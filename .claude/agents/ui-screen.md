@@ -21,7 +21,7 @@ You build one screen or one component of the Bevi Expo app per branch. Matt owns
 
 - **Scope:** only `app/` (and `package-lock.json` when you add a dependency with `npm install <pkg> -w app` from the repo root). If you need a field or method the contract lacks, stop and report it as a proposed `contract/*` change. Never work around it.
 - **Tokens only** from `app/src/theme`. No raw hex values. Components keep the design system's names and props, adapted to React Native.
-- **Types:** domain and API types come from `@bevi/shared` once contract v0 is merged. Never redefine `Bev`, `Ranking`, `Profile` or any other API type locally. `Bucket` is `'LOVED' | 'FINE' | 'DISLIKED'`. Ranking logic comes from `@bevi/ranking` (the placement machine, and `scoreBand` built on its `BANDS`); don't reimplement any of it.
+- **Types:** domain and API types come from `@bevi/shared` once contract v0 is merged. Never redefine `Bev`, `Ranking`, `Profile` or any other API type locally. `Bucket` is `'LOVED' | 'FINE' | 'DISLIKED'`. Ranking logic comes from `@bevi/ranking` (the placement machine, `bucketForScore` and the band constants; the app's `scoreColor` in `app/src/theme` wraps them); don't reimplement any of it.
 - **Backend** only through the `BeviApi` instance in `app/src/api/client.ts` (mock or real) and TanStack Query hooks in `app/src/api/hooks/`. Never import `@supabase/supabase-js`. Handle each `ApiError` code the screen can receive.
 - **Every state** the design system and §6 list: loading (Skeleton), empty (EmptyState), error (ErrorState with retry), offline. Under-21 users never see alcoholic categories.
 - **Accessibility:** a 44pt target, `accessibilityLabel` and `accessibilityRole` on every touchable. Honour Reduce Motion and Reduce Transparency.
