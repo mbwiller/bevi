@@ -60,9 +60,9 @@ supabase/
     _shared/                  # supabaseAdmin.ts, snapshot.ts, images.ts, ranking.bundle.mjs (generated)
     recommend/                # Layer 1/2 predictions + Recommended list
     process-photo/            # background removal + resize for user uploads
-    delete-account/           # Apple token revocation + admin delete (Phase 1.5)
+    delete-account/           # Apple token revocation on delete (task 3.0, only once Apple sign-in exists)
 packages/api/
-  src/index.ts                # createBeviApi(client): BeviApi
+  src/index.ts                # createBeviApi(config): BeviApi
   src/errors.ts               # ApiError + PG error mapping
   src/paging.ts               # cursor helpers
   src/*.ts                    # one file per BeviApi area (bevs, rankings, feed, ...)
@@ -128,7 +128,7 @@ Rules:
 | Edge Functions | 500k invocations/mo; 150 s wall clock; **2 s CPU per request**; 256 MB; 20 MB bundle; 100 functions | 2M; 400 s | Recommendation batches must stay under 2 s CPU each; batch by user, not all users at once. Image resizing in WASM also eats CPU; one image per invocation. |
 | Realtime | 200 concurrent, 2M msgs/mo | 500 | Not needed for v1 feed; pull-to-refresh. |
 | Auth MAU | 50,000 | 100,000 | Irrelevant at our size. |
-| Built-in email | **2 emails/hour** total (meant for non-production) | same | Magic-link/OTP sign-in is unusable without custom SMTP. See §4.2. |
+| Built-in email | **2 emails/hour** total (meant for non-production) | same | Irrelevant in v1 (Google-only sign-in, email disabled). If email sign-in is ever enabled, custom SMTP is mandatory first. |
 | Log retention | 1 day | 7 days | Errors older than a day are gone. See §8.2. |
 | Compute | Shared CPU, 500 MB RAM | Micro | pg_trgm and the small tables are fine. |
 | Branching | Not included | per-branch hourly | Not needed; local stack is the branch. |
@@ -142,13 +142,13 @@ Also: paused projects can reportedly be deleted after a long time paused (one so
 
 | Secret | Where | Who |
 |---|---|---|
-| Publishable/anon key, project URL | `app/` env (Matt), `packages/api` test env | Public by design; RLS is the security boundary |
+| Publishable/anon key, project URL | `app/` env (`EXPO_PUBLIC_…`, Matt), passed into `createBeviApi(config)`; `packages/api` test env | Public by design; RLS is the security boundary |
 | Service-role/secret key | Edge Function env (auto-injected as `SUPABASE_SERVICE_ROLE_KEY`), `scripts/catalog/` via `supabase/.env`, Vault for pg_net calls | Never in the app, never in git |
 | `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `SUPABASE_PROJECT_ID` | GitHub Environments `dev` / `prod` | CI deploys |
 | `REPLICATE_API_TOKEN` (or Photoroom key) | `supabase secrets set`, `supabase/.env` | process-photo function and catalog scripts |
 | `CRON_SECRET` | Vault (`vault.create_secret`) and function secrets | pg_net → Edge Function auth |
-| SMTP (Resend) API key | Dashboard → Auth → SMTP | Auth emails |
-| Apple Services ID key (only if web OAuth) | Dashboard | Rotates every 6 months; prefer native-only to avoid it |
+| Google OAuth client IDs (iOS, Android, Web) + Web client secret | Dashboard → Auth → Providers → Google; `config.toml` for local | Client IDs are public; the Web client secret is not |
+| Apple Services ID key (task 3.0, only if web OAuth is needed) | Dashboard | Rotates every 6 months; prefer native-only to avoid it |
 
 Supabase introduced new-style API keys (`sb_publishable_…` / `sb_secret_…`) alongside the legacy `anon`/`service_role` JWTs. Use the new ones for new projects; supabase-js accepts either.
 
@@ -164,7 +164,7 @@ Design decisions you should defend in review:
 2. **Rankings store position and score, re-spaced per bucket** (vision §4). Position is a 0-based index within `(user_id, bucket)`; `0` is the user's favourite in that bucket. The unique index on `(user_id, bucket, position)` is `DEFERRABLE INITIALLY DEFERRED` so a single `UPDATE … SET position = position + 1` shift never collides mid-statement. A per-user advisory lock serialises concurrent submits from the same user (two devices, double tap).
 3. **Aggregates live in their own tables** (`bev_stats`, `user_stats`, `user_category_stats`) rather than as columns on `bevs`/`profiles`, so the hot write path never touches catalog rows and RLS on the catalog stays read-only.
 4. **Categories are text slugs** (`'soda'`, `'diet_soda'`) so `shared/` enums and the DB agree without a lookup.
-5. **Buckets are `smallint` 1/2/3** (`1` = didn't like, `2` = fine, `3` = loved) so `ORDER BY bucket DESC, position` yields the user's full list best-first.
+5. **Buckets are `smallint` 1/2/3** in the DB (`1` = DISLIKED, `2` = FINE, `3` = LOVED) so `ORDER BY bucket DESC, position` yields the user's full list best-first. The domain type in `shared/` is `'LOVED' | 'FINE' | 'DISLIKED'`; `packages/api/src/mappers.ts` converts both ways. `insertIndex` 0 = best in the bucket (confirmed with Matt).
 6. **Merged duplicates are kept, not deleted.** `bevs.status = 'merged'` + `merged_into` + a row in `bev_aliases`, so old links and searches still resolve.
 7. **Every Bev-creating or ranking RPC writes a `feed_events` row.** The feed is a query over events, not over rankings, so re-ranks and want-to-try saves can appear without special-casing.
 
@@ -291,7 +291,7 @@ create table public.bev_stats (
   rating_count  integer not null default 0,
   sum_score     numeric(10,3) not null default 0,
   avg_score     numeric(4,2),                   -- null until rating_count > 0
-  score_stddev  numeric(4,2),                   -- sample stddev; null until count > 1 (Matt confirms sample vs population)
+  score_stddev  numeric(4,2),                   -- POPULATION stddev (stddev_pop): 0 when rating_count = 1, null when 0. Matt's SIGMA_FLOOR = 1.0 applies only when computing z-scores, never to the stored value
   bayes_score   numeric(4,2),                   -- Matt's Bayesian average; refreshed with global mean
   last_ranked_at timestamptz,
   updated_at    timestamptz not null default now()
@@ -307,7 +307,7 @@ create table public.rankings (
   id          uuid primary key default gen_random_uuid(),
   user_id     uuid not null references public.profiles(id) on delete cascade,
   bev_id      uuid not null references public.bevs(id) on delete cascade,
-  bucket      smallint not null check (bucket in (1,2,3)),   -- 1 didn't like, 2 fine, 3 loved
+  bucket      smallint not null check (bucket in (1,2,3)),   -- 1 DISLIKED, 2 FINE, 3 LOVED (domain enum maps in packages/api)
   position    integer not null check (position >= 0),       -- 0 = best in bucket
   score       numeric(4,2) not null check (score >= 0 and score <= 10),
   note        text check (char_length(note) <= 280),
@@ -330,6 +330,7 @@ create table public.comparisons (
   submission_id  uuid not null,                        -- groups one submit_ranking call
   winner_bev_id  uuid not null references public.bevs(id) on delete cascade,
   loser_bev_id   uuid not null references public.bevs(id) on delete cascade,
+  tie            boolean not null default false,        -- "about the same"; winner/loser then just record the pair order shown
   created_at     timestamptz not null default now(),
   check (winner_bev_id <> loser_bev_id)
 );
@@ -358,7 +359,7 @@ create table public.user_stats (
   user_id          uuid primary key references public.profiles(id) on delete cascade,
   rating_count     integer not null default 0,
   mean_score       numeric(5,3),
-  stddev_score     numeric(5,3),
+  stddev_score     numeric(5,3),                -- stddev_pop, same rule as bev_stats
   want_count       integer not null default 0,
   follower_count   integer not null default 0,
   following_count  integer not null default 0,
@@ -370,8 +371,8 @@ create table public.user_category_stats (
   category_id   text not null references public.categories(id),
   rating_count  integer not null default 0,
   mean_score    numeric(5,3),
-  stddev_score  numeric(5,3),
-  affinity_z    numeric(6,3),                  -- Matt's "category affinity" if he wants it stored; else computed in the Edge Function
+  stddev_score  numeric(5,3),                 -- stddev_pop
+  affinity_z    numeric(6,3),                  -- Matt's "category affinity" if Matt wants it stored; else computed in the Edge Function
   updated_at    timestamptz not null default now(),
   primary key (user_id, category_id)
 );
@@ -389,7 +390,7 @@ create table public.streaks (
 );
 ```
 
-`touch_streak(uid)` runs inside `submit_ranking`: compute `today := (now() at time zone p.timezone)::date`; if `last_ranked_on = today` nothing; if `= today - 1` increment; else reset to 1. An hourly cron zeroes `current_days` where `last_ranked_on < today - 1` in each user's timezone, so profile and leaderboard reads never show a stale streak. Matt's streak vectors define exactly this; adjust to them.
+`touch_streak(uid)` runs inside `submit_ranking` and `rerank_bev` (re-ranks count; removals don't break a streak): compute `today := (now() at time zone p.timezone)::date`; if `last_ranked_on = today` nothing; if `= today - 1` increment; else reset to 1. An hourly cron zeroes `current_days` where `last_ranked_on < today - 1` in each user's timezone, so profile and leaderboard reads never show a stale streak. Matt's streak vectors (start of Phase 2) pin the edge cases.
 
 #### `featured_bevs`
 
@@ -491,16 +492,26 @@ create table public.global_stats (
 );
 ```
 
-Per-category global means can live in `categories` (add `mean_score`) if Matt's formula wants them.
+```sql
+create table public.category_stats (
+  category_id   text primary key references public.categories(id),
+  rating_count  integer not null default 0,
+  mean_score    numeric(5,3),                                  -- category prior m, used once rating_count >= 30
+  updated_at    timestamptz not null default now()
+);
+```
+
+Both are refreshed by `refresh_global_stats()` (cron, every 10 min).
 
 ### 3.3 Views
 
 | View | Purpose | Notes |
 |---|---|---|
 | `bev_cards` | `bevs` ⋈ `bev_stats` ⋈ `categories`, only `status='active'`, age-filtered | What search, lists and the detail page read. Public URL columns computed from paths. |
-| `bev_leaderboard` | `bev_cards` + Matt's `bayes_score(sum_score, rating_count, m, C)` ordered desc, with `category_id` for filtering | Keep as a view; materialize only if slow |
+| `bev_leaderboard` | `bev_cards` + `bayes_score(sum_score, rating_count, m, 3)` ordered desc, `rating_count >= 2` (`MIN_RATERS`), with `category_id` for filtering; `m` is the category mean when that category has ≥ 30 rankings, else the global mean | Keep as a view; materialize only if slow |
+| `bev_new` | `bev_cards` with `rating_count = 1`, newest first | The "New" strip under the leaderboard |
 | `bev_leaderboard_30d` | Same, over rankings in the last 30 days | "Hottest this month" (Phase 3) |
-| `user_leaderboard` | `profiles` ⋈ `user_stats` ⋈ `streaks` ordered by Matt's rank formula | `bevi_rank` is snapshotted into `profiles` hourly |
+| `user_leaderboard` | `profiles` ⋈ `user_stats` ⋈ `streaks`, `points = rating_count + 3 * current_days + 2 * created_adopted` (created Bevs ranked by someone else), `rank() over (order by points desc)` so ties share a rank | `bevi_rank` is snapshotted into `profiles` hourly |
 | `my_lists` (function, not view) | Bev'd list ordered `bucket desc, position` | Functions, because RLS on views in Supabase needs `security_invoker = true` (set it on every view). |
 
 Set `alter view … set (security_invoker = true)` on all views so RLS of the underlying tables applies.
@@ -552,15 +563,14 @@ The alcohol filter on `rankings` and `feed_events` matters: a minor following a 
 
 ### 4.2 Auth
 
-**Providers for v1: Sign in with Apple (native) + Google (native) + email magic link.**
+**Decided 2026-10-09: v1 sign-in is Google only.** Email/password and magic link are disabled, so no custom SMTP, no Resend and no Turnstile in v1.
 
-- App Store Guideline 4.8 (verified verbatim on 2026-10-09): any app using a third-party/social login (Google etc.) for the primary account must also offer an equivalent option with private-email relay, which in practice means Sign in with Apple. If we ship Google, we must ship Apple. Shipping Apple + email only would also satisfy 4.8. Apple-only is the cheapest path that passes review; Matt decides which buttons appear.
-- Native flow (Supabase docs, Expo section): `expo-apple-authentication` → `supabase.auth.signInWithIdToken({ provider: 'apple', token: credential.identityToken })`. Dashboard → Auth → Apple → Client IDs must list every bundle id (`com.bevi.app`, `com.bevi.app.dev`) and `host.exp.Exponent` for Expo Go. Native-only needs no Services ID and no 6-monthly secret rotation; only add the web OAuth config if Android needs Apple sign-in (Android has no native Apple sign-in; it goes through a browser OAuth flow).
-- Apple sends `fullName` only on the first sign-in. The profile trigger reads `raw_user_meta_data` and the app must call `updateUser` with the name the first time, which is Matt's side; document it in the contract.
-- Google native: `@react-native-google-signin/google-signin` → `signInWithIdToken({ provider: 'google' })`. Needs iOS and Android client IDs in the Google provider settings.
-- Email magic link / OTP: only with custom SMTP. The built-in sender is 2 emails/hour for the whole project. Use Resend (free tier is enough at our size; verify the current monthly cap when you sign up). Configure under Auth → SMTP, then raise `rate_limit.email_sent` to ~30/hour.
-- Auth config in `config.toml` for local: `enable_anonymous_sign_ins = false`, `rate_limit.sign_in_sign_ups = 30` (per 5 min per IP, default), `[auth.email] enable_confirmations = true`. Hosted settings must match; they are set in the dashboard (the CLI can push some auth config via `supabase config push`; check it covers what you need).
-- Bot protection: enable Cloudflare Turnstile in Auth → Bot and Abuse Protection once there is an email sign-up form. Not needed if only Apple/Google.
+- **Flow:** native Google sign-in in the app (`@react-native-google-signin/google-signin`) returns an ID token; `packages/api` exposes `signInWithGoogle(idToken)`, which calls `supabase.auth.signInWithIdToken({ provider: 'google', token })` internally. The app never touches supabase-js.
+- **Setup (you):** Google Cloud project → OAuth client IDs for iOS (bundle ids `com.bevi.app`, `com.bevi.app.dev`), Android (package name + SHA-1 of the debug and release keystores; Matt supplies the SHA-1s from EAS) and a Web client ID. Dashboard → Auth → Providers → Google: enable, paste the Web client ID as the client ID and add the iOS and Android client IDs to "Authorized Client IDs" (Supabase validates the ID token's `aud` against this list). `config.toml`: `[auth.external.google] enabled = true`, `skip_nonce_check = true` only if the native library can't send a nonce (check `@react-native-google-signin` docs; it usually can). Expo Go cannot run the native Google module; Matt uses a dev build.
+- **Disabled in v1:** `[auth.email] enable_signup = false` (hosted: Auth → Providers → Email off), `enable_anonymous_sign_ins = false`. Keep `rate_limit.sign_in_sign_ups = 30` (per 5 min per IP, default). Hosted settings are set in the dashboard; check whether `supabase config push` covers the Google provider fields, otherwise write the clicks into `supabase/README.md`.
+- **Profile trigger:** reads Google's `full_name` and `avatar_url` from `raw_user_meta_data` (Google supplies them on every sign-in), generates a handle from the email prefix, and onboarding still asks for a real handle via `set_handle()`.
+- **App Store 4.8 consequence:** shipping Google (a third-party login) requires an equivalent privacy-preserving option, i.e. Sign in with Apple. Google-only is fine for Android and internal TestFlight; **Apple must be added before App Store submission, and possibly before external TestFlight beta review** (beta review applies the guidelines; treat it as a gate). That work is task 3.0 in §10, with the setup notes kept there.
+- **Account deletion:** `delete_my_account` (§4.3) is unchanged. Google needs no token revocation on delete; the Apple revocation step moves to task 3.0 with Apple itself.
 
 **Profile creation on signup**
 
@@ -570,13 +580,15 @@ language plpgsql security definer set search_path = public as $$
 declare v_base text; v_handle text; v_name text;
 begin
   v_name := coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', split_part(new.email,'@',1), 'bevi user');
+  -- Google supplies full_name and avatar_url in raw_user_meta_data; Apple (task 3.0) supplies the name only on first sign-in
   v_base := regexp_replace(lower(coalesce(split_part(new.email,'@',1), 'user')), '[^a-z0-9_]', '', 'g');
   v_base := left(coalesce(nullif(v_base,''), 'user'), 14);
   v_handle := v_base;
   while exists (select 1 from public.profiles where handle = v_handle) loop
     v_handle := v_base || '_' || substr(md5(gen_random_uuid()::text), 1, 4);
   end loop;
-  insert into public.profiles (id, handle, display_name) values (new.id, v_handle, left(v_name, 40));
+  insert into public.profiles (id, handle, display_name, avatar_path)
+  values (new.id, v_handle, left(v_name, 40), new.raw_user_meta_data->>'avatar_url');   -- external URL until the user uploads one; packages/api passes it through as-is
   insert into public.user_stats (user_id) values (new.id);
   insert into public.streaks (user_id) values (new.id);
   return new;
@@ -585,7 +597,7 @@ create trigger on_auth_user_created after insert on auth.users
   for each row execute function public.handle_new_user();
 ```
 
-Apple's private relay gives emails like `abc123@privaterelay.appleid.com`, so the generated handle will be junk; onboarding must ask for a handle (`set_handle()` RPC: lowercases, validates, checks reserved list, allows 1 change per 30 days).
+The generated handle is only a placeholder (and once Apple sign-in exists its private relay emails like `abc123@privaterelay.appleid.com` make it junk), so onboarding always asks for a handle (`set_handle()` RPC: lowercases, validates, checks reserved list, allows 1 change per 30 days).
 
 ### 4.3 Account deletion (App Store 5.1.1(v): "If your app supports account creation, you must also offer account deletion within the app")
 
@@ -606,11 +618,11 @@ end $$;
 
 Deleting from `auth.users` inside a `security definer` function owned by `postgres` is the standard Supabase pattern and avoids needing the service key from the app. Verify the `storage.objects` owner column name on your Postgres/storage version (`owner` uuid in older, `owner_id` text in newer schemas).
 
-Apple additionally expects Sign in with Apple tokens to be revoked when an account is deleted. Supabase does not do this for native sign-in. Plan: a `delete-account` Edge Function (Phase 1.5) that takes the Apple `authorizationCode` from a fresh sign-in, exchanges it for a refresh token at `appleid.apple.com/auth/token`, calls `/auth/revoke`, then calls the RPC. Whether App Review actually checks revocation for a friends-only app, I can't confirm; ship the RPC first, add revocation before public TestFlight.
+With Google-only sign-in nothing else is needed. When Sign in with Apple is added (task 3.0), Apple additionally expects its tokens to be revoked on account deletion, and Supabase does not do that for native sign-in; the `delete-account` Edge Function described in task 3.0 handles it.
 
 ### 4.4 Age gate (alcoholic categories)
 
-- Store a declared `birth_date` collected during onboarding (Apple's guidelines accept "verified or declared age" mechanisms; nothing requires ID checks for an app like this). The RPC `set_birth_date()` is one-way: it can be set once and only changed by an admin, so nobody flips from 19 to 21.
+- Store a declared `birth_date` collected during onboarding (Apple's guidelines accept "verified or declared age" mechanisms; nothing requires ID checks for an app like this). The RPC `set_birth_date()` is one-way: it can be set once and only changed by an admin, so nobody flips from 19 to 21. Matt's onboarding spec matches this.
 - `viewer_is_adult()` gates `bevs` (and everything joined through `bev_cards`), `create_bev()` for alcoholic categories, and `submit_ranking()`.
 - App Store rating consequence: "frequent" alcohol references rate the app 18+ under Apple's 2025 tiers (13+/16+/18+ replaced 12+/17+). A beer leaderboard is arguably "frequent". For a friends-only release that may be fine; see §13 for the alternative of shipping v1 without alcohol.
 
@@ -653,23 +665,24 @@ Raise with a stable code in the message and a Postgres `errcode`; `packages/api`
 |---|---|---|
 | `BEVI_UNAUTHORIZED` | `42501` | `unauthorized` |
 | `BEVI_NOT_FOUND` | `P0002` | `not_found` |
-| `BEVI_ALREADY_RANKED`, `BEVI_DUPLICATE_BEV`, `BEVI_HANDLE_TAKEN` | `23505` | `conflict` |
+| `BEVI_ALREADY_RANKED`, `BEVI_DUPLICATE_BEV`, `BEVI_HANDLE_TAKEN`, `BEVI_STALE_BUCKET` | `23505` | `conflict` (for `BEVI_STALE_BUCKET` the app refetches the bucket and restarts placement) |
 | `BEVI_BAD_INDEX`, `BEVI_VALIDATION` | `22023` | `validation` |
 | `BEVI_RATE_LIMITED` | `P0001` | `rate_limited` |
 | `BEVI_AGE_RESTRICTED` | `42501` | `age_restricted` |
 
 ### 5.2 `submit_ranking` (seam 3)
 
-Input shape mirrors `api.submitRanking({ bevId, bucket, insertIndex, comparisons, note })`.
+Input shape mirrors `api.submitRanking({ bevId, bucket, insertIndex, expectedBucketSize, comparisons, note })`. `expectedBucketSize` is the bucket length the app binary-searched over; if the server's count differs (another device ranked in between), the placement is stale and the RPC refuses rather than inserting at a wrong index.
 
 ```sql
 create or replace function public.submit_ranking(
-  p_bev_id        uuid,
-  p_bucket        smallint,
-  p_insert_index  integer,
-  p_comparisons   jsonb default '[]'::jsonb,   -- [{"winner": uuid, "loser": uuid}, ...]
-  p_note          text default null,
-  p_photo_path    text default null
+  p_bev_id               uuid,
+  p_bucket               smallint,                 -- 3 LOVED, 2 FINE, 1 DISLIKED
+  p_insert_index         integer,                  -- 0 = best in bucket, n = append at the bottom
+  p_expected_bucket_size integer,                  -- bucket length the app placed against
+  p_comparisons          jsonb default '[]'::jsonb,   -- [{"winner": uuid, "loser": uuid, "tie": bool}, ...] — every comparison, not just the decisive ones
+  p_note                 text default null,
+  p_photo_path           text default null
 ) returns public.rankings
 language plpgsql security definer set search_path = public as $$
 declare
@@ -690,6 +703,9 @@ begin
   end if;
 
   select count(*) into v_n from public.rankings where user_id = v_uid and bucket = p_bucket;
+  if v_n <> p_expected_bucket_size then
+    raise exception 'BEVI_STALE_BUCKET' using errcode = '23505', detail = format('expected=%s actual=%s', p_expected_bucket_size, v_n);
+  end if;
   if p_insert_index < 0 or p_insert_index > v_n then
     raise exception 'BEVI_BAD_INDEX' using errcode = '22023', detail = format('n=%s', v_n);
   end if;
@@ -701,8 +717,8 @@ begin
   values (v_uid, p_bev_id, p_bucket, p_insert_index, 0, p_note, p_photo_path)
   returning * into v_row;
 
-  insert into public.comparisons (user_id, submission_id, winner_bev_id, loser_bev_id)
-  select v_uid, v_sub, (c->>'winner')::uuid, (c->>'loser')::uuid
+  insert into public.comparisons (user_id, submission_id, winner_bev_id, loser_bev_id, tie)
+  select v_uid, v_sub, (c->>'winner')::uuid, (c->>'loser')::uuid, coalesce((c->>'tie')::boolean, false)
     from jsonb_array_elements(p_comparisons) c;
 
   perform public.respace_bucket(v_uid, p_bucket);                        -- scores for the whole bucket
@@ -723,12 +739,12 @@ Helpers (bodies are placeholders until Matt's vectors land):
 
 ```sql
 -- Mirrors packages/ranking scoreFromPosition(). Verified by shared/fixtures/score_from_position.vectors.json
+-- Bands are equal thirds: DISLIKED (1) [0, 10/3], FINE (2) [10/3, 20/3], LOVED (3) [20/3, 10].
+-- score = hi - (hi - lo) * (i + 1) / (n + 1), i = 0 is best in the bucket, rounded to 2 dp.
 create or replace function public.ranking_score(p_bucket smallint, p_position integer, p_count integer)
 returns numeric language sql immutable as $$
-  -- PLACEHOLDER: linear within band, best at position 0; replaced by Matt's formula
-  select round((case p_bucket when 3 then 10.0 when 2 then 6.7 else 3.4 end)
-             - (case p_bucket when 3 then 3.3 when 2 then 3.3 else 3.4 end)
-               * (case when p_count <= 1 then 0.5 else p_position::numeric / (p_count - 1) end), 2);
+  select round(b.hi - (b.hi - b.lo) * (p_position + 1)::numeric / (p_count + 1), 2)
+    from (select (p_bucket - 1) * 10.0 / 3 as lo, p_bucket * 10.0 / 3 as hi) b;
 $$;
 
 create or replace function public.respace_bucket(p_uid uuid, p_bucket smallint) returns void
@@ -742,7 +758,7 @@ $$;
 create or replace function public.refresh_bev_stats(p_bev_ids uuid[]) returns void
 language sql security definer set search_path = public as $$
   insert into public.bev_stats (bev_id, rating_count, sum_score, avg_score, score_stddev, last_ranked_at, updated_at)
-  select b.id, count(r.id), coalesce(sum(r.score),0), avg(r.score), stddev_samp(r.score), max(r.ranked_at), now()
+  select b.id, count(r.id), coalesce(sum(r.score),0), avg(r.score), stddev_pop(r.score), max(r.ranked_at), now()
     from unnest(p_bev_ids) as ids(id)
     join public.bevs b on b.id = ids.id
     left join public.rankings r on r.bev_id = b.id
@@ -753,12 +769,22 @@ language sql security definer set search_path = public as $$
 $$;
 ```
 
-`bayes_score` is computed in the `bev_leaderboard` view from `sum_score`, `rating_count`, `global_stats.mean_score` and Matt's prior weight `C`, through a `bayes_score(sum, n, m, c)` SQL function with its own vector file. `C` lives in a `ranking_constants` table seeded from `shared/` so it can be tuned without a migration; the vector test pins it.
+`bayes_score` is computed in the `bev_leaderboard` view through a `bayes_score(sum, n, m, c)` SQL function with its own vector file: `(c * m + sum) / (c + n)`. Agreed constants (Matt's §8): `C = 3` and `MIN_RATERS = 2`, both rows in `ranking_constants` (seeded from `shared/`, pinned by the vector test). Bevs with `rating_count < MIN_RATERS` are excluded from the ranked board and returned as a separate "New" strip. The prior `m`: on the overall board it is `global_stats.mean_score`; on a per-category board it is that category's mean when the category has at least 30 rankings (`category_stats.rating_count >= 30`), otherwise the global mean.
+
+### 5.10 Other agreed formulas (Matt's; yours to execute)
+
+| Formula | SQL home | Definition |
+|---|---|---|
+| Per-Bev / per-user stddev | `refresh_bev_stats`, `refresh_user_stats` | `stddev_pop`; one rating → 0 |
+| z-score | `z_score(score, mean, stddev)` | `(score - mean) / greatest(stddev, 1.0)`; `SIGMA_FLOOR = 1.0` lives here only |
+| Rank points ("rank on Bevi") | `user_leaderboard` view, snapshotted into `profiles.bevi_rank` hourly | `bevs_ranked + 3 * current_streak + 2 * bevs_created`, where a created Bev counts only once another user has ranked it. `rank()` window so ties share a rank |
+| Streak day | `touch_streak` | The local date in the profile timezone. `submit_ranking` **and** `rerank_bev` call it; `remove_ranking` does not touch it, and removals never break a streak |
+
 
 ### 5.3 Re-rank and remove
 
-- `rerank_bev(p_bev_id, p_bucket, p_insert_index, p_comparisons)`: same lock; delete the existing row's slot (shift down the old bucket), insert at the new slot (shift up the new bucket), re-space both buckets, refresh stats for both buckets' Bevs, `feed_events.kind = 'reranked'`. Implement as: remove then insert inside one transaction, reusing the two primitives.
-- `remove_ranking(p_bev_id)`: lock, delete, `UPDATE … position = position - 1 WHERE position > old`, re-space, refresh stats, enqueue recommendation job. No feed event.
+- `rerank_bev(p_bev_id, p_bucket, p_insert_index, p_expected_bucket_size, p_comparisons, p_note)`: same signature and stale-bucket check as `submit_ranking` (the app's `rerankBev` has the same shape as `submitRanking`); `p_expected_bucket_size` is the target bucket's length *excluding* the Bev being moved. Same lock; delete the existing row's slot (shift down the old bucket), insert at the new slot (shift up the new bucket), re-space both buckets, refresh stats for both buckets' Bevs, `touch_streak` (re-ranks count), `feed_events.kind = 'reranked'`. Implement as: remove then insert inside one transaction, reusing the two primitives.
+- `remove_ranking(p_bev_id)` (the app's `removeRanking(bevId)`): lock, delete, `UPDATE … position = position - 1 WHERE position > old`, re-space, refresh stats, enqueue recommendation job. No feed event, and the streak is untouched.
 - Both return the user's updated bucket list so the app can reconcile without a second round trip.
 
 ### 5.4 Create Bev with dedupe
@@ -815,10 +841,10 @@ User search (`search_users(q)`): trigram on `handle` and `display_name`, limit 2
 | `follow_user(p_user_id)` / `unfollow_user(p_user_id)` | | Updates both users' counts in `user_stats`; `feed_events('followed')` |
 | `get_profile(p_handle)` | profile ⋈ `user_stats` ⋈ `streaks` + `is_following` + `follows_me` | |
 | `get_bev(p_bev_id)` | `bev_cards` + my ranking (if any) + my prediction + friends who ranked it (profiles I follow, with their score) + `in_want_to_try` | One call for the detail page |
-| `bev_leaderboard` view, `get_bev_leaderboard(p_category_id, p_period, p_limit, p_offset)` | | Offset paging is fine here (bounded, top 100) |
+| `bev_leaderboard` view, `get_bev_leaderboard(p_category_id, p_period, p_limit, p_offset)` | ranked rows (`rating_count >= 2`) plus a `new_bevs` array (one-rater Bevs) | Offset paging is fine here (bounded, top 100) |
 | `user_leaderboard` view, `get_user_leaderboard(p_limit)` | | |
 | `get_recommendations(p_limit)` | `user_bev_predictions` where `rec_rank is not null` ⋈ `bev_cards` | Reads the cache only |
-| `get_starter_candidates()` | `bev_cards where is_starter` | Matt's `packages/ranking` picks the ~8 to ask |
+| `get_starter_candidates()` | `bev_cards where is_starter` (age-filtered, ≥ 30 rows, each with `rating_count`) | Selection is client-side: Matt's `selectStarterSet()` picks 10 (6 core + 4 seeded by `userId`) |
 | `get_my_overview()` | counts, rank, streak, handle, etc. for the Profile tab | |
 | `report_bev(p_bev_id, p_reason, p_duplicate_of, p_note)` | | rate-limited |
 | `ping()` | `select true` | granted to `anon` for the keep-alive |
@@ -830,18 +856,18 @@ Matt exports `shared/fixtures/<formula>.vectors.json`. Proposed format, to be fi
 ```json
 { "formula": "scoreFromPosition", "version": "2026-10-20", "sql": "ranking_score",
   "tolerance": 0.005,
-  "cases": [ { "name": "loved, 1 of 1", "args": [3, 0, 1], "expected": 8.35 },
-             { "name": "fine, 3 of 7",  "args": [2, 2, 7], "expected": 5.6 } ] }
+  "cases": [ { "name": "loved, 1 of 1", "args": [3, 0, 1], "expected": 8.33 },
+             { "name": "fine, 3 of 7",  "args": [2, 2, 7], "expected": 5.42 } ] }
 ```
 
-Formulas expected: `scoreFromPosition` → `ranking_score`; `bayesAverage` → `bayes_score`; `userMeanStddev` / `categoryStats` → `refresh_user_stats` (table-level cases: input rankings → expected rows); `streakUpdate` → `touch_streak` (sequence of dates + timezone → expected current/longest); `userRank` → `user_leaderboard`; `zScore` → `z_score(score, mean, stddev)`.
+Formulas expected: `scoreFromPosition` → `ranking_score`; `bayesAverage` → `bayes_score`; `userMeanStddev` / `categoryStats` → `refresh_user_stats` (table-level cases: input rankings → expected rows); `streakUpdate` → `touch_streak` (sequence of dates + timezone → expected current/longest); `userRank` → `user_leaderboard` (rank points + tie sharing); `zScore` → `z_score(score, mean, stddev)` (with the 1.0 floor); `predictScore`/`recommend` → the Edge Function (run as a Deno test against the bundle, not pgTAP).
 
 Mechanism: `scripts/vectors-to-pgtap.ts` (Haiku-level) reads every `*.vectors.json` and writes `supabase/tests/generated/<formula>.test.sql`:
 
 ```sql
 begin; select plan(2);
-select cmp_ok(abs(public.ranking_score(3,0,1) - 8.35), '<', 0.005, 'scoreFromPosition: loved, 1 of 1');
-select cmp_ok(abs(public.ranking_score(2,2,7) - 5.6),  '<', 0.005, 'scoreFromPosition: fine, 3 of 7');
+select cmp_ok(abs(public.ranking_score(3,0,1) - 8.33), '<', 0.005, 'scoreFromPosition: loved, 1 of 1');
+select cmp_ok(abs(public.ranking_score(2,2,7) - 5.42), '<', 0.005, 'scoreFromPosition: fine, 3 of 7');
 select * from finish(); rollback;
 ```
 
@@ -854,15 +880,15 @@ select * from finish(); rollback;
 1. `submit_ranking` / `remove_ranking` upsert `recommendation_jobs(user_id)`.
 2. pg_cron every minute: `select net.http_post(url := <functions-url>/recommend, headers := jsonb_build_object('Authorization','Bearer '|| (select decrypted_secret from vault.decrypted_secrets where name='cron_secret'), 'Content-Type','application/json'), body := '{"mode":"queue"}')` (pg_net is fire-and-forget; the function pulls the queue itself).
 3. Nightly 03:30 UTC: same call with `{"mode":"all"}` so new Bevs and other users' rankings propagate to everyone.
-4. The `recommend` function (`verify_jwt = false` in `config.toml`, checks `CRON_SECRET` itself): takes up to 10 users per invocation (2 s CPU cap), for each builds the snapshot, calls `predictScore()`/`recommend()` from `packages/ranking`, upserts `user_bev_predictions` (full matrix for that user: ~400 rows), sets `rec_rank` for the top N, deletes the job. Failures increment `attempts`; after 3 the job is left for inspection.
+4. The `recommend` function (`verify_jwt = false` in `config.toml`, checks `CRON_SECRET` itself): takes up to 10 users per invocation (2 s CPU cap), for each builds the `PredictionSnapshot`, calls `predictScore()`/`recommend()` from the `packages/ranking` bundle with an explicit seed, upserts `user_bev_predictions` (full matrix for that user: ~400 rows) with `model_version = RANKING_VERSION`, sets `rec_rank` for the top N, deletes the job. Failures increment `attempts`; after 3 the job is left for inspection.
 5. On-demand: `get_bev()` returns `predicted_score` from the cache or null. The app shows "not enough data yet" for null; no synchronous compute in v1. (If Matt wants an instant prediction after onboarding, `api.refreshRecommendations()` can `functions.invoke('recommend', { body: { mode: 'me' } })` with the user's JWT and wait; keep it to one user per call.)
 
-**Snapshot** (`_shared/snapshot.ts`, yours; the *type* `RecommendationSnapshot` is Matt's in `shared/`): the target user's rankings (bev, category, score, z-score), their `user_stats`/`user_category_stats`, all active `bev_cards` with `bev_stats` and `global_stats`, and for Layer 2 the normalized scores of every user who shares ≥ 3 ranked Bevs with the target (at 20 users: just everyone). Build it with 3–4 queries via the service-role client; no per-row queries.
+**Snapshot** (`_shared/snapshot.ts`, yours; the *type* `PredictionSnapshot` is Matt's in `shared/`): the target user's rankings (bev, category, score, z-score), their `user_stats`/`user_category_stats`, all active `bev_cards` with `bev_stats` and `global_stats`, and for Layer 2 the normalized scores of every user who shares ≥ 3 ranked Bevs with the target (at 20 users: just everyone). Build it with 3–4 queries via the service-role client; no per-row queries.
 
 **How the Edge Function (Deno) imports `packages/ranking`** — verified 2026-10-09:
 
 - Supabase CLI ≥ 2.13.3 has `supabase functions deploy --use-api`, which bundles server-side and "simplifies importing files outside the `supabase/` directory … useful for monorepo setups" (changelog 2025-02-14, discussion #33613). You map the package in the function's `deno.json`: `"imports": { "@bevi/ranking": "../../../packages/ranking/src/index.ts" }`. Caveats found: it is still labelled experimental; `supabase functions serve` (local) still runs in Docker and the changelog says the flag "only modifies deploy behavior", so local serve may not resolve the outside path; one user reported an unanswered `../../` import failure in Sep 2025; and it requires `packages/ranking` to be Deno-resolvable (relative imports with explicit extensions, no Node built-ins, no tsconfig path aliases), which is a constraint on Matt's package.
-- **Approach (default): prebuilt bundle.** `scripts/bundle-ranking.mjs` runs esbuild on `packages/ranking/src/index.ts` → `supabase/functions/_shared/ranking.bundle.mjs` (ESM, no externals, ~tens of KB). The function imports `../_shared/ranking.bundle.mjs`. The bundle is gitignored and produced by `npm run be:bundle`, which `be:serve` and the CI deploy job run first. This works identically for local `serve`, Docker deploy and `--use-api` deploy, puts no constraints on how Matt writes `packages/ranking` beyond "zero I/O, no Node APIs" (already the rule), and the bundle carries `packages/ranking`'s version string into `model_version`. Types come from `packages/ranking` directly for `deno check` via a `.d.ts` emitted by the same script (`tsc --emitDeclarationOnly` into `_shared/ranking.bundle.d.mts`).
+- **Approach (agreed with Matt): prebuilt bundle.** `scripts/bundle-ranking.mjs` runs esbuild on `packages/ranking/src/index.ts` → `supabase/functions/_shared/ranking.bundle.mjs` (ESM, no externals, ~tens of KB). The function imports `../_shared/ranking.bundle.mjs`. The bundle is gitignored and produced by `npm run be:bundle`, which `be:serve` and the CI deploy job run first. This works identically for local `serve`, Docker deploy and `--use-api` deploy, puts no constraints on how Matt writes `packages/ranking` beyond "zero I/O, no Node APIs" (already the rule), and the bundle carries the package's `RANKING_VERSION` export into `model_version`. Types come from `packages/ranking` directly for `deno check` via a `.d.ts` emitted by the same script (`tsc --emitDeclarationOnly` into `_shared/ranking.bundle.d.mts`).
 - **Fallback if the bundle step is ever a problem:** the direct `deno.json` path import with `--use-api`, once Supabase documents it with an example (they promised one in the discussion; not there as of Oct 2025). Second fallback: publish `@bevi/ranking` to GitHub Packages and import `npm:@bevi/ranking` with a function-local `.npmrc` (private registries are supported since CLI 1.207.9). Ownership does not change in any variant: Matt owns the math, you own the function.
 - Vision §8 says Layer 1 should "start as SQL views/functions". With seam 5 the prediction math runs in TypeScript inside the Edge Function instead, so one implementation (Matt's) serves the app's tests, the function and the vectors. Proposed vision change in §13.
 
@@ -873,8 +899,8 @@ select * from finish(); rollback;
 | `* * * * *` | `net.http_post` → `recommend` `{mode: queue}` | No-op when queue empty |
 | `30 3 * * *` | `recommend` `{mode: all}` | Full refresh |
 | `15 * * * *` | `reset_lapsed_streaks()` | Per-user timezone |
-| `20 * * * *` | `refresh_user_ranks()` → `profiles.bevi_rank` | Matt's formula via `user_leaderboard` |
-| `*/10 * * * *` | `refresh_global_stats()` | `m` for the Bayesian average |
+| `20 * * * *` | `refresh_user_ranks()` → `profiles.bevi_rank` | Rank points via `user_leaderboard` (§5.10) |
+| `*/10 * * * *` | `refresh_global_stats()` | `global_stats` + `category_stats`: the Bayesian priors |
 | `0 4 * * *` | `refresh_all_stats()` | Full `bev_stats` + `user_stats` recompute (safety net) |
 | `0 5 * * *` | housekeeping: delete `user_actions` > 7 d, hide `pending_photo` Bevs > 24 h, delete orphaned `raw-uploads` > 7 d | |
 
@@ -890,32 +916,35 @@ The only module the app imports to reach the backend. It implements `BeviApi` fr
 
 ```ts
 // packages/api/src/index.ts
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '@bevi/shared/db.types';
-import type { BeviApi } from '@bevi/shared';
+import type { BeviApi, AuthStorage } from '@bevi/shared';
 
-export function createBeviApi(client: SupabaseClient<Database>): BeviApi { … }
+export interface BeviApiConfig {
+  url: string;                 // Supabase project URL
+  publishableKey: string;      // sb_publishable_… (anon); safe in the app
+  authStorage: AuthStorage;    // { getItem, setItem, removeItem } — the app passes an expo-secure-store or AsyncStorage wrapper
+}
+export function createBeviApi(config: BeviApiConfig): BeviApi { … }
 export { ApiError } from './errors';
 ```
 
-The app constructs the Supabase client (so it controls storage, auth persistence and the publishable key) and passes it in; `packages/api` has no env access. Swapping mock → real is `const api = USE_MOCK ? createMockApi() : createBeviApi(supabase)` in Matt's `app/src/api/index.ts`.
+`packages/api` creates and owns the supabase-js client internally; the app never imports `@supabase/supabase-js` and never sees the client. The app only supplies the config (from `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) and a storage adapter for session persistence. Auth lives in the API surface (`getSession`, `onAuthChange`, `signInWithGoogle`, `signOut`, `deleteAccount`; `signInWithApple` arrives with task 3.0). Matt's swap line is `EXPO_PUBLIC_BEVI_API=mock|supabase` → `createMockApi()` or `createBeviApi(config)` in `app/src/api/index.ts`.
 
 Proposed `BeviApi` surface (final list is Matt's per-screen needs in contract v0):
 
 | Area | Methods |
 |---|---|
-| Session | `getSession`, `onAuthChange`, `signInWithApple(idToken, nonce?)`, `signInWithGoogle(idToken)`, `sendMagicLink(email)`, `signOut`, `deleteAccount` |
+| Session | `getSession`, `onAuthChange`, `signInWithGoogle(idToken)`, `signOut`, `deleteAccount`. `signInWithApple(idToken, nonce)` is added with task 3.0 (additive contract change) |
 | Profile | `getMyProfile`, `getProfile(handle)`, `updateProfile({displayName, avatarPath})`, `setHandle`, `setBirthDate`, `searchUsers(q)`, `getMyOverview` |
 | Social | `follow`, `unfollow`, `listFollowers(userId, cursor)`, `listFollowing(userId, cursor)`, `getFeed(cursor)`, `getFeatured` |
 | Bevs | `searchBevs({q, categoryId, cursor})`, `lookupByUpc`, `getBev(id)`, `findSimilarBevs`, `createBev`, `uploadRawPhoto(file) → path`, `reportBev`, `listCategories` |
-| Rankings | `submitRanking`, `rerankBev`, `removeRanking`, `listRankings({userId, bucket, cursor})`, `getMyRankingForBev` |
+| Rankings | `submitRanking({bevId, bucket, insertIndex, expectedBucketSize, comparisons, note})`, `rerankBev(…)` (same shape as `submitRanking`), `removeRanking(bevId)`, `listRankings({userId, bucket, cursor})`, `getMyRankingForBev` |
 | Want to try | `addWantToTry`, `removeWantToTry`, `listWantToTry(cursor)` |
 | Leaderboards | `getBevLeaderboard({categoryId, period})`, `getUserLeaderboard` |
-| Recs | `getRecommendations`, `getStarterCandidates`, `refreshRecommendations` (optional, Phase 2) |
+| Recs | `getRecommendations`, `getStarterCandidates` (≥ 30 age-filtered `is_starter` Bevs with `ratingCount`; the app's `selectStarterSet()` picks 10), `refreshRecommendations` (optional, Phase 2) |
 
 ### 6.2 Conventions
 
-- **Types:** `supabase gen types typescript --local --schema public > shared/src/db.types.ts`, committed, with a CI drift check (§8.1). `packages/api` maps DB rows (snake_case) to `shared/` domain types (camelCase) in one `mappers.ts`; RPC row types come from the generated `Functions` section so a changed RPC signature fails `tsc`.
+- **Types:** `supabase gen types typescript --local --schema public > shared/src/db.types.ts`, committed, with a CI drift check (§8.1). `packages/api` maps DB rows (snake_case) to `shared/` domain types (camelCase) in one `mappers.ts`, including `Bucket` `'LOVED' | 'FINE' | 'DISLIKED'` ↔ smallint 3/2/1; RPC row types come from the generated `Functions` section so a changed RPC signature fails `tsc`.
 - **Errors:** methods throw `ApiError { code: 'unauthorized' | 'not_found' | 'conflict' | 'validation' | 'rate_limited' | 'age_restricted' | 'network' | 'unknown'; message; detail? }`. Mapping: `PostgrestError.code` `23505` → `conflict`, `42501` → `unauthorized`/`age_restricted` (by message prefix), `P0001` → `rate_limited`, `22023` → `validation`, `P0002` → `not_found`, `PGRST116` (single row missing) → `not_found`, fetch failures → `network`. Never let a raw `PostgrestError` escape. Matt's screens switch on `code`.
 - **Pagination:** every list takes `{ cursor?: string; limit?: number }` and returns `{ items: T[]; nextCursor: string | null }`. Cursor = base64url JSON of the keyset tuple; opaque to the app. Default `limit` 20, max 50.
 - **Storage URLs:** `packages/api` returns full public URLs for photos (`client.storage.from('bev-photos').getPublicUrl(path)`); the app never sees bucket paths. Add `?v=<updated_at epoch>` for cache busting on re-processed images.
@@ -949,7 +978,7 @@ Target ≈ 380 seed Bevs. Enough that onboarding and search feel populated for 2
 | `spirits_cocktails` | 12 | Margarita, Old Fashioned, Espresso Martini, Tito's soda, Jack & Coke, … |
 | `other` | 15 | Horchata, agua fresca (jamaica, tamarindo), Yakult, Calpico, Ramune, kombucha (GT's 4), Vita Coco |
 
-Mark ~30 as `is_starter` (the Coke/Diet Coke/Sprite/LaCroix/Red Bull tier of fame); Matt's onboarding selection picks from those.
+Mark at least 30 as `is_starter` (the Coke/Diet Coke/Sprite/LaCroix/Red Bull tier of fame), none alcoholic, so `getStarterCandidates()` always returns ≥ 30 even for minors; Matt's `selectStarterSet()` picks 10 of them client-side.
 
 ### 7.2 Source format and rules
 
@@ -964,7 +993,7 @@ coca-cola-classic,Coca-Cola Classic,Coca-Cola,Original,soda,1,false,049000006346
 - Price tier rules (typical US retail per single serving, 2026): `$` ≤ $2.50; `$$` $2.50–6; `$$$` $6–15; `$$$$` > $15. Alcohol by typical per-drink price out. Category defaults when unknown (used by `create_bev` estimation too): soda/diet/water/sparkling/sports/juice/tea → `$`; energy/coffee/smoothie/boba/other → `$$`; beer → `$$`; wine/cocktails → `$$$`. Anything estimated gets `price_estimated = true`.
 - `aliases` pipe-separated, lowercase, no brand duplication needed (the pipeline also generates `brand + name` and `name` alone).
 - `scripts/catalog/validate.ts` fails on: unknown category, missing name, duplicate natural key, tier outside 1–4, missing `image_source_url` for an active seed, missing license.
-- `scripts/catalog/build-seed.ts` writes `supabase/seed/catalog.sql` (deterministic UUIDs from `uuid_generate_v5(namespace, slug)` so re-seeding is idempotent) and `shared/fixtures/bevs.sample.json` (a 50-Bev slice for Matt's mock).
+- `scripts/catalog/build-seed.ts` writes `supabase/seed/catalog.sql` (deterministic UUIDs from `uuid_generate_v5(namespace, slug)` so re-seeding is idempotent) and `shared/fixtures/bevs.sample.json` (at least 60 Bevs covering every category, with real dev-bucket image URLs, for Matt's mock; due Oct 16). Matt generates the companion `users`, `rankings`, `follows` and `featured` fixtures with `packages/ranking`.
 
 ### 7.3 Image sourcing stance
 
@@ -978,7 +1007,7 @@ Honest position: manufacturer packshots are copyrighted; using them as catalog i
 
 Every seed image keeps `image_source_url`, `image_license`, `image_attribution`, so any one can be swapped on request. Never scrape Google Images; never use Amazon listing photos.
 
-**Style standard (Matt reviews the contact sheet):** transparent background; subject fills ~85% of the height; square canvas 1024×1024 with the product centered and bottom-aligned; no shadows; WebP with alpha (PNG fallback only if an edge halo is visible). Thumbs 256×256 same framing.
+**Style standard (Matt reviews the contact sheet against the Beli screenshots and UI spec in `bevi-ui-inspiration/`, where Matt's reference material now lives):** transparent background; subject fills ~85% of the height; square canvas 1024×1024 with the product centered and bottom-aligned; no shadows; WebP with alpha (PNG fallback only if an edge halo is visible). Thumbs 256×256 same framing.
 
 ### 7.4 Background-removal pipeline (user uploads and seeds)
 
@@ -1087,7 +1116,7 @@ Integrator agent (`.claude/agents/integrator.md`, `chore/*` PR with Matt): same 
 ### 8.4 Seeding local/dev
 
 - `seed.sql`: categories, `ranking_constants`, catalog (`\i seed/catalog.sql` is not supported by the seeder; concatenate via `sql_paths = ["./seed.sql", "./seed/catalog.sql", "./seed/dev_users.sql"]` in `config.toml`).
-- `seed/dev_users.sql` (local only, gated by a `current_setting('app.env') = 'local'` check or just excluded from the prod `sql_paths`): 4 users (`matt`, `arjun`, `jack`, `minor_test` with a 2008 birth date), ~60 rankings between them, follows both ways, 2 featured Bevs. This is also what `packages/api` tests and Matt's e2e runs use.
+- `seed/dev_users.sql` (local only; excluded from the prod `sql_paths`): generated by `scripts/fixtures-to-seed.ts` from Matt's `shared/fixtures/{users,rankings,follows,featured}.json` so the mock and the local DB contain the same world. Add one extra local user `minor_test` with a 2008 birth date for age-gate tests. This is also what `packages/api` tests and Matt's e2e runs use.
 - Dev project: run `scripts/catalog/upload-images.ts` + `supabase db push` + `psql $DEV_URL -f supabase/seed/catalog.sql` once; thereafter catalog changes are new migration-like SQL files in `supabase/seed/` applied by the same script. Prod: same, with the prod URL, by hand, once.
 
 ---
@@ -1113,52 +1142,52 @@ Branches: Matt uses `ui/*` (app) and `rank/*` (ranking package); Arjun uses `be/
 
 **Seam 1 — App ↔ backend.** The app imports only `shared/` types and the `BeviApi` interface. `packages/api` implements it on Supabase. Matt builds every screen first against a mock (`app/src/api/mock.ts`, implements `BeviApi`, backed by `shared/fixtures`), so UI work is never blocked on the backend. TypeScript keeps the mock and the real client honest. Swapping mock→real is a one-line change.
 
-- You provide: `packages/api` implementing every `BeviApi` method, `shared/src/db.types.ts` (generated), the `shared/fixtures/bevs.sample.json` slice (so the mock has real-looking Bevs with real image URLs from the dev bucket), and `ApiError` codes documented in `shared/`.
+- You provide: `packages/api` implementing every `BeviApi` method (including auth; the app never imports supabase-js), `shared/src/db.types.ts` (generated), `shared/fixtures/bevs.sample.json` (≥ 60 Bevs across every category with real dev-bucket image URLs; Matt generates the users/rankings/follows/featured fixtures from it with `packages/ranking`), and `ApiError` codes documented in `shared/`.
 - You need: nothing to start; the method list from contract v0 to finish.
 - By when: fixtures + types with contract v0 (end of week 1); `packages/api` methods land feature by feature in Phase 1, each PR naming the `BeviApi` methods it completes.
 
 **Seam 2 — Contract v0 is the first joint milestone.** Matt lists the data each screen needs; you turn that into the schema + `BeviApi` methods; both approve one `contract/v0` PR. Nothing else merges into `shared/` before it.
 
 - You provide: §3 schema as migrations on a `be/schema-v0` branch (so the generated types are real), the `BeviApi` method list (§6.1), the vector JSON format (§5.7), enums (`Bucket`, `CategoryId`, `PriceTier`, `FeedEventKind`, `BevStatus`), `ApiError` codes.
-- You need: Matt's per-screen data list (Feed, Lists ×3, Add/Search/Create, Bev detail, Leaderboard ×2, Profile, Onboarding, Settings), the `RankingComparison` type and the `submitRanking` argument type, bucket enum values and names.
+- You need: Matt's per-screen data list (Feed, Lists ×3, Add/Search/Create, Bev detail, Leaderboard ×2, Profile, Onboarding, Settings) (auth is decided: Google only). Already agreed: `Bucket = 'LOVED' | 'FINE' | 'DISLIKED'`, `RankingComparison = { winnerBevId, loserBevId, tie }`, the `submitRanking` argument shape with `expectedBucketSize`.
 - By when: Matt's list by Tue Oct 13; your draft PR by Wed Oct 14; merged by Fri Oct 16.
 
 **Seam 3 — Ranking write path.** The interactive comparison flow runs in the app using `packages/ranking` (pure state machine). On finish the app calls `api.submitRanking({ bevId, bucket, insertIndex, comparisons, note })`. Your RPC applies it atomically (insert at position, shift others, store raw comparisons, update aggregates). Re-ranking/removing a Bev is the same shape.
 
-- You provide: `submit_ranking`, `rerank_bev`, `remove_ranking` (§5.2–5.3), `listRankings({bucket})` returning the ordered bucket the state machine binary-searches over, and the guarantee that `insertIndex` is interpreted as "0 = best, n = worst, within that bucket".
-- You need: confirmation of index semantics and the exact `comparisons` element shape; whether the app sends all comparisons or only the decisive ones (store all).
+- You provide: `submit_ranking`, `rerank_bev`, `remove_ranking` (§5.2–5.3), `listRankings({bucket})` returning the ordered bucket the state machine binary-searches over, the stale-bucket guard (`expectedBucketSize` → `BEVI_STALE_BUCKET` → `conflict`), and the guarantee that `insertIndex` is interpreted as "0 = best, n = append at the bottom, within that bucket".
+- Agreed: `insertIndex` 0 = best; `rerankBev` has the same shape as `submitRanking` plus `expectedBucketSize`; `removeRanking(bevId)`; comparison elements are `{ winnerBevId, loserBevId, tie }` and the app sends every comparison (you store all).
 - By when: RPC with placeholder scoring in Phase 0 week 2 (Oct 19–23); final once score vectors land.
 
 **Seam 4 — Formulas are Matt's; storage and execution are yours.** Wherever math must run in SQL (score-from-position for aggregates, per-Bev avg/stddev, per-user per-category mean/stddev, Bayesian leaderboard average, streaks, user rank), Matt specifies it in `packages/ranking` and exports golden test vectors to `shared/fixtures/*.vectors.json`; your SQL must pass the same vectors in CI. Changing a formula = `contract/*` PR that regenerates the vectors.
 
 - You provide: `ranking_score`, `bayes_score`, `z_score`, `refresh_user_stats`, `touch_streak`, `user_leaderboard` implementations; the generator `scripts/vectors-to-pgtap.ts`; CI wiring.
-- You need: vector files for each formula, with the format in §5.7; sample vs population stddev decision; score band boundaries; Bayesian `C`; streak timezone rule; user-rank formula inputs.
-- By when: `scoreFromPosition` + `bayesAverage` vectors by end of Phase 1 week 1 (Oct 30) so leaderboards are real before Phase 1 ends; stats/streak/rank vectors at the start of Phase 2.
+- You need: vector files for each formula, with the format in §5.7. The formulas themselves are already agreed (§5.2, §5.10): population stddev, equal-third bands, `C = 3`, `MIN_RATERS = 2`, rank points, profile-timezone streaks.
+- By when: score, stats and Bayesian vectors by Oct 23 (Matt's commitment; ahead of your Oct 30 need); streak and user-rank vectors at the start of Phase 2 (Nov 23); prediction vectors when the snapshot freezes (Nov 23).
 
 **Seam 5 — Recommendations.** `packages/ranking` exports pure `predictScore()` / `recommend()` taking an explicit input snapshot type (defined by Matt). Your Edge Function (or scheduled job) assembles that snapshot from the DB, calls Matt's functions, and serves/caches results through `BeviApi`.
 
 - You provide: `recommend` Edge Function, the job queue and cron, `user_bev_predictions` cache, `getRecommendations`/`getBev.predictedScore`, the bundling step (§5.8) and its constraints on `packages/ranking` (ESM, no Node/DOM APIs, no I/O, a `RANKING_VERSION` export).
-- You need: `RecommendationSnapshot` type, `predictScore(snapshot, bevId)`, `recommend(snapshot, { limit })` signatures and the `reason` payload shape; an exploration/randomness seed convention (pass a seed so results are reproducible in tests).
+- You need: the `PredictionSnapshot` type, the `predictScore(snapshot, bevId)` / `recommend(snapshot, { limit, seed })` signatures and the `reason` payload shape, and the `RANKING_VERSION` export. The exploration seed is passed in by you (derive it from `user_id` + date so a day's list is stable and tests are reproducible).
 - By when: snapshot type by the start of Phase 2 (Nov 23); function live with Layer 1 by end of Phase 2 week 2 (Dec 4).
 
 ### 9.3 Dependency / handoff table
 
 | Who waits | On what | From | Needed by | Until then |
 |---|---|---|---|---|
-| Matt | `shared/fixtures/bevs.sample.json` with real dev-bucket image URLs | Arjun | Oct 16 | Mock uses placeholder images |
+| Matt | `shared/fixtures/bevs.sample.json` (≥ 60 Bevs, every category, real dev-bucket image URLs) | Arjun | Oct 16 | Mock uses placeholder images |
 | Matt | `db.types.ts` + `BeviApi` method list in `contract/v0` | Arjun | Oct 16 | Mock typed against hand-written interface |
 | Matt | `packages/api` auth + profile + bevs + rankings methods | Arjun | Oct 30 | Mock API |
 | Matt | Search, lists, leaderboard, want-to-try methods | Arjun | Nov 6 | Mock API |
 | Matt | Feed, follows, featured | Arjun | Nov 20 | Mock API |
 | Matt | Recommendations/predicted score served from cache | Arjun | Dec 4 | Mock returns fixture predictions |
-| Matt | Catalog image contact sheet to review | Arjun | Oct 23 | — |
+| Matt | Catalog image contact sheet to review against `bevi-ui-inspiration/` | Arjun | Oct 23 | — |
 | Arjun | Per-screen data needs | Matt | Oct 13 | Draft schema from vision.md (this doc) |
-| Arjun | Bucket enum, `insertIndex` semantics, `comparisons` shape | Matt | Oct 16 | Assume §3.2 |
-| Arjun | `scoreFromPosition` + `bayesAverage` vectors | Matt | Oct 30 | Placeholder formulas, leaderboard uses plain average |
-| Arjun | Stats/streak/user-rank vectors | Matt | Nov 23 | Plain mean/stddev_samp, naive streak, rank by `rating_count` |
-| Arjun | `RecommendationSnapshot` + `predictScore`/`recommend` exports | Matt | Nov 23 | Function scaffolded, returns category-average placeholder |
+| Arjun | Per-screen additions to the `BeviApi` surface | Matt | Oct 16 | Build from §6.1 |
+| Arjun | `scoreFromPosition`, stats (`stddev_pop`, z-score) and `bayesAverage` vectors | Matt | Oct 23 | Agreed formulas implemented from §5.2/§5.10, unverified by CI |
+| Arjun | Streak and user-rank vectors | Matt | Nov 23 | Agreed formulas implemented, unverified by CI |
+| Arjun | `PredictionSnapshot` type + `predictScore`/`recommend`/`RANKING_VERSION` exports and prediction vectors | Matt | Nov 23 | Function scaffolded, returns category-average placeholder |
 | Arjun | Image style sign-off | Matt | Oct 28 | Keep pipeline parameters adjustable (padding, canvas) |
-| Arjun | Which auth buttons ship (Apple only vs Apple + Google + email) | Matt | Oct 16 | Configure Apple + email; add Google if asked |
+| Arjun | Google OAuth client IDs; Matt supplies bundle ids and Android SHA-1s | Matt | Oct 14 | Decided 2026-10-09: v1 sign-in is Google only (Apple before App Store / external TestFlight, task 3.0) |
 | Both | `CLAUDE.md`, `.claude/agents/integrator.md`, CI workflows | chore PRs | Oct 16 | — |
 
 ---
@@ -1181,7 +1210,7 @@ Tags: model/effort for the Claude Code sub-agent per vision §10. "DoD" = defini
 | 0.8 | `build-seed.ts`, `upload-images.ts`; seed local and dev | Local `db reset` shows 380 Bevs with images; dev bucket populated | Sonnet, medium |
 | 0.9 | CI `backend.yml` + integrator agent adapted from Bev Maps (chore PR with Matt) | PR checks run; integrator comments on a test PR | Sonnet, medium |
 | 0.10 | Nightly dump workflow + keep-alive ping workflow | Artifact appears; `ping()` 200 from both projects | Haiku, low |
-| 0.11 | Auth: Apple provider config (bundle ids), Resend SMTP, rate limits, `handle_new_user` trigger | Sign-in from Matt's dev build creates a profile | Sonnet, medium + you in the dashboards |
+| 0.11 | Auth: Google provider config (iOS/Android/Web client IDs, authorized client IDs), email + anonymous sign-in disabled, rate limits, `handle_new_user` trigger reading Google name + avatar | Google sign-in from Matt's dev build creates a profile with name and avatar | Sonnet, medium + you in the dashboards |
 
 ### Phase 1 — MVP backend (Oct 26 – Nov 20)
 
@@ -1189,15 +1218,14 @@ Tags: model/effort for the Claude Code sub-agent per vision §10. "DoD" = defini
 |---|---|---|---|
 | 1.1 | `packages/api` skeleton: client factory, `ApiError`, paging, mappers, vitest harness with seeded users | `npm test -w packages/api` green against local stack | Sonnet, medium |
 | 1.2 | Auth + profile methods; `set_handle`, `set_birth_date`, `delete_my_account` RPCs | pgTAP + vitest; deletion removes all rows and storage objects | Sonnet, medium |
-| 1.3 | `submit_ranking` / `rerank_bev` / `remove_ranking` with advisory lock, deferred unique, placeholder scoring | pgTAP: shift, re-space, errors, concurrency test (two sessions) | Opus, high for the function design review; Sonnet, medium to implement |
-| 1.4 | Vector generator + first vector files wired (`scoreFromPosition`, `bayesAverage`) | CI fails when vectors change and SQL doesn't | Haiku, low–medium |
+| 1.3 | `submit_ranking` / `rerank_bev` / `remove_ranking` with advisory lock, deferred unique, stale-bucket check, `tie` comparisons, agreed scoring formula | pgTAP: shift, re-space, `BEVI_STALE_BUCKET`, `BEVI_BAD_INDEX`, concurrency test (two sessions) | Opus, high for the function design review; Sonnet, medium to implement |
+| 1.4 | Vector generator + first vector files wired (`scoreFromPosition`, stats/z-score, `bayesAverage`; Matt delivers them Oct 23) | CI fails when vectors change and SQL doesn't | Haiku, low–medium |
 | 1.5 | `find_similar_bevs`, `search_bevs`, `lookup_bev_by_upc`, `create_bev` with rate limits | Typo tests ("diet cke", "lacroix pample") hit; dup creation returns `conflict` with id | Sonnet, medium |
 | 1.6 | `process-photo` Edge Function + `raw-uploads` policies + `photo_jobs` | Upload from the app → active Bev with cutout in < 30 s | Sonnet, medium–high |
 | 1.7 | Lists, want-to-try, `get_bev`, Bev leaderboard view + RPC, `global_stats` cron | vitest for each method; leaderboard excludes alcohol for minors | Sonnet, medium |
 | 1.8 | Starter candidates + `is_starter` seeds | `getStarterCandidates` returns ≥ 30 | Haiku, low |
 | 1.9 | Code review / bug hunt before Phase 1 ships | Review notes addressed | Sonnet, high |
 | 1.10 | Restore drill + ops README | Documented, done once | Haiku, low |
-| 1.11 | (1.5) `delete-account` Edge Function with Apple token revocation | Revocation call returns 200 in a test; wired before public TestFlight | Sonnet, medium |
 
 ### Phase 2 — Social + recommendations backend (Nov 23 – Dec 18)
 
@@ -1215,6 +1243,7 @@ Tags: model/effort for the Claude Code sub-agent per vision §10. "DoD" = defini
 
 | # | Task | DoD | Agent |
 |---|---|---|---|
+| 3.0 | **Pre-distribution gate: add Sign in with Apple before App Store submission / external TestFlight** (App Store 4.8, because v1 ships Google). Native flow: `expo-apple-authentication` → `signInWithApple(idToken, nonce)` in `packages/api` → `signInWithIdToken({ provider: 'apple' })`. Dashboard → Auth → Apple → Client IDs lists every bundle id (`com.bevi.app`, `com.bevi.app.dev`); native-only needs no Services ID and no 6-monthly secret rotation (add the web OAuth config only if Android ever needs Apple). Apple sends `fullName` only on the first sign-in, so the app calls `updateUser` with it then (Matt's side). Also ship the `delete-account` Edge Function: take the Apple `authorizationCode` from a fresh sign-in, exchange it at `appleid.apple.com/auth/token`, call `/auth/revoke`, then call `delete_my_account()`. Whether beta review enforces revocation I can't confirm; do it anyway. Additive `contract/*` PR for the new method. | Apple sign-in creates a profile; deletion revokes the Apple token (200 in a test); App Review checklist item ticked | Sonnet, medium + you in the Apple developer console |
 | 3.1 | Layer 2 inputs in the snapshot (similar-user matrix), blend/exploration seeds; batch sizing for growth | Vectors/goldens for `recommend` outputs on fixture data pass | Sonnet, medium (Opus review of the snapshot cost) |
 | 3.2 | Per-category leaderboards, `bev_leaderboard_30d` "hottest this month" | | Sonnet, medium |
 | 3.3 | Accept on-device cutouts (`createBev({cutoutPath})`), skip Replicate when present | | Sonnet, medium |
@@ -1234,7 +1263,7 @@ Tags: model/effort for the Claude Code sub-agent per vision §10. "DoD" = defini
 6. [ ] `supabase gen types` → `shared/src/db.types.ts`; write `BeviApi` interface, enums, `ApiError` codes, vector JSON format; open `contract/v0` (Wed), iterate with Matt, merge (Fri).
 7. [ ] Kick off Haiku catalog batches (0.5, 0.6) in parallel worktrees, one category each; `catalog:validate` must pass per batch.
 8. [ ] Replicate account + token; run `cutout.ts` on 20 images; generate the contact sheet; send to Matt.
-9. [ ] Apple provider config with Matt's bundle ids; Resend SMTP; profile trigger; confirm one real sign-in from Matt's dev build creates a `profiles` row.
+9. [ ] Google provider config (iOS/Android/Web client IDs from Matt's bundle ids and SHA-1s); disable email and anonymous sign-in; profile trigger; confirm one real Google sign-in from Matt's dev build creates a `profiles` row with name and avatar.
 10. [ ] `backend.yml` CI + nightly dump + keep-alive ping (chore PR with Matt's app CI).
 11. [ ] Adapt `.claude/agents/integrator.md` and a `supabase/CLAUDE.md` pointing agents at this doc's §3–§5 and the "RPC only" rule.
 
@@ -1251,6 +1280,7 @@ Divergences from the founding conversation, kept brief:
 - **No Beli-style scraping or "the open-source Beli algorithm".** Matt writes the placement math; your part is just storing positions and re-spacing.
 - **No Python worker, no matrix factorization, no realtime** in v1. The Edge Function and Postgres cover Layers 1–2 at this scale.
 - **No admin UI.** Moderation and featured Bevs are SQL views and admin RPCs run from Studio or scripts.
+- **No email sign-in, SMTP, Resend or Turnstile in v1.** Google-only sign-in (decided 2026-10-09); Apple is added as a pre-distribution gate (task 3.0).
 - **No image transformations on the fly** (Pro-only); sizes are pre-rendered.
 - **No generated images for real products**; only for featured hero art.
 
@@ -1264,27 +1294,23 @@ Proposed vision changes (needs both of you; nothing here is applied yet):
 2. **§8 `users`** → `profiles` (Supabase owns `auth.users`).
 3. **§2 Bev model**: add `upc` (barcode) and a **barcode scan** as the primary "snap your drink" lookup for packaged drinks. Photo recognition of a can is unreliable and expensive; barcode scan is instant, works offline for the lookup step, and Open Food Facts gives us UPCs for most seeds. Camera UI is Matt's; `lookupByUpc` is mine.
 4. **§2 Categories**: split "Alcoholic" into `beer`, `wine`, `spirits_cocktails` (all 21+). Mixed-alcohol leaderboards are meaningless.
-5. **§4 Store both position and score**: note explicitly that inserting into a bucket re-spaces every score in that bucket, so global `avg_score` for many Bevs changes on each ranking. That's by design, but it means aggregates are recomputed per bucket on every submit (cheap now; nightly full refresh as a safety net). Matt should decide whether `score_stddev` is sample or population.
-6. **§6 Feed**: allow an optional user photo on a ranking (the conversation's "Jack took a photo of his boba") alongside the canonical Bev icon. Schema has `rankings.photo_path` for it; the UI may ignore it in v1.
+5. **§4 Store both position and score**: note explicitly that inserting into a bucket re-spaces every score in that bucket, so global `avg_score` for many Bevs changes on each ranking. That's by design, but it means aggregates are recomputed per bucket on every submit (cheap now; nightly full refresh as a safety net). Also record the agreed definitions: `score_stddev` is the population stddev (`stddev_pop`, so one rating gives 0), and `SIGMA_FLOOR = 1.0` applies only inside z-score computation.
+6. **§6 Feed**: allow an optional user photo on a ranking (the conversation's example of Jack's photo of a boba drink) alongside the canonical Bev icon. Schema has `rankings.photo_path` for it; the UI may ignore it in v1.
 7. **§11 Alcohol in v1**: shipping beer/wine/cocktails means a declared-DOB gate and most likely an 18+ App Store rating. Options: (a) ship with gate + 18+ rating (friends-only, fine), (b) hide alcoholic categories behind a feature flag until Phase 3 and rate 13+. Schema supports both; I lean (a) because "arguing about the best Bev" includes beer for this group.
 8. **§9 Phase 0** should name the two hosted projects and the nightly dump explicitly, given the free plan has no backups and pauses weekly.
 
 Open questions for Matt (answers go into contract v0 or the first vector PR):
 
-- `insertIndex` semantics: 0 = best in bucket, `n` = append at the bottom? Does the app send every comparison or just the binary-search path? (I store all.)
-- Score band boundaries and the n = 1 case (midpoint?) — vector file.
-- Bayesian prior weight `C` and whether `m` is global or per-category.
-- Streak day boundary: user timezone (stored on profile) vs device-local vs UTC. I assume profile timezone.
-- "Rank on Bevi" formula inputs: `rating_count`, `current_days`, `follower_count`? Hourly refresh is fine for all of them.
+- Settled with Matt (recorded in §5.2/§5.10): `insertIndex` 0 = best; all comparisons sent, with `tie`; equal-third bands and `hi − (hi − lo)(i + 1)/(n + 1)`; `C = 3`, `MIN_RATERS = 2`, category prior at ≥ 30 rankings; profile-timezone streaks that count re-ranks; rank points `bevsRanked + 3·streak + 2·adoptedCreated` with shared ties.
+- `reason` payload shape for predictions and the exact `PredictionSnapshot` fields (Nov 23).
 - Does the mock need realtime-ish behaviour (e.g. feed updating after your own ranking)? If so `getFeed` after `submitRanking` already includes your own event.
-- Which sign-in buttons ship (Apple only is simplest and passes 4.8).
 - Should friends' want-to-try lists be visible? Currently private (count public).
+- Streak period: daily (vision) or weekly (Beli shows "9 weeks"). Matt's `computeStreak` supports both and picks before the streak vectors land (start of Phase 2); `touch_streak` / `reset_lapsed_streaks` must follow whichever period the vectors pin.
 
 Open questions for you to resolve during Phase 0 (facts I could not verify):
 
 - Whether pg_cron activity alone prevents the free-plan pause (assume no; keep the ping).
 - `storage.objects` owner column name on the project's storage version (`owner` vs `owner_id`).
 - Whether `@imagemagick/magick-wasm` encoding of a 1024 px WebP fits in the 2 s CPU budget; measure on the first run and fall back to Replicate-side resizing.
-- Whether `supabase config push` covers the auth settings we set (Apple client ids, SMTP, rate limits); otherwise document the dashboard clicks in `supabase/README.md`.
-- Resend free-tier monthly cap at sign-up time.
-- Whether App Review checks Apple token revocation on deletion for a TestFlight/friends build; ship the revocation function before public TestFlight regardless.
+- Whether `supabase config push` covers the auth settings we set (Google client ids, email disabled, rate limits); otherwise document the dashboard clicks in `supabase/README.md`.
+- Whether external TestFlight beta review enforces 4.8 (Apple sign-in) and token revocation on deletion; task 3.0 is scheduled before external TestFlight regardless.

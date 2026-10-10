@@ -87,6 +87,7 @@ Vision §9 Phase 0 asks for "open-source mobile UI design skills/guidelines to u
 | `shopify/flash-list` (MIT) | Virtualised list, v2 is JS-only and needs the New Architecture | Feed, Bev'd, leaderboard | Adopt |
 | `gorhom/react-native-bottom-sheet` (MIT) | Bottom sheets | Re-rank sheet, category picker, "Did you mean…" | Adopt |
 | `expo-image` (part of Expo) | Disk+memory cache, `recyclingKey`, placeholders | Every Bev photo | Adopt |
+| `lucide-react-native` (ISC) | Outline line icons; the Beli spec (`bevi-ui-inspiration/beli-screens-spec.md` Part 2) names the same icon set | Every icon: heart, bookmark, plus-circle, check-circle, trophy, flame, clock, lock, share | Adopt |
 
 Not found: a dedicated, well-maintained open-source "mobile UI design guideline skill" beyond the above. Registry sites list community `mobile-app-ui-implementation` / `frontend-app-design` SKILL.md files, but I could not verify their source repos or licences; treat them as unverified and don't install blind.
 
@@ -110,7 +111,7 @@ Not found: a dedicated, well-maintained open-source "mobile UI design guideline 
 | Images | `expo-image` (`cachePolicy="memory-disk"`, `recyclingKey={bev.id}`, `contentFit="contain"`) | |
 | Camera/picker | `expo-camera` + `expo-image-picker` + `expo-image-manipulator` (resize to max 1600px, JPEG q0.85 before upload) | |
 | Animation | `react-native-reanimated` + `react-native-gesture-handler` | |
-| Storage | `expo-secure-store` for the session (handled inside `packages/api`), `@react-native-async-storage/async-storage` for the mock's persistence and per-device prefs | |
+| Storage | `expo-secure-store` behind a small `authStorage` adapter (`getItem/setItem/removeItem`) that the app passes to `createBeviApi({ url, publishableKey, authStorage })`; `@react-native-async-storage/async-storage` for the mock's persistence and per-device prefs | `packages/api` builds the Supabase client itself; the app never imports supabase-js |
 | Tests | `jest-expo` + `@testing-library/react-native`; Maestro for e2e in Phase 3 | |
 | Builds | EAS Build + EAS Submit; `expo-dev-client` from day one | §7 |
 
@@ -128,8 +129,9 @@ app/
       keys.ts                     TanStack query keys
       hooks/                      useFeed(), useBev(id), useMyRankings(), useSubmitRanking() ...
     theme/                        tokens.ts  typography.ts  colors.ts  spacing.ts  index.ts
-    components/                   BevImage  PriceTier  ScoreBadge  BucketPill  Avatar  BevRow  FeedCard  StatTile
-                                  SegmentedTabs  CategoryChips  EmptyState  ErrorState  Skeleton  Sheet  Wordmark
+    components/                   Wordmark  ScoreBubble  BevImage  PriceTier  Avatar  Pill  FilterPill  SortToggle  BevRow
+                                  FeedPost  StatCard  ProfileListRow  SegmentedTabs  ListScopeDropdown  FeaturedCard
+                                  SearchBar  TabBar  EmptyState  ErrorState  Skeleton  Sheet
     features/
       ranking/                    GutCheck  CompareCard  PlacementProgress  RankResult  useRankingFlow (wraps @bevi/ranking)
       add-bev/                    SearchBevs  DidYouMean  CreateBevWizard  CameraCapture  LabelCapture  PriceTierPicker
@@ -150,16 +152,15 @@ src/app/
     profile.tsx                    name, handle, birthdate (age gate), timezone captured silently
     starter.tsx                    starter-set ranking
   (tabs)/
-    _layout.tsx                    5 tabs: feed | lists | add (center, raised) | leaderboard | profile
+    _layout.tsx                    5 tabs: feed | lists | add (center: filled circle with +, inline, not raised) | leaderboard | profile
     feed/index.tsx
-    lists/index.tsx                ?tab=bevd|want|recommended  (deep-linkable from Profile tiles)
-    add/index.tsx                  search Bevs
+    lists/index.tsx                ?tab=bevd|want|recommended  (deep-linkable from Profile rows)
+    add/index.tsx                  search: Bevs | People tabs (Beli's Restaurants | Members)
     leaderboard/index.tsx          ?scope=bevs|users&category=<id>
-    profile/index.tsx              own profile
+    profile/index.tsx              own profile, ?tab=activity|taste
   bev/[id].tsx                     Bev detail
   user/[id]/index.tsx              other user's profile
   user/[id]/followers.tsx  user/[id]/following.tsx
-  users/search.tsx                 find people (handle search)
   rank/[bevId].tsx                 full-screen modal: gut check → comparisons → note → result
   add/new.tsx                      create-new-Bev wizard (modal stack)
   settings/index.tsx  settings/account.tsx  settings/privacy.tsx  settings/delete-account.tsx
@@ -170,22 +171,25 @@ Tab order and the centre "Add Bev" slot follow vision §6 ("replaces Beli's sear
 
 ### Auth and onboarding (screens yours, Supabase Auth config Arjun's)
 
-- The app never imports `@supabase/supabase-js`. `BeviApi` exposes an `auth` namespace (`signUp`, `signIn`, `signOut`, `getSession`, `onAuthStateChange`, `deleteAccount`) implemented by Arjun on Supabase and by you in the mock.
-- v1 method: email + password. Sign in with Apple is **not** required by Apple unless you also offer another third-party login, so skip it in v1 (open question §18 if Arjun wants magic links instead).
+- The app never imports `@supabase/supabase-js`. `packages/api` exports `createBeviApi({ url, publishableKey, authStorage })`, builds the Supabase client itself, and exposes the auth surface `getSession`, `onAuthChange`, `signInWithGoogle(idToken)`, `signOut`, `deleteAccount`, implemented by Arjun on Supabase and by you in the mock.
+- **v1 sign-in is Google only (decided 2026-10-09).** No email/password, no magic link, so no emailed flows and no custom SMTP in v1.
+  - Flow: the native `@react-native-google-signin/google-signin` SDK returns an `idToken` → `api.signInWithGoogle(idToken)` → session. The app holds no Google secrets; the web client id is public config (`EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`), the iOS client id lives in the native config.
+  - Expo Go: native Google sign-in does not run in Expo Go. You need an EAS development build (`eas build --profile development`) from day one of auth work; the mock's `signInWithGoogle` lets every other screen keep working in Expo Go meanwhile.
+  - App Store Review 4.8: an app offering Google login must also offer Sign in with Apple. Google-only is fine for Android and internal TestFlight testers; **Sign in with Apple must be added before App Store submission, and possibly before external TestFlight beta review** (`expo-apple-authentication` → an `api.signInWithApple(idToken, nonce)` method added in a `contract/*` PR). Tracked as a pre-distribution gate in §15 and a risk in §18.
 - Session gate in the root layout: `signedOut → (auth)`; `signedIn && !profile.onboarded → onboarding`; else tabs. The gate reads one query, `api.profile.getMe()`.
-- Onboarding step 1 collects: display name, handle (live availability check via `api.profile.checkHandle`), birthdate (age gate, §6.17), and silently `Intl.DateTimeFormat().resolvedOptions().timeZone`.
+- Onboarding step 1 collects: display name, handle (live availability check via `api.profile.checkHandle`), birthdate (set once via `api.profile.setBirthDate`, §6.17), and silently `Intl.DateTimeFormat().resolvedOptions().timeZone`.
 - Onboarding step 2 is the starter ranking (§6.3). Minimum 3 ranked to continue; "I haven't had this" skips an item.
 
 ### The mock API and when to swap
 
-- `app/src/api/mock.ts` implements every `BeviApi` method against an in-memory copy of `shared/fixtures/` (bevs, categories, users, rankings, follows, featured). It runs `@bevi/ranking` for real: `submitRanking` inserts at `insertIndex`, re-spaces the bucket with `respaceBucket()`, recomputes per-Bev stats, and `getRecommendations` calls `recommend()` on a snapshot built from the mock state. So the UI against the mock behaves like production.
+- `app/src/api/mock.ts` implements every `BeviApi` method against an in-memory copy of `shared/fixtures/` (Arjun's `bevs.sample.json` plus the users, rankings, follows and featured fixtures you generate with `@bevi/ranking`, §13). It runs `@bevi/ranking` for real: `submitRanking` checks `expectedBucketSize`, inserts at `insertIndex`, re-spaces the bucket with `respaceBucket()`, recomputes per-Bev stats, and `getRecommendations` calls `recommend()` on a snapshot built from the mock state. So the UI against the mock behaves like production, including `conflict` errors.
 - Latency 200–600 ms (uniform) so loading states are real; dev panel toggles: `failNext(method)`, `latency`, `resetToFixtures()`, `emptyUser()` (first-run states).
 - Swap: `EXPO_PUBLIC_BEVI_API=mock|supabase` read in `client.ts`. Default `mock` until Arjun's `packages/api` passes its own contract tests, then default `supabase` with `mock` kept for Storybook-style work and offline demos.
 - Rule copied from Bev Maps: TypeScript keeps both honest. If a screen needs something the interface lacks, propose a `contract/*` change, never a workaround.
 
 ### Data-fetching rules
 
-- All reads through TanStack Query hooks in `app/src/api/hooks/`. Mutations: `submitRanking`, `removeRanking`, `follow/unfollow`, `addWantToTry/removeWantToTry`, `createBev`, `uploadImage`, `updateMe`. Optimistic updates only for follow and want-to-try (cheap to roll back). After `submitRanking` invalidate: my rankings, the Bev, my stats, feed, leaderboard, recommendations.
+- All reads through TanStack Query hooks in `app/src/api/hooks/`. Mutations: `submitRanking`, `rerankBev`, `removeRanking`, `follow/unfollow`, `addWantToTry/removeWantToTry`, `createBev`, `uploadImage`, `updateMe`, `setBirthDate`. Optimistic updates only for follow and want-to-try (cheap to roll back). After `submitRanking` invalidate: my rankings, the Bev, my stats, feed, leaderboard, recommendations.
 - Cursor pagination everywhere a list can exceed 50 rows (feed, Bev'd, leaderboard, followers, user rankings): `{ cursor?: string; limit: number } → { items, nextCursor }`.
 
 ---
@@ -196,32 +200,40 @@ Build this in week 1, before any screen, so Sonnet agents produce consistent scr
 
 ### Tokens (`app/src/theme/tokens.ts`, mirrored in `design/brand/tokens.md`)
 
-| Group | Values (proposed) |
+Values below come from the Beli spec's Part 2 table and from measuring the screenshots (1179×2556 px = 393×852 pt, scale 3; px ÷ 3 = pt). Beli's own brand colour (`#154F5C` teal) is the one thing not to copy; everything structural is fair game.
+
+| Group | Values |
 |---|---|
-| Spacing | 4pt grid: `xs 4, sm 8, md 12, lg 16, xl 24, xxl 32`; screen gutter 16 |
-| Radius | `sm 8, md 12, lg 16, pill 999` |
-| Type | System font (SF Pro on iOS / Roboto on Android). Scale: `display 28/34 bold`, `title 22/28 semibold`, `heading 17/22 semibold`, `body 15/20`, `caption 13/18`, `micro 11/14`. `maxFontSizeMultiplier` 1.3 on dense rows, unlimited on body text |
-| Colour, neutral | `bg`, `surface`, `surfaceRaised`, `border`, `textPrimary`, `textSecondary`, `textTertiary`; light and dark sets |
-| Colour, brand | `primary` (wordmark, Recommended tile, primary buttons), `primaryPressed`, `onPrimary`. Vision §11 leaves brand colour open; pick in week 1 from two candidate directions (see wordmark) and record the hex in `design/brand/colors.md` |
-| Colour, score | `scoreLoved` (green family), `scoreFine` (amber), `scoreDisliked` (red); must pass 4.5:1 as text on `surface` and 3:1 as a fill with white text |
-| Elevation | `card` (y2 blur8 8%), `raisedTab` (centre Add button, y4 blur12 16%) |
+| Spacing | 4pt grid: `xs 4, sm 8, md 12, lg 16, xl 20, xxl 24`; screen gutter 16 (Beli uses 16–20; lists use 16) |
+| Radius | `input 12` (search bar), `card 16`, `photo 14`, `pill 999`, `button 8` (outlined profile buttons), `stat 20` (profile stat cards) |
+| Type | System font (SF Pro / Roboto); serif only in Beli's wordmark, ours is decided separately. Scale measured from the screenshots: `displayDrop 28 bold` ("All ⌄" list selector), `screenTitle 20 bold` (profile name, "You ranked X", row names), `tabLabel 20 semibold` (Been/Want to Try/Recs), `heading 17 semibold` (stat numbers, sort toggle, score text), `body 15` (meta lines, "Member since", pill labels), `sectionCaps 15 bold tracking 0.5` ("FEATURED LISTS", "MY LISTS"), `caption 13` ("2 likes"), `tabBar 10` (tab labels, active bold). `maxFontSizeMultiplier` 1.3 on dense rows |
+| Colour, neutral | `text #111111`, `textSecondary #8A8A8E`, `border #E3E3E6`, `surface #FFFFFF`, `input #EDEDED` (grey search/composer pills), `avatarFill #EEF0F3`; dark set derived in week 1 |
+| Colour, brand | `primary` = **not** `#154F5C`. Used exactly where Beli uses its teal: filled pills, primary buttons, active tab underline, saved-bookmark fill, count badges, "Rank"/"Streak" values. Pick in week 1 from two candidates, record in `design/brand/colors.md`. `primaryTint` (active filter pill background, Beli `#E8EEF2`-style) derived from it |
+| Colour, score | `scoreHigh #2E9E5B`, `scoreMid #E8B423`, `scoreLow #D9534F`. The spec's thresholds are ≥ 7.0 / 4.0–6.9 / < 4.0; our scores are bucket-derived so colour = bucket, and band boundaries are the thresholds (§8.1, and see §18 on 7.0/4.0 vs thirds) |
+| Colour, misc | `badgeRed #E05A55` (notification count, not v1), `tasteCard #332E80` (Taste Profile share card, Phase 3) |
+| Elevation | None on cards; Beli uses 1pt `border` outlines, not shadows. Only the floating pill button ("View Map" in Beli) has a shadow; we have no floating button in v1 |
 | Motion | `fast 150ms`, `base 250ms`, `springy` (Reanimated spring damping 18 stiffness 180); honoured `reduceMotion` |
 
 ### Core components (built with a `ComponentGallery` dev screen showing every state)
 
-| Component | Spec |
+| Component | Spec (measurements from the screenshots) |
 |---|---|
-| `Wordmark` | SVG, "Bevi" in a clean playful geometric face with a custom lowercase "v" cue (the conversation said "make it look like Beli with a v"; we **diverge**: original letterforms, same spirit, no copied glyphs). Assets: `design/brand/wordmark.svg`, `wordmark-dark.svg`, `app-icon-1024.png`, `splash.png`. Two candidate directions produced by a Sonnet (Medium–High) agent as SVG, you pick one |
-| `BevImage` | Square tile, sizes 40/56/72/96/160, transparent-PNG cutout centred with 8% padding on a soft radial tint derived from `surfaceRaised`; `contentFit="contain"`; blurhash/skeleton placeholder; `status="processing"` shows a shimmer over the raw photo while background removal runs |
-| `PriceTier` | Renders four `$` glyphs, tier N filled (`textPrimary`), rest `textTertiary`; `estimated` adds a `~` prefix and `accessibilityLabel="about $$, estimated"` |
-| `ScoreBadge` | Rounded pill, 1-decimal score, fill = bucket colour, white text, sizes 28/36; `variant="predicted"` is outlined with a dotted border and prefix "~" |
-| `BucketPill` | Loved / Fine / Didn't like, tinted |
-| `Avatar` | Circle, initials (first letters of up to two words of display name), sizes 32/40/88, deterministic background from a 8-colour palette hashed on userId |
-| `BevRow` | 72pt row: `BevImage 56`, name + brand/flavor line, right-aligned `ScoreBadge` or `PriceTier`, optional position "#4" |
-| `FeedCard` | Avatar + "Matt Bev'd **Diet Coke**" + time, `BevImage 96` left, score badge, note (2 lines, "more"), actions: Want to Try (bookmark), Rank it |
-| `StatTile` | 84pt tall tile: count 22 bold + label 13; `highlight` variant uses `primary` fill |
-| `SegmentedTabs` | For Lists and Leaderboard sub-tabs; animated underline |
-| `CategoryChips` | Horizontal scroll, single-select, "All" first |
+| `Wordmark` | SVG, lowercase "bevi" is fine, but **not** a serif in teal (that is Beli's mark). The conversation said "make it look like Beli with a v"; we **diverge**: original letterforms in a different family (rounded sans or slab), same clean playful spirit, no copied glyphs. Rendered 28pt tall at the header's left, 16pt gutter. Assets: `design/brand/wordmark.svg`, `wordmark-dark.svg`, `app-icon-1024.png`, `splash.png`. Two candidate directions from a Sonnet (Medium–High) agent, you pick one |
+| `ScoreBubble` | Beli's score mark, used everywhere: white circle, 2pt `border` ring, score in bold coloured 17pt text (colour by bucket). Sizes 40 (rows, feed) and 56 (Bev detail). Optional `count` renders a 24pt `primary` badge with white 11pt text at bottom-right ("362", "5k"). Variants: `predicted` = dotted ring + "~" prefix; `locked` = grey lock icon, no number (Beli shows a lock where a score is hidden; we use it when prediction confidence < 0.25) |
+| `BevImage` | Square tile, sizes 40/56/96/155, transparent-PNG cutout centred with 8% padding on a soft tint of `input`, radius `photo 14`; `contentFit="contain"`; blurhash/skeleton placeholder; `status="processing"` shows a shimmer over the raw photo while background removal runs. 155 is the Beli photo-strip tile size |
+| `PriceTier` | Inline text "$$" in 15pt `text`, as Beli prints it in the row meta line (`$$ • Bar`); `estimated` adds "~" and `accessibilityLabel="about $$, estimated"`. No glyph greying: Beli prints only the active count |
+| `Avatar` | Circle, `avatarFill` with 1pt `border`, initials in `textSecondary` (two letters). Sizes 32 (tab bar), 44 (composer), 60 (feed/activity posts), 100 (profile hero, initials 40pt light) |
+| `Pill` | Filled (`primary`, white 15pt text, leading icon, 30pt tall) and outlined (`border`, 30pt tall) variants, radius 999, horizontal padding 16 |
+| `FilterPill` / `SortToggle` | Outlined pill with optional count badge (filter icon + "3" tinted `primaryTint` when active); sort toggle is a text button "↓↑ Score" in `primary` 17pt with a search icon right-aligned |
+| `BevRow` | Beli list row, ~126pt tall: line 1 name 20pt bold (optionally "1. " numbered), line 2 `$$ • Category` 15pt, line 3 category icon • brand/shop 15pt, bottom-left meta 15pt `textSecondary` (we show "Ranked Oct 3", not distance/hours), bottom-right action icons 28pt (plus-circle = Rank it, bookmark = Want to Try, filled `primary` when saved), `ScoreBubble 40` top-right. 1pt divider |
+| `FeedPost` | Avatar 60 left; "**Arjun** Bev'd **Diet Coke**" 20pt (names bold, verb regular), meta line category icon • brand • `$` 15pt `textSecondary`; `ScoreBubble 40` top-right; photo strip of 155pt square `BevImage`s (one tile for a Bev, more only if a ranking has user photos later), 8pt gaps, horizontal scroll; "**Notes:** …" 17pt with "…See more" at 4 lines; action row 28pt icons (bookmark + plus-circle on the right; heart/comment/send are Beli's and not in v1); timestamp 15pt `textSecondary` ("5 hours ago", "Wednesday"); 1pt divider. Variant `bookmarked`: "Arjun saved **Diet Coke**", no photo, no score |
+| `StatCard` | Beli profile stat card: 181×84pt, radius 20, 1pt `border`, 24pt `primary` icon left, label 17pt `textSecondary` semibold over value 20pt bold `primary`. Two per row with 10pt gutter/gap |
+| `ProfileListRow` | 44pt row: 24pt icon at 20pt from the left, label 20pt semibold at 67pt, right-aligned count 20pt, chevron 20pt; 1pt divider. Rows: Bev'd / Want to Try / Recommended for you |
+| `SegmentedTabs` | Two styles: `underline-text` (Lists: 20pt semibold text tabs, 3pt black underline under the active one, horizontally scrollable) and `underline-icon` (Profile Activity/Taste Profile and Search Bevs/People: icon + 17pt label, equal widths, 3pt underline in `primary` on Search, black on Profile) |
+| `ListScopeDropdown` | Beli's "All ⌄": 28pt bold text + chevron, opens a sheet to scope the list (All Bevs / one category) |
+| `FeaturedCard` | 164×164pt photo card, radius 14, bottom dark gradient, title 20pt bold white, subtitle 15pt white ("You've had 1 of 10"); horizontal carousel, 16pt gap, under a `sectionCaps` header with "See all" in `primary` |
+| `SearchBar` | Grey `input` field, 36pt tall, radius 12, leading search icon, placeholder 17pt `textSecondary` |
+| `TabBar` | Icons 28pt outline, labels 10pt (active bold, black); centre tab is a 32pt `primary` filled circle with a white "+" sitting inline (not raised) with label "Add Bev"; Profile tab icon is `Avatar 32` with initials |
 | `EmptyState`, `ErrorState` (with Retry), `Skeleton` | Every list screen uses these; no bare spinners except inside buttons |
 | `Sheet` | bottom-sheet wrapper with handle, snap points 40/90% |
 
@@ -233,172 +245,212 @@ Acceptance for a catalog image: PNG with alpha, product fills 70–90% of the lo
 
 ## 5. From Beli screenshots to per-screen specs
 
-1. Drop screenshots into `design/reference/` named `<screen>-<variant>-<n>.png` (e.g. `profile-own-1.png`, `lists-bevd-1.png`, `rank-compare-2.png`). Record device and scale in `design/reference/README.md` (an iPhone 15/16 Pro screenshot is 1179px wide = 393pt, scale 3; divide px by 3 for pt).
-2. For each screen run a Sonnet (Medium) agent with the screenshot(s) and the matching §6 entry; output `design/specs/<screen>.md` with: regions diagram (ASCII boxes with pt sizes), component list (from §4), measured values (heights, paddings, type sizes), interaction notes, and a "Bevi differences" list (what changes because it's drinks, Add Bev instead of Search, leaderboard added).
-3. You review each spec against the screenshot; the spec, not the screenshot, is what the `ui-screen` agent builds from.
-4. Rule: measurements from screenshots are inputs, tokens are outputs. If a screenshot implies 14pt and the scale has 13/15, pick the nearest token and note it.
+The reference material is in the repo now and stays where it is: `bevi-ui-inspiration/beli-screens-spec.md` (the written spec: 12 screen descriptions, Part 2 tokens, Part 3 data model) and `bevi-ui-inspiration/beli-ui-images/IMG_1107.PNG … IMG_1118.PNG` (iPhone, 1179×2556 px, scale 3). Don't move or rename them. `design/` holds what you produce from them: `design/specs/<screen>.md`, `design/brand/`, `design/photo-style.md`.
 
-Screenshots are not in the repo yet, so nothing in §6 asserts Beli-specific pixel values; the numbers there are the baseline to adjust once specs exist.
+File-to-spec mapping (the spec numbers screens 01–12; the files are in a different order):
+
+| Spec screen | File | Bevi screen |
+|---|---|---|
+| 01 Home (new-user) | `IMG_1107` | 6.4 Feed (empty state + Featured) |
+| 02 Profile top | `IMG_1108` | 6.13 Profile |
+| 03 Profile › Activity (Angel) | `IMG_1109` | 6.13 Activity tab, `FeedPost` with photo strip + notes |
+| 04 Activity (ZiZi + bookmark) | `IMG_1110` | `FeedPost` ranked + bookmarked variants |
+| 05 / 11 Lists › Recs | `IMG_1113`, `IMG_1117` (duplicate) | 6.7 Recommended |
+| 06 Lists › Been | `IMG_1114` | 6.5 Bev'd |
+| 07 Lists › Want to Try | `IMG_1115` | 6.6 Want to Try |
+| 08 Search | `IMG_1116` | 6.8 Add Bev (Bevs | People tabs) |
+| 09 Activity (bookmarks + Wan Waan) | `IMG_1111` | `FeedPost` variants, Activity tab |
+| 10 Profile › Taste Profile | `IMG_1112` | 6.20 Taste Profile (Phase 3) |
+| 12 Feed (with friends) | `IMG_1118` | 6.4 Feed |
+
+No screenshot exists for: the ranking flow (gut check, comparisons), Bev detail, Leaderboard, Followers/Following, Settings, Sign-in, Onboarding. Those screens are specified from the vision and this doc only; their look is derived from the components in §4.
+
+Process:
+
+1. For each screen, a Sonnet (Medium) agent reads the matching image(s), the spec entry and the §6 entry, and writes `design/specs/<screen>.md`: ASCII region diagram with pt values (px ÷ 3), components from §4, measured type sizes and paddings, interactions, and a "Bevi differences" list (what is dropped, renamed or added because this is drinks with no location).
+2. You review the spec against the image; the spec, not the image, is what the `ui-screen` agent builds from.
+3. Measurements are inputs, tokens are outputs: snap every measured value to the nearest token and note the snap.
+4. After each screen is built, screenshot it in the simulator next to the reference and fix spacing/colour before moving on (the spec's Part 4 instruction; keep it).
+
+What in the reference is a bad fit for Bevi and is dropped: everything location/venue driven (Reserve now, Order, Open now, distance, hours, "View Map", the party/date/time bar, "Recs Nearby", City filter, "Current Location"); the invite-unlock card (0/5 friends unlock features); Guides tab and guides lists; "Add School"; the "Import a list" card; notifications bell + calendar icons (no notifications in v1); likes/comments/share on posts (not in vision; see §18); "with Rhea" co-visit tagging and "2 visits" repeat counts (a Bev is ranked once; re-rank replaces).
+
+What the reference adds that the vision lacks and we adopt: the Profile is rows + stat cards, not tiles (§6.13); Bev'd is one numbered list sorted by score, not bucket sections (§6.5); search has a People tab (§6.8); the "locked" score state (§4 `ScoreBubble locked`); the Activity feed on the Profile is the same `FeedPost` as the Feed tab; the Taste Profile tab and calendar grid are a natural fit for our per-category stats and streaks (§6.20, Phase 3); a yearly goal card ("You've tried 60 spots in 2026") is cheap gamification for Phase 3.
 
 ---
 
 ## 6. Screen inventory
 
-Common to every screen unless noted: loading = skeleton of the final layout; error = `ErrorState` with Retry and the message from `BeviApi` errors (`{ code, message }`); offline = top banner; pull-to-refresh on lists. Data is expressed in `BeviApi` terms (§13 has the method list).
+Common to every screen unless noted: loading = skeleton of the final layout; error = `ErrorState` with Retry and the message from `BeviApi` errors (`{ code, message, detail? }`, codes in §13); offline = top banner; pull-to-refresh on lists. Data is expressed in `BeviApi` terms (§13 has the method list). Header pattern (from the screenshots): 44pt row under the status bar, title left in 20pt bold (or the wordmark), 28pt icons right-aligned with 20pt spacing; list screens use a centred `sectionCaps` title ("MY LISTS" → "YOUR LISTS").
 
-### 6.1 Sign in / Sign up (`(auth)/`)
+### 6.1 Sign in (`(auth)/sign-in.tsx`) — Google only (decided 2026-10-09)
 
-- Purpose: get a session. Contents: wordmark, email, password, primary button, switch link; sign-up adds "confirm password".
-- Data: `auth.signIn`, `auth.signUp`.
-- States: validating, submitting (button spinner), error inline (wrong password, email in use), "check your email" if Arjun enables confirmation.
-- Interactions: keyboard-avoiding, return-key chaining, password visibility toggle.
+- Purpose: get a session. Contents: wordmark centred in the top third, one-line tagline ("Rank every drink you've ever had"), a single "Continue with Google" button (Google's branded button via the SDK's `GoogleSigninButton` or a custom button that follows Google's branding rules), 13pt legal line linking to the privacy policy.
+- Data: `api.signInWithGoogle(idToken)` after `GoogleSignin.signIn()`; `api.onAuthChange` drives the root gate.
+- States: idle; signing in (button spinner, disabled); cancelled (user dismissed the Google sheet: return to idle silently); error (`network`, `unauthorized`, SDK errors such as Play Services missing on Android) → inline message + retry; already signed in → gate skips this screen.
+- Not in v1: email/password, magic links, sign-up form, password reset. Sign in with Apple is added as a second button before App Store / external TestFlight (§15 gate G1).
+- Runs only in an EAS development build (not Expo Go); the mock's `signInWithGoogle` accepts any token so Expo Go sessions still work for every other screen.
 
 ### 6.2 Onboarding: profile + age gate (`onboarding/profile.tsx`)
 
-- Contents: display name, handle (`@`, lowercase, 3–20 chars, availability check debounced 400ms), birthdate (native date picker), explanation line "Birthdate is used only to show 21+ categories".
-- Data: `profile.checkHandle(handle)`, `profile.updateMe({ displayName, handle, birthdate, timezone })`.
-- States: handle taken / invalid; under-21 is allowed, it just sets `profile.canSeeAlcohol = false`.
+- Contents: display name (prefilled from the Google profile), handle (`@`, lowercase, 3–20 chars, availability check debounced 400ms), birthdate (native date picker) with the line "Set once. Used only to show 21+ categories. Can't be changed later without contacting us."; `Avatar 100` preview with initials.
+- Data: `profile.checkHandle(handle)`, `profile.updateMe({ displayName, handle, timezone })`, `profile.setBirthDate(date)` (one call, one time; the server rejects a second call, only an admin can change it, Arjun's rule).
+- States: handle taken / invalid; birthdate missing blocks Continue; under-21 is allowed and just sets `profile.canSeeAlcohol = false`.
 
 ### 6.3 Onboarding: starter ranking (`onboarding/starter.tsx`)
 
-- Purpose: cold-start baseline (vision §5). Contents: progress "3 of 10", `BevImage 160`, name, "Have you had this?" → Yes/No; Yes opens the ranking flow (§6.9) inline; No skips.
-- Data: `onboarding.getStarterSet()` (Arjun calls `selectStarterSet()` from `@bevi/ranking`, or the app does it from `bevs.listStarterCandidates()`; see §12 seam 5 note), `rankings.submitRanking` per item, `profile.updateMe({ onboarded: true })`.
-- States: first Bev (empty bucket, no comparisons: "Placed. Keep going."), finished summary ("You ranked 6 Bevs. Your top: Coke 8.3"), fewer than 3 ranked → "Rank at least 3 so we can learn your taste".
-- Interactions: skip-all link after ≥3 ranked.
+- Purpose: cold-start baseline (vision §5). Contents: progress "3 of 10", `BevImage 155`, name, "Have you had this?" → Yes / No; Yes opens the ranking flow (§6.9) inline; No skips.
+- Data: `bevs.getStarterCandidates()` returns at least 30 age-filtered `isStarter` Bevs, each with `ratingCount`; the app runs `selectStarterSet(candidates, { seed: userId })` from `@bevi/ranking` to pick 10 (§8.12). Then `rankings.submitRanking` per item and `profile.updateMe({ onboarded: true })`.
+- States: first Bev (empty bucket, no comparisons: "Placed. Keep going."), finished summary ("You ranked 6 Bevs. Your top: Coke 8.3"), fewer than 3 ranked → "Rank at least 3 so we can learn your taste", candidates call fails → Retry (onboarding can't be skipped past this without ≥ 3).
+- Interactions: skip-all link after ≥ 3 ranked. The set is deterministic for the user, so leaving and coming back shows the same 10.
 
-### 6.4 Feed tab
+### 6.4 Feed tab (ref 01, 12)
 
-- Contents: header with wordmark left and "find people" icon right; **Featured Bevs** horizontal carousel (card 140×180, polished image, name, category, tap → detail); then feed of followed users' rankings as `FeedCard`s, newest first.
+- Contents, top to bottom: header (wordmark left, 28pt; right: a "find people" icon that opens 6.8 on the People tab; no bell/calendar); `SearchBar` ("Search a Bev or a person") that focuses the Add tab's search; **Featured Bevs** under a `sectionCaps` header "FEATURED BEVS" + "See all": `FeaturedCard` carousel ("You've had 1 of 10" subtitle works for featured *lists*; for a single featured Bev the subtitle is its category + `$`); then "YOUR FEED" `sectionCaps` and `FeedPost`s of followed users' rankings and saves, newest first.
 - Data: `feed.getFeatured()`, `feed.getFeed({ cursor, limit: 20 })`, `wantToTry.add/remove`.
-- States: following nobody → `EmptyState` "Follow friends to see their Bevs" with "Find people" button and the Featured carousel still shown; no activity yet; paginating footer.
-- Interactions: tap card → Bev detail; tap avatar/name → user profile; bookmark → Want to Try (optimistic); "Rank it" → ranking flow.
+- States: following nobody → `EmptyState` under YOUR FEED: "Follow friends to see their Bevs" + "Find people" `Pill` (Featured stays visible, as in ref 01); no activity yet; paginating footer.
+- Interactions: tap post body → Bev detail; tap avatar/name → user profile; bookmark → Want to Try (optimistic, fills `primary`); plus-circle → ranking flow.
+- Dropped from the reference: quick-action pills row, composer "Ask your friends for recs", invite card, likes/comments.
 
-### 6.5 Your Lists tab: Bev'd
+### 6.5 Your Lists tab: Bev'd (ref 06)
 
-- Contents: `SegmentedTabs` Bev'd / Want to Try / Recommended; Bev'd shows three bucket sections (Loved, Fine, Didn't like) in order, rows with position within bucket and `ScoreBadge`; `CategoryChips` filter; search field filters client-side.
-- Data: `rankings.listMine({ bucket?, categoryId?, cursor })` ordered by `(bucket, position)`.
-- States: nothing ranked → "Add your first Bev" CTA to the Add tab; filter yields nothing.
-- Interactions: tap → Bev detail; long-press/swipe → sheet: Re-rank, Edit note, Remove (confirm; explains other scores in the bucket will shift).
+- Contents: header "YOUR LISTS" centred, share icon (Phase 3) right; `ListScopeDropdown` "All ⌄" (All Bevs / one category); `SegmentedTabs underline-text` Bev'd · Want to Try · Recommended; filter row: `FilterPill` with count (opens a sheet: bucket, price tier, category), then `SortToggle` "↓↑ Score" (toggles Score / Recent / Name) with a search icon that reveals an inline search field. Rows: `BevRow` numbered "1. Diet Coke", line 2 `$ • Diet soda`, line 3 category icon • Coca-Cola, bottom-left "Ranked Oct 3", `ScoreBubble 40` coloured by bucket. One list sorted by score, as in the reference; buckets show through colour, not sections.
+- Data: `rankings.listMine({ bucket?, categoryId?, sort, cursor })` ordered by `(bucket desc, position)`; the numbering is the global index across buckets.
+- States: nothing ranked → "Add your first Bev" CTA to the Add tab; filter yields nothing; a Bev whose photo is still processing shows the shimmer tile.
+- Interactions: tap → Bev detail; long-press/swipe → sheet: Re-rank (6.9 via `rerankBev`), Edit note, Remove (confirm; explains other scores in that bucket shift).
 
-### 6.6 Your Lists: Want to Try
+### 6.6 Your Lists: Want to Try (ref 07)
 
-- Contents: rows with `PriceTier` instead of score, "Rank it" button, who you saw it from (if saved from feed: "via @arjun").
-- Data: `wantToTry.list({ cursor })`, `wantToTry.remove`, deep-link into ranking flow.
-- States: empty → "Bookmark Bevs from the Feed or Leaderboard".
-- Interactions: swipe to remove; ranking it removes it from Want to Try automatically (server side; UI invalidates).
+- Contents: same chrome; rows are `BevRow` without numbering, `ScoreBubble 40` showing the **global** Bayesian score with the rating-count badge (as Beli shows 7.3 with "5k"), bookmark filled `primary`, plus-circle = Rank it, bottom-left "Saved from @arjun" when saved via the feed.
+- Data: `wantToTry.list({ cursor })`, `wantToTry.remove`, deep link into the ranking flow.
+- States: empty → "Bookmark Bevs from the Feed, Leaderboard or a friend's profile". The "Import a list" card from the reference is dropped.
+- Interactions: tap bookmark to unsave (confirm if the list is short); ranking it removes it from Want to Try automatically (server side; UI invalidates).
 
-### 6.7 Your Lists: Recommended
+### 6.7 Your Lists: Recommended (ref 05)
 
-- Contents: ordered list of untried Bevs with predicted `ScoreBadge variant="predicted"`, one-line reason (`"You love Diet sodas"`, `"People who rank like you"`), exploration items tagged "Something different". Header line: "Based on N Bevs you've ranked" and "Updated 2h ago".
+- Contents: same chrome; `FilterPill` count defaults to 1 ("Not tried"); sort default "↓↑ Predicted". Rows: `BevRow` with `ScoreBubble 40 variant="predicted"` (dotted ring, "~8.2") and the rating-count badge, one-line reason in the bottom-left meta slot ("You love Diet sodas" / "People who rank like you" / "Something different" for exploration), bookmark + plus-circle actions. Header line under the tabs: "Based on N Bevs you've ranked · Updated 2h ago".
 - Data: `recs.getRecommendations({ limit: 20 })` → items with `predictedScore`, `confidence`, `reason`, `isExploration`, `generatedAt`.
-- States: < 3 rankings → "Rank 3 Bevs to unlock recommendations" with progress; confidence < 0.25 on every item → show them without numbers ("Try these") instead of fake precision; stale (> 24h) → still show, with "Refreshing" when `recs.refresh()` is available.
+- States: < 3 rankings → "Rank 3 Bevs to unlock recommendations" with progress; confidence < 0.25 → `ScoreBubble locked` instead of a number; stale (> 24h) → still shown, "Refreshing" when `recs.refresh()` exists.
 - Interactions: tap → detail; bookmark → Want to Try; "Not interested" is Phase 3 (§17).
 
-### 6.8 Add Bev tab: search
+### 6.8 Add Bev tab: search (ref 08)
 
-- Contents: search field autofocused, camera button on the right ("Snap it"), recent searches, results as `BevRow` with `PriceTier` and rating count; sticky footer "Can't find it? Add a new Bev".
-- Data: `bevs.search({ q, categoryId?, limit: 25 })` debounced 250ms; respects `canSeeAlcohol`.
-- States: idle (recents + popular), searching, no results (footer becomes primary), error.
-- Interactions: tap result → if already ranked by you → detail with "Re-rank" option; else straight into the ranking flow (vision §3 step 2). Camera button → `CameraCapture` → the photo is kept and passed into the create wizard prefilled (we do **not** do image recognition in v1; see §17).
+- Contents: header with wordmark left and a grey 32pt ✕ circle right (closes to the previous tab); `SegmentedTabs underline-icon` **Bevs** (bottle icon) · **People** (people icon), half width each, `primary` underline; outlined 48pt search input ("Search a Bev, brand or flavor" / "Search by name or @handle"); a camera `Pill` row ("Snap it") replaces Beli's Reserve/Order/Recs pills; **Recents** list (clock icon, name, brand/category, ✕ to forget) when idle; results as `BevRow` (score bubble = global score + count, actions: plus-circle, bookmark); sticky footer "Can't find it? Add a new Bev".
+- People tab: results rows `Avatar 44`, name, @handle, Follow/Following `Pill`; idle shows "Suggested" (users with the most rankings you don't follow). This is the Find-people screen; there is no separate route.
+- Data: `bevs.search({ q, categoryId?, limit: 25 })` debounced 250ms, age-filtered server-side; `profile.searchUsers({ q, limit: 25 })`, `follows.suggested()`, `follows.follow/unfollow`.
+- States: idle (recents + "Popular this week"), searching, no results (footer becomes primary), error.
+- Interactions: tap a Bev result → if already ranked by you → detail with "Re-rank"; else straight into the ranking flow (vision §3 step 2). Camera → `CameraCapture` → the create wizard, prefilled with the photo (no image recognition in v1, §17).
 
-### 6.9 Ranking flow (`rank/[bevId]`), full-screen modal
+### 6.9 Ranking flow (`rank/[bevId]`), full-screen modal (no reference screenshot)
 
-- Step 1 Gut check: `BevImage 160`, name, three big buttons Loved it / It was fine / Didn't like it.
-- Step 2 Compare: two cards (new Bev on top, incumbent below, each `BevImage 120` + name + brand), prompt "Which was better?", tap a card; secondary row: "Too close to call" and Undo; progress dots = `ceil(log2(n+1))` max steps; card swap animates 250ms; prefetch the next candidate image after each answer (the next mid is computable for both answers, prefetch both).
+- Step 1 Gut check: `BevImage 155`, name, brand, three full-width 52pt buttons: Loved it / It was fine / Didn't like it, each tinted with its score colour at 12% with a coloured left bar.
+- Step 2 Compare: two stacked cards (new Bev on top, incumbent below; each `BevImage 96` left, name 20pt bold, brand 15pt), prompt "Which was better?", tap a card; secondary row: "Too close to call" (outlined `Pill`) and Undo (text); progress dots = `maxComparisons(n)`; card swap animates 250ms; prefetch both possible next candidates after each answer.
 - Step 3 Note: optional 140-char note ("Tastes like flat Sprite"), Skip.
-- Step 4 Result: "#4 of 31 in Loved — 8.9", animated badge, buttons Done / Share-to-feed is implicit (every ranking is a feed item).
-- Data: `rankings.listMine({ bucket })` once at start (ordered ids), then `@bevi/ranking` runs locally; finish → `rankings.submitRanking({ bevId, bucket, insertIndex, comparisons, note })` → returns `{ score, position, bucketSize }` for the result screen.
-- States: empty bucket → straight to Step 3 (no comparisons, say "First one in Loved"); re-rank → the Bev is removed from the ordered list before placement and the request carries `replaceExisting: true`; submit failure → keep the local result, Retry (the flow is idempotent because the server re-validates `insertIndex` against the current bucket size and the comparisons; if the bucket changed meanwhile, the server returns `CONFLICT` and the UI restarts placement with the fresh list).
-- Interactions: Undo pops one comparison; closing mid-flow asks to discard.
+- Step 4 Result: `ScoreBubble 56` animates in, "#4 of 31 in Loved · 8.9", Done. Every ranking is a feed item; no separate share step.
+- Data: `rankings.listMine({ bucket })` once at start (ordered ids; `expectedBucketSize = ids.length`), then `@bevi/ranking` runs locally; finish → `rankings.submitRanking({ bevId, bucket, insertIndex, expectedBucketSize, comparisons, note })` → `{ ranking, bucketSize }`. Every comparison is sent, as `{ winnerBevId, loserBevId, tie }`. `insertIndex` 0 = best.
+- Re-rank: the same screen entered with `mode: 'rerank'`; the existing Bev is removed from the list before placement, the bucket can change, and the call is `rankings.rerankBev({ bevId, bucket, insertIndex, expectedBucketSize, comparisons, note? })`.
+- States: empty bucket → straight to Step 3 ("First one in Loved"); submit returns `conflict` (the bucket changed on the server since the list was fetched, e.g. from another device) → toast "Your list changed, let's redo this one", refetch, restart placement; `validation` (index out of range: a client bug) → log and restart; `network` → keep the local result and Retry; closing mid-flow asks to discard.
+- Interactions: Undo pops one comparison.
 
 ### 6.10 Create new Bev wizard (`add/new`)
 
 - Step 1 Photo: `CameraCapture` (rear camera, framing guide "fill the frame, plain background helps"), or pick from library; preview; retake.
-- Step 2 Details: name, flavor, brand/shop, category picker (sheet; alcoholic categories only if `canSeeAlcohol`), `PriceTierPicker` (4 tappable `$`, plus "Not sure, estimate it" which sets `priceTier: null, priceEstimated: true` and lets the server estimate from category; see §18).
-- Step 3 Did you mean…: triggered on leaving Step 2 (and live after 3 typed chars in name): `bevs.findLikelyDuplicates({ name, brand, flavor, categoryId })` → up to 5 matches as rows with "This is it" (jumps to ranking that Bev) vs "No, mine is different".
+- Step 2 Details: name, flavor, brand/shop, category picker (sheet listing `categories.list()`, which is already age-filtered), price tier picker (four tappable `$` cells, plus "Not sure, estimate it" which sends `priceTier: null, priceEstimated: true` and lets the server estimate from the category).
+- Step 3 Did you mean…: triggered on leaving Step 2 (and live after 3 typed chars in name): `bevs.findLikelyDuplicates({ name, brand, flavor, categoryId })` → up to 5 `BevRow`s with "This is it" (jumps to ranking that Bev) vs "No, mine is different".
 - Step 4 Nutrition label (optional): capture or skip.
-- Submit: `media.upload({ kind: 'bev-photo', file })` → `{ assetId, url, status: 'processing' | 'ready' }`; `media.upload({ kind: 'label' })`; `bevs.create({ name, flavor, brand, categoryId, priceTier, priceEstimated, photoAssetId, labelAssetId })` → Bev; then ranking flow immediately. The `BevImage` shows the raw photo with the processing shimmer until `getBev(id).photoStatus === 'ready'` (poll 3s, max 60s, then show raw photo silently).
-- States: upload failure (retry keeps the form), duplicate chosen, camera permission denied (explain + Open Settings), offline (block submit).
+- Submit: `media.upload({ kind: 'bev-photo', uri, mimeType })` → `{ assetId, url, status: 'processing' | 'ready' }`; `media.upload({ kind: 'label' })`; `bevs.create({ name, flavor, brand, categoryId, priceTier, priceEstimated, photoAssetId, labelAssetId })` → Bev; then the ranking flow immediately. `BevImage` shows the raw photo with the processing shimmer until `bevs.get(id).photoStatus === 'ready'` (poll 3s, max 60s, then show the raw photo silently).
+- States: upload failure (retry keeps the form), duplicate chosen, camera permission denied (explain + Open Settings), offline (block submit), `validation` from the server (field errors from `detail`).
 
-### 6.11 Bev detail (`bev/[id]`)
+### 6.11 Bev detail (`bev/[id]`) (no reference screenshot)
 
-- Contents: `BevImage 160` hero, name, brand/flavor, category chip, `PriceTier`; stats row: global score (Bayesian, 1dp) + rating count, **Your predicted score** (`ScoreBadge predicted` + "based on your tastes"), or your actual score and position if you ranked it; "Friends who've had it" avatar stack with their scores; buttons: Rank it (or Re-rank) and Want to Try (toggle); nutrition label thumbnail → full-screen viewer; "Added by @handle" footer for user-created Bevs; Report (sheet) → `bevs.report`.
+- Contents: `BevImage 155` hero centred, name 20pt bold, brand/flavor 15pt, category icon + name, `PriceTier`; two `StatCard`s: "Bevi score" (`ScoreBubble 56` global Bayesian + "N ratings") and "You'd rate it" (`ScoreBubble 56 predicted`, or `locked` with "Rank 3 Bevs to see your prediction", or your actual score + "#4 in Loved" if you ranked it); "Friends who've had it" avatar stack (`Avatar 32`) with their scores; buttons: Rank it (or Re-rank) `Pill filled` and Want to Try `Pill outlined` (filled when saved); nutrition label thumbnail → full-screen viewer; "Added by @handle" footer for user-created Bevs; "•••" → Report sheet → `bevs.report`.
 - Data: `bevs.get(id)` returning global stats, `myRanking?`, `prediction?`, `friends[]`, `photoStatus`.
-- States: no ratings yet ("Be the first"), prediction missing (fewer than 3 rankings by you → "Rank 3 Bevs to see your prediction"), alcohol and `!canSeeAlcohol` → not reachable (search hides it; deep link shows a neutral "Not available" screen).
+- States: no ratings yet ("Be the first"), `not_found`, `age_restricted` (deep link to an alcoholic Bev when `!canSeeAlcohol`) → neutral "Not available" screen.
 
-### 6.12 Leaderboard tab
+### 6.12 Leaderboard tab (no reference screenshot; Beli's own leaderboard was not captured)
 
-- Contents: `SegmentedTabs` Bevs / Users. Bevs: `CategoryChips` (All + categories), rows: rank number, `BevImage 56`, name, Bayesian score, "N ratings", your score badge if ranked. Users: rank, `Avatar`, name/handle, points, "N Bevs", streak flame; your own row pinned at the bottom if off-screen.
+- Contents: header "LEADERBOARD" centred; `SegmentedTabs underline-text` Bevs · People; `ListScopeDropdown` "All ⌄" for category on the Bevs tab. Bevs rows: `BevRow` numbered by rank, `ScoreBubble 40` = Bayesian score with the rating-count badge, your own score as a small secondary bubble if you ranked it. People rows: rank number, `Avatar 44`, name/@handle, points, "N Bevs", flame + streak; your own row pinned at the bottom if off-screen.
 - Data: `leaderboard.bevs({ categoryId?, cursor, limit: 50 })`, `leaderboard.users({ cursor })`.
-- States: category with fewer than `MIN_RATERS` (=2) rated Bevs → "Not enough rankings yet"; Phase 3 adds a "This month" toggle.
-- Interactions: tap → Bev detail / user profile; chips persist per session.
+- States: category with no Bev at `MIN_RATERS` (= 2) → "Not enough rankings yet"; Phase 3 adds a "This month" toggle.
+- Interactions: tap → Bev detail / user profile; dropdown choice persists per session.
 
-### 6.13 Profile tab (own): pixel-careful spec
+### 6.13 Profile tab (own): pixel spec from ref 02, 03, 04, 09
 
-Baseline on a 393pt-wide iPhone; adjust to the `design/specs/profile.md` measurements once screenshots are in.
+All values in pt on the 393-wide reference (px ÷ 3). The reference uses list rows + two stat cards where vision §6 says "three tappable tiles"; the rows are what we build (§18 item 12).
 
 ```
-┌─────────────────────────────────────────────┐ safe-area top
-│ Matt Willer (title 22 semibold)      [gear] │ 44pt row, gutter 16
-│                                             │
-│                 ( MW )                      │ Avatar 88, initials 32 semibold, centred
-│                @mbwiller                    │ body 15 textSecondary, 6pt below
-│                                             │ 16pt
-│   128 Followers   ·   96 Following          │ heading 17 numbers, caption 13 labels, tappable
-│                                             │ 12pt
-│   [ #12 on Bevi ]   [ flame 4-day streak ]  │ two pills 32pt tall, radius pill, surfaceRaised
-│                                             │ 20pt
-│ ┌────────┐ ┌────────┐ ┌────────────┐        │ 3 StatTiles, 84pt tall, 12pt gaps, equal width
-│ │  42    │ │  7     │ │  ★         │        │   (393-32-24)/3 = 112pt
-│ │ Bev'd  │ │Want to │ │Recommended │        │ third tile = highlight (primary fill), label
-│ │        │ │  Try   │ │  for you   │        │   "Recommended for you", no count
-│ └────────┘ └────────┘ └────────────┘        │
-│                                             │ 24pt
-│ Recent Bevs                      (heading)  │
-│ [BevRow 72] #1 Loved  Diet Coke        9.3  │ scrollable list of the user's rankings,
-│ [BevRow 72] #2 Loved  Topo Chico       9.1  │   newest first, 20 per page
-│ ...                                         │
-└─────────────────────────────────────────────┘
+y   0   status bar (59 on Dynamic Island phones; use safe-area insets)
+   59   ┌─────────────────────────────────────────────┐
+        │ Matt Willer                     [share] [≡] │  44pt row; name 20pt bold at x16; icons 28pt at
+  103   │                                             │  x≈305 and x≈343 (gear replaces ≡; share is Phase 3)
+  104   │                 ( MW )                      │  Avatar 100, centred (x 146–246), y 104–204,
+        │                                             │  avatarFill + 1pt border, initials 40pt light
+  224   │                @mbwiller                    │  17pt bold, centred, baseline ≈ y 229
+  246   │           Member since Oct 2026             │  15pt textSecondary
+  280   │     7            9           #12            │  numbers 17pt semibold, columns centred at
+  300   │  Followers    Following   Rank on Bevi      │  x 91 / 196 / 301; labels 15pt textSecondary
+  341   │   [ Edit profile ] [ Share profile ] [▼]    │  36pt outlined buttons, radius 8: 120 / 120 / 34 wide,
+        │                                             │  4pt gaps, centred; ▼ opens the settings sheet
+  392   │ ⊙  Bev'd                          42   ›   │  ProfileListRow 44: icon 24 at x20, label 20pt
+  436   │ ▮  Want to Try                     7   ›   │  semibold at x67, count 20pt right-aligned at x353,
+  480   │ ♥  Recommended for you                 ›   │  chevron at x374; 1pt dividers
+  543   │ ┌──────────────────┐ ┌──────────────────┐   │  StatCards 181×84, radius 20, at x10 and x202,
+        │ │🏆 Rank on Bevi   │ │🔥 Current Streak │   │  y 543–627; icon 24 primary; label 17pt
+  627   │ │   #12            │ │   4 days         │   │  textSecondary semibold; value 20pt bold primary
+  641   │ [goal card: Phase 3]                        │
+  ~660  │ ▤ Activity        ▥ Taste Profile          │  SegmentedTabs underline-icon, 17pt, equal halves,
+        │ ━━━━━━━━━━━━━━━━━━                          │  3pt black underline (Guides tab dropped)
+        │ (MW)  You Bev'd Diet Coke            (9.3)  │  FeedPost: Avatar 60 at x16, text at x100,
+        │       🥤 • Coca-Cola • $                     │  ScoreBubble 40 at x333
+        │       [155 BevImage]                        │
+        │       Notes: … See more                     │
+        │       [bookmark] [plus]        Wednesday    │
+        │ …                                           │
+        └─────────────────────────────────────────────┘
 ```
 
-- Vision §6 order honoured: name top-left, avatar top-centre with handle, follower/following counts, Rank on Bevi, Streak, three tiles (Recommended is the emphasised one), scrollable rankings feed, settings via the corner gear.
-- Data: `profile.getMe()` (name, handle, initials), `stats.getMine()` → `{ followers, following, rankOnBevi, rankPoints, currentStreak, bevdCount, wantToTryCount }`, `rankings.listUser(me, { cursor })`.
-- States: brand-new user (0 everywhere, streak pill says "Rank today to start a streak", tiles still tappable), rank unavailable (fewer than `MIN_RANKED_FOR_RANK`=1 ranked → "Unranked").
-- Interactions: tiles deep-link to `lists?tab=bevd|want|recommended`; counts → followers/following lists; gear → settings; tap name/avatar → edit profile.
-- Polish task is tagged Sonnet Medium–High (vision §10 "UI polish (profile page…)").
+- Order honoured from vision §6: name top-left, avatar top-centre with handle, follower/following counts, Rank on Bevi, Streak, the three links (Recommended is the one that matters: it gets the heart icon and is always visible even at 0 ranked), scrollable rankings feed, settings via the corner menu.
+- Data: `profile.getMe()`, `stats.getMine()` → `{ followers, following, rankOnBevi, rankPoints, currentStreak, longestStreak, streakAliveToday, bevdCount, wantToTryCount }`, `rankings.listUser(me, { cursor })` rendered as `FeedPost`s ("**You** Bev'd **Diet Coke**").
+- States: brand-new user (0 everywhere; streak card says "Rank today to start"; rank card "Unranked" until ≥ 1 ranked); Activity empty → "Your rankings will show up here".
+- Interactions: the three rows deep-link to `lists?tab=bevd|want|recommended`; Followers/Following numbers → 6.15; ▼ / gear → settings; Edit profile → 6.19; Share profile is Phase 3 (needs a web profile page).
+- Polish task is Sonnet Medium–High (vision §10 "UI polish (profile page…)"), DoD: within 2pt of this spec and `design/specs/profile.md`.
 
 ### 6.14 Other user's profile (`user/[id]`)
 
-- Same layout minus the gear and the Recommended tile (tiles: Bev'd, Want to Try, and a Follow/Following button in the third slot); their rankings list.
+- Same layout; the button row becomes [ Follow / Following ] [ Share profile ] with no ▼; the Recommended row is omitted (private); Bev'd and Want to Try rows open read-only lists of theirs; Activity tab shows their rankings.
 - Data: `profile.getUser(id)`, `stats.getUser(id)`, `follows.follow/unfollow` (optimistic), `rankings.listUser(id)`.
-- States: not found; blocked/private is not a v1 concept.
+- States: `not_found`; blocked/private is not a v1 concept.
 
 ### 6.15 Followers / Following lists
 
-- Rows: `Avatar 40`, name, handle, Follow/Following button; search within list.
+- Rows: `Avatar 44`, name, @handle, Follow/Following `Pill`; search within list.
 - Data: `follows.listFollowers(userId, { cursor })`, `follows.listFollowing(userId, { cursor })`.
 - States: empty.
 
-### 6.16 Find people (`users/search`)
+### 6.16 Find people
 
-- Handle/name search, results with follow buttons; "Suggested" section = users with the most rankings you don't follow. Required for the social loop; vision §6 doesn't list it (§18).
-- Data: `profile.searchUsers({ q, limit: 25 })`, `follows.suggested()`.
+Merged into the Add tab's **People** tab (§6.8), matching the reference's Restaurants | Members search. Feed empty state and the Feed header icon both deep-link to `add?tab=people`.
 
 ### 6.17 Age gate for alcoholic categories
 
-- Birthdate is captured in onboarding (§6.2) and editable once in account settings (changing it again requires support; keep it simple: editable only while `canSeeAlcohol` is false).
-- `profile.canSeeAlcohol = age ≥ 21` computed server-side (Arjun; RLS/view filtering), mirrored in the client for UI hiding: category pickers, chips, search, leaderboard categories, featured carousel and recommendations all hide `category.isAlcoholic` content when false. Feed items for alcoholic Bevs from friends still render but with no "Rank it" button (seeing a friend's beer is fine; ranking it isn't).
-- Users with no birthdate (should not exist after onboarding) are treated as under 21.
+- Birthdate is captured once in onboarding (§6.2) through `profile.setBirthDate`; it is not editable in the app. Settings shows it read-only with "Contact us to correct it" (admin-only change, Arjun's rule).
+- `profile.canSeeAlcohol = age ≥ 21` is computed server-side (Arjun; RLS/view filtering) and mirrored in the client for UI hiding: category pickers, the list-scope dropdown, search, leaderboard categories, featured carousel and recommendations hide the three alcoholic categories (`beer`, `wine`, `spirits_cocktails`, all `isAlcoholic`) when false. Feed posts about alcoholic Bevs from friends still render but with no plus-circle (seeing a friend's beer is fine; ranking it isn't). Any direct fetch returns `age_restricted`, which maps to the neutral "Not available" screen.
+- A profile with no birthdate cannot get past onboarding, so the under-21 default never applies to a real session.
 
 ### 6.18 Settings, privacy, account deletion
 
-- Settings: Account (email, display name, handle, birthdate per rule above, timezone override), Privacy (link to the policy screen; "Location: never collected"), About (version, licences), Sign out, Delete account.
-- Privacy policy: static markdown bundled in the app (`app/assets/privacy.md`), also published as a web page (Arjun or a GitHub Pages file via `chore/*`) because App Store Connect requires a URL. The conversation's "we don't need no damn privacy page" is overridden (§17).
-- Delete account: Apple requires in-app account deletion. Screen explains what is deleted (rankings, comparisons, follows, Want to Try, profile; Bevs you created stay with `createdBy = null`), type `DELETE`, calls `auth.deleteAccount()`, then signs out.
+- Opened from the profile ▼ / gear as a sheet, then full screens: Account (email from Google, display name, handle, birthdate read-only, timezone override), Privacy (link to the policy screen; "Location: never collected"), About (version, licences), Sign out, Delete account.
+- Privacy policy: static markdown bundled in the app (`app/assets/privacy.md`), also published as a web page (GitHub Pages via `chore/*`) because App Store Connect requires a URL. The conversation's "we don't need no damn privacy page" is overridden (§17).
+- Delete account: Apple requires in-app account deletion. Screen explains what is deleted (rankings, comparisons, follows, Want to Try, profile; Bevs you created stay with `createdBy = null`), type `DELETE`, calls `api.deleteAccount()`, then `signOut`.
 
 ### 6.19 Small screens and sheets
 
-Edit profile; Re-rank sheet (choose: change bucket → full placement, or keep bucket → placement within bucket); Remove-ranking confirm; Category picker sheet; Report Bev sheet; Full-screen image viewer; Not-found screen; Force-update/maintenance screen driven by `meta.getAppConfig()` (minimum version, maintenance flag; cheap insurance).
+Edit profile (name, handle, avatar initials preview); Re-rank sheet (choose: change bucket → full placement, or keep bucket → placement within bucket; both end in `rerankBev`); Remove-ranking confirm; Category picker sheet; Filter sheet (bucket, price, category); Report Bev sheet; Full-screen image viewer; Not-found screen; Force-update/maintenance screen driven by `meta.getAppConfig()` (minimum version, maintenance flag).
+
+### 6.20 Taste Profile tab and goal card (ref 10, 02) — Phase 3
+
+- The reference's second profile tab maps cleanly onto data we already compute: an indigo share card ("LAST 30 DAYS · Top 34% Bevi drinker · 12 Bevs · 7 categories · More active than 66% of Bevi users"), then a monthly calendar card (‹ Oct 2026, "4 Bevs ranked · 3 categories") whose days carry the `BevImage 40` of a Bev ranked that day with a `primary` outline on today, which is the streak made visible. Below it: per-category averages from `user_category_stats` ("Your Soda average 7.2 · 9 ranked") as a simple bar list.
+- Goal card ("Set your 2026 goal: you've ranked 42 Bevs so far. 80 / 100 / 150 / Customize") is optional Phase 3; needs a `profile.yearlyGoal` field (contract change).
+- Data: `stats.getTasteProfile({ month })` (new method, Phase 3 contract PR): per-day ranked Bev ids, per-category stats, 30-day percentile.
 
 ---
 
@@ -426,8 +478,9 @@ Edit profile; Re-rank sheet (choose: change bucket → full placement, or keep b
 
 - `eas.json` profiles: `development` (dev client, simulator + device), `preview` (internal distribution, `EXPO_PUBLIC_BEVI_API=supabase` against Arjun's staging project), `production`.
 - iOS: TestFlight via `eas build --profile preview --platform ios` + `eas submit`; up to 100 internal testers without review, external testers need a one-time Beta review. Needs an Apple Developer account ($99/yr) and the bundle id `com.bevi.app` (whose account, see §18). Android: `eas build --profile preview --platform android` produces an APK shared by link; Play internal testing in Phase 3.
-- Expo Go is fine for the first two weeks (camera, image, router all work); switch to the dev client the moment a native module outside Expo Go is added.
-- Env: `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY` are consumed inside `packages/api` (Arjun provides values via EAS secrets and `.env.local`; never committed). Service keys never exist in the app.
+- Expo Go covers camera, image, router and every screen running against the mock. It does **not** run `@react-native-google-signin/google-signin`, so the real sign-in needs an EAS development build (`eas build --profile development --platform ios`, install on your phone, `npx expo start --dev-client`). Queue that build in week 1 so credentials and the Google iOS client id exist before auth work starts.
+- Env: `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` are read in `client.ts` and passed to `createBeviApi({ url, publishableKey, authStorage })`; `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` configures the Google SDK. Arjun provides the Supabase values via EAS secrets and `.env.local`; never committed. Service keys never exist in the app.
+- Distribution gate G1: Sign in with Apple must ship before App Store submission (and possibly before external TestFlight beta review, since reviewers apply 4.8 there too). Internal TestFlight (≤ 100 testers) and Android APKs are fine with Google only.
 
 ---
 
@@ -493,9 +546,13 @@ Guarantees (these are the property tests in §11):
 - With a consistent oracle (a hidden true index `t`), `insertIndex === t`.
 - `insertIndex ∈ [0, n]` always; the comparison log is exactly what the binary search asked, so Arjun's RPC can re-validate it (each logged comparison must be consistent with the final index).
 
-Re-ranking an existing Bev: the UI removes it from `orderedIds` before `start` (the state machine also filters defensively), chooses the bucket again (may change), runs placement, submits with `replaceExisting: true`. Server: delete old row, insert new, re-space the old bucket (if different) and the new bucket, append the new comparisons (old comparisons are kept; they're still true observations).
+Re-ranking an existing Bev: the UI removes it from `orderedIds` before `start` (the state machine also filters defensively), chooses the bucket again (may change), runs placement, and calls `rerankBev({ bevId, bucket, insertIndex, expectedBucketSize, comparisons, note? })`, its own method with the same shape as `submitRanking`. Server: delete old row, insert new, re-space the old bucket (if different) and the new bucket, append the new comparisons (old comparisons are kept; they're still true observations).
+
+Stale list guard: both `submitRanking` and `rerankBev` carry `expectedBucketSize` = the length of the list the app binary-searched (after removing the Bev itself on a re-rank). If the server's current bucket size differs, it returns `conflict` and the app refetches the bucket and restarts placement. An `insertIndex` outside `[0, expectedBucketSize]` is a `validation` error (client bug, never expected). `insertIndex` 0 = best. Every comparison is sent as `{ winnerBevId, loserBevId, tie }`; on a tie both ids are set and `tie: true`.
 
 Removal: `removeRanking(bevId)` → server deletes the row, re-spaces that bucket. Pure helper `removeFromBucket(orderedIds, bevId)` + `respaceBucket` exist so the mock and the vectors cover it.
+
+Bucket encoding: the domain type is `'LOVED' | 'FINE' | 'DISLIKED'` everywhere in `shared/`, `app/` and `packages/ranking`; the DB stores smallint 3/2/1 and `packages/api` maps between them. Your code never sees the integers.
 
 Not in v1: "skip this comparator" (pick a different incumbent). TIE covers the "I can't decide" case; a skip would need a non-binary search. Listed in §17.
 
@@ -626,6 +683,7 @@ selectStarterSet(candidates, { k = 10, core = 6, maxPerCategory = 2, seed, exclu
 - The **core** = the 6 most-rated starters (by `rating_count`, ties by name), shown to everyone. Shared items maximise `common(u, v)` for user-user CF.
 - The remaining 4 are drawn with the seeded PRNG from the other starters, respecting `maxPerCategory` across the whole set of 10 and a spread of at least 5 categories if possible; `excludeCategoryIds` removes alcoholic categories for anyone under 21.
 - Deterministic for a seed (`userId`), so the set is stable if the user leaves onboarding and comes back.
+- Runs in the app (seam interpretation 1, §12): input is `bevs.getStarterCandidates()` (≥ 30 age-filtered `isStarter` Bevs with `ratingCount`); the server never calls this function.
 
 New Bev cold start needs no special code: `g_b = 0`, `support = 0` → prediction is affinity + content only.
 
@@ -647,17 +705,26 @@ display order: points desc, bevsRanked desc, createdAt asc
 - `computeStreak(dayKeys: string[] (unique 'YYYY-MM-DD'), todayKey) → { current, longest, lastDay }`:
   - `current`: walk back from `todayKey`; if today is in the set start at today, else if yesterday is in the set start at yesterday (streak alive but not extended yet), else 0; count consecutive days.
   - `longest`: longest consecutive run anywhere.
-- Multiple rankings in one day count once. Re-ranks count (they are rankings). Removals don't retroactively break a streak (the comparison rows remain; the streak is computed from `rankings` rows plus a `ranking_events` log on Arjun's side if he prefers; see §18).
+- Multiple rankings in one day count once. Re-ranks count (they are rankings). Removals don't retroactively break a streak (the comparison rows remain; the streak is computed from `rankings` rows plus a `ranking_events` log on Arjun's side if they prefer; see §18).
+- Period: the function takes `period: 'day' | 'week'` (week key = ISO week of the local date, `YYYY-Www`) with `'day'` as the vision's definition. Beli's reference profile shows "Current Streak 9 weeks", i.e. a weekly streak; if daily proves too punishing at 20 users the switch is a constant and a vector regeneration, not a redesign (§18).
 - UI copy: `current = 0` → "Rank today to start a streak"; alive-but-not-today → flame outlined, "Rank today to keep your 4-day streak".
 
 ---
 
 ## 9. `packages/ranking`: exports, types, package layout
 
+Constraints agreed with Arjun for seam 5 (Arjun bundles `packages/ranking/src/index.ts` with esbuild into `supabase/functions/_shared/ranking.bundle.mjs`; you ship no `dist/`):
+
+- ESM only, zero I/O, no Node or DOM APIs (no `Buffer`, `process`, `fetch`, `Date.now()`, `Math.random()`); `lib: ["ES2022"]`, no `@types/node`.
+- Plain relative imports with extensions that esbuild resolves (`./score.ts` style or extensionless, pick one and lint it); **no tsconfig path aliases**, no workspace imports except `shared/` types via `import type`.
+- Randomness is always a seed passed in (`prng.ts` mulberry32 + a string hash).
+- `export const RANKING_VERSION = "1.0.0"` from `index.ts`, equal to the `version` field written into every vectors file; Arjun's Edge Function logs it and the snapshot carries it.
+- A CI job on your side runs the same esbuild bundle command (`esbuild src/index.ts --bundle --format=esm --platform=neutral`) as a smoke test so a Node-only import fails in your PR, not in Arjun's.
+
 ```
 packages/ranking/
-  package.json        name "@bevi/ranking", "type": "module", exports → dist/index.js + types; no dependencies
-  tsconfig.json       strict, lib ES2022, no DOM, no node types   (keeps it importable from Deno/Edge; Arjun verifies)
+  package.json        name "@bevi/ranking", "type": "module", "exports": { ".": "./src/index.ts" }; no dependencies; devDeps: vitest, fast-check, esbuild (bundle smoke test)
+  tsconfig.json       strict, lib ES2022, no DOM, no node types
   src/
     index.ts  constants.ts  types.ts  prng.ts
     placement.ts  score.ts  stats.ts  bayesian.ts  similarity.ts
@@ -677,7 +744,7 @@ export function currentPrompt(s: PlacementState): { comparedBevId: BevId; step: 
 export function answer(s: PlacementState, a: ComparisonAnswer): PlacementState;   // 'NEW_BETTER' | 'EXISTING_BETTER' | 'TIE'
 export function undo(s: PlacementState): PlacementState;
 export function isDone(s: PlacementState): boolean;
-export function placementResult(s: PlacementState): PlacementResult;             // { bevId, bucket, insertIndex, comparisons }
+export function placementResult(s: PlacementState): PlacementResult;             // { bevId, bucket, insertIndex, expectedBucketSize, comparisons: { winnerBevId, loserBevId, tie }[] }
 export function maxComparisons(n: number): number;                                 // ceil(log2(n + 1))
 export function removeFromBucket(orderedBevIds: BevId[], bevId: BevId): BevId[];
 
@@ -709,7 +776,8 @@ export function recommend(snapshot: PredictionSnapshot, userId: UserId, opts: { 
 export function selectStarterSet(candidates: StarterCandidate[], opts: { k?: number; core?: number; maxPerCategory?: number; seed: string; excludeCategoryIds?: CategoryId[] }): BevId[];
 export function rankPoints(a: { bevsRanked: number; currentStreak: number; bevsCreated: number }): number;
 export function rankUsers(rows: Array<{ userId; bevsRanked; currentStreak; bevsCreated; createdAt }>): Array<{ userId; points; rank }>;
-export function computeStreak(dayKeys: string[], todayKey: string): { current: number; longest: number; lastDay: string | null };
+export function computeStreak(periodKeys: string[], todayKey: string, period: 'day' | 'week' = 'day'): { current: number; longest: number; lastKey: string | null };
+export const RANKING_VERSION: string;                                              // "1.0.0"; equals the vectors' version field
 export function localDayKey(isoTimestamp: string, timeZone: string): string;   // Intl-based; only used by the app and tests
 ```
 
@@ -728,7 +796,7 @@ export interface Prediction { bevId; z: number; score: number; confidence: numbe
 export interface Recommendation { bevId; score: number; confidence: number; reason: 'CATEGORY' | 'SIMILAR' | 'NEIGHBOURS' | 'POPULAR'; isExploration: boolean }
 ```
 
-Scope note for Arjun: at 20 users the snapshot is the full `rankings` table (≈ 1,000 rows). Past ~500 users he should restrict `rankings` to the target user, the users sharing ≥ 2 items with them, and the candidate Bevs; the functions don't care.
+Scope note for Arjun: at 20 users the snapshot is the full `rankings` table (≈ 1,000 rows). Past ~500 users Arjun should restrict `rankings` to the target user, the users sharing ≥ 2 items with them, and the candidate Bevs; the functions don't care. `PredictionSnapshot.version` must equal `RANKING_VERSION` of the bundle that consumes it; mismatch → the function throws and the Edge Function serves the cached result.
 
 ---
 
@@ -744,7 +812,7 @@ Seam 4: formulas are yours, SQL execution is Arjun's, and both must pass the sam
 | `bayesian.vectors.json` | `bayesianAverage` with global and per-category priors, eligibility, tie order | leaderboard view |
 | `streak.vectors.json` | `computeStreak` + `localDayKey` with tz cases: `America/Los_Angeles` across a DST change, `UTC`, `Asia/Kolkata`, a ranking at 23:59 local, two rankings in one day | streak RPC/cron |
 | `rank-points.vectors.json` | `rankPoints`, `rankUsers` ties | user leaderboard view |
-| `placement.vectors.json` | full answer sequences → `insertIndex` + comparison logs (incl. TIE, undo) | app regression + Arjun's RPC consistency check |
+| `placement.vectors.json` | full answer sequences → `insertIndex`, `expectedBucketSize` + comparison logs as `{ winnerBevId, loserBevId, tie }` (incl. TIE, undo, re-rank with the Bev removed first) | app regression + Arjun's RPC consistency check |
 | `prediction.vectors.json` | a 12-user × 40-Bev snapshot → `predictScore`/`recommend` outputs for 6 users | Arjun's Edge Function smoke test (calls your function, compares) |
 
 Format: `{ "version": "1.0.0", "constants": {...}, "cases": [{ "name", "input", "expected" }] }`. Numeric comparison: absolute tolerance `1e-6` on unrounded values; stored 2-dp values compared exactly.
@@ -777,7 +845,7 @@ Each formula has table tests mirroring §8's worked examples (so the doc and the
 
 ### App tests
 
-- `jest-expo` + RNTL for components (`ScoreBadge`, `PriceTier`, `FeedCard` states) and for `useRankingFlow` (drives the state machine and the mock).
+- `jest-expo` + RNTL for components (`ScoreBubble` incl. `predicted`/`locked`, `PriceTier`, `FeedPost` ranked/bookmarked states) and for `useRankingFlow` (drives the state machine and the mock, including the `conflict` restart path).
 - Mock contract test: `app/src/api/mock.test.ts` runs the same `BeviApi` conformance suite Arjun runs against the real client (lives in `shared/testing/api-conformance.ts`, written jointly in contract v0). This is what makes mock→real a one-line swap.
 - Phase 3: Maestro flows for sign-in → rank → profile.
 
@@ -803,39 +871,41 @@ Each formula has table tests mirroring §8's worked examples (so the doc and the
 **Seam 1 — App ↔ backend.** The app imports only `shared/` types and the `BeviApi` interface. `packages/api` implements it on Supabase. You build every screen first against a mock (`app/src/api/mock.ts`, implements `BeviApi`, backed by `shared/fixtures`), so UI work is never blocked on the backend. TypeScript keeps the mock and the real client honest. Swapping mock→real is a one-line change.
 
 - You provide: the mock, the fixtures' *shape* needs, the `api-conformance` suite (joint), the one-line switch, and bug reports against `packages/api` phrased as failing conformance cases.
-- You need: `packages/api` exporting `createBeviApi(env): BeviApi` with no React dependency, generated DB types in `shared/db.ts`, env var names, a staging Supabase project with seed data.
+- You need: `packages/api` exporting `createBeviApi({ url, publishableKey, authStorage }): BeviApi` with no React dependency (it builds the Supabase client itself; you pass an `expo-secure-store`-backed `authStorage` adapter for session persistence), generated DB types in `shared/src/db.types.ts`, env var names, a staging Supabase project with seed data.
 - By when: mock complete for Phase 1 screens by end of week 2 (2026-10-23); real client needed by the end of Phase 1 for TestFlight.
 
 **Seam 2 — Contract v0 is the first joint milestone.** You list the data each screen needs (§13); Arjun turns that into the schema + `BeviApi` methods; both approve one `contract/v0` PR. Nothing else merges into `shared/` before it.
 
-- You provide: §13 as `shared/README-v0-needs.md` (or the PR description) by 2026-10-13, review of Arjun's `shared/api.ts` + `shared/types.ts` within one day of his draft.
+- You provide: §13 as `shared/README-v0-needs.md` (or the PR description) by 2026-10-13, review of Arjun's `shared/api.ts` + `shared/types.ts` within one day of their draft.
 - You need: the PR merged by end of week 1 (2026-10-16) so the mock and hooks can be typed against it.
 
 **Seam 3 — Ranking write path.** The interactive comparison flow runs in the app using `packages/ranking` (pure state machine). On finish the app calls `api.submitRanking({ bevId, bucket, insertIndex, comparisons, note })`. Arjun's RPC applies it atomically (insert at position, shift others, store raw comparisons, update aggregates). Re-ranking/removing a Bev is the same shape.
 
-- You provide: the exact `SubmitRankingInput`/`Result` types, `placement.vectors.json` (so the RPC can validate comparison logs), `respaceBucket` semantics and the `CONFLICT` behaviour (§6.9), `removeRanking(bevId)` and `replaceExisting`.
-- You need: the RPC to return `{ score, position, bucketSize }` and to re-space in the same transaction; a `CONFLICT` error code when `insertIndex > bucketSize`.
+- You provide: the exact `SubmitRankingInput`/`Result` types including `expectedBucketSize`, the separate `rerankBev` input (same shape), the comparison element `{ winnerBevId, loserBevId, tie }` with every comparison sent, `insertIndex` 0 = best, `placement.vectors.json` (so the RPC can validate comparison logs), `respaceBucket` semantics, and the client behaviour on `conflict` (refetch + restart, §6.9).
+- You need: the RPC to return `{ ranking: { score, position, bucket }, bucketSize }` and to re-space in the same transaction; `conflict` when the server's bucket size ≠ `expectedBucketSize`; `validation` for an out-of-range `insertIndex`; the DB's smallint bucket (3/2/1) mapped to `'LOVED' | 'FINE' | 'DISLIKED'` inside `packages/api`; a `tie` column on comparisons (Arjun is adding it).
 - By when: types in contract v0; vectors by end of week 2.
 
 **Seam 4 — Formulas are yours; storage and execution are Arjun's.** Wherever math must run in SQL (score-from-position for aggregates, per-Bev avg/stddev, per-user per-category mean/stddev, Bayesian leaderboard average, streaks, user rank), you specify it in `packages/ranking` and export golden test vectors to `shared/fixtures/*.vectors.json`; Arjun's SQL must pass the same vectors in CI. Changing a formula = `contract/*` PR that regenerates the vectors.
 
 - You provide: §8 + §10 (the vectors, the constants, the `vectors-fresh` CI job on your side).
-- You need: a CI job on Arjun's side that loads each vectors file and asserts against his SQL (`supabase test db` or a pgTAP/psql script); the names of his SQL functions so the integrator can cross-reference.
+- You need: a CI job on Arjun's side that loads each vectors file and asserts against the SQL (`supabase test db` or a pgTAP/psql script); the names of Arjun's SQL functions so the integrator can cross-reference. Stddev is population (`stddev_pop`) on both sides; settled.
 - By when: score/stats/bayesian vectors end of week 2 (Phase 1 needs them); streak/rank vectors start of Phase 2; prediction vectors start of Phase 3.
 
-**Seam 5 — Recommendations.** `packages/ranking` exports pure `predictScore()` / `recommend()` taking an explicit input snapshot type (defined by you). Arjun's Edge Function (or scheduled job) assembles that snapshot from the DB, calls your functions, and serves/caches results through `BeviApi`. (Arjun's doc verifies how a Supabase Edge Function can import a workspace TS package and names the approach; if impractical, he proposes the fallback without changing ownership.)
+**Seam 5 — Recommendations.** `packages/ranking` exports pure `predictScore()` / `recommend()` taking an explicit input snapshot type (defined by you). Arjun's Edge Function (or scheduled job) assembles that snapshot from the DB, calls your functions, and serves/caches results through `BeviApi`.
 
-- You provide: `PredictionSnapshot`, `Prediction`, `Recommendation` (§9) in `contract/v1`, a dependency-free ESM build (`dist/`), `prediction.vectors.json`, and the staleness/confidence rules the UI relies on.
-- You need: `recs.getRecommendations()`, `recs.refresh()` (optional), `prediction` embedded in `bevs.get()`, `generatedAt` on both; his chosen import approach (bundled `dist/` copied into `supabase/functions/`, npm specifier, or a Deno import map) so you know whether `src/` or `dist/` is the contract.
+- Arjun's answer on the import: the Edge Function build step bundles `packages/ranking/src/index.ts` with esbuild into `supabase/functions/_shared/ranking.bundle.mjs`. You ship no `dist/`; `src/` is the contract. Your package must be ESM, zero I/O, free of Node and DOM APIs, use plain relative imports (no tsconfig path aliases), take all randomness as a passed-in seed, and export `RANKING_VERSION` (§9).
+- You provide: `PredictionSnapshot` (the name stays), `Prediction`, `Recommendation` (§9) in `contract/v1`, the bundle-compatibility constraints enforced by your own esbuild smoke test, `prediction.vectors.json`, and the staleness/confidence rules the UI relies on.
+- You need: `recs.getRecommendations()`, `recs.refresh()` (optional), `prediction` embedded in `bevs.get()`, `generatedAt` and `rankingVersion` on both.
 - By when: snapshot type frozen at the start of Phase 2 (Layer 1 runs through the same function, so the Edge Function exists in Phase 2, not 3).
 
 ### Interpretations of the brief (flag if Arjun's doc differs)
 
-1. **Starter set:** `selectStarterSet()` is yours; it is called by Arjun inside `onboarding.getStarterSet()` (server has the catalog and rating counts) rather than by the app. The app only renders what it gets.
+1. **Starter set is selected client-side (agreed).** The app calls `bevs.getStarterCandidates()`, which returns age-filtered `isStarter` Bevs (at least 30, each with `ratingCount`), then runs `selectStarterSet(candidates, { seed: userId })` from `@bevi/ranking` and ranks the 10 it picks. The server never calls `selectStarterSet`.
 2. **Background removal for user uploads:** the brief gives Arjun the catalog pipeline; vision §8 says "background removal on upload". I assume Arjun runs the same removal for user uploads (storage trigger/Edge Function) and exposes `photoStatus: 'processing' | 'ready'`; your side renders the raw photo with a shimmer meanwhile. If Arjun prefers on-device removal, that moves into `app/` and becomes an open question (§18).
-3. **Age gate:** birthdate storage and alcohol filtering in queries/RLS are Arjun's; the screens and client-side hiding are yours. The server is the authority.
+3. **Age gate and birthdate (agreed):** birthdate is set once through `profile.setBirthDate`; only an admin can change it afterwards (Arjun's rule). Storage and alcohol filtering in queries/RLS are Arjun's; the screens and client-side hiding are yours. The server is the authority and returns `age_restricted`.
 4. **Timezone:** stored on the profile (Arjun), captured by the app; the server computes streak days from it (not from a client-sent date).
 5. **Price estimation when the user picks "not sure":** vision §2 says "estimate it". The client sends `priceTier: null, priceEstimated: true` and the server fills a tier (median of the category). Your side only displays the `~`.
+6. **Category ids (agreed, Arjun's list):** `soda, diet_soda, juice, water, sparkling_water, energy, coffee, tea, boba, sports, smoothie, beer, wine, spirits_cocktails, other`. Vision's single "Alcoholic" category is split into three, all `isAlcoholic: true`.
 
 ---
 
@@ -849,7 +919,7 @@ This is your input to seam 2. Field names are proposals; Arjun owns the schema a
 |---|---|
 | `Profile` | `id, handle, displayName, initials (derived ok), createdAt, timezone, birthdate (self only), canSeeAlcohol, onboarded` |
 | `ProfileStats` | `followers, following, bevdCount, wantToTryCount, rankOnBevi (number \| null), rankPoints, currentStreak, longestStreak, streakAliveToday (bool)` |
-| `Category` | `id, name, slug, isAlcoholic, sortOrder` |
+| `Category` | `id, name, isAlcoholic, sortOrder, icon`. Ids are Arjun's: `soda, diet_soda, juice, water, sparkling_water, energy, coffee, tea, boba, sports, smoothie, beer, wine, spirits_cocktails, other`; `beer`, `wine`, `spirits_cocktails` are `isAlcoholic` |
 | `BevSummary` | `id, name, brand, flavor, categoryId, photoUrl, photoStatus ('processing'\|'ready'), priceTier (1–4), priceEstimated, ratingCount, bayesScore (number \| null)` |
 | `Bev` (detail) | `BevSummary + nutritionLabelUrl, avgScore, scoreStddev, createdBy (Profile summary \| null), createdAt, myRanking ({ bucket, position, bucketSize, score, note } \| null), prediction ({ score, confidence, generatedAt } \| null), inWantToTry, friends: Array<{ profile, score, bucket }>, isStarter` |
 | `Ranking` | `id, userId, bevId, bucket, position, score, note, createdAt, updatedAt` |
@@ -861,31 +931,33 @@ This is your input to seam 2. Field names are proposals; Arjun owns the schema a
 | `Recommendation` | `bev (BevSummary), predictedScore, confidence, reason, isExploration, generatedAt` |
 | `WantToTryItem` | `bev (BevSummary), savedAt, via (Profile summary \| null)` |
 | `Page<T>` | `{ items: T[], nextCursor: string \| null }` |
-| `ApiError` | `{ code: 'NOT_FOUND' \| 'CONFLICT' \| 'UNAUTHORIZED' \| 'VALIDATION' \| 'RATE_LIMITED' \| 'NETWORK' \| 'UNKNOWN', message }` |
+| `ApiError` | Arjun's set, lowercase: `{ code: 'unauthorized' \| 'not_found' \| 'conflict' \| 'validation' \| 'rate_limited' \| 'age_restricted' \| 'network' \| 'unknown', message, detail? }`. UI mapping: `conflict` → refetch + restart placement; `validation` → field errors from `detail`; `age_restricted` → "Not available" screen; `network` → Retry; `unauthorized` → sign-out |
 
 ### `BeviApi` methods by screen
 
 | Namespace.method | Input → Output | Screens |
 |---|---|---|
-| `auth.signUp / signIn / signOut / getSession / onAuthStateChange / deleteAccount` | email+password → session | 6.1, 6.18 |
+| `getSession() / onAuthChange(cb) / signInWithGoogle(idToken) / signOut() / deleteAccount()` | Google id token → session. No email/password, no magic link. `signInWithApple(idToken, nonce)` is added later in a `contract/*` PR before App Store submission | 6.1, 6.18 |
 | `profile.getMe()` | → `Profile` | root gate, 6.13 |
-| `profile.updateMe(patch)` | `{ displayName?, handle?, birthdate?, timezone?, onboarded? }` → `Profile` | 6.2, 6.3, 6.18 |
+| `profile.updateMe(patch)` | `{ displayName?, handle?, timezone?, onboarded? }` → `Profile` | 6.2, 6.3, 6.18 |
+| `profile.setBirthDate(date)` | set once; a second call is `validation`; admin-only change afterwards | 6.2 |
 | `profile.checkHandle(handle)` | → `{ available }` | 6.2 |
-| `profile.getUser(id)` / `searchUsers({ q, limit })` | → `Profile` / `Profile[]` | 6.14, 6.16 |
+| `profile.getUser(id)` / `searchUsers({ q, limit })` | → `Profile` / `Profile[]` | 6.14, 6.8 People tab |
 | `stats.getMine()` / `stats.getUser(id)` | → `ProfileStats` | 6.13, 6.14 |
-| `follows.follow(id) / unfollow(id)` | → void | 6.14–6.16 |
-| `follows.listFollowers(id, page)` / `listFollowing(id, page)` / `suggested()` | → `Page<Profile & { isFollowing }>` | 6.15, 6.16 |
-| `categories.list()` | → `Category[]` (already filtered by age) | pickers, chips |
+| `follows.follow(id) / unfollow(id)` | → void | 6.8, 6.14, 6.15 |
+| `follows.listFollowers(id, page)` / `listFollowing(id, page)` / `suggested()` | → `Page<Profile & { isFollowing }>` | 6.15, 6.8 |
+| `categories.list()` | → `Category[]` (already filtered by age) | pickers, scope dropdown |
 | `bevs.search({ q, categoryId?, limit })` | → `BevSummary[]` | 6.8 |
 | `bevs.get(id)` | → `Bev` | 6.11 |
 | `bevs.findLikelyDuplicates({ name, brand?, flavor?, categoryId? })` | → `BevSummary[]` (≤ 5) | 6.10 |
 | `bevs.create(input)` | `{ name, flavor?, brand?, categoryId, priceTier: 1–4 \| null, priceEstimated, photoAssetId, labelAssetId? }` → `Bev` | 6.10 |
 | `bevs.report(id, reason)` | → void | 6.11 |
-| `bevs.listStarterCandidates()` or `onboarding.getStarterSet()` | → `BevSummary[]` (10) | 6.3 |
+| `bevs.getStarterCandidates()` | → `BevSummary[]`: age-filtered `isStarter` Bevs, at least 30, each with `ratingCount`; the app runs `selectStarterSet(candidates, { seed: userId })` to pick 10 | 6.3 |
 | `media.upload({ kind: 'bev-photo' \| 'label', uri, mimeType })` | → `{ assetId, url, status }` | 6.10 |
 | `rankings.listMine({ bucket?, categoryId?, page })` | → `Page<Ranking & { bev: BevSummary }>` ordered by bucket, position | 6.5, 6.9 start |
 | `rankings.listUser(id, page)` | → same | 6.13, 6.14 |
-| `rankings.submitRanking({ bevId, bucket, insertIndex, comparisons, note?, replaceExisting? })` | → `{ ranking, bucketSize }` | 6.9 |
+| `rankings.submitRanking({ bevId, bucket, insertIndex, expectedBucketSize, comparisons, note? })` | → `{ ranking, bucketSize }`; `conflict` if the server's bucket size ≠ `expectedBucketSize`; `validation` if `insertIndex` out of range. `comparisons: Array<{ winnerBevId, loserBevId, tie }>`, all of them; `insertIndex` 0 = best | 6.9 |
+| `rankings.rerankBev({ bevId, bucket, insertIndex, expectedBucketSize, comparisons, note? })` | same shape and errors as `submitRanking`; replaces the existing ranking atomically | 6.9 re-rank, 6.19 |
 | `rankings.updateNote(bevId, note)` / `removeRanking(bevId)` | → void | 6.5 |
 | `wantToTry.list(page) / add(bevId, viaUserId?) / remove(bevId)` | → `Page<WantToTryItem>` / void | 6.4, 6.6, 6.11 |
 | `feed.getFeed(page)` / `feed.getFeatured()` | → `Page<FeedItem>` / `FeaturedBev[]` | 6.4 |
@@ -893,9 +965,19 @@ This is your input to seam 2. Field names are proposals; Arjun owns the schema a
 | `recs.getRecommendations({ limit })` / `recs.refresh()` | → `{ items: Recommendation[], generatedAt, basedOnCount }` | 6.7 |
 | `meta.getAppConfig()` | → `{ minAppVersion, maintenance: bool }` | root |
 
-Constraints the schema must honour: `(userId, bevId)` unique in `rankings`; `position` unique per `(userId, bucket)`; `handle` unique, lowercase; `score` numeric(4,2); all list calls cursor-paginated; alcoholic content filtered server-side by `canSeeAlcohol`.
+Constraints the schema must honour: `(userId, bevId)` unique in `rankings`; `position` unique per `(userId, bucket)`; bucket stored as smallint 3/2/1 and mapped to `'LOVED' | 'FINE' | 'DISLIKED'` in `packages/api`; `comparisons.tie boolean`; `handle` unique, lowercase; `score` numeric(4,2); all list calls cursor-paginated; alcoholic content filtered server-side by `canSeeAlcohol`.
 
-Also in `contract/v0`: `shared/enums.ts` (`Bucket`, `PriceTier`, category slugs), `shared/fixtures/` seed JSON (≥ 60 Bevs across all categories, 12 users, ~300 rankings generated by the ranking package so scores are consistent, 3 featured Bevs), and `shared/testing/api-conformance.ts`.
+Also in `contract/v0`: `shared/enums.ts` (`Bucket`, `PriceTier`, the 15 category ids) and `shared/testing/api-conformance.ts`.
+
+Fixtures, split by owner:
+
+| File (`shared/fixtures/`) | Owner | Content | By when |
+|---|---|---|---|
+| `bevs.sample.json` | Arjun | At least 60 Bevs covering every category (incl. a few in each alcoholic one), with dev-bucket image URLs, price tiers, `isStarter` on ≥ 30 | 2026-10-16 |
+| `categories.json` | Arjun | The 15 categories | with `contract/v0` |
+| `users.sample.json`, `rankings.sample.json`, `follows.sample.json`, `featured.sample.json` | You | 12 users with handles/timezones/birthdates (two under 21), ~300 rankings generated by running `packages/ranking` placement with planted tastes (scores therefore consistent with `scoreFromPosition`), a follow graph, 3 featured Bevs. Generated by `scripts/gen-fixtures.ts` in `packages/ranking`, deterministic seed | 2026-10-20 (needs `bevs.sample.json`) |
+
+The mock loads all of them; Arjun's `seed.sql` loads the same files so staging and the mock agree.
 
 ---
 
@@ -903,20 +985,22 @@ Also in `contract/v0`: `shared/enums.ts` (`Bucket`, `PriceTier`, category slugs)
 
 | Your task | Blocked on (Arjun) | Unblocks (Arjun) |
 |---|---|---|
-| §13 data-needs list | nothing | his schema draft and `contract/v0` |
-| Mock API + fixtures | `contract/v0` merged (types) | his `api-conformance` runs against real client |
-| Placement machine + `score-from-position` vectors | nothing | `submit_ranking` RPC + `respace_bucket()` SQL |
+| §13 data-needs list | nothing | Arjun's schema draft and `contract/v0` |
+| Mock API | `contract/v0` merged (types); `bevs.sample.json` (Oct 16) for realistic data | Arjun's `api-conformance` run against the real client |
+| Generated fixtures (`users/rankings/follows/featured.sample.json`) | `bevs.sample.json` | Arjun's `seed.sql` for staging |
+| Placement machine + `score-from-position` vectors | nothing | `submit_ranking` / `rerank_bev` RPCs + `respace_bucket()` SQL |
 | Stats + Bayesian vectors | nothing | aggregate triggers, leaderboard view |
-| Ranking flow screen | mock only; real end-to-end needs `submit_ranking` RPC | his RPC gets a real client exercising `CONFLICT` |
-| Add Bev / create wizard | mock; real needs `media.upload` + storage bucket + background removal job | his dedupe `findLikelyDuplicates` gets real inputs |
+| Ranking flow screen | mock only; real end-to-end needs the `submit_ranking` and `rerank_bev` RPCs | Arjun's RPCs get a real client exercising `conflict` and `validation` |
+| Sign-in screen (Google) | EAS dev build with the Google iOS client id; Arjun's Supabase Google provider config | Arjun's `signInWithGoogle` gets real tokens |
+| Add Bev / create wizard | mock; real needs `media.upload` + storage bucket + background removal job | Arjun's dedupe `findLikelyDuplicates` gets real inputs |
 | Feed, lists, leaderboard, profile screens | mock; real needs views + `getFeed`/`stats` RPCs | nothing |
-| Age-gate UI | `canSeeAlcohol` on `Profile` in contract v0 | his RLS/view filtering spec |
-| `PredictionSnapshot` type + `prediction.vectors.json` (`contract/v1`) | nothing | his Edge Function |
+| Age-gate UI | `canSeeAlcohol` on `Profile`, `setBirthDate`, `age_restricted` in contract v0 | Arjun's RLS/view filtering spec |
+| `PredictionSnapshot` type + `prediction.vectors.json` (`contract/v1`) + bundle-safe package | nothing | Arjun's esbuild bundle and Edge Function |
 | Recommended tab with real data | Edge Function serving `recs.getRecommendations` | nothing |
-| Streak / rank pills on Profile | streak + rank SQL passing your vectors | nothing; you unblock him with the vectors |
-| Photo-style review (`design/photo-style.md`) | nothing | his Haiku image-seeding agents |
-| TestFlight build | staging Supabase project + env values | his first real-user data for the offline eval |
-| Onboarding starter screen | `onboarding.getStarterSet()` (calls your `selectStarterSet`) | nothing |
+| Streak / rank cards on Profile | streak + rank SQL passing your vectors | nothing; you unblock Arjun with the vectors |
+| Photo-style review (`design/photo-style.md`) | nothing | Arjun's Haiku image-seeding agents |
+| TestFlight build | staging Supabase project + env values | Arjun's first real-user data for the offline eval |
+| Onboarding starter screen | `bevs.getStarterCandidates()` in contract v0 | nothing (selection runs in the app) |
 
 ---
 
@@ -931,7 +1015,7 @@ Tags follow vision §10: model / effort. Each row is one Claude Code sub-agent d
 | 0.1 | Workspace scaffold (`chore/scaffold`, joint): root `package.json` workspaces, tsconfig base, vitest, CI skeleton; your parts: `app/` (create-expo-app, router root, eas.json), `packages/ranking/` skeleton | `npm install && npm run typecheck && npm test` green on an empty repo | Opus / High (architecture) for the layout decision, Haiku / Low for the boilerplate |
 | 0.2 | UI skills research (§2) | `design/research.md`, skills installed, CLAUDE.md references | Sonnet / Medium |
 | 0.3 | `app/CLAUDE.md`, `packages/ranking/CLAUDE.md`, `.claude/agents/ui-screen.md`, `ranking-math.md`, integrator adapted | Agents launch on the right model by default; integrator checks `shared/api.ts` + vectors | Haiku / Medium (docs), you review |
-| 0.4 | Beli screenshots into `design/reference/` + README | Named per §5; at least one per screen in §6 | you (manual) |
+| 0.4 | Per-screen specs from `bevi-ui-inspiration/` (§5): Feed, Lists (×3), Search, Profile, Activity post, Taste Profile | `design/specs/*.md` with pt measurements, component mapping and a "Bevi differences" list; you have reviewed each against its image | Sonnet / Medium (one agent per screen, worktrees) |
 | 0.5 | Tokens + `Wordmark` candidates + `photo-style.md` | `tokens.ts`, two SVG wordmark directions, chosen one committed, brand colour hex recorded | Sonnet / Medium–High |
 | 0.6 | §13 → `contract/v0` review | PR approved by both | you + Sonnet / Medium for the fixtures generator |
 | 0.7 | `packages/ranking`: placement + score + stats + bayesian with tests, vectors v1.0.0 | Property tests pass; `vectors-fresh` CI job exists | Opus / High (design + review), Haiku / Low–Medium (tests, generator) |
@@ -943,8 +1027,8 @@ Tags follow vision §10: model / effort. Each row is one Claude Code sub-agent d
 | 1.1 | Mock API + fixtures + conformance suite | Every `BeviApi` method implemented; conformance green; dev panel | Sonnet / Medium |
 | 1.2 | Core components + `ComponentGallery` | All §4 components with every state visible in the gallery; a11y labels | Sonnet / Medium |
 | 1.3 | Root layout, session gate, tab navigator | 5 tabs, raised Add button, deep links `lists?tab=` work | Sonnet / Medium (one agent owns these files) |
-| 1.4 | Auth + onboarding profile + age gate | Sign-up to tabs end-to-end on mock; handle validation | Sonnet / Medium |
-| 1.5 | Ranking flow (6.9) | All states incl. empty bucket, TIE, undo, CONFLICT restart; prefetch | Sonnet / Medium; Opus / High reviews the state-machine wiring |
+| 1.4 | Google sign-in screen + onboarding profile + `setBirthDate` age gate | "Continue with Google" → tabs end-to-end on mock in Expo Go and against staging in the dev build; cancel/error states; handle validation | Sonnet / Medium |
+| 1.5 | Ranking flow (6.9) | All states incl. empty bucket, TIE, undo, `conflict` restart via `expectedBucketSize`, re-rank via `rerankBev`; prefetch | Sonnet / Medium; Opus / High reviews the state-machine wiring |
 | 1.6 | Starter ranking onboarding (6.3) | Min-3 rule, skip, summary | Sonnet / Medium |
 | 1.7 | Add Bev search + Did-you-mean + create wizard + camera + label + price tier (6.8, 6.10) | Creates then ranks on mock; permission-denied paths | Sonnet / Medium |
 | 1.8 | Your Lists: Bev'd + Want to Try (6.5, 6.6) | Bucket sections, filters, re-rank/remove sheet | Sonnet / Medium |
@@ -952,7 +1036,7 @@ Tags follow vision §10: model / effort. Each row is one Claude Code sub-agent d
 | 1.10 | Profile (6.13) + settings/privacy/delete (6.18) + edit profile | Matches `design/specs/profile.md` within 2pt; VoiceOver pass | Sonnet / Medium–High |
 | 1.11 | Leaderboard: Bevs overall (6.12) | Bayesian ordering from the API; MIN_RATERS strip | Sonnet / Medium |
 | 1.12 | Swap to real `packages/api` on staging; fix drift | App runs on `EXPO_PUBLIC_BEVI_API=supabase`; conformance green on both | Sonnet / Medium |
-| 1.13 | Phase-1 review + bug hunt; EAS preview build to 5 friends via TestFlight | Review findings fixed; build installed on ≥ 3 phones | Sonnet / High (review), Haiku / Low (release notes) |
+| 1.13 | Phase-1 review + bug hunt; EAS preview build to 5 friends via **internal** TestFlight (Google-only is allowed there) | Review findings fixed; build installed on ≥ 3 phones | Sonnet / High (review), Haiku / Low (release notes) |
 
 ### Phase 2 — Social + recommendations
 
@@ -960,7 +1044,7 @@ Tags follow vision §10: model / effort. Each row is one Claude Code sub-agent d
 |---|---|---|---|
 | 2.1 | Ranking: z-scores, affinity, `g_b`, content similarity, Layer 1, `predictScore` v1, `PredictionSnapshot`; `contract/v1` + prediction vectors | Eval script: Layer 1 beats user-mean baseline on synthetic data | Opus / High (design), Haiku / Medium (tests) |
 | 2.2 | Streak + rank formulas + vectors | `streak.vectors.json`, `rank-points.vectors.json` merged | Opus / High (review only; small), Haiku / Low |
-| 2.3 | Feed + Featured carousel (6.4), Find people (6.16), followers/following (6.15), other profiles (6.14) | Optimistic follow/bookmark; empty states | Sonnet / Medium |
+| 2.3 | Feed + Featured carousel (6.4), People tab in search (6.8), followers/following (6.15), other profiles (6.14) | Optimistic follow/bookmark; empty states; `FeedPost` matches `design/specs/feed.md` | Sonnet / Medium |
 | 2.4 | Recommended tab (6.7) + predicted score on Bev detail | Confidence gating; stale handling | Sonnet / Medium |
 | 2.5 | Profile pills wired to real streak/rank | Copy for all streak states | Sonnet / Medium |
 | 2.6 | Per-screen polish pass against Beli specs (feed, lists, profile) | Specs' "differences" list closed | Sonnet / Medium–High |
@@ -976,21 +1060,23 @@ Tags follow vision §10: model / effort. Each row is one Claude Code sub-agent d
 | 3.4 | Performance pass (bundle, images, query cache persistence), analytics stub | Budgets in §7 met | Sonnet / Medium |
 | 3.5 | Maestro e2e flows in CI; "Not interested" on recs; drift re-check prompts (vision §4 "optional later") | | Sonnet / Medium, Haiku / Low |
 | 3.6 | Android preview build, Play internal testing | APK/AAB installable | Haiku / Low–Medium |
+| 3.7 | Taste Profile tab + calendar + per-category averages, optional yearly goal card (6.20); `stats.getTasteProfile` contract PR | Matches `design/specs/taste-profile.md` | Sonnet / Medium–High |
+| **G1** | **Pre-distribution gate: add Sign in with Apple before App Store submission / external TestFlight beta review** (`expo-apple-authentication` → `api.signInWithApple(idToken, nonce)`, contract PR, Arjun enables the Apple provider) | Both buttons on 6.1; Apple review 4.8 satisfied; account linking by email verified on staging | Sonnet / Medium; do it at the end of Phase 2 if external testers come before Phase 3 |
 
 ---
 
 ## 16. First-week checklist (ordered)
 
 1. [ ] Agree package names and the scaffold with Arjun; open `chore/scaffold` together (0.1).
-2. [ ] Drop Beli screenshots into `design/reference/` with the README (0.4).
-3. [ ] Write §13 into the `contract/v0` PR description / `shared/README-v0-needs.md`; send to Arjun by 2026-10-13 (0.6).
+2. [ ] Per-screen specs from `bevi-ui-inspiration/` into `design/specs/` (0.4); Profile and Feed first, since they gate 1.2 and 1.10.
+3. [ ] Write §13 into the `contract/v0` PR description / `shared/README-v0-needs.md`; send to Arjun by 2026-10-13 (0.6). Confirm the 15 category ids, lowercase error codes, `expectedBucketSize`, `rerankBev`, `setBirthDate`, `getStarterCandidates` and the Google-only auth surface are in it.
 4. [ ] Research spike (0.2): install `frontend-design` + `react-native-skills`, write `design/research.md`.
-5. [ ] `app/CLAUDE.md`, `packages/ranking/CLAUDE.md`, agent definitions (0.3).
-6. [ ] `packages/ranking`: `placement.ts`, `score.ts`, `stats.ts`, `bayesian.ts` + property tests + `gen-vectors.ts` (0.7). Open `rank/placement` PR.
-7. [ ] Tokens, `Wordmark` candidates, pick one; `design/photo-style.md` (0.5).
+5. [ ] `app/CLAUDE.md`, `packages/ranking/CLAUDE.md` (with the bundle constraints from §9), agent definitions (0.3).
+6. [ ] `packages/ranking`: `placement.ts`, `score.ts`, `stats.ts`, `bayesian.ts` + property tests + `gen-vectors.ts` + esbuild smoke test + `RANKING_VERSION` (0.7). Open `rank/placement` PR.
+7. [ ] Tokens from §4, `Wordmark` candidates, pick one and the brand colour; `design/photo-style.md` (0.5).
 8. [ ] Review Arjun's `contract/v0` draft within a day; approve by 2026-10-16.
-9. [ ] Start `ui/mock-api` against the merged contract (1.1) and `ui/components` (1.2) in separate worktrees.
-10. [ ] Expo Go running on your phone with the component gallery; `eas build --profile development` queued once so credentials exist.
+9. [ ] Start `ui/mock-api` against the merged contract (1.1) and `ui/components` (1.2) in separate worktrees; wire `gen-fixtures.ts` once `bevs.sample.json` lands (Oct 16).
+10. [ ] Expo Go running on your phone with the component gallery; **queue `eas build --profile development --platform ios` now** so credentials exist and the Google iOS client id is in the native config before 1.4 (native Google sign-in doesn't run in Expo Go).
 
 ---
 
@@ -1002,6 +1088,7 @@ Tags follow vision §10: model / effort. Each row is one Claude Code sub-agent d
 - Photo recognition of a drink from the camera ("take a picture and it's in the database"): v1 is search + manual create; the camera photo becomes the Bev's image, not a lookup key.
 - Business model bits (promoted placements, subscriptions), "hottest this month" before Phase 3, matrix factorisation, Android Play release before Phase 3.
 - "Skip this comparator" in the ranking flow, periodic drift re-checks, push notifications, blocking/private profiles, Bev editing by non-creators (moderation is an open question).
+- From the Beli reference (§5): reservations/ordering/hours/distance/maps, invite-unlock card, Guides, "Add School", list import, likes/comments/shares on posts, co-visit tagging ("with Rhea"), visit counts, email/password or magic-link auth.
 
 ---
 
@@ -1017,15 +1104,23 @@ Proposed edits to vision.md (via `chore/vision-*` PRs, both approve):
 6. **§7/§11 rank on Bevi:** `points = bevsRanked + 3·currentStreak + 2·bevsCreated`; followers excluded. Closes §11 item 4.
 7. **§6 streak definition:** consecutive local days (profile timezone) with ≥ 1 ranking; alive if yesterday had one.
 8. **§8 recommendations tech:** vision says "start as SQL views/functions in Postgres for Layer 1"; the agreed seam 5 runs Layer 1 and 2 through `packages/ranking` called by an Edge Function. Update §8 to match the brief (this is the one place the brief and vision conflict).
-9. **§6 missing screens:** add Find people (handle search + suggestions), Followers/Following lists, Edit profile, Account deletion (Apple requirement), Report Bev.
+9. **§6 missing screens:** add a People tab in search (handle search + suggestions, as in the reference), Followers/Following lists, Edit profile, Account deletion (Apple requirement), Report Bev.
 10. **§2 users fields:** add `handle`, `display_name`, `birthdate`, `timezone`, `onboarded`; `categories.is_alcoholic`; `bevs.is_starter`, `bevs.photo_status`.
 11. **§9 Phase 2:** the Edge Function for recommendations is Phase 2 work (Layer 1 already runs through it), not Phase 3.
+12. **§6 Profile:** the reference (and this doc) uses three list rows (Bev'd / Want to Try / Recommended for you) plus two stat cards (Rank, Streak), not "three tappable tiles". Update the wording; the links and emphasis are unchanged.
+13. **§6 Your Lists › Bev'd:** one numbered list sorted by score (reference 06), not bucket sections; buckets show through colour.
+14. **§6 / §8 Auth:** record "v1 sign-in is Google only (decided 2026-10-09); Sign in with Apple added before App Store submission (4.8)". Supabase Auth config remains Arjun's.
+15. **§2 Categories:** replace the list with the 15 ids (`soda … other`), alcohol split into `beer`, `wine`, `spirits_cocktails`.
+16. **§8 Core tables:** `comparisons` gains `tie`; bucket is smallint 3/2/1 in the DB; `users` gets `birthdate` (set once), `timezone`, `handle`, `display_name`.
 
 Open questions (need a decision, not a doc edit):
 
-- Alcohol in v1: proposal is yes, seeded minimally, gated by birthdate ≥ 21 (vision §11 item 1). Arjun's RLS must enforce it; confirm he's fine with that scope.
-- Auth method: email+password (proposed) vs magic link. Email confirmation on or off for the friends-only phase?
-- Whose Apple Developer account and bundle id (`com.bevi.app`)? Who holds the EAS org?
+- **Score bands: thirds (this doc, §8.1) vs 7.0 / 4.0.** The Beli spec's colour thresholds are ≥ 7.0 green, 4.0–6.9 amber, < 4.0 red, which implies Beli's bands are Loved 7–10, Fine 4–7, Didn't like 0–4. Ours are equal thirds (6.67 / 3.33) per vision §4's example. "A 7 is good" is more intuitive; unequal widths cost nothing in the math. Decide before vectors v1.0.0 freezes (end of week 2); the change is two constants and a regeneration.
+- **Streak period: daily (vision) vs weekly (Beli shows "9 weeks").** `computeStreak` supports both; pick before the streak vectors land (start of Phase 2).
+- **App Store 4.8 risk:** Google-only sign-in is fine for internal TestFlight and Android, but Apple may reject an external TestFlight beta or the App Store submission until Sign in with Apple exists (gate G1 in §15). Plan G1 before inviting external testers.
+- Alcohol in v1: proposal is yes, seeded minimally, gated by birthdate ≥ 21 (vision §11 item 1). Arjun's RLS enforces it; confirm that scope with Arjun.
+- Likes on feed posts: the reference has heart/comment/share; vision doesn't. Proposal: no likes in v1, revisit in Phase 3 once the feed has traffic.
+- Whose Apple Developer account and bundle id (`com.bevi.app`)? Who holds the EAS org and the Google Cloud project for the OAuth client ids?
 - Background removal for user uploads: server-side (assumed, Arjun) vs on-device (would move to `app/`). Also: does the pipeline produce blurhashes?
 - Price estimation default when the user says "not sure": category median (proposed) vs always ask.
 - Moderation for user-added Bevs (vision §11 item 5): proposal for v1 is `bevs.report` + Arjun's admin SQL; no in-app moderation UI.
