@@ -1,0 +1,101 @@
+name: backend
+
+# Arjun's lane: supabase/, packages/api/, data/catalog/, scripts/, and shared/
+# (shared/ is joint, but changes there still need the db job to pass).
+#
+# NOTE: as of this PR, none of supabase/, packages/api/, data/catalog/ or a
+# root lockfile exist yet in this branch. This workflow defines the CI
+# *shape* that later PRs (schema, catalog, packages/api) will fill in.
+# `npm ci` will fail until a lockfile exists — that is expected and will
+# resolve once more of the scaffold lands.
+
+on:
+  pull_request:
+    paths:
+      - "supabase/**"
+      - "packages/api/**"
+      - "shared/**"
+      - "data/catalog/**"
+      - "scripts/**"
+  push:
+    branches:
+      - main
+    paths:
+      - "supabase/**"
+      - "packages/api/**"
+      - "shared/**"
+      - "data/catalog/**"
+      - "scripts/**"
+
+jobs:
+  db:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Will fail until a root package-lock.json exists (needs more of the
+      # workspace scaffold). Not worked around on purpose.
+      - run: npm ci
+
+      # Trim the local stack to what CI actually needs. `-x` excludes
+      # services; drop any name here the installed CLI version doesn't
+      # support.
+      - run: supabase start -x studio,imgproxy,inbucket,logflare,vector
+
+      - run: supabase db lint --level warning
+
+      # pgTAP. No-ops cleanly until supabase/tests/*.test.sql exist.
+      - run: supabase test db
+
+      # No-ops until data/catalog/ and its catalog:validate script exist.
+      - run: npm run catalog:validate --if-present
+
+  deploy-dev:
+    needs: db
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+
+      # TODO: enable once bevi-dev Supabase project exists (needs
+      # SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD, SUPABASE_PROJECT_ID in
+      # the dev GitHub Environment). There is no hosted Supabase project yet,
+      # so this job intentionally does nothing right now.
+      #
+      # - uses: actions/setup-node@v4
+      #   with:
+      #     node-version: 22
+      #     cache: npm
+      #
+      # - uses: supabase/setup-cli@v1
+      #   with:
+      #     version: latest
+      #
+      # - run: npm ci
+      #
+      # - run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_ID }}
+      #   env:
+      #     SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      #
+      # - run: supabase db push
+      #   env:
+      #     SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      #     SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      #
+      # - run: supabase functions deploy --use-api
+      #   env:
+      #     SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - run: |
+          echo "deploy-dev is stubbed: no hosted Supabase project exists yet."
+          echo "See the TODO comments in this job for what it needs before it can run."
