@@ -12,6 +12,7 @@
   },
   "scripts": {
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "catalog:validate": "node --experimental-strip-types scripts/catalog/validate.ts"
   }
 }
