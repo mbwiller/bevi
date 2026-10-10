@@ -1,0 +1,17 @@
+{
+  "name": "bevi",
+  "private": true,
+  "workspaces": [
+    "app",
+    "packages/ranking",
+    "packages/api",
+    "shared"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  }
+}

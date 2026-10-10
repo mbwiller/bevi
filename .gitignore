@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+supabase/.env
+.DS_Store
+*.log
+.expo/
+.turbo/
+coverage/
+supabase/.temp/
+supabase/tests/generated/
+data/catalog/raw/
