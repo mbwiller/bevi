@@ -209,7 +209,7 @@ Values below come from the Beli spec's Part 2 table and from measuring the scree
 | Type | System font (SF Pro / Roboto); serif only in Beli's wordmark, ours is decided separately. Scale measured from the screenshots: `displayDrop 28 bold` ("All ⌄" list selector), `screenTitle 20 bold` (profile name, "You ranked X", row names), `tabLabel 20 semibold` (Been/Want to Try/Recs), `heading 17 semibold` (stat numbers, sort toggle, score text), `body 15` (meta lines, "Member since", pill labels), `sectionCaps 15 bold tracking 0.5` ("FEATURED LISTS", "MY LISTS"), `caption 13` ("2 likes"), `tabBar 10` (tab labels, active bold). `maxFontSizeMultiplier` 1.3 on dense rows |
 | Colour, neutral | `text #111111`, `textSecondary #8A8A8E`, `border #E3E3E6`, `surface #FFFFFF`, `input #EDEDED` (grey search/composer pills), `avatarFill #EEF0F3`; dark set derived in week 1 |
 | Colour, brand | `primary` = **not** `#154F5C`. Used exactly where Beli uses its teal: filled pills, primary buttons, active tab underline, saved-bookmark fill, count badges, "Rank"/"Streak" values. Pick in week 1 from two candidates, record in `design/brand/colors.md`. `primaryTint` (active filter pill background, Beli `#E8EEF2`-style) derived from it |
-| Colour, score | `scoreHigh #2E9E5B`, `scoreMid #E8B423`, `scoreLow #D9534F`. The spec's thresholds are ≥ 7.0 / 4.0–6.9 / < 4.0; our scores are bucket-derived so colour = bucket, and band boundaries are the thresholds (§8.1, and see §18 on 7.0/4.0 vs thirds) |
+| Colour, score | `scoreHigh #2E9E5B`, `scoreMid #E8B423`, `scoreLow #D9534F`. Thresholds ≥ 7.0 / 4.0–6.9 / < 4.0, which are also our band edges (§8.1), so a bucket's colour and a score's colour always agree. The design system's darkened hexes supersede these |
 | Colour, misc | `badgeRed #E05A55` (notification count, not v1), `tasteCard #332E80` (Taste Profile share card, Phase 3) |
 | Elevation | None on cards; Beli uses 1pt `border` outlines, not shadows. Only the floating pill button ("View Map" in Beli) has a shadow; we have no floating button in v1 |
 | Motion | `fast 150ms`, `base 250ms`, `springy` (Reanimated spring damping 18 stiffness 180); honoured `reduceMotion` |
@@ -492,10 +492,10 @@ Everything here is pure: no `Date.now()`, no `Math.random()` (seeded PRNG passed
 
 ```
 type Bucket = 'LOVED' | 'FINE' | 'DISLIKED'
-BANDS = { DISLIKED: [0, 10/3], FINE: [10/3, 20/3], LOVED: [20/3, 10] }   // lo, hi
+BANDS = { DISLIKED: [0, 4], FINE: [4, 7], LOVED: [7, 10] }   // lo, hi; FINE and DISLIKED exclude hi
 ```
 
-Proposal for vision §11's open question: equal thirds, exactly as vision §4's example (Loved 6.7–10, Fine 3.4–6.7, Didn't like 0–3.4 after 1-dp display). Equal widths keep the z-score math unbiased across buckets, and the numbers match the Beli-style feel users expect ("a 7 is good"). Scores are stored to 2 dp and displayed to 1 dp.
+**Decided 2026-10-09 (closes vision §11's open question): Beli-style 7 / 4**, replacing the equal thirds this section first proposed. The edges are Beli's colour thresholds (≥ 7.0 green, 4.0–6.9 amber, < 4.0 red), so a bucket's colour and a score's colour always agree, and "a 7 is good" reads naturally. The unequal widths (Didn't like is 4 wide) don't bias the maths, because z-scores are per user. Integer edges also let stored scores be computed exactly (§8.2). Scores are stored to 2 dp and displayed to 1 dp.
 
 ### 8.2 Score from position
 
@@ -505,10 +505,10 @@ Within a bucket of `n` Bevs after insertion, index `i` (0 = best):
 score(i, n, bucket) = hi − (hi − lo) · (i + 1) / (n + 1)
 ```
 
-- `n = 1` → the band midpoint (Loved alone = 8.33; Fine alone = 5.00; Disliked alone = 1.67).
+- `n = 1` → the band midpoint (Loved alone = 8.50; Fine alone = 5.50; Disliked alone = 2.00).
 - Scores are strictly inside the open band, so bucket order is always preserved globally.
-- Loved, `n = 3` → 9.17, 8.33, 7.50. Loved, `n = 50`, top → 9.93.
-- Stored value: `round(score · 100) / 100` in double precision (`round(x::numeric, 2)` in SQL). The vector generator rejects any case within 1e-9 of a rounding boundary so JS and SQL agree exactly.
+- Loved, `n = 3` → 9.25, 8.50, 7.75. Loved, `n = 50`, top → 9.94.
+- Stored value, in exact integer arithmetic so JS and SQL agree on every half cent (rounding a double near x.xx5 can differ between them): `D = n + 1`, `N = 100·(hi·D − (hi − lo)·(i + 1))`, `cents = floor((2N + D) / (2D))` (round half up), capped at `hi·100 − 1` for FINE and DISLIKED (the cap only bites for buckets of 599+ / 799+ Bevs). Stored score = `cents / 100`, `numeric(4,2)`. SQL twin: `least((200*(hi*(n+1) - w*(i+1)) + (n+1)) / (2*(n+1)), max_cents)` with integer division. Examples: Loved `n = 7`, top = 9.625 → 9.63; Loved `n = 39`, top = 9.925 → 9.93. The vectors include these half-cent cases instead of excluding them.
 - `respaceBucket(orderedIds, bucket)` returns `[{ bevId, position: i, score }]` for all `n`; the RPC calls the SQL twin after every insert/remove (vision §4 "re-spaces scores in that bucket").
 
 Alternative considered and rejected: `(i + 0.5)/n` (midpoint spacing) gives the same `n = 1` result but is not symmetric under re-indexing; `(i + 1)/(n + 1)` is simpler to prove and to write in SQL.
@@ -750,7 +750,8 @@ export function removeFromBucket(orderedBevIds: BevId[], bevId: BevId): BevId[];
 
 // score.ts
 export function scoreFromPosition(index: number, n: number, bucket: Bucket): number;      // unrounded
-export function storedScore(score: number): number;                                       // 2 dp
+export function storedScoreCents(index: number, n: number, bucket: Bucket): number;     // exact integer hundredths (§8.2)
+export function storedScore(index: number, n: number, bucket: Bucket): number;            // cents / 100
 export function respaceBucket(orderedBevIds: BevId[], bucket: Bucket): Array<{ bevId: BevId; position: number; score: number }>;
 export function bucketForScore(score: number): Bucket;
 
@@ -1096,7 +1097,7 @@ Tags follow vision §10: model / effort. Each row is one Claude Code sub-agent d
 
 Proposed edits to vision.md (via `chore/vision-*` PRs, both approve):
 
-1. **§4 score bands:** adopt equal thirds (`[0, 10/3), [10/3, 20/3), [20/3, 10]`), `score = hi − (hi − lo)(i + 1)/(n + 1)`, stored 2 dp, displayed 1 dp. Closes §11 item 3.
+1. **§4 score bands (decided 2026-10-09):** Beli-style 7 / 4 (`[0, 4), [4, 7), [7, 10]`), `score = hi − (hi − lo)(i + 1)/(n + 1)`, stored 2 dp with exact integer rounding (§8.2), displayed 1 dp. Closes §11 item 3. (Done in vision.md.)
 2. **§4 ties:** add the "Too close to call" answer and its rule (insert directly below the incumbent).
 3. **§2/§4 stddev:** state that all stddevs are population (`stddev_pop`) with a floor of 1.0 and small-n fallbacks (§8.4).
 4. **§5 normalisation subtlety:** category affinity uses the user's overall mean/σ (per-category z-scores would be identically 0).
@@ -1115,7 +1116,6 @@ Proposed edits to vision.md (via `chore/vision-*` PRs, both approve):
 
 Open questions (need a decision, not a doc edit):
 
-- **Score bands: thirds (this doc, §8.1) vs 7.0 / 4.0.** The Beli spec's colour thresholds are ≥ 7.0 green, 4.0–6.9 amber, < 4.0 red, which implies Beli's bands are Loved 7–10, Fine 4–7, Didn't like 0–4. Ours are equal thirds (6.67 / 3.33) per vision §4's example. "A 7 is good" is more intuitive; unequal widths cost nothing in the math. Decide before vectors v1.0.0 freezes (end of week 2); the change is two constants and a regeneration.
 - **Streak period: daily (vision) vs weekly (Beli shows "9 weeks").** `computeStreak` supports both; pick before the streak vectors land (start of Phase 2).
 - **App Store 4.8 risk:** Google-only sign-in is fine for internal TestFlight and Android, but Apple may reject an external TestFlight beta or the App Store submission until Sign in with Apple exists (gate G1 in §15). Plan G1 before inviting external testers.
 - Alcohol in v1: proposal is yes, seeded minimally, gated by birthdate ≥ 21 (vision §11 item 1). Arjun's RLS enforces it; confirm that scope with Arjun.
