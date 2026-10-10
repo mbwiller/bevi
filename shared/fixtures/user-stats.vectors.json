@@ -1,0 +1,796 @@
+{
+  "version": "1.0.0",
+  "constants": {
+    "version": "1.0.0",
+    "bands": {
+      "DISLIKED": [
+        0,
+        4
+      ],
+      "FINE": [
+        4,
+        7
+      ],
+      "LOVED": [
+        7,
+        10
+      ]
+    },
+    "bucketOrder": [
+      "LOVED",
+      "FINE",
+      "DISLIKED"
+    ],
+    "bucketDb": {
+      "LOVED": 3,
+      "FINE": 2,
+      "DISLIKED": 1
+    },
+    "sigmaFloor": 1,
+    "minNUser": 3,
+    "minNCat": 3,
+    "globalFallback": {
+      "mean": 5,
+      "stddev": 2.5
+    },
+    "kAff": 2,
+    "bayesC": 3,
+    "bayesCategoryPriorMin": 30,
+    "minRaters": 2,
+    "storedScoreRule": "cents = floor((2N + D) / (2D)) with D = n + 1, N = 100*(hi*D - (hi - lo)*(index + 1)); capped at hi*100 - 1 for FINE and DISLIKED; storedScore = cents / 100",
+    "stddev": "population (stddev_pop)",
+    "nameOrder": "code point (SQL collate \"C\"), then bevId"
+  },
+  "cases": [
+    {
+      "name": "two rankings: global stats",
+      "fn": "userStats",
+      "input": {
+        "rankings": [
+          {
+            "bevId": "u2-0",
+            "categoryId": "sparkling_water",
+            "score": 8.76
+          },
+          {
+            "bevId": "u2-1",
+            "categoryId": "boba",
+            "score": 6.92
+          }
+        ],
+        "global": {
+          "n": 200,
+          "mean": 5.355999999999999,
+          "stddev": 2.7014009328494715
+        }
+      },
+      "expected": {
+        "overall": {
+          "n": 2,
+          "mean": 7.84,
+          "stddev": 0.9199999999999999
+        },
+        "effective": {
+          "mean": 5.355999999999999,
+          "stddev": 2.7014009328494715
+        },
+        "byCategory": {
+          "boba": {
+            "stats": {
+              "n": 1,
+              "mean": 6.92,
+              "stddev": 0
+            },
+            "effective": {
+              "mean": 5.355999999999999,
+              "stddev": 2.7014009328494715
+            }
+          },
+          "sparkling_water": {
+            "stats": {
+              "n": 1,
+              "mean": 8.76,
+              "stddev": 0
+            },
+            "effective": {
+              "mean": 5.355999999999999,
+              "stddev": 2.7014009328494715
+            }
+          }
+        },
+        "z": {
+          "u2-0": 1.260086926974375,
+          "u2-1": 0.5789588583395779
+        },
+        "affinity": {
+          "boba": 0.19298628611319266,
+          "sparkling_water": 0.420028975658125
+        }
+      }
+    },
+    {
+      "name": "one ranking, empty system: GLOBAL_FALLBACK",
+      "fn": "userStats",
+      "input": {
+        "rankings": [
+          {
+            "bevId": "u1-0",
+            "categoryId": "coffee",
+            "score": 8.2
+          }
+        ],
+        "global": {
+          "n": 0,
+          "mean": 0,
+          "stddev": 0
+        }
+      },
+      "expected": {
+        "overall": {
+          "n": 1,
+          "mean": 8.2,
+          "stddev": 0
+        },
+        "effective": {
+          "mean": 5,
+          "stddev": 2.5
+        },
+        "byCategory": {
+          "coffee": {
+            "stats": {
+              "n": 1,
+              "mean": 8.2,
+              "stddev": 0
+            },
+            "effective": {
+              "mean": 5,
+              "stddev": 2.5
+            }
+          }
+        },
+        "z": {
+          "u1-0": 1.2799999999999998
+        },
+        "affinity": {
+          "coffee": 0.4266666666666666
+        }
+      }
+    },
+    {
+      "name": "three identical scores: stddev floored",
+      "fn": "userStats",
+      "input": {
+        "rankings": [
+          {
+            "bevId": "same-0",
+            "categoryId": "soda",
+            "score": 8.5
+          },
+          {
+            "bevId": "same-1",
+            "categoryId": "soda",
+            "score": 8.5
+          },
+          {
+            "bevId": "same-2",
+            "categoryId": "energy",
+            "score": 8.5
+          }
+        ],
+        "global": {
+          "n": 200,
+          "mean": 5.355999999999999,
+          "stddev": 2.7014009328494715
+        }
+      },
+      "expected": {
+        "overall": {
+          "n": 3,
+          "mean": 8.5,
+          "stddev": 0
+        },
+        "effective": {
+          "mean": 8.5,
+          "stddev": 1
+        },
+        "byCategory": {
+          "energy": {
+            "stats": {
+              "n": 1,
+              "mean": 8.5,
+              "stddev": 0
+            },
+            "effective": {
+              "mean": 8.5,
+              "stddev": 1
+            }
+          },
+          "soda": {
+            "stats": {
+              "n": 2,
+              "mean": 8.5,
+              "stddev": 0
+            },
+            "effective": {
+              "mean": 8.5,
+              "stddev": 1
+            }
+          }
+        },
+        "z": {
+          "same-0": 0,
+          "same-1": 0,
+          "same-2": 0
+        },
+        "affinity": {
+          "energy": 0,
+          "soda": 0
+        }
+      }
+    },
+    {
+      "name": "five rankings",
+      "fn": "userStats",
+      "input": {
+        "rankings": [
+          {
+            "bevId": "u5-0",
+            "categoryId": "diet_soda",
+            "score": 3
+          },
+          {
+            "bevId": "u5-1",
+            "categoryId": "coffee",
+            "score": 0.71
+          },
+          {
+            "bevId": "u5-2",
+            "categoryId": "sparkling_water",
+            "score": 8.5
+          },
+          {
+            "bevId": "u5-3",
+            "categoryId": "boba",
+            "score": 5.33
+          },
+          {
+            "bevId": "u5-4",
+            "categoryId": "coffee",
+            "score": 5.73
+          }
+        ],
+        "global": {
+          "n": 200,
+          "mean": 5.355999999999999,
+          "stddev": 2.7014009328494715
+        }
+      },
+      "expected": {
+        "overall": {
+          "n": 5,
+          "mean": 4.654,
+          "stddev": 2.6342862410907433
+        },
+        "effective": {
+          "mean": 4.654,
+          "stddev": 2.6342862410907433
+        },
+        "byCategory": {
+          "boba": {
+            "stats": {
+              "n": 1,
+              "mean": 5.33,
+              "stddev": 0
+            },
+            "effective": {
+              "mean": 4.654,
+              "stddev": 2.6342862410907433
+            }
+          },
+          "coffee": {
+            "stats": {
+              "n": 2,
+              "mean": 3.22,
+              "stddev": 2.5100000000000002
+            },
+            "effective": {
+              "mean": 4.654,
+              "stddev": 2.6342862410907433
+            }
+          },
+          "diet_soda": {
+            "stats": {
+              "n": 1,
+              "mean": 3,
+              "stddev": 0
+            },
+            "effective": {
+              "mean": 4.654,
+              "stddev": 2.6342862410907433
+            }
+          },
+          "sparkling_water": {
+            "stats": {
+              "n": 1,
+              "mean": 8.5,
+              "stddev": 0
+            },
+            "effective": {
+              "mean": 4.654,
+              "stddev": 2.6342862410907433
+            }
+          }
+        },
+        "z": {
+          "u5-0": -0.6278740609885851,
+          "u5-1": -1.4971797439776178,
+          "u5-2": 1.4599780160593099,
+          "u5-3": 0.25661600074261404,
+          "u5-4": 0.40845978816427925
+        },
+        "affinity": {
+          "boba": 0.08553866691420468,
+          "coffee": -0.2721799889533346,
+          "diet_soda": -0.2092913536628617,
+          "sparkling_water": 0.4866593386864366
+        }
+      }
+    },
+    {
+      "name": "twelve rankings",
+      "fn": "userStats",
+      "input": {
+        "rankings": [
+          {
+            "bevId": "u12-0",
+            "categoryId": "soda",
+            "score": 8
+          },
+          {
+            "bevId": "u12-1",
+            "categoryId": "energy",
+            "score": 7.15
+          },
+          {
+            "bevId": "u12-2",
+            "categoryId": "diet_soda",
+            "score": 3.71
+          },
+          {
+            "bevId": "u12-3",
+            "categoryId": "sparkling_water",
+            "score": 9.63
+          },
+          {
+            "bevId": "u12-4",
+            "categoryId": "soda",
+            "score": 6.59
+          },
+          {
+            "bevId": "u12-5",
+            "categoryId": "diet_soda",
+            "score": 3.33
+          },
+          {
+            "bevId": "u12-6",
+            "categoryId": "soda",
+            "score": 7.63
+          },
+          {
+            "bevId": "u12-7",
+            "categoryId": "sparkling_water",
+            "score": 1
+          },
+          {
+            "bevId": "u12-8",
+            "categoryId": "coffee",
+            "score": 5.24
+          },
+          {
+            "bevId": "u12-9",
+            "categoryId": "soda",
+            "score": 4.9
+          },
+          {
+            "bevId": "u12-10",
+            "categoryId": "sparkling_water",
+            "score": 1.71
+          },
+          {
+            "bevId": "u12-11",
+            "categoryId": "boba",
+            "score": 1.93
+          }
+        ],
+        "global": {
+          "n": 200,
+          "mean": 5.355999999999999,
+          "stddev": 2.7014009328494715
+        }
+      },
+      "expected": {
+        "overall": {
+          "n": 12,
+          "mean": 5.068333333333333,
+          "stddev": 2.664863452828723
+        },
+        "effective": {
+          "mean": 5.068333333333333,
+          "stddev": 2.664863452828723
+        },
+        "byCategory": {
+          "boba": {
+            "stats": {
+              "n": 1,
+              "mean": 1.93,
+              "stddev": 0
+            },
+            "effective": {
+              "mean": 5.068333333333333,
+              "stddev": 2.664863452828723
+            }
+          },
+          "coffee": {
+            "stats": {
+              "n": 1,
+              "mean": 5.24,
+              "stddev": 0
+            },
+            "effective": {
+              "mean": 5.068333333333333,
+              "stddev": 2.664863452828723
+            }
+          },
+          "diet_soda": {
+            "stats": {
+              "n": 2,
+              "mean": 3.52,
+              "stddev": 0.18999999999999995
+            },
+            "effective": {
+              "mean": 5.068333333333333,
+              "stddev": 2.664863452828723
+            }
+          },
+          "energy": {
+            "stats": {
+              "n": 1,
+              "mean": 7.15,
+              "stddev": 0
+            },
+            "effective": {
+              "mean": 5.068333333333333,
+              "stddev": 2.664863452828723
+            }
+          },
+          "soda": {
+            "stats": {
+              "n": 4,
+              "mean": 6.779999999999999,
+              "stddev": 1.2022271000106426
+            },
+            "effective": {
+              "mean": 6.779999999999999,
+              "stddev": 1.2022271000106426
+            }
+          },
+          "sparkling_water": {
+            "stats": {
+              "n": 3,
+              "mean": 4.113333333333333,
+              "stddev": 3.9116265443191565
+            },
+            "effective": {
+              "mean": 4.113333333333333,
+              "stddev": 3.9116265443191565
+            }
+          }
+        },
+        "z": {
+          "u12-0": 1.1001189061130825,
+          "u12-1": 0.7811532198608528,
+          "u12-2": -0.5097196750893475,
+          "u12-3": 1.7117825162202998,
+          "u12-4": 0.5710111206829132,
+          "u12-5": -0.6523160995315207,
+          "u12-6": 0.9612750191562295,
+          "u12-7": -1.5266573336111622,
+          "u12-8": 0.06441856016466607,
+          "u12-9": -0.06316771433622576,
+          "u12-10": -1.2602271721534175,
+          "u12-11": -1.1776713474763698
+        },
+        "affinity": {
+          "boba": -0.3925571158254566,
+          "coffee": 0.021472853388222024,
+          "diet_soda": -0.29050894365521707,
+          "energy": 0.2603844066202843,
+          "soda": 0.4282062219359999,
+          "sparkling_water": -0.215020397908856
+        }
+      }
+    },
+    {
+      "name": "thirty rankings",
+      "fn": "userStats",
+      "input": {
+        "rankings": [
+          {
+            "bevId": "u30-0",
+            "categoryId": "diet_soda",
+            "score": 7.53
+          },
+          {
+            "bevId": "u30-1",
+            "categoryId": "energy",
+            "score": 3.6
+          },
+          {
+            "bevId": "u30-2",
+            "categoryId": "boba",
+            "score": 5.5
+          },
+          {
+            "bevId": "u30-3",
+            "categoryId": "soda",
+            "score": 9.1
+          },
+          {
+            "bevId": "u30-4",
+            "categoryId": "boba",
+            "score": 2.67
+          },
+          {
+            "bevId": "u30-5",
+            "categoryId": "soda",
+            "score": 4.86
+          },
+          {
+            "bevId": "u30-6",
+            "categoryId": "energy",
+            "score": 9.59
+          },
+          {
+            "bevId": "u30-7",
+            "categoryId": "coffee",
+            "score": 3.18
+          },
+          {
+            "bevId": "u30-8",
+            "categoryId": "energy",
+            "score": 3.2
+          },
+          {
+            "bevId": "u30-9",
+            "categoryId": "soda",
+            "score": 4.43
+          },
+          {
+            "bevId": "u30-10",
+            "categoryId": "sparkling_water",
+            "score": 9.08
+          },
+          {
+            "bevId": "u30-11",
+            "categoryId": "diet_soda",
+            "score": 8.88
+          },
+          {
+            "bevId": "u30-12",
+            "categoryId": "coffee",
+            "score": 0.44
+          },
+          {
+            "bevId": "u30-13",
+            "categoryId": "soda",
+            "score": 2.52
+          },
+          {
+            "bevId": "u30-14",
+            "categoryId": "sparkling_water",
+            "score": 2
+          },
+          {
+            "bevId": "u30-15",
+            "categoryId": "sparkling_water",
+            "score": 4.25
+          },
+          {
+            "bevId": "u30-16",
+            "categoryId": "energy",
+            "score": 8.43
+          },
+          {
+            "bevId": "u30-17",
+            "categoryId": "diet_soda",
+            "score": 7.94
+          },
+          {
+            "bevId": "u30-18",
+            "categoryId": "diet_soda",
+            "score": 5.29
+          },
+          {
+            "bevId": "u30-19",
+            "categoryId": "energy",
+            "score": 8.45
+          },
+          {
+            "bevId": "u30-20",
+            "categoryId": "boba",
+            "score": 5.78
+          },
+          {
+            "bevId": "u30-21",
+            "categoryId": "soda",
+            "score": 2.18
+          },
+          {
+            "bevId": "u30-22",
+            "categoryId": "coffee",
+            "score": 4.55
+          },
+          {
+            "bevId": "u30-23",
+            "categoryId": "boba",
+            "score": 8.15
+          },
+          {
+            "bevId": "u30-24",
+            "categoryId": "diet_soda",
+            "score": 9.18
+          },
+          {
+            "bevId": "u30-25",
+            "categoryId": "sparkling_water",
+            "score": 3.2
+          },
+          {
+            "bevId": "u30-26",
+            "categoryId": "coffee",
+            "score": 0.77
+          },
+          {
+            "bevId": "u30-27",
+            "categoryId": "boba",
+            "score": 5.11
+          },
+          {
+            "bevId": "u30-28",
+            "categoryId": "soda",
+            "score": 8.2
+          },
+          {
+            "bevId": "u30-29",
+            "categoryId": "boba",
+            "score": 8.88
+          }
+        ],
+        "global": {
+          "n": 200,
+          "mean": 5.355999999999999,
+          "stddev": 2.7014009328494715
+        }
+      },
+      "expected": {
+        "overall": {
+          "n": 30,
+          "mean": 5.564666666666667,
+          "stddev": 2.7835789113218175
+        },
+        "effective": {
+          "mean": 5.564666666666667,
+          "stddev": 2.7835789113218175
+        },
+        "byCategory": {
+          "boba": {
+            "stats": {
+              "n": 6,
+              "mean": 6.015000000000001,
+              "stddev": 2.045114096246629
+            },
+            "effective": {
+              "mean": 6.015000000000001,
+              "stddev": 2.045114096246629
+            }
+          },
+          "coffee": {
+            "stats": {
+              "n": 4,
+              "mean": 2.235,
+              "stddev": 1.7044427241770255
+            },
+            "effective": {
+              "mean": 2.235,
+              "stddev": 1.7044427241770255
+            }
+          },
+          "diet_soda": {
+            "stats": {
+              "n": 5,
+              "mean": 7.764,
+              "stddev": 1.3752759723051953
+            },
+            "effective": {
+              "mean": 7.764,
+              "stddev": 1.3752759723051953
+            }
+          },
+          "energy": {
+            "stats": {
+              "n": 5,
+              "mean": 6.653999999999999,
+              "stddev": 2.692839393651244
+            },
+            "effective": {
+              "mean": 6.653999999999999,
+              "stddev": 2.692839393651244
+            }
+          },
+          "soda": {
+            "stats": {
+              "n": 6,
+              "mean": 5.215,
+              "stddev": 2.6210668947332625
+            },
+            "effective": {
+              "mean": 5.215,
+              "stddev": 2.6210668947332625
+            }
+          },
+          "sparkling_water": {
+            "stats": {
+              "n": 4,
+              "mean": 4.6325,
+              "stddev": 2.6883394037955846
+            },
+            "effective": {
+              "mean": 4.6325,
+              "stddev": 2.6883394037955846
+            }
+          }
+        },
+        "z": {
+          "u30-0": 0.7060454888990628,
+          "u30-1": -0.7058059890724347,
+          "u30-2": -0.02323148318290674,
+          "u30-3": 1.270067580607778,
+          "u30-4": -1.0399082472183616,
+          "u30-5": -0.253151316745695,
+          "u30-6": 1.4460999531792877,
+          "u30-7": -0.8566908798480146,
+          "u30-8": -0.8495058850491775,
+          "u30-9": -0.4076287049206937,
+          "u30-10": 1.262882585808941,
+          "u30-11": 1.1910326378205698,
+          "u30-12": -1.8410351672887024,
+          "u30-13": -1.0937957082096401,
+          "u30-14": -1.2806055729794057,
+          "u30-15": -0.47229365811022783,
+          "u30-16": 1.0293702548467338,
+          "u30-17": 0.8533378822752242,
+          "u30-18": -0.09867392857069666,
+          "u30-19": 1.0365552496455708,
+          "u30-20": 0.07735844400081328,
+          "u30-21": -1.2159406197898714,
+          "u30-22": -0.36451873612767083,
+          "u30-23": 0.9287803276630141,
+          "u30-24": 1.2988075598031266,
+          "u30-25": -0.8495058850491775,
+          "u30-26": -1.7224827531078897,
+          "u30-27": -0.16333888176023081,
+          "u30-28": 0.9467428146601066,
+          "u30-29": 1.1910326378205698
+        },
+        "affinity": {
+          "boba": 0.12133659966536224,
+          "coffee": -0.7974545893953796,
+          "diet_soda": 0.5643642343181838,
+          "energy": 0.27953051193571143,
+          "soda": -0.09421324429975196,
+          "sparkling_water": -0.22325375505497833
+        }
+      }
+    }
+  ]
+}

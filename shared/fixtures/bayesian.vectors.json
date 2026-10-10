@@ -1,0 +1,272 @@
+{
+  "version": "1.0.0",
+  "constants": {
+    "version": "1.0.0",
+    "bands": {
+      "DISLIKED": [
+        0,
+        4
+      ],
+      "FINE": [
+        4,
+        7
+      ],
+      "LOVED": [
+        7,
+        10
+      ]
+    },
+    "bucketOrder": [
+      "LOVED",
+      "FINE",
+      "DISLIKED"
+    ],
+    "bucketDb": {
+      "LOVED": 3,
+      "FINE": 2,
+      "DISLIKED": 1
+    },
+    "sigmaFloor": 1,
+    "minNUser": 3,
+    "minNCat": 3,
+    "globalFallback": {
+      "mean": 5,
+      "stddev": 2.5
+    },
+    "kAff": 2,
+    "bayesC": 3,
+    "bayesCategoryPriorMin": 30,
+    "minRaters": 2,
+    "storedScoreRule": "cents = floor((2N + D) / (2D)) with D = n + 1, N = 100*(hi*D - (hi - lo)*(index + 1)); capped at hi*100 - 1 for FINE and DISLIKED; storedScore = cents / 100",
+    "stddev": "population (stddev_pop)",
+    "nameOrder": "code point (SQL collate \"C\"), then bevId"
+  },
+  "cases": [
+    {
+      "name": "one 10/10, m = 6",
+      "fn": "bayesianAverage",
+      "input": {
+        "mean": 10,
+        "n": 1,
+        "m": 6,
+        "C": 3
+      },
+      "expected": 7
+    },
+    {
+      "name": "five 10/10s, m = 6",
+      "fn": "bayesianAverage",
+      "input": {
+        "mean": 10,
+        "n": 5,
+        "m": 6,
+        "C": 3
+      },
+      "expected": 8.5
+    },
+    {
+      "name": "one 2/10, m = 6",
+      "fn": "bayesianAverage",
+      "input": {
+        "mean": 2,
+        "n": 1,
+        "m": 6,
+        "C": 3
+      },
+      "expected": 5
+    },
+    {
+      "name": "no ratings",
+      "fn": "bayesianAverage",
+      "input": {
+        "mean": 0,
+        "n": 0,
+        "m": 6.2,
+        "C": 3
+      },
+      "expected": 6.2
+    },
+    {
+      "name": "random 1 (n = 17)",
+      "fn": "bayesianAverage",
+      "input": {
+        "mean": 5.258235294117647,
+        "n": 17,
+        "m": 6.12,
+        "C": 3
+      },
+      "expected": 5.387499999999999
+    },
+    {
+      "name": "random 2 (n = 25)",
+      "fn": "bayesianAverage",
+      "input": {
+        "mean": 5.7248,
+        "n": 25,
+        "m": 5.36,
+        "C": 3
+      },
+      "expected": 5.685714285714286
+    },
+    {
+      "name": "random 3 (n = 12)",
+      "fn": "bayesianAverage",
+      "input": {
+        "mean": 4.4783333333333335,
+        "n": 12,
+        "m": 5.18,
+        "C": 3
+      },
+      "expected": 4.618666666666667
+    },
+    {
+      "name": "random 4 (n = 24)",
+      "fn": "bayesianAverage",
+      "input": {
+        "mean": 5.335000000000001,
+        "n": 24,
+        "m": 7.42,
+        "C": 3
+      },
+      "expected": 5.566666666666667
+    },
+    {
+      "name": "random 5 (n = 9)",
+      "fn": "bayesianAverage",
+      "input": {
+        "mean": 5.544444444444444,
+        "n": 9,
+        "m": 7.79,
+        "C": 3
+      },
+      "expected": 6.105833333333333
+    },
+    {
+      "name": "random 6 (n = 24)",
+      "fn": "bayesianAverage",
+      "input": {
+        "mean": 4.966666666666666,
+        "n": 24,
+        "m": 7.49,
+        "C": 3
+      },
+      "expected": 5.247037037037036
+    },
+    {
+      "name": "category with 30 rankings uses its own mean",
+      "fn": "categoryPrior",
+      "input": {
+        "category": {
+          "n": 30,
+          "mean": 4.2,
+          "stddev": 1.1
+        },
+        "global": {
+          "n": 120,
+          "mean": 6.4,
+          "stddev": 2
+        }
+      },
+      "expected": 4.2
+    },
+    {
+      "name": "category with 29 rankings uses the global mean",
+      "fn": "categoryPrior",
+      "input": {
+        "category": {
+          "n": 29,
+          "mean": 4.2,
+          "stddev": 1.1
+        },
+        "global": {
+          "n": 120,
+          "mean": 6.4,
+          "stddev": 2
+        }
+      },
+      "expected": 6.4
+    },
+    {
+      "name": "empty system prior",
+      "fn": "categoryPrior",
+      "input": {
+        "category": {
+          "n": 0,
+          "mean": 0,
+          "stddev": 0
+        },
+        "global": {
+          "n": 0,
+          "mean": 0,
+          "stddev": 0
+        }
+      },
+      "expected": 5
+    },
+    {
+      "name": "eligibility and tie order",
+      "fn": "leaderboardOrder",
+      "input": {
+        "rows": [
+          {
+            "bevId": "new",
+            "bayes": 9.9,
+            "n": 1,
+            "name": "New Bev"
+          },
+          {
+            "bevId": "b",
+            "bayes": 7.2,
+            "n": 4,
+            "name": "Sprite"
+          },
+          {
+            "bevId": "a",
+            "bayes": 7.2,
+            "n": 9,
+            "name": "Coke"
+          },
+          {
+            "bevId": "c",
+            "bayes": 7.2,
+            "n": 4,
+            "name": "Fanta"
+          },
+          {
+            "bevId": "d2",
+            "bayes": 8.1,
+            "n": 2,
+            "name": "Topo Chico"
+          },
+          {
+            "bevId": "d1",
+            "bayes": 8.1,
+            "n": 2,
+            "name": "Topo Chico"
+          },
+          {
+            "bevId": "lower",
+            "bayes": 6,
+            "n": 3,
+            "name": "arizona"
+          },
+          {
+            "bevId": "upper",
+            "bayes": 6,
+            "n": 3,
+            "name": "Zevia"
+          }
+        ]
+      },
+      "expected": [
+        "d1",
+        "d2",
+        "a",
+        "c",
+        "b",
+        "upper",
+        "lower"
+      ]
+    }
+  ]
+}
