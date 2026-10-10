@@ -1,0 +1,49 @@
+name: ranking
+
+# Matt's lane: packages/ranking (pure TypeScript maths) and the golden vectors it generates in
+# shared/fixtures. Arjun's SQL must pass the same vectors (backend workflow).
+
+on:
+  pull_request:
+    paths:
+      - "packages/ranking/**"
+      - "shared/fixtures/**"
+      - "package-lock.json"
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/ranking/**"
+      - "shared/fixtures/**"
+      - "package-lock.json"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run typecheck -w packages/ranking
+
+      # Unit tables + fast-check property tests.
+      - run: npm test -w packages/ranking
+
+      # Bundles src/ the way the Edge Function build does; fails on Node imports or impure globals.
+      - run: npm run bundle:smoke -w packages/ranking
+
+      # The committed vectors must equal what the generator writes. Skipped only until the first
+      # vectors land (contract/vectors-v1); after that a missing or edited file fails.
+      - name: vectors-fresh
+        run: |
+          if ls shared/fixtures/*.vectors.json >/dev/null 2>&1; then
+            npm run vectors -w packages/ranking -- --check
+          else
+            echo "No vectors committed yet; skipping."
+          fi
