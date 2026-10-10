@@ -1,0 +1,19 @@
+{
+  "name": "bevi-design-system",
+  "private": true,
+  "type": "module",
+  "description": "Source for the Bevi design system published to claude.ai (tokens, web React reference components, previews).",
+  "scripts": {
+    "assets": "node gen-assets.mjs",
+    "build": "node build.mjs && node gen-previews.mjs && node gen-readmes.mjs",
+    "shoot": "node shoot.mjs"
+  },
+  "devDependencies": {
+    "@fontsource/fredoka": "5.1.0",
+    "esbuild": "0.25.0",
+    "lucide-static": "0.460.0",
+    "opentype.js": "1.3.4",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  }
+}
