@@ -1,0 +1,17 @@
+[
+  { "id": "soda", "name": "Soda", "sortOrder": 1, "isAlcoholic": false, "emoji": "🥤" },
+  { "id": "diet_soda", "name": "Diet Soda", "sortOrder": 2, "isAlcoholic": false, "emoji": "🥤" },
+  { "id": "juice", "name": "Juice", "sortOrder": 3, "isAlcoholic": false, "emoji": "🧃" },
+  { "id": "water", "name": "Water", "sortOrder": 4, "isAlcoholic": false, "emoji": "💧" },
+  { "id": "sparkling_water", "name": "Sparkling Water", "sortOrder": 5, "isAlcoholic": false, "emoji": "✨" },
+  { "id": "energy", "name": "Energy Drinks", "sortOrder": 6, "isAlcoholic": false, "emoji": "⚡" },
+  { "id": "coffee", "name": "Coffee", "sortOrder": 7, "isAlcoholic": false, "emoji": "☕" },
+  { "id": "tea", "name": "Tea", "sortOrder": 8, "isAlcoholic": false, "emoji": "🍵" },
+  { "id": "boba", "name": "Boba", "sortOrder": 9, "isAlcoholic": false, "emoji": "🧋" },
+  { "id": "sports", "name": "Sports Drinks", "sortOrder": 10, "isAlcoholic": false, "emoji": "🏃" },
+  { "id": "smoothie", "name": "Smoothie", "sortOrder": 11, "isAlcoholic": false, "emoji": "🍓" },
+  { "id": "beer", "name": "Beer", "sortOrder": 12, "isAlcoholic": true, "emoji": "🍺" },
+  { "id": "wine", "name": "Wine", "sortOrder": 13, "isAlcoholic": true, "emoji": "🍷" },
+  { "id": "spirits_cocktails", "name": "Spirits & Cocktails", "sortOrder": 14, "isAlcoholic": true, "emoji": "🍸" },
+  { "id": "other", "name": "Other", "sortOrder": 15, "isAlcoholic": false, "emoji": "🍹" }
+]
