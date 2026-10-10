@@ -1,0 +1,6715 @@
+{
+  "version": "1.0.0",
+  "constants": {
+    "version": "1.0.0",
+    "bands": {
+      "DISLIKED": [
+        0,
+        4
+      ],
+      "FINE": [
+        4,
+        7
+      ],
+      "LOVED": [
+        7,
+        10
+      ]
+    },
+    "bucketOrder": [
+      "LOVED",
+      "FINE",
+      "DISLIKED"
+    ],
+    "bucketDb": {
+      "LOVED": 3,
+      "FINE": 2,
+      "DISLIKED": 1
+    },
+    "sigmaFloor": 1,
+    "minNUser": 3,
+    "minNCat": 3,
+    "globalFallback": {
+      "mean": 5,
+      "stddev": 2.5
+    },
+    "kAff": 2,
+    "bayesC": 3,
+    "bayesCategoryPriorMin": 30,
+    "minRaters": 2,
+    "storedScoreRule": "cents = floor((2N + D) / (2D)) with D = n + 1, N = 100*(hi*D - (hi - lo)*(index + 1)); capped at hi*100 - 1 for FINE and DISLIKED; storedScore = cents / 100",
+    "stddev": "population (stddev_pop)",
+    "nameOrder": "code point (SQL collate \"C\"), then bevId"
+  },
+  "cases": [
+    {
+      "name": "LOVED n=1 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 1,
+        "index": 0
+      },
+      "expected": {
+        "score": 8.5,
+        "storedScore": 8.5,
+        "storedCents": 850
+      }
+    },
+    {
+      "name": "LOVED n=2 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 2,
+        "index": 0
+      },
+      "expected": {
+        "score": 9,
+        "storedScore": 9,
+        "storedCents": 900
+      }
+    },
+    {
+      "name": "LOVED n=2 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 2,
+        "index": 1
+      },
+      "expected": {
+        "score": 8,
+        "storedScore": 8,
+        "storedCents": 800
+      }
+    },
+    {
+      "name": "LOVED n=3 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 3,
+        "index": 0
+      },
+      "expected": {
+        "score": 9.25,
+        "storedScore": 9.25,
+        "storedCents": 925
+      }
+    },
+    {
+      "name": "LOVED n=3 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 3,
+        "index": 1
+      },
+      "expected": {
+        "score": 8.5,
+        "storedScore": 8.5,
+        "storedCents": 850
+      }
+    },
+    {
+      "name": "LOVED n=3 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 3,
+        "index": 2
+      },
+      "expected": {
+        "score": 7.75,
+        "storedScore": 7.75,
+        "storedCents": 775
+      }
+    },
+    {
+      "name": "LOVED n=4 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 4,
+        "index": 0
+      },
+      "expected": {
+        "score": 9.4,
+        "storedScore": 9.4,
+        "storedCents": 940
+      }
+    },
+    {
+      "name": "LOVED n=4 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 4,
+        "index": 1
+      },
+      "expected": {
+        "score": 8.8,
+        "storedScore": 8.8,
+        "storedCents": 880
+      }
+    },
+    {
+      "name": "LOVED n=4 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 4,
+        "index": 2
+      },
+      "expected": {
+        "score": 8.2,
+        "storedScore": 8.2,
+        "storedCents": 820
+      }
+    },
+    {
+      "name": "LOVED n=4 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 4,
+        "index": 3
+      },
+      "expected": {
+        "score": 7.6,
+        "storedScore": 7.6,
+        "storedCents": 760
+      }
+    },
+    {
+      "name": "LOVED n=5 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 5,
+        "index": 0
+      },
+      "expected": {
+        "score": 9.5,
+        "storedScore": 9.5,
+        "storedCents": 950
+      }
+    },
+    {
+      "name": "LOVED n=5 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 5,
+        "index": 1
+      },
+      "expected": {
+        "score": 9,
+        "storedScore": 9,
+        "storedCents": 900
+      }
+    },
+    {
+      "name": "LOVED n=5 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 5,
+        "index": 2
+      },
+      "expected": {
+        "score": 8.5,
+        "storedScore": 8.5,
+        "storedCents": 850
+      }
+    },
+    {
+      "name": "LOVED n=5 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 5,
+        "index": 3
+      },
+      "expected": {
+        "score": 8,
+        "storedScore": 8,
+        "storedCents": 800
+      }
+    },
+    {
+      "name": "LOVED n=5 i=4",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 5,
+        "index": 4
+      },
+      "expected": {
+        "score": 7.5,
+        "storedScore": 7.5,
+        "storedCents": 750
+      }
+    },
+    {
+      "name": "LOVED n=6 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 6,
+        "index": 0
+      },
+      "expected": {
+        "score": 9.571428571428571,
+        "storedScore": 9.57,
+        "storedCents": 957
+      }
+    },
+    {
+      "name": "LOVED n=6 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 6,
+        "index": 1
+      },
+      "expected": {
+        "score": 9.142857142857142,
+        "storedScore": 9.14,
+        "storedCents": 914
+      }
+    },
+    {
+      "name": "LOVED n=6 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 6,
+        "index": 2
+      },
+      "expected": {
+        "score": 8.714285714285714,
+        "storedScore": 8.71,
+        "storedCents": 871
+      }
+    },
+    {
+      "name": "LOVED n=6 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 6,
+        "index": 3
+      },
+      "expected": {
+        "score": 8.285714285714286,
+        "storedScore": 8.29,
+        "storedCents": 829
+      }
+    },
+    {
+      "name": "LOVED n=6 i=4",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 6,
+        "index": 4
+      },
+      "expected": {
+        "score": 7.857142857142858,
+        "storedScore": 7.86,
+        "storedCents": 786
+      }
+    },
+    {
+      "name": "LOVED n=6 i=5",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 6,
+        "index": 5
+      },
+      "expected": {
+        "score": 7.428571428571429,
+        "storedScore": 7.43,
+        "storedCents": 743
+      }
+    },
+    {
+      "name": "LOVED n=7 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 7,
+        "index": 0
+      },
+      "expected": {
+        "score": 9.625,
+        "storedScore": 9.63,
+        "storedCents": 963
+      }
+    },
+    {
+      "name": "LOVED n=7 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 7,
+        "index": 1
+      },
+      "expected": {
+        "score": 9.25,
+        "storedScore": 9.25,
+        "storedCents": 925
+      }
+    },
+    {
+      "name": "LOVED n=7 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 7,
+        "index": 2
+      },
+      "expected": {
+        "score": 8.875,
+        "storedScore": 8.88,
+        "storedCents": 888
+      }
+    },
+    {
+      "name": "LOVED n=7 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 7,
+        "index": 3
+      },
+      "expected": {
+        "score": 8.5,
+        "storedScore": 8.5,
+        "storedCents": 850
+      }
+    },
+    {
+      "name": "LOVED n=7 i=4",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 7,
+        "index": 4
+      },
+      "expected": {
+        "score": 8.125,
+        "storedScore": 8.13,
+        "storedCents": 813
+      }
+    },
+    {
+      "name": "LOVED n=7 i=5",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 7,
+        "index": 5
+      },
+      "expected": {
+        "score": 7.75,
+        "storedScore": 7.75,
+        "storedCents": 775
+      }
+    },
+    {
+      "name": "LOVED n=7 i=6",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 7,
+        "index": 6
+      },
+      "expected": {
+        "score": 7.375,
+        "storedScore": 7.38,
+        "storedCents": 738
+      }
+    },
+    {
+      "name": "LOVED n=8 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 8,
+        "index": 0
+      },
+      "expected": {
+        "score": 9.666666666666666,
+        "storedScore": 9.67,
+        "storedCents": 967
+      }
+    },
+    {
+      "name": "LOVED n=8 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 8,
+        "index": 1
+      },
+      "expected": {
+        "score": 9.333333333333334,
+        "storedScore": 9.33,
+        "storedCents": 933
+      }
+    },
+    {
+      "name": "LOVED n=8 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 8,
+        "index": 2
+      },
+      "expected": {
+        "score": 9,
+        "storedScore": 9,
+        "storedCents": 900
+      }
+    },
+    {
+      "name": "LOVED n=8 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 8,
+        "index": 3
+      },
+      "expected": {
+        "score": 8.666666666666666,
+        "storedScore": 8.67,
+        "storedCents": 867
+      }
+    },
+    {
+      "name": "LOVED n=8 i=4",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 8,
+        "index": 4
+      },
+      "expected": {
+        "score": 8.333333333333334,
+        "storedScore": 8.33,
+        "storedCents": 833
+      }
+    },
+    {
+      "name": "LOVED n=8 i=5",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 8,
+        "index": 5
+      },
+      "expected": {
+        "score": 8,
+        "storedScore": 8,
+        "storedCents": 800
+      }
+    },
+    {
+      "name": "LOVED n=8 i=6",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 8,
+        "index": 6
+      },
+      "expected": {
+        "score": 7.666666666666666,
+        "storedScore": 7.67,
+        "storedCents": 767
+      }
+    },
+    {
+      "name": "LOVED n=8 i=7",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 8,
+        "index": 7
+      },
+      "expected": {
+        "score": 7.333333333333334,
+        "storedScore": 7.33,
+        "storedCents": 733
+      }
+    },
+    {
+      "name": "LOVED n=9 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 9,
+        "index": 0
+      },
+      "expected": {
+        "score": 9.7,
+        "storedScore": 9.7,
+        "storedCents": 970
+      }
+    },
+    {
+      "name": "LOVED n=9 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 9,
+        "index": 1
+      },
+      "expected": {
+        "score": 9.4,
+        "storedScore": 9.4,
+        "storedCents": 940
+      }
+    },
+    {
+      "name": "LOVED n=9 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 9,
+        "index": 2
+      },
+      "expected": {
+        "score": 9.1,
+        "storedScore": 9.1,
+        "storedCents": 910
+      }
+    },
+    {
+      "name": "LOVED n=9 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 9,
+        "index": 3
+      },
+      "expected": {
+        "score": 8.8,
+        "storedScore": 8.8,
+        "storedCents": 880
+      }
+    },
+    {
+      "name": "LOVED n=9 i=4",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 9,
+        "index": 4
+      },
+      "expected": {
+        "score": 8.5,
+        "storedScore": 8.5,
+        "storedCents": 850
+      }
+    },
+    {
+      "name": "LOVED n=9 i=5",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 9,
+        "index": 5
+      },
+      "expected": {
+        "score": 8.2,
+        "storedScore": 8.2,
+        "storedCents": 820
+      }
+    },
+    {
+      "name": "LOVED n=9 i=6",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 9,
+        "index": 6
+      },
+      "expected": {
+        "score": 7.9,
+        "storedScore": 7.9,
+        "storedCents": 790
+      }
+    },
+    {
+      "name": "LOVED n=9 i=7",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 9,
+        "index": 7
+      },
+      "expected": {
+        "score": 7.6,
+        "storedScore": 7.6,
+        "storedCents": 760
+      }
+    },
+    {
+      "name": "LOVED n=9 i=8",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 9,
+        "index": 8
+      },
+      "expected": {
+        "score": 7.3,
+        "storedScore": 7.3,
+        "storedCents": 730
+      }
+    },
+    {
+      "name": "LOVED n=10 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 10,
+        "index": 0
+      },
+      "expected": {
+        "score": 9.727272727272727,
+        "storedScore": 9.73,
+        "storedCents": 973
+      }
+    },
+    {
+      "name": "LOVED n=10 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 10,
+        "index": 1
+      },
+      "expected": {
+        "score": 9.454545454545455,
+        "storedScore": 9.45,
+        "storedCents": 945
+      }
+    },
+    {
+      "name": "LOVED n=10 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 10,
+        "index": 2
+      },
+      "expected": {
+        "score": 9.181818181818182,
+        "storedScore": 9.18,
+        "storedCents": 918
+      }
+    },
+    {
+      "name": "LOVED n=10 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 10,
+        "index": 3
+      },
+      "expected": {
+        "score": 8.90909090909091,
+        "storedScore": 8.91,
+        "storedCents": 891
+      }
+    },
+    {
+      "name": "LOVED n=10 i=4",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 10,
+        "index": 4
+      },
+      "expected": {
+        "score": 8.636363636363637,
+        "storedScore": 8.64,
+        "storedCents": 864
+      }
+    },
+    {
+      "name": "LOVED n=10 i=5",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 10,
+        "index": 5
+      },
+      "expected": {
+        "score": 8.363636363636363,
+        "storedScore": 8.36,
+        "storedCents": 836
+      }
+    },
+    {
+      "name": "LOVED n=10 i=6",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 10,
+        "index": 6
+      },
+      "expected": {
+        "score": 8.09090909090909,
+        "storedScore": 8.09,
+        "storedCents": 809
+      }
+    },
+    {
+      "name": "LOVED n=10 i=7",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 10,
+        "index": 7
+      },
+      "expected": {
+        "score": 7.818181818181818,
+        "storedScore": 7.82,
+        "storedCents": 782
+      }
+    },
+    {
+      "name": "LOVED n=10 i=8",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 10,
+        "index": 8
+      },
+      "expected": {
+        "score": 7.545454545454545,
+        "storedScore": 7.55,
+        "storedCents": 755
+      }
+    },
+    {
+      "name": "LOVED n=10 i=9",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 10,
+        "index": 9
+      },
+      "expected": {
+        "score": 7.272727272727273,
+        "storedScore": 7.27,
+        "storedCents": 727
+      }
+    },
+    {
+      "name": "LOVED n=11 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 11,
+        "index": 0
+      },
+      "expected": {
+        "score": 9.75,
+        "storedScore": 9.75,
+        "storedCents": 975
+      }
+    },
+    {
+      "name": "LOVED n=11 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 11,
+        "index": 1
+      },
+      "expected": {
+        "score": 9.5,
+        "storedScore": 9.5,
+        "storedCents": 950
+      }
+    },
+    {
+      "name": "LOVED n=11 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 11,
+        "index": 2
+      },
+      "expected": {
+        "score": 9.25,
+        "storedScore": 9.25,
+        "storedCents": 925
+      }
+    },
+    {
+      "name": "LOVED n=11 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 11,
+        "index": 3
+      },
+      "expected": {
+        "score": 9,
+        "storedScore": 9,
+        "storedCents": 900
+      }
+    },
+    {
+      "name": "LOVED n=11 i=4",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 11,
+        "index": 4
+      },
+      "expected": {
+        "score": 8.75,
+        "storedScore": 8.75,
+        "storedCents": 875
+      }
+    },
+    {
+      "name": "LOVED n=11 i=5",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 11,
+        "index": 5
+      },
+      "expected": {
+        "score": 8.5,
+        "storedScore": 8.5,
+        "storedCents": 850
+      }
+    },
+    {
+      "name": "LOVED n=11 i=6",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 11,
+        "index": 6
+      },
+      "expected": {
+        "score": 8.25,
+        "storedScore": 8.25,
+        "storedCents": 825
+      }
+    },
+    {
+      "name": "LOVED n=11 i=7",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 11,
+        "index": 7
+      },
+      "expected": {
+        "score": 8,
+        "storedScore": 8,
+        "storedCents": 800
+      }
+    },
+    {
+      "name": "LOVED n=11 i=8",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 11,
+        "index": 8
+      },
+      "expected": {
+        "score": 7.75,
+        "storedScore": 7.75,
+        "storedCents": 775
+      }
+    },
+    {
+      "name": "LOVED n=11 i=9",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 11,
+        "index": 9
+      },
+      "expected": {
+        "score": 7.5,
+        "storedScore": 7.5,
+        "storedCents": 750
+      }
+    },
+    {
+      "name": "LOVED n=11 i=10",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 11,
+        "index": 10
+      },
+      "expected": {
+        "score": 7.25,
+        "storedScore": 7.25,
+        "storedCents": 725
+      }
+    },
+    {
+      "name": "LOVED n=12 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 12,
+        "index": 0
+      },
+      "expected": {
+        "score": 9.76923076923077,
+        "storedScore": 9.77,
+        "storedCents": 977
+      }
+    },
+    {
+      "name": "LOVED n=12 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 12,
+        "index": 1
+      },
+      "expected": {
+        "score": 9.538461538461538,
+        "storedScore": 9.54,
+        "storedCents": 954
+      }
+    },
+    {
+      "name": "LOVED n=12 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 12,
+        "index": 2
+      },
+      "expected": {
+        "score": 9.307692307692308,
+        "storedScore": 9.31,
+        "storedCents": 931
+      }
+    },
+    {
+      "name": "LOVED n=12 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 12,
+        "index": 3
+      },
+      "expected": {
+        "score": 9.076923076923077,
+        "storedScore": 9.08,
+        "storedCents": 908
+      }
+    },
+    {
+      "name": "LOVED n=12 i=4",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 12,
+        "index": 4
+      },
+      "expected": {
+        "score": 8.846153846153847,
+        "storedScore": 8.85,
+        "storedCents": 885
+      }
+    },
+    {
+      "name": "LOVED n=12 i=5",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 12,
+        "index": 5
+      },
+      "expected": {
+        "score": 8.615384615384615,
+        "storedScore": 8.62,
+        "storedCents": 862
+      }
+    },
+    {
+      "name": "LOVED n=12 i=6",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 12,
+        "index": 6
+      },
+      "expected": {
+        "score": 8.384615384615385,
+        "storedScore": 8.38,
+        "storedCents": 838
+      }
+    },
+    {
+      "name": "LOVED n=12 i=7",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 12,
+        "index": 7
+      },
+      "expected": {
+        "score": 8.153846153846153,
+        "storedScore": 8.15,
+        "storedCents": 815
+      }
+    },
+    {
+      "name": "LOVED n=12 i=8",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 12,
+        "index": 8
+      },
+      "expected": {
+        "score": 7.923076923076923,
+        "storedScore": 7.92,
+        "storedCents": 792
+      }
+    },
+    {
+      "name": "LOVED n=12 i=9",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 12,
+        "index": 9
+      },
+      "expected": {
+        "score": 7.6923076923076925,
+        "storedScore": 7.69,
+        "storedCents": 769
+      }
+    },
+    {
+      "name": "LOVED n=12 i=10",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 12,
+        "index": 10
+      },
+      "expected": {
+        "score": 7.461538461538462,
+        "storedScore": 7.46,
+        "storedCents": 746
+      }
+    },
+    {
+      "name": "LOVED n=12 i=11",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 12,
+        "index": 11
+      },
+      "expected": {
+        "score": 7.230769230769231,
+        "storedScore": 7.23,
+        "storedCents": 723
+      }
+    },
+    {
+      "name": "LOVED n=50 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 0
+      },
+      "expected": {
+        "score": 9.941176470588236,
+        "storedScore": 9.94,
+        "storedCents": 994
+      }
+    },
+    {
+      "name": "LOVED n=50 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 1
+      },
+      "expected": {
+        "score": 9.882352941176471,
+        "storedScore": 9.88,
+        "storedCents": 988
+      }
+    },
+    {
+      "name": "LOVED n=50 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 2
+      },
+      "expected": {
+        "score": 9.823529411764707,
+        "storedScore": 9.82,
+        "storedCents": 982
+      }
+    },
+    {
+      "name": "LOVED n=50 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 3
+      },
+      "expected": {
+        "score": 9.764705882352942,
+        "storedScore": 9.76,
+        "storedCents": 976
+      }
+    },
+    {
+      "name": "LOVED n=50 i=4",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 4
+      },
+      "expected": {
+        "score": 9.705882352941176,
+        "storedScore": 9.71,
+        "storedCents": 971
+      }
+    },
+    {
+      "name": "LOVED n=50 i=5",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 5
+      },
+      "expected": {
+        "score": 9.647058823529411,
+        "storedScore": 9.65,
+        "storedCents": 965
+      }
+    },
+    {
+      "name": "LOVED n=50 i=6",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 6
+      },
+      "expected": {
+        "score": 9.588235294117647,
+        "storedScore": 9.59,
+        "storedCents": 959
+      }
+    },
+    {
+      "name": "LOVED n=50 i=7",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 7
+      },
+      "expected": {
+        "score": 9.529411764705882,
+        "storedScore": 9.53,
+        "storedCents": 953
+      }
+    },
+    {
+      "name": "LOVED n=50 i=8",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 8
+      },
+      "expected": {
+        "score": 9.470588235294118,
+        "storedScore": 9.47,
+        "storedCents": 947
+      }
+    },
+    {
+      "name": "LOVED n=50 i=9",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 9
+      },
+      "expected": {
+        "score": 9.411764705882353,
+        "storedScore": 9.41,
+        "storedCents": 941
+      }
+    },
+    {
+      "name": "LOVED n=50 i=10",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 10
+      },
+      "expected": {
+        "score": 9.352941176470589,
+        "storedScore": 9.35,
+        "storedCents": 935
+      }
+    },
+    {
+      "name": "LOVED n=50 i=11",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 11
+      },
+      "expected": {
+        "score": 9.294117647058824,
+        "storedScore": 9.29,
+        "storedCents": 929
+      }
+    },
+    {
+      "name": "LOVED n=50 i=12",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 12
+      },
+      "expected": {
+        "score": 9.235294117647058,
+        "storedScore": 9.24,
+        "storedCents": 924
+      }
+    },
+    {
+      "name": "LOVED n=50 i=13",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 13
+      },
+      "expected": {
+        "score": 9.176470588235293,
+        "storedScore": 9.18,
+        "storedCents": 918
+      }
+    },
+    {
+      "name": "LOVED n=50 i=14",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 14
+      },
+      "expected": {
+        "score": 9.117647058823529,
+        "storedScore": 9.12,
+        "storedCents": 912
+      }
+    },
+    {
+      "name": "LOVED n=50 i=15",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 15
+      },
+      "expected": {
+        "score": 9.058823529411764,
+        "storedScore": 9.06,
+        "storedCents": 906
+      }
+    },
+    {
+      "name": "LOVED n=50 i=16",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 16
+      },
+      "expected": {
+        "score": 9,
+        "storedScore": 9,
+        "storedCents": 900
+      }
+    },
+    {
+      "name": "LOVED n=50 i=17",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 17
+      },
+      "expected": {
+        "score": 8.941176470588236,
+        "storedScore": 8.94,
+        "storedCents": 894
+      }
+    },
+    {
+      "name": "LOVED n=50 i=18",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 18
+      },
+      "expected": {
+        "score": 8.882352941176471,
+        "storedScore": 8.88,
+        "storedCents": 888
+      }
+    },
+    {
+      "name": "LOVED n=50 i=19",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 19
+      },
+      "expected": {
+        "score": 8.823529411764707,
+        "storedScore": 8.82,
+        "storedCents": 882
+      }
+    },
+    {
+      "name": "LOVED n=50 i=20",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 20
+      },
+      "expected": {
+        "score": 8.764705882352942,
+        "storedScore": 8.76,
+        "storedCents": 876
+      }
+    },
+    {
+      "name": "LOVED n=50 i=21",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 21
+      },
+      "expected": {
+        "score": 8.705882352941176,
+        "storedScore": 8.71,
+        "storedCents": 871
+      }
+    },
+    {
+      "name": "LOVED n=50 i=22",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 22
+      },
+      "expected": {
+        "score": 8.647058823529411,
+        "storedScore": 8.65,
+        "storedCents": 865
+      }
+    },
+    {
+      "name": "LOVED n=50 i=23",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 23
+      },
+      "expected": {
+        "score": 8.588235294117647,
+        "storedScore": 8.59,
+        "storedCents": 859
+      }
+    },
+    {
+      "name": "LOVED n=50 i=24",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 24
+      },
+      "expected": {
+        "score": 8.529411764705882,
+        "storedScore": 8.53,
+        "storedCents": 853
+      }
+    },
+    {
+      "name": "LOVED n=50 i=25",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 25
+      },
+      "expected": {
+        "score": 8.470588235294118,
+        "storedScore": 8.47,
+        "storedCents": 847
+      }
+    },
+    {
+      "name": "LOVED n=50 i=26",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 26
+      },
+      "expected": {
+        "score": 8.411764705882353,
+        "storedScore": 8.41,
+        "storedCents": 841
+      }
+    },
+    {
+      "name": "LOVED n=50 i=27",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 27
+      },
+      "expected": {
+        "score": 8.352941176470589,
+        "storedScore": 8.35,
+        "storedCents": 835
+      }
+    },
+    {
+      "name": "LOVED n=50 i=28",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 28
+      },
+      "expected": {
+        "score": 8.294117647058824,
+        "storedScore": 8.29,
+        "storedCents": 829
+      }
+    },
+    {
+      "name": "LOVED n=50 i=29",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 29
+      },
+      "expected": {
+        "score": 8.235294117647058,
+        "storedScore": 8.24,
+        "storedCents": 824
+      }
+    },
+    {
+      "name": "LOVED n=50 i=30",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 30
+      },
+      "expected": {
+        "score": 8.176470588235293,
+        "storedScore": 8.18,
+        "storedCents": 818
+      }
+    },
+    {
+      "name": "LOVED n=50 i=31",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 31
+      },
+      "expected": {
+        "score": 8.117647058823529,
+        "storedScore": 8.12,
+        "storedCents": 812
+      }
+    },
+    {
+      "name": "LOVED n=50 i=32",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 32
+      },
+      "expected": {
+        "score": 8.058823529411764,
+        "storedScore": 8.06,
+        "storedCents": 806
+      }
+    },
+    {
+      "name": "LOVED n=50 i=33",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 33
+      },
+      "expected": {
+        "score": 8,
+        "storedScore": 8,
+        "storedCents": 800
+      }
+    },
+    {
+      "name": "LOVED n=50 i=34",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 34
+      },
+      "expected": {
+        "score": 7.9411764705882355,
+        "storedScore": 7.94,
+        "storedCents": 794
+      }
+    },
+    {
+      "name": "LOVED n=50 i=35",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 35
+      },
+      "expected": {
+        "score": 7.882352941176471,
+        "storedScore": 7.88,
+        "storedCents": 788
+      }
+    },
+    {
+      "name": "LOVED n=50 i=36",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 36
+      },
+      "expected": {
+        "score": 7.8235294117647065,
+        "storedScore": 7.82,
+        "storedCents": 782
+      }
+    },
+    {
+      "name": "LOVED n=50 i=37",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 37
+      },
+      "expected": {
+        "score": 7.764705882352941,
+        "storedScore": 7.76,
+        "storedCents": 776
+      }
+    },
+    {
+      "name": "LOVED n=50 i=38",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 38
+      },
+      "expected": {
+        "score": 7.705882352941177,
+        "storedScore": 7.71,
+        "storedCents": 771
+      }
+    },
+    {
+      "name": "LOVED n=50 i=39",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 39
+      },
+      "expected": {
+        "score": 7.647058823529411,
+        "storedScore": 7.65,
+        "storedCents": 765
+      }
+    },
+    {
+      "name": "LOVED n=50 i=40",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 40
+      },
+      "expected": {
+        "score": 7.588235294117647,
+        "storedScore": 7.59,
+        "storedCents": 759
+      }
+    },
+    {
+      "name": "LOVED n=50 i=41",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 41
+      },
+      "expected": {
+        "score": 7.529411764705882,
+        "storedScore": 7.53,
+        "storedCents": 753
+      }
+    },
+    {
+      "name": "LOVED n=50 i=42",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 42
+      },
+      "expected": {
+        "score": 7.470588235294118,
+        "storedScore": 7.47,
+        "storedCents": 747
+      }
+    },
+    {
+      "name": "LOVED n=50 i=43",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 43
+      },
+      "expected": {
+        "score": 7.411764705882353,
+        "storedScore": 7.41,
+        "storedCents": 741
+      }
+    },
+    {
+      "name": "LOVED n=50 i=44",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 44
+      },
+      "expected": {
+        "score": 7.352941176470589,
+        "storedScore": 7.35,
+        "storedCents": 735
+      }
+    },
+    {
+      "name": "LOVED n=50 i=45",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 45
+      },
+      "expected": {
+        "score": 7.294117647058823,
+        "storedScore": 7.29,
+        "storedCents": 729
+      }
+    },
+    {
+      "name": "LOVED n=50 i=46",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 46
+      },
+      "expected": {
+        "score": 7.235294117647059,
+        "storedScore": 7.24,
+        "storedCents": 724
+      }
+    },
+    {
+      "name": "LOVED n=50 i=47",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 47
+      },
+      "expected": {
+        "score": 7.1764705882352935,
+        "storedScore": 7.18,
+        "storedCents": 718
+      }
+    },
+    {
+      "name": "LOVED n=50 i=48",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 48
+      },
+      "expected": {
+        "score": 7.117647058823529,
+        "storedScore": 7.12,
+        "storedCents": 712
+      }
+    },
+    {
+      "name": "LOVED n=50 i=49",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 50,
+        "index": 49
+      },
+      "expected": {
+        "score": 7.0588235294117645,
+        "storedScore": 7.06,
+        "storedCents": 706
+      }
+    },
+    {
+      "name": "LOVED n=15 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 15,
+        "index": 0
+      },
+      "expected": {
+        "score": 9.8125,
+        "storedScore": 9.81,
+        "storedCents": 981
+      }
+    },
+    {
+      "name": "LOVED n=15 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 15,
+        "index": 1
+      },
+      "expected": {
+        "score": 9.625,
+        "storedScore": 9.63,
+        "storedCents": 963
+      }
+    },
+    {
+      "name": "LOVED n=15 i=14",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 15,
+        "index": 14
+      },
+      "expected": {
+        "score": 7.1875,
+        "storedScore": 7.19,
+        "storedCents": 719
+      }
+    },
+    {
+      "name": "LOVED n=39 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 39,
+        "index": 0
+      },
+      "expected": {
+        "score": 9.925,
+        "storedScore": 9.93,
+        "storedCents": 993
+      }
+    },
+    {
+      "name": "LOVED n=39 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 39,
+        "index": 1
+      },
+      "expected": {
+        "score": 9.85,
+        "storedScore": 9.85,
+        "storedCents": 985
+      }
+    },
+    {
+      "name": "LOVED n=39 i=38",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 39,
+        "index": 38
+      },
+      "expected": {
+        "score": 7.075,
+        "storedScore": 7.08,
+        "storedCents": 708
+      }
+    },
+    {
+      "name": "LOVED n=598 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 598,
+        "index": 0
+      },
+      "expected": {
+        "score": 9.99499165275459,
+        "storedScore": 9.99,
+        "storedCents": 999
+      }
+    },
+    {
+      "name": "LOVED n=598 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 598,
+        "index": 1
+      },
+      "expected": {
+        "score": 9.989983305509181,
+        "storedScore": 9.99,
+        "storedCents": 999
+      }
+    },
+    {
+      "name": "LOVED n=598 i=597",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 598,
+        "index": 597
+      },
+      "expected": {
+        "score": 7.005008347245409,
+        "storedScore": 7.01,
+        "storedCents": 701
+      }
+    },
+    {
+      "name": "LOVED n=599 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 599,
+        "index": 0
+      },
+      "expected": {
+        "score": 9.995,
+        "storedScore": 10,
+        "storedCents": 1000
+      }
+    },
+    {
+      "name": "LOVED n=599 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 599,
+        "index": 1
+      },
+      "expected": {
+        "score": 9.99,
+        "storedScore": 9.99,
+        "storedCents": 999
+      }
+    },
+    {
+      "name": "LOVED n=599 i=598",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 599,
+        "index": 598
+      },
+      "expected": {
+        "score": 7.005,
+        "storedScore": 7.01,
+        "storedCents": 701
+      }
+    },
+    {
+      "name": "LOVED n=799 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 799,
+        "index": 0
+      },
+      "expected": {
+        "score": 9.99625,
+        "storedScore": 10,
+        "storedCents": 1000
+      }
+    },
+    {
+      "name": "LOVED n=799 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 799,
+        "index": 1
+      },
+      "expected": {
+        "score": 9.9925,
+        "storedScore": 9.99,
+        "storedCents": 999
+      }
+    },
+    {
+      "name": "LOVED n=799 i=798",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 799,
+        "index": 798
+      },
+      "expected": {
+        "score": 7.00375,
+        "storedScore": 7,
+        "storedCents": 700
+      }
+    },
+    {
+      "name": "LOVED n=800 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 800,
+        "index": 0
+      },
+      "expected": {
+        "score": 9.99625468164794,
+        "storedScore": 10,
+        "storedCents": 1000
+      }
+    },
+    {
+      "name": "LOVED n=800 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 800,
+        "index": 1
+      },
+      "expected": {
+        "score": 9.99250936329588,
+        "storedScore": 9.99,
+        "storedCents": 999
+      }
+    },
+    {
+      "name": "LOVED n=800 i=799",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "LOVED",
+        "n": 800,
+        "index": 799
+      },
+      "expected": {
+        "score": 7.00374531835206,
+        "storedScore": 7,
+        "storedCents": 700
+      }
+    },
+    {
+      "name": "FINE n=1 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 1,
+        "index": 0
+      },
+      "expected": {
+        "score": 5.5,
+        "storedScore": 5.5,
+        "storedCents": 550
+      }
+    },
+    {
+      "name": "FINE n=2 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 2,
+        "index": 0
+      },
+      "expected": {
+        "score": 6,
+        "storedScore": 6,
+        "storedCents": 600
+      }
+    },
+    {
+      "name": "FINE n=2 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 2,
+        "index": 1
+      },
+      "expected": {
+        "score": 5,
+        "storedScore": 5,
+        "storedCents": 500
+      }
+    },
+    {
+      "name": "FINE n=3 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 3,
+        "index": 0
+      },
+      "expected": {
+        "score": 6.25,
+        "storedScore": 6.25,
+        "storedCents": 625
+      }
+    },
+    {
+      "name": "FINE n=3 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 3,
+        "index": 1
+      },
+      "expected": {
+        "score": 5.5,
+        "storedScore": 5.5,
+        "storedCents": 550
+      }
+    },
+    {
+      "name": "FINE n=3 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 3,
+        "index": 2
+      },
+      "expected": {
+        "score": 4.75,
+        "storedScore": 4.75,
+        "storedCents": 475
+      }
+    },
+    {
+      "name": "FINE n=4 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 4,
+        "index": 0
+      },
+      "expected": {
+        "score": 6.4,
+        "storedScore": 6.4,
+        "storedCents": 640
+      }
+    },
+    {
+      "name": "FINE n=4 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 4,
+        "index": 1
+      },
+      "expected": {
+        "score": 5.8,
+        "storedScore": 5.8,
+        "storedCents": 580
+      }
+    },
+    {
+      "name": "FINE n=4 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 4,
+        "index": 2
+      },
+      "expected": {
+        "score": 5.2,
+        "storedScore": 5.2,
+        "storedCents": 520
+      }
+    },
+    {
+      "name": "FINE n=4 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 4,
+        "index": 3
+      },
+      "expected": {
+        "score": 4.6,
+        "storedScore": 4.6,
+        "storedCents": 460
+      }
+    },
+    {
+      "name": "FINE n=5 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 5,
+        "index": 0
+      },
+      "expected": {
+        "score": 6.5,
+        "storedScore": 6.5,
+        "storedCents": 650
+      }
+    },
+    {
+      "name": "FINE n=5 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 5,
+        "index": 1
+      },
+      "expected": {
+        "score": 6,
+        "storedScore": 6,
+        "storedCents": 600
+      }
+    },
+    {
+      "name": "FINE n=5 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 5,
+        "index": 2
+      },
+      "expected": {
+        "score": 5.5,
+        "storedScore": 5.5,
+        "storedCents": 550
+      }
+    },
+    {
+      "name": "FINE n=5 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 5,
+        "index": 3
+      },
+      "expected": {
+        "score": 5,
+        "storedScore": 5,
+        "storedCents": 500
+      }
+    },
+    {
+      "name": "FINE n=5 i=4",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 5,
+        "index": 4
+      },
+      "expected": {
+        "score": 4.5,
+        "storedScore": 4.5,
+        "storedCents": 450
+      }
+    },
+    {
+      "name": "FINE n=6 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 6,
+        "index": 0
+      },
+      "expected": {
+        "score": 6.571428571428571,
+        "storedScore": 6.57,
+        "storedCents": 657
+      }
+    },
+    {
+      "name": "FINE n=6 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 6,
+        "index": 1
+      },
+      "expected": {
+        "score": 6.142857142857143,
+        "storedScore": 6.14,
+        "storedCents": 614
+      }
+    },
+    {
+      "name": "FINE n=6 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 6,
+        "index": 2
+      },
+      "expected": {
+        "score": 5.714285714285714,
+        "storedScore": 5.71,
+        "storedCents": 571
+      }
+    },
+    {
+      "name": "FINE n=6 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 6,
+        "index": 3
+      },
+      "expected": {
+        "score": 5.285714285714286,
+        "storedScore": 5.29,
+        "storedCents": 529
+      }
+    },
+    {
+      "name": "FINE n=6 i=4",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 6,
+        "index": 4
+      },
+      "expected": {
+        "score": 4.857142857142858,
+        "storedScore": 4.86,
+        "storedCents": 486
+      }
+    },
+    {
+      "name": "FINE n=6 i=5",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 6,
+        "index": 5
+      },
+      "expected": {
+        "score": 4.428571428571429,
+        "storedScore": 4.43,
+        "storedCents": 443
+      }
+    },
+    {
+      "name": "FINE n=7 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 7,
+        "index": 0
+      },
+      "expected": {
+        "score": 6.625,
+        "storedScore": 6.63,
+        "storedCents": 663
+      }
+    },
+    {
+      "name": "FINE n=7 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 7,
+        "index": 1
+      },
+      "expected": {
+        "score": 6.25,
+        "storedScore": 6.25,
+        "storedCents": 625
+      }
+    },
+    {
+      "name": "FINE n=7 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 7,
+        "index": 2
+      },
+      "expected": {
+        "score": 5.875,
+        "storedScore": 5.88,
+        "storedCents": 588
+      }
+    },
+    {
+      "name": "FINE n=7 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 7,
+        "index": 3
+      },
+      "expected": {
+        "score": 5.5,
+        "storedScore": 5.5,
+        "storedCents": 550
+      }
+    },
+    {
+      "name": "FINE n=7 i=4",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 7,
+        "index": 4
+      },
+      "expected": {
+        "score": 5.125,
+        "storedScore": 5.13,
+        "storedCents": 513
+      }
+    },
+    {
+      "name": "FINE n=7 i=5",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 7,
+        "index": 5
+      },
+      "expected": {
+        "score": 4.75,
+        "storedScore": 4.75,
+        "storedCents": 475
+      }
+    },
+    {
+      "name": "FINE n=7 i=6",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 7,
+        "index": 6
+      },
+      "expected": {
+        "score": 4.375,
+        "storedScore": 4.38,
+        "storedCents": 438
+      }
+    },
+    {
+      "name": "FINE n=8 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 8,
+        "index": 0
+      },
+      "expected": {
+        "score": 6.666666666666667,
+        "storedScore": 6.67,
+        "storedCents": 667
+      }
+    },
+    {
+      "name": "FINE n=8 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 8,
+        "index": 1
+      },
+      "expected": {
+        "score": 6.333333333333333,
+        "storedScore": 6.33,
+        "storedCents": 633
+      }
+    },
+    {
+      "name": "FINE n=8 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 8,
+        "index": 2
+      },
+      "expected": {
+        "score": 6,
+        "storedScore": 6,
+        "storedCents": 600
+      }
+    },
+    {
+      "name": "FINE n=8 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 8,
+        "index": 3
+      },
+      "expected": {
+        "score": 5.666666666666667,
+        "storedScore": 5.67,
+        "storedCents": 567
+      }
+    },
+    {
+      "name": "FINE n=8 i=4",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 8,
+        "index": 4
+      },
+      "expected": {
+        "score": 5.333333333333333,
+        "storedScore": 5.33,
+        "storedCents": 533
+      }
+    },
+    {
+      "name": "FINE n=8 i=5",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 8,
+        "index": 5
+      },
+      "expected": {
+        "score": 5,
+        "storedScore": 5,
+        "storedCents": 500
+      }
+    },
+    {
+      "name": "FINE n=8 i=6",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 8,
+        "index": 6
+      },
+      "expected": {
+        "score": 4.666666666666666,
+        "storedScore": 4.67,
+        "storedCents": 467
+      }
+    },
+    {
+      "name": "FINE n=8 i=7",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 8,
+        "index": 7
+      },
+      "expected": {
+        "score": 4.333333333333334,
+        "storedScore": 4.33,
+        "storedCents": 433
+      }
+    },
+    {
+      "name": "FINE n=9 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 9,
+        "index": 0
+      },
+      "expected": {
+        "score": 6.7,
+        "storedScore": 6.7,
+        "storedCents": 670
+      }
+    },
+    {
+      "name": "FINE n=9 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 9,
+        "index": 1
+      },
+      "expected": {
+        "score": 6.4,
+        "storedScore": 6.4,
+        "storedCents": 640
+      }
+    },
+    {
+      "name": "FINE n=9 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 9,
+        "index": 2
+      },
+      "expected": {
+        "score": 6.1,
+        "storedScore": 6.1,
+        "storedCents": 610
+      }
+    },
+    {
+      "name": "FINE n=9 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 9,
+        "index": 3
+      },
+      "expected": {
+        "score": 5.8,
+        "storedScore": 5.8,
+        "storedCents": 580
+      }
+    },
+    {
+      "name": "FINE n=9 i=4",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 9,
+        "index": 4
+      },
+      "expected": {
+        "score": 5.5,
+        "storedScore": 5.5,
+        "storedCents": 550
+      }
+    },
+    {
+      "name": "FINE n=9 i=5",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 9,
+        "index": 5
+      },
+      "expected": {
+        "score": 5.2,
+        "storedScore": 5.2,
+        "storedCents": 520
+      }
+    },
+    {
+      "name": "FINE n=9 i=6",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 9,
+        "index": 6
+      },
+      "expected": {
+        "score": 4.9,
+        "storedScore": 4.9,
+        "storedCents": 490
+      }
+    },
+    {
+      "name": "FINE n=9 i=7",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 9,
+        "index": 7
+      },
+      "expected": {
+        "score": 4.6,
+        "storedScore": 4.6,
+        "storedCents": 460
+      }
+    },
+    {
+      "name": "FINE n=9 i=8",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 9,
+        "index": 8
+      },
+      "expected": {
+        "score": 4.3,
+        "storedScore": 4.3,
+        "storedCents": 430
+      }
+    },
+    {
+      "name": "FINE n=10 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 10,
+        "index": 0
+      },
+      "expected": {
+        "score": 6.7272727272727275,
+        "storedScore": 6.73,
+        "storedCents": 673
+      }
+    },
+    {
+      "name": "FINE n=10 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 10,
+        "index": 1
+      },
+      "expected": {
+        "score": 6.454545454545455,
+        "storedScore": 6.45,
+        "storedCents": 645
+      }
+    },
+    {
+      "name": "FINE n=10 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 10,
+        "index": 2
+      },
+      "expected": {
+        "score": 6.181818181818182,
+        "storedScore": 6.18,
+        "storedCents": 618
+      }
+    },
+    {
+      "name": "FINE n=10 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 10,
+        "index": 3
+      },
+      "expected": {
+        "score": 5.909090909090909,
+        "storedScore": 5.91,
+        "storedCents": 591
+      }
+    },
+    {
+      "name": "FINE n=10 i=4",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 10,
+        "index": 4
+      },
+      "expected": {
+        "score": 5.636363636363637,
+        "storedScore": 5.64,
+        "storedCents": 564
+      }
+    },
+    {
+      "name": "FINE n=10 i=5",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 10,
+        "index": 5
+      },
+      "expected": {
+        "score": 5.363636363636363,
+        "storedScore": 5.36,
+        "storedCents": 536
+      }
+    },
+    {
+      "name": "FINE n=10 i=6",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 10,
+        "index": 6
+      },
+      "expected": {
+        "score": 5.090909090909091,
+        "storedScore": 5.09,
+        "storedCents": 509
+      }
+    },
+    {
+      "name": "FINE n=10 i=7",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 10,
+        "index": 7
+      },
+      "expected": {
+        "score": 4.818181818181818,
+        "storedScore": 4.82,
+        "storedCents": 482
+      }
+    },
+    {
+      "name": "FINE n=10 i=8",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 10,
+        "index": 8
+      },
+      "expected": {
+        "score": 4.545454545454545,
+        "storedScore": 4.55,
+        "storedCents": 455
+      }
+    },
+    {
+      "name": "FINE n=10 i=9",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 10,
+        "index": 9
+      },
+      "expected": {
+        "score": 4.272727272727273,
+        "storedScore": 4.27,
+        "storedCents": 427
+      }
+    },
+    {
+      "name": "FINE n=11 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 11,
+        "index": 0
+      },
+      "expected": {
+        "score": 6.75,
+        "storedScore": 6.75,
+        "storedCents": 675
+      }
+    },
+    {
+      "name": "FINE n=11 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 11,
+        "index": 1
+      },
+      "expected": {
+        "score": 6.5,
+        "storedScore": 6.5,
+        "storedCents": 650
+      }
+    },
+    {
+      "name": "FINE n=11 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 11,
+        "index": 2
+      },
+      "expected": {
+        "score": 6.25,
+        "storedScore": 6.25,
+        "storedCents": 625
+      }
+    },
+    {
+      "name": "FINE n=11 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 11,
+        "index": 3
+      },
+      "expected": {
+        "score": 6,
+        "storedScore": 6,
+        "storedCents": 600
+      }
+    },
+    {
+      "name": "FINE n=11 i=4",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 11,
+        "index": 4
+      },
+      "expected": {
+        "score": 5.75,
+        "storedScore": 5.75,
+        "storedCents": 575
+      }
+    },
+    {
+      "name": "FINE n=11 i=5",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 11,
+        "index": 5
+      },
+      "expected": {
+        "score": 5.5,
+        "storedScore": 5.5,
+        "storedCents": 550
+      }
+    },
+    {
+      "name": "FINE n=11 i=6",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 11,
+        "index": 6
+      },
+      "expected": {
+        "score": 5.25,
+        "storedScore": 5.25,
+        "storedCents": 525
+      }
+    },
+    {
+      "name": "FINE n=11 i=7",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 11,
+        "index": 7
+      },
+      "expected": {
+        "score": 5,
+        "storedScore": 5,
+        "storedCents": 500
+      }
+    },
+    {
+      "name": "FINE n=11 i=8",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 11,
+        "index": 8
+      },
+      "expected": {
+        "score": 4.75,
+        "storedScore": 4.75,
+        "storedCents": 475
+      }
+    },
+    {
+      "name": "FINE n=11 i=9",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 11,
+        "index": 9
+      },
+      "expected": {
+        "score": 4.5,
+        "storedScore": 4.5,
+        "storedCents": 450
+      }
+    },
+    {
+      "name": "FINE n=11 i=10",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 11,
+        "index": 10
+      },
+      "expected": {
+        "score": 4.25,
+        "storedScore": 4.25,
+        "storedCents": 425
+      }
+    },
+    {
+      "name": "FINE n=12 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 12,
+        "index": 0
+      },
+      "expected": {
+        "score": 6.769230769230769,
+        "storedScore": 6.77,
+        "storedCents": 677
+      }
+    },
+    {
+      "name": "FINE n=12 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 12,
+        "index": 1
+      },
+      "expected": {
+        "score": 6.538461538461538,
+        "storedScore": 6.54,
+        "storedCents": 654
+      }
+    },
+    {
+      "name": "FINE n=12 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 12,
+        "index": 2
+      },
+      "expected": {
+        "score": 6.3076923076923075,
+        "storedScore": 6.31,
+        "storedCents": 631
+      }
+    },
+    {
+      "name": "FINE n=12 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 12,
+        "index": 3
+      },
+      "expected": {
+        "score": 6.076923076923077,
+        "storedScore": 6.08,
+        "storedCents": 608
+      }
+    },
+    {
+      "name": "FINE n=12 i=4",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 12,
+        "index": 4
+      },
+      "expected": {
+        "score": 5.846153846153847,
+        "storedScore": 5.85,
+        "storedCents": 585
+      }
+    },
+    {
+      "name": "FINE n=12 i=5",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 12,
+        "index": 5
+      },
+      "expected": {
+        "score": 5.615384615384615,
+        "storedScore": 5.62,
+        "storedCents": 562
+      }
+    },
+    {
+      "name": "FINE n=12 i=6",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 12,
+        "index": 6
+      },
+      "expected": {
+        "score": 5.384615384615385,
+        "storedScore": 5.38,
+        "storedCents": 538
+      }
+    },
+    {
+      "name": "FINE n=12 i=7",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 12,
+        "index": 7
+      },
+      "expected": {
+        "score": 5.153846153846153,
+        "storedScore": 5.15,
+        "storedCents": 515
+      }
+    },
+    {
+      "name": "FINE n=12 i=8",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 12,
+        "index": 8
+      },
+      "expected": {
+        "score": 4.923076923076923,
+        "storedScore": 4.92,
+        "storedCents": 492
+      }
+    },
+    {
+      "name": "FINE n=12 i=9",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 12,
+        "index": 9
+      },
+      "expected": {
+        "score": 4.6923076923076925,
+        "storedScore": 4.69,
+        "storedCents": 469
+      }
+    },
+    {
+      "name": "FINE n=12 i=10",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 12,
+        "index": 10
+      },
+      "expected": {
+        "score": 4.461538461538462,
+        "storedScore": 4.46,
+        "storedCents": 446
+      }
+    },
+    {
+      "name": "FINE n=12 i=11",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 12,
+        "index": 11
+      },
+      "expected": {
+        "score": 4.230769230769231,
+        "storedScore": 4.23,
+        "storedCents": 423
+      }
+    },
+    {
+      "name": "FINE n=50 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 0
+      },
+      "expected": {
+        "score": 6.9411764705882355,
+        "storedScore": 6.94,
+        "storedCents": 694
+      }
+    },
+    {
+      "name": "FINE n=50 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 1
+      },
+      "expected": {
+        "score": 6.882352941176471,
+        "storedScore": 6.88,
+        "storedCents": 688
+      }
+    },
+    {
+      "name": "FINE n=50 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 2
+      },
+      "expected": {
+        "score": 6.823529411764706,
+        "storedScore": 6.82,
+        "storedCents": 682
+      }
+    },
+    {
+      "name": "FINE n=50 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 3
+      },
+      "expected": {
+        "score": 6.764705882352941,
+        "storedScore": 6.76,
+        "storedCents": 676
+      }
+    },
+    {
+      "name": "FINE n=50 i=4",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 4
+      },
+      "expected": {
+        "score": 6.705882352941177,
+        "storedScore": 6.71,
+        "storedCents": 671
+      }
+    },
+    {
+      "name": "FINE n=50 i=5",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 5
+      },
+      "expected": {
+        "score": 6.647058823529412,
+        "storedScore": 6.65,
+        "storedCents": 665
+      }
+    },
+    {
+      "name": "FINE n=50 i=6",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 6
+      },
+      "expected": {
+        "score": 6.588235294117647,
+        "storedScore": 6.59,
+        "storedCents": 659
+      }
+    },
+    {
+      "name": "FINE n=50 i=7",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 7
+      },
+      "expected": {
+        "score": 6.529411764705882,
+        "storedScore": 6.53,
+        "storedCents": 653
+      }
+    },
+    {
+      "name": "FINE n=50 i=8",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 8
+      },
+      "expected": {
+        "score": 6.470588235294118,
+        "storedScore": 6.47,
+        "storedCents": 647
+      }
+    },
+    {
+      "name": "FINE n=50 i=9",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 9
+      },
+      "expected": {
+        "score": 6.411764705882353,
+        "storedScore": 6.41,
+        "storedCents": 641
+      }
+    },
+    {
+      "name": "FINE n=50 i=10",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 10
+      },
+      "expected": {
+        "score": 6.352941176470588,
+        "storedScore": 6.35,
+        "storedCents": 635
+      }
+    },
+    {
+      "name": "FINE n=50 i=11",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 11
+      },
+      "expected": {
+        "score": 6.294117647058823,
+        "storedScore": 6.29,
+        "storedCents": 629
+      }
+    },
+    {
+      "name": "FINE n=50 i=12",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 12
+      },
+      "expected": {
+        "score": 6.235294117647059,
+        "storedScore": 6.24,
+        "storedCents": 624
+      }
+    },
+    {
+      "name": "FINE n=50 i=13",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 13
+      },
+      "expected": {
+        "score": 6.176470588235294,
+        "storedScore": 6.18,
+        "storedCents": 618
+      }
+    },
+    {
+      "name": "FINE n=50 i=14",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 14
+      },
+      "expected": {
+        "score": 6.117647058823529,
+        "storedScore": 6.12,
+        "storedCents": 612
+      }
+    },
+    {
+      "name": "FINE n=50 i=15",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 15
+      },
+      "expected": {
+        "score": 6.0588235294117645,
+        "storedScore": 6.06,
+        "storedCents": 606
+      }
+    },
+    {
+      "name": "FINE n=50 i=16",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 16
+      },
+      "expected": {
+        "score": 6,
+        "storedScore": 6,
+        "storedCents": 600
+      }
+    },
+    {
+      "name": "FINE n=50 i=17",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 17
+      },
+      "expected": {
+        "score": 5.9411764705882355,
+        "storedScore": 5.94,
+        "storedCents": 594
+      }
+    },
+    {
+      "name": "FINE n=50 i=18",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 18
+      },
+      "expected": {
+        "score": 5.882352941176471,
+        "storedScore": 5.88,
+        "storedCents": 588
+      }
+    },
+    {
+      "name": "FINE n=50 i=19",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 19
+      },
+      "expected": {
+        "score": 5.823529411764706,
+        "storedScore": 5.82,
+        "storedCents": 582
+      }
+    },
+    {
+      "name": "FINE n=50 i=20",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 20
+      },
+      "expected": {
+        "score": 5.764705882352941,
+        "storedScore": 5.76,
+        "storedCents": 576
+      }
+    },
+    {
+      "name": "FINE n=50 i=21",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 21
+      },
+      "expected": {
+        "score": 5.705882352941177,
+        "storedScore": 5.71,
+        "storedCents": 571
+      }
+    },
+    {
+      "name": "FINE n=50 i=22",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 22
+      },
+      "expected": {
+        "score": 5.647058823529411,
+        "storedScore": 5.65,
+        "storedCents": 565
+      }
+    },
+    {
+      "name": "FINE n=50 i=23",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 23
+      },
+      "expected": {
+        "score": 5.588235294117647,
+        "storedScore": 5.59,
+        "storedCents": 559
+      }
+    },
+    {
+      "name": "FINE n=50 i=24",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 24
+      },
+      "expected": {
+        "score": 5.529411764705882,
+        "storedScore": 5.53,
+        "storedCents": 553
+      }
+    },
+    {
+      "name": "FINE n=50 i=25",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 25
+      },
+      "expected": {
+        "score": 5.470588235294118,
+        "storedScore": 5.47,
+        "storedCents": 547
+      }
+    },
+    {
+      "name": "FINE n=50 i=26",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 26
+      },
+      "expected": {
+        "score": 5.411764705882353,
+        "storedScore": 5.41,
+        "storedCents": 541
+      }
+    },
+    {
+      "name": "FINE n=50 i=27",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 27
+      },
+      "expected": {
+        "score": 5.352941176470589,
+        "storedScore": 5.35,
+        "storedCents": 535
+      }
+    },
+    {
+      "name": "FINE n=50 i=28",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 28
+      },
+      "expected": {
+        "score": 5.294117647058823,
+        "storedScore": 5.29,
+        "storedCents": 529
+      }
+    },
+    {
+      "name": "FINE n=50 i=29",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 29
+      },
+      "expected": {
+        "score": 5.235294117647059,
+        "storedScore": 5.24,
+        "storedCents": 524
+      }
+    },
+    {
+      "name": "FINE n=50 i=30",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 30
+      },
+      "expected": {
+        "score": 5.176470588235294,
+        "storedScore": 5.18,
+        "storedCents": 518
+      }
+    },
+    {
+      "name": "FINE n=50 i=31",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 31
+      },
+      "expected": {
+        "score": 5.117647058823529,
+        "storedScore": 5.12,
+        "storedCents": 512
+      }
+    },
+    {
+      "name": "FINE n=50 i=32",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 32
+      },
+      "expected": {
+        "score": 5.0588235294117645,
+        "storedScore": 5.06,
+        "storedCents": 506
+      }
+    },
+    {
+      "name": "FINE n=50 i=33",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 33
+      },
+      "expected": {
+        "score": 5,
+        "storedScore": 5,
+        "storedCents": 500
+      }
+    },
+    {
+      "name": "FINE n=50 i=34",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 34
+      },
+      "expected": {
+        "score": 4.9411764705882355,
+        "storedScore": 4.94,
+        "storedCents": 494
+      }
+    },
+    {
+      "name": "FINE n=50 i=35",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 35
+      },
+      "expected": {
+        "score": 4.882352941176471,
+        "storedScore": 4.88,
+        "storedCents": 488
+      }
+    },
+    {
+      "name": "FINE n=50 i=36",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 36
+      },
+      "expected": {
+        "score": 4.8235294117647065,
+        "storedScore": 4.82,
+        "storedCents": 482
+      }
+    },
+    {
+      "name": "FINE n=50 i=37",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 37
+      },
+      "expected": {
+        "score": 4.764705882352941,
+        "storedScore": 4.76,
+        "storedCents": 476
+      }
+    },
+    {
+      "name": "FINE n=50 i=38",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 38
+      },
+      "expected": {
+        "score": 4.705882352941177,
+        "storedScore": 4.71,
+        "storedCents": 471
+      }
+    },
+    {
+      "name": "FINE n=50 i=39",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 39
+      },
+      "expected": {
+        "score": 4.647058823529411,
+        "storedScore": 4.65,
+        "storedCents": 465
+      }
+    },
+    {
+      "name": "FINE n=50 i=40",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 40
+      },
+      "expected": {
+        "score": 4.588235294117647,
+        "storedScore": 4.59,
+        "storedCents": 459
+      }
+    },
+    {
+      "name": "FINE n=50 i=41",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 41
+      },
+      "expected": {
+        "score": 4.529411764705882,
+        "storedScore": 4.53,
+        "storedCents": 453
+      }
+    },
+    {
+      "name": "FINE n=50 i=42",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 42
+      },
+      "expected": {
+        "score": 4.470588235294118,
+        "storedScore": 4.47,
+        "storedCents": 447
+      }
+    },
+    {
+      "name": "FINE n=50 i=43",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 43
+      },
+      "expected": {
+        "score": 4.411764705882353,
+        "storedScore": 4.41,
+        "storedCents": 441
+      }
+    },
+    {
+      "name": "FINE n=50 i=44",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 44
+      },
+      "expected": {
+        "score": 4.352941176470589,
+        "storedScore": 4.35,
+        "storedCents": 435
+      }
+    },
+    {
+      "name": "FINE n=50 i=45",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 45
+      },
+      "expected": {
+        "score": 4.294117647058823,
+        "storedScore": 4.29,
+        "storedCents": 429
+      }
+    },
+    {
+      "name": "FINE n=50 i=46",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 46
+      },
+      "expected": {
+        "score": 4.235294117647059,
+        "storedScore": 4.24,
+        "storedCents": 424
+      }
+    },
+    {
+      "name": "FINE n=50 i=47",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 47
+      },
+      "expected": {
+        "score": 4.1764705882352935,
+        "storedScore": 4.18,
+        "storedCents": 418
+      }
+    },
+    {
+      "name": "FINE n=50 i=48",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 48
+      },
+      "expected": {
+        "score": 4.117647058823529,
+        "storedScore": 4.12,
+        "storedCents": 412
+      }
+    },
+    {
+      "name": "FINE n=50 i=49",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 50,
+        "index": 49
+      },
+      "expected": {
+        "score": 4.0588235294117645,
+        "storedScore": 4.06,
+        "storedCents": 406
+      }
+    },
+    {
+      "name": "FINE n=15 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 15,
+        "index": 0
+      },
+      "expected": {
+        "score": 6.8125,
+        "storedScore": 6.81,
+        "storedCents": 681
+      }
+    },
+    {
+      "name": "FINE n=15 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 15,
+        "index": 1
+      },
+      "expected": {
+        "score": 6.625,
+        "storedScore": 6.63,
+        "storedCents": 663
+      }
+    },
+    {
+      "name": "FINE n=15 i=14",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 15,
+        "index": 14
+      },
+      "expected": {
+        "score": 4.1875,
+        "storedScore": 4.19,
+        "storedCents": 419
+      }
+    },
+    {
+      "name": "FINE n=39 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 39,
+        "index": 0
+      },
+      "expected": {
+        "score": 6.925,
+        "storedScore": 6.93,
+        "storedCents": 693
+      }
+    },
+    {
+      "name": "FINE n=39 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 39,
+        "index": 1
+      },
+      "expected": {
+        "score": 6.85,
+        "storedScore": 6.85,
+        "storedCents": 685
+      }
+    },
+    {
+      "name": "FINE n=39 i=38",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 39,
+        "index": 38
+      },
+      "expected": {
+        "score": 4.075,
+        "storedScore": 4.08,
+        "storedCents": 408
+      }
+    },
+    {
+      "name": "FINE n=598 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 598,
+        "index": 0
+      },
+      "expected": {
+        "score": 6.994991652754591,
+        "storedScore": 6.99,
+        "storedCents": 699
+      }
+    },
+    {
+      "name": "FINE n=598 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 598,
+        "index": 1
+      },
+      "expected": {
+        "score": 6.989983305509182,
+        "storedScore": 6.99,
+        "storedCents": 699
+      }
+    },
+    {
+      "name": "FINE n=598 i=597",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 598,
+        "index": 597
+      },
+      "expected": {
+        "score": 4.005008347245409,
+        "storedScore": 4.01,
+        "storedCents": 401
+      }
+    },
+    {
+      "name": "FINE n=599 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 599,
+        "index": 0
+      },
+      "expected": {
+        "score": 6.995,
+        "storedScore": 6.99,
+        "storedCents": 699
+      }
+    },
+    {
+      "name": "FINE n=599 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 599,
+        "index": 1
+      },
+      "expected": {
+        "score": 6.99,
+        "storedScore": 6.99,
+        "storedCents": 699
+      }
+    },
+    {
+      "name": "FINE n=599 i=598",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 599,
+        "index": 598
+      },
+      "expected": {
+        "score": 4.005,
+        "storedScore": 4.01,
+        "storedCents": 401
+      }
+    },
+    {
+      "name": "FINE n=799 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 799,
+        "index": 0
+      },
+      "expected": {
+        "score": 6.99625,
+        "storedScore": 6.99,
+        "storedCents": 699
+      }
+    },
+    {
+      "name": "FINE n=799 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 799,
+        "index": 1
+      },
+      "expected": {
+        "score": 6.9925,
+        "storedScore": 6.99,
+        "storedCents": 699
+      }
+    },
+    {
+      "name": "FINE n=799 i=798",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 799,
+        "index": 798
+      },
+      "expected": {
+        "score": 4.00375,
+        "storedScore": 4,
+        "storedCents": 400
+      }
+    },
+    {
+      "name": "FINE n=800 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 800,
+        "index": 0
+      },
+      "expected": {
+        "score": 6.99625468164794,
+        "storedScore": 6.99,
+        "storedCents": 699
+      }
+    },
+    {
+      "name": "FINE n=800 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 800,
+        "index": 1
+      },
+      "expected": {
+        "score": 6.992509363295881,
+        "storedScore": 6.99,
+        "storedCents": 699
+      }
+    },
+    {
+      "name": "FINE n=800 i=799",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "FINE",
+        "n": 800,
+        "index": 799
+      },
+      "expected": {
+        "score": 4.00374531835206,
+        "storedScore": 4,
+        "storedCents": 400
+      }
+    },
+    {
+      "name": "DISLIKED n=1 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 1,
+        "index": 0
+      },
+      "expected": {
+        "score": 2,
+        "storedScore": 2,
+        "storedCents": 200
+      }
+    },
+    {
+      "name": "DISLIKED n=2 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 2,
+        "index": 0
+      },
+      "expected": {
+        "score": 2.666666666666667,
+        "storedScore": 2.67,
+        "storedCents": 267
+      }
+    },
+    {
+      "name": "DISLIKED n=2 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 2,
+        "index": 1
+      },
+      "expected": {
+        "score": 1.3333333333333335,
+        "storedScore": 1.33,
+        "storedCents": 133
+      }
+    },
+    {
+      "name": "DISLIKED n=3 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 3,
+        "index": 0
+      },
+      "expected": {
+        "score": 3,
+        "storedScore": 3,
+        "storedCents": 300
+      }
+    },
+    {
+      "name": "DISLIKED n=3 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 3,
+        "index": 1
+      },
+      "expected": {
+        "score": 2,
+        "storedScore": 2,
+        "storedCents": 200
+      }
+    },
+    {
+      "name": "DISLIKED n=3 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 3,
+        "index": 2
+      },
+      "expected": {
+        "score": 1,
+        "storedScore": 1,
+        "storedCents": 100
+      }
+    },
+    {
+      "name": "DISLIKED n=4 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 4,
+        "index": 0
+      },
+      "expected": {
+        "score": 3.2,
+        "storedScore": 3.2,
+        "storedCents": 320
+      }
+    },
+    {
+      "name": "DISLIKED n=4 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 4,
+        "index": 1
+      },
+      "expected": {
+        "score": 2.4,
+        "storedScore": 2.4,
+        "storedCents": 240
+      }
+    },
+    {
+      "name": "DISLIKED n=4 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 4,
+        "index": 2
+      },
+      "expected": {
+        "score": 1.6,
+        "storedScore": 1.6,
+        "storedCents": 160
+      }
+    },
+    {
+      "name": "DISLIKED n=4 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 4,
+        "index": 3
+      },
+      "expected": {
+        "score": 0.7999999999999998,
+        "storedScore": 0.8,
+        "storedCents": 80
+      }
+    },
+    {
+      "name": "DISLIKED n=5 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 5,
+        "index": 0
+      },
+      "expected": {
+        "score": 3.3333333333333335,
+        "storedScore": 3.33,
+        "storedCents": 333
+      }
+    },
+    {
+      "name": "DISLIKED n=5 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 5,
+        "index": 1
+      },
+      "expected": {
+        "score": 2.666666666666667,
+        "storedScore": 2.67,
+        "storedCents": 267
+      }
+    },
+    {
+      "name": "DISLIKED n=5 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 5,
+        "index": 2
+      },
+      "expected": {
+        "score": 2,
+        "storedScore": 2,
+        "storedCents": 200
+      }
+    },
+    {
+      "name": "DISLIKED n=5 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 5,
+        "index": 3
+      },
+      "expected": {
+        "score": 1.3333333333333335,
+        "storedScore": 1.33,
+        "storedCents": 133
+      }
+    },
+    {
+      "name": "DISLIKED n=5 i=4",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 5,
+        "index": 4
+      },
+      "expected": {
+        "score": 0.6666666666666665,
+        "storedScore": 0.67,
+        "storedCents": 67
+      }
+    },
+    {
+      "name": "DISLIKED n=6 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 6,
+        "index": 0
+      },
+      "expected": {
+        "score": 3.428571428571429,
+        "storedScore": 3.43,
+        "storedCents": 343
+      }
+    },
+    {
+      "name": "DISLIKED n=6 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 6,
+        "index": 1
+      },
+      "expected": {
+        "score": 2.857142857142857,
+        "storedScore": 2.86,
+        "storedCents": 286
+      }
+    },
+    {
+      "name": "DISLIKED n=6 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 6,
+        "index": 2
+      },
+      "expected": {
+        "score": 2.2857142857142856,
+        "storedScore": 2.29,
+        "storedCents": 229
+      }
+    },
+    {
+      "name": "DISLIKED n=6 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 6,
+        "index": 3
+      },
+      "expected": {
+        "score": 1.7142857142857144,
+        "storedScore": 1.71,
+        "storedCents": 171
+      }
+    },
+    {
+      "name": "DISLIKED n=6 i=4",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 6,
+        "index": 4
+      },
+      "expected": {
+        "score": 1.1428571428571428,
+        "storedScore": 1.14,
+        "storedCents": 114
+      }
+    },
+    {
+      "name": "DISLIKED n=6 i=5",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 6,
+        "index": 5
+      },
+      "expected": {
+        "score": 0.5714285714285716,
+        "storedScore": 0.57,
+        "storedCents": 57
+      }
+    },
+    {
+      "name": "DISLIKED n=7 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 7,
+        "index": 0
+      },
+      "expected": {
+        "score": 3.5,
+        "storedScore": 3.5,
+        "storedCents": 350
+      }
+    },
+    {
+      "name": "DISLIKED n=7 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 7,
+        "index": 1
+      },
+      "expected": {
+        "score": 3,
+        "storedScore": 3,
+        "storedCents": 300
+      }
+    },
+    {
+      "name": "DISLIKED n=7 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 7,
+        "index": 2
+      },
+      "expected": {
+        "score": 2.5,
+        "storedScore": 2.5,
+        "storedCents": 250
+      }
+    },
+    {
+      "name": "DISLIKED n=7 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 7,
+        "index": 3
+      },
+      "expected": {
+        "score": 2,
+        "storedScore": 2,
+        "storedCents": 200
+      }
+    },
+    {
+      "name": "DISLIKED n=7 i=4",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 7,
+        "index": 4
+      },
+      "expected": {
+        "score": 1.5,
+        "storedScore": 1.5,
+        "storedCents": 150
+      }
+    },
+    {
+      "name": "DISLIKED n=7 i=5",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 7,
+        "index": 5
+      },
+      "expected": {
+        "score": 1,
+        "storedScore": 1,
+        "storedCents": 100
+      }
+    },
+    {
+      "name": "DISLIKED n=7 i=6",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 7,
+        "index": 6
+      },
+      "expected": {
+        "score": 0.5,
+        "storedScore": 0.5,
+        "storedCents": 50
+      }
+    },
+    {
+      "name": "DISLIKED n=8 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 8,
+        "index": 0
+      },
+      "expected": {
+        "score": 3.5555555555555554,
+        "storedScore": 3.56,
+        "storedCents": 356
+      }
+    },
+    {
+      "name": "DISLIKED n=8 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 8,
+        "index": 1
+      },
+      "expected": {
+        "score": 3.111111111111111,
+        "storedScore": 3.11,
+        "storedCents": 311
+      }
+    },
+    {
+      "name": "DISLIKED n=8 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 8,
+        "index": 2
+      },
+      "expected": {
+        "score": 2.666666666666667,
+        "storedScore": 2.67,
+        "storedCents": 267
+      }
+    },
+    {
+      "name": "DISLIKED n=8 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 8,
+        "index": 3
+      },
+      "expected": {
+        "score": 2.2222222222222223,
+        "storedScore": 2.22,
+        "storedCents": 222
+      }
+    },
+    {
+      "name": "DISLIKED n=8 i=4",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 8,
+        "index": 4
+      },
+      "expected": {
+        "score": 1.7777777777777777,
+        "storedScore": 1.78,
+        "storedCents": 178
+      }
+    },
+    {
+      "name": "DISLIKED n=8 i=5",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 8,
+        "index": 5
+      },
+      "expected": {
+        "score": 1.3333333333333335,
+        "storedScore": 1.33,
+        "storedCents": 133
+      }
+    },
+    {
+      "name": "DISLIKED n=8 i=6",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 8,
+        "index": 6
+      },
+      "expected": {
+        "score": 0.8888888888888888,
+        "storedScore": 0.89,
+        "storedCents": 89
+      }
+    },
+    {
+      "name": "DISLIKED n=8 i=7",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 8,
+        "index": 7
+      },
+      "expected": {
+        "score": 0.44444444444444464,
+        "storedScore": 0.44,
+        "storedCents": 44
+      }
+    },
+    {
+      "name": "DISLIKED n=9 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 9,
+        "index": 0
+      },
+      "expected": {
+        "score": 3.6,
+        "storedScore": 3.6,
+        "storedCents": 360
+      }
+    },
+    {
+      "name": "DISLIKED n=9 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 9,
+        "index": 1
+      },
+      "expected": {
+        "score": 3.2,
+        "storedScore": 3.2,
+        "storedCents": 320
+      }
+    },
+    {
+      "name": "DISLIKED n=9 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 9,
+        "index": 2
+      },
+      "expected": {
+        "score": 2.8,
+        "storedScore": 2.8,
+        "storedCents": 280
+      }
+    },
+    {
+      "name": "DISLIKED n=9 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 9,
+        "index": 3
+      },
+      "expected": {
+        "score": 2.4,
+        "storedScore": 2.4,
+        "storedCents": 240
+      }
+    },
+    {
+      "name": "DISLIKED n=9 i=4",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 9,
+        "index": 4
+      },
+      "expected": {
+        "score": 2,
+        "storedScore": 2,
+        "storedCents": 200
+      }
+    },
+    {
+      "name": "DISLIKED n=9 i=5",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 9,
+        "index": 5
+      },
+      "expected": {
+        "score": 1.6,
+        "storedScore": 1.6,
+        "storedCents": 160
+      }
+    },
+    {
+      "name": "DISLIKED n=9 i=6",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 9,
+        "index": 6
+      },
+      "expected": {
+        "score": 1.2000000000000002,
+        "storedScore": 1.2,
+        "storedCents": 120
+      }
+    },
+    {
+      "name": "DISLIKED n=9 i=7",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 9,
+        "index": 7
+      },
+      "expected": {
+        "score": 0.7999999999999998,
+        "storedScore": 0.8,
+        "storedCents": 80
+      }
+    },
+    {
+      "name": "DISLIKED n=9 i=8",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 9,
+        "index": 8
+      },
+      "expected": {
+        "score": 0.3999999999999999,
+        "storedScore": 0.4,
+        "storedCents": 40
+      }
+    },
+    {
+      "name": "DISLIKED n=10 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 10,
+        "index": 0
+      },
+      "expected": {
+        "score": 3.6363636363636362,
+        "storedScore": 3.64,
+        "storedCents": 364
+      }
+    },
+    {
+      "name": "DISLIKED n=10 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 10,
+        "index": 1
+      },
+      "expected": {
+        "score": 3.2727272727272725,
+        "storedScore": 3.27,
+        "storedCents": 327
+      }
+    },
+    {
+      "name": "DISLIKED n=10 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 10,
+        "index": 2
+      },
+      "expected": {
+        "score": 2.909090909090909,
+        "storedScore": 2.91,
+        "storedCents": 291
+      }
+    },
+    {
+      "name": "DISLIKED n=10 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 10,
+        "index": 3
+      },
+      "expected": {
+        "score": 2.5454545454545454,
+        "storedScore": 2.55,
+        "storedCents": 255
+      }
+    },
+    {
+      "name": "DISLIKED n=10 i=4",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 10,
+        "index": 4
+      },
+      "expected": {
+        "score": 2.1818181818181817,
+        "storedScore": 2.18,
+        "storedCents": 218
+      }
+    },
+    {
+      "name": "DISLIKED n=10 i=5",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 10,
+        "index": 5
+      },
+      "expected": {
+        "score": 1.8181818181818183,
+        "storedScore": 1.82,
+        "storedCents": 182
+      }
+    },
+    {
+      "name": "DISLIKED n=10 i=6",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 10,
+        "index": 6
+      },
+      "expected": {
+        "score": 1.4545454545454546,
+        "storedScore": 1.45,
+        "storedCents": 145
+      }
+    },
+    {
+      "name": "DISLIKED n=10 i=7",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 10,
+        "index": 7
+      },
+      "expected": {
+        "score": 1.0909090909090908,
+        "storedScore": 1.09,
+        "storedCents": 109
+      }
+    },
+    {
+      "name": "DISLIKED n=10 i=8",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 10,
+        "index": 8
+      },
+      "expected": {
+        "score": 0.7272727272727271,
+        "storedScore": 0.73,
+        "storedCents": 73
+      }
+    },
+    {
+      "name": "DISLIKED n=10 i=9",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 10,
+        "index": 9
+      },
+      "expected": {
+        "score": 0.36363636363636376,
+        "storedScore": 0.36,
+        "storedCents": 36
+      }
+    },
+    {
+      "name": "DISLIKED n=11 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 11,
+        "index": 0
+      },
+      "expected": {
+        "score": 3.6666666666666665,
+        "storedScore": 3.67,
+        "storedCents": 367
+      }
+    },
+    {
+      "name": "DISLIKED n=11 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 11,
+        "index": 1
+      },
+      "expected": {
+        "score": 3.3333333333333335,
+        "storedScore": 3.33,
+        "storedCents": 333
+      }
+    },
+    {
+      "name": "DISLIKED n=11 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 11,
+        "index": 2
+      },
+      "expected": {
+        "score": 3,
+        "storedScore": 3,
+        "storedCents": 300
+      }
+    },
+    {
+      "name": "DISLIKED n=11 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 11,
+        "index": 3
+      },
+      "expected": {
+        "score": 2.666666666666667,
+        "storedScore": 2.67,
+        "storedCents": 267
+      }
+    },
+    {
+      "name": "DISLIKED n=11 i=4",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 11,
+        "index": 4
+      },
+      "expected": {
+        "score": 2.333333333333333,
+        "storedScore": 2.33,
+        "storedCents": 233
+      }
+    },
+    {
+      "name": "DISLIKED n=11 i=5",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 11,
+        "index": 5
+      },
+      "expected": {
+        "score": 2,
+        "storedScore": 2,
+        "storedCents": 200
+      }
+    },
+    {
+      "name": "DISLIKED n=11 i=6",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 11,
+        "index": 6
+      },
+      "expected": {
+        "score": 1.6666666666666665,
+        "storedScore": 1.67,
+        "storedCents": 167
+      }
+    },
+    {
+      "name": "DISLIKED n=11 i=7",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 11,
+        "index": 7
+      },
+      "expected": {
+        "score": 1.3333333333333335,
+        "storedScore": 1.33,
+        "storedCents": 133
+      }
+    },
+    {
+      "name": "DISLIKED n=11 i=8",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 11,
+        "index": 8
+      },
+      "expected": {
+        "score": 1,
+        "storedScore": 1,
+        "storedCents": 100
+      }
+    },
+    {
+      "name": "DISLIKED n=11 i=9",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 11,
+        "index": 9
+      },
+      "expected": {
+        "score": 0.6666666666666665,
+        "storedScore": 0.67,
+        "storedCents": 67
+      }
+    },
+    {
+      "name": "DISLIKED n=11 i=10",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 11,
+        "index": 10
+      },
+      "expected": {
+        "score": 0.3333333333333335,
+        "storedScore": 0.33,
+        "storedCents": 33
+      }
+    },
+    {
+      "name": "DISLIKED n=12 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 12,
+        "index": 0
+      },
+      "expected": {
+        "score": 3.6923076923076925,
+        "storedScore": 3.69,
+        "storedCents": 369
+      }
+    },
+    {
+      "name": "DISLIKED n=12 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 12,
+        "index": 1
+      },
+      "expected": {
+        "score": 3.3846153846153846,
+        "storedScore": 3.38,
+        "storedCents": 338
+      }
+    },
+    {
+      "name": "DISLIKED n=12 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 12,
+        "index": 2
+      },
+      "expected": {
+        "score": 3.0769230769230766,
+        "storedScore": 3.08,
+        "storedCents": 308
+      }
+    },
+    {
+      "name": "DISLIKED n=12 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 12,
+        "index": 3
+      },
+      "expected": {
+        "score": 2.769230769230769,
+        "storedScore": 2.77,
+        "storedCents": 277
+      }
+    },
+    {
+      "name": "DISLIKED n=12 i=4",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 12,
+        "index": 4
+      },
+      "expected": {
+        "score": 2.4615384615384617,
+        "storedScore": 2.46,
+        "storedCents": 246
+      }
+    },
+    {
+      "name": "DISLIKED n=12 i=5",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 12,
+        "index": 5
+      },
+      "expected": {
+        "score": 2.1538461538461537,
+        "storedScore": 2.15,
+        "storedCents": 215
+      }
+    },
+    {
+      "name": "DISLIKED n=12 i=6",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 12,
+        "index": 6
+      },
+      "expected": {
+        "score": 1.8461538461538463,
+        "storedScore": 1.85,
+        "storedCents": 185
+      }
+    },
+    {
+      "name": "DISLIKED n=12 i=7",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 12,
+        "index": 7
+      },
+      "expected": {
+        "score": 1.5384615384615383,
+        "storedScore": 1.54,
+        "storedCents": 154
+      }
+    },
+    {
+      "name": "DISLIKED n=12 i=8",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 12,
+        "index": 8
+      },
+      "expected": {
+        "score": 1.2307692307692308,
+        "storedScore": 1.23,
+        "storedCents": 123
+      }
+    },
+    {
+      "name": "DISLIKED n=12 i=9",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 12,
+        "index": 9
+      },
+      "expected": {
+        "score": 0.9230769230769229,
+        "storedScore": 0.92,
+        "storedCents": 92
+      }
+    },
+    {
+      "name": "DISLIKED n=12 i=10",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 12,
+        "index": 10
+      },
+      "expected": {
+        "score": 0.6153846153846154,
+        "storedScore": 0.62,
+        "storedCents": 62
+      }
+    },
+    {
+      "name": "DISLIKED n=12 i=11",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 12,
+        "index": 11
+      },
+      "expected": {
+        "score": 0.3076923076923075,
+        "storedScore": 0.31,
+        "storedCents": 31
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 0
+      },
+      "expected": {
+        "score": 3.9215686274509802,
+        "storedScore": 3.92,
+        "storedCents": 392
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 1
+      },
+      "expected": {
+        "score": 3.843137254901961,
+        "storedScore": 3.84,
+        "storedCents": 384
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=2",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 2
+      },
+      "expected": {
+        "score": 3.764705882352941,
+        "storedScore": 3.76,
+        "storedCents": 376
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=3",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 3
+      },
+      "expected": {
+        "score": 3.686274509803922,
+        "storedScore": 3.69,
+        "storedCents": 369
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=4",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 4
+      },
+      "expected": {
+        "score": 3.607843137254902,
+        "storedScore": 3.61,
+        "storedCents": 361
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=5",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 5
+      },
+      "expected": {
+        "score": 3.5294117647058822,
+        "storedScore": 3.53,
+        "storedCents": 353
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=6",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 6
+      },
+      "expected": {
+        "score": 3.450980392156863,
+        "storedScore": 3.45,
+        "storedCents": 345
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=7",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 7
+      },
+      "expected": {
+        "score": 3.372549019607843,
+        "storedScore": 3.37,
+        "storedCents": 337
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=8",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 8
+      },
+      "expected": {
+        "score": 3.2941176470588234,
+        "storedScore": 3.29,
+        "storedCents": 329
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=9",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 9
+      },
+      "expected": {
+        "score": 3.215686274509804,
+        "storedScore": 3.22,
+        "storedCents": 322
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=10",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 10
+      },
+      "expected": {
+        "score": 3.1372549019607843,
+        "storedScore": 3.14,
+        "storedCents": 314
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=11",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 11
+      },
+      "expected": {
+        "score": 3.0588235294117645,
+        "storedScore": 3.06,
+        "storedCents": 306
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=12",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 12
+      },
+      "expected": {
+        "score": 2.980392156862745,
+        "storedScore": 2.98,
+        "storedCents": 298
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=13",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 13
+      },
+      "expected": {
+        "score": 2.9019607843137254,
+        "storedScore": 2.9,
+        "storedCents": 290
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=14",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 14
+      },
+      "expected": {
+        "score": 2.8235294117647056,
+        "storedScore": 2.82,
+        "storedCents": 282
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=15",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 15
+      },
+      "expected": {
+        "score": 2.7450980392156863,
+        "storedScore": 2.75,
+        "storedCents": 275
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=16",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 16
+      },
+      "expected": {
+        "score": 2.666666666666667,
+        "storedScore": 2.67,
+        "storedCents": 267
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=17",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 17
+      },
+      "expected": {
+        "score": 2.5882352941176467,
+        "storedScore": 2.59,
+        "storedCents": 259
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=18",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 18
+      },
+      "expected": {
+        "score": 2.5098039215686274,
+        "storedScore": 2.51,
+        "storedCents": 251
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=19",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 19
+      },
+      "expected": {
+        "score": 2.431372549019608,
+        "storedScore": 2.43,
+        "storedCents": 243
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=20",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 20
+      },
+      "expected": {
+        "score": 2.3529411764705883,
+        "storedScore": 2.35,
+        "storedCents": 235
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=21",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 21
+      },
+      "expected": {
+        "score": 2.2745098039215685,
+        "storedScore": 2.27,
+        "storedCents": 227
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=22",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 22
+      },
+      "expected": {
+        "score": 2.196078431372549,
+        "storedScore": 2.2,
+        "storedCents": 220
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=23",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 23
+      },
+      "expected": {
+        "score": 2.1176470588235294,
+        "storedScore": 2.12,
+        "storedCents": 212
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=24",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 24
+      },
+      "expected": {
+        "score": 2.0392156862745097,
+        "storedScore": 2.04,
+        "storedCents": 204
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=25",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 25
+      },
+      "expected": {
+        "score": 1.9607843137254903,
+        "storedScore": 1.96,
+        "storedCents": 196
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=26",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 26
+      },
+      "expected": {
+        "score": 1.8823529411764706,
+        "storedScore": 1.88,
+        "storedCents": 188
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=27",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 27
+      },
+      "expected": {
+        "score": 1.8039215686274508,
+        "storedScore": 1.8,
+        "storedCents": 180
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=28",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 28
+      },
+      "expected": {
+        "score": 1.7254901960784315,
+        "storedScore": 1.73,
+        "storedCents": 173
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=29",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 29
+      },
+      "expected": {
+        "score": 1.6470588235294117,
+        "storedScore": 1.65,
+        "storedCents": 165
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=30",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 30
+      },
+      "expected": {
+        "score": 1.5686274509803924,
+        "storedScore": 1.57,
+        "storedCents": 157
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=31",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 31
+      },
+      "expected": {
+        "score": 1.4901960784313726,
+        "storedScore": 1.49,
+        "storedCents": 149
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=32",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 32
+      },
+      "expected": {
+        "score": 1.4117647058823528,
+        "storedScore": 1.41,
+        "storedCents": 141
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=33",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 33
+      },
+      "expected": {
+        "score": 1.3333333333333335,
+        "storedScore": 1.33,
+        "storedCents": 133
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=34",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 34
+      },
+      "expected": {
+        "score": 1.2549019607843137,
+        "storedScore": 1.25,
+        "storedCents": 125
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=35",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 35
+      },
+      "expected": {
+        "score": 1.176470588235294,
+        "storedScore": 1.18,
+        "storedCents": 118
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=36",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 36
+      },
+      "expected": {
+        "score": 1.0980392156862746,
+        "storedScore": 1.1,
+        "storedCents": 110
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=37",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 37
+      },
+      "expected": {
+        "score": 1.0196078431372548,
+        "storedScore": 1.02,
+        "storedCents": 102
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=38",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 38
+      },
+      "expected": {
+        "score": 0.9411764705882355,
+        "storedScore": 0.94,
+        "storedCents": 94
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=39",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 39
+      },
+      "expected": {
+        "score": 0.8627450980392157,
+        "storedScore": 0.86,
+        "storedCents": 86
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=40",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 40
+      },
+      "expected": {
+        "score": 0.784313725490196,
+        "storedScore": 0.78,
+        "storedCents": 78
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=41",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 41
+      },
+      "expected": {
+        "score": 0.7058823529411766,
+        "storedScore": 0.71,
+        "storedCents": 71
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=42",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 42
+      },
+      "expected": {
+        "score": 0.6274509803921569,
+        "storedScore": 0.63,
+        "storedCents": 63
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=43",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 43
+      },
+      "expected": {
+        "score": 0.5490196078431371,
+        "storedScore": 0.55,
+        "storedCents": 55
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=44",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 44
+      },
+      "expected": {
+        "score": 0.47058823529411775,
+        "storedScore": 0.47,
+        "storedCents": 47
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=45",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 45
+      },
+      "expected": {
+        "score": 0.392156862745098,
+        "storedScore": 0.39,
+        "storedCents": 39
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=46",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 46
+      },
+      "expected": {
+        "score": 0.31372549019607865,
+        "storedScore": 0.31,
+        "storedCents": 31
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=47",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 47
+      },
+      "expected": {
+        "score": 0.23529411764705888,
+        "storedScore": 0.24,
+        "storedCents": 24
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=48",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 48
+      },
+      "expected": {
+        "score": 0.1568627450980391,
+        "storedScore": 0.16,
+        "storedCents": 16
+      }
+    },
+    {
+      "name": "DISLIKED n=50 i=49",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 50,
+        "index": 49
+      },
+      "expected": {
+        "score": 0.07843137254901977,
+        "storedScore": 0.08,
+        "storedCents": 8
+      }
+    },
+    {
+      "name": "DISLIKED n=15 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 15,
+        "index": 0
+      },
+      "expected": {
+        "score": 3.75,
+        "storedScore": 3.75,
+        "storedCents": 375
+      }
+    },
+    {
+      "name": "DISLIKED n=15 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 15,
+        "index": 1
+      },
+      "expected": {
+        "score": 3.5,
+        "storedScore": 3.5,
+        "storedCents": 350
+      }
+    },
+    {
+      "name": "DISLIKED n=15 i=14",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 15,
+        "index": 14
+      },
+      "expected": {
+        "score": 0.25,
+        "storedScore": 0.25,
+        "storedCents": 25
+      }
+    },
+    {
+      "name": "DISLIKED n=39 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 39,
+        "index": 0
+      },
+      "expected": {
+        "score": 3.9,
+        "storedScore": 3.9,
+        "storedCents": 390
+      }
+    },
+    {
+      "name": "DISLIKED n=39 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 39,
+        "index": 1
+      },
+      "expected": {
+        "score": 3.8,
+        "storedScore": 3.8,
+        "storedCents": 380
+      }
+    },
+    {
+      "name": "DISLIKED n=39 i=38",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 39,
+        "index": 38
+      },
+      "expected": {
+        "score": 0.10000000000000009,
+        "storedScore": 0.1,
+        "storedCents": 10
+      }
+    },
+    {
+      "name": "DISLIKED n=598 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 598,
+        "index": 0
+      },
+      "expected": {
+        "score": 3.993322203672788,
+        "storedScore": 3.99,
+        "storedCents": 399
+      }
+    },
+    {
+      "name": "DISLIKED n=598 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 598,
+        "index": 1
+      },
+      "expected": {
+        "score": 3.986644407345576,
+        "storedScore": 3.99,
+        "storedCents": 399
+      }
+    },
+    {
+      "name": "DISLIKED n=598 i=597",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 598,
+        "index": 597
+      },
+      "expected": {
+        "score": 0.006677796327211993,
+        "storedScore": 0.01,
+        "storedCents": 1
+      }
+    },
+    {
+      "name": "DISLIKED n=599 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 599,
+        "index": 0
+      },
+      "expected": {
+        "score": 3.993333333333333,
+        "storedScore": 3.99,
+        "storedCents": 399
+      }
+    },
+    {
+      "name": "DISLIKED n=599 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 599,
+        "index": 1
+      },
+      "expected": {
+        "score": 3.986666666666667,
+        "storedScore": 3.99,
+        "storedCents": 399
+      }
+    },
+    {
+      "name": "DISLIKED n=599 i=598",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 599,
+        "index": 598
+      },
+      "expected": {
+        "score": 0.006666666666666821,
+        "storedScore": 0.01,
+        "storedCents": 1
+      }
+    },
+    {
+      "name": "DISLIKED n=799 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 799,
+        "index": 0
+      },
+      "expected": {
+        "score": 3.995,
+        "storedScore": 3.99,
+        "storedCents": 399
+      }
+    },
+    {
+      "name": "DISLIKED n=799 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 799,
+        "index": 1
+      },
+      "expected": {
+        "score": 3.99,
+        "storedScore": 3.99,
+        "storedCents": 399
+      }
+    },
+    {
+      "name": "DISLIKED n=799 i=798",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 799,
+        "index": 798
+      },
+      "expected": {
+        "score": 0.004999999999999893,
+        "storedScore": 0.01,
+        "storedCents": 1
+      }
+    },
+    {
+      "name": "DISLIKED n=800 i=0",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 800,
+        "index": 0
+      },
+      "expected": {
+        "score": 3.9950062421972534,
+        "storedScore": 3.99,
+        "storedCents": 399
+      }
+    },
+    {
+      "name": "DISLIKED n=800 i=1",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 800,
+        "index": 1
+      },
+      "expected": {
+        "score": 3.990012484394507,
+        "storedScore": 3.99,
+        "storedCents": 399
+      }
+    },
+    {
+      "name": "DISLIKED n=800 i=799",
+      "fn": "storedScore",
+      "input": {
+        "bucket": "DISLIKED",
+        "n": 800,
+        "index": 799
+      },
+      "expected": {
+        "score": 0.004993757802746579,
+        "storedScore": 0,
+        "storedCents": 0
+      }
+    },
+    {
+      "name": "respace LOVED n=0",
+      "fn": "respaceBucket",
+      "input": {
+        "bucket": "LOVED",
+        "orderedBevIds": []
+      },
+      "expected": []
+    },
+    {
+      "name": "respace LOVED n=1",
+      "fn": "respaceBucket",
+      "input": {
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "bev-a"
+        ]
+      },
+      "expected": [
+        {
+          "bevId": "bev-a",
+          "position": 0,
+          "score": 8.5
+        }
+      ]
+    },
+    {
+      "name": "respace LOVED n=2",
+      "fn": "respaceBucket",
+      "input": {
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "bev-a",
+          "bev-b"
+        ]
+      },
+      "expected": [
+        {
+          "bevId": "bev-a",
+          "position": 0,
+          "score": 9
+        },
+        {
+          "bevId": "bev-b",
+          "position": 1,
+          "score": 8
+        }
+      ]
+    },
+    {
+      "name": "respace LOVED n=5",
+      "fn": "respaceBucket",
+      "input": {
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "bev-a",
+          "bev-b",
+          "bev-c",
+          "bev-d",
+          "bev-e"
+        ]
+      },
+      "expected": [
+        {
+          "bevId": "bev-a",
+          "position": 0,
+          "score": 9.5
+        },
+        {
+          "bevId": "bev-b",
+          "position": 1,
+          "score": 9
+        },
+        {
+          "bevId": "bev-c",
+          "position": 2,
+          "score": 8.5
+        },
+        {
+          "bevId": "bev-d",
+          "position": 3,
+          "score": 8
+        },
+        {
+          "bevId": "bev-e",
+          "position": 4,
+          "score": 7.5
+        }
+      ]
+    },
+    {
+      "name": "respace LOVED n=13",
+      "fn": "respaceBucket",
+      "input": {
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "bev-a",
+          "bev-b",
+          "bev-c",
+          "bev-d",
+          "bev-e",
+          "bev-f",
+          "bev-g",
+          "bev-h",
+          "bev-i",
+          "bev-j",
+          "bev-k",
+          "bev-l",
+          "bev-m"
+        ]
+      },
+      "expected": [
+        {
+          "bevId": "bev-a",
+          "position": 0,
+          "score": 9.79
+        },
+        {
+          "bevId": "bev-b",
+          "position": 1,
+          "score": 9.57
+        },
+        {
+          "bevId": "bev-c",
+          "position": 2,
+          "score": 9.36
+        },
+        {
+          "bevId": "bev-d",
+          "position": 3,
+          "score": 9.14
+        },
+        {
+          "bevId": "bev-e",
+          "position": 4,
+          "score": 8.93
+        },
+        {
+          "bevId": "bev-f",
+          "position": 5,
+          "score": 8.71
+        },
+        {
+          "bevId": "bev-g",
+          "position": 6,
+          "score": 8.5
+        },
+        {
+          "bevId": "bev-h",
+          "position": 7,
+          "score": 8.29
+        },
+        {
+          "bevId": "bev-i",
+          "position": 8,
+          "score": 8.07
+        },
+        {
+          "bevId": "bev-j",
+          "position": 9,
+          "score": 7.86
+        },
+        {
+          "bevId": "bev-k",
+          "position": 10,
+          "score": 7.64
+        },
+        {
+          "bevId": "bev-l",
+          "position": 11,
+          "score": 7.43
+        },
+        {
+          "bevId": "bev-m",
+          "position": 12,
+          "score": 7.21
+        }
+      ]
+    },
+    {
+      "name": "respace FINE n=0",
+      "fn": "respaceBucket",
+      "input": {
+        "bucket": "FINE",
+        "orderedBevIds": []
+      },
+      "expected": []
+    },
+    {
+      "name": "respace FINE n=1",
+      "fn": "respaceBucket",
+      "input": {
+        "bucket": "FINE",
+        "orderedBevIds": [
+          "bev-a"
+        ]
+      },
+      "expected": [
+        {
+          "bevId": "bev-a",
+          "position": 0,
+          "score": 5.5
+        }
+      ]
+    },
+    {
+      "name": "respace FINE n=2",
+      "fn": "respaceBucket",
+      "input": {
+        "bucket": "FINE",
+        "orderedBevIds": [
+          "bev-a",
+          "bev-b"
+        ]
+      },
+      "expected": [
+        {
+          "bevId": "bev-a",
+          "position": 0,
+          "score": 6
+        },
+        {
+          "bevId": "bev-b",
+          "position": 1,
+          "score": 5
+        }
+      ]
+    },
+    {
+      "name": "respace FINE n=5",
+      "fn": "respaceBucket",
+      "input": {
+        "bucket": "FINE",
+        "orderedBevIds": [
+          "bev-a",
+          "bev-b",
+          "bev-c",
+          "bev-d",
+          "bev-e"
+        ]
+      },
+      "expected": [
+        {
+          "bevId": "bev-a",
+          "position": 0,
+          "score": 6.5
+        },
+        {
+          "bevId": "bev-b",
+          "position": 1,
+          "score": 6
+        },
+        {
+          "bevId": "bev-c",
+          "position": 2,
+          "score": 5.5
+        },
+        {
+          "bevId": "bev-d",
+          "position": 3,
+          "score": 5
+        },
+        {
+          "bevId": "bev-e",
+          "position": 4,
+          "score": 4.5
+        }
+      ]
+    },
+    {
+      "name": "respace FINE n=13",
+      "fn": "respaceBucket",
+      "input": {
+        "bucket": "FINE",
+        "orderedBevIds": [
+          "bev-a",
+          "bev-b",
+          "bev-c",
+          "bev-d",
+          "bev-e",
+          "bev-f",
+          "bev-g",
+          "bev-h",
+          "bev-i",
+          "bev-j",
+          "bev-k",
+          "bev-l",
+          "bev-m"
+        ]
+      },
+      "expected": [
+        {
+          "bevId": "bev-a",
+          "position": 0,
+          "score": 6.79
+        },
+        {
+          "bevId": "bev-b",
+          "position": 1,
+          "score": 6.57
+        },
+        {
+          "bevId": "bev-c",
+          "position": 2,
+          "score": 6.36
+        },
+        {
+          "bevId": "bev-d",
+          "position": 3,
+          "score": 6.14
+        },
+        {
+          "bevId": "bev-e",
+          "position": 4,
+          "score": 5.93
+        },
+        {
+          "bevId": "bev-f",
+          "position": 5,
+          "score": 5.71
+        },
+        {
+          "bevId": "bev-g",
+          "position": 6,
+          "score": 5.5
+        },
+        {
+          "bevId": "bev-h",
+          "position": 7,
+          "score": 5.29
+        },
+        {
+          "bevId": "bev-i",
+          "position": 8,
+          "score": 5.07
+        },
+        {
+          "bevId": "bev-j",
+          "position": 9,
+          "score": 4.86
+        },
+        {
+          "bevId": "bev-k",
+          "position": 10,
+          "score": 4.64
+        },
+        {
+          "bevId": "bev-l",
+          "position": 11,
+          "score": 4.43
+        },
+        {
+          "bevId": "bev-m",
+          "position": 12,
+          "score": 4.21
+        }
+      ]
+    },
+    {
+      "name": "respace DISLIKED n=0",
+      "fn": "respaceBucket",
+      "input": {
+        "bucket": "DISLIKED",
+        "orderedBevIds": []
+      },
+      "expected": []
+    },
+    {
+      "name": "respace DISLIKED n=1",
+      "fn": "respaceBucket",
+      "input": {
+        "bucket": "DISLIKED",
+        "orderedBevIds": [
+          "bev-a"
+        ]
+      },
+      "expected": [
+        {
+          "bevId": "bev-a",
+          "position": 0,
+          "score": 2
+        }
+      ]
+    },
+    {
+      "name": "respace DISLIKED n=2",
+      "fn": "respaceBucket",
+      "input": {
+        "bucket": "DISLIKED",
+        "orderedBevIds": [
+          "bev-a",
+          "bev-b"
+        ]
+      },
+      "expected": [
+        {
+          "bevId": "bev-a",
+          "position": 0,
+          "score": 2.67
+        },
+        {
+          "bevId": "bev-b",
+          "position": 1,
+          "score": 1.33
+        }
+      ]
+    },
+    {
+      "name": "respace DISLIKED n=5",
+      "fn": "respaceBucket",
+      "input": {
+        "bucket": "DISLIKED",
+        "orderedBevIds": [
+          "bev-a",
+          "bev-b",
+          "bev-c",
+          "bev-d",
+          "bev-e"
+        ]
+      },
+      "expected": [
+        {
+          "bevId": "bev-a",
+          "position": 0,
+          "score": 3.33
+        },
+        {
+          "bevId": "bev-b",
+          "position": 1,
+          "score": 2.67
+        },
+        {
+          "bevId": "bev-c",
+          "position": 2,
+          "score": 2
+        },
+        {
+          "bevId": "bev-d",
+          "position": 3,
+          "score": 1.33
+        },
+        {
+          "bevId": "bev-e",
+          "position": 4,
+          "score": 0.67
+        }
+      ]
+    },
+    {
+      "name": "respace DISLIKED n=13",
+      "fn": "respaceBucket",
+      "input": {
+        "bucket": "DISLIKED",
+        "orderedBevIds": [
+          "bev-a",
+          "bev-b",
+          "bev-c",
+          "bev-d",
+          "bev-e",
+          "bev-f",
+          "bev-g",
+          "bev-h",
+          "bev-i",
+          "bev-j",
+          "bev-k",
+          "bev-l",
+          "bev-m"
+        ]
+      },
+      "expected": [
+        {
+          "bevId": "bev-a",
+          "position": 0,
+          "score": 3.71
+        },
+        {
+          "bevId": "bev-b",
+          "position": 1,
+          "score": 3.43
+        },
+        {
+          "bevId": "bev-c",
+          "position": 2,
+          "score": 3.14
+        },
+        {
+          "bevId": "bev-d",
+          "position": 3,
+          "score": 2.86
+        },
+        {
+          "bevId": "bev-e",
+          "position": 4,
+          "score": 2.57
+        },
+        {
+          "bevId": "bev-f",
+          "position": 5,
+          "score": 2.29
+        },
+        {
+          "bevId": "bev-g",
+          "position": 6,
+          "score": 2
+        },
+        {
+          "bevId": "bev-h",
+          "position": 7,
+          "score": 1.71
+        },
+        {
+          "bevId": "bev-i",
+          "position": 8,
+          "score": 1.43
+        },
+        {
+          "bevId": "bev-j",
+          "position": 9,
+          "score": 1.14
+        },
+        {
+          "bevId": "bev-k",
+          "position": 10,
+          "score": 0.86
+        },
+        {
+          "bevId": "bev-l",
+          "position": 11,
+          "score": 0.57
+        },
+        {
+          "bevId": "bev-m",
+          "position": 12,
+          "score": 0.29
+        }
+      ]
+    }
+  ]
+}
