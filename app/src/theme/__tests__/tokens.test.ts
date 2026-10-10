@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 import { bucketForScore } from '@bevi/ranking';
 
-import { colors, radius, size, spacing, type } from '../tokens';
+import { colors, elevation, radius, size, spacing, type } from '../tokens';
 import { scoreColor } from '../score';
 
 // The design system is the source of truth; these tests fail when app tokens drift from it.
@@ -35,6 +35,14 @@ describe('tokens match design/system/project/tokens.json', () => {
     expect(ours).toEqual(theirs);
   });
 
+  it('elevation', () => {
+    const shadow = (name: string) => ds.shadow.tokens.find((t: { name: string }) => t.name === name).value;
+    for (const scheme of ['light', 'dark'] as const) {
+      expect(elevation[scheme].glass).toBe(shadow('elevation-glass')[scheme]);
+      expect(elevation[scheme].floating).toBe(shadow('elevation-floating')[scheme]);
+    }
+  });
+
   it('type scale', () => {
     const app = ds.type.groups.find((g: { name: string }) => g.name === 'App');
     const theirs = Object.fromEntries(
@@ -63,11 +71,13 @@ describe('scoreColor', () => {
     expect(scoreColor(6.99, 'FINE')).toBe('scoreMid');
     expect(scoreColor(7.0, 'FINE')).toBe('scoreMid');
   });
-  it('otherwise follows @bevi/ranking bands', () => {
+  it('otherwise bands the displayed value with @bevi/ranking edges', () => {
     expect(bucketForScore(7)).toBe('LOVED');
     expect(scoreColor(7)).toBe('scoreHigh');
-    expect(scoreColor(6.99)).toBe('scoreMid');
+    expect(scoreColor(6.96)).toBe('scoreHigh'); // shows "7.0"
+    expect(scoreColor(6.94)).toBe('scoreMid'); // shows "6.9"
     expect(scoreColor(4)).toBe('scoreMid');
-    expect(scoreColor(3.99)).toBe('scoreLow');
+    expect(scoreColor(3.96)).toBe('scoreMid'); // shows "4.0"
+    expect(scoreColor(3.94)).toBe('scoreLow');
   });
 });

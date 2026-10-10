@@ -1,7 +1,8 @@
 import type { ExpoConfig } from 'expo/config';
 
 // APP_VARIANT=development (set by the eas.json `development` profile) installs a separate
-// "Bevi Dev" app next to the real one. Both bundle ids are registered with Google and Supabase Auth.
+// "Bevi Dev" app next to the real one. Both bundle ids (and schemes bevi / bevi-dev) need registering
+// with the Google OAuth clients and Supabase Auth (Arjun's config, DEVELOPMENT-ARJUN 0.11) before task 1.4.
 const IS_DEV = process.env.APP_VARIANT === 'development';
 
 const config: ExpoConfig = {
