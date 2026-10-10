@@ -21,4 +21,4 @@ create table public.profiles (
   created_at       timestamptz not null default now(),
   updated_at       timestamptz not null default now()
 );
-create index profiles_handle_trgm on public.profiles using gin (handle gin_trgm_ops);
+create index profiles_handle_trgm on public.profiles using gin (handle extensions.gin_trgm_ops);

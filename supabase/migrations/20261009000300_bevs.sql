@@ -23,7 +23,7 @@ create table public.bevs (
   check (status <> 'active' or photo_path is not null),
   check ((status = 'merged') = (merged_into is not null))
 );
-create index bevs_search_trgm   on public.bevs using gin (search_text gin_trgm_ops);
+create index bevs_search_trgm   on public.bevs using gin (search_text extensions.gin_trgm_ops);
 create index bevs_category_idx  on public.bevs (category_id) where status = 'active';
 create unique index bevs_upc_uq on public.bevs (upc) where upc is not null and status <> 'merged';
 create unique index bevs_natural_uq on public.bevs
@@ -37,7 +37,7 @@ create table public.bev_aliases (
   created_at  timestamptz not null default now(),
   primary key (alias)
 );
-create index bev_aliases_trgm on public.bev_aliases using gin (alias gin_trgm_ops);
+create index bev_aliases_trgm on public.bev_aliases using gin (alias extensions.gin_trgm_ops);
 
 create table public.bev_stats (
   bev_id        uuid primary key references public.bevs(id) on delete cascade,
