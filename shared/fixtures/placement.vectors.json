@@ -1,0 +1,1381 @@
+{
+  "version": "1.0.0",
+  "constants": {
+    "version": "1.0.0",
+    "bands": {
+      "DISLIKED": [
+        0,
+        4
+      ],
+      "FINE": [
+        4,
+        7
+      ],
+      "LOVED": [
+        7,
+        10
+      ]
+    },
+    "bucketOrder": [
+      "LOVED",
+      "FINE",
+      "DISLIKED"
+    ],
+    "bucketDb": {
+      "LOVED": 3,
+      "FINE": 2,
+      "DISLIKED": 1
+    },
+    "sigmaFloor": 1,
+    "minNUser": 3,
+    "minNCat": 3,
+    "globalFallback": {
+      "mean": 5,
+      "stddev": 2.5
+    },
+    "kAff": 2,
+    "bayesC": 3,
+    "bayesCategoryPriorMin": 30,
+    "minRaters": 2,
+    "storedScoreRule": "cents = floor((2N + D) / (2D)) with D = n + 1, N = 100*(hi*D - (hi - lo)*(index + 1)); capped at hi*100 - 1 for FINE and DISLIKED; storedScore = cents / 100",
+    "stddev": "population (stddev_pop)",
+    "nameOrder": "code point (SQL collate \"C\"), then bevId"
+  },
+  "cases": [
+    {
+      "name": "empty bucket",
+      "fn": "placement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [],
+        "steps": []
+      },
+      "expected": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "insertIndex": 0,
+        "expectedBucketSize": 0,
+        "comparisons": []
+      }
+    },
+    {
+      "name": "one Bev, new is better",
+      "fn": "placement",
+      "input": {
+        "bevId": "new",
+        "bucket": "FINE",
+        "orderedBevIds": [
+          "coke"
+        ],
+        "steps": [
+          "NEW_BETTER"
+        ]
+      },
+      "expected": {
+        "bevId": "new",
+        "bucket": "FINE",
+        "insertIndex": 0,
+        "expectedBucketSize": 1,
+        "comparisons": [
+          {
+            "winnerBevId": "new",
+            "loserBevId": "coke",
+            "tie": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "one Bev, existing is better",
+      "fn": "placement",
+      "input": {
+        "bevId": "new",
+        "bucket": "FINE",
+        "orderedBevIds": [
+          "coke"
+        ],
+        "steps": [
+          "EXISTING_BETTER"
+        ]
+      },
+      "expected": {
+        "bevId": "new",
+        "bucket": "FINE",
+        "insertIndex": 1,
+        "expectedBucketSize": 1,
+        "comparisons": [
+          {
+            "winnerBevId": "coke",
+            "loserBevId": "new",
+            "tie": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "one Bev, tie",
+      "fn": "placement",
+      "input": {
+        "bevId": "new",
+        "bucket": "FINE",
+        "orderedBevIds": [
+          "coke"
+        ],
+        "steps": [
+          "TIE"
+        ]
+      },
+      "expected": {
+        "bevId": "new",
+        "bucket": "FINE",
+        "insertIndex": 1,
+        "expectedBucketSize": 1,
+        "comparisons": [
+          {
+            "winnerBevId": "coke",
+            "loserBevId": "new",
+            "tie": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "best of five",
+      "fn": "placement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "coke",
+          "sprite",
+          "pepsi",
+          "fanta",
+          "dew"
+        ],
+        "steps": [
+          "NEW_BETTER",
+          "NEW_BETTER",
+          "NEW_BETTER"
+        ]
+      },
+      "expected": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "insertIndex": 0,
+        "expectedBucketSize": 5,
+        "comparisons": [
+          {
+            "winnerBevId": "new",
+            "loserBevId": "pepsi",
+            "tie": false
+          },
+          {
+            "winnerBevId": "new",
+            "loserBevId": "sprite",
+            "tie": false
+          },
+          {
+            "winnerBevId": "new",
+            "loserBevId": "coke",
+            "tie": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "worst of five",
+      "fn": "placement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "coke",
+          "sprite",
+          "pepsi",
+          "fanta",
+          "dew"
+        ],
+        "steps": [
+          "EXISTING_BETTER",
+          "EXISTING_BETTER"
+        ]
+      },
+      "expected": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "insertIndex": 5,
+        "expectedBucketSize": 5,
+        "comparisons": [
+          {
+            "winnerBevId": "pepsi",
+            "loserBevId": "new",
+            "tie": false
+          },
+          {
+            "winnerBevId": "dew",
+            "loserBevId": "new",
+            "tie": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "tie on the first question",
+      "fn": "placement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "coke",
+          "sprite",
+          "pepsi",
+          "fanta",
+          "dew"
+        ],
+        "steps": [
+          "TIE"
+        ]
+      },
+      "expected": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "insertIndex": 3,
+        "expectedBucketSize": 5,
+        "comparisons": [
+          {
+            "winnerBevId": "pepsi",
+            "loserBevId": "new",
+            "tie": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "tie on the second question",
+      "fn": "placement",
+      "input": {
+        "bevId": "new",
+        "bucket": "DISLIKED",
+        "orderedBevIds": [
+          "coke",
+          "sprite",
+          "pepsi",
+          "fanta",
+          "dew"
+        ],
+        "steps": [
+          "NEW_BETTER",
+          "TIE"
+        ]
+      },
+      "expected": {
+        "bevId": "new",
+        "bucket": "DISLIKED",
+        "insertIndex": 2,
+        "expectedBucketSize": 5,
+        "comparisons": [
+          {
+            "winnerBevId": "new",
+            "loserBevId": "pepsi",
+            "tie": false
+          },
+          {
+            "winnerBevId": "sprite",
+            "loserBevId": "new",
+            "tie": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "undo then change the answer",
+      "fn": "placement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "coke",
+          "sprite",
+          "pepsi",
+          "fanta",
+          "dew"
+        ],
+        "steps": [
+          "NEW_BETTER",
+          "UNDO",
+          "EXISTING_BETTER",
+          "NEW_BETTER",
+          "EXISTING_BETTER"
+        ]
+      },
+      "expected": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "insertIndex": 4,
+        "expectedBucketSize": 5,
+        "comparisons": [
+          {
+            "winnerBevId": "pepsi",
+            "loserBevId": "new",
+            "tie": false
+          },
+          {
+            "winnerBevId": "new",
+            "loserBevId": "dew",
+            "tie": false
+          },
+          {
+            "winnerBevId": "fanta",
+            "loserBevId": "new",
+            "tie": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "undo after done",
+      "fn": "placement",
+      "input": {
+        "bevId": "new",
+        "bucket": "FINE",
+        "orderedBevIds": [
+          "coke"
+        ],
+        "steps": [
+          "NEW_BETTER",
+          "UNDO",
+          "EXISTING_BETTER"
+        ]
+      },
+      "expected": {
+        "bevId": "new",
+        "bucket": "FINE",
+        "insertIndex": 1,
+        "expectedBucketSize": 1,
+        "comparisons": [
+          {
+            "winnerBevId": "coke",
+            "loserBevId": "new",
+            "tie": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "re-rank: the Bev is removed from its own list first",
+      "fn": "placement",
+      "input": {
+        "bevId": "pepsi",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "coke",
+          "sprite",
+          "pepsi",
+          "fanta",
+          "dew"
+        ],
+        "steps": [
+          "EXISTING_BETTER",
+          "NEW_BETTER"
+        ]
+      },
+      "expected": {
+        "bevId": "pepsi",
+        "bucket": "LOVED",
+        "insertIndex": 3,
+        "expectedBucketSize": 4,
+        "comparisons": [
+          {
+            "winnerBevId": "fanta",
+            "loserBevId": "pepsi",
+            "tie": false
+          },
+          {
+            "winnerBevId": "pepsi",
+            "loserBevId": "dew",
+            "tie": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "oracle n=3 t=0",
+      "fn": "placement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "b0",
+          "b1",
+          "b2"
+        ],
+        "steps": [
+          "NEW_BETTER",
+          "NEW_BETTER"
+        ]
+      },
+      "expected": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "insertIndex": 0,
+        "expectedBucketSize": 3,
+        "comparisons": [
+          {
+            "winnerBevId": "new",
+            "loserBevId": "b1",
+            "tie": false
+          },
+          {
+            "winnerBevId": "new",
+            "loserBevId": "b0",
+            "tie": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "oracle n=3 t=3",
+      "fn": "placement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "b0",
+          "b1",
+          "b2"
+        ],
+        "steps": [
+          "EXISTING_BETTER",
+          "EXISTING_BETTER"
+        ]
+      },
+      "expected": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "insertIndex": 3,
+        "expectedBucketSize": 3,
+        "comparisons": [
+          {
+            "winnerBevId": "b1",
+            "loserBevId": "new",
+            "tie": false
+          },
+          {
+            "winnerBevId": "b2",
+            "loserBevId": "new",
+            "tie": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "oracle n=3 t=0",
+      "fn": "placement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "b0",
+          "b1",
+          "b2"
+        ],
+        "steps": [
+          "NEW_BETTER",
+          "NEW_BETTER"
+        ]
+      },
+      "expected": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "insertIndex": 0,
+        "expectedBucketSize": 3,
+        "comparisons": [
+          {
+            "winnerBevId": "new",
+            "loserBevId": "b1",
+            "tie": false
+          },
+          {
+            "winnerBevId": "new",
+            "loserBevId": "b0",
+            "tie": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "oracle n=10 t=0",
+      "fn": "placement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "b0",
+          "b1",
+          "b2",
+          "b3",
+          "b4",
+          "b5",
+          "b6",
+          "b7",
+          "b8",
+          "b9"
+        ],
+        "steps": [
+          "NEW_BETTER",
+          "NEW_BETTER",
+          "NEW_BETTER",
+          "NEW_BETTER"
+        ]
+      },
+      "expected": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "insertIndex": 0,
+        "expectedBucketSize": 10,
+        "comparisons": [
+          {
+            "winnerBevId": "new",
+            "loserBevId": "b5",
+            "tie": false
+          },
+          {
+            "winnerBevId": "new",
+            "loserBevId": "b2",
+            "tie": false
+          },
+          {
+            "winnerBevId": "new",
+            "loserBevId": "b1",
+            "tie": false
+          },
+          {
+            "winnerBevId": "new",
+            "loserBevId": "b0",
+            "tie": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "oracle n=10 t=10",
+      "fn": "placement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "b0",
+          "b1",
+          "b2",
+          "b3",
+          "b4",
+          "b5",
+          "b6",
+          "b7",
+          "b8",
+          "b9"
+        ],
+        "steps": [
+          "EXISTING_BETTER",
+          "EXISTING_BETTER",
+          "EXISTING_BETTER"
+        ]
+      },
+      "expected": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "insertIndex": 10,
+        "expectedBucketSize": 10,
+        "comparisons": [
+          {
+            "winnerBevId": "b5",
+            "loserBevId": "new",
+            "tie": false
+          },
+          {
+            "winnerBevId": "b8",
+            "loserBevId": "new",
+            "tie": false
+          },
+          {
+            "winnerBevId": "b9",
+            "loserBevId": "new",
+            "tie": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "oracle n=10 t=7",
+      "fn": "placement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "b0",
+          "b1",
+          "b2",
+          "b3",
+          "b4",
+          "b5",
+          "b6",
+          "b7",
+          "b8",
+          "b9"
+        ],
+        "steps": [
+          "EXISTING_BETTER",
+          "NEW_BETTER",
+          "NEW_BETTER",
+          "EXISTING_BETTER"
+        ]
+      },
+      "expected": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "insertIndex": 7,
+        "expectedBucketSize": 10,
+        "comparisons": [
+          {
+            "winnerBevId": "b5",
+            "loserBevId": "new",
+            "tie": false
+          },
+          {
+            "winnerBevId": "new",
+            "loserBevId": "b8",
+            "tie": false
+          },
+          {
+            "winnerBevId": "new",
+            "loserBevId": "b7",
+            "tie": false
+          },
+          {
+            "winnerBevId": "b6",
+            "loserBevId": "new",
+            "tie": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "oracle n=31 t=0",
+      "fn": "placement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "b0",
+          "b1",
+          "b2",
+          "b3",
+          "b4",
+          "b5",
+          "b6",
+          "b7",
+          "b8",
+          "b9",
+          "b10",
+          "b11",
+          "b12",
+          "b13",
+          "b14",
+          "b15",
+          "b16",
+          "b17",
+          "b18",
+          "b19",
+          "b20",
+          "b21",
+          "b22",
+          "b23",
+          "b24",
+          "b25",
+          "b26",
+          "b27",
+          "b28",
+          "b29",
+          "b30"
+        ],
+        "steps": [
+          "NEW_BETTER",
+          "NEW_BETTER",
+          "NEW_BETTER",
+          "NEW_BETTER",
+          "NEW_BETTER"
+        ]
+      },
+      "expected": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "insertIndex": 0,
+        "expectedBucketSize": 31,
+        "comparisons": [
+          {
+            "winnerBevId": "new",
+            "loserBevId": "b15",
+            "tie": false
+          },
+          {
+            "winnerBevId": "new",
+            "loserBevId": "b7",
+            "tie": false
+          },
+          {
+            "winnerBevId": "new",
+            "loserBevId": "b3",
+            "tie": false
+          },
+          {
+            "winnerBevId": "new",
+            "loserBevId": "b1",
+            "tie": false
+          },
+          {
+            "winnerBevId": "new",
+            "loserBevId": "b0",
+            "tie": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "oracle n=31 t=31",
+      "fn": "placement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "b0",
+          "b1",
+          "b2",
+          "b3",
+          "b4",
+          "b5",
+          "b6",
+          "b7",
+          "b8",
+          "b9",
+          "b10",
+          "b11",
+          "b12",
+          "b13",
+          "b14",
+          "b15",
+          "b16",
+          "b17",
+          "b18",
+          "b19",
+          "b20",
+          "b21",
+          "b22",
+          "b23",
+          "b24",
+          "b25",
+          "b26",
+          "b27",
+          "b28",
+          "b29",
+          "b30"
+        ],
+        "steps": [
+          "EXISTING_BETTER",
+          "EXISTING_BETTER",
+          "EXISTING_BETTER",
+          "EXISTING_BETTER",
+          "EXISTING_BETTER"
+        ]
+      },
+      "expected": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "insertIndex": 31,
+        "expectedBucketSize": 31,
+        "comparisons": [
+          {
+            "winnerBevId": "b15",
+            "loserBevId": "new",
+            "tie": false
+          },
+          {
+            "winnerBevId": "b23",
+            "loserBevId": "new",
+            "tie": false
+          },
+          {
+            "winnerBevId": "b27",
+            "loserBevId": "new",
+            "tie": false
+          },
+          {
+            "winnerBevId": "b29",
+            "loserBevId": "new",
+            "tie": false
+          },
+          {
+            "winnerBevId": "b30",
+            "loserBevId": "new",
+            "tie": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "oracle n=31 t=12",
+      "fn": "placement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "b0",
+          "b1",
+          "b2",
+          "b3",
+          "b4",
+          "b5",
+          "b6",
+          "b7",
+          "b8",
+          "b9",
+          "b10",
+          "b11",
+          "b12",
+          "b13",
+          "b14",
+          "b15",
+          "b16",
+          "b17",
+          "b18",
+          "b19",
+          "b20",
+          "b21",
+          "b22",
+          "b23",
+          "b24",
+          "b25",
+          "b26",
+          "b27",
+          "b28",
+          "b29",
+          "b30"
+        ],
+        "steps": [
+          "NEW_BETTER",
+          "EXISTING_BETTER",
+          "EXISTING_BETTER",
+          "NEW_BETTER",
+          "NEW_BETTER"
+        ]
+      },
+      "expected": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "insertIndex": 12,
+        "expectedBucketSize": 31,
+        "comparisons": [
+          {
+            "winnerBevId": "new",
+            "loserBevId": "b15",
+            "tie": false
+          },
+          {
+            "winnerBevId": "b7",
+            "loserBevId": "new",
+            "tie": false
+          },
+          {
+            "winnerBevId": "b11",
+            "loserBevId": "new",
+            "tie": false
+          },
+          {
+            "winnerBevId": "new",
+            "loserBevId": "b13",
+            "tie": false
+          },
+          {
+            "winnerBevId": "new",
+            "loserBevId": "b12",
+            "tie": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "oracle n=100 t=0",
+      "fn": "placement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "b0",
+          "b1",
+          "b2",
+          "b3",
+          "b4",
+          "b5",
+          "b6",
+          "b7",
+          "b8",
+          "b9",
+          "b10",
+          "b11",
+          "b12",
+          "b13",
+          "b14",
+          "b15",
+          "b16",
+          "b17",
+          "b18",
+          "b19",
+          "b20",
+          "b21",
+          "b22",
+          "b23",
+          "b24",
+          "b25",
+          "b26",
+          "b27",
+          "b28",
+          "b29",
+          "b30",
+          "b31",
+          "b32",
+          "b33",
+          "b34",
+          "b35",
+          "b36",
+          "b37",
+          "b38",
+          "b39",
+          "b40",
+          "b41",
+          "b42",
+          "b43",
+          "b44",
+          "b45",
+          "b46",
+          "b47",
+          "b48",
+          "b49",
+          "b50",
+          "b51",
+          "b52",
+          "b53",
+          "b54",
+          "b55",
+          "b56",
+          "b57",
+          "b58",
+          "b59",
+          "b60",
+          "b61",
+          "b62",
+          "b63",
+          "b64",
+          "b65",
+          "b66",
+          "b67",
+          "b68",
+          "b69",
+          "b70",
+          "b71",
+          "b72",
+          "b73",
+          "b74",
+          "b75",
+          "b76",
+          "b77",
+          "b78",
+          "b79",
+          "b80",
+          "b81",
+          "b82",
+          "b83",
+          "b84",
+          "b85",
+          "b86",
+          "b87",
+          "b88",
+          "b89",
+          "b90",
+          "b91",
+          "b92",
+          "b93",
+          "b94",
+          "b95",
+          "b96",
+          "b97",
+          "b98",
+          "b99"
+        ],
+        "steps": [
+          "NEW_BETTER",
+          "NEW_BETTER",
+          "NEW_BETTER",
+          "NEW_BETTER",
+          "NEW_BETTER",
+          "NEW_BETTER",
+          "NEW_BETTER"
+        ]
+      },
+      "expected": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "insertIndex": 0,
+        "expectedBucketSize": 100,
+        "comparisons": [
+          {
+            "winnerBevId": "new",
+            "loserBevId": "b50",
+            "tie": false
+          },
+          {
+            "winnerBevId": "new",
+            "loserBevId": "b25",
+            "tie": false
+          },
+          {
+            "winnerBevId": "new",
+            "loserBevId": "b12",
+            "tie": false
+          },
+          {
+            "winnerBevId": "new",
+            "loserBevId": "b6",
+            "tie": false
+          },
+          {
+            "winnerBevId": "new",
+            "loserBevId": "b3",
+            "tie": false
+          },
+          {
+            "winnerBevId": "new",
+            "loserBevId": "b1",
+            "tie": false
+          },
+          {
+            "winnerBevId": "new",
+            "loserBevId": "b0",
+            "tie": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "oracle n=100 t=100",
+      "fn": "placement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "b0",
+          "b1",
+          "b2",
+          "b3",
+          "b4",
+          "b5",
+          "b6",
+          "b7",
+          "b8",
+          "b9",
+          "b10",
+          "b11",
+          "b12",
+          "b13",
+          "b14",
+          "b15",
+          "b16",
+          "b17",
+          "b18",
+          "b19",
+          "b20",
+          "b21",
+          "b22",
+          "b23",
+          "b24",
+          "b25",
+          "b26",
+          "b27",
+          "b28",
+          "b29",
+          "b30",
+          "b31",
+          "b32",
+          "b33",
+          "b34",
+          "b35",
+          "b36",
+          "b37",
+          "b38",
+          "b39",
+          "b40",
+          "b41",
+          "b42",
+          "b43",
+          "b44",
+          "b45",
+          "b46",
+          "b47",
+          "b48",
+          "b49",
+          "b50",
+          "b51",
+          "b52",
+          "b53",
+          "b54",
+          "b55",
+          "b56",
+          "b57",
+          "b58",
+          "b59",
+          "b60",
+          "b61",
+          "b62",
+          "b63",
+          "b64",
+          "b65",
+          "b66",
+          "b67",
+          "b68",
+          "b69",
+          "b70",
+          "b71",
+          "b72",
+          "b73",
+          "b74",
+          "b75",
+          "b76",
+          "b77",
+          "b78",
+          "b79",
+          "b80",
+          "b81",
+          "b82",
+          "b83",
+          "b84",
+          "b85",
+          "b86",
+          "b87",
+          "b88",
+          "b89",
+          "b90",
+          "b91",
+          "b92",
+          "b93",
+          "b94",
+          "b95",
+          "b96",
+          "b97",
+          "b98",
+          "b99"
+        ],
+        "steps": [
+          "EXISTING_BETTER",
+          "EXISTING_BETTER",
+          "EXISTING_BETTER",
+          "EXISTING_BETTER",
+          "EXISTING_BETTER",
+          "EXISTING_BETTER"
+        ]
+      },
+      "expected": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "insertIndex": 100,
+        "expectedBucketSize": 100,
+        "comparisons": [
+          {
+            "winnerBevId": "b50",
+            "loserBevId": "new",
+            "tie": false
+          },
+          {
+            "winnerBevId": "b75",
+            "loserBevId": "new",
+            "tie": false
+          },
+          {
+            "winnerBevId": "b88",
+            "loserBevId": "new",
+            "tie": false
+          },
+          {
+            "winnerBevId": "b94",
+            "loserBevId": "new",
+            "tie": false
+          },
+          {
+            "winnerBevId": "b97",
+            "loserBevId": "new",
+            "tie": false
+          },
+          {
+            "winnerBevId": "b99",
+            "loserBevId": "new",
+            "tie": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "oracle n=100 t=25",
+      "fn": "placement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "b0",
+          "b1",
+          "b2",
+          "b3",
+          "b4",
+          "b5",
+          "b6",
+          "b7",
+          "b8",
+          "b9",
+          "b10",
+          "b11",
+          "b12",
+          "b13",
+          "b14",
+          "b15",
+          "b16",
+          "b17",
+          "b18",
+          "b19",
+          "b20",
+          "b21",
+          "b22",
+          "b23",
+          "b24",
+          "b25",
+          "b26",
+          "b27",
+          "b28",
+          "b29",
+          "b30",
+          "b31",
+          "b32",
+          "b33",
+          "b34",
+          "b35",
+          "b36",
+          "b37",
+          "b38",
+          "b39",
+          "b40",
+          "b41",
+          "b42",
+          "b43",
+          "b44",
+          "b45",
+          "b46",
+          "b47",
+          "b48",
+          "b49",
+          "b50",
+          "b51",
+          "b52",
+          "b53",
+          "b54",
+          "b55",
+          "b56",
+          "b57",
+          "b58",
+          "b59",
+          "b60",
+          "b61",
+          "b62",
+          "b63",
+          "b64",
+          "b65",
+          "b66",
+          "b67",
+          "b68",
+          "b69",
+          "b70",
+          "b71",
+          "b72",
+          "b73",
+          "b74",
+          "b75",
+          "b76",
+          "b77",
+          "b78",
+          "b79",
+          "b80",
+          "b81",
+          "b82",
+          "b83",
+          "b84",
+          "b85",
+          "b86",
+          "b87",
+          "b88",
+          "b89",
+          "b90",
+          "b91",
+          "b92",
+          "b93",
+          "b94",
+          "b95",
+          "b96",
+          "b97",
+          "b98",
+          "b99"
+        ],
+        "steps": [
+          "NEW_BETTER",
+          "NEW_BETTER",
+          "EXISTING_BETTER",
+          "EXISTING_BETTER",
+          "EXISTING_BETTER",
+          "EXISTING_BETTER"
+        ]
+      },
+      "expected": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "insertIndex": 25,
+        "expectedBucketSize": 100,
+        "comparisons": [
+          {
+            "winnerBevId": "new",
+            "loserBevId": "b50",
+            "tie": false
+          },
+          {
+            "winnerBevId": "new",
+            "loserBevId": "b25",
+            "tie": false
+          },
+          {
+            "winnerBevId": "b12",
+            "loserBevId": "new",
+            "tie": false
+          },
+          {
+            "winnerBevId": "b19",
+            "loserBevId": "new",
+            "tie": false
+          },
+          {
+            "winnerBevId": "b22",
+            "loserBevId": "new",
+            "tie": false
+          },
+          {
+            "winnerBevId": "b24",
+            "loserBevId": "new",
+            "tie": false
+          }
+        ]
+      }
+    }
+  ]
+}
