@@ -41,7 +41,7 @@ describe('session bootstrap (mock API)', () => {
   it('an onboarded session: ready, with the profile, on the feed', async () => {
     controls.signInAs('demo');
     const path = await launch();
-    await screen.findAllByText('Feed');
+    await screen.findAllByText('Your feed');
     expect(path()).toBe('/feed');
     expect(useSession.getState().status).toBe('ready');
     expect(useSession.getState().profile?.handle).toBe('demo');
@@ -68,7 +68,7 @@ describe('session bootstrap (mock API)', () => {
     controls.failNext('network', 'profile.getMe');
     const path = await launch();
     await fireEvent.press(await screen.findByText('Retry'));
-    await screen.findAllByText('Feed');
+    await screen.findAllByText('Your feed');
     expect(path()).toBe('/feed');
   });
 
@@ -122,7 +122,7 @@ describe('session bootstrap (mock API)', () => {
     expect(result.getPathname()).toBe('/onboarding/profile');
     expect(useSession.getState().status).toBe('onboarding');
     await act(async () => controls.signInAs('demo'));
-    await screen.findAllByText('Feed');
+    await screen.findAllByText('Your feed');
     expect(result.getPathname()).toBe('/feed');
   });
 });

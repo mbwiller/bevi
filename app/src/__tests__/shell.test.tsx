@@ -24,7 +24,7 @@ describe('session gate', () => {
   it.each([
     ['signedOut', '/sign-in', 'Sign in'],
     ['onboarding', '/onboarding/profile', 'Your profile'],
-    ['ready', '/feed', 'Feed'],
+    ['ready', '/feed', 'Your feed'],
   ] as const)('%s: / redirects to %s', async (status, pathname, title) => {
     const path = await start(status);
     expect((await screen.findAllByText(title)).length).toBeGreaterThan(0);
