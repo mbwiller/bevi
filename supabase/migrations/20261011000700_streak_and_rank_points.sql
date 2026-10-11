@@ -9,6 +9,34 @@
 -- Decided (2026-10-11, confirmed against PR #37's review): exploration
 -- slot positions 4/9/14 (packages/ranking's formula, not the doc's 4/9/15)
 -- and bevsRanked = 0 users are excluded from the user leaderboard.
+--
+-- Also fixes a gap this PR's own live test caught: submit_ranking never
+-- updated user_stats.rating_count/mean_score/stddev_score at all, so
+-- ProfileStats.bevdCount stayed 0 forever. Added refresh_user_stats,
+-- mirroring the existing refresh_bev_stats pattern, called from
+-- submit_ranking, rerank_bev and remove_ranking (unlike the streak, a
+-- removal must decrease rating_count -- nothing says otherwise).
+
+-- ============================================================================
+-- 0. refresh_user_stats -- recompute from rankings, not incremented, same
+-- "recomputed, not maintained incrementally" pattern as refresh_bev_stats.
+-- ============================================================================
+create or replace function public.refresh_user_stats(p_uid uuid) returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.user_stats
+     set rating_count = (select count(*) from public.rankings where user_id = p_uid),
+         mean_score   = (select avg(score) from public.rankings where user_id = p_uid),
+         stddev_score = (select stddev_pop(score) from public.rankings where user_id = p_uid),
+         updated_at   = now()
+   where user_id = p_uid;
+end;
+$$;
+
+revoke execute on function public.refresh_user_stats(uuid) from public, anon, authenticated;
 
 -- ============================================================================
 -- 1. touch_streak -- full recompute from rankings.ranked_at, not an
@@ -179,6 +207,7 @@ begin
       updated_at = now()
   where user_id = v_uid;
 
+  perform public.refresh_user_stats(v_uid);
   perform public.touch_streak(v_uid);
 
   insert into public.feed_events (actor_id, kind, bev_id, ranking_id)
@@ -274,6 +303,10 @@ begin
     )
   );
 
+  -- rating_count is unchanged by a rerank, but mean/stddev can shift if
+  -- the score did.
+  perform public.refresh_user_stats(v_uid);
+
   -- Re-ranks count towards the streak (packages/ranking's own doc: "Re-ranks
   -- count"); the new row's ranked_at defaults to now(), so today is what
   -- touch_streak sees either way.
@@ -288,7 +321,54 @@ end;
 $$;
 alter function public.rerank_bev(uuid, smallint, integer, integer, jsonb, text) owner to postgres;
 
--- remove_ranking is unchanged on purpose: removals never touch the streak.
+-- remove_ranking: never touches the streak, on purpose, but it must still
+-- refresh user_stats -- bevdCount has to drop when a ranking is removed.
+-- Same body as 20261011000200_ranking_rpcs.sql, just the one added call.
+create or replace function public.remove_ranking(p_bev_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid     uuid := auth.uid();
+  v_old     public.rankings;
+  v_bev_ids uuid[];
+begin
+  if v_uid is null then
+    raise exception 'BEVI_UNAUTHORIZED' using errcode = '42501';
+  end if;
+
+  perform pg_advisory_xact_lock(hashtext('rank:' || v_uid::text));
+
+  select * into v_old
+  from public.rankings
+  where user_id = v_uid and bev_id = p_bev_id;
+
+  if v_old.id is null then
+    raise exception 'BEVI_NOT_FOUND' using errcode = 'P0002';
+  end if;
+
+  delete from public.rankings where id = v_old.id;
+
+  update public.rankings
+  set position = position - 1, updated_at = now()
+  where user_id = v_uid and bucket = v_old.bucket and position > v_old.position;
+
+  perform public.respace_bucket(v_uid, v_old.bucket);
+
+  select coalesce(array_agg(bev_id), array[]::uuid[]) into v_bev_ids
+  from public.rankings
+  where user_id = v_uid and bucket = v_old.bucket;
+
+  -- Refresh every Bev still in the bucket (respacing just changed their scores)
+  -- plus the removed Bev itself (its stats must drop by this one rating).
+  perform public.refresh_bev_stats(v_bev_ids || v_old.bev_id);
+
+  perform public.refresh_user_stats(v_uid);
+end;
+$$;
+alter function public.remove_ranking(uuid) owner to postgres;
 
 -- ============================================================================
 -- 3. get_user_leaderboard: the real points formula (rank.ts), competition
