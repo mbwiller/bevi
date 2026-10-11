@@ -20,7 +20,8 @@ function memoryStorage(): AuthStorageAdapter {
 describe.skipIf(!url || !publishableKey)('streak + rank points, against a live local stack', () => {
   it('a first-ever ranking gives a 1-day streak and the matching leaderboard points', async () => {
     const api = createBeviApi({ url: url!, publishableKey: publishableKey!, authStorage: memoryStorage() });
-    const username = `vitest_${Date.now().toString(36)}_streak`;
+    // HANDLE_PATTERN caps usernames at 20 chars -- no extra suffix here.
+    const username = `vitest_${Date.now().toString(36)}`;
 
     await api.signUp({ username, password: 'correct-horse-battery-staple', inviteCode: 'local-test-invite-code' });
     await api.profile.setBirthDate('1990-01-01');
