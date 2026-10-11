@@ -15,3 +15,9 @@ insert into public.categories (id, name, sort_order, is_alcoholic, emoji) values
   ('spirits_cocktails', 'Spirits & Cocktails', 14, true,  '🍸'),
   ('other',             'Other',             15, false, '🧪')
 on conflict (id) do nothing;
+
+-- Local/CI only (supabase/CLAUDE.md: "local and CI only", never for
+-- hosted) -- lets packages/api's vitest suite and any local manual sign-up
+-- actually pass handle_new_user's invite-code check.
+insert into public.app_secrets (key, value) values ('invite_code', 'local-test-invite-code')
+on conflict (key) do nothing;

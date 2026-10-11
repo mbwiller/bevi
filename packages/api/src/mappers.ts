@@ -1,0 +1,405 @@
+// DB row (snake_case) -> `shared/` domain type (camelCase) mappers, plus the
+// couple of enum conversions `packages/api` owns (DEVELOPMENT-ARJUN.md §6.2):
+// `Bucket` <-> smallint, and the feed `kind` text -> `FeedEventKind`.
+//
+// There's no generated `shared/src/db.types.ts` yet (needs a live Supabase
+// project to `supabase gen types` from -- not done here, see PR description).
+// Row shapes below are typed by hand against the migrations instead.
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type {
+  AppConfig,
+  Bev,
+  BevSummary,
+  Bucket,
+  Category,
+  CategoryId,
+  FeedEventKind,
+  FeedItem,
+  LeaderboardRow,
+  PhotoStatus,
+  PriceTier,
+  Profile,
+  ProfileRow,
+  Ranking,
+  UserLeaderboardRow,
+  WantToTryItem,
+} from '@bevi/shared';
+import { ApiError } from '@bevi/shared';
+
+export function bucketToDb(bucket: Bucket): 1 | 2 | 3 {
+  switch (bucket) {
+    case 'DISLIKED':
+      return 1;
+    case 'FINE':
+      return 2;
+    case 'LOVED':
+      return 3;
+  }
+}
+
+export function bucketFromDb(value: number): Bucket {
+  switch (value) {
+    case 1:
+      return 'DISLIKED';
+    case 2:
+      return 'FINE';
+    case 3:
+      return 'LOVED';
+    default:
+      throw new ApiError('unknown', `Unexpected bucket value from DB: ${value}`);
+  }
+}
+
+/** `get_feed` already drops 'followed' -- the other two kinds are the only ones it returns. */
+export function feedKindFromDb(kind: string): FeedEventKind {
+  switch (kind) {
+    case 'ranked':
+    case 'reranked':
+      return 'RANKING';
+    case 'want_to_try':
+      return 'SAVED';
+    default:
+      throw new ApiError('unknown', `Unexpected feed_events.kind from DB: ${kind}`);
+  }
+}
+
+/** `bevs.photo_path`/`avatar_path` etc. are storage paths; the app only ever sees public URLs. */
+export function publicUrl(client: SupabaseClient, bucket: string, path: string | null): string | null {
+  if (!path) return null;
+  return client.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+}
+
+// --------------------------------------------------------------------------
+// profiles_view row -> Profile / ProfileRow
+// --------------------------------------------------------------------------
+
+export interface ProfileViewRow {
+  id: string;
+  handle: string;
+  display_name: string;
+  avatar_path: string | null;
+  birth_date: string | null;
+  can_see_alcohol: boolean;
+  timezone: string;
+  onboarded: boolean;
+  created_at: string;
+}
+
+export function mapProfile(client: SupabaseClient, row: ProfileViewRow): Profile {
+  return {
+    id: row.id,
+    handle: row.handle,
+    displayName: row.display_name,
+    avatarUrl: publicUrl(client, 'avatars', row.avatar_path),
+    timezone: row.timezone,
+    createdAt: row.created_at,
+    birthdate: row.birth_date,
+    canSeeAlcohol: row.can_see_alcohol,
+    onboarded: row.onboarded,
+  };
+}
+
+export function mapProfileRow(client: SupabaseClient, row: ProfileViewRow, isFollowing: boolean): ProfileRow {
+  return { ...mapProfile(client, row), isFollowing };
+}
+
+// --------------------------------------------------------------------------
+// categories
+// --------------------------------------------------------------------------
+
+export interface CategoryRow {
+  id: string;
+  name: string;
+  sort_order: number;
+  is_alcoholic: boolean;
+}
+
+export function mapCategory(row: CategoryRow): Category {
+  return {
+    id: row.id as CategoryId,
+    name: row.name,
+    sortOrder: row.sort_order,
+    isAlcoholic: row.is_alcoholic,
+  };
+}
+
+// --------------------------------------------------------------------------
+// bevs / bev_stats -> BevSummary, Bev
+// --------------------------------------------------------------------------
+
+export interface BevStatsRow {
+  rating_count: number | null;
+  avg_score: number | null;
+  score_stddev: number | null;
+  bayes_score: number | null;
+}
+
+export interface BevSummaryRow {
+  id: string;
+  name: string;
+  brand: string | null;
+  flavor: string | null;
+  category_id: string;
+  photo_path: string | null;
+  price_tier: number;
+  price_estimated: boolean;
+  bev_stats?: BevStatsRow | BevStatsRow[] | null;
+}
+
+function oneBevStats(stats: BevSummaryRow['bev_stats']): BevStatsRow | null {
+  if (!stats) return null;
+  return Array.isArray(stats) ? stats[0] ?? null : stats;
+}
+
+export function mapBevSummary(client: SupabaseClient, row: BevSummaryRow): BevSummary {
+  const stats = oneBevStats(row.bev_stats);
+  return {
+    id: row.id,
+    name: row.name,
+    brand: row.brand,
+    flavor: row.flavor,
+    categoryId: row.category_id as CategoryId,
+    photoUrl: publicUrl(client, 'bev-photos', row.photo_path),
+    // Placeholder until the process-photo pipeline (milestone 1.6) exists:
+    // there's no column tracking async background-removal state yet, so
+    // once a Bev has a photo_path it's treated as 'ready'.
+    photoStatus: 'ready' as PhotoStatus,
+    priceTier: row.price_tier as PriceTier,
+    priceEstimated: row.price_estimated,
+    ratingCount: stats?.rating_count ?? 0,
+    // bev_stats.bayes_score is only populated once the leaderboard refresh
+    // job (milestone 1.7) runs; null until then is correct, not a bug.
+    bayesScore: stats?.bayes_score ?? null,
+  };
+}
+
+export interface BevRow extends BevSummaryRow {
+  status: string;
+  nutrition_label_path: string | null;
+  created_at: string;
+  created_by: { id: string; handle: string } | null | Array<{ id: string; handle: string }>;
+  is_starter: boolean;
+}
+
+export interface MyRankingRow {
+  bucket: number;
+  position: number;
+  score: number;
+  note: string | null;
+  bucket_size: number;
+}
+
+export function mapBev(
+  client: SupabaseClient,
+  row: BevRow,
+  extras: { myRanking: MyRankingRow | null; inWantToTry: boolean; friends: Array<{ profile: Profile; score: number; bucket: Bucket }> }
+): Bev {
+  const createdBy = Array.isArray(row.created_by) ? row.created_by[0] ?? null : row.created_by;
+  const stats = oneBevStats(row.bev_stats);
+  return {
+    ...mapBevSummary(client, row),
+    status: row.status as Bev['status'],
+    nutritionLabelUrl: publicUrl(client, 'bev-photos', row.nutrition_label_path),
+    avgScore: stats?.avg_score ?? null,
+    scoreStddev: stats?.score_stddev ?? null,
+    createdBy: createdBy ? { id: createdBy.id, handle: createdBy.handle } : null,
+    createdAt: row.created_at,
+    myRanking: extras.myRanking
+      ? {
+          bucket: bucketFromDb(extras.myRanking.bucket),
+          position: extras.myRanking.position,
+          bucketSize: extras.myRanking.bucket_size,
+          score: extras.myRanking.score,
+          note: extras.myRanking.note,
+        }
+      : null,
+    // No recommendation pipeline yet (milestone 1.4 / Phase 2) -- always
+    // null until `user_bev_predictions` has a real writer.
+    prediction: null,
+    inWantToTry: extras.inWantToTry,
+    friends: extras.friends,
+    isStarter: row.is_starter,
+  };
+}
+
+// --------------------------------------------------------------------------
+// rankings
+// --------------------------------------------------------------------------
+
+export interface RankingRow {
+  id: string;
+  user_id: string;
+  bev_id: string;
+  bucket: number;
+  position: number;
+  score: number;
+  note: string | null;
+  ranked_at: string;
+  updated_at: string;
+}
+
+export function mapRanking(row: RankingRow): Ranking {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    bevId: row.bev_id,
+    bucket: bucketFromDb(row.bucket),
+    position: row.position,
+    score: Number(row.score),
+    note: row.note,
+    createdAt: row.ranked_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+// --------------------------------------------------------------------------
+// get_feed RPC row -> FeedItem
+// --------------------------------------------------------------------------
+
+export interface FeedRpcRow {
+  id: number;
+  kind: string;
+  created_at: string;
+  actor_id: string;
+  actor_handle: string;
+  actor_display_name: string;
+  actor_avatar_path: string | null;
+  bev_id: string | null;
+  bev_name: string | null;
+  bev_brand: string | null;
+  bev_flavor: string | null;
+  bev_category_id: string | null;
+  bev_thumb_path: string | null;
+  bev_price_tier: number | null;
+  bev_price_estimated: boolean | null;
+  bev_status: string | null;
+  bev_rating_count: number | null;
+  bev_bayes_score: number | null;
+  score: number | null;
+  bucket: number | null;
+  note: string | null;
+  in_my_want_to_try: boolean;
+}
+
+export function mapFeedItem(client: SupabaseClient, row: FeedRpcRow, actor: Profile): FeedItem {
+  if (!row.bev_id || !row.bev_name || !row.bev_category_id) {
+    throw new ApiError('unknown', `get_feed row ${row.id} is missing its Bev (actor_id=${row.actor_id})`);
+  }
+  return {
+    id: String(row.id),
+    type: feedKindFromDb(row.kind),
+    actor,
+    bev: {
+      id: row.bev_id,
+      name: row.bev_name,
+      brand: row.bev_brand,
+      flavor: row.bev_flavor,
+      categoryId: row.bev_category_id as CategoryId,
+      photoUrl: publicUrl(client, 'bev-photos', row.bev_thumb_path),
+      photoStatus: 'ready',
+      priceTier: (row.bev_price_tier ?? 1) as PriceTier,
+      priceEstimated: row.bev_price_estimated ?? true,
+      ratingCount: row.bev_rating_count ?? 0,
+      bayesScore: row.bev_bayes_score,
+    },
+    score: row.score,
+    bucket: row.bucket === null ? null : bucketFromDb(row.bucket),
+    note: row.note,
+    createdAt: row.created_at,
+    inMyWantToTry: row.in_my_want_to_try,
+  };
+}
+
+// --------------------------------------------------------------------------
+// want_to_try
+// --------------------------------------------------------------------------
+
+export function mapWantToTryItem(bev: BevSummary, createdAt: string, via: Profile | null): WantToTryItem {
+  return { bev, savedAt: createdAt, via };
+}
+
+// --------------------------------------------------------------------------
+// leaderboards
+// --------------------------------------------------------------------------
+
+export interface BevLeaderboardRpcRow {
+  id: string;
+  name: string;
+  brand: string | null;
+  flavor: string | null;
+  category_id: string;
+  photo_path: string | null;
+  price_tier: number;
+  rating_count: number;
+  avg_score: number | null;
+  bayes_score: number;
+}
+
+export function mapBevLeaderboardRow(
+  client: SupabaseClient,
+  row: BevLeaderboardRpcRow,
+  rank: number,
+  myScore: number | null
+): LeaderboardRow {
+  return {
+    rank,
+    bev: {
+      id: row.id,
+      name: row.name,
+      brand: row.brand,
+      flavor: row.flavor,
+      categoryId: row.category_id as CategoryId,
+      photoUrl: publicUrl(client, 'bev-photos', row.photo_path),
+      photoStatus: 'ready',
+      priceTier: row.price_tier as PriceTier,
+      priceEstimated: false,
+      ratingCount: row.rating_count,
+      bayesScore: row.bayes_score,
+    },
+    bayesScore: row.bayes_score,
+    ratingCount: row.rating_count,
+    myScore,
+  };
+}
+
+export interface UserLeaderboardRpcRow {
+  user_id: string;
+  handle: string;
+  display_name: string;
+  avatar_path: string | null;
+  timezone: string;
+  created_at: string;
+  onboarded: boolean;
+  can_see_alcohol: boolean;
+  bevi_rank: number | null;
+  rating_count: number | null;
+  current_streak_days: number | null;
+}
+
+export function mapUserLeaderboardRow(client: SupabaseClient, row: UserLeaderboardRpcRow, rank: number): UserLeaderboardRow {
+  return {
+    rank,
+    profile: {
+      id: row.user_id,
+      handle: row.handle,
+      displayName: row.display_name,
+      avatarUrl: publicUrl(client, 'avatars', row.avatar_path),
+      timezone: row.timezone,
+      createdAt: row.created_at,
+      // Never this row's own birth_date, only whether it clears 21 --
+      // same rule profiles_view applies for any profile but the caller's.
+      birthdate: null,
+      canSeeAlcohol: row.can_see_alcohol,
+      onboarded: row.onboarded,
+    },
+    points: row.bevi_rank ?? 0,
+    bevsRanked: row.rating_count ?? 0,
+    currentStreak: row.current_streak_days ?? 0,
+  };
+}
+
+export function placeholderAppConfig(): AppConfig {
+  // No versioning/maintenance-flag infra exists yet; this is a fixed
+  // placeholder, not a read from the DB, until that's built.
+  return { minAppVersion: '1.0.0', maintenance: false };
+}
