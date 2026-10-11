@@ -10,10 +10,11 @@ import { controls } from './gallery/Controls';
 import { flow } from './gallery/Flow';
 import { primitives } from './gallery/Primitives';
 import { rows } from './gallery/Rows';
+import { session } from './gallery/Session';
 import type { GallerySection } from './gallery/types';
 
 /** Every component group, in order. A PR that adds components adds one import and one entry here. */
-export const SECTIONS: GallerySection[] = [primitives, controls, flow, rows];
+export const SECTIONS: GallerySection[] = [primitives, controls, flow, session, rows];
 
 const SCHEMES: { id: ColorScheme | null; label: string }[] = [
   { id: null, label: 'System' },

@@ -11,7 +11,8 @@ const config: ExpoConfig = {
   // Single-page web build served by Vercel (vercel.json, root directory `app`). The HTML shell,
   // manifest and home-screen icons live in public/.
   web: { bundler: 'metro', output: 'single', favicon: './public/icon-192.png' },
-  plugins: ['expo-router', 'expo-image'],
+  // No /_sitemap: it would list every route to anyone, signed in or not.
+  plugins: [['expo-router', { sitemap: false }], 'expo-image'],
   experiments: { typedRoutes: true },
 };
 
