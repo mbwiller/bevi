@@ -30,10 +30,9 @@ it('renders nothing while closed', async () => {
 it('opens as a named modal dialog and closes from the scrim', async () => {
   await render(<Harness />);
   await fireEvent.press(screen.getByRole('button', { name: 'Open' }));
-  const dialog = screen.getByTestId('sheet');
-  expect(dialog.props.role).toBe('dialog');
-  expect(dialog.props['aria-modal']).toBe(true);
-  expect(dialog.props['aria-label']).toBe('Sort by');
+  // One dialog only: the Modal wrapper carries the name; the panel just takes focus.
+  expect(screen.getByLabelText('Sort by', { includeHiddenElements: true })).toBeTruthy();
+  expect(screen.getByTestId('sheet').props.role).toBeUndefined();
   expect(screen.getByRole('header', { name: 'Sort by' })).toBeTruthy();
   expect(screen.getByText('Score')).toBeTruthy();
 

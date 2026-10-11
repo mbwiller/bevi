@@ -88,9 +88,7 @@ export function Sheet({ open = false, title, snap = 40, onClose, children }: She
         </Animated.View>
         <Animated.View
           ref={panel}
-          role="dialog"
-          aria-modal
-          aria-label={title}
+          // The Modal wrapper above is the dialog (role, aria-modal, name); the panel only takes focus.
           tabIndex={-1}
           testID="sheet"
           style={[
