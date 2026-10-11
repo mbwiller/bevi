@@ -8,12 +8,13 @@ import { useSession, type SessionStatus } from '@/state/session';
 const APP_DIR = path.resolve(__dirname, '../app');
 
 /**
- * Renders the app at `initialUrl` with the given session status and returns a pathname reader.
+ * Renders the app at `initialUrl` with the given session status, forced as the dev override
+ * (`?session=`) would force it, and returns a pathname reader.
  * (renderRouter attaches getPathname to the render promise; RNTL 14's async render means
  * `expect(screen).toHavePathname` can't see it.)
  */
 async function start(status: SessionStatus, initialUrl = '/') {
-  useSession.setState({ status, profile: undefined });
+  useSession.setState({ status, profile: undefined, checked: true, devForced: true });
   const result = renderRouter(APP_DIR, { initialUrl });
   await result;
   return () => result.getPathname();
@@ -109,7 +110,12 @@ describe('tab bar', () => {
   });
 
   it('shows the session profile on the Profile tab', async () => {
-    useSession.setState({ status: 'ready', profile: { handle: 'tester', displayName: 'Test User', avatarUrl: null } });
+    useSession.setState({
+      status: 'ready',
+      profile: { handle: 'tester', displayName: 'Test User', avatarUrl: null },
+      checked: true,
+      devForced: true,
+    });
     await renderRouter(APP_DIR, { initialUrl: '/profile' });
     expect(await screen.findByText('Test User')).toBeTruthy();
     expect(screen.getByText('TU')).toBeTruthy();

@@ -1,7 +1,7 @@
 import type { Profile } from '@bevi/shared';
 import { create } from 'zustand';
 
-import { devSessionStatus, sessionOverrideEnabled } from '@/dev/devSession';
+import { devSessionOverride, sessionOverrideEnabled } from '@/dev/devSession';
 
 /**
  * Where the user is in the auth flow. The root layout's gate reads it:
@@ -16,6 +16,23 @@ export interface SessionState {
   status: SessionStatus;
   profile?: SessionProfile;
   /**
+   * False until the first auth check (`getSession`, then `getMe`) settles; the root layout shows a
+   * splash meanwhile instead of flashing sign in. True from the start when the dev override forces
+   * a status.
+   */
+  checked: boolean;
+  /**
+   * The status was forced by the dev override (`?session=`, mock only): the session bootstrap
+   * leaves the launch check alone and only applies real auth events after it (sign-in, sign-out).
+   */
+  devForced: boolean;
+  /**
+   * Bumped whenever the client changes the session itself (`completeOnboarding`, `signOut`). The
+   * bootstrap drops a `getMe` that started before the bump, so a stale profile (`onboarded: false`)
+   * can't send a user who just finished onboarding back into it.
+   */
+  epoch: number;
+  /**
    * A session arrived (sign-in, sign-up, `getSession` on launch, `onAuthChange`). `onboarded`
    * comes from the contract's `Profile.onboarded`; false sends the user through onboarding.
    */
@@ -24,22 +41,28 @@ export interface SessionState {
   completeOnboarding: (profile?: SessionProfile) => void;
   /** Signed out, account deleted, or the session expired. */
   signOut: () => void;
-  /** Dev only: force a status (the gallery toggle). A no-op unless the dev session override is on. */
+  /** Dev only: force a status (the gallery toggle, tests). A no-op unless the dev session override is on. */
   setStatus: (status: SessionStatus) => void;
 }
 
 /**
  * The client-side session (one of the app's two Zustand stores, DEVELOPMENT-MATT §3). It holds no
- * data of its own: the API layer calls `setSession` / `signOut` from `getSession` and `onAuthChange`.
- * Until that lands, the starting status comes from the dev override (`ready` by default).
+ * data of its own: the session bootstrap (features/auth/useSessionBootstrap.ts, mounted once in the
+ * root layout) calls `setSession` / `signOut` from `getSession` and `onAuthChange`. It starts
+ * `signedOut` and unchecked, unless the dev override (`?session=` on the mock) forces a status.
  */
+const forced = devSessionOverride();
+
 export const useSession = create<SessionState>()((set) => ({
-  status: devSessionStatus(),
+  status: forced ?? 'signedOut',
   profile: undefined,
-  setSession: (profile, onboarded = true) => set({ profile, status: onboarded ? 'ready' : 'onboarding' }),
-  completeOnboarding: (profile) => set((s) => ({ status: 'ready', profile: profile ?? s.profile })),
-  signOut: () => set({ status: 'signedOut', profile: undefined }),
+  checked: forced !== null,
+  devForced: forced !== null,
+  epoch: 0,
+  setSession: (profile, onboarded = true) => set({ profile, status: onboarded ? 'ready' : 'onboarding', checked: true }),
+  completeOnboarding: (profile) => set((s) => ({ status: 'ready', profile: profile ?? s.profile, epoch: s.epoch + 1 })),
+  signOut: () => set((s) => ({ status: 'signedOut', profile: undefined, checked: true, epoch: s.epoch + 1 })),
   setStatus: (status) => {
-    if (sessionOverrideEnabled()) set({ status });
+    if (sessionOverrideEnabled()) set({ status, checked: true });
   },
 }));

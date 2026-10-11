@@ -1,4 +1,4 @@
-import { devSessionStatus } from '@/dev/devSession';
+import { devSessionOverride, devSessionStatus } from '@/dev/devSession';
 import { useSession, type SessionProfile } from '@/state/session';
 
 const PROFILE: SessionProfile = { handle: 'tester', displayName: 'Test User', avatarUrl: null };
@@ -6,9 +6,19 @@ const PROFILE: SessionProfile = { handle: 'tester', displayName: 'Test User', av
 beforeEach(() => useSession.setState({ status: 'ready', profile: undefined }));
 
 describe('session store', () => {
-  it('starts ready with no profile in dev (no sample data)', () => {
-    expect(devSessionStatus('')).toBe('ready');
+  it('starts signed out and unchecked with no override, so the API decides (no sample data)', () => {
+    expect(devSessionStatus('')).toBe('signedOut');
+    expect(devSessionOverride('')).toBeNull();
     expect(useSession.getState().profile).toBeUndefined();
+  });
+
+  it('setSession and signOut mark the first check done', () => {
+    useSession.setState({ checked: false });
+    useSession.getState().setSession(PROFILE);
+    expect(useSession.getState().checked).toBe(true);
+    useSession.setState({ checked: false });
+    useSession.getState().signOut();
+    expect(useSession.getState().checked).toBe(true);
   });
 
   it('setSession: onboarded → ready, not onboarded → onboarding', () => {
@@ -51,6 +61,7 @@ describe('with the real API (EXPO_PUBLIC_BEVI_API=supabase)', () => {
   });
 
   it('ignores ?session= and starts signed out', () => {
+    expect(devSessionOverride('?session=ready')).toBeNull();
     expect(devSessionStatus('?session=ready')).toBe('signedOut');
     expect(devSessionStatus(undefined)).toBe('signedOut');
   });
@@ -69,10 +80,12 @@ describe('with the real API (EXPO_PUBLIC_BEVI_API=supabase)', () => {
 
 describe('devSessionStatus', () => {
   it('reads ?session= and ignores unknown values', () => {
-    expect(devSessionStatus('?session=signedOut')).toBe('signedOut');
-    expect(devSessionStatus('?foo=1&session=onboarding')).toBe('onboarding');
+    expect(devSessionOverride('?session=signedOut')).toBe('signedOut');
+    expect(devSessionOverride('?foo=1&session=onboarding')).toBe('onboarding');
+    expect(devSessionOverride('?session=ready')).toBe('ready');
+    expect(devSessionOverride('?session=admin')).toBeNull();
+    expect(devSessionOverride(undefined)).toBeNull();
     expect(devSessionStatus('?session=ready')).toBe('ready');
-    expect(devSessionStatus('?session=admin')).toBe('ready');
-    expect(devSessionStatus(undefined)).toBe('ready');
+    expect(devSessionStatus('?session=admin')).toBe('signedOut');
   });
 });
