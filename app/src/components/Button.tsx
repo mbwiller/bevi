@@ -4,7 +4,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View, type StyleProp, t
 import { radius, spacing, type, useTheme } from '@/theme';
 
 import { Icon, type IconName } from './Icon';
-import { hitSlopFor, PRESSED } from './pressed';
+import { HitTarget, PRESSED } from './HitTarget';
 
 export interface ButtonProps {
   variant?: 'outlined' | 'primary' | 'ghost';
@@ -48,7 +48,6 @@ export function Button({
     <Pressable
       onPress={onPress}
       disabled={inactive}
-      hitSlop={hitSlopFor(HEIGHT[sz])}
       accessibilityRole="button"
       accessibilityLabel={label}
       aria-disabled={inactive}
@@ -64,6 +63,7 @@ export function Button({
         style,
       ]}
     >
+      <HitTarget height={HEIGHT[sz]} borderWidth={variant === 'outlined' ? 1 : 0} />
       {loading ? (
         <View style={styles.spinner}>
           <ActivityIndicator size="small" color={fg} />

@@ -116,15 +116,20 @@ export type TypeStyle = keyof typeof type;
 /** Dense rows cap Dynamic Type here; body text scales freely. */
 export const MAX_FONT_SCALE_DENSE = 1.3;
 
-/** Only glass floats. RN's `boxShadow` takes the same CSS strings as the design system. */
-export const elevation: Record<ColorScheme, { glass: string; floating: string }> = {
+/**
+ * Only glass floats. RN's `boxShadow` takes the same CSS strings as the design system.
+ * `focusRing` is keyboard focus on every control: a 2px `surface` gap, then a 2px `primary` ring.
+ */
+export const elevation: Record<ColorScheme, { glass: string; floating: string; focusRing: string }> = {
   light: {
     glass: '0 12px 32px #2a145a1f, 0 2px 8px #1111110f',
     floating: '0 4px 12px #11111129',
+    focusRing: '0 0 0 2px #ffffff, 0 0 0 4px #4a2a84',
   },
   dark: {
     glass: '0 12px 32px #00000099, 0 2px 8px #00000066',
     floating: '0 4px 12px #00000099',
+    focusRing: '0 0 0 2px #121214, 0 0 0 4px #b9a4f2',
   },
 };
 

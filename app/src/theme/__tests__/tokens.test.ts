@@ -40,6 +40,7 @@ describe('tokens match design/system/project/tokens.json', () => {
     for (const scheme of ['light', 'dark'] as const) {
       expect(elevation[scheme].glass).toBe(shadow('elevation-glass')[scheme]);
       expect(elevation[scheme].floating).toBe(shadow('elevation-floating')[scheme]);
+      expect(elevation[scheme].focusRing).toBe(shadow('focus-ring')[scheme]);
     }
   });
 

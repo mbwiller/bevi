@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } fro
 
 import { MAX_FONT_SCALE_DENSE, radius, size as sizes, useTheme } from '@/theme';
 
+import { TARGET_MIN } from './HitTarget';
 import { Icon, type IconName } from './Icon';
 
 export interface IconButtonProps {
@@ -53,7 +54,7 @@ export function IconButton({ icon, label, variant = 'plain', badge, size = sizes
 
 // Badge geometry is the design system's (bundle.css `.bv-iconbtn-badge`).
 const styles = StyleSheet.create({
-  target: { minWidth: sizes.target, minHeight: sizes.target, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' },
+  target: { ...TARGET_MIN, alignSelf: 'flex-start' },
   disc: { width: DISC, height: DISC, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   badge: {
     position: 'absolute',
