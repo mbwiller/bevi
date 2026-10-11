@@ -2,10 +2,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { EmptyState } from '@/components/EmptyState';
 import { Header } from '@/components/Header';
 import { SegmentedTabs, type Tab } from '@/components/SegmentedTabs';
 import { BevSearch } from '@/features/add-bev/BevSearch';
+import { PeopleSearch } from '@/features/people/PeopleSearch';
 import { useBack } from '@/lib/useBack';
 import { useTheme } from '@/theme';
 
@@ -34,7 +34,7 @@ export default function AddBevScreen() {
         onChange={(id) => router.setParams({ tab: id === 'people' ? 'people' : undefined })}
       />
       <View style={styles.body}>
-        {tab === 'bevs' ? <BevSearch /> : <EmptyState icon="users" title="Find people" body="Coming soon" />}
+        {tab === 'bevs' ? <BevSearch /> : <PeopleSearch />}
       </View>
     </SafeAreaView>
   );

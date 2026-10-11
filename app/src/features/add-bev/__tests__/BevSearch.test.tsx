@@ -156,7 +156,7 @@ it('the screen opens the People tab from ?tab=people', async () => {
       <AddBevScreen />
     </QueryClientProvider>,
   );
-  expect(screen.getByText('Coming soon')).toBeTruthy();
+  expect(screen.getByLabelText('Search by name or @handle')).toBeTruthy();
   expect(screen.queryByLabelText('Search a Bev, brand or flavor')).toBeNull();
   await fireEvent.press(screen.getByLabelText('Bevs'));
   expect(mockSetParams).toHaveBeenCalledWith({ tab: undefined });
