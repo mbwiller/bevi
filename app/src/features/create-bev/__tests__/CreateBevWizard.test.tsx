@@ -6,7 +6,7 @@ import { api, mockControls } from '@/api/client';
 import { categoryById } from '@/lib/categories';
 
 import { CreateBevWizard } from '../CreateBevWizard';
-import { pickImage, preparePhoto } from '../photo';
+import { pickImage, preparePhoto, UnsupportedImageError } from '../photo';
 
 const mockReplace = jest.fn();
 const mockBack = jest.fn();
@@ -39,8 +39,9 @@ beforeEach(() => {
   controls.signInAs('demo');
   client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false, gcTime: Infinity } } });
   mockPick.mockResolvedValue(asset);
+  let n = 0;
   mockPrepare.mockImplementation(async () => ({
-    uri: 'blob:prepared',
+    uri: `blob:prepared-${++n}`,
     blob: new Blob(['jpeg'], { type: 'image/jpeg' }),
     mimeType: 'image/jpeg',
     width: 1200,
@@ -234,4 +235,42 @@ it('the category sheet hides alcoholic categories for an under-21 account', asyn
   await screen.findByRole('button', { name: 'Soda' });
   expect(screen.queryByRole('button', { name: 'Beer' })).toBeNull();
   expect(screen.queryByRole('button', { name: 'Wine' })).toBeNull();
+});
+
+it('revokes the preview URL when the photo is replaced, and on unmount', async () => {
+  const revoke = jest.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+  await renderWizard();
+  await addPhoto();
+  expect(revoke).not.toHaveBeenCalled();
+  await fireEvent.press(screen.getByRole('button', { name: 'Retake' }));
+  await waitFor(() => expect(revoke).toHaveBeenCalledWith('blob:prepared-1'));
+  expect(revoke).not.toHaveBeenCalledWith('blob:prepared-2');
+  await screen.unmount();
+  expect(revoke).toHaveBeenCalledWith('blob:prepared-2');
+});
+
+it('Next waits while the photo is being prepared', async () => {
+  let finish!: () => void;
+  mockPrepare.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = () => resolve({ uri: 'blob:slow', blob: new Blob(['jpeg'], { type: 'image/jpeg' }), mimeType: 'image/jpeg', width: 10, height: 10 });
+      }),
+  );
+  await renderWizard();
+  await fireEvent.press(screen.getByRole('button', { name: 'Take photo' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled());
+  finish();
+  await screen.findByRole('button', { name: 'Retake' });
+  expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
+});
+
+it("an image that can't be read says so and is never uploaded", async () => {
+  mockPrepare.mockRejectedValueOnce(new UnsupportedImageError());
+  const upload = jest.spyOn(api.media, 'upload');
+  await renderWizard();
+  await fireEvent.press(screen.getByRole('button', { name: 'Choose photo' }));
+  await screen.findByText("Bevi can't read that image. Try a JPEG or PNG.");
+  expect(screen.queryByRole('button', { name: 'Retry upload' })).toBeNull();
+  expect(upload).not.toHaveBeenCalled();
 });

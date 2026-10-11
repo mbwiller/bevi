@@ -124,7 +124,7 @@ export function DetailsStep({ form, errors, onChange, onOpenCategories, label, o
             <Button variant="outlined" icon="file-text" onPress={() => onPickLabel('library')} accessibilityLabel={hasLabel ? 'Replace label photo' : 'Add label photo'}>
               {hasLabel ? 'Replace' : 'Add label'}
             </Button>
-            {hasLabel ? (
+            {label.phase !== 'empty' ? (
               <Button variant="ghost" onPress={label.clear} accessibilityLabel="Remove label photo">
                 Remove
               </Button>
