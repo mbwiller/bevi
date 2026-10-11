@@ -1,0 +1,279 @@
+{
+  "version": "1.1.0",
+  "constants": {
+    "version": "1.1.0",
+    "bands": {
+      "DISLIKED": [
+        0,
+        4
+      ],
+      "FINE": [
+        4,
+        7
+      ],
+      "LOVED": [
+        7,
+        10
+      ]
+    },
+    "bucketOrder": [
+      "LOVED",
+      "FINE",
+      "DISLIKED"
+    ],
+    "bucketDb": {
+      "LOVED": 3,
+      "FINE": 2,
+      "DISLIKED": 1
+    },
+    "sigmaFloor": 1,
+    "minNUser": 3,
+    "minNCat": 3,
+    "globalFallback": {
+      "mean": 5,
+      "stddev": 2.5
+    },
+    "kAff": 2,
+    "bayesC": 3,
+    "bayesCategoryPriorMin": 30,
+    "minRaters": 2,
+    "kG": 3,
+    "rankPointsWeights": {
+      "bevsRanked": 1,
+      "currentStreak": 3,
+      "bevsCreated": 2
+    },
+    "streakPeriod": "day",
+    "simWeights": {
+      "category": 0.4,
+      "brand": 0.3,
+      "flavor": 0.2,
+      "tier": 0.1
+    },
+    "simMin": 0.1,
+    "layer1Weights": {
+      "affinity": 0.4,
+      "content": 0.4,
+      "global": 0.2
+    },
+    "conf1UserN": 10,
+    "conf1Mass": 4,
+    "cfK": 10,
+    "cfMinCommon": 2,
+    "cfSignificance": 5,
+    "lambdaMax": 0.7,
+    "lambdaUserN": 15,
+    "epsilon": 0.15,
+    "jitterSd": 0.15,
+    "storedScoreRule": "cents = floor((2N + D) / (2D)) with D = n + 1, N = 100*(hi*D - (hi - lo)*(index + 1)); capped at hi*100 - 1 for FINE and DISLIKED; storedScore = cents / 100",
+    "stddev": "population (stddev_pop)",
+    "nameOrder": "code point (SQL collate \"C\"), then bevId",
+    "streakDayKey": "calendar date of the ranking instant in the profile timezone: (created_at AT TIME ZONE timezone)::date; week = ISO week of that date (YYYY-Www)",
+    "rankOrder": "points desc, bevsRanked desc, createdAt asc, userId asc; rank = 1 + count(points > mine); bevsRanked = 0 excluded"
+  },
+  "cases": [
+    {
+      "name": "all zero",
+      "fn": "rankPoints",
+      "input": {
+        "bevsRanked": 0,
+        "currentStreak": 0,
+        "bevsCreated": 0
+      },
+      "expected": 0
+    },
+    {
+      "name": "ranked only",
+      "fn": "rankPoints",
+      "input": {
+        "bevsRanked": 12,
+        "currentStreak": 0,
+        "bevsCreated": 0
+      },
+      "expected": 12
+    },
+    {
+      "name": "streak weighs 3",
+      "fn": "rankPoints",
+      "input": {
+        "bevsRanked": 0,
+        "currentStreak": 1,
+        "bevsCreated": 0
+      },
+      "expected": 3
+    },
+    {
+      "name": "adopted creations weigh 2",
+      "fn": "rankPoints",
+      "input": {
+        "bevsRanked": 0,
+        "currentStreak": 0,
+        "bevsCreated": 1
+      },
+      "expected": 2
+    },
+    {
+      "name": "everything",
+      "fn": "rankPoints",
+      "input": {
+        "bevsRanked": 40,
+        "currentStreak": 4,
+        "bevsCreated": 2
+      },
+      "expected": 56
+    },
+    {
+      "name": "ties share a rank and the next rank skips; tie order bevsRanked desc then createdAt asc",
+      "fn": "rankUsers",
+      "input": {
+        "rows": [
+          {
+            "userId": "carol",
+            "bevsRanked": 10,
+            "currentStreak": 0,
+            "bevsCreated": 0,
+            "createdAt": "2026-10-01T00:00:00Z"
+          },
+          {
+            "userId": "arjun",
+            "bevsRanked": 4,
+            "currentStreak": 2,
+            "bevsCreated": 0,
+            "createdAt": "2026-10-03T00:00:00Z"
+          },
+          {
+            "userId": "bob",
+            "bevsRanked": 10,
+            "currentStreak": 0,
+            "bevsCreated": 0,
+            "createdAt": "2026-09-30T00:00:00Z"
+          },
+          {
+            "userId": "matt",
+            "bevsRanked": 20,
+            "currentStreak": 5,
+            "bevsCreated": 1,
+            "createdAt": "2026-10-05T00:00:00Z"
+          },
+          {
+            "userId": "dana",
+            "bevsRanked": 3,
+            "currentStreak": 0,
+            "bevsCreated": 0,
+            "createdAt": "2026-10-01T00:00:00Z"
+          }
+        ]
+      },
+      "expected": [
+        {
+          "userId": "matt",
+          "points": 37,
+          "rank": 1
+        },
+        {
+          "userId": "bob",
+          "points": 10,
+          "rank": 2
+        },
+        {
+          "userId": "carol",
+          "points": 10,
+          "rank": 2
+        },
+        {
+          "userId": "arjun",
+          "points": 10,
+          "rank": 2
+        },
+        {
+          "userId": "dana",
+          "points": 3,
+          "rank": 5
+        }
+      ]
+    },
+    {
+      "name": "users with bevsRanked = 0 are Unranked: left out and not counted",
+      "fn": "rankUsers",
+      "input": {
+        "rows": [
+          {
+            "userId": "ghost",
+            "bevsRanked": 0,
+            "currentStreak": 0,
+            "bevsCreated": 5,
+            "createdAt": "2026-09-01T00:00:00Z"
+          },
+          {
+            "userId": "one",
+            "bevsRanked": 1,
+            "currentStreak": 1,
+            "bevsCreated": 0,
+            "createdAt": "2026-10-01T00:00:00Z"
+          },
+          {
+            "userId": "two",
+            "bevsRanked": 2,
+            "currentStreak": 0,
+            "bevsCreated": 0,
+            "createdAt": "2026-10-01T00:00:00Z"
+          }
+        ]
+      },
+      "expected": [
+        {
+          "userId": "one",
+          "points": 4,
+          "rank": 1
+        },
+        {
+          "userId": "two",
+          "points": 2,
+          "rank": 2
+        }
+      ]
+    },
+    {
+      "name": "equal points, bevsRanked and createdAt fall back to userId",
+      "fn": "rankUsers",
+      "input": {
+        "rows": [
+          {
+            "userId": "u-b",
+            "bevsRanked": 5,
+            "currentStreak": 0,
+            "bevsCreated": 0,
+            "createdAt": "2026-10-01T00:00:00Z"
+          },
+          {
+            "userId": "u-a",
+            "bevsRanked": 5,
+            "currentStreak": 0,
+            "bevsCreated": 0,
+            "createdAt": "2026-10-01T00:00:00Z"
+          }
+        ]
+      },
+      "expected": [
+        {
+          "userId": "u-a",
+          "points": 5,
+          "rank": 1
+        },
+        {
+          "userId": "u-b",
+          "points": 5,
+          "rank": 1
+        }
+      ]
+    },
+    {
+      "name": "empty",
+      "fn": "rankUsers",
+      "input": {
+        "rows": []
+      },
+      "expected": []
+    }
+  ]
+}

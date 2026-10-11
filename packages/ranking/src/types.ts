@@ -91,3 +91,135 @@ export interface LeaderboardInputRow {
   n: number;
   name: string;
 }
+
+// ---------------------------------------------------------------- predictions (§8.8–§8.11, §9)
+
+export type PriceTier = 1 | 2 | 3 | 4;
+
+/** What prediction needs to know about a Bev. `brandKey` and `flavorTokens` are pre-normalised by the snapshot builder. */
+export interface BevFeatures {
+  id: BevId;
+  categoryId: CategoryId;
+  /** Normalised brand (see `normaliseBrand`); null or '' when unknown. */
+  brandKey: string | null;
+  /** See `flavorTokens(name, flavor)`. */
+  flavorTokens: string[];
+  priceTier: PriceTier;
+  ratingCount: number;
+  mean: number;
+  stddev: number;
+  isAlcoholic: boolean;
+}
+
+export interface UserSnapshot {
+  id: UserId;
+  /** Overall stats over ALL the user's stored scores (population stddev). */
+  stats: Stats;
+  categoryStats: Record<CategoryId, Stats>;
+  canSeeAlcohol: boolean;
+}
+
+/** Everything `predictScore` / `recommend` read. Treated as immutable once passed in. */
+export interface PredictionSnapshot {
+  /** Must equal RANKING_VERSION of the consuming bundle; otherwise the functions throw. */
+  version: string;
+  /** ISO; informational only. */
+  generatedAt: string;
+  global: { mean: number; stddev: number; byCategoryMean: Record<CategoryId, number> };
+  bevs: Record<BevId, BevFeatures>;
+  users: Record<UserId, UserSnapshot>;
+  /** Stored scores; z-scores are computed inside. */
+  rankings: Array<{ userId: UserId; bevId: BevId; score: number }>;
+}
+
+export interface Layer1Result {
+  z: number;
+  confidence: number;
+  parts: { affinity: number; content: number; global: number };
+}
+
+export interface Layer2Result {
+  z: number;
+  support: number;
+  /** The neighbours used, most similar first. */
+  neighbours: UserId[];
+}
+
+export interface Prediction {
+  bevId: BevId;
+  /** Blended ẑ in z-units (un-jittered). */
+  z: number;
+  /** clamp(μ* + σ*·ẑ, 0, 10), unrounded; the UI shows 1 dp with "~". */
+  score: number;
+  /** max(conf1, min(1, support)); the UI locks below CONFIDENCE_LOCK. */
+  confidence: number;
+  lambda: number;
+  layer1: Layer1Result;
+  layer2: Layer2Result;
+}
+
+export type RecommendationReason = 'CATEGORY' | 'SIMILAR' | 'NEIGHBOURS' | 'POPULAR';
+
+export interface Recommendation {
+  bevId: BevId;
+  /** Un-jittered predicted score. */
+  score: number;
+  confidence: number;
+  reason: RecommendationReason;
+  isExploration: boolean;
+}
+
+export interface RecommendOptions {
+  /** List length. */
+  n: number;
+  /** PRNG seed; the caller derives it from userId + local day so a day's list is stable. */
+  seed: string;
+  /** Exploration share; default EPSILON. */
+  epsilon?: number;
+  excludeBevIds?: BevId[];
+}
+
+// ---------------------------------------------------------------- starter set, rank, streaks (§8.12–§8.14)
+
+/** Structurally satisfied by shared's BevSummary. */
+export interface StarterCandidate {
+  id: BevId;
+  name: string;
+  categoryId: CategoryId;
+  ratingCount: number;
+}
+
+export interface StarterOptions {
+  k?: number;
+  core?: number;
+  maxPerCategory?: number;
+  seed: string;
+  excludeCategoryIds?: CategoryId[];
+}
+
+export interface RankPointsInput {
+  bevsRanked: number;
+  currentStreak: number;
+  bevsCreated: number;
+}
+
+export interface RankUsersRow extends RankPointsInput {
+  userId: UserId;
+  /** ISO timestamp of account creation (tie-break: earlier first). */
+  createdAt: string;
+}
+
+export interface RankedUser {
+  userId: UserId;
+  points: number;
+  rank: number;
+}
+
+export type StreakPeriod = 'day' | 'week';
+
+export interface StreakResult {
+  current: number;
+  longest: number;
+  /** Latest period key on or before today, or null. */
+  lastKey: string | null;
+}

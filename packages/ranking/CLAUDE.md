@@ -1,6 +1,6 @@
 # packages/ranking (`@bevi/ranking`)
 
-Matt's lane. Pure TypeScript for Bevi's maths: the placement state machine, score-from-position, stats and z-scores, the Bayesian leaderboard average. Recommendations, streaks and "Rank on Bevi" come in Phase 2. The formulas are specified in `DEVELOPMENT-MATT.md` §8–§10; this package is the executable version of them.
+Matt's lane. Pure TypeScript for Bevi's maths: the placement state machine, score-from-position, stats and z-scores, the Bayesian leaderboard average, predictions and recommendations (Layer 1, Layer 2, blend, exploration), the onboarding starter set, "Rank on Bevi" points and streaks. The formulas are specified in `DEVELOPMENT-MATT.md` §8–§10; this package is the executable version of them.
 
 ## Rules
 
