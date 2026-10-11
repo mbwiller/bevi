@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
-import { fireEvent, renderRouter, screen, within } from 'expo-router/testing-library';
+import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
 import { api, mockControls } from '@/api/client';
 import LeaderboardScreen from '@/app/(tabs)/leaderboard/index';
@@ -138,8 +138,10 @@ it('shows ErrorState with Retry when the board fails', async () => {
   expect(await screen.findByLabelText(/^1\. /)).toBeTruthy();
 });
 
-it('pins your own row from your stats when the board is loaded', async () => {
+it("doesn't flash the pinned own row before the list reports what's on screen", async () => {
+  const me = await api.profile.getMe();
   await start('/leaderboard?scope=users');
-  const pinned = await screen.findByTestId('pinned-self');
-  expect(within(pinned).getByText(/\(you\)/)).toBeTruthy();
+  expect((await screen.findAllByText(/\(you\)/)).length).toBe(1);
+  expect(screen.getAllByLabelText(new RegExp(`^${me.displayName} \\(you\\)`))).toHaveLength(1);
+  expect(screen.queryByTestId('pinned-self')).toBeNull();
 });

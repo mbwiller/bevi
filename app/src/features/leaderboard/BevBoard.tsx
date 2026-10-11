@@ -3,13 +3,14 @@ import type { CategoryId, LeaderboardRow } from '@bevi/shared';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, type ReactElement } from 'react';
 
-import { flattenPages, useAddWantToTry, useLeaderboardBevs, useRemoveWantToTry, useWantToTry } from '@/api/hooks';
+import { flattenPages, useAddWantToTry, useLeaderboardBevs, useMe, useRemoveWantToTry, useWantToTry } from '@/api/hooks';
 import { BevRow } from '@/components/BevRow';
 import { EmptyState } from '@/components/EmptyState';
 import { BevList } from '@/features/lists/BevList';
+import { categoryById } from '@/lib/categories';
 import { formatScore } from '@/lib/format';
 
-import { useToggleSet } from './useToggleSet';
+import { useAllPages, useToggleSet } from './useToggleSet';
 
 export interface BevBoardProps {
   categoryId: CategoryId | undefined;
@@ -31,7 +32,9 @@ export function BevBoard({ categoryId, header }: BevBoardProps) {
   const query = useLeaderboardBevs(categoryId);
   const rows = useMemo(() => flattenPages(query.data).filter((r) => isLeaderboardEligible(r.ratingCount)), [query.data]);
 
+  const canSeeAlcohol = useMe().data?.canSeeAlcohol ?? false;
   const wantToTry = useWantToTry();
+  useAllPages(wantToTry);
   const savedIds = useMemo(() => flattenPages(wantToTry.data).map((w) => w.bev.id), [wantToTry.data]);
   const saved = useToggleSet(savedIds);
   const add = useAddWantToTry();
@@ -41,6 +44,8 @@ export function BevBoard({ categoryId, header }: BevBoardProps) {
     ({ item }: { item: LeaderboardRow }) => {
       const id = item.bev.id;
       const isSaved = saved.has(id);
+      // The server filters alcohol under 21 already; never offer to rank it regardless (§6.17).
+      const rankable = item.myScore == null && !(categoryById(item.bev.categoryId)?.isAlcoholic && !canSeeAlcohol);
       return (
         <BevRow
           bev={item.bev}
@@ -50,7 +55,7 @@ export function BevBoard({ categoryId, header }: BevBoardProps) {
           meta={myScoreMeta(item.myScore)}
           saved={isSaved}
           onPress={() => router.push({ pathname: '/bev/[id]', params: { id } })}
-          onRank={item.myScore == null ? () => router.push({ pathname: '/rank/[bevId]', params: { bevId: id } }) : undefined}
+          onRank={rankable ? () => router.push({ pathname: '/rank/[bevId]', params: { bevId: id } }) : undefined}
           onSave={() => {
             const undo = saved.set(id, !isSaved);
             if (isSaved) remove.mutate(id, { onError: undo });
@@ -59,7 +64,7 @@ export function BevBoard({ categoryId, header }: BevBoardProps) {
         />
       );
     },
-    [add, remove, router, saved],
+    [add, remove, router, saved, canSeeAlcohol],
   );
 
   return (
