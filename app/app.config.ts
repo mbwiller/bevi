@@ -22,6 +22,9 @@ const config: ExpoConfig = {
     // `primary` (light) from app/src/theme/tokens.ts; the icon art is full-bleed grape.
     adaptiveIcon: { foregroundImage: './assets/icon.png', backgroundColor: '#4a2a84' },
   },
+  // Single-page web build served by Vercel (vercel.json, root directory `app`). The HTML shell,
+  // manifest and home-screen icons live in public/.
+  web: { bundler: 'metro', output: 'single', favicon: './public/icon-192.png' },
   plugins: [
     'expo-router',
     ['expo-splash-screen', { image: './assets/icon.png', imageWidth: 120, backgroundColor: '#4a2a84' }],

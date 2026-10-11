@@ -34,6 +34,9 @@ npm run typecheck -w app     # tsc
 npm test -w app              # jest-expo: token parity, components, lib
 npm start -w app             # Expo dev server (Expo Go works until Google sign-in, task 1.4)
 npx expo-doctor              # from app/: SDK version and config checks
+npm start -w app -- --web    # the same app in a browser (react-native-web)
 ```
+
+Web: `npx expo export --platform web` (from `app/`) builds a single-page app into `app/dist/`. Vercel deploys it with `app/vercel.json` (project root directory `app`). `public/` holds the HTML shell, `manifest.json` and the home-screen icons, so it can be added to the iPhone home screen. Native-only APIs (glass effect, haptics, secure store) need a web fallback in any component that uses them.
 
 Builds: `eas build --profile development --platform ios` makes the "Bevi Dev" app (`com.bevi.app.dev`, `APP_VARIANT=development`); `preview` and `production` build `com.bevi.app`. The EAS project id is added by `eas init` under the team account.
