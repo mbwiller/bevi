@@ -15,15 +15,20 @@ import {
   BAYES_C,
   categoryAffinity,
   categoryPrior,
+  computeStreak,
   createPrng,
   currentPrompt,
   effectiveCategoryStats,
   effectiveUserStats,
   isDone,
   leaderboardOrder,
+  localDayKey,
+  localPeriodKey,
   placementResult,
   populationStats,
   randomInt,
+  rankPoints,
+  rankUsers,
   RANKING_CONSTANTS,
   RANKING_VERSION,
   respaceBucket,
@@ -38,8 +43,10 @@ import {
   type ComparisonAnswer,
   type LeaderboardInputRow,
   type PlacementState,
+  type RankUsersRow,
   type ScoredRanking,
   type Stats,
+  type StreakPeriod,
 } from '../src/index.ts';
 
 const OUT_DIR = fileURLToPath(new URL('../../../shared/fixtures/', import.meta.url));
@@ -62,6 +69,8 @@ const constants = {
     'cents = floor((2N + D) / (2D)) with D = n + 1, N = 100*(hi*D - (hi - lo)*(index + 1)); capped at hi*100 - 1 for FINE and DISLIKED; storedScore = cents / 100',
   stddev: 'population (stddev_pop)',
   nameOrder: 'code point (SQL collate "C"), then bevId',
+  streakDayKey: 'calendar date of the ranking instant in the profile timezone: (created_at AT TIME ZONE timezone)::date; week = ISO week of that date (YYYY-Www)',
+  rankOrder: 'points desc, bevsRanked desc, createdAt asc, userId asc; rank = 1 + count(points > mine); bevsRanked = 0 excluded',
 };
 
 /** A plausible stored score: some position in some bucket. */
@@ -246,6 +255,92 @@ function placementCases(): Case[] {
   return cases;
 }
 
+// ---------------------------------------------------------------- streak
+// No PRNG here, so adding these files leaves every earlier file's cases unchanged.
+
+function streakCases(): Case[] {
+  const cases: Case[] = [];
+  const dayKey = (name: string, isoTimestamp: string, timeZone: string) =>
+    cases.push({ name, fn: 'localDayKey', input: { isoTimestamp, timeZone }, expected: localDayKey(isoTimestamp, timeZone) });
+  dayKey('LA 23:59 PDT stays on the local day', '2026-10-11T06:59:00Z', 'America/Los_Angeles');
+  dayKey('LA 00:00 PDT starts the next day', '2026-10-11T07:00:00Z', 'America/Los_Angeles');
+  dayKey('LA 23:59 PST the night clocks spring forward', '2026-03-08T07:59:00Z', 'America/Los_Angeles');
+  dayKey('LA 23:59 PDT on the 23-hour day', '2026-03-09T06:59:00Z', 'America/Los_Angeles');
+  dayKey('LA 01:30 PDT before the fall-back repeat', '2026-11-01T08:30:00Z', 'America/Los_Angeles');
+  dayKey('LA 01:30 PST after the fall-back repeat', '2026-11-01T09:30:00Z', 'America/Los_Angeles');
+  dayKey('LA 23:59 PST on the 25-hour day', '2026-11-02T07:59:00Z', 'America/Los_Angeles');
+  dayKey('UTC 23:59:59', '2026-10-10T23:59:59Z', 'UTC');
+  dayKey('UTC midnight', '2026-10-11T00:00:00Z', 'UTC');
+  dayKey('Kolkata 23:59 IST (UTC+05:30)', '2026-10-10T18:29:00Z', 'Asia/Kolkata');
+  dayKey('Kolkata 00:00 IST', '2026-10-10T18:30:00Z', 'Asia/Kolkata');
+
+  // From ranking timestamps + profile timezone + "now" to the streak, as touch_streak / the reset cron see it.
+  const streak = (name: string, timestamps: string[], timeZone: string, now: string, period: StreakPeriod = 'day') => {
+    const keys = [...new Set(timestamps.map((t) => localPeriodKey(t, timeZone, period)))].sort();
+    const todayKey = localPeriodKey(now, timeZone, period);
+    cases.push({ name, fn: 'streakFromTimestamps', input: { timestamps, timeZone, now, period }, expected: { periodKeys: keys, todayKey, ...computeStreak(keys, todayKey, period) } });
+  };
+  streak('LA: four nights at 23:30 across the spring-forward change, ranked today', ['2026-03-07T07:30:00Z', '2026-03-08T07:30:00Z', '2026-03-09T06:30:00Z', '2026-03-10T06:30:00Z'], 'America/Los_Angeles', '2026-03-10T06:45:00Z');
+  streak('LA: the 25-hour fall-back day, two rankings, alive from yesterday', ['2026-10-31T19:00:00Z', '2026-11-01T07:30:00Z', '2026-11-02T07:30:00Z'], 'America/Los_Angeles', '2026-11-02T18:00:00Z');
+  streak('LA: a ranking at 23:59 local keeps the streak, the next one at 00:01 extends it', ['2026-10-09T18:00:00Z', '2026-10-11T06:59:00Z', '2026-10-11T07:01:00Z'], 'America/Los_Angeles', '2026-10-11T20:00:00Z');
+  streak('UTC: the same instants as the previous case', ['2026-10-09T18:00:00Z', '2026-10-11T06:59:00Z', '2026-10-11T07:01:00Z'], 'UTC', '2026-10-11T20:00:00Z');
+  streak('UTC: two rankings in one day count once', ['2026-10-10T08:00:00Z', '2026-10-10T21:00:00Z', '2026-10-11T09:00:00Z'], 'UTC', '2026-10-11T23:00:00Z');
+  streak('UTC: alive but not extended yet', ['2026-10-08T12:00:00Z', '2026-10-09T12:00:00Z', '2026-10-10T12:00:00Z'], 'UTC', '2026-10-11T12:00:00Z');
+  streak('UTC: broken two days ago, longest kept', ['2026-10-01T12:00:00Z', '2026-10-02T12:00:00Z', '2026-10-03T12:00:00Z', '2026-10-09T12:00:00Z'], 'UTC', '2026-10-11T12:00:00Z');
+  streak('Kolkata: 23:59 IST and 00:01 IST are two days', ['2026-10-10T18:29:00Z', '2026-10-10T18:31:00Z'], 'Asia/Kolkata', '2026-10-11T05:00:00Z');
+  streak('Kolkata: ranked today only', ['2026-10-11T03:00:00Z'], 'Asia/Kolkata', '2026-10-11T18:29:00Z');
+  streak('no rankings', [], 'UTC', '2026-10-11T12:00:00Z');
+  streak('weekly: three ISO weeks across the new year', ['2026-12-23T12:00:00Z', '2026-12-31T12:00:00Z', '2027-01-05T12:00:00Z'], 'UTC', '2027-01-12T12:00:00Z', 'week');
+
+  const keys = (name: string, periodKeys: string[], todayKey: string, period: StreakPeriod = 'day') =>
+    cases.push({ name, fn: 'computeStreak', input: { periodKeys, todayKey, period }, expected: computeStreak(periodKeys, todayKey, period) });
+  keys('empty', [], '2026-10-11');
+  keys('today only', ['2026-10-11'], '2026-10-11');
+  keys('duplicates count once', ['2026-10-10', '2026-10-11', '2026-10-11'], '2026-10-11');
+  keys('across a month end and a leap day', ['2028-02-28', '2028-02-29', '2028-03-01'], '2028-03-01');
+  keys('longest run earlier than the current one', ['2026-09-01', '2026-09-02', '2026-09-03', '2026-10-10', '2026-10-11'], '2026-10-11');
+  keys('keys after today are ignored', ['2026-10-11', '2026-10-12'], '2026-10-11');
+  keys('weekly: W53 to W01', ['2026-W52', '2026-W53', '2027-W01'], '2027-W01', 'week');
+  return cases;
+}
+
+// ---------------------------------------------------------------- rank points
+
+function rankPointsCases(): Case[] {
+  const cases: Case[] = [];
+  for (const [name, a] of [
+    ['all zero', { bevsRanked: 0, currentStreak: 0, bevsCreated: 0 }],
+    ['ranked only', { bevsRanked: 12, currentStreak: 0, bevsCreated: 0 }],
+    ['streak weighs 3', { bevsRanked: 0, currentStreak: 1, bevsCreated: 0 }],
+    ['adopted creations weigh 2', { bevsRanked: 0, currentStreak: 0, bevsCreated: 1 }],
+    ['everything', { bevsRanked: 40, currentStreak: 4, bevsCreated: 2 }],
+  ] as Array<[string, { bevsRanked: number; currentStreak: number; bevsCreated: number }]>) {
+    cases.push({ name, fn: 'rankPoints', input: a, expected: rankPoints(a) });
+  }
+  const row = (userId: string, bevsRanked: number, currentStreak: number, bevsCreated: number, createdAt: string): RankUsersRow => ({ userId, bevsRanked, currentStreak, bevsCreated, createdAt });
+  const boards: Array<[string, RankUsersRow[]]> = [
+    ['ties share a rank and the next rank skips; tie order bevsRanked desc then createdAt asc', [
+      row('carol', 10, 0, 0, '2026-10-01T00:00:00Z'),
+      row('arjun', 4, 2, 0, '2026-10-03T00:00:00Z'),
+      row('bob', 10, 0, 0, '2026-09-30T00:00:00Z'),
+      row('matt', 20, 5, 1, '2026-10-05T00:00:00Z'),
+      row('dana', 3, 0, 0, '2026-10-01T00:00:00Z'),
+    ]],
+    ['users with bevsRanked = 0 are Unranked: left out and not counted', [
+      row('ghost', 0, 0, 5, '2026-09-01T00:00:00Z'),
+      row('one', 1, 1, 0, '2026-10-01T00:00:00Z'),
+      row('two', 2, 0, 0, '2026-10-01T00:00:00Z'),
+    ]],
+    ['equal points, bevsRanked and createdAt fall back to userId', [
+      row('u-b', 5, 0, 0, '2026-10-01T00:00:00Z'),
+      row('u-a', 5, 0, 0, '2026-10-01T00:00:00Z'),
+    ]],
+    ['empty', []],
+  ];
+  for (const [name, rows] of boards) cases.push({ name, fn: 'rankUsers', input: { rows }, expected: rankUsers(rows) });
+  return cases;
+}
+
 // ---------------------------------------------------------------- write / check
 
 const files: Record<string, Case[]> = {
@@ -254,6 +349,8 @@ const files: Record<string, Case[]> = {
   'user-stats.vectors.json': userStatsCases(),
   'bayesian.vectors.json': bayesianCases(),
   'placement.vectors.json': placementCases(),
+  'streak.vectors.json': streakCases(),
+  'rank-points.vectors.json': rankPointsCases(),
 };
 
 const check = process.argv.includes('--check');

@@ -706,7 +706,7 @@ display order: points desc, bevsRanked desc, createdAt asc
 ### 8.14 Streaks
 
 - Day key = the calendar date of `ranking.created_at` in the user's profile timezone (IANA, captured at onboarding, editable in settings). SQL twin: `(created_at AT TIME ZONE profile.timezone)::date`. Day boundary = local midnight; DST handled by the tz conversion; a user who changes timezone gets their streak recomputed under the new zone (accepted).
-- `computeStreak(dayKeys: string[] (unique 'YYYY-MM-DD'), todayKey) → { current, longest, lastDay }`:
+- `computeStreak(dayKeys: string[] (unique 'YYYY-MM-DD'), todayKey) → { current, longest, lastKey }`:
   - `current`: walk back from `todayKey`; if today is in the set start at today, else if yesterday is in the set start at yesterday (streak alive but not extended yet), else 0; count consecutive days.
   - `longest`: longest consecutive run anywhere.
 - Multiple rankings in one day count once. Re-ranks count (they are rankings). Removals don't retroactively break a streak (the comparison rows remain; the streak is computed from `rankings` rows plus a `ranking_events` log on Arjun's side if they prefer; see §18).
@@ -722,7 +722,7 @@ Constraints agreed with Arjun for seam 5 (Arjun bundles `packages/ranking/src/in
 - ESM only, zero I/O, no Node or DOM APIs (no `Buffer`, `process`, `fetch`, `Date.now()`, `Math.random()`); `lib: ["ES2022"]`, no `@types/node`.
 - Plain relative imports with extensions that esbuild resolves (`./score.ts` style or extensionless, pick one and lint it); **no tsconfig path aliases**, no workspace imports except `shared/` types via `import type`.
 - Randomness is always a seed passed in (`prng.ts` mulberry32 + a string hash).
-- `export const RANKING_VERSION = "1.0.0"` from `index.ts`, equal to the `version` field written into every vectors file; Arjun's Edge Function logs it and the snapshot carries it.
+- `export const RANKING_VERSION = "1.1.0"` from `index.ts`, equal to the `version` field written into every vectors file; Arjun's Edge Function logs it and the snapshot carries it.
 - A CI job on your side runs the same esbuild bundle command (`esbuild src/index.ts --bundle --format=esm --platform=neutral`) as a smoke test so a Node-only import fails in your PR, not in Arjun's.
 
 ```
@@ -782,7 +782,7 @@ export function selectStarterSet(candidates: StarterCandidate[], opts: { k?: num
 export function rankPoints(a: { bevsRanked: number; currentStreak: number; bevsCreated: number }): number;
 export function rankUsers(rows: Array<{ userId; bevsRanked; currentStreak; bevsCreated; createdAt }>): Array<{ userId; points; rank }>;
 export function computeStreak(periodKeys: string[], todayKey: string, period: 'day' | 'week' = 'day'): { current: number; longest: number; lastKey: string | null };
-export const RANKING_VERSION: string;                                              // "1.0.0"; equals the vectors' version field
+export const RANKING_VERSION: string;                                              // "1.1.0"; equals the vectors' version field
 export function localDayKey(isoTimestamp: string, timeZone: string): string;   // Intl-based; only used by the app and tests
 ```
 

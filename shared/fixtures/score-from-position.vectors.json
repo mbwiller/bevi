@@ -1,7 +1,7 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "constants": {
-    "version": "1.0.0",
+    "version": "1.1.0",
     "bands": {
       "DISLIKED": [
         0,
@@ -37,9 +37,39 @@
     "bayesC": 3,
     "bayesCategoryPriorMin": 30,
     "minRaters": 2,
+    "kG": 3,
+    "rankPointsWeights": {
+      "bevsRanked": 1,
+      "currentStreak": 3,
+      "bevsCreated": 2
+    },
+    "streakPeriod": "day",
+    "simWeights": {
+      "category": 0.4,
+      "brand": 0.3,
+      "flavor": 0.2,
+      "tier": 0.1
+    },
+    "simMin": 0.1,
+    "layer1Weights": {
+      "affinity": 0.4,
+      "content": 0.4,
+      "global": 0.2
+    },
+    "conf1UserN": 10,
+    "conf1Mass": 4,
+    "cfK": 10,
+    "cfMinCommon": 2,
+    "cfSignificance": 5,
+    "lambdaMax": 0.7,
+    "lambdaUserN": 15,
+    "epsilon": 0.15,
+    "jitterSd": 0.15,
     "storedScoreRule": "cents = floor((2N + D) / (2D)) with D = n + 1, N = 100*(hi*D - (hi - lo)*(index + 1)); capped at hi*100 - 1 for FINE and DISLIKED; storedScore = cents / 100",
     "stddev": "population (stddev_pop)",
-    "nameOrder": "code point (SQL collate \"C\"), then bevId"
+    "nameOrder": "code point (SQL collate \"C\"), then bevId",
+    "streakDayKey": "calendar date of the ranking instant in the profile timezone: (created_at AT TIME ZONE timezone)::date; week = ISO week of that date (YYYY-Www)",
+    "rankOrder": "points desc, bevsRanked desc, createdAt asc, userId asc; rank = 1 + count(points > mine); bevsRanked = 0 excluded"
   },
   "cases": [
     {
