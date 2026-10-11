@@ -126,37 +126,37 @@ export const EXTRA_USERS: readonly ExtraUser[] = [
   {
     handle: 'jules', displayName: 'Jules Moreau', password: 'password123', birthdate: '1994-09-30',
     timezone: 'America/New_York', joinedDaysAgo: 60, taste: { soda: 0.8, diet_soda: -0.6, energy: 0.3, juice: 0.2 },
-    rankings: 28, streakDays: 5, follows: ['priya_k', 'sam', 'demo', 'nina'],
+    rankings: 55, streakDays: 5, follows: ['priya_k', 'sam', 'demo', 'nina'],
     wantToTry: [{ bevId: 'mock-gong-cha-taro', via: 'maya' }, { bevId: 'reeds-ginger-beer' }],
   },
   {
     handle: 'priya_k', displayName: 'Priya Kapoor', password: 'password123', birthdate: '1998-02-14',
     timezone: 'America/Los_Angeles', joinedDaysAgo: 55, taste: { sparkling_water: 0.9, tea: 0.6, soda: -0.4, diet_soda: 0.3 },
-    rankings: 22, streakDays: 3, follows: ['jules', 'maya', 'demo'],
+    rankings: 40, streakDays: 3, follows: ['jules', 'maya', 'demo'],
     wantToTry: [{ bevId: 'mock-health-ade-pink-lady' }],
   },
   {
     handle: 'sam', displayName: 'Sam Okafor', password: 'password123', birthdate: '1992-11-03',
     timezone: 'America/Chicago', joinedDaysAgo: 50, taste: { energy: 0.7, sports: 0.6, soda: 0.3, water: -0.3 },
-    rankings: 20, streakDays: 0, follows: ['jules', 'theo'],
+    rankings: 45, streakDays: 0, follows: ['jules', 'theo'],
     wantToTry: [{ bevId: 'mock-ghost-sour-patch', via: 'theo' }],
   },
   {
     handle: 'maya', displayName: 'Maya Chen', password: 'password123', birthdate: '2000-06-21',
     timezone: 'America/Los_Angeles', joinedDaysAgo: 45, taste: { coffee: 0.8, boba: 0.9, tea: 0.4, soda: -0.2 },
-    rankings: 18, streakDays: 1, follows: ['priya_k', 'demo', 'nina'],
+    rankings: 35, streakDays: 1, follows: ['priya_k', 'demo', 'nina'],
     wantToTry: [{ bevId: 'mock-la-colombe-draft-latte' }],
   },
   {
     handle: 'theo', displayName: 'Theo Park', password: 'password123', birthdate: '2008-05-01',
     timezone: 'America/Denver', joinedDaysAgo: 30, taste: { energy: 0.6, sports: 0.8, soda: 0.5, juice: 0.3 },
-    rankings: 15, streakDays: 4, follows: ['sam', 'jules'],
+    rankings: 35, streakDays: 4, follows: ['sam', 'jules'],
     wantToTry: [{ bevId: 'mock-celsius-sparkling-orange', via: 'sam' }],
   },
   {
     handle: 'nina', displayName: 'Nina Alvarez', password: 'password123', birthdate: '1990-01-08',
     timezone: 'Europe/London', joinedDaysAgo: 35, taste: { beer: 0.6, wine: 0.7, spirits_cocktails: 0.4, diet_soda: 0.5, soda: -0.3 },
-    rankings: 20, streakDays: 0, follows: ['maya', 'jules'],
+    rankings: 40, streakDays: 0, follows: ['maya', 'jules'],
     wantToTry: [{ bevId: 'mock-cutwater-margarita' }],
   },
 ];

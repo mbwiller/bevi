@@ -70,7 +70,7 @@ describe('fixtures through the API', () => {
     expect((await api.leaderboard.users()).items.length).toBeGreaterThan(3);
     const stats = await api.stats.getMine();
     expect(stats.following).toBe(4);
-    expect(stats).toMatchObject({ currentStreak: 2, longestStreak: 2, streakAliveToday: true });
+    expect(stats).toMatchObject({ currentStreak: 2, longestStreak: 3, streakAliveToday: true });
     const recs = await api.recs.getRecommendations();
     expect(recs.items.length).toBeGreaterThan(5);
     expect(recs.rankingVersion).toBe(RANKING_VERSION);
@@ -138,7 +138,7 @@ describe('persistence', () => {
     await a.wantToTry.add('pepsi');
     const later = make(storage, new Date(FIXED_NOW.getTime() + 9 * 24 * 60 * 60 * 1000));
     expect((await later.wantToTry.list()).items.map((w) => w.bev.id)).toContain('pepsi');
-    expect(await later.stats.getMine()).toMatchObject({ currentStreak: 0, longestStreak: 2, streakAliveToday: false });
+    expect(await later.stats.getMine()).toMatchObject({ currentStreak: 0, longestStreak: 3, streakAliveToday: false });
   });
 
   it('falls back to fixtures when the stored db is corrupt', async () => {

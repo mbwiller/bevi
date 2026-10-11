@@ -93,7 +93,10 @@ it('locks the prediction below 3 rankings', async () => {
   controls.emptyUser();
   await open(rec.bev.id);
   expect(await screen.findByText('Rank 3 Bevs to see your prediction')).toBeTruthy();
-  expect(screen.getByLabelText('Score hidden')).toBeTruthy();
+  // The Bevi-score tile can independently be locked too (not enough global ratings on this Bev);
+  // assert on the specific prediction lock this test is about, now that each tile's lock carries a
+  // distinct label (ScoreBubble's `context` prop) instead of two indistinguishable "Score hidden"s.
+  expect(screen.getByLabelText('Your score hidden')).toBeTruthy();
 });
 
 it('not_found shows an empty state', async () => {

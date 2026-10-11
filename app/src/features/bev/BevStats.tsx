@@ -45,19 +45,24 @@ export function BevStats({ bev, myRankingCount }: { bev: Bev; myRankingCount: nu
         label="Bevi score"
         meta={bev.ratingCount === 0 ? 'Be the first' : ratings(bev.ratingCount)}
       >
-        <ScoreBubble size={56} score={bev.bayesScore} count={bev.bayesScore != null ? bev.ratingCount : undefined} />
+        <ScoreBubble
+          size={56}
+          score={bev.bayesScore}
+          count={bev.bayesScore != null ? bev.ratingCount : undefined}
+          context="Bevi score"
+        />
       </StatTile>
       {mine ? (
         <StatTile label="Your score" meta={`#${mine.position + 1} in ${BUCKET_SHORT[mine.bucket]}`}>
-          <ScoreBubble size={56} score={mine.score} bucket={mine.bucket} />
+          <ScoreBubble size={56} score={mine.score} bucket={mine.bucket} context="Your score" />
         </StatTile>
       ) : hasPrediction ? (
         <StatTile label="You'd rate it" meta="from your tastes">
-          <ScoreBubble size={56} score={prediction.score} variant="predicted" />
+          <ScoreBubble size={56} score={prediction.score} variant="predicted" context="Your score" />
         </StatTile>
       ) : (
         <StatTile label="You'd rate it" meta={tooFew ? PREDICTION_LOCKED : 'Not enough to go on yet'}>
-          <ScoreBubble size={56} variant="locked" />
+          <ScoreBubble size={56} variant="locked" context="Your score" />
         </StatTile>
       )}
     </View>
