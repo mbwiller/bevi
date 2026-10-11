@@ -1,32 +1,15 @@
-import { Link } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Redirect } from 'expo-router';
 
-import { Wordmark } from '@/components/Wordmark';
-import { size, spacing, type, useTheme } from '@/theme';
+import { useSession, type SessionStatus } from '@/state/session';
 
-// Placeholder until the session gate and tabs land (task 1.3): the dev screens.
+const HOME = {
+  signedOut: '/sign-in',
+  onboarding: '/onboarding/profile',
+  ready: '/feed',
+} as const satisfies Record<SessionStatus, string>;
+
+/** `/` and the fallback for any route the session doesn't allow: on to the status's home. */
 export default function Index() {
-  const { colors } = useTheme();
-  const link = [type.bodyLarge, styles.link, { color: colors.primary }];
-  return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: colors.surface }]}>
-      <View style={styles.content}>
-        <Wordmark height={40} />
-        <Link href="/dev/gallery" style={link} accessibilityLabel="Component gallery">
-          Component gallery
-        </Link>
-        <Link href="/dev/tokens" style={link} accessibilityLabel="Token preview">
-          Token preview
-        </Link>
-        <Text style={[type.caption, { color: colors.textSecondary }]}>Dev screens. The app shell replaces this page.</Text>
-      </View>
-    </SafeAreaView>
-  );
+  const status = useSession((s) => s.status);
+  return <Redirect href={HOME[status]} />;
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1 },
-  content: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.lg, padding: spacing.gutter },
-  link: { minHeight: size.target, paddingVertical: spacing.md, fontWeight: '600' },
-});
