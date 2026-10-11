@@ -4,6 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { createBeviApi } from '../src/index.ts';
 import type { AuthStorageAdapter } from '../src/client.ts';
+import { randomTestUsername } from './testUsername.ts';
 
 const url = process.env.SUPABASE_URL;
 const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
@@ -20,8 +21,7 @@ function memoryStorage(): AuthStorageAdapter {
 describe.skipIf(!url || !publishableKey)('streak + rank points, against a live local stack', () => {
   it('a first-ever ranking gives a 1-day streak and the matching leaderboard points', async () => {
     const api = createBeviApi({ url: url!, publishableKey: publishableKey!, authStorage: memoryStorage() });
-    // HANDLE_PATTERN caps usernames at 20 chars -- no extra suffix here.
-    const username = `vitest_${Date.now().toString(36)}`;
+    const username = randomTestUsername();
 
     await api.signUp({ username, password: 'correct-horse-battery-staple', inviteCode: 'local-test-invite-code' });
     await api.profile.setBirthDate('1990-01-01');

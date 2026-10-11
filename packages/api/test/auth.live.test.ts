@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { createBeviApi } from '../src/index.ts';
 import type { AuthStorageAdapter } from '../src/client.ts';
+import { randomTestUsername } from './testUsername.ts';
 
 const url = process.env.SUPABASE_URL;
 const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
@@ -23,7 +24,7 @@ describe.skipIf(!url || !publishableKey)('auth, against a live local stack', () 
   it('signs up, is signed in, signs out, and the account can be deleted', async () => {
     const api = createBeviApi({ url: url!, publishableKey: publishableKey!, authStorage: memoryStorage() });
     // Matches seed.sql's local-only invite_code row -- see supabase/seed.sql.
-    const username = `vitest_${Date.now().toString(36)}`;
+    const username = randomTestUsername();
 
     const signedUp = await api.signUp({ username, password: 'correct-horse-battery-staple', inviteCode: 'local-test-invite-code' });
     expect(signedUp.handle).toBe(username);
@@ -41,7 +42,7 @@ describe.skipIf(!url || !publishableKey)('auth, against a live local stack', () 
 
   it('rejects a bad invite code as validation, not a generic error', async () => {
     const api = createBeviApi({ url: url!, publishableKey: publishableKey!, authStorage: memoryStorage() });
-    const username = `vitest_${Date.now().toString(36)}_bad`;
+    const username = randomTestUsername();
     await expect(api.signUp({ username, password: 'correct-horse-battery-staple', inviteCode: 'wrong-code' })).rejects.toMatchObject({
       code: 'validation',
     });
