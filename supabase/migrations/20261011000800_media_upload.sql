@@ -57,8 +57,12 @@ grant execute on function public.assert_upload_rate() to authenticated;
 -- there's nothing to overwrite; deletion isn't part of this ticket.
 -- =====================================================================
 
-alter table storage.objects enable row level security;
-
+-- No `alter table storage.objects enable row level security` here:
+-- Supabase ships that table with RLS already enabled, and `postgres`
+-- doesn't own it (confirmed live in CI -- "must be owner of table
+-- objects", 42501), so the statement is both redundant and unauthorized.
+-- `create policy` on it is the standard, officially-documented Supabase
+-- pattern and doesn't require ownership.
 create policy storage_bev_photos_insert on storage.objects
   for insert to authenticated with check (
     bucket_id = 'bev-photos' and (storage.foldername(name))[1] = auth.uid()::text
