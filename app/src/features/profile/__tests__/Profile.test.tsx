@@ -5,6 +5,7 @@ import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/te
 import { api, mockControls } from '@/api/client';
 import ProfileScreen from '@/app/(tabs)/profile/index';
 import UserProfileScreen from '@/app/user/[id]/index';
+import { streakCardValue } from '@/features/profile/copy';
 
 const controls = mockControls!;
 let client: QueryClient;
@@ -38,6 +39,21 @@ async function open(url: string) {
   return { path: () => result.getPathnameWithParams() };
 }
 
+// Pin "now" (Date only; timers stay real) so demo's seeded streak and predictions are the same on
+// any day and in any timezone the tests run.
+const FIXED_NOW = new Date('2026-10-11T16:00:00Z');
+beforeAll(() => {
+  jest.useFakeTimers({
+    now: FIXED_NOW,
+    doNotFake: [
+      'hrtime', 'nextTick', 'performance', 'queueMicrotask', 'requestAnimationFrame', 'cancelAnimationFrame',
+      'requestIdleCallback', 'cancelIdleCallback', 'setImmediate', 'clearImmediate', 'setInterval', 'clearInterval',
+      'setTimeout', 'clearTimeout',
+    ],
+  });
+});
+afterAll(() => jest.useRealTimers());
+
 beforeEach(() => {
   client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false, gcTime: Infinity } },
@@ -67,8 +83,8 @@ describe('own profile', () => {
     expect(screen.getByLabelText(`Want to Try, ${stats.wantToTryCount}`)).toBeTruthy();
     expect(screen.getByLabelText('Recommended for you')).toBeTruthy();
     expect(screen.getByLabelText(`Rank on Bevi, #${stats.rankOnBevi} · ${stats.rankPoints} pts`)).toBeTruthy();
-    // Streaks aren't computed yet (the mock returns 0).
-    expect(screen.getByLabelText('Current streak, Rank today to start')).toBeTruthy();
+    expect(stats.currentStreak).toBe(2); // demo ranked today and yesterday (seed, pinned clock)
+    expect(screen.getByLabelText(`Current streak, ${streakCardValue(stats, true)}`)).toBeTruthy();
     expect((await screen.findAllByText(latest.bev.name)).length).toBeGreaterThan(0);
 
     await fireEvent.press(screen.getByLabelText(`Want to Try, ${stats.wantToTryCount}`));

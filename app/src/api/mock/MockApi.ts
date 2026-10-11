@@ -112,6 +112,9 @@ const UPLOAD_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'
 /** Default time the mock's "background removal" takes before a bev photo is 'ready'. */
 const PHOTO_PROCESSING_MS = 3000;
 
+/** Writes that only change the session; they leave seeded fixtures "clean" (see MockDb.dirty). */
+const SESSION_ONLY_METHODS = new Set(['signIn', 'signOut']);
+
 export type Latency = number | readonly [min: number, max: number];
 
 export interface MockApiOptions {
@@ -187,7 +190,15 @@ export class MockApi implements BeviApi {
     this.clock = options.now ?? (() => new Date());
     this.photoProcessingMs = options.photoProcessingMs ?? PHOTO_PROCESSING_MS;
     this.latency = MockApi.toRange(options.latency ?? [200, 600]);
-    this.db = loadDb(this.storage) ?? buildFixtures(this.clock());
+    const stored = loadDb(this.storage);
+    if (stored && stored.dirty !== false) {
+      this.db = stored;
+    } else {
+      // Untouched fixtures are rebuilt for today (timestamps are relative to now), keeping the session.
+      this.db = buildFixtures(this.clock());
+      const session = stored?.sessionUserId;
+      if (session && this.db.users.some((u) => u.id === session)) this.db.sessionUserId = session;
+    }
     saveDb(this.storage, this.db);
   }
 
@@ -223,6 +234,7 @@ export class MockApi implements BeviApi {
     this.wipeUserData(me.id);
     me.onboarded = false;
     me.birthdate = null;
+    this.db.dirty = true;
     this.commit();
   }
 
@@ -254,7 +266,10 @@ export class MockApi implements BeviApi {
       fail(f!.code, `Mock failure on ${method} (failNext)`);
     }
     const result = fn();
-    if (write) this.commit();
+    if (write) {
+      if (!SESSION_ONLY_METHODS.has(method)) this.db.dirty = true;
+      this.commit();
+    }
     return clone(result);
   }
 

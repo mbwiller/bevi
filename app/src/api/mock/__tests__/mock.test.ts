@@ -20,7 +20,9 @@ const memoryStorage = (): StorageLike & { data: Map<string, string> } => {
   };
 };
 
-const make = (storage: StorageLike | null = null) => new MockApi({ storage, latency: 0 });
+/** Every test runs on a pinned clock, so streaks and "today" never depend on the real date. */
+const FIXED_NOW = new Date('2026-10-11T16:00:00Z');
+const make = (storage: StorageLike | null = null, now: Date = FIXED_NOW) => new MockApi({ storage, latency: 0, now: () => now });
 
 async function signInDemo(api: MockApi) {
   return api.signIn({ username: DEMO_HANDLE, password: DEMO_PASSWORD });
@@ -68,6 +70,7 @@ describe('fixtures through the API', () => {
     expect((await api.leaderboard.users()).items.length).toBeGreaterThan(3);
     const stats = await api.stats.getMine();
     expect(stats.following).toBe(4);
+    expect(stats).toMatchObject({ currentStreak: 2, longestStreak: 2, streakAliveToday: true });
     const recs = await api.recs.getRecommendations();
     expect(recs.items.length).toBeGreaterThan(5);
     expect(recs.rankingVersion).toBe(RANKING_VERSION);
@@ -118,6 +121,24 @@ describe('persistence', () => {
     expect(storage.data.has(STORAGE_KEY)).toBe(true);
     const b = make(storage);
     expect(await b.getSession()).toMatchObject({ handle: 'persisted' });
+  });
+
+  it('re-seeds untouched fixtures for today, so the demo keeps its streak on later days', async () => {
+    const storage = memoryStorage();
+    await signInDemo(make(storage));
+    const later = make(storage, new Date(FIXED_NOW.getTime() + 9 * 24 * 60 * 60 * 1000));
+    expect(await later.getSession()).toMatchObject({ handle: 'demo' });
+    expect(await later.stats.getMine()).toMatchObject({ currentStreak: 2, streakAliveToday: true });
+  });
+
+  it('keeps a db with real changes as it is, so it ages like real data', async () => {
+    const storage = memoryStorage();
+    const a = make(storage);
+    await signInDemo(a);
+    await a.wantToTry.add('pepsi');
+    const later = make(storage, new Date(FIXED_NOW.getTime() + 9 * 24 * 60 * 60 * 1000));
+    expect((await later.wantToTry.list()).items.map((w) => w.bev.id)).toContain('pepsi');
+    expect(await later.stats.getMine()).toMatchObject({ currentStreak: 0, longestStreak: 2, streakAliveToday: false });
   });
 
   it('falls back to fixtures when the stored db is corrupt', async () => {
