@@ -89,7 +89,7 @@ The comparison approach is well known and not hard to implement. Our version:
 
 1. **Gut check.** After trying a Bev, the user picks one of three buckets: *Loved it* / *It was fine* / *Didn't like it*.
 2. **Pairwise placement.** Bevi shows the new Bev next to one the user already ranked in that bucket and asks "Which was better?" Using **binary search** over the user's ordered list for that bucket, it finds the exact slot in about log₂(n) comparisons (≈ 4–7 taps even for a long list).
-3. **Score from position.** Each bucket maps to a score band (e.g. Loved 6.7–10, Fine 3.4–6.7, Didn't like 0–3.4). A Bev's score is interpolated from its position within its bucket. Inserting a new Bev re-spaces scores in that bucket.
+3. **Score from position.** Each bucket maps to a score band: Loved 7–10, Fine 4–7, Didn't like 0–4 (Beli-style; decided 2026-10-09). A Bev's score is interpolated from its position within its bucket. Inserting a new Bev re-spaces scores in that bucket.
 4. **Store both** the ordered position and the derived 0–10 score per user per Bev, plus the raw comparisons (useful later for re-ranking and for the recommendation model).
 
 Optional later: periodically re-check a few close pairs to correct drift.
@@ -239,7 +239,7 @@ Rules of thumb:
 
 - Exact category list and whether alcohol ships in v1 (needs 21+ age gate).
 - How to source seed images legally and consistently (manufacturer images, own photos, or generated).
-- Score band boundaries for the three buckets.
+- ~~Score band boundaries for the three buckets.~~ Decided 2026-10-09: Loved 7–10, Fine 4–7, Didn't like 0–4.
 - What counts toward "rank on Bevi" — volume, streak, followers, or a mix?
 - Moderation for user-added Bevs and photos (duplicates, junk entries).
 - Logo and brand colors.

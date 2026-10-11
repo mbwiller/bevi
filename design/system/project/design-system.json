@@ -1,0 +1,460 @@
+{
+  "v": 3,
+  "layout": "files",
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-10-10T02:54:31Z"
+  },
+  "title": "Bevi",
+  "namespace": "Bevi",
+  "libraries": [
+    {
+      "name": "react",
+      "version": "18"
+    },
+    {
+      "name": "react-dom",
+      "version": "18"
+    }
+  ],
+  "sections": {},
+  "groups": [
+    "Logos",
+    "Icons"
+  ],
+  "assetGroups": {
+    "Logos": {
+      "name": "Logos",
+      "tile": "l",
+      "order": [
+        "wordmark.svg",
+        "wordmark-dark.svg",
+        "wordmark-white.svg",
+        "app-icon.svg",
+        "app-icon-1024.png"
+      ],
+      "files": {
+        "wordmark.svg": {
+          "name": "wordmark.svg",
+          "blob": "bf02ed06ede448ca1ac70ffa63cff329",
+          "size": 2267,
+          "type": "image/svg+xml"
+        },
+        "wordmark-dark.svg": {
+          "name": "wordmark-dark.svg",
+          "blob": "12d434bd427b1d86d7b432af25257026",
+          "size": 2267,
+          "type": "image/svg+xml"
+        },
+        "wordmark-white.svg": {
+          "name": "wordmark-white.svg",
+          "blob": "b4c95c7dea485f14320f5269e8bbe64f",
+          "size": 2267,
+          "type": "image/svg+xml"
+        },
+        "app-icon.svg": {
+          "name": "app-icon.svg",
+          "blob": "de2a91e5b4d87c3b9ad421cd0568ffc0",
+          "size": 1356,
+          "type": "image/svg+xml"
+        },
+        "app-icon-1024.png": {
+          "name": "app-icon-1024.png",
+          "blob": "6d037d013d83480fe612f63c90e0eeba",
+          "size": 19663,
+          "type": "image/png"
+        }
+      }
+    },
+    "Icons": {
+      "name": "Icons",
+      "tile": "s",
+      "order": [
+        "arrow-up-down.svg",
+        "banana.svg",
+        "beer.svg",
+        "bookmark.svg",
+        "camera.svg",
+        "candy-off.svg",
+        "chart-no-axes-column.svg",
+        "check.svg",
+        "chevron-down.svg",
+        "chevron-left.svg",
+        "chevron-right.svg",
+        "circle-check.svg",
+        "circle-plus.svg",
+        "citrus.svg",
+        "clock.svg",
+        "coffee.svg",
+        "cup-soda.svg",
+        "droplets.svg",
+        "dumbbell.svg",
+        "ellipsis.svg",
+        "file-text.svg",
+        "flame.svg",
+        "frown.svg",
+        "glass-water.svg",
+        "globe.svg",
+        "heart.svg",
+        "image.svg",
+        "laugh.svg",
+        "leaf.svg",
+        "list-filter.svg",
+        "list.svg",
+        "lock.svg",
+        "martini.svg",
+        "meh.svg",
+        "menu.svg",
+        "milk.svg",
+        "newspaper.svg",
+        "plus.svg",
+        "refresh-cw.svg",
+        "search.svg",
+        "settings.svg",
+        "share.svg",
+        "sparkles.svg",
+        "triangle-alert.svg",
+        "trophy.svg",
+        "undo-2.svg",
+        "user-plus.svg",
+        "user.svg",
+        "users.svg",
+        "wifi-off.svg",
+        "wine.svg",
+        "x.svg",
+        "zap.svg"
+      ],
+      "files": {
+        "arrow-up-down.svg": {
+          "name": "arrow-up-down.svg",
+          "blob": "593f24723a123450d1e415c9a047f4f3",
+          "size": 276,
+          "type": "image/svg+xml"
+        },
+        "banana.svg": {
+          "name": "banana.svg",
+          "blob": "5f6e0572194ee38477dbca54e4027b53",
+          "size": 387,
+          "type": "image/svg+xml"
+        },
+        "beer.svg": {
+          "name": "beer.svg",
+          "blob": "13286d079b8cd078cede2627307a2a49",
+          "size": 491,
+          "type": "image/svg+xml"
+        },
+        "bookmark.svg": {
+          "name": "bookmark.svg",
+          "blob": "0e3f2ff4b8c808ac66729f852dc6bc16",
+          "size": 247,
+          "type": "image/svg+xml"
+        },
+        "camera.svg": {
+          "name": "camera.svg",
+          "blob": "0149254be65614ae6aa51337be46c043",
+          "size": 318,
+          "type": "image/svg+xml"
+        },
+        "candy-off.svg": {
+          "name": "candy-off.svg",
+          "blob": "3f6d6404c3eb5b15fe4d384df4881705",
+          "size": 608,
+          "type": "image/svg+xml"
+        },
+        "chart-no-axes-column.svg": {
+          "name": "chart-no-axes-column.svg",
+          "blob": "53e51e298ea40190b528dd878b478991",
+          "size": 300,
+          "type": "image/svg+xml"
+        },
+        "check.svg": {
+          "name": "check.svg",
+          "blob": "1a348fb5dbad599b3057a0edc10541b4",
+          "size": 211,
+          "type": "image/svg+xml"
+        },
+        "chevron-down.svg": {
+          "name": "chevron-down.svg",
+          "blob": "9f3910c62df430f6401e93bb4a6cee2d",
+          "size": 208,
+          "type": "image/svg+xml"
+        },
+        "chevron-left.svg": {
+          "name": "chevron-left.svg",
+          "blob": "71b363c2dc5a405a5dfc73dc450d0f13",
+          "size": 210,
+          "type": "image/svg+xml"
+        },
+        "chevron-right.svg": {
+          "name": "chevron-right.svg",
+          "blob": "1549e51c8d94bf661a60eba7b8676ec8",
+          "size": 209,
+          "type": "image/svg+xml"
+        },
+        "circle-check.svg": {
+          "name": "circle-check.svg",
+          "blob": "cb9a3cc5420223c400cdfbbb6458729c",
+          "size": 242,
+          "type": "image/svg+xml"
+        },
+        "circle-plus.svg": {
+          "name": "circle-plus.svg",
+          "blob": "ad87fccb83d164e162eef7d782361732",
+          "size": 256,
+          "type": "image/svg+xml"
+        },
+        "citrus.svg": {
+          "name": "citrus.svg",
+          "blob": "332673ccab6ff877702b8490de721fca",
+          "size": 380,
+          "type": "image/svg+xml"
+        },
+        "clock.svg": {
+          "name": "clock.svg",
+          "blob": "cc8fc5d2e6541906fb3307cee25de4ce",
+          "size": 254,
+          "type": "image/svg+xml"
+        },
+        "coffee.svg": {
+          "name": "coffee.svg",
+          "blob": "3471ca1151a62ff3be7363892ff1c8b2",
+          "size": 342,
+          "type": "image/svg+xml"
+        },
+        "cup-soda.svg": {
+          "name": "cup-soda.svg",
+          "blob": "ec0e5027b8339f6d08e769e06e0e36bb",
+          "size": 357,
+          "type": "image/svg+xml"
+        },
+        "droplets.svg": {
+          "name": "droplets.svg",
+          "blob": "f539c125bcee381c3939a7dc4d2bb871",
+          "size": 441,
+          "type": "image/svg+xml"
+        },
+        "dumbbell.svg": {
+          "name": "dumbbell.svg",
+          "blob": "cb0f3042b9a8613c605fa45a5eafd9eb",
+          "size": 579,
+          "type": "image/svg+xml"
+        },
+        "ellipsis.svg": {
+          "name": "ellipsis.svg",
+          "blob": "c48b4dea6026e4004aa64872e3c0a009",
+          "size": 278,
+          "type": "image/svg+xml"
+        },
+        "file-text.svg": {
+          "name": "file-text.svg",
+          "blob": "bca5ee15ccf04e4e6b6f3f56fcbe6b62",
+          "size": 352,
+          "type": "image/svg+xml"
+        },
+        "flame.svg": {
+          "name": "flame.svg",
+          "blob": "296bf735d24daea520ad434e68d1f7c0",
+          "size": 365,
+          "type": "image/svg+xml"
+        },
+        "glass-water.svg": {
+          "name": "glass-water.svg",
+          "blob": "0835be9604ef7f93d3939994a7dd1c75",
+          "size": 350,
+          "type": "image/svg+xml"
+        },
+        "globe.svg": {
+          "name": "globe.svg",
+          "blob": "7cb0ea219cbf7252713803a4a1438e08",
+          "size": 297,
+          "type": "image/svg+xml"
+        },
+        "heart.svg": {
+          "name": "heart.svg",
+          "blob": "5b17077e644300fb54be0b93b88ae23d",
+          "size": 332,
+          "type": "image/svg+xml"
+        },
+        "image.svg": {
+          "name": "image.svg",
+          "blob": "d594bbf914003f4bff8497fe750d4b8e",
+          "size": 324,
+          "type": "image/svg+xml"
+        },
+        "leaf.svg": {
+          "name": "leaf.svg",
+          "blob": "7b3b9ec4e67105a51e42cd77fc687d4c",
+          "size": 337,
+          "type": "image/svg+xml"
+        },
+        "list-filter.svg": {
+          "name": "list-filter.svg",
+          "blob": "d3e4b645237f1ffc7c40bdf043482731",
+          "size": 245,
+          "type": "image/svg+xml"
+        },
+        "list.svg": {
+          "name": "list.svg",
+          "blob": "6723d60387eb710f7ba223586f9a374c",
+          "size": 310,
+          "type": "image/svg+xml"
+        },
+        "lock.svg": {
+          "name": "lock.svg",
+          "blob": "78f563417c95a0130fbb007eb26a86ae",
+          "size": 278,
+          "type": "image/svg+xml"
+        },
+        "martini.svg": {
+          "name": "martini.svg",
+          "blob": "b1f0588583368f23722aaca9b0c58ae0",
+          "size": 252,
+          "type": "image/svg+xml"
+        },
+        "menu.svg": {
+          "name": "menu.svg",
+          "blob": "5583a156af9b32420e78958ce9f95fa0",
+          "size": 298,
+          "type": "image/svg+xml"
+        },
+        "milk.svg": {
+          "name": "milk.svg",
+          "blob": "941e53df0574404f8ee82ed98e571d18",
+          "size": 428,
+          "type": "image/svg+xml"
+        },
+        "newspaper.svg": {
+          "name": "newspaper.svg",
+          "blob": "49eadf4eb034552d7313a3271807373e",
+          "size": 377,
+          "type": "image/svg+xml"
+        },
+        "plus.svg": {
+          "name": "plus.svg",
+          "blob": "3f9db4a06886e6581f2731f4fd5d6467",
+          "size": 225,
+          "type": "image/svg+xml"
+        },
+        "refresh-cw.svg": {
+          "name": "refresh-cw.svg",
+          "blob": "6ba79fc9b5d4ffa2f188789ffccc2f42",
+          "size": 355,
+          "type": "image/svg+xml"
+        },
+        "search.svg": {
+          "name": "search.svg",
+          "blob": "a971f3022949c75c1edaa704b05cd4c3",
+          "size": 242,
+          "type": "image/svg+xml"
+        },
+        "settings.svg": {
+          "name": "settings.svg",
+          "blob": "130fbe4b2b005250c9a109dd78ec2fd3",
+          "size": 793,
+          "type": "image/svg+xml"
+        },
+        "share.svg": {
+          "name": "share.svg",
+          "blob": "1068d48b558a0adb4309fb7c0e23e2ac",
+          "size": 311,
+          "type": "image/svg+xml"
+        },
+        "sparkles.svg": {
+          "name": "sparkles.svg",
+          "blob": "d774d49dce9728c644e55a1f5d4a8191",
+          "size": 528,
+          "type": "image/svg+xml"
+        },
+        "triangle-alert.svg": {
+          "name": "triangle-alert.svg",
+          "blob": "fe0c0799ccccb0bae0d350cd859ebac7",
+          "size": 311,
+          "type": "image/svg+xml"
+        },
+        "trophy.svg": {
+          "name": "trophy.svg",
+          "blob": "6e186b7ea250ed87fcda8f68537a25d7",
+          "size": 471,
+          "type": "image/svg+xml"
+        },
+        "undo-2.svg": {
+          "name": "undo-2.svg",
+          "blob": "820efeb857c3ea83e48e24750106ca79",
+          "size": 278,
+          "type": "image/svg+xml"
+        },
+        "user-plus.svg": {
+          "name": "user-plus.svg",
+          "blob": "a46eba954f8ab36f0f719768d0daf82d",
+          "size": 346,
+          "type": "image/svg+xml"
+        },
+        "user.svg": {
+          "name": "user.svg",
+          "blob": "40241b400edd17f23677de136a1f9faa",
+          "size": 268,
+          "type": "image/svg+xml"
+        },
+        "users.svg": {
+          "name": "users.svg",
+          "blob": "4a1c80e897d3808676cc7f4118d26f9a",
+          "size": 344,
+          "type": "image/svg+xml"
+        },
+        "wifi-off.svg": {
+          "name": "wifi-off.svg",
+          "blob": "de3035608515ab2c77d2b162d12f075e",
+          "size": 448,
+          "type": "image/svg+xml"
+        },
+        "wine.svg": {
+          "name": "wine.svg",
+          "blob": "579c33e58228acf6bffea82c59fc6752",
+          "size": 323,
+          "type": "image/svg+xml"
+        },
+        "x.svg": {
+          "name": "x.svg",
+          "blob": "e00e1a255d6587b9f0f8715b5efe17d1",
+          "size": 229,
+          "type": "image/svg+xml"
+        },
+        "zap.svg": {
+          "name": "zap.svg",
+          "blob": "92958dd6c4f51588a67478ce57faf967",
+          "size": 351,
+          "type": "image/svg+xml"
+        },
+        "laugh.svg": {
+          "name": "laugh.svg",
+          "blob": "066f01c5f05d36c28e402717b21ce810",
+          "size": 347,
+          "type": "image/svg+xml"
+        },
+        "meh.svg": {
+          "name": "meh.svg",
+          "blob": "884fbf5d0a90d568584031dfa9bba964",
+          "size": 335,
+          "type": "image/svg+xml"
+        },
+        "frown.svg": {
+          "name": "frown.svg",
+          "blob": "e22724890c69a8950724612736521a14",
+          "size": 334,
+          "type": "image/svg+xml"
+        }
+      }
+    }
+  },
+  "blobs": {},
+  "docs": {
+    "readme": "project/README.md",
+    "sections": []
+  },
+  "lastChange": {
+    "by": "Matt Willer",
+    "at": "2026-10-10T03:23:32Z",
+    "via": "Claude Code",
+    "note": "Score bands now 7 / 4; BucketButton gains a tint fallback for non-glass platforms"
+  }
+}
