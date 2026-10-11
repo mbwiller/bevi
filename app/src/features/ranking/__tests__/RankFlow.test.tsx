@@ -7,9 +7,9 @@ import { api, mockControls } from '@/api/client';
 import { RankFlow } from '../RankFlow';
 
 const mockBack = jest.fn();
-jest.mock('expo-router', () => ({
-  useRouter: () => ({ canGoBack: () => true, back: mockBack, replace: jest.fn(), push: jest.fn() }),
-}));
+const mockReplace = jest.fn();
+const mockRouter = { canGoBack: () => true, back: mockBack, replace: mockReplace, push: jest.fn() };
+jest.mock('expo-router', () => ({ useRouter: () => mockRouter }));
 
 const controls = mockControls!;
 
@@ -29,6 +29,7 @@ afterEach(() => {
   client.clear();
   jest.restoreAllMocks();
   mockBack.mockClear();
+  mockReplace.mockClear();
 });
 
 /** Unranked, non-alcoholic Bevs for demo. */
@@ -46,10 +47,10 @@ async function unranked(n: number): Promise<BevSummary[]> {
   return out;
 }
 
-async function renderRank(bevId: string) {
+async function renderRank(bevId: string, detailIfRanked = false) {
   await render(
     <QueryClientProvider client={client}>
-      <RankFlow bevId={bevId} />
+      <RankFlow bevId={bevId} detailIfRanked={detailIfRanked} />
     </QueryClientProvider>,
   );
 }
@@ -190,4 +191,87 @@ it('shows "Not available" for an age-restricted Bev', async () => {
   await renderRank('any-bev');
   expect(await screen.findByText('Not available')).toBeTruthy();
   expect(screen.queryByLabelText('Retry')).toBeNull();
+});
+
+/** Runs to the note step in Loved (always preferring the new Bev). */
+async function toNote(bev: BevSummary) {
+  await renderRank(bev.id);
+  await chooseBucket('Loved it');
+  await answerAllNewBetter(bev.name);
+}
+
+it('a conflict without detail on a Bev ranked elsewhere switches to rerankBev', async () => {
+  const [bev] = await unranked(1);
+  const loved = await api.rankings.listBucket('LOVED');
+  const submit = jest.spyOn(api.rankings, 'submitRanking');
+  const rerank = jest.spyOn(api.rankings, 'rerankBev');
+  await toNote(bev!);
+
+  // Another device ranks this Bev in Fine; the server answers a bare conflict (no detail).
+  const fine = await api.rankings.listBucket('FINE');
+  await api.rankings.submitRanking({ bevId: bev!.id, bucket: 'FINE', insertIndex: 0, expectedBucketSize: fine.length, comparisons: [] });
+  submit.mockClear();
+  submit.mockRejectedValueOnce(new ApiError('conflict', 'Already ranked'));
+
+  await fireEvent.press(screen.getByLabelText('Save'));
+  await screen.findByText("Your list changed, let's redo this one");
+  await answerAllNewBetter(bev!.name);
+  await fireEvent.press(screen.getByLabelText('Save'));
+  await screen.findByText('Done');
+  expect(submit).toHaveBeenCalledTimes(1);
+  expect(rerank).toHaveBeenCalledTimes(1);
+  // The Bev is in Fine, so Loved's size is unchanged.
+  expect(rerank.mock.calls[0]![0]).toMatchObject({ bevId: bev!.id, bucket: 'LOVED', insertIndex: 0, expectedBucketSize: loved.length });
+});
+
+it('a conflict whose bucket refetch fails shows the error instead of restarting on the stale list', async () => {
+  const [bev] = await unranked(1);
+  const submit = jest.spyOn(api.rankings, 'submitRanking');
+  await toNote(bev!);
+  submit.mockRejectedValueOnce(new ApiError('conflict', 'Your list changed'));
+  jest.spyOn(api.rankings, 'listBucket').mockRejectedValue(new ApiError('network', 'offline'));
+
+  await fireEvent.press(screen.getByLabelText('Save'));
+  expect(await screen.findByText("You're offline")).toBeTruthy();
+  expect(screen.queryByText("Your list changed, let's redo this one")).toBeNull();
+  expect(screen.getByText('Add a note')).toBeTruthy();
+});
+
+it('a validation error on the note shows on the field and keeps the placement', async () => {
+  const [bev] = await unranked(1);
+  const submit = jest.spyOn(api.rankings, 'submitRanking');
+  await toNote(bev!);
+  submit.mockRejectedValueOnce(new ApiError('validation', 'Notes are up to 140 characters', { field: 'note' }));
+  await fireEvent.press(screen.getByLabelText('Save'));
+  expect(await screen.findByText('Notes are up to 140 characters')).toBeTruthy();
+  expect(screen.getByText('Add a note')).toBeTruthy();
+  await fireEvent.press(screen.getByLabelText('Save'));
+  await screen.findByText('Done');
+  expect(submit.mock.calls[1]![0]).toEqual(submit.mock.calls[0]![0]);
+});
+
+it('any other validation error restarts placement on a fresh list', async () => {
+  const [bev] = await unranked(1);
+  const submit = jest.spyOn(api.rankings, 'submitRanking');
+  const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  await toNote(bev!);
+  submit.mockRejectedValueOnce(new ApiError('validation', 'insertIndex out of range', { field: 'insertIndex' }));
+  await fireEvent.press(screen.getByLabelText('Save'));
+  await screen.findByText("That didn't go through, let's redo this one");
+  expect(warn).toHaveBeenCalled();
+  expect(screen.getByText('Which was better?')).toBeTruthy();
+});
+
+it('entered from a search tap (entry=search), an already-ranked Bev opens its detail', async () => {
+  const [target] = await api.rankings.listBucket('LOVED');
+  await renderRank(target!, true);
+  await waitFor(() => expect(mockReplace).toHaveBeenCalledWith({ pathname: '/bev/[id]', params: { id: target } }));
+  expect(screen.queryByText('How was it?')).toBeNull();
+});
+
+it('entered from a search tap, an unranked Bev goes straight to the gut check', async () => {
+  const [bev] = await unranked(1);
+  await renderRank(bev!.id, true);
+  expect(await screen.findByText('How was it?')).toBeTruthy();
+  expect(mockReplace).not.toHaveBeenCalled();
 });

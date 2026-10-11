@@ -24,7 +24,7 @@ beforeEach(() => {
   controls.resetToFixtures();
   controls.signInAs('demo');
   mockParams = {};
-  client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
+  client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { gcTime: Infinity } } });
 });
 
 afterEach(() => {
@@ -57,8 +57,42 @@ it('debounces typing into one search and lists the results', async () => {
   const first = (await search.mock.results[0]!.value).items[0];
   await fireEvent.press(screen.getByLabelText(`Rank ${first.name}`));
   expect(mockPush).toHaveBeenCalledWith({ pathname: '/rank/[bevId]', params: { bevId: first.id } });
-  await fireEvent.press(screen.getByRole('button', { name: first.name }));
-  expect(mockPush).toHaveBeenCalledWith({ pathname: '/bev/[id]', params: { id: first.id } });
+});
+
+it('tapping a result ranks it, or opens its detail when already ranked', async () => {
+  const items = (await api.bevs.search({ q: 'coke', limit: 25 })).items;
+  const details = await Promise.all(items.map((b) => api.bevs.get(b.id)));
+  const unranked = details.find((d) => !d.myRanking)!;
+  // Rank one so the list has a ranked row too.
+  const loved = await api.rankings.listBucket('LOVED');
+  const ranked = details.find((d) => d.id !== unranked.id && !d.myRanking)!;
+  await api.rankings.submitRanking({ bevId: ranked.id, bucket: 'LOVED', insertIndex: 0, expectedBucketSize: loved.length, comparisons: [] });
+
+  await renderSearch();
+  await fireEvent.changeText(screen.getByLabelText('Search a Bev, brand or flavor'), 'coke');
+  await screen.findAllByLabelText(/^Rank /);
+  // Each row reads its Bev's detail; wait for both rows to know.
+  await waitFor(() => expect(client.getQueryData(['bevi', 'bevs', 'detail', ranked.id])).toBeTruthy());
+  await waitFor(() => expect(client.getQueryData(['bevi', 'bevs', 'detail', unranked.id])).toBeTruthy());
+
+  await fireEvent.press(screen.getByRole('button', { name: unranked.name }));
+  expect(mockPush).toHaveBeenLastCalledWith({ pathname: '/rank/[bevId]', params: { bevId: unranked.id } });
+  await fireEvent.press(screen.getByRole('button', { name: ranked.name }));
+  expect(mockPush).toHaveBeenLastCalledWith({ pathname: '/bev/[id]', params: { id: ranked.id } });
+});
+
+it('the bookmark saves a result to Want to Try and back', async () => {
+  const add = jest.spyOn(api.wantToTry, 'add');
+  const remove = jest.spyOn(api.wantToTry, 'remove');
+  await renderSearch();
+  await fireEvent.changeText(screen.getByLabelText('Search a Bev, brand or flavor'), 'coke');
+  await screen.findAllByLabelText(/^Rank /);
+  const [save] = await screen.findAllByLabelText('Save to Want to Try');
+  await fireEvent.press(save!);
+  await waitFor(() => expect(add).toHaveBeenCalledTimes(1));
+  const [savedBtn] = await screen.findAllByLabelText('Saved to Want to Try');
+  await fireEvent.press(savedBtn!);
+  await waitFor(() => expect(remove).toHaveBeenCalledWith(add.mock.calls[0]![0]));
 });
 
 it('shows an empty state and a primary "Add a new Bev" when nothing matches', async () => {
@@ -102,13 +136,16 @@ it('remembers opened Bevs as Recents (in localStorage) and forgets them', async 
   const [rank] = await screen.findAllByLabelText(/^Rank /);
   const name = rank!.props.accessibilityLabel.replace(/^Rank /, '');
   await fireEvent.press(screen.getByRole('button', { name }));
-  expect(readRecents()[0]?.name).toBe(name);
+  expect(readRecents('mock-user-demo')[0]?.name).toBe(name);
+  // Another account on this browser has its own (empty) list.
+  expect(readRecents('mock-user-jules')).toEqual([]);
+  expect([...store.keys()]).toEqual(['bevi.add.recents:mock-user-demo']);
 
   await fireEvent.press(screen.getByLabelText('Clear search'));
   expect(await screen.findByText('Recents')).toBeTruthy();
   await fireEvent.press(screen.getByLabelText(`Forget ${name}`));
   expect(screen.queryByText('Recents')).toBeNull();
-  expect(readRecents()).toEqual([]);
+  expect(readRecents('mock-user-demo')).toEqual([]);
   g.localStorage = saved;
 });
 

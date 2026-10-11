@@ -4,7 +4,8 @@ import { useCallback, useState } from 'react';
 /** A Bev opened from search, as the Recents row shows it (name, brand) and links to it (id). */
 export type RecentBev = Pick<BevSummary, 'id' | 'name' | 'brand'>;
 
-const KEY = 'bevi.add.recents';
+/** One list per account, so people sharing a browser don't see each other's recents. */
+const keyFor = (userId: string) => `bevi.add.recents:${userId}`;
 /** Recents kept on this device. */
 export const RECENTS_MAX = 8;
 
@@ -27,10 +28,11 @@ function isRecent(v: unknown): v is RecentBev {
   return !!r && typeof r.id === 'string' && typeof r.name === 'string' && (r.brand === null || typeof r.brand === 'string');
 }
 
-/** The recents list, newest first. Empty when storage is missing, blocked or holds junk. */
-export function readRecents(): RecentBev[] {
+/** A user's recents, newest first. Empty with no user, or when storage is missing, blocked or holds junk. */
+export function readRecents(userId: string | undefined): RecentBev[] {
+  if (!userId) return [];
   try {
-    const raw = storage()?.getItem(KEY);
+    const raw = storage()?.getItem(keyFor(userId));
     const parsed: unknown = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed.filter(isRecent).slice(0, RECENTS_MAX) : [];
   } catch {
@@ -38,26 +40,39 @@ export function readRecents(): RecentBev[] {
   }
 }
 
-function write(list: RecentBev[]): void {
+function write(userId: string | undefined, list: RecentBev[]): void {
+  if (!userId) return;
   try {
-    storage()?.setItem(KEY, JSON.stringify(list));
+    storage()?.setItem(keyFor(userId), JSON.stringify(list));
   } catch {
     // Private mode or full storage: recents are a convenience, so drop the write.
   }
 }
 
-/** Per-device recent Bevs for the Add Bev idle state: remember on open, forget with the row's ✕. */
-export function useRecents() {
-  const [recents, setRecents] = useState<RecentBev[]>(readRecents);
-  const remember = useCallback((bev: RecentBev) => {
-    const next = [{ id: bev.id, name: bev.name, brand: bev.brand }, ...readRecents().filter((r) => r.id !== bev.id)].slice(0, RECENTS_MAX);
-    write(next);
-    setRecents(next);
-  }, []);
-  const forget = useCallback((id: string) => {
-    const next = readRecents().filter((r) => r.id !== id);
-    write(next);
-    setRecents(next);
-  }, []);
+/**
+ * Recent Bevs for the Add Bev idle state, per account on this device: remember on open, forget with
+ * the row's ✕. Nothing is kept until the signed-in user is known.
+ */
+export function useRecents(userId: string | undefined) {
+  const [state, setState] = useState(() => ({ userId, list: readRecents(userId) }));
+  // Re-read when the account changes (or becomes known).
+  const recents = state.userId === userId ? state.list : readRecents(userId);
+  if (state.userId !== userId) setState({ userId, list: recents });
+  const remember = useCallback(
+    (bev: RecentBev) => {
+      const next = [{ id: bev.id, name: bev.name, brand: bev.brand }, ...readRecents(userId).filter((r) => r.id !== bev.id)].slice(0, RECENTS_MAX);
+      write(userId, next);
+      setState({ userId, list: userId ? next : [] });
+    },
+    [userId],
+  );
+  const forget = useCallback(
+    (id: string) => {
+      const next = readRecents(userId).filter((r) => r.id !== id);
+      write(userId, next);
+      setState({ userId, list: next });
+    },
+    [userId],
+  );
   return { recents, remember, forget };
 }

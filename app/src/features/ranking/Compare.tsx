@@ -61,7 +61,7 @@ export function Compare({
     if (Platform.OS !== 'web' || !keysEnabled || typeof window === 'undefined') return;
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null;
-      if (e.metaKey || e.ctrlKey || e.altKey || el?.tagName === 'INPUT' || el?.tagName === 'TEXTAREA') return;
+      if (e.repeat || e.metaKey || e.ctrlKey || e.altKey || el?.tagName === 'INPUT' || el?.tagName === 'TEXTAREA') return;
       const k = e.key.toLowerCase();
       if (k === '1' || k === 'arrowup') onNewBetter();
       else if (k === '2' || k === 'arrowdown') {

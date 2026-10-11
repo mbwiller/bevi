@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { useBevSearch, useMe } from '@/api/hooks';
+import { useAddWantToTry, useBev, useBevSearch, useMe, useRemoveWantToTry } from '@/api/hooks';
 import { BevRow } from '@/components/BevRow';
 import { Button } from '@/components/Button';
 import { EmptyState } from '@/components/EmptyState';
@@ -25,16 +25,17 @@ const ADD_NEW = "Can't find it? Add a new Bev";
 
 /**
  * The Bevs tab of Add Bev (DEVELOPMENT-MATT §6.8, design system ScreenAddBev): outlined search,
- * debounced 250ms; Recents while idle; results as BevRows (tap → detail, plus → rank); a sticky
- * "Can't find it? Add a new Bev" that turns primary when nothing matches.
+ * debounced 250ms; Recents while idle; results as BevRows (tap → rank, or detail when already
+ * ranked; plus → rank; bookmark → Want to Try); a sticky "Can't find it? Add a new Bev" that turns
+ * primary when nothing matches.
  */
 export function BevSearch() {
   const router = useRouter();
   const { colors } = useTheme();
   const [q, setQ] = useState('');
   const query = useDebouncedValue(q.trim());
-  const { recents, remember, forget } = useRecents();
   const me = useMe();
+  const { recents, remember, forget } = useRecents(me.data?.id);
   const search = useBevSearch(query, undefined, { enabled: query.length > 0 });
 
   // The server already age-filters; this keeps the alcoholic three out even if a result slips through.
@@ -45,9 +46,14 @@ export function BevSearch() {
   const settled = !idle && query === q.trim();
   const noResults = settled && search.isSuccess && !search.isPlaceholderData && results.length === 0;
 
-  const openBev = (bev: RecentBev) => {
+  /**
+   * Tapping a Bev starts ranking it (§6.8), or opens its detail when you've already ranked it. Until
+   * the row knows (`ranked` undefined) the rank screen decides (`entry=search`).
+   */
+  const openBev = (bev: RecentBev, ranked?: boolean) => {
     remember(bev);
-    router.push({ pathname: '/bev/[id]', params: { id: bev.id } });
+    if (ranked) router.push({ pathname: '/bev/[id]', params: { id: bev.id } });
+    else router.push({ pathname: '/rank/[bevId]', params: ranked === false ? { bevId: bev.id } : { bevId: bev.id, entry: 'search' } });
   };
   const rankBev = (bev: BevSummary) => {
     remember(bev);
@@ -88,14 +94,7 @@ export function BevSearch() {
         keyExtractor={(b) => b.id}
         keyboardShouldPersistTaps="handled"
         renderItem={({ item }) => (
-          <BevRow
-            bev={item}
-            showImage
-            score={item.bayesScore}
-            count={item.ratingCount}
-            onPress={() => openBev(item)}
-            onRank={() => rankBev(item)}
-          />
+          <ResultRow bev={item} onOpen={(ranked) => openBev(item, ranked)} onRank={() => rankBev(item)} />
         )}
       />
     );
@@ -118,6 +117,29 @@ export function BevSearch() {
         </Button>
       </View>
     </View>
+  );
+}
+
+/**
+ * A search result. `BevSummary` has no per-viewer fields, so the row reads the Bev's detail
+ * (`useBev`, only for rows on screen) for the bookmark and whether you've ranked it.
+ */
+function ResultRow({ bev, onOpen, onRank }: { bev: BevSummary; onOpen: (ranked: boolean | undefined) => void; onRank: () => void }) {
+  const detail = useBev(bev.id);
+  const add = useAddWantToTry();
+  const remove = useRemoveWantToTry();
+  const saved = detail.data?.inWantToTry ?? false;
+  return (
+    <BevRow
+      bev={bev}
+      showImage
+      score={bev.bayesScore}
+      count={bev.ratingCount}
+      saved={saved}
+      onPress={() => onOpen(detail.data ? !!detail.data.myRanking : undefined)}
+      onRank={onRank}
+      onSave={() => (saved ? remove.mutate(bev.id) : add.mutate({ bevId: bev.id }))}
+    />
   );
 }
 
