@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { BUCKET_ORDER, RANKING_VERSION, storedScore } from '@bevi/ranking';
+import { BUCKET_ORDER, CONFIDENCE_LOCK, MIN_N_USER, RANKING_VERSION, rankUsers, storedScore } from '@bevi/ranking';
 import { isApiError, type Session } from '@bevi/shared';
 
 import { STORAGE_KEY, type StorageLike } from '../db';
@@ -71,8 +71,7 @@ describe('fixtures through the API', () => {
     const recs = await api.recs.getRecommendations();
     expect(recs.items.length).toBeGreaterThan(5);
     expect(recs.rankingVersion).toBe(RANKING_VERSION);
-    // TODO(rank/predict-streaks): predictions and streaks come from @bevi/ranking in a follow-up.
-    expect((await api.bevs.get(recs.items[0]!.bev.id)).prediction).toBeNull();
+    expect((await api.bevs.get(recs.items[0]!.bev.id)).prediction).not.toBeNull();
   });
 
   it('category leaderboard rows carry the board\'s Bayesian score on the Bev too', async () => {
@@ -191,5 +190,112 @@ describe('dev controls', () => {
     expect(await api.stats.getMine()).toMatchObject({ following: 0, followers: 0, bevdCount: 0 });
     expect(await api.profile.getMe()).toMatchObject({ onboarded: false, birthdate: null, canSeeAlcohol: false });
     expect((await api.recs.getRecommendations()).items).toEqual([]);
+  });
+});
+
+describe('@bevi/ranking-backed predictions, recommendations, streaks and points', () => {
+  const NOW = '2026-10-11T16:00:00Z';
+  const clocked = (iso: string) => {
+    const clock = { now: new Date(iso) };
+    const api = new MockApi({ storage: null, latency: 0, now: () => clock.now });
+    return { api, clock };
+  };
+  /** Ranks each Bev into its own (empty) bucket: no comparisons needed. Up to three. */
+  const rankInto = async (api: MockApi, bevId: string, i: number) =>
+    api.rankings.submitRanking({ bevId, bucket: BUCKET_ORDER[i]!, insertIndex: 0, expectedBucketSize: 0, comparisons: [] });
+
+  it('demo gets a prediction on an unranked Bev (above MIN_N_USER) and none on a ranked one', async () => {
+    const { api } = clocked(NOW);
+    await signInDemo(api);
+    const mine = (await api.rankings.listMine()).items;
+    expect(mine.length).toBeGreaterThanOrEqual(MIN_N_USER);
+    const ranked = new Set(mine.map((r) => r.bevId));
+    const unranked = (await api.bevs.search({ q: '', limit: 100 })).items.find((b) => !ranked.has(b.id))!;
+    const bev = await api.bevs.get(unranked.id);
+    expect(bev.prediction).toMatchObject({ rankingVersion: RANKING_VERSION, generatedAt: new Date(NOW).toISOString() });
+    expect(bev.prediction!.score).toBeGreaterThanOrEqual(0);
+    expect(bev.prediction!.score).toBeLessThanOrEqual(10);
+    expect(bev.prediction!.confidence).toBeGreaterThanOrEqual(0);
+    expect(bev.prediction!.confidence).toBeLessThanOrEqual(1);
+    expect((await api.bevs.get(mine[0]!.bevId)).prediction).toBeNull();
+  });
+
+  it('prediction is null below MIN_N_USER rankings and appears once the user reaches it', async () => {
+    const { api } = clocked(NOW);
+    await api.signUp({ username: 'predictor', password: 'password1', inviteCode: MOCK_INVITE_CODE });
+    const ids = (await api.bevs.getStarterCandidates()).map((b) => b.id);
+    const target = ids[MIN_N_USER]!;
+    for (let i = 0; i < MIN_N_USER; i++) {
+      expect((await api.bevs.get(target)).prediction).toBeNull();
+      await rankInto(api, ids[i]!, i);
+    }
+    expect((await api.bevs.get(target)).prediction).not.toBeNull();
+  });
+
+  it('demo\'s Recommended list has unlocked bubbles and is stable within a local day', async () => {
+    const { api, clock } = clocked('2026-10-11T12:00:00Z');
+    await signInDemo(api);
+    const morning = await api.recs.getRecommendations();
+    expect(morning.basedOnCount).toBe(12);
+    expect(morning.items.filter((r) => r.confidence >= CONFIDENCE_LOCK).length).toBeGreaterThan(3);
+    expect(morning.items.some((r) => r.isExploration)).toBe(true);
+    // 20:00Z is still 2026-10-11 in demo's America/New_York: same seed, same list.
+    clock.now = new Date('2026-10-11T20:00:00Z');
+    const evening = await api.recs.getRecommendations();
+    const strip = (items: typeof morning.items) => items.map(({ generatedAt: _g, ...rest }) => rest);
+    expect(strip(evening.items)).toEqual(strip(morning.items));
+    expect(evening.generatedAt).toBe('2026-10-11T20:00:00.000Z');
+  });
+
+  it('streaks count local days in the profile timezone and break after a missed day', async () => {
+    const { api, clock } = clocked('2026-10-12T03:00:00Z'); // 2026-10-11 23:00 in New York
+    await api.signUp({ username: 'streaker', password: 'password1', inviteCode: MOCK_INVITE_CODE });
+    await api.profile.updateMe({ timezone: 'America/New_York' });
+    const ids = (await api.bevs.getStarterCandidates()).map((b) => b.id);
+    await rankInto(api, ids[0]!, 0);
+    expect(await api.stats.getMine()).toMatchObject({ currentStreak: 1, longestStreak: 1, streakAliveToday: true });
+
+    clock.now = new Date('2026-10-12T14:00:00Z'); // same UTC day, but the next local day
+    expect(await api.stats.getMine()).toMatchObject({ currentStreak: 1, streakAliveToday: false });
+    await rankInto(api, ids[1]!, 1);
+    expect(await api.stats.getMine()).toMatchObject({ currentStreak: 2, longestStreak: 2, streakAliveToday: true });
+
+    clock.now = new Date('2026-10-14T14:00:00Z'); // 2026-10-13 missed
+    expect(await api.stats.getMine()).toMatchObject({ currentStreak: 0, longestStreak: 2, streakAliveToday: false });
+    await rankInto(api, ids[2]!, 2);
+    expect(await api.stats.getMine()).toMatchObject({ currentStreak: 1, longestStreak: 2, streakAliveToday: true });
+  });
+
+  it('removing today\'s ranking does not break the streak', async () => {
+    const { api } = clocked(NOW);
+    await api.signUp({ username: 'remover', password: 'password1', inviteCode: MOCK_INVITE_CODE });
+    const [id] = (await api.bevs.getStarterCandidates()).map((b) => b.id);
+    await rankInto(api, id!, 0);
+    await api.rankings.removeRanking(id!);
+    expect(await api.stats.getMine()).toMatchObject({ bevdCount: 0, currentStreak: 1, streakAliveToday: true });
+  });
+
+  it('the user leaderboard\'s order, ranks and points are rankUsers over the mock\'s data', async () => {
+    const now = new Date(NOW);
+    const { api } = clocked(NOW);
+    await signInDemo(api);
+    const db = buildFixtures(now);
+    const rows = [];
+    for (const u of db.users) {
+      const stats = await api.stats.getUser(u.id);
+      const created = new Set(db.bevs.filter((b) => b.createdById === u.id).map((b) => b.id));
+      const bevsCreated = new Set(db.rankings.filter((r) => r.userId !== u.id && created.has(r.bevId)).map((r) => r.bevId)).size;
+      rows.push({ userId: u.id, bevsRanked: stats.bevdCount, currentStreak: stats.currentStreak, bevsCreated, createdAt: u.createdAt });
+      if (stats.rankOnBevi !== null) expect(stats.rankPoints).toBeGreaterThan(0);
+    }
+    const expected = rankUsers(rows);
+    const board = (await api.leaderboard.users()).items;
+    expect(board.map((r) => ({ userId: r.profile.id, points: r.points, rank: r.rank }))).toEqual(expected);
+    for (const r of board) {
+      const stats = await api.stats.getUser(r.profile.id);
+      expect(stats).toMatchObject({ rankOnBevi: r.rank, rankPoints: r.points, currentStreak: r.currentStreak });
+    }
+    // The seed plants streaks (demo ranked today and yesterday).
+    expect((await api.stats.getMine()).currentStreak).toBeGreaterThanOrEqual(2);
   });
 });
