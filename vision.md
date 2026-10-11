@@ -152,7 +152,7 @@ Look and feel: very close to Beli's layout and gamified energy, with our own **B
   - **Want to Try (count)** → opens Your Lists › Want to Try
   - **Recommended for you** → opens Your Lists › Recommended *(most important link on the page)*
 - Below: scrollable feed of the user's past rankings
-- Settings in a corner menu (account, sign out). Location features are off; keep a minimal privacy/settings page since app stores require one.
+- Settings in a corner menu (account, sign out). Location features are off; keep a minimal privacy/settings page anyway.
 
 ### Bev detail page
 Photo, name, flavor, category, price tier, global score + rating count, **your predicted score**, friends who've had it, buttons for "Rank it" and "Want to Try."
@@ -170,8 +170,9 @@ Photo, name, flavor, category, price tier, global score + rating count, **your p
 
 ## 8. Tech direction
 
-- **Backend:** Supabase — Postgres for data, Auth for accounts, Storage for photos. Free tier should comfortably cover the first group of users (build for ~20 from day one, with room to grow).
-- **Mobile:** React Native with Expo (one codebase for iOS and Android).
+- **Backend:** Supabase — Postgres for data, Auth for accounts (username + password, sign-up gated by a shared invite code; no OAuth, no emails), Storage for photos. Free tier should comfortably cover the first group of users (build for ~20 from day one, with room to grow).
+- **App:** Expo (React Native) built for the web, hosted on Vercel and added to the iPhone home screen. No native builds, app stores or Android.
+- *Decided 2026-10-11:* web app only, for under 20 friends; replaces the earlier iOS/Android and Google sign-in plan.
 - **Images:** background removal on upload (service or on-device model).
 - **Recommendations:** start as SQL views/functions in Postgres for Layer 1; move Layer 2 to a scheduled job (Edge Function or small Python worker) when data justifies it.
 

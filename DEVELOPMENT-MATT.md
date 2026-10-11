@@ -2,6 +2,8 @@
 
 Written 2026-10-09 from `vision.md` (source of truth), `CONVERSATION.md` (raw founding chat) and the agreed work-split brief. Arjun's counterpart is `DEVELOPMENT-ARJUN.md`; the two documents share the ownership table and the five seams word for word. Where this doc goes beyond vision.md it says so, and §18 lists everything that should be folded back into vision.md.
 
+**Decided 2026-10-11 (Matt + Arjun): Bevi is a web app only.** The Expo app is built for the web (`expo export --platform web`), hosted on Vercel and added to the iPhone home screen; the backend stays Supabase. No native builds, EAS, App Store/TestFlight, Android, or Expo Go/dev client as a target. Under 20 users (friends), so sign-in is username + password gated by a shared invite code; no OAuth, no third-party services, no emails. Sections below are updated where this changed the plan.
+
 **Contents**
 
 1. Your lane: what you own
@@ -79,8 +81,8 @@ Vision §9 Phase 0 asks for "open-source mobile UI design skills/guidelines to u
 | `vercel-labs/agent-skills` → `skills/react-native-skills` (~32k stars repo) | Vercel's RN/Expo best practices: perf, animation (GPU-only props via Reanimated), native navigators | Load for every app agent; this is the performance checklist | Adopt |
 | `vercel-labs/agent-skills` → `web-design-guidelines` | Web-oriented design review rules | Skim once; most rules (touch targets, contrast, motion) transfer | Reference |
 | `gentleman-programming/gentleman-skills` → `react-native` (MIT) | Community RN/Expo project-structure skill | Compare its folder layout with §3; don't adopt wholesale | Reference |
-| Apple Human Interface Guidelines (developer.apple.com, free, not open source) | Tab bars, navigation, type sizes, 44pt targets, Dynamic Type | The baseline for all iOS measurements; Beli is an iOS-first app | Adopt |
-| Material 3 (m3.material.io, Apache-2.0 components) | Android equivalents | Only for Android-specific affordances (back behaviour, ripple) | Reference |
+| Apple Human Interface Guidelines (developer.apple.com, free, not open source) | Tab bars, navigation, type sizes, 44pt targets, Dynamic Type | The baseline for measurements; Bevi runs as a home-screen web app on iPhones | Adopt |
+| Material 3 (m3.material.io, Apache-2.0 components) | Android equivalents | Not needed: no Android target (decided 2026-10-11) | Skip |
 | `founded-labs/react-native-reusables` (MIT, ~8.7k) | shadcn/ui port for RN; copy-paste components on NativeWind | Only if you choose NativeWind (§3 recommends plain `StyleSheet` + tokens) | Optional |
 | `nativewind/nativewind` (MIT) | Tailwind for RN | See above | Optional |
 | `software-mansion/react-native-reanimated` (MIT) | Animations on the UI thread | Comparison-card transitions, tile presses | Adopt |
@@ -101,25 +103,27 @@ Not found: a dedicated, well-maintained open-source "mobile UI design guideline 
 
 | Piece | Choice | Notes |
 |---|---|---|
-| Expo | SDK 58 (current as of 2026-10-09: `expo@58.0.x`) with the New Architecture on (default) | FlashList v2 needs it |
-| Routing | Expo Router, route root moved to `app/src/app` via `plugins: [["expo-router", { "root": "./src/app" }]]` in `app.json` | Avoids `app/app/`. Verify the `root` option name against the SDK 58 docs before relying on it |
+| Platform | Web only (decided 2026-10-11): `expo export --platform web` → single-page app on Vercel (`app/vercel.json`), added to the iPhone home screen via the PWA manifest in `app/public/` | No native builds, EAS, App Store or Android |
+| Expo | SDK 57 (latest stable on 2026-10-10; 58 is canary) with the New Architecture on (default) | |
+| Routing | Expo Router, routes in `app/src/app` (picked up by default, no config) | Avoids `app/app/` |
 | Language | TypeScript strict, `"moduleResolution": "bundler"` | Same tsconfig base as `shared/` |
 | Styling | `StyleSheet.create` + tokens from `app/src/theme/`; no CSS-in-JS runtime | Fidelity to the Beli screenshots matters more than a component library. If you later want NativeWind, add it in one PR and keep tokens as the source of truth |
 | Server state | TanStack Query (`@tanstack/react-query`) with `BeviApi` methods as query/mutation functions | Keys in one file `app/src/api/keys.ts` |
 | Client state | Zustand, two stores: `session` (auth + profile) and `rankingFlow` (wraps the `@bevi/ranking` state machine) | Nothing else global |
 | Lists | `@shopify/flash-list` v2 | No `estimatedItemSize` in v2 |
 | Images | `expo-image` (`cachePolicy="memory-disk"`, `recyclingKey={bev.id}`, `contentFit="contain"`) | |
-| Camera/picker | `expo-camera` + `expo-image-picker` + `expo-image-manipulator` (resize to max 1600px, JPEG q0.85 before upload) | |
+| Camera/picker | `expo-image-picker` (on web: a file input with camera capture, so the iPhone offers camera or library) + `expo-image-manipulator` (resize to max 1600px, JPEG q0.85 before upload) | No `expo-camera` (decided 2026-10-11) |
 | Animation | `react-native-reanimated` + `react-native-gesture-handler` | |
-| Storage | `expo-secure-store` behind a small `authStorage` adapter (`getItem/setItem/removeItem`) that the app passes to `createBeviApi({ url, publishableKey, authStorage })`; `@react-native-async-storage/async-storage` for the mock's persistence and per-device prefs | `packages/api` builds the Supabase client itself; the app never imports supabase-js |
-| Tests | `jest-expo` + `@testing-library/react-native`; Maestro for e2e in Phase 3 | |
-| Builds | EAS Build + EAS Submit; `expo-dev-client` from day one | §7 |
+| Storage | `localStorage` (supabase-js's web default) behind a small `authStorage` adapter (`getItem/setItem/removeItem`) that the app passes to `createBeviApi({ url, publishableKey, authStorage })`; `@react-native-async-storage/async-storage` for the mock's persistence and per-device prefs | `packages/api` builds the Supabase client itself; the app never imports supabase-js |
+| Tests | `jest-expo` + `@testing-library/react-native`; browser e2e (e.g. Playwright) against the web build in Phase 3 | Maestro is native-only |
+| Builds | `expo export --platform web`, deployed by Vercel; no EAS, no dev client (decided 2026-10-11) | §7 |
+| Native-only APIs | Each needs a web path or is dropped: `expo-glass-effect` → translucent fallback; `expo-haptics` → no-op on web; `expo-secure-store` → localStorage. Check every library on web as its component is built | |
 
 ### Folder layout
 
 ```
 app/
-  app.json  eas.json  package.json  tsconfig.json  jest.config.js  CLAUDE.md
+  app.config.ts  vercel.json  public/  package.json  tsconfig.json  jest.config.js  CLAUDE.md
   src/
     app/                          expo-router routes (see navigation below)
     api/
@@ -137,7 +141,7 @@ app/
       add-bev/                    SearchBevs  DidYouMean  CreateBevWizard  CameraCapture  LabelCapture  PriceTierPicker
       onboarding/                 ProfileSetup  AgeGate  StarterRanking
       profile/                    ProfileHeader  StatsRow  TilesRow  UserRankingsList
-    lib/                          date (local day key), tz, format (score 1dp, counts), haptics, analytics (no-op v1)
+    lib/                          date (local day key), tz, format (score 1dp, counts), haptics (no-op on web), analytics (no-op v1)
     dev/                          ComponentGallery screen, mock controls (latency, fail-next), only in __DEV__
 ```
 
@@ -149,7 +153,7 @@ src/app/
   (auth)/
     sign-in.tsx  sign-up.tsx
   onboarding/
-    profile.tsx                    name, handle, birthdate (age gate), timezone captured silently
+    profile.tsx                    name, birthdate (age gate), timezone captured silently (handle = username from sign-up)
     starter.tsx                    starter-set ranking
   (tabs)/
     _layout.tsx                    5 tabs: feed | lists | add (center: filled circle with +, inline, not raised) | leaderboard | profile
@@ -171,13 +175,15 @@ Tab order and the centre "Add Bev" slot follow vision §6 ("replaces Beli's sear
 
 ### Auth and onboarding (screens yours, Supabase Auth config Arjun's)
 
-- The app never imports `@supabase/supabase-js`. `packages/api` exports `createBeviApi({ url, publishableKey, authStorage })`, builds the Supabase client itself, and exposes the auth surface `getSession`, `onAuthChange`, `signInWithGoogle(idToken)`, `signOut`, `deleteAccount`, implemented by Arjun on Supabase and by you in the mock.
-- **v1 sign-in is Google only (decided 2026-10-09).** No email/password, no magic link, so no emailed flows and no custom SMTP in v1.
-  - Flow: the native `@react-native-google-signin/google-signin` SDK returns an `idToken` → `api.signInWithGoogle(idToken)` → session. The app holds no Google secrets; the web client id is public config (`EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`), the iOS client id lives in the native config.
-  - Expo Go: native Google sign-in does not run in Expo Go. You need an EAS development build (`eas build --profile development`) from day one of auth work; the mock's `signInWithGoogle` lets every other screen keep working in Expo Go meanwhile.
-  - App Store Review 4.8: an app offering Google login must also offer Sign in with Apple. Google-only is fine for Android and internal TestFlight testers; **Sign in with Apple must be added before App Store submission, and possibly before external TestFlight beta review** (`expo-apple-authentication` → an `api.signInWithApple(idToken, nonce)` method added in a `contract/*` PR). Tracked as a pre-distribution gate in §15 and a risk in §18.
+- The app never imports `@supabase/supabase-js`. `packages/api` exports `createBeviApi({ url, publishableKey, authStorage })`, builds the Supabase client itself, and exposes the auth surface `signUp({ username, password, inviteCode })`, `signIn({ username, password })`, `getSession`, `onAuthChange`, `signOut`, `deleteAccount`, implemented by Arjun on Supabase and by you in the mock.
+- **Sign-in is username + password (decided 2026-10-11; replaces the 2026-10-09 Google-only plan).** No OAuth, no magic link, no third-party services.
+  - Flow: Supabase email/password auth; `packages/api` maps the username to a synthetic email (`<username>@users.bevi.app` or similar), internal only and never shown. "Confirm email" is off, so no SMTP and no emails at all.
+  - The username becomes the profile handle at sign-up, so handle rules apply on the sign-up form (lowercase, 3–20 chars, validated, reserved list, availability check).
+  - Sign-up needs the shared invite code; where it is checked (sign-up RPC, auth hook) is Arjun's call.
+  - No password-reset email: an admin resets a password from the Supabase dashboard.
+  - Session persists in `localStorage` through the `authStorage` adapter.
 - Session gate in the root layout: `signedOut → (auth)`; `signedIn && !profile.onboarded → onboarding`; else tabs. The gate reads one query, `api.profile.getMe()`.
-- Onboarding step 1 collects: display name, handle (live availability check via `api.profile.checkHandle`), birthdate (set once via `api.profile.setBirthDate`, §6.17), and silently `Intl.DateTimeFormat().resolvedOptions().timeZone`.
+- Onboarding step 1 collects: display name, birthdate (set once via `api.profile.setBirthDate`, §6.17), and silently `Intl.DateTimeFormat().resolvedOptions().timeZone`.
 - Onboarding step 2 is the starter ranking (§6.3). Minimum 3 ranked to continue; "I haven't had this" skips an item.
 
 ### The mock API and when to swap
@@ -282,19 +288,18 @@ What the reference adds that the vision lacks and we adopt: the Profile is rows 
 
 Common to every screen unless noted: loading = skeleton of the final layout; error = `ErrorState` with Retry and the message from `BeviApi` errors (`{ code, message, detail? }`, codes in §13); offline = top banner; pull-to-refresh on lists. Data is expressed in `BeviApi` terms (§13 has the method list). Header pattern (from the screenshots): 44pt row under the status bar, title left in 20pt bold (or the wordmark), 28pt icons right-aligned with 20pt spacing; list screens use a centred `sectionCaps` title ("MY LISTS" → "YOUR LISTS").
 
-### 6.1 Sign in (`(auth)/sign-in.tsx`) — Google only (decided 2026-10-09)
+### 6.1 Sign in / sign up (`(auth)/sign-in.tsx`, `(auth)/sign-up.tsx`) — username + password (decided 2026-10-11)
 
-- Purpose: get a session. Contents: wordmark centred in the top third, one-line tagline ("Rank every drink you've ever had"), a single "Continue with Google" button (Google's branded button via the SDK's `GoogleSigninButton` or a custom button that follows Google's branding rules), 13pt legal line linking to the privacy policy.
-- Data: `api.signInWithGoogle(idToken)` after `GoogleSignin.signIn()`; `api.onAuthChange` drives the root gate.
-- States: idle; signing in (button spinner, disabled); cancelled (user dismissed the Google sheet: return to idle silently); error (`network`, `unauthorized`, SDK errors such as Play Services missing on Android) → inline message + retry; already signed in → gate skips this screen.
-- Not in v1: email/password, magic links, sign-up form, password reset. Sign in with Apple is added as a second button before App Store / external TestFlight (§15 gate G1).
-- Runs only in an EAS development build (not Expo Go); the mock's `signInWithGoogle` accepts any token so Expo Go sessions still work for every other screen.
+- Purpose: get a session. Contents: wordmark centred in the top third, one-line tagline ("Rank every drink you've ever had"); sign in = username + password + "Sign in" `Pill filled`, link to sign up; sign up = username (`@`, lowercase, 3–20 chars, availability check debounced 400ms), password, invite code, "Create account"; 13pt legal line linking to the privacy policy.
+- Data: `api.signIn({ username, password })`, `api.signUp({ username, password, inviteCode })`, `profile.checkHandle(username)`; `api.onAuthChange` drives the root gate.
+- States: idle; submitting (button spinner, disabled); wrong username or password (`unauthorized`) → inline message; username taken / invalid; invite code wrong (`validation` from the server) → field error; `network` → inline message + retry; already signed in → gate skips this screen.
+- Forgot password: copy says "Ask an admin to reset it"; no reset email. Not in v1: OAuth, magic links, any email.
 
 ### 6.2 Onboarding: profile + age gate (`onboarding/profile.tsx`)
 
-- Contents: display name (prefilled from the Google profile), handle (`@`, lowercase, 3–20 chars, availability check debounced 400ms), birthdate (native date picker) with the line "Set once. Used only to show 21+ categories. Can't be changed later without contacting us."; `Avatar 100` preview with initials.
-- Data: `profile.checkHandle(handle)`, `profile.updateMe({ displayName, handle, timezone })`, `profile.setBirthDate(date)` (one call, one time; the server rejects a second call, only an admin can change it, Arjun's rule).
-- States: handle taken / invalid; birthdate missing blocks Continue; under-21 is allowed and just sets `profile.canSeeAlcohol = false`.
+- Contents: display name (prefilled from the username), birthdate (date picker) with the line "Set once. Used only to show 21+ categories. Can't be changed later without contacting us."; `Avatar 100` preview with initials.
+- Data: `profile.updateMe({ displayName, timezone })`, `profile.setBirthDate(date)` (one call, one time; the server rejects a second call, only an admin can change it, Arjun's rule).
+- States: birthdate missing blocks Continue; under-21 is allowed and just sets `profile.canSeeAlcohol = false`.
 
 ### 6.3 Onboarding: starter ranking (`onboarding/starter.tsx`)
 
@@ -353,12 +358,12 @@ Common to every screen unless noted: loading = skeleton of the final layout; err
 
 ### 6.10 Create new Bev wizard (`add/new`)
 
-- Step 1 Photo: `CameraCapture` (rear camera, framing guide "fill the frame, plain background helps"), or pick from library; preview; retake.
+- Step 1 Photo: `CameraCapture` = `expo-image-picker` (on web the iPhone offers camera or photo library; hint "fill the frame, plain background helps"); preview; retake.
 - Step 2 Details: name, flavor, brand/shop, category picker (sheet listing `categories.list()`, which is already age-filtered), price tier picker (four tappable `$` cells, plus "Not sure, estimate it" which sends `priceTier: null, priceEstimated: true` and lets the server estimate from the category).
 - Step 3 Did you mean…: triggered on leaving Step 2 (and live after 3 typed chars in name): `bevs.findLikelyDuplicates({ name, brand, flavor, categoryId })` → up to 5 `BevRow`s with "This is it" (jumps to ranking that Bev) vs "No, mine is different".
 - Step 4 Nutrition label (optional): capture or skip.
 - Submit: `media.upload({ kind: 'bev-photo', uri, mimeType })` → `{ assetId, url, status: 'processing' | 'ready' }`; `media.upload({ kind: 'label' })`; `bevs.create({ name, flavor, brand, categoryId, priceTier, priceEstimated, photoAssetId, labelAssetId })` → Bev; then the ranking flow immediately. `BevImage` shows the raw photo with the processing shimmer until `bevs.get(id).photoStatus === 'ready'` (poll 3s, max 60s, then show the raw photo silently).
-- States: upload failure (retry keeps the form), duplicate chosen, camera permission denied (explain + Open Settings), offline (block submit), `validation` from the server (field errors from `detail`).
+- States: upload failure (retry keeps the form), duplicate chosen, picker cancelled (stay on the step), offline (block submit), `validation` from the server (field errors from `detail`).
 
 ### 6.11 Bev detail (`bev/[id]`) (no reference screenshot)
 
@@ -438,9 +443,9 @@ Merged into the Add tab's **People** tab (§6.8), matching the reference's Resta
 
 ### 6.18 Settings, privacy, account deletion
 
-- Opened from the profile ▼ / gear as a sheet, then full screens: Account (email from Google, display name, handle, birthdate read-only, timezone override), Privacy (link to the policy screen; "Location: never collected"), About (version, licences), Sign out, Delete account.
-- Privacy policy: static markdown bundled in the app (`app/assets/privacy.md`), also published as a web page (GitHub Pages via `chore/*`) because App Store Connect requires a URL. The conversation's "we don't need no damn privacy page" is overridden (§17).
-- Delete account: Apple requires in-app account deletion. Screen explains what is deleted (rankings, comparisons, follows, Want to Try, profile; Bevs you created stay with `createdBy = null`), type `DELETE`, calls `api.deleteAccount()`, then `signOut`.
+- Opened from the profile ▼ / gear as a sheet, then full screens: Account (username = handle, display name, birthdate read-only, timezone override), Privacy (link to the policy screen; "Location: never collected"), About (version, licences), Sign out, Delete account.
+- Privacy policy: static markdown bundled in the app (`app/assets/privacy.md`), shown at `settings/privacy` (a plain URL now that the app is on the web). The conversation's "we don't need no damn privacy page" is overridden (§17).
+- Delete account: kept although no app store requires it now (friends should be able to leave). Screen explains what is deleted (rankings, comparisons, follows, Want to Try, profile; Bevs you created stay with `createdBy = null`), type `DELETE`, calls `api.deleteAccount()`, then `signOut`.
 
 ### 6.19 Small screens and sheets
 
@@ -474,13 +479,12 @@ Edit profile (name, handle, avatar initials preview); Re-rank sheet (choose: cha
 - Startup: lazy-load the camera and the create wizard; keep the JS bundle under control (check with `npx expo export --dump-sourcemap` + source-map-explorer once in Phase 3).
 - Budgets: Feed cold render < 1.5s on an iPhone 12 with warm cache; comparison tap → next card < 100ms; 60fps card transitions.
 
-### Builds and distribution to friends
+### Builds and distribution to friends (web only, decided 2026-10-11)
 
-- `eas.json` profiles: `development` (dev client, simulator + device), `preview` (internal distribution, `EXPO_PUBLIC_BEVI_API=supabase` against Arjun's staging project), `production`.
-- iOS: TestFlight via `eas build --profile preview --platform ios` + `eas submit`; up to 100 internal testers without review, external testers need a one-time Beta review. Needs an Apple Developer account ($99/yr) and the bundle id `com.bevi.app` (whose account, see §18). Android: `eas build --profile preview --platform android` produces an APK shared by link; Play internal testing in Phase 3.
-- Expo Go covers camera, image, router and every screen running against the mock. It does **not** run `@react-native-google-signin/google-signin`, so the real sign-in needs an EAS development build (`eas build --profile development --platform ios`, install on your phone, `npx expo start --dev-client`). Queue that build in week 1 so credentials and the Google iOS client id exist before auth work starts.
-- Env: `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` are read in `client.ts` and passed to `createBeviApi({ url, publishableKey, authStorage })`; `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` configures the Google SDK. Arjun provides the Supabase values via EAS secrets and `.env.local`; never committed. Service keys never exist in the app.
-- Distribution gate G1: Sign in with Apple must ship before App Store submission (and possibly before external TestFlight beta review, since reviewers apply 4.8 there too). Internal TestFlight (≤ 100 testers) and Android APKs are fine with Google only.
+- Build: `npx expo export --platform web` (from `app/`) → `app/dist/`; Vercel deploys it with `app/vercel.json` (project root directory `app`). Preview deploys per PR, production from `main`.
+- Install: friends open the URL in iPhone Safari → Share → Add to Home Screen; `app/public/manifest.json` and the icons make it open full-screen. No App Store, TestFlight, Apple Developer account, Android build or EAS.
+- Dev: `npm start -w app -- --web` in a desktop browser, and the LAN/preview URL in iPhone Safari for real-device checks.
+- Env: `EXPO_PUBLIC_BEVI_API`, `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` are read in `client.ts` and passed to `createBeviApi({ url, publishableKey, authStorage })`. Arjun provides the Supabase values; they live in Vercel project env vars and `.env.local`, never committed. Service keys never exist in the app.
 
 ---
 
@@ -848,7 +852,7 @@ Each formula has table tests mirroring §8's worked examples (so the doc and the
 
 - `jest-expo` + RNTL for components (`ScoreBubble` incl. `predicted`/`locked`, `PriceTier`, `FeedPost` ranked/bookmarked states) and for `useRankingFlow` (drives the state machine and the mock, including the `conflict` restart path).
 - Mock contract test: `app/src/api/mock.test.ts` runs the same `BeviApi` conformance suite Arjun runs against the real client (lives in `shared/testing/api-conformance.ts`, written jointly in contract v0). This is what makes mock→real a one-line swap.
-- Phase 3: Maestro flows for sign-in → rank → profile.
+- Phase 3: browser e2e flows (e.g. Playwright) against the web build for sign-in → rank → profile.
 
 ---
 
@@ -872,8 +876,8 @@ Each formula has table tests mirroring §8's worked examples (so the doc and the
 **Seam 1 — App ↔ backend.** The app imports only `shared/` types and the `BeviApi` interface. `packages/api` implements it on Supabase. You build every screen first against a mock (`app/src/api/mock.ts`, implements `BeviApi`, backed by `shared/fixtures`), so UI work is never blocked on the backend. TypeScript keeps the mock and the real client honest. Swapping mock→real is a one-line change.
 
 - You provide: the mock, the fixtures' *shape* needs, the `api-conformance` suite (joint), the one-line switch, and bug reports against `packages/api` phrased as failing conformance cases.
-- You need: `packages/api` exporting `createBeviApi({ url, publishableKey, authStorage }): BeviApi` with no React dependency (it builds the Supabase client itself; you pass an `expo-secure-store`-backed `authStorage` adapter for session persistence), generated DB types in `shared/src/db.types.ts`, env var names, a staging Supabase project with seed data.
-- By when: mock complete for Phase 1 screens by end of week 2 (2026-10-23); real client needed by the end of Phase 1 for TestFlight.
+- You need: `packages/api` exporting `createBeviApi({ url, publishableKey, authStorage }): BeviApi` with no React dependency (it builds the Supabase client itself; you pass a `localStorage`-backed `authStorage` adapter for session persistence), generated DB types in `shared/src/db.types.ts`, env var names, a staging Supabase project with seed data.
+- By when: mock complete for Phase 1 screens by end of week 2 (2026-10-23); real client needed by the end of Phase 1 for the first friends deploy on Vercel.
 
 **Seam 2 — Contract v0 is the first joint milestone.** You list the data each screen needs (§13); Arjun turns that into the schema + `BeviApi` methods; both approve one `contract/v0` PR. Nothing else merges into `shared/` before it.
 
@@ -938,11 +942,11 @@ This is your input to seam 2. Field names are proposals; Arjun owns the schema a
 
 | Namespace.method | Input → Output | Screens |
 |---|---|---|
-| `getSession() / onAuthChange(cb) / signInWithGoogle(idToken) / signOut() / deleteAccount()` | Google id token → session. No email/password, no magic link. `signInWithApple(idToken, nonce)` is added later in a `contract/*` PR before App Store submission | 6.1, 6.18 |
+| `signUp({ username, password, inviteCode }) / signIn({ username, password }) / getSession() / onAuthChange(cb) / signOut() / deleteAccount()` | username + password → session (synthetic email internal to `packages/api`); `signUp` also creates the profile with `handle = username` and rejects a wrong invite code with `validation`. No OAuth (decided 2026-10-11) | 6.1, 6.18 |
 | `profile.getMe()` | → `Profile` | root gate, 6.13 |
 | `profile.updateMe(patch)` | `{ displayName?, handle?, timezone?, onboarded? }` → `Profile` | 6.2, 6.3, 6.18 |
 | `profile.setBirthDate(date)` | set once; a second call is `validation`; admin-only change afterwards | 6.2 |
-| `profile.checkHandle(handle)` | → `{ available }` | 6.2 |
+| `profile.checkHandle(handle)` | → `{ available }`; callable signed out (sign-up form) | 6.1, 6.19 |
 | `profile.getUser(id)` / `searchUsers({ q, limit })` | → `Profile` / `Profile[]` | 6.14, 6.8 People tab |
 | `stats.getMine()` / `stats.getUser(id)` | → `ProfileStats` | 6.13, 6.14 |
 | `follows.follow(id) / unfollow(id)` | → void | 6.8, 6.14, 6.15 |
@@ -992,7 +996,7 @@ The mock loads all of them; Arjun's `seed.sql` loads the same files so staging a
 | Placement machine + `score-from-position` vectors | nothing | `submit_ranking` / `rerank_bev` RPCs + `respace_bucket()` SQL |
 | Stats + Bayesian vectors | nothing | aggregate triggers, leaderboard view |
 | Ranking flow screen | mock only; real end-to-end needs the `submit_ranking` and `rerank_bev` RPCs | Arjun's RPCs get a real client exercising `conflict` and `validation` |
-| Sign-in screen (Google) | EAS dev build with the Google iOS client id; Arjun's Supabase Google provider config | Arjun's `signInWithGoogle` gets real tokens |
+| Sign-in / sign-up screens | Arjun's `signUp`/`signIn` in `packages/api` (synthetic email, confirm-email off, invite-code check) | Arjun's auth path gets real sign-ups |
 | Add Bev / create wizard | mock; real needs `media.upload` + storage bucket + background removal job | Arjun's dedupe `findLikelyDuplicates` gets real inputs |
 | Feed, lists, leaderboard, profile screens | mock; real needs views + `getFeed`/`stats` RPCs | nothing |
 | Age-gate UI | `canSeeAlcohol` on `Profile`, `setBirthDate`, `age_restricted` in contract v0 | Arjun's RLS/view filtering spec |
@@ -1000,7 +1004,7 @@ The mock loads all of them; Arjun's `seed.sql` loads the same files so staging a
 | Recommended tab with real data | Edge Function serving `recs.getRecommendations` | nothing |
 | Streak / rank cards on Profile | streak + rank SQL passing your vectors | nothing; you unblock Arjun with the vectors |
 | Photo-style review (`design/photo-style.md`) | nothing | Arjun's Haiku image-seeding agents |
-| TestFlight build | staging Supabase project + env values | Arjun's first real-user data for the offline eval |
+| First Vercel deploy to friends | staging Supabase project + env values in Vercel | Arjun's first real-user data for the offline eval |
 | Onboarding starter screen | `bevs.getStarterCandidates()` in contract v0 | nothing (selection runs in the app) |
 
 ---
@@ -1013,7 +1017,7 @@ Tags follow vision §10: model / effort. Each row is one Claude Code sub-agent d
 
 | # | Task | DoD | Tag |
 |---|---|---|---|
-| 0.1 | Workspace scaffold (`chore/scaffold`, joint): root `package.json` workspaces, tsconfig base, vitest, CI skeleton; your parts: `app/` (create-expo-app, router root, eas.json), `packages/ranking/` skeleton | `npm install && npm run typecheck && npm test` green on an empty repo | Opus / High (architecture) for the layout decision, Haiku / Low for the boilerplate |
+| 0.1 | Workspace scaffold (`chore/scaffold`, joint): root `package.json` workspaces, tsconfig base, vitest, CI skeleton; your parts: `app/` (create-expo-app, router root), `packages/ranking/` skeleton | `npm install && npm run typecheck && npm test` green on an empty repo | Opus / High (architecture) for the layout decision, Haiku / Low for the boilerplate |
 | 0.2 | UI skills research (§2) | `design/research.md`, skills installed, CLAUDE.md references | Sonnet / Medium |
 | 0.3 | `app/CLAUDE.md`, `packages/ranking/CLAUDE.md`, `.claude/agents/ui-screen.md`, `ranking-math.md`, integrator adapted | Agents launch on the right model by default; integrator checks `shared/api.ts` + vectors | Haiku / Medium (docs), you review |
 | 0.4 | Per-screen specs from `bevi-ui-inspiration/` (§5): Feed, Lists (×3), Search, Profile, Activity post, Taste Profile | `design/specs/*.md` with pt measurements, component mapping and a "Bevi differences" list; you have reviewed each against its image | Sonnet / Medium (one agent per screen, worktrees) |
@@ -1028,7 +1032,7 @@ Tags follow vision §10: model / effort. Each row is one Claude Code sub-agent d
 | 1.1 | Mock API + fixtures + conformance suite | Every `BeviApi` method implemented; conformance green; dev panel | Sonnet / Medium |
 | 1.2 | Core components + `ComponentGallery` | All §4 components with every state visible in the gallery; a11y labels | Sonnet / Medium |
 | 1.3 | Root layout, session gate, tab navigator | 5 tabs, raised Add button, deep links `lists?tab=` work | Sonnet / Medium (one agent owns these files) |
-| 1.4 | Google sign-in screen + onboarding profile + `setBirthDate` age gate | "Continue with Google" → tabs end-to-end on mock in Expo Go and against staging in the dev build; cancel/error states; handle validation | Sonnet / Medium |
+| 1.4 | Sign-in / sign-up screens (username + password + invite code) + onboarding profile + `setBirthDate` age gate | Sign up → onboarding → tabs end-to-end on mock and against staging in the web build; wrong password / taken username / bad invite code states; handle validation | Sonnet / Medium |
 | 1.5 | Ranking flow (6.9) | All states incl. empty bucket, TIE, undo, `conflict` restart via `expectedBucketSize`, re-rank via `rerankBev`; prefetch | Sonnet / Medium; Opus / High reviews the state-machine wiring |
 | 1.6 | Starter ranking onboarding (6.3) | Min-3 rule, skip, summary | Sonnet / Medium |
 | 1.7 | Add Bev search + Did-you-mean + create wizard + camera + label + price tier (6.8, 6.10) | Creates then ranks on mock; permission-denied paths | Sonnet / Medium |
@@ -1037,7 +1041,7 @@ Tags follow vision §10: model / effort. Each row is one Claude Code sub-agent d
 | 1.10 | Profile (6.13) + settings/privacy/delete (6.18) + edit profile | Matches `design/specs/profile.md` within 2pt; VoiceOver pass | Sonnet / Medium–High |
 | 1.11 | Leaderboard: Bevs overall (6.12) | Bayesian ordering from the API; MIN_RATERS strip | Sonnet / Medium |
 | 1.12 | Swap to real `packages/api` on staging; fix drift | App runs on `EXPO_PUBLIC_BEVI_API=supabase`; conformance green on both | Sonnet / Medium |
-| 1.13 | Phase-1 review + bug hunt; EAS preview build to 5 friends via **internal** TestFlight (Google-only is allowed there) | Review findings fixed; build installed on ≥ 3 phones | Sonnet / High (review), Haiku / Low (release notes) |
+| 1.13 | Phase-1 review + bug hunt; Vercel deploy to 5 friends with the invite code | Review findings fixed; added to the home screen on ≥ 3 phones | Sonnet / High (review), Haiku / Low (release notes) |
 
 ### Phase 2 — Social + recommendations
 
@@ -1049,7 +1053,7 @@ Tags follow vision §10: model / effort. Each row is one Claude Code sub-agent d
 | 2.4 | Recommended tab (6.7) + predicted score on Bev detail | Confidence gating; stale handling | Sonnet / Medium |
 | 2.5 | Profile pills wired to real streak/rank | Copy for all streak states | Sonnet / Medium |
 | 2.6 | Per-screen polish pass against Beli specs (feed, lists, profile) | Specs' "differences" list closed | Sonnet / Medium–High |
-| 2.7 | Phase-2 review + TestFlight round 2 | | Sonnet / High |
+| 2.7 | Phase-2 review + friends deploy round 2 | | Sonnet / High |
 
 ### Phase 3 — Smarter and bigger
 
@@ -1057,12 +1061,12 @@ Tags follow vision §10: model / effort. Each row is one Claude Code sub-agent d
 |---|---|---|---|
 | 3.1 | Layer 2 user-user CF + blend + exploration; eval on synthetic + real export; vectors v2 | Blend beats Layer 1 on synthetic; no regression on real | Opus / High, Haiku / Medium |
 | 3.2 | Per-category leaderboards + "This month" toggle; user leaderboard | Category chips, month filter | Sonnet / Medium |
-| 3.3 | Swipe gestures on comparison cards, haptics, Reanimated polish | 60fps on iPhone 12; reduce-motion fallback | Sonnet / Medium–High |
+| 3.3 | Swipe gestures on comparison cards, haptics (no-op on web), Reanimated polish | 60fps in iPhone 12 Safari; reduce-motion fallback | Sonnet / Medium–High |
 | 3.4 | Performance pass (bundle, images, query cache persistence), analytics stub | Budgets in §7 met | Sonnet / Medium |
-| 3.5 | Maestro e2e flows in CI; "Not interested" on recs; drift re-check prompts (vision §4 "optional later") | | Sonnet / Medium, Haiku / Low |
-| 3.6 | Android preview build, Play internal testing | APK/AAB installable | Haiku / Low–Medium |
+| 3.5 | Browser e2e flows (e.g. Playwright) against the web build in CI; "Not interested" on recs; drift re-check prompts (vision §4 "optional later") | | Sonnet / Medium, Haiku / Low |
+| 3.6 | ~~Android preview build, Play internal testing~~ Dropped 2026-10-11 (web only) | | |
 | 3.7 | Taste Profile tab + calendar + per-category averages, optional yearly goal card (6.20); `stats.getTasteProfile` contract PR | Matches `design/specs/taste-profile.md` | Sonnet / Medium–High |
-| **G1** | **Pre-distribution gate: add Sign in with Apple before App Store submission / external TestFlight beta review** (`expo-apple-authentication` → `api.signInWithApple(idToken, nonce)`, contract PR, Arjun enables the Apple provider) | Both buttons on 6.1; Apple review 4.8 satisfied; account linking by email verified on staging | Sonnet / Medium; do it at the end of Phase 2 if external testers come before Phase 3 |
+| ~~G1~~ | ~~Sign in with Apple before App Store submission~~ Obsolete 2026-10-11: no App Store, no OAuth | | |
 
 ---
 
@@ -1070,26 +1074,27 @@ Tags follow vision §10: model / effort. Each row is one Claude Code sub-agent d
 
 1. [ ] Agree package names and the scaffold with Arjun; open `chore/scaffold` together (0.1).
 2. [ ] Per-screen specs from `bevi-ui-inspiration/` into `design/specs/` (0.4); Profile and Feed first, since they gate 1.2 and 1.10.
-3. [ ] Write §13 into the `contract/v0` PR description / `shared/README-v0-needs.md`; send to Arjun by 2026-10-13 (0.6). Confirm the 15 category ids, lowercase error codes, `expectedBucketSize`, `rerankBev`, `setBirthDate`, `getStarterCandidates` and the Google-only auth surface are in it.
+3. [ ] Write §13 into the `contract/v0` PR description / `shared/README-v0-needs.md`; send to Arjun by 2026-10-13 (0.6). Confirm the 15 category ids, lowercase error codes, `expectedBucketSize`, `rerankBev`, `setBirthDate`, `getStarterCandidates` and the username/password auth surface (`signUp`, `signIn`, decided 2026-10-11) are in it.
 4. [ ] Research spike (0.2): install `frontend-design` + `react-native-skills`, write `design/research.md`.
 5. [ ] `app/CLAUDE.md`, `packages/ranking/CLAUDE.md` (with the bundle constraints from §9), agent definitions (0.3).
 6. [ ] `packages/ranking`: `placement.ts`, `score.ts`, `stats.ts`, `bayesian.ts` + property tests + `gen-vectors.ts` + esbuild smoke test + `RANKING_VERSION` (0.7). Open `rank/placement` PR.
 7. [ ] Tokens from §4, `Wordmark` candidates, pick one and the brand colour; `design/photo-style.md` (0.5).
 8. [ ] Review Arjun's `contract/v0` draft within a day; approve by 2026-10-16.
 9. [ ] Start `ui/mock-api` against the merged contract (1.1) and `ui/components` (1.2) in separate worktrees; wire `gen-fixtures.ts` once `bevs.sample.json` lands (Oct 16).
-10. [ ] Expo Go running on your phone with the component gallery; **queue `eas build --profile development --platform ios` now** so credentials exist and the Google iOS client id is in the native config before 1.4 (native Google sign-in doesn't run in Expo Go).
+10. [ ] The web build running in iPhone Safari (and added to the home screen) with the component gallery; check each native-only library's web path as it lands (§3).
 
 ---
 
 ## 17. Deliberately not doing (from the conversation)
 
 - Users "adding a row in the SQL": all writes go through `BeviApi`; no SQL exposure.
-- "We don't need no damn privacy page" / "we got location off forever": a minimal privacy screen and a hosted policy ship because the stores require them; location is genuinely never collected.
+- "We don't need no damn privacy page" / "we got location off forever": a minimal privacy screen ships anyway (no store requires it now, but the data is real); location is genuinely never collected.
 - "Make our logo look like Beli with a v": original wordmark in a similar spirit; no copied glyphs, colours or icon.
 - Photo recognition of a drink from the camera ("take a picture and it's in the database"): v1 is search + manual create; the camera photo becomes the Bev's image, not a lookup key.
-- Business model bits (promoted placements, subscriptions), "hottest this month" before Phase 3, matrix factorisation, Android Play release before Phase 3.
+- Business model bits (promoted placements, subscriptions), "hottest this month" before Phase 3, matrix factorisation.
+- Native builds, EAS, App Store/TestFlight, Android, Expo Go/dev client as a target, OAuth and any emailed flow (decided 2026-10-11: web app only).
 - "Skip this comparator" in the ranking flow, periodic drift re-checks, push notifications, blocking/private profiles, Bev editing by non-creators (moderation is an open question).
-- From the Beli reference (§5): reservations/ordering/hours/distance/maps, invite-unlock card, Guides, "Add School", list import, likes/comments/shares on posts, co-visit tagging ("with Rhea"), visit counts, email/password or magic-link auth.
+- From the Beli reference (§5): reservations/ordering/hours/distance/maps, invite-unlock card, Guides, "Add School", list import, likes/comments/shares on posts, co-visit tagging ("with Rhea"), visit counts, magic-link or social auth.
 
 ---
 
@@ -1105,25 +1110,24 @@ Proposed edits to vision.md (via `chore/vision-*` PRs, both approve):
 6. **§7/§11 rank on Bevi:** `points = bevsRanked + 3·currentStreak + 2·bevsCreated`; followers excluded. Closes §11 item 4.
 7. **§6 streak definition:** consecutive local days (profile timezone) with ≥ 1 ranking; alive if yesterday had one.
 8. **§8 recommendations tech:** vision says "start as SQL views/functions in Postgres for Layer 1"; the agreed seam 5 runs Layer 1 and 2 through `packages/ranking` called by an Edge Function. Update §8 to match the brief (this is the one place the brief and vision conflict).
-9. **§6 missing screens:** add a People tab in search (handle search + suggestions, as in the reference), Followers/Following lists, Edit profile, Account deletion (Apple requirement), Report Bev.
+9. **§6 missing screens:** add a People tab in search (handle search + suggestions, as in the reference), Followers/Following lists, Edit profile, Account deletion, Report Bev.
 10. **§2 users fields:** add `handle`, `display_name`, `birthdate`, `timezone`, `onboarded`; `categories.is_alcoholic`; `bevs.is_starter`, `bevs.photo_status`.
 11. **§9 Phase 2:** the Edge Function for recommendations is Phase 2 work (Layer 1 already runs through it), not Phase 3.
 12. **§6 Profile:** the reference (and this doc) uses three list rows (Bev'd / Want to Try / Recommended for you) plus two stat cards (Rank, Streak), not "three tappable tiles". Update the wording; the links and emphasis are unchanged.
 13. **§6 Your Lists › Bev'd:** one numbered list sorted by score (reference 06), not bucket sections; buckets show through colour.
-14. **§6 / §8 Auth:** record "v1 sign-in is Google only (decided 2026-10-09); Sign in with Apple added before App Store submission (4.8)". Supabase Auth config remains Arjun's.
+14. **§6 / §8 Auth:** record "username + password with a shared invite code, no OAuth, no emails; web app on Vercel, no native builds (decided 2026-10-11, replaces Google-only of 2026-10-09)". (Done in vision.md §8.) Supabase Auth config remains Arjun's.
 15. **§2 Categories:** replace the list with the 15 ids (`soda … other`), alcohol split into `beer`, `wine`, `spirits_cocktails`.
 16. **§8 Core tables:** `comparisons` gains `tie`; bucket is smallint 3/2/1 in the DB; `users` gets `birthdate` (set once), `timezone`, `handle`, `display_name`.
 
 Open questions (need a decision, not a doc edit):
 
 - **Streak period: daily (vision) vs weekly (Beli shows "9 weeks").** `computeStreak` supports both; pick before the streak vectors land (start of Phase 2).
-- **App Store 4.8 risk:** Google-only sign-in is fine for internal TestFlight and Android, but Apple may reject an external TestFlight beta or the App Store submission until Sign in with Apple exists (gate G1 in §15). Plan G1 before inviting external testers.
 - Alcohol in v1: proposal is yes, seeded minimally, gated by birthdate ≥ 21 (vision §11 item 1). Arjun's RLS enforces it; confirm that scope with Arjun.
 - Likes on feed posts: the reference has heart/comment/share; vision doesn't. Proposal: no likes in v1, revisit in Phase 3 once the feed has traffic.
-- Whose Apple Developer account and bundle id (`com.bevi.app`)? Who holds the EAS org and the Google Cloud project for the OAuth client ids?
+- Invite code: where it's checked (Arjun) and how it's shared and rotated among friends.
 - Background removal for user uploads: server-side (assumed, Arjun) vs on-device (would move to `app/`). Also: does the pipeline produce blurhashes?
 - Price estimation default when the user says "not sure": category median (proposed) vs always ask.
 - Moderation for user-added Bevs (vision §11 item 5): proposal for v1 is `bevs.report` + Arjun's admin SQL; no in-app moderation UI.
 - Brand colour and the final wordmark (vision §11 item 6): decide from the two week-1 candidates.
 - Streak source of truth after removals: compute from current `rankings` rows (simplest; removing your only ranking of a day breaks that day) or from an append-only `ranking_events` log (Arjun's call; the vectors are the same either way).
-- Expo Router `root` option and FlashList v2 on SDK 58: verify in the scaffold PR; both are my recollection, not re-verified against the SDK 58 docs today.
+- FlashList v2 and `@gorhom/bottom-sheet` on web (SDK 57): confirm in the first PR that uses each; the router root is settled (`src/app` by default).
