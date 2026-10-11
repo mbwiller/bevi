@@ -1,4 +1,5 @@
 import { ApiError, isApiError, type Bucket, type SubmitRankingInput, type SubmitRankingResult, type ValidationErrorDetail } from '@bevi/shared';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
@@ -28,6 +29,11 @@ export interface RankFlowProps {
   bevId: string;
   /** `?mode=rerank`. Also on when the Bev already has `myRanking`. */
   rerank?: boolean;
+  /**
+   * `?entry=search`: opened by tapping a search result before its ranked state was known. A Bev
+   * you've already ranked opens its detail instead (§6.8: detail, with Re-rank there).
+   */
+  detailIfRanked?: boolean;
 }
 
 const flow = () => useRankingFlow.getState();
@@ -37,8 +43,9 @@ const flow = () => useRankingFlow.getState();
  * locally in the `rankingFlow` store (`@bevi/ranking`); the bucket list is fetched once when the
  * bucket is chosen and again only to restart after a `conflict`.
  */
-export function RankFlow({ bevId, rerank = false }: RankFlowProps) {
+export function RankFlow({ bevId, rerank = false, detailIfRanked = false }: RankFlowProps) {
   const back = useBack();
+  const router = useRouter();
   const { colors } = useTheme();
   const reduced = useReducedMotion();
   const bevQ = useBev(bevId);
@@ -65,6 +72,11 @@ export function RankFlow({ bevId, rerank = false }: RankFlowProps) {
   const [confirm, setConfirm] = useState(false);
   const bucketQ = useBucket(bucket ?? undefined);
   const mode: RankingMode = rerank || !!bevQ.data?.myRanking ? 'rerank' : 'new';
+
+  const toDetail = detailIfRanked && !rerank && !!bevQ.data?.myRanking;
+  useEffect(() => {
+    if (toDetail) router.replace({ pathname: '/bev/[id]', params: { id: bevId } });
+  }, [toDetail, router, bevId]);
 
   // A fresh flow per visit; nothing survives leaving the screen.
   useEffect(() => {
@@ -124,7 +136,8 @@ export function RankFlow({ bevId, rerank = false }: RankFlowProps) {
   /** After a conflict (or an invalid placement): the latest list, placement from the top. */
   const restart = async (message: string, nextMode?: RankingMode) => {
     const fresh = await bucketQ.refetch();
-    if (!fresh.data) {
+    // A failed refetch keeps the old (stale) list in `data`: never restart on it.
+    if (fresh.isError || !fresh.data) {
       setSaveError(fresh.error ?? new ApiError('unknown', 'Could not reload the list'));
       return;
     }
@@ -137,9 +150,16 @@ export function RankFlow({ bevId, rerank = false }: RankFlowProps) {
     if (!isApiError(e)) return setSaveError(e);
     switch (e.code) {
       case 'conflict': {
-        // The bucket changed elsewhere, or (rarely) the Bev was ranked elsewhere: move it instead.
+        // The bucket changed elsewhere, or the Bev was ranked elsewhere (then move it instead).
+        // `detail.reason` is only a fast path (the mock sends it; the contract doesn't promise it):
+        // otherwise a new ranking re-reads the Bev and switches to re-rank if it now has myRanking.
         const reason = (e.detail as { reason?: string } | undefined)?.reason;
-        return restart(CONFLICT_NOTICE, reason === 'already_ranked' ? 'rerank' : undefined);
+        if (reason === 'already_ranked') return restart(CONFLICT_NOTICE, 'rerank');
+        if (flow().mode === 'new') {
+          const bevNow = await bevQ.refetch();
+          if (!bevNow.isError && bevNow.data?.myRanking) return restart(CONFLICT_NOTICE, 'rerank');
+        }
+        return restart(CONFLICT_NOTICE);
       }
       case 'validation':
         if ((e.detail as ValidationErrorDetail | undefined)?.field === 'note') return setNoteError(e.message);
@@ -201,7 +221,7 @@ export function RankFlow({ bevId, rerank = false }: RankFlowProps) {
         <ErrorState error={blocking} onRetry={fatal ? undefined : () => void bevQ.refetch()} />
       </Screen>
     );
-  } else if (!bev) {
+  } else if (!bev || toDetail) {
     content = (
       <Screen>
         <Header actions={[{ icon: 'x', label: 'Close', variant: 'filled', onPress: leave }]} />
