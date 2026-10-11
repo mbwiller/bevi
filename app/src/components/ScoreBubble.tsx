@@ -15,6 +15,13 @@ export interface ScoreBubbleProps {
   variant?: 'default' | 'predicted' | 'locked';
   /** The user's own bucket when known: colour is the bucket, not the band (app addition, see `scoreColor`). */
   bucket?: Bucket;
+  /**
+   * Distinguishes this bubble's accessible label from a sibling bubble shown on the same screen
+   * (e.g. "Bevi score" vs. "Your score"). Only affects the `locked` label, the one case where two
+   * bubbles can otherwise read identically ("Score hidden") with nothing to tell them apart. Omit
+   * when there's only one bubble in view.
+   */
+  context?: string;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -30,13 +37,13 @@ const NUM: Record<40 | 56, { default: TextStyle; predicted: TextStyle }> = {
 };
 
 /** Beli's score mark: a `surface` circle with a 2pt ring and the score in its bucket colour. */
-export function ScoreBubble({ score, size = 40, count, variant = 'default', bucket, style }: ScoreBubbleProps) {
+export function ScoreBubble({ score, size = 40, count, variant = 'default', bucket, context, style }: ScoreBubbleProps) {
   const { colors } = useTheme();
   const locked = variant === 'locked' || score == null;
   const predicted = variant === 'predicted' && !locked;
   const dim = size === 56 ? sizes.scoreBubbleLg : sizes.scoreBubble;
   const label = locked
-    ? 'Score hidden'
+    ? context ? `${context} hidden` : 'Score hidden'
     : `${predicted ? 'Predicted score ' : 'Score '}${formatScore(score)}${count != null ? `, ${count} ratings` : ''}`;
   return (
     <View
