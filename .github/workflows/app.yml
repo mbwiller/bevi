@@ -34,6 +34,12 @@ jobs:
 
       - run: npm ci
 
+      # Typed routes live in app/.expo/types (gitignored) and are only written by the Expo CLI;
+      # without them tsc can't catch a bad href.
+      - name: generate route types
+        working-directory: app
+        run: npx expo customize tsconfig.json
+
       - run: npm run typecheck -w app
 
       - run: npm test -w app
