@@ -5,7 +5,7 @@ Read before any change here: this file, `DEVELOPMENT-MATT.md` §3–§7 and the 
 ## Sources of truth, in order
 
 1. **Design system** — https://claude.ai/artifact/WAYjGiTd5Fu938F6vv6Dyn, mirrored in `design/system/project/`: `README.md` (rules, voice, colour use), `tokens.json`, `components/index.d.ts` (component names and props), `components/*/preview.html` (every state). It supersedes DEVELOPMENT-MATT §4/§5 where they differ. Don't edit `design/system/` by hand; the design changes in the artifact first and the mirror is re-synced.
-2. **Contract** — `@bevi/shared` (`shared/src/`): `BeviApi`, domain types, enums, `ApiError`. Contract v0 is not merged yet; until it is, don't build anything that needs API or domain types (mock API, screens with data).
+2. **Contract** — `@bevi/shared` (`shared/src/`): `BeviApi`, domain types, enums, `ApiError`. Contract v1 (`CONTRACT_VERSION = '1.0.0'`) is in `shared/src/`; once the `contract/v1` PR merges, the mock API and screens with data build against it.
 3. **Ranking maths** — `@bevi/ranking`: the placement state machine, scores, `bucketForScore`, band constants. Never reimplement a formula or a threshold in the app.
 
 ## Rules
