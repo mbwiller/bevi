@@ -57,18 +57,18 @@ jobs:
       - run: supabase test db
 
       # Exposes the local stack's URL/anon key to packages/api's vitest
-      # suite as SUPABASE_URL/SUPABASE_PUBLISHABLE_KEY. The `-o env`
-      # key-path names (api.url, auth.anon_key) match the Supabase CLI docs
-      # at the time of writing but are unverified against whatever
-      # `version: latest` resolves to when this runs -- if this step's
-      # output doesn't look like `SUPABASE_URL="http://..."` /
-      # `SUPABASE_PUBLISHABLE_KEY="..."` in the Actions log, the key paths
-      # need adjusting.
+      # suite as SUPABASE_URL/SUPABASE_PUBLISHABLE_KEY. `-o env` prints
+      # shell-quoted `NAME="value"` lines; `eval`-ing them lets bash strip
+      # the quotes correctly before the now-clean values go to
+      # $GITHUB_ENV (appending the quoted form directly made the URL
+      # literally start with a `"` character -- confirmed by this step
+      # failing once already).
       - run: |
-          supabase status -o env \
+          eval "$(supabase status -o env \
             --override-name api.url=SUPABASE_URL \
-            --override-name auth.anon_key=SUPABASE_PUBLISHABLE_KEY \
-            >> "$GITHUB_ENV"
+            --override-name auth.anon_key=SUPABASE_PUBLISHABLE_KEY)"
+          echo "SUPABASE_URL=$SUPABASE_URL" >> "$GITHUB_ENV"
+          echo "SUPABASE_PUBLISHABLE_KEY=$SUPABASE_PUBLISHABLE_KEY" >> "$GITHUB_ENV"
 
       # vitest against the local stack (packages/api's own tests skip
       # anything needing a live stack if these env vars aren't set).
