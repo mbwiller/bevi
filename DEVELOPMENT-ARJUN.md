@@ -3,7 +3,9 @@
 > Your lane: the Supabase project and everything server-side. Postgres schema, RLS, SQL functions/RPCs, Edge Functions, cron, storage, auth config, the `packages/api` client the app talks through, and the seed catalog with its image pipeline.
 > Matt owns the app, the ranking math, and design. You meet in `shared/` through `contract/*` PRs.
 
-Written 2026-10-09 from `vision.md` (source of truth), `CONVERSATION.md` (raw founding chat), the agreed work-split brief, and the Bev Maps conventions you already use. Facts about Supabase, Apple and vendors were checked against current docs on 2026-10-09; where I could not confirm something I say so.
+Written 2026-10-09 from `vision.md` (source of truth), `CONVERSATION.md` (raw founding chat), the agreed work-split brief, and the Bev Maps conventions you already use. Facts about Supabase and vendors were checked against current docs on 2026-10-09; where I could not confirm something I say so.
+
+**Decided 2026-10-11 (Matt + Arjun): Bevi is a web app only.** The Expo app is built for the web (`expo export --platform web`), hosted on Vercel and added to the iPhone home screen; the backend stays Supabase. No native builds, EAS, App Store/TestFlight, Android, or Expo Go/dev client as a target. Sign-in is username + password gated by a shared invite code; no OAuth, no third-party services, no emails. Sections below are updated where this changed the plan.
 
 **Sections**
 
@@ -60,7 +62,6 @@ supabase/
     _shared/                  # supabaseAdmin.ts, snapshot.ts, images.ts, ranking.bundle.mjs (generated)
     recommend/                # Layer 1/2 predictions + Recommended list
     process-photo/            # background removal + resize for user uploads
-    delete-account/           # Apple token revocation on delete (task 3.0, only once Apple sign-in exists)
 packages/api/
   src/index.ts                # createBeviApi(config): BeviApi
   src/errors.ts               # ApiError + PG error mapping
@@ -85,7 +86,7 @@ scripts/catalog/              # validate, fetch-images, cutout, build-seed, uplo
 | Environment | What | Where secrets live |
 |---|---|---|
 | `local` | `supabase start` on your Mac (Docker). Migrations + `seed.sql` applied by `supabase db reset`. This is where you and your agents do all development and where CI runs. | `supabase/.env` (gitignored) |
-| `bevi-dev` | Hosted Free project. Target of `main` deploys. Matt's dev/TestFlight-internal builds point here. | Dashboard + GitHub Environment `dev` |
+| `bevi-dev` | Hosted Free project. Target of `main` deploys. Matt's Vercel preview deploys point here. | Dashboard + GitHub Environment `dev` |
 | `bevi-prod` | Hosted Free project (upgrade to Pro when §2.3 bites). Deployed by manual approval only. | Dashboard + GitHub Environment `prod` |
 
 Free plan allows 2 active projects per organization, so dev + prod both free is allowed. Both pause after a week of no activity (see 2.3).
@@ -128,7 +129,7 @@ Rules:
 | Edge Functions | 500k invocations/mo; 150 s wall clock; **2 s CPU per request**; 256 MB; 20 MB bundle; 100 functions | 2M; 400 s | Recommendation batches must stay under 2 s CPU each; batch by user, not all users at once. Image resizing in WASM also eats CPU; one image per invocation. |
 | Realtime | 200 concurrent, 2M msgs/mo | 500 | Not needed for v1 feed; pull-to-refresh. |
 | Auth MAU | 50,000 | 100,000 | Irrelevant at our size. |
-| Built-in email | **2 emails/hour** total (meant for non-production) | same | Irrelevant in v1 (Google-only sign-in, email disabled). If email sign-in is ever enabled, custom SMTP is mandatory first. |
+| Built-in email | **2 emails/hour** total (meant for non-production) | same | Irrelevant: "Confirm email" is off (username + password, no SMTP). If a real email flow is ever added, custom SMTP is mandatory first. |
 | Log retention | 1 day | 7 days | Errors older than a day are gone. See §8.2. |
 | Compute | Shared CPU, 500 MB RAM | Micro | pg_trgm and the small tables are fine. |
 | Branching | Not included | per-branch hourly | Not needed; local stack is the branch. |
@@ -147,8 +148,7 @@ Also: paused projects can reportedly be deleted after a long time paused (one so
 | `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `SUPABASE_PROJECT_ID` | GitHub Environments `dev` / `prod` | CI deploys |
 | `REPLICATE_API_TOKEN` (or Photoroom key) | `supabase secrets set`, `supabase/.env` | process-photo function and catalog scripts |
 | `CRON_SECRET` | Vault (`vault.create_secret`) and function secrets | pg_net → Edge Function auth |
-| Google OAuth client IDs (iOS, Android, Web) + Web client secret | Dashboard → Auth → Providers → Google; `config.toml` for local | Client IDs are public; the Web client secret is not |
-| Apple Services ID key (task 3.0, only if web OAuth is needed) | Dashboard | Rotates every 6 months; prefer native-only to avoid it |
+| Invite code | Vault or a config table checked by the sign-up RPC | Shared secret; gates sign-up while under 20 friends |
 
 Supabase introduced new-style API keys (`sb_publishable_…` / `sb_secret_…`) alongside the legacy `anon`/`service_role` JWTs. Use the new ones for new projects; supabase-js accepts either.
 
@@ -563,32 +563,31 @@ The alcohol filter on `rankings` and `feed_events` matters: a minor following a 
 
 ### 4.2 Auth
 
-**Decided 2026-10-09: v1 sign-in is Google only.** Email/password and magic link are disabled, so no custom SMTP, no Resend and no Turnstile in v1.
+**Decided 2026-10-11: v1 sign-in is username + password, gated by a shared invite code.** No OAuth, no magic link, no custom SMTP, no Resend, no Turnstile. Supabase's "Confirm email" is off.
 
-- **Flow:** native Google sign-in in the app (`@react-native-google-signin/google-signin`) returns an ID token; `packages/api` exposes `signInWithGoogle(idToken)`, which calls `supabase.auth.signInWithIdToken({ provider: 'google', token })` internally. The app never touches supabase-js.
-- **Setup (you):** Google Cloud project → OAuth client IDs for iOS (bundle ids `com.bevi.app`, `com.bevi.app.dev`), Android (package name + SHA-1 of the debug and release keystores; Matt supplies the SHA-1s from EAS) and a Web client ID. Dashboard → Auth → Providers → Google: enable, paste the Web client ID as the client ID and add the iOS and Android client IDs to "Authorized Client IDs" (Supabase validates the ID token's `aud` against this list). `config.toml`: `[auth.external.google] enabled = true`, `skip_nonce_check = true` only if the native library can't send a nonce (check `@react-native-google-signin` docs; it usually can). Expo Go cannot run the native Google module; Matt uses a dev build.
-- **Disabled in v1:** `[auth.email] enable_signup = false` (hosted: Auth → Providers → Email off), `enable_anonymous_sign_ins = false`. Keep `rate_limit.sign_in_sign_ups = 30` (per 5 min per IP, default). Hosted settings are set in the dashboard; check whether `supabase config push` covers the Google provider fields, otherwise write the clicks into `supabase/README.md`.
-- **Profile trigger:** reads Google's `full_name` and `avatar_url` from `raw_user_meta_data` (Google supplies them on every sign-in), generates a handle from the email prefix, and onboarding still asks for a real handle via `set_handle()`.
-- **App Store 4.8 consequence:** shipping Google (a third-party login) requires an equivalent privacy-preserving option, i.e. Sign in with Apple. Google-only is fine for Android and internal TestFlight; **Apple must be added before App Store submission, and possibly before external TestFlight beta review** (beta review applies the guidelines; treat it as a gate). That work is task 3.0 in §10, with the setup notes kept there.
-- **Account deletion:** `delete_my_account` (§4.3) is unchanged. Google needs no token revocation on delete; the Apple revocation step moves to task 3.0 with Apple itself.
+- **Flow:** the app collects `{ username, password }` (sign-in) or `{ username, password, inviteCode }` (sign-up). `packages/api` maps the username to a synthetic internal email (`<username>@users.bevi.app`) and calls `supabase.auth.signUp` / `signInWithPassword` with that email under the hood; the app never sees the synthetic email or touches supabase-js. The username *is* the handle — there's no separate handle step in onboarding (handle format/reserved-word rules still apply, enforced on the username at sign-up).
+- **Setup (you):** hosted dashboard → Auth → Providers → Email: enabled, "Confirm email" off (no SMTP needed). `config.toml`: `[auth.email] enable_signup = true`, `enable_confirmations = false`, `enable_anonymous_sign_ins = false`. Keep `rate_limit.sign_in_sign_ups = 30` (per 5 min per IP, default). Check whether `supabase config push` covers these fields; otherwise document the dashboard clicks in `supabase/README.md`.
+- **Invite code:** a shared secret checked at sign-up (RPC or a `before_user_created` auth hook — pick one and reject sign-up with `ApiError.code: 'validation'` if it doesn't match). Not rate-limit-sensitive at this size; stored in Vault or a tiny config table, not hardcoded.
+- **Profile trigger:** derives the handle from the username (not an email prefix or OAuth metadata), lowercases it, runs it through the same validate/reserved-list check as `set_handle()`. No `full_name`/`avatar_url` to read from provider metadata — `display_name` defaults to the username until the user changes it.
+- **Password reset:** no reset email (no SMTP). An admin resets a password from the dashboard if someone gets locked out — fine for ~20 friends.
+- **Account deletion:** `delete_my_account` (§4.3) is unchanged and needs no token revocation of any kind.
 
 **Profile creation on signup**
 
 ```sql
 create or replace function public.handle_new_user() returns trigger
 language plpgsql security definer set search_path = public as $$
-declare v_base text; v_handle text; v_name text;
+declare v_handle text; v_username text;
 begin
-  v_name := coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', split_part(new.email,'@',1), 'bevi user');
-  -- Google supplies full_name and avatar_url in raw_user_meta_data; Apple (task 3.0) supplies the name only on first sign-in
-  v_base := regexp_replace(lower(coalesce(split_part(new.email,'@',1), 'user')), '[^a-z0-9_]', '', 'g');
-  v_base := left(coalesce(nullif(v_base,''), 'user'), 14);
-  v_handle := v_base;
-  while exists (select 1 from public.profiles where handle = v_handle) loop
-    v_handle := v_base || '_' || substr(md5(gen_random_uuid()::text), 1, 4);
-  end loop;
-  insert into public.profiles (id, handle, display_name, avatar_path)
-  values (new.id, v_handle, left(v_name, 40), new.raw_user_meta_data->>'avatar_url');   -- external URL until the user uploads one; packages/api passes it through as-is
+  -- packages/api signs up with email '<username>@users.bevi.app'; the username is the local part
+  v_username := split_part(new.email, '@', 1);
+  v_handle := regexp_replace(lower(v_username), '[^a-z0-9_]', '', 'g');
+  v_handle := left(coalesce(nullif(v_handle,''), 'user'), 14);
+  if exists (select 1 from public.profiles where handle = v_handle) then
+    raise exception 'BEVI_HANDLE_TAKEN' using errcode = '23505';
+  end if;
+  insert into public.profiles (id, handle, display_name)
+  values (new.id, v_handle, v_handle);
   insert into public.user_stats (user_id) values (new.id);
   insert into public.streaks (user_id) values (new.id);
   return new;
@@ -597,9 +596,9 @@ create trigger on_auth_user_created after insert on auth.users
   for each row execute function public.handle_new_user();
 ```
 
-The generated handle is only a placeholder (and once Apple sign-in exists its private relay emails like `abc123@privaterelay.appleid.com` make it junk), so onboarding always asks for a handle (`set_handle()` RPC: lowercases, validates, checks reserved list, allows 1 change per 30 days).
+The username is already validated (format + reserved list) before sign-up, so the trigger's uniqueness check should never fire in practice; it's a server-side backstop against a race, not the primary validation path. `set_handle()` still exists for later changes (1 per 30 days).
 
-### 4.3 Account deletion (App Store 5.1.1(v): "If your app supports account creation, you must also offer account deletion within the app")
+### 4.3 Account deletion
 
 ```sql
 create or replace function public.delete_my_account() returns void
@@ -618,13 +617,13 @@ end $$;
 
 Deleting from `auth.users` inside a `security definer` function owned by `postgres` is the standard Supabase pattern and avoids needing the service key from the app. Verify the `storage.objects` owner column name on your Postgres/storage version (`owner` uuid in older, `owner_id` text in newer schemas).
 
-With Google-only sign-in nothing else is needed. When Sign in with Apple is added (task 3.0), Apple additionally expects its tokens to be revoked on account deletion, and Supabase does not do that for native sign-in; the `delete-account` Edge Function described in task 3.0 handles it.
+Username + password needs no external token revocation on delete; this RPC is the whole deletion flow.
 
 ### 4.4 Age gate (alcoholic categories)
 
-- Store a declared `birth_date` collected during onboarding (Apple's guidelines accept "verified or declared age" mechanisms; nothing requires ID checks for an app like this). The RPC `set_birth_date()` is one-way: it can be set once and only changed by an admin, so nobody flips from 19 to 21. Matt's onboarding spec matches this.
+- Store a declared `birth_date` collected during onboarding (nothing requires ID checks for an app like this). The RPC `set_birth_date()` is one-way: it can be set once and only changed by an admin, so nobody flips from 19 to 21. Matt's onboarding spec matches this.
 - `viewer_is_adult()` gates `bevs` (and everything joined through `bev_cards`), `create_bev()` for alcoholic categories, and `submit_ranking()`.
-- App Store rating consequence: "frequent" alcohol references rate the app 18+ under Apple's 2025 tiers (13+/16+/18+ replaced 12+/17+). A beer leaderboard is arguably "frequent". For a friends-only release that may be fine; see §13 for the alternative of shipping v1 without alcohol.
+- The gate stays for its own reasons (don't show a minor friend's beer rankings) independent of any store rating — there is no app store for a web app.
 
 ### 4.5 Rate limits and abuse on user-created content
 
@@ -921,20 +920,20 @@ import type { BeviApi, AuthStorage } from '@bevi/shared';
 export interface BeviApiConfig {
   url: string;                 // Supabase project URL
   publishableKey: string;      // sb_publishable_… (anon); safe in the app
-  authStorage: AuthStorage;    // { getItem, setItem, removeItem } — the app passes an expo-secure-store or AsyncStorage wrapper
+  authStorage: AuthStorage;    // { getItem, setItem, removeItem } — the app passes a localStorage wrapper (supabase-js's web default)
 }
 export function createBeviApi(config: BeviApiConfig): BeviApi { … }
 export { ApiError } from './errors';
 ```
 
-`packages/api` creates and owns the supabase-js client internally; the app never imports `@supabase/supabase-js` and never sees the client. The app only supplies the config (from `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) and a storage adapter for session persistence. Auth lives in the API surface (`getSession`, `onAuthChange`, `signInWithGoogle`, `signOut`, `deleteAccount`; `signInWithApple` arrives with task 3.0). Matt's swap line is `EXPO_PUBLIC_BEVI_API=mock|supabase` → `createMockApi()` or `createBeviApi(config)` in `app/src/api/index.ts`.
+`packages/api` creates and owns the supabase-js client internally; the app never imports `@supabase/supabase-js` and never sees the client. The app only supplies the config (from `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) and a storage adapter for session persistence — `localStorage`, since the app is web-only. Auth lives in the API surface (`signUp`, `signIn`, `getSession`, `onAuthChange`, `signOut`, `deleteAccount`; no `signInWithGoogle`/`signInWithApple`). Matt's swap line is `EXPO_PUBLIC_BEVI_API=mock|supabase` → `createMockApi()` or `createBeviApi(config)` in `app/src/api/index.ts`.
 
 Proposed `BeviApi` surface (final list is Matt's per-screen needs in contract v0):
 
 | Area | Methods |
 |---|---|
-| Session | `getSession`, `onAuthChange`, `signInWithGoogle(idToken)`, `signOut`, `deleteAccount`. `signInWithApple(idToken, nonce)` is added with task 3.0 (additive contract change) |
-| Profile | `getMyProfile`, `getProfile(handle)`, `updateProfile({displayName, avatarPath})`, `setHandle`, `setBirthDate`, `searchUsers(q)`, `getMyOverview` |
+| Session | `signUp({ username, password, inviteCode })`, `signIn({ username, password })`, `getSession`, `onAuthChange`, `signOut`, `deleteAccount` |
+| Profile | `getMyProfile`, `getProfile(handle)`, `updateProfile({displayName, avatarPath})`, `setHandle`, `checkHandle(handle)` (callable signed-out, for the sign-up form), `setBirthDate`, `searchUsers(q)`, `getMyOverview` |
 | Social | `follow`, `unfollow`, `listFollowers(userId, cursor)`, `listFollowing(userId, cursor)`, `getFeed(cursor)`, `getFeatured` |
 | Bevs | `searchBevs({q, categoryId, cursor})`, `lookupByUpc`, `getBev(id)`, `findSimilarBevs`, `createBev`, `uploadRawPhoto(file) → path`, `reportBev`, `listCategories` |
 | Rankings | `submitRanking({bevId, bucket, insertIndex, expectedBucketSize, comparisons, note})`, `rerankBev(…)` (same shape as `submitRanking`), `removeRanking(bevId)`, `listRankings({userId, bucket, cursor})`, `getMyRankingForBev` |
@@ -1019,7 +1018,7 @@ Expected volume: 380 seeds once, then ~5 new Bevs per user per month → ~100/mo
 | Photoroom Remove Background API | $0.02/image, but sold as a $20/month bucket of 1,000 (no rollover); 1,000 free sandbox images are watermarked, ~10 free production calls | Excellent, product-photo tuned | Trivial | Good upgrade if Replicate quality disappoints; the $20 floor is the only objection |
 | remove.bg | ~$0.20–0.40/image pay-as-you-go; 50 free low-res preview calls/month (unverified) | Excellent | Trivial | Too expensive per image for no benefit over Photoroom |
 | Self-hosted `rembg` (Python, U²-Net/ISNet) on a small VM | ~$5–7/month VM, or $0 on a laptop for the one-off seed run | Same models as Replicate | Ops burden; needs a worker and queue | Use the laptop variant **only** for the one-time seed batch if you want to avoid any API spend; not for production uploads |
-| On-device: iOS 17+ Vision `VNGenerateForegroundInstanceMaskRequest`; Android ML Kit Subject Segmentation (beta) | $0, instant, private | Very good on iOS; Android beta and spottier | Needs a custom Expo module (that's `app/`, so Matt's lane); simulator can't run it | Phase 3 polish. Your pipeline must accept an already-cut PNG (`createBev({ cutoutPath })` skips removal). |
+| On-device: iOS 17+ Vision `VNGenerateForegroundInstanceMaskRequest`; Android ML Kit Subject Segmentation (beta) | $0, instant, private | Very good on iOS; Android beta and spottier | Needs a custom Expo module | **Not applicable — web-only build has no native module access.** |
 | `@imgly/background-removal` (ONNX in browser/Node) | $0 | Good | Node package in a Deno Edge Function with a 2 s CPU limit and 256 MB is unlikely to work; not verified | Skip |
 
 **Edge Function `process-photo`:**
@@ -1149,7 +1148,7 @@ Branches: Matt uses `ui/*` (app) and `rank/*` (ranking package); Arjun uses `be/
 **Seam 2 — Contract v0 is the first joint milestone.** Matt lists the data each screen needs; you turn that into the schema + `BeviApi` methods; both approve one `contract/v0` PR. Nothing else merges into `shared/` before it.
 
 - You provide: §3 schema as migrations on a `be/schema-v0` branch (so the generated types are real), the `BeviApi` method list (§6.1), the vector JSON format (§5.7), enums (`Bucket`, `CategoryId`, `PriceTier`, `FeedEventKind`, `BevStatus`), `ApiError` codes.
-- You need: Matt's per-screen data list (Feed, Lists ×3, Add/Search/Create, Bev detail, Leaderboard ×2, Profile, Onboarding, Settings) (auth is decided: Google only). Already agreed: `Bucket = 'LOVED' | 'FINE' | 'DISLIKED'`, `RankingComparison = { winnerBevId, loserBevId, tie }`, the `submitRanking` argument shape with `expectedBucketSize`.
+- You need: Matt's per-screen data list (Feed, Lists ×3, Add/Search/Create, Bev detail, Leaderboard ×2, Profile, Onboarding, Settings) (auth is decided: username + password, invite code). Already agreed: `Bucket = 'LOVED' | 'FINE' | 'DISLIKED'`, `RankingComparison = { winnerBevId, loserBevId, tie }`, the `submitRanking` argument shape with `expectedBucketSize`.
 - By when: Matt's list by Tue Oct 13; your draft PR by Wed Oct 14; merged by Fri Oct 16.
 
 **Seam 3 — Ranking write path.** The interactive comparison flow runs in the app using `packages/ranking` (pure state machine). On finish the app calls `api.submitRanking({ bevId, bucket, insertIndex, comparisons, note })`. Your RPC applies it atomically (insert at position, shift others, store raw comparisons, update aggregates). Re-ranking/removing a Bev is the same shape.
@@ -1187,7 +1186,7 @@ Branches: Matt uses `ui/*` (app) and `rank/*` (ranking package); Arjun uses `be/
 | Arjun | Streak and user-rank vectors | Matt | Nov 23 | Agreed formulas implemented, unverified by CI |
 | Arjun | `PredictionSnapshot` type + `predictScore`/`recommend`/`RANKING_VERSION` exports and prediction vectors | Matt | Nov 23 | Function scaffolded, returns category-average placeholder |
 | Arjun | Image style sign-off | Matt | Oct 28 | Keep pipeline parameters adjustable (padding, canvas) |
-| Arjun | Google OAuth client IDs; Matt supplies bundle ids and Android SHA-1s | Matt | Oct 14 | Decided 2026-10-09: v1 sign-in is Google only (Apple before App Store / external TestFlight, task 3.0) |
+| Arjun | Invite code value and where it's checked; "Confirm email" off confirmed in dashboard | Matt | Oct 14 | Decided 2026-10-11: v1 sign-in is username + password gated by a shared invite code |
 | Both | `CLAUDE.md`, `.claude/agents/integrator.md`, CI workflows | chore PRs | Oct 16 | — |
 
 ---
@@ -1210,7 +1209,7 @@ Tags: model/effort for the Claude Code sub-agent per vision §10. "DoD" = defini
 | 0.8 | `build-seed.ts`, `upload-images.ts`; seed local and dev | Local `db reset` shows 380 Bevs with images; dev bucket populated | Sonnet, medium |
 | 0.9 | CI `backend.yml` + integrator agent adapted from Bev Maps (chore PR with Matt) | PR checks run; integrator comments on a test PR | Sonnet, medium |
 | 0.10 | Nightly dump workflow + keep-alive ping workflow | Artifact appears; `ping()` 200 from both projects | Haiku, low |
-| 0.11 | Auth: Google provider config (iOS/Android/Web client IDs, authorized client IDs), email + anonymous sign-in disabled, rate limits, `handle_new_user` trigger reading Google name + avatar | Google sign-in from Matt's dev build creates a profile with name and avatar | Sonnet, medium + you in the dashboards |
+| 0.11 | Auth: email/password provider config with "Confirm email" off, anonymous sign-in disabled, rate limits, invite-code gate on sign-up, `handle_new_user` trigger deriving the handle from the username | A username sign-up from the web build creates a profile | Sonnet, medium + you in the dashboards |
 
 ### Phase 1 — MVP backend (Oct 26 – Nov 20)
 
@@ -1243,7 +1242,7 @@ Tags: model/effort for the Claude Code sub-agent per vision §10. "DoD" = defini
 
 | # | Task | DoD | Agent |
 |---|---|---|---|
-| 3.0 | **Pre-distribution gate: add Sign in with Apple before App Store submission / external TestFlight** (App Store 4.8, because v1 ships Google). Native flow: `expo-apple-authentication` → `signInWithApple(idToken, nonce)` in `packages/api` → `signInWithIdToken({ provider: 'apple' })`. Dashboard → Auth → Apple → Client IDs lists every bundle id (`com.bevi.app`, `com.bevi.app.dev`); native-only needs no Services ID and no 6-monthly secret rotation (add the web OAuth config only if Android ever needs Apple). Apple sends `fullName` only on the first sign-in, so the app calls `updateUser` with it then (Matt's side). Also ship the `delete-account` Edge Function: take the Apple `authorizationCode` from a fresh sign-in, exchange it at `appleid.apple.com/auth/token`, call `/auth/revoke`, then call `delete_my_account()`. Whether beta review enforces revocation I can't confirm; do it anyway. Additive `contract/*` PR for the new method. | Apple sign-in creates a profile; deletion revokes the Apple token (200 in a test); App Review checklist item ticked | Sonnet, medium + you in the Apple developer console |
+| 3.0 | ~~Pre-distribution gate: add Sign in with Apple before App Store submission / external TestFlight~~ — **obsolete, dropped 2026-10-11.** No App Store, no native builds (web-only decision); sign-in is username + password. The `delete-account` Edge Function for Apple token revocation is dropped with it. | — | — |
 | 3.1 | Layer 2 inputs in the snapshot (similar-user matrix), blend/exploration seeds; batch sizing for growth | Vectors/goldens for `recommend` outputs on fixture data pass | Sonnet, medium (Opus review of the snapshot cost) |
 | 3.2 | Per-category leaderboards, `bev_leaderboard_30d` "hottest this month" | | Sonnet, medium |
 | 3.3 | Accept on-device cutouts (`createBev({cutoutPath})`), skip Replicate when present | | Sonnet, medium |
@@ -1263,7 +1262,7 @@ Tags: model/effort for the Claude Code sub-agent per vision §10. "DoD" = defini
 6. [ ] `supabase gen types` → `shared/src/db.types.ts`; write `BeviApi` interface, enums, `ApiError` codes, vector JSON format; open `contract/v0` (Wed), iterate with Matt, merge (Fri).
 7. [ ] Kick off Haiku catalog batches (0.5, 0.6) in parallel worktrees, one category each; `catalog:validate` must pass per batch.
 8. [ ] Replicate account + token; run `cutout.ts` on 20 images; generate the contact sheet; send to Matt.
-9. [ ] Google provider config (iOS/Android/Web client IDs from Matt's bundle ids and SHA-1s); disable email and anonymous sign-in; profile trigger; confirm one real Google sign-in from Matt's dev build creates a `profiles` row with name and avatar.
+9. [ ] Email/password provider config with "Confirm email" off; disable anonymous sign-in; invite-code gate on sign-up; profile trigger deriving the handle from the username; confirm one real sign-up from the web build creates a `profiles` row.
 10. [ ] `backend.yml` CI + nightly dump + keep-alive ping (chore PR with Matt's app CI).
 11. [ ] Adapt `.claude/agents/integrator.md` and a `supabase/CLAUDE.md` pointing agents at this doc's §3–§5 and the "RPC only" rule.
 
@@ -1274,13 +1273,13 @@ Tags: model/effort for the Claude Code sub-agent per vision §10. "DoD" = defini
 Divergences from the founding conversation, kept brief:
 
 - **Users don't "add a row in the SQL".** All writes go through validated RPCs with rate limits; there are no direct insert policies on content tables.
-- **"We don't need no damn privacy page."** We do: App Store 5.1.1(i) requires a privacy policy link in the app and in App Store Connect, and 5.1.1(v) requires in-app account deletion. Both are in scope (privacy page is a static URL; hosting it is a root/`chore` item for both of you).
+- **"We don't need no damn privacy page."** We do anyway: good practice for an app that stores personal data, independent of any app store requirement. In-app account deletion stays for the same reason (privacy page is a static URL; hosting it is a root/`chore` item for both of you).
 - **No copying Beli's logo or fonts.** Matt's lane, but the catalog and featured imagery also avoid reproducing trademarks via generated art.
 - **No location/IP features.** Nothing stores location; no `geo` columns, no IP logging beyond what Supabase Auth does by default.
 - **No Beli-style scraping or "the open-source Beli algorithm".** Matt writes the placement math; your part is just storing positions and re-spacing.
 - **No Python worker, no matrix factorization, no realtime** in v1. The Edge Function and Postgres cover Layers 1–2 at this scale.
 - **No admin UI.** Moderation and featured Bevs are SQL views and admin RPCs run from Studio or scripts.
-- **No email sign-in, SMTP, Resend or Turnstile in v1.** Google-only sign-in (decided 2026-10-09); Apple is added as a pre-distribution gate (task 3.0).
+- **No OAuth, SMTP, Resend or Turnstile in v1.** Username + password gated by a shared invite code (decided 2026-10-11); no password-reset email.
 - **No image transformations on the fly** (Pro-only); sizes are pre-rendered.
 - **No generated images for real products**; only for featured hero art.
 
@@ -1296,7 +1295,7 @@ Proposed vision changes (needs both of you; nothing here is applied yet):
 4. **§2 Categories**: split "Alcoholic" into `beer`, `wine`, `spirits_cocktails` (all 21+). Mixed-alcohol leaderboards are meaningless.
 5. **§4 Store both position and score**: note explicitly that inserting into a bucket re-spaces every score in that bucket, so global `avg_score` for many Bevs changes on each ranking. That's by design, but it means aggregates are recomputed per bucket on every submit (cheap now; nightly full refresh as a safety net). Also record the agreed definitions: `score_stddev` is the population stddev (`stddev_pop`, so one rating gives 0), and `SIGMA_FLOOR = 1.0` applies only inside z-score computation.
 6. **§6 Feed**: allow an optional user photo on a ranking (the conversation's example of Jack's photo of a boba drink) alongside the canonical Bev icon. Schema has `rankings.photo_path` for it; the UI may ignore it in v1.
-7. **§11 Alcohol in v1**: shipping beer/wine/cocktails means a declared-DOB gate and most likely an 18+ App Store rating. Options: (a) ship with gate + 18+ rating (friends-only, fine), (b) hide alcoholic categories behind a feature flag until Phase 3 and rate 13+. Schema supports both; I lean (a) because "arguing about the best Bev" includes beer for this group.
+7. **§11 Alcohol in v1**: shipping beer/wine/cocktails means a declared-DOB gate (§4.4), independent of any store rating now that there's no app store. Schema supports hiding alcoholic categories behind a feature flag if that's ever wanted; I lean toward shipping them because "arguing about the best Bev" includes beer for this group.
 8. **§9 Phase 0** should name the two hosted projects and the nightly dump explicitly, given the free plan has no backups and pauses weekly.
 
 Open questions for Matt (answers go into contract v0 or the first vector PR):
@@ -1312,5 +1311,4 @@ Open questions for you to resolve during Phase 0 (facts I could not verify):
 - Whether pg_cron activity alone prevents the free-plan pause (assume no; keep the ping).
 - `storage.objects` owner column name on the project's storage version (`owner` vs `owner_id`).
 - Whether `@imagemagick/magick-wasm` encoding of a 1024 px WebP fits in the 2 s CPU budget; measure on the first run and fall back to Replicate-side resizing.
-- Whether `supabase config push` covers the auth settings we set (Google client ids, email disabled, rate limits); otherwise document the dashboard clicks in `supabase/README.md`.
-- Whether external TestFlight beta review enforces 4.8 (Apple sign-in) and token revocation on deletion; task 3.0 is scheduled before external TestFlight regardless.
+- Whether `supabase config push` covers the auth settings we set ("Confirm email" off, rate limits); otherwise document the dashboard clicks in `supabase/README.md`.
