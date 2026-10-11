@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { AuthApi, Session, SignInInput, SignUpInput } from '@bevi/shared';
+import { ApiError, HANDLE_PATTERN, RESERVED_HANDLES, type AuthApi, type Session, type SignInInput, type SignUpInput } from '@bevi/shared';
 import { emailToUsername, usernameToEmail } from './client';
 import { mapError } from './errors';
 
@@ -11,13 +11,39 @@ function sessionFromUser(user: { id: string; email?: string | null } | null): Se
 export function createAuthApi(client: SupabaseClient): AuthApi {
   return {
     async signUp(input: SignUpInput): Promise<Session> {
+      // Pre-validated here, not left to handle_new_user's raise, because
+      // GoTrue doesn't pass a trigger's raised message through to the
+      // client -- confirmed against a live local stack, where a bad
+      // invite code surfaced as a generic "Database error saving new
+      // user", not BEVI_VALIDATION. The trigger itself stays as the race
+      // backstop its own comment already says it is.
+      if (!HANDLE_PATTERN.test(input.username) || RESERVED_HANDLES.includes(input.username)) {
+        throw new ApiError('validation', `Invalid username: ${input.username}`, { field: 'username' });
+      }
+
+      const { data: handleOk, error: handleError } = await client.rpc('check_handle', { p_handle: input.username }).maybeSingle();
+      if (handleError) throw mapError(handleError);
+      const handleResult = handleOk as { available: boolean; reason: string | null } | null;
+      if (handleResult && !handleResult.available) {
+        if (handleResult.reason === 'taken') {
+          throw new ApiError('conflict', `Username already taken: ${input.username}`);
+        }
+        throw new ApiError('validation', `Invalid username: ${input.username}`, { field: 'username' });
+      }
+
+      const { data: inviteOk, error: inviteError } = await client.rpc('check_invite_code', { p_code: input.inviteCode });
+      if (inviteError) throw mapError(inviteError);
+      if (!inviteOk) {
+        throw new ApiError('validation', 'Invalid invite code', { field: 'inviteCode' });
+      }
+
       const { data, error } = await client.auth.signUp({
         email: usernameToEmail(input.username),
         password: input.password,
-        // handle_new_user (an AFTER INSERT trigger on auth.users) reads
-        // this back out as raw_user_meta_data->>'invite_code' and raises
-        // (rolling back the whole signup) on a bad code, reserved/malformed
-        // username, or a taken handle.
+        // handle_new_user (an AFTER INSERT trigger on auth.users) still
+        // reads this back out as raw_user_meta_data->>'invite_code' and
+        // re-checks everything above -- redundant on the happy path,
+        // but the only thing that actually blocks a concurrent race.
         options: { data: { invite_code: input.inviteCode } },
       });
       if (error) throw mapError(error);

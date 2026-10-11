@@ -1,5 +1,29 @@
--- Two small gaps found while building packages/api against the existing
+-- Small gaps found while building packages/api against the existing
 -- RPCs/views, not part of the #25 review checklist itself.
+
+-- 0. Confirmed live (local stack, this PR's CI): GoTrue does not pass
+-- handle_new_user's raised message through to the client -- a bad invite
+-- code surfaces as a generic "Database error saving new user", not
+-- BEVI_VALIDATION, so packages/api.signUp can't tell an invite-code
+-- failure from a username-taken one that way. check_invite_code lets
+-- signUp check this itself, with a real PostgrestError, before ever
+-- calling auth.signUp -- the trigger stays as the race backstop it already
+-- documented itself as (handle_new_user's own comment: "the uniqueness
+-- check should never fire in practice ... a server-side backstop against
+-- a race, not the primary validation path" -- same now applies to the
+-- invite-code check).
+create or replace function public.check_invite_code(p_code text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (select 1 from public.app_secrets where key = 'invite_code' and value = p_code);
+$$;
+
+revoke execute on function public.check_invite_code(text) from public, anon;
+grant execute on function public.check_invite_code(text) to anon;
 
 -- 1. rankings.updateNote has no backing RPC -- rankings has no direct
 -- update policy for `authenticated` (RPC-only, per supabase/CLAUDE.md), so

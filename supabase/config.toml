@@ -150,7 +150,12 @@ enable_signup = true
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
-enable_confirmations = true
+# Off per DEVELOPMENT-ARJUN.md §4.2 (decided 2026-10-11: username+password,
+# no SMTP) -- synthetic emails (<username>@users.bevi.app) can't receive
+# mail anyway, so signUp must grant a session immediately or sign-up is
+# permanently broken. Confirmed live: with this left at the CLI default
+# (true), signUp succeeded but returned no session.
+enable_confirmations = false
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = false
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
