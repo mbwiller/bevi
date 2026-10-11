@@ -3,8 +3,11 @@
 // app/src/api/client.ts. It runs @bevi/ranking for real (placement validity, respacing, stats,
 // the Bayesian leaderboard, MIN_N_USER gating), so the UI sees the same scores and errors
 // (`conflict`, `validation`, `age_restricted`…) it will see in production. It does no ranking
-// maths of its own: predictions are null, streaks 0, and recommendations / the user board are
-// plain orderings until @bevi/ranking exports them (TODO(rank/predict-streaks)).
+// maths of its own: predictions (`predictScore`), recommendations (`recommend`), streaks
+// (`computeStreak` over `localDayKey`) and the user board (`rankPoints`, `rankUsers`) are all calls
+// into @bevi/ranking over a `PredictionSnapshot` built from the mock's tables; this file only maps
+// data. Starter selection is the app's job (`selectStarterSet`, per the contract), so
+// `getStarterCandidates` only returns the candidates.
 //
 // Mock invite code: `bevi-dev`. Demo account: `demo` / `demo1234` (friends: `jules`, `priya_k`,
 // `sam`, `maya`, `theo` (under 21), `nina`, all with password `password123`).
@@ -14,15 +17,29 @@ import {
   BUCKET_ORDER,
   MIN_N_USER,
   RANKING_VERSION,
+  RECOMMEND_N,
   bayesianAverage,
   categoryPrior,
+  computeStreak,
+  flavorTokens,
   globalPrior,
   insertIntoBucket,
   isLeaderboardEligible,
   leaderboardOrder,
+  localDayKey,
+  normaliseBrand,
   populationStats,
+  predictScore,
+  rankPoints,
+  rankUsers,
+  recommend,
   respaceBucket,
+  userStats,
+  type BevFeatures,
+  type PredictionSnapshot,
   type Stats,
+  type StreakResult,
+  type UserSnapshot,
 } from '@bevi/ranking';
 import {
   ApiError,
@@ -32,6 +49,7 @@ import {
   type AuthApi,
   type Bev,
   type BeviApi,
+  type BevPrediction,
   type BevsApi,
   type BevSummary,
   type Bucket,
@@ -94,6 +112,9 @@ const UPLOAD_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'
 /** Default time the mock's "background removal" takes before a bev photo is 'ready'. */
 const PHOTO_PROCESSING_MS = 3000;
 
+/** Writes that only change the session; they leave seeded fixtures "clean" (see MockDb.dirty). */
+const SESSION_ONLY_METHODS = new Set(['signIn', 'signOut']);
+
 export type Latency = number | readonly [min: number, max: number];
 
 export interface MockApiOptions {
@@ -145,6 +166,13 @@ interface Aggregates {
   global: Stats;
   byBev: Map<string, number[]>;
   byCategory: Map<CategoryId, number[]>;
+  /** Built lazily by `snapshot()`; dropped with the aggregates on every write. */
+  snapshot?: PredictionSnapshot;
+}
+
+/** One user's streak, as @bevi/ranking's computeStreak sees it, plus whether today counts. */
+interface UserStreak extends StreakResult {
+  aliveToday: boolean;
 }
 
 export class MockApi implements BeviApi {
@@ -162,7 +190,15 @@ export class MockApi implements BeviApi {
     this.clock = options.now ?? (() => new Date());
     this.photoProcessingMs = options.photoProcessingMs ?? PHOTO_PROCESSING_MS;
     this.latency = MockApi.toRange(options.latency ?? [200, 600]);
-    this.db = loadDb(this.storage) ?? buildFixtures(this.clock());
+    const stored = loadDb(this.storage);
+    if (stored && stored.dirty !== false) {
+      this.db = stored;
+    } else {
+      // Untouched fixtures are rebuilt for today (timestamps are relative to now), keeping the session.
+      this.db = buildFixtures(this.clock());
+      const session = stored?.sessionUserId;
+      if (session && this.db.users.some((u) => u.id === session)) this.db.sessionUserId = session;
+    }
     saveDb(this.storage, this.db);
   }
 
@@ -198,6 +234,7 @@ export class MockApi implements BeviApi {
     this.wipeUserData(me.id);
     me.onboarded = false;
     me.birthdate = null;
+    this.db.dirty = true;
     this.commit();
   }
 
@@ -229,7 +266,10 @@ export class MockApi implements BeviApi {
       fail(f!.code, `Mock failure on ${method} (failNext)`);
     }
     const result = fn();
-    if (write) this.commit();
+    if (write) {
+      if (!SESSION_ONLY_METHODS.has(method)) this.db.dirty = true;
+      this.commit();
+    }
     return clone(result);
   }
 
@@ -316,6 +356,74 @@ export class MockApi implements BeviApi {
     const global = populationStats(this.db.rankings.map((r) => r.score));
     this.agg = { global, byBev, byCategory };
     return this.agg;
+  }
+
+  /**
+   * The mock's tables as a @bevi/ranking `PredictionSnapshot` (§9): every Bev's features, every
+   * user's stats (via `userStats`), the global stats and the whole rankings table. Pure data
+   * mapping; z-scores and everything else are computed inside @bevi/ranking.
+   */
+  private snapshot(): PredictionSnapshot {
+    const agg = this.aggregates();
+    if (agg.snapshot) return agg.snapshot;
+    const catOf = new Map(this.db.bevs.map((b) => [b.id, b.categoryId]));
+    const bevs: Record<string, BevFeatures> = {};
+    for (const b of this.db.bevs) {
+      const s = populationStats(agg.byBev.get(b.id) ?? []);
+      bevs[b.id] = {
+        id: b.id,
+        categoryId: b.categoryId,
+        brandKey: normaliseBrand(b.brand),
+        flavorTokens: flavorTokens(b.name, b.flavor),
+        priceTier: b.priceTier,
+        ratingCount: s.n,
+        mean: s.mean,
+        stddev: s.stddev,
+        isAlcoholic: ALCOHOLIC.has(b.categoryId),
+      };
+    }
+    const users: Record<string, UserSnapshot> = {};
+    for (const u of this.db.users) {
+      const stats = userStats(
+        this.db.rankings
+          .filter((r) => r.userId === u.id && catOf.has(r.bevId))
+          .map((r) => ({ bevId: r.bevId, categoryId: catOf.get(r.bevId)!, score: r.score })),
+      );
+      users[u.id] = { id: u.id, stats: stats.overall, categoryStats: stats.byCategory, canSeeAlcohol: this.canSeeAlcohol(u) };
+    }
+    const byCategoryMean: Record<string, number> = {};
+    for (const [c, scores] of agg.byCategory) byCategoryMean[c] = populationStats(scores).mean;
+    agg.snapshot = {
+      version: RANKING_VERSION,
+      generatedAt: this.nowIso(),
+      global: { mean: agg.global.mean, stddev: agg.global.stddev, byCategoryMean },
+      bevs,
+      users,
+      rankings: this.db.rankings.filter((r) => catOf.has(r.bevId)).map((r) => ({ userId: r.userId, bevId: r.bevId, score: r.score })),
+    };
+    return agg.snapshot;
+  }
+
+  /**
+   * @bevi/ranking's computeStreak over the local days (profile timezone, `localDayKey`) on which
+   * the user ranked: each ranking's createdAt plus every RANKING feed event (written on submit and
+   * re-rank, kept on removal), so re-ranks count and removals don't break a streak (§8.14).
+   */
+  private streakOf(u: MockUser): UserStreak {
+    const stamps = [
+      ...this.db.rankings.filter((r) => r.userId === u.id).map((r) => r.createdAt),
+      ...this.db.feed.filter((e) => e.actorId === u.id && e.type === 'RANKING').map((e) => e.createdAt),
+    ];
+    const keys = [...new Set(stamps.map((at) => localDayKey(at, u.timezone)))];
+    const todayKey = localDayKey(this.nowIso(), u.timezone);
+    const streak = computeStreak(keys, todayKey);
+    return { ...streak, aliveToday: streak.lastKey === todayKey };
+  }
+
+  /** Bevs `u` added that at least one other user has ranked (§8.13 `bevsCreated`). */
+  private bevsCreatedBy(u: MockUser): number {
+    const mine = new Set(this.db.bevs.filter((b) => b.createdById === u.id).map((b) => b.id));
+    return new Set(this.db.rankings.filter((r) => r.userId !== u.id && mine.has(r.bevId)).map((r) => r.bevId)).size;
   }
 
   // -------------------------------------------------------------------------
@@ -430,8 +538,7 @@ export class MockApi implements BeviApi {
             note: mine.note,
           }
         : null,
-      // TODO(rank/predict-streaks): call @bevi/ranking's predictScore once it lands; no maths here.
-      prediction: null,
+      prediction: this.predictionFor(b, viewer, !!mine),
       inWantToTry: this.db.wantToTry.some((w) => w.userId === viewer.id && w.bevId === b.id),
       friends: this.db.rankings
         .filter((r) => r.bevId === b.id && followed.has(r.userId))
@@ -440,24 +547,44 @@ export class MockApi implements BeviApi {
     };
   }
 
+  /**
+   * `Bev.prediction`: null when the viewer has ranked the Bev or has fewer than MIN_N_USER
+   * rankings (contract), else @bevi/ranking's predictScore over the snapshot.
+   */
+  private predictionFor(b: MockBev, viewer: MockUser, rankedByViewer: boolean): BevPrediction | null {
+    if (rankedByViewer) return null;
+    if (this.db.rankings.filter((r) => r.userId === viewer.id).length < MIN_N_USER) return null;
+    const p = predictScore(this.snapshot(), viewer.id, b.id);
+    return { score: round2(p.score), confidence: p.confidence, generatedAt: this.nowIso(), rankingVersion: RANKING_VERSION };
+  }
+
   // -------------------------------------------------------------------------
   // Stats
   // -------------------------------------------------------------------------
 
-  // TODO(rank/predict-streaks): call @bevi/ranking's computeStreak / rankPoints / rankUsers once they
-  // land. Until then the mock does no maths: streaks are 0, points are the ranking count, and the
-  // user board is simply ordered by ranking count (then handle).
+  /** "Rank on Bevi": @bevi/ranking's rankUsers (which drops Unranked users) in display order. */
   private userBoard() {
-    const count = (id: string) => this.db.rankings.filter((r) => r.userId === id).length;
-    return this.db.users
-      .map((u) => ({ u, bevsRanked: count(u.id) }))
-      .filter((r) => r.bevsRanked > 0)
-      .sort((a, z) => z.bevsRanked - a.bevsRanked || a.u.handle.localeCompare(z.u.handle))
-      .map((r, i) => ({ ...r, rank: i + 1 }));
+    const inputs = this.db.users.map((u) => ({
+      u,
+      streak: this.streakOf(u),
+      bevsRanked: this.db.rankings.filter((r) => r.userId === u.id).length,
+      bevsCreated: this.bevsCreatedBy(u),
+    }));
+    const byId = new Map(inputs.map((x) => [x.u.id, x]));
+    return rankUsers(
+      inputs.map((x) => ({
+        userId: x.u.id,
+        bevsRanked: x.bevsRanked,
+        currentStreak: x.streak.current,
+        bevsCreated: x.bevsCreated,
+        createdAt: x.u.createdAt,
+      })),
+    ).map((r) => ({ ...byId.get(r.userId)!, points: r.points, rank: r.rank }));
   }
 
   private statsFor(u: MockUser): ProfileStats {
     const bevsRanked = this.db.rankings.filter((r) => r.userId === u.id).length;
+    const streak = this.streakOf(u);
     const board = this.userBoard().find((r) => r.u.id === u.id);
     return {
       followers: this.db.follows.filter((f) => f.followeeId === u.id).length,
@@ -465,10 +592,10 @@ export class MockApi implements BeviApi {
       bevdCount: bevsRanked,
       wantToTryCount: this.db.wantToTry.filter((w) => w.userId === u.id).length,
       rankOnBevi: board ? board.rank : null,
-      rankPoints: bevsRanked, // TODO(rank/predict-streaks): rankPoints from @bevi/ranking
-      currentStreak: 0, // TODO(rank/predict-streaks): computeStreak from @bevi/ranking
-      longestStreak: 0,
-      streakAliveToday: false,
+      rankPoints: rankPoints({ bevsRanked, currentStreak: streak.current, bevsCreated: this.bevsCreatedBy(u) }),
+      currentStreak: streak.current,
+      longestStreak: streak.longest,
+      streakAliveToday: streak.aliveToday,
     };
   }
 
@@ -870,6 +997,8 @@ export class MockApi implements BeviApi {
         true,
       ),
 
+    // The contract has the app pick the 10 with selectStarterSet(candidates, { seed: userId }), so the
+    // mock only returns the age-filtered starter candidates and never selects.
     getStarterCandidates: () =>
       this.call('bevs.getStarterCandidates', () => {
         const me = this.requireUser();
@@ -1174,46 +1303,33 @@ export class MockApi implements BeviApi {
         const rows = this.userBoard().map((r) => ({
           rank: r.rank,
           profile: this.toProfile(r.u, me),
-          points: r.bevsRanked, // TODO(rank/predict-streaks): rankPoints
+          points: r.points,
           bevsRanked: r.bevsRanked,
-          currentStreak: 0, // TODO(rank/predict-streaks): computeStreak
+          currentStreak: r.streak.current,
         }));
         return paginate(rows, page, 50);
       }),
   };
 
   recs: RecsApi = {
-    // TODO(rank/predict-streaks): call @bevi/ranking's recommend() once it lands. Until then a plain,
-    // formula-free list: unranked Bevs in categories the user has ranked, then other unranked Bevs,
-    // each ordered by their existing Bayesian score; predictedScore = that score, confidence 0
-    // (the UI shows a locked bubble), no exploration slots.
+    // @bevi/ranking's recommend() over the snapshot, seeded with userId + ':' + the local day
+    // (profile timezone) so the list is stable within a day (§8.11). The contract's reasons are
+    // @bevi/ranking's RecommendationReason values, so they map one to one; the app owns the copy.
     getRecommendations: (params = {}) =>
       this.call('recs.getRecommendations', () => {
         const me = this.requireUser();
         const generatedAt = this.nowIso();
-        const mine = this.db.rankings.filter((r) => r.userId === me.id);
-        const base = { generatedAt, basedOnCount: mine.length, rankingVersion: RANKING_VERSION };
-        if (mine.length < MIN_N_USER) return { ...base, items: [] };
-        const limit = clamp(Math.floor(params.limit ?? 20), 1, 50);
-        const ranked = new Set(mine.map((r) => r.bevId));
-        const catOf = new Map(this.db.bevs.map((b) => [b.id, b.categoryId]));
-        const triedCats = new Set(mine.map((r) => catOf.get(r.bevId)));
-        const candidates = this.db.bevs
-          .filter((b) => !ranked.has(b.id) && this.visible(b, me))
-          .map((b) => ({ b, summary: this.toSummary(b) }))
-          .filter((x): x is { b: MockBev; summary: BevSummary & { bayesScore: number } } => x.summary.bayesScore !== null)
-          .sort(
-            (a, z) =>
-              Number(triedCats.has(z.b.categoryId)) - Number(triedCats.has(a.b.categoryId)) ||
-              z.summary.bayesScore - a.summary.bayesScore ||
-              a.b.name.localeCompare(z.b.name),
-          );
-        const items: Recommendation[] = candidates.slice(0, limit).map(({ b, summary }) => ({
-          bev: summary,
-          predictedScore: summary.bayesScore,
-          confidence: 0,
-          reason: triedCats.has(b.categoryId) ? 'CATEGORY' : 'POPULAR',
-          isExploration: false,
+        const basedOnCount = this.db.rankings.filter((r) => r.userId === me.id).length;
+        const base = { generatedAt, basedOnCount, rankingVersion: RANKING_VERSION };
+        if (basedOnCount < MIN_N_USER) return { ...base, items: [] };
+        const limit = clamp(Math.floor(params.limit ?? RECOMMEND_N), 1, 50);
+        const seed = `${me.id}:${localDayKey(generatedAt, me.timezone)}`;
+        const items: Recommendation[] = recommend(this.snapshot(), me.id, { n: limit, seed }).map((r) => ({
+          bev: this.toSummary(this.bev(r.bevId)),
+          predictedScore: round2(r.score),
+          confidence: r.confidence,
+          reason: r.reason,
+          isExploration: r.isExploration,
           generatedAt,
         }));
         return { ...base, items };

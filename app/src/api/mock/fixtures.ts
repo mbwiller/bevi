@@ -190,5 +190,6 @@ export function buildFixtures(now: Date = new Date()): MockDb {
     reports: [],
     sessionUserId: null,
     seq,
+    dirty: false,
   };
 }

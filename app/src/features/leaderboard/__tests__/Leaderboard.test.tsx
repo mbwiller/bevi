@@ -38,6 +38,21 @@ async function start(url = '/leaderboard') {
   return { searchParams: () => result.getSearchParams(), path: () => result.getPathnameWithParams() };
 }
 
+// Pin "now" (Date only; timers stay real) so demo's seeded streak and predictions are the same on
+// any day and in any timezone the tests run.
+const FIXED_NOW = new Date('2026-10-11T16:00:00Z');
+beforeAll(() => {
+  jest.useFakeTimers({
+    now: FIXED_NOW,
+    doNotFake: [
+      'hrtime', 'nextTick', 'performance', 'queueMicrotask', 'requestAnimationFrame', 'cancelAnimationFrame',
+      'requestIdleCallback', 'cancelIdleCallback', 'setImmediate', 'clearImmediate', 'setInterval', 'clearInterval',
+      'setTimeout', 'clearTimeout',
+    ],
+  });
+});
+afterAll(() => jest.useRealTimers());
+
 beforeEach(() => {
   client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false, gcTime: Infinity } },
@@ -64,14 +79,14 @@ it('switches to People through ?scope= and highlights your own row', async () =>
   const me = await api.profile.getMe();
   const people = (await api.leaderboard.users()).items;
   const mine = people.find((r) => r.profile.id === me.id)!;
-  expect(mine).toBeTruthy();
+  expect(mine).toMatchObject({ currentStreak: 2 }); // seeded, on the pinned clock
   const r = await start();
   await screen.findByLabelText(/^1\. /);
 
   await fireEvent.press(screen.getByLabelText('People'));
   expect(r.searchParams()).toEqual({ scope: 'users' });
   const own = await screen.findAllByLabelText(
-    `${me.displayName} (you), @${me.handle}, ${pointsMeta(mine.points, mine.bevsRanked)}`,
+    `${me.displayName} (you), @${me.handle}, ${pointsMeta(mine.points, mine.bevsRanked)}${mine.currentStreak ? `, ${mine.currentStreak} day streak` : ''}`,
   );
   expect(own.length).toBeGreaterThan(0);
   // Others get a Follow button; your own row never does.

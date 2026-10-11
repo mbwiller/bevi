@@ -5,6 +5,4 @@ import { MOCK_ALCOHOLIC_BEV_ID } from '../seed/extra';
 runConformance(() => new MockApi({ storage: null, latency: 0, photoProcessingMs: 0 }), {
   inviteCode: MOCK_INVITE_CODE,
   alcoholicBevId: MOCK_ALCOHOLIC_BEV_ID,
-  // TODO(rank/predict-streaks): drop once the mock calls @bevi/ranking's computeStreak.
-  checkStreaks: false,
 });

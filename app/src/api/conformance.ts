@@ -33,8 +33,7 @@ export interface ConformanceOptions {
    */
   waitForAsset?: (assetId: string) => Promise<void>;
   /**
-   * Check streaks (a ranking today → currentStreak 1). Default true. The mock passes false until
-   * it calls @bevi/ranking's computeStreak (TODO(rank/predict-streaks)).
+   * Check streaks (a ranking today → currentStreak 1). Default true (the mock runs with it on).
    */
   checkStreaks?: boolean;
 }

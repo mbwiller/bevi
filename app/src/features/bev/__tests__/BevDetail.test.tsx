@@ -1,3 +1,4 @@
+import { CONFIDENCE_LOCK } from '@bevi/ranking';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
 import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
@@ -29,6 +30,21 @@ async function open(id: string) {
   return { path: () => result.getPathnameWithParams() };
 }
 
+// Pin "now" (Date only; timers stay real) so demo's seeded streak and predictions are the same on
+// any day and in any timezone the tests run.
+const FIXED_NOW = new Date('2026-10-11T16:00:00Z');
+beforeAll(() => {
+  jest.useFakeTimers({
+    now: FIXED_NOW,
+    doNotFake: [
+      'hrtime', 'nextTick', 'performance', 'queueMicrotask', 'requestAnimationFrame', 'cancelAnimationFrame',
+      'requestIdleCallback', 'cancelIdleCallback', 'setImmediate', 'clearImmediate', 'setInterval', 'clearInterval',
+      'setTimeout', 'clearTimeout',
+    ],
+  });
+});
+afterAll(() => jest.useRealTimers());
+
 beforeEach(() => {
   client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false, gcTime: Infinity } },
@@ -51,18 +67,25 @@ it('a ranked Bev shows your score, its place in the bucket, and Re-rank', async 
   expect(r.path()).toBe(`/rank/${ranked.bevId}?mode=rerank`);
 });
 
-it('an unranked Bev offers Rank it and Want to Try, with a locked prediction when there is none', async () => {
-  const rec = (await api.recs.getRecommendations()).items[0]!;
+it('an unranked Bev offers Rank it and Want to Try, with a locked prediction when confidence is low', async () => {
+  // Demo has enough rankings, so a low-confidence prediction is "Not enough to go on yet", not the "Rank 3" lock.
+  const rec = (await api.recs.getRecommendations()).items.find((x) => x.confidence < CONFIDENCE_LOCK)!;
   const r = await open(rec.bev.id);
   expect(await screen.findByText(rec.bev.name)).toBeTruthy();
   expect(screen.getByText("You'd rate it")).toBeTruthy();
-  // The mock returns no prediction yet; demo has enough rankings, so it isn't the "Rank 3" lock.
   expect(screen.getByText('Not enough to go on yet')).toBeTruthy();
   const save = screen.getByLabelText('Save to Want to Try');
   await fireEvent.press(save);
   expect(await screen.findByLabelText('Saved to Want to Try')).toBeTruthy();
   await fireEvent.press(screen.getByLabelText(`Rank ${rec.bev.name}`));
   expect(r.path()).toBe(`/rank/${rec.bev.id}`);
+});
+
+it('shows a confident prediction from your tastes', async () => {
+  const rec = (await api.recs.getRecommendations()).items.find((x) => x.confidence >= CONFIDENCE_LOCK)!;
+  await open(rec.bev.id);
+  expect(await screen.findByText(rec.bev.name)).toBeTruthy();
+  expect(screen.getByText('from your tastes')).toBeTruthy();
 });
 
 it('locks the prediction below 3 rankings', async () => {

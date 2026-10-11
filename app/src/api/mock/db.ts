@@ -118,6 +118,12 @@ export interface MockDb {
   sessionUserId: string | null;
   /** Monotonic id counter. */
   seq: number;
+  /**
+   * false while the data is exactly the seeded fixtures (signing in or out doesn't count). A clean
+   * stored db is re-seeded relative to "now" on load, so the demo's streaks and recent activity
+   * stay current on later days; once anything is written it is kept as is. Missing = dirty.
+   */
+  dirty?: boolean;
 }
 
 /** Bump when MockDb's shape changes; a stored db with another schema is discarded. */
