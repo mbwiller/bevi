@@ -1,0 +1,757 @@
+{
+  "source": "data/catalog",
+  "categories": [
+    {
+      "id": "soda",
+      "name": "Soda",
+      "sortOrder": 1,
+      "isAlcoholic": false
+    },
+    {
+      "id": "diet_soda",
+      "name": "Diet Soda",
+      "sortOrder": 2,
+      "isAlcoholic": false
+    },
+    {
+      "id": "juice",
+      "name": "Juice",
+      "sortOrder": 3,
+      "isAlcoholic": false
+    },
+    {
+      "id": "water",
+      "name": "Water",
+      "sortOrder": 4,
+      "isAlcoholic": false
+    },
+    {
+      "id": "sparkling_water",
+      "name": "Sparkling Water",
+      "sortOrder": 5,
+      "isAlcoholic": false
+    },
+    {
+      "id": "energy",
+      "name": "Energy Drinks",
+      "sortOrder": 6,
+      "isAlcoholic": false
+    },
+    {
+      "id": "coffee",
+      "name": "Coffee",
+      "sortOrder": 7,
+      "isAlcoholic": false
+    },
+    {
+      "id": "tea",
+      "name": "Tea",
+      "sortOrder": 8,
+      "isAlcoholic": false
+    },
+    {
+      "id": "boba",
+      "name": "Boba",
+      "sortOrder": 9,
+      "isAlcoholic": false
+    },
+    {
+      "id": "sports",
+      "name": "Sports Drinks",
+      "sortOrder": 10,
+      "isAlcoholic": false
+    },
+    {
+      "id": "smoothie",
+      "name": "Smoothie",
+      "sortOrder": 11,
+      "isAlcoholic": false
+    },
+    {
+      "id": "beer",
+      "name": "Beer",
+      "sortOrder": 12,
+      "isAlcoholic": true
+    },
+    {
+      "id": "wine",
+      "name": "Wine",
+      "sortOrder": 13,
+      "isAlcoholic": true
+    },
+    {
+      "id": "spirits_cocktails",
+      "name": "Spirits & Cocktails",
+      "sortOrder": 14,
+      "isAlcoholic": true
+    },
+    {
+      "id": "other",
+      "name": "Other",
+      "sortOrder": 15,
+      "isAlcoholic": false
+    }
+  ],
+  "bevs": [
+    {
+      "id": "coca-cola-classic",
+      "name": "Coca-Cola Classic",
+      "brand": "Coca-Cola",
+      "flavor": "Original",
+      "categoryId": "soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": true,
+      "aliases": [
+        "coke",
+        "coca cola"
+      ]
+    },
+    {
+      "id": "diet-coke",
+      "name": "Diet Coke",
+      "brand": "Coca-Cola",
+      "flavor": "Diet",
+      "categoryId": "diet_soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": true,
+      "aliases": [
+        "diet coke"
+      ]
+    },
+    {
+      "id": "coke-zero-sugar",
+      "name": "Coke Zero Sugar",
+      "brand": "Coca-Cola",
+      "flavor": "Zero Sugar",
+      "categoryId": "diet_soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": true,
+      "aliases": [
+        "coke zero",
+        "coca cola zero"
+      ]
+    },
+    {
+      "id": "cherry-coke",
+      "name": "Cherry Coke",
+      "brand": "Coca-Cola",
+      "flavor": "Cherry",
+      "categoryId": "soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "coke cherry",
+        "cherry coca cola"
+      ]
+    },
+    {
+      "id": "mexican-coca-cola",
+      "name": "Mexican Coca-Cola",
+      "brand": "Coca-Cola",
+      "flavor": "Original Glass Bottle",
+      "categoryId": "soda",
+      "priceTier": 2,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "mexican coke"
+      ]
+    },
+    {
+      "id": "pepsi",
+      "name": "Pepsi",
+      "brand": "Pepsi",
+      "flavor": "Original",
+      "categoryId": "soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": true,
+      "aliases": [
+        "pepsi cola"
+      ]
+    },
+    {
+      "id": "diet-pepsi",
+      "name": "Diet Pepsi",
+      "brand": "Pepsi",
+      "flavor": "Diet",
+      "categoryId": "diet_soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": true,
+      "aliases": [
+        "diet pepsi"
+      ]
+    },
+    {
+      "id": "pepsi-zero-sugar",
+      "name": "Pepsi Zero Sugar",
+      "brand": "Pepsi",
+      "flavor": "Zero Sugar",
+      "categoryId": "diet_soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": true,
+      "aliases": [
+        "pepsi zero",
+        "pepsi zero sugar"
+      ]
+    },
+    {
+      "id": "sprite",
+      "name": "Sprite",
+      "brand": "Sprite",
+      "flavor": "Lemon-Lime",
+      "categoryId": "soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": true,
+      "aliases": [
+        "sprite lemon lime"
+      ]
+    },
+    {
+      "id": "sprite-zero-sugar",
+      "name": "Sprite Zero Sugar",
+      "brand": "Sprite",
+      "flavor": "Zero Sugar",
+      "categoryId": "diet_soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": true,
+      "aliases": [
+        "sprite zero",
+        "diet sprite"
+      ]
+    },
+    {
+      "id": "dr-pepper",
+      "name": "Dr Pepper",
+      "brand": "Dr Pepper",
+      "flavor": "Original",
+      "categoryId": "soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": true,
+      "aliases": [
+        "dr pepper"
+      ]
+    },
+    {
+      "id": "diet-dr-pepper",
+      "name": "Diet Dr Pepper",
+      "brand": "Dr Pepper",
+      "flavor": "Diet",
+      "categoryId": "diet_soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": true,
+      "aliases": [
+        "diet dr pepper"
+      ]
+    },
+    {
+      "id": "mountain-dew",
+      "name": "Mountain Dew",
+      "brand": "Mountain Dew",
+      "flavor": "Original",
+      "categoryId": "soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": true,
+      "aliases": [
+        "mtn dew",
+        "dew"
+      ]
+    },
+    {
+      "id": "diet-mountain-dew",
+      "name": "Diet Mountain Dew",
+      "brand": "Mountain Dew",
+      "flavor": "Diet",
+      "categoryId": "diet_soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": true,
+      "aliases": [
+        "diet dew",
+        "diet mtn dew"
+      ]
+    },
+    {
+      "id": "fanta-orange",
+      "name": "Fanta Orange",
+      "brand": "Fanta",
+      "flavor": "Orange",
+      "categoryId": "soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": true,
+      "aliases": [
+        "fanta"
+      ]
+    },
+    {
+      "id": "fanta-grape",
+      "name": "Fanta Grape",
+      "brand": "Fanta",
+      "flavor": "Grape",
+      "categoryId": "soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "fanta grape"
+      ]
+    },
+    {
+      "id": "fanta-zero-orange",
+      "name": "Fanta Zero Sugar Orange",
+      "brand": "Fanta",
+      "flavor": "Zero Sugar Orange",
+      "categoryId": "diet_soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "fanta zero"
+      ]
+    },
+    {
+      "id": "aw-root-beer",
+      "name": "A&W Root Beer",
+      "brand": "A&W",
+      "flavor": "Root Beer",
+      "categoryId": "soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "root beer",
+        "aw root beer"
+      ]
+    },
+    {
+      "id": "aw-diet-root-beer",
+      "name": "A&W Diet Root Beer",
+      "brand": "A&W",
+      "flavor": "Diet Root Beer",
+      "categoryId": "diet_soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "diet root beer"
+      ]
+    },
+    {
+      "id": "jarritos-mandarin",
+      "name": "Jarritos Mandarin",
+      "brand": "Jarritos",
+      "flavor": "Mandarin",
+      "categoryId": "soda",
+      "priceTier": 2,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "jarritos tangerine"
+      ]
+    },
+    {
+      "id": "jarritos-lime",
+      "name": "Jarritos Lime",
+      "brand": "Jarritos",
+      "flavor": "Lime",
+      "categoryId": "soda",
+      "priceTier": 2,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "jarritos lima"
+      ]
+    },
+    {
+      "id": "jarritos-fruit-punch",
+      "name": "Jarritos Fruit Punch",
+      "brand": "Jarritos",
+      "flavor": "Fruit Punch",
+      "categoryId": "soda",
+      "priceTier": 2,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "jarritos ponche"
+      ]
+    },
+    {
+      "id": "jarritos-pineapple",
+      "name": "Jarritos Pineapple",
+      "brand": "Jarritos",
+      "flavor": "Pineapple",
+      "categoryId": "soda",
+      "priceTier": 2,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "jarritos pina"
+      ]
+    },
+    {
+      "id": "jarritos-grapefruit",
+      "name": "Jarritos Grapefruit",
+      "brand": "Jarritos",
+      "flavor": "Grapefruit",
+      "categoryId": "soda",
+      "priceTier": 2,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "jarritos toronja"
+      ]
+    },
+    {
+      "id": "barqs-root-beer",
+      "name": "Barq's Root Beer",
+      "brand": "Barq's",
+      "flavor": "Root Beer",
+      "categoryId": "soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "barqs"
+      ]
+    },
+    {
+      "id": "canada-dry-ginger-ale",
+      "name": "Canada Dry Ginger Ale",
+      "brand": "Canada Dry",
+      "flavor": "Ginger Ale",
+      "categoryId": "soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "ginger ale",
+        "canada dry"
+      ]
+    },
+    {
+      "id": "canada-dry-diet-ginger-ale",
+      "name": "Canada Dry Diet Ginger Ale",
+      "brand": "Canada Dry",
+      "flavor": "Diet Ginger Ale",
+      "categoryId": "diet_soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "diet ginger ale"
+      ]
+    },
+    {
+      "id": "seven-up",
+      "name": "7Up",
+      "brand": "7Up",
+      "flavor": "Lemon-Lime",
+      "categoryId": "soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "7 up",
+        "seven up"
+      ]
+    },
+    {
+      "id": "diet-seven-up",
+      "name": "Diet 7Up",
+      "brand": "7Up",
+      "flavor": "Diet",
+      "categoryId": "diet_soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "diet 7 up"
+      ]
+    },
+    {
+      "id": "mug-root-beer",
+      "name": "Mug Root Beer",
+      "brand": "Mug",
+      "flavor": "Root Beer",
+      "categoryId": "soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "mug"
+      ]
+    },
+    {
+      "id": "sunkist-orange",
+      "name": "Sunkist Orange",
+      "brand": "Sunkist",
+      "flavor": "Orange",
+      "categoryId": "soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "sunkist"
+      ]
+    },
+    {
+      "id": "diet-sunkist-orange",
+      "name": "Diet Sunkist Orange",
+      "brand": "Sunkist",
+      "flavor": "Diet Orange",
+      "categoryId": "diet_soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "diet sunkist"
+      ]
+    },
+    {
+      "id": "crush-orange",
+      "name": "Crush Orange",
+      "brand": "Crush",
+      "flavor": "Orange",
+      "categoryId": "soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "orange crush"
+      ]
+    },
+    {
+      "id": "big-red",
+      "name": "Big Red",
+      "brand": "Big Red",
+      "flavor": "Cream Soda",
+      "categoryId": "soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "big red"
+      ]
+    },
+    {
+      "id": "aw-cream-soda",
+      "name": "A&W Cream Soda",
+      "brand": "A&W",
+      "flavor": "Cream Soda",
+      "categoryId": "soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "cream soda"
+      ]
+    },
+    {
+      "id": "squirt",
+      "name": "Squirt",
+      "brand": "Squirt",
+      "flavor": "Grapefruit",
+      "categoryId": "soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "squirt grapefruit"
+      ]
+    },
+    {
+      "id": "reeds-ginger-beer",
+      "name": "Reed's Original Ginger Beer",
+      "brand": "Reed's",
+      "flavor": "Original Ginger Beer",
+      "categoryId": "soda",
+      "priceTier": 2,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "reeds ginger beer"
+      ]
+    },
+    {
+      "id": "olipop-vintage-cola",
+      "name": "Olipop Vintage Cola",
+      "brand": "Olipop",
+      "flavor": "Vintage Cola",
+      "categoryId": "soda",
+      "priceTier": 2,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "olipop cola"
+      ]
+    },
+    {
+      "id": "olipop-strawberry-vanilla",
+      "name": "Olipop Strawberry Vanilla",
+      "brand": "Olipop",
+      "flavor": "Strawberry Vanilla",
+      "categoryId": "soda",
+      "priceTier": 2,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "olipop strawberry"
+      ]
+    },
+    {
+      "id": "olipop-orange-squeeze",
+      "name": "Olipop Orange Squeeze",
+      "brand": "Olipop",
+      "flavor": "Orange Squeeze",
+      "categoryId": "soda",
+      "priceTier": 2,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "olipop orange"
+      ]
+    },
+    {
+      "id": "olipop-classic-root-beer",
+      "name": "Olipop Classic Root Beer",
+      "brand": "Olipop",
+      "flavor": "Classic Root Beer",
+      "categoryId": "soda",
+      "priceTier": 2,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "olipop root beer"
+      ]
+    },
+    {
+      "id": "poppi-cola",
+      "name": "Poppi Cola",
+      "brand": "Poppi",
+      "flavor": "Cola",
+      "categoryId": "soda",
+      "priceTier": 2,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "poppi cola"
+      ]
+    },
+    {
+      "id": "poppi-strawberry-lemon",
+      "name": "Poppi Strawberry Lemon",
+      "brand": "Poppi",
+      "flavor": "Strawberry Lemon",
+      "categoryId": "soda",
+      "priceTier": 2,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "poppi strawberry"
+      ]
+    },
+    {
+      "id": "poppi-doc-pop",
+      "name": "Poppi Doc Pop",
+      "brand": "Poppi",
+      "flavor": "Doc Pop",
+      "categoryId": "soda",
+      "priceTier": 2,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "poppi dr pepper"
+      ]
+    },
+    {
+      "id": "poppi-orange",
+      "name": "Poppi Orange",
+      "brand": "Poppi",
+      "flavor": "Orange",
+      "categoryId": "soda",
+      "priceTier": 2,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "poppi orange"
+      ]
+    },
+    {
+      "id": "zevia-cola",
+      "name": "Zevia Cola",
+      "brand": "Zevia",
+      "flavor": "Cola",
+      "categoryId": "diet_soda",
+      "priceTier": 2,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "zevia cola"
+      ]
+    },
+    {
+      "id": "zevia-ginger-ale",
+      "name": "Zevia Ginger Ale",
+      "brand": "Zevia",
+      "flavor": "Ginger Ale",
+      "categoryId": "diet_soda",
+      "priceTier": 2,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "zevia ginger"
+      ]
+    },
+    {
+      "id": "zevia-mountain-twist",
+      "name": "Zevia Mountain Twist",
+      "brand": "Zevia",
+      "flavor": "Mountain Twist",
+      "categoryId": "diet_soda",
+      "priceTier": 2,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "zevia mtn dew"
+      ]
+    },
+    {
+      "id": "rc-cola",
+      "name": "RC Cola",
+      "brand": "RC Cola",
+      "flavor": "Original",
+      "categoryId": "soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "royal crown cola"
+      ]
+    },
+    {
+      "id": "diet-rc-cola",
+      "name": "Diet RC Cola",
+      "brand": "RC Cola",
+      "flavor": "Diet",
+      "categoryId": "diet_soda",
+      "priceTier": 1,
+      "priceEstimated": true,
+      "isStarter": false,
+      "aliases": [
+        "diet royal crown"
+      ]
+    }
+  ]
+}
