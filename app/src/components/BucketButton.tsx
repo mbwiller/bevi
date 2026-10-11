@@ -1,4 +1,5 @@
 import type { Bucket } from '@bevi/ranking';
+import { BUCKET_LABEL } from '@bevi/shared';
 import { useEffect, useId, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, {
@@ -22,7 +23,6 @@ import { MAX_FONT_SCALE_DENSE, motion, radius, scoreColor, spacing, type, useThe
 import { Icon, type IconName } from './Icon';
 
 /** The fixed gut-check copy and faces, in display order (design system `BUCKETS`). */
-export const BUCKET_LABEL: Record<Bucket, string> = { LOVED: 'Loved it', FINE: 'It was fine', DISLIKED: "Didn't like it" };
 const BUCKET_ICON: Record<Bucket, IconName> = { LOVED: 'laugh', FINE: 'meh', DISLIKED: 'frown' };
 
 export interface BucketButtonProps {
