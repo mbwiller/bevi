@@ -1,5 +1,3 @@
-import { Placeholder } from '@/dev/Placeholder';
+import { LeaderboardScreen } from '@/features/leaderboard/LeaderboardScreen';
 
-export default function LeaderboardScreen() {
-  return <Placeholder title="Leaderboard" header={{ centered: true, title: 'Leaderboard' }} />;
-}
+export default LeaderboardScreen;

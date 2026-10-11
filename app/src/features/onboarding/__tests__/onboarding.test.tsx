@@ -106,7 +106,7 @@ describe('onboarding: starter (temporary skip)', () => {
     const updateMe = jest.spyOn(api.profile, 'updateMe');
     const path = await open('/onboarding/starter');
     await fireEvent.press(await screen.findByRole('button', { name: 'Skip for now' }));
-    await screen.findAllByText('Feed');
+    await screen.findAllByText('Your feed');
     expect(updateMe).toHaveBeenCalledWith({ onboarded: true });
     expect(path()).toBe('/feed');
     expect(useSession.getState().status).toBe('ready');

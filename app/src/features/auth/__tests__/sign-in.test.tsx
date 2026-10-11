@@ -43,7 +43,7 @@ describe('sign in', () => {
     await fill('Demo ', 'demo1234');
     await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));
     expect(spy).toHaveBeenCalledWith({ username: 'demo', password: 'demo1234' });
-    await screen.findAllByText('Feed');
+    await screen.findAllByText('Your feed');
     expect(path()).toBe('/feed');
     expect(useSession.getState()).toMatchObject({ status: 'ready', profile: expect.objectContaining({ handle: 'demo' }) });
   });
@@ -80,7 +80,7 @@ describe('sign in', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));
     expect(await screen.findByText("You're offline. Check your connection and try again.")).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));
-    await screen.findAllByText('Feed');
+    await screen.findAllByText('Your feed');
   });
 
   it('links to sign up, with the admin reset hint and no reset flow', async () => {
