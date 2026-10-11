@@ -2,7 +2,7 @@ import type { FeaturedBev } from '@bevi/shared';
 import { useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import { useFeatured } from '@/api/hooks';
+import { useFeatured, useMe } from '@/api/hooks';
 import { bevArtForCategory } from '@/components/BevArt';
 import { FeaturedCard } from '@/components/FeaturedCard';
 import { priceTierText } from '@/components/PriceTier';
@@ -27,7 +27,9 @@ const SKELETON_CARDS = 3;
 export function FeaturedCarousel() {
   const router = useRouter();
   const featured = useFeatured();
-  const items = featured.data ?? [];
+  const canSeeAlcohol = useMe().data?.canSeeAlcohol ?? false;
+  // The server age-filters featured already; hide alcohol client-side too (§6.17).
+  const items = (featured.data ?? []).filter((f) => canSeeAlcohol || !categoryById(f.bev.categoryId)?.isAlcoholic);
   if (featured.isError || (featured.isSuccess && items.length === 0)) return null;
 
   return (

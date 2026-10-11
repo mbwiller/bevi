@@ -12,7 +12,7 @@ import { UserRow } from '@/components/UserRow';
 import { formatCount } from '@/lib/format';
 import { size, spacing, useTheme } from '@/theme';
 
-import { useToggleSet } from './useToggleSet';
+import { useAllPages, useToggleSet } from './useToggleSet';
 
 /** "212 pts · 84 Bevs". */
 export function pointsMeta(points: number, bevsRanked: number): string {
@@ -48,12 +48,14 @@ export function PeopleBoard() {
   const meId = me.data?.id;
 
   const following = useFollowing(meId);
+  useAllPages(following);
   const followingIds = useMemo(() => flattenPages(following.data).map((p) => p.id), [following.data]);
   const followed = useToggleSet(followingIds);
   const follow = useFollow();
   const unfollow = useUnfollow();
 
-  const [selfVisible, setSelfVisible] = useState(false);
+  // Unknown until FlashList first reports what's on screen, so the pinned row never flashes over a visible own row.
+  const [selfVisible, setSelfVisible] = useState<boolean | null>(null);
   const meIdRef = useRef(meId);
   meIdRef.current = meId;
   // Stable for FlashList; reads the id through a ref.
@@ -93,7 +95,7 @@ export function PeopleBoard() {
   // Your row as the board has it, else from your stats (you may be past the loaded pages).
   const ownRow = rows.find((r) => r.profile.id === meId);
   const pinned =
-    me.data && !selfVisible && query.isSuccess && rows.length > 0 && (ownRow || stats.data) ? (
+    me.data && selfVisible === false && query.isSuccess && rows.length > 0 && (ownRow || stats.data) ? (
       <View style={[styles.pinned, { borderTopColor: colors.border }]} testID="pinned-self">
         <UserRow
           user={me.data}
