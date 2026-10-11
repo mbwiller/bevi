@@ -1,7 +1,11 @@
-import { Placeholder } from '@/dev/Placeholder';
-import { useBack } from '@/lib/useBack';
+import { useLocalSearchParams } from 'expo-router';
 
+import { useFollowing } from '@/api/hooks';
+import { PeopleScreen } from '@/features/people/PeopleScreen';
+
+/** Who a user follows (§6.15): UserRows with Follow pills, search within the list, infinite. */
 export default function FollowingScreen() {
-  const back = useBack();
-  return <Placeholder title="Following" header={{ title: 'Following', onBack: back }} />;
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const query = useFollowing(id);
+  return <PeopleScreen userId={id} title="Following" query={query} which="following" />;
 }

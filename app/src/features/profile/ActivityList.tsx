@@ -1,0 +1,127 @@
+import type { Profile, RankedBev } from '@bevi/shared';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
+import { useRouter } from 'expo-router';
+import { useCallback, useMemo, type ReactElement, type RefObject } from 'react';
+import { StyleSheet, View } from 'react-native';
+
+import { flattenPages, useUserRankings } from '@/api/hooks';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
+import { FeedPost } from '@/components/FeedPost';
+import { SegmentedTabs } from '@/components/SegmentedTabs';
+import { Skeleton } from '@/components/Skeleton';
+import { spacing } from '@/theme';
+
+export type ProfileTab = 'activity' | 'taste';
+
+const TABS = [
+  { id: 'activity', label: 'Activity', icon: 'file-text' as const },
+  { id: 'taste', label: 'Taste Profile', icon: 'chart-no-axes-column' as const },
+];
+
+export function parseProfileTab(v: string | string[] | undefined): ProfileTab {
+  return v === 'taste' ? 'taste' : 'activity';
+}
+
+export interface ActivityListProps {
+  /** Whose rankings: newest first, as FeedPosts. */
+  profile: Profile;
+  /** Your own profile: "You Bev'd …" and first-person empty copy. */
+  self: boolean;
+  /** Everything above the tabs (hero, buttons, rows, stat cards); scrolls with the list. */
+  header: ReactElement;
+  tab: ProfileTab;
+  onTab: (tab: ProfileTab) => void;
+  /** The Activity empty state's action (your own profile: rank your first Bev). */
+  onEmptyAction?: () => void;
+  /** Pull to refresh: refetch the header's queries too. The rankings refetch here. */
+  onRefresh?: () => unknown;
+  /** For `scrollToIndex({ index: 0 })`: brings the first post up under the screen header. */
+  listRef?: RefObject<FlashListRef<RankedBev> | null>;
+}
+
+/**
+ * The scrolling body of a profile: the header, Activity · Taste Profile tabs, then the user's
+ * rankings (`rankings.listUser`) as FeedPosts with infinite scroll. Taste Profile is Phase 3.
+ */
+export function ActivityList({ profile, self, header, tab, onTab, onEmptyAction, onRefresh, listRef }: ActivityListProps) {
+  const router = useRouter();
+  const query = useUserRankings(profile.id);
+  const items = useMemo(() => flattenPages(query.data), [query.data]);
+  const data = tab === 'activity' ? items : [];
+
+  const renderItem = useCallback(
+    ({ item }: { item: RankedBev }) => (
+      <FeedPost
+        actor={profile}
+        you={self}
+        bev={item.bev}
+        score={item.score}
+        bucket={item.bucket}
+        note={item.note}
+        time={item.createdAt}
+        onOpen={() => router.push({ pathname: '/bev/[id]', params: { id: item.bev.id } })}
+      />
+    ),
+    [profile, self, router],
+  );
+
+  const listHeader = (
+    <View>
+      {header}
+      <SegmentedTabs variant="underline-icon" tabs={TABS} value={tab} onChange={(id) => onTab(parseProfileTab(id))} />
+    </View>
+  );
+
+  const first = profile.displayName.split(' ')[0] || `@${profile.handle}`;
+  const empty =
+    tab === 'taste' ? (
+      <EmptyState
+        icon="chart-no-axes-column"
+        title="Coming soon"
+        body={self ? 'Your taste profile will show up here.' : `${first}'s taste profile will show up here.`}
+      />
+    ) : query.isPending ? (
+      <View accessibilityLabel="Loading" testID="activity-skeleton">
+        <Skeleton variant="post" />
+        <Skeleton variant="post" />
+      </View>
+    ) : query.isError ? (
+      <ErrorState error={query.error} onRetry={() => void query.refetch()} />
+    ) : self ? (
+      <EmptyState
+        icon="file-text"
+        title="Your rankings will show up here"
+        body="Rank a Bev and it lands on your profile."
+        action="Rank your first Bev"
+        onAction={onEmptyAction}
+      />
+    ) : (
+      <EmptyState icon="file-text" title={`${first} hasn't Bev'd anything yet`} body="Their rankings will show up here." />
+    );
+
+  return (
+    <FlashList
+      ref={listRef}
+      data={data}
+      renderItem={renderItem}
+      keyExtractor={(r) => r.id}
+      ListHeaderComponent={listHeader}
+      ListEmptyComponent={<>{empty}</>}
+      ListFooterComponent={
+        tab === 'activity' && query.isFetchingNextPage ? <Skeleton variant="post" /> : <View style={styles.foot} />
+      }
+      onEndReached={() => {
+        if (tab === 'activity' && query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage();
+      }}
+      onEndReachedThreshold={0.5}
+      refreshing={query.isRefetching && !query.isFetchingNextPage}
+      onRefresh={() => {
+        void query.refetch();
+        onRefresh?.();
+      }}
+    />
+  );
+}
+
+const styles = StyleSheet.create({ foot: { height: spacing.xxl } });
