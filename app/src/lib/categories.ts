@@ -1,29 +1,12 @@
+import type { CategoryId } from '@bevi/shared';
+
 import type { IconName } from '@/components/Icon';
 
 // The 15 drink categories, mirroring the design system's `Bevi.categories` (design/system/src/core.jsx):
 // labels in the interface's sentence case, one Lucide icon each, and the alcoholic flag. Ids match
 // data/catalog/categories.json (checked by lib/__tests__/categories.test.ts).
 
-/**
- * Category slug. Mirrors `CategoryId` in the draft contract (shared/src/enums.ts); switch to the
- * `@bevi/shared` export once contract v0 is merged and the app depends on it.
- */
-export type CategoryId =
-  | 'soda'
-  | 'diet_soda'
-  | 'juice'
-  | 'water'
-  | 'sparkling_water'
-  | 'energy'
-  | 'coffee'
-  | 'tea'
-  | 'boba'
-  | 'sports'
-  | 'smoothie'
-  | 'beer'
-  | 'wine'
-  | 'spirits_cocktails'
-  | 'other';
+export type { CategoryId };
 
 export interface CategoryInfo {
   id: CategoryId;
