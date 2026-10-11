@@ -15,6 +15,7 @@ Read before any change here: this file, `DEVELOPMENT-MATT.md` §3–§7 and the 
 - **Score colour** is `scoreColor(score, bucket?)` from `@/theme`: the bucket when known, else `bucketForScore` from `@bevi/ranking`. Scores display with `formatScore` (one decimal) from `@/lib/format`.
 - **Types from `@bevi/shared` only.** Never define a local `Bev`, `Ranking`, `Profile` or API type. If a screen needs something the contract lacks, propose a `contract/*` PR; no workarounds.
 - **Backend only through `BeviApi`** (`app/src/api/client.ts`, mock or real via `EXPO_PUBLIC_BEVI_API`). The app never imports `@supabase/supabase-js`.
+- **Auth** is username + password (decided 2026-10-11): `signUp({ username, password, inviteCode })`, `signIn({ username, password })`, `getSession`, `onAuthChange`, `signOut`, `deleteAccount`. The username is the handle (handle rules apply on the sign-up form). No OAuth, no emails, no password-reset flow (an admin resets passwords). The session lives in `localStorage` via the `authStorage` adapter.
 - **Icons:** `lucide-react-native`, names as in the design system README (category → icon map lives client-side). **Lists > 20 rows:** `@shopify/flash-list`. **Images:** `expo-image`. **Animation:** Reanimated, transform and opacity only, with reduced-motion fallbacks. **Sheets:** `@gorhom/bottom-sheet`.
 - **Accessibility:** every touchable has an `accessibilityLabel` and a 44pt hit area (`size.target`, via `hitSlop` if the visual is smaller); never colour-only meaning; dense rows set `maxFontSizeMultiplier={MAX_FONT_SCALE_DENSE}`.
 - **Copy** follows the design system's "Voice and copy": Bev / Bev'd / Want to Try, sentence case, no emoji, scores to one decimal.
@@ -23,20 +24,20 @@ Read before any change here: this file, `DEVELOPMENT-MATT.md` §3–§7 and the 
 
 ## Dependencies
 
-One lockfile, at the root. Add packages with `npx expo install <pkg>` from `app/` (picks SDK-compatible versions and writes the root lockfile) or `npm install <pkg> -w app` from the root for non-native packages. Never run `npm install` inside `app/` without `-w`, and never commit `app/package-lock.json`. The core stack (Expo Router, TanStack Query, Zustand, FlashList, bottom sheet, expo-image, Reanimated, Lucide, SVG, secure store, AsyncStorage, glass effect, haptics, dev client) is already installed so parallel branches don't collide on the lockfile; anything else gets its own small PR.
+One lockfile, at the root. Add packages with `npx expo install <pkg>` from `app/` (picks SDK-compatible versions and writes the root lockfile) or `npm install <pkg> -w app` from the root for non-native packages. Never run `npm install` inside `app/` without `-w`, and never commit `app/package-lock.json`. The core stack (Expo Router, TanStack Query, Zustand, FlashList, bottom sheet, expo-image, Reanimated, Lucide, SVG, secure store, AsyncStorage, glass effect, haptics, dev client) is already installed so parallel branches don't collide on the lockfile; anything else gets its own small PR. Secure store and dev client are leftovers from the native plan: don't use them.
 
-Expo SDK 57 (latest stable on 2026-10-10; 58 is canary). Routes live in `src/app/` (Expo Router picks it up; no config). `ios/` and `android/` are generated (CNG) and ignored.
+Expo SDK 57 (latest stable on 2026-10-10; 58 is canary). Routes live in `src/app/` (Expo Router picks it up; no config). Web only (decided 2026-10-11): no native builds, so `ios/` and `android/` are never generated (still ignored).
 
 ## Commands (from the repo root)
 
 ```
 npm run typecheck -w app     # tsc
 npm test -w app              # jest-expo: token parity, components, lib
-npm start -w app             # Expo dev server (Expo Go works until Google sign-in, task 1.4)
+npm start -w app             # Expo dev server (web is the target; Expo Go is not)
 npx expo-doctor              # from app/: SDK version and config checks
 npm start -w app -- --web    # the same app in a browser (react-native-web)
 ```
 
-Web: `npx expo export --platform web` (from `app/`) builds a single-page app into `app/dist/`. Vercel deploys it with `app/vercel.json` (project root directory `app`). `public/` holds the HTML shell, `manifest.json` and the home-screen icons, so it can be added to the iPhone home screen. Native-only APIs (glass effect, haptics, secure store) need a web fallback in any component that uses them.
+Bevi ships only as a web app (decided 2026-10-11): `npx expo export --platform web` (from `app/`) builds a single-page app into `app/dist/`. Vercel deploys it with `app/vercel.json` (project root directory `app`). `public/` holds the HTML shell, `manifest.json` and the home-screen icons, so it can be added to the iPhone home screen. No EAS, App Store, TestFlight or Android.
 
-Builds: `eas build --profile development --platform ios` makes the "Bevi Dev" app (`com.bevi.app.dev`, `APP_VARIANT=development`); `preview` and `production` build `com.bevi.app`. The EAS project id is added by `eas init` under the team account.
+Native-only APIs need a web path or get dropped: `expo-glass-effect` → a translucent fallback; `expo-haptics` → no-op on web; `expo-secure-store` → `localStorage`; camera → `expo-image-picker` (file input with camera capture on web). Check each library on web as its component is built. `eas.json`, the `ios`/`android` blocks, bundle ids, schemes and the `expo-secure-store` plugin in `app.config.ts` are leftovers to remove in a `ui/*` cleanup PR.
