@@ -40,7 +40,6 @@ export function RankingActionsSheet({ ranked, onClose }: { ranked: RankedBev | n
   }, [bevId]);
 
   const name = ranked?.bev.name ?? '';
-  const failure = updateNote.error ?? remove.error;
 
   const title = mode === 'note' ? 'Edit note' : mode === 'remove' ? `Remove ${name}?` : name;
 
@@ -98,7 +97,7 @@ export function RankingActionsSheet({ ranked, onClose }: { ranked: RankedBev | n
           </Text>
           {remove.error ? (
             <Text style={[type.body, { color: colors.scoreLow }]} accessibilityRole="alert">
-              {errorCopy(failure).message}
+              {errorCopy(remove.error).message}
             </Text>
           ) : null}
           <View style={styles.buttons}>
