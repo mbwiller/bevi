@@ -1,7 +1,9 @@
-import { Placeholder } from '@/dev/Placeholder';
-import { useBack } from '@/lib/useBack';
+import { useLocalSearchParams } from 'expo-router';
 
+import { RankFlow } from '@/features/ranking/RankFlow';
+
+/** Full-screen ranking modal (DEVELOPMENT-MATT §6.9). `?mode=rerank` moves an existing ranking. */
 export default function RankScreen() {
-  const back = useBack();
-  return <Placeholder title="Rank this Bev" header={{ actions: [{ icon: 'x', label: 'Close', variant: 'filled', onPress: back }] }} />;
+  const { bevId, mode } = useLocalSearchParams<{ bevId: string; mode?: string }>();
+  return <RankFlow key={bevId} bevId={bevId} rerank={mode === 'rerank'} />;
 }
