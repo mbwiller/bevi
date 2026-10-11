@@ -6,11 +6,12 @@ import { Pill } from '@/components/Pill';
 import { Wordmark } from '@/components/Wordmark';
 import { ColorSchemeOverride, size, spacing, type, useTheme, type ColorScheme } from '@/theme';
 
+import { controls } from './gallery/Controls';
 import { primitives } from './gallery/Primitives';
 import type { GallerySection } from './gallery/types';
 
 /** Every component group, in order. A PR that adds components adds one import and one entry here. */
-export const SECTIONS: GallerySection[] = [primitives];
+export const SECTIONS: GallerySection[] = [primitives, controls];
 
 const SCHEMES: { id: ColorScheme | null; label: string }[] = [
   { id: null, label: 'System' },
