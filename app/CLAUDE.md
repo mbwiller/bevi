@@ -24,7 +24,7 @@ Read before any change here: this file, `DEVELOPMENT-MATT.md` §3–§7 and the 
 
 ## Dependencies
 
-One lockfile, at the root. Add packages with `npx expo install <pkg>` from `app/` (picks SDK-compatible versions and writes the root lockfile) or `npm install <pkg> -w app` from the root for non-native packages. Never run `npm install` inside `app/` without `-w`, and never commit `app/package-lock.json`. The core stack (Expo Router, TanStack Query, Zustand, FlashList, bottom sheet, expo-image, Reanimated, Lucide, SVG, secure store, AsyncStorage, glass effect, haptics, dev client) is already installed so parallel branches don't collide on the lockfile; anything else gets its own small PR. Secure store and dev client are leftovers from the native plan: don't use them.
+One lockfile, at the root. Add packages with `npx expo install <pkg>` from `app/` (picks SDK-compatible versions and writes the root lockfile) or `npm install <pkg> -w app` from the root for non-native packages. Never run `npm install` inside `app/` without `-w`, and never commit `app/package-lock.json`. The core stack (Expo Router, TanStack Query, Zustand, FlashList, bottom sheet, expo-image, Reanimated, Lucide, SVG, AsyncStorage, glass effect, haptics) is already installed so parallel branches don't collide on the lockfile; anything else gets its own small PR.
 
 Expo SDK 57 (latest stable on 2026-10-10; 58 is canary). Routes live in `src/app/` (Expo Router picks it up; no config). Web only (decided 2026-10-11): no native builds, so `ios/` and `android/` are never generated (still ignored).
 
@@ -38,6 +38,6 @@ npx expo-doctor              # from app/: SDK version and config checks
 npm start -w app -- --web    # the same app in a browser (react-native-web)
 ```
 
-Bevi ships only as a web app (decided 2026-10-11): `npx expo export --platform web` (from `app/`) builds a single-page app into `app/dist/`. Vercel deploys it with `app/vercel.json` (project root directory `app`). `public/` holds the HTML shell, `manifest.json` and the home-screen icons, so it can be added to the iPhone home screen. No EAS, App Store, TestFlight or Android.
+Bevi ships only as a web app (decided 2026-10-11): `npx expo export --platform web` (from `app/`) builds a single-page app into `app/dist/`. Vercel deploys it with `app/vercel.json` (project root directory `app`). Git auto-deploy is off (`git.deploymentEnabled: false`); deploys are manual with `vercel deploy --prod` from the repo root. `public/` holds the HTML shell, `manifest.json` and the home-screen icons, so it can be added to the iPhone home screen. No EAS, App Store, TestFlight or Android.
 
-Native-only APIs need a web path or get dropped: `expo-glass-effect` → a translucent fallback; `expo-haptics` → no-op on web; `expo-secure-store` → `localStorage`; camera → `expo-image-picker` (file input with camera capture on web). Check each library on web as its component is built. `eas.json`, the `ios`/`android` blocks, bundle ids, schemes and the `expo-secure-store` plugin in `app.config.ts` are leftovers to remove in a `ui/*` cleanup PR.
+Native-only APIs need a web path or get dropped: `expo-glass-effect` → a translucent fallback; `expo-haptics` → no-op on web; session → `localStorage`; camera → `expo-image-picker` (file input with camera capture on web). Check each library on web as its component is built.
