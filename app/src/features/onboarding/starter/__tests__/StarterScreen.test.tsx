@@ -1,6 +1,7 @@
 import path from 'path';
 
 import { selectStarterSet } from '@bevi/ranking';
+import { ApiError } from '@bevi/shared';
 import { configure, fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
 
 import { api, mockControls } from '@/api/client';
@@ -34,6 +35,13 @@ async function expectedSet(): Promise<{ id: string; name: string }[]> {
 
 const doneButton = () => screen.getByRole('button', { name: 'Done' });
 
+/** "Haven't had it" on the Bev on screen (Yes and No wait for its details). */
+async function skip(name: string) {
+  await screen.findByRole('header', { name });
+  await waitFor(() => expect(screen.getByRole('button', { name: "Haven't had it" })).toBeEnabled());
+  await fireEvent.press(screen.getByRole('button', { name: "Haven't had it" }));
+}
+
 async function start() {
   await fireEvent.press(await screen.findByRole('button', { name: 'Start' }));
 }
@@ -41,6 +49,7 @@ async function start() {
 /** Rank the Bev on screen into an empty bucket: no comparisons, straight to "Placed". */
 async function rankFirstIn(bucketLabel: string, name: string) {
   await screen.findByRole('header', { name });
+  await waitFor(() => expect(screen.getByRole('button', { name: "I've had it" })).toBeEnabled());
   await fireEvent.press(screen.getByRole('button', { name: "I've had it" }));
   await screen.findByText('How was it?');
   await fireEvent.press(screen.getByLabelText(bucketLabel));
@@ -58,6 +67,7 @@ it('shows the selectStarterSet picks, seeded by the user id with alcohol exclude
   const set = await expectedSet();
   expect(set).toHaveLength(10);
   await screen.findByText("Rank a few Bevs you've had");
+  expect(screen.getByText(/^We'll show you 10 popular Bevs\./)).toBeTruthy();
   await start();
   expect(await screen.findByRole('header', { name: set[0]!.name })).toBeTruthy();
   expect(screen.getByText('1 of 10')).toBeTruthy();
@@ -69,8 +79,7 @@ it('skip moves on without ranking', async () => {
   await open();
   const set = await expectedSet();
   await start();
-  await screen.findByRole('header', { name: set[0]!.name });
-  await fireEvent.press(screen.getByRole('button', { name: "Haven't had it" }));
+  await skip(set[0]!.name);
   expect(await screen.findByRole('header', { name: set[1]!.name })).toBeTruthy();
   expect(screen.getByText('2 of 10')).toBeTruthy();
   expect(submit).not.toHaveBeenCalled();
@@ -87,8 +96,7 @@ it('ranking 3 turns Done on; finishing marks the profile onboarded and lands on 
 
   await rankFirstIn('Loved it', set[0]!.name);
   await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
-  await screen.findByRole('header', { name: set[1]!.name });
-  await fireEvent.press(screen.getByRole('button', { name: "Haven't had it" }));
+  await skip(set[1]!.name);
   await rankFirstIn('It was fine', set[2]!.name);
   await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
   await screen.findByRole('header', { name: set[3]!.name });
@@ -96,6 +104,8 @@ it('ranking 3 turns Done on; finishing marks the profile onboarded and lands on 
   expect(doneButton()).toBeDisabled();
 
   await rankFirstIn("Didn't like it", set[3]!.name);
+  // Counted at once: Done is on the "Placed" screen before the rankings refetch.
+  expect(screen.getByRole('button', { name: 'Done' })).toBeEnabled();
   expect(submit).toHaveBeenCalledTimes(3);
   expect(submit.mock.calls[0]![0]).toEqual({ bevId: set[0]!.id, bucket: 'LOVED', insertIndex: 0, expectedBucketSize: 0, comparisons: [] });
   await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
@@ -122,9 +132,7 @@ it('runs a comparison when the bucket already has a Bev', async () => {
   await start();
   await rankFirstIn('Loved it', set[0]!.name);
   await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
-  await screen.findByRole('header', { name: set[1]!.name });
-  await fireEvent.press(screen.getByRole('button', { name: "I've had it" }));
-  await fireEvent.press(await screen.findByLabelText('Loved it'));
+  await rankAs('Loved it', set[1]!.name);
   await screen.findByText('Which was better?');
   await fireEvent.press(await screen.findByLabelText(`${set[1]!.name}, candidate`));
   await screen.findByText(/^#1 of 2 in Loved · /);
@@ -136,8 +144,7 @@ it('running out before 3 offers more starters', async () => {
   const set = await expectedSet();
   await start();
   for (const b of set) {
-    await screen.findByRole('header', { name: b.name });
-    await fireEvent.press(screen.getByRole('button', { name: "Haven't had it" }));
+    await skip(b.name);
   }
   await screen.findByText("That's all of these");
   await fireEvent.press(screen.getByRole('button', { name: 'Show me more' }));
@@ -148,6 +155,68 @@ it('a failed candidates call shows Retry', async () => {
   controls.signInAs('demo');
   controls.emptyUser();
   controls.failNext('unknown', 'bevs.getStarterCandidates');
+  useSession.setState({ status: 'onboarding', profile: undefined, checked: true, devForced: true });
+  await renderRouter(APP_DIR, { initialUrl: '/onboarding/starter' });
+  await fireEvent.press(await screen.findByText('Retry'));
+  expect(await screen.findByRole('button', { name: 'Start' })).toBeTruthy();
+});
+
+/** Yes on the Bev on screen, then a bucket. */
+async function rankAs(bucketLabel: string, name: string) {
+  await screen.findByRole('header', { name });
+  await waitFor(() => expect(screen.getByRole('button', { name: "I've had it" })).toBeEnabled());
+  await fireEvent.press(screen.getByRole('button', { name: "I've had it" }));
+  await screen.findByText('How was it?');
+  await fireEvent.press(screen.getByLabelText(bucketLabel));
+}
+
+it('a bare conflict (no detail) on a Bev ranked elsewhere moves on', async () => {
+  await open();
+  const set = await expectedSet();
+  const real = api.rankings.submitRanking.bind(api.rankings);
+  const submit = jest.spyOn(api.rankings, 'submitRanking');
+  // Another device ranks it first; the real API answers a conflict with no detail.
+  submit.mockImplementationOnce(async (input) => {
+    await real(input);
+    throw new ApiError('conflict', 'Already ranked');
+  });
+  await start();
+  await rankAs('Loved it', set[0]!.name);
+  expect(await screen.findByRole('header', { name: set[1]!.name })).toBeTruthy();
+  expect(submit).toHaveBeenCalledTimes(1);
+});
+
+it('a server that keeps answering conflict re-saves once, then shows Retry', async () => {
+  await open();
+  const set = await expectedSet();
+  const submit = jest.spyOn(api.rankings, 'submitRanking').mockRejectedValue(new ApiError('conflict', 'Your list changed'));
+  await start();
+  await rankAs('Loved it', set[0]!.name);
+  expect(await screen.findByText("That didn't save")).toBeTruthy();
+  expect(submit).toHaveBeenCalledTimes(2);
+  submit.mockRestore();
+  await fireEvent.press(screen.getByText('Retry'));
+  expect(await screen.findByText(/Placed\. Keep going\./)).toBeTruthy();
+});
+
+it('a conflict whose bucket refetch fails shows the error instead of restarting on the stale list', async () => {
+  await open();
+  const set = await expectedSet();
+  const submit = jest.spyOn(api.rankings, 'submitRanking').mockRejectedValueOnce(new ApiError('conflict', 'Your list changed'));
+  const realList = api.rankings.listBucket.bind(api.rankings);
+  const list = jest.spyOn(api.rankings, 'listBucket');
+  // The first read (placement) works; the reload after the conflict fails.
+  list.mockImplementationOnce(realList).mockRejectedValue(new ApiError('unknown', 'Could not load'));
+  await start();
+  await rankAs('Loved it', set[0]!.name);
+  expect(await screen.findByText("That didn't save")).toBeTruthy();
+  expect(submit).toHaveBeenCalledTimes(1);
+});
+
+it('a failed rankings load shows Retry', async () => {
+  controls.signInAs('demo');
+  controls.emptyUser();
+  controls.failNext('unknown', 'rankings.listMine');
   useSession.setState({ status: 'onboarding', profile: undefined, checked: true, devForced: true });
   await renderRouter(APP_DIR, { initialUrl: '/onboarding/starter' });
   await fireEvent.press(await screen.findByText('Retry'));

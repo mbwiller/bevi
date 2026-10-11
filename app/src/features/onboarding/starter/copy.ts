@@ -3,8 +3,6 @@ import { MIN_N_USER } from '@bevi/ranking';
 /** Starter ranking copy (§6.3), in the design system's voice. */
 export const STARTER_COPY = {
   introTitle: "Rank a few Bevs you've had",
-  introBody:
-    "We'll show you 10 popular Bevs. Rank the ones you've tried and skip the rest. It's how Bevi learns your taste.",
   start: 'Start',
   question: 'Have you had this?',
   yes: "I've had it",
@@ -24,6 +22,11 @@ export const STARTER_COPY = {
   tryAgain: 'Try again',
   saveFailed: "That didn't save",
 } as const;
+
+/** "We'll show you 10 popular Bevs…", with the size of the actual selection. */
+export function introBody(count: number): string {
+  return `We'll show you ${count} popular ${count === 1 ? 'Bev' : 'Bevs'}. Rank the ones you've tried and skip the rest. It's how Bevi learns your taste.`;
+}
 
 /** "Rank at least 3 so we can learn your taste", then how many are left. */
 export function thresholdLine(ranked: number): string {

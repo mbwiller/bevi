@@ -38,6 +38,8 @@ export interface StarterStepProps {
   onSkip: () => void;
   /** Saved: on to the next Bev. */
   onNext: () => void;
+  /** A ranking was saved (counted at once, before the rankings refetch lands). */
+  onSaved: (bevId: string) => void;
 }
 
 const flow = () => useRankingFlow.getState();
@@ -47,7 +49,7 @@ const flow = () => useRankingFlow.getState();
  * same GutCheck and Compare steps as §6.9, driving the `rankingFlow` store), then submits without
  * a note; No skips. Keyed by Bev id by the parent, so each Bev starts fresh.
  */
-export function StarterStep({ bev: summary, index, total, ranked, canFinish, onFinish, onSkip, onNext }: StarterStepProps) {
+export function StarterStep({ bev: summary, index, total, ranked, canFinish, onFinish, onSkip, onNext, onSaved }: StarterStepProps) {
   const { colors } = useTheme();
   const reduced = useReducedMotion();
   const bevQ = useBev(summary.id);
@@ -72,8 +74,10 @@ export function StarterStep({ bev: summary, index, total, ranked, canFinish, onF
     return () => flow().reset();
   }, []);
 
-  // Coming back to onboarding: a Bev ranked on an earlier visit is passed over.
+  // Coming back to onboarding: a Bev ranked on an earlier visit is passed over. Yes and No wait for
+  // the Bev to load, so a ranked one can't be started before this check runs.
   const alreadyRanked = phase === 'ask' && !!bevQ.data?.myRanking;
+  const answerable = !!bevQ.data && !alreadyRanked;
   useEffect(() => {
     if (alreadyRanked) onSkip();
   }, [alreadyRanked, onSkip]);
@@ -86,37 +90,51 @@ export function StarterStep({ bev: summary, index, total, ranked, canFinish, onF
     pour.current = setTimeout(() => setPhase('loading'), reduced ? 0 : motion.pour);
   };
 
-  const save = useCallback(async () => {
-    const r = flow().result();
-    if (!r) return;
-    setPhase('saving');
-    setSaveError(null);
-    try {
-      const res = await submit.mutateAsync({
-        bevId: r.bevId,
-        bucket: r.bucket,
-        insertIndex: r.insertIndex,
-        expectedBucketSize: r.expectedBucketSize,
-        comparisons: r.comparisons,
-      });
-      setOutcome(res);
-      setPhase('placed');
-    } catch (e) {
-      if (isApiError(e) && e.code === 'conflict') {
-        // Ranked elsewhere already: nothing to place. A changed bucket: place again on the fresh list.
+  /**
+   * Re-saves started by a conflict restart rather than by the user. A restart on an empty (or
+   * unchanged) list is done at once and saves again by itself; one such re-save is allowed, then the
+   * error shows with Retry, so a server that keeps answering `conflict` can't loop requests.
+   */
+  const autoResaves = useRef(0);
+
+  const save = useCallback(
+    async (auto = false) => {
+      const r = flow().result();
+      if (!r) return;
+      if (!auto) autoResaves.current = 0;
+      setPhase('saving');
+      setSaveError(null);
+      try {
+        const res = await submit.mutateAsync({
+          bevId: r.bevId,
+          bucket: r.bucket,
+          insertIndex: r.insertIndex,
+          expectedBucketSize: r.expectedBucketSize,
+          comparisons: r.comparisons,
+        });
+        onSaved(r.bevId);
+        setOutcome(res);
+        setPhase('placed');
+      } catch (e) {
+        if (!isApiError(e) || e.code !== 'conflict') return setSaveError(e);
+        // Ranked elsewhere already: nothing to place, move on. `detail.reason` is only a fast path
+        // (the mock sends it; the real API answers a bare conflict), so otherwise re-read the Bev.
         if ((e.detail as { reason?: string } | undefined)?.reason === 'already_ranked') return onNext();
+        const bevNow = await bevQ.refetch();
+        if (!bevNow.isError && bevNow.data?.myRanking) return onNext();
+        // The bucket changed: place again on the fresh list (never on a stale cached one).
         const fresh = await bucketQ.refetch();
-        if (fresh.data) {
-          flow().restart(fresh.data);
-          setNotice(CONFLICT_NOTICE);
-          if (selectDone(flow())) return void save();
-          return setPhase('compare');
-        }
-        return setSaveError(fresh.error ?? e);
+        if (fresh.isError || !fresh.data) return setSaveError(fresh.error ?? e);
+        flow().restart(fresh.data);
+        setNotice(CONFLICT_NOTICE);
+        if (!selectDone(flow())) return setPhase('compare');
+        if (autoResaves.current >= 1) return setSaveError(e);
+        autoResaves.current += 1;
+        return void save(true);
       }
-      setSaveError(e);
-    }
-  }, [submit, bucketQ, onNext]);
+    },
+    [submit, bevQ, bucketQ, onNext, onSaved],
+  );
 
   // Start placement on a bucket list fetched after the bucket was chosen (never a stale cached one).
   useEffect(() => {
@@ -279,10 +297,10 @@ export function StarterStep({ bev: summary, index, total, ranked, canFinish, onF
         {brand ? <Text style={[type.body, styles.text, { color: colors.textSecondary }]}>{brand}</Text> : null}
         <Text style={[type.displayDrop, styles.question, { color: colors.text }]}>{STARTER_COPY.question}</Text>
         <View style={styles.answers}>
-          <Button variant="primary" block onPress={() => setPhase('gut')} disabled={alreadyRanked}>
+          <Button variant="primary" block onPress={() => setPhase('gut')} disabled={!answerable}>
             {STARTER_COPY.yes}
           </Button>
-          <Button variant="outlined" block size="lg" onPress={onSkip} disabled={alreadyRanked}>
+          <Button variant="outlined" block size="lg" onPress={onSkip} disabled={!answerable}>
             {STARTER_COPY.no}
           </Button>
         </View>

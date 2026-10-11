@@ -1,6 +1,6 @@
 import { MIN_N_USER } from '@bevi/ranking';
 import type { BevSummary } from '@bevi/shared';
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -15,7 +15,7 @@ import { useBack } from '@/lib/useBack';
 import { useSession } from '@/state/session';
 import { spacing, type, useTheme } from '@/theme';
 
-import { STARTER_COPY, thresholdLine } from './copy';
+import { STARTER_COPY, introBody, thresholdLine } from './copy';
 import { hasMoreStarters, selectStarterRound } from './selection';
 import { StarterStep } from './StarterStep';
 import { StarterSummary } from './StarterSummary';
@@ -42,42 +42,47 @@ export function StarterScreen() {
   const completeOnboarding = useSession((s) => s.completeOnboarding);
 
   const [view, setView] = useState<View_>('intro');
-  const [roundCount, setRoundCount] = useState(1);
+  const [rounds, setRounds] = useState<string[][] | null>(null);
   const [index, setIndex] = useState(0);
 
   const candidates = candidatesQ.data;
   const profile = me.data;
   const byId = useMemo(() => new Map((candidates ?? []).map((c) => [c.id, c])), [candidates]);
-  const { ids, seen } = useMemo(() => {
-    const out: string[] = [];
-    const shown = new Set<string>();
-    if (!candidates || !profile) return { ids: out, seen: shown };
-    for (let r = 0; r < roundCount; r++) {
-      for (const id of selectStarterRound(candidates, profile, r, shown)) {
-        out.push(id);
-        shown.add(id);
-      }
-    }
-    return { ids: out, seen: shown };
-  }, [candidates, profile, roundCount]);
+  // Each round is picked once and kept: ranking a Bev changes its ratingCount, and a re-pick on
+  // the refetched candidates would reorder the set under the user.
+  useEffect(() => {
+    if (!rounds && candidates && profile) setRounds([selectStarterRound(candidates, profile, 0)]);
+  }, [rounds, candidates, profile]);
+  const ids = useMemo(() => (rounds ?? []).flat(), [rounds]);
+  const seen = useMemo(() => new Set(ids), [ids]);
+  const nextRound = () => {
+    if (!candidates || !profile) return;
+    setRounds((r) => [...(r ?? []), selectStarterRound(candidates, profile, r?.length ?? 0, seen)]);
+  };
 
   const rankings = useMemo(() => flattenPages(rankingsQ.data), [rankingsQ.data]);
-  const ranked = rankings.length;
+  // Saves count at once; the rankings refetch catches up a moment later.
+  const [savedIds, setSavedIds] = useState<ReadonlySet<string>>(new Set());
+  const ranked = useMemo(() => new Set([...rankings.map((r) => r.bevId), ...savedIds]).size, [rankings, savedIds]);
+  const onSaved = useCallback((id: string) => setSavedIds((s) => new Set(s).add(id)), []);
   const canFinish = ranked >= MIN_N_USER;
 
   const advance = useCallback(() => setIndex((i) => i + 1), []);
   const finish = () => updateMe.mutate({ onboarded: true }, { onSuccess: (p) => completeOnboarding(p) });
 
-  const blocking = me.error ?? candidatesQ.error ?? null;
+  // A rankings refetch that fails after a save keeps the list it had; only a first load blocks.
+  const rankingsError = rankingsQ.isError && !rankingsQ.data ? rankingsQ.error : null;
+  const blocking = me.error ?? candidatesQ.error ?? rankingsError ?? null;
   const retry = () => {
     if (me.isError) void me.refetch();
     if (candidatesQ.isError) void candidatesQ.refetch();
+    if (rankingsQ.isError) void rankingsQ.refetch();
   };
 
   let body: ReactNode;
   if (blocking) {
     body = <ErrorState error={blocking} onRetry={retry} />;
-  } else if (!candidates || !profile) {
+  } else if (!candidates || !profile || !rounds) {
     body = (
       <View style={styles.pad} accessibilityLabel="Loading" aria-busy>
         <Skeleton variant="text" lines={2} />
@@ -90,7 +95,10 @@ export function StarterScreen() {
         title={STARTER_COPY.emptyTitle}
         body={STARTER_COPY.emptyBody}
         action={STARTER_COPY.tryAgain}
-        onAction={() => void candidatesQ.refetch()}
+        onAction={() => {
+          setRounds(null);
+          void candidatesQ.refetch();
+        }}
       />
     );
   } else if (view === 'intro') {
@@ -99,7 +107,7 @@ export function StarterScreen() {
         <Text style={[type.displayDrop, { color: colors.text }]} accessibilityRole="header">
           {STARTER_COPY.introTitle}
         </Text>
-        <Text style={[type.bodyLarge, { color: colors.text }]}>{STARTER_COPY.introBody}</Text>
+        <Text style={[type.bodyLarge, { color: colors.text }]}>{introBody(ids.length)}</Text>
         <Text style={[type.body, { color: colors.textSecondary }]}>{thresholdLine(ranked)}</Text>
         <Button variant="primary" block onPress={() => setView('steps')}>
           {STARTER_COPY.start}
@@ -116,7 +124,7 @@ export function StarterScreen() {
         onRankMore={() => {
           updateMe.reset();
           if (index >= ids.length) {
-            if (hasMoreStarters(candidates, profile, seen)) setRoundCount((n) => n + 1);
+            if (hasMoreStarters(candidates, profile, seen)) nextRound();
             else setIndex(0);
           }
           setView('steps');
@@ -132,7 +140,7 @@ export function StarterScreen() {
         title={STARTER_COPY.outTitle}
         body={`${more ? STARTER_COPY.outBodyMore : STARTER_COPY.outBodyAgain} ${thresholdLine(ranked)}`}
         action={more ? STARTER_COPY.showMore : STARTER_COPY.again}
-        onAction={() => (more ? setRoundCount((n) => n + 1) : setIndex(0))}
+        onAction={() => (more ? nextRound() : setIndex(0))}
       />
     );
   } else {
@@ -149,6 +157,7 @@ export function StarterScreen() {
         onFinish={() => setView('summary')}
         onSkip={advance}
         onNext={advance}
+        onSaved={onSaved}
       />
     );
   }
