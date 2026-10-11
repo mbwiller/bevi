@@ -1,0 +1,49 @@
+name: app
+
+# Matt's lane: the Expo web app in app/. Typecheck, unit tests, expo-doctor and the web export that
+# Vercel builds (deploys themselves are manual; see app/CLAUDE.md).
+
+on:
+  pull_request:
+    paths:
+      - "app/**"
+      - "shared/src/**"
+      - "packages/ranking/src/**"
+      - "package-lock.json"
+      - ".github/workflows/app.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "app/**"
+      - "shared/src/**"
+      - "packages/ranking/src/**"
+      - "package-lock.json"
+      - ".github/workflows/app.yml"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run typecheck -w app
+
+      - run: npm test -w app
+
+      - name: expo-doctor
+        working-directory: app
+        run: npx expo-doctor
+
+      - name: web export
+        working-directory: app
+        env:
+          CI: "1"
+        run: npx expo export --platform web
