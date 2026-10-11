@@ -39,7 +39,6 @@ language sql
 stable
 security definer
 set search_path = public, extensions
-set pg_trgm.similarity_threshold = 0.3
 as $$
   with q as (select lower(unaccent(coalesce(p_brand, '') || ' ' || p_name)) as text)
   select b.id, b.name, b.brand, b.flavor, b.thumb_path,
@@ -88,7 +87,6 @@ language sql
 stable
 security definer
 set search_path = public, extensions
-set pg_trgm.similarity_threshold = 0.3
 as $$
   with q as (select lower(unaccent(p_query)) as text)
   select b.id, b.name, b.brand, b.flavor, b.category_id, b.photo_path, b.thumb_path,
