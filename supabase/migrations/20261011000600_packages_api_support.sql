@@ -112,14 +112,24 @@ grant execute on function public.get_user_leaderboard(int) to authenticated;
 -- `profiles` (rankings, comparisons, follows, want_to_try, user_stats,
 -- streaks, feed_events, user_bev_predictions, user_actions, bev_reports);
 -- `bevs.created_by` is `on delete set null`, so Bevs the user created stay
--- in the catalog, per the contract. Only storage objects need an explicit
--- delete since they aren't DB rows. `refresh_global_stats()` doesn't exist
+-- in the catalog, per the contract. `refresh_global_stats()` doesn't exist
 -- yet (global_stats is unpopulated pending its cron job, milestone 1.7),
 -- so it isn't called here -- only the affected Bevs' stats are refreshed.
+--
+-- Storage objects (avatars/raw-uploads) are NOT cleaned up here, confirmed
+-- live against a local stack: `delete from storage.objects` raises "Direct
+-- deletion from storage tables is not allowed. Use the Storage API
+-- instead." -- Supabase's storage extension blocks raw DML on that table
+-- even for a security-definer function owned by postgres. There are also
+-- no storage RLS policies yet (0008_storage.sql only creates the buckets),
+-- so a client-side `.storage.from(bucket).remove(...)` call wouldn't work
+-- either. Deleted accounts leave orphaned storage objects until both a
+-- storage policy and a real deletion path (Storage API, not raw SQL) are
+-- built -- a separate ticket, not blocking the DB-row side of deletion.
 create or replace function public.delete_my_account() returns void
 language plpgsql
 security definer
-set search_path = public, auth, storage
+set search_path = public, auth
 as $$
 declare
   v_uid  uuid := auth.uid();
@@ -131,11 +141,6 @@ begin
 
   select coalesce(array_agg(distinct bev_id), array[]::uuid[]) into v_bevs
   from public.rankings where user_id = v_uid;
-
-  -- storage.objects' owner column is `owner_id text` on newer Postgres/
-  -- storage versions, `owner uuid` on older ones -- unverified against the
-  -- actual hosted/local storage schema version; confirm once a stack exists.
-  delete from storage.objects where bucket_id in ('avatars', 'raw-uploads') and owner_id = v_uid::text;
 
   delete from auth.users where id = v_uid;
 
