@@ -89,6 +89,20 @@ describe('sign up', () => {
     expect(useSession.getState().status).toBe('onboarding');
   });
 
+  it('Enter moves through the fields; only the last one submits', async () => {
+    const spy = jest.spyOn(api, 'signUp');
+    await open();
+    await type('Username', 'newbie');
+    await type('Password', 'longenough');
+    await type('Invite code', 'bevi-dev');
+    for (const label of ['Username', 'Password']) {
+      await fireEvent(screen.getByLabelText(label), 'submitEditing', { nativeEvent: { text: '' } });
+    }
+    expect(spy).not.toHaveBeenCalled();
+    await fireEvent(screen.getByLabelText('Invite code'), 'submitEditing', { nativeEvent: { text: 'bevi-dev' } });
+    expect(spy).toHaveBeenCalled();
+  });
+
   it('links back to sign in', async () => {
     const path = await open();
     await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));

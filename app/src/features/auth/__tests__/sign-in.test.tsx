@@ -48,6 +48,15 @@ describe('sign in', () => {
     expect(useSession.getState()).toMatchObject({ status: 'ready', profile: expect.objectContaining({ handle: 'demo' }) });
   });
 
+  it('Enter in the username field moves on instead of submitting', async () => {
+    const spy = jest.spyOn(api, 'signIn');
+    await open();
+    await fill('demo', 'demo1234');
+    await fireEvent(screen.getByLabelText('Username'), 'submitEditing', { nativeEvent: { text: 'demo' } });
+    expect(spy).not.toHaveBeenCalled();
+    expect(screen.queryByText('Enter your password')).toBeNull();
+  });
+
   it('Enter in the password field submits', async () => {
     const spy = jest.spyOn(api, 'signIn');
     await open();

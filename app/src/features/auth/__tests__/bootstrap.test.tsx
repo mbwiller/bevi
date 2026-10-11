@@ -1,6 +1,6 @@
 import path from 'path';
 
-import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
+import { act, fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
 
 import { api, mockControls } from '@/api/client';
 import { useSession } from '@/state/session';
@@ -70,6 +70,39 @@ describe('session bootstrap (mock API)', () => {
     await fireEvent.press(await screen.findByText('Retry'));
     await screen.findAllByText('Feed');
     expect(path()).toBe('/feed');
+  });
+
+  it('after the first check, a failing getMe keeps the current screen and retries quietly', async () => {
+    controls.signInAs('demo');
+    const path = await launch('/settings');
+    await screen.findByText('Account');
+    const getMe = jest.spyOn(api.profile, 'getMe');
+    controls.failNext('network', 'profile.getMe');
+    await act(async () => controls.signInAs('demo')); // an auth event → getMe, which fails
+    await waitFor(() => expect(getMe).toHaveBeenCalledTimes(1));
+    await act(async () => {});
+    expect(screen.getByText('Account')).toBeTruthy();
+    expect(screen.queryByText('Retry')).toBeNull();
+    expect(useSession.getState().status).toBe('ready');
+    await waitFor(() => expect(getMe).toHaveBeenCalledTimes(2)); // the quiet retry
+    expect(path()).toBe('/settings');
+    getMe.mockRestore();
+  });
+
+  it('a stale getMe (onboarded: false) cannot undo completeOnboarding', async () => {
+    controls.signInAs('demo');
+    controls.emptyUser();
+    await launch();
+    await screen.findByLabelText('Display name');
+    const stale = await api.profile.getMe(); // onboarded: false
+    let resolve!: (p: typeof stale) => void;
+    const getMe = jest.spyOn(api.profile, 'getMe').mockImplementationOnce(() => new Promise((r) => (resolve = r)));
+    await act(async () => controls.signInAs('demo')); // an auth event → getMe, held in flight
+    await waitFor(() => expect(getMe).toHaveBeenCalled());
+    await act(async () => useSession.getState().completeOnboarding());
+    await act(async () => resolve(stale));
+    expect(useSession.getState().status).toBe('ready');
+    getMe.mockRestore();
   });
 
   it('a sign-out from anywhere lands on sign in', async () => {

@@ -12,11 +12,13 @@ import { Header } from '@/components/Header';
 import { Skeleton } from '@/components/Skeleton';
 import { TextField } from '@/components/TextField';
 import { FormError } from '@/features/auth/AuthScreen';
+import { focusField } from '@/features/auth/focusField';
 import { errorField, formErrorMessage } from '@/features/auth/formError';
 import { birthdateProblem, deviceTimezone, isUnder21, maskBirthdate } from '@/features/onboarding/birthdate';
 import { spacing, type, useTheme } from '@/theme';
 
 const NAME_MAX = 50;
+const BIRTHDATE_ID = 'onboarding-birthdate';
 const FORM_MAX = 420;
 const SKELETON_FIELD = 48;
 const BIRTHDATE_HINT = "Set once. Used only to show 21+ categories. Can't be changed later without contacting us.";
@@ -95,7 +97,7 @@ function ProfileForm({ me }: { me: Profile }) {
             setDisplayName(v);
             if (error?.field === 'displayName') setError(null);
           }}
-          onSubmit={() => void submit()}
+          onSubmit={() => focusField(BIRTHDATE_ID)}
           hint="How friends see you. You can change it later."
           error={error?.field === 'displayName' ? error.message : name ? undefined : 'Enter a name'}
           maxLength={NAME_MAX}
@@ -106,6 +108,7 @@ function ProfileForm({ me }: { me: Profile }) {
         />
         <TextField
           label="Birthdate"
+          id={BIRTHDATE_ID}
           value={birthdate}
           onChange={(v) => {
             setBirthdate(maskBirthdate(v));

@@ -46,7 +46,8 @@ function SessionGate() {
   const { error, retry } = useSessionBootstrap();
   const status = useSession((s) => s.status);
   const checked = useSession((s) => s.checked);
-  if (!checked || error) return <Splash error={error || undefined} onRetry={retry} />;
+  // Only the launch check can show the splash (and its error); once the Stack is up it stays up.
+  if (!checked) return <Splash error={error || undefined} onRetry={retry} />;
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.surface } }}>
       <Stack.Screen name="index" />

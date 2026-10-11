@@ -7,8 +7,11 @@ import { useSignIn } from '@/api/hooks';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
 import { AuthScreen, FormError } from '@/features/auth/AuthScreen';
+import { focusField } from '@/features/auth/focusField';
 import { formErrorMessage } from '@/features/auth/formError';
 import { spacing, type, useTheme } from '@/theme';
+
+const PASSWORD_ID = 'sign-in-password';
 
 /** §6.1 Sign in: username + password. The root gate moves on once the session's profile loads. */
 export default function SignInScreen() {
@@ -48,7 +51,7 @@ export default function SignInScreen() {
           setUsername(v);
           setMissing((m) => ({ ...m, username: undefined }));
         }}
-        onSubmit={submit}
+        onSubmit={() => focusField(PASSWORD_ID)}
         error={missing.username}
         autoComplete="username"
         autoCapitalize="none"
@@ -57,6 +60,7 @@ export default function SignInScreen() {
       />
       <TextField
         label="Password"
+        id={PASSWORD_ID}
         type="password"
         value={password}
         onChange={(v) => {

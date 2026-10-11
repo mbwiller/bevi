@@ -6,6 +6,7 @@ import { useCheckHandle, useSignUp } from '@/api/hooks';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
 import { AuthScreen, FormError } from '@/features/auth/AuthScreen';
+import { focusField } from '@/features/auth/focusField';
 import { errorField, formErrorMessage, PASSWORD_MIN_LENGTH } from '@/features/auth/formError';
 import { HANDLE_RULE, localHandleProblem } from '@/features/auth/handle';
 import { useDebouncedValue } from '@/features/auth/useDebouncedValue';
@@ -13,6 +14,8 @@ import { useBack } from '@/lib/useBack';
 import { spacing, type, useTheme } from '@/theme';
 
 const CHECK_DEBOUNCE_MS = 400;
+const PASSWORD_ID = 'sign-up-password';
+const INVITE_ID = 'sign-up-invite';
 const TAKEN = 'That username is taken. Try another.';
 const INVITE_WRONG = "That invite code isn't right. Check it with whoever invited you.";
 
@@ -93,7 +96,7 @@ export default function SignUpScreen() {
         prefix="@"
         value={username}
         onChange={change('username', (v) => setUsername(v.toLowerCase()))}
-        onSubmit={submit}
+        onSubmit={() => focusField(PASSWORD_ID)}
         hint={usernameHint}
         error={usernameError}
         maxLength={20}
@@ -104,10 +107,11 @@ export default function SignUpScreen() {
       />
       <TextField
         label="Password"
+        id={PASSWORD_ID}
         type="password"
         value={password}
         onChange={change('password', setPassword)}
-        onSubmit={submit}
+        onSubmit={() => focusField(INVITE_ID)}
         hint={`At least ${PASSWORD_MIN_LENGTH} characters`}
         error={passwordError}
         autoComplete="new-password"
@@ -115,6 +119,7 @@ export default function SignUpScreen() {
       />
       <TextField
         label="Invite code"
+        id={INVITE_ID}
         value={inviteCode}
         onChange={change('inviteCode', setInviteCode)}
         onSubmit={submit}

@@ -27,6 +27,12 @@ export interface SessionState {
    */
   devForced: boolean;
   /**
+   * Bumped whenever the client changes the session itself (`completeOnboarding`, `signOut`). The
+   * bootstrap drops a `getMe` that started before the bump, so a stale profile (`onboarded: false`)
+   * can't send a user who just finished onboarding back into it.
+   */
+  epoch: number;
+  /**
    * A session arrived (sign-in, sign-up, `getSession` on launch, `onAuthChange`). `onboarded`
    * comes from the contract's `Profile.onboarded`; false sends the user through onboarding.
    */
@@ -52,9 +58,10 @@ export const useSession = create<SessionState>()((set) => ({
   profile: undefined,
   checked: forced !== null,
   devForced: forced !== null,
+  epoch: 0,
   setSession: (profile, onboarded = true) => set({ profile, status: onboarded ? 'ready' : 'onboarding', checked: true }),
-  completeOnboarding: (profile) => set((s) => ({ status: 'ready', profile: profile ?? s.profile })),
-  signOut: () => set({ status: 'signedOut', profile: undefined, checked: true }),
+  completeOnboarding: (profile) => set((s) => ({ status: 'ready', profile: profile ?? s.profile, epoch: s.epoch + 1 })),
+  signOut: () => set((s) => ({ status: 'signedOut', profile: undefined, checked: true, epoch: s.epoch + 1 })),
   setStatus: (status) => {
     if (sessionOverrideEnabled()) set({ status, checked: true });
   },
