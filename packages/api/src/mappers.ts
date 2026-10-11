@@ -371,14 +371,17 @@ export interface UserLeaderboardRpcRow {
   created_at: string;
   onboarded: boolean;
   can_see_alcohol: boolean;
-  bevi_rank: number | null;
+  points: number;
+  bevi_rank: number;
   rating_count: number | null;
   current_streak_days: number | null;
 }
 
-export function mapUserLeaderboardRow(client: SupabaseClient, row: UserLeaderboardRpcRow, rank: number): UserLeaderboardRow {
+// rank is `rank() over (order by points desc)` from SQL -- competition
+// ranking, ties share a rank -- not the row's position in this page.
+export function mapUserLeaderboardRow(client: SupabaseClient, row: UserLeaderboardRpcRow): UserLeaderboardRow {
   return {
-    rank,
+    rank: row.bevi_rank,
     profile: {
       id: row.user_id,
       handle: row.handle,
@@ -392,7 +395,7 @@ export function mapUserLeaderboardRow(client: SupabaseClient, row: UserLeaderboa
       canSeeAlcohol: row.can_see_alcohol,
       onboarded: row.onboarded,
     },
-    points: row.bevi_rank ?? 0,
+    points: row.points,
     bevsRanked: row.rating_count ?? 0,
     currentStreak: row.current_streak_days ?? 0,
   };

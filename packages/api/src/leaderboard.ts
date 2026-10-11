@@ -45,7 +45,9 @@ export function createLeaderboardApi(client: SupabaseClient): LeaderboardApi {
       const { data, error } = await client.rpc('get_user_leaderboard', { p_limit: page?.limit ?? 50 });
       if (error) throw mapError(error);
       const rows = (data ?? []) as UserLeaderboardRpcRow[];
-      return { items: rows.map((row, i) => mapUserLeaderboardRow(client, row, i + 1)), nextCursor: null };
+      // bevi_rank is already the real competition rank from SQL (rank()
+      // over (order by points desc)), not this page's row position.
+      return { items: rows.map((row) => mapUserLeaderboardRow(client, row)), nextCursor: null };
     },
   };
 }
