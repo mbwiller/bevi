@@ -1,5 +1,5 @@
 import { Placeholder, PlaceholderLinks } from '@/dev/Placeholder';
-import { DEV_TOOLS_ENABLED } from '@/dev/devSession';
+import { sessionOverrideEnabled } from '@/dev/devSession';
 import { useBack } from '@/lib/useBack';
 
 export default function SettingsScreen() {
@@ -13,7 +13,7 @@ export default function SettingsScreen() {
           { label: 'Delete account', href: '/settings/delete-account' },
         ]}
       />
-      {DEV_TOOLS_ENABLED ? (
+      {sessionOverrideEnabled() ? (
         <PlaceholderLinks
           links={[
             { label: 'Component gallery', href: '/dev/gallery' },

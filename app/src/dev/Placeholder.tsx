@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { EmptyState } from '@/components/EmptyState';
 import { Header, type HeaderProps } from '@/components/Header';
 import { Icon } from '@/components/Icon';
 import { size, spacing, type, useTheme } from '@/theme';
@@ -26,10 +27,7 @@ export function Placeholder({ title, header, children }: PlaceholderProps) {
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.screen, { backgroundColor: colors.surface }]}>
       <Header {...header} />
       <ScrollView contentContainerStyle={styles.body}>
-        <View style={styles.copy}>
-          <Text style={[type.heading, { color: colors.text }]}>{title}</Text>
-          <Text style={[type.body, { color: colors.textSecondary }]}>Coming soon</Text>
-        </View>
+        <EmptyState icon="clock" title={title} body="Coming soon" />
         {children}
       </ScrollView>
     </SafeAreaView>
@@ -61,7 +59,6 @@ export function PlaceholderLinks({ links }: { links: { label: string; href: Href
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   body: { padding: spacing.gutter, gap: spacing.xl },
-  copy: { gap: spacing.xs },
   links: { borderTopWidth: StyleSheet.hairlineWidth },
   row: {
     minHeight: size.target,

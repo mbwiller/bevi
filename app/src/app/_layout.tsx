@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { sessionOverrideEnabled } from '@/dev/devSession';
 import { useSession } from '@/state/session';
 import { useTheme } from '@/theme';
 
@@ -14,7 +15,8 @@ import { useTheme } from '@/theme';
 // (Stack.Protected). A URL for a route that isn't available — a deep link, a reload, or the
 // screen on display when the status changes — falls back to `index`, which redirects to the
 // status's home: signedOut → /sign-in, onboarding → /onboarding/profile, ready → /feed.
-// index and the /dev routes are outside every guard. A new route file must be added to the
+// index and +not-found are outside every guard; the /dev routes exist only while the dev
+// session override is on (mock API), so a real-API build has no way around the gate. A new route file must be added to the
 // right guard below, or it is reachable in every status.
 export default function RootLayout() {
   const { scheme, colors } = useTheme();
@@ -53,8 +55,10 @@ export default function RootLayout() {
               <Stack.Screen name="image/[url]" options={{ presentation: 'fullScreenModal' }} />
             </Stack.Protected>
 
-            <Stack.Screen name="dev/gallery" />
-            <Stack.Screen name="dev/tokens" />
+            <Stack.Protected guard={sessionOverrideEnabled()}>
+              <Stack.Screen name="dev/gallery" />
+              <Stack.Screen name="dev/tokens" />
+            </Stack.Protected>
           </Stack>
         </QueryClientProvider>
       </SafeAreaProvider>

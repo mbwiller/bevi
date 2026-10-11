@@ -40,6 +40,33 @@ describe('session store', () => {
   });
 });
 
+describe('with the real API (EXPO_PUBLIC_BEVI_API=supabase)', () => {
+  const saved = process.env.EXPO_PUBLIC_BEVI_API;
+  beforeEach(() => {
+    process.env.EXPO_PUBLIC_BEVI_API = 'supabase';
+  });
+  afterEach(() => {
+    if (saved === undefined) delete process.env.EXPO_PUBLIC_BEVI_API;
+    else process.env.EXPO_PUBLIC_BEVI_API = saved;
+  });
+
+  it('ignores ?session= and starts signed out', () => {
+    expect(devSessionStatus('?session=ready')).toBe('signedOut');
+    expect(devSessionStatus(undefined)).toBe('signedOut');
+  });
+
+  it('makes setStatus a no-op', () => {
+    useSession.setState({ status: 'signedOut' });
+    useSession.getState().setStatus('ready');
+    expect(useSession.getState().status).toBe('signedOut');
+  });
+
+  it('still takes real sessions', () => {
+    useSession.getState().setSession(PROFILE);
+    expect(useSession.getState().status).toBe('ready');
+  });
+});
+
 describe('devSessionStatus', () => {
   it('reads ?session= and ignores unknown values', () => {
     expect(devSessionStatus('?session=signedOut')).toBe('signedOut');

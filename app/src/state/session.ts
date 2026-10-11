@@ -1,7 +1,7 @@
 import type { Profile } from '@bevi/shared';
 import { create } from 'zustand';
 
-import { devSessionStatus } from '@/dev/devSession';
+import { devSessionStatus, sessionOverrideEnabled } from '@/dev/devSession';
 
 /**
  * Where the user is in the auth flow. The root layout's gate reads it:
@@ -24,7 +24,7 @@ export interface SessionState {
   completeOnboarding: (profile?: SessionProfile) => void;
   /** Signed out, account deleted, or the session expired. */
   signOut: () => void;
-  /** Dev only: force a status without a profile (the `?session=` override and the gallery toggle). */
+  /** Dev only: force a status (the gallery toggle). A no-op unless the dev session override is on. */
   setStatus: (status: SessionStatus) => void;
 }
 
@@ -39,5 +39,7 @@ export const useSession = create<SessionState>()((set) => ({
   setSession: (profile, onboarded = true) => set({ profile, status: onboarded ? 'ready' : 'onboarding' }),
   completeOnboarding: (profile) => set((s) => ({ status: 'ready', profile: profile ?? s.profile })),
   signOut: () => set({ status: 'signedOut', profile: undefined }),
-  setStatus: (status) => set({ status }),
+  setStatus: (status) => {
+    if (sessionOverrideEnabled()) set({ status });
+  },
 }));

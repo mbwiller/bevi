@@ -50,13 +50,49 @@ describe('session gate', () => {
     expect(path()).toBe('/sign-in');
   });
 
-  it('keeps the dev routes reachable when signed out', async () => {
+  it('keeps the dev routes reachable in any status on the mock API', async () => {
     const path = await start('signedOut', '/dev/tokens');
     expect(path()).toBe('/dev/tokens');
+  });
+
+  it('shows not-found for an unknown URL', async () => {
+    await start('ready', '/no/such/page');
+    expect(await screen.findByText('Page not found')).toBeTruthy();
+  });
+
+  describe('on the real API (EXPO_PUBLIC_BEVI_API=supabase)', () => {
+    const saved = process.env.EXPO_PUBLIC_BEVI_API;
+    beforeEach(() => {
+      process.env.EXPO_PUBLIC_BEVI_API = 'supabase';
+    });
+    afterEach(() => {
+      if (saved === undefined) delete process.env.EXPO_PUBLIC_BEVI_API;
+      else process.env.EXPO_PUBLIC_BEVI_API = saved;
+    });
+
+    it.each(['/dev/gallery', '/dev/tokens'])('%s is unreachable', async (url) => {
+      const path = await start('signedOut', url);
+      await screen.findByText('Create account');
+      expect(path()).toBe('/sign-in');
+    });
+
+    it('ignores setStatus (no way around the gate)', async () => {
+      const path = await start('signedOut', '/');
+      await screen.findByText('Create account');
+      await act(async () => useSession.getState().setStatus('ready'));
+      expect(useSession.getState().status).toBe('signedOut');
+      expect(path()).toBe('/sign-in');
+    });
   });
 });
 
 describe('tab bar', () => {
+  it("Feed's Find people opens Add Bev on the People tab", async () => {
+    const path = await start('ready', '/feed');
+    await fireEvent.press(await screen.findByLabelText('Find people'));
+    expect(path()).toBe('/add');
+  });
+
   it('navigates between tabs and marks the current one', async () => {
     const path = await start('ready', '/feed');
     for (const [label, pathname] of [

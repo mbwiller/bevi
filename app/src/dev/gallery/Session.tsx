@@ -1,9 +1,9 @@
 import { Link } from 'expo-router';
-import { Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
 import { Pill } from '@/components/Pill';
 import { useSession, type SessionStatus } from '@/state/session';
-import { type, useTheme } from '@/theme';
+import { size, spacing, type, useTheme } from '@/theme';
 
 import { Group, Row } from './parts';
 import type { GallerySection } from './types';
@@ -28,7 +28,7 @@ function Session() {
           </Pill>
         ))}
       </Row>
-      <Link href="/" style={[type.body, { color: colors.primary }]} accessibilityLabel="Open the app">
+      <Link href="/" style={[type.body, styles.link, { color: colors.primary }]} accessibilityLabel="Open the app">
         Open the app
       </Link>
       <Text style={[type.caption, { color: colors.textSecondary }]}>
@@ -37,5 +37,9 @@ function Session() {
     </Group>
   );
 }
+
+const styles = StyleSheet.create({
+  link: { minHeight: size.target, paddingVertical: spacing.md, alignSelf: 'flex-start' },
+});
 
 export const session: GallerySection = { id: 'session', title: 'Session (dev)', Component: Session };
