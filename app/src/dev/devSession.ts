@@ -23,14 +23,19 @@ function isStatus(v: string | null): v is SessionStatus {
 }
 
 /**
- * Starting status for the session store: with the override on, `?session=signedOut|onboarding|ready`
- * in the URL on web, else `ready` so the tabs are reachable. With it off, `signedOut` until the API
- * reports a session.
+ * The status the dev override forces at launch: with the override on, `?session=signedOut|onboarding|ready`
+ * in the URL on web; otherwise (no or unknown `?session=`, or the override off) null, and the session
+ * comes from the API like in production. A fresh visitor on the mock with no session lands on sign in.
  */
-export function devSessionStatus(search: string | undefined = currentSearch()): SessionStatus {
-  if (!sessionOverrideEnabled()) return 'signedOut';
+export function devSessionOverride(search: string | undefined = currentSearch()): SessionStatus | null {
+  if (!sessionOverrideEnabled()) return null;
   const param = search ? new URLSearchParams(search).get('session') : null;
-  return isStatus(param) ? param : 'ready';
+  return isStatus(param) ? param : null;
+}
+
+/** Starting status for the session store: the dev override's, else `signedOut` until the API reports a session. */
+export function devSessionStatus(search: string | undefined = currentSearch()): SessionStatus {
+  return devSessionOverride(search) ?? 'signedOut';
 }
 
 function currentSearch(): string | undefined {
