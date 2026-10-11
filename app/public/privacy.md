@@ -18,7 +18,7 @@ Everything is stored in our Supabase database and file storage. Your sign-in ses
 
 ## Who can see it
 
-People signed in to Bevi can see your display name, username, rankings and notes, and who you follow. Your birth date and Want to Try list are not shown to anyone else.
+People signed in to Bevi can see your display name, username, rankings and notes, who you follow, and how many Bevs you've saved to Want to Try. When you save a Bev, your friends see it in their feed. Your birth date is never shown to anyone else.
 
 ## What we don't do
 
