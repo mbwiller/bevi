@@ -1,6 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { computeStreak, dayKeyFromNumber, dayNumber, isoWeekKey, localDayKey, localPeriodKey } from '../src/index.ts';
+import { computeStreak, dayKeyFromNumber, dayNumber, isoWeekKey, localDayKey, localPeriodKey, STREAK_PERIOD } from '../src/index.ts';
 
 describe('localDayKey', () => {
   it.each([
@@ -20,6 +20,15 @@ describe('localDayKey', () => {
   it('rejects bad input', () => {
     expect(() => localDayKey('not a date', 'UTC')).toThrow(RangeError);
     expect(() => localDayKey('2026-10-10T00:00:00Z', 'Mars/Olympus')).toThrow();
+  });
+
+  it('rejects timestamps without Z or an explicit offset (no host-timezone leak)', () => {
+    for (const bare of ['2026-10-10T23:59:00', '2026-10-10T23:59', '2026-10-10', '2026-10-10 23:59:00Z']) {
+      expect(() => localDayKey(bare, 'UTC')).toThrow(/Z or an explicit UTC offset/);
+    }
+    expect(localDayKey('2026-10-10T23:59:00.123+05:30', 'UTC')).toBe('2026-10-10');
+    expect(localDayKey('2026-10-10T23:59:00-0700', 'UTC')).toBe('2026-10-11');
+    expect(localDayKey('2026-10-10t23:59:00z', 'UTC')).toBe('2026-10-10');
   });
 
   it('gives week keys for period week', () => {
@@ -63,6 +72,11 @@ describe('computeStreak', () => {
     { name: 'future keys ignored', keys: ['2026-10-12', '2026-10-11'], today: '2026-10-11', want: { current: 1, longest: 1, lastKey: '2026-10-11' } },
   ])('$name', ({ keys, today, want }) => {
     expect(computeStreak(keys, today)).toEqual(want);
+  });
+
+  it('defaults the period to STREAK_PERIOD', () => {
+    expect(STREAK_PERIOD).toBe('day');
+    expect(computeStreak(['2026-10-10'], '2026-10-11')).toEqual(computeStreak(['2026-10-10'], '2026-10-11', STREAK_PERIOD));
   });
 
   it('counts ISO weeks for period week, across a year boundary', () => {

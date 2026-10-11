@@ -6,10 +6,13 @@
 // depends on the host's timezone. Only `localDayKey` touches Intl, to convert an instant to a
 // local date; the server derives day keys itself and only needs the vectors.
 
+import { STREAK_PERIOD } from './constants.ts';
 import type { StreakPeriod, StreakResult } from './types.ts';
 
 const DAY_KEY = /^(\d{4})-(\d{2})-(\d{2})$/;
 const WEEK_KEY = /^(\d{4})-W(\d{2})$/;
+/** An ISO 8601 date-time that pins its instant: ends in Z or an explicit ±HH:MM / ±HHMM offset. */
+const ZONED_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/i;
 
 /** Days since 1970-01-01 for a proleptic Gregorian date (Howard Hinnant's days_from_civil). */
 function daysFromCivil(y: number, m: number, d: number): number {
@@ -89,8 +92,13 @@ const formatters = new Map<string, Intl.DateTimeFormat>();
  * The calendar date ('YYYY-MM-DD') of an instant in an IANA timezone. DST is handled by the zone
  * conversion; a ranking at 23:59 local belongs to that local day. Throws on an unparseable
  * timestamp or an unknown timezone. Intl-based: used by the app and tests, not by SQL.
+ * The timestamp must carry `Z` or an explicit offset: a bare local time would be parsed in the
+ * host's timezone, which must never leak into a streak.
  */
 export function localDayKey(isoTimestamp: string, timeZone: string): string {
+  if (!ZONED_TIMESTAMP.test(isoTimestamp)) {
+    throw new RangeError(`timestamp "${isoTimestamp}" must be ISO 8601 with Z or an explicit UTC offset`);
+  }
   const ms = Date.parse(isoTimestamp);
   if (Number.isNaN(ms)) throw new RangeError(`invalid timestamp "${isoTimestamp}"`);
   let f = formatters.get(timeZone);
@@ -103,8 +111,8 @@ export function localDayKey(isoTimestamp: string, timeZone: string): string {
   return `${pad(get('year'), 4)}-${pad(get('month'), 2)}-${pad(get('day'), 2)}`;
 }
 
-/** The streak key of an instant: the local day key, or its ISO week for period 'week'. */
-export function localPeriodKey(isoTimestamp: string, timeZone: string, period: StreakPeriod = 'day'): string {
+/** The streak key of an instant: the local day key, or its ISO week for period 'week' (default STREAK_PERIOD). */
+export function localPeriodKey(isoTimestamp: string, timeZone: string, period: StreakPeriod = STREAK_PERIOD): string {
   const day = localDayKey(isoTimestamp, timeZone);
   return period === 'day' ? day : isoWeekKey(day);
 }
@@ -120,7 +128,7 @@ export function localPeriodKey(isoTimestamp: string, timeZone: string, period: S
  * timezone change and the SQL twin, which updates incrementally, never sees them).
  * `lastKey` = the latest key on or before today, or null.
  */
-export function computeStreak(periodKeys: readonly string[], todayKey: string, period: StreakPeriod = 'day'): StreakResult {
+export function computeStreak(periodKeys: readonly string[], todayKey: string, period: StreakPeriod = STREAK_PERIOD): StreakResult {
   const today = periodOrdinal(todayKey, period);
   const byOrdinal = new Map<number, string>();
   for (const key of periodKeys) {
