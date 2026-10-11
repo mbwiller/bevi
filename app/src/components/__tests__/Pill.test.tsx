@@ -17,11 +17,16 @@ it('is a labelled button that fires onPress', async () => {
   expect(onPress).toHaveBeenCalledTimes(1);
 });
 
-it('reaches a 44pt hit area', async () => {
+it('reaches a 44pt hit area without hitSlop (ignored on web)', async () => {
   await render(<Pill>Following</Pill>);
   const pill = screen.getByRole('button', { name: 'Following' });
-  const { top, bottom } = pill.props.hitSlop;
-  expect(StyleSheet.flatten(pill.props.style).height + top + bottom).toBeGreaterThanOrEqual(size.target);
+  expect(pill.props.hitSlop).toBeUndefined();
+  const visual = StyleSheet.flatten(pill.props.style).height;
+  const target = StyleSheet.flatten(screen.getByTestId('hit-target').props.style);
+  expect(target.position).toBe('absolute');
+  // Absolute children sit inside the 1pt border, so the reach is measured from the padding box.
+  const border = StyleSheet.flatten(pill.props.style).borderWidth ?? 0;
+  expect(visual - 2 * border - target.top - target.bottom).toBeGreaterThanOrEqual(size.target);
 });
 
 it('marks an active outlined pill as pressed', async () => {

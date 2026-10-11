@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'rea
 import { radius, size, spacing, type, useTheme } from '@/theme';
 
 import { Icon, type IconName } from './Icon';
-import { hitSlopFor, PRESSED } from './pressed';
+import { HitTarget, PRESSED } from './HitTarget';
 
 export interface PillProps {
   variant?: 'filled' | 'outlined';
@@ -38,7 +38,6 @@ export function Pill({ variant = 'outlined', icon, iconRight, active = false, ch
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      hitSlop={hitSlopFor(size.pill)}
       accessibilityRole="button"
       accessibilityLabel={label}
       aria-disabled={!!disabled}
@@ -58,6 +57,7 @@ export function Pill({ variant = 'outlined', icon, iconRight, active = false, ch
         style,
       ]}
     >
+      <HitTarget height={size.pill} borderWidth={filled ? 0 : 1} />
       {icon ? <Icon name={icon} size={18} strokeWidth={2} color={fg} /> : null}
       {children != null ? (
         <Text style={[styles.label, filled && styles.labelFilled, { color: fg }]} numberOfLines={1}>

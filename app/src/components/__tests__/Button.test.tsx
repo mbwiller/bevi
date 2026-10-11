@@ -1,5 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
+import { StyleSheet } from 'react-native';
+
+import { size } from '@/theme';
+
 import { Button } from '../Button';
 
 it('is a labelled button that fires onPress', async () => {
@@ -20,7 +24,14 @@ it('labels an icon-only button', async () => {
 
 it('extends the 36pt md button to a 44pt target', async () => {
   await render(<Button>Edit profile</Button>);
-  expect(screen.getByRole('button', { name: 'Edit profile' }).props.hitSlop).toEqual({ top: 4, bottom: 4 });
+  const button = screen.getByRole('button', { name: 'Edit profile' });
+  expect(button.props.hitSlop).toBeUndefined();
+  const visual = StyleSheet.flatten(button.props.style).height;
+  const target = StyleSheet.flatten(screen.getByTestId('hit-target').props.style);
+  expect(visual).toBe(36);
+  // Absolute children sit inside the 1pt border, so the reach is measured from the padding box.
+  const border = StyleSheet.flatten(button.props.style).borderWidth ?? 0;
+  expect(visual - 2 * border - target.top - target.bottom).toBeGreaterThanOrEqual(size.target);
 });
 
 it('shows a spinner and ignores presses while loading', async () => {
