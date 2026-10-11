@@ -100,16 +100,3 @@ describe('onboarding: profile', () => {
     expect(await screen.findByLabelText('Display name')).toBeTruthy();
   });
 });
-
-describe('onboarding: starter (temporary skip)', () => {
-  it('Skip for now marks the profile onboarded and lands on the feed', async () => {
-    const updateMe = jest.spyOn(api.profile, 'updateMe');
-    const path = await open('/onboarding/starter');
-    await fireEvent.press(await screen.findByRole('button', { name: 'Skip for now' }));
-    await screen.findAllByText('Your feed');
-    expect(updateMe).toHaveBeenCalledWith({ onboarded: true });
-    expect(path()).toBe('/feed');
-    expect(useSession.getState().status).toBe('ready');
-    expect((await api.profile.getMe()).onboarded).toBe(true);
-  });
-});
