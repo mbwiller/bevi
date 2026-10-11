@@ -6,8 +6,11 @@ import { api } from '../client';
 import { keys } from '../keys';
 import { clearUserQueries, resetUserQueries } from './util';
 
-/** The persisted session (null when signed out). Kept current by the auth mutations and `useAuthListener`. */
-export function useSession() {
+/**
+ * The persisted session as a query (null when signed out). Named to avoid the shell's Zustand
+ * `useSession` store (state/session.ts). Kept current by the auth mutations and `useAuthListener`.
+ */
+export function useSessionQuery() {
   return useQuery({ queryKey: keys.session(), queryFn: () => api.getSession(), staleTime: Infinity });
 }
 
@@ -15,9 +18,13 @@ export function useSession() {
  * Bridges `api.onAuthChange` to a session store without this module knowing the store: calls
  * `onChange` once with the persisted session on mount (`getSession`), then on every sign-in,
  * sign-out, token expiry and account deletion. Also keeps the session query in sync and drops the
- * previous user's cached data on sign-out. Mount it once, in the root layout:
+ * previous user's cached data on sign-out. Mount it once, in the root layout, e.g. with the
+ * shell's store (state/session.ts):
  *
- *   useAuthListener((session) => useSessionStore.getState().setSession(session));
+ *   useAuthListener((session) => {
+ *     if (!session) return useSession.getState().signOut();
+ *     api.profile.getMe().then((p) => useSession.getState().setSession(p, p.onboarded));
+ *   });
  */
 export function useAuthListener(onChange: (session: Session | null) => void): void {
   const qc = useQueryClient();

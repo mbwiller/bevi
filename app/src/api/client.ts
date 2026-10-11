@@ -6,23 +6,17 @@
 //
 // Removing the mock later: delete app/src/api/mock/ (and app/scripts/build-mock-seed.mjs), delete
 // everything marked MOCK below (the import, the 'mock' case, `mockControls`), and set
-// EXPO_PUBLIC_BEVI_API=supabase (or make 'supabase' the default in resolveBackend).
+// EXPO_PUBLIC_BEVI_API=supabase (or make 'supabase' the default in backend.ts).
 
 import type { BeviApi } from '@bevi/shared';
 
+import { apiBackend, type ApiBackend } from './backend';
 import { getMockApi, mockControls as mockControlsImpl, type MockControls } from './mock'; // MOCK
 
-export type ApiBackend = 'mock' | 'supabase';
+export type { ApiBackend } from './backend';
 
-function resolveBackend(value: string | undefined): ApiBackend {
-  const v = (value ?? '').trim().toLowerCase();
-  if (v === '' || v === 'mock') return 'mock';
-  if (v === 'supabase') return 'supabase';
-  throw new Error(`EXPO_PUBLIC_BEVI_API must be "mock" or "supabase", got "${value}"`);
-}
-
-// Read literally so Expo inlines it at build time.
-export const API_BACKEND: ApiBackend = resolveBackend(process.env.EXPO_PUBLIC_BEVI_API);
+/** The backend this bundle runs on, fixed at startup. Same source as `apiBackend()` in ./backend. */
+export const API_BACKEND: ApiBackend = apiBackend();
 
 function createApi(backend: ApiBackend): BeviApi {
   switch (backend) {

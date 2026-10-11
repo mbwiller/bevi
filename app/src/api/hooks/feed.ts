@@ -18,6 +18,10 @@ export function useFeatured() {
   return useQuery({ queryKey: keys.featured(), queryFn: () => api.feed.getFeatured() });
 }
 
+/**
+ * Bev leaderboard, 50 per page. Display `row.bayesScore` (the score on this board: per-category
+ * boards use the category's prior); `row.bev.bayesScore` carries the same value.
+ */
 export function useLeaderboardBevs(categoryId?: CategoryId) {
   return useInfiniteQuery({
     queryKey: keys.leaderboard.bevs(categoryId),

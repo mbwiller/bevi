@@ -56,7 +56,7 @@ describe('seed', () => {
 });
 
 describe('fixtures through the API', () => {
-  it('the demo account has rankings, a feed, featured Bevs, a leaderboard and predictions', async () => {
+  it('the demo account has rankings, a feed, featured Bevs, a leaderboard and recommendations', async () => {
     const api = make();
     await signInDemo(api);
     const me = await api.profile.getMe();
@@ -68,14 +68,19 @@ describe('fixtures through the API', () => {
     expect((await api.leaderboard.users()).items.length).toBeGreaterThan(3);
     const stats = await api.stats.getMine();
     expect(stats.following).toBe(4);
-    expect(stats.currentStreak).toBeGreaterThanOrEqual(1);
     const recs = await api.recs.getRecommendations();
     expect(recs.items.length).toBeGreaterThan(5);
     expect(recs.rankingVersion).toBe(RANKING_VERSION);
-    expect(recs.items.some((r) => r.isExploration)).toBe(true);
-    const unranked = recs.items[0]!.bev.id;
-    const bev = await api.bevs.get(unranked);
-    expect(bev.prediction).toMatchObject({ rankingVersion: RANKING_VERSION });
+    // TODO(rank/predict-streaks): predictions and streaks come from @bevi/ranking in a follow-up.
+    expect((await api.bevs.get(recs.items[0]!.bev.id)).prediction).toBeNull();
+  });
+
+  it('category leaderboard rows carry the board\'s Bayesian score on the Bev too', async () => {
+    const api = make();
+    await signInDemo(api);
+    const rows = (await api.leaderboard.bevs({ categoryId: 'soda' })).items;
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) expect(row.bev.bayesScore).toBe(row.bayesScore);
   });
 
   it('theo (under 21) never sees alcoholic categories, Bevs or featured items', async () => {
@@ -89,17 +94,20 @@ describe('fixtures through the API', () => {
     await expect(api.bevs.get(MOCK_ALCOHOLIC_BEV_ID)).rejects.toMatchObject({ code: 'age_restricted' });
   });
 
-  it('a Bev created with a processing photo becomes ready', async () => {
+  it('bevs.create rejects a photo that is still processing (validation), then accepts it once ready', async () => {
     let now = new Date('2026-10-11T12:00:00Z');
     const api = new MockApi({ storage: null, latency: 0, now: () => now });
     await signInDemo(api);
     const up = await api.media.upload({ kind: 'bev-photo', file: new Blob(['x']), mimeType: 'image/jpeg' });
     expect(up.status).toBe('processing');
-    const bev = await api.bevs.create({ name: 'Garage Cola', categoryId: 'soda', priceTier: 1, priceEstimated: false, photoAssetId: up.assetId });
-    expect(bev.photoStatus).toBe('processing');
-    expect(bev.photoUrl).toBe(up.url);
+    const input = { name: 'Garage Cola', categoryId: 'soda' as const, priceTier: 1 as const, priceEstimated: false, photoAssetId: up.assetId };
+    await expect(api.bevs.create(input)).rejects.toMatchObject({
+      code: 'validation',
+      detail: { field: 'photoAssetId', reason: 'asset_not_ready' },
+    });
     now = new Date(now.getTime() + 5000);
-    expect((await api.bevs.get(bev.id)).photoStatus).toBe('ready');
+    const bev = await api.bevs.create(input);
+    expect(bev).toMatchObject({ photoStatus: 'ready', photoUrl: up.url });
   });
 });
 

@@ -7,6 +7,7 @@
 // It only relies on what the contract promises, never on mock fixtures: it creates its own users
 // (unique usernames) and finds Bevs through `getStarterCandidates` (≥ 30 promised). Uses Jest globals.
 
+import { BANDS, MIN_N_USER, MIN_RATERS } from '@bevi/ranking';
 import {
   ApiError,
   BUCKET_ORDER,
@@ -26,6 +27,16 @@ export interface ConformanceOptions {
   makeUsername?: () => string;
   /** A password the implementation accepts. Default 'conformance-pass-1'. */
   password?: string;
+  /**
+   * Resolves once an uploaded bev photo is ready (`bevs.create` rejects a processing one with
+   * 'validation'). Default: no wait (the implementation under test finishes processing instantly).
+   */
+  waitForAsset?: (assetId: string) => Promise<void>;
+  /**
+   * Check streaks (a ranking today → currentStreak 1). Default true. The mock passes false until
+   * it calls @bevi/ranking's computeStreak (TODO(rank/predict-streaks)).
+   */
+  checkStreaks?: boolean;
 }
 
 const MINOR_BIRTHDATE = (now: Date) => `${now.getUTCFullYear() - 15}-01-01`;
@@ -47,6 +58,8 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
   const makeUsername =
     options.makeUsername ?? (() => `c${Date.now().toString(36).slice(-8)}${(counter++).toString(36)}`.slice(0, 20));
   const password = options.password ?? 'conformance-pass-1';
+  const waitForAsset = options.waitForAsset ?? (async () => undefined);
+  const checkStreaks = options.checkStreaks ?? true;
 
   let api: BeviApi;
   beforeEach(async () => {
@@ -276,12 +289,13 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       await expectCode(api.stats.getUser('no-such-user'), 'not_found');
     });
 
-    it('ranking today starts a streak and counts as Bev\'d', async () => {
+    it('ranking today counts as Bev\'d, puts you on the board and starts a streak', async () => {
       await newUser();
       const [id] = await starterIds(1);
       await rankAtBottom(id!);
       const stats = await api.stats.getMine();
-      expect(stats).toMatchObject({ bevdCount: 1, currentStreak: 1, streakAliveToday: true });
+      expect(stats.bevdCount).toBe(1);
+      if (checkStreaks) expect(stats).toMatchObject({ currentStreak: 1, streakAliveToday: true });
       expect(stats.rankOnBevi).not.toBeNull();
       expect(stats.rankPoints).toBeGreaterThan(0);
     });
@@ -368,6 +382,7 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       const me = await newUser();
       const file = new Blob(['img'], { type: 'image/png' });
       const photo = await api.media.upload({ kind: 'bev-photo', file, mimeType: 'image/png' });
+      await waitForAsset(photo.assetId);
       const name = `Conformance Fizz ${makeUsername()}`;
       const input = { name, brand: 'Test Co', flavor: 'Yuzu', categoryId: 'soda' as const, priceTier: null, priceEstimated: true, photoAssetId: photo.assetId };
       const bev = await api.bevs.create(input);
@@ -383,6 +398,7 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       const e = await expectCode(api.bevs.create({ ...base, photoAssetId: 'no-such-asset' }), 'validation');
       expect(e.detail).toMatchObject({ field: 'photoAssetId' });
       const photo = await api.media.upload({ kind: 'bev-photo', file: new Blob(['x']), mimeType: 'image/jpeg' });
+      await waitForAsset(photo.assetId);
       await expectCode(api.bevs.create({ ...base, categoryId: 'beer', photoAssetId: photo.assetId }), 'age_restricted');
     });
 
@@ -402,7 +418,7 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       const first = await api.rankings.submitRanking({ bevId: a!, bucket: 'LOVED', insertIndex: 0, expectedBucketSize: 0, comparisons: [] });
       expect(first.bucketSize).toBe(1);
       expect(first.ranking).toMatchObject({ userId: me.userId, bevId: a, bucket: 'LOVED', position: 0, note: null });
-      expect(first.ranking.score).toBeGreaterThanOrEqual(7);
+      expect(first.ranking.score).toBeGreaterThanOrEqual(BANDS.LOVED[0]);
       const second = await api.rankings.submitRanking({
         bevId: b!, bucket: 'LOVED', insertIndex: 0, expectedBucketSize: 1,
         comparisons: [{ winnerBevId: b!, loserBevId: a!, tie: false }], note: 'Better ice cold',
@@ -449,7 +465,7 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       const feed = await api.feed.getFeed();
       const post = feed.items.find((i) => i.type === 'RANKING' && i.bev.id === a);
       expect(post).toMatchObject({ actor: { id: me.userId }, bucket: 'DISLIKED', note: 'Way too sweet' });
-      expect(post!.score).toBeLessThan(4);
+      expect(post!.score).toBeLessThan(BANDS.DISLIKED[1]);
     });
 
     it('listMine filters by bucket and category and sorts', async () => {
@@ -580,15 +596,16 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       }
     });
 
-    it('leaderboard.bevs: Bayesian order, ≥ MIN_RATERS (2) ratings, myScore when ranked', async () => {
+    it('leaderboard.bevs: Bayesian order, ≥ MIN_RATERS ratings, myScore when ranked', async () => {
       await newUser();
       const [x] = await starterIds(1);
-      await rankAtBottom(x!);
-      await newUser();
-      await rankAtBottom(x!);
+      for (let i = 0; i < MIN_RATERS; i++) {
+        if (i > 0) await newUser();
+        await rankAtBottom(x!);
+      }
       const page = await api.leaderboard.bevs({ page: { limit: 100 } });
       page.items.forEach((row, i) => {
-        expect(row.ratingCount).toBeGreaterThanOrEqual(2);
+        expect(row.ratingCount).toBeGreaterThanOrEqual(MIN_RATERS);
         if (i > 0) expect(row.rank).toBeGreaterThan(page.items[i - 1]!.rank);
         if (i > 0) expect(row.bayesScore).toBeLessThanOrEqual(page.items[i - 1]!.bayesScore);
       });
@@ -614,28 +631,31 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       expect(rows.some((r) => r.profile.id === me.userId)).toBe(true);
     });
 
-    it('recommendations are empty below 3 rankings, then exclude ranked Bevs', async () => {
+    it('recommendations are empty below MIN_N_USER rankings, then exclude ranked Bevs', async () => {
       await newUser();
-      const ids = await starterIds(4);
-      await rankAtBottom(ids[0]!);
-      const empty = await api.recs.getRecommendations();
-      expect(empty.items).toEqual([]);
-      expect(empty.basedOnCount).toBe(1);
-      await rankAtBottom(ids[1]!, 'FINE');
-      await rankAtBottom(ids[2]!, 'DISLIKED');
+      const ids = await starterIds(MIN_N_USER + 1);
+      const rankedIds = ids.slice(0, MIN_N_USER);
+      for (const [i, id] of rankedIds.entries()) {
+        if (i === MIN_N_USER - 1) {
+          const empty = await api.recs.getRecommendations();
+          expect(empty.items).toEqual([]);
+          expect(empty.basedOnCount).toBe(MIN_N_USER - 1);
+        }
+        await rankAtBottom(id, BUCKET_ORDER[i % BUCKET_ORDER.length]);
+      }
       await api.recs.refresh();
       const recs = await api.recs.getRecommendations({ limit: 10 });
-      expect(recs.basedOnCount).toBe(3);
+      expect(recs.basedOnCount).toBe(MIN_N_USER);
       expect(typeof recs.rankingVersion).toBe('string');
       expect(recs.items.length).toBeLessThanOrEqual(10);
       for (const r of recs.items) {
-        expect(ids.slice(0, 3)).not.toContain(r.bev.id);
+        expect(rankedIds).not.toContain(r.bev.id);
         expect(r.predictedScore).toBeGreaterThanOrEqual(0);
         expect(r.predictedScore).toBeLessThanOrEqual(10);
         expect(r.confidence).toBeGreaterThanOrEqual(0);
         expect(r.confidence).toBeLessThanOrEqual(1);
       }
-      const p = (await api.bevs.get(ids[3]!)).prediction;
+      const p = (await api.bevs.get(ids[MIN_N_USER]!)).prediction;
       if (p) expect(typeof p.rankingVersion).toBe('string');
     });
   });

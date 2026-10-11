@@ -2,7 +2,9 @@
 // packages/api exists. MOCK ONLY: nothing outside app/src/api/mock/ imports this except
 // app/src/api/client.ts. It runs @bevi/ranking for real (placement validity, respacing, stats,
 // the Bayesian leaderboard, MIN_N_USER gating), so the UI sees the same scores and errors
-// (`conflict`, `validation`, `age_restricted`…) it will see in production.
+// (`conflict`, `validation`, `age_restricted`…) it will see in production. It does no ranking
+// maths of its own: predictions are null, streaks 0, and recommendations / the user board are
+// plain orderings until @bevi/ranking exports them (TODO(rank/predict-streaks)).
 //
 // Mock invite code: `bevi-dev`. Demo account: `demo` / `demo1234` (friends: `jules`, `priya_k`,
 // `sam`, `maya`, `theo` (under 21), `nina`, all with password `password123`).
@@ -11,20 +13,15 @@ import {
   BAYES_C,
   BUCKET_ORDER,
   MIN_N_USER,
-  MIN_RATERS,
   RANKING_VERSION,
   bayesianAverage,
-  categoryAffinity,
   categoryPrior,
-  effectiveUserStats,
   globalPrior,
   insertIntoBucket,
+  isLeaderboardEligible,
   leaderboardOrder,
   populationStats,
   respaceBucket,
-  userStats,
-  zScore,
-  type MeanStd,
   type Stats,
 } from '@bevi/ranking';
 import {
@@ -94,11 +91,8 @@ const DISPLAY_NAME_MAX = 50;
 const REPORT_REASON_MAX = 500;
 const UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
 const UPLOAD_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
-/** How long the mock's "background removal" takes before a bev photo is 'ready'. */
+/** Default time the mock's "background removal" takes before a bev photo is 'ready'. */
 const PHOTO_PROCESSING_MS = 3000;
-/** §8.6 shrinkage for a Bev's normalised global score (not exported by @bevi/ranking yet). */
-const K_G = 3;
-const DAY = 24 * 60 * 60 * 1000;
 
 export type Latency = number | readonly [min: number, max: number];
 
@@ -109,6 +103,8 @@ export interface MockApiOptions {
   latency?: Latency;
   /** Clock, for tests. */
   now?: () => Date;
+  /** How long an uploaded bev photo stays 'processing'. Default 3000 ms. */
+  photoProcessingMs?: number;
 }
 
 function fail(code: ApiErrorCode, message: string, detail?: unknown): never {
@@ -136,38 +132,6 @@ function paginate<T>(items: readonly T[], page: PageParams | undefined, defaultL
   return { items: items.slice(start, end), nextCursor: end < items.length ? `o:${end}` : null };
 }
 
-/** 'YYYY-MM-DD' of `at` in `timeZone` (UTC if the zone is unknown). */
-function dayKey(at: string | Date, timeZone: string): string {
-  const d = typeof at === 'string' ? new Date(at) : at;
-  try {
-    return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
-  } catch {
-    return d.toISOString().slice(0, 10);
-  }
-}
-
-function dayNumber(key: string): number {
-  const [y, m, d] = key.split('-').map(Number) as [number, number, number];
-  return Math.round(Date.UTC(y, m - 1, d) / DAY);
-}
-
-/** §8.14 daily streak: current (alive through yesterday), longest, and whether today counts. */
-function streak(dayKeys: readonly string[], todayKey: string): { current: number; longest: number; aliveToday: boolean } {
-  const days = new Set(dayKeys.map(dayNumber));
-  const today = dayNumber(todayKey);
-  let start = days.has(today) ? today : days.has(today - 1) ? today - 1 : null;
-  let current = 0;
-  while (start !== null && days.has(start - current)) current++;
-  let longest = 0;
-  for (const d of days) {
-    if (days.has(d - 1)) continue;
-    let run = 0;
-    while (days.has(d + run)) run++;
-    longest = Math.max(longest, run);
-  }
-  return { current, longest, aliveToday: days.has(today) };
-}
-
 function isValidTimeZone(tz: string): boolean {
   try {
     new Intl.DateTimeFormat('en-US', { timeZone: tz });
@@ -181,13 +145,13 @@ interface Aggregates {
   global: Stats;
   byBev: Map<string, number[]>;
   byCategory: Map<CategoryId, number[]>;
-  userEffective: Map<string, MeanStd>;
 }
 
 export class MockApi implements BeviApi {
   private db: MockDb;
   private readonly storage: StorageLike | null;
   private readonly clock: () => Date;
+  private readonly photoProcessingMs: number;
   private latency: readonly [number, number];
   private readonly listeners = new Set<(session: Session | null) => void>();
   private failures: { code: ApiErrorCode; method?: string }[] = [];
@@ -196,6 +160,7 @@ export class MockApi implements BeviApi {
   constructor(options: MockApiOptions = {}) {
     this.storage = options.storage === undefined ? webStorage() : options.storage;
     this.clock = options.now ?? (() => new Date());
+    this.photoProcessingMs = options.photoProcessingMs ?? PHOTO_PROCESSING_MS;
     this.latency = MockApi.toRange(options.latency ?? [200, 600]);
     this.db = loadDb(this.storage) ?? buildFixtures(this.clock());
     saveDb(this.storage, this.db);
@@ -349,9 +314,7 @@ export class MockApi implements BeviApi {
       if (cat) push(byCategory, cat, r.score);
     }
     const global = populationStats(this.db.rankings.map((r) => r.score));
-    const userEffective = new Map<string, MeanStd>();
-    for (const [userId, scores] of byUser) userEffective.set(userId, effectiveUserStats(populationStats(scores), global));
-    this.agg = { global, byBev, byCategory, userEffective };
+    this.agg = { global, byBev, byCategory };
     return this.agg;
   }
 
@@ -391,7 +354,7 @@ export class MockApi implements BeviApi {
   private bayes(bevId: string): number | null {
     const { global, byBev } = this.aggregates();
     const scores = byBev.get(bevId) ?? [];
-    if (scores.length < MIN_RATERS) return null;
+    if (!isLeaderboardEligible(scores.length)) return null;
     const s = populationStats(scores);
     return round2(bayesianAverage(s.mean, s.n, { m: globalPrior(global), C: BAYES_C }));
   }
@@ -443,32 +406,10 @@ export class MockApi implements BeviApi {
     }
   }
 
-  /** Layer-1-style prediction stub (§8.8 without content similarity), gated on MIN_N_USER. */
-  private predict(u: MockUser, b: MockBev): { score: number; confidence: number } | null {
-    const catOf = new Map(this.db.bevs.map((x) => [x.id, x.categoryId]));
-    const mine = this.db.rankings
-      .filter((r) => r.userId === u.id)
-      .map((r) => ({ bevId: r.bevId, categoryId: catOf.get(r.bevId) ?? 'other', score: r.score }));
-    if (mine.length < MIN_N_USER) return null;
-    const { global, userEffective } = this.aggregates();
-    const eff = effectiveUserStats(userStats(mine).overall, global);
-    const inCat = mine.filter((r) => r.categoryId === b.categoryId);
-    const affinity = categoryAffinity(inCat.map((r) => zScore(r.score, eff)));
-    const raters = this.db.rankings.filter((r) => r.bevId === b.id && r.userId !== u.id);
-    const g =
-      raters.reduce((sum, r) => sum + zScore(r.score, userEffective.get(r.userId) ?? eff), 0) / (raters.length + K_G);
-    const z = 0.7 * affinity + 0.3 * g;
-    return {
-      score: round2(clamp(eff.mean + eff.stddev * z, 0, 10)),
-      confidence: round2(Math.min(1, mine.length / 10) * Math.min(1, (inCat.length + Math.min(raters.length, 2)) / 4)),
-    };
-  }
-
   private toBev(b: MockBev, viewer: MockUser): Bev {
     const scores = this.aggregates().byBev.get(b.id) ?? [];
     const s = scores.length ? populationStats(scores) : null;
     const mine = this.rankingOf(viewer.id, b.id);
-    const pred = mine ? null : this.predict(viewer, b);
     const label = this.assetUrlAndStatus(b.labelAssetId);
     const creator = b.createdById ? this.db.users.find((u) => u.id === b.createdById) : undefined;
     const followed = new Set(this.db.follows.filter((f) => f.followerId === viewer.id).map((f) => f.followeeId));
@@ -489,9 +430,8 @@ export class MockApi implements BeviApi {
             note: mine.note,
           }
         : null,
-      prediction: pred
-        ? { ...pred, generatedAt: this.nowIso(), rankingVersion: RANKING_VERSION }
-        : null,
+      // TODO(rank/predict-streaks): call @bevi/ranking's predictScore once it lands; no maths here.
+      prediction: null,
       inWantToTry: this.db.wantToTry.some((w) => w.userId === viewer.id && w.bevId === b.id),
       friends: this.db.rankings
         .filter((r) => r.bevId === b.id && followed.has(r.userId))
@@ -504,41 +444,31 @@ export class MockApi implements BeviApi {
   // Stats
   // -------------------------------------------------------------------------
 
-  private userActivity(u: MockUser) {
-    const mine = this.db.rankings.filter((r) => r.userId === u.id);
-    const s = streak(
-      mine.map((r) => dayKey(r.createdAt, u.timezone)),
-      dayKey(this.now(), u.timezone),
-    );
-    const rankedByOthers = new Set(this.db.rankings.filter((r) => r.userId !== u.id).map((r) => r.bevId));
-    const bevsCreated = this.db.bevs.filter((b) => b.createdById === u.id && rankedByOthers.has(b.id)).length;
-    // §8.13 points (not exported by @bevi/ranking yet).
-    const points = mine.length + 3 * s.current + 2 * bevsCreated;
-    return { bevsRanked: mine.length, points, streak: s };
-  }
-
-  /** §8.13 "Rank on Bevi": competition ranking over users with ≥ 1 ranking. */
+  // TODO(rank/predict-streaks): call @bevi/ranking's computeStreak / rankPoints / rankUsers once they
+  // land. Until then the mock does no maths: streaks are 0, points are the ranking count, and the
+  // user board is simply ordered by ranking count (then handle).
   private userBoard() {
-    const rows = this.db.users
-      .map((u) => ({ u, ...this.userActivity(u) }))
+    const count = (id: string) => this.db.rankings.filter((r) => r.userId === id).length;
+    return this.db.users
+      .map((u) => ({ u, bevsRanked: count(u.id) }))
       .filter((r) => r.bevsRanked > 0)
-      .sort((a, z) => z.points - a.points || z.bevsRanked - a.bevsRanked || a.u.createdAt.localeCompare(z.u.createdAt));
-    return rows.map((r) => ({ ...r, rank: 1 + rows.filter((o) => o.points > r.points).length }));
+      .sort((a, z) => z.bevsRanked - a.bevsRanked || a.u.handle.localeCompare(z.u.handle))
+      .map((r, i) => ({ ...r, rank: i + 1 }));
   }
 
   private statsFor(u: MockUser): ProfileStats {
-    const act = this.userActivity(u);
+    const bevsRanked = this.db.rankings.filter((r) => r.userId === u.id).length;
     const board = this.userBoard().find((r) => r.u.id === u.id);
     return {
       followers: this.db.follows.filter((f) => f.followeeId === u.id).length,
       following: this.db.follows.filter((f) => f.followerId === u.id).length,
-      bevdCount: act.bevsRanked,
+      bevdCount: bevsRanked,
       wantToTryCount: this.db.wantToTry.filter((w) => w.userId === u.id).length,
       rankOnBevi: board ? board.rank : null,
-      rankPoints: act.points,
-      currentStreak: act.streak.current,
-      longestStreak: act.streak.longest,
-      streakAliveToday: act.streak.aliveToday,
+      rankPoints: bevsRanked, // TODO(rank/predict-streaks): rankPoints from @bevi/ranking
+      currentStreak: 0, // TODO(rank/predict-streaks): computeStreak from @bevi/ranking
+      longestStreak: 0,
+      streakAliveToday: false,
     };
   }
 
@@ -888,6 +818,9 @@ export class MockApi implements BeviApi {
           if (input.priceTier !== null && ![1, 2, 3, 4].includes(input.priceTier)) invalid('priceTier', 'Choose a price');
           const photo = this.db.assets.find((a) => a.id === input.photoAssetId && a.userId === me.id && a.kind === 'bev-photo');
           if (!photo) invalid('photoAssetId', 'Upload a photo first', 'unknown_asset');
+          if (this.assetUrlAndStatus(photo.id).status !== 'ready') {
+            invalid('photoAssetId', 'The photo is still processing', 'asset_not_ready');
+          }
           if (input.labelAssetId !== undefined) {
             const label = this.db.assets.find((a) => a.id === input.labelAssetId && a.userId === me.id && a.kind === 'label');
             if (!label) invalid('labelAssetId', 'Upload the label again', 'unknown_asset');
@@ -959,7 +892,7 @@ export class MockApi implements BeviApi {
           } catch {
             // Not a real Blob (tests) or no object URLs: keep the placeholder.
           }
-          const processing = input.kind === 'bev-photo' ? PHOTO_PROCESSING_MS : 0;
+          const processing = input.kind === 'bev-photo' ? this.photoProcessingMs : 0;
           const readyAt = new Date(this.now().getTime() + processing).toISOString();
           this.db.assets.push({ id, userId: me.id, kind: input.kind, url, mimeType: input.mimeType, readyAt });
           return { assetId: id, url, status: processing > 0 ? ('processing' as const) : ('ready' as const) };
@@ -1221,10 +1154,13 @@ export class MockApi implements BeviApi {
         const bevById = new Map(bevs.map((b) => [b.id, b]));
         const rows = leaderboardOrder(input).map((bevId, i) => {
           const r = byId.get(bevId)!;
+          const bayesScore = round2(r.bayes);
           return {
             rank: i + 1,
-            bev: this.toSummary(bevById.get(bevId)!),
-            bayesScore: round2(r.bayes),
+            // On a category board the prior is the category's, so the row's score can differ from
+            // the Bev's global score; the summary carries the board's score so the two agree.
+            bev: { ...this.toSummary(bevById.get(bevId)!), bayesScore },
+            bayesScore,
             ratingCount: r.n,
             myScore: this.rankingOf(me.id, bevId)?.score ?? null,
           };
@@ -1238,15 +1174,19 @@ export class MockApi implements BeviApi {
         const rows = this.userBoard().map((r) => ({
           rank: r.rank,
           profile: this.toProfile(r.u, me),
-          points: r.points,
+          points: r.bevsRanked, // TODO(rank/predict-streaks): rankPoints
           bevsRanked: r.bevsRanked,
-          currentStreak: r.streak.current,
+          currentStreak: 0, // TODO(rank/predict-streaks): computeStreak
         }));
         return paginate(rows, page, 50);
       }),
   };
 
   recs: RecsApi = {
+    // TODO(rank/predict-streaks): call @bevi/ranking's recommend() once it lands. Until then a plain,
+    // formula-free list: unranked Bevs in categories the user has ranked, then other unranked Bevs,
+    // each ordered by their existing Bayesian score; predictedScore = that score, confidence 0
+    // (the UI shows a locked bubble), no exploration slots.
     getRecommendations: (params = {}) =>
       this.call('recs.getRecommendations', () => {
         const me = this.requireUser();
@@ -1258,28 +1198,25 @@ export class MockApi implements BeviApi {
         const ranked = new Set(mine.map((r) => r.bevId));
         const catOf = new Map(this.db.bevs.map((b) => [b.id, b.categoryId]));
         const triedCats = new Set(mine.map((r) => catOf.get(r.bevId)));
-        const scored = this.db.bevs
+        const candidates = this.db.bevs
           .filter((b) => !ranked.has(b.id) && this.visible(b, me))
-          .map((b) => ({ b, p: this.predict(me, b)! }))
-          .sort((a, z) => z.p.score - a.p.score || a.b.id.localeCompare(z.b.id));
-        const toRec = (x: (typeof scored)[number], isExploration: boolean): Recommendation => ({
-          bev: this.toSummary(x.b),
-          predictedScore: x.p.score,
-          confidence: x.p.confidence,
-          reason: triedCats.has(x.b.categoryId) ? 'CATEGORY' : 'POPULAR',
-          isExploration,
+          .map((b) => ({ b, summary: this.toSummary(b) }))
+          .filter((x): x is { b: MockBev; summary: BevSummary & { bayesScore: number } } => x.summary.bayesScore !== null)
+          .sort(
+            (a, z) =>
+              Number(triedCats.has(z.b.categoryId)) - Number(triedCats.has(a.b.categoryId)) ||
+              z.summary.bayesScore - a.summary.bayesScore ||
+              a.b.name.localeCompare(z.b.name),
+          );
+        const items: Recommendation[] = candidates.slice(0, limit).map(({ b, summary }) => ({
+          bev: summary,
+          predictedScore: summary.bayesScore,
+          confidence: 0,
+          reason: triedCats.has(b.categoryId) ? 'CATEGORY' : 'POPULAR',
+          isExploration: false,
           generatedAt,
-        });
-        const main = scored.slice(0, limit);
-        // §8.11-style exploration slots: the best picks from categories the user hasn't tried.
-        const explore = scored.filter((x) => !triedCats.has(x.b.categoryId) && !main.slice(0, limit - 2).includes(x));
-        const items = main.map((x) => toRec(x, false));
-        [3, 8].forEach((slot, i) => {
-          const pick = explore[i];
-          if (pick && slot < items.length) items.splice(slot, 1, toRec(pick, true));
-        });
-        const seen = new Set<string>();
-        return { ...base, items: items.filter((r) => !seen.has(r.bev.id) && !!seen.add(r.bev.id)) };
+        }));
+        return { ...base, items };
       }),
 
     refresh: () =>

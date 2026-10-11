@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
 
+import { apiBackend } from '@/api/backend';
+
 import type { SessionStatus } from '@/state/session';
 
 const STATUSES: readonly SessionStatus[] = ['signedOut', 'onboarding', 'ready'];
@@ -9,10 +11,11 @@ const STATUSES: readonly SessionStatus[] = ['signedOut', 'onboarding', 'ready'];
  * until the real API passes its contract tests, DEVELOPMENT-MATT §3), in dev and production builds
  * alike. With `EXPO_PUBLIC_BEVI_API=supabase` it is off everywhere: the session comes only from
  * `getSession`, `?session=` and the gallery toggle do nothing, and the /dev routes are unreachable.
- * (Read `process.env.EXPO_PUBLIC_BEVI_API` literally so the bundler inlines it.)
+ * Reads the backend from `@/api/backend` (the same source as `API_BACKEND` in `@/api/client`),
+ * at call time and without constructing the API.
  */
 export function sessionOverrideEnabled(): boolean {
-  return process.env.EXPO_PUBLIC_BEVI_API !== 'supabase';
+  return apiBackend() === 'mock';
 }
 
 function isStatus(v: string | null): v is SessionStatus {
