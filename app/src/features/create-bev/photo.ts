@@ -15,15 +15,13 @@ import * as ImagePicker from 'expo-image-picker';
  *
  * The chosen image is then resized to fit 1600px and re-encoded as JPEG q0.85 before upload
  * (expo-image-manipulator, which draws to a canvas on the web). If that fails, a plain canvas
- * fallback does the same; if the browser can't decode the image at all, the original file is sent
- * when it is a type the server accepts.
+ * fallback does the same; if the browser can't decode the image at all it is rejected (never
+ * uploaded untouched, which would keep its EXIF/GPS data).
  */
 
 export const PHOTO_MAX_EDGE = 1600;
 export const PHOTO_QUALITY = 0.85;
 export const PHOTO_MIME = 'image/jpeg';
-/** What `media.upload` accepts without conversion (the contract says "unsupported mimeType" only). */
-const PASSTHROUGH_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
 
 export type PhotoSource = 'camera' | 'library';
 
@@ -57,12 +55,49 @@ async function blobFromUri(uri: string): Promise<Blob> {
   return res.blob();
 }
 
+/** Thrown when the picked file can't be decoded and re-encoded (it is never uploaded as-is). */
+export class UnsupportedImageError extends Error {
+  constructor() {
+    super('unsupported_image');
+    this.name = 'UnsupportedImageError';
+  }
+}
+
+export function isUnsupportedImage(e: unknown): boolean {
+  return e instanceof UnsupportedImageError;
+}
+
+/** Frees an object URL this module or the picker created (no-op for anything else). */
+export function revokeIfBlob(uri: string | null | undefined): void {
+  if (!uri || !uri.startsWith('blob:') || typeof URL === 'undefined' || typeof URL.revokeObjectURL !== 'function') return;
+  try {
+    URL.revokeObjectURL(uri);
+  } catch {
+    // Already gone.
+  }
+}
+
 async function viaManipulator(uri: string, width: number, height: number): Promise<PreparedPhoto> {
   const target = fitWithin(width, height);
-  const actions = target.width !== width ? [{ resize: target }] : [];
-  const out = await ImageManipulator.manipulateAsync(uri, actions, { compress: PHOTO_QUALITY, format: ImageManipulator.SaveFormat.JPEG });
-  const blob = await blobFromUri(out.uri);
-  return { uri: out.uri, blob, mimeType: PHOTO_MIME, width: out.width, height: out.height };
+  const context = ImageManipulator.ImageManipulator.manipulate(uri);
+  if (target.width !== width) context.resize(target);
+  const image = await context.renderAsync();
+  try {
+    const out = await image.saveAsync({ compress: PHOTO_QUALITY, format: ImageManipulator.SaveFormat.JPEG });
+    try {
+      const blob = await blobFromUri(out.uri);
+      // The caller owns the preview URL (`uri`) and revokes it.
+      return { uri: out.uri, blob, mimeType: PHOTO_MIME, width: out.width, height: out.height };
+    } catch (e) {
+      revokeIfBlob(out.uri);
+      throw e;
+    }
+  } finally {
+    // The full-size intermediate render (an object URL on the web).
+    revokeIfBlob((image as unknown as { uri?: string }).uri);
+    context.release();
+    image.release();
+  }
 }
 
 /** Plain canvas resize, for when the manipulator isn't available or throws. Web only. */
@@ -83,27 +118,34 @@ async function viaCanvas(uri: string): Promise<PreparedPhoto> {
   ctx.drawImage(img, 0, 0, target.width, target.height);
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, PHOTO_MIME, PHOTO_QUALITY));
   if (!blob || blob.type !== PHOTO_MIME) throw new Error('Could not encode the image');
+  // The caller owns this preview URL and revokes it.
   return { uri: URL.createObjectURL(blob), blob, mimeType: PHOTO_MIME, width: target.width, height: target.height };
 }
 
-/** Resizes and compresses a picked image for upload (max 1600px, JPEG q0.85). */
+/**
+ * Resizes and re-encodes a picked image for upload (max 1600px, JPEG q0.85). Re-encoding also
+ * drops EXIF (including GPS), so an image that can't be decoded is rejected with
+ * `UnsupportedImageError` rather than uploaded untouched. The picker's own object URL is revoked
+ * either way; the returned `uri` belongs to the caller.
+ */
 export async function preparePhoto(asset: ImagePicker.ImagePickerAsset): Promise<PreparedPhoto> {
-  if (asset.width > 0 && asset.height > 0) {
-    try {
-      return await viaManipulator(asset.uri, asset.width, asset.height);
-    } catch {
-      // Fall through to the canvas.
+  try {
+    if (asset.width > 0 && asset.height > 0) {
+      try {
+        return await viaManipulator(asset.uri, asset.width, asset.height);
+      } catch {
+        // Fall through to the canvas.
+      }
     }
-  }
-  if (typeof document !== 'undefined') {
-    try {
-      return await viaCanvas(asset.uri);
-    } catch {
-      // Fall through to the original.
+    if (typeof document !== 'undefined') {
+      try {
+        return await viaCanvas(asset.uri);
+      } catch {
+        // Fall through.
+      }
     }
+    throw new UnsupportedImageError();
+  } finally {
+    revokeIfBlob(asset.uri);
   }
-  const mimeType = asset.mimeType ?? asset.file?.type ?? '';
-  if (!PASSTHROUGH_MIME.includes(mimeType)) throw new Error('unsupported_image');
-  const blob = asset.file ?? (await blobFromUri(asset.uri));
-  return { uri: asset.uri, blob, mimeType, width: asset.width, height: asset.height };
 }

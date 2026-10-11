@@ -14,6 +14,22 @@ export function isAssetNotReady(error: unknown): boolean {
   return (error.detail as ValidationErrorDetail | undefined)?.reason === 'asset_not_ready';
 }
 
+/** Photo reasons that waiting can't fix. */
+const FINAL_PHOTO_REASONS = new Set(['unknown_asset']);
+
+/**
+ * Worth waiting for: `asset_not_ready`, or any other `validation` on `photoAssetId` whose reason
+ * isn't a known final one. The real backend's reason string isn't pinned in the contract yet, so
+ * an unrecognised photo rejection gets the same 60 s budget before the wizard asks for the photo
+ * again.
+ */
+export function mayBeProcessing(error: unknown): boolean {
+  if (isAssetNotReady(error)) return true;
+  if (!isApiError(error) || error.code !== 'validation') return false;
+  const detail = error.detail as ValidationErrorDetail | undefined;
+  return detail?.field === 'photoAssetId' && !FINAL_PHOTO_REASONS.has(detail.reason ?? '');
+}
+
 export interface CreateWhenReadyOptions {
   /** Called once, when the first attempt finds the photo still processing. */
   onWaiting?: () => void;
@@ -35,7 +51,7 @@ export async function createWhenReady(
     try {
       return await create(input);
     } catch (e) {
-      if (!isAssetNotReady(e) || waited >= maxWaitMs || signal?.aborted) throw e;
+      if (!mayBeProcessing(e) || waited >= maxWaitMs || signal?.aborted) throw e;
       if (attempt === 0) onWaiting?.();
       const delay = READY_BACKOFF_MS[Math.min(attempt, READY_BACKOFF_MS.length - 1)] ?? READY_BACKOFF_MS[0];
       await sleep(delay);

@@ -24,13 +24,14 @@ import {
   STEP_COUNT,
   STEP_TITLES,
   STILL_PROCESSING,
+  UNREADABLE_IMAGE,
   UPLOAD_FAILED,
 } from './copy';
 import { createWhenReady, isAssetNotReady } from './createWhenReady';
 import { DetailsStep, type DetailsForm, type FieldErrors } from './DetailsStep';
 import { DuplicatesStep, ExistingBev } from './DuplicatesStep';
 import { PhotoStep } from './PhotoStep';
-import type { PhotoSource } from './photo';
+import { isUnsupportedImage, type PhotoSource } from './photo';
 import { CategorySheet, DiscardBevSheet } from './Sheets';
 import { useOnline } from './useOnline';
 import { usePhotoUpload } from './usePhotoUpload';
@@ -85,6 +86,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
   const abort = useRef({ aborted: false });
   useEffect(() => {
     const a = abort.current;
+    a.aborted = false; // StrictMode re-runs effects: re-arm after the simulated unmount.
     return () => {
       a.aborted = true;
     };
@@ -162,7 +164,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
 
   const next = () => {
     if (step === 0) {
-      if (!photo.photo && photo.phase !== 'preparing') {
+      if (!photo.photo) {
         setErrors((e) => ({ ...e, photo: FIELD_REQUIRED.photo }));
         return;
       }
@@ -186,6 +188,12 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
 
   /** A failed upload (photo or label) during submit. */
   const onUploadError = (e: unknown, which: 'photo' | 'label') => {
+    if (isUnsupportedImage(e) || (e instanceof Error && e.message === 'no_photo')) {
+      // The image couldn't be read (or there's none): back to where it was chosen.
+      setErrors((x) => ({ ...x, [which]: which === 'photo' && !isUnsupportedImage(e) ? FIELD_REQUIRED.photo : UNREADABLE_IMAGE }));
+      setStep(which === 'photo' ? 0 : 1);
+      return;
+    }
     if (isApiError(e) && e.code === 'validation') {
       // Unsupported type or too large: the server's message says what to do.
       setErrors((x) => ({ ...x, [which]: e.message }));
@@ -242,7 +250,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
         return onUploadError(e, 'photo');
       }
       let labelAssetId: string | undefined;
-      if (label.photo) {
+      if (label.phase !== 'empty') {
         try {
           labelAssetId = await label.ensureUploaded();
         } catch (e) {
@@ -342,7 +350,14 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
       </ScrollView>
       {step < 2 && !existingId ? (
         <View style={[styles.footer, { borderTopColor: colors.border }]}>
-          <Button variant="primary" size="lg" block onPress={next}>
+          <Button
+            variant="primary"
+            size="lg"
+            block
+            onPress={next}
+            loading={step === 0 && photo.phase === 'preparing'}
+            disabled={step === 0 && photo.phase === 'preparing'}
+          >
             Next
           </Button>
         </View>
