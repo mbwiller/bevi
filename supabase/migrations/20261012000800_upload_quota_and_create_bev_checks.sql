@@ -1,4 +1,4 @@
--- Follow-ups from the backend review of 20261012000100..0400.
+-- Follow-ups from the backend review of 20261011000900 (media upload) and 20261012000200..0400.
 --
 -- 1. Upload quota enforced by Storage itself. media.upload calls
 --    assert_upload_rate() before uploading, but that is advisory: anyone can

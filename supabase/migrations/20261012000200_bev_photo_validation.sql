@@ -9,7 +9,7 @@
 --
 -- Now:
 --   * the photo asset must be an object the caller uploaded to `bev-photos`
---     (media.upload writes `<uid>/<random>.<ext>`, 20261012000100); likewise
+--     (media.upload writes `<uid>/<random>.<ext>`, 20261011000900); likewise
 --     the optional label in `nutrition-labels`. Otherwise BEVI_VALIDATION with
 --     detail '<field>:unknown_asset', which packages/api maps to
 --     { field, reason: 'unknown_asset' } (the app stops retrying on it).
