@@ -9,6 +9,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
   AppConfig,
   Bev,
+  BevPrediction,
   BevSummary,
   Bucket,
   Category,
@@ -192,14 +193,19 @@ export interface MyRankingRow {
 export function mapBev(
   client: SupabaseClient,
   row: BevRow,
-  extras: { myRanking: MyRankingRow | null; inWantToTry: boolean; friends: Array<{ profile: Profile; score: number; bucket: Bucket }> }
+  extras: {
+    myRanking: MyRankingRow | null;
+    inWantToTry: boolean;
+    friends: Array<{ profile: Profile; score: number; bucket: Bucket }>;
+    prediction?: BevPrediction | null;
+  }
 ): Bev {
   const createdBy = Array.isArray(row.created_by) ? row.created_by[0] ?? null : row.created_by;
   const stats = oneBevStats(row.bev_stats);
   return {
     ...mapBevSummary(client, row),
     status: row.status as Bev['status'],
-    nutritionLabelUrl: publicUrl(client, 'bev-photos', row.nutrition_label_path),
+    nutritionLabelUrl: publicUrl(client, 'nutrition-labels', row.nutrition_label_path),
     avgScore: stats?.avg_score ?? null,
     scoreStddev: stats?.score_stddev ?? null,
     createdBy: createdBy ? { id: createdBy.id, handle: createdBy.handle } : null,
@@ -213,9 +219,8 @@ export function mapBev(
           note: extras.myRanking.note,
         }
       : null,
-    // No recommendation pipeline yet (milestone 1.4 / Phase 2) -- always
-    // null until `user_bev_predictions` has a real writer.
-    prediction: null,
+    // @bevi/ranking's predictScore over the caller's snapshot (bevs.ts).
+    prediction: extras.prediction ?? null,
     inWantToTry: extras.inWantToTry,
     friends: extras.friends,
     isStarter: row.is_starter,

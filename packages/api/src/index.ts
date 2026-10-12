@@ -15,6 +15,7 @@ import { createMetaApi } from './meta';
 import { createProfileApi } from './profile';
 import { createRankingsApi } from './rankings';
 import { createRecsApi } from './recs';
+import { createSnapshotCache } from './snapshot';
 import { createStatsApi } from './stats';
 import { createWantToTryApi } from './wantToTry';
 
@@ -23,6 +24,9 @@ export type { AuthStorageAdapter, BeviApiConfig } from './client';
 export function createBeviApi(config: BeviApiConfig): BeviApi {
   const client = createSupabaseClientFor(config);
   const auth = createAuthApi(client);
+  // The caller's PredictionSnapshot for recommendations and predicted scores;
+  // ranking and Bev writes invalidate it.
+  const snapshots = createSnapshotCache(client);
 
   return {
     ...auth,
@@ -30,13 +34,13 @@ export function createBeviApi(config: BeviApiConfig): BeviApi {
     stats: createStatsApi(client),
     follows: createFollowsApi(client),
     categories: createCategoriesApi(client),
-    bevs: createBevsApi(client),
+    bevs: createBevsApi(client, snapshots),
     media: createMediaApi(client),
-    rankings: createRankingsApi(client),
+    rankings: createRankingsApi(client, snapshots),
     wantToTry: createWantToTryApi(client),
     feed: createFeedApi(client),
     leaderboard: createLeaderboardApi(client),
-    recs: createRecsApi(client),
+    recs: createRecsApi(client, snapshots),
     meta: createMetaApi(),
   };
 }

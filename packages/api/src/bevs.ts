@@ -1,7 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { MIN_N_USER, RANKING_VERSION, predictScore } from '@bevi/ranking';
 import {
   ApiError,
   type Bev,
+  type BevPrediction,
   type BevsApi,
   type BevSummary,
   type CategoryId,
@@ -9,20 +11,19 @@ import {
   type FindDuplicatesInput,
   type FriendScore,
   type Page,
-  type PriceTier,
 } from '@bevi/shared';
 import {
   bucketFromDb,
   mapBev,
   mapBevSummary,
   mapProfile,
-  publicUrl,
   type BevRow,
   type BevSummaryRow,
   type MyRankingRow,
   type ProfileViewRow,
 } from './mappers';
 import { fetchFollowIds } from './follows';
+import type { SnapshotCache } from './snapshot';
 import { mapError } from './errors';
 
 async function requireUserId(client: SupabaseClient): Promise<string> {
@@ -43,12 +44,14 @@ interface SearchBevRpcRow {
   price_estimated: boolean;
   rating_count: number;
   avg_score: number | null;
+  bayes_score: number | null;
 }
 
 function mapSearchRow(client: SupabaseClient, row: SearchBevRpcRow): BevSummary {
   return mapBevSummary(client, {
     ...row,
-    bev_stats: { rating_count: row.rating_count, avg_score: row.avg_score, score_stddev: null, bayes_score: null },
+    photo_path: row.thumb_path ?? row.photo_path,
+    bev_stats: { rating_count: row.rating_count, avg_score: row.avg_score, score_stddev: null, bayes_score: row.bayes_score },
   });
 }
 
@@ -58,6 +61,11 @@ interface FindSimilarRpcRow {
   brand: string | null;
   flavor: string | null;
   thumb_path: string | null;
+  category_id: string;
+  price_tier: number;
+  price_estimated: boolean;
+  rating_count: number;
+  bayes_score: number | null;
 }
 
 interface GetBevRpcRow {
@@ -81,7 +89,7 @@ interface GetBevRpcRow {
   bayes_score: number | null;
 }
 
-export function createBevsApi(client: SupabaseClient): BevsApi {
+export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache): BevsApi {
   async function search(params: { q: string; categoryId?: CategoryId; limit?: number; cursor?: string }): Promise<Page<BevSummary>> {
     await requireUserId(client);
     const { data, error } = await client.rpc('search_bevs', {
@@ -176,7 +184,23 @@ export function createBevsApi(client: SupabaseClient): BevsApi {
       myRanking,
       inWantToTry: wantRes.data !== null,
       friends,
+      prediction: myRanking ? null : await predictionFor(uid, id),
     });
+  }
+
+  // The contract's `Bev.prediction`: null when the caller ranked the Bev or has
+  // fewer than MIN_N_USER rankings, else predictScore over their snapshot. A
+  // prediction is a nice-to-have on the detail screen, so a failure to build
+  // it leaves it null instead of failing the whole Bev.
+  async function predictionFor(uid: string, bevId: string): Promise<BevPrediction | null> {
+    try {
+      const { snapshot, viewer } = await snapshots.get(uid);
+      if (viewer.rankingCount < MIN_N_USER || !snapshot.bevs[bevId]) return null;
+      const p = predictScore(snapshot, uid, bevId);
+      return { score: Math.round(p.score * 100) / 100, confidence: p.confidence, generatedAt: snapshot.generatedAt, rankingVersion: RANKING_VERSION };
+    } catch {
+      return null;
+    }
   }
 
   async function findLikelyDuplicates(input: FindDuplicatesInput): Promise<BevSummary[]> {
@@ -189,19 +213,19 @@ export function createBevsApi(client: SupabaseClient): BevsApi {
       p_limit: 5,
     });
     if (error) throw mapError(error);
-    return ((data ?? []) as FindSimilarRpcRow[]).map((row) => ({
-      id: row.bev_id,
-      name: row.name,
-      brand: row.brand,
-      flavor: row.flavor,
-      categoryId: (input.categoryId ?? 'other') as CategoryId,
-      photoUrl: publicUrl(client, 'bev-photos', row.thumb_path),
-      photoStatus: 'ready',
-      priceTier: 1 as PriceTier,
-      priceEstimated: true,
-      ratingCount: 0,
-      bayesScore: null,
-    }));
+    return ((data ?? []) as FindSimilarRpcRow[]).map((row) =>
+      mapBevSummary(client, {
+        id: row.bev_id,
+        name: row.name,
+        brand: row.brand,
+        flavor: row.flavor,
+        category_id: row.category_id,
+        photo_path: row.thumb_path,
+        price_tier: row.price_tier,
+        price_estimated: row.price_estimated,
+        bev_stats: { rating_count: row.rating_count, avg_score: null, score_stddev: null, bayes_score: row.bayes_score },
+      }),
+    );
   }
 
   async function create(input: CreateBevInput): Promise<Bev> {
@@ -219,6 +243,7 @@ export function createBevsApi(client: SupabaseClient): BevsApi {
       })
       .single();
     if (error) throw mapError(error);
+    snapshots.invalidate();
     const created = data as { id: string };
     return get(created.id);
   }

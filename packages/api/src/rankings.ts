@@ -13,6 +13,7 @@ import {
 import { mapError } from './errors';
 import { bucketToDb, mapBevSummary, mapRanking, type BevSummaryRow, type RankingRow } from './mappers';
 import { clampLimit, decodeCursor, toPage } from './paging';
+import type { SnapshotCache } from './snapshot';
 
 async function requireUserId(client: SupabaseClient): Promise<string> {
   const { data, error } = await client.auth.getUser();
@@ -42,7 +43,7 @@ async function fetchRankedBevs(client: SupabaseClient, userId: string, bucket?: 
   return (data as RankingWithBevRow[]).map((row) => mapRankedBev(client, row));
 }
 
-export function createRankingsApi(client: SupabaseClient): RankingsApi {
+export function createRankingsApi(client: SupabaseClient, snapshots: SnapshotCache): RankingsApi {
   return {
     async listMine(params): Promise<Page<RankedBev>> {
       const uid = await requireUserId(client);
@@ -105,6 +106,7 @@ export function createRankingsApi(client: SupabaseClient): RankingsApi {
         })
         .single();
       if (error) throw mapError(error);
+      snapshots.invalidate();
       const row = data as { ranking: RankingRow; bucket_size: number };
       return { ranking: mapRanking(row.ranking), bucketSize: row.bucket_size };
     },
@@ -122,6 +124,7 @@ export function createRankingsApi(client: SupabaseClient): RankingsApi {
         })
         .single();
       if (error) throw mapError(error);
+      snapshots.invalidate();
       const row = data as { ranking: RankingRow; bucket_size: number };
       return { ranking: mapRanking(row.ranking), bucketSize: row.bucket_size };
     },
@@ -136,6 +139,7 @@ export function createRankingsApi(client: SupabaseClient): RankingsApi {
       await requireUserId(client);
       const { error } = await client.rpc('remove_ranking', { p_bev_id: bevId });
       if (error) throw mapError(error);
+      snapshots.invalidate();
     },
   };
 }

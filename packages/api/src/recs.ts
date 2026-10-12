@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { ApiError, type RecsApi } from '@bevi/shared';
+import { MIN_N_USER, RANKING_VERSION, RECOMMEND_N, localDayKey, recommend } from '@bevi/ranking';
+import { ApiError, type Recommendation, type RecommendationsResult, type RecsApi } from '@bevi/shared';
+import type { SnapshotCache } from './snapshot';
 
 async function requireUserId(client: SupabaseClient): Promise<string> {
   const { data, error } = await client.auth.getUser();
@@ -7,18 +9,33 @@ async function requireUserId(client: SupabaseClient): Promise<string> {
   return data.user.id;
 }
 
-// Not implemented: no recommendation-generation job exists yet
-// (`recommendation_jobs` is a queue table with no worker, and
-// `user_bev_predictions` has no writer) -- that's milestone 1.4 / Phase 2.
-export function createRecsApi(client: SupabaseClient): RecsApi {
+const round2 = (x: number) => Math.round(x * 100) / 100;
+
+// Recommendations are @bevi/ranking's recommend() over the caller's
+// PredictionSnapshot (./snapshot.ts), run here in the client. The seed is the
+// user and their local day, so the list is stable within a day and shuffles a
+// little from one day to the next (DEVELOPMENT-MATT §8.11).
+export function createRecsApi(client: SupabaseClient, snapshots: SnapshotCache): RecsApi {
   return {
-    async getRecommendations() {
-      await requireUserId(client);
-      throw new ApiError('unknown', 'recs.getRecommendations is not implemented yet (no recommendation job exists, milestone 1.4)');
+    async getRecommendations(params = {}): Promise<RecommendationsResult> {
+      const uid = await requireUserId(client);
+      const { snapshot, summaries, viewer } = await snapshots.get(uid);
+      const generatedAt = snapshot.generatedAt;
+      const base = { generatedAt, basedOnCount: viewer.rankingCount, rankingVersion: RANKING_VERSION };
+      if (viewer.rankingCount < MIN_N_USER) return { ...base, items: [] };
+      const limit = Math.min(50, Math.max(1, Math.floor(params.limit ?? RECOMMEND_N)));
+      const seed = `${uid}:${localDayKey(generatedAt, viewer.timezone)}`;
+      const items: Recommendation[] = recommend(snapshot, uid, { n: limit, seed }).flatMap((r) => {
+        const bev = summaries.get(r.bevId);
+        if (!bev) return [];
+        return [{ bev, predictedScore: round2(r.score), confidence: r.confidence, reason: r.reason, isExploration: r.isExploration, generatedAt }];
+      });
+      return { ...base, items };
     },
-    async refresh() {
+
+    async refresh(): Promise<void> {
       await requireUserId(client);
-      throw new ApiError('unknown', 'recs.refresh is not implemented yet (no recommendation job exists, milestone 1.4)');
+      snapshots.invalidate();
     },
   };
 }
