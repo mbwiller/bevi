@@ -6,11 +6,11 @@ import { isApiError } from '@bevi/shared';
 import { describe, expect, it } from 'vitest';
 import { createBeviApi } from '../src/index.ts';
 import { usernameToEmail, type AuthStorageAdapter } from '../src/client.ts';
-import { randomTestUsername } from './testUsername.ts';
+import { randomTestUsername, TEST_INVITE_CODE } from './testUsername.ts';
 
 const url = process.env.SUPABASE_URL;
 const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
-const INVITE = 'local-test-invite-code';
+const INVITE = TEST_INVITE_CODE;
 const PASSWORD = 'correct-horse-battery-staple';
 
 function memoryStorage(): AuthStorageAdapter {

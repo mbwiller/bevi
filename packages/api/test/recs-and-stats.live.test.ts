@@ -5,7 +5,7 @@ import type { Bucket } from '@bevi/shared';
 import { describe, expect, it } from 'vitest';
 import { createBeviApi } from '../src/index.ts';
 import type { AuthStorageAdapter } from '../src/client.ts';
-import { randomTestUsername } from './testUsername.ts';
+import { randomTestUsername, TEST_INVITE_CODE } from './testUsername.ts';
 
 const url = process.env.SUPABASE_URL;
 const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
@@ -21,7 +21,7 @@ function memoryStorage(): AuthStorageAdapter {
 
 async function newUser() {
   const api = createBeviApi({ url: url!, publishableKey: publishableKey!, authStorage: memoryStorage() });
-  const session = await api.signUp({ username: randomTestUsername(), password: 'correct-horse-battery-staple', inviteCode: 'local-test-invite-code' });
+  const session = await api.signUp({ username: randomTestUsername(), password: 'correct-horse-battery-staple', inviteCode: TEST_INVITE_CODE });
   await api.profile.setBirthDate('1990-01-01');
   return { api, session };
 }

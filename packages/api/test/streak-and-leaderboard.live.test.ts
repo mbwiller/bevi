@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { createBeviApi } from '../src/index.ts';
 import type { AuthStorageAdapter } from '../src/client.ts';
-import { randomTestUsername } from './testUsername.ts';
+import { randomTestUsername, TEST_INVITE_CODE } from './testUsername.ts';
 
 const url = process.env.SUPABASE_URL;
 const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
@@ -23,7 +23,7 @@ describe.skipIf(!url || !publishableKey)('streak + rank points, against a live l
     const api = createBeviApi({ url: url!, publishableKey: publishableKey!, authStorage: memoryStorage() });
     const username = randomTestUsername();
 
-    await api.signUp({ username, password: 'correct-horse-battery-staple', inviteCode: 'local-test-invite-code' });
+    await api.signUp({ username, password: 'correct-horse-battery-staple', inviteCode: TEST_INVITE_CODE });
     await api.profile.setBirthDate('1990-01-01');
 
     // A seeded catalog Bev (20261012000300), so the test leaves nothing behind.
