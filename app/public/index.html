@@ -35,6 +35,12 @@
         height: 100%;
         flex: 1;
       }
+      /* No browser focus ring on text boxes: TextField and SearchBar draw their own on the box around
+         the input. outline-width: 0 alone isn't enough, Safari still draws its blue `auto` ring. */
+      input:focus,
+      textarea:focus {
+        outline: none;
+      }
     </style>
   </head>
 
