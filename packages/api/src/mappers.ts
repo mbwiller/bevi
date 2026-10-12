@@ -404,5 +404,5 @@ export function mapUserLeaderboardRow(client: SupabaseClient, row: UserLeaderboa
 export function placeholderAppConfig(): AppConfig {
   // No versioning/maintenance-flag infra exists yet; this is a fixed
   // placeholder, not a read from the DB, until that's built.
-  return { minAppVersion: '1.0.0', maintenance: false };
+  return { minAppVersion: '0.1.0', maintenance: false };
 }

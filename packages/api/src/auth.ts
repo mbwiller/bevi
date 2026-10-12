@@ -47,9 +47,12 @@ export function createAuthApi(client: SupabaseClient): AuthApi {
         options: { data: { invite_code: input.inviteCode } },
       });
       if (error) throw mapError(error);
-      const session = sessionFromUser(data.user);
+      // With "Confirm email" on, GoTrue creates the user but returns no session (it waits for an
+      // email that the synthetic `@users.bevi.app` address can never receive). Fail loudly instead
+      // of reporting a sign-up the user can't use.
+      const session = data.session ? sessionFromUser(data.user) : null;
       if (!session) {
-        throw mapError(new Error('signUp returned no user; "Confirm email" may not be disabled'));
+        throw new ApiError('unknown', 'Sign-up created no session: turn off "Confirm email" in the Supabase project (Auth settings).');
       }
       return session;
     },
