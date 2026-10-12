@@ -146,6 +146,46 @@ function mapAuthError(e: AuthErrorLike): ApiError {
   return new ApiError('unknown', e.message);
 }
 
+// `@supabase/storage-js` `StorageError`/`StorageApiError`/`StorageUnknownError`
+// (thrown by `client.storage.from(bucket).upload()` etc, see `media.ts`).
+// This is NOT a `PostgrestError` (no `details`/`hint`, and it does carry
+// `status`, so `isPostgrestLikeError` correctly skips it) but it WOULD be
+// wrongly caught by `isAuthErrorLike` below -- that guard's fallback is
+// just `'status' in e`, which every `StorageError` satisfies too (see the
+// vendored `@supabase/storage-js` `errors.ts`: `status`/`statusCode` are
+// assigned in the base `StorageError` constructor). So this check has to
+// run before `isAuthErrorLike` in `mapError`.
+interface StorageErrorLike {
+  name?: string;
+  message: string;
+  status?: number;
+  statusCode?: string;
+}
+
+function isStorageErrorLike(e: unknown): e is StorageErrorLike {
+  if (typeof e !== 'object' || e === null || !('message' in e) || !('name' in e)) return false;
+  const name = (e as { name: unknown }).name;
+  const message = (e as { message: unknown }).message;
+  return typeof message === 'string' && typeof name === 'string' && name.startsWith('Storage');
+}
+
+// HTTP status -> ApiErrorCode. Storage doesn't raise BEVI_*/SQLSTATE like
+// the RPCs do; this maps the HTTP status the Storage API itself returns
+// (see https://supabase.com/docs/guides/storage/debugging/error-codes).
+const STORAGE_STATUS_CODE_MAP: Record<number, ApiErrorCode> = {
+  400: 'validation', // e.g. mime type/path rejected by bucket config
+  403: 'unauthorized', // RLS denied the insert
+  404: 'not_found',
+  409: 'conflict', // ResourceAlreadyExists
+  413: 'validation', // payload too large (bucket's file_size_limit)
+  429: 'rate_limited',
+};
+
+function mapStorageError(e: StorageErrorLike): ApiError {
+  const code = typeof e.status === 'number' ? STORAGE_STATUS_CODE_MAP[e.status] : undefined;
+  return new ApiError(code ?? 'unknown', e.message);
+}
+
 function isNetworkError(e: unknown): boolean {
   if (e instanceof TypeError) return true;
   if (typeof e === 'object' && e !== null && 'message' in e) {
@@ -163,6 +203,8 @@ export function mapError(e: unknown): ApiError {
     return new ApiError('network', message);
   }
   if (isPostgrestLikeError(e)) return mapPostgrestError(e);
+  // Must run before isAuthErrorLike -- see isStorageErrorLike's comment.
+  if (isStorageErrorLike(e)) return mapStorageError(e);
   if (isAuthErrorLike(e)) return mapAuthError(e);
   if (e instanceof Error) return new ApiError('unknown', e.message);
   return new ApiError('unknown', typeof e === 'string' ? e : 'Unknown error');
