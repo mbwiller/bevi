@@ -1,7 +1,6 @@
 /**
  * Generates the catalog seed migration from data/catalog/{categories.json,bevs.csv}.
  *
- *   npm run catalog:migration                     # rewrite the newest *_catalog_seed.sql in place
  *   npm run catalog:migration -- --new <version>  # write supabase/migrations/<version>_catalog_seed.sql
  *   npm run catalog:migration -- --check          # fail if the newest one is out of date (CI)
  *
@@ -14,11 +13,15 @@
  *     fields are updated, never its status;
  *   - a row whose (category, brand, name, flavor) already belongs to another live Bev (say, one a
  *     user created first) is skipped instead of failing the migration;
+ *   - a row whose UPC already belongs to another Bev is skipped too;
  *   - aliases are lowercased, and an alias shared by several Bevs is skipped (bev_aliases is keyed
  *     by alias, so it can't point at all of them).
+ * A later seed migration never moves or removes an existing alias (`on conflict do nothing`) and
+ * never deletes a Bev whose row left the CSV: retire one with an explicit migration (status
+ * 'hidden' or 'merged').
  */
 
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -87,6 +90,10 @@ ${bevValues}
       and lower(b.name) = lower(v.name)
       and lower(coalesce(b.flavor, '')) = lower(coalesce(v.flavor, ''))
  )
+   and not exists (
+   select 1 from public.bevs b
+    where b.id <> v.id::uuid and v.upc is not null and b.upc = v.upc and b.status <> 'merged'
+ )
 on conflict (id) do update
    set name = excluded.name,
        brand = excluded.brand,
@@ -131,21 +138,18 @@ function main(argv: string[]): void {
     console.log(`catalog:migration --check: ${file} is up to date`);
     return;
   }
+  // Only ever writes a NEW file: rewriting an existing seed migration would edit one that may
+  // already be merged and applied (migrations are append-only).
   const i = argv.indexOf("--new");
-  let file: string | null;
-  if (i >= 0) {
-    const version = argv[i + 1] ?? "";
-    if (!/^\d{14}$/.test(version)) {
-      console.error("catalog:migration --new needs a YYYYMMDDHHMMSS version");
-      process.exit(1);
-    }
-    file = join(MIGRATIONS_DIR, `${version}${SUFFIX}`);
-  } else {
-    file = newestSeedMigration();
-    if (!file) {
-      console.error(`no *${SUFFIX} yet: use --new <YYYYMMDDHHMMSS>`);
-      process.exit(1);
-    }
+  const version = i >= 0 ? (argv[i + 1] ?? "") : "";
+  if (!/^\d{14}$/.test(version)) {
+    console.error("usage: catalog:migration -- --new <YYYYMMDDHHMMSS> | --check");
+    process.exit(1);
+  }
+  const file = join(MIGRATIONS_DIR, `${version}${SUFFIX}`);
+  if (existsSync(file)) {
+    console.error(`${file} already exists; pick a new version (migrations are append-only)`);
+    process.exit(1);
   }
   writeFileSync(file, sql);
   console.log(`wrote ${file}`);

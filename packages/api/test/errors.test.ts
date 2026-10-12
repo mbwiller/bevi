@@ -42,17 +42,19 @@ describe('mapError', () => {
     expect(mapError(new TypeError('fetch failed')).code).toBe('network');
   });
 
-  it('maps a storage-js StorageError by HTTP status, not through the AuthError branch', () => {
+  it('maps a storage-js StorageError by its body statusCode, not through the AuthError branch', () => {
     // StorageError carries `status` too, which is isAuthErrorLike's own
     // fallback discriminator -- this only passes if the storage check in
-    // mapError runs first.
-    expect(mapError({ name: 'StorageApiError', message: 'The object exceeded the maximum allowed size', status: 413 }).code).toBe(
-      'validation'
-    );
-    expect(mapError({ name: 'StorageApiError', message: 'new row violates row-level security policy', status: 403 }).code).toBe(
-      'unauthorized'
-    );
-    expect(mapError({ name: 'StorageApiError', message: 'The resource already exists', status: 409 }).code).toBe('conflict');
+    // mapError runs first. The Storage API answers with HTTP 400 and the
+    // real status in the body (storage-js `statusCode`), as a live local
+    // stack does for an RLS denial ('403') or a disallowed mime type ('415').
+    const storageError = (message: string, statusCode: string) => ({ name: 'StorageApiError', message, status: 400, statusCode });
+    expect(mapError(storageError('new row violates row-level security policy', '403')).code).toBe('unauthorized');
+    expect(mapError(storageError('mime type image/gif is not supported', '415')).code).toBe('validation');
+    expect(mapError(storageError('The object exceeded the maximum allowed size', '413')).code).toBe('validation');
+    expect(mapError(storageError('The resource already exists', '409')).code).toBe('conflict');
+    // No body code: fall back to the HTTP status.
+    expect(mapError({ name: 'StorageApiError', message: 'Too many requests', status: 429 }).code).toBe('rate_limited');
     expect(mapError({ name: 'StorageUnknownError', message: 'fetch error', status: undefined }).code).toBe('unknown');
   });
 

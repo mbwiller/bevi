@@ -420,6 +420,10 @@ select v.id::uuid, v.name, v.brand, v.flavor, v.category_id, v.price_tier::small
       and lower(b.name) = lower(v.name)
       and lower(coalesce(b.flavor, '')) = lower(coalesce(v.flavor, ''))
  )
+   and not exists (
+   select 1 from public.bevs b
+    where b.id <> v.id::uuid and v.upc is not null and b.upc = v.upc and b.status <> 'merged'
+ )
 on conflict (id) do update
    set name = excluded.name,
        brand = excluded.brand,

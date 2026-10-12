@@ -100,6 +100,16 @@ describe.skipIf(!url || !publishableKey)('catalog, photos and privacy, against a
     }
   });
 
+  it('updateMe still writes the own-row columns under the profile column privileges', async () => {
+    const { api } = await newUser('1990-01-01');
+    try {
+      const me = await api.profile.updateMe({ displayName: 'Live Tester', timezone: 'America/Chicago', onboarded: true });
+      expect(me).toMatchObject({ displayName: 'Live Tester', timezone: 'America/Chicago', onboarded: true, birthdate: '1990-01-01' });
+    } finally {
+      await api.deleteAccount();
+    }
+  });
+
   it("never exposes another user's birth date", async () => {
     const a = await newUser('1990-05-05');
     const b = await newUser('1991-06-06');

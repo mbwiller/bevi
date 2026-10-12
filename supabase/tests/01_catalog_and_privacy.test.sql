@@ -1,7 +1,7 @@
 -- The seeded catalog (20261012000300) and the profile privacy rules
 -- (20261012000400).
 begin;
-select plan(9);
+select plan(10);
 
 select is((select count(*)::int from public.categories), 15, '15 categories');
 select is((select count(*)::int from public.bevs where source = 'seed' and status = 'active'), 378, '378 active seed Bevs');
@@ -32,6 +32,15 @@ select ok(
   not has_table_privilege('anon', 'public.profiles_view', 'SELECT')
     and not has_table_privilege('authenticated', 'public.profiles_view', 'UPDATE'),
   'profiles_view: no anon reads, no writes through it'
+);
+
+select is(
+  (select count(*)::int from pg_policies
+    where schemaname = 'storage' and tablename = 'objects'
+      and policyname in ('storage_bev_photos_insert', 'storage_nutrition_labels_insert')
+      and with_check like '%upload_quota_ok()%'),
+  2,
+  'both upload policies enforce the per-user quota'
 );
 
 select * from finish();

@@ -177,20 +177,27 @@ function isStorageErrorLike(e: unknown): e is StorageErrorLike {
   return typeof message === 'string' && typeof name === 'string' && name.startsWith('Storage');
 }
 
-// HTTP status -> ApiErrorCode. Storage doesn't raise BEVI_*/SQLSTATE like
-// the RPCs do; this maps the HTTP status the Storage API itself returns
-// (see https://supabase.com/docs/guides/storage/debugging/error-codes).
+// Storage status -> ApiErrorCode. Storage doesn't raise BEVI_*/SQLSTATE like
+// the RPCs do (see https://supabase.com/docs/guides/storage/debugging/error-codes).
+// The Storage API answers most failures with HTTP 400 and puts the real
+// status in the body, which storage-js exposes as `statusCode` (a string,
+// e.g. '403' for an RLS denial, '415' for a disallowed mime type), so that
+// wins over the HTTP `status`.
 const STORAGE_STATUS_CODE_MAP: Record<number, ApiErrorCode> = {
-  400: 'validation', // e.g. mime type/path rejected by bucket config
+  400: 'validation', // e.g. path rejected by bucket config
+  401: 'unauthorized', // missing or expired JWT
   403: 'unauthorized', // RLS denied the insert
   404: 'not_found',
   409: 'conflict', // ResourceAlreadyExists
   413: 'validation', // payload too large (bucket's file_size_limit)
+  415: 'validation', // mime type not in the bucket's allowed_mime_types
   429: 'rate_limited',
 };
 
 function mapStorageError(e: StorageErrorLike): ApiError {
-  const code = typeof e.status === 'number' ? STORAGE_STATUS_CODE_MAP[e.status] : undefined;
+  const bodyStatus = Number(e.statusCode);
+  const status = Number.isInteger(bodyStatus) && bodyStatus > 0 ? bodyStatus : e.status;
+  const code = typeof status === 'number' ? STORAGE_STATUS_CODE_MAP[status] : undefined;
   return new ApiError(code ?? 'unknown', e.message);
 }
 

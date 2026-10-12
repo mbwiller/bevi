@@ -32,6 +32,7 @@ function main(): void {
   const seenNaturalKeys = new Map<string, number>(); // key -> first line number
   const seenSlugs = new Map<string, number>(); // slug -> first line number
   const aliasOwners = new Map<string, string[]>(); // alias -> slugs
+  const seenUpcs = new Map<string, number>(); // upc -> first line number
 
   for (const row of rows) {
     const line = row.__line;
@@ -54,6 +55,26 @@ function main(): void {
 
     for (const alias of aliasesOf(row)) {
       aliasOwners.set(alias, [...(aliasOwners.get(alias) ?? []), row.slug]);
+    }
+
+    // length limits of the bevs columns (name 1-80, brand and flavor <= 80)
+    for (const [col, value] of [["name", row.name], ["brand", row.brand], ["flavor", row.flavor]] as const) {
+      if (value.trim().length > 80) {
+        errors.push(`line ${line}: ${col} is longer than 80 characters (slug=${row.slug})`);
+      }
+    }
+
+    // upc: optional, 8-14 digits (bevs.upc check), unique
+    if (row.upc.trim() !== "") {
+      if (!/^[0-9]{8,14}$/.test(row.upc.trim())) {
+        errors.push(`line ${line}: upc must be 8-14 digits, got "${row.upc}" (slug=${row.slug})`);
+      }
+      const firstUpcLine = seenUpcs.get(row.upc.trim());
+      if (firstUpcLine !== undefined) {
+        errors.push(`line ${line}: duplicate upc "${row.upc}" already seen at line ${firstUpcLine} (slug=${row.slug})`);
+      } else {
+        seenUpcs.set(row.upc.trim(), line);
+      }
     }
 
     // missing name
