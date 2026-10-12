@@ -43,8 +43,9 @@ export function createWantToTryApi(client: SupabaseClient): WantToTryApi {
         for (const row of viaRows as ProfileViewRow[]) viaById.set(row.id, mapProfile(client, row));
       }
 
-      const items = rows.slice(offset, offset + limit).map((row) => {
+      const items = rows.slice(offset, offset + limit).flatMap((row) => {
         const bevRow = Array.isArray(row.bevs) ? row.bevs[0] : row.bevs;
+        if (!bevRow) return [];
         return {
           bev: mapBevSummary(client, bevRow),
           savedAt: row.created_at,

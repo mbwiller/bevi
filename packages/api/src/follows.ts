@@ -18,7 +18,10 @@ export async function fetchFollowIds(client: SupabaseClient, table: 'follows', c
   const otherColumn = column === 'follower_id' ? 'followee_id' : 'follower_id';
   const { data, error } = await client.from(table).select(otherColumn).eq(column, value);
   if (error) throw mapError(error);
-  return (data ?? []).map((row) => (row as Record<string, string>)[otherColumn]);
+  return (data ?? []).flatMap((row) => {
+    const id = (row as Record<string, string | undefined>)[otherColumn];
+    return id ? [id] : [];
+  });
 }
 
 async function fetchProfileRows(

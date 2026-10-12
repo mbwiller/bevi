@@ -26,6 +26,7 @@ interface RankingWithBevRow extends RankingRow {
 
 function mapRankedBev(client: SupabaseClient, row: RankingWithBevRow): RankedBev {
   const bevRow = Array.isArray(row.bevs) ? row.bevs[0] : row.bevs;
+  if (!bevRow) throw new ApiError('unknown', `Ranking ${row.id} has no Bev`);
   return { ...mapRanking(row), bev: mapBevSummary(client, bevRow) };
 }
 

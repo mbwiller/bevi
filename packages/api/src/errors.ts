@@ -128,9 +128,8 @@ function mapAuthError(e: AuthErrorLike): ApiError {
   const beviCode = findBeviCode(e.message);
   if (beviCode) return new ApiError(beviCode, e.message);
 
-  if (e.code && AUTH_CODE_MAP[e.code]) {
-    return new ApiError(AUTH_CODE_MAP[e.code], e.message);
-  }
+  const authCode = e.code ? AUTH_CODE_MAP[e.code] : undefined;
+  if (authCode) return new ApiError(authCode, e.message);
 
   const msg = e.message.toLowerCase();
   if (msg.includes('invalid login credentials')) return new ApiError('unauthorized', e.message);
