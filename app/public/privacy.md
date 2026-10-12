@@ -1,7 +1,5 @@
 # Privacy
 
-**Draft for Matt and Arjun to review. Not final.**
-
 Bevi is a small app for a group of friends to rank drinks. This note says what it keeps about you and why.
 
 ## What we store
@@ -28,8 +26,8 @@ People signed in to Bevi can see your display name, username, rankings and notes
 
 ## Deleting your account
 
-Settings › Delete account removes your profile, rankings, comparisons, follows and Want to Try. Bevs you added stay in the catalog without your name on them.
+Settings › Delete account removes your profile, rankings, comparisons, follows and Want to Try. Bevs you added, and their photos, stay in the catalog without your name on them.
 
 ## Questions
 
-Message Matt or Arjun.
+Ask the person who invited you to Bevi.

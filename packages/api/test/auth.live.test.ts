@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { createBeviApi } from '../src/index.ts';
 import type { AuthStorageAdapter } from '../src/client.ts';
-import { randomTestUsername } from './testUsername.ts';
+import { randomTestUsername, TEST_INVITE_CODE } from './testUsername.ts';
 
 const url = process.env.SUPABASE_URL;
 const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
@@ -26,7 +26,7 @@ describe.skipIf(!url || !publishableKey)('auth, against a live local stack', () 
     // Matches seed.sql's local-only invite_code row -- see supabase/seed.sql.
     const username = randomTestUsername();
 
-    const signedUp = await api.signUp({ username, password: 'correct-horse-battery-staple', inviteCode: 'local-test-invite-code' });
+    const signedUp = await api.signUp({ username, password: 'correct-horse-battery-staple', inviteCode: TEST_INVITE_CODE });
     expect(signedUp.handle).toBe(username);
 
     const session = await api.getSession();

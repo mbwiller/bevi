@@ -3,8 +3,8 @@ import { isApiError, type ValidationErrorDetail } from '@bevi/shared';
 import { errorCopy } from '@/lib/errorCopy';
 
 /**
- * Password rule shown on the sign-up form. The contract has no constant for it (the mock enforces
- * 8 and `signUp` throws `validation` with `field: 'password'` otherwise); the server's message wins
+ * Password rule shown on the sign-up form. The contract has no constant for it (the server and the
+ * test FakeApi enforce 8 and `signUp` throws `validation` with `field: 'password'` otherwise); the server's message wins
  * when it rejects one.
  */
 export const PASSWORD_MIN_LENGTH = 8;

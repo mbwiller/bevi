@@ -1,7 +1,8 @@
 name: app
 
 # Matt's lane: the Expo web app in app/. Typecheck, unit tests, expo-doctor and the web export that
-# Vercel builds (deploys themselves are manual; see app/CLAUDE.md).
+# Vercel builds (deploys themselves are manual; see app/CLAUDE.md). Also runs on packages/api and
+# data/catalog changes: the app bundles @bevi/api, and its jest FakeApi reads the catalog CSV.
 
 on:
   pull_request:
@@ -9,6 +10,8 @@ on:
       - "app/**"
       - "shared/src/**"
       - "packages/ranking/src/**"
+      - "packages/api/src/**"
+      - "data/catalog/**"
       - "package-lock.json"
       - ".github/workflows/app.yml"
   push:
@@ -18,6 +21,8 @@ on:
       - "app/**"
       - "shared/src/**"
       - "packages/ranking/src/**"
+      - "packages/api/src/**"
+      - "data/catalog/**"
       - "package-lock.json"
       - ".github/workflows/app.yml"
 
@@ -48,8 +53,12 @@ jobs:
         working-directory: app
         run: npx expo-doctor
 
+      # The same guarded build Vercel runs (vercel.json buildCommand), with placeholder values: the
+      # env check, the export, and the scan that fails if test-only or fake content reached dist/.
       - name: web export
         working-directory: app
         env:
           CI: "1"
-        run: npx expo export --platform web
+          EXPO_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+          EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci
+        run: node scripts/check-env.mjs && npx expo export --platform web --clear && node scripts/check-bundle.mjs

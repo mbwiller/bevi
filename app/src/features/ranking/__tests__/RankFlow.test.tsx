@@ -2,7 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { configure, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { ApiError, type BevSummary, type Bucket } from '@bevi/shared';
 
-import { api, mockControls } from '@/api/client';
+import { api } from '@/api/client';
+import { controls } from '@/testing/fakeApi';
 
 import { RankFlow } from '../RankFlow';
 
@@ -11,9 +12,8 @@ const mockReplace = jest.fn();
 const mockRouter = { canGoBack: () => true, back: mockBack, replace: mockReplace, push: jest.fn() };
 jest.mock('expo-router', () => ({ useRouter: () => mockRouter }));
 
-const controls = mockControls!;
 
-// The mock computes its aggregates on the first read after a reset, which can take a moment.
+// The FakeApi computes its aggregates on the first read after a reset, which can take a moment.
 configure({ asyncUtilTimeout: 5000 });
 jest.setTimeout(30000);
 let client: QueryClient;
@@ -21,7 +21,7 @@ let client: QueryClient;
 beforeEach(() => {
   controls.setLatency(0);
   controls.resetToFixtures();
-  controls.signInAs('demo');
+  controls.signInAs('tester');
   client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false, gcTime: Infinity } } });
 });
 
@@ -32,7 +32,7 @@ afterEach(() => {
   mockReplace.mockClear();
 });
 
-/** Unranked, non-alcoholic Bevs for demo. */
+/** Unranked, non-alcoholic Bevs for the test user. */
 async function unranked(n: number): Promise<BevSummary[]> {
   const out: BevSummary[] = [];
   for (const q of ['a', 'e', 'o']) {
@@ -186,7 +186,7 @@ it('closing mid-flow asks before discarding', async () => {
 });
 
 it('shows "Not available" for an age-restricted Bev', async () => {
-  controls.signInAs('theo');
+  controls.signInAs('minor_user');
   jest.spyOn(api.bevs, 'get').mockRejectedValue(new ApiError('age_restricted', 'Not available'));
   await renderRank('any-bev');
   expect(await screen.findByText('Not available')).toBeTruthy();

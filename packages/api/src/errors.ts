@@ -38,13 +38,22 @@ const SQLSTATE_CODE_MAP: Record<string, ApiErrorCode> = {
 
 // Validation errors raise with `detail = '<field name>'` (a bare string,
 // e.g. 'inviteCode', 'handle', 'note') -- see every `BEVI_VALIDATION`/
-// `BEVI_BAD_INDEX` raise across the migrations. Wrap it into the shape
-// `ValidationErrorDetail` promises.
+// `BEVI_BAD_INDEX` raise across the migrations -- or `'<field>:<reason>'`
+// (e.g. 'photoAssetId:unknown_asset', create_bev in 20261012000200). Wrap
+// it into the shape `ValidationErrorDetail` promises.
 function validationDetail(details: unknown): ValidationErrorDetail | undefined {
   if (typeof details === 'string' && details.length > 0) {
-    return { field: details };
+    const i = details.indexOf(':');
+    return i > 0 ? { field: details.slice(0, i), reason: details.slice(i + 1) } : { field: details };
   }
   return undefined;
+}
+
+// create_bev raises BEVI_DUPLICATE_BEV with `detail = <existing bev id>`;
+// the contract promises `{ existingBevId }` so the app can open that Bev.
+function conflictDetail(message: string, details: string | null | undefined): unknown {
+  if (message.includes('BEVI_DUPLICATE_BEV')) return details ? { existingBevId: details } : undefined;
+  return details ?? undefined;
 }
 
 interface PostgrestLikeError {
@@ -77,7 +86,7 @@ function findBeviCode(message: string): ApiErrorCode | undefined {
 function mapPostgrestError(e: PostgrestLikeError): ApiError {
   const beviCode = findBeviCode(e.message);
   if (beviCode) {
-    const detail = beviCode === 'validation' ? validationDetail(e.details) : e.details ?? undefined;
+    const detail = beviCode === 'validation' ? validationDetail(e.details) : conflictDetail(e.message, e.details);
     return new ApiError(beviCode, e.message, detail);
   }
 
@@ -128,9 +137,8 @@ function mapAuthError(e: AuthErrorLike): ApiError {
   const beviCode = findBeviCode(e.message);
   if (beviCode) return new ApiError(beviCode, e.message);
 
-  if (e.code && AUTH_CODE_MAP[e.code]) {
-    return new ApiError(AUTH_CODE_MAP[e.code], e.message);
-  }
+  const authCode = e.code ? AUTH_CODE_MAP[e.code] : undefined;
+  if (authCode) return new ApiError(authCode, e.message);
 
   const msg = e.message.toLowerCase();
   if (msg.includes('invalid login credentials')) return new ApiError('unauthorized', e.message);
@@ -169,20 +177,27 @@ function isStorageErrorLike(e: unknown): e is StorageErrorLike {
   return typeof message === 'string' && typeof name === 'string' && name.startsWith('Storage');
 }
 
-// HTTP status -> ApiErrorCode. Storage doesn't raise BEVI_*/SQLSTATE like
-// the RPCs do; this maps the HTTP status the Storage API itself returns
-// (see https://supabase.com/docs/guides/storage/debugging/error-codes).
+// Storage status -> ApiErrorCode. Storage doesn't raise BEVI_*/SQLSTATE like
+// the RPCs do (see https://supabase.com/docs/guides/storage/debugging/error-codes).
+// The Storage API answers most failures with HTTP 400 and puts the real
+// status in the body, which storage-js exposes as `statusCode` (a string,
+// e.g. '403' for an RLS denial, '415' for a disallowed mime type), so that
+// wins over the HTTP `status`.
 const STORAGE_STATUS_CODE_MAP: Record<number, ApiErrorCode> = {
-  400: 'validation', // e.g. mime type/path rejected by bucket config
+  400: 'validation', // e.g. path rejected by bucket config
+  401: 'unauthorized', // missing or expired JWT
   403: 'unauthorized', // RLS denied the insert
   404: 'not_found',
   409: 'conflict', // ResourceAlreadyExists
   413: 'validation', // payload too large (bucket's file_size_limit)
+  415: 'validation', // mime type not in the bucket's allowed_mime_types
   429: 'rate_limited',
 };
 
 function mapStorageError(e: StorageErrorLike): ApiError {
-  const code = typeof e.status === 'number' ? STORAGE_STATUS_CODE_MAP[e.status] : undefined;
+  const bodyStatus = Number(e.statusCode);
+  const status = Number.isInteger(bodyStatus) && bodyStatus > 0 ? bodyStatus : e.status;
+  const code = typeof status === 'number' ? STORAGE_STATUS_CODE_MAP[status] : undefined;
   return new ApiError(code ?? 'unknown', e.message);
 }
 

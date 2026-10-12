@@ -118,7 +118,7 @@ export function StarterStep({ bev: summary, index, total, ranked, canFinish, onF
       } catch (e) {
         if (!isApiError(e) || e.code !== 'conflict') return setSaveError(e);
         // Ranked elsewhere already: nothing to place, move on. `detail.reason` is only a fast path
-        // (the mock sends it; the real API answers a bare conflict), so otherwise re-read the Bev.
+        // (the test FakeApi sends it; the real API answers a bare conflict), so otherwise re-read the Bev.
         if ((e.detail as { reason?: string } | undefined)?.reason === 'already_ranked') return onNext();
         const bevNow = await bevQ.refetch();
         if (!bevNow.isError && bevNow.data?.myRanking) return onNext();

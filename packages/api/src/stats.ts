@@ -2,24 +2,16 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { ApiError, type ProfileStats, type StatsApi } from '@bevi/shared';
 import { mapError } from './errors';
 
-interface UserStatsRow {
-  rating_count: number;
-  mean_score: number | null;
-  stddev_score: number | null;
+interface ProfileStatsRow {
+  followers: number;
+  following: number;
+  bevd_count: number;
   want_count: number;
-  follower_count: number;
-  following_count: number;
-}
-
-interface StreakRow {
-  current_days: number;
-  longest_days: number;
-  last_ranked_on: string | null;
-}
-
-interface ProfileRankRow {
-  bevi_rank: number | null;
-  timezone: string;
+  rank_on_bevi: number | null;
+  rank_points: number;
+  current_streak: number;
+  longest_streak: number;
+  streak_alive_today: boolean;
 }
 
 async function requireUserId(client: SupabaseClient): Promise<string> {
@@ -28,46 +20,24 @@ async function requireUserId(client: SupabaseClient): Promise<string> {
   return data.user.id;
 }
 
-function todayInTimezone(timezone: string): string {
-  // en-CA gives YYYY-MM-DD directly, matching streaks.last_ranked_on's date type.
-  return new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date());
-}
-
+// One RPC (20261012000500): counts, the live "rank on Bevi" and points (the
+// same helper the People leaderboard uses, so they always agree), and the
+// streak as it stands today in the user's timezone.
 async function fetchStats(client: SupabaseClient, userId: string): Promise<ProfileStats> {
-  const [userStats, streak, profile] = await Promise.all([
-    client.from('user_stats').select('*').eq('user_id', userId).maybeSingle(),
-    client.from('streaks').select('*').eq('user_id', userId).maybeSingle(),
-    client.from('profiles').select('bevi_rank, timezone').eq('id', userId).maybeSingle(),
-  ]);
-  if (userStats.error) throw mapError(userStats.error);
-  if (streak.error) throw mapError(streak.error);
-  if (profile.error) throw mapError(profile.error);
-  if (!profile.data) throw new ApiError('not_found', `No profile for user ${userId}`);
-
-  const us = (userStats.data as UserStatsRow | null) ?? {
-    rating_count: 0,
-    mean_score: null,
-    stddev_score: null,
-    want_count: 0,
-    follower_count: 0,
-    following_count: 0,
-  };
-  const st = (streak.data as StreakRow | null) ?? { current_days: 0, longest_days: 0, last_ranked_on: null };
-  const p = profile.data as ProfileRankRow;
-
+  const { data, error } = await client.rpc('get_profile_stats', { p_user_id: userId }).maybeSingle();
+  if (error) throw mapError(error);
+  const row = data as ProfileStatsRow | null;
+  if (!row) throw new ApiError('not_found', `No profile for user ${userId}`);
   return {
-    followers: us.follower_count,
-    following: us.following_count,
-    bevdCount: us.rating_count,
-    wantToTryCount: us.want_count,
-    rankOnBevi: p.bevi_rank,
-    // "rank on Bevi" points formula (bevs_ranked + 3*streak + 2*bevs_created)
-    // isn't computed anywhere yet (no view/cron for it) -- bevi_rank itself
-    // is the closest existing signal (populated by the same future cron).
-    rankPoints: p.bevi_rank ?? 0,
-    currentStreak: st.current_days,
-    longestStreak: st.longest_days,
-    streakAliveToday: st.last_ranked_on === todayInTimezone(p.timezone),
+    followers: row.followers,
+    following: row.following,
+    bevdCount: row.bevd_count,
+    wantToTryCount: row.want_count,
+    rankOnBevi: row.rank_on_bevi,
+    rankPoints: row.rank_points,
+    currentStreak: row.current_streak,
+    longestStreak: row.longest_streak,
+    streakAliveToday: row.streak_alive_today,
   };
 }
 

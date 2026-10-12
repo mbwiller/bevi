@@ -2,7 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
 import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
 
-import { api, mockControls } from '@/api/client';
+import { api } from '@/api/client';
+import { controls } from '@/testing/fakeApi';
 import AccountScreen from '@/app/settings/account';
 import DeleteAccountScreen from '@/app/settings/delete-account';
 import SettingsIndexScreen from '@/app/settings/index';
@@ -11,7 +12,6 @@ import { useSession } from '@/state/session';
 
 import { parseMarkdown } from '../Markdown';
 
-const controls = mockControls!;
 let client: QueryClient;
 
 function Layout() {
@@ -22,8 +22,6 @@ function Layout() {
   );
 }
 
-const Stub = () => null;
-
 async function open(url: string) {
   const result = renderRouter(
     {
@@ -32,8 +30,6 @@ async function open(url: string) {
       'settings/account': AccountScreen,
       'settings/privacy': PrivacyScreen,
       'settings/delete-account': DeleteAccountScreen,
-      'dev/gallery': Stub,
-      'dev/tokens': Stub,
     },
     { initialUrl: url },
   );
@@ -47,18 +43,18 @@ beforeEach(() => {
   });
   controls.setLatency(0);
   controls.resetToFixtures();
-  controls.signInAs('demo');
+  controls.signInAs('tester');
   useSession.setState({ status: 'ready', checked: true, devForced: true });
 });
 
 afterEach(() => client.clear());
 
-it('lists the rows, with dev links on the mock', async () => {
+it('lists the rows, with no developer links', async () => {
   const r = await open('/settings');
   expect(await screen.findByLabelText('Account')).toBeTruthy();
   expect(screen.getByLabelText('Privacy')).toBeTruthy();
   expect(screen.getByLabelText('Delete account')).toBeTruthy();
-  expect(screen.getByLabelText('Component gallery')).toBeTruthy();
+  expect(screen.queryByLabelText('Component gallery')).toBeNull();
   await fireEvent.press(screen.getByLabelText('Account'));
   expect(r.path()).toBe('/settings/account');
 });
@@ -82,7 +78,7 @@ it('delete account needs DELETE typed out', async () => {
   await fireEvent.press(screen.getByRole('button', { name: 'Delete account' }));
   await waitFor(() => expect(useSession.getState().status).toBe('signedOut'));
   expect(await api.getSession()).toBeNull();
-  await expect(api.signIn({ username: me.handle, password: 'demo1234' })).rejects.toMatchObject({ code: 'unauthorized' });
+  await expect(api.signIn({ username: me.handle, password: 'tester-pass-1' })).rejects.toMatchObject({ code: 'unauthorized' });
 });
 
 it('account shows the username and birthdate read-only and saves the display name', async () => {

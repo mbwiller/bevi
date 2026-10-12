@@ -21,7 +21,7 @@ const BUCKET_BY_KIND: Record<UploadMediaInput['kind'], string> = {
   label: 'nutrition-labels',
 };
 
-// Matches the allow-list enforced server-side (20261011000800_media_upload.sql
+// Matches the allow-list enforced server-side (20261011000900_media_upload.sql
 // sets `allowed_mime_types` on both buckets) and DEVELOPMENT-ARJUN.md's
 // `raw-uploads object insert` row, reused here for lack of a better list.
 const EXT_BY_MIME_TYPE: Record<string, string> = {

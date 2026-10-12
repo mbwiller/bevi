@@ -16,6 +16,7 @@ on:
       - "packages/api/**"
       - "shared/**"
       - "data/catalog/**"
+      - "packages/ranking/**"
       - "scripts/**"
   push:
     branches:
@@ -25,6 +26,7 @@ on:
       - "packages/api/**"
       - "shared/**"
       - "data/catalog/**"
+      - "packages/ranking/**"
       - "scripts/**"
 
 jobs:
@@ -32,6 +34,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Migrations are append-only once merged (supabase/CLAUDE.md): a PR may
+      # add migration files but never modify, delete or rename one.
+      - name: migrations are append-only
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          changed=$(git diff --diff-filter=MDR --name-only "origin/$BASE_REF...HEAD" -- supabase/migrations)
+          if [ -n "$changed" ]; then
+            echo "Merged migrations must not change; add a new one instead:"
+            echo "$changed"
+            exit 1
+          fi
 
       - uses: actions/setup-node@v4
         with:
@@ -45,6 +63,8 @@ jobs:
       # Will fail until a root package-lock.json exists (needs more of the
       # workspace scaffold). Not worked around on purpose.
       - run: npm ci
+
+      - run: npm run typecheck -w packages/api
 
       # Trim the local stack to what CI actually needs. `-x` excludes
       # services; drop any name here the installed CLI version doesn't
@@ -74,8 +94,11 @@ jobs:
       # anything needing a live stack if these env vars aren't set).
       - run: npm test -w packages/api
 
-      # No-ops until data/catalog/ and its catalog:validate script exist.
-      - run: npm run catalog:validate --if-present
+      - run: npm run catalog:validate
+
+      # The newest *_catalog_seed.sql migration must match data/catalog
+      # (scripts/catalog/build-seed-migration.ts generates it).
+      - run: npm run catalog:migration -- --check
 
   deploy-dev:
     needs: db

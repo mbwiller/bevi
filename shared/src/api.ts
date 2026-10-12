@@ -197,7 +197,8 @@ export interface BevsApi {
    * on (name, brand, flavor, category), case-insensitive, is a 'conflict', with
    * `detail = { existingBevId }` so the app can jump to ranking that Bev.
    * @throws 'unauthorized'; 'validation' (`detail.field`), incl. an unknown or
-   *   unready asset id; 'age_restricted' — alcoholic category and the caller
+   *   unready asset id (an asset that doesn't exist or isn't the caller's upload has
+   *   `detail.reason: 'unknown_asset'`, which retrying can't fix); 'age_restricted' — alcoholic category and the caller
    *   can't see alcohol; 'conflict' — exact duplicate; 'rate_limited'.
    */
   create(input: CreateBevInput): Promise<Bev>;

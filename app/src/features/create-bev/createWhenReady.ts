@@ -2,7 +2,7 @@ import { isApiError, type Bev, type CreateBevInput, type ValidationErrorDetail }
 
 /**
  * `bevs.create` rejects with `validation` (`detail.reason = 'asset_not_ready'`) while the photo is
- * still being processed (background removal, ~3 s in the mock). The contract has no way to ask
+ * still being processed (background removal, ~3 s in the test FakeApi). The contract has no way to ask
  * for an asset's status (no `media.get`), so the wizard waits and retries `create` with backoff,
  * showing "Processing photo…", until it goes through or `maxWaitMs` passes.
  */

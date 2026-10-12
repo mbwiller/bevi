@@ -2,7 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { configure, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import type { BevSummary } from '@bevi/shared';
 
-import { api, mockControls } from '@/api/client';
+import { api } from '@/api/client';
+import { controls } from '@/testing/fakeApi';
 import { categoryById } from '@/lib/categories';
 
 import { CreateBevWizard } from '../CreateBevWizard';
@@ -24,10 +25,9 @@ jest.mock('../photo', () => ({
 const mockPick = pickImage as jest.MockedFunction<typeof pickImage>;
 const mockPrepare = preparePhoto as jest.MockedFunction<typeof preparePhoto>;
 
-const controls = mockControls!;
 configure({ asyncUtilTimeout: 5000 });
 jest.setTimeout(30000);
-/** The mock keeps a new photo 'processing' for 3 s; create waits for it with backoff. */
+/** The FakeApi keeps a new photo 'processing' for 3 s; create waits for it with backoff. */
 const READY_TIMEOUT = { timeout: 12000 };
 let client: QueryClient;
 
@@ -36,7 +36,7 @@ const asset = { uri: 'blob:photo', width: 3000, height: 4000, mimeType: 'image/j
 beforeEach(() => {
   controls.setLatency(0);
   controls.resetToFixtures();
-  controls.signInAs('demo');
+  controls.signInAs('tester');
   client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false, gcTime: Infinity } } });
   mockPick.mockResolvedValue(asset);
   let n = 0;
@@ -80,7 +80,7 @@ async function fillDetails({ name, brand, flavor, category }: { name: string; br
   await fireEvent.press(screen.getByText('Not sure, estimate it'));
 }
 
-/** A non-alcoholic fixture Bev demo can see. */
+/** A non-alcoholic fixture Bev the test user can see. */
 async function existingBev(): Promise<BevSummary> {
   const page = await api.bevs.search({ q: 'cola', limit: 50 });
   const bev = page.items.find((b) => !categoryById(b.categoryId).isAlcoholic);
@@ -227,7 +227,7 @@ it('closing with something entered asks before discarding; with nothing entered 
 });
 
 it('the category sheet hides alcoholic categories for an under-21 account', async () => {
-  controls.signInAs('theo');
+  controls.signInAs('minor_user');
   await renderWizard();
   await addPhoto();
   await fireEvent.press(screen.getByRole('button', { name: 'Next' }));

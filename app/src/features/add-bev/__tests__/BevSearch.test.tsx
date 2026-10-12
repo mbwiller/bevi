@@ -1,7 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { configure, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
-import { api, mockControls } from '@/api/client';
+import { api } from '@/api/client';
+import { controls } from '@/testing/fakeApi';
 import AddBevScreen from '@/app/(tabs)/add/index';
 
 import { BevSearch } from '../BevSearch';
@@ -15,14 +16,13 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockParams,
 }));
 
-const controls = mockControls!;
 configure({ asyncUtilTimeout: 5000 });
 let client: QueryClient;
 
 beforeEach(() => {
   controls.setLatency(0);
   controls.resetToFixtures();
-  controls.signInAs('demo');
+  controls.signInAs('tester');
   mockParams = {};
   client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { gcTime: Infinity } } });
 });
@@ -113,7 +113,7 @@ it('shows ErrorState with Retry when search fails', async () => {
 });
 
 it('hides alcoholic results from an under-21 viewer', async () => {
-  controls.signInAs('theo');
+  controls.signInAs('minor_user');
   const alcoholic = { id: 'x-beer', name: 'Test Lager', brand: null, flavor: null, categoryId: 'beer', photoUrl: null, photoStatus: 'ready', priceTier: 1, priceEstimated: false, ratingCount: 0, bayesScore: null } as const;
   const real = api.bevs.search.bind(api.bevs);
   jest.spyOn(api.bevs, 'search').mockImplementation(async (p) => {
@@ -136,16 +136,16 @@ it('remembers opened Bevs as Recents (in localStorage) and forgets them', async 
   const [rank] = await screen.findAllByLabelText(/^Rank /);
   const name = rank!.props.accessibilityLabel.replace(/^Rank /, '');
   await fireEvent.press(screen.getByRole('button', { name }));
-  expect(readRecents('mock-user-demo')[0]?.name).toBe(name);
+  expect(readRecents('user-tester')[0]?.name).toBe(name);
   // Another account on this browser has its own (empty) list.
-  expect(readRecents('mock-user-jules')).toEqual([]);
-  expect([...store.keys()]).toEqual(['bevi.add.recents:mock-user-demo']);
+  expect(readRecents('user-friend_a')).toEqual([]);
+  expect([...store.keys()]).toEqual(['bevi.add.recents:user-tester']);
 
   await fireEvent.press(screen.getByLabelText('Clear search'));
   expect(await screen.findByText('Recents')).toBeTruthy();
   await fireEvent.press(screen.getByLabelText(`Forget ${name}`));
   expect(screen.queryByText('Recents')).toBeNull();
-  expect(readRecents('mock-user-demo')).toEqual([]);
+  expect(readRecents('user-tester')).toEqual([]);
   g.localStorage = saved;
 });
 

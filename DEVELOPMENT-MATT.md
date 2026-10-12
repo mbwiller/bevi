@@ -4,6 +4,14 @@ Written 2026-10-09 from `vision.md` (source of truth), `CONVERSATION.md` (raw fo
 
 **Decided 2026-10-11 (Matt + Arjun): Bevi is a web app only.** The Expo app is built for the web (`expo export --platform web`), hosted on Vercel and added to the iPhone home screen; the backend stays Supabase. No native builds, EAS, App Store/TestFlight, Android, or Expo Go/dev client as a target. Under 20 users (friends), so sign-in is username + password gated by a shared invite code; no OAuth, no third-party services, no emails. Sections below are updated where this changed the plan.
 
+**Status 2026-10-12 (end-to-end audit and launch work, branch `claude/upbeat-galileo-iuhp0s`).**
+
+- Until now the deployed app ran entirely on the in-browser mock (each visitor got a private fake world with seeded fake users); it never talked to Supabase. Now the app runs only on `packages/api` against the hosted project (`tgfyqgqbqxhsxvbelect`); the mock is a jest-only test double with neutral fixture people (§3). The dev gallery and dev routes are gone; the old mock's localStorage (fake users, plain-text passwords) is wiped on launch.
+- Hosted Supabase: all migrations through `20261012000900` applied; the 378-Bev catalog is loaded by a generated migration (`npm run catalog:migration`); confirm-email off, minimum password 8, invite code set (in `app_secrets`, not in the repo).
+- Working end to end against hosted, checked in a real browser (sign up with the invite code → profile + birthdate → starter ranking with comparisons → feed; reload keeps the session; follow → their rankings in your feed; Recommended; Rank on Bevi; delete account) and by the `packages/api` live suites: photo upload → create a Bev visible to everyone, search, Bev detail with a predicted score, recommendations, streaks, user leaderboard, birth dates private.
+- **Decided 2026-10-12 (deviates from seam 5 / §8 below, for Arjun's sign-off):** predictions and recommendations run in the client. `get_prediction_snapshot()` returns the caller's `PredictionSnapshot` as one jsonb value and `packages/api` runs `predictScore()` / `recommend()` from `@bevi/ranking` (no Edge Function). Revisit at ~200 users or a ~1 MB snapshot.
+- Still to do: Taste Profile tab (Phase 3), background removal / thumbnails for user photos (raw photo is used), moderation tools (report exists; merge/hide by SQL), pagination on search and the leaderboards (fine under ~50 rows), SQL tests against the streak and rank-points golden vectors, running the BeviApi conformance suite against `packages/api`, and `site_url` once the production URL is final.
+
 **Contents**
 
 1. Your lane: what you own
@@ -127,9 +135,8 @@ app/
   src/
     app/                          expo-router routes (see navigation below)
     api/
-      client.ts                   export const api: BeviApi = USE_MOCK ? mockApi : realApi   ← the one-line swap
-      mock.ts                     MockApi implements BeviApi (dev only)
-      mock-state.ts               in-memory DB seeded from shared/fixtures, persisted to AsyncStorage
+      client.ts                   export const api: BeviApi = createBeviApi(...)   (Supabase only, since 2026-10-12)
+      config.ts  authStorage.ts   env-var validation; localStorage session adapter
       keys.ts                     TanStack query keys
       hooks/                      useFeed(), useBev(id), useMyRankings(), useSubmitRanking() ...
     theme/                        tokens.ts  typography.ts  colors.ts  spacing.ts  index.ts
@@ -142,7 +149,7 @@ app/
       onboarding/                 ProfileSetup  AgeGate  StarterRanking
       profile/                    ProfileHeader  StatsRow  TilesRow  UserRankingsList
     lib/                          date (local day key), tz, format (score 1dp, counts), haptics (no-op on web), analytics (no-op v1)
-    dev/                          ComponentGallery screen, mock controls (latency, fail-next), only in __DEV__
+    testing/fakeApi/              jest-only in-memory BeviApi + neutral fixture people (never bundled)
 ```
 
 ### Navigation (5 tabs + stacks)
@@ -191,6 +198,7 @@ Tab order and the centre "Add Bev" slot follow vision §6 ("replaces Beli's sear
 - `app/src/api/mock.ts` implements every `BeviApi` method against an in-memory copy of `shared/fixtures/` (Arjun's `bevs.sample.json` plus the users, rankings, follows and featured fixtures you generate with `@bevi/ranking`, §13). It runs `@bevi/ranking` for real: `submitRanking` checks `expectedBucketSize`, inserts at `insertIndex`, re-spaces the bucket with `respaceBucket()`, recomputes per-Bev stats, and `getRecommendations` calls `recommend()` on a snapshot built from the mock state. So the UI against the mock behaves like production, including `conflict` errors.
 - Latency 200–600 ms (uniform) so loading states are real; dev panel toggles: `failNext(method)`, `latency`, `resetToFixtures()`, `emptyUser()` (first-run states).
 - Swap: `EXPO_PUBLIC_BEVI_API=mock|supabase` read in `client.ts`. Default `mock` until Arjun's `packages/api` passes its own contract tests, then default `supabase` with `mock` kept for Storybook-style work and offline demos.
+- **Done 2026-10-12 (superseded the above):** the app runs on `packages/api` only; there is no switch. The mock became `app/src/testing/fakeApi/`, a jest-only test double (`jest.setup.js` swaps `@/api/client` for it) with neutral fixture people; `scripts/check-bundle.mjs` fails a build that contains it.
 - Rule copied from Bev Maps: TypeScript keeps both honest. If a screen needs something the interface lacks, propose a `contract/*` change, never a workaround.
 
 ### Data-fetching rules
@@ -481,10 +489,10 @@ Edit profile (name, handle, avatar initials preview); Re-rank sheet (choose: cha
 
 ### Builds and distribution to friends (web only, decided 2026-10-11)
 
-- Build: `npx expo export --platform web` (from `app/`) → `app/dist/`; Vercel deploys it with `app/vercel.json` (project root directory `app`). Preview deploys per PR, production from `main`.
+- Build: `npx expo export --platform web` (from `app/`) → `app/dist/`; Vercel deploys it with `app/vercel.json` (project root directory `app`). Git deploys are off (`git.deploymentEnabled: false`): production is a manual `vercel deploy --prod`. The build runs `scripts/check-env.mjs`, the export, then `scripts/check-bundle.mjs`.
 - Install: friends open the URL in iPhone Safari → Share → Add to Home Screen; `app/public/manifest.json` and the icons make it open full-screen. No App Store, TestFlight, Apple Developer account, Android build or EAS.
 - Dev: `npm start -w app -- --web` in a desktop browser, and the LAN/preview URL in iPhone Safari for real-device checks.
-- Env: `EXPO_PUBLIC_BEVI_API`, `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` are read in `client.ts` and passed to `createBeviApi({ url, publishableKey, authStorage })`. Arjun provides the Supabase values; they live in Vercel project env vars and `.env.local`, never committed. Service keys never exist in the app.
+- Env: `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (see `app/.env.example`; `EXPO_PUBLIC_BEVI_API` is gone since 2026-10-12) are read in `client.ts` and passed to `createBeviApi({ url, publishableKey, authStorage })`. Arjun provides the Supabase values; they live in Vercel project env vars and `.env.local`, never committed. Service keys never exist in the app.
 
 ---
 

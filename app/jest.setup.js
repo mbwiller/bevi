@@ -8,3 +8,7 @@ jest.mock('react-native-reanimated/mock', () => ({
   useReducedMotion: () => false,
 }));
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
+
+// The app talks to Supabase through `@bevi/api` (src/api/client.ts). Suites run against the
+// in-memory FakeApi instead: every importer of the client gets src/testing/fakeApi/client.ts.
+jest.mock('./src/api/client', () => require('./src/testing/fakeApi/client'));

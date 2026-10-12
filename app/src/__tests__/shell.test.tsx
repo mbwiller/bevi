@@ -8,8 +8,8 @@ import { useSession, type SessionStatus } from '@/state/session';
 const APP_DIR = path.resolve(__dirname, '../app');
 
 /**
- * Renders the app at `initialUrl` with the given session status, forced as the dev override
- * (`?session=`) would force it, and returns a pathname reader.
+ * Renders the app at `initialUrl` with the given session status set directly (skipping the launch
+ * check), and returns a pathname reader.
  * (renderRouter attaches getPathname to the render promise; RNTL 14's async render means
  * `expect(screen).toHavePathname` can't see it.)
  */
@@ -51,39 +51,14 @@ describe('session gate', () => {
     expect(path()).toBe('/sign-in');
   });
 
-  it('keeps the dev routes reachable in any status on the mock API', async () => {
-    const path = await start('signedOut', '/dev/tokens');
-    expect(path()).toBe('/dev/tokens');
-  });
-
   it('shows not-found for an unknown URL', async () => {
     await start('ready', '/no/such/page');
     expect(await screen.findByText('Page not found')).toBeTruthy();
   });
 
-  describe('on the real API (EXPO_PUBLIC_BEVI_API=supabase)', () => {
-    const saved = process.env.EXPO_PUBLIC_BEVI_API;
-    beforeEach(() => {
-      process.env.EXPO_PUBLIC_BEVI_API = 'supabase';
-    });
-    afterEach(() => {
-      if (saved === undefined) delete process.env.EXPO_PUBLIC_BEVI_API;
-      else process.env.EXPO_PUBLIC_BEVI_API = saved;
-    });
-
-    it.each(['/dev/gallery', '/dev/tokens'])('%s is unreachable', async (url) => {
-      const path = await start('signedOut', url);
-      await screen.findByText('Create account');
-      expect(path()).toBe('/sign-in');
-    });
-
-    it('ignores setStatus (no way around the gate)', async () => {
-      const path = await start('signedOut', '/');
-      await screen.findByText('Create account');
-      await act(async () => useSession.getState().setStatus('ready'));
-      expect(useSession.getState().status).toBe('signedOut');
-      expect(path()).toBe('/sign-in');
-    });
+  it.each(['/dev/gallery', '/dev/tokens'])('has no dev route at %s', async (url) => {
+    await start('ready', url);
+    expect(await screen.findByText('Page not found')).toBeTruthy();
   });
 });
 

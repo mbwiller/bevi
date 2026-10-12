@@ -2,12 +2,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
 import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
 
-import { api, mockControls } from '@/api/client';
+import { api } from '@/api/client';
+import { controls } from '@/testing/fakeApi';
 import ProfileScreen from '@/app/(tabs)/profile/index';
 import UserProfileScreen from '@/app/user/[id]/index';
 import { streakCardValue } from '@/features/profile/copy';
 
-const controls = mockControls!;
 let client: QueryClient;
 
 function Layout() {
@@ -39,7 +39,7 @@ async function open(url: string) {
   return { path: () => result.getPathnameWithParams() };
 }
 
-// Pin "now" (Date only; timers stay real) so demo's seeded streak and predictions are the same on
+// Pin "now" (Date only; timers stay real) so the test user's seeded streak and predictions are the same on
 // any day and in any timezone the tests run.
 const FIXED_NOW = new Date('2026-10-11T16:00:00Z');
 beforeAll(() => {
@@ -60,7 +60,7 @@ beforeEach(() => {
   });
   controls.setLatency(0);
   controls.resetToFixtures();
-  controls.signInAs('demo');
+  controls.signInAs('tester');
 });
 
 // Let optimistic mutations and their refetches finish before the next test renders.
@@ -83,7 +83,7 @@ describe('own profile', () => {
     expect(screen.getByLabelText(`Want to Try, ${stats.wantToTryCount}`)).toBeTruthy();
     expect(screen.getByLabelText('Recommended for you')).toBeTruthy();
     expect(screen.getByLabelText(`Rank on Bevi, #${stats.rankOnBevi} · ${stats.rankPoints} pts`)).toBeTruthy();
-    expect(stats.currentStreak).toBe(2); // demo ranked today and yesterday (seed, pinned clock)
+    expect(stats.currentStreak).toBe(2); // the test user ranked today and yesterday (seed, pinned clock)
     expect(screen.getByLabelText(`Current streak, ${streakCardValue(stats, true)}`)).toBeTruthy();
     expect((await screen.findAllByText(latest.bev.name)).length).toBeGreaterThan(0);
 
@@ -122,17 +122,17 @@ describe('own profile', () => {
     await fireEvent.changeText(name, '  ');
     await fireEvent.press(within(sheet).getByLabelText('Save'));
     expect(await within(sheet).findByText('Enter a name.')).toBeTruthy();
-    await fireEvent.changeText(name, 'Demo Renamed');
+    await fireEvent.changeText(name, 'Tester Renamed');
     await fireEvent.press(within(sheet).getByLabelText('Save'));
-    await waitFor(async () => expect((await api.profile.getMe()).displayName).toBe('Demo Renamed'));
-    expect(await screen.findByText('Demo Renamed')).toBeTruthy();
+    await waitFor(async () => expect((await api.profile.getMe()).displayName).toBe('Tester Renamed'));
+    expect(await screen.findByText('Tester Renamed')).toBeTruthy();
   });
 });
 
 describe("another user's profile", () => {
   async function jules() {
-    const page = await api.profile.searchUsers({ q: 'jules' });
-    return page.items.find((u) => u.handle === 'jules')!;
+    const page = await api.profile.searchUsers({ q: 'friend_a' });
+    return page.items.find((u) => u.handle === 'friend_a')!;
   }
 
   it('follow toggles optimistically and the count follows', async () => {

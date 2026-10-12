@@ -15,127 +15,67 @@
  * contains a comma -- which is the convention this catalog follows.
  */
 
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const CATALOG_DIR = join(__dirname, "..", "..", "data", "catalog");
-const CATEGORIES_PATH = join(CATALOG_DIR, "categories.json");
-const BEVS_CSV_PATH = join(CATALOG_DIR, "bevs.csv");
-
-interface Category {
-  id: string;
-  name: string;
-  sortOrder: number;
-  isAlcoholic: boolean;
-  emoji: string;
-}
-
-interface BevRow {
-  slug: string;
-  name: string;
-  brand: string;
-  flavor: string;
-  category: string;
-  price_tier: string;
-  price_estimated: string;
-  upc: string;
-  is_starter: string;
-  aliases: string;
-  image_source_url: string;
-  image_license: string;
-  image_attribution: string;
-  notes: string;
-  __line: number;
-}
-
-const EXPECTED_HEADER = [
-  "slug",
-  "name",
-  "brand",
-  "flavor",
-  "category",
-  "price_tier",
-  "price_estimated",
-  "upc",
-  "is_starter",
-  "aliases",
-  "image_source_url",
-  "image_license",
-  "image_attribution",
-  "notes",
-];
-
-function parseCsv(raw: string): BevRow[] {
-  // Split on \n or \r\n, drop trailing blank lines.
-  const lines = raw.split(/\r?\n/).filter((line, idx, arr) => {
-    // keep all non-empty lines; also keep if it's not the last element
-    return line.length > 0 || idx !== arr.length - 1;
-  });
-
-  if (lines.length === 0) {
-    throw new Error("bevs.csv is empty");
-  }
-
-  const header = lines[0].split(",");
-  if (
-    header.length !== EXPECTED_HEADER.length ||
-    !header.every((h, i) => h.trim() === EXPECTED_HEADER[i])
-  ) {
-    throw new Error(
-      `bevs.csv header does not match expected columns.\n  expected: ${EXPECTED_HEADER.join(",")}\n  got:      ${header.join(",")}`
-    );
-  }
-
-  const rows: BevRow[] = [];
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i];
-    if (line.trim() === "") continue;
-    const cols = line.split(",");
-    const lineNo = i + 1; // 1-indexed, header is line 1
-    if (cols.length !== EXPECTED_HEADER.length) {
-      throw new Error(
-        `bevs.csv line ${lineNo}: expected ${EXPECTED_HEADER.length} columns, got ${cols.length} (did a field contain an unescaped comma?)\n  line: ${line}`
-      );
-    }
-    rows.push({
-      slug: cols[0],
-      name: cols[1],
-      brand: cols[2],
-      flavor: cols[3],
-      category: cols[4],
-      price_tier: cols[5],
-      price_estimated: cols[6],
-      upc: cols[7],
-      is_starter: cols[8],
-      aliases: cols[9],
-      image_source_url: cols[10],
-      image_license: cols[11],
-      image_attribution: cols[12],
-      notes: cols[13],
-      __line: lineNo,
-    });
-  }
-  return rows;
-}
+import { aliasesOf, loadBevRows, loadCategories, type Category } from "./catalog.ts";
 
 function main(): void {
   const errors: string[] = [];
 
-  const categories: Category[] = JSON.parse(readFileSync(CATEGORIES_PATH, "utf8"));
+  const warnings: string[] = [];
+  const categories: Category[] = loadCategories();
   const categoryById = new Map<string, Category>();
   for (const c of categories) {
     categoryById.set(c.id, c);
   }
 
-  const csvRaw = readFileSync(BEVS_CSV_PATH, "utf8");
-  const rows = parseCsv(csvRaw);
+  const rows = loadBevRows();
 
   const seenNaturalKeys = new Map<string, number>(); // key -> first line number
+  const seenSlugs = new Map<string, number>(); // slug -> first line number
+  const aliasOwners = new Map<string, string[]>(); // alias -> slugs
+  const seenUpcs = new Map<string, number>(); // upc -> first line number
 
   for (const row of rows) {
     const line = row.__line;
+
+    // slug: present, url-safe, unique (it becomes the Bev's id, see catalogBevId)
+    if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(row.slug)) {
+      errors.push(`line ${line}: slug must be lowercase letters, digits and single hyphens, got "${row.slug}"`);
+    }
+    const firstSlugLine = seenSlugs.get(row.slug);
+    if (firstSlugLine !== undefined) {
+      errors.push(`line ${line}: duplicate slug "${row.slug}" already seen at line ${firstSlugLine}`);
+    } else {
+      seenSlugs.set(row.slug, line);
+    }
+
+    // is_starter must be exactly "true"/"false"
+    if (row.is_starter !== "true" && row.is_starter !== "false") {
+      errors.push(`line ${line}: is_starter must be exactly "true" or "false", got "${row.is_starter}" (slug=${row.slug})`);
+    }
+
+    for (const alias of aliasesOf(row)) {
+      aliasOwners.set(alias, [...(aliasOwners.get(alias) ?? []), row.slug]);
+    }
+
+    // length limits of the bevs columns (name 1-80, brand and flavor <= 80)
+    for (const [col, value] of [["name", row.name], ["brand", row.brand], ["flavor", row.flavor]] as const) {
+      if (value.trim().length > 80) {
+        errors.push(`line ${line}: ${col} is longer than 80 characters (slug=${row.slug})`);
+      }
+    }
+
+    // upc: optional, 8-14 digits (bevs.upc check), unique
+    if (row.upc.trim() !== "") {
+      if (!/^[0-9]{8,14}$/.test(row.upc.trim())) {
+        errors.push(`line ${line}: upc must be 8-14 digits, got "${row.upc}" (slug=${row.slug})`);
+      }
+      const firstUpcLine = seenUpcs.get(row.upc.trim());
+      if (firstUpcLine !== undefined) {
+        errors.push(`line ${line}: duplicate upc "${row.upc}" already seen at line ${firstUpcLine} (slug=${row.slug})`);
+      } else {
+        seenUpcs.set(row.upc.trim(), line);
+      }
+    }
 
     // missing name
     if (!row.name || row.name.trim() === "") {
@@ -190,6 +130,13 @@ function main(): void {
     }
   }
 
+  // An alias shared by several Bevs can't point at one of them (bev_aliases is keyed by alias): the
+  // seed migration drops it, so say which ones.
+  for (const [alias, slugs] of aliasOwners) {
+    if (slugs.length > 1) warnings.push(`alias "${alias}" is shared by ${slugs.join(", ")}; the seed migration skips it`);
+  }
+  for (const w of warnings) console.warn(`  warning: ${w}`);
+
   if (errors.length > 0) {
     console.error(`catalog validation FAILED with ${errors.length} error(s):`);
     for (const e of errors) {
@@ -198,7 +145,7 @@ function main(): void {
     process.exit(1);
   }
 
-  console.log(`validated ${rows.length} rows, 0 errors`);
+  console.log(`validated ${rows.length} rows, 0 errors, ${warnings.length} warning(s)`);
   process.exit(0);
 }
 

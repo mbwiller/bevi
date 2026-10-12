@@ -23,8 +23,8 @@ const RETRY_MAX_MS = 30_000;
  * Drives the session store from the API. Mount once, in the root layout, inside the
  * QueryClientProvider. On launch (`getSession`) and on every auth change: a session → `getMe` →
  * `setSession(profile, profile.onboarded)`; none → `signOut`, so signing out from anywhere lands on
- * sign in. When the dev override forced the launch status (`?session=`, mock only), the launch check
- * is skipped and later auth events still apply.
+ * sign in. When a test set the status directly (`devForced`), the launch check is skipped and later
+ * auth events still apply.
  *
  * A `getMe` result is dropped when a newer auth event arrived or the client changed the session
  * meanwhile (`epoch`: completeOnboarding, signOut). After the first check, a failing `getMe` keeps

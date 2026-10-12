@@ -23,7 +23,7 @@ export const LABEL_REUPLOAD = 'Add the label photo again.';
 export const PHOTO_REUPLOAD = 'Add the photo again.';
 
 /**
- * Longest Bev name. The contract has no constant for it; the mock rejects longer names with
+ * Longest Bev name. The contract has no constant for it; the test FakeApi rejects longer names with
  * `validation` on `name`, whose message the field then shows.
  */
 export const NAME_MAX_LENGTH = 80;

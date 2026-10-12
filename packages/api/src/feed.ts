@@ -1,17 +1,15 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   ApiError,
-  type CategoryId,
   type FeaturedBev,
   type FeedApi,
   type FeedItem,
   type Page,
   type PageParams,
-  type PriceTier,
   type Profile,
 } from '@bevi/shared';
 import { mapError } from './errors';
-import { mapFeedItem, mapProfile, publicUrl, type FeedRpcRow, type ProfileViewRow } from './mappers';
+import { mapBevSummary, mapFeedItem, mapProfile, publicUrl, type FeedRpcRow, type ProfileViewRow } from './mappers';
 import { clampLimit, decodeCursor, encodeCursor } from './paging';
 
 async function requireUserId(client: SupabaseClient): Promise<string> {
@@ -37,6 +35,10 @@ interface FeaturedRpcRow {
   bev_flavor: string | null;
   bev_category_id: string;
   bev_thumb_path: string | null;
+  bev_price_tier: number;
+  bev_price_estimated: boolean;
+  bev_rating_count: number;
+  bev_bayes_score: number | null;
 }
 
 export function createFeedApi(client: SupabaseClient): FeedApi {
@@ -74,22 +76,20 @@ export function createFeedApi(client: SupabaseClient): FeedApi {
       const { data, error } = await client.rpc('get_featured');
       if (error) throw mapError(error);
       return ((data ?? []) as FeaturedRpcRow[]).map((row) => ({
-        bev: {
+        bev: mapBevSummary(client, {
           id: row.bev_id,
           name: row.bev_name,
           brand: row.bev_brand,
           flavor: row.bev_flavor,
-          categoryId: row.bev_category_id as CategoryId,
-          photoUrl: publicUrl(client, 'bev-photos', row.bev_thumb_path),
-          photoStatus: 'ready',
-          priceTier: 1 as PriceTier,
-          priceEstimated: true,
-          ratingCount: 0,
-          bayesScore: null,
-        },
-        // Admin-curated content is expected to always have an image; '' is
-        // a defensive fallback, not an expected value.
-        heroImageUrl: publicUrl(client, 'bev-photos', row.image_path) ?? '',
+          category_id: row.bev_category_id,
+          photo_path: row.bev_thumb_path,
+          price_tier: row.bev_price_tier,
+          price_estimated: row.bev_price_estimated,
+          bev_stats: { rating_count: row.bev_rating_count, avg_score: null, score_stddev: null, bayes_score: row.bev_bayes_score },
+        }),
+        // Hero images live in the `featured` bucket. With none, '' makes the
+        // card fall back to the Bev's own art.
+        heroImageUrl: publicUrl(client, 'featured', row.image_path) ?? '',
         tagline: row.blurb,
         startsAt: row.starts_at,
         endsAt: row.ends_at,

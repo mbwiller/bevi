@@ -2,11 +2,11 @@ import path from 'path';
 
 import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
-import { api, mockControls } from '@/api/client';
+import { api } from '@/api/client';
+import { controls } from '@/testing/fakeApi';
 import { useSession } from '@/state/session';
 
 const APP_DIR = path.resolve(__dirname, '../../../app');
-const controls = mockControls!;
 
 async function open(url = '/sign-in') {
   useSession.setState({ status: 'signedOut', profile: undefined, checked: true, devForced: true });
@@ -40,19 +40,19 @@ describe('sign in', () => {
   it('signs in and the gate moves on to the feed', async () => {
     const spy = jest.spyOn(api, 'signIn');
     const path = await open();
-    await fill('Demo ', 'demo1234');
+    await fill('Tester ', 'tester-pass-1');
     await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));
-    expect(spy).toHaveBeenCalledWith({ username: 'demo', password: 'demo1234' });
+    expect(spy).toHaveBeenCalledWith({ username: 'tester', password: 'tester-pass-1' });
     await screen.findAllByText('Your feed');
     expect(path()).toBe('/feed');
-    expect(useSession.getState()).toMatchObject({ status: 'ready', profile: expect.objectContaining({ handle: 'demo' }) });
+    expect(useSession.getState()).toMatchObject({ status: 'ready', profile: expect.objectContaining({ handle: 'tester' }) });
   });
 
   it('Enter in the username field moves on instead of submitting', async () => {
     const spy = jest.spyOn(api, 'signIn');
     await open();
-    await fill('demo', 'demo1234');
-    await fireEvent(screen.getByLabelText('Username'), 'submitEditing', { nativeEvent: { text: 'demo' } });
+    await fill('tester', 'tester-pass-1');
+    await fireEvent(screen.getByLabelText('Username'), 'submitEditing', { nativeEvent: { text: 'tester' } });
     expect(spy).not.toHaveBeenCalled();
     expect(screen.queryByText('Enter your password')).toBeNull();
   });
@@ -60,14 +60,14 @@ describe('sign in', () => {
   it('Enter in the password field submits', async () => {
     const spy = jest.spyOn(api, 'signIn');
     await open();
-    await fill('demo', 'demo1234');
-    await fireEvent(screen.getByLabelText('Password'), 'submitEditing', { nativeEvent: { text: 'demo1234' } });
-    expect(spy).toHaveBeenCalledWith({ username: 'demo', password: 'demo1234' });
+    await fill('tester', 'tester-pass-1');
+    await fireEvent(screen.getByLabelText('Password'), 'submitEditing', { nativeEvent: { text: 'tester-pass-1' } });
+    expect(spy).toHaveBeenCalledWith({ username: 'tester', password: 'tester-pass-1' });
   });
 
   it('says so when the username or password is wrong', async () => {
     const path = await open();
-    await fill('demo', 'nope-nope');
+    await fill('tester', 'nope-nope');
     await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));
     expect(await screen.findByText('Wrong username or password. Check them and try again.')).toBeTruthy();
     expect(path()).toBe('/sign-in');
@@ -76,7 +76,7 @@ describe('sign in', () => {
   it('shows an offline message and lets you try again', async () => {
     await open();
     controls.failNext('network', 'signIn');
-    await fill('demo', 'demo1234');
+    await fill('tester', 'tester-pass-1');
     await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));
     expect(await screen.findByText("You're offline. Check your connection and try again.")).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));
