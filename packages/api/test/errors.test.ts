@@ -42,6 +42,20 @@ describe('mapError', () => {
     expect(mapError(new TypeError('fetch failed')).code).toBe('network');
   });
 
+  it('maps a storage-js StorageError by HTTP status, not through the AuthError branch', () => {
+    // StorageError carries `status` too, which is isAuthErrorLike's own
+    // fallback discriminator -- this only passes if the storage check in
+    // mapError runs first.
+    expect(mapError({ name: 'StorageApiError', message: 'The object exceeded the maximum allowed size', status: 413 }).code).toBe(
+      'validation'
+    );
+    expect(mapError({ name: 'StorageApiError', message: 'new row violates row-level security policy', status: 403 }).code).toBe(
+      'unauthorized'
+    );
+    expect(mapError({ name: 'StorageApiError', message: 'The resource already exists', status: 409 }).code).toBe('conflict');
+    expect(mapError({ name: 'StorageUnknownError', message: 'fetch error', status: undefined }).code).toBe('unknown');
+  });
+
   it('falls back to unknown for anything unrecognized', () => {
     expect(mapError('a plain string').code).toBe('unknown');
     expect(mapError(new Error('surprise')).code).toBe('unknown');

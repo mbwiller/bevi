@@ -31,7 +31,7 @@ export function createBeviApi(config: BeviApiConfig): BeviApi {
     follows: createFollowsApi(client),
     categories: createCategoriesApi(client),
     bevs: createBevsApi(client),
-    media: createMediaApi(),
+    media: createMediaApi(client),
     rankings: createRankingsApi(client),
     wantToTry: createWantToTryApi(client),
     feed: createFeedApi(client),

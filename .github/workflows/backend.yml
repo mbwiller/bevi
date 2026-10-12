@@ -74,8 +74,11 @@ jobs:
       # anything needing a live stack if these env vars aren't set).
       - run: npm test -w packages/api
 
-      # No-ops until data/catalog/ and its catalog:validate script exist.
-      - run: npm run catalog:validate --if-present
+      - run: npm run catalog:validate
+
+      # The newest *_catalog_seed.sql migration must match data/catalog
+      # (scripts/catalog/build-seed-migration.ts generates it).
+      - run: npm run catalog:migration -- --check
 
   deploy-dev:
     needs: db
