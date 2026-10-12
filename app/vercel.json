@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "cd .. && npm ci",
-  "buildCommand": "npx expo export --platform web",
+  "buildCommand": "node scripts/check-env.mjs && npx expo export --platform web && node scripts/check-bundle.mjs",
   "outputDirectory": "dist",
   "rewrites": [{ "source": "/(.*)", "destination": "/" }],
   "git": { "deploymentEnabled": false }

@@ -9,8 +9,12 @@ import { apiConfig } from '@/api/client';
 import { createQueryClient } from '@/api/queryClient';
 import { ConfigError, Splash } from '@/features/auth/Splash';
 import { useSessionBootstrap } from '@/features/auth/useSessionBootstrap';
+import { clearLegacyStorage } from '@/lib/clearLegacyStorage';
 import { useSession } from '@/state/session';
 import { useTheme } from '@/theme';
+
+// The old in-browser mock's data (fake users, plain-text passwords) may still sit in localStorage.
+clearLegacyStorage();
 
 // Root layout. One agent at a time owns this file and (tabs)/_layout.tsx (app/CLAUDE.md).
 //
