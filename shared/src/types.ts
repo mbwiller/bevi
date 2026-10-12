@@ -21,7 +21,10 @@ export interface Profile {
   createdAt: string;
   /** ISO date (YYYY-MM-DD). Only on the caller's own profile; null for other users and before it is set. */
   birthdate: string | null;
-  /** age ≥ 21, computed server-side from birthdate. */
+  /**
+   * age ≥ 21, computed server-side from birthdate. Only meaningful on the caller's own profile:
+   * for other users it is always false, so it never reveals whether someone else is over 21.
+   */
   canSeeAlcohol: boolean;
   /** Set by the starter screen via `updateMe({ onboarded: true })`. */
   onboarded: boolean;
