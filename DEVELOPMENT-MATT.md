@@ -4,6 +4,14 @@ Written 2026-10-09 from `vision.md` (source of truth), `CONVERSATION.md` (raw fo
 
 **Decided 2026-10-11 (Matt + Arjun): Bevi is a web app only.** The Expo app is built for the web (`expo export --platform web`), hosted on Vercel and added to the iPhone home screen; the backend stays Supabase. No native builds, EAS, App Store/TestFlight, Android, or Expo Go/dev client as a target. Under 20 users (friends), so sign-in is username + password gated by a shared invite code; no OAuth, no third-party services, no emails. Sections below are updated where this changed the plan.
 
+**Status 2026-10-12 (end-to-end audit and launch work, branch `claude/upbeat-galileo-iuhp0s`).**
+
+- Until now the deployed app ran entirely on the in-browser mock (each visitor got a private fake world with seeded fake users); it never talked to Supabase. Now the app runs only on `packages/api` against the hosted project (`tgfyqgqbqxhsxvbelect`); the mock is a jest-only test double with neutral fixture people (§3). The dev gallery and dev routes are gone; the old mock's localStorage (fake users, plain-text passwords) is wiped on launch.
+- Hosted Supabase: all migrations through `20261012000900` applied; the 378-Bev catalog is loaded by a generated migration (`npm run catalog:migration`); confirm-email off, minimum password 8, invite code set (in `app_secrets`, not in the repo).
+- Working end to end against hosted, checked in a real browser (sign up with the invite code → profile + birthdate → starter ranking with comparisons → feed; reload keeps the session; follow → their rankings in your feed; Recommended; Rank on Bevi; delete account) and by the `packages/api` live suites: photo upload → create a Bev visible to everyone, search, Bev detail with a predicted score, recommendations, streaks, user leaderboard, birth dates private.
+- **Decided 2026-10-12 (deviates from seam 5 / §8 below, for Arjun's sign-off):** predictions and recommendations run in the client. `get_prediction_snapshot()` returns the caller's `PredictionSnapshot` as one jsonb value and `packages/api` runs `predictScore()` / `recommend()` from `@bevi/ranking` (no Edge Function). Revisit at ~200 users or a ~1 MB snapshot.
+- Still to do: Taste Profile tab (Phase 3), background removal / thumbnails for user photos (raw photo is used), moderation tools (report exists; merge/hide by SQL), pagination on search and the leaderboards (fine under ~50 rows), SQL tests against the streak and rank-points golden vectors, running the BeviApi conformance suite against `packages/api`, and `site_url` once the production URL is final.
+
 **Contents**
 
 1. Your lane: what you own
