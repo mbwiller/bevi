@@ -16,6 +16,7 @@ on:
       - "packages/api/**"
       - "shared/**"
       - "data/catalog/**"
+      - "packages/ranking/**"
       - "scripts/**"
   push:
     branches:
@@ -25,6 +26,7 @@ on:
       - "packages/api/**"
       - "shared/**"
       - "data/catalog/**"
+      - "packages/ranking/**"
       - "scripts/**"
 
 jobs:
@@ -39,8 +41,10 @@ jobs:
       # add migration files but never modify, delete or rename one.
       - name: migrations are append-only
         if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
         run: |
-          changed=$(git diff --diff-filter=MDR --name-only "origin/${{ github.base_ref }}...HEAD" -- supabase/migrations)
+          changed=$(git diff --diff-filter=MDR --name-only "origin/$BASE_REF...HEAD" -- supabase/migrations)
           if [ -n "$changed" ]; then
             echo "Merged migrations must not change; add a new one instead:"
             echo "$changed"

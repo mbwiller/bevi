@@ -6,7 +6,7 @@ import { isApiError } from '@bevi/shared';
 import { describe, expect, it } from 'vitest';
 import { createBeviApi } from '../src/index.ts';
 import { usernameToEmail, type AuthStorageAdapter } from '../src/client.ts';
-import { randomTestUsername, TEST_INVITE_CODE } from './testUsername.ts';
+import { AGAINST_SHARED_PROJECT, randomTestUsername, TEST_INVITE_CODE } from './testUsername.ts';
 
 const url = process.env.SUPABASE_URL;
 const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
@@ -32,7 +32,12 @@ async function newUser(birthDate: string) {
   const api = createBeviApi({ url: url!, publishableKey: publishableKey!, authStorage: memoryStorage() });
   const username = randomTestUsername();
   const session = await api.signUp({ username, password: PASSWORD, inviteCode: INVITE });
-  await api.profile.setBirthDate(birthDate);
+  try {
+    await api.profile.setBirthDate(birthDate);
+  } catch (e) {
+    await api.deleteAccount();
+    throw e;
+  }
   return { api, username, session };
 }
 
@@ -64,7 +69,7 @@ describe.skipIf(!url || !publishableKey)('catalog, photos and privacy, against a
     }
   });
 
-  it('creates a Bev from an uploaded photo, visible to others; rejects unknown assets and exact duplicates', async () => {
+  it.skipIf(AGAINST_SHARED_PROJECT)('creates a Bev from an uploaded photo, visible to others; rejects unknown assets and exact duplicates', async () => {
     const a = await newUser('1990-01-01');
     const b = await newUser('1991-01-01');
     try {

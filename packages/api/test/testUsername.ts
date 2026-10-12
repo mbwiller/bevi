@@ -12,3 +12,7 @@ export function randomTestUsername(): string {
 // set BEVI_INVITE_CODE to run them against another project (a hosted smoke
 // test), where they clean up their own accounts.
 export const TEST_INVITE_CODE = process.env.BEVI_INVITE_CODE ?? 'local-test-invite-code';
+
+// Against another project, skip tests that leave catalog content behind (a
+// created Bev outlives its creator's account, and its photo stays in storage).
+export const AGAINST_SHARED_PROJECT = process.env.BEVI_INVITE_CODE !== undefined;

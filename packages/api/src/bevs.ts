@@ -112,6 +112,9 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
     if (error) throw mapError(error);
     if (!data) throw new ApiError('not_found', `No Bev ${id}`);
     const row = data as GetBevRpcRow;
+    // Started now, alongside the reads below; only used if the caller hasn't
+    // ranked this Bev. Never rejects (predictionFor catches).
+    const prediction = predictionFor(uid, id);
 
     const [rankingRes, wantRes, followeeIds] = await Promise.all([
       client.from('rankings').select('bucket, position, score, note').eq('user_id', uid).eq('bev_id', id).maybeSingle(),
@@ -184,7 +187,7 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
       myRanking,
       inWantToTry: wantRes.data !== null,
       friends,
-      prediction: myRanking ? null : await predictionFor(uid, id),
+      prediction: myRanking ? null : await prediction,
     });
   }
 

@@ -61,4 +61,4 @@ jobs:
           CI: "1"
           EXPO_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
           EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci
-        run: node scripts/check-env.mjs && npx expo export --platform web && node scripts/check-bundle.mjs
+        run: node scripts/check-env.mjs && npx expo export --platform web --clear && node scripts/check-bundle.mjs

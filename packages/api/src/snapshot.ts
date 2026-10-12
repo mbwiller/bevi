@@ -14,7 +14,7 @@ import {
   type Stats,
   type UserSnapshot,
 } from '@bevi/ranking';
-import type { BevSummary, CategoryId, PhotoStatus, PriceTier } from '@bevi/shared';
+import { ApiError, type BevSummary, type CategoryId, type PhotoStatus, type PriceTier } from '@bevi/shared';
 import { mapError } from './errors';
 import { publicUrl } from './mappers';
 
@@ -121,7 +121,11 @@ export function createSnapshotCache(client: SupabaseClient): SnapshotCache {
       const value = (async () => {
         const { data, error } = await client.rpc('get_prediction_snapshot');
         if (error) throw mapError(error);
-        return toViewerSnapshot(client, data as SnapshotJson);
+        const json = data as SnapshotJson;
+        // The session can change between reading the user id and this call;
+        // never file another user's snapshot under this one's key.
+        if (json.viewer.id !== userId) throw new ApiError('unauthorized', 'The signed-in user changed');
+        return toViewerSnapshot(client, json);
       })();
       cached = { userId, at: Date.now(), value };
       // A failed fetch isn't cached.

@@ -22,7 +22,12 @@ function memoryStorage(): AuthStorageAdapter {
 async function newUser() {
   const api = createBeviApi({ url: url!, publishableKey: publishableKey!, authStorage: memoryStorage() });
   const session = await api.signUp({ username: randomTestUsername(), password: 'correct-horse-battery-staple', inviteCode: TEST_INVITE_CODE });
-  await api.profile.setBirthDate('1990-01-01');
+  try {
+    await api.profile.setBirthDate('1990-01-01');
+  } catch (e) {
+    await api.deleteAccount();
+    throw e;
+  }
   return { api, session };
 }
 
