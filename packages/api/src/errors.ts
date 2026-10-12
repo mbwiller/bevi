@@ -38,13 +38,22 @@ const SQLSTATE_CODE_MAP: Record<string, ApiErrorCode> = {
 
 // Validation errors raise with `detail = '<field name>'` (a bare string,
 // e.g. 'inviteCode', 'handle', 'note') -- see every `BEVI_VALIDATION`/
-// `BEVI_BAD_INDEX` raise across the migrations. Wrap it into the shape
-// `ValidationErrorDetail` promises.
+// `BEVI_BAD_INDEX` raise across the migrations -- or `'<field>:<reason>'`
+// (e.g. 'photoAssetId:unknown_asset', create_bev in 20261012000200). Wrap
+// it into the shape `ValidationErrorDetail` promises.
 function validationDetail(details: unknown): ValidationErrorDetail | undefined {
   if (typeof details === 'string' && details.length > 0) {
-    return { field: details };
+    const i = details.indexOf(':');
+    return i > 0 ? { field: details.slice(0, i), reason: details.slice(i + 1) } : { field: details };
   }
   return undefined;
+}
+
+// create_bev raises BEVI_DUPLICATE_BEV with `detail = <existing bev id>`;
+// the contract promises `{ existingBevId }` so the app can open that Bev.
+function conflictDetail(message: string, details: string | null | undefined): unknown {
+  if (message.includes('BEVI_DUPLICATE_BEV')) return details ? { existingBevId: details } : undefined;
+  return details ?? undefined;
 }
 
 interface PostgrestLikeError {
@@ -77,7 +86,7 @@ function findBeviCode(message: string): ApiErrorCode | undefined {
 function mapPostgrestError(e: PostgrestLikeError): ApiError {
   const beviCode = findBeviCode(e.message);
   if (beviCode) {
-    const detail = beviCode === 'validation' ? validationDetail(e.details) : e.details ?? undefined;
+    const detail = beviCode === 'validation' ? validationDetail(e.details) : conflictDetail(e.message, e.details);
     return new ApiError(beviCode, e.message, detail);
   }
 

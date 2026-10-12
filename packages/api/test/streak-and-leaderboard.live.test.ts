@@ -26,16 +26,12 @@ describe.skipIf(!url || !publishableKey)('streak + rank points, against a live l
     await api.signUp({ username, password: 'correct-horse-battery-staple', inviteCode: 'local-test-invite-code' });
     await api.profile.setBirthDate('1990-01-01');
 
-    const bev = await api.bevs.create({
-      name: `Vitest Soda ${Date.now()}`,
-      categoryId: 'soda',
-      priceTier: null,
-      priceEstimated: true,
-      photoAssetId: 'vitest-asset',
-    });
+    // A seeded catalog Bev (20261012000300), so the test leaves nothing behind.
+    const [bev] = await api.bevs.getStarterCandidates();
+    expect(bev).toBeDefined();
 
     await api.rankings.submitRanking({
-      bevId: bev.id,
+      bevId: bev!.id,
       bucket: 'LOVED',
       insertIndex: 0,
       expectedBucketSize: 0,
@@ -50,8 +46,7 @@ describe.skipIf(!url || !publishableKey)('streak + rank points, against a live l
     const session = await api.getSession();
     const mine = board.items.find((row) => row.profile.id === session!.userId);
     expect(mine).toBeDefined();
-    // bevsRanked(1)*1 + currentStreak(1)*3 + bevsCreated(0, nobody else
-    // ranked this Bev)*2 = 4.
+    // bevsRanked(1)*1 + currentStreak(1)*3 + bevsCreated(0)*2 = 4.
     expect(mine!.points).toBe(4);
     expect(mine!.rank).toBeGreaterThanOrEqual(1);
 
