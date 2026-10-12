@@ -1,12 +1,12 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 
-// Matt's rule: the mock is removable. Nothing outside app/src/api/mock/ imports from it except
-// app/src/api/client.ts. Catches static, side-effect and dynamic imports, require() and jest.mock().
+// The in-memory FakeApi and its fixture people are test-only. No production file (anything outside
+// src/testing/, __tests__/ and *.test.*) may import src/testing/**, so none of it can reach the app
+// bundle. Catches static, side-effect and dynamic imports, require() and jest.mock().
 
 const SRC = resolve(__dirname, '../..');
-const MOCK_DIR = resolve(SRC, 'api/mock');
-const ALLOWED = new Set([resolve(SRC, 'api/client.ts'), __filename]);
+const TESTING_DIR = resolve(SRC, 'testing');
 
 /** Module specifiers in `from '…'`, `import '…'`, `import('…')`, `require('…')`, `jest.mock('…')` & co. */
 const SPECIFIER =
@@ -26,35 +26,36 @@ function target(file: string, spec: string): string | null {
   return null;
 }
 
-const insideMock = (p: string) => p === MOCK_DIR || p.startsWith(MOCK_DIR + sep);
+const insideTesting = (p: string) => p === TESTING_DIR || p.startsWith(TESTING_DIR + sep);
+const isTestFile = (p: string) => p.split(sep).includes('__tests__') || /\.test\.[cm]?[jt]sx?$/.test(p);
 
-function mockImports(file: string, text: string): string[] {
+function testingImports(file: string, text: string): string[] {
   return [...text.matchAll(SPECIFIER)]
     .map((m) => m[2]!)
     .filter((spec) => {
       const t = target(file, spec);
-      return t !== null && insideMock(t);
+      return t !== null && insideTesting(t);
     });
 }
 
-it('only client.ts imports from app/src/api/mock', () => {
+it('no production file imports src/testing', () => {
   const offenders = walk(SRC)
-    .filter((file) => !insideMock(file) && !ALLOWED.has(file))
-    .flatMap((file) => mockImports(file, readFileSync(file, 'utf8')).map((spec) => `${relative(SRC, file)} → ${spec}`));
+    .filter((file) => !insideTesting(file) && !isTestFile(file))
+    .flatMap((file) => testingImports(file, readFileSync(file, 'utf8')).map((spec) => `${relative(SRC, file)} → ${spec}`));
   expect(offenders).toEqual([]);
 });
 
 it('recognises every kind of import', () => {
   const file = resolve(SRC, 'app/screen.tsx');
   const kinds = [
-    "import { MockApi } from '@/api/mock';",
-    "import '@/api/mock/seed/extra';",
-    "const m = await import('../api/mock/controls');",
-    "const m = require('@/api/mock');",
-    "jest.mock('@/api/mock/MockApi', () => ({}));",
-    "export * from '../api/mock';",
+    "import { FakeApi } from '@/testing/fakeApi';",
+    "import '@/testing/fakeApi/people';",
+    "const m = await import('../testing/fakeApi/controls');",
+    "const m = require('@/testing/fakeApi');",
+    "jest.mock('@/testing/fakeApi/FakeApi', () => ({}));",
+    "export * from '../testing/fakeApi';",
   ];
-  for (const line of kinds) expect(mockImports(file, line)).toHaveLength(1);
-  expect(mockImports(file, "import { api } from '@/api/client';")).toEqual([]);
-  expect(mockImports(file, "import data from './mockData';")).toEqual([]);
+  for (const line of kinds) expect(testingImports(file, line)).toHaveLength(1);
+  expect(testingImports(file, "import { api } from '@/api/client';")).toEqual([]);
+  expect(testingImports(file, "import data from './testingData';")).toEqual([]);
 });

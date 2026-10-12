@@ -2,11 +2,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
 import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
 
-import { api, mockControls } from '@/api/client';
+import { api } from '@/api/client';
+import { controls } from '@/testing/fakeApi';
 import FollowersScreen from '@/app/user/[id]/followers';
 import FollowingScreen from '@/app/user/[id]/following';
 
-const controls = mockControls!;
 let client: QueryClient;
 
 function Layout() {
@@ -41,7 +41,7 @@ beforeEach(() => {
   });
   controls.setLatency(0);
   controls.resetToFixtures();
-  controls.signInAs('demo');
+  controls.signInAs('tester');
 });
 
 afterEach(async () => {

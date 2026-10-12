@@ -1,13 +1,12 @@
-// Dev controls for the mock (a dev panel can drive these). Reach them through `mockControls` in
-// app/src/api/client.ts, which is null when the app runs against the real API. After a control
+// Test controls for the FakeApi. Suites import `controls` from '@/testing/fakeApi'. After a control
 // changes data, invalidate TanStack Query (`queryClient.invalidateQueries()`) to refetch.
 
 import type { ApiErrorCode } from '@bevi/shared';
 
-import { getMockApi } from './instance';
-import type { Latency } from './MockApi';
+import { getFakeApi } from './instance';
+import type { Latency } from './FakeApi';
 
-export interface MockControls {
+export interface FakeControls {
   /** The next call (to `method`, e.g. 'rankings.submitRanking', or to any method) rejects with `code`. */
   failNext(code: ApiErrorCode, method?: string): void;
   /** Per-call latency in ms: a number or [min, max]. Default [200, 600]. */
@@ -16,20 +15,14 @@ export interface MockControls {
   resetToFixtures(): void;
   /** First-run state for the signed-in user (no rankings/follows/Want to Try, back to onboarding). */
   emptyUser(): void;
-  /** Sign in as a mock user without a password, e.g. 'demo', 'jules', 'theo' (under 21). */
+  /** Sign in as a fixture user without a password, e.g. ME.handle, FRIEND.handle, MINOR.handle (under 21). */
   signInAs(handle: string): void;
 }
 
-export const mockControls: MockControls = {
-  failNext: (code, method) => getMockApi().failNext(code, method),
-  setLatency: (latency) => getMockApi().setLatency(latency),
-  resetToFixtures: () => getMockApi().resetToFixtures(),
-  emptyUser: () => getMockApi().emptyUser(),
-  signInAs: (handle) => getMockApi().signInAs(handle),
+export const controls: FakeControls = {
+  failNext: (code, method) => getFakeApi().failNext(code, method),
+  setLatency: (latency) => getFakeApi().setLatency(latency),
+  resetToFixtures: () => getFakeApi().resetToFixtures(),
+  emptyUser: () => getFakeApi().emptyUser(),
+  signInAs: (handle) => getFakeApi().signInAs(handle),
 };
-
-export const failNext = mockControls.failNext;
-export const setLatency = mockControls.setLatency;
-export const resetToFixtures = mockControls.resetToFixtures;
-export const emptyUser = mockControls.emptyUser;
-export const signInAs = mockControls.signInAs;

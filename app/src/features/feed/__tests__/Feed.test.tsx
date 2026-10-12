@@ -2,12 +2,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
 import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
 
-import { api, mockControls } from '@/api/client';
+import { api } from '@/api/client';
+import { controls } from '@/testing/fakeApi';
 import FeedScreen from '@/app/(tabs)/feed/index';
 
 import { featuredSubtitle } from '../FeaturedCarousel';
 
-const controls = mockControls!;
 let client: QueryClient;
 
 function Layout() {
@@ -43,7 +43,7 @@ beforeEach(() => {
   });
   controls.setLatency(0);
   controls.resetToFixtures();
-  controls.signInAs('demo');
+  controls.signInAs('tester');
 });
 
 afterEach(() => client.clear());

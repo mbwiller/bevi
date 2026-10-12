@@ -1,12 +1,11 @@
-// The mock's in-memory database and its persistence. MOCK ONLY: everything under
-// app/src/api/mock/ is deleted when the real API takes over (see client.ts).
+// The FakeApi's in-memory database and its optional persistence. TEST-ONLY (src/testing/**).
 
 import type { Bucket, CategoryId, FeedEventKind, PriceTier } from '@bevi/shared';
 
-export interface MockUser {
+export interface FakeUser {
   id: string;
   handle: string;
-  /** Plain text: this is a local mock, never a real credential store. */
+  /** Plain text: an in-memory test double, never a real credential store. */
   password: string;
   displayName: string;
   avatarUrl: string | null;
@@ -16,7 +15,7 @@ export interface MockUser {
   onboarded: boolean;
 }
 
-export interface MockBev {
+export interface FakeBev {
   id: string;
   name: string;
   brand: string | null;
@@ -31,11 +30,9 @@ export interface MockBev {
   labelAssetId: string | null;
   createdById: string | null;
   createdAt: string;
-  /** true for the ~40 mock-only Bevs that are not in data/catalog. */
-  mockOnly: boolean;
 }
 
-export interface MockRanking {
+export interface FakeRanking {
   id: string;
   userId: string;
   bevId: string;
@@ -47,7 +44,7 @@ export interface MockRanking {
   updatedAt: string;
 }
 
-export interface MockComparison {
+export interface FakeComparison {
   rankingId: string;
   userId: string;
   winnerBevId: string;
@@ -56,20 +53,20 @@ export interface MockComparison {
   createdAt: string;
 }
 
-export interface MockFollow {
+export interface FakeFollow {
   followerId: string;
   followeeId: string;
   createdAt: string;
 }
 
-export interface MockWantToTry {
+export interface FakeWantToTry {
   userId: string;
   bevId: string;
   savedAt: string;
   viaUserId: string | null;
 }
 
-export interface MockFeedEvent {
+export interface FakeFeedEvent {
   id: string;
   type: FeedEventKind;
   actorId: string;
@@ -77,7 +74,7 @@ export interface MockFeedEvent {
   createdAt: string;
 }
 
-export interface MockFeatured {
+export interface FakeFeatured {
   bevId: string;
   heroImageUrl: string;
   tagline: string | null;
@@ -85,7 +82,7 @@ export interface MockFeatured {
   endsAt: string | null;
 }
 
-export interface MockAsset {
+export interface FakeAsset {
   id: string;
   userId: string;
   kind: 'bev-photo' | 'label';
@@ -95,77 +92,63 @@ export interface MockAsset {
   readyAt: string;
 }
 
-export interface MockReport {
+export interface FakeReport {
   bevId: string;
   userId: string;
   reason: string;
   createdAt: string;
 }
 
-export interface MockDb {
+export interface FakeDb {
   schema: number;
-  users: MockUser[];
-  bevs: MockBev[];
-  rankings: MockRanking[];
-  comparisons: MockComparison[];
-  follows: MockFollow[];
-  wantToTry: MockWantToTry[];
-  feed: MockFeedEvent[];
-  featured: MockFeatured[];
-  assets: MockAsset[];
-  reports: MockReport[];
+  users: FakeUser[];
+  bevs: FakeBev[];
+  rankings: FakeRanking[];
+  comparisons: FakeComparison[];
+  follows: FakeFollow[];
+  wantToTry: FakeWantToTry[];
+  feed: FakeFeedEvent[];
+  featured: FakeFeatured[];
+  assets: FakeAsset[];
+  reports: FakeReport[];
   /** The signed-in user, persisted like a real session. */
   sessionUserId: string | null;
   /** Monotonic id counter. */
   seq: number;
   /**
    * false while the data is exactly the seeded fixtures (signing in or out doesn't count). A clean
-   * stored db is re-seeded relative to "now" on load, so the demo's streaks and recent activity
-   * stay current on later days; once anything is written it is kept as is. Missing = dirty.
+   * stored db is re-seeded relative to "now" on load, so streaks and recent activity stay current
+   * on later days; once anything is written it is kept as is. Missing = dirty.
    */
   dirty?: boolean;
 }
 
-/** Bump when MockDb's shape changes; a stored db with another schema is discarded. */
-export const MOCK_DB_SCHEMA = 1;
+/** Bump when FakeDb's shape changes; a stored db with another schema is discarded. */
+export const FAKE_DB_SCHEMA = 1;
 
-export const STORAGE_KEY = 'bevi.mock.db';
+export const STORAGE_KEY = 'bevi.fake.db';
 
-/** The subset of the Web Storage API the mock uses. */
+/** The subset of the Web Storage API the FakeApi uses. */
 export interface StorageLike {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
   removeItem(key: string): void;
 }
 
-/** `localStorage` when it exists and works (web), else null (memory only). Never throws. */
-export function webStorage(): StorageLike | null {
-  try {
-    const ls = (globalThis as { localStorage?: StorageLike }).localStorage;
-    if (!ls) return null;
-    const probe = `${STORAGE_KEY}.probe`;
-    ls.setItem(probe, '1');
-    ls.removeItem(probe);
-    return ls;
-  } catch {
-    return null;
-  }
-}
-
-export function loadDb(storage: StorageLike | null): MockDb | null {
+export function loadDb(storage: StorageLike | null): FakeDb | null {
   if (!storage) return null;
   try {
     const raw = storage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const db = JSON.parse(raw) as MockDb;
-    return db && db.schema === MOCK_DB_SCHEMA ? db : null;
+    const db = JSON.parse(raw) as FakeDb;
+    return db && db.schema === FAKE_DB_SCHEMA ? db : null;
   } catch {
     return null;
   }
 }
 
 /** Best effort: a full or blocked storage leaves the in-memory state authoritative. */
-export function saveDb(storage: StorageLike | null, db: MockDb): void {
+export function saveDb(storage: StorageLike | null, db: FakeDb): void {
   if (!storage) return;
   try {
     storage.setItem(STORAGE_KEY, JSON.stringify(db));
@@ -183,7 +166,7 @@ export function clearDb(storage: StorageLike | null): void {
   }
 }
 
-/** Deep copy of plain JSON data, so callers can never mutate the mock's state. */
+/** Deep copy of plain JSON data, so callers can never mutate the fake's state. */
 export function clone<T>(value: T): T {
   return value === undefined ? value : (JSON.parse(JSON.stringify(value)) as T);
 }

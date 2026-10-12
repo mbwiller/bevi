@@ -4,11 +4,11 @@ import { resolve } from 'node:path';
 import { BUCKET_ORDER, CONFIDENCE_LOCK, MIN_N_USER, RANKING_VERSION, rankUsers, storedScore } from '@bevi/ranking';
 import { isApiError, type Session } from '@bevi/shared';
 
+import { CATALOG_BEVS } from '../catalog';
 import { STORAGE_KEY, type StorageLike } from '../db';
 import { buildFixtures } from '../fixtures';
-import { MOCK_INVITE_CODE, MockApi } from '../MockApi';
-import catalog from '../seed/catalog.json';
-import { DEMO_HANDLE, DEMO_PASSWORD, EXTRA_BEVS, MOCK_ALCOHOLIC_BEV_ID } from '../seed/extra';
+import { FakeApi } from '../FakeApi';
+import { ALCOHOLIC_BEV_ID, FAKE_INVITE_CODE, ME } from '../people';
 
 const memoryStorage = (): StorageLike & { data: Map<string, string> } => {
   const data = new Map<string, string>();
@@ -22,25 +22,18 @@ const memoryStorage = (): StorageLike & { data: Map<string, string> } => {
 
 /** Every test runs on a pinned clock, so streaks and "today" never depend on the real date. */
 const FIXED_NOW = new Date('2026-10-11T16:00:00Z');
-const make = (storage: StorageLike | null = null, now: Date = FIXED_NOW) => new MockApi({ storage, latency: 0, now: () => now });
+const make = (storage: StorageLike | null = null, now: Date = FIXED_NOW) => new FakeApi({ storage, latency: 0, now: () => now });
 
-async function signInDemo(api: MockApi) {
-  return api.signIn({ username: DEMO_HANDLE, password: DEMO_PASSWORD });
+async function signInMe(api: FakeApi) {
+  return api.signIn({ username: ME.handle, password: ME.password });
 }
 
 describe('seed', () => {
-  it('catalog.json matches data/catalog/bevs.csv (re-run app/scripts/build-mock-seed.mjs)', () => {
+  it('uses exactly the catalog in data/catalog/bevs.csv, nothing invented', () => {
     const csv = readFileSync(resolve(__dirname, '../../../../../data/catalog/bevs.csv'), 'utf8');
     const slugs = csv.trim().split(/\r?\n/).slice(1).map((line) => line.split(',')[0]);
-    expect(catalog.bevs.map((b) => b.id)).toEqual(slugs);
-  });
-
-  it('mock-only Bevs are marked with a mock- id prefix and don\'t collide with the catalog', () => {
-    const ids = new Set(catalog.bevs.map((b) => b.id));
-    for (const b of EXTRA_BEVS) {
-      expect(b.id.startsWith('mock-')).toBe(true);
-      expect(ids.has(b.id)).toBe(false);
-    }
+    expect(CATALOG_BEVS.map((b) => b.id)).toEqual(slugs);
+    expect(buildFixtures(FIXED_NOW).bevs.map((b) => b.id)).toEqual(slugs);
   });
 
   it('fixture scores are exactly @bevi/ranking storedScore for every bucket position', () => {
@@ -58,11 +51,11 @@ describe('seed', () => {
 });
 
 describe('fixtures through the API', () => {
-  it('the demo account has rankings, a feed, featured Bevs, a leaderboard and recommendations', async () => {
+  it('the test account has rankings, a feed, featured Bevs, a leaderboard and recommendations', async () => {
     const api = make();
-    await signInDemo(api);
+    await signInMe(api);
     const me = await api.profile.getMe();
-    expect(me).toMatchObject({ handle: 'demo', onboarded: true, canSeeAlcohol: true });
+    expect(me).toMatchObject({ handle: 'tester', onboarded: true, canSeeAlcohol: true });
     expect((await api.rankings.listMine()).items).toHaveLength(12);
     expect((await api.feed.getFeed()).items.length).toBeGreaterThan(10);
     expect((await api.feed.getFeatured()).length).toBeGreaterThanOrEqual(3);
@@ -70,7 +63,7 @@ describe('fixtures through the API', () => {
     expect((await api.leaderboard.users()).items.length).toBeGreaterThan(3);
     const stats = await api.stats.getMine();
     expect(stats.following).toBe(4);
-    expect(stats).toMatchObject({ currentStreak: 2, longestStreak: 3, streakAliveToday: true });
+    expect(stats).toMatchObject({ currentStreak: 2, longestStreak: 2, streakAliveToday: true });
     const recs = await api.recs.getRecommendations();
     expect(recs.items.length).toBeGreaterThan(5);
     expect(recs.rankingVersion).toBe(RANKING_VERSION);
@@ -79,7 +72,7 @@ describe('fixtures through the API', () => {
 
   it('category leaderboard rows carry the board\'s Bayesian score on the Bev too', async () => {
     const api = make();
-    await signInDemo(api);
+    await signInMe(api);
     const rows = (await api.leaderboard.bevs({ categoryId: 'soda' })).items;
     expect(rows.length).toBeGreaterThan(0);
     for (const row of rows) expect(row.bev.bayesScore).toBe(row.bayesScore);
@@ -87,19 +80,19 @@ describe('fixtures through the API', () => {
 
   it('theo (under 21) never sees alcoholic categories, Bevs or featured items', async () => {
     const api = make();
-    api.signInAs('theo');
+    api.signInAs('minor_user');
     expect((await api.profile.getMe()).canSeeAlcohol).toBe(false);
     expect((await api.categories.list()).some((c) => c.isAlcoholic)).toBe(false);
-    expect((await api.feed.getFeatured()).map((f) => f.bev.id)).not.toContain(MOCK_ALCOHOLIC_BEV_ID);
-    expect((await api.bevs.search({ q: '', limit: 100 })).items.map((b) => b.id)).not.toContain(MOCK_ALCOHOLIC_BEV_ID);
+    expect((await api.feed.getFeatured()).map((f) => f.bev.id)).not.toContain(ALCOHOLIC_BEV_ID);
+    expect((await api.bevs.search({ q: '', limit: 100 })).items.map((b) => b.id)).not.toContain(ALCOHOLIC_BEV_ID);
     expect((await api.bevs.getStarterCandidates()).length).toBeGreaterThanOrEqual(30);
-    await expect(api.bevs.get(MOCK_ALCOHOLIC_BEV_ID)).rejects.toMatchObject({ code: 'age_restricted' });
+    await expect(api.bevs.get(ALCOHOLIC_BEV_ID)).rejects.toMatchObject({ code: 'age_restricted' });
   });
 
   it('bevs.create rejects a photo that is still processing (validation), then accepts it once ready', async () => {
     let now = new Date('2026-10-11T12:00:00Z');
-    const api = new MockApi({ storage: null, latency: 0, now: () => now });
-    await signInDemo(api);
+    const api = new FakeApi({ storage: null, latency: 0, now: () => now });
+    await signInMe(api);
     const up = await api.media.upload({ kind: 'bev-photo', file: new Blob(['x']), mimeType: 'image/jpeg' });
     expect(up.status).toBe('processing');
     const input = { name: 'Garage Cola', categoryId: 'soda' as const, priceTier: 1 as const, priceEstimated: false, photoAssetId: up.assetId };
@@ -117,35 +110,35 @@ describe('persistence', () => {
   it('persists to storage and restores, including the session', async () => {
     const storage = memoryStorage();
     const a = make(storage);
-    await a.signUp({ username: 'persisted', password: 'password1', inviteCode: MOCK_INVITE_CODE });
+    await a.signUp({ username: 'persisted', password: 'password1', inviteCode: FAKE_INVITE_CODE });
     expect(storage.data.has(STORAGE_KEY)).toBe(true);
     const b = make(storage);
     expect(await b.getSession()).toMatchObject({ handle: 'persisted' });
   });
 
-  it('re-seeds untouched fixtures for today, so the demo keeps its streak on later days', async () => {
+  it('re-seeds untouched fixtures for today, so the test user keeps its streak on later days', async () => {
     const storage = memoryStorage();
-    await signInDemo(make(storage));
+    await signInMe(make(storage));
     const later = make(storage, new Date(FIXED_NOW.getTime() + 9 * 24 * 60 * 60 * 1000));
-    expect(await later.getSession()).toMatchObject({ handle: 'demo' });
+    expect(await later.getSession()).toMatchObject({ handle: 'tester' });
     expect(await later.stats.getMine()).toMatchObject({ currentStreak: 2, streakAliveToday: true });
   });
 
   it('keeps a db with real changes as it is, so it ages like real data', async () => {
     const storage = memoryStorage();
     const a = make(storage);
-    await signInDemo(a);
+    await signInMe(a);
     await a.wantToTry.add('pepsi');
     const later = make(storage, new Date(FIXED_NOW.getTime() + 9 * 24 * 60 * 60 * 1000));
     expect((await later.wantToTry.list()).items.map((w) => w.bev.id)).toContain('pepsi');
-    expect(await later.stats.getMine()).toMatchObject({ currentStreak: 0, longestStreak: 3, streakAliveToday: false });
+    expect(await later.stats.getMine()).toMatchObject({ currentStreak: 0, longestStreak: 2, streakAliveToday: false });
   });
 
   it('falls back to fixtures when the stored db is corrupt', async () => {
     const storage = memoryStorage();
     storage.setItem(STORAGE_KEY, '{not json');
     const api = make(storage);
-    await expect(signInDemo(api)).resolves.toMatchObject({ handle: 'demo' });
+    await expect(signInMe(api)).resolves.toMatchObject({ handle: 'tester' });
   });
 
   it('keeps working in memory when storage throws', async () => {
@@ -161,7 +154,7 @@ describe('persistence', () => {
       },
     };
     const api = make(throwing);
-    await signInDemo(api);
+    await signInMe(api);
     await api.wantToTry.add('pepsi');
     expect((await api.wantToTry.list()).items.map((w) => w.bev.id)).toContain('pepsi');
     api.resetToFixtures();
@@ -174,7 +167,7 @@ describe('dev controls', () => {
     api.failNext('network');
     await expect(api.meta.getAppConfig()).rejects.toMatchObject({ code: 'network' });
     await expect(api.meta.getAppConfig()).resolves.toBeDefined();
-    await signInDemo(api);
+    await signInMe(api);
     api.failNext('conflict', 'rankings.submitRanking');
     await expect(api.profile.getMe()).resolves.toBeDefined();
     const err = await api.rankings
@@ -193,7 +186,7 @@ describe('dev controls', () => {
 
   it('resetToFixtures signs out (firing onAuthChange) and restores data', async () => {
     const api = make();
-    await api.signUp({ username: 'temp_user', password: 'password1', inviteCode: MOCK_INVITE_CODE });
+    await api.signUp({ username: 'temp_user', password: 'password1', inviteCode: FAKE_INVITE_CODE });
     const events: (Session | null)[] = [];
     api.onAuthChange((s) => events.push(s));
     api.resetToFixtures();
@@ -204,7 +197,7 @@ describe('dev controls', () => {
 
   it('emptyUser gives the signed-in user a first-run state', async () => {
     const api = make();
-    await signInDemo(api);
+    await signInMe(api);
     api.emptyUser();
     expect((await api.rankings.listMine()).items).toEqual([]);
     expect((await api.wantToTry.list()).items).toEqual([]);
@@ -218,16 +211,16 @@ describe('@bevi/ranking-backed predictions, recommendations, streaks and points'
   const NOW = '2026-10-11T16:00:00Z';
   const clocked = (iso: string) => {
     const clock = { now: new Date(iso) };
-    const api = new MockApi({ storage: null, latency: 0, now: () => clock.now });
+    const api = new FakeApi({ storage: null, latency: 0, now: () => clock.now });
     return { api, clock };
   };
   /** Ranks each Bev into its own (empty) bucket: no comparisons needed. Up to three. */
-  const rankInto = async (api: MockApi, bevId: string, i: number) =>
+  const rankInto = async (api: FakeApi, bevId: string, i: number) =>
     api.rankings.submitRanking({ bevId, bucket: BUCKET_ORDER[i]!, insertIndex: 0, expectedBucketSize: 0, comparisons: [] });
 
-  it('demo gets a prediction on an unranked Bev (above MIN_N_USER) and none on a ranked one', async () => {
+  it('the test user gets a prediction on an unranked Bev (above MIN_N_USER) and none on a ranked one', async () => {
     const { api } = clocked(NOW);
-    await signInDemo(api);
+    await signInMe(api);
     const mine = (await api.rankings.listMine()).items;
     expect(mine.length).toBeGreaterThanOrEqual(MIN_N_USER);
     const ranked = new Set(mine.map((r) => r.bevId));
@@ -243,7 +236,7 @@ describe('@bevi/ranking-backed predictions, recommendations, streaks and points'
 
   it('prediction is null below MIN_N_USER rankings and appears once the user reaches it', async () => {
     const { api } = clocked(NOW);
-    await api.signUp({ username: 'predictor', password: 'password1', inviteCode: MOCK_INVITE_CODE });
+    await api.signUp({ username: 'predictor', password: 'password1', inviteCode: FAKE_INVITE_CODE });
     const ids = (await api.bevs.getStarterCandidates()).map((b) => b.id);
     const target = ids[MIN_N_USER]!;
     for (let i = 0; i < MIN_N_USER; i++) {
@@ -253,14 +246,14 @@ describe('@bevi/ranking-backed predictions, recommendations, streaks and points'
     expect((await api.bevs.get(target)).prediction).not.toBeNull();
   });
 
-  it('demo\'s Recommended list has unlocked bubbles and is stable within a local day', async () => {
+  it('the test user\'s Recommended list has unlocked bubbles and is stable within a local day', async () => {
     const { api, clock } = clocked('2026-10-11T12:00:00Z');
-    await signInDemo(api);
+    await signInMe(api);
     const morning = await api.recs.getRecommendations();
     expect(morning.basedOnCount).toBe(12);
     expect(morning.items.filter((r) => r.confidence >= CONFIDENCE_LOCK).length).toBeGreaterThan(3);
     expect(morning.items.some((r) => r.isExploration)).toBe(true);
-    // 20:00Z is still 2026-10-11 in demo's America/New_York: same seed, same list.
+    // 20:00Z is still 2026-10-11 in the test user's America/New_York: same seed, same list.
     clock.now = new Date('2026-10-11T20:00:00Z');
     const evening = await api.recs.getRecommendations();
     const strip = (items: typeof morning.items) => items.map(({ generatedAt: _g, ...rest }) => rest);
@@ -270,7 +263,7 @@ describe('@bevi/ranking-backed predictions, recommendations, streaks and points'
 
   it('streaks count local days in the profile timezone and break after a missed day', async () => {
     const { api, clock } = clocked('2026-10-12T03:00:00Z'); // 2026-10-11 23:00 in New York
-    await api.signUp({ username: 'streaker', password: 'password1', inviteCode: MOCK_INVITE_CODE });
+    await api.signUp({ username: 'streaker', password: 'password1', inviteCode: FAKE_INVITE_CODE });
     await api.profile.updateMe({ timezone: 'America/New_York' });
     const ids = (await api.bevs.getStarterCandidates()).map((b) => b.id);
     await rankInto(api, ids[0]!, 0);
@@ -289,17 +282,17 @@ describe('@bevi/ranking-backed predictions, recommendations, streaks and points'
 
   it('removing today\'s ranking does not break the streak', async () => {
     const { api } = clocked(NOW);
-    await api.signUp({ username: 'remover', password: 'password1', inviteCode: MOCK_INVITE_CODE });
+    await api.signUp({ username: 'remover', password: 'password1', inviteCode: FAKE_INVITE_CODE });
     const [id] = (await api.bevs.getStarterCandidates()).map((b) => b.id);
     await rankInto(api, id!, 0);
     await api.rankings.removeRanking(id!);
     expect(await api.stats.getMine()).toMatchObject({ bevdCount: 0, currentStreak: 1, streakAliveToday: true });
   });
 
-  it('the user leaderboard\'s order, ranks and points are rankUsers over the mock\'s data', async () => {
+  it('the user leaderboard\'s order, ranks and points are rankUsers over the fake\'s data', async () => {
     const now = new Date(NOW);
     const { api } = clocked(NOW);
-    await signInDemo(api);
+    await signInMe(api);
     const db = buildFixtures(now);
     const rows = [];
     for (const u of db.users) {
@@ -316,7 +309,7 @@ describe('@bevi/ranking-backed predictions, recommendations, streaks and points'
       const stats = await api.stats.getUser(r.profile.id);
       expect(stats).toMatchObject({ rankOnBevi: r.rank, rankPoints: r.points, currentStreak: r.currentStreak });
     }
-    // The seed plants streaks (demo ranked today and yesterday).
+    // The seed plants streaks (the test user ranked today and yesterday).
     expect((await api.stats.getMine()).currentStreak).toBeGreaterThanOrEqual(2);
   });
 });

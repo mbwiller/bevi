@@ -1,8 +1,8 @@
 import { runConformance } from '../../conformance';
-import { MOCK_INVITE_CODE, MockApi } from '../MockApi';
-import { MOCK_ALCOHOLIC_BEV_ID } from '../seed/extra';
+import { FakeApi } from '../FakeApi';
+import { ALCOHOLIC_BEV_ID, FAKE_INVITE_CODE } from '../people';
 
-runConformance(() => new MockApi({ storage: null, latency: 0, photoProcessingMs: 0 }), {
-  inviteCode: MOCK_INVITE_CODE,
-  alcoholicBevId: MOCK_ALCOHOLIC_BEV_ID,
+runConformance(() => new FakeApi({ storage: null, latency: 0, photoProcessingMs: 0 }), {
+  inviteCode: FAKE_INVITE_CODE,
+  alcoholicBevId: ALCOHOLIC_BEV_ID,
 });

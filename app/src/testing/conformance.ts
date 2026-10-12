@@ -1,10 +1,10 @@
 // A conformance suite for any `BeviApi` implementation: every method's happy path and the error
-// codes its contract doc comment documents (shared/src/api.ts). The mock runs it in
-// mock/__tests__/conformance.test.ts; packages/api can run the same suite against a real backend:
+// codes its contract doc comment documents (shared/src/api.ts). The FakeApi runs it in
+// src/testing/fakeApi/__tests__/conformance.test.ts; packages/api can run the same suite against a real backend:
 //
 //   runConformance(() => createBeviApi({ ... }), { inviteCode: process.env.INVITE_CODE!, alcoholicBevId: '...' });
 //
-// It only relies on what the contract promises, never on mock fixtures: it creates its own users
+// It only relies on what the contract promises, never on fixture data: it creates its own users
 // (unique usernames) and finds Bevs through `getStarterCandidates` (≥ 30 promised). Uses Jest globals.
 
 import { BANDS, MIN_N_USER, MIN_RATERS } from '@bevi/ranking';
@@ -33,7 +33,7 @@ export interface ConformanceOptions {
    */
   waitForAsset?: (assetId: string) => Promise<void>;
   /**
-   * Check streaks (a ranking today → currentStreak 1). Default true (the mock runs with it on).
+   * Check streaks (a ranking today → currentStreak 1). Default true (the FakeApi runs with it on).
    */
   checkStreaks?: boolean;
 }

@@ -1,7 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { configure, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
-import { api, mockControls } from '@/api/client';
+import { api } from '@/api/client';
+import { controls } from '@/testing/fakeApi';
 import AddBevScreen from '@/app/(tabs)/add/index';
 
 import { PEOPLE_PLACEHOLDER } from '../PeopleSearch';
@@ -13,14 +14,13 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockParams,
 }));
 
-const controls = mockControls!;
 configure({ asyncUtilTimeout: 5000 });
 let client: QueryClient;
 
 beforeEach(() => {
   controls.setLatency(0);
   controls.resetToFixtures();
-  controls.signInAs('demo');
+  controls.signInAs('tester');
   mockParams = { tab: 'people' };
   client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false, gcTime: Infinity } },

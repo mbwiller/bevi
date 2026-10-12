@@ -2,14 +2,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
 import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
-import { api, mockControls } from '@/api/client';
+import { api } from '@/api/client';
+import { controls } from '@/testing/fakeApi';
 import LeaderboardScreen from '@/app/(tabs)/leaderboard/index';
 import { categoryById } from '@/lib/categories';
 
 import { myScoreMeta } from '../BevBoard';
 import { pointsMeta } from '../PeopleBoard';
 
-const controls = mockControls!;
 let client: QueryClient;
 
 function Layout() {
@@ -59,7 +59,7 @@ beforeEach(() => {
   });
   controls.setLatency(0);
   controls.resetToFixtures();
-  controls.signInAs('demo');
+  controls.signInAs('tester');
 });
 
 afterEach(() => client.clear());
@@ -128,7 +128,7 @@ it('scopes the Bevs board by category through ?category=', async () => {
 });
 
 it('hides alcoholic categories under 21 and ignores them in the URL', async () => {
-  controls.signInAs('theo');
+  controls.signInAs('minor_user');
   await start('/leaderboard?category=beer');
   const dropdown = await screen.findByLabelText('All, choose a category');
   await fireEvent.press(dropdown);

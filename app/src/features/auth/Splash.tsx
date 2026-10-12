@@ -26,6 +26,22 @@ export function Splash({ error, onRetry }: SplashProps) {
   );
 }
 
+/**
+ * The build has no usable Supabase config (missing or wrong EXPO_PUBLIC_SUPABASE_* env vars): say so
+ * instead of a blank page. Shown by the root layout in place of the whole app.
+ */
+export function ConfigError({ problem }: { problem: string }) {
+  const { colors } = useTheme();
+  return (
+    <SafeAreaView style={[styles.screen, { backgroundColor: colors.surface }]}>
+      <View style={styles.center}>
+        <Wordmark height={WORDMARK_HEIGHT} />
+        <ErrorState title="Bevi isn't set up yet" message={problem} icon="triangle-alert" style={styles.error} />
+      </View>
+    </SafeAreaView>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.gutter, gap: spacing.xxl },

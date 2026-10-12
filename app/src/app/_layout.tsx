@@ -5,8 +5,9 @@ import { useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { apiConfig } from '@/api/client';
 import { createQueryClient } from '@/api/queryClient';
-import { Splash } from '@/features/auth/Splash';
+import { ConfigError, Splash } from '@/features/auth/Splash';
 import { useSessionBootstrap } from '@/features/auth/useSessionBootstrap';
 import { useSession } from '@/state/session';
 import { useTheme } from '@/theme';
@@ -23,7 +24,7 @@ import { useTheme } from '@/theme';
 // The session comes from the API (useSessionBootstrap: getSession / onAuthChange → getMe →
 // setSession, or signOut). Until the first check settles the layout shows the Splash (wordmark)
 // instead of the Stack, so a signed-in user never sees sign in flash and a deep link survives the
-// check.
+// check. A build without a usable Supabase config shows ConfigError instead of the app.
 export default function RootLayout() {
   const { scheme } = useTheme();
   const [queryClient] = useState(createQueryClient);
@@ -32,7 +33,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-          <SessionGate />
+          {apiConfig.ok ? <SessionGate /> : <ConfigError problem={apiConfig.problem} />}
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

@@ -1,16 +1,15 @@
-// MockApi: an in-memory `BeviApi` that behaves like the real server, for building screens before
-// packages/api exists. MOCK ONLY: nothing outside app/src/api/mock/ imports this except
-// app/src/api/client.ts. It runs @bevi/ranking for real (placement validity, respacing, stats,
+// FakeApi: an in-memory `BeviApi` that behaves like the real server, for the app's jest suites.
+// TEST-ONLY: jest.setup.js swaps `@/api/client` for it; no production file imports src/testing/**.
+// It runs @bevi/ranking for real (placement validity, respacing, stats,
 // the Bayesian leaderboard, MIN_N_USER gating), so the UI sees the same scores and errors
 // (`conflict`, `validation`, `age_restricted`…) it will see in production. It does no ranking
 // maths of its own: predictions (`predictScore`), recommendations (`recommend`), streaks
 // (`computeStreak` over `localDayKey`) and the user board (`rankPoints`, `rankUsers`) are all calls
-// into @bevi/ranking over a `PredictionSnapshot` built from the mock's tables; this file only maps
+// into @bevi/ranking over a `PredictionSnapshot` built from the fake's tables; this file only maps
 // data. Starter selection is the app's job (`selectStarterSet`, per the contract), so
 // `getStarterCandidates` only returns the candidates.
 //
-// Mock invite code: `bevi-dev`. Demo account: `demo` / `demo1234` (friends: `jules`, `priya_k`,
-// `sam`, `maya`, `theo` (under 21), `nina`, all with password `password123`).
+// Fixture people, passwords and the invite code are in ./people.ts.
 
 import {
   BAYES_C,
@@ -90,35 +89,33 @@ import {
   clone,
   loadDb,
   saveDb,
-  webStorage,
-  type MockBev,
-  type MockDb,
-  type MockRanking,
-  type MockUser,
+  type FakeBev,
+  type FakeDb,
+  type FakeRanking,
+  type FakeUser,
   type StorageLike,
 } from './db';
 import { ALCOHOLIC, CATEGORIES, buildFixtures, isAdult } from './fixtures';
+import { FAKE_INVITE_CODE } from './people';
 
-/** The shared invite code the mock accepts on sign-up. */
-export const MOCK_INVITE_CODE = 'bevi-dev';
-/** Mock password rule: at least this many characters (`validation`, field 'password'). */
-export const MOCK_MIN_PASSWORD_LENGTH = 8;
+/** Password rule: at least this many characters (`validation`, field 'password'). */
+export const FAKE_MIN_PASSWORD_LENGTH = 8;
 export const NOTE_MAX = 140;
 const NAME_MAX = 80;
 const DISPLAY_NAME_MAX = 50;
 const REPORT_REASON_MAX = 500;
 const UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
 const UPLOAD_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
-/** Default time the mock's "background removal" takes before a bev photo is 'ready'. */
+/** Default time the fake's "background removal" takes before a bev photo is 'ready'. */
 const PHOTO_PROCESSING_MS = 3000;
 
-/** Writes that only change the session; they leave seeded fixtures "clean" (see MockDb.dirty). */
+/** Writes that only change the session; they leave seeded fixtures "clean" (see FakeDb.dirty). */
 const SESSION_ONLY_METHODS = new Set(['signIn', 'signOut']);
 
 export type Latency = number | readonly [min: number, max: number];
 
-export interface MockApiOptions {
-  /** Persistence. Defaults to `localStorage` on web; `null` = memory only. */
+export interface FakeApiOptions {
+  /** Persistence (a Web Storage-like object). Default: none, memory only. */
   storage?: StorageLike | null;
   /** Per-call latency in ms (uniform in [min, max]). Default [200, 600]. */
   latency?: Latency;
@@ -175,8 +172,8 @@ interface UserStreak extends StreakResult {
   aliveToday: boolean;
 }
 
-export class MockApi implements BeviApi {
-  private db: MockDb;
+export class FakeApi implements BeviApi {
+  private db: FakeDb;
   private readonly storage: StorageLike | null;
   private readonly clock: () => Date;
   private readonly photoProcessingMs: number;
@@ -185,11 +182,11 @@ export class MockApi implements BeviApi {
   private failures: { code: ApiErrorCode; method?: string }[] = [];
   private agg: Aggregates | null = null;
 
-  constructor(options: MockApiOptions = {}) {
-    this.storage = options.storage === undefined ? webStorage() : options.storage;
+  constructor(options: FakeApiOptions = {}) {
+    this.storage = options.storage ?? null;
     this.clock = options.now ?? (() => new Date());
     this.photoProcessingMs = options.photoProcessingMs ?? PHOTO_PROCESSING_MS;
-    this.latency = MockApi.toRange(options.latency ?? [200, 600]);
+    this.latency = FakeApi.toRange(options.latency ?? [200, 600]);
     const stored = loadDb(this.storage);
     if (stored && stored.dirty !== false) {
       this.db = stored;
@@ -203,7 +200,7 @@ export class MockApi implements BeviApi {
   }
 
   // -------------------------------------------------------------------------
-  // Dev controls (not part of BeviApi; exposed through mock/controls.ts)
+  // Test controls (not part of BeviApi; exposed through ./controls.ts)
   // -------------------------------------------------------------------------
 
   /** The next call (to `method`, e.g. 'rankings.submitRanking', or to any method) rejects with `code`. */
@@ -212,7 +209,7 @@ export class MockApi implements BeviApi {
   }
 
   setLatency(latency: Latency): void {
-    this.latency = MockApi.toRange(latency);
+    this.latency = FakeApi.toRange(latency);
   }
 
   /** Back to the seeded fixtures, signed out. */
@@ -238,10 +235,10 @@ export class MockApi implements BeviApi {
     this.commit();
   }
 
-  /** Sign in as any mock user without a password (dev convenience). */
+  /** Sign in as any fixture user without a password. */
   signInAs(handle: string): void {
     const user = this.db.users.find((u) => u.handle === handle);
-    if (!user) throw new Error(`signInAs: no mock user @${handle}`);
+    if (!user) throw new Error(`signInAs: no fixture user @${handle}`);
     this.db.sessionUserId = user.id;
     this.commit();
     this.emit();
@@ -263,7 +260,7 @@ export class MockApi implements BeviApi {
     const i = this.failures.findIndex((f) => !f.method || f.method === method);
     if (i >= 0) {
       const [f] = this.failures.splice(i, 1);
-      fail(f!.code, `Mock failure on ${method} (failNext)`);
+      fail(f!.code, `Fake failure on ${method} (failNext)`);
     }
     const result = fn();
     if (write) {
@@ -302,7 +299,7 @@ export class MockApi implements BeviApi {
     return `${prefix}-${this.db.seq}`;
   }
 
-  private sessionUser(): MockUser | null {
+  private sessionUser(): FakeUser | null {
     const id = this.db.sessionUserId;
     return id ? (this.db.users.find((u) => u.id === id) ?? null) : null;
   }
@@ -312,27 +309,27 @@ export class MockApi implements BeviApi {
     return u ? { userId: u.id, handle: u.handle } : null;
   }
 
-  private requireUser(): MockUser {
+  private requireUser(): FakeUser {
     return this.sessionUser() ?? fail('unauthorized', 'Not signed in');
   }
 
-  private user(id: string): MockUser {
+  private user(id: string): FakeUser {
     return this.db.users.find((u) => u.id === id) ?? fail('not_found', 'No such user');
   }
 
-  private bev(id: string): MockBev {
+  private bev(id: string): FakeBev {
     return this.db.bevs.find((b) => b.id === id) ?? fail('not_found', 'No such Bev');
   }
 
-  private canSeeAlcohol(u: MockUser): boolean {
+  private canSeeAlcohol(u: FakeUser): boolean {
     return isAdult(u.birthdate, this.now());
   }
 
-  private visible(b: MockBev, viewer: MockUser): boolean {
+  private visible(b: FakeBev, viewer: FakeUser): boolean {
     return !ALCOHOLIC.has(b.categoryId) || this.canSeeAlcohol(viewer);
   }
 
-  private requireVisible(b: MockBev, viewer: MockUser): void {
+  private requireVisible(b: FakeBev, viewer: FakeUser): void {
     if (!this.visible(b, viewer)) fail('age_restricted', 'Not available');
   }
 
@@ -359,7 +356,7 @@ export class MockApi implements BeviApi {
   }
 
   /**
-   * The mock's tables as a @bevi/ranking `PredictionSnapshot` (§9): every Bev's features, every
+   * The fake's tables as a @bevi/ranking `PredictionSnapshot` (§9): every Bev's features, every
    * user's stats (via `userStats`), the global stats and the whole rankings table. Pure data
    * mapping; z-scores and everything else are computed inside @bevi/ranking.
    */
@@ -409,7 +406,7 @@ export class MockApi implements BeviApi {
    * the user ranked: each ranking's createdAt plus every RANKING feed event (written on submit and
    * re-rank, kept on removal), so re-ranks count and removals don't break a streak (§8.14).
    */
-  private streakOf(u: MockUser): UserStreak {
+  private streakOf(u: FakeUser): UserStreak {
     const stamps = [
       ...this.db.rankings.filter((r) => r.userId === u.id).map((r) => r.createdAt),
       ...this.db.feed.filter((e) => e.actorId === u.id && e.type === 'RANKING').map((e) => e.createdAt),
@@ -421,7 +418,7 @@ export class MockApi implements BeviApi {
   }
 
   /** Bevs `u` added that at least one other user has ranked (§8.13 `bevsCreated`). */
-  private bevsCreatedBy(u: MockUser): number {
+  private bevsCreatedBy(u: FakeUser): number {
     const mine = new Set(this.db.bevs.filter((b) => b.createdById === u.id).map((b) => b.id));
     return new Set(this.db.rankings.filter((r) => r.userId !== u.id && mine.has(r.bevId)).map((r) => r.bevId)).size;
   }
@@ -430,7 +427,7 @@ export class MockApi implements BeviApi {
   // Mappers
   // -------------------------------------------------------------------------
 
-  private toProfile(u: MockUser, viewer: MockUser | null): Profile {
+  private toProfile(u: FakeUser, viewer: FakeUser | null): Profile {
     const self = viewer?.id === u.id;
     return {
       id: u.id,
@@ -449,7 +446,7 @@ export class MockApi implements BeviApi {
     return this.db.follows.some((f) => f.followerId === followerId && f.followeeId === followeeId);
   }
 
-  private toRow(u: MockUser, viewer: MockUser): ProfileRow {
+  private toRow(u: FakeUser, viewer: FakeUser): ProfileRow {
     return { ...this.toProfile(u, viewer), isFollowing: u.id !== viewer.id && this.isFollowing(viewer.id, u.id) };
   }
 
@@ -467,7 +464,7 @@ export class MockApi implements BeviApi {
     return round2(bayesianAverage(s.mean, s.n, { m: globalPrior(global), C: BAYES_C }));
   }
 
-  private toSummary(b: MockBev): BevSummary {
+  private toSummary(b: FakeBev): BevSummary {
     const photo = this.assetUrlAndStatus(b.photoAssetId);
     return {
       id: b.id,
@@ -491,16 +488,16 @@ export class MockApi implements BeviApi {
       .map((r) => r.bevId);
   }
 
-  private rankingOf(userId: string, bevId: string): MockRanking | undefined {
+  private rankingOf(userId: string, bevId: string): FakeRanking | undefined {
     return this.db.rankings.find((r) => r.userId === userId && r.bevId === bevId);
   }
 
-  private toRanking(r: MockRanking): Ranking {
+  private toRanking(r: FakeRanking): Ranking {
     const { id, userId, bevId, bucket, position, score, note, createdAt, updatedAt } = r;
     return { id, userId, bevId, bucket, position, score, note, createdAt, updatedAt };
   }
 
-  private toRanked(r: MockRanking): RankedBev {
+  private toRanked(r: FakeRanking): RankedBev {
     return { ...this.toRanking(r), bev: this.toSummary(this.bev(r.bevId)) };
   }
 
@@ -514,7 +511,7 @@ export class MockApi implements BeviApi {
     }
   }
 
-  private toBev(b: MockBev, viewer: MockUser): Bev {
+  private toBev(b: FakeBev, viewer: FakeUser): Bev {
     const scores = this.aggregates().byBev.get(b.id) ?? [];
     const s = scores.length ? populationStats(scores) : null;
     const mine = this.rankingOf(viewer.id, b.id);
@@ -551,7 +548,7 @@ export class MockApi implements BeviApi {
    * `Bev.prediction`: null when the viewer has ranked the Bev or has fewer than MIN_N_USER
    * rankings (contract), else @bevi/ranking's predictScore over the snapshot.
    */
-  private predictionFor(b: MockBev, viewer: MockUser, rankedByViewer: boolean): BevPrediction | null {
+  private predictionFor(b: FakeBev, viewer: FakeUser, rankedByViewer: boolean): BevPrediction | null {
     if (rankedByViewer) return null;
     if (this.db.rankings.filter((r) => r.userId === viewer.id).length < MIN_N_USER) return null;
     const p = predictScore(this.snapshot(), viewer.id, b.id);
@@ -582,7 +579,7 @@ export class MockApi implements BeviApi {
     ).map((r) => ({ ...byId.get(r.userId)!, points: r.points, rank: r.rank }));
   }
 
-  private statsFor(u: MockUser): ProfileStats {
+  private statsFor(u: FakeUser): ProfileStats {
     const bevsRanked = this.db.rankings.filter((r) => r.userId === u.id).length;
     const streak = this.streakOf(u);
     const board = this.userBoard().find((r) => r.u.id === u.id);
@@ -618,17 +615,17 @@ export class MockApi implements BeviApi {
     this.call(
       'signUp',
       () => {
-        if ((input.inviteCode ?? '').trim() !== MOCK_INVITE_CODE) invalid('inviteCode', 'That invite code is not valid');
+        if ((input.inviteCode ?? '').trim() !== FAKE_INVITE_CODE) invalid('inviteCode', 'That invite code is not valid');
         const username = input.username ?? '';
         if (!HANDLE_PATTERN.test(username)) {
           invalid('username', 'Use 3–20 lowercase letters, numbers or _', 'invalid');
         }
         if (RESERVED_HANDLES.includes(username)) invalid('username', 'That username is reserved', 'reserved');
-        if ((input.password ?? '').length < MOCK_MIN_PASSWORD_LENGTH) {
-          invalid('password', `Use at least ${MOCK_MIN_PASSWORD_LENGTH} characters`, 'weak');
+        if ((input.password ?? '').length < FAKE_MIN_PASSWORD_LENGTH) {
+          invalid('password', `Use at least ${FAKE_MIN_PASSWORD_LENGTH} characters`, 'weak');
         }
         if (this.db.users.some((u) => u.handle === username)) fail('conflict', 'That username is taken');
-        const user: MockUser = {
+        const user: FakeUser = {
           id: this.nextId('user'),
           handle: username,
           password: input.password,
@@ -961,7 +958,7 @@ export class MockApi implements BeviApi {
               b.categoryId === input.categoryId,
           );
           if (existing) fail('conflict', 'That Bev already exists', { existingBevId: existing.id });
-          const bev: MockBev = {
+          const bev: FakeBev = {
             id: this.nextId('bev'),
             name,
             brand,
@@ -975,7 +972,6 @@ export class MockApi implements BeviApi {
             labelAssetId: input.labelAssetId ?? null,
             createdById: me.id,
             createdAt: this.nowIso(),
-            mockOnly: true,
           };
           this.db.bevs.push(bev);
           this.agg = null;
@@ -998,7 +994,7 @@ export class MockApi implements BeviApi {
       ),
 
     // The contract has the app pick the 10 with selectStarterSet(candidates, { seed: userId }), so the
-    // mock only returns the age-filtered starter candidates and never selects.
+    // fake only returns the age-filtered starter candidates and never selects.
     getStarterCandidates: () =>
       this.call('bevs.getStarterCandidates', () => {
         const me = this.requireUser();
@@ -1015,7 +1011,7 @@ export class MockApi implements BeviApi {
           if (!UPLOAD_MIME_TYPES.includes(input.mimeType)) invalid('mimeType', 'Use a JPEG, PNG, WebP or HEIC image');
           if (typeof input.file?.size === 'number' && input.file.size > UPLOAD_MAX_BYTES) invalid('file', 'That image is too large');
           const id = this.nextId('asset');
-          let url = `mock-asset://${id}`;
+          let url = `fake-asset://${id}`;
           try {
             if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') url = URL.createObjectURL(input.file);
           } catch {
@@ -1048,7 +1044,7 @@ export class MockApi implements BeviApi {
     return note || null;
   }
 
-  private logPlacement(me: MockUser, rankingId: string, bevId: string, comparisons: readonly Comparison[], at: string) {
+  private logPlacement(me: FakeUser, rankingId: string, bevId: string, comparisons: readonly Comparison[], at: string) {
     for (const c of comparisons) {
       this.db.comparisons.push({ rankingId, userId: me.id, winnerBevId: c.winnerBevId, loserBevId: c.loserBevId, tie: !!c.tie, createdAt: at });
     }
@@ -1107,7 +1103,7 @@ export class MockApi implements BeviApi {
           }
           const next = insertIntoBucket(ids, bev.id, input.insertIndex);
           const at = this.nowIso();
-          const row: MockRanking = {
+          const row: FakeRanking = {
             id: this.nextId('rank'),
             userId: me.id,
             bevId: bev.id,
@@ -1261,7 +1257,7 @@ export class MockApi implements BeviApi {
         return this.db.featured
           .filter((f) => f.startsAt <= now && (f.endsAt === null || f.endsAt > now))
           .map((f) => ({ f, b: this.db.bevs.find((b) => b.id === f.bevId) }))
-          .filter((x): x is { f: (typeof x)['f']; b: MockBev } => !!x.b && this.visible(x.b, me))
+          .filter((x): x is { f: (typeof x)['f']; b: FakeBev } => !!x.b && this.visible(x.b, me))
           .map(({ f, b }) => ({ bev: this.toSummary(b), heroImageUrl: f.heroImageUrl, tagline: f.tagline, startsAt: f.startsAt, endsAt: f.endsAt }));
       }),
   };

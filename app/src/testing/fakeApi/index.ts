@@ -1,8 +1,8 @@
-// The removable mock. ONLY app/src/api/client.ts imports from this folder. To remove the mock:
-// delete app/src/api/mock/ (and app/scripts/build-mock-seed.mjs), delete the mock branch in
-// client.ts, and set EXPO_PUBLIC_BEVI_API=supabase.
+// The in-memory BeviApi test double. TEST-ONLY: jest.setup.js swaps `@/api/client` for ./client, and
+// no production file may import src/testing/** (src/api/__tests__/test-double-isolation.test.ts).
 
-export { MockApi, MOCK_INVITE_CODE, type MockApiOptions } from './MockApi';
-export { getMockApi } from './instance';
-export { mockControls, type MockControls } from './controls';
-export { DEMO_HANDLE, DEMO_PASSWORD, MOCK_ALCOHOLIC_BEV_ID } from './seed/extra';
+export { FakeApi, type FakeApiOptions } from './FakeApi';
+export { getFakeApi } from './instance';
+export { controls, type FakeControls } from './controls';
+export { userIdFor } from './fixtures';
+export { ALCOHOLIC_BEV_ID, FAKE_INVITE_CODE, FRIEND, ME, MINOR } from './people';

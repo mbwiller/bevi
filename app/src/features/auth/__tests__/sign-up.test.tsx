@@ -2,11 +2,11 @@ import path from 'path';
 
 import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
-import { api, mockControls } from '@/api/client';
+import { api } from '@/api/client';
+import { controls } from '@/testing/fakeApi';
 import { useSession } from '@/state/session';
 
 const APP_DIR = path.resolve(__dirname, '../../../app');
-const controls = mockControls!;
 const WAIT = { timeout: 2000 };
 
 async function open() {
@@ -34,7 +34,7 @@ describe('sign up', () => {
     expect(await screen.findByText('@newbie is available', {}, WAIT)).toBeTruthy();
     expect(check).toHaveBeenLastCalledWith('newbie');
 
-    await type('Username', 'demo');
+    await type('Username', 'tester');
     expect(await screen.findByText('That username is taken. Try another.', {}, WAIT)).toBeTruthy();
 
     check.mockClear();
@@ -71,7 +71,7 @@ describe('sign up', () => {
     controls.failNext('conflict', 'signUp');
     await type('Username', 'newbie');
     await type('Password', 'longenough');
-    await type('Invite code', 'bevi-dev');
+    await type('Invite code', 'test-invite');
     await create();
     expect(await screen.findByText('That username is taken. Try another.')).toBeTruthy();
   });
@@ -81,9 +81,9 @@ describe('sign up', () => {
     const path = await open();
     await type('Username', 'newbie');
     await type('Password', 'longenough');
-    await type('Invite code', ' bevi-dev ');
+    await type('Invite code', ' test-invite ');
     await create();
-    expect(spy).toHaveBeenCalledWith({ username: 'newbie', password: 'longenough', inviteCode: 'bevi-dev' });
+    expect(spy).toHaveBeenCalledWith({ username: 'newbie', password: 'longenough', inviteCode: 'test-invite' });
     await screen.findByLabelText('Display name');
     expect(path()).toBe('/onboarding/profile');
     expect(useSession.getState().status).toBe('onboarding');
@@ -94,12 +94,12 @@ describe('sign up', () => {
     await open();
     await type('Username', 'newbie');
     await type('Password', 'longenough');
-    await type('Invite code', 'bevi-dev');
+    await type('Invite code', 'test-invite');
     for (const label of ['Username', 'Password']) {
       await fireEvent(screen.getByLabelText(label), 'submitEditing', { nativeEvent: { text: '' } });
     }
     expect(spy).not.toHaveBeenCalled();
-    await fireEvent(screen.getByLabelText('Invite code'), 'submitEditing', { nativeEvent: { text: 'bevi-dev' } });
+    await fireEvent(screen.getByLabelText('Invite code'), 'submitEditing', { nativeEvent: { text: 'test-invite' } });
     expect(spy).toHaveBeenCalled();
   });
 

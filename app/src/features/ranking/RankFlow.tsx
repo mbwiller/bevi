@@ -151,7 +151,7 @@ export function RankFlow({ bevId, rerank = false, detailIfRanked = false }: Rank
     switch (e.code) {
       case 'conflict': {
         // The bucket changed elsewhere, or the Bev was ranked elsewhere (then move it instead).
-        // `detail.reason` is only a fast path (the mock sends it; the contract doesn't promise it):
+        // `detail.reason` is only a fast path (the FakeApi sends it; the contract doesn't promise it):
         // otherwise a new ranking re-reads the Bev and switches to re-rank if it now has myRanking.
         const reason = (e.detail as { reason?: string } | undefined)?.reason;
         if (reason === 'already_ranked') return restart(CONFLICT_NOTICE, 'rerank');

@@ -1,9 +1,9 @@
-import { MockApi } from './MockApi';
+import { FakeApi } from './FakeApi';
 
-let instance: MockApi | null = null;
+let instance: FakeApi | null = null;
 
-/** The app's single MockApi (localStorage-persisted on web, 200–600 ms latency). Created on first use. */
-export function getMockApi(): MockApi {
-  instance ??= new MockApi();
+/** The suites' single FakeApi (memory only, 200–600 ms latency until a suite sets it). Created on first use. */
+export function getFakeApi(): FakeApi {
+  instance ??= new FakeApi();
   return instance;
 }

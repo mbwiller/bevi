@@ -3,7 +3,8 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 import type { ProfileRow, Session } from '@bevi/shared';
 
-import { api, mockControls } from '../../client';
+import { api } from '@/api/client';
+import { controls } from '@/testing/fakeApi';
 import {
   flattenPages,
   useAuthListener,
@@ -14,10 +15,9 @@ import {
   useSignIn,
   useSubmitRanking,
   useUser,
-} from '../../hooks';
-import { keys } from '../../keys';
+} from '@/api/hooks';
+import { keys } from '@/api/keys';
 
-const controls = mockControls!;
 
 const clients: QueryClient[] = [];
 
@@ -43,10 +43,10 @@ afterEach(() => {
 it('signs in, then reads the profile and the paginated feed', async () => {
   const { wrapper } = setup();
   const signIn = await renderHook(() => useSignIn(), { wrapper });
-  await act(() => signIn.result.current.mutateAsync({ username: 'demo', password: 'demo1234' }));
+  await act(() => signIn.result.current.mutateAsync({ username: 'tester', password: 'tester-pass-1' }));
 
   const me = await renderHook(() => useMe(), { wrapper });
-  await waitFor(() => expect(me.result.current.data?.handle).toBe('demo'));
+  await waitFor(() => expect(me.result.current.data?.handle).toBe('tester'));
 
   const feed = await renderHook(() => useFeed(), { wrapper });
   await waitFor(() => expect(feed.result.current.isSuccess).toBe(true));
@@ -62,15 +62,15 @@ it('useAuthListener reports the persisted session, then changes', async () => {
   const seen: (Session | null)[] = [];
   await renderHook(() => useAuthListener((s) => seen.push(s)), { wrapper });
   await waitFor(() => expect(seen).toEqual([null]));
-  await act(() => api.signIn({ username: 'demo', password: 'demo1234' }).then(() => undefined));
+  await act(() => api.signIn({ username: 'tester', password: 'tester-pass-1' }).then(() => undefined));
   await act(() => api.signOut());
-  expect(seen).toEqual([null, { userId: 'mock-user-demo', handle: 'demo' }, null]);
+  expect(seen).toEqual([null, { userId: 'user-tester', handle: 'tester' }, null]);
 });
 
 it('useFollow is optimistic and rolls back on error', async () => {
-  await api.signIn({ username: 'demo', password: 'demo1234' });
+  await api.signIn({ username: 'tester', password: 'tester-pass-1' });
   const { client, wrapper } = setup();
-  const nina = 'mock-user-nina';
+  const nina = 'user-friend_e';
   const user = await renderHook(() => useUser(nina), { wrapper });
   await waitFor(() => expect(user.result.current.data?.isFollowing).toBe(false));
   const follow = await renderHook(() => useFollow(), { wrapper });
@@ -90,7 +90,7 @@ it('useFollow is optimistic and rolls back on error', async () => {
 });
 
 it('useSubmitRanking invalidates the bucket list the placement flow reads', async () => {
-  await api.signIn({ username: 'demo', password: 'demo1234' });
+  await api.signIn({ username: 'tester', password: 'tester-pass-1' });
   const { wrapper } = setup();
   const bucket = await renderHook(() => useBucket('FINE'), { wrapper });
   await waitFor(() => expect(bucket.result.current.isSuccess).toBe(true));

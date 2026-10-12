@@ -4,20 +4,20 @@ import { selectStarterSet } from '@bevi/ranking';
 import { ApiError } from '@bevi/shared';
 import { configure, fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
 
-import { api, mockControls } from '@/api/client';
+import { api } from '@/api/client';
+import { controls } from '@/testing/fakeApi';
 import { useSession } from '@/state/session';
 
 import { ALCOHOLIC_CATEGORY_IDS } from '../selection';
 
 const APP_DIR = path.resolve(__dirname, '../../../../app');
-const controls = mockControls!;
 
 configure({ asyncUtilTimeout: 5000 });
 jest.setTimeout(60000);
 
-/** A new account mid-onboarding: demo, emptied (no rankings, no birthdate, not onboarded). */
+/** A new account mid-onboarding: the test user, emptied (no rankings, no birthdate, not onboarded). */
 async function open() {
-  controls.signInAs('demo');
+  controls.signInAs('tester');
   controls.emptyUser();
   useSession.setState({ status: 'onboarding', profile: undefined, checked: true, devForced: true });
   const result = renderRouter(APP_DIR, { initialUrl: '/onboarding/starter' });
@@ -152,7 +152,7 @@ it('running out before 3 offers more starters', async () => {
 });
 
 it('a failed candidates call shows Retry', async () => {
-  controls.signInAs('demo');
+  controls.signInAs('tester');
   controls.emptyUser();
   controls.failNext('unknown', 'bevs.getStarterCandidates');
   useSession.setState({ status: 'onboarding', profile: undefined, checked: true, devForced: true });
@@ -214,7 +214,7 @@ it('a conflict whose bucket refetch fails shows the error instead of restarting 
 });
 
 it('a failed rankings load shows Retry', async () => {
-  controls.signInAs('demo');
+  controls.signInAs('tester');
   controls.emptyUser();
   controls.failNext('unknown', 'rankings.listMine');
   useSession.setState({ status: 'onboarding', profile: undefined, checked: true, devForced: true });

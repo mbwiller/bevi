@@ -3,12 +3,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
 import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
-import { api, mockControls } from '@/api/client';
+import { api } from '@/api/client';
+import { controls } from '@/testing/fakeApi';
 import BevDetailScreen from '@/app/bev/[id]';
 
 import { imageUrlFromParam } from '../imageUrl';
 
-const controls = mockControls!;
 let client: QueryClient;
 
 function Layout() {
@@ -51,7 +51,7 @@ beforeEach(() => {
   });
   controls.setLatency(0);
   controls.resetToFixtures();
-  controls.signInAs('demo');
+  controls.signInAs('tester');
 });
 
 afterEach(() => client.clear());
@@ -107,7 +107,7 @@ it('not_found shows an empty state', async () => {
 
 it('an alcoholic Bev is "Not available" to an under-21 user', async () => {
   const beer = (await api.bevs.search({ q: 'a', categoryId: 'beer' })).items[0]!;
-  controls.signInAs('theo');
+  controls.signInAs('minor_user');
   await open(beer.id);
   expect(await screen.findByText('Not available')).toBeTruthy();
 });

@@ -2,15 +2,15 @@ import path from 'path';
 
 import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
 
-import { api, mockControls } from '@/api/client';
+import { api } from '@/api/client';
+import { controls } from '@/testing/fakeApi';
 import { useSession } from '@/state/session';
 
 const APP_DIR = path.resolve(__dirname, '../../../app');
-const controls = mockControls!;
 
-/** A new account mid-onboarding: demo, emptied (no birthdate, not onboarded). */
+/** A new account mid-onboarding: the test user, emptied (no birthdate, not onboarded). */
 async function open(url: string) {
-  controls.signInAs('demo');
+  controls.signInAs('tester');
   controls.emptyUser();
   useSession.setState({ status: 'onboarding', profile: undefined, checked: true, devForced: true });
   const result = renderRouter(APP_DIR, { initialUrl: url });
@@ -90,7 +90,7 @@ describe('onboarding: profile', () => {
 
   it('shows ErrorState with Retry when the profile fails to load', async () => {
     controls.setLatency(0);
-    controls.signInAs('demo');
+    controls.signInAs('tester');
     controls.emptyUser();
     // 'unknown' isn't retried by the query client, so the error shows at once.
     controls.failNext('unknown', 'profile.getMe');

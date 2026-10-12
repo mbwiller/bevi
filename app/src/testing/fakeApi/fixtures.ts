@@ -1,29 +1,22 @@
-// Builds the mock's starting database from the catalog seed (seed/catalog.json, generated from
-// data/catalog by app/scripts/build-mock-seed.mjs) and the mock-only extras (seed/extra.ts).
+// Builds the FakeApi's starting database from the real catalog (./catalog.ts reads data/catalog) and
+// the neutral test people (./people.ts). TEST-ONLY.
 // Deterministic for a given `now`: rankings come from @bevi/ranking's seeded PRNG and respaceBucket,
 // so every stored score is exactly what the real server would store for that position.
 
 import { BUCKET_ORDER, createPrng, randomInt, respaceBucket, type Bucket } from '@bevi/ranking';
-import type { CategoryId, PriceTier } from '@bevi/shared';
+import type { CategoryId } from '@bevi/shared';
 
-import { MOCK_DB_SCHEMA, type MockBev, type MockDb, type MockRanking, type MockUser } from './db';
-import catalog from './seed/catalog.json';
-import { EXTRA_BEVS, EXTRA_FEATURED, EXTRA_USERS } from './seed/extra';
+import { CATALOG_BEVS, CATALOG_CATEGORIES, type CatalogCategory } from './catalog';
+import { FAKE_DB_SCHEMA, type FakeBev, type FakeDb, type FakeRanking, type FakeUser } from './db';
+import { FIXTURE_FEATURED, FIXTURE_USERS } from './people';
 
 const DAY = 24 * 60 * 60 * 1000;
 
-export interface CatalogCategory {
-  id: CategoryId;
-  name: string;
-  sortOrder: number;
-  isAlcoholic: boolean;
-}
-
-export const CATEGORIES: readonly CatalogCategory[] = catalog.categories as CatalogCategory[];
+export const CATEGORIES: readonly CatalogCategory[] = CATALOG_CATEGORIES;
 export const ALCOHOLIC = new Set<CategoryId>(CATEGORIES.filter((c) => c.isAlcoholic).map((c) => c.id));
 
 export function userIdFor(handle: string): string {
-  return `mock-user-${handle}`;
+  return `user-${handle}`;
 }
 
 function iso(ms: number): string {
@@ -43,47 +36,21 @@ export function isAdult(birthdate: string | null, now: Date): boolean {
   return birthdate != null && ageOn(birthdate, now) >= 21;
 }
 
-export function buildFixtures(now: Date = new Date()): MockDb {
+export function buildFixtures(now: Date = new Date()): FakeDb {
   const t = now.getTime();
   const catalogCreated = iso(t - 120 * DAY);
 
-  const bevs: MockBev[] = [
-    ...catalog.bevs.map((cb) => ({
-      id: cb.id,
-      name: cb.name,
-      brand: cb.brand,
-      flavor: cb.flavor,
-      categoryId: cb.categoryId as CategoryId,
-      priceTier: cb.priceTier as PriceTier,
-      priceEstimated: cb.priceEstimated,
-      isStarter: cb.isStarter,
-      aliases: cb.aliases,
-      photoAssetId: null,
-      labelAssetId: null,
-      createdById: null,
-      createdAt: catalogCreated,
-      mockOnly: false,
-    })),
-    ...EXTRA_BEVS.map((eb, i) => ({
-      id: eb.id,
-      name: eb.name,
-      brand: eb.brand,
-      flavor: eb.flavor,
-      categoryId: eb.categoryId,
-      priceTier: eb.priceTier,
-      priceEstimated: false,
-      isStarter: eb.isStarter,
-      aliases: eb.aliases ?? [],
-      photoAssetId: null,
-      labelAssetId: null,
-      createdById: eb.createdBy ? userIdFor(eb.createdBy) : null,
-      createdAt: eb.createdBy ? iso(t - (20 + i) * DAY) : catalogCreated,
-      mockOnly: true,
-    })),
-  ];
+  const bevs: FakeBev[] = CATALOG_BEVS.map((cb) => ({
+    ...cb,
+    aliases: [...cb.aliases],
+    photoAssetId: null,
+    labelAssetId: null,
+    createdById: null,
+    createdAt: catalogCreated,
+  }));
   const bevById = new Map(bevs.map((bev) => [bev.id, bev]));
 
-  const users: MockUser[] = EXTRA_USERS.map((u) => ({
+  const users: FakeUser[] = FIXTURE_USERS.map((u) => ({
     id: userIdFor(u.handle),
     handle: u.handle,
     password: u.password,
@@ -95,14 +62,14 @@ export function buildFixtures(now: Date = new Date()): MockDb {
     onboarded: true,
   }));
 
-  const rankings: MockRanking[] = [];
-  const feed: MockDb['feed'] = [];
+  const rankings: FakeRanking[] = [];
+  const feed: FakeDb['feed'] = [];
   let seq = 0;
   const nextId = (prefix: string) => `${prefix}-${++seq}`;
 
-  for (const u of EXTRA_USERS) {
+  for (const u of FIXTURE_USERS) {
     const userId = userIdFor(u.handle);
-    const rand = createPrng(`bevi-mock-v1:${u.handle}`);
+    const rand = createPrng(`bevi-fixtures-v1:${u.handle}`);
     const adult = isAdult(u.birthdate, now);
     // Shuffle the visible catalog (Fisher-Yates with the seeded PRNG) and take the first N.
     const pool = bevs.filter((bev) => adult || !ALCOHOLIC.has(bev.categoryId)).map((bev) => bev.id);
@@ -150,13 +117,13 @@ export function buildFixtures(now: Date = new Date()): MockDb {
       r.note = notes[i % notes.length] ?? null;
     });
 
-  const follows: MockDb['follows'] = EXTRA_USERS.flatMap((u, i) =>
+  const follows: FakeDb['follows'] = FIXTURE_USERS.flatMap((u, i) =>
     u.follows.map((f) => ({ followerId: userIdFor(u.handle), followeeId: userIdFor(f), createdAt: iso(t - (30 - i) * DAY) })),
   );
 
   const ranked = new Set(rankings.map((r) => `${r.userId}:${r.bevId}`));
-  const wantToTry: MockDb['wantToTry'] = [];
-  EXTRA_USERS.forEach((u, i) => {
+  const wantToTry: FakeDb['wantToTry'] = [];
+  FIXTURE_USERS.forEach((u, i) => {
     u.wantToTry.forEach((w, j) => {
       const userId = userIdFor(u.handle);
       if (ranked.has(`${userId}:${w.bevId}`) || !bevById.has(w.bevId)) return;
@@ -166,9 +133,9 @@ export function buildFixtures(now: Date = new Date()): MockDb {
     });
   });
 
-  const featured: MockDb['featured'] = EXTRA_FEATURED.map((f) => ({
+  const featured: FakeDb['featured'] = FIXTURE_FEATURED.map((f) => ({
     bevId: f.bevId,
-    // The contract types heroImageUrl as a string; the mock has no images, so it is empty and the
+    // The contract types heroImageUrl as a string; fixtures have no images, so it is empty and the
     // card falls back to BevArt.
     heroImageUrl: '',
     tagline: f.tagline,
@@ -177,7 +144,7 @@ export function buildFixtures(now: Date = new Date()): MockDb {
   }));
 
   return {
-    schema: MOCK_DB_SCHEMA,
+    schema: FAKE_DB_SCHEMA,
     users,
     bevs,
     rankings,

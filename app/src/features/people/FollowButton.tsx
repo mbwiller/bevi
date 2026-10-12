@@ -26,7 +26,7 @@ export function useFollowToggle() {
 
 export interface FollowButtonProps {
   userId: string;
-  /** The person's display name, for the accessible name ("Follow Jules Moreau"). */
+  /** The person's display name, for the accessible name ("Follow Friend A"). */
   name: string;
   /** Whether the viewer follows them now (`ProfileRow.isFollowing`). */
   following: boolean;
