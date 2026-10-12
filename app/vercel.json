@@ -4,5 +4,5 @@
   "buildCommand": "node scripts/check-env.mjs && npx expo export --platform web --clear && node scripts/check-bundle.mjs",
   "outputDirectory": "dist",
   "rewrites": [{ "source": "/(.*)", "destination": "/" }],
-  "git": { "deploymentEnabled": false }
+  "git": { "deploymentEnabled": { "main": true, "**": false } }
 }
