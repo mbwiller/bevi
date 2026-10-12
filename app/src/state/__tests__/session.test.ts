@@ -1,4 +1,3 @@
-import { devSessionOverride, devSessionStatus } from '@/dev/devSession';
 import { useSession, type SessionProfile } from '@/state/session';
 
 const PROFILE: SessionProfile = { handle: 'tester', displayName: 'Test User', avatarUrl: null };
@@ -6,10 +5,9 @@ const PROFILE: SessionProfile = { handle: 'tester', displayName: 'Test User', av
 beforeEach(() => useSession.setState({ status: 'ready', profile: undefined }));
 
 describe('session store', () => {
-  it('starts signed out and unchecked with no override, so the API decides (no sample data)', () => {
-    expect(devSessionStatus('')).toBe('signedOut');
-    expect(devSessionOverride('')).toBeNull();
-    expect(useSession.getState().profile).toBeUndefined();
+  it('starts signed out and unchecked, so the API decides (no sample data)', () => {
+    expect(useSession.getInitialState()).toMatchObject({ status: 'signedOut', checked: false, devForced: false });
+    expect(useSession.getInitialState().profile).toBeUndefined();
   });
 
   it('setSession and signOut mark the first check done', () => {
@@ -42,50 +40,5 @@ describe('session store', () => {
     useSession.getState().signOut();
     expect(useSession.getState().status).toBe('signedOut');
     expect(useSession.getState().profile).toBeUndefined();
-  });
-
-  it('setStatus forces a status (dev)', () => {
-    useSession.getState().setStatus('onboarding');
-    expect(useSession.getState().status).toBe('onboarding');
-  });
-});
-
-describe('with the real API (EXPO_PUBLIC_BEVI_API=supabase)', () => {
-  const saved = process.env.EXPO_PUBLIC_BEVI_API;
-  beforeEach(() => {
-    process.env.EXPO_PUBLIC_BEVI_API = 'supabase';
-  });
-  afterEach(() => {
-    if (saved === undefined) delete process.env.EXPO_PUBLIC_BEVI_API;
-    else process.env.EXPO_PUBLIC_BEVI_API = saved;
-  });
-
-  it('ignores ?session= and starts signed out', () => {
-    expect(devSessionOverride('?session=ready')).toBeNull();
-    expect(devSessionStatus('?session=ready')).toBe('signedOut');
-    expect(devSessionStatus(undefined)).toBe('signedOut');
-  });
-
-  it('makes setStatus a no-op', () => {
-    useSession.setState({ status: 'signedOut' });
-    useSession.getState().setStatus('ready');
-    expect(useSession.getState().status).toBe('signedOut');
-  });
-
-  it('still takes real sessions', () => {
-    useSession.getState().setSession(PROFILE);
-    expect(useSession.getState().status).toBe('ready');
-  });
-});
-
-describe('devSessionStatus', () => {
-  it('reads ?session= and ignores unknown values', () => {
-    expect(devSessionOverride('?session=signedOut')).toBe('signedOut');
-    expect(devSessionOverride('?foo=1&session=onboarding')).toBe('onboarding');
-    expect(devSessionOverride('?session=ready')).toBe('ready');
-    expect(devSessionOverride('?session=admin')).toBeNull();
-    expect(devSessionOverride(undefined)).toBeNull();
-    expect(devSessionStatus('?session=ready')).toBe('ready');
-    expect(devSessionStatus('?session=admin')).toBe('signedOut');
   });
 });

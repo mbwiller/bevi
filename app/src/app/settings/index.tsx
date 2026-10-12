@@ -3,7 +3,6 @@ import { useRouter } from 'expo-router';
 import { StyleSheet, Text } from 'react-native';
 
 import { useSignOut } from '@/api/hooks';
-import { sessionOverrideEnabled } from '@/dev/devSession';
 import { errorCopy } from '@/lib/errorCopy';
 import { SettingsRow, SettingsScreen, SettingsSection } from '@/features/settings/SettingsRow';
 import { useSession } from '@/state/session';
@@ -11,7 +10,7 @@ import { spacing, type, useTheme } from '@/theme';
 
 /**
  * Settings (§6.18): Account, Privacy, Sign out, Delete account. Signing out clears the session;
- * the root gate then lands on sign in. The dev links show only while the dev override is on (mock API).
+ * the root gate then lands on sign in.
  */
 export default function SettingsIndexScreen() {
   const { colors } = useTheme();
@@ -39,12 +38,6 @@ export default function SettingsIndexScreen() {
         <Text style={[type.body, styles.note, { color: colors.scoreLow }]} accessibilityLiveRegion="polite" role="alert">
           {`Couldn't sign out. ${errorCopy(signOut.error).message}`}
         </Text>
-      ) : null}
-      {sessionOverrideEnabled() ? (
-        <SettingsSection title="Developer">
-          <SettingsRow label="Component gallery" onPress={() => router.push('/dev/gallery')} />
-          <SettingsRow label="Token preview" onPress={() => router.push('/dev/tokens')} />
-        </SettingsSection>
       ) : null}
       {version ? <Text style={[type.caption, styles.note, { color: colors.textSecondary }]}>{`Bevi ${version}`}</Text> : null}
     </SettingsScreen>

@@ -22,8 +22,6 @@ function Layout() {
   );
 }
 
-const Stub = () => null;
-
 async function open(url: string) {
   const result = renderRouter(
     {
@@ -32,8 +30,6 @@ async function open(url: string) {
       'settings/account': AccountScreen,
       'settings/privacy': PrivacyScreen,
       'settings/delete-account': DeleteAccountScreen,
-      'dev/gallery': Stub,
-      'dev/tokens': Stub,
     },
     { initialUrl: url },
   );
@@ -53,12 +49,12 @@ beforeEach(() => {
 
 afterEach(() => client.clear());
 
-it('lists the rows, with dev links on the mock', async () => {
+it('lists the rows, with no developer links', async () => {
   const r = await open('/settings');
   expect(await screen.findByLabelText('Account')).toBeTruthy();
   expect(screen.getByLabelText('Privacy')).toBeTruthy();
   expect(screen.getByLabelText('Delete account')).toBeTruthy();
-  expect(screen.getByLabelText('Component gallery')).toBeTruthy();
+  expect(screen.queryByLabelText('Component gallery')).toBeNull();
   await fireEvent.press(screen.getByLabelText('Account'));
   expect(r.path()).toBe('/settings/account');
 });

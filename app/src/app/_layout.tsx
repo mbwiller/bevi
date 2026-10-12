@@ -6,7 +6,6 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { createQueryClient } from '@/api/queryClient';
-import { sessionOverrideEnabled } from '@/dev/devSession';
 import { Splash } from '@/features/auth/Splash';
 import { useSessionBootstrap } from '@/features/auth/useSessionBootstrap';
 import { useSession } from '@/state/session';
@@ -18,14 +17,13 @@ import { useTheme } from '@/theme';
 // (Stack.Protected). A URL for a route that isn't available — a deep link, a reload, or the
 // screen on display when the status changes — falls back to `index`, which redirects to the
 // status's home: signedOut → /sign-in, onboarding → /onboarding/profile, ready → /feed.
-// index and +not-found are outside every guard; the /dev routes exist only while the dev
-// session override is on (mock API), so a real-API build has no way around the gate. A new route file must be added to the
-// right guard below, or it is reachable in every status.
+// index and +not-found are outside every guard. A new route file must be added to the right guard
+// below, or it is reachable in every status.
 //
 // The session comes from the API (useSessionBootstrap: getSession / onAuthChange → getMe →
 // setSession, or signOut). Until the first check settles the layout shows the Splash (wordmark)
 // instead of the Stack, so a signed-in user never sees sign in flash and a deep link survives the
-// check. On the mock, `?session=` forces the launch status instead (dev/devSession.ts).
+// check.
 export default function RootLayout() {
   const { scheme } = useTheme();
   const [queryClient] = useState(createQueryClient);
@@ -75,11 +73,6 @@ function SessionGate() {
         <Stack.Screen name="settings/privacy" />
         <Stack.Screen name="settings/delete-account" />
         <Stack.Screen name="image/[url]" options={{ presentation: 'fullScreenModal' }} />
-      </Stack.Protected>
-
-      <Stack.Protected guard={sessionOverrideEnabled()}>
-        <Stack.Screen name="dev/gallery" />
-        <Stack.Screen name="dev/tokens" />
       </Stack.Protected>
     </Stack>
   );
