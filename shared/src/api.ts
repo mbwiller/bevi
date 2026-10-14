@@ -331,6 +331,17 @@ export interface FeedApi {
 
   /** Age-filtered. @throws 'unauthorized'. */
   getFeatured(): Promise<FeaturedBev[]>;
+
+  /**
+   * Idempotent: liking an already-liked post resolves without error.
+   * @throws 'unauthorized'; 'not_found' — no such post, or one the caller
+   *   cannot see (a stranger's, or an alcoholic Bev's while under 21);
+   *   'rate_limited'.
+   */
+  like(id: string): Promise<void>;
+
+  /** Idempotent. @throws 'unauthorized', 'not_found', 'rate_limited'. */
+  unlike(id: string): Promise<void>;
 }
 
 export interface LeaderboardApi {
