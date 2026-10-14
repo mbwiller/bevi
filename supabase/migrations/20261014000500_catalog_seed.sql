@@ -934,7 +934,7 @@ select v.bev_id::uuid, v.base, v.carbonated, v.caffeine::smallint, v.sweetness::
   ('2f9d6990-b220-585a-8bcb-0cde8e72ea63', 'cola', true, 1, 3, false, false, 'cold'), -- mexican-coca-cola
   ('946588a1-e485-500a-a7c9-afdd321219b2', 'cola', true, 1, 3, false, false, 'cold'), -- pepsi
   ('78f2c3fb-838a-5950-8ec5-9d97c8bb973a', 'cola', true, 1, 3, false, false, 'cold'), -- diet-pepsi
-  ('37ea2b26-55ba-570a-8579-b5e32b9b387a', 'cola', true, 1, 3, false, false, 'cold'), -- pepsi-zero-sugar
+  ('37ea2b26-55ba-570a-8579-b5e32b9b387a', 'cola', true, 2, 3, false, false, 'cold'), -- pepsi-zero-sugar
   ('5f6616d1-5289-570b-ac9a-323c8dcd1dba', 'lemon-lime', true, 0, 3, false, false, 'cold'), -- sprite
   ('72bc7b45-f9f5-5e7e-9ee9-55f374fc778d', 'lemon-lime', true, 0, 3, false, false, 'cold'), -- sprite-zero-sugar
   ('686a8b0d-8d5f-53d6-ae2b-d84988f38daf', 'cola', true, 1, 3, false, false, 'cold'), -- dr-pepper
@@ -1012,10 +1012,10 @@ select v.bev_id::uuid, v.base, v.carbonated, v.caffeine::smallint, v.sweetness::
   ('e3e5a072-e596-5920-bb12-c000c53850df', 'cola', true, 1, 3, false, false, 'cold'), -- coca-cola-cherry-zero-sugar
   ('52e1cc03-c200-5a14-af3f-435e360d66dd', 'cola', true, 1, 3, false, false, 'cold'), -- coca-cola-zero-sugar-vanilla
   ('b017deaa-4830-518c-a7a5-d1d8b1476608', 'lemon-lime', true, 0, 3, false, false, 'cold'), -- starry-zero-sugar
-  ('34f26c46-aef3-5a25-ab73-925618cc4b74', 'cola', true, 1, 3, false, false, 'cold'), -- pepsi-max
+  ('34f26c46-aef3-5a25-ab73-925618cc4b74', 'cola', true, 2, 3, false, false, 'cold'), -- pepsi-max
   ('5ff248d3-5dfd-5fdb-95c7-ed304a50970c', 'cola', true, 0, 3, false, false, 'cold'), -- diet-pepsi-caffeine-free
   ('79a9510e-5645-5a27-be84-12d51d4320fd', 'root-beer', true, 0, 3, false, false, 'cold'), -- diet-mug-root-beer
-  ('7696f382-d1dc-530a-ad78-e55684050b2f', 'root-beer', true, 1, 3, false, false, 'cold'), -- diet-barqs-root-beer
+  ('7696f382-d1dc-530a-ad78-e55684050b2f', 'root-beer', true, 0, 3, false, false, 'cold'), -- diet-barqs-root-beer
   ('d2e6c5b6-8c89-52c9-96e0-1ff327eb6cfb', 'orange', true, 0, 3, false, false, 'cold'), -- diet-orange-crush
   ('dc8b7b75-0987-5dc9-a4cd-e64739d84094', 'citrus', true, 0, 3, false, false, 'cold'), -- diet-squirt
   ('007e1a80-c178-5280-8fff-f743d28b1b11', 'ginger', true, 0, 3, false, false, 'cold'), -- diet-vernors
@@ -1169,7 +1169,7 @@ select v.bev_id::uuid, v.base, v.carbonated, v.caffeine::smallint, v.sweetness::
   ('4161a575-6829-5c34-966c-ad2932252030', 'coffee', false, 2, 2, true, false, 'cold'), -- la-colombe-draft-latte-vanilla
   ('92c5c010-fd07-5e7d-9912-8d66880a2a15', 'coffee', false, 2, 2, false, false, 'cold'), -- la-colombe-draft-latte-oat-milk
   ('32e8e1d6-e57f-5e28-bf7f-bf570e0c4bcf', 'coffee', false, 3, 0, false, false, 'cold'), -- stok-cold-brew-black
-  ('dd57b1eb-3286-5808-b27e-530c078f1196', 'coffee', false, 3, 0, false, false, 'cold'), -- stok-cold-brew-not-too-sweet
+  ('dd57b1eb-3286-5808-b27e-530c078f1196', 'coffee', false, 3, 1, false, false, 'cold'), -- stok-cold-brew-not-too-sweet
   ('58c62238-4df9-51ad-8a52-536bbc25a8b4', 'coffee', false, 3, 0, false, false, 'cold'), -- chameleon-cold-brew-black
   ('769babf7-8666-5642-bd4d-75b08b2addd5', 'coffee', false, 3, 2, false, false, 'cold'), -- califia-farms-cold-brew-almond-milk
   ('cdcc0e60-0ef3-5e37-9535-a13fea816553', 'coffee', false, 3, 2, true, false, 'cold'), -- high-brew-mexican-vanilla
@@ -1212,8 +1212,8 @@ select v.bev_id::uuid, v.base, v.carbonated, v.caffeine::smallint, v.sweetness::
   ('cda59b34-3839-552a-bd83-864d9a71cf25', 'tea', false, 1, 2, false, false, 'cold'), -- lipton-iced-tea
   ('f3361059-c2f8-5bc5-bc37-fe2726a79451', 'tea', false, 1, 1, false, false, 'cold'), -- lipton-green-tea
   ('7fe7a045-cf4c-5673-a7c2-d19741ec8967', 'tea', false, 1, 1, false, false, 'cold'), -- lipton-diet-green-tea
-  ('68f358af-dac8-5d66-a105-d8edb7632080', 'tea', false, 1, 1, false, false, 'cold'), -- ito-en-oi-ocha-green-tea
-  ('0bedfd48-3c66-5e2d-ad29-4f3f9590f58f', 'matcha', false, 2, 1, false, false, 'cold'), -- ito-en-matcha-green-tea
+  ('68f358af-dac8-5d66-a105-d8edb7632080', 'tea', false, 1, 0, false, false, 'cold'), -- ito-en-oi-ocha-green-tea
+  ('0bedfd48-3c66-5e2d-ad29-4f3f9590f58f', 'matcha', false, 2, 0, false, false, 'cold'), -- ito-en-matcha-green-tea
   ('e08a0034-fda6-5144-bb0e-f08fb5c50cef', 'tea', false, 2, 1, false, false, 'cold'), -- guayaki-yerba-mate-enlighten-mint
   ('fb97ea20-564f-5c57-b5d2-33c3b81f644d', 'tea', false, 2, 1, false, false, 'cold'), -- guayaki-yerba-mate-lemon-elation
   ('7a10e003-6498-5d95-bbd2-6d2654e22e85', 'tea', false, 1, 3, false, false, 'cold'), -- honest-tea-honey-green-tea
@@ -1293,14 +1293,14 @@ select v.bev_id::uuid, v.base, v.carbonated, v.caffeine::smallint, v.sweetness::
   ('8387862d-bb35-5787-a877-eb7375d1f056', 'wine', false, 0, 0, false, true, 'either'), -- barefoot-cellars-cabernet-sauvignon
   ('bfeb046e-4589-55b9-bd02-83b12f5bc59d', 'wine', false, 0, 0, false, true, 'cold'), -- josh-cellars-chardonnay
   ('c11c6bb5-cadf-5d6a-b1f0-c705f3838ba5', 'wine', true, 0, 1, false, true, 'cold'), -- la-marca-prosecco
-  ('527cd62b-93e3-56d5-8df1-928bbe0a5e59', 'agave', true, 0, 2, false, true, 'cold'), -- generic-margarita
+  ('527cd62b-93e3-56d5-8df1-928bbe0a5e59', 'agave', false, 0, 2, false, true, 'cold'), -- generic-margarita
   ('20c73e8b-121e-522b-bea2-6f4aa75ad504', 'grain', false, 0, 1, false, true, 'either'), -- generic-old-fashioned
   ('9ca9380a-0569-5bb3-a805-6db42827ed9b', 'coffee', false, 2, 2, false, true, 'cold'), -- generic-espresso-martini
   ('f5cde824-6dbc-5cd9-9ffd-896e760f6f38', 'ginger', true, 0, 2, false, true, 'cold'), -- generic-moscow-mule
   ('f5967925-5813-583f-950b-2fb79b2ef174', 'herbal', true, 0, 2, false, true, 'cold'), -- generic-mojito
   ('225503ed-526f-5133-af49-759bfdbfe10f', 'tropical', false, 0, 2, false, true, 'cold'), -- generic-pina-colada
   ('947cd3ec-462b-515e-90d9-9967fb46d88d', 'grain', true, 0, 2, false, true, 'cold'), -- titos-handmade-vodka-soda
-  ('70da1493-bf1b-5bf2-8dc6-87e6d0ab6aab', 'grain', false, 1, 2, false, true, 'cold'), -- jack-daniels-and-coke
+  ('70da1493-bf1b-5bf2-8dc6-87e6d0ab6aab', 'grain', true, 1, 2, false, true, 'cold'), -- jack-daniels-and-coke
   ('b227f854-bdfa-5a02-a1d1-ebac6e0245c1', 'grain', true, 0, 2, false, true, 'cold'), -- high-noon-vodka-soda-watermelon
   ('718762fe-6d32-59dc-ae45-baac2d630681', 'grain', true, 0, 2, false, true, 'cold'), -- high-noon-vodka-soda-peach
   ('8adbfd7e-77c9-5c99-a55f-5ffc03bfd754', 'agave', true, 0, 2, false, true, 'cold'), -- cutwater-spirits-margarita
