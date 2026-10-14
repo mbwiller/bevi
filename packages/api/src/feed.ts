@@ -95,5 +95,17 @@ export function createFeedApi(client: SupabaseClient): FeedApi {
         endsAt: row.ends_at,
       }));
     },
+
+    async like(id: string): Promise<void> {
+      await requireUserId(client);
+      const { error } = await client.rpc('like_post', { p_event_id: Number(id) });
+      if (error) throw mapError(error);
+    },
+
+    async unlike(id: string): Promise<void> {
+      await requireUserId(client);
+      const { error } = await client.rpc('unlike_post', { p_event_id: Number(id) });
+      if (error) throw mapError(error);
+    },
   };
 }
