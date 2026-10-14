@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BUCKET_ORDER } from '@bevi/shared';
-import { bucketFromDb, bucketToDb, feedKindFromDb } from '../src/mappers.ts';
+import { bucketFromDb, bucketToDb, feedKindFromDb, mapFlavorProfile } from '../src/mappers.ts';
 
 describe('bucket <-> smallint', () => {
   it('round-trips every Bucket value through the DB encoding', () => {
@@ -30,5 +30,32 @@ describe('feedKindFromDb', () => {
 
   it('throws on "followed" -- get_feed should never return it', () => {
     expect(() => feedKindFromDb('followed')).toThrow();
+  });
+});
+
+describe('mapFlavorProfile', () => {
+  it('returns exactly the FlavorProfile contract fields, nothing from the table row besides', () => {
+    const row = {
+      bev_id: '00000000-0000-0000-0000-000000000000',
+      base: 'cola',
+      carbonated: true,
+      caffeine: 1,
+      sweetness: 3,
+      dairy: false,
+      alcohol: false,
+      serve: 'cold',
+      source: 'catalog',
+      updated_at: '2026-10-14T00:00:00Z',
+    };
+    expect(mapFlavorProfile(row)).toStrictEqual({
+      base: 'cola',
+      carbonated: true,
+      caffeine: 1,
+      sweetness: 3,
+      dairy: false,
+      alcohol: false,
+      serve: 'cold',
+      source: 'catalog',
+    });
   });
 });

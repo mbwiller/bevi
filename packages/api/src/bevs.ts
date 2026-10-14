@@ -124,7 +124,11 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
       client.from('rankings').select('bucket, position, score, note').eq('user_id', uid).eq('bev_id', id).maybeSingle(),
       client.from('want_to_try').select('user_id').eq('user_id', uid).eq('bev_id', id).maybeSingle(),
       fetchFollowIds(client, 'follows', 'follower_id', uid),
-      client.from('bev_flavor_profiles').select('*').eq('bev_id', id).maybeSingle(),
+      client
+        .from('bev_flavor_profiles')
+        .select('base, carbonated, caffeine, sweetness, dairy, alcohol, serve, source')
+        .eq('bev_id', id)
+        .maybeSingle(),
     ]);
     if (rankingRes.error) throw mapError(rankingRes.error);
     if (wantRes.error) throw mapError(wantRes.error);
