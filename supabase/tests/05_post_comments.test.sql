@@ -30,7 +30,13 @@ select is(
 -- d1 posts, then comments on it five times.
 -- ---------------------------------------------------------------------------
 
+-- Both fixture tables are made here, by the owner, before the role switch:
+-- `authenticated` needs explicit grants to use them (without that the
+-- assertions die with 42501 instead of running), and creating one *as*
+-- authenticated would instead depend on it holding TEMP on the database.
 create temporary table t_event (id bigint) on commit drop;
+create temporary table t_comments (n int, id bigint) on commit drop;
+grant select, insert on t_event, t_comments to authenticated;
 
 set local role authenticated;
 set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000000d1", "role": "authenticated"}';
@@ -53,7 +59,6 @@ select throws_ok(
   'a 281-character body is rejected'
 );
 
-create temporary table t_comments (n int, id bigint) on commit drop;
 insert into t_comments (n, id)
 select g.g, c.id
   from generate_series(1, 5) g,
