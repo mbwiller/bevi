@@ -547,7 +547,7 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
   });
 
   describe('want to try', () => {
-    it('add is idempotent and posts one SAVED item; remove is idempotent', async () => {
+    it('add is idempotent and posts no feed item; remove is idempotent', async () => {
       const a = await newUser();
       const viewer = await newUser();
       const [x] = await starterIds(1);
@@ -557,9 +557,8 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       expect(list.items).toHaveLength(1);
       expect(list.items[0]).toMatchObject({ bev: { id: x }, via: { id: a.userId } });
       expect((await api.bevs.get(x!)).inWantToTry).toBe(true);
-      const saved = (await api.feed.getFeed()).items.filter((i) => i.type === 'SAVED' && i.bev.id === x && i.actor.id === viewer.userId);
-      expect(saved).toHaveLength(1);
-      expect(saved[0]).toMatchObject({ score: null, bucket: null, inMyWantToTry: true });
+      // A save is never a feed post; the bookmark (inMyWantToTry) is the only signal.
+      expect((await api.feed.getFeed()).items.filter((i) => i.bev.id === x && i.actor.id === viewer.userId)).toEqual([]);
       expect((await api.stats.getMine()).wantToTryCount).toBe(1);
       await api.wantToTry.remove(x!);
       await api.wantToTry.remove(x!);

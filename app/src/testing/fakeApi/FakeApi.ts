@@ -1203,7 +1203,6 @@ export class FakeApi implements BeviApi {
           const via = viaUserId && viaUserId !== me.id && this.db.users.some((u) => u.id === viaUserId) ? viaUserId : null;
           const at = this.nowIso();
           this.db.wantToTry.push({ userId: me.id, bevId, savedAt: at, viaUserId: via });
-          this.db.feed.push({ id: this.nextId('feed'), type: 'SAVED', actorId: me.id, bevId, createdAt: at });
         },
         true,
       ),
@@ -1233,16 +1232,17 @@ export class FakeApi implements BeviApi {
           const actor = this.db.users.find((u) => u.id === e.actorId);
           const bev = this.db.bevs.find((b) => b.id === e.bevId);
           if (!actor || !bev) continue;
+          // The feed carries rankings only (contract 2.0.0): a save is never a post.
           const r = e.type === 'RANKING' ? this.rankingOf(e.actorId, e.bevId) : undefined;
-          if (e.type === 'RANKING' && !r) continue; // ranking since removed
+          if (!r) continue; // ranking since removed
           items.push({
             id: e.id,
             type: e.type,
             actor: this.toProfile(actor, me),
             bev: this.toSummary(bev),
-            score: r?.score ?? null,
-            bucket: r?.bucket ?? null,
-            note: r?.note ?? null,
+            score: r.score,
+            bucket: r.bucket,
+            note: r.note,
             createdAt: e.createdAt,
             inMyWantToTry: saved.has(bev.id),
           });
