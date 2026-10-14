@@ -12,6 +12,7 @@ import type {
   Bev,
   BevSummary,
   Category,
+  Comment,
   Comparison,
   FeaturedBev,
   FeedItem,
@@ -344,6 +345,20 @@ export interface FeedApi {
   unlike(id: string): Promise<void>;
 }
 
+export interface CommentsApi {
+  /** Newest first. @throws 'unauthorized', 'not_found' — post not visible. */
+  list(eventId: string, page?: PageParams): Promise<Page<Comment>>;
+
+  /**
+   * @throws 'unauthorized'; 'not_found' — post not visible; 'validation' —
+   *   empty or over 280 characters; 'rate_limited'.
+   */
+  add(eventId: string, body: string): Promise<Comment>;
+
+  /** Own comments only. Idempotent. @throws 'unauthorized', 'not_found'. */
+  remove(id: string): Promise<void>;
+}
+
 export interface LeaderboardApi {
   /** @throws 'unauthorized'. */
   bevs(params?: { categoryId?: CategoryId; page?: PageParams }): Promise<Page<LeaderboardRow>>;
@@ -375,6 +390,7 @@ export interface BeviApi extends AuthApi {
   rankings: RankingsApi;
   wantToTry: WantToTryApi;
   feed: FeedApi;
+  comments: CommentsApi;
   leaderboard: LeaderboardApi;
   recs: RecsApi;
   meta: MetaApi;
