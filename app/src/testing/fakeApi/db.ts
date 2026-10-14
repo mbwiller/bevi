@@ -74,6 +74,11 @@ export interface FakeFeedEvent {
   createdAt: string;
 }
 
+export interface FakeLike {
+  userId: string;
+  feedEventId: string;
+}
+
 export interface FakeFeatured {
   bevId: string;
   heroImageUrl: string;
@@ -108,6 +113,8 @@ export interface FakeDb {
   follows: FakeFollow[];
   wantToTry: FakeWantToTry[];
   feed: FakeFeedEvent[];
+  /** Optional so a db stored before likes existed still loads. */
+  likes?: FakeLike[];
   featured: FakeFeatured[];
   assets: FakeAsset[];
   reports: FakeReport[];

@@ -91,6 +91,7 @@ import {
   saveDb,
   type FakeBev,
   type FakeDb,
+  type FakeFeedEvent,
   type FakeRanking,
   type FakeUser,
   type StorageLike,
@@ -605,6 +606,20 @@ export class FakeApi implements BeviApi {
       .filter((w) => w.userId !== userId)
       .map((w) => (w.viaUserId === userId ? { ...w, viaUserId: null } : w));
     db.feed = db.feed.filter((e) => e.actorId !== userId);
+    const events = new Set(db.feed.map((e) => e.id));
+    db.likes = (db.likes ?? []).filter((l) => l.userId !== userId && events.has(l.feedEventId));
+  }
+
+  /** The feed event `id` if `viewer` can see it (own or a followee's post, Bev age-visible), else not_found. */
+  private visibleFeedEvent(id: string, viewer: FakeUser): FakeFeedEvent {
+    const e = this.db.feed.find((x) => x.id === id);
+    const bev = e && this.db.bevs.find((b) => b.id === e.bevId);
+    const sees =
+      !!e &&
+      !!bev &&
+      (e.actorId === viewer.id || this.db.follows.some((f) => f.followerId === viewer.id && f.followeeId === e.actorId)) &&
+      this.visible(bev, viewer);
+    return sees ? e! : fail('not_found', 'No such post');
   }
 
   // -------------------------------------------------------------------------
@@ -1225,6 +1240,7 @@ export class FakeApi implements BeviApi {
         const me = this.requireUser();
         const actors = new Set([me.id, ...this.db.follows.filter((f) => f.followerId === me.id).map((f) => f.followeeId)]);
         const saved = new Set(this.db.wantToTry.filter((w) => w.userId === me.id).map((w) => w.bevId));
+        const likes = this.db.likes ?? [];
         const items: FeedItem[] = [];
         const events = this.db.feed
           .filter((e) => actors.has(e.actorId))
@@ -1245,6 +1261,8 @@ export class FakeApi implements BeviApi {
             note: r?.note ?? null,
             createdAt: e.createdAt,
             inMyWantToTry: saved.has(bev.id),
+            likeCount: likes.filter((l) => l.feedEventId === e.id).length,
+            likedByMe: likes.some((l) => l.feedEventId === e.id && l.userId === me.id),
           });
         }
         return paginate(items, page, 20);
@@ -1260,6 +1278,34 @@ export class FakeApi implements BeviApi {
           .filter((x): x is { f: (typeof x)['f']; b: FakeBev } => !!x.b && this.visible(x.b, me))
           .map(({ f, b }) => ({ bev: this.toSummary(b), heroImageUrl: f.heroImageUrl, tagline: f.tagline, startsAt: f.startsAt, endsAt: f.endsAt }));
       }),
+
+    like: (id: string) =>
+      this.call(
+        'feed.like',
+        () => {
+          const me = this.requireUser();
+          this.visibleFeedEvent(id, me);
+          const likes = (this.db.likes ??= []);
+          if (!likes.some((l) => l.userId === me.id && l.feedEventId === id)) likes.push({ userId: me.id, feedEventId: id });
+        },
+        true,
+      ),
+
+    unlike: (id: string) =>
+      this.call(
+        'feed.unlike',
+        () => {
+          const me = this.requireUser();
+          const likes = this.db.likes ?? [];
+          // Your own like can always be taken back, as in unlike_post (A-02).
+          if (!likes.some((l) => l.userId === me.id && l.feedEventId === id)) {
+            this.visibleFeedEvent(id, me);
+            return;
+          }
+          this.db.likes = likes.filter((l) => !(l.userId === me.id && l.feedEventId === id));
+        },
+        true,
+      ),
   };
 
   leaderboard: LeaderboardApi = {
