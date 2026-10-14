@@ -30,10 +30,10 @@ export type PhotoStatus = 'processing' | 'ready';
 
 /**
  * Kinds of feed post the app renders. `packages/api` maps DB `feed_events.kind`:
- * 'ranked' | 'reranked' → 'RANKING', 'want_to_try' → 'SAVED'; 'followed' events
- * are not feed posts in v1 and are filtered out.
+ * 'ranked' | 'reranked' → 'RANKING'. Saving a Bev is not a feed post, so the
+ * feed carries rankings only.
  */
-export type FeedEventKind = 'RANKING' | 'SAVED';
+export type FeedEventKind = 'RANKING';
 
 export type BevStatus = 'pending_photo' | 'active' | 'merged' | 'hidden';
 
