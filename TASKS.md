@@ -2,22 +2,27 @@
 
 Source: `CONVERSATION-2.md` (raw transcript). This file turns that conversation into tasks, split by lane. The maths asked for in topic 6 lives in `docs/bevi-ranking-math.tex` (compiled: `docs/bevi-ranking-math.pdf`).
 
+**Revision 2 (2026-10-14, later the same day, Matt with Claude).** Two additions that were not in the transcript, decided after research:
+
+- **The Bev graph moves to a graph database.** Bevs, categories, brands and flavour profiles become nodes in **Neo4j AuraDB Free** with similarity-weighted edges (Pepsi next to Coke); Supabase stays the system of record for the Bev row, users and rankings; a nightly job keeps the two in step and writes the edges back to Postgres for the hot path. §1b, §1d, A-15..A-17, M-24.
+- **The map lives in the Search tab.** The centre tab becomes **Search**: the Bev search bar on top, a live NYC map underneath that you can pan in place or open full screen, search results sliding over the map. The map copies Beli's map UI (three reference screenshots in `bevi-ui-inspiration/beli-map-images/`), is **strictly constrained to New York City**, runs on **Google Maps JS** with the Bev Maps key, draws venues imported from **OpenStreetMap** plus our own curation, and carries the **Find Bev** button that opens Bev Maps. §1b, §1c, M-15..M-17, M-23, A-08.
+
 Lanes are the ones in `DEVELOPMENT-MATT.md` §1 / `DEVELOPMENT-ARJUN.md` §1 and do not change:
 
 | Owner | Paths | Branches |
 |---|---|---|
 | **Matt** (`@mbwiller`) | `app/`, `packages/ranking/`, `design/` | `ui/*`, `rank/*` |
-| **Arjun** (`@acheema5`) | `supabase/`, `packages/api/`, `data/catalog/` | `be/*` |
+| **Arjun** (`@acheema5`) | `supabase/`, `packages/api/`, `data/catalog/`, `scripts/` (catalog and graph pipelines) | `be/*` |
 | **Both** | `shared/` (contract), root docs, `.github/`, `.claude/` | `contract/*`, `chore/*` |
 
 Task ids: `M-nn` Matt, `A-nn` Arjun, `S-nn` shared contract or docs, `D-nn` a decision still open. Put the id in the PR title. Every task that needs the other lane says so under **Needs**; ship the contract PR (`S-`) first, then both sides build against it.
 
-Priorities follow the order the conversation itself set:
+Priorities follow the order the conversation itself set, with the revision-2 work slotted in:
 
 - **P0 — "Our experience and immediate changes we want"** (topic 2, called *"probably the most important part of the conversation"*).
-- **P1 — UI / UX** (topic 3) and the data the P0 screens need (topic 5).
-- **P2 — Additional features** (topic 4: maps, nutrition label, Bev Maps integration).
-- **P3 — Later**: parked ideas and algorithm evolutions (graph of Bevs, Smart Recommend).
+- **P1 — UI / UX** (topic 3), the data the P0 screens need (topic 5), **the graph foundation** (A-15..A-17, M-24: backend and pure-package work that runs alongside P0 without touching screens) and **the Search tab shell** (M-15, because it changes the centre tab).
+- **P2 — Additional features** (topic 4: the map itself, nutrition label, Bev Maps integration).
+- **P3 — Later**: parked ideas and algorithm evolutions (anchored placement on the graph, Smart Recommend).
 
 ---
 
@@ -31,7 +36,7 @@ Rule for this round: **finish P0 and P1 before starting anything in P2 or P3.** 
 
 ## 1. What the conversation decided (the emphasis)
 
-These are the statements both of us agreed to. Everything in the task board below traces back to one of them.
+These are the statements both of us agreed to. Everything in the task board below traces back to one of them. Items 17–20 and 26 were superseded by revision 2 and now point to §1b.
 
 1. **Saving a Bev is not a feed post.** *"When you're saving a beverage, it should not be on the feed … we should get rid of that, 100."* You should only see, on a post, that you already have that Bev saved. → A-01, S-01, M-01
 2. **Likes, exactly like Instagram.** Heart on every post, **double-tap the post to like**, the heart in the **Bevi grape** (`primary`, *"the same purple as the Bevi logo"*), count next to it. *"This component needs to be very seamless."* Likes are for posts, above all posts with a photo of the Bev; likes on comments: *"maybe not."* → A-02, S-02, M-02
@@ -49,8 +54,8 @@ These are the statements both of us agreed to. Everything in the task board belo
 14. **The theme is good.** *"It looks really nice."* But **lists and the feed are too crowded** (*"with the dollars, them all having approximate … it's a lot of info … not laid out very cleanly"*). → M-12
 15. **The gut-check buttons (Loved it / It was fine / Didn't like it) stick out too much.** → M-13, D-05
 16. **The compare step and the note step are good.** Keep them. **The score reveal is not landing**: *"I don't think it tells you the score. It should show the number and animate a little bit."* → M-14
-17. **"Searching for Bevs is amazing."** Keep it. Rename the tab: **Add Bev → Search, with tabs Bevs · People · Maps.** → M-15
-18. **Maps**: a map of New York City with markers for spots, **filterable by Bev category** (sodas are everywhere; the value is craft coffee, lattes, cocktails) **and by retailer** (Duane Reade / CVS / Target carry a fixed subset). Include Bev Maps screenshots as the reference. → M-16, A-08, S-10, D-08
+17. **"Searching for Bevs is amazing."** Keep it. The tab itself changes: see §1b item 32 (Search tab with the map inside; no separate Maps tab). → M-15
+18. **Maps**: a map of New York City with markers for spots, **filterable by Bev category** (sodas are everywhere; the value is craft coffee, lattes, cocktails) **and by retailer** (Duane Reade / CVS / Target carry a fixed subset). Superseded in detail by §1b items 32–37 and §1c. → M-16, A-08, S-10
 19. **Find Bev**: the Bev Maps glassmorphic button, *"smack right there"* on the map, initially linking to Bev Maps. → M-17
 20. **Smart Recommend on the map** (Spotify "smart shuffle"): opt-in; show only spots we would recommend. **Challenged as too complicated** → parked under the guardrail. The maths is written anyway (LaTeX §10.5). → D-03
 21. **Nutrition label**: a cheap or free open-source VLM reads the label photo and fills in the Bev's nutrition, **broken down by volume**; **for the user's own eyes** on the Bev, not a social feature. → A-09, S-11, M-18
@@ -58,8 +63,58 @@ These are the statements both of us agreed to. Everything in the task board belo
 23. **Taste Profile stays** but means something concrete: **your average score per category** (*"your average score of cafe drinks could be this number out of 10"*), i.e. which kinds of drinks you prefer. → A-11, S-12, M-19
 24. **Binary had-or-not.** One ranking per Bev per user; we never count how many times you drank it. (Already how the data works; record it.) → S-09
 25. **Duplicates will happen** as the catalog grows (*"someone inputting a new name of a Bev that's the same as some other name"*). Collect enough unique identifiers to detect them and add a **flag-as-duplicate** path. → A-12, S-13, M-20
-26. **Categories must be finer and hierarchical** (external feedback, below) and **Bevs should live in a graph with weighted edges**: the first comparisons are against the most similar Bevs you have ranked. → M-21, A-13, S-14, D-04
+26. **Categories must be finer and hierarchical** (external feedback, below) and **Bevs should live in a graph with weighted edges**: the first comparisons are against the most similar Bevs you have ranked. Revision 2 decided where that graph lives and how the weights are computed: §1b items 28–31. → A-13, A-15, A-16, A-17, M-24, M-21, S-14, D-04
 27. **The scoring maths is documented as a LaTeX paper**, academic and proof-based, covering what exists and what we plan. → S-15 (done in this session), M-22, A-14
+
+### 1b. Decided in revision 2 (2026-10-14, after research)
+
+28. **Scope of the graph: it holds the relationships; Postgres keeps the record.** Neo4j stores `Bev`, `Category`, `Brand` and `Flavor` nodes and the weighted `SIMILAR_TO` edges. Supabase keeps the `bevs` row (photo, stats, foreign keys from rankings, the age-gate RLS, trigram search, dedupe, the prediction snapshot). A nightly job syncs new Bevs into the graph, recomputes the weights and writes each Bev's top-k edges back to a `bev_edges` table, so nothing a user taps ever waits on a cross-cloud call, and the app keeps working if the graph instance is paused. → A-15, A-16
+29. **Product: Neo4j AuraDB Free.** $0, no card: one instance, 200,000 nodes, 400,000 relationships, 1 GB, full Cypher, vector indexes (378 Bevs plus edges is under 1% of the cap). It auto-pauses after 72 hours without activity, does not auto-resume, and is deleted after 30 days paused, so the nightly sync doubles as the keep-alive and nothing lives only in the graph. Graph Data Science is a separate paid product; we compute similarity ourselves. Rejected: FalkorDB Cloud free (100 MB, stopped after a day idle, no persistence), Memgraph Cloud (14-day trial), Kùzu (archived October 2025), Dgraph Cloud (no free tier), MongoDB Atlas (a document store; `$graphLookup` is a capped recursive join, not a graph). SurrealDB Cloud's free instance was the runner-up. → A-15
+30. **Similarity edges are computed from three signals in v1, a fourth later:** (a) the taxonomy-plus-content rules already in the paper (tree similarity, brand, flavour tokens, price tier); (b) **text embeddings** of "brand name flavour category" from the free `gte-small` model that ships inside Supabase Edge Functions (384 dimensions, cosine); (c) a **flavour profile** per Bev (base family such as cola / citrus / coffee / matcha, carbonation, caffeine, sweetness, dairy, alcohol), labelled once for the catalog; (d) later, the **co-rating** signal from users who ranked both. Formula, weights and the Coke–Pepsi worked example: LaTeX §10.1, eq. (18). → M-24, A-16, A-17
+31. **Users and rankings stay in Supabase.** Auth, profiles, rankings, feed, streaks and leaderboards keep their RLS and RPCs. The graph gets **anonymised `RANKED` edges** (stable pseudonym, score, z-score, bucket), refreshed nightly, so graph-based recommendations and the co-rating signal can be computed there without any handle or birth date leaving Postgres. → A-16
+32. **The centre tab becomes Search, and the map lives inside it.** *"Instead of having the Add Bev button in the center, we change that to Search … that page has the Bev search at the top still, but then below the search bar is a map that the user can fully click into or just scroll around without fully clicking into. If they go to the search bar then the search results populate over the map. Make that UI very seamless."* So: no Maps tab, no List | Map toggle in Your Lists; the Add-a-Bev flows (Snap it, Can't find it) stay inside the search results. The grape circle in the tab bar stays; its label becomes **Search**, exactly as Beli labels it. → M-15, M-16
+33. **A Bev gets a location two ways:** an optional **"Where did you have it?"** step on every ranking (`rankings.venue_id`), so your Bev'd pins are where you actually drank; and **curated venue assortments** (chain presets for Duane Reade / CVS / Target, menus for craft spots), so Want to Try and Recommended pins exist before anyone has been there. → M-23, A-08, S-16
+34. **Map engine: Google Maps JavaScript API**, the stack Bev Maps already runs, reusing its Google Cloud project. A Bevi **Map ID** with a muted, POI-free cloud style gets the look close to Beli's; **Advanced Markers** draw our own score pins. The free Dynamic Maps allowance is 10,000 map loads per month and each `new google.maps.Map` is a load, so the map is created once per app session and re-parented (the Bev Maps pattern), never on every tab visit. → M-16, D-12
+35. **Venues come from OpenStreetMap plus our own curation.** An Overpass import of cafés, coffee shops, bars, delis, convenience stores, supermarkets, liquor stores and juice/tea shops inside the New York City boundary (OSM relation 175905), stored with attribution ("© OpenStreetMap contributors", ODbL), then curated by the two of us: craft spots we know, chain assortments, corrections. OSM opening hours are patchy in NYC, so **Open now is best-effort**. Google Places was rejected for the map because its data may not be cached and its per-SKU free tier is small; Bev Maps keeps using it for Find Bev. → A-08
+36. **The map is strictly New York City.** Google Maps `restriction` to the five-borough bounds (lat 40.477–40.918, lng −74.260 to −73.700) with `strictBounds`, minimum zoom around 10, default view centred on Manhattan; the venues table carries the same bounds as a CHECK constraint; the OSM import is clipped to the city boundary. No other city, no "City ▾" filter: it becomes **Neighborhood ▾**. → M-16, A-08
+37. **The map UI copies Beli's map as closely as the web allows** (§1c), with two additions: the **Find Bev** glass button and venue sheets listing the Bevs sold there. → M-16, M-17
+38. **Location privacy stays as it was.** We store the venue a user chose on a ranking, never GPS traces; "locate me" and "nearby" use the browser's position on the device only, while the Search tab is open, and send nothing but a venue id to the server. → M-23, S-09
+
+### 1c. The Beli map, screenshot by screenshot, and the Bevi mapping
+
+Reference images: `bevi-ui-inspiration/beli-map-images/` (README there describes each).
+
+| Beli element (images 01–03) | Bevi equivalent on the Search tab |
+|---|---|
+| Header "You" + avatar, "Been ▾" scope, share (web, Been map) | Not needed: the Search header keeps the wordmark; scope comes from the filters and the people toggle |
+| Floating segmented control `List \| Map` (dark fill on the active side) with a **people** circle button at its right | Same control over the map: `List` shows the venues in view as rows, `Map` the pins; the people button toggles **friends' pins** (venues where people you follow Bev'd) |
+| Filter row: `Filters 2`, `City ▾`, `Cuisine ▾`, `$, $$ ▾` (Been map); filter icon, `City ▾`, `Reserve`, `Order`, `Open now`, `Cuisine ▾` (Recs map) | `Filters N` (sheet: bucket / your score, Want to Try available, friends only), `Neighborhood ▾`, `Category ▾` (multi-select Bev categories), `$, $$ ▾` (price tiers of the Bevs sold there), `Open now`, `Retailer ▾` (Chains / Craft). `Reserve` and `Order` are dropped |
+| Teardrop pins coloured by score band with the score inside (Been map) | Venues where **you** have ranked something: teardrop in `scoreHigh` / `scoreMid` / `scoreLow` with **your best score there** |
+| White callout pins with a green circle holding a category icon (fork & knife, cocktail, ice cream, coffee) and the score in bold (Recs map) | Venues you have not ranked at: white callout, grape circle with the **category icon** of the venue's best Bev (or the venue kind), and the **best Bayesian score** of its assortment; **predicted score** with the dotted ring when a prediction exists |
+| ↗ trending badge, bookmark badge on some callouts | ↗ on venues with the most likes this week (A-04's popularity), bookmark where one of your Want to Try Bevs is sold |
+| Pins overlap at every zoom; no clustering | Same: no clustering; the server caps pins per viewport by zoom instead |
+| Blue location dot; locate button bottom-right | Same (device-only geolocation) |
+| `View List` dark pill bottom-right | Same, opens the list of venues in view |
+| Reservation bar "2 · Today · All Day" | Dropped |
+| (none) | **Find Bev** glass button bottom-centre, above the tab bar, exactly the Bev Maps button (`frontend/app/components/find-bev/glass-button.module.css` in `acheema5/bev-maps`), opens Bev Maps |
+| (none) | **Venue sheet** on pin tap: name, kind, neighborhood, open / closed, the Bevs sold there as `BevRow`s (your score or predicted, Rank it, Want to Try), "Rank it here" pre-fills the venue, "Walk there with Bev Maps" |
+
+Inline vs full screen (decision 32): under the search bar the map fills the rest of the screen and pans in place; tapping a pin, the `List | Map` control or an expand affordance opens the same map **full screen** with the full chrome and a close ✕; focusing the search bar slides the results panel **over** the map (Recents when idle, grouped results while typing, the sticky "Can't find it? Add a new Bev" footer); cancelling returns to the same map viewport. The map never steals gestures while the panel is up.
+
+### 1d. The Bev graph: what lives where
+
+```
+Supabase (Postgres)                    nightly job (A-16)                 Neo4j AuraDB Free (A-15)
+bevs, categories, brands  ──────────── sync nodes ───────────────────────▶ (:Bev)-[:IN_CATEGORY]->(:Category)-[:CHILD_OF]->(:Category)
+bev_flavor_profiles (A-17) ─────────── sync props ──────────────────────▶ (:Bev)-[:BY_BRAND]->(:Brand), (:Bev)-[:TASTES_OF]->(:Flavor)
+bev_embeddings (pgvector, gte-small) ─ sync vectors ────────────────────▶ Bev.embedding + vector index
+rankings (pseudonymised) ───────────── sync edges ──────────────────────▶ (:User {pseudonym})-[:RANKED {score, z, bucket}]->(:Bev)
+bev_edges  ◀────────────────────────── write back top-20 per Bev ◀──────── (:Bev)-[:SIMILAR_TO {w, tree, content, emb, profile, cop}]-(:Bev)
+   ▲
+   └── read by the app's hot path (anchored placement M-21, recommendations, "similar Bevs" rows); Neo4j is never on a request path
+```
+
+Weights: `w = 0.25·tree + 0.15·content + 0.30·embedding + 0.30·profile (+ co-rating later)`, top 20 edges per Bev with `w ≥ 0.3` (LaTeX §10.1). Sanity check the job must print: Coca-Cola ↔ Pepsi ≥ 0.8, Coca-Cola ↔ a sparkling water < 0.4.
 
 ---
 
@@ -69,7 +124,7 @@ These are the statements both of us agreed to. Everything in the task board belo
 
 - **Beli users don't use Beli for drinks.** Anisha, Jot and Raya: Beli is food; drinks *"not as much, obviously."* Takeaway: *"the market that we're in could be very good … something that's very low on Beli users' minds."* No task; this is the positioning.
 - **Cross-category comparisons feel wrong.** Anisha *"didn't like the idea of ranking against other types of cuisines … I'd always take mid Indian food over top-tier American food."* Both agreed: *"Oh, that's such a great point."* Consequence: when you rank a mocha, the first things you compare it against are other mochas, then other coffees, then the rest. *"It has to be that."* This is the single biggest algorithm change requested (M-21, LaTeX §10.1).
-- **How to get there:** finer, **hierarchical categories** (*"cafe → hot / cold → subcategories"*) and **a graph of Bevs where each edge holds a weight** (a similarity score, assigned by rules first, learned later). Storage note for Arjun: this is a graph *model*, not necessarily a graph *database*; at our size a `categories.parent_id` column plus a `bev_edges(src, dst, weight, kind)` table in Postgres does the job (A-13).
+- **How to get there:** finer, **hierarchical categories** (*"cafe → hot / cold → subcategories"*) and **a graph of Bevs where each edge holds a weight**. Revision 2 made this concrete: the graph is Neo4j AuraDB Free (§1b, §1d); the weights come from taxonomy, content, text embeddings and flavour profiles; the taxonomy itself is still to be written (D-04).
 
 ### Topic 2 — Our experience and immediate changes (P0)
 
@@ -87,11 +142,11 @@ For that to display 5.9 the global mean `m` was about 6.6 at that moment (`(3·6
 
 ### Topic 3 — UI / UX (P1)
 
-Decisions 14–17. Keep: theme, user page, compare step, note step, search. Change: density of lists and feed, gut-check button weight, score reveal, tab naming.
+Decisions 14–17. Keep: theme, user page, compare step, note step, search. Change: density of lists and feed, gut-check button weight, score reveal, and the centre tab (Search with the map, §1b item 32).
 
 ### Topic 4 — Additional features (P2)
 
-Decisions 17–22: the Search tab with Maps, the NYC map with category and retailer filters, Find Bev → Bev Maps, nutrition label via a VLM. Smart Recommend parked (D-03).
+Decisions 17–22 as revised: the Search tab's inline map (Beli UI, NYC only, Google Maps JS, OSM venues), Find Bev → Bev Maps, nutrition label via a VLM. Smart Recommend parked (D-03).
 
 ### Topic 5 — What is stored per user, and what is not
 
@@ -105,11 +160,12 @@ Asked as *"let's talk about what's not stored that needs to be stored."* Today t
 | Bev of the day / week | a per-period winner (computed or cached) | A-05 |
 | Category progress | total active Bevs per category | A-06 |
 | Icons / vessel | per-Bev icon asset and vessel kind (can, glass bottle, cup…) | A-07 |
-| Maps | venues, venue ↔ Bev links, chain vs craft | A-08 |
+| Maps | venues (OSM import + curation), venue ↔ Bev assortments, chain presets, `rankings.venue_id` | A-08, S-16 |
 | Nutrition | parsed nutrition facts per Bev, per serving and per 100 ml | A-09 |
 | Taste Profile | `user_category_stats` exists but **is never written** (`refresh_user_stats` only fills `user_stats`; `affinity_z` has no writer) | A-11 |
 | Duplicates | a duplicate-of target on reports, a merge routine | A-12 |
-| Finer categories | `categories.parent_id` (hierarchy), `bev_edges` weights | A-13 |
+| Finer categories | `categories.parent_id` (hierarchy) in Postgres and as `CHILD_OF` in the graph | A-13 |
+| The Bev graph | the Neo4j instance, its schema, the sync job, `bev_edges`, `bev_embeddings`, `bev_flavor_profiles`, stable user pseudonyms | A-15, A-16, A-17 |
 
 Already true and worth writing down: a user ranks a Bev **once** (`rankings` is unique on `(user_id, bev_id)`; a re-rank moves it). That is the "binary had-or-not" (S-09).
 
@@ -117,7 +173,7 @@ Already true and worth writing down: a user ranks a Bev **once** (`rankings` is 
 
 > "Instead of a markdown file, please design a LaTeX document describing the algorithm … in the format of academics doing research … proof based but also just outline all the mathematics that are used … including what we are thinking about further implementing."
 
-Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, propositions and proofs: pairwise placement and its bounds, score-from-position and the exact cents rounding, population statistics and z-scores, the category-affinity subtlety, the Bayesian leaderboard (with the 5.9 worked example), Layer 1 and Layer 2 prediction, the blend, exploration, cold start, rank points and streaks; then the proposed extensions from this session: category-aware (anchored) placement over a weighted Bev graph, Taste Profile, Bev of the period, likes and the Explore ranking, Smart Recommend on the map, nutrition normalisation, duplicate detection. It ends with the known places where SQL and TypeScript differ today.
+Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, propositions and proofs: pairwise placement and its bounds, score-from-position and the exact cents rounding, population statistics and z-scores, the category-affinity subtlety, the Bayesian leaderboard (with the 5.9 worked example), Layer 1 and Layer 2 prediction, the blend, exploration, cold start, rank points and streaks; then the proposed extensions from this session: category-aware (anchored) placement over the weighted Bev graph (now including the embedding and flavour-profile terms and the Neo4j decision), Taste Profile, Bev of the period, likes and the Explore ranking, Smart Recommend on the map, nutrition normalisation, duplicate detection. It ends with the known places where SQL and TypeScript differ today.
 
 ---
 
@@ -197,27 +253,41 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - Today the score only appears on `RankResult` after Save/Skip on the note step (`ScoreBubble 56` with `ZoomIn.springify()`), which is why it was missed. Change: compute the score locally the moment placement finishes (`storedScore(insertIndex, list.length + 1, bucket)` from `@bevi/ranking`; the server's re-spacing stores exactly this value, LaTeX §3) and show it **on the note step**: a 72pt bubble that pours in and **counts up to the number**, with "#4 of 31 in Loved" under it; the note field sits below. `RankResult` then confirms the saved value (unchanged unless a conflict occurred).
 - DoD: the number is visible before the note is written; reduced-motion shows it without the count-up; tests cover the local score equals the submitted result.
 
-**M-15 · Add Bev → Search, with a Maps tab.** `ui/search-tab`
-- `app/src/components/TabBar.tsx` labels the centre circle "Add Bev"; `app/src/app/(tabs)/add/index.tsx` has Bevs · People. Rename to **Search** (tab label, header, route stays `/add` or moves to `/search` with a redirect), add a third tab **Maps** that hosts M-16. The grape circle stays the design system's.
-- DoD: three tabs; deep links `?tab=people|maps`; the camera "Snap it" pill and "Can't find it? Add a new Bev" footer unchanged.
+**M-15 · The Search tab: search bar on top, the map underneath, results over the map.** `ui/search-tab` (decision 32)
+- Tab bar: `app/src/components/TabBar.tsx` labels the centre grape circle "Add Bev"; it becomes **Search** (Beli's label for the same circle). Route stays `/add` with a redirect from `/search`, or moves; `?tab=people` keeps working.
+- Layout, top to bottom: header (wordmark, ✕ close as today); the outlined `SearchBar` ("Search a Bev or a person"); the **Snap it** pill row; then the **map area** filling the rest of the screen (M-16 provides the map; until it lands, a static NYC placeholder with the same chrome).
+- Behaviour: the map pans and zooms **in place** without being "clicked into"; tapping a pin, the `List | Map` control or the expand affordance opens the **full-screen map** (a modal route, e.g. `/search/map`) with the full chrome from §1c and a close ✕. **Focusing the search bar** (or any text in it) slides the **results panel over the map** from under the bar: Recents while idle, then results while typing, the sticky "Can't find it? Add a new Bev" footer; clearing the bar or tapping Cancel slides it away and the map is exactly where it was. The map must not receive gestures while the panel is up (`pointerEvents="none"` on the map host).
+- People: one bar searches Bevs and people; results are grouped under "Bevs" and "People" section headers with the existing `BevRow`s and `UserRow`s (replaces the Bevs · People segmented tabs; D-10 if you prefer to keep the tabs).
+- Everything that exists today in `app/src/features/add-bev/BevSearch.tsx` and `features/people/PeopleSearch.tsx` is reused inside the panel; the create-Bev wizard and the ranking flow are untouched.
+- Needs: nothing from the backend for the shell; M-16 for the live map.
+- DoD: the tab reads "Search"; map visible and pannable under the bar; panel slides over and back without the map re-mounting; keyboard never covers results; tests for the panel state machine (idle → typing → results → cancelled).
 
 **M-19 · Taste Profile tab.** `ui/taste-profile`
 - Replace the "Coming soon" tab (`app/src/features/profile/ActivityList.tsx`) with the simple definition from the session: a bar list of **your average score per category** ("Coffee 8.1 · 9 ranked"), ordered high to low, with a one-line read-out ("You prefer coffee and boba over soda"). The §6.20 calendar and share card can come later.
 - Needs: S-12, A-11.
 - DoD: renders from `stats.getTasteProfile`, hides categories with no rankings, works on another user's profile.
 
+**M-24 · Edge-weight formulas in `packages/ranking`.** `rank/edge-weight` (decision 30)
+- Add, pure and vector-tested: `treeSimilarity(catA, catB, taxonomy)` (Wu–Palmer over `Category.parentId`), `profileSimilarity(a, b)` (eq. 17 in the paper: base family 0.40, carbonation 0.15, dairy 0.10, alcohol 0.05, caffeine closeness 0.15, sweetness closeness 0.15), `embeddingSimilarity(a, b)` (cosine clamped at 0), `edgeWeight({ tree, content, emb, profile, cop })` with `EDGE_WEIGHTS = { tree: 0.25, content: 0.15, emb: 0.30, profile: 0.30, cop: 0 }`, and `topEdges(candidates, k = 20, min = 0.3)`. Types for `FlavorProfile` and `Taxonomy`. New `edges.vectors.json` (golden vectors, including Coke–Pepsi and Coke–sparkling-water), `RANKING_VERSION` bump.
+- The nightly job (A-16) imports these; the app's anchored placement (M-21) consumes the resulting weights. Nothing here does I/O (package rule).
+- Needs: the flavour-profile schema from A-17 (agree the column names in S-14 first).
+- DoD: vectors committed; `npm test -w packages/ranking` green; bundle smoke passes.
+
 ### P2
 
-**M-16 · Maps tab: NYC map with filters.** `ui/maps`
-- Spec: a map of New York City (bounded to the five boroughs) with markers for spots that carry Bevs. Filter pills: **by Bev category** (multi-select; the session's example: pick Soda and the map gets crowded, pick Coffee and it gets interesting) and **by venue kind**: chain retailers (Duane Reade, CVS, Target carry a fixed subset) vs craft spots. Marker states: open / closed, popular. Tap a marker → sheet with the venue's Bevs (`BevRow`s, rank and save actions).
-- Library: evaluate MapLibre GL JS with free tiles vs Leaflet; no paid key if possible (D-08). Web-only, so a plain JS map component is fine.
-- Reference: add Bev Maps screenshots under `design/reference/bev-maps/` (the session asked for them).
-- Needs: S-10, A-08.
-- DoD: markers from `venues.list({ bbox, categoryIds, kinds })`, filters work, 60fps panning on an iPhone 12 Safari.
+**M-16 · The map: Beli's map UI on Google Maps, NYC only.** `ui/map` (decisions 34–37, §1c)
+- Engine: Google Maps JavaScript API via `@googlemaps/js-api-loader` in a web-only component (`MapView.web.tsx`; there is no native build). A Bevi **Map ID** (vector, cloud-styled: POI labels and transit off, muted palette, neighborhood labels on) created in the Bev Maps Google Cloud project; a second browser key restricted to Bevi's Vercel domain and localhost (D-12). Create the `google.maps.Map` **once per app session** and re-parent its element between the inline host and the full-screen host (the Bev Maps `minimap/maps.ts` pattern); each `new Map` is a billable load against the 10,000 free per month.
+- NYC: `restriction: { latLngBounds: NYC_BOUNDS, strictBounds: true }`, `minZoom: 10`, default centre Manhattan (zoom 12); `NYC_BOUNDS` lives in `shared/` so the venue CHECK constraint (A-08) uses the same numbers.
+- Pins: `AdvancedMarkerElement` with our own DOM: the teardrop (your score, band colour) and the white callout (category icon in a grape circle + score, dotted ring for predicted), ↗ and bookmark badges, 44pt targets, selected pin raised. No clustering (Beli doesn't); the viewport query (S-10) caps results by zoom.
+- Chrome, exactly §1c: `List | Map` control with the people button, the filter row (`Filters N`, `Neighborhood ▾`, `Category ▾`, `$, $$ ▾`, `Open now`, `Retailer ▾`), blue dot + locate button, `View List` pill, the venue sheet, and the Find Bev button (M-17). Design-system components for all of it first (`MapPin`, `MapCallout`, `MapFilterRow`, `VenueSheet`).
+- Data: `venues.inView({ bounds, zoom, filters })` → pins; `venues.get(id)` → sheet; friends' pins from `venues.friends(bounds)`; your own pins from your rankings' `venueId`.
+- Reference: `bevi-ui-inspiration/beli-map-images/`.
+- Needs: S-10, S-16, A-08, M-15.
+- DoD: Beli screenshots side by side with Bevi screenshots at the same three zooms; 60fps panning on an iPhone 12 Safari; map never created more than once per session (assert in a test on the loader wrapper); bounds cannot be escaped.
 
 **M-17 · The Find Bev button → Bev Maps.** `ui/find-bev-button`
-- Spec: the Bev Maps glassmorphic button, ported as-is into the design system and placed at the bottom of the Maps tab. Tapping opens Bev Maps (external URL, with the current map centre as parameters if Bev Maps accepts them). Later it becomes in-app.
-- DoD: component in `design/system` and `app/src/components/`; deep link works from the home-screen app.
+- Port the Bev Maps glass button (`acheema5/bev-maps`: `frontend/app/components/find-bev/glass-button.tsx` and `.module.css`, the `.glass` material from its `globals.css`) into the design system and the app, bottom-centre of the map above the tab bar, label **Find Bev**. Tapping opens Bev Maps (its production URL, `window.open` in a new tab; the home-screen app hands off to Safari). Bev Maps takes no URL parameters today; D-14 covers passing a Bev or venue later.
+- DoD: component in `design/system` and `app/src/components/`; deep link works from the home-screen app; reduced-transparency fallback.
 
 **M-18 · Nutrition on the Bev detail.** `ui/nutrition`
 - Spec: a collapsed "Nutrition" section on `bev/[id]` showing calories, sugar, caffeine, sodium **per serving and per 100 ml** (toggle), with the serving size, and the label thumbnail. Shown to everyone who opens the Bev but never on the feed or lists (decision 21).
@@ -228,11 +298,18 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - `app/src/features/bev/ReportSheet.tsx` already offers the `duplicate` reason; add a Bev search step to pick the original, sent as `duplicateOfId`.
 - Needs: S-13, A-12.
 
+**M-23 · "Where did you have it?" on every ranking.** `ui/ranking-venue` (decision 33)
+- An optional step after the note (or an "Add the spot" row on the note step): a sheet with **Nearby** (browser geolocation on tap only, nothing stored) and **search by name** over `venues.search`; pick one, or skip. Sent as `venueId` on `submitRanking` / `rerankBev`. "Rank it here" from a venue sheet (M-16) pre-fills it.
+- Surfaces: the feed post meta line ("at Devoción · Williamsburg"), Bev'd rows ("Ranked Oct 3 · Devoción"), and your teardrop pins on the map.
+- Needs: S-16, A-08.
+- DoD: ranking with and without a venue; nearby list within 300 m; no coordinates ever leave the device.
+
 ### P3 (needs a yes from both)
 
-**M-21 · Category-aware placement (anchored binary search).** `rank/anchored-placement`
-- The algorithm answer to Anisha's feedback. Specified in LaTeX §10.1: the user's bucket list is searched in two phases, first among **anchors** (ranked Bevs most similar to the new one, same subcategory first, then adjacent categories by edge weight), then among the remaining Bevs between the two anchors it landed between. Same `PlacementResult` shape (`insertIndex`, `expectedBucketSize`, `comparisons`), so `submit_ranking` is untouched; the comparison log stays consistent with the final index. Bump `RANKING_VERSION`, regenerate vectors (`contract/vectors-*`).
-- Needs: S-14 (bucket lists must carry each Bev's category and the similarity inputs; today `rankings.listBucket` returns ids only), A-13, D-04.
+**M-21 · Category-aware placement (anchored binary search) on the graph.** `rank/anchored-placement`
+- The algorithm answer to Anisha's feedback. Specified in LaTeX §10.1: the user's bucket list is searched in two phases, first among **anchors** (ranked Bevs most similar to the new one by edge weight `w`, same leaf first), then among the remaining Bevs between the two anchors it landed between. Same `PlacementResult` shape (`insertIndex`, `expectedBucketSize`, `comparisons`), so `submit_ranking` is untouched; the comparison log stays consistent with the final index. Bump `RANKING_VERSION`, regenerate vectors (`contract/vectors-*`).
+- Similarity inputs come from `bev_edges` through S-14 (`bevs.similarities`), with `treeSimilarity` from M-24 as the fallback when no edge exists.
+- Needs: S-14, A-13, A-16, M-24, D-04.
 - DoD: property tests: valid index, consistent log, first question is the most similar anchor when one exists, comparisons ≤ ⌈log₂(a+1)⌉ + ⌈log₂(g+1)⌉.
 
 **M-22 · Keep the maths paper and the package in step.** `chore/ranking-doc`
@@ -240,7 +317,7 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 
 ---
 
-## 4. Task board — Arjun (`supabase/`, `packages/api/`, `data/catalog/`)
+## 4. Task board — Arjun (`supabase/`, `packages/api/`, `data/catalog/`, `scripts/`)
 
 ### P0
 
@@ -262,7 +339,7 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - DoD: pgTAP for RLS and paging; live test.
 
 **A-04 · Explore.** `be/explore`
-- RPC `get_explore(p_limit, p_before)` over posts by users within two follows of the caller (recursive CTE on `follows`, depth ≤ 2, excluding the caller's own follows' posts already in the feed, D-01), ordered by a **time-decayed like count** (LaTeX §10.4: `(likes + 1) / (age_hours + 2)^1.5`; constant in one place). Also `get_popular_bevs(p_days)` for the "Bevs getting the most likes" ranking if the app wants a Bev-level list.
+- RPC `get_explore(p_limit, p_before)` over posts by users within two follows of the caller (recursive CTE on `follows`, depth ≤ 2, excluding the caller's own follows' posts already in the feed, D-01), ordered by a **time-decayed like count** (LaTeX §10.4: `(likes + 1) / (age_hours + 2)^1.5`; constant in one place). Also `get_popular_bevs(p_days)` for the "Bevs getting the most likes" ranking if the app wants a Bev-level list, and `get_popular_venues(p_days)` for the map's ↗ badge.
 - Needs: S-04, A-02.
 - DoD: `explain analyze` under 150 ms locally at 1k posts; live test.
 
@@ -289,12 +366,35 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - Needs: S-12.
 - DoD: golden-vector test against `shared/fixtures/user-stats.vectors.json`; live test.
 
+**A-15 · Neo4j AuraDB Free: the instance, the schema, the access path.** `be/graph-instance` (decisions 28, 29)
+- Instance: one AuraDB Free instance (region close to the Supabase project), credentials in Supabase secrets (`NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD`) and GitHub Actions secrets; never in `app/` or `packages/api`. Document in `docs/graph.md` (S-17): the 72-hour pause, the 30-day deletion, that the nightly write is the keep-alive, and that resuming a paused instance is a manual console action.
+- Schema (Cypher, idempotent `CREATE CONSTRAINT IF NOT EXISTS`): `(:Bev {id, name, brand, flavor, categoryId, vessel, priceTier, isAlcoholic, embedding, base, carbonated, caffeine, sweetness, dairy, alcohol})` unique on `id`; `(:Category {id, name, depth})` with `[:CHILD_OF]` to the parent; `(:Brand {key})` with `[:BY_BRAND]`; `(:Flavor {name})` with `[:TASTES_OF]`; `(:User {pseudonym})-[:RANKED {score, z, bucket, rankedAt}]->(:Bev)`; `(:Bev)-[:SIMILAR_TO {w, tree, content, emb, profile, cop, version, computedAt}]->(:Bev)` stored once per unordered pair (`src.id < dst.id`); a vector index on `Bev.embedding` (384 dimensions, cosine).
+- Access: a Supabase Edge Function `graph-query` (JWT-verified, read-only Cypher templates, no free-form queries from the client) for on-demand exploration such as "Bevs similar to X"; the official JavaScript driver or the Query API over HTTPS (port 443, the only one Aura exposes). The hot path (ranking flow, recommendations, Bev detail) reads Postgres only (`bev_edges`), never the graph.
+- DoD: instance up; schema script in `scripts/graph/schema.cypher` applied idempotently; `graph-query` returns the 10 nearest Bevs to a given id; `docs/graph.md` written.
+
+**A-16 · The nightly graph sync and edge computation.** `be/graph-sync` (decisions 28, 30, 31)
+- Where it runs: a GitHub Actions scheduled workflow (`.github/workflows/graph-sync.yml`, nightly after `refresh_all_stats`, plus `workflow_dispatch`), running `scripts/graph/sync.ts` with Node (no CPU limit, free minutes cover a few minutes a night). Fallback if Actions is not wanted: pg_cron → an Edge Function, mindful of its 2 s CPU cap.
+- Steps, idempotent and resumable: (1) read active Bevs, categories (with `parent_id`), flavour profiles and pseudonymised rankings from Postgres with the service role; (2) **embed** new or changed Bevs through an `embed` Edge Function (`Supabase.ai.Session('gte-small')`, normalised 384-d), stored in `bev_embeddings` (pgvector `vector(384)`, HNSW) and on the node; (3) build candidate pairs: same category subtree ∪ same brand ∪ the 50 nearest by embedding (pgvector or the Neo4j vector index); (4) weight each candidate with `edgeWeight()` from `@bevi/ranking` (M-24); (5) keep the top 20 per Bev with `w ≥ 0.3`; (6) `MERGE` nodes and edges in Neo4j in batched `UNWIND`s, delete edges that dropped out; (7) **write back** `bev_edges(src_bev_id, dst_bev_id, weight, components jsonb, version, computed_at)` in one transaction (truncate-and-insert is fine at this size); (8) mirror `RANKED` edges with a **stable pseudonym** (`encode(hmac(user_id, secret_salt), 'hex')`, never the per-call aliases the prediction snapshot uses); (9) touch a `(:Meta {lastSyncAt})` node (the keep-alive); (10) print the sanity report from §1d.
+- Failure modes: if the instance is paused the job fails loudly (Actions email) and nothing in the app degrades; a `--dry-run` prints the top-5 neighbours of Coca-Cola, Pepsi, Diet Coke, a matcha and Red Bull.
+- Needs: A-15, A-17, M-24, S-14 (the `bev_edges` RPC), S-17.
+- DoD: nightly run green for a week; `bev_edges` populated for every active Bev; Coke–Pepsi ≥ 0.8 and Coke–sparkling water < 0.4 in the report; `bevs.similarities()` live test.
+
+**A-17 · Flavour profiles for the catalog.** `be/flavor-profiles` (decision 30)
+- `data/catalog/flavor-profiles.csv`: `slug, base, carbonated, caffeine, sweetness, dairy, alcohol, serve, notes` with `base` from a fixed vocabulary (cola, citrus, lemon-lime, berry, tropical, apple, grape, orange, ginger, root-beer, cream, coffee, tea, matcha, chai, chocolate, nut, herbal, mineral, hop, wine, agave, grain, other), `carbonated/dairy/alcohol` booleans, `caffeine` and `sweetness` 0–3, `serve` hot/cold/either. Produced once by a sub-agent for the 378 seeds ("do this 378 times": Haiku), validated by `scripts/catalog/validate.ts` (vocabulary, ranges, every slug present), loaded by `catalog:migration` into `bev_flavor_profiles(bev_id, …)`, exposed on `Bev` reads. Matt reviews a sample of 30.
+- User-created Bevs: D-11 (nearest seeded Bev by embedding, flagged `inferred`, until a labelling step exists).
+- Needs: S-14 (column names agreed with M-24).
+- DoD: 378 rows validated and loaded; the sync job sees them.
+
 ### P2
 
-**A-08 · Venues for the Maps tab.** `be/venues`
-- Schema: `venues(id, name, kind chain|craft, lat, lng, address, neighborhood, hours jsonb, source, external_id)` with a NYC bounding-box check; `venue_bevs(venue_id, bev_id, verified_at)`; RPC `list_venues(p_bbox, p_category_ids[], p_kinds[])` returning venues with Bev counts; `get_venue(p_id)` with its Bevs. Seed from the Bev Maps backend (export of the NYC spots) plus chain presets (a Duane Reade carries the standard soda/energy/sports subset: encode as a `chain_assortments` table so one row covers every branch).
-- No location features for users: we store venue coordinates, never the user's (vision §17 still holds; the map centres on NYC, not on the user, unless they tap "locate me", which stays on-device).
-- Needs: S-10.
+**A-08 · NYC venues: OpenStreetMap import, curation, assortments.** `be/venues` (decisions 33, 35, 36)
+- Schema: `venues(id, name, kind chain|craft, osm_id, lat, lng, address, neighborhood, borough, hours_osm text, hours_known boolean, website, source osm|manual, status, updated_at)` with `CHECK (lat between 40.477 and 40.918 and lng between -74.260 and -73.700)` (the same `NYC_BOUNDS` as `shared/`); `chains(id, name, assortment_bev_ids[])` for Duane Reade / CVS / Target / 7-Eleven / Whole Foods presets; `venue_bevs(venue_id, bev_id, source menu|chain|ranking, verified_at)`; `rankings.venue_id` (S-16).
+- Import: `scripts/venues/import-osm.ts` queries Overpass for `amenity in (cafe, bar, pub, juice_bar)` and `shop in (convenience, supermarket, alcohol, beverages, coffee, tea, deli)` inside `area(3600175905)` (the New York City relation), identifies with a `User-Agent`, keeps `name, brand, opening_hours, addr:*`, assigns `kind = chain` when `brand` matches a chain preset, writes a reviewable CSV, then upserts by `osm_id`. Attribution "© OpenStreetMap contributors" in the venue sheet and the map's attribution control; keep the OSM-derived venue table separable from our own curation (assortments, scores) so the ODbL share-alike obligation, if ever invoked, covers only the venue table. Re-run monthly for new spots; manual rows (`source = manual`) are never overwritten.
+- Curation: the two of us add craft spots (coffee, cocktails, boba) and their menus as `venue_bevs`; a venue with no assortment and no ranking still exists but gets no pin until it has one (D-13).
+- RPCs (S-10): `venues_in_view(p_bounds, p_zoom, p_category_ids[], p_kinds[], p_price_tiers[], p_open_now, p_neighborhoods[], p_friends_only)` returning pins with the viewer's best score there, the best Bayesian or predicted score of the assortment, trending and Want-to-Try flags, capped by zoom (e.g. 60 pins at zoom 11, 300 at zoom 15); `venue_detail(p_id)`; `venues_search(p_q, p_lat, p_lng)` for the ranking step; `neighborhoods()` for the filter.
+- Open now: evaluate `opening_hours` (the `opening_hours` npm parser) in the RPC or the API for venues with `hours_known`; others show "Hours unknown".
+- Needs: S-10, S-16.
+- DoD: import runs clean for the five boroughs; `explain analyze` under 150 ms for `venues_in_view` with a GiST index on the point; pgTAP for the bounds constraint and the zoom cap.
 
 **A-09 · Nutrition extraction.** `be/nutrition`
 - Pipeline: when a `label` asset is uploaded (`media.upload({ kind: 'label' })`, already exists), an Edge Function `extract-nutrition` sends the image to a cheap hosted open-weight VLM (candidates to evaluate, D-09) with a strict JSON schema prompt and stores `bev_nutrition(bev_id, serving_ml, servings_per_container, calories, total_fat_g, sodium_mg, total_carb_g, sugars_g, added_sugars_g, protein_g, caffeine_mg, confidence, model, raw jsonb)`. Per-100 ml values are derived, not stored (LaTeX §10.6, with the sanity checks: calories ≈ 4·carbs + 4·protein + 9·fat within tolerance; reject and mark `needs_review` otherwise). Admin re-run RPC.
@@ -302,19 +402,19 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - DoD: 20 real labels parsed with ≥ 90% field accuracy on a hand-checked set; failures leave `nutrition = null` and never block the Bev.
 
 **A-10 · Bev Maps data link (later).** `be/bev-maps-sync`
-- After A-08: a scheduled job that refreshes `venues` from Bev Maps, and a stable id mapping so the Find Bev button can pass a Bev or venue through.
+- Bev Maps has no database of its own (it queries Google Places live), so there is nothing to sync today. When Bev Maps accepts URL parameters (D-14), expose a `venue_handoff(p_venue_id)` that returns what Find Bev needs (name, coordinates) so the button can pass a destination.
 
 **A-12 · Duplicates: identifiers, flagging, merging.** `be/duplicates`
 - Today: `find_similar_bevs` (pg_trgm over `search_text` + aliases) runs during create; `bev_reports.reason` already allows `'duplicate'`; `bevs.upc` exists with a unique index; `status = 'merged'` and `merged_into` exist but there is no merge routine.
-- Do: `report_bev` accepts `p_duplicate_of uuid`; admin RPC `merge_bev(p_src, p_dst)` that re-points rankings (if a user ranked both, keep the better-positioned one and remove the other with re-spacing), moves aliases and `want_to_try`, folds `bev_stats`, sets `status='merged'`; a view of pending duplicate reports for Studio. UPC becomes the strongest identifier (barcode scan was already in your §13 proposals).
+- Do: `report_bev` accepts `p_duplicate_of uuid`; admin RPC `merge_bev(p_src, p_dst)` that re-points rankings (if a user ranked both, keep the better-positioned one and remove the other with re-spacing), moves aliases, `want_to_try` and `venue_bevs`, folds `bev_stats`, sets `status='merged'`, and marks the Bev for the next graph sync (A-16 removes the node and its edges). A view of pending duplicate reports for Studio. UPC becomes the strongest identifier (barcode scan was already in your §13 proposals); the embedding neighbour from the graph becomes a second "Did you mean…" signal.
 - Needs: S-13.
 - DoD: pgTAP merge test preserving bucket invariants (`unique (user_id, bucket, position)`, scores re-spaced).
 
 ### P3
 
-**A-13 · Category hierarchy and the Bev graph.** `be/bev-graph`
-- `categories.parent_id` (self-reference; leaves are what Bevs point to; today's 15 ids become the second level, e.g. `coffee → coffee_hot, coffee_iced, matcha, mocha…`; the taxonomy itself is D-04). `bev_edges(src_bev_id, dst_bev_id, weight numeric(4,3), kind rule|learned, updated_at)` with weights from the formula in LaTeX §10.1 (tree similarity + content similarity, later co-preference), refreshed nightly. `get_prediction_snapshot()` gains `parentId` per category and, for the ranking flow, `rankings.listBucket` returns each Bev's category and brand so the app can order anchors (S-14).
-- This is a graph **model in Postgres**, which is what the maths needs; a graph database product is not required at our size (noted in LaTeX §10.1).
+**A-13 · Category hierarchy in both stores.** `be/category-tree`
+- `categories.parent_id` (self-reference; today's 15 ids become the second level, e.g. `coffee → coffee_hot, coffee_iced, matcha, mocha…`; the taxonomy itself is D-04), `depth` derived; `get_prediction_snapshot()` and `categories.list()` gain `parentId`; the sync (A-16) mirrors it as `CHILD_OF`. The age gate keys off the alcoholic ancestor, so RLS helpers walk up the tree (a `category_is_alcoholic(id)` function with the result cached in the table).
+- Needs: S-14, D-04.
 
 **A-14 · SQL ↔ TypeScript parity follow-ups.** `be/ranking-parity`
 - Known divergences (LaTeX §11): the SQL prior is the global mean only (`get_bev_leaderboard`, `refresh_global_stats`), while `@bevi/ranking` uses a category's own mean once it has 30 rankings; `affinity_z` has no writer (A-11); the leaderboard's tie-break order in SQL is `bayes desc` only, the package specifies `bayes desc, n desc, name asc (C collation), id asc`. Align, with golden-vector tests.
@@ -333,39 +433,46 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 | **S-06** | `UserLeaderboardRow.bevsCreated: number` (optional) | M-06 |
 | **S-07** | `Category.bevCount: number`; `StatsApi.getCategoryProgress()` → `{ categoryId, ranked, total }[]` | M-08, A-06 |
 | **S-08** | `BevSummary.artKind: ArtKind` (vessel enum shared by app and catalog); `CreateBevInput.vessel` | M-10, A-07 |
-| **S-09** | `vision.md` edits: vessels are not variants; one ranking per Bev per user ("binary"); Mexican Coke is its own Bev; icons over photos; feed = friends + Explore; Bev of the day/week; NYC only for maps and "area" | everyone |
-| **S-10** | `VenuesApi { list({ bbox, categoryIds?, kinds? }), get(id) }`; `Venue`, `VenueKind` types | M-16, A-08 |
+| **S-09** | `vision.md` edits: vessels are not variants; one ranking per Bev per user ("binary"); Mexican Coke is its own Bev; icons over photos; feed = friends + Explore; Bev of the day/week; NYC only; **the Bev graph lives in Neo4j AuraDB Free with Postgres as the system of record (§1b, §1d); the map is inside the Search tab, Google Maps JS, OSM venues, strictly NYC; rankings may carry a venue, GPS is never stored** | everyone |
+| **S-10** | `VenuesApi { inView({ bounds, zoom, filters }), get(id), search({ q, near? }), friends(bounds), neighborhoods() }`; `Venue`, `VenueKind`, `VenuePin { venue, myBestScore, bestScore, predictedScore, trending, wantToTryHere, openNow \| null }`; `NYC_BOUNDS` constant in `shared/` | M-16, M-23, A-08 |
 | **S-11** | `Bev.nutrition: Nutrition \| null` (per-serving fields + `servingMl`); a shared `per100ml()` helper in `shared/` | M-18, A-09 |
 | **S-12** | `StatsApi.getTasteProfile(userId)` → `{ categoryId, rankingCount, mean, affinity }[]` | M-19, A-11 |
 | **S-13** | `BevsApi.report(id, reason, opts?: { duplicateOfId })` | M-20, A-12 |
-| **S-14** | `RankingsApi.listBucket(bucket)` → `{ id, categoryId, brand }[]` (or a parallel `listBucketBevs`), `Category.parentId` | M-21, A-13 |
-| **S-15** | `docs/bevi-ranking-math.tex` + `.pdf` (this session). Both read it; comments become PRs against the `.tex` | M-22, A-14 |
+| **S-14** | `RankingsApi.listBucketBevs(bucket)` → `{ id, categoryId, brandKey }[]` (beside `listBucket`); `BevsApi.similarities(bevId, otherIds)` → `{ bevId, weight }[]` from `bev_edges`; `BevsApi.similar(bevId, n)` for "Bevs like this"; `Category.parentId`; `FlavorProfile` type and `Bev.flavorProfile` (column names agreed between M-24 and A-17) | M-21, M-24, A-13, A-16, A-17 |
+| **S-15** | `docs/bevi-ranking-math.tex` + `.pdf` (this session; §10.1 updated in revision 2 with the embedding and profile terms and the Neo4j decision). Both read it; comments become PRs against the `.tex` | M-22, A-14 |
+| **S-16** | `SubmitRankingInput.venueId?: string`; `Ranking.venue: VenueRef \| null`, `FeedItem.venue`, `RankedBev.venue`; `VenueRef { id, name, neighborhood }` | M-23, M-16, A-08 |
+| **S-17** | `docs/graph.md`: the graph schema, what Postgres owns vs the graph, the sync contract and its sanity report, secret names, the keep-alive rule, "Neo4j is never on a request path", how to resume a paused instance; plus a `supabase/CLAUDE.md` line pointing at it | A-15, A-16 |
 
 ---
 
-## 6. Decisions still open (D-nn)
+## 6. Decisions (D-nn)
 
 | Id | Question | Proposal (so a branch can start) |
 |---|---|---|
 | **D-01** | Explore scope: one hop, two hops, or global? Likes on comments? | Two hops (friends of friends); fall back to global while fewer than 20 users; no likes on comments this round. |
 | **D-02** | Bev of the day when nobody ranked anything today? Score definition: the Bev's overall Bayesian score vs. only that day's scores? | Overall Bayesian score among Bevs ranked in the period; if the period is empty, show the latest non-empty day with its date (LaTeX §10.3). |
 | **D-03** | Smart Recommend on the map | Parked under the guardrail (§0). Maths kept in LaTeX §10.5 so it is ready when wanted. |
-| **D-04** | The finer category taxonomy (which leaves under each of today's 15 ids) and how deep | Two levels: today's 15 become parents; add leaves only for coffee, tea, boba, soda, beer, cocktails first. Matt drafts in `design/taxonomy.md`, Arjun stores it. |
+| **D-04** | The finer category taxonomy (which leaves under each of today's 15 ids) and how deep | Two levels: today's 15 become parents; add leaves only for coffee, tea, boba, soda, beer, cocktails first. Matt drafts in `design/taxonomy.md`, Arjun stores it (Postgres `parent_id` and the graph's `CHILD_OF`). The flavour-profile `base` vocabulary (A-17) should line up with the leaves. |
 | **D-05** | Bucket buttons: tint by default or keep glass | Tint by default; glass only over a real photo. |
 | **D-06** | Price in lists: hide estimates (`~$`) or hide price entirely on rows | Hide on rows; keep on detail. |
 | **D-07** | Icon production: generated illustrations via the skill vs. web product photos | Generated illustrations in one style; photos only as fallback with a recorded licence. |
-| **D-08** | Map library and tiles | MapLibre GL JS + a free tile source; revisit if a key is needed. |
+| **D-08** | Map library and tiles | **Decided 2026-10-14: Google Maps JavaScript API with the Bev Maps Google Cloud project** (decision 34). MapLibre + OpenFreeMap (free, no key) stays the fallback if the free map-load allowance is ever exceeded. |
 | **D-09** | Nutrition VLM | Trial two cheap hosted open-weight vision models on 20 labels; pick by field accuracy per dollar. |
+| **D-10** | People search in the new Search tab: one bar with grouped Bevs / People results, or keep the Bevs · People segmented tabs above the bar | One bar, grouped results (M-15). |
+| **D-11** | Flavour profile for a Bev a user creates (no labelling step at runtime) | Copy the profile of the nearest seeded Bev by embedding, flagged `inferred`; a periodic sub-agent pass relabels inferred rows into the CSV. |
+| **D-12** | Google key and quota: second browser key in the Bev Maps project vs a separate project | Second key in the same project (one billing account, one budget alert), referrer-restricted to Bevi's domains; confirm in the console whether the free Dynamic Maps allowance pools across the two apps and split it if it does. |
+| **D-13** | Which venues get a pin | Only venues with at least one `venue_bevs` row or one ranking; bare OSM rows stay searchable in "Where did you have it?" but draw no pin. |
+| **D-14** | Find Bev handoff: what Bev Maps should accept (`?bev=`, `?venue=`, `?from=bevi`) | A change in `acheema5/bev-maps`; until then the button opens Bev Maps' home. |
 
 ---
 
 ## 7. Suggested order of work
 
-1. **Week 1 (P0, small):** S-01 → A-01 + M-01 · M-09 · M-11 · M-06 · M-07 · S-08/S-09 docs.
-2. **Week 2 (P0, social):** S-02/S-03 → A-02/A-03 + M-02/M-03 · S-05 → A-05 + M-05.
-3. **Week 3 (P0/P1):** S-04 → A-04 + M-04 · S-07 → A-06 + M-08 · M-10 + A-07 (icons) · M-12 · M-13 · M-14 · M-15.
-4. **Week 4 (P1):** S-12 → A-11 + M-19 · A-14 parity.
-5. **Then P2:** maps (S-10, A-08, M-16, M-17), nutrition (S-11, A-09, M-18), duplicates (S-13, A-12, M-20).
-6. **P3 only after both say yes:** D-04 → S-14 → A-13 → M-21.
+1. **Week 1 (P0, small):** S-01 → A-01 + M-01 · M-09 · M-11 · M-06 · M-07 · S-08/S-09 docs. **In parallel (graph foundation, no screens):** A-15 (instance + schema + `docs/graph.md`), S-14 column names, M-24 (edge formulas + vectors), A-17 (flavour profiles batch).
+2. **Week 2 (P0, social):** S-02/S-03 → A-02/A-03 + M-02/M-03 · S-05 → A-05 + M-05. **Graph:** A-16 nightly sync live; first sanity report.
+3. **Week 3 (P0/P1):** S-04 → A-04 + M-04 · S-07 → A-06 + M-08 · M-10 + A-07 (icons) · M-12 · M-13 · M-14 · **M-15 (Search tab shell)**.
+4. **Week 4 (P1):** S-12 → A-11 + M-19 · A-14 parity · D-04 taxonomy draft.
+5. **Then P2:** the map (S-10, S-16 → A-08 → M-16, M-17, M-23), nutrition (S-11, A-09, M-18), duplicates (S-13, A-12, M-20).
+6. **P3 only after both say yes:** A-13 → M-21 (anchored placement on `bev_edges`).
 
 Run `npm run typecheck && npm test` from the root and the lane's integrator agent before every PR, as before.

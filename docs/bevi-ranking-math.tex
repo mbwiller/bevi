@@ -60,7 +60,7 @@
 \maketitle
 
 \begin{abstract}
-Bevi asks a user to compare a beverage (``Bev'') against beverages they have already ranked and converts the answers into a personal 0--10 score, a global leaderboard and a prediction of how much a user would like a Bev they have not tried. This document states every formula the system uses, proves the properties the product relies on (termination and correctness of placement, exactness of stored scores, boundedness of predictions), explains the numbers users see (why two ratings of 7.6 and 2.0 display as 5.9), and specifies the extensions agreed in the 14 October 2026 session: category-aware comparisons over a weighted Bev graph, the Taste Profile, Bev of the day and of the week, likes and an Explore ranking, a Smart Recommend filter for the map, nutrition normalisation and duplicate detection. It closes with the places where the SQL and TypeScript implementations currently differ.
+Bevi asks a user to compare a beverage (``Bev'') against beverages they have already ranked and converts the answers into a personal 0--10 score, a global leaderboard and a prediction of how much a user would like a Bev they have not tried. This document states every formula the system uses, proves the properties the product relies on (termination and correctness of placement, exactness of stored scores, boundedness of predictions), explains the numbers users see (why two ratings of 7.6 and 2.0 display as 5.9), and specifies the extensions agreed in the 14 October 2026 session: category-aware comparisons over a weighted Bev graph (stored in Neo4j, weights from taxonomy, content, text embeddings and flavour profiles), the Taste Profile, Bev of the day and of the week, likes and an Explore ranking, a Smart Recommend filter for the map, nutrition normalisation and duplicate detection. It closes with the places where the SQL and TypeScript implementations currently differ.
 \end{abstract}
 
 \tableofcontents
@@ -425,15 +425,31 @@ Nothing in this section is implemented. Each subsection gives the definition pre
 equal to $1$ for the same leaf and decreasing as the common ancestor moves toward the root.
 \end{definition}
 
-\begin{definition}[Edge weight]
-\begin{equation}\label{eq:w}
-w(b, b') = \alpha\, \simi_T(b, b') + \beta\, \simi(b, b') + \gamma\, \simi_{\mathrm{cop}}(b, b'), \qquad \alpha + \beta + \gamma = 1,
+\begin{definition}[Embedding and profile similarity]
+Let $e_b \in \R^{384}$ be the unit-norm text embedding of ``brand, name, flavour, category'' (the \code{gte-small} model that ships with Supabase Edge Functions) and $\simi_{\mathrm{emb}}(b, b') = \max(0, e_b \cdot e_{b'})$. Let every Bev carry a \emph{flavour profile} $\pi_b = (\mathrm{base}, \mathrm{carb}, \mathrm{caff}, \mathrm{sweet}, \mathrm{dairy}, \mathrm{alc})$: a categorical base family (cola, citrus, coffee, matcha, \dots), carbonation, dairy and alcohol as binary flags, caffeine and sweetness on an ordinal $0..3$ scale. Then
+\begin{equation}\label{eq:prof}
+\begin{aligned}
+\simi_{\mathrm{prof}}(b, b') ={}& 0.40\,\ind{\mathrm{base}_b = \mathrm{base}_{b'}} + 0.15\,\ind{\mathrm{carb}_b = \mathrm{carb}_{b'}} \\
+&+ 0.10\,\ind{\mathrm{dairy}_b = \mathrm{dairy}_{b'}} + 0.05\,\ind{\mathrm{alc}_b = \mathrm{alc}_{b'}} \\
+&+ 0.15\Bigl(1 - \tfrac{\abs{\mathrm{caff}_b - \mathrm{caff}_{b'}}}{3}\Bigr) + 0.15\Bigl(1 - \tfrac{\abs{\mathrm{sweet}_b - \mathrm{sweet}_{b'}}}{3}\Bigr).
+\end{aligned}
 \end{equation}
-with the content similarity $\simi$ of \eqref{eq:sim} and a learned \emph{co-preference} term $\simi_{\mathrm{cop}}$: the cosine of the two Bevs' vectors of z-scores over their common raters, set to $0$ while fewer than $3$ users have ranked both. Proposed start: $(\alpha, \beta, \gamma) = (0.5, 0.3, 0.2)$ with $\gamma$ effectively $0$ until data exists. Edges below a threshold are not stored.
+Both similarities are symmetric and lie in $[0, 1]$.
 \end{definition}
 
-\begin{remark}
-This is a graph \emph{model}, not a requirement for a graph database. At Bevi's size a \code{categories.parent\_id} column and a \code{bev\_edges(src, dst, weight, kind)} table in Postgres, refreshed nightly, are sufficient; the ranking package only needs the weights between the new Bev and the user's ranked Bevs.
+\begin{definition}[Edge weight]
+\begin{equation}\label{eq:w}
+w(b, b') = \alpha\, \simi_T + \beta\, \simi + \delta\, \simi_{\mathrm{emb}} + \eta\, \simi_{\mathrm{prof}} + \gamma\, \simi_{\mathrm{cop}}, \qquad \alpha + \beta + \delta + \eta + \gamma = 1,
+\end{equation}
+every term evaluated at $(b, b')$, with the content similarity $\simi$ of \eqref{eq:sim} and the learned \emph{co-preference} term $\simi_{\mathrm{cop}}$: the cosine of the two Bevs' vectors of z-scores over their common raters, $0$ while fewer than $3$ users have ranked both. Decided 2026-10-14: the first version uses $(\alpha, \beta, \delta, \eta, \gamma) = (0.25, 0.15, 0.30, 0.30, 0)$ and switches $\gamma$ on (renormalising the others) once co-raters exist. For each Bev the $K_E = 20$ heaviest edges with $w \ge 0.3$ are stored; everything else is recomputed on demand.
+\end{definition}
+
+\begin{example}[Coca-Cola and Pepsi]
+Same leaf (cola) gives $\simi_T = 1$; content gives $0.5$ (same category and price tier, different brands, no shared flavour tokens); two colas embed close together, $\simi_{\mathrm{emb}}$ near $0.9$; identical profiles give $\simi_{\mathrm{prof}} = 1$. Hence $w \approx 0.25 + 0.075 + 0.27 + 0.30 \approx 0.90$. For Coca-Cola and a plain sparkling water the tree, content and profile terms all fall (different leaf, no shared tokens, different base and sweetness), and $w$ drops below $0.4$. The content term alone would have put the two colas at $0.5$, which is why the embedding and profile terms were added.
+\end{example}
+
+\begin{remark}[Where the graph lives]
+Decided 2026-10-14: the graph is stored in Neo4j AuraDB Free (\code{Bev}, \code{Category}, \code{Brand} and \code{Flavor} nodes; \code{SIMILAR\_TO} edges carrying $w$ and its components; pseudonymous \code{RANKED} edges), rebuilt nightly from Postgres, which stays the system of record for Bevs, users and rankings. The job writes each Bev's top-$K_E$ edges back to a \code{bev\_edges} table, so the ranking flow and the recommender read weights from Postgres and never wait on the graph. Neo4j is where similarity is computed and inspected (a vector index over $e_b$, taxonomy paths, co-rating neighbourhoods); it sits on no request path, and the nightly write is also what keeps a Free instance from pausing.
 \end{remark}
 
 \paragraph{Anchored placement.} Let $L = (\ell_0, \dots, \ell_{n-1})$ be the user's bucket list and $b$ the new Bev. Partition $L$ into \emph{tiers} by similarity to $b$: $T_1$ = same leaf category, $T_2$ = same parent, \dots, or more generally by decreasing $w(b, \ell_i)$ bands. Let $A = (a_1, \dots, a_k)$ be the members of the most similar non-empty tier, in list order, at positions $p_1 < \dots < p_k$ in $L$.
@@ -615,7 +631,7 @@ Version & Date & Change \\
 \midrule
 1.0.0 & 2026-10-09 & First vectors: bands 7/4, placement, exact cents, statistics, Bayesian average, rank points, streaks \\
 1.1.0 & 2026-10-11 & Prediction snapshot, Layers 1--2, blend, exploration, starter set; current \\
-(next) & --- & Anchored placement (Section~\ref{sec:anchored}) when adopted; requires a bump and new vectors \\
+(next) & --- & Edge weights \eqref{eq:w} as \code{edges.vectors.json}; anchored placement (Section~\ref{sec:anchored}) when adopted; each requires a bump and new vectors \\
 \bottomrule
 \end{tabular}
 \end{center}
