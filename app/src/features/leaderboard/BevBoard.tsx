@@ -49,6 +49,7 @@ export function BevBoard({ categoryId, header }: BevBoardProps) {
       return (
         <BevRow
           bev={item.bev}
+          showImage
           number={item.rank}
           score={item.bayesScore}
           count={item.ratingCount}

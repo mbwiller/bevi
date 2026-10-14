@@ -2,16 +2,19 @@ import type { Profile, UserLeaderboardRow } from '@bevi/shared';
 import { FlashList, type ViewToken } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { flattenPages, useFollow, useFollowing, useLeaderboardUsers, useMe, useStats, useUnfollow } from '@/api/hooks';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { SectionHeader } from '@/components/SectionHeader';
+import { Sheet } from '@/components/Sheet';
 import { Skeleton } from '@/components/Skeleton';
 import { UserRow } from '@/components/UserRow';
 import { formatCount } from '@/lib/format';
-import { size, spacing, useTheme } from '@/theme';
+import { size, spacing, type, useTheme } from '@/theme';
 
+import { pointsRules } from './copy';
 import { useAllPages, useToggleSet } from './useToggleSet';
 
 /** "212 pts · 84 Bevs". */
@@ -46,6 +49,7 @@ export function PeopleBoard() {
   const query = useLeaderboardUsers();
   const rows = useMemo(() => flattenPages(query.data), [query.data]);
   const meId = me.data?.id;
+  const [explainer, setExplainer] = useState(false);
 
   const following = useFollowing(meId);
   useAllPages(following);
@@ -129,6 +133,9 @@ export function PeopleBoard() {
         data={rows}
         renderItem={renderItem}
         keyExtractor={(r) => r.profile.id}
+        ListHeaderComponent={
+          <SectionHeader title="Ranked by points" action="How points work" onAction={() => setExplainer(true)} />
+        }
         ListEmptyComponent={empty}
         ListFooterComponent={query.isFetchingNextPage ? <PeopleSkeleton count={2} /> : <View style={styles.foot} />}
         onEndReached={() => {
@@ -144,6 +151,15 @@ export function PeopleBoard() {
         }}
       />
       {pinned}
+      <Sheet open={explainer} title="How points work" onClose={() => setExplainer(false)}>
+        <View style={styles.rules}>
+          {pointsRules().map((line) => (
+            <Text key={line} style={[type.body, { color: colors.text }]}>
+              {line}
+            </Text>
+          ))}
+        </View>
+      </Sheet>
     </View>
   );
 }
@@ -151,6 +167,7 @@ export function PeopleBoard() {
 const styles = StyleSheet.create({
   body: { flex: 1 },
   foot: { height: spacing.xxl },
+  rules: { gap: spacing.md, paddingHorizontal: spacing.gutter, paddingTop: spacing.sm },
   pinned: { borderTopWidth: 1 },
   skeletonRow: {
     flexDirection: 'row',
