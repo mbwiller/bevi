@@ -11,7 +11,12 @@ values ('00000000-0000-4000-8000-0000000000b1', 'pgtapfeed1@users.bevi.app',
         '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated');
 
 -- Two distinct non-alcoholic seed Bevs, picked deterministically.
+-- Created and filled as the owner, before the role switch below. A temp table
+-- is owned by whoever made it, so `authenticated` needs an explicit grant --
+-- without it every later lives_ok() dies with 42501 rather than testing
+-- anything (caught by CI on the first run).
 create temporary table t_bevs (n int primary key, id uuid) on commit drop;
+grant select on t_bevs to authenticated;
 insert into t_bevs (n, id)
 select row_number() over (order by b.name, b.id), b.id
   from public.bevs b
