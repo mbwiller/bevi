@@ -44,7 +44,11 @@ select is(
 -- Two posts by u1: one ordinary, one alcoholic.
 -- ---------------------------------------------------------------------------
 
+-- Made as the owner before the role switch; `authenticated` needs explicit
+-- grants or every later call dies with 42501 instead of testing anything.
+-- INSERT too, because the event ids are captured after the switch.
 create temporary table t_events (label text primary key, id bigint) on commit drop;
+grant select, insert on t_events to authenticated;
 
 set local role authenticated;
 set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000000c1", "role": "authenticated"}';
