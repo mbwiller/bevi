@@ -24,17 +24,16 @@ const AVATAR = 60;
  * 60pt transparent target over the avatar opens the actor's profile.
  */
 export const FeedPostItem = memo(function FeedPostItem({ item, you, onRank, onSave, onOpenBev, onOpenActor }: FeedPostItemProps) {
-  const saved = item.type === 'SAVED';
   return (
     <View>
       <FeedPost
         actor={item.actor}
         you={you}
-        verb={saved ? 'saved' : 'ranked'}
+        verb="ranked"
         bev={item.bev}
-        score={saved ? undefined : item.score}
-        bucket={saved ? undefined : item.bucket}
-        note={saved ? undefined : item.note}
+        score={item.score}
+        bucket={item.bucket}
+        note={item.note}
         time={item.createdAt}
         saved={item.inMyWantToTry}
         onRank={onRank}
