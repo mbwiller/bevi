@@ -7,6 +7,12 @@ Source: `CONVERSATION-2.md` (raw transcript). This file turns that conversation 
 - **The Bev graph moves to a graph database.** Bevs, categories, brands and flavour profiles become nodes in **Neo4j AuraDB Free** with similarity-weighted edges (Pepsi next to Coke); Supabase stays the system of record for the Bev row, users and rankings; a nightly job keeps the two in step and writes the edges back to Postgres for the hot path. §1b, §1d, A-15..A-17, M-24.
 - **The map lives in the Search tab.** The centre tab becomes **Search**: the Bev search bar on top, a live NYC map underneath that you can pan in place or open full screen, search results sliding over the map. The map copies Beli's map UI (three reference screenshots in `bevi-ui-inspiration/beli-map-images/`), is **strictly constrained to New York City**, runs on **Google Maps JS** with the Bev Maps key, draws venues imported from **OpenStreetMap** plus our own curation, and carries the **Find Bev** button that opens Bev Maps. §1b, §1c, M-15..M-17, M-23, A-08.
 
+**Progress (2026-10-14, evening, Matt with Claude).**
+- **Done, live and checked by Matt on the site:** M-09 (#60), M-11 (#61) and M-06 (#62). What shipped, and the corrections to the original task text, are under each task in §3.
+- **Every merge to `main` now deploys to production** at `bevi-gamma.vercel.app` (#58). Other branches never deploy. For a preview, run `vercel deploy` from the repo root, without `--prod`. Arjun's merges deploy too.
+- **CI on `main` breaks whenever Expo ships an SDK patch.** `expo-doctor` checks against Expo's current versions. #63 bumped the SDK 57 patches, and S-18 is the lasting fix.
+- **Next in Matt's lane:** M-07, which is decided and waits on the design-system change. Then the rest of §7.
+
 Lanes are the ones in `DEVELOPMENT-MATT.md` §1 / `DEVELOPMENT-ARJUN.md` §1 and do not change:
 
 | Owner | Paths | Branches |
@@ -215,10 +221,34 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - Today `app/src/features/leaderboard/BevBoard.tsx` renders `BevRow` without `showImage`; the row already supports it (`BevRow showImage` draws a 56pt `BevImage`). Turn it on. People rows already show the avatar; add an info affordance on the People board header explaining the points: "1 pt per Bev ranked · 3 per day of your current streak · 2 per Bev you added that someone else ranked" (the formula in `packages/ranking/src/rank.ts`; wording checked against `RANK_POINTS_WEIGHTS`).
 - Optional with S-06: show the breakdown per row ("84 Bevs · 4-day streak · 2 added").
 - DoD: icons on the Bevs board at all sizes; the points explainer sheet; tests updated.
+- **Done in #62:**
+  - The Bevs board now shows each Bev's image (`BevRow showImage`), as category placeholder art until A-07/M-10 ship real icons.
+  - The People board has a "Ranked by points" `SectionHeader` whose "How points work" link opens a `Sheet`.
+  - The sheet's lines come from `pointsRules()` in `features/leaderboard/copy.ts`, built from `RANK_POINTS_WEIGHTS`, so they can't drift from `rank.ts` or the SQL.
+  - There's no info icon, because `Icon.test.tsx` requires the app's icons to match the design system's set exactly.
+  - The S-06 per-row breakdown is not done.
+- **Follow-ups:**
+  - Screen readers announce the link as "How points work ranked by points". The label comes from `SectionHeader`; add an `actionLabel` prop.
+  - Build the streak line from `STREAK_PERIOD`, as the weights are.
+  - In the design system artifact, add the leaderboard to the BevRow README's list of `showImage` uses, and show images on ScreenLeaderboard.
 
 **M-07 · Score bubble: rethink the count badge.** `ui/score-count`
 - Today `ScoreBubble` draws the rating count as a small `primary` pill overlapping the bubble (bottom-right). Feedback: it reads like a vote tally and makes the score look off. Options (pick in the design system first): move the count into the row's meta line ("5.9 · 2 ratings"), or keep the badge but neutral (`input` fill, `textSecondary` text) and only above 10 ratings. Apply everywhere the bubble has `count` (leaderboard, search, Want to Try, Recommended, Bev detail).
 - DoD: design system updated; `ScoreBubble.test.tsx` updated; no `primary` badge on the score.
+- **Decided 2026-10-14 (Matt):** the badge goes. The count moves to the row's meta line, in words: "Your score 7.6 · 2 ratings".
+- **Step 1 (Matt with the design agent, on the artifact):**
+  - Drop ScoreBubble's `count` prop and badge.
+  - Make BevRow print `count` in the meta line.
+  - Remove "count badges" from the README's list of `primary` uses (line 21). The ScoreBubble README also names the `primary` badge.
+  - Update the ScoreBubble, BevRow and ScreenLeaderboard previews.
+  - Re-sync `design/system/` as the branch's first commit.
+- **Step 2 (`ui-screen`):**
+  - `ScoreBubble`: remove `count`, the badge and ", N ratings" from the accessible label.
+  - New `formatRatings(n)` in `@/lib/format` ("1 rating", "12 ratings", "5k ratings").
+  - `BevRow` keeps its `count` prop and appends ` · ${formatRatings(count)}` to `meta` when `count > 0`. The call sites (BevBoard, BevSearch, WantToTryTab, RecommendedTab) stay as they are.
+  - `BevStats` reuses `formatRatings` in place of its local `ratings()` and drops `count` from its bubble, since the tile meta already prints it.
+  - Update the ScoreBubble, BevRow and Leaderboard tests: the meta text gains " · N ratings", and the label `'Predicted score 8.2, 58 ratings'` in `BevRow.test.tsx` loses the count.
+  - It overlaps M-12 (density), so do M-07 first.
 
 **M-08 · Your Lists › Bev'd: gamify.** `ui/bevd-gamified`
 - Spec: **icons on every row** (`BevRow showImage` in `BevdTab.tsx`, which currently has `actions={false}` and no image); a **category progress strip** above the list ("Soda · 4 of 61 tried · 7%") driven by A-06; and one visual "graph of Bevs" (e.g. a horizontal bar per category of your ranked count vs catalog size, or a collection grid of icons you've unlocked). Keep the rows less crowded (see M-12).
@@ -226,8 +256,17 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - DoD: rows show icons, progress strip shows real counts, test for the percentage copy (never show 0% as "0.4%"; round down).
 
 **M-09 · Bug: sort toggle scrolls the list to the bottom.** `ui/fix-sort-jump`
-- Where: `app/src/features/lists/BevdTab.tsx` cycles `sort` on `SortToggle` press; the whole `header` (filters + toggle) is the FlashList's `ListHeaderComponent`, and the query key changes, so the list re-mounts its data and the viewport lands at the end. Fix: keep the header outside the list or memoised, call `scrollToOffset({ offset: 0, animated: false })` on sort change (keep a list ref), or render the header as a sticky element above `BevList`. Check the same pattern in `RecommendedTab` and `WantToTryTab`.
 - DoD: tapping Score → Recent → Name keeps the viewport at the top; a test asserts the list ref's scroll call or that the header stays mounted.
+- **Done in #60. The root cause was not the one first written here.** The header wasn't the problem: FlashList 2.0.2 turns `maintainVisibleContentPosition` (MVCP) on by default.
+  - MVCP remembers the key of the first visible row and keeps that key across the empty "loading" state.
+  - When the sort changes the query key, the rows come back in a new order, and MVCP scrolls to wherever that row now sits, often the bottom.
+  - Bev'd's Bucket and Category filters had the same bug.
+- **The fix:**
+  - `BevList` disables MVCP. Every list built on it is anchored at the top and loads more at the bottom.
+  - `BevList` gains an optional `resetScrollKey` prop that scrolls to offset 0 when the key changes, but not on first mount.
+  - `BevdTab` passes `sort|bucket|categoryId` as the key.
+- **Not touched:** Recommended and Want to Try don't change their sort.
+- **Optional nit:** the reset runs in `useEffect`. `useLayoutEffect` would avoid a possible one-frame flash when the new sort is already cached.
 
 **M-10 · Bev icons: the style, the skill, the component.** `ui/bev-icons` (with Arjun's A-07)
 - Decision 11: icons over photos for identity. Matt owns the look (`design/`): write `design/icons/STYLE.md` (one consistent illustrated cutout style: transparent background, fixed canvas, vessel-true, brand colours, no logos), make **one great reference icon**, then a `.claude/skills/bev-icon/SKILL.md` that produces icons in that style from a Bev's fields (name, brand, flavor, vessel). Arjun runs it across the catalog and uploads (A-07); Matt reviews a sample before the batch.
@@ -236,8 +275,15 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 
 **M-11 · Dark mode: status bar area is white on the home-screen app.** `ui/dark-statusbar`
 - Where: `app/public/index.html` sets `apple-mobile-web-app-status-bar-style="default"` and `app/public/manifest.json` has `"theme_color": "#ffffff"` (one value, no dark variant). iOS paints the status-bar strip from these, not from the app's `SafeAreaView` background, so it stays white in dark mode. The two `theme-color` metas already have light/dark media queries.
-- Fix: set `apple-mobile-web-app-status-bar-style` to `black-translucent` so the page extends under the status bar (the app already uses `viewport-fit=cover` and `SafeAreaView edges=['top']`, so nothing overlaps), give `body` a `prefers-color-scheme` background matching `surface` in both themes so nothing white flashes under the inset, and remove or darken the manifest `theme_color`. Verify on a real iPhone from the home screen; this cannot be checked in jest.
 - DoD: screenshots light and dark from the home-screen app with the strip matching the page.
+- **Done in #61 and checked on Matt's iPhone. The first proposal here was wrong:** a fixed `black-translucent` would break light mode. iOS always draws the status-bar symbols white with it, so the clock and battery would disappear on the white header.
+- **What shipped:**
+  - An inline `#status-bar-style` script in `index.html` sets `black-translucent` only when `prefers-color-scheme: dark` matches at launch. Light mode stays `default`.
+  - `html, body` get the `surface` background in each theme.
+  - `<meta name="color-scheme" content="light dark">` is added.
+  - The single-valued `theme_color` is removed from `manifest.json`.
+  - `src/__tests__/htmlShell.test.ts` ties the colours to the theme tokens.
+- **Known limit:** iOS reads the style at launch, so changing appearance while the app is open only takes effect on the next launch.
 
 ### P1
 
@@ -272,6 +318,11 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - The nightly job (A-16) imports these; the app's anchored placement (M-21) consumes the resulting weights. Nothing here does I/O (package rule).
 - Needs: the flavour-profile schema from A-17 (agree the column names in S-14 first).
 - DoD: vectors committed; `npm test -w packages/ranking` green; bundle smoke passes.
+
+**M-25 · Recommended's "Predicted" sort toggle does nothing.** `ui/recs-sort-toggle` (found during M-09)
+- `RecommendedTab.tsx` renders `<SortToggle label="Predicted" onSearch={false} />` with no `onPress`, so screen readers get a button that does nothing.
+- Fix: give `SortToggle` a non-interactive form (no `onPress` → plain text, no `button` role), or drop it from Recommended. Recommendations have one order.
+- DoD: no touchable without an action on Recommended; test updated.
 
 ### P2
 
@@ -442,6 +493,8 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 | **S-15** | `docs/bevi-ranking-math.tex` + `.pdf` (this session; §10.1 updated in revision 2 with the embedding and profile terms and the Neo4j decision). Both read it; comments become PRs against the `.tex` | M-22, A-14 |
 | **S-16** | `SubmitRankingInput.venueId?: string`; `Ranking.venue: VenueRef \| null`, `FeedItem.venue`, `RankedBev.venue`; `VenueRef { id, name, neighborhood }` | M-23, M-16, A-08 |
 | **S-17** | `docs/graph.md`: the graph schema, what Postgres owns vs the graph, the sync contract and its sanity report, secret names, the keep-alive rule, "Neo4j is never on a request path", how to resume a paused instance; plus a `supabase/CLAUDE.md` line pointing at it | A-15, A-16 |
+| **S-18** | `.github/workflows/app.yml`: stop `expo-doctor`'s dependency-version check from turning `main` red when Expo ships an SDK patch (it compares against Expo's *current* expected versions; this happened at #58, fixed by #63). Make that check advisory (its own step with `continue-on-error`, or exclude it) and keep the other doctor checks blocking. Bump patches with `npx expo install --fix` from `app/` in a small `ui/*` PR when it warns | `main` CI stays green |
+| **S-19** | `.claude/agents/ui-screen.md` asks for a `ComponentGallery` entry, but no such screen exists in `app/src`. Either drop that step or build the gallery (DEVELOPMENT-MATT §4 planned one) | ui-screen runs |
 
 ---
 
@@ -468,7 +521,7 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 
 ## 7. Suggested order of work
 
-1. **Week 1 (P0, small):** S-01 → A-01 + M-01 · M-09 · M-11 · M-06 · M-07 · S-08/S-09 docs. **In parallel (graph foundation, no screens):** A-15 (instance + schema + `docs/graph.md`), S-14 column names, M-24 (edge formulas + vectors), A-17 (flavour profiles batch).
+1. **Week 1 (P0, small):** S-01 → A-01 + M-01 · ~~M-09~~ (#60) · ~~M-11~~ (#61) · ~~M-06~~ (#62) · M-07 (decided; waits on the design-system change) · S-08/S-09 docs · M-25, S-18, S-19 (small, found on 2026-10-14). **In parallel (graph foundation, no screens):** A-15 (instance + schema + `docs/graph.md`), S-14 column names, M-24 (edge formulas + vectors), A-17 (flavour profiles batch).
 2. **Week 2 (P0, social):** S-02/S-03 → A-02/A-03 + M-02/M-03 · S-05 → A-05 + M-05. **Graph:** A-16 nightly sync live; first sanity report.
 3. **Week 3 (P0/P1):** S-04 → A-04 + M-04 · S-07 → A-06 + M-08 · M-10 + A-07 (icons) · M-12 · M-13 · M-14 · **M-15 (Search tab shell)**.
 4. **Week 4 (P1):** S-12 → A-11 + M-19 · A-14 parity · D-04 taxonomy draft.
@@ -476,3 +529,9 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 6. **P3 only after both say yes:** A-13 → M-21 (anchored placement on `bev_edges`).
 
 Run `npm run typecheck && npm test` from the root and the lane's integrator agent before every PR, as before.
+
+Lessons from week 1 (Matt's lane, with sub-agents):
+- **Check every agent report against `git diff --stat origin/main...HEAD` before trusting it.** An agent once reported a test that never reached the commit.
+- **A fresh worktree needs `npm ci` at its root.**
+- **Only one agent at a time may edit `app/src/app/_layout.tsx` or `(tabs)/_layout.tsx`.** None of M-06/M-09/M-11 touched them. M-15 will.
+- **Since #58 a merge to `main` is a production deploy.** Do the device and visual checks before merging, or on a `vercel deploy` preview.
