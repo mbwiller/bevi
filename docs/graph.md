@@ -62,6 +62,11 @@ those rotate and co-rating needs stability.
 1. **It auto-pauses after 72 hours without activity, and does not auto-resume.**
    The nightly sync's write to `(:Meta)` is what keeps it awake — the
    keep-alive is a side effect of doing real work, not a separate ping.
+   **Until A-16 exists**, `.github/workflows/graph-keepalive.yml` bridges the
+   gap: once a day it runs `npm run graph:keepalive`, which stamps
+   `(:Meta).lastKeepAliveAt`. Delete that workflow and
+   `scripts/graph/keepalive.ts` when `graph-sync.yml` runs nightly. Without
+   the `NEO4J_*` Actions secrets it logs a warning and does nothing.
 2. **A paused instance is deleted after 30 days.** Because nothing lives only
    in the graph, that is a rebuild, not data loss. Still worth not doing.
 3. **Resuming is a manual console action.** There is no API for it on the free
@@ -86,6 +91,11 @@ npm run graph:schema -- --dry-run # print the statements, connect to nothing
 Every statement is `IF NOT EXISTS`, so re-running is a no-op. That is the
 idempotency guarantee A-15's definition of done asks for — run it twice and the
 second run changes nothing.
+
+`(:Bev)` properties the sync writes: `id`, `name`, `brand`, `flavor`,
+`categoryId`, `priceTier` and **`isAlcoholic`** (from the category, walking up
+the tree once A-13 lands). `isAlcoholic` is mandatory: `graph-query` treats a
+Bev without it as alcoholic and never returns it.
 
 Neo4j cannot express "at most one `SIMILAR_TO` per unordered pair", so the sync
 enforces it by convention: it only ever writes the direction where
@@ -124,7 +134,7 @@ See `supabase/.env.example`.
 
 | Name | Where | Used by |
 |---|---|---|
-| `NEO4J_URI` | Supabase secrets, Actions secrets, `supabase/.env` | `graph-query`, `graph:schema`, the sync |
+| `NEO4J_URI` | Supabase secrets, Actions secrets, `supabase/.env` | `graph-query`, `graph:schema`, `graph:keepalive`, the sync |
 | `NEO4J_USERNAME` | same | same |
 | `NEO4J_PASSWORD` | same | same |
 | `NEO4J_DATABASE` | same, optional (`neo4j` is the default) | same |
@@ -144,6 +154,12 @@ verified. The client names one of a fixed set of templates (`similar`, `bev`,
 `meta`) and passes values that are bound as Cypher parameters. There is no
 path by which caller input becomes Cypher text, and no free-form query is
 accepted. If you add a template, keep that property.
+
+**Age gate.** Postgres hides alcoholic Bevs from anyone not verified 21+
+(`bevs` RLS, `viewer_is_adult()`). `graph-query` runs as no user and any
+holder of the publishable key passes `verify_jwt`, so it fails closed: every
+template filters on `coalesce(isAlcoholic, true) = false`. Any new template
+must do the same, or check `viewer_is_adult()` with the caller's JWT first.
 
 ```bash
 # local

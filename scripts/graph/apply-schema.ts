@@ -48,7 +48,7 @@ export function queryApiUrl(uri: string, database: string): string {
   return `https://${host}/db/${database}/query/v2`;
 }
 
-async function run(statement: string, url: string, auth: string): Promise<void> {
+export async function run(statement: string, url: string, auth: string): Promise<void> {
   const response = await fetch(url, {
     method: "POST",
     headers: {
@@ -85,7 +85,7 @@ async function main(): Promise<void> {
   const uri = process.env.NEO4J_URI;
   const username = process.env.NEO4J_USERNAME;
   const password = process.env.NEO4J_PASSWORD;
-  const database = process.env.NEO4J_DATABASE ?? "neo4j";
+  const database = process.env.NEO4J_DATABASE || "neo4j";
 
   const missing = [
     ["NEO4J_URI", uri],
@@ -112,9 +112,12 @@ async function main(): Promise<void> {
   console.log("schema applied. Re-running is a no-op.");
 }
 
-main().catch((error: unknown) => {
-  // A paused instance fails here with a connection error. Resuming is a manual
-  // console action (docs/graph.md); nothing in the app degrades meanwhile.
-  console.error(`graph:schema failed\n${error instanceof Error ? error.message : String(error)}`);
-  process.exit(1);
-});
+// Only when run directly, so scripts/graph/keepalive.ts can import the helpers.
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch((error: unknown) => {
+    // A paused instance fails here with a connection error. Resuming is a manual
+    // console action (docs/graph.md); nothing in the app degrades meanwhile.
+    console.error(`graph:schema failed\n${error instanceof Error ? error.message : String(error)}`);
+    process.exit(1);
+  });
+}

@@ -15,7 +15,8 @@
     "test": "npm run test --workspaces --if-present",
     "catalog:validate": "node --experimental-strip-types scripts/catalog/validate.ts",
     "catalog:migration": "node --experimental-strip-types scripts/catalog/build-seed-migration.ts",
-    "graph:schema": "node --experimental-strip-types scripts/graph/apply-schema.ts"
+    "graph:schema": "node --experimental-strip-types scripts/graph/apply-schema.ts",
+    "graph:keepalive": "node --experimental-strip-types scripts/graph/keepalive.ts"
   },
   "overrides": {
     "react": "19.2.3"

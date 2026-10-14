@@ -10,12 +10,22 @@
 // the client can only name a template. There is no path by which caller input
 // reaches Cypher as text: every template is a fixed string, and every value is
 // bound as a named parameter. Do not add a template that interpolates.
+//
+// Age gate: Postgres hides alcoholic Bevs from anyone not verified 21+ (the
+// `bevs` select policy and `viewer_is_adult()`). This function runs as no user
+// and any holder of the publishable key passes verify_jwt, so it cannot apply
+// that check -- it fails closed instead and never returns an alcoholic Bev. A
+// node without `isAlcoholic` counts as alcoholic, so a sync that forgets the
+// property hides Bevs rather than leaking them. Serving adults the full graph
+// means checking `viewer_is_adult()` with the caller's JWT first.
 
 const TEMPLATES = {
   // Nearest neighbours by the nightly SIMILAR_TO weight. Read undirected: the
   // sync only ever writes the src.id < dst.id direction (schema.cypher).
   similar: `
     MATCH (b:Bev { id: $bevId })-[s:SIMILAR_TO]-(other:Bev)
+    WHERE coalesce(b.isAlcoholic, true) = false
+      AND coalesce(other.isAlcoholic, true) = false
     RETURN other.id AS id, other.name AS name, other.brand AS brand,
            s.w AS weight, s.tree AS tree, s.content AS content,
            s.emb AS emb, s.profile AS profile
@@ -25,6 +35,7 @@ const TEMPLATES = {
   // The Bev's own node, for checking what the sync actually wrote.
   bev: `
     MATCH (b:Bev { id: $bevId })
+    WHERE coalesce(b.isAlcoholic, true) = false
     OPTIONAL MATCH (b)-[:IN_CATEGORY]->(c:Category)
     OPTIONAL MATCH (b)-[:BY_BRAND]->(br:Brand)
     RETURN b.id AS id, b.name AS name, b.brand AS brand,
@@ -34,7 +45,7 @@ const TEMPLATES = {
   // human can check liveness without the Aura console.
   meta: `
     MATCH (m:Meta { key: 'singleton' })
-    RETURN m.lastSyncAt AS lastSyncAt
+    RETURN m.lastSyncAt AS lastSyncAt, m.lastKeepAliveAt AS lastKeepAliveAt
   `,
 } as const;
 

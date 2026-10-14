@@ -5,7 +5,7 @@
 // allow-list, uuid validation and limit clamping. Anything past that needs a
 // live graph and belongs to A-16's sanity report.
 
-import { assertEquals } from "jsr:@std/assert";
+import { assertEquals } from "jsr:@std/assert@1";
 
 const FUNCTION_URL = Deno.env.get("GRAPH_QUERY_URL") ?? "http://127.0.0.1:54321/functions/v1/graph-query";
 const ANON_KEY = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? "";

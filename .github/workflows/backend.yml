@@ -29,6 +29,9 @@ on:
       - "packages/ranking/**"
       - "scripts/**"
 
+permissions:
+  contents: read
+
 jobs:
   db:
     runs-on: ubuntu-latest
@@ -103,9 +106,10 @@ jobs:
 
       - run: deno check supabase/functions/graph-query/index.ts
 
-      # graph-query's own tests skip themselves unless a local
-      # `supabase functions serve` is answering, so this is a no-op in CI
-      # until the serve step is worth adding.
+      # graph-query's input-validation tests. They skip when nothing answers
+      # on 127.0.0.1:54321, but `supabase start` above already serves every
+      # function in supabase/functions, so in CI they do run (with no NEO4J_*
+      # set, nothing upstream is ever called).
       - run: deno test --allow-net --allow-env supabase/functions/graph-query/test.ts
 
       - run: npm run catalog:validate
@@ -164,5 +168,5 @@ jobs:
       #     SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
       - run: |
-          echo "deploy-dev is stubbed: no hosted Supabase project exists yet."
-          echo "See the TODO comments in this job for what it needs before it can run."
+          echo "deploy-dev is stubbed on purpose: enabling db push needs a backup step first."
+          echo "See the comments in this job for what it needs before it can run."
