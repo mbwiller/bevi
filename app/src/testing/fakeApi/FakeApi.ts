@@ -542,6 +542,8 @@ export class FakeApi implements BeviApi {
         .filter((r) => r.bevId === b.id && followed.has(r.userId))
         .map((r) => ({ profile: this.toProfile(this.user(r.userId), viewer), score: r.score, bucket: r.bucket })),
       isStarter: b.isStarter,
+      // The fake catalog carries no flavour profiles; null is the contract's "not labelled yet".
+      flavorProfile: null,
     };
   }
 
