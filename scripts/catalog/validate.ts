@@ -15,7 +15,15 @@
  * contains a comma -- which is the convention this catalog follows.
  */
 
-import { aliasesOf, loadBevRows, loadCategories, type Category } from "./catalog.ts";
+import {
+  aliasesOf,
+  FLAVOR_BASES,
+  FLAVOR_SERVES,
+  loadBevRows,
+  loadCategories,
+  loadFlavorProfileRows,
+  type Category,
+} from "./catalog.ts";
 
 function main(): void {
   const errors: string[] = [];
@@ -130,6 +138,95 @@ function main(): void {
     }
   }
 
+  // -------------------------------------------------------------------------
+  // flavor-profiles.csv (A-17)
+  // -------------------------------------------------------------------------
+  // The graph's `profile` edge term reads these, so a wrong value is a wrong
+  // recommendation rather than a crash -- which is why every field is checked
+  // strictly and every slug must be accounted for in both directions.
+
+  const profileRows = loadFlavorProfileRows();
+  const profileBySlug = new Map<string, number>();
+  const bases = new Set<string>(FLAVOR_BASES);
+  const serves = new Set<string>(FLAVOR_SERVES);
+
+  for (const row of profileRows) {
+    const line = row.__line;
+
+    const firstLine = profileBySlug.get(row.slug);
+    if (firstLine !== undefined) {
+      errors.push(`flavor-profiles.csv line ${line}: duplicate slug "${row.slug}" already seen at line ${firstLine}`);
+    } else {
+      profileBySlug.set(row.slug, line);
+    }
+
+    if (!seenSlugs.has(row.slug)) {
+      errors.push(`flavor-profiles.csv line ${line}: slug "${row.slug}" is not in bevs.csv`);
+    }
+
+    if (!bases.has(row.base)) {
+      errors.push(
+        `flavor-profiles.csv line ${line}: base must be one of ${FLAVOR_BASES.join("|")}, got "${row.base}" (slug=${row.slug})`
+      );
+    }
+
+    for (const [col, value] of [
+      ["carbonated", row.carbonated],
+      ["dairy", row.dairy],
+      ["alcohol", row.alcohol],
+    ] as const) {
+      if (value !== "true" && value !== "false") {
+        errors.push(
+          `flavor-profiles.csv line ${line}: ${col} must be exactly "true" or "false", got "${value}" (slug=${row.slug})`
+        );
+      }
+    }
+
+    for (const [col, value] of [
+      ["caffeine", row.caffeine],
+      ["sweetness", row.sweetness],
+    ] as const) {
+      if (!/^[0-3]$/.test(value)) {
+        errors.push(
+          `flavor-profiles.csv line ${line}: ${col} must be an integer 0-3, got "${value}" (slug=${row.slug})`
+        );
+      }
+    }
+
+    if (!serves.has(row.serve)) {
+      errors.push(
+        `flavor-profiles.csv line ${line}: serve must be one of ${FLAVOR_SERVES.join("|")}, got "${row.serve}" (slug=${row.slug})`
+      );
+    }
+
+    // The parser splits on commas with no quoting, so a comma anywhere would
+    // silently shift every later column. Caught here with the slug named.
+    for (const [col, value] of Object.entries(row)) {
+      if (typeof value === "string" && value.includes(",")) {
+        errors.push(`flavor-profiles.csv line ${line}: ${col} contains a comma, which this CSV cannot encode (slug=${row.slug})`);
+      }
+    }
+
+    // A profile whose alcohol flag disagrees with its category is a labelling
+    // mistake, not a judgement call: the category's is_alcoholic drives the
+    // age gate, so the two must agree.
+    const bevRow = rows.find((r) => r.slug === row.slug);
+    if (bevRow) {
+      const category = categoryById.get(bevRow.category);
+      if (category && category.isAlcoholic !== (row.alcohol === "true")) {
+        errors.push(
+          `flavor-profiles.csv line ${line}: alcohol="${row.alcohol}" disagrees with category "${bevRow.category}" (is_alcoholic=${category.isAlcoholic}) (slug=${row.slug})`
+        );
+      }
+    }
+  }
+
+  for (const [slug, line] of seenSlugs) {
+    if (!profileBySlug.has(slug)) {
+      errors.push(`bevs.csv line ${line}: slug "${slug}" has no row in flavor-profiles.csv`);
+    }
+  }
+
   // An alias shared by several Bevs can't point at one of them (bev_aliases is keyed by alias): the
   // seed migration drops it, so say which ones.
   for (const [alias, slugs] of aliasOwners) {
@@ -145,7 +242,9 @@ function main(): void {
     process.exit(1);
   }
 
-  console.log(`validated ${rows.length} rows, 0 errors, ${warnings.length} warning(s)`);
+  console.log(
+    `validated ${rows.length} Bev rows and ${profileRows.length} flavour profiles, 0 errors, ${warnings.length} warning(s)`
+  );
   process.exit(0);
 }
 
