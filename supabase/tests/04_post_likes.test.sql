@@ -1,7 +1,7 @@
 -- A-02 (20261014000200): post_likes, like_post/unlike_post, and the two new
 -- get_feed columns.
 begin;
-select plan(13);
+select plan(18);
 
 -- u1 posts (adult, so it can rank an alcoholic Bev); u2 follows u1 and is 16;
 -- u3 follows nobody.
@@ -121,6 +121,12 @@ select is(
   'and the row is gone'
 );
 
+-- Liked again, so u3 below has a like it must not be able to read.
+select lives_ok(
+  $$ select public.like_post((select id from t_events where label = 'plain')) $$,
+  'like after unlike succeeds'
+);
+
 -- ---------------------------------------------------------------------------
 -- As u3 (follows nobody).
 -- ---------------------------------------------------------------------------
@@ -131,6 +137,40 @@ select throws_ok(
   $$ select public.like_post((select id from t_events where label = 'plain')) $$,
   'P0002', 'BEVI_NOT_FOUND',
   'a stranger cannot like a post that is not in their feed'
+);
+select throws_ok(
+  $$ select public.unlike_post((select id from t_events where label = 'plain')) $$,
+  'P0002', 'BEVI_NOT_FOUND',
+  'nor unlike it'
+);
+select is(
+  (select count(*)::int from public.post_likes
+    where feed_event_id = (select id from t_events where label = 'plain')),
+  0,
+  'a stranger cannot read the likes on a post they cannot see'
+);
+
+-- ---------------------------------------------------------------------------
+-- u2 unfollows u1: the post leaves u2's feed, but u2's like can still go.
+-- ---------------------------------------------------------------------------
+
+reset role;
+delete from public.follows
+ where follower_id = '00000000-0000-4000-8000-0000000000c2'
+   and followee_id = '00000000-0000-4000-8000-0000000000c1';
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000000c2", "role": "authenticated"}';
+
+select lives_ok(
+  $$ select public.unlike_post((select id from t_events where label = 'plain')) $$,
+  'unlike_post removes your own like from a post you can no longer see'
+);
+select is(
+  (select count(*)::int from public.post_likes
+    where user_id = '00000000-0000-4000-8000-0000000000c2'),
+  0,
+  'and the like is gone'
 );
 
 -- ---------------------------------------------------------------------------
