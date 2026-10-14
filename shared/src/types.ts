@@ -151,11 +151,11 @@ export interface FeedItem {
   type: FeedEventKind;
   actor: Profile;
   bev: BevSummary;
-  /** The actor's score; null for 'SAVED'. */
-  score: number | null;
-  /** The actor's bucket; null for 'SAVED'. */
-  bucket: Bucket | null;
-  /** The actor's ranking note; null for 'SAVED'. */
+  /** The actor's score for this Bev. */
+  score: number;
+  /** The actor's bucket for this Bev. */
+  bucket: Bucket;
+  /** The actor's ranking note, if they wrote one. */
   note: string | null;
   createdAt: string;
   inMyWantToTry: boolean;

@@ -314,8 +314,9 @@ export interface WantToTryApi {
   list(page?: PageParams): Promise<Page<WantToTryItem>>;
 
   /**
-   * Idempotent: saving an already-saved Bev resolves without error. Posts a
-   * 'SAVED' feed item the first time.
+   * Idempotent: saving an already-saved Bev resolves without error. A save is
+   * never a feed post; the only public signal is the filled bookmark on a Bev
+   * the caller has saved.
    * @throws 'unauthorized', 'not_found', 'age_restricted'.
    */
   add(bevId: string, viaUserId?: string): Promise<void>;
@@ -325,7 +326,7 @@ export interface WantToTryApi {
 }
 
 export interface FeedApi {
-  /** The caller's and followed users' RANKING and SAVED posts, newest first. @throws 'unauthorized'. */
+  /** The caller's and followed users' RANKING posts, newest first. @throws 'unauthorized'. */
   getFeed(page?: PageParams): Promise<Page<FeedItem>>;
 
   /** Age-filtered. @throws 'unauthorized'. */
