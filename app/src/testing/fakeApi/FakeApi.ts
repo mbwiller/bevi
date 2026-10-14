@@ -55,6 +55,7 @@ import {
   type CategoriesApi,
   type CategoryId,
   type CheckHandleResult,
+  type CommentsApi,
   type Comparison,
   type FeedApi,
   type FeedItem,
@@ -1265,6 +1266,8 @@ export class FakeApi implements BeviApi {
             inMyWantToTry: saved.has(bev.id),
             likeCount: likes.filter((l) => l.feedEventId === e.id).length,
             likedByMe: likes.some((l) => l.feedEventId === e.id && l.userId === me.id),
+            commentCount: 0,
+            comments: [],
           });
         }
         return paginate(items, page, 20);
@@ -1305,6 +1308,34 @@ export class FakeApi implements BeviApi {
             return;
           }
           this.db.likes = likes.filter((l) => !(l.userId === me.id && l.feedEventId === id));
+        },
+        true,
+      ),
+  };
+
+  // Comments (S-03) are a stub until M-03 builds the in-memory thread: no post has any yet.
+  comments: CommentsApi = {
+    list: (eventId: string, page?: PageParams) =>
+      this.call('comments.list', () => {
+        this.visibleFeedEvent(eventId, this.requireUser());
+        return paginate([], page, 20);
+      }),
+
+    add: (eventId: string, _body: string) =>
+      this.call(
+        'comments.add',
+        () => {
+          this.visibleFeedEvent(eventId, this.requireUser());
+          throw new ApiError('unknown', 'FakeApi comments arrive with M-03');
+        },
+        true,
+      ),
+
+    remove: (_id: string) =>
+      this.call(
+        'comments.remove',
+        () => {
+          this.requireUser();
         },
         true,
       ),
