@@ -38,13 +38,15 @@ create index post_comments_event_idx on public.post_comments (feed_event_id, id 
 
 alter table public.post_comments enable row level security;
 
--- Unlike a like, a comment body is content: it is readable exactly where its
--- post is (feed_event_visible -- actor-or-followee plus the alcohol age gate),
--- so a direct `from('post_comments')` read cannot reach comments on posts the
--- caller is not shown.
+-- A live comment is readable wherever its post is (feed_event_visible --
+-- actor-or-followee plus the alcohol age gate) and always by its author, the
+-- same rule as post_likes_select. `deleted_at is null` alone would let a
+-- direct `from('post_comments')` read return every comment body in the app.
 create policy post_comments_select on public.post_comments
-  for select to authenticated
-  using (deleted_at is null and public.feed_event_visible(feed_event_id));
+  for select to authenticated using (
+    deleted_at is null
+    and (user_id = auth.uid() or public.feed_event_visible(feed_event_id))
+  );
 
 -- ---------------------------------------------------------------------------
 -- 2. add_comment / delete_comment / get_comments
@@ -186,6 +188,9 @@ $$;
 -- Third drop-and-recreate of this function (20261011000400 shape, A-01's
 -- kind filter, A-02's like columns, now these two). `returns table` cannot
 -- change in place, so the revoke/grant block at the end is mandatory.
+-- Everything above the two new columns is 20261014000200's definition
+-- unchanged; comment_count is a correlated count on post_comments_event_idx,
+-- like like_count, so it costs one index probe per returned post.
 --
 -- `comments` is the first seven, OLDEST first -- that is the reading order
 -- under a post. get_comments pages newest-first for the full thread, which is
@@ -245,30 +250,21 @@ as $$
            select 1 from public.want_to_try w
             where w.user_id = auth.uid() and w.bev_id = e.bev_id
          ),
-         coalesce(l.n, 0)::integer,
+         (select count(*) from public.post_likes pl
+           where pl.feed_event_id = e.id)::integer,
          exists (
            select 1 from public.post_likes pl
             where pl.user_id = auth.uid() and pl.feed_event_id = e.id
          ),
-         coalesce(cc.n, 0)::integer,
-         coalesce(first3.items, '[]'::jsonb)
+         (select count(*) from public.post_comments pc
+           where pc.feed_event_id = e.id and pc.deleted_at is null)::integer,
+         coalesce(ic.items, '[]'::jsonb)
     from public.feed_events e
     join public.profiles p on p.id = e.actor_id
     left join public.bevs b on b.id = e.bev_id
     left join public.categories c on c.id = b.category_id
     left join public.bev_stats s on s.bev_id = b.id
     left join public.rankings r on r.id = e.ranking_id
-    left join (
-      select feed_event_id, count(*) as n
-        from public.post_likes
-       group by feed_event_id
-    ) l on l.feed_event_id = e.id
-    left join (
-      select feed_event_id, count(*) as n
-        from public.post_comments
-       where deleted_at is null
-       group by feed_event_id
-    ) cc on cc.feed_event_id = e.id
     left join lateral (
       select jsonb_agg(
                jsonb_build_object(
@@ -295,7 +291,7 @@ as $$
            order by cm.id
            limit 7
         ) t
-    ) first3 on true
+    ) ic on true
    where e.kind in ('ranked', 'reranked')
      and (e.actor_id = auth.uid()
           or e.actor_id in (select followee_id from public.follows where follower_id = auth.uid()))
