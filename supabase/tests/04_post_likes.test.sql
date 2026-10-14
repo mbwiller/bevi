@@ -1,7 +1,7 @@
 -- A-02 (20261014000200): post_likes, like_post/unlike_post, and the two new
 -- get_feed columns.
 begin;
-select plan(12);
+select plan(13);
 
 -- u1 posts (adult, so it can rank an alcoholic Bev); u2 follows u1 and is 16;
 -- u3 follows nobody.
