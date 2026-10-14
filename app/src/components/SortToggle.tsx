@@ -8,9 +8,9 @@ import { Icon } from './Icon';
 export interface SortToggleProps {
   /** The current sort: Score, Recent, Name, Predicted. */
   label?: string;
-  /** Cycles the sort. */
-  onPress?: () => void;
-  /** Opens search within the list; `false` hides the icon. */
+  /** Cycles the sort. Required: a sort toggle with no action must not render. */
+  onPress: () => void;
+  /** Opens search within the list. The icon renders only for a function; omitted or `false` hides it. */
   onSearch?: (() => void) | false;
   style?: StyleProp<ViewStyle>;
 }
@@ -34,9 +34,9 @@ export function SortToggle({ label = 'Score', onPress, onSearch, style }: SortTo
           {label}
         </Text>
       </Pressable>
-      {onSearch !== false ? (
+      {typeof onSearch === 'function' ? (
         <Pressable
-          onPress={onSearch || undefined}
+          onPress={onSearch}
           accessibilityRole="button"
           accessibilityLabel="Search this list"
           style={({ pressed }) => [styles.search, pressed && styles.pressed]}

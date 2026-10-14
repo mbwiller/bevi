@@ -17,13 +17,19 @@ it('labels the sort and search buttons and fires their handlers', async () => {
 });
 
 it('hides search when onSearch is false', async () => {
-  await render(<SortToggle onSearch={false} />);
+  await render(<SortToggle onPress={jest.fn()} onSearch={false} />);
+  expect(screen.getByRole('button', { name: 'Sort by Score' })).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Search this list' })).toBeNull();
+});
+
+it('hides search when onSearch is omitted', async () => {
+  await render(<SortToggle onPress={jest.fn()} />);
   expect(screen.getByRole('button', { name: 'Sort by Score' })).toBeTruthy();
   expect(screen.queryByRole('button', { name: 'Search this list' })).toBeNull();
 });
 
 it('gives both buttons 44pt targets', async () => {
-  await render(<SortToggle />);
+  await render(<SortToggle onPress={jest.fn()} onSearch={jest.fn()} />);
   for (const name of ['Sort by Score', 'Search this list']) {
     expect(StyleSheet.flatten(screen.getByRole('button', { name }).props.style).minHeight).toBe(size.target);
   }

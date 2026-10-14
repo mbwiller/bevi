@@ -8,7 +8,6 @@ import { flattenPages, useAddWantToTry, useRecommendations, useRemoveWantToTry, 
 import { BevRow } from '@/components/BevRow';
 import { EmptyState } from '@/components/EmptyState';
 import { FilterPill } from '@/components/FilterPill';
-import { SortToggle } from '@/components/SortToggle';
 import type { CategoryInfo } from '@/lib/categories';
 import { formatRelativeTime } from '@/lib/time';
 import { MAX_FONT_SCALE_DENSE, type, useTheme } from '@/theme';
@@ -86,7 +85,6 @@ export function RecommendedTab({ categoryId, categories, onCategory, onCategoryP
         <FilterPill count={categoryId ? 1 : 0} onPress={() => setFiltersOpen(true)} />
         <FilterPill label={category?.label ?? 'Category'} icon={null} chevron onPress={onCategoryPress} />
       </View>
-      <SortToggle label="Predicted" onSearch={false} />
     </View>
   );
 
