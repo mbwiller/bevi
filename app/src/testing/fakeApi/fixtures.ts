@@ -129,7 +129,6 @@ export function buildFixtures(now: Date = new Date()): FakeDb {
       if (ranked.has(`${userId}:${w.bevId}`) || !bevById.has(w.bevId)) return;
       const savedAt = iso(t - (i + 1) * 3 * 60 * 60 * 1000 - j * DAY);
       wantToTry.push({ userId, bevId: w.bevId, savedAt, viaUserId: w.via ? userIdFor(w.via) : null });
-      feed.push({ id: nextId('feed'), type: 'SAVED', actorId: userId, bevId: w.bevId, createdAt: savedAt });
     });
   });
 
