@@ -131,7 +131,15 @@ export function BevdTab({ categoryId, categories, onCategory, onCategoryPress }:
 
   return (
     <>
-      <BevList data={rows} query={query} renderItem={renderItem} keyExtractor={(r) => r.id} header={header} empty={empty} />
+      <BevList
+        data={rows}
+        query={query}
+        renderItem={renderItem}
+        keyExtractor={(r) => r.id}
+        header={header}
+        empty={empty}
+        resetScrollKey={`${sort}|${bucket ?? ''}|${categoryId ?? ''}`}
+      />
       <FilterSheet
         open={sheet === 'filters'}
         bucket={bucket}

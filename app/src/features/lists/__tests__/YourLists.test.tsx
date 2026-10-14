@@ -104,6 +104,24 @@ it('Re-rank opens the ranking flow in re-rank mode', async () => {
   expect(r.path()).toBe(`/rank/${first.bevId}?mode=rerank`);
 });
 
+it('cycles the sort Score, Recent, Name and keeps the filters on screen', async () => {
+  const recent = (await api.rankings.listMine({ sort: 'recent' })).items[0]!;
+  const byName = (await api.rankings.listMine({ sort: 'name' })).items[0]!;
+  await start();
+  await screen.findByLabelText(/^1\. /);
+  const firstRowLabel = () => screen.getAllByLabelText(/^\d+\. /)[0]!.props.accessibilityLabel as string;
+
+  await fireEvent.press(screen.getByLabelText('Sort by Score'));
+  expect(await screen.findByLabelText('Sort by Recent')).toBeTruthy();
+  await waitFor(() => expect(firstRowLabel().endsWith(`. ${recent.bev.name}`)).toBe(true));
+  expect(screen.getByLabelText(/Bucket/)).toBeTruthy();
+
+  await fireEvent.press(screen.getByLabelText('Sort by Recent'));
+  expect(await screen.findByLabelText('Sort by Name')).toBeTruthy();
+  await waitFor(() => expect(firstRowLabel().endsWith(`. ${byName.bev.name}`)).toBe(true));
+  expect(screen.getByLabelText(/Bucket/)).toBeTruthy();
+});
+
 it('formats the Recommended summary line', () => {
   const now = new Date('2026-10-11T12:00:00Z');
   expect(basedOnLine(12, '2026-10-11T10:00:00Z', now)).toBe("Based on 12 Bevs you've ranked · Updated 2 hours ago");

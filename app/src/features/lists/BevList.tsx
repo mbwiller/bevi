@@ -1,5 +1,5 @@
-import { FlashList, type ListRenderItem } from '@shopify/flash-list';
-import type { ReactElement, ReactNode } from 'react';
+import { FlashList, type FlashListRef, type ListRenderItem } from '@shopify/flash-list';
+import { useEffect, useRef, type ReactElement, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { ErrorState } from '@/components/ErrorState';
@@ -38,13 +38,24 @@ export interface BevListProps<T> {
   header?: ReactElement | null;
   /** Shown when the query succeeded with no rows. */
   empty: ReactNode;
+  /** When this changes (sort or filters), the list scrolls back to the top. Not on first mount. */
+  resetScrollKey?: string;
 }
 
 /**
  * A FlashList of Bev rows with the common states: skeleton while loading, ErrorState with Retry,
  * an empty state, infinite scroll on `nextCursor` and pull-to-refresh (native only; harmless on web).
+ * Maintain-visible-content-position is off: these lists are top-anchored and append at the bottom, and
+ * with it on, a re-sort scrolls to wherever the old first row landed. `resetScrollKey` returns to the top.
  */
-export function BevList<T>({ data, query, renderItem, keyExtractor, header, empty }: BevListProps<T>) {
+export function BevList<T>({ data, query, renderItem, keyExtractor, header, empty, resetScrollKey }: BevListProps<T>) {
+  const listRef = useRef<FlashListRef<T>>(null);
+  const lastKey = useRef(resetScrollKey);
+  useEffect(() => {
+    if (lastKey.current === resetScrollKey) return;
+    lastKey.current = resetScrollKey;
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [resetScrollKey]);
   const body = query.isPending ? (
     <SkeletonRows />
   ) : query.isError && data.length === 0 ? (
@@ -54,6 +65,8 @@ export function BevList<T>({ data, query, renderItem, keyExtractor, header, empt
   );
   return (
     <FlashList
+      ref={listRef}
+      maintainVisibleContentPosition={{ disabled: true }}
       data={data}
       renderItem={renderItem}
       keyExtractor={keyExtractor}
