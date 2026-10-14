@@ -22,13 +22,13 @@ describe('bucket <-> smallint', () => {
 });
 
 describe('feedKindFromDb', () => {
-  it('maps ranked/reranked to RANKING and want_to_try to SAVED', () => {
+  it('maps ranked and reranked to RANKING', () => {
     expect(feedKindFromDb('ranked')).toBe('RANKING');
     expect(feedKindFromDb('reranked')).toBe('RANKING');
-    expect(feedKindFromDb('want_to_try')).toBe('SAVED');
   });
 
-  it('throws on "followed" -- get_feed should never return it', () => {
+  it('throws on the kinds A-01 removed -- feed_events can no longer hold them', () => {
+    expect(() => feedKindFromDb('want_to_try')).toThrow();
     expect(() => feedKindFromDb('followed')).toThrow();
   });
 });
