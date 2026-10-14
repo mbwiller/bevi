@@ -51,14 +51,12 @@ export function bucketFromDb(value: number): Bucket {
   }
 }
 
-/** `get_feed` already drops 'followed' -- the other two kinds are the only ones it returns. */
+/** Since 20261014000100 'ranked' and 'reranked' are the only kinds that exist. */
 export function feedKindFromDb(kind: string): FeedEventKind {
   switch (kind) {
     case 'ranked':
     case 'reranked':
       return 'RANKING';
-    case 'want_to_try':
-      return 'SAVED';
     default:
       throw new ApiError('unknown', `Unexpected feed_events.kind from DB: ${kind}`);
   }
@@ -290,6 +288,10 @@ export function mapFeedItem(client: SupabaseClient, row: FeedRpcRow, actor: Prof
   if (!row.bev_id || !row.bev_name || !row.bev_category_id) {
     throw new ApiError('unknown', `get_feed row ${row.id} is missing its Bev (actor_id=${row.actor_id})`);
   }
+  // Every feed item is a ranking now, so the joined ranking is always there.
+  if (row.score === null || row.bucket === null) {
+    throw new ApiError('unknown', `get_feed row ${row.id} is missing its ranking (actor_id=${row.actor_id})`);
+  }
   return {
     id: String(row.id),
     type: feedKindFromDb(row.kind),
@@ -308,7 +310,7 @@ export function mapFeedItem(client: SupabaseClient, row: FeedRpcRow, actor: Prof
       bayesScore: row.bev_bayes_score,
     },
     score: row.score,
-    bucket: row.bucket === null ? null : bucketFromDb(row.bucket),
+    bucket: bucketFromDb(row.bucket),
     note: row.note,
     createdAt: row.created_at,
     inMyWantToTry: row.in_my_want_to_try,
