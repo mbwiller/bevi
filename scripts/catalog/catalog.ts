@@ -13,6 +13,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export const CATALOG_DIR = join(__dirname, "..", "..", "data", "catalog");
 export const CATEGORIES_PATH = join(CATALOG_DIR, "categories.json");
 export const BEVS_CSV_PATH = join(CATALOG_DIR, "bevs.csv");
+export const FLAVOR_PROFILES_CSV_PATH = join(CATALOG_DIR, "flavor-profiles.csv");
 
 export interface Category {
   id: string;
@@ -108,6 +109,99 @@ export function parseCsv(raw: string): BevRow[] {
     });
   }
   return rows;
+}
+
+// ---------------------------------------------------------------------------
+// Flavour profiles (A-17)
+// ---------------------------------------------------------------------------
+
+/**
+ * One row of data/catalog/flavor-profiles.csv, keyed by a bevs.csv slug.
+ *
+ * Field names are the contract with `FlavorProfile` in `shared/` and
+ * `profileSimilarity` in `@bevi/ranking` (S-14). Renaming one means
+ * relabelling 378 rows.
+ */
+export interface FlavorProfileRow {
+  slug: string;
+  base: string;
+  carbonated: string;
+  caffeine: string;
+  sweetness: string;
+  dairy: string;
+  alcohol: string;
+  serve: string;
+  notes: string;
+  __line: number;
+}
+
+/** Mirrors `FlavorBase` in shared/src/enums.ts and the `base` check constraint. */
+export const FLAVOR_BASES = [
+  "cola", "citrus", "lemon-lime", "berry", "tropical", "apple",
+  "grape", "orange", "ginger", "root-beer", "cream",
+  "coffee", "tea", "matcha", "chai", "chocolate", "nut",
+  "herbal", "mineral", "hop", "wine", "agave", "grain", "other",
+] as const;
+
+/** Mirrors `FlavorServe` in shared/src/enums.ts. */
+export const FLAVOR_SERVES = ["hot", "cold", "either"] as const;
+
+const FLAVOR_PROFILE_HEADER = [
+  "slug",
+  "base",
+  "carbonated",
+  "caffeine",
+  "sweetness",
+  "dairy",
+  "alcohol",
+  "serve",
+  "notes",
+];
+
+export function parseFlavorProfileCsv(raw: string): FlavorProfileRow[] {
+  const lines = raw.split(/\r?\n/).filter((line) => line.trim() !== "");
+  if (lines.length === 0) throw new Error("flavor-profiles.csv is empty");
+
+  const header = lines[0]!.split(",");
+  if (
+    header.length !== FLAVOR_PROFILE_HEADER.length ||
+    !header.every((h, i) => h.trim() === FLAVOR_PROFILE_HEADER[i])
+  ) {
+    throw new Error(
+      `flavor-profiles.csv header does not match expected columns.\n  expected: ${FLAVOR_PROFILE_HEADER.join(",")}\n  got:      ${header.join(",")}`
+    );
+  }
+
+  const rows: FlavorProfileRow[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i]!.split(",");
+    const lineNo = i + 1;
+    // Same dependency-free parser as bevs.csv: no quoted fields, so no field
+    // may contain a comma. The validator enforces that rather than leaving it
+    // to this error.
+    if (cols.length !== FLAVOR_PROFILE_HEADER.length) {
+      throw new Error(
+        `flavor-profiles.csv line ${lineNo}: expected ${FLAVOR_PROFILE_HEADER.length} columns, got ${cols.length} (did a field contain an unescaped comma?)\n  line: ${lines[i]}`
+      );
+    }
+    rows.push({
+      slug: cols[0]!,
+      base: cols[1]!,
+      carbonated: cols[2]!,
+      caffeine: cols[3]!,
+      sweetness: cols[4]!,
+      dairy: cols[5]!,
+      alcohol: cols[6]!,
+      serve: cols[7]!,
+      notes: cols[8]!,
+      __line: lineNo,
+    });
+  }
+  return rows;
+}
+
+export function loadFlavorProfileRows(): FlavorProfileRow[] {
+  return parseFlavorProfileCsv(readFileSync(FLAVOR_PROFILES_CSV_PATH, "utf8"));
 }
 
 export function loadCategories(): Category[] {
