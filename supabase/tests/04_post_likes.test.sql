@@ -13,12 +13,17 @@ values ('00000000-0000-4000-8000-0000000000c1', 'pgtaplike1@users.bevi.app',
        ('00000000-0000-4000-8000-0000000000c3', 'pgtaplike3@users.bevi.app',
         '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated');
 
+-- protect_profile_columns silently pins birth_date unless the trusted-RPC
+-- bypass flag is on, so a bare update would leave every age null (nobody
+-- adult). Turn it on for these three updates only.
+set local bevi.rpc_bypass = 'true';
 update public.profiles set birth_date = (current_date - interval '30 years')::date
  where id = '00000000-0000-4000-8000-0000000000c1';
 update public.profiles set birth_date = (current_date - interval '16 years')::date
  where id = '00000000-0000-4000-8000-0000000000c2';
 update public.profiles set birth_date = (current_date - interval '30 years')::date
  where id = '00000000-0000-4000-8000-0000000000c3';
+set local bevi.rpc_bypass = 'false';
 
 insert into public.follows (follower_id, followee_id)
 values ('00000000-0000-4000-8000-0000000000c2', '00000000-0000-4000-8000-0000000000c1');
