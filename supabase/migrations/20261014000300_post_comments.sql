@@ -3,8 +3,9 @@
 -- TASKS.md decision 3: a comment button in line with the heart, opening a
 -- clean multi-user comment section. The first comments show inline on the
 -- post; above seven the app collapses to "View all N comments" -- that rule
--- is the app's, so the server just supplies the first three plus the count,
--- and comments.list() for the rest.
+-- is the app's, so the server supplies the first seven plus the count (a post
+-- with seven or fewer renders entirely from get_feed, no second call), and
+-- comments.list() for the rest.
 --
 -- No likes on comments (D-01). No comment reports here either: bev_reports is
 -- keyed (reporter_id, bev_id, reason) with bev_id not null, so reporting a
@@ -37,8 +38,13 @@ create index post_comments_event_idx on public.post_comments (feed_event_id, id 
 
 alter table public.post_comments enable row level security;
 
+-- Unlike a like, a comment body is content: it is readable exactly where its
+-- post is (feed_event_visible -- actor-or-followee plus the alcohol age gate),
+-- so a direct `from('post_comments')` read cannot reach comments on posts the
+-- caller is not shown.
 create policy post_comments_select on public.post_comments
-  for select to authenticated using (deleted_at is null);
+  for select to authenticated
+  using (deleted_at is null and public.feed_event_visible(feed_event_id));
 
 -- ---------------------------------------------------------------------------
 -- 2. add_comment / delete_comment / get_comments
@@ -69,7 +75,9 @@ as $$
 declare
   v_uid uuid := auth.uid();
   v_id  bigint;
-  v_body text := btrim(coalesce(p_body, ''));
+  -- btrim's default strips only spaces; a newline- or tab-only body must not
+  -- count as a comment.
+  v_body text := btrim(coalesce(p_body, ''), E' \t\n\r');
 begin
   if v_uid is null then
     raise exception 'BEVI_UNAUTHORIZED' using errcode = '42501';
@@ -168,7 +176,7 @@ begin
        and cm.deleted_at is null
        and (p_before_id is null or cm.id < p_before_id)
      order by cm.id desc
-     limit p_limit;
+     limit least(greatest(coalesce(p_limit, 20), 1), 50);
 end;
 $$;
 
@@ -179,7 +187,7 @@ $$;
 -- kind filter, A-02's like columns, now these two). `returns table` cannot
 -- change in place, so the revoke/grant block at the end is mandatory.
 --
--- `comments` is the first three, OLDEST first -- that is the reading order
+-- `comments` is the first seven, OLDEST first -- that is the reading order
 -- under a post. get_comments pages newest-first for the full thread, which is
 -- the opposite order on purpose: a thread opens at the newest.
 
@@ -285,7 +293,7 @@ as $$
             join public.profiles cp on cp.id = cm.user_id
            where cm.feed_event_id = e.id and cm.deleted_at is null
            order by cm.id
-           limit 3
+           limit 7
         ) t
     ) first3 on true
    where e.kind in ('ranked', 'reranked')

@@ -1,15 +1,22 @@
 -- A-03 (20261014000300): post_comments, the three RPCs, and the two new
 -- get_feed columns.
 begin;
-select plan(14);
+select plan(20);
 
 insert into auth.users (id, email, raw_user_meta_data, aud, role)
 values ('00000000-0000-4000-8000-0000000000d1', 'pgtapcomment1@users.bevi.app',
         '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated'),
        ('00000000-0000-4000-8000-0000000000d2', 'pgtapcomment2@users.bevi.app',
+        '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated'),
+       ('00000000-0000-4000-8000-0000000000d3', 'pgtapcomment3@users.bevi.app',
         '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated');
 
--- d2 follows d1, so d1's post is in d2's feed.
+update public.profiles set birth_date = (current_date - interval '30 years')::date
+ where id in ('00000000-0000-4000-8000-0000000000d1',
+              '00000000-0000-4000-8000-0000000000d2',
+              '00000000-0000-4000-8000-0000000000d3');
+
+-- d2 follows d1, so d1's post is in d2's feed. d3 follows nobody.
 insert into public.follows (follower_id, followee_id)
 values ('00000000-0000-4000-8000-0000000000d2', '00000000-0000-4000-8000-0000000000d1');
 
@@ -27,7 +34,7 @@ select is(
 );
 
 -- ---------------------------------------------------------------------------
--- d1 posts, then comments on it five times.
+-- d1 posts, then comments on it eight times (one past the inline seven).
 -- ---------------------------------------------------------------------------
 
 -- Both fixture tables are made here, by the owner, before the role switch:
@@ -54,6 +61,11 @@ select throws_ok(
   'an empty body is rejected'
 );
 select throws_ok(
+  $$ select public.add_comment((select id from t_event), E'\n\t\n') $$,
+  '22023', 'BEVI_VALIDATION',
+  'a whitespace-only body (newlines, tabs) is rejected'
+);
+select throws_ok(
   $$ select public.add_comment((select id from t_event), repeat('x', 281)) $$,
   '22023', 'BEVI_VALIDATION',
   'a 281-character body is rejected'
@@ -61,13 +73,13 @@ select throws_ok(
 
 insert into t_comments (n, id)
 select g.g, c.id
-  from generate_series(1, 5) g,
+  from generate_series(1, 8) g,
        lateral public.add_comment((select id from t_event), 'comment ' || g.g) c;
 
 select is(
   (select count(*)::int from public.get_comments((select id from t_event), 20, null)),
-  5,
-  'get_comments returns all five'
+  8,
+  'get_comments returns all eight'
 );
 
 -- ---------------------------------------------------------------------------
@@ -87,19 +99,19 @@ select is(
 );
 select is(
   (select id from public.get_comments((select id from t_event), 1, null)),
-  (select id from t_comments where n = 5),
+  (select id from t_comments where n = 8),
   'the first page starts at the newest comment'
 );
 
 -- ---------------------------------------------------------------------------
--- get_feed's inline three.
+-- get_feed's inline seven.
 -- ---------------------------------------------------------------------------
 
 select is(
   (select jsonb_array_length(comments) from public.get_feed(20, null)
     where id = (select id from t_event)),
-  3,
-  'get_feed carries three comments inline'
+  7,
+  'get_feed carries seven comments inline'
 );
 select is(
   (select (comments -> 0 ->> 'id')::bigint from public.get_feed(20, null)
@@ -108,10 +120,16 @@ select is(
   'oldest first, which is the reading order under a post'
 );
 select is(
+  (select (comments -> 6 ->> 'id')::bigint from public.get_feed(20, null)
+    where id = (select id from t_event)),
+  (select id from t_comments where n = 7),
+  'the inline seven are the first seven, not the newest'
+);
+select is(
   (select comment_count from public.get_feed(20, null)
     where id = (select id from t_event)),
-  5,
-  'comment_count is the full total, not the inline three'
+  8,
+  'comment_count is the full total, not the inline seven'
 );
 
 -- ---------------------------------------------------------------------------
@@ -123,9 +141,9 @@ select lives_ok(
   'delete_comment on an own comment succeeds'
 );
 select ok(
-  (select count(*)::int from public.get_comments((select id from t_event), 20, null)) = 4
+  (select count(*)::int from public.get_comments((select id from t_event), 20, null)) = 7
     and (select comment_count from public.get_feed(20, null)
-          where id = (select id from t_event)) = 4,
+          where id = (select id from t_event)) = 7,
   'a deleted comment leaves both get_comments and comment_count'
 );
 select lives_ok(
@@ -134,15 +152,45 @@ select lives_ok(
 );
 
 -- ---------------------------------------------------------------------------
--- As d2: someone else's comment is not theirs to delete.
+-- As d2 (follows d1): can read the thread, cannot delete d1's comments.
 -- ---------------------------------------------------------------------------
 
 set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000000d2", "role": "authenticated"}';
+
+select is(
+  (select count(*)::int from public.post_comments
+    where feed_event_id = (select id from t_event)),
+  7,
+  'a follower reads the live comments directly through RLS'
+);
 
 select throws_ok(
   $$ select public.delete_comment((select id from t_comments where n = 2)) $$,
   'P0002', 'BEVI_NOT_FOUND',
   'another user''s comment cannot be deleted'
+);
+
+-- ---------------------------------------------------------------------------
+-- As d3 (follows nobody): the post is not theirs to see, nor its comments.
+-- ---------------------------------------------------------------------------
+
+set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000000d3", "role": "authenticated"}';
+
+select is(
+  (select count(*)::int from public.post_comments
+    where feed_event_id = (select id from t_event)),
+  0,
+  'RLS hides comments on a post the caller cannot see'
+);
+select throws_ok(
+  $$ select * from public.get_comments((select id from t_event), 20, null) $$,
+  'P0002', 'BEVI_NOT_FOUND',
+  'get_comments on an invisible post is not found'
+);
+select throws_ok(
+  $$ select public.add_comment((select id from t_event), 'hi') $$,
+  'P0002', 'BEVI_NOT_FOUND',
+  'add_comment on an invisible post is not found'
 );
 
 reset role;

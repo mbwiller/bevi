@@ -286,7 +286,7 @@ export interface FeedRpcRow {
   like_count: number;
   liked_by_me: boolean;
   comment_count: number;
-  /** `get_feed` builds the first three with `jsonb_build_object`. */
+  /** `get_feed` builds the first seven, oldest first, with `jsonb_build_object`. */
   comments: CommentRpcRow[];
 }
 
