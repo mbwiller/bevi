@@ -94,6 +94,20 @@ jobs:
       # anything needing a live stack if these env vars aren't set).
       - run: npm test -w packages/api
 
+      # Edge Functions run on Deno, which nothing else in this workflow
+      # provides. `deno check` is a type-check only -- it reaches no network
+      # and needs no NEO4J_* secret.
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - run: deno check supabase/functions/graph-query/index.ts
+
+      # graph-query's own tests skip themselves unless a local
+      # `supabase functions serve` is answering, so this is a no-op in CI
+      # until the serve step is worth adding.
+      - run: deno test --allow-net --allow-env supabase/functions/graph-query/test.ts
+
       - run: npm run catalog:validate
 
       # The newest *_catalog_seed.sql migration must match data/catalog
@@ -108,10 +122,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # TODO: enable once bevi-dev Supabase project exists (needs
-      # SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD, SUPABASE_PROJECT_ID in
-      # the dev GitHub Environment). There is no hosted Supabase project yet,
-      # so this job intentionally does nothing right now.
+      # Still stubbed, but no longer for the original reason: a hosted
+      # Supabase project DOES exist now (#56 put the app on it), so the only
+      # thing missing is SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD and
+      # SUPABASE_PROJECT_ID in the dev GitHub Environment.
+      #
+      # Enabling it is a deliberate decision, not a side effect of adding an
+      # Edge Function: `supabase db push` on every main merge would apply
+      # migrations to the live database unattended, and some of them (A-01's
+      # feed_events cleanup) delete real rows. Turn this on only alongside a
+      # backup step and a conscious read of what is pending.
+      #
+      # `supabase functions deploy --use-api` is listed below because
+      # graph-query (A-15) is the first Edge Function in the repo and will
+      # need it whenever this job is switched on. It also needs the NEO4J_*
+      # secrets set on the project with `supabase secrets set` -- deploying
+      # the function does not carry them (docs/graph.md).
       #
       # - uses: actions/setup-node@v4
       #   with:

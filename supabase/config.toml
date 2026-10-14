@@ -249,6 +249,17 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
+# Edge Functions. graph-query (A-15) is the first one in this repo; the
+# `recommend` function from DEVELOPMENT-ARJUN.md §5.8 is not built yet.
+#
+# verify_jwt is the default, spelled out here because it is the whole
+# authorisation story for this function: the client may only name a template,
+# never send Cypher. Secrets (NEO4J_*) come from supabase/.env locally and
+# `supabase secrets set` in the hosted project -- never from this file.
+[functions.graph-query]
+enabled = true
+verify_jwt = true
+
 [analytics]
 enabled = true
 port = 54327
