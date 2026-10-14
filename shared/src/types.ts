@@ -166,9 +166,11 @@ export interface FeedItem {
   /** Total comments on this post, excluding deleted ones. */
   commentCount: number;
   /**
-   * The first three comments, oldest first, so a post can show them inline
-   * without a second call. Above seven the app collapses to "View all N
-   * comments" and fetches the rest with `comments.list`.
+   * The first seven comments (at most), oldest first. With `commentCount` of
+   * seven or fewer this is the whole thread, so the post shows every comment
+   * inline without a second call; above seven the app collapses to "View all
+   * N comments" (previewing some of these if it likes) and fetches the thread
+   * with `comments.list`.
    */
   comments: Comment[];
 }
