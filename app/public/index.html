@@ -15,6 +15,19 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Bevi" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <!-- iOS reads the status-bar style at launch. black-translucent always draws white symbols, so it is only safe in
+         dark mode (the page's own dark background shows under it); light stays `default`. An appearance flip while the
+         app is open catches up on the next launch. -->
+    <script id="status-bar-style">
+      (function () {
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          document
+            .querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')
+            .setAttribute('content', 'black-translucent');
+        }
+      })();
+    </script>
+    <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#121214" />
 
@@ -23,6 +36,14 @@
       html,
       body {
         height: 100%;
+        /* `surface` token, light then dark: shows under the translucent status bar. */
+        background-color: #ffffff;
+      }
+      @media (prefers-color-scheme: dark) {
+        html,
+        body {
+          background-color: #121214;
+        }
       }
       body {
         overflow: hidden;
