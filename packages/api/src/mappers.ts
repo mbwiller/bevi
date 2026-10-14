@@ -16,6 +16,7 @@ import type {
   CategoryId,
   FeedEventKind,
   FeedItem,
+  FlavorProfile,
   LeaderboardRow,
   PhotoStatus,
   PriceTier,
@@ -182,6 +183,30 @@ export interface BevRow extends BevSummaryRow {
   is_starter: boolean;
 }
 
+export interface FlavorProfileRow {
+  base: string;
+  carbonated: boolean;
+  caffeine: number;
+  sweetness: number;
+  dairy: boolean;
+  alcohol: boolean;
+  serve: string;
+  source: string;
+}
+
+export function mapFlavorProfile(row: FlavorProfileRow): FlavorProfile {
+  return {
+    base: row.base as FlavorProfile['base'],
+    carbonated: row.carbonated,
+    caffeine: row.caffeine as FlavorProfile['caffeine'],
+    sweetness: row.sweetness as FlavorProfile['sweetness'],
+    dairy: row.dairy,
+    alcohol: row.alcohol,
+    serve: row.serve as FlavorProfile['serve'],
+    source: row.source as FlavorProfile['source'],
+  };
+}
+
 export interface MyRankingRow {
   bucket: number;
   position: number;
@@ -197,6 +222,7 @@ export function mapBev(
     myRanking: MyRankingRow | null;
     inWantToTry: boolean;
     friends: Array<{ profile: Profile; score: number; bucket: Bucket }>;
+    flavorProfile: FlavorProfileRow | null;
     prediction?: BevPrediction | null;
   }
 ): Bev {
@@ -224,6 +250,7 @@ export function mapBev(
     inWantToTry: extras.inWantToTry,
     friends: extras.friends,
     isStarter: row.is_starter,
+    flavorProfile: extras.flavorProfile ? mapFlavorProfile(extras.flavorProfile) : null,
   };
 }
 

@@ -19,6 +19,7 @@ import {
   mapProfile,
   type BevRow,
   type BevSummaryRow,
+  type FlavorProfileRow,
   type MyRankingRow,
   type ProfileViewRow,
 } from './mappers';
@@ -116,13 +117,18 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
     // ranked this Bev. Never rejects (predictionFor catches).
     const prediction = predictionFor(uid, id);
 
-    const [rankingRes, wantRes, followeeIds] = await Promise.all([
+    // Read straight from the table rather than widening get_bev: the profile
+    // has a select policy for authenticated, and changing an RPC's `returns
+    // table` means dropping and recreating it.
+    const [rankingRes, wantRes, followeeIds, profileRes] = await Promise.all([
       client.from('rankings').select('bucket, position, score, note').eq('user_id', uid).eq('bev_id', id).maybeSingle(),
       client.from('want_to_try').select('user_id').eq('user_id', uid).eq('bev_id', id).maybeSingle(),
       fetchFollowIds(client, 'follows', 'follower_id', uid),
+      client.from('bev_flavor_profiles').select('*').eq('bev_id', id).maybeSingle(),
     ]);
     if (rankingRes.error) throw mapError(rankingRes.error);
     if (wantRes.error) throw mapError(wantRes.error);
+    if (profileRes.error) throw mapError(profileRes.error);
 
     let myRanking: MyRankingRow | null = null;
     if (rankingRes.data) {
@@ -187,6 +193,7 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
       myRanking,
       inWantToTry: wantRes.data !== null,
       friends,
+      flavorProfile: profileRes.data as FlavorProfileRow | null,
       prediction: myRanking ? null : await prediction,
     });
   }

@@ -1,0 +1,379 @@
+slug,base,carbonated,caffeine,sweetness,dairy,alcohol,serve,notes
+coca-cola-classic,cola,true,1,3,false,false,cold,
+diet-coke,cola,true,1,3,false,false,cold,sweetness is perceived sweetness not sugar content
+coke-zero-sugar,cola,true,1,3,false,false,cold,sweetness is perceived sweetness not sugar content
+cherry-coke,cola,true,1,3,false,false,cold,
+mexican-coca-cola,cola,true,1,3,false,false,cold,
+pepsi,cola,true,1,3,false,false,cold,
+diet-pepsi,cola,true,1,3,false,false,cold,sweetness is perceived sweetness not sugar content
+pepsi-zero-sugar,cola,true,1,3,false,false,cold,sweetness is perceived sweetness not sugar content
+sprite,lemon-lime,true,0,3,false,false,cold,
+sprite-zero-sugar,lemon-lime,true,0,3,false,false,cold,sweetness is perceived sweetness not sugar content
+dr-pepper,cola,true,1,3,false,false,cold,nearest base in the vocabulary is cola
+diet-dr-pepper,cola,true,1,3,false,false,cold,nearest base in the vocabulary is cola
+mountain-dew,citrus,true,2,3,false,false,cold,
+diet-mountain-dew,citrus,true,2,3,false,false,cold,sweetness is perceived sweetness not sugar content
+fanta-orange,orange,true,0,3,false,false,cold,
+fanta-grape,grape,true,0,3,false,false,cold,
+fanta-zero-orange,orange,true,0,3,false,false,cold,sweetness is perceived sweetness not sugar content
+aw-root-beer,root-beer,true,0,3,false,false,cold,
+aw-diet-root-beer,root-beer,true,0,3,false,false,cold,sweetness is perceived sweetness not sugar content
+jarritos-mandarin,orange,true,0,3,false,false,cold,
+jarritos-lime,citrus,true,0,3,false,false,cold,
+jarritos-fruit-punch,tropical,true,0,3,false,false,cold,
+jarritos-pineapple,tropical,true,0,3,false,false,cold,
+jarritos-grapefruit,citrus,true,0,3,false,false,cold,
+barqs-root-beer,root-beer,true,1,3,false,false,cold,
+canada-dry-ginger-ale,ginger,true,0,3,false,false,cold,
+canada-dry-diet-ginger-ale,ginger,true,0,3,false,false,cold,sweetness is perceived sweetness not sugar content
+seven-up,lemon-lime,true,0,3,false,false,cold,
+diet-seven-up,lemon-lime,true,0,3,false,false,cold,sweetness is perceived sweetness not sugar content
+mug-root-beer,root-beer,true,0,3,false,false,cold,
+sunkist-orange,orange,true,0,3,false,false,cold,
+diet-sunkist-orange,orange,true,0,3,false,false,cold,sweetness is perceived sweetness not sugar content
+crush-orange,orange,true,0,3,false,false,cold,
+big-red,cream,true,0,3,false,false,cold,
+aw-cream-soda,cream,true,0,3,false,false,cold,
+squirt,citrus,true,0,3,false,false,cold,
+reeds-ginger-beer,ginger,true,0,3,false,false,cold,
+olipop-vintage-cola,cola,true,1,2,false,false,cold,
+olipop-strawberry-vanilla,berry,true,0,2,false,false,cold,
+olipop-orange-squeeze,orange,true,0,2,false,false,cold,
+olipop-classic-root-beer,root-beer,true,0,2,false,false,cold,
+poppi-cola,cola,true,1,2,false,false,cold,
+poppi-strawberry-lemon,citrus,true,0,2,false,false,cold,
+poppi-doc-pop,cola,true,1,2,false,false,cold,nearest base in the vocabulary is cola
+poppi-orange,orange,true,0,2,false,false,cold,
+zevia-cola,cola,true,1,2,false,false,cold,sweetness is perceived sweetness not sugar content
+zevia-ginger-ale,ginger,true,0,2,false,false,cold,sweetness is perceived sweetness not sugar content
+zevia-mountain-twist,citrus,true,1,2,false,false,cold,sweetness is perceived sweetness not sugar content
+rc-cola,cola,true,1,3,false,false,cold,
+diet-rc-cola,cola,true,1,3,false,false,cold,sweetness is perceived sweetness not sugar content
+jarritos-guava,tropical,true,0,3,false,false,cold,
+jarritos-tamarind,other,true,0,3,false,false,cold,tamarind has no entry in the vocabulary
+jarritos-watermelon,tropical,true,0,3,false,false,cold,
+dr-pepper-cherry,cola,true,1,3,false,false,cold,nearest base in the vocabulary is cola
+sprite-cherry,lemon-lime,true,0,3,false,false,cold,a Sprite variant; stays with the lemon-lime family
+fanta-strawberry,berry,true,0,3,false,false,cold,
+fanta-pineapple,tropical,true,0,3,false,false,cold,
+mountain-dew-code-red,berry,true,2,3,false,false,cold,
+mountain-dew-baja-blast,tropical,true,2,3,false,false,cold,
+mountain-dew-spark,citrus,true,2,3,false,false,cold,
+pepsi-wild-cherry,cola,true,1,3,false,false,cold,
+coca-cola-vanilla,cola,true,1,3,false,false,cold,
+starry-lemon-lime,lemon-lime,true,0,3,false,false,cold,
+crush-grape,grape,true,0,3,false,false,cold,
+vernors-ginger-ale,ginger,true,0,3,false,false,cold,
+ibc-root-beer,root-beer,true,0,3,false,false,cold,
+hires-root-beer,root-beer,true,0,3,false,false,cold,
+shasta-cola,cola,true,1,3,false,false,cold,
+shasta-grape,grape,true,0,3,false,false,cold,
+faygo-red-pop,berry,true,0,3,false,false,cold,
+faygo-rock-and-rye,cream,true,0,3,false,false,cold,
+stewarts-root-beer,root-beer,true,0,3,false,false,cold,
+stewarts-orange-n-cream,cream,true,0,3,false,false,cold,
+boylan-birch-beer,root-beer,true,0,3,false,false,cold,
+bundaberg-ginger-beer,ginger,true,0,3,false,false,cold,
+olipop-dr-wow,cola,true,1,2,false,false,cold,nearest base in the vocabulary is cola
+diet-coke-ginger-lime,cola,true,1,3,false,false,cold,sweetness is perceived sweetness not sugar content
+diet-coke-zesty-blood-orange,cola,true,1,3,false,false,cold,sweetness is perceived sweetness not sugar content
+diet-coke-twisted-mango,cola,true,1,3,false,false,cold,sweetness is perceived sweetness not sugar content
+diet-coke-feisty-cherry,cola,true,1,3,false,false,cold,sweetness is perceived sweetness not sugar content
+diet-coke-caffeine-free,cola,true,0,3,false,false,cold,sweetness is perceived sweetness not sugar content
+dr-pepper-zero-sugar,cola,true,1,3,false,false,cold,nearest base in the vocabulary is cola
+coca-cola-cherry-zero-sugar,cola,true,1,3,false,false,cold,sweetness is perceived sweetness not sugar content
+coca-cola-zero-sugar-vanilla,cola,true,1,3,false,false,cold,sweetness is perceived sweetness not sugar content
+starry-zero-sugar,lemon-lime,true,0,3,false,false,cold,sweetness is perceived sweetness not sugar content
+pepsi-max,cola,true,1,3,false,false,cold,sweetness is perceived sweetness not sugar content
+diet-pepsi-caffeine-free,cola,true,0,3,false,false,cold,sweetness is perceived sweetness not sugar content
+diet-mug-root-beer,root-beer,true,0,3,false,false,cold,sweetness is perceived sweetness not sugar content
+diet-barqs-root-beer,root-beer,true,1,3,false,false,cold,sweetness is perceived sweetness not sugar content
+diet-orange-crush,orange,true,0,3,false,false,cold,sweetness is perceived sweetness not sugar content
+diet-squirt,citrus,true,0,3,false,false,cold,sweetness is perceived sweetness not sugar content
+diet-vernors,ginger,true,0,3,false,false,cold,sweetness is perceived sweetness not sugar content
+zevia-grape,grape,true,0,2,false,false,cold,sweetness is perceived sweetness not sugar content
+zevia-orange,orange,true,0,2,false,false,cold,sweetness is perceived sweetness not sugar content
+zevia-dr-zevia,cola,true,1,2,false,false,cold,nearest base in the vocabulary is cola
+zevia-cream-soda,cream,true,0,2,false,false,cold,sweetness is perceived sweetness not sugar content
+zevia-cherry-cola,cola,true,1,2,false,false,cold,sweetness is perceived sweetness not sugar content
+shasta-diet-cola,cola,true,1,3,false,false,cold,sweetness is perceived sweetness not sugar content
+fresca-original,citrus,true,0,3,false,false,cold,sweetness is perceived sweetness not sugar content
+fresca-black-cherry-citrus,citrus,true,0,3,false,false,cold,sweetness is perceived sweetness not sugar content
+tropicana-orange-juice-original,orange,false,0,2,false,false,cold,
+tropicana-orange-juice-no-pulp,orange,false,0,2,false,false,cold,
+tropicana-orange-juice-some-pulp,orange,false,0,2,false,false,cold,
+tropicana-pink-lemonade,citrus,false,0,3,false,false,cold,
+tropicana-fruit-punch,tropical,false,0,3,false,false,cold,
+simply-orange,orange,false,0,2,false,false,cold,
+simply-lemonade,citrus,false,0,3,false,false,cold,
+simply-apple,apple,false,0,2,false,false,cold,
+simply-grapefruit,citrus,false,0,2,false,false,cold,
+simply-limeade,citrus,false,0,3,false,false,cold,
+minute-maid-apple-juice,apple,false,0,2,false,false,cold,
+minute-maid-fruit-punch,tropical,false,0,3,false,false,cold,
+minute-maid-lemonade,citrus,false,0,3,false,false,cold,
+welchs-100-grape-juice,grape,false,0,2,false,false,cold,
+welchs-white-grape-juice,grape,false,0,2,false,false,cold,
+naked-juice-green-machine,herbal,false,0,2,false,false,cold,
+naked-juice-blue-machine,berry,false,0,2,false,false,cold,
+naked-juice-mighty-mango,tropical,false,0,2,false,false,cold,
+naked-juice-strawberry-banana,berry,false,0,2,false,false,cold,
+odwalla-superfood-juice,herbal,false,0,2,false,false,cold,
+bolthouse-farms-perfectly-protein-vanilla-chai,chai,false,0,2,true,false,cold,
+bolthouse-farms-green-goodness-juice,herbal,false,0,2,false,false,cold,
+v8-original-vegetable-juice,herbal,false,0,2,false,false,cold,
+v8-v-fusion-strawberry-banana,herbal,false,0,2,false,false,cold,a V8 vegetable blend despite the fruit name
+ocean-spray-cranberry-juice-cocktail,berry,false,0,2,false,false,cold,
+ocean-spray-cran-grape,grape,false,0,2,false,false,cold,
+ocean-spray-cran-raspberry,berry,false,0,2,false,false,cold,
+motts-apple-juice,apple,false,0,2,false,false,cold,
+juicy-juice-apple,apple,false,0,3,false,false,cold,
+hi-c-fruit-punch,tropical,false,0,3,false,false,cold,
+fiji-natural-artesian-water,mineral,false,0,0,false,false,cold,
+evian-natural-spring-water,mineral,false,0,0,false,false,cold,
+smartwater-vapor-distilled,mineral,false,0,0,false,false,cold,
+liquid-death-mountain-water-still,mineral,false,0,0,false,false,cold,
+liquid-death-sparkling-severed-lime,citrus,true,0,0,false,false,cold,
+essentia-ionized-alkaline-water,mineral,false,0,0,false,false,cold,
+arrowhead-mountain-spring-water,mineral,false,0,0,false,false,cold,
+dasani-purified-water,mineral,false,0,0,false,false,cold,
+aquafina-purified-water,mineral,false,0,0,false,false,cold,
+poland-spring-natural-spring-water,mineral,false,0,0,false,false,cold,
+deer-park-natural-spring-water,mineral,false,0,0,false,false,cold,
+voss-artesian-still-water,mineral,false,0,0,false,false,cold,
+mountain-valley-spring-water,mineral,false,0,0,false,false,cold,
+core-hydration-nutrient-enhanced-water,mineral,false,0,0,false,false,cold,
+just-water-still,mineral,false,0,0,false,false,cold,
+lacroix-pamplemousse,citrus,true,0,0,false,false,cold,
+lacroix-lime,citrus,true,0,0,false,false,cold,
+lacroix-coconut,tropical,true,0,0,false,false,cold,coconut is tropical here not a nut
+lacroix-berry,berry,true,0,0,false,false,cold,
+lacroix-mango,tropical,true,0,0,false,false,cold,
+lacroix-passionfruit,tropical,true,0,0,false,false,cold,
+lacroix-cran-raspberry,berry,true,0,0,false,false,cold,
+lacroix-lemon,citrus,true,0,0,false,false,cold,
+lacroix-orange,orange,true,0,0,false,false,cold,
+lacroix-key-lime,citrus,true,0,0,false,false,cold,
+lacroix-pure,mineral,true,0,0,false,false,cold,
+lacroix-peach-pear,tropical,true,0,0,false,false,cold,
+topo-chico-original,mineral,true,0,0,false,false,cold,
+topo-chico-twist-lime,citrus,true,0,0,false,false,cold,
+topo-chico-twist-grapefruit,citrus,true,0,0,false,false,cold,
+topo-chico-twist-tangerine,orange,true,0,0,false,false,cold,
+spindrift-grapefruit,citrus,true,0,0,false,false,cold,
+spindrift-raspberry-lime,citrus,true,0,0,false,false,cold,
+spindrift-lemon,citrus,true,0,0,false,false,cold,
+spindrift-blackberry,berry,true,0,0,false,false,cold,
+spindrift-half-tea-half-lemon,tea,true,1,0,false,false,cold,
+spindrift-cucumber,herbal,true,0,0,false,false,cold,
+bubly-lime,citrus,true,0,0,false,false,cold,
+bubly-strawberry,berry,true,0,0,false,false,cold,
+bubly-mango,tropical,true,0,0,false,false,cold,
+bubly-cherry,berry,true,0,0,false,false,cold,
+bubly-grapefruit,citrus,true,0,0,false,false,cold,
+bubly-blackberry,berry,true,0,0,false,false,cold,
+waterloo-black-cherry,berry,true,0,0,false,false,cold,
+waterloo-lime,citrus,true,0,0,false,false,cold,
+waterloo-grapefruit,citrus,true,0,0,false,false,cold,
+waterloo-watermelon,tropical,true,0,0,false,false,cold,
+perrier-original,mineral,true,0,0,false,false,cold,
+perrier-lorange,orange,true,0,0,false,false,cold,
+san-pellegrino-original,mineral,true,0,0,false,false,cold,
+san-pellegrino-limonata,citrus,true,0,3,false,false,cold,
+san-pellegrino-aranciata,orange,true,0,3,false,false,cold,
+polar-seltzer-black-cherry,berry,true,0,0,false,false,cold,
+polar-seltzer-raspberry-lime,citrus,true,0,0,false,false,cold,
+aha-lime-watermelon,citrus,true,0,0,false,false,cold,
+red-bull-original,other,true,3,2,false,false,cold,unflavoured energy; its own family not in the vocabulary
+red-bull-sugarfree,other,true,3,1,false,false,cold,unflavoured energy; its own family not in the vocabulary
+red-bull-tropical,tropical,true,3,2,false,false,cold,
+red-bull-watermelon,tropical,true,3,2,false,false,cold,
+monster-energy-original,other,true,3,2,false,false,cold,unflavoured energy; its own family not in the vocabulary
+monster-energy-zero-ultra,other,true,3,1,false,false,cold,unflavoured energy; its own family not in the vocabulary
+monster-energy-mango-loco,tropical,true,3,2,false,false,cold,
+monster-energy-pipeline-punch,tropical,true,3,2,false,false,cold,
+monster-energy-peachy-keen,tropical,true,3,2,false,false,cold,
+monster-energy-juice-khaotic,orange,true,3,2,false,false,cold,
+celsius-sparkling-orange,orange,true,3,2,false,false,cold,
+celsius-sparkling-peach-vibe,tropical,true,3,2,false,false,cold,
+celsius-sparkling-watermelon,tropical,true,3,2,false,false,cold,
+celsius-kiwi-guava,tropical,true,3,2,false,false,cold,
+celsius-sparkling-cola,cola,true,3,2,false,false,cold,
+celsius-cucumber-lime,herbal,true,3,2,false,false,cold,
+celsius-arctic-vibe,other,true,3,2,false,false,cold,unflavoured energy; its own family not in the vocabulary
+celsius-sparkling-wild-berry,berry,true,3,2,false,false,cold,
+alani-nu-hawaiian-shaved-ice,tropical,true,3,2,false,false,cold,
+alani-nu-witchs-brew,other,true,3,2,false,false,cold,unflavoured energy; its own family not in the vocabulary
+alani-nu-breezeberry,berry,true,3,2,false,false,cold,
+alani-nu-cosmic-stardust,berry,true,3,2,false,false,cold,
+alani-nu-mimosa,orange,true,3,2,false,false,cold,
+bang-star-blast,other,true,3,2,false,false,cold,unflavoured energy; its own family not in the vocabulary
+bang-peach-mango,tropical,true,3,2,false,false,cold,
+bang-rainbow-unicorn,other,true,3,2,false,false,cold,unflavoured energy; its own family not in the vocabulary
+bang-blue-razz,berry,true,3,2,false,false,cold,
+ghost-energy-cherry-limeade,citrus,true,3,2,false,false,cold,
+ghost-energy-sour-patch-kids-redberry,berry,true,3,2,false,false,cold,
+ghost-energy-faze-berry,berry,true,3,2,false,false,cold,
+reign-melon-mania,tropical,true,3,2,false,false,cold,
+reign-razzle-berry,berry,true,3,2,false,false,cold,
+five-hour-energy-original,other,false,3,2,false,false,cold,unflavoured energy; its own family not in the vocabulary
+five-hour-energy-extra-strength,other,false,3,2,false,false,cold,unflavoured energy; its own family not in the vocabulary
+five-hour-energy-pink-lemonade,citrus,false,3,2,false,false,cold,
+rockstar-original,other,true,3,2,false,false,cold,unflavoured energy; its own family not in the vocabulary
+nos-original,other,true,3,2,false,false,cold,unflavoured energy; its own family not in the vocabulary
+full-throttle-original,other,true,3,2,false,false,cold,unflavoured energy; its own family not in the vocabulary
+c4-energy-frozen-bombsicle,berry,true,3,2,false,false,cold,
+guru-organic-energy-original,other,true,3,2,false,false,cold,unflavoured energy; its own family not in the vocabulary
+starbucks-frappuccino-mocha,coffee,false,2,3,true,false,cold,
+starbucks-frappuccino-vanilla,coffee,false,2,3,true,false,cold,
+starbucks-frappuccino-caramel,coffee,false,2,3,true,false,cold,
+starbucks-frappuccino-coffee,coffee,false,2,3,true,false,cold,
+starbucks-frappuccino-mocha-light,coffee,false,2,3,true,false,cold,
+starbucks-doubleshot-original,coffee,false,3,2,true,false,cold,
+starbucks-doubleshot-espresso-cream,coffee,false,3,2,true,false,cold,
+starbucks-doubleshot-vanilla,coffee,false,3,2,true,false,cold,
+starbucks-doubleshot-energy-coffee,coffee,false,3,2,true,false,cold,
+dunkin-bottled-iced-coffee-original,coffee,false,3,2,true,false,cold,
+dunkin-bottled-iced-coffee-mocha,coffee,false,3,2,true,false,cold,
+dunkin-bottled-iced-coffee-french-vanilla,coffee,false,3,2,true,false,cold,
+la-colombe-draft-latte-original,coffee,false,2,2,true,false,cold,
+la-colombe-draft-latte-mocha,coffee,false,2,2,true,false,cold,
+la-colombe-draft-latte-vanilla,coffee,false,2,2,true,false,cold,
+la-colombe-draft-latte-oat-milk,coffee,false,2,2,false,false,cold,
+stok-cold-brew-black,coffee,false,3,0,false,false,cold,
+stok-cold-brew-not-too-sweet,coffee,false,3,0,false,false,cold,
+chameleon-cold-brew-black,coffee,false,3,0,false,false,cold,
+califia-farms-cold-brew-almond-milk,coffee,false,3,2,false,false,cold,
+high-brew-mexican-vanilla,coffee,false,3,2,true,false,cold,
+high-brew-salted-caramel,coffee,false,3,2,true,false,cold,
+peets-iced-coffee-classic,coffee,false,3,2,false,false,cold,
+illy-issimo-cappuccino,coffee,false,2,2,true,false,cold,
+nescafe-frappe-caramel,coffee,false,2,3,true,false,cold,
+death-wish-coffee-rtd-black,coffee,false,3,0,false,false,cold,
+rise-brewing-nitro-cold-brew-black,coffee,false,3,0,false,false,cold,
+rise-brewing-nitro-cold-brew-oat-latte,coffee,false,2,2,false,false,cold,
+kitu-super-coffee-mocha,coffee,false,3,2,true,false,cold,
+bulletproof-coffee-rtd-vanilla,coffee,false,3,2,true,false,cold,
+jamba-juice-mango-a-go-go,tropical,false,0,2,false,false,cold,
+jamba-juice-strawberry-surf-rider,berry,false,0,2,false,false,cold,
+jamba-juice-caribbean-passion,tropical,false,0,2,false,false,cold,
+jamba-juice-orange-dream-machine,orange,false,0,2,true,false,cold,
+naked-protein-zone,tropical,false,0,2,true,false,cold,
+naked-berry-blast,berry,false,0,2,false,false,cold,
+bolthouse-farms-perfectly-protein-chocolate,chocolate,false,0,2,true,false,cold,
+bolthouse-farms-green-goodness-smoothie,herbal,false,0,2,false,false,cold,
+bolthouse-farms-strawberry-banana,berry,false,0,2,false,false,cold,
+odwalla-superfood-smoothie,herbal,false,0,2,false,false,cold,
+arizona-green-tea,tea,false,1,3,false,false,cold,
+arizona-sweet-tea,tea,false,1,3,false,false,cold,
+arizona-half-and-half,tea,false,1,3,false,false,cold,
+arizona-peach-tea,tea,false,1,3,false,false,cold,
+arizona-raspberry-tea,tea,false,1,3,false,false,cold,
+arizona-diet-green-tea,tea,false,1,1,false,false,cold,
+pure-leaf-sweet-tea,tea,false,1,3,false,false,cold,
+pure-leaf-unsweetened,tea,false,1,0,false,false,cold,
+pure-leaf-lemon-tea,tea,false,1,2,false,false,cold,
+pure-leaf-extra-sweet-tea,tea,false,1,3,false,false,cold,
+snapple-lemon-tea,tea,false,1,3,false,false,cold,
+snapple-peach-tea,tea,false,1,3,false,false,cold,
+snapple-raspberry-tea,tea,false,1,3,false,false,cold,
+snapple-diet-peach-tea,tea,false,1,1,false,false,cold,
+gold-peak-sweet-tea,tea,false,1,3,false,false,cold,
+gold-peak-unsweetened-tea,tea,false,1,0,false,false,cold,
+gold-peak-peach-tea,tea,false,1,2,false,false,cold,
+lipton-iced-tea,tea,false,1,2,false,false,cold,
+lipton-green-tea,tea,false,1,1,false,false,cold,
+lipton-diet-green-tea,tea,false,1,1,false,false,cold,
+ito-en-oi-ocha-green-tea,tea,false,1,1,false,false,cold,
+ito-en-matcha-green-tea,matcha,false,2,1,false,false,cold,
+guayaki-yerba-mate-enlighten-mint,tea,false,2,1,false,false,cold,
+guayaki-yerba-mate-lemon-elation,tea,false,2,1,false,false,cold,
+honest-tea-honey-green-tea,tea,false,1,3,false,false,cold,
+kung-fu-tea-classic-milk-tea,tea,false,1,3,true,false,either,
+tiger-sugar-brown-sugar-boba-milk-tea,tea,false,1,3,true,false,either,
+boba-guys-taro-milk-tea,tea,false,1,3,true,false,either,milk-tea base; the fruit is a flavouring
+thai-milk-tea-boba,tea,false,1,3,true,false,either,
+matcha-latte-with-boba,matcha,false,2,3,true,false,either,
+wintermelon-milk-tea-boba,tea,false,1,3,true,false,either,milk-tea base; the fruit is a flavouring
+honeydew-milk-tea-with-boba,tea,false,1,3,true,false,either,milk-tea base; the fruit is a flavouring
+strawberry-fruit-tea-with-boba,tea,false,1,2,false,false,either,
+mango-green-tea-with-boba,tea,false,1,2,false,false,either,
+oolong-milk-tea-boba,tea,false,1,3,true,false,either,
+gong-cha-classic-milk-tea,tea,false,1,3,true,false,either,
+sharetea-taro-milk-tea,tea,false,1,3,true,false,either,milk-tea base; the fruit is a flavouring
+chatime-peach-oolong-tea,tea,false,1,2,false,false,either,
+kung-fu-tea-wintermelon-milk-tea,tea,false,1,3,true,false,either,milk-tea base; the fruit is a flavouring
+gong-cha-taro-milk-tea,tea,false,1,3,true,false,either,milk-tea base; the fruit is a flavouring
+gatorade-lemon-lime,lemon-lime,false,0,2,false,false,cold,
+gatorade-fruit-punch,tropical,false,0,2,false,false,cold,
+gatorade-orange,orange,false,0,2,false,false,cold,
+gatorade-cool-blue,berry,false,0,2,false,false,cold,
+gatorade-glacier-freeze,berry,false,0,2,false,false,cold,
+gatorade-grape,grape,false,0,2,false,false,cold,
+gatorade-zero-lemon-lime,lemon-lime,false,0,1,false,false,cold,
+gatorade-zero-grape,grape,false,0,1,false,false,cold,
+powerade-mountain-berry-blast,berry,false,0,2,false,false,cold,
+powerade-fruit-punch,tropical,false,0,2,false,false,cold,
+powerade-grape,grape,false,0,2,false,false,cold,
+powerade-zero-mixed-berry,berry,false,0,1,false,false,cold,
+bodyarmor-fruit-punch,tropical,false,0,2,false,false,cold,
+bodyarmor-strawberry-banana,berry,false,0,2,false,false,cold,
+bodyarmor-orange-mango,orange,false,0,2,false,false,cold,
+bodyarmor-lyte-fruit-punch,tropical,false,0,1,false,false,cold,
+prime-hydration-lemon-lime,lemon-lime,false,0,2,false,false,cold,
+prime-hydration-blue-raspberry,berry,false,0,2,false,false,cold,
+prime-hydration-ice-pop,berry,false,0,2,false,false,cold,
+propel-water-berry,berry,false,0,1,false,false,cold,
+horchata-traditional,cream,false,0,2,true,false,cold,rice and cinnamon with milk
+agua-fresca-jamaica,herbal,false,0,2,false,false,cold,
+agua-fresca-tamarindo,other,false,0,2,false,false,cold,tamarind has no entry in the vocabulary
+yakult-original,other,false,0,3,true,false,cold,cultured milk drink; tangy rather than creamy
+calpico-original,other,false,0,2,true,false,cold,cultured milk drink; tangy rather than creamy
+calpico-mango,tropical,false,0,2,true,false,cold,cultured milk drink; tangy rather than creamy
+ramune-original,lemon-lime,true,0,3,false,false,cold,
+ramune-melon,tropical,true,0,3,false,false,cold,
+gts-kombucha-gingerade,ginger,true,1,1,false,false,cold,fermented tea; lightly caffeinated
+gts-kombucha-trilogy,tea,true,1,1,false,false,cold,fermented tea; lightly caffeinated
+gts-kombucha-guava-goddess,tea,true,1,1,false,false,cold,fermented tea; lightly caffeinated
+vita-coco-coconut-water-original,tropical,false,0,1,false,false,cold,coconut is tropical here not a nut
+harmless-harvest-coconut-water,tropical,false,0,1,false,false,cold,coconut is tropical here not a nut
+health-ade-kombucha-pink-lady-apple,tea,true,1,1,false,false,cold,fermented tea; lightly caffeinated
+suja-kombucha-strawberry-basil-lemonade,tea,true,1,1,false,false,cold,fermented tea; lightly caffeinated
+modelo-especial,hop,true,0,0,false,true,cold,all beer is hop; the vocabulary has no lager/stout split
+corona-extra,hop,true,0,0,false,true,cold,all beer is hop; the vocabulary has no lager/stout split
+corona-light,hop,true,0,0,false,true,cold,all beer is hop; the vocabulary has no lager/stout split
+coors-light,hop,true,0,0,false,true,cold,all beer is hop; the vocabulary has no lager/stout split
+bud-light,hop,true,0,0,false,true,cold,all beer is hop; the vocabulary has no lager/stout split
+miller-lite,hop,true,0,0,false,true,cold,all beer is hop; the vocabulary has no lager/stout split
+heineken-original-lager,hop,true,0,0,false,true,cold,all beer is hop; the vocabulary has no lager/stout split
+stella-artois-lager,hop,true,0,0,false,true,cold,all beer is hop; the vocabulary has no lager/stout split
+guinness-draught,hop,true,0,0,false,true,cold,all beer is hop; the vocabulary has no lager/stout split
+blue-moon-belgian-white,hop,true,0,0,false,true,cold,all beer is hop; the vocabulary has no lager/stout split
+pacifico-clara,hop,true,0,0,false,true,cold,all beer is hop; the vocabulary has no lager/stout split
+dos-equis-lager-especial,hop,true,0,0,false,true,cold,all beer is hop; the vocabulary has no lager/stout split
+white-claw-black-cherry,berry,true,0,1,false,true,cold,a hard seltzer tastes of its fruit not of hops
+white-claw-mango,tropical,true,0,1,false,true,cold,a hard seltzer tastes of its fruit not of hops
+white-claw-lime,citrus,true,0,1,false,true,cold,a hard seltzer tastes of its fruit not of hops
+white-claw-natural-lime,citrus,true,0,1,false,true,cold,a hard seltzer tastes of its fruit not of hops
+truly-wild-berry,berry,true,0,1,false,true,cold,a hard seltzer tastes of its fruit not of hops
+truly-lemonade,citrus,true,0,1,false,true,cold,a hard seltzer tastes of its fruit not of hops
+generic-house-red-cabernet-sauvignon,wine,false,0,0,false,true,either,
+generic-house-white-chardonnay,wine,false,0,0,false,true,cold,
+generic-prosecco,wine,true,0,1,false,true,cold,
+generic-pinot-grigio,wine,false,0,0,false,true,cold,
+generic-rose,wine,false,0,1,false,true,cold,
+barefoot-cellars-cabernet-sauvignon,wine,false,0,0,false,true,either,
+josh-cellars-chardonnay,wine,false,0,0,false,true,cold,
+la-marca-prosecco,wine,true,0,1,false,true,cold,
+generic-margarita,agave,true,0,2,false,true,cold,
+generic-old-fashioned,grain,false,0,1,false,true,either,
+generic-espresso-martini,coffee,false,2,2,false,true,cold,
+generic-moscow-mule,ginger,true,0,2,false,true,cold,
+generic-mojito,herbal,true,0,2,false,true,cold,
+generic-pina-colada,tropical,false,0,2,false,true,cold,coconut is tropical here not a nut
+titos-handmade-vodka-soda,grain,true,0,2,false,true,cold,spirit-led; the mixer is not the base
+jack-daniels-and-coke,grain,false,1,2,false,true,cold,spirit-led; the mixer is not the base
+high-noon-vodka-soda-watermelon,grain,true,0,2,false,true,cold,spirit-led; the mixer is not the base
+high-noon-vodka-soda-peach,grain,true,0,2,false,true,cold,spirit-led; the mixer is not the base
+cutwater-spirits-margarita,agave,true,0,2,false,true,cold,
+cutwater-spirits-vodka-mule,ginger,true,0,2,false,true,cold,
