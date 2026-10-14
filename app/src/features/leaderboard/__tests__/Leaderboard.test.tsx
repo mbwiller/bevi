@@ -7,6 +7,9 @@ import { controls } from '@/testing/fakeApi';
 import LeaderboardScreen from '@/app/(tabs)/leaderboard/index';
 import { categoryById } from '@/lib/categories';
 
+import { RANK_POINTS_WEIGHTS } from '@bevi/ranking';
+
+import { pointsRules } from '../copy';
 import { myScoreMeta } from '../BevBoard';
 import { pointsMeta } from '../PeopleBoard';
 
@@ -159,4 +162,41 @@ it("doesn't flash the pinned own row before the list reports what's on screen", 
   expect((await screen.findAllByText(/\(you\)/)).length).toBe(1);
   expect(screen.getAllByLabelText(new RegExp(`^${me.displayName} \\(you\\)`))).toHaveLength(1);
   expect(screen.queryByTestId('pinned-self')).toBeNull();
+});
+
+it('shows each Bev\'s image on the Bevs board', async () => {
+  const first = (await api.leaderboard.bevs()).items[0]!;
+  await start();
+  await screen.findByLabelText(`1. ${first.bev.name}`);
+  const named = screen.getAllByLabelText(first.bev.name);
+  expect(named.some((el) => el.props.accessibilityRole === 'image' || el.props.role === 'image')).toBe(true);
+});
+
+it('explains People points in a sheet', async () => {
+  await start('/leaderboard?scope=users');
+  await screen.findAllByText(/\(you\)/);
+  expect(screen.queryByTestId('sheet')).toBeNull();
+  await fireEvent.press(screen.getByText('How points work'));
+  expect(await screen.findByTestId('sheet')).toBeTruthy();
+  for (const line of pointsRules()) expect(screen.getByText(line)).toBeTruthy();
+});
+
+describe('pointsRules', () => {
+  it('builds the rules from the default weights', () => {
+    expect(RANK_POINTS_WEIGHTS).toEqual({ bevsRanked: 1, currentStreak: 3, bevsCreated: 2 });
+    expect(pointsRules()).toEqual([
+      '1 point for each Bev you rank',
+      '3 points for each day of your current streak',
+      '2 points for each Bev you added that someone else ranked',
+      "Followers don't count",
+      'Rank a Bev to get on the board',
+    ]);
+  });
+
+  it('pluralises from custom weights', () => {
+    const [a, b, c] = pointsRules({ bevsRanked: 2, currentStreak: 1, bevsCreated: 1 });
+    expect(a).toBe('2 points for each Bev you rank');
+    expect(b).toBe('1 point for each day of your current streak');
+    expect(c).toBe('1 point for each Bev you added that someone else ranked');
+  });
 });
