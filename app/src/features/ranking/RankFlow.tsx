@@ -1,3 +1,4 @@
+import { storedScore } from '@bevi/ranking';
 import { ApiError, isApiError, type Bucket, type SubmitRankingInput, type SubmitRankingResult, type ValidationErrorDetail } from '@bevi/shared';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -109,6 +110,16 @@ export function RankFlow({ bevId, rerank = false, detailIfRanked = false }: Rank
     flow().start(bevId, bucket, bucketQ.data, mode);
     setPhase(selectDone(flow()) ? 'note' : 'compare');
   }, [phase, bucket, bevId, bevQ.data, bucketQ.data, bucketQ.isFetchedAfterMount, bucketQ.isFetching, mode]);
+
+  // The score the server will store, computed the moment placement finishes (the note step reveals it).
+  // Recomputed for every finished placement: after Undo and forward again, and after a conflict restart.
+  const placed = useMemo(() => {
+    if (phase !== 'note' || !placement) return null;
+    const r = flow().result();
+    if (!r) return null;
+    const bucketSize = r.expectedBucketSize + 1;
+    return { bucket: r.bucket, position: r.insertIndex, bucketSize, score: storedScore(r.insertIndex, bucketSize, r.bucket) };
+  }, [phase, placement]);
 
   // The last answer finishes placement: on to the note.
   useEffect(() => {
@@ -264,12 +275,14 @@ export function RankFlow({ bevId, rerank = false, detailIfRanked = false }: Rank
         />
       </Screen>
     );
-  } else if (phase === 'note' && placement) {
+  } else if (phase === 'note' && placement && placed) {
     content = (
       <Screen>
         <NoteStep
-          bucket={placement.bucket}
-          firstInBucket={placement.list.length === 0}
+          bucket={placed.bucket}
+          score={placed.score}
+          position={placed.position}
+          bucketSize={placed.bucketSize}
           note={note}
           onNoteChange={(v) => flow().setNote(v)}
           onSave={() => void save(true)}

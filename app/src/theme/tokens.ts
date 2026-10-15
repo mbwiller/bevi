@@ -93,6 +93,7 @@ export const size = {
   pill: 30,
   scoreBubble: 40,
   scoreBubbleLg: 56,
+  scoreBubbleXl: 72,
   bevImageStrip: 155,
   featuredCard: 164,
   rowMin: 126,
