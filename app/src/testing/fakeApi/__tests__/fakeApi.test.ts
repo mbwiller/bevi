@@ -313,3 +313,23 @@ describe('@bevi/ranking-backed predictions, recommendations, streaks and points'
     expect((await api.stats.getMine()).currentStreak).toBeGreaterThanOrEqual(2);
   });
 });
+
+describe('likes (S-02)', () => {
+  it('like and unlike are idempotent and show on the feed item; an unknown post is not_found', async () => {
+    const api = make();
+    await signInMe(api);
+    const [post] = (await api.feed.getFeed()).items;
+    expect(post).toMatchObject({ likeCount: 0, likedByMe: false });
+
+    await api.feed.like(post!.id);
+    await api.feed.like(post!.id);
+    expect((await api.feed.getFeed()).items.find((i) => i.id === post!.id)).toMatchObject({ likeCount: 1, likedByMe: true });
+
+    await api.feed.unlike(post!.id);
+    await api.feed.unlike(post!.id);
+    expect((await api.feed.getFeed()).items.find((i) => i.id === post!.id)).toMatchObject({ likeCount: 0, likedByMe: false });
+
+    const missing = await api.feed.like('feed-does-not-exist').catch((e: unknown) => e);
+    expect(isApiError(missing) && missing.code).toBe('not_found');
+  });
+});
