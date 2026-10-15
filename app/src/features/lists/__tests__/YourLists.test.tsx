@@ -64,6 +64,14 @@ it('switches tabs through ?tab=', async () => {
   expect(await screen.findByLabelText(recs.items[0]!.bev.name)).toBeTruthy();
 });
 
+it('Recommended has no sort toggle, since recommendations have one order', async () => {
+  const recs = await api.recs.getRecommendations();
+  await start('/lists?tab=recommended');
+  expect(await screen.findByLabelText(recs.items[0]!.bev.name)).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Sort by Predicted' })).toBeNull();
+  expect(screen.queryByText('Predicted')).toBeNull();
+});
+
 it('shows each tab’s empty state, and Recommended locked below 3 rankings', async () => {
   controls.emptyUser();
   await start('/lists?tab=bevd');
