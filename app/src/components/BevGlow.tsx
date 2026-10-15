@@ -18,7 +18,7 @@ type WebViewStyle = ViewStyle & { isolation?: 'isolate' };
 const BLUR: ViewStyle = Platform.OS === 'web' ? { filter: 'blur(48px)' } : {};
 
 /**
- * Soft colour field behind the gut check's glass: the Bev's colour, `primary` and `fizz`, blurred into
+ * Soft colour field behind the gut check's BucketButtons: the Bev's colour, `primary` and `fizz`, blurred into
  * `surface`. Decorative and static (the design system doesn't animate it, so reduced motion changes
  * nothing). Under Reduce Transparency the blobs go and it is plain `surface`.
  */

@@ -26,7 +26,7 @@ const QUESTION_TOP = 36;
 
 /**
  * Ranking flow step 1 (design system ScreenGutCheck): the Bev floating on its own BevGlow (the
- * route draws the glow behind this), "How was it?" and the three glass BucketButtons.
+ * route draws the glow behind this), "How was it?" and the three BucketButtons.
  */
 export function GutCheck({ bev, chosen, onChoose, onClose }: GutCheckProps) {
   const { colors } = useTheme();

@@ -1,7 +1,7 @@
 import type { Bucket } from '@bevi/ranking';
 import { BUCKET_LABEL } from '@bevi/shared';
 import { useEffect, useId, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, {
   cancelAnimation,
   Easing,
@@ -14,10 +14,9 @@ import Animated, {
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
-import Svg, { Defs, LinearGradient, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
+import Svg, { Defs, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 
 import { fade, mix, shade } from '@/lib/color';
-import { supportsBackdropFilter, useReducedTransparency } from '@/lib/glass';
 import { MAX_FONT_SCALE_DENSE, motion, radius, scoreColor, spacing, type, useTheme, type Colors } from '@/theme';
 
 import { Icon, type IconName } from './Icon';
@@ -28,18 +27,13 @@ const BUCKET_ICON: Record<Bucket, IconName> = { LOVED: 'laugh', FINE: 'meh', DIS
 export interface BucketButtonProps {
   bucket: Bucket;
   selected?: boolean;
-  /**
-   * glass (default): liquid glass via CSS backdrop-filter. Falls back to tint where the browser can't
-   * blur or the viewer prefers reduced transparency. tint: 12% bucket tint and a 4pt bucket bar.
-   */
-  material?: 'glass' | 'tint';
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
 }
 
 // Geometry from the design system's bundle.css (`.bv-bucket*`); these sizes have no token.
 const HEIGHT = 64;
-const ORB = 48;
+const ORB = 40;
 const CHECK = 26;
 const TINT_BAR = 4;
 const TINT_PAD_LEFT = 14;
@@ -60,41 +54,28 @@ const FIZZ_RISE = 28;
 const PRESSED_SCALE = 0.98;
 const FILL_BOX = { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 } as const;
 
-/** Web-only style keys React Native's types don't list; react-native-web passes them to CSS. */
-type WebViewStyle = ViewStyle & { backdropFilter?: string; WebkitBackdropFilter?: string };
-
-const BLUR: WebViewStyle | null =
-  Platform.OS === 'web' ? { backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)' } : null;
-
 /**
  * Gut-check choice: a capsule with a glossy orb in its bucket colour; choosing it pours that colour in.
  * Always show all three, in `BUCKET_ORDER`, on a BevGlow. The label always shows, so a bucket is
  * never told apart by colour alone; the chosen one also gets a ring and a filled check.
+ *
+ * App adaptation: the design system's `material` prop is omitted. Bevi is web-only and real glass is the
+ * native GlassView on iOS 26+, which it never has (and it never imitates glass with `backdrop-filter`),
+ * so the button is always the tint material: 12% bucket tint, a 4pt bucket bar, no blur, no shadow.
+ * Reduce Transparency therefore needs no special case here.
  */
-export function BucketButton({ bucket, selected = false, material = 'glass', onPress, style }: BucketButtonProps) {
-  const { colors, elevation } = useTheme();
-  const reducedTransparency = useReducedTransparency();
-  const glass = material === 'glass' && supportsBackdropFilter() && !reducedTransparency;
+export function BucketButton({ bucket, selected = false, onPress, style }: BucketButtonProps) {
+  const { colors } = useTheme();
   const band = colors[scoreColor(0, bucket)];
   const [width, setWidth] = useState(0);
   const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
 
-  const surface: ViewStyle = glass
-    ? {
-        ...BLUR,
-        borderRadius: radius.pill,
-        paddingLeft: spacing.sm,
-        backgroundColor: colors.glassFill,
-        boxShadow: selected
-          ? `inset 0 1px 0 ${colors.glassHighlight}, inset 0 0 0 1.5px ${fade(band, 0.7)}, ${elevation.glass}`
-          : `inset 0 1px 0 ${colors.glassHighlight}, inset 0 0 0 1px ${colors.glassStroke}, inset 0 -12px 20px -16px ${colors.glassHighlight}, ${elevation.glass}`,
-      }
-    : {
-        borderRadius: radius.card,
-        paddingLeft: TINT_PAD_LEFT,
-        backgroundColor: mix(band, colors.surface, 0.12),
-        boxShadow: selected ? `inset 0 0 0 2px ${band}` : undefined,
-      };
+  const surface: ViewStyle = {
+    borderRadius: radius.card,
+    paddingLeft: TINT_PAD_LEFT,
+    backgroundColor: mix(band, colors.surface, 0.12),
+    boxShadow: selected ? `inset 0 0 0 2px ${band}` : undefined,
+  };
 
   return (
     <Pressable
@@ -106,7 +87,7 @@ export function BucketButton({ bucket, selected = false, material = 'glass', onP
       style={({ pressed }) => [styles.base, surface, pressed && styles.pressed, style]}
     >
       <Liquid band={band} colors={colors} selected={selected} width={width} />
-      {glass ? <Sheen color={colors.glassHighlight} /> : <View style={[styles.bar, { backgroundColor: band }]} />}
+      <View style={[styles.bar, { backgroundColor: band }]} />
       <Orb band={band} colors={colors} icon={BUCKET_ICON[bucket]} />
       <Text style={[styles.label, { color: colors.text }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE_DENSE}>
         {BUCKET_LABEL[bucket]}
@@ -221,25 +202,7 @@ function Bubble({ t, left, size, color }: { t: SharedValue<number>; left: string
   );
 }
 
-/** The glass's top sheen: `glassHighlight` fading out by halfway down, at half strength. */
-function Sheen({ color }: { color: string }) {
-  const id = `sheen-${useId().replace(/:/g, '')}`;
-  return (
-    <View style={styles.sheen} pointerEvents="none" aria-hidden>
-      <Svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 100 100">
-        <Defs>
-          <LinearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={color} />
-            <Stop offset="0.48" stopColor={color} stopOpacity={0} />
-          </LinearGradient>
-        </Defs>
-        <Rect width="100" height="100" fill={`url(#${id})`} />
-      </Svg>
-    </View>
-  );
-}
-
-/** A glossy 48pt orb in the bucket colour with its face. */
+/** A glossy 40pt orb in the bucket colour with its face. */
 function Orb({ band, colors, icon }: { band: string; colors: Colors; icon: IconName }) {
   const id = `orb-${useId().replace(/:/g, '')}`;
   return (
@@ -280,7 +243,6 @@ const styles = StyleSheet.create({
   waveFront: { top: -(WAVE_H - 1) },
   waveBack: { top: -(WAVE_H + 1) },
   fizz: { position: 'absolute', bottom: 6, borderRadius: radius.pill, opacity: 0 },
-  sheen: { ...FILL_BOX, zIndex: 1, opacity: 0.5 },
   bar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: TINT_BAR, zIndex: 1 },
   orb: { width: ORB, height: ORB, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', zIndex: 2 },
   orbGloss: { ...FILL_BOX, borderRadius: radius.pill },
