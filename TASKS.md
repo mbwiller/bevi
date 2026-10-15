@@ -23,7 +23,7 @@ Source: `CONVERSATION-2.md` (raw transcript). This file turns that conversation 
 - **S-14 shipped as part 1 only** — the flavour-profile field names. `BevsApi.similarities`/`similar`, `RankingsApi.listBucketBevs` and `Category.parentId` are deliberately deferred to part 2, which lands with A-16; declaring them earlier would oblige `packages/api` to implement methods with no SQL behind them.
 - **A-15's "10 nearest Bevs" check moved to A-16.** It cannot pass on its own: nearest-by-embedding needs pgvector and `bev_embeddings`, nearest-by-edge needs `SIMILAR_TO`. The vector index ships empty and valid; `docs/graph.md` records this.
 - **`deploy-dev` is still stubbed in `backend.yml`.** Its old comment claimed no hosted project existed, which #56 made untrue. It was corrected but not enabled: `supabase db push` on every merge would apply migrations unattended, and one of them deletes rows. Turning it on is a decision for both of us.
-- **Still open from this round:** #74 (M-25, green) and #79 (Matt's verification branch, now obsolete).
+- **Closed since:** #74 (M-25) merged on 2026-10-15; #79 (Matt's verification branch) was closed without merging.
 
 Lanes are the ones in `DEVELOPMENT-MATT.md` §1 / `DEVELOPMENT-ARJUN.md` §1 and do not change:
 
@@ -204,6 +204,7 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - Do: remove the SAVED rendering path from `FeedPostItem`/`FeedPost` once S-01 lands (the type union shrinks, so TypeScript finds every spot); keep `FeedPost verb="saved"` only if Profile › Activity still needs it (it doesn't; rankings only). Update `Feed.test.tsx` fixtures.
 - Needs: S-01, A-01.
 - DoD: no save ever appears in the feed; the bookmark still fills on posts for Bevs in your Want to Try.
+- **Done in #80, except one leftover:** `FeedPostItem` no longer renders `SAVED`, but `FeedPost` still has its `verb="saved"` / `isSave` branch (and `FeedPost.test.tsx` still covers it), as does the design system's FeedPost. Nothing passes `verb="saved"` any more. It goes with M-02, which rewrites FeedPost's action row.
 
 **M-02 · Likes on posts (Instagram-identical).** `ui/post-likes`
 - Spec from the session: heart button in the post's action row, **filled `primary` (grape) when liked**, like count beside it, **double-tap anywhere on the post to like** with a heart burst over the image (Reanimated, transform + opacity only, reduced-motion fallback = fade). Optimistic update with rollback (same pattern as `useToggleSet` in the leaderboard).
@@ -335,6 +336,10 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - `RecommendedTab.tsx` renders `<SortToggle label="Predicted" onSearch={false} />` with no `onPress`, so screen readers get a button that does nothing.
 - Fix: give `SortToggle` a non-interactive form (no `onPress` → plain text, no `button` role), or drop it from Recommended. Recommendations have one order.
 - DoD: no touchable without an action on Recommended; test updated.
+- **Done in #74:**
+  - Recommended no longer renders a SortToggle; recommendations have one order.
+  - `SortToggle` requires `onPress`, so a dead toggle doesn't type-check, and draws the search icon only when `onSearch` is a function. It used to draw a search button with no action whenever `onSearch` was omitted.
+  - **Follow-up (design system):** the SortToggle preview still renders a `Predicted` toggle with no `onClick`, and its README lists `Predicted` as a label. Fix them with the M-07 design change.
 
 ### P2
 
@@ -502,7 +507,7 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 |---|---|---|
 | **S-01** | `FeedEventKind` → `'RANKING'` only; `WantToTryApi.add` no longer "posts a 'SAVED' feed item"; `FeedApi.getFeed` doc | M-01, A-01 |
 | **S-02** | `FeedItem.likeCount: number`, `likedByMe: boolean`; `FeedApi.like(id)`, `unlike(id)` (idempotent, `'not_found'`, `'rate_limited'`) | M-02, A-02 |
-| **S-03** | `FeedItem.commentCount`, `comments: Comment[]` (first three); `CommentsApi { list(eventId, page), add(eventId, body), remove(id) }`; `Comment { id, author: Profile, body, createdAt }` | M-03, A-03 |
+| **S-03** | `FeedItem.commentCount`, `comments: Comment[]` (first seven; corrected by A-03); `CommentsApi { list(eventId, page), add(eventId, body), remove(id) }`; `Comment { id, author: Profile, body, createdAt }` | M-03, A-03 |
 | **S-04** | `FeedApi.getExplore(page)` → `Page<FeedItem>`; optional `leaderboard.popularBevs({ days })` | M-04, A-04 |
 | **S-05** | `FeedApi.getBevOfPeriod()` → `{ day: PeriodWinner \| null, week: PeriodWinner \| null }`, `PeriodWinner { bev: BevSummary, periodStart: string, rankingsInPeriod: number }` | M-05, A-05 |
 | **S-06** | `UserLeaderboardRow.bevsCreated: number` (optional) | M-06 |
@@ -545,7 +550,7 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 
 ## 7. Suggested order of work
 
-1. **Week 1 (P0, small):** ~~S-01~~ (#65) → ~~A-01~~ (#69) + ~~M-01~~ (folded into #80) · ~~M-09~~ (#60) · ~~M-11~~ (#61) · ~~M-06~~ (#62) · M-07 (decided; waits on the design-system change) · S-08/S-09 docs · M-25, S-18, S-19 (small, found on 2026-10-14). **In parallel (graph foundation, no screens):** ~~A-15~~ (#72, with S-17) · ~~S-14 column names~~ (#68, part 1 only) · M-24 (edge formulas + vectors) · ~~A-17~~ (#73).
+1. **Week 1 (P0, small):** ~~S-01~~ (#65) → ~~A-01~~ (#69) + ~~M-01~~ (folded into #80) · ~~M-09~~ (#60) · ~~M-11~~ (#61) · ~~M-06~~ (#62) · M-07 (decided; waits on the design-system change) · S-08/S-09 docs · ~~M-25~~ (#74) · S-18, S-19 (small, found on 2026-10-14). **In parallel (graph foundation, no screens):** ~~A-15~~ (#72, with S-17) · ~~S-14 column names~~ (#68, part 1 only) · M-24 (edge formulas + vectors) · ~~A-17~~ (#73).
 2. **Week 2 (P0, social):** ~~S-02~~ (#82) / ~~S-03~~ (#67) → ~~A-02~~ (#70) / ~~A-03~~ (#71) + M-02/M-03 · S-05 → A-05 + M-05. **Graph:** A-16 nightly sync live; first sanity report. **The backend and contracts for likes and comments are done; M-02 and M-03 are what make them reachable in the app.**
 3. **Week 3 (P0/P1):** S-04 → A-04 + M-04 · S-07 → A-06 + M-08 · M-10 + A-07 (icons) · M-12 · M-13 · M-14 · **M-15 (Search tab shell)**.
 4. **Week 4 (P1):** S-12 → A-11 + M-19 · A-14 parity · D-04 taxonomy draft.
