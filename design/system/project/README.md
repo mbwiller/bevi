@@ -18,7 +18,7 @@ Use the tokens by name; never paste hex values.
 
 - `surface` is the page and every card. Cards are separated with a 1pt `border`, never a shadow or a grey fill. Grey fills (`input`) are for the search bar, BevImage tiles and skeletons only.
 - `text` for content, `textSecondary` for meta lines, labels, timestamps and placeholders. Both clear 4.5:1 on `surface`, `input` and `avatarFill` in both themes.
-- `primary` (Bevi grape) goes exactly where Beli uses its teal: filled Pills, the primary Button, the Add tab circle, a saved bookmark, the FilterPill count, StatCard values and icons, SortToggle and "See all". Nothing else is grape, so a grape thing is always something to tap or a value you earned. Text on a `primary` fill is `onPrimary` (white in light, dark ink in dark mode).
+- `primary` (Bevi grape) goes exactly where Beli uses its teal: filled Pills, the primary Button, the Add tab circle, a saved bookmark, a liked heart, the FilterPill count, StatCard values and icons, SortToggle and "See all". Nothing else is grape, so a grape thing is always something to tap or a value you earned. Text on a `primary` fill is `onPrimary` (white in light, dark ink in dark mode).
 - `primaryTint` behind `primary` text marks a selected chip or an active filter.
 - **Score colours follow the bucket bands**: `scoreHigh` 7–10 (Loved), `scoreMid` 4–7 (Fine), `scoreLow` 0–4 (Didn't like). Use them for score numbers, bucket bars and 12% bucket tints, never for decoration. They share a lightness, so a score always shows its number and a bucket always shows its label.
 - `fizz` is the wordmark's bubbles and one blob of the BevGlow; it never carries text or meaning.
@@ -52,15 +52,16 @@ Use the tokens by name; never paste hex values.
 ## Iconography
 
 - Lucide outline icons (ISC), bundled as the `Icon` component; the same names exist in lucide-react-native for the app. 28pt with stroke 1.6 in headers and action rows, 24pt in profile rows and stat cards, 16pt with stroke 2 inside meta lines.
-- Icons take `text`; `primary` when active or saved (a saved bookmark is `filled`); `textSecondary` for chevrons and recents.
-- Actions: `circle-plus` = Rank it, `bookmark` = Want to Try, `circle-check` = Bev'd, `heart` = Recommended, `trophy` = rank, `flame` = streak, `lock` = hidden score.
+- Icons take `text`; `primary` when active, saved or liked (a saved bookmark and a liked heart are `filled`); `textSecondary` for chevrons and recents.
+- Actions: `circle-plus` = Rank it, `bookmark` = Want to Try, `circle-check` = Bev'd, `heart` = Recommended (in a post's action row, `heart` = Like: filled grape once you've liked it), `trophy` = rank, `flame` = streak, `lock` = hidden score.
 - One icon per category, always from `Bevi.categories`: soda `cup-soda`, diet soda `candy-off`, juice `citrus`, water `glass-water`, sparkling water `droplets`, energy `zap`, coffee `coffee`, tea `leaf`, boba `milk`, sports `dumbbell`, smoothie `banana`, beer `beer`, wine `wine`, spirits & cocktails `martini`, other `globe`. The three alcoholic categories are hidden from under-21 users everywhere.
 
 ## Motion
 
-- `fast` 150ms for presses and colour changes, `base` 250ms for tab underlines, sheets and the compare-card swap, `springy` (Reanimated spring, damping 18, stiffness 180) for the result bubble, `pour` 450ms for the score reveal on the note step (the ScoreBubble 72 pours in and counts up from its bucket's lower edge to the score; under reduced motion the number shows at once).
+- `fast` 150ms for presses, colour changes and the like pop, `base` 250ms for tab underlines, sheets and the compare-card swap, `springy` (Reanimated spring, damping 18, stiffness 180) for the result bubble, `pour` 450ms for the score reveal on the note step (the ScoreBubble 72 pours in and counts up from its bucket's lower edge to the score; under reduced motion the number shows at once).
 - The pour: choosing a bucket fills its button in 450ms with a slight overshoot; the surface drifts in a 5s loop and a few bubbles rise. It is the one ambient animation in the app.
-- Animate transform and opacity (and the pour's height) only. Under reduced motion, swaps become cross-fades, shimmers stop, and the pour lands without waves or bubbles. Under reduced transparency, glass becomes the tint material.
+- The like burst: a double-tap on a post grows a filled `primary` heart over its photo, holds it and fades it within 800ms.
+- Animate transform and opacity (and the pour's height) only. Under reduced motion, swaps become cross-fades, shimmers stop, the like burst only fades, and the pour lands without waves or bubbles. Under reduced transparency, glass becomes the tint material.
 
 ## Building screens
 

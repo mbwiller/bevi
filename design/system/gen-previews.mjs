@@ -178,6 +178,17 @@ h('div', { className: 'pv', style: { gap: 12 } },
   L('filled close', h(B.IconButton, { icon: 'x', label: 'Close', variant: 'filled' })),
   L('with badge', h(B.IconButton, { icon: 'menu', label: 'Menu', badge: 4 })))`];
 
+P.LikeButton = [{ group: 'Actions', height: 110, subtitle: 'Tap to like' }, '', `
+h(function Demo() {
+  var st = React.useState(true), on = st[0], set = st[1];
+  return h('div', { className: 'pv', style: { gap: 16 } },
+    L('not liked', h(B.LikeButton, { count: 12 })),
+    L('liked', h(B.LikeButton, { liked: on, count: on ? 13 : 12, onClick: function () { set(!on); } })),
+    L('no likes yet', h(B.LikeButton, {})),
+    L('liked, 1', h(B.LikeButton, { liked: true, count: 1 })),
+    L('5k', h(B.LikeButton, { liked: true, count: 5120 })));
+})`];
+
 P.FilterPill = [{ group: 'Actions', height: 96, width: 393 }, '', `
 h('div', { className: 'pv', style: { gap: 10, flexWrap: 'nowrap', overflow: 'hidden' } },
   h(B.FilterPill, { count: 3 }),
@@ -230,11 +241,15 @@ h('div', { className: 'pv-narrow', style: { display: 'flex', flexDirection: 'col
   h(B.TabBar, { active: 'profile', user: ME }))`];
 
 // ---------- Feed ----------
-P.FeedPost = [{ group: 'Feed', height: 720, width: 393 }, '', `
-h('div', { className: 'pv-narrow' },
-  h(B.FeedPost, { actor: ARJUN, bev: BEVS.horchata, score: 9.5, time: '5 hours ago',
-    note: "went back with my mom and she pulled out a sleeper: the cinnamon is way stronger than the dining hall one and it's not too sweet. honestly the best thing on this whole block, and it costs less than a cold brew. getting two next time" }),
-  h(B.FeedPost, { actor: FRIENDS[0], verb: 'saved', bev: BEVS.brownSugar, saved: true, time: 'Wednesday' }))`];
+P.FeedPost = [{ group: 'Feed', height: 760, width: 393, subtitle: 'Double-tap a post to like it' }, '', `
+h(function Demo() {
+  var a = React.useState(false), aOn = a[0], setA = a[1];
+  var b = React.useState(true), bOn = b[0], setB = b[1];
+  return h('div', { className: 'pv-narrow' },
+    h(B.FeedPost, { actor: ARJUN, bev: BEVS.horchata, score: 9.5, time: '5 hours ago', liked: aOn, likeCount: aOn ? 4 : 3, onLike: function () { setA(!aOn); },
+      note: "went back with my mom and she pulled out a sleeper: the cinnamon is way stronger than the dining hall one and it's not too sweet. honestly the best thing on this whole block, and it costs less than a cold brew. getting two next time" }),
+    h(B.FeedPost, { actor: FRIENDS[0], bev: BEVS.brownSugar, score: 7.8, saved: true, time: 'Wednesday', liked: bOn, likeCount: bOn ? 12 : 11, onLike: function () { setB(!bOn); } }));
+})`];
 
 // ---------- Ranking ----------
 P.BucketButton = [{ group: 'Ranking', height: 560, width: 393, subtitle: 'Tap one to pour' }, `.gc { display: flex; flex-direction: column; gap: 14px; padding: 6px 16px 24px; }
@@ -315,7 +330,7 @@ P.ScreenFeed = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHO
       h(B.FeaturedCard, { title: 'Top 10 Sparkling Waters', subtitle: "You've had 3 of 10", art: BEVS.topo.art, tint: '#cfe8e0' }),
       h(B.FeaturedCard, { title: 'Red Bull', subtitle: 'Energy • $$', art: BEVS.redBull.art, tint: '#d8def0' })),
     h(B.SectionHeader, { title: 'Your feed' }),
-    h(B.FeedPost, { actor: ARJUN, bev: BEVS.horchata, score: 9.5, time: '5 hours ago', note: 'cinnamon-forward, not too sweet. best thing on the block' }))`)];
+    h(B.FeedPost, { actor: ARJUN, bev: BEVS.horchata, score: 9.5, time: '5 hours ago', liked: true, likeCount: 4, note: 'cinnamon-forward, not too sweet. best thing on the block' }))`)];
 
 P.ScreenYourLists = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHONE_CSS + `.top { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; } .filters { display: flex; gap: 10px; padding: 12px 16px 4px; overflow: hidden; }`, phone('lists', `
   h(F, null,
@@ -432,7 +447,7 @@ P.ScreenProfile = [{ group: 'Screens', height: 852, width: 393, isPage: true }, 
       h(B.ProfileListRow, { icon: 'heart', label: 'Recommended for you' })),
     h('div', { className: 'pf-stats' }, h(B.StatCard, { icon: 'trophy', label: 'Rank on Bevi', value: '#12' }), h(B.StatCard, { icon: 'flame', label: 'Current Streak', value: '4 days' })),
     h(B.SegmentedTabs, { variant: 'underline-icon', tabs: [{ id: 'activity', label: 'Activity', icon: 'file-text' }, { id: 'taste', label: 'Taste Profile', icon: 'chart-no-axes-column' }], value: 'activity' }),
-    h(B.FeedPost, { you: true, actor: ME, bev: BEVS.dietCoke, score: 9.3, time: 'Wednesday', note: 'the fountain one at the dining hall hits different' }))`)];
+    h(B.FeedPost, { you: true, actor: ME, bev: BEVS.dietCoke, score: 9.3, time: 'Wednesday', likeCount: 6, note: 'the fountain one at the dining hall hits different' }))`)];
 
 P.ScreenLeaderboard = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHONE_CSS + `.top { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; }`, phone('leaderboard', `
   h(F, null,

@@ -5,7 +5,16 @@ import { useCallback, useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { flattenPages, useAddWantToTry, useFeatured, useFeed, useMe, useRemoveWantToTry, useStats } from '@/api/hooks';
+import {
+  flattenPages,
+  useAddWantToTry,
+  useFeatured,
+  useFeed,
+  useMe,
+  useRemoveWantToTry,
+  useStats,
+  useToggleLike,
+} from '@/api/hooks';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { Header } from '@/components/Header';
@@ -17,6 +26,7 @@ import { spacing, useTheme } from '@/theme';
 
 import { FeaturedCarousel } from './FeaturedCarousel';
 import { FeedPostItem } from './FeedPostItem';
+import { likeErrorMessage } from './likeError';
 
 const SEARCH_PLACEHOLDER = 'Search a Bev or a person';
 
@@ -32,8 +42,8 @@ function PostSkeletons({ count }: { count: number }) {
 
 /**
  * Feed (§6.4): the filled search bar (opens Add Bev), Featured Bevs, then YOUR FEED: followed users'
- * rankings and saves, newest first, 20 per page. Following nobody → "Follow friends to see their
- * Bevs" under YOUR FEED while Featured stays.
+ * rankings, newest first, 20 per page, each with a heart (tap it, or double-tap the post, to like).
+ * Following nobody → "Follow friends to see their Bevs" under YOUR FEED while Featured stays.
  */
 export function FeedScreen() {
   const { colors } = useTheme();
@@ -44,6 +54,11 @@ export function FeedScreen() {
   const featured = useFeatured();
   const add = useAddWantToTry();
   const remove = useRemoveWantToTry();
+  const like = useToggleLike();
+  const toggleLike = like.mutate;
+  // The latest like tap failed and its post went back: say so on that post until the next tap.
+  const failedLikeId = like.isError ? like.variables?.id : undefined;
+  const failedLikeMessage = like.isError && like.variables ? likeErrorMessage(like.error, like.variables.like) : null;
   const posts = useMemo(() => flattenPages(feed.data), [feed.data]);
 
   const meId = me.data?.id;
@@ -67,6 +82,8 @@ export function FeedScreen() {
               ? remove.mutate(item.bev.id)
               : add.mutate({ bevId: item.bev.id, viaUserId: you ? undefined : item.actor.id })
           }
+          onLike={() => toggleLike({ id: item.id, like: !item.likedByMe })}
+          likeError={failedLikeId === item.id ? failedLikeMessage : null}
           onOpenBev={() => router.push({ pathname: '/bev/[id]', params: { id: item.bev.id } })}
           onOpenActor={() =>
             you ? router.push('/profile') : router.push({ pathname: '/user/[id]', params: { id: item.actor.id } })
@@ -74,14 +91,14 @@ export function FeedScreen() {
         />
       );
     },
-    [add, remove, router, meId, canSeeAlcohol],
+    [add, remove, toggleLike, failedLikeId, failedLikeMessage, router, meId, canSeeAlcohol],
   );
 
   const followPrompt = (
     <EmptyState
       icon="users"
       title="Follow friends to see their Bevs"
-      body="Their rankings and saves show up here."
+      body="Their rankings show up here."
       action="Find people"
       onAction={findPeople}
     />

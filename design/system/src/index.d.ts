@@ -79,6 +79,10 @@ export declare function Button(props: ButtonProps): React.ReactElement;
 export interface IconButtonProps { icon: string; label: string; variant?: 'plain' | 'filled'; badge?: number | string; size?: number; onClick?: () => void; className?: string }
 export declare function IconButton(props: IconButtonProps): React.ReactElement;
 
+/** The post's heart: outline until liked, then filled `primary`, with the like count beside it (hidden at 0). Accessible name "Like" / "Unlike, 12 likes", `aria-pressed`. */
+export interface LikeButtonProps { liked?: boolean; count?: number; onClick?: () => void; className?: string }
+export declare function LikeButton(props: LikeButtonProps): React.ReactElement;
+
 export interface FilterPillProps { count?: number; label?: string; icon?: string | null; chevron?: boolean; onClick?: () => void; className?: string }
 export declare function FilterPill(props: FilterPillProps): React.ReactElement;
 
@@ -123,8 +127,14 @@ export interface BevRowProps {
 export declare function BevRow(props: BevRowProps): React.ReactElement;
 
 export interface FeedPostProps {
-  actor?: Person; you?: boolean; verb?: 'ranked' | 'saved'; bev: Bev; score?: number; scoreVariant?: 'default' | 'predicted' | 'locked';
+  actor?: Person; you?: boolean; bev: Bev; score?: number; scoreVariant?: 'default' | 'predicted' | 'locked';
   note?: string; time?: string; saved?: boolean; photos?: { src?: string; art?: BevArtProps }[];
+  /** The viewer liked this post: the heart is filled `primary`. */
+  liked?: boolean;
+  /** Likes on the post, beside the heart; hidden at 0. */
+  likeCount?: number;
+  /** Toggles the like from the heart. A double-tap outside the photo strip calls it only when not yet liked. */
+  onLike?: () => void;
   onRank?: () => void; onSave?: () => void; onOpen?: () => void; divider?: boolean; className?: string;
 }
 export declare function FeedPost(props: FeedPostProps): React.ReactElement;
