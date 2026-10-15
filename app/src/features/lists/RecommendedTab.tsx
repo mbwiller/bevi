@@ -59,7 +59,6 @@ export function RecommendedTab({ categoryId, categories, onCategory, onCategoryP
           bev={item.bev}
           score={item.predictedScore}
           scoreVariant={item.confidence < MIN_CONFIDENCE ? 'locked' : 'predicted'}
-          count={item.bev.ratingCount}
           meta={reasonText(item)}
           saved={saved}
           onSave={() => (saved ? remove.mutate(item.bev.id) : add.mutate({ bevId: item.bev.id }))}

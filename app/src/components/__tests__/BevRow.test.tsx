@@ -46,7 +46,7 @@ it('fires onPress, onRank and onSave, and reports saved with aria-pressed', asyn
 
 it('shows a predicted or locked bubble, and no bubble without a score', async () => {
   const { rerender } = await render(<BevRow bev={BEV} score={8.2} scoreVariant="predicted" count={58} />);
-  expect(screen.getByLabelText('Predicted score 8.2, 58 ratings')).toBeTruthy();
+  expect(screen.getByLabelText('Predicted score 8.2')).toBeTruthy();
   await rerender(<BevRow bev={BEV} score={null} scoreVariant="locked" />);
   expect(screen.getByLabelText('Score hidden')).toBeTruthy();
   await rerender(<BevRow bev={BEV} />);
@@ -61,4 +61,18 @@ it('shows the image (with the processing shimmer) only with showImage, and hides
   expect(screen.getByLabelText('Diet Coke (photo processing)', { includeHiddenElements: true })).toBeTruthy();
   expect(screen.getByTestId('shimmer', { includeHiddenElements: true })).toBeTruthy();
   expect(screen.queryByRole('button', { name: 'Rank Diet Coke' })).toBeNull();
+});
+
+it('shows the rating count in the meta line only when there is no meta', async () => {
+  const { rerender } = await render(<BevRow bev={BEV} score={8.2} count={362} />);
+  expect(screen.getByText('362 ratings')).toBeTruthy();
+  await rerender(<BevRow bev={BEV} score={8.2} count={362} meta="Ranked Oct 3" />);
+  expect(screen.getByText('Ranked Oct 3')).toBeTruthy();
+  expect(screen.queryByText('362 ratings')).toBeNull();
+  await rerender(<BevRow bev={BEV} score={8.2} count={362} meta="" />);
+  expect(screen.getByText('362 ratings')).toBeTruthy();
+  await rerender(<BevRow bev={BEV} score={8.2} count={0} />);
+  expect(screen.queryByText(/ratings?$/)).toBeNull();
+  await rerender(<BevRow bev={BEV} score={null} scoreVariant="locked" count={362} />);
+  expect(screen.getByText('362 ratings')).toBeTruthy();
 });

@@ -44,10 +44,6 @@
 .bv-score-56.bv-score-predicted { font-size: 19px; }
 .bv-score-num { color: var(--band); }
 .bv-score-predicted { border-style: dotted; border-color: var(--textSecondary); }
-.bv-score-count { position: absolute; right: -9px; bottom: -7px; min-width: 24px; height: 20px; padding: 0 5px; border-radius: var(--radius-pill);
-  background: var(--primary); color: var(--onPrimary); border: 2px solid var(--surface); font-size: 10px; line-height: 16px; font-weight: 700; letter-spacing: 0;
-  display: inline-flex; align-items: center; justify-content: center; }
-.bv-score-56 .bv-score-count { font-size: 11px; height: 22px; min-width: 26px; }
 
 /* PriceTier */
 .bv-price { font-variant-numeric: tabular-nums; }

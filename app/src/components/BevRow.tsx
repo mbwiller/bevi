@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { categoryById } from '@/lib/categories';
+import { formatRatings } from '@/lib/format';
 import { MAX_FONT_SCALE_DENSE, size, spacing, type, useTheme } from '@/theme';
 
 import { BevActions, bevImageProps, brandLine } from './BevParts';
@@ -20,7 +21,7 @@ export interface BevRowProps {
   scoreVariant?: 'default' | 'predicted' | 'locked';
   /** The viewer's own bucket, when known: the bubble takes the bucket colour. */
   bucket?: Bucket;
-  /** Global rating count badge on the bubble. */
+  /** Global rating count; shown as "362 ratings" in the meta line when `meta` is not given. */
   count?: number;
   /** Bottom-left line: "Ranked Oct 3", "Saved from @arjun", a recommendation reason. */
   meta?: ReactNode;
@@ -92,13 +93,13 @@ export function BevRow({
         </Pressable>
         {score !== undefined || scoreVariant ? (
           <View style={styles.score}>
-            <ScoreBubble score={score} count={count} variant={scoreVariant} bucket={bucket} />
+            <ScoreBubble score={score} variant={scoreVariant} bucket={bucket} />
           </View>
         ) : null}
       </View>
       <View style={styles.foot}>
         <Text {...DENSE} style={[type.body, styles.shrink, { color: colors.textSecondary }]} numberOfLines={1}>
-          {meta}
+          {meta != null && meta !== '' ? meta : count != null && count > 0 ? formatRatings(count) : null}
         </Text>
         {actions ? <BevActions name={bev.name} saved={saved} onRank={onRank} onSave={onSave} /> : null}
       </View>

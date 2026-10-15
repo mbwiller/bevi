@@ -26,7 +26,7 @@ function savedMeta(item: WantToTryItem): string {
 }
 
 /**
- * Want to Try (§6.6): the global Bayesian score with its rating count, a filled bookmark that unsaves
+ * Want to Try (§6.6): the global Bayesian score, a filled bookmark that unsaves
  * optimistically, and Rank it. `wantToTry.list` has no category filter, so the scope filters the
  * loaded pages.
  */
@@ -47,7 +47,6 @@ export function WantToTryTab({ categoryId, categories, onCategory, onCategoryPre
       <BevRow
         bev={item.bev}
         score={item.bev.bayesScore}
-        count={item.bev.ratingCount}
         meta={savedMeta(item)}
         saved
         onSave={() => remove.mutate(item.bev.id)}

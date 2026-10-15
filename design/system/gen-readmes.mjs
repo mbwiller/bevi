@@ -27,7 +27,8 @@ const R = {
 - Don't crop the product or put it on a photo background: the tile is the Bev's icon everywhere.`,
   ScoreBubble: `Beli's score mark: a \`surface\` circle with a 2pt \`border\` ring and the score in bold, coloured by its bucket band.
 
-- Provide: \`score\` (0–10; shown to one decimal), \`size\` 40 (rows, posts) or 56 (Bev detail, ranking result), optional \`count\` for the \`primary\` rating-count badge ("198", "5k").
+- Provide: \`score\` (0–10; shown to one decimal), \`size\` 40 (rows, posts) or 56 (Bev detail, ranking result).
+- No count on the bubble: a badge read like a vote tally. A Bev's rating count is words in a meta line instead (BevRow's \`count\`, the Bev detail tile's "5k ratings").
 - \`variant="predicted"\` = dotted ring and "~" prefix (Recommended, "You'd rate it"); \`locked\` = lock icon, no number (prediction confidence < 0.25, or fewer than 3 rankings).
 - Bands: ≥ 7 \`scoreHigh\`, ≥ 4 \`scoreMid\`, else \`scoreLow\`. The number always shows, so colour is never the only signal.`,
   PriceTier: `The price tier as Beli prints it in a meta line: the active count of "$" only, with "~" when Bevi estimated it.
@@ -62,7 +63,7 @@ const R = {
 - Sits first in the list filter row, followed by the SortToggle line.`,
   SortToggle: `"↓↑ Score" in \`primary\` with a search icon at the right edge: the sort line above every list.
 
-- Provide: \`label\` (Score, Recent, Name, Predicted), \`onClick\` to cycle, \`onSearch\` (or \`false\` to hide the icon).`,
+- Provide: \`label\` (Score, Recent, Name), \`onClick\` to cycle (required: a list with one order has no SortToggle), \`onSearch\` to show the search icon (omit it and there is no icon).`,
   SearchBar: `Search input in two forms: \`filled\` (grey 36pt bar at the top of Feed) and \`outlined\` (48pt field on the Add Bev tab).
 
 - Provide: \`placeholder\` that names what can be found ("Search a Bev, brand or flavor", "Search by name or @handle"), \`value\`/\`onChange\`, \`id\`.
@@ -96,7 +97,8 @@ const R = {
 - Icons are 28pt outlines; labels 10pt, the active one bold.`,
   BevRow: `The ~126pt list row from Beli: name (optionally numbered), \`$$ • Category\`, category icon • brand, a meta line, Rank and Want to Try actions, and a ScoreBubble.
 
-- Provide: \`bev\`, \`number\` (Bev'd and Leaderboard), \`score\` (+ \`count\` for global scores, \`scoreVariant="predicted"\` on Recommended), \`meta\` ("Ranked Oct 3", "Saved from @arjun", a recommendation reason), \`saved\`, \`onRank\`, \`onSave\`.
+- Provide: \`bev\`, \`number\` (Bev'd and Leaderboard), \`score\` (\`scoreVariant="predicted"\` on Recommended), \`meta\` ("Ranked Oct 3", "Saved from @arjun", a recommendation reason), \`count\`, \`saved\`, \`onRank\`, \`onSave\`.
+- The meta line is \`meta\` when the row has one. Only a row with no meta of its own (search results) prints the rating count there instead: "1 rating", "362 ratings", "5k ratings", even under a locked bubble, and nothing at 0. Leaderboard, Want to Try and Recommended rows keep just their own meta.
 - No image by default, as in the reference; \`showImage\` adds a 56pt BevImage for search results and "Did you mean…".
 - One list sorted by score: buckets show through the bubble colour, not as sections.`,
   FeedPost: `A ranking or save in the Feed and on Profile › Activity: "**Arjun** Bev'd **Horchata**", meta line, ScoreBubble, a 155pt photo strip, notes and actions.
@@ -165,21 +167,21 @@ const S = {
 - Dropped from Beli: quick-action pills, the composer, the invite card, likes and comments.`,
   ScreenYourLists: `Your Lists › Bev'd (ref 06): centred "YOUR LISTS" Header, ListScopeDropdown, SegmentedTabs, the FilterPill row, SortToggle, then numbered BevRows sorted by score.
 
-- Want to Try rows show the global score with its count and a filled bookmark; Recommended rows show predicted bubbles and a reason in the meta line.`,
+- Want to Try rows show the global score and a filled bookmark, with when or from whom you saved it in the meta line; Recommended rows show predicted bubbles and a reason in the meta line.`,
   ScreenAddBev: `Add Bev tab (ref 08): wordmark Header with the close circle, Bevs · People tabs in \`primary\`, the outlined SearchBar, a "Snap it" Pill, Recents, and a sticky "Can't find it? Add a new Bev".
 
-- Results are BevRows with \`showImage\`; tapping a Bev you haven't ranked goes straight into the ranking flow.`,
+- Results are BevRows with \`showImage\` and the rating count as their meta line ("362 ratings"); tapping a Bev you haven't ranked goes straight into the ranking flow.`,
   ScreenGutCheck: `Ranking flow, step 1 (no reference): a BevGlow in the drink's colour fills the screen; the cutout floats at 200pt over its name, brand and category; "How was it?"; three liquid-glass BucketButtons; a hint that comparisons come next.
 
 - Choosing a bucket pours it, then moves on to comparisons. An empty bucket skips straight to the note: "First one in Loved".`,
   ScreenRanking: `Ranking flow, step 2 (no reference): ProgressDots and the close circle, "Which was better?", two CompareCards (new on top), "Too close to call" and Undo.
 
 - After placement: an optional 140-character note, then the result: ScoreBubble 56 and "#4 of 31 in Loved · 8.9".`,
-  ScreenBevDetail: `Bev detail (no reference): BevImage 155, name, brand, category and PriceTier; two stat cards (Bevi score with count, "You'd rate it" predicted); friends who've had it; Rank it and Want to Try Pills.
+  ScreenBevDetail: `Bev detail (no reference): BevImage 155, name, brand, category and PriceTier; two stat cards (Bevi score with "5k ratings" under it, "You'd rate it" predicted); friends who've had it; Rank it and Want to Try Pills.
 
 - Not enough rankings: the second bubble is \`locked\` with "Rank 3 Bevs to see your prediction".`,
   ScreenProfile: `Profile tab (ref 02, 03): name Header, Avatar 100, handle, counts, the outlined Button row, three ProfileListRows, two StatCards, Activity · Taste Profile tabs, then your FeedPosts.`,
-  ScreenLeaderboard: `Leaderboard tab (no reference): centred "LEADERBOARD", Bevs · People tabs, the category scope, then numbered BevRows with the Bayesian score and its count; "Your score" in the meta line.
+  ScreenLeaderboard: `Leaderboard tab (no reference): centred "LEADERBOARD", Bevs · People tabs, the category scope, then numbered BevRows with the Bayesian score; "Your score 7.6" (or "Not ranked yet") in the meta line, with no rating count.
 
 - People tab: UserRows with rank, points, Bevs and streak; your own row pinned and highlighted.`,
 };

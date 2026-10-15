@@ -1,14 +1,14 @@
 import React from 'react';
-import { cx, Icon, BevArt, scoreBand, formatScore, formatCount, initialsOf } from './core.jsx';
+import { cx, Icon, BevArt, scoreBand, formatScore, initialsOf } from './core.jsx';
 
 /** Beli's score mark: a `surface` circle with a 2pt ring and the score in its bucket colour. */
-export function ScoreBubble({ score, size = 40, count, variant = 'default', className }) {
+export function ScoreBubble({ score, size = 40, variant = 'default', className }) {
   const band = scoreBand(score);
   const locked = variant === 'locked' || score == null;
   const predicted = variant === 'predicted';
   const label = locked
     ? 'Score hidden'
-    : (predicted ? 'Predicted score ' : 'Score ') + formatScore(score) + (count != null ? ', ' + count + ' ratings' : '');
+    : (predicted ? 'Predicted score ' : 'Score ') + formatScore(score);
   return (
     <span
       className={cx('bv', 'bv-score', 'bv-score-' + size, predicted && 'bv-score-predicted', locked && 'bv-score-locked', !locked && 'bv-band-' + band, className)}
@@ -20,7 +20,6 @@ export function ScoreBubble({ score, size = 40, count, variant = 'default', clas
       ) : (
         <span className="bv-score-num">{(predicted ? '~' : '') + formatScore(score)}</span>
       )}
-      {count != null && !locked ? <span className="bv-score-count">{formatCount(count)}</span> : null}
     </span>
   );
 }
@@ -123,7 +122,7 @@ export function FilterPill({ count = 0, label, icon = 'list-filter', chevron = f
   );
 }
 
-/** "↓↑ Score" text button in `primary`, with an optional search icon at the right edge of its row. */
+/** "↓↑ Score" text button in `primary`, with a search icon at the right edge of its row only when `onSearch` is given. */
 export function SortToggle({ label = 'Score', onClick, onSearch, className }) {
   return (
     <div className={cx('bv', 'bv-sort', className)}>
@@ -131,7 +130,7 @@ export function SortToggle({ label = 'Score', onClick, onSearch, className }) {
         <Icon name="arrow-up-down" size={16} strokeWidth={2.25} />
         <span>{label}</span>
       </button>
-      {onSearch !== false ? (
+      {typeof onSearch === 'function' ? (
         <button type="button" className="bv-sort-search" onClick={onSearch} aria-label="Search this list">
           <Icon name="search" size={22} strokeWidth={1.75} />
         </button>

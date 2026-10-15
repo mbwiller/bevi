@@ -18,7 +18,7 @@ Use the tokens by name; never paste hex values.
 
 - `surface` is the page and every card. Cards are separated with a 1pt `border`, never a shadow or a grey fill. Grey fills (`input`) are for the search bar, BevImage tiles and skeletons only.
 - `text` for content, `textSecondary` for meta lines, labels, timestamps and placeholders. Both clear 4.5:1 on `surface`, `input` and `avatarFill` in both themes.
-- `primary` (Bevi grape) goes exactly where Beli uses its teal: filled Pills, the primary Button, the Add tab circle, a saved bookmark, count badges, StatCard values and icons, SortToggle and "See all". Nothing else is grape, so a grape thing is always something to tap or a value you earned. Text on a `primary` fill is `onPrimary` (white in light, dark ink in dark mode).
+- `primary` (Bevi grape) goes exactly where Beli uses its teal: filled Pills, the primary Button, the Add tab circle, a saved bookmark, the FilterPill count, StatCard values and icons, SortToggle and "See all". Nothing else is grape, so a grape thing is always something to tap or a value you earned. Text on a `primary` fill is `onPrimary` (white in light, dark ink in dark mode).
 - `primaryTint` behind `primary` text marks a selected chip or an active filter.
 - **Score colours follow the bucket bands**: `scoreHigh` 7–10 (Loved), `scoreMid` 4–7 (Fine), `scoreLow` 0–4 (Didn't like). Use them for score numbers, bucket bars and 12% bucket tints, never for decoration. They share a lightness, so a score always shows its number and a bucket always shows its label.
 - `fizz` is the wordmark's bubbles and one blob of the BevGlow; it never carries text or meaning.

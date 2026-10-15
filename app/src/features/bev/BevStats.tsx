@@ -6,7 +6,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { AvatarStack } from '@/components/AvatarStack';
 import { ScoreBubble } from '@/components/ScoreBubble';
 import { BUCKET_SHORT, MIN_CONFIDENCE, PREDICTION_LOCKED } from '@/features/lists/copy';
-import { formatScore } from '@/lib/format';
+import { formatRatings, formatScore } from '@/lib/format';
 import { MAX_FONT_SCALE_DENSE, radius, spacing, type, useTheme } from '@/theme';
 
 const DENSE = { maxFontSizeMultiplier: MAX_FONT_SCALE_DENSE } as const;
@@ -28,10 +28,8 @@ function StatTile({ label, meta, children }: { label: string; meta: string; chil
   );
 }
 
-const ratings = (n: number) => `${n} rating${n === 1 ? '' : 's'}`;
-
 /**
- * The two stat tiles (§6.11): "Bevi score" (global Bayesian + count) and either your own score
+ * The two stat tiles (§6.11): "Bevi score" (global Bayesian, with its rating count below) and either your own score
  * ("#4 in Loved"), "You'd rate it" (predicted), or a lock with why.
  */
 export function BevStats({ bev, myRankingCount }: { bev: Bev; myRankingCount: number | undefined }) {
@@ -43,12 +41,11 @@ export function BevStats({ bev, myRankingCount }: { bev: Bev; myRankingCount: nu
     <View style={styles.stats}>
       <StatTile
         label="Bevi score"
-        meta={bev.ratingCount === 0 ? 'Be the first' : ratings(bev.ratingCount)}
+        meta={bev.ratingCount === 0 ? 'Be the first' : formatRatings(bev.ratingCount)}
       >
         <ScoreBubble
           size={56}
           score={bev.bayesScore}
-          count={bev.bayesScore != null ? bev.ratingCount : undefined}
           context="Bevi score"
         />
       </StatTile>
