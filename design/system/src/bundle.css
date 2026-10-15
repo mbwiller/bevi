@@ -92,6 +92,14 @@
   color: var(--onDeep); font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
 .bv-saved { color: var(--primary); }
 
+/* LikeButton: the heart and its count; 44pt target, the pop is transform only */
+.bv-like { display: inline-flex; flex: none; align-items: center; min-width: var(--size-target); min-height: var(--size-target); padding: 0 var(--space-sm); gap: var(--space-xs); color: var(--text); }
+.bv-like-heart { display: inline-flex; }
+.bv-liked .bv-like-heart { color: var(--primary); }
+.bv-like-count { color: var(--text); font-variant-numeric: tabular-nums; }
+.bv-like-pop { animation: bv-like-pop 150ms ease-out; }
+@keyframes bv-like-pop { 50% { transform: scale(1.2); } }
+
 /* SortToggle */
 .bv-sort { display: flex; align-items: center; justify-content: space-between; padding: 0 var(--space-gutter); }
 .bv-sort-btn { display: inline-flex; align-items: center; gap: 6px; min-height: var(--size-target); color: var(--primary); }
@@ -172,7 +180,13 @@
 .bv-catmark { color: var(--text); }
 
 /* FeedPost */
-.bv-post { padding: var(--space-lg) var(--space-gutter) var(--space-xs); background: var(--surface); }
+.bv-post { position: relative; padding: var(--space-lg) var(--space-gutter) var(--space-xs); background: var(--surface); touch-action: manipulation; }
+.bv-post-media { position: relative; }
+/* The double-tap burst: over the photo strip, or the post's centre when there is none. Grows on the springy curve, holds, fades. */
+.bv-like-burst { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--primary); pointer-events: none; opacity: 0;
+  animation: bv-like-burst 800ms cubic-bezier(.2,.8,.2,1); }
+@keyframes bv-like-burst { 0% { transform: scale(.4); opacity: 0; } 20% { transform: scale(1.1); opacity: 1; } 32% { transform: scale(1); } 70% { opacity: 1; } 100% { transform: scale(1); opacity: 0; } }
+@keyframes bv-like-fade { 0% { opacity: 0; } 25% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; } }
 .bv-post-head { display: flex; align-items: flex-start; gap: var(--space-xxl); }
 .bv-post-head-text { flex: 1; min-width: 0; padding-top: var(--space-xs); }
 .bv-post-verb { font-weight: 400; }
@@ -318,4 +332,6 @@
   .bv-sheet { animation: none; }
   .bv-bucket-wave, .bv-bucket-on .bv-bucket-fizz { animation: none; }
   .bv-bucket-liquid { transition: none; }
+  .bv-like-pop { animation: none; }
+  .bv-like-burst { animation-name: bv-like-fade; }
 }

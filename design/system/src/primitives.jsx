@@ -1,5 +1,5 @@
 import React from 'react';
-import { cx, Icon, BevArt, scoreBand, formatScore, initialsOf } from './core.jsx';
+import { cx, Icon, BevArt, scoreBand, formatScore, formatCount, initialsOf } from './core.jsx';
 
 /** Beli's score mark: a `surface` circle with a 2pt ring and the score in its bucket colour. */
 export function ScoreBubble({ score, size = 40, variant = 'default', className }) {
@@ -105,6 +105,29 @@ export function IconButton({ icon, label, variant = 'plain', badge, onClick, cla
     <button type="button" onClick={onClick} aria-label={label} className={cx('bv', 'bv-iconbtn', 'bv-iconbtn-' + variant, className)}>
       {variant === 'filled' ? <span className="bv-iconbtn-disc"><Icon name={icon} size={18} strokeWidth={2.25} /></span> : <Icon name={icon} size={size} strokeWidth={1.6} />}
       {badge ? <span className="bv-iconbtn-badge">{badge}</span> : null}
+    </button>
+  );
+}
+
+/**
+ * The post's like control: a 28pt heart, outline until liked, then filled `primary`; the count beside it ("12", "5k"), hidden at 0.
+ * A press pops the heart (transform only).
+ */
+export function LikeButton({ liked = false, count = 0, onClick, className }) {
+  const [pop, setPop] = React.useState(0);
+  const label = (liked ? 'Unlike' : 'Like') + (count > 0 ? ', ' + count + (count === 1 ? ' like' : ' likes') : '');
+  return (
+    <button
+      type="button"
+      className={cx('bv', 'bv-like', liked && 'bv-liked', className)}
+      aria-pressed={liked}
+      aria-label={label}
+      onClick={() => { setPop((n) => n + 1); if (onClick) onClick(); }}
+    >
+      <span key={pop} className={cx('bv-like-heart', pop > 0 && 'bv-like-pop')}>
+        <Icon name="heart" size={28} strokeWidth={1.6} filled={liked} />
+      </span>
+      {count > 0 ? <span className="body bv-like-count" aria-hidden="true">{formatCount(count)}</span> : null}
     </button>
   );
 }

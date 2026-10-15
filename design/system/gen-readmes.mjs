@@ -12,7 +12,7 @@ const R = {
 - Do: sit it at the header's left on the 16pt gutter (Feed, Add Bev). Don't: recolour the bubbles, add a tagline beside it in the header, or set it in Beli's teal or a serif.`,
   Icon: `Lucide outline icons, the 50 the app uses, including one per drink category.
 
-- Provide: \`name\` (see \`Bevi.iconNames\`), \`size\` (28 for header and action rows, 24 in profile rows and stat cards, 16 inline in meta lines), \`strokeWidth\` (1.6–1.75 at 24–28, 2 at 16), \`filled\` for a saved bookmark.
+- Provide: \`name\` (see \`Bevi.iconNames\`), \`size\` (28 for header and action rows, 24 in profile rows and stat cards, 16 inline in meta lines), \`strokeWidth\` (1.6–1.75 at 24–28, 2 at 16), \`filled\` for a saved bookmark or a liked heart.
 - Colour comes from CSS \`color\`: \`text\` by default, \`primary\` for an active or saved state, \`textSecondary\` for chevrons and recents.
 - Category icons: use \`Bevi.categories\` rather than picking icons by hand so every screen agrees.`,
   BevArt: `Placeholder drink cutouts for mockups, standing in for catalog photos until Arjun's background-removal pipeline delivers real ones.
@@ -57,6 +57,13 @@ const R = {
 
 - Provide: \`icon\`, \`label\` (required: it is the accessible name), \`variant\` (plain or filled), optional \`badge\` count.
 - Header icons sit 20pt apart; the close circle is the Add Bev tab's and the ranking flow's dismiss.`,
+  LikeButton: `The post's like control, Instagram's heart: a 28pt \`heart\`, outline in \`text\` until liked, then filled \`primary\`, with the like count beside it.
+
+- Provide: \`liked\`, \`count\` (printed like other counts: "12", "5k"; hidden at 0), \`onClick\` to toggle.
+- Accessible name "Like" or "Unlike", plus the count when there is one ("Unlike, 12 likes"), and \`aria-pressed\`. The target is at least 44pt; the count sits inside it.
+- A press pops the heart to 1.2× and back in \`fast\` (150ms), transform only; Reduce Motion drops the pop.
+- The count stays \`text\`: only the heart turns grape, like the saved bookmark.
+- It lives in FeedPost's action row. Liking by double-tap and its burst belong to FeedPost.`,
   FilterPill: `Outlined pill that opens the filter sheet; it shows a \`primary\` count badge and turns \`primaryTint\` while filters are on.
 
 - Provide: \`count\` (active filters), optional \`label\` with \`chevron\` for single-facet pills (Bucket, Price, Category), \`icon={null}\` to drop the filter glyph.
@@ -101,11 +108,14 @@ const R = {
 - The meta line is \`meta\` when the row has one. Only a row with no meta of its own (search results) prints the rating count there instead: "1 rating", "362 ratings", "5k ratings", even under a locked bubble, and nothing at 0. Leaderboard, Want to Try and Recommended rows keep just their own meta.
 - No image by default, as in the reference; \`showImage\` adds a 56pt BevImage for search results and "Did you mean…".
 - One list sorted by score: buckets show through the bubble colour, not as sections.`,
-  FeedPost: `A ranking or save in the Feed and on Profile › Activity: "**Arjun** Bev'd **Horchata**", meta line, ScoreBubble, a 155pt photo strip, notes and actions.
+  FeedPost: `A ranking in the Feed and on Profile › Activity: "**Arjun** Bev'd **Horchata**", meta line, ScoreBubble, a 155pt photo strip, notes and actions.
 
-- Provide: \`actor\` (or \`you\` for "You"), \`verb\` (ranked or saved), \`bev\`, \`score\`, \`note\`, \`time\` ("5 hours ago", "Wednesday"), \`saved\`, \`onRank\`, \`onSave\`.
-- Notes over 160 characters truncate with "See more". A \`saved\` post has no score and no photo.
-- No likes, comments or share in v1. Alcoholic Bevs from friends render without the Rank action for under-21 viewers.`,
+- Provide: \`actor\` (or \`you\` for "You"), \`bev\`, \`score\`, \`note\`, \`time\` ("5 hours ago", "Wednesday"), \`saved\`, \`liked\`, \`likeCount\`, \`onLike\`, \`onRank\`, \`onSave\`, \`onOpen\`.
+- A post is always a ranking. Saving a Bev is not a post; the filled bookmark shows you already have it saved.
+- Action row: the time on the left; on the right the LikeButton, then Rank it and Want to Try. The heart leads the group because liking is about the post, while Rank and Want to Try are about the Bev. Comments (next) sit beside the heart.
+- **Double-tap anywhere on the post outside the photo strip to like it**, Instagram-style. It only ever likes, never unlikes (the heart does that), and it is never the only way to like. A single tap on the photo still opens the Bev, so the strip ignores double-taps. The post sets \`touch-action: manipulation\` so Safari doesn't zoom on a double-tap.
+- The burst: a 88pt filled \`primary\` heart grows over the photo strip (the post's centre when there is no photo), holds and fades within 800ms, transform and opacity only. Reduce Motion: a plain fade. It plays on every like by double-tap, even when the post was already liked.
+- Notes over 160 characters truncate with "See more". Alcoholic Bevs from friends render without the Rank action for under-21 viewers.`,
   FeaturedCard: `164pt square photo card for the Featured carousel: image, a \`photoScrim\` gradient, white 20pt title and 15pt subtitle.
 
 - Provide: \`title\`, \`subtitle\` (category + "$" for a Bev, "You've had 3 of 10" for a list), \`src\` or \`art\` with a \`tint\` backdrop.

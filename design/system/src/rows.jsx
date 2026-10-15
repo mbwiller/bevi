@@ -1,6 +1,6 @@
 import React from 'react';
 import { cx, Icon, Wordmark, BevArt, categoryById, formatRatings } from './core.jsx';
-import { ScoreBubble, PriceTier, Avatar, BevImage, Pill, IconButton } from './primitives.jsx';
+import { ScoreBubble, PriceTier, Avatar, BevImage, Pill, IconButton, LikeButton } from './primitives.jsx';
 
 function CategoryMark({ category }) {
   const cat = categoryById(category);
@@ -79,20 +79,38 @@ export function BevRow({ bev, number, score, scoreVariant, count, meta, saved = 
   );
 }
 
-/** A ranking or a save in the Feed and on Profile › Activity. Names bold, verb regular. */
-export function FeedPost({ actor = {}, you = false, verb = 'ranked', bev, score, scoreVariant, note, time, saved = false, photos, onRank, onSave, onOpen, divider = true, className }) {
-  const [open, setOpen] = React.useState(false);
-  const cat = categoryById(bev.category);
-  const isSave = verb === 'saved';
-  const tiles = photos || (isSave ? [] : [{ src: bev.src, art: bev.art }]);
+/** The big heart that bursts over a post's photo strip (or its centre) when a double-tap likes it. Transform and opacity only. */
+function LikeBurst() {
   return (
-    <article className={cx('bv', 'bv-post', divider && 'bv-divider', className)}>
+    <span className="bv-like-burst" aria-hidden="true">
+      <Icon name="heart" size={88} strokeWidth={1.6} filled />
+    </span>
+  );
+}
+
+/**
+ * A ranking in the Feed and on Profile › Activity. Names bold, verb regular.
+ * Double-tap anywhere outside the photo strip likes it (never unlikes); the heart in the action row is the way to unlike.
+ */
+export function FeedPost({ actor = {}, you = false, bev, score, scoreVariant, note, time, saved = false, liked = false, likeCount = 0, photos, onRank, onSave, onLike, onOpen, divider = true, className }) {
+  const [open, setOpen] = React.useState(false);
+  const [burst, setBurst] = React.useState(0);
+  const cat = categoryById(bev.category);
+  const tiles = photos || [{ src: bev.src, art: bev.art }];
+  const onDoubleClick = (e) => {
+    // The photo strip keeps single tap = open the Bev; buttons keep their own action.
+    if (e.target.closest && e.target.closest('.bv-post-strip, button')) return;
+    setBurst((n) => n + 1);
+    if (!liked && onLike) onLike();
+  };
+  return (
+    <article className={cx('bv', 'bv-post', divider && 'bv-divider', className)} onDoubleClick={onDoubleClick}>
       <div className="bv-post-head">
         <Avatar name={actor.name} src={actor.src} size={60} />
         <div className="bv-post-head-text">
           <p className="screenTitle bv-post-line">
             <b>{you ? 'You' : (actor.name || '').split(' ')[0]}</b>
-            <span className="bv-post-verb">{isSave ? ' saved ' : " Bev'd "}</span>
+            <span className="bv-post-verb">{" Bev'd "}</span>
             <b>{bev.name}</b>
           </p>
           <p className="body bv-meta bv-post-meta">
@@ -102,17 +120,20 @@ export function FeedPost({ actor = {}, you = false, verb = 'ranked', bev, score,
             <PriceTier tier={bev.priceTier} estimated={bev.priceEstimated} />
           </p>
         </div>
-        {!isSave && (score != null || scoreVariant) ? <ScoreBubble score={score} variant={scoreVariant} className="bv-post-score" /> : null}
+        {score != null || scoreVariant ? <ScoreBubble score={score} variant={scoreVariant} className="bv-post-score" /> : null}
       </div>
       {tiles.length ? (
-        <div className="bv-post-strip" role="list">
-          {tiles.map((t, i) => (
-            <button type="button" role="listitem" key={i} className="bv-post-tile" onClick={onOpen} aria-label={'Open ' + bev.name}>
-              <BevImage size={155} src={t.src} art={t.art} alt={bev.name} />
-            </button>
-          ))}
+        <div className="bv-post-media">
+          <div className="bv-post-strip" role="list">
+            {tiles.map((t, i) => (
+              <button type="button" role="listitem" key={i} className="bv-post-tile" onClick={onOpen} aria-label={'Open ' + bev.name}>
+                <BevImage size={155} src={t.src} art={t.art} alt={bev.name} />
+              </button>
+            ))}
+          </div>
+          {burst ? <LikeBurst key={burst} /> : null}
         </div>
-      ) : null}
+      ) : burst ? <LikeBurst key={burst} /> : null}
       {note ? (
         <p className="bodyLarge bv-post-note">
           <b>Notes:</b> {open || note.length <= 160 ? note : note.slice(0, 150).replace(/\s+\S*$/, '') + ' …'}
@@ -122,6 +143,7 @@ export function FeedPost({ actor = {}, you = false, verb = 'ranked', bev, score,
       <div className="bv-post-foot">
         <span className="body bv-meta">{time}</span>
         <span className="bv-actions">
+          <LikeButton liked={liked} count={likeCount} onClick={onLike} />
           <IconButton icon="circle-plus" label={'Rank ' + bev.name} onClick={onRank} />
           <button type="button" className={cx('bv-iconbtn', 'bv-iconbtn-plain', saved && 'bv-saved')} onClick={onSave} aria-pressed={saved} aria-label={saved ? 'Saved to Want to Try' : 'Save to Want to Try'}>
             <Icon name="bookmark" size={28} strokeWidth={1.6} filled={saved} />
