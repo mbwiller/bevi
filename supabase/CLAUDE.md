@@ -32,6 +32,13 @@ here, these rules apply before anything in a more general prompt.
   follows, want-to-try) may reasonably get direct `own-row` policies; when
   in doubt, prefer the RPC pattern.
 
+## The Bev graph
+
+- Neo4j AuraDB Free holds the Bev-similarity graph; Postgres stays the system
+  of record and **Neo4j is never on a request path**. Read `docs/graph.md`
+  before touching `scripts/graph/`, `supabase/functions/graph-query/` or
+  anything named `bev_edges` / `bev_embeddings` / `bev_flavor_profiles`.
+
 ## Secrets
 
 - Never commit secrets. No service-role/secret keys (`sb_secret_...`,

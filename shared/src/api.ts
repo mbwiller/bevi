@@ -12,6 +12,7 @@ import type {
   Bev,
   BevSummary,
   Category,
+  Comment,
   Comparison,
   FeaturedBev,
   FeedItem,
@@ -314,8 +315,9 @@ export interface WantToTryApi {
   list(page?: PageParams): Promise<Page<WantToTryItem>>;
 
   /**
-   * Idempotent: saving an already-saved Bev resolves without error. Posts a
-   * 'SAVED' feed item the first time.
+   * Idempotent: saving an already-saved Bev resolves without error. A save is
+   * never a feed post; the only public signal is the filled bookmark on a Bev
+   * the caller has saved.
    * @throws 'unauthorized', 'not_found', 'age_restricted'.
    */
   add(bevId: string, viaUserId?: string): Promise<void>;
@@ -325,11 +327,36 @@ export interface WantToTryApi {
 }
 
 export interface FeedApi {
-  /** The caller's and followed users' RANKING and SAVED posts, newest first. @throws 'unauthorized'. */
+  /** The caller's and followed users' RANKING posts, newest first. @throws 'unauthorized'. */
   getFeed(page?: PageParams): Promise<Page<FeedItem>>;
 
   /** Age-filtered. @throws 'unauthorized'. */
   getFeatured(): Promise<FeaturedBev[]>;
+
+  /**
+   * Idempotent: liking an already-liked post resolves without error.
+   * @throws 'unauthorized'; 'not_found' — no such post, or one the caller
+   *   cannot see (a stranger's, or an alcoholic Bev's while under 21);
+   *   'rate_limited'.
+   */
+  like(id: string): Promise<void>;
+
+  /** Idempotent. @throws 'unauthorized', 'not_found', 'rate_limited'. */
+  unlike(id: string): Promise<void>;
+}
+
+export interface CommentsApi {
+  /** Newest first. @throws 'unauthorized', 'not_found' — post not visible. */
+  list(eventId: string, page?: PageParams): Promise<Page<Comment>>;
+
+  /**
+   * @throws 'unauthorized'; 'not_found' — post not visible; 'validation' —
+   *   empty or over 280 characters; 'rate_limited'.
+   */
+  add(eventId: string, body: string): Promise<Comment>;
+
+  /** Own comments only. Idempotent. @throws 'unauthorized', 'not_found'. */
+  remove(id: string): Promise<void>;
 }
 
 export interface LeaderboardApi {
@@ -363,6 +390,7 @@ export interface BeviApi extends AuthApi {
   rankings: RankingsApi;
   wantToTry: WantToTryApi;
   feed: FeedApi;
+  comments: CommentsApi;
   leaderboard: LeaderboardApi;
   recs: RecsApi;
   meta: MetaApi;
