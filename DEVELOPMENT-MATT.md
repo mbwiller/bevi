@@ -489,7 +489,7 @@ Edit profile (name, handle, avatar initials preview); Re-rank sheet (choose: cha
 
 ### Builds and distribution to friends (web only, decided 2026-10-11)
 
-- Build: `npx expo export --platform web` (from `app/`) → `app/dist/`; Vercel deploys it with `app/vercel.json` (project root directory `app`). Git deploys are off (`git.deploymentEnabled: false`): production is a manual `vercel deploy --prod`. The build runs `scripts/check-env.mjs`, the export, then `scripts/check-bundle.mjs`.
+- Build: `npx expo export --platform web` (from `app/`) → `app/dist/`; Vercel deploys it with `app/vercel.json` (project root directory `app`). Every merge to `main` deploys to production through Vercel's Git integration; other branches never deploy (`git.deploymentEnabled`: `main` on, `**` off; decided 2026-10-12, replacing manual-only deploys). `vercel deploy --prod` from the repo root still works. The build runs `scripts/check-env.mjs`, the export, then `scripts/check-bundle.mjs`.
 - Install: friends open the URL in iPhone Safari → Share → Add to Home Screen; `app/public/manifest.json` and the icons make it open full-screen. No App Store, TestFlight, Apple Developer account, Android build or EAS.
 - Dev: `npm start -w app -- --web` in a desktop browser, and the LAN/preview URL in iPhone Safari for real-device checks.
 - Env: `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (see `app/.env.example`; `EXPO_PUBLIC_BEVI_API` is gone since 2026-10-12) are read in `client.ts` and passed to `createBeviApi({ url, publishableKey, authStorage })`. Arjun provides the Supabase values; they live in Vercel project env vars and `.env.local`, never committed. Service keys never exist in the app.

@@ -23,6 +23,31 @@ export type CategoryId =
   | 'coffee' | 'tea' | 'boba' | 'sports' | 'smoothie'
   | 'beer' | 'wine' | 'spirits_cocktails' | 'other';
 
+/**
+ * A Bev's dominant taste family. Deliberately coarser than a category and cuts
+ * across them: a cola soda and a cola slushie share `cola`. Mirrored by the
+ * `base` check constraint on `bev_flavor_profiles`; keep the two in sync by
+ * hand, as with `HANDLE_PATTERN`.
+ *
+ * The leaves of the finer taxonomy (D-04) are meant to line up with these.
+ */
+export type FlavorBase =
+  | 'cola' | 'citrus' | 'lemon-lime' | 'berry' | 'tropical' | 'apple'
+  | 'grape' | 'orange' | 'ginger' | 'root-beer' | 'cream'
+  | 'coffee' | 'tea' | 'matcha' | 'chai' | 'chocolate' | 'nut'
+  | 'herbal' | 'mineral' | 'hop' | 'wine' | 'agave' | 'grain' | 'other';
+
+/** How a Bev is normally served. */
+export type FlavorServe = 'hot' | 'cold' | 'either';
+
+/**
+ * Where a Bev's flavour profile came from. `catalog` is hand-labelled in
+ * `data/catalog/flavor-profiles.csv`; `inferred` is copied from the nearest
+ * seeded Bev by embedding for a Bev a user created (D-11), and gets relabelled
+ * by a later pass.
+ */
+export type FlavorProfileSource = 'catalog' | 'inferred';
+
 export type PriceTier = 1 | 2 | 3 | 4;
 
 /** Server-side photo processing (background removal). The UI shows a shimmer while 'processing'. */
@@ -30,10 +55,10 @@ export type PhotoStatus = 'processing' | 'ready';
 
 /**
  * Kinds of feed post the app renders. `packages/api` maps DB `feed_events.kind`:
- * 'ranked' | 'reranked' → 'RANKING', 'want_to_try' → 'SAVED'; 'followed' events
- * are not feed posts in v1 and are filtered out.
+ * 'ranked' | 'reranked' → 'RANKING'. Saving a Bev is not a feed post, so the
+ * feed carries rankings only.
  */
-export type FeedEventKind = 'RANKING' | 'SAVED';
+export type FeedEventKind = 'RANKING';
 
 export type BevStatus = 'pending_photo' | 'active' | 'merged' | 'hidden';
 

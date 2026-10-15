@@ -30,11 +30,12 @@ create index post_likes_event_idx on public.post_likes (feed_event_id);
 
 alter table public.post_likes enable row level security;
 
--- Counts are public inside the app, same as rankings and user_stats. Reads of
--- a like whose post the viewer cannot see are harmless: the post itself is
--- already filtered out of get_feed, and a feed_event_id leaks nothing.
-create policy post_likes_select on public.post_likes
-  for select to authenticated using (true);
+-- A like is readable by whoever can see the post (and always by the liker).
+-- `using (true)` would let anyone enumerate post_likes and learn which posts
+-- exist and who likes them -- including strangers' posts and, for an under-21
+-- viewer, alcoholic Bevs' posts -- which is exactly what like_post's
+-- BEVI_NOT_FOUND refuses to confirm. The policy itself is created in section
+-- 2, after feed_event_visible exists.
 
 -- ---------------------------------------------------------------------------
 -- 2. feed_event_visible
@@ -68,6 +69,11 @@ as $$
        and (b.id is null or not c.is_alcoholic or public.viewer_is_adult())
   );
 $$;
+
+create policy post_likes_select on public.post_likes
+  for select to authenticated using (
+    user_id = auth.uid() or public.feed_event_visible(feed_event_id)
+  );
 
 -- ---------------------------------------------------------------------------
 -- 3. like_post / unlike_post
@@ -112,7 +118,12 @@ begin
   if v_uid is null then
     raise exception 'BEVI_UNAUTHORIZED' using errcode = '42501';
   end if;
-  if not public.feed_event_visible(p_event_id) then
+  -- Your own like can always be taken back, even from a post you can no
+  -- longer see (you unfollowed the poster): otherwise it would stay counted
+  -- with no way to remove it. Only an unliked, invisible post is not_found.
+  if not exists (select 1 from public.post_likes
+                  where user_id = v_uid and feed_event_id = p_event_id)
+     and not public.feed_event_visible(p_event_id) then
     raise exception 'BEVI_NOT_FOUND' using errcode = 'P0002';
   end if;
 
@@ -129,7 +140,9 @@ $$;
 -- A `returns table` cannot be changed by `create or replace`, so this is a
 -- drop and recreate -- which loses the grants, hence the revoke/grant block
 -- at the end. Everything above the two new columns is 20261014000100's
--- definition unchanged.
+-- definition unchanged. like_count is a correlated count on
+-- post_likes_event_idx, so it costs one index probe per returned post rather
+-- than aggregating the whole post_likes table on every feed load.
 
 drop function if exists public.get_feed(int, bigint);
 
@@ -183,7 +196,8 @@ as $$
            select 1 from public.want_to_try w
             where w.user_id = auth.uid() and w.bev_id = e.bev_id
          ),
-         coalesce(l.n, 0)::integer,
+         (select count(*) from public.post_likes pl
+           where pl.feed_event_id = e.id)::integer,
          exists (
            select 1 from public.post_likes pl
             where pl.user_id = auth.uid() and pl.feed_event_id = e.id
@@ -194,11 +208,6 @@ as $$
     left join public.categories c on c.id = b.category_id
     left join public.bev_stats s on s.bev_id = b.id
     left join public.rankings r on r.id = e.ranking_id
-    left join (
-      select feed_event_id, count(*) as n
-        from public.post_likes
-       group by feed_event_id
-    ) l on l.feed_event_id = e.id
    where e.kind in ('ranked', 'reranked')
      and (e.actor_id = auth.uid()
           or e.actor_id in (select followee_id from public.follows where follower_id = auth.uid()))

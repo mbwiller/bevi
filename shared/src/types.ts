@@ -2,7 +2,17 @@
 // the design system's component props (design/system/project/components/index.d.ts).
 // All timestamps are ISO 8601 strings; all scores are 0–10 with 2 dp.
 
-import type { BevStatus, Bucket, CategoryId, FeedEventKind, PhotoStatus, PriceTier } from './enums';
+import type {
+  BevStatus,
+  Bucket,
+  CategoryId,
+  FeedEventKind,
+  FlavorBase,
+  FlavorProfileSource,
+  FlavorServe,
+  PhotoStatus,
+  PriceTier,
+} from './enums';
 
 /** The signed-in user as the app sees it. Tokens stay inside `packages/api`. */
 export interface Session {
@@ -76,6 +86,26 @@ export interface BevSummary {
   bayesScore: number | null;
 }
 
+/**
+ * A Bev's taste profile: the hand-labelled signal behind the `profile` term of
+ * the Bev-graph edge weight (`profileSimilarity` in `@bevi/ranking`, LaTeX
+ * §10.1 eq. 17). Field names are the contract between that formula (M-24) and
+ * the catalog CSV plus `bev_flavor_profiles` table (A-17); renaming one means
+ * relabelling 378 rows, so they are fixed here first.
+ */
+export interface FlavorProfile {
+  base: FlavorBase;
+  carbonated: boolean;
+  /** 0 none, 1 low, 2 medium, 3 high. */
+  caffeine: 0 | 1 | 2 | 3;
+  /** 0 unsweetened, 1 low, 2 medium, 3 high. */
+  sweetness: 0 | 1 | 2 | 3;
+  dairy: boolean;
+  alcohol: boolean;
+  serve: FlavorServe;
+  source: FlavorProfileSource;
+}
+
 /** The caller's ranking of a Bev, embedded in `Bev`. */
 export interface MyRanking {
   bucket: Bucket;
@@ -116,6 +146,8 @@ export interface Bev extends BevSummary {
   /** Followed users who ranked it. */
   friends: FriendScore[];
   isStarter: boolean;
+  /** null until the Bev is labelled (A-17 covers the 378 seeds). */
+  flavorProfile: FlavorProfile | null;
 }
 
 export interface Ranking {
@@ -151,14 +183,35 @@ export interface FeedItem {
   type: FeedEventKind;
   actor: Profile;
   bev: BevSummary;
-  /** The actor's score; null for 'SAVED'. */
-  score: number | null;
-  /** The actor's bucket; null for 'SAVED'. */
-  bucket: Bucket | null;
-  /** The actor's ranking note; null for 'SAVED'. */
+  /** The actor's score for this Bev. */
+  score: number;
+  /** The actor's bucket for this Bev. */
+  bucket: Bucket;
+  /** The actor's ranking note, if they wrote one. */
   note: string | null;
   createdAt: string;
   inMyWantToTry: boolean;
+  /** Total likes on this post. */
+  likeCount: number;
+  /** Whether the caller has liked it. */
+  likedByMe: boolean;
+  /** Total comments on this post, excluding deleted ones. */
+  commentCount: number;
+  /**
+   * The first seven comments (at most), oldest first. With `commentCount` of
+   * seven or fewer this is the whole thread, so the post shows every comment
+   * inline without a second call; above seven the app collapses to "View all
+   * N comments" (previewing some of these if it likes) and fetches the thread
+   * with `comments.list`.
+   */
+  comments: Comment[];
+}
+
+export interface Comment {
+  id: string;
+  author: Profile;
+  body: string;
+  createdAt: string;
 }
 
 export interface FeaturedBev {

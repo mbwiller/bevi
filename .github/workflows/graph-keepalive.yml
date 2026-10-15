@@ -1,0 +1,45 @@
+name: graph-keepalive
+
+# Aura Free auto-pauses after 72 hours without activity, never auto-resumes,
+# and deletes an instance after 30 days paused (TASKS.md decision 29,
+# docs/graph.md). Until A-16's nightly sync exists to do this as a side effect
+# of real work, this writes one timestamp to (:Meta) every day.
+#
+# Delete this workflow (and scripts/graph/keepalive.ts) once graph-sync.yml
+# runs nightly.
+#
+# Needs the NEO4J_URI, NEO4J_USERNAME and NEO4J_PASSWORD repository secrets.
+# Without them it logs a warning and exits 0.
+
+on:
+  schedule:
+    - cron: "17 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: graph-keepalive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # No `npm ci`: the script has no dependencies.
+      - run: npm run graph:keepalive
+        env:
+          NEO4J_URI: ${{ secrets.NEO4J_URI }}
+          NEO4J_USERNAME: ${{ secrets.NEO4J_USERNAME }}
+          NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
+          NEO4J_DATABASE: ${{ secrets.NEO4J_DATABASE }}
