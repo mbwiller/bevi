@@ -23,7 +23,13 @@ Source: `CONVERSATION-2.md` (raw transcript). This file turns that conversation 
 - **S-14 shipped as part 1 only** — the flavour-profile field names. `BevsApi.similarities`/`similar`, `RankingsApi.listBucketBevs` and `Category.parentId` are deliberately deferred to part 2, which lands with A-16; declaring them earlier would oblige `packages/api` to implement methods with no SQL behind them.
 - **A-15's "10 nearest Bevs" check moved to A-16.** It cannot pass on its own: nearest-by-embedding needs pgvector and `bev_embeddings`, nearest-by-edge needs `SIMILAR_TO`. The vector index ships empty and valid; `docs/graph.md` records this.
 - **`deploy-dev` is still stubbed in `backend.yml`.** Its old comment claimed no hosted project existed, which #56 made untrue. It was corrected but not enabled: `supabase db push` on every merge would apply migrations unattended, and one of them deletes rows. Turning it on is a decision for both of us.
-- **Still open from this round:** #74 (M-25, green) and #79 (Matt's verification branch, now obsolete).
+- **Closed since:** #74 (M-25) merged on 2026-10-15; #79 (Matt's verification branch) was closed without merging.
+
+**Progress (2026-10-15, Matt with Claude).**
+- **Merged and live:** M-07 (#85), M-13 (#88), M-14 (#89), M-02 (#90) and M-24 (#86, `RANKING_VERSION` 1.2.0). What shipped is under each task in §3.
+- **The design step happens in the repo now.** Edit `design/system/src/` and the generators, run `npm run build` in `design/system`, and commit the result as the branch's first commit. After the merge, the changed `project/` files are published to the design-system artifact (version 8 matches `main` at #90). Two branches' generated files always conflict: rebase, then rebuild.
+- **Contract gap found by M-02:** Profile › Activity can't show likes (details under M-02).
+- **Next in Matt's lane:** M-03 (comments), then M-12 once D-06 is decided.
 
 Lanes are the ones in `DEVELOPMENT-MATT.md` §1 / `DEVELOPMENT-ARJUN.md` §1 and do not change:
 
@@ -204,6 +210,7 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - Do: remove the SAVED rendering path from `FeedPostItem`/`FeedPost` once S-01 lands (the type union shrinks, so TypeScript finds every spot); keep `FeedPost verb="saved"` only if Profile › Activity still needs it (it doesn't; rankings only). Update `Feed.test.tsx` fixtures.
 - Needs: S-01, A-01.
 - DoD: no save ever appears in the feed; the bookmark still fills on posts for Bevs in your Want to Try.
+- **Done in #80, and the leftover in #90:** #80 stopped `FeedPostItem` rendering `SAVED`; FeedPost's own `verb="saved"` / `isSave` branch (app and design system) went with M-02 in #90.
 
 **M-02 · Likes on posts (Instagram-identical).** `ui/post-likes`
 - Spec from the session: heart button in the post's action row, **filled `primary` (grape) when liked**, like count beside it, **double-tap anywhere on the post to like** with a heart burst over the image (Reanimated, transform + opacity only, reduced-motion fallback = fade). Optimistic update with rollback (same pattern as `useToggleSet` in the leaderboard).
@@ -211,6 +218,14 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - Accessibility: `accessibilityRole="button"`, label "Like" / "Unlike, 12 likes", `aria-pressed`; double-tap is an addition, never the only way.
 - Needs: S-02, A-02.
 - DoD: like, unlike, count, double-tap, works offline-optimistically, tests in `components/__tests__/` and `features/feed/__tests__/`.
+- **Done in #90:**
+  - `LikeButton` leads FeedPost's action row (heart, then Rank, then Want to Try): filled `primary` when liked, the count beside it, hidden at 0.
+  - **Double-tap anywhere on the post outside the photo strip likes it** (Matt, 2026-10-15: a single tap on the photo still opens the Bev). It never unlikes; on a liked post it only plays the burst. The post sets `touch-action: manipulation` so iOS Safari doesn't zoom.
+  - `useToggleLike` updates every FeedItem cache optimistically and runs taps in order. The latest tap on a post settles it by writing back the server-confirmed state, so a feed refetch that lands mid-like can't undo it.
+  - FeedPost's `verb` / saved variant is gone, which closes M-01's leftover.
+- **Not done:**
+  - **Profile › Activity has no hearts.** It renders `RankedBev`s from `rankings.listUser`, which carry no feed-event id, `likeCount` or `likedByMe`. Needs a contract change: those fields on `listUser`, or a `feed.listUser(id, page)` returning `FeedItem`s.
+  - Only the most recent like shows an error message: like post A, then B, and a failure on A rolls back without one. Fix with M-03, which touches the same code.
 
 **M-03 · Comments.** `ui/post-comments`
 - Spec: comment icon in line with the heart, count beside it. Tapping opens a clean sheet/screen: list of comments (avatar 32, name, text, time), composer pinned to the bottom. **Inline on the post: the first comments are visible without tapping; after seven, show "View all N comments".** No likes on comments for now (D-01).
@@ -261,6 +276,10 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
   - `BevStats` reuses `formatRatings` in place of its local `ratings()` and drops `count` from its bubble, since the tile meta already prints it.
   - Update the ScoreBubble, BevRow and Leaderboard tests: the meta text gains " · N ratings", and the label `'Predicted score 8.2, 58 ratings'` in `BevRow.test.tsx` loses the count.
   - It overlaps M-12 (density), so do M-07 first.
+- **Done in #85:**
+  - ScoreBubble has no count or badge, in the design system and the app.
+  - **Changed from step 2 (Matt, 2026-10-15): the count shows only on rows with no meta of their own.** Bev search shows "362 ratings"; the Leaderboard, Want to Try and Recommended show only their own meta line. The Bev detail tile reads "5k ratings" (`formatRatings`).
+  - The design system's SortToggle needs `onClick` and shows the search icon only with `onSearch`; the dead "Predicted" example is gone (M-25's follow-up).
 
 **M-08 · Your Lists › Bev'd: gamify.** `ui/bevd-gamified`
 - Spec: **icons on every row** (`BevRow showImage` in `BevdTab.tsx`, which currently has `actions={false}` and no image); a **category progress strip** above the list ("Soda · 4 of 61 tried · 7%") driven by A-06; and one visual "graph of Bevs" (e.g. a horizontal bar per category of your ranked count vs catalog size, or a collection grid of icons you've unlocked). Keep the rows less crowded (see M-12).
@@ -306,10 +325,19 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 **M-13 · Gut-check buttons: calmer.** `ui/bucket-buttons` (D-05)
 - Feedback: the three `BucketButton`s *"stick out a lot"*. The glass is CSS `backdrop-filter` in `app/src/components/BucketButton.tsx` (no Apple developer route is needed on the web build; that worry is moot). Options: default to the `tint` material (12% bucket tint, 4pt bar) and reserve glass for when a `BevGlow` sits behind a real photo; reduce the orb to 40pt; drop the fizz unless selected. Decide in the design system.
 - DoD: previews for both materials; the chosen default shipped.
+- **Done in #88:**
+  - The design system defaults to `material="tint"`; glass is only ever the native `GlassView` on iOS 26+, never a CSS blur. Both materials stay in the preview.
+  - The web app always draws tint: the `backdrop-filter` path, the `material` prop and `supportsBackdropFilter` are gone. `useReducedTransparency` stays for BevGlow.
+  - The orb is 40 (was 48), Matt's pick from a side-by-side preview.
 
 **M-14 · Show the score, with motion, at the moment of placement.** `ui/score-reveal`
 - Today the score only appears on `RankResult` after Save/Skip on the note step (`ScoreBubble 56` with `ZoomIn.springify()`), which is why it was missed. Change: compute the score locally the moment placement finishes (`storedScore(insertIndex, list.length + 1, bucket)` from `@bevi/ranking`; the server's re-spacing stores exactly this value, LaTeX §3) and show it **on the note step**: a 72pt bubble that pours in and **counts up to the number**, with "#4 of 31 in Loved" under it; the note field sits below. `RankResult` then confirms the saved value (unchanged unless a conflict occurred).
 - DoD: the number is visible before the note is written; reduced-motion shows it without the count-up; tests cover the local score equals the submitted result.
+- **Done in #89:**
+  - ScoreBubble size 72 (`size-scoreBubble-xl` / `scoreBubbleXl`). On the note step, the bubble and "#4 of 31 in Loved" (or "First one in Loved") replace the "Add a note" title, since the keyboard opens at once.
+  - The bubble pours in and the number counts up from the bucket's lower edge (`BANDS`) over `pour` (450ms); Reduce Motion shows the number at once. The label is always the final score.
+  - RankFlow computes `storedScore(insertIndex, expectedBucketSize + 1, bucket)`. Tests check it equals the saved score for a new ranking, a re-rank, the first in a bucket, after Undo and after a conflict restart; `integrator-app` checked it against `submit_ranking` / `rerank_bev`.
+  - RankResult keeps its 56 confirmation, and its `ZoomIn` now respects Reduce Motion.
 
 **M-15 · The Search tab: search bar on top, the map underneath, results over the map.** `ui/search-tab` (decision 32)
 - Tab bar: `app/src/components/TabBar.tsx` labels the centre grape circle "Add Bev"; it becomes **Search** (Beli's label for the same circle). Route stays `/add` with a redirect from `/search`, or moves; `?tab=people` keeps working.
@@ -330,11 +358,19 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - The nightly job (A-16) imports these; the app's anchored placement (M-21) consumes the resulting weights. Nothing here does I/O (package rule).
 - Needs: the flavour-profile schema from A-17 (agree the column names in S-14 first).
 - DoD: vectors committed; `npm test -w packages/ranking` green; bundle smoke passes.
+- **Done in #86 (`RANKING_VERSION` 1.2.0):**
+  - `packages/ranking/src/edges.ts`: `treeSimilarity` (over a `Taxonomy` passed in, since `Category.parentId` and D-04 don't exist yet), `profileSimilarity` (eq. 17; `serve` and `source` are not in it), `embeddingSimilarity`, `edgeWeight` (eq. 18), `topEdges`.
+  - `shared/fixtures/edges.vectors.json` (43 cases). The other vectors files changed only in their header. Code and vectors shipped in one PR, as #37 did, because ranking CI checks the vectors on every `packages/ranking` change. Paper §11 has the 1.2.0 row.
+  - **For A-16:** a top-level category has depth 1 under an implicit root (`treeDepth` in the vectors header; the paper doesn't define it yet). `topEdges` breaks ties by `bevId` in code-unit order, so SQL tie-breaks need `collate "C"`. With today's flat categories, Coca-Cola vs a sparkling water stays under 0.4 only while their embedding cosine is ≤ 0.88, so the sanity check may trip on real `gte-small` embeddings. No SQL change.
 
 **M-25 · Recommended's "Predicted" sort toggle does nothing.** `ui/recs-sort-toggle` (found during M-09)
 - `RecommendedTab.tsx` renders `<SortToggle label="Predicted" onSearch={false} />` with no `onPress`, so screen readers get a button that does nothing.
 - Fix: give `SortToggle` a non-interactive form (no `onPress` → plain text, no `button` role), or drop it from Recommended. Recommendations have one order.
 - DoD: no touchable without an action on Recommended; test updated.
+- **Done in #74:**
+  - Recommended no longer renders a SortToggle; recommendations have one order.
+  - `SortToggle` requires `onPress`, so a dead toggle doesn't type-check, and draws the search icon only when `onSearch` is a function. It used to draw a search button with no action whenever `onSearch` was omitted.
+  - **Follow-up (design system):** the SortToggle preview still renders a `Predicted` toggle with no `onClick`, and its README lists `Predicted` as a label. Fix them with the M-07 design change.
 
 ### P2
 
@@ -502,7 +538,7 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 |---|---|---|
 | **S-01** | `FeedEventKind` → `'RANKING'` only; `WantToTryApi.add` no longer "posts a 'SAVED' feed item"; `FeedApi.getFeed` doc | M-01, A-01 |
 | **S-02** | `FeedItem.likeCount: number`, `likedByMe: boolean`; `FeedApi.like(id)`, `unlike(id)` (idempotent, `'not_found'`, `'rate_limited'`) | M-02, A-02 |
-| **S-03** | `FeedItem.commentCount`, `comments: Comment[]` (first three); `CommentsApi { list(eventId, page), add(eventId, body), remove(id) }`; `Comment { id, author: Profile, body, createdAt }` | M-03, A-03 |
+| **S-03** | `FeedItem.commentCount`, `comments: Comment[]` (first seven; corrected by A-03); `CommentsApi { list(eventId, page), add(eventId, body), remove(id) }`; `Comment { id, author: Profile, body, createdAt }` | M-03, A-03 |
 | **S-04** | `FeedApi.getExplore(page)` → `Page<FeedItem>`; optional `leaderboard.popularBevs({ days })` | M-04, A-04 |
 | **S-05** | `FeedApi.getBevOfPeriod()` → `{ day: PeriodWinner \| null, week: PeriodWinner \| null }`, `PeriodWinner { bev: BevSummary, periodStart: string, rankingsInPeriod: number }` | M-05, A-05 |
 | **S-06** | `UserLeaderboardRow.bevsCreated: number` (optional) | M-06 |
@@ -545,9 +581,9 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 
 ## 7. Suggested order of work
 
-1. **Week 1 (P0, small):** ~~S-01~~ (#65) → ~~A-01~~ (#69) + ~~M-01~~ (folded into #80) · ~~M-09~~ (#60) · ~~M-11~~ (#61) · ~~M-06~~ (#62) · M-07 (decided; waits on the design-system change) · S-08/S-09 docs · M-25, S-18, S-19 (small, found on 2026-10-14). **In parallel (graph foundation, no screens):** ~~A-15~~ (#72, with S-17) · ~~S-14 column names~~ (#68, part 1 only) · M-24 (edge formulas + vectors) · ~~A-17~~ (#73).
-2. **Week 2 (P0, social):** ~~S-02~~ (#82) / ~~S-03~~ (#67) → ~~A-02~~ (#70) / ~~A-03~~ (#71) + M-02/M-03 · S-05 → A-05 + M-05. **Graph:** A-16 nightly sync live; first sanity report. **The backend and contracts for likes and comments are done; M-02 and M-03 are what make them reachable in the app.**
-3. **Week 3 (P0/P1):** S-04 → A-04 + M-04 · S-07 → A-06 + M-08 · M-10 + A-07 (icons) · M-12 · M-13 · M-14 · **M-15 (Search tab shell)**.
+1. **Week 1 (P0, small):** ~~S-01~~ (#65) → ~~A-01~~ (#69) + ~~M-01~~ (folded into #80) · ~~M-09~~ (#60) · ~~M-11~~ (#61) · ~~M-06~~ (#62) · ~~M-07~~ (#85) · S-08/S-09 docs · ~~M-25~~ (#74) · S-18, S-19 (small, found on 2026-10-14). **In parallel (graph foundation, no screens):** ~~A-15~~ (#72, with S-17) · ~~S-14 column names~~ (#68, part 1 only) · ~~M-24~~ (#86) · ~~A-17~~ (#73).
+2. **Week 2 (P0, social):** ~~S-02~~ (#82) / ~~S-03~~ (#67) → ~~A-02~~ (#70) / ~~A-03~~ (#71) + ~~M-02~~ (#90) / M-03 · S-05 → A-05 + M-05. **Graph:** A-16 nightly sync live; first sanity report. **The backend and contracts for likes and comments are done; M-02 and M-03 are what make them reachable in the app.**
+3. **Week 3 (P0/P1):** S-04 → A-04 + M-04 · S-07 → A-06 + M-08 · M-10 + A-07 (icons) · M-12 · ~~M-13~~ (#88) · ~~M-14~~ (#89) · **M-15 (Search tab shell)**.
 4. **Week 4 (P1):** S-12 → A-11 + M-19 · A-14 parity · D-04 taxonomy draft.
 5. **Then P2:** the map (S-10, S-16 → A-08 → M-16, M-17, M-23), nutrition (S-11, A-09, M-18), duplicates (S-13, A-12, M-20).
 6. **P3 only after both say yes:** A-13 → M-21 (anchored placement on `bev_edges`).

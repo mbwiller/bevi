@@ -286,7 +286,7 @@ Process:
 3. Measurements are inputs, tokens are outputs: snap every measured value to the nearest token and note the snap.
 4. After each screen is built, screenshot it in the simulator next to the reference and fix spacing/colour before moving on (the spec's Part 4 instruction; keep it).
 
-What in the reference is a bad fit for Bevi and is dropped: everything location/venue driven (Reserve now, Order, Open now, distance, hours, "View Map", the party/date/time bar, "Recs Nearby", City filter, "Current Location"); the invite-unlock card (0/5 friends unlock features); Guides tab and guides lists; "Add School"; the "Import a list" card; notifications bell + calendar icons (no notifications in v1); likes/comments/share on posts (not in vision; see §18); "with Rhea" co-visit tagging and "2 visits" repeat counts (a Bev is ranked once; re-rank replaces).
+What in the reference is a bad fit for Bevi and is dropped: everything location/venue driven (Reserve now, Order, Open now, distance, hours, "View Map", the party/date/time bar, "Recs Nearby", City filter, "Current Location"); the invite-unlock card (0/5 friends unlock features); Guides tab and guides lists; "Add School"; the "Import a list" card; notifications bell + calendar icons (no notifications in v1); share on posts (not in vision; see §18; likes and comments were added later, TASKS.md decisions 2–3, M-02, M-03); "with Rhea" co-visit tagging and "2 visits" repeat counts (a Bev is ranked once; re-rank replaces).
 
 What the reference adds that the vision lacks and we adopt: the Profile is rows + stat cards, not tiles (§6.13); Bev'd is one numbered list sorted by score, not bucket sections (§6.5); search has a People tab (§6.8); the "locked" score state (§4 `ScoreBubble locked`); the Activity feed on the Profile is the same `FeedPost` as the Feed tab; the Taste Profile tab and calendar grid are a natural fit for our per-category stats and streaks (§6.20, Phase 3); a yearly goal card ("You've tried 60 spots in 2026") is cheap gamification for Phase 3.
 
@@ -322,7 +322,7 @@ Common to every screen unless noted: loading = skeleton of the final layout; err
 - Data: `feed.getFeatured()`, `feed.getFeed({ cursor, limit: 20 })`, `wantToTry.add/remove`.
 - States: following nobody → `EmptyState` under YOUR FEED: "Follow friends to see their Bevs" + "Find people" `Pill` (Featured stays visible, as in ref 01); no activity yet; paginating footer.
 - Interactions: tap post body → Bev detail; tap avatar/name → user profile; bookmark → Want to Try (optimistic, fills `primary`); plus-circle → ranking flow.
-- Dropped from the reference: quick-action pills row, composer "Ask your friends for recs", invite card, likes/comments.
+- Dropped from the reference: quick-action pills row, composer "Ask your friends for recs", invite card, likes/comments (likes and comments were added later: TASKS.md M-02, M-03).
 
 ### 6.5 Your Lists tab: Bev'd (ref 06)
 
@@ -1102,7 +1102,7 @@ Tags follow vision §10: model / effort. Each row is one Claude Code sub-agent d
 - Business model bits (promoted placements, subscriptions), "hottest this month" before Phase 3, matrix factorisation.
 - Native builds, EAS, App Store/TestFlight, Android, Expo Go/dev client as a target, OAuth and any emailed flow (decided 2026-10-11: web app only).
 - "Skip this comparator" in the ranking flow, periodic drift re-checks, push notifications, blocking/private profiles, Bev editing by non-creators (moderation is an open question).
-- From the Beli reference (§5): reservations/ordering/hours/distance/maps, invite-unlock card, Guides, "Add School", list import, likes/comments/shares on posts, co-visit tagging ("with Rhea"), visit counts, magic-link or social auth.
+- From the Beli reference (§5): reservations/ordering/hours/distance/maps, invite-unlock card, Guides, "Add School", list import, shares on posts (likes and comments were added later: TASKS.md M-02, M-03), co-visit tagging ("with Rhea"), visit counts, magic-link or social auth.
 
 ---
 
@@ -1131,7 +1131,7 @@ Open questions (need a decision, not a doc edit):
 
 - **Streak period: daily (vision) vs weekly (Beli shows "9 weeks").** `computeStreak` supports both; pick before the streak vectors land (start of Phase 2).
 - Alcohol in v1: proposal is yes, seeded minimally, gated by birthdate ≥ 21 (vision §11 item 1). Arjun's RLS enforces it; confirm that scope with Arjun.
-- Likes on feed posts: the reference has heart/comment/share; vision doesn't. Proposal: no likes in v1, revisit in Phase 3 once the feed has traffic.
+- Likes on feed posts: the reference has heart/comment/share; vision doesn't. Proposal: no likes in v1, revisit in Phase 3 once the feed has traffic. **Superseded 2026-10-14:** likes and comments are in (TASKS.md decisions 2–3); likes shipped in #90 (M-02).
 - Invite code: where it's checked (Arjun) and how it's shared and rotated among friends.
 - Background removal for user uploads: server-side (assumed, Arjun) vs on-device (would move to `app/`). Also: does the pipeline produce blurhashes?
 - Price estimation default when the user says "not sure": category median (proposed) vs always ask.
