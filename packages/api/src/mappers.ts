@@ -282,6 +282,8 @@ export interface FeedRpcRow {
   bucket: number | null;
   note: string | null;
   in_my_want_to_try: boolean;
+  like_count: number;
+  liked_by_me: boolean;
 }
 
 export function mapFeedItem(client: SupabaseClient, row: FeedRpcRow, actor: Profile): FeedItem {
@@ -314,6 +316,8 @@ export function mapFeedItem(client: SupabaseClient, row: FeedRpcRow, actor: Prof
     note: row.note,
     createdAt: row.created_at,
     inMyWantToTry: row.in_my_want_to_try,
+    likeCount: row.like_count,
+    likedByMe: row.liked_by_me,
   };
 }
 
