@@ -27,7 +27,7 @@ const R = {
 - Don't crop the product or put it on a photo background: the tile is the Bev's icon everywhere.`,
   ScoreBubble: `Beli's score mark: a \`surface\` circle with a 2pt \`border\` ring and the score in bold, coloured by its bucket band.
 
-- Provide: \`score\` (0–10; shown to one decimal), \`size\` 40 (rows, posts) or 56 (Bev detail, ranking result).
+- Provide: \`score\` (0–10; shown to one decimal), \`size\` 40 (rows, posts), 56 (Bev detail, ranking result) or 72 (the ranking note step, where the score is revealed the moment placement finishes).
 - No count on the bubble: a badge read like a vote tally. A Bev's rating count is words in a meta line instead (BevRow's \`count\`, the Bev detail tile's "5k ratings").
 - \`variant="predicted"\` = dotted ring and "~" prefix (Recommended, "You'd rate it"); \`locked\` = lock icon, no number (prediction confidence < 0.25, or fewer than 3 rankings).
 - Bands: ≥ 7 \`scoreHigh\`, ≥ 4 \`scoreMid\`, else \`scoreLow\`. The number always shows, so colour is never the only signal.`,
@@ -176,7 +176,12 @@ const S = {
 - Choosing a bucket pours it, then moves on to comparisons. An empty bucket skips straight to the note: "First one in Loved".`,
   ScreenRanking: `Ranking flow, step 2 (no reference): ProgressDots and the close circle, "Which was better?", two CompareCards (new on top), "Too close to call" and Undo.
 
-- After placement: an optional 140-character note, then the result: ScoreBubble 56 and "#4 of 31 in Loved · 8.9".`,
+- After placement, the note step (ScreenRankingNote) reveals the score at once, then the result confirms it: ScoreBubble 56 and "#4 of 31 in Loved · 8.9".`,
+  ScreenRankingNote: `Ranking flow, step 3 (no reference): Undo and the close circle, then the score the moment placement finishes: a ScoreBubble 72 over "#4 of 31 in Loved", in place of a title, because the note field takes focus and the keyboard covers the rest. Then "Optional. Your friends see it with your ranking.", the 140-character note, Save and Skip.
+
+- First Bev in an empty bucket: the same bubble over "First one in Loved", and "Nothing to compare yet. Add a note if you like."
+- Motion: the bubble pours in and its number counts up from the bucket's lower edge (7.0 Loved, 4.0 Fine, 0.0 Didn't like) to the score, both over \`pour\` (450ms). Under Reduce Motion the final number shows at once, with no count-up.
+- The score shown is the one that will be saved (\`storedScore\` from @bevi/ranking); the result step's ScoreBubble 56 confirms it.`,
   ScreenBevDetail: `Bev detail (no reference): BevImage 155, name, brand, category and PriceTier; two stat cards (Bevi score with "5k ratings" under it, "You'd rate it" predicted); friends who've had it; Rank it and Want to Try Pills.
 
 - Not enough rankings: the second bubble is \`locked\` with "Rank 3 Bevs to see your prediction".`,

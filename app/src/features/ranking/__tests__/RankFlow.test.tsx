@@ -1,8 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { configure, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { ApiError, type BevSummary, type Bucket } from '@bevi/shared';
+import { storedScore } from '@bevi/ranking';
+import { ApiError, type BevSummary, type Bucket, type SubmitRankingResult } from '@bevi/shared';
 
 import { api } from '@/api/client';
+import { formatScore } from '@/lib/format';
 import { controls } from '@/testing/fakeApi';
 
 import { RankFlow } from '../RankFlow';
@@ -11,7 +13,12 @@ const mockBack = jest.fn();
 const mockReplace = jest.fn();
 const mockRouter = { canGoBack: () => true, back: mockBack, replace: mockReplace, push: jest.fn() };
 jest.mock('expo-router', () => ({ useRouter: () => mockRouter }));
-
+// Reduce Motion is off unless a test turns it on (then the score shows without the count-up).
+let mockReduced = false;
+jest.mock('react-native-reanimated', () => ({
+  ...jest.requireActual('react-native-reanimated/mock'),
+  useReducedMotion: () => mockReduced,
+}));
 
 // The FakeApi computes its aggregates on the first read after a reset, which can take a moment.
 configure({ asyncUtilTimeout: 5000 });
@@ -144,7 +151,7 @@ it('offline on save keeps the placement and retries', async () => {
   await renderRank(bev!.id);
   await chooseBucket("Didn't like it");
   await waitFor(() => expect(screen.queryByText('How was it?')).toBeNull(), { timeout: 3000 });
-  if (!screen.queryByText('Add a note') && !screen.queryByText(/^First one in/)) await answerAllNewBetter(bev!.name);
+  if (!screen.queryByText(/^#\d+ of \d+ in Didn't like$/) && !screen.queryByText(/^First one in/)) await answerAllNewBetter(bev!.name);
 
   controls.failNext('network', 'rankings.submitRanking');
   await fireEvent.press(screen.getByLabelText('Save'));
@@ -234,7 +241,7 @@ it('a conflict whose bucket refetch fails shows the error instead of restarting 
   await fireEvent.press(screen.getByLabelText('Save'));
   expect(await screen.findByText("You're offline")).toBeTruthy();
   expect(screen.queryByText("Your list changed, let's redo this one")).toBeNull();
-  expect(screen.getByText('Add a note')).toBeTruthy();
+  expect(screen.getByText(/^#1 of \d+ in Loved$/)).toBeTruthy();
 });
 
 it('a validation error on the note shows on the field and keeps the placement', async () => {
@@ -244,7 +251,7 @@ it('a validation error on the note shows on the field and keeps the placement', 
   submit.mockRejectedValueOnce(new ApiError('validation', 'Notes are up to 140 characters', { field: 'note' }));
   await fireEvent.press(screen.getByLabelText('Save'));
   expect(await screen.findByText('Notes are up to 140 characters')).toBeTruthy();
-  expect(screen.getByText('Add a note')).toBeTruthy();
+  expect(screen.getByText(/^#1 of \d+ in Loved$/)).toBeTruthy();
   await fireEvent.press(screen.getByLabelText('Save'));
   await screen.findByText('Done');
   expect(submit.mock.calls[1]![0]).toEqual(submit.mock.calls[0]![0]);
@@ -274,4 +281,121 @@ it('entered from a search tap, an unranked Bev goes straight to the gut check', 
   await renderRank(bev!.id, true);
   expect(await screen.findByText('How was it?')).toBeTruthy();
   expect(mockReplace).not.toHaveBeenCalled();
+});
+
+describe('the score on the note step (Reduce Motion: no count-up)', () => {
+  beforeEach(() => {
+    mockReduced = true;
+  });
+  afterEach(() => {
+    mockReduced = false;
+  });
+
+  /** The note step shows the score and the place before anything is typed. */
+  function expectRevealed(score: number, line: string) {
+    expect(screen.getByLabelText(`Score ${formatScore(score)}`)).toBeTruthy();
+    expect(screen.getByText(formatScore(score))).toBeTruthy();
+    expect(screen.getByText(line)).toBeTruthy();
+    expect(screen.getByLabelText('Note').props.value).toBe('');
+  }
+
+  /** The score the save came back with. */
+  async function savedScore(spy: jest.SpyInstance): Promise<number> {
+    const res = (await spy.mock.results[spy.mock.results.length - 1]!.value) as SubmitRankingResult;
+    return res.ranking.score;
+  }
+
+  it('a new ranking: the local storedScore shows, and is the score saved', async () => {
+    const [bev] = await unranked(1);
+    const loved = await api.rankings.listBucket('LOVED');
+    const submit = jest.spyOn(api.rankings, 'submitRanking');
+    await toNote(bev!);
+
+    const local = storedScore(0, loved.length + 1, 'LOVED');
+    expectRevealed(local, `#1 of ${loved.length + 1} in Loved`);
+
+    await fireEvent.press(screen.getByLabelText('Skip'));
+    await screen.findByText('Done');
+    expect(submit.mock.calls[0]![0]).toMatchObject({ insertIndex: 0, expectedBucketSize: loved.length });
+    expect(await savedScore(submit)).toBe(local);
+  });
+
+  it('a re-rank: the score for the new place shows, and is the score saved', async () => {
+    const loved = await api.rankings.listBucket('LOVED');
+    const target = loved[loved.length - 1]!;
+    const { name } = await api.bevs.get(target);
+    const rerank = jest.spyOn(api.rankings, 'rerankBev');
+    await renderRank(target);
+    await chooseBucket('Loved it');
+    await answerAllNewBetter(name);
+
+    // The Bev leaves its old place: the bucket is the same size, with it at the top.
+    const local = storedScore(0, loved.length, 'LOVED');
+    expectRevealed(local, `#1 of ${loved.length} in Loved`);
+
+    await fireEvent.press(screen.getByLabelText('Skip'));
+    await screen.findByText('Done');
+    expect(rerank.mock.calls[0]![0]).toMatchObject({ insertIndex: 0, expectedBucketSize: loved.length - 1 });
+    expect(await savedScore(rerank)).toBe(local);
+  });
+
+  it('the first Bev in a bucket: "First one in Fine" with its score, the score saved', async () => {
+    const [bev] = await unranked(1);
+    controls.emptyUser();
+    const submit = jest.spyOn(api.rankings, 'submitRanking');
+    await renderRank(bev!.id);
+    await chooseBucket('It was fine');
+    await screen.findByText('First one in Fine', {}, { timeout: 3000 });
+
+    const local = storedScore(0, 1, 'FINE');
+    expectRevealed(local, 'First one in Fine');
+    expect(screen.queryByText('#1 of 1 in Fine')).toBeNull();
+
+    await fireEvent.press(screen.getByLabelText('Skip'));
+    await screen.findByText('Done');
+    expect(await savedScore(submit)).toBe(local);
+  });
+
+  it('after Undo and a different answer, the score is recomputed for the new place', async () => {
+    const [bev] = await unranked(1);
+    const loved = await api.rankings.listBucket('LOVED');
+    const submit = jest.spyOn(api.rankings, 'submitRanking');
+    await toNote(bev!);
+    expectRevealed(storedScore(0, loved.length + 1, 'LOVED'), `#1 of ${loved.length + 1} in Loved`);
+
+    // Take back the last "new is better" (against the current #1) and say the #1 was better instead.
+    await fireEvent.press(screen.getByLabelText('Undo'));
+    await screen.findByText('Which was better?');
+    await fireEvent.press(screen.getByLabelText(/, currently #1 in Loved$/));
+    await screen.findByLabelText('Save');
+
+    const local = storedScore(1, loved.length + 1, 'LOVED');
+    expectRevealed(local, `#2 of ${loved.length + 1} in Loved`);
+
+    await fireEvent.press(screen.getByLabelText('Save'));
+    await screen.findByText('Done');
+    expect(submit.mock.calls[0]![0]).toMatchObject({ insertIndex: 1, expectedBucketSize: loved.length });
+    expect(await savedScore(submit)).toBe(local);
+  });
+
+  it('after a conflict restart, the score is recomputed on the fresh list', async () => {
+    const [bev, other] = await unranked(2);
+    const loved = await api.rankings.listBucket('LOVED');
+    const submit = jest.spyOn(api.rankings, 'submitRanking');
+    await toNote(bev!);
+    expectRevealed(storedScore(0, loved.length + 1, 'LOVED'), `#1 of ${loved.length + 1} in Loved`);
+
+    await api.rankings.submitRanking({ bevId: other!.id, bucket: 'LOVED', insertIndex: 0, expectedBucketSize: loved.length, comparisons: [] });
+    submit.mockClear();
+    await fireEvent.press(screen.getByLabelText('Save'));
+    await screen.findByText("Your list changed, let's redo this one");
+    await answerAllNewBetter(bev!.name);
+
+    const local = storedScore(0, loved.length + 2, 'LOVED');
+    expectRevealed(local, `#1 of ${loved.length + 2} in Loved`);
+
+    await fireEvent.press(screen.getByLabelText('Save'));
+    await screen.findByText('Done');
+    expect(await savedScore(submit)).toBe(local);
+  });
 });

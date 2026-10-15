@@ -14,9 +14,14 @@ export const CONFLICT_NOTICE = "Your list changed, let's redo this one";
 /** After a `validation` error that isn't the note: a client bug, so start over the same way. */
 export const VALIDATION_NOTICE = "That didn't go through, let's redo this one";
 
+/** "#4 of 31 in Loved": where a Bev sits, `position` 0 = best, `bucketSize` counting the Bev itself. */
+export function placeLine(position: number, bucketSize: number, bucket: Bucket): string {
+  return `#${position + 1} of ${bucketSize} in ${BUCKET_NAME[bucket]}`;
+}
+
 /** "#4 of 31 in Loved · 8.9" from `submitRanking`'s `{ ranking, bucketSize }`. */
 export function rankLine(position: number, bucketSize: number, bucket: Bucket, score: number): string {
-  return `#${position + 1} of ${bucketSize} in ${BUCKET_NAME[bucket]} · ${formatScore(score)}`;
+  return `${placeLine(position, bucketSize, bucket)} · ${formatScore(score)}`;
 }
 
 /** Where an incumbent sits in the fetched list: "#3 in Loved". */

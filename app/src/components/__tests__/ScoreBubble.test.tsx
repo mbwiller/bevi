@@ -1,7 +1,7 @@
-import { render, screen } from '@testing-library/react-native';
+import { act, render, screen } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 
-import { colors, scoreColor } from '@/theme';
+import { colors, motion, scoreColor, size } from '@/theme';
 
 import { ScoreBubble } from '../ScoreBubble';
 
@@ -44,4 +44,41 @@ it('locks when locked or null, hiding the number', async () => {
   expect(screen.queryByText('8.0')).toBeNull();
   await render(<ScoreBubble score={null} />);
   expect(screen.getByLabelText('Score hidden')).toBeTruthy();
+});
+
+it('size 72 renders at the scoreBubbleXl token with the 28/34 number', async () => {
+  await render(<ScoreBubble score={8.9} size={72} bucket="LOVED" />);
+  const bubble = StyleSheet.flatten(screen.getByLabelText('Score 8.9').props.style);
+  expect(bubble.width).toBe(size.scoreBubbleXl);
+  expect(bubble.height).toBe(size.scoreBubbleXl);
+  const num = StyleSheet.flatten(screen.getByText('8.9').props.style);
+  expect(num).toMatchObject({ fontSize: 28, lineHeight: 34, letterSpacing: -0.4, fontWeight: '700' });
+});
+
+it('size 72 predicted is 24 and the lock is 28', async () => {
+  await render(<ScoreBubble score={7.6} size={72} variant="predicted" />);
+  expect(StyleSheet.flatten(screen.getByText('~7.6').props.style).fontSize).toBe(24);
+  await render(<ScoreBubble variant="locked" size={72} />);
+  expect(StyleSheet.flatten(screen.getByLabelText('Score hidden').props.style).width).toBe(size.scoreBubbleXl);
+});
+
+describe('countFrom', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  it('counts the number up while the label is the final score from the start', async () => {
+    await render(<ScoreBubble score={8.93} size={72} bucket="LOVED" countFrom={7} />);
+    expect(screen.getByText('7.0')).toBeTruthy();
+    expect(screen.getByLabelText('Score 8.9')).toBeTruthy();
+    // Colour is the final score's (the bucket's) all the way up.
+    expect(textColor('7.0')).toBe(colors.light.scoreHigh);
+
+    await act(() => jest.advanceTimersByTime(motion.pour / 2));
+    expect(screen.getByLabelText('Score 8.9')).toBeTruthy();
+    expect(screen.queryByText('7.0')).toBeNull();
+
+    await act(() => jest.advanceTimersByTime(motion.pour / 2));
+    expect(screen.getByText('8.9')).toBeTruthy();
+    expect(screen.getByLabelText('Score 8.9')).toBeTruthy();
+  });
 });
