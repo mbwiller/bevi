@@ -1,6 +1,6 @@
 % Bevi -- ranking, scoring and recommendation: mathematical specification.
 % Build: tectonic docs/bevi-ranking-math.tex   (or pdflatex twice)
-% Source of truth for the implemented parts: packages/ranking/src (RANKING_VERSION 1.1.0).
+% Source of truth for the implemented parts: packages/ranking/src (RANKING_VERSION 1.2.0).
 % Section 10 specifies the extensions discussed on 2026-10-14 (CONVERSATION-2.md, TASKS.md).
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
@@ -52,7 +52,7 @@
 \newtheorem{implnote}[theorem]{Implementation note}
 
 \title{\textbf{The Bevi Ranking and Recommendation System}\\[4pt]
-\large Mathematical specification of \code{@bevi/ranking} v1.1.0\\ and the extensions proposed on 2026-10-14}
+\large Mathematical specification of \code{@bevi/ranking} v1.2.0\\ and the extensions proposed on 2026-10-14}
 \author{Bevi (Matt \& Arjun)\thanks{Drafted from \code{packages/ranking/src}, \code{DEVELOPMENT-MATT.md} \S 8 and the second planning session (\code{CONVERSATION-2.md}). Sections 2--9 describe what is implemented and tested; Section 10 is a proposal. Formula changes must bump \code{RANKING\_VERSION} and regenerate the golden vectors in \code{shared/fixtures}.}}
 \date{14 October 2026}
 
@@ -410,7 +410,7 @@ The day key of a ranking is the calendar date of its timestamp in the user's pro
 
 \section{Proposed extensions (session of 2026-10-14)}\label{sec:extensions}
 
-Nothing in this section is implemented. Each subsection gives the definition precisely enough to code and test; where a choice is still open it says so.
+Nothing in this section is implemented except the edge weights of Section~\ref{sec:anchored} (\code{edges.ts}, \code{RANKING\_VERSION} 1.2.0). Each subsection gives the definition precisely enough to code and test; where a choice is still open it says so.
 
 \subsection{Category-aware comparisons over a weighted Bev graph}\label{sec:anchored}
 
@@ -630,8 +630,9 @@ The development document lists the three slots for a 20-item list as 4, 9, 15; t
 Version & Date & Change \\
 \midrule
 1.0.0 & 2026-10-09 & First vectors: bands 7/4, placement, exact cents, statistics, Bayesian average, rank points, streaks \\
-1.1.0 & 2026-10-11 & Prediction snapshot, Layers 1--2, blend, exploration, starter set; current \\
-(next) & --- & Edge weights \eqref{eq:w} as \code{edges.vectors.json}; anchored placement (Section~\ref{sec:anchored}) when adopted; each requires a bump and new vectors \\
+1.1.0 & 2026-10-11 & Prediction snapshot, Layers 1--2, blend, exploration, starter set \\
+1.2.0 & 2026-10-14 & Bev-graph edge weights: tree \eqref{eq:wp}, profile \eqref{eq:prof} and embedding similarity, $w$ \eqref{eq:w}, top-$K_E$ selection, as \code{edges.vectors.json} (M-24); earlier vectors unchanged apart from the header; current \\
+(next) & --- & Anchored placement (Section~\ref{sec:anchored}) when adopted; requires a bump and new vectors \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -640,7 +641,7 @@ Version & Date & Change \\
 
 \section{Constants}\label{app:constants}
 
-All values from \code{packages/ranking/src/constants.ts}, \code{RANKING\_VERSION} 1.1.0.
+All values from \code{packages/ranking/src/constants.ts}, \code{RANKING\_VERSION} 1.2.0.
 
 \begin{center}
 \small
@@ -674,6 +675,10 @@ Constant & Value & Role \\
 \code{STARTER\_MAX\_PER\_CATEGORY},\newline \code{STARTER\_MIN\_CATEGORIES} & 2, 5 & Spread of the onboarding set \\
 \code{RANK\_POINTS\_WEIGHTS} & 1 / 3 / 2 & Bevs ranked, current streak, adopted Bevs created \\
 \code{STREAK\_PERIOD} & day & Daily streak (weekly is a constant change) \\
+\code{EDGE\_WEIGHTS} & 0.25 / 0.15 / 0.30 / 0.30 / 0 & Tree, content, embedding, profile, co-preference \eqref{eq:w} \\
+\code{EDGE\_TOP\_K},\newline \code{EDGE\_MIN\_WEIGHT} & 20, 0.3 & Edges kept per Bev ($K_E$) and their minimum weight \\
+\code{PROFILE\_WEIGHTS} & 0.40 / 0.15 / 0.10 / 0.05 / 0.15 / 0.15 & Base, carbonation, dairy, alcohol, caffeine, sweetness \eqref{eq:prof} \\
+\code{PROFILE\_LEVEL\_SPAN} & 3 & Largest caffeine or sweetness difference \\
 \bottomrule
 \end{tabular}
 \end{center}

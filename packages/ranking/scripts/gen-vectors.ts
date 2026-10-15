@@ -16,16 +16,22 @@ import {
   categoryAffinity,
   categoryPrior,
   computeStreak,
+  contentSimilarity,
   createPrng,
   currentPrompt,
   effectiveCategoryStats,
+  EDGE_MIN_WEIGHT,
+  EDGE_TOP_K,
   effectiveUserStats,
+  edgeWeight,
+  embeddingSimilarity,
   isDone,
   leaderboardOrder,
   localDayKey,
   localPeriodKey,
   placementResult,
   populationStats,
+  profileSimilarity,
   randomInt,
   rankPoints,
   rankUsers,
@@ -36,17 +42,24 @@ import {
   startPlacement,
   storedScore,
   storedScoreCents,
+  topEdges,
+  treeSimilarity,
   undo,
   userStats,
   zScore,
+  type BevFeatures,
   type Bucket,
   type ComparisonAnswer,
+  type EdgeCandidate,
+  type EdgeComponents,
+  type FlavorProfile,
   type LeaderboardInputRow,
   type PlacementState,
   type RankUsersRow,
   type ScoredRanking,
   type Stats,
   type StreakPeriod,
+  type Taxonomy,
 } from '../src/index.ts';
 
 const OUT_DIR = fileURLToPath(new URL('../../../shared/fixtures/', import.meta.url));
@@ -71,6 +84,11 @@ const constants = {
   nameOrder: 'code point (SQL collate "C"), then bevId',
   streakDayKey: 'calendar date of the ranking instant in the profile timezone: (created_at AT TIME ZONE timezone)::date; week = ISO week of that date (YYYY-Www)',
   rankOrder: 'points desc, bevsRanked desc, createdAt asc, userId asc; rank = 1 + count(points > mine); bevsRanked = 0 excluded',
+  treeDepth: 'Wu-Palmer depth from an implicit root (depth 0) above the top-level categories; a top-level category (parent null or not in the taxonomy) has depth 1',
+  profileRule: 'N / 300 with N = 3*(40*[base] + 15*[carbonated] + 10*[dairy] + 5*[alcohol]) + 15*(3 - |dCaffeine|) + 15*(3 - |dSweetness|)',
+  embeddingRule: 'min(1, max(0, dot / sqrt(|a|^2 * |b|^2))); 0 when either vector is zero',
+  edgeWeightRule: 'tree*0.25 + content*0.15 + emb*0.30 + profile*0.30 + cop*0, summed in that order, clamped to [0, 1]',
+  edgeOrder: 'w desc, then bevId asc (code unit); keep w >= edgeMinWeight; at most edgeTopK',
 };
 
 /** A plausible stored score: some position in some bucket. */
@@ -341,6 +359,117 @@ function rankPointsCases(): Case[] {
   return cases;
 }
 
+// ---------------------------------------------------------------- edges (LaTeX §10.1)
+// No PRNG here either. Hand-built inputs; the taxonomy is illustrative until D-04 settles the real one.
+
+function edgeCases(): Case[] {
+  const cases: Case[] = [];
+  const taxonomy: Taxonomy = {
+    soda: null,
+    cola: 'soda',
+    lemon_lime: 'soda',
+    water: null,
+    sparkling_water: 'water',
+    still_water: 'water',
+    coffee: null,
+    hot_coffee: 'coffee',
+    iced_coffee: 'coffee',
+    mocha: 'iced_coffee',
+  };
+  const tree = (name: string, catA: string, catB: string, t: Taxonomy = taxonomy) =>
+    cases.push({ name, fn: 'treeSimilarity', input: { catA, catB, taxonomy: t }, expected: treeSimilarity(catA, catB, t) });
+  tree('same leaf', 'cola', 'cola');
+  tree('same top-level category', 'soda', 'soda');
+  tree('siblings under one parent', 'cola', 'lemon_lime');
+  tree('leaf and its parent', 'cola', 'soda');
+  tree('depth 3 and depth 2 under one root', 'mocha', 'hot_coffee');
+  tree('depth 3 and its grandparent', 'mocha', 'coffee');
+  tree('different top-level trees', 'cola', 'sparkling_water');
+  tree('unknown category is top-level', 'kombucha', 'cola');
+  tree('flat taxonomy, same category', 'soda', 'soda', {});
+  tree('flat taxonomy, different categories', 'soda', 'water', {});
+
+  const fp = (o: Partial<FlavorProfile>): FlavorProfile => ({ base: 'cola', carbonated: true, caffeine: 1, sweetness: 3, dairy: false, alcohol: false, ...o });
+  const cola = fp({});
+  const lime = fp({ base: 'citrus', caffeine: 0, sweetness: 0 });
+  const latte = fp({ base: 'coffee', carbonated: false, caffeine: 2, sweetness: 1, dairy: true });
+  const ipa = fp({ base: 'hop', caffeine: 0, sweetness: 0, alcohol: true });
+  const prof = (name: string, a: FlavorProfile, b: FlavorProfile) =>
+    cases.push({ name, fn: 'profileSimilarity', input: { a, b }, expected: profileSimilarity(a, b) });
+  prof('Coca-Cola / Pepsi: identical profiles', cola, cola);
+  prof('Coca-Cola / LaCroix Lime', cola, lime);
+  prof('caffeine one level apart', cola, fp({ caffeine: 2 }));
+  prof('sweetness three levels apart', cola, fp({ sweetness: 0 }));
+  prof('only the base differs', cola, fp({ base: 'citrus' }));
+  prof('latte / Coca-Cola', latte, cola);
+  prof('IPA / latte', ipa, latte);
+  prof('nothing in common', fp({ caffeine: 3, dairy: true, alcohol: true }), fp({ base: 'tea', carbonated: false, caffeine: 0, sweetness: 0 }));
+
+  const emb = (name: string, a: number[], b: number[]) =>
+    cases.push({ name, fn: 'embeddingSimilarity', input: { a, b }, expected: embeddingSimilarity(a, b) });
+  const eCoke = [1, 0, 0];
+  const ePepsi = [0.9, Math.sqrt(1 - 0.81), 0];
+  const eLime = [0.6, 0, 0.8];
+  emb('Coca-Cola / Pepsi: cosine 0.9', eCoke, ePepsi);
+  emb('Coca-Cola / LaCroix Lime: cosine 0.6', eCoke, eLime);
+  emb('identical', [0.6, 0.8], [0.6, 0.8]);
+  emb('orthogonal', [1, 0], [0, 1]);
+  emb('negative cosine is clamped to 0', [1, 0], [-0.6, 0.8]);
+  emb('unnormalised: the norms cancel', [2, 0], [3, 3]);
+  emb('zero vector', [0, 0], [1, 0]);
+
+  const bev = (o: Partial<BevFeatures>): BevFeatures => ({ id: 'b', categoryId: 'cola', brandKey: null, flavorTokens: [], priceTier: 1, ratingCount: 0, mean: 0, stddev: 0, isAlcoholic: false, ...o });
+  const coke = bev({ id: 'coca-cola', brandKey: 'Coca-Cola', flavorTokens: ['coca', 'cola'] });
+  const pepsi = bev({ id: 'pepsi', brandKey: 'Pepsi', flavorTokens: ['pepsi'] });
+  const lacroix = bev({ id: 'lacroix-lime', categoryId: 'sparkling_water', brandKey: 'LaCroix', flavorTokens: ['lacroix', 'lime'] });
+  const content = (name: string, a: BevFeatures, b: BevFeatures) =>
+    cases.push({ name, fn: 'contentSimilarity', input: { a, b }, expected: contentSimilarity(a, b) });
+  content('Coca-Cola / Pepsi: same category and tier, no shared tokens', coke, pepsi);
+  content('Coca-Cola / LaCroix Lime: tier only', coke, lacroix);
+
+  const weight = (name: string, c: EdgeComponents) => cases.push({ name, fn: 'edgeWeight', input: c, expected: edgeWeight(c) });
+  weight('Coca-Cola / Pepsi (§10.1 worked example, >= 0.8)', {
+    tree: treeSimilarity('cola', 'cola', taxonomy),
+    content: contentSimilarity(coke, pepsi),
+    emb: embeddingSimilarity(eCoke, ePepsi),
+    profile: profileSimilarity(cola, cola),
+    cop: 0,
+  });
+  weight('Coca-Cola / LaCroix Lime (§10.1 worked example, < 0.4)', {
+    tree: treeSimilarity('cola', 'sparkling_water', taxonomy),
+    content: contentSimilarity(coke, lacroix),
+    emb: embeddingSimilarity(eCoke, eLime),
+    profile: profileSimilarity(cola, lime),
+    cop: 0,
+  });
+  weight('all zero', { tree: 0, content: 0, emb: 0, profile: 0, cop: 0 });
+  weight('all one', { tree: 1, content: 1, emb: 1, profile: 1, cop: 1 });
+  weight('tree only', { tree: 1, content: 0, emb: 0, profile: 0, cop: 0 });
+  weight('content only', { tree: 0, content: 1, emb: 0, profile: 0, cop: 0 });
+  weight('embedding only', { tree: 0, content: 0, emb: 1, profile: 0, cop: 0 });
+  weight('profile only', { tree: 0, content: 0, emb: 0, profile: 1, cop: 0 });
+  weight('co-preference is off in v1', { tree: 0, content: 0, emb: 0, profile: 0, cop: 1 });
+  weight('siblings, middling terms', { tree: 0.5, content: 0.4, emb: 0.7, profile: 0.85, cop: 0 });
+
+  // k and min are written out even where the call uses the defaults (EDGE_TOP_K, EDGE_MIN_WEIGHT).
+  const top = (name: string, candidates: EdgeCandidate[], k?: number, min?: number) =>
+    cases.push({ name, fn: 'topEdges', input: { candidates, k: k ?? EDGE_TOP_K, min: min ?? EDGE_MIN_WEIGHT }, expected: topEdges(candidates, k, min) });
+  top('min is inclusive; ties by bevId', [
+    { bevId: 'c', w: 0.5 },
+    { bevId: 'a', w: 0.9 },
+    { bevId: 'low', w: 0.29 },
+    { bevId: 'edge', w: 0.3 },
+    { bevId: 'b', w: 0.5 },
+  ]);
+  const many = Array.from({ length: 25 }, (_, i) => ({ bevId: `b${String(i).padStart(2, '0')}`, w: 0.4 + i / 100 }));
+  top('25 candidates, default k = 20', many);
+  top('k = 3', many, 3);
+  top('k = 50, min = 0.6', many, 50, 0.6);
+  top('k = 0', many, 0);
+  top('empty', []);
+  return cases;
+}
+
 // ---------------------------------------------------------------- write / check
 
 const files: Record<string, Case[]> = {
@@ -351,6 +480,7 @@ const files: Record<string, Case[]> = {
   'placement.vectors.json': placementCases(),
   'streak.vectors.json': streakCases(),
   'rank-points.vectors.json': rankPointsCases(),
+  'edges.vectors.json': edgeCases(),
 };
 
 const check = process.argv.includes('--check');

@@ -1,7 +1,7 @@
 import type { Bucket } from './types.ts';
 
 /** Bumped with any formula or constant change; equals the `version` field of every vectors file. */
-export const RANKING_VERSION = '1.1.0';
+export const RANKING_VERSION = '1.2.0';
 
 /**
  * Score band per bucket as integer [lo, hi] edges on the 0–10 scale (Beli-style 7 / 4, decided 2026-10-09).
@@ -124,6 +124,42 @@ export const RANK_POINTS_WEIGHTS: Readonly<{ bevsRanked: number; currentStreak: 
 /** 'day' is the vision's definition; switching to 'week' is a constant change plus a vector regeneration. */
 export const STREAK_PERIOD: 'day' | 'week' = 'day';
 
+// ---------------------------------------------------------------- Bev-graph edges (LaTeX §10.1)
+
+/**
+ * w = 0.25·tree + 0.15·content + 0.30·emb + 0.30·profile + 0·cop (eq. 18, decided 2026-10-14).
+ * Switching cop on renormalises the other four; that is a constant change and a version bump.
+ */
+export const EDGE_WEIGHTS: Readonly<{ tree: number; content: number; emb: number; profile: number; cop: number }> = {
+  tree: 0.25,
+  content: 0.15,
+  emb: 0.3,
+  profile: 0.3,
+  cop: 0,
+};
+/** Edges kept per Bev (K_E). */
+export const EDGE_TOP_K = 20;
+/** Edges lighter than this are not kept. */
+export const EDGE_MIN_WEIGHT = 0.3;
+/** Profile similarity (eq. 17): base family, flags, and closeness on the 0–3 caffeine and sweetness scales. */
+export const PROFILE_WEIGHTS: Readonly<{
+  base: number;
+  carbonated: number;
+  dairy: number;
+  alcohol: number;
+  caffeine: number;
+  sweetness: number;
+}> = {
+  base: 0.4,
+  carbonated: 0.15,
+  dairy: 0.1,
+  alcohol: 0.05,
+  caffeine: 0.15,
+  sweetness: 0.15,
+};
+/** Largest |Δcaffeine| or |Δsweetness| (levels 0–3). */
+export const PROFILE_LEVEL_SPAN = 3;
+
 /** Everything a SQL twin or the vectors need, in one object. */
 export const RANKING_CONSTANTS = {
   version: RANKING_VERSION,
@@ -153,4 +189,9 @@ export const RANKING_CONSTANTS = {
   lambdaUserN: LAMBDA_USER_N,
   epsilon: EPSILON,
   jitterSd: JITTER_SD,
+  edgeWeights: EDGE_WEIGHTS,
+  edgeTopK: EDGE_TOP_K,
+  edgeMinWeight: EDGE_MIN_WEIGHT,
+  profileWeights: PROFILE_WEIGHTS,
+  profileLevelSpan: PROFILE_LEVEL_SPAN,
 } as const;
