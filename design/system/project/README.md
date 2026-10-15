@@ -23,7 +23,7 @@ Use the tokens by name; never paste hex values.
 - **Score colours follow the bucket bands**: `scoreHigh` 7–10 (Loved), `scoreMid` 4–7 (Fine), `scoreLow` 0–4 (Didn't like). Use them for score numbers, bucket bars and 12% bucket tints, never for decoration. They share a lightness, so a score always shows its number and a bucket always shows its label.
 - `fizz` is the wordmark's bubbles and one blob of the BevGlow; it never carries text or meaning.
 - `tasteCard`, `photoScrim` and `onDeep` (white) are the fixed-dark set: the Taste Profile card, photo overlays and the text on them.
-- `glassFill`, `glassStroke` and `glassHighlight` make the liquid-glass material. Only the gut-check BucketButtons are glass, only over a BevGlow, and only where the OS renders real glass (iOS 26+); everywhere else they use their tint material.
+- `glassFill`, `glassStroke` and `glassHighlight` make the liquid-glass material. The gut-check BucketButtons use their tint material by default, and always on the Bevi web app. Glass is only for a native build on iOS 26+ (the native `GlassView`), only over a BevGlow; it is never imitated with a blur.
 - `borderStrong` outlines controls (outlined Pills and Buttons, text fields, the outlined search bar) so they meet 3:1; `border` is for hairlines.
 - Beli's measured grey and score colours failed the plan's 4.5:1 rule, so the tokens are darker versions of the same hues. Each token's note records Beli's value.
 
@@ -40,7 +40,7 @@ Use the tokens by name; never paste hex values.
 - 16pt screen gutter (`space-gutter`) on every screen. 44pt header row under the status bar. 4pt grid: `space-xs` 4 … `space-xxl` 24.
 - Every tap target is at least 44×44 (`size-target`), even when the visual is a 30pt Pill or a 28pt icon.
 - Radii are named by what they round: `radius-button` 8 (outlined profile buttons), `radius-input` 12 (search, fields, the big primary button), `radius-photo` 14 (Bev tiles, featured photos), `radius-card` 16 (cards, sheet tops), `radius-stat` 20 (profile stat cards), `radius-pill` 999.
-- **No elevation, except glass.** Separation is a 1pt `border`. Every focusable control shows `focus-ring` (a 2pt `surface` gap, then a 2pt `primary` ring). The one thing that floats is the liquid-glass BucketButton, on `elevation-glass` over a BevGlow; nothing else gets glass, blur or a shadow. On Android, on iOS before 26 and under Reduce Transparency the buttons drop the glass for a 12% bucket tint and a 4px bucket bar, with no blur and no shadow.
+- **No elevation.** Separation is a 1pt `border`. Every focusable control shows `focus-ring` (a 2pt `surface` gap, then a 2pt `primary` ring). The gut-check BucketButtons use a 12% bucket tint and a 4px bucket bar, with no blur and no shadow; that is all the web app ever draws. The one exception is reserved for a native build: on iOS 26+ they may be liquid glass (`GlassView`) on `elevation-glass` over a BevGlow. Nothing else gets glass, blur or a shadow.
 - Rows are full-bleed with 1pt dividers. Lists are one sorted list: buckets show through bubble colour, not section headers.
 
 ## Imagery
@@ -59,7 +59,7 @@ Use the tokens by name; never paste hex values.
 ## Motion
 
 - `fast` 150ms for presses and colour changes, `base` 250ms for tab underlines, sheets and the compare-card swap, `springy` (Reanimated spring, damping 18, stiffness 180) for the result bubble.
-- The pour: choosing a bucket fills its glass in 450ms with a slight overshoot; the surface drifts in a 5s loop and a few bubbles rise. It is the one ambient animation in the app.
+- The pour: choosing a bucket fills its button in 450ms with a slight overshoot; the surface drifts in a 5s loop and a few bubbles rise. It is the one ambient animation in the app.
 - Animate transform and opacity (and the pour's height) only. Under reduced motion, swaps become cross-fades, shimmers stop, and the pour lands without waves or bubbles. Under reduced transparency, glass becomes the tint material.
 
 ## Building screens
@@ -67,7 +67,7 @@ Use the tokens by name; never paste hex values.
 - Wrap content the way the screens in this system do: `Header`, then content on `surface`, then `TabBar` at the bottom. Load `tokens.css` and `components/bundle.css` before using `window.Bevi`.
 - Feed: wordmark Header, filled SearchBar, SectionHeader + FeaturedCards, SectionHeader + FeedPosts.
 - Lists (Your Lists, Leaderboard): centred caps Header, ListScopeDropdown, SegmentedTabs, FilterPill row, SortToggle, numbered BevRows.
-- Ranking: a BevGlow with the floating cutout and three glass BucketButtons, then ProgressDots and CompareCard pairs, then a note, then a ScoreBubble 56 result.
+- Ranking: a BevGlow with the floating cutout and three BucketButtons, then ProgressDots and CompareCard pairs, then a note, then a ScoreBubble 56 result.
 - Profile: name Header, Avatar 100, counts, outlined Buttons, ProfileListRows, two StatCards, Activity tabs, FeedPosts.
 - The Screens group shows each of these composed at 393pt.
 
@@ -79,8 +79,8 @@ The tokens map one to one onto `app/src/theme/tokens.ts`: colour names are the s
 
 The plan's component list (DEVELOPMENT-MATT §4) covers the screens that have a Beli reference. These were added for the screens that don't, or to keep the rest consistent:
 
-- `BucketButton`, `CompareCard`, `ProgressDots`: the ranking flow (§6.9). BucketButton is liquid glass rather than §6.9's tinted bar.
-- `BevGlow`: the colour field the glass needs behind it on the gut check.
+- `BucketButton`, `CompareCard`, `ProgressDots`: the ranking flow (§6.9). BucketButton is a tinted capsule with an orb and a pour rather than §6.9's tinted bar (glass only on a native iOS 26+ build).
+- `BevGlow`: the colour field behind the BucketButtons on the gut check.
 - `UserRow`, `AvatarStack`: People search, followers, the user leaderboard and "Friends who've had it" (§6.8, §6.11, §6.12).
 - `TextField`, `PriceTierPicker`: onboarding and the create-Bev wizard (§6.2, §6.10).
 - `Header`, `SectionHeader`, `IconButton`, `Button`: the header pattern, caps section labels, the close circle and the 36pt profile buttons, all described in §4 and §6 but not named as components.
