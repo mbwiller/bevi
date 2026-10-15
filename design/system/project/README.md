@@ -58,7 +58,7 @@ Use the tokens by name; never paste hex values.
 
 ## Motion
 
-- `fast` 150ms for presses and colour changes, `base` 250ms for tab underlines, sheets and the compare-card swap, `springy` (Reanimated spring, damping 18, stiffness 180) for the result bubble.
+- `fast` 150ms for presses and colour changes, `base` 250ms for tab underlines, sheets and the compare-card swap, `springy` (Reanimated spring, damping 18, stiffness 180) for the result bubble, `pour` 450ms for the score reveal on the note step (the ScoreBubble 72 pours in and counts up from its bucket's lower edge to the score; under reduced motion the number shows at once).
 - The pour: choosing a bucket fills its button in 450ms with a slight overshoot; the surface drifts in a 5s loop and a few bubbles rise. It is the one ambient animation in the app.
 - Animate transform and opacity (and the pour's height) only. Under reduced motion, swaps become cross-fades, shimmers stop, and the pour lands without waves or bubbles. Under reduced transparency, glass becomes the tint material.
 
@@ -67,7 +67,7 @@ Use the tokens by name; never paste hex values.
 - Wrap content the way the screens in this system do: `Header`, then content on `surface`, then `TabBar` at the bottom. Load `tokens.css` and `components/bundle.css` before using `window.Bevi`.
 - Feed: wordmark Header, filled SearchBar, SectionHeader + FeaturedCards, SectionHeader + FeedPosts.
 - Lists (Your Lists, Leaderboard): centred caps Header, ListScopeDropdown, SegmentedTabs, FilterPill row, SortToggle, numbered BevRows.
-- Ranking: a BevGlow with the floating cutout and three BucketButtons, then ProgressDots and CompareCard pairs, then a note, then a ScoreBubble 56 result.
+- Ranking: a BevGlow with the floating cutout and three BucketButtons, then ProgressDots and CompareCard pairs, then the note step with the score revealed at once in a ScoreBubble 72 over "#4 of 31 in Loved", then a ScoreBubble 56 result that confirms it.
 - Profile: name Header, Avatar 100, counts, outlined Buttons, ProfileListRows, two StatCards, Activity tabs, FeedPosts.
 - The Screens group shows each of these composed at 393pt.
 

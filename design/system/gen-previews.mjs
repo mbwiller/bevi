@@ -90,7 +90,7 @@ h('div', { className: 'pv', style: { alignItems: 'flex-end' } },
   L('loading', h(B.BevImage, { size: 96, status: 'loading' })),
   L('no photo', h(B.BevImage, { size: 96 })))`];
 
-P.ScoreBubble = [{ group: 'Bev', height: 140 }, '', `
+P.ScoreBubble = [{ group: 'Bev', height: 230 }, '', `
 h('div', { className: 'pv', style: { gap: 28 } },
   L('Loved band', h(B.ScoreBubble, { score: 9.3 })),
   L('Fine band', h(B.ScoreBubble, { score: 5.8 })),
@@ -98,7 +98,9 @@ h('div', { className: 'pv', style: { gap: 28 } },
   L('predicted', h(B.ScoreBubble, { score: 8.2, variant: 'predicted' })),
   L('locked', h(B.ScoreBubble, { variant: 'locked' })),
   L('56 · detail', h(B.ScoreBubble, { score: 8.9, size: 56 })),
-  L('56 predicted', h(B.ScoreBubble, { score: 7.6, size: 56, variant: 'predicted' })))`];
+  L('56 predicted', h(B.ScoreBubble, { score: 7.6, size: 56, variant: 'predicted' })),
+  L('72 · note step', h(B.ScoreBubble, { score: 8.9, size: 72 })),
+  L('72 · first in Fine', h(B.ScoreBubble, { score: 5.5, size: 72 })))`];
 
 P.PriceTier = [{ group: 'Bev', height: 96 }, `.line { font-size: 15px; line-height: 20px; }`, `
 h('div', { className: 'pv', style: { gap: 32 } },
@@ -341,6 +343,23 @@ P.ScreenRanking = [{ group: 'Screens', height: 852, width: 393, isPage: true }, 
       h('span', { className: 'rk-or' }, 'OR'),
       h(B.CompareCard, { bev: BEVS.mexicanCoke, rankLabel: '#3 in Loved' })),
     h('div', { className: 'rk-foot' }, h(B.Pill, { variant: 'outlined' }, 'Too close to call'), h(B.Button, { variant: 'ghost', size: 'md', icon: 'undo-2' }, 'Undo')))`)];
+
+P.ScreenRankingNote = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHONE_CSS + `
+  .nt-top { display: flex; align-items: center; justify-content: space-between; padding: 0 8px; height: 44px; }
+  .nt-reveal { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px 16px 4px; text-align: center; }
+  .nt-body { display: flex; flex-direction: column; gap: 16px; padding: 16px 16px 0; }
+  .nt-kb { position: absolute; left: 0; right: 0; bottom: 0; height: 291px; background: var(--input); border-top: 1px solid var(--border); }`, phone(null, `
+  h(F, null,
+    h('div', { className: 'nt-top' }, h(B.Button, { variant: 'ghost', size: 'md', icon: 'undo-2' }, 'Undo'), h(B.IconButton, { icon: 'x', label: 'Discard ranking', variant: 'filled' })),
+    h('div', { className: 'nt-reveal' },
+      h(B.ScoreBubble, { score: 8.9, size: 72 }),
+      h('p', { className: 'screenTitle' }, '#4 of 31 in Loved')),
+    h('div', { className: 'nt-body' },
+      h('p', { className: 'body bv-meta', style: { textAlign: 'center' } }, 'Optional. Your friends see it with your ranking.'),
+      h(B.TextField, { label: 'Note', placeholder: 'Tastes like flat Sprite', hint: '0/140', id: 'nt-note' }),
+      h(B.Button, { variant: 'primary', block: true }, 'Save'),
+      h(B.Button, { variant: 'ghost', block: true }, 'Skip')),
+    h('div', { className: 'nt-kb', 'aria-hidden': true }))`)];
 
 P.ScreenGutCheck = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHONE_CSS + `
   .phone > .bv-glow { position: absolute; inset: 0; }

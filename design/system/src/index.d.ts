@@ -45,7 +45,8 @@ export declare function BevImage(props: BevImageProps): React.ReactElement;
 export interface ScoreBubbleProps {
   /** 0–10; colour follows the bucket band (≥ 7 high, ≥ 4 mid, else low). null shows the lock. */
   score?: number | null;
-  size?: 40 | 56;
+  /** 40 rows and posts, 56 Bev detail and the ranking result, 72 the ranking note step's score reveal. */
+  size?: 40 | 56 | 72;
   variant?: 'default' | 'predicted' | 'locked';
   className?: string;
 }

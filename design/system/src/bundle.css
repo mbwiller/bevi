@@ -40,8 +40,10 @@
   background: var(--surface); border: 2px solid var(--border); font-weight: 700; font-variant-numeric: tabular-nums; color: var(--textSecondary); }
 .bv-score-40 { width: var(--size-scoreBubble); height: var(--size-scoreBubble); font-size: 17px; line-height: 22px; letter-spacing: -0.2px; }
 .bv-score-56 { width: var(--size-scoreBubble-lg); height: var(--size-scoreBubble-lg); font-size: 22px; line-height: 26px; letter-spacing: -0.3px; }
+.bv-score-72 { width: var(--size-scoreBubble-xl); height: var(--size-scoreBubble-xl); font-size: 28px; line-height: 34px; letter-spacing: -0.4px; }
 .bv-score-40.bv-score-predicted { font-size: 14px; letter-spacing: -0.4px; }
 .bv-score-56.bv-score-predicted { font-size: 19px; }
+.bv-score-72.bv-score-predicted { font-size: 24px; }
 .bv-score-num { color: var(--band); }
 .bv-score-predicted { border-style: dotted; border-color: var(--textSecondary); }
 

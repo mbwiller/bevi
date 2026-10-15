@@ -16,7 +16,7 @@ export function ScoreBubble({ score, size = 40, variant = 'default', className }
       aria-label={label}
     >
       {locked ? (
-        <Icon name="lock" size={size >= 56 ? 22 : 18} strokeWidth={2} />
+        <Icon name="lock" size={size >= 72 ? 28 : size >= 56 ? 22 : 18} strokeWidth={2} />
       ) : (
         <span className="bv-score-num">{(predicted ? '~' : '') + formatScore(score)}</span>
       )}
