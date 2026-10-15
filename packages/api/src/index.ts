@@ -7,6 +7,7 @@ import { createAuthApi } from './auth';
 import { createBevsApi } from './bevs';
 import { createCategoriesApi } from './categories';
 import { type BeviApiConfig, createSupabaseClientFor } from './client';
+import { createCommentsApi } from './comments';
 import { createFeedApi } from './feed';
 import { createFollowsApi } from './follows';
 import { createLeaderboardApi } from './leaderboard';
@@ -57,6 +58,7 @@ export function createBeviApi(config: BeviApiConfig): BeviApi {
     rankings: createRankingsApi(client, snapshots),
     wantToTry: createWantToTryApi(client),
     feed: createFeedApi(client),
+    comments: createCommentsApi(client),
     leaderboard: createLeaderboardApi(client),
     recs: createRecsApi(client, snapshots),
     meta: createMetaApi(),

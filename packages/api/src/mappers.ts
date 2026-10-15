@@ -14,6 +14,7 @@ import type {
   Bucket,
   Category,
   CategoryId,
+  Comment,
   FeedEventKind,
   FeedItem,
   FlavorProfile,
@@ -52,14 +53,12 @@ export function bucketFromDb(value: number): Bucket {
   }
 }
 
-/** `get_feed` already drops 'followed' -- the other two kinds are the only ones it returns. */
+/** Since 20261014000100 'ranked' and 'reranked' are the only kinds that exist. */
 export function feedKindFromDb(kind: string): FeedEventKind {
   switch (kind) {
     case 'ranked':
     case 'reranked':
       return 'RANKING';
-    case 'want_to_try':
-      return 'SAVED';
     default:
       throw new ApiError('unknown', `Unexpected feed_events.kind from DB: ${kind}`);
   }
@@ -311,11 +310,54 @@ export interface FeedRpcRow {
   bucket: number | null;
   note: string | null;
   in_my_want_to_try: boolean;
+  like_count: number;
+  liked_by_me: boolean;
+  comment_count: number;
+  /** `get_feed` builds the first seven, oldest first, with `jsonb_build_object`. */
+  comments: CommentRpcRow[];
+}
+
+export interface CommentRpcRow {
+  id: number;
+  created_at: string;
+  body: string;
+  author_id: string;
+  author_handle: string;
+  author_display_name: string;
+  author_avatar_path: string | null;
+  author_timezone: string;
+  author_onboarded: boolean;
+  author_created_at: string;
+}
+
+export function mapComment(client: SupabaseClient, row: CommentRpcRow): Comment {
+  return {
+    id: String(row.id),
+    author: {
+      id: row.author_id,
+      handle: row.author_handle,
+      displayName: row.author_display_name,
+      avatarUrl: publicUrl(client, 'avatars', row.author_avatar_path),
+      timezone: row.author_timezone,
+      createdAt: row.author_created_at,
+      // Same rule as profiles_view: a birthdate is only ever the caller's own,
+      // and canSeeAlcohol is false for everyone else so it reveals nothing.
+      birthdate: null,
+      canSeeAlcohol: false,
+      onboarded: row.author_onboarded,
+    },
+    body: row.body,
+    createdAt: row.created_at,
+  };
 }
 
 export function mapFeedItem(client: SupabaseClient, row: FeedRpcRow, actor: Profile): FeedItem {
   if (!row.bev_id || !row.bev_name || !row.bev_category_id) {
     throw new ApiError('unknown', `get_feed row ${row.id} is missing its Bev (actor_id=${row.actor_id})`);
+  }
+  // Every feed item is a ranking now, so the joined ranking is always there.
+  if (row.score === null || row.bucket === null) {
+    throw new ApiError('unknown', `get_feed row ${row.id} is missing its ranking (actor_id=${row.actor_id})`);
   }
   return {
     id: String(row.id),
@@ -335,10 +377,14 @@ export function mapFeedItem(client: SupabaseClient, row: FeedRpcRow, actor: Prof
       bayesScore: row.bev_bayes_score,
     },
     score: row.score,
-    bucket: row.bucket === null ? null : bucketFromDb(row.bucket),
+    bucket: bucketFromDb(row.bucket),
     note: row.note,
     createdAt: row.created_at,
     inMyWantToTry: row.in_my_want_to_try,
+    likeCount: row.like_count,
+    likedByMe: row.liked_by_me,
+    commentCount: row.comment_count,
+    comments: row.comments.map((c) => mapComment(client, c)),
   };
 }
 

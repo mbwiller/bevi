@@ -13,3 +13,4 @@ supabase/.temp/
 supabase/tests/generated/
 data/catalog/raw/
 supabase/.branches/
+.vercel/

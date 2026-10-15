@@ -29,6 +29,9 @@ on:
       - "packages/ranking/**"
       - "scripts/**"
 
+permissions:
+  contents: read
+
 jobs:
   db:
     runs-on: ubuntu-latest
@@ -94,6 +97,21 @@ jobs:
       # anything needing a live stack if these env vars aren't set).
       - run: npm test -w packages/api
 
+      # Edge Functions run on Deno, which nothing else in this workflow
+      # provides. `deno check` is a type-check only -- it reaches no network
+      # and needs no NEO4J_* secret.
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - run: deno check supabase/functions/graph-query/index.ts
+
+      # graph-query's input-validation tests. They skip when nothing answers
+      # on 127.0.0.1:54321, but `supabase start` above already serves every
+      # function in supabase/functions, so in CI they do run (with no NEO4J_*
+      # set, nothing upstream is ever called).
+      - run: deno test --allow-net --allow-env supabase/functions/graph-query/test.ts
+
       - run: npm run catalog:validate
 
       # The newest *_catalog_seed.sql migration must match data/catalog
@@ -108,10 +126,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # TODO: enable once bevi-dev Supabase project exists (needs
-      # SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD, SUPABASE_PROJECT_ID in
-      # the dev GitHub Environment). There is no hosted Supabase project yet,
-      # so this job intentionally does nothing right now.
+      # Still stubbed, but no longer for the original reason: a hosted
+      # Supabase project DOES exist now (#56 put the app on it), so the only
+      # thing missing is SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD and
+      # SUPABASE_PROJECT_ID in the dev GitHub Environment.
+      #
+      # Enabling it is a deliberate decision, not a side effect of adding an
+      # Edge Function: `supabase db push` on every main merge would apply
+      # migrations to the live database unattended, and some of them (A-01's
+      # feed_events cleanup) delete real rows. Turn this on only alongside a
+      # backup step and a conscious read of what is pending.
+      #
+      # `supabase functions deploy --use-api` is listed below because
+      # graph-query (A-15) is the first Edge Function in the repo and will
+      # need it whenever this job is switched on. It also needs the NEO4J_*
+      # secrets set on the project with `supabase secrets set` -- deploying
+      # the function does not carry them (docs/graph.md).
       #
       # - uses: actions/setup-node@v4
       #   with:
@@ -138,5 +168,5 @@ jobs:
       #     SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
       - run: |
-          echo "deploy-dev is stubbed: no hosted Supabase project exists yet."
-          echo "See the TODO comments in this job for what it needs before it can run."
+          echo "deploy-dev is stubbed on purpose: enabling db push needs a backup step first."
+          echo "See the comments in this job for what it needs before it can run."
