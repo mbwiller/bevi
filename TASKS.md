@@ -13,6 +13,18 @@ Source: `CONVERSATION-2.md` (raw transcript). This file turns that conversation 
 - **CI on `main` breaks whenever Expo ships an SDK patch.** `expo-doctor` checks against Expo's current versions. #63 bumped the SDK 57 patches, and S-18 is the lasting fix.
 - **Next in Matt's lane:** M-07, which is decided and waits on the design-system change. Then the rest of §7.
 
+**Progress (2026-10-15, early hours, Arjun with Claude).** The whole backend half of week 1 plus the week-2 contracts are merged, and **production already has the schema**.
+
+- **Merged:** A-15 + S-17 (#72), A-01 (#69), S-01 (#65), S-02 (#82), S-03 (#67), S-14 part 1 (#68), A-02 (#70), A-03 (#71), A-17 (#73), and Matt's app-side #80. `main` is green.
+- **The database was migrated before any of it merged.** All five migrations (`20261014000100`–`20261014000500`) were pushed to prod from `scratch/round-verify` on 2026-10-14. Matt's call, and the right one: merging the api code first would have broken the live feed, since the #69 mapper throws on old `want_to_try` rows and #71 reads `row.comments`. Migrations first is safe because `get_feed` keeps its parameters and only gains columns.
+- **18 of 32 `feed_events` rows were deleted** (16 `want_to_try`, 2 `followed`). All 32 are preserved in `backup.feed_events_20261014`, in a private schema with no `anon`/`authenticated` grants. Drop it once nobody wants it.
+- **Those five migration files are frozen.** Prod has them; a change now means a new migration, per the append-only rule.
+- **Likes and comments exist end to end in the backend but have no UI.** Nothing in `app/` calls `feed.like` or `api.comments`; the only references are in the jest mock. M-02 and M-03 are the next two tasks that make the feature reachable.
+- **S-14 shipped as part 1 only** — the flavour-profile field names. `BevsApi.similarities`/`similar`, `RankingsApi.listBucketBevs` and `Category.parentId` are deliberately deferred to part 2, which lands with A-16; declaring them earlier would oblige `packages/api` to implement methods with no SQL behind them.
+- **A-15's "10 nearest Bevs" check moved to A-16.** It cannot pass on its own: nearest-by-embedding needs pgvector and `bev_embeddings`, nearest-by-edge needs `SIMILAR_TO`. The vector index ships empty and valid; `docs/graph.md` records this.
+- **`deploy-dev` is still stubbed in `backend.yml`.** Its old comment claimed no hosted project existed, which #56 made untrue. It was corrected but not enabled: `supabase db push` on every merge would apply migrations unattended, and one of them deletes rows. Turning it on is a decision for both of us.
+- **Still open from this round:** #74 (M-25, green) and #79 (Matt's verification branch, now obsolete).
+
 Lanes are the ones in `DEVELOPMENT-MATT.md` §1 / `DEVELOPMENT-ARJUN.md` §1 and do not change:
 
 | Owner | Paths | Branches |
@@ -373,17 +385,23 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 ### P0
 
 **A-01 · Saves are not feed events.** `be/feed-no-saves`
+- **Done in #69. One correction to the task text above:** `'followed'` was *not* dead. It was dead on the read side (`get_feed` had filtered it since `20261011000400`) but `follow_user` still inserted it, so narrowing the `kind` check alone would have made every new follow fail with `23514`. Both inserts were dropped in the same migration.
+- Also corrected: `packages/api/test/mappers.test.ts` asserted `want_to_try → SAVED` and had to change with it. The live test is Matt's (`feed.live.test.ts`).
 - Where: `add_want_to_try` (latest in `supabase/migrations/20261011000400_contract_v1_rpc_fixes.sql`) inserts `feed_events(kind = 'want_to_try')`; `get_feed` (same file) selects `kind in ('ranked','reranked','want_to_try')`. New migration: stop the insert, filter `get_feed` to `('ranked','reranked')`, delete existing `want_to_try` rows from `feed_events`, and tighten the `kind` check constraint (`'followed'` is also dead). `packages/api/src/mappers.ts` drops the `'SAVED'` mapping.
 - Needs: S-01.
 - DoD: pgTAP test that a save produces no feed row; live test `getFeed` has only RANKING items.
 
 **A-02 · Likes.** `be/post-likes`
+- **Done in #70.** Added `feed_event_visible(bigint)` as the single definition of "may the caller see this post?". `DEVELOPMENT-ARJUN.md` §4.1 wants that predicate to live in a `bev_cards` view — **that view does not exist**; the only mention in `supabase/` is a comment in `20261011000300`. The helper is the narrow version of the same idea, and A-03 reuses it.
+- Review caught two things: like reads needed scoping to visible posts, and the pgTAP fixture set birth dates with a bare `update`, which `protect_profile_columns` silently ignores — the "30-year-old" could not see alcohol and the test died at 2/18. It now goes through `bevi.rpc_bypass`.
 - Schema: `post_likes(user_id, feed_event_id, created_at)` PK `(user_id, feed_event_id)`, RLS select for authenticated, writes through `like_post(p_event_id)` / `unlike_post(p_event_id)` (security definer, idempotent, rate-limited via `user_actions`). `get_feed` returns `like_count` and `liked_by_me`. Cascade on event delete.
 - `packages/api`: `feed.like(id)`, `feed.unlike(id)`; `FeedItem.likeCount`, `likedByMe` in the mapper.
 - Needs: S-02.
 - DoD: pgTAP for idempotency and RLS (no direct insert policy); live test round-trip.
 
 **A-03 · Comments.** `be/post-comments`
+- **Done in #71. Two corrections to the task text above:** `get_feed` carries the first **seven** comments, not three — decision 3 shows every comment inline until there are more than seven. And the `post_comments` select policy must gate on post visibility: as first written (`using (deleted_at is null)`) any signed-in user could read every comment body, including on strangers' posts and, under 21, on alcoholic Bevs' posts. Caught in review.
+- **Comment reports are deferred.** `bev_reports` is keyed `(reporter_id, bev_id, reason)` with `bev_id not null`, so a comment report needs its own table or a loosened live constraint. Follow-up, not in this round.
 - Schema: `post_comments(id, feed_event_id, user_id, body ≤ 280, created_at, deleted_at)`; RPCs `add_comment`, `delete_comment` (own only), `get_comments(p_event_id, p_limit, p_before_id)` keyset-paged; `get_feed` returns `comment_count` and the **first three comments** inline so the post can show them without a second call (the seven-rule is the app's). Rate limits; report path via `bev_reports`-style `comment_reports` or reuse with a `kind` column.
 - `packages/api`: `comments.list/add/remove`; mappers.
 - Needs: S-03.
@@ -418,6 +436,9 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - DoD: golden-vector test against `shared/fixtures/user-stats.vectors.json`; live test.
 
 **A-15 · Neo4j AuraDB Free: the instance, the schema, the access path.** `be/graph-instance` (decisions 28, 29)
+- **Done in #72, with S-17 (`docs/graph.md`). The DoD above changed:** "returns the 10 nearest Bevs" cannot pass after A-15 alone — nearest-by-embedding needs pgvector and `bev_embeddings`, nearest-by-edge needs `SIMILAR_TO`, and all of those are A-16. The vector index ships empty (valid, free) and that check moved to A-16.
+- `(:Bev)` carries `id, name, brand, flavor, categoryId, priceTier, isAlcoholic` only. `vessel` waits on A-07, the flavour properties on A-17, `[:CHILD_OF]` on A-13.
+- `graph-query` is the repo's first Edge Function, so it also added `supabase/functions/`, the `[functions.graph-query]` config block and a `deno check` CI step.
 - Instance: one AuraDB Free instance (region close to the Supabase project), credentials in Supabase secrets (`NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD`) and GitHub Actions secrets; never in `app/` or `packages/api`. Document in `docs/graph.md` (S-17): the 72-hour pause, the 30-day deletion, that the nightly write is the keep-alive, and that resuming a paused instance is a manual console action.
 - Schema (Cypher, idempotent `CREATE CONSTRAINT IF NOT EXISTS`): `(:Bev {id, name, brand, flavor, categoryId, vessel, priceTier, isAlcoholic, embedding, base, carbonated, caffeine, sweetness, dairy, alcohol})` unique on `id`; `(:Category {id, name, depth})` with `[:CHILD_OF]` to the parent; `(:Brand {key})` with `[:BY_BRAND]`; `(:Flavor {name})` with `[:TASTES_OF]`; `(:User {pseudonym})-[:RANKED {score, z, bucket, rankedAt}]->(:Bev)`; `(:Bev)-[:SIMILAR_TO {w, tree, content, emb, profile, cop, version, computedAt}]->(:Bev)` stored once per unordered pair (`src.id < dst.id`); a vector index on `Bev.embedding` (384 dimensions, cosine).
 - Access: a Supabase Edge Function `graph-query` (JWT-verified, read-only Cypher templates, no free-form queries from the client) for on-demand exploration such as "Bevs similar to X"; the official JavaScript driver or the Query API over HTTPS (port 443, the only one Aura exposes). The hot path (ranking flow, recommendations, Bev detail) reads Postgres only (`bev_edges`), never the graph.
@@ -431,6 +452,9 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - DoD: nightly run green for a week; `bev_edges` populated for every active Bev; Coke–Pepsi ≥ 0.8 and Coke–sparkling water < 0.4 in the report; `bevs.similarities()` live test.
 
 **A-17 · Flavour profiles for the catalog.** `be/flavor-profiles` (decision 30)
+- **Done in #73.** 378 rows, one per `bevs.csv` slug. The `notes` column carries the judgement calls (103 rows) rather than restating the other columns, which is what a reviewer should read first.
+- **The validator is the real deliverable**, because a wrong label is a wrong recommendation rather than a crash. It checks the vocabulary, both 0–3 ranges, the booleans, the `serve` enum, that every slug appears in both files exactly once in both directions, that no field contains a comma (this CSV has no quoting), and that each profile's `alcohol` flag agrees with its category's `is_alcoholic` — the age gate keys off that.
+- Keyword labelling hit five substring traps worth knowing if the rules are ever extended: `pine`**`apple`**, `cho`**`cola`**`te`, `mi`**`nut`**`e`, `Cut`**`water`**, and `agua `**`Fresca`**. Review corrected eight further labels.
 - `data/catalog/flavor-profiles.csv`: `slug, base, carbonated, caffeine, sweetness, dairy, alcohol, serve, notes` with `base` from a fixed vocabulary (cola, citrus, lemon-lime, berry, tropical, apple, grape, orange, ginger, root-beer, cream, coffee, tea, matcha, chai, chocolate, nut, herbal, mineral, hop, wine, agave, grain, other), `carbonated/dairy/alcohol` booleans, `caffeine` and `sweetness` 0–3, `serve` hot/cold/either. Produced once by a sub-agent for the 378 seeds ("do this 378 times": Haiku), validated by `scripts/catalog/validate.ts` (vocabulary, ranges, every slug present), loaded by `catalog:migration` into `bev_flavor_profiles(bev_id, …)`, exposed on `Bev` reads. Matt reviews a sample of 30.
 - User-created Bevs: D-11 (nearest seeded Bev by embedding, flagged `inferred`, until a labelling step exists).
 - Needs: S-14 (column names agreed with M-24).
@@ -521,8 +545,8 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 
 ## 7. Suggested order of work
 
-1. **Week 1 (P0, small):** S-01 → A-01 + M-01 · ~~M-09~~ (#60) · ~~M-11~~ (#61) · ~~M-06~~ (#62) · M-07 (decided; waits on the design-system change) · S-08/S-09 docs · M-25, S-18, S-19 (small, found on 2026-10-14). **In parallel (graph foundation, no screens):** A-15 (instance + schema + `docs/graph.md`), S-14 column names, M-24 (edge formulas + vectors), A-17 (flavour profiles batch).
-2. **Week 2 (P0, social):** S-02/S-03 → A-02/A-03 + M-02/M-03 · S-05 → A-05 + M-05. **Graph:** A-16 nightly sync live; first sanity report.
+1. **Week 1 (P0, small):** ~~S-01~~ (#65) → ~~A-01~~ (#69) + ~~M-01~~ (folded into #80) · ~~M-09~~ (#60) · ~~M-11~~ (#61) · ~~M-06~~ (#62) · M-07 (decided; waits on the design-system change) · S-08/S-09 docs · M-25, S-18, S-19 (small, found on 2026-10-14). **In parallel (graph foundation, no screens):** ~~A-15~~ (#72, with S-17) · ~~S-14 column names~~ (#68, part 1 only) · M-24 (edge formulas + vectors) · ~~A-17~~ (#73).
+2. **Week 2 (P0, social):** ~~S-02~~ (#82) / ~~S-03~~ (#67) → ~~A-02~~ (#70) / ~~A-03~~ (#71) + M-02/M-03 · S-05 → A-05 + M-05. **Graph:** A-16 nightly sync live; first sanity report. **The backend and contracts for likes and comments are done; M-02 and M-03 are what make them reachable in the app.**
 3. **Week 3 (P0/P1):** S-04 → A-04 + M-04 · S-07 → A-06 + M-08 · M-10 + A-07 (icons) · M-12 · M-13 · M-14 · **M-15 (Search tab shell)**.
 4. **Week 4 (P1):** S-12 → A-11 + M-19 · A-14 parity · D-04 taxonomy draft.
 5. **Then P2:** the map (S-10, S-16 → A-08 → M-16, M-17, M-23), nutrition (S-11, A-09, M-18), duplicates (S-13, A-12, M-20).
