@@ -14,6 +14,11 @@ export interface SheetProps {
   onClose?: () => void;
   /** Option rows: 48pt, 1pt dividers, a `primary` check on the chosen one. */
   children?: ReactNode;
+  /**
+   * false: the body is a plain flex column instead of a ScrollView, for content that scrolls itself
+   * and pins something to the bottom (CommentsSheet's list and composer). Default true.
+   */
+  scroll?: boolean;
 }
 
 // From bundle.css: the handle bar, and the sheet's entrance (`bv-sheet-in`: 24pt rise, from 60% opacity).
@@ -32,7 +37,7 @@ const SAFE_BOTTOM = (Platform.OS === 'web'
  * the web, with its own Escape handling and focus trap) and Reanimated. The handle is a visual cue
  * only: there are no drag gestures, so close with the scrim, Escape or a row inside.
  */
-export function Sheet({ open = false, title, snap = 40, onClose, children }: SheetProps) {
+export function Sheet({ open = false, title, snap = 40, onClose, children, scroll = true }: SheetProps) {
   const { colors } = useTheme();
   const { height: windowHeight } = useWindowDimensions();
   const reduced = useReducedMotion();
@@ -104,7 +109,7 @@ export function Sheet({ open = false, title, snap = 40, onClose, children }: She
               {title}
             </Text>
           ) : null}
-          <ScrollView style={styles.body}>{children}</ScrollView>
+          {scroll ? <ScrollView style={styles.body}>{children}</ScrollView> : <View style={styles.body}>{children}</View>}
         </Animated.View>
       </View>
     </Modal>

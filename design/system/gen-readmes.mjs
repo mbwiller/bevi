@@ -10,7 +10,7 @@ const R = {
 - Provide: \`height\` (28 in headers, the only in-app size), \`tone\` = \`brand\` (default), \`inverse\` (on \`tasteCard\` or a photo) or \`mono\` (inherits \`currentColor\`).
 - It is outlined SVG, so it never depends on Fredoka loading. Never retype "bevi" in a font to stand in for it.
 - Do: sit it at the header's left on the 16pt gutter (Feed, Add Bev). Don't: recolour the bubbles, add a tagline beside it in the header, or set it in Beli's teal or a serif.`,
-  Icon: `Lucide outline icons, the 50 the app uses, including one per drink category.
+  Icon: `Lucide outline icons, the 54 the app uses, including one per drink category.
 
 - Provide: \`name\` (see \`Bevi.iconNames\`), \`size\` (28 for header and action rows, 24 in profile rows and stat cards, 16 inline in meta lines), \`strokeWidth\` (1.6–1.75 at 24–28, 2 at 16), \`filled\` for a saved bookmark or a liked heart.
 - Colour comes from CSS \`color\`: \`text\` by default, \`primary\` for an active or saved state, \`textSecondary\` for chevrons and recents.
@@ -64,6 +64,12 @@ const R = {
 - A press pops the heart to 1.2× and back in \`fast\` (150ms), transform only; Reduce Motion drops the pop.
 - The count stays \`text\`: only the heart turns grape, like the saved bookmark.
 - It lives in FeedPost's action row. Liking by double-tap and its burst belong to FeedPost.`,
+  CommentButton: `The post's comment control, Instagram's speech bubble, right after the heart: a 28pt \`message-circle\` outline in \`text\` with the comment count beside it.
+
+- Provide: \`count\` (all comments on the post, printed like other counts: "3", "5k"; hidden at 0), \`onClick\` to open the comments sheet.
+- Accessible name "Comment", plus the count when there is one ("Comment, 3 comments"). The target is at least 44pt; the count sits inside it.
+- It has no on state and never turns grape: commenting is not a value you earned, and the heart stays the only grape icon in the row.
+- No likes on comments.`,
   FilterPill: `Outlined pill that opens the filter sheet; it shows a \`primary\` count badge and turns \`primaryTint\` while filters are on.
 
 - Provide: \`count\` (active filters), optional \`label\` with \`chevron\` for single-facet pills (Bucket, Price, Category), \`icon={null}\` to drop the filter glyph.
@@ -110,11 +116,12 @@ const R = {
 - One list sorted by score: buckets show through the bubble colour, not as sections.`,
   FeedPost: `A ranking in the Feed and on Profile › Activity: "**Arjun** Bev'd **Horchata**", meta line, ScoreBubble, a 155pt photo strip, notes and actions.
 
-- Provide: \`actor\` (or \`you\` for "You"), \`bev\`, \`score\`, \`note\`, \`time\` ("5 hours ago", "Wednesday"), \`saved\`, \`liked\`, \`likeCount\`, \`onLike\`, \`onRank\`, \`onSave\`, \`onOpen\`.
+- Provide: \`actor\` (or \`you\` for "You"), \`bev\`, \`score\`, \`note\`, \`time\` ("5 hours ago", "Wednesday"), \`saved\`, \`liked\`, \`likeCount\`, \`comments\`, \`commentCount\`, \`onLike\`, \`onComment\`, \`onRank\`, \`onSave\`, \`onOpen\`.
 - A post is always a ranking. Saving a Bev is not a post; the filled bookmark shows you already have it saved.
-- Action row: the time on the left; on the right the LikeButton, then Rank it and Want to Try. The heart leads the group because liking is about the post, while Rank and Want to Try are about the Bev. Comments (next) sit beside the heart.
+- Action row: the time on the left; on the right the LikeButton and the CommentButton, then Rank it and Want to Try. Heart and comment lead the group because they are about the post, while Rank and Want to Try are about the Bev.
 - **Double-tap anywhere on the post outside the photo strip to like it**, Instagram-style. It only ever likes, never unlikes (the heart does that), and it is never the only way to like. A single tap on the photo still opens the Bev, so the strip ignores double-taps. The post sets \`touch-action: manipulation\` so Safari doesn't zoom on a double-tap.
 - The burst: a 88pt filled \`primary\` heart grows over the photo strip (the post's centre when there is no photo), holds and fades within 800ms, transform and opacity only. Reduce Motion: a plain fade. It plays on every like by double-tap, even when the post was already liked.
+- **Comments sit under the action row**, as on Instagram: the post (head, photos, note) reads first, the row of actions closes it, and the conversation follows. With 7 or fewer comments the post shows every one inline, oldest first, as "**handle** text" in \`body\` (\`comments\` is the contract's first seven). Above 7 it collapses to a single "View all N comments" line in \`textSecondary\`, with no preview, so a busy post stays one line taller, not seven. That line and the CommentButton both open the CommentsSheet.
 - Notes over 160 characters truncate with "See more". Alcoholic Bevs from friends render without the Rank action for under-21 viewers.`,
   FeaturedCard: `164pt square photo card for the Featured carousel: image, a \`photoScrim\` gradient, white 20pt title and 15pt subtitle.
 
@@ -168,13 +175,22 @@ const R = {
 - Provide: \`title\`, \`snap\`, \`onClose\`, children (option rows 48pt with 1pt dividers, a check in \`primary\` on the chosen one).
 - Uses: list scope, filters, re-rank, category picker, report a Bev, settings.
 - It fills its nearest positioned ancestor: render it inside the screen container.`,
+  CommentsSheet: `The post's comments, Instagram-clean, in a 90% Sheet titled "Comments".
+
+- Provide: \`comments\` (each \`author\`, \`body\`, \`time\`, \`mine\`), \`me\` (the composer's avatar), \`onPost\`, \`onDelete\`, \`onClose\`, optional \`error\`.
+- Order: oldest at the top, newest just above the composer, like a chat, and the same order as the post's inline comments. \`comments.list\` returns newest first, so the app reverses each page and loads older ones as you scroll up.
+- A comment: Avatar 32, the bold handle and a relative time in \`textSecondary\` ("2 hours ago"), then the text in \`body\`, wrapped. Your own comments end in a "Delete" text button (44pt target, \`textSecondary\`, removed after a confirm in the app). No likes on comments.
+- Empty: an EmptyState with \`message-circle\`, "No comments yet" and "Start the conversation."
+- The composer is pinned to the bottom: your Avatar 32, a pill field "Add a comment…" (\`borderStrong\`, focus ring), and **Post** in \`primary\`, \`textSecondary\` and disabled while the field is empty. A comment is at most 280 characters: the remaining count appears beside Post from 20 left, and turns \`scoreLow\` and blocks Post below zero.
+- When posting fails the draft stays and a \`scoreLow\` caption under the composer says why ("Couldn't post your comment. Check your connection and try again.", "… Wait a minute, then try again.").`,
 };
 
 const S = {
   ScreenFeed: `Feed tab (ref 01, 12): Header with the wordmark and Find people, the filled SearchBar, "FEATURED BEVS" FeaturedCards, then "YOUR FEED" FeedPosts, over the TabBar.
 
 - Following nobody: an EmptyState under YOUR FEED ("Follow friends to see their Bevs" + Find people); Featured stays.
-- Dropped from Beli: quick-action pills, the composer, the invite card, likes and comments.`,
+- Each post carries the heart and the comment bubble; up to seven comments show under the action row, more collapse to "View all N comments".
+- Dropped from Beli: quick-action pills, the composer, the invite card.`,
   ScreenYourLists: `Your Lists › Bev'd (ref 06): centred "YOUR LISTS" Header, ListScopeDropdown, SegmentedTabs, the FilterPill row, SortToggle, then numbered BevRows sorted by score.
 
 - Want to Try rows show the global score and a filled bookmark, with when or from whom you saved it in the meta line; Recommended rows show predicted bubbles and a reason in the meta line.`,

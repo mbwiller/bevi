@@ -213,6 +213,48 @@ export function ErrorState({ title = "Couldn't load this", message = 'Check your
   );
 }
 
+/** Comments longer than this are refused (the contract's `comments.add` limit). */
+export const COMMENT_MAX = 280;
+
+/**
+ * The post's comments in a 90% Sheet: oldest at the top and newest just above the composer, like a chat.
+ * Each comment: Avatar 32, bold handle, the text, a relative time; your own add a Delete. The composer
+ * ("Add a comment…" and a `primary` Post) stays pinned to the bottom.
+ */
+export function CommentsSheet({ open = true, comments = [], me, onClose, onPost, onDelete, error, className }) {
+  const [draft, setDraft] = React.useState('');
+  const body = draft.trim();
+  const left = COMMENT_MAX - draft.length;
+  const post = () => { if (!body || left < 0) return; if (onPost) onPost(body); setDraft(''); };
+  return (
+    <Sheet open={open} title="Comments" snap={90} onClose={onClose} className={cx('bv-comments', className)}>
+      {comments.length ? (
+        <ul className="bv-comment-list">
+          {comments.map((c, i) => (
+            <li key={c.id || i} className="bv-comment-row">
+              <Avatar name={c.author && c.author.name} src={c.author && c.author.src} size={32} />
+              <div className="bv-comment-text">
+                <p className="body"><b>{c.author && c.author.handle}</b> <span className="bv-meta">{c.time}</span></p>
+                <p className="body bv-comment-body">{c.body}</p>
+              </div>
+              {c.mine ? <button type="button" className="body bv-comment-delete" onClick={() => onDelete && onDelete(c.id)} aria-label={'Delete your comment: ' + c.body}>Delete</button> : null}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <EmptyState icon="message-circle" title="No comments yet" body="Start the conversation." />
+      )}
+      <form className="bv-composer" onSubmit={(e) => { e.preventDefault(); post(); }}>
+        {me ? <Avatar name={me.name} src={me.src} size={32} /> : null}
+        <input className="bodyLarge bv-composer-input" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Add a comment…" aria-label="Add a comment" />
+        {left <= 20 ? <span className={cx('caption', left < 0 ? 'bv-field-errmsg' : 'bv-meta')} aria-live="polite">{left}</span> : null}
+        <button type="submit" className="body bv-composer-post" disabled={!body || left < 0}>Post</button>
+      </form>
+      {error ? <p className="caption bv-field-errmsg bv-composer-error" role="alert">{error}</p> : null}
+    </Sheet>
+  );
+}
+
 /** Bottom sheet with a handle; snaps to 40% or 90% of its container. Fills the nearest positioned ancestor. */
 export function Sheet({ open = true, title, snap = 40, onClose, children, className }) {
   if (!open) return null;

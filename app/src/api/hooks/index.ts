@@ -8,4 +8,5 @@ export * from './bevs';
 export * from './rankings';
 export * from './lists';
 export * from './feed';
+export * from './comments';
 export { flattenPages } from './util';

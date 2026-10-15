@@ -18,7 +18,7 @@ export function useFeed() {
  * Every cache that holds FeedItems, by key prefix. Profile › Activity shows `RankedBev`s, which carry
  * no likes, so today that is the feed alone; a later FeedItem list (Explore, M-04) joins here.
  */
-const FEED_ITEM_PREFIXES = [keys.feed()];
+export const FEED_ITEM_PREFIXES = [keys.feed()];
 
 export interface LikeVars {
   /** The FeedItem's id. */
@@ -82,10 +82,14 @@ function setLiked(qc: QueryClient, id: string, liked: boolean): void {
  * on success that is the tap's own state (re-applied over any refetch that landed meanwhile); when
  * it fails ('network', 'rate_limited', 'not_found', …) the post goes back to the last confirmed one. A per-item restore
  * rather than `snapshot` / `rollback`, so a rollback never undoes another post's like, or a later
- * tap on this one. 'not_found' means the post is gone: the feed refetches. The screen tells the user
- * from the mutation's `error` and `variables` (see `likeErrorMessage`).
+ * tap on this one. 'not_found' means the post is gone: the feed refetches.
+ *
+ * `onFailed` hears about every post whose latest tap failed, as it settles, whichever post was tapped
+ * last: the mutation's own `error` (and a callback passed to `mutate`) only ever describes the most
+ * recent call, so liking post A, then B, would lose A's failure. The screen keeps one message per
+ * post from it (see `likeErrorMessage`).
  */
-export function useToggleLike() {
+export function useToggleLike({ onFailed }: { onFailed?: (vars: LikeVars, error: unknown) => void } = {}) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, like }: LikeVars) => (like ? api.feed.like(id) : api.feed.unlike(id)),
@@ -103,7 +107,8 @@ export function useToggleLike() {
       const chain = chainsFor(qc).get(id);
       if (chain) chain.confirmed = like;
     },
-    onSettled: (_data, error, { id }, ctx) => {
+    onSettled: (_data, error, vars, ctx) => {
+      const { id } = vars;
       const chains = chainsFor(qc);
       const chain = chains.get(id);
       // A newer tap on this post is queued behind this one: it decides.
@@ -115,6 +120,7 @@ export function useToggleLike() {
       if (isApiError(error) && error.code === 'not_found') {
         void Promise.all(FEED_ITEM_PREFIXES.map((queryKey) => qc.invalidateQueries({ queryKey })));
       }
+      if (error) onFailed?.(vars, error);
     },
   });
 }

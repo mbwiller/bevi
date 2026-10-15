@@ -1,8 +1,9 @@
 import type { FeedItem } from '@bevi/shared';
 import { FlashList } from '@shopify/flash-list';
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useCallback, useMemo } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
@@ -14,7 +15,9 @@ import {
   useRemoveWantToTry,
   useStats,
   useToggleLike,
+  type LikeVars,
 } from '@/api/hooks';
+import { keys } from '@/api/keys';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { Header } from '@/components/Header';
@@ -22,13 +25,19 @@ import { SearchBar } from '@/components/SearchBar';
 import { SectionHeader } from '@/components/SectionHeader';
 import { Skeleton } from '@/components/Skeleton';
 import { categoryById } from '@/lib/categories';
-import { spacing, useTheme } from '@/theme';
+import { spacing, type, useTheme } from '@/theme';
 
 import { FeaturedCarousel } from './FeaturedCarousel';
 import { FeedPostItem } from './FeedPostItem';
 import { likeErrorMessage } from './likeError';
+import { PostCommentsSheet } from './PostCommentsSheet';
 
 const SEARCH_PLACEHOLDER = 'Search a Bev or a person';
+
+/** What the feed says when a post's comments turn out to be on a post that's gone. */
+export const POST_GONE = "That post isn't here anymore.";
+/** How long that notice stays. */
+const NOTICE_MS = 6000;
 
 function PostSkeletons({ count }: { count: number }) {
   return (
@@ -42,8 +51,8 @@ function PostSkeletons({ count }: { count: number }) {
 
 /**
  * Feed (§6.4): the filled search bar (opens Add Bev), Featured Bevs, then YOUR FEED: followed users'
- * rankings, newest first, 20 per page, each with a heart (tap it, or double-tap the post, to like).
- * Following nobody → "Follow friends to see their Bevs" under YOUR FEED while Featured stays.
+ * rankings, newest first, 20 per page, each with a heart (tap it, or double-tap the post, to like)
+ * and a comment bubble that opens the post's comments in a sheet. Following nobody → "Follow friends to see their Bevs" under YOUR FEED while Featured stays.
  */
 export function FeedScreen() {
   const { colors } = useTheme();
@@ -54,11 +63,46 @@ export function FeedScreen() {
   const featured = useFeatured();
   const add = useAddWantToTry();
   const remove = useRemoveWantToTry();
-  const like = useToggleLike();
-  const toggleLike = like.mutate;
-  // The latest like tap failed and its post went back: say so on that post until the next tap.
-  const failedLikeId = like.isError ? like.variables?.id : undefined;
-  const failedLikeMessage = like.isError && like.variables ? likeErrorMessage(like.error, like.variables.like) : null;
+  const qc = useQueryClient();
+  // Per post: its latest like tap failed and the heart went back. Said on that post until its next
+  // tap, whichever post was tapped since (the mutation's own `error` only knows the latest call).
+  const [likeErrors, setLikeErrors] = useState<Record<string, string>>({});
+  const onLikeFailed = useCallback(
+    (vars: LikeVars, error: unknown) => setLikeErrors((m) => ({ ...m, [vars.id]: likeErrorMessage(error, vars.like) })),
+    [],
+  );
+  const { mutate: toggleLike } = useToggleLike({ onFailed: onLikeFailed });
+  const like = useCallback(
+    (vars: LikeVars) => {
+      setLikeErrors((m) => {
+        if (!(vars.id in m)) return m;
+        const { [vars.id]: _cleared, ...rest } = m;
+        return rest;
+      });
+      toggleLike(vars);
+    },
+    [toggleLike],
+  );
+
+  // The post whose comments are open, and the notice when one turned out to be gone.
+  const [commentsFor, setCommentsFor] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const openComments = useCallback((id: string) => {
+    setNotice(null);
+    setCommentsFor(id);
+  }, []);
+  const closeComments = useCallback(() => setCommentsFor(null), []);
+  const postGone = useCallback(() => {
+    setCommentsFor(null);
+    setNotice(POST_GONE);
+    void qc.invalidateQueries({ queryKey: keys.feed() });
+  }, [qc]);
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(null), NOTICE_MS);
+    return () => clearTimeout(t);
+  }, [notice]);
+
   const posts = useMemo(() => flattenPages(feed.data), [feed.data]);
 
   const meId = me.data?.id;
@@ -82,8 +126,9 @@ export function FeedScreen() {
               ? remove.mutate(item.bev.id)
               : add.mutate({ bevId: item.bev.id, viaUserId: you ? undefined : item.actor.id })
           }
-          onLike={() => toggleLike({ id: item.id, like: !item.likedByMe })}
-          likeError={failedLikeId === item.id ? failedLikeMessage : null}
+          onLike={() => like({ id: item.id, like: !item.likedByMe })}
+          likeError={likeErrors[item.id] ?? null}
+          onComment={() => openComments(item.id)}
           onOpenBev={() => router.push({ pathname: '/bev/[id]', params: { id: item.bev.id } })}
           onOpenActor={() =>
             you ? router.push('/profile') : router.push({ pathname: '/user/[id]', params: { id: item.actor.id } })
@@ -91,7 +136,7 @@ export function FeedScreen() {
         />
       );
     },
-    [add, remove, toggleLike, failedLikeId, failedLikeMessage, router, meId, canSeeAlcohol],
+    [add, remove, like, likeErrors, openComments, router, meId, canSeeAlcohol],
   );
 
   const followPrompt = (
@@ -136,6 +181,11 @@ export function FeedScreen() {
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.screen, { backgroundColor: colors.surface }]}>
       <Header wordmark actions={[{ icon: 'user-plus', label: 'Find people', onPress: findPeople }]} />
+      {notice ? (
+        <Text style={[type.body, styles.notice, { color: colors.textSecondary }]} role="alert" accessibilityLiveRegion="polite">
+          {notice}
+        </Text>
+      ) : null}
       <FlashList
         data={posts}
         renderItem={renderItem}
@@ -154,6 +204,7 @@ export function FeedScreen() {
           void stats.refetch();
         }}
       />
+      <PostCommentsSheet eventId={commentsFor} onClose={closeComments} onGone={postGone} />
     </SafeAreaView>
   );
 }
@@ -162,4 +213,5 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   search: { paddingHorizontal: spacing.gutter, paddingTop: spacing.xs, paddingBottom: spacing.sm },
   foot: { height: spacing.xxl },
+  notice: { paddingHorizontal: spacing.gutter, paddingVertical: spacing.sm },
 });

@@ -8,7 +8,7 @@ import { CATALOG_BEVS } from '../catalog';
 import { STORAGE_KEY, type StorageLike } from '../db';
 import { buildFixtures } from '../fixtures';
 import { FakeApi } from '../FakeApi';
-import { ALCOHOLIC_BEV_ID, FAKE_INVITE_CODE, ME } from '../people';
+import { ALCOHOLIC_BEV_ID, FAKE_INVITE_CODE, FRIEND, ME } from '../people';
 
 const memoryStorage = (): StorageLike & { data: Map<string, string> } => {
   const data = new Map<string, string>();
@@ -331,5 +331,66 @@ describe('likes (S-02)', () => {
 
     const missing = await api.feed.like('feed-does-not-exist').catch((e: unknown) => e);
     expect(isApiError(missing) && missing.code).toBe('not_found');
+  });
+});
+
+describe('comments (S-03)', () => {
+  /** FRIEND's newest post, which ME (following FRIEND) can see. */
+  async function friendsPost(api: FakeApi) {
+    const post = (await api.feed.getFeed()).items.find((i) => i.actor.handle === FRIEND.handle);
+    expect(post).toBeDefined();
+    return post!;
+  }
+
+  it('add trims, lists newest first in keyset pages, and the feed carries the count and the first seven', async () => {
+    const api = make();
+    await signInMe(api);
+    const post = await friendsPost(api);
+    expect(post).toMatchObject({ commentCount: 0, comments: [] });
+
+    const added = await api.comments.add(post.id, '  one  ');
+    expect(added).toMatchObject({ body: 'one', author: { handle: ME.handle } });
+    for (let i = 2; i <= 9; i++) await api.comments.add(post.id, `c${i}`);
+
+    const first = await api.comments.list(post.id, { limit: 5 });
+    expect(first.items.map((c) => c.body)).toEqual(['c9', 'c8', 'c7', 'c6', 'c5']);
+    // A comment added between pages doesn't shift the next one.
+    await api.comments.add(post.id, 'c10');
+    const second = await api.comments.list(post.id, { cursor: first.nextCursor!, limit: 5 });
+    expect(second.items.map((c) => c.body)).toEqual(['c4', 'c3', 'c2', 'one']);
+    expect(second.nextCursor).toBeNull();
+
+    const item = (await api.feed.getFeed()).items.find((i) => i.id === post.id)!;
+    expect(item.commentCount).toBe(10);
+    expect(item.comments.map((c) => c.body)).toEqual(['one', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7']);
+  });
+
+  it('add refuses empty and over 280 characters; an unseen post is not_found', async () => {
+    const api = make();
+    await signInMe(api);
+    const post = await friendsPost(api);
+    const code = (p: Promise<unknown>) => p.then(() => 'ok', (e: unknown) => (isApiError(e) ? e.code : e));
+    expect(await code(api.comments.add(post.id, ' \n\t '))).toBe('validation');
+    expect(await code(api.comments.add(post.id, 'x'.repeat(281)))).toBe('validation');
+    expect(await code(api.comments.add(post.id, 'x'.repeat(280)))).toBe('ok');
+    expect(await code(api.comments.add('feed-does-not-exist', 'hi'))).toBe('not_found');
+    expect(await code(api.comments.list('feed-does-not-exist'))).toBe('not_found');
+  });
+
+  it("remove is own comments only and idempotent; removed comments leave the count", async () => {
+    const api = make();
+    await signInMe(api);
+    const post = await friendsPost(api);
+    const mine = await api.comments.add(post.id, 'mine');
+    api.signInAs(FRIEND.handle);
+    const theirs = await api.comments.add(post.id, 'theirs');
+    const removeTheirs = await api.comments.remove(mine.id).catch((e: unknown) => e);
+    expect(isApiError(removeTheirs) && removeTheirs.code).toBe('not_found');
+
+    api.signInAs(ME.handle);
+    await api.comments.remove(mine.id);
+    await api.comments.remove(mine.id);
+    expect((await api.comments.list(post.id)).items.map((c) => c.id)).toEqual([theirs.id]);
+    expect((await api.feed.getFeed()).items.find((i) => i.id === post.id)).toMatchObject({ commentCount: 1 });
   });
 });

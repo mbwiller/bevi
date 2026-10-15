@@ -14,7 +14,7 @@ export const ICONS = {
   menu: 'menu', search: 'search', x: 'x', 'user-plus': 'user-plus', camera: 'camera', users: 'users', user: 'user',
   'chevron-right': 'chevron-right', 'chevron-down': 'chevron-down', 'chevron-left': 'chevron-left', ellipsis: 'ellipsis',
   // actions + state
-  bookmark: 'bookmark', 'circle-plus': 'circle-plus', 'circle-check': 'circle-check', heart: 'heart', 'undo-2': 'undo-2',
+  bookmark: 'bookmark', 'circle-plus': 'circle-plus', 'circle-check': 'circle-check', heart: 'heart', 'message-circle': 'message-circle', 'undo-2': 'undo-2',
   flame: 'flame', lock: 'lock', 'arrow-up-down': 'arrow-up-down', 'list-filter': 'list-filter', clock: 'clock',
   image: 'image', check: 'check', 'triangle-alert': 'triangle-alert', 'wifi-off': 'wifi-off', 'refresh-cw': 'refresh-cw',
   'file-text': 'file-text', 'chart-no-axes-column': 'chart-no-axes-column', sparkles: 'sparkles',

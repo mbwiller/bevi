@@ -55,6 +55,7 @@ import {
   type CategoriesApi,
   type CategoryId,
   type CheckHandleResult,
+  type Comment,
   type CommentsApi,
   type Comparison,
   type FeedApi,
@@ -91,6 +92,7 @@ import {
   loadDb,
   saveDb,
   type FakeBev,
+  type FakeComment,
   type FakeDb,
   type FakeFeedEvent,
   type FakeRanking,
@@ -151,6 +153,11 @@ function paginate<T>(items: readonly T[], page: PageParams | undefined, defaultL
   const end = start + limit;
   return { items: items.slice(start, end), nextCursor: end < items.length ? `o:${end}` : null };
 }
+
+/** `comments.add` refuses longer bodies (contract); `get_feed` carries this many comments per post. */
+const COMMENT_MAX = 280;
+const FEED_INLINE_COMMENTS = 7;
+const commentSeq = (c: FakeComment) => Number(c.id.split('-')[1]);
 
 function isValidTimeZone(tz: string): boolean {
   try {
@@ -611,6 +618,7 @@ export class FakeApi implements BeviApi {
     db.feed = db.feed.filter((e) => e.actorId !== userId);
     const events = new Set(db.feed.map((e) => e.id));
     db.likes = (db.likes ?? []).filter((l) => l.userId !== userId && events.has(l.feedEventId));
+    db.comments = (db.comments ?? []).filter((c) => c.userId !== userId && events.has(c.feedEventId));
   }
 
   /** The feed event `id` if `viewer` can see it (own or a followee's post, Bev age-visible), else not_found. */
@@ -623,6 +631,15 @@ export class FakeApi implements BeviApi {
       (e.actorId === viewer.id || this.db.follows.some((f) => f.followerId === viewer.id && f.followeeId === e.actorId)) &&
       this.visible(bev, viewer);
     return sees ? e! : fail('not_found', 'No such post');
+  }
+
+  /** A post's comments that aren't deleted, oldest first. */
+  private liveComments(eventId: string): FakeComment[] {
+    return (this.db.comments ?? []).filter((c) => c.feedEventId === eventId && !c.deleted).sort((a, z) => commentSeq(a) - commentSeq(z));
+  }
+
+  private toComment(c: FakeComment, viewer: FakeUser): Comment {
+    return { id: c.id, author: this.toProfile(this.user(c.userId), viewer), body: c.body, createdAt: c.createdAt };
   }
 
   // -------------------------------------------------------------------------
@@ -1266,8 +1283,9 @@ export class FakeApi implements BeviApi {
             inMyWantToTry: saved.has(bev.id),
             likeCount: likes.filter((l) => l.feedEventId === e.id).length,
             likedByMe: likes.some((l) => l.feedEventId === e.id && l.userId === me.id),
-            commentCount: 0,
-            comments: [],
+            commentCount: this.liveComments(e.id).length,
+            // The first seven, oldest first, as get_feed returns them.
+            comments: this.liveComments(e.id).slice(0, FEED_INLINE_COMMENTS).map((c) => this.toComment(c, me)),
           });
         }
         return paginate(items, page, 20);
@@ -1313,29 +1331,59 @@ export class FakeApi implements BeviApi {
       ),
   };
 
-  // Comments (S-03) are a stub until M-03 builds the in-memory thread: no post has any yet.
+  // Comments (S-03), as add_comment / delete_comment / get_comments do them (20261014000300).
   comments: CommentsApi = {
     list: (eventId: string, page?: PageParams) =>
       this.call('comments.list', () => {
-        this.visibleFeedEvent(eventId, this.requireUser());
-        return paginate([], page, 20);
+        const me = this.requireUser();
+        this.visibleFeedEvent(eventId, me);
+        // Newest first, keyset-paged like get_comments (`p_before_id`): a comment added meanwhile
+        // never shifts a later page.
+        // get_comments and packages/api's MAX_LIMIT cap a page at 50.
+        const limit = clamp(Math.floor(page?.limit ?? 20), 1, 50);
+        let before = Infinity;
+        if (page?.cursor) {
+          const m = /^c:(\d+)$/.exec(page.cursor);
+          if (!m) invalid('cursor', 'Malformed cursor');
+          before = Number(m[1]);
+        }
+        const rows = this.liveComments(eventId)
+          .reverse()
+          .filter((c) => commentSeq(c) < before)
+          .slice(0, limit);
+        const last = rows[rows.length - 1];
+        return {
+          items: rows.map((c) => this.toComment(c, me)),
+          nextCursor: rows.length === limit && last ? `c:${commentSeq(last)}` : null,
+        };
       }),
 
-    add: (eventId: string, _body: string) =>
+    add: (eventId: string, body: string) =>
       this.call(
         'comments.add',
         () => {
-          this.visibleFeedEvent(eventId, this.requireUser());
-          throw new ApiError('unknown', 'FakeApi comments arrive with M-03');
+          const me = this.requireUser();
+          this.visibleFeedEvent(eventId, me);
+          // btrim(body, E' \t\n\r'), then 1–280 characters (code points, like char_length).
+          const text = (body ?? '').replace(/^[ \t\n\r]+|[ \t\n\r]+$/g, '');
+          const length = Array.from(text).length;
+          if (length < 1 || length > COMMENT_MAX) invalid('body', `A comment is 1 to ${COMMENT_MAX} characters`);
+          const row: FakeComment = { id: this.nextId('comment'), feedEventId: eventId, userId: me.id, body: text, createdAt: this.nowIso() };
+          (this.db.comments ??= []).push(row);
+          return this.toComment(row, me);
         },
         true,
       ),
 
-    remove: (_id: string) =>
+    remove: (id: string) =>
       this.call(
         'comments.remove',
         () => {
-          this.requireUser();
+          const me = this.requireUser();
+          // Own comments only; removing one already removed is a no-op.
+          const row = (this.db.comments ?? []).find((c) => c.id === id && c.userId === me.id);
+          if (!row) fail('not_found', 'No such comment');
+          row.deleted = true;
         },
         true,
       ),

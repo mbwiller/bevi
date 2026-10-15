@@ -1,6 +1,6 @@
-import type { BevSummary, Bucket, Profile } from '@bevi/shared';
+import type { BevSummary, Bucket, Comment, Profile } from '@bevi/shared';
 import { useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useReducedMotion,
@@ -18,6 +18,7 @@ import { Avatar } from './Avatar';
 import type { BevArtProps } from './BevArt';
 import { BevActions, bevImageProps } from './BevParts';
 import { BevImage } from './BevImage';
+import { CommentButton } from './CommentButton';
 import { Icon } from './Icon';
 import { LikeButton } from './LikeButton';
 import { PriceTier } from './PriceTier';
@@ -47,6 +48,15 @@ export interface FeedPostProps {
    * liked. Without it the post has no heart and double-tap does nothing.
    */
   onLike?: () => void;
+  /**
+   * Comments on the post (the contract's first seven, oldest first), shown under the action row as
+   * "**handle** text" while `commentCount` ≤ `INLINE_COMMENTS`.
+   */
+  comments?: Comment[];
+  /** All comments on the post: beside the comment icon (hidden at 0); above 7 the post shows "View all N comments". */
+  commentCount?: number;
+  /** Opens the comments sheet (the comment icon and "View all N comments"). Without it the post has no comment icon. */
+  onComment?: () => void;
   /** Strip tiles; defaults to the Bev's own photo. An empty list draws no strip. */
   photos?: { src?: string; art?: BevArtProps }[];
   onRank?: () => void;
@@ -55,6 +65,9 @@ export interface FeedPostProps {
   divider?: boolean;
   style?: StyleProp<ViewStyle>;
 }
+
+/** Comments shown on the post itself; above this many, the post collapses to "View all N comments". */
+export const INLINE_COMMENTS = 7;
 
 /** Notes longer than this truncate with "See more" (FeedPost README). */
 const NOTE_MAX = 160;
@@ -71,7 +84,8 @@ export const DOUBLE_TAP_MS = 300;
  *
  * Double-tap anywhere outside the photo strip likes it (never unlikes; the heart does that). The
  * post's background is a Pressable that only counts taps: two within `DOUBLE_TAP_MS` like. Every
- * control inside (the heart, Rank, Want to Try, "See more", the strip's tiles) is its own Pressable,
+ * control inside (the heart, the comment bubble, Rank, Want to Try, "See more", "View all N comments",
+ * the strip's tiles) is its own Pressable,
  * so it takes the tap itself with no delay: on the web the innermost Pressable handles the `click`
  * and stops it bubbling, and natively the deepest responder wins. The strip sits in a tap sink that
  * swallows taps between and around its tiles, so a double-tap on the photo never likes.
@@ -89,6 +103,9 @@ export function FeedPost({
   liked = false,
   likeCount = 0,
   onLike,
+  comments = [],
+  commentCount = 0,
+  onComment,
   photos,
   onRank,
   onSave,
@@ -212,9 +229,30 @@ export function FeedPost({
         <Text style={[type.body, { color: colors.textSecondary }]}>{time ? formatRelativeTime(time) : ''}</Text>
         <View style={styles.actions}>
           {onLike ? <LikeButton liked={liked} count={likeCount} onPress={onLike} /> : null}
+          {onComment ? <CommentButton count={commentCount} onPress={onComment} /> : null}
           <BevActions name={bev.name} saved={saved} onRank={onRank} onSave={onSave} />
         </View>
       </View>
+      {commentCount > INLINE_COMMENTS ? (
+        <Pressable
+          onPress={onComment}
+          disabled={!onComment}
+          accessibilityRole="button"
+          accessibilityLabel={`View all ${commentCount} comments`}
+          style={styles.allComments}
+        >
+          <Text style={[type.body, { color: colors.textSecondary }]}>{`View all ${commentCount} comments`}</Text>
+        </Pressable>
+      ) : comments.length ? (
+        // Text, not controls: a double-tap here likes the post like anywhere else outside the strip.
+        <View style={styles.comments} role="list" aria-label="Comments" testID="feed-post-comments">
+          {comments.slice(0, INLINE_COMMENTS).map((c) => (
+            <Text key={c.id} role="listitem" style={[type.body, styles.comment, textColor]}>
+              <Text style={styles.bold}>{c.author.handle}</Text> {c.body}
+            </Text>
+          ))}
+        </View>
+      ) : null}
       {burst && !tiles.length ? <LikeBurst key={burst} /> : null}
     </Pressable>
   );
@@ -289,6 +327,11 @@ const styles = StyleSheet.create({
   stripContent: { gap: spacing.sm, paddingHorizontal: spacing.gutter },
   note: { marginTop: spacing.lg },
   noteTarget: { minHeight: size.target },
+  // bundle.css `.bv-post-comments` / `.bv-post-allcomments`.
+  comments: { gap: spacing.xs, marginTop: spacing.xs, marginBottom: spacing.sm },
+  // bundle.css `overflow-wrap: anywhere`: a long unbroken word wraps instead of widening the post.
+  comment: { flexShrink: 1, ...(Platform.OS === 'web' ? ({ overflowWrap: 'anywhere' } as TextStyle) : null) },
+  allComments: { minHeight: size.target, justifyContent: 'center', alignSelf: 'flex-start' },
   actions: { flexDirection: 'row', alignItems: 'center' },
   burst: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, alignItems: 'center', justifyContent: 'center' },
   foot: {

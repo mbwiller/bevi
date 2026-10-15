@@ -79,6 +79,17 @@ export interface FakeLike {
   feedEventId: string;
 }
 
+export interface FakeComment {
+  /** `comment-<seq>`: the seq orders comments and keys `comments.list`'s cursor. */
+  id: string;
+  feedEventId: string;
+  userId: string;
+  body: string;
+  createdAt: string;
+  /** Soft delete, as `delete_comment` does: a removed comment stays so a second remove is a no-op. */
+  deleted?: boolean;
+}
+
 export interface FakeFeatured {
   bevId: string;
   heroImageUrl: string;
@@ -115,6 +126,8 @@ export interface FakeDb {
   feed: FakeFeedEvent[];
   /** Optional so a db stored before likes existed still loads. */
   likes?: FakeLike[];
+  /** Optional so a db stored before comments existed still loads. */
+  comments?: FakeComment[];
   featured: FakeFeatured[];
   assets: FakeAsset[];
   reports: FakeReport[];

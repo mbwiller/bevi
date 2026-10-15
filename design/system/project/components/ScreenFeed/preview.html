@@ -63,7 +63,8 @@
       h(B.FeaturedCard, { title: 'Top 10 Sparkling Waters', subtitle: "You've had 3 of 10", art: BEVS.topo.art, tint: '#cfe8e0' }),
       h(B.FeaturedCard, { title: 'Red Bull', subtitle: 'Energy • $$', art: BEVS.redBull.art, tint: '#d8def0' })),
     h(B.SectionHeader, { title: 'Your feed' }),
-    h(B.FeedPost, { actor: ARJUN, bev: BEVS.horchata, score: 9.5, time: '5 hours ago', liked: true, likeCount: 4, note: 'cinnamon-forward, not too sweet. best thing on the block' }))),
+    h(B.FeedPost, { actor: ARJUN, bev: BEVS.horchata, score: 9.5, time: '5 hours ago', liked: true, likeCount: 4, note: 'cinnamon-forward, not too sweet. best thing on the block',
+      commentCount: 2, comments: [{ author: FRIENDS[1], body: 'ok this is going on my list' }, { author: ME, body: 'the truck or the one on 3rd?' }] }))),
   h('div', { className: 'tabbar' }, h(B.TabBar, { active: 'feed', user: ME }))));
 </script>
 </body>

@@ -1,6 +1,9 @@
 import React from 'react';
 import { cx, Icon, Wordmark, BevArt, categoryById, formatRatings } from './core.jsx';
-import { ScoreBubble, PriceTier, Avatar, BevImage, Pill, IconButton, LikeButton } from './primitives.jsx';
+import { ScoreBubble, PriceTier, Avatar, BevImage, Pill, IconButton, LikeButton, CommentButton } from './primitives.jsx';
+
+/** Comments shown on the post itself; above this many, the post collapses to "View all N comments". */
+export const INLINE_COMMENTS = 7;
 
 function CategoryMark({ category }) {
   const cat = categoryById(category);
@@ -92,7 +95,7 @@ function LikeBurst() {
  * A ranking in the Feed and on Profile › Activity. Names bold, verb regular.
  * Double-tap anywhere outside the photo strip likes it (never unlikes); the heart in the action row is the way to unlike.
  */
-export function FeedPost({ actor = {}, you = false, bev, score, scoreVariant, note, time, saved = false, liked = false, likeCount = 0, photos, onRank, onSave, onLike, onOpen, divider = true, className }) {
+export function FeedPost({ actor = {}, you = false, bev, score, scoreVariant, note, time, saved = false, liked = false, likeCount = 0, comments = [], commentCount = 0, photos, onRank, onSave, onLike, onComment, onOpen, divider = true, className }) {
   const [open, setOpen] = React.useState(false);
   const [burst, setBurst] = React.useState(0);
   const cat = categoryById(bev.category);
@@ -144,12 +147,22 @@ export function FeedPost({ actor = {}, you = false, bev, score, scoreVariant, no
         <span className="body bv-meta">{time}</span>
         <span className="bv-actions">
           <LikeButton liked={liked} count={likeCount} onClick={onLike} />
+          <CommentButton count={commentCount} onClick={onComment} />
           <IconButton icon="circle-plus" label={'Rank ' + bev.name} onClick={onRank} />
           <button type="button" className={cx('bv-iconbtn', 'bv-iconbtn-plain', saved && 'bv-saved')} onClick={onSave} aria-pressed={saved} aria-label={saved ? 'Saved to Want to Try' : 'Save to Want to Try'}>
             <Icon name="bookmark" size={28} strokeWidth={1.6} filled={saved} />
           </button>
         </span>
       </div>
+      {commentCount > INLINE_COMMENTS ? (
+        <button type="button" className="body bv-post-allcomments" onClick={onComment}>{'View all ' + commentCount + ' comments'}</button>
+      ) : comments.length ? (
+        <ul className="bv-post-comments" aria-label="Comments">
+          {comments.slice(0, INLINE_COMMENTS).map((c, i) => (
+            <li key={c.id || i} className="body bv-post-comment"><b>{(c.author && c.author.handle) || ''}</b> {c.body}</li>
+          ))}
+        </ul>
+      ) : null}
     </article>
   );
 }

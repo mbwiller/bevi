@@ -1,4 +1,4 @@
-<!-- @dsCard group="Feed" height=760 width=393 subtitle="Double-tap a post to like it" -->
+<!-- @dsCard group="Feed" height=1180 width=393 subtitle="Double-tap a post to like it" -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -44,8 +44,15 @@
   var b = React.useState(true), bOn = b[0], setB = b[1];
   return h('div', { className: 'pv-narrow' },
     h(B.FeedPost, { actor: ARJUN, bev: BEVS.horchata, score: 9.5, time: '5 hours ago', liked: aOn, likeCount: aOn ? 4 : 3, onLike: function () { setA(!aOn); },
+      comments: [
+        { author: FRIENDS[1], body: 'ok this is going on my list' },
+        { author: ME, body: 'the one on 3rd ave or the truck?' },
+        { author: ARJUN, body: 'the truck, always the truck' }],
+      commentCount: 3,
       note: "went back with my mom and she pulled out a sleeper: the cinnamon is way stronger than the dining hall one and it's not too sweet. honestly the best thing on this whole block, and it costs less than a cold brew. getting two next time" }),
-    h(B.FeedPost, { actor: FRIENDS[0], bev: BEVS.brownSugar, score: 7.8, saved: true, time: 'Wednesday', liked: bOn, likeCount: bOn ? 12 : 11, onLike: function () { setB(!bOn); } }));
+    h(B.FeedPost, { actor: FRIENDS[0], bev: BEVS.brownSugar, score: 7.8, saved: true, time: 'Wednesday', liked: bOn, likeCount: bOn ? 12 : 11, onLike: function () { setB(!bOn); },
+      comments: [{ author: FRIENDS[2], body: 'tiger sugar > everything' }], commentCount: 12 }),
+    h(B.FeedPost, { actor: FRIENDS[3], bev: BEVS.topo, score: 6.1, time: 'Monday', likeCount: 1 }));
 }));
 </script>
 </body>

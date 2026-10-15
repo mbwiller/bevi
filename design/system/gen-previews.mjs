@@ -189,6 +189,14 @@ h(function Demo() {
     L('5k', h(B.LikeButton, { liked: true, count: 5120 })));
 })`];
 
+P.CommentButton = [{ group: 'Actions', height: 110, subtitle: 'Opens the comments' }, '', `
+h('div', { className: 'pv', style: { gap: 16 } },
+  L('no comments yet', h(B.CommentButton, {})),
+  L('1', h(B.CommentButton, { count: 1 })),
+  L('12', h(B.CommentButton, { count: 12 })),
+  L('5k', h(B.CommentButton, { count: 5120 })),
+  L('beside the heart', h('span', { style: { display: 'inline-flex' } }, h(B.LikeButton, { liked: true, count: 4 }), h(B.CommentButton, { count: 3 }))))`];
+
 P.FilterPill = [{ group: 'Actions', height: 96, width: 393 }, '', `
 h('div', { className: 'pv', style: { gap: 10, flexWrap: 'nowrap', overflow: 'hidden' } },
   h(B.FilterPill, { count: 3 }),
@@ -241,14 +249,21 @@ h('div', { className: 'pv-narrow', style: { display: 'flex', flexDirection: 'col
   h(B.TabBar, { active: 'profile', user: ME }))`];
 
 // ---------- Feed ----------
-P.FeedPost = [{ group: 'Feed', height: 760, width: 393, subtitle: 'Double-tap a post to like it' }, '', `
+P.FeedPost = [{ group: 'Feed', height: 1180, width: 393, subtitle: 'Double-tap a post to like it' }, '', `
 h(function Demo() {
   var a = React.useState(false), aOn = a[0], setA = a[1];
   var b = React.useState(true), bOn = b[0], setB = b[1];
   return h('div', { className: 'pv-narrow' },
     h(B.FeedPost, { actor: ARJUN, bev: BEVS.horchata, score: 9.5, time: '5 hours ago', liked: aOn, likeCount: aOn ? 4 : 3, onLike: function () { setA(!aOn); },
+      comments: [
+        { author: FRIENDS[1], body: 'ok this is going on my list' },
+        { author: ME, body: 'the one on 3rd ave or the truck?' },
+        { author: ARJUN, body: 'the truck, always the truck' }],
+      commentCount: 3,
       note: "went back with my mom and she pulled out a sleeper: the cinnamon is way stronger than the dining hall one and it's not too sweet. honestly the best thing on this whole block, and it costs less than a cold brew. getting two next time" }),
-    h(B.FeedPost, { actor: FRIENDS[0], bev: BEVS.brownSugar, score: 7.8, saved: true, time: 'Wednesday', liked: bOn, likeCount: bOn ? 12 : 11, onLike: function () { setB(!bOn); } }));
+    h(B.FeedPost, { actor: FRIENDS[0], bev: BEVS.brownSugar, score: 7.8, saved: true, time: 'Wednesday', liked: bOn, likeCount: bOn ? 12 : 11, onLike: function () { setB(!bOn); },
+      comments: [{ author: FRIENDS[2], body: 'tiger sugar > everything' }], commentCount: 12 }),
+    h(B.FeedPost, { actor: FRIENDS[3], bev: BEVS.topo, score: 6.1, time: 'Monday', likeCount: 1 }));
 })`];
 
 // ---------- Ranking ----------
@@ -293,6 +308,30 @@ h(B.ErrorState, { icon: 'wifi-off', title: "You're offline", message: "We'll sho
 P.Skeleton = [{ group: 'Feedback', height: 420, width: 393 }, '', `
 h('div', { className: 'pv-narrow' }, h(B.Skeleton, { variant: 'row' }), h(B.Skeleton, { variant: 'post' }))`];
 
+P.CommentsSheet = [{ group: 'Feed', height: 1470, width: 393, subtitle: 'Your own comments can be deleted' }, `.pv-frame { height: 440px; margin: 10px auto; } .cap { margin: 14px 16px 0; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--textSecondary); }`, `
+h(function Demo() {
+  var few = [
+    { id: 'a', author: FRIENDS[1], body: 'ok this is going on my list', time: '4 hours ago' },
+    { id: 'b', author: ME, body: 'the one on 3rd ave or the truck?', time: '3 hours ago', mine: true },
+    { id: 'c', author: ARJUN, body: 'the truck, always the truck', time: '2 hours ago' }];
+  var long = [
+    { author: FRIENDS[2], body: 'tiger sugar > everything', time: 'Wednesday' },
+    { author: FRIENDS[1], body: 'hot take but the brown sugar is too sweet for me', time: 'Wednesday' },
+    { author: FRIENDS[0], body: 'that is the point priya', time: 'Wednesday' },
+    { author: FRIENDS[5], body: 'less ice and it is perfect', time: 'Thursday' },
+    { author: ME, body: 'less ice is the move, agreed', time: 'Thursday', mine: true },
+    { author: FRIENDS[3], body: 'which location?', time: 'Thursday' },
+    { author: FRIENDS[0], body: 'the one by campus, the line is shorter after 3', time: 'Thursday' },
+    { author: ARJUN, body: "ranking it tonight, you've convinced me", time: '5 hours ago' }];
+  return h(F, null,
+    h('p', { className: 'cap' }, 'Empty'),
+    h('div', { className: 'pv-frame' }, h(B.CommentsSheet, { me: ME })),
+    h('p', { className: 'cap' }, 'A few, one of them yours'),
+    h('div', { className: 'pv-frame' }, h(B.CommentsSheet, { me: ME, comments: few })),
+    h('p', { className: 'cap' }, 'A long thread, posting failed'),
+    h('div', { className: 'pv-frame', style: { height: 500 } }, h(B.CommentsSheet, { me: ME, comments: long, error: "Couldn't post your comment. Check your connection and try again." })));
+})`];
+
 P.Sheet = [{ group: 'Feedback', height: 460, width: 393 }, `.pv-frame { height: 440px; margin: 10px auto; } .opt { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; min-height: 48px; border-bottom: 1px solid var(--border); font-size: 17px; }`, `
 h('div', { className: 'pv-frame' },
   h('div', { style: { padding: 16 } }, h(B.ListScopeDropdown, { label: 'All' })),
@@ -330,7 +369,8 @@ P.ScreenFeed = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHO
       h(B.FeaturedCard, { title: 'Top 10 Sparkling Waters', subtitle: "You've had 3 of 10", art: BEVS.topo.art, tint: '#cfe8e0' }),
       h(B.FeaturedCard, { title: 'Red Bull', subtitle: 'Energy • $$', art: BEVS.redBull.art, tint: '#d8def0' })),
     h(B.SectionHeader, { title: 'Your feed' }),
-    h(B.FeedPost, { actor: ARJUN, bev: BEVS.horchata, score: 9.5, time: '5 hours ago', liked: true, likeCount: 4, note: 'cinnamon-forward, not too sweet. best thing on the block' }))`)];
+    h(B.FeedPost, { actor: ARJUN, bev: BEVS.horchata, score: 9.5, time: '5 hours ago', liked: true, likeCount: 4, note: 'cinnamon-forward, not too sweet. best thing on the block',
+      commentCount: 2, comments: [{ author: FRIENDS[1], body: 'ok this is going on my list' }, { author: ME, body: 'the truck or the one on 3rd?' }] }))`)];
 
 P.ScreenYourLists = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHONE_CSS + `.top { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; } .filters { display: flex; gap: 10px; padding: 12px 16px 4px; overflow: hidden; }`, phone('lists', `
   h(F, null,
