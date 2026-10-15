@@ -64,6 +64,9 @@ describe.skipIf(!url || !publishableKey)('catalog, photos and privacy, against a
       const detail = await api.bevs.get(found.items[0]!.id);
       expect(detail.name).toBeTruthy();
       expect(detail.photoUrl).toBeNull(); // seeded Bevs have no photo yet: the app draws placeholder art
+      // A-17: every seeded Bev carries its hand-labelled flavour profile, and every Bev a
+      // search for "coke" can return to an under-21 viewer is a cola.
+      expect(detail.flavorProfile).toMatchObject({ base: 'cola', carbonated: true, alcohol: false, source: 'catalog' });
     } finally {
       await api.deleteAccount();
     }
@@ -90,6 +93,7 @@ describe.skipIf(!url || !publishableKey)('catalog, photos and privacy, against a
       // Another user sees it straight away (it is active, not pending a photo job).
       const seen = await b.api.bevs.get(created.id);
       expect(seen.name).toBe(name);
+      expect(seen.flavorProfile).toBeNull(); // user-created: unlabelled until D-11
       expect((await b.api.bevs.search({ q: name })).items.map((x) => x.id)).toContain(created.id);
 
       // An exact duplicate is a conflict that names the existing Bev.
