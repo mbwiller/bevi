@@ -95,11 +95,9 @@ h('div', { className: 'pv', style: { gap: 28 } },
   L('Loved band', h(B.ScoreBubble, { score: 9.3 })),
   L('Fine band', h(B.ScoreBubble, { score: 5.8 })),
   L("Didn't like", h(B.ScoreBubble, { score: 2.1 })),
-  L('global + count', h(B.ScoreBubble, { score: 8.3, count: 198 })),
-  L('5k ratings', h(B.ScoreBubble, { score: 7.3, count: 5120 })),
   L('predicted', h(B.ScoreBubble, { score: 8.2, variant: 'predicted' })),
   L('locked', h(B.ScoreBubble, { variant: 'locked' })),
-  L('56 · detail', h(B.ScoreBubble, { score: 8.9, size: 56, count: 31 })),
+  L('56 · detail', h(B.ScoreBubble, { score: 8.9, size: 56 })),
   L('56 predicted', h(B.ScoreBubble, { score: 7.6, size: 56, variant: 'predicted' })))`];
 
 P.PriceTier = [{ group: 'Bev', height: 96 }, `.line { font-size: 15px; line-height: 20px; }`, `
@@ -107,12 +105,13 @@ h('div', { className: 'pv', style: { gap: 32 } },
   [1, 2, 3, 4].map(function (t) { return h(F, { key: t }, L('tier ' + t, h('span', { className: 'line' }, h(B.PriceTier, { tier: t }), ' • Soda'))); }),
   L('estimated', h('span', { className: 'line' }, h(B.PriceTier, { tier: 2, estimated: true }), ' • Other')))`];
 
-P.BevRow = [{ group: 'Bev', height: 560, width: 393 }, '', `
+P.BevRow = [{ group: 'Bev', height: 700, width: 393 }, '', `
 h('div', { className: 'pv-narrow' },
   h(B.BevRow, { bev: BEVS.dietCoke, number: 1, score: 9.3, meta: 'Ranked Oct 3' }),
   h(B.BevRow, { bev: BEVS.horchata, number: 2, score: 8.8, meta: 'Ranked Sep 28', saved: false }),
   h(B.BevRow, { bev: BEVS.brownSugar, score: 7.3, count: 5120, saved: true, meta: 'Saved from @acheema5' }),
-  h(B.BevRow, { bev: BEVS.poppi, score: 8.2, scoreVariant: 'predicted', count: 58, meta: 'You love diet sodas' }))`];
+  h(B.BevRow, { bev: BEVS.poppi, score: 8.2, scoreVariant: 'predicted', meta: 'You love diet sodas' }),
+  h(B.BevRow, { bev: BEVS.mexicanCoke, score: 8.7, count: 362, showImage: true }))`];
 
 P.FeaturedCard = [{ group: 'Bev', height: 210 }, `.row { display: flex; gap: 16px; padding: 20px 16px; overflow-x: auto; }`, `
 h('div', { className: 'row' },
@@ -185,7 +184,7 @@ h('div', { className: 'pv', style: { gap: 10, flexWrap: 'nowrap', overflow: 'hid
   h(B.FilterPill, { count: 0 }))`];
 
 P.SortToggle = [{ group: 'Actions', height: 80, width: 393 }, '', `
-h('div', { className: 'pv-narrow', style: { paddingTop: 16 } }, h(B.SortToggle, { label: 'Score' }), h(B.SortToggle, { label: 'Predicted', onSearch: false }))`];
+h('div', { className: 'pv-narrow', style: { paddingTop: 16 } }, h(B.SortToggle, { label: 'Score', onClick: function () {}, onSearch: function () {} }), h(B.SortToggle, { label: 'Recent', onClick: function () {} }))`];
 
 // ---------- Inputs ----------
 P.SearchBar = [{ group: 'Inputs', height: 150, width: 393 }, '', `
@@ -322,7 +321,7 @@ P.ScreenYourLists = [{ group: 'Screens', height: 852, width: 393, isPage: true }
     h('div', { className: 'top' }, h(B.ListScopeDropdown, { label: 'All' })),
     h(B.SegmentedTabs, { tabs: [{ id: 'bevd', label: "Bev'd" }, { id: 'want', label: 'Want to Try' }, { id: 'recs', label: 'Recommended' }], value: 'bevd' }),
     h('div', { className: 'filters' }, h(B.FilterPill, { count: 0 }), h(B.FilterPill, { label: 'Bucket', icon: null, chevron: true }), h(B.FilterPill, { label: 'Price', icon: null, chevron: true }), h(B.FilterPill, { label: 'Category', icon: null, chevron: true })),
-    h(B.SortToggle, { label: 'Score' }),
+    h(B.SortToggle, { label: 'Score', onClick: function () {}, onSearch: function () {} }),
     h(B.BevRow, { bev: BEVS.horchata, number: 1, score: 9.5, meta: 'Ranked Oct 8' }),
     h(B.BevRow, { bev: BEVS.dietCoke, number: 2, score: 9.3, meta: 'Ranked Oct 3' }),
     h(B.BevRow, { bev: BEVS.mexicanCoke, number: 3, score: 8.9, meta: 'Ranked Sep 30' }),
@@ -381,7 +380,7 @@ P.ScreenBevDetail = [{ group: 'Screens', height: 852, width: 393, isPage: true }
       h('p', { className: 'body bv-meta' }, 'Tacos El Gordo'),
       h('p', { className: 'body bd-cat' }, h(B.Icon, { name: 'globe', size: 16, strokeWidth: 2 }), ' Other • ', h(B.PriceTier, { tier: 2, estimated: true }))),
     h('div', { className: 'bd-stats' },
-      h('div', { className: 'bd-stat' }, h(B.ScoreBubble, { score: 8.7, size: 56, count: 31 }), h('div', null, h('p', { className: 'heading' }, 'Bevi score'), h('p', { className: 'body bv-meta' }, '31 ratings'))),
+      h('div', { className: 'bd-stat' }, h(B.ScoreBubble, { score: 8.7, size: 56 }), h('div', null, h('p', { className: 'heading' }, 'Bevi score'), h('p', { className: 'body bv-meta' }, '5k ratings'))),
       h('div', { className: 'bd-stat' }, h(B.ScoreBubble, { score: 9.1, size: 56, variant: 'predicted' }), h('div', null, h('p', { className: 'heading' }, "You'd rate it"), h('p', { className: 'body bv-meta' }, 'from your tastes')))),
     h('div', { className: 'bd-friends' },
       h('div', null, h('p', { className: 'heading' }, "Friends who've had it"), h('p', { className: 'body bv-meta' }, 'Arjun 9.5 · Jack 8.1 · 2 more')),
@@ -421,10 +420,10 @@ P.ScreenLeaderboard = [{ group: 'Screens', height: 852, width: 393, isPage: true
     h(B.Header, { centered: true, title: 'Leaderboard' }),
     h(B.SegmentedTabs, { tabs: [{ id: 'bevs', label: 'Bevs' }, { id: 'people', label: 'People' }], value: 'bevs' }),
     h('div', { className: 'top' }, h(B.ListScopeDropdown, { label: 'All' })),
-    h(B.BevRow, { bev: BEVS.horchata, number: 1, score: 8.9, count: 31, meta: 'Your score 9.5', actions: true }),
-    h(B.BevRow, { bev: BEVS.mexicanCoke, number: 2, score: 8.7, count: 64, meta: 'Your score 8.9' }),
-    h(B.BevRow, { bev: BEVS.brownSugar, number: 3, score: 8.5, count: 22, meta: 'Not ranked yet', saved: true }),
-    h(B.BevRow, { bev: BEVS.topo, number: 4, score: 8.4, count: 48, meta: 'Your score 7.9' }))`)];
+    h(B.BevRow, { bev: BEVS.horchata, number: 1, score: 8.9, meta: 'Your score 9.5', actions: true }),
+    h(B.BevRow, { bev: BEVS.mexicanCoke, number: 2, score: 8.7, meta: 'Your score 8.9' }),
+    h(B.BevRow, { bev: BEVS.brownSugar, number: 3, score: 8.5, meta: 'Not ranked yet', saved: true }),
+    h(B.BevRow, { bev: BEVS.topo, number: 4, score: 8.4, meta: 'Your score 7.9' }))`)];
 
 P.ScreenAddBev = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHONE_CSS + `
   .ab-q { padding: 16px 16px 12px; } .ab-pills { display: flex; gap: 10px; padding: 0 16px 8px; }

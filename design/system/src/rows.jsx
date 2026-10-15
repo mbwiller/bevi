@@ -1,5 +1,5 @@
 import React from 'react';
-import { cx, Icon, Wordmark, BevArt, categoryById } from './core.jsx';
+import { cx, Icon, Wordmark, BevArt, categoryById, formatRatings } from './core.jsx';
 import { ScoreBubble, PriceTier, Avatar, BevImage, Pill, IconButton } from './primitives.jsx';
 
 function CategoryMark({ category }) {
@@ -46,6 +46,7 @@ export function ListScopeDropdown({ label = 'All', onClick, className }) {
 
 /**
  * The list row (~126pt): name, `$$ • Category`, category icon • brand, a meta line, actions, and a ScoreBubble 40.
+ * The meta line is `meta` when given; otherwise the rating count ("362 ratings") when `count` > 0.
  * No image by default, as in the reference; pass `showImage` for search results.
  */
 export function BevRow({ bev, number, score, scoreVariant, count, meta, saved = false, onRank, onSave, actions = true, showImage = false, divider = true, onClick, className }) {
@@ -61,10 +62,10 @@ export function BevRow({ bev, number, score, scoreVariant, count, meta, saved = 
         </span>
       </button>
       <span className="bv-bevrow-score">
-        {score !== undefined || scoreVariant ? <ScoreBubble score={score} count={count} variant={scoreVariant} /> : null}
+        {score !== undefined || scoreVariant ? <ScoreBubble score={score} variant={scoreVariant} /> : null}
       </span>
       <div className="bv-bevrow-foot">
-        <span className="body bv-meta">{meta}</span>
+        <span className="body bv-meta">{meta != null && meta !== '' ? meta : count > 0 ? formatRatings(count) : null}</span>
         {actions ? (
           <span className="bv-actions">
             <IconButton icon="circle-plus" label={'Rank ' + bev.name} onClick={onRank} />

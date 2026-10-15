@@ -46,8 +46,6 @@ export interface ScoreBubbleProps {
   /** 0–10; colour follows the bucket band (≥ 7 high, ≥ 4 mid, else low). null shows the lock. */
   score?: number | null;
   size?: 40 | 56;
-  /** Rating count badge ("362", "5k"). */
-  count?: number;
   variant?: 'default' | 'predicted' | 'locked';
   className?: string;
 }
@@ -83,7 +81,7 @@ export declare function IconButton(props: IconButtonProps): React.ReactElement;
 export interface FilterPillProps { count?: number; label?: string; icon?: string | null; chevron?: boolean; onClick?: () => void; className?: string }
 export declare function FilterPill(props: FilterPillProps): React.ReactElement;
 
-export interface SortToggleProps { label?: string; onClick?: () => void; /** false hides the search icon. */ onSearch?: (() => void) | false; className?: string }
+export interface SortToggleProps { label?: string; onClick: () => void; /** The search icon shows only when this is given. */ onSearch?: () => void; className?: string }
 export declare function SortToggle(props: SortToggleProps): React.ReactElement;
 
 export interface SearchBarProps { placeholder?: string; value?: string; onChange?: (v: string) => void; variant?: 'filled' | 'outlined'; autoFocus?: boolean; onClear?: () => void; id?: string; className?: string }
@@ -113,8 +111,10 @@ export interface TabBarProps { active?: 'feed' | 'lists' | 'add' | 'leaderboard'
 export declare function TabBar(props: TabBarProps): React.ReactElement;
 
 export interface BevRowProps {
-  bev: Bev; number?: number; score?: number | null; scoreVariant?: 'default' | 'predicted' | 'locked'; count?: number;
-  /** Bottom-left line: "Ranked Oct 3", "Saved from @arjun", a recommendation reason. */
+  bev: Bev; number?: number; score?: number | null; scoreVariant?: 'default' | 'predicted' | 'locked';
+  /** The Bev's rating count, printed as the meta line ("362 ratings") only when there is no `meta`; nothing at 0. */
+  count?: number;
+  /** Bottom-left line: "Ranked Oct 3", "Saved from @arjun", a recommendation reason. Wins over `count`. */
   meta?: React.ReactNode;
   saved?: boolean; actions?: boolean; showImage?: boolean; divider?: boolean;
   onRank?: () => void; onSave?: () => void; onClick?: () => void; className?: string;

@@ -39,7 +39,7 @@
   var ARJUN = { name: 'Arjun Cheema', handle: 'acheema5' };
   var FRIENDS = [{ name: 'Jack Torres', handle: 'jackt' }, { name: 'Priya Nair', handle: 'priya' }, { name: 'Sam Okafor', handle: 'samo' }, { name: 'Lena Park', handle: 'lenap' }, ARJUN, { name: 'Diego Ruiz', handle: 'dr' }];
 
-  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'pv-narrow', style: { paddingTop: 16 } }, h(B.SortToggle, { label: 'Score' }), h(B.SortToggle, { label: 'Predicted', onSearch: false })));
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'pv-narrow', style: { paddingTop: 16 } }, h(B.SortToggle, { label: 'Score', onClick: function () {}, onSearch: function () {} }), h(B.SortToggle, { label: 'Recent', onClick: function () {} })));
 </script>
 </body>
 </html>

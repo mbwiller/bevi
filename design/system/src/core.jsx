@@ -37,6 +37,8 @@ export const BUCKETS = {
 };
 export const formatScore = (s) => (Math.round(s * 10) / 10).toFixed(1);
 export const formatCount = (n) => (n >= 1000 ? Math.round(n / 1000) + 'k' : String(n));
+/** "1 rating", "362 ratings", "5k ratings": a Bev's rating count in words, for a meta line. */
+export const formatRatings = (n) => formatCount(n) + (n === 1 ? ' rating' : ' ratings');
 export const initialsOf = (name = '') =>
   name.trim().split(/\s+/).slice(0, 2).map((w) => w[0] || '').join('').toUpperCase();
 
