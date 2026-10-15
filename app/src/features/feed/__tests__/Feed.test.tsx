@@ -5,6 +5,7 @@ import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/te
 import type { FeedItem } from '@bevi/shared';
 
 import { api } from '@/api/client';
+import { likeLabel } from '@/components/LikeButton';
 import { keys } from '@/api/keys';
 import { formatRelativeTime } from '@/lib/time';
 import { FRIEND, ME, controls, userIdFor } from '@/testing/fakeApi';
@@ -275,5 +276,38 @@ describe('likes', () => {
     expect((await waitFor(() => heart(post, 'Unlike, 1 like'))).props['aria-pressed']).toBe(true);
     await waitFor(async () => expect(await serverSide(post)).toEqual({ liked: true, count: 1 }), { timeout: 3000 });
     expect(heart(post, 'Unlike, 1 like').props['aria-pressed']).toBe(true);
+  });
+});
+
+describe('likes on several posts', () => {
+  it('a failed like on one post still shows on it after another post was liked', async () => {
+    const feed = await api.feed.getFeed({ limit: 20 });
+    const friends = feed.items.filter((p) => p.actor.id !== userIdFor(ME.handle) && !p.likedByMe);
+    expect(friends.length).toBeGreaterThanOrEqual(2);
+    const [a, b] = friends as [FeedItem, FeedItem];
+    await start();
+    await screen.findByTestId(`feed-post-${a.id}`);
+    const heartOf = (post: FeedItem, name: string) => within(screen.getByTestId(`feed-post-${post.id}`)).getByRole('button', { name });
+
+    controls.setLatency(200);
+    controls.failNext('network', 'feed.like');
+    await fireEvent.press(heartOf(a, likeLabel(false, a.likeCount)));
+    await fireEvent.press(heartOf(b, likeLabel(false, b.likeCount)));
+
+    // A failed after B was tapped: A's heart goes back and A says why; B is liked and says nothing.
+    const cardA = screen.getByTestId(`feed-post-${a.id}`);
+    expect(
+      await within(cardA).findByText("Couldn't like this post. Check your connection and try again.", {}, { timeout: 3000 }),
+    ).toBeTruthy();
+    await waitFor(async () => {
+      const now = (await api.feed.getFeed({ limit: 20 })).items;
+      expect(now.find((p) => p.id === b.id)?.likedByMe).toBe(true);
+    }, { timeout: 3000 });
+    expect(within(cardA).getByRole('button', { name: /^Like/ }).props['aria-pressed']).toBe(false);
+    const cardB = screen.getByTestId(`feed-post-${b.id}`);
+    await waitFor(() => expect(within(cardB).getByRole('button', { name: /^Unlike/ }).props['aria-pressed']).toBe(true));
+    expect(within(cardB).queryByText(/Couldn't like this post/)).toBeNull();
+    // Still there once B has settled.
+    expect(within(cardA).getByText("Couldn't like this post. Check your connection and try again.")).toBeTruthy();
   });
 });

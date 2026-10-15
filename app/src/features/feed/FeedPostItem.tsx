@@ -16,6 +16,8 @@ export interface FeedPostItemProps {
   onLike: () => void;
   /** Shown under the actions when the last like or unlike on this post failed and was undone. */
   likeError?: string | null;
+  /** Opens the post's comments (the comment bubble and "View all N comments"). */
+  onComment: () => void;
   onOpenBev: () => void;
   onOpenActor: () => void;
 }
@@ -35,6 +37,7 @@ export const FeedPostItem = memo(function FeedPostItem({
   onSave,
   onLike,
   likeError,
+  onComment,
   onOpenBev,
   onOpenActor,
 }: FeedPostItemProps) {
@@ -53,6 +56,9 @@ export const FeedPostItem = memo(function FeedPostItem({
         liked={item.likedByMe}
         likeCount={item.likeCount}
         onLike={onLike}
+        comments={item.comments}
+        commentCount={item.commentCount}
+        onComment={onComment}
         onRank={onRank}
         onSave={onSave}
         onOpen={onOpenBev}

@@ -34,6 +34,7 @@ import Lock from 'lucide-react-native/icons/lock';
 import Martini from 'lucide-react-native/icons/martini';
 import Meh from 'lucide-react-native/icons/face-neutral'; // Lucide renamed meh (the design system's name is kept)
 import Menu from 'lucide-react-native/icons/menu';
+import MessageCircle from 'lucide-react-native/icons/message-circle';
 import Milk from 'lucide-react-native/icons/milk';
 import Newspaper from 'lucide-react-native/icons/newspaper';
 import Plus from 'lucide-react-native/icons/plus';
@@ -81,6 +82,7 @@ const ICONS = {
   'circle-plus': CirclePlus,
   'circle-check': CircleCheck,
   heart: Heart,
+  'message-circle': MessageCircle,
   'undo-2': Undo2,
   flame: Flame,
   lock: Lock,

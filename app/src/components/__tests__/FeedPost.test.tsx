@@ -1,5 +1,5 @@
-import type { BevSummary } from '@bevi/shared';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import type { BevSummary, Comment, Profile } from '@bevi/shared';
+import { fireEvent, render, screen, within } from '@testing-library/react-native';
 
 import { DOUBLE_TAP_MS, FeedPost } from '../FeedPost';
 
@@ -151,3 +151,127 @@ describe('likes', () => {
     expect(screen.getByTestId('like-burst', hidden)).toBeTruthy();
   });
 });
+
+describe('comments', () => {
+  const time = new Date(Date.now() - 5 * 3_600_000).toISOString();
+  const hidden = { includeHiddenElements: true };
+  const person = (handle: string): Profile => ({
+    id: `user-${handle}`,
+    handle,
+    displayName: handle,
+    avatarUrl: null,
+    timezone: 'America/New_York',
+    createdAt: time,
+    birthdate: null,
+    canSeeAlcohol: false,
+    onboarded: true,
+  });
+  const thread = (n: number): Comment[] =>
+    Array.from({ length: n }, (_, i) => ({ id: `c${i + 1}`, author: person(`user${i + 1}`), body: `comment ${i + 1}`, createdAt: time }));
+  const doubleTap = async (target: Parameters<typeof fireEvent.press>[0]) => {
+    await fireEvent.press(target);
+    await fireEvent.press(target);
+  };
+
+  it('the comment bubble sits right after the heart, before Rank and Want to Try', async () => {
+    await render(
+      <FeedPost
+        actor={ARJUN}
+        bev={BEV}
+        score={7}
+        likeCount={2}
+        commentCount={3}
+        comments={thread(3)}
+        onLike={() => {}}
+        onComment={() => {}}
+        onRank={() => {}}
+        onSave={() => {}}
+      />,
+    );
+    const names = screen.getAllByRole('button').map((b) => b.props.accessibilityLabel as string);
+    const row = names.slice(names.indexOf('Like, 2 likes'));
+    expect(row).toEqual(['Like, 2 likes', 'Comment, 3 comments', 'Rank Horchata', 'Save to Want to Try']);
+    expect(screen.getByText('3', hidden)).toBeTruthy();
+  });
+
+  it('without onComment there is no comment bubble', async () => {
+    await render(<FeedPost actor={ARJUN} bev={BEV} score={7} onLike={() => {}} />);
+    expect(screen.queryByRole('button', { name: /^Comment/ })).toBeNull();
+  });
+
+  it('0 comments: a bare bubble, nothing under the actions', async () => {
+    await render(<FeedPost actor={ARJUN} bev={BEV} score={7} onComment={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Comment' })).toBeTruthy();
+    expect(screen.queryByTestId('feed-post-comments')).toBeNull();
+    expect(screen.queryByText(/^View all/)).toBeNull();
+  });
+
+  it.each([3, 7])('%i comments: every one inline as "handle text", oldest first, under the action row', async (n) => {
+    await render(<FeedPost actor={ARJUN} bev={BEV} score={7} commentCount={n} comments={thread(n)} onComment={() => {}} />);
+    const list = screen.getByTestId('feed-post-comments');
+    const rows = within(list).getAllByRole('listitem');
+    expect(rows).toHaveLength(n);
+    expect(rows.map((r) => textOf(r))).toEqual(thread(n).map((c) => `${c.author.handle} ${c.body}`));
+    expect(within(rows[0]!).getByText('user1').props.style).toMatchObject({ fontWeight: '700' });
+    expect(screen.queryByText(/^View all/)).toBeNull();
+    // Under the action row: the list renders after the row's last control.
+    const bubble = `Comment, ${n} comments`;
+    expect(docOrder([bubble, 'feed-post-comments'])).toEqual([bubble, 'feed-post-comments']);
+  });
+
+  it('8 or more: one "View all N comments" line, no preview, and it opens the sheet', async () => {
+    const onComment = jest.fn();
+    await render(<FeedPost actor={ARJUN} bev={BEV} score={7} commentCount={8} comments={thread(7)} onComment={onComment} />);
+    expect(screen.queryByTestId('feed-post-comments')).toBeNull();
+    expect(screen.queryByText(/comment 1/)).toBeNull();
+    const all = screen.getByRole('button', { name: 'View all 8 comments' });
+    const style = Object.assign({}, ...[all.props.style].flat(Infinity).filter(Boolean));
+    expect(style.minHeight).toBe(44);
+    await fireEvent.press(all);
+    await fireEvent.press(screen.getByRole('button', { name: 'Comment, 8 comments' }));
+    expect(onComment).toHaveBeenCalledTimes(2);
+  });
+
+  it('double-tap still likes on the post and on inline comments, never through the comment targets', async () => {
+    const onLike = jest.fn();
+    const onComment = jest.fn();
+    const { rerender } = await render(
+      <FeedPost actor={ARJUN} bev={BEV} score={7} time={time} commentCount={3} comments={thread(3)} onLike={onLike} onComment={onComment} />,
+    );
+    await doubleTap(screen.getByText('5 hours ago'));
+    expect(onLike).toHaveBeenCalledTimes(1);
+    await doubleTap(screen.getByText('user2 comment 2'));
+    expect(onLike).toHaveBeenCalledTimes(2);
+    await doubleTap(screen.getByRole('button', { name: 'Comment, 3 comments' }));
+    expect(onComment).toHaveBeenCalledTimes(2);
+    expect(onLike).toHaveBeenCalledTimes(2);
+
+    await rerender(
+      <FeedPost actor={ARJUN} bev={BEV} score={7} time={time} commentCount={9} comments={thread(7)} onLike={onLike} onComment={onComment} />,
+    );
+    await doubleTap(screen.getByRole('button', { name: 'View all 9 comments' }));
+    expect(onComment).toHaveBeenCalledTimes(4);
+    expect(onLike).toHaveBeenCalledTimes(2);
+  });
+});
+
+/** All the text under a host node, joined the way it renders. */
+function textOf(node: { children: unknown[] }): string {
+  return node.children.map((c) => (typeof c === 'string' ? c : textOf(c as { children: unknown[] }))).join('');
+}
+
+type JsonNode = { props: Record<string, unknown>; children: (JsonNode | string)[] | null };
+
+/** Which of `markers` (a testID or an accessibilityLabel) appear, in render order. */
+function docOrder(markers: string[]): string[] {
+  const out: string[] = [];
+  const walk = (n: JsonNode | string | null) => {
+    if (!n || typeof n === 'string') return;
+    const hit = markers.find((m) => n.props.testID === m || n.props.accessibilityLabel === m);
+    if (hit && !out.includes(hit)) out.push(hit);
+    (n.children ?? []).forEach(walk);
+  };
+  const json = screen.toJSON() as JsonNode | JsonNode[] | null;
+  (Array.isArray(json) ? json : [json]).forEach(walk);
+  return out;
+}

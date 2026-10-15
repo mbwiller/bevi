@@ -62,6 +62,8 @@ export const keys = {
   wantToTry: () => [...root, 'wantToTry'] as const,
 
   feed: () => [...root, 'feed'] as const,
+  /** A post's thread (`comments.list`, newest-first pages). */
+  comments: (eventId: string) => [...root, 'comments', eventId] as const,
   featured: () => [...root, 'featured'] as const,
 
   leaderboard: {
