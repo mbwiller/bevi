@@ -159,6 +159,10 @@ export interface FeedItem {
   note: string | null;
   createdAt: string;
   inMyWantToTry: boolean;
+  /** Total likes on this post. */
+  likeCount: number;
+  /** Whether the caller has liked it. */
+  likedByMe: boolean;
 }
 
 export interface FeaturedBev {
