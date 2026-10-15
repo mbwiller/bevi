@@ -163,6 +163,23 @@ export interface FeedItem {
   likeCount: number;
   /** Whether the caller has liked it. */
   likedByMe: boolean;
+  /** Total comments on this post, excluding deleted ones. */
+  commentCount: number;
+  /**
+   * The first seven comments (at most), oldest first. With `commentCount` of
+   * seven or fewer this is the whole thread, so the post shows every comment
+   * inline without a second call; above seven the app collapses to "View all
+   * N comments" (previewing some of these if it likes) and fetches the thread
+   * with `comments.list`.
+   */
+  comments: Comment[];
+}
+
+export interface Comment {
+  id: string;
+  author: Profile;
+  body: string;
+  createdAt: string;
 }
 
 export interface FeaturedBev {
