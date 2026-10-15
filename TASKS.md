@@ -210,7 +210,7 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - Do: remove the SAVED rendering path from `FeedPostItem`/`FeedPost` once S-01 lands (the type union shrinks, so TypeScript finds every spot); keep `FeedPost verb="saved"` only if Profile › Activity still needs it (it doesn't; rankings only). Update `Feed.test.tsx` fixtures.
 - Needs: S-01, A-01.
 - DoD: no save ever appears in the feed; the bookmark still fills on posts for Bevs in your Want to Try.
-- **Done in #80, except one leftover:** `FeedPostItem` no longer renders `SAVED`, but `FeedPost` still has its `verb="saved"` / `isSave` branch (and `FeedPost.test.tsx` still covers it), as does the design system's FeedPost. Nothing passes `verb="saved"` any more. It goes with M-02, which rewrites FeedPost's action row.
+- **Done in #80, and the leftover in #90:** #80 stopped `FeedPostItem` rendering `SAVED`; FeedPost's own `verb="saved"` / `isSave` branch (app and design system) went with M-02 in #90.
 
 **M-02 · Likes on posts (Instagram-identical).** `ui/post-likes`
 - Spec from the session: heart button in the post's action row, **filled `primary` (grape) when liked**, like count beside it, **double-tap anywhere on the post to like** with a heart burst over the image (Reanimated, transform + opacity only, reduced-motion fallback = fade). Optimistic update with rollback (same pattern as `useToggleSet` in the leaderboard).
