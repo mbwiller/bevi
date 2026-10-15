@@ -143,13 +143,13 @@ export declare function UserRow(props: UserRowProps): React.ReactElement;
 /** Gut-check choice; selecting it pours the bucket colour in. Place on a BevGlow. */
 export interface BucketButtonProps {
   bucket: Bucket; selected?: boolean;
-  /** glass: liquid glass, only where the OS has it (iOS 26+). tint: the fallback everywhere else (Android, iOS < 26): 12% bucket tint and a 4px bucket bar. Reduce Transparency forces tint. */
+  /** tint (default; always on the Bevi web app): 12% bucket tint and a 4px bucket bar. glass: liquid glass, only with the native GlassView on iOS 26+, never imitated with a blur. Reduce Transparency forces tint. */
   material?: 'glass' | 'tint';
   onClick?: () => void; className?: string;
 }
 export declare function BucketButton(props: BucketButtonProps): React.ReactElement;
 
-/** Blurred colour field behind glass: the Bev's colour plus `primary` and `fizz`. */
+/** Blurred colour field behind the gut-check BucketButtons: the Bev's colour plus `primary` and `fizz`. */
 export interface BevGlowProps { color?: string; children?: React.ReactNode; className?: string; style?: React.CSSProperties }
 export declare function BevGlow(props: BevGlowProps): React.ReactElement;
 

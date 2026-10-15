@@ -245,10 +245,10 @@ h(function Demo() {
     }));
   }
   return h(B.BevGlow, { color: '#f4a7b9' },
-    h('p', { className: 'mat' }, 'Liquid glass · iOS 26+'),
-    h(Set, { material: 'glass', start: 'loved' }),
-    h('p', { className: 'mat' }, 'Tint fallback · Android, iOS before 26'),
-    h(Set, { material: 'tint', start: 'fine' }));
+    h('p', { className: 'mat' }, 'Tint · default, and the web app'),
+    h(Set, { material: 'tint', start: 'loved' }),
+    h('p', { className: 'mat' }, 'Liquid glass · native GlassView, iOS 26+ only'),
+    h(Set, { material: 'glass', start: 'fine' }));
 })`];
 
 P.BevGlow = [{ group: 'Ranking', height: 300, width: 393 }, `.hero { display: flex; flex-direction: column; align-items: center; padding: 24px 16px 32px; text-align: center; } .art { width: 168px; height: 168px; }`, `

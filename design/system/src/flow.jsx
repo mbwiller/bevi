@@ -132,11 +132,12 @@ export function PriceTierPicker({ value, estimated = false, onChange, className 
 const BUCKET_ICON = { loved: 'laugh', fine: 'meh', disliked: 'frown' };
 const WAVE = 'M0 8 Q30 1 60 8 T120 8 T180 8 T240 8 V16 H0 Z';
 /**
- * Gut-check choice: a liquid-glass capsule with a glossy orb in its bucket colour. Choosing it pours that
- * colour into the glass (two-thirds full, a moving surface, a few rising bubbles). Sit it on a BevGlow.
- * `material="tint"` is the non-glass fallback for Android and iOS before 26: 12% bucket tint and a bucket bar.
+ * Gut-check choice: a capsule with a glossy orb in its bucket colour. Choosing it pours that colour in
+ * (two-thirds full, a moving surface, a few rising bubbles). Sit it on a BevGlow.
+ * `material="tint"` (default, and always on the web app): 12% bucket tint and a bucket bar.
+ * `material="glass"`: liquid glass, only with the native GlassView on iOS 26+; never imitated with a blur.
  */
-export function BucketButton({ bucket = 'loved', selected = false, material = 'glass', onClick, className }) {
+export function BucketButton({ bucket = 'loved', selected = false, material = 'tint', onClick, className }) {
   const b = BUCKETS[bucket];
   return (
     <button type="button" className={cx('bv', 'bv-bucket', 'bv-band-' + b.band, material === 'tint' && 'bv-bucket-tint', selected && 'bv-bucket-on', className)} onClick={onClick} aria-pressed={selected}>
