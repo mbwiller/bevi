@@ -1,7 +1,7 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "constants": {
-    "version": "1.1.0",
+    "version": "1.2.0",
     "bands": {
       "DISLIKED": [
         0,
@@ -65,11 +65,34 @@
     "lambdaUserN": 15,
     "epsilon": 0.15,
     "jitterSd": 0.15,
+    "edgeWeights": {
+      "tree": 0.25,
+      "content": 0.15,
+      "emb": 0.3,
+      "profile": 0.3,
+      "cop": 0
+    },
+    "edgeTopK": 20,
+    "edgeMinWeight": 0.3,
+    "profileWeights": {
+      "base": 0.4,
+      "carbonated": 0.15,
+      "dairy": 0.1,
+      "alcohol": 0.05,
+      "caffeine": 0.15,
+      "sweetness": 0.15
+    },
+    "profileLevelSpan": 3,
     "storedScoreRule": "cents = floor((2N + D) / (2D)) with D = n + 1, N = 100*(hi*D - (hi - lo)*(index + 1)); capped at hi*100 - 1 for FINE and DISLIKED; storedScore = cents / 100",
     "stddev": "population (stddev_pop)",
     "nameOrder": "code point (SQL collate \"C\"), then bevId",
     "streakDayKey": "calendar date of the ranking instant in the profile timezone: (created_at AT TIME ZONE timezone)::date; week = ISO week of that date (YYYY-Www)",
-    "rankOrder": "points desc, bevsRanked desc, createdAt asc, userId asc; rank = 1 + count(points > mine); bevsRanked = 0 excluded"
+    "rankOrder": "points desc, bevsRanked desc, createdAt asc, userId asc; rank = 1 + count(points > mine); bevsRanked = 0 excluded",
+    "treeDepth": "Wu-Palmer depth from an implicit root (depth 0) above the top-level categories; a top-level category (parent null or not in the taxonomy) has depth 1",
+    "profileRule": "N / 300 with N = 3*(40*[base] + 15*[carbonated] + 10*[dairy] + 5*[alcohol]) + 15*(3 - |dCaffeine|) + 15*(3 - |dSweetness|)",
+    "embeddingRule": "min(1, max(0, dot / sqrt(|a|^2 * |b|^2))); 0 when either vector is zero",
+    "edgeWeightRule": "tree*0.25 + content*0.15 + emb*0.30 + profile*0.30 + cop*0, summed in that order, clamped to [0, 1]",
+    "edgeOrder": "w desc, then bevId asc (code unit); keep w >= edgeMinWeight; at most edgeTopK"
   },
   "cases": [
     {

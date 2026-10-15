@@ -1,0 +1,1386 @@
+{
+  "version": "1.2.0",
+  "constants": {
+    "version": "1.2.0",
+    "bands": {
+      "DISLIKED": [
+        0,
+        4
+      ],
+      "FINE": [
+        4,
+        7
+      ],
+      "LOVED": [
+        7,
+        10
+      ]
+    },
+    "bucketOrder": [
+      "LOVED",
+      "FINE",
+      "DISLIKED"
+    ],
+    "bucketDb": {
+      "LOVED": 3,
+      "FINE": 2,
+      "DISLIKED": 1
+    },
+    "sigmaFloor": 1,
+    "minNUser": 3,
+    "minNCat": 3,
+    "globalFallback": {
+      "mean": 5,
+      "stddev": 2.5
+    },
+    "kAff": 2,
+    "bayesC": 3,
+    "bayesCategoryPriorMin": 30,
+    "minRaters": 2,
+    "kG": 3,
+    "rankPointsWeights": {
+      "bevsRanked": 1,
+      "currentStreak": 3,
+      "bevsCreated": 2
+    },
+    "streakPeriod": "day",
+    "simWeights": {
+      "category": 0.4,
+      "brand": 0.3,
+      "flavor": 0.2,
+      "tier": 0.1
+    },
+    "simMin": 0.1,
+    "layer1Weights": {
+      "affinity": 0.4,
+      "content": 0.4,
+      "global": 0.2
+    },
+    "conf1UserN": 10,
+    "conf1Mass": 4,
+    "cfK": 10,
+    "cfMinCommon": 2,
+    "cfSignificance": 5,
+    "lambdaMax": 0.7,
+    "lambdaUserN": 15,
+    "epsilon": 0.15,
+    "jitterSd": 0.15,
+    "edgeWeights": {
+      "tree": 0.25,
+      "content": 0.15,
+      "emb": 0.3,
+      "profile": 0.3,
+      "cop": 0
+    },
+    "edgeTopK": 20,
+    "edgeMinWeight": 0.3,
+    "profileWeights": {
+      "base": 0.4,
+      "carbonated": 0.15,
+      "dairy": 0.1,
+      "alcohol": 0.05,
+      "caffeine": 0.15,
+      "sweetness": 0.15
+    },
+    "profileLevelSpan": 3,
+    "storedScoreRule": "cents = floor((2N + D) / (2D)) with D = n + 1, N = 100*(hi*D - (hi - lo)*(index + 1)); capped at hi*100 - 1 for FINE and DISLIKED; storedScore = cents / 100",
+    "stddev": "population (stddev_pop)",
+    "nameOrder": "code point (SQL collate \"C\"), then bevId",
+    "streakDayKey": "calendar date of the ranking instant in the profile timezone: (created_at AT TIME ZONE timezone)::date; week = ISO week of that date (YYYY-Www)",
+    "rankOrder": "points desc, bevsRanked desc, createdAt asc, userId asc; rank = 1 + count(points > mine); bevsRanked = 0 excluded",
+    "treeDepth": "Wu-Palmer depth from an implicit root (depth 0) above the top-level categories; a top-level category (parent null or not in the taxonomy) has depth 1",
+    "profileRule": "N / 300 with N = 3*(40*[base] + 15*[carbonated] + 10*[dairy] + 5*[alcohol]) + 15*(3 - |dCaffeine|) + 15*(3 - |dSweetness|)",
+    "embeddingRule": "min(1, max(0, dot / sqrt(|a|^2 * |b|^2))); 0 when either vector is zero",
+    "edgeWeightRule": "tree*0.25 + content*0.15 + emb*0.30 + profile*0.30 + cop*0, summed in that order, clamped to [0, 1]",
+    "edgeOrder": "w desc, then bevId asc (code unit); keep w >= edgeMinWeight; at most edgeTopK"
+  },
+  "cases": [
+    {
+      "name": "same leaf",
+      "fn": "treeSimilarity",
+      "input": {
+        "catA": "cola",
+        "catB": "cola",
+        "taxonomy": {
+          "soda": null,
+          "cola": "soda",
+          "lemon_lime": "soda",
+          "water": null,
+          "sparkling_water": "water",
+          "still_water": "water",
+          "coffee": null,
+          "hot_coffee": "coffee",
+          "iced_coffee": "coffee",
+          "mocha": "iced_coffee"
+        }
+      },
+      "expected": 1
+    },
+    {
+      "name": "same top-level category",
+      "fn": "treeSimilarity",
+      "input": {
+        "catA": "soda",
+        "catB": "soda",
+        "taxonomy": {
+          "soda": null,
+          "cola": "soda",
+          "lemon_lime": "soda",
+          "water": null,
+          "sparkling_water": "water",
+          "still_water": "water",
+          "coffee": null,
+          "hot_coffee": "coffee",
+          "iced_coffee": "coffee",
+          "mocha": "iced_coffee"
+        }
+      },
+      "expected": 1
+    },
+    {
+      "name": "siblings under one parent",
+      "fn": "treeSimilarity",
+      "input": {
+        "catA": "cola",
+        "catB": "lemon_lime",
+        "taxonomy": {
+          "soda": null,
+          "cola": "soda",
+          "lemon_lime": "soda",
+          "water": null,
+          "sparkling_water": "water",
+          "still_water": "water",
+          "coffee": null,
+          "hot_coffee": "coffee",
+          "iced_coffee": "coffee",
+          "mocha": "iced_coffee"
+        }
+      },
+      "expected": 0.5
+    },
+    {
+      "name": "leaf and its parent",
+      "fn": "treeSimilarity",
+      "input": {
+        "catA": "cola",
+        "catB": "soda",
+        "taxonomy": {
+          "soda": null,
+          "cola": "soda",
+          "lemon_lime": "soda",
+          "water": null,
+          "sparkling_water": "water",
+          "still_water": "water",
+          "coffee": null,
+          "hot_coffee": "coffee",
+          "iced_coffee": "coffee",
+          "mocha": "iced_coffee"
+        }
+      },
+      "expected": 0.6666666666666666
+    },
+    {
+      "name": "depth 3 and depth 2 under one root",
+      "fn": "treeSimilarity",
+      "input": {
+        "catA": "mocha",
+        "catB": "hot_coffee",
+        "taxonomy": {
+          "soda": null,
+          "cola": "soda",
+          "lemon_lime": "soda",
+          "water": null,
+          "sparkling_water": "water",
+          "still_water": "water",
+          "coffee": null,
+          "hot_coffee": "coffee",
+          "iced_coffee": "coffee",
+          "mocha": "iced_coffee"
+        }
+      },
+      "expected": 0.4
+    },
+    {
+      "name": "depth 3 and its grandparent",
+      "fn": "treeSimilarity",
+      "input": {
+        "catA": "mocha",
+        "catB": "coffee",
+        "taxonomy": {
+          "soda": null,
+          "cola": "soda",
+          "lemon_lime": "soda",
+          "water": null,
+          "sparkling_water": "water",
+          "still_water": "water",
+          "coffee": null,
+          "hot_coffee": "coffee",
+          "iced_coffee": "coffee",
+          "mocha": "iced_coffee"
+        }
+      },
+      "expected": 0.5
+    },
+    {
+      "name": "different top-level trees",
+      "fn": "treeSimilarity",
+      "input": {
+        "catA": "cola",
+        "catB": "sparkling_water",
+        "taxonomy": {
+          "soda": null,
+          "cola": "soda",
+          "lemon_lime": "soda",
+          "water": null,
+          "sparkling_water": "water",
+          "still_water": "water",
+          "coffee": null,
+          "hot_coffee": "coffee",
+          "iced_coffee": "coffee",
+          "mocha": "iced_coffee"
+        }
+      },
+      "expected": 0
+    },
+    {
+      "name": "unknown category is top-level",
+      "fn": "treeSimilarity",
+      "input": {
+        "catA": "kombucha",
+        "catB": "cola",
+        "taxonomy": {
+          "soda": null,
+          "cola": "soda",
+          "lemon_lime": "soda",
+          "water": null,
+          "sparkling_water": "water",
+          "still_water": "water",
+          "coffee": null,
+          "hot_coffee": "coffee",
+          "iced_coffee": "coffee",
+          "mocha": "iced_coffee"
+        }
+      },
+      "expected": 0
+    },
+    {
+      "name": "flat taxonomy, same category",
+      "fn": "treeSimilarity",
+      "input": {
+        "catA": "soda",
+        "catB": "soda",
+        "taxonomy": {}
+      },
+      "expected": 1
+    },
+    {
+      "name": "flat taxonomy, different categories",
+      "fn": "treeSimilarity",
+      "input": {
+        "catA": "soda",
+        "catB": "water",
+        "taxonomy": {}
+      },
+      "expected": 0
+    },
+    {
+      "name": "Coca-Cola / Pepsi: identical profiles",
+      "fn": "profileSimilarity",
+      "input": {
+        "a": {
+          "base": "cola",
+          "carbonated": true,
+          "caffeine": 1,
+          "sweetness": 3,
+          "dairy": false,
+          "alcohol": false
+        },
+        "b": {
+          "base": "cola",
+          "carbonated": true,
+          "caffeine": 1,
+          "sweetness": 3,
+          "dairy": false,
+          "alcohol": false
+        }
+      },
+      "expected": 1
+    },
+    {
+      "name": "Coca-Cola / LaCroix Lime",
+      "fn": "profileSimilarity",
+      "input": {
+        "a": {
+          "base": "cola",
+          "carbonated": true,
+          "caffeine": 1,
+          "sweetness": 3,
+          "dairy": false,
+          "alcohol": false
+        },
+        "b": {
+          "base": "citrus",
+          "carbonated": true,
+          "caffeine": 0,
+          "sweetness": 0,
+          "dairy": false,
+          "alcohol": false
+        }
+      },
+      "expected": 0.4
+    },
+    {
+      "name": "caffeine one level apart",
+      "fn": "profileSimilarity",
+      "input": {
+        "a": {
+          "base": "cola",
+          "carbonated": true,
+          "caffeine": 1,
+          "sweetness": 3,
+          "dairy": false,
+          "alcohol": false
+        },
+        "b": {
+          "base": "cola",
+          "carbonated": true,
+          "caffeine": 2,
+          "sweetness": 3,
+          "dairy": false,
+          "alcohol": false
+        }
+      },
+      "expected": 0.95
+    },
+    {
+      "name": "sweetness three levels apart",
+      "fn": "profileSimilarity",
+      "input": {
+        "a": {
+          "base": "cola",
+          "carbonated": true,
+          "caffeine": 1,
+          "sweetness": 3,
+          "dairy": false,
+          "alcohol": false
+        },
+        "b": {
+          "base": "cola",
+          "carbonated": true,
+          "caffeine": 1,
+          "sweetness": 0,
+          "dairy": false,
+          "alcohol": false
+        }
+      },
+      "expected": 0.85
+    },
+    {
+      "name": "only the base differs",
+      "fn": "profileSimilarity",
+      "input": {
+        "a": {
+          "base": "cola",
+          "carbonated": true,
+          "caffeine": 1,
+          "sweetness": 3,
+          "dairy": false,
+          "alcohol": false
+        },
+        "b": {
+          "base": "citrus",
+          "carbonated": true,
+          "caffeine": 1,
+          "sweetness": 3,
+          "dairy": false,
+          "alcohol": false
+        }
+      },
+      "expected": 0.6
+    },
+    {
+      "name": "latte / Coca-Cola",
+      "fn": "profileSimilarity",
+      "input": {
+        "a": {
+          "base": "coffee",
+          "carbonated": false,
+          "caffeine": 2,
+          "sweetness": 1,
+          "dairy": true,
+          "alcohol": false
+        },
+        "b": {
+          "base": "cola",
+          "carbonated": true,
+          "caffeine": 1,
+          "sweetness": 3,
+          "dairy": false,
+          "alcohol": false
+        }
+      },
+      "expected": 0.2
+    },
+    {
+      "name": "IPA / latte",
+      "fn": "profileSimilarity",
+      "input": {
+        "a": {
+          "base": "hop",
+          "carbonated": true,
+          "caffeine": 0,
+          "sweetness": 0,
+          "dairy": false,
+          "alcohol": true
+        },
+        "b": {
+          "base": "coffee",
+          "carbonated": false,
+          "caffeine": 2,
+          "sweetness": 1,
+          "dairy": true,
+          "alcohol": false
+        }
+      },
+      "expected": 0.15
+    },
+    {
+      "name": "nothing in common",
+      "fn": "profileSimilarity",
+      "input": {
+        "a": {
+          "base": "cola",
+          "carbonated": true,
+          "caffeine": 3,
+          "sweetness": 3,
+          "dairy": true,
+          "alcohol": true
+        },
+        "b": {
+          "base": "tea",
+          "carbonated": false,
+          "caffeine": 0,
+          "sweetness": 0,
+          "dairy": false,
+          "alcohol": false
+        }
+      },
+      "expected": 0
+    },
+    {
+      "name": "Coca-Cola / Pepsi: cosine 0.9",
+      "fn": "embeddingSimilarity",
+      "input": {
+        "a": [
+          1,
+          0,
+          0
+        ],
+        "b": [
+          0.9,
+          0.4358898943540673,
+          0
+        ]
+      },
+      "expected": 0.9
+    },
+    {
+      "name": "Coca-Cola / LaCroix Lime: cosine 0.6",
+      "fn": "embeddingSimilarity",
+      "input": {
+        "a": [
+          1,
+          0,
+          0
+        ],
+        "b": [
+          0.6,
+          0,
+          0.8
+        ]
+      },
+      "expected": 0.6
+    },
+    {
+      "name": "identical",
+      "fn": "embeddingSimilarity",
+      "input": {
+        "a": [
+          0.6,
+          0.8
+        ],
+        "b": [
+          0.6,
+          0.8
+        ]
+      },
+      "expected": 1
+    },
+    {
+      "name": "orthogonal",
+      "fn": "embeddingSimilarity",
+      "input": {
+        "a": [
+          1,
+          0
+        ],
+        "b": [
+          0,
+          1
+        ]
+      },
+      "expected": 0
+    },
+    {
+      "name": "negative cosine is clamped to 0",
+      "fn": "embeddingSimilarity",
+      "input": {
+        "a": [
+          1,
+          0
+        ],
+        "b": [
+          -0.6,
+          0.8
+        ]
+      },
+      "expected": 0
+    },
+    {
+      "name": "unnormalised: the norms cancel",
+      "fn": "embeddingSimilarity",
+      "input": {
+        "a": [
+          2,
+          0
+        ],
+        "b": [
+          3,
+          3
+        ]
+      },
+      "expected": 0.7071067811865476
+    },
+    {
+      "name": "zero vector",
+      "fn": "embeddingSimilarity",
+      "input": {
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          1,
+          0
+        ]
+      },
+      "expected": 0
+    },
+    {
+      "name": "Coca-Cola / Pepsi: same category and tier, no shared tokens",
+      "fn": "contentSimilarity",
+      "input": {
+        "a": {
+          "id": "coca-cola",
+          "categoryId": "cola",
+          "brandKey": "Coca-Cola",
+          "flavorTokens": [
+            "coca",
+            "cola"
+          ],
+          "priceTier": 1,
+          "ratingCount": 0,
+          "mean": 0,
+          "stddev": 0,
+          "isAlcoholic": false
+        },
+        "b": {
+          "id": "pepsi",
+          "categoryId": "cola",
+          "brandKey": "Pepsi",
+          "flavorTokens": [
+            "pepsi"
+          ],
+          "priceTier": 1,
+          "ratingCount": 0,
+          "mean": 0,
+          "stddev": 0,
+          "isAlcoholic": false
+        }
+      },
+      "expected": 0.5
+    },
+    {
+      "name": "Coca-Cola / LaCroix Lime: tier only",
+      "fn": "contentSimilarity",
+      "input": {
+        "a": {
+          "id": "coca-cola",
+          "categoryId": "cola",
+          "brandKey": "Coca-Cola",
+          "flavorTokens": [
+            "coca",
+            "cola"
+          ],
+          "priceTier": 1,
+          "ratingCount": 0,
+          "mean": 0,
+          "stddev": 0,
+          "isAlcoholic": false
+        },
+        "b": {
+          "id": "lacroix-lime",
+          "categoryId": "sparkling_water",
+          "brandKey": "LaCroix",
+          "flavorTokens": [
+            "lacroix",
+            "lime"
+          ],
+          "priceTier": 1,
+          "ratingCount": 0,
+          "mean": 0,
+          "stddev": 0,
+          "isAlcoholic": false
+        }
+      },
+      "expected": 0.1
+    },
+    {
+      "name": "Coca-Cola / Pepsi (§10.1 worked example, >= 0.8)",
+      "fn": "edgeWeight",
+      "input": {
+        "tree": 1,
+        "content": 0.5,
+        "emb": 0.9,
+        "profile": 1,
+        "cop": 0
+      },
+      "expected": 0.895
+    },
+    {
+      "name": "Coca-Cola / LaCroix Lime (§10.1 worked example, < 0.4)",
+      "fn": "edgeWeight",
+      "input": {
+        "tree": 0,
+        "content": 0.1,
+        "emb": 0.6,
+        "profile": 0.4,
+        "cop": 0
+      },
+      "expected": 0.315
+    },
+    {
+      "name": "all zero",
+      "fn": "edgeWeight",
+      "input": {
+        "tree": 0,
+        "content": 0,
+        "emb": 0,
+        "profile": 0,
+        "cop": 0
+      },
+      "expected": 0
+    },
+    {
+      "name": "all one",
+      "fn": "edgeWeight",
+      "input": {
+        "tree": 1,
+        "content": 1,
+        "emb": 1,
+        "profile": 1,
+        "cop": 1
+      },
+      "expected": 1
+    },
+    {
+      "name": "tree only",
+      "fn": "edgeWeight",
+      "input": {
+        "tree": 1,
+        "content": 0,
+        "emb": 0,
+        "profile": 0,
+        "cop": 0
+      },
+      "expected": 0.25
+    },
+    {
+      "name": "content only",
+      "fn": "edgeWeight",
+      "input": {
+        "tree": 0,
+        "content": 1,
+        "emb": 0,
+        "profile": 0,
+        "cop": 0
+      },
+      "expected": 0.15
+    },
+    {
+      "name": "embedding only",
+      "fn": "edgeWeight",
+      "input": {
+        "tree": 0,
+        "content": 0,
+        "emb": 1,
+        "profile": 0,
+        "cop": 0
+      },
+      "expected": 0.3
+    },
+    {
+      "name": "profile only",
+      "fn": "edgeWeight",
+      "input": {
+        "tree": 0,
+        "content": 0,
+        "emb": 0,
+        "profile": 1,
+        "cop": 0
+      },
+      "expected": 0.3
+    },
+    {
+      "name": "co-preference is off in v1",
+      "fn": "edgeWeight",
+      "input": {
+        "tree": 0,
+        "content": 0,
+        "emb": 0,
+        "profile": 0,
+        "cop": 1
+      },
+      "expected": 0
+    },
+    {
+      "name": "siblings, middling terms",
+      "fn": "edgeWeight",
+      "input": {
+        "tree": 0.5,
+        "content": 0.4,
+        "emb": 0.7,
+        "profile": 0.85,
+        "cop": 0
+      },
+      "expected": 0.65
+    },
+    {
+      "name": "min is inclusive; ties by bevId",
+      "fn": "topEdges",
+      "input": {
+        "candidates": [
+          {
+            "bevId": "c",
+            "w": 0.5
+          },
+          {
+            "bevId": "a",
+            "w": 0.9
+          },
+          {
+            "bevId": "low",
+            "w": 0.29
+          },
+          {
+            "bevId": "edge",
+            "w": 0.3
+          },
+          {
+            "bevId": "b",
+            "w": 0.5
+          }
+        ],
+        "k": 20,
+        "min": 0.3
+      },
+      "expected": [
+        {
+          "bevId": "a",
+          "w": 0.9
+        },
+        {
+          "bevId": "b",
+          "w": 0.5
+        },
+        {
+          "bevId": "c",
+          "w": 0.5
+        },
+        {
+          "bevId": "edge",
+          "w": 0.3
+        }
+      ]
+    },
+    {
+      "name": "25 candidates, default k = 20",
+      "fn": "topEdges",
+      "input": {
+        "candidates": [
+          {
+            "bevId": "b00",
+            "w": 0.4
+          },
+          {
+            "bevId": "b01",
+            "w": 0.41000000000000003
+          },
+          {
+            "bevId": "b02",
+            "w": 0.42000000000000004
+          },
+          {
+            "bevId": "b03",
+            "w": 0.43000000000000005
+          },
+          {
+            "bevId": "b04",
+            "w": 0.44
+          },
+          {
+            "bevId": "b05",
+            "w": 0.45
+          },
+          {
+            "bevId": "b06",
+            "w": 0.46
+          },
+          {
+            "bevId": "b07",
+            "w": 0.47000000000000003
+          },
+          {
+            "bevId": "b08",
+            "w": 0.48000000000000004
+          },
+          {
+            "bevId": "b09",
+            "w": 0.49
+          },
+          {
+            "bevId": "b10",
+            "w": 0.5
+          },
+          {
+            "bevId": "b11",
+            "w": 0.51
+          },
+          {
+            "bevId": "b12",
+            "w": 0.52
+          },
+          {
+            "bevId": "b13",
+            "w": 0.53
+          },
+          {
+            "bevId": "b14",
+            "w": 0.54
+          },
+          {
+            "bevId": "b15",
+            "w": 0.55
+          },
+          {
+            "bevId": "b16",
+            "w": 0.56
+          },
+          {
+            "bevId": "b17",
+            "w": 0.5700000000000001
+          },
+          {
+            "bevId": "b18",
+            "w": 0.5800000000000001
+          },
+          {
+            "bevId": "b19",
+            "w": 0.5900000000000001
+          },
+          {
+            "bevId": "b20",
+            "w": 0.6000000000000001
+          },
+          {
+            "bevId": "b21",
+            "w": 0.61
+          },
+          {
+            "bevId": "b22",
+            "w": 0.62
+          },
+          {
+            "bevId": "b23",
+            "w": 0.63
+          },
+          {
+            "bevId": "b24",
+            "w": 0.64
+          }
+        ],
+        "k": 20,
+        "min": 0.3
+      },
+      "expected": [
+        {
+          "bevId": "b24",
+          "w": 0.64
+        },
+        {
+          "bevId": "b23",
+          "w": 0.63
+        },
+        {
+          "bevId": "b22",
+          "w": 0.62
+        },
+        {
+          "bevId": "b21",
+          "w": 0.61
+        },
+        {
+          "bevId": "b20",
+          "w": 0.6000000000000001
+        },
+        {
+          "bevId": "b19",
+          "w": 0.5900000000000001
+        },
+        {
+          "bevId": "b18",
+          "w": 0.5800000000000001
+        },
+        {
+          "bevId": "b17",
+          "w": 0.5700000000000001
+        },
+        {
+          "bevId": "b16",
+          "w": 0.56
+        },
+        {
+          "bevId": "b15",
+          "w": 0.55
+        },
+        {
+          "bevId": "b14",
+          "w": 0.54
+        },
+        {
+          "bevId": "b13",
+          "w": 0.53
+        },
+        {
+          "bevId": "b12",
+          "w": 0.52
+        },
+        {
+          "bevId": "b11",
+          "w": 0.51
+        },
+        {
+          "bevId": "b10",
+          "w": 0.5
+        },
+        {
+          "bevId": "b09",
+          "w": 0.49
+        },
+        {
+          "bevId": "b08",
+          "w": 0.48000000000000004
+        },
+        {
+          "bevId": "b07",
+          "w": 0.47000000000000003
+        },
+        {
+          "bevId": "b06",
+          "w": 0.46
+        },
+        {
+          "bevId": "b05",
+          "w": 0.45
+        }
+      ]
+    },
+    {
+      "name": "k = 3",
+      "fn": "topEdges",
+      "input": {
+        "candidates": [
+          {
+            "bevId": "b00",
+            "w": 0.4
+          },
+          {
+            "bevId": "b01",
+            "w": 0.41000000000000003
+          },
+          {
+            "bevId": "b02",
+            "w": 0.42000000000000004
+          },
+          {
+            "bevId": "b03",
+            "w": 0.43000000000000005
+          },
+          {
+            "bevId": "b04",
+            "w": 0.44
+          },
+          {
+            "bevId": "b05",
+            "w": 0.45
+          },
+          {
+            "bevId": "b06",
+            "w": 0.46
+          },
+          {
+            "bevId": "b07",
+            "w": 0.47000000000000003
+          },
+          {
+            "bevId": "b08",
+            "w": 0.48000000000000004
+          },
+          {
+            "bevId": "b09",
+            "w": 0.49
+          },
+          {
+            "bevId": "b10",
+            "w": 0.5
+          },
+          {
+            "bevId": "b11",
+            "w": 0.51
+          },
+          {
+            "bevId": "b12",
+            "w": 0.52
+          },
+          {
+            "bevId": "b13",
+            "w": 0.53
+          },
+          {
+            "bevId": "b14",
+            "w": 0.54
+          },
+          {
+            "bevId": "b15",
+            "w": 0.55
+          },
+          {
+            "bevId": "b16",
+            "w": 0.56
+          },
+          {
+            "bevId": "b17",
+            "w": 0.5700000000000001
+          },
+          {
+            "bevId": "b18",
+            "w": 0.5800000000000001
+          },
+          {
+            "bevId": "b19",
+            "w": 0.5900000000000001
+          },
+          {
+            "bevId": "b20",
+            "w": 0.6000000000000001
+          },
+          {
+            "bevId": "b21",
+            "w": 0.61
+          },
+          {
+            "bevId": "b22",
+            "w": 0.62
+          },
+          {
+            "bevId": "b23",
+            "w": 0.63
+          },
+          {
+            "bevId": "b24",
+            "w": 0.64
+          }
+        ],
+        "k": 3,
+        "min": 0.3
+      },
+      "expected": [
+        {
+          "bevId": "b24",
+          "w": 0.64
+        },
+        {
+          "bevId": "b23",
+          "w": 0.63
+        },
+        {
+          "bevId": "b22",
+          "w": 0.62
+        }
+      ]
+    },
+    {
+      "name": "k = 50, min = 0.6",
+      "fn": "topEdges",
+      "input": {
+        "candidates": [
+          {
+            "bevId": "b00",
+            "w": 0.4
+          },
+          {
+            "bevId": "b01",
+            "w": 0.41000000000000003
+          },
+          {
+            "bevId": "b02",
+            "w": 0.42000000000000004
+          },
+          {
+            "bevId": "b03",
+            "w": 0.43000000000000005
+          },
+          {
+            "bevId": "b04",
+            "w": 0.44
+          },
+          {
+            "bevId": "b05",
+            "w": 0.45
+          },
+          {
+            "bevId": "b06",
+            "w": 0.46
+          },
+          {
+            "bevId": "b07",
+            "w": 0.47000000000000003
+          },
+          {
+            "bevId": "b08",
+            "w": 0.48000000000000004
+          },
+          {
+            "bevId": "b09",
+            "w": 0.49
+          },
+          {
+            "bevId": "b10",
+            "w": 0.5
+          },
+          {
+            "bevId": "b11",
+            "w": 0.51
+          },
+          {
+            "bevId": "b12",
+            "w": 0.52
+          },
+          {
+            "bevId": "b13",
+            "w": 0.53
+          },
+          {
+            "bevId": "b14",
+            "w": 0.54
+          },
+          {
+            "bevId": "b15",
+            "w": 0.55
+          },
+          {
+            "bevId": "b16",
+            "w": 0.56
+          },
+          {
+            "bevId": "b17",
+            "w": 0.5700000000000001
+          },
+          {
+            "bevId": "b18",
+            "w": 0.5800000000000001
+          },
+          {
+            "bevId": "b19",
+            "w": 0.5900000000000001
+          },
+          {
+            "bevId": "b20",
+            "w": 0.6000000000000001
+          },
+          {
+            "bevId": "b21",
+            "w": 0.61
+          },
+          {
+            "bevId": "b22",
+            "w": 0.62
+          },
+          {
+            "bevId": "b23",
+            "w": 0.63
+          },
+          {
+            "bevId": "b24",
+            "w": 0.64
+          }
+        ],
+        "k": 50,
+        "min": 0.6
+      },
+      "expected": [
+        {
+          "bevId": "b24",
+          "w": 0.64
+        },
+        {
+          "bevId": "b23",
+          "w": 0.63
+        },
+        {
+          "bevId": "b22",
+          "w": 0.62
+        },
+        {
+          "bevId": "b21",
+          "w": 0.61
+        },
+        {
+          "bevId": "b20",
+          "w": 0.6000000000000001
+        }
+      ]
+    },
+    {
+      "name": "k = 0",
+      "fn": "topEdges",
+      "input": {
+        "candidates": [
+          {
+            "bevId": "b00",
+            "w": 0.4
+          },
+          {
+            "bevId": "b01",
+            "w": 0.41000000000000003
+          },
+          {
+            "bevId": "b02",
+            "w": 0.42000000000000004
+          },
+          {
+            "bevId": "b03",
+            "w": 0.43000000000000005
+          },
+          {
+            "bevId": "b04",
+            "w": 0.44
+          },
+          {
+            "bevId": "b05",
+            "w": 0.45
+          },
+          {
+            "bevId": "b06",
+            "w": 0.46
+          },
+          {
+            "bevId": "b07",
+            "w": 0.47000000000000003
+          },
+          {
+            "bevId": "b08",
+            "w": 0.48000000000000004
+          },
+          {
+            "bevId": "b09",
+            "w": 0.49
+          },
+          {
+            "bevId": "b10",
+            "w": 0.5
+          },
+          {
+            "bevId": "b11",
+            "w": 0.51
+          },
+          {
+            "bevId": "b12",
+            "w": 0.52
+          },
+          {
+            "bevId": "b13",
+            "w": 0.53
+          },
+          {
+            "bevId": "b14",
+            "w": 0.54
+          },
+          {
+            "bevId": "b15",
+            "w": 0.55
+          },
+          {
+            "bevId": "b16",
+            "w": 0.56
+          },
+          {
+            "bevId": "b17",
+            "w": 0.5700000000000001
+          },
+          {
+            "bevId": "b18",
+            "w": 0.5800000000000001
+          },
+          {
+            "bevId": "b19",
+            "w": 0.5900000000000001
+          },
+          {
+            "bevId": "b20",
+            "w": 0.6000000000000001
+          },
+          {
+            "bevId": "b21",
+            "w": 0.61
+          },
+          {
+            "bevId": "b22",
+            "w": 0.62
+          },
+          {
+            "bevId": "b23",
+            "w": 0.63
+          },
+          {
+            "bevId": "b24",
+            "w": 0.64
+          }
+        ],
+        "k": 0,
+        "min": 0.3
+      },
+      "expected": []
+    },
+    {
+      "name": "empty",
+      "fn": "topEdges",
+      "input": {
+        "candidates": [],
+        "k": 20,
+        "min": 0.3
+      },
+      "expected": []
+    }
+  ]
+}
