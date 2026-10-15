@@ -53,7 +53,7 @@ Use the tokens by name; never paste hex values.
 
 - Lucide outline icons (ISC), bundled as the `Icon` component; the same names exist in lucide-react-native for the app. 28pt with stroke 1.6 in headers and action rows, 24pt in profile rows and stat cards, 16pt with stroke 2 inside meta lines.
 - Icons take `text`; `primary` when active, saved or liked (a saved bookmark and a liked heart are `filled`); `textSecondary` for chevrons and recents.
-- Actions: `circle-plus` = Rank it, `bookmark` = Want to Try, `circle-check` = Bev'd, `heart` = Recommended (in a post's action row, `heart` = Like: filled grape once you've liked it), `trophy` = rank, `flame` = streak, `lock` = hidden score.
+- Actions: `circle-plus` = Rank it, `bookmark` = Want to Try, `circle-check` = Bev'd, `heart` = Recommended (in a post's action row, `heart` = Like: filled grape once you've liked it), `message-circle` = Comment (right after the heart; it never turns grape), `trophy` = rank, `flame` = streak, `lock` = hidden score.
 - One icon per category, always from `Bevi.categories`: soda `cup-soda`, diet soda `candy-off`, juice `citrus`, water `glass-water`, sparkling water `droplets`, energy `zap`, coffee `coffee`, tea `leaf`, boba `milk`, sports `dumbbell`, smoothie `banana`, beer `beer`, wine `wine`, spirits & cocktails `martini`, other `globe`. The three alcoholic categories are hidden from under-21 users everywhere.
 
 ## Motion
@@ -66,7 +66,7 @@ Use the tokens by name; never paste hex values.
 ## Building screens
 
 - Wrap content the way the screens in this system do: `Header`, then content on `surface`, then `TabBar` at the bottom. Load `tokens.css` and `components/bundle.css` before using `window.Bevi`.
-- Feed: wordmark Header, filled SearchBar, SectionHeader + FeaturedCards, SectionHeader + FeedPosts.
+- Feed: wordmark Header, filled SearchBar, SectionHeader + FeaturedCards, SectionHeader + FeedPosts. Each post's action row starts with the heart and the comment bubble; up to seven comments show under it, more collapse to "View all N comments", and both open the CommentsSheet.
 - Lists (Your Lists, Leaderboard): centred caps Header, ListScopeDropdown, SegmentedTabs, FilterPill row, SortToggle, numbered BevRows.
 - Ranking: a BevGlow with the floating cutout and three BucketButtons, then ProgressDots and CompareCard pairs, then the note step with the score revealed at once in a ScoreBubble 72 over "#4 of 31 in Loved", then a ScoreBubble 56 result that confirms it.
 - Profile: name Header, Avatar 100, counts, outlined Buttons, ProfileListRows, two StatCards, Activity tabs, FeedPosts.

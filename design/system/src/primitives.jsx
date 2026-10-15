@@ -132,6 +132,20 @@ export function LikeButton({ liked = false, count = 0, onClick, className }) {
   );
 }
 
+/**
+ * The post's comment control, beside the heart: a 28pt `message-circle` outline in `text` and the comment count ("3", "5k"), hidden at 0.
+ * It opens the comments sheet. It has no on state, so it never turns grape.
+ */
+export function CommentButton({ count = 0, onClick, className }) {
+  const label = 'Comment' + (count > 0 ? ', ' + count + (count === 1 ? ' comment' : ' comments') : '');
+  return (
+    <button type="button" className={cx('bv', 'bv-like', 'bv-comment', className)} aria-label={label} onClick={onClick}>
+      <span className="bv-like-heart"><Icon name="message-circle" size={28} strokeWidth={1.6} /></span>
+      {count > 0 ? <span className="body bv-like-count" aria-hidden="true">{formatCount(count)}</span> : null}
+    </button>
+  );
+}
+
 /** Outlined pill that opens filters; shows a `primary` count badge and turns `primaryTint` when filters are on. */
 export function FilterPill({ count = 0, label, icon = 'list-filter', chevron = false, onClick, className }) {
   const active = count > 0;

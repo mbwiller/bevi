@@ -1,0 +1,66 @@
+<!-- @dsCard group="Feed" height=1470 width=393 subtitle="Your own comments can be deleted" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CommentsSheet</title>
+<style>
+  body { margin: 0; background: var(--surface); color: var(--text); font-family: var(--font-sans); }
+  .pv { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 20px 16px; }
+  .pv-col { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+  .pv-stack { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+  .pv-label { font-size: 12px; line-height: 16px; color: var(--textSecondary); }
+  .pv-narrow { max-width: 393px; }
+  .pv-frame { position: relative; width: 393px; max-width: 100%; overflow: hidden; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
+.pv-frame { height: 440px; margin: 10px auto; } .cap { margin: 14px 16px 0; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--textSecondary); }</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+  var B = window.Bevi, h = React.createElement, F = React.Fragment;
+  function L(text, el) { return h('div', { className: 'pv-stack' }, el, h('span', { className: 'pv-label' }, text)); }
+
+  var BEVS = {
+    dietCoke: { name: 'Diet Coke', brand: 'Coca-Cola', category: 'diet_soda', priceTier: 1, art: { kind: 'can', color: '#d6d6db', accent: '#c8102e' } },
+    mexicanCoke: { name: 'Mexican Coke', brand: 'Coca-Cola', category: 'soda', priceTier: 2, art: { kind: 'bottle', color: '#3b1d12', accent: '#e03a3e' } },
+    topo: { name: 'Topo Chico', brand: 'Topo Chico', category: 'sparkling_water', priceTier: 1, art: { kind: 'bottle', color: '#a9d8c9', accent: '#f2c94c' } },
+    pamplemousse: { name: 'LaCroix Pamplemousse', brand: 'LaCroix', flavor: 'Pamplemousse', category: 'sparkling_water', priceTier: 1, art: { kind: 'can', color: '#f4a7b9', accent: '#ffffff' } },
+    redBull: { name: 'Red Bull', brand: 'Red Bull', category: 'energy', priceTier: 2, art: { kind: 'slimCan', color: '#2d4fa1', accent: '#c0c4cc' } },
+    brownSugar: { name: 'Brown Sugar Boba', brand: 'Tiger Sugar', category: 'boba', priceTier: 2, art: { kind: 'boba', color: '#c9a27e', accent: '#7a4a2a' } },
+    horchata: { name: 'Horchata', brand: 'Tacos El Gordo', category: 'other', priceTier: 2, priceEstimated: true, art: { kind: 'icedCup', color: '#efe4d0', accent: '#b07a45' } },
+    coldBrew: { name: 'Cold Brew', brand: 'Blue Bottle', category: 'coffee', priceTier: 2, art: { kind: 'icedCup', color: '#4a2c1d', accent: '#3c7dd9' } },
+    sprite: { name: 'Sprite', brand: 'Coca-Cola', category: 'soda', priceTier: 1, art: { kind: 'can', color: '#1f8f4e', accent: '#f2d230' } },
+    gatorade: { name: 'Gatorade Cool Blue', brand: 'Gatorade', category: 'sports', priceTier: 1, art: { kind: 'waterBottle', color: '#3aa0e0', accent: '#f26b1d' } },
+    oj: { name: 'Orange Juice', brand: 'Tropicana', category: 'juice', priceTier: 1, art: { kind: 'carton', color: '#f6a623', accent: '#2f9e44' } },
+    poppi: { name: 'Strawberry Lemon', brand: 'Poppi', category: 'diet_soda', priceTier: 2, art: { kind: 'can', color: '#f7c6cf', accent: '#e8384f' } },
+    matcha: { name: 'Iced Matcha Latte', brand: 'Starbucks', category: 'tea', priceTier: 2, art: { kind: 'icedCup', color: '#9cbf6b', accent: '#1e7a46' } },
+  };
+  var ME = { name: 'Matt Willer', handle: 'mbwiller' };
+  var ARJUN = { name: 'Arjun Cheema', handle: 'acheema5' };
+  var FRIENDS = [{ name: 'Jack Torres', handle: 'jackt' }, { name: 'Priya Nair', handle: 'priya' }, { name: 'Sam Okafor', handle: 'samo' }, { name: 'Lena Park', handle: 'lenap' }, ARJUN, { name: 'Diego Ruiz', handle: 'dr' }];
+
+  ReactDOM.createRoot(document.getElementById('root')).render(h(function Demo() {
+  var few = [
+    { id: 'a', author: FRIENDS[1], body: 'ok this is going on my list', time: '4 hours ago' },
+    { id: 'b', author: ME, body: 'the one on 3rd ave or the truck?', time: '3 hours ago', mine: true },
+    { id: 'c', author: ARJUN, body: 'the truck, always the truck', time: '2 hours ago' }];
+  var long = [
+    { author: FRIENDS[2], body: 'tiger sugar > everything', time: 'Wednesday' },
+    { author: FRIENDS[1], body: 'hot take but the brown sugar is too sweet for me', time: 'Wednesday' },
+    { author: FRIENDS[0], body: 'that is the point priya', time: 'Wednesday' },
+    { author: FRIENDS[5], body: 'less ice and it is perfect', time: 'Thursday' },
+    { author: ME, body: 'less ice is the move, agreed', time: 'Thursday', mine: true },
+    { author: FRIENDS[3], body: 'which location?', time: 'Thursday' },
+    { author: FRIENDS[0], body: 'the one by campus, the line is shorter after 3', time: 'Thursday' },
+    { author: ARJUN, body: "ranking it tonight, you've convinced me", time: '5 hours ago' }];
+  return h(F, null,
+    h('p', { className: 'cap' }, 'Empty'),
+    h('div', { className: 'pv-frame' }, h(B.CommentsSheet, { me: ME })),
+    h('p', { className: 'cap' }, 'A few, one of them yours'),
+    h('div', { className: 'pv-frame' }, h(B.CommentsSheet, { me: ME, comments: few })),
+    h('p', { className: 'cap' }, 'A long thread, posting failed'),
+    h('div', { className: 'pv-frame', style: { height: 500 } }, h(B.CommentsSheet, { me: ME, comments: long, error: "Couldn't post your comment. Check your connection and try again." })));
+}));
+</script>
+</body>
+</html>

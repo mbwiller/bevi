@@ -83,6 +83,10 @@ export declare function IconButton(props: IconButtonProps): React.ReactElement;
 export interface LikeButtonProps { liked?: boolean; count?: number; onClick?: () => void; className?: string }
 export declare function LikeButton(props: LikeButtonProps): React.ReactElement;
 
+/** The post's comment control, beside the heart: `message-circle` outline in `text` with the comment count (hidden at 0). Accessible name "Comment" / "Comment, 3 comments". Opens the comments sheet. */
+export interface CommentButtonProps { count?: number; onClick?: () => void; className?: string }
+export declare function CommentButton(props: CommentButtonProps): React.ReactElement;
+
 export interface FilterPillProps { count?: number; label?: string; icon?: string | null; chevron?: boolean; onClick?: () => void; className?: string }
 export declare function FilterPill(props: FilterPillProps): React.ReactElement;
 
@@ -135,6 +139,12 @@ export interface FeedPostProps {
   likeCount?: number;
   /** Toggles the like from the heart. A double-tap outside the photo strip calls it only when not yet liked. */
   onLike?: () => void;
+  /** Comments on the post (the contract's first seven, oldest first), shown inline as "**handle** text" while `commentCount` ≤ 7. */
+  comments?: PostComment[];
+  /** All comments on the post: beside the comment icon (hidden at 0); above 7 the post shows "View all N comments" instead of the list. */
+  commentCount?: number;
+  /** Opens the comments sheet (the comment icon and "View all N comments"). */
+  onComment?: () => void;
   onRank?: () => void; onSave?: () => void; onOpen?: () => void; divider?: boolean; className?: string;
 }
 export declare function FeedPost(props: FeedPostProps): React.ReactElement;
@@ -182,17 +192,23 @@ export declare function Skeleton(props: SkeletonProps): React.ReactElement;
 export interface SheetProps { open?: boolean; title?: string; snap?: 40 | 90; onClose?: () => void; children?: React.ReactNode; className?: string }
 export declare function Sheet(props: SheetProps): React.ReactElement | null;
 
+/** One comment as the post and the sheet draw it. `time` is relative ("2 hours ago"); `mine` adds Delete in the sheet. */
+export interface PostComment { id?: string; author: Person; body: string; time?: string; mine?: boolean }
+/** The post's comments in a 90% Sheet, oldest at the top, newest above the composer; empty state "No comments yet"; composer "Add a comment…" + Post, 280-character limit (the count shows from 20 left). */
+export interface CommentsSheetProps { open?: boolean; comments?: PostComment[]; me?: Person; onClose?: () => void; onPost?: (body: string) => void; onDelete?: (id: string) => void; error?: string; className?: string }
+export declare function CommentsSheet(props: CommentsSheetProps): React.ReactElement | null;
+
 declare global {
   interface Window {
     Bevi: {
       Wordmark: typeof Wordmark; Icon: typeof Icon; BevArt: typeof BevArt; BevImage: typeof BevImage; ScoreBubble: typeof ScoreBubble;
       PriceTier: typeof PriceTier; Avatar: typeof Avatar; AvatarStack: typeof AvatarStack; Pill: typeof Pill; Button: typeof Button;
-      IconButton: typeof IconButton; FilterPill: typeof FilterPill; SortToggle: typeof SortToggle; SearchBar: typeof SearchBar;
+      IconButton: typeof IconButton; LikeButton: typeof LikeButton; CommentButton: typeof CommentButton; FilterPill: typeof FilterPill; SortToggle: typeof SortToggle; SearchBar: typeof SearchBar;
       TextField: typeof TextField; PriceTierPicker: typeof PriceTierPicker; Header: typeof Header; SectionHeader: typeof SectionHeader;
       ListScopeDropdown: typeof ListScopeDropdown; SegmentedTabs: typeof SegmentedTabs; TabBar: typeof TabBar; BevRow: typeof BevRow;
       FeedPost: typeof FeedPost; FeaturedCard: typeof FeaturedCard; ProfileListRow: typeof ProfileListRow; StatCard: typeof StatCard;
       UserRow: typeof UserRow; BevGlow: typeof BevGlow; BucketButton: typeof BucketButton; CompareCard: typeof CompareCard; ProgressDots: typeof ProgressDots;
-      EmptyState: typeof EmptyState; ErrorState: typeof ErrorState; Skeleton: typeof Skeleton; Sheet: typeof Sheet;
+      EmptyState: typeof EmptyState; ErrorState: typeof ErrorState; Skeleton: typeof Skeleton; Sheet: typeof Sheet; CommentsSheet: typeof CommentsSheet;
       /** The 15 category slugs with labels and icon names. */
       categories: { id: CategoryId; label: string; icon: string; isAlcoholic?: boolean }[];
       scoreBand(score: number): 'high' | 'mid' | 'low';
