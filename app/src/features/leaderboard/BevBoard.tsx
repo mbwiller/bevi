@@ -23,7 +23,7 @@ export function myScoreMeta(myScore: number | null): string {
 }
 
 /**
- * Bevs board (§6.12): numbered BevRows with the board's Bayesian score and its rating count, "Your
+ * Bevs board (§6.12): numbered BevRows with the board's Bayesian score, "Your
  * score" in the meta line. Only Bevs with ≥ MIN_RATERS rankings are ranked (§8.7); the API returns just
  * those, and anything below is filtered out here too. The "New" strip has no endpoint yet, so it's left out.
  */
@@ -52,7 +52,6 @@ export function BevBoard({ categoryId, header }: BevBoardProps) {
           showImage
           number={item.rank}
           score={item.bayesScore}
-          count={item.ratingCount}
           meta={myScoreMeta(item.myScore)}
           saved={isSaved}
           onPress={() => router.push({ pathname: '/bev/[id]', params: { id } })}

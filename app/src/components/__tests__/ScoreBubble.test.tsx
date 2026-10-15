@@ -32,23 +32,16 @@ it('uses the bucket colour when known', async () => {
   expect(textColor('7.4')).toBe(colors.light.scoreMid);
 });
 
-it('shows the count badge', async () => {
-  await render(<ScoreBubble score={7.3} count={5120} />);
-  expect(screen.getByText('5k')).toBeTruthy();
-  expect(screen.getByLabelText('Score 7.3, 5120 ratings')).toBeTruthy();
-});
-
 it('prefixes predictions with ~', async () => {
   await render(<ScoreBubble score={8.2} variant="predicted" size={56} />);
   expect(screen.getByText('~8.2')).toBeTruthy();
   expect(screen.getByLabelText('Predicted score 8.2')).toBeTruthy();
 });
 
-it('locks when locked or null, hiding the number and count', async () => {
-  await render(<ScoreBubble variant="locked" score={8} count={3} />);
+it('locks when locked or null, hiding the number', async () => {
+  await render(<ScoreBubble variant="locked" score={8} />);
   expect(screen.getByLabelText('Score hidden')).toBeTruthy();
   expect(screen.queryByText('8.0')).toBeNull();
-  expect(screen.queryByText('3')).toBeNull();
   await render(<ScoreBubble score={null} />);
   expect(screen.getByLabelText('Score hidden')).toBeTruthy();
 });

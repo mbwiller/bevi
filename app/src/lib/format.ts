@@ -10,6 +10,11 @@ export function formatCount(n: number): string {
   return n >= 1000 ? `${Math.round(n / 1000)}k` : String(n);
 }
 
+/** A rating count in words, for a meta line: 1 rating, 362 ratings, 5k ratings. */
+export function formatRatings(n: number): string {
+  return formatCount(n) + (n === 1 ? ' rating' : ' ratings');
+}
+
 /** Up to two initials for an Avatar. */
 export function initialsOf(name: string): string {
   return name
