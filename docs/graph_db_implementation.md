@@ -80,7 +80,8 @@ predictions are already shipping, via `layer1.ts` + `layer2.ts` + `blend.ts`.
 **Does not exist.** `bev_edges` (no migration creates it). `bev_embeddings`,
 the `vector` extension, any `embed` function. The M-24 formulas
 (`treeSimilarity`, `profileSimilarity`, `embeddingSimilarity`, `edgeWeight`,
-`topEdges`) are absent from `packages/ranking/src`. `categories.parent_id`, so
+`topEdges`) landed after this was written, in #86 (`packages/ranking/src/edges.ts`,
+`RANKING_VERSION` 1.2.0). `categories.parent_id`, so
 no `CHILD_OF` and no meaningful tree term. `user_bev_predictions` exists with
 no writer.
 
