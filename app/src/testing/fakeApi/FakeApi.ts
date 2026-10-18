@@ -48,6 +48,7 @@ import {
   type AuthApi,
   type Bev,
   type BeviApi,
+  type BevOfPeriod,
   type BevPrediction,
   type BevsApi,
   type BevSummary,
@@ -66,6 +67,7 @@ import {
   type MetaApi,
   type Page,
   type PageParams,
+  type PeriodWinner,
   type PriceTier,
   type Profile,
   type ProfileApi,
@@ -157,6 +159,15 @@ function paginate<T>(items: readonly T[], page: PageParams | undefined, defaultL
 /** `comments.add` refuses longer bodies (contract); `get_feed` carries this many comments per post. */
 const COMMENT_MAX = 280;
 const FEED_INLINE_COMMENTS = 7;
+/** Bev of the day / week is "strictly New York City" (get_bev_of_period, 20261018000100). */
+const BEV_OF_PERIOD_ZONE = 'America/New_York';
+/** The ISO week's Monday for a `YYYY-MM-DD` day key. */
+function isoWeekStart(dayKey: string): string {
+  const d = new Date(`${dayKey}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+  return d.toISOString().slice(0, 10);
+}
+const codePointOrder = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 const commentSeq = (c: FakeComment) => Number(c.id.split('-')[1]);
 
 function isValidTimeZone(tz: string): boolean {
@@ -1300,6 +1311,45 @@ export class FakeApi implements BeviApi {
           .map((f) => ({ f, b: this.db.bevs.find((b) => b.id === f.bevId) }))
           .filter((x): x is { f: (typeof x)['f']; b: FakeBev } => !!x.b && this.visible(x.b, me))
           .map(({ f, b }) => ({ bev: this.toSummary(b), heroImageUrl: f.heroImageUrl, tagline: f.tagline, startsAt: f.startsAt, endsAt: f.endsAt }));
+      }),
+
+    // As get_bev_of_period: among Bevs ranked in the period (New York day / ISO week), the best
+    // current Bayesian score, then more rankings in the period, more raters, name, id. An empty
+    // current period falls back to the latest one with a ranking.
+    getBevOfPeriod: () =>
+      this.call('feed.getBevOfPeriod', (): BevOfPeriod => {
+        const me = this.requireUser();
+        const now = this.nowIso();
+        const { global, byBev } = this.aggregates();
+        const m = globalPrior(global);
+        const bevs = new Map(this.db.bevs.filter((b) => this.visible(b, me)).map((b) => [b.id, b]));
+        const days = this.db.rankings
+          .filter((r) => r.createdAt <= now && bevs.has(r.bevId))
+          .map((r) => ({ bevId: r.bevId, day: localDayKey(r.createdAt, BEV_OF_PERIOD_ZONE) }));
+        const today = localDayKey(now, BEV_OF_PERIOD_ZONE);
+
+        const winner = (periodOf: (day: string) => string): PeriodWinner | null => {
+          if (days.length === 0) return null;
+          const start = days.map((r) => periodOf(r.day)).reduce((a, k) => (k > a ? k : a));
+          const inPeriod = new Map<string, number>();
+          for (const r of days) if (periodOf(r.day) === start) inPeriod.set(r.bevId, (inPeriod.get(r.bevId) ?? 0) + 1);
+          const rows = [...inPeriod].map(([bevId, k]) => {
+            const s = populationStats(byBev.get(bevId) ?? []);
+            return { bevId, k, n: s.n, name: bevs.get(bevId)!.name, bayes: bayesianAverage(s.mean, s.n, { m, C: BAYES_C }) };
+          });
+          rows.sort(
+            (a, z) => z.bayes - a.bayes || z.k - a.k || z.n - a.n || codePointOrder(a.name, z.name) || codePointOrder(a.bevId, z.bevId),
+          );
+          const w = rows[0]!;
+          return {
+            // The score it won with, set even below MIN_RATERS (toSummary would give null).
+            bev: { ...this.toSummary(bevs.get(w.bevId)!), bayesScore: round2(w.bayes) },
+            periodStart: start,
+            rankingsInPeriod: w.k,
+            isCurrent: start === periodOf(today),
+          };
+        };
+        return { day: winner((d) => d), week: winner(isoWeekStart) };
       }),
 
     like: (id: string) =>

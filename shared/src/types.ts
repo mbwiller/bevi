@@ -222,6 +222,29 @@ export interface FeaturedBev {
   endsAt: string | null;
 }
 
+/**
+ * One period's winner (LaTeX §10.3): among the Bevs ranked at least once in the period, the one
+ * with the highest current Bayesian score; ties go to more rankings in the period, then more
+ * raters overall, then name (code points), then id. Periods are America/New_York calendar days
+ * and ISO weeks (Monday start). `bev.bayesScore` is the score the winner was picked by, so it
+ * is set even for a Bev with a single rating.
+ */
+export interface PeriodWinner {
+  bev: BevSummary;
+  /** First day of the period, `YYYY-MM-DD` in New York: the day itself, or the week's Monday. */
+  periodStart: string;
+  /** Rankings of `bev` created in the period. */
+  rankingsInPeriod: number;
+  /** false when nothing was ranked in the current period and this is the latest one that had rankings. */
+  isCurrent: boolean;
+}
+
+/** Both cards at the top of the feed; a side is null only when nothing the caller may see was ever ranked. */
+export interface BevOfPeriod {
+  day: PeriodWinner | null;
+  week: PeriodWinner | null;
+}
+
 export interface LeaderboardRow {
   rank: number;
   bev: BevSummary;

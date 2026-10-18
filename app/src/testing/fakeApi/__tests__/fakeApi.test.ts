@@ -394,3 +394,52 @@ describe('comments (S-03)', () => {
     expect((await api.feed.getFeed()).items.find((i) => i.id === post.id)).toMatchObject({ commentCount: 1 });
   });
 });
+
+describe('feed.getBevOfPeriod', () => {
+  // Fixtures are built at 2026-10-11; the clock then moves past all of them, so the
+  // only rankings in November are this test's.
+  const setup = async () => {
+    const clock = { now: new Date('2026-10-11T16:00:00Z') };
+    const api = new FakeApi({ storage: null, latency: 0, now: () => clock.now });
+    await api.signUp({ username: 'periodic', password: 'password1', inviteCode: FAKE_INVITE_CODE });
+    await api.profile.setBirthDate('1990-05-05');
+    return { api, clock };
+  };
+  const rankFirst = (api: FakeApi, bevId: string) =>
+    api.rankings.submitRanking({ bevId, bucket: 'LOVED', insertIndex: 0, expectedBucketSize: 0, comparisons: [] });
+
+  it('uses the New York day and ISO week, and falls back to the latest non-empty period', async () => {
+    const { api, clock } = await setup();
+    const [bev] = await api.bevs.getStarterCandidates();
+    // Tuesday 2026-11-10, 22:30 in New York (already the 11th in UTC).
+    clock.now = new Date('2026-11-11T03:30:00Z');
+    await rankFirst(api, bev!.id);
+
+    const now = await api.feed.getBevOfPeriod();
+    expect(now.day).toMatchObject({ bev: { id: bev!.id }, periodStart: '2026-11-10', isCurrent: true, rankingsInPeriod: 1 });
+    expect(now.week).toMatchObject({ bev: { id: bev!.id }, periodStart: '2026-11-09', isCurrent: true });
+    // One rating is enough to win, and the card gets the score it won with.
+    expect(typeof now.day!.bev.bayesScore).toBe('number');
+
+    clock.now = new Date('2026-11-13T17:00:00Z'); // Friday: nothing ranked today
+    const friday = await api.feed.getBevOfPeriod();
+    expect(friday.day).toMatchObject({ periodStart: '2026-11-10', isCurrent: false });
+    expect(friday.week).toMatchObject({ periodStart: '2026-11-09', isCurrent: true });
+
+    clock.now = new Date('2026-11-18T17:00:00Z'); // the next week, still empty
+    expect((await api.feed.getBevOfPeriod()).week).toMatchObject({ periodStart: '2026-11-09', isCurrent: false });
+  });
+
+  it('never gives a minor an alcoholic winner', async () => {
+    const { api, clock } = await setup();
+    clock.now = new Date('2026-11-11T17:00:00Z');
+    await rankFirst(api, ALCOHOLIC_BEV_ID);
+    expect((await api.feed.getBevOfPeriod()).day).toMatchObject({ bev: { id: ALCOHOLIC_BEV_ID }, isCurrent: true });
+
+    api.signInAs('minor_user');
+    const minor = await api.feed.getBevOfPeriod();
+    expect([minor.day?.bev.id, minor.week?.bev.id]).not.toContain(ALCOHOLIC_BEV_ID);
+    // Its latest visible period is from the fixtures, not today.
+    expect(minor.day?.isCurrent).toBe(false);
+  });
+});

@@ -9,6 +9,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
   AppConfig,
   Bev,
+  BevOfPeriod,
   BevPrediction,
   BevSummary,
   Bucket,
@@ -19,6 +20,7 @@ import type {
   FeedItem,
   FlavorProfile,
   LeaderboardRow,
+  PeriodWinner,
   PhotoStatus,
   PriceTier,
   Profile,
@@ -385,6 +387,59 @@ export function mapFeedItem(client: SupabaseClient, row: FeedRpcRow, actor: Prof
     likedByMe: row.liked_by_me,
     commentCount: row.comment_count,
     comments: row.comments.map((c) => mapComment(client, c)),
+  };
+}
+
+// --------------------------------------------------------------------------
+// get_bev_of_period RPC rows -> BevOfPeriod
+// --------------------------------------------------------------------------
+
+export interface BevOfPeriodRpcRow {
+  period: string;
+  period_start: string;
+  is_current: boolean;
+  rankings_in_period: number;
+  bev_id: string;
+  bev_name: string;
+  bev_brand: string | null;
+  bev_flavor: string | null;
+  bev_category_id: string;
+  bev_thumb_path: string | null;
+  bev_price_tier: number;
+  bev_price_estimated: boolean;
+  bev_rating_count: number;
+  bev_bayes_score: number | string;
+}
+
+function mapPeriodWinner(client: SupabaseClient, row: BevOfPeriodRpcRow): PeriodWinner {
+  // The score the winner was picked by (live, like get_bev_leaderboard), not
+  // bev_stats.bayes_score, which the 15-minute refresh may not have caught up on.
+  const bayes = Number(row.bev_bayes_score);
+  return {
+    bev: mapBevSummary(client, {
+      id: row.bev_id,
+      name: row.bev_name,
+      brand: row.bev_brand,
+      flavor: row.bev_flavor,
+      category_id: row.bev_category_id,
+      photo_path: row.bev_thumb_path,
+      price_tier: row.bev_price_tier,
+      price_estimated: row.bev_price_estimated,
+      bev_stats: { rating_count: row.bev_rating_count, avg_score: null, score_stddev: null, bayes_score: bayes },
+    }),
+    periodStart: row.period_start,
+    rankingsInPeriod: row.rankings_in_period,
+    isCurrent: row.is_current,
+  };
+}
+
+/** Zero, one or two rows ('day', 'week'); a missing period maps to null. */
+export function mapBevOfPeriod(client: SupabaseClient, rows: readonly BevOfPeriodRpcRow[]): BevOfPeriod {
+  const day = rows.find((r) => r.period === 'day');
+  const week = rows.find((r) => r.period === 'week');
+  return {
+    day: day ? mapPeriodWinner(client, day) : null,
+    week: week ? mapPeriodWinner(client, week) : null,
   };
 }
 

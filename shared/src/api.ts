@@ -10,6 +10,7 @@ import type { Bucket, CategoryId, PriceTier } from './enums';
 import type {
   AppConfig,
   Bev,
+  BevOfPeriod,
   BevSummary,
   Category,
   Comment,
@@ -332,6 +333,13 @@ export interface FeedApi {
 
   /** Age-filtered. @throws 'unauthorized'. */
   getFeatured(): Promise<FeaturedBev[]>;
+
+  /**
+   * Bev of the day and Bev of the week (`PeriodWinner`), age-filtered. A period with no
+   * rankings falls back to the latest one that had some, with `isCurrent: false`.
+   * @throws 'unauthorized'.
+   */
+  getBevOfPeriod(): Promise<BevOfPeriod>;
 
   /**
    * Idempotent: liking an already-liked post resolves without error.

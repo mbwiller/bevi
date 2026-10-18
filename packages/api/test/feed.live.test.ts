@@ -46,4 +46,29 @@ describe.skipIf(!url || !publishableKey)('feed, against a live local stack', () 
       await other.deleteAccount();
     }
   });
+
+  // A-05 (20261018000100). Other suites rank too, so this checks the shape and
+  // the current periods, not which Bev wins.
+  it('getBevOfPeriod: ranking a Bev now makes both periods current', async () => {
+    const api = createBeviApi({ url: url!, publishableKey: publishableKey!, authStorage: memoryStorage() });
+    await api.signUp({ username: randomTestUsername(), password: 'correct-horse-battery-staple', inviteCode: TEST_INVITE_CODE });
+
+    try {
+      const [bev] = await api.bevs.getStarterCandidates();
+      expect(bev).toBeDefined();
+      await api.rankings.submitRanking({ bevId: bev!.id, bucket: 'LOVED', insertIndex: 0, expectedBucketSize: 0, comparisons: [] });
+
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
+      const { day, week } = await api.feed.getBevOfPeriod();
+      expect(day).toMatchObject({ periodStart: today, isCurrent: true });
+      expect(day!.rankingsInPeriod).toBeGreaterThanOrEqual(1);
+      expect(typeof day!.bev.bayesScore).toBe('number');
+      expect(week).toMatchObject({ isCurrent: true });
+      // The ISO week's Monday, on or before today.
+      expect(new Date(`${week!.periodStart}T12:00:00Z`).getUTCDay()).toBe(1);
+      expect(week!.periodStart <= today).toBe(true);
+    } finally {
+      await api.deleteAccount();
+    }
+  });
 });
