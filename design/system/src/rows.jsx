@@ -35,7 +35,7 @@ export function SectionHeader({ title, action, actionLabel, onAction, className 
   return (
     <div className={cx('bv', 'bv-section', className)}>
       <h2 className="sectionCaps bv-section-title">{title}</h2>
-      {action ? <button type="button" className="bv-link sectionCaps" onClick={onAction} aria-label={actionLabel}>{action}</button> : null}
+      {action ? <button type="button" className="bv-link sectionCaps" onClick={onAction} aria-label={actionLabel ?? `${action} ${title.toLowerCase()}`}>{action}</button> : null}
     </div>
   );
 }
