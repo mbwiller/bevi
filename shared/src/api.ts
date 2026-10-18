@@ -13,6 +13,7 @@ import type {
   BevOfPeriod,
   BevSummary,
   Category,
+  CategoryProgress,
   Comment,
   Comparison,
   FeaturedBev,
@@ -135,6 +136,13 @@ export interface StatsApi {
 
   /** @throws 'unauthorized', 'not_found'. */
   getUser(id: string): Promise<ProfileStats>;
+
+  /**
+   * The caller's ranked count per category, one row per category they can see
+   * (ranked 0 included; alcoholic categories only for 21+), in `sortOrder`.
+   * @throws 'unauthorized'.
+   */
+  getCategoryProgress(): Promise<CategoryProgress[]>;
 }
 
 export interface FollowsApi {

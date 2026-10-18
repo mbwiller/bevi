@@ -113,6 +113,7 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       await expectCode(api.feed.getBevOfPeriod(), 'unauthorized');
       await expectCode(api.rankings.listMine(), 'unauthorized');
       await expectCode(api.categories.list(), 'unauthorized');
+      await expectCode(api.stats.getCategoryProgress(), 'unauthorized');
       await expectCode(api.deleteAccount(), 'unauthorized');
     });
 
@@ -309,6 +310,27 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       expect(minor.some((c) => c.isAlcoholic)).toBe(false);
       await newUser({ birthdate: ADULT_BIRTHDATE });
       expect((await api.categories.list()).some((c) => c.isAlcoholic)).toBe(true);
+    });
+
+    it('category progress (S-07): one row per visible category, the same totals as bevCount, own rankings only', async () => {
+      await newUser({ birthdate: MINOR_BIRTHDATE(new Date()) });
+      const minorCats = await api.categories.list();
+      const minor = await api.stats.getCategoryProgress();
+      expect(minor.map((p) => p.categoryId)).toEqual(minorCats.map((c) => c.id));
+      expect(minor.every((p) => p.ranked === 0)).toBe(true);
+      for (const c of minorCats) expect(c.bevCount).toBe(minor.find((p) => p.categoryId === c.id)!.total);
+
+      const [first] = await api.bevs.getStarterCandidates();
+      await api.rankings.submitRanking({ bevId: first!.id, bucket: 'LOVED', insertIndex: 0, expectedBucketSize: 0, comparisons: [] });
+      const after = await api.stats.getCategoryProgress();
+      expect(after.find((p) => p.categoryId === first!.categoryId)).toMatchObject({ ranked: 1 });
+      expect(after.reduce((sum, p) => sum + p.ranked, 0)).toBe(1);
+      expect(after.every((p) => p.ranked <= p.total)).toBe(true);
+
+      await newUser({ birthdate: ADULT_BIRTHDATE });
+      const adult = await api.stats.getCategoryProgress();
+      expect(adult.reduce((sum, p) => sum + p.ranked, 0)).toBe(0);
+      expect(adult.length).toBeGreaterThan(minor.length);
     });
 
     it('an alcoholic Bev is age_restricted for minors (get, rank, save) and visible to adults', async () => {

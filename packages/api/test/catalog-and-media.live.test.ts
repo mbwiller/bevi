@@ -57,6 +57,8 @@ describe.skipIf(!url || !publishableKey)('catalog, photos and privacy, against a
       const categories = await api.categories.list();
       const alcoholic = new Set(categories.filter((c) => c.isAlcoholic).map((c) => c.id));
       expect(alcoholic.size).toBe(0); // hidden for an under-21 viewer
+      const progress = await api.stats.getCategoryProgress();
+      expect(progress.map((p) => p.categoryId)).toEqual(categories.map((c) => c.id)); // the same age filter
       expect(starters.every((b) => !['beer', 'wine', 'spirits_cocktails'].includes(b.categoryId))).toBe(true);
 
       const found = await api.bevs.search({ q: 'coke' });

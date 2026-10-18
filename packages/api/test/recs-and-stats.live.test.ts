@@ -93,6 +93,27 @@ describe.skipIf(!url || !publishableKey)('recommendations, predictions and stats
     }
   });
 
+  it('category progress counts the caller\'s rankings against the active catalog (S-07)', async () => {
+    const { api } = await newUser();
+    try {
+      const empty = await api.stats.getCategoryProgress();
+      const categories = await api.categories.list();
+      expect(empty.map((p) => p.categoryId)).toEqual(categories.map((c) => c.id));
+      expect(empty.every((p) => p.ranked === 0)).toBe(true);
+      // categories.list() and getCategoryProgress() read the same count.
+      for (const c of categories) expect(c.bevCount).toBe(empty.find((p) => p.categoryId === c.id)!.total);
+
+      const [first] = await api.bevs.getStarterCandidates();
+      await rankAll(api, [first!.id], 'LOVED');
+      const after = await api.stats.getCategoryProgress();
+      expect(after.find((p) => p.categoryId === first!.categoryId)).toMatchObject({ ranked: 1 });
+      expect(after.reduce((sum, p) => sum + p.ranked, 0)).toBe(1);
+      expect(after.every((p) => p.ranked <= p.total)).toBe(true);
+    } finally {
+      await api.deleteAccount();
+    }
+  });
+
   it('search and duplicate cards carry the real category and price', async () => {
     const { api } = await newUser();
     try {
