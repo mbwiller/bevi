@@ -10,6 +10,11 @@ it('renders the title as a heading and fires the action', async () => {
   expect(onAction).toHaveBeenCalledTimes(1);
 });
 
+it('uses actionLabel as the link name when given', async () => {
+  await render(<SectionHeader title="Ranked by points" action="How points work" actionLabel="How points work" onAction={() => {}} />);
+  expect(screen.getByRole('link', { name: 'How points work' })).toBeTruthy();
+});
+
 it('has no link without an action', async () => {
   await render(<SectionHeader title="Your feed" />);
   expect(screen.queryByRole('link')).toBeNull();

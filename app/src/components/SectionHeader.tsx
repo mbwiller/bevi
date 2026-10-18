@@ -7,12 +7,14 @@ export interface SectionHeaderProps {
   title: string;
   /** Link text ("See all") in `primary`. */
   action?: string;
+  /** The link's spoken name, when `action` + `title` read badly together ("How points work"). */
+  actionLabel?: string;
   onAction?: () => void;
   style?: StyleProp<ViewStyle>;
 }
 
 /** "FEATURED BEVS" caps label with an optional "See all" link in `primary`. */
-export function SectionHeader({ title, action, onAction, style }: SectionHeaderProps) {
+export function SectionHeader({ title, action, actionLabel, onAction, style }: SectionHeaderProps) {
   const { colors } = useTheme();
   return (
     <View style={[styles.row, style]}>
@@ -24,7 +26,7 @@ export function SectionHeader({ title, action, onAction, style }: SectionHeaderP
           onPress={onAction}
           accessibilityRole="link"
           // "See all featured bevs": the visible text first, then what it opens.
-          accessibilityLabel={`${action} ${title.toLowerCase()}`}
+          accessibilityLabel={actionLabel ?? `${action} ${title.toLowerCase()}`}
           style={({ pressed }) => [styles.link, pressed && styles.pressed]}
         >
           <Text style={[type.sectionCaps, { color: colors.primary }]}>{action}</Text>
