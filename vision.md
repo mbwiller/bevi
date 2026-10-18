@@ -11,6 +11,8 @@ This document is the source of truth for what we're building. It was distilled f
 ## 1. Core idea
 
 - **The unit is a single beverage product**, not a brand or a store. A can of Coca-Cola and a can of Diet Coca-Cola are two different Bevs. A specific horchata from a specific spot is its own Bev.
+- **Vessels are not variants** (decided 2026-10-14). Can, glass bottle and plastic bottle are the same Bev: "Coca-Cola is Coca-Cola." There is no fluid-ounce input. A *different product* is a different Bev, so **Mexican Coca-Cola is its own Bev**, drawn as a glass bottle.
+- **Had it or not.** A user ranks a Bev **once**; re-ranking moves it. We never count how many times you drank something.
 - **Ranking is blind and comparative.** You never type a number. You answer quick "higher or lower?" prompts, Tinder-style, and the app places the drink in your list and derives a score from its position.
 - **Discovery is personalized.** When you look up a Bev, Bevi shows "We think you'd rate this X/10" based on your tastes and how people like you ranked it.
 - **It's social.** Feed of what friends are drinking, followers/following, a leaderboard, and a "Want to Try" list for drinks you spot on someone else's feed.
@@ -42,6 +44,7 @@ Every Bev is its own record and **must have a photo**.
 | `created_at` | |
 
 ### Photos
+- *Decided 2026-10-14:* **icons over photos** for a Bev's identity in search results, posts and lists ("you're collecting something"); a user's photo is extra. *2026-10-18:* how icons get made is on hold, because generated icons can't cover every Bev (craft cocktails, one shop's own drinks). Until then, lists draw category placeholder art.
 - Seeded Bevs: source product images from the web that are consistent in style with clean/transparent backgrounds.
 - User-added Bevs: run the user's photo through **background removal** so it matches the rest of the catalog.
 - Featured Bevs can use polished generated imagery.
@@ -132,12 +135,12 @@ Goal: show "**We think you'd rate this X/10**" on any Bev, and power a **Recomme
 Look and feel: very close to Beli's layout and gamified energy, with our own **Bevi** identity. Logo: an original wordmark in a similar clean, playful spirit — "Bevi" spelled B-E-V-I. Reference screenshots of Beli will be added to the repo for layout guidance.
 
 ### Bottom tabs
-1. **Feed** — Venmo-style social feed of friends' recent rankings (Bev photo, who, score, short note). Includes **Featured Bevs** at the top.
+1. **Feed** — Venmo-style social feed of friends' recent rankings (Bev photo, who, score, short note). Includes **Featured Bevs** at the top. *Decided 2026-10-14:* saving a Bev is **not** a post; **Bev of the day** and **Bev of the week** sit side by side under the search bar (just the Bev, not a post, from the Bevs ranked that New York day or week); an **Explore** surface beside the friends feed shows popular posts one or two follows away.
 2. **Your Lists** — sub-tabs:
    - **Bev'd** — everything you've ranked, in order
    - **Want to Try** — saved Bevs (e.g. you saw Jack rank a boba drink and saved it)
    - **Recommended** — your algorithmic recs with predicted scores
-3. **Add Bev** (center) — search the database or add a new Bev, then rank it. Replaces Beli's "search" slot.
+3. **Add Bev** (center) — search the database or add a new Bev, then rank it. Replaces Beli's "search" slot. *Decided 2026-10-14:* this becomes **Search**, as Beli labels it: the Bev and people search bar on top, a live **New York City map** underneath (pan in place or open full screen), results sliding over the map. The map runs on Google Maps JS, draws venues from OpenStreetMap plus our own curation, is strictly NYC (five-borough bounds), and carries a **Find Bev** button that opens Bev Maps. Adding a Bev stays inside the search results.
 4. **Leaderboard** — top Bevs overall and per category, plus a user leaderboard.
 5. **Profile** — see below.
 
@@ -155,7 +158,7 @@ Look and feel: very close to Beli's layout and gamified energy, with our own **B
 - Settings in a corner menu (account, sign out). Location features are off; keep a minimal privacy/settings page anyway.
 
 ### Bev detail page
-Photo, name, flavor, category, price tier, global score + rating count, **your predicted score**, friends who've had it, buttons for "Rank it" and "Want to Try."
+Photo, name, flavor, category, price tier, global score + rating count, **your predicted score**, friends who've had it, buttons for "Rank it" and "Want to Try." *Decided 2026-10-18:* the price tier shows **only** here, not on list rows or feed posts.
 
 ---
 
@@ -164,7 +167,9 @@ Photo, name, flavor, category, price tier, global score + rating count, **your p
 - Follow / unfollow users
 - Feed of followed users' rankings
 - Save any Bev from the feed to Want to Try
+- **Likes and comments on posts**, Instagram-style: a grape heart with double-tap to like; comments inline under the post until there are more than seven (shipped 2026-10-15)
 - User leaderboard (by number of Bevs ranked, streaks, etc.)
+- **Location privacy** (decided 2026-10-14): a ranking may carry the venue where you had it; GPS is never stored. "Nearby" and "locate me" use the device's position only while the Search tab is open, and send nothing but a venue id.
 
 ---
 
@@ -175,6 +180,8 @@ Photo, name, flavor, category, price tier, global score + rating count, **your p
 - *Decided 2026-10-11:* web app only, for under 20 friends; replaces the earlier iOS/Android and Google sign-in plan.
 - **Images:** background removal on upload (service or on-device model).
 - **Recommendations:** start as SQL views/functions in Postgres for Layer 1; move Layer 2 to a scheduled job (Edge Function or small Python worker) when data justifies it.
+- **The Bev graph** (decided 2026-10-14, re-scoped 2026-10-15): **Neo4j AuraDB Free** holds Bevs, categories, brands, flavours and pseudonymised rankings as a graph. **Postgres stays the system of record**; nothing lives only in the graph, and Neo4j is never on a request path (a nightly job writes results back to Postgres). The first use is taste neighbourhoods for Layer 2, kept only if it beats the current engine on a pre-registered bar (`docs/graph_db_implementation.md`, `docs/graph.md`).
+- **Strictly New York City** for now: the map, venues and "Bev of the area" are NYC only.
 
 ### Core tables
 `users`, `follows`, `categories`, `bevs`, `rankings` (user, bev, bucket, position, score, note, created_at), `comparisons` (user, winner_bev, loser_bev), `want_to_try`, `user_category_stats` (mean, stddev), `streaks`, `featured_bevs`.

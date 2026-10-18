@@ -49,9 +49,20 @@ jobs:
 
       - run: npm test -w app
 
+      # expo-doctor's dependency-version check compares against Expo's *current* expected versions,
+      # so an SDK patch release turned main red with no change of ours (#58, fixed by #63). The
+      # other doctor checks stay blocking; the version check is advisory. When it warns, bump with
+      # `npx expo install --fix` from app/ in a small ui/* PR (TASKS.md S-18).
       - name: expo-doctor
         working-directory: app
+        env:
+          EXPO_DOCTOR_SKIP_DEPENDENCY_VERSION_CHECK: "1"
         run: npx expo-doctor
+
+      - name: expo dependency versions (advisory)
+        working-directory: app
+        continue-on-error: true
+        run: npx expo install --check
 
       # The same guarded build Vercel runs (vercel.json buildCommand), with placeholder values: the
       # env check, the export, and the scan that fails if test-only or fake content reached dist/.
