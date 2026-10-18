@@ -351,6 +351,39 @@ describe('category progress (S-07)', () => {
   });
 });
 
+describe('feed.listUser (S-20)', () => {
+  it("is get_feed's rows for one actor: followed users and yourself, never a stranger, age-gated", async () => {
+    const api = make();
+    await signInMe(api);
+    const me = await api.profile.getMe();
+    const friendPosts = (await api.feed.getFeed()).items.filter((i) => i.actor.handle === FRIEND.handle);
+    expect(friendPosts.length).toBeGreaterThan(0);
+    const friendId = friendPosts[0]!.actor.id;
+    // The feed's first page holds FRIEND's newest posts, so they open FRIEND's own page.
+    expect((await api.feed.listUser(friendId)).items.slice(0, friendPosts.length)).toEqual(friendPosts);
+
+    if (!(await api.bevs.get(ALCOHOLIC_BEV_ID)).myRanking) {
+      const loved = await api.rankings.listBucket('LOVED');
+      await api.rankings.submitRanking({
+        bevId: ALCOHOLIC_BEV_ID,
+        bucket: 'LOVED',
+        insertIndex: 0,
+        expectedBucketSize: loved.length,
+        comparisons: [],
+      });
+    }
+    expect((await api.feed.listUser(me.id)).items.map((i) => i.bev.id)).toContain(ALCOHOLIC_BEV_ID);
+
+    api.signInAs('minor_user');
+    await api.follows.unfollow(me.id);
+    expect((await api.feed.listUser(me.id)).items).toEqual([]);
+    await api.follows.follow(me.id);
+    const seen = (await api.feed.listUser(me.id)).items;
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen.map((i) => i.bev.id)).not.toContain(ALCOHOLIC_BEV_ID);
+  });
+});
+
 describe('comments (S-03)', () => {
   /** FRIEND's newest post, which ME (following FRIEND) can see. */
   async function friendsPost(api: FakeApi) {

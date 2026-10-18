@@ -111,6 +111,7 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       await expectCode(api.profile.getMe(), 'unauthorized');
       await expectCode(api.feed.getFeed(), 'unauthorized');
       await expectCode(api.feed.getBevOfPeriod(), 'unauthorized');
+      await expectCode(api.feed.listUser('anyone'), 'unauthorized');
       await expectCode(api.rankings.listMine(), 'unauthorized');
       await expectCode(api.categories.list(), 'unauthorized');
       await expectCode(api.stats.getCategoryProgress(), 'unauthorized');
@@ -606,6 +607,26 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       const items = (await api.feed.getFeed()).items.filter((i) => i.actor.id === a.userId);
       expect(items.map((i) => i.bev.id)).toEqual([y, x]);
       expect(items[0]).toMatchObject({ type: 'RANKING', bucket: 'LOVED', inMyWantToTry: false });
+    });
+
+    it('feed.listUser: own and followed posts newest first, paged; a stranger\'s page is empty', async () => {
+      const a = await newUser();
+      const [x, y] = await starterIds(2);
+      await rankAtBottom(x!);
+      await rankAtBottom(y!);
+      const own = await api.feed.listUser(a.userId);
+      expect(own.items.map((i) => i.bev.id)).toEqual([y, x]);
+      expect(own.items.every((i) => i.type === 'RANKING' && i.actor.id === a.userId)).toBe(true);
+
+      await newUser();
+      expect((await api.feed.listUser(a.userId)).items).toEqual([]);
+      await api.follows.follow(a.userId);
+      const first = await api.feed.listUser(a.userId, { limit: 1 });
+      expect(first.items.map((i) => i.bev.id)).toEqual([y]);
+      expect(first.nextCursor).not.toBeNull();
+      const second = await api.feed.listUser(a.userId, { limit: 1, cursor: first.nextCursor! });
+      expect(second.items.map((i) => i.bev.id)).toEqual([x]);
+      await expectCode(api.feed.listUser('00000000-0000-4000-8000-00000000ffff'), 'not_found');
     });
 
     it('getFeatured returns well-formed items', async () => {

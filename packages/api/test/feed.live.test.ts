@@ -71,4 +71,39 @@ describe.skipIf(!url || !publishableKey)('feed, against a live local stack', () 
       await api.deleteAccount();
     }
   });
+
+  it('listUser: own and followed posts in the feed shape; a stranger gets an empty page', async () => {
+    const author = createBeviApi({ url: url!, publishableKey: publishableKey!, authStorage: memoryStorage() });
+    const follower = createBeviApi({ url: url!, publishableKey: publishableKey!, authStorage: memoryStorage() });
+    const stranger = createBeviApi({ url: url!, publishableKey: publishableKey!, authStorage: memoryStorage() });
+    const password = 'correct-horse-battery-staple';
+    const { userId: authorId } = await author.signUp({ username: randomTestUsername(), password, inviteCode: TEST_INVITE_CODE });
+    await follower.signUp({ username: randomTestUsername(), password, inviteCode: TEST_INVITE_CODE });
+    await stranger.signUp({ username: randomTestUsername(), password, inviteCode: TEST_INVITE_CODE });
+
+    try {
+      const [first, second] = await author.bevs.getStarterCandidates();
+      await author.rankings.submitRanking({ bevId: first!.id, bucket: 'LOVED', insertIndex: 0, expectedBucketSize: 0, comparisons: [] });
+      await author.rankings.submitRanking({ bevId: second!.id, bucket: 'FINE', insertIndex: 0, expectedBucketSize: 0, comparisons: [] });
+      await follower.follows.follow(authorId);
+
+      const own = await author.feed.listUser(authorId);
+      expect(own.items.map((i) => i.bev.id)).toEqual([second!.id, first!.id]);
+
+      const followed = await follower.feed.listUser(authorId, { limit: 1 });
+      expect(followed.items).toHaveLength(1);
+      expect(followed.items[0]).toMatchObject({ type: 'RANKING', actor: { id: authorId }, bev: { id: second!.id } });
+      await follower.feed.like(followed.items[0]!.id);
+      const next = await follower.feed.listUser(authorId, { limit: 1, cursor: followed.nextCursor! });
+      expect(next.items.map((i) => i.bev.id)).toEqual([first!.id]);
+      expect((await follower.feed.listUser(authorId)).items[0]).toMatchObject({ likeCount: 1, likedByMe: true });
+
+      expect((await stranger.feed.listUser(authorId)).items).toEqual([]);
+      await expect(stranger.feed.listUser('00000000-0000-4000-8000-00000000ffff')).rejects.toMatchObject({ code: 'not_found' });
+    } finally {
+      await stranger.deleteAccount();
+      await follower.deleteAccount();
+      await author.deleteAccount();
+    }
+  });
 });
