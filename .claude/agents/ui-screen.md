@@ -31,6 +31,5 @@ You build one screen or one component of the Bevi Expo app per branch. Matt owns
 ## Before opening the PR
 
 1. `npm run typecheck && npm test` from the repo root, plus the app's lint if present.
-2. Add or update the component's entry in the `ComponentGallery` dev screen with every state.
-3. Run the `integrator-app` agent on your diff and fix anything it marks blocking.
-4. Branch `ui/<thing>` off fresh `origin/main`. Write the PR with a Summary, a "Heads-up for Arjun" section if you need anything from his lane, and a Test plan.
+2. Run the `integrator-app` agent on your diff and fix anything it marks blocking. If you have no Agent tool, stop at a local commit and say so; the orchestrating session runs it.
+3. Branch `ui/<thing>` off fresh `origin/main`. Write the PR with a Summary, a "Heads-up for Arjun" section if you need anything from his lane, and a Test plan.
