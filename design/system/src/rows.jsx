@@ -27,12 +27,15 @@ export function Header({ title, wordmark = false, centered = false, actions = []
   );
 }
 
-/** "FEATURED BEVS" caps label with an optional "See all" link in `primary`. */
-export function SectionHeader({ title, action, onAction, className }) {
+/**
+ * "FEATURED BEVS" caps label with an optional "See all" link in `primary`.
+ * `actionLabel` replaces the link's spoken name when the action and the title don't read well together.
+ */
+export function SectionHeader({ title, action, actionLabel, onAction, className }) {
   return (
     <div className={cx('bv', 'bv-section', className)}>
       <h2 className="sectionCaps bv-section-title">{title}</h2>
-      {action ? <button type="button" className="bv-link sectionCaps" onClick={onAction}>{action}</button> : null}
+      {action ? <button type="button" className="bv-link sectionCaps" onClick={onAction} aria-label={actionLabel}>{action}</button> : null}
     </div>
   );
 }
