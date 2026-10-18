@@ -35,7 +35,7 @@ const R = {
 
 - Provide: \`tier\` 1–4, \`estimated\`.
 - It inherits the line's size and colour; it reads "about $$, estimated" to screen readers.
-- **Only on Bev detail** (and the create-Bev wizard's picker). Rows and posts print no price, estimated or not (D-06): a price on every row was too much information.`,
+- **Never on rows or posts**, estimated or not (D-06): a price on every row was too much information. It shows on Bev detail, the gut-check card and featured cards. The create-Bev wizard picks a tier with \`PriceTierPicker\`.`,
   Avatar: `A circle with two initials in \`textSecondary\` on \`avatarFill\`, or the person's photo.
 
 - Provide: \`name\` (initials come from the first two words), \`src\` optional, \`size\` 32 (tab bar), 44 (people rows), 60 (feed posts), 100 (profile hero, initials 40pt light).
@@ -114,7 +114,7 @@ const R = {
 - Provide: \`bev\`, \`number\` (Bev'd and Leaderboard), \`score\` (\`scoreVariant="predicted"\` on Recommended), \`meta\` ("Ranked Oct 3", "Saved from @arjun", a recommendation reason), \`count\`, \`saved\`, \`onRank\`, \`onSave\`.
 - The meta line is \`meta\` when the row has one. Only a row with no meta of its own (search results) prints the rating count there instead: "1 rating", "362 ratings", "5k ratings", even under a locked bubble, and nothing at 0. Leaderboard, Want to Try and Recommended rows keep just their own meta.
 - No image by default, as in the reference; \`showImage\` adds a 56pt BevImage for search results, "Did you mean…" and the Leaderboard's Bevs board.
-- **One secondary line, no price.** "Soda · Coca-Cola" after the category icon; just the category when there's no brand. The flavour joins the brand ("LaCroix · Pamplemousse") unless it is "Original". The price tier shows on Bev detail only (D-06).
+- **One secondary line, no price.** "Soda · Coca-Cola" after the category icon; just the category when there's no brand. The flavour joins the brand ("LaCroix · Pamplemousse") unless it is "Original". The price tier stays off rows (D-06).
 - One list sorted by score: buckets show through the bubble colour, not as sections.`,
   FeedPost: `A ranking in the Feed and on Profile › Activity: "**Arjun** Bev'd **Horchata**", meta line, ScoreBubble, a 155pt photo strip, notes and actions.
 

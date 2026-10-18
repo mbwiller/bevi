@@ -52,7 +52,7 @@ export function ListScopeDropdown({ label = 'All', onClick, className }) {
 
 /**
  * The list row: name, one line of category icon, category and brand, a meta line, actions, and a ScoreBubble 40.
- * No price on a row (D-06): it shows on Bev detail only.
+ * No price on a row (D-06).
  * The meta line is `meta` when given; otherwise the rating count ("362 ratings") when `count` > 0.
  * No image by default, as in the reference; pass `showImage` for search results.
  */
