@@ -174,6 +174,7 @@
 .bv-bevrow-text { display: flex; flex-direction: column; min-width: 0; }
 .bv-bevrow-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bv-bevrow-line { display: flex; align-items: center; gap: var(--space-xs); color: var(--text); white-space: nowrap; overflow: hidden; }
+.bv-bevrow-line-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .bv-bevrow-score { grid-area: score; padding: 2px 4px 0 var(--space-md); }
 .bv-bevrow-foot { grid-area: foot; display: flex; align-items: center; justify-content: space-between; min-height: var(--size-target); margin-top: var(--space-md); }
 .bv-actions { display: flex; align-items: center; margin-right: -8px; }

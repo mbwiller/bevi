@@ -8,7 +8,7 @@ Build iOS-first at 393×852pt. Every size below is in pt.
 - **Ranking language is fixed.** Gut check: "Loved it", "It was fine", "Didn't like it". Comparison: "Which was better?", "Too close to call", "Undo". Prediction: "You'd rate it" with a `~8.2` bubble; on a list row the reason sits in the meta line ("You love diet sodas", "People who rank like you", "Something different").
 - **Sentence case** for buttons, tabs and titles ("Edit profile", "Want to Try" keeps its capitals because it is a list's name). Section labels are set in caps by `sectionCaps`, not typed in caps.
 - **Second person, plain and short.** Empty states say what will appear and how to make it happen: "Follow friends to see their Bevs" + Find people. Errors say what happened and what to do, without apologies: "You're offline. We'll show your list again as soon as you're back online."
-- **Numbers:** scores always one decimal (`9.3`, never `9.30` or `93`); rank as `#12`; counts as Beli prints them (`362`, `5k`); price as `$`–`$$$$`, with `~` when Bevi estimated it; dates as "Ranked Oct 3", times as "5 hours ago" or a weekday.
+- **Numbers:** scores always one decimal (`9.3`, never `9.30` or `93`); rank as `#12`; counts as Beli prints them (`362`, `5k`); price as `$`–`$$$$`, with `~` when Bevi estimated it, on Bev detail only (never on rows or posts); dates as "Ranked Oct 3", times as "5 hours ago" or a weekday.
 - **No emoji** in the interface. Users' notes keep their own voice and casing ("tastes like flat Sprite, in a good way").
 - The product is **Bevi** in sentences; the logo is lowercase **bevi**. Never write "BEVI" or "Bev-i".
 
