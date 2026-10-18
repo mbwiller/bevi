@@ -30,6 +30,14 @@ it("reads '<first name> Bev'd <Bev>' with a score, a photo tile and a relative t
   expect(onOpen).toHaveBeenCalledTimes(1);
 });
 
+it('the meta line is the brand, or the category with no brand, and never a price', async () => {
+  const { rerender } = await render(<FeedPost actor={ARJUN} bev={BEV} score={9.5} />);
+  expect(screen.getByText('Tacos El Gordo')).toBeTruthy();
+  expect(screen.queryByText(/\$/)).toBeNull();
+  await rerender(<FeedPost actor={ARJUN} bev={{ ...BEV, brand: null }} score={9.5} />);
+  expect(screen.getByText('Other')).toBeTruthy();
+});
+
 it('"You" for your own post', async () => {
   await render(<FeedPost you actor={ARJUN} bev={BEV} score={9} />);
   expect(screen.getByText('You')).toBeTruthy();

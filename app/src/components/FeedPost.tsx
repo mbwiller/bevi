@@ -21,7 +21,6 @@ import { BevImage } from './BevImage';
 import { CommentButton } from './CommentButton';
 import { Icon } from './Icon';
 import { LikeButton } from './LikeButton';
-import { PriceTier } from './PriceTier';
 import { ScoreBubble } from './ScoreBubble';
 
 export type FeedActor = Pick<Profile, 'displayName' | 'handle' | 'avatarUrl'>;
@@ -171,8 +170,7 @@ export function FeedPost({
           <View style={styles.meta}>
             {cat ? <Icon name={cat.icon} size={16} strokeWidth={2} color={colors.textSecondary} /> : null}
             <Text style={[type.body, styles.shrink, { color: colors.textSecondary }]} numberOfLines={1}>
-              {bev.brand ? `${bev.brand} • ` : ''}
-              <PriceTier tier={bev.priceTier} estimated={bev.priceEstimated} />
+              {bev.brand || cat?.label || ''}
             </Text>
           </View>
         </View>

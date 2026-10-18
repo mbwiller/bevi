@@ -9,7 +9,6 @@ import { MAX_FONT_SCALE_DENSE, size, spacing, type, useTheme } from '@/theme';
 import { BevActions, bevImageProps, brandLine } from './BevParts';
 import { BevImage } from './BevImage';
 import { Icon } from './Icon';
-import { PriceTier } from './PriceTier';
 import { ScoreBubble } from './ScoreBubble';
 
 export interface BevRowProps {
@@ -39,7 +38,10 @@ export interface BevRowProps {
 
 const DENSE = { maxFontSizeMultiplier: MAX_FONT_SCALE_DENSE } as const;
 
-/** The ~126pt list row: name, `$$ • Category`, category icon • brand, a meta line, actions and a ScoreBubble 40. */
+/**
+ * The ~126pt list row: name, one line of category icon and "Category · Brand", a meta line, actions and a ScoreBubble 40.
+ * No price on a row (D-06): it shows on Bev detail only.
+ */
 export function BevRow({
   bev,
   number,
@@ -59,7 +61,7 @@ export function BevRow({
 }: BevRowProps) {
   const { colors } = useTheme();
   const cat = categoryById(bev.categoryId);
-  const brand = brandLine(bev);
+  const secondary = [cat?.label, brandLine(bev)].filter(Boolean).join(' · ');
   const prefix = number != null ? `${number}. ` : '';
   return (
     <View
@@ -77,15 +79,11 @@ export function BevRow({
             <Text {...DENSE} style={[type.screenTitle, { color: colors.text }]} numberOfLines={1}>
               {prefix + bev.name}
             </Text>
-            <Text {...DENSE} style={[type.body, { color: colors.text }]} numberOfLines={1}>
-              <PriceTier tier={bev.priceTier} estimated={bev.priceEstimated} />
-              {cat ? ` • ${cat.label}` : ''}
-            </Text>
             <View style={styles.line}>
               {cat ? <Icon name={cat.icon} size={16} strokeWidth={2} color={colors.text} /> : null}
-              {brand ? (
+              {secondary ? (
                 <Text {...DENSE} style={[type.body, styles.shrink, { color: colors.text }]} numberOfLines={1}>
-                  {` • ${brand}`}
+                  {secondary}
                 </Text>
               ) : null}
             </View>

@@ -19,16 +19,22 @@ const BEV: BevSummary = {
   bayesScore: 8.4,
 };
 
-it('renders the name, price, category, brand, meta and score', async () => {
+it('renders the name, one category · brand line, meta and score, and no price', async () => {
   await render(<BevRow bev={BEV} number={1} score={9.3} meta="Ranked Oct 3" />);
   expect(screen.getByText('1. Diet Coke')).toBeTruthy();
-  expect(screen.getByText('~$$')).toBeTruthy();
-  expect(screen.getByText(/Diet soda/)).toBeTruthy();
-  // "Original" is dropped from the brand line.
-  expect(screen.getByText(' • Coca-Cola')).toBeTruthy();
+  // One secondary line; "Original" is dropped from the brand part.
+  expect(screen.getByText('Diet soda · Coca-Cola')).toBeTruthy();
+  // D-06: the price tier is on Bev detail only, estimated or not.
+  expect(screen.queryByText(/\$/)).toBeNull();
   expect(screen.getByText('Ranked Oct 3')).toBeTruthy();
   expect(screen.getByLabelText('Score 9.3')).toBeTruthy();
   expect(screen.getByText('1. Diet Coke').props.maxFontSizeMultiplier).toBe(MAX_FONT_SCALE_DENSE);
+});
+
+it('prints just the category when the Bev has no brand', async () => {
+  await render(<BevRow bev={{ ...BEV, brand: null, flavor: null }} />);
+  expect(screen.getByText('Diet soda')).toBeTruthy();
+  expect(screen.queryByText(/·/)).toBeNull();
 });
 
 it('fires onPress, onRank and onSave, and reports saved with aria-pressed', async () => {
