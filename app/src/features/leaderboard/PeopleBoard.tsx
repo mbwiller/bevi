@@ -134,7 +134,7 @@ export function PeopleBoard() {
         renderItem={renderItem}
         keyExtractor={(r) => r.profile.id}
         ListHeaderComponent={
-          <SectionHeader title="Ranked by points" action="How points work" onAction={() => setExplainer(true)} />
+          <SectionHeader title="Ranked by points" action="How points work" actionLabel="How points work" onAction={() => setExplainer(true)} />
         }
         ListEmptyComponent={empty}
         ListFooterComponent={query.isFetchingNextPage ? <PeopleSkeleton count={2} /> : <View style={styles.foot} />}

@@ -106,7 +106,7 @@ export interface HeaderAction { icon: string; label: string; badge?: number; onC
 export interface HeaderProps { title?: string; wordmark?: boolean; centered?: boolean; actions?: HeaderAction[]; onBack?: () => void; className?: string }
 export declare function Header(props: HeaderProps): React.ReactElement;
 
-export interface SectionHeaderProps { title: string; action?: string; onAction?: () => void; className?: string }
+export interface SectionHeaderProps { title: string; action?: string; actionLabel?: string; onAction?: () => void; className?: string }
 export declare function SectionHeader(props: SectionHeaderProps): React.ReactElement;
 
 export interface ListScopeDropdownProps { label?: string; onClick?: () => void; className?: string }

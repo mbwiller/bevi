@@ -494,10 +494,10 @@ P.ScreenLeaderboard = [{ group: 'Screens', height: 852, width: 393, isPage: true
     h(B.Header, { centered: true, title: 'Leaderboard' }),
     h(B.SegmentedTabs, { tabs: [{ id: 'bevs', label: 'Bevs' }, { id: 'people', label: 'People' }], value: 'bevs' }),
     h('div', { className: 'top' }, h(B.ListScopeDropdown, { label: 'All' })),
-    h(B.BevRow, { bev: BEVS.horchata, number: 1, score: 8.9, meta: 'Your score 9.5', actions: true }),
-    h(B.BevRow, { bev: BEVS.mexicanCoke, number: 2, score: 8.7, meta: 'Your score 8.9' }),
-    h(B.BevRow, { bev: BEVS.brownSugar, number: 3, score: 8.5, meta: 'Not ranked yet', saved: true }),
-    h(B.BevRow, { bev: BEVS.topo, number: 4, score: 8.4, meta: 'Your score 7.9' }))`)];
+    h(B.BevRow, { bev: BEVS.horchata, showImage: true, number: 1, score: 8.9, meta: 'Your score 9.5', actions: true }),
+    h(B.BevRow, { bev: BEVS.mexicanCoke, showImage: true, number: 2, score: 8.7, meta: 'Your score 8.9' }),
+    h(B.BevRow, { bev: BEVS.brownSugar, showImage: true, number: 3, score: 8.5, meta: 'Not ranked yet', saved: true }),
+    h(B.BevRow, { bev: BEVS.topo, showImage: true, number: 4, score: 8.4, meta: 'Your score 7.9' }))`)];
 
 P.ScreenAddBev = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHONE_CSS + `
   .ab-q { padding: 16px 16px 12px; } .ab-pills { display: flex; gap: 10px; padding: 0 16px 8px; }

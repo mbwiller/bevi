@@ -7,7 +7,7 @@ import { controls } from '@/testing/fakeApi';
 import LeaderboardScreen from '@/app/(tabs)/leaderboard/index';
 import { categoryById } from '@/lib/categories';
 
-import { RANK_POINTS_WEIGHTS } from '@bevi/ranking';
+import { RANK_POINTS_WEIGHTS, STREAK_PERIOD } from '@bevi/ranking';
 
 import { pointsRules } from '../copy';
 import { myScoreMeta } from '../BevBoard';
@@ -176,6 +176,8 @@ it('explains People points in a sheet', async () => {
   await start('/leaderboard?scope=users');
   await screen.findAllByText(/\(you\)/);
   expect(screen.queryByTestId('sheet')).toBeNull();
+  // The link's spoken name is just "How points work", not "How points work ranked by points".
+  expect(screen.getByRole('link', { name: 'How points work' })).toBeTruthy();
   await fireEvent.press(screen.getByText('How points work'));
   expect(await screen.findByTestId('sheet')).toBeTruthy();
   for (const line of pointsRules()) expect(screen.getByText(line)).toBeTruthy();
@@ -198,5 +200,10 @@ describe('pointsRules', () => {
     expect(a).toBe('2 points for each Bev you rank');
     expect(b).toBe('1 point for each day of your current streak');
     expect(c).toBe('1 point for each Bev you added that someone else ranked');
+  });
+
+  it('names the streak period', () => {
+    expect(STREAK_PERIOD).toBe('day');
+    expect(pointsRules(RANK_POINTS_WEIGHTS, 'week')[1]).toBe('3 points for each week of your current streak');
   });
 });

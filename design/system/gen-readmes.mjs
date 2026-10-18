@@ -94,7 +94,8 @@ const R = {
 - No bell or calendar in v1.`,
   SectionHeader: `Caps section label ("FEATURED BEVS", "YOUR FEED") with an optional "See all" link in \`primary\`.
 
-- Provide: \`title\` (written in sentence case; it renders uppercase), \`action\` and \`onAction\`.`,
+- Provide: \`title\` (written in sentence case; it renders uppercase), \`action\` and \`onAction\`.
+- The link's spoken name is the action, then the title ("See all featured bevs"). When the two don't read well together, pass \`actionLabel\` (the People board's "How points work").`,
   ListScopeDropdown: `Beli's "All ⌄": a 28pt bold label that opens a sheet to scope a list to one category.
 
 - Provide: \`label\` ("All" or the category's label), \`onClick\` to open the Sheet.
@@ -112,7 +113,7 @@ const R = {
 
 - Provide: \`bev\`, \`number\` (Bev'd and Leaderboard), \`score\` (\`scoreVariant="predicted"\` on Recommended), \`meta\` ("Ranked Oct 3", "Saved from @arjun", a recommendation reason), \`count\`, \`saved\`, \`onRank\`, \`onSave\`.
 - The meta line is \`meta\` when the row has one. Only a row with no meta of its own (search results) prints the rating count there instead: "1 rating", "362 ratings", "5k ratings", even under a locked bubble, and nothing at 0. Leaderboard, Want to Try and Recommended rows keep just their own meta.
-- No image by default, as in the reference; \`showImage\` adds a 56pt BevImage for search results and "Did you mean…".
+- No image by default, as in the reference; \`showImage\` adds a 56pt BevImage for search results, "Did you mean…" and the Leaderboard's Bevs board.
 - One list sorted by score: buckets show through the bubble colour, not as sections.`,
   FeedPost: `A ranking in the Feed and on Profile › Activity: "**Arjun** Bev'd **Horchata**", meta line, ScoreBubble, a 155pt photo strip, notes and actions.
 
@@ -212,7 +213,7 @@ const S = {
 
 - Not enough rankings: the second bubble is \`locked\` with "Rank 3 Bevs to see your prediction".`,
   ScreenProfile: `Profile tab (ref 02, 03): name Header, Avatar 100, handle, counts, the outlined Button row, three ProfileListRows, two StatCards, Activity · Taste Profile tabs, then your FeedPosts.`,
-  ScreenLeaderboard: `Leaderboard tab (no reference): centred "LEADERBOARD", Bevs · People tabs, the category scope, then numbered BevRows with the Bayesian score; "Your score 7.6" (or "Not ranked yet") in the meta line, with no rating count.
+  ScreenLeaderboard: `Leaderboard tab (no reference): centred "LEADERBOARD", Bevs · People tabs, the category scope, then numbered BevRows with the Bev's image (\`showImage\`) and the Bayesian score; "Your score 7.6" (or "Not ranked yet") in the meta line, with no rating count.
 
 - People tab: UserRows with rank, points, Bevs and streak; your own row pinned and highlighted.`,
 };
