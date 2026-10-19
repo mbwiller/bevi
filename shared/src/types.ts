@@ -64,6 +64,19 @@ export interface Category {
   name: string;
   sortOrder: number;
   isAlcoholic: boolean;
+  /** Active Bevs in the category (always age-filtered for the caller: an alcoholic category is absent, not 0). */
+  bevCount: number;
+}
+
+/**
+ * The caller's progress through one category ("Soda · 4 of 61 tried"). `total`
+ * is the same count as `Category.bevCount`; `ranked` counts only rankings of
+ * active Bevs, so `ranked <= total`.
+ */
+export interface CategoryProgress {
+  categoryId: CategoryId;
+  ranked: number;
+  total: number;
 }
 
 /** What `BevRow`, `BevImage`, `PriceTier`, `CompareCard` and `FeedPost` render. */

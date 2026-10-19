@@ -55,6 +55,7 @@ import {
   type Bucket,
   type CategoriesApi,
   type CategoryId,
+  type CategoryProgress,
   type CheckHandleResult,
   type Comment,
   type CommentsApi,
@@ -836,7 +837,24 @@ export class FakeApi implements BeviApi {
         this.requireUser();
         return this.statsFor(this.user(id));
       }),
+    getCategoryProgress: () => this.call('stats.getCategoryProgress', () => this.categoryProgress(this.requireUser())),
   };
+
+  /**
+   * As `get_category_progress()` (20261018000200): one row per category the
+   * viewer can see, in sort order. Every FakeBev counts as active (the fake has
+   * no pending_photo / hidden / merged states).
+   */
+  private categoryProgress(me: FakeUser): CategoryProgress[] {
+    const adult = this.canSeeAlcohol(me);
+    const mine = new Set(this.db.rankings.filter((r) => r.userId === me.id).map((r) => r.bevId));
+    return CATEGORIES.filter((c) => adult || !c.isAlcoholic)
+      .sort((a, z) => a.sortOrder - z.sortOrder)
+      .map((c) => {
+        const inCategory = this.db.bevs.filter((b) => b.categoryId === c.id);
+        return { categoryId: c.id, ranked: inCategory.filter((b) => mine.has(b.id)).length, total: inCategory.length };
+      });
+  }
 
   // -------------------------------------------------------------------------
   // Follows
@@ -905,8 +923,9 @@ export class FakeApi implements BeviApi {
       this.call('categories.list', () => {
         const me = this.requireUser();
         const adult = this.canSeeAlcohol(me);
+        const totals = new Map(this.categoryProgress(me).map((p) => [p.categoryId, p.total]));
         return CATEGORIES.filter((c) => adult || !c.isAlcoholic)
-          .map(({ id, name, sortOrder, isAlcoholic }) => ({ id, name, sortOrder, isAlcoholic }))
+          .map(({ id, name, sortOrder, isAlcoholic }) => ({ id, name, sortOrder, isAlcoholic, bevCount: totals.get(id) ?? 0 }))
           .sort((a, z) => a.sortOrder - z.sortOrder);
       }),
   };

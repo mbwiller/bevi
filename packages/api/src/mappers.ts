@@ -14,6 +14,7 @@ import type {
   BevSummary,
   Bucket,
   Category,
+  CategoryProgress,
   CategoryId,
   Comment,
   FeedEventKind,
@@ -117,13 +118,26 @@ export interface CategoryRow {
   is_alcoholic: boolean;
 }
 
-export function mapCategory(row: CategoryRow): Category {
+/** `bevCount` comes from `get_category_progress` (20261018000200), not the table. */
+export function mapCategory(row: CategoryRow, bevCount: number): Category {
   return {
     id: row.id as CategoryId,
     name: row.name,
     sortOrder: row.sort_order,
     isAlcoholic: row.is_alcoholic,
+    bevCount,
   };
+}
+
+/** One row of `get_category_progress()`. */
+export interface CategoryProgressRow {
+  category_id: string;
+  ranked: number;
+  total: number;
+}
+
+export function mapCategoryProgress(row: CategoryProgressRow): CategoryProgress {
+  return { categoryId: row.category_id as CategoryId, ranked: row.ranked, total: row.total };
 }
 
 // --------------------------------------------------------------------------

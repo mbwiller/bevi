@@ -334,6 +334,23 @@ describe('likes (S-02)', () => {
   });
 });
 
+describe('category progress (S-07)', () => {
+  it('counts the catalog per category and the signed-in user\'s rankings in it', async () => {
+    const api = make();
+    await signInMe(api);
+    const progress = await api.stats.getCategoryProgress();
+    const { bevdCount } = await api.stats.getMine();
+    for (const p of progress) {
+      expect(p.total).toBe(CATALOG_BEVS.filter((b) => b.categoryId === p.categoryId).length);
+    }
+    const ranked = progress.reduce((sum, p) => sum + p.ranked, 0);
+    expect(ranked).toBe(bevdCount);
+    expect(ranked).toBeGreaterThan(0);
+    const categories = await api.categories.list();
+    expect(categories.map((c) => c.bevCount)).toEqual(progress.map((p) => p.total));
+  });
+});
+
 describe('comments (S-03)', () => {
   /** FRIEND's newest post, which ME (following FRIEND) can see. */
   async function friendsPost(api: FakeApi) {

@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { BUCKET_ORDER } from '@bevi/shared';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { bucketFromDb, bucketToDb, feedKindFromDb, mapBevOfPeriod, mapFlavorProfile, type BevOfPeriodRpcRow } from '../src/mappers.ts';
+import {
+  bucketFromDb,
+  bucketToDb,
+  feedKindFromDb,
+  mapBevOfPeriod,
+  mapCategory,
+  mapCategoryProgress,
+  mapFlavorProfile,
+  type BevOfPeriodRpcRow,
+} from '../src/mappers.ts';
 
 describe('bucket <-> smallint', () => {
   it('round-trips every Bucket value through the DB encoding', () => {
@@ -92,5 +101,25 @@ describe('mapBevOfPeriod', () => {
   it('maps a missing period to null', () => {
     expect(mapBevOfPeriod(client, [row('week')])).toMatchObject({ day: null });
     expect(mapBevOfPeriod(client, [])).toStrictEqual({ day: null, week: null });
+  });
+});
+
+describe('category progress (S-07)', () => {
+  it('mapCategory carries the bevCount it is given', () => {
+    expect(mapCategory({ id: 'soda', name: 'Soda', sort_order: 1, is_alcoholic: false }, 61)).toStrictEqual({
+      id: 'soda',
+      name: 'Soda',
+      sortOrder: 1,
+      isAlcoholic: false,
+      bevCount: 61,
+    });
+  });
+
+  it('mapCategoryProgress renames the RPC columns', () => {
+    expect(mapCategoryProgress({ category_id: 'soda', ranked: 4, total: 61 })).toStrictEqual({
+      categoryId: 'soda',
+      ranked: 4,
+      total: 61,
+    });
   });
 });
