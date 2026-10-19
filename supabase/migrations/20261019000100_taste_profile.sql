@@ -80,8 +80,9 @@ begin
     end if;
   end if;
 
-  delete from public.user_category_stats where user_id = p_uid;
-
+  -- Upsert, then drop only the categories with no rankings left, so two
+  -- refreshes of the same user at once (a ranking during the nightly job or
+  -- the backfill) can't collide on the (user_id, category_id) primary key.
   insert into public.user_category_stats
     (user_id, category_id, rating_count, mean_score, stddev_score, affinity_z, updated_at)
   select p_uid,
@@ -94,7 +95,20 @@ begin
     from public.rankings r
     join public.bevs b on b.id = r.bev_id
    where r.user_id = p_uid
-   group by b.category_id;
+   group by b.category_id
+  on conflict (user_id, category_id) do update
+     set rating_count = excluded.rating_count,
+         mean_score   = excluded.mean_score,
+         stddev_score = excluded.stddev_score,
+         affinity_z   = excluded.affinity_z,
+         updated_at   = excluded.updated_at;
+
+  delete from public.user_category_stats s
+   where s.user_id = p_uid
+     and not exists (select 1
+                       from public.rankings r
+                       join public.bevs b on b.id = r.bev_id
+                      where r.user_id = p_uid and b.category_id = s.category_id);
 end;
 $$;
 

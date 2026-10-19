@@ -13,7 +13,7 @@
 -- also gets a wine ranking inserted directly (bad data an under-21 owner
 -- cannot normally have).
 begin;
-select plan(24);
+select plan(25);
 
 insert into auth.users (id, email, raw_user_meta_data, aud, role)
 values ('00000000-0000-4000-8000-0000000000f1', 'pgtaptp1@users.bevi.app',
@@ -70,10 +70,21 @@ select is(
   'refresh_user_category_stats matches user-stats.vectors.json "five rankings"'
 );
 
--- Re-running replaces rather than duplicates.
+-- Re-running upserts rather than duplicating: twice in a row leaves the same rows.
+create temporary table t_first on commit drop as
+  select category_id, rating_count, mean_score, stddev_score, affinity_z
+    from public.user_category_stats where user_id = '00000000-0000-4000-8000-0000000000f1';
+select public.refresh_user_category_stats('00000000-0000-4000-8000-0000000000f1');
 select public.refresh_user_category_stats('00000000-0000-4000-8000-0000000000f1');
 select is((select count(*)::int from public.user_category_stats
-            where user_id = '00000000-0000-4000-8000-0000000000f1'), 4, 'a refresh is idempotent');
+            where user_id = '00000000-0000-4000-8000-0000000000f1'), 4, 'a refresh is idempotent: no duplicate rows');
+select results_eq(
+  $$ select category_id, rating_count, mean_score, stddev_score, affinity_z
+       from public.user_category_stats where user_id = '00000000-0000-4000-8000-0000000000f1'
+      order by category_id $$,
+  $$ select * from t_first order by category_id $$,
+  'two refreshes in a row leave the same values'
+);
 
 -- The under-21 owner's wine row is stored, so the under-21 owner check below tests the filter.
 select is((select count(*)::int from public.user_category_stats
