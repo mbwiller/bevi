@@ -111,9 +111,8 @@ select is(
 set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000000e1", "role": "authenticated"}';
 
 select is(
-  (select array_agg(id order by ord)
-     from (select id, row_number() over () as ord
-             from public.get_user_feed('00000000-0000-4000-8000-0000000000e1', 20, null)) t),
+  (select array_agg(t.id order by t.ordinality)
+     from public.get_user_feed('00000000-0000-4000-8000-0000000000e1', 20, null) with ordinality t),
   array[(select id from t_events where label = 'plain2'),
         (select id from t_events where label = 'booze'),
         (select id from t_events where label = 'plain1')],
