@@ -102,9 +102,11 @@
         "list-filter.svg",
         "list.svg",
         "lock.svg",
+        "map.svg",
         "martini.svg",
         "meh.svg",
         "menu.svg",
+        "message-circle.svg",
         "milk.svg",
         "newspaper.svg",
         "plus.svg",
@@ -442,6 +444,18 @@
           "blob": "e22724890c69a8950724612736521a14",
           "size": 334,
           "type": "image/svg+xml"
+        },
+        "message-circle.svg": {
+          "name": "message-circle.svg",
+          "blob": "477d370b7f63a3bbc92865516f409759",
+          "size": 235,
+          "type": "image/svg+xml"
+        },
+        "map.svg": {
+          "name": "map.svg",
+          "blob": "6798330eef161a81e8a3ce43bc908b20",
+          "size": 501,
+          "type": "image/svg+xml"
         }
       }
     }
@@ -453,8 +467,8 @@
   },
   "lastChange": {
     "by": "Matt Willer",
-    "at": "2026-10-10T03:23:32Z",
-    "via": "Claude Code",
-    "note": "Score bands now 7 / 4; BucketButton gains a tint fallback for non-glass platforms"
+    "at": "2026-10-19T17:46:14Z",
+    "via": "Claude Code (re-sync from mbwiller/bevi main @ b51ebf5)",
+    "note": "M-06 follow-ups, M-12 (one secondary line, no price on rows), M-08 ProgressStrip/ProgressBar/CollectionSheet, M-15 Search tab (ScreenSearch, ScreenSearchResults replace ScreenAddBev; map icon), M-05 BevOfCard replaces Featured on the Feed."
   }
 }

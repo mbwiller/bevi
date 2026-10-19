@@ -31,6 +31,25 @@ Source: `CONVERSATION-2.md` (raw transcript). This file turns that conversation 
 - **Contract gap found by M-02:** Profile › Activity can't show likes (details under M-02).
 - **Next in Matt's lane:** M-03 (comments), then M-12 once D-06 is decided.
 
+**Progress (2026-10-19, later, Matt with Claude): wave 2.**
+- **Merged and live:**
+  - S-20's UI (#102), M-08 (#103) and M-15 (#104).
+  - M-05 (#105).
+  - S-12 + A-11 (#101).
+  - Every prod deploy succeeded. A GitHub Actions incident held CI for about an hour.
+- **On prod:** Matt pushed `20261019000100_taste_profile.sql` on 2026-10-19, and `migration list` matches.
+- **Design system:**
+  - The artifact is at version 13, matching `main` at #105. It has the `map` icon uploaded, and ScreenAddBev was removed for ScreenSearch.
+  - `design/system/project/design-system.json` in the repo had fallen behind the artifact: `message-circle` was uploaded during M-03, but the repo copy never got the record. That's fixed in this PR.
+- **Decided:** D-10 (one bar, grouped results).
+- **D-01** was accepted as proposed. **Explore is still on hold**, pending a new joint decision, D-15: whether posts outside your follows can be liked and commented on.
+- **What's left in P0 and P1:**
+  - M-19, the Taste Profile screen. Its backend is live.
+  - Explore, once D-15 is settled.
+  - Graph Stages 2–3 (Arjun).
+  - A-14 parity and the D-04 taxonomy draft.
+  - The icons, on hold under D-07.
+
 **Progress (2026-10-19, Matt with Claude).**
 - **Merged and live:**
   - M-12 (#95), the M-06 follow-ups (#94) and M-26 (#99).
@@ -270,11 +289,17 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
   - No likes on comments and no comment reports. Both are deferred on purpose (D-01, A-03).
 
 **M-04 · Explore surface.** `ui/explore`
+- **On hold (2026-10-19, Matt): see D-15.** D-01 (two hops, a global fallback under 20 users) is accepted, but Explore shows posts from people you don't follow, and today only followers can see, like or comment on a post. Decide D-15 with Arjun first.
 - Spec: the Feed keeps "Your feed" (friends). Add an **Explore** segment (`SegmentedTabs` on the Feed, or a second list under the header) showing posts from people one or two follows away, **ordered by popularity (likes)**, not time. Post cards are the same `FeedPost`. Follow button on the actor for people you don't follow yet.
 - Needs: S-04, A-04, D-01 (hops and whether global is allowed as a fallback when the graph is tiny).
 - DoD: Explore renders from `feed.getExplore()`, paginates, degrades to an empty state when nothing is popular yet.
 
 **M-05 · Bev of the day · Bev of the week.** `ui/bev-of-period`
+- **Done in #105:**
+  - The pair replaces the Featured carousel (Matt's pick).
+  - Each card flexes to half the row; an earlier period's winner shows its date.
+  - Under-21 users don't see alcoholic winners: the server filters them out and the app hides them too.
+  - Removed from the app: FeaturedCarousel, `useFeatured` and `keys.featured`. `feed.getFeatured` stays in the contract, and FeaturedCard stays in the design system.
 - **Backend live (#96, contract 2.1.0):** `feed.getBevOfPeriod()`. A Bev with a single rating can win, and its `bayesScore` is then set even below `MIN_RATERS` (LaTeX §10.3). The UI is what remains.
 - Spec: **two cards side by side at the top of the feed, directly under the search bar** (above Featured Bevs; consider replacing the Featured carousel while the catalog has no hero art). Each card: the Bev's image/icon, a small caps label ("BEV OF THE DAY" / "BEV OF THE WEEK"), the Bev's name underneath, the Bayesian score bubble. Tapping opens the Bev. **Not a post.** When no Bev was ranked that day, show the most recent day's winner with its date, or hide the day card (D-02).
 - Design system: a `BevOfCard` component (half-width, square image).
@@ -319,6 +344,11 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
   - The design system's SortToggle needs `onClick` and shows the search icon only with `onSearch`; the dead "Predicted" example is gone (M-25's follow-up).
 
 **M-08 · Your Lists › Bev'd: gamify.** `ui/bevd-gamified`
+- **Done in #103, without the per-Bev icons:**
+  - A `ProgressStrip` under the filters ("Soda · 4 of 61 tried · 6%"; "All Bevs · …" with no category picked) opens a "Your collection" `CollectionSheet` with one `ProgressBar` per category.
+  - Tapping a row filters Bev'd to that category.
+  - Percentages round down and show "<1%" for any share above zero.
+  - The icons wait on D-07.
 - **Backend live (#93, contract 2.2.0):** `Category.bevCount` and `stats.getCategoryProgress()`. The UI remains. The per-row icons wait on D-07; rows can use category placeholder art until then.
 - Spec: **icons on every row** (`BevRow showImage` in `BevdTab.tsx`, which currently has `actions={false}` and no image); a **category progress strip** above the list ("Soda · 4 of 61 tried · 7%") driven by A-06; and one visual "graph of Bevs" (e.g. a horizontal bar per category of your ranked count vs catalog size, or a collection grid of icons you've unlocked). Keep the rows less crowded (see M-12).
 - Needs: S-07, A-06.
@@ -388,6 +418,12 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
   - RankResult keeps its 56 confirmation, and its `ZoomIn` now respects Reduce Motion.
 
 **M-15 · The Search tab: search bar on top, the map underneath, results over the map.** `ui/search-tab` (decision 32)
+- **Done in #104 (D-10: one bar, grouped results):**
+  - The centre tab reads "Search". `/add` stays the route, and `/search` redirects to it.
+  - Under the bar is a static "Map coming soon" placeholder (M-16 brings the map). It is mounted once and never re-mounted.
+  - The results panel slides over it. `?tab=people` and `?focus=1` open it, and so does every "go find a Bev" button in the app.
+  - The keyboard lift has a unit test with iPhone numbers.
+  - `DEVELOPMENT-MATT.md` §5, §6.8 and §6.16 still describe Add Bev and the Bevs · People tabs: a joint docs follow-up.
 - Tab bar: `app/src/components/TabBar.tsx` labels the centre grape circle "Add Bev"; it becomes **Search** (Beli's label for the same circle). Route stays `/add` with a redirect from `/search`, or moves; `?tab=people` keeps working.
 - Layout, top to bottom: header (wordmark, ✕ close as today); the outlined `SearchBar` ("Search a Bev or a person"); the **Snap it** pill row; then the **map area** filling the rest of the screen (M-16 provides the map; until it lands, a static NYC placeholder with the same chrome).
 - Behaviour: the map pans and zooms **in place** without being "clicked into"; tapping a pin, the `List | Map` control or the expand affordance opens the **full-screen map** (a modal route, e.g. `/search/map`) with the full chrome from §1c and a close ✕. **Focusing the search bar** (or any text in it) slides the **results panel over the map** from under the bar: Recents while idle, then results while typing, the sticky "Can't find it? Add a new Bev" footer; clearing the bar or tapping Cancel slides it away and the map is exactly where it was. The map must not receive gestures while the panel is up (`pointerEvents="none"` on the map host).
@@ -397,6 +433,7 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - DoD: the tab reads "Search"; map visible and pannable under the bar; panel slides over and back without the map re-mounting; keyboard never covers results; tests for the panel state machine (idle → typing → results → cancelled).
 
 **M-19 · Taste Profile tab.** `ui/taste-profile`
+- **Unblocked:** S-12 + A-11 are live (#101, contract 2.4.0, on prod). `stats.getTasteProfile(userId)` returns rows ordered by mean; alcoholic categories are dropped unless both the viewer and the owner are 21+. Only the UI remains.
 - Replace the "Coming soon" tab (`app/src/features/profile/ActivityList.tsx`) with the simple definition from the session: a bar list of **your average score per category** ("Coffee 8.1 · 9 ranked"), ordered high to low, with a one-line read-out ("You prefer coffee and boba over soda"). The §6.20 calendar and share card can come later.
 - Needs: S-12, A-11.
 - DoD: renders from `stats.getTasteProfile`, hides categories with no rankings, works on another user's profile.
@@ -513,6 +550,7 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - DoD: pgTAP for RLS and paging; live test.
 
 **A-04 · Explore.** `be/explore`
+- **On hold with M-04 (D-15).**
 - RPC `get_explore(p_limit, p_before)` over posts by users within two follows of the caller (recursive CTE on `follows`, depth ≤ 2, excluding the caller's own follows' posts already in the feed, D-01), ordered by a **time-decayed like count** (LaTeX §10.4: `(likes + 1) / (age_hours + 2)^1.5`; constant in one place). Also `get_popular_bevs(p_days)` for the "Bevs getting the most likes" ranking if the app wants a Bev-level list, and `get_popular_venues(p_days)` for the map's ↗ badge.
 - Needs: S-04, A-02.
 - DoD: `explain analyze` under 150 ms locally at 1k posts; live test.
@@ -539,6 +577,12 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 ### P1
 
 **A-11 · Taste Profile data.** `be/taste-profile`
+- **Done in #101, with S-12:**
+  - `refresh_user_category_stats` upserts on `(user_id, category_id)` with no race, and runs via `refresh_user_stats` (same signature).
+  - A nightly pg_cron job runs at 04:20 UTC, and the migration backfilled existing users.
+  - `get_taste_profile(p_user_id)` is the read path.
+  - `user_category_stats_select` is narrowed to owner-only: it was `using (true)`, and the backfill made that matter.
+  - It's on prod.
 - `user_category_stats` is never written: `refresh_user_stats` (`20261011000700_streak_and_rank_points.sql`) only updates `user_stats`, and nothing writes `affinity_z`. Add `refresh_user_category_stats(p_uid)` (population stddev, `affinity_z = Σ z / (n + 2)` with z against the user's **overall** effective stats, as in `packages/ranking/src/stats.ts` and LaTeX §4.3), call it from `submit_ranking`, `rerank_bev`, `remove_ranking`, and from the nightly `refresh_all_stats`. RPC `get_taste_profile(p_user_id)` → rows `(category_id, rating_count, mean_score, affinity_z)`, visible for any user (means are not sensitive; birth dates stay private).
 - Needs: S-12.
 - DoD: golden-vector test against `shared/fixtures/user-stats.vectors.json`; live test.
@@ -626,7 +670,7 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 | **S-09** | **Done in #92.** `vision.md` edits: vessels are not variants; one ranking per Bev per user ("binary"); Mexican Coke is its own Bev; icons over photos; feed = friends + Explore; Bev of the day/week; NYC only; **the Bev graph lives in Neo4j AuraDB Free with Postgres as the system of record (§1b, §1d); the map is inside the Search tab, Google Maps JS, OSM venues, strictly NYC; rankings may carry a venue, GPS is never stored** | everyone |
 | **S-10** | `VenuesApi { inView({ bounds, zoom, filters }), get(id), search({ q, near? }), friends(bounds), neighborhoods() }`; `Venue`, `VenueKind`, `VenuePin { venue, myBestScore, bestScore, predictedScore, trending, wantToTryHere, openNow \| null }`; `NYC_BOUNDS` constant in `shared/` | M-16, M-23, A-08 |
 | **S-11** | `Bev.nutrition: Nutrition \| null` (per-serving fields + `servingMl`); a shared `per100ml()` helper in `shared/` | M-18, A-09 |
-| **S-12** | `StatsApi.getTasteProfile(userId)` → `{ categoryId, rankingCount, mean, affinity }[]` | M-19, A-11 |
+| **S-12** | **Done in #101.** `StatsApi.getTasteProfile(userId)` → `{ categoryId, rankingCount, mean, affinity }[]` | M-19, A-11 |
 | **S-13** | `BevsApi.report(id, reason, opts?: { duplicateOfId })` | M-20, A-12 |
 | **S-14** | `RankingsApi.listBucketBevs(bucket)` → `{ id, categoryId, brandKey }[]` (beside `listBucket`); `BevsApi.similarities(bevId, otherIds)` → `{ bevId, weight }[]` from `bev_edges`; `BevsApi.similar(bevId, n)` for "Bevs like this"; `Category.parentId`; `FlavorProfile` type and `Bev.flavorProfile` (column names agreed between M-24 and A-17). **Part 1 done in #68** (the flavour-profile names). Part 2 (`similarities`, `similar`, `listBucketBevs`, `parentId`) waits on the full A-16, which #87 deferred | M-21, M-24, A-13, A-16, A-17 |
 | **S-15** | `docs/bevi-ranking-math.tex` + `.pdf` (this session; §10.1 updated in revision 2 with the embedding and profile terms and the Neo4j decision). Both read it; comments become PRs against the `.tex` | M-22, A-14 |
@@ -634,7 +678,7 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 | **S-17** | `docs/graph.md`: the graph schema, what Postgres owns vs the graph, the sync contract and its sanity report, secret names, the keep-alive rule, "Neo4j is never on a request path", how to resume a paused instance; plus a `supabase/CLAUDE.md` line pointing at it | A-15, A-16 |
 | **S-18** | **Done in #92.** `.github/workflows/app.yml`: stop `expo-doctor`'s dependency-version check from turning `main` red when Expo ships an SDK patch (it compares against Expo's *current* expected versions; this happened at #58, fixed by #63). Make that check advisory (its own step with `continue-on-error`, or exclude it) and keep the other doctor checks blocking. Bump patches with `npx expo install --fix` from `app/` in a small `ui/*` PR when it warns (first time: #98) | `main` CI stays green |
 | **S-19** | **Done in #92.** `.claude/agents/ui-screen.md` asks for a `ComponentGallery` entry, but no such screen exists in `app/src`. Either drop that step or build the gallery (DEVELOPMENT-MATT §4 planned one). **The gallery did exist, and #56 removed it on purpose at launch** ("the dev gallery and dev routes are gone", DEVELOPMENT-MATT status 2026-10-12). The design system's `preview.html` files now show every state, so the proposal is to drop the step. In the same PR, `app/CLAUDE.md` line 7 still says the design changes "in the artifact first and the mirror is re-synced". Since 2026-10-15 the order is repo first (`design/system/src/`, `npm run build`), then publish to the artifact after the merge | ui-screen runs |
-| **S-20** | **Backend done in #97 (hybrid; contract 2.3.0).** Profile › Activity can't show likes or comments: `RankedBev` from `rankings.listUser` has no feed-event id, `likeCount`, `likedByMe` or `commentCount`. Either add those fields to `listUser`, or add `feed.listUser(userId, page)` returning `FeedItem`s (found by M-02 and M-03). **Matt's pick (2026-10-18), for Arjun to approve in the contract PR:** `FeedApi.listUser(userId, page)` → `Page<FeedItem>`. This is how Beli and Instagram do it: a profile's activity is the same post as the feed, with the same likes and comments. It also means one card and one cache. Backend: `get_feed`'s row shape filtered to one actor and gated by `feed_event_visible`. `rankings.listUser` stays as it is for lists.
+| **S-20** | **Done: backend #97, UI #102 (hybrid; contract 2.3.0).** Profile › Activity can't show likes or comments: `RankedBev` from `rankings.listUser` has no feed-event id, `likeCount`, `likedByMe` or `commentCount`. Either add those fields to `listUser`, or add `feed.listUser(userId, page)` returning `FeedItem`s (found by M-02 and M-03). **Matt's pick (2026-10-18), for Arjun to approve in the contract PR:** `FeedApi.listUser(userId, page)` → `Page<FeedItem>`. This is how Beli and Instagram do it: a profile's activity is the same post as the feed, with the same likes and comments. It also means one card and one cache. Backend: `get_feed`'s row shape filtered to one actor and gated by `feed_event_visible`. `rankings.listUser` stays as it is for lists.
 **Blocked on a visibility decision (found 2026-10-18):**
 - `rankings_select` lets any signed-in user read anyone's rankings, so a stranger's Activity shows today. Only the age gate applies.
 - `feed_event_visible`, which gates posts, likes and comments, requires that you are the author or follow them.
@@ -650,7 +694,7 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 
 | Id | Question | Proposal (so a branch can start) |
 |---|---|---|
-| **D-01** | Explore scope: one hop, two hops, or global? Likes on comments? | Two hops (friends of friends); fall back to global while fewer than 20 users; no likes on comments this round. |
+| **D-01** | Explore scope: one hop, two hops, or global? Likes on comments? | **Accepted 2026-10-19 (Matt; Arjun confirms):** two hops (friends of friends); fall back to global while fewer than 20 users; no likes on comments this round. Explore itself waits on D-15. |
 | **D-02** | Bev of the day when nobody ranked anything today? Score definition: the Bev's overall Bayesian score vs. only that day's scores? | **Decided 2026-10-18 (Matt; Arjun confirms in review):** overall Bayesian score among Bevs ranked in the period; if the period is empty, show the latest non-empty day with its date (LaTeX §10.3). |
 | **D-03** | Smart Recommend on the map | Parked under the guardrail (§0). Maths kept in LaTeX §10.5 so it is ready when wanted. |
 | **D-04** | The finer category taxonomy (which leaves under each of today's 15 ids) and how deep | Two levels: today's 15 become parents; add leaves only for coffee, tea, boba, soda, beer, cocktails first. Matt drafts in `design/taxonomy.md`, Arjun stores it (Postgres `parent_id` and the graph's `CHILD_OF`). The flavour-profile `base` vocabulary (A-17) should line up with the leaves. |
@@ -659,10 +703,11 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 | **D-07** | Icon production: generated illustrations via the skill vs. web product photos | **On hold (Matt and Arjun, 2026-10-18).** Some Bevs can't get a generated icon at all: craft cocktails, one coffee shop's own drinks, and the like. The approach needs rethinking before M-10 / A-07 go ahead. The earlier proposal was generated illustrations in one style, with photos only as a fallback with a recorded licence. |
 | **D-08** | Map library and tiles | **Decided 2026-10-14: Google Maps JavaScript API with the Bev Maps Google Cloud project** (decision 34). MapLibre + OpenFreeMap (free, no key) stays the fallback if the free map-load allowance is ever exceeded. |
 | **D-09** | Nutrition VLM | Trial two cheap hosted open-weight vision models on 20 labels; pick by field accuracy per dollar. |
-| **D-10** | People search in the new Search tab: one bar with grouped Bevs / People results, or keep the Bevs · People segmented tabs above the bar | One bar, grouped results (M-15). |
+| **D-10** | People search in the new Search tab: one bar with grouped Bevs / People results, or keep the Bevs · People segmented tabs above the bar | **Decided 2026-10-19 (Matt): one bar, grouped results.** Shipped in #104. |
 | **D-11** | Flavour profile for a Bev a user creates (no labelling step at runtime) | Copy the profile of the nearest seeded Bev by embedding, flagged `inferred`; a periodic sub-agent pass relabels inferred rows into the CSV. |
 | **D-12** | Google key and quota: second browser key in the Bev Maps project vs a separate project | Second key in the same project (one billing account, one budget alert), referrer-restricted to Bevi's domains; confirm in the console whether the free Dynamic Maps allowance pools across the two apps and split it if it does. |
 | **D-13** | Which venues get a pin | Only venues with at least one `venue_bevs` row or one ranking; bare OSM rows stay searchable in "Where did you have it?" but draw no pin. |
+| **D-15** | Explore shows posts from people you don't follow. Can you like and comment on them? Today `feed_event_visible` restricts posts, likes and comments to the author's followers. | Open, joint (raised 2026-10-19; Matt held Explore). Options: (1) like and comment, Instagram-style, by widening `feed_event_visible` to two hops plus the global fallback, which also makes strangers' Activity show posts; (2) Explore read-only (counts shown, no heart or comment until you follow). |
 | **D-14** | Find Bev handoff: what Bev Maps should accept (`?bev=`, `?venue=`, `?from=bevi`) | A change in `acheema5/bev-maps`; until then the button opens Bev Maps' home. |
 
 ---
@@ -670,9 +715,9 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 ## 7. Suggested order of work
 
 1. **Week 1 (P0, small):** ~~S-01~~ (#65) → ~~A-01~~ (#69) + ~~M-01~~ (folded into #80) · ~~M-09~~ (#60) · ~~M-11~~ (#61) · ~~M-06~~ (#62) · ~~M-07~~ (#85) · S-08/S-09 docs · ~~M-25~~ (#74) · S-18, S-19 (small, found on 2026-10-14). **In parallel (graph foundation, no screens):** ~~A-15~~ (#72, with S-17) · ~~S-14 column names~~ (#68, part 1 only) · ~~M-24~~ (#86) · ~~A-17~~ (#73). **Left on 2026-10-18:** S-08 (on hold with the icons). ~~S-09, S-18, S-19~~ (#92).
-2. **Week 2 (P0, social):** ~~S-02~~ (#82) / ~~S-03~~ (#67) → ~~A-02~~ (#70) / ~~A-03~~ (#71) + ~~M-02~~ (#90) / ~~M-03~~ (#91) · ~~S-05 → A-05~~ (#96) + M-05. **Graph (re-planned by #87):** ~~the implementation plan~~ (#87) → ~~M-26~~ (#99, needs the export) → A-16 Stage 2 (sync live; it replaces the keep-alive). **Likes and comments are done end to end;** the only gap left is Profile › Activity: S-20's backend is done (#97), its UI isn't.
-3. **Week 3 (P0/P1):** S-04 → A-04 + M-04 · ~~S-07 → A-06~~ (#93) + M-08 · M-10 + A-07 (icons, **on hold**, D-07) · ~~M-12~~ (#95) · ~~M-13~~ (#88) · ~~M-14~~ (#89) · **M-15 (Search tab shell)** · graph Stage 3 (`user_neighbors`).
-4. **Week 4 (P1):** S-12 → A-11 + M-19 · A-14 parity · D-04 taxonomy draft.
+2. **Week 2 (P0, social):** ~~S-02~~ (#82) / ~~S-03~~ (#67) → ~~A-02~~ (#70) / ~~A-03~~ (#71) + ~~M-02~~ (#90) / ~~M-03~~ (#91) · ~~S-05 → A-05~~ (#96) + ~~M-05~~ (#105). **Graph (re-planned by #87):** ~~the implementation plan~~ (#87) → ~~M-26~~ (#99, needs the export) → A-16 Stage 2 (sync live; it replaces the keep-alive). **Likes and comments are done end to end;** the only gap left is Profile › Activity: ~~S-20~~ (#97, #102).
+3. **Week 3 (P0/P1):** S-04 → A-04 + M-04 (**on hold**, D-15) · ~~S-07 → A-06~~ (#93) + ~~M-08~~ (#103) · M-10 + A-07 (icons, **on hold**, D-07) · ~~M-12~~ (#95) · ~~M-13~~ (#88) · ~~M-14~~ (#89) · ~~M-15~~ (#104) · graph Stage 3 (`user_neighbors`).
+4. **Week 4 (P1):** ~~S-12 → A-11~~ (#101) + M-19 · A-14 parity · D-04 taxonomy draft.
 5. **Then P2:** the map (S-10, S-16 → A-08 → M-16, M-17, M-23), nutrition (S-11, A-09, M-18), duplicates (S-13, A-12, M-20).
 6. **P3 only after both say yes:** A-13 → M-21 (anchored placement on `bev_edges`). Graph Stages 4–5 also go here, plus the full A-16 (`bev_edges`, embeddings) if Stage 5's bar says the graph earns its keep.
 
