@@ -260,18 +260,21 @@ export function CommentsSheet({ open = true, comments = [], me, onClose, onPost,
  * Empty categories are left out. A row is a button: it scopes Bev'd to that category and closes.
  */
 export function CollectionSheet({ open = true, rows = [], onClose, onSelect, className }) {
-  const shown = rows.filter((r) => r.total > 0 && categoryById(r.category));
+  const shown = rows.filter((r) => r.total > 0 && categoryById(r.categoryId));
   const ranked = shown.reduce((n, r) => n + r.ranked, 0);
   const total = shown.reduce((n, r) => n + r.total, 0);
   return (
     <Sheet open={open} title="Your collection" snap={90} onClose={onClose} className={cx('bv-collection', className)}>
-      <p className="body bv-meta bv-collection-sum">{formatTried(ranked, total)}</p>
+      <p className="body bv-meta bv-collection-sum">
+        <span aria-hidden="true">{formatTried(ranked, total)}</span>
+        <span className="bv-sr-only">{spokenTried(ranked, total)}</span>
+      </p>
       <ul className="bv-collection-list">
         {shown.map((r) => {
-          const cat = categoryById(r.category);
+          const cat = categoryById(r.categoryId);
           return (
-            <li key={r.category}>
-              <button type="button" className="bv-collection-row" onClick={() => onSelect && onSelect(r.category)}
+            <li key={r.categoryId}>
+              <button type="button" className="bv-collection-row" onClick={() => onSelect && onSelect(r.categoryId)}
                 aria-label={cat.label + ', ' + spokenTried(r.ranked, r.total) + '. Show only ' + cat.label}>
                 <Icon name={cat.icon} size={24} strokeWidth={1.75} />
                 <span className="bv-collection-text">

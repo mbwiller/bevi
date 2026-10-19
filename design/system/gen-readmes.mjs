@@ -144,9 +144,13 @@ const R = {
 - The percentage rounds **down** and never reads a misleading 0%: "<1%" once anything is tried, "0%" when nothing is. An empty category drops the percentage.
 - The bar is \`input\` with a \`primary\` fill, because it is a share you earned (the README's rule for grape). It is decorative; the line and the spoken label carry the number ("Soda, 4 of 61 tried, 6 percent. Show your collection").
 - While the numbers load, a one-line Skeleton holds the strip's place; if they fail, the strip is left out rather than showing a wrong count.`,
+  ProgressBar: `A 4pt progress track in \`input\` with a \`primary\` fill: a share you earned. Used by the ProgressStrip and the CollectionSheet.
+
+- Provide: \`value\` 0–1 (clamped).
+- Decorative and hidden from screen readers: the text beside it always says the number.`,
   CollectionSheet: `"Your collection": a 90% Sheet with every category the viewer can see, in catalog order, each with its icon, "9 of 40" and the same 4pt bar.
 
-- Provide: \`rows\` (\`{ category, ranked, total }\` from \`stats.getCategoryProgress()\`), \`onSelect\`, \`onClose\`. Categories with nothing in them are left out; the alcoholic three never reach an under-21 viewer.
+- Provide: \`rows\` (\`{ categoryId, ranked, total }\`: the contract's \`CategoryProgress\`, from \`stats.getCategoryProgress()\`), \`onSelect\` (called with the \`categoryId\`), \`onClose\`. Categories with nothing in them are left out; the alcoholic three never reach an under-21 viewer.
 - The sheet opens on the overall line ("37 of 378 tried · 9%"). Catalog order stays put as you rank, so a bar never jumps rows.
 - Tapping a row scopes Bev'd to that category and closes the sheet.`,
   UserRow: `A person row for People search, followers lists and the user leaderboard.

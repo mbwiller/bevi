@@ -9,6 +9,8 @@
 .bv:focus-visible, :where(.bv) :focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .bv-icon { display: block; flex: none; }
 .bv-meta { color: var(--textSecondary); }
+/* Read by screen readers, not drawn: the spoken form of a number shown in a compact visual form. */
+.bv-sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .bv-divider { border-bottom: 1px solid var(--border); }
 .bv-band-high { --band: var(--scoreHigh); }
 .bv-band-mid { --band: var(--scoreMid); }

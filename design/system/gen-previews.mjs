@@ -126,13 +126,16 @@ h('div', { className: 'stack' },
   h('p', { className: 'cap' }, 'Nothing yet'),
   h(B.ProgressStrip, { label: 'Boba', ranked: 0, total: 22, onClick: function () {} }))`];
 
+P.ProgressBar = [{ group: 'Bev', height: 110, width: 393 }, `.bars { display: flex; flex-direction: column; gap: 14px; padding: 20px 16px; } .bars .pv-stack { align-items: stretch; }`, `
+h('div', { className: 'bars' }, L('0', h(B.ProgressBar, { value: 0 })), L('9%', h(B.ProgressBar, { value: 0.09 })), L('66%', h(B.ProgressBar, { value: 2 / 3 })))`];
+
 P.CollectionSheet = [{ group: 'Bev', height: 760, width: 393, subtitle: 'Tap a category to show only it' }, `.pv-frame { height: 740px; margin: 10px auto; }`, `
 h('div', { className: 'pv-frame' },
   h(B.ProgressStrip, { label: 'All Bevs', ranked: 37, total: 378 }),
   h(B.CollectionSheet, { rows: [
-    { category: 'soda', ranked: 4, total: 61 }, { category: 'diet_soda', ranked: 6, total: 34 }, { category: 'juice', ranked: 0, total: 25 },
-    { category: 'sparkling_water', ranked: 7, total: 30 }, { category: 'energy', ranked: 2, total: 28 }, { category: 'coffee', ranked: 9, total: 40 },
-    { category: 'tea', ranked: 3, total: 26 }, { category: 'boba', ranked: 5, total: 22 }, { category: 'smoothie', ranked: 0, total: 0 }, { category: 'other', ranked: 1, total: 112 },
+    { categoryId: 'soda', ranked: 4, total: 61 }, { categoryId: 'diet_soda', ranked: 6, total: 34 }, { categoryId: 'juice', ranked: 0, total: 25 },
+    { categoryId: 'sparkling_water', ranked: 7, total: 30 }, { categoryId: 'energy', ranked: 2, total: 28 }, { categoryId: 'coffee', ranked: 9, total: 40 },
+    { categoryId: 'tea', ranked: 3, total: 26 }, { categoryId: 'boba', ranked: 5, total: 22 }, { categoryId: 'smoothie', ranked: 0, total: 0 }, { categoryId: 'other', ranked: 1, total: 112 },
   ] }))`];
 
 P.FeaturedCard = [{ group: 'Bev', height: 210 }, `.row { display: flex; gap: 16px; padding: 20px 16px; overflow-x: auto; }`, `

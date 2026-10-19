@@ -208,9 +208,10 @@ export function ProgressStrip({ label = 'All Bevs', ranked = 0, total = 0, onCli
       type={onClick ? 'button' : undefined}
       className={cx('bv', 'bv-progress', className)}
       onClick={onClick}
-      aria-label={label + ', ' + spokenTried(ranked, total) + (onClick ? '. Show your collection' : '')}
+      aria-label={onClick ? label + ', ' + spokenTried(ranked, total) + '. Show your collection' : undefined}
     >
-      <span className="bv-progress-top">
+      {onClick ? null : <span className="bv-sr-only">{label + ', ' + spokenTried(ranked, total)}</span>}
+      <span className="bv-progress-top" aria-hidden={onClick ? undefined : 'true'}>
         <span className="body bv-progress-text">{label} · {formatTried(ranked, total)}</span>
         {onClick ? <Icon name="chevron-right" size={20} strokeWidth={2} className="bv-progress-chev" /> : null}
       </span>

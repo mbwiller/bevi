@@ -16,7 +16,7 @@ Build iOS-first at 393×852pt. Every size below is in pt.
 
 Use the tokens by name; never paste hex values.
 
-- `surface` is the page and every card. Cards are separated with a 1pt `border`, never a shadow or a grey fill. Grey fills (`input`) are for the search bar, BevImage tiles and skeletons only.
+- `surface` is the page and every card. Cards are separated with a 1pt `border`, never a shadow or a grey fill. Grey fills (`input`) are for the search bar, BevImage tiles, skeletons and progress-bar tracks only.
 - `text` for content, `textSecondary` for meta lines, labels, timestamps and placeholders. Both clear 4.5:1 on `surface`, `input` and `avatarFill` in both themes.
 - `primary` (Bevi grape) goes exactly where Beli uses its teal: filled Pills, the primary Button, the Add tab circle, a saved bookmark, a liked heart, the FilterPill count, StatCard values and icons, SortToggle, "See all" and the fill of a progress bar. Nothing else is grape, so a grape thing is always something to tap or a value you earned. Text on a `primary` fill is `onPrimary` (white in light, dark ink in dark mode).
 - `primaryTint` behind `primary` text marks a selected chip or an active filter.
