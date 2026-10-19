@@ -1,14 +1,15 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
 import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
-import { StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 
 import type { BevOfPeriod as BevOfPeriodData, PeriodWinner } from '@bevi/shared';
 
 import { api } from '@/api/client';
+import { useSubmitRanking } from '@/api/hooks';
 import { bevOfCardLabel } from '@/components/BevOfCard';
 import { formatPeriodStart } from '@/lib/time';
-import { controls } from '@/testing/fakeApi';
+import { MINOR, controls } from '@/testing/fakeApi';
 
 import { BevOfPeriod } from '../BevOfPeriod';
 
@@ -105,4 +106,45 @@ it('an error hides the row quietly', async () => {
   await waitFor(() => expect(screen.queryByTestId('bev-of-period-loading')).toBeNull());
   expect(screen.queryByTestId('bev-of-period')).toBeNull();
   expect(screen.queryByText(/couldn't|try again/i)).toBeNull();
+});
+
+it('under 21: an alcoholic day winner is hidden client-side; the week card stays, alone at half width', async () => {
+  const { week } = await winners();
+  const beer: PeriodWinner = { ...week!, bev: { ...week!.bev, id: 'beer-winner', name: 'Pilsner', categoryId: 'beer' } };
+  controls.signInAs(MINOR.handle);
+  expect((await api.profile.getMe()).canSeeAlcohol).toBe(false);
+  jest.spyOn(api.feed, 'getBevOfPeriod').mockResolvedValue({ day: beer, week: week! });
+  await start();
+  const row = await screen.findByTestId('bev-of-period');
+  expect(within(row).getAllByRole('button')).toHaveLength(1);
+  expect(within(row).getByLabelText(cardName('week', week!))).toBeTruthy();
+  expect(within(row).queryByText('Pilsner')).toBeNull();
+  expect(within(row).queryByText('Bev of the day')).toBeNull();
+  expect(StyleSheet.flatten(within(row).getByTestId('bev-of-period-spacer').props.style)).toMatchObject({ flex: 1 });
+});
+
+it('a ranking refetches the winners (invalidates keys.bevOfPeriod)', async () => {
+  const fetches = jest.spyOn(api.feed, 'getBevOfPeriod');
+  // Only the mutation's settling matters here, not what the server does with it.
+  jest.spyOn(api.rankings, 'submitRanking').mockResolvedValue({} as Awaited<ReturnType<typeof api.rankings.submitRanking>>);
+  function RowAndRank() {
+    const submit = useSubmitRanking();
+    return (
+      <>
+        <BevOfPeriod />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Rank"
+          onPress={() => submit.mutate({ bevId: 'any', bucket: 'LOVED', insertIndex: 0, expectedBucketSize: 0, comparisons: [] })}
+        >
+          <Text>Rank</Text>
+        </Pressable>
+      </>
+    );
+  }
+  await renderRouter({ _layout: Layout, index: RowAndRank }, { initialUrl: '/' });
+  await screen.findByTestId('bev-of-period');
+  expect(fetches).toHaveBeenCalledTimes(1);
+  await fireEvent.press(screen.getByLabelText('Rank'));
+  await waitFor(() => expect(fetches).toHaveBeenCalledTimes(2));
 });
