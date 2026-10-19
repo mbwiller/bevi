@@ -31,6 +31,15 @@ Source: `CONVERSATION-2.md` (raw transcript). This file turns that conversation 
 - **Contract gap found by M-02:** Profile › Activity can't show likes (details under M-02).
 - **Next in Matt's lane:** M-03 (comments), then M-12 once D-06 is decided.
 
+**Progress (2026-10-19, Matt with Claude).**
+- **Merged and live:**
+  - M-12 (#95), the M-06 follow-ups (#94) and M-26 (#99).
+  - The backend halves of S-05 + A-05 (#96), S-07 + A-06 (#93) and S-20 (#97).
+  - #92's chores, plus the Expo SDK patch bump (#98) that S-18 now makes routine.
+- **Three migrations on prod.** Matt pushed `20261018000100`–`0300` on 2026-10-19, and `supabase migration list` matches. Arjun added Matt to the Supabase project, so Matt can push migrations from now on: dry-run first, in timestamp order.
+- **Design-system artifact:** version 12 matches `main` at #95.
+- **What's left in this round:** the UI for M-05, M-08 and the S-20 hybrid Activity tab. Their backends are live.
+
 **Progress (2026-10-18, Matt with Claude).**
 - **Merged and live:** M-03 (#91). Likes and comments are now reachable in the app end to end. The design-system artifact has CommentButton and CommentsSheet, so it matches `main` at #91.
 - **#87 re-scoped the graph work** (`docs/graph_db_implementation.md`, which wins where it and `docs/graph.md` disagree). The first increment is no longer `bev_edges`. It is **user taste neighbourhoods** (`user_neighbors`, read by Layer 2), built in five stages that start with an offline evaluation harness and end with a pre-registered keep-or-drop bar for Neo4j. Embeddings, pgvector, `bev_edges` and the full `SIMILAR_TO` graph are deferred. A-16 is rewritten below, and Stage 1 is a new task in Matt's lane, **M-26**.
@@ -266,6 +275,7 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - DoD: Explore renders from `feed.getExplore()`, paginates, degrades to an empty state when nothing is popular yet.
 
 **M-05 · Bev of the day · Bev of the week.** `ui/bev-of-period`
+- **Backend live (#96, contract 2.1.0):** `feed.getBevOfPeriod()`. A Bev with a single rating can win, and its `bayesScore` is then set even below `MIN_RATERS` (LaTeX §10.3). The UI is what remains.
 - Spec: **two cards side by side at the top of the feed, directly under the search bar** (above Featured Bevs; consider replacing the Featured carousel while the catalog has no hero art). Each card: the Bev's image/icon, a small caps label ("BEV OF THE DAY" / "BEV OF THE WEEK"), the Bev's name underneath, the Bayesian score bubble. Tapping opens the Bev. **Not a post.** When no Bev was ranked that day, show the most recent day's winner with its date, or hide the day card (D-02).
 - Design system: a `BevOfCard` component (half-width, square image).
 - Needs: S-05, A-05.
@@ -281,7 +291,7 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
   - The sheet's lines come from `pointsRules()` in `features/leaderboard/copy.ts`, built from `RANK_POINTS_WEIGHTS`, so they can't drift from `rank.ts` or the SQL.
   - There's no info icon, because `Icon.test.tsx` requires the app's icons to match the design system's set exactly.
   - The S-06 per-row breakdown is not done.
-- **Follow-ups (all three still open on 2026-10-18):**
+- **Follow-ups: all three done in #94.**
   - Screen readers announce the link as "How points work ranked by points". The label comes from `SectionHeader`; add an `actionLabel` prop.
   - Build the streak line from `STREAK_PERIOD`, as the weights are.
   - In the design system artifact, add the leaderboard to the BevRow README's list of `showImage` uses, and show images on ScreenLeaderboard.
@@ -309,6 +319,7 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
   - The design system's SortToggle needs `onClick` and shows the search icon only with `onSearch`; the dead "Predicted" example is gone (M-25's follow-up).
 
 **M-08 · Your Lists › Bev'd: gamify.** `ui/bevd-gamified`
+- **Backend live (#93, contract 2.2.0):** `Category.bevCount` and `stats.getCategoryProgress()`. The UI remains. The per-row icons wait on D-07; rows can use category placeholder art until then.
 - Spec: **icons on every row** (`BevRow showImage` in `BevdTab.tsx`, which currently has `actions={false}` and no image); a **category progress strip** above the list ("Soda · 4 of 61 tried · 7%") driven by A-06; and one visual "graph of Bevs" (e.g. a horizontal bar per category of your ranked count vs catalog size, or a collection grid of icons you've unlocked). Keep the rows less crowded (see M-12).
 - Needs: S-07, A-06.
 - DoD: rows show icons, progress strip shows real counts, test for the percentage copy (never show 0% as "0.4%"; round down).
@@ -347,6 +358,11 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 ### P1
 
 **M-12 · Less crowded rows and posts.** `ui/density`
+- **Done in #95:**
+  - `BevRow` shows one line, `[icon] Category · Brand`. `FeedPost`'s meta line is `[icon] Brand`. There's no price on any row or post.
+  - The gut-check card, Featured cards, Bev detail and the create picker still show the tier, deliberately (outside D-06's "rows").
+  - Row min-height is unchanged (126).
+  - Matt is checking on iPhone.
 - Feedback: `$`/`~$` on every row, three text lines, meta line, two action icons. Proposal (in the design system first): `BevRow` → name, one secondary line (category · brand), the bubble; price only on Bev detail (or only when not estimated); actions as a single overflow on dense lists. `FeedPost` → remove the price from the post header line. Keep 44pt targets.
 - DoD: updated design system previews and ported components; visual check of Feed, Bev'd, Leaderboard, Search.
 - **Unblocked 2026-10-18 (D-06):** no price tier on any `BevRow` or `FeedPost`, estimated (`~$`) or not. Price shows only on Bev detail.
@@ -406,6 +422,10 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
   - ~~**Follow-up (design system):** the SortToggle preview still renders a `Predicted` toggle with no `onClick`.~~ Done in #85, with M-07.
 
 **M-26 · Graph Stage 1: the baseline evaluation harness.** `rank/eval-harness` (from #87, `docs/graph_db_implementation.md` § Stage 1)
+- **Done in #99:**
+  - `npm run eval -w packages/ranking -- <export.json>`.
+  - Real baseline numbers need one prod export, `packages/ranking/eval/export.sql`, run by Arjun as a role that bypasses RLS. The export uses salted aliases and hour-truncated timestamps.
+  - Synthetic output is labelled "not an accuracy result".
 - What: an offline harness that measures the **current** recommendation engine, in a new `packages/ranking/eval/`, reusing `test/snapshot-fixture.ts`. No graph work and no production change. Every later graph stage is judged against its numbers, under the doc's pre-registered decision bar.
 - Leakage rules the doc spells out (each of them is a real trap in today's code):
   - Recompute `users[u].stats` for every fold.
@@ -498,11 +518,13 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - DoD: `explain analyze` under 150 ms locally at 1k posts; live test.
 
 **A-05 · Bev of the day / week.** `be/bev-of-period`
+- **Done in #96, with S-05:** `get_bev_of_period()` wraps an internal `bev_of_period_at(p_now, p_adult)` that no client can call. It has 25 pgTAP checks and is on prod. The query scans all rankings; it gets an index or a cache when the feed slows.
 - RPC `get_bev_of_period()` returning two rows (`day`, `week`): among Bevs with at least one ranking created in the current **America/New_York** day (ISO week), the one with the highest **Bayesian score** (ties: more rankings in the period, then more raters overall, then name). Fallback (D-02): the most recent period with a ranking, with the period's date in the payload. Definition in LaTeX §10.3. Cheap enough to compute live; cache in a table only if the feed call gets slow.
 - Needs: S-05.
 - DoD: pgTAP with fixed timestamps across the midnight and ISO-week boundaries.
 
 **A-06 · Category progress.** `be/category-progress`
+- **Done in #93, with S-07:** `get_category_progress()`. `categories.list()` takes both visibility and `bevCount` from it. It's on prod.
 - Add `bev_count` (active, age-filtered) to `categories.list()` and the caller's ranked count per category to `get_profile_stats` or a small `get_category_progress()`. Powers M-08's "you've tried 7% of Sodas".
 - Needs: S-07.
 
@@ -597,9 +619,9 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 | **S-02** | `FeedItem.likeCount: number`, `likedByMe: boolean`; `FeedApi.like(id)`, `unlike(id)` (idempotent, `'not_found'`, `'rate_limited'`) | M-02, A-02 |
 | **S-03** | `FeedItem.commentCount`, `comments: Comment[]` (first seven; corrected by A-03); `CommentsApi { list(eventId, page), add(eventId, body), remove(id) }`; `Comment { id, author: Profile, body, createdAt }` | M-03, A-03 |
 | **S-04** | `FeedApi.getExplore(page)` → `Page<FeedItem>`; optional `leaderboard.popularBevs({ days })` | M-04, A-04 |
-| **S-05** | `FeedApi.getBevOfPeriod()` → `{ day: PeriodWinner \| null, week: PeriodWinner \| null }`, `PeriodWinner { bev: BevSummary, periodStart: string, rankingsInPeriod: number }` | M-05, A-05 |
+| **S-05** | **Done in #96.** `FeedApi.getBevOfPeriod()` → `{ day: PeriodWinner \| null, week: PeriodWinner \| null }`, `PeriodWinner { bev: BevSummary, periodStart: string, rankingsInPeriod: number }` | M-05, A-05 |
 | **S-06** | `UserLeaderboardRow.bevsCreated: number` (optional) | M-06 |
-| **S-07** | `Category.bevCount: number`; `StatsApi.getCategoryProgress()` → `{ categoryId, ranked, total }[]` | M-08, A-06 |
+| **S-07** | **Done in #93.** `Category.bevCount: number`; `StatsApi.getCategoryProgress()` → `{ categoryId, ranked, total }[]` | M-08, A-06 |
 | **S-08** | `BevSummary.artKind: ArtKind` (vessel enum shared by app and catalog); `CreateBevInput.vessel` | M-10, A-07 |
 | **S-09** | **Done in #92.** `vision.md` edits: vessels are not variants; one ranking per Bev per user ("binary"); Mexican Coke is its own Bev; icons over photos; feed = friends + Explore; Bev of the day/week; NYC only; **the Bev graph lives in Neo4j AuraDB Free with Postgres as the system of record (§1b, §1d); the map is inside the Search tab, Google Maps JS, OSM venues, strictly NYC; rankings may carry a venue, GPS is never stored** | everyone |
 | **S-10** | `VenuesApi { inView({ bounds, zoom, filters }), get(id), search({ q, near? }), friends(bounds), neighborhoods() }`; `Venue`, `VenueKind`, `VenuePin { venue, myBestScore, bestScore, predictedScore, trending, wantToTryHere, openNow \| null }`; `NYC_BOUNDS` constant in `shared/` | M-16, M-23, A-08 |
@@ -610,9 +632,9 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 | **S-15** | `docs/bevi-ranking-math.tex` + `.pdf` (this session; §10.1 updated in revision 2 with the embedding and profile terms and the Neo4j decision). Both read it; comments become PRs against the `.tex` | M-22, A-14 |
 | **S-16** | `SubmitRankingInput.venueId?: string`; `Ranking.venue: VenueRef \| null`, `FeedItem.venue`, `RankedBev.venue`; `VenueRef { id, name, neighborhood }` | M-23, M-16, A-08 |
 | **S-17** | `docs/graph.md`: the graph schema, what Postgres owns vs the graph, the sync contract and its sanity report, secret names, the keep-alive rule, "Neo4j is never on a request path", how to resume a paused instance; plus a `supabase/CLAUDE.md` line pointing at it | A-15, A-16 |
-| **S-18** | **Done in #92.** `.github/workflows/app.yml`: stop `expo-doctor`'s dependency-version check from turning `main` red when Expo ships an SDK patch (it compares against Expo's *current* expected versions; this happened at #58, fixed by #63). Make that check advisory (its own step with `continue-on-error`, or exclude it) and keep the other doctor checks blocking. Bump patches with `npx expo install --fix` from `app/` in a small `ui/*` PR when it warns | `main` CI stays green |
+| **S-18** | **Done in #92.** `.github/workflows/app.yml`: stop `expo-doctor`'s dependency-version check from turning `main` red when Expo ships an SDK patch (it compares against Expo's *current* expected versions; this happened at #58, fixed by #63). Make that check advisory (its own step with `continue-on-error`, or exclude it) and keep the other doctor checks blocking. Bump patches with `npx expo install --fix` from `app/` in a small `ui/*` PR when it warns (first time: #98) | `main` CI stays green |
 | **S-19** | **Done in #92.** `.claude/agents/ui-screen.md` asks for a `ComponentGallery` entry, but no such screen exists in `app/src`. Either drop that step or build the gallery (DEVELOPMENT-MATT §4 planned one). **The gallery did exist, and #56 removed it on purpose at launch** ("the dev gallery and dev routes are gone", DEVELOPMENT-MATT status 2026-10-12). The design system's `preview.html` files now show every state, so the proposal is to drop the step. In the same PR, `app/CLAUDE.md` line 7 still says the design changes "in the artifact first and the mirror is re-synced". Since 2026-10-15 the order is repo first (`design/system/src/`, `npm run build`), then publish to the artifact after the merge | ui-screen runs |
-| **S-20** | Profile › Activity can't show likes or comments: `RankedBev` from `rankings.listUser` has no feed-event id, `likeCount`, `likedByMe` or `commentCount`. Either add those fields to `listUser`, or add `feed.listUser(userId, page)` returning `FeedItem`s (found by M-02 and M-03). **Matt's pick (2026-10-18), for Arjun to approve in the contract PR:** `FeedApi.listUser(userId, page)` → `Page<FeedItem>`. This is how Beli and Instagram do it: a profile's activity is the same post as the feed, with the same likes and comments. It also means one card and one cache. Backend: `get_feed`'s row shape filtered to one actor and gated by `feed_event_visible`. `rankings.listUser` stays as it is for lists.
+| **S-20** | **Backend done in #97 (hybrid; contract 2.3.0).** Profile › Activity can't show likes or comments: `RankedBev` from `rankings.listUser` has no feed-event id, `likeCount`, `likedByMe` or `commentCount`. Either add those fields to `listUser`, or add `feed.listUser(userId, page)` returning `FeedItem`s (found by M-02 and M-03). **Matt's pick (2026-10-18), for Arjun to approve in the contract PR:** `FeedApi.listUser(userId, page)` → `Page<FeedItem>`. This is how Beli and Instagram do it: a profile's activity is the same post as the feed, with the same likes and comments. It also means one card and one cache. Backend: `get_feed`'s row shape filtered to one actor and gated by `feed_event_visible`. `rankings.listUser` stays as it is for lists.
 **Blocked on a visibility decision (found 2026-10-18):**
 - `rankings_select` lets any signed-in user read anyone's rankings, so a stranger's Activity shows today. Only the age gate applies.
 - `feed_event_visible`, which gates posts, likes and comments, requires that you are the author or follow them.
@@ -648,8 +670,8 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 ## 7. Suggested order of work
 
 1. **Week 1 (P0, small):** ~~S-01~~ (#65) → ~~A-01~~ (#69) + ~~M-01~~ (folded into #80) · ~~M-09~~ (#60) · ~~M-11~~ (#61) · ~~M-06~~ (#62) · ~~M-07~~ (#85) · S-08/S-09 docs · ~~M-25~~ (#74) · S-18, S-19 (small, found on 2026-10-14). **In parallel (graph foundation, no screens):** ~~A-15~~ (#72, with S-17) · ~~S-14 column names~~ (#68, part 1 only) · ~~M-24~~ (#86) · ~~A-17~~ (#73). **Left on 2026-10-18:** S-08 (on hold with the icons). ~~S-09, S-18, S-19~~ (#92).
-2. **Week 2 (P0, social):** ~~S-02~~ (#82) / ~~S-03~~ (#67) → ~~A-02~~ (#70) / ~~A-03~~ (#71) + ~~M-02~~ (#90) / ~~M-03~~ (#91) · S-05 → A-05 + M-05. **Graph (re-planned by #87):** ~~the implementation plan~~ (#87) → M-26 (Stage 1 harness) → A-16 Stage 2 (sync live; it replaces the keep-alive). **Likes and comments are done end to end;** the only gap left is Profile › Activity (S-20).
-3. **Week 3 (P0/P1):** S-04 → A-04 + M-04 · S-07 → A-06 + M-08 · M-10 + A-07 (icons, **on hold**, D-07) · M-12 (unblocked by D-06) · ~~M-13~~ (#88) · ~~M-14~~ (#89) · **M-15 (Search tab shell)** · graph Stage 3 (`user_neighbors`).
+2. **Week 2 (P0, social):** ~~S-02~~ (#82) / ~~S-03~~ (#67) → ~~A-02~~ (#70) / ~~A-03~~ (#71) + ~~M-02~~ (#90) / ~~M-03~~ (#91) · ~~S-05 → A-05~~ (#96) + M-05. **Graph (re-planned by #87):** ~~the implementation plan~~ (#87) → ~~M-26~~ (#99, needs the export) → A-16 Stage 2 (sync live; it replaces the keep-alive). **Likes and comments are done end to end;** the only gap left is Profile › Activity: S-20's backend is done (#97), its UI isn't.
+3. **Week 3 (P0/P1):** S-04 → A-04 + M-04 · ~~S-07 → A-06~~ (#93) + M-08 · M-10 + A-07 (icons, **on hold**, D-07) · ~~M-12~~ (#95) · ~~M-13~~ (#88) · ~~M-14~~ (#89) · **M-15 (Search tab shell)** · graph Stage 3 (`user_neighbors`).
 4. **Week 4 (P1):** S-12 → A-11 + M-19 · A-14 parity · D-04 taxonomy draft.
 5. **Then P2:** the map (S-10, S-16 → A-08 → M-16, M-17, M-23), nutrition (S-11, A-09, M-18), duplicates (S-13, A-12, M-20).
 6. **P3 only after both say yes:** A-13 → M-21 (anchored placement on `bev_edges`). Graph Stages 4–5 also go here, plus the full A-16 (`bev_edges`, embeddings) if Stage 5's bar says the graph earns its keep.
