@@ -35,7 +35,7 @@ const R = {
 
 - Provide: \`tier\` 1–4, \`estimated\`.
 - It inherits the line's size and colour; it reads "about $$, estimated" to screen readers.
-- Write meta lines as \`$$ • Category\`, with a bullet and spaces.`,
+- **Never on rows or posts**, estimated or not (D-06): a price on every row was too much information. It shows on Bev detail, the gut-check card and featured cards. The create-Bev wizard picks a tier with \`PriceTierPicker\`.`,
   Avatar: `A circle with two initials in \`textSecondary\` on \`avatarFill\`, or the person's photo.
 
 - Provide: \`name\` (initials come from the first two words), \`src\` optional, \`size\` 32 (tab bar), 44 (people rows), 60 (feed posts), 100 (profile hero, initials 40pt light).
@@ -109,16 +109,18 @@ const R = {
 
 - Provide: \`active\`, \`user\` (for the avatar), \`onChange\`, \`safeArea\` (adds the 34pt home-indicator inset).
 - Icons are 28pt outlines; labels 10pt, the active one bold.`,
-  BevRow: `The ~126pt list row from Beli: name (optionally numbered), \`$$ • Category\`, category icon • brand, a meta line, Rank and Want to Try actions, and a ScoreBubble.
+  BevRow: `The ~126pt list row from Beli: name (optionally numbered), one secondary line (category icon, then "Category · Brand"), a meta line, Rank and Want to Try actions, and a ScoreBubble.
 
 - Provide: \`bev\`, \`number\` (Bev'd and Leaderboard), \`score\` (\`scoreVariant="predicted"\` on Recommended), \`meta\` ("Ranked Oct 3", "Saved from @arjun", a recommendation reason), \`count\`, \`saved\`, \`onRank\`, \`onSave\`.
 - The meta line is \`meta\` when the row has one. Only a row with no meta of its own (search results) prints the rating count there instead: "1 rating", "362 ratings", "5k ratings", even under a locked bubble, and nothing at 0. Leaderboard, Want to Try and Recommended rows keep just their own meta.
 - No image by default, as in the reference; \`showImage\` adds a 56pt BevImage for search results, "Did you mean…" and the Leaderboard's Bevs board.
+- **One secondary line, no price.** "Soda · Coca-Cola" after the category icon; just the category when there's no brand. The flavour joins the brand ("LaCroix · Pamplemousse") unless it is "Original". The price tier stays off rows (D-06).
 - One list sorted by score: buckets show through the bubble colour, not as sections.`,
   FeedPost: `A ranking in the Feed and on Profile › Activity: "**Arjun** Bev'd **Horchata**", meta line, ScoreBubble, a 155pt photo strip, notes and actions.
 
 - Provide: \`actor\` (or \`you\` for "You"), \`bev\`, \`score\`, \`note\`, \`time\` ("5 hours ago", "Wednesday"), \`saved\`, \`liked\`, \`likeCount\`, \`comments\`, \`commentCount\`, \`onLike\`, \`onComment\`, \`onRank\`, \`onSave\`, \`onOpen\`.
 - A post is always a ranking. Saving a Bev is not a post; the filled bookmark shows you already have it saved.
+- The meta line under the name is the category icon and the brand (the category's name when there's no brand). No price on a post (D-06).
 - Action row: the time on the left; on the right the LikeButton and the CommentButton, then Rank it and Want to Try. Heart and comment lead the group because they are about the post, while Rank and Want to Try are about the Bev.
 - **Double-tap anywhere on the post outside the photo strip to like it**, Instagram-style. It only ever likes, never unlikes (the heart does that), and it is never the only way to like. A single tap on the photo still opens the Bev, so the strip ignores double-taps. The post sets \`touch-action: manipulation\` so Safari doesn't zoom on a double-tap.
 - The burst: a 88pt filled \`primary\` heart grows over the photo strip (the post's centre when there is no photo), holds and fades within 800ms, transform and opacity only. Reduce Motion: a plain fade. It plays on every like by double-tap, even when the post was already liked.

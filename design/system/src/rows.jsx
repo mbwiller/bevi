@@ -1,6 +1,6 @@
 import React from 'react';
 import { cx, Icon, Wordmark, BevArt, categoryById, formatRatings } from './core.jsx';
-import { ScoreBubble, PriceTier, Avatar, BevImage, Pill, IconButton, LikeButton, CommentButton } from './primitives.jsx';
+import { ScoreBubble, Avatar, BevImage, Pill, IconButton, LikeButton, CommentButton } from './primitives.jsx';
 
 /** Comments shown on the post itself; above this many, the post collapses to "View all N comments". */
 export const INLINE_COMMENTS = 7;
@@ -51,7 +51,8 @@ export function ListScopeDropdown({ label = 'All', onClick, className }) {
 }
 
 /**
- * The list row (~126pt): name, `$$ • Category`, category icon • brand, a meta line, actions, and a ScoreBubble 40.
+ * The list row: name, one line of category icon, category and brand, a meta line, actions, and a ScoreBubble 40.
+ * No price on a row (D-06).
  * The meta line is `meta` when given; otherwise the rating count ("362 ratings") when `count` > 0.
  * No image by default, as in the reference; pass `showImage` for search results.
  */
@@ -63,8 +64,10 @@ export function BevRow({ bev, number, score, scoreVariant, count, meta, saved = 
         {showImage ? <BevImage size={56} src={bev.src} art={bev.art} alt={bev.name} status={bev.photoStatus} /> : null}
         <span className="bv-bevrow-text">
           <span className="screenTitle bv-bevrow-name">{number != null ? number + '. ' : ''}{bev.name}</span>
-          <span className="body bv-bevrow-line"><PriceTier tier={bev.priceTier} estimated={bev.priceEstimated} /> • {cat ? cat.label : ''}</span>
-          <span className="body bv-bevrow-line"><CategoryMark category={bev.category} /> • {brandLine(bev)}</span>
+          <span className="body bv-bevrow-line">
+            <CategoryMark category={bev.category} />
+            <span className="bv-bevrow-line-text">{[cat ? cat.label : null, brandLine(bev) || null].filter(Boolean).join(' · ')}</span>
+          </span>
         </span>
       </button>
       <span className="bv-bevrow-score">
@@ -121,9 +124,7 @@ export function FeedPost({ actor = {}, you = false, bev, score, scoreVariant, no
           </p>
           <p className="body bv-meta bv-post-meta">
             {cat ? <Icon name={cat.icon} size={16} strokeWidth={2} /> : null}
-            <span>{[' ', bev.brand].join('')}</span>
-            <span> • </span>
-            <PriceTier tier={bev.priceTier} estimated={bev.priceEstimated} />
+            <span>{' ' + (bev.brand || (cat ? cat.label : ''))}</span>
           </p>
         </div>
         {score != null || scoreVariant ? <ScoreBubble score={score} variant={scoreVariant} className="bv-post-score" /> : null}
