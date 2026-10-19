@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
 import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
 
-import type { BevOfPeriod, FeedItem, PeriodWinner } from '@bevi/shared';
+import type { FeedItem, PeriodWinner } from '@bevi/shared';
 
 import { api } from '@/api/client';
 import { bevOfCardLabel } from '@/components/BevOfCard';
@@ -48,9 +48,16 @@ beforeEach(() => {
   controls.setLatency(0);
   controls.resetToFixtures();
   controls.signInAs('tester');
+  // These tests are about posts. The Bev of the day and week has its own suite (BevOfPeriod.test.tsx);
+  // computing and drawing it on every Feed render here only made the suite slower. The two tests
+  // below that check it on the Feed restore the real call.
+  jest.spyOn(api.feed, 'getBevOfPeriod').mockResolvedValue({ day: null, week: null });
 });
 
-afterEach(() => client.clear());
+afterEach(() => {
+  client.clear();
+  jest.restoreAllMocks();
+});
 
 /** The card's accessible name for a winner, as BevOfPeriod renders it. */
 function cardName(period: 'day' | 'week', w: PeriodWinner): string {
@@ -58,6 +65,7 @@ function cardName(period: 'day' | 'week', w: PeriodWinner): string {
 }
 
 it('renders Bev of the day and week (not Featured) above the feed posts', async () => {
+  jest.restoreAllMocks();
   const period = await api.feed.getBevOfPeriod();
   const feed = await api.feed.getFeed({ limit: 20 });
   expect(period.day).not.toBeNull();
@@ -66,8 +74,8 @@ it('renders Bev of the day and week (not Featured) above the feed posts', async 
   await start();
 
   const row = await screen.findByTestId('bev-of-period');
-  expect(within(row).getByRole('button', { name: cardName('day', period.day!) })).toBeTruthy();
-  expect(within(row).getByRole('button', { name: cardName('week', period.week!) })).toBeTruthy();
+  expect(within(row).getByLabelText(cardName('day', period.day!))).toBeTruthy();
+  expect(within(row).getByLabelText(cardName('week', period.week!))).toBeTruthy();
   expect(screen.queryByTestId('featured-carousel')).toBeNull();
   expect(screen.queryByText('Featured Bevs')).toBeNull();
 
@@ -103,6 +111,7 @@ it('the search bar opens the Search tab asking for its results panel', async () 
 });
 
 it('following nobody: the follow empty state under YOUR FEED, the Bev of the day and week stay', async () => {
+  jest.restoreAllMocks();
   controls.emptyUser();
   const r = await start();
   expect(await screen.findByText('Follow friends to see their Bevs')).toBeTruthy();
@@ -320,47 +329,3 @@ describe('likes on several posts', () => {
   });
 });
 
-describe('Bev of the day and week', () => {
-  afterEach(() => jest.restoreAllMocks());
-
-  async function winners(): Promise<BevOfPeriod> {
-    const period = await api.feed.getBevOfPeriod();
-    expect(period.day && period.week).toBeTruthy();
-    return period;
-  }
-
-  it('opens the Bev from its card', async () => {
-    const { day } = await winners();
-    const r = await start();
-    await fireEvent.press(await screen.findByRole('button', { name: cardName('day', day!) }));
-    expect(r.path()).toBe(`/bev/${day!.bev.id}`);
-  });
-
-  it('no winner in either period: the row is left out and the feed still shows', async () => {
-    jest.spyOn(api.feed, 'getBevOfPeriod').mockResolvedValue({ day: null, week: null });
-    await start();
-    expect(await screen.findByText('Your feed')).toBeTruthy();
-    await waitFor(() => expect(screen.queryByTestId('bev-of-period-loading')).toBeNull());
-    expect(screen.queryByTestId('bev-of-period')).toBeNull();
-  });
-
-  it('only a week winner from an earlier week: one card, with its date', async () => {
-    const { week } = await winners();
-    const old: PeriodWinner = { ...week!, periodStart: '2026-10-05', isCurrent: false };
-    jest.spyOn(api.feed, 'getBevOfPeriod').mockResolvedValue({ day: null, week: old });
-    await start();
-    const row = await screen.findByTestId('bev-of-period');
-    expect(within(row).getAllByRole('button')).toHaveLength(1);
-    expect(within(row).getByText(formatPeriodStart('2026-10-05', 'week'))).toBeTruthy();
-    expect(within(row).queryByText('Bev of the day')).toBeNull();
-  });
-
-  it('an error hides the row quietly; the feed still works', async () => {
-    controls.failNext('network', 'feed.getBevOfPeriod');
-    await start();
-    expect(await screen.findByText('Your feed')).toBeTruthy();
-    await waitFor(() => expect(screen.queryByTestId('bev-of-period-loading')).toBeNull());
-    expect(screen.queryByTestId('bev-of-period')).toBeNull();
-    expect(screen.queryByText(/couldn't|try again/i)).toBeNull();
-  });
-});

@@ -31,7 +31,9 @@ export function bevOfCardLabel(period: BevOfPeriodKind, name: string, score?: nu
 
 /**
  * Bev of the day / Bev of the week: half of a pair under the Feed's search bar. Just the Bev, not a
- * post: a caps label, its tile (the old Featured card's 164), its name and the score it won with.
+ * post: a caps label, its square tile, its name and the score it won with. The card takes the width
+ * its parent gives it (`flex: 1` in the pair) and the tile follows that width, so the pair fits any
+ * phone.
  */
 export function BevOfCard({ period = 'day', bev, score, date, onPress, style }: BevOfCardProps) {
   const { colors } = useTheme();
@@ -45,7 +47,10 @@ export function BevOfCard({ period = 'day', bev, score, date, onPress, style }: 
       <Text style={[type.sectionCaps, { color: colors.textSecondary }]} numberOfLines={1}>
         {BEV_OF_LABEL[period]}
       </Text>
-      <BevImage size={size.featuredCard} {...bevImageProps(bev)} />
+      <View style={styles.tile}>
+        {/* `size` only sets the tile's padding and corner; the style makes it fill the square. */}
+        <BevImage size={size.featuredCard} {...bevImageProps(bev)} style={styles.fill} />
+      </View>
       <View style={styles.foot}>
         <Text style={[type.heading, styles.name, { color: colors.text }]} numberOfLines={2}>
           {bev.name}
@@ -58,7 +63,9 @@ export function BevOfCard({ period = 'day', bev, score, date, onPress, style }: 
 }
 
 const styles = StyleSheet.create({
-  card: { width: size.featuredCard, minHeight: size.target, gap: spacing.sm },
+  card: { flex: 1, minWidth: 0, minHeight: size.target, gap: spacing.sm },
+  tile: { width: '100%', aspectRatio: 1 },
+  fill: { width: '100%', height: '100%' },
   foot: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.sm },
   name: { flexShrink: 1, minWidth: 0 },
   // bundle.css `.bv-bevof-date { margin-top: calc(-1 * var(--space-xs)) }`: it hangs under the name.

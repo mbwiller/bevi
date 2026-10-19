@@ -7,7 +7,7 @@ import { BevOfCard, type BevOfPeriodKind } from '@/components/BevOfCard';
 import { Skeleton } from '@/components/Skeleton';
 import { categoryById } from '@/lib/categories';
 import { formatPeriodStart } from '@/lib/time';
-import { size, spacing } from '@/theme';
+import { spacing } from '@/theme';
 
 const PERIODS: BevOfPeriodKind[] = ['day', 'week'];
 
@@ -25,7 +25,9 @@ export function BevOfPeriod() {
     return (
       <View style={styles.pair} testID="bev-of-period-loading">
         {PERIODS.map((p) => (
-          <Skeleton key={p} variant="block" width={size.featuredCard} height={size.featuredCard} />
+          <View key={p} style={styles.slot}>
+            <Skeleton variant="block" width="100%" style={styles.fill} />
+          </View>
         ))}
       </View>
     );
@@ -52,6 +54,8 @@ export function BevOfPeriod() {
           onPress={() => router.push({ pathname: '/bev/[id]', params: { id: winner.bev.id } })}
         />
       ))}
+      {/* A lone winner keeps half the row, on the left. */}
+      {cards.length === 1 ? <View style={styles.half} testID="bev-of-period-spacer" /> : null}
     </View>
   );
 }
@@ -59,4 +63,7 @@ export function BevOfPeriod() {
 const styles = StyleSheet.create({
   // bundle.css `.bv-bevof-pair`.
   pair: { flexDirection: 'row', gap: spacing.lg, paddingHorizontal: spacing.gutter, paddingTop: spacing.xs, paddingBottom: spacing.sm },
+  half: { flex: 1 },
+  slot: { flex: 1, aspectRatio: 1 },
+  fill: { height: '100%' },
 });
