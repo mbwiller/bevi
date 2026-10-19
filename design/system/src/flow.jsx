@@ -42,12 +42,12 @@ export function SegmentedTabs({ tabs = [], value, onChange, variant = 'underline
 const TABS = [
   { id: 'feed', label: 'Feed', icon: 'newspaper' },
   { id: 'lists', label: 'Your Lists', icon: 'list' },
-  { id: 'add', label: 'Add Bev' },
+  { id: 'add', label: 'Search' },
   { id: 'leaderboard', label: 'Leaderboard', icon: 'trophy' },
   { id: 'profile', label: 'Profile' },
 ];
 
-/** The five-tab bar. Centre tab: a 32pt `primary` circle with a white plus, inline with the others. */
+/** The five-tab bar. Centre tab (Search, as Beli labels it): a 32pt `primary` circle with a white plus, inline with the others. */
 export function TabBar({ active = 'feed', user = {}, onChange, safeArea = true, className }) {
   return (
     <nav className={cx('bv', 'bv-tabbar', safeArea && 'bv-tabbar-safe', className)} aria-label="Main">
@@ -69,8 +69,8 @@ export function TabBar({ active = 'feed', user = {}, onChange, safeArea = true, 
   );
 }
 
-/** Search input. `filled`: grey 36pt bar (Feed). `outlined`: 48pt field (Add Bev). */
-export function SearchBar({ placeholder = 'Search a Bev or a person', value, onChange, variant = 'filled', autoFocus, onClear, className, id }) {
+/** Search input. `filled`: grey 36pt bar (Feed). `outlined`: 48pt field (the Search tab). `onFocus` opens the Search tab's results panel. */
+export function SearchBar({ placeholder = 'Search a Bev or a person', value, onChange, variant = 'filled', autoFocus, onClear, onFocus, className, id }) {
   const [v, setV] = React.useState(value ?? '');
   const val = value ?? v;
   return (
@@ -83,6 +83,7 @@ export function SearchBar({ placeholder = 'Search a Bev or a person', value, onC
         placeholder={placeholder}
         value={val}
         autoFocus={autoFocus}
+        onFocus={onFocus}
         onChange={(e) => { setV(e.target.value); onChange && onChange(e.target.value); }}
         aria-label={placeholder}
       />

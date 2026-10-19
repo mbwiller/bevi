@@ -523,23 +523,40 @@ P.ScreenLeaderboard = [{ group: 'Screens', height: 852, width: 393, isPage: true
     h(B.BevRow, { bev: BEVS.brownSugar, showImage: true, number: 3, score: 8.5, meta: 'Not ranked yet', saved: true }),
     h(B.BevRow, { bev: BEVS.topo, showImage: true, number: 4, score: 8.4, meta: 'Your score 7.9' }))`)];
 
-P.ScreenAddBev = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHONE_CSS + `
-  .ab-q { padding: 16px 16px 12px; } .ab-pills { display: flex; gap: 10px; padding: 0 16px 8px; }
-  .recent { display: flex; align-items: center; gap: 14px; padding: 0 8px 0 16px; min-height: 62px; border-bottom: 1px solid var(--border); }
-  .recent-t { flex: 1; display: flex; flex-direction: column; }
-  .ab-foot { position: absolute; left: 0; right: 0; bottom: 83px; padding: 12px 16px; border-top: 1px solid var(--border); background: var(--surface); }`, phone('add', `
-  h(F, null,
+// The Search tab (M-15): the bar, Snap it, then the map area. Until the live NYC map (M-16) the
+// area is an honest placeholder: no pins, no fake streets.
+const SEARCH_CSS = PHONE_CSS + `
+  .scroll { display: flex; flex-direction: column; }
+  .sr-q { display: flex; align-items: center; gap: 4px; padding: 16px 16px 12px; } .sr-q .bv-search { flex: 1; }
+  .sr-pills { display: flex; gap: 10px; padding: 0 16px 8px; }
+  .sr-area { position: relative; flex: 1; border-top: 1px solid var(--border); }
+  .sr-map { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 0 40px; text-align: center; background: var(--input); color: var(--textSecondary); }
+  .sr-panel { position: absolute; inset: 0; background: var(--surface); overflow: hidden; }
+  .sr-foot { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px; border-top: 1px solid var(--border); background: var(--surface); }`;
+const SEARCH_TOP = (value, cancel) => `
     h(B.Header, { wordmark: true, actions: [{ icon: 'x', label: 'Close', variant: 'filled' }] }),
-    h(B.SegmentedTabs, { variant: 'underline-icon', accent: 'primary', tabs: [{ id: 'bevs', label: 'Bevs', icon: 'cup-soda' }, { id: 'people', label: 'People', icon: 'users' }], value: 'bevs' }),
-    h('div', { className: 'ab-q' }, h(B.SearchBar, { variant: 'outlined', placeholder: 'Search a Bev, brand or flavor', id: 'add-q' })),
-    h('div', { className: 'ab-pills' }, h(B.Pill, { variant: 'filled', icon: 'camera' }, 'Snap it')),
-    h('p', { className: 'heading', style: { padding: '12px 16px 4px', fontWeight: 700 } }, 'Recents'),
-    [BEVS.horchata, BEVS.dietCoke, BEVS.brownSugar, BEVS.coldBrew].map(function (b) {
-      return h('div', { key: b.name, className: 'recent' }, h(B.Icon, { name: 'clock', size: 22, style: { color: 'var(--textSecondary)' } }),
-        h('span', { className: 'recent-t' }, h('span', { className: 'bodyLarge' }, b.name), h('span', { className: 'body bv-meta' }, b.brand)),
-        h(B.IconButton, { icon: 'x', label: 'Forget ' + b.name, size: 20 }));
-    }),
-    h('div', { className: 'ab-foot' }, h(B.Button, { variant: 'outlined', block: true, icon: 'circle-plus' }, "Can't find it? Add a new Bev")))`)];
+    h('div', { className: 'sr-q' }, h(B.SearchBar, { variant: 'outlined', placeholder: 'Search a Bev or a person', id: 'search-q'${value ? `, value: '${value}'` : ''} })${cancel ? `, h(B.Button, { variant: 'ghost' }, 'Cancel')` : ''}),
+    h('div', { className: 'sr-pills' }, h(B.Pill, { variant: 'filled', icon: 'camera' }, 'Snap it')),`;
+const MAP_PLACEHOLDER = `h('div', { className: 'sr-map' },
+        h(B.Icon, { name: 'map', size: 28, strokeWidth: 1.6 }),
+        h('p', { className: 'heading', style: { color: 'var(--text)' } }, 'Map coming soon'),
+        h('p', { className: 'body' }, 'Spots across New York City that carry your Bevs will show up here.'))`;
+
+P.ScreenSearch = [{ group: 'Screens', height: 852, width: 393, isPage: true }, SEARCH_CSS, phone('add', `
+  h(F, null,${SEARCH_TOP('', false)}
+    h('div', { className: 'sr-area' }, ${MAP_PLACEHOLDER}))`)];
+
+P.ScreenSearchResults = [{ group: 'Screens', height: 852, width: 393, isPage: true }, SEARCH_CSS, phone('add', `
+  h(F, null,${SEARCH_TOP('co', true)}
+    h('div', { className: 'sr-area' }, ${MAP_PLACEHOLDER},
+      h('div', { className: 'sr-panel' },
+        h(B.SectionHeader, { title: 'Bevs' }),
+        h(B.BevRow, { bev: BEVS.mexicanCoke, showImage: true, score: 8.7, count: 362 }),
+        h(B.BevRow, { bev: BEVS.coldBrew, showImage: true, score: 8.1, count: 41, saved: true }),
+        h(B.SectionHeader, { title: 'People' }),
+        h(B.UserRow, { user: { name: 'Cody Lin', handle: 'codyl' }, following: false }),
+        h(B.UserRow, { user: { name: 'Colette Ames', handle: 'colette' }, following: true, divider: false }),
+        h('div', { className: 'sr-foot' }, h(B.Button, { variant: 'outlined', block: true, icon: 'circle-plus' }, "Can't find it? Add a new Bev")))))`)];
 
 for (const [name, [opts, css, code]] of Object.entries(P)) {
   const dir = path.join(ROOT, 'project/components', name);

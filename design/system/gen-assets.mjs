@@ -23,6 +23,8 @@ export const ICONS = {
   'cup-soda': 'cup-soda', 'candy-off': 'candy-off', citrus: 'citrus', 'glass-water': 'glass-water', droplets: 'droplets',
   zap: 'zap', coffee: 'coffee', leaf: 'leaf', milk: 'milk', dumbbell: 'dumbbell', banana: 'banana', beer: 'beer',
   wine: 'wine', martini: 'martini', globe: 'globe',
+  // The Search tab's map area (M-15 placeholder until the live map, M-16).
+  map: 'map',
 };
 
 const parseIcon = (svg) => {
