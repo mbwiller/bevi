@@ -14,6 +14,7 @@ it('lists every category with a total, in the order given, with the overall line
   await render(<CollectionSheet open rows={ROWS} />);
   expect(screen.getByRole('header', { name: 'Your collection' })).toBeTruthy();
   expect(screen.getByText('13 of 126 tried · 10%')).toBeTruthy();
+  expect(screen.getByLabelText('13 of 126 tried, 10 percent')).toBeTruthy();
   const rows = screen
     .getAllByRole('button', { name: /Show only/ })
     .map((b) => b.props.accessibilityLabel as string);

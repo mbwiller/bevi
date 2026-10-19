@@ -12,7 +12,7 @@ import { IconButton } from '@/components/IconButton';
 import { ProgressStrip } from '@/components/ProgressStrip';
 import { Skeleton } from '@/components/Skeleton';
 import { SortToggle } from '@/components/SortToggle';
-import type { CategoryInfo } from '@/lib/categories';
+import { categoryById, type CategoryInfo } from '@/lib/categories';
 import { formatShortDate } from '@/lib/time';
 import { size, spacing } from '@/theme';
 
@@ -49,7 +49,7 @@ function globalNumber(r: RankedBev, counts: BucketCounts): number | undefined {
  * A Skeleton line while it loads; nothing if it fails or the scoped category isn't in the result, so it
  * never shows a wrong count.
  */
-function CategoryProgressStrip({ categoryId, label, onPress }: { categoryId: CategoryId | undefined; label: string | undefined; onPress: () => void }) {
+function CategoryProgressStrip({ categoryId, onPress }: { categoryId: CategoryId | undefined; onPress: () => void }) {
   const progress = useCategoryProgress();
   if (progress.isPending) {
     return (
@@ -63,7 +63,8 @@ function CategoryProgressStrip({ categoryId, label, onPress }: { categoryId: Cat
   if (rows.length === 0) return null;
   const ranked = rows.reduce((n, r) => n + r.ranked, 0);
   const total = rows.reduce((n, r) => n + r.total, 0);
-  return <ProgressStrip label={categoryId ? label : 'All Bevs'} ranked={ranked} total={total} onPress={onPress} />;
+  // The label comes from the full list, not the visible one, which is empty while `me` loads.
+  return <ProgressStrip label={categoryId ? categoryById(categoryId).label : 'All Bevs'} ranked={ranked} total={total} onPress={onPress} />;
 }
 
 export interface BevdTabProps {
@@ -125,7 +126,7 @@ export function BevdTab({ categoryId, categories, onCategory, onCategoryPress }:
         <FilterPill label={bucket ? BUCKET_SHORT[bucket] : 'Bucket'} icon={null} chevron onPress={() => setSheet('bucket')} />
         <FilterPill label={category?.label ?? 'Category'} icon={null} chevron onPress={onCategoryPress} />
       </View>
-      <CategoryProgressStrip categoryId={categoryId} label={category?.label} onPress={() => setSheet('collection')} />
+      <CategoryProgressStrip categoryId={categoryId} onPress={() => setSheet('collection')} />
       <SortToggle
         label={SORT_LABEL[sort]}
         onPress={() => setSort(SORTS[(SORTS.indexOf(sort) + 1) % SORTS.length]!)}

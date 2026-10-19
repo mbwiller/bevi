@@ -32,7 +32,9 @@ export function CollectionSheet({ open = false, rows, onClose, onSelect }: Colle
   const total = shown.reduce((n, r) => n + r.total, 0);
   return (
     <Sheet open={open} title="Your collection" snap={90} onClose={onClose}>
-      <Text style={[type.body, styles.sum, { color: colors.textSecondary }]}>{formatTried(ranked, total)}</Text>
+      <Text style={[type.body, styles.sum, { color: colors.textSecondary }]} accessibilityLabel={spokenTried(ranked, total)}>
+        {formatTried(ranked, total)}
+      </Text>
       <View style={[styles.list, { borderTopColor: colors.border }]}>
         {shown.map((r) => {
           const cat = categoryById(r.categoryId);
