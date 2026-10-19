@@ -65,12 +65,12 @@ export function FeedScreen() {
   const header = (
     <View>
       <Pressable
-        onPress={() => router.push('/add')}
+        onPress={() => router.push({ pathname: '/add', params: { focus: '1' } })}
         accessibilityRole="search"
         accessibilityLabel={SEARCH_PLACEHOLDER}
         style={styles.search}
       >
-        {/* The bar is a doorway to Add Bev's search: it never takes focus itself. */}
+        {/* The bar is a doorway to the Search tab, which opens with its bar focused: it never takes focus itself. */}
         <View pointerEvents="none" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
           <SearchBar variant="filled" placeholder={SEARCH_PLACEHOLDER} />
         </View>

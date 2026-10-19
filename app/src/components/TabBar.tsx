@@ -21,7 +21,7 @@ export interface TabBarProps {
 const TABS: { id: TabId; label: string; icon?: IconName }[] = [
   { id: 'feed', label: 'Feed', icon: 'newspaper' },
   { id: 'lists', label: 'Your Lists', icon: 'list' },
-  { id: 'add', label: 'Add Bev' },
+  { id: 'add', label: 'Search' },
   { id: 'leaderboard', label: 'Leaderboard', icon: 'trophy' },
   { id: 'profile', label: 'Profile' },
 ];
@@ -30,7 +30,7 @@ const ICON_BOX = 32;
 const ADD = 32;
 const ACTIVE_RING = 1.5;
 
-/** The five-tab bar. Centre tab: a 32pt `primary` circle with a plus, inline with the others; Profile is the user's Avatar. */
+/** The five-tab bar. Centre tab (Search, as Beli labels it): a 32pt `primary` circle with a plus, inline with the others; Profile is the user's Avatar. */
 export function TabBar({ active = 'feed', user, onChange, safeArea = true, style }: TabBarProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();

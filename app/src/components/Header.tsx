@@ -18,7 +18,7 @@ export interface HeaderAction {
 
 export interface HeaderProps {
   title?: string;
-  /** The bevi wordmark on the left instead of a title (Feed, Add Bev). */
+  /** The bevi wordmark on the left instead of a title (Feed, Search). */
   wordmark?: boolean;
   /** List screens: a centred caps title ("YOUR LISTS", "LEADERBOARD"). */
   centered?: boolean;

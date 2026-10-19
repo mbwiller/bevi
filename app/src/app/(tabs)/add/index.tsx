@@ -1,46 +1,22 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useEffect, useState } from 'react';
 
-import { Header } from '@/components/Header';
-import { SegmentedTabs, type Tab } from '@/components/SegmentedTabs';
-import { BevSearch } from '@/features/add-bev/BevSearch';
-import { PeopleSearch } from '@/features/people/PeopleSearch';
-import { useBack } from '@/lib/useBack';
-import { useTheme } from '@/theme';
+import { SearchScreen } from '@/features/search/SearchScreen';
 
-type AddTab = 'bevs' | 'people';
-
-const TABS: Tab[] = [
-  { id: 'bevs', label: 'Bevs', icon: 'cup-soda' },
-  { id: 'people', label: 'People', icon: 'users' },
-];
-
-/** Add Bev (DEVELOPMENT-MATT §6.8, design system ScreenAddBev). `?tab=people` opens People. */
-export default function AddBevScreen() {
-  const back = useBack();
-  const router = useRouter();
-  const { colors } = useTheme();
-  const params = useLocalSearchParams<{ tab?: string }>();
-  const tab: AddTab = params.tab === 'people' ? 'people' : 'bevs';
-  return (
-    <SafeAreaView edges={['top', 'left', 'right']} style={[styles.screen, { backgroundColor: colors.surface }]}>
-      <Header wordmark actions={[{ icon: 'x', label: 'Close', variant: 'filled', onPress: back }]} />
-      <SegmentedTabs
-        variant="underline-icon"
-        accent="primary"
-        tabs={TABS}
-        value={tab}
-        onChange={(id) => router.setParams({ tab: id === 'people' ? 'people' : undefined })}
-      />
-      <View style={styles.body}>
-        {tab === 'bevs' ? <BevSearch /> : <PeopleSearch />}
-      </View>
-    </SafeAreaView>
-  );
+/**
+ * The Search tab (TASKS.md M-15; the URL stays /add, and /search redirects here). `?focus=1` (Feed's
+ * search bar) and `?tab=people` (Find people, older links) open the results panel with the bar
+ * focused, once: the params are cleared so a later tab press lands on the map.
+ */
+export default function SearchTab() {
+  const { setParams } = useRouter();
+  const params = useLocalSearchParams<{ tab?: string; focus?: string }>();
+  const wantsPanel = params.tab === 'people' || params.focus === '1';
+  const [request, setRequest] = useState(0);
+  useEffect(() => {
+    if (!wantsPanel) return;
+    setRequest((n) => n + 1);
+    setParams({ tab: undefined, focus: undefined });
+  }, [wantsPanel, setParams]);
+  return <SearchScreen focusRequest={request} />;
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1 },
-  body: { flex: 1 },
-});

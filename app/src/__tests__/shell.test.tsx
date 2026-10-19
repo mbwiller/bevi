@@ -63,10 +63,18 @@ describe('session gate', () => {
 });
 
 describe('tab bar', () => {
-  it("Feed's Find people opens Add Bev on the People tab", async () => {
+  it("Feed's Find people opens Search with the results panel up", async () => {
     const path = await start('ready', '/feed');
     await fireEvent.press(await screen.findByLabelText('Find people'));
     expect(path()).toBe('/add');
+    expect(await screen.findByRole('button', { name: 'Cancel' })).toBeTruthy();
+  });
+
+  it('/search is the Search tab', async () => {
+    const path = await start('ready', '/search');
+    expect(await screen.findByText('Map coming soon')).toBeTruthy();
+    expect(path()).toBe('/add');
+    expect(screen.getByLabelText('Search').props.accessibilityState).toEqual({ selected: true });
   });
 
   it('navigates between tabs and marks the current one', async () => {
@@ -74,7 +82,7 @@ describe('tab bar', () => {
     for (const [label, pathname] of [
       ['Leaderboard', '/leaderboard'],
       ['Your Lists', '/lists'],
-      ['Add Bev', '/add'],
+      ['Search', '/add'],
       ['Profile', '/profile'],
       ['Feed', '/feed'],
     ] as const) {
