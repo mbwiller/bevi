@@ -1,10 +1,11 @@
 import type { FeedItem, Profile, RankedBev } from '@bevi/shared';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
+import { useIsMutating } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, type ReactElement, type RefObject } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { flattenPages, useUserFeed, useUserRankings } from '@/api/hooks';
+import { FOLLOW_MUTATION, flattenPages, useUserFeed, useUserRankings } from '@/api/hooks';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { FeedPost } from '@/components/FeedPost';
@@ -58,7 +59,9 @@ export function ActivityList({ profile, self, following = false, header, tab, on
   const router = useRouter();
   // Posts for you and people you follow (feed.listUser returns nothing for anyone else); follow or
   // unfollow flips `following`, which swaps the query without a reload.
-  const posts = self || following;
+  // Not while a follow or unfollow of this person is in flight: the optimistic flag runs ahead of the server, and feed.listUser would come back empty.
+  const followPending = useIsMutating({ mutationKey: FOLLOW_MUTATION, predicate: (m) => m.state.variables === profile.id }) > 0;
+  const posts = self || (following && !followPending);
   const rankingsQuery = useUserRankings(posts ? undefined : profile.id);
   const postsQuery = useUserFeed(posts ? profile.id : undefined);
   const query = posts ? postsQuery : rankingsQuery;

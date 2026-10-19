@@ -31,7 +31,8 @@ function applySaved(qc: QueryClient, bevId: string, saved: boolean) {
   const bev = qc.getQueryData<Bev>(keys.bevs.detail(bevId));
   const wasSaved = bev?.inWantToTry;
   qc.setQueryData<Bev>(keys.bevs.detail(bevId), (b) => b && { ...b, inWantToTry: saved });
-  qc.setQueryData(keys.feed(), (data: unknown) =>
+  // The feed and every person's Activity (keys.feedUser sits under keys.feed()).
+  qc.setQueriesData({ queryKey: keys.feed() }, (data: unknown) =>
     mapCachedItems<FeedItem>(data, (item) => (item.bev.id === bevId ? { ...item, inMyWantToTry: saved } : item)),
   );
   if (!saved) qc.setQueryData(keys.wantToTry(), (data: unknown) => filterCachedItems<WantToTryItem>(data, (w) => w.bev.id !== bevId));

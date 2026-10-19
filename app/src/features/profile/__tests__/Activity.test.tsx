@@ -6,6 +6,7 @@ import type { FeedItem } from '@bevi/shared';
 
 import { api } from '@/api/client';
 import { keys } from '@/api/keys';
+import { POST_GONE } from '@/features/feed/useFeedPostActions';
 import { FRIEND, ME, controls, userIdFor } from '@/testing/fakeApi';
 import ProfileScreen from '@/app/(tabs)/profile/index';
 import UserProfileScreen from '@/app/user/[id]/index';
@@ -131,5 +132,59 @@ describe('Profile › Activity', () => {
       client.getQueryData<{ pages: { items: FeedItem[] }[] }>(keys.feed())!.pages.flatMap((p) => p.items).find((p) => p.id === post.id);
     await waitFor(() => expect(inFeed()?.likedByMe).toBe(true));
     expect(inFeed()?.likeCount).toBe(post.likeCount + 1);
+  });
+
+  it('Want to Try on Activity fills the bookmark before the server answers', async () => {
+    const id = userIdFor(FRIEND.handle);
+    const post = (await api.feed.listUser(id, { limit: 20 })).items.find((p) => !p.inMyWantToTry)!;
+    await open(`/user/${id}`);
+    const card = await screen.findByTestId(`feed-post-${post.id}`);
+    controls.setLatency(600);
+    await fireEvent.press(within(card).getByLabelText('Save to Want to Try'));
+    await waitFor(() => expect(within(screen.getByTestId(`feed-post-${post.id}`)).getByLabelText('Saved to Want to Try').props['aria-pressed']).toBe(true), { timeout: 300 });
+    controls.setLatency(0);
+  });
+
+  it('comments on Activity: post one, it counts and shows inline', async () => {
+    const id = userIdFor(FRIEND.handle);
+    const post = await firstPost(id);
+    await open(`/user/${id}`);
+    const card = await screen.findByTestId(`feed-post-${post.id}`);
+    await fireEvent.press(within(card).getByRole('button', { name: /^Comment/ }));
+    const sheet = await screen.findByTestId('sheet');
+    await fireEvent.changeText(within(sheet).getByLabelText('Add a comment'), 'hi');
+    await fireEvent.press(within(sheet).getByRole('button', { name: 'Post' }));
+    const n = post.commentCount + 1;
+    const label = `Comment, ${n} ${n === 1 ? 'comment' : 'comments'}`;
+    await waitFor(() => expect(within(screen.getByTestId(`feed-post-${post.id}`)).getByRole('button', { name: label })).toBeTruthy());
+    expect(within(screen.getByTestId(`feed-post-${post.id}`)).getAllByText(/hi$/).length).toBeGreaterThan(0);
+    expect(within(screen.getByTestId(`feed-post-${post.id}`)).getAllByText(ME.handle).length).toBeGreaterThan(0);
+  });
+
+  it('commenting on a post that is no longer visible says it is gone and closes the sheet', async () => {
+    const id = userIdFor(FRIEND.handle);
+    const post = await firstPost(id);
+    await open(`/user/${id}`);
+    const card = await screen.findByTestId(`feed-post-${post.id}`);
+    await fireEvent.press(within(card).getByRole('button', { name: /^Comment/ }));
+    const sheet = await screen.findByTestId('sheet');
+    await api.follows.unfollow(id);
+    await fireEvent.changeText(within(sheet).getByLabelText('Add a comment'), 'hi');
+    await fireEvent.press(within(sheet).getByRole('button', { name: 'Post' }));
+    expect(await screen.findByText(POST_GONE)).toBeTruthy();
+    await waitFor(() => expect(screen.queryByTestId('sheet')).toBeNull());
+  });
+
+  it('following a stranger never flashes the empty state while the follow is in flight', async () => {
+    await open(`/user/${strangerId}`);
+    const follow = await screen.findByLabelText('Follow Friend E');
+    await screen.findAllByText(/./);
+    controls.setLatency(300);
+    await fireEvent.press(follow);
+    await waitFor(() => {
+      expect(screen.queryByText(/hasn't Bev'd anything yet/)).toBeNull();
+      expect(screen.queryAllByLabelText(/^(Like|Unlike)/).length).toBeGreaterThan(0);
+    }, { timeout: 3000 });
+    controls.setLatency(0);
   });
 });
