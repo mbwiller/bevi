@@ -96,6 +96,11 @@ select is(public.bayes_prior('soda'), 8.000::numeric,
           'a category at 30 rankings uses its own mean (categoryPrior)');
 
 -- ---------------------------------------------------------------- the boards
+-- The board assertions join t_bevs while the role is authenticated, and a temp
+-- table created by postgres is not readable by it (07_bev_of_period grants
+-- t_expect the same way).
+grant select on t_bevs to authenticated;
+
 set local role authenticated;
 set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000000e1", "role": "authenticated"}';
 
