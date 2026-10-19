@@ -45,7 +45,10 @@ returns table (
 )
 language sql
 stable
-security definer
+-- Invoker on purpose: its only caller, get_bev_of_period(), is a definer owned
+-- by postgres, so this already runs as postgres there. A grant added to it by
+-- mistake later cannot hand a client a chosen clock and age flag with elevated rights.
+security invoker
 set search_path = public, extensions
 as $$
   with params as (

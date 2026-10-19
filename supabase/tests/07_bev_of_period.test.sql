@@ -1,5 +1,8 @@
 -- A-05 (20261018000100): Bev of the day / Bev of the week.
 --
+-- Expects a database with no rankings (test 1). Locally, run `supabase db reset`
+-- first if the live vitest suite has already written rankings to the same stack.
+--
 -- Rankings are inserted directly with fixed ranked_at values and the clock is
 -- pinned through bev_of_period_at(p_now, p_adult). Prior m = 5, C = 3, so
 -- bayes = (15 + sum) / (3 + n):
