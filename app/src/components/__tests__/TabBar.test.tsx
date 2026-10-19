@@ -14,7 +14,7 @@ const renderBar = (props: TabBarProps) =>
     </SafeAreaProvider>,
   );
 
-const LABELS = ['Feed', 'Your Lists', 'Add Bev', 'Leaderboard', 'Profile'];
+const LABELS = ['Feed', 'Your Lists', 'Search', 'Leaderboard', 'Profile'];
 
 it('renders the five labelled tabs with 44pt targets and reports presses', async () => {
   const onChange = jest.fn();

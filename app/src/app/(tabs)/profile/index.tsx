@@ -71,7 +71,7 @@ export default function ProfileScreen() {
         self
         tab={tab}
         onTab={(t) => router.setParams({ tab: t })}
-        onEmptyAction={() => router.push('/add')}
+        onEmptyAction={() => router.push({ pathname: '/add', params: { focus: '1' } })}
         onRefresh={() => {
           void me.refetch();
           void stats.refetch();

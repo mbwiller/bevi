@@ -50,7 +50,7 @@ function write(userId: string | undefined, list: RecentBev[]): void {
 }
 
 /**
- * Recent Bevs for the Add Bev idle state, per account on this device: remember on open, forget with
+ * Recent Bevs for the Search panel's idle state, per account on this device: remember on open, forget with
  * the row's ✕. Nothing is kept until the signed-in user is known.
  */
 export function useRecents(userId: string | undefined) {

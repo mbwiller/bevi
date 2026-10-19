@@ -8,7 +8,7 @@ import { useSession } from '@/state/session';
 
 type TabBarRenderProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
 
-/** TabBar ids → the tab routes in this folder (URLs /feed, /lists, /add, /leaderboard, /profile). */
+/** TabBar ids → the tab routes in this folder (URLs /feed, /lists, /add, /leaderboard, /profile). `add` is the Search tab (M-15). */
 const TAB_ROUTES = {
   feed: 'feed/index',
   lists: 'lists/index',

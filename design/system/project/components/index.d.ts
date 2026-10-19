@@ -93,7 +93,7 @@ export declare function FilterPill(props: FilterPillProps): React.ReactElement;
 export interface SortToggleProps { label?: string; onClick: () => void; /** The search icon shows only when this is given. */ onSearch?: () => void; className?: string }
 export declare function SortToggle(props: SortToggleProps): React.ReactElement;
 
-export interface SearchBarProps { placeholder?: string; value?: string; onChange?: (v: string) => void; variant?: 'filled' | 'outlined'; autoFocus?: boolean; onClear?: () => void; id?: string; className?: string }
+export interface SearchBarProps { placeholder?: string; value?: string; onChange?: (v: string) => void; variant?: 'filled' | 'outlined'; autoFocus?: boolean; onClear?: () => void; /** The field took focus: the Search tab opens its results panel. */ onFocus?: () => void; id?: string; className?: string }
 export declare function SearchBar(props: SearchBarProps): React.ReactElement;
 
 export interface TextFieldProps { label?: string; value?: string; defaultValue?: string; placeholder?: string; prefix?: string; hint?: string; error?: string; type?: string; id?: string; onChange?: React.ChangeEventHandler<HTMLInputElement>; className?: string }

@@ -33,3 +33,10 @@ it('follows a controlled value and submits', async () => {
   await fireEvent(input, 'submitEditing', { nativeEvent: { text: 'topo' } });
   expect(onSubmit).toHaveBeenCalledWith('topo');
 });
+
+it('reports focus (the Search tab opens its results panel on it)', async () => {
+  const onFocus = jest.fn();
+  await render(<SearchBar onFocus={onFocus} />);
+  await fireEvent(screen.getByLabelText('Search a Bev or a person'), 'focus');
+  expect(onFocus).toHaveBeenCalledTimes(1);
+});

@@ -20,7 +20,7 @@ export interface SegmentedTabsProps {
   onChange?: (id: string) => void;
   /** underline-text: 20pt text tabs that scroll sideways. underline-icon: equal-width icon + 17pt label tabs. */
   variant?: 'underline-text' | 'underline-icon';
-  /** The active label and bar: `text` (default) or `primary` (Add Bev). */
+  /** The active label and bar: `text` (default) or `primary`. */
   accent?: 'text' | 'primary';
   style?: StyleProp<ViewStyle>;
 }

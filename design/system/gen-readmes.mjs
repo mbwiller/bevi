@@ -9,8 +9,8 @@ const R = {
 
 - Provide: \`height\` (28 in headers, the only in-app size), \`tone\` = \`brand\` (default), \`inverse\` (on \`tasteCard\` or a photo) or \`mono\` (inherits \`currentColor\`).
 - It is outlined SVG, so it never depends on Fredoka loading. Never retype "bevi" in a font to stand in for it.
-- Do: sit it at the header's left on the 16pt gutter (Feed, Add Bev). Don't: recolour the bubbles, add a tagline beside it in the header, or set it in Beli's teal or a serif.`,
-  Icon: `Lucide outline icons, the 54 the app uses, including one per drink category.
+- Do: sit it at the header's left on the 16pt gutter (Feed, Search). Don't: recolour the bubbles, add a tagline beside it in the header, or set it in Beli's teal or a serif.`,
+  Icon: `Lucide outline icons, the 55 the app uses, including one per drink category.
 
 - Provide: \`name\` (see \`Bevi.iconNames\`), \`size\` (28 for header and action rows, 24 in profile rows and stat cards, 16 inline in meta lines), \`strokeWidth\` (1.6–1.75 at 24–28, 2 at 16), \`filled\` for a saved bookmark or a liked heart.
 - Colour comes from CSS \`color\`: \`text\` by default, \`primary\` for an active or saved state, \`textSecondary\` for chevrons and recents.
@@ -56,7 +56,7 @@ const R = {
   IconButton: `A bare 28pt outline icon with a 44pt target, or the grey 32pt close circle.
 
 - Provide: \`icon\`, \`label\` (required: it is the accessible name), \`variant\` (plain or filled), optional \`badge\` count.
-- Header icons sit 20pt apart; the close circle is the Add Bev tab's and the ranking flow's dismiss.`,
+- Header icons sit 20pt apart; the close circle is the Search tab's and the ranking flow's dismiss.`,
   LikeButton: `The post's like control, Instagram's heart: a 28pt \`heart\`, outline in \`text\` until liked, then filled \`primary\`, with the like count beside it.
 
 - Provide: \`liked\`, \`count\` (printed like other counts: "12", "5k"; hidden at 0), \`onClick\` to toggle.
@@ -77,9 +77,9 @@ const R = {
   SortToggle: `"↓↑ Score" in \`primary\` with a search icon at the right edge: the sort line above every list.
 
 - Provide: \`label\` (Score, Recent, Name), \`onClick\` to cycle (required: a list with one order has no SortToggle), \`onSearch\` to show the search icon (omit it and there is no icon).`,
-  SearchBar: `Search input in two forms: \`filled\` (grey 36pt bar at the top of Feed) and \`outlined\` (48pt field on the Add Bev tab).
+  SearchBar: `Search input in two forms: \`filled\` (grey 36pt bar at the top of Feed) and \`outlined\` (48pt field on the Search tab).
 
-- Provide: \`placeholder\` that names what can be found ("Search a Bev, brand or flavor", "Search by name or @handle"), \`value\`/\`onChange\`, \`id\`.
+- Provide: \`placeholder\` that names what can be found ("Search a Bev or a person", "Search by name or @handle"), \`value\`/\`onChange\`, \`id\`, and \`onFocus\` where focusing opens something (the Search tab's results panel).
 - A clear button appears once there is text. Debounce queries 250ms.`,
   TextField: `Labelled 48pt text field for onboarding, settings and the create-Bev wizard.
 
@@ -103,9 +103,9 @@ const R = {
   SegmentedTabs: `Underline tabs with an animated 3pt bar.
 
 - \`underline-text\` (Your Lists: Bev'd · Want to Try · Recommended; Leaderboard: Bevs · People): 20pt labels that scroll sideways, bar in \`text\`.
-- \`underline-icon\` (Profile: Activity · Taste Profile; Add Bev: Bevs · People): equal halves, icon + 17pt label. \`accent="primary"\` on the Add Bev tabs, \`text\` on Profile.
+- \`underline-icon\` (Profile: Activity · Taste Profile): equal halves, icon + 17pt label, with \`accent="text"\`; \`accent="primary"\` stays available for a grape bar.
 - Provide: \`tabs\` ([{ id, label, icon? }]), \`value\`, \`onChange\`.`,
-  TabBar: `The five-tab bar: Feed, Your Lists, Add Bev (a 32pt \`primary\` circle with a white plus, inline), Leaderboard, Profile (the user's 32pt Avatar).
+  TabBar: `The five-tab bar: Feed, Your Lists, Search (a 32pt \`primary\` circle with a white plus, inline, labelled as Beli labels it), Leaderboard, Profile (the user's 32pt Avatar).
 
 - Provide: \`active\`, \`user\` (for the avatar), \`onChange\`, \`safeArea\` (adds the 34pt home-indicator inset).
 - Icons are 28pt outlines; labels 10pt, the active one bold.`,
@@ -212,9 +212,15 @@ const S = {
   ScreenYourLists: `Your Lists › Bev'd (ref 06): centred "YOUR LISTS" Header, ListScopeDropdown, SegmentedTabs, the FilterPill row, the ProgressStrip ("All Bevs · 37 of 378 tried · 9%"), SortToggle, then numbered BevRows sorted by score.
 
 - Want to Try rows show the global score and a filled bookmark, with when or from whom you saved it in the meta line; Recommended rows show predicted bubbles and a reason in the meta line.`,
-  ScreenAddBev: `Add Bev tab (ref 08): wordmark Header with the close circle, Bevs · People tabs in \`primary\`, the outlined SearchBar, a "Snap it" Pill, Recents, and a sticky "Can't find it? Add a new Bev".
+  ScreenSearch: `Search tab (TASKS.md decision 32): wordmark Header with the close circle, the outlined SearchBar "Search a Bev or a person", a "Snap it" Pill, then the map area filling the rest of the screen.
 
-- Results are BevRows with \`showImage\` and the rating count as their meta line ("362 ratings"); tapping a Bev you haven't ranked goes straight into the ranking flow.`,
+- Until the live New York City map (M-16) the area is a placeholder in \`input\`: the \`map\` icon, "Map coming soon" and one line on what will show there. No pins and no fake streets.
+- The map area stays mounted while the results panel covers it, so the real map is created once per session, and it takes no gestures while the panel is up.`,
+  ScreenSearchResults: `Search tab with the results panel up: focusing the bar slides the panel over the map area from under the bar (opacity and a short downward slide over \`base\`; under Reduce Motion it just appears), and a ghost **Cancel** joins the bar.
+
+- Idle: Recents (the Bevs you opened) and "Suggested for you" (people). Typing (debounced 250ms): one query searches both, grouped under "BEVS" (BevRows with \`showImage\` and the rating count) and "PEOPLE" (UserRows with Follow); an empty group is left out, and nothing in either shows one empty state.
+- A sticky "Can't find it? Add a new Bev" closes the panel's bottom and turns \`primary\` when no Bev matches. It always sits above the keyboard.
+- Cancel (or clearing the bar, then Cancel) slides the panel away and leaves the map exactly where it was.`,
   ScreenGutCheck: `Ranking flow, step 1 (no reference): a BevGlow in the drink's colour fills the screen; the cutout floats at 200pt over its name, brand and category; "How was it?"; three BucketButtons in the tint material; a hint that comparisons come next.
 
 - Choosing a bucket pours it, then moves on to comparisons. An empty bucket skips straight to the note: "First one in Loved".`,

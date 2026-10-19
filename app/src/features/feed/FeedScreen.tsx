@@ -34,7 +34,7 @@ function PostSkeletons({ count }: { count: number }) {
 }
 
 /**
- * Feed (§6.4): the filled search bar (opens Add Bev), Featured Bevs, then YOUR FEED: followed users'
+ * Feed (§6.4): the filled search bar (opens the Search tab with its panel up), Featured Bevs, then YOUR FEED: followed users'
  * rankings, newest first, 20 per page, each with a heart (tap it, or double-tap the post, to like)
  * and a comment bubble that opens the post's comments in a sheet. Following nobody → "Follow friends to see their Bevs" under YOUR FEED while Featured stays.
  */
@@ -65,12 +65,12 @@ export function FeedScreen() {
   const header = (
     <View>
       <Pressable
-        onPress={() => router.push('/add')}
+        onPress={() => router.push({ pathname: '/add', params: { focus: '1' } })}
         accessibilityRole="search"
         accessibilityLabel={SEARCH_PLACEHOLDER}
         style={styles.search}
       >
-        {/* The bar is a doorway to Add Bev's search: it never takes focus itself. */}
+        {/* The bar is a doorway to the Search tab, which opens with its bar focused: it never takes focus itself. */}
         <View pointerEvents="none" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
           <SearchBar variant="filled" placeholder={SEARCH_PLACEHOLDER} />
         </View>

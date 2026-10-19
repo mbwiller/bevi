@@ -88,10 +88,11 @@ it('opens the Bev from a post', async () => {
   expect(r.path()).toBe(`/bev/${post.bev.id}`);
 });
 
-it('the search bar opens Add Bev', async () => {
+it('the search bar opens the Search tab asking for its results panel', async () => {
   const r = await start();
   await fireEvent.press(await screen.findByRole('search'));
-  expect(r.path()).toBe('/add');
+  // The Search tab opens its panel for ?focus=1 (features/search tests cover that side).
+  expect(r.path()).toBe('/add?focus=1');
 });
 
 it('following nobody: the follow empty state under YOUR FEED, Featured stays', async () => {

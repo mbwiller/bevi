@@ -67,6 +67,7 @@ function SessionGate() {
 
       <Stack.Protected guard={status === 'ready'}>
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="search" />
         <Stack.Screen name="bev/[id]" />
         <Stack.Screen name="user/[id]/index" />
         <Stack.Screen name="user/[id]/followers" />

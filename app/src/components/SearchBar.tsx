@@ -12,13 +12,15 @@ export interface SearchBarProps {
   /** Controlled text. Leave undefined to let the bar hold its own. */
   value?: string;
   onChange?: (v: string) => void;
-  /** filled: the grey 36pt bar (Feed). outlined: the 48pt field (Add Bev). */
+  /** filled: the grey 36pt bar (Feed). outlined: the 48pt field (the Search tab). */
   variant?: 'filled' | 'outlined';
   autoFocus?: boolean;
   /** Called after the clear button empties the field (onChange('') fires first). */
   onClear?: () => void;
   /** Return / the keyboard's Search key. */
   onSubmit?: (v: string) => void;
+  /** The field took focus (the Search tab opens its results panel). */
+  onFocus?: () => void;
   /** The input's DOM id on web. */
   id?: string;
   style?: StyleProp<ViewStyle>;
@@ -27,7 +29,7 @@ export interface SearchBarProps {
 const HEIGHT = { filled: 36, outlined: 48 } as const;
 const CLEAR = 32;
 
-/** Search input: `filled` (grey 36pt bar at the top of Feed) or `outlined` (48pt field on Add Bev). A clear button appears once there is text. */
+/** Search input: `filled` (grey 36pt bar at the top of Feed) or `outlined` (48pt field on the Search tab). A clear button appears once there is text. */
 export function SearchBar({
   placeholder = 'Search a Bev or a person',
   value,
@@ -36,6 +38,7 @@ export function SearchBar({
   autoFocus,
   onClear,
   onSubmit,
+  onFocus,
   id,
   style,
 }: SearchBarProps) {
@@ -82,7 +85,10 @@ export function SearchBar({
         placeholderTextColor={colors.textSecondary}
         accessibilityLabel={placeholder}
         autoFocus={autoFocus}
-        onFocus={() => setFocused(true)}
+        onFocus={() => {
+          setFocused(true);
+          onFocus?.();
+        }}
         onBlur={() => setFocused(false)}
         // Web: a Search return key, no autocorrect or capitalisation. No inputMode="search": react-native-web
         // turns it into type="search", whose WebKit cancel button would double up with our clear button.

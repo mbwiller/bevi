@@ -73,9 +73,9 @@ export default function BevDetailScreen() {
       <EmptyState
         icon="search"
         title="This Bev isn't here anymore"
-        body="It may have been removed or merged. Search for it on the Add tab."
+        body="It may have been removed or merged. Search for it in Search."
         action="Search Bevs"
-        onAction={() => router.replace('/add')}
+        onAction={() => router.replace({ pathname: '/add', params: { focus: '1' } })}
       />
     );
   } else if (!bev) {

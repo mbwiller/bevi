@@ -31,6 +31,7 @@ import Leaf from 'lucide-react-native/icons/leaf';
 import List from 'lucide-react-native/icons/list';
 import ListFilter from 'lucide-react-native/icons/list-filter';
 import Lock from 'lucide-react-native/icons/lock';
+import MapIcon from 'lucide-react-native/icons/map'; // not `Map`, which would shadow the global
 import Martini from 'lucide-react-native/icons/martini';
 import Meh from 'lucide-react-native/icons/face-neutral'; // Lucide renamed meh (the design system's name is kept)
 import Menu from 'lucide-react-native/icons/menu';
@@ -115,6 +116,8 @@ const ICONS = {
   wine: Wine,
   martini: Martini,
   globe: Globe,
+  // The Search tab's map area.
+  map: MapIcon,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;
