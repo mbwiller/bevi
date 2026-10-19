@@ -32,6 +32,20 @@
 set search_path = public, extensions;
 
 -- ---------------------------------------------------------------------------
+-- 0. user_category_stats becomes owner-only for direct reads.
+-- ---------------------------------------------------------------------------
+-- 20261011000100 made it readable by every signed-in user (`using (true)`).
+-- That was harmless while the table stayed empty, but the backfill below
+-- fills it, and a direct read would then let an under-21 see an adult's
+-- alcoholic category rows. Nothing reads the table as the caller (no
+-- invoker function, view, packages/api, app or script); the definer
+-- functions here bypass RLS. Anyone else's profile goes through
+-- get_taste_profile, which applies the age gate.
+drop policy user_category_stats_select on public.user_category_stats;
+create policy user_category_stats_select on public.user_category_stats
+  for select to authenticated using (user_id = auth.uid());
+
+-- ---------------------------------------------------------------------------
 -- 1. refresh_user_category_stats(p_uid): recompute one user's rows.
 -- ---------------------------------------------------------------------------
 create or replace function public.refresh_user_category_stats(p_uid uuid) returns void

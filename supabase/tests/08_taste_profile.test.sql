@@ -13,7 +13,7 @@
 -- also gets a wine ranking inserted directly (bad data an under-21 owner
 -- cannot normally have).
 begin;
-select plan(21);
+select plan(24);
 
 insert into auth.users (id, email, raw_user_meta_data, aud, role)
 values ('00000000-0000-4000-8000-0000000000f1', 'pgtaptp1@users.bevi.app',
@@ -60,7 +60,7 @@ select public.refresh_user_category_stats('00000000-0000-4000-8000-0000000000f1'
 select public.refresh_user_category_stats('00000000-0000-4000-8000-0000000000f3');
 select public.refresh_user_category_stats('00000000-0000-4000-8000-0000000000f4');
 
--- 1. The stored rows equal the golden vectors (rounded to the columns' scale).
+-- The stored rows equal the golden vectors (rounded to the columns' scale).
 select is(
   (select array_agg(row(category_id, rating_count, mean_score, stddev_score, affinity_z)::text
                     order by category_id)
@@ -70,10 +70,15 @@ select is(
   'refresh_user_category_stats matches user-stats.vectors.json "five rankings"'
 );
 
--- 2. Re-running replaces rather than duplicates.
+-- Re-running replaces rather than duplicates.
 select public.refresh_user_category_stats('00000000-0000-4000-8000-0000000000f1');
 select is((select count(*)::int from public.user_category_stats
             where user_id = '00000000-0000-4000-8000-0000000000f1'), 4, 'a refresh is idempotent');
+
+-- The under-21 owner's wine row is stored, so the under-21 owner check below tests the filter.
+select is((select count(*)::int from public.user_category_stats
+            where user_id = '00000000-0000-4000-8000-0000000000f3' and category_id = 'wine'),
+          1, 'the under-21 owner''s alcoholic row exists in the table');
 
 -- ---------------------------------------------------------------------------
 -- The ranking RPCs keep it fresh (f2, through refresh_user_stats).
@@ -82,7 +87,6 @@ set local role authenticated;
 set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000000f2", "role": "authenticated"}';
 
 select public.submit_ranking((select id from t_bevs where label = 'soda1'), 3::smallint, 0, 0);
--- 3, 4
 select is((select array_agg(category_id || ':' || rating_count)
              from public.user_category_stats where user_id = '00000000-0000-4000-8000-0000000000f2'),
           array['soda:1'], 'submit_ranking writes the category row');
@@ -90,20 +94,18 @@ select is((select rating_count from public.user_stats where user_id = '00000000-
           1, 'refresh_user_stats still updates user_stats');
 
 select public.submit_ranking((select id from t_bevs where label = 'sparkling'), 3::smallint, 1, 1);
--- 5
 select is((select array_agg(category_id || ':' || rating_count order by category_id)
              from public.user_category_stats where user_id = '00000000-0000-4000-8000-0000000000f2'),
           array['soda:1', 'sparkling_water:1'], 'a second ranking adds its category');
 
 select public.rerank_bev((select id from t_bevs where label = 'sparkling'), 1::smallint, 0, 0);
--- 6. It was Loved (>= 7); a Didn't-like score is below 4.
+-- It was Loved (>= 7); a Didn't-like score is below 4.
 select ok((select s.mean_score < 4
              from public.user_category_stats s
             where s.user_id = '00000000-0000-4000-8000-0000000000f2' and s.category_id = 'sparkling_water'),
           'rerank_bev into Didn''t like moves the category mean into that band');
 
 select public.remove_ranking((select id from t_bevs where label = 'soda1'));
--- 7
 select is((select array_agg(category_id || ':' || rating_count)
              from public.user_category_stats where user_id = '00000000-0000-4000-8000-0000000000f2'),
           array['sparkling_water:1'], 'remove_ranking drops the emptied category');
@@ -111,7 +113,7 @@ select is((select array_agg(category_id || ':' || rating_count)
 -- ---------------------------------------------------------------------------
 -- get_taste_profile
 -- ---------------------------------------------------------------------------
--- 8. An adult viewer sees f1's four categories, highest mean first.
+-- An adult viewer sees f1's four categories, highest mean first.
 select is(
   (select array_agg(row(t.category_id, t.rating_count, t.mean_score, t.affinity_z)::text order by t.ordinality)
      from public.get_taste_profile('00000000-0000-4000-8000-0000000000f1') with ordinality t),
@@ -120,37 +122,43 @@ select is(
   'adult viewer: every category, highest mean first'
 );
 
--- 9. The under-21 owner's wine row is stored, so test 11 tests the filter.
+-- Direct reads of the table are owner-only (get_taste_profile is the way in).
 select is((select count(*)::int from public.user_category_stats
-            where user_id = '00000000-0000-4000-8000-0000000000f3' and category_id = 'wine'),
-          1, 'the under-21 owner''s alcoholic row exists in the table');
+            where user_id = '00000000-0000-4000-8000-0000000000f2'),
+          1, 'direct read: a user sees their own rows');
+select is((select count(*)::int from public.user_category_stats
+            where user_id = '00000000-0000-4000-8000-0000000000f1'),
+          0, 'direct read: not another user''s rows');
 
--- 10. An adult sees another adult's alcoholic category.
+-- An adult sees another adult's alcoholic category.
 select is((select array_agg(category_id) from public.get_taste_profile('00000000-0000-4000-8000-0000000000f4')),
           array['wine'], 'adult viewer, adult owner: the alcoholic category shows');
 
--- 11. An under-21 owner's alcoholic row never shows, even to an adult.
+-- An under-21 owner's alcoholic row never shows, even to an adult.
 select is((select count(*)::int from public.get_taste_profile('00000000-0000-4000-8000-0000000000f3')),
           0, 'adult viewer, under-21 owner: no alcoholic category');
 
--- 12. Your own profile works too.
+-- Your own profile works too.
 select is((select array_agg(category_id) from public.get_taste_profile('00000000-0000-4000-8000-0000000000f2')),
           array['sparkling_water'], 'own profile');
 
--- 13, 14. An under-21 viewer.
+-- An under-21 viewer.
 set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000000f3", "role": "authenticated"}';
 select is((select count(*)::int from public.get_taste_profile('00000000-0000-4000-8000-0000000000f4')),
           0, 'under-21 viewer: an adult''s alcoholic category is hidden');
 select is((select count(*)::int from public.get_taste_profile('00000000-0000-4000-8000-0000000000f1')),
           4, 'under-21 viewer: non-alcoholic categories still show');
+select is((select count(*)::int from public.user_category_stats
+            where user_id = '00000000-0000-4000-8000-0000000000f4' and category_id = 'wine'),
+          0, 'direct read: an under-21 cannot read an adult''s alcoholic row');
 
--- 15. Unknown user.
+-- Unknown user.
 select throws_ok(
   $$ select * from public.get_taste_profile('00000000-0000-4000-8000-00000000ffff') $$,
   'P0002', 'BEVI_NOT_FOUND', 'unknown user is not_found'
 );
 
--- 16. Signed out.
+-- Signed out.
 set local request.jwt.claims = '{"role": "authenticated"}';
 select throws_ok(
   $$ select * from public.get_taste_profile('00000000-0000-4000-8000-0000000000f1') $$,
@@ -159,7 +167,7 @@ select throws_ok(
 
 reset role;
 
--- 17-21. Grants.
+-- Grants.
 select ok(has_function_privilege('authenticated', 'public.get_taste_profile(uuid)', 'execute'),
           'authenticated may call get_taste_profile');
 select ok(not has_function_privilege('anon', 'public.get_taste_profile(uuid)', 'execute'),
