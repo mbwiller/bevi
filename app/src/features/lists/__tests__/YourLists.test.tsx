@@ -3,6 +3,7 @@ import { Slot } from 'expo-router';
 import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
 
 import { api } from '@/api/client';
+import { categoryById } from '@/lib/categories';
 import { controls } from '@/testing/fakeApi';
 import ListsScreen from '@/app/(tabs)/lists/index';
 
@@ -134,4 +135,50 @@ it('formats the Recommended summary line', () => {
   const now = new Date('2026-10-11T12:00:00Z');
   expect(basedOnLine(12, '2026-10-11T10:00:00Z', now)).toBe("Based on 12 Bevs you've ranked · Updated 2 hours ago");
   expect(basedOnLine(1, '2026-10-11T12:00:00Z', now)).toBe("Based on 1 Bev you've ranked · Updated just now");
+});
+
+describe("Bev'd category progress (M-08)", () => {
+  const sum = (rows: { ranked: number; total: number }[]) =>
+    rows.reduce((t, r) => ({ ranked: t.ranked + r.ranked, total: t.total + r.total }), { ranked: 0, total: 0 });
+
+  it('shows every visible category summed as All Bevs, and the scoped category once one is picked', async () => {
+    const progress = await api.stats.getCategoryProgress();
+    const all = sum(progress);
+    expect(all.ranked).toBeGreaterThan(0);
+    await start();
+    const strip = await screen.findByRole('button', { name: new RegExp(`^All Bevs, ${all.ranked} of ${all.total} tried`) });
+
+    await fireEvent.press(strip);
+    expect(await screen.findByRole('header', { name: 'Your collection' })).toBeTruthy();
+    const target = progress.find((r) => r.ranked > 0)!;
+    const label = categoryById(target.categoryId).label;
+    await fireEvent.press(screen.getByRole('button', { name: new RegExp(`^${label}, .*Show only ${label}$`) }));
+
+    expect(
+      await screen.findByRole('button', { name: new RegExp(`^${label}, ${target.ranked} of ${target.total} tried`) }),
+    ).toBeTruthy();
+    expect(screen.queryByRole('header', { name: 'Your collection' })).toBeNull();
+  });
+
+  it('counts down when a ranking is removed', async () => {
+    const all = sum(await api.stats.getCategoryProgress());
+    const first = (await api.rankings.listMine()).items[0]!;
+    await start();
+    await screen.findByRole('button', { name: new RegExp(`^All Bevs, ${all.ranked} of `) });
+
+    await fireEvent.press(await screen.findByLabelText(`More for ${first.bev.name}`));
+    await fireEvent.press(await screen.findByLabelText("Remove from Bev'd"));
+    await fireEvent.press(await screen.findByLabelText(`Remove ${first.bev.name}`));
+
+    expect(
+      await screen.findByRole('button', { name: new RegExp(`^All Bevs, ${all.ranked - 1} of ${all.total} tried`) }),
+    ).toBeTruthy();
+  });
+
+  it('still shows the strip with nothing ranked', async () => {
+    controls.emptyUser();
+    const all = sum(await api.stats.getCategoryProgress());
+    await start('/lists?tab=bevd');
+    expect(await screen.findByText(`All Bevs · 0 of ${all.total} tried · 0%`)).toBeTruthy();
+  });
 });

@@ -1,6 +1,6 @@
 import React from 'react';
-import { cx, Icon, Wordmark, BevArt, categoryById, formatRatings } from './core.jsx';
-import { ScoreBubble, Avatar, BevImage, Pill, IconButton, LikeButton, CommentButton } from './primitives.jsx';
+import { cx, Icon, Wordmark, BevArt, categoryById, formatRatings, formatTried, spokenTried } from './core.jsx';
+import { ScoreBubble, Avatar, BevImage, Pill, IconButton, LikeButton, CommentButton, ProgressBar } from './primitives.jsx';
 
 /** Comments shown on the post itself; above this many, the post collapses to "View all N comments". */
 export const INLINE_COMMENTS = 7;
@@ -193,6 +193,29 @@ export function StatCard({ icon, label, value, onClick, className }) {
         <span className="bodyLarge bv-statcard-label">{label}</span>
         <span className="screenTitle bv-statcard-value">{value}</span>
       </span>
+    </Tag>
+  );
+}
+
+/**
+ * Bev'd's progress line under the filters: "Soda · 4 of 61 tried · 6%" over a 4pt `primary` bar.
+ * With `onClick` it is a button (chevron right) that opens the CollectionSheet.
+ */
+export function ProgressStrip({ label = 'All Bevs', ranked = 0, total = 0, onClick, className }) {
+  const Tag = onClick ? 'button' : 'div';
+  return (
+    <Tag
+      type={onClick ? 'button' : undefined}
+      className={cx('bv', 'bv-progress', className)}
+      onClick={onClick}
+      aria-label={onClick ? label + ', ' + spokenTried(ranked, total) + '. Show your collection' : undefined}
+    >
+      {onClick ? null : <span className="bv-sr-only">{label + ', ' + spokenTried(ranked, total)}</span>}
+      <span className="bv-progress-top" aria-hidden={onClick ? undefined : 'true'}>
+        <span className="body bv-progress-text">{label} · {formatTried(ranked, total)}</span>
+        {onClick ? <Icon name="chevron-right" size={20} strokeWidth={2} className="bv-progress-chev" /> : null}
+      </span>
+      <ProgressBar value={total > 0 ? ranked / total : 0} />
     </Tag>
   );
 }
