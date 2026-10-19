@@ -51,6 +51,27 @@ interface FeaturedRpcRow {
   bev_bayes_score: number | null;
 }
 
+/** get_feed and get_user_feed rows (same columns) → a page of FeedItems, actors joined from profiles_view. */
+async function toFeedPage(client: SupabaseClient, rpc: string, rows: FeedRpcRow[], limit: number): Promise<Page<FeedItem>> {
+  const actorIds = [...new Set(rows.map((r) => r.actor_id))];
+  const actorById = new Map<string, Profile>();
+  if (actorIds.length > 0) {
+    const { data: actorRows, error: actorError } = await client.from('profiles_view').select('*').in('id', actorIds);
+    if (actorError) throw mapError(actorError);
+    for (const row of actorRows as ProfileViewRow[]) actorById.set(row.id, mapProfile(client, row));
+  }
+
+  const items = rows.map((row) => {
+    const actor = actorById.get(row.actor_id);
+    if (!actor) throw new ApiError('unknown', `${rpc} row ${row.id} has no matching profile for actor ${row.actor_id}`);
+    return mapFeedItem(client, row, actor);
+  });
+
+  const last = rows[rows.length - 1];
+  const nextCursor = rows.length === limit && last ? encodeCursor({ beforeId: last.id } satisfies FeedCursor) : null;
+  return { items, nextCursor };
+}
+
 export function createFeedApi(client: SupabaseClient): FeedApi {
   return {
     async getFeed(page?: PageParams): Promise<Page<FeedItem>> {
@@ -60,25 +81,21 @@ export function createFeedApi(client: SupabaseClient): FeedApi {
 
       const { data, error } = await client.rpc('get_feed', { p_limit: limit, p_before_id: beforeId ?? null });
       if (error) throw mapError(error);
-      const rows = data as FeedRpcRow[];
+      return toFeedPage(client, 'get_feed', data as FeedRpcRow[], limit);
+    },
 
-      const actorIds = [...new Set(rows.map((r) => r.actor_id))];
-      const actorById = new Map<string, Profile>();
-      if (actorIds.length > 0) {
-        const { data: actorRows, error: actorError } = await client.from('profiles_view').select('*').in('id', actorIds);
-        if (actorError) throw mapError(actorError);
-        for (const row of actorRows as ProfileViewRow[]) actorById.set(row.id, mapProfile(client, row));
-      }
+    async listUser(userId: string, page?: PageParams): Promise<Page<FeedItem>> {
+      await requireUserId(client);
+      const limit = clampLimit(page?.limit);
+      const { beforeId } = decodeCursor<FeedCursor>(page?.cursor) ?? { beforeId: undefined as unknown as number };
 
-      const items = rows.map((row) => {
-        const actor = actorById.get(row.actor_id);
-        if (!actor) throw new ApiError('unknown', `get_feed row ${row.id} has no matching profile for actor ${row.actor_id}`);
-        return mapFeedItem(client, row, actor);
+      const { data, error } = await client.rpc('get_user_feed', {
+        p_user_id: userId,
+        p_limit: limit,
+        p_before_id: beforeId ?? null,
       });
-
-      const last = rows[rows.length - 1];
-      const nextCursor = rows.length === limit && last ? encodeCursor({ beforeId: last.id } satisfies FeedCursor) : null;
-      return { items, nextCursor };
+      if (error) throw mapError(error);
+      return toFeedPage(client, 'get_user_feed', data as FeedRpcRow[], limit);
     },
 
     async getFeatured(): Promise<FeaturedBev[]> {

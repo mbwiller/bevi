@@ -1283,42 +1283,60 @@ export class FakeApi implements BeviApi {
       ),
   };
 
+  /** Whose posts the caller may see (feed_event_visible): themselves and the users they follow. */
+  private feedActors(me: FakeUser): Set<string> {
+    return new Set([me.id, ...this.db.follows.filter((f) => f.followerId === me.id).map((f) => f.followeeId)]);
+  }
+
+  /** get_feed's rows for these actors, newest first, age-gated like the SQL. */
+  private feedItems(me: FakeUser, actors: Set<string>): FeedItem[] {
+    const saved = new Set(this.db.wantToTry.filter((w) => w.userId === me.id).map((w) => w.bevId));
+    const likes = this.db.likes ?? [];
+    const items: FeedItem[] = [];
+    const events = this.db.feed
+      .filter((e) => actors.has(e.actorId))
+      .sort((a, z) => z.createdAt.localeCompare(a.createdAt) || Number(z.id.split('-')[1]) - Number(a.id.split('-')[1]));
+    for (const e of events) {
+      const actor = this.db.users.find((u) => u.id === e.actorId);
+      const bev = this.db.bevs.find((b) => b.id === e.bevId);
+      if (!actor || !bev || !this.visible(bev, me)) continue;
+      // The feed carries rankings only (contract 2.0.0): a save is never a post.
+      const r = e.type === 'RANKING' ? this.rankingOf(e.actorId, e.bevId) : undefined;
+      if (!r) continue; // ranking since removed
+      items.push({
+        id: e.id,
+        type: e.type,
+        actor: this.toProfile(actor, me),
+        bev: this.toSummary(bev),
+        score: r.score,
+        bucket: r.bucket,
+        note: r.note,
+        createdAt: e.createdAt,
+        inMyWantToTry: saved.has(bev.id),
+        likeCount: likes.filter((l) => l.feedEventId === e.id).length,
+        likedByMe: likes.some((l) => l.feedEventId === e.id && l.userId === me.id),
+        commentCount: this.liveComments(e.id).length,
+        // The first seven, oldest first, as get_feed returns them.
+        comments: this.liveComments(e.id).slice(0, FEED_INLINE_COMMENTS).map((c) => this.toComment(c, me)),
+      });
+    }
+    return items;
+  }
+
   feed: FeedApi = {
     getFeed: (page?: PageParams) =>
       this.call('feed.getFeed', () => {
         const me = this.requireUser();
-        const actors = new Set([me.id, ...this.db.follows.filter((f) => f.followerId === me.id).map((f) => f.followeeId)]);
-        const saved = new Set(this.db.wantToTry.filter((w) => w.userId === me.id).map((w) => w.bevId));
-        const likes = this.db.likes ?? [];
-        const items: FeedItem[] = [];
-        const events = this.db.feed
-          .filter((e) => actors.has(e.actorId))
-          .sort((a, z) => z.createdAt.localeCompare(a.createdAt) || Number(z.id.split('-')[1]) - Number(a.id.split('-')[1]));
-        for (const e of events) {
-          const actor = this.db.users.find((u) => u.id === e.actorId);
-          const bev = this.db.bevs.find((b) => b.id === e.bevId);
-          if (!actor || !bev) continue;
-          // The feed carries rankings only (contract 2.0.0): a save is never a post.
-          const r = e.type === 'RANKING' ? this.rankingOf(e.actorId, e.bevId) : undefined;
-          if (!r) continue; // ranking since removed
-          items.push({
-            id: e.id,
-            type: e.type,
-            actor: this.toProfile(actor, me),
-            bev: this.toSummary(bev),
-            score: r.score,
-            bucket: r.bucket,
-            note: r.note,
-            createdAt: e.createdAt,
-            inMyWantToTry: saved.has(bev.id),
-            likeCount: likes.filter((l) => l.feedEventId === e.id).length,
-            likedByMe: likes.some((l) => l.feedEventId === e.id && l.userId === me.id),
-            commentCount: this.liveComments(e.id).length,
-            // The first seven, oldest first, as get_feed returns them.
-            comments: this.liveComments(e.id).slice(0, FEED_INLINE_COMMENTS).map((c) => this.toComment(c, me)),
-          });
-        }
-        return paginate(items, page, 20);
+        return paginate(this.feedItems(me, this.feedActors(me)), page, 20);
+      }),
+
+    listUser: (userId: string, page?: PageParams) =>
+      this.call('feed.listUser', () => {
+        const me = this.requireUser();
+        this.user(userId);
+        // feed_event_visible: only the caller's own and followed users' posts; anyone else's page is empty.
+        const actors = this.feedActors(me).has(userId) ? new Set([userId]) : new Set<string>();
+        return paginate(this.feedItems(me, actors), page, 20);
       }),
 
     getFeatured: () =>

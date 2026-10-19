@@ -339,6 +339,15 @@ export interface FeedApi {
   /** The caller's and followed users' RANKING posts, newest first. @throws 'unauthorized'. */
   getFeed(page?: PageParams): Promise<Page<FeedItem>>;
 
+  /**
+   * One user's RANKING posts, newest first, in the same shape as `getFeed`
+   * (likes, and the first seven comments inline). Only posts the caller may
+   * see: their own and followed users'; empty for anyone else, whose Activity
+   * uses `rankings.listUser`.
+   * @throws 'unauthorized'; 'not_found' — no such user.
+   */
+  listUser(userId: string, page?: PageParams): Promise<Page<FeedItem>>;
+
   /** Age-filtered. @throws 'unauthorized'. */
   getFeatured(): Promise<FeaturedBev[]>;
 
