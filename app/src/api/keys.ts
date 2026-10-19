@@ -62,6 +62,8 @@ export const keys = {
   wantToTry: () => [...root, 'wantToTry'] as const,
 
   feed: () => [...root, 'feed'] as const,
+  /** `feed.listUser` for one person; nested under `feed()` so every FeedItem cache operation on that prefix covers it. */
+  feedUser: (userId: string) => [...root, 'feed', 'user', userId] as const,
   /** A post's thread (`comments.list`, newest-first pages). */
   comments: (eventId: string) => [...root, 'comments', eventId] as const,
   featured: () => [...root, 'featured'] as const,

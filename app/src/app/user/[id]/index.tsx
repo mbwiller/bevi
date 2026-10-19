@@ -1,4 +1,4 @@
-import { isApiError, type RankedBev } from '@bevi/shared';
+import { isApiError } from '@bevi/shared';
 import type { FlashListRef } from '@shopify/flash-list';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useRef } from 'react';
@@ -13,7 +13,7 @@ import { Header } from '@/components/Header';
 import { ProfileListRow } from '@/components/ProfileListRow';
 import { useBack } from '@/lib/useBack';
 import { FollowButton } from '@/features/people/FollowButton';
-import { ActivityList, parseProfileTab } from '@/features/profile/ActivityList';
+import { ActivityList, parseProfileTab, type ActivityRow } from '@/features/profile/ActivityList';
 import {
   PROFILE_BUTTON_WIDTH,
   ProfileButtonRow,
@@ -40,7 +40,7 @@ export default function UserProfileScreen() {
   const user = useUser(isMe ? undefined : id);
   const stats = useStats(isMe ? undefined : id);
   const { share, notice } = useShareProfile(id);
-  const listRef = useRef<FlashListRef<RankedBev> | null>(null);
+  const listRef = useRef<FlashListRef<ActivityRow> | null>(null);
 
   if (isMe) return <Redirect href="/profile" />;
 
@@ -78,6 +78,7 @@ export default function UserProfileScreen() {
       <ActivityList
         profile={profile}
         self={false}
+        following={profile.isFollowing}
         listRef={listRef}
         tab={tab}
         onTab={(t) => router.setParams({ tab: t })}

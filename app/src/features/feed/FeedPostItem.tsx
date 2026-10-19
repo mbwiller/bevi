@@ -19,7 +19,8 @@ export interface FeedPostItemProps {
   /** Opens the post's comments (the comment bubble and "View all N comments"). */
   onComment: () => void;
   onOpenBev: () => void;
-  onOpenActor: () => void;
+  /** Omitted on the actor's own profile, where the avatar has nowhere to go. */
+  onOpenActor?: () => void;
 }
 
 /** FeedPost draws a 60pt avatar at the post's top-left padding; the actor target sits over it. */
@@ -69,12 +70,14 @@ export const FeedPostItem = memo(function FeedPostItem({
           {likeError}
         </Text>
       ) : null}
-      <Pressable
-        onPress={onOpenActor}
-        accessibilityRole="link"
-        accessibilityLabel={you ? 'Your profile' : `${item.actor.displayName}, @${item.actor.handle}`}
-        style={styles.actor}
-      />
+      {onOpenActor ? (
+        <Pressable
+          onPress={onOpenActor}
+          accessibilityRole="link"
+          accessibilityLabel={you ? 'Your profile' : `${item.actor.displayName}, @${item.actor.handle}`}
+          style={styles.actor}
+        />
+      ) : null}
     </View>
   );
 });
