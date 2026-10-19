@@ -25,12 +25,20 @@ const result = await build({
   platform: 'neutral',
   target: 'es2022',
   legalComments: 'none',
+  metafile: true,
   write: false,
   logLevel: 'silent',
 }).catch((err: { errors?: Array<{ text: string }> }) => {
   for (const e of err.errors ?? []) console.error(`esbuild: ${e.text}`);
   process.exit(1);
 });
+
+// eval/ (the offline harness) and test/ are Node-side tooling; nothing in the bundle may reach them.
+const leaked = Object.keys(result.metafile?.inputs ?? {}).filter((f) => /(^|\/)(eval|test|scripts)\//.test(f));
+if (leaked.length > 0) {
+  console.error(`bundle-smoke: the bundle includes non-src files: ${leaked.join(', ')}`);
+  process.exit(1);
+}
 
 const code = (result.outputFiles[0]?.text ?? '')
   .replace(/\/\*[\s\S]*?\*\//g, '')

@@ -10,7 +10,8 @@
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.tools.json",
     "test": "vitest run",
     "vectors": "node scripts/gen-vectors.ts",
-    "bundle:smoke": "node scripts/bundle-smoke.ts"
+    "bundle:smoke": "node scripts/bundle-smoke.ts",
+    "eval": "node eval/cli.ts"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
