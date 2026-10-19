@@ -1,16 +1,23 @@
-import type { Profile, RankedBev } from '@bevi/shared';
+import type { FeedItem, Profile, RankedBev } from '@bevi/shared';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
+import { useIsMutating } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, type ReactElement, type RefObject } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { flattenPages, useUserRankings } from '@/api/hooks';
+import { FOLLOW_MUTATION, flattenPages, useUserFeed, useUserRankings } from '@/api/hooks';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { FeedPost } from '@/components/FeedPost';
 import { SegmentedTabs } from '@/components/SegmentedTabs';
 import { Skeleton } from '@/components/Skeleton';
-import { spacing } from '@/theme';
+import { FeedPostItem } from '@/features/feed/FeedPostItem';
+import { PostCommentsSheet } from '@/features/feed/PostCommentsSheet';
+import { useFeedPostActions } from '@/features/feed/useFeedPostActions';
+import { spacing, type, useTheme } from '@/theme';
+
+/** A row of the Activity list: a post (you and people you follow) or a plain ranking (anyone else). */
+export type ActivityRow = RankedBev | FeedItem;
 
 export type ProfileTab = 'activity' | 'taste';
 
@@ -28,6 +35,8 @@ export interface ActivityListProps {
   profile: Profile;
   /** Your own profile: "You Bev'd …" and first-person empty copy. */
   self: boolean;
+  /** The viewer follows this person. With `self`, Activity shows posts (hearts, comments); otherwise plain rankings. */
+  following?: boolean;
   /** Everything above the tabs (hero, buttons, rows, stat cards); scrolls with the list. */
   header: ReactElement;
   tab: ProfileTab;
@@ -37,33 +46,49 @@ export interface ActivityListProps {
   /** Pull to refresh: refetch the header's queries too. The rankings refetch here. */
   onRefresh?: () => unknown;
   /** For `scrollToIndex({ index: 0 })`: brings the first post up under the screen header. */
-  listRef?: RefObject<FlashListRef<RankedBev> | null>;
+  listRef?: RefObject<FlashListRef<ActivityRow> | null>;
 }
 
 /**
  * The scrolling body of a profile: the header, Activity · Taste Profile tabs, then the user's
- * rankings (`rankings.listUser`) as FeedPosts with infinite scroll. Taste Profile is Phase 3.
+ * posts (`feed.listUser`, as the Feed shows them) for you and people you follow, else their rankings
+ * (`rankings.listUser`) as plain FeedPosts; infinite scroll. Taste Profile is Phase 3.
  */
-export function ActivityList({ profile, self, header, tab, onTab, onEmptyAction, onRefresh, listRef }: ActivityListProps) {
+export function ActivityList({ profile, self, following = false, header, tab, onTab, onEmptyAction, onRefresh, listRef }: ActivityListProps) {
+  const { colors } = useTheme();
   const router = useRouter();
-  const query = useUserRankings(profile.id);
-  const items = useMemo(() => flattenPages(query.data), [query.data]);
+  // Posts for you and people you follow (feed.listUser returns nothing for anyone else); follow or
+  // unfollow flips `following`, which swaps the query without a reload.
+  // Not while a follow or unfollow of this person is in flight: the optimistic flag runs ahead of the server, and feed.listUser would come back empty.
+  const followPending = useIsMutating({ mutationKey: FOLLOW_MUTATION, predicate: (m) => m.state.variables === profile.id }) > 0;
+  const posts = self || (following && !followPending);
+  const rankingsQuery = useUserRankings(posts ? undefined : profile.id);
+  const postsQuery = useUserFeed(posts ? profile.id : undefined);
+  const query = posts ? postsQuery : rankingsQuery;
+  const items = useMemo<ActivityRow[]>(
+    () => (posts ? flattenPages(postsQuery.data) : flattenPages(rankingsQuery.data)),
+    [posts, postsQuery.data, rankingsQuery.data],
+  );
   const data = tab === 'activity' ? items : [];
+  const { renderItem: renderPost, commentsFor, closeComments, postGone, notice } = useFeedPostActions({ linkActors: false });
 
   const renderItem = useCallback(
-    ({ item }: { item: RankedBev }) => (
-      <FeedPost
-        actor={profile}
-        you={self}
-        bev={item.bev}
-        score={item.score}
-        bucket={item.bucket}
-        note={item.note}
-        time={item.createdAt}
-        onOpen={() => router.push({ pathname: '/bev/[id]', params: { id: item.bev.id } })}
-      />
-    ),
-    [profile, self, router],
+    ({ item }: { item: ActivityRow }) =>
+      'actor' in item ? (
+        renderPost({ item })
+      ) : (
+        <FeedPost
+          actor={profile}
+          you={self}
+          bev={item.bev}
+          score={item.score}
+          bucket={item.bucket}
+          note={item.note}
+          time={item.createdAt}
+          onOpen={() => router.push({ pathname: '/bev/[id]', params: { id: item.bev.id } })}
+        />
+      ),
+    [profile, self, router, renderPost],
   );
 
   const listHeader = (
@@ -101,27 +126,37 @@ export function ActivityList({ profile, self, header, tab, onTab, onEmptyAction,
     );
 
   return (
-    <FlashList
-      ref={listRef}
-      data={data}
-      renderItem={renderItem}
-      keyExtractor={(r) => r.id}
-      ListHeaderComponent={listHeader}
-      ListEmptyComponent={<>{empty}</>}
-      ListFooterComponent={
-        tab === 'activity' && query.isFetchingNextPage ? <Skeleton variant="post" /> : <View style={styles.foot} />
-      }
-      onEndReached={() => {
-        if (tab === 'activity' && query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage();
-      }}
-      onEndReachedThreshold={0.5}
-      refreshing={query.isRefetching && !query.isFetchingNextPage}
-      onRefresh={() => {
-        void query.refetch();
-        onRefresh?.();
-      }}
-    />
+    <View style={styles.fill}>
+      {notice ? (
+        <Text style={[type.body, styles.notice, { color: colors.textSecondary }]} role="alert" accessibilityLiveRegion="polite">
+          {notice}
+        </Text>
+      ) : null}
+      <FlashList
+        ref={listRef}
+        data={data}
+        renderItem={renderItem}
+        keyExtractor={(r) => r.id}
+        ListHeaderComponent={listHeader}
+        ListEmptyComponent={<>{empty}</>}
+        ListFooterComponent={tab === 'activity' && query.isFetchingNextPage ? <Skeleton variant="post" /> : <View style={styles.foot} />}
+        onEndReached={() => {
+          if (tab === 'activity' && query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage();
+        }}
+        onEndReachedThreshold={0.5}
+        refreshing={query.isRefetching && !query.isFetchingNextPage}
+        onRefresh={() => {
+          void query.refetch();
+          onRefresh?.();
+        }}
+      />
+      <PostCommentsSheet eventId={commentsFor} onClose={closeComments} onGone={postGone} />
+    </View>
   );
 }
 
-const styles = StyleSheet.create({ foot: { height: spacing.xxl } });
+const styles = StyleSheet.create({
+  fill: { flex: 1 },
+  foot: { height: spacing.xxl },
+  notice: { paddingHorizontal: spacing.gutter, paddingVertical: spacing.sm },
+});

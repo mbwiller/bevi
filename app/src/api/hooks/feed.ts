@@ -14,9 +14,19 @@ export function useFeed() {
   });
 }
 
+/** A person's posts (Profile › Activity), newest first, 20 per page. Empty unless it's you or someone you follow. */
+export function useUserFeed(userId: string | undefined) {
+  return useInfiniteQuery({
+    queryKey: keys.feedUser(userId ?? ''),
+    queryFn: ({ pageParam }) => api.feed.listUser(userId!, { cursor: pageParam, limit: 20 }),
+    ...cursorPaging,
+    enabled: !!userId,
+  });
+}
+
 /**
- * Every cache that holds FeedItems, by key prefix. Profile › Activity shows `RankedBev`s, which carry
- * no likes, so today that is the feed alone; a later FeedItem list (Explore, M-04) joins here.
+ * Every cache that holds FeedItems, by key prefix. `keys.feedUser` sits under `keys.feed()`, so the
+ * one prefix covers the feed and every person's Activity; a later FeedItem list (Explore, M-04) joins here.
  */
 export const FEED_ITEM_PREFIXES = [keys.feed()];
 

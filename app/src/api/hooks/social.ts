@@ -49,9 +49,13 @@ function settleFollow(qc: QueryClient, userId: string) {
   void qc.invalidateQueries({ queryKey: keys.bevs.all }); // Bev detail "friends who've had it"
 }
 
+/** Both follow and unfollow share this key; the variable is the user id. */
+export const FOLLOW_MUTATION = ['bevi', 'follow'] as const;
+
 function useFollowMutation(isFollowing: boolean) {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: FOLLOW_MUTATION,
     mutationFn: (userId: string) => (isFollowing ? api.follows.follow(userId) : api.follows.unfollow(userId)),
     onMutate: async (userId) => {
       const snap = await snapshot(qc, [...ROW_PREFIXES, keys.stats.user(userId)]);
