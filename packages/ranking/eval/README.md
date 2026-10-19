@@ -34,32 +34,26 @@ One JSON object. Pseudonymise users; keep the file outside the repo.
 ```
 
 `bucket` uses the DB encoding (3 LOVED, 2 FINE, 1 DISLIKED); `score` may be a number or a numeric
-string; timestamps are ISO 8601. Rows on Bevs missing from `bevs` are dropped and counted. A
+string; timestamps are ISO 8601, truncated to the hour by the export; `submissionId` is an opaque
+salted hash (used only for grouping). Rows on Bevs missing from `bevs` are dropped and counted. A
 duplicated (user, Bev) ranking keeps the latest. `brand`/`flavor`/`name` are normalised by
 `normaliseBrand` / `flavorTokens`, as `packages/api/src/snapshot.ts` does.
 
-Export query (service role; `\set salt '<secret>'` in psql first):
+To produce the file, use the query shipped as `eval/export.sql`. Run it as a database role that
+bypasses RLS (e.g. `postgres`). Pass the salt with `-v`, not `\set`, so it stays out of psql
+history:
 
-```sql
-with ids as (select user_id from public.rankings union select user_id from public.comparisons),
-alias as (select user_id, 'u' || row_number() over (order by md5(user_id::text || :'salt')) as a from ids)
-select jsonb_build_object(
-  'format', 'bevi-eval-export', 'formatVersion', 1, 'exportedAt', now(),
-  'bevs', (select coalesce(jsonb_agg(jsonb_build_object('id', b.id, 'name', b.name, 'brand', b.brand,
-             'flavor', b.flavor, 'categoryId', b.category_id, 'priceTier', b.price_tier,
-             'isAlcoholic', c.is_alcoholic) order by b.id), '[]'::jsonb)
-           from public.bevs b join public.categories c on c.id = b.category_id
-          where b.status = 'active' or exists (select 1 from public.rankings r where r.bev_id = b.id)),
-  'rankings', (select coalesce(jsonb_agg(jsonb_build_object('userId', a.a, 'bevId', r.bev_id,
-             'bucket', r.bucket, 'position', r.position, 'score', r.score, 'rankedAt', r.ranked_at)
-             order by r.ranked_at, r.id), '[]'::jsonb)
-           from public.rankings r join alias a using (user_id)),
-  'comparisons', (select coalesce(jsonb_agg(jsonb_build_object('userId', a.a,
-             'submissionId', c.submission_id, 'winnerBevId', c.winner_bev_id,
-             'loserBevId', c.loser_bev_id, 'tie', c.tie, 'createdAt', c.created_at)
-             order by c.id), '[]'::jsonb)
-           from public.comparisons c join alias a using (user_id)));
 ```
+psql "$DATABASE_URL" -At -v salt="$SALT" -f packages/ranking/eval/export.sql > export.json
+```
+
+Re-identification guards: `userId` is a salted alias (`u<n>`), `submissionId` is
+`md5(submission_id || salt)`, and `rankedAt` / `createdAt` are truncated to the hour (UTC), so
+rows can't be joined to the visible `feed_events.created_at`. The harness only needs hour
+precision. The temporal cutoff is an instant, and rows in the cutoff hour all fall on the test
+side, together with the comparisons from the same submission (they share `now()`). Ties within an
+hour are broken by array order, which the query fixes: rankings by exact `ranked_at` then `id`,
+comparisons by `id`. So "latest answer per pair" means the last one in the array.
 
 ## How a fold is built (`folds.ts`)
 
@@ -91,8 +85,11 @@ predicted higher, 0.5 on a predicted tie, 0 otherwise; we take the mean per user
 For each (user, pair) only the latest answer counts, and "too close to call" answers are excluded.
 Secondary: macro Spearman, tie-aware NDCG@10 (gain Loved 3, Fine 1, Disliked 0), bucket accuracy
 via `bucketForScore` with a 3×3 confusion matrix, MAE, and CF coverage (the share of predictions
-with Layer 2 support > 0). Every number gets a 95% paired percentile bootstrap over users
-(`createPrng(seed)`), and every arm gets a Δ against `engine` computed on the same resamples.
+with Layer 2 support > 0). NDCG@10 ranks the user's held-out temporal items, not the whole catalog.
+Every number gets a 95% paired percentile bootstrap over users (`createPrng(seed)`), and every
+arm gets a Δ against `engine` computed on the same resamples. If some resamples give an
+undefined statistic (for example, a small cohort where no drawn user has a comparison), the report
+shows how many draws were valid, e.g. `(812/1000 draws)`, and the JSON carries it as `draws`.
 
 Arms: `global-mean`, `user-mean` (constant μ*_u), `category-mean`, `user-category-mean`,
 `bayes-bev`, `item-mean-z` (`globalScore`), `l1-affinity`, `l1-content`, `layer1`, `layer2`,

@@ -67,6 +67,29 @@ describe('splits', () => {
     expect(decisive).toEqual([c('b', 'a', '2026-10-02T00:00:00Z')]);
     expect(ties).toBe(1);
   });
+  it('hour-truncated timestamps: equal createdAt keeps the later answer in array order, stable order', () => {
+    const c = (w: string, l: string, sub: string) => ({ userId: 'u', submissionId: sub, winnerBevId: w, loserBevId: l, tie: false, createdAt: '2026-10-01T13:00:00+00:00' });
+    const cs = [c('a', 'b', 's1'), c('c', 'd', 's1'), c('b', 'a', 's2')];
+    expect(dedupeComparisons(cs).decisive).toEqual([c('b', 'a', 's2'), c('c', 'd', 's1')]);
+    expect(dedupeComparisons([...cs].reverse()).decisive.map((x) => x.winnerBevId)).toEqual(['a', 'c']);
+  });
+  it('temporal split at hour precision: the whole cutoff hour, and its comparisons, are test', () => {
+    const at = (h: number) => `2026-10-01T${String(h).padStart(2, '0')}:00:00+00:00`;
+    const bevs = ['a', 'b', 'c', 'd', 'e', 'f'].map((id) => ({ id, name: id, brand: null, flavor: null, categoryId: 'soda', priceTier: 1 as const, isAlcoholic: false }));
+    const r = (bevId: string, position: number, h: number) => ({ userId: 'u', bevId, bucket: 'FINE' as const, position, score: 6.5 - position * 0.4, rankedAt: at(h) });
+    // Four rankings in hour 1, then e and f both in hour 5 (one submission each, same truncated hour).
+    const rankings = [r('a', 0, 1), r('b', 1, 1), r('c', 2, 1), r('d', 3, 1), r('e', 4, 5), r('f', 5, 5)];
+    const comparisons = [
+      { userId: 'u', submissionId: 'x', winnerBevId: 'c', loserBevId: 'e', tie: false, createdAt: at(5) },
+      { userId: 'u', submissionId: 'y', winnerBevId: 'e', loserBevId: 'f', tie: false, createdAt: at(5) },
+      { userId: 'u', submissionId: 'z', winnerBevId: 'a', loserBevId: 'b', tie: false, createdAt: at(1) },
+    ];
+    const rep = evaluate({ bevs, rankings, comparisons }, { splits: ['temporal'], temporalQuantile: 0.7, bootstrapIterations: 10, arms: ['user-mean', 'engine'] });
+    const t = rep.splits[0]!;
+    expect(t.cutoff).toBe(at(5));
+    expect(t.points).toBe(2);
+    expect(t.pairs).toBe(2);
+  });
   it('temporal cutoff is the ranked_at quantile', () => {
     const rows = [0, 1, 2, 3, 4].map((d) => ({ userId: 'u', bevId: `b${d}`, bucket: 'FINE' as const, position: d, score: 5, rankedAt: `2026-10-0${d + 1}T00:00:00Z` }));
     expect(temporalCutoff(rows, 0.8)).toBe('2026-10-05T00:00:00Z');
@@ -93,6 +116,8 @@ describe('evaluate (end to end on synthetic data, NOT an accuracy result)', () =
         expect(conc.point).toBeGreaterThanOrEqual(0);
         expect(conc.point).toBeLessThanOrEqual(1);
         expect(conc.lo).toBeLessThanOrEqual(conc.hi);
+        expect(conc.iterations).toBe(50);
+        expect(conc.draws).toBeLessThanOrEqual(50);
         expect(a.confusion.flat().reduce((x, y) => x + y, 0)).toBe(all.points);
         expect(a.delta === null).toBe(a.arm === 'engine');
         expect(Number.isNaN(a.metrics.cfCoverage.point)).toBe(!['layer2', 'engine', 'engine-pearson'].includes(a.arm));

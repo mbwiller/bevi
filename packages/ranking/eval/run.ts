@@ -43,6 +43,10 @@ export interface MetricCI {
   point: number;
   lo: number;
   hi: number;
+  /** Bootstrap resamples where this statistic was defined (the CI uses only these). */
+  draws: number;
+  /** Bootstrap resamples requested. */
+  iterations: number;
 }
 
 export interface ArmSummary {
@@ -120,7 +124,11 @@ interface PairPred {
   preds: Map<ArmId, { winner: number; loser: number }>;
 }
 
-/** Latest answer per (user, unordered pair); returns the decisive ones and the tie count. */
+/**
+ * Latest answer per (user, unordered pair); on equal `createdAt` (the export truncates to the hour)
+ * the later one in array order wins, and the export orders comparisons by id. Returns the decisive
+ * ones and the tie count.
+ */
 export function dedupeComparisons(cs: readonly EvalComparison[]): { decisive: EvalComparison[]; ties: number } {
   const latest = new Map<string, EvalComparison>();
   for (const c of cs) {
@@ -130,7 +138,11 @@ export function dedupeComparisons(cs: readonly EvalComparison[]): { decisive: Ev
     const prev = latest.get(k);
     if (!prev || Date.parse(c.createdAt) >= Date.parse(prev.createdAt)) latest.set(k, c);
   }
-  const all = [...latest.values()].sort((x, y) => (x.userId < y.userId ? -1 : x.userId > y.userId ? 1 : 0) || Date.parse(x.createdAt) - Date.parse(y.createdAt) || (x.winnerBevId < y.winnerBevId ? -1 : 1));
+  // Total order (hour-truncated timestamps tie often): user, time, winner, loser.
+  const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+  const all = [...latest.values()].sort(
+    (x, y) => cmp(x.userId, y.userId) || Date.parse(x.createdAt) - Date.parse(y.createdAt) || cmp(x.winnerBevId, y.winnerBevId) || cmp(x.loserBevId, y.loserBevId),
+  );
   const decisive = all.filter((c) => !c.tie);
   return { decisive, ties: all.length - decisive.length };
 }
@@ -344,7 +356,7 @@ function summariseGroup(group: GroupSummary['group'], users: readonly UserAgg[],
     return out;
   };
   const bs = pairedBootstrap(users, stat, { iterations, seed: `${seed}:${group}` });
-  const at = (i: number): MetricCI => ({ point: bs.point[i] as number, lo: bs.lo[i] as number, hi: bs.hi[i] as number });
+  const at = (i: number): MetricCI => ({ point: bs.point[i] as number, lo: bs.lo[i] as number, hi: bs.hi[i] as number, draws: bs.valid[i] as number, iterations: bs.iterations });
   const block = (offset: number) => Object.fromEntries(METRIC_IDS.map((m, j) => [m, at(offset + j)])) as Record<MetricId, MetricCI>;
   const M = METRIC_IDS.length;
   const summaries: ArmSummary[] = arms.map((a, i) => {

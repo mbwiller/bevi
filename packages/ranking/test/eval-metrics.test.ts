@@ -67,9 +67,22 @@ describe('paired bootstrap', () => {
     expect(a.point[0]).toBe(4.5);
     expect(a.lo[0]).toBeLessThan(4.5);
     expect(a.hi[0]).toBeGreaterThan(4.5);
+    expect(a.iterations).toBe(200);
+    expect(a.valid).toEqual([200, 200, 200]);
     // The difference of two paired statistics has a degenerate interval.
     expect(a.lo[2]).toBeCloseTo(1, 12);
     expect(a.hi[2]).toBeCloseTo(1, 12);
+  });
+});
+
+describe('paired bootstrap: valid draws', () => {
+  it('counts the resamples where a statistic is defined', () => {
+    // Statistic undefined whenever the resample contains no 1.
+    const stat = (s: readonly number[]) => [s.includes(1) ? 1 : Number.NaN];
+    const r = pairedBootstrap([0, 0, 0, 1], stat, { iterations: 400, seed: 'v' });
+    expect(r.valid[0]).toBeLessThan(400);
+    expect(r.valid[0]).toBeGreaterThan(200); // P(contains a 1) = 1 − (3/4)^4 ≈ 0.68
+    expect(pairedBootstrap([], stat, { iterations: 400, seed: 'v' }).iterations).toBe(0);
   });
 });
 

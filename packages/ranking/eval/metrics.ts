@@ -111,6 +111,10 @@ export interface BootstrapResult {
   point: number[];
   lo: number[];
   hi: number[];
+  /** Resamples requested. */
+  iterations: number;
+  /** Per statistic: resamples where it was finite (the CI uses only these). */
+  valid: number[];
 }
 
 /**
@@ -144,5 +148,5 @@ export function pairedBootstrap<T>(
     lo.push(quantile(d, alpha));
     hi.push(quantile(d, 1 - alpha));
   }
-  return { point, lo, hi };
+  return { point, lo, hi, iterations: units.length > 0 ? opts.iterations : 0, valid: draws.map((d) => d.length) };
 }

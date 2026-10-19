@@ -15,7 +15,11 @@ export const SYNTHETIC_BANNER = [
 
 const f3 = (x: number) => (Number.isFinite(x) ? x.toFixed(3) : '  —  ');
 const signed = (x: number) => (Number.isFinite(x) ? (x >= 0 ? '+' : '') + x.toFixed(3) : '  —  ');
-const ci = (m: MetricCI, fmt = f3) => (Number.isFinite(m.point) ? `${fmt(m.point)} [${fmt(m.lo)}, ${fmt(m.hi)}]` : '—');
+const ci = (m: MetricCI, fmt = f3) => {
+  if (!Number.isFinite(m.point)) return '—';
+  const partial = m.draws < m.iterations ? ` (${m.draws}/${m.iterations} draws)` : '';
+  return `${fmt(m.point)} [${fmt(m.lo)}, ${fmt(m.hi)}]${partial}`;
+};
 const pad = (s: string, n: number) => (s.length >= n ? s : s + ' '.repeat(n - s.length));
 
 const COLUMNS: Array<[MetricId, string]> = [
