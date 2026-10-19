@@ -27,6 +27,7 @@ import type {
   Ranking,
   RecommendationsResult,
   Session,
+  TasteProfileRow,
   UserLeaderboardRow,
   WantToTryItem,
 } from './types';
@@ -143,6 +144,14 @@ export interface StatsApi {
    * @throws 'unauthorized'.
    */
   getCategoryProgress(): Promise<CategoryProgress[]>;
+
+  /**
+   * Any user's average score per category they've ranked, highest mean first.
+   * Means aren't private, so any signed-in caller may read anyone's. Alcoholic
+   * categories are left out for a caller under 21 (and for an owner under 21).
+   * @throws 'unauthorized', 'not_found' (no such user).
+   */
+  getTasteProfile(userId: string): Promise<TasteProfileRow[]>;
 }
 
 export interface FollowsApi {

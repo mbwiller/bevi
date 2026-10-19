@@ -115,6 +115,7 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       await expectCode(api.rankings.listMine(), 'unauthorized');
       await expectCode(api.categories.list(), 'unauthorized');
       await expectCode(api.stats.getCategoryProgress(), 'unauthorized');
+      await expectCode(api.stats.getTasteProfile('anyone'), 'unauthorized');
       await expectCode(api.deleteAccount(), 'unauthorized');
     });
 
@@ -332,6 +333,20 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       const adult = await api.stats.getCategoryProgress();
       expect(adult.reduce((sum, p) => sum + p.ranked, 0)).toBe(0);
       expect(adult.length).toBeGreaterThan(minor.length);
+    });
+
+    it('taste profile (S-12): ranked categories only, highest mean first, any user, unknown user not_found', async () => {
+      const owner = await newUser({ birthdate: ADULT_BIRTHDATE });
+      expect(await api.stats.getTasteProfile(owner.userId)).toEqual([]);
+      const starters = await api.bevs.getStarterCandidates();
+      await api.rankings.submitRanking({ bevId: starters[0]!.id, bucket: 'LOVED', insertIndex: 0, expectedBucketSize: 0, comparisons: [] });
+      const mine = await api.stats.getTasteProfile(owner.userId);
+      expect(mine).toEqual([expect.objectContaining({ categoryId: starters[0]!.categoryId, rankingCount: 1 })]);
+      expect(mine[0]!.mean).toBeGreaterThanOrEqual(7);
+
+      await newUser({ birthdate: MINOR_BIRTHDATE(new Date()) });
+      expect(await api.stats.getTasteProfile(owner.userId)).toEqual(mine);
+      await expectCode(api.stats.getTasteProfile('00000000-0000-4000-8000-00000000ffff'), 'not_found');
     });
 
     it('an alcoholic Bev is age_restricted for minors (get, rank, save) and visible to adults', async () => {

@@ -79,6 +79,21 @@ export interface CategoryProgress {
   total: number;
 }
 
+/**
+ * One category of a user's Taste Profile ("Coffee 8.1 · 9 ranked"): their own
+ * ratings there. `affinity` is the recommendation engine's category affinity,
+ * Σz / (n + 2) with z against the user's overall stats (LaTeX §4.3,
+ * `categoryAffinity` in @bevi/ranking): above 0 they rate the category above
+ * their own average.
+ */
+export interface TasteProfileRow {
+  categoryId: CategoryId;
+  rankingCount: number;
+  /** Mean of the user's scores in the category, 0–10. */
+  mean: number;
+  affinity: number;
+}
+
 /** What `BevRow`, `BevImage`, `PriceTier`, `CompareCard` and `FeedPost` render. */
 export interface BevSummary {
   id: string;

@@ -18,8 +18,10 @@ import {
   RANKING_VERSION,
   RECOMMEND_N,
   bayesianAverage,
+  categoryAffinity,
   categoryPrior,
   computeStreak,
+  effectiveUserStats,
   flavorTokens,
   globalPrior,
   insertIntoBucket,
@@ -34,6 +36,7 @@ import {
   recommend,
   respaceBucket,
   userStats,
+  zScore,
   type BevFeatures,
   type PredictionSnapshot,
   type Stats,
@@ -83,6 +86,7 @@ import {
   type SignInInput,
   type SignUpInput,
   type StatsApi,
+  type TasteProfileRow,
   type SubmitRankingInput,
   type SubmitRankingResult,
   type UpdateMeInput,
@@ -838,7 +842,40 @@ export class FakeApi implements BeviApi {
         return this.statsFor(this.user(id));
       }),
     getCategoryProgress: () => this.call('stats.getCategoryProgress', () => this.categoryProgress(this.requireUser())),
+    getTasteProfile: (userId: string) =>
+      this.call('stats.getTasteProfile', () => this.tasteProfile(this.requireUser(), this.user(userId))),
   };
+
+  /**
+   * As `get_taste_profile()` over `refresh_user_category_stats()` (20261019000100),
+   * computed with @bevi/ranking's own functions: per category the user's mean and
+   * Σz / (n + K_AFF), z against their effective overall stats (their own from
+   * MIN_N_USER rankings, else every stored score's). Rounded to 3 places as the
+   * numeric(5,3) / numeric(6,3) columns store them. Alcoholic categories only
+   * when the viewer and the owner are both 21+. Highest mean first.
+   */
+  private tasteProfile(viewer: FakeUser, owner: FakeUser): TasteProfileRow[] {
+    const showAlcohol = this.canSeeAlcohol(viewer) && this.canSeeAlcohol(owner);
+    const round3 = (x: number) => Math.round(x * 1000) / 1000;
+    const all = this.db.rankings;
+    const own = all.filter((r) => r.userId === owner.id);
+    const effective = effectiveUserStats(populationStats(own.map((r) => r.score)), populationStats(all.map((r) => r.score)));
+    const byCategory = new Map<CategoryId, number[]>();
+    for (const r of own) {
+      const c = this.bev(r.bevId).categoryId;
+      byCategory.set(c, [...(byCategory.get(c) ?? []), r.score]);
+    }
+    const order = new Map(CATEGORIES.map((c) => [c.id, c.sortOrder]));
+    return [...byCategory]
+      .filter(([c]) => showAlcohol || !ALCOHOLIC.has(c))
+      .map(([categoryId, scores]) => ({
+        categoryId,
+        rankingCount: scores.length,
+        mean: round3(populationStats(scores).mean),
+        affinity: round3(categoryAffinity(scores.map((sc) => zScore(sc, effective)))),
+      }))
+      .sort((a, z) => z.mean - a.mean || (order.get(a.categoryId) ?? 0) - (order.get(z.categoryId) ?? 0) || (a.categoryId < z.categoryId ? -1 : 1));
+  }
 
   /**
    * As `get_category_progress()` (20261018000200): one row per category the

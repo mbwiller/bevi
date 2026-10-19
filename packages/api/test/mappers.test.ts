@@ -9,6 +9,7 @@ import {
   mapCategory,
   mapCategoryProgress,
   mapFlavorProfile,
+  mapTasteProfileRow,
   type BevOfPeriodRpcRow,
 } from '../src/mappers.ts';
 
@@ -120,6 +121,17 @@ describe('category progress (S-07)', () => {
       categoryId: 'soda',
       ranked: 4,
       total: 61,
+    });
+  });
+});
+
+describe('taste profile (S-12)', () => {
+  it('renames the RPC columns and turns numeric strings into numbers', () => {
+    expect(mapTasteProfileRow({ category_id: 'coffee', rating_count: 2, mean_score: '3.220', affinity_z: '-0.272' })).toStrictEqual({
+      categoryId: 'coffee',
+      rankingCount: 2,
+      mean: 3.22,
+      affinity: -0.272,
     });
   });
 });
