@@ -70,6 +70,8 @@ export function invalidateAfterRankingChange(qc: QueryClient): Promise<unknown> 
     qc.invalidateQueries({ queryKey: keys.bevs.all }),
     qc.invalidateQueries({ queryKey: keys.stats.all }),
     qc.invalidateQueries({ queryKey: keys.feed() }),
+    // A ranking can change today's and this week's winner.
+    qc.invalidateQueries({ queryKey: keys.bevOfPeriod() }),
     qc.invalidateQueries({ queryKey: keys.leaderboard.all }),
     qc.invalidateQueries({ queryKey: keys.recommendationsAll }),
     qc.invalidateQueries({ queryKey: keys.wantToTry() }),

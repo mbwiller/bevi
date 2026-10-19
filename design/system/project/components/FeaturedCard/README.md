@@ -4,3 +4,4 @@
 
 - Provide: `title`, `subtitle` (category + "$" for a Bev, "You've had 3 of 10" for a list), `src` or `art` with a `tint` backdrop.
 - Carousel gap 16pt under a SectionHeader with "See all".
+- Not on the Feed since M-05: Bev of the day and Bev of the week (BevOfCard) took its slot under the search bar.

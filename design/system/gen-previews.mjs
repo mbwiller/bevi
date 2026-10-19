@@ -144,6 +144,11 @@ h('div', { className: 'row' },
   h(B.FeaturedCard, { title: 'Top 10 Sparkling Waters', subtitle: "You've had 3 of 10", art: BEVS.topo.art, tint: '#cfe8e0' }),
   h(B.FeaturedCard, { title: 'Red Bull', subtitle: 'Energy • $$', art: BEVS.redBull.art, tint: '#d8def0' }))`];
 
+P.BevOfCard = [{ group: 'Bev', height: 300, width: 393 }, '', `
+h('div', { className: 'bv-bevof-pair' },
+  h(B.BevOfCard, { period: 'day', bev: BEVS.horchata, score: 8.9 }),
+  h(B.BevOfCard, { period: 'week', bev: BEVS.topo, score: 8.4, date: 'Week of Oct 12' }))`];
+
 // ---------- People ----------
 P.Avatar = [{ group: 'People', height: 150 }, '', `
 h('div', { className: 'pv', style: { alignItems: 'flex-end' } },
@@ -386,11 +391,9 @@ P.ScreenFeed = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHO
   h(F, null,
     h(B.Header, { wordmark: true, actions: [{ icon: 'user-plus', label: 'Find people' }] }),
     h('div', { className: 'gutter', style: { padding: '4px 16px 8px' } }, h(B.SearchBar, { placeholder: 'Search a Bev or a person', id: 'feed-q' })),
-    h(B.SectionHeader, { title: 'Featured Bevs', action: 'See all' }),
-    h('div', { className: 'carousel' },
-      h(B.FeaturedCard, { title: 'Brown Sugar Boba', subtitle: 'Boba • $$', art: BEVS.brownSugar.art, tint: '#e9d3bd' }),
-      h(B.FeaturedCard, { title: 'Top 10 Sparkling Waters', subtitle: "You've had 3 of 10", art: BEVS.topo.art, tint: '#cfe8e0' }),
-      h(B.FeaturedCard, { title: 'Red Bull', subtitle: 'Energy • $$', art: BEVS.redBull.art, tint: '#d8def0' })),
+    h('div', { className: 'bv-bevof-pair' },
+      h(B.BevOfCard, { period: 'day', bev: BEVS.horchata, score: 8.9 }),
+      h(B.BevOfCard, { period: 'week', bev: BEVS.topo, score: 8.4 })),
     h(B.SectionHeader, { title: 'Your feed' }),
     h(B.FeedPost, { actor: ARJUN, bev: BEVS.horchata, score: 9.5, time: '5 hours ago', liked: true, likeCount: 4, note: 'cinnamon-forward, not too sweet. best thing on the block',
       commentCount: 2, comments: [{ author: FRIENDS[1], body: 'ok this is going on my list' }, { author: ME, body: 'the truck or the one on 3rd?' }] }))`)];

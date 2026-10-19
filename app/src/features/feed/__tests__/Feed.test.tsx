@@ -2,16 +2,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
 import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
 
-import type { FeedItem } from '@bevi/shared';
+import type { FeedItem, PeriodWinner } from '@bevi/shared';
 
 import { api } from '@/api/client';
+import { bevOfCardLabel } from '@/components/BevOfCard';
 import { likeLabel } from '@/components/LikeButton';
 import { keys } from '@/api/keys';
-import { formatRelativeTime } from '@/lib/time';
+import { formatPeriodStart, formatRelativeTime } from '@/lib/time';
 import { FRIEND, ME, controls, userIdFor } from '@/testing/fakeApi';
 import FeedScreen from '@/app/(tabs)/feed/index';
-
-import { featuredSubtitle } from '../FeaturedCarousel';
 
 let client: QueryClient;
 
@@ -49,20 +48,36 @@ beforeEach(() => {
   controls.setLatency(0);
   controls.resetToFixtures();
   controls.signInAs('tester');
+  // These tests are about posts. The Bev of the day and week has its own suite (BevOfPeriod.test.tsx);
+  // computing and drawing it on every Feed render here only made the suite slower. The two tests
+  // below that check it on the Feed restore the real call.
+  jest.spyOn(api.feed, 'getBevOfPeriod').mockResolvedValue({ day: null, week: null });
 });
 
-afterEach(() => client.clear());
+afterEach(() => {
+  client.clear();
+  jest.restoreAllMocks();
+});
 
-it('renders the featured carousel and the feed posts', async () => {
-  const featured = await api.feed.getFeatured();
+/** The card's accessible name for a winner, as BevOfPeriod renders it. */
+function cardName(period: 'day' | 'week', w: PeriodWinner): string {
+  return bevOfCardLabel(period, w.bev.name, w.bev.bayesScore, w.isCurrent ? undefined : formatPeriodStart(w.periodStart, period));
+}
+
+it('renders Bev of the day and week (not Featured) above the feed posts', async () => {
+  jest.restoreAllMocks();
+  const period = await api.feed.getBevOfPeriod();
   const feed = await api.feed.getFeed({ limit: 20 });
-  expect(featured.length).toBeGreaterThan(0);
+  expect(period.day).not.toBeNull();
+  expect(period.week).not.toBeNull();
   expect(feed.items.length).toBeGreaterThan(0);
   await start();
 
-  const first = featured[0]!;
-  const carousel = await screen.findByTestId('featured-carousel');
-  expect(await within(carousel).findByLabelText(`${first.bev.name}, ${featuredSubtitle(first)}`)).toBeTruthy();
+  const row = await screen.findByTestId('bev-of-period');
+  expect(within(row).getByLabelText(cardName('day', period.day!))).toBeTruthy();
+  expect(within(row).getByLabelText(cardName('week', period.week!))).toBeTruthy();
+  expect(screen.queryByTestId('featured-carousel')).toBeNull();
+  expect(screen.queryByText('Featured Bevs')).toBeNull();
 
   const post = feed.items.find((p) => p.type === 'RANKING')!;
   expect((await screen.findAllByText(post.bev.name)).length).toBeGreaterThan(0);
@@ -95,11 +110,12 @@ it('the search bar opens the Search tab asking for its results panel', async () 
   expect(r.path()).toBe('/add?focus=1');
 });
 
-it('following nobody: the follow empty state under YOUR FEED, Featured stays', async () => {
+it('following nobody: the follow empty state under YOUR FEED, the Bev of the day and week stay', async () => {
+  jest.restoreAllMocks();
   controls.emptyUser();
   const r = await start();
   expect(await screen.findByText('Follow friends to see their Bevs')).toBeTruthy();
-  expect(await screen.findByTestId('featured-carousel')).toBeTruthy();
+  expect(await screen.findByTestId('bev-of-period')).toBeTruthy();
   // The header's icon and the empty state's pill both say Find people; press the pill.
   const buttons = screen.getAllByLabelText('Find people');
   expect(buttons).toHaveLength(2);
@@ -312,3 +328,4 @@ describe('likes on several posts', () => {
     expect(within(cardA).getByText("Couldn't like this post. Check your connection and try again.")).toBeTruthy();
   });
 });
+

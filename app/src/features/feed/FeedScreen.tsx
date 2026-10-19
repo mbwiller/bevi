@@ -1,11 +1,13 @@
 import type { FeedItem } from '@bevi/shared';
 import { FlashList } from '@shopify/flash-list';
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { flattenPages, useFeatured, useFeed, useStats } from '@/api/hooks';
+import { flattenPages, useFeed, useStats } from '@/api/hooks';
+import { keys } from '@/api/keys';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { Header } from '@/components/Header';
@@ -14,7 +16,7 @@ import { SectionHeader } from '@/components/SectionHeader';
 import { Skeleton } from '@/components/Skeleton';
 import { spacing, type, useTheme } from '@/theme';
 
-import { FeaturedCarousel } from './FeaturedCarousel';
+import { BevOfPeriod } from './BevOfPeriod';
 import { PostCommentsSheet } from './PostCommentsSheet';
 import { POST_GONE, useFeedPostActions } from './useFeedPostActions';
 
@@ -34,17 +36,17 @@ function PostSkeletons({ count }: { count: number }) {
 }
 
 /**
- * Feed (§6.4): the filled search bar (opens the Search tab with its panel up), Featured Bevs, then YOUR FEED: followed users'
+ * Feed (§6.4): the filled search bar (opens the Search tab with its panel up), Bev of the day and week (M-05), then YOUR FEED: followed users'
  * rankings, newest first, 20 per page, each with a heart (tap it, or double-tap the post, to like)
- * and a comment bubble that opens the post's comments in a sheet. Following nobody → "Follow friends to see their Bevs" under YOUR FEED while Featured stays.
+ * and a comment bubble that opens the post's comments in a sheet. Following nobody → "Follow friends to see their Bevs" under YOUR FEED while the Bev of the day and week stay.
  */
 export function FeedScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const stats = useStats();
   const feed = useFeed();
-  const featured = useFeatured();
   const { renderItem, commentsFor, closeComments, postGone, notice } = useFeedPostActions();
+  const qc = useQueryClient();
 
   const posts = useMemo(() => flattenPages(feed.data), [feed.data]);
 
@@ -75,7 +77,7 @@ export function FeedScreen() {
           <SearchBar variant="filled" placeholder={SEARCH_PLACEHOLDER} />
         </View>
       </Pressable>
-      <FeaturedCarousel />
+      <BevOfPeriod />
       <SectionHeader title="Your feed" />
       {followingNobody && posts.length > 0 ? followPrompt : null}
     </View>
@@ -113,7 +115,7 @@ export function FeedScreen() {
         refreshing={feed.isRefetching && !feed.isFetchingNextPage && !feed.isPending}
         onRefresh={() => {
           void feed.refetch();
-          void featured.refetch();
+          void qc.invalidateQueries({ queryKey: keys.bevOfPeriod() });
           void stats.refetch();
         }}
       />

@@ -129,7 +129,14 @@ const R = {
   FeaturedCard: `164pt square photo card for the Featured carousel: image, a \`photoScrim\` gradient, white 20pt title and 15pt subtitle.
 
 - Provide: \`title\`, \`subtitle\` (category + "$" for a Bev, "You've had 3 of 10" for a list), \`src\` or \`art\` with a \`tint\` backdrop.
-- Carousel gap 16pt under a SectionHeader with "See all".`,
+- Carousel gap 16pt under a SectionHeader with "See all".
+- Not on the Feed since M-05: Bev of the day and Bev of the week (BevOfCard) took its slot under the search bar.`,
+  BevOfCard: `Bev of the day or Bev of the week, a pair side by side under the Feed's search bar: a caps label, the Bev's square tile, its name and the score it won with. Just the Bev, never a post.
+
+- Provide: \`period\` ("day" or "week"), \`bev\`, \`score\` (the Bayesian score it won with, set even when the Bev has a single rating), \`date\`, \`onClick\` (opens the Bev).
+- The winner is the best Bayesian score among Bevs ranked that New York day or ISO week. When nobody ranked anything in the current period it is the latest period's winner, and \`date\` says which: "Oct 17", "Week of Oct 12". The current period shows no date.
+- The pair splits the row between the gutters, with a 16pt gap; each card is half and its tile follows that width, so it fits any phone. No winner for either period: leave the row out. Only one: it keeps half the row, on the left.
+- The whole card is one button: "Bev of the day: Horchata, 8.9" (with the date when there is one). The name wraps to two lines.`,
   ProfileListRow: `The profile's 44pt link rows: Bev'd, Want to Try, Recommended for you.
 
 - Provide: \`icon\` (circle-check, bookmark with \`iconFilled\`, heart), \`label\`, \`count\` (omit on Recommended), \`onClick\` (deep-links to the Your Lists tab).
@@ -204,9 +211,9 @@ const R = {
 };
 
 const S = {
-  ScreenFeed: `Feed tab (ref 01, 12): Header with the wordmark and Find people, the filled SearchBar, "FEATURED BEVS" FeaturedCards, then "YOUR FEED" FeedPosts, over the TabBar.
+  ScreenFeed: `Feed tab (ref 01, 12): Header with the wordmark and Find people, the filled SearchBar, Bev of the day and Bev of the week side by side (BevOfCard), then "YOUR FEED" FeedPosts, over the TabBar.
 
-- Following nobody: an EmptyState under YOUR FEED ("Follow friends to see their Bevs" + Find people); Featured stays.
+- Following nobody: an EmptyState under YOUR FEED ("Follow friends to see their Bevs" + Find people); the Bev of the day and week stay.
 - Each post carries the heart and the comment bubble; up to seven comments show under the action row, more collapse to "View all N comments".
 - Dropped from Beli: quick-action pills, the composer, the invite card.`,
   ScreenYourLists: `Your Lists › Bev'd (ref 06): centred "YOUR LISTS" Header, ListScopeDropdown, SegmentedTabs, the FilterPill row, the ProgressStrip ("All Bevs · 37 of 378 tried · 9%"), SortToggle, then numbered BevRows sorted by score.

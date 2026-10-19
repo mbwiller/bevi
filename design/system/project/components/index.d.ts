@@ -152,6 +152,17 @@ export declare function FeedPost(props: FeedPostProps): React.ReactElement;
 export interface FeaturedCardProps { title: string; subtitle?: string; src?: string; art?: BevArtProps; tint?: string; onClick?: () => void; className?: string }
 export declare function FeaturedCard(props: FeaturedCardProps): React.ReactElement;
 
+/** Bev of the day / Bev of the week on the Feed: half of a pair, a caps label, the Bev's square tile (it follows the card's width), its name and the score it won with. Not a post. */
+export interface BevOfCardProps {
+  period?: 'day' | 'week'; bev: Bev;
+  /** The Bayesian score it won with. */
+  score?: number | null;
+  /** Only when the winner is from an earlier period: "Oct 17" (day), "Week of Oct 12" (week). */
+  date?: string;
+  onClick?: () => void; className?: string;
+}
+export declare function BevOfCard(props: BevOfCardProps): React.ReactElement;
+
 export interface ProfileListRowProps { icon: string; iconFilled?: boolean; label: string; count?: number; onClick?: () => void; divider?: boolean; className?: string }
 export declare function ProfileListRow(props: ProfileListRowProps): React.ReactElement;
 
@@ -220,7 +231,7 @@ declare global {
       IconButton: typeof IconButton; LikeButton: typeof LikeButton; CommentButton: typeof CommentButton; FilterPill: typeof FilterPill; SortToggle: typeof SortToggle; SearchBar: typeof SearchBar;
       TextField: typeof TextField; PriceTierPicker: typeof PriceTierPicker; Header: typeof Header; SectionHeader: typeof SectionHeader;
       ListScopeDropdown: typeof ListScopeDropdown; SegmentedTabs: typeof SegmentedTabs; TabBar: typeof TabBar; BevRow: typeof BevRow;
-      FeedPost: typeof FeedPost; FeaturedCard: typeof FeaturedCard; ProfileListRow: typeof ProfileListRow; StatCard: typeof StatCard;
+      FeedPost: typeof FeedPost; FeaturedCard: typeof FeaturedCard; BevOfCard: typeof BevOfCard; ProfileListRow: typeof ProfileListRow; StatCard: typeof StatCard;
       UserRow: typeof UserRow; ProgressStrip: typeof ProgressStrip; ProgressBar: typeof ProgressBar; BevGlow: typeof BevGlow; BucketButton: typeof BucketButton; CompareCard: typeof CompareCard; ProgressDots: typeof ProgressDots;
       EmptyState: typeof EmptyState; ErrorState: typeof ErrorState; Skeleton: typeof Skeleton; Sheet: typeof Sheet; CommentsSheet: typeof CommentsSheet; CollectionSheet: typeof CollectionSheet;
       /** The 15 category slugs with labels and icon names. */

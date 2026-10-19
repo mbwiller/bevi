@@ -1,4 +1,4 @@
-import { formatRelativeTime, formatShortDate } from '../time';
+import { formatPeriodStart, formatRelativeTime, formatShortDate } from '../time';
 
 // Local-time dates so the weekday and date checks hold in any time zone.
 const NOW = new Date(2026, 9, 11, 12, 0, 0); // Sunday, Oct 11 2026, noon
@@ -33,4 +33,13 @@ it('falls back to a short date, with the year only when it differs', () => {
 it('returns an empty string for an invalid timestamp', () => {
   expect(formatRelativeTime('not a date', NOW)).toBe('');
   expect(formatShortDate('', NOW)).toBe('');
+});
+
+it('prints a Bev of the period start from its own YYYY-MM-DD, never shifted by a time zone', () => {
+  expect(formatPeriodStart('2026-10-17', 'day', NOW)).toBe('Oct 17');
+  expect(formatPeriodStart('2026-10-12', 'week', NOW)).toBe('Week of Oct 12');
+  expect(formatPeriodStart('2025-12-29', 'week', NOW)).toBe('Week of Dec 29, 2025');
+  expect(formatPeriodStart('2026-01-01', 'day', NOW)).toBe('Jan 1');
+  expect(formatPeriodStart('2026-13-01', 'day', NOW)).toBe('');
+  expect(formatPeriodStart('Oct 17', 'day', NOW)).toBe('');
 });

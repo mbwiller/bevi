@@ -135,8 +135,9 @@ export function useToggleLike({ onFailed }: { onFailed?: (vars: LikeVars, error:
   });
 }
 
-export function useFeatured() {
-  return useQuery({ queryKey: keys.featured(), queryFn: () => api.feed.getFeatured() });
+/** Bev of the day and Bev of the week (M-05), at the top of the Feed. */
+export function useBevOfPeriod() {
+  return useQuery({ queryKey: keys.bevOfPeriod(), queryFn: () => api.feed.getBevOfPeriod() });
 }
 
 /**
