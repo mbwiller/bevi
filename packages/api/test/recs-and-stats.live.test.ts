@@ -1,6 +1,6 @@
 // Recommendations, predicted scores, "rank on Bevi" and card fields against a
 // real local stack (skipped without SUPABASE_URL/SUPABASE_PUBLISHABLE_KEY).
-import { MIN_N_USER, RANKING_VERSION } from '@bevi/ranking';
+import { categoryAffinity, effectiveUserStats, MIN_N_USER, populationStats, RANKING_VERSION, zScore } from '@bevi/ranking';
 import type { Bucket } from '@bevi/shared';
 import { describe, expect, it } from 'vitest';
 import { createBeviApi } from '../src/index.ts';
@@ -110,6 +110,45 @@ describe.skipIf(!url || !publishableKey)('recommendations, predictions and stats
       expect(after.reduce((sum, p) => sum + p.ranked, 0)).toBe(1);
       expect(after.every((p) => p.ranked <= p.total)).toBe(true);
     } finally {
+      await api.deleteAccount();
+    }
+  });
+
+  it('taste profile: per-category means and affinities as @bevi/ranking computes them (S-12)', async () => {
+    const { api } = await newUser();
+    const { api: viewer } = await newUser();
+    try {
+      expect(await api.stats.getTasteProfile((await api.profile.getMe()).id)).toEqual([]);
+
+      // MIN_N_USER rankings over at least two categories, so z uses the user's own stats.
+      const starters = await api.bevs.getStarterCandidates();
+      const first = starters[0]!;
+      const other = starters.find((b) => b.categoryId !== first.categoryId)!;
+      const third = starters.find((b) => b.id !== first.id && b.id !== other.id)!;
+      const picks = [first, other, third];
+      expect(new Set(picks.map((b) => b.id)).size).toBe(MIN_N_USER);
+      await rankAll(api, picks.slice(0, 2).map((b) => b.id), 'LOVED');
+      await rankAll(api, picks.slice(2).map((b) => b.id), 'FINE');
+
+      const mine = (await api.rankings.listMine()).items;
+      const overall = effectiveUserStats(populationStats(mine.map((r) => r.score)), { n: 0, mean: 0, stddev: 0 });
+      const byCat = new Map<string, number[]>();
+      for (const r of mine) byCat.set(r.bev.categoryId, [...(byCat.get(r.bev.categoryId) ?? []), r.score]);
+
+      const me = (await api.profile.getMe()).id;
+      const profile = await viewer.stats.getTasteProfile(me);
+      expect(profile.map((p) => p.categoryId).sort()).toEqual([...byCat.keys()].sort());
+      for (const row of profile) {
+        const scores = byCat.get(row.categoryId)!;
+        expect(row.rankingCount).toBe(scores.length);
+        expect(row.mean).toBeCloseTo(populationStats(scores).mean, 2);
+        expect(row.affinity).toBeCloseTo(categoryAffinity(scores.map((sc) => zScore(sc, overall))), 2);
+      }
+      expect(profile.map((p) => p.mean)).toEqual([...profile.map((p) => p.mean)].sort((x, y) => y - x));
+
+      await expect(viewer.stats.getTasteProfile('00000000-0000-4000-8000-00000000ffff')).rejects.toMatchObject({ code: 'not_found' });
+    } finally {
+      await viewer.deleteAccount();
       await api.deleteAccount();
     }
   });

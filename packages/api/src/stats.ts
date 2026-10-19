@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { ApiError, type CategoryProgress, type ProfileStats, type StatsApi } from '@bevi/shared';
+import { ApiError, type CategoryProgress, type ProfileStats, type StatsApi, type TasteProfileRow } from '@bevi/shared';
 import { mapError } from './errors';
-import { mapCategoryProgress, type CategoryProgressRow } from './mappers';
+import { mapCategoryProgress, mapTasteProfileRow, type CategoryProgressRow, type TasteProfileRpcRow } from './mappers';
 
 interface ProfileStatsRow {
   followers: number;
@@ -58,6 +58,13 @@ export function createStatsApi(client: SupabaseClient): StatsApi {
       const { data, error } = await client.rpc('get_category_progress');
       if (error) throw mapError(error);
       return (data as CategoryProgressRow[]).map(mapCategoryProgress);
+    },
+    // 20261019000100: highest mean first; alcoholic categories already dropped for an under-21 caller.
+    async getTasteProfile(userId: string): Promise<TasteProfileRow[]> {
+      await requireUserId(client);
+      const { data, error } = await client.rpc('get_taste_profile', { p_user_id: userId });
+      if (error) throw mapError(error);
+      return (data as TasteProfileRpcRow[]).map(mapTasteProfileRow);
     },
   };
 }

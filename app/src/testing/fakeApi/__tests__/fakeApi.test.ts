@@ -1,7 +1,18 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { BUCKET_ORDER, CONFIDENCE_LOCK, MIN_N_USER, RANKING_VERSION, rankUsers, storedScore } from '@bevi/ranking';
+import {
+  BUCKET_ORDER,
+  CONFIDENCE_LOCK,
+  MIN_N_USER,
+  RANKING_VERSION,
+  categoryAffinity,
+  effectiveUserStats,
+  populationStats,
+  rankUsers,
+  storedScore,
+  zScore,
+} from '@bevi/ranking';
 import { isApiError, type Session } from '@bevi/shared';
 
 import { CATALOG_BEVS } from '../catalog';
@@ -331,6 +342,46 @@ describe('likes (S-02)', () => {
 
     const missing = await api.feed.like('feed-does-not-exist').catch((e: unknown) => e);
     expect(isApiError(missing) && missing.code).toBe('not_found');
+  });
+});
+
+describe('taste profile (S-12)', () => {
+  it("matches @bevi/ranking's affinity for ME, highest mean first, and hides alcohol from a minor", async () => {
+    const api = make();
+    await signInMe(api);
+    const me = await api.profile.getMe();
+    if (!(await api.bevs.get(ALCOHOLIC_BEV_ID)).myRanking) {
+      const loved = await api.rankings.listBucket('LOVED');
+      await api.rankings.submitRanking({ bevId: ALCOHOLIC_BEV_ID, bucket: 'LOVED', insertIndex: 0, expectedBucketSize: loved.length, comparisons: [] });
+    }
+    const mine = [];
+    for (let page = await api.rankings.listMine({ page: { limit: 100 } }); ; ) {
+      mine.push(...page.items);
+      if (!page.nextCursor) break;
+      page = await api.rankings.listMine({ page: { limit: 100, cursor: page.nextCursor } });
+    }
+    expect(mine.length).toBeGreaterThanOrEqual(MIN_N_USER);
+    const effective = effectiveUserStats(populationStats(mine.map((r) => r.score)), { n: 0, mean: 0, stddev: 0 });
+    const byCat = new Map<string, number[]>();
+    for (const r of mine) byCat.set(r.bev.categoryId, [...(byCat.get(r.bev.categoryId) ?? []), r.score]);
+
+    const profile = await api.stats.getTasteProfile(me.id);
+    expect(profile.map((p) => p.categoryId).sort()).toEqual([...byCat.keys()].sort());
+    for (const row of profile) {
+      const scores = byCat.get(row.categoryId)!;
+      expect(row.rankingCount).toBe(scores.length);
+      expect(row.mean).toBeCloseTo(populationStats(scores).mean, 3);
+      expect(row.affinity).toBeCloseTo(categoryAffinity(scores.map((s) => zScore(s, effective))), 3);
+    }
+    const means = profile.map((p) => p.mean);
+    expect(means).toEqual([...means].sort((a, b) => b - a));
+    const alcoholic = (await api.bevs.get(ALCOHOLIC_BEV_ID)).categoryId;
+    expect(profile.map((p) => p.categoryId)).toContain(alcoholic);
+
+    api.signInAs('minor_user');
+    const seenByMinor = await api.stats.getTasteProfile(me.id);
+    expect(seenByMinor.map((p) => p.categoryId)).not.toContain(alcoholic);
+    expect(seenByMinor).toEqual(profile.filter((p) => p.categoryId !== alcoholic));
   });
 });
 

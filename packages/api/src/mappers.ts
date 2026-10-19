@@ -27,6 +27,7 @@ import type {
   Profile,
   ProfileRow,
   Ranking,
+  TasteProfileRow,
   UserLeaderboardRow,
   WantToTryItem,
 } from '@bevi/shared';
@@ -138,6 +139,23 @@ export interface CategoryProgressRow {
 
 export function mapCategoryProgress(row: CategoryProgressRow): CategoryProgress {
   return { categoryId: row.category_id as CategoryId, ranked: row.ranked, total: row.total };
+}
+
+/** One row of `get_taste_profile()` (20261019000100). Numerics may arrive as strings. */
+export interface TasteProfileRpcRow {
+  category_id: string;
+  rating_count: number;
+  mean_score: number | string;
+  affinity_z: number | string;
+}
+
+export function mapTasteProfileRow(row: TasteProfileRpcRow): TasteProfileRow {
+  return {
+    categoryId: row.category_id as CategoryId,
+    rankingCount: row.rating_count,
+    mean: Number(row.mean_score),
+    affinity: Number(row.affinity_z),
+  };
 }
 
 // --------------------------------------------------------------------------
