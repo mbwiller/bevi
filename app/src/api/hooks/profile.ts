@@ -80,7 +80,7 @@ export function useSetBirthDate() {
       void qc.invalidateQueries({ queryKey: keys.categories() });
       void qc.invalidateQueries({ queryKey: keys.stats.all });
       void qc.invalidateQueries({ queryKey: keys.bevs.all });
-      void qc.invalidateQueries({ queryKey: keys.featured() });
+      void qc.invalidateQueries({ queryKey: keys.bevOfPeriod() });
       void qc.invalidateQueries({ queryKey: keys.leaderboard.all });
       void qc.invalidateQueries({ queryKey: keys.recommendationsAll });
     },

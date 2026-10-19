@@ -19,6 +19,20 @@ export function formatShortDate(iso: string, now: Date = new Date()): string {
   return d.getFullYear() === now.getFullYear() ? base : `${base}, ${d.getFullYear()}`;
 }
 
+/**
+ * A Bev of the period's `periodStart` ('YYYY-MM-DD', the New York date it began) as its card prints it:
+ * "Oct 17" for a day, "Week of Oct 12" for a week, with the year when it isn't `now`'s. It reads the
+ * string itself, so no time zone can move the date.
+ */
+export function formatPeriodStart(periodStart: string, period: 'day' | 'week', now: Date = new Date()): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(periodStart);
+  const month = m ? MONTHS[Number(m[2]) - 1] : undefined;
+  if (!m || !month) return '';
+  const year = Number(m[1]);
+  const date = `${month} ${Number(m[3])}${year === now.getFullYear() ? '' : `, ${year}`}`;
+  return period === 'day' ? date : `Week of ${date}`;
+}
+
 /** How long ago an ISO timestamp was, as a FeedPost prints it. Future times (clock skew) read "Just now". */
 export function formatRelativeTime(iso: string, now: Date = new Date()): string {
   const t = new Date(iso).getTime();

@@ -68,7 +68,8 @@ export const keys = {
   feedUser: (userId: string) => [...root, 'feed', 'user', userId] as const,
   /** A post's thread (`comments.list`, newest-first pages). */
   comments: (eventId: string) => [...root, 'comments', eventId] as const,
-  featured: () => [...root, 'featured'] as const,
+  /** `feed.getBevOfPeriod` (M-05). */
+  bevOfPeriod: () => [...root, 'bevOfPeriod'] as const,
 
   leaderboard: {
     all: [...root, 'leaderboard'] as const,

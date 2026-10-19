@@ -2,16 +2,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
 import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
 
-import type { FeedItem } from '@bevi/shared';
+import type { BevOfPeriod, FeedItem, PeriodWinner } from '@bevi/shared';
 
 import { api } from '@/api/client';
+import { bevOfCardLabel } from '@/components/BevOfCard';
 import { likeLabel } from '@/components/LikeButton';
 import { keys } from '@/api/keys';
-import { formatRelativeTime } from '@/lib/time';
+import { formatPeriodStart, formatRelativeTime } from '@/lib/time';
 import { FRIEND, ME, controls, userIdFor } from '@/testing/fakeApi';
 import FeedScreen from '@/app/(tabs)/feed/index';
-
-import { featuredSubtitle } from '../FeaturedCarousel';
 
 let client: QueryClient;
 
@@ -53,16 +52,24 @@ beforeEach(() => {
 
 afterEach(() => client.clear());
 
-it('renders the featured carousel and the feed posts', async () => {
-  const featured = await api.feed.getFeatured();
+/** The card's accessible name for a winner, as BevOfPeriod renders it. */
+function cardName(period: 'day' | 'week', w: PeriodWinner): string {
+  return bevOfCardLabel(period, w.bev.name, w.bev.bayesScore, w.isCurrent ? undefined : formatPeriodStart(w.periodStart, period));
+}
+
+it('renders Bev of the day and week (not Featured) above the feed posts', async () => {
+  const period = await api.feed.getBevOfPeriod();
   const feed = await api.feed.getFeed({ limit: 20 });
-  expect(featured.length).toBeGreaterThan(0);
+  expect(period.day).not.toBeNull();
+  expect(period.week).not.toBeNull();
   expect(feed.items.length).toBeGreaterThan(0);
   await start();
 
-  const first = featured[0]!;
-  const carousel = await screen.findByTestId('featured-carousel');
-  expect(await within(carousel).findByLabelText(`${first.bev.name}, ${featuredSubtitle(first)}`)).toBeTruthy();
+  const row = await screen.findByTestId('bev-of-period');
+  expect(within(row).getByRole('button', { name: cardName('day', period.day!) })).toBeTruthy();
+  expect(within(row).getByRole('button', { name: cardName('week', period.week!) })).toBeTruthy();
+  expect(screen.queryByTestId('featured-carousel')).toBeNull();
+  expect(screen.queryByText('Featured Bevs')).toBeNull();
 
   const post = feed.items.find((p) => p.type === 'RANKING')!;
   expect((await screen.findAllByText(post.bev.name)).length).toBeGreaterThan(0);
@@ -95,11 +102,11 @@ it('the search bar opens the Search tab asking for its results panel', async () 
   expect(r.path()).toBe('/add?focus=1');
 });
 
-it('following nobody: the follow empty state under YOUR FEED, Featured stays', async () => {
+it('following nobody: the follow empty state under YOUR FEED, the Bev of the day and week stay', async () => {
   controls.emptyUser();
   const r = await start();
   expect(await screen.findByText('Follow friends to see their Bevs')).toBeTruthy();
-  expect(await screen.findByTestId('featured-carousel')).toBeTruthy();
+  expect(await screen.findByTestId('bev-of-period')).toBeTruthy();
   // The header's icon and the empty state's pill both say Find people; press the pill.
   const buttons = screen.getAllByLabelText('Find people');
   expect(buttons).toHaveLength(2);
@@ -310,5 +317,50 @@ describe('likes on several posts', () => {
     expect(within(cardB).queryByText(/Couldn't like this post/)).toBeNull();
     // Still there once B has settled.
     expect(within(cardA).getByText("Couldn't like this post. Check your connection and try again.")).toBeTruthy();
+  });
+});
+
+describe('Bev of the day and week', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  async function winners(): Promise<BevOfPeriod> {
+    const period = await api.feed.getBevOfPeriod();
+    expect(period.day && period.week).toBeTruthy();
+    return period;
+  }
+
+  it('opens the Bev from its card', async () => {
+    const { day } = await winners();
+    const r = await start();
+    await fireEvent.press(await screen.findByRole('button', { name: cardName('day', day!) }));
+    expect(r.path()).toBe(`/bev/${day!.bev.id}`);
+  });
+
+  it('no winner in either period: the row is left out and the feed still shows', async () => {
+    jest.spyOn(api.feed, 'getBevOfPeriod').mockResolvedValue({ day: null, week: null });
+    await start();
+    expect(await screen.findByText('Your feed')).toBeTruthy();
+    await waitFor(() => expect(screen.queryByTestId('bev-of-period-loading')).toBeNull());
+    expect(screen.queryByTestId('bev-of-period')).toBeNull();
+  });
+
+  it('only a week winner from an earlier week: one card, with its date', async () => {
+    const { week } = await winners();
+    const old: PeriodWinner = { ...week!, periodStart: '2026-10-05', isCurrent: false };
+    jest.spyOn(api.feed, 'getBevOfPeriod').mockResolvedValue({ day: null, week: old });
+    await start();
+    const row = await screen.findByTestId('bev-of-period');
+    expect(within(row).getAllByRole('button')).toHaveLength(1);
+    expect(within(row).getByText(formatPeriodStart('2026-10-05', 'week'))).toBeTruthy();
+    expect(within(row).queryByText('Bev of the day')).toBeNull();
+  });
+
+  it('an error hides the row quietly; the feed still works', async () => {
+    controls.failNext('network', 'feed.getBevOfPeriod');
+    await start();
+    expect(await screen.findByText('Your feed')).toBeTruthy();
+    await waitFor(() => expect(screen.queryByTestId('bev-of-period-loading')).toBeNull());
+    expect(screen.queryByTestId('bev-of-period')).toBeNull();
+    expect(screen.queryByText(/couldn't|try again/i)).toBeNull();
   });
 });
