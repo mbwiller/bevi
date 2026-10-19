@@ -1,6 +1,6 @@
 import React from 'react';
-import { cx, Icon, BUCKETS } from './core.jsx';
-import { Avatar, BevImage, Pill } from './primitives.jsx';
+import { cx, Icon, BUCKETS, categoryById, formatTried, spokenTried } from './core.jsx';
+import { Avatar, BevImage, Pill, ProgressBar } from './primitives.jsx';
 
 /**
  * Underline tabs. `underline-text`: 20pt text tabs that scroll, 3pt underline in `text`.
@@ -251,6 +251,41 @@ export function CommentsSheet({ open = true, comments = [], me, onClose, onPost,
         <button type="submit" className="body bv-composer-post" disabled={!body || left < 0}>Post</button>
       </form>
       {error ? <p className="caption bv-field-errmsg bv-composer-error" role="alert">{error}</p> : null}
+    </Sheet>
+  );
+}
+
+/**
+ * "Your collection": every category you can see, in catalog order, with "9 of 40" and a 4pt bar.
+ * Empty categories are left out. A row is a button: it scopes Bev'd to that category and closes.
+ */
+export function CollectionSheet({ open = true, rows = [], onClose, onSelect, className }) {
+  const shown = rows.filter((r) => r.total > 0 && categoryById(r.category));
+  const ranked = shown.reduce((n, r) => n + r.ranked, 0);
+  const total = shown.reduce((n, r) => n + r.total, 0);
+  return (
+    <Sheet open={open} title="Your collection" snap={90} onClose={onClose} className={cx('bv-collection', className)}>
+      <p className="body bv-meta bv-collection-sum">{formatTried(ranked, total)}</p>
+      <ul className="bv-collection-list">
+        {shown.map((r) => {
+          const cat = categoryById(r.category);
+          return (
+            <li key={r.category}>
+              <button type="button" className="bv-collection-row" onClick={() => onSelect && onSelect(r.category)}
+                aria-label={cat.label + ', ' + spokenTried(r.ranked, r.total) + '. Show only ' + cat.label}>
+                <Icon name={cat.icon} size={24} strokeWidth={1.75} />
+                <span className="bv-collection-text">
+                  <span className="bv-collection-top">
+                    <span className="heading bv-collection-label">{cat.label}</span>
+                    <span className="body bv-meta bv-collection-count">{r.ranked} of {r.total}</span>
+                  </span>
+                  <ProgressBar value={r.ranked / r.total} />
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
     </Sheet>
   );
 }

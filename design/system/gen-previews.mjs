@@ -115,6 +115,26 @@ h('div', { className: 'pv-narrow' },
   h(B.BevRow, { bev: BEVS.poppi, score: 8.2, scoreVariant: 'predicted', meta: 'You love diet sodas' }),
   h(B.BevRow, { bev: BEVS.mexicanCoke, score: 8.7, count: 362, showImage: true }))`];
 
+P.ProgressStrip = [{ group: 'Bev', height: 300, width: 393, subtitle: 'Opens your collection' }, `.stack { display: flex; flex-direction: column; gap: 14px; padding: 16px 0; } .cap { margin: 0 16px -8px; font-size: 12px; line-height: 16px; color: var(--textSecondary); }`, `
+h('div', { className: 'stack' },
+  h('p', { className: 'cap' }, 'All categories'),
+  h(B.ProgressStrip, { label: 'All Bevs', ranked: 37, total: 378, onClick: function () {} }),
+  h('p', { className: 'cap' }, 'One category'),
+  h(B.ProgressStrip, { label: 'Soda', ranked: 4, total: 61, onClick: function () {} }),
+  h('p', { className: 'cap' }, 'Tried one of many: never 0%'),
+  h(B.ProgressStrip, { label: 'Coffee', ranked: 1, total: 140, onClick: function () {} }),
+  h('p', { className: 'cap' }, 'Nothing yet'),
+  h(B.ProgressStrip, { label: 'Boba', ranked: 0, total: 22, onClick: function () {} }))`];
+
+P.CollectionSheet = [{ group: 'Bev', height: 760, width: 393, subtitle: 'Tap a category to show only it' }, `.pv-frame { height: 740px; margin: 10px auto; }`, `
+h('div', { className: 'pv-frame' },
+  h(B.ProgressStrip, { label: 'All Bevs', ranked: 37, total: 378 }),
+  h(B.CollectionSheet, { rows: [
+    { category: 'soda', ranked: 4, total: 61 }, { category: 'diet_soda', ranked: 6, total: 34 }, { category: 'juice', ranked: 0, total: 25 },
+    { category: 'sparkling_water', ranked: 7, total: 30 }, { category: 'energy', ranked: 2, total: 28 }, { category: 'coffee', ranked: 9, total: 40 },
+    { category: 'tea', ranked: 3, total: 26 }, { category: 'boba', ranked: 5, total: 22 }, { category: 'smoothie', ranked: 0, total: 0 }, { category: 'other', ranked: 1, total: 112 },
+  ] }))`];
+
 P.FeaturedCard = [{ group: 'Bev', height: 210 }, `.row { display: flex; gap: 16px; padding: 20px 16px; overflow-x: auto; }`, `
 h('div', { className: 'row' },
   h(B.FeaturedCard, { title: 'Brown Sugar Boba', subtitle: 'Boba • $$', art: BEVS.brownSugar.art, tint: '#e9d3bd' }),
@@ -378,6 +398,7 @@ P.ScreenYourLists = [{ group: 'Screens', height: 852, width: 393, isPage: true }
     h('div', { className: 'top' }, h(B.ListScopeDropdown, { label: 'All' })),
     h(B.SegmentedTabs, { tabs: [{ id: 'bevd', label: "Bev'd" }, { id: 'want', label: 'Want to Try' }, { id: 'recs', label: 'Recommended' }], value: 'bevd' }),
     h('div', { className: 'filters' }, h(B.FilterPill, { count: 0 }), h(B.FilterPill, { label: 'Bucket', icon: null, chevron: true }), h(B.FilterPill, { label: 'Price', icon: null, chevron: true }), h(B.FilterPill, { label: 'Category', icon: null, chevron: true })),
+    h(B.ProgressStrip, { label: 'All Bevs', ranked: 37, total: 378, onClick: function () {} }),
     h(B.SortToggle, { label: 'Score', onClick: function () {}, onSearch: function () {} }),
     h(B.BevRow, { bev: BEVS.horchata, number: 1, score: 9.5, meta: 'Ranked Oct 8' }),
     h(B.BevRow, { bev: BEVS.dietCoke, number: 2, score: 9.3, meta: 'Ranked Oct 3' }),

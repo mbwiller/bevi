@@ -138,6 +138,17 @@ const R = {
 
 - Provide: \`icon\` (trophy, flame), \`label\` ("Rank on Bevi", "Current Streak"), \`value\` ("#12", "4 days"). Two per row, 10pt apart.
 - New users: "Unranked" and "Rank today to start".`,
+  ProgressStrip: `Bev'd's progress line under the filter row: "Soda · 4 of 61 tried · 6%" over a 4pt bar, a chevron, and a tap that opens the CollectionSheet.
+
+- Provide: \`label\` (the scoped category, or "All Bevs"), \`ranked\` and \`total\` from \`stats.getCategoryProgress()\` (all categories summed for "All Bevs"), \`onClick\`.
+- The percentage rounds **down** and never reads a misleading 0%: "<1%" once anything is tried, "0%" when nothing is. An empty category drops the percentage.
+- The bar is \`input\` with a \`primary\` fill, because it is a share you earned (the README's rule for grape). It is decorative; the line and the spoken label carry the number ("Soda, 4 of 61 tried, 6 percent. Show your collection").
+- While the numbers load, a one-line Skeleton holds the strip's place; if they fail, the strip is left out rather than showing a wrong count.`,
+  CollectionSheet: `"Your collection": a 90% Sheet with every category the viewer can see, in catalog order, each with its icon, "9 of 40" and the same 4pt bar.
+
+- Provide: \`rows\` (\`{ category, ranked, total }\` from \`stats.getCategoryProgress()\`), \`onSelect\`, \`onClose\`. Categories with nothing in them are left out; the alcoholic three never reach an under-21 viewer.
+- The sheet opens on the overall line ("37 of 378 tried · 9%"). Catalog order stays put as you rank, so a bar never jumps rows.
+- Tapping a row scopes Bev'd to that category and closes the sheet.`,
   UserRow: `A person row for People search, followers lists and the user leaderboard.
 
 - Provide: \`user\` ({ name, handle }), \`meta\` ("84 Bevs", "212 pts"), optional \`rank\` and \`streak\`, \`following\` to show the Follow/Following pill, \`self\` to highlight your own row in \`primaryTint\`.
@@ -194,7 +205,7 @@ const S = {
 - Following nobody: an EmptyState under YOUR FEED ("Follow friends to see their Bevs" + Find people); Featured stays.
 - Each post carries the heart and the comment bubble; up to seven comments show under the action row, more collapse to "View all N comments".
 - Dropped from Beli: quick-action pills, the composer, the invite card.`,
-  ScreenYourLists: `Your Lists › Bev'd (ref 06): centred "YOUR LISTS" Header, ListScopeDropdown, SegmentedTabs, the FilterPill row, SortToggle, then numbered BevRows sorted by score.
+  ScreenYourLists: `Your Lists › Bev'd (ref 06): centred "YOUR LISTS" Header, ListScopeDropdown, SegmentedTabs, the FilterPill row, the ProgressStrip ("All Bevs · 37 of 378 tried · 9%"), SortToggle, then numbered BevRows sorted by score.
 
 - Want to Try rows show the global score and a filled bookmark, with when or from whom you saved it in the meta line; Recommended rows show predicted bubbles and a reason in the meta line.`,
   ScreenAddBev: `Add Bev tab (ref 08): wordmark Header with the close circle, Bevs · People tabs in \`primary\`, the outlined SearchBar, a "Snap it" Pill, Recents, and a sticky "Can't find it? Add a new Bev".

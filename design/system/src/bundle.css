@@ -227,6 +227,23 @@
 .bv-featured-text { position: absolute; left: var(--space-md); right: var(--space-md); bottom: 10px; display: flex; flex-direction: column; color: var(--onDeep); }
 .bv-featured-title { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 
+/* ProgressStrip + CollectionSheet: the 4pt bar is input-tinted, filled in primary (a share you earned). */
+.bv-progress { display: flex; flex-direction: column; justify-content: center; gap: var(--space-xs); width: 100%; min-height: var(--size-target);
+  padding: var(--space-xs) var(--space-gutter); background: var(--surface); text-align: left; }
+.bv-progress-top { display: flex; align-items: center; gap: var(--space-sm); }
+.bv-progress-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bv-progress-chev { flex: none; color: var(--textSecondary); }
+.bv-progress-track { display: block; height: 4px; overflow: hidden; border-radius: var(--radius-pill); background: var(--input); }
+.bv-progress-fill { display: block; height: 100%; border-radius: var(--radius-pill); background: var(--primary); }
+.bv-collection-sum { padding: 0 var(--space-gutter) var(--space-md); text-align: center; font-variant-numeric: tabular-nums; }
+.bv-collection-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); }
+.bv-collection-row { display: flex; align-items: center; gap: var(--space-lg); width: 100%; min-height: 64px; padding: var(--space-sm) var(--space-gutter);
+  border-bottom: 1px solid var(--border); background: var(--surface); text-align: left; }
+.bv-collection-text { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: var(--space-sm); }
+.bv-collection-top { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-sm); }
+.bv-collection-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bv-collection-count { flex: none; font-variant-numeric: tabular-nums; }
+
 /* UserRow */
 .bv-userrow { display: flex; align-items: center; gap: var(--space-md); min-height: 64px; padding: var(--space-sm) var(--space-gutter); background: var(--surface); }
 .bv-userrow-self { background: var(--primaryTint); }

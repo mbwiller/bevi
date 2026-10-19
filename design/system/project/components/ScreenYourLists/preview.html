@@ -59,6 +59,7 @@
     h('div', { className: 'top' }, h(B.ListScopeDropdown, { label: 'All' })),
     h(B.SegmentedTabs, { tabs: [{ id: 'bevd', label: "Bev'd" }, { id: 'want', label: 'Want to Try' }, { id: 'recs', label: 'Recommended' }], value: 'bevd' }),
     h('div', { className: 'filters' }, h(B.FilterPill, { count: 0 }), h(B.FilterPill, { label: 'Bucket', icon: null, chevron: true }), h(B.FilterPill, { label: 'Price', icon: null, chevron: true }), h(B.FilterPill, { label: 'Category', icon: null, chevron: true })),
+    h(B.ProgressStrip, { label: 'All Bevs', ranked: 37, total: 378, onClick: function () {} }),
     h(B.SortToggle, { label: 'Score', onClick: function () {}, onSearch: function () {} }),
     h(B.BevRow, { bev: BEVS.horchata, number: 1, score: 9.5, meta: 'Ranked Oct 8' }),
     h(B.BevRow, { bev: BEVS.dietCoke, number: 2, score: 9.3, meta: 'Ranked Oct 3' }),

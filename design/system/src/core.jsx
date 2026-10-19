@@ -39,6 +39,23 @@ export const formatScore = (s) => (Math.round(s * 10) / 10).toFixed(1);
 export const formatCount = (n) => (n >= 1000 ? Math.round(n / 1000) + 'k' : String(n));
 /** "1 rating", "362 ratings", "5k ratings": a Bev's rating count in words, for a meta line. */
 export const formatRatings = (n) => formatCount(n) + (n === 1 ? ' rating' : ' ratings');
+/** The share of a category you've tried, rounded down: "6%", "<1%" once anything is tried, null with no total. */
+export const formatTriedPercent = (ranked, total) => {
+  if (!(total > 0)) return null;
+  const pct = Math.floor((Math.min(ranked, total) * 100) / total);
+  return ranked > 0 && pct === 0 ? '<1%' : pct + '%';
+};
+/** "4 of 61 tried · 6%" (no percent when the category is empty). */
+export const formatTried = (ranked, total) => {
+  const pct = formatTriedPercent(ranked, total);
+  return ranked + ' of ' + total + ' tried' + (pct ? ' · ' + pct : '');
+};
+/** The same line for a screen reader: "4 of 61 tried, 6 percent". */
+export const spokenTried = (ranked, total) => {
+  const pct = formatTriedPercent(ranked, total);
+  const said = pct == null ? '' : pct === '<1%' ? ', less than 1 percent' : ', ' + pct.slice(0, -1) + ' percent';
+  return ranked + ' of ' + total + ' tried' + said;
+};
 export const initialsOf = (name = '') =>
   name.trim().split(/\s+/).slice(0, 2).map((w) => w[0] || '').join('').toUpperCase();
 

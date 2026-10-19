@@ -155,6 +155,10 @@ export declare function FeaturedCard(props: FeaturedCardProps): React.ReactEleme
 export interface ProfileListRowProps { icon: string; iconFilled?: boolean; label: string; count?: number; onClick?: () => void; divider?: boolean; className?: string }
 export declare function ProfileListRow(props: ProfileListRowProps): React.ReactElement;
 
+/** Bev'd's progress line: "Soda · 4 of 61 tried · 6%" (rounded down; "<1%" once anything is tried) over a 4pt `primary` bar. With `onClick` it is a button that opens the CollectionSheet. */
+export interface ProgressStripProps { label?: string; ranked: number; total: number; onClick?: () => void; className?: string }
+export declare function ProgressStrip(props: ProgressStripProps): React.ReactElement;
+
 export interface StatCardProps { icon: string; label: string; value: React.ReactNode; onClick?: () => void; className?: string }
 export declare function StatCard(props: StatCardProps): React.ReactElement;
 
@@ -198,6 +202,12 @@ export interface PostComment { id?: string; author: Person; body: string; time?:
 export interface CommentsSheetProps { open?: boolean; comments?: PostComment[]; me?: Person; onClose?: () => void; onPost?: (body: string) => void; onDelete?: (id: string) => void; error?: string; className?: string }
 export declare function CommentsSheet(props: CommentsSheetProps): React.ReactElement | null;
 
+/** One category's progress, as `stats.getCategoryProgress()` returns it. */
+export interface CategoryProgressRow { category: CategoryId; ranked: number; total: number }
+/** "Your collection" in a 90% Sheet: one row per category with a total, in catalog order, "9 of 40" and a bar; a row calls `onSelect` with its category. */
+export interface CollectionSheetProps { open?: boolean; rows?: CategoryProgressRow[]; onClose?: () => void; onSelect?: (category: CategoryId) => void; className?: string }
+export declare function CollectionSheet(props: CollectionSheetProps): React.ReactElement | null;
+
 declare global {
   interface Window {
     Bevi: {
@@ -207,8 +217,8 @@ declare global {
       TextField: typeof TextField; PriceTierPicker: typeof PriceTierPicker; Header: typeof Header; SectionHeader: typeof SectionHeader;
       ListScopeDropdown: typeof ListScopeDropdown; SegmentedTabs: typeof SegmentedTabs; TabBar: typeof TabBar; BevRow: typeof BevRow;
       FeedPost: typeof FeedPost; FeaturedCard: typeof FeaturedCard; ProfileListRow: typeof ProfileListRow; StatCard: typeof StatCard;
-      UserRow: typeof UserRow; BevGlow: typeof BevGlow; BucketButton: typeof BucketButton; CompareCard: typeof CompareCard; ProgressDots: typeof ProgressDots;
-      EmptyState: typeof EmptyState; ErrorState: typeof ErrorState; Skeleton: typeof Skeleton; Sheet: typeof Sheet; CommentsSheet: typeof CommentsSheet;
+      UserRow: typeof UserRow; ProgressStrip: typeof ProgressStrip; BevGlow: typeof BevGlow; BucketButton: typeof BucketButton; CompareCard: typeof CompareCard; ProgressDots: typeof ProgressDots;
+      EmptyState: typeof EmptyState; ErrorState: typeof ErrorState; Skeleton: typeof Skeleton; Sheet: typeof Sheet; CommentsSheet: typeof CommentsSheet; CollectionSheet: typeof CollectionSheet;
       /** The 15 category slugs with labels and icon names. */
       categories: { id: CategoryId; label: string; icon: string; isAlcoholic?: boolean }[];
       scoreBand(score: number): 'high' | 'mid' | 'low';

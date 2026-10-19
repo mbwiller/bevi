@@ -176,6 +176,16 @@ export function SortToggle({ label = 'Score', onClick, onSearch, className }) {
   );
 }
 
+/** A 4pt track in `input` with a `primary` fill: a share you've earned (ProgressStrip, CollectionSheet). Decorative; its parent says the number. */
+export function ProgressBar({ value = 0, className }) {
+  const pct = Math.max(0, Math.min(1, value)) * 100;
+  return (
+    <span className={cx('bv-progress-track', className)} aria-hidden="true">
+      <span className="bv-progress-fill" style={{ width: pct + '%' }} />
+    </span>
+  );
+}
+
 /** Loading placeholder in the shape of the final layout. No bare spinners outside buttons. */
 export function Skeleton({ variant = 'text', width, height, lines = 1, className }) {
   if (variant === 'row') {
