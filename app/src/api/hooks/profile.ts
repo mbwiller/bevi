@@ -19,7 +19,7 @@ export function useUser(id: string | undefined) {
   return useQuery({ queryKey: keys.users.detail(id ?? ''), queryFn: () => api.profile.getUser(id!), enabled: !!id });
 }
 
-/** People search (Add tab, People). Debounce `q` in the screen. */
+/** People search (the Search tab's People group). Debounce `q` in the screen. */
 export function useUserSearch(q: string, opts: QueryOpts & { limit?: number } = {}) {
   return useInfiniteQuery({
     queryKey: keys.users.search(q),

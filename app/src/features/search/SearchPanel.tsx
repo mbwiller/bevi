@@ -1,8 +1,8 @@
 import type { BevSummary, ProfileRow } from '@bevi/shared';
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
-import { useCallback, useMemo, useRef, useState } from 'react';
-import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { flattenPages, useBevSearch, useMe, useSuggested, useUserSearch } from '@/api/hooks';
 import { Button } from '@/components/Button';
@@ -19,28 +19,43 @@ import { useKeyboardInset } from '@/lib/useKeyboardInset';
 import { spacing, useTheme } from '@/theme';
 
 import { RecentRow, ResultRow, useOpenBev } from './BevRows';
+import { footLift, keyboardTop } from './keyboardLift';
 
 export const ADD_NEW = "Can't find it? Add a new Bev";
 const SKELETON_ROWS = 4;
+
+type Group = 'bevs' | 'people';
 
 type Item =
   | { kind: 'header'; key: string; title: string }
   | { kind: 'recent'; key: string; bev: RecentBev }
   | { kind: 'bev'; key: string; bev: BevSummary }
-  | { kind: 'person'; key: string; row: ProfileRow };
+  | { kind: 'person'; key: string; row: ProfileRow }
+  | { kind: 'loading'; key: string; group: Group }
+  | { kind: 'error'; key: string; error: unknown; retry: () => void };
 
 const header = (title: string): Item => ({ kind: 'header', key: `h:${title}`, title });
 
+export interface SearchPanelProps {
+  /** The bar's text as typed. */
+  q: string;
+  /** The bar's text, trimmed and debounced 250ms by the screen. */
+  query: string;
+  /** Idle: "Suggested for you" above Recents (the panel was opened by Find people). */
+  suggestionsFirst?: boolean;
+}
+
 /**
  * The Search tab's results panel (design system ScreenSearchResults), over the map area. One query
- * (`query`, the bar's text debounced 250ms by the screen) searches Bevs and people; results are grouped under "Bevs" (BevRows: tap to
- * rank, or to open one you've ranked; plus to rank; bookmark for Want to Try) and "People"
- * (UserRows with Follow, which toggles optimistically). A query starting with "@" is a handle, so
- * it searches people only. An empty group is left out. Idle: Recents and "Suggested for you".
- * A sticky "Can't find it? Add a new Bev" closes the bottom, kept above the keyboard, and turns
- * primary when no Bev matches. Your own profile never shows.
+ * searches Bevs and people; results are grouped under "Bevs" (BevRows: tap to rank, or to open one
+ * you've ranked; plus to rank; bookmark for Want to Try) and "People" (UserRows with Follow, which
+ * toggles optimistically). A query starting with "@" is a handle, so it searches people only. A
+ * group holds its place while it loads, shows its own error with Retry, and is left out when it has
+ * nothing. Idle: Recents and "Suggested for you". A sticky "Can't find it? Add a new Bev" closes
+ * the bottom, kept above the keyboard, and turns primary when no Bev matches. Your own profile
+ * never shows.
  */
-export function SearchPanel({ q, query }: { q: string; query: string }) {
+export function SearchPanel({ q, query, suggestionsFirst = false }: SearchPanelProps) {
   const router = useRouter();
   const { colors } = useTheme();
   const typed = q.trim();
@@ -67,22 +82,55 @@ export function SearchPanel({ q, query }: { q: string; query: string }) {
   const peopleResults = useMemo(() => flattenPages(people.data).filter((r) => r.id !== meId), [people.data, meId]);
   const suggestions = useMemo(() => (suggested.data ?? []).filter((r) => r.id !== meId), [suggested.data, meId]);
 
-  const items = useMemo<Item[]>(() => {
-    const out: Item[] = [];
-    if (idle) {
-      if (recents.length) out.push(header('Recents'), ...recents.map((bev): Item => ({ kind: 'recent', key: `r:${bev.id}`, bev })));
-      if (suggestions.length) out.push(header('Suggested for you'), ...suggestions.map((row): Item => ({ kind: 'person', key: `s:${row.id}`, row })));
-    } else {
-      if (bevResults.length) out.push(header('Bevs'), ...bevResults.map((bev): Item => ({ kind: 'bev', key: `b:${bev.id}`, bev })));
-      if (peopleResults.length) out.push(header('People'), ...peopleResults.map((row): Item => ({ kind: 'person', key: `p:${row.id}`, row })));
-    }
-    return out;
-  }, [idle, recents, suggestions, bevResults, peopleResults]);
-
-  const bevFailed = bevQuery.length > 0 && bevs.isError && !bevs.data;
-  const peopleFailed = people.isError && !people.data;
-  const bevPending = bevQuery.length > 0 && !bevs.data;
+  const searching = !idle && query.length > 0;
+  const bevFailed = searching && bevQuery.length > 0 && bevs.isError && !bevs.data;
+  const peopleFailed = searching && people.isError && !people.data;
+  const suggestedFailed = suggested.isError && !suggested.data;
+  // A group still waiting for its first answer to this query holds its place.
+  const bevLoading = searching && bevQuery.length > 0 && !bevFailed && bevResults.length === 0 && (!bevs.data || bevs.isPlaceholderData);
+  const peopleLoading = searching && !peopleFailed && !people.data;
   const noBev = settled && bevQuery.length > 0 && bevs.isSuccess && !bevs.isPlaceholderData && bevResults.length === 0;
+
+  const items = useMemo<Item[]>(() => {
+    if (idle) {
+      const recent: Item[] = recents.length
+        ? [header('Recents'), ...recents.map((bev): Item => ({ kind: 'recent', key: `r:${bev.id}`, bev }))]
+        : [];
+      const suggest: Item[] = suggestedFailed
+        ? [header('Suggested for you'), { kind: 'error', key: 'e:suggested', error: suggested.error, retry: () => void suggested.refetch() }]
+        : suggestions.length
+          ? [header('Suggested for you'), ...suggestions.map((row): Item => ({ kind: 'person', key: `s:${row.id}`, row }))]
+          : [];
+      return suggestionsFirst ? [...suggest, ...recent] : [...recent, ...suggest];
+    }
+    const out: Item[] = [];
+    if (bevFailed) out.push(header('Bevs'), { kind: 'error', key: 'e:bevs', error: bevs.error, retry: () => void bevs.refetch() });
+    else if (bevResults.length) out.push(header('Bevs'), ...bevResults.map((bev): Item => ({ kind: 'bev', key: `b:${bev.id}`, bev })));
+    else if (bevLoading) out.push(header('Bevs'), { kind: 'loading', key: 'l:bevs', group: 'bevs' });
+    if (peopleFailed) out.push(header('People'), { kind: 'error', key: 'e:people', error: people.error, retry: () => void people.refetch() });
+    else if (peopleResults.length) out.push(header('People'), ...peopleResults.map((row): Item => ({ kind: 'person', key: `p:${row.id}`, row })));
+    else if (peopleLoading) out.push(header('People'), { kind: 'loading', key: 'l:people', group: 'people' });
+    return out;
+    // The query objects change identity every render; their error and refetch are what's read.
+  }, [
+    idle,
+    recents,
+    suggestions,
+    suggestionsFirst,
+    suggestedFailed,
+    suggested.error,
+    suggested.refetch,
+    bevFailed,
+    bevResults,
+    bevLoading,
+    bevs.error,
+    bevs.refetch,
+    peopleFailed,
+    peopleResults,
+    peopleLoading,
+    people.error,
+    people.refetch,
+  ]);
 
   const renderItem = useCallback(
     ({ item }: { item: Item }) => {
@@ -102,23 +150,23 @@ export function SearchPanel({ q, query }: { q: string; query: string }) {
               onPress={() => router.push({ pathname: '/user/[id]', params: { id: item.row.id } })}
             />
           );
+        case 'loading':
+          return item.group === 'bevs' ? (
+            <View accessibilityLabel="Loading Bevs" aria-busy>
+              <Skeleton variant="row" />
+            </View>
+          ) : (
+            <PeopleSkeleton count={1} />
+          );
+        case 'error':
+          return <ErrorState error={item.error} onRetry={item.retry} />;
       }
     },
     [open, rank, forget, toggle, router],
   );
 
   let body;
-  if (!idle && (bevFailed || peopleFailed)) {
-    body = (
-      <ErrorState
-        error={bevFailed ? bevs.error : people.error}
-        onRetry={() => {
-          if (bevFailed) void bevs.refetch();
-          if (peopleFailed) void people.refetch();
-        }}
-      />
-    );
-  } else if (items.length) {
+  if (items.length) {
     body = (
       <FlashList
         data={items}
@@ -138,7 +186,7 @@ export function SearchPanel({ q, query }: { q: string; query: string }) {
     ) : (
       <EmptyState icon="search" title="Find a Bev or a friend" body="Search Bevs by name, brand or flavor, and people by name or @handle." />
     );
-  } else if (!settled || bevPending || !people.data) {
+  } else if (!settled) {
     body = (
       <View accessibilityLabel="Loading results" aria-busy>
         {Array.from({ length: SKELETON_ROWS }, (_, i) => (
@@ -167,7 +215,8 @@ export function SearchPanel({ q, query }: { q: string; query: string }) {
 /**
  * How far to raise the panel's foot so the keyboard never covers it. The panel ends above the tab
  * bar, so only the part of the keyboard taller than what lies below the panel hides anything:
- * measure the panel's bottom in the window, then compare it with the top of the keyboard.
+ * measure the panel's bottom in the window, then compare it with the keyboard's top
+ * (`keyboardLift.ts`, which explains why the web reads `window.innerHeight`).
  */
 function useKeyboardLift() {
   const inset = useKeyboardInset();
@@ -177,7 +226,12 @@ function useKeyboardLift() {
   const measure = useCallback(() => {
     ref.current?.measureInWindow?.((_x, y, _w, h) => setBottom(y + h));
   }, []);
-  const by = inset > 0 && bottom != null ? Math.max(0, bottom - (height - inset)) : 0;
+  // Opening the keyboard can pan the page: measure again whenever the inset changes.
+  useEffect(() => {
+    if (inset > 0) measure();
+  }, [inset, measure]);
+  const layoutHeight = Platform.OS === 'web' && typeof window !== 'undefined' ? window.innerHeight : height;
+  const by = inset > 0 && bottom != null ? footLift(bottom, keyboardTop(layoutHeight, inset)) : 0;
   return { ref, measure, by };
 }
 

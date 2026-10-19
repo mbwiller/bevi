@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { configure, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, configure, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { api } from '@/api/client';
 import SearchTab from '@/app/(tabs)/add/index';
@@ -12,9 +12,20 @@ import { SEARCH_PLACEHOLDER } from '../SearchScreen';
 const mockPush = jest.fn();
 const mockSetParams = jest.fn();
 let mockParams: { tab?: string; focus?: string } = {};
+// The tab navigator as the route sees it: tests fire its tabPress listeners to press the Search tab.
+const mockTab = { listeners: new Set<() => void>(), focused: true };
+const mockNavigation = {
+  addListener: (_type: string, listener: () => void) => {
+    mockTab.listeners.add(listener);
+    return () => void mockTab.listeners.delete(listener);
+  },
+  isFocused: () => mockTab.focused,
+  setParams: (p: unknown) => mockSetParams(p),
+};
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush, setParams: mockSetParams, canGoBack: () => true, back: jest.fn(), replace: jest.fn() }),
   useLocalSearchParams: () => mockParams,
+  useNavigation: () => mockNavigation,
 }));
 
 // Counts mounts of the map area: the live map (M-16) must be created once, so the placeholder that
@@ -42,6 +53,7 @@ beforeEach(() => {
   controls.signInAs('tester');
   mockParams = {};
   mockMap.mounts = 0;
+  mockTab.focused = true;
   client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false, gcTime: Infinity } },
   });
@@ -64,6 +76,18 @@ const renderSearch = () =>
 
 const bar = () => screen.getByLabelText(SEARCH_PLACEHOLDER);
 const type = async (q: string) => fireEvent.changeText(bar(), q);
+const headings = () => screen.getAllByRole('heading').map((h) => h.props.children as string);
+
+/** A localStorage holding one Recents entry for the test user; returns a restore function. */
+function withRecent(bev: { id: string; name: string; brand: string | null }) {
+  const store = new Map([[`bevi.add.recents:user-tester`, JSON.stringify([bev])]]);
+  const g = globalThis as { localStorage?: unknown };
+  const saved = g.localStorage;
+  g.localStorage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) };
+  return () => {
+    g.localStorage = saved;
+  };
+}
 
 describe('the map area and the panel', () => {
   it('opens on the map; focusing the bar slides the panel over it and Cancel slides it away', async () => {
@@ -99,6 +123,54 @@ describe('the map area and the panel', () => {
     expect(await screen.findByText('Suggested for you')).toBeTruthy();
   });
 
+  it('pressing the Search tab while it shows closes the panel; a press from another tab does not', async () => {
+    await renderSearch();
+    await type('coke');
+    expect(screen.getByTestId('search-panel')).toBeTruthy();
+    mockTab.focused = false;
+    await act(async () => mockTab.listeners.forEach((l) => l()));
+    expect(screen.getByTestId('search-panel')).toBeTruthy();
+    mockTab.focused = true;
+    await act(async () => mockTab.listeners.forEach((l) => l()));
+    expect(screen.queryByTestId('search-panel')).toBeNull();
+    expect(bar().props.value).toBe('');
+    expect(mockMap.mounts).toBe(1);
+  });
+
+  it('idle: Recents, then suggestions', async () => {
+    const restore = withRecent({ id: 'b-1', name: 'Topo Chico', brand: 'Topo Chico' });
+    try {
+      await renderSearch();
+      await fireEvent(bar(), 'focus');
+      await screen.findByText('Suggested for you');
+      expect(headings()).toEqual(['Recents', 'Suggested for you']);
+    } finally {
+      restore();
+    }
+  });
+
+  it('Find people (?tab=people) puts suggestions above Recents', async () => {
+    const restore = withRecent({ id: 'b-1', name: 'Topo Chico', brand: 'Topo Chico' });
+    try {
+      mockParams = { tab: 'people' };
+      await renderSearch();
+      await screen.findByText('Suggested for you');
+      expect(headings()).toEqual(['Suggested for you', 'Recents']);
+    } finally {
+      restore();
+    }
+  });
+
+  it('a failed "Suggested for you" shows ErrorState under its header, and Retry loads it', async () => {
+    controls.failNext('network', 'follows.suggested');
+    mockParams = { tab: 'people' };
+    await renderSearch();
+    expect(await screen.findByText("You're offline")).toBeTruthy();
+    expect(screen.getByText('Suggested for you')).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText('Retry'));
+    expect((await screen.findAllByLabelText(/^Follow /)).length).toBeGreaterThan(0);
+  });
+
   it.each([{ tab: 'people' }, { focus: '1' }])('%p opens the panel once and clears the params', async (params) => {
     mockParams = params;
     await renderSearch();
@@ -121,9 +193,11 @@ describe('grouped results', () => {
     expect(userSearch).not.toHaveBeenCalled();
 
     expect(await screen.findByText('People')).toBeTruthy();
+    await waitFor(() => expect(bevSearch).toHaveBeenCalledTimes(1));
+    expect(bevSearch.mock.calls[0]![0]).toMatchObject({ q, limit: 25 });
     expect(userSearch).toHaveBeenCalledTimes(1);
     expect(userSearch.mock.calls[0]![0]).toMatchObject({ q });
-    if ((await bevSearch.mock.results[0]?.value)?.items.length) expect(screen.getByText('Bevs')).toBeTruthy();
+    if ((await bevSearch.mock.results[0]!.value).items.length) expect(screen.getByText('Bevs')).toBeTruthy();
   });
 
   it('leaves out an empty group', async () => {
@@ -171,16 +245,47 @@ describe('grouped results', () => {
     expect(mockPush).toHaveBeenCalledWith('/add/new');
   });
 
-  it.each([
-    ['Bev', 'bevs.search'],
-    ['people', 'profile.searchUsers'],
-  ] as const)('a failed %s search shows ErrorState, and Retry recovers', async (_what, method) => {
-    controls.failNext('network', method);
+  it('a failed Bev search errors in its own group, keeps the People results, and Retry recovers', async () => {
+    const friend = (await api.follows.suggested())[0]!;
+    controls.failNext('network', 'bevs.search');
+    await renderSearch();
+    await type(friend.displayName);
+    expect(await screen.findByText("You're offline")).toBeTruthy();
+    expect(await screen.findByLabelText(new RegExp(`^${friend.displayName}, @`))).toBeTruthy();
+    expect(headings()).toEqual(['Bevs', 'People']);
+    jest.spyOn(api.bevs, 'search').mockResolvedValueOnce({ items: [(await api.bevs.search({ q: 'coke', limit: 1 })).items[0]!], nextCursor: null });
+    await fireEvent.press(screen.getByLabelText('Retry'));
+    expect((await screen.findAllByLabelText(/^Rank /)).length).toBe(1);
+    expect(screen.queryByText("You're offline")).toBeNull();
+  });
+
+  it('a failed people search errors in its own group, keeps the Bev results, and Retry recovers', async () => {
+    controls.failNext('network', 'profile.searchUsers');
     await renderSearch();
     await type('coke');
     expect(await screen.findByText("You're offline")).toBeTruthy();
-    await fireEvent.press(screen.getByLabelText('Retry'));
     expect((await screen.findAllByLabelText(/^Rank /)).length).toBeGreaterThan(0);
+    expect(headings()).toEqual(['Bevs', 'People']);
+    await fireEvent.press(screen.getByLabelText('Retry'));
+    await waitFor(() => expect(screen.queryByText("You're offline")).toBeNull());
+  });
+
+  it('the Bevs group holds its place above People while it loads', async () => {
+    const friend = (await api.follows.suggested())[0]!;
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const real = api.bevs.search.bind(api.bevs);
+    jest.spyOn(api.bevs, 'search').mockImplementation(async (p) => {
+      await gate;
+      return real(p);
+    });
+    await renderSearch();
+    await type(friend.displayName);
+    expect(await screen.findByLabelText(new RegExp(`^${friend.displayName}, @`))).toBeTruthy();
+    expect(screen.getByLabelText('Loading Bevs')).toBeTruthy();
+    expect(headings()).toEqual(['Bevs', 'People']);
+    await act(async () => release());
+    await waitFor(() => expect(screen.queryByLabelText('Loading Bevs')).toBeNull());
   });
 
   it('hides alcoholic results from an under-21 viewer', async () => {

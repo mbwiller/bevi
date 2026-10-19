@@ -1,6 +1,6 @@
 import path from 'path';
 
-import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
+import { act, fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
 
 import { useSession, type SessionStatus } from '@/state/session';
 
@@ -68,6 +68,14 @@ describe('tab bar', () => {
     await fireEvent.press(await screen.findByLabelText('Find people'));
     expect(path()).toBe('/add');
     expect(await screen.findByRole('button', { name: 'Cancel' })).toBeTruthy();
+  });
+
+  it('pressing the Search tab while it shows closes the results panel', async () => {
+    const path = await start('ready', '/add?tab=people');
+    expect(await screen.findByRole('button', { name: 'Cancel' })).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText('Search'));
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull());
+    expect(path()).toBe('/add');
   });
 
   it('/search is the Search tab', async () => {

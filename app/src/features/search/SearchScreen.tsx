@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useReducer, useState } from 'react';
+import { useCallback, useEffect, useReducer, useState } from 'react';
 import { Keyboard, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown, FadeOutUp, useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,12 +18,17 @@ import { SearchPanel } from './SearchPanel';
 
 export const SEARCH_PLACEHOLDER = 'Search a Bev or a person';
 
+/** A link asked for the panel up and the bar focused; each new `n` opens it once. */
+export interface FocusRequest {
+  n: number;
+  /** Find people: "Suggested for you" above Recents. */
+  people?: boolean;
+}
+
 export interface SearchScreenProps {
-  /**
-   * Bumped by the route when a link asks for the panel up and the bar focused (Feed's search bar,
-   * Find people): each new value opens it once.
-   */
-  focusRequest?: number;
+  focusRequest?: FocusRequest;
+  /** Bumped by the route when the Search tab is pressed while showing: each new value closes the panel. */
+  closeRequest?: number;
 }
 
 /**
@@ -31,9 +36,10 @@ export interface SearchScreenProps {
  * bar for Bevs and people, Snap it, then the map area filling the rest. Focusing or typing in the
  * bar slides the results panel over the map from under it; Cancel slides it away. The map area
  * stays mounted throughout (the live map, M-16, must be created once per session) and takes no
- * gestures while the panel is up.
+ * gestures (or screen-reader and keyboard focus) while the panel is up. Pressing the Search tab
+ * again closes the panel.
  */
-export function SearchScreen({ focusRequest = 0 }: SearchScreenProps) {
+export function SearchScreen({ focusRequest, closeRequest = 0 }: SearchScreenProps) {
   const back = useBack();
   const router = useRouter();
   const { colors } = useTheme();
@@ -47,16 +53,25 @@ export function SearchScreen({ focusRequest = 0 }: SearchScreenProps) {
 
   // A link asked for the panel: open it and remount the bar with autoFocus to bring the keyboard up.
   const [barKey, setBarKey] = useState(0);
+  const [suggestionsFirst, setSuggestionsFirst] = useState(false);
+  const focusN = focusRequest?.n ?? 0;
+  const focusPeople = focusRequest?.people ?? false;
   useEffect(() => {
-    if (!focusRequest) return;
+    if (!focusN) return;
     dispatch({ type: 'focus' });
+    setSuggestionsFirst(focusPeople);
     setBarKey((k) => k + 1);
-  }, [focusRequest]);
+  }, [focusN, focusPeople]);
 
-  const cancel = () => {
+  const cancel = useCallback(() => {
     dispatch({ type: 'cancel' });
+    setSuggestionsFirst(false);
     Keyboard.dismiss();
-  };
+  }, []);
+
+  useEffect(() => {
+    if (closeRequest) cancel();
+  }, [closeRequest, cancel]);
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.screen, { backgroundColor: colors.surface }]}>
@@ -92,6 +107,9 @@ export function SearchScreen({ focusRequest = 0 }: SearchScreenProps) {
           pointerEvents={up ? 'none' : 'auto'}
           importantForAccessibility={up ? 'no-hide-descendants' : 'auto'}
           accessibilityElementsHidden={up}
+          // react-native-web ignores the two above: hide it from screen readers and the Tab key there.
+          aria-hidden={up}
+          tabIndex={up ? -1 : undefined}
         >
           <MapPlaceholder />
         </View>
@@ -102,7 +120,7 @@ export function SearchScreen({ focusRequest = 0 }: SearchScreenProps) {
             exiting={reduced ? undefined : FadeOutUp.duration(motion.fast)}
             style={[StyleSheet.absoluteFill, { backgroundColor: colors.surface }]}
           >
-            <SearchPanel q={panel.q} query={query} />
+            <SearchPanel q={panel.q} query={query} suggestionsFirst={suggestionsFirst} />
           </Animated.View>
         ) : null}
       </View>

@@ -153,7 +153,7 @@ export function BevdTab({ categoryId, categories, onCategory, onCategoryPress }:
         title="Add your first Bev"
         body="Rank what you drink and your list builds itself."
         action="Add a Bev"
-        onAction={() => router.push('/add')}
+        onAction={() => router.push({ pathname: '/add', params: { focus: '1' } })}
       />
     );
 

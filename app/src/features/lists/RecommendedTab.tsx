@@ -94,7 +94,7 @@ export function RecommendedTab({ categoryId, categories, onCategory, onCategoryP
       title={RECS_LOCKED_TITLE}
       body={`${remaining} more to go. Your picks get sharper with every Bev you rank.`}
       action="Add a Bev"
-      onAction={() => router.push('/add')}
+      onAction={() => router.push({ pathname: '/add', params: { focus: '1' } })}
     />
   ) : categoryId && (result?.items.length ?? 0) > 0 ? (
     <EmptyState
