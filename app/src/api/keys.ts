@@ -33,6 +33,8 @@ export const keys = {
     all: [...root, 'stats'] as const,
     mine: () => [...root, 'stats', 'me'] as const,
     user: (id: string) => [...root, 'stats', 'user', id] as const,
+    /** Under `stats.all`, so `invalidateAfterRankingChange` refreshes it. */
+    categoryProgress: () => [...root, 'stats', 'categoryProgress'] as const,
   },
 
   follows: {

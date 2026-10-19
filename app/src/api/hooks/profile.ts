@@ -47,6 +47,11 @@ export function useStats(userId?: string) {
   });
 }
 
+/** The caller's ranked and total count per category they can see (Bev'd's progress strip). */
+export function useCategoryProgress() {
+  return useQuery({ queryKey: keys.stats.categoryProgress(), queryFn: () => api.stats.getCategoryProgress() });
+}
+
 function onProfileSaved(qc: ReturnType<typeof useQueryClient>, profile: Profile) {
   qc.setQueryData(keys.me(), profile);
   qc.setQueryData<Session | null>(keys.session(), (s) => (s ? { ...s, handle: profile.handle } : s));
@@ -73,6 +78,7 @@ export function useSetBirthDate() {
     onSuccess: (profile) => {
       onProfileSaved(qc, profile);
       void qc.invalidateQueries({ queryKey: keys.categories() });
+      void qc.invalidateQueries({ queryKey: keys.stats.all });
       void qc.invalidateQueries({ queryKey: keys.bevs.all });
       void qc.invalidateQueries({ queryKey: keys.featured() });
       void qc.invalidateQueries({ queryKey: keys.leaderboard.all });

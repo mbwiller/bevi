@@ -15,6 +15,29 @@ export function formatRatings(n: number): string {
   return formatCount(n) + (n === 1 ? ' rating' : ' ratings');
 }
 
+/**
+ * The share of a category you've tried, rounded down: "6%". "<1%" once anything is tried, so a
+ * first Bev never reads as 0%; null when the category is empty.
+ */
+export function formatTriedPercent(ranked: number, total: number): string | null {
+  if (!(total > 0)) return null;
+  const pct = Math.floor((Math.min(ranked, total) * 100) / total);
+  return ranked > 0 && pct === 0 ? '<1%' : `${pct}%`;
+}
+
+/** "4 of 61 tried · 6%"; no percentage for an empty category. */
+export function formatTried(ranked: number, total: number): string {
+  const pct = formatTriedPercent(ranked, total);
+  return `${ranked} of ${total} tried${pct ? ` · ${pct}` : ''}`;
+}
+
+/** The same line for a screen reader: "4 of 61 tried, 6 percent", "…, less than 1 percent". */
+export function spokenTried(ranked: number, total: number): string {
+  const pct = formatTriedPercent(ranked, total);
+  const said = pct == null ? '' : pct === '<1%' ? ', less than 1 percent' : `, ${pct.slice(0, -1)} percent`;
+  return `${ranked} of ${total} tried${said}`;
+}
+
 /** Up to two initials for an Avatar. */
 export function initialsOf(name: string): string {
   return name

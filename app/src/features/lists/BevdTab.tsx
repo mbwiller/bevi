@@ -3,15 +3,18 @@ import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { flattenPages, useBucket, useMyRankings } from '@/api/hooks';
+import { flattenPages, useBucket, useCategoryProgress, useMyRankings } from '@/api/hooks';
 import { BevRow } from '@/components/BevRow';
+import { CollectionSheet } from '@/components/CollectionSheet';
 import { EmptyState } from '@/components/EmptyState';
 import { FilterPill } from '@/components/FilterPill';
 import { IconButton } from '@/components/IconButton';
+import { ProgressStrip } from '@/components/ProgressStrip';
+import { Skeleton } from '@/components/Skeleton';
 import { SortToggle } from '@/components/SortToggle';
 import type { CategoryInfo } from '@/lib/categories';
 import { formatShortDate } from '@/lib/time';
-import { spacing } from '@/theme';
+import { size, spacing } from '@/theme';
 
 import { BevList, listStyles } from './BevList';
 import { BUCKET_SHORT } from './copy';
@@ -41,6 +44,28 @@ function globalNumber(r: RankedBev, counts: BucketCounts): number | undefined {
   return undefined;
 }
 
+/**
+ * "Soda · 4 of 61 tried · 6%" for the scoped category, or every visible category summed as "All Bevs".
+ * A Skeleton line while it loads; nothing if it fails or the scoped category isn't in the result, so it
+ * never shows a wrong count.
+ */
+function CategoryProgressStrip({ categoryId, label, onPress }: { categoryId: CategoryId | undefined; label: string | undefined; onPress: () => void }) {
+  const progress = useCategoryProgress();
+  if (progress.isPending) {
+    return (
+      <View style={styles.stripLoading} testID="progress-strip-loading">
+        <Skeleton variant="text" width="60%" />
+      </View>
+    );
+  }
+  if (!progress.data) return null;
+  const rows = categoryId ? progress.data.filter((r) => r.categoryId === categoryId) : progress.data;
+  if (rows.length === 0) return null;
+  const ranked = rows.reduce((n, r) => n + r.ranked, 0);
+  const total = rows.reduce((n, r) => n + r.total, 0);
+  return <ProgressStrip label={categoryId ? label : 'All Bevs'} ranked={ranked} total={total} onPress={onPress} />;
+}
+
 export interface BevdTabProps {
   categoryId: CategoryId | undefined;
   categories: readonly CategoryInfo[];
@@ -53,7 +78,8 @@ export function BevdTab({ categoryId, categories, onCategory, onCategoryPress }:
   const router = useRouter();
   const [bucket, setBucket] = useState<Bucket | undefined>();
   const [sort, setSort] = useState<RankingSort>('score');
-  const [sheet, setSheet] = useState<'filters' | 'bucket' | null>(null);
+  const [sheet, setSheet] = useState<'filters' | 'bucket' | 'collection' | null>(null);
+  const progress = useCategoryProgress();
   const [acting, setActing] = useState<RankedBev | null>(null);
 
   const query = useMyRankings({ bucket, categoryId, sort });
@@ -99,6 +125,7 @@ export function BevdTab({ categoryId, categories, onCategory, onCategoryPress }:
         <FilterPill label={bucket ? BUCKET_SHORT[bucket] : 'Bucket'} icon={null} chevron onPress={() => setSheet('bucket')} />
         <FilterPill label={category?.label ?? 'Category'} icon={null} chevron onPress={onCategoryPress} />
       </View>
+      <CategoryProgressStrip categoryId={categoryId} label={category?.label} onPress={() => setSheet('collection')} />
       <SortToggle
         label={SORT_LABEL[sort]}
         onPress={() => setSort(SORTS[(SORTS.indexOf(sort) + 1) % SORTS.length]!)}
@@ -150,6 +177,15 @@ export function BevdTab({ categoryId, categories, onCategory, onCategoryPress }:
         onCategory={onCategory}
         onClose={() => setSheet(null)}
       />
+      <CollectionSheet
+        open={sheet === 'collection'}
+        rows={progress.data ?? []}
+        onSelect={(id) => {
+          onCategory(id);
+          setSheet(null);
+        }}
+        onClose={() => setSheet(null)}
+      />
       <BucketSheet open={sheet === 'bucket'} value={bucket} counts={counts} onSelect={setBucket} onClose={() => setSheet(null)} />
       <RankingActionsSheet ranked={acting} onClose={() => setActing(null)} />
     </>
@@ -157,6 +193,7 @@ export function BevdTab({ categoryId, categories, onCategory, onCategoryPress }:
 }
 
 const styles = StyleSheet.create({
+  stripLoading: { justifyContent: 'center', minHeight: size.target, paddingHorizontal: spacing.gutter },
   // Sits in the BevRow's 44pt foot, where Rank / Want to Try go on other lists; the glyph lines up with the gutter.
   more: { position: 'absolute', right: spacing.gutter - spacing.sm, bottom: spacing.xs },
 });
