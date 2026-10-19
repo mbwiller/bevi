@@ -1,5 +1,5 @@
 import React from 'react';
-import { cx, Icon, Wordmark, BevArt, categoryById, formatRatings, formatTried, spokenTried } from './core.jsx';
+import { cx, Icon, Wordmark, BevArt, categoryById, formatRatings, formatTried, spokenTried, formatScore } from './core.jsx';
 import { ScoreBubble, Avatar, BevImage, Pill, IconButton, LikeButton, CommentButton, ProgressBar } from './primitives.jsx';
 
 /** Comments shown on the post itself; above this many, the post collapses to "View all N comments". */
@@ -230,6 +230,29 @@ export function FeaturedCard({ title, subtitle, src, art, tint, onClick, classNa
         <span className="screenTitle bv-featured-title">{title}</span>
         {subtitle ? <span className="body bv-featured-sub">{subtitle}</span> : null}
       </span>
+    </button>
+  );
+}
+
+const BEV_OF_LABEL = { day: 'Bev of the day', week: 'Bev of the week' };
+
+/**
+ * Bev of the day / Bev of the week: half of a pair under the Feed's search bar. Just the Bev, not a
+ * post: a caps label, its square tile, its name and the score it won with. `date` ("Oct 17",
+ * "Week of Oct 12") shows only when the winner is from an earlier period.
+ */
+export function BevOfCard({ period = 'day', bev, score, date, onClick, className }) {
+  const label = BEV_OF_LABEL[period];
+  const spoken = label + ': ' + bev.name + (score != null ? ', ' + formatScore(score) : '') + (date ? ', ' + date : '');
+  return (
+    <button type="button" className={cx('bv', 'bv-bevof', className)} onClick={onClick} aria-label={spoken}>
+      <span className="sectionCaps bv-bevof-label">{label}</span>
+      <BevImage size={164} src={bev.src} art={bev.art} status={bev.photoStatus} />
+      <span className="bv-bevof-foot">
+        <span className="heading bv-bevof-name">{bev.name}</span>
+        <ScoreBubble score={score} />
+      </span>
+      {date ? <span className="caption bv-bevof-date">{date}</span> : null}
     </button>
   );
 }

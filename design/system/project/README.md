@@ -66,7 +66,7 @@ Use the tokens by name; never paste hex values.
 ## Building screens
 
 - Wrap content the way the screens in this system do: `Header`, then content on `surface`, then `TabBar` at the bottom. Load `tokens.css` and `components/bundle.css` before using `window.Bevi`.
-- Feed: wordmark Header, filled SearchBar, SectionHeader + FeaturedCards, SectionHeader + FeedPosts. Each post's action row starts with the heart and the comment bubble; up to seven comments show under it, more collapse to "View all N comments", and both open the CommentsSheet.
+- Feed: wordmark Header, filled SearchBar, the Bev of the day and Bev of the week pair (BevOfCard), SectionHeader + FeedPosts. Each post's action row starts with the heart and the comment bubble; up to seven comments show under it, more collapse to "View all N comments", and both open the CommentsSheet.
 - Lists (Your Lists, Leaderboard): centred caps Header, ListScopeDropdown, SegmentedTabs, FilterPill row, SortToggle, numbered BevRows. Bev'd adds the ProgressStrip under the filters ("All Bevs · 37 of 378 tried · 9%"), which opens the CollectionSheet.
 - Ranking: a BevGlow with the floating cutout and three BucketButtons, then ProgressDots and CompareCard pairs, then the note step with the score revealed at once in a ScoreBubble 72 over "#4 of 31 in Loved", then a ScoreBubble 56 result that confirms it.
 - Profile: name Header, Avatar 100, counts, outlined Buttons, ProfileListRows, two StatCards, Activity tabs, FeedPosts.
@@ -83,6 +83,7 @@ The plan's component list (DEVELOPMENT-MATT §4) covers the screens that have a 
 
 - `BucketButton`, `CompareCard`, `ProgressDots`: the ranking flow (§6.9). BucketButton is a tinted capsule with an orb and a pour rather than §6.9's tinted bar (glass only on a native iOS 26+ build).
 - `BevGlow`: the colour field behind the BucketButtons on the gut check.
+- `BevOfCard`: Bev of the day and Bev of the week at the top of the Feed (M-05), in the slot Featured Bevs had.
 - `UserRow`, `AvatarStack`: People search, followers, the user leaderboard and "Friends who've had it" (§6.8, §6.11, §6.12).
 - `TextField`, `PriceTierPicker`: onboarding and the create-Bev wizard (§6.2, §6.10).
 - `Header`, `SectionHeader`, `IconButton`, `Button`: the header pattern, caps section labels, the close circle and the 36pt profile buttons, all described in §4 and §6 but not named as components.
