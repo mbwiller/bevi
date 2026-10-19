@@ -22,11 +22,7 @@ export type ProfileTab = 'activity' | 'taste';
 
 const TABS = [
   { id: 'activity', label: 'Activity', icon: 'file-text' as const },
-  {
-    id: 'taste',
-    label: 'Taste Profile',
-    icon: 'chart-no-axes-column' as const,
-  },
+  { id: 'taste', label: 'Taste Profile', icon: 'chart-no-axes-column' as const },
 ];
 
 export function parseProfileTab(v: string | string[] | undefined): ProfileTab {
@@ -57,17 +53,7 @@ export interface ActivityListProps {
  * posts (`feed.listUser`, as the Feed shows them) for you and people you follow, else their rankings
  * (`rankings.listUser`) as plain FeedPosts; infinite scroll. Taste Profile is Phase 3.
  */
-export function ActivityList({
-  profile,
-  self,
-  following = false,
-  header,
-  tab,
-  onTab,
-  onEmptyAction,
-  onRefresh,
-  listRef,
-}: ActivityListProps) {
+export function ActivityList({ profile, self, following = false, header, tab, onTab, onEmptyAction, onRefresh, listRef }: ActivityListProps) {
   const { colors } = useTheme();
   const router = useRouter();
   // Posts for you and people you follow (feed.listUser returns nothing for anyone else); follow or
