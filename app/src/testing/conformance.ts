@@ -110,6 +110,7 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       expect(await api.getSession()).toBeNull();
       await expectCode(api.profile.getMe(), 'unauthorized');
       await expectCode(api.feed.getFeed(), 'unauthorized');
+      await expectCode(api.feed.getBevOfPeriod(), 'unauthorized');
       await expectCode(api.rankings.listMine(), 'unauthorized');
       await expectCode(api.categories.list(), 'unauthorized');
       await expectCode(api.deleteAccount(), 'unauthorized');
@@ -592,6 +593,23 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
         expect(typeof f.heroImageUrl).toBe('string');
         expect(typeof f.startsAt).toBe('string');
       }
+    });
+
+    it('getBevOfPeriod: a ranking now makes both periods current; a minor never gets an alcoholic winner', async () => {
+      await newUser({ birthdate: ADULT_BIRTHDATE });
+      await api.rankings.submitRanking({ bevId: options.alcoholicBevId, bucket: 'LOVED', insertIndex: 0, expectedBucketSize: 0, comparisons: [] });
+      const { day, week } = await api.feed.getBevOfPeriod();
+      expect(day).toMatchObject({ isCurrent: true });
+      expect(day!.periodStart).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(day!.rankingsInPeriod).toBeGreaterThanOrEqual(1);
+      expect(typeof day!.bev.bayesScore).toBe('number');
+      expect(week).toMatchObject({ isCurrent: true });
+      expect(week!.periodStart <= day!.periodStart).toBe(true);
+
+      await newUser({ birthdate: MINOR_BIRTHDATE(new Date()) });
+      const minorCats = new Set((await api.categories.list()).map((c) => c.id));
+      const minor = await api.feed.getBevOfPeriod();
+      for (const w of [minor.day, minor.week]) if (w) expect(minorCats.has(w.bev.categoryId)).toBe(true);
     });
 
     it('leaderboard.bevs: Bayesian order, ≥ MIN_RATERS ratings, myScore when ranked', async () => {

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   ApiError,
+  type BevOfPeriod,
   type FeaturedBev,
   type FeedApi,
   type FeedItem,
@@ -9,7 +10,16 @@ import {
   type Profile,
 } from '@bevi/shared';
 import { mapError } from './errors';
-import { mapBevSummary, mapFeedItem, mapProfile, publicUrl, type FeedRpcRow, type ProfileViewRow } from './mappers';
+import {
+  mapBevOfPeriod,
+  mapBevSummary,
+  mapFeedItem,
+  mapProfile,
+  publicUrl,
+  type BevOfPeriodRpcRow,
+  type FeedRpcRow,
+  type ProfileViewRow,
+} from './mappers';
 import { clampLimit, decodeCursor, encodeCursor } from './paging';
 
 async function requireUserId(client: SupabaseClient): Promise<string> {
@@ -94,6 +104,13 @@ export function createFeedApi(client: SupabaseClient): FeedApi {
         startsAt: row.starts_at,
         endsAt: row.ends_at,
       }));
+    },
+
+    async getBevOfPeriod(): Promise<BevOfPeriod> {
+      await requireUserId(client);
+      const { data, error } = await client.rpc('get_bev_of_period');
+      if (error) throw mapError(error);
+      return mapBevOfPeriod(client, (data ?? []) as BevOfPeriodRpcRow[]);
     },
 
     async like(id: string): Promise<void> {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BUCKET_ORDER } from '@bevi/shared';
-import { bucketFromDb, bucketToDb, feedKindFromDb, mapFlavorProfile } from '../src/mappers.ts';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { bucketFromDb, bucketToDb, feedKindFromDb, mapBevOfPeriod, mapFlavorProfile, type BevOfPeriodRpcRow } from '../src/mappers.ts';
 
 describe('bucket <-> smallint', () => {
   it('round-trips every Bucket value through the DB encoding', () => {
@@ -57,5 +58,39 @@ describe('mapFlavorProfile', () => {
       serve: 'cold',
       source: 'catalog',
     });
+  });
+});
+
+describe('mapBevOfPeriod', () => {
+  // No photo paths, so publicUrl never touches the client.
+  const client = {} as SupabaseClient;
+  const row = (period: string, over: Partial<BevOfPeriodRpcRow> = {}): BevOfPeriodRpcRow => ({
+    period,
+    period_start: '2026-10-19',
+    is_current: true,
+    rankings_in_period: 2,
+    bev_id: '00000000-0000-0000-0000-0000000000b1',
+    bev_name: 'Mexican Coca-Cola',
+    bev_brand: 'Coca-Cola',
+    bev_flavor: null,
+    bev_category_id: 'soda',
+    bev_thumb_path: null,
+    bev_price_tier: 2,
+    bev_price_estimated: false,
+    bev_rating_count: 1,
+    bev_bayes_score: '6.00',
+    ...over,
+  });
+
+  it('maps the day and week rows, carrying the score the winner was picked by', () => {
+    const out = mapBevOfPeriod(client, [row('day', { period_start: '2026-10-21', is_current: false }), row('week')]);
+    expect(out.day).toMatchObject({ periodStart: '2026-10-21', isCurrent: false, rankingsInPeriod: 2 });
+    expect(out.day!.bev).toMatchObject({ id: '00000000-0000-0000-0000-0000000000b1', ratingCount: 1, bayesScore: 6, photoUrl: null });
+    expect(out.week).toMatchObject({ periodStart: '2026-10-19', isCurrent: true });
+  });
+
+  it('maps a missing period to null', () => {
+    expect(mapBevOfPeriod(client, [row('week')])).toMatchObject({ day: null });
+    expect(mapBevOfPeriod(client, [])).toStrictEqual({ day: null, week: null });
   });
 });
