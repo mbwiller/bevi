@@ -152,7 +152,7 @@ export declare function FeedPost(props: FeedPostProps): React.ReactElement;
 export interface FeaturedCardProps { title: string; subtitle?: string; src?: string; art?: BevArtProps; tint?: string; onClick?: () => void; className?: string }
 export declare function FeaturedCard(props: FeaturedCardProps): React.ReactElement;
 
-/** Bev of the day / Bev of the week on the Feed: a caps label, the Bev's 164pt tile, its name and the score it won with. Not a post. */
+/** Bev of the day / Bev of the week on the Feed: half of a pair, a caps label, the Bev's square tile (it follows the card's width), its name and the score it won with. Not a post. */
 export interface BevOfCardProps {
   period?: 'day' | 'week'; bev: Bev;
   /** The Bayesian score it won with. */
