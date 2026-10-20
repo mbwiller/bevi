@@ -163,7 +163,10 @@ export function FeedPost({ actor = {}, you = false, bev, score, scoreVariant, no
       ) : comments.length ? (
         <ul className="bv-post-comments" aria-label="Comments">
           {comments.slice(0, INLINE_COMMENTS).map((c, i) => (
-            <li key={c.id || i} className="body bv-post-comment"><b>{(c.author && c.author.handle) || ''}</b> {c.body}</li>
+            <li key={c.id || i} className="bv-post-comment">
+              <Avatar name={(c.author && (c.author.name || c.author.handle)) || ''} src={c.author && c.author.src} size={24} />
+              <p className="body bv-post-comment-text"><b>{(c.author && c.author.handle) || ''}</b> {c.body}</p>
+            </li>
           ))}
         </ul>
       ) : null}

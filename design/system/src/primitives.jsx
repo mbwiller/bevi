@@ -34,12 +34,33 @@ export function PriceTier({ tier = 1, estimated = false, className }) {
   );
 }
 
-/** Circle with initials on `avatarFill`, or a photo. Sizes 32 (tab bar), 44, 60 (posts), 100 (profile). */
+/** Circle with initials on `avatarFill`, or a photo. Sizes 24 (inline comments), 32 (tab bar, comments sheet), 44, 60 (posts), 100 (profile). */
 export function Avatar({ name = '', src, size = 44, className, ring = false }) {
   return (
     <span className={cx('bv', 'bv-avatar', 'bv-avatar-' + size, ring && 'bv-avatar-ring', className)} style={{ width: size, height: size }} role="img" aria-label={name}>
       {src ? <img src={src} alt="" /> : <span className="bv-avatar-initials">{initialsOf(name)}</span>}
     </span>
+  );
+}
+
+/**
+ * Your own photo where it can be changed (Edit profile, onboarding): Avatar 100 over "Add a photo" /
+ * "Change photo" in `primary` and "Remove" in `textSecondary`. `busy` covers the circle with a spinner while
+ * the picture uploads; the photo is saved as soon as it lands, with no Save step.
+ */
+export function AvatarPicker({ name = '', src, busy = false, error, onChange, onRemove, className }) {
+  return (
+    <div className={cx('bv', 'bv-avatarpicker', className)}>
+      <span className="bv-avatarpicker-circle">
+        <Avatar name={name} src={src} size={100} />
+        {busy ? <span className="bv-avatarpicker-busy" role="status" aria-label="Uploading your photo"><span className="bv-spinner" aria-hidden="true" /></span> : null}
+      </span>
+      <span className="bv-avatarpicker-actions">
+        <button type="button" className="body bv-avatarpicker-change" onClick={onChange} disabled={busy}>{src ? 'Change photo' : 'Add a photo'}</button>
+        {src && onRemove ? <button type="button" className="body bv-avatarpicker-remove" onClick={onRemove} disabled={busy} aria-label="Remove photo">Remove</button> : null}
+      </span>
+      {error ? <p className="caption bv-field-errmsg bv-avatarpicker-error" role="alert">{error}</p> : null}
+    </div>
   );
 }
 

@@ -55,11 +55,25 @@ export declare function ScoreBubble(props: ScoreBubbleProps): React.ReactElement
 export interface PriceTierProps { tier: 1 | 2 | 3 | 4; estimated?: boolean; className?: string }
 export declare function PriceTier(props: PriceTierProps): React.ReactElement;
 
-export interface AvatarProps { name: string; src?: string; size?: 32 | 44 | 60 | 100; ring?: boolean; className?: string }
+export interface AvatarProps { name: string; src?: string; size?: 24 | 32 | 44 | 60 | 100; ring?: boolean; className?: string }
 export declare function Avatar(props: AvatarProps): React.ReactElement;
 
 export interface AvatarStackProps { people: Person[]; size?: number; max?: number; className?: string }
 export declare function AvatarStack(props: AvatarStackProps): React.ReactElement;
+
+export interface AvatarPickerProps {
+  name: string; src?: string;
+  /** The picture is uploading: a spinner over the circle, both buttons disabled. */
+  busy?: boolean;
+  /** Why the last upload failed, as a `scoreLow` caption. */
+  error?: string;
+  /** "Add a photo" / "Change photo": opens the photo picker. */
+  onChange?: () => void;
+  /** "Remove": back to initials. Only shown with a photo. */
+  onRemove?: () => void;
+  className?: string;
+}
+export declare function AvatarPicker(props: AvatarPickerProps): React.ReactElement;
 
 export interface PillProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'filled' | 'outlined'; icon?: string; iconRight?: string;

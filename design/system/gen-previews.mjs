@@ -31,6 +31,8 @@ const SAMPLES = `
     matcha: { name: 'Iced Matcha Latte', brand: 'Starbucks', category: 'tea', priceTier: 2, art: { kind: 'icedCup', color: '#9cbf6b', accent: '#1e7a46' } },
   };
   var ME = { name: 'Matt Willer', handle: 'mbwiller' };
+  // A stand-in profile photo for previews (an SVG gradient; real ones are the person's upload).
+  var PHOTO = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F2B263"/><stop offset="1" stop-color="#8E44AD"/></linearGradient></defs><rect width="100" height="100" fill="url(#g)"/><circle cx="50" cy="40" r="18" fill="#FFF4E0"/><ellipse cx="50" cy="86" rx="30" ry="22" fill="#FFF4E0"/></svg>');
   var ARJUN = { name: 'Arjun Cheema', handle: 'acheema5' };
   var FRIENDS = [{ name: 'Jack Torres', handle: 'jackt' }, { name: 'Priya Nair', handle: 'priya' }, { name: 'Sam Okafor', handle: 'samo' }, { name: 'Lena Park', handle: 'lenap' }, ARJUN, { name: 'Diego Ruiz', handle: 'dr' }];
 `;
@@ -152,10 +154,18 @@ h('div', { className: 'bv-bevof-pair' },
 // ---------- People ----------
 P.Avatar = [{ group: 'People', height: 150 }, '', `
 h('div', { className: 'pv', style: { alignItems: 'flex-end' } },
+  L('24 · comments', h(B.Avatar, { name: FRIENDS[1].name, size: 24 })),
   L('32 · tab bar', h(B.Avatar, { name: ME.name, size: 32 })),
   L('44 · rows', h(B.Avatar, { name: ARJUN.name, size: 44 })),
   L('60 · posts', h(B.Avatar, { name: 'Priya Nair', size: 60 })),
   L('100 · profile', h(B.Avatar, { name: ME.name, size: 100 })))`];
+
+P.AvatarPicker = [{ group: 'People', height: 230, subtitle: 'Edit profile and onboarding' }, '', `
+h('div', { className: 'pv', style: { alignItems: 'flex-start', gap: 40 } },
+  L('no photo', h(B.AvatarPicker, { name: ME.name })),
+  L('with a photo', h(B.AvatarPicker, { name: ME.name, src: PHOTO, onRemove: function () {} })),
+  L('uploading', h(B.AvatarPicker, { name: ME.name, src: PHOTO, busy: true, onRemove: function () {} })),
+  L('failed', h(B.AvatarPicker, { name: ME.name, error: "Couldn't upload your photo. Try another one." })))`];
 
 P.AvatarStack = [{ group: 'People', height: 96 }, '', `
 h('div', { className: 'pv', style: { gap: 40 } },

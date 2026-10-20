@@ -7,8 +7,8 @@ import { radius, useTheme } from '@/theme';
 export interface AvatarProps {
   name: string;
   src?: string;
-  /** 32 (tab bar), 44 (people rows), 60 (feed posts), 100 (profile hero). */
-  size?: 32 | 44 | 60 | 100;
+  /** 24 (a comment inline on a post), 32 (tab bar), 44 (people rows), 60 (feed posts), 100 (profile hero). */
+  size?: 24 | 32 | 44 | 60 | 100;
   /** A 2pt `surface` outline, for overlapping stacks. */
   ring?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -16,6 +16,7 @@ export interface AvatarProps {
 
 /** Initials sizes from the design system (bundle.css `.bv-avatar-*`). */
 const INITIALS: Record<number, TextStyle> = {
+  24: { fontSize: 9 },
   32: { fontSize: 12 },
   44: { fontSize: 16 },
   60: { fontSize: 22 },

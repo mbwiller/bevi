@@ -13,3 +13,10 @@ it('shows a photo instead of initials', async () => {
   expect(screen.queryByText('SO')).toBeNull();
   expect(screen.getByLabelText('Sam Okafor')).toBeTruthy();
 });
+
+it('draws the 24pt size for inline comments with 9pt initials', async () => {
+  await render(<Avatar name="Sam Okafor" size={24} />);
+  const circle = screen.getByLabelText('Sam Okafor');
+  expect(circle.props.style).toEqual(expect.arrayContaining([expect.objectContaining({ width: 24, height: 24 })]));
+  expect(screen.getByText('SO').props.style).toEqual(expect.arrayContaining([expect.objectContaining({ fontSize: 9 })]));
+});

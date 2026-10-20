@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Profile } from '@bevi/shared';
 
 import { useMe, useSetBirthDate, useUpdateMe } from '@/api/hooks';
-import { Avatar } from '@/components/Avatar';
+import { AvatarPicker } from '@/components/AvatarPicker';
 import { Button } from '@/components/Button';
 import { ErrorState } from '@/components/ErrorState';
 import { Header } from '@/components/Header';
@@ -14,6 +14,7 @@ import { TextField } from '@/components/TextField';
 import { FormError } from '@/features/auth/AuthScreen';
 import { focusField } from '@/features/auth/focusField';
 import { errorField, formErrorMessage } from '@/features/auth/formError';
+import { useAvatarUpload } from '@/features/profile/useAvatarUpload';
 import { birthdateProblem, deviceTimezone, isUnder21, maskBirthdate } from '@/features/onboarding/birthdate';
 import { spacing, type, useTheme } from '@/theme';
 
@@ -54,6 +55,7 @@ function ProfileForm({ me }: { me: Profile }) {
   const [birthdate, setBirthdate] = useState(me.birthdate ?? '');
   const [error, setError] = useState<{ field?: 'displayName' | 'birthdate'; message: string } | null>(null);
   const [saving, setSaving] = useState(false);
+  const avatar = useAvatarUpload();
   const birthdateLocked = me.birthdate !== null;
 
   const name = displayName.trim();
@@ -89,7 +91,15 @@ function ProfileForm({ me }: { me: Profile }) {
   return (
     <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
       <View style={styles.column}>
-        <Avatar name={name || me.handle} src={me.avatarUrl ?? undefined} size={100} style={styles.avatar} />
+        <AvatarPicker
+          name={name || me.handle}
+          src={me.avatarUrl ?? undefined}
+          busy={avatar.busy}
+          error={avatar.error}
+          onChange={() => void avatar.choose()}
+          onRemove={me.avatarUrl ? () => void avatar.remove() : undefined}
+          style={styles.avatar}
+        />
         <TextField
           label="Display name"
           value={displayName}
@@ -142,6 +152,6 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   body: { flexGrow: 1, padding: spacing.gutter },
   column: { width: '100%', maxWidth: FORM_MAX, alignSelf: 'center', gap: spacing.lg },
-  avatar: { alignSelf: 'center', marginBottom: spacing.sm },
+  avatar: { marginBottom: spacing.sm },
   state: { flex: 1 },
 });

@@ -63,8 +63,12 @@ export function useUpdateMe() {
     mutationFn: (patch: UpdateMeInput) => api.profile.updateMe(patch),
     onSuccess: (profile) => {
       onProfileSaved(qc, profile);
+      // The profile is embedded in every surface that draws the person (posts, comment authors,
+      // people rows, follow lists, the leaderboard), so a new name or photo refreshes them all.
       void qc.invalidateQueries({ queryKey: keys.users.all });
       void qc.invalidateQueries({ queryKey: keys.feed() });
+      void qc.invalidateQueries({ queryKey: keys.commentsAll });
+      void qc.invalidateQueries({ queryKey: keys.follows.all });
       void qc.invalidateQueries({ queryKey: keys.leaderboard.users() });
     },
   });
