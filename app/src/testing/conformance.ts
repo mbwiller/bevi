@@ -214,6 +214,25 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       await expectCode(api.profile.updateMe({ handle: first.handle }), 'conflict');
     });
 
+    it('updateMe sets the profile photo from an avatar upload and clears it with null; any other asset is validation', async () => {
+      await newUser();
+      const file = new Blob(['img'], { type: 'image/jpeg' });
+      const up = await api.media.upload({ kind: 'avatar', file, mimeType: 'image/jpeg' });
+      expect(up.status).toBe('ready');
+      const me = await api.profile.updateMe({ avatarAssetId: up.assetId });
+      expect(typeof me.avatarUrl).toBe('string');
+      expect((await api.profile.getMe()).avatarUrl).toBe(me.avatarUrl);
+
+      const unknown = await expectCode(api.profile.updateMe({ avatarAssetId: 'no-such-asset' }), 'validation');
+      expect(unknown.detail).toMatchObject({ field: 'avatarAssetId', reason: 'unknown_asset' });
+      const photo = await api.media.upload({ kind: 'bev-photo', file, mimeType: 'image/jpeg' });
+      await waitForAsset(photo.assetId);
+      await expectCode(api.profile.updateMe({ avatarAssetId: photo.assetId }), 'validation');
+      expect((await api.profile.getMe()).avatarUrl).toBe(me.avatarUrl);
+
+      expect((await api.profile.updateMe({ avatarAssetId: null })).avatarUrl).toBeNull();
+    });
+
     it('setBirthDate sets canSeeAlcohol once; a second call is validation', async () => {
       await newUser({ birthdate: null });
       const me = await api.profile.setBirthDate(ADULT_BIRTHDATE);

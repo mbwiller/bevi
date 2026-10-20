@@ -101,7 +101,7 @@ export interface FakeFeatured {
 export interface FakeAsset {
   id: string;
   userId: string;
-  kind: 'bev-photo' | 'label';
+  kind: 'bev-photo' | 'label' | 'avatar';
   url: string;
   mimeType: string;
   /** Background removal "finishes" at this time (status flips to 'ready'). */

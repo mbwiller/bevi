@@ -94,6 +94,12 @@ export interface UpdateMeInput {
   handle?: string;
   timezone?: string;
   onboarded?: boolean;
+  /**
+   * The profile photo: an `assetId` from `media.upload({ kind: 'avatar' })`, or
+   * null to remove the photo (the Avatar falls back to initials). Omitted =
+   * unchanged. Shows as `Profile.avatarUrl` everywhere a profile appears.
+   */
+  avatarAssetId?: string | null;
 }
 
 export interface CheckHandleResult {
@@ -109,7 +115,9 @@ export interface ProfileApi {
   /**
    * Birthdate is not patchable here (see `setBirthDate`).
    * @throws 'unauthorized'; 'validation' (`detail.field`) — malformed handle,
-   *   empty display name, unknown timezone; 'conflict' — handle taken.
+   *   empty display name, unknown timezone, or an `avatarAssetId` that isn't
+   *   the caller's own avatar upload (`detail.reason: 'unknown_asset'`);
+   *   'conflict' — handle taken.
    */
   updateMe(patch: UpdateMeInput): Promise<Profile>;
 
@@ -234,7 +242,8 @@ export interface BevsApi {
 }
 
 export interface UploadMediaInput {
-  kind: 'bev-photo' | 'label';
+  /** 'avatar' is the caller's profile photo, applied with `profile.updateMe({ avatarAssetId })`. */
+  kind: 'bev-photo' | 'label' | 'avatar';
   /** A web `File` or `Blob` (from the image picker / camera input). */
   file: Blob;
   mimeType: string;

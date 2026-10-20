@@ -775,6 +775,17 @@ export class FakeApi implements BeviApi {
             if (displayName.length > DISPLAY_NAME_MAX) invalid('displayName', 'That name is too long');
           }
           if (patch.timezone !== undefined && !isValidTimeZone(patch.timezone)) invalid('timezone', 'Unknown timezone');
+          let avatarUrl = me.avatarUrl;
+          if (patch.avatarAssetId !== undefined) {
+            if (patch.avatarAssetId === null) {
+              avatarUrl = null;
+            } else {
+              // set_avatar's rule: the caller's own upload, to the avatars bucket.
+              const asset = this.db.assets.find((a) => a.id === patch.avatarAssetId && a.userId === me.id && a.kind === 'avatar');
+              if (!asset) invalid('avatarAssetId', "That photo isn't one of your uploads", 'unknown_asset');
+              avatarUrl = asset.url;
+            }
+          }
           const handleChanged = patch.handle !== undefined && patch.handle !== me.handle;
           if (handleChanged) {
             const problem = this.handleProblem(patch.handle!, me.id);
@@ -783,6 +794,7 @@ export class FakeApi implements BeviApi {
             me.handle = patch.handle!;
           }
           me.displayName = displayName;
+          me.avatarUrl = avatarUrl;
           if (patch.timezone !== undefined) me.timezone = patch.timezone;
           if (patch.onboarded !== undefined) me.onboarded = patch.onboarded;
           this.commit();

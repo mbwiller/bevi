@@ -121,6 +121,31 @@ describe.skipIf(!url || !publishableKey)('catalog, photos and privacy, against a
     }
   });
 
+  it('a profile photo: upload to avatars, set it with updateMe, read it back, remove it', async () => {
+    const { api, session } = await newUser('1990-01-01');
+    try {
+      const up = await api.media.upload({ kind: 'avatar', file: new Blob([PNG], { type: 'image/png' }), mimeType: 'image/png' });
+      expect(up.url).toContain('/avatars/');
+
+      const me = await api.profile.updateMe({ avatarAssetId: up.assetId });
+      expect(me.avatarUrl).toBe(up.url);
+      expect((await api.profile.getMe()).avatarUrl).toBe(up.url);
+
+      // Only the caller's own upload to `avatars` counts (set_avatar).
+      const missing = await errorOf(api.profile.updateMe({ avatarAssetId: `${session.userId}/missing.png` }));
+      expect(isApiError(missing) && missing.code === 'validation').toBe(true);
+      expect(isApiError(missing) ? missing.detail : null).toMatchObject({ field: 'avatarAssetId', reason: 'unknown_asset' });
+      const photo = await api.media.upload({ kind: 'bev-photo', file: new Blob([PNG], { type: 'image/png' }), mimeType: 'image/png' });
+      const wrongBucket = await errorOf(api.profile.updateMe({ avatarAssetId: photo.assetId }));
+      expect(isApiError(wrongBucket) && wrongBucket.code === 'validation').toBe(true);
+      expect((await api.profile.getMe()).avatarUrl).toBe(up.url);
+
+      expect((await api.profile.updateMe({ avatarAssetId: null })).avatarUrl).toBeNull();
+    } finally {
+      await api.deleteAccount();
+    }
+  });
+
   it("never exposes another user's birth date", async () => {
     const a = await newUser('1990-05-05');
     const b = await newUser('1991-06-06');
