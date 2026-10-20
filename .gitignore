@@ -14,3 +14,7 @@ supabase/tests/generated/
 data/catalog/raw/
 supabase/.branches/
 .vercel/
+
+# Claude Code agent worktrees and personal settings (local, never committed)
+.claude/worktrees/
+.claude/settings.local.json

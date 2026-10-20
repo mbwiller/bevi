@@ -27,6 +27,30 @@
 -- The third divergence A-14 lists, `affinity_z` having no writer, was closed
 -- by A-11 (20261019000100_taste_profile.sql). Nothing here touches it.
 --
+-- WHAT THIS DOES NOT CLOSE, so the header is not read as a wider claim than it
+-- is. Both are A-14 follow-ups on the board:
+--
+--   * Divergence 2 is closed FOR THE LEADERBOARD ONLY. The same
+--     `coalesce((select mean_score from global_stats limit 1), 0)` is still
+--     live in get_feed (20261014000300:244), get_user_feed (20261018000300:75)
+--     and bev_of_period_at (20261018000100:55), whose package twin is also
+--     globalPrior() (FakeApi toSummary, and bev of period). All three could
+--     call public.bayes_prior(null) — each runs inside a definer owned by
+--     postgres, so the revoke is not in the way — but they are the live feed's
+--     hot path and changing the figure they display is not what A-14 asked
+--     for. Until then an empty system shrinks the leaderboard toward 5.0 and
+--     the feed card toward 0. It needs global_stats.rating_count = 0 to be
+--     observable at all, so prod never sees it.
+--   * The two branches below do not have the same freshness or precision. The
+--     category branch is live off `rankings` and exact; the global branch
+--     reads global_stats.mean_score, which is numeric(5,3) written by a
+--     15-minute cron (20261011000800). globalPrior() returns an exact mean, so
+--     bayes_prior(null) is its twin only to 3 decimals and only just after the
+--     cron. Making the global branch live would put a full scan of `rankings`
+--     on every leaderboard call; the better fix is to materialise category
+--     means in refresh_global_stats, which also removes the per-call aggregate
+--     below. Deferred deliberately, as a follow-up.
+--
 -- Deliberately NOT changed:
 --   * `bev_stats.bayes_score`, written by refresh_global_stats. That column is
 --     one number per Bev, read by mapBevSummary for every BevSummary outside
@@ -57,13 +81,19 @@ set search_path = public, extensions;
 -- merged after people ranked it still happened, and the prior is a statement
 -- about the category's taste, not about what is currently on the shelf.
 --
--- Internal: the leaderboard calls it as its definer. No client role needs it.
+-- Internal: no client role needs it, and the revoke below says so.
+--
+-- Invoker on purpose, as bev_of_period_at (20261018000100) is and for the same
+-- reason: its only caller, get_bev_leaderboard(), is a definer owned by
+-- postgres, so this already runs as postgres there. A grant added to it by
+-- mistake later cannot then hand a client the mean score of an age-gated
+-- category with RLS bypassed; it would read through rankings_select instead.
 create or replace function public.bayes_prior(p_category_id text default null)
 returns numeric
 language sql
 stable
-security definer
-set search_path = public, extensions
+security invoker
+set search_path = public, extensions, pg_temp
 as $$
   with g as (
     select mean_score, rating_count from public.global_stats limit 1
@@ -84,7 +114,10 @@ as $$
          end::numeric;
 $$;
 
-alter function public.bayes_prior(text) owner to postgres;
+-- `from public` strips the implicit grant every new function gets; anon and
+-- authenticated are named separately because Supabase's default privileges
+-- grant to them explicitly, which a revoke from PUBLIC would not touch.
+-- service_role keeps it, as every other internal helper here does.
 revoke execute on function public.bayes_prior(text) from public, anon, authenticated;
 
 -- ============================================================================
@@ -109,9 +142,15 @@ returns table (
 language sql
 stable
 security definer
-set search_path = public, extensions
+set search_path = public, extensions, pg_temp
 as $$
-  with prior as (select public.bayes_prior(p_category_id) as m)
+  -- `materialized` is load-bearing. Without it the CTE is inlined, then pulled
+  -- up into the cross join, and bayes_prior() — which cannot itself be inlined
+  -- (it has a CTE and a SET clause) and is stable rather than immutable, so it
+  -- is never folded to a constant — ends up evaluated once per candidate row
+  -- instead of once per call. The old code was safe by accident, because a
+  -- scalar sub-SELECT becomes an InitPlan.
+  with prior as materialized (select public.bayes_prior(p_category_id) as m)
   select b.id, b.name, b.brand, b.flavor, b.category_id, b.photo_path, b.thumb_path,
          b.price_tier, s.rating_count, s.avg_score,
          public.bayes_score(s.sum_score, s.rating_count, p.m, 3)::numeric
@@ -133,5 +172,9 @@ as $$
    limit p_limit;
 $$;
 
+-- `create or replace` keeps the owner and the ACL 20261011000300 set. Both are
+-- re-stated anyway: a definer that is ever dropped and recreated by a different
+-- role would silently change whose rights its body runs with.
+alter function public.get_bev_leaderboard(text, int) owner to postgres;
 revoke execute on function public.get_bev_leaderboard(text, int) from public, anon;
 grant execute on function public.get_bev_leaderboard(text, int) to authenticated;

@@ -16,7 +16,7 @@ Source: `CONVERSATION-2.md` (raw transcript). This file turns that conversation 
 | Task | What | Owner | Status | Blocked by | Unblocks |
 |---|---|---|---|---|---|
 | **A-15 fix (urgent)** | **The Neo4j keep-alive has never run.** All of its daily runs since 2026-10-15 logged `NEO4J_URI is not set; graph keep-alive skipped`: the `NEO4J_*` GitHub Actions secrets are empty. Resume the instance in the Aura console if it's paused, set the four secrets (and the Supabase function secrets), and re-run `graph-keepalive` by hand. **Aura deletes an instance after 30 days paused** | Arjun | **Do first** | — | Everything on the graph |
-| **A-14** | Leaderboard parity in SQL (prior, fallback, total order) | Arjun | **In review: #107**, CI green. Push `20261019000200` to prod, then merge | — | M-22's cross-check |
+| **A-14** | Leaderboard parity in SQL (prior, fallback, total order) | Arjun | **#107**, rebased on main, reviewed three ways. Merges once `20261019000200` is on prod. Follow-ups are listed under A-14 in §4 | — | M-22's cross-check |
 | **M-19** | Taste Profile screen | Matt | **Ready** | — | — |
 | **D-04** | The finer category list, `design/taxonomy.md` (high effort), **plus the 378 catalog Bevs assigned to leaves** | Matt | **Ready** | — | A-13, then M-21 |
 | **M-22** | Maths review: paper ↔ `@bevi/ranking` ↔ SQL | Matt | **Ready** | — | Any A-14 follow-ups |
@@ -721,6 +721,12 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - Needs: D-04 (Matt). Ships `Category.parentId` (the S-14 part 2 field).
 
 **A-14 · SQL ↔ TypeScript parity follow-ups.** `be/ranking-parity`
+- **Follow-ups found by the three reviews of #107 (2026-10-19), none of them blocking it.** They are a second `be/*` PR, and M-22 may add to the list:
+  - **The 0 prior survives outside the leaderboard.** `coalesce((select mean_score from global_stats limit 1), 0)` is still live in `get_feed` (`20261014000300:244`), `get_user_feed` (`20261018000300:75`) and `bev_of_period_at` (`20261018000100:55`), whose package twin is `globalPrior()` too. Each could call `public.bayes_prior(null)`. Only observable while `global_stats.rating_count = 0`, so prod never sees it, but it makes an empty system internally inconsistent.
+  - **`bayes_prior`'s two branches differ in freshness and precision:** the category branch is live and exact, the global branch reads `global_stats.mean_score`, a `numeric(5,3)` written by a 15-minute cron. Materialising category means in `refresh_global_stats` fixes this *and* removes the per-call `rankings ⋈ bevs` aggregate, which no index serves (`bevs_category_idx` is partial on `status = 'active'` and the prior deliberately does not filter status).
+  - **The leaderboard returns an unrounded `numeric`** where `bev_stats.bayes_score` and `bev_of_period_at` are `numeric(4,2)` and the FakeApi applies `round2`, so fake and real disagree in the digits. Pre-existing.
+  - **Matt's lane:** `compareCodePoints` (`packages/ranking/src/bayesian.ts:28-30`) compares UTF-16 code units, while `collate "C"` and the paper's §5 say code points. They differ only when one name holds an astral character and the other U+E000–U+FFFF. Every one of the 378 catalog names is ASCII, but `create_bev` does not restrict names. Needs a `RANKING_VERSION` bump and regenerated vectors.
+  - **Docs:** `docs/bevi-ranking-math.tex` §11 needs `impl:prior` narrowed to the functions that really are still global, the leaderboard-order note removed, and `impl:affinity` struck (A-11 closed it). Matt owns the paper. `shared/src/types.ts:113` documents `BevSummary.bayesScore` as the global score, but a category board now puts the category-prior score there in both engines — a one-line contract doc change.
 - **In review: #107 (Arjun, 2026-10-19).**
   - `bayes_prior(p_category_id)` mirrors `globalPrior` and `categoryPrior`.
   - The empty-system fallback is 5.0, not 0.
