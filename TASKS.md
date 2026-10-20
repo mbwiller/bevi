@@ -7,6 +7,65 @@ Source: `CONVERSATION-2.md` (raw transcript). This file turns that conversation 
 - **The Bev graph moves to a graph database.** Bevs, categories, brands and flavour profiles become nodes in **Neo4j AuraDB Free** with similarity-weighted edges (Pepsi next to Coke); Supabase stays the system of record for the Bev row, users and rankings; a nightly job keeps the two in step and writes the edges back to Postgres for the hot path. §1b, §1d, A-15..A-17, M-24.
 - **The map lives in the Search tab.** The centre tab becomes **Search**: the Bev search bar on top, a live NYC map underneath that you can pan in place or open full screen, search results sliding over the map. The map copies Beli's map UI (three reference screenshots in `bevi-ui-inspiration/beli-map-images/`), is **strictly constrained to New York City**, runs on **Google Maps JS** with the Bev Maps key, draws venues imported from **OpenStreetMap** plus our own curation. §1b, §1c, M-15, M-16, A-08. *(The Find Bev button and "Where did you have it?" were removed on 2026-10-19.)*
 
+## Now: the board (2026-10-19)
+
+**Start here.** Each of us has a plan: [`NEXT-MATT.md`](NEXT-MATT.md) and [`NEXT-ARJUN.md`](NEXT-ARJUN.md). Both list what to build first, what blocks whom, and which files we both touch. Everything below this board is history and per-task detail. When you start or finish a task, update its row here in the same PR.
+
+**P0 and P1: finish these before P2 (§0).**
+
+| Task | What | Owner | Status | Blocked by | Unblocks |
+|---|---|---|---|---|---|
+| **A-15 fix (urgent)** | **The Neo4j keep-alive has never run.** All of its daily runs since 2026-10-15 logged `NEO4J_URI is not set; graph keep-alive skipped`: the `NEO4J_*` GitHub Actions secrets are empty. Resume the instance in the Aura console if it's paused, set the four secrets (and the Supabase function secrets), and re-run `graph-keepalive` by hand. **Aura deletes an instance after 30 days paused** | Arjun | **Do first** | — | Everything on the graph |
+| **A-14** | Leaderboard parity in SQL (prior, fallback, total order) | Arjun | **In review: #107**, CI green. Push `20261019000200` to prod, then merge | — | M-22's cross-check |
+| **M-19** | Taste Profile screen | Matt | **Ready** | — | — |
+| **D-04** | The finer category list, `design/taxonomy.md` (high effort), **plus the 378 catalog Bevs assigned to leaves** | Matt | **Ready** | — | A-13, then M-21 |
+| **M-22** | Maths review: paper ↔ `@bevi/ranking` ↔ SQL | Matt | **Ready** | — | Any A-14 follow-ups |
+| **M-26 export** | Run `packages/ranking/eval/export.sql` on prod and hand Matt the file (outside the repo) | Arjun | **Ready**, about 15 min | — | Real baseline numbers for M-27 and A-16 |
+| **S-04 + A-04** | Explore backend (read-only posts, D-15), one combined PR including the FakeApi | Arjun | **Ready** | — | M-04 |
+| **M-04** | Explore screen | Matt | Waiting | S-04 + A-04 | — |
+| **A-16 (1) + S-14 (2)** | **The Bev graph:** embeddings, weighted `SIMILAR_TO` edges in Neo4j, a `bev_edges` mirror in Postgres, nightly rebuild plus new-Bev updates, D-11 inference. Includes the contract (`similar`, `similarities`, `listBucketBevs`) | Arjun | **Ready** | — | M-27, M-21 |
+| **M-27** | Use the Bev graph: recommendations read edge weights, plus a "Bevs like this" row | Matt | Waiting | A-16 (1) + S-14 (2) | — |
+| **A-13** | Category hierarchy: `categories.parent_id` in Postgres, `CHILD_OF` in Neo4j, `Category.parentId` | Arjun | Waiting | D-04 | M-21, a better tree term |
+| **M-21** | Category-aware placement (compare a new mocha with mochas first) | Matt | Waiting | A-13, A-16 (1) | — |
+| **M-28** | Taste formulas for the second increment (`packages/ranking/src/graph.ts`) | Matt | Later | A-16 (1) | A-16 (2) |
+| **A-16 (2)** | **The taste graph:** `RANKED` edges updated on every ranking, taste neighbours, the co-rating weight | Arjun | Later | A-16 (1), M-28 | — |
+
+**P2: after P0 and P1.**
+
+| Task | What | Owner | Status | Blocked by | Unblocks |
+|---|---|---|---|---|---|
+| **S-10 + A-08** | Venues (Upper East Side and Roosevelt Island first) and the trimmed venues contract | Arjun | Ready once P0/P1 are done | — | M-16 |
+| **M-16** | Map UI in the Search tab | Matt | Waiting | S-10 + A-08, and the Maps key from Arjun | — |
+| **S-13 + A-12** | Duplicates: `duplicateOfId` and the `merge_bev` admin routine (plan approved) | Arjun | Ready once P0/P1 are done | — | M-20 |
+| **M-20** | "Duplicate of…" step in the report sheet | Matt | Waiting | S-13 + A-12 | — |
+
+**Joint housekeeping, any time:**
+- Decide whether to turn on `deploy-dev`.
+- Drop `backup.feed_events_20261014`.
+- Update `DEVELOPMENT-MATT.md` §5, §6.8 and §6.16 (they still describe Add Bev and the Bevs · People tabs).
+
+---
+
+**Graph and kickoff decisions (2026-10-19, Matt and Arjun).**
+- **Neo4j stays, and it holds the Bev graph** (reverses Claude's "Postgres only" proposal):
+  - Bevs, categories, brands and flavours are nodes, joined by weighted `SIMILAR_TO` edges (Pepsi next to Coke). We chose it because a weighted Bev graph is the right model for similarity, recommendations and placement, not because of data size.
+  - Supabase stays the system of record. The app reads the `bev_edges` mirror in Postgres, so nothing a user taps waits on Neo4j, and the app still works if the instance pauses. "Neo4j is never on a request path" stays.
+  - This **reverses #87's narrowing:** Bev-to-Bev edges come first (A-16 (1)), and taste neighbourhoods come second (A-16 (2)). `docs/graph_db_implementation.md` and `docs/graph.md` get updated in A-16 (1)'s PR.
+- **When the graph updates:**
+  - Bev-to-Bev edges depend on the catalog, not on ratings. So a new or edited Bev gets its edges right away (an async database webhook to an Edge Function), and a nightly full rebuild re-checks everything. The rebuild doubles as the keep-alive.
+  - The rating-driven parts (`RANKED` edges, taste neighbours, the co-rating weight) update on every ranking in A-16 (2), also async, so a ranking never waits on the graph.
+  - The free tier doesn't limit how often we run: it has no query cap. Its limits are 200,000 nodes and 400,000 relationships (we use under 1%), a pause after 72 hours with no activity, and no Graph Data Science, which we don't need (`edgeWeight` in `@bevi/ranking` computes the weights).
+- **Embeddings are back in A-16 (1):** `gte-small`, free inside Supabase Edge Functions. `edgeWeight` gives them 0.30, and the Coke–Pepsi ≥ 0.8 sanity check needs them.
+- **D-11 decided: option 1.** A user-created Bev copies the flavour profile of its most similar seeded Bev, marked `inferred` (structure in A-16 (1)).
+- **D-04:** Matt writes the category list with high effort.
+- **Duplicates plan (S-13, A-12, M-20) approved** as proposed.
+- **The trimmed S-10 approved.** A "contract" is the shared `shared/src` interface, and it ships inside the feature's combined PR.
+- **New tasks:** M-27 (use the Bev graph in the app) and M-28 (taste formulas for A-16 (2)).
+
+---
+
+## History: progress notes by session
+
 **Progress (2026-10-14, evening, Matt with Claude).**
 - **Done, live and checked by Matt on the site:** M-09 (#60), M-11 (#61) and M-06 (#62). What shipped, and the corrections to the original task text, are under each task in §3.
 - **Every merge to `main` now deploys to production** at `bevi-gamma.vercel.app` (#58). Other branches never deploy. For a preview, run `vercel deploy` from the repo root, without `--prod`. Arjun's merges deploy too.
@@ -40,7 +99,7 @@ Source: `CONVERSATION-2.md` (raw transcript). This file turns that conversation 
   - **M-21:** yes from both.
   - **S-14 part 2** ships together with A-16.
 - **Owners:** Arjun does A-08 (venues); Matt does M-16's UI.
-- **Awaiting your review (proposals only):**
+- **Awaiting your review (proposals only)**, *all resolved in the kickoff decisions above*:
   - A-13: which store holds the graph.
   - A-16: what makes it ready.
   - The duplicates plan (S-13, A-12, M-20).
@@ -306,7 +365,7 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
   - No likes on comments and no comment reports. Both are deferred on purpose (D-01, A-03).
 
 **M-04 · Explore surface.** `ui/explore`
-- **Unblocked 2026-10-19 (D-15 decided):** Explore posts are **read-only**, rendered as the plain post a stranger's Activity already uses (`FeedPost` with no heart, no counts, no comments; tapping opens the Bev). Explore excludes people you follow, so every Explore post is a stranger's. Keep the Follow button on the author. `feed_event_visible` doesn't change: likes and comments stay follower-only.
+- **Waiting on S-04 + A-04 (Arjun).** **Unblocked 2026-10-19 (D-15 decided):** Explore posts are **read-only**, rendered as the plain post a stranger's Activity already uses (`FeedPost` with no heart, no counts, no comments; tapping opens the Bev). Explore excludes people you follow, so every Explore post is a stranger's. Keep the Follow button on the author. `feed_event_visible` doesn't change: likes and comments stay follower-only.
 - Spec: the Feed keeps "Your feed" (friends). Add an **Explore** segment (`SegmentedTabs` on the Feed, or a second list under the header) showing posts from people one or two follows away, **ordered by popularity (likes)**, not time. Post cards are the same `FeedPost`. Follow button on the actor for people you don't follow yet.
 - Needs: S-04, A-04, D-01 (hops and whether global is allowed as a fallback when the graph is tiny).
 - DoD: Explore renders from `feed.getExplore()`, paginates, degrades to an empty state when nothing is popular yet.
@@ -442,7 +501,7 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - DoD: the tab reads "Search"; map visible and pannable under the bar; panel slides over and back without the map re-mounting; keyboard never covers results; tests for the panel state machine (idle → typing → results → cancelled).
 
 **M-19 · Taste Profile tab.** `ui/taste-profile`
-- **Ready (2026-10-19): next to build.**
+- **Ready (2026-10-19): Matt, next to build.** The backend has been live since #101.
 - **Unblocked:** S-12 + A-11 are live (#101, contract 2.4.0, on prod). `stats.getTasteProfile(userId)` returns rows ordered by mean; alcoholic categories are dropped unless both the viewer and the owner are 21+. Only the UI remains.
 - Replace the "Coming soon" tab (`app/src/features/profile/ActivityList.tsx`) with the simple definition from the session: a bar list of **your average score per category** ("Coffee 8.1 · 9 ranked"), ordered high to low, with a one-line read-out ("You prefer coffee and boba over soda"). The §6.20 calendar and share card can come later.
 - Needs: S-12, A-11.
@@ -488,6 +547,16 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - Spotted by the doc, on its own merits: `cosineSimilarity` in `layer2.ts` isn't re-centred on the common subset. Stage 3 replaces it with Pearson. The harness should show by how much it matters.
 - DoD: the doc's seven-point Stage 1 report (files, method, commands, tests, missing data, baseline numbers, blockers before Stage 2). **Stop there.** Stage 2 doesn't start automatically.
 
+**M-27 · Use the Bev graph in the app.** `rank/graph-recs` + `ui/similar-bevs` (new 2026-10-19)
+- **Recommendations:** Layer 1's content-similarity term reads `bev_edges` weights (via S-14 part 2) instead of recomputing `contentSimilarity`. It sits behind a flag, with `RANKING_VERSION` bumped, vectors regenerated and the paper's §11 row added. Compare against the M-26 baseline before turning it on.
+- **"Bevs like this":** a row on Bev detail from `bevs.similar(bevId, n)`, using BevRows with placeholder art, age-filtered.
+- Needs: A-16 (1) + S-14 part 2 (Arjun). For the comparison, the M-26 export (Arjun).
+- DoD: flag on and off both tested; the harness report attached to the PR; the row hidden when there are no edges.
+
+**M-28 · Taste formulas for the taste graph.** `rank/taste-graph` (new 2026-10-19; #87 Stage 3)
+- Pure TypeScript in `packages/ranking/src/graph.ts`: `tasteVector()`, `attributeSimilarity()`, `blendUserSimilarity()`, plus the Pearson fix in `layer2.ts`, all vector-tested. The sync job (A-16 (2)) imports them.
+- Needs: A-16 (1). Blocks: A-16 (2).
+
 ### P2
 
 **M-16 · The map: Beli's map UI on Google Maps, NYC only.** `ui/map` (decisions 34–37, §1c)
@@ -505,21 +574,21 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - Needs: S-10 (trimmed), A-08, M-15 (done).
 - DoD: Beli screenshots side by side with Bevi screenshots at the same three zooms; 60fps panning on an iPhone 12 Safari; map never created more than once per session (assert in a test on the loader wrapper); bounds cannot be escaped.
 
-**M-20 · Report sheet: "Duplicate of…".** *(proposal under review: see S-13)* `ui/report-duplicate`
+**M-20 · Report sheet: "Duplicate of…".** *(plan approved: see S-13; waits on S-13 + A-12)* `ui/report-duplicate`
 - `app/src/features/bev/ReportSheet.tsx` already offers the `duplicate` reason; add a Bev search step to pick the original, sent as `duplicateOfId`.
 - Needs: S-13, A-12.
 
 ### P3 (needs a yes from both)
 
 **M-21 · Category-aware placement (anchored binary search) on the graph.** `rank/anchored-placement`
-- **Yes from both (2026-10-19).** It still needs A-13's hierarchy (D-04) and its similarity source, which depends on A-13's graph-store decision.
+- **Yes from both (2026-10-19).** It needs A-13 (after D-04) and A-16 (1)'s `bev_edges` through S-14 part 2.
 - The algorithm answer to Anisha's feedback. Specified in LaTeX §10.1: the user's bucket list is searched in two phases, first among **anchors** (ranked Bevs most similar to the new one by edge weight `w`, same leaf first), then among the remaining Bevs between the two anchors it landed between. Same `PlacementResult` shape (`insertIndex`, `expectedBucketSize`, `comparisons`), so `submit_ranking` is untouched; the comparison log stays consistent with the final index. Bump `RANKING_VERSION`, regenerate vectors (`contract/vectors-*`).
 - Similarity inputs come from `bev_edges` through S-14 (`bevs.similarities`), with `treeSimilarity` from M-24 as the fallback when no edge exists.
-- Needs: S-14, A-13, A-16, M-24, D-04. Since #87, "A-16" here means the **full** A-16 (`bev_edges`), which is deferred behind the five-stage plan.
+- Needs: S-14 part 2 and A-16 (1) (Arjun), A-13 (Arjun, after D-04), M-24 (done), D-04 (Matt).
 - DoD: property tests: valid index, consistent log, first question is the most similar anchor when one exists, comparisons ≤ ⌈log₂(a+1)⌉ + ⌈log₂(g+1)⌉.
 
 **M-22 · Keep the maths paper and the package in step.** `chore/ranking-doc`
-- **Requested 2026-10-19:** review that the maths is correct across the paper, `@bevi/ranking` and the SQL, using the `ranking-math` agent and the golden vectors. The maths will grow as the data model does, so the paper's §11 version table stays the record.
+- **Ready (Matt, 2026-10-19):** review that the maths is correct across the paper (`docs/bevi-ranking-math.tex`), `@bevi/ranking` and the SQL (including #107's `bayes_prior`), with the `ranking-math` agent and the golden vectors. Output: a list of corrections, split by lane. Paper and package fixes are Matt's; SQL fixes go to Arjun as A-14 follow-ups. The maths will grow with the data model, so the paper's §11 version table stays the record.
 - Any `RANKING_VERSION` bump updates `docs/bevi-ranking-math.tex` §11 (version table) in the same PR. Review the paper with Arjun once (S-15).
 
 ---
@@ -590,20 +659,26 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - Access: a Supabase Edge Function `graph-query` (JWT-verified, read-only Cypher templates, no free-form queries from the client) for on-demand exploration such as "Bevs similar to X"; the official JavaScript driver or the Query API over HTTPS (port 443, the only one Aura exposes). The hot path (ranking flow, recommendations, Bev detail) reads Postgres only (`bev_edges`), never the graph.
 - DoD: instance up; schema script in `scripts/graph/schema.cypher` applied idempotently; `graph-query` returns the 10 nearest Bevs to a given id; `docs/graph.md` written.
 
-**A-16 · The nightly graph sync and edge computation.** `be/graph-sync` (decisions 28, 30, 31)
-- **What "Ready" needs (2026-10-19), proposal under review:**
-  1. **Decide the graph store** (see A-13). The recommendation is Postgres only. The sync then becomes one nightly job inside Supabase.
-  2. **Arjun runs the M-26 export** (`packages/ranking/eval/export.sql`), so the current engine has real baseline numbers to beat.
-  3. **Agree the first increment:** taste neighbourhoods (`user_neighbors`) feeding Layer 2 behind a flag, plus the Pearson fix in `layer2.ts`.
-  4. **Ship it with S-14 part 2** (Matt or Arjun), now redefined as the contract that exposes the neighbours to the prediction engine.
-- **Re-scoped by #87 (`docs/graph_db_implementation.md`); read that first.** The first increment builds **user taste neighbourhoods** (approach B: attribute-bridged similarity over `:Flavor` / `:Brand` / `:Category`) written to a new `user_neighbors` table for Layer 2, not Bev-to-Bev edges. It runs in stages:
-  - **Stage 1, the eval harness:** M-26, Matt.
-  - **Stage 2, the Supabase → Neo4j sync:** Arjun. It must be atomic: a failed run publishes nothing.
-  - **Stage 3, taste neighbourhoods:** Arjun builds `user_neighbors`, its RLS and the Cypher. Matt writes the pure formulas in `packages/ranking/src/graph.ts`.
-  - **Stage 4, engine integration:** both lanes, behind a flag, contract first.
-  - **Stage 5, evaluation:** includes a SQL-only ablation that decides whether Neo4j stays.
-- **Deferred, so the text below waits:** steps 2–3 and 7 (embeddings, the `embed` function, pgvector, `bev_edges`) and the `SIMILAR_TO` part of the sanity report. The steps for nodes, `RANKED` pseudonyms and the keep-alive (1, 6, 8 and 9) carry into Stage 2. Until `graph-sync.yml` exists, `graph-keepalive.yml` keeps the instance alive. Delete it once the sync runs nightly.
-- Where it runs: a GitHub Actions scheduled workflow (`.github/workflows/graph-sync.yml`, nightly after `refresh_all_stats`, plus `workflow_dispatch`), running `scripts/graph/sync.ts` with Node (no CPU limit, free minutes cover a few minutes a night). Fallback if Actions is not wanted: pg_cron → an Edge Function, mindful of its 2 s CPU cap.
+**A-16 · The Bev graph, then the taste graph.** `be/graph-sync` (decisions 28, 30, 31)
+- **Decided 2026-10-19 (Matt and Arjun):** Neo4j holds the Bev graph, and #87's narrowing is reversed. It comes in two increments:
+- **Increment 1, the Bev graph: ready, Arjun, one PR with S-14 part 2.**
+  - **Steps:** run steps 1–7 and 9–10 below as written, embeddings included.
+  - **On write:** a new or edited Bev triggers an async database webhook. An Edge Function embeds that Bev, infers its flavour profile if it has none (D-11), computes its candidates and edges, and updates Neo4j and `bev_edges`. The Edge Function's 2s CPU budget covers one Bev; the batch work stays in the nightly job.
+  - **D-11 inference:**
+    - Only seeded Bevs (never inferred ones) **in the same category** are candidates.
+    - The nearest by embedding cosine is chosen, with brand match as the tie-break.
+    - It copies that Bev's profile with `inferred = true`, `inferred_from = <bev id>` and the similarity.
+    - Below a cosine of 0.6 the profile stays empty, and the Bev falls back to category and brand.
+    - Matt and Arjun relabel inferred rows into the CSV now and then.
+  - **Nightly:** `graph-sync.yml` does a full rebuild plus the sanity report (Coke–Pepsi ≥ 0.8, Coke vs a sparkling water < 0.4). Once it's green for a week, delete `graph-keepalive.yml`.
+  - **Docs, in the same PR:** update `docs/graph.md`, `docs/graph_db_implementation.md` (the user-neighbour MVP moves to increment 2) (`vision.md`'s graph line was already updated on 2026-10-19).
+  - **Before starting:** fix the instance (the board's "A-15 fix": the keep-alive's secrets were never set), and run the M-26 export so increment 1 has a baseline to compare against.
+- **Increment 2, the taste graph: later, after increment 1 and M-28.**
+  - Step 8 below (`RANKED` edges with stable pseudonyms), **updated on every ranking** through an async webhook, plus the nightly re-check.
+  - #87's taste neighbourhoods (`user_neighbors`, approach B) and the `cop` co-rating term.
+  - The formulas are Matt's (M-28). The Cypher, tables and RLS are Arjun's.
+  - Measure with the M-26 harness against #87's decision bar.
+- Where the nightly job runs: a GitHub Actions scheduled workflow (`.github/workflows/graph-sync.yml`, nightly after `refresh_all_stats`, plus `workflow_dispatch`), running `scripts/graph/sync.ts` with Node (no CPU limit, free minutes cover a few minutes a night). Fallback if Actions is not wanted: pg_cron → an Edge Function, mindful of its 2 s CPU cap.
 - Steps, idempotent and resumable: (1) read active Bevs, categories (with `parent_id`), flavour profiles and pseudonymised rankings from Postgres with the service role; (2) **embed** new or changed Bevs through an `embed` Edge Function (`Supabase.ai.Session('gte-small')`, normalised 384-d), stored in `bev_embeddings` (pgvector `vector(384)`, HNSW) and on the node; (3) build candidate pairs: same category subtree ∪ same brand ∪ the 50 nearest by embedding (pgvector or the Neo4j vector index); (4) weight each candidate with `edgeWeight()` from `@bevi/ranking` (M-24); (5) keep the top 20 per Bev with `w ≥ 0.3`; (6) `MERGE` nodes and edges in Neo4j in batched `UNWIND`s, delete edges that dropped out; (7) **write back** `bev_edges(src_bev_id, dst_bev_id, weight, components jsonb, version, computed_at)` in one transaction (truncate-and-insert is fine at this size); (8) mirror `RANKED` edges with a **stable pseudonym** (`encode(hmac(user_id, secret_salt), 'hex')`, never the per-call aliases the prediction snapshot uses); (9) touch a `(:Meta {lastSyncAt})` node (the keep-alive); (10) print the sanity report from §1d.
 - Failure modes: if the instance is paused the job fails loudly (Actions email) and nothing in the app degrades; a `--dry-run` prints the top-5 neighbours of Coca-Cola, Pepsi, Diet Coke, a matcha and Red Bull.
 - Needs: A-15, A-17, M-24, S-14 (the `bev_edges` RPC), S-17.
@@ -632,7 +707,7 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - DoD: import runs clean for the starting area; `explain analyze` under 150 ms for `venues_in_view` with a GiST index on the point; pgTAP for the bounds constraint and the zoom cap.
 
 **A-12 · Duplicates: identifiers, flagging, merging.** `be/duplicates`
-- *Proposal under review: see S-13.*
+- **Plan approved 2026-10-19 (see S-13).** Arjun, once P0/P1 are done.
 - Today: `find_similar_bevs` (pg_trgm over `search_text` + aliases) runs during create; `bev_reports.reason` already allows `'duplicate'`; `bevs.upc` exists with a unique index; `status = 'merged'` and `merged_into` exist but there is no merge routine.
 - Do: `report_bev` accepts `p_duplicate_of uuid`; admin RPC `merge_bev(p_src, p_dst)` that re-points rankings (if a user ranked both, keep the better-positioned one and remove the other with re-spacing), moves aliases, `want_to_try` and `venue_bevs`, folds `bev_stats`, sets `status='merged'`, and marks the Bev for the next graph sync (A-16 removes the node and its edges). A view of pending duplicate reports for Studio. UPC becomes the strongest identifier (barcode scan was already in your §13 proposals); the embedding neighbour from the graph becomes a second "Did you mean…" signal.
 - Needs: S-13.
@@ -641,22 +716,18 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 ### P3
 
 **A-13 · Category hierarchy in both stores.** `be/category-tree`
-- **Graph store: proposal under review (2026-10-19).** Use **Postgres (Supabase) only** for now and retire Neo4j:
-  - The hierarchy is one `categories.parent_id` column.
-  - Taste neighbourhoods and Bev similarity are a nightly SQL or TypeScript job writing tables that the app already knows how to read.
-  - The doc's own Stage 5 ablation expects SQL to match the graph at this size.
-  - Neo4j costs a second account and its secrets, the 72-hour pause and 30-day deletion (hence the keep-alive), a sync job, Cypher, and duplicated data, for nothing we need yet.
-  - If you agree: delete `graph-keepalive.yml`, `scripts/graph/` and the `graph-query` function in a cleanup PR, and update `docs/graph.md` and `docs/graph_db_implementation.md`.
+- **Decided 2026-10-19:** both stores, as titled. `parent_id` in Postgres and `CHILD_OF` in Neo4j. It starts once Matt's D-04 list is approved, and it can land after A-16 (1): the tree term works on today's flat categories and improves when the hierarchy arrives.
 - `categories.parent_id` (self-reference; today's 15 ids become the second level, e.g. `coffee → coffee_hot, coffee_iced, matcha, mocha…`; the taxonomy itself is D-04), `depth` derived; `get_prediction_snapshot()` and `categories.list()` gain `parentId`; the sync (A-16) mirrors it as `CHILD_OF`. The age gate keys off the alcoholic ancestor, so RLS helpers walk up the tree (a `category_is_alcoholic(id)` function with the result cached in the table).
-- Needs: S-14, D-04.
+- Needs: D-04 (Matt). Ships `Category.parentId` (the S-14 part 2 field).
 
 **A-14 · SQL ↔ TypeScript parity follow-ups.** `be/ranking-parity`
-- **Note (2026-10-19): independent of A-13.** This is about the scoring maths, not the graph.
-  - `affinity_z` now has a writer (#101).
-  - Two items remain:
-    - The SQL leaderboard's prior is the global mean, where the package uses a category's own mean once it has 30 rankings.
-    - The SQL leaderboard breaks ties by Bayesian score only.
-  - Small. It goes well with the M-22 maths review.
+- **In review: #107 (Arjun, 2026-10-19).**
+  - `bayes_prior(p_category_id)` mirrors `globalPrior` and `categoryPrior`.
+  - The empty-system fallback is 5.0, not 0.
+  - The leaderboard has a total order: `bayes desc, n desc, name collate "C", id`.
+  - `affinity_z` was already closed by #101.
+  - Merge after its migration `20261019000200` is on prod.
+  - Matt's M-22 review may add follow-ups.
 - Known divergences (LaTeX §11): the SQL prior is the global mean only (`get_bev_leaderboard`, `refresh_global_stats`), while `@bevi/ranking` uses a category's own mean once it has 30 rankings; `affinity_z` has no writer (A-11); the leaderboard's tie-break order in SQL is `bayes desc` only, the package specifies `bayes desc, n desc, name asc (C collation), id asc`. Align, with golden-vector tests.
 
 ---
@@ -672,10 +743,10 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 | **S-05** | **Done in #96.** `FeedApi.getBevOfPeriod()` → `{ day: PeriodWinner \| null, week: PeriodWinner \| null }`, `PeriodWinner { bev: BevSummary, periodStart: string, rankingsInPeriod: number }` | M-05, A-05 |
 | **S-07** | **Done in #93.** `Category.bevCount: number`; `StatsApi.getCategoryProgress()` → `{ categoryId, ranked, total }[]` | M-08, A-06 |
 | **S-09** | **Done in #92.** `vision.md` edits: vessels are not variants; one ranking per Bev per user ("binary"); Mexican Coke is its own Bev; icons over photos; feed = friends + Explore; Bev of the day/week; NYC only; **the Bev graph lives in Neo4j AuraDB Free with Postgres as the system of record (§1b, §1d); the map is inside the Search tab, Google Maps JS, OSM venues, strictly NYC; rankings may carry a venue, GPS is never stored** | everyone |
-| **S-10** | **Trimmed (proposal, 2026-10-19):** `VenuesApi { inView({ bounds, zoom, filters }), get(id) }`, `Venue`, `VenuePin { venue, bestScore, predictedScore, openNow \| null }`, and `NYC_BOUNDS` in `shared/`. Ships with A-08 as one combined PR, not a separate contract PR | M-16, A-08 |
+| **S-10** | **Trimmed, approved 2026-10-19:** `VenuesApi { inView({ bounds, zoom, filters }), get(id) }`, `Venue`, `VenuePin { venue, bestScore, predictedScore, openNow \| null }`, and `NYC_BOUNDS` in `shared/`. Ships with A-08 as one combined PR, not a separate contract PR | M-16, A-08 |
 | **S-12** | **Done in #101.** `StatsApi.getTasteProfile(userId)` → `{ categoryId, rankingCount, mean, affinity }[]` | M-19, A-11 |
-| **S-13** | `BevsApi.report(id, reason, opts?: { duplicateOfId })`. The database already has `bev_reports.duplicate_of` and `report_bev(…, p_duplicate_of)`; only the contract and the app are missing. **Duplicates plan, proposal under review (2026-10-19):** (1) prevention: the existing "Did you mean…" step at create, plus normalising names; (2) flagging: the "Duplicate of another Bev" report asks which Bev; (3) resolution by hand: an admin-only `merge_bev(src, dst)` run from Supabase Studio, with a Studio view of pending reports. The merge moves rankings (if someone ranked both, keep their ranking of `dst` and re-space the bucket), Want to Try and aliases (the old name becomes an alias), folds the stats, and sets `src` to `merged`, so old links redirect. Never merge automatically | M-20, A-12 |
-| **S-14** | `RankingsApi.listBucketBevs(bucket)` → `{ id, categoryId, brandKey }[]` (beside `listBucket`); `BevsApi.similarities(bevId, otherIds)` → `{ bevId, weight }[]` from `bev_edges`; `BevsApi.similar(bevId, n)` for "Bevs like this"; `Category.parentId`; `FlavorProfile` type and `Bev.flavorProfile` (column names agreed between M-24 and A-17). **Part 1 done in #68** (the flavour-profile names). Part 2 ships **together with A-16** (decided 2026-10-19), redefined by A-16's first increment: expose the taste neighbours to the prediction engine. `parentId` comes with A-13; `listBucketBevs` and similarities come with M-21 | M-21, M-24, A-13, A-16, A-17 |
+| **S-13** | **Plan approved 2026-10-19.** `BevsApi.report(id, reason, opts?: { duplicateOfId })`. The database already has `bev_reports.duplicate_of` and `report_bev(…, p_duplicate_of)`; only the contract and the app are missing. **Duplicates plan:** (1) prevention: the existing "Did you mean…" step at create, plus normalising names; (2) flagging: the "Duplicate of another Bev" report asks which Bev; (3) resolution by hand: an admin-only `merge_bev(src, dst)` run from Supabase Studio, with a Studio view of pending reports. The merge moves rankings (if someone ranked both, keep their ranking of `dst` and re-space the bucket), Want to Try and aliases (the old name becomes an alias), folds the stats, and sets `src` to `merged`, so old links redirect. Never merge automatically | M-20, A-12 |
+| **S-14** | `RankingsApi.listBucketBevs(bucket)` → `{ id, categoryId, brandKey }[]` (beside `listBucket`); `BevsApi.similarities(bevId, otherIds)` → `{ bevId, weight }[]` from `bev_edges`; `BevsApi.similar(bevId, n)` for "Bevs like this"; `Category.parentId`; `FlavorProfile` type and `Bev.flavorProfile` (column names agreed between M-24 and A-17). **Part 1 done in #68** (the flavour-profile names). **Part 2 ships with A-16 (1)** (Arjun, decided 2026-10-19), as originally specified: `similarities`, `similar` and `listBucketBevs` from `bev_edges`. `Category.parentId` comes with A-13 | M-21, M-24, A-13, A-16, A-17 |
 | **S-15** | `docs/bevi-ranking-math.tex` + `.pdf` (this session; §10.1 updated in revision 2 with the embedding and profile terms and the Neo4j decision). Both read it; comments become PRs against the `.tex` | M-22, A-14 |
 | **S-17** | `docs/graph.md`: the graph schema, what Postgres owns vs the graph, the sync contract and its sanity report, secret names, the keep-alive rule, "Neo4j is never on a request path", how to resume a paused instance; plus a `supabase/CLAUDE.md` line pointing at it | A-15, A-16 |
 | **S-18** | **Done in #92.** `.github/workflows/app.yml`: stop `expo-doctor`'s dependency-version check from turning `main` red when Expo ships an SDK patch (it compares against Expo's *current* expected versions; this happened at #58, fixed by #63). Make that check advisory (its own step with `continue-on-error`, or exclude it) and keep the other doctor checks blocking. Bump patches with `npx expo install --fix` from `app/` in a small `ui/*` PR when it warns (first time: #98) | `main` CI stays green |
@@ -699,12 +770,12 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 | **D-01** | Explore scope: one hop, two hops, or global? Likes on comments? | **Accepted 2026-10-19 (Matt; Arjun confirms):** two hops (friends of friends); fall back to global while fewer than 20 users; no likes on comments this round. Explore itself waits on D-15. |
 | **D-02** | Bev of the day when nobody ranked anything today? Score definition: the Bev's overall Bayesian score vs. only that day's scores? | **Decided 2026-10-18 (Matt; Arjun confirms in review):** overall Bayesian score among Bevs ranked in the period; if the period is empty, show the latest non-empty day with its date (LaTeX §10.3). |
 | **D-03** | Smart Recommend on the map | Parked under the guardrail (§0). Maths kept in LaTeX §10.5 so it is ready when wanted. |
-| **D-04** | The finer category list: the actual subcategories under each of today's 15 (for example coffee → hot coffee, iced coffee, espresso drinks, cold brew; tea → hot tea, iced tea, matcha). It's content to write, not a yes/no | **Proposal:** Claude drafts it from the 378-Bev catalog and its flavour profiles into `design/taxonomy.md`; Matt and Arjun edit and approve it. Two levels to start. Needed by A-13 and M-21 |
+| **D-04** | The finer category list: the actual subcategories under each of today's 15 (for example coffee → hot coffee, iced coffee, espresso drinks, cold brew; tea → hot tea, iced tea, matcha) | **Matt writes it with high effort (2026-10-19)** in `design/taxonomy.md`, together with a slug → leaf assignment for the 378 catalog Bevs, which A-13 needs to migrate the catalog. Arjun reviews. Two levels to start, lined up with the flavour-profile `base` vocabulary. Blocks A-13, then M-21 |
 | **D-05** | Bucket buttons: tint by default or keep glass | **Done in #88:** tint everywhere on the web app. |
 | **D-06** | Price in lists: hide estimates (`~$`) or hide price entirely on rows | **Decided 2026-10-18 (Matt): the `$`–`$$$$` price tier, estimated or not, comes off rows and posts. It stays on Bev detail.** |
 | **D-08** | Map library and tiles | **Decided 2026-10-14: Google Maps JavaScript API with the Bev Maps Google Cloud project** (decision 34). MapLibre + OpenFreeMap (free, no key) stays the fallback if the free map-load allowance is ever exceeded. |
 | **D-10** | People search in the new Search tab: one bar with grouped Bevs / People results, or keep the Bevs · People segmented tabs above the bar | **Decided 2026-10-19 (Matt): one bar, grouped results.** Shipped in #104. |
-| **D-11** | When a user creates a Bev, it has no flavour profile (only the 378 seeds were labelled), so recommendations treat it more coarsely. Needed from you: a yes or no on how to fill it | **Proposal:** copy the profile of the most similar seeded Bev (same category, closest name and brand), marked `inferred`. Or leave it empty, so the Bev falls back to category and brand only. Either works; copying gives better recommendations for user-created Bevs |
+| **D-11** | Flavour profile for a user-created Bev | **Decided 2026-10-19 (Matt and Arjun): option 1.** Copy the most similar seeded Bev's profile, marked `inferred`. How it works (seeded candidates in the same category, embedding cosine, brand tie-break, empty below 0.6) is spelled out in A-16 (1) |
 | **D-12** | Google Maps key and quota | **Decided 2026-10-19:** Arjun has it set up (as for Bev Maps) and provides it when M-16 starts |
 | **D-13** | Which venues get a pin | **Decided 2026-10-19:** start with the Upper East Side and Roosevelt Island; venues with a curated assortment get pins. Refine while building |
 | **D-15** | Explore shows posts from people you don't follow. Can you like and comment on them? | **Decided 2026-10-19 (Matt and Arjun): no.** A plain, read-only post: no hearts, counts or comments. `feed_event_visible` is unchanged |
@@ -716,9 +787,11 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 1. **Week 1 (P0, small):** ~~S-01~~ (#65) → ~~A-01~~ (#69) + ~~M-01~~ (folded into #80) · ~~M-09~~ (#60) · ~~M-11~~ (#61) · ~~M-06~~ (#62) · ~~M-07~~ (#85) · S-08/S-09 docs · ~~M-25~~ (#74) · S-18, S-19 (small, found on 2026-10-14). **In parallel (graph foundation, no screens):** ~~A-15~~ (#72, with S-17) · ~~S-14 column names~~ (#68, part 1 only) · ~~M-24~~ (#86) · ~~A-17~~ (#73). **Left on 2026-10-18:** ~~S-08~~ (removed with the icons, 2026-10-19). ~~S-09, S-18, S-19~~ (#92).
 2. **Week 2 (P0, social):** ~~S-02~~ (#82) / ~~S-03~~ (#67) → ~~A-02~~ (#70) / ~~A-03~~ (#71) + ~~M-02~~ (#90) / ~~M-03~~ (#91) · ~~S-05 → A-05~~ (#96) + ~~M-05~~ (#105). **Graph (re-planned by #87):** ~~the implementation plan~~ (#87) → ~~M-26~~ (#99, needs the export) → A-16 Stage 2 (sync live; it replaces the keep-alive). **Likes and comments are done end to end;** the only gap left is Profile › Activity: ~~S-20~~ (#97, #102).
 3. **Week 3 (P0/P1):** S-04 → A-04 + M-04 (**unblocked**, D-15 decided) · ~~S-07 → A-06~~ (#93) + ~~M-08~~ (#103) · ~~M-12~~ (#95) · ~~M-13~~ (#88) · ~~M-14~~ (#89) · ~~M-15~~ (#104).
-4. **Week 4 (P1):** ~~S-12 → A-11~~ (#101) + **M-19 (ready)** · M-22 maths review + A-14 parity · D-04 taxonomy draft · **graph: decide the store (A-13), then A-16 + S-14 part 2 together**.
+4. **Week 4 (P1), now:** see the board at the top, and `NEXT-MATT.md` / `NEXT-ARJUN.md`. In short:
+   - **Matt:** M-19, D-04 and M-22 now; M-04 after Explore's backend; M-27, then M-21, after the Bev graph.
+   - **Arjun:** #107 (A-14); the M-26 export; S-04 + A-04 (Explore); A-16 (1) + S-14 part 2 (the Bev graph); A-13 after D-04; A-16 (2) after M-28.
 5. **Then P2:** the map (S-10 trimmed + A-08 by Arjun → M-16 by Matt; Upper East Side and Roosevelt Island first) · duplicates (S-13 + A-12 → M-20, once the plan is approved).
-6. **P3:** A-13 (the hierarchy, after D-04) → M-21 (yes from both, 2026-10-19).
+6. **P3:** A-13 (after D-04) → M-21 (yes from both). Both are now on the P1 board, since the Bev graph is the priority.
 
 Run `npm run typecheck && npm test` from the root and the lane's integrator agent before every PR, as before.
 

@@ -180,7 +180,7 @@ Photo, name, flavor, category, price tier, global score + rating count, **your p
 - *Decided 2026-10-11:* web app only, for under 20 friends; replaces the earlier iOS/Android and Google sign-in plan.
 - **Images:** background removal on upload (service or on-device model).
 - **Recommendations:** start as SQL views/functions in Postgres for Layer 1; move Layer 2 to a scheduled job (Edge Function or small Python worker) when data justifies it.
-- **The Bev graph** (decided 2026-10-14, re-scoped 2026-10-15): **Neo4j AuraDB Free** holds Bevs, categories, brands, flavours and pseudonymised rankings as a graph. **Postgres stays the system of record**; nothing lives only in the graph, and Neo4j is never on a request path (a nightly job writes results back to Postgres). The first use is taste neighbourhoods for Layer 2, kept only if it beats the current engine on a pre-registered bar (`docs/graph_db_implementation.md`, `docs/graph.md`).
+- **The Bev graph** (decided 2026-10-14, confirmed 2026-10-19): **Neo4j AuraDB Free** holds the Bevs, categories, brands and flavours as a graph with **weighted similarity edges** (Pepsi next to Coke). It powers similarity, recommendations and category-aware placement. **Postgres (Supabase) stays the system of record**, and nothing lives only in the graph. The app reads a `bev_edges` mirror in Postgres, so Neo4j is never on a request path. A new Bev gets its edges right away, and a nightly job rebuilds everything. A later increment adds pseudonymised rankings, so it can find people with similar taste (`docs/graph.md`).
 - **Strictly New York City** for now: the map, venues and "Bev of the area" are NYC only.
 
 ### Core tables
