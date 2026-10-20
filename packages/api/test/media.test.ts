@@ -65,6 +65,31 @@ describe('media.upload validation', () => {
     expect(calls.upload).toBe(true);
   });
 
+  it.each([
+    ['bev-photo', 'bev-photos'],
+    ['label', 'nutrition-labels'],
+    ['avatar', 'avatars'],
+  ] as const)('uploads kind %s into the %s bucket and returns its public URL', async (kind, bucket) => {
+    const buckets: string[] = [];
+    const client = {
+      auth: { getUser: async () => ({ data: { user: { id: 'user-1' } }, error: null }) },
+      rpc: () => Promise.resolve({ data: null, error: null }),
+      storage: {
+        from: (name: string) => {
+          buckets.push(name);
+          return {
+            upload: () => Promise.resolve({ data: { path: 'user-1/x.jpg' }, error: null }),
+            getPublicUrl: (path: string) => ({ data: { publicUrl: `https://example.supabase.co/storage/v1/object/public/${name}/${path}` } }),
+          };
+        },
+      },
+    } as unknown as SupabaseClient;
+
+    const result = await createMediaApi(client).upload({ kind, file: { size: 1 } as unknown as Blob, mimeType: 'image/jpeg' });
+    expect(new Set(buckets)).toEqual(new Set([bucket]));
+    expect(result.url).toBe(`https://example.supabase.co/storage/v1/object/public/${bucket}/${result.assetId}`);
+  });
+
   it('derives the extension from mimeType for every supported type', async () => {
     const cases: Array<[string, string]> = [
       ['image/jpeg', 'jpg'],

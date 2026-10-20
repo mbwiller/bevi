@@ -62,6 +62,14 @@ export function createProfileApi(client: SupabaseClient): ProfileApi {
         if (error) throw mapError(error);
       }
 
+      if (patch.avatarAssetId !== undefined) {
+        // avatar_path is pinned by protect_profile_columns (20261019000300):
+        // only set_avatar() moves it, after checking the object is the
+        // caller's own upload to `avatars`. null clears the photo.
+        const { error } = await client.rpc('set_avatar', { p_path: patch.avatarAssetId });
+        if (error) throw mapError(error);
+      }
+
       const directPatch: Record<string, unknown> = {};
       if (patch.displayName !== undefined) directPatch.display_name = patch.displayName;
       if (patch.timezone !== undefined) directPatch.timezone = patch.timezone;

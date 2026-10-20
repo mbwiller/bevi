@@ -19,10 +19,13 @@ async function requireUserId(client: SupabaseClient): Promise<string> {
 const BUCKET_BY_KIND: Record<UploadMediaInput['kind'], string> = {
   'bev-photo': 'bev-photos',
   label: 'nutrition-labels',
+  // Profile photos (20261019000300): same per-user-folder policy; the path
+  // is what `profile.updateMe({ avatarAssetId })` hands to set_avatar.
+  avatar: 'avatars',
 };
 
 // Matches the allow-list enforced server-side (20261011000900_media_upload.sql
-// sets `allowed_mime_types` on both buckets) and DEVELOPMENT-ARJUN.md's
+// and 20261019000300_avatars.sql set `allowed_mime_types` on the three buckets) and DEVELOPMENT-ARJUN.md's
 // `raw-uploads object insert` row, reused here for lack of a better list.
 const EXT_BY_MIME_TYPE: Record<string, string> = {
   'image/jpeg': 'jpg',
@@ -33,7 +36,7 @@ const EXT_BY_MIME_TYPE: Record<string, string> = {
 
 // Matches `raw-uploads object insert: 10 MB max` in DEVELOPMENT-ARJUN.md's
 // rate-limit table -- reused here since there's no better number yet.
-// Also set server-side as a backstop (`file_size_limit` on both buckets,
+// Also set server-side as a backstop (`file_size_limit` on all three buckets,
 // same migration) in case a caller other than this function ever reaches
 // the Storage API directly.
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
