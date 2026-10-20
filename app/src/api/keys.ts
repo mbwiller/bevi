@@ -66,6 +66,8 @@ export const keys = {
   feed: () => [...root, 'feed'] as const,
   /** `feed.listUser` for one person; nested under `feed()` so every FeedItem cache operation on that prefix covers it. */
   feedUser: (userId: string) => [...root, 'feed', 'user', userId] as const,
+  /** Every post's thread: a profile change (name, photo) invalidates them all, since each Comment carries its author. */
+  commentsAll: [...root, 'comments'] as const,
   /** A post's thread (`comments.list`, newest-first pages). */
   comments: (eventId: string) => [...root, 'comments', eventId] as const,
   /** `feed.getBevOfPeriod` (M-05). */

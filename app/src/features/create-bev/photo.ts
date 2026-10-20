@@ -20,6 +20,8 @@ import * as ImagePicker from 'expo-image-picker';
  */
 
 export const PHOTO_MAX_EDGE = 1600;
+/** Profile photos are shown at 100pt at most, so they are resized much smaller than Bev photos. */
+export const AVATAR_MAX_EDGE = 512;
 export const PHOTO_QUALITY = 0.85;
 export const PHOTO_MIME = 'image/jpeg';
 
@@ -77,8 +79,8 @@ export function revokeIfBlob(uri: string | null | undefined): void {
   }
 }
 
-async function viaManipulator(uri: string, width: number, height: number): Promise<PreparedPhoto> {
-  const target = fitWithin(width, height);
+async function viaManipulator(uri: string, width: number, height: number, maxEdge: number): Promise<PreparedPhoto> {
+  const target = fitWithin(width, height, maxEdge);
   const context = ImageManipulator.ImageManipulator.manipulate(uri);
   if (target.width !== width) context.resize(target);
   const image = await context.renderAsync();
@@ -101,14 +103,14 @@ async function viaManipulator(uri: string, width: number, height: number): Promi
 }
 
 /** Plain canvas resize, for when the manipulator isn't available or throws. Web only. */
-async function viaCanvas(uri: string): Promise<PreparedPhoto> {
+async function viaCanvas(uri: string, maxEdge: number): Promise<PreparedPhoto> {
   const img = await new Promise<HTMLImageElement>((resolve, reject) => {
     const el = new Image();
     el.onload = () => resolve(el);
     el.onerror = () => reject(new Error('Could not read the image'));
     el.src = uri;
   });
-  const target = fitWithin(img.naturalWidth, img.naturalHeight);
+  const target = fitWithin(img.naturalWidth, img.naturalHeight, maxEdge);
   if (!target.width || !target.height) throw new Error('Could not read the image');
   const canvas = document.createElement('canvas');
   canvas.width = target.width;
@@ -123,23 +125,23 @@ async function viaCanvas(uri: string): Promise<PreparedPhoto> {
 }
 
 /**
- * Resizes and re-encodes a picked image for upload (max 1600px, JPEG q0.85). Re-encoding also
+ * Resizes and re-encodes a picked image for upload (longest edge `maxEdge`, default 1600px; JPEG q0.85). Re-encoding also
  * drops EXIF (including GPS), so an image that can't be decoded is rejected with
  * `UnsupportedImageError` rather than uploaded untouched. The picker's own object URL is revoked
  * either way; the returned `uri` belongs to the caller.
  */
-export async function preparePhoto(asset: ImagePicker.ImagePickerAsset): Promise<PreparedPhoto> {
+export async function preparePhoto(asset: ImagePicker.ImagePickerAsset, maxEdge = PHOTO_MAX_EDGE): Promise<PreparedPhoto> {
   try {
     if (asset.width > 0 && asset.height > 0) {
       try {
-        return await viaManipulator(asset.uri, asset.width, asset.height);
+        return await viaManipulator(asset.uri, asset.width, asset.height, maxEdge);
       } catch {
         // Fall through to the canvas.
       }
     }
     if (typeof document !== 'undefined') {
       try {
-        return await viaCanvas(asset.uri);
+        return await viaCanvas(asset.uri, maxEdge);
       } catch {
         // Fall through.
       }

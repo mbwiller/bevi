@@ -217,14 +217,37 @@ describe('comments', () => {
   it.each([3, 7])('%i comments: every one inline as "handle text", oldest first, under the action row', async (n) => {
     await render(<FeedPost actor={ARJUN} bev={BEV} score={7} commentCount={n} comments={thread(n)} onComment={() => {}} />);
     const list = screen.getByTestId('feed-post-comments');
-    const rows = within(list).getAllByRole('listitem');
+    const rows = within(list).getAllByTestId(/^feed-post-comment-/);
     expect(rows).toHaveLength(n);
-    expect(rows.map((r) => textOf(r))).toEqual(thread(n).map((c) => `${c.author.handle} ${c.body}`));
+    expect(list.props.role).toBe('list');
+    rows.forEach((r) => expect(r.props.role).toBe('listitem'));
+    // Each row is the author's avatar (initials here: no photo) then "handle body"; the text line is its own node.
+    thread(n).forEach((c, i) => {
+      expect(within(rows[i]!).getByText(`${c.author.handle} ${c.body}`)).toBeTruthy();
+      expect(within(rows[i]!).getByLabelText(c.author.displayName)).toBeTruthy();
+    });
     expect(within(rows[0]!).getByText('user1').props.style).toMatchObject({ fontWeight: '700' });
     expect(screen.queryByText(/^View all/)).toBeNull();
     // Under the action row: the list renders after the row's last control.
     const bubble = `Comment, ${n} comments`;
     expect(docOrder([bubble, 'feed-post-comments'])).toEqual([bubble, 'feed-post-comments']);
+  });
+
+  it("each inline comment draws its author's avatar: the photo when they have one, else initials", async () => {
+    const withPhoto = { ...person('sam'), displayName: 'Sam Okafor', avatarUrl: 'https://example.com/sam.png' };
+    const comments: Comment[] = [
+      { id: 'c1', author: withPhoto, body: 'love it', createdAt: time },
+      { id: 'c2', author: person('jo'), body: 'same', createdAt: time },
+    ];
+    await render(<FeedPost actor={ARJUN} bev={BEV} score={7} commentCount={2} comments={comments} onComment={() => {}} />);
+    const rows = within(screen.getByTestId('feed-post-comments')).getAllByTestId(/^feed-post-comment-/);
+    const first = within(rows[0]!);
+    expect(first.getByLabelText('Sam Okafor')).toBeTruthy();
+    expect(first.queryByText('SO')).toBeNull();
+    expect(first.getByText('sam love it')).toBeTruthy();
+    const second = within(rows[1]!);
+    expect(second.getByLabelText('jo')).toBeTruthy();
+    expect(second.getByText('J')).toBeTruthy();
   });
 
   it('8 or more: one "View all N comments" line, no preview, and it opens the sheet', async () => {
@@ -262,11 +285,6 @@ describe('comments', () => {
     expect(onLike).toHaveBeenCalledTimes(2);
   });
 });
-
-/** All the text under a host node, joined the way it renders. */
-function textOf(node: { children: unknown[] }): string {
-  return node.children.map((c) => (typeof c === 'string' ? c : textOf(c as { children: unknown[] }))).join('');
-}
 
 type JsonNode = { props: Record<string, unknown>; children: (JsonNode | string)[] | null };
 

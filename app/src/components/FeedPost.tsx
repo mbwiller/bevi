@@ -49,7 +49,7 @@ export interface FeedPostProps {
   onLike?: () => void;
   /**
    * Comments on the post (the contract's first seven, oldest first), shown under the action row as
-   * "**handle** text" while `commentCount` ≤ `INLINE_COMMENTS`.
+   * the author's Avatar 24 and "**handle** text" while `commentCount` ≤ `INLINE_COMMENTS`.
    */
   comments?: Comment[];
   /** All comments on the post: beside the comment icon (hidden at 0); above 7 the post shows "View all N comments". */
@@ -88,6 +88,9 @@ export const DOUBLE_TAP_MS = 300;
  * so it takes the tap itself with no delay: on the web the innermost Pressable handles the `click`
  * and stops it bubbling, and natively the deepest responder wins. The strip sits in a tap sink that
  * swallows taps between and around its tiles, so a double-tap on the photo never likes.
+ *
+ * Inline comments are plain rows (an Avatar 24 and the "**handle** text" line), not controls, so a
+ * double-tap on them likes like anywhere else outside the strip.
  */
 export function FeedPost({
   actor,
@@ -245,9 +248,12 @@ export function FeedPost({
         // Text, not controls: a double-tap here likes the post like anywhere else outside the strip.
         <View style={styles.comments} role="list" aria-label="Comments" testID="feed-post-comments">
           {comments.slice(0, INLINE_COMMENTS).map((c) => (
-            <Text key={c.id} role="listitem" style={[type.body, styles.comment, textColor]}>
-              <Text style={styles.bold}>{c.author.handle}</Text> {c.body}
-            </Text>
+            <View key={c.id} role="listitem" style={styles.commentRow} testID={`feed-post-comment-${c.id}`}>
+              <Avatar name={c.author.displayName || c.author.handle} src={c.author.avatarUrl ?? undefined} size={24} />
+              <Text style={[type.body, styles.comment, textColor]}>
+                <Text style={styles.bold}>{c.author.handle}</Text> {c.body}
+              </Text>
+            </View>
           ))}
         </View>
       ) : null}
@@ -255,6 +261,9 @@ export function FeedPost({
     </Pressable>
   );
 }
+
+/** `.bv-post-comment-text` padding-top: 2px (no spacing token is 2). */
+const COMMENT_TEXT_OFFSET = 2;
 
 /** The burst heart (FeedPost README): 88pt, filled `primary`. */
 const BURST = 88;
@@ -327,8 +336,10 @@ const styles = StyleSheet.create({
   noteTarget: { minHeight: size.target },
   // bundle.css `.bv-post-comments` / `.bv-post-allcomments`.
   comments: { gap: spacing.xs, marginTop: spacing.xs, marginBottom: spacing.sm },
-  // bundle.css `overflow-wrap: anywhere`: a long unbroken word wraps instead of widening the post.
-  comment: { flexShrink: 1, ...(Platform.OS === 'web' ? ({ overflowWrap: 'anywhere' } as TextStyle) : null) },
+  commentRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  // bundle.css `.bv-post-comment-text`: `overflow-wrap: anywhere` so a long unbroken word wraps instead of
+  // widening the post, and the text starts a little below the avatar's top edge.
+  comment: { flex: 1, minWidth: 0, paddingTop: COMMENT_TEXT_OFFSET, ...(Platform.OS === 'web' ? ({ overflowWrap: 'anywhere' } as TextStyle) : null) },
   allComments: { minHeight: size.target, justifyContent: 'center', alignSelf: 'flex-start' },
   actions: { flexDirection: 'row', alignItems: 'center' },
   burst: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, alignItems: 'center', justifyContent: 'center' },
