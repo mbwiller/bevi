@@ -21,8 +21,8 @@ Source: `CONVERSATION-2.md` (raw transcript). This file turns that conversation 
 | **D-04** | The finer category list, `design/taxonomy.md` (high effort), **plus the 378 catalog Bevs assigned to leaves** | Matt | **Ready** | — | A-13, then M-21 |
 | **M-22** | Maths review: paper ↔ `@bevi/ranking` ↔ SQL | Matt | **Ready** | — | Any A-14 follow-ups |
 | **M-26 export** | Run `packages/ranking/eval/export.sql` on prod and hand Matt the file (outside the repo) | Arjun | **Ready**, about 15 min | — | Real baseline numbers for M-27 and A-16 |
-| **S-04 + A-04** | Explore backend (read-only posts, D-15), one combined PR including the FakeApi | Arjun | **Ready** | — | M-04 |
-| **M-04** | Explore screen | Matt | Waiting | S-04 + A-04 | — |
+| **S-04 + A-04** | Explore backend (read-only posts, D-15), one combined PR including the FakeApi | Arjun | **Built, in review** on `be/explore`: `get_explore` (`20261019000300`), pgTAP, contract `2.5.0`, `packages/api`, FakeApi | — | M-04 |
+| **M-04** | Explore screen | Matt | **Ready to start** against the FakeApi; needs `20261019000300` on prod before merging | S-04 + A-04 (in review) | — |
 | **A-16 (1) + S-14 (2)** | **The Bev graph:** embeddings, weighted `SIMILAR_TO` edges in Neo4j, a `bev_edges` mirror in Postgres, nightly rebuild plus new-Bev updates, D-11 inference. Includes the contract (`similar`, `similarities`, `listBucketBevs`) | Arjun | **Ready** | — | M-27, M-21 |
 | **M-27** | Use the Bev graph: recommendations read edge weights, plus a "Bevs like this" row | Matt | Waiting | A-16 (1) + S-14 (2) | — |
 | **A-13** | Category hierarchy: `categories.parent_id` in Postgres, `CHILD_OF` in Neo4j, `Category.parentId` | Arjun | Waiting | D-04 | M-21, a better tree term |

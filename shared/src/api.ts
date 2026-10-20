@@ -16,6 +16,7 @@ import type {
   CategoryProgress,
   Comment,
   Comparison,
+  ExplorePost,
   FeaturedBev,
   FeedItem,
   LeaderboardRow,
@@ -365,6 +366,32 @@ export interface FeedApi {
    * @throws 'unauthorized'; 'not_found' — no such user.
    */
   listUser(userId: string, page?: PageParams): Promise<Page<FeedItem>>;
+
+  /**
+   * Explore: RANKING posts by users up to two follows away whom the caller
+   * does NOT follow (never their own, never someone they already follow, so
+   * no post is ever in both the feed and Explore). Age-filtered.
+   *
+   * **Ordered by popularity, not by time** — a time-decayed like count,
+   * `(likes + 1) / (ageHours + 2)^1.5` (docs/bevi-ranking-math.tex §10.4) —
+   * so `items` is NOT newest-first and a post can move up as it is liked.
+   *
+   * **Read-only (D-15):** an `ExplorePost` is a `FeedItem` without
+   * `likeCount`, `likedByMe`, `commentCount` and `comments`. The server does
+   * not return them, and `feed.like` / `comments.add` on an Explore post
+   * throw 'not_found' — likes and comments stay follower-only. Render it as a
+   * plain post with no heart, no counts and no comments.
+   *
+   * While Bevi has fewer than 20 users the two-hop scope widens to everyone
+   * (minus the caller and the people they follow), so the tab is never empty
+   * (D-01).
+   *
+   * Paging is by `nextCursor` as everywhere else; the cursor freezes the
+   * ordering for the rest of the sequence, so pages do not reshuffle as
+   * scores decay. Start a fresh sequence (no cursor) to pick up new posts.
+   * @throws 'unauthorized'.
+   */
+  getExplore(page?: PageParams): Promise<Page<ExplorePost>>;
 
   /** Age-filtered. @throws 'unauthorized'. */
   getFeatured(): Promise<FeaturedBev[]>;

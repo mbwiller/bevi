@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   ApiError,
   type BevOfPeriod,
+  type ExplorePost,
   type FeaturedBev,
   type FeedApi,
   type FeedItem,
@@ -13,10 +14,12 @@ import { mapError } from './errors';
 import {
   mapBevOfPeriod,
   mapBevSummary,
+  mapExplorePost,
   mapFeedItem,
   mapProfile,
   publicUrl,
   type BevOfPeriodRpcRow,
+  type ExploreRpcRow,
   type FeedRpcRow,
   type ProfileViewRow,
 } from './mappers';
@@ -30,6 +33,18 @@ async function requireUserId(client: SupabaseClient): Promise<string> {
 
 interface FeedCursor {
   beforeId: number;
+}
+
+/**
+ * Explore pages by offset over an ordering frozen per sequence: `before` is
+ * the snapshot instant page 1 was built from, which every later page sends
+ * back so decaying scores cannot reshuffle the rows underneath the reader
+ * (get_explore, 20261019000300). It holds no like counts and no score, so it
+ * carries nothing about another user (D-15).
+ */
+interface ExploreCursor {
+  before: string;
+  offset: number;
 }
 
 interface FeaturedRpcRow {
@@ -51,8 +66,8 @@ interface FeaturedRpcRow {
   bev_bayes_score: number | null;
 }
 
-/** get_feed and get_user_feed rows (same columns) → a page of FeedItems, actors joined from profiles_view. */
-async function toFeedPage(client: SupabaseClient, rpc: string, rows: FeedRpcRow[], limit: number): Promise<Page<FeedItem>> {
+/** The actors of these rows, joined from profiles_view in one round trip. */
+async function loadActors(client: SupabaseClient, rows: { actor_id: string }[]): Promise<Map<string, Profile>> {
   const actorIds = [...new Set(rows.map((r) => r.actor_id))];
   const actorById = new Map<string, Profile>();
   if (actorIds.length > 0) {
@@ -60,12 +75,19 @@ async function toFeedPage(client: SupabaseClient, rpc: string, rows: FeedRpcRow[
     if (actorError) throw mapError(actorError);
     for (const row of actorRows as ProfileViewRow[]) actorById.set(row.id, mapProfile(client, row));
   }
+  return actorById;
+}
 
-  const items = rows.map((row) => {
-    const actor = actorById.get(row.actor_id);
-    if (!actor) throw new ApiError('unknown', `${rpc} row ${row.id} has no matching profile for actor ${row.actor_id}`);
-    return mapFeedItem(client, row, actor);
-  });
+function actorOf(actorById: Map<string, Profile>, rpc: string, row: { id: number; actor_id: string }): Profile {
+  const actor = actorById.get(row.actor_id);
+  if (!actor) throw new ApiError('unknown', `${rpc} row ${row.id} has no matching profile for actor ${row.actor_id}`);
+  return actor;
+}
+
+/** get_feed and get_user_feed rows (same columns) → a page of FeedItems, actors joined from profiles_view. */
+async function toFeedPage(client: SupabaseClient, rpc: string, rows: FeedRpcRow[], limit: number): Promise<Page<FeedItem>> {
+  const actorById = await loadActors(client, rows);
+  const items = rows.map((row) => mapFeedItem(client, row, actorOf(actorById, rpc, row)));
 
   const last = rows[rows.length - 1];
   const nextCursor = rows.length === limit && last ? encodeCursor({ beforeId: last.id } satisfies FeedCursor) : null;
@@ -96,6 +118,34 @@ export function createFeedApi(client: SupabaseClient): FeedApi {
       });
       if (error) throw mapError(error);
       return toFeedPage(client, 'get_user_feed', data as FeedRpcRow[], limit);
+    },
+
+    async getExplore(page?: PageParams): Promise<Page<ExplorePost>> {
+      await requireUserId(client);
+      const limit = clampLimit(page?.limit);
+      // A new sequence snapshots this client's clock; get_explore measures
+      // every age from it and ignores anything created after it, so every
+      // later page of the sequence reuses the same ordering. The server
+      // tolerates a few minutes of clock skew. A cursor that does not hold a
+      // timestamp and a non-negative offset starts the sequence over, the same
+      // way `decodeCursor` treats one it cannot even parse.
+      const decoded = decodeCursor<ExploreCursor>(page?.cursor);
+      const cursor =
+        decoded && !Number.isNaN(Date.parse(decoded.before)) && Number.isInteger(decoded.offset) && decoded.offset >= 0
+          ? decoded
+          : undefined;
+      const before = cursor?.before ?? new Date().toISOString();
+      const offset = cursor?.offset ?? 0;
+
+      const { data, error } = await client.rpc('get_explore', { p_limit: limit, p_before: before, p_offset: offset });
+      if (error) throw mapError(error);
+
+      const rows = (data ?? []) as ExploreRpcRow[];
+      const actorById = await loadActors(client, rows);
+      const items = rows.map((row) => mapExplorePost(client, row, actorOf(actorById, 'get_explore', row)));
+      const nextCursor =
+        rows.length === limit ? encodeCursor({ before, offset: offset + rows.length } satisfies ExploreCursor) : null;
+      return { items, nextCursor };
     },
 
     async getFeatured(): Promise<FeaturedBev[]> {
