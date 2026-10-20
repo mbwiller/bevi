@@ -134,10 +134,15 @@ neighbours therefore live in both columns, which is why there are two indexes
 and why the read RPCs look both ways.
 
 RLS on both: `select` for `authenticated`, **no** insert/update/delete policy —
-the sync writes as the service role. The select policies carry the alcohol
-predicate as well, because an edge is a statement about two Bevs and a readable
-row would tell an under-21 viewer that a Bev they may not see exists and what it
-resembles. The reasoning is written out in the migration.
+the sync writes as the service role. The select policies reproduce **both**
+halves of `bevs_select`, the status one and the alcohol one, because an edge is
+a statement about two Bevs: a readable row would otherwise tell a viewer that a
+Bev they may not see exists and what it resembles. The status half matters most
+after a takedown — `bevs_select` stops serving a hidden Bev's row at once, while
+its edge and embedding survive until the next nightly sync, so without it a
+plain `GET /rest/v1/bev_edges` is a moderation bypass that also yields the
+Bev's `gte-small` vector. Only `status = 'active'` passes, not `bevs_select`'s
+`pending_photo` branch. The reasoning is written out in the migration.
 
 Three `security definer` read RPCs, each age-gating exactly as `search_bevs`
 does, each returning **zero rows rather than an error** while the mirror is

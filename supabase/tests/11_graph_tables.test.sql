@@ -31,7 +31,7 @@
 -- src_bev_id and the other with anchor as dst_bev_id: every lookup below has
 -- to find both.
 begin;
-select plan(53);
+select plan(55);
 
 -- ---------------------------------------------------------------------------
 -- People
@@ -387,6 +387,20 @@ select throws_ok(
   '22023', 'BEVI_VALIDATION',
   'more ids than a bucket could hold is a validation error, not an unbounded scan'
 );
+-- The cap counts elements, not dimensions. array_length(arr, 1) measures the
+-- first dimension only, so a nested array -- which is what PostgREST builds
+-- from a nested JSON array -- would slip 2x, 10x or 1000x the cap past a
+-- guard written that way, bounded only by the request body size.
+select throws_ok(
+  $$ select * from public.get_bev_similarities(
+       (select id from t_bevs where label = 'anchor'),
+       (select array_agg(a) from (
+          select array[gen_random_uuid(), gen_random_uuid(), gen_random_uuid(),
+                       gen_random_uuid(), gen_random_uuid(), gen_random_uuid()] as a
+            from generate_series(1, 100)) s)) $$,
+  '22023', 'BEVI_VALIDATION',
+  'a nested array is measured by cardinality, so 600 ids in 100 rows is still rejected'
+);
 
 -- ---------------------------------------------------------------------------
 -- 5. get_similar_bevs: order, the status filter, the clamp
@@ -583,12 +597,24 @@ select is(
   (select count(*)::int from public.bev_edges
     where src_bev_id = (select id from t_bevs where label = 'anchor')
        or dst_bev_id = (select id from t_bevs where label = 'anchor')),
-  64,
-  'select on bev_edges is allowed: an adult reads all 64 of the anchor''s edges'
+  63,
+  'select on bev_edges is allowed: an adult reads the anchor''s 63 visible edges'
+);
+-- The heaviest edge (0.99) leads to the Bev moderation hid. The policy must
+-- withhold it from everyone, adult or not: bevs_select stops serving that row
+-- the moment status changes, while the edge survives until the nightly sync,
+-- so without the status half of the predicate this is a moderation bypass --
+-- the id, the weight and the per-term components of a Bev that was taken down.
+select is(
+  (select count(*)::int from public.bev_edges
+    where src_bev_id = (select id from t_bevs where label = 'hidden')
+       or dst_bev_id = (select id from t_bevs where label = 'hidden')),
+  0,
+  'an edge to a non-active Bev is invisible even to an adult'
 );
 select is(
   (select count(*)::int from public.bev_embeddings), 2,
-  'and both embedding rows'
+  'and both embedding rows (anchor and booze are both still active)'
 );
 
 set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000ed002", "role": "authenticated"}';
@@ -604,7 +630,7 @@ select is(
   (select count(*)::int from public.bev_edges
     where src_bev_id = (select id from t_bevs where label = 'anchor')
        or dst_bev_id = (select id from t_bevs where label = 'anchor')),
-  63,
+  62,
   'the same caller still reads every edge between two Bevs they may see'
 );
 select is(

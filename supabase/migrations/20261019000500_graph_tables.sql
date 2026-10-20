@@ -179,27 +179,61 @@ create index bev_edges_dst_weight_idx on public.bev_edges (dst_bev_id, weight de
 alter table public.bev_embeddings enable row level security;
 alter table public.bev_edges      enable row level security;
 
+-- bevs_select is a conjunction of TWO halves -- the status half and the
+-- alcohol half -- and derived data has to mirror both. Mirroring only the
+-- alcohol half is the same mistake one layer down: substitute "a Bev whose
+-- status hides it" for "an alcoholic Bev" in the argument above and it reads
+-- identically. Concretely, moderation sets status='hidden' and bevs_select
+-- stops serving the row, but the edge and the embedding survive until the next
+-- nightly sync -- so a plain `GET /rest/v1/bev_edges?weight=gt.0.9` would hand
+-- any signed-in user the hidden Bev's id, its weight to a visible Bev and the
+-- per-term `components`, and the embeddings table would hand over its 384-d
+-- gte-small vector. That vector encodes "brand name flavour category" from a
+-- public model, so candidate strings can be embedded and compared to recover
+-- roughly the free text that was just taken down.
+--
+-- Only 'active' is allowed through, not bevs_select's `pending_photo and
+-- created_by = auth.uid()` branch: a draft's creator can see the Bev row
+-- itself, and there is no reason its edges need to follow.
 create policy bev_embeddings_select on public.bev_embeddings
   for select to authenticated using (
-    public.viewer_is_adult()
-    or not exists (
-      select 1
-        from public.bevs b
-        join public.categories c on c.id = b.category_id
-       where b.id = bev_embeddings.bev_id
-         and c.is_alcoholic
+    exists (
+      select 1 from public.bevs b
+       where b.id = bev_embeddings.bev_id and b.status = 'active'
+    )
+    and (
+      public.viewer_is_adult()
+      or not exists (
+        select 1
+          from public.bevs b
+          join public.categories c on c.id = b.category_id
+         where b.id = bev_embeddings.bev_id
+           and c.is_alcoholic
+      )
     )
   );
 
+-- Both ends must be active, for the reason above: an edge is a statement about
+-- two Bevs, so either end being withheld withholds the row.
 create policy bev_edges_select on public.bev_edges
   for select to authenticated using (
-    public.viewer_is_adult()
-    or not exists (
-      select 1
-        from public.bevs b
-        join public.categories c on c.id = b.category_id
-       where b.id in (bev_edges.src_bev_id, bev_edges.dst_bev_id)
-         and c.is_alcoholic
+    exists (
+      select 1 from public.bevs b
+       where b.id = bev_edges.src_bev_id and b.status = 'active'
+    )
+    and exists (
+      select 1 from public.bevs b
+       where b.id = bev_edges.dst_bev_id and b.status = 'active'
+    )
+    and (
+      public.viewer_is_adult()
+      or not exists (
+        select 1
+          from public.bevs b
+          join public.categories c on c.id = b.category_id
+         where b.id in (bev_edges.src_bev_id, bev_edges.dst_bev_id)
+           and c.is_alcoholic
+      )
     )
   );
 
@@ -246,7 +280,12 @@ begin
   if v_uid is null then
     raise exception 'BEVI_UNAUTHORIZED' using errcode = '42501';
   end if;
-  if coalesce(array_length(p_other_ids, 1), 0) > v_max then
+  -- cardinality(), not array_length(arr, 1): the latter is the length of the
+  -- FIRST DIMENSION only, so a nested array walks straight past the cap --
+  -- PostgREST builds a multidimensional array from a nested JSON array, and
+  -- `[[a,b],[c,d], ...]` with 500 outer elements unnests to 1000+ ids. The
+  -- bound would then be set by the request body size, not by v_max.
+  if coalesce(cardinality(p_other_ids), 0) > v_max then
     raise exception 'BEVI_VALIDATION' using errcode = '22023', detail = 'otherIds';
   end if;
 
