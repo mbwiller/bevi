@@ -31,7 +31,7 @@
 -- src_bev_id and the other with anchor as dst_bev_id: every lookup below has
 -- to find both.
 begin;
-select plan(55);
+select plan(57);
 
 -- ---------------------------------------------------------------------------
 -- People
@@ -470,11 +470,13 @@ select is(
 -- ---------------------------------------------------------------------------
 
 -- First as the adult, so each "absent" below is the gate and not an empty set.
+-- booze has two visible neighbours: anchor at 0.97 from the loop above, and
+-- upper at 0.55 from the edge that does not touch the anchor.
 select is(
   (select count(*)::int from public.get_similar_bevs(
      (select id from t_bevs where label = 'booze'), 10)),
-  1,
-  'an adult does see the alcoholic Bev''s own neighbour'
+  2,
+  'an adult does see the alcoholic Bev''s own neighbours'
 );
 
 set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000ed002", "role": "authenticated"}';
@@ -561,6 +563,37 @@ select lives_ok(
   $$ select * from public.list_bucket_bevs(9::smallint) $$,
   'a bucket value no Bucket maps to is zero rows, not an error'
 );
+
+-- The status filter is what makes this function agree with rankings.listBucket,
+-- not what breaks the agreement. rankings_select carries no status condition of
+-- its own, but its positive `exists` reads public.bevs under bevs_select, which
+-- requires 'active' -- so listBucket already drops a hidden Bev, and a definer
+-- without the filter would be the one keeping it. Both reads are asserted here,
+-- against the same bucket, so a future edit cannot move one without the other.
+reset role;
+update public.bevs set status = 'hidden'
+ where id = (select id from t_bevs where label = 'booze');
+set local role authenticated;
+set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000ed001", "role": "authenticated"}';
+
+select is(
+  (select array_agg(t.id order by t.ordinality)
+     from public.list_bucket_bevs(3::smallint) with ordinality t),
+  array[(select id from t_bevs where label = 'brandy'),
+        (select id from t_bevs where label = 'blank')],
+  'a Bev moderation hid leaves the caller''s bucket list'
+);
+select is(
+  (select count(*)::int from public.rankings r
+    where r.user_id = '00000000-0000-4000-8000-0000000ed001' and r.bucket = 3),
+  2,
+  'and rankings.listBucket''s own read agrees, so expectedBucketSize cannot drift'
+);
+
+reset role;
+update public.bevs set status = 'active'
+ where id = (select id from t_bevs where label = 'booze');
+set local role authenticated;
 
 set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000ed003", "role": "authenticated"}';
 select is(

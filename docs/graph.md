@@ -142,7 +142,14 @@ after a takedown — `bevs_select` stops serving a hidden Bev's row at once, whi
 its edge and embedding survive until the next nightly sync, so without it a
 plain `GET /rest/v1/bev_edges` is a moderation bypass that also yields the
 Bev's `gte-small` vector. Only `status = 'active'` passes, not `bevs_select`'s
-`pending_photo` branch. The reasoning is written out in the migration.
+`pending_photo` branch.
+
+Both policies are written as a **positive** `exists` per Bev the row references,
+mirroring `rankings_select`. That shape is load-bearing: a policy's own table
+references are subject to those tables' RLS, so a negative `not exists` over
+`bevs` is fail-**open** — `bevs_select` has already hidden the alcoholic Bev
+from an under-21 caller, the inner select finds nothing, and the row is served.
+The reasoning is written out in the migration.
 
 Three `security definer` read RPCs, each age-gating exactly as `search_bevs`
 does, each returning **zero rows rather than an error** while the mirror is

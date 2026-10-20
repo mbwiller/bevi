@@ -195,45 +195,53 @@ alter table public.bev_edges      enable row level security;
 -- Only 'active' is allowed through, not bevs_select's `pending_photo and
 -- created_by = auth.uid()` branch: a draft's creator can see the Bev row
 -- itself, and there is no reason its edges need to follow.
+-- Shape matters as much as content here. A policy's own table references are
+-- themselves subject to those tables' RLS -- the mechanism behind Postgres's
+-- "infinite recursion detected in policy" -- so a NEGATIVE subquery over
+-- `bevs` is fail-OPEN: for an under-21 caller, bevs_select has already hidden
+-- the alcoholic Bev, the inner select finds nothing, `not exists` is vacuously
+-- true, and the row is served. That is the exact disclosure the policy exists
+-- to stop, and it would have made the predicate equivalent to `using (true)`
+-- for everyone.
+--
+-- So this mirrors rankings_select (20261011000100:145-153): a POSITIVE
+-- `exists` per endpoint, which is fail-closed under either reading of the
+-- nesting semantics -- an invisible `bevs` row simply yields false. The status
+-- condition rides inside the same subquery rather than standing apart, so one
+-- `exists` enforces both halves of bevs_select at once.
 create policy bev_embeddings_select on public.bev_embeddings
   for select to authenticated using (
     exists (
-      select 1 from public.bevs b
-       where b.id = bev_embeddings.bev_id and b.status = 'active'
-    )
-    and (
-      public.viewer_is_adult()
-      or not exists (
-        select 1
-          from public.bevs b
-          join public.categories c on c.id = b.category_id
-         where b.id = bev_embeddings.bev_id
-           and c.is_alcoholic
-      )
+      select 1
+        from public.bevs b
+        join public.categories c on c.id = b.category_id
+       where b.id = bev_embeddings.bev_id
+         and b.status = 'active'
+         and (not c.is_alcoholic or public.viewer_is_adult())
     )
   );
 
 -- Both ends must be active, for the reason above: an edge is a statement about
 -- two Bevs, so either end being withheld withholds the row.
+-- One positive `exists` per endpoint, for the reason above: an edge is a
+-- statement about two Bevs, so either end being withheld withholds the row.
 create policy bev_edges_select on public.bev_edges
   for select to authenticated using (
     exists (
-      select 1 from public.bevs b
-       where b.id = bev_edges.src_bev_id and b.status = 'active'
+      select 1
+        from public.bevs b
+        join public.categories c on c.id = b.category_id
+       where b.id = bev_edges.src_bev_id
+         and b.status = 'active'
+         and (not c.is_alcoholic or public.viewer_is_adult())
     )
     and exists (
-      select 1 from public.bevs b
-       where b.id = bev_edges.dst_bev_id and b.status = 'active'
-    )
-    and (
-      public.viewer_is_adult()
-      or not exists (
-        select 1
-          from public.bevs b
-          join public.categories c on c.id = b.category_id
-         where b.id in (bev_edges.src_bev_id, bev_edges.dst_bev_id)
-           and c.is_alcoholic
-      )
+      select 1
+        from public.bevs b
+        join public.categories c on c.id = b.category_id
+       where b.id = bev_edges.dst_bev_id
+         and b.status = 'active'
+         and (not c.is_alcoholic or public.viewer_is_adult())
     )
   );
 
@@ -429,24 +437,29 @@ comment on function public.get_similar_bevs(uuid, int) is
 --   * age-gated through the Bev's category, which is what `rankings_select`
 --     does, so an under-21 caller whose birth date arrived after the ranking
 --     sees neither here;
---   * NOT filtered on `bevs.status`, which `rankings_select` also does not
---     filter on. The two lists index into each other during placement
---     (`listBucket`'s length is `expectedBucketSize`), so a Bev that appears
---     in one and not the other is a bug source. This is the one place in this
---     migration where "match the existing read" beats "filter like #113",
---     because these ids are never rendered as a card -- they are compared
---     against, and the Bev's own RPCs still refuse to return it.
+--   * filtered on `bevs.status = 'active'`, which is what actually MATCHES
+--     `listBucket`. An earlier revision of this function skipped the filter on
+--     the grounds that `rankings_select` (20261011000100:145-153) carries no
+--     status condition -- true of its text, but not of its behaviour: its
+--     positive `exists` reads `public.bevs`, that read is subject to
+--     bevs_select, and bevs_select requires 'active'. So `listBucket` already
+--     drops a Bev moderation has hidden, and this function -- a definer, which
+--     bypasses RLS -- would have been the one keeping it. The two lists index
+--     into each other during placement (`listBucket`'s length is
+--     `expectedBucketSize`), so that divergence was the bug the omission was
+--     meant to avoid.
 --   * ordered by `position`, best first, as `listBucket` is.
 --
 -- brand_key matches `normaliseBrand()` in @bevi/ranking (lowercase, trim,
 -- collapse inner whitespace, null when empty) rather than the schema's own
 -- `lower(brand)` (`bevs_natural_uq`, 20261009000300), because the value is
 -- consumed by `contentSimilarity`, whose `brandKey` equality is defined by
--- that function. The only divergence is the exact character class of `\s`,
+-- that function. The residual divergence is the exact character class of `\s`,
 -- which differs between JS and Postgres for exotic Unicode spaces; a brand
 -- containing one would compare equal in SQL and unequal in TypeScript, which
 -- is a cosmetic mismatch on data `bevs.brand`'s CHECK does not exclude but no
--- seeded row contains.
+-- seeded row contains. (An earlier revision also diverged on plain ASCII tab
+-- and newline; see the comment on the expression itself.)
 --
 -- An out-of-range p_bucket is zero rows, not an error: `bucketToDb` in
 -- packages/api only ever produces 1, 2 or 3, so a bad value is unreachable
@@ -474,12 +487,19 @@ begin
   return query
     select b.id,
            b.category_id,
-           nullif(regexp_replace(lower(btrim(b.brand)), '\s+', ' ', 'g'), '') as brand_key
+           -- Collapse BEFORE trimming. btrim(text) strips spaces only, while
+           -- normaliseBrand()'s JS .trim() strips all whitespace, so
+           -- `lower(btrim(E'\tDr Pepper'))` keeps the tab, the collapse turns
+           -- it into a leading space, and SQL reads ' dr pepper' where
+           -- TypeScript reads 'dr pepper'. Collapsing first also means a
+           -- whitespace-only brand reaches btrim as ' ' and nullif catches it.
+           nullif(btrim(regexp_replace(lower(b.brand), '\s+', ' ', 'g')), '') as brand_key
       from public.rankings r
       join public.bevs b on b.id = r.bev_id
       join public.categories c on c.id = b.category_id
      where r.user_id = v_uid
        and r.bucket = p_bucket
+       and b.status = 'active'
        and (not c.is_alcoholic or public.viewer_is_adult())
      order by r.position;
 end;
