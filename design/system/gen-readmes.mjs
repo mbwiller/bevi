@@ -38,8 +38,14 @@ const R = {
 - **Never on rows or posts**, estimated or not (D-06): a price on every row was too much information. It shows on Bev detail, the gut-check card and featured cards. The create-Bev wizard picks a tier with \`PriceTierPicker\`.`,
   Avatar: `A circle with two initials in \`textSecondary\` on \`avatarFill\`, or the person's photo.
 
-- Provide: \`name\` (initials come from the first two words), \`src\` optional, \`size\` 32 (tab bar), 44 (people rows), 60 (feed posts), 100 (profile hero, initials 40pt light).
-- \`ring\` adds a \`surface\` outline for overlapping stacks.`,
+- Provide: \`name\` (initials come from the first two words), \`src\` optional, \`size\` 24 (a comment inline on a post), 32 (tab bar, the comments sheet), 44 (people rows), 60 (feed posts), 100 (profile hero, initials 40pt light).
+- \`ring\` adds a \`surface\` outline for overlapping stacks.
+- The photo is the person's own upload (AvatarPicker); without one, the initials. The same circle, photo or initials, appears everywhere the person does: posts, comments, people rows, the leaderboard, people search, the tab bar.`,
+  AvatarPicker: `Your own photo where it can be changed: Edit profile and the onboarding profile step. An Avatar 100 (the photo, or your initials) over a \`primary\` text button, "Add a photo" with no photo and "Change photo" with one, plus "Remove" in \`textSecondary\`.
+
+- Provide: \`name\`, \`src\`, \`onChange\` (opens the photo picker: on the web the file input, which on an iPhone offers the camera or the library), \`onRemove\`, \`busy\` (a spinner over the circle while the picture uploads; both buttons disabled), \`error\` (a \`scoreLow\` caption: "Couldn't upload your photo. Try another one.").
+- A chosen photo is saved as soon as it uploads, with no Save step: the circle shows the new picture at once and it appears everywhere the person's Avatar does. Removing goes back to initials.
+- Photos are resized to 512pt on the longest edge and re-encoded as JPEG before upload (EXIF dropped), the same path as Bev photos at 1600pt.`,
   AvatarStack: `Overlapping avatars for "Friends who've had it" on Bev detail, with a "+N" chip past \`max\`.
 
 - Provide: \`people\` ({ name, src? }), \`size\` (32), \`max\` (4).
@@ -124,7 +130,7 @@ const R = {
 - Action row: the time on the left; on the right the LikeButton and the CommentButton, then Rank it and Want to Try. Heart and comment lead the group because they are about the post, while Rank and Want to Try are about the Bev.
 - **Double-tap anywhere on the post outside the photo strip to like it**, Instagram-style. It only ever likes, never unlikes (the heart does that), and it is never the only way to like. A single tap on the photo still opens the Bev, so the strip ignores double-taps. The post sets \`touch-action: manipulation\` so Safari doesn't zoom on a double-tap.
 - The burst: a 88pt filled \`primary\` heart grows over the photo strip (the post's centre when there is no photo), holds and fades within 800ms, transform and opacity only. Reduce Motion: a plain fade. It plays on every like by double-tap, even when the post was already liked.
-- **Comments sit under the action row**, as on Instagram: the post (head, photos, note) reads first, the row of actions closes it, and the conversation follows. With 7 or fewer comments the post shows every one inline, oldest first, as "**handle** text" in \`body\` (\`comments\` is the contract's first seven). Above 7 it collapses to a single "View all N comments" line in \`textSecondary\`, with no preview, so a busy post stays one line taller, not seven. That line and the CommentButton both open the CommentsSheet.
+- **Comments sit under the action row**, as on Instagram: the post (head, photos, note) reads first, the row of actions closes it, and the conversation follows. With 7 or fewer comments the post shows every one inline, oldest first, each as its author's Avatar 24 then "**handle** text" in \`body\`, like Instagram (\`comments\` is the contract's first seven). Above 7 it collapses to a single "View all N comments" line in \`textSecondary\`, with no preview, so a busy post stays one line taller, not seven. That line and the CommentButton both open the CommentsSheet.
 - Notes over 160 characters truncate with "See more". Alcoholic Bevs from friends render without the Rank action for under-21 viewers.`,
   FeaturedCard: `164pt square photo card for the Featured carousel: image, a \`photoScrim\` gradient, white 20pt title and 15pt subtitle.
 
