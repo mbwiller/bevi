@@ -7,7 +7,7 @@
 // It only relies on what the contract promises, never on fixture data: it creates its own users
 // (unique usernames) and finds Bevs through `getStarterCandidates` (≥ 30 promised). Uses Jest globals.
 
-import { BANDS, MIN_N_USER, MIN_RATERS } from '@bevi/ranking';
+import { BANDS, MIN_N_USER, MIN_RATERS, normaliseBrand } from '@bevi/ranking';
 import {
   ApiError,
   BUCKET_ORDER,
@@ -114,6 +114,9 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       await expectCode(api.feed.getBevOfPeriod(), 'unauthorized');
       await expectCode(api.feed.listUser('anyone'), 'unauthorized');
       await expectCode(api.rankings.listMine(), 'unauthorized');
+      await expectCode(api.rankings.listBucketBevs('LOVED'), 'unauthorized');
+      await expectCode(api.bevs.similar('anything'), 'unauthorized');
+      await expectCode(api.bevs.similarities('anything', ['other']), 'unauthorized');
       await expectCode(api.categories.list(), 'unauthorized');
       await expectCode(api.stats.getCategoryProgress(), 'unauthorized');
       await expectCode(api.stats.getTasteProfile('anyone'), 'unauthorized');
@@ -795,6 +798,85 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       }
       const p = (await api.bevs.get(ids[MIN_N_USER]!)).prediction;
       if (p) expect(typeof p.rankingVersion).toBe('string');
+    });
+  });
+
+  // S-14 part 2. Everything here is contract-only on purpose: `bev_edges` is EMPTY until the graph
+  // sync job lands, and sparse afterwards (only pairs above EDGE_MIN_WEIGHT that made one of the two
+  // Bevs' top-EDGE_TOP_K cut are stored), so a conformance suite may not assert that any particular
+  // pair has a weight. What it can assert is that an empty or partial answer is well-formed, that
+  // `listBucketBevs` is `listBucket` plus two columns, and that the documented errors fire.
+  describe('the Bev graph', () => {
+    it('bevs.similarities: a subset of the ids asked about, weights in [0, 1], never the anchor', async () => {
+      await newUser();
+      const ids = await starterIds(6);
+      const [anchor, ...others] = ids as [string, ...string[]];
+
+      expect(await api.bevs.similarities(anchor, [])).toEqual([]);
+
+      // Duplicates and the anchor itself are in the input on purpose: both have to be handled
+      // rather than echoed back.
+      const rows = await api.bevs.similarities(anchor, [...others, ...others, anchor]);
+      const seen = new Set<string>();
+      for (const row of rows) {
+        expect(others).toContain(row.bevId);
+        expect(seen.has(row.bevId)).toBe(false);
+        seen.add(row.bevId);
+        expect(row.weight).toBeGreaterThanOrEqual(0);
+        expect(row.weight).toBeLessThanOrEqual(1);
+      }
+      // An id nothing matches is simply absent, not an error.
+      expect(await api.bevs.similarities(anchor, ['no-such-bev'])).toEqual([]);
+      const e = await expectCode(
+        api.bevs.similarities(anchor, Array.from({ length: 501 }, (_, i) => `no-such-bev-${i}`)),
+        'validation',
+      );
+      expect(e.detail).toMatchObject({ field: 'otherIds' });
+    });
+
+    it('bevs.similar: at most n BevSummary rows, never the Bev itself, age-filtered', async () => {
+      await newUser();
+      const [anchor] = await starterIds(1);
+
+      const all = await api.bevs.similar(anchor!);
+      expect(all.length).toBeLessThanOrEqual(10);
+      const two = await api.bevs.similar(anchor!, 2);
+      expect(two.length).toBeLessThanOrEqual(2);
+      for (const bev of [...all, ...two]) {
+        expect(bev.id).not.toBe(anchor);
+        expect(typeof bev.name).toBe('string');
+        expect([1, 2, 3, 4]).toContain(bev.priceTier);
+        expect(bev.ratingCount).toBeGreaterThanOrEqual(0);
+      }
+      // An absurd n is clamped server-side rather than refused.
+      expect((await api.bevs.similar(anchor!, 10_000)).length).toBeLessThanOrEqual(50);
+
+      // A Bev a minor may not see offers them no neighbours and no weights, either way round.
+      await newUser({ birthdate: MINOR_BIRTHDATE(new Date()) });
+      expect(await api.bevs.similar(options.alcoholicBevId)).toEqual([]);
+      expect(await api.bevs.similarities(options.alcoholicBevId, [anchor!])).toEqual([]);
+      expect(await api.bevs.similarities(anchor!, [options.alcoholicBevId])).toEqual([]);
+    });
+
+    it('rankings.listBucketBevs: listBucket plus the category and the normalised brand key', async () => {
+      await newUser();
+      expect(await api.rankings.listBucketBevs('LOVED')).toEqual([]);
+
+      const [a, b] = await starterIds(2);
+      await rankAtBottom(a!, 'LOVED');
+      await rankAtBottom(b!, 'LOVED');
+
+      const ids = await api.rankings.listBucket('LOVED');
+      const rows = await api.rankings.listBucketBevs('LOVED');
+      expect(rows.map((r) => r.id)).toEqual(ids);
+      for (const row of rows) {
+        const bev = await api.bevs.get(row.id);
+        expect(row.categoryId).toBe(bev.categoryId);
+        // The one formula the row carries: @bevi/ranking's normaliseBrand, which the SQL
+        // reproduces with lower/btrim/collapse.
+        expect(row.brandKey).toBe(normaliseBrand(bev.brand));
+      }
+      expect(await api.rankings.listBucketBevs('DISLIKED')).toEqual([]);
     });
   });
 }

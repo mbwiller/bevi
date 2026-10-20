@@ -10,6 +10,17 @@ increment to the part that cannot be done in Postgres at all, and defers the
 rest. Where the two disagree, this document is the newer decision and
 `docs/graph.md` should be updated when a stage lands.
 
+> **Superseded for the ordering, 2026-10-19 (TASKS.md A-16).** Matt and Arjun
+> reversed the narrowing: the **Bev graph is increment 1** — embeddings,
+> `bev_embeddings`, `bev_edges` and the weighted `SIMILAR_TO` edges, with the
+> Postgres tables, RLS and S-14 part 2's contract already merged
+> (`20261019000500`) and the sync pipeline following in the next PR. **The
+> user-neighbour MVP this document specifies (approach B, `user_neighbors`,
+> Stages 2–5) is increment 2**, after M-28. Everything below still stands as the
+> design for that increment; only "which comes first" changed, so read §5's
+> integration plan and the decision bar as increment 2's, and ignore the
+> "Deferred" entries for embeddings, pgvector and `bev_edges`.
+
 ## Objective
 
 Predict how much an individual user will enjoy a specific drink. Not "find

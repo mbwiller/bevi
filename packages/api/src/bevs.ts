@@ -5,6 +5,7 @@ import {
   type Bev,
   type BevPrediction,
   type BevsApi,
+  type BevSimilarity,
   type BevSummary,
   type CategoryId,
   type CreateBevInput,
@@ -15,9 +16,11 @@ import {
 import {
   bucketFromDb,
   mapBev,
+  mapBevSimilarity,
   mapBevSummary,
   mapProfile,
   type BevRow,
+  type BevSimilarityRow,
   type BevSummaryRow,
   type FlavorProfileRow,
   type MyRankingRow,
@@ -277,5 +280,40 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
     return (data ?? []).map((row) => mapBevSummary(client, row as unknown as BevSummaryRow));
   }
 
-  return { search, get, findLikelyDuplicates, create, report, getStarterCandidates };
+  // --------------------------------------------------------------------------
+  // The Bev graph (A-16 + S-14 part 2)
+  // --------------------------------------------------------------------------
+  // Both of these read the `bev_edges` mirror written by the nightly graph
+  // sync. The sync does not exist yet, so the mirror is empty and both return
+  // `[]`; the contract says so and the app has to cope either way, because a
+  // pair without an edge is also the steady state (the sync keeps each Bev's
+  // top EDGE_TOP_K above EDGE_MIN_WEIGHT, nothing more). Neither method
+  // reimplements a weight -- the number comes out of SQL exactly as
+  // `edgeWeight()` produced it.
+
+  async function similarities(bevId: string, otherIds: readonly string[]): Promise<BevSimilarity[]> {
+    await requireUserId(client);
+    // No ids means no pairs: skip the round trip rather than ask the server for
+    // the weights of an empty set.
+    if (otherIds.length === 0) return [];
+    const { data, error } = await client.rpc('get_bev_similarities', {
+      p_bev_id: bevId,
+      p_other_ids: [...otherIds],
+    });
+    if (error) throw mapError(error);
+    return ((data ?? []) as BevSimilarityRow[]).map(mapBevSimilarity);
+  }
+
+  async function similar(bevId: string, n?: number): Promise<BevSummary[]> {
+    await requireUserId(client);
+    // p_limit is clamped server-side; passing it through unchanged keeps one
+    // copy of the bound (in SQL) rather than two that can disagree.
+    const { data, error } = await client.rpc('get_similar_bevs', { p_bev_id: bevId, p_limit: n ?? 10 });
+    if (error) throw mapError(error);
+    // get_similar_bevs returns search_bevs' columns, so the search mapper is
+    // reused verbatim -- including its thumb-then-photo fallback.
+    return ((data ?? []) as SearchBevRpcRow[]).map((row) => mapSearchRow(client, row));
+  }
+
+  return { search, get, findLikelyDuplicates, create, report, getStarterCandidates, similarities, similar };
 }

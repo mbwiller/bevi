@@ -345,6 +345,65 @@ describe('likes (S-02)', () => {
   });
 });
 
+// The conformance suite can only check the shape of these (`bev_edges` is empty on a real backend
+// until the graph sync job lands), so the plausibility of the fake's own mirror is asserted here.
+describe('the Bev graph (A-16 + S-14 part 2)', () => {
+  it('derives recognisable edges from the catalog with edgeWeight/topEdges', async () => {
+    const api = make();
+    await signInMe(api);
+
+    const near = await api.bevs.similar('coca-cola-classic', 10);
+    expect(near.length).toBeGreaterThan(0);
+    // Every neighbour of Coke is a cola of some kind: the fake is running the real formula over the
+    // real catalog, not picking rows at random.
+    expect(near.map((b) => b.id)).toContain('pepsi');
+    expect(near.map((b) => b.id)).not.toContain('coca-cola-classic');
+    for (const b of near) expect(['soda', 'diet_soda', 'energy', 'other']).toContain(b.categoryId);
+
+    const [coke] = await api.bevs.similarities('coca-cola-classic', ['pepsi']);
+    expect(coke!.bevId).toBe('pepsi');
+    // Not the paper's ≥ 0.8: `emb` is 0 here (the fixtures carry no gte-small vectors), and its
+    // weight is 0.30. What has to hold is that Coke-Pepsi clears EDGE_MIN_WEIGHT comfortably and
+    // beats an unrelated drink, which has no edge at all.
+    expect(coke!.weight).toBeGreaterThan(0.5);
+    expect(await api.bevs.similarities('coca-cola-classic', ['red-bull-original'])).toEqual([]);
+
+    // Symmetric: the mirror stores one row per unordered pair and both ends read the same number.
+    const [back] = await api.bevs.similarities('pepsi', ['coca-cola-classic']);
+    expect(back).toEqual({ bevId: 'coca-cola-classic', weight: coke!.weight });
+
+    // Heaviest first, and n is clamped the way the RPC clamps it.
+    const all = await api.bevs.similar('coca-cola-classic', 10_000);
+    expect(all.length).toBeLessThanOrEqual(50);
+    expect((await api.bevs.similar('coca-cola-classic', 1))[0]!.id).toBe(all[0]!.id);
+  });
+
+  it('hides an alcoholic Bev from a minor, as an anchor and as a neighbour', async () => {
+    const api = make();
+    await signInMe(api);
+    const adultNear = await api.bevs.similar(ALCOHOLIC_BEV_ID, 10);
+    expect(adultNear.length).toBeGreaterThan(0);
+
+    api.signInAs('minor_user');
+    expect(await api.bevs.similar(ALCOHOLIC_BEV_ID)).toEqual([]);
+    expect(await api.bevs.similarities(ALCOHOLIC_BEV_ID, [adultNear[0]!.id])).toEqual([]);
+    for (const neighbour of adultNear) {
+      expect(await api.bevs.similarities(neighbour.id, [ALCOHOLIC_BEV_ID])).toEqual([]);
+    }
+  });
+
+  it('listBucketBevs is listBucket plus the category and the brand key', async () => {
+    const api = make();
+    await signInMe(api);
+    const ids = await api.rankings.listBucket('LOVED');
+    const rows = await api.rankings.listBucketBevs('LOVED');
+    expect(rows.map((r) => r.id)).toEqual(ids);
+    const brandy = rows.find((r) => r.brandKey !== null);
+    expect(brandy).toBeDefined();
+    expect(brandy!.brandKey).toBe(brandy!.brandKey!.trim().toLowerCase());
+  });
+});
+
 describe('taste profile (S-12)', () => {
   it("matches @bevi/ranking's affinity for ME, highest mean first, and hides alcohol from a minor", async () => {
     const api = make();

@@ -54,8 +54,10 @@ import {
   type BevOfPeriod,
   type BevPrediction,
   type BevsApi,
+  type BevSimilarity,
   type BevSummary,
   type Bucket,
+  type BucketBev,
   type CategoriesApi,
   type CategoryId,
   type CategoryProgress,
@@ -108,6 +110,7 @@ import {
   type StorageLike,
 } from './db';
 import { ALCOHOLIC, CATEGORIES, buildFixtures, isAdult } from './fixtures';
+import { buildEdgeMirror, type EdgeMirror } from './graph';
 import { FAKE_INVITE_CODE } from './people';
 
 /** Password rule: at least this many characters (`validation`, field 'password'). */
@@ -176,6 +179,11 @@ const EXPLORE_GLOBAL_FALLBACK_USERS = 20;
  * helper to import (nothing in the app computes it: the ordering is the server's).
  */
 const exploreHotness = (likes: number, ageHours: number) => (likes + 1) / Math.pow(Math.max(ageHours, 0) + 2, 1.5);
+/** get_bev_similarities' guard on how many ids one call may ask about (20261019000500). */
+const SIMILARITIES_MAX_IDS = 500;
+/** get_similar_bevs' default and its server-side clamp. */
+const SIMILAR_DEFAULT_N = 10;
+const SIMILAR_MAX_N = 50;
 /** The ISO week's Monday for a `YYYY-MM-DD` day key. */
 function isoWeekStart(dayKey: string): string {
   const d = new Date(`${dayKey}T00:00:00Z`);
@@ -216,6 +224,8 @@ export class FakeApi implements BeviApi {
   private readonly listeners = new Set<(session: Session | null) => void>();
   private failures: { code: ApiErrorCode; method?: string }[] = [];
   private agg: Aggregates | null = null;
+  /** ./graph.ts's mirror, keyed on the Bev table it was built from (see `edges()`). */
+  private edgeCache: { source: FakeBev[]; size: number; mirror: EdgeMirror } | null = null;
 
   constructor(options: FakeApiOptions = {}) {
     this.storage = options.storage ?? null;
@@ -434,6 +444,24 @@ export class FakeApi implements BeviApi {
       rankings: this.db.rankings.filter((r) => catOf.has(r.bevId)).map((r) => ({ userId: r.userId, bevId: r.bevId, score: r.score })),
     };
     return agg.snapshot;
+  }
+
+  /**
+   * The fake's `bev_edges` mirror (./graph.ts), built with `edgeWeight`/`topEdges` from
+   * @bevi/ranking over the catalog.
+   *
+   * Cached outside `this.agg`, which every write drops: the mirror depends only on the Bev rows
+   * (category, brand, flavour tokens, price tier, flavour profile) and not on the rankings table,
+   * exactly as the real `bev_edges` only changes when a Bev or a flavour profile does. So it is
+   * rebuilt when a Bev is added or the fixtures are reset, and not when someone ranks something.
+   */
+  private edges(): EdgeMirror {
+    if (this.edgeCache && this.edgeCache.source === this.db.bevs && this.edgeCache.size === this.db.bevs.length) {
+      return this.edgeCache.mirror;
+    }
+    const mirror = buildEdgeMirror(this.db.bevs, ALCOHOLIC);
+    this.edgeCache = { source: this.db.bevs, size: this.db.bevs.length, mirror };
+    return mirror;
   }
 
   /**
@@ -1124,6 +1152,46 @@ export class FakeApi implements BeviApi {
         const me = this.requireUser();
         return this.db.bevs.filter((b) => b.isStarter && this.visible(b, me)).map((b) => this.toSummary(b));
       }),
+
+    // get_bev_similarities (20261019000500): the weights for the pairs the mirror has a row for.
+    // A pair with no edge is absent, so the result is usually shorter than `otherIds` -- the
+    // contract's "callers must handle empty" is the ordinary case, not a failure mode.
+    similarities: (bevId: string, otherIds: readonly string[]) =>
+      this.call('bevs.similarities', () => {
+        const me = this.requireUser();
+        if (otherIds.length > SIMILARITIES_MAX_IDS) invalid('otherIds', 'Too many Bevs to compare at once');
+        const anchor = this.db.bevs.find((b) => b.id === bevId);
+        // An anchor the caller cannot see contributes nothing, and is not an error: the SQL drops
+        // the row rather than raising, because this feeds a placement heuristic.
+        if (!anchor || !this.visible(anchor, me)) return [];
+        const mirror = this.edges();
+        const out: BevSimilarity[] = [];
+        for (const id of new Set(otherIds)) {
+          if (id === bevId) continue;
+          const other = this.db.bevs.find((b) => b.id === id);
+          if (!other || !this.visible(other, me)) continue;
+          // Unrounded, as the server's numeric column is: the value is exactly what
+          // `edgeWeight()` produced, which is what the sync job will store.
+          const weight = mirror.weightOf(bevId, id);
+          if (weight !== null) out.push({ bevId: id, weight });
+        }
+        return out;
+      }),
+
+    // get_similar_bevs: the heaviest neighbours, both stored orientations merged, age-filtered.
+    similar: (bevId: string, n?: number) =>
+      this.call('bevs.similar', () => {
+        const me = this.requireUser();
+        const anchor = this.db.bevs.find((b) => b.id === bevId);
+        if (!anchor || !this.visible(anchor, me)) return [];
+        const limit = clamp(Math.floor(n ?? SIMILAR_DEFAULT_N), 1, SIMILAR_MAX_N);
+        return this.edges()
+          .neighboursOf(bevId)
+          .map((e) => this.db.bevs.find((b) => b.id === e.bevId))
+          .filter((b): b is FakeBev => !!b && this.visible(b, me))
+          .slice(0, limit)
+          .map((b) => this.toSummary(b));
+      }),
   };
 
   media: MediaApi = {
@@ -1210,6 +1278,24 @@ export class FakeApi implements BeviApi {
         const me = this.requireUser();
         if (!BUCKET_ORDER.includes(bucket)) invalid('bucket', 'Unknown bucket');
         return this.bucketIds(me.id, bucket);
+      }),
+
+    // list_bucket_bevs (20261019000500): listBucket's ids, same order, each with the two catalog
+    // fields the similarity formulas need. brandKey is normaliseBrand's, from @bevi/ranking, which
+    // is also what the SQL's lower/trim/collapse reproduces.
+    //
+    // Built on `bucketIds`, so it is the same row set as `listBucket` above -- which is the
+    // invariant the SQL version is written to hold too (rankings_select age-gates both or neither).
+    // Neither applies a visibility filter here because the fake cannot produce a ranking of a Bev
+    // its ranker could not see: `submitRanking` calls `requireVisible` first.
+    listBucketBevs: (bucket: Bucket) =>
+      this.call('rankings.listBucketBevs', (): BucketBev[] => {
+        const me = this.requireUser();
+        if (!BUCKET_ORDER.includes(bucket)) invalid('bucket', 'Unknown bucket');
+        return this.bucketIds(me.id, bucket).map((id) => {
+          const b = this.bev(id);
+          return { id: b.id, categoryId: b.categoryId, brandKey: normaliseBrand(b.brand) };
+        });
       }),
 
     submitRanking: (input: SubmitRankingInput) =>

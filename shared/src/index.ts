@@ -1,5 +1,5 @@
 /** Bumped on any breaking change to the types or `BeviApi` below. */
-export const CONTRACT_VERSION = '2.6.0';
+export const CONTRACT_VERSION = '2.7.0';
 
 export * from './enums';
 export * from './errors';

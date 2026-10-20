@@ -12,7 +12,7 @@ Your queue from 2026-10-19 on, centred on Supabase and Neo4j. Matt's is in [`NEX
 | 1 | **A-14 · #107** (already open, CI green) | Push `20261019000200_leaderboard_parity.sql` to prod (dry-run first), then merge | Matt's M-22 cross-check |
 | 2 | **M-26 export** (about 15 min) | Run `packages/ranking/eval/export.sql` against prod as a role that bypasses RLS: `psql "$DATABASE_URL" -At -v salt="$SALT" -f packages/ranking/eval/export.sql > export.json`. Hand Matt the file privately. **It never goes in the repo** | Real baseline numbers for Matt's M-27, and for judging the graph |
 | 3 | **S-04 + A-04 · Explore backend** — **done in #113**, `20261019000400` on prod, contract `2.6.0`. The security review found that using `p_before` as both the paging cut and the decay clock leaked exact like counts (a non-linear decay means sweeping the clock reveals the ratio); the clock is now server-side `now()`. Also gated non-active Bevs and bounded `p_offset` | — | **Matt's M-04, now unblocked** |
-| 4 | **A-16 (1) + S-14 part 2 · The Bev graph**, one PR | See below | **Matt's M-27 and M-21** |
+| 4 | **A-16 (1) + S-14 part 2 · The Bev graph**, two PRs | **Half 1 is in review** (`be/graph-tables`): `20261019000500` adds `bev_edges`, `bev_embeddings` (pgvector, 384-d), RLS on both and the three read RPCs, plus contract `2.7.0`, `packages/api`, the FakeApi and pgTAP. **Half 2 is the follow-up:** the pipeline that fills them — steps 1–4 below. Nothing needs a live Neo4j until then | **Matt's M-27 and M-21** |
 
 Items 3 and 4 each unblock Matt, so do 3 first: it's smaller and P0.
 
@@ -31,8 +31,8 @@ The decision (2026-10-19): Neo4j holds Bevs, categories, brands and flavours as 
    - A Bev with no flavour profile copies the profile of its nearest **seeded** Bev in the **same category**, by embedding cosine, with brand as the tie-break.
    - Store `inferred = true`, `inferred_from` and the similarity.
    - Below a cosine of 0.6, leave it empty.
-5. **S-14 part 2**, the contract, version `2.7.0`: `bevs.similarities(bevId, otherIds)`, `bevs.similar(bevId, n)` and `rankings.listBucketBevs(bucket)`, all reading `bev_edges`. Plus `packages/api`, FakeApi, and live tests.
-6. **Docs in the same PR:** update `docs/graph.md`, and `docs/graph_db_implementation.md`, whose user-neighbour MVP moves to increment 2.
+5. ~~**S-14 part 2**, the contract, version `2.7.0`: `bevs.similarities(bevId, otherIds)`, `bevs.similar(bevId, n)` and `rankings.listBucketBevs(bucket)`, all reading `bev_edges`. Plus `packages/api`, FakeApi~~ — **done in half 1**, with pgTAP and `packages/api` unit tests. Live tests wait for half 2, since they need a non-empty `bev_edges`.
+6. ~~**Docs:** update `docs/graph.md`, and `docs/graph_db_implementation.md`, whose user-neighbour MVP moves to increment 2.~~ — **done in half 1.**
 
 ## Then: these wait on Matt
 

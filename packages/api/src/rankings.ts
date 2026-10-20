@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   ApiError,
   type Bucket,
+  type BucketBev,
   type CategoryId,
   type Page,
   type PageParams,
@@ -11,7 +12,15 @@ import {
   type SubmitRankingResult,
 } from '@bevi/shared';
 import { mapError } from './errors';
-import { bucketToDb, mapBevSummary, mapRanking, type BevSummaryRow, type RankingRow } from './mappers';
+import {
+  bucketToDb,
+  mapBevSummary,
+  mapBucketBev,
+  mapRanking,
+  type BevSummaryRow,
+  type BucketBevRow,
+  type RankingRow,
+} from './mappers';
 import { clampLimit, decodeCursor, toPage } from './paging';
 import type { SnapshotCache } from './snapshot';
 
@@ -91,6 +100,17 @@ export function createRankingsApi(client: SupabaseClient, snapshots: SnapshotCac
         .order('position');
       if (error) throw mapError(error);
       return (data ?? []).map((row) => (row as { bev_id: string }).bev_id);
+    },
+
+    // Deliberately an RPC and not a widened `listBucket`: the brand key is
+    // `normaliseBrand`'s, which is a formula from @bevi/ranking rather than a
+    // column, so it is derived in one place (list_bucket_bevs, 20261019000500)
+    // instead of here and in the FakeApi.
+    async listBucketBevs(bucket: Bucket): Promise<BucketBev[]> {
+      await requireUserId(client);
+      const { data, error } = await client.rpc('list_bucket_bevs', { p_bucket: bucketToDb(bucket) });
+      if (error) throw mapError(error);
+      return ((data ?? []) as BucketBevRow[]).map(mapBucketBev);
     },
 
     async submitRanking(input: SubmitRankingInput): Promise<SubmitRankingResult> {
