@@ -11,7 +11,9 @@ import type {
   AppConfig,
   Bev,
   BevOfPeriod,
+  BevSimilarity,
   BevSummary,
+  BucketBev,
   Category,
   CategoryProgress,
   Comment,
@@ -240,6 +242,40 @@ export interface BevsApi {
    * @throws 'unauthorized'.
    */
   getStarterCandidates(): Promise<BevSummary[]>;
+
+  /**
+   * Bev-graph edge weights between `bevId` and each of `otherIds` — for
+   * anchored placement (compare a new mocha with mochas first) and for the
+   * content term of a recommendation.
+   *
+   * Reads the **`bev_edges` mirror** in Postgres, which the nightly graph sync
+   * writes (A-16); Neo4j is never on a request path. **The mirror is empty
+   * until that sync job lands, so this returns `[]` today** — and it stays
+   * sparse afterwards, because only pairs above `EDGE_MIN_WEIGHT` that made one
+   * of the two Bevs' top-`EDGE_TOP_K` cut are stored. Callers MUST handle a
+   * result shorter than `otherIds`, including empty, and fall back to
+   * `treeSimilarity` / `contentSimilarity` from `@bevi/ranking` for the pairs
+   * that are missing.
+   *
+   * Order is unspecified; match on `bevId`. Ids the caller may not see (an
+   * alcoholic Bev while under 21, or a Bev that is not active) are simply
+   * absent rather than an error.
+   * @throws 'unauthorized'; 'validation' (`detail.field = 'otherIds'`) — more
+   *   than 500 ids in one call.
+   */
+  similarities(bevId: string, otherIds: readonly string[]): Promise<BevSimilarity[]>;
+
+  /**
+   * "Bevs like this": the heaviest `bev_edges` neighbours of `bevId`, most
+   * similar first, age-filtered and active only. `n` defaults to 10 and is
+   * clamped server-side to 50.
+   *
+   * Same mirror as `similarities`, so the same caveat: **empty until the graph
+   * sync job lands**, and a Bev with no edges returns `[]`. Render the row only
+   * when it is non-empty; there is no error for "no neighbours".
+   * @throws 'unauthorized'.
+   */
+  similar(bevId: string, n?: number): Promise<BevSummary[]>;
 }
 
 export interface UploadMediaInput {
@@ -309,6 +345,20 @@ export interface RankingsApi {
    * @throws 'unauthorized'.
    */
   listBucket(bucket: Bucket): Promise<string[]>;
+
+  /**
+   * The same bucket as `listBucket`, same order, but each id carried with the
+   * `categoryId` and `brandKey` the similarity formulas need — so anchored
+   * placement can rank the bucket against a new Bev without a `bevs.get` per
+   * row.
+   *
+   * It pairs with `bevs.similarities`: ask for the weights over these ids, and
+   * use `treeSimilarity(categoryId, …)` / `contentSimilarity` from
+   * `@bevi/ranking` for the pairs `bev_edges` has no row for — which, until the
+   * graph sync job lands, is all of them.
+   * @throws 'unauthorized'.
+   */
+  listBucketBevs(bucket: Bucket): Promise<BucketBev[]>;
 
   /**
    * Inserts a new ranking at `insertIndex`, re-spaces the bucket's scores, stores

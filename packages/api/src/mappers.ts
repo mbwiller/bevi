@@ -11,8 +11,10 @@ import type {
   Bev,
   BevOfPeriod,
   BevPrediction,
+  BevSimilarity,
   BevSummary,
   Bucket,
+  BucketBev,
   Category,
   CategoryProgress,
   CategoryId,
@@ -239,6 +241,32 @@ export function mapFlavorProfile(row: FlavorProfileRow): FlavorProfile {
     serve: row.serve as FlavorProfile['serve'],
     source: row.source as FlavorProfile['source'],
   };
+}
+
+// --------------------------------------------------------------------------
+// The Bev graph: get_bev_similarities / list_bucket_bevs rows (A-16, S-14)
+// --------------------------------------------------------------------------
+
+/** `get_bev_similarities` (20261019000500). `weight` arrives as a numeric. */
+export interface BevSimilarityRow {
+  bev_id: string;
+  weight: number | string;
+}
+
+export function mapBevSimilarity(row: BevSimilarityRow): BevSimilarity {
+  return { bevId: row.bev_id, weight: Number(row.weight) };
+}
+
+/** `list_bucket_bevs` (20261019000500). */
+export interface BucketBevRow {
+  id: string;
+  category_id: string;
+  /** Already `normaliseBrand`d by SQL; null when the Bev has no brand. */
+  brand_key: string | null;
+}
+
+export function mapBucketBev(row: BucketBevRow): BucketBev {
+  return { id: row.id, categoryId: row.category_id as CategoryId, brandKey: row.brand_key };
 }
 
 export interface MyRankingRow {

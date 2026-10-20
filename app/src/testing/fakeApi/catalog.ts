@@ -96,5 +96,56 @@ function loadBevs(categoryIds: ReadonlySet<string>): CatalogBev[] {
   });
 }
 
+/**
+ * A row of `data/catalog/flavor-profiles.csv` (A-17), keyed by the same slug as `bevs.csv`. The
+ * fields are exactly @bevi/ranking's `FlavorProfile` (the subset eq. 17 uses), so
+ * `profileSimilarity` takes one of these unchanged; `serve` and `notes` are dropped because the
+ * formula ignores them.
+ */
+export interface CatalogFlavorProfile {
+  base: string;
+  carbonated: boolean;
+  caffeine: 0 | 1 | 2 | 3;
+  sweetness: 0 | 1 | 2 | 3;
+  dairy: boolean;
+  alcohol: boolean;
+}
+
+function loadFlavorProfiles(bevIds: ReadonlySet<string>): Map<string, CatalogFlavorProfile> {
+  const [header = [], ...records] = parseCsv(readFileSync(resolve(CATALOG_DIR, 'flavor-profiles.csv'), 'utf8'));
+  const col = (name: string) => {
+    const i = header.indexOf(name);
+    if (i < 0) throw new Error(`flavor-profiles.csv has no "${name}" column`);
+    return i;
+  };
+  const C = {
+    slug: col('slug'), base: col('base'), carbonated: col('carbonated'), caffeine: col('caffeine'),
+    sweetness: col('sweetness'), dairy: col('dairy'), alcohol: col('alcohol'),
+  };
+  const out = new Map<string, CatalogFlavorProfile>();
+  for (const r of records) {
+    const get = (i: number) => r[i] ?? '';
+    const slug = get(C.slug);
+    if (!bevIds.has(slug)) throw new Error(`flavor-profiles.csv: unknown slug ${slug}`);
+    const level = (raw: string, field: string) => {
+      const n = Number(raw);
+      if (![0, 1, 2, 3].includes(n)) throw new Error(`${slug}: bad ${field} ${raw}`);
+      return n as 0 | 1 | 2 | 3;
+    };
+    out.set(slug, {
+      base: get(C.base),
+      carbonated: get(C.carbonated) === 'true',
+      caffeine: level(get(C.caffeine), 'caffeine'),
+      sweetness: level(get(C.sweetness), 'sweetness'),
+      dairy: get(C.dairy) === 'true',
+      alcohol: get(C.alcohol) === 'true',
+    });
+  }
+  return out;
+}
+
 export const CATALOG_CATEGORIES: readonly CatalogCategory[] = loadCategories();
 export const CATALOG_BEVS: readonly CatalogBev[] = loadBevs(new Set(CATALOG_CATEGORIES.map((c) => c.id)));
+export const CATALOG_FLAVOR_PROFILES: ReadonlyMap<string, CatalogFlavorProfile> = loadFlavorProfiles(
+  new Set(CATALOG_BEVS.map((b) => b.id)),
+);

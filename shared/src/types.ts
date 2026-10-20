@@ -323,6 +323,35 @@ export interface WantToTryItem {
  */
 export type ExplorePost = Omit<FeedItem, 'likeCount' | 'likedByMe' | 'commentCount' | 'comments'>;
 
+/**
+ * One Bev-graph edge weight, as `bevs.similarities` returns it: how similar
+ * `bevId` is to the Bev that was asked about, in [0, 1].
+ *
+ * Read from the `bev_edges` mirror in Postgres (A-16), which the nightly graph
+ * sync writes. **The mirror is empty until that sync job lands**, and even once
+ * it runs a pair only has a row when its weight cleared `EDGE_MIN_WEIGHT` and
+ * it survived one of the two Bevs' top-`EDGE_TOP_K` cut. So a missing pair is
+ * the normal case, not an error: fall back to `treeSimilarity` /
+ * `contentSimilarity` from `@bevi/ranking` when there is no weight.
+ */
+export interface BevSimilarity {
+  bevId: string;
+  /** `edgeWeight()` from `@bevi/ranking`, LaTeX §10.1 eq. (18). 0–1. */
+  weight: number;
+}
+
+/**
+ * A Bev in one of the caller's buckets, with just the catalog fields the
+ * similarity formulas need (`rankings.listBucketBevs`). The id list is exactly
+ * `rankings.listBucket`'s, in the same order.
+ */
+export interface BucketBev {
+  id: string;
+  categoryId: CategoryId;
+  /** `normaliseBrand(brand)` from `@bevi/ranking`; null when the Bev has no brand. */
+  brandKey: string | null;
+}
+
 export interface AppConfig {
   minAppVersion: string;
   maintenance: boolean;
