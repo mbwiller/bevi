@@ -1,4 +1,4 @@
--- A-04 + S-04 (20261019000300): Explore, a read-only popularity surface.
+-- A-04 + S-04 (20261019000400): Explore, a read-only popularity surface.
 --
 -- get_explore returns RANKING posts by users up to two follows away from the
 -- caller whom the caller does NOT already follow (so every Explore post is a
@@ -44,10 +44,20 @@ set search_path = public, extensions;
 -- appear here and nowhere else in the schema, so they cannot drift from the
 -- paper; get_explore (and any later get_popular_bevs) must call this.
 --
--- No `set search_path` on purpose: the body touches no tables, `power` and
--- the arithmetic operators resolve from pg_catalog, which always precedes the
--- search path, and leaving the SET off keeps the function inlinable by the
--- planner (it is evaluated once per candidate post).
+-- No `set search_path` on purpose: the body touches no tables, and leaving the
+-- SET off keeps the function inlinable by the planner (a SQL function with a
+-- SET clause never is, and this is evaluated once per candidate post).
+--
+-- That means operator resolution matters, and the rule is narrower than
+-- "pg_catalog wins". pg_catalog is searched first for a *name*, but an
+-- operator is resolved by preferring an exact argument-type match over schema
+-- order. So every literal below is cast so its operator pair exists in
+-- pg_catalog exactly: `+ 2::numeric` is `numeric + numeric`, not
+-- `numeric + integer`, for which pg_catalog has no operator at all (it gets
+-- there by implicit cast) and which a user-created
+-- `operator +(numeric, integer)` on the search path would therefore win. That
+-- would matter because get_explore calls this as a definer owned by postgres.
+-- `power` is written pg_catalog.power for the same reason.
 
 create or replace function public.explore_hotness(
   p_like_count bigint,
@@ -59,7 +69,10 @@ immutable
 parallel safe
 as $$
   select (coalesce(p_like_count, 0) + 1)::numeric
-           / pg_catalog.power(greatest(coalesce(p_age_hours, 0), 0::numeric) + 2, 1.5);
+           / pg_catalog.power(
+               greatest(coalesce(p_age_hours, 0::numeric), 0::numeric) + 2::numeric,
+               1.5::numeric
+             );
 $$;
 
 comment on function public.explore_hotness(bigint, numeric) is
@@ -72,27 +85,42 @@ comment on function public.explore_hotness(bigint, numeric) is
 --
 -- A decaying score reorders rows between calls, so a keyset cursor on the
 -- score is not an option -- and it would have to carry a like-derived number
--- out of the function, which D-15 forbids. Instead the caller passes the
--- request's own clock back in as `p_before`:
+-- out of the function, which D-15 forbids. So the candidate set is frozen by a
+-- timestamp the caller sends, and the rows are skipped by offset:
 --
---   * `p_before` is the snapshot instant. Ages are measured from it and only
---     posts created at or before it are candidates, so pages 2..n see exactly
---     the ordering page 1 was built from. Null means "now". The client sends
---     its own clock, so a few minutes ahead of the server is accepted as
---     ordinary skew (nothing is created in the future, so a slightly future
---     snapshot only shifts every age by the same amount); further ahead than
---     that is clamped, which costs the caller nothing but its own ordering.
---   * `p_offset` is how many rows of that frozen ordering to skip.
+--   * `p_before` is the paging CUT only: posts created after it are not
+--     candidates, so pages 2..n see the same set page 1 was built from. Null
+--     means "now". It is clamped on BOTH sides -- a few minutes of forward
+--     clock skew is ordinary, and 30 days back is further than any page needs.
+--   * `p_offset` is how many rows to skip, capped at 1000 (20 pages).
 --
--- The cursor is therefore a timestamp and an integer and leaks nothing: no
--- like counts, no scores, no other user's rows. (packages/api packs the two
--- into its opaque base64 cursor.)
+-- `p_before` is deliberately NOT the decay clock. An earlier revision of this
+-- function used it for both, and that leaks the exact like counts the schema
+-- withholds. The decay is non-linear, so moving the clock does not shift the
+-- order uniformly: two posts P and Q swap exactly when
 --
--- Known and accepted: freezing the clock removes the continuous drift that
--- would otherwise reshuffle every row between pages, but a like arriving
--- mid-paging can still nudge two adjacent posts past each other, repeating or
--- skipping one row. For a discovery tab that is a fair trade against leaking
--- a like-derived cursor.
+--     (L_P + 1) / (L_Q + 1) = ((h_P + 2) / (h_Q + 2)) ^ 1.5
+--
+-- The caller knows both `created_at` values (they are returned columns) and,
+-- if it also chose the clock, knows both ages exactly -- so binary-searching
+-- `p_before` for the swap point reads off the like-count RATIO of two
+-- strangers' posts, and anchoring on any post with no likes turns the ratios
+-- into exact counts. `post_likes_select` (20261014000200) gates on
+-- feed_event_visible, which is false for every Explore post, so that is data
+-- the caller cannot read a single row of. Hence:
+--
+--   * the decay clock is `now()`, read inside the function. There is no knob,
+--     so there is nothing to sweep and the equation above has no free variable
+--     the caller controls.
+--
+-- Residual, and a product decision rather than a bug: ANY like-ordered
+-- surface discloses the partial order of like counts, so one page still
+-- bounds the ratios even with a fixed clock. Tightening that means ranking
+-- off a cron-materialised dense rank, or bucketing `hot` into coarse tiers
+-- and shuffling within a tier. Not this PR.
+--
+-- Known and accepted: a like arriving mid-paging can still nudge two adjacent
+-- posts past each other, repeating or skipping one row.
 
 create or replace function public.get_explore(
   p_limit  int         default 20,
@@ -133,9 +161,15 @@ as $$
 #variable_conflict use_column
 declare
   v_uid    uuid := auth.uid();
-  v_now    timestamptz;
+  -- The paging cut (client-settable, clamped both ways) and the decay clock
+  -- (server-side, coarse). They are separate on purpose: see the note above.
+  v_cut    timestamptz;
+  v_snap   timestamptz;
   v_limit  int  := least(greatest(coalesce(p_limit, 20), 1), 50);
-  v_offset int  := greatest(coalesce(p_offset, 0), 0);
+  -- Capped above as well as below: nodeLimit passes `offset + count` as the
+  -- sort bound, so an unbounded offset defeats the bounded top-N heapsort and
+  -- forces a full sort of the candidate set on every request.
+  v_offset int  := least(greatest(coalesce(p_offset, 0), 0), 1000);
   -- D-01: below this many profiles the two-hop scope widens to everyone.
   v_global boolean;
 begin
@@ -143,7 +177,17 @@ begin
     raise exception 'BEVI_UNAUTHORIZED' using errcode = '42501';
   end if;
 
-  v_now := least(coalesce(p_before, now()), now() + interval '5 minutes');
+  v_cut  := least(
+              greatest(coalesce(p_before, now()), now() - interval '30 days'),
+              now() + interval '5 minutes'
+            );
+  -- Server-side, and never derived from a parameter. That is the whole fix:
+  -- the caller cannot move it, so it cannot sweep it. Plain now() rather than
+  -- a truncated clock on purpose -- quantising to the hour would make a post's
+  -- rank depend on where in the hour the query runs, which is both surprising
+  -- and a source of flapping tests, and it does not close the residual below
+  -- (real time moves the ages on its own either way).
+  v_snap := now();
   v_global := (select count(*) from public.profiles) < 20;
 
   return query
@@ -213,7 +257,7 @@ begin
              -- Ordering only: the like count never reaches the result (D-15).
              public.explore_hotness(
                (select count(*) from public.post_likes pl where pl.feed_event_id = e.id),
-               (extract(epoch from (v_now - e.created_at)) / 3600.0)::numeric
+               (extract(epoch from (v_snap - e.created_at)) / 3600.0)::numeric
              )                     as hot
         from public.feed_events e
         join scope sc on sc.user_id = e.actor_id
@@ -223,8 +267,20 @@ begin
         left join public.bev_stats s on s.bev_id = b.id
         left join public.rankings r on r.id = e.ranking_id
        where e.kind in ('ranked', 'reranked')
-         and e.created_at <= v_now
+         and e.created_at <= v_cut
+         -- A post older than this can never reach a page under (h+2)^-1.5, and
+         -- bounding it keeps the candidate set from growing without limit as
+         -- feed_events does. Served by feed_events_created_idx below.
+         and e.created_at > v_cut - interval '14 days'
          and (b.id is null or not c2.is_alcoholic or public.viewer_is_adult())
+         -- The status half of bevs_select (20261011000100), which the alcohol
+         -- predicate above reproduces but this originally did not. Without it
+         -- a user can create_bev with no photo (status 'pending_photo', which
+         -- only its creator may see), rank it, and push 80 characters of free
+         -- text in each of name/brand/flavor to every stranger two hops out --
+         -- or, under D-01's fallback, to the whole instance. It also keeps
+         -- Explore from broadcasting a Bev that moderation has hidden.
+         and (b.id is null or b.status = 'active')
     )
     select sc2.id, sc2.kind, sc2.created_at,
            sc2.actor_id, sc2.actor_handle, sc2.actor_display_name, sc2.actor_avatar_path,
@@ -254,18 +310,40 @@ comment on function public.get_explore(int, timestamptz, int) is
 -- get_popular_venues is not built: venues are P2 and the table does not exist.
 
 -- ---------------------------------------------------------------------------
--- 3. Grants
+-- 3. The index the recency bound needs
+-- ---------------------------------------------------------------------------
+-- feed_events had no index on created_at at all: the only one is
+-- feed_events_actor_idx (actor_id, id desc) from 20261009000700, which serves
+-- get_feed's `actor_id in (...) order by id desc` and is no use to Explore,
+-- whose scope is a two-hop set and whose order is not indexable.
+--
+-- Not partial on `kind`: feed_events_kind_check (20261014000100) already
+-- restricts kind to ('ranked','reranked'), so every row qualifies and the
+-- predicate would only cost the planner a proof.
+create index if not exists feed_events_created_idx
+  on public.feed_events (created_at desc);
+
+-- ---------------------------------------------------------------------------
+-- 4. Grants
 -- ---------------------------------------------------------------------------
 -- explore_hotness is an internal helper: it is called from inside
 -- get_explore, where the current user is the owner, so `authenticated` needs
 -- no privilege on it.
+--
+-- `from public` strips Postgres's implicit grant to PUBLIC; anon, authenticated
+-- and service_role are named separately because Supabase's default privileges
+-- lay down *direct* grants to all three on every new function in this schema,
+-- which a revoke from PUBLIC does not touch. Without naming them the comment
+-- above would be false -- authenticated would keep EXECUTE -- and the pgTAP
+-- assertion below would be testing only the half that already passed.
 
 alter function public.explore_hotness(bigint, numeric) owner to postgres;
 alter function public.get_explore(int, timestamptz, int) owner to postgres;
 
-revoke execute on function
-  public.explore_hotness(bigint, numeric),
-  public.get_explore(int, timestamptz, int)
-from public, anon;
+revoke execute on function public.explore_hotness(bigint, numeric)
+  from public, anon, authenticated, service_role;
+
+revoke execute on function public.get_explore(int, timestamptz, int)
+  from public, anon;
 
 grant execute on function public.get_explore(int, timestamptz, int) to authenticated;

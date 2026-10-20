@@ -1,4 +1,4 @@
--- A-04 + S-04 (20261019000300): get_explore -- two-hop scope, D-01's global
+-- A-04 + S-04 (20261019000400): get_explore -- two-hop scope, D-01's global
 -- fallback, the §10.4 decay order, the age gate, and D-15 (no like or comment
 -- data in the rows).
 --
@@ -20,7 +20,7 @@
 -- (B, A, D, C) nor most-liked-first (C, A, then the zeros). ff01..ff13 are the
 -- likers; ff14 exists only to move the profile count across D-01's 20.
 begin;
-select plan(26);
+select plan(30);
 
 -- ---------------------------------------------------------------------------
 -- Users. Twenty profiles to start, so the fallback is OFF for the first half
@@ -170,6 +170,13 @@ select is(
 select ok(
   not has_function_privilege('anon', 'public.explore_hotness(bigint, numeric)', 'execute'),
   'anon cannot execute explore_hotness'
+);
+-- The half that used to be missing. Supabase's default privileges grant
+-- EXECUTE on every new public function directly to authenticated, so without
+-- an explicit revoke this passes only by accident of the grant block.
+select ok(
+  not has_function_privilege('authenticated', 'public.explore_hotness(bigint, numeric)', 'execute'),
+  'authenticated cannot execute explore_hotness either'
 );
 
 -- ---------------------------------------------------------------------------
@@ -365,5 +372,63 @@ select is(
   'an offset past the end is an empty page, not an error'
 );
 
+-- p_before is the paging cut, NOT the decay clock. If a future edit wires it
+-- back into the hotness term, these two calls -- same cut, both wide enough to
+-- hold every eligible post -- stop agreeing on the order, which is the signal
+-- that the like-count oracle is back.
+select is(
+  (select array_agg(t.id order by t.ordinality)
+     from public.get_explore(20, now(), 0) with ordinality t),
+  (select array_agg(t.id order by t.ordinality)
+     from public.get_explore(20, now() + interval '4 minutes', 0) with ordinality t),
+  'moving p_before within the clamp does not reorder the page: it is the cut, not the clock'
+);
+
+-- p_offset is capped at 1000, so an absurd offset is an empty page rather than
+-- a full sort of the candidate set (nodeLimit passes offset + count as the
+-- sort bound, which defeats the bounded top-N heapsort).
+select is(
+  (select count(*)::int from public.get_explore(20, now(), 2147483647)),
+  0,
+  'an out-of-range p_offset is clamped, not passed to the sort'
+);
+
+reset role;
+
+-- A Bev only its creator may see (bevs_select: status 'pending_photo' is
+-- visible to created_by alone) must not reach a stranger through Explore. d3
+-- creates one with free text in every displayed column, ranks it, and the
+-- post is hot enough -- no likes, but brand new -- to be on page 1 if the
+-- status filter were missing.
+do $$
+declare
+  v_bev     uuid;
+  v_ranking uuid;
+  v_event   bigint;
+begin
+  insert into public.bevs (name, brand, flavor, category_id, price_tier, status, source, created_by)
+  values ('pgTAP Not Yours', 'pgTAP Leak', 'pgTAP Leak', 'soda', 2, 'pending_photo', 'user',
+          '00000000-0000-4000-8000-0000000000d3')
+  returning id into v_bev;
+  insert into public.rankings (user_id, bev_id, bucket, position, score)
+  values ('00000000-0000-4000-8000-0000000000d3', v_bev, 3, 2, 9.50)
+  returning id into v_ranking;
+  insert into public.feed_events (actor_id, kind, bev_id, ranking_id, created_at)
+  values ('00000000-0000-4000-8000-0000000000d3', 'ranked', v_bev, v_ranking, now())
+  returning id into v_event;
+  insert into t_posts (label, id) values ('pending', v_event);
+end $$;
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000000d1", "role": "authenticated"}';
+
+select is(
+  (select count(*)::int from public.get_explore(50, null::timestamptz, 0)
+    where id = (select id from t_posts where label = 'pending')),
+  0,
+  'a post whose Bev is not active is withheld, as bevs_select withholds the Bev'
+);
+
 reset role;
 select * from finish();
+rollback;
