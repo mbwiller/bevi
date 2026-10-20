@@ -13,7 +13,7 @@ import {
   storedScore,
   zScore,
 } from '@bevi/ranking';
-import { isApiError, type Session } from '@bevi/shared';
+import { isApiError, type Bucket, type Session } from '@bevi/shared';
 
 import { CATALOG_BEVS } from '../catalog';
 import { STORAGE_KEY, type StorageLike } from '../db';
@@ -432,6 +432,71 @@ describe('feed.listUser (S-20)', () => {
     const seen = (await api.feed.listUser(me.id)).items;
     expect(seen.length).toBeGreaterThan(0);
     expect(seen.map((i) => i.bev.id)).not.toContain(ALCOHOLIC_BEV_ID);
+  });
+});
+
+describe('feed.getExplore (S-04 + A-04)', () => {
+  const PW = 'explore-pass-1';
+  const join = (api: FakeApi, username: string) => api.signUp({ username, password: PW, inviteCode: FAKE_INVITE_CODE });
+  /** Two non-alcoholic Bevs: a fresh signup has no birthdate, so search already hides alcohol. */
+  const twoBevs = async (api: FakeApi) => (await api.bevs.search({ q: '', limit: 2 })).items.map((b) => b.id);
+  const rankFirstIn = (api: FakeApi, bevId: string, bucket: Bucket) =>
+    api.rankings.submitRanking({ bevId, bucket, insertIndex: 0, expectedBucketSize: 0, comparisons: [] });
+
+  it('shows strangers exactly two follows away, hottest first, with no like or comment fields', async () => {
+    const api = make();
+    // The fixtures hold seven users; these fourteen signups clear D-01's 20-user threshold, so
+    // what is under test here is the two-hop scope and not the global fallback.
+    for (let i = 1; i <= 10; i++) await join(api, `expfill${i}`);
+
+    const hop3 = await join(api, 'exphop3');
+    const [h3bev] = await twoBevs(api);
+    await rankFirstIn(api, h3bev!, 'LOVED');
+
+    const author = await join(api, 'expauthor');
+    const [x, y] = await twoBevs(api);
+    await rankFirstIn(api, x!, 'LOVED');
+    await rankFirstIn(api, y!, 'FINE');
+    await api.follows.follow(hop3.userId); // author -> hop3, so hop3 is three hops from the viewer
+
+    const middle = await join(api, 'expmiddle');
+    await api.follows.follow(author.userId);
+    const xPost = (await api.feed.listUser(author.userId)).items.find((i) => i.bev.id === x)!;
+    await api.feed.like(xPost.id); // one like, and the clock is pinned: x's post is the hotter one
+
+    const viewer = await join(api, 'expviewer');
+    const [ownBev] = await twoBevs(api);
+    await rankFirstIn(api, ownBev!, 'LOVED');
+    await api.follows.follow(middle.userId);
+
+    const explore = await api.feed.getExplore({ limit: 50 });
+    expect(explore.items.map((i) => i.actor.id)).toEqual([author.userId, author.userId]);
+    // Popularity, not time: both posts were made at the same pinned instant, so newest-first would
+    // have put y's post (the later ranking) first. The liked one wins instead.
+    expect(explore.items.map((i) => i.bev.id)).toEqual([x, y]);
+    expect(explore.items.some((i) => i.actor.id === viewer.userId)).toBe(false); // never your own
+    expect(explore.items.some((i) => i.actor.id === middle.userId)).toBe(false); // never a followee
+    expect(explore.items.some((i) => i.actor.id === hop3.userId)).toBe(false); // three hops is too far
+
+    // D-15: a read-only post, so no heart, no counts and no comments can be rendered.
+    expect(Object.keys(explore.items[0]!).sort()).toEqual(
+      ['actor', 'bev', 'bucket', 'createdAt', 'id', 'inMyWantToTry', 'note', 'score', 'type'].sort(),
+    );
+  });
+
+  it('falls back to everyone while Bevi has fewer than 20 users, minus whoever you follow (D-01)', async () => {
+    const api = make();
+    const viewer = await join(api, 'expsmall'); // eight users: under the threshold
+
+    const first = await api.feed.getExplore({ limit: 50 });
+    expect(first.items.length).toBeGreaterThan(0);
+    expect(first.items.some((i) => i.actor.id === viewer.userId)).toBe(false);
+
+    const stranger = first.items[0]!.actor.id;
+    await api.follows.follow(stranger);
+    const after = await api.feed.getExplore({ limit: 50 });
+    expect(after.items.some((i) => i.actor.id === stranger)).toBe(false);
+    expect((await api.feed.getFeed()).items.some((i) => i.actor.id === stranger)).toBe(true);
   });
 });
 

@@ -314,6 +314,15 @@ export interface WantToTryItem {
   via: Profile | null;
 }
 
+/**
+ * An Explore post: a `FeedItem` by someone the caller does NOT follow, so it
+ * carries no engagement at all (D-15). It is deliberately a `FeedItem` minus
+ * `likeCount`, `likedByMe`, `commentCount` and `comments` rather than those
+ * fields nulled, so a screen cannot render a heart or a count by accident —
+ * `get_explore` does not return them either.
+ */
+export type ExplorePost = Omit<FeedItem, 'likeCount' | 'likedByMe' | 'commentCount' | 'comments'>;
+
 export interface AppConfig {
   minAppVersion: string;
   maintenance: boolean;

@@ -15,6 +15,7 @@ import {
   type ApiErrorCode,
   type BeviApi,
   type Bucket,
+  type ExplorePost,
   type Session,
 } from '@bevi/shared';
 
@@ -661,6 +662,50 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       const second = await api.feed.listUser(a.userId, { limit: 1, cursor: first.nextCursor! });
       expect(second.items.map((i) => i.bev.id)).toEqual([x]);
       await expectCode(api.feed.listUser('00000000-0000-4000-8000-00000000ffff'), 'not_found');
+    });
+
+    it('feed.getExplore: strangers only, popularity order, and no like or comment fields', async () => {
+      // viewer -> middle -> author, so the author is two follows away and never in the feed. The
+      // suite cannot know whether Bevi is over D-01's 20-user threshold here, so this asserts only
+      // what holds either way: a two-hop author is in scope under both the two-hop rule and the
+      // global fallback, while the caller and the caller's followees are out under both.
+      const author = await newUser();
+      const [x, y] = await starterIds(2);
+      await rankAtBottom(x!);
+      await rankAtBottom(y!);
+
+      const middle = await newUser();
+      await api.follows.follow(author.userId);
+      const [z] = await starterIds(1);
+      await rankAtBottom(z!);
+      const authored = (await api.feed.listUser(author.userId)).items;
+      // One like on the older of the two posts: with both only seconds old, the decay factor is
+      // the same for each, so the liked one must come out on top of the newer one.
+      await api.feed.like(authored.find((i) => i.bev.id === x)!.id);
+
+      const viewer = await newUser();
+      await rankAtBottom(x!);
+      await api.follows.follow(middle.userId);
+
+      const seen: ExplorePost[] = [];
+      for (let page = await api.feed.getExplore({ limit: 50 }); ; ) {
+        seen.push(...page.items);
+        if (!page.nextCursor || seen.length >= 200) break;
+        page = await api.feed.getExplore({ limit: 50, cursor: page.nextCursor });
+      }
+
+      expect(seen.some((i) => i.actor.id === viewer.userId)).toBe(false);
+      expect(seen.some((i) => i.actor.id === middle.userId)).toBe(false);
+      expect(seen.filter((i) => i.actor.id === author.userId).map((i) => i.bev.id)).toEqual([x, y]);
+      expect(new Set(seen.map((i) => i.id)).size).toBe(seen.length);
+
+      const post = seen.find((i) => i.actor.id === author.userId)!;
+      expect(post).toMatchObject({ type: 'RANKING', bucket: 'LOVED' });
+      for (const field of ['likeCount', 'likedByMe', 'commentCount', 'comments']) {
+        expect(post).not.toHaveProperty(field);
+      }
+      // D-15: Explore does not open the post up to engagement either.
+      await expectCode(api.feed.like(post.id), 'not_found');
     });
 
     it('getFeatured returns well-formed items', async () => {

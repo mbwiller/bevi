@@ -11,7 +11,7 @@ Your queue from 2026-10-19 on, centred on Supabase and Neo4j. Matt's is in [`NEX
 | 0 | **Neo4j instance: urgent** | All of the daily keep-alive runs since 2026-10-15 logged `NEO4J_URI is not set; graph keep-alive skipped`: **the `NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD` and `NEO4J_DATABASE` GitHub Actions secrets are empty**, so nothing has touched the instance since it was created. Resume it in the Aura console if it's paused (Free pauses after 72 hours idle and **deletes after 30 days paused**). Set the four secrets in GitHub (and in Supabase for `graph-query`), then run `graph-keepalive` by hand and check its log shows a write | Everything on the graph |
 | 1 | **A-14 · #107** (already open, CI green) | Push `20261019000200_leaderboard_parity.sql` to prod (dry-run first), then merge | Matt's M-22 cross-check |
 | 2 | **M-26 export** (about 15 min) | Run `packages/ranking/eval/export.sql` against prod as a role that bypasses RLS: `psql "$DATABASE_URL" -At -v salt="$SALT" -f packages/ranking/eval/export.sql > export.json`. Hand Matt the file privately. **It never goes in the repo** | Real baseline numbers for Matt's M-27, and for judging the graph |
-| 3 | **S-04 + A-04 · Explore backend**, one combined PR | `get_explore(p_limit, p_before)`: posts from people up to two follows away who you don't follow, falling back to everyone while Bevi has under 20 users (D-01). Ordered by time-decayed likes (LaTeX §10.4). **Read-only (D-15):** it returns no like or comment fields, and `feed_event_visible` stays as it is. Age-gated. Contract `getExplore(page) → Page<ExplorePost>` (version `2.5.0`), `packages/api`, FakeApi, pgTAP. Mind paging: a decaying score shifts between pages, so page by offset or freeze the ordering per request | **Matt's M-04** |
+| 3 | **S-04 + A-04 · Explore backend** — **built, in review on `be/explore`** (migration `20261019000400`, pgTAP `10_explore.test.sql`, contract `2.6.0`, `packages/api`, FakeApi). Next: review, push the migration to prod, merge | `get_explore(p_limit, p_before)`: posts from people up to two follows away who you don't follow, falling back to everyone while Bevi has under 20 users (D-01). Ordered by time-decayed likes (LaTeX §10.4). **Read-only (D-15):** it returns no like or comment fields, and `feed_event_visible` stays as it is. Age-gated. Contract `getExplore(page) → Page<ExplorePost>` (version `2.6.0`), `packages/api`, FakeApi, pgTAP. Mind paging: a decaying score shifts between pages, so page by offset or freeze the ordering per request | **Matt's M-04** |
 | 4 | **A-16 (1) + S-14 part 2 · The Bev graph**, one PR | See below | **Matt's M-27 and M-21** |
 
 Items 3 and 4 each unblock Matt, so do 3 first: it's smaller and P0.
@@ -31,7 +31,7 @@ The decision (2026-10-19): Neo4j holds Bevs, categories, brands and flavours as 
    - A Bev with no flavour profile copies the profile of its nearest **seeded** Bev in the **same category**, by embedding cosine, with brand as the tie-break.
    - Store `inferred = true`, `inferred_from` and the similarity.
    - Below a cosine of 0.6, leave it empty.
-5. **S-14 part 2**, the contract, version `2.6.0`: `bevs.similarities(bevId, otherIds)`, `bevs.similar(bevId, n)` and `rankings.listBucketBevs(bucket)`, all reading `bev_edges`. Plus `packages/api`, FakeApi, and live tests.
+5. **S-14 part 2**, the contract, version `2.7.0`: `bevs.similarities(bevId, otherIds)`, `bevs.similar(bevId, n)` and `rankings.listBucketBevs(bucket)`, all reading `bev_edges`. Plus `packages/api`, FakeApi, and live tests.
 6. **Docs in the same PR:** update `docs/graph.md`, and `docs/graph_db_implementation.md`, whose user-neighbour MVP moves to increment 2.
 
 ## Then: these wait on Matt
@@ -88,7 +88,7 @@ M-20 duplicate step ◀───────────────── S-13 
 
 | Surface | Who edits it | Rule |
 |---|---|---|
-| `shared/src/` (the contract) and `CONTRACT_VERSION` | Mostly your combined PRs | One combined PR per feature (contract + migration + `packages/api` + FakeApi). Bump the minor version, currently `2.4.0`: Explore takes `2.5.0`, S-14 part 2 takes `2.6.0`. Whoever merges second rebases and takes the next number |
+| `shared/src/` (the contract) and `CONTRACT_VERSION` | Mostly your combined PRs | One combined PR per feature (contract + migration + `packages/api` + FakeApi). Bump the minor version, currently `2.5.0` (Matt's avatars, #110): Explore takes `2.6.0`, S-14 part 2 takes `2.7.0`. Whoever merges second rebases and takes the next number |
 | `app/src/testing/fakeApi/*`, `conformance.ts` | You (in your combined PRs) and Matt | Every new API method needs a FakeApi version, or the app's typecheck fails. Write it to match your SQL, and Matt reviews it |
 | `packages/ranking/` | Matt | Your sync job and Edge Function import `edgeWeight` / `topEdges` from it; never copy the formulas. A `RANKING_VERSION` bump means re-running the sync |
 | `supabase/migrations/` | You | Timestamped and append-only, so keep your next timestamps after `20261019000200`. App code that calls a new function merges **only after its migration is on prod**. Push in timestamp order |

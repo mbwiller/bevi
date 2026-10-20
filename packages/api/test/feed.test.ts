@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createFeedApi } from '../src/feed.ts';
 import { encodeCursor } from '../src/paging.ts';
-import type { FeedRpcRow, ProfileViewRow } from '../src/mappers.ts';
+import type { ExploreRpcRow, FeedRpcRow, ProfileViewRow } from '../src/mappers.ts';
 
 const ACTOR = '00000000-0000-4000-8000-0000000000a1';
 
@@ -49,8 +49,17 @@ const actorRow: ProfileViewRow = {
   created_at: '2026-10-01T00:00:00Z',
 };
 
+/** `row` without the four fields get_explore does not return (D-15). */
+function exploreRow(id: number): ExploreRpcRow {
+  const { like_count: _lc, liked_by_me: _lbm, comment_count: _cc, comments: _cs, ...rest } = row(id);
+  return rest;
+}
+
 // Records the RPC name and arguments; returns the given rows or error.
-function fakeClient(result: { data?: FeedRpcRow[]; error?: unknown }, calls: { rpc?: [string, unknown] } = {}): SupabaseClient {
+function fakeClient(
+  result: { data?: (FeedRpcRow | ExploreRpcRow)[]; error?: unknown },
+  calls: { rpc?: [string, unknown] } = {},
+): SupabaseClient {
   return {
     auth: { getUser: async () => ({ data: { user: { id: 'me' } }, error: null }) },
     rpc: (name: string, args: unknown) => {
@@ -93,5 +102,65 @@ describe('feed.listUser', () => {
   it('maps BEVI_NOT_FOUND to not_found', async () => {
     const api = createFeedApi(fakeClient({ error: { code: 'P0002', message: 'BEVI_NOT_FOUND' } }));
     await expect(api.listUser('nobody')).rejects.toMatchObject({ code: 'not_found' });
+  });
+});
+
+describe('feed.getExplore', () => {
+  it('snapshots the clock for page 1 and maps rows with no like or comment fields', async () => {
+    const calls: { rpc?: [string, unknown] } = {};
+    const api = createFeedApi(fakeClient({ data: [exploreRow(9), exploreRow(7)] }, calls));
+
+    const page = await api.getExplore({ limit: 2 });
+
+    const [name, args] = calls.rpc!;
+    expect(name).toBe('get_explore');
+    expect(args).toMatchObject({ p_limit: 2, p_offset: 0 });
+    const before = (args as { p_before: string }).p_before;
+    expect(Number.isNaN(Date.parse(before))).toBe(false);
+
+    expect(page.items.map((i) => i.id)).toEqual(['9', '7']);
+    expect(page.items[0]).toMatchObject({ type: 'RANKING', actor: { id: ACTOR }, score: 8.2, bucket: 'LOVED' });
+    // D-15: an ExplorePost carries no engagement at all.
+    expect(Object.keys(page.items[0]!).sort()).toEqual(
+      ['actor', 'bev', 'bucket', 'createdAt', 'id', 'inMyWantToTry', 'note', 'score', 'type'].sort(),
+    );
+    expect(page.nextCursor).not.toBeNull();
+  });
+
+  it('page 2 reuses page 1\'s snapshot and advances the offset', async () => {
+    const first: { rpc?: [string, unknown] } = {};
+    const page1 = await createFeedApi(fakeClient({ data: [exploreRow(9), exploreRow(7)] }, first)).getExplore({ limit: 2 });
+    const before = (first.rpc![1] as { p_before: string }).p_before;
+
+    const second: { rpc?: [string, unknown] } = {};
+    const api = createFeedApi(fakeClient({ data: [exploreRow(5)] }, second));
+    const page2 = await api.getExplore({ limit: 2, cursor: page1.nextCursor! });
+
+    expect(second.rpc).toEqual(['get_explore', { p_limit: 2, p_before: before, p_offset: 2 }]);
+    // A short page ends the sequence.
+    expect(page2.nextCursor).toBeNull();
+  });
+
+  it('starts over on a malformed cursor instead of failing', async () => {
+    const calls: { rpc?: [string, unknown] } = {};
+    const api = createFeedApi(fakeClient({ data: [] }, calls));
+
+    await expect(api.getExplore({ limit: 5, cursor: 'not-a-cursor' })).resolves.toEqual({ items: [], nextCursor: null });
+    expect(calls.rpc![1]).toMatchObject({ p_limit: 5, p_offset: 0 });
+
+    // A forged cursor that decodes but holds nonsense starts over too.
+    await api.getExplore({ limit: 5, cursor: encodeCursor({ before: 'nope', offset: -3 }) });
+    expect(calls.rpc![1]).toMatchObject({ p_limit: 5, p_offset: 0 });
+  });
+
+  it('never copies like or comment data through, even if a row carries it', async () => {
+    // get_explore does not return those columns; this pins the mapper so a
+    // future shape change cannot leak them into an ExplorePost (D-15).
+    const api = createFeedApi(fakeClient({ data: [row(3)] }));
+    const page = await api.getExplore();
+    expect(page.items[0]).not.toHaveProperty('likeCount');
+    expect(page.items[0]).not.toHaveProperty('likedByMe');
+    expect(page.items[0]).not.toHaveProperty('commentCount');
+    expect(page.items[0]).not.toHaveProperty('comments');
   });
 });

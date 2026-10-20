@@ -17,6 +17,7 @@ import type {
   CategoryProgress,
   CategoryId,
   Comment,
+  ExplorePost,
   FeedEventKind,
   FeedItem,
   FlavorProfile,
@@ -318,7 +319,7 @@ export function mapRanking(row: RankingRow): Ranking {
 }
 
 // --------------------------------------------------------------------------
-// get_feed RPC row -> FeedItem
+// get_feed / get_explore RPC rows -> FeedItem / ExplorePost
 // --------------------------------------------------------------------------
 
 export interface FeedRpcRow {
@@ -350,6 +351,12 @@ export interface FeedRpcRow {
   /** `get_feed` builds the first seven, oldest first, with `jsonb_build_object`. */
   comments: CommentRpcRow[];
 }
+
+/**
+ * `get_explore`'s row (20261019000300): get_feed's columns minus the four
+ * engagement ones, which the function does not return at all (D-15).
+ */
+export type ExploreRpcRow = Omit<FeedRpcRow, 'like_count' | 'liked_by_me' | 'comment_count' | 'comments'>;
 
 export interface CommentRpcRow {
   id: number;
@@ -385,13 +392,17 @@ export function mapComment(client: SupabaseClient, row: CommentRpcRow): Comment 
   };
 }
 
-export function mapFeedItem(client: SupabaseClient, row: FeedRpcRow, actor: Profile): FeedItem {
+/**
+ * The part of a post every surface shares: get_explore returns exactly this,
+ * and get_feed returns it plus the four engagement fields (D-15).
+ */
+export function mapExplorePost(client: SupabaseClient, row: ExploreRpcRow, actor: Profile): ExplorePost {
   if (!row.bev_id || !row.bev_name || !row.bev_category_id) {
-    throw new ApiError('unknown', `get_feed row ${row.id} is missing its Bev (actor_id=${row.actor_id})`);
+    throw new ApiError('unknown', `feed row ${row.id} is missing its Bev (actor_id=${row.actor_id})`);
   }
   // Every feed item is a ranking now, so the joined ranking is always there.
   if (row.score === null || row.bucket === null) {
-    throw new ApiError('unknown', `get_feed row ${row.id} is missing its ranking (actor_id=${row.actor_id})`);
+    throw new ApiError('unknown', `feed row ${row.id} is missing its ranking (actor_id=${row.actor_id})`);
   }
   return {
     id: String(row.id),
@@ -415,6 +426,12 @@ export function mapFeedItem(client: SupabaseClient, row: FeedRpcRow, actor: Prof
     note: row.note,
     createdAt: row.created_at,
     inMyWantToTry: row.in_my_want_to_try,
+  };
+}
+
+export function mapFeedItem(client: SupabaseClient, row: FeedRpcRow, actor: Profile): FeedItem {
+  return {
+    ...mapExplorePost(client, row, actor),
     likeCount: row.like_count,
     likedByMe: row.liked_by_me,
     commentCount: row.comment_count,

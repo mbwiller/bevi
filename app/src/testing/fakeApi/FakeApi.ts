@@ -63,6 +63,7 @@ import {
   type Comment,
   type CommentsApi,
   type Comparison,
+  type ExplorePost,
   type FeedApi,
   type FeedItem,
   type FollowsApi,
@@ -166,6 +167,15 @@ const COMMENT_MAX = 280;
 const FEED_INLINE_COMMENTS = 7;
 /** Bev of the day / week is "strictly New York City" (get_bev_of_period, 20261018000100). */
 const BEV_OF_PERIOD_ZONE = 'America/New_York';
+/** D-01: below this many users Explore widens from two hops to everyone (get_explore, 20261019000300). */
+const EXPLORE_GLOBAL_FALLBACK_USERS = 20;
+/**
+ * Explore's order: hot = (likes + 1) / (ageHours + 2)^1.5, docs/bevi-ranking-math.tex §10.4.
+ * The server's one copy of the two constants is `explore_hotness()` in 20261019000300; this is the
+ * fake's, kept here next to it rather than spread through the method. @bevi/ranking has no hotness
+ * helper to import (nothing in the app computes it: the ordering is the server's).
+ */
+const exploreHotness = (likes: number, ageHours: number) => (likes + 1) / Math.pow(Math.max(ageHours, 0) + 2, 1.5);
 /** The ISO week's Monday for a `YYYY-MM-DD` day key. */
 function isoWeekStart(dayKey: string): string {
   const d = new Date(`${dayKey}T00:00:00Z`);
@@ -1372,6 +1382,65 @@ export class FakeApi implements BeviApi {
     return items;
   }
 
+  /**
+   * get_explore's scope: the users up to two follows away, minus the caller and everyone the
+   * caller already follows -- so an Explore post is always a stranger's, and never one the feed
+   * has already shown. Below EXPLORE_GLOBAL_FALLBACK_USERS users the two-hop set would be empty
+   * for almost everyone, so it widens to all users, with the same two exclusions (D-01).
+   */
+  private exploreAuthors(me: FakeUser): Set<string> {
+    const following = (id: string) => this.db.follows.filter((f) => f.followerId === id).map((f) => f.followeeId);
+    const direct = new Set(following(me.id));
+    const twoHops = new Set(direct);
+    for (const id of direct) for (const id2 of following(id)) twoHops.add(id2);
+    const candidates =
+      this.db.users.length < EXPLORE_GLOBAL_FALLBACK_USERS ? this.db.users.map((u) => u.id) : [...twoHops];
+    return new Set(candidates.filter((id) => id !== me.id && !direct.has(id)));
+  }
+
+  /**
+   * get_explore's rows: hottest first (§10.4), age-gated like the feed, and with no like or
+   * comment data at all -- an Explore post is read-only (D-15).
+   */
+  private explorePosts(me: FakeUser): ExplorePost[] {
+    const authors = this.exploreAuthors(me);
+    const saved = new Set(this.db.wantToTry.filter((w) => w.userId === me.id).map((w) => w.bevId));
+    const likes = this.db.likes ?? [];
+    const now = Date.parse(this.nowIso());
+    const rows: { post: ExplorePost; hot: number; seq: number }[] = [];
+    for (const e of this.db.feed) {
+      if (!authors.has(e.actorId)) continue;
+      const actor = this.db.users.find((u) => u.id === e.actorId);
+      const bev = this.db.bevs.find((b) => b.id === e.bevId);
+      if (!actor || !bev || !this.visible(bev, me)) continue;
+      // Rankings only, as in the feed.
+      const r = e.type === 'RANKING' ? this.rankingOf(e.actorId, e.bevId) : undefined;
+      if (!r) continue;
+      rows.push({
+        // Like counts order the rows and never leave the server (D-15).
+        hot: exploreHotness(
+          likes.filter((l) => l.feedEventId === e.id).length,
+          (now - Date.parse(e.createdAt)) / 3_600_000,
+        ),
+        seq: Number(e.id.split('-')[1]),
+        post: {
+          id: e.id,
+          type: e.type,
+          actor: this.toProfile(actor, me),
+          bev: this.toSummary(bev),
+          score: r.score,
+          bucket: r.bucket,
+          note: r.note,
+          createdAt: e.createdAt,
+          inMyWantToTry: saved.has(bev.id),
+        },
+      });
+    }
+    // `hot desc, id desc`: the id keeps the order total, so paging cannot repeat a row.
+    rows.sort((a, z) => z.hot - a.hot || z.seq - a.seq);
+    return rows.map((x) => x.post);
+  }
+
   feed: FeedApi = {
     getFeed: (page?: PageParams) =>
       this.call('feed.getFeed', () => {
@@ -1386,6 +1455,15 @@ export class FakeApi implements BeviApi {
         // feed_event_visible: only the caller's own and followed users' posts; anyone else's page is empty.
         const actors = this.feedActors(me).has(userId) ? new Set([userId]) : new Set<string>();
         return paginate(this.feedItems(me, actors), page, 20);
+      }),
+
+    // Popularity order, not time order, and read-only rows (D-15). Paging is by offset over that
+    // order, as get_explore pages: the real one also freezes the clock in its cursor, which the
+    // fake has no need of (its ordering only moves when a test moves it).
+    getExplore: (page?: PageParams) =>
+      this.call('feed.getExplore', () => {
+        const me = this.requireUser();
+        return paginate(this.explorePosts(me), page, 20);
       }),
 
     getFeatured: () =>
