@@ -130,7 +130,9 @@ async function postBatch(
   url: string,
   token: string,
   ids: string[],
-): Promise<{ ok: true; embedded: number } | { ok: false; detail: string }> {
+): Promise<
+  { ok: true; embedded: number } | { ok: false; detail: string; status?: number }
+> {
   let response: Response;
   try {
     response = await fetch(url, {
@@ -142,7 +144,13 @@ async function postBatch(
     return { ok: false, detail: error instanceof Error ? error.message : String(error) };
   }
   const text = await response.text();
-  if (!response.ok) return { ok: false, detail: `HTTP ${response.status}: ${text.slice(0, 300)}` };
+  if (!response.ok) {
+    return {
+      ok: false,
+      status: response.status,
+      detail: `HTTP ${response.status}: ${text.slice(0, 300)}`,
+    };
+  }
   try {
     const body = JSON.parse(text) as { embedded?: number };
     return { ok: true, embedded: typeof body.embedded === "number" ? body.embedded : ids.length };
@@ -169,7 +177,18 @@ if (!serviceRoleKey) {
 }
 
 const functionUrl = process.env.EMBED_FUNCTION_URL?.replace(/\/+$/, "") ?? `${supabaseUrl}/functions/v1/embed`;
-const embedToken = process.env.EMBED_WEBHOOK_SECRET || serviceRoleKey;
+// Required, and deliberately not defaulted to the service-role key: the token
+// travels in a header that pg_net persists in net.http_request_queue when the
+// trigger sends it, so the two are kept distinct. See the comment in
+// supabase/functions/embed/index.ts.
+const embedToken = process.env.EMBED_WEBHOOK_SECRET || undefined;
+if (!embedToken) {
+  fail(
+    "EMBED_WEBHOOK_SECRET is required: it is the bearer token the embed function checks. " +
+      "Set the same value here, in `supabase secrets set EMBED_WEBHOOK_SECRET=...` and in the " +
+      "database setting bevi.embed_webhook_token.",
+  );
+}
 
 const rest = `${supabaseUrl}/rest/v1`;
 const headers = {
@@ -240,6 +259,17 @@ const failures: Array<{ ids: string[]; detail: string }> = [];
 for (const [index, batch] of batches.entries()) {
   const ids = batch.map((bev) => bev.id);
   let result = await postBatch(functionUrl, embedToken, ids);
+  // 401/403 is a misconfiguration, not a blip, and retrying it 96 times
+  // produces 96 futile requests and a 96-line failure dump instead of one
+  // clear error. The token is set by hand in three places, so a mismatch is
+  // the likeliest failure of this whole pipeline -- say so and stop.
+  if (!result.ok && (result.status === 401 || result.status === 403)) {
+    fail(
+      `${result.status} from embed. EMBED_WEBHOOK_SECRET here does not match the function's ` +
+        "secret (`supabase secrets list`) -- and the trigger's own copy lives in the database " +
+        "setting bevi.embed_webhook_token. All three must be the same value.",
+    );
+  }
   if (!result.ok) {
     // One retry: a cold start or a transient 5xx should not need a second run
     // of the whole script. A second failure is recorded and the run continues,

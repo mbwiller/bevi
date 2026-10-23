@@ -27,7 +27,7 @@
 -- e1..e3, f1..f4 and ffff. be0NN collides with none.
 
 begin;
-select plan(20);
+select plan(22);
 
 -- ---------------------------------------------------------------------------
 -- 1. The trigger function
@@ -134,6 +134,16 @@ select ok(
     where tgrelid = 'public.bevs'::regclass and tgname = 'bevs_embed_after_update'),
   'the update trigger has a WHEN condition, so an unchanged value does not fire it'
 );
+-- The INSERT trigger is narrowed to `source = 'user'`. Without that, a catalog
+-- seed migration -- 378 rows in one statement in 20261014000500 -- would queue
+-- a pg_net request per row inside its own transaction, and the worker would
+-- then fire 378 function invocations and inferences. Seeded rows are the
+-- backfill's job.
+select ok(
+  (select tgqual is not null from pg_trigger
+    where tgrelid = 'public.bevs'::regclass and tgname = 'bevs_embed_after_insert'),
+  'the insert trigger has a WHEN condition, so a seeded catalog row does not fan out'
+);
 
 -- ---------------------------------------------------------------------------
 -- 4. The no-op path: writing a Bev with no configuration
@@ -206,6 +216,17 @@ select is(
   0,
   'and none of those four writes queued an HTTP request, because the configuration is absent'
 );
+
+-- The suspend escape hatch, for bulk work that legitimately edits the embedded
+-- columns on many rows. It only ever suppresses work, so the worst outcome is
+-- a missing embedding that the backfill repairs.
+set local bevi.embed_suspend = 'true';
+select lives_ok(
+  $$ update public.bevs set name = 'pgTAP Embed Cola Suspended', updated_at = now()
+      where id = '00000000-0000-4000-8000-0000000be001' $$,
+  'bevi.embed_suspend makes the trigger a no-op without breaking the write'
+);
+set local bevi.embed_suspend = 'false';
 
 -- ---------------------------------------------------------------------------
 -- 5. bev_embeddings: still no write path for authenticated, still prod's shape

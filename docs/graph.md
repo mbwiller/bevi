@@ -259,7 +259,7 @@ above, and **none of them is a `NEO4J_*`**.
 | Name | Where | Used by |
 |---|---|---|
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | injected into every Edge Function; set explicitly for the backfill | `embed` (to read `bevs`, to upsert `bev_embeddings`), `backfill-embeddings.ts` |
-| `EMBED_WEBHOOK_SECRET` | `supabase secrets set` (hosted), `supabase/.env` (local); optional | `embed` accepts it as the bearer token; the backfill sends it. Unset ⇒ the service-role key is the token |
+| `EMBED_WEBHOOK_SECRET` | `supabase secrets set` (hosted), `supabase/.env` (local); **required** | The bearer token `embed` checks; the backfill and the trigger both send it. It must NOT be the service-role key: pg_net persists the trigger's headers in `net.http_request_queue`, so the token is at rest in a table, and `embed` refuses to start rather than accept the key as its password |
 | `EMBED_FUNCTION_URL` | the backfill's environment; optional | defaults to `<SUPABASE_URL>/functions/v1/embed` |
 | `bevi.embed_function_url` | a **database** setting, set once per environment | the trigger, as the URL to POST to |
 | `bevi.embed_webhook_token` | a **database** setting, set once per environment | the trigger, as the bearer token |

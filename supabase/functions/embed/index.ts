@@ -119,7 +119,9 @@ function bearer(req: Request): string | null {
   return match ? match[1].trim() : null;
 }
 
-function collectIds(body: RequestBody): { ids: string[]; invalid: boolean } {
+function collectIds(
+  body: RequestBody,
+): { ids: string[]; invalid: boolean; tooMany: number } {
   const raw: unknown[] = Array.isArray(body.bevIds)
     ? body.bevIds
     : body.bevIds !== undefined
@@ -130,13 +132,28 @@ function collectIds(body: RequestBody): { ids: string[]; invalid: boolean } {
     ? [body.record.id]
     : [];
 
+  // Reject on the RAW length, before validating or de-duplicating anything.
+  // The bound used to be checked on the way out, which meant a caller could
+  // make this validate and de-duplicate an array of any length first -- and
+  // the de-duplication was a linear scan per element, so 100k distinct uuids
+  // cost on the order of 5e9 comparisons for a request that was going to be
+  // refused anyway. Token-gated, so never an anonymous lever, but it defeated
+  // the point of having a batch bound at all.
+  if (raw.length > MAX_BATCH) return { ids: [], invalid: false, tooMany: raw.length };
+
+  const seen = new Set<string>();
   const ids: string[] = [];
   for (const value of raw) {
-    if (typeof value !== "string" || !UUID_RE.test(value)) return { ids: [], invalid: true };
+    if (typeof value !== "string" || !UUID_RE.test(value)) {
+      return { ids: [], invalid: true, tooMany: 0 };
+    }
     const id = value.toLowerCase();
-    if (!ids.includes(id)) ids.push(id);
+    if (!seen.has(id)) {
+      seen.add(id);
+      ids.push(id);
+    }
   }
-  return { ids, invalid: false };
+  return { ids, invalid: false, tooMany: 0 };
 }
 
 /**
@@ -155,11 +172,21 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // and never an open door.
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  // `||`, not `??`: a blank EMBED_WEBHOOK_SECRET counts as absent, the same
-  // way the trigger's `nullif(..., '')` and the backfill script treat a blank
-  // value. Copying supabase/.env.example verbatim must not leave the door
-  // open to the empty-string token.
-  const webhookSecret = Deno.env.get("EMBED_WEBHOOK_SECRET") || serviceRoleKey;
+  // EMBED_WEBHOOK_SECRET is REQUIRED, and must never fall back to the
+  // service-role key. net.http_post persists the whole request -- url, body
+  // and headers -- as a row in net.http_request_queue, so whatever token the
+  // trigger sends sits at rest in a database table, one row per Bev write,
+  // until the pg_net worker consumes it. It is also readable as
+  // current_setting('bevi.embed_webhook_token'). None of that is alarming for
+  // a token whose only power is "ask for an embedding"; all of it is alarming
+  // for a key that bypasses RLS on every table. So the two are kept distinct,
+  // and this function refuses to start rather than silently accepting the
+  // service-role key as its password.
+  //
+  // `||`, not `??`: a blank value counts as absent, the same way the trigger's
+  // `nullif(..., '')` and the backfill treat one. Copying
+  // supabase/.env.example verbatim must not make the empty string a token.
+  const webhookSecret = Deno.env.get("EMBED_WEBHOOK_SECRET") || undefined;
 
   if (!supabaseUrl || !serviceRoleKey) {
     console.error(
@@ -171,13 +198,20 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
   if (!webhookSecret) {
     console.error(
-      "embed is misconfigured: no EMBED_WEBHOOK_SECRET and no service-role key to fall back " +
-        "on, so no caller could be authorised. Refusing to run.",
+      "embed is misconfigured: EMBED_WEBHOOK_SECRET is not set. Set it with " +
+        "`supabase secrets set EMBED_WEBHOOK_SECRET=<random>` and set the database setting " +
+        "bevi.embed_webhook_token to the same value. It is deliberately NOT allowed to fall " +
+        "back to the service-role key, which pg_net would then persist in " +
+        "net.http_request_queue. Refusing to run.",
     );
     return json({ error: "embed_secret_missing" }, 500);
   }
 
-  const token = bearer(req) ?? req.headers.get("x-embed-token");
+  // `Authorization: Bearer` only. An `x-embed-token` alternative used to be
+  // accepted here; it was undocumented, no caller sent it, and a bespoke
+  // header is the one proxy and platform request logging is least likely to
+  // redact -- so it was the less safe of the two channels, for no benefit.
+  const token = bearer(req);
   if (!token || !tokensMatch(token, webhookSecret)) {
     return json({ error: "unauthorized" }, 401);
   }
@@ -189,13 +223,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return json({ error: "invalid_json" }, 400);
   }
 
-  const { ids, invalid } = collectIds(body);
+  const { ids, invalid, tooMany } = collectIds(body);
+  if (tooMany > 0) {
+    return json({ error: "batch_too_large", maxBatch: MAX_BATCH, received: tooMany }, 413);
+  }
   if (invalid) return json({ error: "invalid_bev_id" }, 400);
   if (ids.length === 0) {
     return json({ error: "no_bev_ids", hint: "send { \"bevIds\": [uuid, ...] }" }, 400);
-  }
-  if (ids.length > MAX_BATCH) {
-    return json({ error: "batch_too_large", maxBatch: MAX_BATCH, received: ids.length }, 413);
   }
 
   const rest = `${supabaseUrl.replace(/\/+$/, "")}/rest/v1`;

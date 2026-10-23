@@ -101,6 +101,18 @@ begin
     return null;
   end if;
 
+  -- An escape hatch for bulk work that legitimately touches the embedded
+  -- columns on many rows at once -- a catalog refresh that edits existing
+  -- rows, or an admin correction run. `set local bevi.embed_suspend = 'true';`
+  -- at the top of such a migration or session keeps it from queueing one
+  -- function invocation per row; the backfill picks the rows up afterwards.
+  -- Transaction-local, so it cannot leak into another session, and it only
+  -- ever suppresses work (the failure mode is a missing embedding, which the
+  -- backfill already repairs).
+  if coalesce(current_setting('bevi.embed_suspend', true), '') = 'true' then
+    return null;
+  end if;
+
   -- A merged Bev is on its way out (A-12 re-points its rankings and removes
   -- its node and edges); embedding it would be work for a row nothing reads.
   if new.status = 'merged' then
@@ -164,10 +176,21 @@ revoke execute on function public.enqueue_bev_embedding()
 -- supabase/functions/embed/text.ts reads: brand, name, flavor, category_id.
 -- Add a part to that template and this list has to grow with it.
 
+-- INSERT is narrowed to `source = 'user'`, which keeps a catalog seed from
+-- fanning out. 20261014000500_catalog_seed.sql inserts 378 rows in one
+-- statement (and its `on conflict ... do update set name =, brand =,
+-- flavor =, category_id =` arms the UPDATE trigger too), so without this the
+-- next regenerated seed migration would queue several hundred pg_net rows
+-- inside its own transaction and the worker would then fire several hundred
+-- function invocations and model inferences as fast as it could. Seeded rows
+-- do not need the trigger: scripts/graph/backfill-embeddings.ts finds every
+-- active Bev with no embedding, which is the sanctioned path for bulk work.
 drop trigger if exists bevs_embed_after_insert on public.bevs;
 create trigger bevs_embed_after_insert
   after insert on public.bevs
-  for each row execute function public.enqueue_bev_embedding();
+  for each row
+  when (new.source = 'user')
+  execute function public.enqueue_bev_embedding();
 
 drop trigger if exists bevs_embed_after_update on public.bevs;
 create trigger bevs_embed_after_update
