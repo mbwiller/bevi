@@ -1,0 +1,24 @@
+{
+  // `scripts/` is not an npm workspace (package.json's `workspaces` lists app,
+  // packages/* and shared), so `npm run typecheck --workspaces` never saw it
+  // and nothing here was type-checked. `npm run typecheck:scripts` from the
+  // repo root runs this project; backend.yml runs it in CI.
+  //
+  // `erasableSyntaxOnly` is not a style preference here: every script in this
+  // folder runs under `node --experimental-strip-types`, which refuses enums,
+  // namespaces and parameter properties at runtime. This turns that runtime
+  // failure into a compile error.
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    // Not `noUncheckedIndexedAccess`: scripts/catalog/* predates this project
+    // and is written against plain indexed access, and turning the flag on
+    // would mean rewriting a working CSV parser to add this file. packages/api
+    // makes the same call; packages/ranking, whose output is a contract, does not.
+    "types": ["node"]
+  },
+  "include": ["**/*.ts"]
+}

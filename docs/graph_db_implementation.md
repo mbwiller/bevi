@@ -20,6 +20,15 @@ rest. Where the two disagree, this document is the newer decision and
 > design for that increment; only "which comes first" changed, so read §5's
 > integration plan and the decision bar as increment 2's, and ignore the
 > "Deferred" entries for embeddings, pgvector and `bev_edges`.
+>
+> **Update, 2026-10-23.** `bev_edges` and `bev_embeddings` exist
+> (`20261019000500`), and `bev_edges` now has a writer:
+> `scripts/graph/build-edges.ts`, `.github/workflows/graph-edges.yml`,
+> `20261023000200` (D-11 inference) and `20261023000300` (the service-role
+> RPCs). It fills the table **from Postgres alone** — no Neo4j — and the
+> §"Does not exist" inventory below is stale in exactly those respects.
+> `docs/graph.md` is the current description of how edges are computed; where
+> the two disagree about `bev_edges`, `docs/graph.md` wins.
 
 ## Objective
 
