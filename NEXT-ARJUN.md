@@ -22,6 +22,7 @@ The decision (2026-10-19): Neo4j holds Bevs, categories, brands and flavours as 
 
 0. **The instance must be alive first:** that's item 0 above.
 1. **Embeddings:** an `embed` Edge Function (`gte-small`, free in Supabase), a `bev_embeddings` table (pgvector, 384 dimensions), and the vector on each node.
+   - **Built on `be/embed-pipeline`** and it needs no Neo4j, so it can ship before item 0: `supabase/functions/embed/`, the async pg_net trigger `20261023000100_embed_webhook.sql`, `npm run graph:backfill-embeddings` and pgTAP `12_embed_webhook`. **To deploy:** `supabase functions deploy embed`, optionally `supabase secrets set EMBED_WEBHOOK_SECRET=…`, then `alter database postgres set bevi.embed_function_url = '…/functions/v1/embed'` and `bevi.embed_webhook_token = '…'` (missing ⇒ the trigger no-ops), then run the backfill. Only the vector on the node is left for the sync.
 2. **Edges:** candidates are the same category ∪ the same brand ∪ the 50 nearest by embedding. Weight each pair with `edgeWeight()` from `@bevi/ranking` (Matt's M-24; don't reimplement it), keep the top 20 per Bev with `w ≥ 0.3`, `MERGE` them into Neo4j, and write `bev_edges` back to Postgres in one transaction.
 3. **When it updates:**
    - **A new or edited Bev** gets its edges right away, through an async database webhook to an Edge Function. That keeps a ranking or a create from ever waiting on Neo4j.

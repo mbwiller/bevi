@@ -663,6 +663,7 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - **Decided 2026-10-19 (Matt and Arjun):** Neo4j holds the Bev graph, and #87's narrowing is reversed. It comes in two increments:
 - **Increment 1, the Bev graph: ready, Arjun, one PR with S-14 part 2.**
   - **Steps:** run steps 1–7 and 9–10 below as written, embeddings included.
+  - **Step 2 (embeddings) is built** on `be/embed-pipeline`, Neo4j-free: the `embed` Edge Function (`verify_jwt = false` + a shared-secret check), an async pg_net trigger on `bevs` (`20261023000100`), `scripts/graph/backfill-embeddings.ts` and pgTAP `12_embed_webhook`; the text template, the two `bevi.embed_*` database settings and the re-run command are in `docs/graph.md`.
   - **On write:** a new or edited Bev triggers an async database webhook. An Edge Function embeds that Bev, infers its flavour profile if it has none (D-11), computes its candidates and edges, and updates Neo4j and `bev_edges`. The Edge Function's 2s CPU budget covers one Bev; the batch work stays in the nightly job.
   - **D-11 inference:**
     - Only seeded Bevs (never inferred ones) **in the same category** are candidates.

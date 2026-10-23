@@ -104,13 +104,15 @@ jobs:
         with:
           deno-version: v2.x
 
-      - run: deno check supabase/functions/graph-query/index.ts
+      - run: deno check supabase/functions/*/index.ts
 
       # graph-query's input-validation tests. They skip when nothing answers
       # on 127.0.0.1:54321, but `supabase start` above already serves every
       # function in supabase/functions, so in CI they do run (with no NEO4J_*
       # set, nothing upstream is ever called).
-      - run: deno test --allow-net --allow-env supabase/functions/graph-query/test.ts
+      # embed's tests are pure (they import ./text.ts, not index.ts, so nothing
+      # starts a server and Supabase.ai is never touched) and need neither.
+      - run: deno test --allow-net --allow-env supabase/functions/
 
       - run: npm run catalog:validate
 
