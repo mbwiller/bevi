@@ -260,6 +260,28 @@ deno_version = 2
 enabled = true
 verify_jwt = true
 
+# embed (A-16 (1)): computes a Bev's gte-small embedding and upserts
+# bev_embeddings. Its only callers are the `bevs` trigger from
+# 20261023000100_embed_webhook.sql (over pg_net) and
+# scripts/graph/backfill-embeddings.ts, run by a maintainer.
+#
+# verify_jwt = false ON PURPOSE, and it is not the weaker setting here.
+# verify_jwt only proves the request carries a key the project issued, and the
+# publishable key ships in every copy of the app -- which is fine for
+# graph-query (read-only) but not for a function that writes as the service
+# role and runs model inference per call. Neither real caller holds a user JWT
+# anyway. So the gate lives in index.ts instead: a request must present
+# EMBED_WEBHOOK_SECRET, or the service-role key when that is unset, as
+# `Authorization: Bearer <token>`, and anything else is 401 before a row is
+# read or the model is loaded. Full reasoning in the function's header comment.
+#
+# Secrets (EMBED_WEBHOOK_SECRET; SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are
+# injected) come from supabase/.env locally and `supabase secrets set` in the
+# hosted project -- never from this file.
+[functions.embed]
+enabled = true
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

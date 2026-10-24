@@ -161,6 +161,143 @@ empty (contract `2.7.0`, S-14 part 2):
 | `get_similar_bevs(p_bev_id, p_limit)` | `bevs.similar` | `search_bevs`' BevSummary columns, heaviest first, `status = 'active'` only, limit clamped to 50 |
 | `list_bucket_bevs(p_bucket)` | `rankings.listBucketBevs` | `(id, category_id, brand_key)` for the caller's own bucket, `brand_key` matching `normaliseBrand()` |
 
+## How embeddings are produced (A-16 (1), the Postgres-only half)
+
+**This half needs no Neo4j.** It is Postgres → an Edge Function → Postgres, so
+it can be deployed, run and judged while the Aura instance is paused, deleted
+or never created. Copying the vector onto `(:Bev).embedding` is the sync job's
+step, not this one's.
+
+### The text
+
+One string per Bev, in the order decision 30 writes it — **"brand name flavour
+category"**:
+
+```
+`${brand} ${name} ${flavor} ${category}`
+```
+
+- a missing or blank `brand` or `flavor` is **omitted**, not left as a blank
+  slot (both columns are nullable in `bevs`);
+- `category` is `bevs.category_id` — the slug the column actually holds — with
+  `_` and `-` turned into spaces, so `sparkling_water` embeds as the two words
+  `sparkling water` rather than one token the model has never seen;
+- runs of whitespace collapse to one space, and the whole string is trimmed.
+
+So Coca-Cola Cherry Coke is `Coca-Cola Coke Cherry soda`, and an unbranded
+seltzer is `Seltzer Lime sparkling water`.
+
+`embeddingText()` in `supabase/functions/embed/text.ts` is the single
+definition of that template, and `supabase/functions/embed/test.ts` pins it.
+Changing it makes every stored vector stale — re-run the backfill with
+`--all`.
+
+### The model
+
+`Supabase.ai.Session('gte-small')`, run with `{ mean_pool: true, normalize:
+true }`: **384 dimensions, unit-norm, compared with cosine**. That is the model
+decision 30 fixes, it is free inside Edge Functions, and `bev_embeddings.model`
+records the name so a future model change is visible in the data rather than
+silently mixed in. `Supabase.ai` exists **only in the deployed Edge Runtime**,
+so `embed` declares the one method it uses and returns a 503 (`ai_unavailable`)
+anywhere else — that is what keeps CI's `deno check` green without a live
+runtime.
+
+### The two writers
+
+| Path | Trigger | Batch |
+|---|---|---|
+| **on write** | `bevs_embed_after_insert` / `bevs_embed_after_update` on `public.bevs` (migration `20261023000100_embed_webhook.sql`) → `net.http_post` → `embed` | 1 Bev |
+| **backfill** | `npm run graph:backfill-embeddings`, by hand | up to 16 per call, 8 by default |
+
+The trigger fires on insert, and on update **only when `name`, `brand`,
+`flavor` or `category_id` actually changed** — an `updated_at` touch, a
+moderation `status` change or a `photo_path` landing after upload do not reach
+it. It uses **pg_net directly** (`20261009000100_extensions.sql` enables it)
+rather than `supabase_functions.http_request`, because that function only
+exists once database webhooks have been enabled in the hosted dashboard and
+nothing in this repo creates it; a `create trigger` against it on a project
+that never enabled the feature fails at migration time.
+
+`net.http_post` queues a row and returns; a background worker does the HTTP.
+So `create_bev` adds one insert, never a network round trip, and the function's
+cold start, its 2 s CPU budget and its failures are all invisible to the
+transaction. The queue row is written inside the caller's transaction, so a
+rolled-back `create_bev` never leaves a request behind. The body of the
+function is wrapped in an exception block, so even a failure to queue degrades
+to a `WARNING`.
+
+A dropped request is therefore possible by design, and that is fine: the
+backfill finds every active Bev with no row, so **"has no row in
+`bev_embeddings`" is the dirty flag** and no queue table or `dirty` column is
+needed. Nothing in the app reads `bev_embeddings` on a request path, so a Bev
+whose vector arrives hours late costs a slightly worse "Bevs like this" row and
+nothing else.
+
+### Authorisation: `embed` has `verify_jwt = false`, on purpose
+
+It is not the weaker setting here. `verify_jwt` only proves a request carries a
+key the project issued, and the publishable key ships in every copy of the app
+— fine for `graph-query`, which is read-only, but not for a function that
+writes as the service role and runs inference per call. Neither real caller
+holds a user JWT anyway. So the gate is a shared secret checked inside
+`index.ts`, in constant time: a request must present `EMBED_WEBHOOK_SECRET` —
+or the service-role key when that is unset — as `Authorization: Bearer
+<token>`, and anything else is 401 before a row is read or the model is
+loaded. With no secret configured at all the function refuses everything (500)
+rather than falling open.
+
+`bev_embeddings` itself gains no write path: the Edge Function writes as the
+service role, which bypasses RLS, and the table keeps the policies
+`20261019000500` gave it (`select` for `authenticated`, no write policy).
+
+### Secrets and settings a deployer must provide
+
+Names only; values never go in the repo. These are in addition to the table
+above, and **none of them is a `NEO4J_*`**.
+
+| Name | Where | Used by |
+|---|---|---|
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | injected into every Edge Function; set explicitly for the backfill | `embed` (to read `bevs`, to upsert `bev_embeddings`), `backfill-embeddings.ts` |
+| `EMBED_WEBHOOK_SECRET` | `supabase secrets set` (hosted), `supabase/.env` (local); **required** | The bearer token `embed` checks; the backfill and the trigger both send it. It must NOT be the service-role key: pg_net persists the trigger's headers in `net.http_request_queue`, so the token is at rest in a table, and `embed` refuses to start rather than accept the key as its password |
+| `EMBED_FUNCTION_URL` | the backfill's environment; optional | defaults to `<SUPABASE_URL>/functions/v1/embed` |
+| `bevi.embed_function_url` | a **database** setting, set once per environment | the trigger, as the URL to POST to |
+| `bevi.embed_webhook_token` | a **database** setting, set once per environment | the trigger, as the bearer token |
+
+The two database settings follow the `bevi.*` precedent already in the schema
+(`bevi.rpc_bypass`) and are set by a human, outside the repo:
+
+```sql
+alter database postgres set bevi.embed_function_url  = 'https://<project-ref>.supabase.co/functions/v1/embed';
+alter database postgres set bevi.embed_webhook_token = '<EMBED_WEBHOOK_SECRET>';
+select pg_reload_conf();   -- existing sessions pick it up on reconnect
+```
+
+**Either one missing or blank is a no-op, not an error.** That is load-bearing:
+no local stack, `supabase db reset` or CI run has them, and `create_bev` has to
+keep working there. A blank token counts as absent too, so half-configuring the
+pair cannot start sending unauthenticated requests. `supabase/tests/12_embed_webhook.test.sql`
+is what holds that property down.
+
+### Re-running the backfill
+
+```bash
+npm run graph:backfill-embeddings                  # embed every active Bev that has no row
+npm run graph:backfill-embeddings -- --dry-run     # print the plan and the first ten texts, write nothing
+npm run graph:backfill-embeddings -- --stale       # also re-embed rows older than the Bev's updated_at, or from another model
+npm run graph:backfill-embeddings -- --all         # re-embed everything (after a template change)
+npm run graph:backfill-embeddings -- --batch 4 --limit 50
+```
+
+It needs `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`, optionally
+`EMBED_FUNCTION_URL` and `EMBED_WEBHOOK_SECRET`, and **nothing else — no
+Neo4j**. It is idempotent and resumable because it writes nothing itself:
+`embed` upserts on `bev_id`, and the work list is re-derived from the database
+on every run, so an interrupted run is resumed by running it again. There is no
+cursor file and no partial state to clean up. A batch that fails is retried
+once, then named in the summary, and the run exits non-zero without abandoning
+the rest.
+
 ## The sync contract (A-16, not yet built)
 
 The nightly GitHub Actions workflow must, in order: read active Bevs,
@@ -238,7 +375,11 @@ right choice: a Bolt connection pool has nothing to pool.
   database webhook on `bevs`, `scripts/graph/sync.ts` and `graph-sync.yml` are
   A-16 increment 1's second PR. Until that lands both tables are empty, every
   RPC returns zero rows, `Bev.embedding` is unset on every node, and nothing in
-  the app breaks — which is the point.
+  the app breaks — which is the point. **The embedding writer now exists**
+  ("How embeddings are produced", above: the `embed` function, the `bevs`
+  trigger and the backfill), so `bev_embeddings` fills as soon as a deployer
+  sets the two database settings and runs the backfill; `bev_edges`,
+  `scripts/graph/sync.ts` and `graph-sync.yml` are still to come.
 - `Bev.vessel` arrives with A-07; the flavour properties (`base`,
   `carbonated`, `caffeine`, `sweetness`, `dairy`, `alcohol`) with A-17.
 - `categories.parent_id`, and therefore `[:CHILD_OF]`, arrive with A-13 (D-04
