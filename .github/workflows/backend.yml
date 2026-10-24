@@ -69,6 +69,14 @@ jobs:
 
       - run: npm run typecheck -w packages/api
 
+      # scripts/ is not an npm workspace, so `npm run typecheck --workspaces`
+      # never reached it and nothing in it was type-checked. These two cover it
+      # (scripts/tsconfig.json) and run the unit tests for the pure half of the
+      # bev_edges builder, which need no database.
+      - run: npm run typecheck:scripts
+
+      - run: npm run test:scripts
+
       # Trim the local stack to what CI actually needs. `-x` excludes
       # services; drop any name here the installed CLI version doesn't
       # support.

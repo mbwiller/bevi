@@ -671,6 +671,7 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
     - It copies that Bev's profile with `inferred = true`, `inferred_from = <bev id>` and the similarity.
     - Below a cosine of 0.6 the profile stays empty, and the Bev falls back to category and brand.
     - Matt and Arjun relabel inferred rows into the CSV now and then.
+  - **Edge weights done (steps 1, 3, 4, 5, 7, 10), no Neo4j:** `scripts/graph/build-edges.ts` + `graph-edges.yml` (nightly 04:50 UTC, needs a new `SUPABASE_SERVICE_ROLE_KEY` Actions secret), D-11 inference in `20261023000200`, the service-role RPCs in `20261023000300`, pgTAP `13`/`14`, `docs/graph.md` rewritten; never run against a database, and the sanity thresholds are printed as a measurement rather than enforced (M-24's 0.88 cosine caveat), with `--strict` to opt in.
   - **Nightly:** `graph-sync.yml` does a full rebuild plus the sanity report (Coke–Pepsi ≥ 0.8, Coke vs a sparkling water < 0.4). Once it's green for a week, delete `graph-keepalive.yml`.
   - **Docs, in the same PR:** update `docs/graph.md`, `docs/graph_db_implementation.md` (the user-neighbour MVP moves to increment 2) (`vision.md`'s graph line was already updated on 2026-10-19).
   - **Before starting:** fix the instance (the board's "A-15 fix": the keep-alive's secrets were never set), and run the M-26 export so increment 1 has a baseline to compare against.
