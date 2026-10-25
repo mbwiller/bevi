@@ -494,16 +494,12 @@ h('div', { className: 'phone' },
     h('div', { className: 'gc-btns' }, h(B.BucketButton, { bucket: 'loved', selected: true }), h(B.BucketButton, { bucket: 'fine' }), h(B.BucketButton, { bucket: 'disliked' })),
     h('p', { className: 'caption bv-meta gc-hint' }, "Next, you'll compare it with Bevs you've already ranked.")))`];
 
-P.ScreenBevDetail = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHONE_CSS + `
-  .bd-hero { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px 16px 16px; text-align: center; }
-  .bd-cat { display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; }
-  .bd-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 10px; }
-  .bd-stat { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-stat); text-align: center; }
-  .bd-friends { display: flex; align-items: center; justify-content: space-between; padding: 18px 16px; }
-  .bd-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px; }
-  .bd-btns > * { width: 100%; justify-content: center; height: 44px; }`, phone('lists', `
+// Bev detail scrolls: the first phone is the top of the screen, the second is the same screen
+// scrolled to "Bevs like this" (M-27), with the Header held in place as it is in the app.
+const bevDetailScreen = (scrollY) => `
   h(F, null,
     h(B.Header, { onBack: function () {}, actions: [{ icon: 'ellipsis', label: 'More' }] }),
+    h('div', { className: 'bd-clip' }, h('div', { style: { transform: 'translateY(-${scrollY}px)' } },
     h('div', { className: 'bd-hero' },
       h(B.BevImage, { size: 155, art: BEVS.horchata.art, alt: 'Horchata' }),
       h('h1', { className: 'screenTitle', style: { marginTop: 12 } }, 'Horchata'),
@@ -516,7 +512,29 @@ P.ScreenBevDetail = [{ group: 'Screens', height: 852, width: 393, isPage: true }
       h('div', null, h('p', { className: 'heading' }, "Friends who've had it"), h('p', { className: 'body bv-meta' }, 'Arjun 9.5 · Jack 8.1 · 2 more')),
       h(B.AvatarStack, { people: [ARJUN, FRIENDS[0], FRIENDS[1], FRIENDS[2]], max: 3 })),
     h('div', { className: 'bd-btns' }, h(B.Pill, { variant: 'filled', icon: 'circle-plus' }, 'Rank it'), h(B.Pill, { variant: 'outlined', icon: 'bookmark' }, 'Want to Try')),
-    h('p', { className: 'caption bv-meta', style: { padding: '24px 16px', textAlign: 'center' } }, 'Added by @acheema5'))`)];
+    h('div', { className: 'bd-like' },
+      h(B.SectionHeader, { title: 'Bevs like this' }),
+      h(B.BevRow, { bev: BEVS.brownSugar, showImage: true, actions: false, score: 8.5, count: 5120 }),
+      h(B.BevRow, { bev: BEVS.matcha, showImage: true, actions: false, score: 8.2, count: 1840 }),
+      h(B.BevRow, { bev: BEVS.coldBrew, showImage: true, actions: false, score: 7.9, count: 903 }),
+      h(B.BevRow, { bev: BEVS.poppi, showImage: true, actions: false, score: 7.4, count: 212 }),
+      h(B.BevRow, { bev: BEVS.oj, showImage: true, actions: false, scoreVariant: 'locked', count: 2, divider: false })),
+    h('p', { className: 'caption bv-meta', style: { padding: '24px 16px', textAlign: 'center' } }, 'Added by @acheema5'))))`;
+
+P.ScreenBevDetail = [{ group: 'Screens', height: 852, width: 802, isPage: true }, PHONE_CSS + `
+  .bd-pair { display: flex; gap: 16px; align-items: flex-start; }
+  .bd-clip { height: 636px; overflow: hidden; }
+  .bd-hero { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px 16px 16px; text-align: center; }
+  .bd-cat { display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; }
+  .bd-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 10px; }
+  .bd-stat { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-stat); text-align: center; }
+  .bd-friends { display: flex; align-items: center; justify-content: space-between; padding: 18px 16px; }
+  .bd-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px; }
+  .bd-btns > * { width: 100%; justify-content: center; height: 44px; }
+  .bd-like { margin-top: 24px; }`, `
+  h('div', { className: 'bd-pair' },
+    ${phone('lists', bevDetailScreen(0))},
+    ${phone('lists', bevDetailScreen(560))})`];
 
 P.ScreenProfile = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHONE_CSS + `
   .pf-id { display: flex; flex-direction: column; align-items: center; padding-top: 1px; }
