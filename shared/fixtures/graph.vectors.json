@@ -1,0 +1,3231 @@
+{
+  "version": "1.3.0",
+  "constants": {
+    "version": "1.3.0",
+    "bands": {
+      "DISLIKED": [
+        0,
+        4
+      ],
+      "FINE": [
+        4,
+        7
+      ],
+      "LOVED": [
+        7,
+        10
+      ]
+    },
+    "bucketOrder": [
+      "LOVED",
+      "FINE",
+      "DISLIKED"
+    ],
+    "bucketDb": {
+      "LOVED": 3,
+      "FINE": 2,
+      "DISLIKED": 1
+    },
+    "sigmaFloor": 1,
+    "minNUser": 3,
+    "minNCat": 3,
+    "globalFallback": {
+      "mean": 5,
+      "stddev": 2.5
+    },
+    "kAff": 2,
+    "bayesC": 3,
+    "bayesCategoryPriorMin": 30,
+    "minRaters": 2,
+    "kG": 3,
+    "rankPointsWeights": {
+      "bevsRanked": 1,
+      "currentStreak": 3,
+      "bevsCreated": 2
+    },
+    "streakPeriod": "day",
+    "simWeights": {
+      "category": 0.4,
+      "brand": 0.3,
+      "flavor": 0.2,
+      "tier": 0.1
+    },
+    "simMin": 0.1,
+    "layer1Weights": {
+      "affinity": 0.4,
+      "content": 0.4,
+      "global": 0.2
+    },
+    "conf1UserN": 10,
+    "conf1Mass": 4,
+    "cfK": 10,
+    "cfMinCommon": 2,
+    "cfSignificance": 5,
+    "lambdaMax": 0.7,
+    "lambdaUserN": 15,
+    "epsilon": 0.15,
+    "jitterSd": 0.15,
+    "edgeWeights": {
+      "tree": 0.25,
+      "content": 0.15,
+      "emb": 0.3,
+      "profile": 0.3,
+      "cop": 0
+    },
+    "edgeTopK": 20,
+    "edgeMinWeight": 0.3,
+    "profileWeights": {
+      "base": 0.4,
+      "carbonated": 0.15,
+      "dairy": 0.1,
+      "alcohol": 0.05,
+      "caffeine": 0.15,
+      "sweetness": 0.15
+    },
+    "profileLevelSpan": 3,
+    "tasteK": 2,
+    "tasteMinAttrBevs": 2,
+    "tasteAlpha": 0.5,
+    "tasteSharedMin": 0.2,
+    "tasteMinSharedAttrs": 2,
+    "tasteBridgeKinds": [
+      "brand",
+      "flavor"
+    ],
+    "tasteSimFloor": 0.1,
+    "tasteNeighbourK": 25,
+    "neighbourReliabilityN": 15,
+    "storedScoreRule": "cents = floor((2N + D) / (2D)) with D = n + 1, N = 100*(hi*D - (hi - lo)*(index + 1)); capped at hi*100 - 1 for FINE and DISLIKED; storedScore = cents / 100",
+    "stddev": "population (stddev_pop)",
+    "nameOrder": "Unicode code point, not UTF-16 code unit (SQL collate \"C\" on UTF-8), then bevId the same way",
+    "streakDayKey": "calendar date of the ranking instant in the profile timezone: (created_at AT TIME ZONE timezone)::date; week = ISO week of that date (YYYY-Www)",
+    "rankOrder": "points desc, bevsRanked desc, createdAt asc, userId asc; rank = 1 + count(points > mine); bevsRanked = 0 excluded",
+    "treeDepth": "Wu-Palmer depth from an implicit root (depth 0) above the top-level categories; a top-level category (parent null or not in the taxonomy) has depth 1",
+    "profileRule": "N / 300 with N = 3*(40*[base] + 15*[carbonated] + 10*[dairy] + 5*[alcohol]) + 15*(3 - |dCaffeine|) + 15*(3 - |dSweetness|)",
+    "embeddingRule": "min(1, max(0, dot / sqrt(|a|^2 * |b|^2))); 0 when either vector is zero",
+    "edgeWeightRule": "tree*0.25 + content*0.15 + emb*0.30 + profile*0.30 + cop*0, summed in that order, clamped to [0, 1]",
+    "edgeOrder": "w desc, then bevId asc (code unit); keep w >= edgeMinWeight; at most edgeTopK",
+    "pearsonRule": "r over common(u, v) = R(u) & R(v) in bevId order: sum((x - mean x)(y - mean y)) / sqrt(sum((x - mean x)^2) * sum((y - mean y)^2)), clamped to [-1, 1]; 0 when |common| < cfMinCommon or either side is constant (all entries equal); sim = r * min(1, |common| / cfSignificance)",
+    "tasteAttributeKey": "'category:' + categoryId, 'brand:' + normaliseBrand(brand) when non-empty, 'flavor:' + trim(flavorBase) when non-empty; kept when it covers >= tasteMinAttrBevs catalog Bevs",
+    "tasteVectorRule": "t_u[a] = sum of z_{u,b} over b in R(u) carrying a / (n_{u,a} + tasteK); Bevs outside the catalog skipped",
+    "attributeSimilarityRule": "cosine of the taste vectors as sparse vectors (missing = 0), clamped to [-1, 1]; 0 when either is all zeros",
+    "sharedAttrsRule": "count of attributes a of a tasteBridgeKinds kind with |t_u[a]| >= tasteSharedMin and |t_v[a]| >= tasteSharedMin that u and v reach through distinct Bevs: some b in R(u) and b2 in R(v) carry a with b != b2 (one co-rated Bev is not a bridge)",
+    "blendRule": "alpha = tasteAlpha if |common| >= cfMinCommon else 0; attributeSim = attributeSimilarity if |common| >= cfMinCommon or sharedAttrs >= tasteMinSharedAttrs else 0; sim = alpha * pearson.sim + (1 - alpha) * attributeSim, clamped to [-1, 1]; method = attr (alpha 0), pearson (alpha 1), else blend",
+    "neighbourOrder": "sim desc, then userId asc (code point, SQL collate \"C\"); keep sim >= tasteSimFloor; at most tasteNeighbourK",
+    "reliabilityRule": "min(1, n_v / neighbourReliabilityN); applied by Layer 2 per neighbour, not stored in user_neighbors.sim"
+  },
+  "cases": [
+    {
+      "name": "perfect positive",
+      "fn": "pearsonCorrelation",
+      "input": {
+        "a": [
+          1,
+          2,
+          3
+        ],
+        "b": [
+          2,
+          4,
+          6
+        ]
+      },
+      "expected": 1
+    },
+    {
+      "name": "perfect negative",
+      "fn": "pearsonCorrelation",
+      "input": {
+        "a": [
+          1,
+          2,
+          3
+        ],
+        "b": [
+          3,
+          2,
+          1
+        ]
+      },
+      "expected": -1
+    },
+    {
+      "name": "sqrt(3)/2",
+      "fn": "pearsonCorrelation",
+      "input": {
+        "a": [
+          1,
+          0,
+          -1
+        ],
+        "b": [
+          0.5,
+          0.5,
+          -1
+        ]
+      },
+      "expected": 0.8660254037844387
+    },
+    {
+      "name": "re-centred: both above their means, opposite order (cosine says 0.6)",
+      "fn": "pearsonCorrelation",
+      "input": {
+        "a": [
+          0.5,
+          1.5
+        ],
+        "b": [
+          1.5,
+          0.5
+        ]
+      },
+      "expected": -1
+    },
+    {
+      "name": "two entries are +-1",
+      "fn": "pearsonCorrelation",
+      "input": {
+        "a": [
+          0.2,
+          0.9
+        ],
+        "b": [
+          -1,
+          3
+        ]
+      },
+      "expected": 1
+    },
+    {
+      "name": "zero variance on one side",
+      "fn": "pearsonCorrelation",
+      "input": {
+        "a": [
+          1,
+          1,
+          1
+        ],
+        "b": [
+          2,
+          4,
+          6
+        ]
+      },
+      "expected": 0
+    },
+    {
+      "name": "one entry",
+      "fn": "pearsonCorrelation",
+      "input": {
+        "a": [
+          1
+        ],
+        "b": [
+          2
+        ]
+      },
+      "expected": 0
+    },
+    {
+      "name": "empty",
+      "fn": "pearsonCorrelation",
+      "input": {
+        "a": [],
+        "b": []
+      },
+      "expected": 0
+    },
+    {
+      "name": "general",
+      "fn": "pearsonCorrelation",
+      "input": {
+        "a": [
+          0.2,
+          -1.1,
+          0.7,
+          1.4,
+          -0.35
+        ],
+        "b": [
+          0.5,
+          -0.3,
+          0.1,
+          1,
+          -0.8
+        ]
+      },
+      "expected": 0.7842911237419857
+    },
+    {
+      "name": "|common| = 0",
+      "fn": "significanceWeight",
+      "input": {
+        "common": 0
+      },
+      "expected": 0
+    },
+    {
+      "name": "|common| = 1",
+      "fn": "significanceWeight",
+      "input": {
+        "common": 1
+      },
+      "expected": 0.2
+    },
+    {
+      "name": "|common| = 2",
+      "fn": "significanceWeight",
+      "input": {
+        "common": 2
+      },
+      "expected": 0.4
+    },
+    {
+      "name": "|common| = 3",
+      "fn": "significanceWeight",
+      "input": {
+        "common": 3
+      },
+      "expected": 0.6
+    },
+    {
+      "name": "|common| = 4",
+      "fn": "significanceWeight",
+      "input": {
+        "common": 4
+      },
+      "expected": 0.8
+    },
+    {
+      "name": "|common| = 5",
+      "fn": "significanceWeight",
+      "input": {
+        "common": 5
+      },
+      "expected": 1
+    },
+    {
+      "name": "|common| = 8",
+      "fn": "significanceWeight",
+      "input": {
+        "common": 8
+      },
+      "expected": 1
+    },
+    {
+      "name": "identical users, 5 common",
+      "fn": "pearsonSimilarity",
+      "input": {
+        "zu": {
+          "b0": 1.2,
+          "b1": -0.4,
+          "b2": 0.3,
+          "b3": -1.1,
+          "b4": 0.7
+        },
+        "zv": {
+          "b0": 1.2,
+          "b1": -0.4,
+          "b2": 0.3,
+          "b3": -1.1,
+          "b4": 0.7
+        }
+      },
+      "expected": {
+        "r": 1,
+        "common": 5,
+        "sim": 1
+      }
+    },
+    {
+      "name": "opposite users, 5 common",
+      "fn": "pearsonSimilarity",
+      "input": {
+        "zu": {
+          "b0": 1.2,
+          "b1": -0.4,
+          "b2": 0.3,
+          "b3": -1.1,
+          "b4": 0.7
+        },
+        "zv": {
+          "b0": -1.2,
+          "b1": 0.4,
+          "b2": -0.3,
+          "b3": 1.1,
+          "b4": -0.7
+        }
+      },
+      "expected": {
+        "r": -1,
+        "common": 5,
+        "sim": -1
+      }
+    },
+    {
+      "name": "1 common Bev",
+      "fn": "pearsonSimilarity",
+      "input": {
+        "zu": {
+          "a": 1,
+          "b": 2
+        },
+        "zv": {
+          "a": 3,
+          "c": 1
+        }
+      },
+      "expected": {
+        "r": 0,
+        "common": 1,
+        "sim": 0
+      }
+    },
+    {
+      "name": "no common Bev",
+      "fn": "pearsonSimilarity",
+      "input": {
+        "zu": {
+          "a": 1
+        },
+        "zv": {
+          "b": 1
+        }
+      },
+      "expected": {
+        "r": 0,
+        "common": 0,
+        "sim": 0
+      }
+    },
+    {
+      "name": "zero variance on the common Bevs",
+      "fn": "pearsonSimilarity",
+      "input": {
+        "zu": {
+          "a": 0.4,
+          "b": 0.4,
+          "c": 0.4,
+          "x": -2
+        },
+        "zv": {
+          "a": -1,
+          "b": 0.5,
+          "c": 1
+        }
+      },
+      "expected": {
+        "r": 0,
+        "common": 3,
+        "sim": 0
+      }
+    },
+    {
+      "name": "shrinkage at 1 common (v = 2u + 0.3)",
+      "fn": "pearsonSimilarity",
+      "input": {
+        "zu": {
+          "b0": 0.9,
+          "onlyU": 2
+        },
+        "zv": {
+          "b0": 2.1,
+          "onlyV": -2
+        }
+      },
+      "expected": {
+        "r": 0,
+        "common": 1,
+        "sim": 0
+      }
+    },
+    {
+      "name": "shrinkage at 3 common (v = 2u + 0.3)",
+      "fn": "pearsonSimilarity",
+      "input": {
+        "zu": {
+          "b0": 0.9,
+          "b1": -0.2,
+          "b2": 0.4,
+          "onlyU": 2
+        },
+        "zv": {
+          "b0": 2.1,
+          "b1": -0.10000000000000003,
+          "b2": 1.1,
+          "onlyV": -2
+        }
+      },
+      "expected": {
+        "r": 1,
+        "common": 3,
+        "sim": 0.6
+      }
+    },
+    {
+      "name": "shrinkage at 5 common (v = 2u + 0.3)",
+      "fn": "pearsonSimilarity",
+      "input": {
+        "zu": {
+          "b0": 0.9,
+          "b1": -0.2,
+          "b2": 0.4,
+          "b3": -1.3,
+          "b4": 1.1,
+          "onlyU": 2
+        },
+        "zv": {
+          "b0": 2.1,
+          "b1": -0.10000000000000003,
+          "b2": 1.1,
+          "b3": -2.3000000000000003,
+          "b4": 2.5,
+          "onlyV": -2
+        }
+      },
+      "expected": {
+        "r": 1,
+        "common": 5,
+        "sim": 1
+      }
+    },
+    {
+      "name": "shrinkage at 8 common (v = 2u + 0.3)",
+      "fn": "pearsonSimilarity",
+      "input": {
+        "zu": {
+          "b0": 0.9,
+          "b1": -0.2,
+          "b2": 0.4,
+          "b3": -1.3,
+          "b4": 1.1,
+          "b5": 0.05,
+          "b6": -0.6,
+          "b7": 0.75,
+          "onlyU": 2
+        },
+        "zv": {
+          "b0": 2.1,
+          "b1": -0.10000000000000003,
+          "b2": 1.1,
+          "b3": -2.3000000000000003,
+          "b4": 2.5,
+          "b5": 0.4,
+          "b6": -0.8999999999999999,
+          "b7": 1.8,
+          "onlyV": -2
+        }
+      },
+      "expected": {
+        "r": 1,
+        "common": 8,
+        "sim": 1
+      }
+    },
+    {
+      "name": "3 common of 4 and 4: r = sqrt(3)/2, sim = 0.6 r",
+      "fn": "pearsonSimilarity",
+      "input": {
+        "zu": {
+          "b3": 1,
+          "b1": 1.5,
+          "b2": 0.5,
+          "b9": -3
+        },
+        "zv": {
+          "b1": 1,
+          "b2": 0,
+          "b3": 1,
+          "b6": -0.5
+        }
+      },
+      "expected": {
+        "r": 0.8660254037844385,
+        "common": 3,
+        "sim": 0.519615242270663
+      }
+    },
+    {
+      "name": "re-centred: shared Bevs above both means, opposite order",
+      "fn": "pearsonSimilarity",
+      "input": {
+        "zu": {
+          "a": 0.539,
+          "b": 0.863,
+          "c": -1.402
+        },
+        "zv": {
+          "a": 0.863,
+          "b": 0.539,
+          "d": -1.402
+        }
+      },
+      "expected": {
+        "r": -1,
+        "common": 2,
+        "sim": -0.4
+      }
+    },
+    {
+      "name": "doc example, 6 Bevs",
+      "fn": "tasteCatalog",
+      "input": {
+        "bevs": [
+          {
+            "id": "b1",
+            "categoryId": "soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b2",
+            "categoryId": "soda",
+            "brand": "Pepsi",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b3",
+            "categoryId": "diet_soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b4",
+            "categoryId": "soda",
+            "brand": "Dr Pepper",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b5",
+            "categoryId": "sparkling_water",
+            "brand": "LaCroix",
+            "flavorBase": "lemon-lime"
+          },
+          {
+            "id": "b6",
+            "categoryId": "energy",
+            "brand": "Red Bull",
+            "flavorBase": "herbal"
+          }
+        ]
+      },
+      "expected": {
+        "attributes": {
+          "b1": [
+            "brand:coca-cola",
+            "category:soda",
+            "flavor:cola"
+          ],
+          "b2": [
+            "category:soda",
+            "flavor:cola"
+          ],
+          "b3": [
+            "brand:coca-cola",
+            "flavor:cola"
+          ],
+          "b4": [
+            "category:soda",
+            "flavor:cola"
+          ],
+          "b5": [],
+          "b6": []
+        },
+        "coverage": {
+          "brand:coca-cola": 2,
+          "brand:dr pepper": 1,
+          "brand:lacroix": 1,
+          "brand:pepsi": 1,
+          "brand:red bull": 1,
+          "category:diet_soda": 1,
+          "category:energy": 1,
+          "category:soda": 3,
+          "category:sparkling_water": 1,
+          "flavor:cola": 4,
+          "flavor:herbal": 1,
+          "flavor:lemon-lime": 1
+        }
+      }
+    },
+    {
+      "name": "doc example plus a second LaCroix",
+      "fn": "tasteCatalog",
+      "input": {
+        "bevs": [
+          {
+            "id": "b1",
+            "categoryId": "soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b2",
+            "categoryId": "soda",
+            "brand": "Pepsi",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b3",
+            "categoryId": "diet_soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b4",
+            "categoryId": "soda",
+            "brand": "Dr Pepper",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b5",
+            "categoryId": "sparkling_water",
+            "brand": "LaCroix",
+            "flavorBase": "lemon-lime"
+          },
+          {
+            "id": "b6",
+            "categoryId": "energy",
+            "brand": "Red Bull",
+            "flavorBase": "herbal"
+          },
+          {
+            "id": "b7",
+            "categoryId": "sparkling_water",
+            "brand": "LaCroix",
+            "flavorBase": "citrus"
+          }
+        ]
+      },
+      "expected": {
+        "attributes": {
+          "b1": [
+            "brand:coca-cola",
+            "category:soda",
+            "flavor:cola"
+          ],
+          "b2": [
+            "category:soda",
+            "flavor:cola"
+          ],
+          "b3": [
+            "brand:coca-cola",
+            "flavor:cola"
+          ],
+          "b4": [
+            "category:soda",
+            "flavor:cola"
+          ],
+          "b5": [
+            "brand:lacroix",
+            "category:sparkling_water"
+          ],
+          "b6": [],
+          "b7": [
+            "brand:lacroix",
+            "category:sparkling_water"
+          ]
+        },
+        "coverage": {
+          "brand:coca-cola": 2,
+          "brand:dr pepper": 1,
+          "brand:lacroix": 2,
+          "brand:pepsi": 1,
+          "brand:red bull": 1,
+          "category:diet_soda": 1,
+          "category:energy": 1,
+          "category:soda": 3,
+          "category:sparkling_water": 2,
+          "flavor:citrus": 1,
+          "flavor:cola": 4,
+          "flavor:herbal": 1,
+          "flavor:lemon-lime": 1
+        }
+      }
+    },
+    {
+      "name": "category and flavour base with the same name; blank brand and base",
+      "fn": "tasteCatalog",
+      "input": {
+        "bevs": [
+          {
+            "id": "x",
+            "categoryId": "coffee",
+            "brand": "  Blue  Bottle ",
+            "flavorBase": "coffee"
+          },
+          {
+            "id": "y",
+            "categoryId": "coffee",
+            "brand": "blue bottle",
+            "flavorBase": "coffee"
+          },
+          {
+            "id": "z",
+            "categoryId": "coffee",
+            "brand": " ",
+            "flavorBase": ""
+          }
+        ]
+      },
+      "expected": {
+        "attributes": {
+          "x": [
+            "brand:blue bottle",
+            "category:coffee",
+            "flavor:coffee"
+          ],
+          "y": [
+            "brand:blue bottle",
+            "category:coffee",
+            "flavor:coffee"
+          ],
+          "z": [
+            "category:coffee"
+          ]
+        },
+        "coverage": {
+          "brand:blue bottle": 2,
+          "category:coffee": 3,
+          "flavor:coffee": 2
+        }
+      }
+    },
+    {
+      "name": "U1",
+      "fn": "tasteVector",
+      "input": {
+        "z": {
+          "b1": 1.2,
+          "b4": 0.6,
+          "b5": -1.3
+        },
+        "catalogBevs": [
+          {
+            "id": "b1",
+            "categoryId": "soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b2",
+            "categoryId": "soda",
+            "brand": "Pepsi",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b3",
+            "categoryId": "diet_soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b4",
+            "categoryId": "soda",
+            "brand": "Dr Pepper",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b5",
+            "categoryId": "sparkling_water",
+            "brand": "LaCroix",
+            "flavorBase": "lemon-lime"
+          },
+          {
+            "id": "b6",
+            "categoryId": "energy",
+            "brand": "Red Bull",
+            "flavorBase": "herbal"
+          }
+        ]
+      },
+      "expected": {
+        "brand:coca-cola": 0.39999999999999997,
+        "category:soda": 0.44999999999999996,
+        "flavor:cola": 0.44999999999999996
+      }
+    },
+    {
+      "name": "U2",
+      "fn": "tasteVector",
+      "input": {
+        "z": {
+          "b2": 1.1,
+          "b3": 0.8,
+          "b5": -0.9
+        },
+        "catalogBevs": [
+          {
+            "id": "b1",
+            "categoryId": "soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b2",
+            "categoryId": "soda",
+            "brand": "Pepsi",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b3",
+            "categoryId": "diet_soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b4",
+            "categoryId": "soda",
+            "brand": "Dr Pepper",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b5",
+            "categoryId": "sparkling_water",
+            "brand": "LaCroix",
+            "flavorBase": "lemon-lime"
+          },
+          {
+            "id": "b6",
+            "categoryId": "energy",
+            "brand": "Red Bull",
+            "flavorBase": "herbal"
+          }
+        ]
+      },
+      "expected": {
+        "brand:coca-cola": 0.26666666666666666,
+        "category:soda": 0.3666666666666667,
+        "flavor:cola": 0.47500000000000003
+      }
+    },
+    {
+      "name": "U3",
+      "fn": "tasteVector",
+      "input": {
+        "z": {
+          "b4": 1,
+          "b6": 0.9
+        },
+        "catalogBevs": [
+          {
+            "id": "b1",
+            "categoryId": "soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b2",
+            "categoryId": "soda",
+            "brand": "Pepsi",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b3",
+            "categoryId": "diet_soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b4",
+            "categoryId": "soda",
+            "brand": "Dr Pepper",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b5",
+            "categoryId": "sparkling_water",
+            "brand": "LaCroix",
+            "flavorBase": "lemon-lime"
+          },
+          {
+            "id": "b6",
+            "categoryId": "energy",
+            "brand": "Red Bull",
+            "flavorBase": "herbal"
+          }
+        ]
+      },
+      "expected": {
+        "category:soda": 0.3333333333333333,
+        "flavor:cola": 0.3333333333333333
+      }
+    },
+    {
+      "name": "U1 with a second LaCroix",
+      "fn": "tasteVector",
+      "input": {
+        "z": {
+          "b1": 1.2,
+          "b4": 0.6,
+          "b5": -1.3
+        },
+        "catalogBevs": [
+          {
+            "id": "b1",
+            "categoryId": "soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b2",
+            "categoryId": "soda",
+            "brand": "Pepsi",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b3",
+            "categoryId": "diet_soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b4",
+            "categoryId": "soda",
+            "brand": "Dr Pepper",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b5",
+            "categoryId": "sparkling_water",
+            "brand": "LaCroix",
+            "flavorBase": "lemon-lime"
+          },
+          {
+            "id": "b6",
+            "categoryId": "energy",
+            "brand": "Red Bull",
+            "flavorBase": "herbal"
+          },
+          {
+            "id": "b7",
+            "categoryId": "sparkling_water",
+            "brand": "LaCroix",
+            "flavorBase": "citrus"
+          }
+        ]
+      },
+      "expected": {
+        "brand:coca-cola": 0.39999999999999997,
+        "brand:lacroix": -0.43333333333333335,
+        "category:soda": 0.44999999999999996,
+        "category:sparkling_water": -0.43333333333333335,
+        "flavor:cola": 0.44999999999999996
+      }
+    },
+    {
+      "name": "U2 with a second LaCroix",
+      "fn": "tasteVector",
+      "input": {
+        "z": {
+          "b2": 1.1,
+          "b3": 0.8,
+          "b5": -0.9
+        },
+        "catalogBevs": [
+          {
+            "id": "b1",
+            "categoryId": "soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b2",
+            "categoryId": "soda",
+            "brand": "Pepsi",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b3",
+            "categoryId": "diet_soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b4",
+            "categoryId": "soda",
+            "brand": "Dr Pepper",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b5",
+            "categoryId": "sparkling_water",
+            "brand": "LaCroix",
+            "flavorBase": "lemon-lime"
+          },
+          {
+            "id": "b6",
+            "categoryId": "energy",
+            "brand": "Red Bull",
+            "flavorBase": "herbal"
+          },
+          {
+            "id": "b7",
+            "categoryId": "sparkling_water",
+            "brand": "LaCroix",
+            "flavorBase": "citrus"
+          }
+        ]
+      },
+      "expected": {
+        "brand:coca-cola": 0.26666666666666666,
+        "brand:lacroix": -0.3,
+        "category:soda": 0.3666666666666667,
+        "category:sparkling_water": -0.3,
+        "flavor:cola": 0.47500000000000003
+      }
+    },
+    {
+      "name": "a Bev outside the catalog is skipped",
+      "fn": "tasteVector",
+      "input": {
+        "z": {
+          "b1": 1.2,
+          "b4": 0.6,
+          "b5": -1.3,
+          "gone": 3
+        },
+        "catalogBevs": [
+          {
+            "id": "b1",
+            "categoryId": "soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b2",
+            "categoryId": "soda",
+            "brand": "Pepsi",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b3",
+            "categoryId": "diet_soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b4",
+            "categoryId": "soda",
+            "brand": "Dr Pepper",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b5",
+            "categoryId": "sparkling_water",
+            "brand": "LaCroix",
+            "flavorBase": "lemon-lime"
+          },
+          {
+            "id": "b6",
+            "categoryId": "energy",
+            "brand": "Red Bull",
+            "flavorBase": "herbal"
+          }
+        ]
+      },
+      "expected": {
+        "brand:coca-cola": 0.39999999999999997,
+        "category:soda": 0.44999999999999996,
+        "flavor:cola": 0.44999999999999996
+      }
+    },
+    {
+      "name": "no rankings",
+      "fn": "tasteVector",
+      "input": {
+        "z": {},
+        "catalogBevs": [
+          {
+            "id": "b1",
+            "categoryId": "soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b2",
+            "categoryId": "soda",
+            "brand": "Pepsi",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b3",
+            "categoryId": "diet_soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b4",
+            "categoryId": "soda",
+            "brand": "Dr Pepper",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b5",
+            "categoryId": "sparkling_water",
+            "brand": "LaCroix",
+            "flavorBase": "lemon-lime"
+          },
+          {
+            "id": "b6",
+            "categoryId": "energy",
+            "brand": "Red Bull",
+            "flavorBase": "herbal"
+          }
+        ]
+      },
+      "expected": {}
+    },
+    {
+      "name": "doc example U1-U2",
+      "fn": "attributeSimilarity",
+      "input": {
+        "a": {
+          "brand:coca-cola": 0.39999999999999997,
+          "category:soda": 0.44999999999999996,
+          "flavor:cola": 0.44999999999999996
+        },
+        "b": {
+          "brand:coca-cola": 0.26666666666666666,
+          "category:soda": 0.3666666666666667,
+          "flavor:cola": 0.47500000000000003
+        }
+      },
+      "expected": 0.9834694547683118
+    },
+    {
+      "name": "doc example U1-U3",
+      "fn": "attributeSimilarity",
+      "input": {
+        "a": {
+          "brand:coca-cola": 0.39999999999999997,
+          "category:soda": 0.44999999999999996,
+          "flavor:cola": 0.44999999999999996
+        },
+        "b": {
+          "category:soda": 0.3333333333333333,
+          "flavor:cola": 0.3333333333333333
+        }
+      },
+      "expected": 0.8466487815452375
+    },
+    {
+      "name": "doc example U2-U3",
+      "fn": "attributeSimilarity",
+      "input": {
+        "a": {
+          "brand:coca-cola": 0.26666666666666666,
+          "category:soda": 0.3666666666666667,
+          "flavor:cola": 0.47500000000000003
+        },
+        "b": {
+          "category:soda": 0.3333333333333333,
+          "flavor:cola": 0.3333333333333333
+        }
+      },
+      "expected": 0.906349179710161
+    },
+    {
+      "name": "U1-U2 with a second LaCroix: the shared dislike enters the cosine",
+      "fn": "attributeSimilarity",
+      "input": {
+        "a": {
+          "brand:coca-cola": 0.39999999999999997,
+          "brand:lacroix": -0.43333333333333335,
+          "category:soda": 0.44999999999999996,
+          "category:sparkling_water": -0.43333333333333335,
+          "flavor:cola": 0.44999999999999996
+        },
+        "b": {
+          "brand:coca-cola": 0.26666666666666666,
+          "brand:lacroix": -0.3,
+          "category:soda": 0.3666666666666667,
+          "category:sparkling_water": -0.3,
+          "flavor:cola": 0.47500000000000003
+        }
+      },
+      "expected": 0.9831552618524985
+    },
+    {
+      "name": "identical",
+      "fn": "attributeSimilarity",
+      "input": {
+        "a": {
+          "flavor:cola": 0.4,
+          "brand:x": -0.2
+        },
+        "b": {
+          "flavor:cola": 0.4,
+          "brand:x": -0.2
+        }
+      },
+      "expected": 1
+    },
+    {
+      "name": "opposite",
+      "fn": "attributeSimilarity",
+      "input": {
+        "a": {
+          "flavor:cola": 0.4,
+          "brand:x": -0.2
+        },
+        "b": {
+          "flavor:cola": -0.4,
+          "brand:x": 0.2
+        }
+      },
+      "expected": -1
+    },
+    {
+      "name": "no attribute in common",
+      "fn": "attributeSimilarity",
+      "input": {
+        "a": {
+          "flavor:cola": 0.4
+        },
+        "b": {
+          "brand:x": 0.9
+        }
+      },
+      "expected": 0
+    },
+    {
+      "name": "a zero vector",
+      "fn": "attributeSimilarity",
+      "input": {
+        "a": {
+          "flavor:cola": 0
+        },
+        "b": {
+          "flavor:cola": 0.9
+        }
+      },
+      "expected": 0
+    },
+    {
+      "name": "doc example U1-U2: coke and cola, each through different Bevs",
+      "fn": "sharedAttributeCount",
+      "input": {
+        "zu": {
+          "b1": 1.2,
+          "b4": 0.6,
+          "b5": -1.3
+        },
+        "zv": {
+          "b2": 1.1,
+          "b3": 0.8,
+          "b5": -0.9
+        },
+        "catalogBevs": [
+          {
+            "id": "b1",
+            "categoryId": "soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b2",
+            "categoryId": "soda",
+            "brand": "Pepsi",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b3",
+            "categoryId": "diet_soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b4",
+            "categoryId": "soda",
+            "brand": "Dr Pepper",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b5",
+            "categoryId": "sparkling_water",
+            "brand": "LaCroix",
+            "flavorBase": "lemon-lime"
+          },
+          {
+            "id": "b6",
+            "categoryId": "energy",
+            "brand": "Red Bull",
+            "flavorBase": "herbal"
+          }
+        ]
+      },
+      "expected": 2
+    },
+    {
+      "name": "doc example U1-U3: cola only",
+      "fn": "sharedAttributeCount",
+      "input": {
+        "zu": {
+          "b1": 1.2,
+          "b4": 0.6,
+          "b5": -1.3
+        },
+        "zv": {
+          "b4": 1,
+          "b6": 0.9
+        },
+        "catalogBevs": [
+          {
+            "id": "b1",
+            "categoryId": "soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b2",
+            "categoryId": "soda",
+            "brand": "Pepsi",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b3",
+            "categoryId": "diet_soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b4",
+            "categoryId": "soda",
+            "brand": "Dr Pepper",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b5",
+            "categoryId": "sparkling_water",
+            "brand": "LaCroix",
+            "flavorBase": "lemon-lime"
+          },
+          {
+            "id": "b6",
+            "categoryId": "energy",
+            "brand": "Red Bull",
+            "flavorBase": "herbal"
+          }
+        ]
+      },
+      "expected": 1
+    },
+    {
+      "name": "U1-U2 with a second LaCroix: lacroix is reached only through co-rated b5, so not a bridge",
+      "fn": "sharedAttributeCount",
+      "input": {
+        "zu": {
+          "b1": 1.2,
+          "b4": 0.6,
+          "b5": -1.3
+        },
+        "zv": {
+          "b2": 1.1,
+          "b3": 0.8,
+          "b5": -0.9
+        },
+        "catalogBevs": [
+          {
+            "id": "b1",
+            "categoryId": "soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b2",
+            "categoryId": "soda",
+            "brand": "Pepsi",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b3",
+            "categoryId": "diet_soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b4",
+            "categoryId": "soda",
+            "brand": "Dr Pepper",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b5",
+            "categoryId": "sparkling_water",
+            "brand": "LaCroix",
+            "flavorBase": "lemon-lime"
+          },
+          {
+            "id": "b6",
+            "categoryId": "energy",
+            "brand": "Red Bull",
+            "flavorBase": "herbal"
+          },
+          {
+            "id": "b7",
+            "categoryId": "sparkling_water",
+            "brand": "LaCroix",
+            "flavorBase": "citrus"
+          }
+        ]
+      },
+      "expected": 2
+    },
+    {
+      "name": "the same attributes through two different Bevs; categories never bridge",
+      "fn": "sharedAttributeCount",
+      "input": {
+        "zu": {
+          "k1": 0.9
+        },
+        "zv": {
+          "k2": 0.9
+        },
+        "catalogBevs": [
+          {
+            "id": "k1",
+            "categoryId": "soda",
+            "brand": "X",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "k2",
+            "categoryId": "soda",
+            "brand": "X",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "k3",
+            "categoryId": "soda",
+            "brand": "Y",
+            "flavorBase": "citrus"
+          },
+          {
+            "id": "k4",
+            "categoryId": "soda",
+            "brand": "Y",
+            "flavorBase": "citrus"
+          }
+        ]
+      },
+      "expected": 2
+    },
+    {
+      "name": "one co-rated Bev is not a bridge",
+      "fn": "sharedAttributeCount",
+      "input": {
+        "zu": {
+          "k1": 1
+        },
+        "zv": {
+          "k1": 0.8
+        },
+        "catalogBevs": [
+          {
+            "id": "k1",
+            "categoryId": "soda",
+            "brand": "X",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "k2",
+            "categoryId": "soda",
+            "brand": "X",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "k3",
+            "categoryId": "soda",
+            "brand": "Y",
+            "flavorBase": "citrus"
+          },
+          {
+            "id": "k4",
+            "categoryId": "soda",
+            "brand": "Y",
+            "flavorBase": "citrus"
+          }
+        ]
+      },
+      "expected": 0
+    },
+    {
+      "name": "a co-rated Bev plus another Bev with the attribute is",
+      "fn": "sharedAttributeCount",
+      "input": {
+        "zu": {
+          "k1": 1
+        },
+        "zv": {
+          "k1": 0.8,
+          "k2": 0.6
+        },
+        "catalogBevs": [
+          {
+            "id": "k1",
+            "categoryId": "soda",
+            "brand": "X",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "k2",
+            "categoryId": "soda",
+            "brand": "X",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "k3",
+            "categoryId": "soda",
+            "brand": "Y",
+            "flavorBase": "citrus"
+          },
+          {
+            "id": "k4",
+            "categoryId": "soda",
+            "brand": "Y",
+            "flavorBase": "citrus"
+          }
+        ]
+      },
+      "expected": 2
+    },
+    {
+      "name": "|t| = 0.2 exactly counts, and the signs may differ",
+      "fn": "sharedAttributeCount",
+      "input": {
+        "zu": {
+          "k1": 0.5,
+          "k2": 0.3
+        },
+        "zv": {
+          "k1": -0.9
+        },
+        "catalogBevs": [
+          {
+            "id": "k1",
+            "categoryId": "soda",
+            "brand": "X",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "k2",
+            "categoryId": "soda",
+            "brand": "X",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "k3",
+            "categoryId": "soda",
+            "brand": "Y",
+            "flavorBase": "citrus"
+          },
+          {
+            "id": "k4",
+            "categoryId": "soda",
+            "brand": "Y",
+            "flavorBase": "citrus"
+          }
+        ]
+      },
+      "expected": 2
+    },
+    {
+      "name": "|t| = 0.19 does not count",
+      "fn": "sharedAttributeCount",
+      "input": {
+        "zu": {
+          "k1": 0.57
+        },
+        "zv": {
+          "k2": 0.9
+        },
+        "catalogBevs": [
+          {
+            "id": "k1",
+            "categoryId": "soda",
+            "brand": "X",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "k2",
+            "categoryId": "soda",
+            "brand": "X",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "k3",
+            "categoryId": "soda",
+            "brand": "Y",
+            "flavorBase": "citrus"
+          },
+          {
+            "id": "k4",
+            "categoryId": "soda",
+            "brand": "Y",
+            "flavorBase": "citrus"
+          }
+        ]
+      },
+      "expected": 0
+    },
+    {
+      "name": "different attributes do not bridge",
+      "fn": "sharedAttributeCount",
+      "input": {
+        "zu": {
+          "k1": 0.9
+        },
+        "zv": {
+          "k3": 0.9
+        },
+        "catalogBevs": [
+          {
+            "id": "k1",
+            "categoryId": "soda",
+            "brand": "X",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "k2",
+            "categoryId": "soda",
+            "brand": "X",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "k3",
+            "categoryId": "soda",
+            "brand": "Y",
+            "flavorBase": "citrus"
+          },
+          {
+            "id": "k4",
+            "categoryId": "soda",
+            "brand": "Y",
+            "flavorBase": "citrus"
+          }
+        ]
+      },
+      "expected": 0
+    },
+    {
+      "name": "attribute only: doc U1-U2 share one Bev, bridged by coke and cola",
+      "fn": "blendUserSimilarity",
+      "input": {
+        "zu": {
+          "b1": 1.2,
+          "b4": 0.6,
+          "b5": -1.3
+        },
+        "zv": {
+          "b2": 1.1,
+          "b3": 0.8,
+          "b5": -0.9
+        },
+        "catalogBevs": [
+          {
+            "id": "b1",
+            "categoryId": "soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b2",
+            "categoryId": "soda",
+            "brand": "Pepsi",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b3",
+            "categoryId": "diet_soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b4",
+            "categoryId": "soda",
+            "brand": "Dr Pepper",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b5",
+            "categoryId": "sparkling_water",
+            "brand": "LaCroix",
+            "flavorBase": "lemon-lime"
+          },
+          {
+            "id": "b6",
+            "categoryId": "energy",
+            "brand": "Red Bull",
+            "flavorBase": "herbal"
+          }
+        ]
+      },
+      "expected": {
+        "sim": 0.9834694547683118,
+        "method": "attr",
+        "alpha": 0,
+        "common": 1,
+        "pearson": 0,
+        "pearsonSim": 0,
+        "attribute": 0.9834694547683118,
+        "sharedAttrs": 2,
+        "attributeSim": 0.9834694547683118
+      }
+    },
+    {
+      "name": "attribute only, gated out: doc U1-U3 share one bridging attribute",
+      "fn": "blendUserSimilarity",
+      "input": {
+        "zu": {
+          "b1": 1.2,
+          "b4": 0.6,
+          "b5": -1.3
+        },
+        "zv": {
+          "b4": 1,
+          "b6": 0.9
+        },
+        "catalogBevs": [
+          {
+            "id": "b1",
+            "categoryId": "soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b2",
+            "categoryId": "soda",
+            "brand": "Pepsi",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b3",
+            "categoryId": "diet_soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b4",
+            "categoryId": "soda",
+            "brand": "Dr Pepper",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b5",
+            "categoryId": "sparkling_water",
+            "brand": "LaCroix",
+            "flavorBase": "lemon-lime"
+          },
+          {
+            "id": "b6",
+            "categoryId": "energy",
+            "brand": "Red Bull",
+            "flavorBase": "herbal"
+          }
+        ]
+      },
+      "expected": {
+        "sim": 0,
+        "method": "attr",
+        "alpha": 0,
+        "common": 1,
+        "pearson": 0,
+        "pearsonSim": 0,
+        "attribute": 0.8466487815452375,
+        "sharedAttrs": 1,
+        "attributeSim": 0
+      }
+    },
+    {
+      "name": "attribute only, no common Bev: doc U2-U3",
+      "fn": "blendUserSimilarity",
+      "input": {
+        "zu": {
+          "b2": 1.1,
+          "b3": 0.8,
+          "b5": -0.9
+        },
+        "zv": {
+          "b4": 1,
+          "b6": 0.9
+        },
+        "catalogBevs": [
+          {
+            "id": "b1",
+            "categoryId": "soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b2",
+            "categoryId": "soda",
+            "brand": "Pepsi",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b3",
+            "categoryId": "diet_soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b4",
+            "categoryId": "soda",
+            "brand": "Dr Pepper",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b5",
+            "categoryId": "sparkling_water",
+            "brand": "LaCroix",
+            "flavorBase": "lemon-lime"
+          },
+          {
+            "id": "b6",
+            "categoryId": "energy",
+            "brand": "Red Bull",
+            "flavorBase": "herbal"
+          }
+        ]
+      },
+      "expected": {
+        "sim": 0,
+        "method": "attr",
+        "alpha": 0,
+        "common": 0,
+        "pearson": 0,
+        "pearsonSim": 0,
+        "attribute": 0.906349179710161,
+        "sharedAttrs": 1,
+        "attributeSim": 0
+      }
+    },
+    {
+      "name": "blend: 3 common Bevs, r = sqrt(3)/2, two bridging attributes",
+      "fn": "blendUserSimilarity",
+      "input": {
+        "zu": {
+          "b1": 1.5,
+          "b2": 0.5,
+          "b3": 1
+        },
+        "zv": {
+          "b1": 1,
+          "b2": 0,
+          "b3": 1,
+          "b6": -0.5
+        },
+        "catalogBevs": [
+          {
+            "id": "b1",
+            "categoryId": "soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b2",
+            "categoryId": "soda",
+            "brand": "Pepsi",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b3",
+            "categoryId": "diet_soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b4",
+            "categoryId": "soda",
+            "brand": "Dr Pepper",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b5",
+            "categoryId": "sparkling_water",
+            "brand": "LaCroix",
+            "flavorBase": "lemon-lime"
+          },
+          {
+            "id": "b6",
+            "categoryId": "energy",
+            "brand": "Red Bull",
+            "flavorBase": "herbal"
+          }
+        ]
+      },
+      "expected": {
+        "sim": 0.7524624260063215,
+        "method": "blend",
+        "alpha": 0.5,
+        "common": 3,
+        "pearson": 0.8660254037844385,
+        "pearsonSim": 0.519615242270663,
+        "attribute": 0.98530960974198,
+        "sharedAttrs": 2,
+        "attributeSim": 0.98530960974198
+      }
+    },
+    {
+      "name": "blend: a co-rated pair with fewer than 2 bridging attributes is not gated",
+      "fn": "blendUserSimilarity",
+      "input": {
+        "zu": {
+          "b1": 1,
+          "b2": 0.2,
+          "b4": -0.5
+        },
+        "zv": {
+          "b1": 0.8,
+          "b2": 0.4,
+          "b4": -0.9
+        },
+        "catalogBevs": [
+          {
+            "id": "b1",
+            "categoryId": "soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b2",
+            "categoryId": "soda",
+            "brand": "Pepsi",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b3",
+            "categoryId": "diet_soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b4",
+            "categoryId": "soda",
+            "brand": "Dr Pepper",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b5",
+            "categoryId": "sparkling_water",
+            "brand": "LaCroix",
+            "flavorBase": "lemon-lime"
+          },
+          {
+            "id": "b6",
+            "categoryId": "energy",
+            "brand": "Red Bull",
+            "flavorBase": "herbal"
+          }
+        ]
+      },
+      "expected": {
+        "sim": 0.7703831751425997,
+        "method": "blend",
+        "alpha": 0.5,
+        "common": 3,
+        "pearson": 0.944374558963448,
+        "pearsonSim": 0.5666247353780688,
+        "attribute": 0.9741416149071306,
+        "sharedAttrs": 0,
+        "attributeSim": 0.9741416149071306
+      }
+    },
+    {
+      "name": "identical users with faint taste vectors",
+      "fn": "blendUserSimilarity",
+      "input": {
+        "zu": {
+          "b1": 1.5,
+          "b2": -0.5,
+          "b3": 1,
+          "b4": -1.2,
+          "b6": 0.4
+        },
+        "zv": {
+          "b1": 1.5,
+          "b2": -0.5,
+          "b3": 1,
+          "b4": -1.2,
+          "b6": 0.4
+        },
+        "catalogBevs": [
+          {
+            "id": "b1",
+            "categoryId": "soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b2",
+            "categoryId": "soda",
+            "brand": "Pepsi",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b3",
+            "categoryId": "diet_soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b4",
+            "categoryId": "soda",
+            "brand": "Dr Pepper",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b5",
+            "categoryId": "sparkling_water",
+            "brand": "LaCroix",
+            "flavorBase": "lemon-lime"
+          },
+          {
+            "id": "b6",
+            "categoryId": "energy",
+            "brand": "Red Bull",
+            "flavorBase": "herbal"
+          }
+        ]
+      },
+      "expected": {
+        "sim": 1,
+        "method": "blend",
+        "alpha": 0.5,
+        "common": 5,
+        "pearson": 1,
+        "pearsonSim": 1,
+        "attribute": 1,
+        "sharedAttrs": 1,
+        "attributeSim": 1
+      }
+    },
+    {
+      "name": "opposite users",
+      "fn": "blendUserSimilarity",
+      "input": {
+        "zu": {
+          "b1": 1.5,
+          "b2": -0.5,
+          "b3": 1,
+          "b4": -1.2,
+          "b6": 0.4
+        },
+        "zv": {
+          "b1": -1.5,
+          "b2": 0.5,
+          "b3": -1,
+          "b4": 1.2,
+          "b6": -0.4
+        },
+        "catalogBevs": [
+          {
+            "id": "b1",
+            "categoryId": "soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b2",
+            "categoryId": "soda",
+            "brand": "Pepsi",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b3",
+            "categoryId": "diet_soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b4",
+            "categoryId": "soda",
+            "brand": "Dr Pepper",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b5",
+            "categoryId": "sparkling_water",
+            "brand": "LaCroix",
+            "flavorBase": "lemon-lime"
+          },
+          {
+            "id": "b6",
+            "categoryId": "energy",
+            "brand": "Red Bull",
+            "flavorBase": "herbal"
+          }
+        ]
+      },
+      "expected": {
+        "sim": -1,
+        "method": "blend",
+        "alpha": 0.5,
+        "common": 5,
+        "pearson": -1,
+        "pearsonSim": -1,
+        "attribute": -1,
+        "sharedAttrs": 1,
+        "attributeSim": -1
+      }
+    },
+    {
+      "name": "zero variance on the common Bevs",
+      "fn": "blendUserSimilarity",
+      "input": {
+        "zu": {
+          "b1": 0.8,
+          "b2": 0.8,
+          "b3": 0.8
+        },
+        "zv": {
+          "b1": 1,
+          "b2": 0.2,
+          "b3": 1.4
+        },
+        "catalogBevs": [
+          {
+            "id": "b1",
+            "categoryId": "soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b2",
+            "categoryId": "soda",
+            "brand": "Pepsi",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b3",
+            "categoryId": "diet_soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b4",
+            "categoryId": "soda",
+            "brand": "Dr Pepper",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b5",
+            "categoryId": "sparkling_water",
+            "brand": "LaCroix",
+            "flavorBase": "lemon-lime"
+          },
+          {
+            "id": "b6",
+            "categoryId": "energy",
+            "brand": "Red Bull",
+            "flavorBase": "herbal"
+          }
+        ]
+      },
+      "expected": {
+        "sim": 0.4840485215528921,
+        "method": "blend",
+        "alpha": 0.5,
+        "common": 3,
+        "pearson": 0,
+        "pearsonSim": 0,
+        "attribute": 0.9680970431057841,
+        "sharedAttrs": 2,
+        "attributeSim": 0.9680970431057841
+      }
+    },
+    {
+      "name": "alpha = 1: the Pearson arm",
+      "fn": "blendUserSimilarity",
+      "input": {
+        "zu": {
+          "b1": 1.5,
+          "b2": 0.5,
+          "b3": 1
+        },
+        "zv": {
+          "b1": 1,
+          "b2": 0,
+          "b3": 1,
+          "b6": -0.5
+        },
+        "catalogBevs": [
+          {
+            "id": "b1",
+            "categoryId": "soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b2",
+            "categoryId": "soda",
+            "brand": "Pepsi",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b3",
+            "categoryId": "diet_soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b4",
+            "categoryId": "soda",
+            "brand": "Dr Pepper",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b5",
+            "categoryId": "sparkling_water",
+            "brand": "LaCroix",
+            "flavorBase": "lemon-lime"
+          },
+          {
+            "id": "b6",
+            "categoryId": "energy",
+            "brand": "Red Bull",
+            "flavorBase": "herbal"
+          }
+        ],
+        "alpha": 1
+      },
+      "expected": {
+        "sim": 0.519615242270663,
+        "method": "pearson",
+        "alpha": 1,
+        "common": 3,
+        "pearson": 0.8660254037844385,
+        "pearsonSim": 0.519615242270663,
+        "attribute": 0.98530960974198,
+        "sharedAttrs": 2,
+        "attributeSim": 0.98530960974198
+      }
+    },
+    {
+      "name": "alpha = 0: the attribute arm",
+      "fn": "blendUserSimilarity",
+      "input": {
+        "zu": {
+          "b1": 1.5,
+          "b2": 0.5,
+          "b3": 1
+        },
+        "zv": {
+          "b1": 1,
+          "b2": 0,
+          "b3": 1,
+          "b6": -0.5
+        },
+        "catalogBevs": [
+          {
+            "id": "b1",
+            "categoryId": "soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b2",
+            "categoryId": "soda",
+            "brand": "Pepsi",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b3",
+            "categoryId": "diet_soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b4",
+            "categoryId": "soda",
+            "brand": "Dr Pepper",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b5",
+            "categoryId": "sparkling_water",
+            "brand": "LaCroix",
+            "flavorBase": "lemon-lime"
+          },
+          {
+            "id": "b6",
+            "categoryId": "energy",
+            "brand": "Red Bull",
+            "flavorBase": "herbal"
+          }
+        ],
+        "alpha": 0
+      },
+      "expected": {
+        "sim": 0.98530960974198,
+        "method": "attr",
+        "alpha": 0,
+        "common": 3,
+        "pearson": 0.8660254037844385,
+        "pearsonSim": 0.519615242270663,
+        "attribute": 0.98530960974198,
+        "sharedAttrs": 2,
+        "attributeSim": 0.98530960974198
+      }
+    },
+    {
+      "name": "alpha = 1 below 2 common Bevs is still attribute only",
+      "fn": "blendUserSimilarity",
+      "input": {
+        "zu": {
+          "b1": 1.2,
+          "b4": 0.6,
+          "b5": -1.3
+        },
+        "zv": {
+          "b2": 1.1,
+          "b3": 0.8,
+          "b5": -0.9
+        },
+        "catalogBevs": [
+          {
+            "id": "b1",
+            "categoryId": "soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b2",
+            "categoryId": "soda",
+            "brand": "Pepsi",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b3",
+            "categoryId": "diet_soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b4",
+            "categoryId": "soda",
+            "brand": "Dr Pepper",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "b5",
+            "categoryId": "sparkling_water",
+            "brand": "LaCroix",
+            "flavorBase": "lemon-lime"
+          },
+          {
+            "id": "b6",
+            "categoryId": "energy",
+            "brand": "Red Bull",
+            "flavorBase": "herbal"
+          }
+        ],
+        "alpha": 1
+      },
+      "expected": {
+        "sim": 0.9834694547683118,
+        "method": "attr",
+        "alpha": 0,
+        "common": 1,
+        "pearson": 0,
+        "pearsonSim": 0,
+        "attribute": 0.9834694547683118,
+        "sharedAttrs": 2,
+        "attributeSim": 0.9834694547683118
+      }
+    },
+    {
+      "name": "attribute only, gated out: one co-rated Bev is not a bridge",
+      "fn": "blendUserSimilarity",
+      "input": {
+        "zu": {
+          "x": 1,
+          "p": -0.1
+        },
+        "zv": {
+          "x": 0.8,
+          "q": 0.05
+        },
+        "catalogBevs": [
+          {
+            "id": "x",
+            "categoryId": "soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "y",
+            "categoryId": "soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "p",
+            "categoryId": "water",
+            "brand": "LaCroix",
+            "flavorBase": "lime"
+          },
+          {
+            "id": "q",
+            "categoryId": "water",
+            "brand": "LaCroix",
+            "flavorBase": "lime"
+          }
+        ]
+      },
+      "expected": {
+        "sim": 0,
+        "method": "attr",
+        "alpha": 0,
+        "common": 1,
+        "pearson": 0,
+        "pearsonSim": 0,
+        "attribute": 0.9868925619168516,
+        "sharedAttrs": 0,
+        "attributeSim": 0
+      }
+    },
+    {
+      "name": "attribute only: the same attributes through two different Bevs bridge",
+      "fn": "blendUserSimilarity",
+      "input": {
+        "zu": {
+          "x": 1
+        },
+        "zv": {
+          "y": 0.8
+        },
+        "catalogBevs": [
+          {
+            "id": "x",
+            "categoryId": "soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "y",
+            "categoryId": "soda",
+            "brand": "Coca-Cola",
+            "flavorBase": "cola"
+          },
+          {
+            "id": "p",
+            "categoryId": "water",
+            "brand": "LaCroix",
+            "flavorBase": "lime"
+          },
+          {
+            "id": "q",
+            "categoryId": "water",
+            "brand": "LaCroix",
+            "flavorBase": "lime"
+          }
+        ]
+      },
+      "expected": {
+        "sim": 0.9999999999999998,
+        "method": "attr",
+        "alpha": 0,
+        "common": 0,
+        "pearson": 0,
+        "pearsonSim": 0,
+        "attribute": 0.9999999999999998,
+        "sharedAttrs": 2,
+        "attributeSim": 0.9999999999999998
+      }
+    },
+    {
+      "name": "floor is inclusive; ties by userId; negatives dropped",
+      "fn": "topUserNeighbours",
+      "input": {
+        "candidates": [
+          {
+            "userId": "c",
+            "sim": 0.5
+          },
+          {
+            "userId": "a",
+            "sim": 0.9
+          },
+          {
+            "userId": "low",
+            "sim": 0.09
+          },
+          {
+            "userId": "edge",
+            "sim": 0.1
+          },
+          {
+            "userId": "b",
+            "sim": 0.5
+          },
+          {
+            "userId": "neg",
+            "sim": -0.8
+          }
+        ],
+        "k": 25,
+        "min": 0.1
+      },
+      "expected": [
+        {
+          "userId": "a",
+          "sim": 0.9
+        },
+        {
+          "userId": "b",
+          "sim": 0.5
+        },
+        {
+          "userId": "c",
+          "sim": 0.5
+        },
+        {
+          "userId": "edge",
+          "sim": 0.1
+        }
+      ]
+    },
+    {
+      "name": "30 candidates, default k = 25",
+      "fn": "topUserNeighbours",
+      "input": {
+        "candidates": [
+          {
+            "userId": "u00",
+            "sim": 0.2
+          },
+          {
+            "userId": "u01",
+            "sim": 0.21000000000000002
+          },
+          {
+            "userId": "u02",
+            "sim": 0.22
+          },
+          {
+            "userId": "u03",
+            "sim": 0.23
+          },
+          {
+            "userId": "u04",
+            "sim": 0.24000000000000002
+          },
+          {
+            "userId": "u05",
+            "sim": 0.25
+          },
+          {
+            "userId": "u06",
+            "sim": 0.26
+          },
+          {
+            "userId": "u07",
+            "sim": 0.27
+          },
+          {
+            "userId": "u08",
+            "sim": 0.28
+          },
+          {
+            "userId": "u09",
+            "sim": 0.29000000000000004
+          },
+          {
+            "userId": "u10",
+            "sim": 0.30000000000000004
+          },
+          {
+            "userId": "u11",
+            "sim": 0.31
+          },
+          {
+            "userId": "u12",
+            "sim": 0.32
+          },
+          {
+            "userId": "u13",
+            "sim": 0.33
+          },
+          {
+            "userId": "u14",
+            "sim": 0.34
+          },
+          {
+            "userId": "u15",
+            "sim": 0.35
+          },
+          {
+            "userId": "u16",
+            "sim": 0.36
+          },
+          {
+            "userId": "u17",
+            "sim": 0.37
+          },
+          {
+            "userId": "u18",
+            "sim": 0.38
+          },
+          {
+            "userId": "u19",
+            "sim": 0.39
+          },
+          {
+            "userId": "u20",
+            "sim": 0.4
+          },
+          {
+            "userId": "u21",
+            "sim": 0.41000000000000003
+          },
+          {
+            "userId": "u22",
+            "sim": 0.42000000000000004
+          },
+          {
+            "userId": "u23",
+            "sim": 0.43000000000000005
+          },
+          {
+            "userId": "u24",
+            "sim": 0.44
+          },
+          {
+            "userId": "u25",
+            "sim": 0.45
+          },
+          {
+            "userId": "u26",
+            "sim": 0.46
+          },
+          {
+            "userId": "u27",
+            "sim": 0.47000000000000003
+          },
+          {
+            "userId": "u28",
+            "sim": 0.48000000000000004
+          },
+          {
+            "userId": "u29",
+            "sim": 0.49
+          }
+        ],
+        "k": 25,
+        "min": 0.1
+      },
+      "expected": [
+        {
+          "userId": "u29",
+          "sim": 0.49
+        },
+        {
+          "userId": "u28",
+          "sim": 0.48000000000000004
+        },
+        {
+          "userId": "u27",
+          "sim": 0.47000000000000003
+        },
+        {
+          "userId": "u26",
+          "sim": 0.46
+        },
+        {
+          "userId": "u25",
+          "sim": 0.45
+        },
+        {
+          "userId": "u24",
+          "sim": 0.44
+        },
+        {
+          "userId": "u23",
+          "sim": 0.43000000000000005
+        },
+        {
+          "userId": "u22",
+          "sim": 0.42000000000000004
+        },
+        {
+          "userId": "u21",
+          "sim": 0.41000000000000003
+        },
+        {
+          "userId": "u20",
+          "sim": 0.4
+        },
+        {
+          "userId": "u19",
+          "sim": 0.39
+        },
+        {
+          "userId": "u18",
+          "sim": 0.38
+        },
+        {
+          "userId": "u17",
+          "sim": 0.37
+        },
+        {
+          "userId": "u16",
+          "sim": 0.36
+        },
+        {
+          "userId": "u15",
+          "sim": 0.35
+        },
+        {
+          "userId": "u14",
+          "sim": 0.34
+        },
+        {
+          "userId": "u13",
+          "sim": 0.33
+        },
+        {
+          "userId": "u12",
+          "sim": 0.32
+        },
+        {
+          "userId": "u11",
+          "sim": 0.31
+        },
+        {
+          "userId": "u10",
+          "sim": 0.30000000000000004
+        },
+        {
+          "userId": "u09",
+          "sim": 0.29000000000000004
+        },
+        {
+          "userId": "u08",
+          "sim": 0.28
+        },
+        {
+          "userId": "u07",
+          "sim": 0.27
+        },
+        {
+          "userId": "u06",
+          "sim": 0.26
+        },
+        {
+          "userId": "u05",
+          "sim": 0.25
+        }
+      ]
+    },
+    {
+      "name": "k = 3",
+      "fn": "topUserNeighbours",
+      "input": {
+        "candidates": [
+          {
+            "userId": "u00",
+            "sim": 0.2
+          },
+          {
+            "userId": "u01",
+            "sim": 0.21000000000000002
+          },
+          {
+            "userId": "u02",
+            "sim": 0.22
+          },
+          {
+            "userId": "u03",
+            "sim": 0.23
+          },
+          {
+            "userId": "u04",
+            "sim": 0.24000000000000002
+          },
+          {
+            "userId": "u05",
+            "sim": 0.25
+          },
+          {
+            "userId": "u06",
+            "sim": 0.26
+          },
+          {
+            "userId": "u07",
+            "sim": 0.27
+          },
+          {
+            "userId": "u08",
+            "sim": 0.28
+          },
+          {
+            "userId": "u09",
+            "sim": 0.29000000000000004
+          },
+          {
+            "userId": "u10",
+            "sim": 0.30000000000000004
+          },
+          {
+            "userId": "u11",
+            "sim": 0.31
+          },
+          {
+            "userId": "u12",
+            "sim": 0.32
+          },
+          {
+            "userId": "u13",
+            "sim": 0.33
+          },
+          {
+            "userId": "u14",
+            "sim": 0.34
+          },
+          {
+            "userId": "u15",
+            "sim": 0.35
+          },
+          {
+            "userId": "u16",
+            "sim": 0.36
+          },
+          {
+            "userId": "u17",
+            "sim": 0.37
+          },
+          {
+            "userId": "u18",
+            "sim": 0.38
+          },
+          {
+            "userId": "u19",
+            "sim": 0.39
+          },
+          {
+            "userId": "u20",
+            "sim": 0.4
+          },
+          {
+            "userId": "u21",
+            "sim": 0.41000000000000003
+          },
+          {
+            "userId": "u22",
+            "sim": 0.42000000000000004
+          },
+          {
+            "userId": "u23",
+            "sim": 0.43000000000000005
+          },
+          {
+            "userId": "u24",
+            "sim": 0.44
+          },
+          {
+            "userId": "u25",
+            "sim": 0.45
+          },
+          {
+            "userId": "u26",
+            "sim": 0.46
+          },
+          {
+            "userId": "u27",
+            "sim": 0.47000000000000003
+          },
+          {
+            "userId": "u28",
+            "sim": 0.48000000000000004
+          },
+          {
+            "userId": "u29",
+            "sim": 0.49
+          }
+        ],
+        "k": 3,
+        "min": 0.1
+      },
+      "expected": [
+        {
+          "userId": "u29",
+          "sim": 0.49
+        },
+        {
+          "userId": "u28",
+          "sim": 0.48000000000000004
+        },
+        {
+          "userId": "u27",
+          "sim": 0.47000000000000003
+        }
+      ]
+    },
+    {
+      "name": "k = 0",
+      "fn": "topUserNeighbours",
+      "input": {
+        "candidates": [
+          {
+            "userId": "u00",
+            "sim": 0.2
+          },
+          {
+            "userId": "u01",
+            "sim": 0.21000000000000002
+          },
+          {
+            "userId": "u02",
+            "sim": 0.22
+          },
+          {
+            "userId": "u03",
+            "sim": 0.23
+          },
+          {
+            "userId": "u04",
+            "sim": 0.24000000000000002
+          },
+          {
+            "userId": "u05",
+            "sim": 0.25
+          },
+          {
+            "userId": "u06",
+            "sim": 0.26
+          },
+          {
+            "userId": "u07",
+            "sim": 0.27
+          },
+          {
+            "userId": "u08",
+            "sim": 0.28
+          },
+          {
+            "userId": "u09",
+            "sim": 0.29000000000000004
+          },
+          {
+            "userId": "u10",
+            "sim": 0.30000000000000004
+          },
+          {
+            "userId": "u11",
+            "sim": 0.31
+          },
+          {
+            "userId": "u12",
+            "sim": 0.32
+          },
+          {
+            "userId": "u13",
+            "sim": 0.33
+          },
+          {
+            "userId": "u14",
+            "sim": 0.34
+          },
+          {
+            "userId": "u15",
+            "sim": 0.35
+          },
+          {
+            "userId": "u16",
+            "sim": 0.36
+          },
+          {
+            "userId": "u17",
+            "sim": 0.37
+          },
+          {
+            "userId": "u18",
+            "sim": 0.38
+          },
+          {
+            "userId": "u19",
+            "sim": 0.39
+          },
+          {
+            "userId": "u20",
+            "sim": 0.4
+          },
+          {
+            "userId": "u21",
+            "sim": 0.41000000000000003
+          },
+          {
+            "userId": "u22",
+            "sim": 0.42000000000000004
+          },
+          {
+            "userId": "u23",
+            "sim": 0.43000000000000005
+          },
+          {
+            "userId": "u24",
+            "sim": 0.44
+          },
+          {
+            "userId": "u25",
+            "sim": 0.45
+          },
+          {
+            "userId": "u26",
+            "sim": 0.46
+          },
+          {
+            "userId": "u27",
+            "sim": 0.47000000000000003
+          },
+          {
+            "userId": "u28",
+            "sim": 0.48000000000000004
+          },
+          {
+            "userId": "u29",
+            "sim": 0.49
+          }
+        ],
+        "k": 0,
+        "min": 0.1
+      },
+      "expected": []
+    },
+    {
+      "name": "empty",
+      "fn": "topUserNeighbours",
+      "input": {
+        "candidates": [],
+        "k": 25,
+        "min": 0.1
+      },
+      "expected": []
+    },
+    {
+      "name": "n_v = 0",
+      "fn": "neighbourReliability",
+      "input": {
+        "n": 0
+      },
+      "expected": 0
+    },
+    {
+      "name": "n_v = 3",
+      "fn": "neighbourReliability",
+      "input": {
+        "n": 3
+      },
+      "expected": 0.2
+    },
+    {
+      "name": "n_v = 10",
+      "fn": "neighbourReliability",
+      "input": {
+        "n": 10
+      },
+      "expected": 0.6666666666666666
+    },
+    {
+      "name": "n_v = 15",
+      "fn": "neighbourReliability",
+      "input": {
+        "n": 15
+      },
+      "expected": 1
+    },
+    {
+      "name": "n_v = 80",
+      "fn": "neighbourReliability",
+      "input": {
+        "n": 80
+      },
+      "expected": 1
+    },
+    {
+      "name": "own stats at 3 rankings, global stats below, sigma floored",
+      "fn": "zScoresFromRankings",
+      "input": {
+        "rankings": [
+          {
+            "userId": "u",
+            "bevId": "a",
+            "score": 9
+          },
+          {
+            "userId": "u",
+            "bevId": "b",
+            "score": 7
+          },
+          {
+            "userId": "u",
+            "bevId": "c",
+            "score": 2
+          },
+          {
+            "userId": "v",
+            "bevId": "a",
+            "score": 9
+          },
+          {
+            "userId": "v",
+            "bevId": "b",
+            "score": 8
+          },
+          {
+            "userId": "v",
+            "bevId": "d",
+            "score": 6
+          },
+          {
+            "userId": "w",
+            "bevId": "a",
+            "score": 3
+          },
+          {
+            "userId": "w",
+            "bevId": "d",
+            "score": 4
+          },
+          {
+            "userId": "x",
+            "bevId": "a",
+            "score": 6.5
+          },
+          {
+            "userId": "x",
+            "bevId": "b",
+            "score": 6.5
+          },
+          {
+            "userId": "x",
+            "bevId": "c",
+            "score": 6.5
+          }
+        ]
+      },
+      "expected": {
+        "u": {
+          "a": 1.0190493307301363,
+          "b": 0.3396831102433787,
+          "c": -1.3587324409735149
+        },
+        "v": {
+          "a": 1.0690449676496974,
+          "b": 0.2672612419124242,
+          "d": -1.3363062095621223
+        },
+        "w": {
+          "a": -1.4350108206432879,
+          "d": -0.9774711386990512
+        },
+        "x": {
+          "a": 0,
+          "b": 0,
+          "c": 0
+        }
+      }
+    }
+  ]
+}

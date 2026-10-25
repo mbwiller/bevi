@@ -1,9 +1,10 @@
 % Bevi -- ranking, scoring and recommendation: mathematical specification.
 % Build: tectonic docs/bevi-ranking-math.tex   (or pdflatex twice)
-% Source of truth for the implemented parts: packages/ranking/src (RANKING_VERSION 1.2.0).
+% Source of truth for the implemented parts: packages/ranking/src (RANKING_VERSION 1.3.0).
 % Section 10 specifies the extensions discussed on 2026-10-14 (CONVERSATION-2.md, TASKS.md).
 % Revised 2026-10-24 (M-22 review): corrections in Sections 2, 3, 5, 6, 8, 9; Sections 10 and 11
 % brought up to date with #96, #101, #112, #113, #115, #117, #118 and #121. No version change.
+% RANKING_VERSION 1.3.0 (M-28): Section 6.4 (Pearson, taste neighbourhoods), the 1.3.0 row in Section 11.
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{amsmath,amssymb,amsthm,mathtools}
@@ -54,7 +55,7 @@
 \newtheorem{implnote}[theorem]{Implementation note}
 
 \title{\textbf{The Bevi Ranking and Recommendation System}\\[4pt]
-\large Mathematical specification of \code{@bevi/ranking} v1.2.0\\ and the extensions proposed on 2026-10-14}
+\large Mathematical specification of \code{@bevi/ranking} v1.3.0\\ and the extensions proposed on 2026-10-14}
 \author{Bevi (Matt \& Arjun)\thanks{Drafted from \code{packages/ranking/src}, \code{DEVELOPMENT-MATT.md} \S 8 and the second planning session (\code{CONVERSATION-2.md}). Sections 2--9 describe what is implemented and tested; Section 10 specifies the extensions, several of which have since shipped (its introduction says which). Revised on 2026-10-24 after the M-22 review of this paper against the package and the SQL; the review's correction lists are under M-22 in \code{TASKS.md}. Formula changes must bump \code{RANKING\_VERSION} and regenerate the golden vectors in \code{shared/fixtures}.}}
 \date{14 October 2026, revised 24 October 2026}
 
@@ -255,7 +256,7 @@ so the global mean of all stored scores was about $6.6$ at that moment (any $m \
 
 \paragraph{Prior mean.} The mean of all stored scores in the Bev's category once that category has at least $\textsc{bayes\_category\_prior\_min} = 30$ rankings, else the global mean; one $m$ per board. The overall board, the feed cards, the Bev of the period and the stored per-Bev figure all use the global $m$ (\code{bayesian.ts}; SQL \code{bayes\_prior}, since 20261019000200). With no rankings in the system $m = 5$. See Implementation note~\ref{impl:prior} for the functions that still differ.
 
-\paragraph{Eligibility and order.} A Bev joins a leaderboard once $n_b \ge \textsc{min\_raters} = 2$; below that it belongs in a ``New'' strip. Order: $\mathrm{bayes}_b$ descending, then $n_b$ descending, then name ascending in code-point order (SQL \code{collate "C"}), then id, so the order is total and identical in both engines (\code{get\_bev\_leaderboard} since 20261019000200; for the one remaining difference see Implementation note~\ref{impl:codepoints}).
+\paragraph{Eligibility and order.} A Bev joins a leaderboard once $n_b \ge \textsc{min\_raters} = 2$; below that it belongs in a ``New'' strip. Order: $\mathrm{bayes}_b$ descending, then $n_b$ descending, then name ascending in code-point order (SQL \code{collate "C"}), then id, so the order is total and identical in both engines (\code{get\_bev\_leaderboard} since 20261019000200, \code{leaderboardOrder} by code point since 1.3.0; see Implementation note~\ref{impl:codepoints}).
 
 \paragraph{Tuning rule.} $C$ should be roughly the number of ratings at which a Bev's own mean deserves as much trust as the prior; raise $C$ to $5$ when the median $n_b$ over rated Bevs passes $10$.
 
@@ -337,6 +338,86 @@ The weights $\simi'(u,v)/\supp$ are non-negative and sum to one; each $\simi' \l
 \end{proof}
 
 In score units this is the classical ``user's mean plus the weighted average of similar users' deviations'': $\mu^\ast_u + \sigma^\ast_u\,\zhat^{(2)}_{u,b}$.
+
+\subsection{Pearson similarity and taste neighbourhoods (v1.3.0)}\label{sec:tastegraph}
+
+\paragraph{Status.} Implemented in \code{graph.ts} (\code{RANKING\_VERSION} 1.3.0, vectors in \code{graph.vectors.json}) but \emph{not on the live path}: Layer~2 keeps \eqref{eq:usersim} unless it is called with the option \code{userSimilarity: 'pearson'}, and nothing reads taste neighbourhoods yet. The taste graph's nightly job (A-16~(2)) calls these functions to fill \code{user\_neighbors}; Layer~2 reading those rows is Stage~4. Every formula below is from \code{docs/graph\_db\_implementation.md} (approach~B, Section~5 and Stage~3), with the open choices marked.
+
+\paragraph{Pearson over the common subset.} The z-scores are centred on each user's \emph{overall} mean, so the cosine in \eqref{eq:usersim} rewards two users whose shared Bevs all sit above their own means even when they order them oppositely: $x = (0.5, 1.5)$ and $y = (1.5, 0.5)$ give $\cosim(x, y) = 0.6$. Re-centring on the shared Bevs fixes this.
+
+\begin{definition}[Pearson user similarity]\label{def:pearson}
+Let $c = \mathrm{common}(u, v)$, $m = \abs{c}$, $x = z_u[c]$ and $y = z_v[c]$, with means $\bar x$ and $\bar y$ taken over $c$. Then
+\begin{equation}\label{eq:pearson}
+\rho(u, v) =
+\begin{cases}
+\dfrac{\sum_{b \in c} (x_b - \bar x)(y_b - \bar y)}{\sqrt{\sum_{b \in c} (x_b - \bar x)^2\, \sum_{b \in c} (y_b - \bar y)^2}} & m \ge 2 \text{ and both sums of squares} > 0, \\[10pt]
+0 & \text{otherwise,}
+\end{cases}
+\end{equation}
+and its significance-weighted form is
+\[
+\rho'(u, v) = \rho(u, v)\, \min\Bigl(1, \frac{m}{5}\Bigr).
+\]
+\end{definition}
+
+The constants are those of \eqref{eq:usersim} ($\textsc{cf\_min\_common} = 2$, $\textsc{cf\_significance} = 5$, and $\min(1, m/5) = \min(m, 5)/5$). With \code{userSimilarity: 'pearson'}, Definition~\ref{def:layer2} uses $\rho'$ in place of $\simi'$ and nothing else in \eqref{eq:z2}--\eqref{eq:conf} changes. On the example above, $\rho = -1$.
+
+\begin{proposition}\label{prop:pearson}
+$\rho$ is symmetric with values in $[-1, 1]$. It is unchanged when one user's z-scores are replaced by $a z + k$ with $a > 0$ (in particular, by adding a constant) and changes sign when $a < 0$. Also $\abs{\rho'} \le \abs{\rho}$, the factor $\min(1, m/5)$ is non-decreasing in $m$, and for $m = 2$ with distinct scores $\rho = \pm 1$.
+\end{proposition}
+\begin{proof}
+Cauchy--Schwarz bounds the ratio by $1$ in absolute value. Centring removes $k$, and $a$ cancels between the numerator and the denominator except for its sign. Two centred points are $\pm \delta / 2$, so their ratio is the product of the two signs.
+\end{proof}
+
+Zero variance is exact in the code: if a user's z-scores on $c$ are all equal, then $\rho = 0$. (Each vector is shifted by its first entry before centring, so equal entries give an exactly zero sum of squares instead of rounding noise that would correlate at $\pm 1$.) Equal z-scores need equal stored scores, and a user's list only produces those in buckets of 300 or more Bevs.
+
+\paragraph{Taste vectors.}
+
+\begin{definition}[Taste vector]\label{def:taste}
+A Bev $b$ carries the attributes $A(b)$: its category, its brand (normalised as in Definition~\ref{def:sim}; none if empty) and its flavour base (none without a profile). These are the graph's \code{:Category}, \code{:Brand} and \code{:Flavor} nodes. An attribute is \emph{kept} when at least $\textsc{taste\_min\_attr\_bevs} = 2$ catalogue Bevs carry it, so a one-off brand bridges nobody. For a kept $a$, with $n_{u,a} = \abs{\{ b \in R(u) : a \in A(b) \}}$ and $K_T = \textsc{taste\_k} = 2$,
+\begin{equation}\label{eq:taste}
+t_u[a] = \frac{\sum_{b \in R(u),\ a \in A(b)} z_{u,b}}{n_{u,a} + K_T}.
+\end{equation}
+\end{definition}
+
+Like \eqref{eq:aff}, this is a shrunk mean (Proposition~\ref{prop:shrink}) rather than a sum, so prolific raters do not dominate. It is signed, so a shared dislike counts as agreement and opposite signs push the cosine below zero. Since $K_T = \textsc{k\_aff}$, $t_u[c] = \aff_{u,c}$ for every kept category $c$.
+
+\begin{definition}[Attribute similarity and shared attributes]\label{def:attrsim}
+$\simi_A(u, v) = \cosim(t_u, t_v)$, with taste vectors read as sparse vectors (a missing attribute is $0$) and $\simi_A = 0$ when either vector is zero. The \emph{bridging attributes} of a pair are the brands and flavour bases $a$ with $\abs{t_u[a]} \ge 0.2$ and $\abs{t_v[a]} \ge 0.2$, of either sign, that the two users reach through \emph{distinct} Bevs: some $b \in R(u)$ and $b' \in R(v)$ with $a \in A(b) \cap A(b')$ and $b \ne b'$. An attribute both users reach only through one Bev they co-rated is that Bev, not a path through $a$. Categories never bridge: there are only 15 of them, and the doc's candidate query matches \code{:Flavor} and \code{:Brand} only. Write $S(u, v)$ for their number (\code{user\_neighbors.shared\_attrs}).
+\end{definition}
+
+\begin{definition}[Blended user similarity]\label{def:blend-sim}
+With $\alpha = \textsc{taste\_alpha} = 0.5$ when $m \ge 2$ and $\alpha = 0$ otherwise,
+\begin{equation}\label{eq:blendsim}
+\simi_B(u, v) = \alpha\, \rho'(u, v) + (1 - \alpha)\, \simi^\ast_A(u, v),
+\qquad
+\simi^\ast_A =
+\begin{cases}
+\simi_A & m \ge 2 \text{ or } S(u, v) \ge 2, \\
+0 & \text{otherwise.}
+\end{cases}
+\end{equation}
+The pair is stored with method \code{blend} if $\alpha = 0.5$ and \code{attr} if $\alpha = 0$; the Pearson-only arm, $\alpha = 1$, is available only as an explicit option (\code{pearson}).
+\end{definition}
+
+The gate on $\simi_A$ is the doc's guard against weak multi-hop paths. A pair with fewer than two co-rated Bevs is reachable only by the two-hop path $u \to b \to a \to b' \to v$ with $b \ne b'$. A cosine ignores magnitude, so two faint taste vectors can still point the same way, and the pair must share at least two bridging attributes to count. A pair with two or more co-rated Bevs is reached directly and takes the formula as written. The doc leaves this point open, and the reading here was chosen so that two users who agree perfectly on five co-rated Bevs keep $\simi_B = 1$ however faint their taste vectors are.
+
+\begin{proposition}[No double counting]\label{prop:blend-sim}
+$\simi_B$ is symmetric with values in $[-1, 1]$, and it lies between $\rho'$ and $\simi^\ast_A$. It equals $\simi^\ast_A$ when $m < 2$, and setting $\alpha$ to $1$ or $0$ recovers $\rho'$ or $\simi^\ast_A$ exactly.
+\end{proposition}
+\begin{proof}
+It is a convex combination of two symmetric quantities in $[-1, 1]$.
+\end{proof}
+
+This is how the doc's warning about double counting is met. Agreement on co-rated Bevs reaches both terms, through $\rho'$ and through the taste vectors, which are built from all of a user's rankings. Because the weights are convex, that agreement can never add up past what either term says on its own. Below two co-rated Bevs, $\alpha = 0$ makes the attribute term a substitute for Pearson rather than an addition to it. Consumers must take $\simi_B$ as the whole similarity and must not add $\simi_A$ again.
+
+\paragraph{Neighbours and reliability.} Each user keeps the $\textsc{taste\_neighbour\_k} = 25$ users with the largest $\simi_B \ge \textsc{taste\_sim\_floor} = 0.1$ (ties by id); Layer~2 still uses at most $K = 10$ of them per Bev. Stage~4 weights each neighbour by its reliability $\min(1, n_v / N_0)$ when it reads the rows. That weight is per neighbour and asymmetric, so it is not part of $\simi_B$. The doc leaves $N_0$ open; $N_0 = \textsc{neighbour\_reliability\_n} = 15$ is chosen equal to $\textsc{lambda\_user\_n}$, the history at which Layer~2 is fully trusted for the user themself. Under this choice a user fresh from onboarding (10 Bevs) counts $2/3$ and one with 3 rankings counts $1/5$.
+
+\begin{example}[The doc's three users]\label{ex:taste}
+Take Coca-Cola $b_1$, Pepsi $b_2$, Coke Zero $b_3$ (diet soda), Dr Pepper $b_4$, LaCroix Lime $b_5$ and Red Bull $b_6$, with $z$: $U_1 = (b_1{:}\ 1.2,\ b_4{:}\ 0.6,\ b_5{:}\ {-1.3})$, $U_2 = (b_2{:}\ 1.1,\ b_3{:}\ 0.8,\ b_5{:}\ {-0.9})$ and $U_3 = (b_4{:}\ 1.0,\ b_6{:}\ 0.9)$. The kept attributes are soda ($b_1, b_2, b_4$), the brand coke ($b_1, b_3$) and the flavour cola ($b_1$--$b_4$); every other attribute covers one Bev. So $t_{U_1} = (\text{soda } 0.45,\ \text{coke } 0.40,\ \text{cola } 0.45)$, $t_{U_2} = (0.367,\ 0.267,\ 0.475)$ and $t_{U_3} = (\text{soda } 0.333,\ \text{cola } 0.333)$.
+$U_1$ and $U_2$ co-rate only $b_5$, so $m = 1$ and today's $\simi'(U_1, U_2) = 0$. They share two bridging attributes, coke ($b_1$ for $U_1$, $b_3$ for $U_2$) and cola ($b_1, b_4$ and $b_2, b_3$), so $\simi_B = \simi_A = 0.983$: this is the attribute bridge the graph exists for.
+$U_1$ and $U_3$ also co-rate one Bev, but they bridge on cola alone, so $\simi_B = 0$ even though $\simi_A = 0.847$.
+\end{example}
 
 \subsection{Blend, confidence and the displayed number}
 
@@ -618,8 +699,8 @@ The ranking relation is a partial function $U \times B \rightharpoonup [0, 10]$:
 \code{bayes\_prior(p\_category\_id)} (20261019000200, \#112) is the SQL twin of \code{globalPrior} and \code{categoryPrior}: a category's own mean at $30$ rankings, else the global mean, and $5.0$ on an empty system; \code{get\_bev\_leaderboard} uses it, so a Water on the water board now shrinks toward Water's mean. Still different: \code{get\_feed} (20261014000300), \code{get\_user\_feed} (20261018000300), \code{get\_explore} (20261019000400) and \code{bev\_of\_period\_at} (20261018000100) read \code{coalesce((select mean\_score from global\_stats), 0)}, so on a system with no rankings their prior is $0$ rather than $5.0$; invisible in production, where \code{global\_stats.rating\_count > 0}. The global branch everywhere reads \code{global\_stats.mean\_score}, a \code{numeric(5,3)} refreshed every $15$ minutes, while \code{bayes\_prior}'s category branch is live and exact. \code{refresh\_global\_stats} writes \code{bev\_stats.bayes\_score} with the global prior by design (one number per Bev), but updates only rows with \code{rating\_count > 0}, so when a Bev's last ranking is removed the old figure stays in the column until the Bev is ranked again.
 \end{implnote}
 
-\begin{implnote}[Name order]\label{impl:codepoints}
-\code{get\_bev\_leaderboard} has ordered by \code{bayes desc, rating\_count desc, name collate "C", id} since 20261019000200, the order of Section~\ref{sec:bayes}; the earlier ``Bayesian score only'' divergence is closed, and \code{user\_category\_stats.affinity\_z} has had a writer since 20261019000100 (A-11). One difference remains on the TypeScript side: \code{leaderboardOrder} compares names with JavaScript \code{<}, which orders UTF-16 code units, whereas \code{collate "C"} orders code points. The two disagree only when one name contains a character outside the Basic Multilingual Plane and the other a character in U+E000--U+FFFF at the same position (an emoji against a private-use or specials character). Every catalog name is ASCII, but \code{create\_bev} does not restrict names. The fix is a code-point comparison in \code{bayesian.ts} (and the same \code{cmp} in \code{starter.ts}), with a \code{RANKING\_VERSION} bump and a vector case that exercises such a pair.
+\begin{implnote}[Name order; resolved in 1.3.0]\label{impl:codepoints}
+\code{get\_bev\_leaderboard} has ordered by \code{bayes desc, rating\_count desc, name collate "C", id} since 20261019000200, the order of Section~\ref{sec:bayes}; the earlier ``Bayesian score only'' divergence is closed, and \code{user\_category\_stats.affinity\_z} has had a writer since 20261019000100 (A-11). The last difference, on the TypeScript side, is closed in \code{RANKING\_VERSION} 1.3.0 (M-28). \code{leaderboardOrder} compared names with JavaScript \code{<}, which orders UTF-16 code units, whereas \code{collate "C"} orders code points, so the two disagreed when one name had a character outside the Basic Multilingual Plane and the other a character in U+E000--U+FFFF at the same position (an emoji against a private-use or specials character). \code{compareCodePoints} in \code{bayesian.ts} now compares a code point at a time, \code{starter.ts} reuses it for its tie-breaks, and \code{bayesian.vectors.json} gained a case with such a pair. Every catalogue name is ASCII, so no existing order changed.
 \end{implnote}
 
 \begin{implnote}[Streak history in SQL]\label{impl:streak}
@@ -649,7 +730,8 @@ Version & Date & Change \\
 \midrule
 1.0.0 & 2026-10-09 & First vectors: bands 7/4, placement, exact cents, statistics, Bayesian average, rank points, streaks \\
 1.1.0 & 2026-10-11 & Prediction snapshot, Layers 1--2, blend, exploration, starter set \\
-1.2.0 & 2026-10-14 & Bev-graph edge weights: tree \eqref{eq:wp}, profile \eqref{eq:prof} and embedding similarity, $w$ \eqref{eq:w}, top-$K_E$ selection, as \code{edges.vectors.json} (M-24); earlier vectors unchanged apart from the header; current \\
+1.2.0 & 2026-10-14 & Bev-graph edge weights: tree \eqref{eq:wp}, profile \eqref{eq:prof} and embedding similarity, $w$ \eqref{eq:w}, top-$K_E$ selection, as \code{edges.vectors.json} (M-24); earlier vectors unchanged apart from the header \\
+1.3.0 & 2026-10-24 & Taste formulas of Section~\ref{sec:tastegraph} (M-28): Pearson over the common subset \eqref{eq:pearson}, taste vectors \eqref{eq:taste}, attribute similarity, the blend \eqref{eq:blendsim}, neighbour selection and reliability, as \code{graph.vectors.json}. Layer~2 gains \code{userSimilarity: 'pearson'}, default \code{'cosine'}, so live predictions are unchanged; $w$ is unchanged. Fix: leaderboard and starter-set names now compare by Unicode code point as Section~\ref{sec:bayes} specifies, which resolves Implementation note~\ref{impl:codepoints} (they compared UTF-16 code units, which put astral characters before U+E000--U+FFFF), with one new \code{leaderboardOrder} vector; ASCII names, hence every catalogue name, order as before. Earlier vectors unchanged apart from the header; current \\
 (next) & --- & Anchored placement (Section~\ref{sec:anchored}) when adopted; requires a bump and new vectors \\
 \bottomrule
 \end{tabular}
@@ -659,7 +741,7 @@ Version & Date & Change \\
 
 \section{Constants}\label{app:constants}
 
-All values from \code{packages/ranking/src/constants.ts}, \code{RANKING\_VERSION} 1.2.0.
+All values from \code{packages/ranking/src/constants.ts}, \code{RANKING\_VERSION} 1.3.0.
 
 \begin{center}
 \small
@@ -694,10 +776,27 @@ Constant & Value & Role \\
 \code{STARTER\_MAX\_PER\_CATEGORY},\newline \code{STARTER\_MIN\_CATEGORIES} & 2, 5 & Spread of the onboarding set \\
 \code{RANK\_POINTS\_WEIGHTS} & 1 / 3 / 2 & Bevs ranked, current streak, adopted Bevs created \\
 \code{STREAK\_PERIOD} & day & Daily streak (weekly is a constant change) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{center}
+\small
+\begin{tabular}{@{}p{5.1cm}p{2.7cm}p{6.6cm}@{}}
+\toprule
+Constant & Value & Role \\
+\midrule
 \code{EDGE\_WEIGHTS} & 0.25 / 0.15 / 0.30 / 0.30 / 0 & Tree, content, embedding, profile, co-preference \eqref{eq:w} \\
 \code{EDGE\_TOP\_K},\newline \code{EDGE\_MIN\_WEIGHT} & 20, 0.3 & Edges kept per Bev ($K_E$) and their minimum weight \\
 \code{PROFILE\_WEIGHTS} & 0.40 / 0.15 / 0.10 / 0.05 / 0.15 / 0.15 & Base, carbonation, dairy, alcohol, caffeine, sweetness \eqref{eq:prof} \\
 \code{PROFILE\_LEVEL\_SPAN} & 3 & Largest caffeine or sweetness difference \\
+\code{TASTE\_K} & 2 & Shrinkage $K_T$ of a taste-vector entry \eqref{eq:taste} \\
+\code{TASTE\_MIN\_ATTR\_BEVS} & 2 & Catalogue Bevs an attribute needs to be kept \\
+\code{TASTE\_ALPHA} & 0.5 & Pearson weight $\alpha$ of the blend \eqref{eq:blendsim} when $m \ge 2$ \\
+\code{TASTE\_SHARED\_MIN},\newline \code{TASTE\_MIN\_SHARED\_ATTRS} & 0.2, 2 & $\abs{t}$ for a shared attribute; bridging attributes an attribute-only pair needs \\
+\code{TASTE\_BRIDGE\_KINDS} & brand, flavour & Attribute kinds that bridge (categories do not) \\
+\code{TASTE\_SIM\_FLOOR},\newline \code{TASTE\_NEIGHBOUR\_K} & 0.1, 25 & Least similarity kept and neighbours kept per user in \code{user\_neighbors} \\
+\code{NEIGHBOUR\_RELIABILITY\_N} & 15 & $N_0$ of the reliability weight $\min(1, n_v/N_0)$ (chosen; the doc leaves it open) \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -720,6 +819,7 @@ $z_{u,b}$ & Normalised score of $u$ for $b$ \\
 $\aff_{u,c}$ & Category affinity (eq.~\ref{eq:aff}); $g_b$ normalised global score (eq.~\ref{eq:g}) \\
 $\mathrm{bayes}_b$ & Bayesian leaderboard score (eq.~\ref{eq:bayes}); $m$ its prior mean, $C$ its weight \\
 $\simi(b, b')$ & Content similarity; $\simi'(u, v)$ significance-weighted user similarity \\
+$\rho, \rho', t_u, \simi_A, \simi_B$ & Pearson and shrunk Pearson user similarity, taste vector, attribute and blended user similarity (Section~\ref{sec:tastegraph}) \\
 $\zhat^{(1)}, \zhat^{(2)}, \zhat$ & Layer 1, Layer 2 and blended predictions in z-units; $\shat$ in score units \\
 $\lambda, \supp, \conf$ & Blend weight, neighbour support, confidence \\
 $\simi_T, w$ & Tree similarity and Bev-graph edge weight (Section~\ref{sec:anchored}) \\

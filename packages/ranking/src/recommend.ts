@@ -4,6 +4,7 @@ import { EPSILON, JITTER_SD, LAYER1_WEIGHTS } from './constants.ts';
 import { snapshotContext } from './context.ts';
 import { predictScore } from './blend.ts';
 import { explorationSlots, gaussian, weightedSample } from './explore.ts';
+import { userSimilarityKind } from './layer2.ts';
 import { createPrng } from './prng.ts';
 import { categoryAffinity } from './stats.ts';
 import type { BevId, CategoryId, Prediction, PredictionSnapshot, Recommendation, RecommendationReason, RecommendOptions, UserId } from './types.ts';
@@ -51,12 +52,15 @@ function median(xs: readonly number[]): number {
  * replacement ∝ exp(g_b) with the same PRNG (after the jitter draws), candidates in bevId order.
  * Unfilled slots (small pool) fall back to normal picks; exploration picks are tagged and never
  * repeated among the normal picks.
+ *
+ * `opts.userSimilarity` is Layer 2's (default 'cosine', the live engine); nothing else depends on it.
  */
 export function recommend(snapshot: PredictionSnapshot, userId: UserId, opts: RecommendOptions): Recommendation[] {
   const ctx = snapshotContext(snapshot);
   if (!Number.isInteger(opts.n) || opts.n < 0) throw new RangeError(`n must be a non-negative integer, got ${opts.n}`);
   const epsilon = opts.epsilon ?? EPSILON;
   if (!(epsilon >= 0 && epsilon <= 1)) throw new RangeError(`epsilon must be in [0, 1], got ${epsilon}`);
+  const predictOpts = { userSimilarity: userSimilarityKind(opts) };
 
   const ranked = ctx.z.get(userId) ?? new Map<BevId, number>();
   const excluded = new Set(opts.excludeBevIds ?? []);
@@ -72,7 +76,7 @@ export function recommend(snapshot: PredictionSnapshot, userId: UserId, opts: Re
   const preds = new Map<BevId, Prediction>();
   const jittered = new Map<BevId, number>();
   for (const id of candidates) {
-    const p = predictScore(snapshot, userId, id);
+    const p = predictScore(snapshot, userId, id, predictOpts);
     preds.set(id, p);
     jittered.set(id, p.z + gaussian(rand, JITTER_SD));
   }
