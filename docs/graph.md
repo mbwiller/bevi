@@ -205,12 +205,28 @@ so `embed` declares the one method it uses and returns a 503 (`ai_unavailable`)
 anywhere else — that is what keeps CI's `deno check` green without a live
 runtime.
 
+### What the first real run measured (2026-10-24)
+
+All 378 seeded Bevs are embedded on prod. Two things that only a deployed
+function could settle:
+
+- **`gte-small` returns exactly 384 values** for this template, PostgREST
+  accepts pgvector's `[0.1,...]` text form on upsert, and the bearer gate
+  passes with the real token. The function must be deployed with
+  `--no-verify-jwt`, or the gateway rejects the trigger's non-JWT bearer and
+  embeddings silently never appear.
+- **The batch bound is 4, not 16.** At 16 per request, 21 of 24 batches failed
+  with `546 WORKER_RESOURCE_LIMIT` -- gte-small inference for 16 Bevs does not
+  fit one invocation's CPU budget. At 4, all 378 embedded across 95 requests
+  with zero failures. `MAX_BATCH` and the backfill's default are both 4;
+  raising either needs the experiment re-run, not an argument.
+
 ### The two writers
 
 | Path | Trigger | Batch |
 |---|---|---|
 | **on write** | `bevs_embed_after_insert` / `bevs_embed_after_update` on `public.bevs` (migration `20261023000100_embed_webhook.sql`) → `net.http_post` → `embed` | 1 Bev |
-| **backfill** | `npm run graph:backfill-embeddings`, by hand | up to 16 per call, 8 by default |
+| **backfill** | `npm run graph:backfill-embeddings`, by hand | up to 4 per call, 4 by default |
 
 The trigger fires on insert, and on update **only when `name`, `brand`,
 `flavor` or `category_id` actually changed** — an `updated_at` touch, a
@@ -288,7 +304,7 @@ npm run graph:backfill-embeddings                  # embed every active Bev that
 npm run graph:backfill-embeddings -- --dry-run     # print the plan and the first ten texts, write nothing
 npm run graph:backfill-embeddings -- --stale       # also re-embed rows older than the Bev's updated_at, or from another model
 npm run graph:backfill-embeddings -- --all         # re-embed everything (after a template change)
-npm run graph:backfill-embeddings -- --batch 4 --limit 50
+npm run graph:backfill-embeddings -- --batch 4 --limit 50   # 4 is the maximum
 ```
 
 It needs `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`, optionally

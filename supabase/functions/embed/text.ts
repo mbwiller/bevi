@@ -13,9 +13,17 @@ export const DIMENSIONS = 384;
 // one Bev; the batch work stays in the nightly job." The trigger sends one.
 // The backfill sends more, so the bound is not 1 -- but it is small, because
 // every id in a request shares that one CPU budget and a request that times
-// out mid-batch wastes the whole batch. 16 at a time, and a larger request is
-// rejected with the bound in the body rather than silently truncated.
-export const MAX_BATCH = 16;
+// out mid-batch wastes the whole batch.
+//
+// 4, measured against the deployed function on 2026-10-24, not guessed. The
+// first value here was 16, and backfilling the 378 seeded Bevs at 16 failed
+// 21 of 24 batches with `546 WORKER_RESOURCE_LIMIT` ("not having enough
+// compute resources") -- gte-small inference for 16 Bevs does not fit in one
+// invocation's budget. The same 378 at 4 embedded 378 with zero failures
+// across 95 requests. A larger request is rejected with the bound in the body
+// rather than silently truncated, so a caller learns the limit instead of
+// losing rows.
+export const MAX_BATCH = 4;
 
 /** The columns of `bevs` the template reads, and nothing else. */
 export interface EmbeddableBev {
