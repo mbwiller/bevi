@@ -73,6 +73,11 @@ export const keys = {
   commentsAll: [...root, 'comments'] as const,
   /** A post's thread (`comments.list`, newest-first pages). */
   comments: (eventId: string) => [...root, 'comments', eventId] as const,
+  /**
+   * `feed.getExplore` (M-04). Not under `feed()`: an ExplorePost is not a FeedItem (no likes or
+   * comments to patch), and a follow marks it stale rather than refetching it under the reader.
+   */
+  explore: () => [...root, 'explore'] as const,
   /** `feed.getBevOfPeriod` (M-05). */
   bevOfPeriod: () => [...root, 'bevOfPeriod'] as const,
 

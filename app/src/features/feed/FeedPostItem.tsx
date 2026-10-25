@@ -1,4 +1,4 @@
-import type { FeedItem } from '@bevi/shared';
+import type { FeedItem, Profile } from '@bevi/shared';
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -70,17 +70,18 @@ export const FeedPostItem = memo(function FeedPostItem({
           {likeError}
         </Text>
       ) : null}
-      {onOpenActor ? (
-        <Pressable
-          onPress={onOpenActor}
-          accessibilityRole="link"
-          accessibilityLabel={you ? 'Your profile' : `${item.actor.displayName}, @${item.actor.handle}`}
-          style={styles.actor}
-        />
-      ) : null}
+      {onOpenActor ? <ActorLink label={you ? 'Your profile' : actorLabel(item.actor)} onPress={onOpenActor} /> : null}
     </View>
   );
 });
+
+/** The actor link's accessible name: "Friend A, @friend_a". */
+export const actorLabel = (actor: Pick<Profile, 'displayName' | 'handle'>) => `${actor.displayName}, @${actor.handle}`;
+
+/** The 60pt transparent target over a FeedPost's avatar that opens the actor's profile. Inside the post's wrapper View. */
+export function ActorLink({ label, onPress }: { label: string; onPress: () => void }) {
+  return <Pressable onPress={onPress} accessibilityRole="link" accessibilityLabel={label} style={styles.actor} />;
+}
 
 const styles = StyleSheet.create({
   item: { borderBottomWidth: 1 },

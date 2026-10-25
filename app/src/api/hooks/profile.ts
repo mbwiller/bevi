@@ -96,6 +96,9 @@ export function useSetBirthDate() {
       void qc.invalidateQueries({ queryKey: keys.bevOfPeriod() });
       void qc.invalidateQueries({ queryKey: keys.leaderboard.all });
       void qc.invalidateQueries({ queryKey: keys.recommendationsAll });
+      // Server-filtered by age too: the feed (and every Activity under it) and Explore.
+      void qc.invalidateQueries({ queryKey: keys.feed() });
+      void qc.invalidateQueries({ queryKey: keys.explore() });
     },
   });
 }
