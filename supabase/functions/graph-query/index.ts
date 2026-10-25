@@ -60,7 +60,7 @@ interface RequestBody {
 }
 
 function queryApiUrl(uri: string, database: string): string {
-  const host = uri.replace(/^[a-z+]+:\/\//, "").replace(/\/.*$/, "").replace(/:\d+$/, "");
+  const host = uri.replace(/^[a-z][a-z0-9+.-]*:\/\//, "").replace(/\/.*$/, "").replace(/:\d+$/, "");
   return `https://${host}/db/${database}/query/v2`;
 }
 

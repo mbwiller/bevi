@@ -205,12 +205,28 @@ so `embed` declares the one method it uses and returns a 503 (`ai_unavailable`)
 anywhere else — that is what keeps CI's `deno check` green without a live
 runtime.
 
+### What the first real run measured (2026-10-24)
+
+All 378 seeded Bevs are embedded on prod. Two things that only a deployed
+function could settle:
+
+- **`gte-small` returns exactly 384 values** for this template, PostgREST
+  accepts pgvector's `[0.1,...]` text form on upsert, and the bearer gate
+  passes with the real token. The function must be deployed with
+  `--no-verify-jwt`, or the gateway rejects the trigger's non-JWT bearer and
+  embeddings silently never appear.
+- **The batch bound is 4, not 16.** At 16 per request, 21 of 24 batches failed
+  with `546 WORKER_RESOURCE_LIMIT` -- gte-small inference for 16 Bevs does not
+  fit one invocation's CPU budget. At 4, all 378 embedded across 95 requests
+  with zero failures. `MAX_BATCH` and the backfill's default are both 4;
+  raising either needs the experiment re-run, not an argument.
+
 ### The two writers
 
 | Path | Trigger | Batch |
 |---|---|---|
 | **on write** | `bevs_embed_after_insert` / `bevs_embed_after_update` on `public.bevs` (migration `20261023000100_embed_webhook.sql`) → `net.http_post` → `embed` | 1 Bev |
-| **backfill** | `npm run graph:backfill-embeddings`, by hand | up to 16 per call, 8 by default |
+| **backfill** | `npm run graph:backfill-embeddings`, by hand | up to 4 per call, 4 by default |
 
 The trigger fires on insert, and on update **only when `name`, `brand`,
 `flavor` or `category_id` actually changed** — an `updated_at` touch, a
@@ -288,7 +304,7 @@ npm run graph:backfill-embeddings                  # embed every active Bev that
 npm run graph:backfill-embeddings -- --dry-run     # print the plan and the first ten texts, write nothing
 npm run graph:backfill-embeddings -- --stale       # also re-embed rows older than the Bev's updated_at, or from another model
 npm run graph:backfill-embeddings -- --all         # re-embed everything (after a template change)
-npm run graph:backfill-embeddings -- --batch 4 --limit 50
+npm run graph:backfill-embeddings -- --batch 4 --limit 50   # 4 is the maximum
 ```
 
 It needs `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`, optionally
@@ -480,15 +496,22 @@ See `supabase/.env.example`.
 | `NEO4J_URI` | Supabase secrets, Actions secrets, `supabase/.env` | `graph-query`, `graph:schema`, `graph:keepalive`, the sync |
 | `NEO4J_USERNAME` | same | same |
 | `NEO4J_PASSWORD` | same | same |
-| `NEO4J_DATABASE` | same, optional (`neo4j` is the default) | same |
+| `NEO4J_DATABASE` | same; optional only in the sense that it defaults to `neo4j`, which is wrong for our instance, so it is always set | same |
 | `BEVI_PSEUDONYM_SALT` | **Actions secrets only** | the Neo4j sync, for `(:User {pseudonym})` |
-| `SUPABASE_SERVICE_ROLE_KEY` | **Actions secret** — **not set yet** (`gh secret list` shows only `SUPABASE_ACCESS_TOKEN`); `supabase/.env` locally | **`graph-edges.yml` / `npm run graph:edges`**, to read Postgres past RLS and call the service-role RPCs; later the Neo4j sync |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Actions secret** — set 2026-10-24; `supabase/.env` locally | **`graph-edges.yml` / `npm run graph:edges`**, to read Postgres past RLS and call the service-role RPCs; later the Neo4j sync |
 | `SUPABASE_URL` | injected into Edge Functions; an Actions **variable** (`vars`) for `graph-edges.yml`; `supabase/.env` locally. Not a secret | same |
 | `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_ID`, `SUPABASE_DB_PASSWORD` | Actions secrets (already used by `backend.yml`) | deploying the function and pushing migrations |
 
 No `NEO4J_*` value may ever reach `app/` or `packages/api`. The browser gets
 the publishable key and nothing else. Aura shows the password exactly once, at
 instance creation — save the credentials file outside the repo.
+
+The live instance is `bevi-graph-db`, created 2026-10-24 in the Aura project
+`c03f2541-d8b6-4cf4-8383-a0d3d8be8c04`. Its credentials file sets
+`NEO4J_USERNAME` and `NEO4J_DATABASE` to the instance id rather than to
+`neo4j`, so both must be read from that file and neither may be assumed. The
+schema in `scripts/graph/schema.cypher` is applied, and `(:Meta).lastKeepAliveAt`
+was written by hand the same day.
 
 ## Access paths
 

@@ -55,6 +55,10 @@ Deno.test("the model and dimensions are the ones decision 30 fixes", () => {
 });
 
 Deno.test("the batch bound is small enough for one 2s CPU budget", () => {
-  assertEquals(MAX_BATCH <= 16, true);
+  // 4 is measured, not guessed: 16 per request failed 21 of 24 batches with
+  // 546 WORKER_RESOURCE_LIMIT against the deployed function, and 4 embedded
+  // all 378 seeded Bevs with no failures. Raising this needs the same
+  // experiment again, not an argument.
+  assertEquals(MAX_BATCH <= 4, true);
   assertEquals(MAX_BATCH >= 1, true);
 });

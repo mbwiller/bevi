@@ -47,9 +47,14 @@
 // reparses it as ESM either way; `tsc` does not.
 export {};
 
-const DEFAULT_BATCH = 8;
-/** Must not exceed MAX_BATCH in supabase/functions/embed/text.ts. */
-const MAX_BATCH = 16;
+const DEFAULT_BATCH = 4;
+/**
+ * Must not exceed MAX_BATCH in supabase/functions/embed/text.ts, which is 4:
+ * measured on 2026-10-24, where 16 per request failed with
+ * `546 WORKER_RESOURCE_LIMIT` on 21 of 24 batches and 4 embedded all 378
+ * Bevs with no failures.
+ */
+const MAX_BATCH = 4;
 /** PostgREST's own cap for this project (`max_rows` in supabase/config.toml). */
 const PAGE = 1000;
 const MODEL = "gte-small";
