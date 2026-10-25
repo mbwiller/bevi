@@ -301,3 +301,30 @@ function docOrder(markers: string[]): string[] {
   (Array.isArray(json) ? json : [json]).forEach(walk);
   return out;
 }
+
+describe('the plain post and the Follow pill (Explore)', () => {
+  it('with no handlers: no heart, comment bubble, Rank it, Want to Try or pill', async () => {
+    await render(<FeedPost actor={ARJUN} bev={BEV} score={9.5} likeCount={3} commentCount={2} />);
+    expect(screen.queryByRole('button', { name: /^(Like|Unlike)/ })).toBeNull();
+    expect(screen.queryByLabelText(/comment/i)).toBeNull();
+    expect(screen.queryByLabelText('Rank Horchata')).toBeNull();
+    expect(screen.queryByLabelText(/to Want to Try$/)).toBeNull();
+    expect(screen.queryByText('Follow')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Open Horchata' })).toBeTruthy();
+  });
+
+  it("onFollow draws the author's Follow pill; following turns it to Following", async () => {
+    const onFollow = jest.fn();
+    const { rerender } = await render(<FeedPost actor={ARJUN} bev={BEV} score={9.5} onFollow={onFollow} />);
+    const pill = screen.getByRole('button', { name: 'Follow Arjun Cheema' });
+    expect(pill.props['aria-pressed']).toBe(false);
+    expect(within(pill).getByText('Follow')).toBeTruthy();
+    await fireEvent.press(pill);
+    expect(onFollow).toHaveBeenCalledTimes(1);
+
+    await rerender(<FeedPost actor={ARJUN} bev={BEV} score={9.5} following onFollow={onFollow} />);
+    const following = screen.getByRole('button', { name: 'Follow Arjun Cheema' });
+    expect(following.props['aria-pressed']).toBe(true);
+    expect(within(following).getByText('Following')).toBeTruthy();
+  });
+});
