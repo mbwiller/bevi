@@ -106,8 +106,10 @@ A-16 populates embeddings; an empty vector index is valid and costs nothing.
 ## The Postgres half, which exists now
 
 `supabase/migrations/20261019000500_graph_tables.sql` (A-16 increment 1, first
-PR) creates the mirror and the read path. **Both tables are empty**: nothing
-writes them yet, and the job that will is the next increment.
+PR) creates the mirror and the read path. **Both tables are still empty on
+prod.** `bev_edges` now has a writer — `scripts/graph/build-edges.ts`, the next
+section — but it has never run against a database; `bev_embeddings` has none
+yet (the `embed` Edge Function).
 
 ```sql
 bev_embeddings(bev_id uuid primary key references bevs(id) on delete cascade,
@@ -299,27 +301,173 @@ once, then named in the summary, and the run exits non-zero without abandoning
 the rest.
 
 ## The sync contract (A-16, not yet built)
+## How edges are computed — and `bev_edges` is filled without Neo4j
 
-The nightly GitHub Actions workflow must, in order: read active Bevs,
-categories, flavour profiles and pseudonymised rankings from Postgres; embed
-new or changed Bevs; build candidate pairs from the same category subtree, the
-same brand and the 50 nearest by embedding; weight each pair with
-`edgeWeight()` from `@bevi/ranking`; keep the top 20 per Bev with `w ≥ 0.3`;
-`MERGE` nodes and edges in batched `UNWIND`s and delete edges that dropped
-out; write `bev_edges` back in one transaction; mirror `RANKED` edges; touch
-`(:Meta).lastSyncAt`; print the sanity report.
+**`bev_edges` is filled from Postgres alone.** `scripts/graph/build-edges.ts`
+(`npm run graph:edges`) reads Postgres, weighs pairs with `@bevi/ranking` and
+writes Postgres. It never opens a connection to Aura and reads no `NEO4J_*`
+variable. The graph's `(:Bev)-[:SIMILAR_TO]-(:Bev)` is a **mirror of this
+table**, written later by A-16's steps 6, 8 and 9 (the Cypher `MERGE`, the
+`RANKED` edges and the `(:Meta)` keep-alive), which are their own PR. So a
+paused, deleted or never-reachable instance costs the app nothing: the
+similarity data is rebuilt regardless. That is "the one rule" above, taken to
+its conclusion.
 
-**The sanity report is the acceptance test.** Every run prints it, and these
-two lines are what a human checks:
+The job runs A-16's steps 1, 3, 4, 5, 7 and 10:
+
+| Step | What it does |
+|---|---|
+| 1 | Reads active `bevs`, `categories`, `bev_flavor_profiles` and `bev_embeddings` as the service role, and calls D-11 inference (below) for any active Bev with no profile. |
+| 3 | **Candidate pairs** = same category ∪ same brand ∪ the 50 nearest by embedding cosine. |
+| 4 | Weighs each candidate with `edgeWeight()`. |
+| 5 | Keeps the top 20 per Bev with `w ≥ 0.3`, via `topEdges`. |
+| 7 | Replaces `bev_edges` in **one transaction**. |
+| 10 | Prints the **sanity report**. |
+
+Step 2 (embedding new or changed Bevs) is the `embed` Edge Function and its
+`bevs` webhook — a separate PR in the same increment. Until it has run, Bevs
+without a row in `bev_embeddings` get `emb = 0`, every weight they are in is
+understated, and the job says so with a warning rather than failing.
+
+### The candidate rule
+
+Three arms, deduplicated into one set of unordered pairs:
+
+- **same category** — all pairs within a category. "Same category *subtree*" in
+  TASKS.md is the same thing today, because `categories` has no `parent_id`
+  until A-13.
+- **same brand** — all pairs sharing a `normaliseBrand()` key. A null or
+  whitespace-only brand is not a brand and groups with nothing.
+- **the 50 nearest by embedding cosine** — `public.nearest_bev_embeddings(50)`
+  (migration `20261023000300`), pgvector `<=>` against the HNSW index, both
+  ends filtered to `status = 'active'`.
+
+The KNN arm is **selection only**. The `emb` term of the weight is always
+recomputed with `embeddingSimilarity` from the vectors themselves, never
+derived from the index's distance, so an approximate index can change which
+pairs are considered but never what a pair weighs.
+
+### The weight terms
+
+`w = 0.25·tree + 0.15·content + 0.30·emb + 0.30·profile + 0·cop`
+(`EDGE_WEIGHTS`, eq. 18). Every term comes from `@bevi/ranking`; nothing is
+reimplemented in the job or in SQL.
+
+| Term | From | Today |
+|---|---|---|
+| `tree` | `treeSimilarity(catA, catB, taxonomy)` | The `Taxonomy` is built from the `categories` rows as child → parent. **Every parent is `null`**, because the column arrives with A-13, so every category sits at depth 1 under the implicit root and the term **degenerates to the `[same category]` indicator**: exactly 1 or exactly 0, contributing 0.25 or nothing. When A-13 lands, the job selects `parent_id` and nothing else changes. |
+| `content` | `contentSimilarity` | Category, `normaliseBrand()` brand key, `flavorTokens(name, flavor)` Jaccard and price tier, from the `bevs` row. |
+| `emb` | `embeddingSimilarity` | Cosine of the two `gte-small` vectors. **0 when either Bev has no embedding** — the honest value for "no evidence". |
+| `profile` | `profileSimilarity` | `bev_flavor_profiles`. 0 when either is missing, including when D-11 declined below its floor. |
+| `cop` | — | 0. γ = 0 in v1; the co-rating signal is A-16 (2). |
+
+Each term is rounded to 6 decimals and the weight is then computed **from the
+rounded terms**, so `edgeWeight(components) == weight` holds exactly for every
+stored row and the breakdown in `components` is a derivation a reviewer can
+check rather than a decoration. The cost is more exact ties, which is why
+`topEdges`' tie-break on `bevId` matters: it is code-unit order, and SQL
+tie-breaks must match it (`collate "C"`, or a lowercase-hex `uuid` column,
+which is byte-identical — M-24).
+
+A pair is kept when **either** endpoint wants it in its top 20. An
+intersection would drop a small Bev's single best neighbour because a popular
+Bev has twenty better ones, and it is why `get_similar_bevs` clamps at 50
+rather than 20.
+
+### The write-back transaction
+
+`public.replace_bev_edges(p_rows jsonb, p_version text)` (`20261023000300`,
+service role only) replaces the whole table inside one call, which is one
+transaction, and returns the row count. `p_version` is `RANKING_VERSION`.
+
+- Rows must already be in the canonical orientation `src_bev_id < dst_bev_id`;
+  the function rejects a reversed row rather than fixing it, because
+  `orientPair` in the job is the single place that decides orientation.
+- It validates the entire payload — nulls, orientation, weight range,
+  `components` shape, duplicate pairs, unknown Bev ids, and an empty array —
+  **before** it deletes anything, so a bad payload leaves yesterday's edges in
+  place.
+- It uses `delete` + `insert`, not `truncate`, although TASKS.md sanctions
+  truncate-and-insert at this size: `truncate` takes an `ACCESS EXCLUSIVE` lock
+  that blocks every reader, including `get_similar_bevs` on a user's screen,
+  while `delete` lets readers keep seeing the previous generation under MVCC
+  until the commit. The table is never observably empty and nothing on a
+  request path waits.
+
+The job is therefore **idempotent and resumable** in the strongest sense
+available: two runs produce the same table, and a crash anywhere before that
+one call leaves the previous generation untouched. There is no partial state to
+resume from.
+
+### D-11: a flavour profile for a user-created Bev
+
+`public.infer_bev_flavor_profile(p_bev_id uuid)` (`20261023000200`, service
+role only) returns one row — `(bev_id, outcome, inferred_from, similarity)` —
+and is called by the builder for every active Bev with no profile, before
+weights are computed. It copies the profile of the nearest **seeded,
+hand-labelled** Bev **in the same category** by embedding cosine, with brand
+match as the tie-break, and writes `source = 'inferred'`, `inferred_from` and
+`inferred_similarity`. **Below a cosine of 0.6 it writes nothing**: the Bev
+keeps no profile, its `profile` term stays 0, and it falls back to the category
+and brand terms. A wrong `base` would cost more than a missing one, because
+`profileSimilarity` weights `base` at 0.40.
+
+`outcome` is one of `inferred`, `below_floor`, `has_profile`, `no_embedding`,
+`no_candidate`, which is what the run's log reports per Bev. `inferred` on the
+table is a generated column over `source`, so a relabelling pass cannot leave
+the two disagreeing.
+
+### The sanity report
+
+Every run prints it, with **every component term**, not just the total:
 
 - Coca-Cola ↔ Pepsi ≥ 0.8
 - Coca-Cola ↔ a sparkling water < 0.4
 
-If either fails, the weights are wrong and the run should be treated as
-suspect even though it succeeded.
+Both pairs are weighed directly rather than looked up among the kept edges, so
+the report says what the formula gives even for the pair that is *expected* to
+fall below the threshold and therefore not to be stored.
 
-Failure is loud and safe: the job fails, Actions emails, `bev_edges` keeps
-yesterday's values, and the app does not notice.
+**A breach is printed loudly and does not fail the job by default.** M-24 (#86)
+derived what the second bound depends on: with today's flat categories that
+pair is `w = 0.135 + 0.30·emb`, so `< 0.4` holds only while the `gte-small`
+cosine stays `≤ 0.88` — a number no run has ever measured, because
+`bev_embeddings` is empty and the instance these thresholds were to be judged
+against has never answered. The first real run is a **measurement**, not a
+gate; failing on it would leave `bev_edges` empty to protect a threshold that
+is itself under review. `--strict` turns a breach into an exit 1, and belongs
+in the nightly workflow once the bounds have been re-derived against real
+vectors.
+
+Everything else is loud and safe the old way: the job fails, Actions emails,
+`bev_edges` keeps yesterday's values, and the app does not notice.
+
+### The nightly workflow
+
+`.github/workflows/graph-edges.yml` — `cron: "50 4 * * *"` (after the 04:20 UTC
+`refresh-user-category-stats` job; there is no function literally called
+`refresh_all_stats`) plus `workflow_dispatch` with `dry_run` and `strict`
+inputs. It needs:
+
+| Name | Where | Why |
+|---|---|---|
+| `SUPABASE_SERVICE_ROLE_KEY` | repository **secret** — **does not exist yet** | Reads every active Bev past RLS and calls the two service-role-only RPCs. |
+| `SUPABASE_URL` | repository **variable** (a same-named secret also works) | The project's REST origin. Not a secret. |
+
+A missing value **fails the run**: a preflight step exits 1 naming it, and the
+script refuses to start for the same reason. This is deliberate.
+`graph-keepalive.yml` has reported success every day since 2026-10-15 while
+doing nothing, because its script exits 0 with a warning when `NEO4J_URI` is
+unset and nobody ever set it. A warning in a log nobody opens is not a signal;
+a red X on a scheduled run is.
+
+```bash
+npm run graph:edges                 # rebuild bev_edges
+npm run graph:edges -- --dry-run    # write nothing; print the top-5 neighbours of
+                                    # Coca-Cola, Pepsi, Diet Coke, a matcha and Red Bull
+npm run graph:edges -- --strict     # also fail on a sanity-report breach
+npm run test:scripts                # the pure half, no database needed
+```
 
 ## Secrets
 
@@ -333,9 +481,9 @@ See `supabase/.env.example`.
 | `NEO4J_USERNAME` | same | same |
 | `NEO4J_PASSWORD` | same | same |
 | `NEO4J_DATABASE` | same, optional (`neo4j` is the default) | same |
-| `BEVI_PSEUDONYM_SALT` | **Actions secrets only** | the sync, for `(:User {pseudonym})` |
-| `SUPABASE_SERVICE_ROLE_KEY` | **Actions secrets only** | the sync, to read Postgres |
-| `SUPABASE_URL` | injected into Edge Functions; set explicitly in Actions | the sync |
+| `BEVI_PSEUDONYM_SALT` | **Actions secrets only** | the Neo4j sync, for `(:User {pseudonym})` |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Actions secret** — **not set yet** (`gh secret list` shows only `SUPABASE_ACCESS_TOKEN`); `supabase/.env` locally | **`graph-edges.yml` / `npm run graph:edges`**, to read Postgres past RLS and call the service-role RPCs; later the Neo4j sync |
+| `SUPABASE_URL` | injected into Edge Functions; an Actions **variable** (`vars`) for `graph-edges.yml`; `supabase/.env` locally. Not a secret | same |
 | `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_ID`, `SUPABASE_DB_PASSWORD` | Actions secrets (already used by `backend.yml`) | deploying the function and pushing migrations |
 
 No `NEO4J_*` value may ever reach `app/` or `packages/api`. The browser gets
@@ -369,17 +517,29 @@ right choice: a Bolt connection pool has nothing to pool.
 
 ## Known gaps at the time of writing
 
-- `bev_embeddings`, `bev_edges` and the `vector` extension **now exist** (the
-  section above), and so does the contract the app reads them through. What does
-  not exist is anything that **writes** them: the `embed` Edge Function, the
-  database webhook on `bevs`, `scripts/graph/sync.ts` and `graph-sync.yml` are
-  A-16 increment 1's second PR. Until that lands both tables are empty, every
-  RPC returns zero rows, `Bev.embedding` is unset on every node, and nothing in
-  the app breaks — which is the point. **The embedding writer now exists**
-  ("How embeddings are produced", above: the `embed` function, the `bevs`
-  trigger and the backfill), so `bev_embeddings` fills as soon as a deployer
-  sets the two database settings and runs the backfill; `bev_edges`,
-  `scripts/graph/sync.ts` and `graph-sync.yml` are still to come.
+- `bev_embeddings`, `bev_edges` and the `vector` extension exist, and so does
+  the contract the app reads them through (`20261019000500`, #115).
+- **The embedding writer exists and is deployed** ("How embeddings are
+  produced", above): the `embed` Edge Function, the async `bevs` triggers
+  (`20261023000100`, #117) and `scripts/graph/backfill-embeddings.ts`. The
+  function is deployed with `--no-verify-jwt` and `EMBED_WEBHOOK_SECRET` is
+  set on the project. Still outstanding before a vector exists for any Bev:
+  the two `bevi.embed_*` database settings (for the trigger) and one backfill
+  run (for the 378 existing Bevs).
+- **The edge writer exists but has never run:** `scripts/graph/build-edges.ts`,
+  `graph-edges.yml`, `20261023000200` (D-11 inference) and `20261023000300`
+  (the two service-role RPCs). No database was reachable from the branch it was
+  written on, and `SUPABASE_SERVICE_ROLE_KEY` is not an Actions secret yet, so
+  the first scheduled run will fail at its preflight — deliberately, and that
+  failure is the signal to add the secret. `bev_edges` is therefore still empty
+  on prod and every read RPC still returns zero rows, which the app handles.
+- Order matters: until the backfill has run, every `emb` term is 0, so weights
+  are understated by up to 0.30 and the Coke–Pepsi sanity figure is not
+  meaningful. The builder warns loudly when it finds Bevs without an embedding
+  rather than failing.
+- The **Neo4j** side of A-16 — steps 6, 8 and 9, `(:Bev)-[:SIMILAR_TO]`, the
+  `RANKED` mirror and `(:Meta).lastSyncAt` — is still unbuilt, and nothing
+  above depends on it. `Bev.embedding` is unset on every node.
 - `Bev.vessel` arrives with A-07; the flavour properties (`base`,
   `carbonated`, `caffeine`, `sweetness`, `dairy`, `alcohol`) with A-17.
 - `categories.parent_id`, and therefore `[:CHILD_OF]`, arrive with A-13 (D-04

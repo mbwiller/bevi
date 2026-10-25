@@ -1,0 +1,139 @@
+name: graph-edges
+
+# A-16 (1): the nightly rebuild of public.bev_edges (scripts/graph/build-edges.ts).
+#
+# NO NEO4J. This job reads Postgres and writes Postgres. A-16 steps 6, 8 and 9
+# -- the Cypher MERGE, the RANKED mirror and the (:Meta) keep-alive -- are a
+# later PR, and `bev_edges` is complete without them, so a paused or deleted
+# Aura instance cannot stop the app's similarity data from being rebuilt
+# (docs/graph.md, "the one rule"). `graph-keepalive.yml` keeps the instance
+# awake separately and is not touched by this workflow.
+#
+# ---------------------------------------------------------------------------
+# THE SECRET THIS NEEDS, WHICH DOES NOT EXIST YET
+# ---------------------------------------------------------------------------
+#   SUPABASE_SERVICE_ROLE_KEY   repository SECRET.  The service-role key of the
+#                               hosted project (Supabase dashboard > Project
+#                               Settings > API). It bypasses RLS, which is what
+#                               lets this job read every active Bev and call the
+#                               two service-role-only RPCs of 20261023000300.
+#                               `gh secret list` shows only SUPABASE_ACCESS_TOKEN
+#                               today, so this must be added before the first run.
+#
+#   SUPABASE_URL                repository VARIABLE (`vars`), not a secret: it is
+#                               the project's public REST origin, the same value
+#                               the app ships with. A secret of the same name is
+#                               accepted as a fallback for whoever prefers to set
+#                               it that way.
+#
+# Both are documented in docs/graph.md's secrets table and supabase/.env.example.
+#
+# ---------------------------------------------------------------------------
+# A MISSING SECRET FAILS LOUDLY. THAT IS THE POINT.
+# ---------------------------------------------------------------------------
+# `graph-keepalive.yml` has reported SUCCESS every single day since 2026-10-15
+# while doing nothing at all, because `scripts/graph/keepalive.ts` exits 0 with
+# a warning when NEO4J_URI is unset -- and nobody set it. Eight days of green
+# ticks over an instance no one had touched. A warning in a log nobody opens is
+# not a signal.
+#
+# So: the preflight step below exits 1 with the missing name when either value
+# is empty, BEFORE anything else runs, and `build-edges.ts` refuses to start for
+# the same reason. There is no skip path and no soft default. A red X on a
+# scheduled run is the only thing that reliably tells a human the pipeline is
+# not running.
+
+on:
+  schedule:
+    # 04:50 UTC, nightly. After the stats refreshes it should see the output of:
+    # `refresh-user-category-stats` runs at 04:20 UTC (20261019000100) and
+    # `refresh-global-stats` every 15 minutes (20261011000800). 30 minutes of
+    # clearance for a job that takes seconds.
+    #
+    # (TASKS.md says "after refresh_all_stats". There is no function by that
+    # name -- 20261019000100 says so explicitly -- and 04:20's
+    # refresh_all_user_category_stats is the nightly one it means.)
+    - cron: "50 4 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Read and weigh, write nothing, print the top-5 probes"
+        type: boolean
+        default: false
+      strict:
+        description: "Fail the job on a sanity-report breach (see build-edges.ts)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Two rebuilds at once would both call replace_bev_edges; the second would win
+# and the first would have been wasted work. Never cancel a run in progress:
+# it is one transaction and cancelling mid-write is the one way to get a
+# half-replaced mirror.
+concurrency:
+  group: graph-edges
+  cancel-in-progress: false
+
+jobs:
+  build-edges:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: credentials are present
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL || secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          missing=""
+          [ -n "$SUPABASE_URL" ] || missing="$missing SUPABASE_URL"
+          [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] || missing="$missing SUPABASE_SERVICE_ROLE_KEY"
+          if [ -n "$missing" ]; then
+            echo "::error::graph-edges cannot run: missing$missing."
+            echo ""
+            echo "Add them before the next scheduled run:"
+            echo "  gh secret set SUPABASE_SERVICE_ROLE_KEY   # the project's service-role key"
+            echo "  gh variable set SUPABASE_URL              # e.g. https://<project-ref>.supabase.co"
+            echo ""
+            echo "This step fails on purpose rather than skipping. graph-keepalive.yml has"
+            echo "reported success every day since 2026-10-15 while doing nothing, because it"
+            echo "exits 0 when its secrets are unset. See docs/graph.md."
+            exit 1
+          fi
+          echo "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set."
+
+      # `npm ci` is needed even though the script has no dependencies of its
+      # own: it imports @bevi/ranking, which npm workspaces expose as a symlink
+      # in node_modules. (graph-keepalive.yml skips `npm ci` for exactly the
+      # opposite reason -- keepalive.ts imports nothing but node: builtins.)
+      - run: npm ci
+
+      # The pure half of the job, tested without a database. Cheap, and it
+      # catches a bad @bevi/ranking bump before it reaches bev_edges.
+      - run: npm run test:scripts
+
+      - name: build edges
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL || secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          STRICT: ${{ inputs.strict }}
+        # `if`, not `[ … ] && …`: a false test is a non-zero exit status, and
+        # GitHub runs these steps under `bash -e`, so the shorthand would fail
+        # the step whenever the box was left unchecked.
+        run: |
+          args=""
+          if [ "$DRY_RUN" = "true" ]; then args="$args --dry-run"; fi
+          if [ "$STRICT" = "true" ]; then args="$args --strict"; fi
+          echo "running: npm run graph:edges --$args"
+          npm run graph:edges -- $args
