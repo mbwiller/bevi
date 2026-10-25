@@ -5,16 +5,20 @@ import { useRouter } from 'expo-router';
 import { useCallback, useMemo, type ReactElement, type RefObject } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { FOLLOW_MUTATION, flattenPages, useUserFeed, useUserRankings } from '@/api/hooks';
+import { FOLLOW_MUTATION, flattenPages, useMe, useTasteProfile, useUserFeed, useUserRankings } from '@/api/hooks';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { FeedPost } from '@/components/FeedPost';
 import { SegmentedTabs } from '@/components/SegmentedTabs';
 import { Skeleton } from '@/components/Skeleton';
+import { TasteProfile } from '@/components/TasteProfile';
 import { FeedPostItem } from '@/features/feed/FeedPostItem';
 import { PostCommentsSheet } from '@/features/feed/PostCommentsSheet';
 import { useFeedPostActions } from '@/features/feed/useFeedPostActions';
+import { categoryById } from '@/lib/categories';
 import { spacing, type, useTheme } from '@/theme';
+
+import { tasteReadout } from './tasteReadout';
 
 /** A row of the Activity list: a post (you and people you follow) or a plain ranking (anyone else). */
 export type ActivityRow = RankedBev | FeedItem;
@@ -52,7 +56,8 @@ export interface ActivityListProps {
 /**
  * The scrolling body of a profile: the header, Activity · Taste Profile tabs, then the user's
  * posts (`feed.listUser`, as the Feed shows them) for you and people you follow, else their rankings
- * (`rankings.listUser`) as plain FeedPosts; infinite scroll. Taste Profile is Phase 3.
+ * (`rankings.listUser`) as plain FeedPosts; infinite scroll. Taste Profile shows `stats.getTasteProfile`:
+ * the preference read-out over a TasteBar per category.
  */
 export function ActivityList({ profile, self, following = false, header, tab, onTab, onEmptyAction, onRefresh, listRef }: ActivityListProps) {
   const { colors } = useTheme();
@@ -70,6 +75,17 @@ export function ActivityList({ profile, self, following = false, header, tab, on
     [posts, postsQuery.data, rankingsQuery.data],
   );
   const data = tab === 'activity' ? items : [];
+  // Taste Profile: fetched only while its tab is open. The server already drops the alcoholic three
+  // unless viewer and owner are both 21+; dropping them here too keeps an under-21 viewer safe.
+  const canSeeAlcohol = useMe().data?.canSeeAlcohol ?? false;
+  const tasteQuery = useTasteProfile(tab === 'taste' ? profile.id : undefined);
+  const first = profile.displayName.split(' ')[0] || `@${profile.handle}`;
+  const tasteRows = useMemo(
+    () => (tasteQuery.data ?? []).filter((r) => canSeeAlcohol || !categoryById(r.categoryId)?.isAlcoholic),
+    [tasteQuery.data, canSeeAlcohol],
+  );
+  const readout = useMemo(() => tasteReadout(tasteRows, self ? undefined : first), [tasteRows, self, first]);
+  const shown = tab === 'taste' ? tasteQuery : query;
   const { renderItem: renderPost, commentsFor, closeComments, postGone, notice } = useFeedPostActions({ linkActors: false });
 
   const renderItem = useCallback(
@@ -98,14 +114,30 @@ export function ActivityList({ profile, self, following = false, header, tab, on
     </View>
   );
 
-  const first = profile.displayName.split(' ')[0] || `@${profile.handle}`;
   const empty =
     tab === 'taste' ? (
-      <EmptyState
-        icon="chart-no-axes-column"
-        title="Coming soon"
-        body={self ? 'Your taste profile will show up here.' : `${first}'s taste profile will show up here.`}
-      />
+      tasteQuery.isPending ? (
+        <View accessibilityLabel="Loading" testID="taste-skeleton" style={styles.tasteSkeleton}>
+          <Skeleton variant="text" />
+          <Skeleton variant="text" />
+          <Skeleton variant="text" />
+          <Skeleton variant="text" />
+        </View>
+      ) : tasteQuery.isError ? (
+        <ErrorState error={tasteQuery.error} onRetry={() => void tasteQuery.refetch()} />
+      ) : tasteRows.length > 0 ? (
+        <TasteProfile rows={tasteRows} readout={readout} />
+      ) : self ? (
+        <EmptyState
+          icon="chart-no-axes-column"
+          title="No taste profile yet"
+          body="Rank a few Bevs and your categories will show up here."
+          action="Rank your first Bev"
+          onAction={onEmptyAction}
+        />
+      ) : (
+        <EmptyState icon="chart-no-axes-column" title="No taste profile yet" body="Their taste profile will show up here." />
+      )
     ) : query.isPending ? (
       <View accessibilityLabel="Loading" testID="activity-skeleton">
         <Skeleton variant="post" />
@@ -144,9 +176,9 @@ export function ActivityList({ profile, self, following = false, header, tab, on
           if (tab === 'activity' && query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage();
         }}
         onEndReachedThreshold={0.5}
-        refreshing={query.isRefetching && !query.isFetchingNextPage}
+        refreshing={shown.isRefetching && !query.isFetchingNextPage}
         onRefresh={() => {
-          void query.refetch();
+          void shown.refetch();
           onRefresh?.();
         }}
       />
@@ -158,5 +190,6 @@ export function ActivityList({ profile, self, following = false, header, tab, on
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   foot: { height: spacing.xxl },
+  tasteSkeleton: { gap: spacing.lg, paddingVertical: spacing.md, paddingHorizontal: spacing.gutter },
   notice: { paddingHorizontal: spacing.gutter, paddingVertical: spacing.sm },
 });

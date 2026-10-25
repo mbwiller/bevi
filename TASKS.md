@@ -17,7 +17,7 @@ Source: `CONVERSATION-2.md` (raw transcript). This file turns that conversation 
 |---|---|---|---|---|---|
 | **A-15 fix (urgent)** | **Done 2026-10-24.** The instance is `bevi-graph-db`; the four `NEO4J_*` secrets are set in GitHub Actions and in the Supabase project, `scripts/graph/schema.cypher` is applied, and `(:Meta).lastKeepAliveAt` was written. The keep-alive's ten green runs were all no-ops (`NEO4J_URI is not set`), and a scheme regex that could not match `neo4j+s://` meant it would have failed anyway — fixed in this PR, so dispatch `graph-keepalive` once it merges | Arjun | **Done** | — | Everything on the graph |
 | **A-14** | Leaderboard parity in SQL (prior, fallback, total order) | Arjun | **#107**, rebased on main, reviewed three ways. Merges once `20261019000200` is on prod. Follow-ups are listed under A-14 in §4 | — | M-22's cross-check |
-| **M-19** | Taste Profile screen | Matt | **Ready** | — | — |
+| **M-19** | Taste Profile screen | Matt | **Built in `ui/taste-profile`, PR pending** | — | — |
 | **D-04** | The finer category list, `design/taxonomy.md` (high effort), **plus the 378 catalog Bevs assigned to leaves** | Matt | **Ready** | — | A-13, then M-21 |
 | **M-22** | Maths review: paper ↔ `@bevi/ranking` ↔ SQL | Matt | **Ready** | — | Any A-14 follow-ups |
 | **M-26 export** | Run `packages/ranking/eval/export.sql` on prod and hand Matt the file (outside the repo) | Arjun | **Ready**, about 15 min | — | Real baseline numbers for M-27 and A-16 |
@@ -506,6 +506,9 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - Replace the "Coming soon" tab (`app/src/features/profile/ActivityList.tsx`) with the simple definition from the session: a bar list of **your average score per category** ("Coffee 8.1 · 9 ranked"), ordered high to low, with a one-line read-out ("You prefer coffee and boba over soda"). The §6.20 calendar and share card can come later.
 - Needs: S-12, A-11.
 - DoD: renders from `stats.getTasteProfile`, hides categories with no rankings, works on another user's profile.
+- **Done in `ui/taste-profile` (PR pending):**
+  - Design step: `TasteBar`, `TasteProfile` and `ProgressBar`'s `tone` (first commit). App: `components/TasteBar.tsx`, `components/TasteProfile.tsx`, `ProgressBar` `tone`, and `features/profile/tasteReadout.ts` (pure; 3 rankings and a 1.0 gap, from the paper's Definition (Taste Profile), at most two categories named).
+  - `useTasteProfile(userId)` with key `keys.stats.tasteProfile(id)` under `stats.all`, so `invalidateAfterRankingChange` (rank, re-rank, remove) and a birthdate change refresh it. The tab fetches only while open; Skeleton, ErrorState with Retry, EmptyState ("No taste profile yet" / "Their taste profile will show up here."); alcoholic rows are also dropped client-side when the viewer can't see alcohol. Works on your own and other profiles; `?tab=taste` kept.
 
 **M-24 · Edge-weight formulas in `packages/ranking`.** `rank/edge-weight` (decision 30)
 - Add, pure and vector-tested: `treeSimilarity(catA, catB, taxonomy)` (Wu–Palmer over `Category.parentId`), `profileSimilarity(a, b)` (eq. 17 in the paper: base family 0.40, carbonation 0.15, dairy 0.10, alcohol 0.05, caffeine closeness 0.15, sweetness closeness 0.15), `embeddingSimilarity(a, b)` (cosine clamped at 0), `edgeWeight({ tree, content, emb, profile, cop })` with `EDGE_WEIGHTS = { tree: 0.25, content: 0.15, emb: 0.30, profile: 0.30, cop: 0 }`, and `topEdges(candidates, k = 20, min = 0.3)`. Types for `FlavorProfile` and `Taxonomy`. New `edges.vectors.json` (golden vectors, including Coke–Pepsi and Coke–sparkling-water), `RANKING_VERSION` bump.

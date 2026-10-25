@@ -35,6 +35,8 @@ export const keys = {
     user: (id: string) => [...root, 'stats', 'user', id] as const,
     /** Under `stats.all`, so `invalidateAfterRankingChange` refreshes it. */
     categoryProgress: () => [...root, 'stats', 'categoryProgress'] as const,
+    /** `stats.getTasteProfile(userId)`; also under `stats.all`. */
+    tasteProfile: (userId: string) => [...root, 'stats', 'tasteProfile', userId] as const,
   },
 
   follows: {

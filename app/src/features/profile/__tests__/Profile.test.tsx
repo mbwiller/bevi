@@ -108,11 +108,6 @@ describe('own profile', () => {
     expect(screen.getByLabelText('Current streak, Rank today to start')).toBeTruthy();
   });
 
-  it('Taste Profile is coming soon', async () => {
-    await open('/profile?tab=taste');
-    expect(await screen.findByText('Coming soon')).toBeTruthy();
-  });
-
   it('edits the display name in the sheet; the username is read-only', async () => {
     await open('/profile');
     await fireEvent.press(await screen.findByLabelText('Edit profile'));
