@@ -4,24 +4,24 @@ Your queue from 2026-10-19 on. Arjun's is in [`NEXT-ARJUN.md`](NEXT-ARJUN.md). T
 
 **Your lane:** `app/`, `packages/ranking/`, `design/`. Branches are `ui/*` and `rank/*`.
 
-## Start now: nothing blocks these
+## Wave of 2026-10-24: where it stands
 
-| Order | Task | What "done" means | Unblocks |
-|---|---|---|---|
-| 1 | **M-19 · Taste Profile screen** | Profile › Taste Profile shows your average score per category as bars, high to low ("Coffee 8.1 · 9 ranked"), with a one-line read-out ("You prefer coffee and boba over soda"). Categories with no rankings are hidden. It works on anyone's profile, and the server already drops alcoholic categories for under-21s. Design-system component first. Data: `stats.getTasteProfile(userId)`, live since #101 | — |
-| 2 | **D-04 · The finer category list** (high effort) | `design/taxonomy.md`: two levels, today's 15 categories as parents, leaves where it matters (coffee, tea, boba, soda, beer, cocktails first), lined up with the flavour-profile `base` words. **Also assign every one of the 378 catalog Bevs to a leaf**, as a slug → leaf table Arjun can load. Without that, the tree is only a list. Arjun reviews | **Arjun's A-13**, then your M-21 |
-| 3 | **M-22 · Maths review** | Check the paper (`docs/bevi-ranking-math.tex`), `@bevi/ranking` and the SQL against each other (use the `ranking-math` agent and the golden vectors). Include Arjun's #107 (`bayes_prior`, the leaderboard order). Output a list of corrections split by lane: paper and package fixes are yours, SQL fixes go to Arjun | Any A-14 follow-ups for Arjun |
+| Task | State |
+|---|---|
+| **M-19 · Taste Profile** | **Done in #125** |
+| **M-04 · Explore** | **Done in #129** |
+| **M-27 (b) · "Bevs like this"** | **Done in #126** (live: the graph has 4669 edges) |
+| **M-22 · Maths review** | **Done in #128.** Paper fixed; the package list and the SQL list (A-14 follow-ups) are under M-22 in TASKS.md |
+| **D-04 · Taxonomy + 378 leaf assignments** | **#127, waiting on Arjun's review.** 60 leaves under 13 parents; `water` and `sports` unsplit; a Bev may sit on a parent |
+| **M-28 · Taste formulas** | **PR waiting on Arjun's approval** (it changes `shared/fixtures`). `RANKING_VERSION` 1.3.0, which also carries M-22's `compareCodePoints` fix. Pearson in Layer 2 ships off |
 
-M-19 and D-04 can run in parallel. D-04 should not slip, because it's the one item in your lane that blocks Arjun.
+## Next: in this order
 
-## Then: these wait on Arjun
-
-| Task | Waits on (Arjun) | What you build |
+| Task | Waits on | What "done" means |
 |---|---|---|
-| **M-04 · Explore screen** | **S-04 + A-04** (the Explore backend) | An Explore segment on the Feed. Posts are **read-only** (D-15): reuse the plain post a stranger's Activity already renders, with no heart, counts or comments; tapping opens the Bev. A Follow button on the author. Paginates, with an empty state |
-| **M-27 · Use the Bev graph** | **A-16 (1) + S-14 part 2** (the Bev graph and its contract) | (a) Layer 1's content-similarity term reads `bev_edges` weights, behind a flag. Bump `RANKING_VERSION`, regenerate the vectors and add a row to the paper's §11. Compare against the M-26 baseline before switching it on. (b) A "Bevs like this" row on Bev detail from `bevs.similar()` |
-| **M-21 · Category-aware placement** | **A-13** (after your D-04) and **A-16 (1)** | The two-phase binary search from LaTeX §10.1. Same `PlacementResult`, so `submit_ranking` is untouched |
-| **M-28 · Taste formulas** | A-16 (1) merged | Pure TypeScript in `packages/ranking/src/graph.ts`: `tasteVector`, `attributeSimilarity`, `blendUserSimilarity`, plus the Pearson fix in `layer2.ts`. **Blocks Arjun's A-16 (2)** |
+| **M-27 (a) · Edge weights in recommendations** | M-28 merged (it takes `RANKING_VERSION` 1.4.0) | Layer 1's content term reads `bev_edges` weights through `bevs.similarities`, behind a flag that ships **off**. #122 showed the M-26 export is too thin to be a baseline (3 users, 27 rankings), so the switch-on comparison waits for more data; the PR attaches the synthetic report instead |
+| **M-22 package follow-ups** (`rank/m22-fixes`) | M-28 merged | The two golden vectors M-22 asked for (a `bayesianAverage` case on a .xx5 boundary; a `streakFromTimestamps` case written as events), and a decision on `effectiveCategoryStats` and `byCategoryMean` (keep with a note, or drop). Can ride with M-27 (a)'s bump |
+| **M-21 · Category-aware placement** | **A-13** (after D-04 merges) | The two-phase binary search from LaTeX §10.1, with D-04's parent-level rule (a Bev on a parent is "kind unknown") |
 
 ## Later: P2, after P0 and P1
 
@@ -34,9 +34,9 @@ M-19 and D-04 can run in parallel. D-04 should not slip, because it's the one it
 
 | You hand Arjun | So he can |
 |---|---|
-| D-04's tree **plus the 378-Bev leaf assignment** | Build A-13 (the hierarchy in Postgres and Neo4j) |
-| M-22's SQL corrections, if any | Fix them as A-14 follow-ups |
-| M-28's taste formulas | Build A-16 (2), the taste graph |
+| D-04's tree **plus the 378-Bev leaf assignment** (#127, his review) | Build A-13 (the hierarchy in Postgres and Neo4j) |
+| M-22's SQL corrections (#128: two are wrong on prod today, streak history and stale `bayes_score`) | Fix them as A-14 follow-ups |
+| M-28's taste formulas (his approval) | Build A-16 (2), the taste graph |
 | A review of every FakeApi / conformance hunk in his PRs (they live in your lane) | Merge his combined PRs |
 | Advance warning of any `@bevi/ranking` formula or constant change | Re-run the graph sync; his edge weights come from `edgeWeight()` |
 

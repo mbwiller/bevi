@@ -467,8 +467,8 @@
   },
   "lastChange": {
     "by": "Matt Willer",
-    "at": "2026-10-19T17:46:14Z",
-    "via": "Claude Code (re-sync from mbwiller/bevi main @ b51ebf5)",
-    "note": "M-06 follow-ups, M-12 (one secondary line, no price on rows), M-08 ProgressStrip/ProgressBar/CollectionSheet, M-15 Search tab (ScreenSearch, ScreenSearchResults replace ScreenAddBev; map icon), M-05 BevOfCard replaces Featured on the Feed."
+    "at": "2026-10-25T03:30:31Z",
+    "via": "Claude Code (re-sync from mbwiller/bevi main @ c14dfda)",
+    "note": "M-19 TasteBar/TasteProfile and the ProgressBar tone (#125), M-27 (b) Bevs like this on ScreenBevDetail (#126), M-04 Explore segment on ScreenFeed and FeedPost following/onFollow, actions shown only with handlers (#129). Also carries #111's AvatarPicker."
   }
 }
