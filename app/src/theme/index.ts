@@ -3,7 +3,7 @@ import { useColorScheme } from 'react-native';
 import { colors, elevation, type ColorScheme, type Colors } from './tokens';
 
 export * from './tokens';
-export { scoreColor } from './score';
+export { scoreColor, type ScoreColorName } from './score';
 
 export interface Theme {
   scheme: ColorScheme;

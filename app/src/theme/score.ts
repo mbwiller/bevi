@@ -2,7 +2,10 @@ import { bucketForScore, type Bucket } from '@bevi/ranking';
 
 import type { ColorName } from './tokens';
 
-const BUCKET_COLOR: Record<Bucket, ColorName> = {
+/** The three score-band colour tokens. */
+export type ScoreColorName = Extract<ColorName, 'scoreHigh' | 'scoreMid' | 'scoreLow'>;
+
+const BUCKET_COLOR: Record<Bucket, ScoreColorName> = {
   LOVED: 'scoreHigh',
   FINE: 'scoreMid',
   DISLIKED: 'scoreLow',
@@ -14,6 +17,6 @@ const BUCKET_COLOR: Record<Bucket, ColorName> = {
  * displayed (one decimal), as the design system does, so "7.0" is always green; the 7 / 4 edges come
  * from @bevi/ranking's `bucketForScore`, never a local copy.
  */
-export function scoreColor(score: number, bucket?: Bucket): ColorName {
+export function scoreColor(score: number, bucket?: Bucket): ScoreColorName {
   return BUCKET_COLOR[bucket ?? bucketForScore(Math.round(score * 10) / 10)];
 }
