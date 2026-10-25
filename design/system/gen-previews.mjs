@@ -190,6 +190,25 @@ h('div', { className: 'pv-narrow' },
   h(B.ProfileListRow, { icon: 'bookmark', iconFilled: true, label: 'Want to Try', count: 7 }),
   h(B.ProfileListRow, { icon: 'heart', label: 'Recommended for you' }))`];
 
+P.TasteBar = [{ group: 'People', height: 250, width: 393, subtitle: 'Score band colours' }, `.tb { padding: 12px 16px; }`, `
+h('div', { className: 'tb' },
+  h(B.TasteBar, { categoryId: 'coffee', mean: 8.1, rankingCount: 9 }),
+  h(B.TasteBar, { categoryId: 'boba', mean: 7.9, rankingCount: 4 }),
+  h(B.TasteBar, { categoryId: 'tea', mean: 6.3, rankingCount: 3 }),
+  h(B.TasteBar, { categoryId: 'soda', mean: 3.8, rankingCount: 5 }))`];
+
+P.TasteProfile = [{ group: 'People', height: 520, width: 393, subtitle: 'Read-out over the bars' }, `.cap { margin: 0 16px; padding-top: 16px; font-size: 12px; line-height: 16px; color: var(--textSecondary); }`, `
+h('div', { className: 'pv-narrow' },
+  h(B.TasteProfile, { readout: 'You prefer coffee and boba over soda', rows: [
+    { categoryId: 'coffee', mean: 8.1, rankingCount: 9 },
+    { categoryId: 'boba', mean: 7.9, rankingCount: 4 },
+    { categoryId: 'tea', mean: 6.3, rankingCount: 3 },
+    { categoryId: 'soda', mean: 3.8, rankingCount: 5 }] }),
+  h('p', { className: 'cap' }, 'No pair with 3+ rankings and a gap of 1: no read-out'),
+  h(B.TasteProfile, { rows: [
+    { categoryId: 'juice', mean: 7.2, rankingCount: 2 },
+    { categoryId: 'water', mean: 6.8, rankingCount: 1 }] }))`];
+
 // ---------- Actions ----------
 P.Pill = [{ group: 'Actions', height: 120 }, '', `
 h('div', { className: 'pv' },

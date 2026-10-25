@@ -197,12 +197,12 @@ export function SortToggle({ label = 'Score', onClick, onSearch, className }) {
   );
 }
 
-/** A 4pt track in `input` with a `primary` fill: a share you've earned (ProgressStrip, CollectionSheet). Decorative; its parent says the number. */
-export function ProgressBar({ value = 0, className }) {
+/** A 4pt track in `input` with a `primary` fill: a share you've earned (ProgressStrip, CollectionSheet). `tone` recolours the fill with a score band (TasteBar). Decorative; its parent says the number. */
+export function ProgressBar({ value = 0, tone = 'primary', className }) {
   const pct = Math.max(0, Math.min(1, value)) * 100;
   return (
     <span className={cx('bv-progress-track', className)} aria-hidden="true">
-      <span className="bv-progress-fill" style={{ width: pct + '%' }} />
+      <span className={cx('bv-progress-fill', tone !== 'primary' && 'bv-progress-fill-' + tone)} style={{ width: pct + '%' }} />
     </span>
   );
 }

@@ -249,6 +249,18 @@
 .bv-progress-chev { flex: none; color: var(--textSecondary); }
 .bv-progress-track { display: block; height: 4px; overflow: hidden; border-radius: var(--radius-pill); background: var(--input); }
 .bv-progress-fill { display: block; height: 100%; border-radius: var(--radius-pill); background: var(--primary); }
+.bv-progress-fill-scoreHigh { background: var(--scoreHigh); }
+.bv-progress-fill-scoreMid { background: var(--scoreMid); }
+.bv-progress-fill-scoreLow { background: var(--scoreLow); }
+.bv-taste { display: flex; flex-direction: column; gap: var(--space-sm); padding: var(--space-md) var(--space-gutter); background: var(--surface); }
+.bv-taste-readout { margin: 0 0 var(--space-xs); color: var(--text); }
+.bv-taste-list { display: flex; flex-direction: column; gap: var(--space-sm); }
+.bv-taste-bar { display: flex; flex-direction: column; justify-content: center; gap: var(--space-xs); width: 100%; min-height: var(--size-target); padding: var(--space-xs) 0; }
+.bv-taste-top { display: flex; align-items: center; gap: var(--space-sm); }
+.bv-taste-label { display: flex; flex: 1; min-width: 0; align-items: center; gap: var(--space-sm); color: var(--text); }
+.bv-taste-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bv-taste-value { flex: none; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--textSecondary); }
+.bv-taste-score { color: var(--band); }
 .bv-collection-sum { padding: 0 var(--space-gutter) var(--space-md); text-align: center; font-variant-numeric: tabular-nums; }
 .bv-collection-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); }
 .bv-collection-row { display: flex; align-items: center; gap: var(--space-lg); width: 100%; min-height: 64px; padding: var(--space-sm) var(--space-gutter);

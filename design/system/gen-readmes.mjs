@@ -157,10 +157,21 @@ const R = {
 - The percentage rounds **down** and never reads a misleading 0%: "<1%" once anything is tried, "0%" when nothing is. An empty category drops the percentage.
 - The bar is \`input\` with a \`primary\` fill, because it is a share you earned (the README's rule for grape). It is decorative; the line and the spoken label carry the number ("Soda, 4 of 61 tried, 6 percent. Show your collection").
 - While the numbers load, a one-line Skeleton holds the strip's place; if they fail, the strip is left out rather than showing a wrong count.`,
-  ProgressBar: `A 4pt progress track in \`input\` with a \`primary\` fill: a share you earned. Used by the ProgressStrip and the CollectionSheet.
+  ProgressBar: `A 4pt progress track in \`input\` with a \`primary\` fill: a share you earned. Used by the ProgressStrip, the CollectionSheet and the TasteBar.
 
-- Provide: \`value\` 0–1 (clamped).
+- Provide: \`value\` 0–1 (clamped), \`tone\` ("primary" by default; "scoreHigh", "scoreMid" or "scoreLow" fill it in a score band, which only the TasteBar does).
 - Decorative and hidden from screen readers: the text beside it always says the number.`,
+  TasteBar: `One category of a Taste Profile: its icon and label, "8.1 · 9 ranked" on the right and a 4pt bar under it filled to the average score out of 10.
+
+- Provide: \`categoryId\` (icon and label come from \`Bevi.categories\`), \`mean\` (0–10, the user's average score there), \`rankingCount\`.
+- The score and the bar take the score band's colour (7 and up \`scoreHigh\`, 4 and up \`scoreMid\`, else \`scoreLow\`); " · 9 ranked" stays \`textSecondary\`. The number always shows, so colour is never the only signal.
+- Not a button: a 44pt row that a screen reader hears as one sentence, "Coffee, average 8.1, 9 ranked".`,
+  TasteProfile: `The Taste Profile tab's block (Profile, next to Activity): an optional one-line read-out over a TasteBar per category, high to low, on the 16pt gutter.
+
+- Provide: \`rows\` (\`{ categoryId, mean, rankingCount }\`, from \`stats.getTasteProfile(userId)\`, already sorted by mean, highest first) and \`readout\`. It neither sorts nor writes the read-out, so the app owns both; empty \`rows\` render nothing and the screen shows its EmptyState.
+- Read-out rule (the ranking paper's Taste Profile definition): "You prefer coffee and boba over soda" (or "Matt prefers…") appears only when both categories have 3 or more rankings and their means differ by at least 1. Without such a pair the line is left out.
+- Categories the user hasn't ranked are not in \`rows\`; the alcoholic three never reach an under-21 viewer, or a viewer looking at an under-21 profile.
+- Loading is a Skeleton, a failed load is an ErrorState with retry, and a user with no rankings gets "No taste profile yet" (their own) or "Their taste profile will show up here."`,
   CollectionSheet: `"Your collection": a 90% Sheet with every category the viewer can see, in catalog order, each with its icon, "9 of 40" and the same 4pt bar.
 
 - Provide: \`rows\` (\`{ categoryId, ranked, total }\`: the contract's \`CategoryProgress\`, from \`stats.getCategoryProgress()\`), \`onSelect\` (called with the \`categoryId\`), \`onClose\`. Categories with nothing in them are left out; the alcoholic three never reach an under-21 viewer.
@@ -248,7 +259,7 @@ const S = {
   ScreenBevDetail: `Bev detail (no reference): BevImage 155, name, brand, category and PriceTier; two stat cards (Bevi score with "5k ratings" under it, "You'd rate it" predicted); friends who've had it; Rank it and Want to Try Pills.
 
 - Not enough rankings: the second bubble is \`locked\` with "Rank 3 Bevs to see your prediction".`,
-  ScreenProfile: `Profile tab (ref 02, 03): name Header, Avatar 100, handle, counts, the outlined Button row, three ProfileListRows, two StatCards, Activity · Taste Profile tabs, then your FeedPosts.`,
+  ScreenProfile: `Profile tab (ref 02, 03): name Header, Avatar 100, handle, counts, the outlined Button row, three ProfileListRows, two StatCards, Activity · Taste Profile tabs, then your FeedPosts. The Taste Profile tab swaps the posts for a TasteProfile: the read-out over the category bars.`,
   ScreenLeaderboard: `Leaderboard tab (no reference): centred "LEADERBOARD", Bevs · People tabs, the category scope, then numbered BevRows with the Bev's image (\`showImage\`) and the Bayesian score; "Your score 7.6" (or "Not ranked yet") in the meta line, with no rating count.
 
 - People tab: UserRows with rank, points, Bevs and streak; your own row pinned and highlighted.`,
