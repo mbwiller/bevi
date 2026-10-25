@@ -20,7 +20,8 @@
     "graph:schema": "node --experimental-strip-types scripts/graph/apply-schema.ts",
     "graph:keepalive": "node --experimental-strip-types scripts/graph/keepalive.ts",
     "graph:backfill-embeddings": "node --experimental-strip-types scripts/graph/backfill-embeddings.ts",
-    "graph:edges": "node --experimental-strip-types scripts/graph/build-edges.ts"
+    "graph:edges": "node --experimental-strip-types scripts/graph/build-edges.ts",
+    "graph:verify": "node --experimental-strip-types scripts/graph/verify-pipeline.ts"
   },
   "overrides": {
     "react": "19.2.3"

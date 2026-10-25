@@ -31,7 +31,11 @@
 -- src_bev_id and the other with anchor as dst_bev_id: every lookup below has
 -- to find both.
 begin;
-select plan(57);
+-- Section 9 and the four CHECK assertions in section 1 are the hygiene sweep
+-- (20261025000400): the `weight` and `components` CHECKs, a non-active ANCHOR
+-- for get_bev_similarities, the two `on delete cascade` paths from `bevs`, and
+-- list_bucket_bevs' new row cap. 57 -> 65.
+select plan(65);
 
 -- ---------------------------------------------------------------------------
 -- People
@@ -208,6 +212,51 @@ select throws_ok(
   null,
   'and the same CHECK forbids a self-edge'
 );
+-- The other two CHECKs on the table -- `weight >= 0 and weight <= 1` and
+-- `jsonb_typeof(components) = 'object'` (20261019000500:115, 120) -- shipped
+-- unasserted. `replace_bev_edges` validates both in plpgsql before it writes
+-- (20261025000100:68-69), so these constraints are what stands behind any
+-- writer that does NOT go through that RPC: the backfill, a Studio session, a
+-- future sync job. Both are unnamed, so the assertion is on the SQLSTATE.
+select throws_ok(
+  $$ insert into public.bev_edges (src_bev_id, dst_bev_id, weight, components, version)
+     select a.id, u.id, 1.5, '{}'::jsonb, '1.2.0'
+       from (select id from t_bevs where label = 'anchor') a,
+            (select id from t_bevs where label = 'upper') u $$,
+  '23514',
+  null,
+  'the weight CHECK rejects a weight above 1'
+);
+select throws_ok(
+  $$ insert into public.bev_edges (src_bev_id, dst_bev_id, weight, components, version)
+     select a.id, u.id, -0.25, '{}'::jsonb, '1.2.0'
+       from (select id from t_bevs where label = 'anchor') a,
+            (select id from t_bevs where label = 'upper') u $$,
+  '23514',
+  null,
+  'and a weight below 0: edgeWeight() clamps to [0, 1] and so does the column'
+);
+-- A jsonb array and a jsonb scalar are both `not null` and both valid jsonb,
+-- so `not null` alone would accept them; `EdgeComponents` is an object and the
+-- component breakdown is read by key.
+select throws_ok(
+  $$ insert into public.bev_edges (src_bev_id, dst_bev_id, weight, components, version)
+     select a.id, u.id, 0.5, '[]'::jsonb, '1.2.0'
+       from (select id from t_bevs where label = 'anchor') a,
+            (select id from t_bevs where label = 'upper') u $$,
+  '23514',
+  null,
+  'the components CHECK rejects a jsonb array'
+);
+select throws_ok(
+  $$ insert into public.bev_edges (src_bev_id, dst_bev_id, weight, components, version)
+     select a.id, u.id, 0.5, '0.5'::jsonb, '1.2.0'
+       from (select id from t_bevs where label = 'anchor') a,
+            (select id from t_bevs where label = 'upper') u $$,
+  '23514',
+  null,
+  'and a jsonb scalar: components is an object or nothing'
+);
 select ok(
   not has_function_privilege('anon', 'public.get_bev_similarities(uuid, uuid[])', 'execute')
   and not has_function_privilege('anon', 'public.get_similar_bevs(uuid, int)', 'execute')
@@ -373,6 +422,19 @@ select is(
      array[(select id from t_bevs where label = 'hidden')])),
   0,
   'a pair whose other end is not active is dropped, heavy edge and all'
+);
+-- The mirror image of the line above, and the gap #115's review named: the
+-- `others` CTE filters the NEIGHBOURS and the `anchor` CTE filters the ANCHOR,
+-- they are separate predicates, and only the first was covered. `hidden` is
+-- status 'hidden' and its 0.99 edge to the anchor does exist (it is asserted
+-- present from the owner's side in section 8), so zero rows here is the anchor
+-- filter doing its job and not a missing row.
+select is(
+  (select count(*)::int from public.get_bev_similarities(
+     (select id from t_bevs where label = 'hidden'),
+     array[(select id from t_bevs where label = 'anchor')])),
+  0,
+  'a non-active ANCHOR is zero rows too, not only a non-active neighbour'
 );
 select is(
   (select count(*)::int from public.get_bev_similarities(
@@ -669,6 +731,76 @@ select is(
 select is(
   (select count(*)::int from public.bev_embeddings), 1,
   'and only the non-alcoholic Bev''s embedding'
+);
+
+-- ---------------------------------------------------------------------------
+-- 9. on delete cascade from bevs, and list_bucket_bevs' row cap
+-- ---------------------------------------------------------------------------
+-- Both tables' FKs to `bevs(id)` declare `on delete cascade`
+-- (20261019000500:63, 109-110) and neither was asserted. It matters: A-12's
+-- merge path removes a Bev's node and edges, and a moderation hard-delete
+-- would otherwise raise 23503 and fail instead of taking the derived rows with
+-- it. These are written as the owner, like the fixture block above.
+
+reset role;
+
+with ins as (
+  insert into public.bevs (name, brand, flavor, category_id, price_tier, status, source, photo_path)
+  values ('pgTAP Edge Cascade', null, null, 'soda', 2, 'active', 'user', 'pgtap/edge-cascade.jpg')
+  returning id
+)
+insert into t_bevs (label, id) select 'cascade', id from ins;
+
+insert into public.bev_embeddings (bev_id, embedding)
+select id, ('[' || (select string_agg('0.05', ',') from generate_series(1, 384)) || ']')::extensions.vector(384)
+  from t_bevs where label = 'cascade';
+
+insert into public.bev_edges (src_bev_id, dst_bev_id, weight, components, version)
+select least(a.id, c.id), greatest(a.id, c.id), 0.77,
+       '{"tree": 1, "content": 0.5, "emb": 0.4, "profile": 0.5, "cop": 0}'::jsonb, '1.2.0'
+  from (select id from t_bevs where label = 'anchor') a,
+       (select id from t_bevs where label = 'cascade') c;
+
+delete from public.bevs where id = (select id from t_bevs where label = 'cascade');
+
+select is(
+  (select count(*)::int from public.bev_edges
+    where src_bev_id = (select id from t_bevs where label = 'cascade')
+       or dst_bev_id = (select id from t_bevs where label = 'cascade')),
+  0,
+  'deleting a Bev cascades to every bev_edges row it is an endpoint of'
+);
+select is(
+  (select count(*)::int from public.bev_embeddings
+    where bev_id = (select id from t_bevs where label = 'cascade')),
+  0,
+  'and to its bev_embeddings row'
+);
+
+-- The row cap added by 20261025000400. `list_bucket_bevs` returned the
+-- caller's whole bucket, however large; it now stops at 500, ordered by
+-- `position`, so a heavy user gets their 500 best rather than an unbounded
+-- result. ed003's only other ranking is in bucket 3, so bucket 1 is this
+-- fixture and nothing else, and 505 rows in means the answer is the cap rather
+-- than the bucket.
+insert into public.bevs (name, category_id, price_tier, status, source, photo_path)
+select 'pgTAP Edge Cap ' || lpad(g::text, 4, '0'), 'soda', 2, 'active', 'user',
+       'pgtap/edge-cap-' || g || '.jpg'
+  from generate_series(1, 505) g;
+
+insert into public.rankings (user_id, bev_id, bucket, position, score)
+select '00000000-0000-4000-8000-0000000ed003', b.id, 1::smallint,
+       (row_number() over (order by b.name) - 1)::int, 5.00
+  from public.bevs b
+ where b.name like 'pgTAP Edge Cap %';
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000ed003", "role": "authenticated"}';
+
+select is(
+  (select count(*)::int from public.list_bucket_bevs(1::smallint)),
+  500,
+  'list_bucket_bevs stops at 500 rows server-side, though the caller has 505 in the bucket'
 );
 
 reset role;

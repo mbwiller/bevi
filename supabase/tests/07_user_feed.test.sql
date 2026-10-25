@@ -184,3 +184,9 @@ select throws_ok(
 
 reset role;
 select * from finish();
+-- The only file in supabase/tests/ that used to end here, leaving the `begin;`
+-- above to be undone by the client disconnecting. `supabase test db` does
+-- abort, so nothing leaked -- but an explicit rollback is what the other
+-- fourteen files do, and it is what makes running this file by hand in psql,
+-- or twice in one session, safe.
+rollback;

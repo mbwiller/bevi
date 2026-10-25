@@ -111,3 +111,4 @@ M-20 duplicate step ◀───────────────── S-13 
 - Turn on `deploy-dev` (automatic migrations on merge), or keep pushing by hand.
 - Drop `backup.feed_events_20261014`.
 - Update `DEVELOPMENT-MATT.md` §5, §6.8 and §6.16 (they still describe Add Bev and the Bevs · People tabs).
+- **`npm run graph:verify`** (new, `20261025000400` + `scripts/graph/verify-pipeline.ts`): run it after the backfill and after `graph:edges` — it is the one command that tells you whether the Vault secrets, the embed triggers, `bev_embeddings` coverage and `bev_edges` (non-empty, `RANKING_VERSION`, canonical orientation) are actually configured rather than assumed, and it exits non-zero when they are not. The same PR is the hygiene sweep: the `truncate` revokes, `list_bucket_bevs`' 500-row cap, `cardinality()`, and the pgTAP gaps.
