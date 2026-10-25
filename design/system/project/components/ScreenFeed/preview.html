@@ -62,9 +62,9 @@
     h('div', { className: 'bv-bevof-pair' },
       h(B.BevOfCard, { period: 'day', bev: BEVS.horchata, score: 8.9 }),
       h(B.BevOfCard, { period: 'week', bev: BEVS.topo, score: 8.4 })),
-    h(B.SectionHeader, { title: 'Your feed' }),
-    h(B.FeedPost, { actor: ARJUN, bev: BEVS.horchata, score: 9.5, time: '5 hours ago', liked: true, likeCount: 4, note: 'cinnamon-forward, not too sweet. best thing on the block',
-      commentCount: 2, comments: [{ author: FRIENDS[1], body: 'ok this is going on my list' }, { author: ME, body: 'the truck or the one on 3rd?' }] }))),
+    h(B.SegmentedTabs, { tabs: [{ id: 'feed', label: 'Your feed' }, { id: 'explore', label: 'Explore' }], value: 'explore' }),
+    h(B.FeedPost, { actor: FRIENDS[2], bev: BEVS.matcha, score: 8.2, time: '2 days ago', note: 'oat milk, half sweet. the only one I order now', onFollow: function () {} }),
+    h(B.FeedPost, { actor: FRIENDS[5], bev: BEVS.coldBrew, score: 9.1, time: '5 hours ago', following: true, onFollow: function () {} }))),
   h('div', { className: 'tabbar' }, h(B.TabBar, { active: 'feed', user: ME }))));
 </script>
 </body>

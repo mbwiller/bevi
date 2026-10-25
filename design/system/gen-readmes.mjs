@@ -124,7 +124,10 @@ const R = {
 - One list sorted by score: buckets show through the bubble colour, not as sections.`,
   FeedPost: `A ranking in the Feed and on Profile › Activity: "**Arjun** Bev'd **Horchata**", meta line, ScoreBubble, a 155pt photo strip, notes and actions.
 
-- Provide: \`actor\` (or \`you\` for "You"), \`bev\`, \`score\`, \`note\`, \`time\` ("5 hours ago", "Wednesday"), \`saved\`, \`liked\`, \`likeCount\`, \`comments\`, \`commentCount\`, \`onLike\`, \`onComment\`, \`onRank\`, \`onSave\`, \`onOpen\`.
+- Provide: \`actor\` (or \`you\` for "You"), \`bev\`, \`score\`, \`note\`, \`time\` ("5 hours ago", "Wednesday"), \`saved\`, \`liked\`, \`likeCount\`, \`comments\`, \`commentCount\`, \`onLike\`, \`onComment\`, \`onRank\`, \`onSave\`, \`onOpen\`, and in Explore \`following\` and \`onFollow\`.
+- Each action shows only with its handler: no \`onLike\` means no heart and no double-tap, no \`onComment\` no comment icon, and likewise Rank it and Want to Try.
+- **The plain post** is a read-only ranking by someone you don't follow (Explore, and a stranger's Profile › Activity): head, photo strip and note, with no heart, no counts, no comments and no Rank it or Want to Try. Tapping the photo opens the Bev. Likes and comments stay between followers (D-15).
+- **In Explore the plain post carries the author's Follow pill** (\`onFollow\`), UserRow's pill: filled \`primary\` "Follow", outlined "Following" once tapped, its accessible name "Follow" plus the author's name. It leads the action group, where the heart sits on a feed post, so a plain post and an Explore post are the same height.
 - A post is always a ranking. Saving a Bev is not a post; the filled bookmark shows you already have it saved.
 - The meta line under the name is the category icon and the brand (the category's name when there's no brand). No price on a post (D-06).
 - Action row: the time on the left; on the right the LikeButton and the CommentButton, then Rank it and Want to Try. Heart and comment lead the group because they are about the post, while Rank and Want to Try are about the Bev.
@@ -228,10 +231,11 @@ const R = {
 };
 
 const S = {
-  ScreenFeed: `Feed tab (ref 01, 12): Header with the wordmark and Find people, the filled SearchBar, Bev of the day and Bev of the week side by side (BevOfCard), then "YOUR FEED" FeedPosts, over the TabBar.
+  ScreenFeed: `Feed tab (ref 01, 12): Header with the wordmark and Find people, the filled SearchBar, Bev of the day and Bev of the week side by side (BevOfCard), then SegmentedTabs "Your feed · Explore" and that segment's FeedPosts, over the TabBar.
 
-- Following nobody: an EmptyState under YOUR FEED ("Follow friends to see their Bevs" + Find people); the Bev of the day and week stay.
-- Each post carries the heart and the comment bubble; up to seven comments show under the action row, more collapse to "View all N comments".
+- The tabs replace the YOUR FEED section header, in the same place: under the Bev of the day and week, which stay on both segments. Text tabs (\`underline-text\`), as on Your lists and the Leaderboard. "Your feed" is the default.
+- **Your feed:** followed people's rankings, newest first. Each post carries the heart and the comment bubble; up to seven comments show under the action row, more collapse to "View all N comments". Following nobody: an EmptyState under the tabs ("Follow friends to see their Bevs" + Find people).
+- **Explore:** rankings by people you don't follow yet, up to two follows away (everyone while Bevi is small), the most liked first rather than the newest. Each is the plain post (no heart, counts or comments) with the author's Follow pill. A followed author's posts stay, marked "Following", until Explore reloads; then they move to Your feed. Nothing yet: an EmptyState with \`sparkles\` ("Nothing popular yet", "Popular Bevs from people you don't follow show up here").
 - Dropped from Beli: quick-action pills, the composer, the invite card.`,
   ScreenYourLists: `Your Lists › Bev'd (ref 06): centred "YOUR LISTS" Header, ListScopeDropdown, SegmentedTabs, the FilterPill row, the ProgressStrip ("All Bevs · 37 of 378 tried · 9%"), SortToggle, then numbered BevRows sorted by score.
 
