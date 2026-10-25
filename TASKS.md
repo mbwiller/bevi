@@ -15,7 +15,7 @@ Source: `CONVERSATION-2.md` (raw transcript). This file turns that conversation 
 
 | Task | What | Owner | Status | Blocked by | Unblocks |
 |---|---|---|---|---|---|
-| **A-15 fix (urgent)** | **The Neo4j keep-alive has never run.** All of its daily runs since 2026-10-15 logged `NEO4J_URI is not set; graph keep-alive skipped`: the `NEO4J_*` GitHub Actions secrets are empty. Resume the instance in the Aura console if it's paused, set the four secrets (and the Supabase function secrets), and re-run `graph-keepalive` by hand. **Aura deletes an instance after 30 days paused** | Arjun | **Do first** | — | Everything on the graph |
+| **A-15 fix (urgent)** | **Done 2026-10-24.** The instance is `bevi-graph-db`; the four `NEO4J_*` secrets are set in GitHub Actions and in the Supabase project, `scripts/graph/schema.cypher` is applied, and `(:Meta).lastKeepAliveAt` was written. The keep-alive's ten green runs were all no-ops (`NEO4J_URI is not set`), and a scheme regex that could not match `neo4j+s://` meant it would have failed anyway — fixed in this PR, so dispatch `graph-keepalive` once it merges | Arjun | **Done** | — | Everything on the graph |
 | **A-14** | Leaderboard parity in SQL (prior, fallback, total order) | Arjun | **#107**, rebased on main, reviewed three ways. Merges once `20261019000200` is on prod. Follow-ups are listed under A-14 in §4 | — | M-22's cross-check |
 | **M-19** | Taste Profile screen | Matt | **Ready** | — | — |
 | **D-04** | The finer category list, `design/taxonomy.md` (high effort), **plus the 378 catalog Bevs assigned to leaves** | Matt | **Ready** | — | A-13, then M-21 |

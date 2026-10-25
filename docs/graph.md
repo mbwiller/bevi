@@ -496,15 +496,22 @@ See `supabase/.env.example`.
 | `NEO4J_URI` | Supabase secrets, Actions secrets, `supabase/.env` | `graph-query`, `graph:schema`, `graph:keepalive`, the sync |
 | `NEO4J_USERNAME` | same | same |
 | `NEO4J_PASSWORD` | same | same |
-| `NEO4J_DATABASE` | same, optional (`neo4j` is the default) | same |
+| `NEO4J_DATABASE` | same; optional only in the sense that it defaults to `neo4j`, which is wrong for our instance, so it is always set | same |
 | `BEVI_PSEUDONYM_SALT` | **Actions secrets only** | the Neo4j sync, for `(:User {pseudonym})` |
-| `SUPABASE_SERVICE_ROLE_KEY` | **Actions secret** — **not set yet** (`gh secret list` shows only `SUPABASE_ACCESS_TOKEN`); `supabase/.env` locally | **`graph-edges.yml` / `npm run graph:edges`**, to read Postgres past RLS and call the service-role RPCs; later the Neo4j sync |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Actions secret** — set 2026-10-24; `supabase/.env` locally | **`graph-edges.yml` / `npm run graph:edges`**, to read Postgres past RLS and call the service-role RPCs; later the Neo4j sync |
 | `SUPABASE_URL` | injected into Edge Functions; an Actions **variable** (`vars`) for `graph-edges.yml`; `supabase/.env` locally. Not a secret | same |
 | `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_ID`, `SUPABASE_DB_PASSWORD` | Actions secrets (already used by `backend.yml`) | deploying the function and pushing migrations |
 
 No `NEO4J_*` value may ever reach `app/` or `packages/api`. The browser gets
 the publishable key and nothing else. Aura shows the password exactly once, at
 instance creation — save the credentials file outside the repo.
+
+The live instance is `bevi-graph-db`, created 2026-10-24 in the Aura project
+`c03f2541-d8b6-4cf4-8383-a0d3d8be8c04`. Its credentials file sets
+`NEO4J_USERNAME` and `NEO4J_DATABASE` to the instance id rather than to
+`neo4j`, so both must be read from that file and neither may be assumed. The
+schema in `scripts/graph/schema.cypher` is applied, and `(:Meta).lastKeepAliveAt`
+was written by hand the same day.
 
 ## Access paths
 

@@ -11,7 +11,8 @@
  *
  * Credentials come from the environment (supabase/.env locally, GitHub Actions
  * secrets in CI): NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD, and optionally
- * NEO4J_DATABASE (Aura Free's single database is `neo4j`). Never hardcode
+ * NEO4J_DATABASE (the database name from Aura's credentials file, which on a
+ * current Free instance is the instance id, not `neo4j`). Never hardcode
  * them; see docs/graph.md.
  *
  * Every statement in the file is idempotent, so re-running is a no-op.
@@ -44,7 +45,7 @@ export function parseStatements(raw: string): string[] {
  * twice.
  */
 export function queryApiUrl(uri: string, database: string): string {
-  const host = uri.replace(/^[a-z+]+:\/\//, "").replace(/\/.*$/, "").replace(/:\d+$/, "");
+  const host = uri.replace(/^[a-z][a-z0-9+.-]*:\/\//, "").replace(/\/.*$/, "").replace(/:\d+$/, "");
   return `https://${host}/db/${database}/query/v2`;
 }
 

@@ -14,7 +14,7 @@
     "typecheck": "npm run typecheck --workspaces --if-present && npm run typecheck:scripts",
     "typecheck:scripts": "tsc -p scripts/tsconfig.json",
     "test": "npm run test --workspaces --if-present && npm run test:scripts",
-    "test:scripts": "node --experimental-strip-types --test scripts/graph/edges-core.test.ts",
+    "test:scripts": "node --experimental-strip-types --test scripts/graph/*.test.ts",
     "catalog:validate": "node --experimental-strip-types scripts/catalog/validate.ts",
     "catalog:migration": "node --experimental-strip-types scripts/catalog/build-seed-migration.ts",
     "graph:schema": "node --experimental-strip-types scripts/graph/apply-schema.ts",
