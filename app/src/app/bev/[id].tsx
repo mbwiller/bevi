@@ -17,6 +17,7 @@ import { PriceTier } from '@/components/PriceTier';
 import { Skeleton } from '@/components/Skeleton';
 import { BevStats, FriendsRow } from '@/features/bev/BevStats';
 import { ReportSheet } from '@/features/bev/ReportSheet';
+import { SimilarBevs } from '@/features/bev/SimilarBevs';
 import { categoryById } from '@/lib/categories';
 import { useBack } from '@/lib/useBack';
 import { radius, size, spacing, type, useTheme } from '@/theme';
@@ -163,6 +164,8 @@ export default function BevDetailScreen() {
             Nutrition label
           </Pill>
         ) : null}
+
+        <SimilarBevs bevId={bev.id} />
 
         {bev.createdBy ? (
           <Text style={[type.caption, styles.center, styles.footer, { color: colors.textSecondary }]}>
