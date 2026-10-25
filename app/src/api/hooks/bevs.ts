@@ -41,6 +41,21 @@ export function useStarterCandidates() {
   return useQuery({ queryKey: keys.bevs.starterCandidates(), queryFn: () => api.bevs.getStarterCandidates(), staleTime: Infinity });
 }
 
+/** How many neighbours "Bevs like this" shows on Bev detail. */
+export const SIMILAR_BEVS_COUNT = 5;
+
+/**
+ * "Bevs like this": the heaviest `bev_edges` neighbours of a Bev, most similar first, age-filtered and active
+ * only. Empty (not an error) when the Bev has no edges, so the caller renders the row only when non-empty.
+ */
+export function useSimilarBevs(bevId: string | undefined, n: number = SIMILAR_BEVS_COUNT) {
+  return useQuery({
+    queryKey: keys.bevs.similar(bevId ?? '', n),
+    queryFn: () => api.bevs.similar(bevId!, n),
+    enabled: !!bevId,
+  });
+}
+
 /** Age-filtered categories. */
 export function useCategories() {
   return useQuery({ queryKey: keys.categories(), queryFn: () => api.categories.list(), staleTime: Infinity });

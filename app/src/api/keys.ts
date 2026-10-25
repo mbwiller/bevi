@@ -54,6 +54,7 @@ export const keys = {
     search: (q: string, categoryId?: CategoryId) => [...root, 'bevs', 'search', q, categoryId ?? null] as const,
     duplicates: (input: FindDuplicatesInput) => [...root, 'bevs', 'duplicates', input] as const,
     starterCandidates: () => [...root, 'bevs', 'starterCandidates'] as const,
+    similar: (bevId: string, n: number) => [...root, 'bevs', 'similar', bevId, n] as const,
   },
 
   rankings: {
