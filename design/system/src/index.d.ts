@@ -151,14 +151,19 @@ export interface FeedPostProps {
   liked?: boolean;
   /** Likes on the post, beside the heart; hidden at 0. */
   likeCount?: number;
-  /** Toggles the like from the heart. A double-tap outside the photo strip calls it only when not yet liked. */
+  /** Toggles the like from the heart. A double-tap outside the photo strip calls it only when not yet liked. Without it the post has no heart and no double-tap. */
   onLike?: () => void;
   /** Comments on the post (the contract's first seven, oldest first), shown inline as "**handle** text" while `commentCount` ≤ 7. */
   comments?: PostComment[];
   /** All comments on the post: beside the comment icon (hidden at 0); above 7 the post shows "View all N comments" instead of the list. */
   commentCount?: number;
-  /** Opens the comments sheet (the comment icon and "View all N comments"). */
+  /** Opens the comments sheet (the comment icon and "View all N comments"). Without it the post has no comment icon. */
   onComment?: () => void;
+  /** The viewer follows the author: the Follow pill is outlined "Following". */
+  following?: boolean;
+  /** Shows the author's Follow pill (UserRow's) at the start of the action group, where the heart sits on a feed post. Explore only. */
+  onFollow?: () => void;
+  /** Without `onRank` / `onSave` the post has no Rank it / Want to Try action. */
   onRank?: () => void; onSave?: () => void; onOpen?: () => void; divider?: boolean; className?: string;
 }
 export declare function FeedPost(props: FeedPostProps): React.ReactElement;

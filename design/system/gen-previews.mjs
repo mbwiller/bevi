@@ -306,21 +306,28 @@ h('div', { className: 'pv-narrow', style: { display: 'flex', flexDirection: 'col
   h(B.TabBar, { active: 'profile', user: ME }))`];
 
 // ---------- Feed ----------
-P.FeedPost = [{ group: 'Feed', height: 1180, width: 393, subtitle: 'Double-tap a post to like it' }, '', `
+P.FeedPost = [{ group: 'Feed', height: 1640, width: 393, subtitle: 'Double-tap a post to like it' }, '.pv-mat { margin: 0; padding: 20px 16px 0; }', `
 h(function Demo() {
   var a = React.useState(false), aOn = a[0], setA = a[1];
   var b = React.useState(true), bOn = b[0], setB = b[1];
+  var c = React.useState(false), cOn = c[0], setC = c[1];
+  // A post shows each action (heart, comment, Rank it, Want to Try) only with its handler.
+  var NOOP = function () {};
+  var ACTIONS = { onLike: NOOP, onComment: NOOP, onRank: NOOP, onSave: NOOP };
   return h('div', { className: 'pv-narrow' },
-    h(B.FeedPost, { actor: ARJUN, bev: BEVS.horchata, score: 9.5, time: '5 hours ago', liked: aOn, likeCount: aOn ? 4 : 3, onLike: function () { setA(!aOn); },
+    h(B.FeedPost, { actor: ARJUN, bev: BEVS.horchata, score: 9.5, time: '5 hours ago', liked: aOn, likeCount: aOn ? 4 : 3, onLike: function () { setA(!aOn); }, onComment: NOOP, onRank: NOOP, onSave: NOOP,
       comments: [
         { author: FRIENDS[1], body: 'ok this is going on my list' },
         { author: ME, body: 'the one on 3rd ave or the truck?' },
         { author: ARJUN, body: 'the truck, always the truck' }],
       commentCount: 3,
       note: "went back with my mom and she pulled out a sleeper: the cinnamon is way stronger than the dining hall one and it's not too sweet. honestly the best thing on this whole block, and it costs less than a cold brew. getting two next time" }),
-    h(B.FeedPost, { actor: FRIENDS[0], bev: BEVS.brownSugar, score: 7.8, saved: true, time: 'Wednesday', liked: bOn, likeCount: bOn ? 12 : 11, onLike: function () { setB(!bOn); },
+    h(B.FeedPost, { actor: FRIENDS[0], bev: BEVS.brownSugar, score: 7.8, saved: true, time: 'Wednesday', liked: bOn, likeCount: bOn ? 12 : 11, onLike: function () { setB(!bOn); }, onComment: NOOP, onRank: NOOP, onSave: NOOP,
       comments: [{ author: FRIENDS[2], body: 'tiger sugar > everything' }], commentCount: 12 }),
-    h(B.FeedPost, { actor: FRIENDS[3], bev: BEVS.topo, score: 6.1, time: 'Monday', likeCount: 1 }));
+    h(B.FeedPost, Object.assign({ actor: FRIENDS[3], bev: BEVS.topo, score: 6.1, time: 'Monday', likeCount: 1 }, ACTIONS)),
+    h('p', { className: 'pv-label pv-mat' }, "Explore: the plain post (no heart, counts or comments) with the author's Follow pill"),
+    h(B.FeedPost, { actor: FRIENDS[2], bev: BEVS.matcha, score: 8.2, time: '2 days ago', note: 'oat milk, half sweet. the only one I order now',
+      following: cOn, onFollow: function () { setC(!cOn); } }));
 })`];
 
 // ---------- Ranking ----------
@@ -423,9 +430,9 @@ P.ScreenFeed = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHO
     h('div', { className: 'bv-bevof-pair' },
       h(B.BevOfCard, { period: 'day', bev: BEVS.horchata, score: 8.9 }),
       h(B.BevOfCard, { period: 'week', bev: BEVS.topo, score: 8.4 })),
-    h(B.SectionHeader, { title: 'Your feed' }),
-    h(B.FeedPost, { actor: ARJUN, bev: BEVS.horchata, score: 9.5, time: '5 hours ago', liked: true, likeCount: 4, note: 'cinnamon-forward, not too sweet. best thing on the block',
-      commentCount: 2, comments: [{ author: FRIENDS[1], body: 'ok this is going on my list' }, { author: ME, body: 'the truck or the one on 3rd?' }] }))`)];
+    h(B.SegmentedTabs, { tabs: [{ id: 'feed', label: 'Your feed' }, { id: 'explore', label: 'Explore' }], value: 'explore' }),
+    h(B.FeedPost, { actor: FRIENDS[2], bev: BEVS.matcha, score: 8.2, time: '2 days ago', note: 'oat milk, half sweet. the only one I order now', onFollow: function () {} }),
+    h(B.FeedPost, { actor: FRIENDS[5], bev: BEVS.coldBrew, score: 9.1, time: '5 hours ago', following: true, onFollow: function () {} }))`)];
 
 P.ScreenYourLists = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHONE_CSS + `.top { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; } .filters { display: flex; gap: 10px; padding: 12px 16px 4px; overflow: hidden; }`, phone('lists', `
   h(F, null,
@@ -494,16 +501,12 @@ h('div', { className: 'phone' },
     h('div', { className: 'gc-btns' }, h(B.BucketButton, { bucket: 'loved', selected: true }), h(B.BucketButton, { bucket: 'fine' }), h(B.BucketButton, { bucket: 'disliked' })),
     h('p', { className: 'caption bv-meta gc-hint' }, "Next, you'll compare it with Bevs you've already ranked.")))`];
 
-P.ScreenBevDetail = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHONE_CSS + `
-  .bd-hero { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px 16px 16px; text-align: center; }
-  .bd-cat { display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; }
-  .bd-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 10px; }
-  .bd-stat { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-stat); text-align: center; }
-  .bd-friends { display: flex; align-items: center; justify-content: space-between; padding: 18px 16px; }
-  .bd-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px; }
-  .bd-btns > * { width: 100%; justify-content: center; height: 44px; }`, phone('lists', `
+// Bev detail scrolls: the first phone is the top of the screen, the second is the same screen
+// scrolled to "Bevs like this" (M-27), with the Header held in place as it is in the app.
+const bevDetailScreen = (scrollY) => `
   h(F, null,
     h(B.Header, { onBack: function () {}, actions: [{ icon: 'ellipsis', label: 'More' }] }),
+    h('div', { className: 'bd-clip' }, h('div', { style: { transform: 'translateY(-${scrollY}px)' } },
     h('div', { className: 'bd-hero' },
       h(B.BevImage, { size: 155, art: BEVS.horchata.art, alt: 'Horchata' }),
       h('h1', { className: 'screenTitle', style: { marginTop: 12 } }, 'Horchata'),
@@ -516,7 +519,29 @@ P.ScreenBevDetail = [{ group: 'Screens', height: 852, width: 393, isPage: true }
       h('div', null, h('p', { className: 'heading' }, "Friends who've had it"), h('p', { className: 'body bv-meta' }, 'Arjun 9.5 · Jack 8.1 · 2 more')),
       h(B.AvatarStack, { people: [ARJUN, FRIENDS[0], FRIENDS[1], FRIENDS[2]], max: 3 })),
     h('div', { className: 'bd-btns' }, h(B.Pill, { variant: 'filled', icon: 'circle-plus' }, 'Rank it'), h(B.Pill, { variant: 'outlined', icon: 'bookmark' }, 'Want to Try')),
-    h('p', { className: 'caption bv-meta', style: { padding: '24px 16px', textAlign: 'center' } }, 'Added by @acheema5'))`)];
+    h('div', { className: 'bd-like' },
+      h(B.SectionHeader, { title: 'Bevs like this' }),
+      h(B.BevRow, { bev: BEVS.brownSugar, showImage: true, actions: false, score: 8.5, count: 5120 }),
+      h(B.BevRow, { bev: BEVS.matcha, showImage: true, actions: false, score: 8.2, count: 1840 }),
+      h(B.BevRow, { bev: BEVS.coldBrew, showImage: true, actions: false, score: 7.9, count: 903 }),
+      h(B.BevRow, { bev: BEVS.poppi, showImage: true, actions: false, score: 7.4, count: 212 }),
+      h(B.BevRow, { bev: BEVS.oj, showImage: true, actions: false, scoreVariant: 'locked', count: 2, divider: false })),
+    h('p', { className: 'caption bv-meta', style: { padding: '24px 16px', textAlign: 'center' } }, 'Added by @acheema5'))))`;
+
+P.ScreenBevDetail = [{ group: 'Screens', height: 852, width: 802, isPage: true }, PHONE_CSS + `
+  .bd-pair { display: flex; gap: 16px; align-items: flex-start; }
+  .bd-clip { height: 636px; overflow: hidden; }
+  .bd-hero { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px 16px 16px; text-align: center; }
+  .bd-cat { display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; }
+  .bd-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 10px; }
+  .bd-stat { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-stat); text-align: center; }
+  .bd-friends { display: flex; align-items: center; justify-content: space-between; padding: 18px 16px; }
+  .bd-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px; }
+  .bd-btns > * { width: 100%; justify-content: center; height: 44px; }
+  .bd-like { margin-top: 24px; }`, `
+  h('div', { className: 'bd-pair' },
+    ${phone('lists', bevDetailScreen(0))},
+    ${phone('lists', bevDetailScreen(560))})`];
 
 P.ScreenProfile = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHONE_CSS + `
   .pf-id { display: flex; flex-direction: column; align-items: center; padding-top: 1px; }
@@ -543,7 +568,8 @@ P.ScreenProfile = [{ group: 'Screens', height: 852, width: 393, isPage: true }, 
       h(B.ProfileListRow, { icon: 'heart', label: 'Recommended for you' })),
     h('div', { className: 'pf-stats' }, h(B.StatCard, { icon: 'trophy', label: 'Rank on Bevi', value: '#12' }), h(B.StatCard, { icon: 'flame', label: 'Current Streak', value: '4 days' })),
     h(B.SegmentedTabs, { variant: 'underline-icon', tabs: [{ id: 'activity', label: 'Activity', icon: 'file-text' }, { id: 'taste', label: 'Taste Profile', icon: 'chart-no-axes-column' }], value: 'activity' }),
-    h(B.FeedPost, { you: true, actor: ME, bev: BEVS.dietCoke, score: 9.3, time: 'Wednesday', likeCount: 6, note: 'the fountain one at the dining hall hits different' }))`)];
+    h(B.FeedPost, { you: true, actor: ME, bev: BEVS.dietCoke, score: 9.3, time: 'Wednesday', likeCount: 6, note: 'the fountain one at the dining hall hits different',
+      onLike: function () {}, onComment: function () {}, onSave: function () {} }))`)];
 
 P.ScreenLeaderboard = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHONE_CSS + `.top { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; }`, phone('leaderboard', `
   h(F, null,

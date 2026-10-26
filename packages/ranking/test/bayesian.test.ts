@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bayesianAverage, BAYES_C, categoryPrior, globalPrior, leaderboardOrder } from '../src/index.ts';
+import { bayesianAverage, BAYES_C, categoryPrior, compareCodePoints, globalPrior, leaderboardOrder } from '../src/index.ts';
 
 describe('bayesianAverage: DEVELOPMENT-MATT §8.7 worked example (m = 6.0, C = 3)', () => {
   const prior = { m: 6, C: BAYES_C };
@@ -44,5 +44,35 @@ describe('leaderboardOrder', () => {
         { bevId: 'upper', bayes: 7, n: 2, name: 'Zevia' },
       ]),
     ).toEqual(['upper', 'lower']);
+  });
+
+  it('orders an astral name after U+E000–U+FFFF names, as collate "C" does (fixed in 1.3.0)', () => {
+    // JS `<` compares UTF-16 code units: "😀" is \uD83D\uDE00, which sorts before \uFF23 and \uFFFD.
+    const rows = [
+      { bevId: 'emoji', bayes: 7, n: 3, name: '😀 Soda' }, // U+1F600
+      { bevId: 'replacement', bayes: 7, n: 3, name: '\uFFFD Soda' }, // U+FFFD
+      { bevId: 'fullwidth', bayes: 7, n: 3, name: 'Ｃｏｌａ' }, // U+FF23 …
+      { bevId: 'ascii', bayes: 7, n: 3, name: 'Zevia' },
+    ];
+    expect('😀 Soda' < '\uFFFD Soda').toBe(true); // the code-unit order this replaces
+    expect(leaderboardOrder(rows)).toEqual(['ascii', 'fullwidth', 'replacement', 'emoji']);
+    expect(leaderboardOrder([...rows].reverse())).toEqual(['ascii', 'fullwidth', 'replacement', 'emoji']);
+  });
+});
+
+describe('compareCodePoints', () => {
+  it.each([
+    ['equal', 'Coke', 'Coke', 0],
+    ['ASCII', 'Coke', 'Sprite', -1],
+    ['case: uppercase first', 'Zevia', 'arizona', -1],
+    ['prefix is smaller', 'Coke', 'Coke Zero', -1],
+    ['empty is smallest', '', 'a', -1],
+    ['U+FFFD before U+1F600', '\uFFFD', '😀', -1],
+    ['U+E000 before U+10000', '\uE000', '\u{10000}', -1],
+    ['two astral characters', '😀', '😁', -1],
+    ['astral then more text', '😀a', '😀b', -1],
+  ])('%s', (_name, a, b, expected) => {
+    expect(compareCodePoints(a, b)).toBe(expected);
+    expect(compareCodePoints(b, a)).toBe(-expected || 0);
   });
 });

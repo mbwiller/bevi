@@ -12,6 +12,7 @@ import {
   useFeed,
   useFollow,
   useMe,
+  useSetBirthDate,
   useSignIn,
   useSubmitRanking,
   useUser,
@@ -106,4 +107,21 @@ it('useSubmitRanking invalidates the bucket list the placement flow reads', asyn
       .then(() => undefined),
   );
   await waitFor(() => expect(bucket.result.current.data).toEqual([bevId, ...before]));
+});
+
+it('useSetBirthDate refreshes the age-filtered feed, Activity and Explore', async () => {
+  await api.signIn({ username: 'tester', password: 'tester-pass-1' });
+  const { client, wrapper } = setup();
+  const me = await api.profile.getMe();
+  // Turning 21: the server would now let alcoholic posts through.
+  jest.spyOn(api.profile, 'setBirthDate').mockResolvedValue({ ...me, birthdate: '2000-01-01', canSeeAlcohol: true });
+  const empty = { pages: [{ items: [], nextCursor: null }], pageParams: [undefined] };
+  for (const queryKey of [keys.feed(), keys.feedUser(me.id), keys.explore()]) client.setQueryData(queryKey, empty);
+
+  const set = await renderHook(() => useSetBirthDate(), { wrapper });
+  await act(() => set.result.current.mutateAsync('2000-01-01').then(() => undefined));
+  for (const queryKey of [keys.feed(), keys.feedUser(me.id), keys.explore()]) {
+    expect(client.getQueryState(queryKey)?.isInvalidated).toBe(true);
+  }
+  jest.restoreAllMocks();
 });

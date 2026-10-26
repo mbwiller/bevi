@@ -1,5 +1,5 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
-import { isApiError, type CategoryId, type FeedItem } from '@bevi/shared';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData, type QueryClient } from '@tanstack/react-query';
+import { isApiError, type CategoryId, type ExplorePost, type FeedItem, type Page } from '@bevi/shared';
 
 import { api } from '../client';
 import { keys } from '../keys';
@@ -25,8 +25,39 @@ export function useUserFeed(userId: string | undefined) {
 }
 
 /**
+ * Explore (M-04): read-only posts by people the caller doesn't follow, most popular first, 20 per
+ * page; fetched only while `enabled` (the Explore segment is open). The server's cursor freezes the
+ * order for the rest of a sequence, so the list never reshuffles under the reader: no refetch on
+ * window focus or on reconnect, and a follow only marks it stale (`settleFollow`). `restartExplore`
+ * starts over.
+ */
+export function useExplore({ enabled = true }: { enabled?: boolean } = {}) {
+  return useInfiniteQuery({
+    queryKey: keys.explore(),
+    queryFn: ({ pageParam }) => api.feed.getExplore({ cursor: pageParam, limit: 20 }),
+    ...cursorPaging,
+    enabled,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+}
+
+/**
+ * Pull to refresh on Explore: a fresh sequence. Every page but the first is dropped, then the first
+ * is fetched again with no cursor, so new posts and the latest order come in and no page from the
+ * old sequence (whose cursor froze the old order) is kept or merged.
+ */
+export function restartExplore(qc: QueryClient): Promise<void> {
+  qc.setQueryData<InfiniteData<Page<ExplorePost>, string | undefined>>(keys.explore(), (d) =>
+    d && d.pages.length > 1 ? { pages: d.pages.slice(0, 1), pageParams: d.pageParams.slice(0, 1) } : d,
+  );
+  return qc.refetchQueries({ queryKey: keys.explore(), exact: true });
+}
+
+/**
  * Every cache that holds FeedItems, by key prefix. `keys.feedUser` sits under `keys.feed()`, so the
- * one prefix covers the feed and every person's Activity; a later FeedItem list (Explore, M-04) joins here.
+ * one prefix covers the feed and every person's Activity. Explore (`keys.explore()`) is not here:
+ * its posts are read-only ExplorePosts, with nothing to like or comment on (D-15).
  */
 export const FEED_ITEM_PREFIXES = [keys.feed()];
 

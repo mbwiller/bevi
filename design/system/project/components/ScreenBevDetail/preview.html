@@ -1,4 +1,4 @@
-<!-- @dsCard group="Screens" height=852 width=393 page -->
+<!-- @dsCard group="Screens" height=852 width=802 page -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -25,13 +25,16 @@
   .gutter { padding: 0 16px; }
   .center { display: flex; flex-direction: column; align-items: center; text-align: center; }
 
+  .bd-pair { display: flex; gap: 16px; align-items: flex-start; }
+  .bd-clip { height: 636px; overflow: hidden; }
   .bd-hero { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px 16px 16px; text-align: center; }
   .bd-cat { display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; }
   .bd-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 10px; }
   .bd-stat { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-stat); text-align: center; }
   .bd-friends { display: flex; align-items: center; justify-content: space-between; padding: 18px 16px; }
   .bd-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px; }
-  .bd-btns > * { width: 100%; justify-content: center; height: 44px; }</style>
+  .bd-btns > * { width: 100%; justify-content: center; height: 44px; }
+  .bd-like { margin-top: 24px; }</style>
 </head>
 <body>
 <div id="root"></div>
@@ -60,11 +63,14 @@
   var ARJUN = { name: 'Arjun Cheema', handle: 'acheema5' };
   var FRIENDS = [{ name: 'Jack Torres', handle: 'jackt' }, { name: 'Priya Nair', handle: 'priya' }, { name: 'Sam Okafor', handle: 'samo' }, { name: 'Lena Park', handle: 'lenap' }, ARJUN, { name: 'Diego Ruiz', handle: 'dr' }];
 
-  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'phone' },
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'bd-pair' },
+    
+h('div', { className: 'phone' },
   h('div', { className: 'status' }, '9:41', h('span', { className: 'status-r' }, h('span', { className: 'batt' }, h('i')))),
   h('div', { className: 'scroll' }, 
   h(F, null,
     h(B.Header, { onBack: function () {}, actions: [{ icon: 'ellipsis', label: 'More' }] }),
+    h('div', { className: 'bd-clip' }, h('div', { style: { transform: 'translateY(-0px)' } },
     h('div', { className: 'bd-hero' },
       h(B.BevImage, { size: 155, art: BEVS.horchata.art, alt: 'Horchata' }),
       h('h1', { className: 'screenTitle', style: { marginTop: 12 } }, 'Horchata'),
@@ -77,8 +83,43 @@
       h('div', null, h('p', { className: 'heading' }, "Friends who've had it"), h('p', { className: 'body bv-meta' }, 'Arjun 9.5 · Jack 8.1 · 2 more')),
       h(B.AvatarStack, { people: [ARJUN, FRIENDS[0], FRIENDS[1], FRIENDS[2]], max: 3 })),
     h('div', { className: 'bd-btns' }, h(B.Pill, { variant: 'filled', icon: 'circle-plus' }, 'Rank it'), h(B.Pill, { variant: 'outlined', icon: 'bookmark' }, 'Want to Try')),
-    h('p', { className: 'caption bv-meta', style: { padding: '24px 16px', textAlign: 'center' } }, 'Added by @acheema5'))),
-  h('div', { className: 'tabbar' }, h(B.TabBar, { active: 'lists', user: ME }))));
+    h('div', { className: 'bd-like' },
+      h(B.SectionHeader, { title: 'Bevs like this' }),
+      h(B.BevRow, { bev: BEVS.brownSugar, showImage: true, actions: false, score: 8.5, count: 5120 }),
+      h(B.BevRow, { bev: BEVS.matcha, showImage: true, actions: false, score: 8.2, count: 1840 }),
+      h(B.BevRow, { bev: BEVS.coldBrew, showImage: true, actions: false, score: 7.9, count: 903 }),
+      h(B.BevRow, { bev: BEVS.poppi, showImage: true, actions: false, score: 7.4, count: 212 }),
+      h(B.BevRow, { bev: BEVS.oj, showImage: true, actions: false, scoreVariant: 'locked', count: 2, divider: false })),
+    h('p', { className: 'caption bv-meta', style: { padding: '24px 16px', textAlign: 'center' } }, 'Added by @acheema5'))))),
+  h('div', { className: 'tabbar' }, h(B.TabBar, { active: 'lists', user: ME }))),
+    
+h('div', { className: 'phone' },
+  h('div', { className: 'status' }, '9:41', h('span', { className: 'status-r' }, h('span', { className: 'batt' }, h('i')))),
+  h('div', { className: 'scroll' }, 
+  h(F, null,
+    h(B.Header, { onBack: function () {}, actions: [{ icon: 'ellipsis', label: 'More' }] }),
+    h('div', { className: 'bd-clip' }, h('div', { style: { transform: 'translateY(-560px)' } },
+    h('div', { className: 'bd-hero' },
+      h(B.BevImage, { size: 155, art: BEVS.horchata.art, alt: 'Horchata' }),
+      h('h1', { className: 'screenTitle', style: { marginTop: 12 } }, 'Horchata'),
+      h('p', { className: 'body bv-meta' }, 'Tacos El Gordo'),
+      h('p', { className: 'body bd-cat' }, h(B.Icon, { name: 'globe', size: 16, strokeWidth: 2 }), ' Other • ', h(B.PriceTier, { tier: 2, estimated: true }))),
+    h('div', { className: 'bd-stats' },
+      h('div', { className: 'bd-stat' }, h(B.ScoreBubble, { score: 8.7, size: 56 }), h('div', null, h('p', { className: 'heading' }, 'Bevi score'), h('p', { className: 'body bv-meta' }, '5k ratings'))),
+      h('div', { className: 'bd-stat' }, h(B.ScoreBubble, { score: 9.1, size: 56, variant: 'predicted' }), h('div', null, h('p', { className: 'heading' }, "You'd rate it"), h('p', { className: 'body bv-meta' }, 'from your tastes')))),
+    h('div', { className: 'bd-friends' },
+      h('div', null, h('p', { className: 'heading' }, "Friends who've had it"), h('p', { className: 'body bv-meta' }, 'Arjun 9.5 · Jack 8.1 · 2 more')),
+      h(B.AvatarStack, { people: [ARJUN, FRIENDS[0], FRIENDS[1], FRIENDS[2]], max: 3 })),
+    h('div', { className: 'bd-btns' }, h(B.Pill, { variant: 'filled', icon: 'circle-plus' }, 'Rank it'), h(B.Pill, { variant: 'outlined', icon: 'bookmark' }, 'Want to Try')),
+    h('div', { className: 'bd-like' },
+      h(B.SectionHeader, { title: 'Bevs like this' }),
+      h(B.BevRow, { bev: BEVS.brownSugar, showImage: true, actions: false, score: 8.5, count: 5120 }),
+      h(B.BevRow, { bev: BEVS.matcha, showImage: true, actions: false, score: 8.2, count: 1840 }),
+      h(B.BevRow, { bev: BEVS.coldBrew, showImage: true, actions: false, score: 7.9, count: 903 }),
+      h(B.BevRow, { bev: BEVS.poppi, showImage: true, actions: false, score: 7.4, count: 212 }),
+      h(B.BevRow, { bev: BEVS.oj, showImage: true, actions: false, scoreVariant: 'locked', count: 2, divider: false })),
+    h('p', { className: 'caption bv-meta', style: { padding: '24px 16px', textAlign: 'center' } }, 'Added by @acheema5'))))),
+  h('div', { className: 'tabbar' }, h(B.TabBar, { active: 'lists', user: ME })))));
 </script>
 </body>
 </html>

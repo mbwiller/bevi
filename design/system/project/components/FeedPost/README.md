@@ -2,7 +2,10 @@
 
 A ranking in the Feed and on Profile › Activity: "**Arjun** Bev'd **Horchata**", meta line, ScoreBubble, a 155pt photo strip, notes and actions.
 
-- Provide: `actor` (or `you` for "You"), `bev`, `score`, `note`, `time` ("5 hours ago", "Wednesday"), `saved`, `liked`, `likeCount`, `comments`, `commentCount`, `onLike`, `onComment`, `onRank`, `onSave`, `onOpen`.
+- Provide: `actor` (or `you` for "You"), `bev`, `score`, `note`, `time` ("5 hours ago", "Wednesday"), `saved`, `liked`, `likeCount`, `comments`, `commentCount`, `onLike`, `onComment`, `onRank`, `onSave`, `onOpen`, and in Explore `following` and `onFollow`.
+- Each action shows only with its handler: no `onLike` means no heart and no double-tap, no `onComment` no comment icon, and likewise Rank it and Want to Try.
+- **The plain post** is a read-only ranking by someone you don't follow (Explore, and a stranger's Profile › Activity): head, photo strip and note, with no heart, no counts, no comments and no Rank it or Want to Try. Tapping the photo opens the Bev. Likes and comments stay between followers (D-15).
+- **In Explore the plain post carries the author's Follow pill** (`onFollow`), UserRow's pill: filled `primary` "Follow", outlined "Following" once tapped, its accessible name "Follow" plus the author's name. It leads the action group, where the heart sits on a feed post, so a plain post and an Explore post are the same height.
 - A post is always a ranking. Saving a Bev is not a post; the filled bookmark shows you already have it saved.
 - The meta line under the name is the category icon and the brand (the category's name when there's no brand). No price on a post (D-06).
 - Action row: the time on the left; on the right the LikeButton and the CommentButton, then Rank it and Want to Try. Heart and comment lead the group because they are about the post, while Rank and Want to Try are about the Bev.

@@ -14,8 +14,10 @@ export interface SnapshotContext {
   z: Map<UserId, Map<BevId, number>>;
   /** Users who ranked each Bev, with their z. */
   raters: Map<BevId, Array<{ userId: UserId; z: number }>>;
-  /** Lazily filled: u → (v → sim'(u, v)). */
+  /** Lazily filled: u → (v → sim'(u, v)), the cosine of §8.9 (the default). */
   userSims: Map<UserId, Map<UserId, number>>;
+  /** Lazily filled: u → (v → Pearson · min(1, |common| / 5)), for `userSimilarity: 'pearson'`. */
+  userSimsPearson: Map<UserId, Map<UserId, number>>;
 }
 
 const cache = new WeakMap<PredictionSnapshot, SnapshotContext>();
@@ -72,7 +74,7 @@ export function snapshotContext(snapshot: PredictionSnapshot): SnapshotContext {
     z.set(u, zu);
   }
 
-  const ctx: SnapshotContext = { globalEffective, userStats, userEffective, z, raters, userSims: new Map() };
+  const ctx: SnapshotContext = { globalEffective, userStats, userEffective, z, raters, userSims: new Map(), userSimsPearson: new Map() };
   cache.set(snapshot, ctx);
   return ctx;
 }

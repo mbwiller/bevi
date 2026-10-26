@@ -82,8 +82,11 @@ export function UserRow({ user, rank, meta, streak, following, self = false, onF
   );
 }
 
-/** Pill's look (filled Follow, outlined Following) with `aria-pressed` reporting the follow state. */
-function FollowPill({ following, name, onPress }: { following: boolean; name: string; onPress?: () => void }) {
+/**
+ * Pill's look (filled Follow, outlined Following) with `aria-pressed` reporting the follow state.
+ * Also the author's Follow pill on an Explore FeedPost.
+ */
+export function FollowPill({ following, name, onPress }: { following: boolean; name: string; onPress?: () => void }) {
   const { colors } = useTheme();
   return (
     <Pressable

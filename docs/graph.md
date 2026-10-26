@@ -279,17 +279,35 @@ above, and **none of them is a `NEO4J_*`**.
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | injected into every Edge Function; set explicitly for the backfill | `embed` (to read `bevs`, to upsert `bev_embeddings`), `backfill-embeddings.ts` |
 | `EMBED_WEBHOOK_SECRET` | `supabase secrets set` (hosted), `supabase/.env` (local); **required** | The bearer token `embed` checks; the backfill and the trigger both send it. It must NOT be the service-role key: pg_net persists the trigger's headers in `net.http_request_queue`, so the token is at rest in a table, and `embed` refuses to start rather than accept the key as its password |
 | `EMBED_FUNCTION_URL` | the backfill's environment; optional | defaults to `<SUPABASE_URL>/functions/v1/embed` |
-| `bevi.embed_function_url` | a **database** setting, set once per environment | the trigger, as the URL to POST to |
-| `bevi.embed_webhook_token` | a **database** setting, set once per environment | the trigger, as the bearer token |
+| `embed_function_url` | a **Vault secret**, set once per environment | the trigger, as the URL to POST to |
+| `embed_webhook_token` | a **Vault secret**, set once per environment | the trigger, as the bearer token |
 
-The two database settings follow the `bevi.*` precedent already in the schema
-(`bevi.rpc_bypass`) and are set by a human, outside the repo:
+The two values live in **Supabase Vault**, set by a human outside the repo so no
+value is ever committed:
 
 ```sql
-alter database postgres set bevi.embed_function_url  = 'https://<project-ref>.supabase.co/functions/v1/embed';
-alter database postgres set bevi.embed_webhook_token = '<EMBED_WEBHOOK_SECRET>';
-select pg_reload_conf();   -- existing sessions pick it up on reconnect
+select vault.create_secret('https://<project-ref>.supabase.co/functions/v1/embed',
+                           'embed_function_url',
+                           'A-16: the embed Edge Function endpoint');
+select vault.create_secret('<EMBED_WEBHOOK_SECRET>',
+                           'embed_webhook_token',
+                           'A-16: the bearer token the embed function checks');
 ```
+
+They were originally specified as `bevi.*` database settings, by analogy with
+`bevi.rpc_bypass`, and that **cannot work on Supabase**: the `postgres` role is
+not a superuser here, and setting a custom parameter on a database requires one,
+so `alter database postgres set bevi.embed_function_url = ...` fails with
+`42501: permission denied to set parameter`. The instruction was never
+executable, which is why the trigger was a silent no-op from the day it
+shipped — every write took the "not configured" branch. `20261025000200`
+switches it to Vault, which is what Supabase's own database-webhook
+documentation uses for this, and which keeps the token encrypted at rest
+instead of sitting in `pg_db_role_setting` in the clear.
+
+Verified on prod by firing the trigger inside a transaction that rolls back:
+`net.http_request_queue` went from 0 rows to 1 and the rollback discarded both
+the edit and the queued request, so no HTTP was sent.
 
 **Either one missing or blank is a no-op, not an error.** That is load-bearing:
 no local stack, `supabase db reset` or CI run has them, and `create_bev` has to
