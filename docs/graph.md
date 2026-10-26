@@ -302,8 +302,24 @@ so `alter database postgres set bevi.embed_function_url = ...` fails with
 executable, which is why the trigger was a silent no-op from the day it
 shipped — every write took the "not configured" branch. `20261025000200`
 switches it to Vault, which is what Supabase's own database-webhook
-documentation uses for this, and which keeps the token encrypted at rest
-instead of sitting in `pg_db_role_setting` in the clear.
+documentation uses for this. The stored copy is encrypted at rest, though each
+queued request still carries the token in clear text in
+`net.http_request_queue` until pg_net's worker consumes it, as before.
+`20261031000100` then moved the Vault reads inside an exception handler, so an
+unreadable Vault is a no-op like a missing secret and can never abort a Bev
+write.
+
+To rotate a value, update it in place (the name stays the same, so the trigger
+needs no change):
+
+```sql
+select vault.update_secret(
+  (select id from vault.secrets where name = 'embed_webhook_token'),
+  '<new EMBED_WEBHOOK_SECRET>');
+```
+
+Rotate `EMBED_WEBHOOK_SECRET` in `supabase secrets set` at the same moment, or
+the queued requests in between get a 401.
 
 Verified on prod by firing the trigger inside a transaction that rolls back:
 `net.http_request_queue` went from 0 rows to 1 and the rollback discarded both

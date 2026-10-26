@@ -1,6 +1,7 @@
 -- A-16 (1), the on-write half of the embedding pipeline
--- (20261023000100_embed_webhook.sql): the async `bevs` trigger that asks the
--- `embed` Edge Function for a Bev's gte-small vector.
+-- (20261023000100_embed_webhook.sql, config moved to Vault by 20261025000200,
+-- Vault reads guarded by 20261031000100): the async `bevs` trigger that asks
+-- the `embed` Edge Function for a Bev's gte-small vector.
 --
 -- What this file is for, in order: that the trigger function exists, is
 -- SECURITY DEFINER and is not callable by a user role; that pg_net -- the
@@ -9,7 +10,10 @@
 -- triggers are attached to exactly the right events, columns and condition, so
 -- an `updated_at` touch cannot fire them; that writing a Bev still succeeds
 -- with the configuration absent, which is the state of every local stack and
--- of CI, and queues nothing; and that this migration left `bev_embeddings`
+-- of CI, and queues nothing; that with both Vault secrets present a user
+-- Bev's insert or rename queues exactly one request, while a merged Bev,
+-- `bevi.embed_suspend` and a blank token queue none; and that this migration
+-- left `bev_embeddings`
 -- with no write path for `authenticated` and the shape prod already has.
 --
 -- NO NEO4J. Nothing here, and nothing in the migration under test, reaches
@@ -18,7 +22,10 @@
 -- NOT COVERED HERE, because it needs a deployed function and a configured
 -- project: that a queued request is actually delivered, that `embed` returns
 -- 401 to an anonymous caller, and that the vector it writes has 384 values.
--- Those are the deploy-time checks in the PR description.
+-- Those are the deploy-time checks in the PR description. Nor is a Vault read
+-- that throws: reproducing one would mean revoking the owner's access to
+-- vault.decrypted_secrets, which a test transaction cannot do safely. That
+-- path is a code-review property of 20261031000100.
 --
 -- Fixture uuid prefix: ...0000000be0NN ("be" for bev embeddings, both hex).
 -- Checked against every other file in supabase/tests/: 11_graph_tables uses
@@ -27,7 +34,7 @@
 -- e1..e3, f1..f4 and ffff. be0NN collides with none.
 
 begin;
-select plan(22);
+select plan(35);
 
 -- ---------------------------------------------------------------------------
 -- 1. The trigger function
@@ -54,7 +61,7 @@ select is(
 
 -- A trigger does not check EXECUTE when it fires, so revoking it costs
 -- nothing and stops any role calling this by hand to make the database POST a
--- bearer token to a URL of the GUC's choosing.
+-- bearer token to a URL of its choosing.
 select ok(
   not has_function_privilege('authenticated', 'public.enqueue_bev_embedding()', 'execute')
   and not has_function_privilege('anon', 'public.enqueue_bev_embedding()', 'execute'),
@@ -149,16 +156,12 @@ select ok(
 -- 4. The no-op path: writing a Bev with no configuration
 -- ---------------------------------------------------------------------------
 -- This is the state of every local stack, every `supabase db reset` and CI:
--- neither GUC is set. A blank value counts as absent too, which is what `set
--- local` reproduces here -- half-configuring the pair must not start sending
--- unauthenticated requests either.
+-- neither Vault secret exists. (A blank secret counts as absent too; section
+-- 4b tests that, once the pair exists.)
 --
 -- If this section ever fails, `create_bev` is broken on every environment that
 -- has not been configured, which is the whole reason the migration treats a
 -- missing setting as a no-op rather than an error.
-
-set local bevi.embed_function_url  = '';
-set local bevi.embed_webhook_token = '';
 
 -- The temp table comes first so the session's temp schema certainly exists
 -- before anything is created in pg_temp.
@@ -227,6 +230,99 @@ select lives_ok(
   'bevi.embed_suspend makes the trigger a no-op without breaking the write'
 );
 set local bevi.embed_suspend = 'false';
+
+-- ---------------------------------------------------------------------------
+-- 4b. The configured path: both Vault secrets present
+-- ---------------------------------------------------------------------------
+-- Nothing tested this before. The secrets and every queued row live only in
+-- this transaction, which rolls back, so pg_net's worker never sees a request
+-- and no HTTP is sent. The URL points at a closed local port for the same
+-- reason. The deltas below are cumulative from one baseline.
+--
+-- On a local stack where someone has already created either secret by hand,
+-- vault.create_secret fails on the unique name and so does this section; CI
+-- and a fresh `supabase db reset` have no secrets.
+
+create temporary table t_configured (queued int not null) on commit drop;
+insert into t_configured (queued) values (pg_temp.net_queued());
+
+select lives_ok(
+  $$ select vault.create_secret('http://127.0.0.1:1/functions/v1/embed', 'embed_function_url') $$,
+  'the embed_function_url Vault secret can be created'
+);
+select lives_ok(
+  $$ select vault.create_secret('pgtap-embed-token', 'embed_webhook_token') $$,
+  'the embed_webhook_token Vault secret can be created'
+);
+
+select lives_ok(
+  $$ insert into public.bevs (id, name, brand, flavor, category_id, price_tier, status, source)
+     values ('00000000-0000-4000-8000-0000000be002', 'pgTAP Embed Lemonade', 'pgTAP Embed',
+             'Lemon', 'juice', 2, 'pending_photo', 'user') $$,
+  'inserting a user Bev succeeds with the embed configuration present'
+);
+select is(
+  pg_temp.net_queued() - (select queued from t_configured),
+  1,
+  'and it queued exactly one request'
+);
+
+select lives_ok(
+  $$ update public.bevs set name = 'pgTAP Embed Cola Configured', updated_at = now()
+      where id = '00000000-0000-4000-8000-0000000be001' $$,
+  'renaming a Bev succeeds with the embed configuration present'
+);
+select is(
+  pg_temp.net_queued() - (select queued from t_configured),
+  2,
+  'and the rename queued exactly one more'
+);
+
+-- `merged` is set by A-12's merge in the same statement that may touch an
+-- embedded column (the bevs check pairs `merged` with `merged_into`); the
+-- column change fires the trigger, the status stops it.
+select lives_ok(
+  $$ update public.bevs
+        set status = 'merged', merged_into = '00000000-0000-4000-8000-0000000be001',
+            name = 'pgTAP Embed Lemonade Merged', updated_at = now()
+      where id = '00000000-0000-4000-8000-0000000be002' $$,
+  'renaming a Bev while marking it merged succeeds'
+);
+select is(
+  pg_temp.net_queued() - (select queued from t_configured),
+  2,
+  'and a merged Bev queues nothing'
+);
+
+set local bevi.embed_suspend = 'true';
+select lives_ok(
+  $$ update public.bevs set name = 'pgTAP Embed Cola Suspended Again', updated_at = now()
+      where id = '00000000-0000-4000-8000-0000000be001' $$,
+  'renaming under bevi.embed_suspend succeeds with the configuration present'
+);
+set local bevi.embed_suspend = 'false';
+select is(
+  pg_temp.net_queued() - (select queued from t_configured),
+  2,
+  'and bevi.embed_suspend queues nothing even when configured'
+);
+
+-- Half-configuring the pair must not start sending unauthenticated requests.
+select lives_ok(
+  $$ select vault.update_secret(
+       (select id from vault.secrets where name = 'embed_webhook_token'), '') $$,
+  'the token can be blanked'
+);
+select lives_ok(
+  $$ update public.bevs set name = 'pgTAP Embed Cola Blank Token', updated_at = now()
+      where id = '00000000-0000-4000-8000-0000000be001' $$,
+  'renaming a Bev succeeds with a blank token'
+);
+select is(
+  pg_temp.net_queued() - (select queued from t_configured),
+  2,
+  'and a blank token counts as absent: nothing queued'
+);
 
 -- ---------------------------------------------------------------------------
 -- 5. bev_embeddings: still no write path for authenticated, still prod's shape
