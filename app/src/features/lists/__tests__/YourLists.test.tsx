@@ -62,13 +62,17 @@ it('switches tabs through ?tab=', async () => {
   await fireEvent.press(screen.getByLabelText('Recommended'));
   expect(r.searchParams()).toEqual({ tab: 'recommended' });
   expect(await screen.findByText(new RegExp(`^Based on ${recs.basedOnCount} Bevs you've ranked`))).toBeTruthy();
-  expect(await screen.findByLabelText(recs.items[0]!.bev.name)).toBeTruthy();
+  // findAllByLabelText, not findBy: a row's label is the Bev's name, and catalog names are not
+  // unique (two GT's Kombucha flavours, two Ramune), so the top recommendation may share its name
+  // with another row on screen. The assertion is "the first recommendation rendered", not "exactly
+  // one row carries that name".
+  expect(await screen.findAllByLabelText(recs.items[0]!.bev.name)).not.toHaveLength(0);
 });
 
 it('Recommended has no sort toggle, since recommendations have one order', async () => {
   const recs = await api.recs.getRecommendations();
   await start('/lists?tab=recommended');
-  expect(await screen.findByLabelText(recs.items[0]!.bev.name)).toBeTruthy();
+  expect(await screen.findAllByLabelText(recs.items[0]!.bev.name)).not.toHaveLength(0);
   expect(screen.queryByRole('button', { name: 'Sort by Predicted' })).toBeNull();
   expect(screen.queryByText('Predicted')).toBeNull();
 });

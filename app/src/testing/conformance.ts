@@ -117,7 +117,9 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       await expectCode(api.rankings.listBucketBevs('LOVED'), 'unauthorized');
       await expectCode(api.bevs.similar('anything'), 'unauthorized');
       await expectCode(api.bevs.similarities('anything', ['other']), 'unauthorized');
+      await expectCode(api.bevs.leaves(['anything']), 'unauthorized');
       await expectCode(api.categories.list(), 'unauthorized');
+      await expectCode(api.categories.tree(), 'unauthorized');
       await expectCode(api.stats.getCategoryProgress(), 'unauthorized');
       await expectCode(api.stats.getTasteProfile('anyone'), 'unauthorized');
       await expectCode(api.deleteAccount(), 'unauthorized');
@@ -832,6 +834,89 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
         'validation',
       );
       expect(e.detail).toMatchObject({ field: 'otherIds' });
+    });
+
+    // A-13. What the contract promises about the taxonomy, and nothing about which leaves exist:
+    // D-04's 60 are data, so an implementation with a flatter catalog still has to pass.
+    it('categories.tree: two levels, roots match list(), a leaf inherits its root, root-then-leaf order', async () => {
+      await newUser();
+      const roots = await api.categories.list();
+      const nodes = await api.categories.tree();
+
+      const byId = new Map(nodes.map((n) => [n.id, n]));
+      // Every root `list()` shows is in the tree, with the same name and flag.
+      for (const root of roots) {
+        const node = byId.get(root.id);
+        expect(node).toBeDefined();
+        expect(node!.parentId).toBeNull();
+        expect(node!.name).toBe(root.name);
+        expect(node!.isAlcoholic).toBe(root.isAlcoholic);
+      }
+      expect(nodes.filter((n) => n.parentId === null).length).toBe(roots.length);
+
+      for (const node of nodes) {
+        if (node.parentId === null) {
+          // Only a root carries the emoji the app draws.
+          expect(typeof node.emoji === 'string' || node.emoji === null).toBe(true);
+          continue;
+        }
+        const parent = byId.get(node.parentId);
+        // Exactly two levels: a leaf's parent is present and is itself a root.
+        expect(parent).toBeDefined();
+        expect(parent!.parentId).toBeNull();
+        // The age gate walks one hop, so the flags must agree.
+        expect(node.isAlcoholic).toBe(parent!.isAlcoholic);
+        expect(node.emoji).toBeNull();
+      }
+
+      // Root-then-leaf: a leaf never precedes its own root, so one pass builds the tree.
+      const seenRoots = new Set<string>();
+      for (const node of nodes) {
+        if (node.parentId === null) seenRoots.add(node.id);
+        else expect(seenRoots.has(node.parentId)).toBe(true);
+      }
+    });
+
+    it('bevs.leaves: one row per visible id, leaf under the Bev own category or null', async () => {
+      await newUser();
+      const ids = await starterIds(6);
+      const nodes = await api.categories.tree();
+      const parentOf = new Map(nodes.map((n) => [n.id, n.parentId]));
+
+      expect(await api.bevs.leaves([])).toEqual([]);
+
+      // Duplicates are de-duplicated rather than echoed back, as in `similarities`.
+      const rows = await api.bevs.leaves([...ids, ...ids]);
+      expect(rows.length).toBe(ids.length);
+      const summaries = new Map((await api.bevs.getStarterCandidates()).map((b) => [b.id, b]));
+      const seen = new Set<string>();
+      for (const row of rows) {
+        expect(ids).toContain(row.bevId);
+        expect(seen.has(row.bevId)).toBe(false);
+        seen.add(row.bevId);
+        if (row.leafCategoryId === null) continue;
+        // A leaf, never a root, and a child of the Bev's OWN category -- the invariant that lets
+        // `categoryId` keep meaning one of the 15.
+        const parent = parentOf.get(row.leafCategoryId);
+        expect(parent).toBeDefined();
+        expect(parent).not.toBeNull();
+        const summary = summaries.get(row.bevId);
+        if (summary) expect(parent).toBe(summary.categoryId);
+      }
+
+      // An id nothing matches is absent, not an error -- unlike a null leaf, which is a row.
+      expect(await api.bevs.leaves(['no-such-bev'])).toEqual([]);
+      const tooMany = await expectCode(
+        api.bevs.leaves(Array.from({ length: 501 }, (_, i) => `no-such-bev-${i}`)),
+        'validation',
+      );
+      expect(tooMany.detail).toMatchObject({ field: 'bevIds' });
+
+      // A Bev a minor may not see has no leaf to report, as it has no neighbours.
+      await newUser({ birthdate: MINOR_BIRTHDATE(new Date()) });
+      expect(await api.bevs.leaves([options.alcoholicBevId])).toEqual([]);
+      const minorTree = await api.categories.tree();
+      expect(minorTree.some((n) => n.isAlcoholic)).toBe(false);
     });
 
     it('bevs.similar: at most n BevSummary rows, never the Bev itself, age-filtered', async () => {

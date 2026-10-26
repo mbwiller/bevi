@@ -56,6 +56,7 @@ import {
   KNN_CANDIDATES,
   buildTaxonomy,
   bevFeatures,
+  treeNodeOf,
   candidatePairs,
   edgeRows,
   neighboursOf,
@@ -218,10 +219,12 @@ interface BevRow {
   brand: string | null;
   flavor: string | null;
   category_id: string;
+  leaf_category_id: string | null;
   price_tier: number;
 }
 interface CategoryRow {
   id: string;
+  parent_id: string | null;
   is_alcoholic: boolean;
 }
 interface ProfileRow {
@@ -339,32 +342,43 @@ async function main(): Promise<void> {
 
   // -- step 1: read ---------------------------------------------------------
   const [categoryRows, bevRows] = await Promise.all([
-    db.select<CategoryRow>("/categories?select=id,is_alcoholic&order=id"),
-    db.select<BevRow>("/bevs?select=id,name,brand,flavor,category_id,price_tier&status=eq.active&order=id"),
+    db.select<CategoryRow>("/categories?select=id,parent_id,is_alcoholic&order=id"),
+    db.select<BevRow>(
+      "/bevs?select=id,name,brand,flavor,category_id,leaf_category_id,price_tier&status=eq.active&order=id"
+    ),
   ]);
 
+  // A-13: `bevs.category_id` is always one of the 15 ROOTS, so the alcohol
+  // lookup needs no walking -- `category_is_alcoholic()` exists for callers
+  // holding a leaf, which this job never is for the gate. A leaf's own row
+  // carries its root's flag anyway (the catalog validator enforces it), so
+  // either key would answer.
   const alcoholic = new Map(categoryRows.map((c) => [c.id, c.is_alcoholic]));
-  // `parent_id` is deliberately absent from the select: the column does not
-  // exist (A-13). `buildTaxonomy` reads `parentId`, so adding it here is the
-  // whole of this job's A-13 migration.
-  const categories: CategoryRecord[] = categoryRows.map((c) => ({ id: c.id }));
+  const categories: CategoryRecord[] = categoryRows.map((c) => ({ id: c.id, parentId: c.parent_id }));
   const bevs: BevRecord[] = bevRows.map((b) => ({
     id: b.id,
     name: b.name,
     brand: b.brand,
     flavor: b.flavor,
     categoryId: b.category_id,
+    leafCategoryId: b.leaf_category_id,
     priceTier: b.price_tier,
     isAlcoholic: alcoholic.get(b.category_id) ?? true, // fail closed, as graph-query does
   }));
   const byId = new Map(bevs.map((b) => [b.id, b]));
 
   const taxonomy = buildTaxonomy(categories);
+  // A-13: the tree term is measured at each Bev's leaf. `candidatePairs` still
+  // groups by `categoryId`, which IS D-04's "same parent subtree" arm, because
+  // `category_id` stayed the root.
+  const treeNodes = new Map(bevs.map((b) => [b.id, treeNodeOf(b)]));
+  const withLeaf = bevs.filter((b) => b.leafCategoryId !== null).length;
   console.log(`bevs: ${bevs.length} active; categories: ${categories.length}`);
   console.log(
     taxonomyIsFlat(taxonomy)
-      ? `taxonomy: FLAT (no categories.parent_id until A-13), so the tree term is the [same category] indicator: ${EDGE_WEIGHTS.tree} or 0`
-      : `taxonomy: hierarchical, ${Object.values(taxonomy).filter((p) => p !== null).length} categories with a parent`
+      ? `taxonomy: FLAT (no categories.parent_id), so the tree term is the [same category] indicator: ${EDGE_WEIGHTS.tree} or 0`
+      : `taxonomy: hierarchical, ${Object.values(taxonomy).filter((p) => p !== null).length} categories with a parent; ` +
+        `${withLeaf}/${bevs.length} Bevs weighed at a leaf, ${bevs.length - withLeaf} at their root`
   );
 
   // -- step 1 (continued): profiles, D-11 inference, embeddings -------------
@@ -437,7 +451,7 @@ async function main(): Promise<void> {
 
   // -- steps 4 and 5: weigh and keep ---------------------------------------
   const features = new Map(bevs.map((b) => [b.id, bevFeatures(b)]));
-  const ctx: WeighContext = { taxonomy, features, profiles, embeddings };
+  const ctx: WeighContext = { taxonomy, treeNodes, features, profiles, embeddings };
   const weighted = weighPairs(pairs, ctx);
   const kept = selectEdges(weighted, opts.topK, opts.minWeight);
   const covered = new Set<string>();

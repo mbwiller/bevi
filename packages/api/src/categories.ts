@@ -1,7 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { ApiError, type Category, type CategoriesApi } from '@bevi/shared';
+import { ApiError, type Category, type CategoriesApi, type CategoryNode } from '@bevi/shared';
 import { mapError } from './errors';
-import { mapCategory, type CategoryProgressRow, type CategoryRow } from './mappers';
+import {
+  mapCategory,
+  mapCategoryNode,
+  type CategoryNodeRow,
+  type CategoryProgressRow,
+  type CategoryRow,
+} from './mappers';
 
 export function createCategoriesApi(client: SupabaseClient): CategoriesApi {
   return {
@@ -27,6 +33,26 @@ export function createCategoriesApi(client: SupabaseClient): CategoriesApi {
         const bevCount = totals.get(row.id);
         return bevCount === undefined ? [] : [mapCategory(row, bevCount)];
       });
+    },
+
+    // A-13. A separate call rather than a shape change to `list()`, because
+    // `list()` feeds the 15-item UI pickers and the app keys exhaustive
+    // `Record<CategoryId, ...>` maps off those ids.
+    //
+    // `list()` above is already leaf-proof without a filter -- it drops any
+    // category `get_category_progress()` does not return, and that RPC returns
+    // only roots -- but it is one age rule away from silently listing 75
+    // things, so the filter below is the explicit version of the same claim.
+    async tree(): Promise<CategoryNode[]> {
+      const { data: userData, error: userError } = await client.auth.getUser();
+      if (userError || !userData.user) throw new ApiError('unauthorized', 'Not signed in');
+
+      // An RPC, not a table read: the age gate belongs to the server (a leaf of
+      // an alcoholic root has to be hidden too, which is a join `categories_select`
+      // does not do), and the order is total there.
+      const { data, error } = await client.rpc('get_category_tree');
+      if (error) throw mapError(error);
+      return ((data ?? []) as CategoryNodeRow[]).map(mapCategoryNode);
     },
   };
 }
