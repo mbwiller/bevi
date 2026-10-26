@@ -7,7 +7,7 @@ Files, all under `design/taxonomy/`:
 | File | What |
 |---|---|
 | `categories-tree.json` | Every node, 75 of them: the 15 parents exactly as in `data/catalog/categories.json` plus `parentId: null`, and 60 leaves `{ id, name, parentId, sortOrder, isAlcoholic }`. Leaves have no `emoji`. |
-| `bev-leaves.csv` | `slug,category,leaf` for all 378 catalog Bevs in `bevs.csv` order. `category` is the Bev's current parent, untouched; `leaf` is the node it should point to after A-13. |
+| `bev-leaves.csv` | `slug,category,leaf` for all 378 catalog Bevs in `bevs.csv` order. `category` is the leaf's parent; `leaf` is the node the Bev should point to after A-13. For three rows this is a deliberate correction rather than the Bev's present category in `data/catalog/bevs.csv` -- see §7. A-13 brings `data/catalog` into line. |
 
 Validated by a throwaway script (every slug once, same order; every `leaf` exists and sits under the row's `category`; ids unique, snake_case, no collision with the 15; `isAlcoholic` equals the parent's). The treeSimilarity figures below were computed with the real `treeSimilarity` in `packages/ranking/src/edges.ts` over this tree, not worked out by hand.
 
@@ -27,11 +27,11 @@ Validated by a throwaway script (every slug once, same order; every `leaf` exist
 
 | Parent | Leaf | n |
 |---|---|---|
-| **soda** (60) | `cola` Cola | 14 |
-|  | `lemon_lime` Lemon-lime soda | 4 |
-|  | `citrus_soda` Citrus soda | 6 |
-|  | `orange_soda` Orange soda | 6 |
-|  | `fruit_soda` Fruit soda | 14 |
+| **soda** (64) | `cola` Cola | 14 |
+|  | `lemon_lime` Lemon-lime soda | 5 |
+|  | `citrus_soda` Citrus soda | 7 |
+|  | `orange_soda` Orange soda | 7 |
+|  | `fruit_soda` Fruit soda | 15 |
 |  | `root_beer` Root beer | 8 |
 |  | `ginger_ale` Ginger ale & ginger beer | 4 |
 |  | `cream_soda` Cream soda | 4 |
@@ -43,15 +43,15 @@ Validated by a throwaway script (every slug once, same order; every `leaf` exist
 |  | `diet_root_beer` Diet root beer | 3 |
 |  | `diet_ginger_ale` Diet ginger ale | 3 |
 |  | `diet_cream_soda` Diet cream soda | 1 |
-| **juice** (30) | `orange_juice` Orange & grapefruit juice | 5 |
+| **juice** (29) | `orange_juice` Orange & grapefruit juice | 5 |
 |  | `apple_juice` Apple juice | 4 |
 |  | `grape_cranberry_juice` Grape & cranberry juice | 5 |
 |  | `lemonade` Lemonade & limeade | 4 |
-|  | `fruit_juice_blend` Fruit punch & juice blends | 8 |
+|  | `fruit_juice_blend` Fruit punch & juice blends | 7 |
 |  | `green_juice` Green & vegetable juice | 4 |
-| **water** (15) | *(unsplit, all on the parent)* | 15 |
-| **sparkling_water** (40) | `plain_sparkling_water` Plain sparkling water | 4 |
-|  | `citrus_sparkling_water` Citrus sparkling water | 20 |
+| **water** (14) | *(unsplit, all on the parent)* | 14 |
+| **sparkling_water** (39) | `plain_sparkling_water` Plain sparkling water | 4 |
+|  | `citrus_sparkling_water` Citrus sparkling water | 19 |
 |  | `fruit_sparkling_water` Fruit sparkling water | 16 |
 | **energy** (40) | `classic_energy` Classic energy drinks | 14 |
 |  | `performance_energy` Zero-sugar performance energy | 23 |
@@ -71,9 +71,9 @@ Validated by a throwaway script (every slug once, same order; every `leaf` exist
 |  | `flavored_milk_tea` Taro & flavoured milk tea | 7 |
 |  | `boba_fruit_tea` Fruit tea | 3 |
 | **sports** (20) | *(unsplit, all on the parent)* | 20 |
-| **smoothie** (10) | `fruit_smoothie` Fruit smoothie | 6 |
+| **smoothie** (11) | `fruit_smoothie` Fruit smoothie | 6 |
 |  | `green_smoothie` Green smoothie | 2 |
-|  | `protein_smoothie` Protein smoothie | 2 |
+|  | `protein_smoothie` Protein smoothie | 3 |
 | **beer** (18) | `lager` Lager | 10 |
 |  | `ale` Ales, stouts & wheat beers | 2 |
 |  | `hard_seltzer` Hard seltzer | 6 |
@@ -85,13 +85,12 @@ Validated by a throwaway script (every slug once, same order; every `leaf` exist
 |  | `tequila` Tequila & agave cocktails | 2 |
 |  | `whiskey` Whiskey & whiskey cocktails | 2 |
 |  | `rum` Rum & rum cocktails | 2 |
-| **other** (15) | `kombucha` Kombucha | 5 |
+| **other** (13) | `kombucha` Kombucha | 5 |
 |  | `coconut_water` Coconut water | 2 |
 |  | `aguas_frescas` Horchata & aguas frescas | 3 |
 |  | `cultured_milk_drink` Yogurt & cultured milk drinks | 3 |
-|  | *(on `other` itself)* | 2 |
 
-Totals: 378 Bevs; 341 point to a leaf, 37 point to a parent (water 15, sports 20, the two Ramune under `other`, see §7).
+Totals: 378 Bevs; 344 point to a leaf, 34 point to a parent (water 14, sports 20). Every Bev now points to a true leaf or to an unsplit parent; nothing sits on a parent that has children.
 
 **Why 60.** The brief asked for 35–60. Soda and diet soda take 16 between them because the diet tree mirrors the soda tree (§6), and that mirror is worth more than the count. The remaining 44 cover 11 parents at 3–6 each. Going lower would mean dropping distinctions that change the first comparison (red vs white wine, cold brew vs mocha, lager vs hard seltzer); going higher would mean splitting by flavour inside sparkling water, sports or energy, where the profile term already carries the flavour and the tree would just echo it.
 
@@ -194,7 +193,7 @@ If the parents are ever re-cut, the better structure is flavour-first with diet 
 2. **Flavoured Diet Cokes in `diet_cola`** (Ginger Lime, Zesty Blood Orange, Twisted Mango, Feisty Cherry): a cola with a note, profile base `cola`.
 3. **Mountain Dew family split by base:** Original and Spark → `citrus_soda`; Code Red (base `berry`) and Baja Blast (base `tropical`) → `fruit_soda`. Consistent with the profile, even though the brand straddles two leaves.
 4. **Poppi Strawberry Lemon → `citrus_soda`**, Jarritos Tamarind → `fruit_soda` (base `other`; nothing fits better).
-5. **Orange sparkling waters → `citrus_sparkling_water`** (LaCroix Orange, Topo Chico Tangerine, Perrier L'Orange, San Pellegrino Aranciata). In soda, orange has its own leaf; in sparkling water it is a citrus note.
+5. **Orange sparkling waters → `citrus_sparkling_water`** (LaCroix Orange, Topo Chico Tangerine, Perrier L'Orange). In soda, orange has its own leaf; in sparkling water it is a citrus note. *San Pellegrino Aranciata was on this list and has since moved to `soda` → `orange_soda` under the corrections below: at sweetness 3 it is a sweetened Italian soda, and every genuine sparkling water in the catalog is sweetness 0.*
 6. **Spindrift / Polar Raspberry Lime and AHA Lime + Watermelon → citrus**, following their profile base rather than the first word of the name.
 7. **Coffee with milk is `latte` whatever the label says:** Dunkin' Bottled Iced Coffee Original (dairy, sweetened) and Califia Cold Brew with Almond Milk are in `latte`; Peet's Iced Coffee Classic (no dairy) is in `cold_brew`. Starbucks Doubleshot Energy Coffee stays under its catalog parent `coffee`, in `latte`.
 8. **Matcha latte with boba → `flavored_milk_tea`**, not tea's `matcha`: its parent is `boba`, so the tree gives it 0 to bottled matcha, and the profile's `base = matcha` (0.40 of the profile term) carries the link instead.
@@ -206,9 +205,16 @@ If the parents are ever re-cut, the better structure is flavour-first with diet 
 14. **Hard seltzer stays under `beer`**, as the catalog has it; `spirits_cocktails` would be wrong (they are malt/sugar brews) and the leaf keeps them off the lager anchors.
 15. **Fruit punch merged into `fruit_juice_blend`**: a punch is a juice blend; keeping it separate would be three Bevs for one more leaf.
 
-### Catalog corrections to consider (parent kept as-is here; for Arjun)
+### Catalog corrections — APPLIED in `bev-leaves.csv` (Arjun, 2026-10-26)
 
-The leaf given is the best one *under the current parent*; the suggested move is what I would do in `bevs.csv`.
+All five suggestions below were accepted and are now live in `bev-leaves.csv`, so the file is
+internally consistent: every row's `leaf` sits under its own `category`, and no Bev sits on a
+parent that has children. Six rows differ from `data/catalog/bevs.csv` as a result, which is
+deliberate — **A-13 brings `data/catalog` and prod into line**, since it already re-points all 378
+Bevs from parents to leaves and regenerates the seed migration. No separate migration.
+
+Every one is derivable from `flavor-profiles.csv` rather than taste, which is why they were easy
+to accept: the profile and the category disagreed, and the profile was right.
 
 | Slug | Today | Suggest | Why |
 |---|---|---|---|
@@ -216,7 +222,7 @@ The leaf given is the best one *under the current parent*; the suggested move is
 | `liquid-death-sparkling-severed-lime` | `water` | `sparkling_water` → `citrus_sparkling_water` | Carbonated, flavoured, base `citrus`; the one non-still Bev under `water`. |
 | `san-pellegrino-limonata`, `san-pellegrino-aranciata` | `sparkling_water` | `soda` → `citrus_soda`, `orange_soda` | Sweetness 3 in their own profiles; they are sweetened Italian sodas, not sparkling water. Every other sparkling water is sweetness 0. |
 | `bolthouse-farms-perfectly-protein-vanilla-chai` | `juice` | `smoothie` → `protein_smoothie` | A dairy protein shake (dairy `true`, base `chai`), sibling of `bolthouse-farms-perfectly-protein-chocolate`, which is under `smoothie`. |
-| `spindrift-half-tea-half-lemon` | `sparkling_water` | keep, or `tea` → `iced_tea` | A sparkling tea (base `tea`, caffeine 1). Defensible where it is; listed so the choice is deliberate. |
+| `spindrift-half-tea-half-lemon` | `sparkling_water` | **kept as-is** | A sparkling tea (base `tea`, caffeine 1), but sweetness 0 like every other sparkling water. Agreed it is defensible where it is. |
 
 None of these change the tree; each is a one-cell edit in `bevs.csv` plus the matching `leaf` in `bev-leaves.csv`, and I would fold them into the A-13 migration rather than a separate PR.
 

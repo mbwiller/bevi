@@ -119,7 +119,7 @@ naked-juice-blue-machine,juice,fruit_juice_blend
 naked-juice-mighty-mango,juice,fruit_juice_blend
 naked-juice-strawberry-banana,juice,fruit_juice_blend
 odwalla-superfood-juice,juice,green_juice
-bolthouse-farms-perfectly-protein-vanilla-chai,juice,fruit_juice_blend
+bolthouse-farms-perfectly-protein-vanilla-chai,smoothie,protein_smoothie
 bolthouse-farms-green-goodness-juice,juice,green_juice
 v8-original-vegetable-juice,juice,green_juice
 v8-v-fusion-strawberry-banana,juice,fruit_juice_blend
@@ -133,7 +133,7 @@ fiji-natural-artesian-water,water,water
 evian-natural-spring-water,water,water
 smartwater-vapor-distilled,water,water
 liquid-death-mountain-water-still,water,water
-liquid-death-sparkling-severed-lime,water,water
+liquid-death-sparkling-severed-lime,sparkling_water,citrus_sparkling_water
 essentia-ionized-alkaline-water,water,water
 arrowhead-mountain-spring-water,water,water
 dasani-purified-water,water,water
@@ -179,8 +179,8 @@ waterloo-watermelon,sparkling_water,fruit_sparkling_water
 perrier-original,sparkling_water,plain_sparkling_water
 perrier-lorange,sparkling_water,citrus_sparkling_water
 san-pellegrino-original,sparkling_water,plain_sparkling_water
-san-pellegrino-limonata,sparkling_water,citrus_sparkling_water
-san-pellegrino-aranciata,sparkling_water,citrus_sparkling_water
+san-pellegrino-limonata,soda,citrus_soda
+san-pellegrino-aranciata,soda,orange_soda
 polar-seltzer-black-cherry,sparkling_water,fruit_sparkling_water
 polar-seltzer-raspberry-lime,sparkling_water,citrus_sparkling_water
 aha-lime-watermelon,sparkling_water,citrus_sparkling_water
@@ -330,8 +330,8 @@ agua-fresca-tamarindo,other,aguas_frescas
 yakult-original,other,cultured_milk_drink
 calpico-original,other,cultured_milk_drink
 calpico-mango,other,cultured_milk_drink
-ramune-original,other,other
-ramune-melon,other,other
+ramune-original,soda,lemon_lime
+ramune-melon,soda,fruit_soda
 gts-kombucha-gingerade,other,kombucha
 gts-kombucha-trilogy,other,kombucha
 gts-kombucha-guava-goddess,other,kombucha
