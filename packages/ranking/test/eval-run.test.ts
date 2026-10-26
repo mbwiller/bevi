@@ -5,21 +5,26 @@ import { ARMS } from '../eval/arms.ts';
 import { parseExport, prepareDataset, toExport, type EvalDataset } from '../eval/dataset.ts';
 import { formatReport, SYNTHETIC_BANNER } from '../eval/report.ts';
 import { COHORTS, cohortOf, dedupeComparisons, evaluate, temporalCutoff } from '../eval/run.ts';
-import { makeEngine, similarityDiagnostics } from '../eval/similarity-arms.ts';
+import { similarityDiagnostics } from '../eval/similarity-arms.ts';
 import { syntheticDataset } from '../eval/synthetic.ts';
-import { cosineSimilarity, layer2, predictScore } from '../src/index.ts';
+import { layer2, predictScore } from '../src/index.ts';
 import { syntheticSnapshot } from './snapshot-fixture.ts';
 
-describe('the experimental similarity arm differs from the engine only in the similarity', () => {
-  it('makeEngine(cosineSimilarity) reproduces predictScore() and layer2() exactly', () => {
+describe('the experimental Pearson arms run the real engine with the option set', () => {
+  it('engine and engine-pearson are predictScore() with userSimilarity cosine and pearson; layer2-pearson likewise', () => {
     const snap = syntheticSnapshot('engine-equiv', 14, 40);
-    const cosine = makeEngine(cosineSimilarity);
+    const arm = (id: string) => ARMS.find((a) => a.id === id)!;
+    let differ = 0;
     for (const u of Object.keys(snap.users)) {
       for (const b of Object.keys(snap.bevs)) {
-        expect(cosine.layer2(snap, u, b)).toEqual(layer2(snap, u, b));
-        expect(cosine.predict(snap, u, b).score).toBe(predictScore(snap, u, b).score);
+        const p = predictScore(snap, u, b, { userSimilarity: 'pearson' });
+        expect(arm('engine').predict(snap, u, b)).toEqual({ score: predictScore(snap, u, b).score, support: predictScore(snap, u, b).layer2.support });
+        expect(arm('engine-pearson').predict(snap, u, b)).toEqual({ score: p.score, support: p.layer2.support });
+        expect(arm('layer2-pearson').predict(snap, u, b).support).toBe(layer2(snap, u, b, { userSimilarity: 'pearson' }).support);
+        if (p.score !== predictScore(snap, u, b).score) differ++;
       }
     }
+    expect(differ).toBeGreaterThan(0); // the arm is not secretly the reference
   });
 
   it('similarityDiagnostics counts pairs cosine admits and Pearson rejects', () => {
@@ -120,7 +125,7 @@ describe('evaluate (end to end on synthetic data, NOT an accuracy result)', () =
         expect(conc.draws).toBeLessThanOrEqual(50);
         expect(a.confusion.flat().reduce((x, y) => x + y, 0)).toBe(all.points);
         expect(a.delta === null).toBe(a.arm === 'engine');
-        expect(Number.isNaN(a.metrics.cfCoverage.point)).toBe(!['layer2', 'engine', 'engine-pearson'].includes(a.arm));
+        expect(Number.isNaN(a.metrics.cfCoverage.point)).toBe(!['layer2', 'layer2-pearson', 'engine', 'engine-pearson'].includes(a.arm));
         expect(Number.isFinite(a.metrics.spearman.point)).toBe(s.listMetrics);
       }
       // A constant predictor orders nothing.

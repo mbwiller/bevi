@@ -11,7 +11,9 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
   answer,
+  attributeSimilarity,
   bayesianAverage,
+  blendUserSimilarity,
   BAYES_C,
   categoryAffinity,
   categoryPrior,
@@ -29,6 +31,9 @@ import {
   leaderboardOrder,
   localDayKey,
   localPeriodKey,
+  neighbourReliability,
+  pearsonCorrelation,
+  pearsonSimilarity,
   placementResult,
   populationStats,
   profileSimilarity,
@@ -39,14 +44,20 @@ import {
   RANKING_VERSION,
   respaceBucket,
   scoreFromPosition,
+  sharedAttributeCount,
+  significanceWeight,
   startPlacement,
   storedScore,
   storedScoreCents,
+  tasteCatalog,
+  tasteVector,
   topEdges,
+  topUserNeighbours,
   treeSimilarity,
   undo,
   userStats,
   zScore,
+  zScoresFromRankings,
   type BevFeatures,
   type Bucket,
   type ComparisonAnswer,
@@ -59,6 +70,9 @@ import {
   type ScoredRanking,
   type Stats,
   type StreakPeriod,
+  type TasteBev,
+  type TasteCatalog,
+  type TasteVector,
   type Taxonomy,
 } from '../src/index.ts';
 
@@ -81,7 +95,7 @@ const constants = {
   storedScoreRule:
     'cents = floor((2N + D) / (2D)) with D = n + 1, N = 100*(hi*D - (hi - lo)*(index + 1)); capped at hi*100 - 1 for FINE and DISLIKED; storedScore = cents / 100',
   stddev: 'population (stddev_pop)',
-  nameOrder: 'code point (SQL collate "C"), then bevId',
+  nameOrder: 'Unicode code point, not UTF-16 code unit (SQL collate "C" on UTF-8), then bevId the same way',
   streakDayKey: 'calendar date of the ranking instant in the profile timezone: (created_at AT TIME ZONE timezone)::date; week = ISO week of that date (YYYY-Www)',
   rankOrder: 'points desc, bevsRanked desc, createdAt asc, userId asc; rank = 1 + count(points > mine); bevsRanked = 0 excluded',
   treeDepth: 'Wu-Palmer depth from an implicit root (depth 0) above the top-level categories; a top-level category (parent null or not in the taxonomy) has depth 1',
@@ -89,6 +103,17 @@ const constants = {
   embeddingRule: 'min(1, max(0, dot / sqrt(|a|^2 * |b|^2))); 0 when either vector is zero',
   edgeWeightRule: 'tree*0.25 + content*0.15 + emb*0.30 + profile*0.30 + cop*0, summed in that order, clamped to [0, 1]',
   edgeOrder: 'w desc, then bevId asc (code unit); keep w >= edgeMinWeight; at most edgeTopK',
+  pearsonRule:
+    'r over common(u, v) = R(u) & R(v) in bevId order: sum((x - mean x)(y - mean y)) / sqrt(sum((x - mean x)^2) * sum((y - mean y)^2)), clamped to [-1, 1]; 0 when |common| < cfMinCommon or either side is constant (all entries equal); sim = r * min(1, |common| / cfSignificance)',
+  tasteAttributeKey: "'category:' + categoryId, 'brand:' + normaliseBrand(brand) when non-empty, 'flavor:' + trim(flavorBase) when non-empty; kept when it covers >= tasteMinAttrBevs catalog Bevs",
+  tasteVectorRule: 't_u[a] = sum of z_{u,b} over b in R(u) carrying a / (n_{u,a} + tasteK); Bevs outside the catalog skipped',
+  attributeSimilarityRule: 'cosine of the taste vectors as sparse vectors (missing = 0), clamped to [-1, 1]; 0 when either is all zeros',
+  sharedAttrsRule:
+    'count of attributes a of a tasteBridgeKinds kind with |t_u[a]| >= tasteSharedMin and |t_v[a]| >= tasteSharedMin that u and v reach through distinct Bevs: some b in R(u) and b2 in R(v) carry a with b != b2 (one co-rated Bev is not a bridge)',
+  blendRule:
+    'alpha = tasteAlpha if |common| >= cfMinCommon else 0; attributeSim = attributeSimilarity if |common| >= cfMinCommon or sharedAttrs >= tasteMinSharedAttrs else 0; sim = alpha * pearson.sim + (1 - alpha) * attributeSim, clamped to [-1, 1]; method = attr (alpha 0), pearson (alpha 1), else blend',
+  neighbourOrder: 'sim desc, then userId asc (code point, SQL collate "C"); keep sim >= tasteSimFloor; at most tasteNeighbourK',
+  reliabilityRule: 'min(1, n_v / neighbourReliabilityN); applied by Layer 2 per neighbour, not stored in user_neighbors.sim',
 };
 
 /** A plausible stored score: some position in some bucket. */
@@ -221,6 +246,16 @@ function bayesianCases(): Case[] {
     { bevId: 'upper', bayes: 6, n: 3, name: 'Zevia' },
   ];
   cases.push({ name: 'eligibility and tie order', fn: 'leaderboardOrder', input: { rows }, expected: leaderboardOrder(rows) });
+  // 1.3.0: names compare by code point (collate "C" on UTF-8), not by UTF-16 code unit. JS `<` put
+  // U+1F600 (a surrogate pair, 0xD83D 0xDE00) before U+FF23 and U+FFFD. No PRNG here.
+  const unicode: LeaderboardInputRow[] = [
+    { bevId: 'emoji', bayes: 7, n: 3, name: '\u{1F600} Soda' },
+    { bevId: 'replacement', bayes: 7, n: 3, name: '\uFFFD Soda' },
+    { bevId: 'fullwidth', bayes: 7, n: 3, name: '\uFF23\uFF4F\uFF4C\uFF41' },
+    { bevId: 'private-use', bayes: 7, n: 3, name: '\uE000 Cola' },
+    { bevId: 'ascii', bayes: 7, n: 3, name: 'Zevia' },
+  ];
+  cases.push({ name: 'names by code point: an astral name after U+E000-U+FFFF names', fn: 'leaderboardOrder', input: { rows: unicode }, expected: leaderboardOrder(unicode) });
   return cases;
 }
 
@@ -470,6 +505,199 @@ function edgeCases(): Case[] {
   return cases;
 }
 
+
+// ---------------------------------------------------------------- taste neighbourhoods (graph.ts, M-28)
+// No PRNG: hand-built inputs, so adding this file leaves every earlier file's cases unchanged.
+// The six Bevs and three users are docs/graph_db_implementation.md §1's worked example.
+
+function graphCases(): Case[] {
+  const cases: Case[] = [];
+  const corr = (name: string, a: number[], b: number[]) => cases.push({ name, fn: 'pearsonCorrelation', input: { a, b }, expected: pearsonCorrelation(a, b) });
+  corr('perfect positive', [1, 2, 3], [2, 4, 6]);
+  corr('perfect negative', [1, 2, 3], [3, 2, 1]);
+  corr('sqrt(3)/2', [1, 0, -1], [0.5, 0.5, -1]);
+  corr('re-centred: both above their means, opposite order (cosine says 0.6)', [0.5, 1.5], [1.5, 0.5]);
+  corr('two entries are +-1', [0.2, 0.9], [-1, 3]);
+  corr('zero variance on one side', [1, 1, 1], [2, 4, 6]);
+  corr('one entry', [1], [2]);
+  corr('empty', [], []);
+  corr('general', [0.2, -1.1, 0.7, 1.4, -0.35], [0.5, -0.3, 0.1, 1.0, -0.8]);
+
+  for (const n of [0, 1, 2, 3, 4, 5, 8]) cases.push({ name: `|common| = ${n}`, fn: 'significanceWeight', input: { common: n }, expected: significanceWeight(n) });
+
+  const zs = (xs: number[], prefix = 'b') => Object.fromEntries(xs.map((x, i) => [`${prefix}${i}`, x]));
+  const users = (name: string, zu: Record<string, number>, zv: Record<string, number>) =>
+    cases.push({ name, fn: 'pearsonSimilarity', input: { zu, zv }, expected: pearsonSimilarity(zu, zv) });
+  const five = [1.2, -0.4, 0.3, -1.1, 0.7];
+  users('identical users, 5 common', zs(five), zs(five));
+  users('opposite users, 5 common', zs(five), zs(five.map((x) => -x)));
+  users('1 common Bev', { a: 1, b: 2 }, { a: 3, c: 1 });
+  users('no common Bev', { a: 1 }, { b: 1 });
+  users('zero variance on the common Bevs', { a: 0.4, b: 0.4, c: 0.4, x: -2 }, { a: -1, b: 0.5, c: 1 });
+  const base = [0.9, -0.2, 0.4, -1.3, 1.1, 0.05, -0.6, 0.75];
+  for (const n of [1, 3, 5, 8]) {
+    const xs = base.slice(0, n);
+    users(`shrinkage at ${n} common (v = 2u + 0.3)`, { ...zs(xs), onlyU: 2 }, { ...zs(xs.map((x) => 2 * x + 0.3)), onlyV: -2 });
+  }
+  users('3 common of 4 and 4: r = sqrt(3)/2, sim = 0.6 r', { b3: 1.0, b1: 1.5, b2: 0.5, b9: -3 }, { b1: 1.0, b2: 0.0, b3: 1.0, b6: -0.5 });
+  users('re-centred: shared Bevs above both means, opposite order', { a: 0.539, b: 0.863, c: -1.402 }, { a: 0.863, b: 0.539, d: -1.402 });
+
+  const docBevs: TasteBev[] = [
+    { id: 'b1', categoryId: 'soda', brand: 'Coca-Cola', flavorBase: 'cola' },
+    { id: 'b2', categoryId: 'soda', brand: 'Pepsi', flavorBase: 'cola' },
+    { id: 'b3', categoryId: 'diet_soda', brand: 'Coca-Cola', flavorBase: 'cola' },
+    { id: 'b4', categoryId: 'soda', brand: 'Dr Pepper', flavorBase: 'cola' },
+    { id: 'b5', categoryId: 'sparkling_water', brand: 'LaCroix', flavorBase: 'lemon-lime' },
+    { id: 'b6', categoryId: 'energy', brand: 'Red Bull', flavorBase: 'herbal' },
+  ];
+  const withB7: TasteBev[] = [...docBevs, { id: 'b7', categoryId: 'sparkling_water', brand: 'LaCroix', flavorBase: 'citrus' }];
+  const sorted = <V>(m: ReadonlyMap<string, V>) => Object.fromEntries([...m].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
+  const catalogs: Array<[string, TasteBev[]]> = [
+    ['doc example, 6 Bevs', docBevs],
+    ['doc example plus a second LaCroix', withB7],
+    ['category and flavour base with the same name; blank brand and base', [
+      { id: 'x', categoryId: 'coffee', brand: '  Blue  Bottle ', flavorBase: 'coffee' },
+      { id: 'y', categoryId: 'coffee', brand: 'blue bottle', flavorBase: 'coffee' },
+      { id: 'z', categoryId: 'coffee', brand: ' ', flavorBase: '' },
+    ]],
+  ];
+  const built = new Map<string, TasteCatalog>();
+  for (const [name, bevs] of catalogs) {
+    const c = tasteCatalog(bevs);
+    built.set(name, c);
+    cases.push({ name, fn: 'tasteCatalog', input: { bevs }, expected: { attributes: sorted(c.attributes), coverage: sorted(c.coverage) } });
+  }
+  const docCatalog = built.get('doc example, 6 Bevs') as TasteCatalog;
+  const b7Catalog = built.get('doc example plus a second LaCroix') as TasteCatalog;
+
+  const U1 = { b1: 1.2, b4: 0.6, b5: -1.3 };
+  const U2 = { b2: 1.1, b3: 0.8, b5: -0.9 };
+  const U3 = { b4: 1.0, b6: 0.9 };
+  const U4 = { b1: 1.5, b2: 0.5, b3: 1.0 };
+  const U5 = { b1: 1.0, b2: 0.0, b3: 1.0, b6: -0.5 };
+  const faint = { b1: 1.5, b2: -0.5, b3: 1.0, b4: -1.2, b6: 0.4 };
+  const faintOpposite = Object.fromEntries(Object.entries(faint).map(([k, x]) => [k, -x]));
+  const flat = { b1: 0.8, b2: 0.8, b3: 0.8 };
+  const varied = { b1: 1.0, b2: 0.2, b3: 1.4 };
+  const weakU = { b1: 1.0, b2: 0.2, b4: -0.5 };
+  const weakV = { b1: 0.8, b2: 0.4, b4: -0.9 };
+  const vectors: Array<[string, Record<string, number>, string, TasteBev[], TasteCatalog]> = [
+    ['U1', U1, 'doc example, 6 Bevs', docBevs, docCatalog],
+    ['U2', U2, 'doc example, 6 Bevs', docBevs, docCatalog],
+    ['U3', U3, 'doc example, 6 Bevs', docBevs, docCatalog],
+    ['U1 with a second LaCroix', U1, 'doc example plus a second LaCroix', withB7, b7Catalog],
+    ['U2 with a second LaCroix', U2, 'doc example plus a second LaCroix', withB7, b7Catalog],
+    ['a Bev outside the catalog is skipped', { ...U1, gone: 3 }, 'doc example, 6 Bevs', docBevs, docCatalog],
+    ['no rankings', {}, 'doc example, 6 Bevs', docBevs, docCatalog],
+  ];
+  const tv = new Map<string, TasteVector>();
+  for (const [name, z, , bevs, c] of vectors) {
+    const t = tasteVector(z, c);
+    tv.set(name, t);
+    cases.push({ name, fn: 'tasteVector', input: { z, catalogBevs: bevs }, expected: t });
+  }
+  const t = (name: string) => tv.get(name) as TasteVector;
+
+  const attr = (name: string, a: TasteVector, b: TasteVector) =>
+    cases.push({ name, fn: 'attributeSimilarity', input: { a, b }, expected: attributeSimilarity(a, b) });
+  attr('doc example U1-U2', t('U1'), t('U2'));
+  attr('doc example U1-U3', t('U1'), t('U3'));
+  attr('doc example U2-U3', t('U2'), t('U3'));
+  attr('U1-U2 with a second LaCroix: the shared dislike enters the cosine', t('U1 with a second LaCroix'), t('U2 with a second LaCroix'));
+  attr('identical', { 'flavor:cola': 0.4, 'brand:x': -0.2 }, { 'flavor:cola': 0.4, 'brand:x': -0.2 });
+  attr('opposite', { 'flavor:cola': 0.4, 'brand:x': -0.2 }, { 'flavor:cola': -0.4, 'brand:x': 0.2 });
+  attr('no attribute in common', { 'flavor:cola': 0.4 }, { 'brand:x': 0.9 });
+  attr('a zero vector', { 'flavor:cola': 0 }, { 'flavor:cola': 0.9 });
+
+  // sharedAttributeCount needs the ranked Bevs and the catalog: an attribute bridges only if the two
+  // users reach it through different Bevs. k1/k2 share brand X, cola and soda; k3/k4 brand Y, citrus.
+  const kBevs: TasteBev[] = [
+    { id: 'k1', categoryId: 'soda', brand: 'X', flavorBase: 'cola' },
+    { id: 'k2', categoryId: 'soda', brand: 'X', flavorBase: 'cola' },
+    { id: 'k3', categoryId: 'soda', brand: 'Y', flavorBase: 'citrus' },
+    { id: 'k4', categoryId: 'soda', brand: 'Y', flavorBase: 'citrus' },
+  ];
+  const kCatalog = tasteCatalog(kBevs);
+  const shared = (name: string, zu: Record<string, number>, zv: Record<string, number>, bevs: TasteBev[], c: TasteCatalog) =>
+    cases.push({ name, fn: 'sharedAttributeCount', input: { zu, zv, catalogBevs: bevs }, expected: sharedAttributeCount({ zu, zv, tu: tasteVector(zu, c), tv: tasteVector(zv, c) }, c) });
+  shared('doc example U1-U2: coke and cola, each through different Bevs', U1, U2, docBevs, docCatalog);
+  shared('doc example U1-U3: cola only', U1, U3, docBevs, docCatalog);
+  shared('U1-U2 with a second LaCroix: lacroix is reached only through co-rated b5, so not a bridge', U1, U2, withB7, b7Catalog);
+  shared('the same attributes through two different Bevs; categories never bridge', { k1: 0.9 }, { k2: 0.9 }, kBevs, kCatalog);
+  shared('one co-rated Bev is not a bridge', { k1: 1.0 }, { k1: 0.8 }, kBevs, kCatalog);
+  shared('a co-rated Bev plus another Bev with the attribute is', { k1: 1.0 }, { k1: 0.8, k2: 0.6 }, kBevs, kCatalog);
+  shared('|t| = 0.2 exactly counts, and the signs may differ', { k1: 0.5, k2: 0.3 }, { k1: -0.9 }, kBevs, kCatalog);
+  shared('|t| = 0.19 does not count', { k1: 0.57 }, { k2: 0.9 }, kBevs, kCatalog);
+  shared('different attributes do not bridge', { k1: 0.9 }, { k3: 0.9 }, kBevs, kCatalog);
+
+  const blend = (name: string, zu: Record<string, number>, zv: Record<string, number>, bevs: TasteBev[], c: TasteCatalog, alpha?: number) => {
+    const pair = { zu, zv, tu: tasteVector(zu, c), tv: tasteVector(zv, c) };
+    cases.push({ name, fn: 'blendUserSimilarity', input: { zu, zv, catalogBevs: bevs, ...(alpha === undefined ? {} : { alpha }) }, expected: blendUserSimilarity(pair, c, alpha === undefined ? {} : { alpha }) });
+  };
+  blend('attribute only: doc U1-U2 share one Bev, bridged by coke and cola', U1, U2, docBevs, docCatalog);
+  blend('attribute only, gated out: doc U1-U3 share one bridging attribute', U1, U3, docBevs, docCatalog);
+  blend('attribute only, no common Bev: doc U2-U3', U2, U3, docBevs, docCatalog);
+  blend('blend: 3 common Bevs, r = sqrt(3)/2, two bridging attributes', U4, U5, docBevs, docCatalog);
+  blend('blend: a co-rated pair with fewer than 2 bridging attributes is not gated', weakU, weakV, docBevs, docCatalog);
+  blend('identical users with faint taste vectors', faint, faint, docBevs, docCatalog);
+  blend('opposite users', faint, faintOpposite, docBevs, docCatalog);
+  blend('zero variance on the common Bevs', flat, varied, docBevs, docCatalog);
+  blend('alpha = 1: the Pearson arm', U4, U5, docBevs, docCatalog, 1);
+  blend('alpha = 0: the attribute arm', U4, U5, docBevs, docCatalog, 0);
+  blend('alpha = 1 below 2 common Bevs is still attribute only', U1, U2, docBevs, docCatalog, 1);
+  // A single co-rated Bev carrying a kept brand and flavour is not a two-hop bridge (M-28 review).
+  const xyBevs: TasteBev[] = [
+    { id: 'x', categoryId: 'soda', brand: 'Coca-Cola', flavorBase: 'cola' },
+    { id: 'y', categoryId: 'soda', brand: 'Coca-Cola', flavorBase: 'cola' },
+    { id: 'p', categoryId: 'water', brand: 'LaCroix', flavorBase: 'lime' },
+    { id: 'q', categoryId: 'water', brand: 'LaCroix', flavorBase: 'lime' },
+  ];
+  const xyCatalog = tasteCatalog(xyBevs);
+  blend('attribute only, gated out: one co-rated Bev is not a bridge', { x: 1.0, p: -0.1 }, { x: 0.8, q: 0.05 }, xyBevs, xyCatalog);
+  blend('attribute only: the same attributes through two different Bevs bridge', { x: 1.0 }, { y: 0.8 }, xyBevs, xyCatalog);
+
+  // k and min are written out even where the call uses the defaults (TASTE_NEIGHBOUR_K, TASTE_SIM_FLOOR).
+  const top = (name: string, candidates: Array<{ userId: string; sim: number }>, k?: number, min?: number) =>
+    cases.push({ name, fn: 'topUserNeighbours', input: { candidates, k: k ?? RANKING_CONSTANTS.tasteNeighbourK, min: min ?? RANKING_CONSTANTS.tasteSimFloor }, expected: topUserNeighbours(candidates, k, min) });
+  top('floor is inclusive; ties by userId; negatives dropped', [
+    { userId: 'c', sim: 0.5 },
+    { userId: 'a', sim: 0.9 },
+    { userId: 'low', sim: 0.09 },
+    { userId: 'edge', sim: 0.1 },
+    { userId: 'b', sim: 0.5 },
+    { userId: 'neg', sim: -0.8 },
+  ]);
+  const many = Array.from({ length: 30 }, (_, i) => ({ userId: `u${String(i).padStart(2, '0')}`, sim: 0.2 + i / 100 }));
+  top('30 candidates, default k = 25', many);
+  top('k = 3', many, 3);
+  top('k = 0', many, 0);
+  top('empty', []);
+
+  for (const n of [0, 3, 10, 15, 80]) cases.push({ name: `n_v = ${n}`, fn: 'neighbourReliability', input: { n }, expected: neighbourReliability(n) });
+
+  const rows = [
+    { userId: 'u', bevId: 'a', score: 9 },
+    { userId: 'u', bevId: 'b', score: 7 },
+    { userId: 'u', bevId: 'c', score: 2 },
+    { userId: 'v', bevId: 'a', score: 9 },
+    { userId: 'v', bevId: 'b', score: 8 },
+    { userId: 'v', bevId: 'd', score: 6 },
+    { userId: 'w', bevId: 'a', score: 3 },
+    { userId: 'w', bevId: 'd', score: 4 },
+    { userId: 'x', bevId: 'a', score: 6.5 },
+    { userId: 'x', bevId: 'b', score: 6.5 },
+    { userId: 'x', bevId: 'c', score: 6.5 },
+  ];
+  const z = zScoresFromRankings(rows);
+  cases.push({
+    name: 'own stats at 3 rankings, global stats below, sigma floored',
+    fn: 'zScoresFromRankings',
+    input: { rankings: rows },
+    expected: Object.fromEntries([...z].map(([u, m]) => [u, Object.fromEntries(m)])),
+  });
+  return cases;
+}
+
 // ---------------------------------------------------------------- write / check
 
 const files: Record<string, Case[]> = {
@@ -481,6 +709,7 @@ const files: Record<string, Case[]> = {
   'streak.vectors.json': streakCases(),
   'rank-points.vectors.json': rankPointsCases(),
   'edges.vectors.json': edgeCases(),
+  'graph.vectors.json': graphCases(),
 };
 
 const check = process.argv.includes('--check');

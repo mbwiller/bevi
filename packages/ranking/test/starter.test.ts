@@ -28,6 +28,14 @@ describe('selectStarterSet', () => {
     expect(selectStarterSet(cands, { seed: 's', k: 3, core: 3 })).toEqual(['z', 'x', 'w']);
   });
 
+  it('breaks rating ties by code point, not UTF-16 code unit', () => {
+    const cands: StarterCandidate[] = [
+      { id: 'emoji', name: '🥤 Cola', categoryId: 'soda', ratingCount: 9 }, // U+1F964
+      { id: 'fullwidth', name: 'Ｃｏｌａ', categoryId: 'water', ratingCount: 9 }, // U+FF23
+    ];
+    expect(selectStarterSet(cands, { seed: 's', k: 1, core: 1 })).toEqual(['fullwidth']);
+  });
+
   it('drops excluded categories', () => {
     const set = selectStarterSet(make(30), { seed: 'teen', excludeCategoryIds: ['beer'] });
     expect(set.some((id) => make(30).find((c) => c.id === id)?.categoryId === 'beer')).toBe(false);

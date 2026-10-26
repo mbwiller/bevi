@@ -169,7 +169,21 @@ export interface Recommendation {
   isExploration: boolean;
 }
 
-export interface RecommendOptions {
+/**
+ * The user–user similarity Layer 2 weights neighbours by. 'cosine' is §8.9's cosine of the z-scores
+ * on the common Bevs, the live engine. 'pearson' re-centres both users on the common Bevs first
+ * (`pearsonSimilarity` in graph.ts, docs/graph_db_implementation.md Stage 3); it is off by default
+ * until the eval harness has a real export to judge it on.
+ */
+export type UserSimilarityKind = 'cosine' | 'pearson';
+
+/** Options of `layer2`, `userSimilarity` and `predictScore`. Omitted means today's engine. */
+export interface PredictOptions {
+  /** Default 'cosine'. */
+  userSimilarity?: UserSimilarityKind;
+}
+
+export interface RecommendOptions extends PredictOptions {
   /** List length. */
   n: number;
   /** PRNG seed; the caller derives it from userId + local day so a day's list is stable. */
@@ -178,6 +192,11 @@ export interface RecommendOptions {
   epsilon?: number;
   excludeBevIds?: BevId[];
 }
+
+// ---------------------------------------------------------------- taste neighbourhoods (graph.ts)
+
+/** The taste vector's attribute nodes: `:Category`, `:Brand` and `:Flavor` in the graph. */
+export type TasteAttributeKind = 'category' | 'brand' | 'flavor';
 
 // ---------------------------------------------------------------- starter set, rank, streaks (§8.12–§8.14)
 
