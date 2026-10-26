@@ -10,6 +10,7 @@ export * from './stats.ts';
 export * from './bayesian.ts';
 export * from './similarity.ts';
 export * from './edges.ts';
+export * from './graph.ts';
 export * from './layer1.ts';
 export * from './layer2.ts';
 export * from './blend.ts';

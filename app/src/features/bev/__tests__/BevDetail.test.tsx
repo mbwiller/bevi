@@ -19,6 +19,8 @@ function Layout() {
   );
 }
 
+// A neighbour in "Bevs like this" can share a name with this Bev (the catalog has same-named Bevs from different
+// brands), so the title is found by its header role, not by text.
 const Stub = () => null;
 
 async function open(id: string) {
@@ -59,7 +61,7 @@ afterEach(() => client.clear());
 it('a ranked Bev shows your score, its place in the bucket, and Re-rank', async () => {
   const ranked = (await api.rankings.listMine()).items[0]!;
   const r = await open(ranked.bevId);
-  expect(await screen.findByText(ranked.bev.name)).toBeTruthy();
+  expect(await screen.findByRole('header', { name: ranked.bev.name })).toBeTruthy();
   expect(screen.getByText('Your score')).toBeTruthy();
   expect(screen.getByText(`#${ranked.position + 1} in Loved`)).toBeTruthy();
   expect(screen.getByText('Bevi score')).toBeTruthy();
@@ -71,7 +73,7 @@ it('an unranked Bev offers Rank it and Want to Try, with a locked prediction whe
   // Demo has enough rankings, so a low-confidence prediction is "Not enough to go on yet", not the "Rank 3" lock.
   const rec = (await api.recs.getRecommendations()).items.find((x) => x.confidence < CONFIDENCE_LOCK)!;
   const r = await open(rec.bev.id);
-  expect(await screen.findByText(rec.bev.name)).toBeTruthy();
+  expect(await screen.findByRole('header', { name: rec.bev.name })).toBeTruthy();
   expect(screen.getByText("You'd rate it")).toBeTruthy();
   expect(screen.getByText('Not enough to go on yet')).toBeTruthy();
   const save = screen.getByLabelText('Save to Want to Try');
@@ -84,7 +86,7 @@ it('an unranked Bev offers Rank it and Want to Try, with a locked prediction whe
 it('shows a confident prediction from your tastes', async () => {
   const rec = (await api.recs.getRecommendations()).items.find((x) => x.confidence >= CONFIDENCE_LOCK)!;
   await open(rec.bev.id);
-  expect(await screen.findByText(rec.bev.name)).toBeTruthy();
+  expect(await screen.findByRole('header', { name: rec.bev.name })).toBeTruthy();
   expect(screen.getByText('from your tastes')).toBeTruthy();
 });
 

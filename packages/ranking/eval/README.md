@@ -93,11 +93,12 @@ shows how many draws were valid, e.g. `(812/1000 draws)`, and the JSON carries i
 
 Arms: `global-mean`, `user-mean` (constant μ*_u), `category-mean`, `user-category-mean`,
 `bayes-bev`, `item-mean-z` (`globalScore`), `l1-affinity`, `l1-content`, `layer1`, `layer2`,
-`engine` (`predictScore`), and `engine-pearson`. That last arm is **experimental**: the engine with
-Pearson over the common subset in place of `cosineSimilarity`, to measure the re-centring issue
-in `layer2.ts` without changing it. `makeEngine(cosineSimilarity)` reproduces `predictScore()`
-exactly. The report also prints cosine-vs-Pearson disagreement over every user pair, and the
-median number of co-raters per item pair (§8.9).
+`layer2-pearson`, `engine` (`predictScore`), and `engine-pearson`. The two `-pearson` arms are
+**experimental**: they call the real `layer2` / `predictScore` with `{ userSimilarity: 'pearson' }`
+(M-28, `RANKING_VERSION` 1.3.0), which swaps §8.9's cosine for Pearson over the common subset
+(`pearsonSimilarity` in `src/graph.ts`) and changes nothing else. Production still runs the
+default, `'cosine'`. The report also prints cosine-vs-Pearson disagreement over every user pair,
+and the median number of co-raters per item pair (§8.9).
 
 ## Caveats
 

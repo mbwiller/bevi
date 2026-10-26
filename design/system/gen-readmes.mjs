@@ -124,7 +124,10 @@ const R = {
 - One list sorted by score: buckets show through the bubble colour, not as sections.`,
   FeedPost: `A ranking in the Feed and on Profile › Activity: "**Arjun** Bev'd **Horchata**", meta line, ScoreBubble, a 155pt photo strip, notes and actions.
 
-- Provide: \`actor\` (or \`you\` for "You"), \`bev\`, \`score\`, \`note\`, \`time\` ("5 hours ago", "Wednesday"), \`saved\`, \`liked\`, \`likeCount\`, \`comments\`, \`commentCount\`, \`onLike\`, \`onComment\`, \`onRank\`, \`onSave\`, \`onOpen\`.
+- Provide: \`actor\` (or \`you\` for "You"), \`bev\`, \`score\`, \`note\`, \`time\` ("5 hours ago", "Wednesday"), \`saved\`, \`liked\`, \`likeCount\`, \`comments\`, \`commentCount\`, \`onLike\`, \`onComment\`, \`onRank\`, \`onSave\`, \`onOpen\`, and in Explore \`following\` and \`onFollow\`.
+- Each action shows only with its handler: no \`onLike\` means no heart and no double-tap, no \`onComment\` no comment icon, and likewise Rank it and Want to Try.
+- **The plain post** is a read-only ranking by someone you don't follow (Explore, and a stranger's Profile › Activity): head, photo strip and note, with no heart, no counts, no comments and no Rank it or Want to Try. Tapping the photo opens the Bev. Likes and comments stay between followers (D-15).
+- **In Explore the plain post carries the author's Follow pill** (\`onFollow\`), UserRow's pill: filled \`primary\` "Follow", outlined "Following" once tapped, its accessible name "Follow" plus the author's name. It leads the action group, where the heart sits on a feed post, so a plain post and an Explore post are the same height.
 - A post is always a ranking. Saving a Bev is not a post; the filled bookmark shows you already have it saved.
 - The meta line under the name is the category icon and the brand (the category's name when there's no brand). No price on a post (D-06).
 - Action row: the time on the left; on the right the LikeButton and the CommentButton, then Rank it and Want to Try. Heart and comment lead the group because they are about the post, while Rank and Want to Try are about the Bev.
@@ -157,10 +160,21 @@ const R = {
 - The percentage rounds **down** and never reads a misleading 0%: "<1%" once anything is tried, "0%" when nothing is. An empty category drops the percentage.
 - The bar is \`input\` with a \`primary\` fill, because it is a share you earned (the README's rule for grape). It is decorative; the line and the spoken label carry the number ("Soda, 4 of 61 tried, 6 percent. Show your collection").
 - While the numbers load, a one-line Skeleton holds the strip's place; if they fail, the strip is left out rather than showing a wrong count.`,
-  ProgressBar: `A 4pt progress track in \`input\` with a \`primary\` fill: a share you earned. Used by the ProgressStrip and the CollectionSheet.
+  ProgressBar: `A 4pt progress track in \`input\` with a \`primary\` fill: a share you earned. Used by the ProgressStrip, the CollectionSheet and the TasteBar.
 
-- Provide: \`value\` 0–1 (clamped).
+- Provide: \`value\` 0–1 (clamped), \`tone\` ("primary" by default; "scoreHigh", "scoreMid" or "scoreLow" fill it in a score band, which only the TasteBar does).
 - Decorative and hidden from screen readers: the text beside it always says the number.`,
+  TasteBar: `One category of a Taste Profile: its icon and label, "8.1 · 9 ranked" on the right and a 4pt bar under it filled to the average score out of 10.
+
+- Provide: \`categoryId\` (icon and label come from \`Bevi.categories\`), \`mean\` (0–10, the user's average score there), \`rankingCount\`.
+- The score and the bar take the score band's colour (7 and up \`scoreHigh\`, 4 and up \`scoreMid\`, else \`scoreLow\`); " · 9 ranked" stays \`textSecondary\`. The number always shows, so colour is never the only signal.
+- Not a button: a 44pt row that a screen reader hears as one sentence, "Coffee, average 8.1, 9 ranked".`,
+  TasteProfile: `The Taste Profile tab's block (Profile, next to Activity): an optional one-line read-out over a TasteBar per category, high to low, on the 16pt gutter.
+
+- Provide: \`rows\` (\`{ categoryId, mean, rankingCount }\`, from \`stats.getTasteProfile(userId)\`, already sorted by mean, highest first) and \`readout\`. It neither sorts nor writes the read-out, so the app owns both; empty \`rows\` render nothing and the screen shows its EmptyState.
+- Read-out rule (the ranking paper's Taste Profile definition): "You prefer coffee and boba over soda" (or "Matt prefers…") appears only when both categories have 3 or more rankings and their means differ by at least 1. Without such a pair the line is left out.
+- Categories the user hasn't ranked are not in \`rows\`; the alcoholic three never reach an under-21 viewer, or a viewer looking at an under-21 profile.
+- Loading is a Skeleton, a failed load is an ErrorState with retry, and a user with no rankings gets "No taste profile yet" (their own) or "Their taste profile will show up here."`,
   CollectionSheet: `"Your collection": a 90% Sheet with every category the viewer can see, in catalog order, each with its icon, "9 of 40" and the same 4pt bar.
 
 - Provide: \`rows\` (\`{ categoryId, ranked, total }\`: the contract's \`CategoryProgress\`, from \`stats.getCategoryProgress()\`), \`onSelect\` (called with the \`categoryId\`), \`onClose\`. Categories with nothing in them are left out; the alcoholic three never reach an under-21 viewer.
@@ -217,10 +231,11 @@ const R = {
 };
 
 const S = {
-  ScreenFeed: `Feed tab (ref 01, 12): Header with the wordmark and Find people, the filled SearchBar, Bev of the day and Bev of the week side by side (BevOfCard), then "YOUR FEED" FeedPosts, over the TabBar.
+  ScreenFeed: `Feed tab (ref 01, 12): Header with the wordmark and Find people, the filled SearchBar, Bev of the day and Bev of the week side by side (BevOfCard), then SegmentedTabs "Your feed · Explore" and that segment's FeedPosts, over the TabBar.
 
-- Following nobody: an EmptyState under YOUR FEED ("Follow friends to see their Bevs" + Find people); the Bev of the day and week stay.
-- Each post carries the heart and the comment bubble; up to seven comments show under the action row, more collapse to "View all N comments".
+- The tabs replace the YOUR FEED section header, in the same place: under the Bev of the day and week, which stay on both segments. Text tabs (\`underline-text\`), as on Your lists and the Leaderboard. "Your feed" is the default.
+- **Your feed:** followed people's rankings, newest first. Each post carries the heart and the comment bubble; up to seven comments show under the action row, more collapse to "View all N comments". Following nobody: an EmptyState under the tabs ("Follow friends to see their Bevs" + Find people).
+- **Explore:** rankings by people you don't follow yet, up to two follows away (everyone while Bevi is small), the most liked first rather than the newest. Each is the plain post (no heart, counts or comments) with the author's Follow pill. A followed author's posts stay, marked "Following", until Explore reloads; then they move to Your feed. Nothing yet: an EmptyState with \`sparkles\` ("Nothing popular yet", "Popular Bevs from people you don't follow show up here").
 - Dropped from Beli: quick-action pills, the composer, the invite card.`,
   ScreenYourLists: `Your Lists › Bev'd (ref 06): centred "YOUR LISTS" Header, ListScopeDropdown, SegmentedTabs, the FilterPill row, the ProgressStrip ("All Bevs · 37 of 378 tried · 9%"), SortToggle, then numbered BevRows sorted by score.
 
@@ -245,10 +260,12 @@ const S = {
 - First Bev in an empty bucket: the same bubble over "First one in Loved", and "Nothing to compare yet. Add a note if you like."
 - Motion: the bubble pours in and its number counts up from the bucket's lower edge (7.0 Loved, 4.0 Fine, 0.0 Didn't like) to the score, both over \`pour\` (450ms). Under Reduce Motion the final number shows at once, with no count-up.
 - The score shown is the one that will be saved (\`storedScore\` from @bevi/ranking); the result step's ScoreBubble 56 confirms it.`,
-  ScreenBevDetail: `Bev detail (no reference): BevImage 155, name, brand, category and PriceTier; two stat cards (Bevi score with "5k ratings" under it, "You'd rate it" predicted); friends who've had it; Rank it and Want to Try Pills.
+  ScreenBevDetail: `Bev detail (no reference): BevImage 155, name, brand, category and PriceTier; two stat cards (Bevi score with "5k ratings" under it, "You'd rate it" predicted); friends who've had it; Rank it and Want to Try Pills; "Bevs like this"; "Added by". The preview shows two phones: the top of the screen, then the same screen scrolled to the new row (the Header stays put).
 
-- Not enough rankings: the second bubble is \`locked\` with "Rank 3 Bevs to see your prediction".`,
-  ScreenProfile: `Profile tab (ref 02, 03): name Header, Avatar 100, handle, counts, the outlined Button row, three ProfileListRows, two StatCards, Activity · Taste Profile tabs, then your FeedPosts.`,
+- Not enough rankings: the second bubble is \`locked\` with "Rank 3 Bevs to see your prediction".
+- **Bevs like this** (M-27): a \`SectionHeader\` ("Bevs like this", no action) under Rank it, Want to Try and the nutrition label, then up to 5 \`BevRow\`s, most similar first, from \`bevs.similar(bevId, 5)\`. Each row has its image (\`showImage\`; the \`BevArt\` placeholder where there is no photo), no Rank or Want to Try buttons (\`actions={false}\`: the row only opens a Bev, and its own detail has both), the Bayesian score in the bubble and the rating count as the meta line, the same as search results. The bubble is \`locked\` while the Bev has fewer than \`MIN_RATERS\` rankings. No number: this is a set, not a ranking. Tapping a row opens that Bev's detail (pushed, so Back returns here).
+- **Hidden entirely** when there are no neighbours, while it loads, and if the request fails: no header, no empty state, no error. It is secondary content, so it never makes the page jump or shout. The current Bev is never in its own list, and under-21 viewers never see an alcoholic neighbour.`,
+  ScreenProfile: `Profile tab (ref 02, 03): name Header, Avatar 100, handle, counts, the outlined Button row, three ProfileListRows, two StatCards, Activity · Taste Profile tabs, then your FeedPosts. The Taste Profile tab swaps the posts for a TasteProfile: the read-out over the category bars.`,
   ScreenLeaderboard: `Leaderboard tab (no reference): centred "LEADERBOARD", Bevs · People tabs, the category scope, then numbered BevRows with the Bev's image (\`showImage\`) and the Bayesian score; "Your score 7.6" (or "Not ranked yet") in the meta line, with no rating count.
 
 - People tab: UserRows with rank, points, Bevs and streak; your own row pinned and highlighted.`,

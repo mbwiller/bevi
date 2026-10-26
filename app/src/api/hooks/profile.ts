@@ -52,6 +52,15 @@ export function useCategoryProgress() {
   return useQuery({ queryKey: keys.stats.categoryProgress(), queryFn: () => api.stats.getCategoryProgress() });
 }
 
+/** One person's Taste Profile rows (mean per category, highest first); the Taste Profile tab. */
+export function useTasteProfile(userId: string | undefined) {
+  return useQuery({
+    queryKey: keys.stats.tasteProfile(userId ?? ''),
+    queryFn: () => api.stats.getTasteProfile(userId!),
+    enabled: !!userId,
+  });
+}
+
 function onProfileSaved(qc: ReturnType<typeof useQueryClient>, profile: Profile) {
   qc.setQueryData(keys.me(), profile);
   qc.setQueryData<Session | null>(keys.session(), (s) => (s ? { ...s, handle: profile.handle } : s));
@@ -87,6 +96,9 @@ export function useSetBirthDate() {
       void qc.invalidateQueries({ queryKey: keys.bevOfPeriod() });
       void qc.invalidateQueries({ queryKey: keys.leaderboard.all });
       void qc.invalidateQueries({ queryKey: keys.recommendationsAll });
+      // Server-filtered by age too: the feed (and every Activity under it) and Explore.
+      void qc.invalidateQueries({ queryKey: keys.feed() });
+      void qc.invalidateQueries({ queryKey: keys.explore() });
     },
   });
 }

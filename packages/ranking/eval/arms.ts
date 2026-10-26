@@ -10,7 +10,6 @@ import { bevOf, globalScore, layer1 } from '../src/layer1.ts';
 import { layer2 } from '../src/layer2.ts';
 import { effectiveCategoryStats } from '../src/stats.ts';
 import type { BevId, PredictionSnapshot, UserId } from '../src/types.ts';
-import { makeEngine, pearsonSimilarity } from './similarity-arms.ts';
 
 export const ARM_IDS = [
   'global-mean',
@@ -23,6 +22,7 @@ export const ARM_IDS = [
   'l1-content',
   'layer1',
   'layer2',
+  'layer2-pearson',
   'engine',
   'engine-pearson',
 ] as const;
@@ -51,8 +51,6 @@ function fromZ(snapshot: PredictionSnapshot, userId: UserId, z: number): number 
   const eff = effectiveStatsOf(snapshotContext(snapshot), userId);
   return clamp(eff.mean + eff.stddev * z);
 }
-
-const pearson = makeEngine(pearsonSimilarity);
 
 export const ARMS: readonly Arm[] = [
   {
@@ -127,6 +125,15 @@ export const ARMS: readonly Arm[] = [
     },
   },
   {
+    id: 'layer2-pearson',
+    description: "EXPERIMENTAL: layer2(…, { userSimilarity: 'pearson' }), Pearson over the common subset (M-28, off in production)",
+    experimental: true,
+    predict: (s, u, b) => {
+      const l2 = layer2(s, u, b, { userSimilarity: 'pearson' });
+      return { score: fromZ(s, u, l2.z), support: l2.support };
+    },
+  },
+  {
     id: 'engine',
     description: 'predictScore(): the production blend',
     experimental: false,
@@ -137,10 +144,10 @@ export const ARMS: readonly Arm[] = [
   },
   {
     id: 'engine-pearson',
-    description: 'EXPERIMENTAL: the engine with Pearson over the common subset instead of cosine',
+    description: "EXPERIMENTAL: predictScore(…, { userSimilarity: 'pearson' }), the engine with Layer 2 on Pearson (M-28, off in production)",
     experimental: true,
     predict: (s, u, b) => {
-      const p = pearson.predict(s, u, b);
+      const p = predictScore(s, u, b, { userSimilarity: 'pearson' });
       return { score: p.score, support: p.layer2.support };
     },
   },

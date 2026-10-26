@@ -151,14 +151,19 @@ export interface FeedPostProps {
   liked?: boolean;
   /** Likes on the post, beside the heart; hidden at 0. */
   likeCount?: number;
-  /** Toggles the like from the heart. A double-tap outside the photo strip calls it only when not yet liked. */
+  /** Toggles the like from the heart. A double-tap outside the photo strip calls it only when not yet liked. Without it the post has no heart and no double-tap. */
   onLike?: () => void;
   /** Comments on the post (the contract's first seven, oldest first), shown inline as "**handle** text" while `commentCount` ≤ 7. */
   comments?: PostComment[];
   /** All comments on the post: beside the comment icon (hidden at 0); above 7 the post shows "View all N comments" instead of the list. */
   commentCount?: number;
-  /** Opens the comments sheet (the comment icon and "View all N comments"). */
+  /** Opens the comments sheet (the comment icon and "View all N comments"). Without it the post has no comment icon. */
   onComment?: () => void;
+  /** The viewer follows the author: the Follow pill is outlined "Following". */
+  following?: boolean;
+  /** Shows the author's Follow pill (UserRow's) at the start of the action group, where the heart sits on a feed post. Explore only. */
+  onFollow?: () => void;
+  /** Without `onRank` / `onSave` the post has no Rank it / Want to Try action. */
   onRank?: () => void; onSave?: () => void; onOpen?: () => void; divider?: boolean; className?: string;
 }
 export declare function FeedPost(props: FeedPostProps): React.ReactElement;
@@ -180,13 +185,21 @@ export declare function BevOfCard(props: BevOfCardProps): React.ReactElement;
 export interface ProfileListRowProps { icon: string; iconFilled?: boolean; label: string; count?: number; onClick?: () => void; divider?: boolean; className?: string }
 export declare function ProfileListRow(props: ProfileListRowProps): React.ReactElement;
 
-/** A 4pt track in `input` with a `primary` fill (a share you earned). Decorative (`aria-hidden`): the line beside it says the number. */
-export interface ProgressBarProps { value: number; className?: string }
+/** A 4pt track in `input` with a `primary` fill (a share you earned). `tone` recolours the fill with a score band (TasteBar). Decorative (`aria-hidden`): the line beside it says the number. */
+export interface ProgressBarProps { value: number; tone?: 'primary' | 'scoreHigh' | 'scoreMid' | 'scoreLow'; className?: string }
 export declare function ProgressBar(props: ProgressBarProps): React.ReactElement;
 
 /** Bev'd's progress line: "Soda · 4 of 61 tried · 6%" (rounded down; "<1%" once anything is tried) over a 4pt `primary` bar. With `onClick` it is a button that opens the CollectionSheet. */
 export interface ProgressStripProps { label?: string; ranked: number; total: number; onClick?: () => void; className?: string }
 export declare function ProgressStrip(props: ProgressStripProps): React.ReactElement;
+
+/** One category of a Taste Profile: icon and label, "8.1 · 9 ranked" with the score in its band colour, and a 4pt bar filled to `mean` / 10 in that colour. Not interactive; it reads "Coffee, average 8.1, 9 ranked". */
+export interface TasteBarProps { categoryId: CategoryId; mean: number; rankingCount: number; className?: string }
+export declare function TasteBar(props: TasteBarProps): React.ReactElement;
+
+/** The Taste Profile tab's block: the one-line `readout` (omit or null to hide it) over a TasteBar per row. The app sorts the rows (mean, high to low) and writes the read-out; empty `rows` render nothing. */
+export interface TasteProfileProps { rows: { categoryId: CategoryId; mean: number; rankingCount: number }[]; readout?: string | null; className?: string }
+export declare function TasteProfile(props: TasteProfileProps): React.ReactElement | null;
 
 export interface StatCardProps { icon: string; label: string; value: React.ReactNode; onClick?: () => void; className?: string }
 export declare function StatCard(props: StatCardProps): React.ReactElement;
@@ -246,7 +259,7 @@ declare global {
       TextField: typeof TextField; PriceTierPicker: typeof PriceTierPicker; Header: typeof Header; SectionHeader: typeof SectionHeader;
       ListScopeDropdown: typeof ListScopeDropdown; SegmentedTabs: typeof SegmentedTabs; TabBar: typeof TabBar; BevRow: typeof BevRow;
       FeedPost: typeof FeedPost; FeaturedCard: typeof FeaturedCard; BevOfCard: typeof BevOfCard; ProfileListRow: typeof ProfileListRow; StatCard: typeof StatCard;
-      UserRow: typeof UserRow; ProgressStrip: typeof ProgressStrip; ProgressBar: typeof ProgressBar; BevGlow: typeof BevGlow; BucketButton: typeof BucketButton; CompareCard: typeof CompareCard; ProgressDots: typeof ProgressDots;
+      UserRow: typeof UserRow; ProgressStrip: typeof ProgressStrip; ProgressBar: typeof ProgressBar; TasteBar: typeof TasteBar; TasteProfile: typeof TasteProfile; BevGlow: typeof BevGlow; BucketButton: typeof BucketButton; CompareCard: typeof CompareCard; ProgressDots: typeof ProgressDots;
       EmptyState: typeof EmptyState; ErrorState: typeof ErrorState; Skeleton: typeof Skeleton; Sheet: typeof Sheet; CommentsSheet: typeof CommentsSheet; CollectionSheet: typeof CollectionSheet;
       /** The 15 category slugs with labels and icon names. */
       categories: { id: CategoryId; label: string; icon: string; isAlcoholic?: boolean }[];

@@ -25,7 +25,7 @@ import { spacing, type, useTheme } from '@/theme';
 /**
  * Your profile (§6.13, design system ScreenProfile): name header with Settings, Avatar 100, handle,
  * counts, Edit profile / Share profile / Settings, the three list rows, the two stat cards, then
- * Activity (your rankings as FeedPosts) and Taste Profile (Phase 3). `?tab=activity|taste`.
+ * Activity (your rankings as FeedPosts) and Taste Profile (the category bars and the preference read-out). `?tab=activity|taste`.
  */
 export default function ProfileScreen() {
   const { colors } = useTheme();

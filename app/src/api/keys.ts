@@ -35,6 +35,8 @@ export const keys = {
     user: (id: string) => [...root, 'stats', 'user', id] as const,
     /** Under `stats.all`, so `invalidateAfterRankingChange` refreshes it. */
     categoryProgress: () => [...root, 'stats', 'categoryProgress'] as const,
+    /** `stats.getTasteProfile(userId)`; also under `stats.all`. */
+    tasteProfile: (userId: string) => [...root, 'stats', 'tasteProfile', userId] as const,
   },
 
   follows: {
@@ -52,6 +54,7 @@ export const keys = {
     search: (q: string, categoryId?: CategoryId) => [...root, 'bevs', 'search', q, categoryId ?? null] as const,
     duplicates: (input: FindDuplicatesInput) => [...root, 'bevs', 'duplicates', input] as const,
     starterCandidates: () => [...root, 'bevs', 'starterCandidates'] as const,
+    similar: (bevId: string, n: number) => [...root, 'bevs', 'similar', bevId, n] as const,
   },
 
   rankings: {
@@ -70,6 +73,11 @@ export const keys = {
   commentsAll: [...root, 'comments'] as const,
   /** A post's thread (`comments.list`, newest-first pages). */
   comments: (eventId: string) => [...root, 'comments', eventId] as const,
+  /**
+   * `feed.getExplore` (M-04). Not under `feed()`: an ExplorePost is not a FeedItem (no likes or
+   * comments to patch), and a follow marks it stale rather than refetching it under the reader.
+   */
+  explore: () => [...root, 'explore'] as const,
   /** `feed.getBevOfPeriod` (M-05). */
   bevOfPeriod: () => [...root, 'bevOfPeriod'] as const,
 

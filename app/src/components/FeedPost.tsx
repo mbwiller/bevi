@@ -22,6 +22,7 @@ import { CommentButton } from './CommentButton';
 import { Icon } from './Icon';
 import { LikeButton } from './LikeButton';
 import { ScoreBubble } from './ScoreBubble';
+import { FollowPill } from './UserRow';
 
 export type FeedActor = Pick<Profile, 'displayName' | 'handle' | 'avatarUrl'>;
 
@@ -56,6 +57,13 @@ export interface FeedPostProps {
   commentCount?: number;
   /** Opens the comments sheet (the comment icon and "View all N comments"). Without it the post has no comment icon. */
   onComment?: () => void;
+  /** The viewer follows the author: the Follow pill reads "Following", outlined. */
+  following?: boolean;
+  /**
+   * Shows the author's Follow pill (UserRow's) at the start of the action group, where the heart sits
+   * on a feed post. Explore only.
+   */
+  onFollow?: () => void;
   /** Strip tiles; defaults to the Bev's own photo. An empty list draws no strip. */
   photos?: { src?: string; art?: BevArtProps }[];
   onRank?: () => void;
@@ -108,6 +116,8 @@ export function FeedPost({
   comments = [],
   commentCount = 0,
   onComment,
+  following = false,
+  onFollow,
   photos,
   onRank,
   onSave,
@@ -229,9 +239,11 @@ export function FeedPost({
       <View style={styles.foot}>
         <Text style={[type.body, { color: colors.textSecondary }]}>{time ? formatRelativeTime(time) : ''}</Text>
         <View style={styles.actions}>
+          {onFollow ? <FollowPill following={following} name={name || who} onPress={onFollow} /> : null}
           {onLike ? <LikeButton liked={liked} count={likeCount} onPress={onLike} /> : null}
           {onComment ? <CommentButton count={commentCount} onPress={onComment} /> : null}
-          <BevActions name={bev.name} saved={saved} onRank={onRank} onSave={onSave} />
+          {/* Only with an action: its -8pt edge would push a lone Follow pill past the gutter. */}
+          {onRank || onSave ? <BevActions name={bev.name} saved={saved} onRank={onRank} onSave={onSave} /> : null}
         </View>
       </View>
       {commentCount > INLINE_COMMENTS ? (

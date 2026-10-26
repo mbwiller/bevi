@@ -1,14 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import {
   blendLambda,
+  CF_K,
   globalScore,
   layer1,
   layer2,
+  pearsonSimilarity,
   populationStats,
   predictScore,
+  recommend,
   userSimilarity,
   type BevFeatures,
 } from '../src/index.ts';
+import { snapshotContext } from '../src/context.ts';
 import { buildSnapshot, syntheticSnapshot } from './snapshot-fixture.ts';
 
 const bev = (id: string, categoryId: string, brandKey: string | null, flavorTokens: string[], priceTier: 1 | 2 | 3 | 4): BevFeatures => ({
@@ -117,5 +121,94 @@ describe('predictScore', () => {
         expect(p.lambda).toBeLessThan(0.7);
       }
     }
+  });
+});
+
+describe('layer 2 with userSimilarity: "pearson" (M-28, off by default)', () => {
+  it('worked example: u and v share a, b, where Pearson is ±1 by construction', () => {
+    // u: z(9) > z(7); v: z(9) > z(8). Two common items, same order → r = 1; sim' = 1 · 2/5.
+    expect(userSimilarity(snap, 'u', 'v', { userSimilarity: 'pearson' })).toBeCloseTo(0.4, 12);
+    expect(userSimilarity(snap, 'u', 'w', { userSimilarity: 'pearson' })).toBe(0); // one common item
+    expect(userSimilarity(snap, 'u', 'u', { userSimilarity: 'pearson' })).toBe(0);
+    const l2 = layer2(snap, 'u', 'd', { userSimilarity: 'pearson' });
+    expect(l2.neighbours).toEqual(['v']);
+    expect(l2.z).toBeCloseTo(zv(6), 12);
+    expect(l2.support).toBeCloseTo(0.4, 12);
+    // Cosine said (cos · 2)/5 with cos < 1: the two similarities differ even here.
+    expect(userSimilarity(snap, 'u', 'v')).toBeLessThan(0.4);
+  });
+
+  it('re-centring: shared Bevs above both users’ means in opposite order are a neighbour under cosine only', () => {
+    // p and q each rank a low Bev (2.0) that the other didn't, so a and b sit above both means.
+    const s2 = buildSnapshot(
+      [
+        { userId: 'p', bevId: 'a', score: 8 },
+        { userId: 'p', bevId: 'b', score: 9 },
+        { userId: 'p', bevId: 'c', score: 2 },
+        { userId: 'q', bevId: 'a', score: 9 },
+        { userId: 'q', bevId: 'b', score: 8 },
+        { userId: 'q', bevId: 'd', score: 2 },
+      ],
+      [bev('a', 'soda', null, [], 1), bev('b', 'soda', null, [], 1), bev('c', 'soda', null, [], 1), bev('d', 'soda', null, [], 1)],
+    );
+    expect(userSimilarity(s2, 'p', 'q')).toBeGreaterThan(0.3);
+    expect(userSimilarity(s2, 'p', 'q', { userSimilarity: 'pearson' })).toBeCloseTo(-0.4, 12);
+    expect(layer2(s2, 'p', 'd').neighbours).toEqual(['q']);
+    expect(layer2(s2, 'p', 'd', { userSimilarity: 'pearson' })).toEqual({ z: 0, support: 0, neighbours: [] });
+  });
+
+  it("explicit 'cosine' is the default, bit for bit, through layer2, predictScore and recommend", () => {
+    const s = syntheticSnapshot('cosine-default', 14, 40);
+    for (const u of Object.keys(s.users)) {
+      for (const b of Object.keys(s.bevs)) {
+        expect(layer2(s, u, b, { userSimilarity: 'cosine' })).toEqual(layer2(s, u, b));
+        expect(predictScore(s, u, b, { userSimilarity: 'cosine' })).toEqual(predictScore(s, u, b));
+        expect(predictScore(s, u, b, {})).toEqual(predictScore(s, u, b));
+      }
+      expect(recommend(s, u, { n: 20, seed: 'x', userSimilarity: 'cosine' })).toEqual(recommend(s, u, { n: 20, seed: 'x' }));
+    }
+  });
+
+  it('pearson changes only the similarity: neighbours, ẑ2 and support follow from pearsonSimilarity', () => {
+    const s = syntheticSnapshot('pearson-wiring', 14, 40);
+    const ctx = snapshotContext(s);
+    let differs = 0;
+    for (const u of Object.keys(s.users)) {
+      for (const b of Object.keys(s.bevs)) {
+        const zu = ctx.z.get(u) ?? new Map<string, number>();
+        const expected = (ctx.raters.get(b) ?? [])
+          .filter((r) => r.userId !== u)
+          .map((r) => ({ userId: r.userId, z: r.z, sim: pearsonSimilarity(zu, ctx.z.get(r.userId) ?? new Map()).sim }))
+          .filter((r) => r.sim > 0)
+          .sort((x, y) => y.sim - x.sim || (x.userId < y.userId ? -1 : 1))
+          .slice(0, CF_K);
+        const support = expected.reduce((t, r) => t + r.sim, 0);
+        const l2 = layer2(s, u, b, { userSimilarity: 'pearson' });
+        expect(l2.neighbours).toEqual(expected.map((r) => r.userId));
+        expect(l2.support).toBeCloseTo(support, 12);
+        expect(l2.z).toBeCloseTo(support > 0 ? expected.reduce((t, r) => t + r.sim * r.z, 0) / support : 0, 12);
+        const p = predictScore(s, u, b, { userSimilarity: 'pearson' });
+        expect(p.layer1).toEqual(predictScore(s, u, b).layer1);
+        expect(p.layer2).toEqual(l2);
+        if (p.score !== predictScore(s, u, b).score) differs++;
+      }
+    }
+    expect(differs).toBeGreaterThan(0);
+  });
+
+  it('the option never leaks between calls on one snapshot (separate caches)', () => {
+    const s = syntheticSnapshot('cache', 10, 30);
+    const users = Object.keys(s.users).sort();
+    const before = users.map((u) => userSimilarity(s, users[0] as string, u));
+    users.forEach((u) => userSimilarity(s, users[0] as string, u, { userSimilarity: 'pearson' }));
+    expect(users.map((u) => userSimilarity(s, users[0] as string, u))).toEqual(before);
+  });
+
+  it('rejects an unknown similarity', () => {
+    const bad = { userSimilarity: 'jaccard' } as unknown as { userSimilarity: 'cosine' };
+    expect(() => layer2(snap, 'u', 'd', bad)).toThrow(RangeError);
+    expect(() => predictScore(snap, 'u', 'd', bad)).toThrow(RangeError);
+    expect(() => userSimilarity(snap, 'u', 'v', bad)).toThrow(RangeError);
+    expect(() => recommend(snap, 'u', { n: 3, seed: 's', ...bad })).toThrow(RangeError);
   });
 });

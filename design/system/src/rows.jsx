@@ -1,5 +1,5 @@
 import React from 'react';
-import { cx, Icon, Wordmark, BevArt, categoryById, formatRatings, formatTried, spokenTried, formatScore } from './core.jsx';
+import { cx, Icon, Wordmark, BevArt, categoryById, formatRatings, formatTried, spokenTried, formatScore, scoreBand } from './core.jsx';
 import { ScoreBubble, Avatar, BevImage, Pill, IconButton, LikeButton, CommentButton, ProgressBar } from './primitives.jsx';
 
 /** Comments shown on the post itself; above this many, the post collapses to "View all N comments". */
@@ -101,16 +101,18 @@ function LikeBurst() {
  * A ranking in the Feed and on Profile › Activity. Names bold, verb regular.
  * Double-tap anywhere outside the photo strip likes it (never unlikes); the heart in the action row is the way to unlike.
  */
-export function FeedPost({ actor = {}, you = false, bev, score, scoreVariant, note, time, saved = false, liked = false, likeCount = 0, comments = [], commentCount = 0, photos, onRank, onSave, onLike, onComment, onOpen, divider = true, className }) {
+export function FeedPost({ actor = {}, you = false, bev, score, scoreVariant, note, time, saved = false, liked = false, likeCount = 0, comments = [], commentCount = 0, photos, following = false, onFollow, onRank, onSave, onLike, onComment, onOpen, divider = true, className }) {
   const [open, setOpen] = React.useState(false);
   const [burst, setBurst] = React.useState(0);
   const cat = categoryById(bev.category);
   const tiles = photos || [{ src: bev.src, art: bev.art }];
   const onDoubleClick = (e) => {
+    // A read-only post (no onLike: Explore, a stranger's Activity) has no double-tap at all.
+    if (!onLike) return;
     // The photo strip keeps single tap = open the Bev; buttons keep their own action.
     if (e.target.closest && e.target.closest('.bv-post-strip, button')) return;
     setBurst((n) => n + 1);
-    if (!liked && onLike) onLike();
+    if (!liked) onLike();
   };
   return (
     <article className={cx('bv', 'bv-post', divider && 'bv-divider', className)} onDoubleClick={onDoubleClick}>
@@ -149,13 +151,23 @@ export function FeedPost({ actor = {}, you = false, bev, score, scoreVariant, no
       ) : null}
       <div className="bv-post-foot">
         <span className="body bv-meta">{time}</span>
-        <span className="bv-actions">
-          <LikeButton liked={liked} count={likeCount} onClick={onLike} />
-          <CommentButton count={commentCount} onClick={onComment} />
-          <IconButton icon="circle-plus" label={'Rank ' + bev.name} onClick={onRank} />
-          <button type="button" className={cx('bv-iconbtn', 'bv-iconbtn-plain', saved && 'bv-saved')} onClick={onSave} aria-pressed={saved} aria-label={saved ? 'Saved to Want to Try' : 'Save to Want to Try'}>
-            <Icon name="bookmark" size={28} strokeWidth={1.6} filled={saved} />
-          </button>
+        <span className="bv-post-end">
+          {onFollow ? (
+            // The author's Follow pill (Explore): UserRow's pill, leading the group where the heart sits on a feed post.
+            <Pill variant={following ? 'outlined' : 'filled'} onClick={onFollow} aria-pressed={following} aria-label={'Follow ' + (actor.name || actor.handle || '')}>{following ? 'Following' : 'Follow'}</Pill>
+          ) : null}
+          {onLike || onComment || onRank || onSave ? (
+            <span className="bv-actions">
+              {onLike ? <LikeButton liked={liked} count={likeCount} onClick={onLike} /> : null}
+              {onComment ? <CommentButton count={commentCount} onClick={onComment} /> : null}
+              {onRank ? <IconButton icon="circle-plus" label={'Rank ' + bev.name} onClick={onRank} /> : null}
+              {onSave ? (
+                <button type="button" className={cx('bv-iconbtn', 'bv-iconbtn-plain', saved && 'bv-saved')} onClick={onSave} aria-pressed={saved} aria-label={saved ? 'Saved to Want to Try' : 'Save to Want to Try'}>
+                  <Icon name="bookmark" size={28} strokeWidth={1.6} filled={saved} />
+                </button>
+              ) : null}
+            </span>
+          ) : null}
         </span>
       </div>
       {commentCount > INLINE_COMMENTS ? (
@@ -220,6 +232,48 @@ export function ProgressStrip({ label = 'All Bevs', ranked = 0, total = 0, onCli
       </span>
       <ProgressBar value={total > 0 ? ranked / total : 0} />
     </Tag>
+  );
+}
+
+const BAND_TONE = { high: 'scoreHigh', mid: 'scoreMid', low: 'scoreLow' };
+
+/**
+ * One category of a Taste Profile: icon and label, "8.1 · 9 ranked" (the score in its band colour) and a
+ * 4pt bar filled to mean / 10 in the same colour. Not interactive; the spoken label says the numbers.
+ */
+export function TasteBar({ categoryId, mean, rankingCount, className }) {
+  const cat = categoryById(categoryId);
+  const label = cat ? cat.label : categoryId;
+  const band = scoreBand(mean);
+  const score = formatScore(mean);
+  return (
+    <div className={cx('bv', 'bv-taste-bar', 'bv-band-' + band, className)}>
+      <span className="bv-sr-only">{label + ', average ' + score + ', ' + rankingCount + ' ranked'}</span>
+      <span className="bv-taste-top" aria-hidden="true">
+        <span className="body bv-taste-label">
+          {cat ? <Icon name={cat.icon} size={20} strokeWidth={1.75} /> : null}
+          <span className="bv-taste-name">{label}</span>
+        </span>
+        <span className="body bv-taste-value"><span className="bv-taste-score">{score}</span>{' · ' + rankingCount + ' ranked'}</span>
+      </span>
+      <ProgressBar value={mean / 10} tone={BAND_TONE[band]} />
+    </div>
+  );
+}
+
+/**
+ * The Taste Profile tab's block: an optional one-line read-out ("You prefer coffee and boba over soda")
+ * over a TasteBar per category. The app sorts the rows and writes the read-out; this only draws them.
+ */
+export function TasteProfile({ rows = [], readout, className }) {
+  if (!rows.length) return null;
+  return (
+    <section className={cx('bv', 'bv-taste', className)}>
+      {readout ? <p className="body bv-taste-readout">{readout}</p> : null}
+      <div className="bv-taste-list">
+        {rows.map((r) => <TasteBar key={r.categoryId} categoryId={r.categoryId} mean={r.mean} rankingCount={r.rankingCount} />)}
+      </div>
+    </section>
   );
 }
 

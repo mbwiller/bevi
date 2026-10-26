@@ -1,7 +1,7 @@
-import type { Bucket } from './types.ts';
+import type { Bucket, TasteAttributeKind } from './types.ts';
 
 /** Bumped with any formula or constant change; equals the `version` field of every vectors file. */
-export const RANKING_VERSION = '1.2.0';
+export const RANKING_VERSION = '1.3.0';
 
 /**
  * Score band per bucket as integer [lo, hi] edges on the 0–10 scale (Beli-style 7 / 4, decided 2026-10-09).
@@ -160,6 +160,40 @@ export const PROFILE_WEIGHTS: Readonly<{
 /** Largest |Δcaffeine| or |Δsweetness| (levels 0–3). */
 export const PROFILE_LEVEL_SPAN = 3;
 
+// ---------------------------------------------------------------- taste neighbourhoods (graph.ts)
+// docs/graph_db_implementation.md §2 approach B, §5 and Stage 3 (TASKS.md M-28); "line N" below is
+// that file's line. The Pearson term reuses CF_MIN_COMMON (2) and CF_SIGNIFICANCE (5) above: the
+// doc's "α = 0 below 2 common items" and its min(1, |common| / 5) are §8.9's two numbers, and
+// sharing them keeps Layer 2's in-snapshot Pearson and the nightly job's identical.
+
+/** Shrinkage of a taste-vector entry: t_u[a] = Σz / (n_{u,a} + TASTE_K). The doc's K_T = 2 (line 255). */
+export const TASTE_K = 2;
+/** Attributes covering fewer catalog Bevs than this are left out of every taste vector (line 269). */
+export const TASTE_MIN_ATTR_BEVS = 2;
+/** α, the Pearson weight of the blend when |common| ≥ CF_MIN_COMMON; α = 0 below that (line 264). */
+export const TASTE_ALPHA = 0.5;
+/** An attribute is shared by two users when both |t| are at least this (line 274). */
+export const TASTE_SHARED_MIN = 0.2;
+/** The attribute term counts only for pairs sharing at least this many bridging attributes (line 274). */
+export const TASTE_MIN_SHARED_ATTRS = 2;
+/**
+ * The attribute kinds that bridge two users. The doc's candidate query (line 393) matches
+ * `a:Flavor OR a:Brand`; categories stay in the taste vector but are too coarse to bridge on
+ * their own (15 of them, so most users share one).
+ */
+export const TASTE_BRIDGE_KINDS: readonly TasteAttributeKind[] = ['brand', 'flavor'];
+/** Neighbours below this similarity are not kept (line 274's "similarity floor"). */
+export const TASTE_SIM_FLOOR = 0.1;
+/** Neighbours kept per user in `user_neighbors` (line 275). Layer 2 still uses the top CF_K of them per Bev. */
+export const TASTE_NEIGHBOUR_K = 25;
+/**
+ * N₀ of the reliability weight min(1, n_v / N₀) (line 419). The doc leaves it open; 15 is chosen to
+ * equal LAMBDA_USER_N, the history at which Layer 2 is trusted fully for the user themself, so a
+ * neighbour earns full weight at the same point. A user fresh from onboarding (10 starter Bevs)
+ * counts 2/3 and one at MIN_N_USER = 3 counts 1/5. Tune it with the eval harness, like the others.
+ */
+export const NEIGHBOUR_RELIABILITY_N = 15;
+
 /** Everything a SQL twin or the vectors need, in one object. */
 export const RANKING_CONSTANTS = {
   version: RANKING_VERSION,
@@ -194,4 +228,13 @@ export const RANKING_CONSTANTS = {
   edgeMinWeight: EDGE_MIN_WEIGHT,
   profileWeights: PROFILE_WEIGHTS,
   profileLevelSpan: PROFILE_LEVEL_SPAN,
+  tasteK: TASTE_K,
+  tasteMinAttrBevs: TASTE_MIN_ATTR_BEVS,
+  tasteAlpha: TASTE_ALPHA,
+  tasteSharedMin: TASTE_SHARED_MIN,
+  tasteMinSharedAttrs: TASTE_MIN_SHARED_ATTRS,
+  tasteBridgeKinds: TASTE_BRIDGE_KINDS,
+  tasteSimFloor: TASTE_SIM_FLOOR,
+  tasteNeighbourK: TASTE_NEIGHBOUR_K,
+  neighbourReliabilityN: NEIGHBOUR_RELIABILITY_N,
 } as const;
