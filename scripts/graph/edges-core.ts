@@ -22,11 +22,12 @@ import {
   embeddingSimilarity,
   flavorTokens,
   normaliseBrand,
+  pearsonCorrelation,
   profileSimilarity,
   topEdges,
   treeSimilarity,
 } from "@bevi/ranking";
-import type { BevFeatures, EdgeComponents, FlavorProfile, Taxonomy } from "@bevi/ranking";
+import type { BevFeatures, BevId, EdgeComponents, FlavorProfile, Taxonomy, UserId } from "@bevi/ranking";
 
 // ---------------------------------------------------------------------------
 // What the job reads out of Postgres
@@ -100,6 +101,13 @@ export interface WeighContext {
   treeNodes?: ReadonlyMap<string, string>;
   profiles: ReadonlyMap<string, FlavorProfile>;
   embeddings: ReadonlyMap<string, readonly number[]>;
+  /**
+   * A-16 (2): bev id -> (user id -> that user's z for the Bev), from
+   * `coRatersByBev` below. The cop term of eq. (18) is
+   * computed from it; omitted, every pair's `cop` is 0, which is what every
+   * run before A-16 (2) stored.
+   */
+  coRaters?: ReadonlyMap<string, ReadonlyMap<string, number>>;
 }
 
 /** The candidate rule's third arm: "the 50 nearest by embedding cosine" (A-16 step 3). */
@@ -307,6 +315,77 @@ function push<K, V>(map: Map<K, V[]>, key: K, value: V): void {
 // Weighting (A-16 step 4)
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// The cop term of eq. (18) (LaTeX section 10.1), A-16 (2)
+// ---------------------------------------------------------------------------
+
+/**
+ * Minimum common raters before `sim_cop` says anything. The paper: "0 while
+ * fewer than 3 users have ranked both".
+ *
+ * Not in `@bevi/ranking`'s constants, because the term's weight there
+ * (`EDGE_WEIGHTS.cop`) is still 0 and switching it on is Matt's constant change
+ * plus a `RANKING_VERSION` bump. This job computes and STORES the term so the
+ * number is already measured when he does; until then it rides in
+ * `bev_edges.components.cop` and contributes 0 to every weight.
+ */
+export const COP_MIN_CO_RATERS = 3;
+
+/**
+ * `sim_cop(b, b')`: the cosine of two Bevs' z-score vectors over their common
+ * raters, 0 below `COP_MIN_CO_RATERS` of them.
+ *
+ * Reuses `pearsonCorrelation` from @bevi/ranking rather than writing a cosine:
+ * the vectors are z-scores, which are already centred per USER, and the paper
+ * asks for the cosine over common raters. Centring them again per BEV is what
+ * makes the measure "do these two Bevs move together across the people who
+ * rated both", independent of either Bev being generally liked -- the same
+ * correction M-28 applied to the user-user case, and the reason the two agree.
+ *
+ * CLAMPED AT 0, which is a decision worth naming: a correlation is in [-1, 1],
+ * `edgeWeight` requires every term in [0, 1] (`unit()` throws otherwise), and a
+ * NEGATIVE co-preference -- the people who rate Coke highly rate this one
+ * poorly -- is evidence of dissimilarity that eq. (18) has no way to express,
+ * since it sums non-negative terms into a similarity. So negative becomes 0,
+ * "no positive co-preference evidence", rather than being allowed to throw or
+ * to be rescaled into a fake positive. Flagged for Matt in the PR: if the term
+ * should instead be (1 + r)/2, that is a formula change in his lane.
+ */
+export function copSimilarity(
+  ratersA: ReadonlyMap<UserId, number>,
+  ratersB: ReadonlyMap<UserId, number>,
+): number {
+  // Common raters in code-point order, so the result is exactly symmetric and
+  // independent of insertion order -- the same rule `pearsonSimilarity` uses
+  // for its common Bevs.
+  const common = [...ratersA.keys()].filter((u) => ratersB.has(u)).sort(cmp);
+  if (common.length < COP_MIN_CO_RATERS) return 0;
+  const r = pearsonCorrelation(
+    common.map((u) => ratersA.get(u) as number),
+    common.map((u) => ratersB.get(u) as number),
+  );
+  return r <= 0 ? 0 : Math.min(1, r);
+}
+
+/**
+ * bev id -> (user id -> that user's z for the Bev), the input `copSimilarity`
+ * takes, from the same `zScoresFromRankings` output the neighbour build uses.
+ *
+ * Built once per run and handed to `weighPair` through `WeighContext.coRaters`,
+ * so the cop term costs one map lookup per pair rather than a scan.
+ */
+export function coRatersByBev(z: ReadonlyMap<UserId, ReadonlyMap<BevId, number>>): Map<BevId, Map<UserId, number>> {
+  const out = new Map<BevId, Map<UserId, number>>();
+  for (const u of [...z.keys()].sort(cmp)) {
+    for (const [bev, zu] of z.get(u) as ReadonlyMap<BevId, number>) {
+      let raters = out.get(bev);
+      if (!raters) out.set(bev, (raters = new Map()));
+      raters.set(u, zu);
+    }
+  }
+  return out;
+}
+
 /**
  * One candidate's five terms and its weight, eq. (18) through `edgeWeight`.
  *
@@ -322,7 +401,13 @@ function push<K, V>(map: Map<K, V[]>, key: K, value: V): void {
  *            filled the table reports low weights rather than failing.
  *   profile  `profileSimilarity` over `bev_flavor_profiles`. 0 when either is
  *            missing, including when D-11's inference declined below its 0.6 floor.
- *   cop      0. gamma = 0 in v1 (`EDGE_WEIGHTS.cop`); the co-rating signal is A-16 (2).
+ *   cop      `copSimilarity` over the two Bevs' z-scores across their common
+ *            raters (A-16 (2)), 0 below 3 of them and 0 when `ctx.coRaters` is
+ *            absent. **It contributes nothing to the weight today**, because
+ *            `EDGE_WEIGHTS.cop` is still 0 -- switching gamma on renormalises
+ *            the other four and is a constant change plus a RANKING_VERSION
+ *            bump in Matt's lane. It is computed and STORED now so the number
+ *            is already measured when he does.
  *
  * The emb term is recomputed from the vectors, never derived from the KNN
  * `distance`: the HNSW probe is a candidate SELECTOR, so an approximate index
@@ -345,6 +430,8 @@ export function weighPair(a: string, b: string, ctx: WeighContext): WeightedPair
   const eb = ctx.embeddings.get(dst);
   const pa = ctx.profiles.get(src);
   const pb = ctx.profiles.get(dst);
+  const ra = ctx.coRaters?.get(src);
+  const rb = ctx.coRaters?.get(dst);
 
   // A-13: the tree term is measured at each Bev's LEAF (`treeNodes`), while
   // `contentSimilarity` below reads `fa.categoryId`, still the root. See
@@ -357,7 +444,7 @@ export function weighPair(a: string, b: string, ctx: WeighContext): WeightedPair
     content: round6(contentSimilarity(fa, fb)),
     emb: ea === undefined || eb === undefined ? 0 : round6(embeddingSimilarity(ea, eb)),
     profile: pa === undefined || pb === undefined ? 0 : round6(profileSimilarity(pa, pb)),
-    cop: 0,
+    cop: ra === undefined || rb === undefined ? 0 : round6(copSimilarity(ra, rb)),
   };
 
   return { src, dst, weight: round6(edgeWeight(components)), components };

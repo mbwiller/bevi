@@ -106,10 +106,10 @@ A-16 populates embeddings; an empty vector index is valid and costs nothing.
 ## The Postgres half, which exists now
 
 `supabase/migrations/20261019000500_graph_tables.sql` (A-16 increment 1, first
-PR) creates the mirror and the read path. **Both tables are still empty on
-prod.** `bev_edges` now has a writer — `scripts/graph/build-edges.ts`, the next
-section — but it has never run against a database; `bev_embeddings` has none
-yet (the `embed` Edge Function).
+PR) creates the mirror and the read path. **Both tables are filled on prod**
+as of #121: 383 Bevs embedded, `bev_edges` holding 4669 edges, and
+`graph-edges` running green nightly since 2026-10-25. A-16 (2) adds a third
+table, `user_neighbors` — see "Taste neighbours" below.
 
 ```sql
 bev_embeddings(bev_id uuid primary key references bevs(id) on delete cascade,
@@ -503,6 +503,85 @@ npm run graph:edges -- --strict     # also fail on a sanity-report breach
 npm run test:scripts                # the pure half, no database needed
 ```
 
+## Taste neighbours (A-16 (2)) — also without Neo4j
+
+`user_neighbors` is the one table of **Stage 3** in
+`docs/graph_db_implementation.md`, and like the Bev graph it is filled from
+Postgres alone. M-28 (#131) put every formula in
+`packages/ranking/src/graph.ts`, so the doc's `RANKED` edges, HMAC pseudonyms
+and Cypher aggregation buy nothing at this size: `scripts/graph/build-neighbours.ts`
+reads rankings, scores **every** user pair in TypeScript and replaces the table
+in one transaction.
+
+```sql
+user_neighbors(user_id uuid, neighbor_id uuid,        -- both -> profiles(id), cascade
+               sim numeric(5,4) not null check (sim between -1 and 1),
+               common smallint not null,               -- co-rated Bevs
+               shared_attrs smallint not null,         -- bridging attributes
+               method text not null,                   -- 'pearson' | 'attr' | 'blend'
+               version text not null,                  -- RANKING_VERSION at compute time
+               computed_at timestamptz not null default now(),
+               primary key (user_id, neighbor_id),
+               check (user_id <> neighbor_id))
+  -- (user_id, sim desc, neighbor_id) index: "my neighbours, best first".
+```
+
+**Both directions of a pair are stored**, which is the opposite of `bev_edges`
+and not an inconsistency. `sim` is symmetric, but the *selection* is not —
+`topUserNeighbours` keeps each user's own top 25, so "v is in u's 25 nearest"
+does not imply the reverse. And the read is per user, which owner-only RLS
+cannot serve from a canonical orientation: the row `(v, u)` is v's row, and u
+may not read it.
+
+**RLS is owner-only select, with no write policy.** This is the first table in
+the schema whose rows name *another user*, so unlike `bev_edges` there is no
+case for `select to authenticated`. `neighbor_id` is a profile id and the doc
+is explicit that it never reaches the client: Stage 4 will join these rows to
+the alias CTE `get_prediction_snapshot` already builds and emit `u<n>` instead.
+
+Three service-role-only functions, in `20261026000300`:
+
+| Function | Why it is not a table read |
+|---|---|
+| `ranking_z_inputs()` | Returns **every** user's rankings, because a z-score is measured against the global mean. `rankings_select` is owner-and-followees only, so a leftover default grant here would hand any account the whole ranking table. It also casts `score` to `float8` — PostgREST renders `numeric` as a JSON *string*, which `zScoresFromRankings` rejects as non-finite. |
+| `replace_user_neighbors(jsonb, text)` | One call is one transaction. **An empty payload is accepted**, the one place it differs from `replace_bev_edges`: for `bev_edges` empty means a broken run, but for neighbours empty is the expected result today. |
+| `bev_co_rater_counts(int)` | Which Bevs have ≥ 3 raters, so the `cop` term can skip the rankings read entirely when none do. |
+
+**Expect few rows, or none.** #122's export measured why: 3 users, 27 rankings,
+a median of 1 co-rater per rated pair. The α gate needs 2 co-rated Bevs and the
+bridge rule needs 2 bridging attributes reached through *distinct* Bevs, so most
+pairs score 0. The job reports that rather than treating it as a failure.
+
+**Nothing reads these rows yet, by design.** Stage 4 — `get_prediction_snapshot`
+emitting `(alias, sim, common)` and `layer2()` reading `snapshot.userNeighbors`
+— is a separate PR, because `layer2.ts` is Matt's lane and the doc says Stage 4
+needs the contract agreed first. Until then `layer2()` falls back to its
+in-snapshot computation, which is exactly the doc's "3 or more rankings, not yet
+synced" tier.
+
+**There is no per-ranking webhook, and that is deliberate.** TASKS.md's A-16 (2)
+row promises one, which is right for Bev edges — a new Bev changes a bounded,
+knowable set of rows. A taste neighbourhood is not local in that way: one new
+ranking changes u's z-scores against the global mean, so u's taste vector, so
+u's similarity to *every* other user, and through the global stats every other
+pair by a little. There is no incremental update smaller than the full rebuild.
+
+The `cop` term of eq. (18) is computed from the same z-scores and stored in
+`bev_edges.components.cop`. `EDGE_WEIGHTS.cop` is still **0**, so no stored
+weight changes — switching γ on renormalises the other four and is a constant
+change plus a `RANKING_VERSION` bump in Matt's lane. A **negative** correlation
+clamps to 0: eq. (18) sums non-negative terms, so it has no way to express
+"these two move oppositely".
+
+```bash
+npm run graph:neighbours                 # read, score every pair, write
+npm run graph:neighbours -- --dry-run    # score and print the report, write nothing
+```
+
+Scheduled by `graph-neighbours.yml` at 05:20 UTC, 30 minutes after
+`graph-edges`. Neighbours do not read `bev_edges`, so that ordering is for
+whoever reads the two logs, not a data dependency — either job runs alone.
+
 ## Secrets
 
 Names only. Values live in `supabase/.env` (gitignored) locally,
@@ -515,9 +594,9 @@ See `supabase/.env.example`.
 | `NEO4J_USERNAME` | same | same |
 | `NEO4J_PASSWORD` | same | same |
 | `NEO4J_DATABASE` | same; optional only in the sense that it defaults to `neo4j`, which is wrong for our instance, so it is always set | same |
-| `BEVI_PSEUDONYM_SALT` | **Actions secrets only** | the Neo4j sync, for `(:User {pseudonym})` |
-| `SUPABASE_SERVICE_ROLE_KEY` | **Actions secret** — set 2026-10-24; `supabase/.env` locally | **`graph-edges.yml` / `npm run graph:edges`**, to read Postgres past RLS and call the service-role RPCs; later the Neo4j sync |
-| `SUPABASE_URL` | injected into Edge Functions; an Actions **variable** (`vars`) for `graph-edges.yml`; `supabase/.env` locally. Not a secret | same |
+| `BEVI_PSEUDONYM_SALT` | **Actions secrets only** | the Neo4j sync, for `(:User {pseudonym})`. **Still unused:** A-16 (2) shipped Postgres-only, and `user_neighbors` stores real profile ids behind owner-only RLS, so nothing pseudonymises anything until the `RANKED` mirror is built |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Actions secret** — set 2026-10-24; `supabase/.env` locally | **`graph-edges.yml` / `npm run graph:edges`** and **`graph-neighbours.yml` / `npm run graph:neighbours`**, to read Postgres past RLS and call the service-role RPCs; later the Neo4j sync |
+| `SUPABASE_URL` | injected into Edge Functions; an Actions **variable** (`vars`) for both graph workflows; `supabase/.env` locally. Not a secret | same |
 | `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_ID`, `SUPABASE_DB_PASSWORD` | Actions secrets (already used by `backend.yml`) | deploying the function and pushing migrations |
 
 No `NEO4J_*` value may ever reach `app/` or `packages/api`. The browser gets
@@ -567,23 +646,23 @@ right choice: a Bolt connection pool has nothing to pool.
   set on the project. Still outstanding before a vector exists for any Bev:
   the two `bevi.embed_*` database settings (for the trigger) and one backfill
   run (for the 378 existing Bevs).
-- **The edge writer exists but has never run:** `scripts/graph/build-edges.ts`,
-  `graph-edges.yml`, `20261023000200` (D-11 inference) and `20261023000300`
-  (the two service-role RPCs). No database was reachable from the branch it was
-  written on, and `SUPABASE_SERVICE_ROLE_KEY` is not an Actions secret yet, so
-  the first scheduled run will fail at its preflight — deliberately, and that
-  failure is the signal to add the secret. `bev_edges` is therefore still empty
-  on prod and every read RPC still returns zero rows, which the app handles.
-- Order matters: until the backfill has run, every `emb` term is 0, so weights
-  are understated by up to 0.30 and the Coke–Pepsi sanity figure is not
-  meaningful. The builder warns loudly when it finds Bevs without an embedding
-  rather than failing.
+- **The edge writer runs nightly and has run:** `scripts/graph/build-edges.ts`
+  and `graph-edges.yml`, with `20261023000200` (D-11 inference) and
+  `20261023000300` (the two service-role RPCs). `SUPABASE_SERVICE_ROLE_KEY` is
+  set, the backfill has run, and prod holds 4669 edges (Coke–Pepsi 0.9001,
+  Coke–LaCroix 0.3809).
+- **The taste graph (A-16 (2)) is built and also Postgres-only:**
+  `user_neighbors` in `20261026000300`, `scripts/graph/build-neighbours.ts` and
+  `graph-neighbours.yml`, nightly at 05:20 UTC. Expect **few rows or none** at
+  current volume — see "Taste neighbours".
 - The **Neo4j** side of A-16 — steps 6, 8 and 9, `(:Bev)-[:SIMILAR_TO]`, the
   `RANKED` mirror and `(:Meta).lastSyncAt` — is still unbuilt, and nothing
   above depends on it. `Bev.embedding` is unset on every node.
 - `Bev.vessel` arrives with A-07; the flavour properties (`base`,
   `carbonated`, `caffeine`, `sweetness`, `dairy`, `alcohol`) with A-17.
-- `categories.parent_id`, and therefore `[:CHILD_OF]`, arrive with A-13 (D-04
-  has to settle the taxonomy first). Until then every `(:Category)` is a root.
+- `categories.parent_id` **landed with A-13**: Postgres now holds 15 roots and
+  60 leaves (D-04), and `build-edges.ts` measures the tree term at each Bev's
+  leaf while the content term keeps the root. `[:CHILD_OF]` in Neo4j is still
+  unbuilt, with the rest of the mirror.
 - So a fresh instance after A-15 alone has the constraints and indexes and no
   nodes. `graph-query`'s `similar` template correctly returns zero rows.
