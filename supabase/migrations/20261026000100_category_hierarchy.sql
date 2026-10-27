@@ -386,3 +386,79 @@ grant execute on function public.get_category_tree() to authenticated;
 grant execute on function public.get_bev_leaves(uuid[]) to authenticated;
 grant execute on function public.category_root(text) to authenticated;
 grant execute on function public.category_is_alcoholic(text) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- 6. get_category_progress(): restrict it to the roots
+-- ---------------------------------------------------------------------------
+-- THE ONE EXISTING RPC THIS MIGRATION HAS TO REVISE, and the reason is worth
+-- spelling out because it is the exact failure mode the whole shape decision
+-- above exists to avoid.
+--
+-- `get_category_progress` (20261018000200) iterates `public.categories`
+-- WHOLESALE -- `from public.categories c where not c.is_alcoholic or
+-- viewer_is_adult()` -- so adding 60 leaf rows silently turns its 15 rows into
+-- 75. That is wrong twice over:
+--
+--   * The contract says "one row per category (ranked 0 included), in
+--     sortOrder", meaning the 15. The app's category progress strip (M-08)
+--     would render 60 extra rows, every one of them "0 of 0", because no Bev's
+--     `category_id` is a leaf.
+--   * Worse, `categories.list()` in packages/api keeps exactly the categories
+--     this RPC returns -- it uses the progress rows as the single age rule, so
+--     a category absent from them is dropped. With 75 progress rows,
+--     `list()` would return all 75, `mapCategory` would cast a leaf id to
+--     `CategoryId`, and `categoryById()` in the app would return `undefined`
+--     for 60 of them. That is the breakage this migration was shaped to
+--     prevent, arriving through the back door.
+--
+-- So: `and c.parent_id is null`. Progress is a count of Bevs per category, and
+-- every Bev's `category_id` is a root, so a per-leaf row could only ever be 0
+-- until something re-points `category_id` -- which A-13 deliberately does not
+-- do. Per-leaf progress is a product question for later and a new RPC when it
+-- comes, not a silent side effect of loading a taxonomy.
+--
+-- Everything else about the function is unchanged, including `security
+-- invoker`, the `viewer_is_adult()` gate and the `sort_order, id` order -- it
+-- is re-emitted in full only because migrations are append-only.
+
+create or replace function public.get_category_progress()
+returns table (category_id text, ranked integer, total integer)
+language plpgsql
+stable
+security invoker
+set search_path = public, extensions
+as $$
+#variable_conflict use_column
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    raise exception 'BEVI_UNAUTHORIZED' using errcode = '42501';
+  end if;
+
+  return query
+  select
+    c.id,
+    (select count(*)::int
+       from public.rankings r
+       join public.bevs b on b.id = r.bev_id
+      where r.user_id = v_uid
+        and b.category_id = c.id
+        and b.status = 'active'),
+    (select count(*)::int
+       from public.bevs b
+      where b.category_id = c.id
+        and b.status = 'active')
+  from public.categories c
+  where c.parent_id is null                               -- A-13: the 15 roots only
+    and (not c.is_alcoholic or public.viewer_is_adult())
+  order by c.sort_order, c.id;
+end;
+$$;
+
+comment on function public.get_category_progress() is
+  'S-07/A-06: the caller''s progress through each of the 15 TOP-LEVEL categories (A-13 restricted it to parent_id is null; a leaf could only ever read 0, and categories.list() keys its age filter off these rows).';
+
+alter function public.get_category_progress() owner to postgres;
+revoke execute on function public.get_category_progress() from public, anon;
+grant execute on function public.get_category_progress() to authenticated;
