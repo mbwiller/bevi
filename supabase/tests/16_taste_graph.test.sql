@@ -90,6 +90,7 @@ select throws_ok(
      values ('00000000-0000-4000-8000-0000000a1601', '00000000-0000-4000-8000-0000000a1601',
              0.5, 2, 0, 'blend', '1.3.0') $$,
   '23514',
+  null,
   'nobody is their own neighbour'
 );
 
@@ -98,6 +99,7 @@ select throws_ok(
      values ('00000000-0000-4000-8000-0000000a1601', '00000000-0000-4000-8000-0000000a1602',
              1.5, 2, 0, 'blend', '1.3.0') $$,
   '22003',
+  null,
   'sim above 1 does not fit numeric(5,4), let alone the CHECK'
 );
 
@@ -106,6 +108,7 @@ select throws_ok(
      values ('00000000-0000-4000-8000-0000000a1601', '00000000-0000-4000-8000-0000000a1602',
              0.5, -1, 0, 'blend', '1.3.0') $$,
   '23514',
+  null,
   'a negative common count is rejected'
 );
 
@@ -114,6 +117,7 @@ select throws_ok(
      values ('00000000-0000-4000-8000-0000000a1601', '00000000-0000-4000-8000-0000000a1602',
              0.5, 2, 0, 'cosine', '1.3.0') $$,
   '23514',
+  null,
   'a method outside (pearson, attr, blend) is rejected'
 );
 
@@ -140,6 +144,7 @@ select throws_ok(
      values ('00000000-0000-4000-8000-0000000a1601', '00000000-0000-4000-8000-0000000a1602',
              0.9, 3, 1, 'blend', '1.3.0') $$,
   '23505',
+  null,
   'the same direction twice is a primary-key conflict'
 );
 
@@ -166,6 +171,7 @@ select throws_ok(
      values ('00000000-0000-4000-8000-0000000a1601', '00000000-0000-4000-8000-0000000a1603',
              0.9, 2, 0, 'blend', '1.3.0') $$,
   '42501',
+  null,
   'an authenticated user cannot insert a neighbour row, even their own'
 );
 
@@ -189,16 +195,19 @@ select is(
 select throws_ok(
   $$ select * from public.ranking_z_inputs() $$,
   '42501',
+  null,
   'an authenticated user cannot call ranking_z_inputs: it returns everyone''s rankings'
 );
 select throws_ok(
   $$ select * from public.replace_user_neighbors('[]'::jsonb, '1.3.0') $$,
   '42501',
+  null,
   'an authenticated user cannot replace the neighbour table'
 );
 select throws_ok(
   $$ select * from public.bev_co_rater_counts(3) $$,
   '42501',
+  null,
   'an authenticated user cannot call bev_co_rater_counts'
 );
 
