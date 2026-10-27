@@ -1,0 +1,438 @@
+{
+  "schemaVersion": 1,
+  "styleVersion": "bevi-dimensional-v1",
+  "renderer": {
+    "package": "@resvg/resvg-js",
+    "version": "2.6.2",
+    "width": 600,
+    "height": 780,
+    "fonts": [
+      {
+        "name": "Arial.ttf",
+        "sha256": "525979822591a3447cfc49d943d6f7683508e25543407871c0ed8fed05fd2bd9"
+      },
+      {
+        "name": "Arial Bold.ttf",
+        "sha256": "d72db21f9242aedd6b917d8549ad5921766b24d5f8d0becfda2ff4c620b3c2e0"
+      },
+      {
+        "name": "Arial Italic.ttf",
+        "sha256": "ce1d2f1ab89db45f9796100eee960f5702a40e84c225c2b48c3ec3e81d153f98"
+      },
+      {
+        "name": "Arial Bold Italic.ttf",
+        "sha256": "374b0190a9844343110d8f8ed1818117a4591803d022bbb2bd189d63a681e731"
+      },
+      {
+        "name": "Georgia.ttf",
+        "sha256": "4f54eb299fccea7f103edeb0d92437359bfd4441811d53222b82b335369f6218"
+      },
+      {
+        "name": "Georgia Bold.ttf",
+        "sha256": "1cfa9abd55be746c798c22ef4eba88fce82257934897404be2dae53ed0a4142a"
+      },
+      {
+        "name": "Georgia Italic.ttf",
+        "sha256": "7758840cacb7382db65aa038e9fd1194d077ba9b55fe748f9cfb196d2773ac4e"
+      },
+      {
+        "name": "Georgia Bold Italic.ttf",
+        "sha256": "a2036878f47d0da1765869a8747cfb0079b6125776675bad352468b59ca4493d"
+      },
+      {
+        "name": "Times New Roman.ttf",
+        "sha256": "f3b4ffff71c2a0c7227d37497683b2498fb2d0a4e8beae26f022e3ccfcaabfa3"
+      },
+      {
+        "name": "Times New Roman Bold.ttf",
+        "sha256": "50f5b1f27b7d34621090e437e8b1dd4510a22d2823fc876b3286bed327b64bbb"
+      },
+      {
+        "name": "Times New Roman Italic.ttf",
+        "sha256": "7bb99c3a67697fbce15ab66d806d9a2151432ce1dab2eaba4156e1251da486c0"
+      }
+    ]
+  },
+  "summary": {
+    "catalog": 378,
+    "authored": 12,
+    "pending": 366,
+    "starterAuthored": 5,
+    "starterTotal": 43,
+    "livePostgresReconciled": false
+  },
+  "records": [
+    {
+      "slug": "jarritos-mandarin",
+      "family": "glass-soda-bottle",
+      "packageChoice": "Clear glass Mandarin soda bottle, open serving as pictured by manufacturer.",
+      "references": [
+        {
+          "pageUrl": "https://jarritos.com/flavor/mandarin/",
+          "imageUrl": "https://jarritos.com/wp-content/uploads/2025/04/Jarritos-Mandarin-8.jpg",
+          "inspectedAt": "2026-10-26",
+          "observations": "Inspected official lifestyle photo: clear long-neck bottle, bright orange soda, green three-jug mark, cream/green wordmark label, Mandarin below; bottle shown open.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Reference shows an open bottle; cap and exact volume are intentionally unspecified. Product mark simplified; review pending.",
+      "status": "needs-review",
+      "bevId": "543cb630-7d40-5372-85c4-96575336952d",
+      "name": "Jarritos Mandarin",
+      "brand": "Jarritos",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/jarritos-mandarin.svg",
+        "portableSvg": "portable-svg/jarritos-mandarin.svg",
+        "png": "png/jarritos-mandarin.png",
+        "svgSha256": "f190bac281f61bac242c6b773b83fb9ccb3af97e58552cbf2cb88373290f31e9",
+        "portableSvgSha256": "bf3d9088cf2614e94a65c123962df072c4090a97917ebd3f996c0d4d181c19ce",
+        "pngSha256": "e5015d443431f92ff0f3005edc2a1dbc2da7292777e892c3a0e25d4576ca7f38",
+        "pngBytes": 82217
+      },
+      "sourceModule": "scripts/icons/families/pilot.mjs"
+    },
+    {
+      "slug": "matcha-latte-with-boba",
+      "family": "served-boba-glass",
+      "packageChoice": "Unbranded iced matcha latte with tapioca pearls in a tall glass.",
+      "references": [
+        {
+          "pageUrl": "https://monin.us/products/matcha-latte-with-boba",
+          "imageUrl": "https://gorecipe.monin.com/images/fc7c5fd2-b542-4e15-9f73-abf99cfc8ec4-2.png",
+          "inspectedAt": "2026-10-26",
+          "observations": "Inspected Monin recipe photo: pale green milky matcha, visible ice, dark tapioca pearls at the base, clear tall glass without a brand label.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Generic catalog beverage; representative preparation rather than a specific café recipe. Glass proportions adapted to Bevi style; no café brand implied.",
+      "status": "needs-review",
+      "bevId": "3e814390-c8ed-5b23-bdac-5468bc19c09b",
+      "name": "Matcha Latte with Boba",
+      "brand": "Generic",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/matcha-latte-with-boba.svg",
+        "portableSvg": "portable-svg/matcha-latte-with-boba.svg",
+        "png": "png/matcha-latte-with-boba.png",
+        "svgSha256": "b981481904f793551ff8b0538ab5fe283598efb8881ca84253f2763992fb049a",
+        "portableSvgSha256": "f1056f5dec10a13abadde6feb445a0acc37d0c5df613e81f989dd154694361a9",
+        "pngSha256": "0d6a08dd5a53b443a2e872d94546a3b005abe0d69af5f8359cf557a9b071b62d",
+        "pngBytes": 135071
+      },
+      "sourceModule": "scripts/icons/families/pilot.mjs"
+    },
+    {
+      "slug": "fiji-natural-artesian-water",
+      "family": "square-pet-bottle",
+      "packageChoice": "US 500 mL Natural Artesian Water bottle.",
+      "references": [
+        {
+          "pageUrl": "https://www.fijiwater.com/products/fiji-water-500-ml-case-of-24",
+          "imageUrl": "https://cdn.builder.io/api/v1/image/assets%2F5c6ffc8bf83440feb9aec3e4598c016e%2Fcf3dc6d24c204bff8aa86cf083f5ed9c?format=jpeg&height=335&width=335",
+          "inspectedAt": "2026-10-26",
+          "observations": "Inspected official 500mL product photo: clear square bottle with sloped shoulders, blue screw cap, blue label with large cream FIJI lettering and magenta hibiscus.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Simplified package lettering and illustration; final design review and native-app verification pending.",
+      "status": "needs-review",
+      "bevId": "0ac0167f-b60b-5d38-aa27-6d48d3a2ba2d",
+      "name": "Natural Artesian Water",
+      "brand": "Fiji",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/fiji-natural-artesian-water.svg",
+        "portableSvg": "portable-svg/fiji-natural-artesian-water.svg",
+        "png": "png/fiji-natural-artesian-water.png",
+        "svgSha256": "0ba2e8db201ecedf8bb2e733cce10412500333253ca15e3743508402b36674f4",
+        "portableSvgSha256": "f0893c7cfe4d7aa6bac08dfe3edeafefa2ebc1997a5ab6e8461a9cd73153a23a",
+        "pngSha256": "745845954bc364605bf895725bfdd6d59737df9a755da930edf205665cc38fa2",
+        "pngBytes": 77641
+      },
+      "sourceModule": "scripts/icons/families/pilot.mjs"
+    },
+    {
+      "slug": "olipop-vintage-cola",
+      "family": "standard-can",
+      "packageChoice": "US 12 fl oz, refrigerated 9g-fiber line; representative choice for unspecific catalog row.",
+      "references": [
+        {
+          "pageUrl": "https://drinkolipop.com/products/vintage-cola",
+          "imageUrl": "https://cld.accentuate.io/30315238260806/1755694040791/vintage-cola-9g-olipop_12pack-main-image_new_asset.webp?v=1779161488095w_360",
+          "inspectedAt": "2026-10-26",
+          "observations": "Inspected manufacturer pack image: white standard can, arched red OLIPOP, red bottle motifs with green straws, dark green Vintage Cola text, metallic rims.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Catalog does not distinguish 6g and 9g formulas. 9g reference selected explicitly; formulation identity still needs catalog confirmation.",
+      "status": "needs-review",
+      "bevId": "31c7e44e-55e4-5ab3-878e-af27e96439ae",
+      "name": "Olipop Vintage Cola",
+      "brand": "Olipop",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/olipop-vintage-cola.svg",
+        "portableSvg": "portable-svg/olipop-vintage-cola.svg",
+        "png": "png/olipop-vintage-cola.png",
+        "svgSha256": "5be376cdfafd91a91aa47faa5d5d32cdbd1eaef163c3cfa15fbfc7fbe3c0d6a7",
+        "portableSvgSha256": "0e34fb68f323bc5531160731306abb9eaf81cf3253cc178d71772901e0982b44",
+        "pngSha256": "33e8fef366ca314ca70a9f1de6763375dce709d2db1c4bd6e51c4aa13ccbb245",
+        "pngBytes": 100109
+      },
+      "sourceModule": "scripts/icons/families/pilot.mjs"
+    },
+    {
+      "slug": "pure-leaf-unsweetened",
+      "family": "tea-pet-bottle",
+      "packageChoice": "US 18.5 fl oz Unsweetened black tea, black cap and green/black label.",
+      "references": [
+        {
+          "pageUrl": "https://www.target.com/p/-/A-15275592",
+          "imageUrl": "https://target.scene7.com/is/image/Target/GUEST_b6ff35fb-2fca-45b9-bedc-b99f463ad5ea?fmt=pjpeg&hei=1000&wid=1000",
+          "inspectedAt": "2026-10-26",
+          "observations": "Inspected retailer single-bottle image: long tapered neck, squared lower PET body, amber tea, ribbed black screw cap, green UNSWEETENED header, black label with white PURE LEAF and green leaves. Manufacturer product page did not expose usable imagery.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Representative US packaging; small lettering and illustrations simplified. Final design and native-app review pending.",
+      "status": "needs-review",
+      "bevId": "9f7a317f-2673-5aaf-9650-be078b0cf9a0",
+      "name": "Pure Leaf Unsweetened",
+      "brand": "Pure Leaf",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/pure-leaf-unsweetened.svg",
+        "portableSvg": "portable-svg/pure-leaf-unsweetened.svg",
+        "png": "png/pure-leaf-unsweetened.png",
+        "svgSha256": "185b19258900243b0b3640117245eeda280665e47a4df957919d6b9254dc6e61",
+        "portableSvgSha256": "2001a16d77ce986a0939a427af2be9d558e5e26c13dc5e9302a730d97f252dd8",
+        "pngSha256": "d828053e8c8a1503f5f861c9e0ba1d91fd1a0c74b3332e915e25ab883c164c03",
+        "pngBytes": 77537
+      },
+      "sourceModule": "scripts/icons/families/bottles-carton.mjs"
+    },
+    {
+      "slug": "red-bull-original",
+      "family": "slim-can",
+      "packageChoice": "US 8.4 fl oz / 250 mL original energy drink.",
+      "references": [
+        {
+          "pageUrl": "https://www.redbull.com/us-en/energydrink/products/red-bull-energy-drink",
+          "imageUrl": "https://www.redbull.com/energydrink/v1/resources/storyblok/images/f/287059/870x2200/ad3b2bd89c/us_ed_250ml_energy-drink_country_rgb__cold_closed_front_com_25.png/m/686x0",
+          "inspectedAt": "2026-10-26",
+          "observations": "Inspected official front can: tall narrow blue/silver diagonal quadrants, red Red Bull lettering, opposing red bulls over a yellow disk, red ENERGY DRINK, metallic rim.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Simplified package lettering and illustration; final design review and native-app verification pending.",
+      "status": "needs-review",
+      "bevId": "7337b304-8257-570d-bfd8-8a5235cfb81c",
+      "name": "Red Bull Original Energy Drink",
+      "brand": "Red Bull",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/red-bull-original.svg",
+        "portableSvg": "portable-svg/red-bull-original.svg",
+        "png": "png/red-bull-original.png",
+        "svgSha256": "8b6508b31c353942edf4da2bcc66e6d742256dd64eb60637f91385d847b655a3",
+        "portableSvgSha256": "26a936b3aec423d0a1d1188961b832a59c6a02a053ad54c5ac888413a273ee8a",
+        "pngSha256": "931b52c86900806e948b39b5fa6f3dcde7717b02f97b258269c1e0aac2532413",
+        "pngBytes": 117707
+      },
+      "sourceModule": "scripts/icons/families/pilot.mjs"
+    },
+    {
+      "slug": "spindrift-grapefruit",
+      "family": "standard-can",
+      "packageChoice": "US 12 fl oz Grapefruit sparkling water; 2026 can design.",
+      "references": [
+        {
+          "pageUrl": "https://drinkspindrift.com/products/grapefruit-sparkling-water",
+          "imageUrl": "https://drinkspindrift.com/cdn/shop/files/spindrift-can-hero-grapefruit-flatlay-2026.png?v=1771271592&width=600",
+          "inspectedAt": "2026-10-26",
+          "observations": "Inspected manufacturer image: white upper body, coral-pink base and wordmark, pink grapefruit cross-section with yellow rind, Grapefruit neck text.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Simplified package lettering and illustration; final design review and native-app verification pending.",
+      "status": "needs-review",
+      "bevId": "0715fcdd-18ec-57f1-bad7-397e321d9f04",
+      "name": "Spindrift Grapefruit Sparkling Water",
+      "brand": "Spindrift",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/spindrift-grapefruit.svg",
+        "portableSvg": "portable-svg/spindrift-grapefruit.svg",
+        "png": "png/spindrift-grapefruit.png",
+        "svgSha256": "efbe0972e3439f11c7c78b535d3dcbb183af97784cdd266b76cbdc8dff102d25",
+        "portableSvgSha256": "c1964694451d9ab9370bdf30ae30d3018758e40b58a7c9576a1d3feef8289709",
+        "pngSha256": "721a66ded9ef79f0832907959cd3b0db658c3a96e6b391808d63d9ff1840ea4c",
+        "pngBytes": 108423
+      },
+      "sourceModule": "scripts/icons/families/pilot.mjs"
+    },
+    {
+      "slug": "spindrift-lemon",
+      "family": "standard-can",
+      "packageChoice": "US 12 fl oz Lemon sparkling water; manufacturer 2026 can design.",
+      "references": [
+        {
+          "pageUrl": "https://drinkspindrift.com/products/lemon-sparkling-water",
+          "imageUrl": "https://drinkspindrift.com/cdn/shop/files/spindrift-can-hero-lemon-flatlay-2026.png?v=1771271679&width=600",
+          "inspectedAt": "2026-10-26",
+          "observations": "Inspected manufacturer can: white top, powder-blue bottom, blue lowercase serif wordmark, yellow lemon slice, yellow Lemon neck text, silver rims.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Simplified package lettering and illustration; final design review and native-app verification pending.",
+      "status": "needs-review",
+      "bevId": "5c4022c5-3a49-5a90-ab76-e64035c5fbd7",
+      "name": "Spindrift Lemon Sparkling Water",
+      "brand": "Spindrift",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/spindrift-lemon.svg",
+        "portableSvg": "portable-svg/spindrift-lemon.svg",
+        "png": "png/spindrift-lemon.png",
+        "svgSha256": "7bc7b732dea7b9768977829d2396d280e7bf34292ad04c36a596015f74e8162c",
+        "portableSvgSha256": "21b004c9c9eaeaf7d1603bfb4526735e1d3ef27e91fc6329ec2621c8af594de0",
+        "pngSha256": "5e2037077448fabec94b260581ae77128306894fd6393b20b6060a1c69e429da",
+        "pngBytes": 107333
+      },
+      "sourceModule": "scripts/icons/families/pilot.mjs"
+    },
+    {
+      "slug": "spindrift-raspberry-lime",
+      "family": "standard-can",
+      "packageChoice": "US 12 fl oz Raspberry Lime sparkling water; 2026 can design.",
+      "references": [
+        {
+          "pageUrl": "https://drinkspindrift.com/products/raspberry-lime-sparkling-water",
+          "imageUrl": "https://drinkspindrift.com/cdn/shop/files/spindrift-can-hero-raspberry-lime-flatlay-2026.png?v=1771271952&width=600",
+          "inspectedAt": "2026-10-26",
+          "observations": "Inspected manufacturer image: white upper body, saturated raspberry-pink base and wordmark, green lime wheel behind red raspberry, Raspberry Lime neck text.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Simplified package lettering and illustration; final design review and native-app verification pending.",
+      "status": "needs-review",
+      "bevId": "e691bf93-2da8-5f79-9541-493b491b2f37",
+      "name": "Spindrift Raspberry Lime Sparkling Water",
+      "brand": "Spindrift",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/spindrift-raspberry-lime.svg",
+        "portableSvg": "portable-svg/spindrift-raspberry-lime.svg",
+        "png": "png/spindrift-raspberry-lime.png",
+        "svgSha256": "0466717097e66671b1e6e42161e565fb6e49609f636b2f9a9561a0bd24737694",
+        "portableSvgSha256": "1e6a9e4bba98e0759547d3c23f06aed023cf1f22e175ad49b328c45af3b6073f",
+        "pngSha256": "d0dddd643514e81ad21de8de76bbef24b18568e3f58e1d1bf73b8c5eee3d958a",
+        "pngBytes": 120536
+      },
+      "sourceModule": "scripts/icons/families/pilot.mjs"
+    },
+    {
+      "slug": "topo-chico-original",
+      "family": "mineral-glass-bottle",
+      "packageChoice": "US 12 fl oz original mineral-water bottle; yellow-label green-tinted glass.",
+      "references": [
+        {
+          "pageUrl": "https://www.coca-cola.com/us/en/brands/topo-chico/products/mineral-water",
+          "imageUrl": "https://www.coca-cola.com/content/dam/onexp/us/en/brands/topo-chico/mineral-water/en_topo%20chico_prod_mineral%20water_750x750_v1.jpg",
+          "inspectedAt": "2026-10-26",
+          "observations": "Inspected manufacturer image: narrow green-tinted long-neck bottle, yellow crown cap, yellow circular neck badge, yellow lower label with red wordmark and black trim. Distinct from flavored or filtered-water products.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Representative US packaging; small lettering and illustrations simplified. Final design and native-app review pending.",
+      "status": "needs-review",
+      "bevId": "dda9e962-a133-5d30-99a9-902141b453e5",
+      "name": "Topo Chico Original",
+      "brand": "Topo Chico",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/topo-chico-original.svg",
+        "portableSvg": "portable-svg/topo-chico-original.svg",
+        "png": "png/topo-chico-original.png",
+        "svgSha256": "c8fedfc50f14d942ab5e3e01bd138e3165401f3ecbd6f429ffbcfd7c83682db7",
+        "portableSvgSha256": "0c7da70b2ff3b06f49468fd318f9f312ab17314eff436f927bbcb749399e7659",
+        "pngSha256": "52c316b86c9f1f4182ce40debd090a90545cf549e79fc8dd2792b26ce2e8c0ec",
+        "pngBytes": 71355
+      },
+      "sourceModule": "scripts/icons/families/bottles-carton.mjs"
+    },
+    {
+      "slug": "vita-coco-coconut-water-original",
+      "family": "coconut-water-carton",
+      "packageChoice": "US 1 L / 33.8 fl oz Original carton, blue screw cap.",
+      "references": [
+        {
+          "pageUrl": "https://vitacoco.com/products/coconut-water",
+          "imageUrl": "https://vitacoco.com/cdn/shop/files/VC_Original_1L_PDP_01.jpg?v=1756996747&width=1500",
+          "inspectedAt": "2026-10-26",
+          "observations": "Inspected manufacturer Original 1L image: tall pale-blue carton, dark-blue screw cap and folded top, dark-blue VITA COCO lettering with green coconut O shapes, palm tree and green coconut near bottom.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Representative US packaging; small lettering and illustrations simplified. Final design and native-app review pending.",
+      "status": "needs-review",
+      "bevId": "9080bc3d-7cb6-573e-b97e-6626e3115f02",
+      "name": "Vita Coco Coconut Water",
+      "brand": "Vita Coco",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/vita-coco-coconut-water-original.svg",
+        "portableSvg": "portable-svg/vita-coco-coconut-water-original.svg",
+        "png": "png/vita-coco-coconut-water-original.png",
+        "svgSha256": "f75b83279d408616123d39a160149d6c7a9c51484432ee6a37c3d7e122a7c0a6",
+        "portableSvgSha256": "7a37db6615b69cba0e861fb2f5a77e6eb6b7109311cae9c8ebdd4bfc152dbe18",
+        "pngSha256": "d41946d92c79f43db5b0a1b379b74379575954a76b1b5b512f410129c4c36404",
+        "pngBytes": 71617
+      },
+      "sourceModule": "scripts/icons/families/bottles-carton.mjs"
+    },
+    {
+      "slug": "yakult-original",
+      "family": "cultured-milk-bottle",
+      "packageChoice": "US 2.7 fl oz / 80 mL Original bottle.",
+      "references": [
+        {
+          "pageUrl": "https://www.yakultusa.com/products/",
+          "imageUrl": "https://www.yakultusa.com/wp-content/uploads/yakult-bottle-regular.png",
+          "inspectedAt": "2026-10-26",
+          "observations": "Inspected official bottle: squat cream plastic body with pinched waist and wide lower barrel, tapered neck, red foil cap, red lettering and oval Yakult mark.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Simplified package lettering and illustration; final design review and native-app verification pending.",
+      "status": "needs-review",
+      "bevId": "c58da339-7d76-5e1a-98c1-1e2c2b726888",
+      "name": "Yakult",
+      "brand": "Yakult",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/yakult-original.svg",
+        "portableSvg": "portable-svg/yakult-original.svg",
+        "png": "png/yakult-original.png",
+        "svgSha256": "b26aff2bbaf890d685e9c95e4f3d4ecfe195c750d3253ba8dd24d77b4b25df63",
+        "portableSvgSha256": "4f68fff4c6c1952dc6f706399386f9b3646ff13bf67b4881b6005806252968a7",
+        "pngSha256": "04ba1debd613043ad518037153879808193debc7eb6bf3fc59c5acd86cb71844",
+        "pngBytes": 101455
+      },
+      "sourceModule": "scripts/icons/families/pilot.mjs"
+    }
+  ]
+}
