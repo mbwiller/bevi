@@ -28,7 +28,7 @@
 --   a1602  adult (30)   is a1601's neighbour, and owns rows of their own
 --   a1603  adult (30)   owns nothing: the "no rows" tier
 begin;
-select plan(39);
+select plan(40);
 
 -- ---------------------------------------------------------------------------
 -- People
@@ -94,13 +94,29 @@ select throws_ok(
   'nobody is their own neighbour'
 );
 
+-- numeric(5,4) is 5 digits with 4 after the point, so it spans (-10, 10) and
+-- 1.5 fits the TYPE comfortably. The CHECK is what holds sim to a correlation's
+-- range, which is the constraint worth having: a similarity above 1 is a job
+-- bug, not a storage problem.
 select throws_ok(
   $$ insert into public.user_neighbors (user_id, neighbor_id, sim, common, shared_attrs, method, version)
      values ('00000000-0000-4000-8000-0000000a1601', '00000000-0000-4000-8000-0000000a1602',
              1.5, 2, 0, 'blend', '1.3.0') $$,
+  '23514',
+  null,
+  'sim above 1 is rejected by the CHECK (the type would have accepted it)'
+);
+
+-- And the type's own bound, so the precision is pinned too: four decimals is
+-- lossless for everything the job stores, and a wild value cannot be truncated
+-- into range.
+select throws_ok(
+  $$ insert into public.user_neighbors (user_id, neighbor_id, sim, common, shared_attrs, method, version)
+     values ('00000000-0000-4000-8000-0000000a1601', '00000000-0000-4000-8000-0000000a1602',
+             10.5, 2, 0, 'blend', '1.3.0') $$,
   '22003',
   null,
-  'sim above 1 does not fit numeric(5,4), let alone the CHECK'
+  'and a value outside numeric(5,4) overflows rather than rounding into range'
 );
 
 select throws_ok(
