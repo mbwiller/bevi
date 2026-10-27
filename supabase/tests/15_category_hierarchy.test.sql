@@ -24,7 +24,7 @@
 --   ca001  adult (30)   sees the whole tree
 --   ca002  minor (16)   sees neither an alcoholic root nor its leaves
 begin;
-select plan(48);
+select plan(50);
 
 -- ---------------------------------------------------------------------------
 -- People
@@ -256,6 +256,7 @@ select throws_ok(
   $$ insert into public.categories (id, name, parent_id, sort_order, is_alcoholic)
      values ('self_parent', 'Self', 'self_parent', 1, false) $$,
   '23514',
+  null,
   'a self-parenting category is rejected by categories_parent_not_self'
 );
 
@@ -282,6 +283,33 @@ select is(public.category_is_alcoholic('lager'), true,
 select is(public.category_is_alcoholic('cola'), false, 'a leaf of a non-alcoholic root is not');
 select is(public.category_is_alcoholic('no_such_category'), null,
           'an unknown id is null, so a caller must coalesce rather than read false');
+
+-- ---------------------------------------------------------------------------
+-- 4b. get_category_progress stays at the 15 roots
+-- ---------------------------------------------------------------------------
+-- The regression this migration's section 6 exists to stop. It iterated
+-- `categories` wholesale, so the 60 leaves would have turned 15 rows into 75 --
+-- and `categories.list()` keeps exactly the categories this RPC returns, so the
+-- app's 15-item pickers would have been handed leaf ids.
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000ca001", "role": "authenticated"}';
+
+select is(
+  (select count(*)::int from public.get_category_progress()),
+  15,
+  'get_category_progress returns the 15 roots, not all 75 categories'
+);
+select is(
+  (select count(*)::int
+     from public.get_category_progress() p
+     join public.categories c on c.id = p.category_id
+    where c.parent_id is not null),
+  0,
+  'and no leaf appears in it, so categories.list() can never serve one'
+);
+
+reset role;
 
 -- ---------------------------------------------------------------------------
 -- 5. get_category_tree
