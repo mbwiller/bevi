@@ -1,37 +1,13 @@
 {
   "summary": {
     "catalog": 378,
-    "authored": 12,
-    "pending": 366,
-    "starterAuthored": 5,
+    "authored": 30,
+    "pending": 348,
+    "starterAuthored": 21,
     "starterTotal": 43,
     "livePostgresReconciled": false
   },
   "pending": [
-    {
-      "bevId": "a767e075-f4bf-5215-a5f4-44cb8df8d420",
-      "slug": "coca-cola-classic",
-      "name": "Coca-Cola Classic",
-      "brand": "Coca-Cola",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "04126845-996c-5186-9f6f-0d5af683028d",
-      "slug": "diet-coke",
-      "name": "Diet Coke",
-      "brand": "Coca-Cola",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "1d2be6de-5c7f-5c11-829a-7393a9e7f979",
-      "slug": "coke-zero-sugar",
-      "name": "Coke Zero Sugar",
-      "brand": "Coca-Cola",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
     {
       "bevId": "3e7120ef-bc47-548c-b75b-9807900d7ab2",
       "slug": "cherry-coke",
@@ -46,46 +22,6 @@
       "name": "Mexican Coca-Cola",
       "brand": "Coca-Cola",
       "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "946588a1-e485-500a-a7c9-afdd321219b2",
-      "slug": "pepsi",
-      "name": "Pepsi",
-      "brand": "Pepsi",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "78f2c3fb-838a-5950-8ec5-9d97c8bb973a",
-      "slug": "diet-pepsi",
-      "name": "Diet Pepsi",
-      "brand": "Pepsi",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "37ea2b26-55ba-570a-8579-b5e32b9b387a",
-      "slug": "pepsi-zero-sugar",
-      "name": "Pepsi Zero Sugar",
-      "brand": "Pepsi",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "5f6616d1-5289-570b-ac9a-323c8dcd1dba",
-      "slug": "sprite",
-      "name": "Sprite",
-      "brand": "Sprite",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "72bc7b45-f9f5-5e7e-9ee9-55f374fc778d",
-      "slug": "sprite-zero-sugar",
-      "name": "Sprite Zero Sugar",
-      "brand": "Sprite",
-      "isStarter": true,
       "status": "needs-reference"
     },
     {
@@ -117,14 +53,6 @@
       "slug": "diet-mountain-dew",
       "name": "Diet Mountain Dew",
       "brand": "Mountain Dew",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "1d8d5c08-5f2e-5525-8a4a-6d300419527c",
-      "slug": "fanta-orange",
-      "name": "Fanta Orange",
-      "brand": "Fanta",
       "isStarter": true,
       "status": "needs-reference"
     },
@@ -489,14 +417,6 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "d8353b51-2d10-5625-934b-5ca4d3b0374d",
-      "slug": "starry-lemon-lime",
-      "name": "Starry",
-      "brand": "Starry",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "5485e9ea-1b4b-5fc7-8f0e-5948e33df9fc",
       "slug": "crush-grape",
       "name": "Crush Grape",
@@ -662,14 +582,6 @@
       "name": "Coca-Cola Zero Sugar Vanilla",
       "brand": "Coca-Cola",
       "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "b017deaa-4830-518c-a7a5-d1d8b1476608",
-      "slug": "starry-zero-sugar",
-      "name": "Starry Zero Sugar",
-      "brand": "Starry",
-      "isStarter": true,
       "status": "needs-reference"
     },
     {
@@ -1049,14 +961,6 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "8864913a-66c6-5a4f-ae62-28d8d841ee65",
-      "slug": "liquid-death-mountain-water-still",
-      "name": "Mountain Water",
-      "brand": "Liquid Death",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "ac939eca-7862-5813-975a-9e037a28a5db",
       "slug": "liquid-death-sparkling-severed-lime",
       "name": "Sparkling Water",
@@ -1142,22 +1046,6 @@
       "name": "Still Water",
       "brand": "Just Water",
       "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "ce867ef4-8a01-5320-b830-b971b1e7895e",
-      "slug": "lacroix-pamplemousse",
-      "name": "LaCroix Pamplemousse",
-      "brand": "LaCroix",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "759f29c8-f406-5cbc-8404-fd9827f03c8d",
-      "slug": "lacroix-lime",
-      "name": "LaCroix Lime",
-      "brand": "LaCroix",
-      "isStarter": true,
       "status": "needs-reference"
     },
     {
@@ -1289,14 +1177,6 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "001bf081-3994-5406-95e7-18bd3b48179d",
-      "slug": "bubly-lime",
-      "name": "bubly Lime",
-      "brand": "bubly",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "38e4b3f6-39ea-53f4-9199-322aaf63607a",
       "slug": "bubly-strawberry",
       "name": "bubly Strawberry",
@@ -1382,14 +1262,6 @@
       "name": "Perrier L'Orange",
       "brand": "Perrier",
       "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "db4dbcae-afcc-5d57-b2f3-3becb3ae6568",
-      "slug": "san-pellegrino-original",
-      "name": "San Pellegrino Sparkling Natural Mineral Water",
-      "brand": "San Pellegrino",
-      "isStarter": true,
       "status": "needs-reference"
     },
     {
@@ -2829,22 +2701,6 @@
       "slug": "josh-cellars-chardonnay",
       "name": "Josh Cellars Chardonnay",
       "brand": "Josh Cellars",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "c11c6bb5-cadf-5d6a-b1f0-c705f3838ba5",
-      "slug": "la-marca-prosecco",
-      "name": "La Marca Prosecco",
-      "brand": "La Marca",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "527cd62b-93e3-56d5-8df1-928bbe0a5e59",
-      "slug": "generic-margarita",
-      "name": "Margarita",
-      "brand": "Generic",
       "isStarter": false,
       "status": "needs-reference"
     },

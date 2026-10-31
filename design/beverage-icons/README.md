@@ -2,9 +2,11 @@
 
 Start with the **complete [bevi-beverage-icons SKILL.md](skill/SKILL.md)**. It is the same full skill used to create this collection, included in the repository so another coding agent can follow the identical style and research workflow. No personal skill installation or database credentials are needed to author icons.
 
-![The first 12 beverage icons](review/overview-01.png)
+![Beverage icons — overview 1](review/overview-01.png)
 
-The current collection contains 12 reference-checked drafts, including five starter drinks. [The manifest](manifest.json) maps catalog UUIDs to editable SVGs, font-independent SVGs and transparent PNGs. [The work queue](coverage.json) lists the 366 remaining catalog drinks. These counts describe the repository catalog; live Postgres reconciliation and app integration are still pending.
+[Overview 2](review/overview-02.png) · [Overview 3](review/overview-03.png)
+
+The current collection contains 30 reference-checked drafts, including 21 starter drinks. [The manifest](manifest.json) maps catalog UUIDs to editable SVGs, font-independent SVGs and transparent PNGs. [The work queue](coverage.json) lists the 348 remaining catalog drinks. These counts describe the repository catalog; live Postgres reconciliation and app integration are still pending.
 
 ## Give this to your coding agent
 

@@ -55,13 +55,213 @@
   },
   "summary": {
     "catalog": 378,
-    "authored": 12,
-    "pending": 366,
-    "starterAuthored": 5,
+    "authored": 30,
+    "pending": 348,
+    "starterAuthored": 21,
     "starterTotal": 43,
     "livePostgresReconciled": false
   },
   "records": [
+    {
+      "slug": "bubly-lime",
+      "family": "sparkling-standard-can",
+      "packageChoice": "US 12 fl oz / 355 mL Lime sparkling-water can.",
+      "references": [
+        {
+          "pageUrl": "https://www.target.com/p/-/A-53081700",
+          "imageUrl": "https://target.scene7.com/is/image/Target/GUEST_8b2a0962-3921-46ba-b113-fa45c3ac6e58?fmt=pjpeg&hei=1000&wid=1000",
+          "inspectedAt": "2026-10-28",
+          "observations": "Inspected retailer eight-pack graphic with large can: saturated green body, yellow-green bubble dots above/below, white lowercase bubly with smiling u, small sparkling water, lime flavor label, silver rims. Raised tab in promotional photo is rendered flat to match shared unopened-can perspective.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Representative US retail package; catalog does not specify package size. Lettering and fine label engraving are simplified vector interpretations. Final design and native-app review pending.",
+      "status": "needs-review",
+      "bevId": "001bf081-3994-5406-95e7-18bd3b48179d",
+      "name": "bubly Lime",
+      "brand": "bubly",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/bubly-lime.svg",
+        "portableSvg": "portable-svg/bubly-lime.svg",
+        "png": "png/bubly-lime.png",
+        "svgSha256": "6636c6fea34b75eb25ef500cbb09d4c6f9ab7377c770deba3a71aa6a3abf927b",
+        "portableSvgSha256": "72e3d419f0b5657414600408a26b713cdb28addf711e5682c6d694a321d1f301",
+        "pngSha256": "6a0dd91ffa20e5f0e1976416a3c89b777f7c2b4a5451f8763aaa33fa50fc8940",
+        "pngBytes": 101382
+      },
+      "sourceModule": "scripts/icons/families/sparkling-starters.mjs"
+    },
+    {
+      "slug": "coca-cola-classic",
+      "family": "standard-cola-can",
+      "packageChoice": "US 12 fl oz / 355mL Coca-Cola Original Taste aluminum can; representative package for the size-unspecified catalog row.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/coca-cola-soda-cans/0004900000634",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0004900000634",
+          "inspectedAt": "2026-10-28",
+          "visuallyInspected": true,
+          "observations": "Inspected retailer single-can image: standard red aluminum can, oversized white script wrapping around the upper half, white two-line ORIGINAL TASTE below and silver top/bottom rims. Manufacturer page confirms Original but currently shows a PET bottle; can geometry follows this retailer packshot."
+        },
+        {
+          "pageUrl": "https://www.coca-cola.com/us/en/brands/coca-cola/products/original",
+          "imageUrl": "https://www.coca-cola.com/content/dam/onexp/global/icons/logo-white-large.svg",
+          "inspectedAt": "2026-10-28",
+          "visuallyInspected": true,
+          "observations": "Manufacturer vector lockup visually inspected. Only the six Coca-Cola script paths are retained for accurate package lettering; THE and COMPANY paths are omitted. Script is cropped and scaled to the inspected wraparound label."
+        }
+      ],
+      "uncertainty": "Representative US can selected; no flavor or formulation substitution. Tiny package text and condensation simplified. Final aesthetic and native-app review pending.",
+      "status": "needs-review",
+      "bevId": "a767e075-f4bf-5215-a5f4-44cb8df8d420",
+      "name": "Coca-Cola Classic",
+      "brand": "Coca-Cola",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/coca-cola-classic.svg",
+        "portableSvg": "portable-svg/coca-cola-classic.svg",
+        "png": "png/coca-cola-classic.png",
+        "svgSha256": "1a94322b157fc49aa446d6572fcf59a18aa46db5fc0da03744fda6856f707e6f",
+        "portableSvgSha256": "30fbcd5ab3bd5c33a29bd539261754c498ee54e2ccb1a30ba05f4b25b9507d31",
+        "pngSha256": "45b0bbe2f74e9032bd9b6929a56a872a55984ad72d1ef351b1a9dd207e95a60b",
+        "pngBytes": 100020
+      },
+      "sourceModule": "scripts/icons/families/colas.mjs"
+    },
+    {
+      "slug": "coke-zero-sugar",
+      "family": "standard-cola-can",
+      "packageChoice": "US 12 fl oz / 355mL Coca-Cola Zero Sugar aluminum can; representative package for the size-unspecified catalog row.",
+      "references": [
+        {
+          "pageUrl": "https://www.coca-cola.com/us/en/brands/coca-cola/products/zero",
+          "imageUrl": "https://www.coca-cola.com/content/dam/onexp/us/en/brands/coca-cola-zero/en_coca-cola_prod_zero%20sugar%20_750x750_v1.jpg",
+          "inspectedAt": "2026-10-28",
+          "visuallyInspected": true,
+          "observations": "Inspected manufacturer can: red body rather than legacy black can, oversized black Coca-Cola script across upper portion, black ZERO SUGAR beneath, small black ZERO CALORIE COLA lower on body, silver rims."
+        },
+        {
+          "pageUrl": "https://www.coca-cola.com/us/en/brands/coca-cola/products/original",
+          "imageUrl": "https://www.coca-cola.com/content/dam/onexp/global/icons/logo-white-large.svg",
+          "inspectedAt": "2026-10-28",
+          "visuallyInspected": true,
+          "observations": "Manufacturer vector lockup visually inspected. Only the six Coca-Cola script paths are retained for accurate package lettering; THE and COMPANY paths are omitted. Script is cropped and scaled to the inspected wraparound label."
+        }
+      ],
+      "uncertainty": "Representative US can selected; no flavor or formulation substitution. Tiny package text and condensation simplified. Final aesthetic and native-app review pending.",
+      "status": "needs-review",
+      "bevId": "1d2be6de-5c7f-5c11-829a-7393a9e7f979",
+      "name": "Coke Zero Sugar",
+      "brand": "Coca-Cola",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/coke-zero-sugar.svg",
+        "portableSvg": "portable-svg/coke-zero-sugar.svg",
+        "png": "png/coke-zero-sugar.png",
+        "svgSha256": "945d80de86a8d3c8660661f97fe1656b35ed44814f97044296ce0a3160cf0cf3",
+        "portableSvgSha256": "7fb6de09bf74a38eb56bd25a00aa21307c8d5fa6672d213986f3ffe464c33255",
+        "pngSha256": "5e00fdb1e76380fb48406ef647f21afd897e07d40913d3c49087d402a9173610",
+        "pngBytes": 107176
+      },
+      "sourceModule": "scripts/icons/families/colas.mjs"
+    },
+    {
+      "slug": "diet-coke",
+      "family": "standard-cola-can",
+      "packageChoice": "US 12 fl oz / 355mL Diet Coke aluminum can; representative package for the size-unspecified catalog row.",
+      "references": [
+        {
+          "pageUrl": "https://www.coca-cola.com/us/en/brands/diet-coke/products",
+          "imageUrl": "https://www.coca-cola.com/content/dam/onexp/us/en/brands/diet-coke/en_diet%20coke_prod_original_en_diet%20coke_prod_caffeine%20free_750x750_v1.jpg",
+          "inspectedAt": "2026-10-28",
+          "visuallyInspected": true,
+          "observations": "Inspected manufacturer original Diet Coke can: silver aluminum body, oversized red Coke wrapping across upper front, smaller red Diet above/right, NO SUGAR / NO CALORIES near bottom, metallic top and base. Filename also contains caffeine free, but visible label is Original Diet Coke with no caffeine-free banner."
+        }
+      ],
+      "uncertainty": "Representative US can selected; no flavor or formulation substitution. Tiny package text and condensation simplified. Final aesthetic and native-app review pending.",
+      "status": "needs-review",
+      "bevId": "04126845-996c-5186-9f6f-0d5af683028d",
+      "name": "Diet Coke",
+      "brand": "Coca-Cola",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/diet-coke.svg",
+        "portableSvg": "portable-svg/diet-coke.svg",
+        "png": "png/diet-coke.png",
+        "svgSha256": "e6f5edad228c3e1d617c73e79d84c752482ad639bb156a1b564c607e5fb6aad3",
+        "portableSvgSha256": "350bbf291f982db84ce7544c602d7d4c0256389056101092653ad34abaeda03b",
+        "pngSha256": "785755d08aa6a040413ce3b4f980f507a11bb0f12f13670c722fb0653315f0ec",
+        "pngBytes": 86291
+      },
+      "sourceModule": "scripts/icons/families/colas.mjs"
+    },
+    {
+      "slug": "diet-pepsi",
+      "family": "standard-cola-can",
+      "packageChoice": "US 12 fl oz / 355mL Diet Pepsi aluminum can; representative package for the size-unspecified catalog row.",
+      "references": [
+        {
+          "pageUrl": "https://www.target.com/p/diet-pepsi-cola-soda-12pk-12-fl-oz-cans/-/A-13373288",
+          "imageUrl": "https://target.scene7.com/is/image/Target/GUEST_9da9ff7c-18bd-4089-be4d-a7e96035a52b?wid=1000&hei=1000",
+          "inspectedAt": "2026-10-28",
+          "visuallyInspected": true,
+          "observations": "Inspected retailer packshot: cool silver can with large red/white/blue roundel bordered black, heavy black PEPSI inside white stripe, black DIET near lower body. Distinct from blue Original and black Zero Sugar. Manufacturer image host rejected access."
+        }
+      ],
+      "uncertainty": "Representative US can selected; no flavor or formulation substitution. Tiny package text and condensation simplified. Final aesthetic and native-app review pending.",
+      "status": "needs-review",
+      "bevId": "78f2c3fb-838a-5950-8ec5-9d97c8bb973a",
+      "name": "Diet Pepsi",
+      "brand": "Pepsi",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/diet-pepsi.svg",
+        "portableSvg": "portable-svg/diet-pepsi.svg",
+        "png": "png/diet-pepsi.png",
+        "svgSha256": "88cd7cfa8fa44eab1909b09a9214f68bd7fd18c457976f180485dc4ecb99060f",
+        "portableSvgSha256": "2c390a433a2d5c35be307f9f4c95ce9f3d6e1eda1d1f83e076257cd65f6bf0cc",
+        "pngSha256": "34e2fd38bf6ba284eaa182963eea3a28a13c1c6b353e00a158577406db195a31",
+        "pngBytes": 110298
+      },
+      "sourceModule": "scripts/icons/families/colas.mjs"
+    },
+    {
+      "slug": "fanta-orange",
+      "family": "citrus-soda-can",
+      "packageChoice": "US 12 fl oz Orange can; orange body, blue angular logo and orange-slice splash.",
+      "references": [
+        {
+          "pageUrl": "https://www.coca-cola.com/us/en/brands/fanta/products",
+          "imageUrl": "https://www.coca-cola.com/content/dam/onexp/us/en/brands/fanta/fanta-orange-packshot-us-en.png",
+          "inspectedAt": "2026-10-27",
+          "observations": "Manufacturer front packshot visually inspected: standard orange aluminum can, white angular FANTA in large blue asymmetric shield, lowercase orange at left under logo, orange wedge with green leaf and orange/yellow splash, white ORANGE SODA / NATURALLY FLAVORED near base. US recipe, not Fanta Orange Mexico.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Representative US package selected because catalog has no size. Lettering and fine package details are simplified vector interpretations; final aesthetic and native review pending.",
+      "status": "needs-review",
+      "bevId": "1d8d5c08-5f2e-5525-8a4a-6d300419527c",
+      "name": "Fanta Orange",
+      "brand": "Fanta",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/fanta-orange.svg",
+        "portableSvg": "portable-svg/fanta-orange.svg",
+        "png": "png/fanta-orange.png",
+        "svgSha256": "49c20cf17b57fb9f161bebfb6368ff190d5f13dbbd8a2fdf830b9a721c49e447",
+        "portableSvgSha256": "1c13d14b82a1b6e0426094a4b72d28155d266b5886a43452f0e70a2514f58193",
+        "pngSha256": "bb22903bf77abf6de6999cddad744e55333af2b0b76a6ed80eb3d288a82cd2ee",
+        "pngBytes": 118393
+      },
+      "sourceModule": "scripts/icons/families/citrus-sodas.mjs"
+    },
     {
       "slug": "jarritos-mandarin",
       "family": "glass-soda-bottle",
@@ -94,6 +294,130 @@
       "sourceModule": "scripts/icons/families/pilot.mjs"
     },
     {
+      "slug": "la-marca-prosecco",
+      "family": "sparkling-wine-bottle",
+      "packageChoice": "US-market 750mL La Marca Prosecco DOC; closed dark-glass bottle with silver foil and pale-blue labels.",
+      "references": [
+        {
+          "pageUrl": "https://www.lamarcaprosecco.com/prosecco.html",
+          "imageUrl": "https://www.lamarcaprosecco.com/dw/image/v2/bfwt_prd/on/demandware.static/-/Sites-lamarca-Library/default/dw0dba4f73/pdp/Ref2026/LAM-DemiSec-DOC.png?q=65&sh=1000&sm=fit&sw=1000",
+          "inspectedAt": "2026-10-27",
+          "visuallyInspected": true,
+          "observations": "Manufacturer flagship DOC page packshot inspected: tall narrow dark green bottle, long sloped shoulders, silver textured foil, pale turquoise neck band and rectangular lower label, small crown and dark serif LAMARCA / PROSECCO. Image filename contains DemiSec, but visible front label and linked product page identify flagship Prosecco DOC; no Demi Sec wording is drawn."
+        }
+      ],
+      "uncertainty": "Representative 750mL package selected because catalog omits size. Fine foil texture and crown are simplified. Manufacturer image filename discrepancy recorded; final aesthetic/native review pending.",
+      "status": "needs-review",
+      "bevId": "c11c6bb5-cadf-5d6a-b1f0-c705f3838ba5",
+      "name": "La Marca Prosecco",
+      "brand": "La Marca",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/la-marca-prosecco.svg",
+        "portableSvg": "portable-svg/la-marca-prosecco.svg",
+        "png": "png/la-marca-prosecco.png",
+        "svgSha256": "f6875f74b8e1bc61631fc3c25ba1625b0e104033b80bf59f42496b8258bebfab",
+        "portableSvgSha256": "a6862712736acc195110da3644ac0f483e228206129a8ed33c5c7ac94ebc5b4a",
+        "pngSha256": "bd96f9cbd0fd07c98969aef3b23925001f4948aac5e765603d343710745b6157",
+        "pngBytes": 107142
+      },
+      "sourceModule": "scripts/icons/families/wine-cocktail.mjs"
+    },
+    {
+      "slug": "lacroix-lime",
+      "family": "sparkling-standard-can",
+      "packageChoice": "US 12 fl oz / 355 mL Lime can; not Key Lime.",
+      "references": [
+        {
+          "pageUrl": "https://www.target.com/p/-/A-14915875",
+          "imageUrl": "https://target.scene7.com/is/image/Target/GUEST_7d429587-be0b-49d7-92f6-f5fe33ccb0eb?fmt=pjpeg&hei=1000&wid=1000",
+          "inspectedAt": "2026-10-28",
+          "observations": "Individually inspected retailer can front: pale lime-green field, darker green brush texture, large dark-blue hand-script lettering, teal and blue brush sweeps, green LIME header and silver rims. Distinct from Key Lime. Manufacturer site was inaccessible.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Representative US retail package; catalog does not specify package size. Lettering and fine label engraving are simplified vector interpretations. Final design and native-app review pending.",
+      "status": "needs-review",
+      "bevId": "759f29c8-f406-5cbc-8404-fd9827f03c8d",
+      "name": "LaCroix Lime",
+      "brand": "LaCroix",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/lacroix-lime.svg",
+        "portableSvg": "portable-svg/lacroix-lime.svg",
+        "png": "png/lacroix-lime.png",
+        "svgSha256": "1cdb4acb3084b6def00015a8deded2e33cce0596d1e2d46de9d0c7dd872b6843",
+        "portableSvgSha256": "70c9159ca28409747b65e5ab1e21492056670941b4591de18529a77fcc0689e4",
+        "pngSha256": "6667d2164213adcddd7259430dbd6ba83189ee1262ebf6032e8c8b96aa639e96",
+        "pngBytes": 128594
+      },
+      "sourceModule": "scripts/icons/families/sparkling-starters.mjs"
+    },
+    {
+      "slug": "lacroix-pamplemousse",
+      "family": "sparkling-standard-can",
+      "packageChoice": "US 12 fl oz / 355 mL Pamplemousse (grapefruit) can.",
+      "references": [
+        {
+          "pageUrl": "https://www.target.com/p/-/A-14915876",
+          "imageUrl": "https://target.scene7.com/is/image/Target/GUEST_32eba147-b092-491f-9ccf-0c7bac951c69?fmt=pjpeg&hei=1000&wid=1000",
+          "inspectedAt": "2026-10-28",
+          "observations": "Individually inspected retailer can front: cream-gold base with coral wash and red brush marks, dark blue large hand-script LaCroix, teal and blue lower brush sweeps, PAMPLEMOUSSE header, silver rims. Manufacturer site was inaccessible.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Representative US retail package; catalog does not specify package size. Lettering and fine label engraving are simplified vector interpretations. Final design and native-app review pending.",
+      "status": "needs-review",
+      "bevId": "ce867ef4-8a01-5320-b830-b971b1e7895e",
+      "name": "LaCroix Pamplemousse",
+      "brand": "LaCroix",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/lacroix-pamplemousse.svg",
+        "portableSvg": "portable-svg/lacroix-pamplemousse.svg",
+        "png": "png/lacroix-pamplemousse.png",
+        "svgSha256": "99e10aa0cd721dfaecb0fdcaa3691c4a2bce583be6b1b71f06754c73ed0742a8",
+        "portableSvgSha256": "9d4e750b17037d36e5ad5d8fcc8fb1f099b681e9eac7c78ba6c7b00d79155da4",
+        "pngSha256": "4e6e3084b28a6a83ad0ad0bf554c8703aa91fecf3c4556e3d93e8d717a96841f",
+        "pngBytes": 128672
+      },
+      "sourceModule": "scripts/icons/families/sparkling-starters.mjs"
+    },
+    {
+      "slug": "generic-margarita",
+      "family": "served-rocks-cocktail",
+      "packageChoice": "Unbranded classic margarita on ice in a clear straight-sided lowball, salted rim and lime garnish; representative serving, not frozen.",
+      "references": [
+        {
+          "pageUrl": "https://www.cointreau.com/us/en/cocktails/margarita",
+          "imageUrl": "https://brandcenter.remy-cointreau.com/transform/01af6ff1-44f9-4082-9952-5937a4e258af/C0257_margarita_lifestyle.png?format=webp&io=transform%3Afill%2Cwidth%3A1560%2Cheight%3A1560%2Cgravity%3Acenter&source=Large",
+          "inspectedAt": "2026-10-27",
+          "visuallyInspected": true,
+          "observations": "Inspected cocktail-maker reference photograph: clear cylindrical lowball with thick transparent base, cloudy pale straw drink, ice, crystalline salt rim and green lime garnish at upper right. Promotional splash omitted for a settled serving. Page explicitly describes an on-the-rocks lowball preparation."
+        }
+      ],
+      "uncertainty": "Generic catalog beverage has no unique glass or recipe. This is one documented classic serving; no brand mark, frozen texture or bright-green syrup is inferred. Final aesthetic/native review pending.",
+      "status": "needs-review",
+      "bevId": "527cd62b-93e3-56d5-8df1-928bbe0a5e59",
+      "name": "Margarita",
+      "brand": "Generic",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/generic-margarita.svg",
+        "portableSvg": "portable-svg/generic-margarita.svg",
+        "png": "png/generic-margarita.png",
+        "svgSha256": "d7994041f0dbd9cc40a68005f51f6a6e29638bcdbe868cc45ea3f183d22a2e31",
+        "portableSvgSha256": "01d029486ab07d25e6d03158a8ea24c225793162c4a1c5973eab3dfae3962fd3",
+        "pngSha256": "1c4a24fdcd82b78ee867bcf30e04778f98029d6c2389cc27ff1d2216f6a75fb5",
+        "pngBytes": 170283
+      },
+      "sourceModule": "scripts/icons/families/wine-cocktail.mjs"
+    },
+    {
       "slug": "matcha-latte-with-boba",
       "family": "served-boba-glass",
       "packageChoice": "Unbranded iced matcha latte with tapioca pearls in a tall glass.",
@@ -123,6 +447,37 @@
         "pngBytes": 135071
       },
       "sourceModule": "scripts/icons/families/pilot.mjs"
+    },
+    {
+      "slug": "liquid-death-mountain-water-still",
+      "family": "water-tallboy-can",
+      "packageChoice": "US 19.2 fl oz / 568 mL Still Mountain Water tallboy; white, navy and gold.",
+      "references": [
+        {
+          "pageUrl": "https://liquiddeath.com/products/mountain-water-still",
+          "imageUrl": "https://liquiddeath.com/cdn/shop/files/Liquid_Death_19.2oz_Mountain_Still_Drinking_Water_Test.webp?v=1738261237&width=800",
+          "inspectedAt": "2026-10-28",
+          "observations": "Inspected manufacturer 19.2oz image: tall white can, gold upper rim, dark navy two-line blackletter wordmark, MOUNTAIN WATER and STILL DRINKING WATER, tilted melting gold skull, navy base band with gold lettering. Not black sparkling-water packaging.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Representative US retail package; catalog does not specify package size. Lettering and fine label engraving are simplified vector interpretations. Final design and native-app review pending.",
+      "status": "needs-review",
+      "bevId": "8864913a-66c6-5a4f-ae62-28d8d841ee65",
+      "name": "Mountain Water",
+      "brand": "Liquid Death",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/liquid-death-mountain-water-still.svg",
+        "portableSvg": "portable-svg/liquid-death-mountain-water-still.svg",
+        "png": "png/liquid-death-mountain-water-still.png",
+        "svgSha256": "9803c4e5801af0b1709e5bf7b776829553ed97a4f637d7942cd80bdd8e2d7d0f",
+        "portableSvgSha256": "c887453f8220131a6bc7d5d78b1410885fce2f27f18c682a5c9f7b6df807fc36",
+        "pngSha256": "cc7ce307378a2cfa4abe1a1fe838fe831906ffd76d10cbf974e5972d8ceca06a",
+        "pngBytes": 132078
+      },
+      "sourceModule": "scripts/icons/families/sparkling-starters.mjs"
     },
     {
       "slug": "fiji-natural-artesian-water",
@@ -187,6 +542,68 @@
       "sourceModule": "scripts/icons/families/pilot.mjs"
     },
     {
+      "slug": "pepsi",
+      "family": "standard-cola-can",
+      "packageChoice": "US 12 fl oz / 355mL Pepsi aluminum can; representative package for the size-unspecified catalog row.",
+      "references": [
+        {
+          "pageUrl": "https://www.target.com/p/pepsi-cola-soda-12pk-12-fl-oz-cans/-/A-13044177",
+          "imageUrl": "https://target.scene7.com/is/image/Target/GUEST_6b8191c4-2e8e-4487-8a65-f752a4d01fc1?wid=1000&hei=1000",
+          "inspectedAt": "2026-10-28",
+          "visuallyInspected": true,
+          "observations": "Inspected retailer packshot containing single can: vivid blue aluminum body, large centered red/white/blue roundel with black rim and heavy uppercase PEPSI across a subtly curved white band; silver rims. Manufacturer product image host returned403; this is the current roundel-wordmark package, not the old separate lowercase wordmark."
+        }
+      ],
+      "uncertainty": "Representative US can selected; no flavor or formulation substitution. Tiny package text and condensation simplified. Final aesthetic and native-app review pending.",
+      "status": "needs-review",
+      "bevId": "946588a1-e485-500a-a7c9-afdd321219b2",
+      "name": "Pepsi",
+      "brand": "Pepsi",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/pepsi.svg",
+        "portableSvg": "portable-svg/pepsi.svg",
+        "png": "png/pepsi.png",
+        "svgSha256": "0c48706710d0210e89aea2773f7d86e8a7459971054edcd7f28f6de71523979c",
+        "portableSvgSha256": "19165dfdce3b398431765dcf94cd64358497f367f1ecb5a05a81b501b1b015c4",
+        "pngSha256": "3f8ef54ec0cad782620b864d21c4b82e723a4f9e9fe7ce098cdd732da5dfca91",
+        "pngBytes": 101163
+      },
+      "sourceModule": "scripts/icons/families/colas.mjs"
+    },
+    {
+      "slug": "pepsi-zero-sugar",
+      "family": "standard-cola-can",
+      "packageChoice": "US 12 fl oz / 355mL Pepsi Zero Sugar aluminum can; representative package for the size-unspecified catalog row.",
+      "references": [
+        {
+          "pageUrl": "https://www.target.com/p/pepsi-zero-sugar-soda-12pk-12-fl-oz-cans/-/A-12946208",
+          "imageUrl": "https://target.scene7.com/is/image/Target/GUEST_de53b679-9877-442e-b704-eb30b6d43c80?wid=1000&hei=1000",
+          "inspectedAt": "2026-10-28",
+          "visuallyInspected": true,
+          "observations": "Inspected retailer packshot: black can, large red/white/blue roundel with pale silver perimeter and black uppercase PEPSI across white band; white ZERO SUGAR near base and silver rims. Manufacturer image host rejected access."
+        }
+      ],
+      "uncertainty": "Representative US can selected; no flavor or formulation substitution. Tiny package text and condensation simplified. Final aesthetic and native-app review pending.",
+      "status": "needs-review",
+      "bevId": "37ea2b26-55ba-570a-8579-b5e32b9b387a",
+      "name": "Pepsi Zero Sugar",
+      "brand": "Pepsi",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/pepsi-zero-sugar.svg",
+        "portableSvg": "portable-svg/pepsi-zero-sugar.svg",
+        "png": "png/pepsi-zero-sugar.png",
+        "svgSha256": "e36e1f401a3b43da559c7d7a8ee47efd32e5151014f908bf37cef920fcb1955f",
+        "portableSvgSha256": "d0c982c35523ecb2456d0c64aff5ebf859987a1b79e2313f9e9c78dac2b19d85",
+        "pngSha256": "4c74e244aa383898819aa5bca88c070d1f54af3163ed4ca85a16feddcfea570d",
+        "pngBytes": 111249
+      },
+      "sourceModule": "scripts/icons/families/colas.mjs"
+    },
+    {
       "slug": "pure-leaf-unsweetened",
       "family": "tea-pet-bottle",
       "packageChoice": "US 18.5 fl oz Unsweetened black tea, black cap and green/black label.",
@@ -247,6 +664,37 @@
         "pngBytes": 117707
       },
       "sourceModule": "scripts/icons/families/pilot.mjs"
+    },
+    {
+      "slug": "san-pellegrino-original",
+      "family": "mineral-glass-bottle",
+      "packageChoice": "US 500 mL / 16.9 fl oz green glass bottle with metal crown cap.",
+      "references": [
+        {
+          "pageUrl": "https://www.target.com/p/-/A-94759334",
+          "imageUrl": "https://target.scene7.com/is/image/Target/GUEST_b8819045-2265-4809-8bb1-b13857075738?fmt=pjpeg&hei=1000&wid=1000",
+          "inspectedAt": "2026-10-28",
+          "observations": "Inspected retailer package front with full single 500mL glass bottle, corroborated by lifestyle image GUEST_d586281e-985c-412a-ba2d-af2ed40178b0: tapered green glass, silver crown cap/red top, narrow pale neck band, pale shoulder medallion with building, blue lower label and red star. Manufacturer 500mL product page checked; its image download was blocked.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Representative US retail package; catalog does not specify package size. Lettering and fine label engraving are simplified vector interpretations. Final design and native-app review pending.",
+      "status": "needs-review",
+      "bevId": "db4dbcae-afcc-5d57-b2f3-3becb3ae6568",
+      "name": "San Pellegrino Sparkling Natural Mineral Water",
+      "brand": "San Pellegrino",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/san-pellegrino-original.svg",
+        "portableSvg": "portable-svg/san-pellegrino-original.svg",
+        "png": "png/san-pellegrino-original.png",
+        "svgSha256": "1d5ab88f90dd4ef73729d7016e610e9b2e57a20e3d4c2e054df80dc737ca0352",
+        "portableSvgSha256": "eaac5491bfc4df2f6f6dbbd1aa4940a310662a5bfd75a865a2bba6e585c51076",
+        "pngSha256": "86fbce04802a04c1e79169514e416849c8748cf4e082959aa1d8332193b020df",
+        "pngBytes": 82602
+      },
+      "sourceModule": "scripts/icons/families/sparkling-starters.mjs"
     },
     {
       "slug": "spindrift-grapefruit",
@@ -340,6 +788,130 @@
         "pngBytes": 120536
       },
       "sourceModule": "scripts/icons/families/pilot.mjs"
+    },
+    {
+      "slug": "sprite",
+      "family": "citrus-soda-can",
+      "packageChoice": "US 12 fl oz Original lemon-lime can; current minimalist green/white package.",
+      "references": [
+        {
+          "pageUrl": "https://www.coca-cola.com/us/en/brands/sprite/products",
+          "imageUrl": "https://www.coca-cola.com/content/dam/onexp/us/en/brands/sprite/products/en_sprite_prod_12oz-can_750x750_v1.jpg",
+          "inspectedAt": "2026-10-27",
+          "observations": "Manufacturer image visually inspected: green cylindrical standard can, silver rims, oversized italic white Sprite across upper body and small yellow LEMON-LIME with white sparkle low on label. No lemon illustration in this version.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Representative US package selected because catalog has no size. Lettering and fine package details are simplified vector interpretations; final aesthetic and native review pending.",
+      "status": "needs-review",
+      "bevId": "5f6616d1-5289-570b-ac9a-323c8dcd1dba",
+      "name": "Sprite",
+      "brand": "Sprite",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/sprite.svg",
+        "portableSvg": "portable-svg/sprite.svg",
+        "png": "png/sprite.png",
+        "svgSha256": "c045e5a2b7d8a0cd75c7f477652195fbf75d13d5decbb527cbdc57aa0105cd84",
+        "portableSvgSha256": "d40bd315668aa929d76ec7afbb01b8d638478610c9c85a60c1c9e502bd42f235",
+        "pngSha256": "d33f08a61c9ed980e24299454f0fab7b5dffa374af0ba78b17c2b9ee8bd4d292",
+        "pngBytes": 93012
+      },
+      "sourceModule": "scripts/icons/families/citrus-sodas.mjs"
+    },
+    {
+      "slug": "sprite-zero-sugar",
+      "family": "citrus-soda-can",
+      "packageChoice": "US 12 fl oz Zero Sugar lemon-lime can; green body with black wordmark.",
+      "references": [
+        {
+          "pageUrl": "https://www.coca-cola.com/us/en/brands/sprite/products",
+          "imageUrl": "https://www.coca-cola.com/content/dam/onexp/us/en/brands/sprite/products/en_sprite_prod_zero-sugar_12oz-can_750x750_v1.jpg",
+          "inspectedAt": "2026-10-27",
+          "observations": "Manufacturer Zero Sugar image independently inspected: same green standard can silhouette; black Sprite and ZERO SUGAR directly below; small yellow LEMON-LIME and black sparkle. Distinct from white-lettered Original.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Representative US package selected because catalog has no size. Lettering and fine package details are simplified vector interpretations; final aesthetic and native review pending.",
+      "status": "needs-review",
+      "bevId": "72bc7b45-f9f5-5e7e-9ee9-55f374fc778d",
+      "name": "Sprite Zero Sugar",
+      "brand": "Sprite",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/sprite-zero-sugar.svg",
+        "portableSvg": "portable-svg/sprite-zero-sugar.svg",
+        "png": "png/sprite-zero-sugar.png",
+        "svgSha256": "f1bed7a378b3eac9617acfef5bff6449576c570f3a1e831ebdc8697819180277",
+        "portableSvgSha256": "f9f4b0ec4680f1eb708350decfb13b2b5061e6121112209877ac0b75170ce39d",
+        "pngSha256": "f9b8de4bb0a17dfa58a86774f9146f43740a0b86c83904451a17099ed40acf4f",
+        "pngBytes": 100621
+      },
+      "sourceModule": "scripts/icons/families/citrus-sodas.mjs"
+    },
+    {
+      "slug": "starry-lemon-lime",
+      "family": "citrus-soda-can",
+      "packageChoice": "US 16 fl oz sleek can, PepsiCo SKU 321253; green/yellow Original lemon-lime.",
+      "references": [
+        {
+          "pageUrl": "https://www.pepsicopartners.com/pepsico/en/USD/BEVERAGES/Soft-Drinks/Starry/p/1-177PZJ-1",
+          "imageUrl": "https://pepsicopartners.com/medias/300Wx300H-1-177PZJ-1.jpg?context=bWFzdGVyfHJvb3R8MjYzODV8aW1hZ2UvanBlZ3xoMzgvaGUzLzk5NzQwNzM0NTg3MTgvMzAwV3gzMDBIXzEtMTc3UFpKLTEuanBnfDAxYzVmNjcwMTRhMWIyMDAwODBkZGQ2MWVhOTNmMGI5ODMzN2ZhNzcyMjFmNGRiMjdkMGQ5NDZmOTY2MDRkZTU",
+          "inspectedAt": "2026-10-27",
+          "observations": "Manufacturer packshot visually inspected: taller sleek can, silver rim, lime-green upper body and yellow lower body; chunky black-outlined citrus silhouette behind slanted white Starry lettering, black LEMON LIME on green, small sparkle accents. Manufacturer page identifies 16oz sleek can; deliberately distinct from the 12oz Zero Sugar reference.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Representative US package selected because catalog has no size. Lettering and fine package details are simplified vector interpretations; final aesthetic and native review pending.",
+      "status": "needs-review",
+      "bevId": "d8353b51-2d10-5625-934b-5ca4d3b0374d",
+      "name": "Starry",
+      "brand": "Starry",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/starry-lemon-lime.svg",
+        "portableSvg": "portable-svg/starry-lemon-lime.svg",
+        "png": "png/starry-lemon-lime.png",
+        "svgSha256": "14286b81ea034fbb3b750e70790c41f701365a63522711481e0331c6d2bdf286",
+        "portableSvgSha256": "a811d7c7dba04729c9902662a05a04f354efd2a9ebc4ce3000e0a142109ecea8",
+        "pngSha256": "04f6a453513e6b0f7a668bf72208a5ef8b445d51fd6f2396530167872ad62658",
+        "pngBytes": 108081
+      },
+      "sourceModule": "scripts/icons/families/citrus-sodas.mjs"
+    },
+    {
+      "slug": "starry-zero-sugar",
+      "family": "citrus-soda-can",
+      "packageChoice": "US 12 fl oz can, PepsiCo SKU 209800; black shoulders and base with green/yellow center.",
+      "references": [
+        {
+          "pageUrl": "https://www.pepsicopartners.com/pepsico/en/USD/BEVERAGES/Soft-Drinks/Starry-Zero-Sugar/p/1-15HERK-1",
+          "imageUrl": "https://www.pepsicopartners.com/medias/1200Wx1200H-1-15HERK-1.jpg?context=bWFzdGVyfHJvb3R8ODQyMjF8aW1hZ2UvanBlZ3xhRFE0TDJneVl5OHhNRE01TnpNNE56RTJNVFl6TUM4eE1qQXdWM2d4TWpBd1NGOHhMVEUxU0VWU1N5MHhMbXB3Wnd8M2MyMjZjZDgwMzkzY2VlYWRkYTdkYTFhNDU1NzEyY2QyM2RiY2IzZDZmOTI3ODkwZjM3MWNlOWJhNGRiODljNw",
+          "inspectedAt": "2026-10-27",
+          "observations": "Manufacturer packshot independently visually inspected: standard 12oz proportions, black shoulders with white ZERO SUGAR; green/yellow center, large black-outlined lemon/lime badge, white Starry script and black LEMON LIME. Black lower band with yellow small lettering; silver top/bottom.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Representative US package selected because catalog has no size. Lettering and fine package details are simplified vector interpretations; final aesthetic and native review pending.",
+      "status": "needs-review",
+      "bevId": "b017deaa-4830-518c-a7a5-d1d8b1476608",
+      "name": "Starry Zero Sugar",
+      "brand": "Starry",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/starry-zero-sugar.svg",
+        "portableSvg": "portable-svg/starry-zero-sugar.svg",
+        "png": "png/starry-zero-sugar.png",
+        "svgSha256": "99e2c3276d714e186c6325e568b3dde8b1eee6806ee1108efb27371388cf04c0",
+        "portableSvgSha256": "0eaef3dbb8b65d3c00d8099e5436b6980e70f6c8a56ce4b721a980d82a6fbf8a",
+        "pngSha256": "8ca5ba719e995168bb5551b17c44a4fdfd5d1d3bcaccdf49e01123297825dcfe",
+        "pngBytes": 125654
+      },
+      "sourceModule": "scripts/icons/families/citrus-sodas.mjs"
     },
     {
       "slug": "topo-chico-original",
