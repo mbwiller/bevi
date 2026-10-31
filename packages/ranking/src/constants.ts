@@ -1,7 +1,7 @@
 import type { Bucket, TasteAttributeKind } from './types.ts';
 
 /** Bumped with any formula or constant change; equals the `version` field of every vectors file. */
-export const RANKING_VERSION = '1.5.0';
+export const RANKING_VERSION = '1.6.0';
 
 /**
  * Score band per bucket as integer [lo, hi] edges on the 0–10 scale (Beli-style 7 / 4, decided 2026-10-09).

@@ -15,8 +15,9 @@ export function blendLambda(support: number, nUser: number): number {
  * ẑ = (1 − λ)·ẑ1 + λ·ẑ2; score ŝ = clamp(μ*_u + σ*_u·ẑ, 0, 10) with the user's effective stats
  * (§8.4); confidence = max(conf1, min(1, support)). Throws if the snapshot's version is not
  * RANKING_VERSION or the Bev is not in it. A user absent from the snapshot predicts from the
- * global stats with zero confidence. `opts.userSimilarity` is passed to Layer 2 (default 'cosine')
- * and `opts.bevSimilarity` to Layer 1 (default 'content').
+ * global stats with zero confidence. `opts.userSimilarity` is passed to Layer 2 (default 'cosine';
+ * 'stored' reads `snapshot.userNeighbours`, see `effectiveUserSimilarity`) and `opts.bevSimilarity`
+ * to Layer 1 (default 'content'). λ reads Layer 2's support whichever similarity produced it.
  */
 export function predictScore(snapshot: PredictionSnapshot, userId: UserId, bevId: BevId, opts?: PredictOptions): Prediction {
   const ctx = snapshotContext(snapshot);

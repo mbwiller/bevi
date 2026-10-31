@@ -83,6 +83,9 @@ export function formatReport(r: EvalReport, opts: { synthetic: boolean; source: 
     r.dataset.edges === null
       ? 'Edges: none in this dataset, so the *-edges arms fall back to the computed content similarity (identical to their non-edges twins).'
       : `Edges: ${r.dataset.edges} stored edges between catalog Bevs, read by the *-edges arms (bevSimilarity: 'edges').`,
+    ...(ARMS.some((a) => a.readsNeighbours === true && r.options.arms.includes(a.id))
+      ? ["Taste neighbours: rebuilt in every fold from that fold's training rows (syntheticNeighbours, the nightly job's computation; no flavour bases in a snapshot, so brand is the only bridge), read by the *-stored arms (userSimilarity: 'stored')."]
+      : []),
     `Options: respace=${r.options.respace}, temporalQuantile=${r.options.temporalQuantile}, bootstrap=${r.options.bootstrapIterations} resamples over users (seed "${r.options.seed}"), NDCG@${r.options.ndcgK}`,
     'Every value: point estimate [95% paired-bootstrap CI over users]. Primary metric: pairwise concordance on comparisons.',
     'Cohorts use n_u = rankings visible when predicting (LOO: n − 1; temporal: rankings before the cutoff).',
