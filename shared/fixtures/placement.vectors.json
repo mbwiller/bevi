@@ -1,7 +1,7 @@
 {
-  "version": "1.4.0",
+  "version": "1.5.0",
   "constants": {
-    "version": "1.4.0",
+    "version": "1.5.0",
     "bands": {
       "DISLIKED": [
         0,
@@ -32,6 +32,11 @@
     "globalFallback": {
       "mean": 5,
       "stddev": 2.5
+    },
+    "placementTier": {
+      "sameLeaf": 1,
+      "sameRoot": 2,
+      "edge": 3
     },
     "kAff": 2,
     "bayesC": 3,
@@ -115,7 +120,9 @@
     "reliabilityRule": "min(1, n_v / neighbourReliabilityN); applied by Layer 2 per neighbour, not stored in user_neighbors.sim",
     "bayesStoredRule": "bev_stats.bayes_score numeric(4,2) from exact inputs: m with at most 3 dp (global_stats.mean_score numeric(5,3), or the exact category mean), scores in cents; N = C*m_thousandths + 10*sum(score_cents), D = C + n; storedCents = round half away from zero of N / (10*D) = floor((2N + 10D) / (20D)); never round the floating-point bayes",
     "streakEvents": "streakFromTimestamps.timestamps are ranking EVENTS (submit_ranking and rerank_bev), never deleted: a re-rank adds its own day and keeps the original one; a removal adds and deletes nothing. When a case lists input.events, timestamps = events.map(at)",
-    "layer1EdgesRule": "bevSimilarity 'edges': sim(b, b') = w of the snapshot.edges row for the unordered pair {b, b'} (either orientation), 0 when there is none; pairs with sim < simMin dropped as in 'content'; content = sum(sim * z) / (sum(sim) + 1); conf1 mass = n_{u,cat(b)} + sum(sim); affinity and g unchanged. A snapshot without an edges field (absent or null) uses contentSimilarity ('content'); an empty array means no edges"
+    "layer1EdgesRule": "bevSimilarity 'edges': sim(b, b') = w of the snapshot.edges row for the unordered pair {b, b'} (either orientation), 0 when there is none; pairs with sim < simMin dropped as in 'content'; content = sum(sim * z) / (sum(sim) + 1); conf1 mass = n_{u,cat(b)} + sum(sim); affinity and g unchanged. A snapshot without an edges field (absent or null) uses contentSimilarity ('content'); an empty array means no edges",
+    "placementTiersRule": "tier of a bucket Bev l relative to the new Bev b (placementTier constants): sameLeaf (1) when categoryId (the root) is equal and both leafCategoryId are non-null and equal; sameRoot (2) when categoryId is equal otherwise (a null leaf on either side, i.e. kind unknown, never reaches tier 1); edge (3) when the roots differ and weights[l.id] (the bev_edges w of {b, l}) is >= edgeMinWeight; null otherwise (no weight, or a weight below the floor). Without weights only tiers 1 and 2 occur",
+    "anchoredPlacementRule": "startPlacement with tiers (one per orderedBevIds entry, filtered with the Bev itself): anchors A = the entries other than bevId whose tier equals the smallest non-null tier among the entries other than bevId (on a re-rank the Bev is still in the list and its tier against itself is ignored), in list order, at positions p_1 < ... < p_k of the filtered list; no anchors = the plain search. Phase 1 = binary search over anchor slots [aLo, aHi] = [0, k]: ask a_j with j = floor((aLo + aHi) / 2) (0-based), NEW_BETTER aHi = j, EXISTING_BETTER aLo = j + 1, TIE ends the placement at p_j + 1; after each answer the insertion range is lo = (aLo = 0 ? 0 : p_{aLo - 1} + 1), hi = (aHi = k ? n : p_{aHi}). Phase 2 = the plain search on [lo, hi] once aLo = aHi (none when lo = hi). insertIndex = lo; comparisons in the order asked; maxSteps = maxComparisons(k) + maxComparisons(widest gap between consecutive anchors, or before the first / after the last), constant. Undo restores lo, hi, aLo, aHi"
   },
   "cases": [
     {
@@ -1451,6 +1458,2566 @@
             "tie": false
           }
         ]
+      }
+    },
+    {
+      "name": "Coke: Pepsi same leaf; A&W and the unknown soda same root; the rest none",
+      "fn": "placementTiers",
+      "input": {
+        "newBev": {
+          "categoryId": "soda",
+          "leafCategoryId": "cola"
+        },
+        "list": [
+          {
+            "id": "pepsi",
+            "categoryId": "soda",
+            "leafCategoryId": "cola"
+          },
+          {
+            "id": "aw-root-beer",
+            "categoryId": "soda",
+            "leafCategoryId": "root_beer"
+          },
+          {
+            "id": "mystery-soda",
+            "categoryId": "soda",
+            "leafCategoryId": null
+          },
+          {
+            "id": "diet-coke",
+            "categoryId": "diet_soda",
+            "leafCategoryId": "diet_cola"
+          },
+          {
+            "id": "diet-pepsi",
+            "categoryId": "diet_soda",
+            "leafCategoryId": "diet_cola"
+          },
+          {
+            "id": "evian",
+            "categoryId": "water",
+            "leafCategoryId": null
+          },
+          {
+            "id": "gatorade",
+            "categoryId": "sports",
+            "leafCategoryId": null
+          },
+          {
+            "id": "cold-brew",
+            "categoryId": "coffee",
+            "leafCategoryId": "cold_brew"
+          }
+        ]
+      },
+      "expected": [
+        1,
+        2,
+        2,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "name": "a soda of unknown kind: nothing is same leaf, every soda is same root (D-04 §3: T1 empty)",
+      "fn": "placementTiers",
+      "input": {
+        "newBev": {
+          "categoryId": "soda",
+          "leafCategoryId": null
+        },
+        "list": [
+          {
+            "id": "pepsi",
+            "categoryId": "soda",
+            "leafCategoryId": "cola"
+          },
+          {
+            "id": "aw-root-beer",
+            "categoryId": "soda",
+            "leafCategoryId": "root_beer"
+          },
+          {
+            "id": "mystery-soda",
+            "categoryId": "soda",
+            "leafCategoryId": null
+          },
+          {
+            "id": "diet-coke",
+            "categoryId": "diet_soda",
+            "leafCategoryId": "diet_cola"
+          },
+          {
+            "id": "diet-pepsi",
+            "categoryId": "diet_soda",
+            "leafCategoryId": "diet_cola"
+          },
+          {
+            "id": "evian",
+            "categoryId": "water",
+            "leafCategoryId": null
+          },
+          {
+            "id": "gatorade",
+            "categoryId": "sports",
+            "leafCategoryId": null
+          },
+          {
+            "id": "cold-brew",
+            "categoryId": "coffee",
+            "leafCategoryId": "cold_brew"
+          }
+        ]
+      },
+      "expected": [
+        2,
+        2,
+        2,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "name": "Diet Coke: Diet Pepsi same leaf; Coke-like sodas are a different root",
+      "fn": "placementTiers",
+      "input": {
+        "newBev": {
+          "categoryId": "diet_soda",
+          "leafCategoryId": "diet_cola"
+        },
+        "list": [
+          {
+            "id": "pepsi",
+            "categoryId": "soda",
+            "leafCategoryId": "cola"
+          },
+          {
+            "id": "aw-root-beer",
+            "categoryId": "soda",
+            "leafCategoryId": "root_beer"
+          },
+          {
+            "id": "mystery-soda",
+            "categoryId": "soda",
+            "leafCategoryId": null
+          },
+          {
+            "id": "diet-coke",
+            "categoryId": "diet_soda",
+            "leafCategoryId": "diet_cola"
+          },
+          {
+            "id": "diet-pepsi",
+            "categoryId": "diet_soda",
+            "leafCategoryId": "diet_cola"
+          },
+          {
+            "id": "evian",
+            "categoryId": "water",
+            "leafCategoryId": null
+          },
+          {
+            "id": "gatorade",
+            "categoryId": "sports",
+            "leafCategoryId": null
+          },
+          {
+            "id": "cold-brew",
+            "categoryId": "coffee",
+            "leafCategoryId": "cold_brew"
+          }
+        ]
+      },
+      "expected": [
+        null,
+        null,
+        null,
+        1,
+        1,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "name": "Fiji: Evian is same root (unsplit water); Gatorade is not",
+      "fn": "placementTiers",
+      "input": {
+        "newBev": {
+          "categoryId": "water",
+          "leafCategoryId": null
+        },
+        "list": [
+          {
+            "id": "pepsi",
+            "categoryId": "soda",
+            "leafCategoryId": "cola"
+          },
+          {
+            "id": "aw-root-beer",
+            "categoryId": "soda",
+            "leafCategoryId": "root_beer"
+          },
+          {
+            "id": "mystery-soda",
+            "categoryId": "soda",
+            "leafCategoryId": null
+          },
+          {
+            "id": "diet-coke",
+            "categoryId": "diet_soda",
+            "leafCategoryId": "diet_cola"
+          },
+          {
+            "id": "diet-pepsi",
+            "categoryId": "diet_soda",
+            "leafCategoryId": "diet_cola"
+          },
+          {
+            "id": "evian",
+            "categoryId": "water",
+            "leafCategoryId": null
+          },
+          {
+            "id": "gatorade",
+            "categoryId": "sports",
+            "leafCategoryId": null
+          },
+          {
+            "id": "cold-brew",
+            "categoryId": "coffee",
+            "leafCategoryId": "cold_brew"
+          }
+        ]
+      },
+      "expected": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        2,
+        null,
+        null
+      ]
+    },
+    {
+      "name": "Coke with edges: Diet Coke 0.7 and Evian 0.3 become tier 3; 0.29 on cold brew does not; 0.9 on A&W stays tier 2",
+      "fn": "placementTiers",
+      "input": {
+        "newBev": {
+          "categoryId": "soda",
+          "leafCategoryId": "cola"
+        },
+        "list": [
+          {
+            "id": "pepsi",
+            "categoryId": "soda",
+            "leafCategoryId": "cola"
+          },
+          {
+            "id": "aw-root-beer",
+            "categoryId": "soda",
+            "leafCategoryId": "root_beer"
+          },
+          {
+            "id": "mystery-soda",
+            "categoryId": "soda",
+            "leafCategoryId": null
+          },
+          {
+            "id": "diet-coke",
+            "categoryId": "diet_soda",
+            "leafCategoryId": "diet_cola"
+          },
+          {
+            "id": "diet-pepsi",
+            "categoryId": "diet_soda",
+            "leafCategoryId": "diet_cola"
+          },
+          {
+            "id": "evian",
+            "categoryId": "water",
+            "leafCategoryId": null
+          },
+          {
+            "id": "gatorade",
+            "categoryId": "sports",
+            "leafCategoryId": null
+          },
+          {
+            "id": "cold-brew",
+            "categoryId": "coffee",
+            "leafCategoryId": "cold_brew"
+          }
+        ],
+        "weights": {
+          "diet-coke": 0.7,
+          "evian": 0.3,
+          "cold-brew": 0.29,
+          "aw-root-beer": 0.9
+        }
+      },
+      "expected": [
+        1,
+        2,
+        2,
+        3,
+        null,
+        3,
+        null,
+        null
+      ]
+    },
+    {
+      "name": "Diet Coke with an edge to Pepsi only",
+      "fn": "placementTiers",
+      "input": {
+        "newBev": {
+          "categoryId": "diet_soda",
+          "leafCategoryId": "diet_cola"
+        },
+        "list": [
+          {
+            "id": "pepsi",
+            "categoryId": "soda",
+            "leafCategoryId": "cola"
+          },
+          {
+            "id": "aw-root-beer",
+            "categoryId": "soda",
+            "leafCategoryId": "root_beer"
+          },
+          {
+            "id": "mystery-soda",
+            "categoryId": "soda",
+            "leafCategoryId": null
+          },
+          {
+            "id": "diet-coke",
+            "categoryId": "diet_soda",
+            "leafCategoryId": "diet_cola"
+          },
+          {
+            "id": "diet-pepsi",
+            "categoryId": "diet_soda",
+            "leafCategoryId": "diet_cola"
+          },
+          {
+            "id": "evian",
+            "categoryId": "water",
+            "leafCategoryId": null
+          },
+          {
+            "id": "gatorade",
+            "categoryId": "sports",
+            "leafCategoryId": null
+          },
+          {
+            "id": "cold-brew",
+            "categoryId": "coffee",
+            "leafCategoryId": "cold_brew"
+          }
+        ],
+        "weights": {
+          "pepsi": 0.55
+        }
+      },
+      "expected": [
+        3,
+        null,
+        null,
+        1,
+        1,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "name": "figure: lands between a1 and a2, then in the gap l2 l3 (asks l4, l1, l3, l2)",
+      "fn": "anchoredPlacement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "l0",
+          "l1",
+          "l2",
+          "l3",
+          "l4",
+          "l5",
+          "l6",
+          "l7"
+        ],
+        "tiers": [
+          null,
+          1,
+          null,
+          null,
+          1,
+          null,
+          1,
+          null
+        ],
+        "steps": [
+          "NEW_BETTER",
+          "EXISTING_BETTER",
+          "NEW_BETTER",
+          "EXISTING_BETTER"
+        ]
+      },
+      "expected": {
+        "anchors": [
+          "l1",
+          "l4",
+          "l6"
+        ],
+        "maxSteps": 4,
+        "questions": [
+          {
+            "comparedBevId": "l4",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "l1",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "l3",
+            "phase": "GAP"
+          },
+          {
+            "comparedBevId": "l2",
+            "phase": "GAP"
+          }
+        ],
+        "result": {
+          "bevId": "new",
+          "bucket": "LOVED",
+          "insertIndex": 3,
+          "expectedBucketSize": 8,
+          "comparisons": [
+            {
+              "winnerBevId": "new",
+              "loserBevId": "l4",
+              "tie": false
+            },
+            {
+              "winnerBevId": "l1",
+              "loserBevId": "new",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "l3",
+              "tie": false
+            },
+            {
+              "winnerBevId": "l2",
+              "loserBevId": "new",
+              "tie": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "figure: best of all (asks l4, l1, l0)",
+      "fn": "anchoredPlacement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "l0",
+          "l1",
+          "l2",
+          "l3",
+          "l4",
+          "l5",
+          "l6",
+          "l7"
+        ],
+        "tiers": [
+          null,
+          1,
+          null,
+          null,
+          1,
+          null,
+          1,
+          null
+        ],
+        "steps": [
+          "NEW_BETTER",
+          "NEW_BETTER",
+          "NEW_BETTER"
+        ]
+      },
+      "expected": {
+        "anchors": [
+          "l1",
+          "l4",
+          "l6"
+        ],
+        "maxSteps": 4,
+        "questions": [
+          {
+            "comparedBevId": "l4",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "l1",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "l0",
+            "phase": "GAP"
+          }
+        ],
+        "result": {
+          "bevId": "new",
+          "bucket": "LOVED",
+          "insertIndex": 0,
+          "expectedBucketSize": 8,
+          "comparisons": [
+            {
+              "winnerBevId": "new",
+              "loserBevId": "l4",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "l1",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "l0",
+              "tie": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "figure: worst of all (asks l4, l6, l7)",
+      "fn": "anchoredPlacement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "l0",
+          "l1",
+          "l2",
+          "l3",
+          "l4",
+          "l5",
+          "l6",
+          "l7"
+        ],
+        "tiers": [
+          null,
+          1,
+          null,
+          null,
+          1,
+          null,
+          1,
+          null
+        ],
+        "steps": [
+          "EXISTING_BETTER",
+          "EXISTING_BETTER",
+          "EXISTING_BETTER"
+        ]
+      },
+      "expected": {
+        "anchors": [
+          "l1",
+          "l4",
+          "l6"
+        ],
+        "maxSteps": 4,
+        "questions": [
+          {
+            "comparedBevId": "l4",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "l6",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "l7",
+            "phase": "GAP"
+          }
+        ],
+        "result": {
+          "bevId": "new",
+          "bucket": "LOVED",
+          "insertIndex": 8,
+          "expectedBucketSize": 8,
+          "comparisons": [
+            {
+              "winnerBevId": "l4",
+              "loserBevId": "new",
+              "tie": false
+            },
+            {
+              "winnerBevId": "l6",
+              "loserBevId": "new",
+              "tie": false
+            },
+            {
+              "winnerBevId": "l7",
+              "loserBevId": "new",
+              "tie": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "figure: tie in Phase 1 ends at p_j + 1 = 5",
+      "fn": "anchoredPlacement",
+      "input": {
+        "bevId": "new",
+        "bucket": "FINE",
+        "orderedBevIds": [
+          "l0",
+          "l1",
+          "l2",
+          "l3",
+          "l4",
+          "l5",
+          "l6",
+          "l7"
+        ],
+        "tiers": [
+          null,
+          1,
+          null,
+          null,
+          1,
+          null,
+          1,
+          null
+        ],
+        "steps": [
+          "TIE"
+        ]
+      },
+      "expected": {
+        "anchors": [
+          "l1",
+          "l4",
+          "l6"
+        ],
+        "maxSteps": 4,
+        "questions": [
+          {
+            "comparedBevId": "l4",
+            "phase": "ANCHORS"
+          }
+        ],
+        "result": {
+          "bevId": "new",
+          "bucket": "FINE",
+          "insertIndex": 5,
+          "expectedBucketSize": 8,
+          "comparisons": [
+            {
+              "winnerBevId": "l4",
+              "loserBevId": "new",
+              "tie": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "figure: tie in Phase 2, directly below l3",
+      "fn": "anchoredPlacement",
+      "input": {
+        "bevId": "new",
+        "bucket": "FINE",
+        "orderedBevIds": [
+          "l0",
+          "l1",
+          "l2",
+          "l3",
+          "l4",
+          "l5",
+          "l6",
+          "l7"
+        ],
+        "tiers": [
+          null,
+          1,
+          null,
+          null,
+          1,
+          null,
+          1,
+          null
+        ],
+        "steps": [
+          "NEW_BETTER",
+          "EXISTING_BETTER",
+          "TIE"
+        ]
+      },
+      "expected": {
+        "anchors": [
+          "l1",
+          "l4",
+          "l6"
+        ],
+        "maxSteps": 4,
+        "questions": [
+          {
+            "comparedBevId": "l4",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "l1",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "l3",
+            "phase": "GAP"
+          }
+        ],
+        "result": {
+          "bevId": "new",
+          "bucket": "FINE",
+          "insertIndex": 4,
+          "expectedBucketSize": 8,
+          "comparisons": [
+            {
+              "winnerBevId": "new",
+              "loserBevId": "l4",
+              "tie": false
+            },
+            {
+              "winnerBevId": "l1",
+              "loserBevId": "new",
+              "tie": false
+            },
+            {
+              "winnerBevId": "l3",
+              "loserBevId": "new",
+              "tie": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "figure: between a2 and a3, gap l5 alone",
+      "fn": "anchoredPlacement",
+      "input": {
+        "bevId": "new",
+        "bucket": "DISLIKED",
+        "orderedBevIds": [
+          "l0",
+          "l1",
+          "l2",
+          "l3",
+          "l4",
+          "l5",
+          "l6",
+          "l7"
+        ],
+        "tiers": [
+          null,
+          1,
+          null,
+          null,
+          1,
+          null,
+          1,
+          null
+        ],
+        "steps": [
+          "EXISTING_BETTER",
+          "NEW_BETTER",
+          "EXISTING_BETTER"
+        ]
+      },
+      "expected": {
+        "anchors": [
+          "l1",
+          "l4",
+          "l6"
+        ],
+        "maxSteps": 4,
+        "questions": [
+          {
+            "comparedBevId": "l4",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "l6",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "l5",
+            "phase": "GAP"
+          }
+        ],
+        "result": {
+          "bevId": "new",
+          "bucket": "DISLIKED",
+          "insertIndex": 6,
+          "expectedBucketSize": 8,
+          "comparisons": [
+            {
+              "winnerBevId": "l4",
+              "loserBevId": "new",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "l6",
+              "tie": false
+            },
+            {
+              "winnerBevId": "l5",
+              "loserBevId": "new",
+              "tie": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "figure: undo across the phase boundary, then the other answer",
+      "fn": "anchoredPlacement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "l0",
+          "l1",
+          "l2",
+          "l3",
+          "l4",
+          "l5",
+          "l6",
+          "l7"
+        ],
+        "tiers": [
+          null,
+          1,
+          null,
+          null,
+          1,
+          null,
+          1,
+          null
+        ],
+        "steps": [
+          "NEW_BETTER",
+          "EXISTING_BETTER",
+          "NEW_BETTER",
+          "UNDO",
+          "UNDO",
+          "NEW_BETTER",
+          "EXISTING_BETTER"
+        ]
+      },
+      "expected": {
+        "anchors": [
+          "l1",
+          "l4",
+          "l6"
+        ],
+        "maxSteps": 4,
+        "questions": [
+          {
+            "comparedBevId": "l4",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "l1",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "l3",
+            "phase": "GAP"
+          },
+          {
+            "comparedBevId": "l1",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "l0",
+            "phase": "GAP"
+          }
+        ],
+        "result": {
+          "bevId": "new",
+          "bucket": "LOVED",
+          "insertIndex": 1,
+          "expectedBucketSize": 8,
+          "comparisons": [
+            {
+              "winnerBevId": "new",
+              "loserBevId": "l4",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "l1",
+              "tie": false
+            },
+            {
+              "winnerBevId": "l0",
+              "loserBevId": "new",
+              "tie": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "figure: undo after a Phase 1 tie",
+      "fn": "anchoredPlacement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "l0",
+          "l1",
+          "l2",
+          "l3",
+          "l4",
+          "l5",
+          "l6",
+          "l7"
+        ],
+        "tiers": [
+          null,
+          1,
+          null,
+          null,
+          1,
+          null,
+          1,
+          null
+        ],
+        "steps": [
+          "TIE",
+          "UNDO",
+          "EXISTING_BETTER",
+          "EXISTING_BETTER",
+          "NEW_BETTER"
+        ]
+      },
+      "expected": {
+        "anchors": [
+          "l1",
+          "l4",
+          "l6"
+        ],
+        "maxSteps": 4,
+        "questions": [
+          {
+            "comparedBevId": "l4",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "l4",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "l6",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "l7",
+            "phase": "GAP"
+          }
+        ],
+        "result": {
+          "bevId": "new",
+          "bucket": "LOVED",
+          "insertIndex": 7,
+          "expectedBucketSize": 8,
+          "comparisons": [
+            {
+              "winnerBevId": "l4",
+              "loserBevId": "new",
+              "tie": false
+            },
+            {
+              "winnerBevId": "l6",
+              "loserBevId": "new",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "l7",
+              "tie": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "figure: undo after done, in Phase 2",
+      "fn": "anchoredPlacement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "l0",
+          "l1",
+          "l2",
+          "l3",
+          "l4",
+          "l5",
+          "l6",
+          "l7"
+        ],
+        "tiers": [
+          null,
+          1,
+          null,
+          null,
+          1,
+          null,
+          1,
+          null
+        ],
+        "steps": [
+          "NEW_BETTER",
+          "EXISTING_BETTER",
+          "NEW_BETTER",
+          "EXISTING_BETTER",
+          "UNDO",
+          "NEW_BETTER"
+        ]
+      },
+      "expected": {
+        "anchors": [
+          "l1",
+          "l4",
+          "l6"
+        ],
+        "maxSteps": 4,
+        "questions": [
+          {
+            "comparedBevId": "l4",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "l1",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "l3",
+            "phase": "GAP"
+          },
+          {
+            "comparedBevId": "l2",
+            "phase": "GAP"
+          },
+          {
+            "comparedBevId": "l2",
+            "phase": "GAP"
+          }
+        ],
+        "result": {
+          "bevId": "new",
+          "bucket": "LOVED",
+          "insertIndex": 2,
+          "expectedBucketSize": 8,
+          "comparisons": [
+            {
+              "winnerBevId": "new",
+              "loserBevId": "l4",
+              "tie": false
+            },
+            {
+              "winnerBevId": "l1",
+              "loserBevId": "new",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "l3",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "l2",
+              "tie": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "re-rank: l4 itself is in the list with a tier and is filtered out (anchors l1, l6)",
+      "fn": "anchoredPlacement",
+      "input": {
+        "bevId": "l4",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "l0",
+          "l1",
+          "l2",
+          "l3",
+          "l4",
+          "l5",
+          "l6",
+          "l7"
+        ],
+        "tiers": [
+          null,
+          1,
+          null,
+          null,
+          1,
+          null,
+          1,
+          null
+        ],
+        "steps": [
+          "NEW_BETTER",
+          "EXISTING_BETTER",
+          "NEW_BETTER",
+          "EXISTING_BETTER"
+        ]
+      },
+      "expected": {
+        "anchors": [
+          "l1",
+          "l6"
+        ],
+        "maxSteps": 4,
+        "questions": [
+          {
+            "comparedBevId": "l6",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "l1",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "l3",
+            "phase": "GAP"
+          },
+          {
+            "comparedBevId": "l2",
+            "phase": "GAP"
+          }
+        ],
+        "result": {
+          "bevId": "l4",
+          "bucket": "LOVED",
+          "insertIndex": 3,
+          "expectedBucketSize": 7,
+          "comparisons": [
+            {
+              "winnerBevId": "l4",
+              "loserBevId": "l6",
+              "tie": false
+            },
+            {
+              "winnerBevId": "l1",
+              "loserBevId": "l4",
+              "tie": false
+            },
+            {
+              "winnerBevId": "l4",
+              "loserBevId": "l3",
+              "tie": false
+            },
+            {
+              "winnerBevId": "l2",
+              "loserBevId": "l4",
+              "tie": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "the smallest tier present wins: tier 2 anchors when no tier 1 (l0, l3, l5)",
+      "fn": "anchoredPlacement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "l0",
+          "l1",
+          "l2",
+          "l3",
+          "l4",
+          "l5",
+          "l6",
+          "l7"
+        ],
+        "tiers": [
+          2,
+          3,
+          null,
+          2,
+          null,
+          2,
+          3,
+          null
+        ],
+        "steps": [
+          "EXISTING_BETTER",
+          "NEW_BETTER",
+          "NEW_BETTER"
+        ]
+      },
+      "expected": {
+        "anchors": [
+          "l0",
+          "l3",
+          "l5"
+        ],
+        "maxSteps": 4,
+        "questions": [
+          {
+            "comparedBevId": "l3",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "l5",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "l4",
+            "phase": "GAP"
+          }
+        ],
+        "result": {
+          "bevId": "new",
+          "bucket": "LOVED",
+          "insertIndex": 4,
+          "expectedBucketSize": 8,
+          "comparisons": [
+            {
+              "winnerBevId": "l3",
+              "loserBevId": "new",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "l5",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "l4",
+              "tie": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "tier 3 (edges) alone: anchors l2, l7",
+      "fn": "anchoredPlacement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "l0",
+          "l1",
+          "l2",
+          "l3",
+          "l4",
+          "l5",
+          "l6",
+          "l7"
+        ],
+        "tiers": [
+          null,
+          null,
+          3,
+          null,
+          null,
+          null,
+          null,
+          3
+        ],
+        "steps": [
+          "NEW_BETTER",
+          "EXISTING_BETTER",
+          "NEW_BETTER",
+          "NEW_BETTER",
+          "EXISTING_BETTER"
+        ]
+      },
+      "expected": {
+        "anchors": [
+          "l2",
+          "l7"
+        ],
+        "maxSteps": 5,
+        "questions": [
+          {
+            "comparedBevId": "l7",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "l2",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "l5",
+            "phase": "GAP"
+          },
+          {
+            "comparedBevId": "l4",
+            "phase": "GAP"
+          },
+          {
+            "comparedBevId": "l3",
+            "phase": "GAP"
+          }
+        ],
+        "result": {
+          "bevId": "new",
+          "bucket": "LOVED",
+          "insertIndex": 4,
+          "expectedBucketSize": 8,
+          "comparisons": [
+            {
+              "winnerBevId": "new",
+              "loserBevId": "l7",
+              "tie": false
+            },
+            {
+              "winnerBevId": "l2",
+              "loserBevId": "new",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "l5",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "l4",
+              "tie": false
+            },
+            {
+              "winnerBevId": "l3",
+              "loserBevId": "new",
+              "tie": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "adjacent anchors, empty gap: no Phase 2 question",
+      "fn": "anchoredPlacement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "a",
+          "b",
+          "c",
+          "d"
+        ],
+        "tiers": [
+          null,
+          1,
+          1,
+          null
+        ],
+        "steps": [
+          "NEW_BETTER",
+          "EXISTING_BETTER"
+        ]
+      },
+      "expected": {
+        "anchors": [
+          "b",
+          "c"
+        ],
+        "maxSteps": 3,
+        "questions": [
+          {
+            "comparedBevId": "c",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "b",
+            "phase": "ANCHORS"
+          }
+        ],
+        "result": {
+          "bevId": "new",
+          "bucket": "LOVED",
+          "insertIndex": 2,
+          "expectedBucketSize": 4,
+          "comparisons": [
+            {
+              "winnerBevId": "new",
+              "loserBevId": "c",
+              "tie": false
+            },
+            {
+              "winnerBevId": "b",
+              "loserBevId": "new",
+              "tie": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "one anchor at the top of the list",
+      "fn": "anchoredPlacement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "l0",
+          "l1",
+          "l2",
+          "l3",
+          "l4",
+          "l5",
+          "l6",
+          "l7"
+        ],
+        "tiers": [
+          1,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "steps": [
+          "EXISTING_BETTER",
+          "NEW_BETTER",
+          "EXISTING_BETTER",
+          "NEW_BETTER"
+        ]
+      },
+      "expected": {
+        "anchors": [
+          "l0"
+        ],
+        "maxSteps": 4,
+        "questions": [
+          {
+            "comparedBevId": "l0",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "l4",
+            "phase": "GAP"
+          },
+          {
+            "comparedBevId": "l2",
+            "phase": "GAP"
+          },
+          {
+            "comparedBevId": "l3",
+            "phase": "GAP"
+          }
+        ],
+        "result": {
+          "bevId": "new",
+          "bucket": "LOVED",
+          "insertIndex": 3,
+          "expectedBucketSize": 8,
+          "comparisons": [
+            {
+              "winnerBevId": "l0",
+              "loserBevId": "new",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "l4",
+              "tie": false
+            },
+            {
+              "winnerBevId": "l2",
+              "loserBevId": "new",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "l3",
+              "tie": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "one anchor at the bottom of the list",
+      "fn": "anchoredPlacement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "l0",
+          "l1",
+          "l2",
+          "l3",
+          "l4",
+          "l5",
+          "l6",
+          "l7"
+        ],
+        "tiers": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          1
+        ],
+        "steps": [
+          "NEW_BETTER",
+          "EXISTING_BETTER",
+          "EXISTING_BETTER",
+          "NEW_BETTER"
+        ]
+      },
+      "expected": {
+        "anchors": [
+          "l7"
+        ],
+        "maxSteps": 4,
+        "questions": [
+          {
+            "comparedBevId": "l7",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "l3",
+            "phase": "GAP"
+          },
+          {
+            "comparedBevId": "l5",
+            "phase": "GAP"
+          },
+          {
+            "comparedBevId": "l6",
+            "phase": "GAP"
+          }
+        ],
+        "result": {
+          "bevId": "new",
+          "bucket": "LOVED",
+          "insertIndex": 6,
+          "expectedBucketSize": 8,
+          "comparisons": [
+            {
+              "winnerBevId": "new",
+              "loserBevId": "l7",
+              "tie": false
+            },
+            {
+              "winnerBevId": "l3",
+              "loserBevId": "new",
+              "tie": false
+            },
+            {
+              "winnerBevId": "l5",
+              "loserBevId": "new",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "l6",
+              "tie": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "no anchors (every tier null): the plain search, same questions and result as \"best of five\"",
+      "fn": "anchoredPlacement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "coke",
+          "sprite",
+          "pepsi",
+          "fanta",
+          "dew"
+        ],
+        "tiers": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "steps": [
+          "NEW_BETTER",
+          "NEW_BETTER",
+          "NEW_BETTER"
+        ]
+      },
+      "expected": {
+        "anchors": [],
+        "maxSteps": 3,
+        "questions": [
+          {
+            "comparedBevId": "pepsi",
+            "phase": "PLAIN"
+          },
+          {
+            "comparedBevId": "sprite",
+            "phase": "PLAIN"
+          },
+          {
+            "comparedBevId": "coke",
+            "phase": "PLAIN"
+          }
+        ],
+        "result": {
+          "bevId": "new",
+          "bucket": "LOVED",
+          "insertIndex": 0,
+          "expectedBucketSize": 5,
+          "comparisons": [
+            {
+              "winnerBevId": "new",
+              "loserBevId": "pepsi",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "sprite",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "coke",
+              "tie": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "every Bev in one tier: the plain search, same questions and result as \"worst of five\"",
+      "fn": "anchoredPlacement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "coke",
+          "sprite",
+          "pepsi",
+          "fanta",
+          "dew"
+        ],
+        "tiers": [
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        "steps": [
+          "EXISTING_BETTER",
+          "EXISTING_BETTER"
+        ]
+      },
+      "expected": {
+        "anchors": [
+          "coke",
+          "sprite",
+          "pepsi",
+          "fanta",
+          "dew"
+        ],
+        "maxSteps": 3,
+        "questions": [
+          {
+            "comparedBevId": "pepsi",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "dew",
+            "phase": "ANCHORS"
+          }
+        ],
+        "result": {
+          "bevId": "new",
+          "bucket": "LOVED",
+          "insertIndex": 5,
+          "expectedBucketSize": 5,
+          "comparisons": [
+            {
+              "winnerBevId": "pepsi",
+              "loserBevId": "new",
+              "tie": false
+            },
+            {
+              "winnerBevId": "dew",
+              "loserBevId": "new",
+              "tie": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "empty bucket with tiers",
+      "fn": "anchoredPlacement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [],
+        "tiers": [],
+        "steps": []
+      },
+      "expected": {
+        "anchors": [],
+        "maxSteps": 0,
+        "questions": [],
+        "result": {
+          "bevId": "new",
+          "bucket": "LOVED",
+          "insertIndex": 0,
+          "expectedBucketSize": 0,
+          "comparisons": []
+        }
+      }
+    },
+    {
+      "name": "oracle n=20, 7 anchors, t=0",
+      "fn": "anchoredPlacement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "b0",
+          "b1",
+          "b2",
+          "b3",
+          "b4",
+          "b5",
+          "b6",
+          "b7",
+          "b8",
+          "b9",
+          "b10",
+          "b11",
+          "b12",
+          "b13",
+          "b14",
+          "b15",
+          "b16",
+          "b17",
+          "b18",
+          "b19"
+        ],
+        "tiers": [
+          2,
+          null,
+          1,
+          2,
+          null,
+          1,
+          1,
+          null,
+          null,
+          1,
+          null,
+          null,
+          2,
+          1,
+          1,
+          2,
+          null,
+          null,
+          1,
+          null
+        ],
+        "steps": [
+          "NEW_BETTER",
+          "NEW_BETTER",
+          "NEW_BETTER",
+          "NEW_BETTER",
+          "NEW_BETTER"
+        ]
+      },
+      "expected": {
+        "anchors": [
+          "b2",
+          "b5",
+          "b6",
+          "b9",
+          "b13",
+          "b14",
+          "b18"
+        ],
+        "maxSteps": 5,
+        "questions": [
+          {
+            "comparedBevId": "b9",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "b5",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "b2",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "b1",
+            "phase": "GAP"
+          },
+          {
+            "comparedBevId": "b0",
+            "phase": "GAP"
+          }
+        ],
+        "result": {
+          "bevId": "new",
+          "bucket": "LOVED",
+          "insertIndex": 0,
+          "expectedBucketSize": 20,
+          "comparisons": [
+            {
+              "winnerBevId": "new",
+              "loserBevId": "b9",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "b5",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "b2",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "b1",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "b0",
+              "tie": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "oracle n=20, 7 anchors, t=3",
+      "fn": "anchoredPlacement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "b0",
+          "b1",
+          "b2",
+          "b3",
+          "b4",
+          "b5",
+          "b6",
+          "b7",
+          "b8",
+          "b9",
+          "b10",
+          "b11",
+          "b12",
+          "b13",
+          "b14",
+          "b15",
+          "b16",
+          "b17",
+          "b18",
+          "b19"
+        ],
+        "tiers": [
+          2,
+          null,
+          1,
+          2,
+          null,
+          1,
+          1,
+          null,
+          null,
+          1,
+          null,
+          null,
+          2,
+          1,
+          1,
+          2,
+          null,
+          null,
+          1,
+          null
+        ],
+        "steps": [
+          "NEW_BETTER",
+          "NEW_BETTER",
+          "EXISTING_BETTER",
+          "NEW_BETTER",
+          "NEW_BETTER"
+        ]
+      },
+      "expected": {
+        "anchors": [
+          "b2",
+          "b5",
+          "b6",
+          "b9",
+          "b13",
+          "b14",
+          "b18"
+        ],
+        "maxSteps": 5,
+        "questions": [
+          {
+            "comparedBevId": "b9",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "b5",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "b2",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "b4",
+            "phase": "GAP"
+          },
+          {
+            "comparedBevId": "b3",
+            "phase": "GAP"
+          }
+        ],
+        "result": {
+          "bevId": "new",
+          "bucket": "LOVED",
+          "insertIndex": 3,
+          "expectedBucketSize": 20,
+          "comparisons": [
+            {
+              "winnerBevId": "new",
+              "loserBevId": "b9",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "b5",
+              "tie": false
+            },
+            {
+              "winnerBevId": "b2",
+              "loserBevId": "new",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "b4",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "b3",
+              "tie": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "oracle n=20, 7 anchors, t=7",
+      "fn": "anchoredPlacement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "b0",
+          "b1",
+          "b2",
+          "b3",
+          "b4",
+          "b5",
+          "b6",
+          "b7",
+          "b8",
+          "b9",
+          "b10",
+          "b11",
+          "b12",
+          "b13",
+          "b14",
+          "b15",
+          "b16",
+          "b17",
+          "b18",
+          "b19"
+        ],
+        "tiers": [
+          2,
+          null,
+          1,
+          2,
+          null,
+          1,
+          1,
+          null,
+          null,
+          1,
+          null,
+          null,
+          2,
+          1,
+          1,
+          2,
+          null,
+          null,
+          1,
+          null
+        ],
+        "steps": [
+          "NEW_BETTER",
+          "EXISTING_BETTER",
+          "EXISTING_BETTER",
+          "NEW_BETTER",
+          "NEW_BETTER"
+        ]
+      },
+      "expected": {
+        "anchors": [
+          "b2",
+          "b5",
+          "b6",
+          "b9",
+          "b13",
+          "b14",
+          "b18"
+        ],
+        "maxSteps": 5,
+        "questions": [
+          {
+            "comparedBevId": "b9",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "b5",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "b6",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "b8",
+            "phase": "GAP"
+          },
+          {
+            "comparedBevId": "b7",
+            "phase": "GAP"
+          }
+        ],
+        "result": {
+          "bevId": "new",
+          "bucket": "LOVED",
+          "insertIndex": 7,
+          "expectedBucketSize": 20,
+          "comparisons": [
+            {
+              "winnerBevId": "new",
+              "loserBevId": "b9",
+              "tie": false
+            },
+            {
+              "winnerBevId": "b5",
+              "loserBevId": "new",
+              "tie": false
+            },
+            {
+              "winnerBevId": "b6",
+              "loserBevId": "new",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "b8",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "b7",
+              "tie": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "oracle n=20, 7 anchors, t=12",
+      "fn": "anchoredPlacement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "b0",
+          "b1",
+          "b2",
+          "b3",
+          "b4",
+          "b5",
+          "b6",
+          "b7",
+          "b8",
+          "b9",
+          "b10",
+          "b11",
+          "b12",
+          "b13",
+          "b14",
+          "b15",
+          "b16",
+          "b17",
+          "b18",
+          "b19"
+        ],
+        "tiers": [
+          2,
+          null,
+          1,
+          2,
+          null,
+          1,
+          1,
+          null,
+          null,
+          1,
+          null,
+          null,
+          2,
+          1,
+          1,
+          2,
+          null,
+          null,
+          1,
+          null
+        ],
+        "steps": [
+          "EXISTING_BETTER",
+          "NEW_BETTER",
+          "NEW_BETTER",
+          "EXISTING_BETTER",
+          "NEW_BETTER"
+        ]
+      },
+      "expected": {
+        "anchors": [
+          "b2",
+          "b5",
+          "b6",
+          "b9",
+          "b13",
+          "b14",
+          "b18"
+        ],
+        "maxSteps": 5,
+        "questions": [
+          {
+            "comparedBevId": "b9",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "b14",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "b13",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "b11",
+            "phase": "GAP"
+          },
+          {
+            "comparedBevId": "b12",
+            "phase": "GAP"
+          }
+        ],
+        "result": {
+          "bevId": "new",
+          "bucket": "LOVED",
+          "insertIndex": 12,
+          "expectedBucketSize": 20,
+          "comparisons": [
+            {
+              "winnerBevId": "b9",
+              "loserBevId": "new",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "b14",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "b13",
+              "tie": false
+            },
+            {
+              "winnerBevId": "b11",
+              "loserBevId": "new",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "b12",
+              "tie": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "oracle n=20, 7 anchors, t=19",
+      "fn": "anchoredPlacement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "b0",
+          "b1",
+          "b2",
+          "b3",
+          "b4",
+          "b5",
+          "b6",
+          "b7",
+          "b8",
+          "b9",
+          "b10",
+          "b11",
+          "b12",
+          "b13",
+          "b14",
+          "b15",
+          "b16",
+          "b17",
+          "b18",
+          "b19"
+        ],
+        "tiers": [
+          2,
+          null,
+          1,
+          2,
+          null,
+          1,
+          1,
+          null,
+          null,
+          1,
+          null,
+          null,
+          2,
+          1,
+          1,
+          2,
+          null,
+          null,
+          1,
+          null
+        ],
+        "steps": [
+          "EXISTING_BETTER",
+          "EXISTING_BETTER",
+          "EXISTING_BETTER",
+          "NEW_BETTER"
+        ]
+      },
+      "expected": {
+        "anchors": [
+          "b2",
+          "b5",
+          "b6",
+          "b9",
+          "b13",
+          "b14",
+          "b18"
+        ],
+        "maxSteps": 5,
+        "questions": [
+          {
+            "comparedBevId": "b9",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "b14",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "b18",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "b19",
+            "phase": "GAP"
+          }
+        ],
+        "result": {
+          "bevId": "new",
+          "bucket": "LOVED",
+          "insertIndex": 19,
+          "expectedBucketSize": 20,
+          "comparisons": [
+            {
+              "winnerBevId": "b9",
+              "loserBevId": "new",
+              "tie": false
+            },
+            {
+              "winnerBevId": "b14",
+              "loserBevId": "new",
+              "tie": false
+            },
+            {
+              "winnerBevId": "b18",
+              "loserBevId": "new",
+              "tie": false
+            },
+            {
+              "winnerBevId": "new",
+              "loserBevId": "b19",
+              "tie": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "oracle n=20, 7 anchors, t=20",
+      "fn": "anchoredPlacement",
+      "input": {
+        "bevId": "new",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "b0",
+          "b1",
+          "b2",
+          "b3",
+          "b4",
+          "b5",
+          "b6",
+          "b7",
+          "b8",
+          "b9",
+          "b10",
+          "b11",
+          "b12",
+          "b13",
+          "b14",
+          "b15",
+          "b16",
+          "b17",
+          "b18",
+          "b19"
+        ],
+        "tiers": [
+          2,
+          null,
+          1,
+          2,
+          null,
+          1,
+          1,
+          null,
+          null,
+          1,
+          null,
+          null,
+          2,
+          1,
+          1,
+          2,
+          null,
+          null,
+          1,
+          null
+        ],
+        "steps": [
+          "EXISTING_BETTER",
+          "EXISTING_BETTER",
+          "EXISTING_BETTER",
+          "EXISTING_BETTER"
+        ]
+      },
+      "expected": {
+        "anchors": [
+          "b2",
+          "b5",
+          "b6",
+          "b9",
+          "b13",
+          "b14",
+          "b18"
+        ],
+        "maxSteps": 5,
+        "questions": [
+          {
+            "comparedBevId": "b9",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "b14",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "b18",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "b19",
+            "phase": "GAP"
+          }
+        ],
+        "result": {
+          "bevId": "new",
+          "bucket": "LOVED",
+          "insertIndex": 20,
+          "expectedBucketSize": 20,
+          "comparisons": [
+            {
+              "winnerBevId": "b9",
+              "loserBevId": "new",
+              "tie": false
+            },
+            {
+              "winnerBevId": "b14",
+              "loserBevId": "new",
+              "tie": false
+            },
+            {
+              "winnerBevId": "b18",
+              "loserBevId": "new",
+              "tie": false
+            },
+            {
+              "winnerBevId": "b19",
+              "loserBevId": "new",
+              "tie": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "re-rank: the Bev is the only tier-1 entry (itself); the anchors are the tier-2 Bevs latte1, latte2",
+      "fn": "anchoredPlacement",
+      "input": {
+        "bevId": "mocha",
+        "bucket": "LOVED",
+        "orderedBevIds": [
+          "latte1",
+          "mocha",
+          "cola",
+          "latte2"
+        ],
+        "tiers": [
+          2,
+          1,
+          null,
+          2
+        ],
+        "steps": [
+          "NEW_BETTER",
+          "EXISTING_BETTER",
+          "EXISTING_BETTER"
+        ]
+      },
+      "expected": {
+        "anchors": [
+          "latte1",
+          "latte2"
+        ],
+        "maxSteps": 3,
+        "questions": [
+          {
+            "comparedBevId": "latte2",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "latte1",
+            "phase": "ANCHORS"
+          },
+          {
+            "comparedBevId": "cola",
+            "phase": "GAP"
+          }
+        ],
+        "result": {
+          "bevId": "mocha",
+          "bucket": "LOVED",
+          "insertIndex": 2,
+          "expectedBucketSize": 3,
+          "comparisons": [
+            {
+              "winnerBevId": "mocha",
+              "loserBevId": "latte2",
+              "tie": false
+            },
+            {
+              "winnerBevId": "latte1",
+              "loserBevId": "mocha",
+              "tie": false
+            },
+            {
+              "winnerBevId": "cola",
+              "loserBevId": "mocha",
+              "tie": false
+            }
+          ]
+        }
       }
     }
   ]

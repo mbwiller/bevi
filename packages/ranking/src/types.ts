@@ -18,12 +18,47 @@ export interface RankingComparison {
   tie: boolean;
 }
 
+/**
+ * A bucket Bev's tier in anchored placement (LaTeX §10.1, `placementTiers`): a smaller number is
+ * more similar to the new Bev; null is "no tier" (never an anchor). PLACEMENT_TIER names the values.
+ */
+export type PlacementTier = number | null;
+
+/**
+ * What `placementTiers` reads about a Bev: its root category (`bevs.category_id`, one of the 15
+ * roots) and its leaf (`bevs.leaf_category_id`), null when no finer placement is known (the
+ * unsplit roots `water` and `sports`, a user-created Bev, a Bev the taxonomy left on its parent).
+ */
+export interface PlacementBevKind {
+  categoryId: CategoryId;
+  leafCategoryId: CategoryId | null;
+}
+
+/** A bucket Bev as `placementTiers` sees it (`rankings.listBucketBevs` joined with `bevs.leaves`). */
+export interface PlacementListBev extends PlacementBevKind {
+  id: BevId;
+}
+
+/** Phase 1 of anchored placement: the binary search over the anchors (LaTeX Algorithm alg:anchored). */
+export interface PlacementAnchors {
+  /** Positions in `list` of the anchors, ascending: the paper's p_1 < … < p_k, 0-based. */
+  readonly positions: readonly number[];
+  /**
+   * Candidate anchor slots [lo, hi] ⊆ [0, k]. Phase 1 runs while lo < hi; once lo = hi = j*, the
+   * state's own [lo, hi] is the gap between anchors j* and j* + 1 and Phase 2 searches it.
+   */
+  readonly lo: number;
+  readonly hi: number;
+}
+
 /** The range [lo, hi] and the question asked, captured BEFORE an answer (for undo and the log). */
 export interface PlacementStep {
   readonly comparedBevId: BevId;
   readonly answer: ComparisonAnswer;
   readonly lo: number;
   readonly hi: number;
+  /** The anchor-slot range before the answer; present exactly when the placement is anchored. */
+  readonly anchored?: { readonly lo: number; readonly hi: number };
 }
 
 export interface PlacementState {
@@ -36,13 +71,24 @@ export interface PlacementState {
   readonly hi: number;
   readonly history: readonly PlacementStep[];
   readonly status: 'COMPARING' | 'DONE';
+  /**
+   * Anchored placement (LaTeX §10.1, M-21). Absent in a plain binary search, which is also what an
+   * anchored start with no anchors produces, so a state without this field is exactly 1.4.0's.
+   */
+  readonly anchored?: PlacementAnchors;
 }
+
+/** Which search a question belongs to: the anchors (like-for-like), the gap between two anchors, or a plain search. */
+export type PlacementPhase = 'PLAIN' | 'ANCHORS' | 'GAP';
 
 export interface PlacementPrompt {
   comparedBevId: BevId;
   /** 1-based number of the question being asked. */
   step: number;
-  /** maxComparisons(list.length): the most questions this placement can take. */
+  /**
+   * The most questions this placement can take: maxComparisons(list.length), or for an anchored
+   * placement maxAnchoredComparisons(list.length, anchor positions). Constant for the whole placement.
+   */
   maxSteps: number;
 }
 
