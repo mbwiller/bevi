@@ -145,10 +145,16 @@ comment on column public.bevs.leaf_category_id is
 -- rather than report on it afterwards; row-level because the offending value is
 -- per row and the message should name it.
 --
--- `when` keeps it off the hot path: `submit_ranking`, the feed writes and every
--- other update that does not touch either column never fires it. A new row
--- always does, which is `create_bev` (leaf null, passes immediately) and the
--- seed.
+-- The column list keeps it off the hot path: `submit_ranking`, the feed writes
+-- and every other update that does not touch either column never fires it. A
+-- new row always does, which is `create_bev` and the seed.
+--
+-- It also holds the other half of the invariant: `category_id` is always a
+-- root. Without it, `create_bev(p_category_id => 'cola')` -- which accepts any
+-- categories.id -- would make a public Bev whose category the app's 15-root
+-- `Record<CategoryId, ...>` maps cannot resolve, keyed into
+-- user_category_stats by a leaf and missing from get_category_progress. (Found
+-- by the integrator review of #132.)
 create or replace function public.bevs_leaf_category_guard()
 returns trigger
 language plpgsql
@@ -157,6 +163,12 @@ as $$
 declare
   v_parent text;
 begin
+  if exists (select 1 from public.categories c
+              where c.id = new.category_id and c.parent_id is not null) then
+    raise exception 'BEVI_VALIDATION' using errcode = '22023',
+      detail = 'categoryId:not_a_root';
+  end if;
+
   if new.leaf_category_id is null then
     return new;
   end if;
@@ -382,6 +394,17 @@ $$;
 comment on function public.get_bev_leaves(uuid[]) is
   'A-13: each requested active, visible Bev''s leaf_category_id (null when it sits on its parent), for M-21''s category-aware placement. Age-gated; invisible Bevs are omitted, not errors.';
 
+-- The project's convention (20261019000500 explains why the anon revoke has to
+-- be explicit on Supabase): owned by postgres, nothing for public or anon,
+-- execute for authenticated only.
+alter function public.get_category_tree() owner to postgres;
+alter function public.get_bev_leaves(uuid[]) owner to postgres;
+alter function public.category_root(text) owner to postgres;
+alter function public.category_is_alcoholic(text) owner to postgres;
+revoke execute on function public.get_category_tree() from public, anon;
+revoke execute on function public.get_bev_leaves(uuid[]) from public, anon;
+revoke execute on function public.category_root(text) from public, anon;
+revoke execute on function public.category_is_alcoholic(text) from public, anon;
 grant execute on function public.get_category_tree() to authenticated;
 grant execute on function public.get_bev_leaves(uuid[]) to authenticated;
 grant execute on function public.category_root(text) to authenticated;

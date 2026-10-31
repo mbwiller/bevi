@@ -24,7 +24,7 @@
 --   ca001  adult (30)   sees the whole tree
 --   ca002  minor (16)   sees neither an alcoholic root nor its leaves
 begin;
-select plan(50);
+select plan(53);
 
 -- ---------------------------------------------------------------------------
 -- People
@@ -113,6 +113,13 @@ select ok(
   has_function_privilege('authenticated', 'public.get_category_tree()', 'execute')
   and has_function_privilege('authenticated', 'public.get_bev_leaves(uuid[])', 'execute'),
   'authenticated may execute both new RPCs'
+);
+select ok(
+  not has_function_privilege('anon', 'public.get_category_tree()', 'execute')
+  and not has_function_privilege('anon', 'public.get_bev_leaves(uuid[])', 'execute')
+  and not has_function_privilege('anon', 'public.category_root(text)', 'execute')
+  and not has_function_privilege('anon', 'public.category_is_alcoholic(text)', 'execute'),
+  'anon may execute none of the four new functions'
 );
 
 -- Both guards must be attached, or every assertion in section 3 would pass
@@ -239,6 +246,22 @@ select throws_ok(
       where id = (select id from public.bevs where leaf_category_id = 'cola' order by id limit 1) $$,
   '22023', 'BEVI_VALIDATION',
   'changing category_id while a now-foreign leaf remains is rejected'
+);
+
+-- The other half of the invariant: category_id is always a root, on insert,
+-- on update -- and so through create_bev, which inserts whatever categories.id it is given.
+select throws_ok(
+  $$ insert into public.bevs (id, name, brand, flavor, category_id, price_tier, status, source)
+     values ('00000000-0000-4000-8000-0000000c1301', 'pgTAP Leaf Cola', 'pgTAP Leaf',
+             null, 'cola', 2, 'pending_photo', 'user') $$,
+  '22023', 'BEVI_VALIDATION',
+  'inserting a Bev whose category_id is a leaf is rejected'
+);
+select throws_ok(
+  $$ update public.bevs set category_id = 'cola', leaf_category_id = null
+      where id = (select id from public.bevs where category_id = 'soda' and source = 'seed' order by id limit 1) $$,
+  '22023', 'BEVI_VALIDATION',
+  'moving a Bev''s category_id onto a leaf is rejected'
 );
 
 -- The depth guard. A third level is the thing that would quietly break

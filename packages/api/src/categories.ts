@@ -39,10 +39,9 @@ export function createCategoriesApi(client: SupabaseClient): CategoriesApi {
     // `list()` feeds the 15-item UI pickers and the app keys exhaustive
     // `Record<CategoryId, ...>` maps off those ids.
     //
-    // `list()` above is already leaf-proof without a filter -- it drops any
+    // `list()` above is leaf-proof without a filter of its own: it drops any
     // category `get_category_progress()` does not return, and that RPC returns
-    // only roots -- but it is one age rule away from silently listing 75
-    // things, so the filter below is the explicit version of the same claim.
+    // only roots (20261026000100 section 6).
     async tree(): Promise<CategoryNode[]> {
       const { data: userData, error: userError } = await client.auth.getUser();
       if (userError || !userData.user) throw new ApiError('unauthorized', 'Not signed in');
