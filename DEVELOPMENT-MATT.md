@@ -163,10 +163,10 @@ src/app/
     profile.tsx                    name, birthdate (age gate), timezone captured silently (handle = username from sign-up)
     starter.tsx                    starter-set ranking
   (tabs)/
-    _layout.tsx                    5 tabs: feed | lists | add (center: filled circle with +, inline, not raised) | leaderboard | profile
+    _layout.tsx                    5 tabs: feed | lists | add = Search (center: filled circle with +, inline, not raised) | leaderboard | profile
     feed/index.tsx
     lists/index.tsx                ?tab=bevd|want|recommended  (deep-linkable from Profile rows)
-    add/index.tsx                  search: Bevs | People tabs (Beli's Restaurants | Members)
+    add/index.tsx                  Search tab: one bar, grouped Bevs / People results over the map area (route still /add; /search redirects here)
     leaderboard/index.tsx          ?scope=bevs|users&category=<id>
     profile/index.tsx              own profile, ?tab=activity|taste
   bev/[id].tsx                     Bev detail
@@ -178,7 +178,7 @@ src/app/
   image/[url].tsx                  full-screen image viewer (nutrition label)
 ```
 
-Tab order and the centre "Add Bev" slot follow vision §6 ("replaces Beli's search slot"). Tabs keep their own stacks so Bev detail pushed from Feed doesn't lose the Feed scroll position.
+Tab order and the centre Search slot follow vision §6 ("replaces Beli's search slot"; it was labelled "Add Bev" until M-15, [#104](https://github.com/mbwiller/bevi/pull/104)). Tabs keep their own stacks so Bev detail pushed from Feed doesn't lose the Feed scroll position.
 
 ### Auth and onboarding (screens yours, Supabase Auth config Arjun's)
 
@@ -243,11 +243,11 @@ Values below come from the Beli spec's Part 2 table and from measuring the scree
 | `FeedPost` | Avatar 60 left; "**Arjun** Bev'd **Diet Coke**" 20pt (names bold, verb regular), meta line category icon + brand 15pt `textSecondary` (no price, D-06); `ScoreBubble 40` top-right; photo strip of 155pt square `BevImage`s (one tile for a Bev, more only if a ranking has user photos later), 8pt gaps, horizontal scroll; "**Notes:** …" 17pt with "…See more" at 4 lines; action row 28pt icons (bookmark + plus-circle on the right; heart/comment/send are Beli's and not in v1); timestamp 15pt `textSecondary` ("5 hours ago", "Wednesday"); 1pt divider. Variant `bookmarked`: "Arjun saved **Diet Coke**", no photo, no score |
 | `StatCard` | Beli profile stat card: 181×84pt, radius 20, 1pt `border`, 24pt `primary` icon left, label 17pt `textSecondary` semibold over value 20pt bold `primary`. Two per row with 10pt gutter/gap |
 | `ProfileListRow` | 44pt row: 24pt icon at 20pt from the left, label 20pt semibold at 67pt, right-aligned count 20pt, chevron 20pt; 1pt divider. Rows: Bev'd / Want to Try / Recommended for you |
-| `SegmentedTabs` | Two styles: `underline-text` (Lists: 20pt semibold text tabs, 3pt black underline under the active one, horizontally scrollable) and `underline-icon` (Profile Activity/Taste Profile and Search Bevs/People: icon + 17pt label, equal widths, 3pt underline in `primary` on Search, black on Profile) |
+| `SegmentedTabs` | Two styles: `underline-text` (Lists: 20pt semibold text tabs, 3pt black underline under the active one, horizontally scrollable) and `underline-icon` (Profile Activity/Taste Profile: icon + 17pt label, equal widths, 3pt black underline; Search used it for Bevs/People until D-10) |
 | `ListScopeDropdown` | Beli's "All ⌄": 28pt bold text + chevron, opens a sheet to scope the list (All Bevs / one category) |
 | `FeaturedCard` | 164×164pt photo card, radius 14, bottom dark gradient, title 20pt bold white, subtitle 15pt white ("You've had 1 of 10"); horizontal carousel, 16pt gap, under a `sectionCaps` header with "See all" in `primary` |
 | `SearchBar` | Grey `input` field, 36pt tall, radius 12, leading search icon, placeholder 17pt `textSecondary` |
-| `TabBar` | Icons 28pt outline, labels 10pt (active bold, black); centre tab is a 32pt `primary` filled circle with a white "+" sitting inline (not raised) with label "Add Bev"; Profile tab icon is `Avatar 32` with initials |
+| `TabBar` | Icons 28pt outline, labels 10pt (active bold, black); centre tab is a 32pt `primary` filled circle with a white "+" sitting inline (not raised) with label "Search"; Profile tab icon is `Avatar 32` with initials |
 | `EmptyState`, `ErrorState` (with Retry), `Skeleton` | Every list screen uses these; no bare spinners except inside buttons |
 | `Sheet` | bottom-sheet wrapper with handle, snap points 40/90% |
 
@@ -272,7 +272,7 @@ File-to-spec mapping (the spec numbers screens 01–12; the files are in a diffe
 | 05 / 11 Lists › Recs | `IMG_1113`, `IMG_1117` (duplicate) | 6.7 Recommended |
 | 06 Lists › Been | `IMG_1114` | 6.5 Bev'd |
 | 07 Lists › Want to Try | `IMG_1115` | 6.6 Want to Try |
-| 08 Search | `IMG_1116` | 6.8 Add Bev (Bevs | People tabs) |
+| 08 Search | `IMG_1116` | 6.8 Search tab (grouped Bevs and People, D-10) |
 | 09 Activity (bookmarks + Wan Waan) | `IMG_1111` | `FeedPost` variants, Activity tab |
 | 10 Profile › Taste Profile | `IMG_1112` | 6.20 Taste Profile (Phase 3) |
 | 12 Feed (with friends) | `IMG_1118` | 6.4 Feed |
@@ -288,7 +288,7 @@ Process:
 
 What in the reference is a bad fit for Bevi and is dropped: everything location/venue driven (Reserve now, Order, Open now, distance, hours, "View Map", the party/date/time bar, "Recs Nearby", City filter, "Current Location"); the invite-unlock card (0/5 friends unlock features); Guides tab and guides lists; "Add School"; the "Import a list" card; notifications bell + calendar icons (no notifications in v1); share on posts (not in vision; see §18; likes and comments were added later, TASKS.md decisions 2–3, M-02, M-03); "with Rhea" co-visit tagging and "2 visits" repeat counts (a Bev is ranked once; re-rank replaces).
 
-What the reference adds that the vision lacks and we adopt: the Profile is rows + stat cards, not tiles (§6.13); Bev'd is one numbered list sorted by score, not bucket sections (§6.5); search has a People tab (§6.8); the "locked" score state (§4 `ScoreBubble locked`); the Activity feed on the Profile is the same `FeedPost` as the Feed tab; the Taste Profile tab and calendar grid are a natural fit for our per-category stats and streaks (§6.20, Phase 3); a yearly goal card ("You've tried 60 spots in 2026") is cheap gamification for Phase 3.
+What the reference adds that the vision lacks and we adopt: the Profile is rows + stat cards, not tiles (§6.13); Bev'd is one numbered list sorted by score, not bucket sections (§6.5); search finds People as well as Bevs, in one bar (§6.8); the "locked" score state (§4 `ScoreBubble locked`); the Activity feed on the Profile is the same `FeedPost` as the Feed tab; the Taste Profile tab and calendar grid are a natural fit for our per-category stats and streaks (§6.20, Phase 3); a yearly goal card ("You've tried 60 spots in 2026") is cheap gamification for Phase 3.
 
 ---
 
@@ -318,7 +318,7 @@ Common to every screen unless noted: loading = skeleton of the final layout; err
 
 ### 6.4 Feed tab (ref 01, 12)
 
-- Contents, top to bottom: header (wordmark left, 28pt; right: a "find people" icon that opens 6.8 on the People tab; no bell/calendar); `SearchBar` ("Search a Bev or a person") that focuses the Add tab's search; **Featured Bevs** under a `sectionCaps` header "FEATURED BEVS" + "See all": `FeaturedCard` carousel ("You've had 1 of 10" subtitle works for featured *lists*; for a single featured Bev the subtitle is its category + `$`); then "YOUR FEED" `sectionCaps` and `FeedPost`s of followed users' rankings and saves, newest first.
+- Contents, top to bottom: header (wordmark left, 28pt; right: a "find people" icon that opens 6.8 with "Suggested for you" first; no bell/calendar); `SearchBar` ("Search a Bev or a person") that focuses the Search tab's bar; **Featured Bevs** under a `sectionCaps` header "FEATURED BEVS" + "See all": `FeaturedCard` carousel ("You've had 1 of 10" subtitle works for featured *lists*; for a single featured Bev the subtitle is its category + `$`); then "YOUR FEED" `sectionCaps` and `FeedPost`s of followed users' rankings and saves, newest first.
 - Data: `feed.getFeatured()`, `feed.getFeed({ cursor, limit: 20 })`, `wantToTry.add/remove`.
 - States: following nobody → `EmptyState` under YOUR FEED: "Follow friends to see their Bevs" + "Find people" `Pill` (Featured stays visible, as in ref 01); no activity yet; paginating footer.
 - Interactions: tap post body → Bev detail; tap avatar/name → user profile; bookmark → Want to Try (optimistic, fills `primary`); plus-circle → ranking flow.
@@ -328,7 +328,7 @@ Common to every screen unless noted: loading = skeleton of the final layout; err
 
 - Contents: header "YOUR LISTS" centred, share icon (Phase 3) right; `ListScopeDropdown` "All ⌄" (All Bevs / one category); `SegmentedTabs underline-text` Bev'd · Want to Try · Recommended; filter row: `FilterPill` with count (opens a sheet: bucket, price tier, category), then `SortToggle` "↓↑ Score" (toggles Score / Recent / Name) with a search icon that reveals an inline search field. Rows: `BevRow` numbered "1. Diet Coke", line 2 category icon + "Diet soda · Coca-Cola", bottom-left "Ranked Oct 3", `ScoreBubble 40` coloured by bucket. One list sorted by score, as in the reference; buckets show through colour, not sections.
 - Data: `rankings.listMine({ bucket?, categoryId?, sort, cursor })` ordered by `(bucket desc, position)`; the numbering is the global index across buckets.
-- States: nothing ranked → "Add your first Bev" CTA to the Add tab; filter yields nothing; a Bev whose photo is still processing shows the shimmer tile.
+- States: nothing ranked → "Add your first Bev" CTA to the Search tab; filter yields nothing; a Bev whose photo is still processing shows the shimmer tile.
 - Interactions: tap → Bev detail; long-press/swipe → sheet: Re-rank (6.9 via `rerankBev`), Edit note, Remove (confirm; explains other scores in that bucket shift).
 
 ### 6.6 Your Lists: Want to Try (ref 07)
@@ -345,13 +345,18 @@ Common to every screen unless noted: loading = skeleton of the final layout; err
 - States: < 3 rankings → "Rank 3 Bevs to unlock recommendations" with progress; confidence < 0.25 → `ScoreBubble locked` instead of a number; stale (> 24h) → still shown, "Refreshing" when `recs.refresh()` exists.
 - Interactions: tap → detail; bookmark → Want to Try; "Not interested" is Phase 3 (§17).
 
-### 6.8 Add Bev tab: search (ref 08)
+### 6.8 Search tab (ref 08)
 
-- Contents: header with wordmark left and a grey 32pt ✕ circle right (closes to the previous tab); `SegmentedTabs underline-icon` **Bevs** (bottle icon) · **People** (people icon), half width each, `primary` underline; outlined 48pt search input ("Search a Bev, brand or flavor" / "Search by name or @handle"); a camera `Pill` row ("Snap it") replaces Beli's Reserve/Order/Recs pills; **Recents** list (clock icon, name, brand/category, ✕ to forget) when idle; results as `BevRow` (score bubble = global score + count, actions: plus-circle, bookmark); sticky footer "Can't find it? Add a new Bev".
-- People tab: results rows `Avatar 44`, name, @handle, Follow/Following `Pill`; idle shows "Suggested" (users with the most rankings you don't follow). This is the Find-people screen; there is no separate route.
-- Data: `bevs.search({ q, categoryId?, limit: 25 })` debounced 250ms, age-filtered server-side; `profile.searchUsers({ q, limit: 25 })`, `follows.suggested()`, `follows.follow/unfollow`.
-- States: idle (recents + "Popular this week"), searching, no results (footer becomes primary), error.
-- Interactions: tap a Bev result → if already ranked by you → detail with "Re-rank"; else straight into the ranking flow (vision §3 step 2). Camera → `CameraCapture` → the create wizard, prefilled with the photo (no image recognition in v1, §17).
+The centre tab, labelled **Search** since M-15 ([#104](https://github.com/mbwiller/bevi/pull/104)); it was "Add Bev". The route folder is still `(tabs)/add/` (URL `/add`; `/search` redirects to it, params kept). Code: `features/search/` (`SearchScreen`, `SearchPanel`, `panel.ts`, `MapPlaceholder`); design system `ScreenSearch` and `ScreenSearchResults`. The Bevs · People segmented control is gone (D-10: one bar, grouped results).
+
+- Contents: header with wordmark left and a grey 32pt ✕ circle right (closes to the previous tab); one outlined `SearchBar` ("Search a Bev or a person"), with a ghost **Cancel** beside it while the results panel is up; a "Snap it" camera `Pill` (replaces Beli's Reserve/Order/Recs pills); then the **map area** filling the rest of the screen.
+- Map area: **planned, not built.** Today it is `MapPlaceholder` ("Map coming soon", no pins, no fake streets), mounted once so the real NYC map (M-16, P2; needs S-10 + A-08 and the Maps key) is created once per session. Venue pins and the full-screen map are M-16, not part of this tab yet.
+- Results panel: focusing or typing in the bar slides a panel over the map area (a pure reducer in `panel.ts`: map, recents, results); Cancel or pressing the Search tab again slides it away. While it is up the map area takes no gestures and is hidden from screen readers.
+- Idle panel: **Recents** (clock icon, name, brand/category, ✕ to forget) and **Suggested for you** (people with the most rankings you don't follow). Typing: results grouped under **Bevs** (`BevRow`: score bubble = global score + count; plus-circle to rank, bookmark for Want to Try) and **People** (`UserRow`: `Avatar 44`, name, @handle, Follow/Following, optimistic). A query starting with "@" searches people only. A group holds its place while loading, shows its own error with Retry, and is left out when empty. Your own profile never shows. Sticky footer "Can't find it? Add a new Bev" (outlined; primary when no Bev matches), kept above the keyboard.
+- Data: `bevs.search({ q, limit: 25 })` and `profile.searchUsers({ q, limit: 25 })` on the same debounced (250ms) text, Bevs age-filtered server-side; `follows.suggested()`, `follows.follow/unfollow`.
+- Interactions: tap a Bev result → if you've ranked it, its detail with "Re-rank"; else the ranking flow (vision §3 step 2). Tap a person → `user/[id]`. "Snap it" and the footer both open the create wizard (6.10) at `add/new`; the photo is not carried over, the wizard starts at its photo step (no image recognition in v1, §17).
+- Entry points: Feed's search bar and every "go find a Bev" button open `/add?focus=1` (panel up, bar focused); Feed's find-people icon opens `/add?tab=people` (same, with Suggested first). Both params are cleared after use, so a later tab press lands on the map area.
+- Not built: the "Popular this week" idle section in the old spec.
 
 ### 6.9 Ranking flow (`rank/[bevId]`), full-screen modal (no reference screenshot)
 
@@ -441,7 +446,7 @@ y   0   status bar (59 on Dynamic Island phones; use safe-area insets)
 
 ### 6.16 Find people
 
-Merged into the Add tab's **People** tab (§6.8), matching the reference's Restaurants | Members search. Feed empty state and the Feed header icon both deep-link to `add?tab=people`.
+No screen of its own: people are searched in the Search tab's one bar and shown under the **People** group (§6.8, D-10; [#104](https://github.com/mbwiller/bevi/pull/104)). Feed's find-people icon deep-links to `add?tab=people`, which opens the panel with "Suggested for you" first. Followers and Following (§6.15) are separate lists.
 
 ### 6.17 Age gate for alcoholic categories
 
@@ -955,7 +960,7 @@ This is your input to seam 2. Field names are proposals; Arjun owns the schema a
 | `profile.updateMe(patch)` | `{ displayName?, handle?, timezone?, onboarded? }` → `Profile` | 6.2, 6.3, 6.18 |
 | `profile.setBirthDate(date)` | set once; a second call is `validation`; admin-only change afterwards | 6.2 |
 | `profile.checkHandle(handle)` | → `{ available }`; callable signed out (sign-up form) | 6.1, 6.19 |
-| `profile.getUser(id)` / `searchUsers({ q, limit })` | → `Profile` / `Profile[]` | 6.14, 6.8 People tab |
+| `profile.getUser(id)` / `searchUsers({ q, limit })` | → `Profile` / `Profile[]` | 6.14, 6.8 Search tab (People group) |
 | `stats.getMine()` / `stats.getUser(id)` | → `ProfileStats` | 6.13, 6.14 |
 | `follows.follow(id) / unfollow(id)` | → void | 6.8, 6.14, 6.15 |
 | `follows.listFollowers(id, page)` / `listFollowing(id, page)` / `suggested()` | → `Page<Profile & { isFollowing }>` | 6.15, 6.8 |
