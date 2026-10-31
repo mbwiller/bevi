@@ -10,7 +10,7 @@ Your queue from 2026-10-19 on, centred on Supabase and Neo4j. Matt's is in [`NEX
 |---|---|---|---|
 | 0 | **Neo4j instance** — **done 2026-10-24** | Instance `bevi-graph-db`. The four `NEO4J_*` secrets are set in GitHub Actions and in the Supabase project, the Cypher schema is applied (9/9) and `(:Meta).lastKeepAliveAt` is written. Two things are worth knowing: Aura's credentials file sets the username **and** the database to the instance id, not `neo4j`, so both come from that file; and `queryApiUrl()`'s scheme regex never matched `neo4j+s://`, so every graph call failed `fetch failed` regardless of the secrets. Both are in this PR. Dispatch `graph-keepalive` after it merges and check the log says `(:Meta).lastKeepAliveAt updated`. `graph-query` is still undeployed | Everything on the graph |
 | 1 | **A-14 · #107** (already open, CI green) | Push `20261019000200_leaderboard_parity.sql` to prod (dry-run first), then merge | Matt's M-22 cross-check |
-| 2 | **M-26 export** (about 15 min) | Run `packages/ranking/eval/export.sql` against prod as a role that bypasses RLS: `psql "$DATABASE_URL" -At -v salt="$SALT" -f packages/ranking/eval/export.sql > export.json`. Hand Matt the file privately. **It never goes in the repo** | Real baseline numbers for Matt's M-27, and for judging the graph |
+| 2 | **M-26 export** — **done 2026-10-25** | Ran via `supabase db query --linked` (no DB password needed — the CLI's cached credentials suffice, which is worth remembering). Export and harness report live outside the repo at `~/bevi-m26-export.json` and `~/bevi-m26-report.txt`; the salt is `BEVI_EVAL_SALT` in `supabase/.env`, keep it if you want aliases stable across exports. **The numbers are not a baseline:** 3 users, 27 rankings, 31 comparisons; engine concordance 0.703 [0.500, 0.875] (CI includes chance), `category-mean` ahead by +0.064, Pearson identical. Hand the file to Matt and tell him M-27's comparison DoD is not satisfiable on this data | Real baseline numbers — **not yet achievable** |
 | 3 | **S-04 + A-04 · Explore backend** — **done in #113**, `20261019000400` on prod, contract `2.6.0`. The security review found that using `p_before` as both the paging cut and the decay clock leaked exact like counts (a non-linear decay means sweeping the clock reveals the ratio); the clock is now server-side `now()`. Also gated non-active Bevs and bounded `p_offset` | — | **Matt's M-04, now unblocked** |
 | 4 | **A-16 (1) + S-14 part 2 · The Bev graph** — **built and merged**, #115 + #117 + #118, all migrations on prod | Neo4j turned out not to be needed: step 3 allows pgvector for candidates, step 4 is pure TypeScript and step 7 writes Postgres, so only steps 6, 8 and 9 (the Cypher `MERGE`, the `RANKED` mirror, `(:Meta)`) still want the instance. `embed` is deployed with `--no-verify-jwt` and its secret is set. **Left to do, all operator steps:** run `npm run graph:backfill-embeddings` (needs `SUPABASE_SERVICE_ROLE_KEY`), set `bevi.embed_function_url` and `bevi.embed_webhook_token` on the database, add the `SUPABASE_SERVICE_ROLE_KEY` Actions secret and the `SUPABASE_URL` variable, then `npm run graph:edges -- --dry-run` and read the real Coke–Pepsi number before trusting the >= 0.8 bar | **Matt's M-27 and M-21** |
 
@@ -40,9 +40,9 @@ The decision (2026-10-19): Neo4j holds Bevs, categories, brands and flavours as 
 
 | Task | Waits on (Matt) | What you build |
 |---|---|---|
-| **A-13 · Category hierarchy** | **D-04**: Matt's tree **plus the 378-Bev leaf assignment** | `categories.parent_id` (and depth) in Postgres, `CHILD_OF` in Neo4j, `Category.parentId` in the contract. The age gate walks up to the alcoholic ancestor (`category_is_alcoholic(id)`). Reassign the catalog Bevs to their leaves through `data/catalog`. Re-run the sync so the tree term uses the hierarchy |
-| **A-14 follow-ups** | M-22's list of SQL corrections, if any | Small SQL fixes, with pgTAP |
-| **A-16 (2) · The taste graph** | **M-28**: Matt's taste formulas in `packages/ranking/src/graph.ts` | `RANKED` edges with stable HMAC pseudonyms, **updated on every ranking** (async webhook) plus the nightly re-check. Taste neighbours in `user_neighbors` (RLS: owner-only select) and the co-rating `cop` term. Measured against #87's decision bar with Matt's M-26 harness |
+| **A-13 · Category hierarchy** — **done in #132**, contract `2.8.0` | ~~D-04~~ merged as #127 | `categories.parent_id` and `bevs.leaf_category_id` in `20261026000100`, the catalog re-pointed in `20261026000200`, `category_is_alcoholic(id)` walking up one hop, `get_category_tree()` and `get_bev_leaves()`. **`bevs.category_id` still holds one of the 15 roots** — the app keys exhaustive `Record<CategoryId, …>` maps off those ids, so the leaf is a new nullable column instead. The tree term in `build-edges.ts` now measures at the leaf, the content term at the root. `CHILD_OF` stays with the deferred Neo4j mirror |
+| **A-14 follow-ups** | M-22's list of SQL corrections, if any | Small SQL fixes, with pgTAP. **Still open, and two are wrong on prod today:** the streak history rewritten by re-ranks and removals, and `bev_stats.bayes_score` going stale at `rating_count = 0` |
+| **A-16 (2) · The taste graph** — **done in #133**, Postgres-only | ~~M-28~~ merged as #131 | `user_neighbors` (RLS on, no client policy) in `20261026000300`, `scripts/graph/build-neighbours.ts` and `graph-neighbours.yml` nightly, plus the `cop` term stored in `bev_edges.components`. **No HMAC pseudonyms and no `RANKED` mirror** — both belong to the deferred Neo4j steps, as in A-16 (1). **No per-ranking webhook:** one new ranking moves the global mean, so every pair changes and there is no incremental update smaller than the rebuild. **Stage 4 is the follow-up** (`get_prediction_snapshot` + `layer2` reading `userNeighbors`); it touches Matt's lane, so the contract is agreed first |
 
 ## Later: P2, after P0 and P1
 
@@ -75,13 +75,13 @@ The decision (2026-10-19): Neo4j holds Bevs, categories, brands and flavours as 
 ```
 Matt                                   Arjun
 M-19 Taste Profile ──── ready
-D-04 taxonomy + 378 assignments ─────▶ A-13 hierarchy ─────────────┐
+D-04 taxonomy + 378 assignments ─────▶ A-13 hierarchy (#132) ──────┐
 M-22 maths review ───(SQL fixes)─────▶ A-14 follow-ups (#107 first) │
                                        M-26 export ──(file)──▶ Matt │
 M-04 Explore UI ◀──────────────────── S-04 + A-04 Explore backend   │
 M-27 graph in recs ◀───────────────── A-16 (1) Bev graph + S-14 (2) │
 M-21 placement ◀────────────────────── A-16 (1) + A-13 ◀────────────┘
-M-28 taste formulas ─────────────────▶ A-16 (2) taste graph
+M-28 taste formulas ──(#131)─────────▶ A-16 (2) taste graph (#133) ──▶ Stage 4
 M-16 map UI ◀───────────────────────── S-10 + A-08 venues (P2)
 M-20 duplicate step ◀───────────────── S-13 + A-12 duplicates (P2)
 ```

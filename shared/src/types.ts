@@ -58,7 +58,15 @@ export interface ProfileStats {
   streakAliveToday: boolean;
 }
 
-/** Category → icon is mapped client-side by the design system, so there is no icon field. */
+/**
+ * One of the 15 top-level categories. Category → icon is mapped client-side by
+ * the design system, so there is no icon field.
+ *
+ * `categories.list()` returns only these, never a leaf of the finer taxonomy
+ * (A-13/D-04) — `CategoryId` stays a closed union of 15 and the app's
+ * `Record<CategoryId, …>` maps stay exhaustive. The leaves are
+ * {@link CategoryNode}, from `categories.tree()`.
+ */
 export interface Category {
   id: CategoryId;
   name: string;
@@ -66,6 +74,48 @@ export interface Category {
   isAlcoholic: boolean;
   /** Active Bevs in the category (always age-filtered for the caller: an alcoholic category is absent, not 0). */
   bevCount: number;
+}
+
+/**
+ * One node of the two-level category taxonomy (A-13, from D-04's
+ * `design/taxonomy.md`): the 15 roots and the 60 leaves under them.
+ *
+ * `parentId` is null on a root and a root's id on a leaf. The tree is exactly
+ * two levels, so `parentId ?? id` is always the root — there is no walking to
+ * do, and the database enforces the depth.
+ *
+ * A leaf id is a plain `string`, not a `CategoryId`: the 15 are a closed union
+ * the app switches on exhaustively, while the leaves are data that D-04 expects
+ * to grow. `sortOrder` is the order among siblings (1–15 across the roots, 1–n
+ * within one root's leaves), and `emoji` belongs to the root, so it is null on
+ * every leaf — render a leaf with its root's emoji and icon.
+ */
+export interface CategoryNode {
+  /** A root is one of the 15 `CategoryId`s; a leaf is its own slug. */
+  id: string;
+  name: string;
+  /** null on a root; the root's id on a leaf. */
+  parentId: CategoryId | null;
+  sortOrder: number;
+  /** Inherited from the root, so a leaf of an alcoholic root is also true. */
+  isAlcoholic: boolean;
+  /** Only a root carries one. */
+  emoji: string | null;
+}
+
+/**
+ * A Bev's position in the finer taxonomy (`bevs.leaves()`), for M-21's
+ * category-aware placement.
+ *
+ * `leafCategoryId` is null when the Bev sits directly on its category — which
+ * is correct for the two unsplit roots (`water`, `sports`) and for a
+ * user-created Bev until something relabels it, so treat null as "no finer
+ * placement known" and fall back to `BevSummary.categoryId`. That field is
+ * unaffected by A-13: it is still one of the 15.
+ */
+export interface BevLeaf {
+  bevId: string;
+  leafCategoryId: string | null;
 }
 
 /**

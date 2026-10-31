@@ -8,9 +8,12 @@
 //
 // The four components of eq. (18), and where each one comes from:
 //
-//   tree     `treeSimilarity(catA, catB, {})`. The taxonomy is `{}` because today's 15 categories
-//            are flat; `categories.parent_id` arrives with A-13, and when it does this is the one
-//            line that changes.
+//   tree     `treeSimilarity(leafOrRootA, leafOrRootB, CATALOG_TAXONOMY)`. Since A-13 the taxonomy
+//            is the real two-level tree from `data/catalog/categories.json`, and each Bev is
+//            weighed at its LEAF when it has one, so two colas score 1 and a cola against a root
+//            beer 0.5 -- the same input `build-edges.ts` feeds the real `bev_edges`. A Bev with no
+//            leaf (an unsplit root, or anything a test creates) is weighed at its category, which
+//            is what the shape rule intends.
 //   content  `contentSimilarity(a, b)` over `BevFeatures` built from the Bev row. Only the catalog
 //            half of `BevFeatures` matters (category, brand key, flavour tokens, price tier), so
 //            the stats fields are zero and the mirror does not depend on the rankings table -- the
@@ -42,11 +45,23 @@ import {
 } from '@bevi/ranking';
 import type { CategoryId } from '@bevi/shared';
 
-import { CATALOG_FLAVOR_PROFILES } from './catalog';
+import { CATALOG_FLAVOR_PROFILES, CATALOG_TAXONOMY } from './catalog';
 import type { FakeBev } from './db';
 
-/** Today's categories are flat: every one is top-level, so `treeSimilarity` is "same category". */
-const FLAT_TAXONOMY: Taxonomy = {};
+/**
+ * The real two-level taxonomy (A-13): leaf -> root, root -> null. Before A-13
+ * this was `{}` and the tree term was the bare "same category" indicator.
+ */
+const TAXONOMY: Taxonomy = CATALOG_TAXONOMY;
+
+/**
+ * Which category id a Bev is weighed at: its leaf when it has one, else its
+ * category. `treeSimilarity` is Wu-Palmer over `TAXONOMY`, so a leaf gets depth
+ * 2 and a Bev sitting on a parent depth 1 -- which is exactly D-04 section 3's
+ * shape rule, and why a Bev on a parent scores 0.667 against one of that
+ * parent's leaves rather than 1.
+ */
+const treeNodeOf = (b: FakeBev): string => b.leafCategoryId ?? b.categoryId;
 
 /**
  * One unordered pair, canonically keyed, exactly as `src_bev_id < dst_bev_id` does in SQL. '|' is a
@@ -101,7 +116,7 @@ export function buildEdgeMirror(bevs: readonly FakeBev[], alcoholic: ReadonlySet
       const fb = features.get(b.id) as BevFeatures;
       const pb = CATALOG_FLAVOR_PROFILES.get(b.id);
       const w = edgeWeight({
-        tree: treeSimilarity(a.categoryId, b.categoryId, FLAT_TAXONOMY),
+        tree: treeSimilarity(treeNodeOf(a), treeNodeOf(b), TAXONOMY),
         content: contentSimilarity(fa, fb),
         emb: 0,
         profile: pa && pb ? profileSimilarity(pa, pb) : 0,

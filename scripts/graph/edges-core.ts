@@ -8,7 +8,8 @@
  *
  * NOTHING HERE REIMPLEMENTS A FORMULA. `treeSimilarity`, `contentSimilarity`,
  * `embeddingSimilarity`, `profileSimilarity`, `edgeWeight` and `topEdges` all
- * come from @bevi/ranking (M-24, LaTeX 10.1 eqs. 16-18), together with
+ * come from @bevi/ranking (M-24, LaTeX 10.1 eqs. 16-18), as does the cop
+ * term's `cosineSimilarity` (Layer 2's, #131), together with
  * `normaliseBrand` and `flavorTokens`, which define what the content term's
  * brand equality and token set actually are. If a weight looks wrong, the bug
  * is in what this file FEEDS those functions, not in a copy of them.
@@ -18,6 +19,7 @@ import {
   EDGE_MIN_WEIGHT,
   EDGE_TOP_K,
   contentSimilarity,
+  cosineSimilarity,
   edgeWeight,
   embeddingSimilarity,
   flavorTokens,
@@ -26,7 +28,10 @@ import {
   topEdges,
   treeSimilarity,
 } from "@bevi/ranking";
-import type { BevFeatures, EdgeComponents, FlavorProfile, Taxonomy } from "@bevi/ranking";
+import type { BevFeatures, BevId, EdgeComponents, FlavorProfile, Taxonomy, UserId } from "@bevi/ranking";
+
+import { activeZScores } from "./neighbours-core.ts";
+import type { RankingRecord } from "./neighbours-core.ts";
 
 // ---------------------------------------------------------------------------
 // What the job reads out of Postgres
@@ -39,16 +44,25 @@ export interface BevRecord {
   brand: string | null;
   flavor: string | null;
   categoryId: string;
+  /**
+   * A-13: the Bev's leaf under `categoryId`, or null when it sits on the parent
+   * (an unsplit root such as `water`/`sports`, or a user-created Bev nobody has
+   * relabelled). This is the node the TREE term is measured at; `categoryId`
+   * stays the root and is what the CONTENT term reads. See `treeNodeOf`.
+   */
+  leafCategoryId: string | null;
   priceTier: number;
   isAlcoholic: boolean;
 }
 
 /**
- * One row of `public.categories`. `parentId` is optional because the column does
- * not exist yet -- it arrives with A-13, after D-04 settles the taxonomy.
+ * One row of `public.categories`. `parentId` is still optional on the type so a
+ * caller that does not select it (a test, an older snapshot) keeps type-checking;
+ * `build-edges.ts` has selected it since A-13.
  */
 export interface CategoryRecord {
   id: string;
+  /** null on one of the 15 roots, the root's id on one of D-04's 60 leaves (A-13). */
   parentId?: string | null;
 }
 
@@ -79,8 +93,25 @@ export interface EdgeRow {
 export interface WeighContext {
   taxonomy: Taxonomy;
   features: ReadonlyMap<string, BevFeatures>;
+  /**
+   * A-13: bev id -> the category node its TREE term is measured at, which is
+   * `leafCategoryId ?? categoryId` (`treeNodeOf`). Separate from `features`
+   * because `BevFeatures.categoryId` belongs to `contentSimilarity` and must
+   * stay the root -- see `weighPair`.
+   *
+   * A bev missing from this map falls back to its `features.categoryId`, so an
+   * older caller that does not build it still weighs every pair at the root.
+   */
+  treeNodes?: ReadonlyMap<string, string>;
   profiles: ReadonlyMap<string, FlavorProfile>;
   embeddings: ReadonlyMap<string, readonly number[]>;
+  /**
+   * A-16 (2): bev id -> (user id -> that user's z for the Bev), from
+   * `coRatersFromRankings` below (active Bevs only, z from every ranking).
+   * The cop term of eq. (18) is computed from it; omitted, every pair's `cop`
+   * is 0, which is what every run before A-16 (2) stored.
+   */
+  coRaters?: ReadonlyMap<string, ReadonlyMap<string, number>>;
 }
 
 /** The candidate rule's third arm: "the 50 nearest by embedding cosine" (A-16 step 3). */
@@ -102,30 +133,28 @@ export function round6(x: number): number {
 }
 
 // ---------------------------------------------------------------------------
-// The taxonomy, and what the tree term degenerates to today
+// The taxonomy: two levels since A-13, measured at each Bev's leaf
 // ---------------------------------------------------------------------------
 
 /**
  * The `Taxonomy` argument of `treeSimilarity`: a child -> parent map over the
  * rows of `public.categories`.
  *
- * TODAY EVERY VALUE IS `null`, because `categories` has no `parent_id` column
- * (20261009000200: `id, name, sort_order, is_alcoholic, emoji`). A-13 adds it
- * after D-04, and the only change needed here is that `parentId` starts
- * arriving non-null -- this function already passes it through.
+ * Since A-13 the map is TWO LEVELS: `parentId` is null on the 15 roots and the
+ * root's id on D-04's 60 leaves. Depth counts from an implicit root above the
+ * roots, so a root is at depth 1 and a leaf at depth 2, and Wu-Palmer gives
  *
- * With an all-`null` map `treeSimilarity` has every category at depth 1 under
- * the implicit root, so
+ *   same leaf (or same root)        -> 1
+ *   leaf against its own root       -> 2*1 / (2 + 1) = 0.667
+ *   sibling leaves under one root   -> 2*1 / (2 + 2) = 0.5
+ *   anything across two roots       -> 0
  *
- *   same category  -> 2*1 / (1 + 1) = 1
- *   any other pair -> 2*0 / (1 + 1) = 0        (their only common ancestor is
- *                                               the implicit root, depth 0)
- *
- * i.e. **the tree term degenerates to the `[same category]` indicator of
- * eq. (5)**, and contributes exactly 0.25 or 0. It is built from the rows
- * rather than passed as `{}` (which `treeSimilarity` treats identically) so
- * that the degeneracy is a property of today's DATA and visible in the log,
- * not a hard-coded assumption in the job.
+ * measured at each Bev's `treeNodeOf` node. A map with every parent null -- a
+ * caller that does not select `parent_id`, or a snapshot from before A-13 --
+ * puts every category at depth 1 and degenerates the term to the
+ * `[same category]` indicator of eq. (5); `taxonomyIsFlat` detects that so the
+ * job's log can say so. The map is built from the rows rather than hard-coded
+ * so that the shape is a property of the DATA and visible in the log.
  */
 export function buildTaxonomy(categories: readonly CategoryRecord[]): Taxonomy {
   const taxonomy: Record<string, string | null> = {};
@@ -182,6 +211,27 @@ export function splitPairKey(key: string): { src: string; dst: string } {
 // ---------------------------------------------------------------------------
 
 /**
+ * The category node a Bev's TREE term is measured at (A-13): its leaf when it
+ * has one, else its category.
+ *
+ * Why this is not simply `categoryId`: `treeSimilarity` is Wu-Palmer over the
+ * two-level taxonomy, so measuring at the leaf is what makes two colas score 1
+ * and a cola against a root beer 0.5 -- the whole point of D-04. Measuring at
+ * the root would leave the term at the pre-A-13 same-category indicator and the
+ * hierarchy would change nothing.
+ *
+ * And why `contentSimilarity` keeps the ROOT (see `weighPair`): its own
+ * same-category indicator is a coarse "these belong to the same shelf" signal,
+ * and D-04 flagged the consequence of handing it the leaf -- Coke vs Fanta
+ * would drop from 0.40 to 0 on that term. The tree term already carries
+ * leaf-level closeness, so passing the leaf to both would double-count the
+ * taxonomy in `edgeWeight` and lose the shelf signal at the same time.
+ */
+export function treeNodeOf(bev: BevRecord): string {
+  return bev.leafCategoryId ?? bev.categoryId;
+}
+
+/**
  * `BevFeatures` for `contentSimilarity`, which reads only `categoryId`,
  * `brandKey`, `flavorTokens` and `priceTier` (eq. 5 / 8.8). The three
  * prediction fields it does not read (`ratingCount`, `mean`, `stddev`) are set
@@ -204,10 +254,12 @@ export function bevFeatures(bev: BevRecord): BevFeatures {
 }
 
 /**
- * The candidate set: **same category union same brand union the 50 nearest by
- * embedding cosine** (A-16 step 3). "Same category subtree" in the task text is
- * "same category" today, for the same reason the tree term degenerates: there
- * is no subtree until A-13.
+ * The candidate set: **same category subtree union same brand union the 50
+ * nearest by embedding cosine** (A-16 step 3). The subtree arm groups by
+ * `categoryId`, which is the Bev's ROOT since A-13 (its leaf is
+ * `leafCategoryId`), so one group is a whole two-level subtree: the root and
+ * every leaf under it. That is D-04's "same parent subtree" -- a cola and a
+ * root beer are candidates, and the tree term then scores them 0.5.
  *
  * Returns canonical pair keys, so the three arms are deduplicated by
  * construction and a pair found by two arms is weighted once.
@@ -219,8 +271,9 @@ export function bevFeatures(bev: BevRecord): BevFeatures {
  *
  * Cost: the first two arms are quadratic WITHIN a group. At the catalog's size
  * (378 Bevs, 15 categories, biggest brand a few dozen rows) that is a few
- * thousand pairs; it is the growth to watch if the catalog multiplies, and the
- * place where A-13's subtree arm will need a depth bound.
+ * thousand pairs; it is the growth to watch if the catalog multiplies. The
+ * taxonomy is two levels deep, so grouping by root needs no depth bound; a
+ * deeper taxonomy would need one here.
  */
 export function candidatePairs(
   bevs: readonly BevRecord[],
@@ -267,19 +320,118 @@ function push<K, V>(map: Map<K, V[]>, key: K, value: V): void {
 // Weighting (A-16 step 4)
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// The cop term of eq. (18) (LaTeX section 10.1), A-16 (2)
+// ---------------------------------------------------------------------------
+
+/**
+ * Minimum common raters before `sim_cop` says anything. The paper: "0 while
+ * fewer than 3 users have ranked both".
+ *
+ * Not in `@bevi/ranking`'s constants, because the term's weight there
+ * (`EDGE_WEIGHTS.cop`) is still 0 and switching it on is Matt's constant change
+ * plus a `RANKING_VERSION` bump. This job computes and STORES the term so the
+ * number is already measured when he does; until then it rides in
+ * `bev_edges.components.cop` and contributes 0 to every weight.
+ */
+export const COP_MIN_CO_RATERS = 3;
+
+/**
+ * `sim_cop(b, b')`: the cosine of two Bevs' z-score vectors over their common
+ * raters, 0 below `COP_MIN_CO_RATERS` of them -- LaTeX 10.1, eq. (w).
+ *
+ * A COSINE, NOT A PEARSON. The z-scores are already centred per USER (each is
+ * `(s - mu_u) / sigma_u`), which is what makes this the adjusted cosine the
+ * paper defines. Re-centring them per BEV, as Pearson does, measures something
+ * else and breaks badly at the 3-rater floor: three users who all rate both
+ * Bevs above their own means, z_a = (1.0, 0.8, 1.2) and z_b = (0.9, 1.1, 0.7),
+ * have cosine 0.94 but Pearson -1, which would clamp to 0 -- "no evidence" for
+ * the strongest co-preference three raters can show. `cosineSimilarity` is the
+ * same function Layer 2 uses for its user-user term, and it returns 0 when
+ * either vector is all zeros.
+ *
+ * CLAMPED AT 0 (Matt's ruling on #133): sim_cop = max(0, cos), the same
+ * max(0, .) convention eq. (w) applies to sim_emb, so 0 always means "no
+ * evidence of similarity". A negative cosine -- the people who rate one Bev
+ * above their mean rate the other below it -- is not expressible in eq. (18),
+ * which sums non-negative terms (`edgeWeight`'s `unit()` throws outside
+ * [0, 1]). (1 + cos)/2 was rejected: it would lift w by gamma/2 the night a
+ * pair gets its third co-rater, whatever they think of it, and break the
+ * Coke-LaCroix < 0.4 bound once gamma is switched on.
+ */
+export function copSimilarity(
+  ratersA: ReadonlyMap<UserId, number>,
+  ratersB: ReadonlyMap<UserId, number>,
+): number {
+  // Common raters in code-point order, so the result is exactly symmetric and
+  // independent of insertion order -- the same rule `pearsonSimilarity` uses
+  // for its common Bevs.
+  const common = [...ratersA.keys()].filter((u) => ratersB.has(u)).sort(cmp);
+  if (common.length < COP_MIN_CO_RATERS) return 0;
+  const cos = cosineSimilarity(
+    common.map((u) => ratersA.get(u) as number),
+    common.map((u) => ratersB.get(u) as number),
+  );
+  // `Math.min` only guards floating-point drift past 1 on parallel vectors.
+  return cos <= 0 ? 0 : Math.min(1, cos);
+}
+
+/**
+ * bev id -> (user id -> that user's z for the Bev), the input `copSimilarity`
+ * takes, from the same z-score map the neighbour build uses.
+ *
+ * Built once per run and handed to `weighPair` through `WeighContext.coRaters`,
+ * so the cop term costs one map lookup per pair rather than a scan.
+ *
+ * Pass it ACTIVE-ONLY z-scores (`activeZScores`, or `coRatersFromRankings`
+ * below, which does both steps): every Bev in the input becomes a co-rated Bev.
+ */
+export function coRatersByBev(z: ReadonlyMap<UserId, ReadonlyMap<BevId, number>>): Map<BevId, Map<UserId, number>> {
+  const out = new Map<BevId, Map<UserId, number>>();
+  for (const u of [...z.keys()].sort(cmp)) {
+    for (const [bev, zu] of z.get(u) as ReadonlyMap<BevId, number>) {
+      let raters = out.get(bev);
+      if (!raters) out.set(bev, (raters = new Map()));
+      raters.set(u, zu);
+    }
+  }
+  return out;
+}
+
+/**
+ * `coRatersByBev` straight from `ranking_z_inputs()` rows: z-scores from EVERY
+ * ranking (so each user's mu/sigma and the global stats are the ones
+ * `get_prediction_snapshot` computes), then restricted to active Bevs before
+ * inverting -- see `activeZScores`. A hidden, merged or `pending_photo` Bev
+ * moves its raters' z-scores like any other ranking but is never a co-rated
+ * Bev itself.
+ */
+export function coRatersFromRankings(rankings: readonly RankingRecord[]): Map<BevId, Map<UserId, number>> {
+  return coRatersByBev(activeZScores(rankings));
+}
+
 /**
  * One candidate's five terms and its weight, eq. (18) through `edgeWeight`.
  *
  * The terms:
- *   tree     `treeSimilarity` over `buildTaxonomy` -- today the same-category indicator.
- *   content  `contentSimilarity` over the catalog row (category, brand, flavour tokens, tier).
+ *   tree     `treeSimilarity` over `buildTaxonomy`, measured at each Bev's LEAF
+ *            (A-13/D-04): 1 for two colas, 0.5 for sibling leaves, 0.667 for a
+ *            leaf against a Bev sitting on its own parent, 0 across roots.
+ *   content  `contentSimilarity` over the catalog row (ROOT category, brand,
+ *            flavour tokens, tier) -- deliberately the root, see `treeNodeOf`.
  *   emb      `embeddingSimilarity` over the two `bev_embeddings` vectors.
  *            **0 when either Bev has no embedding yet** -- the honest value for
  *            "no evidence", and the reason a run before the embed pipeline has
  *            filled the table reports low weights rather than failing.
  *   profile  `profileSimilarity` over `bev_flavor_profiles`. 0 when either is
  *            missing, including when D-11's inference declined below its 0.6 floor.
- *   cop      0. gamma = 0 in v1 (`EDGE_WEIGHTS.cop`); the co-rating signal is A-16 (2).
+ *   cop      `copSimilarity`: the cosine of the two Bevs' z-scores across
+ *            their common raters, clamped at 0 (A-16 (2)); 0 below 3 of them
+ *            and 0 when `ctx.coRaters` is absent. **It contributes nothing to the weight today**, because
+ *            `EDGE_WEIGHTS.cop` is still 0 -- switching gamma on renormalises
+ *            the other four and is a constant change plus a RANKING_VERSION
+ *            bump in Matt's lane. It is computed and STORED now so the number
+ *            is already measured when he does.
  *
  * The emb term is recomputed from the vectors, never derived from the KNN
  * `distance`: the HNSW probe is a candidate SELECTOR, so an approximate index
@@ -302,13 +454,21 @@ export function weighPair(a: string, b: string, ctx: WeighContext): WeightedPair
   const eb = ctx.embeddings.get(dst);
   const pa = ctx.profiles.get(src);
   const pb = ctx.profiles.get(dst);
+  const ra = ctx.coRaters?.get(src);
+  const rb = ctx.coRaters?.get(dst);
+
+  // A-13: the tree term is measured at each Bev's LEAF (`treeNodes`), while
+  // `contentSimilarity` below reads `fa.categoryId`, still the root. See
+  // `treeNodeOf` for why the two differ.
+  const ta = ctx.treeNodes?.get(src) ?? fa.categoryId;
+  const tb = ctx.treeNodes?.get(dst) ?? fb.categoryId;
 
   const components: Required<EdgeComponents> = {
-    tree: round6(treeSimilarity(fa.categoryId, fb.categoryId, ctx.taxonomy)),
+    tree: round6(treeSimilarity(ta, tb, ctx.taxonomy)),
     content: round6(contentSimilarity(fa, fb)),
     emb: ea === undefined || eb === undefined ? 0 : round6(embeddingSimilarity(ea, eb)),
     profile: pa === undefined || pb === undefined ? 0 : round6(profileSimilarity(pa, pb)),
-    cop: 0,
+    cop: ra === undefined || rb === undefined ? 0 : round6(copSimilarity(ra, rb)),
   };
 
   return { src, dst, weight: round6(edgeWeight(components)), components };

@@ -9,6 +9,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
   AppConfig,
   Bev,
+  BevLeaf,
   BevOfPeriod,
   BevPrediction,
   BevSimilarity,
@@ -16,6 +17,7 @@ import type {
   Bucket,
   BucketBev,
   Category,
+  CategoryNode,
   CategoryProgress,
   CategoryId,
   Comment,
@@ -120,6 +122,35 @@ export interface CategoryRow {
   name: string;
   sort_order: number;
   is_alcoholic: boolean;
+}
+
+/**
+ * One row of `get_category_tree()` (20261026000100). A-13.
+ *
+ * Distinct from `CategoryRow` on purpose: the tree carries `parent_id` and the
+ * root's `emoji` but no Bev count, while `categories.list()` carries the count
+ * and only ever sees roots.
+ */
+export interface CategoryNodeRow {
+  id: string;
+  name: string;
+  parent_id: string | null;
+  sort_order: number;
+  is_alcoholic: boolean;
+  emoji: string | null;
+}
+
+export function mapCategoryNode(row: CategoryNodeRow): CategoryNode {
+  return {
+    id: row.id,
+    name: row.name,
+    // A leaf's parent is always one of the 15, so the cast is the same claim
+    // the database's two-level guard makes.
+    parentId: row.parent_id === null ? null : (row.parent_id as CategoryId),
+    sortOrder: row.sort_order,
+    isAlcoholic: row.is_alcoholic,
+    emoji: row.emoji,
+  };
 }
 
 /** `bevCount` comes from `get_category_progress` (20261018000200), not the table. */
@@ -255,6 +286,16 @@ export interface BevSimilarityRow {
 
 export function mapBevSimilarity(row: BevSimilarityRow): BevSimilarity {
   return { bevId: row.bev_id, weight: Number(row.weight) };
+}
+
+/** `get_bev_leaves` (20261026000100). A-13. */
+export interface BevLeafRow {
+  bev_id: string;
+  leaf_category_id: string | null;
+}
+
+export function mapBevLeaf(row: BevLeafRow): BevLeaf {
+  return { bevId: row.bev_id, leafCategoryId: row.leaf_category_id };
 }
 
 /** `list_bucket_bevs` (20261019000500). */

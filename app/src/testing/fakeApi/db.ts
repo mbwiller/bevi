@@ -21,6 +21,12 @@ export interface FakeBev {
   brand: string | null;
   flavor: string | null;
   categoryId: CategoryId;
+  /**
+   * A-13: the Bev's leaf under `categoryId`, or null when it sits on the parent
+   * -- the state of the two unsplit roots and of every Bev `bevs.create` makes,
+   * since the wizard only offers the 15.
+   */
+  leafCategoryId: string | null;
   priceTier: PriceTier;
   priceEstimated: boolean;
   isStarter: boolean;

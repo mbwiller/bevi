@@ -84,8 +84,11 @@ describe('Profile › Taste Profile', () => {
   it('writes the read-out in the first person on your own profile', async () => {
     controls.signInAs(FRIEND.handle);
     await open('/profile?tab=taste');
-    expect(await screen.findByText('You prefer soda over juice')).toBeTruthy();
-    // 2 of its 3 categories have 3 or more rankings; energy is only 0.6 under soda, so it is not named.
+    // Soda 8.2 (42 ranked), juice 6.5 (3), energy 6.3 (10): the read-out names the highest and the
+    // lowest. A-13's six catalog corrections moved four Bevs into `soda` and one out of `juice`,
+    // and the fixture generator weights its picks by category, so which Bevs this user ranks --
+    // and therefore which category is lowest -- moved with them. It was juice before A-13.
+    expect(await screen.findByText('You prefer soda over energy')).toBeTruthy();
     expect(bars()).toHaveLength(3);
   });
 
