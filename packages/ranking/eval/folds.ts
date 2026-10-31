@@ -20,7 +20,7 @@
 import { RANKING_VERSION } from '../src/constants.ts';
 import { storedScore } from '../src/score.ts';
 import { populationStats } from '../src/stats.ts';
-import type { BevFeatures, BevId, CategoryId, PredictionSnapshot, Stats, UserId, UserSnapshot } from '../src/types.ts';
+import type { BevEdge, BevFeatures, BevId, CategoryId, PredictionSnapshot, Stats, UserId, UserSnapshot } from '../src/types.ts';
 import type { CatalogFeatures, EvalRanking } from './dataset.ts';
 
 export const rowKey = (userId: UserId, bevId: BevId): string => `${userId}\u0000${bevId}`;
@@ -62,9 +62,11 @@ export function holdOut(rows: readonly EvalRanking[], heldOut: ReadonlySet<strin
  * catalog. Every statistic is recomputed from `rows`; equivalent to test/snapshot-fixture.ts's
  * buildSnapshot() (asserted in the tests) but over every category and in O(rows + catalog).
  * Every user can see alcohol: evaluation scores every held-out Bev, recommend()'s age gate is not
- * under test. Rows on Bevs missing from the catalog are dropped.
+ * under test. Rows on Bevs missing from the catalog are dropped. `edges`, when given, is attached
+ * as `snapshot.edges` (shared, not copied): edge weights read no rankings (γ = 0), so they leak
+ * nothing from the held-out rows.
  */
-export function foldSnapshot(catalog: ReadonlyMap<BevId, CatalogFeatures>, rows: readonly EvalRanking[]): PredictionSnapshot {
+export function foldSnapshot(catalog: ReadonlyMap<BevId, CatalogFeatures>, rows: readonly EvalRanking[], edges?: readonly BevEdge[] | null): PredictionSnapshot {
   const rankings: PredictionSnapshot['rankings'] = [];
   const byBev = new Map<BevId, number[]>();
   const byUser = new Map<UserId, number[]>();
@@ -108,6 +110,7 @@ export function foldSnapshot(catalog: ReadonlyMap<BevId, CatalogFeatures>, rows:
     bevs,
     users,
     rankings,
+    ...(edges ? { edges: edges as BevEdge[] } : {}),
   };
 }
 

@@ -1,6 +1,6 @@
 // Derived data for one PredictionSnapshot (effective stats, z-scores, raters per Bev, user
-// similarities), computed once per snapshot and cached in a WeakMap. Snapshots are treated as
-// immutable once passed to predictScore / recommend.
+// similarities, the stored edge lookup), computed once per snapshot and cached in a WeakMap.
+// Snapshots are treated as immutable once passed to predictScore / recommend.
 
 import { RANKING_VERSION } from './constants.ts';
 import { effectiveGlobalStats, effectiveUserStats, populationStats, zScore } from './stats.ts';
@@ -18,6 +18,12 @@ export interface SnapshotContext {
   userSims: Map<UserId, Map<UserId, number>>;
   /** Lazily filled: u → (v → Pearson · min(1, |common| / 5)), for `userSimilarity: 'pearson'`. */
   userSimsPearson: Map<UserId, Map<UserId, number>>;
+  /**
+   * Lazily filled on the first edges-mode call: a → (b → w) for every `snapshot.edges` row, in both
+   * orientations; null when the snapshot has no `edges` field. Undefined until then, so the
+   * default ('content') path never reads or validates the edges.
+   */
+  edgeWeights?: Map<BevId, Map<BevId, number>> | null;
 }
 
 const cache = new WeakMap<PredictionSnapshot, SnapshotContext>();
@@ -77,6 +83,36 @@ export function snapshotContext(snapshot: PredictionSnapshot): SnapshotContext {
   const ctx: SnapshotContext = { globalEffective, userStats, userEffective, z, raters, userSims: new Map(), userSimsPearson: new Map() };
   cache.set(snapshot, ctx);
   return ctx;
+}
+
+/**
+ * The symmetric lookup a → (b → w) of `snapshot.edges`, built once per snapshot; null when the
+ * snapshot carries no `edges` field (undefined or null). Throws on a malformed row: an id that is
+ * not a non-empty string, a self-edge, w not a finite number in [0, 1], or an unordered pair listed
+ * twice (`bev_edges`' primary key and CHECKs rule all of these out in SQL).
+ */
+export function edgeLookup(snapshot: PredictionSnapshot): Map<BevId, Map<BevId, number>> | null {
+  const ctx = snapshotContext(snapshot);
+  if (ctx.edgeWeights !== undefined) return ctx.edgeWeights;
+  const rows = snapshot.edges;
+  if (rows === undefined || rows === null) return (ctx.edgeWeights = null);
+  if (!Array.isArray(rows)) throw new RangeError('snapshot.edges must be an array');
+  const m = new Map<BevId, Map<BevId, number>>();
+  const put = (x: BevId, y: BevId, w: number) => {
+    let row = m.get(x);
+    if (!row) m.set(x, (row = new Map()));
+    row.set(y, w);
+  };
+  rows.forEach((e, i) => {
+    const { a, b, w } = e ?? ({} as { a?: unknown; b?: unknown; w?: unknown });
+    if (typeof a !== 'string' || a === '' || typeof b !== 'string' || b === '') throw new RangeError(`snapshot.edges[${i}]: a and b must be non-empty ids`);
+    if (a === b) throw new RangeError(`snapshot.edges[${i}]: self-edge on "${a}"`);
+    if (typeof w !== 'number' || !(w >= 0 && w <= 1)) throw new RangeError(`snapshot.edges[${i}]: w must be a number in [0, 1], got ${String(w)}`);
+    if (m.get(a)?.has(b)) throw new RangeError(`snapshot.edges[${i}]: the pair ("${a}", "${b}") is listed twice`);
+    put(a, b, w);
+    put(b, a, w);
+  });
+  return (ctx.edgeWeights = m);
 }
 
 export function effectiveStatsOf(ctx: SnapshotContext, u: UserId): MeanStd {

@@ -119,17 +119,42 @@ export interface UserSnapshot {
   canSeeAlcohol: boolean;
 }
 
+/**
+ * One stored Bev-graph edge (`bev_edges`, LaTeX §10.1): the weight w(a, b) of an unordered pair.
+ * `a` and `b` may come in either orientation (`bev_edges` stores src < dst); `w` is in [0, 1].
+ */
+export interface BevEdge {
+  a: BevId;
+  b: BevId;
+  w: number;
+}
+
 /** Everything `predictScore` / `recommend` read. Treated as immutable once passed in. */
 export interface PredictionSnapshot {
   /** Must equal RANKING_VERSION of the consuming bundle; otherwise the functions throw. */
   version: string;
   /** ISO; informational only. */
   generatedAt: string;
+  /**
+   * `byCategoryMean` (the mean stored score per category) is read by no prediction formula: Layer 1
+   * uses affinity in z-units, and `categoryPrior` needs the category's n as well as its mean. It is
+   * kept because the eval harness's `category-mean` baseline reads it (TASKS.md M-26), and because
+   * dropping it would change `get_prediction_snapshot` and packages/api (Arjun's lane) for no gain.
+   */
   global: { mean: number; stddev: number; byCategoryMean: Record<CategoryId, number> };
   bevs: Record<BevId, BevFeatures>;
   users: Record<UserId, UserSnapshot>;
   /** Stored scores; z-scores are computed inside. */
   rankings: Array<{ userId: UserId; bevId: BevId; score: number }>;
+  /**
+   * The stored Bev-graph edges that `bevSimilarity: 'edges'` reads (TASKS.md S-21): every
+   * `bev_edges` row with at least one endpoint among the Bevs ranked by a user whose predictions
+   * will be computed (the viewer, in the app), each unordered pair once. A pair absent from a present
+   * array has no stored edge and weighs 0. Absent (undefined or null) means "not provided": edges
+   * mode then falls back to the computed content similarity. Rows whose Bevs are not in `bevs` are
+   * allowed and ignored. Read lazily, only in edges mode.
+   */
+  edges?: BevEdge[] | null;
 }
 
 export interface Layer1Result {
@@ -177,10 +202,21 @@ export interface Recommendation {
  */
 export type UserSimilarityKind = 'cosine' | 'pearson';
 
-/** Options of `layer2`, `userSimilarity` and `predictScore`. Omitted means today's engine. */
+/**
+ * The Bev–Bev similarity Layer 1's content term weights the user's ranked Bevs by. 'content' is
+ * §8.8's sim(b, b′) (`contentSimilarity`), computed from the snapshot's features: the live engine.
+ * 'edges' is the stored Bev-graph weight w(b, b′) from `snapshot.edges` (LaTeX §10.1), with 0 for a
+ * pair that has no stored edge; it falls back to 'content' when the snapshot carries no `edges`
+ * field. Off by default until the eval harness has a real export to judge it on (TASKS.md M-27 (a)).
+ */
+export type BevSimilarityKind = 'content' | 'edges';
+
+/** Options of `layer1`, `layer2`, `userSimilarity` and `predictScore`. Omitted means today's engine. */
 export interface PredictOptions {
-  /** Default 'cosine'. */
+  /** Layer 2's user–user similarity. Default 'cosine'. */
   userSimilarity?: UserSimilarityKind;
+  /** Layer 1's Bev–Bev similarity in the content term. Default 'content'. */
+  bevSimilarity?: BevSimilarityKind;
 }
 
 export interface RecommendOptions extends PredictOptions {

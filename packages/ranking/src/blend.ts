@@ -15,12 +15,13 @@ export function blendLambda(support: number, nUser: number): number {
  * ẑ = (1 − λ)·ẑ1 + λ·ẑ2; score ŝ = clamp(μ*_u + σ*_u·ẑ, 0, 10) with the user's effective stats
  * (§8.4); confidence = max(conf1, min(1, support)). Throws if the snapshot's version is not
  * RANKING_VERSION or the Bev is not in it. A user absent from the snapshot predicts from the
- * global stats with zero confidence. `opts.userSimilarity` is passed to Layer 2 (default 'cosine').
+ * global stats with zero confidence. `opts.userSimilarity` is passed to Layer 2 (default 'cosine')
+ * and `opts.bevSimilarity` to Layer 1 (default 'content').
  */
 export function predictScore(snapshot: PredictionSnapshot, userId: UserId, bevId: BevId, opts?: PredictOptions): Prediction {
   const ctx = snapshotContext(snapshot);
   bevOf(snapshot, bevId);
-  const l1 = layer1(snapshot, userId, bevId);
+  const l1 = layer1(snapshot, userId, bevId, opts);
   const l2 = layer2(snapshot, userId, bevId, opts);
   const lambda = blendLambda(l2.support, nOf(ctx, userId));
   const z = (1 - lambda) * l1.z + lambda * l2.z;

@@ -85,7 +85,8 @@ export interface SplitReport {
 
 export interface EvalReport {
   rankingVersion: string;
-  dataset: { bevs: number; users: number; rankings: number; comparisons: number; dropped: PreparedDataset['dropped'] };
+  /** `edges`: stored edges between catalog Bevs, or null when the dataset has none (edges arms fall back to content). */
+  dataset: { bevs: number; users: number; rankings: number; comparisons: number; edges: number | null; dropped: PreparedDataset['dropped'] };
   options: Required<Omit<EvalOptions, 'arms'>> & { arms: ArmId[]; reference: ArmId };
   splits: SplitReport[];
   /** Cosine vs Pearson over the full data (descriptive; no predictions involved). */
@@ -188,7 +189,7 @@ function pairPredictions(
     const keys = new Set([rowKey(c.userId, c.winnerBevId), rowKey(c.userId, c.loserBevId)].filter((k) => ranked.has(k)));
     // Both Bevs of the pair are held out together, so neither prediction can see the other's score.
     if ((baseCounts.get(c.userId) ?? 0) - keys.size < MIN_N_USER) continue;
-    const snap = keys.size === 0 ? baseSnap : foldSnapshot(prepared.catalog, holdOut(base, keys, respace));
+    const snap = keys.size === 0 ? baseSnap : foldSnapshot(prepared.catalog, holdOut(base, keys, respace), prepared.edges);
     if (keys.size > 0) folds++;
     const preds = new Map<ArmId, { winner: number; loser: number }>();
     for (const a of arms) preds.set(a.id, { winner: a.predict(snap, c.userId, c.winnerBevId).score, loser: a.predict(snap, c.userId, c.loserBevId).score });
@@ -207,13 +208,13 @@ export function leaveOneOut(prepared: PreparedDataset, arms: readonly Arm[], res
   const ordered = [...rows].sort((a, b) => (a.userId < b.userId ? -1 : a.userId > b.userId ? 1 : 0) || (a.bevId < b.bevId ? -1 : a.bevId > b.bevId ? 1 : 0));
   for (const r of ordered) {
     if ((nTrain.get(r.userId) ?? 0) < MIN_N_USER) continue;
-    const snap = foldSnapshot(prepared.catalog, holdOut(rows, new Set([rowKey(r.userId, r.bevId)]), respace));
+    const snap = foldSnapshot(prepared.catalog, holdOut(rows, new Set([rowKey(r.userId, r.bevId)]), respace), prepared.edges);
     folds++;
     points.push({ userId: r.userId, actual: r, preds: predictAll(arms, snap, r.userId, r.bevId) });
   }
   const { decisive, ties } = dedupeComparisons(prepared.comparisons);
   // n_u for pairs is checked per fold inside pairPredictions against the rows actually removed.
-  const pp = pairPredictions(arms, prepared, rows, foldSnapshot(prepared.catalog, rows), decisive, nTrain, respace);
+  const pp = pairPredictions(arms, prepared, rows, foldSnapshot(prepared.catalog, rows, prepared.edges), decisive, nTrain, respace);
   return { sharedFold: false, cutoff: null, folds: folds + pp.folds, nTrain, points, pairs: pp.pairs, ties };
 }
 
@@ -238,7 +239,7 @@ export function temporalSplit(prepared: PreparedDataset, arms: readonly Arm[], r
   const test = rows.filter((r) => Date.parse(r.rankedAt) >= T);
   const base = holdOut(rows, new Set(test.map((r) => rowKey(r.userId, r.bevId))), respace);
   const nTrain = countsByUser(base);
-  const snap = foldSnapshot(prepared.catalog, base);
+  const snap = foldSnapshot(prepared.catalog, base, prepared.edges);
   const points: PointPred[] = [];
   const orderedTest = [...test].sort((a, b) => (a.userId < b.userId ? -1 : a.userId > b.userId ? 1 : 0) || (a.bevId < b.bevId ? -1 : a.bevId > b.bevId ? 1 : 0));
   for (const r of orderedTest) {
@@ -399,10 +400,11 @@ export function evaluate(ds: EvalDataset, options: EvalOptions = {}): EvalReport
       users: countsByUser(prepared.rankings).size,
       rankings: prepared.rankings.length,
       comparisons: prepared.comparisons.length,
+      edges: prepared.edges === null ? null : prepared.edges.length,
       dropped: prepared.dropped,
     },
     options: { ...opts, splits: [...opts.splits], reference: REFERENCE_ARM },
     splits,
-    similarity: similarityDiagnostics(foldSnapshot(prepared.catalog, prepared.rankings)),
+    similarity: similarityDiagnostics(foldSnapshot(prepared.catalog, prepared.rankings, prepared.edges)),
   };
 }

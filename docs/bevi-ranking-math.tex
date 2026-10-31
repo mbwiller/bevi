@@ -1,10 +1,12 @@
 % Bevi -- ranking, scoring and recommendation: mathematical specification.
 % Build: tectonic docs/bevi-ranking-math.tex   (or pdflatex twice)
-% Source of truth for the implemented parts: packages/ranking/src (RANKING_VERSION 1.3.0).
+% Source of truth for the implemented parts: packages/ranking/src (RANKING_VERSION 1.4.0).
 % Section 10 specifies the extensions discussed on 2026-10-14 (CONVERSATION-2.md, TASKS.md).
 % Revised 2026-10-24 (M-22 review): corrections in Sections 2, 3, 5, 6, 8, 9; Sections 10 and 11
 % brought up to date with #96, #101, #112, #113, #115, #117, #118 and #121. No version change.
 % RANKING_VERSION 1.3.0 (M-28): Section 6.4 (Pearson, taste neighbourhoods), the 1.3.0 row in Section 11.
+% RANKING_VERSION 1.4.0 (M-27 (a), 2026-10-31): Layer 1's edges mode in Section 6.2, the 1.4.0 row in Section 11;
+% Section 10.1 brought up to date with A-13 (#132, the tree term at the leaf) and A-16 (2) (#133, the cop term as built).
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{amsmath,amssymb,amsthm,mathtools}
@@ -55,9 +57,9 @@
 \newtheorem{implnote}[theorem]{Implementation note}
 
 \title{\textbf{The Bevi Ranking and Recommendation System}\\[4pt]
-\large Mathematical specification of \code{@bevi/ranking} v1.3.0\\ and the extensions proposed on 2026-10-14}
-\author{Bevi (Matt \& Arjun)\thanks{Drafted from \code{packages/ranking/src}, \code{DEVELOPMENT-MATT.md} \S 8 and the second planning session (\code{CONVERSATION-2.md}). Sections 2--9 describe what is implemented and tested; Section 10 specifies the extensions, several of which have since shipped (its introduction says which). Revised on 2026-10-24 after the M-22 review of this paper against the package and the SQL; the review's correction lists are under M-22 in \code{TASKS.md}. Formula changes must bump \code{RANKING\_VERSION} and regenerate the golden vectors in \code{shared/fixtures}.}}
-\date{14 October 2026, revised 24 October 2026}
+\large Mathematical specification of \code{@bevi/ranking} v1.4.0\\ and the extensions proposed on 2026-10-14}
+\author{Bevi (Matt \& Arjun)\thanks{Drafted from \code{packages/ranking/src}, \code{DEVELOPMENT-MATT.md} \S 8 and the second planning session (\code{CONVERSATION-2.md}). Sections 2--9 describe what is implemented and tested; Section 10 specifies the extensions, several of which have since shipped (its introduction says which). Revised on 2026-10-24 after the M-22 review of this paper against the package and the SQL; the review's correction lists are under M-22 in \code{TASKS.md}. Revised again on 2026-10-31 for \code{RANKING\_VERSION} 1.4.0 and the category hierarchy. Formula changes must bump \code{RANKING\_VERSION} and regenerate the golden vectors in \code{shared/fixtures}.}}
+\date{14 October 2026, revised 24 and 31 October 2026}
 
 \begin{document}
 \maketitle
@@ -304,6 +306,12 @@ The $+1$ in \eqref{eq:content} shrinks the content term toward $0$ when little s
 $\zhat^{(1)}$ is in z-units (its weights sum to one and each term is a shrunk mean of z-scores), and $\conf^{(1)} \in [0, 1]$.
 \end{proposition}
 
+\paragraph{Edges mode (v1.4.0, off by default).} Called with the option \code{bevSimilarity: 'edges'}, Layer~1 replaces $\simi(b, b')$ in \eqref{eq:content} and \eqref{eq:conf1} by the stored Bev-graph weight $w$ of \eqref{eq:w},
+\begin{equation}\label{eq:simE}
+\simi_E(b, b') = \begin{cases} w(b, b') & \text{if the pair } \{b, b'\} \text{ has a stored edge in } \code{bev\_edges},\\ 0 & \text{otherwise,} \end{cases}
+\end{equation}
+read from the snapshot's field \code{edges} (one row per unordered pair, in either orientation). The \textsc{sim\_min} rule still applies; it removes nothing while \textsc{edge\_min\_weight} $= 0.3$ and keeps the floor if the edge job's threshold is ever lowered. A pair without a stored edge contributes $0$; it is \emph{not} replaced by $\simi$. The two are on different scales ($\simi \ge 0.4$ for every same-category pair, while a kept $w$ lies in $[0.3, 1]$ and carries embedding and profile terms that $\simi$ lacks), so mixing them would make the weighted mean \eqref{eq:content} depend on which pairs happened to be pruned. A missing edge was pruned: either $w < 0.3$, or $w \ge 0.3$ but outside both Bevs' $K_E = 20$ heaviest, so in this mode the content term is a $K_E$-nearest-neighbour item--item average. (Anchored placement, Section~\ref{sec:anchored}, falls back to $\simi_T$ instead, because it needs only an order of tiers, not a weighted mean.) Affinity and $g_b$ are unchanged and the proposition above still holds, since $\simi_E \in [0, 1]$. The mass in \eqref{eq:conf1} becomes $n_{u,\cat(b)} + \sum_{b'} \simi_E(b, b')$, usually smaller than with $\simi$, so $\conf^{(1)}$ saturates later and the $+1$ pulls the content term harder toward $0$. A snapshot without the \code{edges} field falls back to $\simi$, so the option is safe to switch on before \code{get\_prediction\_snapshot} returns edges (S-21); an empty field means ``no edges'' and makes every content term $0$. The default \code{'content'} is byte-identical to 1.3.0, and the reason \textsc{similar} of Section~\ref{sec:recommend} reads whichever content term was used.
+
 \subsection{Layer 2: user--user collaborative filtering}
 
 User--user filtering was chosen for launch because with about twenty users every pair shares the onboarding starter Bevs, whereas item--item similarity needs co-raters per item pair, which a 380-Bev catalogue and twenty users cannot supply. Switch to item--item at roughly 200 users or when the median number of co-raters per rated item pair reaches 3.
@@ -493,19 +501,23 @@ The day key of a ranking is the calendar date of its timestamp in the user's pro
 
 \section{Proposed extensions (session of 2026-10-14)}\label{sec:extensions}
 
-Status on 2026-10-24. Shipped: the edge weights and the graph pipeline of Section~\ref{sec:anchored} (\code{edges.ts}, \code{RANKING\_VERSION} 1.2.0; \code{bev\_edges} is live on prod), the Taste Profile data of Section~\ref{sec:taste} (A-11, \#101), the Bev of the day and week of Section~\ref{sec:bevof} (A-05, \#96), likes and the Explore ranking of Section~\ref{sec:likes} (A-02 \#70, A-04 \#113) and the one-ranking rule of Section~\ref{sec:binary}. Not built: anchored placement (M-21; waits on the taxonomy, D-04 and A-13), Smart Recommend (Section~\ref{sec:smart}, parked), nutrition (Section~\ref{sec:nutrition}) and the duplicate score and merge of Section~\ref{sec:duplicates} (the S-13 plan). Each subsection gives the definition precisely enough to code and test; where a choice was open it now records the decision.
+Status on 2026-10-24. Shipped: the edge weights and the graph pipeline of Section~\ref{sec:anchored} (\code{edges.ts}, \code{RANKING\_VERSION} 1.2.0; \code{bev\_edges} is live on prod), the Taste Profile data of Section~\ref{sec:taste} (A-11, \#101), the Bev of the day and week of Section~\ref{sec:bevof} (A-05, \#96), likes and the Explore ranking of Section~\ref{sec:likes} (A-02 \#70, A-04 \#113) and the one-ranking rule of Section~\ref{sec:binary}. Not built: anchored placement (M-21; waits on the taxonomy, D-04 and A-13), Smart Recommend (Section~\ref{sec:smart}, parked), nutrition (Section~\ref{sec:nutrition}) and the duplicate score and merge of Section~\ref{sec:duplicates} (the S-13 plan). Since then (2026-10-31): the category hierarchy of D-04 (A-13, \#132) and the measurement of the co-preference term (A-16~(2), \#133) are built, and Layer~1 can read the stored weights (edges mode, Section~\ref{sec:predict}, \code{RANKING\_VERSION} 1.4.0), off until the evaluation harness has real data. Each subsection gives the definition precisely enough to code and test; where a choice was open it now records the decision.
 
 \subsection{Category-aware comparisons over a weighted Bev graph}\label{sec:anchored}
 
 \paragraph{Motivation.} External feedback: ranking a Bev against a Bev of a very different kind feels wrong (``I'd always take mid Indian food over top-tier American food''). The agreed answer: \emph{the first comparisons are against the most similar Bevs the user has ranked}, same subcategory first, then adjacent categories; categories become hierarchical and Bevs live in a graph whose edges carry similarity weights.
 
-\paragraph{Taxonomy.} Let $T$ be a rooted tree of categories; today's 15 categories become internal nodes and Bevs point to leaves (e.g. coffee $\to$ hot, iced $\to$ mocha, matcha, \dots). Write $\depth(x)$ for the depth of a node and $\lca(x, y)$ for the lowest common ancestor. Depth is measured from an implicit root above the top-level categories: the root has depth $0$ and a top-level category depth $1$ (\code{treeSimilarity}, and the \code{treeDepth} line of the vectors' header). Two top-level categories therefore meet only at the root and have $\simi_T = 0$, siblings under one parent have $\simi_T = 2 \cdot 1/(2 + 2) = 0.5$, and with today's flat taxonomy (no \code{categories.parent\_id} until A-13) $\simi_T$ is exactly the same-category indicator of \eqref{eq:sim}.
+\paragraph{Taxonomy.} Let $T$ be the two-level category tree of D-04, in Postgres since A-13 (\#132): the 15 categories are roots (\code{categories.parent\_id} null) and 60 leaves sit under 13 of them (e.g. soda $\to$ cola, lemon-lime, \dots; \code{water} and \code{sports} are unsplit). A Bev keeps its root in \code{bevs.category\_id}, so $\cat(b)$, and with it the content similarity \eqref{eq:sim}, affinity and every per-category statistic, still means the root. Its leaf is the nullable \code{bevs.leaf\_category\_id}, null when no finer placement is known (the unsplit roots, and a user-created Bev until it is relabelled); write
+\[
+\mathrm{leaf}(b) = \code{leaf\_category\_id} \mathbin{??} \code{category\_id},
+\]
+the leaf when there is one and the root otherwise. Write $\depth(x)$ for the depth of a node and $\lca(x, y)$ for the lowest common ancestor. Depth is measured from an implicit root above the 15 roots: the implicit root has depth $0$, a root category depth $1$ and a leaf depth $2$ (\code{treeSimilarity}, and the \code{treeDepth} line of the vectors' header). Two Bevs under different roots therefore meet only at the implicit root and have $\simi_T = 0$; sibling leaves under one root have $\simi_T = 2 \cdot 1/(2 + 2) = 0.5$; a leaf against its own root (one Bev placed on the parent) has $2 \cdot 1/(2 + 1) = 2/3$; the same leaf, or the same unsplit root, has $1$.
 
 \begin{definition}[Tree similarity, Wu--Palmer]
 \begin{equation}\label{eq:wp}
-\simi_T(b, b') = \frac{2\,\depth(\lca(\cat(b), \cat(b')))}{\depth(\cat(b)) + \depth(\cat(b'))} \in [0, 1],
+\simi_T(b, b') = \frac{2\,\depth(\lca(\mathrm{leaf}(b), \mathrm{leaf}(b')))}{\depth(\mathrm{leaf}(b)) + \depth(\mathrm{leaf}(b'))} \in [0, 1],
 \end{equation}
-equal to $1$ for the same leaf and decreasing as the common ancestor moves toward the root.
+equal to $1$ for the same leaf and decreasing as the common ancestor moves toward the root. The tree term is measured at the leaf while the content term \eqref{eq:sim} inside $w$ keeps the root (the edge job since \#132): handing the leaf to both would count the taxonomy twice inside $w$ and cost the content term its coarse same-shelf signal (Coca-Cola against Fanta would drop from $0.40$ to $0$ on its category term).
 \end{definition}
 
 \begin{definition}[Embedding and profile similarity]
@@ -524,11 +536,15 @@ Both similarities are symmetric and lie in $[0, 1]$.
 \begin{equation}\label{eq:w}
 w(b, b') = \alpha\, \simi_T + \beta\, \simi + \delta\, \simi_{\mathrm{emb}} + \eta\, \simi_{\mathrm{prof}} + \gamma\, \simi_{\mathrm{cop}}, \qquad \alpha + \beta + \delta + \eta + \gamma = 1,
 \end{equation}
-every term evaluated at $(b, b')$, with the content similarity $\simi$ of \eqref{eq:sim} and the learned \emph{co-preference} term $\simi_{\mathrm{cop}}$: the cosine of the two Bevs' vectors of z-scores over their common raters, $0$ while fewer than $3$ users have ranked both. Decided 2026-10-14: the first version uses $(\alpha, \beta, \delta, \eta, \gamma) = (0.25, 0.15, 0.30, 0.30, 0)$ and switches $\gamma$ on (renormalising the others) once co-raters exist. Weights are computed over a candidate set, the union of same category, same brand and the $50$ nearest by embedding cosine (\code{scripts/graph/build-edges.ts}); each term is rounded to six decimals before $w$ is formed, so the stored components reproduce the stored weight exactly. A pair is kept when either endpoint ranks it among its $K_E = \textsc{edge\_top\_k} = 20$ heaviest with $w \ge \textsc{edge\_min\_weight} = 0.3$ (\code{topEdges}; ties on $w$ go to the smaller id in code-point order, which for lowercase-hex uuids is also \code{uuid} byte order and \code{collate "C"}), so a popular Bev can have more than $20$ incident edges. A pair with no stored edge falls back to $\simi_T$ alone (M-21).
+every term evaluated at $(b, b')$, with the content similarity $\simi$ of \eqref{eq:sim} and the learned \emph{co-preference} term
+\[
+\simi_{\mathrm{cop}}(b, b') = \max\bigl(0,\ \cosim\bigl((z_{v,b})_{v \in V},\ (z_{v,b'})_{v \in V}\bigr)\bigr), \qquad V = R^{-1}(b) \cap R^{-1}(b'),
+\]
+and $\simi_{\mathrm{cop}} = 0$ while $\abs{V} < 3$. As built in A-16~(2) (\#133): $z_{v,b}$ is $v$'s z-score from all of $v$'s rankings (\code{zScoresFromRankings}), only active Bevs contribute, and the value is stored in \code{bev\_edges.components.cop} while $\gamma = \code{EDGE\_WEIGHTS.cop}$ is still $0$, so no stored weight depends on it yet. Ruling (2026-10-31): a negative cosine is clamped to $0$ rather than mapped through $(1 + r)/2$, so that $0$ always means ``no evidence of similarity'', the same convention as $\simi_{\mathrm{emb}}$; under $(1+r)/2$ an uncorrelated pair would score $0.5$, and the term would add weight to pairs about which the data says nothing. Decided 2026-10-14: the first version uses $(\alpha, \beta, \delta, \eta, \gamma) = (0.25, 0.15, 0.30, 0.30, 0)$ and switches $\gamma$ on (renormalising the others) once co-raters exist. \emph{When $\gamma$ is switched on.} Renormalising the other four weights by $(1 - \gamma)$ shrinks every pair without positive co-preference evidence, which today is almost every pair (a median of one co-rater per pair, \#122), by the fraction $\gamma$. The switch must therefore re-derive the $0.3$ floor and the sanity bounds below ($w \ge 0.8$ for Coca-Cola--Pepsi, $w < 0.4$ for Coca-Cola--LaCroix), or it prunes edges for lack of data rather than lack of similarity. Before switching, consider a significance weight $\min(1, \abs{V}/5)$ on $\simi_{\mathrm{cop}}$, as Layer~2 weights users \eqref{eq:usersim}, and a candidate arm for pairs co-rated by at least $3$ users, which the candidate set below can miss; and move \code{copSimilarity} from \code{scripts/graph/edges-core.ts} into \code{edges.ts} with golden vectors, like the other four terms. Each of these is a \code{RANKING\_VERSION} bump. Weights are computed over a candidate set, the union of same category, same brand and the $50$ nearest by embedding cosine (\code{scripts/graph/build-edges.ts}); each term is rounded to six decimals before $w$ is formed, so the stored components reproduce the stored weight exactly. A pair is kept when either endpoint ranks it among its $K_E = \textsc{edge\_top\_k} = 20$ heaviest with $w \ge \textsc{edge\_min\_weight} = 0.3$ (\code{topEdges}; ties on $w$ go to the smaller id in code-point order, which for lowercase-hex uuids is also \code{uuid} byte order and \code{collate "C"}), so a popular Bev can have more than $20$ incident edges. A pair with no stored edge falls back to $\simi_T$ alone in anchored placement (M-21); Layer~1's edges mode gives it $0$ instead \eqref{eq:simE}.
 \end{definition}
 
 \begin{example}[Coca-Cola and Pepsi]
-Same leaf (cola) gives $\simi_T = 1$; content gives $0.5$ (same category and price tier, different brands, no shared flavour tokens); two colas embed close together, $\simi_{\mathrm{emb}}$ near $0.9$; identical profiles give $\simi_{\mathrm{prof}} = 1$. Hence $w \approx 0.25 + 0.075 + 0.27 + 0.30 \approx 0.90$. For Coca-Cola and a plain sparkling water the tree, content and profile terms all fall (different leaf, no shared tokens, different base and sweetness), and $w$ drops below $0.4$. The content term alone would have put the two colas at $0.5$, which is why the embedding and profile terms were added. These are the golden-vector figures ($0.895$ and $0.315$, \code{edges.vectors.json}). The first real run against prod (2026-10-24, \#121; $383$ Bevs embedded with \code{gte-small}, $4669$ edges stored) measured Coca-Cola--Pepsi $w = 0.9001$ and Coca-Cola--LaCroix Lime $w = 0.3809$, both inside the sanity bounds $w \ge 0.8$ and $w < 0.4$ that the job prints. With a flat taxonomy the second bound holds only while the embedding cosine of that pair stays at or below $0.88$; the measured weight corresponds to a cosine of about $0.82$.
+Same leaf (cola) gives $\simi_T = 1$; content gives $0.5$ (same category and price tier, different brands, no shared flavour tokens); two colas embed close together, $\simi_{\mathrm{emb}}$ near $0.9$; identical profiles give $\simi_{\mathrm{prof}} = 1$. Hence $w \approx 0.25 + 0.075 + 0.27 + 0.30 \approx 0.90$. For Coca-Cola and a plain sparkling water the tree, content and profile terms all fall (different leaf, no shared tokens, different base and sweetness), and $w$ drops below $0.4$. The content term alone would have put the two colas at $0.5$, which is why the embedding and profile terms were added. These are the golden-vector figures ($0.895$ and $0.315$, \code{edges.vectors.json}). The first real run against prod (2026-10-24, \#121; $383$ Bevs embedded with \code{gte-small}, $4669$ edges stored) measured Coca-Cola--Pepsi $w = 0.9001$ and Coca-Cola--LaCroix Lime $w = 0.3809$, both inside the sanity bounds $w \ge 0.8$ and $w < 0.4$ that the job prints. Coca-Cola and LaCroix sit under different roots, so their tree term is $0$ with or without the hierarchy, and the second bound holds only while their embedding cosine stays at or below $0.88$; the measured weight corresponds to a cosine of about $0.82$. Measuring $\simi_T$ at the leaf (\#132) changes no formula and leaves both figures unchanged (Coca-Cola and Pepsi share the leaf \emph{cola}); the weights that move are those of pairs under one root on different leaves, which lose exactly $\alpha(1 - 0.5) = 0.125$, and of a leaf against its own root, which lose $\alpha/3 \approx 0.083$.
 \end{example}
 
 \paragraph{Profiles for user-created Bevs (D-11, decided 2026-10-19).} A Bev with no hand-labelled profile copies the profile of the nearest seeded Bev in the same category by embedding cosine (brand match, then id, as tie-breaks), marked \emph{inferred} with its source and the cosine, provided the cosine is at least $0.6$; below that no profile is written and the Bev's $\simi_{\mathrm{prof}}$ term is $0$, so it is weighed by the tree, content and embedding terms alone (\code{infer\_bev\_flavor\_profile}, 20261023000200).
@@ -704,7 +720,7 @@ The ranking relation is a partial function $U \times B \rightharpoonup [0, 10]$:
 \end{implnote}
 
 \begin{implnote}[Streak history in SQL]\label{impl:streak}
-\code{touch\_streak} (20261011000700) recomputes $D_u$ from \code{rankings.ranked\_at}. A re-rank deletes the row and re-inserts it with \code{ranked\_at = now()}, and a removal deletes it, so the original day leaves $D_u$ whenever it held no other ranking; \code{feed\_events} cascades on the same delete, and \code{comparisons} rows exist only when a question was asked. Section~\ref{sec:rank} counts ranking events, so after such a re-rank or removal the SQL current and longest streaks can be shorter than the specification's. Fix: an append-only ranking-event log (user, Bev, kind, timestamp) written by \code{submit\_ranking} and \code{rerank\_bev} and never deleted, which \code{touch\_streak} reads; the \code{streakFromTimestamps} cases of \code{streak.vectors.json} are its test.
+\code{touch\_streak} (20261011000700) recomputes $D_u$ from \code{rankings.ranked\_at}. A re-rank deletes the row and re-inserts it with \code{ranked\_at = now()}, and a removal deletes it, so the original day leaves $D_u$ whenever it held no other ranking; \code{feed\_events} cascades on the same delete, and \code{comparisons} rows exist only when a question was asked. Section~\ref{sec:rank} counts ranking events, so after such a re-rank or removal the SQL current and longest streaks can be shorter than the specification's. Fix: an append-only ranking-event log (user, Bev, kind, timestamp) written by \code{submit\_ranking} and \code{rerank\_bev} and never deleted, which \code{touch\_streak} reads; the \code{streakFromTimestamps} cases of \code{streak.vectors.json} are its test, and since 1.4.0 two of them are written as events (a re-ranked day and a removed day that must still count).
 \end{implnote}
 
 \begin{implnote}[Comparison log]\label{impl:logcheck}
@@ -712,7 +728,7 @@ The ranking relation is a partial function $U \times B \rightharpoonup [0, 10]$:
 \end{implnote}
 
 \begin{implnote}[Stored precision]\label{impl:precision}
-Stored scores are exact (\code{numeric(4,2)} is cents$/100$). Aggregates are rounded on storage: \code{bev\_stats.avg\_score}, \code{score\_stddev} and \code{bayes\_score} to two decimals; \code{user\_stats}, \code{user\_category\_stats} and \code{global\_stats.mean\_score} to three. \code{bayes\_score} is computed from the exact \code{sum\_score}, not from the rounded mean. The live leaderboard, feed and Explore figures are unrounded \code{numeric}; \code{bev\_of\_period\_at} returns two decimals. The prediction snapshot computes user statistics live, so the client's z-scores are exact. The golden vectors are compared unrounded at $10^{-6}$ in TypeScript and at column scale in pgTAP.
+Stored scores are exact (\code{numeric(4,2)} is cents$/100$). Aggregates are rounded on storage: \code{bev\_stats.avg\_score}, \code{score\_stddev} and \code{bayes\_score} to two decimals; \code{user\_stats}, \code{user\_category\_stats} and \code{global\_stats.mean\_score} to three. \code{bayes\_score} is computed from the exact \code{sum\_score}, not from the rounded mean. The live leaderboard, feed and Explore figures are unrounded \code{numeric}; \code{bev\_of\_period\_at} returns two decimals. The prediction snapshot computes user statistics live, so the client's z-scores are exact. The golden vectors are compared unrounded at $10^{-6}$ in TypeScript and at column scale in pgTAP. Since 1.4.0 the \code{bayesScoreStored} cases of \code{bayesian.vectors.json} pin the stored figure itself: inputs whose exact result lies on a half cent ($5.925$, $5.945$, $5.895$), with the value \code{numeric(4,2)} must hold computed by integer arithmetic, because rounding the double (e.g.\ $5.92499\ldots$) would give the other cent.
 \end{implnote}
 
 \begin{implnote}[What pgTAP checks against the vectors]\label{impl:vectors}
@@ -731,7 +747,8 @@ Version & Date & Change \\
 1.0.0 & 2026-10-09 & First vectors: bands 7/4, placement, exact cents, statistics, Bayesian average, rank points, streaks \\
 1.1.0 & 2026-10-11 & Prediction snapshot, Layers 1--2, blend, exploration, starter set \\
 1.2.0 & 2026-10-14 & Bev-graph edge weights: tree \eqref{eq:wp}, profile \eqref{eq:prof} and embedding similarity, $w$ \eqref{eq:w}, top-$K_E$ selection, as \code{edges.vectors.json} (M-24); earlier vectors unchanged apart from the header \\
-1.3.0 & 2026-10-24 & Taste formulas of Section~\ref{sec:tastegraph} (M-28): Pearson over the common subset \eqref{eq:pearson}, taste vectors \eqref{eq:taste}, attribute similarity, the blend \eqref{eq:blendsim}, neighbour selection and reliability, as \code{graph.vectors.json}. Layer~2 gains \code{userSimilarity: 'pearson'}, default \code{'cosine'}, so live predictions are unchanged; $w$ is unchanged. Fix: leaderboard and starter-set names now compare by Unicode code point as Section~\ref{sec:bayes} specifies, which resolves Implementation note~\ref{impl:codepoints} (they compared UTF-16 code units, which put astral characters before U+E000--U+FFFF), with one new \code{leaderboardOrder} vector; ASCII names, hence every catalogue name, order as before. Earlier vectors unchanged apart from the header; current \\
+1.3.0 & 2026-10-24 & Taste formulas of Section~\ref{sec:tastegraph} (M-28): Pearson over the common subset \eqref{eq:pearson}, taste vectors \eqref{eq:taste}, attribute similarity, the blend \eqref{eq:blendsim}, neighbour selection and reliability, as \code{graph.vectors.json}. Layer~2 gains \code{userSimilarity: 'pearson'}, default \code{'cosine'}, so live predictions are unchanged; $w$ is unchanged. Fix: leaderboard and starter-set names now compare by Unicode code point as Section~\ref{sec:bayes} specifies, which resolves Implementation note~\ref{impl:codepoints} (they compared UTF-16 code units, which put astral characters before U+E000--U+FFFF), with one new \code{leaderboardOrder} vector; ASCII names, hence every catalogue name, order as before. Earlier vectors unchanged apart from the header \\
+1.4.0 & 2026-10-31 & Layer~1 edges mode (M-27~(a)): \code{bevSimilarity: 'edges'} reads the stored weights of \code{bev\_edges} from the snapshot's optional \code{edges} field as \eqref{eq:simE}, $0$ for a pair without an edge; a snapshot without the field falls back to \eqref{eq:sim}. The default \code{'content'} is byte-identical to 1.3.0. New golden cases, no other formula change: \code{layer1} in \code{edges.vectors.json} (an edge, no edge, either orientation, the missing field, the default ignoring the field); \code{bayesScoreStored} and the Example~\ref{ex:59} case in \code{bayesian.vectors.json}; two \code{streakFromTimestamps} cases written as ranking events. $w$ is unchanged. Earlier vectors unchanged apart from the header; current \\
 (next) & --- & Anchored placement (Section~\ref{sec:anchored}) when adopted; requires a bump and new vectors \\
 \bottomrule
 \end{tabular}
@@ -741,7 +758,7 @@ Version & Date & Change \\
 
 \section{Constants}\label{app:constants}
 
-All values from \code{packages/ranking/src/constants.ts}, \code{RANKING\_VERSION} 1.3.0.
+All values from \code{packages/ranking/src/constants.ts}, \code{RANKING\_VERSION} 1.4.0.
 
 \begin{center}
 \small
@@ -752,7 +769,7 @@ Constant & Value & Role \\
 \code{BANDS} & $[0,4]$, $[4,7]$, $[7,10]$ & Score bands for \textsc{disliked}, \textsc{fine}, \textsc{loved}; the first two exclude their top edge \\
 \code{SIGMA\_FLOOR} & 1.0 & Floor on any standard deviation used for z-scores \\
 \code{MIN\_N\_USER} & 3 & Below this a user's z-scores use global statistics; predictions withheld \\
-\code{MIN\_N\_CAT} & 3 & Below this \code{effectiveCategoryStats} falls back to the user's overall statistics; exported and in the vectors, but the product shows raw category means (Section~\ref{sec:taste}) \\
+\code{MIN\_N\_CAT} & 3 & Below this \code{effectiveCategoryStats} falls back to the user's overall statistics; exported and in the vectors; the product shows raw category means (Section~\ref{sec:taste}), and it is kept as a display helper and for the evaluation's per-category baseline (M-22) \\
 \code{GLOBAL\_FALLBACK} & $(5.0, 2.5)$ & Only when the system has no rankings \\
 \code{K\_AFF} & 2 & Shrinkage of category affinity \\
 \code{K\_G} & 3 & Shrinkage of a Bev's normalised global score \\
@@ -760,7 +777,7 @@ Constant & Value & Role \\
 \code{BAYES\_CATEGORY\_PRIOR\_MIN} & 30 & Rankings a category needs before its own mean is the prior \\
 \code{MIN\_RATERS} & 2 & Leaderboard eligibility \\
 \code{SIM\_WEIGHTS} & 0.40 / 0.30 / 0.20 / 0.10 & Category, brand, flavour tokens, price tier \\
-\code{SIM\_MIN} & 0.1 & Pairs below this are dropped \\
+\code{SIM\_MIN} & 0.1 & Pairs below this are dropped; applies to $\simi_E$ \eqref{eq:simE} too \\
 \code{PRICE\_TIER\_SPAN} & 3 & Largest $\abs{\mathrm{tier} - \mathrm{tier}'}$ (tiers 1--4) \\
 \code{LAYER1\_WEIGHTS} & 0.40 / 0.40 / 0.20 & Affinity, content, global \\
 \code{CONF1\_USER\_N},\newline \code{CONF1\_MASS} & 10, 4 & Layer 1 confidence saturation \\
@@ -822,7 +839,9 @@ $\simi(b, b')$ & Content similarity; $\simi'(u, v)$ significance-weighted user s
 $\rho, \rho', t_u, \simi_A, \simi_B$ & Pearson and shrunk Pearson user similarity, taste vector, attribute and blended user similarity (Section~\ref{sec:tastegraph}) \\
 $\zhat^{(1)}, \zhat^{(2)}, \zhat$ & Layer 1, Layer 2 and blended predictions in z-units; $\shat$ in score units \\
 $\lambda, \supp, \conf$ & Blend weight, neighbour support, confidence \\
-$\simi_T, w$ & Tree similarity and Bev-graph edge weight (Section~\ref{sec:anchored}) \\
+$\mathrm{leaf}(b)$ & The Bev's leaf category, or its root when it has none (Section~\ref{sec:anchored}) \\
+$\simi_T, \simi_{\mathrm{cop}}, w$ & Tree similarity, co-preference and Bev-graph edge weight (Section~\ref{sec:anchored}) \\
+$\simi_E$ & Stored edge weight as Layer~1's similarity in edges mode \eqref{eq:simE} \\
 $A, G, k, g$ & Anchors, gap, and their sizes in anchored placement \\
 $\hot(p, t)$ & Time-decayed popularity of a post (eq.~\ref{eq:hot}) \\
 \bottomrule

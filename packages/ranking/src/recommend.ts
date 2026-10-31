@@ -4,6 +4,7 @@ import { EPSILON, JITTER_SD, LAYER1_WEIGHTS } from './constants.ts';
 import { snapshotContext } from './context.ts';
 import { predictScore } from './blend.ts';
 import { explorationSlots, gaussian, weightedSample } from './explore.ts';
+import { bevSimilarityKind } from './layer1.ts';
 import { userSimilarityKind } from './layer2.ts';
 import { createPrng } from './prng.ts';
 import { categoryAffinity } from './stats.ts';
@@ -53,14 +54,20 @@ function median(xs: readonly number[]): number {
  * Unfilled slots (small pool) fall back to normal picks; exploration picks are tagged and never
  * repeated among the normal picks.
  *
- * `opts.userSimilarity` is Layer 2's (default 'cosine', the live engine); nothing else depends on it.
+ * `opts.userSimilarity` is Layer 2's (default 'cosine', the live engine) and `opts.bevSimilarity`
+ * Layer 1's (default 'content'; 'edges' reads `snapshot.edges`, see `layer1`). Both only change the
+ * predictions; candidates, the jitter draws, the exploration pool and the reason rule read those
+ * predictions the same way in every mode. In edges mode `content` is exactly 0 for a candidate
+ * with no stored edge to the user's ranked Bevs; SIMILAR can then still win, at 0, when CATEGORY < 0
+ * and NEIGHBOURS, POPULAR ≤ 0 (the reason rule's existing "largest term, ties in order" behaviour,
+ * unchanged here).
  */
 export function recommend(snapshot: PredictionSnapshot, userId: UserId, opts: RecommendOptions): Recommendation[] {
   const ctx = snapshotContext(snapshot);
   if (!Number.isInteger(opts.n) || opts.n < 0) throw new RangeError(`n must be a non-negative integer, got ${opts.n}`);
   const epsilon = opts.epsilon ?? EPSILON;
   if (!(epsilon >= 0 && epsilon <= 1)) throw new RangeError(`epsilon must be in [0, 1], got ${epsilon}`);
-  const predictOpts = { userSimilarity: userSimilarityKind(opts) };
+  const predictOpts = { userSimilarity: userSimilarityKind(opts), bevSimilarity: bevSimilarityKind(opts) };
 
   const ranked = ctx.z.get(userId) ?? new Map<BevId, number>();
   const excluded = new Set(opts.excludeBevIds ?? []);
