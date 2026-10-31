@@ -40,9 +40,9 @@ The decision (2026-10-19): Neo4j holds Bevs, categories, brands and flavours as 
 
 | Task | Waits on (Matt) | What you build |
 |---|---|---|
-| **A-13 · Category hierarchy** | **D-04**: Matt's tree **plus the 378-Bev leaf assignment** | `categories.parent_id` (and depth) in Postgres, `CHILD_OF` in Neo4j, `Category.parentId` in the contract. The age gate walks up to the alcoholic ancestor (`category_is_alcoholic(id)`). Reassign the catalog Bevs to their leaves through `data/catalog`. Re-run the sync so the tree term uses the hierarchy |
-| **A-14 follow-ups** | M-22's list of SQL corrections, if any | Small SQL fixes, with pgTAP |
-| **A-16 (2) · The taste graph** | **M-28**: Matt's taste formulas in `packages/ranking/src/graph.ts` | `RANKED` edges with stable HMAC pseudonyms, **updated on every ranking** (async webhook) plus the nightly re-check. Taste neighbours in `user_neighbors` (RLS: owner-only select) and the co-rating `cop` term. Measured against #87's decision bar with Matt's M-26 harness |
+| **A-13 · Category hierarchy** — **done in #132**, contract `2.8.0` | ~~D-04~~ merged as #127 | `categories.parent_id` and `bevs.leaf_category_id` in `20261026000100`, the catalog re-pointed in `20261026000200`, `category_is_alcoholic(id)` walking up one hop, `get_category_tree()` and `get_bev_leaves()`. **`bevs.category_id` still holds one of the 15 roots** — the app keys exhaustive `Record<CategoryId, …>` maps off those ids, so the leaf is a new nullable column instead. The tree term in `build-edges.ts` now measures at the leaf, the content term at the root. `CHILD_OF` stays with the deferred Neo4j mirror |
+| **A-14 follow-ups** | M-22's list of SQL corrections, if any | Small SQL fixes, with pgTAP. **Still open, and two are wrong on prod today:** the streak history rewritten by re-ranks and removals, and `bev_stats.bayes_score` going stale at `rating_count = 0` |
+| **A-16 (2) · The taste graph** — **done in #133**, Postgres-only | ~~M-28~~ merged as #131 | `user_neighbors` (RLS on, no client policy) in `20261026000300`, `scripts/graph/build-neighbours.ts` and `graph-neighbours.yml` nightly, plus the `cop` term stored in `bev_edges.components`. **No HMAC pseudonyms and no `RANKED` mirror** — both belong to the deferred Neo4j steps, as in A-16 (1). **No per-ranking webhook:** one new ranking moves the global mean, so every pair changes and there is no incremental update smaller than the rebuild. **Stage 4 is the follow-up** (`get_prediction_snapshot` + `layer2` reading `userNeighbors`); it touches Matt's lane, so the contract is agreed first |
 
 ## Later: P2, after P0 and P1
 
@@ -75,13 +75,13 @@ The decision (2026-10-19): Neo4j holds Bevs, categories, brands and flavours as 
 ```
 Matt                                   Arjun
 M-19 Taste Profile ──── ready
-D-04 taxonomy + 378 assignments ─────▶ A-13 hierarchy ─────────────┐
+D-04 taxonomy + 378 assignments ─────▶ A-13 hierarchy (#132) ──────┐
 M-22 maths review ───(SQL fixes)─────▶ A-14 follow-ups (#107 first) │
                                        M-26 export ──(file)──▶ Matt │
 M-04 Explore UI ◀──────────────────── S-04 + A-04 Explore backend   │
 M-27 graph in recs ◀───────────────── A-16 (1) Bev graph + S-14 (2) │
 M-21 placement ◀────────────────────── A-16 (1) + A-13 ◀────────────┘
-M-28 taste formulas ─────────────────▶ A-16 (2) taste graph
+M-28 taste formulas ──(#131)─────────▶ A-16 (2) taste graph (#133) ──▶ Stage 4
 M-16 map UI ◀───────────────────────── S-10 + A-08 venues (P2)
 M-20 duplicate step ◀───────────────── S-13 + A-12 duplicates (P2)
 ```

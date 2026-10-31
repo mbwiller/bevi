@@ -367,8 +367,34 @@ test("every stored row satisfies edgeWeight(components) === weight", () => {
   for (const p of weighed) {
     assert.equal(edgeWeight(p.components), p.weight, `${p.src}|${p.dst}`);
     assert.deepEqual(Object.keys(p.components).sort(), ["content", "cop", "emb", "profile", "tree"]);
-    assert.equal(p.components.cop, 0); // gamma = 0 in v1; co-rating is A-16 (2)
+    assert.equal(p.components.cop, 0); // no coRaters in this context, so no cop term
   }
+});
+
+test("weighPair stores the cop term as the clamped COSINE of co-raters' z, and it moves no weight while gamma = 0", () => {
+  const u = ["00000000-0000-4000-8000-0000000000a1", "00000000-0000-4000-8000-0000000000b2", "00000000-0000-4000-8000-0000000000c3"];
+  const base = context({
+    profiles: { [ID.coke]: cola, [ID.pepsi]: cola },
+    embeddings: { [ID.coke]: AXIS, [ID.pepsi]: atCosine(0.9) },
+  });
+  // Three raters who all rate both above their own means: cosine 0.94, where
+  // Pearson (re-centred per Bev) would say -1 and clamp to 0.
+  const coRaters = new Map([
+    [ID.coke, new Map([[u[0]!, 1.0], [u[1]!, 0.8], [u[2]!, 1.2]])],
+    [ID.pepsi, new Map([[u[0]!, 0.9], [u[1]!, 1.1], [u[2]!, 0.7]])],
+  ]);
+  const p = weighPair(ID.coke, ID.pepsi, { ...base, coRaters });
+  assert.equal(p.components.cop, round6(2.62 / Math.sqrt(3.08 * 2.51)));
+  assert.equal(p.components.cop, 0.9423);
+  assert.equal(p.weight, weighPair(ID.coke, ID.pepsi, base).weight, "EDGE_WEIGHTS.cop is 0");
+  assert.equal(edgeWeight(p.components), p.weight);
+
+  // Opposite co-preference clamps to 0 rather than reaching edgeWeight's unit() check.
+  const opposed = new Map([
+    [ID.coke, new Map([[u[0]!, 1.0], [u[1]!, 0.8], [u[2]!, 1.2]])],
+    [ID.pepsi, new Map([[u[0]!, -1.0], [u[1]!, -0.8], [u[2]!, -1.2]])],
+  ]);
+  assert.equal(weighPair(ID.coke, ID.pepsi, { ...base, coRaters: opposed }).components.cop, 0);
 });
 
 test("Coca-Cola <-> Pepsi reproduces the 10.1 worked example at 0.895", () => {
