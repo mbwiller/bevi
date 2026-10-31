@@ -3,7 +3,7 @@
  * rows Postgres returned" and "the rows `replace_user_neighbors` takes".
  *
  * NO FORMULA LIVES HERE. `zScoresFromRankings`, `tasteCatalog`, `tasteVector`,
- * `blendUserSimilarity`, `topUserNeighbours` and `pearsonCorrelation` are all
+ * `blendUserSimilarity` and `topUserNeighbours` are all
  * M-28's, in `packages/ranking/src/graph.ts` (#131). This file decides which
  * pairs to ask about, in which order, and how the answers become table rows --
  * the same division `edges-core.ts` keeps against `edges.ts`, and the reason
@@ -30,11 +30,43 @@ import type { BevId, NeighbourMethod, TasteBev, TasteCatalog, TasteVector, UserI
 // What the job reads out of Postgres
 // ---------------------------------------------------------------------------
 
-/** One row of `ranking_z_inputs()` (20261026000300). `score` is already a float8. */
+/**
+ * One row of `ranking_z_inputs()` (20261026000300). `score` is already a
+ * float8. EVERY ranking is returned, whatever the Bev's status, because a
+ * z-score's mu and sigma come from all of them -- `active` says whether the
+ * Bev may also be a co-rated Bev. See `activeZScores`.
+ */
 export interface RankingRecord {
   userId: UserId;
   bevId: BevId;
   score: number;
+  /** `bevs.status = 'active'`. False for `pending_photo`, `hidden` and `merged`. */
+  active: boolean;
+}
+
+/** One row of `ranking_z_inputs()` exactly as PostgREST returns it. */
+export interface RankingZRow {
+  user_id: string;
+  bev_id: string;
+  score: number;
+  active: boolean;
+}
+
+/**
+ * `ranking_z_inputs()` rows as `RankingRecord`s, for both jobs. `active` must
+ * be a real boolean: a missing column (the function from before it returned
+ * one) would otherwise read as "every Bev is inactive" and silently empty
+ * both the taste vectors and the cop term, so it throws instead.
+ */
+export function rankingRecords(rows: readonly RankingZRow[]): RankingRecord[] {
+  return rows.map((r) => {
+    if (typeof r.active !== "boolean") {
+      throw new TypeError(
+        `ranking_z_inputs row (${r.user_id}, ${r.bev_id}) has active = ${JSON.stringify(r.active)}, expected a boolean`,
+      );
+    }
+    return { userId: r.user_id, bevId: r.bev_id, score: Number(r.score), active: r.active };
+  });
 }
 
 /**
@@ -62,6 +94,38 @@ export interface NeighbourRow {
  * as an accident.
  */
 const cmp = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
+
+// ---------------------------------------------------------------------------
+// z-scores: from every ranking, kept for active Bevs only
+// ---------------------------------------------------------------------------
+
+/**
+ * Each user's z-scores for ACTIVE Bevs, computed from ALL their rankings.
+ *
+ * Two steps, and the split between them is the point. `zScoresFromRankings` is
+ * called once with every row, active or not (#131's contract), so each user's
+ * mu and sigma and the global stats are exactly the ones
+ * `get_prediction_snapshot` builds: its `ranked` CTE has no status filter.
+ * Then each user's map is cut down to active Bevs, matching the snapshot's
+ * `rankings` array, which only carries rows for `visible` (active) Bevs. So a
+ * hidden Bev's ranking still moves its rater's other z-scores, as it does in
+ * Layer 2, but is never a co-rated Bev: not in `tasteVector`, not in
+ * `blendUserSimilarity`'s common set, not in `coRatersByBev`.
+ *
+ * A user whose every ranking is of an inactive Bev is dropped: their map would
+ * be empty, so they have no taste vector and nothing to pair on.
+ */
+export function activeZScores(rankings: readonly RankingRecord[]): Map<UserId, Map<BevId, number>> {
+  const active = new Set<string>();
+  for (const r of rankings) if (r.active) active.add(`${r.userId}|${r.bevId}`);
+  const all = zScoresFromRankings(rankings);
+  const out = new Map<UserId, Map<BevId, number>>();
+  for (const [u, scores] of all) {
+    const kept = new Map([...scores].filter(([b]) => active.has(`${u}|${b}`)));
+    if (kept.size > 0) out.set(u, kept);
+  }
+  return out;
+}
 
 // ---------------------------------------------------------------------------
 // Taste neighbours (the doc's Stage 3)
@@ -105,9 +169,9 @@ export function buildNeighbours(
   catalogBevs: readonly CatalogBevRecord[],
 ): NeighbourBuild {
   const catalog = tasteCatalog(catalogBevs);
-  // `zScoresFromRankings` wants every ranking and computes the global stats
-  // from the whole set, so it is called once with everything -- never per user.
-  const z = zScoresFromRankings(rankings);
+  // z from EVERY ranking (global and per-user stats over the whole set, called
+  // once, never per user), then restricted to active Bevs -- `activeZScores`.
+  const z = activeZScores(rankings);
 
   const users = [...z.keys()].sort(cmp);
   const vectors = new Map<UserId, TasteVector>();

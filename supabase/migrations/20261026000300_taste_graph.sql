@@ -270,6 +270,16 @@ comment on function public.replace_user_neighbors(jsonb, text) is
 --     attribute's coverage must not depend on who is asking. The age gate
 --     belongs where the neighbours are CONSUMED (Stage 4's snapshot RPC, which
 --     already filters on `viewer_is_adult()`), not where they are computed.
+--   * A ranking is included whatever the Bev's STATUS, too, with an `active`
+--     flag. The z-scores must be Layer 2's, and `get_prediction_snapshot`
+--     (20261012000600) computes every user's and the global mu and sigma from
+--     its `ranked` CTE, which has no status filter -- only its `rankings`
+--     array is cut down to `visible` (active) Bevs. So the job calls
+--     `zScoresFromRankings` on every row, then keeps only `active` Bevs as
+--     co-rated ones (`activeZScores` in scripts/graph/neighbours-core.ts). A
+--     `pending_photo`, `hidden` or `merged` Bev therefore moves its raters'
+--     z-scores, exactly as it does in Layer 2, but never contributes a
+--     co-rating to `user_neighbors` or to the cop term.
 --
 -- `score` is returned as a double, not the stored numeric: `zScoresFromRankings`
 -- throws on a non-finite score and PostgREST renders numeric as a JSON STRING,
@@ -279,34 +289,33 @@ create or replace function public.ranking_z_inputs()
 returns table (
   user_id uuid,
   bev_id  uuid,
-  score   float8
+  score   float8,
+  active  boolean
 )
 language sql
 stable
 security definer
 set search_path = public, extensions
 as $$
-  -- Only rankings of a Bev that still exists and is active: a hidden or merged
-  -- Bev is not in `tasteCatalog`, so `tasteVector` would skip it anyway, and
-  -- including it here would shift the GLOBAL mean that every z-score is
-  -- measured against. Ordered so a run is reproducible and a diff of two runs
-  -- is readable.
-  select r.user_id, r.bev_id, r.score::float8
+  -- No status filter: see above. Ordered so a run is reproducible and a diff
+  -- of two runs is readable.
+  select r.user_id, r.bev_id, r.score::float8, b.status = 'active'
     from public.rankings r
     join public.bevs b on b.id = r.bev_id
-   where b.status = 'active'
    order by r.user_id, r.bev_id;
 $$;
 
 comment on function public.ranking_z_inputs() is
-  'A-16 (2): every ranking of an active Bev as (user_id, bev_id, score::float8), for zScoresFromRankings in the nightly taste-graph job. Not age-filtered: the job is the service role and coverage must not depend on a viewer. Service role only.';
+  'A-16 (2): every ranking, whatever the Bev''s status, as (user_id, bev_id, score::float8, active), for zScoresFromRankings in the nightly taste-graph job: mu and sigma come from all rankings, as in get_prediction_snapshot, and only active Bevs count as co-rated. Not age-filtered: the job is the service role and coverage must not depend on a viewer. Service role only.';
 
 -- ---------------------------------------------------------------------------
 -- 5. bev_co_rater_counts(int) -> which Bevs the cop term can speak about
 -- ---------------------------------------------------------------------------
 -- The co-preference term of eq. (18): `sim_cop(b, b')` is the cosine of the two
 -- Bevs' vectors of z-scores over their COMMON RATERS, 0 while fewer than 3
--- users have ranked both (LaTeX section 10.1). `EDGE_WEIGHTS.cop` is still 0,
+-- users have ranked both (LaTeX section 10.1) -- a cosine, not a Pearson
+-- correlation, because z is already centred per user -- and clamped at 0,
+-- the max(0, .) convention eq. (w) also applies to sim_emb. `EDGE_WEIGHTS.cop` is still 0,
 -- so switching it on is Matt's constant change and version bump; this
 -- migration and `build-edges.ts` only start COMPUTING and STORING the term, so
 -- that when he turns gamma on the number is already there and already
@@ -316,7 +325,9 @@ comment on function public.ranking_z_inputs() is
 -- the formula belongs in TypeScript: that is the standing rule for this
 -- pipeline (`@bevi/ranking` owns every float, SQL stores and orders). The job
 -- already holds every ranking from section 4, so this exists only to say which
--- Bevs are worth pairing at all -- the Bevs with at least MIN co-raters.
+-- Bevs are worth pairing at all -- the Bevs with at least MIN co-raters. It
+-- stays active-only, unlike section 4: it is only a gate, and an inactive Bev
+-- is never paired.
 --
 -- It is a separate function from section 4 so the job can skip it entirely
 -- while the catalog has no co-rated pairs, which is today.

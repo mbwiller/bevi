@@ -50,7 +50,6 @@ import {
   EDGE_TOP_K,
   EDGE_WEIGHTS,
   RANKING_VERSION,
-  zScoresFromRankings,
 } from "@bevi/ranking";
 import type { FlavorProfile } from "@bevi/ranking";
 import {
@@ -58,7 +57,7 @@ import {
   KNN_CANDIDATES,
   buildTaxonomy,
   bevFeatures,
-  coRatersByBev,
+  coRatersFromRankings,
   treeNodeOf,
   candidatePairs,
   edgeRows,
@@ -70,6 +69,8 @@ import {
   weighPairs,
 } from "./edges-core.ts";
 import type { BevRecord, CategoryRecord, NeighbourRecord, WeighContext, WeightedPair } from "./edges-core.ts";
+import { rankingRecords } from "./neighbours-core.ts";
+import type { RankingZRow } from "./neighbours-core.ts";
 
 // ---------------------------------------------------------------------------
 // The sanity report's thresholds (TASKS.md 1d, docs/graph.md)
@@ -252,12 +253,6 @@ interface NeighbourRow {
 interface CoRaterRow {
   bev_id: string;
   rater_count: number;
-}
-/** One row of `ranking_z_inputs()` (20261026000300); `score` is already a float8. */
-interface RankingZRow {
-  user_id: string;
-  bev_id: string;
-  score: number;
 }
 
 /**
@@ -467,10 +462,10 @@ async function main(): Promise<void> {
   const features = new Map(bevs.map((b) => [b.id, bevFeatures(b)]));
   // -- step 1 (continued): the cop term's input (A-16 (2)) ----------------
   // `sim_cop(b, b')` is the cosine of two Bevs' z-scores over their COMMON
-  // RATERS, 0 below 3 of them (LaTeX section 10.1). `EDGE_WEIGHTS.cop` is still
-  // 0, so this changes no weight -- it fills in `components.cop` so the number
-  // is already measured and inspectable when Matt renormalises and switches
-  // gamma on.
+  // RATERS, clamped at 0, and 0 below 3 of them (LaTeX section 10.1).
+  // `EDGE_WEIGHTS.cop` is still 0, so this changes no weight -- it fills in
+  // `components.cop` so the number is already measured and inspectable when
+  // Matt renormalises and switches gamma on.
   //
   // `bev_co_rater_counts` is read first and only to decide whether to bother:
   // below 3 rankings on a Bev the term is 0 for every pair it is in, so with
@@ -485,11 +480,11 @@ async function main(): Promise<void> {
     );
   } else {
     const rankingRows = await db.rpcRows<RankingZRow>("ranking_z_inputs", {});
-    // The same z-scores the taste graph uses, from the same function, so the
-    // two jobs can never disagree about what a user's z is.
-    coRaters = coRatersByBev(
-      zScoresFromRankings(rankingRows.map((r) => ({ userId: r.user_id, bevId: r.bev_id, score: Number(r.score) })))
-    );
+    // The same z-scores the taste graph uses, from the same functions, so the
+    // two jobs can never disagree about what a user's z is: computed from
+    // EVERY ranking (mu and sigma as `get_prediction_snapshot` has them), then
+    // restricted to active Bevs, so an inactive Bev is never a co-rated one.
+    coRaters = coRatersFromRankings(rankingRecords(rankingRows));
     console.log(
       `cop: ${coRated.length} Bev(s) with >= ${COP_MIN_CO_RATERS} raters, ${rankingRows.length} rankings read; ` +
         `sim_cop will be non-zero only for pairs sharing ${COP_MIN_CO_RATERS}+ raters ` +

@@ -8,7 +8,8 @@
  *
  * NOTHING HERE REIMPLEMENTS A FORMULA. `treeSimilarity`, `contentSimilarity`,
  * `embeddingSimilarity`, `profileSimilarity`, `edgeWeight` and `topEdges` all
- * come from @bevi/ranking (M-24, LaTeX 10.1 eqs. 16-18), together with
+ * come from @bevi/ranking (M-24, LaTeX 10.1 eqs. 16-18), as does the cop
+ * term's `cosineSimilarity` (Layer 2's, #131), together with
  * `normaliseBrand` and `flavorTokens`, which define what the content term's
  * brand equality and token set actually are. If a weight looks wrong, the bug
  * is in what this file FEEDS those functions, not in a copy of them.
@@ -18,16 +19,19 @@ import {
   EDGE_MIN_WEIGHT,
   EDGE_TOP_K,
   contentSimilarity,
+  cosineSimilarity,
   edgeWeight,
   embeddingSimilarity,
   flavorTokens,
   normaliseBrand,
-  pearsonCorrelation,
   profileSimilarity,
   topEdges,
   treeSimilarity,
 } from "@bevi/ranking";
 import type { BevFeatures, BevId, EdgeComponents, FlavorProfile, Taxonomy, UserId } from "@bevi/ranking";
+
+import { activeZScores } from "./neighbours-core.ts";
+import type { RankingRecord } from "./neighbours-core.ts";
 
 // ---------------------------------------------------------------------------
 // What the job reads out of Postgres
@@ -103,9 +107,9 @@ export interface WeighContext {
   embeddings: ReadonlyMap<string, readonly number[]>;
   /**
    * A-16 (2): bev id -> (user id -> that user's z for the Bev), from
-   * `coRatersByBev` below. The cop term of eq. (18) is
-   * computed from it; omitted, every pair's `cop` is 0, which is what every
-   * run before A-16 (2) stored.
+   * `coRatersFromRankings` below (active Bevs only, z from every ranking).
+   * The cop term of eq. (18) is computed from it; omitted, every pair's `cop`
+   * is 0, which is what every run before A-16 (2) stored.
    */
   coRaters?: ReadonlyMap<string, ReadonlyMap<string, number>>;
 }
@@ -129,30 +133,28 @@ export function round6(x: number): number {
 }
 
 // ---------------------------------------------------------------------------
-// The taxonomy, and what the tree term degenerates to today
+// The taxonomy: two levels since A-13, measured at each Bev's leaf
 // ---------------------------------------------------------------------------
 
 /**
  * The `Taxonomy` argument of `treeSimilarity`: a child -> parent map over the
  * rows of `public.categories`.
  *
- * TODAY EVERY VALUE IS `null`, because `categories` has no `parent_id` column
- * (20261009000200: `id, name, sort_order, is_alcoholic, emoji`). A-13 adds it
- * after D-04, and the only change needed here is that `parentId` starts
- * arriving non-null -- this function already passes it through.
+ * Since A-13 the map is TWO LEVELS: `parentId` is null on the 15 roots and the
+ * root's id on D-04's 60 leaves. Depth counts from an implicit root above the
+ * roots, so a root is at depth 1 and a leaf at depth 2, and Wu-Palmer gives
  *
- * With an all-`null` map `treeSimilarity` has every category at depth 1 under
- * the implicit root, so
+ *   same leaf (or same root)        -> 1
+ *   leaf against its own root       -> 2*1 / (2 + 1) = 0.667
+ *   sibling leaves under one root   -> 2*1 / (2 + 2) = 0.5
+ *   anything across two roots       -> 0
  *
- *   same category  -> 2*1 / (1 + 1) = 1
- *   any other pair -> 2*0 / (1 + 1) = 0        (their only common ancestor is
- *                                               the implicit root, depth 0)
- *
- * i.e. **the tree term degenerates to the `[same category]` indicator of
- * eq. (5)**, and contributes exactly 0.25 or 0. It is built from the rows
- * rather than passed as `{}` (which `treeSimilarity` treats identically) so
- * that the degeneracy is a property of today's DATA and visible in the log,
- * not a hard-coded assumption in the job.
+ * measured at each Bev's `treeNodeOf` node. A map with every parent null -- a
+ * caller that does not select `parent_id`, or a snapshot from before A-13 --
+ * puts every category at depth 1 and degenerates the term to the
+ * `[same category]` indicator of eq. (5); `taxonomyIsFlat` detects that so the
+ * job's log can say so. The map is built from the rows rather than hard-coded
+ * so that the shape is a property of the DATA and visible in the log.
  */
 export function buildTaxonomy(categories: readonly CategoryRecord[]): Taxonomy {
   const taxonomy: Record<string, string | null> = {};
@@ -209,14 +211,6 @@ export function splitPairKey(key: string): { src: string; dst: string } {
 // ---------------------------------------------------------------------------
 
 /**
- * `BevFeatures` for `contentSimilarity`, which reads only `categoryId`,
- * `brandKey`, `flavorTokens` and `priceTier` (eq. 5 / 8.8). The three
- * prediction fields it does not read (`ratingCount`, `mean`, `stddev`) are set
- * to 0 rather than fetched: this job never predicts a score, and pulling
- * `bev_stats` in to fill fields the formula ignores would invite someone to
- * start using them.
- */
-/**
  * The category node a Bev's TREE term is measured at (A-13): its leaf when it
  * has one, else its category.
  *
@@ -237,6 +231,14 @@ export function treeNodeOf(bev: BevRecord): string {
   return bev.leafCategoryId ?? bev.categoryId;
 }
 
+/**
+ * `BevFeatures` for `contentSimilarity`, which reads only `categoryId`,
+ * `brandKey`, `flavorTokens` and `priceTier` (eq. 5 / 8.8). The three
+ * prediction fields it does not read (`ratingCount`, `mean`, `stddev`) are set
+ * to 0 rather than fetched: this job never predicts a score, and pulling
+ * `bev_stats` in to fill fields the formula ignores would invite someone to
+ * start using them.
+ */
 export function bevFeatures(bev: BevRecord): BevFeatures {
   return {
     id: bev.id,
@@ -252,10 +254,12 @@ export function bevFeatures(bev: BevRecord): BevFeatures {
 }
 
 /**
- * The candidate set: **same category union same brand union the 50 nearest by
- * embedding cosine** (A-16 step 3). "Same category subtree" in the task text is
- * "same category" today, for the same reason the tree term degenerates: there
- * is no subtree until A-13.
+ * The candidate set: **same category subtree union same brand union the 50
+ * nearest by embedding cosine** (A-16 step 3). The subtree arm groups by
+ * `categoryId`, which is the Bev's ROOT since A-13 (its leaf is
+ * `leafCategoryId`), so one group is a whole two-level subtree: the root and
+ * every leaf under it. That is D-04's "same parent subtree" -- a cola and a
+ * root beer are candidates, and the tree term then scores them 0.5.
  *
  * Returns canonical pair keys, so the three arms are deduplicated by
  * construction and a pair found by two arms is weighted once.
@@ -267,8 +271,9 @@ export function bevFeatures(bev: BevRecord): BevFeatures {
  *
  * Cost: the first two arms are quadratic WITHIN a group. At the catalog's size
  * (378 Bevs, 15 categories, biggest brand a few dozen rows) that is a few
- * thousand pairs; it is the growth to watch if the catalog multiplies, and the
- * place where A-13's subtree arm will need a depth bound.
+ * thousand pairs; it is the growth to watch if the catalog multiplies. The
+ * taxonomy is two levels deep, so grouping by root needs no depth bound; a
+ * deeper taxonomy would need one here.
  */
 export function candidatePairs(
   bevs: readonly BevRecord[],
@@ -333,23 +338,26 @@ export const COP_MIN_CO_RATERS = 3;
 
 /**
  * `sim_cop(b, b')`: the cosine of two Bevs' z-score vectors over their common
- * raters, 0 below `COP_MIN_CO_RATERS` of them.
+ * raters, 0 below `COP_MIN_CO_RATERS` of them -- LaTeX 10.1, eq. (w).
  *
- * Reuses `pearsonCorrelation` from @bevi/ranking rather than writing a cosine:
- * the vectors are z-scores, which are already centred per USER, and the paper
- * asks for the cosine over common raters. Centring them again per BEV is what
- * makes the measure "do these two Bevs move together across the people who
- * rated both", independent of either Bev being generally liked -- the same
- * correction M-28 applied to the user-user case, and the reason the two agree.
+ * A COSINE, NOT A PEARSON. The z-scores are already centred per USER (each is
+ * `(s - mu_u) / sigma_u`), which is what makes this the adjusted cosine the
+ * paper defines. Re-centring them per BEV, as Pearson does, measures something
+ * else and breaks badly at the 3-rater floor: three users who all rate both
+ * Bevs above their own means, z_a = (1.0, 0.8, 1.2) and z_b = (0.9, 1.1, 0.7),
+ * have cosine 0.94 but Pearson -1, which would clamp to 0 -- "no evidence" for
+ * the strongest co-preference three raters can show. `cosineSimilarity` is the
+ * same function Layer 2 uses for its user-user term, and it returns 0 when
+ * either vector is all zeros.
  *
- * CLAMPED AT 0, which is a decision worth naming: a correlation is in [-1, 1],
- * `edgeWeight` requires every term in [0, 1] (`unit()` throws otherwise), and a
- * NEGATIVE co-preference -- the people who rate Coke highly rate this one
- * poorly -- is evidence of dissimilarity that eq. (18) has no way to express,
- * since it sums non-negative terms into a similarity. So negative becomes 0,
- * "no positive co-preference evidence", rather than being allowed to throw or
- * to be rescaled into a fake positive. Flagged for Matt in the PR: if the term
- * should instead be (1 + r)/2, that is a formula change in his lane.
+ * CLAMPED AT 0 (Matt's ruling on #133): sim_cop = max(0, cos), the same
+ * max(0, .) convention eq. (w) applies to sim_emb, so 0 always means "no
+ * evidence of similarity". A negative cosine -- the people who rate one Bev
+ * above their mean rate the other below it -- is not expressible in eq. (18),
+ * which sums non-negative terms (`edgeWeight`'s `unit()` throws outside
+ * [0, 1]). (1 + cos)/2 was rejected: it would lift w by gamma/2 the night a
+ * pair gets its third co-rater, whatever they think of it, and break the
+ * Coke-LaCroix < 0.4 bound once gamma is switched on.
  */
 export function copSimilarity(
   ratersA: ReadonlyMap<UserId, number>,
@@ -360,19 +368,23 @@ export function copSimilarity(
   // for its common Bevs.
   const common = [...ratersA.keys()].filter((u) => ratersB.has(u)).sort(cmp);
   if (common.length < COP_MIN_CO_RATERS) return 0;
-  const r = pearsonCorrelation(
+  const cos = cosineSimilarity(
     common.map((u) => ratersA.get(u) as number),
     common.map((u) => ratersB.get(u) as number),
   );
-  return r <= 0 ? 0 : Math.min(1, r);
+  // `Math.min` only guards floating-point drift past 1 on parallel vectors.
+  return cos <= 0 ? 0 : Math.min(1, cos);
 }
 
 /**
  * bev id -> (user id -> that user's z for the Bev), the input `copSimilarity`
- * takes, from the same `zScoresFromRankings` output the neighbour build uses.
+ * takes, from the same z-score map the neighbour build uses.
  *
  * Built once per run and handed to `weighPair` through `WeighContext.coRaters`,
  * so the cop term costs one map lookup per pair rather than a scan.
+ *
+ * Pass it ACTIVE-ONLY z-scores (`activeZScores`, or `coRatersFromRankings`
+ * below, which does both steps): every Bev in the input becomes a co-rated Bev.
  */
 export function coRatersByBev(z: ReadonlyMap<UserId, ReadonlyMap<BevId, number>>): Map<BevId, Map<UserId, number>> {
   const out = new Map<BevId, Map<UserId, number>>();
@@ -384,6 +396,18 @@ export function coRatersByBev(z: ReadonlyMap<UserId, ReadonlyMap<BevId, number>>
     }
   }
   return out;
+}
+
+/**
+ * `coRatersByBev` straight from `ranking_z_inputs()` rows: z-scores from EVERY
+ * ranking (so each user's mu/sigma and the global stats are the ones
+ * `get_prediction_snapshot` computes), then restricted to active Bevs before
+ * inverting -- see `activeZScores`. A hidden, merged or `pending_photo` Bev
+ * moves its raters' z-scores like any other ranking but is never a co-rated
+ * Bev itself.
+ */
+export function coRatersFromRankings(rankings: readonly RankingRecord[]): Map<BevId, Map<UserId, number>> {
+  return coRatersByBev(activeZScores(rankings));
 }
 
 /**
@@ -401,9 +425,9 @@ export function coRatersByBev(z: ReadonlyMap<UserId, ReadonlyMap<BevId, number>>
  *            filled the table reports low weights rather than failing.
  *   profile  `profileSimilarity` over `bev_flavor_profiles`. 0 when either is
  *            missing, including when D-11's inference declined below its 0.6 floor.
- *   cop      `copSimilarity` over the two Bevs' z-scores across their common
- *            raters (A-16 (2)), 0 below 3 of them and 0 when `ctx.coRaters` is
- *            absent. **It contributes nothing to the weight today**, because
+ *   cop      `copSimilarity`: the cosine of the two Bevs' z-scores across
+ *            their common raters, clamped at 0 (A-16 (2)); 0 below 3 of them
+ *            and 0 when `ctx.coRaters` is absent. **It contributes nothing to the weight today**, because
  *            `EDGE_WEIGHTS.cop` is still 0 -- switching gamma on renormalises
  *            the other four and is a constant change plus a RANKING_VERSION
  *            bump in Matt's lane. It is computed and STORED now so the number

@@ -389,11 +389,11 @@ reimplemented in the job or in SQL.
 
 | Term | From | Today |
 |---|---|---|
-| `tree` | `treeSimilarity(catA, catB, taxonomy)` | The `Taxonomy` is built from the `categories` rows as child → parent. **Every parent is `null`**, because the column arrives with A-13, so every category sits at depth 1 under the implicit root and the term **degenerates to the `[same category]` indicator**: exactly 1 or exactly 0, contributing 0.25 or nothing. When A-13 lands, the job selects `parent_id` and nothing else changes. |
+| `tree` | `treeSimilarity(nodeA, nodeB, taxonomy)` | The `Taxonomy` is built from the `categories` rows as child → parent. Since A-13 it is **two levels**: `parent_id` is null on the 15 roots and the root's id on D-04's 60 leaves. Each Bev is measured at its **leaf** (`leaf_category_id`, or its root when it has none — `treeNodeOf`), so Wu–Palmer gives 1 for the same leaf, 0.5 for sibling leaves (cola vs root beer), 0.667 for a leaf against a Bev on its own root, and 0 across roots. A taxonomy with every parent null would degenerate the term to the `[same category]` indicator, and the job's log says so (`taxonomyIsFlat`). |
 | `content` | `contentSimilarity` | Category, `normaliseBrand()` brand key, `flavorTokens(name, flavor)` Jaccard and price tier, from the `bevs` row. |
 | `emb` | `embeddingSimilarity` | Cosine of the two `gte-small` vectors. **0 when either Bev has no embedding** — the honest value for "no evidence". |
 | `profile` | `profileSimilarity` | `bev_flavor_profiles`. 0 when either is missing, including when D-11 declined below its floor. |
-| `cop` | — | 0. γ = 0 in v1; the co-rating signal is A-16 (2). |
+| `cop` | `copSimilarity` (`edges-core.ts`) | **Computed and stored in `components.cop`, with `EDGE_WEIGHTS.cop = 0`**, so it moves no weight yet. The **cosine** (`cosineSimilarity`, Layer 2's) of the two Bevs' z-score vectors over their common raters — z is already centred per user, so this is the paper's adjusted cosine, not a Pearson correlation. **Clamped at 0** (max(0, cos), as eq. (w) does for `emb`) and **0 below 3 common raters**. z comes from every ranking; only active Bevs are co-rated. |
 
 Each term is rounded to 6 decimals and the weight is then computed **from the
 rounded terms**, so `edgeWeight(components) == weight` holds exactly for every
@@ -546,7 +546,7 @@ Three service-role-only functions, in `20261026000300`:
 
 | Function | Why it is not a table read |
 |---|---|
-| `ranking_z_inputs()` | Returns **every** user's rankings, because a z-score is measured against the global mean. `rankings_select` is owner-and-followees only, so a leftover default grant here would hand any account the whole ranking table. It also casts `score` to `float8` — PostgREST renders `numeric` as a JSON *string*, which `zScoresFromRankings` rejects as non-finite. |
+| `ranking_z_inputs()` | Returns **every** user's rankings, because a z-score is measured against the global mean — **whatever the Bev's status**, with an `active` flag. `get_prediction_snapshot` takes every user's μ/σ and the global ones from all rankings, so the job does too (`zScoresFromRankings` on every row), then keeps only active Bevs as co-rated ones (`activeZScores`): a hidden Bev moves its raters' z but never counts as a co-rating. `rankings_select` is owner-and-followees only, so a leftover default grant here would hand any account the whole ranking table. It also casts `score` to `float8` — PostgREST renders `numeric` as a JSON *string*, which `zScoresFromRankings` rejects as non-finite. |
 | `replace_user_neighbors(jsonb, text)` | One call is one transaction. **An empty payload is accepted**, the one place it differs from `replace_bev_edges`: for `bev_edges` empty means a broken run, but for neighbours empty is the expected result today. |
 | `bev_co_rater_counts(int)` | Which Bevs have ≥ 3 raters, so the `cop` term can skip the rankings read entirely when none do. |
 
@@ -570,11 +570,15 @@ u's similarity to *every* other user, and through the global stats every other
 pair by a little. There is no incremental update smaller than the full rebuild.
 
 The `cop` term of eq. (18) is computed from the same z-scores and stored in
-`bev_edges.components.cop`. `EDGE_WEIGHTS.cop` is still **0**, so no stored
-weight changes — switching γ on renormalises the other four and is a constant
-change plus a `RANKING_VERSION` bump in Matt's lane. A **negative** correlation
-clamps to 0: eq. (18) sums non-negative terms, so it has no way to express
-"these two move oppositely".
+`bev_edges.components.cop`: the **cosine** of two Bevs' z-score vectors over
+their common raters, 0 below 3 of them. `EDGE_WEIGHTS.cop` is still **0**, so
+no stored weight changes — switching γ on renormalises the other four and is a
+constant change plus a `RANKING_VERSION` bump in Matt's lane. A **negative**
+cosine clamps to 0 (sim_cop = max(0, cos), the convention eq. (w) uses for
+sim_emb), so 0 always means "no evidence of similarity": eq. (18) sums
+non-negative terms and has no way to express "these two move oppositely".
+(1 + cos)/2 was rejected because it would lift w by γ/2 the night a pair gets
+its third co-rater, and break the Coke–LaCroix < 0.4 bound once γ is on.
 
 ```bash
 npm run graph:neighbours                 # read, score every pair, write

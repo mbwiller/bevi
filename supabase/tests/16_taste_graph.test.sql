@@ -28,7 +28,7 @@
 --   a1602  adult (30)   is a1601's neighbour, and owns rows of their own
 --   a1603  adult (30)   owns nothing: the "no rows" tier
 begin;
-select plan(40);
+select plan(41);
 
 -- ---------------------------------------------------------------------------
 -- People
@@ -380,7 +380,7 @@ select is(
 -- The seed catalog has no rankings, so both are empty here. What is worth
 -- pinning is the SHAPE -- `score` must arrive as a float8, because
 -- `zScoresFromRankings` throws on a non-finite score and PostgREST renders
--- numeric as a JSON string.
+-- numeric as a JSON string, and `active` must be there at all.
 
 select is(
   (select count(*)::int from public.ranking_z_inputs()),
@@ -397,6 +397,21 @@ select is(
       and a.ord = 3),
   'float8',
   'ranking_z_inputs returns score as float8, not numeric'
+);
+
+-- Every ranking comes back, whatever the Bev's status, FLAGGED rather than
+-- filtered: the job takes mu and sigma from all of them (as
+-- get_prediction_snapshot does) and only then keeps active Bevs as co-rated.
+-- The seed has no rankings to filter, so the contract pinned here is the
+-- column list, which is what the job's strict `active` check reads.
+select is(
+  (select string_agg(a.name || ':' || t.typname, ',' order by a.ord)
+     from pg_proc p
+     join unnest(p.proargnames, p.proallargtypes) with ordinality as a(name, oid, ord) on true
+     join pg_type t on t.oid = a.oid
+    where p.oid = 'public.ranking_z_inputs()'::regprocedure),
+  'user_id:uuid,bev_id:uuid,score:float8,active:bool',
+  'ranking_z_inputs returns (user_id, bev_id, score float8, active bool): every ranking, with its Bev flagged'
 );
 
 select is(

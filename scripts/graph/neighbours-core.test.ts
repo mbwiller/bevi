@@ -18,9 +18,9 @@ import { test } from "node:test";
 
 import { RANKING_VERSION, TASTE_SIM_FLOOR, blendUserSimilarity, tasteCatalog, tasteVector, zScoresFromRankings } from "@bevi/ranking";
 
-import { buildNeighbours, NEIGHBOUR_VERSION } from "./neighbours-core.ts";
+import { activeZScores, buildNeighbours, NEIGHBOUR_VERSION, rankingRecords } from "./neighbours-core.ts";
 import type { CatalogBevRecord, RankingRecord } from "./neighbours-core.ts";
-import { COP_MIN_CO_RATERS, coRatersByBev, copSimilarity } from "./edges-core.ts";
+import { COP_MIN_CO_RATERS, coRatersByBev, coRatersFromRankings, copSimilarity } from "./edges-core.ts";
 import { aliasUsers, parseOptions } from "./build-neighbours.ts";
 
 // Real uuids, and ordered so `u1 < u2 < u3` in code-point order: the tie-break
@@ -54,7 +54,12 @@ const CATALOG: CatalogBevRecord[] = [
   { id: B.mocha, categoryId: "coffee", brand: "Starbucks", flavorBase: "coffee" },
 ];
 
-const rank = (userId: string, bevId: string, score: number): RankingRecord => ({ userId, bevId, score });
+const rank = (userId: string, bevId: string, score: number, active = true): RankingRecord => ({
+  userId,
+  bevId,
+  score,
+  active,
+});
 
 // ---------------------------------------------------------------------------
 // buildNeighbours
@@ -196,10 +201,11 @@ test("a run is reproducible: the same data gives byte-identical rows", () => {
   assert.deepEqual(second.users, first.users);
 });
 
-test("a ranking of a Bev outside the catalog is skipped, not an error", () => {
-  // A hidden or merged Bev is not in `tasteCatalog`, so `tasteVector` ignores
-  // it -- but it still counts as a co-rated Bev for the Pearson term, because
-  // both users rated it. Neither behaviour should throw.
+test("an active ranking of a Bev missing from the catalog read is skipped by tasteVector, not an error", () => {
+  // The two reads are not one snapshot, so a Bev can turn active between them.
+  // It is not in `tasteCatalog`, so `tasteVector` ignores it -- but it is
+  // flagged active, so it still counts as a co-rated Bev for the user-user
+  // Pearson term. (An INACTIVE Bev counts for neither: see the next tests.)
   const rankings = [
     rank(U.u1, B.coke, 9), rank(U.u1, B.pepsi, 8), rank(U.u1, "00000000-0000-4000-8000-00000000900e", 5),
     rank(U.u2, B.coke, 8), rank(U.u2, B.pepsi, 9), rank(U.u2, "00000000-0000-4000-8000-00000000900e", 4),
@@ -208,6 +214,81 @@ test("a ranking of a Bev outside the catalog is skipped, not an error", () => {
   assert.equal(build.pairsConsidered, 1);
   assert.equal(build.rows.length, 2);
   assert.equal(build.rows[0]!.common, 3, "the off-catalog Bev still counts as co-rated");
+});
+
+// ---------------------------------------------------------------------------
+// Inactive Bevs: in every z-score's mu and sigma, never a co-rated Bev
+// ---------------------------------------------------------------------------
+
+const HIDDEN = "00000000-0000-4000-8000-00000000bbff";
+
+/** Three users who agree on three active Bevs, and who all ranked one hidden Bev low. */
+const WITH_HIDDEN: RankingRecord[] = [
+  rank(U.u1, B.coke, 9), rank(U.u1, B.pepsi, 8), rank(U.u1, B.sprite, 4), rank(U.u1, HIDDEN, 1, false),
+  rank(U.u2, B.coke, 9), rank(U.u2, B.pepsi, 7), rank(U.u2, B.sprite, 4), rank(U.u2, HIDDEN, 2, false),
+  rank(U.u3, B.coke, 8), rank(U.u3, B.pepsi, 9), rank(U.u3, B.sprite, 5), rank(U.u3, HIDDEN, 3, false),
+];
+
+test("activeZScores: a hidden Bev's ranking moves its rater's mu and sigma, but is not in the map", () => {
+  const z = activeZScores(WITH_HIDDEN);
+  const fromAll = zScoresFromRankings(WITH_HIDDEN);
+  const fromActiveOnly = zScoresFromRankings(WITH_HIDDEN.filter((r) => r.active));
+
+  for (const u of [U.u1, U.u2, U.u3]) {
+    const zu = z.get(u)!;
+    assert.equal(zu.has(HIDDEN), false, "the hidden Bev is never a co-rated Bev");
+    assert.deepEqual([...zu.keys()].sort(), [B.coke, B.pepsi, B.sprite].sort());
+    for (const b of [B.coke, B.pepsi, B.sprite]) {
+      // Exactly Layer 2's z: stats over EVERY ranking, as get_prediction_snapshot has them.
+      assert.equal(zu.get(b), fromAll.get(u)!.get(b));
+    }
+  }
+  // And that is a different number from z over active rankings alone: the
+  // hidden ranking really did move mu and sigma (the bug this guards against).
+  assert.notEqual(z.get(U.u1)!.get(B.coke), fromActiveOnly.get(U.u1)!.get(B.coke));
+});
+
+test("activeZScores drops a user whose every ranking is of an inactive Bev", () => {
+  const z = activeZScores([...WITH_HIDDEN, rank("00000000-0000-4000-8000-0000000000d4", HIDDEN, 7, false)]);
+  assert.deepEqual([...z.keys()].sort(), [U.u1, U.u2, U.u3].sort());
+});
+
+test("buildNeighbours never counts a hidden Bev as co-rated, though it shifts every z", () => {
+  const build = buildNeighbours(WITH_HIDDEN, CATALOG);
+  assert.deepEqual(build.users, [U.u1, U.u2, U.u3]);
+  assert.ok(build.rows.length > 0, "the three users agree, so some pair is kept");
+  for (const row of build.rows) assert.equal(row.common, 3, "coke, pepsi and sprite; never the hidden Bev");
+
+  // And the numbers are blendUserSimilarity's over the ACTIVE z from ALL rankings.
+  const catalog = tasteCatalog(CATALOG);
+  const z = activeZScores(WITH_HIDDEN);
+  const row = build.rows.find((r) => r.user_id === U.u1 && r.neighbor_id === U.u2);
+  assert.ok(row);
+  const expected = blendUserSimilarity(
+    { zu: z.get(U.u1)!, zv: z.get(U.u2)!, tu: tasteVector(z.get(U.u1)!, catalog), tv: tasteVector(z.get(U.u2)!, catalog) },
+    catalog,
+  );
+  assert.equal(row.sim, expected.sim);
+});
+
+test("coRatersFromRankings: a hidden Bev with 3 raters still never gets a cop term", () => {
+  const raters = coRatersFromRankings(WITH_HIDDEN);
+  assert.equal(raters.has(HIDDEN), false);
+  assert.equal(raters.get(B.coke)!.size, 3);
+  // The z it carries is the all-rankings z, the same one the neighbour build uses.
+  assert.equal(raters.get(B.coke)!.get(U.u1), zScoresFromRankings(WITH_HIDDEN).get(U.u1)!.get(B.coke));
+});
+
+test("rankingRecords maps ranking_z_inputs rows and refuses a missing active flag", () => {
+  const user_id = U.u1;
+  const bev_id = B.coke;
+  assert.deepEqual(rankingRecords([{ user_id, bev_id, score: 7.5, active: false }]), [
+    { userId: user_id, bevId: bev_id, score: 7.5, active: false },
+  ]);
+  // An un-migrated function has no `active` column: that must not read as
+  // "every Bev is inactive".
+  const stale = [{ user_id, bev_id, score: 7.5 }] as unknown as Parameters<typeof rankingRecords>[0];
+  assert.throws(() => rankingRecords(stale), /expected a boolean/);
 });
 
 test("every row carries a method the table's CHECK accepts", () => {
@@ -248,7 +329,7 @@ test("coRatersByBev inverts the z-score map, bev -> (user -> z)", () => {
 test("copSimilarity is 0 below COP_MIN_CO_RATERS common raters", () => {
   const a = new Map([[U.u1, 1], [U.u2, -1]]);
   const b = new Map([[U.u1, 1], [U.u2, -1]]);
-  // Two common raters: perfectly correlated, but under the floor.
+  // Two common raters: parallel vectors (cosine 1), but under the floor.
   assert.equal(COP_MIN_CO_RATERS, 3);
   assert.equal(copSimilarity(a, b), 0);
 });
@@ -261,6 +342,25 @@ test("copSimilarity rises with agreement across common raters", () => {
   assert.ok(sim <= 1);
   // Exactly symmetric, as every term of eq. (18) is.
   assert.equal(copSimilarity(b, a), sim);
+});
+
+test("copSimilarity is the COSINE of the z-scores, not Pearson: three raters who like both", () => {
+  // All three rate both Bevs above their own means. z is already centred per
+  // user, so the paper's cosine sees strong co-preference (2.62 / sqrt(3.08 *
+  // 2.51) = 0.94230); Pearson would re-centre per Bev and say -1, clamped to 0.
+  const a = new Map([[U.u1, 1.0], [U.u2, 0.8], [U.u3, 1.2]]);
+  const b = new Map([[U.u1, 0.9], [U.u2, 1.1], [U.u3, 0.7]]);
+  const sim = copSimilarity(a, b);
+  assert.ok(Math.abs(sim - 2.62 / Math.sqrt(3.08 * 2.51)) < 1e-12, `expected 0.9423, got ${sim}`);
+  assert.equal(Math.round(sim * 100) / 100, 0.94);
+  assert.equal(copSimilarity(b, a), sim);
+});
+
+test("copSimilarity is 0 when either Bev's raters are all at their own mean", () => {
+  // A zero vector has no direction: cosineSimilarity defines it as 0.
+  const a = new Map([[U.u1, 0], [U.u2, 0], [U.u3, 0]]);
+  const b = new Map([[U.u1, 1], [U.u2, -0.5], [U.u3, 0.2]]);
+  assert.equal(copSimilarity(a, b), 0);
 });
 
 test("a NEGATIVE co-preference clamps to 0 rather than throwing in edgeWeight", () => {

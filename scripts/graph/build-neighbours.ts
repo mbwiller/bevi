@@ -54,8 +54,8 @@
 import { fileURLToPath } from "node:url";
 
 import { compareCodePoints, RANKING_VERSION, TASTE_NEIGHBOUR_K, TASTE_SIM_FLOOR } from "@bevi/ranking";
-import { buildNeighbours } from "./neighbours-core.ts";
-import type { CatalogBevRecord, NeighbourRow, RankingRecord } from "./neighbours-core.ts";
+import { buildNeighbours, rankingRecords } from "./neighbours-core.ts";
+import type { CatalogBevRecord, NeighbourRow, RankingRecord, RankingZRow } from "./neighbours-core.ts";
 
 const PAGE = 1000;
 
@@ -112,12 +112,6 @@ function client(url: string, key: string): Client {
     rpcRows: <T>(name: string, body: Record<string, unknown>) =>
       paged<T>(`/rpc/${name}`, { method: "POST", body: JSON.stringify(body) }),
   };
-}
-
-interface RankingZRow {
-  user_id: string;
-  bev_id: string;
-  score: number;
 }
 
 interface CatalogRow {
@@ -201,6 +195,11 @@ async function main(): Promise<void> {
   const db = client(url as string, key as string);
 
   // -- read ----------------------------------------------------------------
+  // `ranking_z_inputs()` returns EVERY ranking, active Bev or not, with an
+  // `active` flag: the z-scores' mu and sigma come from all of them, as in
+  // `get_prediction_snapshot`, and `buildNeighbours` then keeps only active
+  // Bevs as co-rated ones (`activeZScores`).
+  //
   // Both reads are RPCs or ordered table reads, and the rankings one has to be
   // an RPC: `rankings_select` is owner-and-followees only, so reading
   // `/rankings` would depend on RLS not applying to the service role, and
@@ -214,11 +213,7 @@ async function main(): Promise<void> {
     ),
   ]);
 
-  const rankings: RankingRecord[] = rankingRows.map((r) => ({
-    userId: r.user_id,
-    bevId: r.bev_id,
-    score: Number(r.score),
-  }));
+  const rankings: RankingRecord[] = rankingRecords(rankingRows);
   // The WHOLE active catalog, not just the ranked Bevs: `tasteCatalog` counts
   // coverage over catalog Bevs, so an attribute's "covers at least 2 Bevs" test
   // must not depend on what anyone happens to have ranked.
@@ -241,8 +236,10 @@ async function main(): Promise<void> {
   }
 
   const rankers = new Set(rankings.map((r) => r.userId)).size;
+  const inactive = rankings.filter((r) => !r.active).length;
   console.log(
-    `rankings: ${rankings.length} over ${rankers} user(s); catalog: ${catalogBevs.length} active Bevs, ` +
+    `rankings: ${rankings.length} over ${rankers} user(s), ${inactive} of an inactive Bev ` +
+      `(in mu/sigma, never co-rated); catalog: ${catalogBevs.length} active Bevs, ` +
       `${catalogBevs.filter((b) => b.flavorBase !== null).length} with a flavour base`,
   );
 
