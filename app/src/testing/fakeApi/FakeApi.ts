@@ -54,6 +54,7 @@ import {
   type BevOfPeriod,
   type BevPrediction,
   type BevsApi,
+  type BevLeaf,
   type BevSimilarity,
   type BevSummary,
   type Bucket,
@@ -109,9 +110,19 @@ import {
   type FakeUser,
   type StorageLike,
 } from './db';
+import { CATALOG_CATEGORY_NODES, type CatalogCategoryNode } from './catalog';
 import { ALCOHOLIC, CATEGORIES, buildFixtures, isAdult } from './fixtures';
 import { buildEdgeMirror, type EdgeMirror } from './graph';
 import { FAKE_INVITE_CODE } from './people';
+
+/**
+ * Code-point string order, the tie-break every id order in the SQL uses
+ * (`collate "C"`; M-22, `compareCodePoints` in @bevi/ranking). Every id these
+ * comparisons see is a uuid or a snake_case slug, so plain `<` on ASCII agrees
+ * with it -- this exists so the fake's ordering reads as the same rule rather
+ * than as an accident of the data.
+ */
+const cmp = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 
 /** Password rule: at least this many characters (`validation`, field 'password'). */
 export const FAKE_MIN_PASSWORD_LENGTH = 8;
@@ -1015,6 +1026,28 @@ export class FakeApi implements BeviApi {
           .map(({ id, name, sortOrder, isAlcoholic }) => ({ id, name, sortOrder, isAlcoholic, bevCount: totals.get(id) ?? 0 }))
           .sort((a, z) => a.sortOrder - z.sortOrder);
       }),
+
+    // get_category_tree (20261026000100): the 75 nodes, age-gated by the ROOT's
+    // flag so a leaf of `beer` is hidden with `beer` itself, ordered
+    // root-then-leaf in sibling order.
+    tree: () =>
+      this.call('categories.tree', () => {
+        const me = this.requireUser();
+        const adult = this.canSeeAlcohol(me);
+        const rootOf = (c: CatalogCategoryNode) => c.parentId ?? c.id;
+        const byId = new Map(CATALOG_CATEGORY_NODES.map((c) => [c.id, c]));
+        const sortOrderOf = (id: string) => byId.get(id)?.sortOrder ?? 0;
+        return CATALOG_CATEGORY_NODES.filter((c) => adult || !c.isAlcoholic)
+          .map(({ id, name, parentId, sortOrder, isAlcoholic, emoji }) => ({ id, name, parentId, sortOrder, isAlcoholic, emoji }))
+          .sort(
+            (a, z) =>
+              sortOrderOf(rootOf(a)) - sortOrderOf(rootOf(z)) ||
+              cmp(rootOf(a), rootOf(z)) ||
+              Number(a.parentId !== null) - Number(z.parentId !== null) ||
+              a.sortOrder - z.sortOrder ||
+              cmp(a.id, z.id),
+          );
+      }),
   };
 
   // -------------------------------------------------------------------------
@@ -1116,6 +1149,10 @@ export class FakeApi implements BeviApi {
             brand,
             flavor,
             categoryId: input.categoryId,
+            // The wizard offers only the 15 roots, so a user-created Bev has no
+            // leaf until something relabels it -- exactly what `create_bev`
+            // leaves `leaf_category_id` as.
+            leafCategoryId: null,
             priceTier: input.priceTier ?? this.estimateTier(input.categoryId),
             priceEstimated: input.priceTier === null ? true : input.priceEstimated,
             isStarter: false,
@@ -1176,6 +1213,22 @@ export class FakeApi implements BeviApi {
           if (weight !== null) out.push({ bevId: id, weight });
         }
         return out;
+      }),
+
+    // get_bev_leaves (20261026000100): each visible Bev's leaf. Unlike
+    // `similarities`, a visible Bev with NO leaf is still returned, with null --
+    // "no finer placement" has to be distinguishable from "you may not see it".
+    leaves: (bevIds: readonly string[]) =>
+      this.call('bevs.leaves', () => {
+        const me = this.requireUser();
+        if (bevIds.length > SIMILARITIES_MAX_IDS) invalid('bevIds', 'Too many Bevs to look up at once');
+        const out: BevLeaf[] = [];
+        for (const id of new Set(bevIds)) {
+          const bev = this.db.bevs.find((b) => b.id === id);
+          if (!bev || !this.visible(bev, me)) continue;
+          out.push({ bevId: bev.id, leafCategoryId: bev.leafCategoryId });
+        }
+        return out.sort((a, z) => cmp(a.bevId, z.bevId));
       }),
 
     // get_similar_bevs: the heaviest neighbours, both stored orientations merged, age-filtered.

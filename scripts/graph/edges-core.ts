@@ -39,16 +39,25 @@ export interface BevRecord {
   brand: string | null;
   flavor: string | null;
   categoryId: string;
+  /**
+   * A-13: the Bev's leaf under `categoryId`, or null when it sits on the parent
+   * (an unsplit root such as `water`/`sports`, or a user-created Bev nobody has
+   * relabelled). This is the node the TREE term is measured at; `categoryId`
+   * stays the root and is what the CONTENT term reads. See `treeNodeOf`.
+   */
+  leafCategoryId: string | null;
   priceTier: number;
   isAlcoholic: boolean;
 }
 
 /**
- * One row of `public.categories`. `parentId` is optional because the column does
- * not exist yet -- it arrives with A-13, after D-04 settles the taxonomy.
+ * One row of `public.categories`. `parentId` is still optional on the type so a
+ * caller that does not select it (a test, an older snapshot) keeps type-checking;
+ * `build-edges.ts` has selected it since A-13.
  */
 export interface CategoryRecord {
   id: string;
+  /** null on one of the 15 roots, the root's id on one of D-04's 60 leaves (A-13). */
   parentId?: string | null;
 }
 
@@ -79,6 +88,16 @@ export interface EdgeRow {
 export interface WeighContext {
   taxonomy: Taxonomy;
   features: ReadonlyMap<string, BevFeatures>;
+  /**
+   * A-13: bev id -> the category node its TREE term is measured at, which is
+   * `leafCategoryId ?? categoryId` (`treeNodeOf`). Separate from `features`
+   * because `BevFeatures.categoryId` belongs to `contentSimilarity` and must
+   * stay the root -- see `weighPair`.
+   *
+   * A bev missing from this map falls back to its `features.categoryId`, so an
+   * older caller that does not build it still weighs every pair at the root.
+   */
+  treeNodes?: ReadonlyMap<string, string>;
   profiles: ReadonlyMap<string, FlavorProfile>;
   embeddings: ReadonlyMap<string, readonly number[]>;
 }
@@ -189,6 +208,27 @@ export function splitPairKey(key: string): { src: string; dst: string } {
  * `bev_stats` in to fill fields the formula ignores would invite someone to
  * start using them.
  */
+/**
+ * The category node a Bev's TREE term is measured at (A-13): its leaf when it
+ * has one, else its category.
+ *
+ * Why this is not simply `categoryId`: `treeSimilarity` is Wu-Palmer over the
+ * two-level taxonomy, so measuring at the leaf is what makes two colas score 1
+ * and a cola against a root beer 0.5 -- the whole point of D-04. Measuring at
+ * the root would leave the term at the pre-A-13 same-category indicator and the
+ * hierarchy would change nothing.
+ *
+ * And why `contentSimilarity` keeps the ROOT (see `weighPair`): its own
+ * same-category indicator is a coarse "these belong to the same shelf" signal,
+ * and D-04 flagged the consequence of handing it the leaf -- Coke vs Fanta
+ * would drop from 0.40 to 0 on that term. The tree term already carries
+ * leaf-level closeness, so passing the leaf to both would double-count the
+ * taxonomy in `edgeWeight` and lose the shelf signal at the same time.
+ */
+export function treeNodeOf(bev: BevRecord): string {
+  return bev.leafCategoryId ?? bev.categoryId;
+}
+
 export function bevFeatures(bev: BevRecord): BevFeatures {
   return {
     id: bev.id,
@@ -271,8 +311,11 @@ function push<K, V>(map: Map<K, V[]>, key: K, value: V): void {
  * One candidate's five terms and its weight, eq. (18) through `edgeWeight`.
  *
  * The terms:
- *   tree     `treeSimilarity` over `buildTaxonomy` -- today the same-category indicator.
- *   content  `contentSimilarity` over the catalog row (category, brand, flavour tokens, tier).
+ *   tree     `treeSimilarity` over `buildTaxonomy`, measured at each Bev's LEAF
+ *            (A-13/D-04): 1 for two colas, 0.5 for sibling leaves, 0.667 for a
+ *            leaf against a Bev sitting on its own parent, 0 across roots.
+ *   content  `contentSimilarity` over the catalog row (ROOT category, brand,
+ *            flavour tokens, tier) -- deliberately the root, see `treeNodeOf`.
  *   emb      `embeddingSimilarity` over the two `bev_embeddings` vectors.
  *            **0 when either Bev has no embedding yet** -- the honest value for
  *            "no evidence", and the reason a run before the embed pipeline has
@@ -303,8 +346,14 @@ export function weighPair(a: string, b: string, ctx: WeighContext): WeightedPair
   const pa = ctx.profiles.get(src);
   const pb = ctx.profiles.get(dst);
 
+  // A-13: the tree term is measured at each Bev's LEAF (`treeNodes`), while
+  // `contentSimilarity` below reads `fa.categoryId`, still the root. See
+  // `treeNodeOf` for why the two differ.
+  const ta = ctx.treeNodes?.get(src) ?? fa.categoryId;
+  const tb = ctx.treeNodes?.get(dst) ?? fb.categoryId;
+
   const components: Required<EdgeComponents> = {
-    tree: round6(treeSimilarity(fa.categoryId, fb.categoryId, ctx.taxonomy)),
+    tree: round6(treeSimilarity(ta, tb, ctx.taxonomy)),
     content: round6(contentSimilarity(fa, fb)),
     emb: ea === undefined || eb === undefined ? 0 : round6(embeddingSimilarity(ea, eb)),
     profile: pa === undefined || pb === undefined ? 0 : round6(profileSimilarity(pa, pb)),

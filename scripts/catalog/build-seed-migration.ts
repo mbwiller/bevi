@@ -44,15 +44,25 @@ export function buildSeedSql(): string {
   const aliases = rows.flatMap((row) => aliasesOf(row).filter((a) => owners.get(a)!.length === 1).map((a) => ({ alias: a, slug: row.slug })));
   const skipped = [...owners].filter(([, slugs]) => slugs.length > 1).map(([a]) => a);
 
-  const categoryValues = categories
-    .map((c) => `  (${q(c.id)}, ${q(c.name)}, ${c.sortOrder}, ${c.isAlcoholic}, ${c.emoji ? q(c.emoji) : "null"})`)
+  // Roots first, then leaves: `parent_id` references this same table, so a
+  // leaf's row cannot be inserted before the root it points at. Within each
+  // half the file's own order is kept, which is sortOrder (see Category).
+  const orderedCategories = [
+    ...categories.filter((c) => c.parentId === null),
+    ...categories.filter((c) => c.parentId !== null),
+  ];
+  const categoryValues = orderedCategories
+    .map(
+      (c) =>
+        `  (${q(c.id)}, ${q(c.name)}, ${c.parentId === null ? "null" : q(c.parentId)}, ${c.sortOrder}, ${c.isAlcoholic}, ${c.emoji ? q(c.emoji) : "null"})`,
+    )
     .join(",\n");
 
   // One row per line, the slug as a trailing comment (after the comma, so it can't swallow it).
   const bevValues = rows
     .map(
       (r, i) =>
-        `  (${q(catalogBevId(r.slug))}, ${q(r.name.trim())}, ${qOrNull(r.brand)}, ${qOrNull(r.flavor)}, ${q(r.category)}, ` +
+        `  (${q(catalogBevId(r.slug))}, ${q(r.name.trim())}, ${qOrNull(r.brand)}, ${qOrNull(r.flavor)}, ${q(r.category)}, ${qOrNull(r.leaf)}, ` +
         `${Number(r.price_tier)}, ${r.price_estimated === "true"}, ${qOrNull(r.upc)}, ${r.is_starter === "true"})` +
         `${i < rows.length - 1 ? "," : ""} -- ${r.slug}`,
     )
@@ -82,19 +92,20 @@ export function buildSeedSql(): string {
 
 set search_path = public, extensions;
 
-insert into public.categories (id, name, sort_order, is_alcoholic, emoji) values
+insert into public.categories (id, name, parent_id, sort_order, is_alcoholic, emoji) values
 ${categoryValues}
 on conflict (id) do update
    set name = excluded.name,
+       parent_id = excluded.parent_id,
        sort_order = excluded.sort_order,
        is_alcoholic = excluded.is_alcoholic,
        emoji = excluded.emoji;
 
-insert into public.bevs (id, name, brand, flavor, category_id, price_tier, price_estimated, upc, is_starter, status, source)
-select v.id::uuid, v.name, v.brand, v.flavor, v.category_id, v.price_tier::smallint, v.price_estimated, v.upc, v.is_starter, 'active', 'seed'
+insert into public.bevs (id, name, brand, flavor, category_id, leaf_category_id, price_tier, price_estimated, upc, is_starter, status, source)
+select v.id::uuid, v.name, v.brand, v.flavor, v.category_id, v.leaf_category_id, v.price_tier::smallint, v.price_estimated, v.upc, v.is_starter, 'active', 'seed'
   from (values
 ${bevValues}
-  ) as v(id, name, brand, flavor, category_id, price_tier, price_estimated, upc, is_starter)
+  ) as v(id, name, brand, flavor, category_id, leaf_category_id, price_tier, price_estimated, upc, is_starter)
  where not exists (
    select 1 from public.bevs b
     where b.id <> v.id::uuid
@@ -113,6 +124,11 @@ on conflict (id) do update
        brand = excluded.brand,
        flavor = excluded.flavor,
        category_id = excluded.category_id,
+       -- A-13: re-points a seeded Bev onto its leaf. The catalog is the source
+       -- of truth for a SEEDED row, so this overwrites. A user-created Bev is
+       -- never in this payload and keeps whatever it has (null until something
+       -- relabels it, which a parent-level category_id makes valid).
+       leaf_category_id = excluded.leaf_category_id,
        price_tier = excluded.price_tier,
        price_estimated = excluded.price_estimated,
        upc = excluded.upc,
