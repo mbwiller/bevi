@@ -6,8 +6,9 @@ import { parseExport, prepareDataset, toExport, type EvalDataset } from '../eval
 import { formatReport, SYNTHETIC_BANNER } from '../eval/report.ts';
 import { COHORTS, cohortOf, dedupeComparisons, evaluate, temporalCutoff } from '../eval/run.ts';
 import { similarityDiagnostics } from '../eval/similarity-arms.ts';
-import { syntheticDataset } from '../eval/synthetic.ts';
-import { layer2, predictScore } from '../src/index.ts';
+import { syntheticDataset, syntheticEdges } from '../eval/synthetic.ts';
+import { EDGE_MIN_WEIGHT, EDGE_TOP_K, layer1, layer2, predictScore } from '../src/index.ts';
+import { effectiveStatsOf, snapshotContext } from '../src/context.ts';
 import { syntheticSnapshot } from './snapshot-fixture.ts';
 
 describe('the experimental Pearson arms run the real engine with the option set', () => {
@@ -37,6 +38,56 @@ describe('the experimental Pearson arms run the real engine with the option set'
   });
 });
 
+describe("the experimental edges arms run the real engine with bevSimilarity: 'edges' (M-27 (a))", () => {
+  const base = syntheticSnapshot('edges-arms', 14, 40);
+  const arm = (id: string) => ARMS.find((a) => a.id === id)!;
+
+  it('with edges: predictScore / layer1 with the option, and different from the reference', () => {
+    const snap = { ...base, edges: syntheticEdges(Object.values(base.bevs)) };
+    let differ = 0;
+    for (const u of Object.keys(snap.users)) {
+      for (const b of Object.keys(snap.bevs)) {
+        const p = predictScore(snap, u, b, { bevSimilarity: 'edges' });
+        expect(arm('engine-edges').predict(snap, u, b)).toEqual({ score: p.score, support: p.layer2.support });
+        const eff = effectiveStatsOf(snapshotContext(snap), u);
+        expect(arm('layer1-edges').predict(snap, u, b).score).toBe(Math.min(10, Math.max(0, eff.mean + eff.stddev * p.layer1.z)));
+        expect(layer1(snap, u, b, { bevSimilarity: 'edges' }).parts.content).toBe(p.layer1.parts.content);
+        if (p.score !== predictScore(snap, u, b).score) differ++;
+      }
+    }
+    expect(differ).toBeGreaterThan(0);
+  });
+
+  it('without edges: each edges arm equals its non-edges twin (the fallback)', () => {
+    for (const u of Object.keys(base.users)) {
+      for (const b of Object.keys(base.bevs)) {
+        expect(arm('engine-edges').predict(base, u, b)).toEqual(arm('engine').predict(base, u, b));
+        expect(arm('layer1-edges').predict(base, u, b)).toEqual(arm('layer1').predict(base, u, b));
+        expect(arm('l1-content-edges').predict(base, u, b)).toEqual(arm('l1-content').predict(base, u, b));
+      }
+    }
+  });
+
+  it('syntheticEdges follows the bev_edges rules: a < b, once per pair, w ≥ EDGE_MIN_WEIGHT, kept by an endpoint’s top K', () => {
+    const big = syntheticSnapshot('edges-rules', 4, 120);
+    const edges = syntheticEdges(Object.values(big.bevs));
+    expect(edges.length).toBeGreaterThan(0);
+    const seen = new Set<string>();
+    const degree = new Map<string, number>();
+    for (const e of edges) {
+      expect(e.a < e.b).toBe(true);
+      expect(e.w).toBeGreaterThanOrEqual(EDGE_MIN_WEIGHT);
+      expect(e.w).toBeLessThanOrEqual(0.4);
+      expect(big.bevs[e.a]?.categoryId).toBe(big.bevs[e.b]?.categoryId);
+      expect(seen.has(`${e.a}:${e.b}`)).toBe(false);
+      seen.add(`${e.a}:${e.b}`);
+      for (const x of [e.a, e.b]) degree.set(x, (degree.get(x) ?? 0) + 1);
+    }
+    // 120 Bevs over 7 categories: some category has more than K_E + 1 Bevs, so pruning by top K bites.
+    expect(Math.max(...degree.values())).toBeGreaterThanOrEqual(EDGE_TOP_K);
+  });
+});
+
 describe('export parsing', () => {
   const ok = toExport(syntheticDataset('parse', 4, 10));
   it('accepts numeric strings for score (Postgres numeric) and rejects malformed rows', () => {
@@ -47,6 +98,12 @@ describe('export parsing', () => {
     expect(() => parseExport({ ...ok, rankings: [{ ...ok.rankings[0], bucket: 4 }] })).toThrow(/rankings\[0\].*bucket/);
     expect(() => parseExport({ ...ok, rankings: [{ ...ok.rankings[0], rankedAt: 'yesterday' }] })).toThrow(/rankedAt/);
     expect(() => parseExport({ ...ok, bevs: [{ ...ok.bevs[0], priceTier: 5 }] })).toThrow(/priceTier/);
+    // Optional edges (M-27 (a)): round-trip, numeric strings accepted, w outside [0, 1] rejected.
+    expect(parseExport(ok).edges).toEqual(ok.edges);
+    const { edges: _omit, ...noEdges } = ok;
+    expect(parseExport(noEdges).edges).toBeUndefined();
+    expect(parseExport({ ...ok, edges: [{ a: 'x', b: 'y', w: '0.5' }] }).edges).toEqual([{ a: 'x', b: 'y', w: 0.5 }]);
+    expect(() => parseExport({ ...ok, edges: [{ a: 'x', b: 'y', w: 2 }] })).toThrow(/edges\[0\]/);
   });
   it('drops rows on unknown Bevs and keeps the latest duplicate ranking', () => {
     const ds = parseExport(ok);
@@ -125,7 +182,7 @@ describe('evaluate (end to end on synthetic data, NOT an accuracy result)', () =
         expect(conc.draws).toBeLessThanOrEqual(50);
         expect(a.confusion.flat().reduce((x, y) => x + y, 0)).toBe(all.points);
         expect(a.delta === null).toBe(a.arm === 'engine');
-        expect(Number.isNaN(a.metrics.cfCoverage.point)).toBe(!['layer2', 'layer2-pearson', 'engine', 'engine-pearson'].includes(a.arm));
+        expect(Number.isNaN(a.metrics.cfCoverage.point)).toBe(!['layer2', 'layer2-pearson', 'engine', 'engine-pearson', 'engine-edges'].includes(a.arm));
         expect(Number.isFinite(a.metrics.spearman.point)).toBe(s.listMetrics);
       }
       // A constant predictor orders nothing.

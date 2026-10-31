@@ -27,7 +27,9 @@ import {
   effectiveUserStats,
   edgeWeight,
   embeddingSimilarity,
+  effectiveBevSimilarity,
   isDone,
+  layer1,
   leaderboardOrder,
   localDayKey,
   localPeriodKey,
@@ -65,6 +67,7 @@ import {
   type EdgeComponents,
   type FlavorProfile,
   type LeaderboardInputRow,
+  type PredictionSnapshot,
   type PlacementState,
   type RankUsersRow,
   type ScoredRanking,
@@ -114,6 +117,12 @@ const constants = {
     'alpha = tasteAlpha if |common| >= cfMinCommon else 0; attributeSim = attributeSimilarity if |common| >= cfMinCommon or sharedAttrs >= tasteMinSharedAttrs else 0; sim = alpha * pearson.sim + (1 - alpha) * attributeSim, clamped to [-1, 1]; method = attr (alpha 0), pearson (alpha 1), else blend',
   neighbourOrder: 'sim desc, then userId asc (code point, SQL collate "C"); keep sim >= tasteSimFloor; at most tasteNeighbourK',
   reliabilityRule: 'min(1, n_v / neighbourReliabilityN); applied by Layer 2 per neighbour, not stored in user_neighbors.sim',
+  bayesStoredRule:
+    'bev_stats.bayes_score numeric(4,2) from exact inputs: m with at most 3 dp (global_stats.mean_score numeric(5,3), or the exact category mean), scores in cents; N = C*m_thousandths + 10*sum(score_cents), D = C + n; storedCents = round half away from zero of N / (10*D) = floor((2N + 10D) / (20D)); never round the floating-point bayes',
+  streakEvents:
+    'streakFromTimestamps.timestamps are ranking EVENTS (submit_ranking and rerank_bev), never deleted: a re-rank adds its own day and keeps the original one; a removal adds and deletes nothing. When a case lists input.events, timestamps = events.map(at)',
+  layer1EdgesRule:
+    "bevSimilarity 'edges': sim(b, b') = w of the snapshot.edges row for the unordered pair {b, b'} (either orientation), 0 when there is none; pairs with sim < simMin dropped as in 'content'; content = sum(sim * z) / (sum(sim) + 1); conf1 mass = n_{u,cat(b)} + sum(sim); affinity and g unchanged. A snapshot without an edges field (absent or null) uses contentSimilarity ('content'); an empty array means no edges",
 };
 
 /** A plausible stored score: some position in some bucket. */
@@ -219,6 +228,22 @@ function bayesianCases(): Case[] {
   avg('five 10/10s, m = 6', 10, 5, 6);
   avg('one 2/10, m = 6', 2, 1, 6);
   avg('no ratings', 0, 0, 6.2);
+  // Paper Example 5.9: scores 7.6 and 2.0 with m = 6.6333… (= 19.9 / 3) give 5.9. No PRNG here.
+  avg('paper Example 5.9: 7.6 and 2.0, m = 6.6333…', (7.6 + 2.0) / 2, 2, 19.9 / 3);
+  // M-22: results exactly on a half cent, so the SQL numeric(4,2) store is pinned (bayesStoredRule).
+  const stored = (name: string, scores: number[], m: number) => {
+    const n = scores.length;
+    const sum = scores.reduce((t, x) => t + x, 0);
+    cases.push({
+      name,
+      fn: 'bayesScoreStored',
+      input: { scores, n, sumScore: sum, m, C: BAYES_C },
+      expected: { bayes: bayesianAverage(sum / n, n, { m, C: BAYES_C }), storedCents: storedBayesCents(scores, m, BAYES_C), stored: storedBayesCents(scores, m, BAYES_C) / 100 },
+    });
+  };
+  stored('7.6 and 2.0, m = 6.675: exactly 5.925 (the double is 5.92499999…), stored 5.93', [7.6, 2.0], 6.675);
+  stored('7.61 and 2.00, m = 6.705: exactly 5.945, stored 5.95 (live shows 5.9, stored shows 6.0)', [7.61, 2.0], 6.705);
+  stored('7.6 and 2.0, m = 6.625: exactly 5.895, stored 5.90', [7.6, 2.0], 6.625);
   for (let i = 0; i < 6; i++) {
     const scores = Array.from({ length: 1 + randomInt(rand, 30) }, randomStoredScore);
     const s = populationStats(scores);
@@ -257,6 +282,20 @@ function bayesianCases(): Case[] {
   ];
   cases.push({ name: 'names by code point: an astral name after U+E000-U+FFFF names', fn: 'leaderboardOrder', input: { rows: unicode }, expected: leaderboardOrder(unicode) });
   return cases;
+}
+
+/** bayesStoredRule: the numeric(4,2) value SQL stores, by exact integer arithmetic. */
+function storedBayesCents(scores: readonly number[], m: number, C: number): number {
+  const cents = scores.map((x) => Math.round(x * 100));
+  scores.forEach((x, i) => {
+    if (Math.abs(x * 100 - (cents[i] as number)) > 1e-9) throw new Error(`score ${x} is not in cents`);
+  });
+  const mThousandths = Math.round(m * 1000);
+  if (Math.abs(m * 1000 - mThousandths) > 1e-9) throw new Error(`prior ${m} has more than 3 decimals`);
+  const N = C * mThousandths + 10 * cents.reduce((t, x) => t + x, 0);
+  const D = C + scores.length;
+  if (N < 0) throw new Error('negative bayes');
+  return Math.floor((2 * N + 10 * D) / (20 * D));
 }
 
 // ---------------------------------------------------------------- placement
@@ -343,6 +382,25 @@ function streakCases(): Case[] {
   streak('Kolkata: 23:59 IST and 00:01 IST are two days', ['2026-10-10T18:29:00Z', '2026-10-10T18:31:00Z'], 'Asia/Kolkata', '2026-10-11T05:00:00Z');
   streak('Kolkata: ranked today only', ['2026-10-11T03:00:00Z'], 'Asia/Kolkata', '2026-10-11T18:29:00Z');
   streak('no rankings', [], 'UTC', '2026-10-11T12:00:00Z');
+  // M-22 (paper impl:streak): timestamps are ranking EVENTS, so history survives re-ranks and removals.
+  // The rows-based SQL (touch_streak over rankings.ranked_at) would see fewer days in both cases.
+  type StreakEvent = { bevId: string; kind: 'submit' | 'rerank'; at: string };
+  const events = (name: string, evs: StreakEvent[], timeZone: string, now: string) => {
+    const timestamps = evs.map((e) => e.at);
+    const keys = [...new Set(timestamps.map((t) => localPeriodKey(t, timeZone, 'day')))].sort();
+    const todayKey = localPeriodKey(now, timeZone, 'day');
+    cases.push({ name, fn: 'streakFromTimestamps', input: { timestamps, timeZone, now, period: 'day', events: evs }, expected: { periodKeys: keys, todayKey, ...computeStreak(keys, todayKey, 'day') } });
+  };
+  events('events: the 9th\'s only ranking is re-ranked on the 11th, and the 9th still counts (rows alone would give 2)', [
+    { bevId: 'coke', kind: 'submit', at: '2026-10-09T12:00:00Z' },
+    { bevId: 'pepsi', kind: 'submit', at: '2026-10-10T12:00:00Z' },
+    { bevId: 'coke', kind: 'rerank', at: '2026-10-11T09:00:00Z' },
+  ], 'UTC', '2026-10-11T20:00:00Z');
+  events('events: the 10th\'s only ranking is removed on the 11th; the removal adds nothing and the 10th still counts (rows alone would give 1)', [
+    { bevId: 'coke', kind: 'submit', at: '2026-10-09T12:00:00Z' },
+    { bevId: 'sprite', kind: 'submit', at: '2026-10-10T12:00:00Z' },
+    { bevId: 'pepsi', kind: 'submit', at: '2026-10-11T12:00:00Z' },
+  ], 'UTC', '2026-10-11T20:00:00Z');
   streak('weekly: three ISO weeks across the new year', ['2026-12-23T12:00:00Z', '2026-12-31T12:00:00Z', '2027-01-05T12:00:00Z'], 'UTC', '2027-01-12T12:00:00Z', 'week');
 
   const keys = (name: string, periodKeys: string[], todayKey: string, period: StreakPeriod = 'day') =>
@@ -502,7 +560,73 @@ function edgeCases(): Case[] {
   top('k = 50, min = 0.6', many, 50, 0.6);
   top('k = 0', many, 0);
   top('empty', []);
+
+  // 1.4.0 (M-27 (a)): Layer 1's content term in bevSimilarity 'edges' mode, on a hand-built snapshot
+  // (layer1EdgesRule). The consumer is S-21: the rows get_prediction_snapshot returns as `edges`.
+  const snap = layer1Snapshot();
+  const edges = [
+    { a: 'coke', b: 'pepsi', w: 0.9001 },
+    { a: 'topo', b: 'lacroix', w: 0.71 },
+    { a: 'monster', b: 'redbull', w: 0.88 },
+    { a: 'coke', b: 'sprite', w: 0.55 },
+  ];
+  const l1 = (name: string, userId: string, bevId: string, bevSimilarity: 'content' | 'edges', withEdges: boolean) => {
+    const snapshot: PredictionSnapshot = withEdges ? { ...snap, edges } : snap;
+    cases.push({
+      name,
+      fn: 'layer1',
+      input: { snapshot, userId, bevId, bevSimilarity },
+      expected: { source: effectiveBevSimilarity(snapshot, { bevSimilarity }), ...layer1(snapshot, userId, bevId, { bevSimilarity }) },
+    });
+  };
+  l1('edges: pepsi–coke has an edge (w 0.9001); pepsi–sprite and pepsi–lacroix have none and weigh 0', 'u', 'pepsi', 'edges', true);
+  l1('edges: the row topo–lacroix is stored the other way round; orientation does not matter', 'u', 'topo', 'edges', true);
+  l1('edges: monster has no edge to any Bev u ranked (only to redbull), so content is 0', 'u', 'monster', 'edges', true);
+  l1('edges requested, snapshot without the edges field: falls back to contentSimilarity', 'u', 'pepsi', 'edges', false);
+  l1('content (the default) ignores a present edges field', 'u', 'pepsi', 'content', true);
   return cases;
+}
+
+/** A small snapshot for the layer1 cases: u ranks coke, sprite, lacroix; v ranks coke, pepsi, topo. */
+function layer1Snapshot(): PredictionSnapshot {
+  const bev = (id: string, categoryId: string, brandKey: string, flavorTokens: string[], priceTier: 1 | 2 | 3 | 4): BevFeatures => ({
+    id, categoryId, brandKey, flavorTokens, priceTier, ratingCount: 0, mean: 0, stddev: 0, isAlcoholic: false,
+  });
+  const list = [
+    bev('coke', 'soda', 'coca-cola', ['cola'], 1),
+    bev('pepsi', 'soda', 'pepsi', ['cola'], 1),
+    bev('sprite', 'soda', 'coca-cola', ['lemon', 'lime'], 1),
+    bev('lacroix', 'sparkling_water', 'lacroix', ['lime'], 2),
+    bev('topo', 'sparkling_water', 'topo chico', ['mineral'], 2),
+    bev('monster', 'energy', 'monster', ['energy'], 2),
+    bev('redbull', 'energy', 'red bull', ['energy'], 3),
+  ];
+  const rankings = [
+    { userId: 'u', bevId: 'coke', score: 9 },
+    { userId: 'u', bevId: 'sprite', score: 6.5 },
+    { userId: 'u', bevId: 'lacroix', score: 3 },
+    { userId: 'v', bevId: 'coke', score: 8 },
+    { userId: 'v', bevId: 'pepsi', score: 7 },
+    { userId: 'v', bevId: 'topo', score: 5 },
+  ];
+  const bevs: Record<string, BevFeatures> = {};
+  for (const b of list) {
+    const st = populationStats(rankings.filter((r) => r.bevId === b.id).map((r) => r.score));
+    bevs[b.id] = { ...b, ratingCount: st.n, mean: st.mean, stddev: st.stddev };
+  }
+  const users: PredictionSnapshot['users'] = {};
+  for (const u of ['u', 'v']) {
+    const mine = rankings.filter((r) => r.userId === u);
+    const categoryStats: Record<string, Stats> = {};
+    for (const c of [...new Set(mine.map((r) => (bevs[r.bevId] as BevFeatures).categoryId))].sort()) {
+      categoryStats[c] = populationStats(mine.filter((r) => (bevs[r.bevId] as BevFeatures).categoryId === c).map((r) => r.score));
+    }
+    users[u] = { id: u, stats: populationStats(mine.map((r) => r.score)), categoryStats, canSeeAlcohol: true };
+  }
+  const g = populationStats(rankings.map((r) => r.score));
+  const byCategoryMean: Record<string, number> = {};
+  for (const c of ['soda', 'sparkling_water']) byCategoryMean[c] = populationStats(rankings.filter((r) => (bevs[r.bevId] as BevFeatures).categoryId === c).map((r) => r.score)).mean;
+  return { version: RANKING_VERSION, generatedAt: '2026-10-31T00:00:00Z', global: { mean: g.mean, stddev: g.stddev, byCategoryMean }, bevs, users, rankings };
 }
 
 

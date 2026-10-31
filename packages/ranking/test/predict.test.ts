@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   blendLambda,
   CF_K,
+  effectiveBevSimilarity,
   globalScore,
   layer1,
   layer2,
@@ -210,5 +211,88 @@ describe('layer 2 with userSimilarity: "pearson" (M-28, off by default)', () => 
     expect(() => predictScore(snap, 'u', 'd', bad)).toThrow(RangeError);
     expect(() => userSimilarity(snap, 'u', 'v', bad)).toThrow(RangeError);
     expect(() => recommend(snap, 'u', { n: 3, seed: 's', ...bad })).toThrow(RangeError);
+  });
+});
+
+describe("layer 1 with bevSimilarity: 'edges' (M-27 (a), off by default)", () => {
+  // Stored edges for the worked example: d–a 0.9 (stored in the a < d orientation), no d–b edge,
+  // d–c 0.05 (below SIM_MIN), and a–b 0.8, which does not touch d.
+  const edges = [
+    { a: 'a', b: 'd', w: 0.9 },
+    { a: 'a', b: 'b', w: 0.8 },
+    { a: 'c', b: 'd', w: 0.05 },
+  ];
+  const withEdges = { ...snap, edges };
+
+  it('worked example u → d: w replaces sim, a missing edge weighs 0, SIM_MIN still applies', () => {
+    const l1 = layer1(withEdges, 'u', 'd', { bevSimilarity: 'edges' });
+    const base = layer1(snap, 'u', 'd');
+    // content = 0.9·z(a) / (0.9 + 1): b has no edge to d, c's 0.05 is below SIM_MIN = 0.1.
+    expect(l1.parts.content).toBeCloseTo((0.9 * zu(9)) / (0.9 + 1), 12);
+    expect(l1.parts.affinity).toBe(base.parts.affinity);
+    expect(l1.parts.global).toBe(base.parts.global);
+    expect(l1.z).toBeCloseTo(0.4 * l1.parts.affinity + 0.4 * l1.parts.content + 0.2 * l1.parts.global, 12);
+    // conf1's mass is n_{u,soda} = 2 plus Σw = 0.9.
+    expect(l1.confidence).toBeCloseTo(0.3 * Math.min(1, (2 + 0.9) / 4), 12);
+  });
+
+  it('a candidate with no stored edge to the user’s Bevs has content 0', () => {
+    const l1 = layer1({ ...snap, edges: [{ a: 'a', b: 'b', w: 0.8 }] }, 'u', 'd', { bevSimilarity: 'edges' });
+    expect(l1.parts.content).toBe(0);
+    expect(l1.confidence).toBeCloseTo(0.3 * Math.min(1, 2 / 4), 12);
+    expect(layer1({ ...snap, edges: [] }, 'u', 'd', { bevSimilarity: 'edges' }).parts.content).toBe(0);
+  });
+
+  it('falls back to the computed similarity when the snapshot has no edges field', () => {
+    expect(effectiveBevSimilarity(snap, { bevSimilarity: 'edges' })).toBe('content');
+    expect(effectiveBevSimilarity({ ...snap, edges: null }, { bevSimilarity: 'edges' })).toBe('content');
+    expect(effectiveBevSimilarity({ ...snap, edges: [] }, { bevSimilarity: 'edges' })).toBe('edges');
+    expect(effectiveBevSimilarity(withEdges, {})).toBe('content');
+    expect(layer1(snap, 'u', 'd', { bevSimilarity: 'edges' })).toEqual(layer1(snap, 'u', 'd'));
+    expect(predictScore(snap, 'u', 'd', { bevSimilarity: 'edges' })).toEqual(predictScore(snap, 'u', 'd'));
+  });
+
+  it('the default ignores a present edges field, bit for bit', () => {
+    for (const u of ['u', 'v', 'w', 'nobody']) {
+      for (const b of ['a', 'b', 'c', 'd']) {
+        expect(predictScore(withEdges, u, b)).toEqual(predictScore(snap, u, b));
+        expect(predictScore(withEdges, u, b, { bevSimilarity: 'content' })).toEqual(predictScore(snap, u, b));
+      }
+    }
+  });
+
+  it('predictScore and recommend pass the option to Layer 1; Layer 2 is untouched', () => {
+    const p = predictScore(withEdges, 'u', 'd', { bevSimilarity: 'edges' });
+    expect(p.layer1).toEqual(layer1(withEdges, 'u', 'd', { bevSimilarity: 'edges' }));
+    expect(p.layer2).toEqual(predictScore(snap, 'u', 'd').layer2);
+    const rec = recommend(withEdges, 'u', { n: 1, seed: 's', epsilon: 0, bevSimilarity: 'edges' });
+    expect(rec).toEqual([{ bevId: 'd', score: p.score, confidence: p.confidence, reason: expect.any(String), isExploration: false }]);
+  });
+
+  it('rejects malformed edges in edges mode only, and an unknown mode always', () => {
+    const bad: Array<[string, unknown]> = [
+      ['self-edge', [{ a: 'a', b: 'a', w: 0.5 }]],
+      ['pair listed twice', [{ a: 'a', b: 'd', w: 0.5 }, { a: 'd', b: 'a', w: 0.5 }]],
+      ['w above 1', [{ a: 'a', b: 'd', w: 1.5 }]],
+      ['w negative', [{ a: 'a', b: 'd', w: -0.1 }]],
+      ['w NaN', [{ a: 'a', b: 'd', w: Number.NaN }]],
+      ['w as a string', [{ a: 'a', b: 'd', w: '0.5' }]],
+      ['missing id', [{ a: '', b: 'd', w: 0.5 }]],
+      ['not an array', { a: 'a', b: 'd', w: 0.5 }],
+    ];
+    for (const [name, e] of bad) {
+      const s = { ...snap, edges: e } as unknown as typeof snap;
+      expect(() => layer1(s, 'u', 'd', { bevSimilarity: 'edges' }), name).toThrow(RangeError);
+      expect(predictScore(s, 'u', 'd'), name).toEqual(predictScore(snap, 'u', 'd'));
+    }
+    const typo = { bevSimilarity: 'graph' } as unknown as { bevSimilarity: 'edges' };
+    expect(() => layer1(snap, 'u', 'd', typo)).toThrow(RangeError);
+    expect(() => predictScore(snap, 'u', 'd', typo)).toThrow(RangeError);
+    expect(() => recommend(snap, 'u', { n: 3, seed: 's', ...typo })).toThrow(RangeError);
+  });
+
+  it('edges between Bevs outside the snapshot are ignored', () => {
+    const extra = { ...snap, edges: [...edges, { a: 'd', b: 'zz-gone', w: 1 }, { a: 'zz-x', b: 'zz-y', w: 0.5 }] };
+    expect(layer1(extra, 'u', 'd', { bevSimilarity: 'edges' })).toEqual(layer1(withEdges, 'u', 'd', { bevSimilarity: 'edges' }));
   });
 });
