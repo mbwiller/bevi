@@ -80,6 +80,9 @@ export function formatReport(r: EvalReport, opts: { synthetic: boolean; source: 
     `Source: ${opts.source}`,
     `Data: ${r.dataset.users} users, ${r.dataset.rankings} rankings, ${r.dataset.comparisons} comparisons, ${r.dataset.bevs} Bevs` +
       ` (dropped: ${r.dataset.dropped.rankingsUnknownBev} rankings and ${r.dataset.dropped.comparisonsUnknownBev} comparisons on unknown Bevs, ${r.dataset.dropped.rankingsDuplicate} duplicate rankings)`,
+    r.dataset.edges === null
+      ? 'Edges: none in this dataset, so the *-edges arms fall back to the computed content similarity (identical to their non-edges twins).'
+      : `Edges: ${r.dataset.edges} stored edges between catalog Bevs, read by the *-edges arms (bevSimilarity: 'edges').`,
     `Options: respace=${r.options.respace}, temporalQuantile=${r.options.temporalQuantile}, bootstrap=${r.options.bootstrapIterations} resamples over users (seed "${r.options.seed}"), NDCG@${r.options.ndcgK}`,
     'Every value: point estimate [95% paired-bootstrap CI over users]. Primary metric: pairwise concordance on comparisons.',
     'Cohorts use n_u = rankings visible when predicting (LOO: n − 1; temporal: rankings before the cutoff).',
