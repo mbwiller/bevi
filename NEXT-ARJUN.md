@@ -7,16 +7,17 @@ Your queue, updated 2026-10-31, centred on Supabase and Neo4j. Matt's is in [`NE
 ## Start now (2026-10-31)
 
 **Prod migrations:**
-- [ ] Confirm `supabase migration list` shows all four: `20261026000100`, `0200`, `0300` (#132, #133) and `20261031000100` (#135). If not, `npx supabase db push`, dry-run first, in timestamp order. Matt's M-21 app half calls #132's functions.
+- [x] Confirmed 2026-10-31: all four are on prod.
 
 | Order | Task | What "done" means | Unblocks |
 |---|---|---|---|
-| 1 | **Approve #137** (M-27 (a) + M-22 package follow-ups, `RANKING_VERSION` 1.4.0) | Review the `shared/fixtures` changes: existing cases are unchanged as exact JSON, the new ones are recomputed by hand. Default output is byte-identical to 1.3.0, and `edgeWeight` is unchanged, so the next `graph:edges` run only re-stamps `bev_edges` | M-27 (a); M-21's package half, stacked on it (1.5.0) |
+| 1 | ~~**Approve #137**~~ — **merged 2026-10-31 from Matt's side**, with #138 (1.5.0) and #144 (1.6.0), under the rule that a PR flagged for you only because it regenerates `shared/fixtures` merges once every pre-existing case is byte-identical (checked, 706 cases) and the `db` job is green | Your review of the fixture hunks is welcome after the fact. `edgeWeight` is unchanged in all three, so the next nightly `graph:edges` only re-stamps `bev_edges`; the `cop` term and `user_neighbors` are untouched | — |
 | 2 | **A-14 follow-ups** | M-22's SQL list (TASKS.md M-22 item 3), still unbuilt. **Two are wrong on prod:** the streak history rewritten by re-ranks and removals, and `bayes_score` stale at `rating_count = 0`. #137 adds vector targets: the `bayesScoreStored` cases (pgTAP, item 7) and the event-streak cases (the `touch_streak` fix, item 1) | Correct streaks and scores |
-| 3 | **S-21 + Stage 4** (new), one combined PR | **S-21:** `get_prediction_snapshot` returns `edges` as `[src, dst, w]` tuples for every `bev_edges` row touching the caller's ranked Bevs, visible Bevs only, `[]` never null; `toViewerSnapshot` maps them with `num(w)`, only when the key is present. **Stage 4:** Layer 2 reads `user_neighbors` through the same RPC, with aliases. Agree the contract with Matt first, so the RPC changes once | Switching on M-27 (a)'s edges mode; taste neighbours in Layer 2 |
+| 3 | **S-21 + Stage 4**, one combined PR | **The contract is fixed on the package side** (#144's "Heads-up for Arjun" has the full text). One revision of `get_prediction_snapshot`: **`edges`** = `[[src, dst, w], …]` for every `bev_edges` row touching the caller's ranked Bevs, visible Bevs only, `[]` never null; **`userNeighbors`** = `[[alias, sim, common], …]` from `user_neighbors where user_id = viewer`, joined to the same alias CTE as `users` and `rankings`, `order by sim desc, neighbor_id`, `[]` never null, **no `version` filter** (sim_B is unchanged since 1.3.0; filtering would empty stored mode after every bump). `toViewerSnapshot` maps `edges` to `{ a, b, w: num(w) }` and `userNeighbors` to `snapshot.userNeighbours = { [viewer.id]: rows.map(([userId, sim, common]) => ({ userId, sim: num(sim), common })) }`, each **whenever its key is present, even as `[]`**. A neighbour counts only if their rankings are in `rankings`, so if the RPC ever trims rankings or users, keep the viewer's neighbours. pgTAP for both keys. Also two doc lines: `docs/graph_db_implementation.md` §5 names the field `userNeighbors` with tuples and says "replace the cosine with Pearson" / "new constants" (as built: `userNeighbours` with objects, cosine fallback, Pearson its own option, no new constant), and the comment in `20261026000300` says `snapshot.userNeighbors` | Switching on M-27 (a)'s edges mode and stored neighbours in Layer 2 |
 | 4 | **`categories_depth_guard` follow-up** | Moving a leafless root (`water`, `sports`) under another root makes its Bevs' `category_id` a leaf. Reject that move. Service-role only, so the app can't reach it | — |
 | 5 | **First `graph-neighbours` run** | A `workflow_dispatch` dry-run. Expect few rows or none at today's volume | Stage 4's data |
 | 6 | **The Neo4j mirror** (optional) | A-16 steps 6, 8 and 9. Nothing the app reads depends on it | — |
+| 7 | **`app.yml` path filter** (optional, joint) | Add `design/beverage-icons/manifest.json` to the `app` workflow's paths, so an icon batch that forgets `node scripts/icons/export-app.mjs` fails its own PR's drift test (`app/src/lib/__tests__/bevIcons.test.ts`) rather than the next app PR. `.github/` is joint, so it needs both of us | — |
 
 ## Done since 2026-10-19
 
@@ -67,9 +68,8 @@ The decision (2026-10-19): Neo4j holds Bevs, categories, brands and flavours as 
 
 | You hand Matt | So he can |
 |---|---|
-| Your approval of #137 (`shared/fixtures`) | Merge M-27 (a), then M-21's package half on top |
 | A-13 (#132: `categories.tree()`, `bevs.leaves()`), on prod | Build M-21's tiers |
-| S-21 + Stage 4, on prod | Switch on edges mode; Layer 2 reads `user_neighbors` |
+| S-21 + Stage 4, on prod | Switch on edges mode and stored neighbours (both options exist in the package) |
 | An M-26 re-export once there are more users (privately, outside the repo) | Judge switching on edges mode and Pearson |
 | S-10 + A-08 and the Maps key; S-13 + A-12 | Build M-16; build M-20 |
 | A heads-up before any migration that changes what an existing function returns | Keep the app and the FakeApi in step |
@@ -78,10 +78,9 @@ The decision (2026-10-19): Neo4j holds Bevs, categories, brands and flavours as 
 |---|---|
 | M-22's SQL corrections (#128: two are wrong on prod today, streak history and stale `bayes_score`) | Fix them as A-14 follow-ups |
 | #137's vector targets: the `bayesScoreStored` cases and the event-streak cases | Test the A-14 follow-ups against them |
-| #137's `PredictionSnapshot.edges?` shape | Build S-21 |
-| The Stage 4 contract, agreed together | Build Stage 4 with S-21, so the RPC changes once |
+| The RPC contract for S-21 + Stage 4: `edges` (#137) and `userNeighbors` (#144), spelled out in #144's "Heads-up for Arjun" | Build S-21 + Stage 4 as one combined PR |
 | A review of every FakeApi / conformance hunk in your PRs (they live in his lane) | Merge your combined PRs |
-| Advance warning of any `@bevi/ranking` formula or constant change (1.4.0 in #137, 1.5.0 in M-21) | Re-run the graph sync; your edge weights come from `edgeWeight()` |
+| Advance warning of any `@bevi/ranking` formula or constant change (1.4.0, 1.5.0 and 1.6.0 all merged on 2026-10-31; `edgeWeight` unchanged, so the nightly run only re-stamps) | Re-run the graph sync; your edge weights come from `edgeWeight()` |
 
 ## The shared map (identical in both plans)
 
@@ -91,10 +90,10 @@ D-04 taxonomy + 378 assignments ─────▶ A-13 hierarchy (#132) ──�
 M-22 maths review ──(SQL fixes)──────▶ A-14 follow-ups (open)         │
 #137 M-22 vectors ──(targets)────────▶ A-14 follow-ups                │
 M-27 (b) Bevs like this ◀───────────── A-16 (1) Bev graph + S-14 (2)  │
-M-21 placement (pkg, then app) ◀────── A-16 (1) + A-13 ◀──────────────┘
+M-21 placement (#138, app #140) ◀───── A-16 (1) + A-13 ◀──────────────┘
 M-28 taste formulas ──(#131)─────────▶ A-16 (2) taste graph (#133)
 M-27 (a) edges mode on (#137) ◀─────── S-21 edges in the snapshot
-Layer 2 reads user_neighbors ◀──────── Stage 4 (same RPC change)
+Stored neighbours on (#144) ◀──────── Stage 4 (same RPC change)
 M-16 map UI ◀───────────────────────── S-10 + A-08 venues (P2)
 M-20 duplicate step ◀───────────────── S-13 + A-12 duplicates (P2)
 ```
