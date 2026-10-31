@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 260" role="img" aria-labelledby="bev-pepsi-zero-sugar-title"><title id="bev-pepsi-zero-sugar-title">Pepsi Zero Sugar</title><defs>
+<linearGradient id="bev-pepsi-zero-sugar-metal"><stop stop-color="#aeb4b3"/><stop offset=".2" stop-color="#f8f8f1"/><stop offset=".48" stop-color="#d3d8d5"/><stop offset=".8" stop-color="#9ba5a1"/><stop offset="1" stop-color="#dce2dd"/></linearGradient>
+<linearGradient id="bev-pepsi-zero-sugar-glass"><stop stop-color="#fff" stop-opacity=".65"/><stop offset=".18" stop-color="#fff" stop-opacity=".12"/><stop offset=".65" stop-color="#fff" stop-opacity=".02"/><stop offset="1" stop-color="#75867c" stop-opacity=".35"/></linearGradient>
+<linearGradient id="bev-pepsi-zero-sugar-shade"><stop stop-color="#000" stop-opacity=".12"/><stop offset=".2" stop-color="#fff" stop-opacity=".16"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/><stop offset=".86" stop-color="#000" stop-opacity=".14"/><stop offset="1" stop-color="#fff" stop-opacity=".09"/></linearGradient>
+<radialGradient id="bev-pepsi-zero-sugar-shadow"><stop stop-color="#3c372d" stop-opacity=".18"/><stop offset="1" stop-color="#3c372d" stop-opacity="0"/></radialGradient><clipPath id="bev-pepsi-zero-sugar-bodyclip"><path d="M61 41Q100 32 139 41L145 58V220Q145 233 100 233T55 220V58Z"/></clipPath><clipPath id="bev-pepsi-zero-sugar-globeclip"><circle cx="100" cy="134" r="40.5"/></clipPath><linearGradient id="bev-pepsi-zero-sugar-pepsiblack"><stop stop-color="#202a31"/><stop offset=".25" stop-color="#3c4348"/><stop offset=".55" stop-color="#1c2227"/><stop offset=".88" stop-color="#131b20"/><stop offset="1" stop-color="#323d44"/></linearGradient></defs><ellipse cx="100" cy="239" rx="58" ry="11" fill="url(#bev-pepsi-zero-sugar-shadow)"/>
+<path d="M61 41Q100 32 139 41L145 58V220Q145 233 100 233T55 220V58Z" fill="url(#bev-pepsi-zero-sugar-pepsiblack)"/>
+<g clip-path="url(#bev-pepsi-zero-sugar-bodyclip)">
+<circle cx="100" cy="134" r="43" fill="#efefe9" stroke="#d4d8d9" stroke-width="1.6"/>
+<g clip-path="url(#bev-pepsi-zero-sugar-globeclip)">
+<path d="M57 88h86v34q-20-6-43-1t-43-2Z" fill="#e32b36"/>
+<path d="M57 148q21 5 43 1t43 1v28H57Z" fill="#153fb7"/>
+<text x="100" y="143" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" fill="#14191d" font-weight="900" letter-spacing="-.8" stroke="#14191d" stroke-width=".5" paint-order="stroke" textLength="76" lengthAdjust="spacingAndGlyphs">PEPSI</text>
+</g>
+
+<text x="100" y="207" text-anchor="middle" font-family="Arial,sans-serif" font-size="6.2" fill="#f0f0e9" font-weight="900" letter-spacing=".15">ZERO SUGAR</text>
+<path d="M61 41Q100 32 139 41L145 58V220Q145 233 100 233T55 220V58Z" fill="url(#bev-pepsi-zero-sugar-shade)" opacity=".85"/>
+<path d="M65 62V213" fill="none" stroke="#fff" stroke-opacity=".18" stroke-width="3.1"/>
+<path d="M138 62V213" fill="none" stroke="#fff" stroke-opacity=".09" stroke-width="1.3"/>
+<ellipse cx="65" cy="67" rx="1.05" ry="1.6" fill="#fff" opacity=".15"/><ellipse cx="94" cy="110" rx="0.6" ry="1" fill="#fff" opacity=".15"/><ellipse cx="123" cy="153" rx="0.6" ry="1" fill="#fff" opacity=".15"/><ellipse cx="83" cy="196" rx="0.6" ry="1" fill="#fff" opacity=".15"/><ellipse cx="112" cy="94" rx="1.05" ry="1.6" fill="#fff" opacity=".15"/><ellipse cx="72" cy="137" rx="0.6" ry="1" fill="#fff" opacity=".15"/><ellipse cx="101" cy="180" rx="0.6" ry="1" fill="#fff" opacity=".15"/><ellipse cx="130" cy="78" rx="0.6" ry="1" fill="#fff" opacity=".15"/><ellipse cx="90" cy="121" rx="1.05" ry="1.6" fill="#fff" opacity=".15"/><ellipse cx="119" cy="164" rx="0.6" ry="1" fill="#fff" opacity=".15"/><ellipse cx="79" cy="207" rx="0.6" ry="1" fill="#fff" opacity=".15"/><ellipse cx="108" cy="105" rx="0.6" ry="1" fill="#fff" opacity=".15"/><ellipse cx="68" cy="148" rx="1.05" ry="1.6" fill="#fff" opacity=".15"/><ellipse cx="97" cy="191" rx="0.6" ry="1" fill="#fff" opacity=".15"/><ellipse cx="126" cy="89" rx="0.6" ry="1" fill="#fff" opacity=".15"/><ellipse cx="86" cy="132" rx="0.6" ry="1" fill="#fff" opacity=".15"/><ellipse cx="115" cy="175" rx="1.05" ry="1.6" fill="#fff" opacity=".15"/><ellipse cx="75" cy="73" rx="0.6" ry="1" fill="#fff" opacity=".15"/><ellipse cx="104" cy="116" rx="0.6" ry="1" fill="#fff" opacity=".15"/>
+</g>
+<ellipse cx="100" cy="41" rx="39" ry="8" fill="url(#bev-pepsi-zero-sugar-metal)" stroke="#9ca7a4" stroke-width="1.1"/>
+<ellipse cx="100" cy="41" rx="34" ry="5.5" fill="none" stroke="#8d9892" stroke-width=".8"/>
+<ellipse cx="105" cy="42" rx="8" ry="3.5" fill="#657169"/>
+<path d="M93 39h10q6 0 5 4t-8 3h-6q-6-1-1-7" fill="none" stroke="#e6e8de" stroke-width="2.4"/>
+<path d="M58 226q42 12 84 0" fill="none" stroke="url(#bev-pepsi-zero-sugar-metal)" stroke-width="4"/>
+<path d="M61 230q39 7 78 0" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1"/>
+</svg>
