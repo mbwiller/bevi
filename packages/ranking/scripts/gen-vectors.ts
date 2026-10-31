@@ -36,7 +36,9 @@ import {
   neighbourReliability,
   pearsonCorrelation,
   pearsonSimilarity,
+  placementPhase,
   placementResult,
+  placementTiers,
   populationStats,
   profileSimilarity,
   randomInt,
@@ -68,7 +70,10 @@ import {
   type FlavorProfile,
   type LeaderboardInputRow,
   type PredictionSnapshot,
+  type PlacementBevKind,
+  type PlacementListBev,
   type PlacementState,
+  type PlacementTier,
   type RankUsersRow,
   type ScoredRanking,
   type Stats,
@@ -123,6 +128,10 @@ const constants = {
     'streakFromTimestamps.timestamps are ranking EVENTS (submit_ranking and rerank_bev), never deleted: a re-rank adds its own day and keeps the original one; a removal adds and deletes nothing. When a case lists input.events, timestamps = events.map(at)',
   layer1EdgesRule:
     "bevSimilarity 'edges': sim(b, b') = w of the snapshot.edges row for the unordered pair {b, b'} (either orientation), 0 when there is none; pairs with sim < simMin dropped as in 'content'; content = sum(sim * z) / (sum(sim) + 1); conf1 mass = n_{u,cat(b)} + sum(sim); affinity and g unchanged. A snapshot without an edges field (absent or null) uses contentSimilarity ('content'); an empty array means no edges",
+  placementTiersRule:
+    'tier of a bucket Bev l relative to the new Bev b (placementTier constants): sameLeaf (1) when categoryId (the root) is equal and both leafCategoryId are non-null and equal; sameRoot (2) when categoryId is equal otherwise (a null leaf on either side, i.e. kind unknown, never reaches tier 1); edge (3) when the roots differ and weights[l.id] (the bev_edges w of {b, l}) is >= edgeMinWeight; null otherwise (no weight, or a weight below the floor). Without weights only tiers 1 and 2 occur',
+  anchoredPlacementRule:
+    'startPlacement with tiers (one per orderedBevIds entry, filtered with the Bev itself): anchors A = the entries other than bevId whose tier equals the smallest non-null tier among the entries other than bevId (on a re-rank the Bev is still in the list and its tier against itself is ignored), in list order, at positions p_1 < ... < p_k of the filtered list; no anchors = the plain search. Phase 1 = binary search over anchor slots [aLo, aHi] = [0, k]: ask a_j with j = floor((aLo + aHi) / 2) (0-based), NEW_BETTER aHi = j, EXISTING_BETTER aLo = j + 1, TIE ends the placement at p_j + 1; after each answer the insertion range is lo = (aLo = 0 ? 0 : p_{aLo - 1} + 1), hi = (aHi = k ? n : p_{aHi}). Phase 2 = the plain search on [lo, hi] once aLo = aHi (none when lo = hi). insertIndex = lo; comparisons in the order asked; maxSteps = maxComparisons(k) + maxComparisons(widest gap between consecutive anchors, or before the first / after the last), constant. Undo restores lo, hi, aLo, aHi',
 };
 
 /** A plausible stored score: some position in some bucket. */
@@ -344,6 +353,109 @@ function placementCases(): Case[] {
       cases.push(placementCase(`oracle n=${n} t=${t}`, 'new', 'LOVED', ids, oracleSteps(n, t)));
     }
   }
+  // 1.5.0 (M-21): anchored placement (placementTiersRule, anchoredPlacementRule). Hand-built, no PRNG,
+  // and appended after the oracle cases, so every earlier case in this file is unchanged.
+  cases.push(...placementTierCases(), ...anchoredCases());
+  return cases;
+}
+
+/** placementTiers over D-04 §3's pairs: a catalogue of six kinds of Bev. */
+function placementTierCases(): Case[] {
+  const cases: Case[] = [];
+  const kind = (categoryId: string, leafCategoryId: string | null): PlacementBevKind => ({ categoryId, leafCategoryId });
+  const coke = kind('soda', 'cola');
+  const unknownSoda = kind('soda', null);
+  const dietCoke = kind('diet_soda', 'diet_cola');
+  const fiji = kind('water', null);
+  const list: PlacementListBev[] = [
+    { id: 'pepsi', ...kind('soda', 'cola') },
+    { id: 'aw-root-beer', ...kind('soda', 'root_beer') },
+    { id: 'mystery-soda', ...unknownSoda },
+    { id: 'diet-coke', ...dietCoke },
+    { id: 'diet-pepsi', ...kind('diet_soda', 'diet_cola') },
+    { id: 'evian', ...fiji },
+    { id: 'gatorade', ...kind('sports', null) },
+    { id: 'cold-brew', ...kind('coffee', 'cold_brew') },
+  ];
+  const tiers = (name: string, newBev: PlacementBevKind, weights?: Map<string, number>) =>
+    cases.push({
+      name,
+      fn: 'placementTiers',
+      input: { newBev, list, ...(weights ? { weights: Object.fromEntries(weights) } : {}) },
+      expected: placementTiers(newBev, list, weights),
+    });
+  tiers('Coke: Pepsi same leaf; A&W and the unknown soda same root; the rest none', coke);
+  tiers('a soda of unknown kind: nothing is same leaf, every soda is same root (D-04 §3: T1 empty)', unknownSoda);
+  tiers('Diet Coke: Diet Pepsi same leaf; Coke-like sodas are a different root', dietCoke);
+  tiers('Fiji: Evian is same root (unsplit water); Gatorade is not', fiji);
+  tiers('Coke with edges: Diet Coke 0.7 and Evian 0.3 become tier 3; 0.29 on cold brew does not; 0.9 on A&W stays tier 2', coke, new Map([
+    ['diet-coke', 0.7],
+    ['evian', 0.3],
+    ['cold-brew', 0.29],
+    ['aw-root-beer', 0.9],
+  ]));
+  tiers('Diet Coke with an edge to Pepsi only', dietCoke, new Map([['pepsi', 0.55]]));
+  return cases;
+}
+
+/**
+ * Anchored placement scripts: the questions asked (with their phase), the anchors, maxSteps and
+ * the result. `fn: 'anchoredPlacement'`; `steps` may contain 'UNDO'.
+ */
+function anchoredCases(): Case[] {
+  const cases: Case[] = [];
+  const add = (name: string, bevId: string, bucket: Bucket, orderedBevIds: string[], tiers: PlacementTier[], steps: Step[]) => {
+    let s = startPlacement({ bevId, bucket, orderedBevIds, tiers });
+    const maxSteps = currentPrompt(s)?.maxSteps ?? 0;
+    const questions: Array<{ comparedBevId: string; phase: string }> = [];
+    for (const step of steps) {
+      if (step === 'UNDO') s = undo(s);
+      else {
+        questions.push({ comparedBevId: currentPrompt(s)?.comparedBevId ?? '', phase: placementPhase(s) });
+        s = answer(s, step);
+      }
+    }
+    if (!isDone(s)) throw new Error(`anchored case "${name}" does not finish`);
+    const anchors = s.anchored ? s.anchored.positions.map((p) => s.list[p]) : [];
+    cases.push({ name, fn: 'anchoredPlacement', input: { bevId, bucket, orderedBevIds, tiers, steps }, expected: { anchors, maxSteps, questions, result: placementResult(s) } });
+  };
+  // The paper's figure: L = l0 … l7, anchors l1, l4, l6.
+  const L = Array.from({ length: 8 }, (_, i) => `l${i}`);
+  const fig: PlacementTier[] = [null, 1, null, null, 1, null, 1, null];
+  add('figure: lands between a1 and a2, then in the gap l2 l3 (asks l4, l1, l3, l2)', 'new', 'LOVED', L, fig, ['NEW_BETTER', 'EXISTING_BETTER', 'NEW_BETTER', 'EXISTING_BETTER']);
+  add('figure: best of all (asks l4, l1, l0)', 'new', 'LOVED', L, fig, ['NEW_BETTER', 'NEW_BETTER', 'NEW_BETTER']);
+  add('figure: worst of all (asks l4, l6, l7)', 'new', 'LOVED', L, fig, ['EXISTING_BETTER', 'EXISTING_BETTER', 'EXISTING_BETTER']);
+  add('figure: tie in Phase 1 ends at p_j + 1 = 5', 'new', 'FINE', L, fig, ['TIE']);
+  add('figure: tie in Phase 2, directly below l3', 'new', 'FINE', L, fig, ['NEW_BETTER', 'EXISTING_BETTER', 'TIE']);
+  add('figure: between a2 and a3, gap l5 alone', 'new', 'DISLIKED', L, fig, ['EXISTING_BETTER', 'NEW_BETTER', 'EXISTING_BETTER']);
+  add('figure: undo across the phase boundary, then the other answer', 'new', 'LOVED', L, fig, ['NEW_BETTER', 'EXISTING_BETTER', 'NEW_BETTER', 'UNDO', 'UNDO', 'NEW_BETTER', 'EXISTING_BETTER']);
+  add('figure: undo after a Phase 1 tie', 'new', 'LOVED', L, fig, ['TIE', 'UNDO', 'EXISTING_BETTER', 'EXISTING_BETTER', 'NEW_BETTER']);
+  add('figure: undo after done, in Phase 2', 'new', 'LOVED', L, fig, ['NEW_BETTER', 'EXISTING_BETTER', 'NEW_BETTER', 'EXISTING_BETTER', 'UNDO', 'NEW_BETTER']);
+  add('re-rank: l4 itself is in the list with a tier and is filtered out (anchors l1, l6)', 'l4', 'LOVED', L, fig, ['NEW_BETTER', 'EXISTING_BETTER', 'NEW_BETTER', 'EXISTING_BETTER']);
+  add('the smallest tier present wins: tier 2 anchors when no tier 1 (l0, l3, l5)', 'new', 'LOVED', L, [2, 3, null, 2, null, 2, 3, null], ['EXISTING_BETTER', 'NEW_BETTER', 'NEW_BETTER']);
+  add('tier 3 (edges) alone: anchors l2, l7', 'new', 'LOVED', L, [null, null, 3, null, null, null, null, 3], ['NEW_BETTER', 'EXISTING_BETTER', 'NEW_BETTER', 'NEW_BETTER', 'EXISTING_BETTER']);
+  add('adjacent anchors, empty gap: no Phase 2 question', 'new', 'LOVED', ['a', 'b', 'c', 'd'], [null, 1, 1, null], ['NEW_BETTER', 'EXISTING_BETTER']);
+  add('one anchor at the top of the list', 'new', 'LOVED', L, [1, null, null, null, null, null, null, null], ['EXISTING_BETTER', 'NEW_BETTER', 'EXISTING_BETTER', 'NEW_BETTER']);
+  add('one anchor at the bottom of the list', 'new', 'LOVED', L, [null, null, null, null, null, null, null, 1], ['NEW_BETTER', 'EXISTING_BETTER', 'EXISTING_BETTER', 'NEW_BETTER']);
+  add('no anchors (every tier null): the plain search, same questions and result as "best of five"', 'new', 'LOVED', ['coke', 'sprite', 'pepsi', 'fanta', 'dew'], [null, null, null, null, null], ['NEW_BETTER', 'NEW_BETTER', 'NEW_BETTER']);
+  add('every Bev in one tier: the plain search, same questions and result as "worst of five"', 'new', 'LOVED', ['coke', 'sprite', 'pepsi', 'fanta', 'dew'], [2, 2, 2, 2, 2], ['EXISTING_BETTER', 'EXISTING_BETTER']);
+  add('empty bucket with tiers', 'new', 'LOVED', [], [], []);
+  // A consistent oracle on a 20-Bev list with 7 anchors, for every true slot that exercises both phases.
+  const twenty = Array.from({ length: 20 }, (_, i) => `b${i}`);
+  const spread: PlacementTier[] = twenty.map((_, i) => ([2, 5, 6, 9, 13, 14, 18].includes(i) ? 1 : i % 3 === 0 ? 2 : null));
+  for (const t of [0, 3, 7, 12, 19, 20]) {
+    let s = startPlacement({ bevId: 'new', bucket: 'LOVED', orderedBevIds: twenty, tiers: spread });
+    const steps: Step[] = [];
+    while (!isDone(s)) {
+      const j = twenty.indexOf(currentPrompt(s)?.comparedBevId ?? '');
+      const a: ComparisonAnswer = t <= j ? 'NEW_BETTER' : 'EXISTING_BETTER';
+      steps.push(a);
+      s = answer(s, a);
+    }
+    add(`oracle n=20, 7 anchors, t=${t}`, 'new', 'LOVED', twenty, spread, steps);
+  }
+  // Integrator review of 7e19458: on a re-rank the Bev's own tier (1 against itself) must not decide the anchors.
+  add('re-rank: the Bev is the only tier-1 entry (itself); the anchors are the tier-2 Bevs latte1, latte2', 'mocha', 'LOVED', ['latte1', 'mocha', 'cola', 'latte2'], [2, 1, null, 2], ['NEW_BETTER', 'EXISTING_BETTER', 'EXISTING_BETTER']);
   return cases;
 }
 

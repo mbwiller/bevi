@@ -1,7 +1,7 @@
 import type { Bucket, TasteAttributeKind } from './types.ts';
 
 /** Bumped with any formula or constant change; equals the `version` field of every vectors file. */
-export const RANKING_VERSION = '1.4.0';
+export const RANKING_VERSION = '1.5.0';
 
 /**
  * Score band per bucket as integer [lo, hi] edges on the 0–10 scale (Beli-style 7 / 4, decided 2026-10-09).
@@ -34,6 +34,17 @@ export const MIN_N_USER = 3;
 export const MIN_N_CAT = 3;
 /** Only when there are zero rankings in the whole system. */
 export const GLOBAL_FALLBACK: Readonly<{ mean: number; stddev: number }> = { mean: 5.0, stddev: 2.5 };
+
+// ---------------------------------------------------------------- anchored placement (LaTeX §10.1, M-21)
+
+/**
+ * The tiers `placementTiers` assigns a bucket Bev relative to the new one (smaller = more similar;
+ * null = no tier). sameLeaf: both leaves known and equal. sameRoot: the same root category, which
+ * includes a Bev of unknown kind (leaf null) against a leaf under that root, and two Bevs of unknown
+ * kind under one root. edge: a different root but a stored `bev_edges` row with w ≥ EDGE_MIN_WEIGHT.
+ * The anchors are the members of the smallest tier present, so what matters is the set, not the number.
+ */
+export const PLACEMENT_TIER: Readonly<{ sameLeaf: 1; sameRoot: 2; edge: 3 }> = { sameLeaf: 1, sameRoot: 2, edge: 3 };
 
 /** Shrinkage for category affinity: Σz / (n + K_AFF). */
 export const K_AFF = 2;
@@ -214,6 +225,7 @@ export const RANKING_CONSTANTS = {
   minNUser: MIN_N_USER,
   minNCat: MIN_N_CAT,
   globalFallback: GLOBAL_FALLBACK,
+  placementTier: PLACEMENT_TIER,
   kAff: K_AFF,
   bayesC: BAYES_C,
   bayesCategoryPriorMin: BAYES_CATEGORY_PRIOR_MIN,
