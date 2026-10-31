@@ -1,0 +1,105 @@
+import { wrap, shadow, ref, text } from '../style.mjs';
+
+// Self-contained Coca-Cola wordmark paths, selected from the manufacturer's
+// company lockup (only the beverage script, without THE / COMPANY).
+// Source: https://www.coca-cola.com/content/dam/onexp/global/icons/logo-white-large.svg
+const cocaScript = "<path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M145.17 8.5841L145.163 8.58019C146.096 7.56152 147.129 6.47965 148.211 5.43877C146.895 4.79707 145.679 4.06971 144.503 3.36606C141.954 1.84137 139.591 0.428035 136.795 0.238895C134.626 0.104655 132.455 0.463533 130.445 1.28858C130.445 1.28858 129.358 -0.186957 126.011 0.291192C122.664 0.769341 112.354 5.07642 103.568 19.1221C95.6258 31.8192 99.3576 39.0997 105.062 39.0213C111.244 38.9354 117.124 32.062 119.119 26.3952C121.113 20.7283 118.76 19.193 116.952 19.3387C114.954 19.5068 111.423 21.2849 109.481 25.2147C107.538 29.1445 107.538 31.5651 107.538 31.5651C108.332 30.7322 109.196 29.9687 110.12 29.2827C110.951 28.6335 111.867 28.1006 112.843 27.6989C113.071 26.6835 113.411 25.6963 113.855 24.7553C114.558 23.2909 115.671 21.7668 117.045 21.4232C119.836 20.7246 118.499 25.8124 116.448 29.1296C115.346 30.9002 111.435 36.0216 108.076 36.0216C104.718 36.0216 104.076 32.7867 104.782 29.7497C105.488 26.7127 106.47 22.8725 111.379 15.8796C116.287 8.88667 121.595 4.74022 124.67 3.0032C127.826 1.21387 129.111 1.99833 129.111 1.99833C129.111 1.99833 125.081 4.47126 122.787 7.4597C120.598 10.3137 119.287 13.5225 120.303 15.0951C121.274 16.5931 124.685 16.623 128.446 11.199C132.159 5.84221 131.226 2.65579 131.226 2.65579C131.47 2.57631 131.72 2.5139 131.973 2.46901C133.784 2.2262 135.234 2.70809 137.475 3.85863C138.568 4.41993 139.641 5.13887 140.787 5.90675C142.102 6.78812 143.514 7.7342 145.163 8.58019L145.159 8.5841H145.17ZM129.955 3.07044C129.955 3.07044 127.565 4.023 124.785 7.08614C122.006 10.1493 120.385 13.5972 121.584 14.5087C122.044 14.8561 123.104 14.9158 125.032 13.1825C126.809 11.6389 128.204 9.70433 129.107 7.53067C130.28 4.67074 129.995 3.26865 129.959 3.08957C129.957 3.07872 129.955 3.07236 129.955 3.07044Z\"/><path d=\"M150.013 10.3192L150.012 10.3211C156.541 11.6136 162.26 7.56803 165.301 4.12386C166.411 2.89132 167.365 1.52769 168.144 0.0633241C166.759 1.50507 165.209 2.77893 163.527 3.85863L163.508 3.8549C160.677 5.67037 156.758 7.31775 152.993 6.9554C152.04 7.94158 151.02 9.08092 150.004 10.3174L150.013 10.3192Z\"/><path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M152.313 33.5263C151.771 34.393 151.155 36.0553 152.944 35.0205C155.122 33.7616 158.226 29.0437 158.226 29.0437H159.631C158.351 31.0153 156.925 32.8883 155.365 34.647C153.157 37.0937 150.464 39.3164 148.566 39.096C146.351 38.8382 147.046 35.9283 147.046 35.9283C147.046 35.9283 143.863 39.2902 141.678 39.0624C138.715 38.7337 139.619 35.0728 139.619 35.0728C139.619 35.0728 136.257 39.1819 133.986 39.0586C130.407 38.8532 131.308 34.4863 132.301 31.4307C132.836 29.7908 133.329 28.502 133.329 28.502C133.329 28.502 132.974 28.5954 132.208 28.7075C131.808 28.7635 131.087 28.8046 131.087 28.8046C130.266 30.2529 129.371 31.6581 128.405 33.0145C127.214 34.5984 122.152 40.0411 119.163 38.9503C116.407 37.9417 117.318 33.7206 118.924 30.3586C121.267 25.4687 127.856 18.4422 131.655 19.3649C135.596 20.3212 131.745 27.5084 131.745 27.5084C131.745 27.5084 131.745 27.5345 131.786 27.5532C132.035 27.5981 132.291 27.584 132.533 27.5121C133.026 27.4123 133.508 27.2686 133.975 27.0825C133.975 27.0825 137.935 18.7896 142.309 13.3656C146.683 7.94158 155.421 -1.3898 158.846 0.870201C159.683 1.4268 159.302 3.33939 158.174 5.6629C157.665 5.82368 157.149 5.95834 156.627 6.06634C157.253 5.02878 157.726 3.90657 158.032 2.73424C158.547 -0.0674197 152.003 5.83847 147.326 12.1964C144.513 16.0265 142.014 20.0778 139.855 24.3107C140.7 23.7972 141.506 23.2229 142.268 22.5924C144.354 20.8621 146.337 19.0111 148.207 17.0488C150.001 15.2005 151.684 13.2471 153.247 11.199C153.747 11.1754 154.246 11.1243 154.741 11.0458C153.031 13.3645 151.168 15.5659 149.164 17.6353C148.998 17.8004 148.832 17.9669 148.665 18.1343C146.941 19.8606 145.123 21.6809 143.523 23.0294C141.96 24.366 140.312 25.5989 138.588 26.7201C138.588 26.7201 134.479 34.9682 136.721 35.4987C138.028 35.8125 140.613 31.8341 140.613 31.8341C140.613 31.8341 143.975 26.6903 146.015 24.363C148.771 21.2252 151.158 19.4172 153.53 19.3686C154.92 19.3425 155.738 20.8255 155.738 20.8255L156.392 19.8131H160.415C160.415 19.8131 152.903 32.5588 152.301 33.5188L152.313 33.5263ZM154.834 22.2524C154.883 22.1659 154.923 22.0745 154.954 21.9797C154.935 21.8305 154.865 21.6923 154.756 21.5882C154.647 21.4842 154.506 21.4207 154.356 21.4082C153.736 21.3783 152.884 21.4979 150.662 23.9596C148.815 25.9979 147.226 28.2563 145.932 30.6836C144.659 33.0108 144.143 34.7441 144.875 35.1924C145.113 35.3144 145.387 35.3424 145.645 35.2708C146.142 35.1513 146.702 34.6881 147.557 33.6981C147.877 33.3272 148.226 32.8316 148.625 32.2652L148.629 32.2599C148.727 32.1207 148.828 31.9773 148.932 31.8304C150.404 29.8281 154.102 23.5225 154.834 22.2487V22.2524ZM131.726 24.9271C132.1 23.9558 132.57 22.0507 131.588 21.3036C130.531 20.5079 127.852 22.372 127.826 24.292C127.8 26.2121 129.72 27.1348 130.18 27.2581C130.441 27.329 130.531 27.3178 130.658 27.1086C131.064 26.4096 131.421 25.6832 131.726 24.9346V24.9271ZM129.69 28.4945C129.023 28.1863 128.401 27.7892 127.841 27.3141C127.277 26.843 126.805 26.2718 126.448 25.6294C126.417 25.5769 126.386 25.6112 126.353 25.6479C126.346 25.6556 126.339 25.6633 126.332 25.6705L126.331 25.6711C126.289 25.7133 126.122 25.88 124.688 27.979C123.246 30.0896 121.05 34.4378 123.045 35.1811C124.322 35.6556 126.448 33.418 127.613 31.935C128.402 30.9006 129.117 29.8121 129.754 28.6776C129.814 28.5506 129.754 28.5207 129.69 28.4945Z\"/><path d=\"M107.042 10.1119H103.216L101.054 13.6084H104.879L107.042 10.1119Z\"/><path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M98.0614 19.6787H99.451C99.451 19.6787 92.4282 29.8281 88.4573 29.3649C86.2421 29.1072 86.8996 26.3765 86.8996 26.3765C86.8996 26.3765 83.7804 30.0186 80.9227 29.2902C78.3303 28.6253 80.0038 24.3182 80.0038 24.3182C79.9596 24.3361 79.7967 24.4927 79.5382 24.741C78.0687 26.1531 73.5122 30.5314 70.1606 29.2416C66.0515 27.6503 68.1771 22.357 68.9615 20.7657C69.6264 19.4246 70.3623 18.1172 70.3623 18.1172C70.3623 18.1172 69.731 18.2965 69.3351 18.3862C68.9391 18.4758 68.3452 18.5916 68.3452 18.5916C68.3452 18.5916 66.3952 21.7631 65.2036 23.3432C64.0119 24.9234 58.9428 30.3623 55.9581 29.279C52.9734 28.1957 53.7168 24.0194 55.3903 20.6873C58.1098 15.3081 64.5648 8.69616 68.4647 9.68981C72.3646 10.6835 69.1408 17.06 69.1408 17.06C69.1408 17.06 69.9216 17.1609 71.7931 15.8833C72.566 15.3574 73.4087 14.5768 74.3077 13.7441C76.5501 11.6671 79.1432 9.2653 81.879 9.67861C83.687 9.9513 85.3717 11.8079 83.0669 15.3305C82.3198 16.4511 81.0908 17.4747 80.142 16.4736C79.5518 15.8572 80.0673 14.7179 80.6874 13.9409C80.9298 13.6242 81.2464 13.3721 81.6092 13.2066C81.9721 13.0412 82.3701 12.9675 82.7681 12.992C82.7681 12.992 83.4031 11.5314 81.7856 11.5613C80.4745 11.5875 77.1573 14.6394 75.2858 17.725C73.5898 20.5677 70.9936 25.394 73.5899 26.4475C75.9843 27.415 80.5417 22.0059 82.6523 19.1706C84.7629 16.3353 89.5668 9.91021 93.6012 9.65246C94.9908 9.56281 95.8163 10.8292 95.8163 10.8292L96.2833 10.082H100.31C100.31 10.082 92.727 22.7792 92.1331 23.7317C91.6661 24.4788 91.046 26.171 92.7644 25.2259C94.4827 24.2808 98.0614 19.6787 98.0614 19.6787ZM88.928 22.2076C90.5567 19.9663 95.0468 12.159 95.0468 12.159C95.0276 12.0097 94.9579 11.8715 94.8491 11.7675C94.7403 11.6635 94.5991 11.5999 94.4491 11.5875C93.829 11.5576 92.798 11.7668 90.7136 14.3443C88.6291 16.9218 87.0752 18.9726 85.9171 21.1056C84.6396 23.4329 84.083 25.0765 84.8152 25.521C85.0532 25.6413 85.3273 25.6693 85.5847 25.5995C86.0628 25.48 86.6867 25.0018 87.5421 24.0156C87.9455 23.5561 88.4013 22.936 88.9355 22.2076H88.928ZM68.4087 11.636C67.3515 10.8366 64.6731 12.7044 64.647 14.6245C64.6208 16.5445 67.0751 17.1422 67.3926 17.1572C67.4634 17.1758 67.5385 17.1706 67.606 17.1422C67.6736 17.1138 67.7299 17.0639 67.7661 17.0003C68.0535 16.4374 68.3116 15.8602 68.5394 15.2707C68.9129 14.2995 69.3799 12.3943 68.3974 11.6472L68.4087 11.636ZM66.8024 18.3712C66.0735 18.1433 65.3768 17.8232 64.7291 17.4187C64.0974 17.0107 63.5825 16.4456 63.2349 15.7787C63.2024 15.7234 63.167 15.7645 63.1337 15.8032C63.1288 15.8089 63.1239 15.8146 63.1191 15.8198C63.0818 15.8609 62.8651 16.1448 61.4269 18.2554C59.9887 20.366 57.8557 24.6843 59.8543 25.4239C61.1318 25.8983 63.2798 23.6533 64.4415 22.1703C65.3169 21.0127 66.1263 19.8067 66.8659 18.558C66.9144 18.431 66.8659 18.4011 66.7949 18.3787L66.8024 18.3712Z\"/><path d=\"M95.8649 40C92.8941 37.9439 89.337 36.9059 85.7266 37.0415C84.7493 37.0678 83.7921 37.3244 82.9326 37.7905C82.0732 38.2566 81.336 38.9189 80.7808 39.7236C79.2417 37.0377 76.201 35.3903 71.4979 35.4277C67.516 35.4727 63.5495 36.4565 59.8172 37.3822C56.4277 38.2228 53.2314 39.0156 50.3921 39.0138C44.6618 39.0138 40.4892 35.4128 40.6274 29.0212C40.874 17.8146 50.3398 7.72866 57.4374 3.17877C61.5054 0.563887 64.9084 -0.205635 67.1498 0.0446464C68.7747 0.223952 70.7284 2.10293 69.4957 4.87097C67.684 8.92403 65.1812 8.5841 65.2745 6.64908C65.3135 6.1443 65.4716 5.65594 65.7359 5.22411C66.0002 4.79228 66.3631 4.42929 66.7949 4.16495C67.2531 3.91551 67.7674 3.78695 68.2891 3.79139C68.6627 3.48882 68.9204 1.27364 66.0067 2.00207C63.093 2.7305 59.5442 5.59566 56.1972 9.29385C52.8501 12.992 47.6428 19.9775 46.354 27.3141C45.7526 30.7172 46.1523 36.9219 54.1987 36.8547C57.3009 36.8292 61.0755 35.8881 65.1399 34.8747C70.0267 33.6562 75.3325 32.3333 80.3923 32.372C83.6195 32.3585 86.7892 33.2264 89.5593 34.8823C91.9575 36.3765 94.8301 38.5133 95.8499 39.9851L95.8649 40Z\"/>";
+
+const shape = 'M61 41Q100 32 139 41L145 58V220Q145 233 100 233T55 220V58Z';
+function can(slug, title, label, color, extraDefs = '') {
+  return wrap(slug, title, `${shadow(58)}
+<path d="${shape}" fill="${color}"/>
+<g clip-path="${ref('bodyclip')}">
+${label}
+<path d="${shape}" fill="${ref('shade')}" opacity=".85"/>
+<path d="M65 62V213" fill="none" stroke="#fff" stroke-opacity=".18" stroke-width="3.1"/>
+<path d="M138 62V213" fill="none" stroke="#fff" stroke-opacity=".09" stroke-width="1.3"/>
+${Array.from({ length: 19 }, (_, i) => `<ellipse cx="${65 + i * 29 % 69}" cy="${67 + i * 43 % 145}" rx="${i % 4 ? .6 : 1.05}" ry="${i % 4 ? 1 : 1.6}" fill="#fff" opacity=".15"/>`).join('')}
+</g>
+<ellipse cx="100" cy="41" rx="39" ry="8" fill="${ref('metal')}" stroke="#9ca7a4" stroke-width="1.1"/>
+<ellipse cx="100" cy="41" rx="34" ry="5.5" fill="none" stroke="#8d9892" stroke-width=".8"/>
+<ellipse cx="105" cy="42" rx="8" ry="3.5" fill="#657169"/>
+<path d="M93 39h10q6 0 5 4t-8 3h-6q-6-1-1-7" fill="none" stroke="#e6e8de" stroke-width="2.4"/>
+<path d="M58 226q42 12 84 0" fill="none" stroke="${ref('metal')}" stroke-width="4"/>
+<path d="M61 230q39 7 78 0" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1"/>
+`, `<clipPath id="__ID__bodyclip"><path d="${shape}"/></clipPath>${extraDefs}`);
+}
+
+// Wraparound lettering intentionally continues beyond the visible front face,
+// as it does in the inspected cans. The shared body clip supplies the crop.
+const cokeLogo = ink => `<g transform="translate(-48 65) scale(1.4 1.65)" fill="${ink}">${cocaScript}</g>`;
+const cokeOriginal = can('coca-cola-classic', 'Coca-Cola Classic', `
+${cokeLogo('#fffdf4')}
+${text(100, 146, 'ORIGINAL', 8.2, '#fffdf4', 'font-weight="bold" letter-spacing="1.6"')}
+${text(100, 157, 'TASTE', 8.2, '#fffdf4', 'font-weight="bold" letter-spacing="1.6"')}
+`, '#e62929');
+
+const cokeZero = can('coke-zero-sugar', 'Coke Zero Sugar', `
+${cokeLogo('#202020')}
+${text(100, 146, 'ZERO SUGAR', 7.7, '#1e2020', 'font-weight="bold" letter-spacing="1"')}
+${text(100, 202, 'ZERO CALORIE COLA', 4.4, '#252624', 'font-weight="bold" letter-spacing=".6"')}
+`, '#e52930');
+
+const dietCoke = can('diet-coke', 'Diet Coke', `
+${text(101, 132, 'Coke', 67, '#d92b28', 'style="font-family:Times New Roman,serif;font-weight:bold" letter-spacing="-4" stroke="#d92b28" stroke-width="1" paint-order="stroke"')}
+${text(129, 78, 'Diet', 17, '#d92b28', 'style="font-family:Georgia,serif;font-style:italic" letter-spacing="-1" transform="rotate(-14 129 78)"')}
+${text(100, 201, 'NO SUGAR', 5, '#d42d29', 'font-weight="bold" letter-spacing=".5"')}
+${text(100, 207, 'NO CALORIES', 5, '#d42d29', 'font-weight="bold" letter-spacing=".5"')}
+`, ref('dietmetal'), `<linearGradient id="__ID__dietmetal"><stop stop-color="#aeb6b8"/><stop offset=".22" stop-color="#f2f3ef"/><stop offset=".5" stop-color="#dde1de"/><stop offset=".82" stop-color="#a6afaf"/><stop offset="1" stop-color="#e1e4e0"/></linearGradient>`);
+
+function pepsiLabel(variant) {
+  const dark = variant === 'zero';
+  return `<circle cx="100" cy="134" r="43" fill="#efefe9" stroke="${dark ? '#d4d8d9' : '#191f25'}" stroke-width="1.6"/>
+<g clip-path="${ref('globeclip')}">
+<path d="M57 88h86v34q-20-6-43-1t-43-2Z" fill="#e32b36"/>
+<path d="M57 148q21 5 43 1t43 1v28H57Z" fill="#153fb7"/>
+${text(100, 143, 'PEPSI', 21, '#14191d', 'font-weight="900" letter-spacing="-.8" stroke="#14191d" stroke-width=".5" paint-order="stroke" textLength="76" lengthAdjust="spacingAndGlyphs"')}
+</g>
+${variant === 'diet' ? text(100, 207, 'DIET', 8, '#20252a', 'font-weight="900" letter-spacing=".2"') : ''}
+${dark ? text(100, 207, 'ZERO SUGAR', 6.2, '#f0f0e9', 'font-weight="900" letter-spacing=".15"') : ''}`;
+}
+const globe = '<clipPath id="__ID__globeclip"><circle cx="100" cy="134" r="40.5"/></clipPath>';
+const pepsi = can('pepsi', 'Pepsi', pepsiLabel('original'), '#1952c5', globe);
+const dietPepsi = can('diet-pepsi', 'Diet Pepsi', pepsiLabel('diet'), ref('pepsimetal'), globe + '<linearGradient id="__ID__pepsimetal"><stop stop-color="#879bae"/><stop offset=".22" stop-color="#e5ecec"/><stop offset=".5" stop-color="#bfcbd6"/><stop offset=".85" stop-color="#8b9dac"/><stop offset="1" stop-color="#c8d4dc"/></linearGradient>');
+const zeroPepsi = can('pepsi-zero-sugar', 'Pepsi Zero Sugar', pepsiLabel('zero'), ref('pepsiblack'), globe + '<linearGradient id="__ID__pepsiblack"><stop stop-color="#202a31"/><stop offset=".25" stop-color="#3c4348"/><stop offset=".55" stop-color="#1c2227"/><stop offset=".88" stop-color="#131b20"/><stop offset="1" stop-color="#323d44"/></linearGradient>');
+
+const record = (slug, name, pageUrl, imageUrl, observations, svg, extraReferences = []) => ({
+  slug, family: 'standard-cola-can',
+  packageChoice: `US 12 fl oz / 355mL ${name} aluminum can; representative package for the size-unspecified catalog row.`,
+  references: [{pageUrl, imageUrl, inspectedAt: '2026-10-28', visuallyInspected: true, observations}, ...extraReferences],
+  uncertainty: 'Representative US can selected; no flavor or formulation substitution. Tiny package text and condensation simplified. Final aesthetic and native-app review pending.',
+  status: 'needs-review', svg,
+});
+const wordmarkReference = {
+  pageUrl: 'https://www.coca-cola.com/us/en/brands/coca-cola/products/original',
+  imageUrl: 'https://www.coca-cola.com/content/dam/onexp/global/icons/logo-white-large.svg',
+  inspectedAt: '2026-10-28', visuallyInspected: true,
+  observations: 'Manufacturer vector lockup visually inspected. Only the six Coca-Cola script paths are retained for accurate package lettering; THE and COMPANY paths are omitted. Script is cropped and scaled to the inspected wraparound label.'
+};
+
+export const records = [
+  record('coca-cola-classic', 'Coca-Cola Original Taste',
+    'https://www.kroger.com/p/coca-cola-soda-cans/0004900000634',
+    'https://www.kroger.com/product/images/large/front/0004900000634',
+    'Inspected retailer single-can image: standard red aluminum can, oversized white script wrapping around the upper half, white two-line ORIGINAL TASTE below and silver top/bottom rims. Manufacturer page confirms Original but currently shows a PET bottle; can geometry follows this retailer packshot.', cokeOriginal, [wordmarkReference]),
+  record('diet-coke', 'Diet Coke',
+    'https://www.coca-cola.com/us/en/brands/diet-coke/products',
+    'https://www.coca-cola.com/content/dam/onexp/us/en/brands/diet-coke/en_diet%20coke_prod_original_en_diet%20coke_prod_caffeine%20free_750x750_v1.jpg',
+    'Inspected manufacturer original Diet Coke can: silver aluminum body, oversized red Coke wrapping across upper front, smaller red Diet above/right, NO SUGAR / NO CALORIES near bottom, metallic top and base. Filename also contains caffeine free, but visible label is Original Diet Coke with no caffeine-free banner.', dietCoke),
+  record('coke-zero-sugar', 'Coca-Cola Zero Sugar',
+    'https://www.coca-cola.com/us/en/brands/coca-cola/products/zero',
+    'https://www.coca-cola.com/content/dam/onexp/us/en/brands/coca-cola-zero/en_coca-cola_prod_zero%20sugar%20_750x750_v1.jpg',
+    'Inspected manufacturer can: red body rather than legacy black can, oversized black Coca-Cola script across upper portion, black ZERO SUGAR beneath, small black ZERO CALORIE COLA lower on body, silver rims.', cokeZero, [wordmarkReference]),
+  record('pepsi', 'Pepsi',
+    'https://www.target.com/p/pepsi-cola-soda-12pk-12-fl-oz-cans/-/A-13044177',
+    'https://target.scene7.com/is/image/Target/GUEST_6b8191c4-2e8e-4487-8a65-f752a4d01fc1?wid=1000&hei=1000',
+    'Inspected retailer packshot containing single can: vivid blue aluminum body, large centered red/white/blue roundel with black rim and heavy uppercase PEPSI across a subtly curved white band; silver rims. Manufacturer product image host returned403; this is the current roundel-wordmark package, not the old separate lowercase wordmark.', pepsi),
+  record('diet-pepsi', 'Diet Pepsi',
+    'https://www.target.com/p/diet-pepsi-cola-soda-12pk-12-fl-oz-cans/-/A-13373288',
+    'https://target.scene7.com/is/image/Target/GUEST_9da9ff7c-18bd-4089-be4d-a7e96035a52b?wid=1000&hei=1000',
+    'Inspected retailer packshot: cool silver can with large red/white/blue roundel bordered black, heavy black PEPSI inside white stripe, black DIET near lower body. Distinct from blue Original and black Zero Sugar. Manufacturer image host rejected access.', dietPepsi),
+  record('pepsi-zero-sugar', 'Pepsi Zero Sugar',
+    'https://www.target.com/p/pepsi-zero-sugar-soda-12pk-12-fl-oz-cans/-/A-12946208',
+    'https://target.scene7.com/is/image/Target/GUEST_de53b679-9877-442e-b704-eb30b6d43c80?wid=1000&hei=1000',
+    'Inspected retailer packshot: black can, large red/white/blue roundel with pale silver perimeter and black uppercase PEPSI across white band; white ZERO SUGAR near base and silver rims. Manufacturer image host rejected access.', zeroPepsi),
+];

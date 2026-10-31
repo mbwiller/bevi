@@ -1,0 +1,222 @@
+{
+  "reviewedAt": "2026-10-31",
+  "reviewer": "Codex coordinator with independent batch-review agent",
+  "scope": "Raster artwork, inspected reference comparison, and 40/56/96/155px light/dark contact sheets; no interactive browser or native Expo session",
+  "sizes": [
+    40,
+    56,
+    96,
+    155
+  ],
+  "paddingFraction": 0.08,
+  "backgrounds": [
+    "light",
+    "dark"
+  ],
+  "sourceImagesVisuallyInspected": true,
+  "outcome": "30 drafts visually reviewed; original 12 praised by user, final approval of new 18 and native review pending",
+  "openItems": [
+    "OLIPOP catalog does not distinguish 6g vs 9g formula; 9g packaging explicitly selected.",
+    "La Marca manufacturer image filename contains DemiSec while its visible label and linking page identify flagship Prosecco DOC; discrepancy retained in evidence.",
+    "Starry Original uses inspected 16oz sleek format; Zero Sugar uses inspected 12oz standard format.",
+    "Fine lettering and complex brand marks are simplified; final aesthetic review of new 18 pending.",
+    "Native integration, live Postgres reconciliation and remaining 348 catalog entries pending."
+  ],
+  "assets": [
+    {
+      "bevId": "001bf081-3994-5406-95e7-18bd3b48179d",
+      "slug": "bubly-lime",
+      "pngSha256": "6a0dd91ffa20e5f0e1976416a3c89b777f7c2b4a5451f8763aaa33fa50fc8940",
+      "portableSvgSha256": "72e3d419f0b5657414600408a26b713cdb28addf711e5682c6d694a321d1f301"
+    },
+    {
+      "bevId": "a767e075-f4bf-5215-a5f4-44cb8df8d420",
+      "slug": "coca-cola-classic",
+      "pngSha256": "45b0bbe2f74e9032bd9b6929a56a872a55984ad72d1ef351b1a9dd207e95a60b",
+      "portableSvgSha256": "30fbcd5ab3bd5c33a29bd539261754c498ee54e2ccb1a30ba05f4b25b9507d31"
+    },
+    {
+      "bevId": "1d2be6de-5c7f-5c11-829a-7393a9e7f979",
+      "slug": "coke-zero-sugar",
+      "pngSha256": "5e00fdb1e76380fb48406ef647f21afd897e07d40913d3c49087d402a9173610",
+      "portableSvgSha256": "7fb6de09bf74a38eb56bd25a00aa21307c8d5fa6672d213986f3ffe464c33255"
+    },
+    {
+      "bevId": "04126845-996c-5186-9f6f-0d5af683028d",
+      "slug": "diet-coke",
+      "pngSha256": "785755d08aa6a040413ce3b4f980f507a11bb0f12f13670c722fb0653315f0ec",
+      "portableSvgSha256": "350bbf291f982db84ce7544c602d7d4c0256389056101092653ad34abaeda03b"
+    },
+    {
+      "bevId": "78f2c3fb-838a-5950-8ec5-9d97c8bb973a",
+      "slug": "diet-pepsi",
+      "pngSha256": "34e2fd38bf6ba284eaa182963eea3a28a13c1c6b353e00a158577406db195a31",
+      "portableSvgSha256": "2c390a433a2d5c35be307f9f4c95ce9f3d6e1eda1d1f83e076257cd65f6bf0cc"
+    },
+    {
+      "bevId": "1d8d5c08-5f2e-5525-8a4a-6d300419527c",
+      "slug": "fanta-orange",
+      "pngSha256": "bb22903bf77abf6de6999cddad744e55333af2b0b76a6ed80eb3d288a82cd2ee",
+      "portableSvgSha256": "1c13d14b82a1b6e0426094a4b72d28155d266b5886a43452f0e70a2514f58193"
+    },
+    {
+      "bevId": "543cb630-7d40-5372-85c4-96575336952d",
+      "slug": "jarritos-mandarin",
+      "pngSha256": "e5015d443431f92ff0f3005edc2a1dbc2da7292777e892c3a0e25d4576ca7f38",
+      "portableSvgSha256": "bf3d9088cf2614e94a65c123962df072c4090a97917ebd3f996c0d4d181c19ce"
+    },
+    {
+      "bevId": "c11c6bb5-cadf-5d6a-b1f0-c705f3838ba5",
+      "slug": "la-marca-prosecco",
+      "pngSha256": "bd96f9cbd0fd07c98969aef3b23925001f4948aac5e765603d343710745b6157",
+      "portableSvgSha256": "a6862712736acc195110da3644ac0f483e228206129a8ed33c5c7ac94ebc5b4a"
+    },
+    {
+      "bevId": "759f29c8-f406-5cbc-8404-fd9827f03c8d",
+      "slug": "lacroix-lime",
+      "pngSha256": "6667d2164213adcddd7259430dbd6ba83189ee1262ebf6032e8c8b96aa639e96",
+      "portableSvgSha256": "70c9159ca28409747b65e5ab1e21492056670941b4591de18529a77fcc0689e4"
+    },
+    {
+      "bevId": "ce867ef4-8a01-5320-b830-b971b1e7895e",
+      "slug": "lacroix-pamplemousse",
+      "pngSha256": "4e6e3084b28a6a83ad0ad0bf554c8703aa91fecf3c4556e3d93e8d717a96841f",
+      "portableSvgSha256": "9d4e750b17037d36e5ad5d8fcc8fb1f099b681e9eac7c78ba6c7b00d79155da4"
+    },
+    {
+      "bevId": "527cd62b-93e3-56d5-8df1-928bbe0a5e59",
+      "slug": "generic-margarita",
+      "pngSha256": "1c4a24fdcd82b78ee867bcf30e04778f98029d6c2389cc27ff1d2216f6a75fb5",
+      "portableSvgSha256": "01d029486ab07d25e6d03158a8ea24c225793162c4a1c5973eab3dfae3962fd3"
+    },
+    {
+      "bevId": "3e814390-c8ed-5b23-bdac-5468bc19c09b",
+      "slug": "matcha-latte-with-boba",
+      "pngSha256": "0d6a08dd5a53b443a2e872d94546a3b005abe0d69af5f8359cf557a9b071b62d",
+      "portableSvgSha256": "f1056f5dec10a13abadde6feb445a0acc37d0c5df613e81f989dd154694361a9"
+    },
+    {
+      "bevId": "8864913a-66c6-5a4f-ae62-28d8d841ee65",
+      "slug": "liquid-death-mountain-water-still",
+      "pngSha256": "cc7ce307378a2cfa4abe1a1fe838fe831906ffd76d10cbf974e5972d8ceca06a",
+      "portableSvgSha256": "c887453f8220131a6bc7d5d78b1410885fce2f27f18c682a5c9f7b6df807fc36"
+    },
+    {
+      "bevId": "0ac0167f-b60b-5d38-aa27-6d48d3a2ba2d",
+      "slug": "fiji-natural-artesian-water",
+      "pngSha256": "745845954bc364605bf895725bfdd6d59737df9a755da930edf205665cc38fa2",
+      "portableSvgSha256": "f0893c7cfe4d7aa6bac08dfe3edeafefa2ebc1997a5ab6e8461a9cd73153a23a"
+    },
+    {
+      "bevId": "31c7e44e-55e4-5ab3-878e-af27e96439ae",
+      "slug": "olipop-vintage-cola",
+      "pngSha256": "33e8fef366ca314ca70a9f1de6763375dce709d2db1c4bd6e51c4aa13ccbb245",
+      "portableSvgSha256": "0e34fb68f323bc5531160731306abb9eaf81cf3253cc178d71772901e0982b44"
+    },
+    {
+      "bevId": "946588a1-e485-500a-a7c9-afdd321219b2",
+      "slug": "pepsi",
+      "pngSha256": "3f8ef54ec0cad782620b864d21c4b82e723a4f9e9fe7ce098cdd732da5dfca91",
+      "portableSvgSha256": "19165dfdce3b398431765dcf94cd64358497f367f1ecb5a05a81b501b1b015c4"
+    },
+    {
+      "bevId": "37ea2b26-55ba-570a-8579-b5e32b9b387a",
+      "slug": "pepsi-zero-sugar",
+      "pngSha256": "4c74e244aa383898819aa5bca88c070d1f54af3163ed4ca85a16feddcfea570d",
+      "portableSvgSha256": "d0c982c35523ecb2456d0c64aff5ebf859987a1b79e2313f9e9c78dac2b19d85"
+    },
+    {
+      "bevId": "9f7a317f-2673-5aaf-9650-be078b0cf9a0",
+      "slug": "pure-leaf-unsweetened",
+      "pngSha256": "d828053e8c8a1503f5f861c9e0ba1d91fd1a0c74b3332e915e25ab883c164c03",
+      "portableSvgSha256": "2001a16d77ce986a0939a427af2be9d558e5e26c13dc5e9302a730d97f252dd8"
+    },
+    {
+      "bevId": "7337b304-8257-570d-bfd8-8a5235cfb81c",
+      "slug": "red-bull-original",
+      "pngSha256": "931b52c86900806e948b39b5fa6f3dcde7717b02f97b258269c1e0aac2532413",
+      "portableSvgSha256": "26a936b3aec423d0a1d1188961b832a59c6a02a053ad54c5ac888413a273ee8a"
+    },
+    {
+      "bevId": "db4dbcae-afcc-5d57-b2f3-3becb3ae6568",
+      "slug": "san-pellegrino-original",
+      "pngSha256": "86fbce04802a04c1e79169514e416849c8748cf4e082959aa1d8332193b020df",
+      "portableSvgSha256": "eaac5491bfc4df2f6f6dbbd1aa4940a310662a5bfd75a865a2bba6e585c51076"
+    },
+    {
+      "bevId": "0715fcdd-18ec-57f1-bad7-397e321d9f04",
+      "slug": "spindrift-grapefruit",
+      "pngSha256": "721a66ded9ef79f0832907959cd3b0db658c3a96e6b391808d63d9ff1840ea4c",
+      "portableSvgSha256": "c1964694451d9ab9370bdf30ae30d3018758e40b58a7c9576a1d3feef8289709"
+    },
+    {
+      "bevId": "5c4022c5-3a49-5a90-ab76-e64035c5fbd7",
+      "slug": "spindrift-lemon",
+      "pngSha256": "5e2037077448fabec94b260581ae77128306894fd6393b20b6060a1c69e429da",
+      "portableSvgSha256": "21b004c9c9eaeaf7d1603bfb4526735e1d3ef27e91fc6329ec2621c8af594de0"
+    },
+    {
+      "bevId": "e691bf93-2da8-5f79-9541-493b491b2f37",
+      "slug": "spindrift-raspberry-lime",
+      "pngSha256": "d0dddd643514e81ad21de8de76bbef24b18568e3f58e1d1bf73b8c5eee3d958a",
+      "portableSvgSha256": "1e6a9e4bba98e0759547d3c23f06aed023cf1f22e175ad49b328c45af3b6073f"
+    },
+    {
+      "bevId": "5f6616d1-5289-570b-ac9a-323c8dcd1dba",
+      "slug": "sprite",
+      "pngSha256": "d33f08a61c9ed980e24299454f0fab7b5dffa374af0ba78b17c2b9ee8bd4d292",
+      "portableSvgSha256": "d40bd315668aa929d76ec7afbb01b8d638478610c9c85a60c1c9e502bd42f235"
+    },
+    {
+      "bevId": "72bc7b45-f9f5-5e7e-9ee9-55f374fc778d",
+      "slug": "sprite-zero-sugar",
+      "pngSha256": "f9b8de4bb0a17dfa58a86774f9146f43740a0b86c83904451a17099ed40acf4f",
+      "portableSvgSha256": "f9f4b0ec4680f1eb708350decfb13b2b5061e6121112209877ac0b75170ce39d"
+    },
+    {
+      "bevId": "d8353b51-2d10-5625-934b-5ca4d3b0374d",
+      "slug": "starry-lemon-lime",
+      "pngSha256": "04f6a453513e6b0f7a668bf72208a5ef8b445d51fd6f2396530167872ad62658",
+      "portableSvgSha256": "a811d7c7dba04729c9902662a05a04f354efd2a9ebc4ce3000e0a142109ecea8"
+    },
+    {
+      "bevId": "b017deaa-4830-518c-a7a5-d1d8b1476608",
+      "slug": "starry-zero-sugar",
+      "pngSha256": "8ca5ba719e995168bb5551b17c44a4fdfd5d1d3bcaccdf49e01123297825dcfe",
+      "portableSvgSha256": "0eaef3dbb8b65d3c00d8099e5436b6980e70f6c8a56ce4b721a980d82a6fbf8a"
+    },
+    {
+      "bevId": "dda9e962-a133-5d30-99a9-902141b453e5",
+      "slug": "topo-chico-original",
+      "pngSha256": "52c316b86c9f1f4182ce40debd090a90545cf549e79fc8dd2792b26ce2e8c0ec",
+      "portableSvgSha256": "0c7da70b2ff3b06f49468fd318f9f312ab17314eff436f927bbcb749399e7659"
+    },
+    {
+      "bevId": "9080bc3d-7cb6-573e-b97e-6626e3115f02",
+      "slug": "vita-coco-coconut-water-original",
+      "pngSha256": "d41946d92c79f43db5b0a1b379b74379575954a76b1b5b512f410129c4c36404",
+      "portableSvgSha256": "7a37db6615b69cba0e861fb2f5a77e6eb6b7109311cae9c8ebdd4bfc152dbe18"
+    },
+    {
+      "bevId": "c58da339-7d76-5e1a-98c1-1e2c2b726888",
+      "slug": "yakult-original",
+      "pngSha256": "04ba1debd613043ad518037153879808193debc7eb6bf3fc59c5acd86cb71844",
+      "portableSvgSha256": "4f68fff4c6c1952dc6f706399386f9b3646ff13bf67b4881b6005806252968a7"
+    }
+  ],
+  "batch2": {
+    "added": 18,
+    "newStarterIcons": 16,
+    "sourceDates": [
+      "2026-10-27",
+      "2026-10-28"
+    ],
+    "reviewedAt": "2026-10-31",
+    "notes": [
+      "Independent reviewer compared 16 soda/water icons to source photographs and all small-size sheets.",
+      "Coordinator reviewed La Marca and margarita against source photographs and combined style sheets.",
+      "Starry tarry lettering enlarged after independent review; final export re-inspected.",
+      "Original 12 export hashes preserved."
+    ]
+  }
+}

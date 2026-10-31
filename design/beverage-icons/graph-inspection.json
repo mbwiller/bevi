@@ -1,0 +1,210 @@
+{
+  "observedAt": "2026-10-26T21:17:48.333Z",
+  "source": "live-neo4j-read-only",
+  "constraints": [
+    {
+      "name": "bev_id_unique",
+      "type": "NODE_PROPERTY_UNIQUENESS",
+      "labelsOrTypes": [
+        "Bev"
+      ],
+      "properties": [
+        "id"
+      ]
+    },
+    {
+      "name": "brand_key_unique",
+      "type": "NODE_PROPERTY_UNIQUENESS",
+      "labelsOrTypes": [
+        "Brand"
+      ],
+      "properties": [
+        "key"
+      ]
+    },
+    {
+      "name": "category_id_unique",
+      "type": "NODE_PROPERTY_UNIQUENESS",
+      "labelsOrTypes": [
+        "Category"
+      ],
+      "properties": [
+        "id"
+      ]
+    },
+    {
+      "name": "flavor_name_unique",
+      "type": "NODE_PROPERTY_UNIQUENESS",
+      "labelsOrTypes": [
+        "Flavor"
+      ],
+      "properties": [
+        "name"
+      ]
+    },
+    {
+      "name": "meta_singleton_unique",
+      "type": "NODE_PROPERTY_UNIQUENESS",
+      "labelsOrTypes": [
+        "Meta"
+      ],
+      "properties": [
+        "key"
+      ]
+    },
+    {
+      "name": "user_pseudonym_unique",
+      "type": "NODE_PROPERTY_UNIQUENESS",
+      "labelsOrTypes": [
+        "User"
+      ],
+      "properties": [
+        "pseudonym"
+      ]
+    }
+  ],
+  "indexes": [
+    {
+      "name": "bev_brand_idx",
+      "type": "RANGE",
+      "state": "ONLINE",
+      "labelsOrTypes": [
+        "Bev"
+      ],
+      "properties": [
+        "brand"
+      ]
+    },
+    {
+      "name": "bev_category_idx",
+      "type": "RANGE",
+      "state": "ONLINE",
+      "labelsOrTypes": [
+        "Bev"
+      ],
+      "properties": [
+        "categoryId"
+      ]
+    },
+    {
+      "name": "bev_embedding_idx",
+      "type": "VECTOR",
+      "state": "ONLINE",
+      "labelsOrTypes": [
+        "Bev"
+      ],
+      "properties": [
+        "embedding"
+      ]
+    },
+    {
+      "name": "bev_id_unique",
+      "type": "RANGE",
+      "state": "ONLINE",
+      "labelsOrTypes": [
+        "Bev"
+      ],
+      "properties": [
+        "id"
+      ]
+    },
+    {
+      "name": "brand_key_unique",
+      "type": "RANGE",
+      "state": "ONLINE",
+      "labelsOrTypes": [
+        "Brand"
+      ],
+      "properties": [
+        "key"
+      ]
+    },
+    {
+      "name": "category_id_unique",
+      "type": "RANGE",
+      "state": "ONLINE",
+      "labelsOrTypes": [
+        "Category"
+      ],
+      "properties": [
+        "id"
+      ]
+    },
+    {
+      "name": "flavor_name_unique",
+      "type": "RANGE",
+      "state": "ONLINE",
+      "labelsOrTypes": [
+        "Flavor"
+      ],
+      "properties": [
+        "name"
+      ]
+    },
+    {
+      "name": "index_1b9dcc97",
+      "type": "LOOKUP",
+      "state": "ONLINE",
+      "labelsOrTypes": null,
+      "properties": null
+    },
+    {
+      "name": "index_460996c0",
+      "type": "LOOKUP",
+      "state": "ONLINE",
+      "labelsOrTypes": null,
+      "properties": null
+    },
+    {
+      "name": "meta_singleton_unique",
+      "type": "RANGE",
+      "state": "ONLINE",
+      "labelsOrTypes": [
+        "Meta"
+      ],
+      "properties": [
+        "key"
+      ]
+    },
+    {
+      "name": "user_pseudonym_unique",
+      "type": "RANGE",
+      "state": "ONLINE",
+      "labelsOrTypes": [
+        "User"
+      ],
+      "properties": [
+        "pseudonym"
+      ]
+    }
+  ],
+  "labels": [
+    {
+      "labels": [
+        "Meta"
+      ],
+      "count": 1
+    }
+  ],
+  "relationships": [],
+  "beverageProperties": [],
+  "categories": [],
+  "beverageCategories": [],
+  "meta": [
+    {
+      "lastSyncAt": null,
+      "lastKeepAliveAt": "2026-10-26T14:16:42.571Z"
+    }
+  ],
+  "summary": {
+    "catalogCount": 378,
+    "graphBevCount": 0,
+    "matchingIdCount": 0,
+    "missingIdCount": 0,
+    "duplicateIds": [],
+    "note": "ID comparison only. Postgres live inventory and product/status conflicts still require reconciliation; CSV IDs may have been skipped by seed deduplication.",
+    "catalogOnlyCount": 378,
+    "graphOnlyCount": 0
+  },
+  "livePostgresVerified": false
+}

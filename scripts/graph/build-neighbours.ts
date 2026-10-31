@@ -209,7 +209,10 @@ async function main(): Promise<void> {
   const [rankingRows, catalogRows] = await Promise.all([
     db.rpcRows<RankingZRow>("ranking_z_inputs", {}),
     db.select<CatalogRow>(
-      "/bevs?select=id,category_id,brand,bev_flavor_profiles(base)&status=eq.active&order=id",
+      // Named FK: `bev_flavor_profiles.inferred_from` (20261023000200) is a
+      // second FK to `bevs`, so a bare `bev_flavor_profiles(base)` embed is
+      // ambiguous and PostgREST answers 300 PGRST201.
+      "/bevs?select=id,category_id,brand,bev_flavor_profiles!bev_flavor_profiles_bev_id_fkey(base)&status=eq.active&order=id",
     ),
   ]);
 
