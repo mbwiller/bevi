@@ -6,26 +6,24 @@ Your queue, updated 2026-10-31. Arjun's is in [`NEXT-ARJUN.md`](NEXT-ARJUN.md). 
 
 ## Where it stands (2026-10-31)
 
-**Done:** M-19 (#125), M-27 (b) (#126), D-04 (#127), M-22 (#128), M-04 (#129), M-28 (#131) and the `DEVELOPMENT-MATT.md` refresh (#136). Arjun's A-13 (#132) and A-16 (2) (#133) merged today, as did the embed guard (#135).
+**Done:** M-19 (#125), M-27 (b) (#126), D-04 (#127), M-22 (#128), M-04 (#129), M-28 (#131) and the `DEVELOPMENT-MATT.md` refresh (#136). Arjun's A-13 (#132) and A-16 (2) (#133) merged today, as did the embed guard (#135). **Merged this evening:** M-27 (a) + the M-22 package follow-ups (#137, 1.4.0), M-21's package half (#138, 1.5.0), the icon pilot (#134), M-29 (#143), the Expo patch bump (#142, S-18) and the Stage 4 package half (#144, 1.6.0).
 
 | PR / branch | What | State |
 |---|---|---|
-| **#137** · `rank/graph-recs` | M-27 (a) + the M-22 package follow-ups, `RANKING_VERSION` 1.4.0. `PredictOptions.bevSimilarity: 'content' \| 'edges'` (default `'content'`) and `PredictionSnapshot.edges?`; byte-identical to 1.3.0 by default. Also paper §10.1 for A-13 and A-16 (2) | **Waiting on Arjun's approval** (it changes `shared/fixtures`) |
-| **#134** · `design/beverage-icon-pilot` | The Codex beverage-icon pilot: draft icons and the authoring workflow. Not wired into the app | Drafts, in review |
-| **#138** | M-21's package half, stacked on #137, `RANKING_VERSION` 1.5.0 | **Open**: the review's one bug (a re-rank Bev's own tier) is fixed. Arjun approves `shared/fixtures`. Retarget it to `main` before deleting `rank/graph-recs` |
+| **#140** · `ui/anchored-placement` | M-21's app half: RankFlow asks the like-for-like questions first; every failure degrades to today's search | **CI green, app-only, up to date with main.** Preview: https://bevi-hu7myzlpc-matts-projects-6b78eb05.vercel.app. **Your click-through checklist is in the PR**; merge after it |
+| **#144** · `rank/stage4-neighbours` | Graph Stage 4, package half: `PredictionSnapshot.userNeighbours?` and `userSimilarity: 'stored'` (off by default), `RANKING_VERSION` 1.6.0; the RPC shape for Arjun is in its Heads-up | Merged 2026-10-31 |
 
 **Prod migrations:**
-- [ ] Confirm `supabase migration list` shows all four: `20261026000100`, `0200`, `0300` (#132, #133) and `20261031000100` (#135). If not, `npx supabase db push`, dry-run first, in timestamp order. M-21's app half calls #132's functions, so this comes first.
+- [x] Confirmed 2026-10-31 from `../bevi-wt/db-push`: all four are on prod, so #140's calls to `bevs.leaves` and `listBucketBevs` are live.
 
 ## Next: in this order
 
 | Task | Waits on | What "done" means |
 |---|---|---|
-| **M-21 · package half** (`rank/anchored-placement`) | #137 (it's stacked on it) | Tiers: 1 = same leaf, 2 = same root (a parent-level Bev is never tier 1), 3 = a cross-root edge with `w` ≥ 0.3. Every Phase 1 question is against a Bev of the most similar non-empty tier; with no anchors, or all in one tier, identical to plain binary search |
-| **M-21 · app half** (`ui/anchored-placement`) | The package half merged; #132's migrations on prod | RankFlow calls `listBucketBevs` + `bevs.leaves` + optional `similarities`, then `placementTiers`, then `startPlacement({…, tiers})`. Any failure falls back to plain binary search. **Decide:** also fall back when the anchored bound exceeds plain + 1? Check on a `vercel deploy` preview before merging |
-| **Stage 4 contract** (with Arjun) | — | Layer 2 reads `user_neighbors` through `get_prediction_snapshot` (the definer RPC, with aliases; the table has no client policy). Agree it together with S-21, so the RPC changes once |
-| **Re-tune `CONF1_MASS`** | S-21, and a real export with enough co-raters | Done before edges mode is switched on: in #137's synthetic eval, edges mode drops mean conf1 from 0.585 to 0.400 |
-| **M-29 · Beverage icons in the app** | #134 final | Codex makes the icons; wiring them in replaces the placeholder `BevArt` |
+| **M-21 · app half, #140** | Your click-through of the preview (the checklist is in the PR) | Merge it. No cap on the anchored question count (decided, Remark 10.7); every failure degrades to today's search |
+| **Icon batches** | Codex, on `design/beverage-icon-pilot` | After each batch: `node scripts/icons/export-app.mjs`, commit `app/public/bev-icons/` and `src/lib/bevIcons.generated.ts` with it, and give the batch your visual sign-off (the drafts are `needs-review` until then) |
+| **Switch-on plan: edges mode and stored neighbours** | S-21 + Stage 4 on prod (Arjun), and a real export with enough co-raters | Re-tune `CONF1_MASS` (edges mode drops mean conf1 from 0.585 to 0.400 in #137's synthetic eval) and review Layer 2's support under stored mode (#144's synthetic eval: every Δ CI includes 0). Then `recs.ts`/`bevs.ts` pass the options; the app itself does not change |
+| **Expo patches** | — | Routine (S-18): when the app workflow's advisory step warns, `npx expo install --fix` from `app/` in a small `ui/*` PR (#142 was the last) |
 
 ## Later: P2, after P0 and P1
 
@@ -41,16 +39,14 @@ Your queue, updated 2026-10-31. Arjun's is in [`NEXT-ARJUN.md`](NEXT-ARJUN.md). 
 |---|---|
 | M-22's SQL corrections (#128: two are wrong on prod today, streak history and stale `bayes_score`) | Fix them as A-14 follow-ups |
 | #137's vector targets: the `bayesScoreStored` cases and the event-streak cases | Test the A-14 follow-ups against them |
-| #137's `PredictionSnapshot.edges?` shape | Build S-21 |
-| The Stage 4 contract, agreed together | Build Stage 4 with S-21, so the RPC changes once |
+| The RPC contract for S-21 + Stage 4: `edges` (#137) and `userNeighbors` (#144), spelled out in #144's "Heads-up for Arjun" | Build S-21 + Stage 4 as one combined PR |
 | A review of every FakeApi / conformance hunk in his PRs (they live in your lane) | Merge his combined PRs |
-| Advance warning of any `@bevi/ranking` formula or constant change (1.4.0 in #137, 1.5.0 in M-21) | Re-run the graph sync; his edge weights come from `edgeWeight()` |
+| Advance warning of any `@bevi/ranking` formula or constant change (1.4.0, 1.5.0 and 1.6.0 all merged on 2026-10-31; `edgeWeight` unchanged, so the nightly run only re-stamps) | Re-run the graph sync; his edge weights come from `edgeWeight()` |
 
 | Arjun hands you | So you can |
 |---|---|
-| His approval of #137 (`shared/fixtures`) | Merge M-27 (a), then M-21's package half on top |
 | A-13 (#132: `categories.tree()`, `bevs.leaves()`), on prod | Build M-21's tiers |
-| S-21 + Stage 4, on prod | Switch on edges mode; Layer 2 reads `user_neighbors` |
+| S-21 + Stage 4, on prod | Switch on edges mode and stored neighbours (both options exist in the package) |
 | An M-26 re-export once there are more users (privately, outside the repo) | Judge switching on edges mode and Pearson |
 | S-10 + A-08 and the Maps key; S-13 + A-12 | Build M-16; build M-20 |
 | A heads-up before any migration that changes what an existing function returns | Keep the app and the FakeApi in step |
@@ -63,10 +59,10 @@ D-04 taxonomy + 378 assignments ─────▶ A-13 hierarchy (#132) ──�
 M-22 maths review ──(SQL fixes)──────▶ A-14 follow-ups (open)         │
 #137 M-22 vectors ──(targets)────────▶ A-14 follow-ups                │
 M-27 (b) Bevs like this ◀───────────── A-16 (1) Bev graph + S-14 (2)  │
-M-21 placement (pkg, then app) ◀────── A-16 (1) + A-13 ◀──────────────┘
+M-21 placement (#138, app #140) ◀───── A-16 (1) + A-13 ◀──────────────┘
 M-28 taste formulas ──(#131)─────────▶ A-16 (2) taste graph (#133)
 M-27 (a) edges mode on (#137) ◀─────── S-21 edges in the snapshot
-Layer 2 reads user_neighbors ◀──────── Stage 4 (same RPC change)
+Stored neighbours on (#144) ◀──────── Stage 4 (same RPC change)
 M-16 map UI ◀───────────────────────── S-10 + A-08 venues (P2)
 M-20 duplicate step ◀───────────────── S-13 + A-12 duplicates (P2)
 ```
