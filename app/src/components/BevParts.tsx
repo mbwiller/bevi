@@ -1,6 +1,7 @@
 import type { BevSummary } from '@bevi/shared';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { bevIconUri } from '@/lib/bevIcons';
 import { useTheme } from '@/theme';
 
 import { bevArtForCategory } from './BevArt';
@@ -11,11 +12,16 @@ import { IconButton } from './IconButton';
 
 // Pieces BevRow, FeedPost and CompareCard share.
 
-/** A Bev's BevImage props: the cutout when it has one, else its category's BevArt; shimmer while processing. */
+/**
+ * A Bev's BevImage props, photo > icon > category art: its cutout when it has one, else its authored
+ * icon (`@/lib/bevIcons`), else its category's BevArt; shimmer while processing. The one place this
+ * precedence lives: screens that draw a Bev's image use this rather than reading `photoUrl`.
+ */
 export function bevImageProps(bev: BevSummary): Pick<BevImageProps, 'src' | 'art' | 'alt' | 'status'> {
+  const src = bev.photoUrl ?? bevIconUri(bev.id);
   return {
-    src: bev.photoUrl ?? undefined,
-    art: bev.photoUrl ? undefined : bevArtForCategory(bev.categoryId),
+    src,
+    art: src ? undefined : bevArtForCategory(bev.categoryId),
     alt: bev.name,
     status: bev.photoStatus,
   };

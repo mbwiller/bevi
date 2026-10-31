@@ -83,6 +83,7 @@ export default function BevDetailScreen() {
     body = <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
   } else {
     const brand = brandLine(bev);
+    // Only a real photo opens the viewer; an authored icon (bevImageProps' fallback) is art, not a photo.
     const photo = bev.photoUrl;
     const ranked = !!bev.myRanking;
     const image = <BevImage size={HERO} {...bevImageProps(bev)} />;

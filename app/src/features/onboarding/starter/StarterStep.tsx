@@ -8,7 +8,7 @@ import { useBev, useBucket, useSubmitRanking } from '@/api/hooks';
 import { bevArtForCategory } from '@/components/BevArt';
 import { BevGlow } from '@/components/BevGlow';
 import { BevImage } from '@/components/BevImage';
-import { brandLine } from '@/components/BevParts';
+import { bevImageProps, brandLine } from '@/components/BevParts';
 import { Button } from '@/components/Button';
 import { ErrorState } from '@/components/ErrorState';
 import { IconButton } from '@/components/IconButton';
@@ -290,7 +290,7 @@ export function StarterStep({ bev: summary, index, total, ranked, canFinish, onF
         </Button>
       </View>
       <ScrollView contentContainerStyle={styles.ask}>
-        <BevImage src={summary.photoUrl ?? undefined} art={bevArtForCategory(summary.categoryId)} alt={summary.name} size={155} />
+        <BevImage {...bevImageProps(summary)} size={155} />
         <Text style={[type.screenTitle, styles.text, { color: colors.text }]} accessibilityRole="header">
           {summary.name}
         </Text>
