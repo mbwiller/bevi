@@ -16,12 +16,28 @@ export interface CatalogCategory {
   isAlcoholic: boolean;
 }
 
+/**
+ * One node of the two-level taxonomy (A-13/D-04): the 15 roots plus the 60
+ * leaves, exactly as `categories.json` carries them. `CatalogCategory` above
+ * stays the roots-only shape the fake's `categories.list()` serves.
+ */
+export interface CatalogCategoryNode {
+  id: string;
+  name: string;
+  parentId: CategoryId | null;
+  sortOrder: number;
+  isAlcoholic: boolean;
+  emoji: string | null;
+}
+
 export interface CatalogBev {
   id: string;
   name: string;
   brand: string | null;
   flavor: string | null;
   categoryId: CategoryId;
+  /** A-13: the Bev's leaf under `categoryId`, null when it sits on the parent. */
+  leafCategoryId: string | null;
   priceTier: PriceTier;
   priceEstimated: boolean;
   isStarter: boolean;
@@ -61,9 +77,15 @@ export function parseCsv(text: string): string[][] {
   return rows;
 }
 
-function loadCategories(): CatalogCategory[] {
-  const raw = JSON.parse(readFileSync(resolve(CATALOG_DIR, 'categories.json'), 'utf8')) as CatalogCategory[];
-  return raw.map(({ id, name, sortOrder, isAlcoholic }) => ({ id, name, sortOrder, isAlcoholic }));
+function loadCategoryNodes(): CatalogCategoryNode[] {
+  return JSON.parse(readFileSync(resolve(CATALOG_DIR, 'categories.json'), 'utf8')) as CatalogCategoryNode[];
+}
+
+/** The 15 roots, which is what `categories.list()` serves. */
+function loadCategories(nodes: readonly CatalogCategoryNode[]): CatalogCategory[] {
+  return nodes
+    .filter((c) => c.parentId === null)
+    .map(({ id, name, sortOrder, isAlcoholic }) => ({ id: id as CategoryId, name, sortOrder, isAlcoholic }));
 }
 
 function loadBevs(categoryIds: ReadonlySet<string>): CatalogBev[] {
@@ -76,6 +98,7 @@ function loadBevs(categoryIds: ReadonlySet<string>): CatalogBev[] {
   const C = {
     slug: col('slug'), name: col('name'), brand: col('brand'), flavor: col('flavor'), category: col('category'),
     tier: col('price_tier'), est: col('price_estimated'), starter: col('is_starter'), aliases: col('aliases'),
+    leaf: col('leaf'),
   };
   return records.map((r) => {
     const get = (i: number) => r[i] ?? '';
@@ -88,6 +111,7 @@ function loadBevs(categoryIds: ReadonlySet<string>): CatalogBev[] {
       brand: get(C.brand) || null,
       flavor: get(C.flavor) || null,
       categoryId: get(C.category) as CategoryId,
+      leafCategoryId: get(C.leaf) || null,
       priceTier: tier as PriceTier,
       priceEstimated: get(C.est) === 'true',
       isStarter: get(C.starter) === 'true',
@@ -144,8 +168,17 @@ function loadFlavorProfiles(bevIds: ReadonlySet<string>): Map<string, CatalogFla
   return out;
 }
 
-export const CATALOG_CATEGORIES: readonly CatalogCategory[] = loadCategories();
+export const CATALOG_CATEGORY_NODES: readonly CatalogCategoryNode[] = loadCategoryNodes();
+export const CATALOG_CATEGORIES: readonly CatalogCategory[] = loadCategories(CATALOG_CATEGORY_NODES);
 export const CATALOG_BEVS: readonly CatalogBev[] = loadBevs(new Set(CATALOG_CATEGORIES.map((c) => c.id)));
+
+/**
+ * child leaf id -> root id, the fake's `category_root()`. Also the taxonomy
+ * `treeSimilarity` takes, so `graph.ts` no longer passes `{}`.
+ */
+export const CATALOG_TAXONOMY: Readonly<Record<string, string | null>> = Object.freeze(
+  Object.fromEntries(CATALOG_CATEGORY_NODES.map((c) => [c.id, c.parentId])),
+);
 export const CATALOG_FLAVOR_PROFILES: ReadonlyMap<string, CatalogFlavorProfile> = loadFlavorProfiles(
   new Set(CATALOG_BEVS.map((b) => b.id)),
 );

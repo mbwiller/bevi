@@ -10,11 +10,13 @@ import type { Bucket, CategoryId, PriceTier } from './enums';
 import type {
   AppConfig,
   Bev,
+  BevLeaf,
   BevOfPeriod,
   BevSimilarity,
   BevSummary,
   BucketBev,
   Category,
+  CategoryNode,
   CategoryProgress,
   Comment,
   Comparison,
@@ -186,8 +188,23 @@ export interface FollowsApi {
 }
 
 export interface CategoriesApi {
-  /** Already age-filtered for the caller. @throws 'unauthorized'. */
+  /**
+   * The 15 top-level categories with their Bev counts, already age-filtered for
+   * the caller. Never returns a leaf of the finer taxonomy — use `tree()` for
+   * that. @throws 'unauthorized'.
+   */
   list(): Promise<Category[]>;
+
+  /**
+   * The whole two-level taxonomy (A-13/D-04): the 15 roots and the 60 leaves,
+   * age-filtered by the root's `isAlcoholic`, ordered root-then-leaf in sibling
+   * order so one pass builds the tree. No Bev counts — `list()` has those.
+   *
+   * The result is catalog structure: it changes only when a migration changes
+   * it, so cache it for the session rather than per screen.
+   * @throws 'unauthorized'.
+   */
+  tree(): Promise<CategoryNode[]>;
 }
 
 export interface CreateBevInput {
@@ -276,6 +293,25 @@ export interface BevsApi {
    * @throws 'unauthorized'.
    */
   similar(bevId: string, n?: number): Promise<BevSummary[]>;
+
+  /**
+   * Each Bev's leaf in the finer taxonomy (A-13/D-04), for M-21's two-phase
+   * placement: phase 1 narrows to the Bevs sharing a leaf, phase 2 searches
+   * within.
+   *
+   * Same bulk shape and the same caveats as `similarities`, deliberately — call
+   * it once per bucket, not once per Bev. `leafCategoryId` is **null** when a
+   * Bev sits directly on its category, which is correct for the two unsplit
+   * roots (`water`, `sports`) and for every user-created Bev until something
+   * relabels it; fall back to `BevSummary.categoryId`, still one of the 15.
+   *
+   * Ids the caller may not see (age-gated, or not `active`) are **omitted**, so
+   * a short result is normal. A visible Bev with no leaf is present with
+   * `leafCategoryId: null`, which is how "no finer placement" differs from "not
+   * visible". Order is by `bevId`; at most 500 ids.
+   * @throws 'unauthorized', 'validation' (`detail.field = 'bevIds'`, over 500).
+   */
+  leaves(bevIds: readonly string[]): Promise<BevLeaf[]>;
 }
 
 export interface UploadMediaInput {
