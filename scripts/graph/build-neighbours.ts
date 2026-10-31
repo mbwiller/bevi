@@ -53,7 +53,7 @@
 
 import { fileURLToPath } from "node:url";
 
-import { RANKING_VERSION, TASTE_NEIGHBOUR_K, TASTE_SIM_FLOOR } from "@bevi/ranking";
+import { compareCodePoints, RANKING_VERSION, TASTE_NEIGHBOUR_K, TASTE_SIM_FLOOR } from "@bevi/ranking";
 import { buildNeighbours } from "./neighbours-core.ts";
 import type { CatalogBevRecord, NeighbourRow, RankingRecord } from "./neighbours-core.ts";
 
@@ -155,10 +155,23 @@ function flavorBaseOf(row: CatalogRow): string | null {
   return profile?.base ?? null;
 }
 
+/**
+ * Per-run aliases for the report. The repo is public, so its Actions logs are
+ * too, and any signed-in account can turn a profile uuid into a handle; a raw
+ * `user_id -> neighbor_id sim=…` line would publish whose taste matches whose,
+ * which `rankings_select` deliberately keeps private. `u1`, `u2`, … in
+ * code-point order of the ids keep the report readable (who pairs with whom,
+ * both directions) without naming anyone, and they mean nothing across runs.
+ */
+export function aliasUsers(rows: readonly NeighbourRow[]): Map<string, string> {
+  const ids = [...new Set(rows.flatMap((r) => [r.user_id, r.neighbor_id]))].sort(compareCodePoints);
+  return new Map(ids.map((id, i) => [id, `u${i + 1}`]));
+}
+
 /** A row's own line in the report: the sim, the evidence behind it, and which terms produced it. */
-function rowLine(row: NeighbourRow): string {
+function rowLine(row: NeighbourRow, alias: Map<string, string>): string {
   return (
-    `  ${row.user_id} -> ${row.neighbor_id}` +
+    `  ${alias.get(row.user_id)} -> ${alias.get(row.neighbor_id)}` +
     `  sim=${row.sim.toFixed(4)}` +
     `  common=${row.common}` +
     `  shared_attrs=${row.shared_attrs}` +
@@ -216,6 +229,17 @@ async function main(): Promise<void> {
     flavorBase: flavorBaseOf(b),
   }));
 
+  // A read that came back empty is a broken run, never a real state: prod has
+  // rankings and a 378-Bev catalog. Writing its result would empty the table
+  // silently, so refuse. "Real data, no pair clears the gate" still writes an
+  // empty generation below, which is the case the empty payload exists for.
+  if (rankings.length === 0 || catalogBevs.length === 0) {
+    throw new Error(
+      `read ${rankings.length} ranking(s) and ${catalogBevs.length} active Bev(s); one of the reads is broken. ` +
+        `user_neighbors left as it was.`,
+    );
+  }
+
   const rankers = new Set(rankings.map((r) => r.userId)).size;
   console.log(
     `rankings: ${rankings.length} over ${rankers} user(s); catalog: ${catalogBevs.length} active Bevs, ` +
@@ -232,7 +256,9 @@ async function main(): Promise<void> {
 
   // The whole report, not a sample: at this volume there are a handful of rows
   // and the point of the first runs is to look at every one of them.
-  for (const row of build.rows.slice(0, 50)) console.log(rowLine(row));
+  // Aliased: see `aliasUsers`.
+  const alias = aliasUsers(build.rows);
+  for (const row of build.rows.slice(0, 50)) console.log(rowLine(row, alias));
   if (build.rows.length > 50) console.log(`  ... and ${build.rows.length - 50} more`);
 
   if (build.rows.length === 0) {

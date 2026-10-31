@@ -69,14 +69,15 @@ select ok(
   'RLS is enabled on user_neighbors'
 );
 
--- No write policy at all: the job writes as the service role, which bypasses
--- RLS. This is supabase/CLAUDE.md's rule for content tables and the doc's rule
--- for this table specifically.
+-- No policy at all. Writes: the job writes as the service role, which
+-- bypasses RLS (supabase/CLAUDE.md's rule for content tables). Reads: a row
+-- names another user's uuid, which must never reach a client; Stage 4 reads
+-- through the definer snapshot RPC, which emits aliases.
 select is(
   (select count(*)::int from pg_policies
-    where schemaname = 'public' and tablename = 'user_neighbors' and cmd <> 'SELECT'),
+    where schemaname = 'public' and tablename = 'user_neighbors'),
   0,
-  'user_neighbors has no insert, update or delete policy'
+  'user_neighbors has no policy at all: no client read or write path'
 );
 
 -- ---------------------------------------------------------------------------
@@ -173,13 +174,14 @@ set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000a1601", 
 
 select is(
   (select count(*)::int from public.user_neighbors),
-  1,
-  'a1601 sees only the row they own, not the reverse one that names them'
+  0,
+  'a1601 sees no rows, not even their own: a row names the neighbour''s uuid'
 );
 select is(
-  (select neighbor_id from public.user_neighbors),
-  '00000000-0000-4000-8000-0000000a1602'::uuid,
-  'and that row is theirs'
+  (select count(*)::int from public.user_neighbors
+    where neighbor_id = '00000000-0000-4000-8000-0000000a1602'),
+  0,
+  'and in particular not the row naming a1602'
 );
 
 select throws_ok(
@@ -199,11 +201,15 @@ select lives_ok(
   $$ delete from public.user_neighbors $$,
   'a client DELETE does not raise: with no DELETE policy it simply matches nothing'
 );
+reset role;
 select is(
-  (select count(*)::int from public.user_neighbors),
+  (select count(*)::int from public.user_neighbors
+    where user_id = '00000000-0000-4000-8000-0000000a1601'),
   1,
   'and the row survives, so no client can wipe a neighbour generation'
 );
+set local role authenticated;
+set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000a1601", "role": "authenticated"}';
 
 -- THE ONE THAT MATTERS: ranking_z_inputs returns every user's rankings, which
 -- rankings_select deliberately does not. A leftover default grant here would

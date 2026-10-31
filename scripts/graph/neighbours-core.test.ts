@@ -21,7 +21,7 @@ import { RANKING_VERSION, TASTE_SIM_FLOOR, blendUserSimilarity, tasteCatalog, ta
 import { buildNeighbours, NEIGHBOUR_VERSION } from "./neighbours-core.ts";
 import type { CatalogBevRecord, RankingRecord } from "./neighbours-core.ts";
 import { COP_MIN_CO_RATERS, coRatersByBev, copSimilarity } from "./edges-core.ts";
-import { parseOptions } from "./build-neighbours.ts";
+import { aliasUsers, parseOptions } from "./build-neighbours.ts";
 
 // Real uuids, and ordered so `u1 < u2 < u3` in code-point order: the tie-break
 // on `sim` is "the smaller userId first", so the ordering has to be knowable.
@@ -288,4 +288,16 @@ test("parseOptions defaults to writing and rejects an unknown flag", () => {
   assert.deepEqual(parseOptions([]), { dryRun: false });
   assert.deepEqual(parseOptions(["--dry-run"]), { dryRun: true });
   assert.throws(() => parseOptions(["--strict"]), /unknown argument/);
+});
+
+test("aliasUsers names every user in the report by a per-run alias, never by id", () => {
+  const a = "00000000-0000-4000-8000-00000000000a";
+  const b = "00000000-0000-4000-8000-00000000000b";
+  const c = "00000000-0000-4000-8000-00000000000c";
+  const row = (user_id: string, neighbor_id: string) =>
+    ({ user_id, neighbor_id, sim: 0.5, common: 2, shared_attrs: 0, method: "blend" }) as Parameters<typeof aliasUsers>[0][number];
+  const alias = aliasUsers([row(c, a), row(a, c), row(b, a)]);
+  // Code-point order of the ids, so a run's report is reproducible.
+  assert.deepEqual([...alias.entries()], [[a, "u1"], [b, "u2"], [c, "u3"]]);
+  assert.equal(aliasUsers([]).size, 0);
 });

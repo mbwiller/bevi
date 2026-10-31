@@ -53,10 +53,8 @@ set search_path = public, extensions;
 --     does not imply "u is one of v's 25 nearest" -- a prolific rater can be
 --     everybody's neighbour while having 25 closer ones of their own.
 --   * And the READ is per user: Layer 2 asks "who are MY neighbours", which
---     with one stored orientation would be a two-sided OR over a table whose
---     RLS predicate is `user_id = auth.uid()`. Owner-only RLS and a canonical
---     orientation do not compose: the row (v, u) is v's row, and u may not
---     read it.
+--     with one stored orientation would be a two-sided OR on every read.
+--     Storing both makes it `where user_id = $1` against the index below.
 -- So the row is the directed fact "v is one of u's neighbours, at this
 -- similarity", `user_id` owns it, and the job writes both directions when both
 -- are selected.
@@ -110,27 +108,25 @@ create index user_neighbors_user_sim_idx
 -- ---------------------------------------------------------------------------
 -- 2. RLS
 -- ---------------------------------------------------------------------------
--- Owner-only select, no write policy -- the doc's rule (section 3) and
--- supabase/CLAUDE.md's rule for content tables. The sync writes as the service
--- role, which bypasses RLS.
+-- No policy at all, so no client reads or writes it. The doc's rule (section 3)
+-- was owner-only select; it is stricter here, for the reason below. The sync
+-- writes as the service role, which bypasses RLS.
 --
 -- This is user data, not catalog data, so unlike `bev_edges` there is no
 -- argument for `select to authenticated`: a row names another user and says
 -- how similar their taste is. `neighbor_id` is a profile id, and the doc is
 -- explicit that it "never reaches the client" -- Stage 4 will join these rows
 -- to the alias CTE `get_prediction_snapshot` already builds and emit `u<n>`
--- instead. The owner-only policy exists so that a direct
--- `GET /rest/v1/user_neighbors` cannot shortcut that: with it, the caller sees
--- only rows they own, and a row they own still names a neighbour's uuid, which
--- is why Stage 4 must not serve these rows through PostgREST at all.
---
--- `auth.uid()`, not a subquery over profiles: the owner is the row's own
--- user_id, so there is nothing to join and nothing that can fail open.
+-- instead. So there is **no select policy at all**: RLS is on and nothing is
+-- granted to `authenticated` or `anon`, and a direct
+-- `GET /rest/v1/user_neighbors` returns no rows. An owner-only policy would
+-- still hand the caller a neighbour's uuid on every row they own, with `sim`,
+-- `common` and `shared_attrs` -- the opposite of the line above. Nothing reads
+-- this table before Stage 4, and Stage 4 reads it inside the definer
+-- `get_prediction_snapshot`, which bypasses RLS and emits aliases. (Found by
+-- the integrator review of #133, before this migration reached prod.)
 
 alter table public.user_neighbors enable row level security;
-
-create policy user_neighbors_select on public.user_neighbors
-  for select to authenticated using (user_id = auth.uid());
 
 -- ---------------------------------------------------------------------------
 -- 3. replace_user_neighbors(p_rows, p_version) -> int
@@ -230,7 +226,10 @@ begin
     raise exception 'BEVI_VALIDATION' using errcode = '22023', detail = 'rows: unknown user id';
   end if;
 
-  delete from public.user_neighbors;
+  -- `where true`: hosted Supabase loads pg_safeupdate, which rejects a DELETE
+  -- with no WHERE clause (21000). CI's local stack does not load it, so only
+  -- prod would fail -- the bug 20261025000100 fixed in replace_bev_edges.
+  delete from public.user_neighbors where true;
 
   insert into public.user_neighbors (user_id, neighbor_id, sim, common, shared_attrs, method, version, computed_at)
   select r.user_id, r.neighbor_id, r.sim, r.common, r.shared_attrs, r.method, p_version, now()

@@ -529,15 +529,18 @@ user_neighbors(user_id uuid, neighbor_id uuid,        -- both -> profiles(id), c
 **Both directions of a pair are stored**, which is the opposite of `bev_edges`
 and not an inconsistency. `sim` is symmetric, but the *selection* is not —
 `topUserNeighbours` keeps each user's own top 25, so "v is in u's 25 nearest"
-does not imply the reverse. And the read is per user, which owner-only RLS
-cannot serve from a canonical orientation: the row `(v, u)` is v's row, and u
-may not read it.
+does not imply the reverse. And the read is per user, so storing both keeps it
+a single `where user_id = $1` against the index.
 
-**RLS is owner-only select, with no write policy.** This is the first table in
-the schema whose rows name *another user*, so unlike `bev_edges` there is no
-case for `select to authenticated`. `neighbor_id` is a profile id and the doc
-is explicit that it never reaches the client: Stage 4 will join these rows to
-the alias CTE `get_prediction_snapshot` already builds and emit `u<n>` instead.
+**RLS is on with no policy at all: no client reads or writes the table.** This
+is the first table in the schema whose rows name *another user*. `neighbor_id`
+is a profile id and the doc is explicit that it never reaches the client, and
+even an owner-only select would hand the owner their neighbours' uuids with
+`sim` and `common`. So it is stricter than the doc's owner-only rule: Stage 4
+reads it inside the definer `get_prediction_snapshot`, joined to the alias CTE
+it already builds, and emits `u<n>`. The job's log aliases users the same way
+(`aliasUsers` in `build-neighbours.ts`), because Actions logs on this public
+repo are public.
 
 Three service-role-only functions, in `20261026000300`:
 
