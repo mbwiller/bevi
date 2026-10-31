@@ -1,0 +1,17 @@
+{
+  "source": "index.html",
+  "sourceSha256": "7da3cc212da5f11320ec6500a62081654833317e45d2d72e515defbcbac828f4",
+  "extractedAt": "2026-10-26T21:17:31.913Z",
+  "extraction": "Unchanged output of original art(kind); original let artId counter retained across all renders.",
+  "kinds": [
+    "matcha",
+    "coffee",
+    "soda",
+    "bottle",
+    "sparkling",
+    "boba",
+    "tea"
+  ],
+  "viewBox": "0 0 200 260",
+  "status": "prototype-style-reference-not-product-verified"
+}

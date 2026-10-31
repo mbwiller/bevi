@@ -1,27 +1,31 @@
 # Next up: Matt
 
-Your queue from 2026-10-19 on. Arjun's is in [`NEXT-ARJUN.md`](NEXT-ARJUN.md). The live status of every task is the board at the top of [`TASKS.md`](TASKS.md). Update your row there in the same PR whenever you start or finish something.
+Your queue, updated 2026-10-31. Arjun's is in [`NEXT-ARJUN.md`](NEXT-ARJUN.md). The live status of every task is the board at the top of [`TASKS.md`](TASKS.md). Update your row there in the same PR whenever you start or finish something.
 
 **Your lane:** `app/`, `packages/ranking/`, `design/`. Branches are `ui/*` and `rank/*`.
 
-## Wave of 2026-10-24: where it stands
+## Where it stands (2026-10-31)
 
-| Task | State |
-|---|---|
-| **M-19 · Taste Profile** | **Done in #125** |
-| **M-04 · Explore** | **Done in #129** |
-| **M-27 (b) · "Bevs like this"** | **Done in #126** (live: the graph has 4669 edges) |
-| **M-22 · Maths review** | **Done in #128.** Paper fixed; the package list and the SQL list (A-14 follow-ups) are under M-22 in TASKS.md |
-| **D-04 · Taxonomy + 378 leaf assignments** | **#127, waiting on Arjun's review.** 60 leaves under 13 parents; `water` and `sports` unsplit; a Bev may sit on a parent |
-| **M-28 · Taste formulas** | **PR waiting on Arjun's approval** (it changes `shared/fixtures`). `RANKING_VERSION` 1.3.0, which also carries M-22's `compareCodePoints` fix. Pearson in Layer 2 ships off |
+**Done:** M-19 (#125), M-27 (b) (#126), D-04 (#127), M-22 (#128), M-04 (#129), M-28 (#131) and the `DEVELOPMENT-MATT.md` refresh (#136). Arjun's A-13 (#132) and A-16 (2) (#133) merged today, as did the embed guard (#135).
+
+| PR / branch | What | State |
+|---|---|---|
+| **#137** · `rank/graph-recs` | M-27 (a) + the M-22 package follow-ups, `RANKING_VERSION` 1.4.0. `PredictOptions.bevSimilarity: 'content' \| 'edges'` (default `'content'`) and `PredictionSnapshot.edges?`; byte-identical to 1.3.0 by default. Also paper §10.1 for A-13 and A-16 (2) | **Waiting on Arjun's approval** (it changes `shared/fixtures`) |
+| **#134** · `design/beverage-icon-pilot` | The Codex beverage-icon pilot: draft icons and the authoring workflow. Not wired into the app | Drafts, in review |
+| **#138** | M-21's package half, stacked on #137, `RANKING_VERSION` 1.5.0 | **Open**: the review's one bug (a re-rank Bev's own tier) is fixed. Arjun approves `shared/fixtures`. Retarget it to `main` before deleting `rank/graph-recs` |
+
+**Prod migrations:**
+- [ ] Confirm `supabase migration list` shows all four: `20261026000100`, `0200`, `0300` (#132, #133) and `20261031000100` (#135). If not, `npx supabase db push`, dry-run first, in timestamp order. M-21's app half calls #132's functions, so this comes first.
 
 ## Next: in this order
 
 | Task | Waits on | What "done" means |
 |---|---|---|
-| **M-27 (a) · Edge weights in recommendations** | M-28 merged (it takes `RANKING_VERSION` 1.4.0) | Layer 1's content term reads `bev_edges` weights through `bevs.similarities`, behind a flag that ships **off**. #122 showed the M-26 export is too thin to be a baseline (3 users, 27 rankings), so the switch-on comparison waits for more data; the PR attaches the synthetic report instead |
-| **M-22 package follow-ups** (`rank/m22-fixes`) | M-28 merged | The two golden vectors M-22 asked for (a `bayesianAverage` case on a .xx5 boundary; a `streakFromTimestamps` case written as events), and a decision on `effectiveCategoryStats` and `byCategoryMean` (keep with a note, or drop). Can ride with M-27 (a)'s bump |
-| **M-21 · Category-aware placement** | **A-13** (after D-04 merges) | The two-phase binary search from LaTeX §10.1, with D-04's parent-level rule (a Bev on a parent is "kind unknown") |
+| **M-21 · package half** (`rank/anchored-placement`) | #137 (it's stacked on it) | Tiers: 1 = same leaf, 2 = same root (a parent-level Bev is never tier 1), 3 = a cross-root edge with `w` ≥ 0.3. Every Phase 1 question is against a Bev of the most similar non-empty tier; with no anchors, or all in one tier, identical to plain binary search |
+| **M-21 · app half** (`ui/anchored-placement`) | The package half merged; #132's migrations on prod | RankFlow calls `listBucketBevs` + `bevs.leaves` + optional `similarities`, then `placementTiers`, then `startPlacement({…, tiers})`. Any failure falls back to plain binary search. **Decide:** also fall back when the anchored bound exceeds plain + 1? Check on a `vercel deploy` preview before merging |
+| **Stage 4 contract** (with Arjun) | — | Layer 2 reads `user_neighbors` through `get_prediction_snapshot` (the definer RPC, with aliases; the table has no client policy). Agree it together with S-21, so the RPC changes once |
+| **Re-tune `CONF1_MASS`** | S-21, and a real export with enough co-raters | Done before edges mode is switched on: in #137's synthetic eval, edges mode drops mean conf1 from 0.585 to 0.400 |
+| **M-29 · Beverage icons in the app** | #134 final | Codex makes the icons; wiring them in replaces the placeholder `BevArt` |
 
 ## Later: P2, after P0 and P1
 
@@ -29,37 +33,40 @@ Your queue from 2026-10-19 on. Arjun's is in [`NEXT-ARJUN.md`](NEXT-ARJUN.md). T
 |---|---|---|
 | **M-16 · The map** | **S-10 + A-08**, plus the Maps key | Centred on the Upper East Side with Roosevelt Island in frame. Pins are venues with a curated assortment. No Find Bev button and no "your score" pins (those were removed) |
 | **M-20 · "Duplicate of…"** | **S-13 + A-12** | In the report sheet: when "Duplicate of another Bev" is picked, search for the original and send `duplicateOfId` |
+| **`index.html` design pass** | — | Planned, not scoped |
 
 ## What you owe Arjun, and what he owes you
 
 | You hand Arjun | So he can |
 |---|---|
-| D-04's tree **plus the 378-Bev leaf assignment** (#127, his review) | Build A-13 (the hierarchy in Postgres and Neo4j) |
 | M-22's SQL corrections (#128: two are wrong on prod today, streak history and stale `bayes_score`) | Fix them as A-14 follow-ups |
-| M-28's taste formulas (his approval) | Build A-16 (2), the taste graph |
+| #137's vector targets: the `bayesScoreStored` cases and the event-streak cases | Test the A-14 follow-ups against them |
+| #137's `PredictionSnapshot.edges?` shape | Build S-21 |
+| The Stage 4 contract, agreed together | Build Stage 4 with S-21, so the RPC changes once |
 | A review of every FakeApi / conformance hunk in his PRs (they live in your lane) | Merge his combined PRs |
-| Advance warning of any `@bevi/ranking` formula or constant change | Re-run the graph sync; his edge weights come from `edgeWeight()` |
+| Advance warning of any `@bevi/ranking` formula or constant change (1.4.0 in #137, 1.5.0 in M-21) | Re-run the graph sync; his edge weights come from `edgeWeight()` |
 
 | Arjun hands you | So you can |
 |---|---|
-| S-04 + A-04 (Explore backend), on prod | Build M-04 |
-| A-16 (1) + S-14 part 2 (Bev graph, `bev_edges`, `similar`/`similarities`), on prod | Build M-27, then M-21 |
-| A-13 (`Category.parentId`) | Build M-21 |
-| The M-26 export file (privately, outside the repo) | Get real baseline numbers before switching on M-27 |
+| His approval of #137 (`shared/fixtures`) | Merge M-27 (a), then M-21's package half on top |
+| A-13 (#132: `categories.tree()`, `bevs.leaves()`), on prod | Build M-21's tiers |
+| S-21 + Stage 4, on prod | Switch on edges mode; Layer 2 reads `user_neighbors` |
+| An M-26 re-export once there are more users (privately, outside the repo) | Judge switching on edges mode and Pearson |
 | S-10 + A-08 and the Maps key; S-13 + A-12 | Build M-16; build M-20 |
+| A heads-up before any migration that changes what an existing function returns | Keep the app and the FakeApi in step |
 
 ## The shared map (identical in both plans)
 
 ```
 Matt                                   Arjun
-M-19 Taste Profile ──── ready
-D-04 taxonomy + 378 assignments ─────▶ A-13 hierarchy ─────────────┐
-M-22 maths review ───(SQL fixes)─────▶ A-14 follow-ups (#107 first) │
-                                       M-26 export ──(file)──▶ Matt │
-M-04 Explore UI ◀──────────────────── S-04 + A-04 Explore backend   │
-M-27 graph in recs ◀───────────────── A-16 (1) Bev graph + S-14 (2) │
-M-21 placement ◀────────────────────── A-16 (1) + A-13 ◀────────────┘
-M-28 taste formulas ─────────────────▶ A-16 (2) taste graph
+D-04 taxonomy + 378 assignments ─────▶ A-13 hierarchy (#132) ─────────┐
+M-22 maths review ──(SQL fixes)──────▶ A-14 follow-ups (open)         │
+#137 M-22 vectors ──(targets)────────▶ A-14 follow-ups                │
+M-27 (b) Bevs like this ◀───────────── A-16 (1) Bev graph + S-14 (2)  │
+M-21 placement (pkg, then app) ◀────── A-16 (1) + A-13 ◀──────────────┘
+M-28 taste formulas ──(#131)─────────▶ A-16 (2) taste graph (#133)
+M-27 (a) edges mode on (#137) ◀─────── S-21 edges in the snapshot
+Layer 2 reads user_neighbors ◀──────── Stage 4 (same RPC change)
 M-16 map UI ◀───────────────────────── S-10 + A-08 venues (P2)
 M-20 duplicate step ◀───────────────── S-13 + A-12 duplicates (P2)
 ```
@@ -68,10 +75,10 @@ M-20 duplicate step ◀───────────────── S-13 
 
 | Surface | Who edits it | Rule |
 |---|---|---|
-| `shared/src/` (the contract) and `CONTRACT_VERSION` | Mostly Arjun's combined PRs | One combined PR per feature (contract + migration + `packages/api` + FakeApi). Bump the minor version, currently `2.4.0`. Whoever merges second rebases and takes the next number |
+| `shared/src/` (the contract) and `CONTRACT_VERSION` | Mostly Arjun's combined PRs | One combined PR per feature (contract + migration + `packages/api` + FakeApi). Bump the minor version, currently `2.8.0` (A-13, #132). Whoever merges second rebases and takes the next number |
 | `app/src/testing/fakeApi/*`, `conformance.ts` | Arjun (in his combined PRs) and you | Every new API method needs a FakeApi version, or the app's typecheck fails. Arjun writes it and you review it. Expect rebase conflicts if your branch edits the FakeApi too |
 | `packages/ranking/` | You | Arjun's sync job and Edge Function import it. Any formula or constant change, or `RANKING_VERSION` bump, changes his edge weights: tell him first |
-| `supabase/migrations/` | Arjun | Timestamped and append-only. Whatever calls a new database function merges **only after its migration is on prod**. Push migrations in timestamp order |
+| `supabase/migrations/` | Arjun | Timestamped and append-only; the next timestamps go after `20261031000100`. Two branches once both took `20261026000100`, so check `ls supabase/migrations` and the open PRs before picking one. Whatever calls a new database function merges **only after its migration is on prod**. Push migrations in timestamp order |
 | `TASKS.md` and `NEXT-*.md` | Both | Small PRs; rebase if they collide. The board at the top is the source of truth |
 | `design/system/` | You | Two design branches always conflict in the generated bundle: rebase, then `npm run build`. Publish to the artifact after the merge |
 | `.github/workflows/` | You (`app.yml`), Arjun (`graph-sync.yml`, `backend.yml`) | Don't edit the other's workflow without a heads-up |
