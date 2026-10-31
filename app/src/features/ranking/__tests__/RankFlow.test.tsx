@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { configure, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { storedScore } from '@bevi/ranking';
+import { maxAnchoredComparisons, maxComparisons, storedScore } from '@bevi/ranking';
 import { ApiError, type BevSummary, type Bucket, type SubmitRankingResult } from '@bevi/shared';
 
 import { api } from '@/api/client';
@@ -236,6 +236,8 @@ it('a conflict whose bucket refetch fails shows the error instead of restarting 
   const submit = jest.spyOn(api.rankings, 'submitRanking');
   await toNote(bev!);
   submit.mockRejectedValueOnce(new ApiError('conflict', 'Your list changed'));
+  // Both list reads fail (listBucketBevs falls back to listBucket since M-21's anchored placement).
+  jest.spyOn(api.rankings, 'listBucketBevs').mockRejectedValue(new ApiError('network', 'offline'));
   jest.spyOn(api.rankings, 'listBucket').mockRejectedValue(new ApiError('network', 'offline'));
 
   await fireEvent.press(screen.getByLabelText('Save'));
@@ -397,5 +399,110 @@ describe('the score on the note step (Reduce Motion: no count-up)', () => {
     await fireEvent.press(screen.getByLabelText('Save'));
     await screen.findByText('Done');
     expect(await savedScore(submit)).toBe(local);
+  });
+});
+
+describe('anchored placement (M-21): like-for-like questions first', () => {
+  // The tester's Loved list mixes coffee leaves with three sodas; #8 is A&W Root Beer (soda / root_beer).
+  // Plain binary search over its 9 Bevs asks #5 first (Death Wish, a cold brew).
+  const ROOT_BEER = 'barqs-root-beer'; // soda / root_beer, unranked
+  const COLD_BREW = 'chameleon-cold-brew-black'; // coffee / cold_brew, unranked: anchors #1, #2, #5
+  const DIET_ROOT_BEER = 'aw-diet-root-beer'; // diet_soda: no shared root, one stored edge to A&W Root Beer
+
+  async function nameOf(id: string) {
+    return (await api.bevs.get(id)).name;
+  }
+
+  /** The incumbent on screen, by its card label. */
+  async function expectAskedAbout(id: string, rank: number) {
+    const name = await nameOf(id);
+    expect(await screen.findByLabelText(`${name}, currently #${rank} in Loved`, {}, { timeout: 3000 })).toBeTruthy();
+  }
+
+  async function startIn(bevId: string) {
+    expect((await api.bevs.get(bevId)).myRanking).toBeFalsy();
+    await renderRank(bevId);
+    await chooseBucket('Loved it');
+    await screen.findByText('Which was better?', {}, { timeout: 3000 });
+  }
+
+  it('a new Bev whose leaf matches a bucket Bev is asked about that Bev first', async () => {
+    const loved = await api.rankings.listBucket('LOVED');
+    expect(loved[7]).toBe('aw-root-beer');
+    await startIn(ROOT_BEER);
+    await expectAskedAbout('aw-root-beer', 8);
+  });
+
+  it('the progress dots follow the anchored bound, which can exceed the plain one', async () => {
+    const loved = await api.rankings.listBucket('LOVED');
+    await startIn(COLD_BREW);
+    // Anchors at #1, #2, #5: the first question is #2.
+    await expectAskedAbout('stok-cold-brew-not-too-sweet', 2);
+    const anchored = maxAnchoredComparisons(loved.length, [0, 1, 4]);
+    expect(anchored).toBeGreaterThan(maxComparisons(loved.length));
+    expect(screen.getAllByTestId('progress-dot')).toHaveLength(anchored);
+    expect(screen.getByLabelText(`Comparison 1 of up to ${anchored}`)).toBeTruthy();
+  });
+
+  it('a re-rank anchors on the other Bevs of its leaf, never on itself', async () => {
+    const target = 'death-wish-coffee-rtd-black'; // #5 in Loved, a cold brew like #1 and #2
+    const name = await nameOf(target);
+    const rerank = jest.spyOn(api.rankings, 'rerankBev');
+    await renderRank(target);
+    await chooseBucket('Loved it');
+    // Without it the list is 8 long; the other cold brews are #1 and #2, and #2 is asked first.
+    await expectAskedAbout('stok-cold-brew-not-too-sweet', 2);
+    await answerAllNewBetter(name);
+    await fireEvent.press(screen.getByLabelText('Skip'));
+    await screen.findByText('Done');
+    expect(rerank.mock.calls[0]![0]).toMatchObject({ bevId: target, insertIndex: 0, expectedBucketSize: 8 });
+  });
+
+  it('leaves fail: the plain search, with the same first question as before anchoring', async () => {
+    jest.spyOn(api.bevs, 'leaves').mockRejectedValue(new ApiError('network', 'offline'));
+    await startIn(ROOT_BEER);
+    await expectAskedAbout('death-wish-coffee-rtd-black', 5);
+    expect(screen.getAllByTestId('progress-dot')).toHaveLength(maxComparisons(9));
+  });
+
+  it('listBucketBevs fails: the list comes from listBucket, the plain search', async () => {
+    jest.spyOn(api.rankings, 'listBucketBevs').mockRejectedValue(new ApiError('unknown', 'boom'));
+    const listBucket = jest.spyOn(api.rankings, 'listBucket');
+    const leaves = jest.spyOn(api.bevs, 'leaves');
+    await startIn(ROOT_BEER);
+    await expectAskedAbout('death-wish-coffee-rtd-black', 5);
+    expect(listBucket).toHaveBeenCalledWith('LOVED');
+    expect(leaves).not.toHaveBeenCalled();
+  });
+
+  it('similarities fail: the edge tier is lost, but the flow still starts', async () => {
+    // With the edge, A&W Root Beer anchors a new Diet Root Beer; without it, nothing does.
+    jest.spyOn(api.bevs, 'similarities').mockRejectedValue(new ApiError('network', 'offline'));
+    await startIn(DIET_ROOT_BEER);
+    await expectAskedAbout('death-wish-coffee-rtd-black', 5);
+  });
+
+  it('similarities answer: a stored edge anchors across roots', async () => {
+    await startIn(DIET_ROOT_BEER);
+    await expectAskedAbout('aw-root-beer', 8);
+  });
+
+  it('similarities hang: the first question comes after the timeout, on taxonomy tiers', async () => {
+    jest.spyOn(api.bevs, 'similarities').mockReturnValue(new Promise(() => {}));
+    await startIn(ROOT_BEER);
+    await expectAskedAbout('aw-root-beer', 8);
+  });
+
+  it('undo crosses from the gap back into the anchor phase', async () => {
+    await startIn(ROOT_BEER);
+    await expectAskedAbout('aw-root-beer', 8);
+    // A&W was better: the only gap left is below it, so #9 is next.
+    await fireEvent.press(screen.getByLabelText(`${await nameOf('aw-root-beer')}, currently #8 in Loved`));
+    await expectAskedAbout('mexican-coca-cola', 9);
+    await fireEvent.press(screen.getByLabelText('Undo'));
+    await expectAskedAbout('aw-root-beer', 8);
+    // The new Bev was better this time: the search moves to the gap above, #1 to #7.
+    await fireEvent.press(screen.getByLabelText(`${await nameOf(ROOT_BEER)}, candidate`));
+    await expectAskedAbout('faygo-rock-and-rye', 4);
   });
 });

@@ -62,6 +62,9 @@ export const keys = {
     mine: (params: MyRankingsParams = {}) => [...root, 'rankings', 'mine', params] as const,
     user: (id: string) => [...root, 'rankings', 'user', id] as const,
     bucket: (bucket: Bucket | undefined) => [...root, 'rankings', 'bucket', bucket ?? null] as const,
+    /** The ranking flow's list for one Bev (`loadPlacementList`): the bucket plus its tiers. */
+    placement: (bucket: Bucket | undefined, bevId: string | undefined) =>
+      [...root, 'rankings', 'placement', bucket ?? null, bevId ?? null] as const,
   },
 
   wantToTry: () => [...root, 'wantToTry'] as const,

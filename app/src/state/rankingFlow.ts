@@ -9,6 +9,7 @@ import {
   type PlacementPrompt,
   type PlacementResult,
   type PlacementState,
+  type PlacementTier,
 } from '@bevi/ranking';
 import type { Bucket } from '@bevi/shared';
 import { create } from 'zustand';
@@ -27,10 +28,13 @@ export interface RankingFlowState {
   orderedIds: readonly string[];
   note: string;
 
-  /** Begin placing `bevId` into `bucket`. An empty list is done at once (insert at 0). Keeps the note. */
-  start: (bevId: string, bucket: Bucket, orderedIds: readonly string[], mode: RankingMode) => void;
+  /**
+   * Begin placing `bevId` into `bucket`. An empty list is done at once (insert at 0). Keeps the note.
+   * `tiers` (one per entry of `orderedIds`, `loadPlacementList`) makes the search anchored (M-21).
+   */
+  start: (bevId: string, bucket: Bucket, orderedIds: readonly string[], mode: RankingMode, tiers?: readonly PlacementTier[]) => void;
   /** Same Bev and bucket, a fresh list (after a `conflict`): placement starts over, the note stays. */
-  restart: (orderedIds: readonly string[], mode?: RankingMode) => void;
+  restart: (orderedIds: readonly string[], mode?: RankingMode, tiers?: readonly PlacementTier[]) => void;
   answer: (a: ComparisonAnswer) => void;
   /** "Too close to call". */
   tie: () => void;
@@ -41,6 +45,15 @@ export interface RankingFlowState {
   reset: () => void;
 }
 
+/**
+ * `startPlacement`, anchored when `tiers` fits the list. Tiers that don't line up with it (never
+ * expected: they're built from the same rows) are dropped for the plain search rather than thrown.
+ */
+function begin(bevId: string, bucket: Bucket, orderedIds: readonly string[], tiers?: readonly PlacementTier[]): PlacementState {
+  const fits = tiers !== undefined && tiers.length === orderedIds.length;
+  return startPlacement({ bevId, bucket, orderedBevIds: orderedIds, ...(fits ? { tiers } : {}) });
+}
+
 const INITIAL = { mode: 'new' as RankingMode, placement: null, orderedIds: [] as readonly string[], note: '' };
 
 /**
@@ -49,15 +62,15 @@ const INITIAL = { mode: 'new' as RankingMode, placement: null, orderedIds: [] as
  */
 export const useRankingFlow = create<RankingFlowState>()((set, get) => ({
   ...INITIAL,
-  start: (bevId, bucket, orderedIds, mode) =>
-    set({ mode, orderedIds, placement: startPlacement({ bevId, bucket, orderedBevIds: orderedIds }) }),
-  restart: (orderedIds, mode) => {
+  start: (bevId, bucket, orderedIds, mode, tiers) =>
+    set({ mode, orderedIds, placement: begin(bevId, bucket, orderedIds, tiers) }),
+  restart: (orderedIds, mode, tiers) => {
     const { placement } = get();
     if (!placement) return;
     set((s) => ({
       mode: mode ?? s.mode,
       orderedIds,
-      placement: startPlacement({ bevId: placement.bevId, bucket: placement.bucket, orderedBevIds: orderedIds }),
+      placement: begin(placement.bevId, placement.bucket, orderedIds, tiers),
     }));
   },
   answer: (a) => {
