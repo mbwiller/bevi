@@ -97,7 +97,10 @@ export function ReportSheet({ bevId, name, open, onClose }: { bevId: string; nam
           <DuplicatePicker
             reportedId={bevId}
             query={query}
-            onQuery={setQuery}
+            onQuery={(q) => {
+              setQuery(q);
+              setPicked(null);
+            }}
             picked={picked}
             onPick={(id) => {
               setPicked(id);
@@ -110,7 +113,11 @@ export function ReportSheet({ bevId, name, open, onClose }: { bevId: string; nam
                 {failure}
               </Text>
             ) : null}
-            <Button variant="outlined" block disabled={report.isPending} onPress={() => setStep('reason')}>
+            <Button variant="outlined" block disabled={report.isPending} onPress={() => {
+                report.reset();
+                setPicked(null);
+                setStep('reason');
+              }}>
               Back
             </Button>
             <Button
@@ -193,7 +200,7 @@ function DuplicatePicker({
           <Skeleton variant="row" />
         </>
       ) : results.length === 0 ? (
-        <EmptyState icon="search" title="No Bevs match" body="Try the brand or the flavour." />
+        <EmptyState icon="search" title="No Bevs match" body="Try the brand or the flavor." />
       ) : (
         results.map((bev) => <PickRow key={bev.id} bev={bev} selected={picked === bev.id} onPress={() => onPick(bev.id)} />)
       )}

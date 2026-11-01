@@ -90,6 +90,13 @@ it('Duplicate of another Bev asks which one, then sends duplicateOfId', async ()
   expect(screen.getByLabelText(`Pick ${other.name}`).props.accessibilityState).toMatchObject({ selected: true });
   expect(screen.getByLabelText('Send report')).toBeEnabled();
 
+  // A new query drops the pick, so a Bev that left the results can't be sent.
+  await search('coc');
+  expect(screen.getByLabelText('Send report')).toBeDisabled();
+  await search('coca');
+  await fireEvent.press(await screen.findByLabelText(`Pick ${other.name}`));
+  expect(screen.getByLabelText('Send report')).toBeEnabled();
+
   await fireEvent.press(screen.getByLabelText('Send report'));
   expect(await screen.findByText('Thanks for the report')).toBeTruthy();
   expect(spy).toHaveBeenCalledWith(COKE, 'duplicate', { duplicateOfId: other.id });
@@ -100,7 +107,7 @@ it('says so when nothing matches', async () => {
   await toSearchStep();
   await search('zzqxjv');
   expect(await screen.findByText('No Bevs match')).toBeTruthy();
-  expect(screen.getByText('Try the brand or the flavour.')).toBeTruthy();
+  expect(screen.getByText('Try the brand or the flavor.')).toBeTruthy();
 });
 
 it('Back returns to the reasons with Duplicate still chosen', async () => {
@@ -128,6 +135,23 @@ it('a rejected duplicateOfId says to pick a different Bev and stays on the searc
   // Picking again clears the message and sends.
   await fireEvent.press(screen.getByLabelText(`Pick ${other.name}`));
   await waitFor(() => expect(screen.queryByText('Pick a different Bev to report this one as a duplicate of.')).toBeNull());
+});
+
+it('Back after a rejected duplicate clears the message and keeps the reason', async () => {
+  const other = await aDuplicateCandidate();
+  jest
+    .spyOn(api.bevs, 'report')
+    .mockRejectedValueOnce(new ApiError('validation', 'Choose the Bev this one duplicates', { field: 'duplicateOfId' }));
+  await render(<Harness open />);
+  await toSearchStep();
+  await search('coca');
+  await fireEvent.press(await screen.findByLabelText(`Pick ${other.name}`));
+  await fireEvent.press(screen.getByLabelText('Send report'));
+  expect(await screen.findByText('Pick a different Bev to report this one as a duplicate of.')).toBeTruthy();
+  await fireEvent.press(screen.getByLabelText('Back'));
+  expect(await screen.findByText(`Report ${COKE_NAME}`)).toBeTruthy();
+  await waitFor(() => expect(screen.queryByText('Pick a different Bev to report this one as a duplicate of.')).toBeNull());
+  expect(screen.getByLabelText('Duplicate of another Bev').props['aria-pressed']).toBe(true);
 });
 
 it('another failure keeps the usual copy', async () => {
