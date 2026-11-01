@@ -61,7 +61,7 @@ select throws_ok(
   '22023', 'BEVI_VALIDATION',
   'moving the leafless root water under soda is rejected'
 );
-select like(
+select alike(
   pg_temp.cd0_catch($$ update public.categories set parent_id = 'soda' where id = 'water' $$),
   '22023|BEVI_VALIDATION|category water %category_id%stay a root%',
   'and the detail names water and the rule'
@@ -72,7 +72,7 @@ select throws_ok(
   '22023', 'BEVI_VALIDATION',
   'moving the leafless root sports under energy is rejected'
 );
-select like(
+select alike(
   pg_temp.cd0_catch($$ update public.categories set parent_id = 'energy' where id = 'sports' $$),
   '22023|BEVI_VALIDATION|category sports %category_id%stay a root%',
   'and the detail names sports and the rule'
@@ -87,7 +87,7 @@ select throws_ok(
   '22023', 'BEVI_VALIDATION',
   'promoting the populated leaf cola to a root is rejected'
 );
-select like(
+select alike(
   pg_temp.cd0_catch($$ update public.categories set parent_id = null where id = 'cola' $$),
   '22023|BEVI_VALIDATION|category cola %leaf_category_id%stay a leaf%',
   'and the detail names cola and the rule'
@@ -133,7 +133,7 @@ select throws_ok(
 
 -- water under cola breaks the depth rule AND rule 1 (water would be a leaf its
 -- Bevs use as category_id). The detail must come from the depth rule.
-select like(
+select alike(
   pg_temp.cd0_catch($$ update public.categories set parent_id = 'cola' where id = 'water' $$),
   '22023|BEVI_VALIDATION|category water is three levels deep%',
   'a statement that breaks several rules reports the depth rule first'
