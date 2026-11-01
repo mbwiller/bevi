@@ -571,12 +571,22 @@ a median of 1 co-rater per rated pair. The α gate needs 2 co-rated Bevs and the
 bridge rule needs 2 bridging attributes reached through *distinct* Bevs, so most
 pairs score 0. The job reports that rather than treating it as a failure.
 
-**Nothing reads these rows yet, by design.** Stage 4 — `get_prediction_snapshot`
-emitting `(alias, sim, common)` and `layer2()` reading `snapshot.userNeighbors`
-— is a separate PR, because `layer2.ts` is Matt's lane and the doc says Stage 4
-needs the contract agreed first. Until then `layer2()` falls back to its
-in-snapshot computation, which is exactly the doc's "3 or more rankings, not yet
-synced" tier.
+**Stage 4 is built, and off by default.** The RPC half is
+`20261101000100`: `get_prediction_snapshot` now emits the viewer's rows as the
+key `userNeighbors: [[alias, sim, common], …]`, joined to the same alias CTE as
+`users` and `rankings` (a neighbour with no rankings drops out; no uuid leaves
+the function), `sim desc`, with no `version` filter, and `[]` rather than null.
+`packages/api/src/snapshot.ts` maps it onto the package field
+`snapshot.userNeighbours` whenever the key is present. The package half is #144:
+`layer2()` reads that field only under `userSimilarity: 'stored'`
+(`RANKING_VERSION` 1.6.0), weighting a listed neighbour by
+sim_B · min(1, n_v / 15) and falling back to today's in-snapshot cosine when the
+field is absent or the user has no rows — exactly the doc's "3 or more
+rankings, not yet synced" tier. The same migration carries S-21's `edges` (every
+`bev_edges` row touching the viewer's ranked Bevs, both ends visible) for
+`bevSimilarity: 'edges'` (#137). Nobody passes either option yet: switching them
+on waits for a real export with enough co-raters to evaluate them (NEXT-MATT.md),
+since today's volume gives few rows or none.
 
 **There is no per-ranking webhook, and that is deliberate.** TASKS.md's A-16 (2)
 row promises one, which is right for Bev edges — a new Bev changes a bounded,
@@ -677,7 +687,9 @@ right choice: a Bolt connection pool has nothing to pool.
 - **The taste graph (A-16 (2)) is built and also Postgres-only:**
   `user_neighbors` in `20261026000300`, `scripts/graph/build-neighbours.ts` and
   `graph-neighbours.yml`, nightly at 05:20 UTC. Expect **few rows or none** at
-  current volume — see "Taste neighbours".
+  current volume — see "Taste neighbours". Both tables reach the client through
+  the prediction snapshot since `20261101000100` (S-21 + Stage 4), and both
+  package modes that read them ship off.
 - The **Neo4j** side of A-16 — steps 6, 8 and 9, `(:Bev)-[:SIMILAR_TO]`, the
   `RANKED` mirror and `(:Meta).lastSyncAt` — is still unbuilt, and nothing
   above depends on it. `Bev.embedding` is unset on every node.
