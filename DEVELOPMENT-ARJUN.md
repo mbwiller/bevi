@@ -870,7 +870,7 @@ select cmp_ok(abs(public.ranking_score(2,2,7) - 5.42), '<', 0.005, 'scoreFromPos
 select * from finish(); rollback;
 ```
 
-`supabase test db` runs them with the rest of your pgTAP suite. CI regenerates the SQL on every run (generated files are gitignored) so a `contract/*` PR that changes vectors fails your SQL until you update it; that's the intended coupling. Table-level cases use a `with fixture as (insert … returning *)` prelude inside the test transaction.
+`supabase test db` runs them with the rest of your pgTAP suite. As built (A-14 follow-ups, #150): `scripts/vectors/build-pgtap.ts` writes `supabase/tests/20_vectors.test.sql`, which **is committed**, and `backend.yml` runs `npm run vectors:pgtap -- --check`, so a `rank/*` PR that changes a vector case fails CI until `npm run vectors:pgtap` is re-run and the file committed; that's the intended coupling. Table-level cases use a `with fixture as (insert … returning *)` prelude inside the test transaction.
 
 ### 5.8 Recommendations: Edge Function + job queue (seam 5)
 
