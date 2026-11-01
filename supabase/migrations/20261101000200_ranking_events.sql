@@ -103,14 +103,26 @@
 -- by position, AFTER `rerank_bev` has deleted the Bev's old row, i.e. exactly
 -- the list `p_expected_bucket_size` is checked against) and pos(x) the 0-based
 -- position of x in L, each element of p_comparisons must satisfy:
---   * exactly one of winnerBevId / loserBevId is `new`, and the other one (the
---     compared Bev) is in L;
+--   * exactly one of winnerBevId / loserBevId is `new` (the other one is the
+--     compared Bev), else BEVI_VALIDATION;
+--   * the compared Bev is in L, else BEVI_STALE_BUCKET (sqlstate 23505,
+--     detail 'compared=<id> not in bucket') -- see below;
 --   * tie = true                     -> p_insert_index =  pos(compared) + 1;
 --   * winner = new (NEW_BETTER)      -> p_insert_index <= pos(compared);
---   * loser  = new (EXISTING_BETTER) -> p_insert_index >= pos(compared) + 1.
--- Anything else raises BEVI_VALIDATION (sqlstate 22023, detail 'comparisons'),
--- which packages/api maps to ApiError code 'validation' with
--- detail { field: 'comparisons' }. The check runs after BEVI_BAD_INDEX and
+--   * loser  = new (EXISTING_BETTER) -> p_insert_index >= pos(compared) + 1;
+--     a violation of any of these three is BEVI_VALIDATION.
+-- BEVI_VALIDATION is sqlstate 22023, detail 'comparisons'; packages/api maps
+-- it to ApiError 'validation' with detail { field: 'comparisons' }: a client
+-- bug, nothing to retry. A compared Bev missing from L is different in kind:
+-- the client searched a list that is no longer the server's (a removal or a
+-- re-rank on another device, leaving the same size so the size check passed),
+-- so it raises the size check's own BEVI_STALE_BUCKET / 23505, which
+-- packages/api maps to 'conflict' and the app answers by restarting placement
+-- on a fresh list. Membership is checked for the whole log before any index
+-- rule, so a stale list is always reported as a conflict, never as a rule
+-- violation that it caused. (A stale list with the same members in a
+-- different order can still fail the index rule as 'validation'; the server
+-- cannot tell that apart from a client bug.) The check runs after BEVI_BAD_INDEX and
 -- before the first row is written, so a rejected call stores nothing (the RPC
 -- is one transaction in any case, and in `rerank_bev` the earlier delete of
 -- the old row rolls back with it).
@@ -129,9 +141,10 @@
 -- noticing. The package proves the property for its own state machine; the
 -- server is the only place that sees every writer. The cost is one indexed
 -- read of one bucket per call, which `submit_ranking` already does for the
--- size check. A client-visible consequence worth knowing: a stale cached list
--- of the SAME length but different members or order used to be accepted
--- silently and now surfaces as 'validation', not 'conflict'.
+-- size check. Client-visible consequence: a stale cached list of the SAME
+-- length used to be accepted silently; with different members it is now a
+-- 'conflict' (placement restarts), and with the same members reordered it can
+-- be a 'validation'.
 --
 -- OBJECTS. New: `ranking_events`, `streak_from_days`,
 -- `assert_comparison_log`. Re-created with identical signatures:
@@ -268,8 +281,9 @@ revoke execute on function public.touch_streak(uuid) from public, anon, authenti
 -- Volatile (the default) on purpose: it must read the bucket as the calling
 -- RPC has just left it (in rerank_bev, after the delete), and a volatile
 -- function takes a fresh snapshot per statement, so there is nothing to argue.
--- The bucket list is numbered with row_number() rather than read from
--- `position`, so the rule holds even if positions were ever sparse.
+-- The bucket list is taken in `position` order and numbered by its index in
+-- that array rather than read from `position`, so the rule holds even if
+-- positions were ever sparse.
 create or replace function public.assert_comparison_log(
   p_uid          uuid,
   p_bucket       smallint,
@@ -280,39 +294,61 @@ create or replace function public.assert_comparison_log(
 language plpgsql
 set search_path = public
 as $$
+declare
+  v_list     uuid[];
+  v_elem     jsonb;
+  v_winner   uuid;
+  v_loser    uuid;
+  v_compared uuid;
+  v_pos      integer;
+  v_ok       boolean;
 begin
-  if exists (
-    select 1
-    from jsonb_array_elements(coalesce(p_comparisons, '[]'::jsonb)) as e(elem)
-    cross join lateral (
-      select (e.elem ->> 'winnerBevId')::uuid                  as winner,
-             (e.elem ->> 'loserBevId')::uuid                   as loser,
-             coalesce((e.elem ->> 'tie')::boolean, false)      as tie
-    ) c
-    left join lateral (
-      select l.pos
-      from (
-        select r.bev_id, (row_number() over (order by r.position) - 1)::integer as pos
-        from public.rankings r
-        where r.user_id = p_uid and r.bucket = p_bucket
-      ) l
-      where l.bev_id = case when c.winner = p_bev_id then c.loser else c.winner end
-    ) m on true
-    where coalesce(c.winner = p_bev_id, false) = coalesce(c.loser = p_bev_id, false)
-       or m.pos is null
-       or not (case
-                 when c.tie                then p_insert_index =  m.pos + 1
-                 when c.winner = p_bev_id  then p_insert_index <= m.pos
-                 else                           p_insert_index >= m.pos + 1
-               end)
-  ) then
-    raise exception 'BEVI_VALIDATION' using errcode = '22023', detail = 'comparisons';
-  end if;
+  -- L, best first; array_position below is 1-based, hence the - 1.
+  select coalesce(array_agg(r.bev_id order by r.position), array[]::uuid[])
+    into v_list
+  from public.rankings r
+  where r.user_id = p_uid and r.bucket = p_bucket;
+
+  -- Pass 1, every element: the shape (a client bug) and membership (a stale
+  -- list). Membership is settled for the whole log before any index rule is
+  -- applied, so a stale list always surfaces as a conflict, never as a rule
+  -- violation that the stale list itself caused.
+  for v_elem in select e.value from jsonb_array_elements(coalesce(p_comparisons, '[]'::jsonb)) as e loop
+    v_winner := (v_elem ->> 'winnerBevId')::uuid;
+    v_loser  := (v_elem ->> 'loserBevId')::uuid;
+    if coalesce(v_winner = p_bev_id, false) = coalesce(v_loser = p_bev_id, false) then
+      raise exception 'BEVI_VALIDATION' using errcode = '22023', detail = 'comparisons';
+    end if;
+    v_compared := case when v_winner = p_bev_id then v_loser else v_winner end;
+    if v_compared is null then
+      raise exception 'BEVI_VALIDATION' using errcode = '22023', detail = 'comparisons';
+    end if;
+    if array_position(v_list, v_compared) is null then
+      raise exception 'BEVI_STALE_BUCKET' using errcode = '23505',
+        detail = format('compared=%s not in bucket', v_compared);
+    end if;
+  end loop;
+
+  -- Pass 2, every element: Prop. 2.5 against the index.
+  for v_elem in select e.value from jsonb_array_elements(coalesce(p_comparisons, '[]'::jsonb)) as e loop
+    v_winner := (v_elem ->> 'winnerBevId')::uuid;
+    v_loser  := (v_elem ->> 'loserBevId')::uuid;
+    v_compared := case when v_winner = p_bev_id then v_loser else v_winner end;
+    v_pos := array_position(v_list, v_compared) - 1;
+    v_ok := case
+              when coalesce((v_elem ->> 'tie')::boolean, false) then p_insert_index =  v_pos + 1
+              when v_winner = p_bev_id                           then p_insert_index <= v_pos
+              else                                                    p_insert_index >= v_pos + 1
+            end;
+    if not coalesce(v_ok, false) then
+      raise exception 'BEVI_VALIDATION' using errcode = '22023', detail = 'comparisons';
+    end if;
+  end loop;
 end;
 $$;
 
 comment on function public.assert_comparison_log(uuid, smallint, uuid, integer, jsonb) is
-  'A-14 3.6: raises BEVI_VALIDATION (detail comparisons) unless every comparison agrees with p_insert_index on the caller''s current p_bucket list (paper Prop. 2.5). Called by submit_ranking and rerank_bev before they write. Internal.';
+  'A-14 3.6: checks the comparison log against p_insert_index on the caller''s current p_bucket list (paper Prop. 2.5). Compared Bev not in the list: BEVI_STALE_BUCKET (23505, conflict). Malformed triple or index rule violated: BEVI_VALIDATION (22023, detail comparisons). Called by submit_ranking and rerank_bev before they write. Internal.';
 
 alter function public.assert_comparison_log(uuid, smallint, uuid, integer, jsonb) owner to postgres;
 revoke execute on function public.assert_comparison_log(uuid, smallint, uuid, integer, jsonb)

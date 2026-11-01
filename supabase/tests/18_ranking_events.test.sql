@@ -4,8 +4,9 @@
 -- In order: (1) the table's shape, RLS and the internal functions' grants;
 -- (2) the RPCs: submit_ranking and rerank_bev each write exactly one event,
 -- remove_ranking writes and deletes nothing, and the comparison log is checked
--- against the index (valid calls pass, inconsistent ones raise BEVI_VALIDATION
--- and change nothing); (3) the two `streakFromTimestamps` vectors written as
+-- against the index (valid calls pass; a malformed triple or a broken index
+-- rule raises BEVI_VALIDATION, a compared Bev outside the bucket raises
+-- BEVI_STALE_BUCKET; either way nothing changes); (3) the two `streakFromTimestamps` vectors written as
 -- events, replayed on real rows with real timestamps: a re-ranked day and a
 -- removed day both still count; (4) `streak_from_days` and the day-key
 -- conversion against every day-period case of streak.vectors.json.
@@ -34,7 +35,7 @@
 --   a1402  the re-ranked-day scenario (section 3)
 --   a1403  the removed-day scenario (section 3)
 begin;
-select plan(57);
+select plan(58);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -194,12 +195,24 @@ select throws_ok(
   'Prop. 2.5: NEW_BETTER against position 0 with index 1 raises BEVI_VALIDATION'
 );
 
+-- A compared Bev outside the bucket means the client searched a stale list:
+-- the size check's own conflict, so the app restarts placement.
 select throws_ok(
   $$ select public.submit_ranking((select id from t_bevs where label = 'b3'), 3::smallint, 0, 2,
                                   jsonb_build_array(pg_temp.cmp('b3', 'b4'))) $$,
-  '22023',
-  'BEVI_VALIDATION',
-  'Prop. 2.5: a comparison against a Bev outside the bucket raises BEVI_VALIDATION'
+  '23505',
+  'BEVI_STALE_BUCKET',
+  'Prop. 2.5: a comparison against a Bev outside the bucket raises BEVI_STALE_BUCKET (conflict)'
+);
+
+-- Membership is settled before any index rule: the first triple breaks the
+-- rule, the second names a Bev outside the bucket, and the answer is conflict.
+select throws_ok(
+  $$ select public.submit_ranking((select id from t_bevs where label = 'b3'), 3::smallint, 0, 2,
+                                  jsonb_build_array(pg_temp.cmp('b1', 'b3'), pg_temp.cmp('b3', 'b4'))) $$,
+  '23505',
+  'BEVI_STALE_BUCKET',
+  'Prop. 2.5: a stale list is reported as a conflict even when an earlier triple also breaks the rule'
 );
 
 select throws_ok(
@@ -242,9 +255,9 @@ select throws_ok(
 select throws_ok(
   $$ select public.rerank_bev((select id from t_bevs where label = 'b1'), 3::smallint, 2, 2,
                               jsonb_build_array(pg_temp.cmp('b1', 'b4'))) $$,
-  '22023',
-  'BEVI_VALIDATION',
-  'Prop. 2.5 on rerank_bev: a comparison against a Bev outside the bucket raises BEVI_VALIDATION'
+  '23505',
+  'BEVI_STALE_BUCKET',
+  'Prop. 2.5 on rerank_bev: a comparison against a Bev outside the bucket raises BEVI_STALE_BUCKET (conflict)'
 );
 
 reset role;
