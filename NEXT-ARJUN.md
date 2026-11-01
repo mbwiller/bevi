@@ -81,7 +81,7 @@ The decision (2026-10-19): Neo4j holds Bevs, categories, brands and flavours as 
 | Task | Unblocks | Note |
 |---|---|---|
 | **S-10 + A-08 · Venues**, one combined PR | Matt's M-16 (the map) | Start with the **Upper East Side and Roosevelt Island** (D-13), keeping the CHECK at the full NYC bounds. Trimmed contract: `venues.inView`, `venues.get`. No `rankings.venue_id`. You also provide the Google Maps key (D-12) |
-| ~~**S-13 + A-12 · Duplicates**~~ — **done in #151 from Matt's side** (2026-11-01, `20261101000500`, contract 2.9.0) | Matt's M-20 (#152, stacked) | As approved: `duplicateOfId` on reports, Studio-only `merge_bev(src, dst)`, the `pending_duplicate_reports` view. Never merges automatically. **S-10 + A-08 (venues) is now the next thing in your lane** |
+| ~~**S-13 + A-12 · Duplicates**~~ — **done in #151 from Matt's side** (2026-11-01, `20261101000500`, contract 2.9.0) | ~~Matt's M-20~~ (#152, merged) | As approved: `duplicateOfId` on reports, Studio-only `merge_bev(src, dst)`, the `pending_duplicate_reports` view. Never merges automatically. **S-10 + A-08 (venues) is now the next thing in your lane** |
 
 ## What you owe Matt, and what he owes you
 
