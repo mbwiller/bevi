@@ -55,13 +55,107 @@
   },
   "summary": {
     "catalog": 378,
-    "authored": 30,
-    "pending": 348,
-    "starterAuthored": 21,
+    "authored": 49,
+    "pending": 329,
+    "identityUnresolved": 3,
+    "starterAuthored": 40,
     "starterTotal": 43,
     "livePostgresReconciled": false
   },
   "records": [
+    {
+      "slug": "alani-nu-hawaiian-shaved-ice",
+      "family": "energy-slim-can",
+      "packageChoice": "US 12 fl oz / 355mL Alani Nu Hawaiian Shaved Ice; current purple/pink tropical can.",
+      "references": [
+        {
+          "pageUrl": "https://www.alaninu.com/products/energy-drink-hawaiian-shaved-ice",
+          "imageUrl": "https://www.alaninu.com/cdn/shop/files/Stretch_AN-Website-12oz-PDP-HSI-01_V1.png?v=1782762260&width=2000",
+          "inspectedAt": "2026-10-31",
+          "observations": "Inspected manufacturer front: silver rims, hot-pink shoulder, purple-to-pink central field, stacked white HAWAIIAN SHAVED ICE, upward white Alani script/NU, pink ENERGY, aqua leaves and base band, strawberry/coconut/flower motifs around edges. 12 FL OZ (355mL) visible; this is the current non-collaboration design.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Catalog has no package size; representative US retail package selected. Fine package lettering and illustrations simplified; final aesthetic and native review pending.",
+      "status": "needs-review",
+      "bevId": "2837c85b-1512-5a63-86cf-f5b00e9a73ae",
+      "name": "Alani Nu Energy Hawaiian Shaved Ice",
+      "brand": "Alani Nu",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/alani-nu-hawaiian-shaved-ice.svg",
+        "portableSvg": "portable-svg/alani-nu-hawaiian-shaved-ice.svg",
+        "png": "png/alani-nu-hawaiian-shaved-ice.png",
+        "svgSha256": "7ae424b7bad7201accd4c89e62238717ec5158e65f7cb4f7946b087a555fb5f3",
+        "portableSvgSha256": "e9e26439a5574588e6ce3a07d87028fe3301b23d7a78b7c0a70ca27ee3ae4afb",
+        "pngSha256": "2c02c93e71f31b2d2f84334dc6794581441bee77438a0147380312ea1b05f033",
+        "pngBytes": 131044
+      },
+      "sourceModule": "scripts/icons/families/energy-starters.mjs"
+    },
+    {
+      "slug": "arizona-green-tea",
+      "family": "tea-pet-bottle",
+      "packageChoice": "US 20 fl oz / 591 mL Green Tea with Ginseng and Honey, manufacturer Tall Boy PET bottle with white screw cap; classic mint cherry-blossom wrap.",
+      "references": [
+        {
+          "pageUrl": "https://drinkarizona.com/products/green-tea-20oz-tallboy",
+          "imageUrl": "https://drinkarizona.com/cdn/shop/files/Green-Tea_Tall-Boy_Image_01_1.png?v=1742491868&width=1200",
+          "inspectedAt": "2026-10-31",
+          "visuallyInspected": true,
+          "observations": "Inspected manufacturer front/three-quarter photo: actual package is a slender PET bottle despite Tall Boy naming; white ribbed cap, visible amber tea shoulder/base, full mint-green floral label, pink cherry blossoms and gray branch, partially wrapped vertical AriZona at left, Green Tea / Ginseng / Honey lower front and small golden pagoda at right. Current 22oz Big Can page has different World Cup art, not used for this chosen bottle."
+        }
+      ],
+      "uncertainty": "Catalog omits size; explicitly selected documented 20oz PET bottle, not the 22oz promotional can. Classic floral marks and text simplified; final aesthetic and native review pending.",
+      "status": "needs-review",
+      "bevId": "92d10127-a5e5-5f1c-9e04-1936e3c24961",
+      "name": "Arizona Green Tea",
+      "brand": "Arizona",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/arizona-green-tea.svg",
+        "portableSvg": "portable-svg/arizona-green-tea.svg",
+        "png": "png/arizona-green-tea.png",
+        "svgSha256": "45728489cb6e4221d9c3eb1f7eb5d482e583304a689f01ad041a2296134d6b92",
+        "portableSvgSha256": "b7b3e2530f4ca27d826a9b47e19e80a78d659abe60e26c516ea24e91adbea53d",
+        "pngSha256": "aed3badaeb60103e73585edbd5a48dc8e3b0801d5a34bfa68e250b8256819f0f",
+        "pngBytes": 115281
+      },
+      "sourceModule": "scripts/icons/families/coffee-tea-starters.mjs"
+    },
+    {
+      "slug": "dunkin-bottled-iced-coffee-original",
+      "family": "rtd-coffee-pet-bottle",
+      "packageChoice": "US 13.7 fl oz Original Iced Coffee, orange/white labeled PET bottle.",
+      "references": [
+        {
+          "pageUrl": "https://dunkinanytime.coca-cola.com/products/iced-coffee-on-the-go",
+          "imageUrl": "https://dunkinanytime.coca-cola.com/content/dam/dunkin/us/en/product-landing-page/teasers/dunkin-iced-original-product-img.png",
+          "inspectedAt": "2026-10-31",
+          "visuallyInspected": true,
+          "observations": "Inspected official product image: tall orange cap with white vertical Original strip; pinched orange neck, latte-brown rounded shoulder, broad white label with oversized orange DUNKIN and pink ICED COFFEE; orange original callout and splash; orange sculpted base."
+        }
+      ],
+      "uncertainty": "Representative US package; fine lettering and brand illustration simplified as original vectors. Final aesthetic and native-app review pending.",
+      "status": "needs-review",
+      "bevId": "14715df4-4d37-58b1-9424-839f5c3524fb",
+      "name": "Bottled Iced Coffee Original",
+      "brand": "Dunkin'",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/dunkin-bottled-iced-coffee-original.svg",
+        "portableSvg": "portable-svg/dunkin-bottled-iced-coffee-original.svg",
+        "png": "png/dunkin-bottled-iced-coffee-original.png",
+        "svgSha256": "40dbf5ea6d51cd44726ae47555ef0a74e922b507a9da40706be3d36c46688fa4",
+        "portableSvgSha256": "73b06ddc506be5ca3ab284a876fc10b1533aa816c41ae5a92510191e3aa89f63",
+        "pngSha256": "4052e5912e68259af9e3db28cc5d60ee40b73b86059decd668557162ffe5608f",
+        "pngBytes": 78553
+      },
+      "sourceModule": "scripts/icons/families/coffee-tea-starters.mjs"
+    },
     {
       "slug": "bubly-lime",
       "family": "sparkling-standard-can",
@@ -92,6 +186,75 @@
         "pngBytes": 101382
       },
       "sourceModule": "scripts/icons/families/sparkling-starters.mjs"
+    },
+    {
+      "slug": "celsius-sparkling-orange",
+      "family": "energy-slim-can",
+      "packageChoice": "US 12 fl oz / 355mL CELSIUS Sparkling Orange; current official product-page image.",
+      "references": [
+        {
+          "pageUrl": "https://www.celsius.com/products/celsius/sparkling-orange/",
+          "imageUrl": "https://www.celsius.com/wp-content/uploads/2023/08/Orange-front.png",
+          "inspectedAt": "2026-10-31",
+          "observations": "Inspected manufacturer front image: narrow white/silver can, ORANGE at shoulder, large silver C with orange upper sweep and degree ring, black CELSIUS and orange LIVE FIT, orange half slice, SPARKLING ORANGE, black lower band and silver base. Image path dated 2023 but currently linked by manufacturer; no newer design assumed.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Catalog has no package size; representative US retail package selected. Fine package lettering and illustrations simplified; final aesthetic and native review pending.",
+      "status": "needs-review",
+      "bevId": "d0522171-dee4-5421-a863-c18e4deba0c1",
+      "name": "Celsius Sparkling Orange",
+      "brand": "Celsius",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/celsius-sparkling-orange.svg",
+        "portableSvg": "portable-svg/celsius-sparkling-orange.svg",
+        "png": "png/celsius-sparkling-orange.png",
+        "svgSha256": "bbf4da81657ee5f7f891622f3772bf8d2944394d2b8a348d452755b4d98c4673",
+        "portableSvgSha256": "11ff327f1eb51d8bde931b0930fff110b4863966890e8ad5abd154552eed70f9",
+        "pngSha256": "de79b8da03f587a11e3a066ebdfff8a8ed3348ec8284f692c85fb34975d498b2",
+        "pngBytes": 93805
+      },
+      "sourceModule": "scripts/icons/families/energy-starters.mjs"
+    },
+    {
+      "slug": "kung-fu-tea-classic-milk-tea",
+      "family": "cafe-milk-tea-cup",
+      "packageChoice": "US Kung Fu Milk Tea (signature Earl Grey, cane sugar and milk powder), iced in the clear tapered café cup shown by the brand; no added topping. Exact cup volume unspecified.",
+      "references": [
+        {
+          "pageUrl": "https://www.kungfutea.com/products/",
+          "imageUrl": "https://www.kungfutea.com/wp-content/uploads/2026/10/kung-fu-tea-kung-fu-milk-tea.jpg",
+          "inspectedAt": "2026-10-31",
+          "visuallyInspected": true,
+          "observations": "Exact Kung Fu Milk Tea card: pale tan iced drink, clear rolled lip, stepped tapered cup, black round badge with red KUNG FU and white TEA. This image crops the cup base."
+        },
+        {
+          "pageUrl": "https://www.kungfutea.com/milk-tea-series/",
+          "imageUrl": "https://www.kungfutea.com/wp-content/uploads/2021/08/Coffee_MilkTea.jpg",
+          "inspectedAt": "2026-10-31",
+          "visuallyInspected": true,
+          "observations": "Full cup photo linked under KUNG FU MILK/MILK GREEN TEA: same ice arrangement, badge and liquid as the current exact product crop; narrow ribbed base and red PRINCIPLE 2: INNOVATIVE below badge. Filename says Coffee_MilkTea and the page reuses it for several items, so the current explicitly named product card is the identity anchor."
+        }
+      ],
+      "uncertainty": "Catalog says Classic Milk Tea; mapped to brand signature Kung Fu Milk Tea using its named official product card. No pearls were added: toppings are customizable and the inspected serving does not show a pearl layer. Promotional open-cup presentation; size not asserted. Seal preserves the photographed 功夫茶 characters as local Songti TC Regular glyph outlines; tiny filler marks omitted. Final aesthetic approval and native-app review pending.",
+      "status": "needs-review",
+      "bevId": "bc5baef9-da2c-5d97-a144-7b1a29b51293",
+      "name": "Classic Milk Tea (Kung Fu Tea)",
+      "brand": "Kung Fu Tea",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/kung-fu-tea-classic-milk-tea.svg",
+        "portableSvg": "portable-svg/kung-fu-tea-classic-milk-tea.svg",
+        "png": "png/kung-fu-tea-classic-milk-tea.png",
+        "svgSha256": "ea21a983cd4776296d880f4f4f7be5c0cf3df507922892124ff1f0e52f06c6cc",
+        "portableSvgSha256": "7fe968b02e202937a9e4f8d07ab7692a79746100e08bd7a6dbea6291d7ef0090",
+        "pngSha256": "e12ce3b03900ff96b5a0c676f51cb8c934a37f9405da46b6f93feec3a6a43584",
+        "pngBytes": 141449
+      },
+      "sourceModule": "scripts/icons/families/cafe-milk-tea.mjs"
     },
     {
       "slug": "coca-cola-classic",
@@ -201,6 +364,68 @@
       "sourceModule": "scripts/icons/families/colas.mjs"
     },
     {
+      "slug": "diet-dr-pepper",
+      "family": "pepper-dew-can",
+      "packageChoice": "US 12 fl oz Diet Dr Pepper can; white/silver package with red wordmark oval.",
+      "references": [
+        {
+          "pageUrl": "https://www.pepsicopartners.com/pepsico/en/USD/BEVERAGES/Soft-Drinks/Diet-Dr-Pepper-(2-12-Packs)/p/1-HYK-44769",
+          "imageUrl": "https://www.pepsicopartners.com/medias/1200Wx1200H-1-HYK-44769.jpeg?context=bWFzdGVyfHJvb3R8ODA0MjF8aW1hZ2UvanBlZ3xhR014TDJnellTOHhNVGN5TXpnMU16TXpNalV4TUM4eE1qQXdWM2d4TWpBd1NGOHhMVWhaU3kwME5EYzJPUzVxY0dWbnw3MTdlZjg2NTRjODk5NjU0OTJhNDMxM2Q0NzY2YzgzODdkYzg0ZTU2OGJjY2QyMTExNzE5NDdhYzBiYWYxNTI5",
+          "inspectedAt": "2026-10-31",
+          "observations": "Individually inspected 1200px distributor image: silver-white standard can with red oval, white Dr Pepper lettering and swoosh, lower white Diet medallion outlined in red and red decorative rings.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Representative US 12oz package selected because the catalog does not specify size. References are the exact distributor packshots accessed on the inspection date; concurrent regional packaging may differ. Complex brand lettering and fine label art are simplified vector interpretations. Final aesthetic and native review pending.",
+      "status": "needs-review",
+      "bevId": "3988d01a-1cac-5ece-877c-d428ffd1abfc",
+      "name": "Diet Dr Pepper",
+      "brand": "Dr Pepper",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/diet-dr-pepper.svg",
+        "portableSvg": "portable-svg/diet-dr-pepper.svg",
+        "png": "png/diet-dr-pepper.png",
+        "svgSha256": "f3f58e85e09c03be22bf4d59a4ac2a2b6d661bec724a38b958dfa7acab623d76",
+        "portableSvgSha256": "9c83978b5230c783643d6cf1aa0da09074428fb55157bd80a2e780c321fdbbc2",
+        "pngSha256": "d9406af727c953ebd18bc4db4854c8d8eebbb9be6ab828801f786b4701bf536e",
+        "pngBytes": 124242
+      },
+      "sourceModule": "scripts/icons/families/pepper-dew.mjs"
+    },
+    {
+      "slug": "diet-mountain-dew",
+      "family": "pepper-dew-can",
+      "packageChoice": "US 12 fl oz Diet Mountain Dew can; current full-name silver/green package.",
+      "references": [
+        {
+          "pageUrl": "https://www.pepsicopartners.com/pepsico/en/USD/BEVERAGES/Soft-Drinks/Diet-Mountain-Dew-(2-12-Packs)/p/1-HYK-45462",
+          "imageUrl": "https://www.pepsicopartners.com/medias/1200Wx1200H-1-HYK-45462.jpg?context=bWFzdGVyfHJvb3R8OTIwNzR8aW1hZ2UvanBlZ3xhRE16TDJnNE5TOHhNVGN5TkRnNU1UQTVOVEEzTUM4eE1qQXdWM2d4TWpBd1NGOHhMVWhaU3kwME5UUTJNaTVxY0djfDJmZWYyNzZjNzgxYTNhYTU4YmQ5MGIzY2RjZTM3NzQ2NzI5N2I4Yjk5MGFlYjExMGMyODVkZDBiMDhlMmQ1Zjg",
+          "inspectedAt": "2026-10-31",
+          "observations": "Individually inspected 1200px manufacturer-distributor image: silver standard can, white and green rays, red DIET above tilted full-name green Mountain/red Dew mark, gray mountain backdrop, dark green forest and DIET DEW low on body.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Representative US 12oz package selected because the catalog does not specify size. References are the exact distributor packshots accessed on the inspection date; concurrent regional packaging may differ. Complex brand lettering and fine label art are simplified vector interpretations. Final aesthetic and native review pending.",
+      "status": "needs-review",
+      "bevId": "3d372168-321c-5bb6-be06-b548c208c636",
+      "name": "Diet Mountain Dew",
+      "brand": "Mountain Dew",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/diet-mountain-dew.svg",
+        "portableSvg": "portable-svg/diet-mountain-dew.svg",
+        "png": "png/diet-mountain-dew.png",
+        "svgSha256": "20ece5cc7b26d470e13a7a0d83b09059a185b314d5149849eb19de350bccaa19",
+        "portableSvgSha256": "7e0e385bacaa4f3a2862209a7658608d4eb5c7b7f43aa85d14f01e06f8f2ce34",
+        "pngSha256": "511398925123887647d274591c288f277c08f6b60586a52636d51379a9c45bfc",
+        "pngBytes": 164666
+      },
+      "sourceModule": "scripts/icons/families/pepper-dew.mjs"
+    },
+    {
       "slug": "diet-pepsi",
       "family": "standard-cola-can",
       "packageChoice": "US 12 fl oz / 355mL Diet Pepsi aluminum can; representative package for the size-unspecified catalog row.",
@@ -232,6 +457,68 @@
       "sourceModule": "scripts/icons/families/colas.mjs"
     },
     {
+      "slug": "dr-pepper",
+      "family": "pepper-dew-can",
+      "packageChoice": "US 12 fl oz Original Dr Pepper can; red oval-and-23-medallion package pictured by PepsiCo Partners.",
+      "references": [
+        {
+          "pageUrl": "https://www.pepsicopartners.com/pepsico/en/USD/BEVERAGES/Soft-Drinks/Dr-Pepper-(2-12-Packs)/p/1-HYK-44768",
+          "imageUrl": "https://www.pepsicopartners.com/medias/1200Wx1200H-1-HYK-44768.jpeg?context=bWFzdGVyfHJvb3R8NzQ0OTF8aW1hZ2UvanBlZ3xhREUyTDJneVlpOHhNVGN5TXpnMU1qUTRNRFUwTWk4eE1qQXdWM2d4TWpBd1NGOHhMVWhaU3kwME5EYzJPQzVxY0dWbnw4ZmQzYzY0M2NjNDIwMzEwM2I3ODU4MDU2MzJkMWY5YjViZTM2MmM1MWNiMTQwY2FkOGI4NmM5OWUxNDdkM2Fh",
+          "inspectedAt": "2026-10-31",
+          "observations": "Individually inspected 1200px distributor image: deep red standard can, red oval, raised initial P with white offset Dr/Pepper lettering, white swoosh, Est.1885, lower tonal 23 roundel and rings.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Representative US 12oz package selected because the catalog does not specify size. References are the exact distributor packshots accessed on the inspection date; concurrent regional packaging may differ. Complex brand lettering and fine label art are simplified vector interpretations. Final aesthetic and native review pending.",
+      "status": "needs-review",
+      "bevId": "686a8b0d-8d5f-53d6-ae2b-d84988f38daf",
+      "name": "Dr Pepper",
+      "brand": "Dr Pepper",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/dr-pepper.svg",
+        "portableSvg": "portable-svg/dr-pepper.svg",
+        "png": "png/dr-pepper.png",
+        "svgSha256": "c76d7d4d3140220ba55f851a5223960bd177ead96a5b0ac74a637b9228c3154e",
+        "portableSvgSha256": "90bf48c09844c721ad85891c1006f2b6960e6f226c4ab7e60ec6f25f6c165693",
+        "pngSha256": "e8d7f69d947348244fc77adccac86a8c80c20d568f2a090c0edfce533bdf33f2",
+        "pngBytes": 132315
+      },
+      "sourceModule": "scripts/icons/families/pepper-dew.mjs"
+    },
+    {
+      "slug": "dr-pepper-zero-sugar",
+      "family": "pepper-dew-can",
+      "packageChoice": "US 12 fl oz Dr Pepper Zero Sugar Original can; black lower body and burgundy upper sweep.",
+      "references": [
+        {
+          "pageUrl": "https://www.pepsicopartners.com/pepsico/en/USD/BEVERAGES/Soft-Drinks/Dr-Pepper-Zero-Sugar/p/1-Y34T4-1",
+          "imageUrl": "https://www.pepsicopartners.com/medias/1200Wx1200H-1-Y34T4-1.jpeg?context=bWFzdGVyfHJvb3R8NjA2Nzl8aW1hZ2UvanBlZ3xhRGc1TDJoaU1DOHhNVGN5TXprNE5UWTBPVFk1TkM4eE1qQXdWM2d4TWpBd1NGOHhMVmt6TkZRMExURXVhbkJsWnd8ZDNlZjgwZmZmMzNkYzg1MjhhZDQ3Mjg0MTRkNWY2MWY0OTE4NDhkYjc5MjcwMTViNjM5MThmZTA5OGVkNzIxYg",
+          "inspectedAt": "2026-10-31",
+          "observations": "Individually inspected 1200px distributor image: standard can, burgundy upper/right area curving across black body, unshadowed white Dr Pepper mark, prominent lowercase zero and uppercase SUGAR stacked beneath.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Representative US 12oz package selected because the catalog does not specify size. References are the exact distributor packshots accessed on the inspection date; concurrent regional packaging may differ. Complex brand lettering and fine label art are simplified vector interpretations. Final aesthetic and native review pending.",
+      "status": "needs-review",
+      "bevId": "c337d6a3-f766-5e8e-b13d-0a3824653db4",
+      "name": "Dr Pepper Zero Sugar",
+      "brand": "Dr Pepper",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/dr-pepper-zero-sugar.svg",
+        "portableSvg": "portable-svg/dr-pepper-zero-sugar.svg",
+        "png": "png/dr-pepper-zero-sugar.png",
+        "svgSha256": "67dc7c48ca01eb846dafa678dd568270b03d472e5f0a23013ce964c905fb6fa9",
+        "portableSvgSha256": "8e76e7c6be48e2d638286348f668ef2d3cd8f24ec52d0d08574016f7e6b4393c",
+        "pngSha256": "595b3d86e9256a74b398558f549252f8cdfcb303aa67bf8ec40665a005536d3d",
+        "pngBytes": 116740
+      },
+      "sourceModule": "scripts/icons/families/pepper-dew.mjs"
+    },
+    {
       "slug": "fanta-orange",
       "family": "citrus-soda-can",
       "packageChoice": "US 12 fl oz Orange can; orange body, blue angular logo and orange-slice splash.",
@@ -261,6 +548,137 @@
         "pngBytes": 118393
       },
       "sourceModule": "scripts/icons/families/citrus-sodas.mjs"
+    },
+    {
+      "slug": "starbucks-frappuccino-mocha",
+      "family": "rtd-coffee-glass-bottle",
+      "packageChoice": "US 13.7 fl oz / 405 mL Mocha chilled coffee drink, glass bottle with copper-brown cap.",
+      "references": [
+        {
+          "pageUrl": "https://www.pepsicopartners.com/pepsico/en/USD/BEVERAGES/Coffees-Teas/Frappuccino-Mocha/p/1-HYK-38347",
+          "imageUrl": "https://www.pepsicopartners.com/medias/300Wx300H-1-HYK-38347.jpg?context=bWFzdGVyfHJvb3R8MTg5Njl8aW1hZ2UvanBlZ3xhRGczTDJneU15OHhNVGN4TWpJME9USXdNRFkzTUM4ek1EQlhlRE13TUVoZk1TMUlXVXN0TXpnek5EY3VhbkJufDkwNDhhYmVjMGRkNzFhZWEwNmQ2NmQ3NGRhMDRmOWRkYWZmNDAwZDk3MWIwMGEyNmIyYzcxMTg1ZjhiYTkzMjI",
+          "inspectedAt": "2026-10-31",
+          "visuallyInspected": true,
+          "observations": "Inspected manufacturer front bottle and higher-resolution Target photograph of the same label: narrow brown neck sleeve with Mocha, rounded glass shoulders, tan opaque coffee, copper-brown twist cap, dark curved lower label, green siren on its upper right and white script Frappuccino. Target corroboration: https://www.target.com/p/-/A-12958806 ; image https://target.scene7.com/is/image/Target/GUEST_a3a0eb52-1a92-4b03-b612-169bbdc4f8b5?fmt=pjpeg&hei=1000&wid=1000 ."
+        }
+      ],
+      "uncertainty": "Representative US package; fine lettering and brand illustration simplified as original vectors. Final aesthetic and native-app review pending.",
+      "status": "needs-review",
+      "bevId": "448ba352-a6bc-59f2-a3ce-0c04a3aaf283",
+      "name": "Frappuccino Mocha",
+      "brand": "Starbucks",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/starbucks-frappuccino-mocha.svg",
+        "portableSvg": "portable-svg/starbucks-frappuccino-mocha.svg",
+        "png": "png/starbucks-frappuccino-mocha.png",
+        "svgSha256": "f13adae084957d8a86c1ede26b802948260ea8214dec62a439992bbf20d68ea5",
+        "portableSvgSha256": "032c962da615f125cd49df222486b6c80510d5609eae516190d8f204e9b883ad",
+        "pngSha256": "38bc12d06872ff3a745c3f014e35665590a584af4da8eabffcd85733fdf8171b",
+        "pngBytes": 94345
+      },
+      "sourceModule": "scripts/icons/families/coffee-tea-starters.mjs"
+    },
+    {
+      "slug": "gatorade-lemon-lime",
+      "family": "sports-drink-sculpted-pet",
+      "packageChoice": "US Gatorade Thirst Quencher Lemon Lime, 28 fl oz / 828 mL orange-cap sculpted PET bottle, UPC 052000135152. Manufacturer SmartLabel front dated February 2025.",
+      "references": [
+        {
+          "pageUrl": "https://smartlabel.pepsico.info/052000135152-0015-en-US/index.html",
+          "imageUrl": "https://smartlabel.pepsico.info/052000135152-0015-en-US/images/69130fad-5cec-4511-a2ae-5660591aff08.png",
+          "inspectedAt": "2026-11-01",
+          "visuallyInspected": true,
+          "observations": "Opened and inspected the complete manufacturer bottle image: short ribbed orange cap, stepped neck, broad asymmetric molded shoulder, chartreuse liquid, pinched grip waist and wide foot. Gray wrap label carries white black-edged G and orange/red bolt over a yellow-green bolt, dark header, Lemon Lime yellow-green callout and 28 FL OZ / 828 mL. Small athlete/honeycomb and fine claims are omitted rather than invented."
+        }
+      ],
+      "uncertainty": "Catalog does not specify package size. Selected this documented US 28oz regular Thirst Quencher, distinct from Zero, G2, Fit and powder. Representative inspected package version; final aesthetic approval and native review pending.",
+      "status": "needs-review",
+      "bevId": "bebb348e-9ffe-5296-8401-4c264f19cba6",
+      "name": "Gatorade Thirst Quencher",
+      "brand": "Gatorade",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/gatorade-lemon-lime.svg",
+        "portableSvg": "portable-svg/gatorade-lemon-lime.svg",
+        "png": "png/gatorade-lemon-lime.png",
+        "svgSha256": "24496e4268fb4458c1441c14cb14ed2e357a2bdf34ea6bf9eb867249a723e0cf",
+        "portableSvgSha256": "f0480adad633307307087dd65096fa6320535d7aad2f75a7cae9252fd0f60523",
+        "pngSha256": "a349d746b85a1a19b150127ef2c26e9af960c989a646c820189675d11920f76f",
+        "pngBytes": 138069
+      },
+      "sourceModule": "scripts/icons/families/hydration-kombucha.mjs"
+    },
+    {
+      "slug": "welchs-100-grape-juice",
+      "family": "juice-pet-bottle",
+      "packageChoice": "US 64 fl oz / 1.89 L 100% Concord Grape Juice in contoured PET bottle with purple cap.",
+      "references": [
+        {
+          "pageUrl": "https://welchs.com/en-us/juices/",
+          "imageUrl": "https://img.welchs.com/s--IBi_ZgeG--/w_309,h_309/fjcc6sjqggpbqf8v7omm.webp?ts=1793259157642",
+          "observations": "Inspected official 100% Grape Juice Concord Grape card, alt text identifies 64 OZ BOTTLE. Purple screw cap, almost black-purple liquid, narrow neck, broad rounded body with sweeping shoulder grooves, purple grape-photo label, large navy Welch's on sloping cream banner, white 100% and CONCORD GRAPE. Product-specific URL currently redirects to lineup.",
+          "inspectedAt": "2026-10-31",
+          "visuallyInspected": true
+        },
+        {
+          "pageUrl": "https://www.target.com/p/-/A-13352159",
+          "imageUrl": "https://target.scene7.com/is/image/Target/GUEST_8d97a216-236c-4035-a9eb-e3d040115fa9?fmt=pjpeg&hei=1000&wid=1000",
+          "observations": "Higher-resolution retailer image visually corroborates the same 64 fl oz package; pronounced spiral shoulder molding, rounded rectangular body, navy italic serif logo, grape clusters, purple lower label and transparent burgundy base edge. PET and UPC 041800207503 listed on page.",
+          "inspectedAt": "2026-10-31",
+          "visuallyInspected": true
+        }
+      ],
+      "status": "needs-review",
+      "uncertainty": "Representative US package; fine label artwork and lettering simplified. Final aesthetic and native-app review pending.",
+      "bevId": "320d15a5-ae1c-589f-a2ab-140eac445ff9",
+      "name": "Grape Juice",
+      "brand": "Welch's",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/welchs-100-grape-juice.svg",
+        "portableSvg": "portable-svg/welchs-100-grape-juice.svg",
+        "png": "png/welchs-100-grape-juice.png",
+        "svgSha256": "634d5fe067925b987bc1f4ec83dc8632753a44dfddbdd6bc781710f1f4e68bce",
+        "portableSvgSha256": "ec92c809e4f82cdc5d29e79bf6cbe2d6e39a3f4abcbc5ed18ae649775fe51757",
+        "pngSha256": "7b01331c49d331f26142897a0766129493718bd15179594afe1e9ff2238d1ea2",
+        "pngBytes": 135995
+      },
+      "sourceModule": "scripts/icons/families/juice-starters.mjs"
+    },
+    {
+      "slug": "gts-kombucha-gingerade",
+      "family": "kombucha-glass-bottle",
+      "packageChoice": "US GT's SYNERGY Gingerade, 16 fl oz / 473 mL glass bottle with white ribbed cap; current official product-page image with THE REAL KOMBUCHA label.",
+      "references": [
+        {
+          "pageUrl": "https://gtslivingfoods.com/products/gts-kombucha-gingerade",
+          "imageUrl": "https://gtslivingfoods.com/cdn/shop/files/SYN_FLAVORS_6.png?v=1735704017&width=2188",
+          "inspectedAt": "2026-11-01",
+          "visuallyInspected": true,
+          "observations": "Opened and inspected official 16oz bottle: narrow glass cylinder, broad rounded shoulders, short clear neck, white ribbed cap, golden ginger kombucha. Ornate pointed silver/red frame around white SYNERGY / THE REAL KOMBUCHA field, small gold GT emblem, orange-yellow lower label, eight-petal flower and black GINGERADE. Source has a large gold promotional halo; that backdrop is intentionally excluded from transparent artwork."
+        }
+      ],
+      "uncertainty": "Catalog omits size and subline. Chosen representative standard US SYNERGY Gingerade, not the separately marketed 21+ CLASSIC formula. The catalog does not specify a subline. Small label claims and fine decorative marks omitted; final aesthetic approval and native review pending.",
+      "status": "needs-review",
+      "bevId": "401c5efa-8e1e-5770-8e3c-469930e46a93",
+      "name": "GT's Kombucha",
+      "brand": "GT's Living Foods",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/gts-kombucha-gingerade.svg",
+        "portableSvg": "portable-svg/gts-kombucha-gingerade.svg",
+        "png": "png/gts-kombucha-gingerade.png",
+        "svgSha256": "a9e88aa456e9428f806337d562ebe137852539704f6336cf66ac54b02f0466bf",
+        "portableSvgSha256": "bcc5ea864a1c1425a0f3af511253d009ec4e97aeb8257ead83e877800545fd72",
+        "pngSha256": "0a62a7bcfb8b376a9d4f13b81e0a6e4bb775d362422b861adbbcb3761bf910fb",
+        "pngBytes": 144408
+      },
+      "sourceModule": "scripts/icons/families/hydration-kombucha.mjs"
     },
     {
       "slug": "jarritos-mandarin",
@@ -387,6 +805,44 @@
       "sourceModule": "scripts/icons/families/sparkling-starters.mjs"
     },
     {
+      "slug": "jamba-juice-mango-a-go-go",
+      "family": "cafe-smoothie-cup",
+      "packageChoice": "US Jamba Mango-a-go-go, open clear tapered cup with orange straw as shown in official front thumbnail; serving volume not specified by image.",
+      "references": [
+        {
+          "pageUrl": "https://www.jamba.com/menu/smoothies/mango-a-go-go",
+          "imageUrl": "https://ctfassets.gotofoods.com/zqt8tllj2cy0/2wpTdxyro3vLc2jc7GndlF/b4a7ed95da704b2676807244ed0b4bcc/JAM-mango-a-go-go-thumbnail-544x544.png",
+          "inspectedAt": "2026-11-01",
+          "observations": "Inspected exact-product front thumbnail extracted from manufacturer page: golden yellow thick smoothie, clear tapered cup, raised upper ridges and lip, white descending spiral mark, orange straw, open top with smoothie crest. No lid, ice cubes, garnish or wordmark visible.",
+          "visuallyInspected": true
+        },
+        {
+          "pageUrl": "https://www.jamba.com/menu/smoothies/mango-a-go-go",
+          "imageUrl": "https://ctfassets.gotofoods.com/zqt8tllj2cy0/17tqyeqSRWivAi0fPnISiY/25550aa66cca9ea3f3ecf3a5d3e25918/746x600_Mango-a-go-go_OH.png",
+          "inspectedAt": "2026-11-01",
+          "observations": "Inspected exact-product overhead hero: creamy mango-yellow folded/swirl surface, orange straw and clear rim; confirms top treatment and consistency. Frontal thumbnail establishes the cup geometry and branding.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Manufacturer menu image has no serving-size annotation; volume deliberately unspecified. Perspective adapted to shared Bevi slightly elevated front view. Final aesthetic and native review pending.",
+      "status": "needs-review",
+      "bevId": "866e3a9c-eaf7-5739-a672-a7f5c9bb0fde",
+      "name": "Mango-a-go-go",
+      "brand": "Jamba Juice",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/jamba-juice-mango-a-go-go.svg",
+        "portableSvg": "portable-svg/jamba-juice-mango-a-go-go.svg",
+        "png": "png/jamba-juice-mango-a-go-go.png",
+        "svgSha256": "7c90a2258397c70a114f7ba256d891532699c0a58490192073bb714b95115f1f",
+        "portableSvgSha256": "9e8fb508431f5a002ef83f80cf91f0b4884c577df91dc1fca3f0147696da239d",
+        "pngSha256": "7fea8f6b57755b41842ea4791a77f218300dd187fe15a2a2c310e5e5e6b696e1",
+        "pngBytes": 124067
+      },
+      "sourceModule": "scripts/icons/families/smoothie-starters.mjs"
+    },
+    {
       "slug": "generic-margarita",
       "family": "served-rocks-cocktail",
       "packageChoice": "Unbranded classic margarita on ice in a clear straight-sided lowball, salted rim and lime garnish; representative serving, not frozen.",
@@ -447,6 +903,99 @@
         "pngBytes": 135071
       },
       "sourceModule": "scripts/icons/families/pilot.mjs"
+    },
+    {
+      "slug": "monster-energy-original",
+      "family": "energy-tall-can",
+      "packageChoice": "US 16 fl oz Monster Energy Original Green, black can with green tab.",
+      "references": [
+        {
+          "pageUrl": "https://www.monsterenergy.com/en-us/energy-drinks/monster-energy/original-green/",
+          "imageUrl": "https://web-assests.monsterenergy.com/mnst/86be6554-4e12-435b-b8d0-bc492e68e436.png",
+          "inspectedAt": "2026-10-31",
+          "observations": "Inspected manufacturer 16oz front: black can, silver rims, green pull-tab, white TAURINE shoulder text, three green torn claw strokes with longest center, white angular Monster lettering and spaced green ENERGY. 16 FL OZ visible at bottom.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Catalog has no package size; representative US retail package selected. Fine package lettering and illustrations simplified; final aesthetic and native review pending.",
+      "status": "needs-review",
+      "bevId": "63c34b3d-6496-509c-8e74-b12f17397ae8",
+      "name": "Monster Energy Original",
+      "brand": "Monster Energy",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/monster-energy-original.svg",
+        "portableSvg": "portable-svg/monster-energy-original.svg",
+        "png": "png/monster-energy-original.png",
+        "svgSha256": "e462601d114561d69a6f605b100b64074161148b37c6bbacf06ddd784598a995",
+        "portableSvgSha256": "6d13ba5f132e670b6914fa1e67dd09f85ee70af000e9d41a790b5f8453b3f6b8",
+        "pngSha256": "204fcbb93b21b2773488a112bb353d58902dea7ba09ad10a32a32530cef1342e",
+        "pngBytes": 114361
+      },
+      "sourceModule": "scripts/icons/families/energy-starters.mjs"
+    },
+    {
+      "slug": "mountain-dew",
+      "family": "pepper-dew-can",
+      "packageChoice": "US 12 fl oz Mountain Dew Original can; current full-name Mountain Dew package.",
+      "references": [
+        {
+          "pageUrl": "https://www.pepsicopartners.com/pepsico/en/USD/BEVERAGES/Soft-Drinks/Mountain-Dew/p/1-HYK-24770",
+          "imageUrl": "https://www.pepsicopartners.com/medias/1200Wx1200H-1-HYK-24770.jpg?context=bWFzdGVyfHJvb3R8ODk3Mzl8aW1hZ2UvanBlZ3xhREprTDJneE1TOHhNVGN4TnpreU9UVTVPVEF3Tmk4eE1qQXdWM2d4TWpBd1NGOHhMVWhaU3kweU5EYzNNQzVxY0djfDI0NTQxYTI5OWFmZjVkNjMzMTgwODdlY2Y1MzkxZGRlMjlkMTEwYTY0ODQ1M2U4MTJkZmM1ZWY2Y2MwZjJhYzk",
+          "inspectedAt": "2026-10-31",
+          "observations": "Individually inspected 1200px manufacturer-distributor image: green can, silver and yellow rays behind oversized tilted full-name green Mountain/red Dew mark with white/yellow/green keylines, mountain shapes and dark green forest at base.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Representative US 12oz package selected because the catalog does not specify size. References are the exact distributor packshots accessed on the inspection date; concurrent regional packaging may differ. Complex brand lettering and fine label art are simplified vector interpretations. Final aesthetic and native review pending.",
+      "status": "needs-review",
+      "bevId": "4d46a498-dcea-5dc5-8342-cb091ba36d15",
+      "name": "Mountain Dew",
+      "brand": "Mountain Dew",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/mountain-dew.svg",
+        "portableSvg": "portable-svg/mountain-dew.svg",
+        "png": "png/mountain-dew.png",
+        "svgSha256": "b294a1ab4d72dd54924d557d51ffc2f944a75f11463a9cbf51f993861a7fd17e",
+        "portableSvgSha256": "1169c25b9e11195c03c375546fef6240092b7652025ebba51ed915663c1d0709",
+        "pngSha256": "5d710ba10f9b8235a2a04ff1d7e62521b5c89c5fb9320190223b01e8107bfb69",
+        "pngBytes": 156952
+      },
+      "sourceModule": "scripts/icons/families/pepper-dew.mjs"
+    },
+    {
+      "slug": "mountain-dew-baja-blast",
+      "family": "pepper-dew-can",
+      "packageChoice": "US 12 fl oz Mountain Dew Baja Blast can; current full-name teal/yellow Tropical Lime package.",
+      "references": [
+        {
+          "pageUrl": "https://www.pepsicopartners.com/pepsico/en/USD/BEVERAGES/Soft-Drinks/Mountain-Dew-Baja-Blast/p/1-RZWDB-2",
+          "imageUrl": "https://www.pepsicopartners.com/medias/1200Wx1200H-1-RZWDB-2.jpeg?context=bWFzdGVyfHJvb3R8MTAzNDkwfGltYWdlL2pwZWd8YURGbUwyZzVZUzh4TVRjeU5EazJORGsxTkRFME1pOHhNakF3VjNneE1qQXdTRjh4TFZKYVYwUkNMVEl1YW5CbFp3fGEzNTAzMzU4NDAyZGE2ZmQ3ODc5ODdlNjFjYWM5N2VhOTY1YzIyMDQ1ZDQ1YzM0Y2RlMDgzMDVlMDYzNjdmMGI",
+          "inspectedAt": "2026-10-31",
+          "observations": "Individually inspected 1200px manufacturer-distributor image: teal standard can, white/yellow rays, asymmetric white curled crest with pale-green underside at upper left, tilted full-name green Mountain/red Dew mark, Baja Blast wave badge at lower right, white surf and yellow lower band with partial lime at base.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Representative US 12oz package selected because the catalog does not specify size. References are the exact distributor packshots accessed on the inspection date; concurrent regional packaging may differ. Complex brand lettering and fine label art are simplified vector interpretations. Final aesthetic and native review pending.",
+      "status": "needs-review",
+      "bevId": "b89ae243-600d-5eca-a1a1-b46ff33b114d",
+      "name": "Mountain Dew Baja Blast",
+      "brand": "Mountain Dew",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/mountain-dew-baja-blast.svg",
+        "portableSvg": "portable-svg/mountain-dew-baja-blast.svg",
+        "png": "png/mountain-dew-baja-blast.png",
+        "svgSha256": "1bebd70a2f2a21c39f55dc144f58750a285455d973a5fec1bf0f6c7e143e865a",
+        "portableSvgSha256": "8a416d6b3b1bb9d4fccc08ccb9449c72df0f1f0f2f9c2ae7b5a9f5330b982e7d",
+        "pngSha256": "0cefa5e5eeaf285511a929bba2b81df7b6362c00920c6dcf9cb110d00997afb1",
+        "pngBytes": 155751
+      },
+      "sourceModule": "scripts/icons/families/pepper-dew.mjs"
     },
     {
       "slug": "liquid-death-mountain-water-still",
@@ -540,6 +1089,37 @@
         "pngBytes": 100109
       },
       "sourceModule": "scripts/icons/families/pilot.mjs"
+    },
+    {
+      "slug": "tropicana-orange-juice-original",
+      "family": "juice-pet-bottle",
+      "packageChoice": "US 46 fl oz / 1.36 L Pure Premium Original (No Pulp), transparent PET bottle and orange screw cap. Flagship representative choice; catalog pulp content is unspecified.",
+      "references": [
+        {
+          "pageUrl": "https://tropicana.com/products/original/",
+          "imageUrl": "https://tropicana.com/images/products/tropicana-pure-premium-no-pulp-320.png",
+          "observations": "Inspected official product image: slender rounded PET bottle, orange ribbed cap, bright opaque yellow-orange juice, white label with dark-green Tropicana and Pure Premium lettering, orange No Pulp oval, lower orange panel and whole orange with green leaf/red-white striped straw. Small package text reads 46 FL OZ (1.36 L). The named Original page identifies the selected No Pulp variant.",
+          "inspectedAt": "2026-10-31",
+          "visuallyInspected": true
+        }
+      ],
+      "status": "needs-review",
+      "uncertainty": "Catalog says Original without pulp level. This draft explicitly represents manufacturer flagship Original (No Pulp), not Some Pulp, Lots of Pulp, from-concentrate 100% Orange Juice, or Light. Catalog pulp preference remains unspecified; no formulation identity claim beyond this documented representative choice. Fine lettering simplified; final aesthetic and native review pending.",
+      "bevId": "87604a87-8cfc-58b2-b607-c2296eec1701",
+      "name": "Orange Juice",
+      "brand": "Tropicana",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/tropicana-orange-juice-original.svg",
+        "portableSvg": "portable-svg/tropicana-orange-juice-original.svg",
+        "png": "png/tropicana-orange-juice-original.png",
+        "svgSha256": "74e3094f515227828125ac489ef7da25277006bf523cf3f30b0ca0cb7ae28188",
+        "portableSvgSha256": "13e545fab7cbec577746859c329b3f9c6c02569a23946bf55c447fca62abd9ec",
+        "pngSha256": "6b8bd0a872f8682df58202e671f7f950cbdb5b3b316dded22406cdb8c661e480",
+        "pngBytes": 123844
+      },
+      "sourceModule": "scripts/icons/families/juice-starters.mjs"
     },
     {
       "slug": "pepsi",
@@ -912,6 +1492,37 @@
         "pngBytes": 125654
       },
       "sourceModule": "scripts/icons/families/citrus-sodas.mjs"
+    },
+    {
+      "slug": "bolthouse-farms-strawberry-banana",
+      "family": "smoothie-pet-bottle",
+      "packageChoice": "US 450mL / 15.2 fl oz Bolthouse Farms Strawberry Banana juice smoothie, pink label and red screw cap.",
+      "references": [
+        {
+          "pageUrl": "https://www.bolthouse.com/product/strawberry-banana/",
+          "imageUrl": "https://www.bolthouse.com/wp-content/uploads/sites/4/2016/01/071464270407_bhf_us_bev_15_pi_blnd_sb_front_520x720.png-260x360.png",
+          "inspectedAt": "2026-11-01",
+          "observations": "Inspected manufacturer front image: narrow PET bottle with round shoulders, ribbed red/pink cap and tamper ring, pink sleeve, strawberries and banana at shoulder, white NO SUGAR ADDED circle, white two-line Bolthouse Farms script, darker pink STRAWBERRY BANANA band, angled white 100% JUICE SMOOTHIE stripe, muted strawberry smoothie at base. Bottom visibly reads 450mL / 15.2 FL OZ.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Representative US single-serve package selected because catalog lacks size. Manufacturer source is a small image; typography and fruit motifs are simplified while retaining observed layout. Final aesthetic and native review pending.",
+      "status": "needs-review",
+      "bevId": "1b25e221-1411-5bd7-8475-0b82e9ba0dd3",
+      "name": "Strawberry Banana",
+      "brand": "Bolthouse Farms",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/bolthouse-farms-strawberry-banana.svg",
+        "portableSvg": "portable-svg/bolthouse-farms-strawberry-banana.svg",
+        "png": "png/bolthouse-farms-strawberry-banana.png",
+        "svgSha256": "35cfd8d78e1221c444707701d37772821a740ecebeb82dc22d482c9660c0b328",
+        "portableSvgSha256": "d97c084eeddf7ff0a9c9210d2c136189128211ba1e77d3c5a07527bcac7acbac",
+        "pngSha256": "d3b34e0396a23634d0e0652a01344080b6bad03dfa48b1eab3152c1dce52f3a2",
+        "pngBytes": 118446
+      },
+      "sourceModule": "scripts/icons/families/smoothie-starters.mjs"
     },
     {
       "slug": "topo-chico-original",

@@ -1,0 +1,939 @@
+{
+  "reviewer": "Astra 6 xhigh final visual reviewer",
+  "reviewDate": "2026-11-01",
+  "state": "complete",
+  "records": [
+    {
+      "slug": "dr-pepper",
+      "inspectedSourcePaths": [
+        "/tmp/bevi-soda-review/pepper.jpg"
+      ],
+      "exactSourceOpened": true,
+      "verdict": "passes-reference-style-and-small-size-review",
+      "finalHashes": {
+        "svgSha256": "c76d7d4d3140220ba55f851a5223960bd177ead96a5b0ac74a637b9228c3154e",
+        "portableSvgSha256": "90bf48c09844c721ad85891c1006f2b6960e6f226c4ab7e60ec6f25f6c165693",
+        "pngSha256": "e8d7f69d947348244fc77adccac86a8c80c20d568f2a090c0edfce533bdf33f2"
+      },
+      "bevId": "686a8b0d-8d5f-53d6-ae2b-d84988f38daf",
+      "statusRetained": "needs-review",
+      "reviewNotes": "Maroon 12oz can, white diagonal wordmark and 23 roundel preserve inspected variant; final letter fit remains readable without leaving can face.",
+      "renderedArtworkEvidence": {
+        "overview": "design/beverage-icons/review/overview-02.png",
+        "tileSheet": "design/beverage-icons/review/sizes-03.png",
+        "sizesPx": [
+          40,
+          56,
+          96,
+          155
+        ],
+        "backgrounds": [
+          "light",
+          "dark"
+        ],
+        "paddingFraction": 0.08,
+        "individualFullResolutionOpened": true
+      },
+      "inspectedSourceHashes": {
+        "/tmp/bevi-soda-review/pepper.jpg": "65252ae118cf549d9044a3c74d55a5fd9c4e440cb1ae1bb637f10d22375ffd7c"
+      },
+      "assetPaths": {
+        "svg": "/Users/matt/Desktop/bevi/design/beverage-icons/svg/dr-pepper.svg",
+        "portableSvg": "/Users/matt/Desktop/bevi/design/beverage-icons/portable-svg/dr-pepper.svg",
+        "png": "/Users/matt/Desktop/bevi/design/beverage-icons/png/dr-pepper.png"
+      },
+      "unusedGradients": []
+    },
+    {
+      "slug": "diet-dr-pepper",
+      "inspectedSourcePaths": [
+        "/tmp/bevi-soda-review/diet-pepper.jpg"
+      ],
+      "exactSourceOpened": true,
+      "verdict": "passes-reference-style-and-small-size-review",
+      "finalHashes": {
+        "svgSha256": "f3f58e85e09c03be22bf4d59a4ac2a2b6d661bec724a38b958dfa7acab623d76",
+        "portableSvgSha256": "9c83978b5230c783643d6cf1aa0da09074428fb55157bd80a2e780c321fdbbc2",
+        "pngSha256": "d9406af727c953ebd18bc4db4854c8d8eebbb9be6ab828801f786b4701bf536e"
+      },
+      "bevId": "3988d01a-1cac-5ece-877c-d428ffd1abfc",
+      "statusRetained": "needs-review",
+      "reviewNotes": "Silver-white 12oz can, maroon logo oval and distinct Diet roundel track exact source; Diet differs clearly from Original and Zero at small sizes.",
+      "renderedArtworkEvidence": {
+        "overview": "design/beverage-icons/review/overview-01.png",
+        "tileSheet": "design/beverage-icons/review/sizes-02.png",
+        "sizesPx": [
+          40,
+          56,
+          96,
+          155
+        ],
+        "backgrounds": [
+          "light",
+          "dark"
+        ],
+        "paddingFraction": 0.08,
+        "individualFullResolutionOpened": false
+      },
+      "inspectedSourceHashes": {
+        "/tmp/bevi-soda-review/diet-pepper.jpg": "daa335ba15cbf85249ce7241427c686aab1f28246946ed88206208ef6fcdfb1f"
+      },
+      "assetPaths": {
+        "svg": "/Users/matt/Desktop/bevi/design/beverage-icons/svg/diet-dr-pepper.svg",
+        "portableSvg": "/Users/matt/Desktop/bevi/design/beverage-icons/portable-svg/diet-dr-pepper.svg",
+        "png": "/Users/matt/Desktop/bevi/design/beverage-icons/png/diet-dr-pepper.png"
+      },
+      "unusedGradients": []
+    },
+    {
+      "slug": "dr-pepper-zero-sugar",
+      "inspectedSourcePaths": [
+        "/tmp/bevi-soda-review/zero-pepper.jpg"
+      ],
+      "exactSourceOpened": true,
+      "verdict": "passes-reference-style-and-small-size-review",
+      "finalHashes": {
+        "svgSha256": "67dc7c48ca01eb846dafa678dd568270b03d472e5f0a23013ce964c905fb6fa9",
+        "portableSvgSha256": "8e76e7c6be48e2d638286348f668ef2d3cd8f24ec52d0d08574016f7e6b4393c",
+        "pngSha256": "595b3d86e9256a74b398558f549252f8cdfcb303aa67bf8ec40665a005536d3d"
+      },
+      "bevId": "c337d6a3-f766-5e8e-b13d-0a3824653db4",
+      "statusRetained": "needs-review",
+      "reviewNotes": "Black/maroon 12oz design with large white zero SUGAR follows selected source; correct regular Dr Pepper mark above.",
+      "renderedArtworkEvidence": {
+        "overview": "design/beverage-icons/review/overview-02.png",
+        "tileSheet": "design/beverage-icons/review/sizes-03.png",
+        "sizesPx": [
+          40,
+          56,
+          96,
+          155
+        ],
+        "backgrounds": [
+          "light",
+          "dark"
+        ],
+        "paddingFraction": 0.08,
+        "individualFullResolutionOpened": false
+      },
+      "inspectedSourceHashes": {
+        "/tmp/bevi-soda-review/zero-pepper.jpg": "e09a7a0bf245d56ee2e8ad82ed52e31eb789e1da1eb2b12a70a4a61a4e2b3c2a"
+      },
+      "assetPaths": {
+        "svg": "/Users/matt/Desktop/bevi/design/beverage-icons/svg/dr-pepper-zero-sugar.svg",
+        "portableSvg": "/Users/matt/Desktop/bevi/design/beverage-icons/portable-svg/dr-pepper-zero-sugar.svg",
+        "png": "/Users/matt/Desktop/bevi/design/beverage-icons/png/dr-pepper-zero-sugar.png"
+      },
+      "unusedGradients": []
+    },
+    {
+      "slug": "mountain-dew",
+      "inspectedSourcePaths": [
+        "/tmp/bevi-soda-review/original-dew.jpg"
+      ],
+      "exactSourceOpened": true,
+      "verdict": "passes-reference-style-and-small-size-review",
+      "finalHashes": {
+        "svgSha256": "b294a1ab4d72dd54924d557d51ffc2f944a75f11463a9cbf51f993861a7fd17e",
+        "portableSvgSha256": "1169c25b9e11195c03c375546fef6240092b7652025ebba51ed915663c1d0709",
+        "pngSha256": "5d710ba10f9b8235a2a04ff1d7e62521b5c89c5fb9320190223b01e8107bfb69"
+      },
+      "bevId": "4d46a498-dcea-5dc5-8342-cb091ba36d15",
+      "statusRetained": "needs-review",
+      "reviewNotes": "Current full-name diagonal Mountain/Dew label, bright green/yellow rays and dark tree band follow inspected original can; no legacy MTN mark substituted.",
+      "renderedArtworkEvidence": {
+        "overview": "design/beverage-icons/review/overview-03.png",
+        "tileSheet": "design/beverage-icons/review/sizes-05.png",
+        "sizesPx": [
+          40,
+          56,
+          96,
+          155
+        ],
+        "backgrounds": [
+          "light",
+          "dark"
+        ],
+        "paddingFraction": 0.08,
+        "individualFullResolutionOpened": false
+      },
+      "inspectedSourceHashes": {
+        "/tmp/bevi-soda-review/original-dew.jpg": "b1340eb271524c7ede53bad49bc2a267e0441f51b733b4c53607aa017f679526"
+      },
+      "assetPaths": {
+        "svg": "/Users/matt/Desktop/bevi/design/beverage-icons/svg/mountain-dew.svg",
+        "portableSvg": "/Users/matt/Desktop/bevi/design/beverage-icons/portable-svg/mountain-dew.svg",
+        "png": "/Users/matt/Desktop/bevi/design/beverage-icons/png/mountain-dew.png"
+      },
+      "unusedGradients": []
+    },
+    {
+      "slug": "diet-mountain-dew",
+      "inspectedSourcePaths": [
+        "/tmp/bevi-soda-review/diet-dew.jpg"
+      ],
+      "exactSourceOpened": true,
+      "verdict": "passes-reference-style-and-small-size-review",
+      "finalHashes": {
+        "svgSha256": "20ece5cc7b26d470e13a7a0d83b09059a185b314d5149849eb19de350bccaa19",
+        "portableSvgSha256": "7e0e385bacaa4f3a2862209a7658608d4eb5c7b7f43aa85d14f01e06f8f2ce34",
+        "pngSha256": "511398925123887647d274591c288f277c08f6b60586a52636d51379a9c45bfc"
+      },
+      "bevId": "3d372168-321c-5bb6-be06-b548c208c636",
+      "statusRetained": "needs-review",
+      "reviewNotes": "Silver body, DIET header, current full-name mark and tree band distinguish exact diet variant from green original.",
+      "renderedArtworkEvidence": {
+        "overview": "design/beverage-icons/review/overview-01.png",
+        "tileSheet": "design/beverage-icons/review/sizes-02.png",
+        "sizesPx": [
+          40,
+          56,
+          96,
+          155
+        ],
+        "backgrounds": [
+          "light",
+          "dark"
+        ],
+        "paddingFraction": 0.08,
+        "individualFullResolutionOpened": false
+      },
+      "inspectedSourceHashes": {
+        "/tmp/bevi-soda-review/diet-dew.jpg": "7d8e8d0d707b878b4cb2c067248f5af4181949be456f5bdc1e3a0c09b9b730b3"
+      },
+      "assetPaths": {
+        "svg": "/Users/matt/Desktop/bevi/design/beverage-icons/svg/diet-mountain-dew.svg",
+        "portableSvg": "/Users/matt/Desktop/bevi/design/beverage-icons/portable-svg/diet-mountain-dew.svg",
+        "png": "/Users/matt/Desktop/bevi/design/beverage-icons/png/diet-mountain-dew.png"
+      },
+      "unusedGradients": []
+    },
+    {
+      "slug": "mountain-dew-baja-blast",
+      "inspectedSourcePaths": [
+        "/tmp/bevi-soda-review/baja.jpg"
+      ],
+      "exactSourceOpened": true,
+      "verdict": "passes-reference-style-and-small-size-review",
+      "finalHashes": {
+        "svgSha256": "1bebd70a2f2a21c39f55dc144f58750a285455d973a5fec1bf0f6c7e143e865a",
+        "portableSvgSha256": "8a416d6b3b1bb9d4fccc08ccb9449c72df0f1f0f2f9c2ae7b5a9f5330b982e7d",
+        "pngSha256": "0cefa5e5eeaf285511a929bba2b81df7b6362c00920c6dcf9cb110d00997afb1"
+      },
+      "bevId": "b89ae243-600d-5eca-a1a1-b46ff33b114d",
+      "statusRetained": "needs-review",
+      "reviewNotes": "Teal body, yellow lower band, partial lime, white surf, diagonal current mark and lower-right Baja Blast badge track source; corrected asymmetric curled upper-left crest after final close inspection.",
+      "renderedArtworkEvidence": {
+        "overview": "design/beverage-icons/review/overview-03.png",
+        "tileSheet": "design/beverage-icons/review/sizes-05.png",
+        "sizesPx": [
+          40,
+          56,
+          96,
+          155
+        ],
+        "backgrounds": [
+          "light",
+          "dark"
+        ],
+        "paddingFraction": 0.08,
+        "individualFullResolutionOpened": true
+      },
+      "inspectedSourceHashes": {
+        "/tmp/bevi-soda-review/baja.jpg": "5104d10c8e20a46f09522202febf2dec13b314ea0a5164249b0105c09158a6d9"
+      },
+      "assetPaths": {
+        "svg": "/Users/matt/Desktop/bevi/design/beverage-icons/svg/mountain-dew-baja-blast.svg",
+        "portableSvg": "/Users/matt/Desktop/bevi/design/beverage-icons/portable-svg/mountain-dew-baja-blast.svg",
+        "png": "/Users/matt/Desktop/bevi/design/beverage-icons/png/mountain-dew-baja-blast.png"
+      },
+      "unusedGradients": []
+    },
+    {
+      "slug": "monster-energy-original",
+      "inspectedSourcePaths": [
+        "/tmp/bevi-energy-review/monster-reference.png"
+      ],
+      "exactSourceOpened": true,
+      "verdict": "passes-reference-style-and-small-size-review",
+      "finalHashes": {
+        "svgSha256": "e462601d114561d69a6f605b100b64074161148b37c6bbacf06ddd784598a995",
+        "portableSvgSha256": "6d13ba5f132e670b6914fa1e67dd09f85ee70af000e9d41a790b5f8453b3f6b8",
+        "pngSha256": "204fcbb93b21b2773488a112bb353d58902dea7ba09ad10a32a32530cef1342e"
+      },
+      "bevId": "63c34b3d-6496-509c-8e74-b12f17397ae8",
+      "statusRetained": "needs-review",
+      "reviewNotes": "Wider 16oz black can, green tab and three ragged green claw strokes with longest middle preserve exact Original Green silhouette; label hierarchy survives tiny tiles.",
+      "renderedArtworkEvidence": {
+        "overview": "design/beverage-icons/review/overview-03.png",
+        "tileSheet": "design/beverage-icons/review/sizes-05.png",
+        "sizesPx": [
+          40,
+          56,
+          96,
+          155
+        ],
+        "backgrounds": [
+          "light",
+          "dark"
+        ],
+        "paddingFraction": 0.08,
+        "individualFullResolutionOpened": false
+      },
+      "inspectedSourceHashes": {
+        "/tmp/bevi-energy-review/monster-reference.png": "d84cc72c7b2e53cf2493adfb3a70230f11832efe073d05e5149f36992492050f"
+      },
+      "assetPaths": {
+        "svg": "/Users/matt/Desktop/bevi/design/beverage-icons/svg/monster-energy-original.svg",
+        "portableSvg": "/Users/matt/Desktop/bevi/design/beverage-icons/portable-svg/monster-energy-original.svg",
+        "png": "/Users/matt/Desktop/bevi/design/beverage-icons/png/monster-energy-original.png"
+      },
+      "unusedGradients": []
+    },
+    {
+      "slug": "celsius-sparkling-orange",
+      "inspectedSourcePaths": [
+        "/tmp/bevi-energy-review/celsius-reference.png"
+      ],
+      "exactSourceOpened": true,
+      "verdict": "passes-reference-style-and-small-size-review",
+      "finalHashes": {
+        "svgSha256": "bbf4da81657ee5f7f891622f3772bf8d2944394d2b8a348d452755b4d98c4673",
+        "portableSvgSha256": "11ff327f1eb51d8bde931b0930fff110b4863966890e8ad5abd154552eed70f9",
+        "pngSha256": "de79b8da03f587a11e3a066ebdfff8a8ed3348ec8284f692c85fb34975d498b2"
+      },
+      "bevId": "d0522171-dee4-5421-a863-c18e4deba0c1",
+      "statusRetained": "needs-review",
+      "reviewNotes": "Narrow 12oz white/silver can, silver/orange C, orange slice and black lower band match inspected Sparkling Orange package; no alternate formula used.",
+      "renderedArtworkEvidence": {
+        "overview": "design/beverage-icons/review/overview-01.png",
+        "tileSheet": "design/beverage-icons/review/sizes-01.png",
+        "sizesPx": [
+          40,
+          56,
+          96,
+          155
+        ],
+        "backgrounds": [
+          "light",
+          "dark"
+        ],
+        "paddingFraction": 0.08,
+        "individualFullResolutionOpened": false
+      },
+      "inspectedSourceHashes": {
+        "/tmp/bevi-energy-review/celsius-reference.png": "797d81ab64efa6ececaed2eb90bfcea5a59e3d1ea206e2bb404c1a300d9f8cdb"
+      },
+      "assetPaths": {
+        "svg": "/Users/matt/Desktop/bevi/design/beverage-icons/svg/celsius-sparkling-orange.svg",
+        "portableSvg": "/Users/matt/Desktop/bevi/design/beverage-icons/portable-svg/celsius-sparkling-orange.svg",
+        "png": "/Users/matt/Desktop/bevi/design/beverage-icons/png/celsius-sparkling-orange.png"
+      },
+      "unusedGradients": []
+    },
+    {
+      "slug": "alani-nu-hawaiian-shaved-ice",
+      "inspectedSourcePaths": [
+        "/tmp/bevi-energy-review/alani-reference.png"
+      ],
+      "exactSourceOpened": true,
+      "verdict": "passes-reference-style-and-small-size-review",
+      "finalHashes": {
+        "svgSha256": "7ae424b7bad7201accd4c89e62238717ec5158e65f7cb4f7946b087a555fb5f3",
+        "portableSvgSha256": "e9e26439a5574588e6ce3a07d87028fe3301b23d7a78b7c0a70ca27ee3ae4afb",
+        "pngSha256": "2c02c93e71f31b2d2f84334dc6794581441bee77438a0147380312ea1b05f033"
+      },
+      "bevId": "2837c85b-1512-5a63-86cf-f5b00e9a73ae",
+      "statusRetained": "needs-review",
+      "reviewNotes": "Narrow can, purple/pink center, aqua edge motifs and upward white script preserve the exact current non-collaboration Hawaiian Shaved Ice package.",
+      "renderedArtworkEvidence": {
+        "overview": "design/beverage-icons/review/overview-01.png",
+        "tileSheet": "design/beverage-icons/review/sizes-01.png",
+        "sizesPx": [
+          40,
+          56,
+          96,
+          155
+        ],
+        "backgrounds": [
+          "light",
+          "dark"
+        ],
+        "paddingFraction": 0.08,
+        "individualFullResolutionOpened": false
+      },
+      "inspectedSourceHashes": {
+        "/tmp/bevi-energy-review/alani-reference.png": "ccbf6127ababb300368c49be47a6c1b8d2d11ba76b5afbc10764f20d6dcb1abe"
+      },
+      "assetPaths": {
+        "svg": "/Users/matt/Desktop/bevi/design/beverage-icons/svg/alani-nu-hawaiian-shaved-ice.svg",
+        "portableSvg": "/Users/matt/Desktop/bevi/design/beverage-icons/portable-svg/alani-nu-hawaiian-shaved-ice.svg",
+        "png": "/Users/matt/Desktop/bevi/design/beverage-icons/png/alani-nu-hawaiian-shaved-ice.png"
+      },
+      "unusedGradients": []
+    },
+    {
+      "slug": "starbucks-frappuccino-mocha",
+      "inspectedSourcePaths": [
+        "/tmp/bevi-coffee-tea-review/starbucks-official.jpg",
+        "/tmp/bevi-coffee-tea-review/starbucks-ref.jpg"
+      ],
+      "exactSourceOpened": true,
+      "verdict": "passes-reference-style-and-small-size-review",
+      "finalHashes": {
+        "svgSha256": "f13adae084957d8a86c1ede26b802948260ea8214dec62a439992bbf20d68ea5",
+        "portableSvgSha256": "032c962da615f125cd49df222486b6c80510d5609eae516190d8f204e9b883ad",
+        "pngSha256": "38bc12d06872ff3a745c3f014e35665590a584af4da8eabffcd85733fdf8171b"
+      },
+      "bevId": "448ba352-a6bc-59f2-a3ce-0c04a3aaf283",
+      "statusRetained": "needs-review",
+      "reviewNotes": "Narrow copper-cap glass bottle, Mocha neck sleeve, tan coffee, dark curved lower label and green siren agree with manufacturer and corroborating retailer sources; lettering simplified.",
+      "renderedArtworkEvidence": {
+        "overview": "design/beverage-icons/review/overview-02.png",
+        "tileSheet": "design/beverage-icons/review/sizes-03.png",
+        "sizesPx": [
+          40,
+          56,
+          96,
+          155
+        ],
+        "backgrounds": [
+          "light",
+          "dark"
+        ],
+        "paddingFraction": 0.08,
+        "individualFullResolutionOpened": false
+      },
+      "inspectedSourceHashes": {
+        "/tmp/bevi-coffee-tea-review/starbucks-official.jpg": "1da6ce088745a233ab1322e2cba29c54a012f87ba7a48f96948bb6a2135b1b04",
+        "/tmp/bevi-coffee-tea-review/starbucks-ref.jpg": "9a9ca77fec93e44b129c45b9c0229ddafa9fbd06122d6926f557109aa2612f7d"
+      },
+      "assetPaths": {
+        "svg": "/Users/matt/Desktop/bevi/design/beverage-icons/svg/starbucks-frappuccino-mocha.svg",
+        "portableSvg": "/Users/matt/Desktop/bevi/design/beverage-icons/portable-svg/starbucks-frappuccino-mocha.svg",
+        "png": "/Users/matt/Desktop/bevi/design/beverage-icons/png/starbucks-frappuccino-mocha.png"
+      },
+      "unusedGradients": []
+    },
+    {
+      "slug": "dunkin-bottled-iced-coffee-original",
+      "inspectedSourcePaths": [
+        "/tmp/bevi-coffee-tea-review/dunkin-ref.png"
+      ],
+      "exactSourceOpened": true,
+      "verdict": "passes-reference-style-and-small-size-review",
+      "finalHashes": {
+        "svgSha256": "40dbf5ea6d51cd44726ae47555ef0a74e922b507a9da40706be3d36c46688fa4",
+        "portableSvgSha256": "73b06ddc506be5ca3ab284a876fc10b1533aa816c41ae5a92510191e3aa89f63",
+        "pngSha256": "4052e5912e68259af9e3db28cc5d60ee40b73b86059decd668557162ffe5608f"
+      },
+      "bevId": "14715df4-4d37-58b1-9424-839f5c3524fb",
+      "statusRetained": "needs-review",
+      "reviewNotes": "Orange tall cap and vertical Original strip, pinched neck, tan shoulder, white orange/pink label and shaped orange foot track exact 13.7oz Original bottle.",
+      "renderedArtworkEvidence": {
+        "overview": "design/beverage-icons/review/overview-01.png",
+        "tileSheet": "design/beverage-icons/review/sizes-01.png",
+        "sizesPx": [
+          40,
+          56,
+          96,
+          155
+        ],
+        "backgrounds": [
+          "light",
+          "dark"
+        ],
+        "paddingFraction": 0.08,
+        "individualFullResolutionOpened": false
+      },
+      "inspectedSourceHashes": {
+        "/tmp/bevi-coffee-tea-review/dunkin-ref.png": "7b76c5555f547b4d4f96a47250119a3f19eafbbda7cf6e7c5942b70ba505bb35"
+      },
+      "assetPaths": {
+        "svg": "/Users/matt/Desktop/bevi/design/beverage-icons/svg/dunkin-bottled-iced-coffee-original.svg",
+        "portableSvg": "/Users/matt/Desktop/bevi/design/beverage-icons/portable-svg/dunkin-bottled-iced-coffee-original.svg",
+        "png": "/Users/matt/Desktop/bevi/design/beverage-icons/png/dunkin-bottled-iced-coffee-original.png"
+      },
+      "unusedGradients": []
+    },
+    {
+      "slug": "arizona-green-tea",
+      "inspectedSourcePaths": [
+        "/tmp/bevi-coffee-tea-review/arizona-classic-ref.png"
+      ],
+      "exactSourceOpened": true,
+      "verdict": "passes-reference-style-and-small-size-review",
+      "finalHashes": {
+        "svgSha256": "45728489cb6e4221d9c3eb1f7eb5d482e583304a689f01ad041a2296134d6b92",
+        "portableSvgSha256": "b7b3e2530f4ca27d826a9b47e19e80a78d659abe60e26c516ea24e91adbea53d",
+        "pngSha256": "aed3badaeb60103e73585edbd5a48dc8e3b0801d5a34bfa68e250b8256819f0f"
+      },
+      "bevId": "92d10127-a5e5-5f1c-9e04-1936e3c24961",
+      "statusRetained": "needs-review",
+      "reviewNotes": "Tall narrow 20oz PET bottle, white cap, amber shoulder/base and mint blossom wrap follow the selected official Tall Boy bottle; no generic can assumption.",
+      "renderedArtworkEvidence": {
+        "overview": "design/beverage-icons/review/overview-01.png",
+        "tileSheet": "design/beverage-icons/review/sizes-01.png",
+        "sizesPx": [
+          40,
+          56,
+          96,
+          155
+        ],
+        "backgrounds": [
+          "light",
+          "dark"
+        ],
+        "paddingFraction": 0.08,
+        "individualFullResolutionOpened": false
+      },
+      "inspectedSourceHashes": {
+        "/tmp/bevi-coffee-tea-review/arizona-classic-ref.png": "a4e7b1c895344fa39256e59f48c3536d4852608b570ccf309213e342e0871fb0"
+      },
+      "assetPaths": {
+        "svg": "/Users/matt/Desktop/bevi/design/beverage-icons/svg/arizona-green-tea.svg",
+        "portableSvg": "/Users/matt/Desktop/bevi/design/beverage-icons/portable-svg/arizona-green-tea.svg",
+        "png": "/Users/matt/Desktop/bevi/design/beverage-icons/png/arizona-green-tea.png"
+      },
+      "unusedGradients": []
+    },
+    {
+      "slug": "kung-fu-tea-classic-milk-tea",
+      "inspectedSourcePaths": [
+        "/tmp/bevi-boba-review/kft-milk-tea.jpg",
+        "/tmp/bevi-boba-review/kft-full-cup.jpg"
+      ],
+      "exactSourceOpened": true,
+      "verdict": "passes-reference-style-and-small-size-review",
+      "finalHashes": {
+        "svgSha256": "ea21a983cd4776296d880f4f4f7be5c0cf3df507922892124ff1f0e52f06c6cc",
+        "portableSvgSha256": "7fe968b02e202937a9e4f8d07ab7692a79746100e08bd7a6dbea6291d7ef0090",
+        "pngSha256": "e12ce3b03900ff96b5a0c676f51cb8c934a37f9405da46b6f93feec3a6a43584"
+      },
+      "bevId": "bc5baef9-da2c-5d97-a144-7b1a29b51293",
+      "statusRetained": "needs-review",
+      "reviewNotes": "Stepped tapered open cup, pale tan iced milk tea and black/red/white badge match exact current product crop and corroborating full cup; photographed \u529f\u592b\u8336 seal characters restored as outlined real glyphs. No pearls added.",
+      "renderedArtworkEvidence": {
+        "overview": "design/beverage-icons/review/overview-01.png",
+        "tileSheet": "design/beverage-icons/review/sizes-01.png",
+        "sizesPx": [
+          40,
+          56,
+          96,
+          155
+        ],
+        "backgrounds": [
+          "light",
+          "dark"
+        ],
+        "paddingFraction": 0.08,
+        "individualFullResolutionOpened": true
+      },
+      "inspectedSourceHashes": {
+        "/tmp/bevi-boba-review/kft-milk-tea.jpg": "a2aa44f03687a10fb905271151ee755c503e13b32472380d6ba9c263a7a46e2c",
+        "/tmp/bevi-boba-review/kft-full-cup.jpg": "e821f5bbabad60a591afe5f8ee07226e322b48b120804c3b7616a02cdb92fd77"
+      },
+      "assetPaths": {
+        "svg": "/Users/matt/Desktop/bevi/design/beverage-icons/svg/kung-fu-tea-classic-milk-tea.svg",
+        "portableSvg": "/Users/matt/Desktop/bevi/design/beverage-icons/portable-svg/kung-fu-tea-classic-milk-tea.svg",
+        "png": "/Users/matt/Desktop/bevi/design/beverage-icons/png/kung-fu-tea-classic-milk-tea.png"
+      },
+      "unusedGradients": []
+    },
+    {
+      "slug": "gatorade-lemon-lime",
+      "inspectedSourcePaths": [
+        "/tmp/bevi-hydration-review/gatorade-reference.png"
+      ],
+      "exactSourceOpened": true,
+      "verdict": "passes-reference-style-and-small-size-review",
+      "finalHashes": {
+        "svgSha256": "24496e4268fb4458c1441c14cb14ed2e357a2bdf34ea6bf9eb867249a723e0cf",
+        "portableSvgSha256": "f0480adad633307307087dd65096fa6320535d7aad2f75a7cae9252fd0f60523",
+        "pngSha256": "a349d746b85a1a19b150127ef2c26e9af960c989a646c820189675d11920f76f"
+      },
+      "bevId": "bebb348e-9ffe-5296-8401-4c264f19cba6",
+      "statusRetained": "needs-review",
+      "reviewNotes": "Broad 28oz sculpted PET form, orange ribbed cap, stepped neck, molded shoulder, grip waist and chartreuse liquid agree with manufacturer SmartLabel source; gray/lime label and white G/orange bolt remain recognizable at 40px.",
+      "renderedArtworkEvidence": {
+        "overview": "design/beverage-icons/review/overview-02.png",
+        "tileSheet": "design/beverage-icons/review/sizes-03.png",
+        "sizesPx": [
+          40,
+          56,
+          96,
+          155
+        ],
+        "backgrounds": [
+          "light",
+          "dark"
+        ],
+        "paddingFraction": 0.08,
+        "individualFullResolutionOpened": true
+      },
+      "inspectedSourceHashes": {
+        "/tmp/bevi-hydration-review/gatorade-reference.png": "94be4184d414424f64c97c01d436e526901da136815c24c8c64926f50f24f028"
+      },
+      "assetPaths": {
+        "svg": "/Users/matt/Desktop/bevi/design/beverage-icons/svg/gatorade-lemon-lime.svg",
+        "portableSvg": "/Users/matt/Desktop/bevi/design/beverage-icons/portable-svg/gatorade-lemon-lime.svg",
+        "png": "/Users/matt/Desktop/bevi/design/beverage-icons/png/gatorade-lemon-lime.png"
+      },
+      "unusedGradients": []
+    },
+    {
+      "slug": "gts-kombucha-gingerade",
+      "inspectedSourcePaths": [
+        "/tmp/bevi-hydration-review/gingerade-reference.png"
+      ],
+      "exactSourceOpened": true,
+      "verdict": "passes-reference-style-and-small-size-review",
+      "finalHashes": {
+        "svgSha256": "a9e88aa456e9428f806337d562ebe137852539704f6336cf66ac54b02f0466bf",
+        "portableSvgSha256": "bcc5ea864a1c1425a0f3af511253d009ec4e97aeb8257ead83e877800545fd72",
+        "pngSha256": "0a62a7bcfb8b376a9d4f13b81e0a6e4bb775d362422b861adbbcb3761bf910fb"
+      },
+      "bevId": "401c5efa-8e1e-5770-8e3c-469930e46a93",
+      "statusRetained": "needs-review",
+      "reviewNotes": "Narrow 16oz glass bottle, white ribbed cap, gold liquid and ornate red/silver/white SYNERGY label match current official source; eight-petal motif and Gingerade word retained; source promotional halo omitted.",
+      "renderedArtworkEvidence": {
+        "overview": "design/beverage-icons/review/overview-02.png",
+        "tileSheet": "design/beverage-icons/review/sizes-04.png",
+        "sizesPx": [
+          40,
+          56,
+          96,
+          155
+        ],
+        "backgrounds": [
+          "light",
+          "dark"
+        ],
+        "paddingFraction": 0.08,
+        "individualFullResolutionOpened": true
+      },
+      "inspectedSourceHashes": {
+        "/tmp/bevi-hydration-review/gingerade-reference.png": "3f5b8325467c56094d9f19762b2e6b3f074299152bb1fde45aaea5756d0b9db2"
+      },
+      "assetPaths": {
+        "svg": "/Users/matt/Desktop/bevi/design/beverage-icons/svg/gts-kombucha-gingerade.svg",
+        "portableSvg": "/Users/matt/Desktop/bevi/design/beverage-icons/portable-svg/gts-kombucha-gingerade.svg",
+        "png": "/Users/matt/Desktop/bevi/design/beverage-icons/png/gts-kombucha-gingerade.png"
+      },
+      "unusedGradients": []
+    },
+    {
+      "slug": "tropicana-orange-juice-original",
+      "inspectedSourcePaths": [
+        "/tmp/bevi-juice-review/tropicana-ref.png"
+      ],
+      "exactSourceOpened": true,
+      "verdict": "passes-reference-style-and-small-size-review",
+      "finalHashes": {
+        "svgSha256": "74e3094f515227828125ac489ef7da25277006bf523cf3f30b0ca0cb7ae28188",
+        "portableSvgSha256": "13e545fab7cbec577746859c329b3f9c6c02569a23946bf55c447fca62abd9ec",
+        "pngSha256": "6b8bd0a872f8682df58202e671f7f950cbdb5b3b316dded22406cdb8c661e480"
+      },
+      "bevId": "87604a87-8cfc-58b2-b607-c2296eec1701",
+      "statusRetained": "needs-review",
+      "reviewNotes": "46oz tall rounded PET bottle, orange cap, vivid juice, No Pulp oval, green Tropicana lettering and orange/straw illustration match official Original page. No Pulp is explicitly documented representative choice.",
+      "renderedArtworkEvidence": {
+        "overview": "design/beverage-icons/review/overview-03.png",
+        "tileSheet": "design/beverage-icons/review/sizes-06.png",
+        "sizesPx": [
+          40,
+          56,
+          96,
+          155
+        ],
+        "backgrounds": [
+          "light",
+          "dark"
+        ],
+        "paddingFraction": 0.08,
+        "individualFullResolutionOpened": false
+      },
+      "inspectedSourceHashes": {
+        "/tmp/bevi-juice-review/tropicana-ref.png": "80941d0ed0983f444379c19403ad8134209191e3feafe2b4d2686fe2a5983571"
+      },
+      "assetPaths": {
+        "svg": "/Users/matt/Desktop/bevi/design/beverage-icons/svg/tropicana-orange-juice-original.svg",
+        "portableSvg": "/Users/matt/Desktop/bevi/design/beverage-icons/portable-svg/tropicana-orange-juice-original.svg",
+        "png": "/Users/matt/Desktop/bevi/design/beverage-icons/png/tropicana-orange-juice-original.png"
+      },
+      "unusedGradients": []
+    },
+    {
+      "slug": "welchs-100-grape-juice",
+      "inspectedSourcePaths": [
+        "/tmp/bevi-juice-review/welchs-ref.webp",
+        "/tmp/bevi-juice-review/welchs-target-ref.jpg"
+      ],
+      "exactSourceOpened": true,
+      "verdict": "passes-reference-style-and-small-size-review",
+      "finalHashes": {
+        "svgSha256": "634d5fe067925b987bc1f4ec83dc8632753a44dfddbdd6bc781710f1f4e68bce",
+        "portableSvgSha256": "ec92c809e4f82cdc5d29e79bf6cbe2d6e39a3f4abcbc5ed18ae649775fe51757",
+        "pngSha256": "7b01331c49d331f26142897a0766129493718bd15179594afe1e9ff2238d1ea2"
+      },
+      "bevId": "320d15a5-ae1c-589f-a2ab-140eac445ff9",
+      "statusRetained": "needs-review",
+      "reviewNotes": "64oz contoured bottle with spiral shoulder grooves, purple cap, dark juice, grape clusters and sloping cream Welch's banner matches both exact sources. Very dark shoulder is low contrast at 40px dark mode, while purple cap/label and white banner preserve recognition.",
+      "renderedArtworkEvidence": {
+        "overview": "design/beverage-icons/review/overview-02.png",
+        "tileSheet": "design/beverage-icons/review/sizes-03.png",
+        "sizesPx": [
+          40,
+          56,
+          96,
+          155
+        ],
+        "backgrounds": [
+          "light",
+          "dark"
+        ],
+        "paddingFraction": 0.08,
+        "individualFullResolutionOpened": false
+      },
+      "inspectedSourceHashes": {
+        "/tmp/bevi-juice-review/welchs-ref.webp": "86854f1b143a6039d9a7735cc891c984a8a23ed21533010fd9e39e6cb155a4a4",
+        "/tmp/bevi-juice-review/welchs-target-ref.jpg": "d0780fff48107652229b8934484775c681f2fd471fddbb97d2c8142c1506acfb"
+      },
+      "assetPaths": {
+        "svg": "/Users/matt/Desktop/bevi/design/beverage-icons/svg/welchs-100-grape-juice.svg",
+        "portableSvg": "/Users/matt/Desktop/bevi/design/beverage-icons/portable-svg/welchs-100-grape-juice.svg",
+        "png": "/Users/matt/Desktop/bevi/design/beverage-icons/png/welchs-100-grape-juice.png"
+      },
+      "unusedGradients": []
+    },
+    {
+      "slug": "jamba-juice-mango-a-go-go",
+      "inspectedSourcePaths": [
+        "/tmp/bevi-smoothie-review/jamba-front-reference.png",
+        "/tmp/bevi-smoothie-review/jamba-reference.png"
+      ],
+      "exactSourceOpened": true,
+      "verdict": "passes-reference-style-and-small-size-review",
+      "finalHashes": {
+        "svgSha256": "7c90a2258397c70a114f7ba256d891532699c0a58490192073bb714b95115f1f",
+        "portableSvgSha256": "9e8fb508431f5a002ef83f80cf91f0b4884c577df91dc1fca3f0147696da239d",
+        "pngSha256": "7fea8f6b57755b41842ea4791a77f218300dd187fe15a2a2c310e5e5e6b696e1"
+      },
+      "bevId": "866e3a9c-eaf7-5739-a672-a7f5c9bb0fde",
+      "statusRetained": "needs-review",
+      "reviewNotes": "Actual open tapered caf\u00e9 cup, orange straw, yellow thick smoothie crest and descending white spiral agree with exact front and overhead manufacturer references. No unsupported lid, ice cubes or garnish.",
+      "renderedArtworkEvidence": {
+        "overview": "design/beverage-icons/review/overview-02.png",
+        "tileSheet": "design/beverage-icons/review/sizes-04.png",
+        "sizesPx": [
+          40,
+          56,
+          96,
+          155
+        ],
+        "backgrounds": [
+          "light",
+          "dark"
+        ],
+        "paddingFraction": 0.08,
+        "individualFullResolutionOpened": false
+      },
+      "inspectedSourceHashes": {
+        "/tmp/bevi-smoothie-review/jamba-front-reference.png": "1f7c877b82a42f9ed329bbd041530061fbccd8b4495a725d62b02c49c7409b8b",
+        "/tmp/bevi-smoothie-review/jamba-reference.png": "575e5ec24de7fe6ada101ff652e81052415788b50c1ae1caa1383649d1fecced"
+      },
+      "assetPaths": {
+        "svg": "/Users/matt/Desktop/bevi/design/beverage-icons/svg/jamba-juice-mango-a-go-go.svg",
+        "portableSvg": "/Users/matt/Desktop/bevi/design/beverage-icons/portable-svg/jamba-juice-mango-a-go-go.svg",
+        "png": "/Users/matt/Desktop/bevi/design/beverage-icons/png/jamba-juice-mango-a-go-go.png"
+      },
+      "unusedGradients": []
+    },
+    {
+      "slug": "bolthouse-farms-strawberry-banana",
+      "inspectedSourcePaths": [
+        "/tmp/bevi-smoothie-review/bolthouse-reference.png"
+      ],
+      "exactSourceOpened": true,
+      "verdict": "passes-reference-style-and-small-size-review",
+      "finalHashes": {
+        "svgSha256": "35cfd8d78e1221c444707701d37772821a740ecebeb82dc22d482c9660c0b328",
+        "portableSvgSha256": "d97c084eeddf7ff0a9c9210d2c136189128211ba1e77d3c5a07527bcac7acbac",
+        "pngSha256": "d3b34e0396a23634d0e0652a01344080b6bad03dfa48b1eab3152c1dce52f3a2"
+      },
+      "bevId": "1b25e221-1411-5bd7-8475-0b82e9ba0dd3",
+      "statusRetained": "needs-review",
+      "reviewNotes": "15.2oz narrow PET bottle, red/pink ribbed cap, fruit shoulder sleeve, white brand script and darker strawberry/banana band preserve inspected single-serve product; source small, fine details intentionally simplified.",
+      "renderedArtworkEvidence": {
+        "overview": "design/beverage-icons/review/overview-04.png",
+        "tileSheet": "design/beverage-icons/review/sizes-08.png",
+        "sizesPx": [
+          40,
+          56,
+          96,
+          155
+        ],
+        "backgrounds": [
+          "light",
+          "dark"
+        ],
+        "paddingFraction": 0.08,
+        "individualFullResolutionOpened": false
+      },
+      "inspectedSourceHashes": {
+        "/tmp/bevi-smoothie-review/bolthouse-reference.png": "b66a80c14e1899c8cb54c28b33f1e3dec04de89577ea5b6872cc5c7b52279769"
+      },
+      "assetPaths": {
+        "svg": "/Users/matt/Desktop/bevi/design/beverage-icons/svg/bolthouse-farms-strawberry-banana.svg",
+        "portableSvg": "/Users/matt/Desktop/bevi/design/beverage-icons/portable-svg/bolthouse-farms-strawberry-banana.svg",
+        "png": "/Users/matt/Desktop/bevi/design/beverage-icons/png/bolthouse-farms-strawberry-banana.png"
+      },
+      "unusedGradients": []
+    }
+  ],
+  "fixesMade": [
+    {
+      "slug": "kung-fu-tea-classic-milk-tea",
+      "change": "Replaced approximate invented-looking seal strokes with deterministic outlines for real photographed \u529f\u592b\u8336 characters. Preserved stacked \u529f/\u592b at left, larger \u8336 at right."
+    },
+    {
+      "slug": "gatorade-lemon-lime",
+      "change": "Authored exact 28oz sculpted PET bottle; corrected baseline and G/header clearance after rendering."
+    },
+    {
+      "slug": "gts-kombucha-gingerade",
+      "change": "Authored exact 16oz glass bottle and current ornate Synergy label; refined eight-petal flower after rendering."
+    },
+    {
+      "scope": "new modules only",
+      "change": "Pruned unused shared gradient definitions in editable masters; retained frozen shared primitives and original30."
+    },
+    {
+      "slug": "mountain-dew-baja-blast",
+      "change": "At final exact-reference inspection, replaced generic five-petal flower with observed asymmetric white curled crest and pale-green underside; corrected reference observation text. Source detail crop /tmp/bevi-astra-review/baja-top.png opened."
+    }
+  ],
+  "unresolvedDecisions": [
+    {
+      "slug": "five-hour-energy-original",
+      "decision": "retain-needs-identity-resolution",
+      "inspectedSourcePaths": [
+        "/tmp/bevi-energy-review/five-hour-reference.jpg"
+      ],
+      "reason": "Manufacturer calls Berry Regular Strength original flavor; catalog does not explicitly say Berry or Regular Strength."
+    },
+    {
+      "slug": "lipton-iced-tea",
+      "decision": "retain-needs-identity-resolution",
+      "inspectedSourcePaths": [],
+      "reason": "Original does not uniquely determine US lemon, sweet tea, mix or international original. No exact product image selected."
+    },
+    {
+      "slug": "tiger-sugar-brown-sugar-boba-milk-tea",
+      "decision": "retain-needs-identity-resolution",
+      "inspectedSourcePaths": [
+        "/tmp/bevi-boba-review/tiger-signature.png",
+        "/tmp/bevi-boba-review/tiger-tea.png"
+      ],
+      "reason": "Signature brown-sugar fresh milk and tea latte are separate visually distinct official menu items."
+    }
+  ],
+  "initialArtworkSheetsOpened": [
+    "/tmp/bevi-soda-review/comparison.png",
+    "/tmp/bevi-energy-review/contact-sheet.png",
+    "/tmp/bevi-coffee-tea-review/coffee-tea-review.png",
+    "/tmp/bevi-boba-review/kft-art.png",
+    "/tmp/bevi-juice-review/juice-review.png",
+    "/tmp/bevi-smoothie-review/contact-sheet.png",
+    "/tmp/bevi-hydration-review/gatorade-lemon-lime.png",
+    "/tmp/bevi-hydration-review/gts-kombucha-gingerade.png",
+    "/tmp/bevi-hydration-review/kung-fu-tea-classic-milk-tea.png"
+  ],
+  "finalSheetsOpened": [
+    "design/beverage-icons/review/overview-01.png",
+    "design/beverage-icons/review/overview-02.png",
+    "design/beverage-icons/review/overview-03.png",
+    "design/beverage-icons/review/overview-04.png",
+    "design/beverage-icons/review/overview-05.png",
+    "design/beverage-icons/review/sizes-01.png",
+    "design/beverage-icons/review/sizes-02.png",
+    "design/beverage-icons/review/sizes-03.png",
+    "design/beverage-icons/review/sizes-04.png",
+    "design/beverage-icons/review/sizes-05.png",
+    "design/beverage-icons/review/sizes-06.png",
+    "design/beverage-icons/review/sizes-07.png",
+    "design/beverage-icons/review/sizes-08.png",
+    "design/beverage-icons/review/sizes-09.png"
+  ],
+  "pending": [],
+  "styleReferencesOpened": [
+    "/tmp/bevi-coffee-tea-review/style-reference.png",
+    "/tmp/bevi-coffee-tea-review/style-coffee.png",
+    "/tmp/bevi-coffee-tea-review/style-soda.png"
+  ],
+  "visualScope": {
+    "exactSourceChecks": 19,
+    "initialArtworkComparisons": 19,
+    "finalHashMatchedReview": 19,
+    "backgroundsRequired": [
+      "light",
+      "dark"
+    ],
+    "tileSizesRequired": [
+      40,
+      56,
+      96,
+      155
+    ],
+    "paddingFraction": 0.08,
+    "crossBatchReview": "All49 final artworks compared across five overview pages and nine light/dark tile pages; individual source comparison scope is the19 new recipes."
+  },
+  "finalSheetHashes": {
+    "design/beverage-icons/review/overview-01.png": "cc43cc00c50b97fafa26e024eee5bf68768f30a2727f8d7dfa904bb7cf927abe",
+    "design/beverage-icons/review/overview-02.png": "bb9843220b8e06a76e843690523eb3a155f3c73910c99ae8db7ff0c824a97e64",
+    "design/beverage-icons/review/overview-03.png": "feec557a9e18de040aecb86ad8b0a908ca74a96b299aa4944817a6e947b362cd",
+    "design/beverage-icons/review/overview-04.png": "93541c42d1c09a64092f59903a872f497e99c1eb1c4bfedfda28c387a1484b43",
+    "design/beverage-icons/review/overview-05.png": "ccd2e86351b7b3b118855404a477e5f39f93c0927e4f5d81d68459f69caecf88",
+    "design/beverage-icons/review/sizes-01.png": "3df7b75b41b7732fff5af40a9d85496d432188d02b49677a5d57e2b6fae7dc96",
+    "design/beverage-icons/review/sizes-02.png": "7081d03b58d53824f81eeccf56be30d9c10e47a7cf878a3bc0e9ed31483ac25c",
+    "design/beverage-icons/review/sizes-03.png": "92d6c200fd8323897c51eed691a5c5d85b4c3abe3aaa03c159c014e0d3b846e8",
+    "design/beverage-icons/review/sizes-04.png": "bf491e3ceddd9ef4c78040546eea1ab21f42154e2b747fc313cabf7458ba530e",
+    "design/beverage-icons/review/sizes-05.png": "76798e67d67b4de83c554cba56112127073b3de5b0f74ed1c06cb469e926b33d",
+    "design/beverage-icons/review/sizes-06.png": "853c3cac3e17eed13dd7c6cd2dde277e0481ede6202c14af03852b94548cc177",
+    "design/beverage-icons/review/sizes-07.png": "ba357e6c79dd3903fe034ddd1877b6f3711e44bb9c2e4524597f6eb633182d4e",
+    "design/beverage-icons/review/sizes-08.png": "e352a2ff7d18dced481472058137e50ab47c3dedacadc04b785e149ecb7ea41b",
+    "design/beverage-icons/review/sizes-09.png": "3b4e3c2015df8a75b3cf90ec3fbe1868a6521eb069a023e209421f669182784f"
+  },
+  "summary": {
+    "catalog": 378,
+    "authored": 49,
+    "pending": 329,
+    "identityUnresolved": 3,
+    "starterAuthored": 40,
+    "starterTotal": 43,
+    "livePostgresReconciled": false
+  },
+  "manifestSha256": "d496fcc587e1c9fe8e602cb3148b087a11f85606f22e9eb10c39ef82ae089f66",
+  "globalFindings": [
+    "All19 new icons preserve inspected product or explicitly selected package identity; the three unresolved catalog identities have no artwork.",
+    "New artwork is consistent with frozen reference lighting direction, subtle elliptical top perspective, ground shadow and baseline; package shapes vary according to references.",
+    "At40/56px typography is supplementary; silhouette, variant colors and major marks carry recognition. No clipping or transparency artifact found on final light/dark sheets.",
+    "Welch's dark shoulder blends into the dark background at40px, but the purple cap and high-contrast banner remain readable as identifying blocks.",
+    "Simplified illustrations and typography are vector interpretations; user aesthetic approval and native app rendering are still pending. No record was promoted to verified."
+  ],
+  "preservation": {
+    "sharedStyleChanged": false,
+    "original30AssetsChanged": false,
+    "original30HashVerification": "Coordinator independently reported all30 export hashes unchanged after final49 build; this reviewer changed only new family modules.",
+    "appOrDatabaseChanged": false
+  },
+  "finalChangedArtifactRecheck": {
+    "slug": "mountain-dew-baja-blast",
+    "masterPreview": "/tmp/bevi-astra-review/baja-final-light.png",
+    "sheets": [
+      "design/beverage-icons/review/overview-03.png",
+      "design/beverage-icons/review/sizes-05.png"
+    ],
+    "verdict": "Corrected crest preserved at all sizes; no new clipping or artifacts."
+  }
+}

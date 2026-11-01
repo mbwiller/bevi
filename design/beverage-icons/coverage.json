@@ -1,9 +1,10 @@
 {
   "summary": {
     "catalog": 378,
-    "authored": 30,
-    "pending": 348,
-    "starterAuthored": 21,
+    "authored": 49,
+    "pending": 329,
+    "identityUnresolved": 3,
+    "starterAuthored": 40,
     "starterTotal": 43,
     "livePostgresReconciled": false
   },
@@ -22,38 +23,6 @@
       "name": "Mexican Coca-Cola",
       "brand": "Coca-Cola",
       "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "686a8b0d-8d5f-53d6-ae2b-d84988f38daf",
-      "slug": "dr-pepper",
-      "name": "Dr Pepper",
-      "brand": "Dr Pepper",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "3988d01a-1cac-5ece-877c-d428ffd1abfc",
-      "slug": "diet-dr-pepper",
-      "name": "Diet Dr Pepper",
-      "brand": "Dr Pepper",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "4d46a498-dcea-5dc5-8342-cb091ba36d15",
-      "slug": "mountain-dew",
-      "name": "Mountain Dew",
-      "brand": "Mountain Dew",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "3d372168-321c-5bb6-be06-b548c208c636",
-      "slug": "diet-mountain-dew",
-      "name": "Diet Mountain Dew",
-      "brand": "Mountain Dew",
-      "isStarter": true,
       "status": "needs-reference"
     },
     {
@@ -385,14 +354,6 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "b89ae243-600d-5eca-a1a1-b46ff33b114d",
-      "slug": "mountain-dew-baja-blast",
-      "name": "Mountain Dew Baja Blast",
-      "brand": "Mountain Dew",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "11f52e23-5357-58c1-94df-02644a5e6f98",
       "slug": "mountain-dew-spark",
       "name": "Mountain Dew Spark",
@@ -561,14 +522,6 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "c337d6a3-f766-5e8e-b13d-0a3824653db4",
-      "slug": "dr-pepper-zero-sugar",
-      "name": "Dr Pepper Zero Sugar",
-      "brand": "Dr Pepper",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "e3e5a072-e596-5920-bb12-c000c53850df",
       "slug": "coca-cola-cherry-zero-sugar",
       "name": "Coca-Cola Cherry Zero Sugar",
@@ -705,14 +658,6 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "87604a87-8cfc-58b2-b607-c2296eec1701",
-      "slug": "tropicana-orange-juice-original",
-      "name": "Orange Juice",
-      "brand": "Tropicana",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "374a0ade-2a53-5760-9e13-5c7f3dea9d53",
       "slug": "tropicana-orange-juice-no-pulp",
       "name": "Orange Juice",
@@ -806,14 +751,6 @@
       "name": "Lemonade",
       "brand": "Minute Maid",
       "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "320d15a5-ae1c-589f-a2ab-140eac445ff9",
-      "slug": "welchs-100-grape-juice",
-      "name": "Grape Juice",
-      "brand": "Welch's",
-      "isStarter": true,
       "status": "needs-reference"
     },
     {
@@ -1329,14 +1266,6 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "63c34b3d-6496-509c-8e74-b12f17397ae8",
-      "slug": "monster-energy-original",
-      "name": "Monster Energy Original",
-      "brand": "Monster Energy",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "9f26a3df-0382-5d1c-b1c4-5d590a960176",
       "slug": "monster-energy-zero-ultra",
       "name": "Monster Energy Zero Ultra",
@@ -1374,14 +1303,6 @@
       "name": "Monster Energy Juice Monster Khaotic",
       "brand": "Monster Energy",
       "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "d0522171-dee4-5421-a863-c18e4deba0c1",
-      "slug": "celsius-sparkling-orange",
-      "name": "Celsius Sparkling Orange",
-      "brand": "Celsius",
-      "isStarter": true,
       "status": "needs-reference"
     },
     {
@@ -1438,14 +1359,6 @@
       "name": "Celsius Sparkling Wild Berry",
       "brand": "Celsius",
       "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "2837c85b-1512-5a63-86cf-f5b00e9a73ae",
-      "slug": "alani-nu-hawaiian-shaved-ice",
-      "name": "Alani Nu Energy Hawaiian Shaved Ice",
-      "brand": "Alani Nu",
-      "isStarter": true,
       "status": "needs-reference"
     },
     {
@@ -1558,7 +1471,19 @@
       "name": "5-hour Energy Original",
       "brand": "5-hour Energy",
       "isStarter": true,
-      "status": "needs-reference"
+      "status": "needs-identity-resolution",
+      "references": [
+        {
+          "pageUrl": "https://5hourenergy.com/products/col-berry-flavor-regular-strength-5-hour-energy-shots",
+          "imageUrl": "https://5hourenergy.com/cdn/shop/files/BRY_R-Tagline_bcaa1045-25f1-4e3c-910d-8670489e84db.jpg?v=1787758545&width=3000",
+          "inspectedAt": "2026-10-31",
+          "observations": "Inspected current Berry Regular Strength 1.93 fl oz/57mL shot: red Berry shrink cap, orange/yellow upper body, black outlined 5-hour ENERGY/running figure, blue lower waves, REGULAR STRENGTH. Product page explicitly identifies Berry Regular Strength as the first/original shot flavor.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Catalog name and flavor both say Original; it does not explicitly identify Berry or Regular Strength. Manufacturer evidence supports Berry as the original flavor but cannot confirm this catalog row intends that exact formula. No artwork generated for an unconfirmed SKU.",
+      "nextStep": "Confirm that five-hour-energy-original means US Berry Regular Strength 1.93 fl oz; then author the inspected package. Keep separate from Extra Strength Berry.",
+      "sourceModule": "scripts/icons/families/energy-starters.mjs"
     },
     {
       "bevId": "dcae3c67-280f-5f1b-865c-9e88aab217cd",
@@ -1614,14 +1539,6 @@
       "name": "Guru Organic Energy Original",
       "brand": "Guru Organic Energy",
       "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "448ba352-a6bc-59f2-a3ce-0c04a3aaf283",
-      "slug": "starbucks-frappuccino-mocha",
-      "name": "Frappuccino Mocha",
-      "brand": "Starbucks",
-      "isStarter": true,
       "status": "needs-reference"
     },
     {
@@ -1686,14 +1603,6 @@
       "name": "Doubleshot Energy Coffee",
       "brand": "Starbucks",
       "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "14715df4-4d37-58b1-9424-839f5c3524fb",
-      "slug": "dunkin-bottled-iced-coffee-original",
-      "name": "Bottled Iced Coffee Original",
-      "brand": "Dunkin'",
-      "isStarter": true,
       "status": "needs-reference"
     },
     {
@@ -1857,14 +1766,6 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "866e3a9c-eaf7-5739-a672-a7f5c9bb0fde",
-      "slug": "jamba-juice-mango-a-go-go",
-      "name": "Mango-a-go-go",
-      "brand": "Jamba Juice",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "846fdbe8-91ab-5f11-affd-7fd05b16acbc",
       "slug": "jamba-juice-strawberry-surf-rider",
       "name": "Strawberry Surf Rider",
@@ -1921,27 +1822,11 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "1b25e221-1411-5bd7-8475-0b82e9ba0dd3",
-      "slug": "bolthouse-farms-strawberry-banana",
-      "name": "Strawberry Banana",
-      "brand": "Bolthouse Farms",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "d0bb1e01-dbc7-5ba4-b18d-e6ac95cf31c0",
       "slug": "odwalla-superfood-smoothie",
       "name": "Superfood",
       "brand": "Odwalla",
       "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "92d10127-a5e5-5f1c-9e04-1936e3c24961",
-      "slug": "arizona-green-tea",
-      "name": "Arizona Green Tea",
-      "brand": "Arizona",
-      "isStarter": true,
       "status": "needs-reference"
     },
     {
@@ -2070,7 +1955,19 @@
       "name": "Lipton Iced Tea",
       "brand": "Lipton",
       "isStarter": true,
-      "status": "needs-reference"
+      "status": "needs-identity-resolution",
+      "references": [
+        {
+          "pageUrl": "https://www.liptonicedtea.com/en-us/our-iced-teas/black-iced-tea",
+          "title": "Lipton US Black Iced Teas",
+          "inspectedAt": "2026-10-31",
+          "visuallyInspected": false,
+          "observations": "Read official US lineup listing Half & Half, Iced Tea Lemon, Iced Sweet Tea and Iced Tea Peach. No uniquely identified Original SKU matches the catalog flavor Original. No product image was selected or visually inspected for this unresolved record."
+        }
+      ],
+      "uncertainty": "Catalog name Lipton Iced Tea and flavor Original do not determine lemon, sweetened plain tea, a tea mix, or a non-US Original product. Selecting a yellow lemon bottle would invent flavor identity.",
+      "nextStep": "Resolve the intended US formulation/flavor or obtain a package/UPC from catalog owner, then inspect that exact product reference before drawing.",
+      "sourceModule": "scripts/icons/families/coffee-tea-starters.mjs"
     },
     {
       "bevId": "f3361059-c2f8-5bc5-bc37-fe2726a79451",
@@ -2129,20 +2026,31 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "bc5baef9-da2c-5d97-a144-7b1a29b51293",
-      "slug": "kung-fu-tea-classic-milk-tea",
-      "name": "Classic Milk Tea (Kung Fu Tea)",
-      "brand": "Kung Fu Tea",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "fdf715a1-7783-58b2-b657-d9afad7530c4",
       "slug": "tiger-sugar-brown-sugar-boba-milk-tea",
       "name": "Brown Sugar Boba Milk Tea (Tiger Sugar)",
       "brand": "Tiger Sugar",
       "isStarter": true,
-      "status": "needs-reference"
+      "status": "needs-identity-resolution",
+      "references": [
+        {
+          "pageUrl": "https://www.tigersugarec.com/menu.html",
+          "imageUrl": "https://www.tigersugarec.com/img/menu/signature-10.png",
+          "inspectedAt": "2026-10-31",
+          "visuallyInspected": true,
+          "observations": "US café menu signature #1 is Brown Sugar Boba Milk + Pearl With Cream Mousse: pale milk with dark syrup stripes and a dense black pearl layer in a clear branded cup. The page now states this location is closed; retained as historical US serving evidence."
+        },
+        {
+          "pageUrl": "https://www.tigersugarec.com/menu.html",
+          "imageUrl": "https://www.tigersugarec.com/img/menu/other-t50.png",
+          "inspectedAt": "2026-10-31",
+          "visuallyInspected": true,
+          "observations": "The same café separately lists T5 Black Tea Latte + Cream Mousse + Brown Sugar With Boba: brown tea, thick white mousse cap, a visibly different preparation from signature brown-sugar milk."
+        }
+      ],
+      "uncertainty": "Catalog Brown Sugar Boba Milk Tea does not distinguish signature brown-sugar fresh milk from actual tea latte. Both are real branded products and differ visibly; neither selected as a verified identity. No icon authored.",
+      "nextStep": "Resolve whether this UUID denotes signature brown-sugar milk or a black/green tea latte; then inspect a current exact serving image and draw that preparation.",
+      "sourceModule": "scripts/icons/families/cafe-milk-tea.mjs"
     },
     {
       "bevId": "01eef672-041e-5ed7-a6d6-b7e1cdadd95f",
@@ -2238,14 +2146,6 @@
       "name": "Taro Milk Tea (Gong Cha)",
       "brand": "Gong Cha",
       "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "bebb348e-9ffe-5296-8401-4c264f19cba6",
-      "slug": "gatorade-lemon-lime",
-      "name": "Gatorade Thirst Quencher",
-      "brand": "Gatorade",
-      "isStarter": true,
       "status": "needs-reference"
     },
     {
@@ -2454,14 +2354,6 @@
       "name": "Ramune",
       "brand": "Hata Kosen",
       "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "401c5efa-8e1e-5770-8e3c-469930e46a93",
-      "slug": "gts-kombucha-gingerade",
-      "name": "GT's Kombucha",
-      "brand": "GT's Living Foods",
-      "isStarter": true,
       "status": "needs-reference"
     },
     {

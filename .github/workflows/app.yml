@@ -14,6 +14,9 @@ on:
       - "data/catalog/**"
       - "package-lock.json"
       - ".github/workflows/app.yml"
+      # An icon batch must ship its app copy (node scripts/icons/export-app.mjs); the drift test
+      # app/src/lib/__tests__/bevIcons.test.ts fails the batch's own PR instead of the next app PR.
+      - "design/beverage-icons/manifest.json"
   push:
     branches:
       - main
@@ -25,6 +28,9 @@ on:
       - "data/catalog/**"
       - "package-lock.json"
       - ".github/workflows/app.yml"
+      # An icon batch must ship its app copy (node scripts/icons/export-app.mjs); the drift test
+      # app/src/lib/__tests__/bevIcons.test.ts fails the batch's own PR instead of the next app PR.
+      - "design/beverage-icons/manifest.json"
 
 jobs:
   check:
