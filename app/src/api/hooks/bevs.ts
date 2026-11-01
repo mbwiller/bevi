@@ -77,5 +77,8 @@ export function useUploadMedia() {
 }
 
 export function useReportBev() {
-  return useMutation({ mutationFn: ({ bevId, reason }: { bevId: string; reason: string }) => api.bevs.report(bevId, reason) });
+  return useMutation({
+    mutationFn: ({ bevId, reason, duplicateOfId }: { bevId: string; reason: string; duplicateOfId?: string }) =>
+      api.bevs.report(bevId, reason, duplicateOfId ? { duplicateOfId } : undefined),
+  });
 }
