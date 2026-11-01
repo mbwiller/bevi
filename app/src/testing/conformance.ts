@@ -472,6 +472,28 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       await expectCode(api.bevs.report('no-such-bev', 'wrong_info'), 'not_found');
       await expectCode(api.bevs.report(id!, ''), 'validation');
     });
+
+    it('report: duplicateOfId names a visible Bev; itself, an unknown id or one a minor cannot see is validation', async () => {
+      await newUser();
+      const [id, original] = await starterIds(2);
+      await expect(api.bevs.report(id!, 'duplicate', { duplicateOfId: original! })).resolves.toBeUndefined();
+      const self = await expectCode(api.bevs.report(original!, 'duplicate', { duplicateOfId: original! }), 'validation');
+      expect(self.detail).toMatchObject({ field: 'duplicateOfId' });
+      // A well-formed id that names no Bev (a real backend wants a uuid here).
+      const unknown = await expectCode(
+        api.bevs.report(original!, 'duplicate', { duplicateOfId: '00000000-0000-4000-8000-000000000000' }),
+        'validation',
+      );
+      expect(unknown.detail).toMatchObject({ field: 'duplicateOfId' });
+
+      await newUser({ birthdate: MINOR_BIRTHDATE(new Date()) });
+      const [minorsBev] = await starterIds(1);
+      const hidden = await expectCode(
+        api.bevs.report(minorsBev!, 'duplicate', { duplicateOfId: options.alcoholicBevId }),
+        'validation',
+      );
+      expect(hidden.detail).toMatchObject({ field: 'duplicateOfId' });
+    });
   });
 
   describe('rankings', () => {
