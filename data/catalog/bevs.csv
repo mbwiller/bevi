@@ -1,379 +1,379 @@
-slug,name,brand,flavor,category,price_tier,price_estimated,upc,is_starter,aliases,image_source_url,image_license,image_attribution,notes
-coca-cola-classic,Coca-Cola Classic,Coca-Cola,Original,soda,1,true,,true,coke|coca cola,,,,
-diet-coke,Diet Coke,Coca-Cola,Diet,diet_soda,1,true,,true,diet coke,,,,
-coke-zero-sugar,Coke Zero Sugar,Coca-Cola,Zero Sugar,diet_soda,1,true,,true,coke zero|coca cola zero,,,,
-cherry-coke,Cherry Coke,Coca-Cola,Cherry,soda,1,true,,false,coke cherry|cherry coca cola,,,,
-mexican-coca-cola,Mexican Coca-Cola,Coca-Cola,Original Glass Bottle,soda,2,true,,false,mexican coke,,,,
-pepsi,Pepsi,Pepsi,Original,soda,1,true,,true,pepsi cola,,,,
-diet-pepsi,Diet Pepsi,Pepsi,Diet,diet_soda,1,true,,true,diet pepsi,,,,
-pepsi-zero-sugar,Pepsi Zero Sugar,Pepsi,Zero Sugar,diet_soda,1,true,,true,pepsi zero|pepsi zero sugar,,,,
-sprite,Sprite,Sprite,Lemon-Lime,soda,1,true,,true,sprite lemon lime,,,,
-sprite-zero-sugar,Sprite Zero Sugar,Sprite,Zero Sugar,diet_soda,1,true,,true,sprite zero|diet sprite,,,,
-dr-pepper,Dr Pepper,Dr Pepper,Original,soda,1,true,,true,dr pepper,,,,
-diet-dr-pepper,Diet Dr Pepper,Dr Pepper,Diet,diet_soda,1,true,,true,diet dr pepper,,,,
-mountain-dew,Mountain Dew,Mountain Dew,Original,soda,1,true,,true,mtn dew|dew,,,,
-diet-mountain-dew,Diet Mountain Dew,Mountain Dew,Diet,diet_soda,1,true,,true,diet dew|diet mtn dew,,,,
-fanta-orange,Fanta Orange,Fanta,Orange,soda,1,true,,true,fanta,,,,
-fanta-grape,Fanta Grape,Fanta,Grape,soda,1,true,,false,fanta grape,,,,
-fanta-zero-orange,Fanta Zero Sugar Orange,Fanta,Zero Sugar Orange,diet_soda,1,true,,false,fanta zero,,,,
-aw-root-beer,A&W Root Beer,A&W,Root Beer,soda,1,true,,false,root beer|aw root beer,,,,
-aw-diet-root-beer,A&W Diet Root Beer,A&W,Diet Root Beer,diet_soda,1,true,,false,diet root beer,,,,
-jarritos-mandarin,Jarritos Mandarin,Jarritos,Mandarin,soda,2,true,,false,jarritos tangerine,,,,
-jarritos-lime,Jarritos Lime,Jarritos,Lime,soda,2,true,,false,jarritos lima,,,,
-jarritos-fruit-punch,Jarritos Fruit Punch,Jarritos,Fruit Punch,soda,2,true,,false,jarritos ponche,,,,
-jarritos-pineapple,Jarritos Pineapple,Jarritos,Pineapple,soda,2,true,,false,jarritos pina,,,,
-jarritos-grapefruit,Jarritos Grapefruit,Jarritos,Grapefruit,soda,2,true,,false,jarritos toronja,,,,
-barqs-root-beer,Barq's Root Beer,Barq's,Root Beer,soda,1,true,,false,barqs,,,,
-canada-dry-ginger-ale,Canada Dry Ginger Ale,Canada Dry,Ginger Ale,soda,1,true,,false,ginger ale|canada dry,,,,
-canada-dry-diet-ginger-ale,Canada Dry Diet Ginger Ale,Canada Dry,Diet Ginger Ale,diet_soda,1,true,,false,diet ginger ale,,,,
-seven-up,7Up,7Up,Lemon-Lime,soda,1,true,,false,7 up|seven up,,,,
-diet-seven-up,Diet 7Up,7Up,Diet,diet_soda,1,true,,false,diet 7 up,,,,
-mug-root-beer,Mug Root Beer,Mug,Root Beer,soda,1,true,,false,mug,,,,
-sunkist-orange,Sunkist Orange,Sunkist,Orange,soda,1,true,,false,sunkist,,,,
-diet-sunkist-orange,Diet Sunkist Orange,Sunkist,Diet Orange,diet_soda,1,true,,false,diet sunkist,,,,
-crush-orange,Crush Orange,Crush,Orange,soda,1,true,,false,orange crush,,,,
-big-red,Big Red,Big Red,Cream Soda,soda,1,true,,false,big red,,,,
-aw-cream-soda,A&W Cream Soda,A&W,Cream Soda,soda,1,true,,false,cream soda,,,,
-squirt,Squirt,Squirt,Grapefruit,soda,1,true,,false,squirt grapefruit,,,,
-reeds-ginger-beer,Reed's Original Ginger Beer,Reed's,Original Ginger Beer,soda,2,true,,false,reeds ginger beer,,,,
-olipop-vintage-cola,Olipop Vintage Cola,Olipop,Vintage Cola,soda,2,true,,false,olipop cola,,,,
-olipop-strawberry-vanilla,Olipop Strawberry Vanilla,Olipop,Strawberry Vanilla,soda,2,true,,false,olipop strawberry,,,,
-olipop-orange-squeeze,Olipop Orange Squeeze,Olipop,Orange Squeeze,soda,2,true,,false,olipop orange,,,,
-olipop-classic-root-beer,Olipop Classic Root Beer,Olipop,Classic Root Beer,soda,2,true,,false,olipop root beer,,,,
-poppi-cola,Poppi Cola,Poppi,Cola,soda,2,true,,false,poppi cola,,,,
-poppi-strawberry-lemon,Poppi Strawberry Lemon,Poppi,Strawberry Lemon,soda,2,true,,false,poppi strawberry,,,,
-poppi-doc-pop,Poppi Doc Pop,Poppi,Doc Pop,soda,2,true,,false,poppi dr pepper,,,,
-poppi-orange,Poppi Orange,Poppi,Orange,soda,2,true,,false,poppi orange,,,,
-zevia-cola,Zevia Cola,Zevia,Cola,diet_soda,2,true,,false,zevia cola,,,,
-zevia-ginger-ale,Zevia Ginger Ale,Zevia,Ginger Ale,diet_soda,2,true,,false,zevia ginger,,,,
-zevia-mountain-twist,Zevia Mountain Twist,Zevia,Mountain Twist,diet_soda,2,true,,false,zevia mtn dew,,,,
-rc-cola,RC Cola,RC Cola,Original,soda,1,true,,false,royal crown cola,,,,
-diet-rc-cola,Diet RC Cola,RC Cola,Diet,diet_soda,1,true,,false,diet royal crown,,,,
-jarritos-guava,Jarritos Guava,Jarritos,Guava,soda,2,true,,false,guava jarritos|jarritos guayaba,,,,
-jarritos-tamarind,Jarritos Tamarind,Jarritos,Tamarind,soda,2,true,,false,tamarindo|jarritos tamarindo,,,,
-jarritos-watermelon,Jarritos Watermelon,Jarritos,Watermelon,soda,2,true,,false,sandia|jarritos sandia,,,,
-dr-pepper-cherry,Dr Pepper Cherry,Dr Pepper,Cherry,soda,1,true,,false,cherry dr pepper,,,,
-sprite-cherry,Sprite Cherry,Sprite,Cherry,soda,1,true,,false,cherry sprite,,,,
-fanta-strawberry,Fanta Strawberry,Fanta,Strawberry,soda,1,true,,false,,,,,
-fanta-pineapple,Fanta Pineapple,Fanta,Pineapple,soda,1,true,,false,,,,,
-mountain-dew-code-red,Mountain Dew Code Red,Mountain Dew,Cherry,soda,1,true,,false,code red|mtn dew code red,,,,
-mountain-dew-baja-blast,Mountain Dew Baja Blast,Mountain Dew,Baja Blast,soda,1,true,,true,baja blast|taco bell mountain dew,,,,
-mountain-dew-spark,Mountain Dew Spark,Mountain Dew,Cherry Citrus,soda,1,true,,false,mtn dew spark,,,,
-pepsi-wild-cherry,Pepsi Wild Cherry,Pepsi,Wild Cherry,soda,1,true,,false,wild cherry pepsi,,,,
-coca-cola-vanilla,Coca-Cola Vanilla,Coca-Cola,Vanilla,soda,1,true,,false,vanilla coke,,,,
-starry-lemon-lime,Starry,Starry,Lemon Lime,soda,1,true,,true,pepsi lemon lime|sierra mist replacement,,,,
-crush-grape,Crush Grape,Crush,Grape,soda,1,true,,false,grape crush,,,,
-vernors-ginger-ale,Vernors Ginger Ale,Vernors,Ginger Ale,soda,1,true,,false,vernors,,,,
-ibc-root-beer,IBC Root Beer,IBC,Root Beer,soda,1,true,,false,ibc,,,,
-hires-root-beer,Hires Root Beer,Hires,Root Beer,soda,1,true,,false,,,,,
-shasta-cola,Shasta Cola,Shasta,Cola,soda,1,true,,false,,,,,
-shasta-grape,Shasta Grape,Shasta,Grape,soda,1,true,,false,,,,,
-faygo-red-pop,Faygo Red Pop,Faygo,Red Pop,soda,1,true,,false,red pop,,,,
-faygo-rock-and-rye,Faygo Rock & Rye,Faygo,Rock & Rye,soda,1,true,,false,,,,,
-stewarts-root-beer,Stewart's Root Beer,Stewart's,Root Beer,soda,2,true,,false,stewarts,,,,
-stewarts-orange-n-cream,Stewart's Orange N' Cream,Stewart's,Orange N' Cream,soda,2,true,,false,orange cream soda,,,,
-boylan-birch-beer,Boylan Birch Beer,Boylan Bottling,Birch Beer,soda,2,true,,false,boylan,,,,
-bundaberg-ginger-beer,Bundaberg Ginger Beer,Bundaberg,Ginger Beer,soda,2,true,,false,bundaberg,,,,
-olipop-dr-wow,Olipop Dr Wow,Olipop,Dr Wow,soda,2,true,,false,dr wow olipop,,,,
-diet-coke-ginger-lime,Diet Coke Ginger Lime,Diet Coke,Ginger Lime,diet_soda,1,true,,false,ginger lime diet coke,,,,
-diet-coke-zesty-blood-orange,Diet Coke Zesty Blood Orange,Diet Coke,Zesty Blood Orange,diet_soda,1,true,,false,blood orange diet coke,,,,
-diet-coke-twisted-mango,Diet Coke Twisted Mango,Diet Coke,Twisted Mango,diet_soda,1,true,,false,mango diet coke,,,,
-diet-coke-feisty-cherry,Diet Coke Feisty Cherry,Diet Coke,Feisty Cherry,diet_soda,1,true,,false,feisty cherry,,,,
-diet-coke-caffeine-free,Diet Coke Caffeine Free,Diet Coke,Caffeine Free Original,diet_soda,1,true,,false,caffeine free diet coke,,,,
-dr-pepper-zero-sugar,Dr Pepper Zero Sugar,Dr Pepper,Original,diet_soda,1,true,,true,dr pepper zero|diet dr pepper zero sugar,,,,
-coca-cola-cherry-zero-sugar,Coca-Cola Cherry Zero Sugar,Coca-Cola,Cherry,diet_soda,1,true,,false,cherry coke zero,,,,
-coca-cola-zero-sugar-vanilla,Coca-Cola Zero Sugar Vanilla,Coca-Cola,Vanilla,diet_soda,1,true,,false,vanilla coke zero,,,,
-starry-zero-sugar,Starry Zero Sugar,Starry,Lemon Lime,diet_soda,1,true,,true,diet starry|zero sugar starry,,,,
-pepsi-max,Pepsi Max,Pepsi,Original,diet_soda,1,true,,false,max cola,,,,
-diet-pepsi-caffeine-free,Diet Pepsi Caffeine Free,Diet Pepsi,Caffeine Free Original,diet_soda,1,true,,false,caffeine free diet pepsi,,,,
-diet-mug-root-beer,Diet Mug Root Beer,Mug,Root Beer,diet_soda,1,true,,false,,,,,
-diet-barqs-root-beer,Diet Barq's Root Beer,Barq's,Root Beer,diet_soda,1,true,,false,diet barqs,,,,
-diet-orange-crush,Diet Orange Crush,Crush,Orange,diet_soda,1,true,,false,diet crush,,,,
-diet-squirt,Diet Squirt,Squirt,Grapefruit,diet_soda,1,true,,false,,,,,
-diet-vernors,Diet Vernors,Vernors,Ginger Ale,diet_soda,1,true,,false,diet vernors ginger ale,,,,
-zevia-grape,Zevia Grape,Zevia,Grape,diet_soda,2,true,,false,,,,,
-zevia-orange,Zevia Orange,Zevia,Orange,diet_soda,2,true,,false,,,,,
-zevia-dr-zevia,Zevia Dr Zevia,Zevia,Dr Zevia,diet_soda,2,true,,false,dr zevia,,,,
-zevia-cream-soda,Zevia Cream Soda,Zevia,Cream Soda,diet_soda,2,true,,false,,,,,
-zevia-cherry-cola,Zevia Cherry Cola,Zevia,Cherry Cola,diet_soda,2,true,,false,,,,,
-shasta-diet-cola,Shasta Diet Cola,Shasta,Cola,diet_soda,1,true,,false,,,,,
-fresca-original,Fresca Original,Fresca,Grapefruit Citrus,diet_soda,1,true,,false,fresca,,,,
-fresca-black-cherry-citrus,Fresca Black Cherry Citrus,Fresca,Black Cherry Citrus,diet_soda,1,true,,false,,,,,
-tropicana-orange-juice-original,Orange Juice,Tropicana,Original,juice,1,true,,true,tropicana oj|orange juice,,,,
-tropicana-orange-juice-no-pulp,Orange Juice,Tropicana,No Pulp,juice,1,true,,false,tropicana no pulp,,,,
-tropicana-orange-juice-some-pulp,Orange Juice,Tropicana,Some Pulp,juice,1,true,,false,simply some pulp,,,,
-tropicana-pink-lemonade,Pink Lemonade,Tropicana,Pink Lemonade,juice,1,true,,false,tropicana lemonade,,,,
-tropicana-fruit-punch,Fruit Punch,Tropicana,Fruit Punch,juice,1,true,,false,tropicana punch,,,,
-simply-orange,Orange Juice,Simply,Original,juice,1,true,,false,simply oj,,,,
-simply-lemonade,Lemonade,Simply,Original,juice,1,true,,false,simply lemonade,,,,
-simply-apple,Apple Juice,Simply,Original,juice,1,true,,false,simply apple,,,,
-simply-grapefruit,Grapefruit Juice,Simply,Original,juice,1,true,,false,simply grapefruit,,,,
-simply-limeade,Limeade,Simply,Original,juice,1,true,,false,simply lime,,,,
-minute-maid-apple-juice,Apple Juice,Minute Maid,Original,juice,1,true,,false,minute maid apple,,,,
-minute-maid-fruit-punch,Fruit Punch,Minute Maid,Fruit Punch,juice,1,true,,false,minute maid punch,,,,
-minute-maid-lemonade,Lemonade,Minute Maid,Original,juice,1,true,,false,minute maid lemonade,,,,
-welchs-100-grape-juice,Grape Juice,Welch's,100% Grape,juice,1,true,,true,welchs grape|concord grape,,,,
-welchs-white-grape-juice,White Grape Juice,Welch's,White Grape,juice,1,true,,false,welchs white grape,,,,
-naked-juice-green-machine,Green Machine,Naked Juice,Green Machine,juice,2,true,,false,naked green,,,,
-naked-juice-blue-machine,Blue Machine,Naked Juice,Blue Machine,juice,2,true,,false,naked blue,,,,
-naked-juice-mighty-mango,Mighty Mango,Naked Juice,Mighty Mango,juice,2,true,,false,naked mango,,,,
-naked-juice-strawberry-banana,Strawberry Banana,Naked Juice,Strawberry Banana,juice,2,true,,false,naked strawberry banana,,,,
-odwalla-superfood-juice,Superfood,Odwalla,Superfood,juice,2,true,,false,odwalla superfood juice,,,,
-bolthouse-farms-perfectly-protein-vanilla-chai,Perfectly Protein,Bolthouse Farms,Vanilla Chai,juice,2,true,,false,bolthouse protein,,,,
-bolthouse-farms-green-goodness-juice,Green Goodness,Bolthouse Farms,Green Goodness,juice,2,true,,false,bolthouse green,,,,
-v8-original-vegetable-juice,Vegetable Juice,V8,Original,juice,1,true,,false,v8 original,,,,
-v8-v-fusion-strawberry-banana,V-Fusion,V8,Strawberry Banana,juice,1,true,,false,v8 fusion,,,,
-ocean-spray-cranberry-juice-cocktail,Cranberry Juice Cocktail,Ocean Spray,Original,juice,1,true,,false,ocean spray cranberry,,,,
-ocean-spray-cran-grape,Cran-Grape,Ocean Spray,Cranberry Grape,juice,1,true,,false,ocean spray cran grape,,,,
-ocean-spray-cran-raspberry,Cran-Raspberry,Ocean Spray,Cranberry Raspberry,juice,1,true,,false,ocean spray cran raspberry,,,,
-motts-apple-juice,Apple Juice,Mott's,Original,juice,1,true,,false,motts apple,,,,
-juicy-juice-apple,Apple Juice,Juicy Juice,Apple,juice,1,true,,false,juicy juice apple,,,,
-hi-c-fruit-punch,Fruit Punch,Hi-C,Fruit Punch,juice,1,true,,false,hi c punch,,,,
-fiji-natural-artesian-water,Natural Artesian Water,Fiji,Original,water,2,true,,true,fiji water,,,,
-evian-natural-spring-water,Natural Spring Water,Evian,Original,water,2,true,,false,evian water,,,,
-smartwater-vapor-distilled,Vapor Distilled Water,Smartwater,Original,water,1,true,,false,smartwater,,,,
-liquid-death-mountain-water-still,Mountain Water,Liquid Death,Still,water,2,true,,true,liquid death water|liquid death still,,,,
-liquid-death-sparkling-severed-lime,Sparkling Water,Liquid Death,Severed Lime,water,2,true,,false,liquid death lime,,,,
-essentia-ionized-alkaline-water,Ionized Alkaline Water,Essentia,Original,water,2,true,,false,essentia water,,,,
-arrowhead-mountain-spring-water,Mountain Spring Water,Arrowhead,Original,water,1,true,,false,arrowhead water,,,,
-dasani-purified-water,Purified Water,Dasani,Original,water,1,true,,false,dasani water,,,,
-aquafina-purified-water,Purified Water,Aquafina,Original,water,1,true,,false,aquafina water,,,,
-poland-spring-natural-spring-water,Natural Spring Water,Poland Spring,Original,water,1,true,,false,poland spring water,,,,
-deer-park-natural-spring-water,Natural Spring Water,Deer Park,Original,water,1,true,,false,deer park water,,,,
-voss-artesian-still-water,Artesian Still Water,Voss,Still,water,2,true,,false,voss water,,,,
-mountain-valley-spring-water,Spring Water,Mountain Valley Spring Water,Original,water,2,true,,false,mountain valley water,,,,
-core-hydration-nutrient-enhanced-water,Nutrient Enhanced Water,Core Hydration,Original,water,2,true,,false,core water,,,,
-just-water-still,Still Water,Just Water,Still,water,1,true,,false,just water,,,,
-lacroix-pamplemousse,LaCroix Pamplemousse,LaCroix,Pamplemousse Grapefruit,sparkling_water,1,true,,true,pamplemousse|grapefruit lacroix|la croix grapefruit,,,,
-lacroix-lime,LaCroix Lime,LaCroix,Lime,sparkling_water,1,true,,true,la croix lime|lacroix lime water,,,,
-lacroix-coconut,LaCroix Coconut,LaCroix,Coconut,sparkling_water,1,true,,false,la croix coconut,,,,
-lacroix-berry,LaCroix Berry,LaCroix,Berry,sparkling_water,1,true,,false,la croix berry,,,,
-lacroix-mango,LaCroix Mango,LaCroix,Mango,sparkling_water,1,true,,false,la croix mango,,,,
-lacroix-passionfruit,LaCroix Passionfruit,LaCroix,Passionfruit,sparkling_water,1,true,,false,la croix passionfruit,,,,
-lacroix-cran-raspberry,LaCroix Cran-Raspberry,LaCroix,Cran-Raspberry,sparkling_water,1,true,,false,cranberry raspberry lacroix|la croix cran raspberry,,,,
-lacroix-lemon,LaCroix Lemon,LaCroix,Lemon,sparkling_water,1,true,,false,la croix lemon,,,,
-lacroix-orange,LaCroix Orange,LaCroix,Orange,sparkling_water,1,true,,false,la croix orange,,,,
-lacroix-key-lime,LaCroix Key Lime,LaCroix,Key Lime,sparkling_water,1,true,,false,la croix key lime,,,,
-lacroix-pure,LaCroix Pure,LaCroix,Pure Unflavored,sparkling_water,1,true,,false,la croix pure|lacroix unflavored,,,,
-lacroix-peach-pear,LaCroix Peach-Pear,LaCroix,Peach-Pear,sparkling_water,1,true,,false,la croix peach pear|lacroix peche pear,,,,
-topo-chico-original,Topo Chico Original,Topo Chico,Original Mineral Water,sparkling_water,2,true,,true,topo chico|topo chico mineral water,,,,
-topo-chico-twist-lime,Topo Chico Twist of Lime,Topo Chico,Twist of Lime,sparkling_water,2,true,,false,topo chico lime,,,,
-topo-chico-twist-grapefruit,Topo Chico Twist of Grapefruit,Topo Chico,Twist of Grapefruit,sparkling_water,2,true,,false,topo chico grapefruit,,,,
-topo-chico-twist-tangerine,Topo Chico Twist of Tangerine,Topo Chico,Twist of Tangerine,sparkling_water,2,true,,false,topo chico tangerine,,,,
-spindrift-grapefruit,Spindrift Grapefruit Sparkling Water,Spindrift,Grapefruit,sparkling_water,1,true,,false,spindrift grapefruit,,,,
-spindrift-raspberry-lime,Spindrift Raspberry Lime Sparkling Water,Spindrift,Raspberry Lime,sparkling_water,1,true,,false,spindrift raspberry lime,,,,
-spindrift-lemon,Spindrift Lemon Sparkling Water,Spindrift,Lemon,sparkling_water,1,true,,false,spindrift lemon,,,,
-spindrift-blackberry,Spindrift Blackberry Sparkling Water,Spindrift,Blackberry,sparkling_water,1,true,,false,spindrift blackberry,,,,
-spindrift-half-tea-half-lemon,Spindrift Half Tea Half Lemon,Spindrift,Half Tea Half Lemon,sparkling_water,1,true,,false,spindrift tea lemon|half and half spindrift,,,,
-spindrift-cucumber,Spindrift Cucumber Sparkling Water,Spindrift,Cucumber,sparkling_water,1,true,,false,spindrift cucumber,,,,
-bubly-lime,bubly Lime,bubly,Lime,sparkling_water,1,true,,true,bubly lime,,,,
-bubly-strawberry,bubly Strawberry,bubly,Strawberry,sparkling_water,1,true,,false,bubly strawberry,,,,
-bubly-mango,bubly Mango,bubly,Mango,sparkling_water,1,true,,false,bubly mango,,,,
-bubly-cherry,bubly Cherry,bubly,Cherry,sparkling_water,1,true,,false,bubly cherry,,,,
-bubly-grapefruit,bubly Grapefruit,bubly,Grapefruit,sparkling_water,1,true,,false,bubly grapefruit,,,,
-bubly-blackberry,bubly Blackberry,bubly,Blackberry,sparkling_water,1,true,,false,bubly blackberry,,,,
-waterloo-black-cherry,Waterloo Black Cherry Sparkling Water,Waterloo,Black Cherry,sparkling_water,1,true,,false,waterloo black cherry,,,,
-waterloo-lime,Waterloo Lime Sparkling Water,Waterloo,Lime,sparkling_water,1,true,,false,waterloo lime,,,,
-waterloo-grapefruit,Waterloo Grapefruit Sparkling Water,Waterloo,Grapefruit,sparkling_water,1,true,,false,waterloo grapefruit,,,,
-waterloo-watermelon,Waterloo Watermelon Sparkling Water,Waterloo,Watermelon,sparkling_water,1,true,,false,waterloo watermelon,,,,
-perrier-original,Perrier Original Sparkling Mineral Water,Perrier,Original,sparkling_water,2,true,,false,perrier|perrier sparkling water,,,,
-perrier-lorange,Perrier L'Orange,Perrier,L'Orange,sparkling_water,2,true,,false,perrier orange,,,,
-san-pellegrino-original,San Pellegrino Sparkling Natural Mineral Water,San Pellegrino,Original,sparkling_water,2,true,,true,san pellegrino|pellegrino,,,,
-san-pellegrino-limonata,San Pellegrino Limonata,San Pellegrino,Limonata Lemon,sparkling_water,2,true,,false,san pellegrino lemon|limonata,,,,
-san-pellegrino-aranciata,San Pellegrino Aranciata,San Pellegrino,Aranciata Orange,sparkling_water,2,true,,false,san pellegrino orange|aranciata,,,,
-polar-seltzer-black-cherry,Polar Seltzer Black Cherry,Polar Seltzer,Black Cherry,sparkling_water,1,true,,false,polar seltzer cherry,,,,
-polar-seltzer-raspberry-lime,Polar Seltzer Raspberry Lime,Polar Seltzer,Raspberry Lime,sparkling_water,1,true,,false,polar seltzer raspberry lime,,,,
-aha-lime-watermelon,AHA Lime + Watermelon,AHA,Lime + Watermelon,sparkling_water,1,true,,false,aha lime watermelon|aha sparkling water,,,,
-red-bull-original,Red Bull Original Energy Drink,Red Bull,Original,energy,1,true,,true,red bull|redbull,,,,
-red-bull-sugarfree,Red Bull Sugarfree,Red Bull,Sugarfree,energy,1,true,,false,red bull sugar free|red bull zero sugar,,,,
-red-bull-tropical,Red Bull Tropical Edition,Red Bull,Tropical,energy,1,true,,false,red bull yellow edition,,,,
-red-bull-watermelon,Red Bull Watermelon Edition,Red Bull,Watermelon,energy,1,true,,false,red bull red edition,,,,
-monster-energy-original,Monster Energy Original,Monster Energy,Original,energy,1,true,,true,monster|green monster,,,,
-monster-energy-zero-ultra,Monster Energy Zero Ultra,Monster Energy,Zero Ultra,energy,1,true,,false,monster zero ultra|zero ultra,,,,
-monster-energy-mango-loco,Monster Energy Mango Loco,Monster Energy,Mango Loco,energy,1,true,,false,mango loco,,,,
-monster-energy-pipeline-punch,Monster Energy Pipeline Punch,Monster Energy,Pipeline Punch,energy,1,true,,false,pipeline punch,,,,
-monster-energy-peachy-keen,Monster Energy Juice Peachy Keen,Monster Energy,Peachy Keen,energy,1,true,,false,peachy keen,,,,
-monster-energy-juice-khaotic,Monster Energy Juice Monster Khaotic,Monster Energy,Khaotic,energy,1,true,,false,juice monster khaotic|khaotic,,,,
-celsius-sparkling-orange,Celsius Sparkling Orange,Celsius,Orange,energy,2,true,,true,celsius orange,,,,
-celsius-sparkling-peach-vibe,Celsius Sparkling Peach Vibe,Celsius,Peach Vibe,energy,2,true,,false,peach vibe,,,,
-celsius-sparkling-watermelon,Celsius Sparkling Watermelon,Celsius,Watermelon,energy,2,true,,false,celsius watermelon,,,,
-celsius-kiwi-guava,Celsius Sparkling Kiwi Guava,Celsius,Kiwi Guava,energy,2,true,,false,kiwi guava,,,,
-celsius-sparkling-cola,Celsius Sparkling Cola,Celsius,Cola,energy,2,true,,false,celsius cola,,,,
-celsius-cucumber-lime,Celsius Cucumber Lime,Celsius,Cucumber Lime,energy,2,true,,false,cucumber lime,,,,
-celsius-arctic-vibe,Celsius Arctic Vibe,Celsius,Arctic Vibe,energy,2,true,,false,arctic vibe,,,,
-celsius-sparkling-wild-berry,Celsius Sparkling Wild Berry,Celsius,Wild Berry,energy,2,true,,false,wild berry,,,,
-alani-nu-hawaiian-shaved-ice,Alani Nu Energy Hawaiian Shaved Ice,Alani Nu,Hawaiian Shaved Ice,energy,2,true,,true,alani|hawaiian shaved ice,,,,
-alani-nu-witchs-brew,Alani Nu Energy Witch's Brew,Alani Nu,Witch's Brew,energy,2,true,,false,witchs brew,,,,
-alani-nu-breezeberry,Alani Nu Energy Breezeberry,Alani Nu,Breezeberry,energy,2,true,,false,breezeberry,,,,
-alani-nu-cosmic-stardust,Alani Nu Energy Cosmic Stardust,Alani Nu,Cosmic Stardust,energy,2,true,,false,cosmic stardust,,,,
-alani-nu-mimosa,Alani Nu Energy Mimosa,Alani Nu,Mimosa,energy,2,true,,false,mimosa,,,,
-bang-star-blast,Bang Energy Star Blast,Bang Energy,Star Blast,energy,2,true,,false,star blast,,,,
-bang-peach-mango,Bang Energy Peach Mango,Bang Energy,Peach Mango,energy,2,true,,false,peach mango,,,,
-bang-rainbow-unicorn,Bang Energy Rainbow Unicorn,Bang Energy,Rainbow Unicorn,energy,2,true,,false,rainbow unicorn,,,,
-bang-blue-razz,Bang Energy Blue Razz,Bang Energy,Blue Razz,energy,2,true,,false,blue razz|blue raspberry,,,,
-ghost-energy-cherry-limeade,Ghost Energy Cherry Limeade,Ghost Energy,Cherry Limeade,energy,2,true,,false,cherry limeade,,,,
-ghost-energy-sour-patch-kids-redberry,Ghost Energy Sour Patch Kids Redberry,Ghost Energy,Sour Patch Kids Redberry,energy,2,true,,false,sour patch kids|spk redberry,,,,
-ghost-energy-faze-berry,Ghost Energy x FaZe Berry,Ghost Energy,FaZe Berry,energy,2,true,,false,faze berry|ghost faze,,,,
-reign-melon-mania,Reign Total Body Fuel Melon Mania,Reign Total Body Fuel,Melon Mania,energy,2,true,,false,melon mania,,,,
-reign-razzle-berry,Reign Total Body Fuel Razzle Berry,Reign Total Body Fuel,Razzle Berry,energy,2,true,,false,razzle berry,,,,
-five-hour-energy-original,5-hour Energy Original,5-hour Energy,Original,energy,2,true,,true,5 hour energy|five hour energy,,,,
-five-hour-energy-extra-strength,5-hour Energy Extra Strength,5-hour Energy,Extra Strength,energy,2,true,,false,5 hour energy extra strength,,,,
-five-hour-energy-pink-lemonade,5-hour Energy Pink Lemonade,5-hour Energy,Pink Lemonade,energy,2,true,,false,5 hour energy pink lemonade,,,,
-rockstar-original,Rockstar Original Energy Drink,Rockstar,Original,energy,2,true,,false,rockstar energy,,,,
-nos-original,NOS Original Energy Drink,NOS,Original,energy,2,true,,false,nos energy,,,,
-full-throttle-original,Full Throttle Original Energy Drink,Full Throttle,Original,energy,2,true,,false,full throttle energy,,,,
-c4-energy-frozen-bombsicle,C4 Energy Frozen Bombsicle,C4 Energy,Frozen Bombsicle,energy,2,true,,false,c4 frozen bombsicle,,,,
-guru-organic-energy-original,Guru Organic Energy Original,Guru Organic Energy,Original,energy,2,true,,false,guru energy|guru organic,,,,
-starbucks-frappuccino-mocha,Frappuccino Mocha,Starbucks,Mocha,coffee,1,true,,true,frapp|frappe|mocha frappuccino,,,,
-starbucks-frappuccino-vanilla,Frappuccino Vanilla,Starbucks,Vanilla,coffee,1,true,,false,frapp|frappe,,,,
-starbucks-frappuccino-caramel,Frappuccino Caramel,Starbucks,Caramel,coffee,1,true,,false,frapp|frappe,,,,
-starbucks-frappuccino-coffee,Frappuccino Coffee,Starbucks,Coffee,coffee,1,true,,false,frapp|frappe|original frappuccino,,,,
-starbucks-frappuccino-mocha-light,Frappuccino Mocha Light,Starbucks,Mocha Light,coffee,1,true,,false,light frappuccino|low calorie frappuccino,,,,
-starbucks-doubleshot-original,Doubleshot Original,Starbucks,Original,coffee,1,true,,false,doubleshot,,,,
-starbucks-doubleshot-espresso-cream,Doubleshot Espresso & Cream,Starbucks,Espresso & Cream,coffee,1,true,,false,doubleshot espresso and cream,,,,
-starbucks-doubleshot-vanilla,Doubleshot Vanilla,Starbucks,Vanilla,coffee,1,true,,false,doubleshot vanilla,,,,
-starbucks-doubleshot-energy-coffee,Doubleshot Energy Coffee,Starbucks,Coffee,coffee,1,true,,false,doubleshot energy|energy coffee,,,,
-dunkin-bottled-iced-coffee-original,Bottled Iced Coffee Original,Dunkin',Original,coffee,1,true,,true,dunkin iced coffee|dunkin original,,,,
-dunkin-bottled-iced-coffee-mocha,Bottled Iced Coffee Mocha,Dunkin',Mocha,coffee,1,true,,false,dunkin iced coffee mocha,,,,
-dunkin-bottled-iced-coffee-french-vanilla,Bottled Iced Coffee French Vanilla,Dunkin',French Vanilla,coffee,1,true,,false,dunkin iced coffee french vanilla,,,,
-la-colombe-draft-latte-original,Draft Latte Original,La Colombe,Original,coffee,3,true,,false,draft latte|la colombe latte,,,,
-la-colombe-draft-latte-mocha,Draft Latte Mocha,La Colombe,Mocha,coffee,3,true,,false,draft latte mocha,,,,
-la-colombe-draft-latte-vanilla,Draft Latte Vanilla,La Colombe,Vanilla,coffee,3,true,,false,draft latte vanilla,,,,
-la-colombe-draft-latte-oat-milk,Draft Latte Oat Milk,La Colombe,Oat Milk,coffee,3,true,,false,draft latte oat|oat milk latte,,,,
-stok-cold-brew-black,Cold Brew Black,Stok,Black,coffee,2,true,,false,stok black coffee|stok cold brew,,,,
-stok-cold-brew-not-too-sweet,Cold Brew Not Too Sweet,Stok,Not Too Sweet,coffee,2,true,,false,stok not too sweet,,,,
-chameleon-cold-brew-black,Cold Brew Black,Chameleon Cold Brew,Black,coffee,2,true,,false,chameleon black coffee,,,,
-califia-farms-cold-brew-almond-milk,Cold Brew Coffee with Almond Milk,Califia Farms,Almond Milk,coffee,2,true,,false,califia cold brew|cold brew almondmilk,,,,
-high-brew-mexican-vanilla,Coffee Mexican Vanilla,High Brew Coffee,Mexican Vanilla,coffee,2,true,,false,high brew vanilla,,,,
-high-brew-salted-caramel,Coffee Salted Caramel,High Brew Coffee,Salted Caramel,coffee,2,true,,false,high brew caramel,,,,
-peets-iced-coffee-classic,Iced Coffee Classic,Peet's,Classic,coffee,2,true,,false,peets iced coffee,,,,
-illy-issimo-cappuccino,issimo Cappuccino,illy,Cappuccino,coffee,2,true,,false,illy cappuccino,,,,
-nescafe-frappe-caramel,Frappe Caramel,Nescafe,Caramel,coffee,2,true,,false,nescafe frappe,,,,
-death-wish-coffee-rtd-black,Coffee RTD Black Coffee,Death Wish Coffee,Black Coffee,coffee,3,true,,false,death wish rtd|death wish cold brew,,,,
-rise-brewing-nitro-cold-brew-black,Nitro Cold Brew Original Black,Rise Brewing Co.,Original Black,coffee,3,true,,false,rise nitro|rise cold brew,,,,
-rise-brewing-nitro-cold-brew-oat-latte,Nitro Cold Brew Oat Milk Latte,Rise Brewing Co.,Oat Milk Latte,coffee,3,true,,false,rise oat latte|rise nitro latte,,,,
-kitu-super-coffee-mocha,Super Coffee Mocha,Kitu,Mocha,coffee,2,true,,false,super coffee mocha|kitu mocha,,,,
-bulletproof-coffee-rtd-vanilla,Clean Coffee RTD Vanilla,Bulletproof,Vanilla,coffee,3,true,,false,bulletproof rtd|bulletproof vanilla coffee,,,,
-jamba-juice-mango-a-go-go,Mango-a-go-go,Jamba Juice,Mango,smoothie,2,true,,true,jamba mango|mango a go go,,,,
-jamba-juice-strawberry-surf-rider,Strawberry Surf Rider,Jamba Juice,Strawberry,smoothie,2,true,,false,jamba strawberry,,,,
-jamba-juice-caribbean-passion,Caribbean Passion,Jamba Juice,Passion Fruit,smoothie,2,true,,false,jamba caribbean,,,,
-jamba-juice-orange-dream-machine,Orange Dream Machine,Jamba Juice,Orange,smoothie,2,true,,false,jamba orange dream,,,,
-naked-protein-zone,Protein Zone,Naked,Protein Blend,smoothie,2,true,,false,naked protein,,,,
-naked-berry-blast,Berry Blast,Naked,Berry,smoothie,2,true,,false,naked berry,,,,
-bolthouse-farms-perfectly-protein-chocolate,Perfectly Protein Chocolate,Bolthouse Farms,Chocolate,smoothie,2,true,,false,bolthouse chocolate protein,,,,
-bolthouse-farms-green-goodness-smoothie,Green Goodness,Bolthouse Farms,Green,smoothie,2,true,,false,bolthouse green smoothie,,,,
-bolthouse-farms-strawberry-banana,Strawberry Banana,Bolthouse Farms,Strawberry Banana,smoothie,2,true,,true,bolthouse strawberry banana,,,,
-odwalla-superfood-smoothie,Superfood,Odwalla,Superfood,smoothie,2,true,,false,odwalla superfood smoothie,,,,
-arizona-green-tea,Arizona Green Tea,Arizona,Green Tea,tea,1,true,,true,az green tea|arizona iced tea green,,,,
-arizona-sweet-tea,Arizona Sweet Tea,Arizona,Sweet Tea,tea,1,true,,false,az sweet tea,,,,
-arizona-half-and-half,Arizona Half & Half,Arizona,Half & Half,tea,1,true,,false,arizona arnold palmer|half and half tea,,,,
-arizona-peach-tea,Arizona Peach Tea,Arizona,Peach Tea,tea,1,true,,false,az peach tea,,,,
-arizona-raspberry-tea,Arizona Raspberry Tea,Arizona,Raspberry Tea,tea,1,true,,false,az raspberry tea,,,,
-arizona-diet-green-tea,Arizona Diet Green Tea,Arizona,Diet Green Tea,tea,1,true,,false,diet az green tea,,,,
-pure-leaf-sweet-tea,Pure Leaf Sweet Tea,Pure Leaf,Sweet Tea,tea,1,true,,false,pure leaf sweetened tea,,,,
-pure-leaf-unsweetened,Pure Leaf Unsweetened,Pure Leaf,Unsweetened,tea,1,true,,false,pure leaf unsweetened tea,,,,
-pure-leaf-lemon-tea,Pure Leaf Lemon Tea,Pure Leaf,Lemon,tea,1,true,,false,pure leaf lemon,,,,
-pure-leaf-extra-sweet-tea,Pure Leaf Extra Sweet Tea,Pure Leaf,Extra Sweet,tea,1,true,,false,pure leaf extra sweet,,,,
-snapple-lemon-tea,Snapple Lemon Tea,Snapple,Lemon Tea,tea,1,true,,false,snapple lemon,,,,
-snapple-peach-tea,Snapple Peach Tea,Snapple,Peach Tea,tea,1,true,,false,snapple peach,,,,
-snapple-raspberry-tea,Snapple Raspberry Tea,Snapple,Raspberry Tea,tea,1,true,,false,snapple raspberry,,,,
-snapple-diet-peach-tea,Snapple Diet Peach Tea,Snapple,Diet Peach Tea,tea,1,true,,false,diet snapple peach,,,,
-gold-peak-sweet-tea,Gold Peak Sweet Tea,Gold Peak,Sweet Tea,tea,1,true,,false,goldpeak sweet tea,,,,
-gold-peak-unsweetened-tea,Gold Peak Unsweetened Tea,Gold Peak,Unsweetened,tea,1,true,,false,goldpeak unsweetened,,,,
-gold-peak-peach-tea,Gold Peak Peach Tea,Gold Peak,Peach,tea,1,true,,false,goldpeak peach tea,,,,
-lipton-iced-tea,Lipton Iced Tea,Lipton,Original,tea,1,true,,true,lipton tea|lipton original iced tea,,,,
-lipton-green-tea,Lipton Green Tea,Lipton,Green Tea,tea,1,true,,false,lipton green,,,,
-lipton-diet-green-tea,Lipton Diet Green Tea,Lipton,Diet Green Tea,tea,1,true,,false,diet lipton green tea,,,,
-ito-en-oi-ocha-green-tea,Ito En Oi Ocha Green Tea,Ito En,Green Tea,tea,2,true,,false,oi ocha|ito en green tea,,,,
-ito-en-matcha-green-tea,Ito En Matcha Green Tea,Ito En,Matcha,tea,2,true,,false,ito en matcha,,,,
-guayaki-yerba-mate-enlighten-mint,Guayaki Yerba Mate Enlighten Mint,Guayaki,Enlighten Mint,tea,2,true,,false,yerba mate mint|guayaki mint,,,,
-guayaki-yerba-mate-lemon-elation,Guayaki Yerba Mate Lemon Elation,Guayaki,Lemon Elation,tea,2,true,,false,yerba mate lemon,,,,
-honest-tea-honey-green-tea,Honest Tea Honey Green Tea,Honest Tea,Honey Green Tea,tea,1,true,,false,honest tea green tea,,,,
-kung-fu-tea-classic-milk-tea,Classic Milk Tea (Kung Fu Tea),Kung Fu Tea,Classic Milk Tea,boba,2,true,,true,kung fu tea milk tea|classic boba milk tea,,,,
-tiger-sugar-brown-sugar-boba-milk-tea,Brown Sugar Boba Milk Tea (Tiger Sugar),Tiger Sugar,Brown Sugar,boba,3,true,,true,tiger sugar|brown sugar milk tea,,,,
-boba-guys-taro-milk-tea,Taro Milk Tea (Boba Guys),Boba Guys,Taro,boba,3,true,,false,boba guys taro,,,,
-thai-milk-tea-boba,Thai Milk Tea,Generic,Thai Milk Tea,boba,2,true,,false,thai tea|thai iced tea boba,,,,
-matcha-latte-with-boba,Matcha Latte with Boba,Generic,Matcha,boba,2,true,,false,matcha boba latte,,,,
-wintermelon-milk-tea-boba,Wintermelon Milk Tea,Generic,Wintermelon,boba,2,true,,false,winter melon milk tea,,,,
-honeydew-milk-tea-with-boba,Honeydew Milk Tea with Boba,Generic,Honeydew,boba,2,true,,false,honeydew boba milk tea,,,,
-strawberry-fruit-tea-with-boba,Strawberry Fruit Tea with Boba,Generic,Strawberry,boba,2,true,,false,strawberry boba tea,,,,
-mango-green-tea-with-boba,Mango Green Tea with Boba,Generic,Mango Green Tea,boba,2,true,,false,mango green tea boba,,,,
-oolong-milk-tea-boba,Oolong Milk Tea,Generic,Oolong,boba,2,true,,false,oolong boba milk tea,,,,
-gong-cha-classic-milk-tea,Classic Milk Tea (Gong Cha),Gong Cha,Classic Milk Tea,boba,2,true,,false,gong cha milk tea,,,,
-sharetea-taro-milk-tea,Taro Milk Tea (Sharetea),Sharetea,Taro,boba,2,true,,false,sharetea taro,,,,
-chatime-peach-oolong-tea,Peach Oolong Tea (Chatime),Chatime,Peach Oolong,boba,2,true,,false,chatime peach oolong,,,,
-kung-fu-tea-wintermelon-milk-tea,Wintermelon Milk Tea (Kung Fu Tea),Kung Fu Tea,Wintermelon,boba,2,true,,false,kung fu tea wintermelon,,,,
-gong-cha-taro-milk-tea,Taro Milk Tea (Gong Cha),Gong Cha,Taro,boba,2,true,,false,gong cha taro,,,,
-gatorade-lemon-lime,Gatorade Thirst Quencher,Gatorade,Lemon-Lime,sports,1,true,,true,gatorade|lemon-lime gatorade|yellow gatorade,,,,
-gatorade-fruit-punch,Gatorade Thirst Quencher,Gatorade,Fruit Punch,sports,1,true,,false,gatorade fruit punch,,,,
-gatorade-orange,Gatorade Thirst Quencher,Gatorade,Orange,sports,1,true,,false,gatorade orange,,,,
-gatorade-cool-blue,Gatorade Thirst Quencher,Gatorade,Cool Blue,sports,1,true,,false,gatorade cool blue,,,,
-gatorade-glacier-freeze,Gatorade Thirst Quencher,Gatorade,Glacier Freeze,sports,1,true,,false,gatorade glacier freeze,,,,
-gatorade-grape,Gatorade Thirst Quencher,Gatorade,Grape,sports,1,true,,false,gatorade grape,,,,
-gatorade-zero-lemon-lime,Gatorade Zero,Gatorade,Lemon-Lime,sports,1,true,,false,gatorade zero|zero sugar gatorade lemon-lime,,,,
-gatorade-zero-grape,Gatorade Zero,Gatorade,Grape,sports,1,true,,false,gatorade zero grape,,,,
-powerade-mountain-berry-blast,Powerade,Powerade,Mountain Berry Blast,sports,1,true,,false,powerade mountain berry blast,,,,
-powerade-fruit-punch,Powerade,Powerade,Fruit Punch,sports,1,true,,false,powerade fruit punch,,,,
-powerade-grape,Powerade,Powerade,Grape,sports,1,true,,false,powerade grape,,,,
-powerade-zero-mixed-berry,Powerade Zero,Powerade,Mixed Berry,sports,1,true,,false,powerade zero|zero sugar powerade mixed berry,,,,
-bodyarmor-fruit-punch,BODYARMOR Sports Drink,BodyArmor,Fruit Punch,sports,1,true,,false,bodyarmor fruit punch|body armor fruit punch,,,,
-bodyarmor-strawberry-banana,BODYARMOR Sports Drink,BodyArmor,Strawberry Banana,sports,1,true,,false,bodyarmor strawberry banana|body armor strawberry banana,,,,
-bodyarmor-orange-mango,BODYARMOR Sports Drink,BodyArmor,Orange Mango,sports,1,true,,false,bodyarmor orange mango|body armor orange mango,,,,
-bodyarmor-lyte-fruit-punch,BODYARMOR Lyte,BodyArmor,Fruit Punch,sports,1,true,,false,bodyarmor lyte|body armor lyte fruit punch,,,,
-prime-hydration-lemon-lime,Prime Hydration,Prime Hydration,Lemon Lime,sports,1,true,,false,prime lemon lime|prime hydration lemon lime,,,,
-prime-hydration-blue-raspberry,Prime Hydration,Prime Hydration,Blue Raspberry,sports,1,true,,false,prime blue raspberry,,,,
-prime-hydration-ice-pop,Prime Hydration,Prime Hydration,Ice Pop,sports,1,true,,false,prime ice pop,,,,
-propel-water-berry,Propel Water,Propel,Berry,sports,1,true,,false,propel fitness water berry|propel berry,,,,
-horchata-traditional,Horchata,Generic,Horchata,other,2,true,,false,mexican horchata|rice horchata,,,,
-agua-fresca-jamaica,Agua Fresca de Jamaica,Generic,Hibiscus,other,2,true,,false,hibiscus agua fresca|jamaica water,,,,
-agua-fresca-tamarindo,Agua Fresca de Tamarindo,Generic,Tamarindo,other,2,true,,false,tamarind agua fresca|tamarind water,,,,
-yakult-original,Yakult,Yakult,Original,other,1,true,,true,yakult probiotic drink,,,,
-calpico-original,Calpico,Calpico,Original,other,1,true,,false,calpis,,,,
-calpico-mango,Calpico,Calpico,Mango,other,1,true,,false,calpico mango drink,,,,
-ramune-original,Ramune,Hata Kosen,Original,other,1,true,,false,japanese soda ramune,,,,
-ramune-melon,Ramune,Hata Kosen,Melon,other,1,true,,false,ramune melon soda,,,,
-gts-kombucha-gingerade,GT's Kombucha,GT's Living Foods,Gingerade,other,2,true,,true,gts kombucha ginger,,,,
-gts-kombucha-trilogy,GT's Kombucha,GT's Living Foods,Trilogy,other,2,true,,false,gts kombucha trilogy,,,,
-gts-kombucha-guava-goddess,GT's Kombucha,GT's Living Foods,Guava Goddess,other,2,true,,false,gts kombucha guava goddess,,,,
-vita-coco-coconut-water-original,Vita Coco Coconut Water,Vita Coco,Original,other,2,true,,true,vita coco|coconut water,,,,
-harmless-harvest-coconut-water,Harmless Harvest Coconut Water,Harmless Harvest,Original,other,2,true,,false,harmless harvest|raw coconut water,,,,
-health-ade-kombucha-pink-lady-apple,Health-Ade Kombucha,Health-Ade,Pink Lady Apple,other,2,true,,false,health ade kombucha,,,,
-suja-kombucha-strawberry-basil-lemonade,Suja Kombucha,Suja,Strawberry Basil Lemonade,other,2,true,,false,suja kombucha,,,,
-modelo-especial,Modelo Especial,Modelo,Especial,beer,2,true,,false,modelo|modelo especial|cerveza modelo,,,,
-corona-extra,Corona Extra,Corona,Extra,beer,2,true,,false,corona|corona extra,,,,
-corona-light,Corona Light,Corona,Light,beer,2,true,,false,corona light,,,,
-coors-light,Coors Light,Coors,Light,beer,2,true,,false,coors|coors light,,,,
-bud-light,Bud Light,Bud Light,Original,beer,2,true,,false,budlight|bud light,,,,
-miller-lite,Miller Lite,Miller,Lite,beer,2,true,,false,miller|miller lite,,,,
-heineken-original-lager,Heineken Original Lager,Heineken,Original,beer,2,true,,false,heineken|heineken lager,,,,
-stella-artois-lager,Stella Artois Lager,Stella Artois,Lager,beer,2,true,,false,stella|stella artois,,,,
-guinness-draught,Guinness Draught,Guinness,Draught,beer,2,true,,false,guinness|guinness stout|guinness draught,,,,
-blue-moon-belgian-white,Blue Moon Belgian White,Blue Moon,Belgian White,beer,2,true,,false,blue moon|belgian white,,,,
-pacifico-clara,Pacifico Clara,Pacifico,Clara,beer,2,true,,false,pacifico,,,,
-dos-equis-lager-especial,Dos Equis Lager Especial,Dos Equis,Lager Especial,beer,2,true,,false,dos equis|dos equis xx,,,,
-white-claw-black-cherry,White Claw Hard Seltzer,White Claw,Black Cherry,beer,2,true,,false,white claw|hard seltzer|black cherry seltzer,,,,
-white-claw-mango,White Claw Hard Seltzer,White Claw,Mango,beer,2,true,,false,white claw mango,,,,
-white-claw-lime,White Claw Hard Seltzer,White Claw,Lime,beer,2,true,,false,white claw lime,,,,
-white-claw-natural-lime,White Claw Hard Seltzer,White Claw,Natural Lime,beer,2,true,,false,white claw natural lime,,,,
-truly-wild-berry,Truly Hard Seltzer,Truly,Wild Berry,beer,2,true,,false,truly|truly seltzer|wild berry,,,,
-truly-lemonade,Truly Hard Seltzer,Truly,Lemonade,beer,2,true,,false,truly lemonade,,,,
-generic-house-red-cabernet-sauvignon,House Red Cabernet Sauvignon,Generic,Cabernet Sauvignon,wine,3,true,,false,house red|cabernet|red wine,,,,
-generic-house-white-chardonnay,House White Chardonnay,Generic,Chardonnay,wine,3,true,,false,house white|chardonnay|white wine,,,,
-generic-prosecco,Prosecco,Generic,Prosecco,wine,3,true,,false,prosecco|sparkling wine,,,,
-generic-pinot-grigio,Pinot Grigio,Generic,Pinot Grigio,wine,3,true,,false,pinot grigio|white wine,,,,
-generic-rose,Rose,Generic,Rose,wine,3,true,,false,rose|rose wine|pink wine,,,,
-barefoot-cellars-cabernet-sauvignon,Barefoot Cellars Cabernet Sauvignon,Barefoot Cellars,Cabernet Sauvignon,wine,3,true,,false,barefoot|barefoot cabernet,,,,
-josh-cellars-chardonnay,Josh Cellars Chardonnay,Josh Cellars,Chardonnay,wine,3,true,,false,josh cellars|josh chardonnay,,,,
-la-marca-prosecco,La Marca Prosecco,La Marca,Prosecco,wine,3,true,,false,la marca|la marca prosecco,,,,
-generic-margarita,Margarita,Generic,Margarita,spirits_cocktails,3,true,,false,margarita|tequila cocktail,,,,
-generic-old-fashioned,Old Fashioned,Generic,Old Fashioned,spirits_cocktails,3,true,,false,old fashioned|whiskey cocktail,,,,
-generic-espresso-martini,Espresso Martini,Generic,Espresso Martini,spirits_cocktails,3,true,,false,espresso martini|coffee cocktail,,,,
-generic-moscow-mule,Moscow Mule,Generic,Moscow Mule,spirits_cocktails,3,true,,false,moscow mule|vodka cocktail,,,,
-generic-mojito,Mojito,Generic,Mojito,spirits_cocktails,3,true,,false,mojito|rum cocktail,,,,
-generic-pina-colada,Pina Colada,Generic,Pina Colada,spirits_cocktails,3,true,,false,pina colada|rum cocktail,,,,
-titos-handmade-vodka-soda,Tito's Vodka Soda,Tito's Handmade Vodka,Soda,spirits_cocktails,3,true,,false,titos|titos vodka soda|vodka soda,,,,
-jack-daniels-and-coke,Jack Daniel's And Coke,Jack Daniel's,And Coke,spirits_cocktails,3,true,,false,jack and coke|jd and coke|whiskey and coke,,,,
-high-noon-vodka-soda-watermelon,High Noon Vodka Soda,High Noon,Watermelon,spirits_cocktails,2,true,,false,high noon|high noon watermelon,,,,
-high-noon-vodka-soda-peach,High Noon Vodka Soda,High Noon,Peach,spirits_cocktails,2,true,,false,high noon|high noon peach,,,,
-cutwater-spirits-margarita,Cutwater Spirits Margarita,Cutwater Spirits,Margarita,spirits_cocktails,2,true,,false,cutwater|cutwater margarita|canned margarita,,,,
-cutwater-spirits-vodka-mule,Cutwater Spirits Vodka Mule,Cutwater Spirits,Vodka Mule,spirits_cocktails,2,true,,false,cutwater|cutwater vodka mule|canned mule,,,,
+slug,name,brand,flavor,category,price_tier,price_estimated,upc,is_starter,aliases,image_source_url,image_license,image_attribution,notes,leaf
+coca-cola-classic,Coca-Cola Classic,Coca-Cola,Original,soda,1,true,,true,coke|coca cola,,,,,cola
+diet-coke,Diet Coke,Coca-Cola,Diet,diet_soda,1,true,,true,diet coke,,,,,diet_cola
+coke-zero-sugar,Coke Zero Sugar,Coca-Cola,Zero Sugar,diet_soda,1,true,,true,coke zero|coca cola zero,,,,,diet_cola
+cherry-coke,Cherry Coke,Coca-Cola,Cherry,soda,1,true,,false,coke cherry|cherry coca cola,,,,,cola
+mexican-coca-cola,Mexican Coca-Cola,Coca-Cola,Original Glass Bottle,soda,2,true,,false,mexican coke,,,,,cola
+pepsi,Pepsi,Pepsi,Original,soda,1,true,,true,pepsi cola,,,,,cola
+diet-pepsi,Diet Pepsi,Pepsi,Diet,diet_soda,1,true,,true,diet pepsi,,,,,diet_cola
+pepsi-zero-sugar,Pepsi Zero Sugar,Pepsi,Zero Sugar,diet_soda,1,true,,true,pepsi zero|pepsi zero sugar,,,,,diet_cola
+sprite,Sprite,Sprite,Lemon-Lime,soda,1,true,,true,sprite lemon lime,,,,,lemon_lime
+sprite-zero-sugar,Sprite Zero Sugar,Sprite,Zero Sugar,diet_soda,1,true,,true,sprite zero|diet sprite,,,,,diet_lemon_lime
+dr-pepper,Dr Pepper,Dr Pepper,Original,soda,1,true,,true,dr pepper,,,,,cola
+diet-dr-pepper,Diet Dr Pepper,Dr Pepper,Diet,diet_soda,1,true,,true,diet dr pepper,,,,,diet_cola
+mountain-dew,Mountain Dew,Mountain Dew,Original,soda,1,true,,true,mtn dew|dew,,,,,citrus_soda
+diet-mountain-dew,Diet Mountain Dew,Mountain Dew,Diet,diet_soda,1,true,,true,diet dew|diet mtn dew,,,,,diet_citrus_soda
+fanta-orange,Fanta Orange,Fanta,Orange,soda,1,true,,true,fanta,,,,,orange_soda
+fanta-grape,Fanta Grape,Fanta,Grape,soda,1,true,,false,fanta grape,,,,,fruit_soda
+fanta-zero-orange,Fanta Zero Sugar Orange,Fanta,Zero Sugar Orange,diet_soda,1,true,,false,fanta zero,,,,,diet_orange_soda
+aw-root-beer,A&W Root Beer,A&W,Root Beer,soda,1,true,,false,root beer|aw root beer,,,,,root_beer
+aw-diet-root-beer,A&W Diet Root Beer,A&W,Diet Root Beer,diet_soda,1,true,,false,diet root beer,,,,,diet_root_beer
+jarritos-mandarin,Jarritos Mandarin,Jarritos,Mandarin,soda,2,true,,false,jarritos tangerine,,,,,orange_soda
+jarritos-lime,Jarritos Lime,Jarritos,Lime,soda,2,true,,false,jarritos lima,,,,,citrus_soda
+jarritos-fruit-punch,Jarritos Fruit Punch,Jarritos,Fruit Punch,soda,2,true,,false,jarritos ponche,,,,,fruit_soda
+jarritos-pineapple,Jarritos Pineapple,Jarritos,Pineapple,soda,2,true,,false,jarritos pina,,,,,fruit_soda
+jarritos-grapefruit,Jarritos Grapefruit,Jarritos,Grapefruit,soda,2,true,,false,jarritos toronja,,,,,citrus_soda
+barqs-root-beer,Barq's Root Beer,Barq's,Root Beer,soda,1,true,,false,barqs,,,,,root_beer
+canada-dry-ginger-ale,Canada Dry Ginger Ale,Canada Dry,Ginger Ale,soda,1,true,,false,ginger ale|canada dry,,,,,ginger_ale
+canada-dry-diet-ginger-ale,Canada Dry Diet Ginger Ale,Canada Dry,Diet Ginger Ale,diet_soda,1,true,,false,diet ginger ale,,,,,diet_ginger_ale
+seven-up,7Up,7Up,Lemon-Lime,soda,1,true,,false,7 up|seven up,,,,,lemon_lime
+diet-seven-up,Diet 7Up,7Up,Diet,diet_soda,1,true,,false,diet 7 up,,,,,diet_lemon_lime
+mug-root-beer,Mug Root Beer,Mug,Root Beer,soda,1,true,,false,mug,,,,,root_beer
+sunkist-orange,Sunkist Orange,Sunkist,Orange,soda,1,true,,false,sunkist,,,,,orange_soda
+diet-sunkist-orange,Diet Sunkist Orange,Sunkist,Diet Orange,diet_soda,1,true,,false,diet sunkist,,,,,diet_orange_soda
+crush-orange,Crush Orange,Crush,Orange,soda,1,true,,false,orange crush,,,,,orange_soda
+big-red,Big Red,Big Red,Cream Soda,soda,1,true,,false,big red,,,,,cream_soda
+aw-cream-soda,A&W Cream Soda,A&W,Cream Soda,soda,1,true,,false,cream soda,,,,,cream_soda
+squirt,Squirt,Squirt,Grapefruit,soda,1,true,,false,squirt grapefruit,,,,,citrus_soda
+reeds-ginger-beer,Reed's Original Ginger Beer,Reed's,Original Ginger Beer,soda,2,true,,false,reeds ginger beer,,,,,ginger_ale
+olipop-vintage-cola,Olipop Vintage Cola,Olipop,Vintage Cola,soda,2,true,,false,olipop cola,,,,,cola
+olipop-strawberry-vanilla,Olipop Strawberry Vanilla,Olipop,Strawberry Vanilla,soda,2,true,,false,olipop strawberry,,,,,fruit_soda
+olipop-orange-squeeze,Olipop Orange Squeeze,Olipop,Orange Squeeze,soda,2,true,,false,olipop orange,,,,,orange_soda
+olipop-classic-root-beer,Olipop Classic Root Beer,Olipop,Classic Root Beer,soda,2,true,,false,olipop root beer,,,,,root_beer
+poppi-cola,Poppi Cola,Poppi,Cola,soda,2,true,,false,poppi cola,,,,,cola
+poppi-strawberry-lemon,Poppi Strawberry Lemon,Poppi,Strawberry Lemon,soda,2,true,,false,poppi strawberry,,,,,citrus_soda
+poppi-doc-pop,Poppi Doc Pop,Poppi,Doc Pop,soda,2,true,,false,poppi dr pepper,,,,,cola
+poppi-orange,Poppi Orange,Poppi,Orange,soda,2,true,,false,poppi orange,,,,,orange_soda
+zevia-cola,Zevia Cola,Zevia,Cola,diet_soda,2,true,,false,zevia cola,,,,,diet_cola
+zevia-ginger-ale,Zevia Ginger Ale,Zevia,Ginger Ale,diet_soda,2,true,,false,zevia ginger,,,,,diet_ginger_ale
+zevia-mountain-twist,Zevia Mountain Twist,Zevia,Mountain Twist,diet_soda,2,true,,false,zevia mtn dew,,,,,diet_citrus_soda
+rc-cola,RC Cola,RC Cola,Original,soda,1,true,,false,royal crown cola,,,,,cola
+diet-rc-cola,Diet RC Cola,RC Cola,Diet,diet_soda,1,true,,false,diet royal crown,,,,,diet_cola
+jarritos-guava,Jarritos Guava,Jarritos,Guava,soda,2,true,,false,guava jarritos|jarritos guayaba,,,,,fruit_soda
+jarritos-tamarind,Jarritos Tamarind,Jarritos,Tamarind,soda,2,true,,false,tamarindo|jarritos tamarindo,,,,,fruit_soda
+jarritos-watermelon,Jarritos Watermelon,Jarritos,Watermelon,soda,2,true,,false,sandia|jarritos sandia,,,,,fruit_soda
+dr-pepper-cherry,Dr Pepper Cherry,Dr Pepper,Cherry,soda,1,true,,false,cherry dr pepper,,,,,cola
+sprite-cherry,Sprite Cherry,Sprite,Cherry,soda,1,true,,false,cherry sprite,,,,,lemon_lime
+fanta-strawberry,Fanta Strawberry,Fanta,Strawberry,soda,1,true,,false,,,,,,fruit_soda
+fanta-pineapple,Fanta Pineapple,Fanta,Pineapple,soda,1,true,,false,,,,,,fruit_soda
+mountain-dew-code-red,Mountain Dew Code Red,Mountain Dew,Cherry,soda,1,true,,false,code red|mtn dew code red,,,,,fruit_soda
+mountain-dew-baja-blast,Mountain Dew Baja Blast,Mountain Dew,Baja Blast,soda,1,true,,true,baja blast|taco bell mountain dew,,,,,fruit_soda
+mountain-dew-spark,Mountain Dew Spark,Mountain Dew,Cherry Citrus,soda,1,true,,false,mtn dew spark,,,,,citrus_soda
+pepsi-wild-cherry,Pepsi Wild Cherry,Pepsi,Wild Cherry,soda,1,true,,false,wild cherry pepsi,,,,,cola
+coca-cola-vanilla,Coca-Cola Vanilla,Coca-Cola,Vanilla,soda,1,true,,false,vanilla coke,,,,,cola
+starry-lemon-lime,Starry,Starry,Lemon Lime,soda,1,true,,true,pepsi lemon lime|sierra mist replacement,,,,,lemon_lime
+crush-grape,Crush Grape,Crush,Grape,soda,1,true,,false,grape crush,,,,,fruit_soda
+vernors-ginger-ale,Vernors Ginger Ale,Vernors,Ginger Ale,soda,1,true,,false,vernors,,,,,ginger_ale
+ibc-root-beer,IBC Root Beer,IBC,Root Beer,soda,1,true,,false,ibc,,,,,root_beer
+hires-root-beer,Hires Root Beer,Hires,Root Beer,soda,1,true,,false,,,,,,root_beer
+shasta-cola,Shasta Cola,Shasta,Cola,soda,1,true,,false,,,,,,cola
+shasta-grape,Shasta Grape,Shasta,Grape,soda,1,true,,false,,,,,,fruit_soda
+faygo-red-pop,Faygo Red Pop,Faygo,Red Pop,soda,1,true,,false,red pop,,,,,fruit_soda
+faygo-rock-and-rye,Faygo Rock & Rye,Faygo,Rock & Rye,soda,1,true,,false,,,,,,cream_soda
+stewarts-root-beer,Stewart's Root Beer,Stewart's,Root Beer,soda,2,true,,false,stewarts,,,,,root_beer
+stewarts-orange-n-cream,Stewart's Orange N' Cream,Stewart's,Orange N' Cream,soda,2,true,,false,orange cream soda,,,,,cream_soda
+boylan-birch-beer,Boylan Birch Beer,Boylan Bottling,Birch Beer,soda,2,true,,false,boylan,,,,,root_beer
+bundaberg-ginger-beer,Bundaberg Ginger Beer,Bundaberg,Ginger Beer,soda,2,true,,false,bundaberg,,,,,ginger_ale
+olipop-dr-wow,Olipop Dr Wow,Olipop,Dr Wow,soda,2,true,,false,dr wow olipop,,,,,cola
+diet-coke-ginger-lime,Diet Coke Ginger Lime,Diet Coke,Ginger Lime,diet_soda,1,true,,false,ginger lime diet coke,,,,,diet_cola
+diet-coke-zesty-blood-orange,Diet Coke Zesty Blood Orange,Diet Coke,Zesty Blood Orange,diet_soda,1,true,,false,blood orange diet coke,,,,,diet_cola
+diet-coke-twisted-mango,Diet Coke Twisted Mango,Diet Coke,Twisted Mango,diet_soda,1,true,,false,mango diet coke,,,,,diet_cola
+diet-coke-feisty-cherry,Diet Coke Feisty Cherry,Diet Coke,Feisty Cherry,diet_soda,1,true,,false,feisty cherry,,,,,diet_cola
+diet-coke-caffeine-free,Diet Coke Caffeine Free,Diet Coke,Caffeine Free Original,diet_soda,1,true,,false,caffeine free diet coke,,,,,diet_cola
+dr-pepper-zero-sugar,Dr Pepper Zero Sugar,Dr Pepper,Original,diet_soda,1,true,,true,dr pepper zero|diet dr pepper zero sugar,,,,,diet_cola
+coca-cola-cherry-zero-sugar,Coca-Cola Cherry Zero Sugar,Coca-Cola,Cherry,diet_soda,1,true,,false,cherry coke zero,,,,,diet_cola
+coca-cola-zero-sugar-vanilla,Coca-Cola Zero Sugar Vanilla,Coca-Cola,Vanilla,diet_soda,1,true,,false,vanilla coke zero,,,,,diet_cola
+starry-zero-sugar,Starry Zero Sugar,Starry,Lemon Lime,diet_soda,1,true,,true,diet starry|zero sugar starry,,,,,diet_lemon_lime
+pepsi-max,Pepsi Max,Pepsi,Original,diet_soda,1,true,,false,max cola,,,,,diet_cola
+diet-pepsi-caffeine-free,Diet Pepsi Caffeine Free,Diet Pepsi,Caffeine Free Original,diet_soda,1,true,,false,caffeine free diet pepsi,,,,,diet_cola
+diet-mug-root-beer,Diet Mug Root Beer,Mug,Root Beer,diet_soda,1,true,,false,,,,,,diet_root_beer
+diet-barqs-root-beer,Diet Barq's Root Beer,Barq's,Root Beer,diet_soda,1,true,,false,diet barqs,,,,,diet_root_beer
+diet-orange-crush,Diet Orange Crush,Crush,Orange,diet_soda,1,true,,false,diet crush,,,,,diet_orange_soda
+diet-squirt,Diet Squirt,Squirt,Grapefruit,diet_soda,1,true,,false,,,,,,diet_citrus_soda
+diet-vernors,Diet Vernors,Vernors,Ginger Ale,diet_soda,1,true,,false,diet vernors ginger ale,,,,,diet_ginger_ale
+zevia-grape,Zevia Grape,Zevia,Grape,diet_soda,2,true,,false,,,,,,diet_fruit_soda
+zevia-orange,Zevia Orange,Zevia,Orange,diet_soda,2,true,,false,,,,,,diet_orange_soda
+zevia-dr-zevia,Zevia Dr Zevia,Zevia,Dr Zevia,diet_soda,2,true,,false,dr zevia,,,,,diet_cola
+zevia-cream-soda,Zevia Cream Soda,Zevia,Cream Soda,diet_soda,2,true,,false,,,,,,diet_cream_soda
+zevia-cherry-cola,Zevia Cherry Cola,Zevia,Cherry Cola,diet_soda,2,true,,false,,,,,,diet_cola
+shasta-diet-cola,Shasta Diet Cola,Shasta,Cola,diet_soda,1,true,,false,,,,,,diet_cola
+fresca-original,Fresca Original,Fresca,Grapefruit Citrus,diet_soda,1,true,,false,fresca,,,,,diet_citrus_soda
+fresca-black-cherry-citrus,Fresca Black Cherry Citrus,Fresca,Black Cherry Citrus,diet_soda,1,true,,false,,,,,,diet_citrus_soda
+tropicana-orange-juice-original,Orange Juice,Tropicana,Original,juice,1,true,,true,tropicana oj|orange juice,,,,,orange_juice
+tropicana-orange-juice-no-pulp,Orange Juice,Tropicana,No Pulp,juice,1,true,,false,tropicana no pulp,,,,,orange_juice
+tropicana-orange-juice-some-pulp,Orange Juice,Tropicana,Some Pulp,juice,1,true,,false,simply some pulp,,,,,orange_juice
+tropicana-pink-lemonade,Pink Lemonade,Tropicana,Pink Lemonade,juice,1,true,,false,tropicana lemonade,,,,,lemonade
+tropicana-fruit-punch,Fruit Punch,Tropicana,Fruit Punch,juice,1,true,,false,tropicana punch,,,,,fruit_juice_blend
+simply-orange,Orange Juice,Simply,Original,juice,1,true,,false,simply oj,,,,,orange_juice
+simply-lemonade,Lemonade,Simply,Original,juice,1,true,,false,simply lemonade,,,,,lemonade
+simply-apple,Apple Juice,Simply,Original,juice,1,true,,false,simply apple,,,,,apple_juice
+simply-grapefruit,Grapefruit Juice,Simply,Original,juice,1,true,,false,simply grapefruit,,,,,orange_juice
+simply-limeade,Limeade,Simply,Original,juice,1,true,,false,simply lime,,,,,lemonade
+minute-maid-apple-juice,Apple Juice,Minute Maid,Original,juice,1,true,,false,minute maid apple,,,,,apple_juice
+minute-maid-fruit-punch,Fruit Punch,Minute Maid,Fruit Punch,juice,1,true,,false,minute maid punch,,,,,fruit_juice_blend
+minute-maid-lemonade,Lemonade,Minute Maid,Original,juice,1,true,,false,minute maid lemonade,,,,,lemonade
+welchs-100-grape-juice,Grape Juice,Welch's,100% Grape,juice,1,true,,true,welchs grape|concord grape,,,,,grape_cranberry_juice
+welchs-white-grape-juice,White Grape Juice,Welch's,White Grape,juice,1,true,,false,welchs white grape,,,,,grape_cranberry_juice
+naked-juice-green-machine,Green Machine,Naked Juice,Green Machine,juice,2,true,,false,naked green,,,,,green_juice
+naked-juice-blue-machine,Blue Machine,Naked Juice,Blue Machine,juice,2,true,,false,naked blue,,,,,fruit_juice_blend
+naked-juice-mighty-mango,Mighty Mango,Naked Juice,Mighty Mango,juice,2,true,,false,naked mango,,,,,fruit_juice_blend
+naked-juice-strawberry-banana,Strawberry Banana,Naked Juice,Strawberry Banana,juice,2,true,,false,naked strawberry banana,,,,,fruit_juice_blend
+odwalla-superfood-juice,Superfood,Odwalla,Superfood,juice,2,true,,false,odwalla superfood juice,,,,,green_juice
+bolthouse-farms-perfectly-protein-vanilla-chai,Perfectly Protein,Bolthouse Farms,Vanilla Chai,smoothie,2,true,,false,bolthouse protein,,,,,protein_smoothie
+bolthouse-farms-green-goodness-juice,Green Goodness,Bolthouse Farms,Green Goodness,juice,2,true,,false,bolthouse green,,,,,green_juice
+v8-original-vegetable-juice,Vegetable Juice,V8,Original,juice,1,true,,false,v8 original,,,,,green_juice
+v8-v-fusion-strawberry-banana,V-Fusion,V8,Strawberry Banana,juice,1,true,,false,v8 fusion,,,,,fruit_juice_blend
+ocean-spray-cranberry-juice-cocktail,Cranberry Juice Cocktail,Ocean Spray,Original,juice,1,true,,false,ocean spray cranberry,,,,,grape_cranberry_juice
+ocean-spray-cran-grape,Cran-Grape,Ocean Spray,Cranberry Grape,juice,1,true,,false,ocean spray cran grape,,,,,grape_cranberry_juice
+ocean-spray-cran-raspberry,Cran-Raspberry,Ocean Spray,Cranberry Raspberry,juice,1,true,,false,ocean spray cran raspberry,,,,,grape_cranberry_juice
+motts-apple-juice,Apple Juice,Mott's,Original,juice,1,true,,false,motts apple,,,,,apple_juice
+juicy-juice-apple,Apple Juice,Juicy Juice,Apple,juice,1,true,,false,juicy juice apple,,,,,apple_juice
+hi-c-fruit-punch,Fruit Punch,Hi-C,Fruit Punch,juice,1,true,,false,hi c punch,,,,,fruit_juice_blend
+fiji-natural-artesian-water,Natural Artesian Water,Fiji,Original,water,2,true,,true,fiji water,,,,,
+evian-natural-spring-water,Natural Spring Water,Evian,Original,water,2,true,,false,evian water,,,,,
+smartwater-vapor-distilled,Vapor Distilled Water,Smartwater,Original,water,1,true,,false,smartwater,,,,,
+liquid-death-mountain-water-still,Mountain Water,Liquid Death,Still,water,2,true,,true,liquid death water|liquid death still,,,,,
+liquid-death-sparkling-severed-lime,Sparkling Water,Liquid Death,Severed Lime,sparkling_water,2,true,,false,liquid death lime,,,,,citrus_sparkling_water
+essentia-ionized-alkaline-water,Ionized Alkaline Water,Essentia,Original,water,2,true,,false,essentia water,,,,,
+arrowhead-mountain-spring-water,Mountain Spring Water,Arrowhead,Original,water,1,true,,false,arrowhead water,,,,,
+dasani-purified-water,Purified Water,Dasani,Original,water,1,true,,false,dasani water,,,,,
+aquafina-purified-water,Purified Water,Aquafina,Original,water,1,true,,false,aquafina water,,,,,
+poland-spring-natural-spring-water,Natural Spring Water,Poland Spring,Original,water,1,true,,false,poland spring water,,,,,
+deer-park-natural-spring-water,Natural Spring Water,Deer Park,Original,water,1,true,,false,deer park water,,,,,
+voss-artesian-still-water,Artesian Still Water,Voss,Still,water,2,true,,false,voss water,,,,,
+mountain-valley-spring-water,Spring Water,Mountain Valley Spring Water,Original,water,2,true,,false,mountain valley water,,,,,
+core-hydration-nutrient-enhanced-water,Nutrient Enhanced Water,Core Hydration,Original,water,2,true,,false,core water,,,,,
+just-water-still,Still Water,Just Water,Still,water,1,true,,false,just water,,,,,
+lacroix-pamplemousse,LaCroix Pamplemousse,LaCroix,Pamplemousse Grapefruit,sparkling_water,1,true,,true,pamplemousse|grapefruit lacroix|la croix grapefruit,,,,,citrus_sparkling_water
+lacroix-lime,LaCroix Lime,LaCroix,Lime,sparkling_water,1,true,,true,la croix lime|lacroix lime water,,,,,citrus_sparkling_water
+lacroix-coconut,LaCroix Coconut,LaCroix,Coconut,sparkling_water,1,true,,false,la croix coconut,,,,,fruit_sparkling_water
+lacroix-berry,LaCroix Berry,LaCroix,Berry,sparkling_water,1,true,,false,la croix berry,,,,,fruit_sparkling_water
+lacroix-mango,LaCroix Mango,LaCroix,Mango,sparkling_water,1,true,,false,la croix mango,,,,,fruit_sparkling_water
+lacroix-passionfruit,LaCroix Passionfruit,LaCroix,Passionfruit,sparkling_water,1,true,,false,la croix passionfruit,,,,,fruit_sparkling_water
+lacroix-cran-raspberry,LaCroix Cran-Raspberry,LaCroix,Cran-Raspberry,sparkling_water,1,true,,false,cranberry raspberry lacroix|la croix cran raspberry,,,,,fruit_sparkling_water
+lacroix-lemon,LaCroix Lemon,LaCroix,Lemon,sparkling_water,1,true,,false,la croix lemon,,,,,citrus_sparkling_water
+lacroix-orange,LaCroix Orange,LaCroix,Orange,sparkling_water,1,true,,false,la croix orange,,,,,citrus_sparkling_water
+lacroix-key-lime,LaCroix Key Lime,LaCroix,Key Lime,sparkling_water,1,true,,false,la croix key lime,,,,,citrus_sparkling_water
+lacroix-pure,LaCroix Pure,LaCroix,Pure Unflavored,sparkling_water,1,true,,false,la croix pure|lacroix unflavored,,,,,plain_sparkling_water
+lacroix-peach-pear,LaCroix Peach-Pear,LaCroix,Peach-Pear,sparkling_water,1,true,,false,la croix peach pear|lacroix peche pear,,,,,fruit_sparkling_water
+topo-chico-original,Topo Chico Original,Topo Chico,Original Mineral Water,sparkling_water,2,true,,true,topo chico|topo chico mineral water,,,,,plain_sparkling_water
+topo-chico-twist-lime,Topo Chico Twist of Lime,Topo Chico,Twist of Lime,sparkling_water,2,true,,false,topo chico lime,,,,,citrus_sparkling_water
+topo-chico-twist-grapefruit,Topo Chico Twist of Grapefruit,Topo Chico,Twist of Grapefruit,sparkling_water,2,true,,false,topo chico grapefruit,,,,,citrus_sparkling_water
+topo-chico-twist-tangerine,Topo Chico Twist of Tangerine,Topo Chico,Twist of Tangerine,sparkling_water,2,true,,false,topo chico tangerine,,,,,citrus_sparkling_water
+spindrift-grapefruit,Spindrift Grapefruit Sparkling Water,Spindrift,Grapefruit,sparkling_water,1,true,,false,spindrift grapefruit,,,,,citrus_sparkling_water
+spindrift-raspberry-lime,Spindrift Raspberry Lime Sparkling Water,Spindrift,Raspberry Lime,sparkling_water,1,true,,false,spindrift raspberry lime,,,,,citrus_sparkling_water
+spindrift-lemon,Spindrift Lemon Sparkling Water,Spindrift,Lemon,sparkling_water,1,true,,false,spindrift lemon,,,,,citrus_sparkling_water
+spindrift-blackberry,Spindrift Blackberry Sparkling Water,Spindrift,Blackberry,sparkling_water,1,true,,false,spindrift blackberry,,,,,fruit_sparkling_water
+spindrift-half-tea-half-lemon,Spindrift Half Tea Half Lemon,Spindrift,Half Tea Half Lemon,sparkling_water,1,true,,false,spindrift tea lemon|half and half spindrift,,,,,fruit_sparkling_water
+spindrift-cucumber,Spindrift Cucumber Sparkling Water,Spindrift,Cucumber,sparkling_water,1,true,,false,spindrift cucumber,,,,,fruit_sparkling_water
+bubly-lime,bubly Lime,bubly,Lime,sparkling_water,1,true,,true,bubly lime,,,,,citrus_sparkling_water
+bubly-strawberry,bubly Strawberry,bubly,Strawberry,sparkling_water,1,true,,false,bubly strawberry,,,,,fruit_sparkling_water
+bubly-mango,bubly Mango,bubly,Mango,sparkling_water,1,true,,false,bubly mango,,,,,fruit_sparkling_water
+bubly-cherry,bubly Cherry,bubly,Cherry,sparkling_water,1,true,,false,bubly cherry,,,,,fruit_sparkling_water
+bubly-grapefruit,bubly Grapefruit,bubly,Grapefruit,sparkling_water,1,true,,false,bubly grapefruit,,,,,citrus_sparkling_water
+bubly-blackberry,bubly Blackberry,bubly,Blackberry,sparkling_water,1,true,,false,bubly blackberry,,,,,fruit_sparkling_water
+waterloo-black-cherry,Waterloo Black Cherry Sparkling Water,Waterloo,Black Cherry,sparkling_water,1,true,,false,waterloo black cherry,,,,,fruit_sparkling_water
+waterloo-lime,Waterloo Lime Sparkling Water,Waterloo,Lime,sparkling_water,1,true,,false,waterloo lime,,,,,citrus_sparkling_water
+waterloo-grapefruit,Waterloo Grapefruit Sparkling Water,Waterloo,Grapefruit,sparkling_water,1,true,,false,waterloo grapefruit,,,,,citrus_sparkling_water
+waterloo-watermelon,Waterloo Watermelon Sparkling Water,Waterloo,Watermelon,sparkling_water,1,true,,false,waterloo watermelon,,,,,fruit_sparkling_water
+perrier-original,Perrier Original Sparkling Mineral Water,Perrier,Original,sparkling_water,2,true,,false,perrier|perrier sparkling water,,,,,plain_sparkling_water
+perrier-lorange,Perrier L'Orange,Perrier,L'Orange,sparkling_water,2,true,,false,perrier orange,,,,,citrus_sparkling_water
+san-pellegrino-original,San Pellegrino Sparkling Natural Mineral Water,San Pellegrino,Original,sparkling_water,2,true,,true,san pellegrino|pellegrino,,,,,plain_sparkling_water
+san-pellegrino-limonata,San Pellegrino Limonata,San Pellegrino,Limonata Lemon,soda,2,true,,false,san pellegrino lemon|limonata,,,,,citrus_soda
+san-pellegrino-aranciata,San Pellegrino Aranciata,San Pellegrino,Aranciata Orange,soda,2,true,,false,san pellegrino orange|aranciata,,,,,orange_soda
+polar-seltzer-black-cherry,Polar Seltzer Black Cherry,Polar Seltzer,Black Cherry,sparkling_water,1,true,,false,polar seltzer cherry,,,,,fruit_sparkling_water
+polar-seltzer-raspberry-lime,Polar Seltzer Raspberry Lime,Polar Seltzer,Raspberry Lime,sparkling_water,1,true,,false,polar seltzer raspberry lime,,,,,citrus_sparkling_water
+aha-lime-watermelon,AHA Lime + Watermelon,AHA,Lime + Watermelon,sparkling_water,1,true,,false,aha lime watermelon|aha sparkling water,,,,,citrus_sparkling_water
+red-bull-original,Red Bull Original Energy Drink,Red Bull,Original,energy,1,true,,true,red bull|redbull,,,,,classic_energy
+red-bull-sugarfree,Red Bull Sugarfree,Red Bull,Sugarfree,energy,1,true,,false,red bull sugar free|red bull zero sugar,,,,,classic_energy
+red-bull-tropical,Red Bull Tropical Edition,Red Bull,Tropical,energy,1,true,,false,red bull yellow edition,,,,,classic_energy
+red-bull-watermelon,Red Bull Watermelon Edition,Red Bull,Watermelon,energy,1,true,,false,red bull red edition,,,,,classic_energy
+monster-energy-original,Monster Energy Original,Monster Energy,Original,energy,1,true,,true,monster|green monster,,,,,classic_energy
+monster-energy-zero-ultra,Monster Energy Zero Ultra,Monster Energy,Zero Ultra,energy,1,true,,false,monster zero ultra|zero ultra,,,,,classic_energy
+monster-energy-mango-loco,Monster Energy Mango Loco,Monster Energy,Mango Loco,energy,1,true,,false,mango loco,,,,,classic_energy
+monster-energy-pipeline-punch,Monster Energy Pipeline Punch,Monster Energy,Pipeline Punch,energy,1,true,,false,pipeline punch,,,,,classic_energy
+monster-energy-peachy-keen,Monster Energy Juice Peachy Keen,Monster Energy,Peachy Keen,energy,1,true,,false,peachy keen,,,,,classic_energy
+monster-energy-juice-khaotic,Monster Energy Juice Monster Khaotic,Monster Energy,Khaotic,energy,1,true,,false,juice monster khaotic|khaotic,,,,,classic_energy
+celsius-sparkling-orange,Celsius Sparkling Orange,Celsius,Orange,energy,2,true,,true,celsius orange,,,,,performance_energy
+celsius-sparkling-peach-vibe,Celsius Sparkling Peach Vibe,Celsius,Peach Vibe,energy,2,true,,false,peach vibe,,,,,performance_energy
+celsius-sparkling-watermelon,Celsius Sparkling Watermelon,Celsius,Watermelon,energy,2,true,,false,celsius watermelon,,,,,performance_energy
+celsius-kiwi-guava,Celsius Sparkling Kiwi Guava,Celsius,Kiwi Guava,energy,2,true,,false,kiwi guava,,,,,performance_energy
+celsius-sparkling-cola,Celsius Sparkling Cola,Celsius,Cola,energy,2,true,,false,celsius cola,,,,,performance_energy
+celsius-cucumber-lime,Celsius Cucumber Lime,Celsius,Cucumber Lime,energy,2,true,,false,cucumber lime,,,,,performance_energy
+celsius-arctic-vibe,Celsius Arctic Vibe,Celsius,Arctic Vibe,energy,2,true,,false,arctic vibe,,,,,performance_energy
+celsius-sparkling-wild-berry,Celsius Sparkling Wild Berry,Celsius,Wild Berry,energy,2,true,,false,wild berry,,,,,performance_energy
+alani-nu-hawaiian-shaved-ice,Alani Nu Energy Hawaiian Shaved Ice,Alani Nu,Hawaiian Shaved Ice,energy,2,true,,true,alani|hawaiian shaved ice,,,,,performance_energy
+alani-nu-witchs-brew,Alani Nu Energy Witch's Brew,Alani Nu,Witch's Brew,energy,2,true,,false,witchs brew,,,,,performance_energy
+alani-nu-breezeberry,Alani Nu Energy Breezeberry,Alani Nu,Breezeberry,energy,2,true,,false,breezeberry,,,,,performance_energy
+alani-nu-cosmic-stardust,Alani Nu Energy Cosmic Stardust,Alani Nu,Cosmic Stardust,energy,2,true,,false,cosmic stardust,,,,,performance_energy
+alani-nu-mimosa,Alani Nu Energy Mimosa,Alani Nu,Mimosa,energy,2,true,,false,mimosa,,,,,performance_energy
+bang-star-blast,Bang Energy Star Blast,Bang Energy,Star Blast,energy,2,true,,false,star blast,,,,,performance_energy
+bang-peach-mango,Bang Energy Peach Mango,Bang Energy,Peach Mango,energy,2,true,,false,peach mango,,,,,performance_energy
+bang-rainbow-unicorn,Bang Energy Rainbow Unicorn,Bang Energy,Rainbow Unicorn,energy,2,true,,false,rainbow unicorn,,,,,performance_energy
+bang-blue-razz,Bang Energy Blue Razz,Bang Energy,Blue Razz,energy,2,true,,false,blue razz|blue raspberry,,,,,performance_energy
+ghost-energy-cherry-limeade,Ghost Energy Cherry Limeade,Ghost Energy,Cherry Limeade,energy,2,true,,false,cherry limeade,,,,,performance_energy
+ghost-energy-sour-patch-kids-redberry,Ghost Energy Sour Patch Kids Redberry,Ghost Energy,Sour Patch Kids Redberry,energy,2,true,,false,sour patch kids|spk redberry,,,,,performance_energy
+ghost-energy-faze-berry,Ghost Energy x FaZe Berry,Ghost Energy,FaZe Berry,energy,2,true,,false,faze berry|ghost faze,,,,,performance_energy
+reign-melon-mania,Reign Total Body Fuel Melon Mania,Reign Total Body Fuel,Melon Mania,energy,2,true,,false,melon mania,,,,,performance_energy
+reign-razzle-berry,Reign Total Body Fuel Razzle Berry,Reign Total Body Fuel,Razzle Berry,energy,2,true,,false,razzle berry,,,,,performance_energy
+five-hour-energy-original,5-hour Energy Original,5-hour Energy,Original,energy,2,true,,true,5 hour energy|five hour energy,,,,,energy_shot
+five-hour-energy-extra-strength,5-hour Energy Extra Strength,5-hour Energy,Extra Strength,energy,2,true,,false,5 hour energy extra strength,,,,,energy_shot
+five-hour-energy-pink-lemonade,5-hour Energy Pink Lemonade,5-hour Energy,Pink Lemonade,energy,2,true,,false,5 hour energy pink lemonade,,,,,energy_shot
+rockstar-original,Rockstar Original Energy Drink,Rockstar,Original,energy,2,true,,false,rockstar energy,,,,,classic_energy
+nos-original,NOS Original Energy Drink,NOS,Original,energy,2,true,,false,nos energy,,,,,classic_energy
+full-throttle-original,Full Throttle Original Energy Drink,Full Throttle,Original,energy,2,true,,false,full throttle energy,,,,,classic_energy
+c4-energy-frozen-bombsicle,C4 Energy Frozen Bombsicle,C4 Energy,Frozen Bombsicle,energy,2,true,,false,c4 frozen bombsicle,,,,,performance_energy
+guru-organic-energy-original,Guru Organic Energy Original,Guru Organic Energy,Original,energy,2,true,,false,guru energy|guru organic,,,,,classic_energy
+starbucks-frappuccino-mocha,Frappuccino Mocha,Starbucks,Mocha,coffee,1,true,,true,frapp|frappe|mocha frappuccino,,,,,blended_coffee
+starbucks-frappuccino-vanilla,Frappuccino Vanilla,Starbucks,Vanilla,coffee,1,true,,false,frapp|frappe,,,,,blended_coffee
+starbucks-frappuccino-caramel,Frappuccino Caramel,Starbucks,Caramel,coffee,1,true,,false,frapp|frappe,,,,,blended_coffee
+starbucks-frappuccino-coffee,Frappuccino Coffee,Starbucks,Coffee,coffee,1,true,,false,frapp|frappe|original frappuccino,,,,,blended_coffee
+starbucks-frappuccino-mocha-light,Frappuccino Mocha Light,Starbucks,Mocha Light,coffee,1,true,,false,light frappuccino|low calorie frappuccino,,,,,blended_coffee
+starbucks-doubleshot-original,Doubleshot Original,Starbucks,Original,coffee,1,true,,false,doubleshot,,,,,latte
+starbucks-doubleshot-espresso-cream,Doubleshot Espresso & Cream,Starbucks,Espresso & Cream,coffee,1,true,,false,doubleshot espresso and cream,,,,,latte
+starbucks-doubleshot-vanilla,Doubleshot Vanilla,Starbucks,Vanilla,coffee,1,true,,false,doubleshot vanilla,,,,,flavored_latte
+starbucks-doubleshot-energy-coffee,Doubleshot Energy Coffee,Starbucks,Coffee,coffee,1,true,,false,doubleshot energy|energy coffee,,,,,latte
+dunkin-bottled-iced-coffee-original,Bottled Iced Coffee Original,Dunkin',Original,coffee,1,true,,true,dunkin iced coffee|dunkin original,,,,,latte
+dunkin-bottled-iced-coffee-mocha,Bottled Iced Coffee Mocha,Dunkin',Mocha,coffee,1,true,,false,dunkin iced coffee mocha,,,,,flavored_latte
+dunkin-bottled-iced-coffee-french-vanilla,Bottled Iced Coffee French Vanilla,Dunkin',French Vanilla,coffee,1,true,,false,dunkin iced coffee french vanilla,,,,,flavored_latte
+la-colombe-draft-latte-original,Draft Latte Original,La Colombe,Original,coffee,3,true,,false,draft latte|la colombe latte,,,,,latte
+la-colombe-draft-latte-mocha,Draft Latte Mocha,La Colombe,Mocha,coffee,3,true,,false,draft latte mocha,,,,,flavored_latte
+la-colombe-draft-latte-vanilla,Draft Latte Vanilla,La Colombe,Vanilla,coffee,3,true,,false,draft latte vanilla,,,,,flavored_latte
+la-colombe-draft-latte-oat-milk,Draft Latte Oat Milk,La Colombe,Oat Milk,coffee,3,true,,false,draft latte oat|oat milk latte,,,,,latte
+stok-cold-brew-black,Cold Brew Black,Stok,Black,coffee,2,true,,false,stok black coffee|stok cold brew,,,,,cold_brew
+stok-cold-brew-not-too-sweet,Cold Brew Not Too Sweet,Stok,Not Too Sweet,coffee,2,true,,false,stok not too sweet,,,,,cold_brew
+chameleon-cold-brew-black,Cold Brew Black,Chameleon Cold Brew,Black,coffee,2,true,,false,chameleon black coffee,,,,,cold_brew
+califia-farms-cold-brew-almond-milk,Cold Brew Coffee with Almond Milk,Califia Farms,Almond Milk,coffee,2,true,,false,califia cold brew|cold brew almondmilk,,,,,latte
+high-brew-mexican-vanilla,Coffee Mexican Vanilla,High Brew Coffee,Mexican Vanilla,coffee,2,true,,false,high brew vanilla,,,,,flavored_latte
+high-brew-salted-caramel,Coffee Salted Caramel,High Brew Coffee,Salted Caramel,coffee,2,true,,false,high brew caramel,,,,,flavored_latte
+peets-iced-coffee-classic,Iced Coffee Classic,Peet's,Classic,coffee,2,true,,false,peets iced coffee,,,,,cold_brew
+illy-issimo-cappuccino,issimo Cappuccino,illy,Cappuccino,coffee,2,true,,false,illy cappuccino,,,,,latte
+nescafe-frappe-caramel,Frappe Caramel,Nescafe,Caramel,coffee,2,true,,false,nescafe frappe,,,,,blended_coffee
+death-wish-coffee-rtd-black,Coffee RTD Black Coffee,Death Wish Coffee,Black Coffee,coffee,3,true,,false,death wish rtd|death wish cold brew,,,,,cold_brew
+rise-brewing-nitro-cold-brew-black,Nitro Cold Brew Original Black,Rise Brewing Co.,Original Black,coffee,3,true,,false,rise nitro|rise cold brew,,,,,cold_brew
+rise-brewing-nitro-cold-brew-oat-latte,Nitro Cold Brew Oat Milk Latte,Rise Brewing Co.,Oat Milk Latte,coffee,3,true,,false,rise oat latte|rise nitro latte,,,,,latte
+kitu-super-coffee-mocha,Super Coffee Mocha,Kitu,Mocha,coffee,2,true,,false,super coffee mocha|kitu mocha,,,,,flavored_latte
+bulletproof-coffee-rtd-vanilla,Clean Coffee RTD Vanilla,Bulletproof,Vanilla,coffee,3,true,,false,bulletproof rtd|bulletproof vanilla coffee,,,,,flavored_latte
+jamba-juice-mango-a-go-go,Mango-a-go-go,Jamba Juice,Mango,smoothie,2,true,,true,jamba mango|mango a go go,,,,,fruit_smoothie
+jamba-juice-strawberry-surf-rider,Strawberry Surf Rider,Jamba Juice,Strawberry,smoothie,2,true,,false,jamba strawberry,,,,,fruit_smoothie
+jamba-juice-caribbean-passion,Caribbean Passion,Jamba Juice,Passion Fruit,smoothie,2,true,,false,jamba caribbean,,,,,fruit_smoothie
+jamba-juice-orange-dream-machine,Orange Dream Machine,Jamba Juice,Orange,smoothie,2,true,,false,jamba orange dream,,,,,fruit_smoothie
+naked-protein-zone,Protein Zone,Naked,Protein Blend,smoothie,2,true,,false,naked protein,,,,,protein_smoothie
+naked-berry-blast,Berry Blast,Naked,Berry,smoothie,2,true,,false,naked berry,,,,,fruit_smoothie
+bolthouse-farms-perfectly-protein-chocolate,Perfectly Protein Chocolate,Bolthouse Farms,Chocolate,smoothie,2,true,,false,bolthouse chocolate protein,,,,,protein_smoothie
+bolthouse-farms-green-goodness-smoothie,Green Goodness,Bolthouse Farms,Green,smoothie,2,true,,false,bolthouse green smoothie,,,,,green_smoothie
+bolthouse-farms-strawberry-banana,Strawberry Banana,Bolthouse Farms,Strawberry Banana,smoothie,2,true,,true,bolthouse strawberry banana,,,,,fruit_smoothie
+odwalla-superfood-smoothie,Superfood,Odwalla,Superfood,smoothie,2,true,,false,odwalla superfood smoothie,,,,,green_smoothie
+arizona-green-tea,Arizona Green Tea,Arizona,Green Tea,tea,1,true,,true,az green tea|arizona iced tea green,,,,,green_tea
+arizona-sweet-tea,Arizona Sweet Tea,Arizona,Sweet Tea,tea,1,true,,false,az sweet tea,,,,,iced_tea
+arizona-half-and-half,Arizona Half & Half,Arizona,Half & Half,tea,1,true,,false,arizona arnold palmer|half and half tea,,,,,iced_tea
+arizona-peach-tea,Arizona Peach Tea,Arizona,Peach Tea,tea,1,true,,false,az peach tea,,,,,iced_tea
+arizona-raspberry-tea,Arizona Raspberry Tea,Arizona,Raspberry Tea,tea,1,true,,false,az raspberry tea,,,,,iced_tea
+arizona-diet-green-tea,Arizona Diet Green Tea,Arizona,Diet Green Tea,tea,1,true,,false,diet az green tea,,,,,green_tea
+pure-leaf-sweet-tea,Pure Leaf Sweet Tea,Pure Leaf,Sweet Tea,tea,1,true,,false,pure leaf sweetened tea,,,,,iced_tea
+pure-leaf-unsweetened,Pure Leaf Unsweetened,Pure Leaf,Unsweetened,tea,1,true,,false,pure leaf unsweetened tea,,,,,iced_tea
+pure-leaf-lemon-tea,Pure Leaf Lemon Tea,Pure Leaf,Lemon,tea,1,true,,false,pure leaf lemon,,,,,iced_tea
+pure-leaf-extra-sweet-tea,Pure Leaf Extra Sweet Tea,Pure Leaf,Extra Sweet,tea,1,true,,false,pure leaf extra sweet,,,,,iced_tea
+snapple-lemon-tea,Snapple Lemon Tea,Snapple,Lemon Tea,tea,1,true,,false,snapple lemon,,,,,iced_tea
+snapple-peach-tea,Snapple Peach Tea,Snapple,Peach Tea,tea,1,true,,false,snapple peach,,,,,iced_tea
+snapple-raspberry-tea,Snapple Raspberry Tea,Snapple,Raspberry Tea,tea,1,true,,false,snapple raspberry,,,,,iced_tea
+snapple-diet-peach-tea,Snapple Diet Peach Tea,Snapple,Diet Peach Tea,tea,1,true,,false,diet snapple peach,,,,,iced_tea
+gold-peak-sweet-tea,Gold Peak Sweet Tea,Gold Peak,Sweet Tea,tea,1,true,,false,goldpeak sweet tea,,,,,iced_tea
+gold-peak-unsweetened-tea,Gold Peak Unsweetened Tea,Gold Peak,Unsweetened,tea,1,true,,false,goldpeak unsweetened,,,,,iced_tea
+gold-peak-peach-tea,Gold Peak Peach Tea,Gold Peak,Peach,tea,1,true,,false,goldpeak peach tea,,,,,iced_tea
+lipton-iced-tea,Lipton Iced Tea,Lipton,Original,tea,1,true,,true,lipton tea|lipton original iced tea,,,,,iced_tea
+lipton-green-tea,Lipton Green Tea,Lipton,Green Tea,tea,1,true,,false,lipton green,,,,,green_tea
+lipton-diet-green-tea,Lipton Diet Green Tea,Lipton,Diet Green Tea,tea,1,true,,false,diet lipton green tea,,,,,green_tea
+ito-en-oi-ocha-green-tea,Ito En Oi Ocha Green Tea,Ito En,Green Tea,tea,2,true,,false,oi ocha|ito en green tea,,,,,green_tea
+ito-en-matcha-green-tea,Ito En Matcha Green Tea,Ito En,Matcha,tea,2,true,,false,ito en matcha,,,,,matcha
+guayaki-yerba-mate-enlighten-mint,Guayaki Yerba Mate Enlighten Mint,Guayaki,Enlighten Mint,tea,2,true,,false,yerba mate mint|guayaki mint,,,,,yerba_mate
+guayaki-yerba-mate-lemon-elation,Guayaki Yerba Mate Lemon Elation,Guayaki,Lemon Elation,tea,2,true,,false,yerba mate lemon,,,,,yerba_mate
+honest-tea-honey-green-tea,Honest Tea Honey Green Tea,Honest Tea,Honey Green Tea,tea,1,true,,false,honest tea green tea,,,,,green_tea
+kung-fu-tea-classic-milk-tea,Classic Milk Tea (Kung Fu Tea),Kung Fu Tea,Classic Milk Tea,boba,2,true,,true,kung fu tea milk tea|classic boba milk tea,,,,,classic_milk_tea
+tiger-sugar-brown-sugar-boba-milk-tea,Brown Sugar Boba Milk Tea (Tiger Sugar),Tiger Sugar,Brown Sugar,boba,3,true,,true,tiger sugar|brown sugar milk tea,,,,,classic_milk_tea
+boba-guys-taro-milk-tea,Taro Milk Tea (Boba Guys),Boba Guys,Taro,boba,3,true,,false,boba guys taro,,,,,flavored_milk_tea
+thai-milk-tea-boba,Thai Milk Tea,Generic,Thai Milk Tea,boba,2,true,,false,thai tea|thai iced tea boba,,,,,classic_milk_tea
+matcha-latte-with-boba,Matcha Latte with Boba,Generic,Matcha,boba,2,true,,false,matcha boba latte,,,,,flavored_milk_tea
+wintermelon-milk-tea-boba,Wintermelon Milk Tea,Generic,Wintermelon,boba,2,true,,false,winter melon milk tea,,,,,flavored_milk_tea
+honeydew-milk-tea-with-boba,Honeydew Milk Tea with Boba,Generic,Honeydew,boba,2,true,,false,honeydew boba milk tea,,,,,flavored_milk_tea
+strawberry-fruit-tea-with-boba,Strawberry Fruit Tea with Boba,Generic,Strawberry,boba,2,true,,false,strawberry boba tea,,,,,boba_fruit_tea
+mango-green-tea-with-boba,Mango Green Tea with Boba,Generic,Mango Green Tea,boba,2,true,,false,mango green tea boba,,,,,boba_fruit_tea
+oolong-milk-tea-boba,Oolong Milk Tea,Generic,Oolong,boba,2,true,,false,oolong boba milk tea,,,,,classic_milk_tea
+gong-cha-classic-milk-tea,Classic Milk Tea (Gong Cha),Gong Cha,Classic Milk Tea,boba,2,true,,false,gong cha milk tea,,,,,classic_milk_tea
+sharetea-taro-milk-tea,Taro Milk Tea (Sharetea),Sharetea,Taro,boba,2,true,,false,sharetea taro,,,,,flavored_milk_tea
+chatime-peach-oolong-tea,Peach Oolong Tea (Chatime),Chatime,Peach Oolong,boba,2,true,,false,chatime peach oolong,,,,,boba_fruit_tea
+kung-fu-tea-wintermelon-milk-tea,Wintermelon Milk Tea (Kung Fu Tea),Kung Fu Tea,Wintermelon,boba,2,true,,false,kung fu tea wintermelon,,,,,flavored_milk_tea
+gong-cha-taro-milk-tea,Taro Milk Tea (Gong Cha),Gong Cha,Taro,boba,2,true,,false,gong cha taro,,,,,flavored_milk_tea
+gatorade-lemon-lime,Gatorade Thirst Quencher,Gatorade,Lemon-Lime,sports,1,true,,true,gatorade|lemon-lime gatorade|yellow gatorade,,,,,
+gatorade-fruit-punch,Gatorade Thirst Quencher,Gatorade,Fruit Punch,sports,1,true,,false,gatorade fruit punch,,,,,
+gatorade-orange,Gatorade Thirst Quencher,Gatorade,Orange,sports,1,true,,false,gatorade orange,,,,,
+gatorade-cool-blue,Gatorade Thirst Quencher,Gatorade,Cool Blue,sports,1,true,,false,gatorade cool blue,,,,,
+gatorade-glacier-freeze,Gatorade Thirst Quencher,Gatorade,Glacier Freeze,sports,1,true,,false,gatorade glacier freeze,,,,,
+gatorade-grape,Gatorade Thirst Quencher,Gatorade,Grape,sports,1,true,,false,gatorade grape,,,,,
+gatorade-zero-lemon-lime,Gatorade Zero,Gatorade,Lemon-Lime,sports,1,true,,false,gatorade zero|zero sugar gatorade lemon-lime,,,,,
+gatorade-zero-grape,Gatorade Zero,Gatorade,Grape,sports,1,true,,false,gatorade zero grape,,,,,
+powerade-mountain-berry-blast,Powerade,Powerade,Mountain Berry Blast,sports,1,true,,false,powerade mountain berry blast,,,,,
+powerade-fruit-punch,Powerade,Powerade,Fruit Punch,sports,1,true,,false,powerade fruit punch,,,,,
+powerade-grape,Powerade,Powerade,Grape,sports,1,true,,false,powerade grape,,,,,
+powerade-zero-mixed-berry,Powerade Zero,Powerade,Mixed Berry,sports,1,true,,false,powerade zero|zero sugar powerade mixed berry,,,,,
+bodyarmor-fruit-punch,BODYARMOR Sports Drink,BodyArmor,Fruit Punch,sports,1,true,,false,bodyarmor fruit punch|body armor fruit punch,,,,,
+bodyarmor-strawberry-banana,BODYARMOR Sports Drink,BodyArmor,Strawberry Banana,sports,1,true,,false,bodyarmor strawberry banana|body armor strawberry banana,,,,,
+bodyarmor-orange-mango,BODYARMOR Sports Drink,BodyArmor,Orange Mango,sports,1,true,,false,bodyarmor orange mango|body armor orange mango,,,,,
+bodyarmor-lyte-fruit-punch,BODYARMOR Lyte,BodyArmor,Fruit Punch,sports,1,true,,false,bodyarmor lyte|body armor lyte fruit punch,,,,,
+prime-hydration-lemon-lime,Prime Hydration,Prime Hydration,Lemon Lime,sports,1,true,,false,prime lemon lime|prime hydration lemon lime,,,,,
+prime-hydration-blue-raspberry,Prime Hydration,Prime Hydration,Blue Raspberry,sports,1,true,,false,prime blue raspberry,,,,,
+prime-hydration-ice-pop,Prime Hydration,Prime Hydration,Ice Pop,sports,1,true,,false,prime ice pop,,,,,
+propel-water-berry,Propel Water,Propel,Berry,sports,1,true,,false,propel fitness water berry|propel berry,,,,,
+horchata-traditional,Horchata,Generic,Horchata,other,2,true,,false,mexican horchata|rice horchata,,,,,aguas_frescas
+agua-fresca-jamaica,Agua Fresca de Jamaica,Generic,Hibiscus,other,2,true,,false,hibiscus agua fresca|jamaica water,,,,,aguas_frescas
+agua-fresca-tamarindo,Agua Fresca de Tamarindo,Generic,Tamarindo,other,2,true,,false,tamarind agua fresca|tamarind water,,,,,aguas_frescas
+yakult-original,Yakult,Yakult,Original,other,1,true,,true,yakult probiotic drink,,,,,cultured_milk_drink
+calpico-original,Calpico,Calpico,Original,other,1,true,,false,calpis,,,,,cultured_milk_drink
+calpico-mango,Calpico,Calpico,Mango,other,1,true,,false,calpico mango drink,,,,,cultured_milk_drink
+ramune-original,Ramune,Hata Kosen,Original,soda,1,true,,false,japanese soda ramune,,,,,lemon_lime
+ramune-melon,Ramune,Hata Kosen,Melon,soda,1,true,,false,ramune melon soda,,,,,fruit_soda
+gts-kombucha-gingerade,GT's Kombucha,GT's Living Foods,Gingerade,other,2,true,,true,gts kombucha ginger,,,,,kombucha
+gts-kombucha-trilogy,GT's Kombucha,GT's Living Foods,Trilogy,other,2,true,,false,gts kombucha trilogy,,,,,kombucha
+gts-kombucha-guava-goddess,GT's Kombucha,GT's Living Foods,Guava Goddess,other,2,true,,false,gts kombucha guava goddess,,,,,kombucha
+vita-coco-coconut-water-original,Vita Coco Coconut Water,Vita Coco,Original,other,2,true,,true,vita coco|coconut water,,,,,coconut_water
+harmless-harvest-coconut-water,Harmless Harvest Coconut Water,Harmless Harvest,Original,other,2,true,,false,harmless harvest|raw coconut water,,,,,coconut_water
+health-ade-kombucha-pink-lady-apple,Health-Ade Kombucha,Health-Ade,Pink Lady Apple,other,2,true,,false,health ade kombucha,,,,,kombucha
+suja-kombucha-strawberry-basil-lemonade,Suja Kombucha,Suja,Strawberry Basil Lemonade,other,2,true,,false,suja kombucha,,,,,kombucha
+modelo-especial,Modelo Especial,Modelo,Especial,beer,2,true,,false,modelo|modelo especial|cerveza modelo,,,,,lager
+corona-extra,Corona Extra,Corona,Extra,beer,2,true,,false,corona|corona extra,,,,,lager
+corona-light,Corona Light,Corona,Light,beer,2,true,,false,corona light,,,,,lager
+coors-light,Coors Light,Coors,Light,beer,2,true,,false,coors|coors light,,,,,lager
+bud-light,Bud Light,Bud Light,Original,beer,2,true,,false,budlight|bud light,,,,,lager
+miller-lite,Miller Lite,Miller,Lite,beer,2,true,,false,miller|miller lite,,,,,lager
+heineken-original-lager,Heineken Original Lager,Heineken,Original,beer,2,true,,false,heineken|heineken lager,,,,,lager
+stella-artois-lager,Stella Artois Lager,Stella Artois,Lager,beer,2,true,,false,stella|stella artois,,,,,lager
+guinness-draught,Guinness Draught,Guinness,Draught,beer,2,true,,false,guinness|guinness stout|guinness draught,,,,,ale
+blue-moon-belgian-white,Blue Moon Belgian White,Blue Moon,Belgian White,beer,2,true,,false,blue moon|belgian white,,,,,ale
+pacifico-clara,Pacifico Clara,Pacifico,Clara,beer,2,true,,false,pacifico,,,,,lager
+dos-equis-lager-especial,Dos Equis Lager Especial,Dos Equis,Lager Especial,beer,2,true,,false,dos equis|dos equis xx,,,,,lager
+white-claw-black-cherry,White Claw Hard Seltzer,White Claw,Black Cherry,beer,2,true,,false,white claw|hard seltzer|black cherry seltzer,,,,,hard_seltzer
+white-claw-mango,White Claw Hard Seltzer,White Claw,Mango,beer,2,true,,false,white claw mango,,,,,hard_seltzer
+white-claw-lime,White Claw Hard Seltzer,White Claw,Lime,beer,2,true,,false,white claw lime,,,,,hard_seltzer
+white-claw-natural-lime,White Claw Hard Seltzer,White Claw,Natural Lime,beer,2,true,,false,white claw natural lime,,,,,hard_seltzer
+truly-wild-berry,Truly Hard Seltzer,Truly,Wild Berry,beer,2,true,,false,truly|truly seltzer|wild berry,,,,,hard_seltzer
+truly-lemonade,Truly Hard Seltzer,Truly,Lemonade,beer,2,true,,false,truly lemonade,,,,,hard_seltzer
+generic-house-red-cabernet-sauvignon,House Red Cabernet Sauvignon,Generic,Cabernet Sauvignon,wine,3,true,,false,house red|cabernet|red wine,,,,,red_wine
+generic-house-white-chardonnay,House White Chardonnay,Generic,Chardonnay,wine,3,true,,false,house white|chardonnay|white wine,,,,,white_wine
+generic-prosecco,Prosecco,Generic,Prosecco,wine,3,true,,false,prosecco|sparkling wine,,,,,sparkling_wine
+generic-pinot-grigio,Pinot Grigio,Generic,Pinot Grigio,wine,3,true,,false,pinot grigio|white wine,,,,,white_wine
+generic-rose,Rose,Generic,Rose,wine,3,true,,false,rose|rose wine|pink wine,,,,,rose_wine
+barefoot-cellars-cabernet-sauvignon,Barefoot Cellars Cabernet Sauvignon,Barefoot Cellars,Cabernet Sauvignon,wine,3,true,,false,barefoot|barefoot cabernet,,,,,red_wine
+josh-cellars-chardonnay,Josh Cellars Chardonnay,Josh Cellars,Chardonnay,wine,3,true,,false,josh cellars|josh chardonnay,,,,,white_wine
+la-marca-prosecco,La Marca Prosecco,La Marca,Prosecco,wine,3,true,,false,la marca|la marca prosecco,,,,,sparkling_wine
+generic-margarita,Margarita,Generic,Margarita,spirits_cocktails,3,true,,false,margarita|tequila cocktail,,,,,tequila
+generic-old-fashioned,Old Fashioned,Generic,Old Fashioned,spirits_cocktails,3,true,,false,old fashioned|whiskey cocktail,,,,,whiskey
+generic-espresso-martini,Espresso Martini,Generic,Espresso Martini,spirits_cocktails,3,true,,false,espresso martini|coffee cocktail,,,,,vodka
+generic-moscow-mule,Moscow Mule,Generic,Moscow Mule,spirits_cocktails,3,true,,false,moscow mule|vodka cocktail,,,,,vodka
+generic-mojito,Mojito,Generic,Mojito,spirits_cocktails,3,true,,false,mojito|rum cocktail,,,,,rum
+generic-pina-colada,Pina Colada,Generic,Pina Colada,spirits_cocktails,3,true,,false,pina colada|rum cocktail,,,,,rum
+titos-handmade-vodka-soda,Tito's Vodka Soda,Tito's Handmade Vodka,Soda,spirits_cocktails,3,true,,false,titos|titos vodka soda|vodka soda,,,,,vodka
+jack-daniels-and-coke,Jack Daniel's And Coke,Jack Daniel's,And Coke,spirits_cocktails,3,true,,false,jack and coke|jd and coke|whiskey and coke,,,,,whiskey
+high-noon-vodka-soda-watermelon,High Noon Vodka Soda,High Noon,Watermelon,spirits_cocktails,2,true,,false,high noon|high noon watermelon,,,,,vodka
+high-noon-vodka-soda-peach,High Noon Vodka Soda,High Noon,Peach,spirits_cocktails,2,true,,false,high noon|high noon peach,,,,,vodka
+cutwater-spirits-margarita,Cutwater Spirits Margarita,Cutwater Spirits,Margarita,spirits_cocktails,2,true,,false,cutwater|cutwater margarita|canned margarita,,,,,tequila
+cutwater-spirits-vodka-mule,Cutwater Spirits Vodka Mule,Cutwater Spirits,Vodka Mule,spirits_cocktails,2,true,,false,cutwater|cutwater vodka mule|canned mule,,,,,vodka

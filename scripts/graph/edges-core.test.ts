@@ -19,7 +19,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { EDGE_MIN_WEIGHT, EDGE_TOP_K, RANKING_VERSION, edgeWeight } from "@bevi/ranking";
-import type { FlavorProfile } from "@bevi/ranking";
+import type { FlavorProfile, Taxonomy } from "@bevi/ranking";
 
 import {
   COMPONENT_DECIMALS,
@@ -35,6 +35,7 @@ import {
   selectEdges,
   splitPairKey,
   taxonomyIsFlat,
+  treeNodeOf,
   weighPair,
   weighPairs,
 } from "./edges-core.ts";
@@ -56,12 +57,24 @@ const ID = {
   absent: "00000000-0000-4000-8000-00000000f6f6",
 } as const;
 
-const bev = (id: string, name: string, brand: string | null, flavor: string | null, categoryId: string, priceTier = 1): BevRecord => ({
+const bev = (
+  id: string,
+  name: string,
+  brand: string | null,
+  flavor: string | null,
+  categoryId: string,
+  priceTier = 1,
+  leafCategoryId: string | null = null,
+): BevRecord => ({
   id,
   name,
   brand,
   flavor,
   categoryId,
+  // A-13: null by default, so every existing case keeps weighing the tree term
+  // at the root and its expected weights are unchanged. The leaf cases below
+  // pass it explicitly.
+  leafCategoryId,
   priceTier,
   isAlcoholic: false,
 });
@@ -74,9 +87,26 @@ const RED_BULL = bev(ID.redbull, "Red Bull Original Energy Drink", "Red Bull", "
 
 const CATALOG = [COKE, PEPSI, LACROIX, DIET_COKE, RED_BULL];
 
-/** Today's `public.categories`: 15 rows, no `parent_id` column (A-13 adds it). */
+/** The pre-A-13 `public.categories`: roots only, every `parent_id` null. */
 const CATEGORIES = ["soda", "diet_soda", "sparkling_water", "energy", "water"].map((id) => ({ id }));
 const TAXONOMY = buildTaxonomy(CATEGORIES);
+
+/**
+ * The A-13 shape: the same roots plus a few of D-04's leaves. `water` stays
+ * unsplit, so a Bev there is weighed at its root -- the shape rule's case.
+ */
+const CATEGORIES_A13 = [
+  { id: "soda", parentId: null },
+  { id: "diet_soda", parentId: null },
+  { id: "sparkling_water", parentId: null },
+  { id: "energy", parentId: null },
+  { id: "water", parentId: null },
+  { id: "cola", parentId: "soda" },
+  { id: "citrus_soda", parentId: "soda" },
+  { id: "diet_cola", parentId: "diet_soda" },
+  { id: "plain_sparkling_water", parentId: "sparkling_water" },
+];
+const TAXONOMY_A13 = buildTaxonomy(CATEGORIES_A13);
 
 const cola: FlavorProfile = { base: "cola", carbonated: true, caffeine: 2, sweetness: 3, dairy: false, alcohol: false };
 /** Chosen so profileSimilarity(cola, sparkling) is exactly 0.4, the 10.1 worked example's profile term. */
@@ -89,10 +119,15 @@ const AXIS = [1, 0];
 function context(options: {
   embeddings?: Record<string, readonly number[]>;
   profiles?: Record<string, FlavorProfile>;
+  /** A-13: pass a leaf-bearing catalog and its taxonomy to weigh the tree term at leaves. */
+  catalog?: readonly BevRecord[];
+  taxonomy?: Taxonomy;
 } = {}) {
+  const catalog = options.catalog ?? CATALOG;
   return {
-    taxonomy: TAXONOMY,
-    features: new Map(CATALOG.map((b) => [b.id, bevFeatures(b)])),
+    taxonomy: options.taxonomy ?? TAXONOMY,
+    treeNodes: new Map(catalog.map((b) => [b.id, treeNodeOf(b)])),
+    features: new Map(catalog.map((b) => [b.id, bevFeatures(b)])),
     profiles: new Map(Object.entries(options.profiles ?? {})),
     embeddings: new Map<string, readonly number[]>(Object.entries(options.embeddings ?? {})),
   };
@@ -128,6 +163,97 @@ test("with a flat taxonomy the tree term is the [same category] indicator", () =
   // soda vs diet_soda: siblings only once A-13 gives them a shared parent
   assert.equal(weighPair(ID.coke, ID.diet, ctx).components.tree, 0);
   assert.equal(weighPair(ID.coke, ID.lacroix, ctx).components.tree, 0);
+});
+
+// ---------------------------------------------------------------------------
+// A-13: the tree term is measured at the leaf, the content term at the root
+// ---------------------------------------------------------------------------
+
+test("buildTaxonomy carries parent_id, so the taxonomy is no longer flat", () => {
+  assert.equal(taxonomyIsFlat(TAXONOMY_A13), false);
+  assert.equal(TAXONOMY_A13.cola, "soda");
+  assert.equal(TAXONOMY_A13.soda, null);
+});
+
+test("treeNodeOf is the leaf when there is one, the category when there is not", () => {
+  assert.equal(treeNodeOf(bev(ID.coke, "Coca-Cola", "Coca-Cola", null, "soda", 1, "cola")), "cola");
+  assert.equal(treeNodeOf(bev(ID.coke, "Coca-Cola", "Coca-Cola", null, "soda")), "soda");
+});
+
+test("with leaves the tree term separates same leaf, sibling leaves and a Bev on its parent", () => {
+  // Every Bev keeps its ROOT in `categoryId`, which is what A-13 preserves, and
+  // carries its leaf alongside.
+  const coke = bev(ID.coke, "Coca-Cola Classic", "Coca-Cola", "Original", "soda", 1, "cola");
+  const pepsi = bev(ID.pepsi, "Pepsi", "Pepsi", "Original", "soda", 1, "cola");
+  // A citrus soda: a sibling leaf of cola under the same root.
+  const sprite = bev(ID.absent, "Sprite", "Sprite", "Original", "soda", 1, "citrus_soda");
+  // Diet Coke is under `diet_soda`, a DIFFERENT root, which is D-04's deliberate
+  // choice: diet soda's leaves mirror soda's rather than nesting under them.
+  const diet = bev(ID.diet, "Diet Coke", "Coca-Cola", "Diet", "diet_soda", 1, "diet_cola");
+  // On an unsplit root, so it is weighed one level up (the shape rule).
+  const dasani = bev(ID.redbull, "Dasani", "Dasani", null, "water");
+  const catalog = [coke, pepsi, sprite, diet, dasani];
+  const ctx = { ...context({ catalog, taxonomy: TAXONOMY_A13 }) };
+
+  // Same leaf: Wu-Palmer 2*2/(2+2).
+  assert.equal(weighPair(coke.id, pepsi.id, ctx).components.tree, 1);
+  // Sibling leaves under one root: 2*1/(2+2).
+  assert.equal(weighPair(coke.id, sprite.id, ctx).components.tree, 0.5);
+  // Different roots: no common ancestor but the implicit one.
+  assert.equal(weighPair(coke.id, diet.id, ctx).components.tree, 0);
+  // A leaf against a Bev sitting on an unrelated root is still 0.
+  assert.equal(weighPair(coke.id, dasani.id, ctx).components.tree, 0);
+});
+
+test("a leaf against a Bev on its OWN parent gives 0.667, D-04's fourth value", () => {
+  const coke = bev(ID.coke, "Coca-Cola Classic", "Coca-Cola", "Original", "soda", 1, "cola");
+  // Same root, no leaf: depth 1 against the leaf's depth 2, so 2*1/(1+2).
+  const generic = bev(ID.pepsi, "Store Brand Soda", null, null, "soda");
+  const ctx = context({ catalog: [coke, generic], taxonomy: TAXONOMY_A13 });
+  assert.equal(weighPair(coke.id, generic.id, ctx).components.tree, 0.666667);
+});
+
+test("the content term reads the ROOT, so leaves do not change it", () => {
+  // The same two Bevs, once without leaves and once with. `contentSimilarity`
+  // must give the same answer both times: its own same-category indicator is a
+  // coarse shelf signal, and handing it the leaf would drop Coke vs a citrus
+  // soda to 0 on that term while the tree term already carries the difference.
+  const flatCoke = bev(ID.coke, "Coca-Cola Classic", "Coca-Cola", "Original", "soda");
+  const flatSprite = bev(ID.absent, "Sprite", "Sprite", "Original", "soda");
+  const leafCoke = bev(ID.coke, "Coca-Cola Classic", "Coca-Cola", "Original", "soda", 1, "cola");
+  const leafSprite = bev(ID.absent, "Sprite", "Sprite", "Original", "soda", 1, "citrus_soda");
+
+  const flat = weighPair(
+    ID.coke,
+    ID.absent,
+    context({ catalog: [flatCoke, flatSprite], taxonomy: TAXONOMY_A13 }),
+  );
+  const leafed = weighPair(
+    ID.coke,
+    ID.absent,
+    context({ catalog: [leafCoke, leafSprite], taxonomy: TAXONOMY_A13 }),
+  );
+
+  assert.equal(leafed.components.content, flat.components.content);
+  // Only the tree term moved, and it moved DOWN: two sodas were "the same
+  // category" before A-13 and are sibling leaves now, which is the finer and
+  // more honest answer.
+  assert.equal(flat.components.tree, 1);
+  assert.equal(leafed.components.tree, 0.5);
+});
+
+test("candidatePairs' same-category arm is D-04's same-parent-subtree arm, since category_id stayed the root", () => {
+  const coke = bev(ID.coke, "Coca-Cola Classic", "Coca-Cola", "Original", "soda", 1, "cola");
+  const sprite = bev(ID.absent, "Sprite", "Sprite", "Original", "soda", 1, "citrus_soda");
+  const diet = bev(ID.diet, "Diet Coke", "Coca-Cola", "Diet", "diet_soda", 1, "diet_cola");
+  const pairs = candidatePairs([coke, sprite, diet]);
+  // Two different leaves of `soda` are still candidates for each other.
+  assert.equal(pairs.has(pairKey(coke.id, sprite.id)), true);
+  // Coke and Diet Coke are candidates through the BRAND arm, not the category
+  // one -- they are under different roots.
+  assert.equal(pairs.has(pairKey(coke.id, diet.id)), true);
+  // Sprite and Diet Coke share neither a root nor a brand.
+  assert.equal(pairs.has(pairKey(sprite.id, diet.id)), false);
 });
 
 // ---------------------------------------------------------------------------
@@ -241,8 +367,34 @@ test("every stored row satisfies edgeWeight(components) === weight", () => {
   for (const p of weighed) {
     assert.equal(edgeWeight(p.components), p.weight, `${p.src}|${p.dst}`);
     assert.deepEqual(Object.keys(p.components).sort(), ["content", "cop", "emb", "profile", "tree"]);
-    assert.equal(p.components.cop, 0); // gamma = 0 in v1; co-rating is A-16 (2)
+    assert.equal(p.components.cop, 0); // no coRaters in this context, so no cop term
   }
+});
+
+test("weighPair stores the cop term as the clamped COSINE of co-raters' z, and it moves no weight while gamma = 0", () => {
+  const u = ["00000000-0000-4000-8000-0000000000a1", "00000000-0000-4000-8000-0000000000b2", "00000000-0000-4000-8000-0000000000c3"];
+  const base = context({
+    profiles: { [ID.coke]: cola, [ID.pepsi]: cola },
+    embeddings: { [ID.coke]: AXIS, [ID.pepsi]: atCosine(0.9) },
+  });
+  // Three raters who all rate both above their own means: cosine 0.94, where
+  // Pearson (re-centred per Bev) would say -1 and clamp to 0.
+  const coRaters = new Map([
+    [ID.coke, new Map([[u[0]!, 1.0], [u[1]!, 0.8], [u[2]!, 1.2]])],
+    [ID.pepsi, new Map([[u[0]!, 0.9], [u[1]!, 1.1], [u[2]!, 0.7]])],
+  ]);
+  const p = weighPair(ID.coke, ID.pepsi, { ...base, coRaters });
+  assert.equal(p.components.cop, round6(2.62 / Math.sqrt(3.08 * 2.51)));
+  assert.equal(p.components.cop, 0.9423);
+  assert.equal(p.weight, weighPair(ID.coke, ID.pepsi, base).weight, "EDGE_WEIGHTS.cop is 0");
+  assert.equal(edgeWeight(p.components), p.weight);
+
+  // Opposite co-preference clamps to 0 rather than reaching edgeWeight's unit() check.
+  const opposed = new Map([
+    [ID.coke, new Map([[u[0]!, 1.0], [u[1]!, 0.8], [u[2]!, 1.2]])],
+    [ID.pepsi, new Map([[u[0]!, -1.0], [u[1]!, -0.8], [u[2]!, -1.2]])],
+  ]);
+  assert.equal(weighPair(ID.coke, ID.pepsi, { ...base, coRaters: opposed }).components.cop, 0);
 });
 
 test("Coca-Cola <-> Pepsi reproduces the 10.1 worked example at 0.895", () => {

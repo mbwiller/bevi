@@ -18,12 +18,47 @@ export interface RankingComparison {
   tie: boolean;
 }
 
+/**
+ * A bucket Bev's tier in anchored placement (LaTeX §10.1, `placementTiers`): a smaller number is
+ * more similar to the new Bev; null is "no tier" (never an anchor). PLACEMENT_TIER names the values.
+ */
+export type PlacementTier = number | null;
+
+/**
+ * What `placementTiers` reads about a Bev: its root category (`bevs.category_id`, one of the 15
+ * roots) and its leaf (`bevs.leaf_category_id`), null when no finer placement is known (the
+ * unsplit roots `water` and `sports`, a user-created Bev, a Bev the taxonomy left on its parent).
+ */
+export interface PlacementBevKind {
+  categoryId: CategoryId;
+  leafCategoryId: CategoryId | null;
+}
+
+/** A bucket Bev as `placementTiers` sees it (`rankings.listBucketBevs` joined with `bevs.leaves`). */
+export interface PlacementListBev extends PlacementBevKind {
+  id: BevId;
+}
+
+/** Phase 1 of anchored placement: the binary search over the anchors (LaTeX Algorithm alg:anchored). */
+export interface PlacementAnchors {
+  /** Positions in `list` of the anchors, ascending: the paper's p_1 < … < p_k, 0-based. */
+  readonly positions: readonly number[];
+  /**
+   * Candidate anchor slots [lo, hi] ⊆ [0, k]. Phase 1 runs while lo < hi; once lo = hi = j*, the
+   * state's own [lo, hi] is the gap between anchors j* and j* + 1 and Phase 2 searches it.
+   */
+  readonly lo: number;
+  readonly hi: number;
+}
+
 /** The range [lo, hi] and the question asked, captured BEFORE an answer (for undo and the log). */
 export interface PlacementStep {
   readonly comparedBevId: BevId;
   readonly answer: ComparisonAnswer;
   readonly lo: number;
   readonly hi: number;
+  /** The anchor-slot range before the answer; present exactly when the placement is anchored. */
+  readonly anchored?: { readonly lo: number; readonly hi: number };
 }
 
 export interface PlacementState {
@@ -36,13 +71,24 @@ export interface PlacementState {
   readonly hi: number;
   readonly history: readonly PlacementStep[];
   readonly status: 'COMPARING' | 'DONE';
+  /**
+   * Anchored placement (LaTeX §10.1, M-21). Absent in a plain binary search, which is also what an
+   * anchored start with no anchors produces, so a state without this field is exactly 1.4.0's.
+   */
+  readonly anchored?: PlacementAnchors;
 }
+
+/** Which search a question belongs to: the anchors (like-for-like), the gap between two anchors, or a plain search. */
+export type PlacementPhase = 'PLAIN' | 'ANCHORS' | 'GAP';
 
 export interface PlacementPrompt {
   comparedBevId: BevId;
   /** 1-based number of the question being asked. */
   step: number;
-  /** maxComparisons(list.length): the most questions this placement can take. */
+  /**
+   * The most questions this placement can take: maxComparisons(list.length), or for an anchored
+   * placement maxAnchoredComparisons(list.length, anchor positions). Constant for the whole placement.
+   */
   maxSteps: number;
 }
 
@@ -119,17 +165,66 @@ export interface UserSnapshot {
   canSeeAlcohol: boolean;
 }
 
+/**
+ * One stored Bev-graph edge (`bev_edges`, LaTeX §10.1): the weight w(a, b) of an unordered pair.
+ * `a` and `b` may come in either orientation (`bev_edges` stores src < dst); `w` is in [0, 1].
+ */
+export interface BevEdge {
+  a: BevId;
+  b: BevId;
+  w: number;
+}
+
 /** Everything `predictScore` / `recommend` read. Treated as immutable once passed in. */
 export interface PredictionSnapshot {
   /** Must equal RANKING_VERSION of the consuming bundle; otherwise the functions throw. */
   version: string;
   /** ISO; informational only. */
   generatedAt: string;
+  /**
+   * `byCategoryMean` (the mean stored score per category) is read by no prediction formula: Layer 1
+   * uses affinity in z-units, and `categoryPrior` needs the category's n as well as its mean. It is
+   * kept because the eval harness's `category-mean` baseline reads it (TASKS.md M-26), and because
+   * dropping it would change `get_prediction_snapshot` and packages/api (Arjun's lane) for no gain.
+   */
   global: { mean: number; stddev: number; byCategoryMean: Record<CategoryId, number> };
   bevs: Record<BevId, BevFeatures>;
   users: Record<UserId, UserSnapshot>;
   /** Stored scores; z-scores are computed inside. */
   rankings: Array<{ userId: UserId; bevId: BevId; score: number }>;
+  /**
+   * The stored Bev-graph edges that `bevSimilarity: 'edges'` reads (TASKS.md S-21): every
+   * `bev_edges` row with at least one endpoint among the Bevs ranked by a user whose predictions
+   * will be computed (the viewer, in the app), each unordered pair once. A pair absent from a present
+   * array has no stored edge and weighs 0. Absent (undefined or null) means "not provided": edges
+   * mode then falls back to the computed content similarity. Rows whose Bevs are not in `bevs` are
+   * allowed and ignored. Read lazily, only in edges mode.
+   */
+  edges?: BevEdge[] | null;
+  /**
+   * The stored taste neighbours that `userSimilarity: 'stored'` reads (Stage 4, LaTeX §6.4): for
+   * each user key, that user's `user_neighbors` rows, i.e. their top TASTE_NEIGHBOUR_K users by the
+   * blended similarity sim_B with sim ≥ TASTE_SIM_FLOOR, as the nightly job (A-16 (2)) stored them.
+   * Keyed by the user whose neighbours they are: the viewer, in the app (other users' ids are the
+   * snapshot's aliases); every user, in the eval harness. Absent (undefined or null) means "not
+   * provided": stored mode then falls back to the in-snapshot cosine for everyone. A key that is
+   * missing or holds an empty list means that user has no rows (not yet synced, or nobody above the
+   * floor), and that user falls back too. Rows naming users absent from the snapshot are allowed
+   * and weigh 0 (their reliability is that of n_v = 0). Row order does not matter. Read lazily,
+   * only in stored mode, and validated then (see `neighbourLookup` in context.ts).
+   */
+  userNeighbours?: Record<UserId, UserNeighbour[]> | null;
+}
+
+/**
+ * One stored taste neighbour of a user: a `user_neighbors` row (A-16 (2), LaTeX §6.4). `sim` is the
+ * blended similarity sim_B as stored (already significance-weighted, in [-1, 1]); `common` is
+ * |common(u, v)|, carried for diagnostics and not read by any formula.
+ */
+export interface UserNeighbour {
+  userId: UserId;
+  sim: number;
+  common: number;
 }
 
 export interface Layer1Result {
@@ -172,15 +267,29 @@ export interface Recommendation {
 /**
  * The user–user similarity Layer 2 weights neighbours by. 'cosine' is §8.9's cosine of the z-scores
  * on the common Bevs, the live engine. 'pearson' re-centres both users on the common Bevs first
- * (`pearsonSimilarity` in graph.ts, docs/graph_db_implementation.md Stage 3); it is off by default
- * until the eval harness has a real export to judge it on.
+ * (`pearsonSimilarity` in graph.ts, docs/graph_db_implementation.md Stage 3). 'stored' reads the
+ * user's stored taste neighbours from `snapshot.userNeighbours` (Stage 4): sim_B · min(1, n_v / N₀)
+ * for a listed neighbour, 0 for everyone else; it falls back to 'cosine' for a user with no stored
+ * rows (see `effectiveUserSimilarity`). Both alternatives are off by default until the eval harness
+ * has a real export to judge them on.
  */
-export type UserSimilarityKind = 'cosine' | 'pearson';
+export type UserSimilarityKind = 'cosine' | 'pearson' | 'stored';
 
-/** Options of `layer2`, `userSimilarity` and `predictScore`. Omitted means today's engine. */
+/**
+ * The Bev–Bev similarity Layer 1's content term weights the user's ranked Bevs by. 'content' is
+ * §8.8's sim(b, b′) (`contentSimilarity`), computed from the snapshot's features: the live engine.
+ * 'edges' is the stored Bev-graph weight w(b, b′) from `snapshot.edges` (LaTeX §10.1), with 0 for a
+ * pair that has no stored edge; it falls back to 'content' when the snapshot carries no `edges`
+ * field. Off by default until the eval harness has a real export to judge it on (TASKS.md M-27 (a)).
+ */
+export type BevSimilarityKind = 'content' | 'edges';
+
+/** Options of `layer1`, `layer2`, `userSimilarity` and `predictScore`. Omitted means today's engine. */
 export interface PredictOptions {
-  /** Default 'cosine'. */
+  /** Layer 2's user–user similarity. Default 'cosine'. */
   userSimilarity?: UserSimilarityKind;
+  /** Layer 1's Bev–Bev similarity in the content term. Default 'content'. */
+  bevSimilarity?: BevSimilarityKind;
 }
 
 export interface RecommendOptions extends PredictOptions {

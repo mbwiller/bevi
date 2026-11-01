@@ -29,7 +29,8 @@ One JSON object. Pseudonymise users; keep the file outside the repo.
   "format": "bevi-eval-export", "formatVersion": 1, "exportedAt": "2026-10-18T00:00:00Z",
   "bevs":        [{ "id", "name", "brand", "flavor", "categoryId", "priceTier", "isAlcoholic" }],
   "rankings":    [{ "userId", "bevId", "bucket": 3|2|1, "position", "score", "rankedAt" }],
-  "comparisons": [{ "userId", "submissionId", "winnerBevId", "loserBevId", "tie", "createdAt" }]
+  "comparisons": [{ "userId", "submissionId", "winnerBevId", "loserBevId", "tie", "createdAt" }],
+  "edges":       [{ "a", "b", "w" }]   // optional: bev_edges as src_bev_id, dst_bev_id, weight
 }
 ```
 
@@ -37,7 +38,11 @@ One JSON object. Pseudonymise users; keep the file outside the repo.
 string; timestamps are ISO 8601, truncated to the hour by the export; `submissionId` is an opaque
 salted hash (used only for grouping). Rows on Bevs missing from `bevs` are dropped and counted. A
 duplicated (user, Bev) ranking keeps the latest. `brand`/`flavor`/`name` are normalised by
-`normaliseBrand` / `flavorTokens`, as `packages/api/src/snapshot.ts` does.
+`normaliseBrand` / `flavorTokens`, as `packages/api/src/snapshot.ts` does. `edges` is optional
+(same `formatVersion`): each unordered pair once, `w` in [0, 1] (number or numeric string); edges
+touching a Bev missing from `bevs` are dropped. Without it, the `-edges` arms fall back to the
+computed content similarity and equal their twins. `export.sql` does not emit it yet; adding
+`select src_bev_id as a, dst_bev_id as b, weight as w from bev_edges` is all it takes.
 
 To produce the file, use the query shipped as `eval/export.sql`. Run it as a database role that
 bypasses RLS (e.g. `postgres`). Pass the salt with `-v`, not `\set`, so it stays out of psql
@@ -93,12 +98,32 @@ shows how many draws were valid, e.g. `(812/1000 draws)`, and the JSON carries i
 
 Arms: `global-mean`, `user-mean` (constant μ*_u), `category-mean`, `user-category-mean`,
 `bayes-bev`, `item-mean-z` (`globalScore`), `l1-affinity`, `l1-content`, `layer1`, `layer2`,
-`layer2-pearson`, `engine` (`predictScore`), and `engine-pearson`. The two `-pearson` arms are
-**experimental**: they call the real `layer2` / `predictScore` with `{ userSimilarity: 'pearson' }`
+`layer2-pearson`, `engine` (`predictScore`), `engine-pearson`, the `-edges` arms and the `-stored`
+arms. The two `-pearson` arms are **experimental**: they call the real `layer2` / `predictScore` with `{ userSimilarity: 'pearson' }`
 (M-28, `RANKING_VERSION` 1.3.0), which swaps §8.9's cosine for Pearson over the common subset
 (`pearsonSimilarity` in `src/graph.ts`) and changes nothing else. Production still runs the
 default, `'cosine'`. The report also prints cosine-vs-Pearson disagreement over every user pair,
 and the median number of co-raters per item pair (§8.9).
+
+The three `-edges` arms (`l1-content-edges`, `layer1-edges`, `engine-edges`) are **experimental**
+too: they call the real `layer1` / `predictScore` with `{ bevSimilarity: 'edges' }` (M-27 (a),
+`RANKING_VERSION` 1.4.0), which replaces the content term's computed similarity by the stored edge
+weight w, with 0 for a pair without an edge. Edge weights read no rankings (γ = 0), so attaching
+the same edges to every fold leaks nothing. `--synthetic` builds stand-in edges with
+`syntheticEdges` (`edgeWeight` with emb = profile = 0, so only same-category pairs clear 0.3);
+they exercise the plumbing and say nothing about the real graph.
+
+The two `-stored` arms (`layer2-stored`, `engine-stored`) are **experimental** as well: they call
+the real `layer2` / `predictScore` with `{ userSimilarity: 'stored' }` (graph Stage 4,
+`RANKING_VERSION` 1.6.0), which weights only the user's stored taste neighbours, each by
+sim_B · min(1, n_v / 15), and gives everyone else 0. Unlike edges, neighbours are computed from
+rankings, so they must never come from the full data or from a dump of `user_neighbors`: the
+harness rebuilds them in **every fold from that fold's training rows** (`syntheticNeighbours`,
+which mirrors `scripts/graph/neighbours-core.ts` with the package's exports; `folds.ts` leak 6),
+and only when a stored arm is in the run, since it scores every user pair per fold. A snapshot
+carries no flavour bases, so in the harness brand is the only bridging attribute and the attribute
+term understates the real graph's. A user with no neighbour above the 0.1 floor falls back to the
+cosine, exactly as in the app.
 
 ## Caveats
 

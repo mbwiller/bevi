@@ -16,12 +16,17 @@
 //      spacing, one more Bev in the bucket). With `respace`, every user who lost a row has their
 //      buckets re-spaced from position order with storedScore(), which is exactly what the app
 //      would have stored had the Bev never been ranked (absent later re-ranks).
+//   6. Stored taste neighbours (Stage 4, the `*-stored` arms). `user_neighbors` is computed from
+//      rankings, so a neighbour list from the full data (or a real dump of the table) would carry
+//      the held-out score into sim_B. With `neighbours`, each fold's lists are computed from that
+//      fold's own snapshot, i.e. from its training rows only (`syntheticNeighbours`).
 
 import { RANKING_VERSION } from '../src/constants.ts';
 import { storedScore } from '../src/score.ts';
 import { populationStats } from '../src/stats.ts';
-import type { BevFeatures, BevId, CategoryId, PredictionSnapshot, Stats, UserId, UserSnapshot } from '../src/types.ts';
+import type { BevEdge, BevFeatures, BevId, CategoryId, PredictionSnapshot, Stats, UserId, UserSnapshot } from '../src/types.ts';
 import type { CatalogFeatures, EvalRanking } from './dataset.ts';
+import { syntheticNeighbours } from './synthetic.ts';
 
 export const rowKey = (userId: UserId, bevId: BevId): string => `${userId}\u0000${bevId}`;
 
@@ -62,9 +67,18 @@ export function holdOut(rows: readonly EvalRanking[], heldOut: ReadonlySet<strin
  * catalog. Every statistic is recomputed from `rows`; equivalent to test/snapshot-fixture.ts's
  * buildSnapshot() (asserted in the tests) but over every category and in O(rows + catalog).
  * Every user can see alcohol: evaluation scores every held-out Bev, recommend()'s age gate is not
- * under test. Rows on Bevs missing from the catalog are dropped.
+ * under test. Rows on Bevs missing from the catalog are dropped. `edges`, when given, is attached
+ * as `snapshot.edges` (shared, not copied): edge weights read no rankings (γ = 0), so they leak
+ * nothing from the held-out rows. With `opts.neighbours`, `snapshot.userNeighbours` is
+ * `syntheticNeighbours` of the fold itself (leak 6); it costs O(users²) blends per fold, so the
+ * harness asks for it only when a stored arm is in the run.
  */
-export function foldSnapshot(catalog: ReadonlyMap<BevId, CatalogFeatures>, rows: readonly EvalRanking[]): PredictionSnapshot {
+export function foldSnapshot(
+  catalog: ReadonlyMap<BevId, CatalogFeatures>,
+  rows: readonly EvalRanking[],
+  edges?: readonly BevEdge[] | null,
+  opts: { neighbours?: boolean } = {},
+): PredictionSnapshot {
   const rankings: PredictionSnapshot['rankings'] = [];
   const byBev = new Map<BevId, number[]>();
   const byUser = new Map<UserId, number[]>();
@@ -101,14 +115,17 @@ export function foldSnapshot(catalog: ReadonlyMap<BevId, CatalogFeatures>, rows:
   const byCategoryMean: Record<CategoryId, number> = {};
   for (const c of [...byCat.keys()].sort()) byCategoryMean[c] = populationStats(byCat.get(c) as number[]).mean;
   const g = populationStats(rankings.map((r) => r.score));
-  return {
+  const snapshot: PredictionSnapshot = {
     version: RANKING_VERSION,
     generatedAt: 'eval-fold',
     global: { mean: g.mean, stddev: g.stddev, byCategoryMean },
     bevs,
     users,
     rankings,
+    ...(edges ? { edges: edges as BevEdge[] } : {}),
   };
+  if (opts.neighbours) snapshot.userNeighbours = syntheticNeighbours(snapshot);
+  return snapshot;
 }
 
 /** Number of rankings each user has in `rows`. */

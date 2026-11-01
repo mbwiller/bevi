@@ -1,20 +1,33 @@
 # Next up: Arjun
 
-Your queue from 2026-10-19 on, centred on Supabase and Neo4j. Matt's is in [`NEXT-MATT.md`](NEXT-MATT.md). The live status of every task is the board at the top of [`TASKS.md`](TASKS.md). Update your row there in the same PR whenever you start or finish something.
+Your queue, updated 2026-10-31, centred on Supabase and Neo4j. Matt's is in [`NEXT-MATT.md`](NEXT-MATT.md). The live status of every task is the board at the top of [`TASKS.md`](TASKS.md). Update your row there in the same PR whenever you start or finish something.
 
 **Your lane:** `supabase/`, `packages/api/`, `data/catalog/`, `scripts/` (catalog and graph). Branches are `be/*`. Your combined PRs also carry the `shared/` contract and the FakeApi (Matt reviews that part).
 
-## Start now: nothing blocks these
+## Start now (2026-10-31)
+
+**Prod migrations:**
+- [x] Confirmed 2026-10-31: all four are on prod.
+
+| Order | Task | What "done" means | Unblocks |
+|---|---|---|---|
+| 1 | ~~**Approve #137**~~ — **merged 2026-10-31 from Matt's side**, with #138 (1.5.0) and #144 (1.6.0), under the rule that a PR flagged for you only because it regenerates `shared/fixtures` merges once every pre-existing case is byte-identical (checked, 706 cases) and the `db` job is green | Your review of the fixture hunks is welcome after the fact. `edgeWeight` is unchanged in all three, so the next nightly `graph:edges` only re-stamps `bev_edges`; the `cop` term and `user_neighbors` are untouched | — |
+| 2 | **A-14 follow-ups** | M-22's SQL list (TASKS.md M-22 item 3), still unbuilt. **Two are wrong on prod:** the streak history rewritten by re-ranks and removals, and `bayes_score` stale at `rating_count = 0`. #137 adds vector targets: the `bayesScoreStored` cases (pgTAP, item 7) and the event-streak cases (the `touch_streak` fix, item 1) | Correct streaks and scores |
+| 3 | **S-21 + Stage 4**, one combined PR | **The contract is fixed on the package side** (#144's "Heads-up for Arjun" has the full text). One revision of `get_prediction_snapshot`: **`edges`** = `[[src, dst, w], …]` for every `bev_edges` row touching the caller's ranked Bevs, visible Bevs only, `[]` never null; **`userNeighbors`** = `[[alias, sim, common], …]` from `user_neighbors where user_id = viewer`, joined to the same alias CTE as `users` and `rankings`, `order by sim desc, neighbor_id`, `[]` never null, **no `version` filter** (sim_B is unchanged since 1.3.0; filtering would empty stored mode after every bump). `toViewerSnapshot` maps `edges` to `{ a, b, w: num(w) }` and `userNeighbors` to `snapshot.userNeighbours = { [viewer.id]: rows.map(([userId, sim, common]) => ({ userId, sim: num(sim), common })) }`, each **whenever its key is present, even as `[]`**. A neighbour counts only if their rankings are in `rankings`, so if the RPC ever trims rankings or users, keep the viewer's neighbours. pgTAP for both keys. Also two doc lines: `docs/graph_db_implementation.md` §5 names the field `userNeighbors` with tuples and says "replace the cosine with Pearson" / "new constants" (as built: `userNeighbours` with objects, cosine fallback, Pearson its own option, no new constant), and the comment in `20261026000300` says `snapshot.userNeighbors` | Switching on M-27 (a)'s edges mode and stored neighbours in Layer 2 |
+| 4 | **`categories_depth_guard` follow-up** | Moving a leafless root (`water`, `sports`) under another root makes its Bevs' `category_id` a leaf. Reject that move. Service-role only, so the app can't reach it | — |
+| 5 | **First `graph-neighbours` run** | A `workflow_dispatch` dry-run. Expect few rows or none at today's volume | Stage 4's data |
+| 6 | **The Neo4j mirror** (optional) | A-16 steps 6, 8 and 9. Nothing the app reads depends on it | — |
+| 7 | **`app.yml` path filter** (optional, joint) | Add `design/beverage-icons/manifest.json` to the `app` workflow's paths, so an icon batch that forgets `node scripts/icons/export-app.mjs` fails its own PR's drift test (`app/src/lib/__tests__/bevIcons.test.ts`) rather than the next app PR. `.github/` is joint, so it needs both of us | — |
+
+## Done since 2026-10-19
 
 | Order | Task | What "done" means | Unblocks |
 |---|---|---|---|
 | 0 | **Neo4j instance** — **done 2026-10-24** | Instance `bevi-graph-db`. The four `NEO4J_*` secrets are set in GitHub Actions and in the Supabase project, the Cypher schema is applied (9/9) and `(:Meta).lastKeepAliveAt` is written. Two things are worth knowing: Aura's credentials file sets the username **and** the database to the instance id, not `neo4j`, so both come from that file; and `queryApiUrl()`'s scheme regex never matched `neo4j+s://`, so every graph call failed `fetch failed` regardless of the secrets. Both are in this PR. Dispatch `graph-keepalive` after it merges and check the log says `(:Meta).lastKeepAliveAt updated`. `graph-query` is still undeployed | Everything on the graph |
-| 1 | **A-14 · #107** (already open, CI green) | Push `20261019000200_leaderboard_parity.sql` to prod (dry-run first), then merge | Matt's M-22 cross-check |
-| 2 | **M-26 export** (about 15 min) | Run `packages/ranking/eval/export.sql` against prod as a role that bypasses RLS: `psql "$DATABASE_URL" -At -v salt="$SALT" -f packages/ranking/eval/export.sql > export.json`. Hand Matt the file privately. **It never goes in the repo** | Real baseline numbers for Matt's M-27, and for judging the graph |
+| 1 | **A-14** — **done in #112** (#107 closed as superseded) | `20261019000200_leaderboard_parity.sql` is on prod | Matt's M-22 cross-check |
+| 2 | **M-26 export** — **done 2026-10-25** | Ran via `supabase db query --linked` (no DB password needed — the CLI's cached credentials suffice, which is worth remembering). Export and harness report live outside the repo at `~/bevi-m26-export.json` and `~/bevi-m26-report.txt`; the salt is `BEVI_EVAL_SALT` in `supabase/.env`, keep it if you want aliases stable across exports. **The numbers are not a baseline:** 3 users, 27 rankings, 31 comparisons; engine concordance 0.703 [0.500, 0.875] (CI includes chance), `category-mean` ahead by +0.064, Pearson identical. Hand the file to Matt and tell him M-27's comparison DoD is not satisfiable on this data | Real baseline numbers — **not yet achievable** |
 | 3 | **S-04 + A-04 · Explore backend** — **done in #113**, `20261019000400` on prod, contract `2.6.0`. The security review found that using `p_before` as both the paging cut and the decay clock leaked exact like counts (a non-linear decay means sweeping the clock reveals the ratio); the clock is now server-side `now()`. Also gated non-active Bevs and bounded `p_offset` | — | **Matt's M-04, now unblocked** |
-| 4 | **A-16 (1) + S-14 part 2 · The Bev graph** — **built and merged**, #115 + #117 + #118, all migrations on prod | Neo4j turned out not to be needed: step 3 allows pgvector for candidates, step 4 is pure TypeScript and step 7 writes Postgres, so only steps 6, 8 and 9 (the Cypher `MERGE`, the `RANKED` mirror, `(:Meta)`) still want the instance. `embed` is deployed with `--no-verify-jwt` and its secret is set. **Left to do, all operator steps:** run `npm run graph:backfill-embeddings` (needs `SUPABASE_SERVICE_ROLE_KEY`), set `bevi.embed_function_url` and `bevi.embed_webhook_token` on the database, add the `SUPABASE_SERVICE_ROLE_KEY` Actions secret and the `SUPABASE_URL` variable, then `npm run graph:edges -- --dry-run` and read the real Coke–Pepsi number before trusting the >= 0.8 bar | **Matt's M-27 and M-21** |
-
-Items 3 and 4 each unblock Matt, so do 3 first: it's smaller and P0.
+| 4 | **A-16 (1) + S-14 part 2 · The Bev graph** — **built and merged**, #115 + #117 + #118, all migrations on prod | Neo4j turned out not to be needed: step 3 allows pgvector for candidates, step 4 is pure TypeScript and step 7 writes Postgres, so only steps 6, 8 and 9 (the Cypher `MERGE`, the `RANKED` mirror, `(:Meta)`) still want the instance. `embed` is deployed with `--no-verify-jwt` and its secret is set. **Left to do, all operator steps:** run `npm run graph:backfill-embeddings` (needs `SUPABASE_SERVICE_ROLE_KEY`), set `bevi.embed_function_url` and `bevi.embed_webhook_token` on the database, add the `SUPABASE_SERVICE_ROLE_KEY` Actions secret and the `SUPABASE_URL` variable, then `npm run graph:edges -- --dry-run` and read the real Coke–Pepsi number before trusting the >= 0.8 bar. **All done since** (#121, #123; Coke–Pepsi 0.9001; `graph-edges` green nightly since 2026-10-25), and #135 guards the trigger's Vault reads (`20261031000100`) | **Matt's M-27 and M-21** |
 
 ### A-16 (1), the Bev graph, in detail
 
@@ -40,9 +53,9 @@ The decision (2026-10-19): Neo4j holds Bevs, categories, brands and flavours as 
 
 | Task | Waits on (Matt) | What you build |
 |---|---|---|
-| **A-13 · Category hierarchy** | **D-04**: Matt's tree **plus the 378-Bev leaf assignment** | `categories.parent_id` (and depth) in Postgres, `CHILD_OF` in Neo4j, `Category.parentId` in the contract. The age gate walks up to the alcoholic ancestor (`category_is_alcoholic(id)`). Reassign the catalog Bevs to their leaves through `data/catalog`. Re-run the sync so the tree term uses the hierarchy |
-| **A-14 follow-ups** | M-22's list of SQL corrections, if any | Small SQL fixes, with pgTAP |
-| **A-16 (2) · The taste graph** | **M-28**: Matt's taste formulas in `packages/ranking/src/graph.ts` | `RANKED` edges with stable HMAC pseudonyms, **updated on every ranking** (async webhook) plus the nightly re-check. Taste neighbours in `user_neighbors` (RLS: owner-only select) and the co-rating `cop` term. Measured against #87's decision bar with Matt's M-26 harness |
+| **A-13 · Category hierarchy** — **done in #132**, contract `2.8.0` | ~~D-04~~ merged as #127 | `categories.parent_id` and `bevs.leaf_category_id` in `20261026000100`, the catalog re-pointed in `20261026000200`, `category_is_alcoholic(id)` walking up one hop, `get_category_tree()` and `get_bev_leaves()`. **`bevs.category_id` still holds one of the 15 roots** — the app keys exhaustive `Record<CategoryId, …>` maps off those ids, so the leaf is a new nullable column instead. The tree term in `build-edges.ts` now measures at the leaf, the content term at the root. `CHILD_OF` stays with the deferred Neo4j mirror. Review fixes: the guard rejects a leaf in `category_id`; owner and revoke on the four new functions. Follow-up: `categories_depth_guard` (Start now, 4) |
+| **A-14 follow-ups** | ~~M-22's list~~ delivered in #128; vector targets in #137 | Small SQL fixes, with pgTAP. **Still open, and two are wrong on prod today:** the streak history rewritten by re-ranks and removals, and `bev_stats.bayes_score` going stale at `rating_count = 0` |
+| **A-16 (2) · The taste graph** — **done in #133**, Postgres-only | ~~M-28~~ merged as #131 | `user_neighbors` (RLS on, no client policy) in `20261026000300`, `scripts/graph/build-neighbours.ts` and `graph-neighbours.yml` nightly, plus the `cop` term stored in `bev_edges.components`. **No HMAC pseudonyms and no `RANKED` mirror** — both belong to the deferred Neo4j steps, as in A-16 (1). **No per-ranking webhook:** one new ranking moves the global mean, so every pair changes and there is no incremental update smaller than the rebuild. Review fixes: a pg_safeupdate-safe DELETE; **no client select policy** (Stage 4 reads through the definer snapshot RPC, with aliases); aliased user ids in the job log (Actions logs on this public repo are public); an empty-read guard. **`cop` is the cosine of z-scores over common raters, clamped at 0** (Matt's ruling, over (1+r)/2), and 0 below 3 co-raters; z comes from all rankings, with only active Bevs as co-rated. **Stage 4 is the follow-up** (Start now, 3); it touches Matt's lane, so the contract is agreed first |
 
 ## Later: P2, after P0 and P1
 
@@ -55,33 +68,32 @@ The decision (2026-10-19): Neo4j holds Bevs, categories, brands and flavours as 
 
 | You hand Matt | So he can |
 |---|---|
-| The M-26 export file (privately) | Measure today's engine and judge M-27 |
-| S-04 + A-04, on prod | Build M-04 (the Explore screen) |
-| A-16 (1) + S-14 part 2, on prod | Build M-27, then M-21 |
-| A-13 (`Category.parentId`) | Build M-21 |
+| A-13 (#132: `categories.tree()`, `bevs.leaves()`), on prod | Build M-21's tiers |
+| S-21 + Stage 4, on prod | Switch on edges mode and stored neighbours (both options exist in the package) |
+| An M-26 re-export once there are more users (privately, outside the repo) | Judge switching on edges mode and Pearson |
 | S-10 + A-08 and the Maps key; S-13 + A-12 | Build M-16; build M-20 |
 | A heads-up before any migration that changes what an existing function returns | Keep the app and the FakeApi in step |
 
 | Matt hands you | So you can |
 |---|---|
-| D-04's tree plus the leaf assignment | Build A-13 |
-| M-22's SQL corrections | Do the A-14 follow-ups |
-| M-28's taste formulas | Build A-16 (2) |
-| Reviews of your FakeApi / conformance hunks | Merge your combined PRs |
-| Advance warning of any `@bevi/ranking` change (`RANKING_VERSION`) | Re-run the sync with the new weights |
+| M-22's SQL corrections (#128: two are wrong on prod today, streak history and stale `bayes_score`) | Fix them as A-14 follow-ups |
+| #137's vector targets: the `bayesScoreStored` cases and the event-streak cases | Test the A-14 follow-ups against them |
+| The RPC contract for S-21 + Stage 4: `edges` (#137) and `userNeighbors` (#144), spelled out in #144's "Heads-up for Arjun" | Build S-21 + Stage 4 as one combined PR |
+| A review of every FakeApi / conformance hunk in your PRs (they live in his lane) | Merge your combined PRs |
+| Advance warning of any `@bevi/ranking` formula or constant change (1.4.0, 1.5.0 and 1.6.0 all merged on 2026-10-31; `edgeWeight` unchanged, so the nightly run only re-stamps) | Re-run the graph sync; your edge weights come from `edgeWeight()` |
 
 ## The shared map (identical in both plans)
 
 ```
 Matt                                   Arjun
-M-19 Taste Profile ──── ready
-D-04 taxonomy + 378 assignments ─────▶ A-13 hierarchy ─────────────┐
-M-22 maths review ───(SQL fixes)─────▶ A-14 follow-ups (#107 first) │
-                                       M-26 export ──(file)──▶ Matt │
-M-04 Explore UI ◀──────────────────── S-04 + A-04 Explore backend   │
-M-27 graph in recs ◀───────────────── A-16 (1) Bev graph + S-14 (2) │
-M-21 placement ◀────────────────────── A-16 (1) + A-13 ◀────────────┘
-M-28 taste formulas ─────────────────▶ A-16 (2) taste graph
+D-04 taxonomy + 378 assignments ─────▶ A-13 hierarchy (#132) ─────────┐
+M-22 maths review ──(SQL fixes)──────▶ A-14 follow-ups (open)         │
+#137 M-22 vectors ──(targets)────────▶ A-14 follow-ups                │
+M-27 (b) Bevs like this ◀───────────── A-16 (1) Bev graph + S-14 (2)  │
+M-21 placement (#138, app #140) ◀───── A-16 (1) + A-13 ◀──────────────┘
+M-28 taste formulas ──(#131)─────────▶ A-16 (2) taste graph (#133)
+M-27 (a) edges mode on (#137) ◀─────── S-21 edges in the snapshot
+Stored neighbours on (#144) ◀──────── Stage 4 (same RPC change)
 M-16 map UI ◀───────────────────────── S-10 + A-08 venues (P2)
 M-20 duplicate step ◀───────────────── S-13 + A-12 duplicates (P2)
 ```
@@ -90,10 +102,10 @@ M-20 duplicate step ◀───────────────── S-13 
 
 | Surface | Who edits it | Rule |
 |---|---|---|
-| `shared/src/` (the contract) and `CONTRACT_VERSION` | Mostly your combined PRs | One combined PR per feature (contract + migration + `packages/api` + FakeApi). Bump the minor version, currently `2.5.0` (Matt's avatars, #110): Explore takes `2.6.0`, S-14 part 2 takes `2.7.0`. Whoever merges second rebases and takes the next number |
+| `shared/src/` (the contract) and `CONTRACT_VERSION` | Mostly your combined PRs | One combined PR per feature (contract + migration + `packages/api` + FakeApi). Bump the minor version, currently `2.8.0` (A-13, #132). Whoever merges second rebases and takes the next number |
 | `app/src/testing/fakeApi/*`, `conformance.ts` | You (in your combined PRs) and Matt | Every new API method needs a FakeApi version, or the app's typecheck fails. Write it to match your SQL, and Matt reviews it |
 | `packages/ranking/` | Matt | Your sync job and Edge Function import `edgeWeight` / `topEdges` from it; never copy the formulas. A `RANKING_VERSION` bump means re-running the sync |
-| `supabase/migrations/` | You | Timestamped and append-only, so keep your next timestamps after `20261019000200`. App code that calls a new function merges **only after its migration is on prod**. Push in timestamp order |
+| `supabase/migrations/` | You | Timestamped and append-only; the next timestamps go after `20261031000100`. Two branches once both took `20261026000100`, so check `ls supabase/migrations` and the open PRs before picking one. App code that calls a new function merges **only after its migration is on prod**. Push in timestamp order |
 | `TASKS.md` and `NEXT-*.md` | Both | Small PRs; rebase if they collide. The board at the top is the source of truth |
 | `.github/workflows/` | You (`graph-sync.yml`, `backend.yml`), Matt (`app.yml`) | Don't edit the other's workflow without a heads-up |
 | `docs/graph*.md` and `docs/bevi-ranking-math.tex` | You own the graph docs, Matt owns the paper | A change to one that affects the other gets a line in the PR's "Heads-up" section |
@@ -110,4 +122,4 @@ M-20 duplicate step ◀───────────────── S-13 
 
 - Turn on `deploy-dev` (automatic migrations on merge), or keep pushing by hand.
 - Drop `backup.feed_events_20261014`.
-- Update `DEVELOPMENT-MATT.md` §5, §6.8 and §6.16 (they still describe Add Bev and the Bevs · People tabs).
+- ~~Update `DEVELOPMENT-MATT.md` §5, §6.8 and §6.16~~ — done in #136.

@@ -3,6 +3,7 @@ import { MIN_N_USER, RANKING_VERSION, predictScore } from '@bevi/ranking';
 import {
   ApiError,
   type Bev,
+  type BevLeaf,
   type BevPrediction,
   type BevsApi,
   type BevSimilarity,
@@ -16,9 +17,11 @@ import {
 import {
   bucketFromDb,
   mapBev,
+  mapBevLeaf,
   mapBevSimilarity,
   mapBevSummary,
   mapProfile,
+  type BevLeafRow,
   type BevRow,
   type BevSimilarityRow,
   type BevSummaryRow,
@@ -315,5 +318,18 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
     return ((data ?? []) as SearchBevRpcRow[]).map((row) => mapSearchRow(client, row));
   }
 
-  return { search, get, findLikelyDuplicates, create, report, getStarterCandidates, similarities, similar };
+  // A-13: the same bulk shape as `similarities`, for the same reason -- M-21's
+  // placement asks about a whole bucket at once. The leaf is the only piece of
+  // the hierarchy that reaches the client per Bev; the structure comes from
+  // `categories.tree()`.
+  async function leaves(bevIds: readonly string[]): Promise<BevLeaf[]> {
+    await requireUserId(client);
+    // No ids means no rows: skip the round trip, as `similarities` does.
+    if (bevIds.length === 0) return [];
+    const { data, error } = await client.rpc('get_bev_leaves', { p_bev_ids: [...bevIds] });
+    if (error) throw mapError(error);
+    return ((data ?? []) as BevLeafRow[]).map(mapBevLeaf);
+  }
+
+  return { search, get, findLikelyDuplicates, create, report, getStarterCandidates, similarities, similar, leaves };
 }

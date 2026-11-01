@@ -27,15 +27,22 @@ import {
   effectiveUserStats,
   edgeWeight,
   embeddingSimilarity,
+  effectiveBevSimilarity,
+  effectiveUserSimilarity,
   isDone,
+  layer1,
+  layer2,
   leaderboardOrder,
   localDayKey,
   localPeriodKey,
   neighbourReliability,
   pearsonCorrelation,
   pearsonSimilarity,
+  placementPhase,
   placementResult,
+  placementTiers,
   populationStats,
+  predictScore,
   profileSimilarity,
   randomInt,
   rankPoints,
@@ -55,6 +62,7 @@ import {
   topUserNeighbours,
   treeSimilarity,
   undo,
+  userSimilarity,
   userStats,
   zScore,
   zScoresFromRankings,
@@ -65,7 +73,11 @@ import {
   type EdgeComponents,
   type FlavorProfile,
   type LeaderboardInputRow,
+  type PredictionSnapshot,
+  type PlacementBevKind,
+  type PlacementListBev,
   type PlacementState,
+  type PlacementTier,
   type RankUsersRow,
   type ScoredRanking,
   type Stats,
@@ -74,6 +86,7 @@ import {
   type TasteCatalog,
   type TasteVector,
   type Taxonomy,
+  type UserNeighbour,
 } from '../src/index.ts';
 
 const OUT_DIR = fileURLToPath(new URL('../../../shared/fixtures/', import.meta.url));
@@ -114,6 +127,18 @@ const constants = {
     'alpha = tasteAlpha if |common| >= cfMinCommon else 0; attributeSim = attributeSimilarity if |common| >= cfMinCommon or sharedAttrs >= tasteMinSharedAttrs else 0; sim = alpha * pearson.sim + (1 - alpha) * attributeSim, clamped to [-1, 1]; method = attr (alpha 0), pearson (alpha 1), else blend',
   neighbourOrder: 'sim desc, then userId asc (code point, SQL collate "C"); keep sim >= tasteSimFloor; at most tasteNeighbourK',
   reliabilityRule: 'min(1, n_v / neighbourReliabilityN); applied by Layer 2 per neighbour, not stored in user_neighbors.sim',
+  bayesStoredRule:
+    'bev_stats.bayes_score numeric(4,2) from exact inputs: m with at most 3 dp (global_stats.mean_score numeric(5,3), or the exact category mean), scores in cents; N = C*m_thousandths + 10*sum(score_cents), D = C + n; storedCents = round half away from zero of N / (10*D) = floor((2N + 10D) / (20D)); never round the floating-point bayes',
+  streakEvents:
+    'streakFromTimestamps.timestamps are ranking EVENTS (submit_ranking and rerank_bev), never deleted: a re-rank adds its own day and keeps the original one; a removal adds and deletes nothing. When a case lists input.events, timestamps = events.map(at)',
+  layer1EdgesRule:
+    "bevSimilarity 'edges': sim(b, b') = w of the snapshot.edges row for the unordered pair {b, b'} (either orientation), 0 when there is none; pairs with sim < simMin dropped as in 'content'; content = sum(sim * z) / (sum(sim) + 1); conf1 mass = n_{u,cat(b)} + sum(sim); affinity and g unchanged. A snapshot without an edges field (absent or null) uses contentSimilarity ('content'); an empty array means no edges",
+  layer2StoredRule:
+    "userSimilarity 'stored' (Stage 4), for the user u: N(u) = snapshot.userNeighbours[u] (u's user_neighbors rows, any order); sim'(u, v) = sim * min(1, n_v / neighbourReliabilityN) for v in N(u), with sim as stored and n_v = users[v].stats.n (derived from v's rankings when v is missing from users; 0 when v is unknown to the snapshot, so the row weighs 0); sim'(u, v) = 0 for every v not in N(u), whatever their co-ratings. Then Layer 2 exactly as in 'cosine' mode: the raters of b other than u with sim' > 0 (so a negative stored sim is dropped), sim' desc then userId asc, at most cfK; support = sum(sim'); z2 = sum(sim' * z_{v,b}) / support, 0 without neighbours. common is carried and read by no formula. Falls back to 'cosine' (the in-snapshot sim' of section 8.9) when the snapshot has no userNeighbours field (absent or null) or u has no rows (key missing or empty list). source = the similarity actually used. predictScore: lambda and confidence read this support",
+  placementTiersRule:
+    'tier of a bucket Bev l relative to the new Bev b (placementTier constants): sameLeaf (1) when categoryId (the root) is equal and both leafCategoryId are non-null and equal; sameRoot (2) when categoryId is equal otherwise (a null leaf on either side, i.e. kind unknown, never reaches tier 1); edge (3) when the roots differ and weights[l.id] (the bev_edges w of {b, l}) is >= edgeMinWeight; null otherwise (no weight, or a weight below the floor). Without weights only tiers 1 and 2 occur',
+  anchoredPlacementRule:
+    'startPlacement with tiers (one per orderedBevIds entry, filtered with the Bev itself): anchors A = the entries other than bevId whose tier equals the smallest non-null tier among the entries other than bevId (on a re-rank the Bev is still in the list and its tier against itself is ignored), in list order, at positions p_1 < ... < p_k of the filtered list; no anchors = the plain search. Phase 1 = binary search over anchor slots [aLo, aHi] = [0, k]: ask a_j with j = floor((aLo + aHi) / 2) (0-based), NEW_BETTER aHi = j, EXISTING_BETTER aLo = j + 1, TIE ends the placement at p_j + 1; after each answer the insertion range is lo = (aLo = 0 ? 0 : p_{aLo - 1} + 1), hi = (aHi = k ? n : p_{aHi}). Phase 2 = the plain search on [lo, hi] once aLo = aHi (none when lo = hi). insertIndex = lo; comparisons in the order asked; maxSteps = maxComparisons(k) + maxComparisons(widest gap between consecutive anchors, or before the first / after the last), constant. Undo restores lo, hi, aLo, aHi',
 };
 
 /** A plausible stored score: some position in some bucket. */
@@ -219,6 +244,22 @@ function bayesianCases(): Case[] {
   avg('five 10/10s, m = 6', 10, 5, 6);
   avg('one 2/10, m = 6', 2, 1, 6);
   avg('no ratings', 0, 0, 6.2);
+  // Paper Example 5.9: scores 7.6 and 2.0 with m = 6.6333… (= 19.9 / 3) give 5.9. No PRNG here.
+  avg('paper Example 5.9: 7.6 and 2.0, m = 6.6333…', (7.6 + 2.0) / 2, 2, 19.9 / 3);
+  // M-22: results exactly on a half cent, so the SQL numeric(4,2) store is pinned (bayesStoredRule).
+  const stored = (name: string, scores: number[], m: number) => {
+    const n = scores.length;
+    const sum = scores.reduce((t, x) => t + x, 0);
+    cases.push({
+      name,
+      fn: 'bayesScoreStored',
+      input: { scores, n, sumScore: sum, m, C: BAYES_C },
+      expected: { bayes: bayesianAverage(sum / n, n, { m, C: BAYES_C }), storedCents: storedBayesCents(scores, m, BAYES_C), stored: storedBayesCents(scores, m, BAYES_C) / 100 },
+    });
+  };
+  stored('7.6 and 2.0, m = 6.675: exactly 5.925 (the double is 5.92499999…), stored 5.93', [7.6, 2.0], 6.675);
+  stored('7.61 and 2.00, m = 6.705: exactly 5.945, stored 5.95 (live shows 5.9, stored shows 6.0)', [7.61, 2.0], 6.705);
+  stored('7.6 and 2.0, m = 6.625: exactly 5.895, stored 5.90', [7.6, 2.0], 6.625);
   for (let i = 0; i < 6; i++) {
     const scores = Array.from({ length: 1 + randomInt(rand, 30) }, randomStoredScore);
     const s = populationStats(scores);
@@ -257,6 +298,20 @@ function bayesianCases(): Case[] {
   ];
   cases.push({ name: 'names by code point: an astral name after U+E000-U+FFFF names', fn: 'leaderboardOrder', input: { rows: unicode }, expected: leaderboardOrder(unicode) });
   return cases;
+}
+
+/** bayesStoredRule: the numeric(4,2) value SQL stores, by exact integer arithmetic. */
+function storedBayesCents(scores: readonly number[], m: number, C: number): number {
+  const cents = scores.map((x) => Math.round(x * 100));
+  scores.forEach((x, i) => {
+    if (Math.abs(x * 100 - (cents[i] as number)) > 1e-9) throw new Error(`score ${x} is not in cents`);
+  });
+  const mThousandths = Math.round(m * 1000);
+  if (Math.abs(m * 1000 - mThousandths) > 1e-9) throw new Error(`prior ${m} has more than 3 decimals`);
+  const N = C * mThousandths + 10 * cents.reduce((t, x) => t + x, 0);
+  const D = C + scores.length;
+  if (N < 0) throw new Error('negative bayes');
+  return Math.floor((2 * N + 10 * D) / (20 * D));
 }
 
 // ---------------------------------------------------------------- placement
@@ -305,6 +360,109 @@ function placementCases(): Case[] {
       cases.push(placementCase(`oracle n=${n} t=${t}`, 'new', 'LOVED', ids, oracleSteps(n, t)));
     }
   }
+  // 1.5.0 (M-21): anchored placement (placementTiersRule, anchoredPlacementRule). Hand-built, no PRNG,
+  // and appended after the oracle cases, so every earlier case in this file is unchanged.
+  cases.push(...placementTierCases(), ...anchoredCases());
+  return cases;
+}
+
+/** placementTiers over D-04 §3's pairs: a catalogue of six kinds of Bev. */
+function placementTierCases(): Case[] {
+  const cases: Case[] = [];
+  const kind = (categoryId: string, leafCategoryId: string | null): PlacementBevKind => ({ categoryId, leafCategoryId });
+  const coke = kind('soda', 'cola');
+  const unknownSoda = kind('soda', null);
+  const dietCoke = kind('diet_soda', 'diet_cola');
+  const fiji = kind('water', null);
+  const list: PlacementListBev[] = [
+    { id: 'pepsi', ...kind('soda', 'cola') },
+    { id: 'aw-root-beer', ...kind('soda', 'root_beer') },
+    { id: 'mystery-soda', ...unknownSoda },
+    { id: 'diet-coke', ...dietCoke },
+    { id: 'diet-pepsi', ...kind('diet_soda', 'diet_cola') },
+    { id: 'evian', ...fiji },
+    { id: 'gatorade', ...kind('sports', null) },
+    { id: 'cold-brew', ...kind('coffee', 'cold_brew') },
+  ];
+  const tiers = (name: string, newBev: PlacementBevKind, weights?: Map<string, number>) =>
+    cases.push({
+      name,
+      fn: 'placementTiers',
+      input: { newBev, list, ...(weights ? { weights: Object.fromEntries(weights) } : {}) },
+      expected: placementTiers(newBev, list, weights),
+    });
+  tiers('Coke: Pepsi same leaf; A&W and the unknown soda same root; the rest none', coke);
+  tiers('a soda of unknown kind: nothing is same leaf, every soda is same root (D-04 §3: T1 empty)', unknownSoda);
+  tiers('Diet Coke: Diet Pepsi same leaf; Coke-like sodas are a different root', dietCoke);
+  tiers('Fiji: Evian is same root (unsplit water); Gatorade is not', fiji);
+  tiers('Coke with edges: Diet Coke 0.7 and Evian 0.3 become tier 3; 0.29 on cold brew does not; 0.9 on A&W stays tier 2', coke, new Map([
+    ['diet-coke', 0.7],
+    ['evian', 0.3],
+    ['cold-brew', 0.29],
+    ['aw-root-beer', 0.9],
+  ]));
+  tiers('Diet Coke with an edge to Pepsi only', dietCoke, new Map([['pepsi', 0.55]]));
+  return cases;
+}
+
+/**
+ * Anchored placement scripts: the questions asked (with their phase), the anchors, maxSteps and
+ * the result. `fn: 'anchoredPlacement'`; `steps` may contain 'UNDO'.
+ */
+function anchoredCases(): Case[] {
+  const cases: Case[] = [];
+  const add = (name: string, bevId: string, bucket: Bucket, orderedBevIds: string[], tiers: PlacementTier[], steps: Step[]) => {
+    let s = startPlacement({ bevId, bucket, orderedBevIds, tiers });
+    const maxSteps = currentPrompt(s)?.maxSteps ?? 0;
+    const questions: Array<{ comparedBevId: string; phase: string }> = [];
+    for (const step of steps) {
+      if (step === 'UNDO') s = undo(s);
+      else {
+        questions.push({ comparedBevId: currentPrompt(s)?.comparedBevId ?? '', phase: placementPhase(s) });
+        s = answer(s, step);
+      }
+    }
+    if (!isDone(s)) throw new Error(`anchored case "${name}" does not finish`);
+    const anchors = s.anchored ? s.anchored.positions.map((p) => s.list[p]) : [];
+    cases.push({ name, fn: 'anchoredPlacement', input: { bevId, bucket, orderedBevIds, tiers, steps }, expected: { anchors, maxSteps, questions, result: placementResult(s) } });
+  };
+  // The paper's figure: L = l0 … l7, anchors l1, l4, l6.
+  const L = Array.from({ length: 8 }, (_, i) => `l${i}`);
+  const fig: PlacementTier[] = [null, 1, null, null, 1, null, 1, null];
+  add('figure: lands between a1 and a2, then in the gap l2 l3 (asks l4, l1, l3, l2)', 'new', 'LOVED', L, fig, ['NEW_BETTER', 'EXISTING_BETTER', 'NEW_BETTER', 'EXISTING_BETTER']);
+  add('figure: best of all (asks l4, l1, l0)', 'new', 'LOVED', L, fig, ['NEW_BETTER', 'NEW_BETTER', 'NEW_BETTER']);
+  add('figure: worst of all (asks l4, l6, l7)', 'new', 'LOVED', L, fig, ['EXISTING_BETTER', 'EXISTING_BETTER', 'EXISTING_BETTER']);
+  add('figure: tie in Phase 1 ends at p_j + 1 = 5', 'new', 'FINE', L, fig, ['TIE']);
+  add('figure: tie in Phase 2, directly below l3', 'new', 'FINE', L, fig, ['NEW_BETTER', 'EXISTING_BETTER', 'TIE']);
+  add('figure: between a2 and a3, gap l5 alone', 'new', 'DISLIKED', L, fig, ['EXISTING_BETTER', 'NEW_BETTER', 'EXISTING_BETTER']);
+  add('figure: undo across the phase boundary, then the other answer', 'new', 'LOVED', L, fig, ['NEW_BETTER', 'EXISTING_BETTER', 'NEW_BETTER', 'UNDO', 'UNDO', 'NEW_BETTER', 'EXISTING_BETTER']);
+  add('figure: undo after a Phase 1 tie', 'new', 'LOVED', L, fig, ['TIE', 'UNDO', 'EXISTING_BETTER', 'EXISTING_BETTER', 'NEW_BETTER']);
+  add('figure: undo after done, in Phase 2', 'new', 'LOVED', L, fig, ['NEW_BETTER', 'EXISTING_BETTER', 'NEW_BETTER', 'EXISTING_BETTER', 'UNDO', 'NEW_BETTER']);
+  add('re-rank: l4 itself is in the list with a tier and is filtered out (anchors l1, l6)', 'l4', 'LOVED', L, fig, ['NEW_BETTER', 'EXISTING_BETTER', 'NEW_BETTER', 'EXISTING_BETTER']);
+  add('the smallest tier present wins: tier 2 anchors when no tier 1 (l0, l3, l5)', 'new', 'LOVED', L, [2, 3, null, 2, null, 2, 3, null], ['EXISTING_BETTER', 'NEW_BETTER', 'NEW_BETTER']);
+  add('tier 3 (edges) alone: anchors l2, l7', 'new', 'LOVED', L, [null, null, 3, null, null, null, null, 3], ['NEW_BETTER', 'EXISTING_BETTER', 'NEW_BETTER', 'NEW_BETTER', 'EXISTING_BETTER']);
+  add('adjacent anchors, empty gap: no Phase 2 question', 'new', 'LOVED', ['a', 'b', 'c', 'd'], [null, 1, 1, null], ['NEW_BETTER', 'EXISTING_BETTER']);
+  add('one anchor at the top of the list', 'new', 'LOVED', L, [1, null, null, null, null, null, null, null], ['EXISTING_BETTER', 'NEW_BETTER', 'EXISTING_BETTER', 'NEW_BETTER']);
+  add('one anchor at the bottom of the list', 'new', 'LOVED', L, [null, null, null, null, null, null, null, 1], ['NEW_BETTER', 'EXISTING_BETTER', 'EXISTING_BETTER', 'NEW_BETTER']);
+  add('no anchors (every tier null): the plain search, same questions and result as "best of five"', 'new', 'LOVED', ['coke', 'sprite', 'pepsi', 'fanta', 'dew'], [null, null, null, null, null], ['NEW_BETTER', 'NEW_BETTER', 'NEW_BETTER']);
+  add('every Bev in one tier: the plain search, same questions and result as "worst of five"', 'new', 'LOVED', ['coke', 'sprite', 'pepsi', 'fanta', 'dew'], [2, 2, 2, 2, 2], ['EXISTING_BETTER', 'EXISTING_BETTER']);
+  add('empty bucket with tiers', 'new', 'LOVED', [], [], []);
+  // A consistent oracle on a 20-Bev list with 7 anchors, for every true slot that exercises both phases.
+  const twenty = Array.from({ length: 20 }, (_, i) => `b${i}`);
+  const spread: PlacementTier[] = twenty.map((_, i) => ([2, 5, 6, 9, 13, 14, 18].includes(i) ? 1 : i % 3 === 0 ? 2 : null));
+  for (const t of [0, 3, 7, 12, 19, 20]) {
+    let s = startPlacement({ bevId: 'new', bucket: 'LOVED', orderedBevIds: twenty, tiers: spread });
+    const steps: Step[] = [];
+    while (!isDone(s)) {
+      const j = twenty.indexOf(currentPrompt(s)?.comparedBevId ?? '');
+      const a: ComparisonAnswer = t <= j ? 'NEW_BETTER' : 'EXISTING_BETTER';
+      steps.push(a);
+      s = answer(s, a);
+    }
+    add(`oracle n=20, 7 anchors, t=${t}`, 'new', 'LOVED', twenty, spread, steps);
+  }
+  // Integrator review of 7e19458: on a re-rank the Bev's own tier (1 against itself) must not decide the anchors.
+  add('re-rank: the Bev is the only tier-1 entry (itself); the anchors are the tier-2 Bevs latte1, latte2', 'mocha', 'LOVED', ['latte1', 'mocha', 'cola', 'latte2'], [2, 1, null, 2], ['NEW_BETTER', 'EXISTING_BETTER', 'EXISTING_BETTER']);
   return cases;
 }
 
@@ -343,6 +501,25 @@ function streakCases(): Case[] {
   streak('Kolkata: 23:59 IST and 00:01 IST are two days', ['2026-10-10T18:29:00Z', '2026-10-10T18:31:00Z'], 'Asia/Kolkata', '2026-10-11T05:00:00Z');
   streak('Kolkata: ranked today only', ['2026-10-11T03:00:00Z'], 'Asia/Kolkata', '2026-10-11T18:29:00Z');
   streak('no rankings', [], 'UTC', '2026-10-11T12:00:00Z');
+  // M-22 (paper impl:streak): timestamps are ranking EVENTS, so history survives re-ranks and removals.
+  // The rows-based SQL (touch_streak over rankings.ranked_at) would see fewer days in both cases.
+  type StreakEvent = { bevId: string; kind: 'submit' | 'rerank'; at: string };
+  const events = (name: string, evs: StreakEvent[], timeZone: string, now: string) => {
+    const timestamps = evs.map((e) => e.at);
+    const keys = [...new Set(timestamps.map((t) => localPeriodKey(t, timeZone, 'day')))].sort();
+    const todayKey = localPeriodKey(now, timeZone, 'day');
+    cases.push({ name, fn: 'streakFromTimestamps', input: { timestamps, timeZone, now, period: 'day', events: evs }, expected: { periodKeys: keys, todayKey, ...computeStreak(keys, todayKey, 'day') } });
+  };
+  events('events: the 9th\'s only ranking is re-ranked on the 11th, and the 9th still counts (rows alone would give 2)', [
+    { bevId: 'coke', kind: 'submit', at: '2026-10-09T12:00:00Z' },
+    { bevId: 'pepsi', kind: 'submit', at: '2026-10-10T12:00:00Z' },
+    { bevId: 'coke', kind: 'rerank', at: '2026-10-11T09:00:00Z' },
+  ], 'UTC', '2026-10-11T20:00:00Z');
+  events('events: the 10th\'s only ranking is removed on the 11th; the removal adds nothing and the 10th still counts (rows alone would give 1)', [
+    { bevId: 'coke', kind: 'submit', at: '2026-10-09T12:00:00Z' },
+    { bevId: 'sprite', kind: 'submit', at: '2026-10-10T12:00:00Z' },
+    { bevId: 'pepsi', kind: 'submit', at: '2026-10-11T12:00:00Z' },
+  ], 'UTC', '2026-10-11T20:00:00Z');
   streak('weekly: three ISO weeks across the new year', ['2026-12-23T12:00:00Z', '2026-12-31T12:00:00Z', '2027-01-05T12:00:00Z'], 'UTC', '2027-01-12T12:00:00Z', 'week');
 
   const keys = (name: string, periodKeys: string[], todayKey: string, period: StreakPeriod = 'day') =>
@@ -502,7 +679,73 @@ function edgeCases(): Case[] {
   top('k = 50, min = 0.6', many, 50, 0.6);
   top('k = 0', many, 0);
   top('empty', []);
+
+  // 1.4.0 (M-27 (a)): Layer 1's content term in bevSimilarity 'edges' mode, on a hand-built snapshot
+  // (layer1EdgesRule). The consumer is S-21: the rows get_prediction_snapshot returns as `edges`.
+  const snap = layer1Snapshot();
+  const edges = [
+    { a: 'coke', b: 'pepsi', w: 0.9001 },
+    { a: 'topo', b: 'lacroix', w: 0.71 },
+    { a: 'monster', b: 'redbull', w: 0.88 },
+    { a: 'coke', b: 'sprite', w: 0.55 },
+  ];
+  const l1 = (name: string, userId: string, bevId: string, bevSimilarity: 'content' | 'edges', withEdges: boolean) => {
+    const snapshot: PredictionSnapshot = withEdges ? { ...snap, edges } : snap;
+    cases.push({
+      name,
+      fn: 'layer1',
+      input: { snapshot, userId, bevId, bevSimilarity },
+      expected: { source: effectiveBevSimilarity(snapshot, { bevSimilarity }), ...layer1(snapshot, userId, bevId, { bevSimilarity }) },
+    });
+  };
+  l1('edges: pepsi–coke has an edge (w 0.9001); pepsi–sprite and pepsi–lacroix have none and weigh 0', 'u', 'pepsi', 'edges', true);
+  l1('edges: the row topo–lacroix is stored the other way round; orientation does not matter', 'u', 'topo', 'edges', true);
+  l1('edges: monster has no edge to any Bev u ranked (only to redbull), so content is 0', 'u', 'monster', 'edges', true);
+  l1('edges requested, snapshot without the edges field: falls back to contentSimilarity', 'u', 'pepsi', 'edges', false);
+  l1('content (the default) ignores a present edges field', 'u', 'pepsi', 'content', true);
   return cases;
+}
+
+/** A small snapshot for the layer1 cases: u ranks coke, sprite, lacroix; v ranks coke, pepsi, topo. */
+function layer1Snapshot(): PredictionSnapshot {
+  const bev = (id: string, categoryId: string, brandKey: string, flavorTokens: string[], priceTier: 1 | 2 | 3 | 4): BevFeatures => ({
+    id, categoryId, brandKey, flavorTokens, priceTier, ratingCount: 0, mean: 0, stddev: 0, isAlcoholic: false,
+  });
+  const list = [
+    bev('coke', 'soda', 'coca-cola', ['cola'], 1),
+    bev('pepsi', 'soda', 'pepsi', ['cola'], 1),
+    bev('sprite', 'soda', 'coca-cola', ['lemon', 'lime'], 1),
+    bev('lacroix', 'sparkling_water', 'lacroix', ['lime'], 2),
+    bev('topo', 'sparkling_water', 'topo chico', ['mineral'], 2),
+    bev('monster', 'energy', 'monster', ['energy'], 2),
+    bev('redbull', 'energy', 'red bull', ['energy'], 3),
+  ];
+  const rankings = [
+    { userId: 'u', bevId: 'coke', score: 9 },
+    { userId: 'u', bevId: 'sprite', score: 6.5 },
+    { userId: 'u', bevId: 'lacroix', score: 3 },
+    { userId: 'v', bevId: 'coke', score: 8 },
+    { userId: 'v', bevId: 'pepsi', score: 7 },
+    { userId: 'v', bevId: 'topo', score: 5 },
+  ];
+  const bevs: Record<string, BevFeatures> = {};
+  for (const b of list) {
+    const st = populationStats(rankings.filter((r) => r.bevId === b.id).map((r) => r.score));
+    bevs[b.id] = { ...b, ratingCount: st.n, mean: st.mean, stddev: st.stddev };
+  }
+  const users: PredictionSnapshot['users'] = {};
+  for (const u of ['u', 'v']) {
+    const mine = rankings.filter((r) => r.userId === u);
+    const categoryStats: Record<string, Stats> = {};
+    for (const c of [...new Set(mine.map((r) => (bevs[r.bevId] as BevFeatures).categoryId))].sort()) {
+      categoryStats[c] = populationStats(mine.filter((r) => (bevs[r.bevId] as BevFeatures).categoryId === c).map((r) => r.score));
+    }
+    users[u] = { id: u, stats: populationStats(mine.map((r) => r.score)), categoryStats, canSeeAlcohol: true };
+  }
+  const g = populationStats(rankings.map((r) => r.score));
+  const byCategoryMean: Record<string, number> = {};
+  for (const c of ['soda', 'sparkling_water']) byCategoryMean[c] = populationStats(rankings.filter((r) => (bevs[r.bevId] as BevFeatures).categoryId === c).map((r) => r.score)).mean;
+  return { version: RANKING_VERSION, generatedAt: '2026-10-31T00:00:00Z', global: { mean: g.mean, stddev: g.stddev, byCategoryMean }, bevs, users, rankings };
 }
 
 
@@ -695,7 +938,100 @@ function graphCases(): Case[] {
     input: { rankings: rows },
     expected: Object.fromEntries([...z].map(([u, m]) => [u, Object.fromEntries(m)])),
   });
+
+  // 1.6.0 (Stage 4): Layer 2 in userSimilarity 'stored' mode (layer2StoredRule) on a hand-built
+  // snapshot. The consumer is Arjun's Stage 4: the rows get_prediction_snapshot returns as
+  // `userNeighbors`, mapped by packages/api onto `snapshot.userNeighbours`. Sims have 4 dp, as
+  // user_neighbors.sim numeric(5,4) stores them.
+  const s2 = layer2StoredSnapshot();
+  const nb = (userId: string, sim: number, common: number): UserNeighbour => ({ userId, sim, common });
+  const amyRow = nb('amy', 0.6213, 3);
+  const amyList = [nb('u', 0.6213, 3), nb('dan', 0.5022, 3)];
+  const stored = (name: string, userNeighbours: PredictionSnapshot['userNeighbours'] | undefined, userSimilarity: 'cosine' | 'stored', fn: 'layer2' | 'predictScore' = 'layer2') => {
+    const snapshot: PredictionSnapshot = userNeighbours === undefined ? s2 : { ...s2, userNeighbours };
+    const opts = { userSimilarity };
+    const source = effectiveUserSimilarity(snapshot, 'u', opts);
+    const result = fn === 'layer2' ? layer2(snapshot, 'u', 'pepsi', opts) : predictScore(snapshot, 'u', 'pepsi', opts);
+    cases.push({ name, fn, input: { snapshot, userId: 'u', bevId: 'pepsi', userSimilarity }, expected: { source, ...result } });
+    return result;
+  };
+  // Each case must exercise what its name says; the generator refuses to write one that doesn't.
+  const assert = (ok: boolean, what: string) => {
+    if (!ok) throw new Error(`layer2 stored cases: ${what}`);
+  };
+  assert(userSimilarity(s2, 'u', 'dan') > 0, 'dan must be a cosine neighbour of u');
+  assert(userSimilarity(s2, 'u', 'eve') === 0, 'eve must share fewer than 2 Bevs with u');
+  assert(s2.users.eve === undefined && s2.users.amy?.stats.n === 18 && s2.users.ben?.stats.n === 3, 'n_v setup');
+  const case1 = { u: [amyRow, nb('ben', 0.4507, 2)], amy: amyList };
+  const c1 = stored('stored: amy (n_v = 18, reliability 1) and ben (n_v = 3, reliability 1/5) are listed and ranked pepsi', case1, 'stored') as { neighbours: string[] };
+  assert(c1.neighbours.join() === 'amy,ben', 'case 1 neighbours');
+  const c2 = stored('stored: cat is listed but did not rank pepsi; dan ranked it and is not listed, so he weighs 0 although the cosine weights him', { u: [nb('cat', 0.8, 3), amyRow], amy: amyList }, 'stored') as { neighbours: string[] };
+  assert(c2.neighbours.join() === 'amy', 'case 2 neighbours');
+  const c3 = stored('stored: eve shares one Bev with u (cosine 0) and counts through the attribute bridge; she is missing from users, so n_v = 4 comes from her rankings', { u: [nb('eve', 0.3511, 1)] }, 'stored') as { neighbours: string[] };
+  assert(c3.neighbours.join() === 'eve', 'case 3 neighbours');
+  const c4 = stored('stored: ghost is unknown to the snapshot (n_v = 0) and weighs 0', { u: [nb('ghost', 0.9, 4), amyRow] }, 'stored') as { neighbours: string[] };
+  assert(c4.neighbours.join() === 'amy', 'case 4 neighbours');
+  const cos = layer2(s2, 'u', 'pepsi');
+  assert(cos.neighbours.includes('dan') && !cos.neighbours.includes('eve'), 'cosine neighbours');
+  stored('stored requested, snapshot without the userNeighbours field: the in-snapshot cosine', undefined, 'stored');
+  stored('stored requested, userNeighbours null: the in-snapshot cosine', null, 'stored');
+  stored('stored requested, u has an empty list (nobody above the floor): the in-snapshot cosine', { u: [], amy: amyList }, 'stored');
+  stored('stored requested, u has no key (not yet synced): the in-snapshot cosine', { amy: amyList }, 'stored');
+  stored('cosine (the default) ignores a present userNeighbours field', case1, 'cosine');
+  const c8 = stored('stored: a negative stored sim (ben) is excluded by sim\' > 0', { u: [nb('ben', -0.4, 2), amyRow] }, 'stored') as { neighbours: string[] };
+  assert(c8.neighbours.join() === 'amy', 'case 8 neighbours');
+  stored('predictScore, stored: case 1 (the support, hence lambda, comes from the stored neighbours)', case1, 'stored', 'predictScore');
+  stored('predictScore, cosine: the same snapshot in the default mode', case1, 'cosine', 'predictScore');
   return cases;
+}
+
+/**
+ * The snapshot of the layer2 stored cases. u ranks coke, sprite, lacroix, topo. amy (whose complete
+ * stats say n = 18; the snapshot carries 4 of her rankings, as get_prediction_snapshot may), ben
+ * (n = 3), dan and eve ranked pepsi; cat did not. dan shares 3 Bevs with u, eve only coke, and eve is
+ * missing from `users` (her n comes from her rankings).
+ */
+function layer2StoredSnapshot(): PredictionSnapshot {
+  const bev = (id: string, categoryId: string, brandKey: string, flavorTokens: string[], priceTier: 1 | 2 | 3 | 4): BevFeatures => ({
+    id, categoryId, brandKey, flavorTokens, priceTier, ratingCount: 0, mean: 0, stddev: 0, isAlcoholic: false,
+  });
+  const list = [
+    bev('coke', 'soda', 'coca-cola', ['cola'], 1),
+    bev('pepsi', 'soda', 'pepsi', ['cola'], 1),
+    bev('sprite', 'soda', 'coca-cola', ['lemon', 'lime'], 1),
+    bev('lacroix', 'sparkling_water', 'lacroix', ['lime'], 2),
+    bev('topo', 'sparkling_water', 'topo chico', ['mineral'], 2),
+    bev('monster', 'energy', 'monster', ['energy'], 2),
+    bev('redbull', 'energy', 'red bull', ['energy'], 3),
+  ];
+  const r = (userId: string, bevId: string, score: number) => ({ userId, bevId, score });
+  const rankings = [
+    r('u', 'coke', 9), r('u', 'sprite', 6.5), r('u', 'lacroix', 3), r('u', 'topo', 5),
+    r('amy', 'coke', 8), r('amy', 'sprite', 7), r('amy', 'pepsi', 8.5), r('amy', 'lacroix', 2),
+    r('ben', 'coke', 7), r('ben', 'pepsi', 4), r('ben', 'topo', 6),
+    r('cat', 'coke', 9), r('cat', 'sprite', 5), r('cat', 'lacroix', 4),
+    r('dan', 'coke', 9.5), r('dan', 'sprite', 6), r('dan', 'lacroix', 2.5), r('dan', 'pepsi', 3),
+    r('eve', 'coke', 8), r('eve', 'pepsi', 9), r('eve', 'monster', 4), r('eve', 'redbull', 3),
+  ];
+  const bevs: Record<string, BevFeatures> = {};
+  for (const b of list) {
+    const st = populationStats(rankings.filter((x) => x.bevId === b.id).map((x) => x.score));
+    bevs[b.id] = { ...b, ratingCount: st.n, mean: st.mean, stddev: st.stddev };
+  }
+  const users: PredictionSnapshot['users'] = {};
+  for (const u of ['u', 'amy', 'ben', 'cat', 'dan']) {
+    const mine = rankings.filter((x) => x.userId === u);
+    const categoryStats: Record<string, Stats> = {};
+    for (const c of [...new Set(mine.map((x) => (bevs[x.bevId] as BevFeatures).categoryId))].sort()) {
+      categoryStats[c] = populationStats(mine.filter((x) => (bevs[x.bevId] as BevFeatures).categoryId === c).map((x) => x.score));
+    }
+    users[u] = { id: u, stats: populationStats(mine.map((x) => x.score)), categoryStats, canSeeAlcohol: true };
+  }
+  (users.amy as { stats: Stats }).stats = { n: 18, mean: 6.1, stddev: 2.2 };
+  const g = populationStats(rankings.map((x) => x.score));
+  const byCategoryMean: Record<string, number> = {};
+  for (const c of ['energy', 'soda', 'sparkling_water']) byCategoryMean[c] = populationStats(rankings.filter((x) => (bevs[x.bevId] as BevFeatures).categoryId === c).map((x) => x.score)).mean;
+  return { version: RANKING_VERSION, generatedAt: '2026-10-31T00:00:00Z', global: { mean: g.mean, stddev: g.stddev, byCategoryMean }, bevs, users, rankings };
 }
 
 // ---------------------------------------------------------------- write / check

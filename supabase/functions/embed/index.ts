@@ -176,8 +176,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // service-role key. net.http_post persists the whole request -- url, body
   // and headers -- as a row in net.http_request_queue, so whatever token the
   // trigger sends sits at rest in a database table, one row per Bev write,
-  // until the pg_net worker consumes it. It is also readable as
-  // current_setting('bevi.embed_webhook_token'). None of that is alarming for
+  // until the pg_net worker consumes it. It is also readable, decrypted, from
+  // the Vault secret embed_webhook_token. None of that is alarming for
   // a token whose only power is "ask for an embedding"; all of it is alarming
   // for a key that bypasses RLS on every table. So the two are kept distinct,
   // and this function refuses to start rather than silently accepting the
@@ -199,8 +199,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (!webhookSecret) {
     console.error(
       "embed is misconfigured: EMBED_WEBHOOK_SECRET is not set. Set it with " +
-        "`supabase secrets set EMBED_WEBHOOK_SECRET=<random>` and set the database setting " +
-        "bevi.embed_webhook_token to the same value. It is deliberately NOT allowed to fall " +
+        "`supabase secrets set EMBED_WEBHOOK_SECRET=<random>` and set the Vault secret " +
+        "embed_webhook_token to the same value (docs/graph.md). It is deliberately NOT allowed to fall " +
         "back to the service-role key, which pg_net would then persist in " +
         "net.http_request_queue. Refusing to run.",
     );

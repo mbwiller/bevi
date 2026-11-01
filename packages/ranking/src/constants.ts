@@ -1,7 +1,7 @@
 import type { Bucket, TasteAttributeKind } from './types.ts';
 
 /** Bumped with any formula or constant change; equals the `version` field of every vectors file. */
-export const RANKING_VERSION = '1.3.0';
+export const RANKING_VERSION = '1.6.0';
 
 /**
  * Score band per bucket as integer [lo, hi] edges on the 0–10 scale (Beli-style 7 / 4, decided 2026-10-09).
@@ -24,10 +24,27 @@ export const BUCKET_DB: Readonly<Record<Bucket, number>> = { LOVED: 3, FINE: 2, 
 export const SIGMA_FLOOR = 1.0;
 /** Below this many rankings a user's z-scores use the global stats. */
 export const MIN_N_USER = 3;
-/** Below this many rankings in a category, per-category stats fall back to the user's overall stats. */
+/**
+ * Below this many rankings in a category, per-category stats fall back to the user's overall stats
+ * (`effectiveCategoryStats`). No formula on the prediction path reads it and neither do the app,
+ * packages/api or SQL (the Taste Profile shows raw category means). It stays, with
+ * `effectiveCategoryStats`, as the display helper for "Your Soda average" and because the eval
+ * harness's `user-category-mean` baseline and `user-stats.vectors.json` use it (M-22 decision).
+ */
 export const MIN_N_CAT = 3;
 /** Only when there are zero rankings in the whole system. */
 export const GLOBAL_FALLBACK: Readonly<{ mean: number; stddev: number }> = { mean: 5.0, stddev: 2.5 };
+
+// ---------------------------------------------------------------- anchored placement (LaTeX §10.1, M-21)
+
+/**
+ * The tiers `placementTiers` assigns a bucket Bev relative to the new one (smaller = more similar;
+ * null = no tier). sameLeaf: both leaves known and equal. sameRoot: the same root category, which
+ * includes a Bev of unknown kind (leaf null) against a leaf under that root, and two Bevs of unknown
+ * kind under one root. edge: a different root but a stored `bev_edges` row with w ≥ EDGE_MIN_WEIGHT.
+ * The anchors are the members of the smallest tier present, so what matters is the set, not the number.
+ */
+export const PLACEMENT_TIER: Readonly<{ sameLeaf: 1; sameRoot: 2; edge: 3 }> = { sameLeaf: 1, sameRoot: 2, edge: 3 };
 
 /** Shrinkage for category affinity: Σz / (n + K_AFF). */
 export const K_AFF = 2;
@@ -53,7 +70,11 @@ export const SIM_WEIGHTS: Readonly<{ category: number; brand: number; flavor: nu
   flavor: 0.2,
   tier: 0.1,
 };
-/** Pairs with sim below this are dropped (contribute nothing to content or its mass). */
+/**
+ * Pairs with sim below this are dropped (contribute nothing to content or its mass). Applies to the
+ * stored edge weight w too in `bevSimilarity: 'edges'` mode, where it is a no-op while
+ * EDGE_MIN_WEIGHT (0.3) is above it, and a guard if the edge job's floor is ever lowered.
+ */
 export const SIM_MIN = 0.1;
 /** Largest |tier − tier'| (tiers 1–4). */
 export const PRICE_TIER_SPAN = 3;
@@ -204,6 +225,7 @@ export const RANKING_CONSTANTS = {
   minNUser: MIN_N_USER,
   minNCat: MIN_N_CAT,
   globalFallback: GLOBAL_FALLBACK,
+  placementTier: PLACEMENT_TIER,
   kAff: K_AFF,
   bayesC: BAYES_C,
   bayesCategoryPriorMin: BAYES_CATEGORY_PRIOR_MIN,

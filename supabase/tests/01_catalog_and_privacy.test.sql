@@ -1,9 +1,12 @@
 -- The seeded catalog (20261012000300) and the profile privacy rules
 -- (20261012000400).
 begin;
-select plan(10);
+select plan(11);
 
-select is((select count(*)::int from public.categories), 15, '15 categories');
+-- A-13 loaded D-04's taxonomy, so the table holds 75 rows: the 15 roots a Bev's
+-- `category_id` may point at, and 60 leaves under them.
+select is((select count(*)::int from public.categories where parent_id is null), 15, '15 root categories');
+select is((select count(*)::int from public.categories), 75, '75 categories in all, roots plus D-04 leaves');
 select is((select count(*)::int from public.bevs where source = 'seed' and status = 'active'), 378, '378 active seed Bevs');
 select ok(
   (select count(*) from public.bevs b join public.categories c on c.id = b.category_id

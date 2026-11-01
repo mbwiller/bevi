@@ -1,7 +1,7 @@
 {
-  "version": "1.3.0",
+  "version": "1.6.0",
   "constants": {
-    "version": "1.3.0",
+    "version": "1.6.0",
     "bands": {
       "DISLIKED": [
         0,
@@ -32,6 +32,11 @@
     "globalFallback": {
       "mean": 5,
       "stddev": 2.5
+    },
+    "placementTier": {
+      "sameLeaf": 1,
+      "sameRoot": 2,
+      "edge": 3
     },
     "kAff": 2,
     "bayesC": 3,
@@ -112,7 +117,13 @@
     "sharedAttrsRule": "count of attributes a of a tasteBridgeKinds kind with |t_u[a]| >= tasteSharedMin and |t_v[a]| >= tasteSharedMin that u and v reach through distinct Bevs: some b in R(u) and b2 in R(v) carry a with b != b2 (one co-rated Bev is not a bridge)",
     "blendRule": "alpha = tasteAlpha if |common| >= cfMinCommon else 0; attributeSim = attributeSimilarity if |common| >= cfMinCommon or sharedAttrs >= tasteMinSharedAttrs else 0; sim = alpha * pearson.sim + (1 - alpha) * attributeSim, clamped to [-1, 1]; method = attr (alpha 0), pearson (alpha 1), else blend",
     "neighbourOrder": "sim desc, then userId asc (code point, SQL collate \"C\"); keep sim >= tasteSimFloor; at most tasteNeighbourK",
-    "reliabilityRule": "min(1, n_v / neighbourReliabilityN); applied by Layer 2 per neighbour, not stored in user_neighbors.sim"
+    "reliabilityRule": "min(1, n_v / neighbourReliabilityN); applied by Layer 2 per neighbour, not stored in user_neighbors.sim",
+    "bayesStoredRule": "bev_stats.bayes_score numeric(4,2) from exact inputs: m with at most 3 dp (global_stats.mean_score numeric(5,3), or the exact category mean), scores in cents; N = C*m_thousandths + 10*sum(score_cents), D = C + n; storedCents = round half away from zero of N / (10*D) = floor((2N + 10D) / (20D)); never round the floating-point bayes",
+    "streakEvents": "streakFromTimestamps.timestamps are ranking EVENTS (submit_ranking and rerank_bev), never deleted: a re-rank adds its own day and keeps the original one; a removal adds and deletes nothing. When a case lists input.events, timestamps = events.map(at)",
+    "layer1EdgesRule": "bevSimilarity 'edges': sim(b, b') = w of the snapshot.edges row for the unordered pair {b, b'} (either orientation), 0 when there is none; pairs with sim < simMin dropped as in 'content'; content = sum(sim * z) / (sum(sim) + 1); conf1 mass = n_{u,cat(b)} + sum(sim); affinity and g unchanged. A snapshot without an edges field (absent or null) uses contentSimilarity ('content'); an empty array means no edges",
+    "layer2StoredRule": "userSimilarity 'stored' (Stage 4), for the user u: N(u) = snapshot.userNeighbours[u] (u's user_neighbors rows, any order); sim'(u, v) = sim * min(1, n_v / neighbourReliabilityN) for v in N(u), with sim as stored and n_v = users[v].stats.n (derived from v's rankings when v is missing from users; 0 when v is unknown to the snapshot, so the row weighs 0); sim'(u, v) = 0 for every v not in N(u), whatever their co-ratings. Then Layer 2 exactly as in 'cosine' mode: the raters of b other than u with sim' > 0 (so a negative stored sim is dropped), sim' desc then userId asc, at most cfK; support = sum(sim'); z2 = sum(sim' * z_{v,b}) / support, 0 without neighbours. common is carried and read by no formula. Falls back to 'cosine' (the in-snapshot sim' of section 8.9) when the snapshot has no userNeighbours field (absent or null) or u has no rows (key missing or empty list). source = the similarity actually used. predictScore: lambda and confidence read this support",
+    "placementTiersRule": "tier of a bucket Bev l relative to the new Bev b (placementTier constants): sameLeaf (1) when categoryId (the root) is equal and both leafCategoryId are non-null and equal; sameRoot (2) when categoryId is equal otherwise (a null leaf on either side, i.e. kind unknown, never reaches tier 1); edge (3) when the roots differ and weights[l.id] (the bev_edges w of {b, l}) is >= edgeMinWeight; null otherwise (no weight, or a weight below the floor). Without weights only tiers 1 and 2 occur",
+    "anchoredPlacementRule": "startPlacement with tiers (one per orderedBevIds entry, filtered with the Bev itself): anchors A = the entries other than bevId whose tier equals the smallest non-null tier among the entries other than bevId (on a re-rank the Bev is still in the list and its tier against itself is ignored), in list order, at positions p_1 < ... < p_k of the filtered list; no anchors = the plain search. Phase 1 = binary search over anchor slots [aLo, aHi] = [0, k]: ask a_j with j = floor((aLo + aHi) / 2) (0-based), NEW_BETTER aHi = j, EXISTING_BETTER aLo = j + 1, TIE ends the placement at p_j + 1; after each answer the insertion range is lo = (aLo = 0 ? 0 : p_{aLo - 1} + 1), hi = (aHi = k ? n : p_{aHi}). Phase 2 = the plain search on [lo, hi] once aLo = aHi (none when lo = hi). insertIndex = lo; comparisons in the order asked; maxSteps = maxComparisons(k) + maxComparisons(widest gap between consecutive anchors, or before the first / after the last), constant. Undo restores lo, hi, aLo, aHi"
   },
   "cases": [
     {
@@ -3224,6 +3235,4365 @@
           "a": 0,
           "b": 0,
           "c": 0
+        }
+      }
+    },
+    {
+      "name": "stored: amy (n_v = 18, reliability 1) and ben (n_v = 3, reliability 1/5) are listed and ranked pepsi",
+      "fn": "layer2",
+      "input": {
+        "snapshot": {
+          "version": "1.6.0",
+          "generatedAt": "2026-10-31T00:00:00Z",
+          "global": {
+            "mean": 5.863636363636363,
+            "stddev": 2.379752747765168,
+            "byCategoryMean": {
+              "energy": 3.5,
+              "soda": 7.107142857142857,
+              "sparkling_water": 3.75
+            }
+          },
+          "bevs": {
+            "coke": {
+              "id": "coke",
+              "categoryId": "soda",
+              "brandKey": "coca-cola",
+              "flavorTokens": [
+                "cola"
+              ],
+              "priceTier": 1,
+              "ratingCount": 6,
+              "mean": 8.416666666666666,
+              "stddev": 0.8374896350934076,
+              "isAlcoholic": false
+            },
+            "pepsi": {
+              "id": "pepsi",
+              "categoryId": "soda",
+              "brandKey": "pepsi",
+              "flavorTokens": [
+                "cola"
+              ],
+              "priceTier": 1,
+              "ratingCount": 4,
+              "mean": 6.125,
+              "stddev": 2.6545950726994127,
+              "isAlcoholic": false
+            },
+            "sprite": {
+              "id": "sprite",
+              "categoryId": "soda",
+              "brandKey": "coca-cola",
+              "flavorTokens": [
+                "lemon",
+                "lime"
+              ],
+              "priceTier": 1,
+              "ratingCount": 4,
+              "mean": 6.125,
+              "stddev": 0.739509972887452,
+              "isAlcoholic": false
+            },
+            "lacroix": {
+              "id": "lacroix",
+              "categoryId": "sparkling_water",
+              "brandKey": "lacroix",
+              "flavorTokens": [
+                "lime"
+              ],
+              "priceTier": 2,
+              "ratingCount": 4,
+              "mean": 2.875,
+              "stddev": 0.739509972887452,
+              "isAlcoholic": false
+            },
+            "topo": {
+              "id": "topo",
+              "categoryId": "sparkling_water",
+              "brandKey": "topo chico",
+              "flavorTokens": [
+                "mineral"
+              ],
+              "priceTier": 2,
+              "ratingCount": 2,
+              "mean": 5.5,
+              "stddev": 0.5,
+              "isAlcoholic": false
+            },
+            "monster": {
+              "id": "monster",
+              "categoryId": "energy",
+              "brandKey": "monster",
+              "flavorTokens": [
+                "energy"
+              ],
+              "priceTier": 2,
+              "ratingCount": 1,
+              "mean": 4,
+              "stddev": 0,
+              "isAlcoholic": false
+            },
+            "redbull": {
+              "id": "redbull",
+              "categoryId": "energy",
+              "brandKey": "red bull",
+              "flavorTokens": [
+                "energy"
+              ],
+              "priceTier": 3,
+              "ratingCount": 1,
+              "mean": 3,
+              "stddev": 0,
+              "isAlcoholic": false
+            }
+          },
+          "users": {
+            "u": {
+              "id": "u",
+              "stats": {
+                "n": 4,
+                "mean": 5.875,
+                "stddev": 2.190176933491904
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 7.75,
+                  "stddev": 1.25
+                },
+                "sparkling_water": {
+                  "n": 2,
+                  "mean": 4,
+                  "stddev": 1
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "amy": {
+              "id": "amy",
+              "stats": {
+                "n": 18,
+                "mean": 6.1,
+                "stddev": 2.2
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 3,
+                  "mean": 7.833333333333333,
+                  "stddev": 0.6236095644623235
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 2,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "ben": {
+              "id": "ben",
+              "stats": {
+                "n": 3,
+                "mean": 5.666666666666667,
+                "stddev": 1.247219128924647
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 5.5,
+                  "stddev": 1.5
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 6,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "cat": {
+              "id": "cat",
+              "stats": {
+                "n": 3,
+                "mean": 6,
+                "stddev": 2.160246899469287
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 7,
+                  "stddev": 2
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 4,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "dan": {
+              "id": "dan",
+              "stats": {
+                "n": 4,
+                "mean": 5.25,
+                "stddev": 2.7950849718747373
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 3,
+                  "mean": 6.166666666666667,
+                  "stddev": 2.6562295750848715
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 2.5,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            }
+          },
+          "rankings": [
+            {
+              "userId": "u",
+              "bevId": "coke",
+              "score": 9
+            },
+            {
+              "userId": "u",
+              "bevId": "sprite",
+              "score": 6.5
+            },
+            {
+              "userId": "u",
+              "bevId": "lacroix",
+              "score": 3
+            },
+            {
+              "userId": "u",
+              "bevId": "topo",
+              "score": 5
+            },
+            {
+              "userId": "amy",
+              "bevId": "coke",
+              "score": 8
+            },
+            {
+              "userId": "amy",
+              "bevId": "sprite",
+              "score": 7
+            },
+            {
+              "userId": "amy",
+              "bevId": "pepsi",
+              "score": 8.5
+            },
+            {
+              "userId": "amy",
+              "bevId": "lacroix",
+              "score": 2
+            },
+            {
+              "userId": "ben",
+              "bevId": "coke",
+              "score": 7
+            },
+            {
+              "userId": "ben",
+              "bevId": "pepsi",
+              "score": 4
+            },
+            {
+              "userId": "ben",
+              "bevId": "topo",
+              "score": 6
+            },
+            {
+              "userId": "cat",
+              "bevId": "coke",
+              "score": 9
+            },
+            {
+              "userId": "cat",
+              "bevId": "sprite",
+              "score": 5
+            },
+            {
+              "userId": "cat",
+              "bevId": "lacroix",
+              "score": 4
+            },
+            {
+              "userId": "dan",
+              "bevId": "coke",
+              "score": 9.5
+            },
+            {
+              "userId": "dan",
+              "bevId": "sprite",
+              "score": 6
+            },
+            {
+              "userId": "dan",
+              "bevId": "lacroix",
+              "score": 2.5
+            },
+            {
+              "userId": "dan",
+              "bevId": "pepsi",
+              "score": 3
+            },
+            {
+              "userId": "eve",
+              "bevId": "coke",
+              "score": 8
+            },
+            {
+              "userId": "eve",
+              "bevId": "pepsi",
+              "score": 9
+            },
+            {
+              "userId": "eve",
+              "bevId": "monster",
+              "score": 4
+            },
+            {
+              "userId": "eve",
+              "bevId": "redbull",
+              "score": 3
+            }
+          ],
+          "userNeighbours": {
+            "u": [
+              {
+                "userId": "amy",
+                "sim": 0.6213,
+                "common": 3
+              },
+              {
+                "userId": "ben",
+                "sim": 0.4507,
+                "common": 2
+              }
+            ],
+            "amy": [
+              {
+                "userId": "u",
+                "sim": 0.6213,
+                "common": 3
+              },
+              {
+                "userId": "dan",
+                "sim": 0.5022,
+                "common": 3
+              }
+            ]
+          }
+        },
+        "userId": "u",
+        "bevId": "pepsi",
+        "userSimilarity": "stored"
+      },
+      "expected": {
+        "source": "stored",
+        "z": 0.7833790290845167,
+        "support": 0.71144,
+        "neighbours": [
+          "amy",
+          "ben"
+        ]
+      }
+    },
+    {
+      "name": "stored: cat is listed but did not rank pepsi; dan ranked it and is not listed, so he weighs 0 although the cosine weights him",
+      "fn": "layer2",
+      "input": {
+        "snapshot": {
+          "version": "1.6.0",
+          "generatedAt": "2026-10-31T00:00:00Z",
+          "global": {
+            "mean": 5.863636363636363,
+            "stddev": 2.379752747765168,
+            "byCategoryMean": {
+              "energy": 3.5,
+              "soda": 7.107142857142857,
+              "sparkling_water": 3.75
+            }
+          },
+          "bevs": {
+            "coke": {
+              "id": "coke",
+              "categoryId": "soda",
+              "brandKey": "coca-cola",
+              "flavorTokens": [
+                "cola"
+              ],
+              "priceTier": 1,
+              "ratingCount": 6,
+              "mean": 8.416666666666666,
+              "stddev": 0.8374896350934076,
+              "isAlcoholic": false
+            },
+            "pepsi": {
+              "id": "pepsi",
+              "categoryId": "soda",
+              "brandKey": "pepsi",
+              "flavorTokens": [
+                "cola"
+              ],
+              "priceTier": 1,
+              "ratingCount": 4,
+              "mean": 6.125,
+              "stddev": 2.6545950726994127,
+              "isAlcoholic": false
+            },
+            "sprite": {
+              "id": "sprite",
+              "categoryId": "soda",
+              "brandKey": "coca-cola",
+              "flavorTokens": [
+                "lemon",
+                "lime"
+              ],
+              "priceTier": 1,
+              "ratingCount": 4,
+              "mean": 6.125,
+              "stddev": 0.739509972887452,
+              "isAlcoholic": false
+            },
+            "lacroix": {
+              "id": "lacroix",
+              "categoryId": "sparkling_water",
+              "brandKey": "lacroix",
+              "flavorTokens": [
+                "lime"
+              ],
+              "priceTier": 2,
+              "ratingCount": 4,
+              "mean": 2.875,
+              "stddev": 0.739509972887452,
+              "isAlcoholic": false
+            },
+            "topo": {
+              "id": "topo",
+              "categoryId": "sparkling_water",
+              "brandKey": "topo chico",
+              "flavorTokens": [
+                "mineral"
+              ],
+              "priceTier": 2,
+              "ratingCount": 2,
+              "mean": 5.5,
+              "stddev": 0.5,
+              "isAlcoholic": false
+            },
+            "monster": {
+              "id": "monster",
+              "categoryId": "energy",
+              "brandKey": "monster",
+              "flavorTokens": [
+                "energy"
+              ],
+              "priceTier": 2,
+              "ratingCount": 1,
+              "mean": 4,
+              "stddev": 0,
+              "isAlcoholic": false
+            },
+            "redbull": {
+              "id": "redbull",
+              "categoryId": "energy",
+              "brandKey": "red bull",
+              "flavorTokens": [
+                "energy"
+              ],
+              "priceTier": 3,
+              "ratingCount": 1,
+              "mean": 3,
+              "stddev": 0,
+              "isAlcoholic": false
+            }
+          },
+          "users": {
+            "u": {
+              "id": "u",
+              "stats": {
+                "n": 4,
+                "mean": 5.875,
+                "stddev": 2.190176933491904
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 7.75,
+                  "stddev": 1.25
+                },
+                "sparkling_water": {
+                  "n": 2,
+                  "mean": 4,
+                  "stddev": 1
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "amy": {
+              "id": "amy",
+              "stats": {
+                "n": 18,
+                "mean": 6.1,
+                "stddev": 2.2
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 3,
+                  "mean": 7.833333333333333,
+                  "stddev": 0.6236095644623235
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 2,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "ben": {
+              "id": "ben",
+              "stats": {
+                "n": 3,
+                "mean": 5.666666666666667,
+                "stddev": 1.247219128924647
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 5.5,
+                  "stddev": 1.5
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 6,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "cat": {
+              "id": "cat",
+              "stats": {
+                "n": 3,
+                "mean": 6,
+                "stddev": 2.160246899469287
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 7,
+                  "stddev": 2
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 4,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "dan": {
+              "id": "dan",
+              "stats": {
+                "n": 4,
+                "mean": 5.25,
+                "stddev": 2.7950849718747373
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 3,
+                  "mean": 6.166666666666667,
+                  "stddev": 2.6562295750848715
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 2.5,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            }
+          },
+          "rankings": [
+            {
+              "userId": "u",
+              "bevId": "coke",
+              "score": 9
+            },
+            {
+              "userId": "u",
+              "bevId": "sprite",
+              "score": 6.5
+            },
+            {
+              "userId": "u",
+              "bevId": "lacroix",
+              "score": 3
+            },
+            {
+              "userId": "u",
+              "bevId": "topo",
+              "score": 5
+            },
+            {
+              "userId": "amy",
+              "bevId": "coke",
+              "score": 8
+            },
+            {
+              "userId": "amy",
+              "bevId": "sprite",
+              "score": 7
+            },
+            {
+              "userId": "amy",
+              "bevId": "pepsi",
+              "score": 8.5
+            },
+            {
+              "userId": "amy",
+              "bevId": "lacroix",
+              "score": 2
+            },
+            {
+              "userId": "ben",
+              "bevId": "coke",
+              "score": 7
+            },
+            {
+              "userId": "ben",
+              "bevId": "pepsi",
+              "score": 4
+            },
+            {
+              "userId": "ben",
+              "bevId": "topo",
+              "score": 6
+            },
+            {
+              "userId": "cat",
+              "bevId": "coke",
+              "score": 9
+            },
+            {
+              "userId": "cat",
+              "bevId": "sprite",
+              "score": 5
+            },
+            {
+              "userId": "cat",
+              "bevId": "lacroix",
+              "score": 4
+            },
+            {
+              "userId": "dan",
+              "bevId": "coke",
+              "score": 9.5
+            },
+            {
+              "userId": "dan",
+              "bevId": "sprite",
+              "score": 6
+            },
+            {
+              "userId": "dan",
+              "bevId": "lacroix",
+              "score": 2.5
+            },
+            {
+              "userId": "dan",
+              "bevId": "pepsi",
+              "score": 3
+            },
+            {
+              "userId": "eve",
+              "bevId": "coke",
+              "score": 8
+            },
+            {
+              "userId": "eve",
+              "bevId": "pepsi",
+              "score": 9
+            },
+            {
+              "userId": "eve",
+              "bevId": "monster",
+              "score": 4
+            },
+            {
+              "userId": "eve",
+              "bevId": "redbull",
+              "score": 3
+            }
+          ],
+          "userNeighbours": {
+            "u": [
+              {
+                "userId": "cat",
+                "sim": 0.8,
+                "common": 3
+              },
+              {
+                "userId": "amy",
+                "sim": 0.6213,
+                "common": 3
+              }
+            ],
+            "amy": [
+              {
+                "userId": "u",
+                "sim": 0.6213,
+                "common": 3
+              },
+              {
+                "userId": "dan",
+                "sim": 0.5022,
+                "common": 3
+              }
+            ]
+          }
+        },
+        "userId": "u",
+        "bevId": "pepsi",
+        "userSimilarity": "stored"
+      },
+      "expected": {
+        "source": "stored",
+        "z": 1.090909090909091,
+        "support": 0.6213,
+        "neighbours": [
+          "amy"
+        ]
+      }
+    },
+    {
+      "name": "stored: eve shares one Bev with u (cosine 0) and counts through the attribute bridge; she is missing from users, so n_v = 4 comes from her rankings",
+      "fn": "layer2",
+      "input": {
+        "snapshot": {
+          "version": "1.6.0",
+          "generatedAt": "2026-10-31T00:00:00Z",
+          "global": {
+            "mean": 5.863636363636363,
+            "stddev": 2.379752747765168,
+            "byCategoryMean": {
+              "energy": 3.5,
+              "soda": 7.107142857142857,
+              "sparkling_water": 3.75
+            }
+          },
+          "bevs": {
+            "coke": {
+              "id": "coke",
+              "categoryId": "soda",
+              "brandKey": "coca-cola",
+              "flavorTokens": [
+                "cola"
+              ],
+              "priceTier": 1,
+              "ratingCount": 6,
+              "mean": 8.416666666666666,
+              "stddev": 0.8374896350934076,
+              "isAlcoholic": false
+            },
+            "pepsi": {
+              "id": "pepsi",
+              "categoryId": "soda",
+              "brandKey": "pepsi",
+              "flavorTokens": [
+                "cola"
+              ],
+              "priceTier": 1,
+              "ratingCount": 4,
+              "mean": 6.125,
+              "stddev": 2.6545950726994127,
+              "isAlcoholic": false
+            },
+            "sprite": {
+              "id": "sprite",
+              "categoryId": "soda",
+              "brandKey": "coca-cola",
+              "flavorTokens": [
+                "lemon",
+                "lime"
+              ],
+              "priceTier": 1,
+              "ratingCount": 4,
+              "mean": 6.125,
+              "stddev": 0.739509972887452,
+              "isAlcoholic": false
+            },
+            "lacroix": {
+              "id": "lacroix",
+              "categoryId": "sparkling_water",
+              "brandKey": "lacroix",
+              "flavorTokens": [
+                "lime"
+              ],
+              "priceTier": 2,
+              "ratingCount": 4,
+              "mean": 2.875,
+              "stddev": 0.739509972887452,
+              "isAlcoholic": false
+            },
+            "topo": {
+              "id": "topo",
+              "categoryId": "sparkling_water",
+              "brandKey": "topo chico",
+              "flavorTokens": [
+                "mineral"
+              ],
+              "priceTier": 2,
+              "ratingCount": 2,
+              "mean": 5.5,
+              "stddev": 0.5,
+              "isAlcoholic": false
+            },
+            "monster": {
+              "id": "monster",
+              "categoryId": "energy",
+              "brandKey": "monster",
+              "flavorTokens": [
+                "energy"
+              ],
+              "priceTier": 2,
+              "ratingCount": 1,
+              "mean": 4,
+              "stddev": 0,
+              "isAlcoholic": false
+            },
+            "redbull": {
+              "id": "redbull",
+              "categoryId": "energy",
+              "brandKey": "red bull",
+              "flavorTokens": [
+                "energy"
+              ],
+              "priceTier": 3,
+              "ratingCount": 1,
+              "mean": 3,
+              "stddev": 0,
+              "isAlcoholic": false
+            }
+          },
+          "users": {
+            "u": {
+              "id": "u",
+              "stats": {
+                "n": 4,
+                "mean": 5.875,
+                "stddev": 2.190176933491904
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 7.75,
+                  "stddev": 1.25
+                },
+                "sparkling_water": {
+                  "n": 2,
+                  "mean": 4,
+                  "stddev": 1
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "amy": {
+              "id": "amy",
+              "stats": {
+                "n": 18,
+                "mean": 6.1,
+                "stddev": 2.2
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 3,
+                  "mean": 7.833333333333333,
+                  "stddev": 0.6236095644623235
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 2,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "ben": {
+              "id": "ben",
+              "stats": {
+                "n": 3,
+                "mean": 5.666666666666667,
+                "stddev": 1.247219128924647
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 5.5,
+                  "stddev": 1.5
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 6,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "cat": {
+              "id": "cat",
+              "stats": {
+                "n": 3,
+                "mean": 6,
+                "stddev": 2.160246899469287
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 7,
+                  "stddev": 2
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 4,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "dan": {
+              "id": "dan",
+              "stats": {
+                "n": 4,
+                "mean": 5.25,
+                "stddev": 2.7950849718747373
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 3,
+                  "mean": 6.166666666666667,
+                  "stddev": 2.6562295750848715
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 2.5,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            }
+          },
+          "rankings": [
+            {
+              "userId": "u",
+              "bevId": "coke",
+              "score": 9
+            },
+            {
+              "userId": "u",
+              "bevId": "sprite",
+              "score": 6.5
+            },
+            {
+              "userId": "u",
+              "bevId": "lacroix",
+              "score": 3
+            },
+            {
+              "userId": "u",
+              "bevId": "topo",
+              "score": 5
+            },
+            {
+              "userId": "amy",
+              "bevId": "coke",
+              "score": 8
+            },
+            {
+              "userId": "amy",
+              "bevId": "sprite",
+              "score": 7
+            },
+            {
+              "userId": "amy",
+              "bevId": "pepsi",
+              "score": 8.5
+            },
+            {
+              "userId": "amy",
+              "bevId": "lacroix",
+              "score": 2
+            },
+            {
+              "userId": "ben",
+              "bevId": "coke",
+              "score": 7
+            },
+            {
+              "userId": "ben",
+              "bevId": "pepsi",
+              "score": 4
+            },
+            {
+              "userId": "ben",
+              "bevId": "topo",
+              "score": 6
+            },
+            {
+              "userId": "cat",
+              "bevId": "coke",
+              "score": 9
+            },
+            {
+              "userId": "cat",
+              "bevId": "sprite",
+              "score": 5
+            },
+            {
+              "userId": "cat",
+              "bevId": "lacroix",
+              "score": 4
+            },
+            {
+              "userId": "dan",
+              "bevId": "coke",
+              "score": 9.5
+            },
+            {
+              "userId": "dan",
+              "bevId": "sprite",
+              "score": 6
+            },
+            {
+              "userId": "dan",
+              "bevId": "lacroix",
+              "score": 2.5
+            },
+            {
+              "userId": "dan",
+              "bevId": "pepsi",
+              "score": 3
+            },
+            {
+              "userId": "eve",
+              "bevId": "coke",
+              "score": 8
+            },
+            {
+              "userId": "eve",
+              "bevId": "pepsi",
+              "score": 9
+            },
+            {
+              "userId": "eve",
+              "bevId": "monster",
+              "score": 4
+            },
+            {
+              "userId": "eve",
+              "bevId": "redbull",
+              "score": 3
+            }
+          ],
+          "userNeighbours": {
+            "u": [
+              {
+                "userId": "eve",
+                "sim": 0.3511,
+                "common": 1
+              }
+            ]
+          }
+        },
+        "userId": "u",
+        "bevId": "pepsi",
+        "userSimilarity": "stored"
+      },
+      "expected": {
+        "source": "stored",
+        "z": 1.1766968108291043,
+        "support": 0.09362666666666668,
+        "neighbours": [
+          "eve"
+        ]
+      }
+    },
+    {
+      "name": "stored: ghost is unknown to the snapshot (n_v = 0) and weighs 0",
+      "fn": "layer2",
+      "input": {
+        "snapshot": {
+          "version": "1.6.0",
+          "generatedAt": "2026-10-31T00:00:00Z",
+          "global": {
+            "mean": 5.863636363636363,
+            "stddev": 2.379752747765168,
+            "byCategoryMean": {
+              "energy": 3.5,
+              "soda": 7.107142857142857,
+              "sparkling_water": 3.75
+            }
+          },
+          "bevs": {
+            "coke": {
+              "id": "coke",
+              "categoryId": "soda",
+              "brandKey": "coca-cola",
+              "flavorTokens": [
+                "cola"
+              ],
+              "priceTier": 1,
+              "ratingCount": 6,
+              "mean": 8.416666666666666,
+              "stddev": 0.8374896350934076,
+              "isAlcoholic": false
+            },
+            "pepsi": {
+              "id": "pepsi",
+              "categoryId": "soda",
+              "brandKey": "pepsi",
+              "flavorTokens": [
+                "cola"
+              ],
+              "priceTier": 1,
+              "ratingCount": 4,
+              "mean": 6.125,
+              "stddev": 2.6545950726994127,
+              "isAlcoholic": false
+            },
+            "sprite": {
+              "id": "sprite",
+              "categoryId": "soda",
+              "brandKey": "coca-cola",
+              "flavorTokens": [
+                "lemon",
+                "lime"
+              ],
+              "priceTier": 1,
+              "ratingCount": 4,
+              "mean": 6.125,
+              "stddev": 0.739509972887452,
+              "isAlcoholic": false
+            },
+            "lacroix": {
+              "id": "lacroix",
+              "categoryId": "sparkling_water",
+              "brandKey": "lacroix",
+              "flavorTokens": [
+                "lime"
+              ],
+              "priceTier": 2,
+              "ratingCount": 4,
+              "mean": 2.875,
+              "stddev": 0.739509972887452,
+              "isAlcoholic": false
+            },
+            "topo": {
+              "id": "topo",
+              "categoryId": "sparkling_water",
+              "brandKey": "topo chico",
+              "flavorTokens": [
+                "mineral"
+              ],
+              "priceTier": 2,
+              "ratingCount": 2,
+              "mean": 5.5,
+              "stddev": 0.5,
+              "isAlcoholic": false
+            },
+            "monster": {
+              "id": "monster",
+              "categoryId": "energy",
+              "brandKey": "monster",
+              "flavorTokens": [
+                "energy"
+              ],
+              "priceTier": 2,
+              "ratingCount": 1,
+              "mean": 4,
+              "stddev": 0,
+              "isAlcoholic": false
+            },
+            "redbull": {
+              "id": "redbull",
+              "categoryId": "energy",
+              "brandKey": "red bull",
+              "flavorTokens": [
+                "energy"
+              ],
+              "priceTier": 3,
+              "ratingCount": 1,
+              "mean": 3,
+              "stddev": 0,
+              "isAlcoholic": false
+            }
+          },
+          "users": {
+            "u": {
+              "id": "u",
+              "stats": {
+                "n": 4,
+                "mean": 5.875,
+                "stddev": 2.190176933491904
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 7.75,
+                  "stddev": 1.25
+                },
+                "sparkling_water": {
+                  "n": 2,
+                  "mean": 4,
+                  "stddev": 1
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "amy": {
+              "id": "amy",
+              "stats": {
+                "n": 18,
+                "mean": 6.1,
+                "stddev": 2.2
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 3,
+                  "mean": 7.833333333333333,
+                  "stddev": 0.6236095644623235
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 2,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "ben": {
+              "id": "ben",
+              "stats": {
+                "n": 3,
+                "mean": 5.666666666666667,
+                "stddev": 1.247219128924647
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 5.5,
+                  "stddev": 1.5
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 6,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "cat": {
+              "id": "cat",
+              "stats": {
+                "n": 3,
+                "mean": 6,
+                "stddev": 2.160246899469287
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 7,
+                  "stddev": 2
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 4,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "dan": {
+              "id": "dan",
+              "stats": {
+                "n": 4,
+                "mean": 5.25,
+                "stddev": 2.7950849718747373
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 3,
+                  "mean": 6.166666666666667,
+                  "stddev": 2.6562295750848715
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 2.5,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            }
+          },
+          "rankings": [
+            {
+              "userId": "u",
+              "bevId": "coke",
+              "score": 9
+            },
+            {
+              "userId": "u",
+              "bevId": "sprite",
+              "score": 6.5
+            },
+            {
+              "userId": "u",
+              "bevId": "lacroix",
+              "score": 3
+            },
+            {
+              "userId": "u",
+              "bevId": "topo",
+              "score": 5
+            },
+            {
+              "userId": "amy",
+              "bevId": "coke",
+              "score": 8
+            },
+            {
+              "userId": "amy",
+              "bevId": "sprite",
+              "score": 7
+            },
+            {
+              "userId": "amy",
+              "bevId": "pepsi",
+              "score": 8.5
+            },
+            {
+              "userId": "amy",
+              "bevId": "lacroix",
+              "score": 2
+            },
+            {
+              "userId": "ben",
+              "bevId": "coke",
+              "score": 7
+            },
+            {
+              "userId": "ben",
+              "bevId": "pepsi",
+              "score": 4
+            },
+            {
+              "userId": "ben",
+              "bevId": "topo",
+              "score": 6
+            },
+            {
+              "userId": "cat",
+              "bevId": "coke",
+              "score": 9
+            },
+            {
+              "userId": "cat",
+              "bevId": "sprite",
+              "score": 5
+            },
+            {
+              "userId": "cat",
+              "bevId": "lacroix",
+              "score": 4
+            },
+            {
+              "userId": "dan",
+              "bevId": "coke",
+              "score": 9.5
+            },
+            {
+              "userId": "dan",
+              "bevId": "sprite",
+              "score": 6
+            },
+            {
+              "userId": "dan",
+              "bevId": "lacroix",
+              "score": 2.5
+            },
+            {
+              "userId": "dan",
+              "bevId": "pepsi",
+              "score": 3
+            },
+            {
+              "userId": "eve",
+              "bevId": "coke",
+              "score": 8
+            },
+            {
+              "userId": "eve",
+              "bevId": "pepsi",
+              "score": 9
+            },
+            {
+              "userId": "eve",
+              "bevId": "monster",
+              "score": 4
+            },
+            {
+              "userId": "eve",
+              "bevId": "redbull",
+              "score": 3
+            }
+          ],
+          "userNeighbours": {
+            "u": [
+              {
+                "userId": "ghost",
+                "sim": 0.9,
+                "common": 4
+              },
+              {
+                "userId": "amy",
+                "sim": 0.6213,
+                "common": 3
+              }
+            ]
+          }
+        },
+        "userId": "u",
+        "bevId": "pepsi",
+        "userSimilarity": "stored"
+      },
+      "expected": {
+        "source": "stored",
+        "z": 1.090909090909091,
+        "support": 0.6213,
+        "neighbours": [
+          "amy"
+        ]
+      }
+    },
+    {
+      "name": "stored requested, snapshot without the userNeighbours field: the in-snapshot cosine",
+      "fn": "layer2",
+      "input": {
+        "snapshot": {
+          "version": "1.6.0",
+          "generatedAt": "2026-10-31T00:00:00Z",
+          "global": {
+            "mean": 5.863636363636363,
+            "stddev": 2.379752747765168,
+            "byCategoryMean": {
+              "energy": 3.5,
+              "soda": 7.107142857142857,
+              "sparkling_water": 3.75
+            }
+          },
+          "bevs": {
+            "coke": {
+              "id": "coke",
+              "categoryId": "soda",
+              "brandKey": "coca-cola",
+              "flavorTokens": [
+                "cola"
+              ],
+              "priceTier": 1,
+              "ratingCount": 6,
+              "mean": 8.416666666666666,
+              "stddev": 0.8374896350934076,
+              "isAlcoholic": false
+            },
+            "pepsi": {
+              "id": "pepsi",
+              "categoryId": "soda",
+              "brandKey": "pepsi",
+              "flavorTokens": [
+                "cola"
+              ],
+              "priceTier": 1,
+              "ratingCount": 4,
+              "mean": 6.125,
+              "stddev": 2.6545950726994127,
+              "isAlcoholic": false
+            },
+            "sprite": {
+              "id": "sprite",
+              "categoryId": "soda",
+              "brandKey": "coca-cola",
+              "flavorTokens": [
+                "lemon",
+                "lime"
+              ],
+              "priceTier": 1,
+              "ratingCount": 4,
+              "mean": 6.125,
+              "stddev": 0.739509972887452,
+              "isAlcoholic": false
+            },
+            "lacroix": {
+              "id": "lacroix",
+              "categoryId": "sparkling_water",
+              "brandKey": "lacroix",
+              "flavorTokens": [
+                "lime"
+              ],
+              "priceTier": 2,
+              "ratingCount": 4,
+              "mean": 2.875,
+              "stddev": 0.739509972887452,
+              "isAlcoholic": false
+            },
+            "topo": {
+              "id": "topo",
+              "categoryId": "sparkling_water",
+              "brandKey": "topo chico",
+              "flavorTokens": [
+                "mineral"
+              ],
+              "priceTier": 2,
+              "ratingCount": 2,
+              "mean": 5.5,
+              "stddev": 0.5,
+              "isAlcoholic": false
+            },
+            "monster": {
+              "id": "monster",
+              "categoryId": "energy",
+              "brandKey": "monster",
+              "flavorTokens": [
+                "energy"
+              ],
+              "priceTier": 2,
+              "ratingCount": 1,
+              "mean": 4,
+              "stddev": 0,
+              "isAlcoholic": false
+            },
+            "redbull": {
+              "id": "redbull",
+              "categoryId": "energy",
+              "brandKey": "red bull",
+              "flavorTokens": [
+                "energy"
+              ],
+              "priceTier": 3,
+              "ratingCount": 1,
+              "mean": 3,
+              "stddev": 0,
+              "isAlcoholic": false
+            }
+          },
+          "users": {
+            "u": {
+              "id": "u",
+              "stats": {
+                "n": 4,
+                "mean": 5.875,
+                "stddev": 2.190176933491904
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 7.75,
+                  "stddev": 1.25
+                },
+                "sparkling_water": {
+                  "n": 2,
+                  "mean": 4,
+                  "stddev": 1
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "amy": {
+              "id": "amy",
+              "stats": {
+                "n": 18,
+                "mean": 6.1,
+                "stddev": 2.2
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 3,
+                  "mean": 7.833333333333333,
+                  "stddev": 0.6236095644623235
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 2,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "ben": {
+              "id": "ben",
+              "stats": {
+                "n": 3,
+                "mean": 5.666666666666667,
+                "stddev": 1.247219128924647
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 5.5,
+                  "stddev": 1.5
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 6,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "cat": {
+              "id": "cat",
+              "stats": {
+                "n": 3,
+                "mean": 6,
+                "stddev": 2.160246899469287
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 7,
+                  "stddev": 2
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 4,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "dan": {
+              "id": "dan",
+              "stats": {
+                "n": 4,
+                "mean": 5.25,
+                "stddev": 2.7950849718747373
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 3,
+                  "mean": 6.166666666666667,
+                  "stddev": 2.6562295750848715
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 2.5,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            }
+          },
+          "rankings": [
+            {
+              "userId": "u",
+              "bevId": "coke",
+              "score": 9
+            },
+            {
+              "userId": "u",
+              "bevId": "sprite",
+              "score": 6.5
+            },
+            {
+              "userId": "u",
+              "bevId": "lacroix",
+              "score": 3
+            },
+            {
+              "userId": "u",
+              "bevId": "topo",
+              "score": 5
+            },
+            {
+              "userId": "amy",
+              "bevId": "coke",
+              "score": 8
+            },
+            {
+              "userId": "amy",
+              "bevId": "sprite",
+              "score": 7
+            },
+            {
+              "userId": "amy",
+              "bevId": "pepsi",
+              "score": 8.5
+            },
+            {
+              "userId": "amy",
+              "bevId": "lacroix",
+              "score": 2
+            },
+            {
+              "userId": "ben",
+              "bevId": "coke",
+              "score": 7
+            },
+            {
+              "userId": "ben",
+              "bevId": "pepsi",
+              "score": 4
+            },
+            {
+              "userId": "ben",
+              "bevId": "topo",
+              "score": 6
+            },
+            {
+              "userId": "cat",
+              "bevId": "coke",
+              "score": 9
+            },
+            {
+              "userId": "cat",
+              "bevId": "sprite",
+              "score": 5
+            },
+            {
+              "userId": "cat",
+              "bevId": "lacroix",
+              "score": 4
+            },
+            {
+              "userId": "dan",
+              "bevId": "coke",
+              "score": 9.5
+            },
+            {
+              "userId": "dan",
+              "bevId": "sprite",
+              "score": 6
+            },
+            {
+              "userId": "dan",
+              "bevId": "lacroix",
+              "score": 2.5
+            },
+            {
+              "userId": "dan",
+              "bevId": "pepsi",
+              "score": 3
+            },
+            {
+              "userId": "eve",
+              "bevId": "coke",
+              "score": 8
+            },
+            {
+              "userId": "eve",
+              "bevId": "pepsi",
+              "score": 9
+            },
+            {
+              "userId": "eve",
+              "bevId": "monster",
+              "score": 4
+            },
+            {
+              "userId": "eve",
+              "bevId": "redbull",
+              "score": 3
+            }
+          ]
+        },
+        "userId": "u",
+        "bevId": "pepsi",
+        "userSimilarity": "stored"
+      },
+      "expected": {
+        "source": "cosine",
+        "z": -0.22447091856598964,
+        "support": 1.4939514182881437,
+        "neighbours": [
+          "dan",
+          "amy",
+          "ben"
+        ]
+      }
+    },
+    {
+      "name": "stored requested, userNeighbours null: the in-snapshot cosine",
+      "fn": "layer2",
+      "input": {
+        "snapshot": {
+          "version": "1.6.0",
+          "generatedAt": "2026-10-31T00:00:00Z",
+          "global": {
+            "mean": 5.863636363636363,
+            "stddev": 2.379752747765168,
+            "byCategoryMean": {
+              "energy": 3.5,
+              "soda": 7.107142857142857,
+              "sparkling_water": 3.75
+            }
+          },
+          "bevs": {
+            "coke": {
+              "id": "coke",
+              "categoryId": "soda",
+              "brandKey": "coca-cola",
+              "flavorTokens": [
+                "cola"
+              ],
+              "priceTier": 1,
+              "ratingCount": 6,
+              "mean": 8.416666666666666,
+              "stddev": 0.8374896350934076,
+              "isAlcoholic": false
+            },
+            "pepsi": {
+              "id": "pepsi",
+              "categoryId": "soda",
+              "brandKey": "pepsi",
+              "flavorTokens": [
+                "cola"
+              ],
+              "priceTier": 1,
+              "ratingCount": 4,
+              "mean": 6.125,
+              "stddev": 2.6545950726994127,
+              "isAlcoholic": false
+            },
+            "sprite": {
+              "id": "sprite",
+              "categoryId": "soda",
+              "brandKey": "coca-cola",
+              "flavorTokens": [
+                "lemon",
+                "lime"
+              ],
+              "priceTier": 1,
+              "ratingCount": 4,
+              "mean": 6.125,
+              "stddev": 0.739509972887452,
+              "isAlcoholic": false
+            },
+            "lacroix": {
+              "id": "lacroix",
+              "categoryId": "sparkling_water",
+              "brandKey": "lacroix",
+              "flavorTokens": [
+                "lime"
+              ],
+              "priceTier": 2,
+              "ratingCount": 4,
+              "mean": 2.875,
+              "stddev": 0.739509972887452,
+              "isAlcoholic": false
+            },
+            "topo": {
+              "id": "topo",
+              "categoryId": "sparkling_water",
+              "brandKey": "topo chico",
+              "flavorTokens": [
+                "mineral"
+              ],
+              "priceTier": 2,
+              "ratingCount": 2,
+              "mean": 5.5,
+              "stddev": 0.5,
+              "isAlcoholic": false
+            },
+            "monster": {
+              "id": "monster",
+              "categoryId": "energy",
+              "brandKey": "monster",
+              "flavorTokens": [
+                "energy"
+              ],
+              "priceTier": 2,
+              "ratingCount": 1,
+              "mean": 4,
+              "stddev": 0,
+              "isAlcoholic": false
+            },
+            "redbull": {
+              "id": "redbull",
+              "categoryId": "energy",
+              "brandKey": "red bull",
+              "flavorTokens": [
+                "energy"
+              ],
+              "priceTier": 3,
+              "ratingCount": 1,
+              "mean": 3,
+              "stddev": 0,
+              "isAlcoholic": false
+            }
+          },
+          "users": {
+            "u": {
+              "id": "u",
+              "stats": {
+                "n": 4,
+                "mean": 5.875,
+                "stddev": 2.190176933491904
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 7.75,
+                  "stddev": 1.25
+                },
+                "sparkling_water": {
+                  "n": 2,
+                  "mean": 4,
+                  "stddev": 1
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "amy": {
+              "id": "amy",
+              "stats": {
+                "n": 18,
+                "mean": 6.1,
+                "stddev": 2.2
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 3,
+                  "mean": 7.833333333333333,
+                  "stddev": 0.6236095644623235
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 2,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "ben": {
+              "id": "ben",
+              "stats": {
+                "n": 3,
+                "mean": 5.666666666666667,
+                "stddev": 1.247219128924647
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 5.5,
+                  "stddev": 1.5
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 6,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "cat": {
+              "id": "cat",
+              "stats": {
+                "n": 3,
+                "mean": 6,
+                "stddev": 2.160246899469287
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 7,
+                  "stddev": 2
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 4,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "dan": {
+              "id": "dan",
+              "stats": {
+                "n": 4,
+                "mean": 5.25,
+                "stddev": 2.7950849718747373
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 3,
+                  "mean": 6.166666666666667,
+                  "stddev": 2.6562295750848715
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 2.5,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            }
+          },
+          "rankings": [
+            {
+              "userId": "u",
+              "bevId": "coke",
+              "score": 9
+            },
+            {
+              "userId": "u",
+              "bevId": "sprite",
+              "score": 6.5
+            },
+            {
+              "userId": "u",
+              "bevId": "lacroix",
+              "score": 3
+            },
+            {
+              "userId": "u",
+              "bevId": "topo",
+              "score": 5
+            },
+            {
+              "userId": "amy",
+              "bevId": "coke",
+              "score": 8
+            },
+            {
+              "userId": "amy",
+              "bevId": "sprite",
+              "score": 7
+            },
+            {
+              "userId": "amy",
+              "bevId": "pepsi",
+              "score": 8.5
+            },
+            {
+              "userId": "amy",
+              "bevId": "lacroix",
+              "score": 2
+            },
+            {
+              "userId": "ben",
+              "bevId": "coke",
+              "score": 7
+            },
+            {
+              "userId": "ben",
+              "bevId": "pepsi",
+              "score": 4
+            },
+            {
+              "userId": "ben",
+              "bevId": "topo",
+              "score": 6
+            },
+            {
+              "userId": "cat",
+              "bevId": "coke",
+              "score": 9
+            },
+            {
+              "userId": "cat",
+              "bevId": "sprite",
+              "score": 5
+            },
+            {
+              "userId": "cat",
+              "bevId": "lacroix",
+              "score": 4
+            },
+            {
+              "userId": "dan",
+              "bevId": "coke",
+              "score": 9.5
+            },
+            {
+              "userId": "dan",
+              "bevId": "sprite",
+              "score": 6
+            },
+            {
+              "userId": "dan",
+              "bevId": "lacroix",
+              "score": 2.5
+            },
+            {
+              "userId": "dan",
+              "bevId": "pepsi",
+              "score": 3
+            },
+            {
+              "userId": "eve",
+              "bevId": "coke",
+              "score": 8
+            },
+            {
+              "userId": "eve",
+              "bevId": "pepsi",
+              "score": 9
+            },
+            {
+              "userId": "eve",
+              "bevId": "monster",
+              "score": 4
+            },
+            {
+              "userId": "eve",
+              "bevId": "redbull",
+              "score": 3
+            }
+          ],
+          "userNeighbours": null
+        },
+        "userId": "u",
+        "bevId": "pepsi",
+        "userSimilarity": "stored"
+      },
+      "expected": {
+        "source": "cosine",
+        "z": -0.22447091856598964,
+        "support": 1.4939514182881437,
+        "neighbours": [
+          "dan",
+          "amy",
+          "ben"
+        ]
+      }
+    },
+    {
+      "name": "stored requested, u has an empty list (nobody above the floor): the in-snapshot cosine",
+      "fn": "layer2",
+      "input": {
+        "snapshot": {
+          "version": "1.6.0",
+          "generatedAt": "2026-10-31T00:00:00Z",
+          "global": {
+            "mean": 5.863636363636363,
+            "stddev": 2.379752747765168,
+            "byCategoryMean": {
+              "energy": 3.5,
+              "soda": 7.107142857142857,
+              "sparkling_water": 3.75
+            }
+          },
+          "bevs": {
+            "coke": {
+              "id": "coke",
+              "categoryId": "soda",
+              "brandKey": "coca-cola",
+              "flavorTokens": [
+                "cola"
+              ],
+              "priceTier": 1,
+              "ratingCount": 6,
+              "mean": 8.416666666666666,
+              "stddev": 0.8374896350934076,
+              "isAlcoholic": false
+            },
+            "pepsi": {
+              "id": "pepsi",
+              "categoryId": "soda",
+              "brandKey": "pepsi",
+              "flavorTokens": [
+                "cola"
+              ],
+              "priceTier": 1,
+              "ratingCount": 4,
+              "mean": 6.125,
+              "stddev": 2.6545950726994127,
+              "isAlcoholic": false
+            },
+            "sprite": {
+              "id": "sprite",
+              "categoryId": "soda",
+              "brandKey": "coca-cola",
+              "flavorTokens": [
+                "lemon",
+                "lime"
+              ],
+              "priceTier": 1,
+              "ratingCount": 4,
+              "mean": 6.125,
+              "stddev": 0.739509972887452,
+              "isAlcoholic": false
+            },
+            "lacroix": {
+              "id": "lacroix",
+              "categoryId": "sparkling_water",
+              "brandKey": "lacroix",
+              "flavorTokens": [
+                "lime"
+              ],
+              "priceTier": 2,
+              "ratingCount": 4,
+              "mean": 2.875,
+              "stddev": 0.739509972887452,
+              "isAlcoholic": false
+            },
+            "topo": {
+              "id": "topo",
+              "categoryId": "sparkling_water",
+              "brandKey": "topo chico",
+              "flavorTokens": [
+                "mineral"
+              ],
+              "priceTier": 2,
+              "ratingCount": 2,
+              "mean": 5.5,
+              "stddev": 0.5,
+              "isAlcoholic": false
+            },
+            "monster": {
+              "id": "monster",
+              "categoryId": "energy",
+              "brandKey": "monster",
+              "flavorTokens": [
+                "energy"
+              ],
+              "priceTier": 2,
+              "ratingCount": 1,
+              "mean": 4,
+              "stddev": 0,
+              "isAlcoholic": false
+            },
+            "redbull": {
+              "id": "redbull",
+              "categoryId": "energy",
+              "brandKey": "red bull",
+              "flavorTokens": [
+                "energy"
+              ],
+              "priceTier": 3,
+              "ratingCount": 1,
+              "mean": 3,
+              "stddev": 0,
+              "isAlcoholic": false
+            }
+          },
+          "users": {
+            "u": {
+              "id": "u",
+              "stats": {
+                "n": 4,
+                "mean": 5.875,
+                "stddev": 2.190176933491904
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 7.75,
+                  "stddev": 1.25
+                },
+                "sparkling_water": {
+                  "n": 2,
+                  "mean": 4,
+                  "stddev": 1
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "amy": {
+              "id": "amy",
+              "stats": {
+                "n": 18,
+                "mean": 6.1,
+                "stddev": 2.2
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 3,
+                  "mean": 7.833333333333333,
+                  "stddev": 0.6236095644623235
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 2,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "ben": {
+              "id": "ben",
+              "stats": {
+                "n": 3,
+                "mean": 5.666666666666667,
+                "stddev": 1.247219128924647
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 5.5,
+                  "stddev": 1.5
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 6,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "cat": {
+              "id": "cat",
+              "stats": {
+                "n": 3,
+                "mean": 6,
+                "stddev": 2.160246899469287
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 7,
+                  "stddev": 2
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 4,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "dan": {
+              "id": "dan",
+              "stats": {
+                "n": 4,
+                "mean": 5.25,
+                "stddev": 2.7950849718747373
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 3,
+                  "mean": 6.166666666666667,
+                  "stddev": 2.6562295750848715
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 2.5,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            }
+          },
+          "rankings": [
+            {
+              "userId": "u",
+              "bevId": "coke",
+              "score": 9
+            },
+            {
+              "userId": "u",
+              "bevId": "sprite",
+              "score": 6.5
+            },
+            {
+              "userId": "u",
+              "bevId": "lacroix",
+              "score": 3
+            },
+            {
+              "userId": "u",
+              "bevId": "topo",
+              "score": 5
+            },
+            {
+              "userId": "amy",
+              "bevId": "coke",
+              "score": 8
+            },
+            {
+              "userId": "amy",
+              "bevId": "sprite",
+              "score": 7
+            },
+            {
+              "userId": "amy",
+              "bevId": "pepsi",
+              "score": 8.5
+            },
+            {
+              "userId": "amy",
+              "bevId": "lacroix",
+              "score": 2
+            },
+            {
+              "userId": "ben",
+              "bevId": "coke",
+              "score": 7
+            },
+            {
+              "userId": "ben",
+              "bevId": "pepsi",
+              "score": 4
+            },
+            {
+              "userId": "ben",
+              "bevId": "topo",
+              "score": 6
+            },
+            {
+              "userId": "cat",
+              "bevId": "coke",
+              "score": 9
+            },
+            {
+              "userId": "cat",
+              "bevId": "sprite",
+              "score": 5
+            },
+            {
+              "userId": "cat",
+              "bevId": "lacroix",
+              "score": 4
+            },
+            {
+              "userId": "dan",
+              "bevId": "coke",
+              "score": 9.5
+            },
+            {
+              "userId": "dan",
+              "bevId": "sprite",
+              "score": 6
+            },
+            {
+              "userId": "dan",
+              "bevId": "lacroix",
+              "score": 2.5
+            },
+            {
+              "userId": "dan",
+              "bevId": "pepsi",
+              "score": 3
+            },
+            {
+              "userId": "eve",
+              "bevId": "coke",
+              "score": 8
+            },
+            {
+              "userId": "eve",
+              "bevId": "pepsi",
+              "score": 9
+            },
+            {
+              "userId": "eve",
+              "bevId": "monster",
+              "score": 4
+            },
+            {
+              "userId": "eve",
+              "bevId": "redbull",
+              "score": 3
+            }
+          ],
+          "userNeighbours": {
+            "u": [],
+            "amy": [
+              {
+                "userId": "u",
+                "sim": 0.6213,
+                "common": 3
+              },
+              {
+                "userId": "dan",
+                "sim": 0.5022,
+                "common": 3
+              }
+            ]
+          }
+        },
+        "userId": "u",
+        "bevId": "pepsi",
+        "userSimilarity": "stored"
+      },
+      "expected": {
+        "source": "cosine",
+        "z": -0.22447091856598964,
+        "support": 1.4939514182881437,
+        "neighbours": [
+          "dan",
+          "amy",
+          "ben"
+        ]
+      }
+    },
+    {
+      "name": "stored requested, u has no key (not yet synced): the in-snapshot cosine",
+      "fn": "layer2",
+      "input": {
+        "snapshot": {
+          "version": "1.6.0",
+          "generatedAt": "2026-10-31T00:00:00Z",
+          "global": {
+            "mean": 5.863636363636363,
+            "stddev": 2.379752747765168,
+            "byCategoryMean": {
+              "energy": 3.5,
+              "soda": 7.107142857142857,
+              "sparkling_water": 3.75
+            }
+          },
+          "bevs": {
+            "coke": {
+              "id": "coke",
+              "categoryId": "soda",
+              "brandKey": "coca-cola",
+              "flavorTokens": [
+                "cola"
+              ],
+              "priceTier": 1,
+              "ratingCount": 6,
+              "mean": 8.416666666666666,
+              "stddev": 0.8374896350934076,
+              "isAlcoholic": false
+            },
+            "pepsi": {
+              "id": "pepsi",
+              "categoryId": "soda",
+              "brandKey": "pepsi",
+              "flavorTokens": [
+                "cola"
+              ],
+              "priceTier": 1,
+              "ratingCount": 4,
+              "mean": 6.125,
+              "stddev": 2.6545950726994127,
+              "isAlcoholic": false
+            },
+            "sprite": {
+              "id": "sprite",
+              "categoryId": "soda",
+              "brandKey": "coca-cola",
+              "flavorTokens": [
+                "lemon",
+                "lime"
+              ],
+              "priceTier": 1,
+              "ratingCount": 4,
+              "mean": 6.125,
+              "stddev": 0.739509972887452,
+              "isAlcoholic": false
+            },
+            "lacroix": {
+              "id": "lacroix",
+              "categoryId": "sparkling_water",
+              "brandKey": "lacroix",
+              "flavorTokens": [
+                "lime"
+              ],
+              "priceTier": 2,
+              "ratingCount": 4,
+              "mean": 2.875,
+              "stddev": 0.739509972887452,
+              "isAlcoholic": false
+            },
+            "topo": {
+              "id": "topo",
+              "categoryId": "sparkling_water",
+              "brandKey": "topo chico",
+              "flavorTokens": [
+                "mineral"
+              ],
+              "priceTier": 2,
+              "ratingCount": 2,
+              "mean": 5.5,
+              "stddev": 0.5,
+              "isAlcoholic": false
+            },
+            "monster": {
+              "id": "monster",
+              "categoryId": "energy",
+              "brandKey": "monster",
+              "flavorTokens": [
+                "energy"
+              ],
+              "priceTier": 2,
+              "ratingCount": 1,
+              "mean": 4,
+              "stddev": 0,
+              "isAlcoholic": false
+            },
+            "redbull": {
+              "id": "redbull",
+              "categoryId": "energy",
+              "brandKey": "red bull",
+              "flavorTokens": [
+                "energy"
+              ],
+              "priceTier": 3,
+              "ratingCount": 1,
+              "mean": 3,
+              "stddev": 0,
+              "isAlcoholic": false
+            }
+          },
+          "users": {
+            "u": {
+              "id": "u",
+              "stats": {
+                "n": 4,
+                "mean": 5.875,
+                "stddev": 2.190176933491904
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 7.75,
+                  "stddev": 1.25
+                },
+                "sparkling_water": {
+                  "n": 2,
+                  "mean": 4,
+                  "stddev": 1
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "amy": {
+              "id": "amy",
+              "stats": {
+                "n": 18,
+                "mean": 6.1,
+                "stddev": 2.2
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 3,
+                  "mean": 7.833333333333333,
+                  "stddev": 0.6236095644623235
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 2,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "ben": {
+              "id": "ben",
+              "stats": {
+                "n": 3,
+                "mean": 5.666666666666667,
+                "stddev": 1.247219128924647
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 5.5,
+                  "stddev": 1.5
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 6,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "cat": {
+              "id": "cat",
+              "stats": {
+                "n": 3,
+                "mean": 6,
+                "stddev": 2.160246899469287
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 7,
+                  "stddev": 2
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 4,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "dan": {
+              "id": "dan",
+              "stats": {
+                "n": 4,
+                "mean": 5.25,
+                "stddev": 2.7950849718747373
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 3,
+                  "mean": 6.166666666666667,
+                  "stddev": 2.6562295750848715
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 2.5,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            }
+          },
+          "rankings": [
+            {
+              "userId": "u",
+              "bevId": "coke",
+              "score": 9
+            },
+            {
+              "userId": "u",
+              "bevId": "sprite",
+              "score": 6.5
+            },
+            {
+              "userId": "u",
+              "bevId": "lacroix",
+              "score": 3
+            },
+            {
+              "userId": "u",
+              "bevId": "topo",
+              "score": 5
+            },
+            {
+              "userId": "amy",
+              "bevId": "coke",
+              "score": 8
+            },
+            {
+              "userId": "amy",
+              "bevId": "sprite",
+              "score": 7
+            },
+            {
+              "userId": "amy",
+              "bevId": "pepsi",
+              "score": 8.5
+            },
+            {
+              "userId": "amy",
+              "bevId": "lacroix",
+              "score": 2
+            },
+            {
+              "userId": "ben",
+              "bevId": "coke",
+              "score": 7
+            },
+            {
+              "userId": "ben",
+              "bevId": "pepsi",
+              "score": 4
+            },
+            {
+              "userId": "ben",
+              "bevId": "topo",
+              "score": 6
+            },
+            {
+              "userId": "cat",
+              "bevId": "coke",
+              "score": 9
+            },
+            {
+              "userId": "cat",
+              "bevId": "sprite",
+              "score": 5
+            },
+            {
+              "userId": "cat",
+              "bevId": "lacroix",
+              "score": 4
+            },
+            {
+              "userId": "dan",
+              "bevId": "coke",
+              "score": 9.5
+            },
+            {
+              "userId": "dan",
+              "bevId": "sprite",
+              "score": 6
+            },
+            {
+              "userId": "dan",
+              "bevId": "lacroix",
+              "score": 2.5
+            },
+            {
+              "userId": "dan",
+              "bevId": "pepsi",
+              "score": 3
+            },
+            {
+              "userId": "eve",
+              "bevId": "coke",
+              "score": 8
+            },
+            {
+              "userId": "eve",
+              "bevId": "pepsi",
+              "score": 9
+            },
+            {
+              "userId": "eve",
+              "bevId": "monster",
+              "score": 4
+            },
+            {
+              "userId": "eve",
+              "bevId": "redbull",
+              "score": 3
+            }
+          ],
+          "userNeighbours": {
+            "amy": [
+              {
+                "userId": "u",
+                "sim": 0.6213,
+                "common": 3
+              },
+              {
+                "userId": "dan",
+                "sim": 0.5022,
+                "common": 3
+              }
+            ]
+          }
+        },
+        "userId": "u",
+        "bevId": "pepsi",
+        "userSimilarity": "stored"
+      },
+      "expected": {
+        "source": "cosine",
+        "z": -0.22447091856598964,
+        "support": 1.4939514182881437,
+        "neighbours": [
+          "dan",
+          "amy",
+          "ben"
+        ]
+      }
+    },
+    {
+      "name": "cosine (the default) ignores a present userNeighbours field",
+      "fn": "layer2",
+      "input": {
+        "snapshot": {
+          "version": "1.6.0",
+          "generatedAt": "2026-10-31T00:00:00Z",
+          "global": {
+            "mean": 5.863636363636363,
+            "stddev": 2.379752747765168,
+            "byCategoryMean": {
+              "energy": 3.5,
+              "soda": 7.107142857142857,
+              "sparkling_water": 3.75
+            }
+          },
+          "bevs": {
+            "coke": {
+              "id": "coke",
+              "categoryId": "soda",
+              "brandKey": "coca-cola",
+              "flavorTokens": [
+                "cola"
+              ],
+              "priceTier": 1,
+              "ratingCount": 6,
+              "mean": 8.416666666666666,
+              "stddev": 0.8374896350934076,
+              "isAlcoholic": false
+            },
+            "pepsi": {
+              "id": "pepsi",
+              "categoryId": "soda",
+              "brandKey": "pepsi",
+              "flavorTokens": [
+                "cola"
+              ],
+              "priceTier": 1,
+              "ratingCount": 4,
+              "mean": 6.125,
+              "stddev": 2.6545950726994127,
+              "isAlcoholic": false
+            },
+            "sprite": {
+              "id": "sprite",
+              "categoryId": "soda",
+              "brandKey": "coca-cola",
+              "flavorTokens": [
+                "lemon",
+                "lime"
+              ],
+              "priceTier": 1,
+              "ratingCount": 4,
+              "mean": 6.125,
+              "stddev": 0.739509972887452,
+              "isAlcoholic": false
+            },
+            "lacroix": {
+              "id": "lacroix",
+              "categoryId": "sparkling_water",
+              "brandKey": "lacroix",
+              "flavorTokens": [
+                "lime"
+              ],
+              "priceTier": 2,
+              "ratingCount": 4,
+              "mean": 2.875,
+              "stddev": 0.739509972887452,
+              "isAlcoholic": false
+            },
+            "topo": {
+              "id": "topo",
+              "categoryId": "sparkling_water",
+              "brandKey": "topo chico",
+              "flavorTokens": [
+                "mineral"
+              ],
+              "priceTier": 2,
+              "ratingCount": 2,
+              "mean": 5.5,
+              "stddev": 0.5,
+              "isAlcoholic": false
+            },
+            "monster": {
+              "id": "monster",
+              "categoryId": "energy",
+              "brandKey": "monster",
+              "flavorTokens": [
+                "energy"
+              ],
+              "priceTier": 2,
+              "ratingCount": 1,
+              "mean": 4,
+              "stddev": 0,
+              "isAlcoholic": false
+            },
+            "redbull": {
+              "id": "redbull",
+              "categoryId": "energy",
+              "brandKey": "red bull",
+              "flavorTokens": [
+                "energy"
+              ],
+              "priceTier": 3,
+              "ratingCount": 1,
+              "mean": 3,
+              "stddev": 0,
+              "isAlcoholic": false
+            }
+          },
+          "users": {
+            "u": {
+              "id": "u",
+              "stats": {
+                "n": 4,
+                "mean": 5.875,
+                "stddev": 2.190176933491904
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 7.75,
+                  "stddev": 1.25
+                },
+                "sparkling_water": {
+                  "n": 2,
+                  "mean": 4,
+                  "stddev": 1
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "amy": {
+              "id": "amy",
+              "stats": {
+                "n": 18,
+                "mean": 6.1,
+                "stddev": 2.2
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 3,
+                  "mean": 7.833333333333333,
+                  "stddev": 0.6236095644623235
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 2,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "ben": {
+              "id": "ben",
+              "stats": {
+                "n": 3,
+                "mean": 5.666666666666667,
+                "stddev": 1.247219128924647
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 5.5,
+                  "stddev": 1.5
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 6,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "cat": {
+              "id": "cat",
+              "stats": {
+                "n": 3,
+                "mean": 6,
+                "stddev": 2.160246899469287
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 7,
+                  "stddev": 2
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 4,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "dan": {
+              "id": "dan",
+              "stats": {
+                "n": 4,
+                "mean": 5.25,
+                "stddev": 2.7950849718747373
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 3,
+                  "mean": 6.166666666666667,
+                  "stddev": 2.6562295750848715
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 2.5,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            }
+          },
+          "rankings": [
+            {
+              "userId": "u",
+              "bevId": "coke",
+              "score": 9
+            },
+            {
+              "userId": "u",
+              "bevId": "sprite",
+              "score": 6.5
+            },
+            {
+              "userId": "u",
+              "bevId": "lacroix",
+              "score": 3
+            },
+            {
+              "userId": "u",
+              "bevId": "topo",
+              "score": 5
+            },
+            {
+              "userId": "amy",
+              "bevId": "coke",
+              "score": 8
+            },
+            {
+              "userId": "amy",
+              "bevId": "sprite",
+              "score": 7
+            },
+            {
+              "userId": "amy",
+              "bevId": "pepsi",
+              "score": 8.5
+            },
+            {
+              "userId": "amy",
+              "bevId": "lacroix",
+              "score": 2
+            },
+            {
+              "userId": "ben",
+              "bevId": "coke",
+              "score": 7
+            },
+            {
+              "userId": "ben",
+              "bevId": "pepsi",
+              "score": 4
+            },
+            {
+              "userId": "ben",
+              "bevId": "topo",
+              "score": 6
+            },
+            {
+              "userId": "cat",
+              "bevId": "coke",
+              "score": 9
+            },
+            {
+              "userId": "cat",
+              "bevId": "sprite",
+              "score": 5
+            },
+            {
+              "userId": "cat",
+              "bevId": "lacroix",
+              "score": 4
+            },
+            {
+              "userId": "dan",
+              "bevId": "coke",
+              "score": 9.5
+            },
+            {
+              "userId": "dan",
+              "bevId": "sprite",
+              "score": 6
+            },
+            {
+              "userId": "dan",
+              "bevId": "lacroix",
+              "score": 2.5
+            },
+            {
+              "userId": "dan",
+              "bevId": "pepsi",
+              "score": 3
+            },
+            {
+              "userId": "eve",
+              "bevId": "coke",
+              "score": 8
+            },
+            {
+              "userId": "eve",
+              "bevId": "pepsi",
+              "score": 9
+            },
+            {
+              "userId": "eve",
+              "bevId": "monster",
+              "score": 4
+            },
+            {
+              "userId": "eve",
+              "bevId": "redbull",
+              "score": 3
+            }
+          ],
+          "userNeighbours": {
+            "u": [
+              {
+                "userId": "amy",
+                "sim": 0.6213,
+                "common": 3
+              },
+              {
+                "userId": "ben",
+                "sim": 0.4507,
+                "common": 2
+              }
+            ],
+            "amy": [
+              {
+                "userId": "u",
+                "sim": 0.6213,
+                "common": 3
+              },
+              {
+                "userId": "dan",
+                "sim": 0.5022,
+                "common": 3
+              }
+            ]
+          }
+        },
+        "userId": "u",
+        "bevId": "pepsi",
+        "userSimilarity": "cosine"
+      },
+      "expected": {
+        "source": "cosine",
+        "z": -0.22447091856598964,
+        "support": 1.4939514182881437,
+        "neighbours": [
+          "dan",
+          "amy",
+          "ben"
+        ]
+      }
+    },
+    {
+      "name": "stored: a negative stored sim (ben) is excluded by sim' > 0",
+      "fn": "layer2",
+      "input": {
+        "snapshot": {
+          "version": "1.6.0",
+          "generatedAt": "2026-10-31T00:00:00Z",
+          "global": {
+            "mean": 5.863636363636363,
+            "stddev": 2.379752747765168,
+            "byCategoryMean": {
+              "energy": 3.5,
+              "soda": 7.107142857142857,
+              "sparkling_water": 3.75
+            }
+          },
+          "bevs": {
+            "coke": {
+              "id": "coke",
+              "categoryId": "soda",
+              "brandKey": "coca-cola",
+              "flavorTokens": [
+                "cola"
+              ],
+              "priceTier": 1,
+              "ratingCount": 6,
+              "mean": 8.416666666666666,
+              "stddev": 0.8374896350934076,
+              "isAlcoholic": false
+            },
+            "pepsi": {
+              "id": "pepsi",
+              "categoryId": "soda",
+              "brandKey": "pepsi",
+              "flavorTokens": [
+                "cola"
+              ],
+              "priceTier": 1,
+              "ratingCount": 4,
+              "mean": 6.125,
+              "stddev": 2.6545950726994127,
+              "isAlcoholic": false
+            },
+            "sprite": {
+              "id": "sprite",
+              "categoryId": "soda",
+              "brandKey": "coca-cola",
+              "flavorTokens": [
+                "lemon",
+                "lime"
+              ],
+              "priceTier": 1,
+              "ratingCount": 4,
+              "mean": 6.125,
+              "stddev": 0.739509972887452,
+              "isAlcoholic": false
+            },
+            "lacroix": {
+              "id": "lacroix",
+              "categoryId": "sparkling_water",
+              "brandKey": "lacroix",
+              "flavorTokens": [
+                "lime"
+              ],
+              "priceTier": 2,
+              "ratingCount": 4,
+              "mean": 2.875,
+              "stddev": 0.739509972887452,
+              "isAlcoholic": false
+            },
+            "topo": {
+              "id": "topo",
+              "categoryId": "sparkling_water",
+              "brandKey": "topo chico",
+              "flavorTokens": [
+                "mineral"
+              ],
+              "priceTier": 2,
+              "ratingCount": 2,
+              "mean": 5.5,
+              "stddev": 0.5,
+              "isAlcoholic": false
+            },
+            "monster": {
+              "id": "monster",
+              "categoryId": "energy",
+              "brandKey": "monster",
+              "flavorTokens": [
+                "energy"
+              ],
+              "priceTier": 2,
+              "ratingCount": 1,
+              "mean": 4,
+              "stddev": 0,
+              "isAlcoholic": false
+            },
+            "redbull": {
+              "id": "redbull",
+              "categoryId": "energy",
+              "brandKey": "red bull",
+              "flavorTokens": [
+                "energy"
+              ],
+              "priceTier": 3,
+              "ratingCount": 1,
+              "mean": 3,
+              "stddev": 0,
+              "isAlcoholic": false
+            }
+          },
+          "users": {
+            "u": {
+              "id": "u",
+              "stats": {
+                "n": 4,
+                "mean": 5.875,
+                "stddev": 2.190176933491904
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 7.75,
+                  "stddev": 1.25
+                },
+                "sparkling_water": {
+                  "n": 2,
+                  "mean": 4,
+                  "stddev": 1
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "amy": {
+              "id": "amy",
+              "stats": {
+                "n": 18,
+                "mean": 6.1,
+                "stddev": 2.2
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 3,
+                  "mean": 7.833333333333333,
+                  "stddev": 0.6236095644623235
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 2,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "ben": {
+              "id": "ben",
+              "stats": {
+                "n": 3,
+                "mean": 5.666666666666667,
+                "stddev": 1.247219128924647
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 5.5,
+                  "stddev": 1.5
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 6,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "cat": {
+              "id": "cat",
+              "stats": {
+                "n": 3,
+                "mean": 6,
+                "stddev": 2.160246899469287
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 7,
+                  "stddev": 2
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 4,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "dan": {
+              "id": "dan",
+              "stats": {
+                "n": 4,
+                "mean": 5.25,
+                "stddev": 2.7950849718747373
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 3,
+                  "mean": 6.166666666666667,
+                  "stddev": 2.6562295750848715
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 2.5,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            }
+          },
+          "rankings": [
+            {
+              "userId": "u",
+              "bevId": "coke",
+              "score": 9
+            },
+            {
+              "userId": "u",
+              "bevId": "sprite",
+              "score": 6.5
+            },
+            {
+              "userId": "u",
+              "bevId": "lacroix",
+              "score": 3
+            },
+            {
+              "userId": "u",
+              "bevId": "topo",
+              "score": 5
+            },
+            {
+              "userId": "amy",
+              "bevId": "coke",
+              "score": 8
+            },
+            {
+              "userId": "amy",
+              "bevId": "sprite",
+              "score": 7
+            },
+            {
+              "userId": "amy",
+              "bevId": "pepsi",
+              "score": 8.5
+            },
+            {
+              "userId": "amy",
+              "bevId": "lacroix",
+              "score": 2
+            },
+            {
+              "userId": "ben",
+              "bevId": "coke",
+              "score": 7
+            },
+            {
+              "userId": "ben",
+              "bevId": "pepsi",
+              "score": 4
+            },
+            {
+              "userId": "ben",
+              "bevId": "topo",
+              "score": 6
+            },
+            {
+              "userId": "cat",
+              "bevId": "coke",
+              "score": 9
+            },
+            {
+              "userId": "cat",
+              "bevId": "sprite",
+              "score": 5
+            },
+            {
+              "userId": "cat",
+              "bevId": "lacroix",
+              "score": 4
+            },
+            {
+              "userId": "dan",
+              "bevId": "coke",
+              "score": 9.5
+            },
+            {
+              "userId": "dan",
+              "bevId": "sprite",
+              "score": 6
+            },
+            {
+              "userId": "dan",
+              "bevId": "lacroix",
+              "score": 2.5
+            },
+            {
+              "userId": "dan",
+              "bevId": "pepsi",
+              "score": 3
+            },
+            {
+              "userId": "eve",
+              "bevId": "coke",
+              "score": 8
+            },
+            {
+              "userId": "eve",
+              "bevId": "pepsi",
+              "score": 9
+            },
+            {
+              "userId": "eve",
+              "bevId": "monster",
+              "score": 4
+            },
+            {
+              "userId": "eve",
+              "bevId": "redbull",
+              "score": 3
+            }
+          ],
+          "userNeighbours": {
+            "u": [
+              {
+                "userId": "ben",
+                "sim": -0.4,
+                "common": 2
+              },
+              {
+                "userId": "amy",
+                "sim": 0.6213,
+                "common": 3
+              }
+            ]
+          }
+        },
+        "userId": "u",
+        "bevId": "pepsi",
+        "userSimilarity": "stored"
+      },
+      "expected": {
+        "source": "stored",
+        "z": 1.090909090909091,
+        "support": 0.6213,
+        "neighbours": [
+          "amy"
+        ]
+      }
+    },
+    {
+      "name": "predictScore, stored: case 1 (the support, hence lambda, comes from the stored neighbours)",
+      "fn": "predictScore",
+      "input": {
+        "snapshot": {
+          "version": "1.6.0",
+          "generatedAt": "2026-10-31T00:00:00Z",
+          "global": {
+            "mean": 5.863636363636363,
+            "stddev": 2.379752747765168,
+            "byCategoryMean": {
+              "energy": 3.5,
+              "soda": 7.107142857142857,
+              "sparkling_water": 3.75
+            }
+          },
+          "bevs": {
+            "coke": {
+              "id": "coke",
+              "categoryId": "soda",
+              "brandKey": "coca-cola",
+              "flavorTokens": [
+                "cola"
+              ],
+              "priceTier": 1,
+              "ratingCount": 6,
+              "mean": 8.416666666666666,
+              "stddev": 0.8374896350934076,
+              "isAlcoholic": false
+            },
+            "pepsi": {
+              "id": "pepsi",
+              "categoryId": "soda",
+              "brandKey": "pepsi",
+              "flavorTokens": [
+                "cola"
+              ],
+              "priceTier": 1,
+              "ratingCount": 4,
+              "mean": 6.125,
+              "stddev": 2.6545950726994127,
+              "isAlcoholic": false
+            },
+            "sprite": {
+              "id": "sprite",
+              "categoryId": "soda",
+              "brandKey": "coca-cola",
+              "flavorTokens": [
+                "lemon",
+                "lime"
+              ],
+              "priceTier": 1,
+              "ratingCount": 4,
+              "mean": 6.125,
+              "stddev": 0.739509972887452,
+              "isAlcoholic": false
+            },
+            "lacroix": {
+              "id": "lacroix",
+              "categoryId": "sparkling_water",
+              "brandKey": "lacroix",
+              "flavorTokens": [
+                "lime"
+              ],
+              "priceTier": 2,
+              "ratingCount": 4,
+              "mean": 2.875,
+              "stddev": 0.739509972887452,
+              "isAlcoholic": false
+            },
+            "topo": {
+              "id": "topo",
+              "categoryId": "sparkling_water",
+              "brandKey": "topo chico",
+              "flavorTokens": [
+                "mineral"
+              ],
+              "priceTier": 2,
+              "ratingCount": 2,
+              "mean": 5.5,
+              "stddev": 0.5,
+              "isAlcoholic": false
+            },
+            "monster": {
+              "id": "monster",
+              "categoryId": "energy",
+              "brandKey": "monster",
+              "flavorTokens": [
+                "energy"
+              ],
+              "priceTier": 2,
+              "ratingCount": 1,
+              "mean": 4,
+              "stddev": 0,
+              "isAlcoholic": false
+            },
+            "redbull": {
+              "id": "redbull",
+              "categoryId": "energy",
+              "brandKey": "red bull",
+              "flavorTokens": [
+                "energy"
+              ],
+              "priceTier": 3,
+              "ratingCount": 1,
+              "mean": 3,
+              "stddev": 0,
+              "isAlcoholic": false
+            }
+          },
+          "users": {
+            "u": {
+              "id": "u",
+              "stats": {
+                "n": 4,
+                "mean": 5.875,
+                "stddev": 2.190176933491904
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 7.75,
+                  "stddev": 1.25
+                },
+                "sparkling_water": {
+                  "n": 2,
+                  "mean": 4,
+                  "stddev": 1
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "amy": {
+              "id": "amy",
+              "stats": {
+                "n": 18,
+                "mean": 6.1,
+                "stddev": 2.2
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 3,
+                  "mean": 7.833333333333333,
+                  "stddev": 0.6236095644623235
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 2,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "ben": {
+              "id": "ben",
+              "stats": {
+                "n": 3,
+                "mean": 5.666666666666667,
+                "stddev": 1.247219128924647
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 5.5,
+                  "stddev": 1.5
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 6,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "cat": {
+              "id": "cat",
+              "stats": {
+                "n": 3,
+                "mean": 6,
+                "stddev": 2.160246899469287
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 7,
+                  "stddev": 2
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 4,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "dan": {
+              "id": "dan",
+              "stats": {
+                "n": 4,
+                "mean": 5.25,
+                "stddev": 2.7950849718747373
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 3,
+                  "mean": 6.166666666666667,
+                  "stddev": 2.6562295750848715
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 2.5,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            }
+          },
+          "rankings": [
+            {
+              "userId": "u",
+              "bevId": "coke",
+              "score": 9
+            },
+            {
+              "userId": "u",
+              "bevId": "sprite",
+              "score": 6.5
+            },
+            {
+              "userId": "u",
+              "bevId": "lacroix",
+              "score": 3
+            },
+            {
+              "userId": "u",
+              "bevId": "topo",
+              "score": 5
+            },
+            {
+              "userId": "amy",
+              "bevId": "coke",
+              "score": 8
+            },
+            {
+              "userId": "amy",
+              "bevId": "sprite",
+              "score": 7
+            },
+            {
+              "userId": "amy",
+              "bevId": "pepsi",
+              "score": 8.5
+            },
+            {
+              "userId": "amy",
+              "bevId": "lacroix",
+              "score": 2
+            },
+            {
+              "userId": "ben",
+              "bevId": "coke",
+              "score": 7
+            },
+            {
+              "userId": "ben",
+              "bevId": "pepsi",
+              "score": 4
+            },
+            {
+              "userId": "ben",
+              "bevId": "topo",
+              "score": 6
+            },
+            {
+              "userId": "cat",
+              "bevId": "coke",
+              "score": 9
+            },
+            {
+              "userId": "cat",
+              "bevId": "sprite",
+              "score": 5
+            },
+            {
+              "userId": "cat",
+              "bevId": "lacroix",
+              "score": 4
+            },
+            {
+              "userId": "dan",
+              "bevId": "coke",
+              "score": 9.5
+            },
+            {
+              "userId": "dan",
+              "bevId": "sprite",
+              "score": 6
+            },
+            {
+              "userId": "dan",
+              "bevId": "lacroix",
+              "score": 2.5
+            },
+            {
+              "userId": "dan",
+              "bevId": "pepsi",
+              "score": 3
+            },
+            {
+              "userId": "eve",
+              "bevId": "coke",
+              "score": 8
+            },
+            {
+              "userId": "eve",
+              "bevId": "pepsi",
+              "score": 9
+            },
+            {
+              "userId": "eve",
+              "bevId": "monster",
+              "score": 4
+            },
+            {
+              "userId": "eve",
+              "bevId": "redbull",
+              "score": 3
+            }
+          ],
+          "userNeighbours": {
+            "u": [
+              {
+                "userId": "amy",
+                "sim": 0.6213,
+                "common": 3
+              },
+              {
+                "userId": "ben",
+                "sim": 0.4507,
+                "common": 2
+              }
+            ],
+            "amy": [
+              {
+                "userId": "u",
+                "sim": 0.6213,
+                "common": 3
+              },
+              {
+                "userId": "dan",
+                "sim": 0.5022,
+                "common": 3
+              }
+            ]
+          }
+        },
+        "userId": "u",
+        "bevId": "pepsi",
+        "userSimilarity": "stored"
+      },
+      "expected": {
+        "source": "stored",
+        "bevId": "pepsi",
+        "z": 0.4134835590065357,
+        "score": 6.780602153314253,
+        "confidence": 0.71144,
+        "lambda": 0.07759672166908178,
+        "layer1": {
+          "z": 0.38236628469433626,
+          "confidence": 0.32000000000000006,
+          "parts": {
+            "affinity": 0.4280476091515122,
+            "content": 0.5188455868503178,
+            "global": 0.01804503146802123
+          }
+        },
+        "layer2": {
+          "z": 0.7833790290845167,
+          "support": 0.71144,
+          "neighbours": [
+            "amy",
+            "ben"
+          ]
+        }
+      }
+    },
+    {
+      "name": "predictScore, cosine: the same snapshot in the default mode",
+      "fn": "predictScore",
+      "input": {
+        "snapshot": {
+          "version": "1.6.0",
+          "generatedAt": "2026-10-31T00:00:00Z",
+          "global": {
+            "mean": 5.863636363636363,
+            "stddev": 2.379752747765168,
+            "byCategoryMean": {
+              "energy": 3.5,
+              "soda": 7.107142857142857,
+              "sparkling_water": 3.75
+            }
+          },
+          "bevs": {
+            "coke": {
+              "id": "coke",
+              "categoryId": "soda",
+              "brandKey": "coca-cola",
+              "flavorTokens": [
+                "cola"
+              ],
+              "priceTier": 1,
+              "ratingCount": 6,
+              "mean": 8.416666666666666,
+              "stddev": 0.8374896350934076,
+              "isAlcoholic": false
+            },
+            "pepsi": {
+              "id": "pepsi",
+              "categoryId": "soda",
+              "brandKey": "pepsi",
+              "flavorTokens": [
+                "cola"
+              ],
+              "priceTier": 1,
+              "ratingCount": 4,
+              "mean": 6.125,
+              "stddev": 2.6545950726994127,
+              "isAlcoholic": false
+            },
+            "sprite": {
+              "id": "sprite",
+              "categoryId": "soda",
+              "brandKey": "coca-cola",
+              "flavorTokens": [
+                "lemon",
+                "lime"
+              ],
+              "priceTier": 1,
+              "ratingCount": 4,
+              "mean": 6.125,
+              "stddev": 0.739509972887452,
+              "isAlcoholic": false
+            },
+            "lacroix": {
+              "id": "lacroix",
+              "categoryId": "sparkling_water",
+              "brandKey": "lacroix",
+              "flavorTokens": [
+                "lime"
+              ],
+              "priceTier": 2,
+              "ratingCount": 4,
+              "mean": 2.875,
+              "stddev": 0.739509972887452,
+              "isAlcoholic": false
+            },
+            "topo": {
+              "id": "topo",
+              "categoryId": "sparkling_water",
+              "brandKey": "topo chico",
+              "flavorTokens": [
+                "mineral"
+              ],
+              "priceTier": 2,
+              "ratingCount": 2,
+              "mean": 5.5,
+              "stddev": 0.5,
+              "isAlcoholic": false
+            },
+            "monster": {
+              "id": "monster",
+              "categoryId": "energy",
+              "brandKey": "monster",
+              "flavorTokens": [
+                "energy"
+              ],
+              "priceTier": 2,
+              "ratingCount": 1,
+              "mean": 4,
+              "stddev": 0,
+              "isAlcoholic": false
+            },
+            "redbull": {
+              "id": "redbull",
+              "categoryId": "energy",
+              "brandKey": "red bull",
+              "flavorTokens": [
+                "energy"
+              ],
+              "priceTier": 3,
+              "ratingCount": 1,
+              "mean": 3,
+              "stddev": 0,
+              "isAlcoholic": false
+            }
+          },
+          "users": {
+            "u": {
+              "id": "u",
+              "stats": {
+                "n": 4,
+                "mean": 5.875,
+                "stddev": 2.190176933491904
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 7.75,
+                  "stddev": 1.25
+                },
+                "sparkling_water": {
+                  "n": 2,
+                  "mean": 4,
+                  "stddev": 1
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "amy": {
+              "id": "amy",
+              "stats": {
+                "n": 18,
+                "mean": 6.1,
+                "stddev": 2.2
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 3,
+                  "mean": 7.833333333333333,
+                  "stddev": 0.6236095644623235
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 2,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "ben": {
+              "id": "ben",
+              "stats": {
+                "n": 3,
+                "mean": 5.666666666666667,
+                "stddev": 1.247219128924647
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 5.5,
+                  "stddev": 1.5
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 6,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "cat": {
+              "id": "cat",
+              "stats": {
+                "n": 3,
+                "mean": 6,
+                "stddev": 2.160246899469287
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 2,
+                  "mean": 7,
+                  "stddev": 2
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 4,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            },
+            "dan": {
+              "id": "dan",
+              "stats": {
+                "n": 4,
+                "mean": 5.25,
+                "stddev": 2.7950849718747373
+              },
+              "categoryStats": {
+                "soda": {
+                  "n": 3,
+                  "mean": 6.166666666666667,
+                  "stddev": 2.6562295750848715
+                },
+                "sparkling_water": {
+                  "n": 1,
+                  "mean": 2.5,
+                  "stddev": 0
+                }
+              },
+              "canSeeAlcohol": true
+            }
+          },
+          "rankings": [
+            {
+              "userId": "u",
+              "bevId": "coke",
+              "score": 9
+            },
+            {
+              "userId": "u",
+              "bevId": "sprite",
+              "score": 6.5
+            },
+            {
+              "userId": "u",
+              "bevId": "lacroix",
+              "score": 3
+            },
+            {
+              "userId": "u",
+              "bevId": "topo",
+              "score": 5
+            },
+            {
+              "userId": "amy",
+              "bevId": "coke",
+              "score": 8
+            },
+            {
+              "userId": "amy",
+              "bevId": "sprite",
+              "score": 7
+            },
+            {
+              "userId": "amy",
+              "bevId": "pepsi",
+              "score": 8.5
+            },
+            {
+              "userId": "amy",
+              "bevId": "lacroix",
+              "score": 2
+            },
+            {
+              "userId": "ben",
+              "bevId": "coke",
+              "score": 7
+            },
+            {
+              "userId": "ben",
+              "bevId": "pepsi",
+              "score": 4
+            },
+            {
+              "userId": "ben",
+              "bevId": "topo",
+              "score": 6
+            },
+            {
+              "userId": "cat",
+              "bevId": "coke",
+              "score": 9
+            },
+            {
+              "userId": "cat",
+              "bevId": "sprite",
+              "score": 5
+            },
+            {
+              "userId": "cat",
+              "bevId": "lacroix",
+              "score": 4
+            },
+            {
+              "userId": "dan",
+              "bevId": "coke",
+              "score": 9.5
+            },
+            {
+              "userId": "dan",
+              "bevId": "sprite",
+              "score": 6
+            },
+            {
+              "userId": "dan",
+              "bevId": "lacroix",
+              "score": 2.5
+            },
+            {
+              "userId": "dan",
+              "bevId": "pepsi",
+              "score": 3
+            },
+            {
+              "userId": "eve",
+              "bevId": "coke",
+              "score": 8
+            },
+            {
+              "userId": "eve",
+              "bevId": "pepsi",
+              "score": 9
+            },
+            {
+              "userId": "eve",
+              "bevId": "monster",
+              "score": 4
+            },
+            {
+              "userId": "eve",
+              "bevId": "redbull",
+              "score": 3
+            }
+          ],
+          "userNeighbours": {
+            "u": [
+              {
+                "userId": "amy",
+                "sim": 0.6213,
+                "common": 3
+              },
+              {
+                "userId": "ben",
+                "sim": 0.4507,
+                "common": 2
+              }
+            ],
+            "amy": [
+              {
+                "userId": "u",
+                "sim": 0.6213,
+                "common": 3
+              },
+              {
+                "userId": "dan",
+                "sim": 0.5022,
+                "common": 3
+              }
+            ]
+          }
+        },
+        "userId": "u",
+        "bevId": "pepsi",
+        "userSimilarity": "cosine"
+      },
+      "expected": {
+        "source": "cosine",
+        "bevId": "pepsi",
+        "z": 0.3145104095362291,
+        "score": 6.563833444309341,
+        "confidence": 1,
+        "lambda": 0.11181891089330229,
+        "layer1": {
+          "z": 0.38236628469433626,
+          "confidence": 0.32000000000000006,
+          "parts": {
+            "affinity": 0.4280476091515122,
+            "content": 0.5188455868503178,
+            "global": 0.01804503146802123
+          }
+        },
+        "layer2": {
+          "z": -0.22447091856598964,
+          "support": 1.4939514182881437,
+          "neighbours": [
+            "dan",
+            "amy",
+            "ben"
+          ]
         }
       }
     }
