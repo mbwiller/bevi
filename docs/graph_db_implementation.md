@@ -410,26 +410,46 @@ RETURN coalesce(a.pseudonym, a.id, a.key, a.name) AS src,
 Graph signals enter **Layer 2 only**. Do not add a Layer 3 until the
 graph-enhanced Layer 2 has been evaluated.
 
-- `packages/ranking/src/types.ts` — `PredictionSnapshot` gains
-  `userNeighbors?: Record<UserId, Array<[UserId, number, number]>>`
-  (alias, sim, common).
-- `packages/ranking/src/layer2.ts` — `computeSim`/`simsOf` read
-  `snapshot.userNeighbors` when present and fall back to the current
-  in-snapshot computation when absent. Replace the common-subset cosine with
-  Pearson. Weight each neighbour by reliability `min(1, n_v / N₀)` so a
-  neighbour with three rankings does not count like one with eighty.
-- `packages/ranking/src/blend.ts` — unchanged in the MVP. `λ` still comes from
+**As built** (Stage 4, package half in #144, RPC half in `20261101000100`).
+Two names, on purpose: **`userNeighbors`** (American, like the table) is the
+RPC's JSON key; **`userNeighbours`** (British, like the rest of
+`@bevi/ranking`) is the package field it is mapped onto.
+
+- `packages/ranking/src/types.ts` — `PredictionSnapshot` has
+  `userNeighbours?: Record<UserId, UserNeighbour[]> | null`, with
+  `UserNeighbour = { userId, sim, common }` objects (not tuples), keyed by the
+  user whose neighbours they are (the viewer, in the app). Alongside it,
+  `edges?: BevEdge[] | null` (`{ a, b, w }`) from `bev_edges` (S-21, #137),
+  read only under `bevSimilarity: 'edges'`.
+- `packages/ranking/src/layer2.ts` — the field is read **only under
+  `userSimilarity: 'stored'`** (#144, `RANKING_VERSION` 1.6.0), which is off
+  by default. A listed neighbour v weighs sim_B(u, v) · `min(1, n_v / N₀)`
+  with `N₀ = NEIGHBOUR_RELIABILITY_N = 15`, so a neighbour with three rankings
+  does not count like one with eighty; everyone not listed weighs 0. When the
+  field is absent or the user has no rows, the fallback is today's in-snapshot
+  **cosine**. Pearson is its own option (`userSimilarity: 'pearson'`, since
+  1.3.0), not the fallback, and the common-subset cosine was not replaced.
+- `packages/ranking/src/blend.ts` — unchanged. `λ` still comes from
   `support`, which now reflects better neighbours rather than a new term.
-- `packages/ranking/src/constants.ts` — new constants, and a
-  **`RANKING_VERSION` bump**. Every bump means regenerating the golden vectors
-  (`npm run vectors -w packages/ranking`) and a contract PR.
-- `supabase/migrations/` — a new revision of `get_prediction_snapshot()` that
-  joins `user_neighbors` to the alias CTE the function already builds, emitting
-  `(alias, sim, common)`.
-- `packages/api/src/snapshot.ts` — map the new field onto the snapshot.
+- `packages/ranking/src/constants.ts` — **no new constant**:
+  `NEIGHBOUR_RELIABILITY_N` already existed (1.3.0, M-28). #144 bumped
+  `RANKING_VERSION` to 1.6.0 and regenerated the golden vectors, with every
+  pre-existing case byte-identical.
+- `supabase/migrations/20261101000100_snapshot_edges_neighbours.sql` — one
+  revision of `get_prediction_snapshot()` with two new keys:
+  `userNeighbors: [[alias, sim, common], …]`, the viewer's `user_neighbors`
+  rows joined to the alias CTE the function already builds (so a neighbour is
+  the same `u<n>` as in `users` and `rankings`, and a neighbour with no
+  rankings drops out), `sim desc`, **no `version` filter**; and
+  `edges: [[src, dst, w], …]`, every `bev_edges` row touching a Bev the viewer
+  ranked with both endpoints visible. Both are `[]`, never null.
+- `packages/api/src/snapshot.ts` — maps `edges` to `snapshot.edges` and
+  `userNeighbors` to `snapshot.userNeighbours = { [viewer]: […] }`, each
+  **only when its key is present** (even as `[]`).
 - `packages/api/src/recs.ts` and `packages/api/src/bevs.ts` — **no change**.
   That is the design goal: every experiment is a snapshot-content change plus a
-  pure-function change.
+  pure-function change. Switching the modes on is passing the options from
+  there, later.
 
 **Avoid double counting.** A pair with direct co-rating overlap must not have
 its agreement counted once as Pearson and again as attribute cosine beyond the
@@ -438,8 +458,11 @@ similarity is a substitute, not an addition, when direct evidence is thin.
 
 **Feature flag.** Gate consumption on a flag (snapshot field absent, or an
 explicit option through `RecsApi`) so graph signals can be disabled without
-redeploying the app. A missing `userNeighbors` field must behave exactly like
-today.
+redeploying the app. As built there are both: the options
+(`userSimilarity: 'stored'`, `bevSimilarity: 'edges'`) default off, and a
+missing `userNeighbours` (or `edges`) field in the package snapshot — which is
+what a payload without the RPC's `userNeighbors` (or `edges`) key maps to —
+behaves exactly like today.
 
 ### New users before the nightly sync
 
@@ -458,7 +481,8 @@ Degradation is graceful by construction, and the tiers already exist:
 
 - `neighbor_id` **never reaches the client.** `get_prediction_snapshot()`
   already aliases every other user as `'u<n>'`; join `user_neighbors` to that
-  same alias CTE. A scalar similarity attached to a rotating alias identifies
+  same alias CTE (as `20261101000100` does; its pgTAP checks that no
+  neighbour's uuid appears anywhere in the payload). A scalar similarity attached to a rotating alias identifies
   nobody.
 - No handle, display name, birth date or `can_see_alcohol` for any user but the
   caller, matching the existing function's guarantees.
@@ -541,6 +565,12 @@ Section 5. Behind the flag. `RANKING_VERSION` bump, vectors regenerated,
 contract PR. No endpoint or predicted-score display changes.
 
 Deliverable: graph-enhanced predictions in the existing engine.
+
+**Built, off by default.** Package half in #144 (`userSimilarity: 'stored'`,
+`RANKING_VERSION` 1.6.0); RPC and `packages/api` half in `20261101000100`,
+shipped together with S-21 (`edges`) so the RPC changed once. Switching it on
+is passing the option from `recs.ts`/`bevs.ts`, and waits on a real export
+with enough co-raters to evaluate it (NEXT-MATT.md).
 
 ### Stage 5 — Evaluation and operations
 
