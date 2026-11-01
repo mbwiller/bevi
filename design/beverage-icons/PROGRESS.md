@@ -1,8 +1,8 @@
 # Beverage icon production checkpoint
 
-2026-10-31. **30 reference-checked draft icons authored; 348 catalog entries remain.** 21 of 43 starters are covered. The original 12 received positive user feedback; the next 18 were added in this batch. Records remain `needs-review` for final approval and native integration. Live Postgres inventory reconciliation is still pending; the inspected Neo4j database has no beverage nodes.
+2026-11-01. **49 reference-checked draft icons authored; 329 catalog entries remain.** 40 of 43 starters have drafts. Batch 3 adds 19 icons to the previous 30. Records remain `needs-review` for user aesthetic approval and native integration. Three starter identities remain explicitly unresolved. Live Postgres inventory reconciliation is still pending; the earlier Neo4j inspection found no beverage nodes.
 
-Open [the review gallery](index.html) or the overview sheets: [1](review/overview-01.png), [2](review/overview-02.png), [3](review/overview-03.png). Gallery controls filter by drink/brand/family, change tile size and switch light/dark/checkerboard surfaces. Individual cards link to masters, PNGs and product evidence. The gallery's markup, links and script syntax were checked; interactive browser execution was unavailable. The artwork itself was rasterized and visually inspected.
+Open [the review gallery](index.html) or the overview sheets: [1](review/overview-01.png), [2](review/overview-02.png), [3](review/overview-03.png), [4](review/overview-04.png), [5](review/overview-05.png). Gallery controls filter by drink/brand/family, change tile size and switch light/dark/checkerboard surfaces. Individual cards link to masters, PNGs and product evidence. The gallery's markup, links and script syntax were checked; interactive browser execution was unavailable. The artwork itself was rasterized and visually inspected.
 
 ## Original 12
 
@@ -55,17 +55,26 @@ python3 scripts/icons/review.py
 
 Pillow is available in the current Python environment. Export uses explicitly listed macOS Arial/Georgia/Times fonts and records hashes. No runtime dependency was added to the app. Another OS needs an equivalent pinned font setup; existing outlined SVGs/PNGs remain portable.
 
-Validation passed for 30 unique catalog mappings, complete authored/pending partition of 378 IDs, reference metadata, output hashes, parseable SVGs, transparent corners/nonempty pixels, dimensions and byte-identical PNG regeneration from outlined SVGs without fonts. Original `index.html` still matches its frozen SHA256.
+Validation passed for 49 unique catalog mappings, complete authored/pending partition of 378 IDs, reference metadata, output hashes, parseable SVGs, transparent corners/nonempty pixels, dimensions and byte-identical PNG regeneration from outlined SVGs without fonts. Original `index.html` still matches its frozen SHA256.
 
-Visual review covered all 30 icons and 40/56/96/155px square tiles with 8% padding on light and dark backgrounds. Fine lettering remains supplementary at small sizes. Package lettering that wraps beyond the can face is intentionally clipped to its body, matching the inspected source. Final aesthetic approval of the new 18 and Expo/native behavior remain pending. The original 12 assets and root prototype are unchanged. No database, app or photo metadata was changed.
+Visual review covered all 49 icons and 40/56/96/155px square tiles with 8% padding on light and dark backgrounds. Fine lettering remains supplementary at small sizes. Package lettering that wraps beyond the can face is intentionally clipped to its body, matching the inspected source. Final aesthetic approval of the latest batches and Expo/native behavior remain pending. The previous 30 assets and root prototype are unchanged. No database, app or photo metadata was changed.
 
 ## Resume here
 
-1. Inspect all three overview sheets and per-product evidence before extending a family. Preserve the original prototype and existing approved direction.
-2. Complete the remaining branded-boba pilot: Tiger Sugar Brown Sugar Boba Milk Tea. Kung Fu Tea is another pending starter; both require actual café-specific serving references.
-3. Prioritize the 22 remaining starters in `coverage.json`: Dr Pepper / Mountain Dew variants, juices, energy drinks, RTD coffees, smoothies, teas, boba, Gatorade and GT's Gingerade. None is claimed complete by this batch.
-4. Assign disjoint UUID/slug groups. Add family modules exporting `records`; keep shared primitives coordinator-owned. Research each exact package instead of recoloring from a category assumption.
-5. Rebuild, validate, inspect overview and small-size sheets, then update `review/review.json` with the exact reviewed hashes. Keep references and unresolved choices in recipes, not the generated inventory.
-6. Reconcile live Postgres IDs and implement UUID-based application image selection in a later integration pass; preserve real photo metadata.
+1. Read the full skill, current recipes, `review/review.json`, and the batch 3 Astra report before extending a family. Preserve the original prototype and previous 30 asset hashes.
+2. Resolve the three remaining starter identities in `coverage.json`: 5-hour Original (Berry Regular Strength unconfirmed), Lipton Iced Tea (formulation/flavor unspecified), and Tiger Sugar Brown Sugar Boba Milk Tea (signature fresh milk versus actual tea latte). Their durable `unresolved` records contain evidence and next steps; no placeholders were generated.
+3. Continue remaining brand/package families from the 329-entry queue. Existing cans support brand batches after independent exact-flavor reference inspection. Do not count repository coverage as reconciled live coverage.
+4. Give workers disjoint UUID groups and frozen primitives. Add family modules, rebuild, validate, inspect exact references and all required sizes/backgrounds, and retain final asset hashes in review evidence.
+5. Integrate into the app and reconcile live Postgres in a separately authorized pass. Catalog metadata and real photos remain distinct from these illustration assets.
 
-All resumed worker output is integrated into four new family modules (`colas`, `citrus-sodas`, `sparkling-starters`, `wine-cocktail`). No hidden worker batch remains to recover. The full reusable skill remains in `skill/SKILL.md`.
+Batch 2 worker output was integrated into four family modules (`colas`, `citrus-sodas`, `sparkling-starters`, `wine-cocktail`). Batch 3 output is also integrated; no hidden worker batch remains to recover. The full reusable skill remains in `skill/SKILL.md`.
+
+## Batch 3 — 19 new drafts
+
+Parallel family workers authored Dr Pepper / Diet / Zero Sugar; Mountain Dew / Diet / Baja Blast; Monster Original; Celsius Sparkling Orange; Alani Nu Hawaiian Shaved Ice; Starbucks Frappuccino Mocha; Dunkin Original bottled iced coffee; AriZona Green Tea; Kung Fu Milk Tea; Tropicana Original orange juice; Welch's 100% Concord grape juice; Jamba Mango-a-go-go; and Bolthouse Strawberry Banana. The specifically requested **Astra 6 xhigh** reviewer independently compared exact sources and drawings, refined artwork, and authored Gatorade Lemon-Lime and GT's Gingerade as new package shapes.
+
+Representative package choices are explicit in recipes: AriZona uses its documented slender 20oz PET bottle; Tropicana uses the named Original page's 46oz No Pulp flagship (catalog pulp level unspecified); Welch's uses 64oz; Gatorade uses the sculpted 28oz bottle; GT's uses the current official 16oz Synergy label; Bolthouse uses 15.2oz. Jamba and Kung Fu Tea use actual café servings, with no cup volume asserted. Kung Fu Tea has no added pearls because its inspected signature serving does not show them. Its photographed Chinese seal is exported as deterministic outlines with source-font identity/hash in the recipe.
+
+Refinements include Dr Pepper logo fit, custom Mountain Dew lettering, narrower AriZona proportions, Alani script spacing, Celsius silver lower material, the Kung Fu Tea seal, Gatorade baseline/label clearance, GT's flower, and the exact asymmetric Baja Blast crest. New masters have unused gradient definitions removed. References live in recipes; source photos and source comparisons remain temporary research files rather than distributed artwork.
+
+The builder now carries `unresolved` module records into `coverage.json`, preserving reference evidence, uncertainty and next steps without claiming artwork. Validation checks this identity state and the complete 378-UUID authored/pending partition. Final build/visual evidence is recorded in `review/review.json` and `review/astra-batch-03.json`. Final aesthetic approval, interactive/native behavior and live inventory reconciliation remain pending. The original prototype and all SVG/portable SVG/PNG hashes for the previous 30 icons are unchanged.

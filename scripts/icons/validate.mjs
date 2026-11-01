@@ -30,10 +30,20 @@ for(const r of manifest.records){
  assert.equal(pixels[3],0);assert.equal(pixels[pixels.length-1],0);
  assert(pixels.some((value,i)=>i%4===3&&value>0),`Nonempty image: ${r.slug}`);
 }
-for(const row of coverage.pending){assert(catalog.has(row.bevId));assert(!ids.has(row.bevId));ids.add(row.bevId)}
+for(const row of coverage.pending){
+ assert.equal(catalog.get(row.bevId)?.slug,row.slug);
+ assert(!ids.has(row.bevId));ids.add(row.bevId);
+ assert(['needs-reference','needs-identity-resolution'].includes(row.status));
+ if(row.status==='needs-identity-resolution'){
+  assert(row.uncertainty&&row.nextStep&&row.references?.length&&row.sourceModule,`Durable identity research: ${row.slug}`);
+  assert(row.references.every(ref=>ref.pageUrl.startsWith('https://')&&ref.inspectedAt&&ref.observations&&typeof ref.visuallyInspected==='boolean'));
+  assert(!row.assets,`Unresolved identities must not claim an asset: ${row.slug}`);
+ }
+}
 assert.equal(ids.size,catalog.size);
 assert.equal(manifest.summary.authored,manifest.records.length);
 assert.equal(manifest.summary.pending,coverage.pending.length);
+assert.equal(manifest.summary.identityUnresolved,coverage.pending.filter(r=>r.status==='needs-identity-resolution').length);
 assert.equal(manifest.summary.starterAuthored,manifest.records.filter(r=>r.isStarter).length);
 const html=read('index.html').toString();
 assert.equal((html.match(/<article class="card"/g)||[]).length,manifest.records.length);

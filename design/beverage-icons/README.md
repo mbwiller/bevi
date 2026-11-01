@@ -4,9 +4,9 @@ Start with the **complete [bevi-beverage-icons SKILL.md](skill/SKILL.md)**. It i
 
 ![Beverage icons — overview 1](review/overview-01.png)
 
-[Overview 2](review/overview-02.png) · [Overview 3](review/overview-03.png)
+[Overview 2](review/overview-02.png) · [Overview 3](review/overview-03.png) · [Overview 4](review/overview-04.png) · [Overview 5](review/overview-05.png)
 
-The current collection contains 30 reference-checked drafts, including 21 starter drinks. [The manifest](manifest.json) maps catalog UUIDs to editable SVGs, font-independent SVGs and transparent PNGs. [The work queue](coverage.json) lists the 348 remaining catalog drinks. These counts describe the repository catalog; live Postgres reconciliation and app integration are still pending.
+The current collection contains 49 reference-checked drafts, including 40 of 43 starter drinks. [The manifest](manifest.json) maps catalog UUIDs to editable SVGs, font-independent SVGs and transparent PNGs. [The work queue](coverage.json) lists the 329 remaining catalog drinks, including three explicitly unresolved starter identities. These counts describe the repository catalog; live Postgres reconciliation and app integration are still pending.
 
 ## Give this to your coding agent
 
@@ -54,8 +54,9 @@ If the renderer is installed elsewhere, set `BEVI_RESVG_MODULE` to the absolute 
 1. Select remaining UUIDs/slugs from `coverage.json`, prioritizing `isStarter`. Tell collaborators which brand/package family you own to avoid duplicate work.
 2. Research each exact product. Record the selected package/market, reference page and image URL, inspection date, observed features and uncertainty. Category does not determine package shape.
 3. Create a module under `scripts/icons/families/` exporting a `records` array. Follow `pilot.mjs` or `bottles-carton.mjs`; reuse the shared `wrap`, `shadow`, `ref` and `text` helpers from `style.mjs`. Each record includes `slug`, `family`, `packageChoice`, `references`, `uncertainty`, `status` and the full `svg` string. Each reference includes `pageUrl`, `imageUrl`, `inspectedAt`, `observations` and a truthful `visuallyInspected` value. Coordinate changes to shared primitives before altering them.
-4. Rebuild and validate. The build rejects duplicate/unknown slugs and generates assets, the UUID manifest, coverage and gallery. Edit recipes, not generated output. `inventory.ts` rebuilds the separate repository inventory; it does not preserve research entered into that generated inventory file.
-5. Inspect the resulting sheets at 40/56/96/155px on light and dark surfaces against the exact reference images. Keep drafts `needs-review` until the relevant review is complete. Update `review/review.json` with the reviewed asset hashes; the renderer does not automatically grant visual approval.
-6. Commit the family recipe, generated SVG/PNG assets, manifest, coverage, gallery and review evidence together. Preserve the original prototype and frozen reference set.
+4. If identity research cannot identify one product, export an `unresolved` array from the family module with `slug`, `status: "needs-identity-resolution"`, `references`, `uncertainty`, and `nextStep`. The build carries this durable research into `coverage.json` without counting it as authored artwork.
+5. Rebuild and validate. The build rejects duplicate/unknown slugs and generates assets, the UUID manifest, coverage and gallery. Edit recipes, not generated output. `inventory.ts` rebuilds the separate repository inventory; it does not preserve research entered into that generated inventory file.
+6. Inspect the resulting sheets at 40/56/96/155px on light and dark surfaces against the exact reference images. Keep drafts `needs-review` until the relevant review is complete. Update `review/review.json` with the reviewed asset hashes; the renderer does not automatically grant visual approval.
+7. Commit the family recipe, generated SVG/PNG assets, manifest, coverage, gallery and review evidence together. Preserve the original prototype and frozen reference set.
 
 The original prototype is a standalone design reference, not the deployed app. No icon authoring step requires changing Neo4j, Postgres, photos, or app behavior.

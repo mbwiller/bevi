@@ -25,8 +25,14 @@ if(renderer.version!=='2.6.2') throw new Error('Use the pinned @resvg/resvg-js@2
 for (const dir of ['svg','portable-svg','png','review']) mkdirSync(join(out,dir),{recursive:true});
 const records = [];
 const seen = new Set();
+const unresolved = new Map();
 for (const file of readdirSync(join(root,'scripts/icons/families')).filter(f=>f.endsWith('.mjs')).sort()) {
   const family = await import(pathToFileURL(join(root,'scripts/icons/families',file)));
+  for (const item of family.unresolved || []) {
+    if (!catalog.has(item.slug) || unresolved.has(item.slug)) throw new Error(`Unknown or duplicate unresolved slug: ${item.slug}`);
+    if (item.status !== 'needs-identity-resolution' || !item.uncertainty || !item.nextStep || !item.references?.length) throw new Error(`Incomplete identity research: ${item.slug}`);
+    unresolved.set(item.slug,{...item,sourceModule:`scripts/icons/families/${file}`});
+  }
   for (const recipe of family.records) {
     const bev = catalog.get(recipe.slug);
     if (!bev || seen.has(recipe.slug)) throw new Error(`Unknown or duplicate slug: ${recipe.slug}`);
@@ -52,11 +58,12 @@ for (const file of readdirSync(join(root,'scripts/icons/families')).filter(f=>f.
   }
 }
 records.sort((a,b)=>a.name.localeCompare(b.name));
+for (const slug of unresolved.keys()) if (seen.has(slug)) throw new Error(`Authored and unresolved identity overlap: ${slug}`);
 const pending = inventory.beverages.filter(row=>!seen.has(row.slug));
-const summary={catalog:catalog.size,authored:records.length,pending:pending.length,starterAuthored:records.filter(r=>r.isStarter).length,starterTotal:inventory.summary.starters,livePostgresReconciled:false};
+const summary={catalog:catalog.size,authored:records.length,pending:pending.length,identityUnresolved:unresolved.size,starterAuthored:records.filter(r=>r.isStarter).length,starterTotal:inventory.summary.starters,livePostgresReconciled:false};
 const manifest={schemaVersion:1,styleVersion:STYLE_VERSION,renderer,summary,records};
 writeFileSync(join(out,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');
-writeFileSync(join(out,'coverage.json'),JSON.stringify({summary,pending:pending.map(({bevId,slug,name,brand,isStarter})=>({bevId,slug,name,brand,isStarter,status:'needs-reference'}))},null,2)+'\n');
+writeFileSync(join(out,'coverage.json'),JSON.stringify({summary,pending:pending.map(({bevId,slug,name,brand,isStarter})=>({bevId,slug,name,brand,isStarter,...(unresolved.get(slug)||{status:'needs-reference'})}))},null,2)+'\n');
 
 const cards=records.map(r=>`<article class="card" data-search="${esc(`${r.name} ${r.brand} ${r.family}`.toLowerCase())}"><div class="preview"><img src="${esc(r.assets.png)}" alt="${esc(r.name)}" width="200" height="260"></div><div class="info"><div class="eyebrow">${esc(r.family)} ${r.isStarter?' · STARTER':''}</div><h2>${esc(r.name)}</h2><p>${esc(typeof r.packageChoice==='string'?r.packageChoice:JSON.stringify(r.packageChoice))}</p><div class="links"><a href="${esc(r.assets.svg)}">SVG master ↗</a><a href="${esc(r.assets.png)}">PNG ↗</a>${r.references.map((ref,i)=>`<a href="${esc(ref.pageUrl)}" target="_blank" rel="noopener noreferrer">Reference ${i+1} ↗</a>`).join('')}</div><details><summary>Evidence & review notes</summary><p>Status: ${esc(r.status)}</p><p>${esc(typeof r.uncertainty==='string'?r.uncertainty:JSON.stringify(r.uncertainty??[]))}</p>${r.references.map(ref=>`<p>${esc(typeof ref.observations==='string'?ref.observations:JSON.stringify(ref.observations??''))}</p>`).join('')}<code>${esc(r.bevId)}</code></details></div></article>`).join('');
 const html=`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bevi · Beverage icon studio</title><style>
