@@ -1169,7 +1169,10 @@ export class FakeApi implements BeviApi {
         true,
       ),
 
-    report: (id: string, reason: string) =>
+    // report_bev (20261101000500): `duplicateOfId` must name another Bev the caller can see. The
+    // fake has no hidden or merged Bevs, so "can see" is "exists, and not alcoholic for a minor";
+    // unknown, self and age-gated are one error, as on the server.
+    report: (id: string, reason: string, opts?: { duplicateOfId?: string }) =>
       this.call(
         'bevs.report',
         () => {
@@ -1177,7 +1180,14 @@ export class FakeApi implements BeviApi {
           this.bev(id);
           const r = (reason ?? '').trim();
           if (!r || r.length > REPORT_REASON_MAX) invalid('reason', 'Choose a reason', 'unknown_reason');
-          this.db.reports.push({ bevId: id, userId: me.id, reason: r, createdAt: this.nowIso() });
+          const duplicateOfId = opts?.duplicateOfId ?? null;
+          if (duplicateOfId !== null) {
+            const original = this.db.bevs.find((b) => b.id === duplicateOfId);
+            if (duplicateOfId === id || !original || !this.visible(original, me)) {
+              invalid('duplicateOfId', 'Choose the Bev this one duplicates');
+            }
+          }
+          this.db.reports.push({ bevId: id, userId: me.id, reason: r, duplicateOfId, createdAt: this.nowIso() });
         },
         true,
       ),

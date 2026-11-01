@@ -1055,6 +1055,8 @@ Friends-only, so optimistic: user-created Bevs go live as soon as the photo is p
 - Photo content: at 20 friends, eyeball the weekly moderation view. If this ever opens up, add a nudity/safety classifier on Replicate in `process-photo` before publishing; not now.
 - Expect the integrator agent to flag any PR that adds a write path bypassing these RPCs.
 
+**Duplicates (S-13 + A-12, `20261101000500`).** Flag, then merge by hand; nothing merges automatically. The app's report sheet sends `bevs.report(id, 'duplicate', { duplicateOfId })` → `report_bev(…, p_duplicate_of)`, which rejects naming the Bev itself or one the reporter cannot see (`validation`, `detail.field = 'duplicateOfId'`). In Studio, `select * from pending_duplicate_reports;` lists the open duplicate reports with both Bevs side by side and a ready-to-paste `merge_sql`; run it in the SQL editor as `select public.merge_bev('<duplicate>', '<original>');` (postgres/service role only, not callable from the app). It folds the duplicate's rankings (someone who ranked both keeps the original's, and the bucket is re-spaced), comparisons, Want to Try, feed posts, aliases (its name becomes one), reports, featured row and `bev_edges` into the original, marks it `merged`, and returns a jsonb summary. `get_bev` then redirects old links to the original. Merge the user-created copy into the catalog Bev, not the other way round; the migration header has every step and what it leaves alone.
+
 ---
 
 ## 8. Ops

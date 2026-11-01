@@ -74,6 +74,30 @@ describe.skipIf(!url || !publishableKey)('catalog, photos and privacy, against a
     }
   });
 
+  // S-13 (20261101000500). Reports cascade with the account, so this leaves
+  // nothing behind even against a shared project.
+  it('reports a duplicate naming the original; rejects naming itself or an unknown Bev', async () => {
+    const { api } = await newUser('1990-01-01');
+    try {
+      const [a, b] = await api.bevs.getStarterCandidates();
+      await expect(api.bevs.report(a!.id, 'duplicate', { duplicateOfId: b!.id })).resolves.toBeUndefined();
+      await expect(api.bevs.report(a!.id, 'wrong_info')).resolves.toBeUndefined(); // no original: still fine
+
+      const self = await errorOf(api.bevs.report(b!.id, 'duplicate', { duplicateOfId: b!.id }));
+      expect(isApiError(self) && self.code).toBe('validation');
+      expect(isApiError(self) && self.detail).toEqual({ field: 'duplicateOfId' });
+
+      const unknown = await errorOf(api.bevs.report(b!.id, 'duplicate', { duplicateOfId: crypto.randomUUID() }));
+      expect(isApiError(unknown) && unknown.code).toBe('validation');
+      expect(isApiError(unknown) && unknown.detail).toEqual({ field: 'duplicateOfId' });
+
+      const missing = await errorOf(api.bevs.report(crypto.randomUUID(), 'wrong_info'));
+      expect(isApiError(missing) && missing.code).toBe('not_found');
+    } finally {
+      await api.deleteAccount();
+    }
+  });
+
   it.skipIf(AGAINST_SHARED_PROJECT)('creates a Bev from an uploaded photo, visible to others; rejects unknown assets and exact duplicates', async () => {
     const a = await newUser('1990-01-01');
     const b = await newUser('1991-01-01');
