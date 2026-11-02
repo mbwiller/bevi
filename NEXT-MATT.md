@@ -17,7 +17,7 @@ Your queue, updated 2026-11-01. Arjun's is in [`NEXT-ARJUN.md`](NEXT-ARJUN.md). 
 
 **Prod migrations (yours to push, from `../bevi-wt/db-push`):**
 - [x] `20261026000100`, `0200`, `0300` and `20261031000100` confirmed on prod 2026-10-31.
-- [ ] **Five new ones, push together in this order** (`git checkout --detach origin/main` after a fetch, `npx supabase db push --dry-run`, then `db push`): `20261101000100` (#147), `20261101000200` (#149; its backfill and one-off streak recompute run inside the push), `20261101000300` (#150; its bootstrap call nulls the stale `bayes_score` rows and fills `category_stats`), `20261101000400` (#146), `20261101000500` (#151). Nothing in the app calls a new RPC, so prod is correct either way until then; the two prod bugs (streaks, stale `bayes_score`) are fixed the moment `000200` and `000300` land. Afterwards, in Studio: `select count(*) from bev_stats where rating_count = 0 and bayes_score is not null;` should be 0.
+- [x] **All five confirmed on prod 2026-11-01**: `20261101000100` (#147), `20261101000200` (#149), `20261101000300` (#150), `20261101000400` (#146), `20261101000500` (#151). `npx supabase migration list` shows local and remote identical for all 52, and the post-push checks pass: 0 rows in `bev_stats` with `rating_count = 0 and bayes_score is not null`, 32 rows in `ranking_events`, 10 in `category_stats`. Both prod bugs (streaks, stale `bayes_score`) are closed.
 
 ## Next: in this order
 
@@ -25,9 +25,9 @@ Your queue, updated 2026-11-01. Arjun's is in [`NEXT-ARJUN.md`](NEXT-ARJUN.md). 
 |---|---|---|
 | **M-21 · app half, #140** | Your click-through of the preview (the checklist is in the PR) | Merge it. No cap on the anchored question count (decided, Remark 10.7); every failure degrades to today's search |
 | **Icon batch 3, #148** | Your visual sign-off | Merge it, then reset `design/beverage-icon-pilot` onto `main`. Batch 4 onwards: Codex on that branch; after each batch `node scripts/icons/export-app.mjs`, commit `app/public/bev-icons/` and `src/lib/bevIcons.generated.ts` with it, your sign-off, merge, reset |
-| **The five migrations** | — | `db push` in timestamp order (above). Then tell Arjun they are on prod |
-| **Duplicates, live** | `20261101000500` on prod | A "Duplicate of another Bev" report now carries `duplicateOfId` (#151, #152). To resolve one: Studio → `select * from pending_duplicate_reports;` → paste its `merge_sql` (`select public.merge_bev('<duplicate>', '<original>');`) |
-| **Switch-on plan: edges mode and stored neighbours** | `20261101000100` on prod (the RPC now returns both keys) and a real export with enough co-raters | Re-tune `CONF1_MASS` (edges mode drops mean conf1 from 0.585 to 0.400 in #137's synthetic eval) and review Layer 2's support under stored mode (#144's synthetic eval: every Δ CI includes 0). Then `recs.ts`/`bevs.ts` pass the options; the app itself does not change |
+| ~~**The five migrations**~~ | — | **Done:** all five are on prod, confirmed 2026-11-01 (above) |
+| **Duplicates, live** | — (`20261101000500` is on prod) | A "Duplicate of another Bev" report now carries `duplicateOfId` (#151, #152). To resolve one: Studio → `select * from pending_duplicate_reports;` → paste its `merge_sql` (`select public.merge_bev('<duplicate>', '<original>');`). Arjun's next migration makes `submit_ranking` and `add_want_to_try` follow a merge too, so a stale client can no longer write to the merged row |
+| **Switch-on plan: edges mode and stored neighbours** | Data only: `20261101000100` is on prod and the RPC returns both keys, but prod `user_neighbors` holds just **4 rows** at the 3-co-rater gate, so stored mode has almost nothing to read | Re-tune `CONF1_MASS` (edges mode drops mean conf1 from 0.585 to 0.400 in #137's synthetic eval) and review Layer 2's support under stored mode (#144's synthetic eval: every Δ CI includes 0). Then `recs.ts`/`bevs.ts` pass the options; the app itself does not change |
 | **Expo patches** | — | Routine (S-18): when the app workflow's advisory step warns, `npx expo install --fix` from `app/` in a small `ui/*` PR (#142 was the last; the step was quiet on 2026-11-01) |
 
 ## Later: P2, after P0 and P1
@@ -41,14 +41,14 @@ Your queue, updated 2026-11-01. Arjun's is in [`NEXT-ARJUN.md`](NEXT-ARJUN.md). 
 
 | You hand Arjun | So he can |
 |---|---|
-| ~~M-22's SQL corrections~~, ~~#137's vector targets~~, ~~the S-21 + Stage 4 RPC contract~~ | All built from your side on 2026-11-01 (#149, #150, #147). What he owes back is a read of those PRs and the follow-ups they list (an `authenticated` EXECUTE still on `refresh_bev_stats`; `respaceBucket`/`rankUsers` vectors untested in SQL; `submit_ranking`/`add_want_to_try` still accept a merged Bev's id) |
+| ~~M-22's SQL corrections~~, ~~#137's vector targets~~, ~~the S-21 + Stage 4 RPC contract~~ | All built from your side on 2026-11-01 (#149, #150, #147). What he owes back is a read of those PRs. Their follow-ups are now queued in his lane: the `authenticated` EXECUTE still on `refresh_bev_stats` and the merged-Bev writes go in one migration (`20261102000100`, with a `resolve_bev_id` helper — it changes what `get_bev`, `submit_ranking`, `rerank_bev` and `add_want_to_try` accept), and the untested `respaceBucket`/`rankUsers` vectors go in a chore PR with the S-07 live-test flake |
 | A review of every FakeApi / conformance hunk in his PRs (they live in your lane) | Merge his combined PRs |
 | Advance warning of any `@bevi/ranking` formula or constant change (1.4.0, 1.5.0 and 1.6.0 all merged on 2026-10-31; `edgeWeight` unchanged, so the nightly run only re-stamps) | Re-run the graph sync; his edge weights come from `edgeWeight()` |
 
 | Arjun hands you | So you can |
 |---|---|
 | ~~A-13 (#132), on prod~~ | Done |
-| ~~S-21 + Stage 4~~ (#147, from your side) — **you push `20261101000100` yourself** | Switch on edges mode and stored neighbours (both options exist in the package) |
+| ~~S-21 + Stage 4~~ (#147, from your side; `20261101000100` pushed and confirmed on prod 2026-11-01) | Switch on edges mode and stored neighbours (both options exist in the package) — data is the only thing left |
 | An M-26 re-export once there are more users (privately, outside the repo) | Judge switching on edges mode and Pearson |
 | S-10 + A-08 and the Maps key | Build M-16 (S-13 + A-12 is #151, from your side) |
 | A heads-up before any migration that changes what an existing function returns | Keep the app and the FakeApi in step |
