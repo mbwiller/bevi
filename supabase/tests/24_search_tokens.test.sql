@@ -1,4 +1,4 @@
--- 20261101000600: search_bevs finds a Bev by any piece of its words, and
+-- 20261102000200: search_bevs finds a Bev by any piece of its words, and
 -- find_similar_bevs accepts the same token match.
 --
 -- The production bug this pins: "A&W" returned nothing, because pg_trgm

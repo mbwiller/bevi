@@ -74,7 +74,7 @@ describe.skipIf(!url || !publishableKey)('catalog, photos and privacy, against a
     }
   });
 
-  // 20261101000600: search matches every whitespace-separated token as a
+  // 20261102000200: search matches every whitespace-separated token as a
   // substring (word starts first). Before it, pg_trgm similarity("a&w", "a&w
   // a&w root beer root beer") = 0.29 < 0.3 and "A&W" found nothing, while the
   // FakeApi the app's tests use found all three. This is the test that would

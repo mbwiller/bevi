@@ -163,8 +163,8 @@ const round2 = (x: number) => Math.round(x * 100) / 100;
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
 const norm = (s: string | null | undefined) => (s ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
 // Whitespace only, punctuation kept inside a token: "a&w" is one token, "barq's" is one. Splitting on
-// [^a-z0-9]+ (as this did until 20261101000600) made "a&w" the tokens "a" and "w", substrings of
-// almost every name. search_bevs/find_similar_bevs split the same way (20261101000600); the SQL side
+// [^a-z0-9]+ (as this did until 20261102000200) made "a&w" the tokens "a" and "w", substrings of
+// almost every name. search_bevs/find_similar_bevs split the same way (20261102000200); the SQL side
 // also unaccents, which `norm` does not.
 const tokens = (s: string) => norm(s).split(' ').filter(Boolean);
 

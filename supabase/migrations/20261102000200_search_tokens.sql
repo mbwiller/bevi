@@ -1,4 +1,4 @@
--- Search finds a Bev by any piece of its words (20261101000600).
+-- Search finds a Bev by any piece of its words (20261102000200).
 --
 -- THE BUG. Searching "A&W" returned nothing, although A&W Root Beer, A&W
 -- Diet Root Beer and A&W Cream Soda are in the catalog. `search_bevs`
