@@ -88,9 +88,12 @@ select is((select count(*)::int from public.venues where name like 'pgTAP %'), 4
           'fixture: four venues');
 
 -- geo is (lng, lat), the order box() and every mapping API expect.
-select is(
-  (select geo from public.venues where id = '00000000-0000-4000-8000-0000000a0801'),
-  point(-73.9566, 40.7736),
+-- `~=` ("is identical to"), not `is()`: Postgres has no `=` operator for
+-- `point`, so pgTAP's is() cannot compare two of them (it failed in CI
+-- exactly here: "operator does not exist: point = point").
+select ok(
+  (select geo from public.venues where id = '00000000-0000-4000-8000-0000000a0801')
+    ~= point(-73.9566, 40.7736),
   'geo is point(lng, lat), not point(lat, lng)'
 );
 
@@ -375,9 +378,11 @@ select is(
   'OSM improves what it knows (name) and erases nothing it has lost: the curated neighborhood, the borough, the address, the hours and the hand-set status all survive'
 );
 
+-- Cast explicitly: `lat` is double precision and a bare 40.7751 is numeric, and
+-- pgTAP's is() is polymorphic over ONE type.
 select is(
   (select lat from public.venues where osm_id = 'node/777001'),
-  40.7751,
+  40.7751::double precision,
   'a venue that moved in OSM moves here: lat/lng are OSM''s outright'
 );
 
