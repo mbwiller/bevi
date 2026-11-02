@@ -414,6 +414,21 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       for (const b of filtered.items) expect(b.categoryId).toBe(bev!.categoryId);
     });
 
+    // 20261102000200: a query is whitespace-separated tokens, each matched as a substring of the
+    // Bev's name, brand, flavor, category and aliases; punctuation stays inside a token, so "A&W" is
+    // one token, not "a" and "w" (which Mountain Dew has). The live twin is
+    // packages/api/test/catalog-and-media.live.test.ts.
+    it('search matches by any piece of a Bev\'s words: "A&W" finds the A&W Bevs and not Mountain Dew', async () => {
+      await newUser();
+      const aw = await api.bevs.search({ q: 'A&W', limit: 50 });
+      expect(aw.items.length).toBeGreaterThan(0);
+      expect(aw.items[0]!.name.startsWith('A&W')).toBe(true);
+      expect(aw.items.some((b) => b.name.startsWith('Mountain Dew'))).toBe(false);
+      const words = await api.bevs.search({ q: 'root beer', limit: 50 });
+      expect(words.items.map((b) => b.name)).toContain('A&W Root Beer');
+      expect((await api.bevs.search({ q: 'zzqx' })).items).toEqual([]);
+    });
+
     it('get returns detail; unknown id is not_found', async () => {
       await newUser();
       const [id] = await starterIds(1);

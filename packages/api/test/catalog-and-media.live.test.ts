@@ -74,6 +74,33 @@ describe.skipIf(!url || !publishableKey)('catalog, photos and privacy, against a
     }
   });
 
+  // 20261102000200: search matches every whitespace-separated token as a
+  // substring (word starts first). Before it, pg_trgm similarity("a&w", "a&w
+  // a&w root beer root beer") = 0.29 < 0.3 and "A&W" found nothing, while the
+  // FakeApi the app's tests use found all three. This is the test that would
+  // have caught it.
+  it('search finds a Bev by any piece of its words ("A&W", "root beer"); nonsense finds nothing', async () => {
+    const { api } = await newUser('1990-01-01');
+    try {
+      const aw = await api.bevs.search({ q: 'A&W' });
+      expect(aw.items.slice(0, 3).map((b) => b.name)).toContain('A&W Root Beer');
+      expect(aw.items.every((b) => `${b.brand ?? ''} ${b.name}`.toLowerCase().includes('a&w'))).toBe(true);
+      expect(aw.items.map((b) => b.name)).not.toContain('Mountain Dew');
+
+      const typing = await api.bevs.search({ q: 'a&' });
+      // Typeahead: a word being typed. Bevs with a word starting "a&" come first.
+      expect(typing.items.length).toBeGreaterThanOrEqual(3);
+      expect(typing.items.slice(0, 3).every((b) => /(^|\s)a&/.test(`${b.brand ?? ''} ${b.name}`.toLowerCase()))).toBe(true);
+
+      const rootBeer = await api.bevs.search({ q: 'root beer', limit: 50 });
+      expect(rootBeer.items.map((b) => b.name)).toContain('A&W Root Beer');
+
+      expect((await api.bevs.search({ q: 'zzqx' })).items).toEqual([]);
+    } finally {
+      await api.deleteAccount();
+    }
+  });
+
   // S-13 (20261101000500). Reports cascade with the account, so this leaves
   // nothing behind even against a shared project.
   it('reports a duplicate naming the original; rejects naming itself or an unknown Bev', async () => {
