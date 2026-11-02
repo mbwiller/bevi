@@ -18,8 +18,6 @@
 -- Not emitted:
 --   categoryPrior (3): needs fixtures; category and global rankings; bayes_prior(category) is pinned by 09 (30 soda rankings, water below) and 19 (juice at 29, then 30).
 --   leaderboardOrder (2): needs fixtures; a board of Bevs; get_bev_leaderboard's order is pinned by 09 (ties, collate "C", id) and 19 (n desc, the unrounded figure).
---   rankUsers (4): needs fixtures; profiles, user_stats and streaks; user_rank_points()'s ranking is not pinned against these cases yet (rank_points' sum is, below).
---   respaceBucket (15): needs fixtures; a user's whole bucket; respace_bucket runs inside every submit_ranking and remove_ranking, but no pgTAP file pins these cases yet.
 --   populationStats with no scores: none in the file today.
 --     avg and stddev_pop return NULL on no rows where populationStats returns 0 (stats.ts says
 --     callers check n), so the SQL twin has no defined output to compare.

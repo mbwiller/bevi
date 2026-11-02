@@ -236,8 +236,10 @@ export function mapBevSummary(client: SupabaseClient, row: BevSummaryRow): BevSu
     priceTier: row.price_tier as PriceTier,
     priceEstimated: row.price_estimated,
     ratingCount: stats?.rating_count ?? 0,
-    // bev_stats.bayes_score is only populated once the leaderboard refresh
-    // job (milestone 1.7) runs; null until then is correct, not a bug.
+    // Since 20261101000300 every write path refreshes bev_stats.bayes_score,
+    // and it is null exactly when rating_count is 0 -- no Bayesian score is
+    // defined with no ratings. So null is correct here, not a stale row
+    // waiting on a job.
     bayesScore: stats?.bayes_score ?? null,
   };
 }
@@ -530,8 +532,16 @@ export interface BevOfPeriodRpcRow {
 }
 
 function mapPeriodWinner(client: SupabaseClient, row: BevOfPeriodRpcRow): PeriodWinner {
-  // The score the winner was picked by (live, like get_bev_leaderboard), not
-  // bev_stats.bayes_score, which the 15-minute refresh may not have caught up on.
+  // The score the winner was picked by. bev_of_period_at recomputes it from
+  // the same inputs bev_stats holds (sum_score, rating_count, bayes_prior(null))
+  // rather than reading bev_stats.bayes_score, because that column is stored
+  // as numeric(4,2) and the winner has to be picked on the UNROUNDED value --
+  // two Bevs that round to the same 2 dp are separated by n_period next, not
+  // by chance. The rounding happens once, here at the RPC boundary
+  // (20261101000300). The only other difference is one accepted race, which
+  // that migration documents: a refresh_global_stats tick landing between
+  // refresh_bev_stats reading the prior and its upsert leaves that row on the
+  // previous prior until the next tick.
   const bayes = Number(row.bev_bayes_score);
   return {
     bev: mapBevSummary(client, {
