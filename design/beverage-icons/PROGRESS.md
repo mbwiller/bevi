@@ -1,5 +1,50 @@
 # Beverage icon production checkpoint
 
+## Latest batch: 29-icon catalog expansion, 2026-11-02
+
+**68 drafts authored; 310 catalog entries remain. 34 of 43 starters covered.** Added 29 individually researched icons in four disjoint recipe modules, using the existing shared primitives and asset locations:
+
+- `gatorade-batch.mjs`: Lemon Lime, Fruit Punch, Orange, Cool Blue, Glacier Freeze, Fierce Grape, Zero Lemon Lime and Zero Grape (8).
+- `coffee-batch.mjs`: Dunkin bottled Original/Mocha/French Vanilla and La Colombe Original/Mocha/Vanilla/Oat Milk (7).
+- `tea-batch.mjs`: AriZona Green/Sweet/Peach/Raspberry/Diet Green and Pure Leaf Sweet/Lemon (7).
+- `juice-batch.mjs`: Simply Orange/Lemonade/Limeade/Apple/Grapefruit and Welch’s Concord Grape/White Grape (7).
+
+All 29 references were downloaded and visually inspected independently. Manufacturer evidence is used where available; documented retailer fallbacks cover unavailable manufacturer artwork. Family workers owned disjoint recipes; the coordinator integrated, built and reviewed the combined batch. Each record retains source URLs, inspection date, package choice and simplifications. Distinct can, carafe, contoured PET, coffee-bottle and handled gallon silhouettes follow their own references.
+
+Notable explicit package choices: Gatorade uses 28oz contoured bottles, with an older lower label retained for Fruit Punch and distinct Zero wraps; La Colombe plain dairy/oat rows use documented current unflavored Everyday packages; Simply Orange uses the manufacturer 46oz Pulp Free package, Apple the current Winter Edition label, other Simply flavors 52oz, and Welch’s 64oz. Fine lettering and illustration details are simplified original vectors. Final aesthetic approval and native-device review remain pending; records stay `needs-review`.
+
+Five identities were deferred and are retained with inspected candidate evidence in `identity-issues.json`: four Starbucks Frappuccino rows have unresolved café-versus-bottled serving identity, and AriZona Half & Half has unspecified formulation while the inspected bottle says LITE. No artwork is assigned to those UUIDs. They remain in pending coverage; substitutes with clear identities filled this batch.
+
+Reviewed all new renders and 40/56/96/155px light/dark tiles with 8% padding. Refined juice caps, fruit/lettering fit, Orange-specific seal wording and La Colombe arc spacing. Supplemental batch previews: `review/large-batch-2026-11-02-01.png` through `-04.png`. Exact reviewed hashes are appended to `review/review.json`. All 39 previously reviewed PNG/portable-SVG hashes remain unchanged.
+
+Built and validated all 68 assets; regenerated full and batch review sheets; exported 29 app SVGs and UUID map entries; export freshness and all **71 app icon tests passed**. Original prototype remains unchanged. Live Postgres reconciliation is still pending. Future catalog batches default to roughly 20–30 products, prioritizing remaining starters and related families; do not guess identities to meet the count.
+
+## Energy drinks and Zero Sugar batch: 2026-11-02
+
+**39 drafts authored; 339 catalog entries remain. 30 of 43 starters covered.** Added Dr Pepper Zero Sugar to `scripts/icons/families/dr-pepper.mjs` and Monster Energy Original, Celsius Sparkling Orange and Alani Nu Hawaiian Shaved Ice in `scripts/icons/families/energy-starters.mjs`. SVG masters, portable SVGs, PNGs and app exports remain alongside the existing collection.
+
+Individually inspected all four product references. Monster follows the manufacturer 16oz black/green-claw can with green pull tab. Alani follows the manufacturer 12oz purple/pink tropical package with vertical script, strawberries, coconut halves, leaves and hibiscus. Celsius follows the documented retailer 12oz white/silver Orange can with orange/gray C, orange slice and black lower band; manufacturer artwork downloads returned 403 and the retailer packaging revision date is unverified. Dr Pepper Zero Sugar uses the inspected black/burgundy football-season can, distinguished from both Original and Diet. Each recipe records its evidence and simplifications.
+
+Reviewed the four renders against references and the shared style, including 40/56/96/155px light/dark sheets. Corrected the Alani wordmark placement and Zero Sugar neck/base treatment. Brand lettering, symbols and fine illustrations are simplified original vector interpretations. Final aesthetic approval and native-device review remain pending; records remain `needs-review`.
+
+Built and validated all 39 assets, regenerated review sheets, exported the four app SVGs/UUID mappings and passed export freshness plus all 42 app icon tests. Prior reviewed asset PNG/portable-SVG hashes remain unchanged. Live Postgres reconciliation remains pending. Next starter priorities include Tropicana and Welch’s juices, 5-hour Energy (resolve Original flavor), RTD coffees, smoothies, teas and branded boba.
+
+## Mountain Dew batch: 2026-11-02
+
+**35 drafts authored; 343 catalog entries remain. 26 of 43 starters covered.** Added Mountain Dew Original, Diet Mountain Dew and Mountain Dew Baja Blast in `scripts/icons/families/mountain-dew.mjs`, beside the existing family recipes. All three use individually inspected current US 12 fl oz retailer can photos, with the full MOUNTAIN DEW name rather than legacy MTN lettering. Original has green mountain/forest art, Diet has silver/snowy mountain art, and Baja Blast has teal surf, lime slices and a yellow base strip. Manufacturer pages were consulted first; direct manufacturer artwork retrieval returned 403/404, so the recipes retain inspected retailer evidence.
+
+Compared all three renders with their product photos and the shared style, then inspected 40/56/96/155px light/dark sheets. Refined the wordmark widths to preserve readable first letters within the can face. Brand lettering, scenery and fine package details are simplified original vector interpretations. Final aesthetic approval and native-device review remain pending; records remain `needs-review`.
+
+Built and validated all 35 assets; regenerated review sheets; exported the three portable SVGs into `app/public/bev-icons/` and regenerated UUID mappings. Export freshness check and all 38 app icon tests passed. Live Postgres inventory reconciliation remains pending. Next starter priorities include Dr Pepper Zero Sugar, juices and energy drinks, plus the branded-boba pilot below.
+
+## Dr Pepper batch: 2026-11-02
+
+**32 drafts authored; 346 catalog entries remain. 23 of 43 starters covered.** Added Dr Pepper Original and Diet Dr Pepper in `scripts/icons/families/dr-pepper.mjs`. Each uses its own visually inspected Kroger US 12 fl oz packshot, including the observed seasonal football graphics. The manufacturer products page returned 403. Original uses burgundy halftone artwork and a white 23 badge; Diet uses a silver face, burgundy bands and a Diet badge. Pinned-font brand lettering is simplified; final aesthetic approval and native-device review remain pending.
+
+Reviewed both renders against their references and the shared style at 40/56/96/155px on light/dark surfaces. Built and validated all 32 assets, regenerated review sheets, exported both app icons and UUID mappings, and passed the app drift test (35 tests). Live Postgres reconciliation remains pending. Next starter priorities include Mountain Dew and Diet Mountain Dew, plus the branded-boba pilot below.
+
+The maintained skill is now discoverable through `.agents/skills/bevi-beverage-icons`; invoke `$bevi-beverage-icons` in this repository. The following checkpoint records the earlier 30-icon batch.
+
 2026-10-31. **30 reference-checked draft icons authored; 348 catalog entries remain.** 21 of 43 starters are covered. The original 12 received positive user feedback; the next 18 were added in this batch. Records remain `needs-review` for final approval and native integration. Live Postgres inventory reconciliation is still pending; the inspected Neo4j database has no beverage nodes.
 
 Open [the review gallery](index.html) or the overview sheets: [1](review/overview-01.png), [2](review/overview-02.png), [3](review/overview-03.png). Gallery controls filter by drink/brand/family, change tile size and switch light/dark/checkerboard surfaces. Individual cards link to masters, PNGs and product evidence. The gallery's markup, links and script syntax were checked; interactive browser execution was unavailable. The artwork itself was rasterized and visually inspected.

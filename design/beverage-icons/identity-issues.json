@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Durable identity research for deferred catalog rows; not overwritten by inventory/build regeneration. These rows have no authored icons.",
+  "records": [
+    {
+      "bevId": "448ba352-a6bc-59f2-a3ce-0c04a3aaf283",
+      "slug": "starbucks-frappuccino-mocha",
+      "status": "needs-identity-resolution",
+      "reason": "Catalog names omit bottled, use blended_coffee subtype, and include frappe/frappuccino aliases. Both cafe blended servings and bottled chilled coffees exist. Inspected bottles establish candidate packaging, but not the intended catalog formulation/serving. Resolve cafe versus bottled identity before mapping artwork.",
+      "references": [
+        {
+          "pageUrl": "https://www.ralphs.com/p/starbucks-frappuccino-mocha-iced-coffee-drink/0001200000452",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0001200000452",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Candidate US 13.7oz flavored glass coffee bottle inspected by coffee batch author; cafe-versus-bottled catalog identity unresolved."
+        }
+      ],
+      "resolutionNeeded": "Confirm whether this row means a cafe blended Frappuccino or the bottled chilled-coffee product.",
+      "competingCafeEvidence": [
+        "https://www.starbucks.com/menu/product/426/iced",
+        "https://www.starbucks.com/menu/product/483/iced",
+        "https://about.starbucks.com/wp-content/uploads/2013/09/Frappuccino_Fact_Sheet.pdf"
+      ]
+    },
+    {
+      "bevId": "317683dc-482e-597f-b854-968bee7b650e",
+      "slug": "starbucks-frappuccino-vanilla",
+      "status": "needs-identity-resolution",
+      "reason": "Catalog names omit bottled, use blended_coffee subtype, and include frappe/frappuccino aliases. Both cafe blended servings and bottled chilled coffees exist. Inspected bottles establish candidate packaging, but not the intended catalog formulation/serving. Resolve cafe versus bottled identity before mapping artwork.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/upc/0001200081331",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0001200081331",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Candidate US 13.7oz flavored glass coffee bottle inspected by coffee batch author; cafe-versus-bottled catalog identity unresolved."
+        }
+      ],
+      "resolutionNeeded": "Confirm whether this row means a cafe blended Frappuccino or the bottled chilled-coffee product.",
+      "competingCafeEvidence": [
+        "https://www.starbucks.com/menu/product/426/iced",
+        "https://www.starbucks.com/menu/product/483/iced",
+        "https://about.starbucks.com/wp-content/uploads/2013/09/Frappuccino_Fact_Sheet.pdf"
+      ]
+    },
+    {
+      "bevId": "6f448307-6277-55d4-8263-46ef7875d8dd",
+      "slug": "starbucks-frappuccino-caramel",
+      "status": "needs-identity-resolution",
+      "reason": "Catalog names omit bottled, use blended_coffee subtype, and include frappe/frappuccino aliases. Both cafe blended servings and bottled chilled coffees exist. Inspected bottles establish candidate packaging, but not the intended catalog formulation/serving. Resolve cafe versus bottled identity before mapping artwork.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/starbucks-frappucino-caramel-chilled-coffee-drink/0001200001672",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0001200001672",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Candidate US 13.7oz flavored glass coffee bottle inspected by coffee batch author; cafe-versus-bottled catalog identity unresolved."
+        }
+      ],
+      "resolutionNeeded": "Confirm whether this row means a cafe blended Frappuccino or the bottled chilled-coffee product.",
+      "competingCafeEvidence": [
+        "https://www.starbucks.com/menu/product/426/iced",
+        "https://www.starbucks.com/menu/product/483/iced",
+        "https://about.starbucks.com/wp-content/uploads/2013/09/Frappuccino_Fact_Sheet.pdf"
+      ]
+    },
+    {
+      "bevId": "3b1b8189-349b-5aff-af1b-29f908cd82fc",
+      "slug": "starbucks-frappuccino-coffee",
+      "status": "needs-identity-resolution",
+      "reason": "Catalog names omit bottled, use blended_coffee subtype, and include frappe/frappuccino aliases. Both cafe blended servings and bottled chilled coffees exist. Inspected bottles establish candidate packaging, but not the intended catalog formulation/serving. Resolve cafe versus bottled identity before mapping artwork.",
+      "references": [
+        {
+          "pageUrl": "https://www.pepsicoproductfacts.com/Home/product?gtin=00012000001802",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0001200000180",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Candidate US 13.7oz flavored glass coffee bottle inspected by coffee batch author; cafe-versus-bottled catalog identity unresolved."
+        }
+      ],
+      "resolutionNeeded": "Confirm whether this row means a cafe blended Frappuccino or the bottled chilled-coffee product.",
+      "competingCafeEvidence": [
+        "https://www.starbucks.com/menu/product/426/iced",
+        "https://www.starbucks.com/menu/product/483/iced",
+        "https://about.starbucks.com/wp-content/uploads/2013/09/Frappuccino_Fact_Sheet.pdf"
+      ]
+    },
+    {
+      "bevId": "e9b9fe9d-fe79-5561-95a2-7c45b476ea36",
+      "slug": "arizona-half-and-half",
+      "status": "needs-identity-resolution",
+      "reason": "Catalog Half & Half row and Arnold Palmer alias do not specify regular/Lite/diet formulation. Retrieved product page is generically titled Half & Half, but inspected bottle explicitly says LITE.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/arizona-arnold-palmer-half-half-lemonade-iced-tea/0061300872085",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0061300872085",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Tea batch author inspected bottle with Arnold Palmer portrait/umbrella and explicit LITE designation."
+        }
+      ],
+      "resolutionNeeded": "Confirm whether catalog row represents Arnold Palmer Lite or another formulation."
+    }
+  ]
+}

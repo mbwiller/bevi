@@ -1,9 +1,9 @@
 {
   "summary": {
     "catalog": 378,
-    "authored": 30,
-    "pending": 348,
-    "starterAuthored": 21,
+    "authored": 68,
+    "pending": 310,
+    "starterAuthored": 34,
     "starterTotal": 43,
     "livePostgresReconciled": false
   },
@@ -22,38 +22,6 @@
       "name": "Mexican Coca-Cola",
       "brand": "Coca-Cola",
       "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "686a8b0d-8d5f-53d6-ae2b-d84988f38daf",
-      "slug": "dr-pepper",
-      "name": "Dr Pepper",
-      "brand": "Dr Pepper",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "3988d01a-1cac-5ece-877c-d428ffd1abfc",
-      "slug": "diet-dr-pepper",
-      "name": "Diet Dr Pepper",
-      "brand": "Dr Pepper",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "4d46a498-dcea-5dc5-8342-cb091ba36d15",
-      "slug": "mountain-dew",
-      "name": "Mountain Dew",
-      "brand": "Mountain Dew",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "3d372168-321c-5bb6-be06-b548c208c636",
-      "slug": "diet-mountain-dew",
-      "name": "Diet Mountain Dew",
-      "brand": "Mountain Dew",
-      "isStarter": true,
       "status": "needs-reference"
     },
     {
@@ -385,14 +353,6 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "b89ae243-600d-5eca-a1a1-b46ff33b114d",
-      "slug": "mountain-dew-baja-blast",
-      "name": "Mountain Dew Baja Blast",
-      "brand": "Mountain Dew",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "11f52e23-5357-58c1-94df-02644a5e6f98",
       "slug": "mountain-dew-spark",
       "name": "Mountain Dew Spark",
@@ -558,14 +518,6 @@
       "name": "Diet Coke Caffeine Free",
       "brand": "Diet Coke",
       "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "c337d6a3-f766-5e8e-b13d-0a3824653db4",
-      "slug": "dr-pepper-zero-sugar",
-      "name": "Dr Pepper Zero Sugar",
-      "brand": "Dr Pepper",
-      "isStarter": true,
       "status": "needs-reference"
     },
     {
@@ -745,46 +697,6 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "f3ba3516-a058-5338-836c-ef56a5417727",
-      "slug": "simply-orange",
-      "name": "Orange Juice",
-      "brand": "Simply",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "fbb7d222-21b7-5c09-8c5e-8f9e15f9d7de",
-      "slug": "simply-lemonade",
-      "name": "Lemonade",
-      "brand": "Simply",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "a5b3a7e8-cfa9-555f-81e6-4de3a4ad02bb",
-      "slug": "simply-apple",
-      "name": "Apple Juice",
-      "brand": "Simply",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "c877f5b4-290c-5538-b4c2-46dff75edd5f",
-      "slug": "simply-grapefruit",
-      "name": "Grapefruit Juice",
-      "brand": "Simply",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "a9dc8b10-da74-5ac9-952c-d42b68383b46",
-      "slug": "simply-limeade",
-      "name": "Limeade",
-      "brand": "Simply",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "6aed7049-e35a-5d43-9bdc-efa577b7aa82",
       "slug": "minute-maid-apple-juice",
       "name": "Apple Juice",
@@ -805,22 +717,6 @@
       "slug": "minute-maid-lemonade",
       "name": "Lemonade",
       "brand": "Minute Maid",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "320d15a5-ae1c-589f-a2ab-140eac445ff9",
-      "slug": "welchs-100-grape-juice",
-      "name": "Grape Juice",
-      "brand": "Welch's",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "875d5d4b-a8b5-525a-aecc-d155228a1e95",
-      "slug": "welchs-white-grape-juice",
-      "name": "White Grape Juice",
-      "brand": "Welch's",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -1329,14 +1225,6 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "63c34b3d-6496-509c-8e74-b12f17397ae8",
-      "slug": "monster-energy-original",
-      "name": "Monster Energy Original",
-      "brand": "Monster Energy",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "9f26a3df-0382-5d1c-b1c4-5d590a960176",
       "slug": "monster-energy-zero-ultra",
       "name": "Monster Energy Zero Ultra",
@@ -1374,14 +1262,6 @@
       "name": "Monster Energy Juice Monster Khaotic",
       "brand": "Monster Energy",
       "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "d0522171-dee4-5421-a863-c18e4deba0c1",
-      "slug": "celsius-sparkling-orange",
-      "name": "Celsius Sparkling Orange",
-      "brand": "Celsius",
-      "isStarter": true,
       "status": "needs-reference"
     },
     {
@@ -1438,14 +1318,6 @@
       "name": "Celsius Sparkling Wild Berry",
       "brand": "Celsius",
       "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "2837c85b-1512-5a63-86cf-f5b00e9a73ae",
-      "slug": "alani-nu-hawaiian-shaved-ice",
-      "name": "Alani Nu Energy Hawaiian Shaved Ice",
-      "brand": "Alani Nu",
-      "isStarter": true,
       "status": "needs-reference"
     },
     {
@@ -1689,62 +1561,6 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "14715df4-4d37-58b1-9424-839f5c3524fb",
-      "slug": "dunkin-bottled-iced-coffee-original",
-      "name": "Bottled Iced Coffee Original",
-      "brand": "Dunkin'",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "c13f6ed9-a760-50c0-981c-02b1558145a8",
-      "slug": "dunkin-bottled-iced-coffee-mocha",
-      "name": "Bottled Iced Coffee Mocha",
-      "brand": "Dunkin'",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "e02b65fb-712d-5940-9809-cff79467fde5",
-      "slug": "dunkin-bottled-iced-coffee-french-vanilla",
-      "name": "Bottled Iced Coffee French Vanilla",
-      "brand": "Dunkin'",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "62297ab6-e145-513d-81ee-053a7f3008e3",
-      "slug": "la-colombe-draft-latte-original",
-      "name": "Draft Latte Original",
-      "brand": "La Colombe",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "41e79f0c-80e0-5cd3-9984-5fa9a110b4d1",
-      "slug": "la-colombe-draft-latte-mocha",
-      "name": "Draft Latte Mocha",
-      "brand": "La Colombe",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "4161a575-6829-5c34-966c-ad2932252030",
-      "slug": "la-colombe-draft-latte-vanilla",
-      "name": "Draft Latte Vanilla",
-      "brand": "La Colombe",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "92c5c010-fd07-5e7d-9912-8d66880a2a15",
-      "slug": "la-colombe-draft-latte-oat-milk",
-      "name": "Draft Latte Oat Milk",
-      "brand": "La Colombe",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "32e8e1d6-e57f-5e28-bf7f-bf570e0c4bcf",
       "slug": "stok-cold-brew-black",
       "name": "Cold Brew Black",
@@ -1937,66 +1753,10 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "92d10127-a5e5-5f1c-9e04-1936e3c24961",
-      "slug": "arizona-green-tea",
-      "name": "Arizona Green Tea",
-      "brand": "Arizona",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "8a198031-bac4-5313-85e4-e1bf0ecd6408",
-      "slug": "arizona-sweet-tea",
-      "name": "Arizona Sweet Tea",
-      "brand": "Arizona",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "e9b9fe9d-fe79-5561-95a2-7c45b476ea36",
       "slug": "arizona-half-and-half",
       "name": "Arizona Half & Half",
       "brand": "Arizona",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "444f149b-77d5-5b23-b317-122da69f920a",
-      "slug": "arizona-peach-tea",
-      "name": "Arizona Peach Tea",
-      "brand": "Arizona",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "003e3d05-98f8-5c8e-8455-c024e0e15b9b",
-      "slug": "arizona-raspberry-tea",
-      "name": "Arizona Raspberry Tea",
-      "brand": "Arizona",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "a294a379-e868-54e2-8097-045b4c1619ee",
-      "slug": "arizona-diet-green-tea",
-      "name": "Arizona Diet Green Tea",
-      "brand": "Arizona",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "662ab338-9d5b-576d-ac1c-da4375bd120e",
-      "slug": "pure-leaf-sweet-tea",
-      "name": "Pure Leaf Sweet Tea",
-      "brand": "Pure Leaf",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "395dd1c6-e711-561b-8307-adb8ef02533d",
-      "slug": "pure-leaf-lemon-tea",
-      "name": "Pure Leaf Lemon Tea",
-      "brand": "Pure Leaf",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -2237,70 +1997,6 @@
       "slug": "gong-cha-taro-milk-tea",
       "name": "Taro Milk Tea (Gong Cha)",
       "brand": "Gong Cha",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "bebb348e-9ffe-5296-8401-4c264f19cba6",
-      "slug": "gatorade-lemon-lime",
-      "name": "Gatorade Thirst Quencher",
-      "brand": "Gatorade",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "f081a4e7-6742-5b97-a686-5713b3443f1f",
-      "slug": "gatorade-fruit-punch",
-      "name": "Gatorade Thirst Quencher",
-      "brand": "Gatorade",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "340528d3-50ea-5892-8fd7-0feaf19bddcb",
-      "slug": "gatorade-orange",
-      "name": "Gatorade Thirst Quencher",
-      "brand": "Gatorade",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "865a3c7c-e4ce-5395-944d-47eca7eafb6e",
-      "slug": "gatorade-cool-blue",
-      "name": "Gatorade Thirst Quencher",
-      "brand": "Gatorade",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "0348907a-ceea-58de-8ace-dfb493a577f6",
-      "slug": "gatorade-glacier-freeze",
-      "name": "Gatorade Thirst Quencher",
-      "brand": "Gatorade",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "7d858d04-e2ab-503c-89c5-e753ec527ced",
-      "slug": "gatorade-grape",
-      "name": "Gatorade Thirst Quencher",
-      "brand": "Gatorade",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "cefdd106-f07a-59c5-82ba-4f37e841b287",
-      "slug": "gatorade-zero-lemon-lime",
-      "name": "Gatorade Zero",
-      "brand": "Gatorade",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "5214767a-f359-5782-847e-69d1cf5a7121",
-      "slug": "gatorade-zero-grape",
-      "name": "Gatorade Zero",
-      "brand": "Gatorade",
       "isStarter": false,
       "status": "needs-reference"
     },

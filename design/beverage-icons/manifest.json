@@ -55,13 +55,323 @@
   },
   "summary": {
     "catalog": 378,
-    "authored": 30,
-    "pending": 348,
-    "starterAuthored": 21,
+    "authored": 68,
+    "pending": 310,
+    "starterAuthored": 34,
     "starterTotal": 43,
     "livePostgresReconciled": false
   },
   "records": [
+    {
+      "slug": "alani-nu-hawaiian-shaved-ice",
+      "family": "energy-starter-can",
+      "packageChoice": "US 12 fl oz / 355mL Alani Nu Hawaiian Shaved Ice slim can; current manufacturer purple/pink/tropical package.",
+      "references": [
+        {
+          "pageUrl": "https://www.alaninu.com/products/energy-drink-hawaiian-shaved-ice",
+          "imageUrl": "https://www.alaninu.com/cdn/shop/files/Stretch_AN-Website-12oz-PDP-HSI-01_V1.png?v=1782762260&width=1200",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Manufacturer front-can image visually inspected: silver-rimmed slim can with hot pink neck, purple upper field fading to pink, white HAWAIIAN SHAVED ICE near top, vertical white Alani script and small NU, pale pink ENERGY beneath, aqua tropical leaves, strawberries, coconut halves with straws, pink shaved-ice cups and hibiscus at edges/foot; aqua bottom band and volume text. Reference is the current purple/pink package rather than older pale graphics."
+        }
+      ],
+      "uncertainty": "Manufacturer image selected. Tropical illustration details and tiny legal text are simplified; the small sugar/certification badge is omitted. Lettering, brand marks and fine package illustrations are simplified original vector interpretations. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "2837c85b-1512-5a63-86cf-f5b00e9a73ae",
+      "name": "Alani Nu Energy Hawaiian Shaved Ice",
+      "brand": "Alani Nu",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/alani-nu-hawaiian-shaved-ice.svg",
+        "portableSvg": "portable-svg/alani-nu-hawaiian-shaved-ice.svg",
+        "png": "png/alani-nu-hawaiian-shaved-ice.png",
+        "svgSha256": "bbbc062c52f66831be7f4f27e84b5a93c870ff55c3e332239cc33d86731d1d5b",
+        "portableSvgSha256": "0eb8cc0628c6efd64db45a3470d2b8c77c3cf83a4d7e9c2d09d33346429169be",
+        "pngSha256": "e709a53dbcebc0e4ee094f3bcca4e8a2b09d19b8117a0121d4610d18d5fea8fc",
+        "pngBytes": 160453
+      },
+      "sourceModule": "scripts/icons/families/energy-starters.mjs"
+    },
+    {
+      "slug": "simply-apple",
+      "family": "simply-juice-carafe",
+      "packageChoice": "US 52 fl oz Simply Apple clear PET carafe; documented Winter Edition Look seasonal label selected for size-unspecified catalog row.",
+      "references": [
+        {
+          "pageUrl": "https://www.coca-cola.com/us/en/brands/simply/products/juices-drinks",
+          "imageUrl": "https://www.coca-cola.com/content/dam/onexp/us/en/brands/simply/holiday-2026/plp/simply-prod-apple-winteredition.jpg",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Current manufacturer Apple Winter Edition Look image independently inspected: amber cloudy apple juice, same clear carafe and green cap/seal; cream label with black Simply Apple script, red apple/green leaf, red pixel holiday motifs, WINTER EDITION LOOK and SERVE HOT OR COLD. Seasonal label explicitly selected; beverage remains original Apple."
+        }
+      ],
+      "uncertainty": "Exact manufacturer variant visually inspected. Representative US package selected; product-defining fruit, cap, juice color and label retained, lettering and fine text simplified using pinned fonts. Apple seasonal packaging is recorded rather than presented as a permanent label. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "a5b3a7e8-cfa9-555f-81e6-4de3a4ad02bb",
+      "name": "Apple Juice",
+      "brand": "Simply",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/simply-apple.svg",
+        "portableSvg": "portable-svg/simply-apple.svg",
+        "png": "png/simply-apple.png",
+        "svgSha256": "ce6c7b5a0ac2ab740d33cb248c3a1b73ae96e1341df2be9d6a713c5dd6eaa081",
+        "portableSvgSha256": "962b960361609ee047736a548f155a2c5a5c6018cc4b711d33c013c676a6eaea",
+        "pngSha256": "2a4de6c8d8f6b34d9342f70f80219b499596ac9a48cbecdf67333e587bc79b5f",
+        "pngBytes": 107654
+      },
+      "sourceModule": "scripts/icons/families/juice-batch.mjs"
+    },
+    {
+      "slug": "arizona-diet-green-tea",
+      "family": "tea-researched-batch",
+      "packageChoice": "US 128 fl oz / 1 gallon Diet Green Tea jug with white ribbed cap, amber/olive tea and traditional illustrated label.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/arizona-diet-green-iced-tea-with-ginseng-bottle/0061300871781",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0061300871781",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Retailer Diet Green gallon image independently inspected: broad amber/olive handled PET jug, integral open right handle, small light ribbed cap left of center; pale cream label with vertical gold AriZona, traditional red/green robed woman illustration, dark green DIET Green Tea with Ginseng. Does not share Original mint can artwork."
+        }
+      ],
+      "uncertainty": "Representative US size selected because catalog has no package size. Brand lettering and package illustrations are simplified original vectors; tiny legal text omitted. Manufacturer Diet Green artwork was not exposed by its current tea catalog; documented retailer gallon selected. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "a294a379-e868-54e2-8097-045b4c1619ee",
+      "name": "Arizona Diet Green Tea",
+      "brand": "Arizona",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/arizona-diet-green-tea.svg",
+        "portableSvg": "portable-svg/arizona-diet-green-tea.svg",
+        "png": "png/arizona-diet-green-tea.png",
+        "svgSha256": "c4af92b58ca16e930c41025424eef990afb8acc05ea5842a9a31313a9f3185d0",
+        "portableSvgSha256": "e98bec386dbb8c06e694a73e2e963eb15392c21545324e6fda1c4316fd036ca5",
+        "pngSha256": "41465eac4af746f8b34d60d5a31d4cdf57a63c13b1287366ebc302faa7aad986",
+        "pngBytes": 111191
+      },
+      "sourceModule": "scripts/icons/families/tea-batch.mjs"
+    },
+    {
+      "slug": "arizona-green-tea",
+      "family": "tea-researched-batch",
+      "packageChoice": "US 22 fl oz Green Tea with Ginseng and Honey tall aluminum can, mint/cherry-blossom retail package.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/arizona-green-tea-with-ginseng-honey-can/0061300871526",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0061300871526",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Retailer can photo visually inspected: slender mint-green can, pink cherry blossoms on dark branches, Green Tea / With GINSENG and HONEY low on face, teal lower flourish, silver rims. Manufacturer page now shows an alternate decorative package; this icon follows the documented mint floral retail can."
+        }
+      ],
+      "uncertainty": "Representative US size selected because catalog has no package size. Brand lettering and package illustrations are simplified original vectors; tiny legal text omitted.  Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "92d10127-a5e5-5f1c-9e04-1936e3c24961",
+      "name": "Arizona Green Tea",
+      "brand": "Arizona",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/arizona-green-tea.svg",
+        "portableSvg": "portable-svg/arizona-green-tea.svg",
+        "png": "png/arizona-green-tea.png",
+        "svgSha256": "ab27f60a8e4b423b89713ccddf83776a80ba0095d75e70ec1280c7cc6ee91519",
+        "portableSvgSha256": "5e5614dc051ae83a4505d4972cb7977df9daf01b40e22a5aae8b1d399b66e0de",
+        "pngSha256": "96cc2d6bd9bd01be99b17b329513931fa27f45aef3e443d0c9ef9198ecafe598",
+        "pngBytes": 99164
+      },
+      "sourceModule": "scripts/icons/families/tea-batch.mjs"
+    },
+    {
+      "slug": "arizona-peach-tea",
+      "family": "tea-researched-batch",
+      "packageChoice": "US 20 fl oz Peach Tea Tall Boy PET bottle, white cap and tiled peach/cream geometric sleeve.",
+      "references": [
+        {
+          "pageUrl": "https://drinkarizona.com/products/peach-tea-20oz-tallboy",
+          "imageUrl": "https://drinkarizona.com/cdn/shop/files/Peach-Tea_Tall-boy_Product-Image_01_1.png?v=1742491417&width=1000",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Manufacturer Peach bottle independently inspected: amber tea under white cap, pastel peach/cream tile sleeve, oversized diagonal cream AriZona with red/teal geometric sun accents, large peach fruit art near base, green/teal Iced tea and with PEACH FLAVOR, turquoise bottom band."
+        }
+      ],
+      "uncertainty": "Representative US size selected because catalog has no package size. Brand lettering and package illustrations are simplified original vectors; tiny legal text omitted.  Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "444f149b-77d5-5b23-b317-122da69f920a",
+      "name": "Arizona Peach Tea",
+      "brand": "Arizona",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/arizona-peach-tea.svg",
+        "portableSvg": "portable-svg/arizona-peach-tea.svg",
+        "png": "png/arizona-peach-tea.png",
+        "svgSha256": "623415cd7b0bf31eea3f55ce2ac2fe0f87ff9951de3c11045b38cbabccedf04d",
+        "portableSvgSha256": "c8c04b3dc6da2b37a924f4d7499ea481c5814d847ed389eaf0a8abf20564cd88",
+        "pngSha256": "516b2818c064117ae68d8c73ed65dd70ef617f5e67e43913211fb1b2b4c1c436",
+        "pngBytes": 115551
+      },
+      "sourceModule": "scripts/icons/families/tea-batch.mjs"
+    },
+    {
+      "slug": "arizona-raspberry-tea",
+      "family": "tea-researched-batch",
+      "packageChoice": "US 22 fl oz Raspberry Iced Tea aluminum can with cream/burgundy tile pattern and teal base.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/arizona-raspberry-iced-tea-can/0061300873547",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0061300873547",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Retailer Raspberry can independently inspected: burgundy and cream rectangular tile pattern, gray linework, oversize diagonal cream AriZona with gold and gray outlines, teal/red geometric sun, pink raspberry cluster on lower face, teal Iced Tea lettering and yellow Raspberry Flavor, silver rims."
+        }
+      ],
+      "uncertainty": "Representative US size selected because catalog has no package size. Brand lettering and package illustrations are simplified original vectors; tiny legal text omitted. Manufacturer standalone Raspberry can page unavailable; current retailer listing used. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "003e3d05-98f8-5c8e-8455-c024e0e15b9b",
+      "name": "Arizona Raspberry Tea",
+      "brand": "Arizona",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/arizona-raspberry-tea.svg",
+        "portableSvg": "portable-svg/arizona-raspberry-tea.svg",
+        "png": "png/arizona-raspberry-tea.png",
+        "svgSha256": "2e066044e3a9e39581e97455ad9487a5ac05fc67d1cca139f61d989122ab6ff9",
+        "portableSvgSha256": "ea47d558f68c1b7356e76de0f57e4c0f0e07cfd26212448d373137f55c846644",
+        "pngSha256": "d67c7922a9d6fd2ce07d63fd533aa4fd754192ea37a13c46c4d9c2690b8a9514",
+        "pngBytes": 124949
+      },
+      "sourceModule": "scripts/icons/families/tea-batch.mjs"
+    },
+    {
+      "slug": "arizona-sweet-tea",
+      "family": "tea-researched-batch",
+      "packageChoice": "US 20 fl oz Sweet Tea Tall Boy PET bottle with white cap and white/green Southern Style sleeve.",
+      "references": [
+        {
+          "pageUrl": "https://drinkarizona.com/products/sweet-tea-20oz-tallboy",
+          "imageUrl": "https://drinkarizona.com/cdn/shop/files/Sweet-Tea_Tall-Boy_Product-Image_01_2.png?v=1742491605&width=1000",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Manufacturer bottle image visually inspected: amber tea PET with short shoulders, white ribbed cap, green/white checkerboard strip, white sleeve with green/gray geometric sun badge, white AriZona outlined wordmark, green Sweet Tea, SOUTHERN STYLE and monochrome riverboat art near foot."
+        }
+      ],
+      "uncertainty": "Representative US size selected because catalog has no package size. Brand lettering and package illustrations are simplified original vectors; tiny legal text omitted.  Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "8a198031-bac4-5313-85e4-e1bf0ecd6408",
+      "name": "Arizona Sweet Tea",
+      "brand": "Arizona",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/arizona-sweet-tea.svg",
+        "portableSvg": "portable-svg/arizona-sweet-tea.svg",
+        "png": "png/arizona-sweet-tea.png",
+        "svgSha256": "72882113cc66042b3aed32a8a8d3f955d47eea6c08817e3dfcb4994013f70f87",
+        "portableSvgSha256": "dd8cc9f2ef66ada618ddfa3f047c2f527cf88702dbc9c2bbf8df3565edc370d9",
+        "pngSha256": "739bb7ce7ccd34841294535c43e99079e905c1775093f4c7ec494fde2b38bec6",
+        "pngBytes": 97901
+      },
+      "sourceModule": "scripts/icons/families/tea-batch.mjs"
+    },
+    {
+      "slug": "dunkin-bottled-iced-coffee-french-vanilla",
+      "family": "dunkin-pet-coffee-bottle",
+      "packageChoice": "US 13.7 fl oz French Vanilla Dunkin bottled iced coffee, pale gold cap and gold/white sleeve.",
+      "references": [
+        {
+          "pageUrl": "https://dunkinanytime.coca-cola.com/products/iced-coffee-on-the-go",
+          "imageUrl": "https://dunkinanytime.coca-cola.com/content/dam/dunkin/us/en/product-landing-page/teasers/dunkin-iced-french-vanilla-product-img.png",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Separate manufacturer French Vanilla image inspected: same contoured bottle and tan coffee shoulder; pale gold cap/neck and lower sleeve, orange vertical cap strip with white French vanilla; white middle label with orange DUNKIN, pink ICED COFFEE, gold french vanilla and CREAMY + SMOOTH. Flavor lettering is two words and gold, unlike brown Mocha."
+        }
+      ],
+      "uncertainty": "Package lettering, illustrations and fine print simplified as original vectors; final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "e02b65fb-712d-5940-9809-cff79467fde5",
+      "name": "Bottled Iced Coffee French Vanilla",
+      "brand": "Dunkin'",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/dunkin-bottled-iced-coffee-french-vanilla.svg",
+        "portableSvg": "portable-svg/dunkin-bottled-iced-coffee-french-vanilla.svg",
+        "png": "png/dunkin-bottled-iced-coffee-french-vanilla.png",
+        "svgSha256": "8fce117b938bc5e9794cda1ce0669af4fda259b06c5abe710918452488aac325",
+        "portableSvgSha256": "a61dd089187199c9ce5ee5c85df8cd69a91ac833089c2cb6a54d57eddeca5708",
+        "pngSha256": "15eb9d0f145c7eb1057838044f53bef1957a68273a2ca2182e6ff2dba08afb1b",
+        "pngBytes": 90238
+      },
+      "sourceModule": "scripts/icons/families/coffee-batch.mjs"
+    },
+    {
+      "slug": "dunkin-bottled-iced-coffee-mocha",
+      "family": "dunkin-pet-coffee-bottle",
+      "packageChoice": "US 13.7 fl oz Mocha Dunkin bottled iced coffee, brown cap and brown/white sleeve.",
+      "references": [
+        {
+          "pageUrl": "https://dunkinanytime.coca-cola.com/products/iced-coffee-on-the-go",
+          "imageUrl": "https://dunkinanytime.coca-cola.com/content/dam/dunkin/us/en/product-landing-page/teasers/dunkin-iced-mocha-product-img.png",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Separate manufacturer Mocha image inspected: same stout contoured PET bottle with exposed tan coffee shoulders; chocolate-brown cap, neck and lower sleeve; orange vertical cap strip with white mocha; white central label, orange DUNKIN/pink apostrophe, pink ICED COFFEE, brown mocha and RICH + CHOCOLATEY. Lower sleeve brown rather than Original orange or Vanilla gold."
+        }
+      ],
+      "uncertainty": "Package lettering, illustrations and fine print simplified as original vectors; final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "c13f6ed9-a760-50c0-981c-02b1558145a8",
+      "name": "Bottled Iced Coffee Mocha",
+      "brand": "Dunkin'",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/dunkin-bottled-iced-coffee-mocha.svg",
+        "portableSvg": "portable-svg/dunkin-bottled-iced-coffee-mocha.svg",
+        "png": "png/dunkin-bottled-iced-coffee-mocha.png",
+        "svgSha256": "c95bafc0f9eb2e246d1356554aaababd4886f672d5ea550e5489ce0d5626769e",
+        "portableSvgSha256": "5a007414edfbdc2cc807647ef73b9df014370be6b99754326f0faa4f359a98a6",
+        "pngSha256": "d3c3aa69797c2969a524796a4d5141ac48f980245d4fb7e35369c972b08234a9",
+        "pngBytes": 101578
+      },
+      "sourceModule": "scripts/icons/families/coffee-batch.mjs"
+    },
+    {
+      "slug": "dunkin-bottled-iced-coffee-original",
+      "family": "dunkin-pet-coffee-bottle",
+      "packageChoice": "US 13.7 fl oz Original Dunkin bottled iced coffee, orange screw cap and orange/white shrink label.",
+      "references": [
+        {
+          "pageUrl": "https://dunkinanytime.coca-cola.com/products/iced-coffee-on-the-go",
+          "imageUrl": "https://dunkinanytime.coca-cola.com/content/dam/dunkin/us/en/product-landing-page/teasers/dunkin-iced-original-product-img.png",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Manufacturer Original image inspected: stout curved PET bottle, visible tan coffee shoulders, orange screw cap/neck and lower bottle sleeve, white vertical cap strip with orange original; white middle label with orange DUNKIN and pink apostrophe, pink ICED COFFEE, orange original and small RICH + SMOOTH. Waist and lower-body molded rings visible."
+        }
+      ],
+      "uncertainty": "Package lettering, illustrations and fine print simplified as original vectors; final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "14715df4-4d37-58b1-9424-839f5c3524fb",
+      "name": "Bottled Iced Coffee Original",
+      "brand": "Dunkin'",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/dunkin-bottled-iced-coffee-original.svg",
+        "portableSvg": "portable-svg/dunkin-bottled-iced-coffee-original.svg",
+        "png": "png/dunkin-bottled-iced-coffee-original.png",
+        "svgSha256": "cfc471499f7c3582f8f6fb363f788795234464f65b9fc021ef130eec6cf8f2eb",
+        "portableSvgSha256": "475779cac9f5ffcfa0d8f351afd87ec9f2a4a1b671609bc6eb70bf0f6305a923",
+        "pngSha256": "99a63ca00ea7537a78760603d5029873f21e0d5ed84f28af8ab5c6a6d21727f5",
+        "pngBytes": 92809
+      },
+      "sourceModule": "scripts/icons/families/coffee-batch.mjs"
+    },
     {
       "slug": "bubly-lime",
       "family": "sparkling-standard-can",
@@ -92,6 +402,37 @@
         "pngBytes": 101382
       },
       "sourceModule": "scripts/icons/families/sparkling-starters.mjs"
+    },
+    {
+      "slug": "celsius-sparkling-orange",
+      "family": "energy-starter-can",
+      "packageChoice": "US 12 fl oz / 355mL Celsius Sparkling Orange slim can, white/silver face and black lower information band as shown by the selected retailer photo.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/celsius-sparkling-orange-energy-drink-can/0088939200031",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0088939200031",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Retailer single-can packshot visually inspected: tall slim white/silver can, dark top rim; small ORANGE at shoulder, large orange/gray C with degree symbol above black CELSIUS and small orange LIVE FIT; orange slice with bubbles, SPARKLING ORANGE label, black lower band with orange left edge; metallic silver foot. Selected image includes essential-energy/metabolism wording; tiny certification symbols omitted."
+        }
+      ],
+      "uncertainty": "Manufacturer product page and image download returned 403; retailer package used. Packaging revision date is unverified; this drawing represents the documented retailer version rather than a claim about newest packaging. Lettering, brand marks and fine package illustrations are simplified original vector interpretations. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "d0522171-dee4-5421-a863-c18e4deba0c1",
+      "name": "Celsius Sparkling Orange",
+      "brand": "Celsius",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/celsius-sparkling-orange.svg",
+        "portableSvg": "portable-svg/celsius-sparkling-orange.svg",
+        "png": "png/celsius-sparkling-orange.png",
+        "svgSha256": "dee44b7ec7926d7142eb5dcf25a397eef320e9255ccb1c249d0243e976440d59",
+        "portableSvgSha256": "b486ef4f5bd8d17309e8b6d18de6e18e05f635e3b1e386590f964d7ea9550dc2",
+        "pngSha256": "8812d5dc9127336df1420945e106acf055b55784d4c367c5005cafc7e04520e8",
+        "pngBytes": 92805
+      },
+      "sourceModule": "scripts/icons/families/energy-starters.mjs"
     },
     {
       "slug": "coca-cola-classic",
@@ -201,6 +542,68 @@
       "sourceModule": "scripts/icons/families/colas.mjs"
     },
     {
+      "slug": "diet-dr-pepper",
+      "family": "dr-pepper-can",
+      "packageChoice": "US 12 fl oz / 355mL Diet Dr Pepper aluminum can with football-season package graphics; representative size for the size-unspecified catalog row.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/diet-dr-pepper-soda-cans/0007800008316",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0007800008316",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Separate Diet retailer packshot visually inspected: silver/white can with burgundy halftone shoulder and base strips; burgundy diagonal Dr Pepper lettering, swooshes and small Est.1885; Diet in burgundy outlined oval below, small football above-right and burgundy 12 FL OZ at base. Diet has a silver main face, unlike the burgundy Original; silver lid and foot."
+        }
+      ],
+      "uncertainty": "Manufacturer products page rejected direct retrieval (403); used individually inspected retailer packshots. Seasonal football graphics are retained as observed. Brand lettering is a simplified pinned-font vector interpretation; small ring text and side-panel print omitted. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "3988d01a-1cac-5ece-877c-d428ffd1abfc",
+      "name": "Diet Dr Pepper",
+      "brand": "Dr Pepper",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/diet-dr-pepper.svg",
+        "portableSvg": "portable-svg/diet-dr-pepper.svg",
+        "png": "png/diet-dr-pepper.png",
+        "svgSha256": "6f60977ba1643771c900880e1d37d938f79a477771eab637ff832f5aad40063f",
+        "portableSvgSha256": "a8e8d830022b96c9633ea0574111c218d19cb658c92faa87836edf9dcdc4f354",
+        "pngSha256": "c2068249f82865cb76d4fd0fec5f5fde3c02759ef4701022230ae9329090a681",
+        "pngBytes": 128632
+      },
+      "sourceModule": "scripts/icons/families/dr-pepper.mjs"
+    },
+    {
+      "slug": "diet-mountain-dew",
+      "family": "mountain-dew-can",
+      "packageChoice": "US 12 fl oz / 355mL Diet Mountain Dew can, current full-name logo and illustrated landscape; representative US size for the size-unspecified catalog row.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/diet-mountain-dew-soda-cans/0001200080997",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0001200080997",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Separately inspected Diet image: silver/gray can, red DIET above full green MOUNTAIN/red DEW outlined wordmark; white/green/yellow shoulder rays, snowy gray mountains and dark-green pine forest along bottom; small DIETDEW near foot and silver rims. Main face is silver, not Original green."
+        }
+      ],
+      "uncertainty": "Manufacturer product pages consulted first; direct manufacturer image retrieval was unavailable (403/404). Each current retailer can photo visually inspected independently. Full-name lettering, landscape and flavor artwork are simplified original vector interpretations; condensation and tiny side-panel print simplified. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "3d372168-321c-5bb6-be06-b548c208c636",
+      "name": "Diet Mountain Dew",
+      "brand": "Mountain Dew",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/diet-mountain-dew.svg",
+        "portableSvg": "portable-svg/diet-mountain-dew.svg",
+        "png": "png/diet-mountain-dew.png",
+        "svgSha256": "74c8651b75ae7e303ca35875d7b76af3b931ee6965098ff48d7d915547daae4a",
+        "portableSvgSha256": "4c59b5fc2975c04bc5049c353f11c9b871cc5db2e6d81c98fae58960ef314c59",
+        "pngSha256": "31bb61d002d8369d79d3f4a3219e363b570609ff537bff2347d75b6f8168a0c4",
+        "pngBytes": 181594
+      },
+      "sourceModule": "scripts/icons/families/mountain-dew.mjs"
+    },
+    {
       "slug": "diet-pepsi",
       "family": "standard-cola-can",
       "packageChoice": "US 12 fl oz / 355mL Diet Pepsi aluminum can; representative package for the size-unspecified catalog row.",
@@ -232,6 +635,192 @@
       "sourceModule": "scripts/icons/families/colas.mjs"
     },
     {
+      "slug": "dr-pepper",
+      "family": "dr-pepper-can",
+      "packageChoice": "US 12 fl oz / 355mL Dr Pepper Original aluminum can with football-season package graphics; representative size for the size-unspecified catalog row.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/dr-pepper-soda-cans/0007800008216",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0007800008216",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Retailer packshot visually inspected: standard can with burgundy halftone body, silver horizontal shoulder and base bands, large white diagonal two-line Dr Pepper lettering and oval swooshes, small Est.1885, white 23 oval below, small outlined football above-right, white 12 FL OZ at base; silver lid and foot. Original variant confirmed by product page."
+        }
+      ],
+      "uncertainty": "Manufacturer products page rejected direct retrieval (403); used individually inspected retailer packshots. Seasonal football graphics are retained as observed. Brand lettering is a simplified pinned-font vector interpretation; small ring text and side-panel print omitted. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "686a8b0d-8d5f-53d6-ae2b-d84988f38daf",
+      "name": "Dr Pepper",
+      "brand": "Dr Pepper",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/dr-pepper.svg",
+        "portableSvg": "portable-svg/dr-pepper.svg",
+        "png": "png/dr-pepper.png",
+        "svgSha256": "2a41e43e21203d8d1293804a439509ee4fe362922c90966a999078e055423420",
+        "portableSvgSha256": "10df241597a0b197284c6d256ff5974825216e43db69825ba0f91d08d1fff2e4",
+        "pngSha256": "5e50a67881b37624904d0e3c6644cf0c47fdc3fce61fc6e63fd829111ab7c085",
+        "pngBytes": 133468
+      },
+      "sourceModule": "scripts/icons/families/dr-pepper.mjs"
+    },
+    {
+      "slug": "dr-pepper-zero-sugar",
+      "family": "dr-pepper-can",
+      "packageChoice": "US 12 fl oz / 355mL Dr Pepper Zero Sugar can, burgundy/black football-season package; representative US size for the size-unspecified catalog row.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/dr-pepper-zero-sugar-soda-cans/0007800003526",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0007800003526",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Independently inspected Zero Sugar packshot: black main face, burgundy halftone neck and upper-right diagonal area, burgundy oval with white Dr Pepper script/Est.1885 and football, white lowercase zero over uppercase SUGAR below, white 12 FL OZ, silver shoulder/base strips and rims. Unlike Original, black lower body and Zero Sugar lockup; unlike Diet, no silver main face or Diet oval."
+        }
+      ],
+      "uncertainty": "Manufacturer products page had no retrievable package artwork; retailer reference selected. Simplified pinned-font brand lettering and seasonal football detail; tiny side-panel print omitted. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "c337d6a3-f766-5e8e-b13d-0a3824653db4",
+      "name": "Dr Pepper Zero Sugar",
+      "brand": "Dr Pepper",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/dr-pepper-zero-sugar.svg",
+        "portableSvg": "portable-svg/dr-pepper-zero-sugar.svg",
+        "png": "png/dr-pepper-zero-sugar.png",
+        "svgSha256": "a407272ab1c68f0e1638c4de2641288acfdd42ba123b40051743e3d0fbf25598",
+        "portableSvgSha256": "f74d88cf88122dbbb55de6cac32b66b4b4f2f1e0e90e8a73001f1e255aa24006",
+        "pngSha256": "37ad981d102f8dda5f856e371be1d841a9daf452531791e556e08254e4d11dc4",
+        "pngBytes": 116122
+      },
+      "sourceModule": "scripts/icons/families/dr-pepper.mjs"
+    },
+    {
+      "slug": "la-colombe-draft-latte-mocha",
+      "family": "la-colombe-draft-latte-can",
+      "packageChoice": "US 9 fl oz La Colombe Mocha Draft Latte can, current manufacturer white/navy/brown package.",
+      "references": [
+        {
+          "pageUrl": "https://www.lacolombe.com/products/mocha-draft-latte",
+          "imageUrl": "https://www.lacolombe.com/cdn/shop/files/mocha_cutout_gallery.png?v=1774638953&width=1200",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Separate manufacturer Mocha can inspected: cream/white slim 9oz can, brown shoulder band, navy La COLOMBE with gold offset and COFFEE WORKSHOP; arched brown MOCHA, brown LATTE, navy dove/olive branch below; ESPRESSO ROAST / WITH WHOLE MILK at base. Different from blue Vanilla or gold plain can."
+        }
+      ],
+      "uncertainty": "Package lettering, illustrations and fine print simplified as original vectors; final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "41e79f0c-80e0-5cd3-9984-5fa9a110b4d1",
+      "name": "Draft Latte Mocha",
+      "brand": "La Colombe",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/la-colombe-draft-latte-mocha.svg",
+        "portableSvg": "portable-svg/la-colombe-draft-latte-mocha.svg",
+        "png": "png/la-colombe-draft-latte-mocha.png",
+        "svgSha256": "42b3845ec2283bade3ffe2dbf7c57577be9c6303c8d768655a4b60e40e9873b5",
+        "portableSvgSha256": "65107f37c2baba175a116532634834da66ca4dcef3957d05c37a5cf82f9df008",
+        "pngSha256": "9142ef3f08b89d43f81c7907ab5ef0ea16d69412f2c5b8bee6084a2f69a63286",
+        "pngBytes": 122305
+      },
+      "sourceModule": "scripts/icons/families/coffee-batch.mjs"
+    },
+    {
+      "slug": "la-colombe-draft-latte-oat-milk",
+      "family": "la-colombe-draft-latte-can",
+      "packageChoice": "US 9 fl oz La Colombe Oatmilk Everyday Draft Latte; explicitly selected unflavored oatmilk variant for the Oat Milk catalog row, not Oatmilk Vanilla.",
+      "references": [
+        {
+          "pageUrl": "https://www.lacolombe.com/products/oatmilk-draft-latte",
+          "imageUrl": "https://www.lacolombe.com/cdn/shop/files/oat_everyday_cutout_gallery.png?v=1774638960&width=1200",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Separate manufacturer Oatmilk Everyday image inspected: pale cream/yellow slim can, gold shoulder band reading EVERYDAY OAT DRAFT LATTE, navy La COLOMBE and COFFEE WORKSHOP; arched gold EVERYDAY and OAT LATTE with navy outline, navy dove/olive branch, ESPRESSO ROAST / WITH OATMILK low on face, silver rims. Oatmilk package is cream/yellow rather than white dairy version."
+        }
+      ],
+      "uncertainty": "Selected current unflavored Everyday Oat Latte rather than a flavored oatmilk variant; catalog does not specify a packaging revision. Package lettering, illustrations and fine print simplified as original vectors; final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "92c5c010-fd07-5e7d-9912-8d66880a2a15",
+      "name": "Draft Latte Oat Milk",
+      "brand": "La Colombe",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/la-colombe-draft-latte-oat-milk.svg",
+        "portableSvg": "portable-svg/la-colombe-draft-latte-oat-milk.svg",
+        "png": "png/la-colombe-draft-latte-oat-milk.png",
+        "svgSha256": "ef34422841643f63ac72b18b39392ac2e65db2fb596877cf6244ab4ec04a11ed",
+        "portableSvgSha256": "bb889a7a781969a90611d4f43b3534b402cba19627f08b6ee27eadba27193391",
+        "pngSha256": "e8a60d56970d5723c8fd5923af3945c713e388822b8d5529a10ba6f857f61d89",
+        "pngBytes": 122028
+      },
+      "sourceModule": "scripts/icons/families/coffee-batch.mjs"
+    },
+    {
+      "slug": "la-colombe-draft-latte-original",
+      "family": "la-colombe-draft-latte-can",
+      "packageChoice": "US 9 fl oz unflavored whole-milk Everyday Draft Latte can, explicitly selected as representative plain dairy Draft Latte for the size-unspecified Original catalog row; not Triple or flavored latte.",
+      "references": [
+        {
+          "pageUrl": "https://www.lacolombe.com/products/draft-latte",
+          "imageUrl": "https://www.lacolombe.com/cdn/shop/files/LC_DTC_9oz_EVERYDAY_USSF.png_2.png?v=1774633181&width=1200",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Manufacturer current plain dairy can inspected: white/cream slim 9oz can with silver rims, gold shoulder band, navy La COLOMBE with gold offset, COFFEE WORKSHOP, arched gold EVERYDAY above LATTE, navy dove holding olive branch, ESPRESSO ROAST / WITH WHOLE MILK low on face. Selected image includes US Soccer badge; badge and tiny text omitted."
+        }
+      ],
+      "uncertainty": "Catalog says Original; manufacturer currently titles the selected unflavored product Everyday. This records the representative package choice without claiming a historical formula or label equivalence. Package lettering, illustrations and fine print simplified as original vectors; final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "62297ab6-e145-513d-81ee-053a7f3008e3",
+      "name": "Draft Latte Original",
+      "brand": "La Colombe",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/la-colombe-draft-latte-original.svg",
+        "portableSvg": "portable-svg/la-colombe-draft-latte-original.svg",
+        "png": "png/la-colombe-draft-latte-original.png",
+        "svgSha256": "68f9ae680112e4280d6c50cd90752f673d0d6a42668c86877c5506c9ae796de3",
+        "portableSvgSha256": "4a70eea1e47b02b31059100857a08b4dc6e5851ed956954b3494bd4087036023",
+        "pngSha256": "22cf28fb41934ee568ed5b9cb41663fb0655ef2921c7e015240e0f78e91e68d0",
+        "pngBytes": 125755
+      },
+      "sourceModule": "scripts/icons/families/coffee-batch.mjs"
+    },
+    {
+      "slug": "la-colombe-draft-latte-vanilla",
+      "family": "la-colombe-draft-latte-can",
+      "packageChoice": "US 9 fl oz La Colombe Vanilla Draft Latte can, current white/navy/blue manufacturer package.",
+      "references": [
+        {
+          "pageUrl": "https://www.lacolombe.com/products/vanilla-draft-latte",
+          "imageUrl": "https://www.lacolombe.com/cdn/shop/files/vanilla_cutout_gallery.png?v=1774638959&width=1200",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Separate manufacturer Vanilla can inspected: cream/white slim 9oz can, bright blue shoulder band, navy La COLOMBE with gold offset and COFFEE WORKSHOP; arched blue VANILLA and blue LATTE with navy outline, navy dove/olive branch and WITH WHOLE MILK low on face; silver rims."
+        }
+      ],
+      "uncertainty": "Package lettering, illustrations and fine print simplified as original vectors; final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "4161a575-6829-5c34-966c-ad2932252030",
+      "name": "Draft Latte Vanilla",
+      "brand": "La Colombe",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/la-colombe-draft-latte-vanilla.svg",
+        "portableSvg": "portable-svg/la-colombe-draft-latte-vanilla.svg",
+        "png": "png/la-colombe-draft-latte-vanilla.png",
+        "svgSha256": "022c2c3445d032231b49a1db9df942d407720ef0c2e7e7dc66758db6d82cad8b",
+        "portableSvgSha256": "7d4ecb59872d0937d6f073d1eb84b4747f33c9c42f0868175d76434ce4ace28e",
+        "pngSha256": "5b141f702d56ccfad5507c4f444b2ec493416f3be753afee1ceda1c7ceb3b375",
+        "pngBytes": 121103
+      },
+      "sourceModule": "scripts/icons/families/coffee-batch.mjs"
+    },
+    {
       "slug": "fanta-orange",
       "family": "citrus-soda-can",
       "packageChoice": "US 12 fl oz Orange can; orange body, blue angular logo and orange-slice splash.",
@@ -261,6 +850,323 @@
         "pngBytes": 118393
       },
       "sourceModule": "scripts/icons/families/citrus-sodas.mjs"
+    },
+    {
+      "slug": "gatorade-lemon-lime",
+      "family": "gatorade-contoured-bottle",
+      "packageChoice": "US 28 fl oz / 828mL Gatorade Lemon Lime orange-capped contoured PET bottle; representative retail size for size-unspecified catalog row.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/gatorade-lemon-lime-sports-drink-bottle/0005200013515",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0005200013515",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Individually inspected retailer bottle and manufacturer Lemon Lime image: yellow-green liquid, orange ribbed cap, contoured/ribbed 28oz PET bottle, silver wrap with yellow-green diagonal bolt field, white G/black outline and orange lightning; white hydration header, ADVANCED REHYDRATION lower label and LEMON LIME in yellow-green."
+        },
+        {
+          "pageUrl": "https://www.gatorade.com/sports-drinks/gatorade-thirst-quencher/lemon-lime-00052000135152",
+          "imageUrl": "https://www.datocms-assets.com/101859/1785939839-gatorade_28oz_gtq_rtd_lemon_lime_pdp_product-tile_2680x3344.png?auto=format&fit=max&w=1200",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Manufacturer Lemon Lime bottle independently inspected: orange cap, shoulder spiral recesses, waist/ribs and silver/yellow-green ADVANCED REHYDRATION wrap. Establishes shared current bottle material/perspective; each sibling separately checked."
+        }
+      ],
+      "uncertainty": "Selected documented retailer packaging; artwork revision date unverified. Catalog has no package size. Simplified original vector lettering, athlete silhouette and molded bottle details; tiny nutrition/certification and side-panel print omitted. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "bebb348e-9ffe-5296-8401-4c264f19cba6",
+      "name": "Gatorade Thirst Quencher",
+      "brand": "Gatorade",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/gatorade-lemon-lime.svg",
+        "portableSvg": "portable-svg/gatorade-lemon-lime.svg",
+        "png": "png/gatorade-lemon-lime.png",
+        "svgSha256": "efc64537360f9b0424932994f48858b1d9b910b73e44abc391c850dca2d0ec44",
+        "portableSvgSha256": "b60a7a802830dd72d3c3bf923ff5ce50dc5cafdac3af816fa81421bbccd11fca",
+        "pngSha256": "344f703a97ad906eae1595a8341611f43a98fbf354015cae7ea4c68e9bfdd390",
+        "pngBytes": 141492
+      },
+      "sourceModule": "scripts/icons/families/gatorade-batch.mjs"
+    },
+    {
+      "slug": "gatorade-fruit-punch",
+      "family": "gatorade-contoured-bottle",
+      "packageChoice": "US 28 fl oz / 828mL Gatorade Fruit Punch orange-capped contoured PET bottle; representative retail size for size-unspecified catalog row.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/gatorade-fruit-punch-sports-drink-bottle/0005200013513",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0005200013513",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Individually inspected Fruit Punch bottle: vivid red liquid and orange ribbed cap; contoured 28oz PET, silver wrap with red diagonal lightning field, white G with black outline/orange bolt. This selected retailer photo has the older lower GATORADE THIRST QUENCHER text plus red FRUIT PUNCH plaque, without the newer hydration header and athlete panel. Preserved rather than assuming sibling layout."
+        }
+      ],
+      "uncertainty": "The selected Fruit Punch retailer image shows an older lower-label layout; revision date unverified. Catalog has no package size. Simplified original vector lettering, athlete silhouette and molded bottle details; tiny nutrition/certification and side-panel print omitted. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "f081a4e7-6742-5b97-a686-5713b3443f1f",
+      "name": "Gatorade Thirst Quencher",
+      "brand": "Gatorade",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/gatorade-fruit-punch.svg",
+        "portableSvg": "portable-svg/gatorade-fruit-punch.svg",
+        "png": "png/gatorade-fruit-punch.png",
+        "svgSha256": "05bb298526c76f993a97479a79e05f677ca83754915251b1ea873ce74f54765a",
+        "portableSvgSha256": "afd31ff02d1713eae314b7e29463e5d0fc272bf25c8a2d3c9c564a91e8490515",
+        "pngSha256": "7aee0e133afbaa64d323c0c81b126de048e0c48348a095785147c93d92008d6a",
+        "pngBytes": 134734
+      },
+      "sourceModule": "scripts/icons/families/gatorade-batch.mjs"
+    },
+    {
+      "slug": "gatorade-orange",
+      "family": "gatorade-contoured-bottle",
+      "packageChoice": "US 28 fl oz / 828mL Gatorade Orange orange-capped contoured PET bottle; representative retail size for size-unspecified catalog row.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/gatorade-orange-sports-drink-bottle/0005200013514",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0005200013514",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Individually inspected Orange bottle: bright orange liquid, orange cap, contoured ribbed PET; silver wrap with orange diagonal field, large white G/orange lightning, white hydration header and orange ADVANCED REHYDRATION/ORANGE lower label."
+        }
+      ],
+      "uncertainty": "Selected documented retailer packaging; artwork revision date unverified. Catalog has no package size. Simplified original vector lettering, athlete silhouette and molded bottle details; tiny nutrition/certification and side-panel print omitted. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "340528d3-50ea-5892-8fd7-0feaf19bddcb",
+      "name": "Gatorade Thirst Quencher",
+      "brand": "Gatorade",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/gatorade-orange.svg",
+        "portableSvg": "portable-svg/gatorade-orange.svg",
+        "png": "png/gatorade-orange.png",
+        "svgSha256": "884425cd4c9b5ae91e2ec79865daf57897a9de462a70c1c3c29fad750d5a72f3",
+        "portableSvgSha256": "e9d0206fdadbc679dec99a7f330c0d329924f2d1df33e079d2088a96845daced",
+        "pngSha256": "8f1f5746c062b62bdcc95f6e8552efd96e22a4aa382d961ad9fcc87d9e5e5eb7",
+        "pngBytes": 136300
+      },
+      "sourceModule": "scripts/icons/families/gatorade-batch.mjs"
+    },
+    {
+      "slug": "gatorade-cool-blue",
+      "family": "gatorade-contoured-bottle",
+      "packageChoice": "US 28 fl oz / 828mL Gatorade Cool Blue orange-capped contoured PET bottle; representative retail size for size-unspecified catalog row.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/gatorade-cool-blue-sports-drink-bottle/0005200013517",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0005200013517",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Individually inspected Cool Blue bottle: saturated medium blue liquid and orange cap, ribbed 28oz bottle; silver wrap and blue diagonal field, white G/orange lightning, white hydration header and blue ADVANCED REHYDRATION / COOL BLUE lower treatment. Distinct deeper blue from Glacier Freeze."
+        }
+      ],
+      "uncertainty": "Selected documented retailer packaging; artwork revision date unverified. Catalog has no package size. Simplified original vector lettering, athlete silhouette and molded bottle details; tiny nutrition/certification and side-panel print omitted. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "865a3c7c-e4ce-5395-944d-47eca7eafb6e",
+      "name": "Gatorade Thirst Quencher",
+      "brand": "Gatorade",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/gatorade-cool-blue.svg",
+        "portableSvg": "portable-svg/gatorade-cool-blue.svg",
+        "png": "png/gatorade-cool-blue.png",
+        "svgSha256": "36188f4e199ddec9c39db97dd306da2b233d7cdb696eaec6ff018ae252640c53",
+        "portableSvgSha256": "0c4dc6d88e95a1e0f32e11aa87cc3b47cb4c37af87665dd1131761488830bff0",
+        "pngSha256": "093fea584d56eccf50abb65012d5ddc679e52888a833a38bd873f6cedecd65b5",
+        "pngBytes": 145123
+      },
+      "sourceModule": "scripts/icons/families/gatorade-batch.mjs"
+    },
+    {
+      "slug": "gatorade-glacier-freeze",
+      "family": "gatorade-contoured-bottle",
+      "packageChoice": "US 28 fl oz / 828mL Gatorade Glacier Freeze orange-capped contoured PET bottle; representative retail size for size-unspecified catalog row.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/gatorade-glacier-freeze-sports-drink-bottle/0005200013519",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0005200013519",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Individually inspected Glacier Freeze bottle: lighter cyan/turquoise liquid, orange cap, contoured ribbed bottle; silver wrap and cyan diagonal field with white G/orange lightning; hydration header and cyan ADVANCED REHYDRATION / GLACIER FREEZE treatment. Distinct from Cool Blue."
+        }
+      ],
+      "uncertainty": "Selected documented retailer packaging; artwork revision date unverified. Catalog has no package size. Simplified original vector lettering, athlete silhouette and molded bottle details; tiny nutrition/certification and side-panel print omitted. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "0348907a-ceea-58de-8ace-dfb493a577f6",
+      "name": "Gatorade Thirst Quencher",
+      "brand": "Gatorade",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/gatorade-glacier-freeze.svg",
+        "portableSvg": "portable-svg/gatorade-glacier-freeze.svg",
+        "png": "png/gatorade-glacier-freeze.png",
+        "svgSha256": "d1773baaa5d7adc6adb50746ec6bfd0e70626087b0809e9e2c6b275bdaa45abd",
+        "portableSvgSha256": "2a3ae2f441dd18500aed3c9064ed746da74376257fee990e500324e90fd0ce8a",
+        "pngSha256": "5216da29c0c56e9a9af0f5bad3ab928d2cdb6c120f885e4b783635e5ad2ad6e4",
+        "pngBytes": 144957
+      },
+      "sourceModule": "scripts/icons/families/gatorade-batch.mjs"
+    },
+    {
+      "slug": "gatorade-grape",
+      "family": "gatorade-contoured-bottle",
+      "packageChoice": "US 28 fl oz / 828mL Gatorade Fierce Grape orange-capped contoured PET bottle; representative retail size for size-unspecified catalog row.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/gatorade-grape-sports-drink-bottle/0005200013516",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0005200013516",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Individually inspected Fierce Grape bottle: blue-purple liquid, orange cap, contoured ribbed PET; silver wrap with purple lightning field, white G/orange bolt, hydration header and purple ADVANCED REHYDRATION / FIERCE GRAPE lower treatment. Selected Fierce Grape US retail version for the catalog Grape row."
+        }
+      ],
+      "uncertainty": "Selected documented retailer packaging; artwork revision date unverified. Catalog has no package size. Simplified original vector lettering, athlete silhouette and molded bottle details; tiny nutrition/certification and side-panel print omitted. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "7d858d04-e2ab-503c-89c5-e753ec527ced",
+      "name": "Gatorade Thirst Quencher",
+      "brand": "Gatorade",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/gatorade-grape.svg",
+        "portableSvg": "portable-svg/gatorade-grape.svg",
+        "png": "png/gatorade-grape.png",
+        "svgSha256": "3273c846c8a6b00891855c971ce200795f62a9d152b35ed6f3b5e22b7ba57565",
+        "portableSvgSha256": "a13273af0a2523553f04f6e91e07dd791be01e7101d0b2623b4de05c20cff2e1",
+        "pngSha256": "dc6bdaa9f4aa1529e56e2ccd6bd9ba1eab2cc396df83b9fded1594470759dfb3",
+        "pngBytes": 143626
+      },
+      "sourceModule": "scripts/icons/families/gatorade-batch.mjs"
+    },
+    {
+      "slug": "gatorade-zero-lemon-lime",
+      "family": "gatorade-contoured-bottle",
+      "packageChoice": "US 28 fl oz / 828mL Gatorade Zero Lemon Lime orange-capped contoured PET bottle; representative retail size for size-unspecified catalog row.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/gatorade-zero-lemon-lime-sports-drink-bottle/0005200004231",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0005200004231",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Individually inspected Zero Lemon Lime bottle: pale yellow-green liquid, orange cap and same contoured PET; predominantly silver/white diagonal wrap rather than saturated regular-flavor bolt field; large white G/orange bolt, outlined italic ZERO, white hydration header, lime ZERO SUGAR REHYDRATION and LEMON LIME lower panel."
+        }
+      ],
+      "uncertainty": "Selected documented retailer packaging; artwork revision date unverified. Catalog has no package size. Simplified original vector lettering, athlete silhouette and molded bottle details; tiny nutrition/certification and side-panel print omitted. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "cefdd106-f07a-59c5-82ba-4f37e841b287",
+      "name": "Gatorade Zero",
+      "brand": "Gatorade",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/gatorade-zero-lemon-lime.svg",
+        "portableSvg": "portable-svg/gatorade-zero-lemon-lime.svg",
+        "png": "png/gatorade-zero-lemon-lime.png",
+        "svgSha256": "5816d6286e86c7adae9e94d5f3a98cef4cfdbca0c68219831cc4430647945fe4",
+        "portableSvgSha256": "2edd799929d06ff7dca5441ce61d07efd0b461c0a05a070402e022a3cacc25ca",
+        "pngSha256": "0c128b35380f61762cb19bb886822dc0b9042c757313eea95c70caddfe03bb42",
+        "pngBytes": 146339
+      },
+      "sourceModule": "scripts/icons/families/gatorade-batch.mjs"
+    },
+    {
+      "slug": "gatorade-zero-grape",
+      "family": "gatorade-contoured-bottle",
+      "packageChoice": "US 28 fl oz / 828mL Gatorade Zero Grape orange-capped contoured PET bottle; representative retail size for size-unspecified catalog row.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/gatorade-zero-grape-sports-drink-bottle/0005200004327",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0005200004327",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Individually inspected Zero Grape bottle: deep translucent purple liquid, orange cap, contoured 28oz PET; silver/white diagonal wrap, large white G/orange bolt, outlined italic ZERO and purple ZERO SUGAR REHYDRATION / GRAPE lower label. Distinct silver Zero label and warmer purple from the blue-purple regular Fierce Grape."
+        }
+      ],
+      "uncertainty": "Selected documented retailer packaging; artwork revision date unverified. Catalog has no package size. Simplified original vector lettering, athlete silhouette and molded bottle details; tiny nutrition/certification and side-panel print omitted. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "5214767a-f359-5782-847e-69d1cf5a7121",
+      "name": "Gatorade Zero",
+      "brand": "Gatorade",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/gatorade-zero-grape.svg",
+        "portableSvg": "portable-svg/gatorade-zero-grape.svg",
+        "png": "png/gatorade-zero-grape.png",
+        "svgSha256": "4fa83557471160dbb64800c8e22719199eab880d077d9455019bd9246207d292",
+        "portableSvgSha256": "215f92ded7cf820027194e17f66d81cb6586733b3ca21fc41ab4ac6caaf61d9c",
+        "pngSha256": "ad7d9eadf4db6a8e3417ccc5ce3c30f47598d5b274c0e3f965ae9f063bf824b7",
+        "pngBytes": 152250
+      },
+      "sourceModule": "scripts/icons/families/gatorade-batch.mjs"
+    },
+    {
+      "slug": "welchs-100-grape-juice",
+      "family": "welchs-juice-bottle",
+      "packageChoice": "US 64 fl oz Welch's 100% Concord Grape Juice PET bottle, original without added calcium/fiber.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/welch-s-100-concord-grape-juice/0004180020750",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0004180020750",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Retailer single-bottle photo individually inspected: broad molded PET bottle, very dark purple juice, contoured shoulders, purple ribbed cap, purple grape label with large white curved Welch’s banner and navy lettering, 100% GRAPE JUICE and CONCORD GRAPE, purple/blue grape bunches. Original 64oz product, not the Manischewitz, calcium or fiber formulation."
+        }
+      ],
+      "uncertainty": "Manufacturer Concord Grape product route redirected to generic juice listing; retailer exact-product reference used. Tiny label copy and molded detail simplified. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "320d15a5-ae1c-589f-a2ab-140eac445ff9",
+      "name": "Grape Juice",
+      "brand": "Welch's",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/welchs-100-grape-juice.svg",
+        "portableSvg": "portable-svg/welchs-100-grape-juice.svg",
+        "png": "png/welchs-100-grape-juice.png",
+        "svgSha256": "2138aea5fb9dd272d6d3ff443fcc4bf01784cf963044ae6147b3058e51d64b35",
+        "portableSvgSha256": "c1bc3d417bd4693c3d253bce6466269de907494c77f496a31d63fa85aade02ca",
+        "pngSha256": "b74a3e3de915f50070124fe395be2898866e16c3c3089255a77fcf645035c136",
+        "pngBytes": 127308
+      },
+      "sourceModule": "scripts/icons/families/juice-batch.mjs"
+    },
+    {
+      "slug": "simply-grapefruit",
+      "family": "simply-juice-carafe",
+      "packageChoice": "US 52 fl oz Simply Grapefruit clear PET carafe; documented manufacturer package selected for size-unspecified catalog row.",
+      "references": [
+        {
+          "pageUrl": "https://www.coca-cola.com/us/en/brands/simply/products/juices-drinks",
+          "imageUrl": "https://www.coca-cola.com/content/dam/onexp/us/en/brands/simply/simply-juices/en_simply_prod_grapefruit_750x750_v1.jpg",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Manufacturer Grapefruit packshot independently inspected: cloudy salmon-pink juice in clear carafe with dark-green cap/seal, white tapering label, peach ALL NATURAL header, black Simply Grapefruit script, yellow whole grapefruit with green leaf and a cut pink grapefruit wedge. 100% grapefruit, not a juice cocktail."
+        }
+      ],
+      "uncertainty": "Exact manufacturer variant visually inspected. Representative US package selected; product-defining fruit, cap, juice color and label retained, lettering and fine text simplified using pinned fonts. Apple seasonal packaging is recorded rather than presented as a permanent label. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "c877f5b4-290c-5538-b4c2-46dff75edd5f",
+      "name": "Grapefruit Juice",
+      "brand": "Simply",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/simply-grapefruit.svg",
+        "portableSvg": "portable-svg/simply-grapefruit.svg",
+        "png": "png/simply-grapefruit.png",
+        "svgSha256": "11a9464057ceea7ae089910a8e0c95c5459e5d7dfbcae4d824eb5e90e0b57744",
+        "portableSvgSha256": "cd35b124c956b59de26d8efae09f98ed15e08c1e5c08d661b1ea03422568f4d0",
+        "pngSha256": "699a4721ed579e2e7d546fff92019541aad4c0e7fde79808ffefc00d91124fe1",
+        "pngBytes": 94373
+      },
+      "sourceModule": "scripts/icons/families/juice-batch.mjs"
     },
     {
       "slug": "jarritos-mandarin",
@@ -387,6 +1293,68 @@
       "sourceModule": "scripts/icons/families/sparkling-starters.mjs"
     },
     {
+      "slug": "simply-lemonade",
+      "family": "simply-juice-carafe",
+      "packageChoice": "US 52 fl oz Simply Lemonade clear PET carafe; documented manufacturer package selected for size-unspecified catalog row.",
+      "references": [
+        {
+          "pageUrl": "https://www.coca-cola.com/us/en/brands/simply/products/simply-lemonade",
+          "imageUrl": "https://www.coca-cola.com/content/dam/onexp/us/en/brands/simply/lp-single-simply-lemonades/en_simply_prod_lemonade_750x750_v1.jpg",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Manufacturer Lemonade packshot independently inspected: clear shaped carafe, dark-green cap and neck seal, cloudy pale lemonade, tapered white label, yellow ALL NATURAL banner, black Simply Lemonade script and whole yellow lemon with green leaf. Original Lemonade, not Light or fruit-flavored variant."
+        }
+      ],
+      "uncertainty": "Exact manufacturer variant visually inspected. Representative US package selected; product-defining fruit, cap, juice color and label retained, lettering and fine text simplified using pinned fonts. Apple seasonal packaging is recorded rather than presented as a permanent label. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "fbb7d222-21b7-5c09-8c5e-8f9e15f9d7de",
+      "name": "Lemonade",
+      "brand": "Simply",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/simply-lemonade.svg",
+        "portableSvg": "portable-svg/simply-lemonade.svg",
+        "png": "png/simply-lemonade.png",
+        "svgSha256": "72b8f486d38d0055f01f096ed0daf63c0406dd80b86335fc1db891ec1c44893d",
+        "portableSvgSha256": "3fe81d48c5d2e0ae6bc6e9ca6bd67d4419f92179c0e2ed43a66f6dfa77525662",
+        "pngSha256": "3ecd0c0acc67eec2560584d5010e283369a0bbcce2a8b3f8f4cb85590f03e676",
+        "pngBytes": 98512
+      },
+      "sourceModule": "scripts/icons/families/juice-batch.mjs"
+    },
+    {
+      "slug": "simply-limeade",
+      "family": "simply-juice-carafe",
+      "packageChoice": "US 52 fl oz Simply Limeade clear PET carafe; documented manufacturer package selected for size-unspecified catalog row.",
+      "references": [
+        {
+          "pageUrl": "https://www.coca-cola.com/us/en/brands/simply/products/simply-lemonade",
+          "imageUrl": "https://www.coca-cola.com/content/dam/onexp/us/en/brands/simply/simply-juices/en_simply_prod_limeade_750x750_v1.jpg",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Manufacturer Limeade packshot independently inspected: pale cloudy liquid in characteristic clear concave-neck carafe, dark-green cap/seal, white tapering label with green ALL NATURAL band, black Simply Limeade script and large green whole lime/leaf. Distinct lime artwork checked rather than inferring from Lemonade."
+        }
+      ],
+      "uncertainty": "Exact manufacturer variant visually inspected. Representative US package selected; product-defining fruit, cap, juice color and label retained, lettering and fine text simplified using pinned fonts. Apple seasonal packaging is recorded rather than presented as a permanent label. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "a9dc8b10-da74-5ac9-952c-d42b68383b46",
+      "name": "Limeade",
+      "brand": "Simply",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/simply-limeade.svg",
+        "portableSvg": "portable-svg/simply-limeade.svg",
+        "png": "png/simply-limeade.png",
+        "svgSha256": "1a333e50298531fdee5ddac3305775756578428258ec043b67023b8379de65ff",
+        "portableSvgSha256": "f9f08365f79719107986855c29125f251ef21ad05a92280e940295bc4b52fdce",
+        "pngSha256": "cbaf2250af7f097b3e8405cf3f6cfcf2bf4e1c941b91a45c59ccc7537c18b7e9",
+        "pngBytes": 100578
+      },
+      "sourceModule": "scripts/icons/families/juice-batch.mjs"
+    },
+    {
       "slug": "generic-margarita",
       "family": "served-rocks-cocktail",
       "packageChoice": "Unbranded classic margarita on ice in a clear straight-sided lowball, salted rim and lime garnish; representative serving, not frozen.",
@@ -447,6 +1415,99 @@
         "pngBytes": 135071
       },
       "sourceModule": "scripts/icons/families/pilot.mjs"
+    },
+    {
+      "slug": "monster-energy-original",
+      "family": "energy-starter-can",
+      "packageChoice": "US 16 fl oz / 473mL Monster Energy Original Green can; representative size selected from manufacturer-listed formats.",
+      "references": [
+        {
+          "pageUrl": "https://www.monsterenergy.com/en-us/energy-drinks/monster-energy/original-green/",
+          "imageUrl": "https://web-assests.monsterenergy.com/mnst/86be6554-4e12-435b-b8d0-bc492e68e436.png",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Manufacturer can photo visually inspected: tall black 16oz can, silver lid and base rim with lime-green pull tab; spaced white TAURINE on black shoulder; large three-jagged-slash lime/yellow/green claw mark in upper-middle, angular white MONSTER near lower third, spaced lime ENERGY below; small volume text at foot. Original Green, not Zero Sugar."
+        }
+      ],
+      "uncertainty": "Manufacturer photo provides the selected 16oz package. Tiny shoulder/side-panel print omitted. Lettering, brand marks and fine package illustrations are simplified original vector interpretations. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "63c34b3d-6496-509c-8e74-b12f17397ae8",
+      "name": "Monster Energy Original",
+      "brand": "Monster Energy",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/monster-energy-original.svg",
+        "portableSvg": "portable-svg/monster-energy-original.svg",
+        "png": "png/monster-energy-original.png",
+        "svgSha256": "04fd5df5c431a67a00dd8afa9dc5fc6f4f66cc03029fdd5d8b06df34592db4a4",
+        "portableSvgSha256": "c24182075367b673bc1447225adab2bbdee953d11de7ff522cb19c2939149b23",
+        "pngSha256": "d9c75ffc1f9d59bd3f30de50902b66c09422b578359a2bce10cb347c8e199e49",
+        "pngBytes": 125701
+      },
+      "sourceModule": "scripts/icons/families/energy-starters.mjs"
+    },
+    {
+      "slug": "mountain-dew",
+      "family": "mountain-dew-can",
+      "packageChoice": "US 12 fl oz / 355mL Mountain Dew Original can, current full-name logo and illustrated landscape; representative US size for the size-unspecified catalog row.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/mountain-dew-soda-cans/0001200080996",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0001200080996",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Inspected retailer image: green 12oz can with new full MOUNTAIN over red DEW wordmark, slanted upward, white/yellow/dark-green outline; white/green/yellow shoulder rays, mountain scene and dark pine forest at foot, teal water detail, silver lid and foot. Uses full-name package rather than legacy MTN DEW."
+        }
+      ],
+      "uncertainty": "Manufacturer product pages consulted first; direct manufacturer image retrieval was unavailable (403/404). Each current retailer can photo visually inspected independently. Full-name lettering, landscape and flavor artwork are simplified original vector interpretations; condensation and tiny side-panel print simplified. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "4d46a498-dcea-5dc5-8342-cb091ba36d15",
+      "name": "Mountain Dew",
+      "brand": "Mountain Dew",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/mountain-dew.svg",
+        "portableSvg": "portable-svg/mountain-dew.svg",
+        "png": "png/mountain-dew.png",
+        "svgSha256": "5b3003c6c5d0296e7c15f489213353da172a5b136ec4cc07d31ec5a728cc85ba",
+        "portableSvgSha256": "3b0195d8a21ecb3b267b1e9c0b4cf9b84ceaf86d095843dd698c5311c8f8a817",
+        "pngSha256": "f37698260a7aacda68daf39cce67bde496e4ce9302f70ba3533e5c5e0b4b8b97",
+        "pngBytes": 175317
+      },
+      "sourceModule": "scripts/icons/families/mountain-dew.mjs"
+    },
+    {
+      "slug": "mountain-dew-baja-blast",
+      "family": "mountain-dew-can",
+      "packageChoice": "US 12 fl oz / 355mL Mountain Dew Baja Blast tropical lime can, current full-name logo and illustrated landscape; representative US size for the size-unspecified catalog row.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/mountain-dew-baja-blast-soda-cans/0001200013032",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0001200013032",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Separately inspected Baja Blast image: turquoise/teal 12oz can, green MOUNTAIN/red DEW full-name outlined wordmark, yellow/white shoulder rays, stylized white surf curl, lime slices near shoulder and bottom, yellow base strip; small italic Baja Blast and TROPICAL LIME on lower right, silver rims. Tropical lime Original, not Zero Sugar."
+        }
+      ],
+      "uncertainty": "Manufacturer product pages consulted first; direct manufacturer image retrieval was unavailable (403/404). Each current retailer can photo visually inspected independently. Full-name lettering, landscape and flavor artwork are simplified original vector interpretations; condensation and tiny side-panel print simplified. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "b89ae243-600d-5eca-a1a1-b46ff33b114d",
+      "name": "Mountain Dew Baja Blast",
+      "brand": "Mountain Dew",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/mountain-dew-baja-blast.svg",
+        "portableSvg": "portable-svg/mountain-dew-baja-blast.svg",
+        "png": "png/mountain-dew-baja-blast.png",
+        "svgSha256": "f4d3d792ab8cad4424ff2730919a2afe659964ebbeb479a52956da8b798e4d9e",
+        "portableSvgSha256": "0f9ce9969150a0253a00f38c8eb36cf0d9ea3951f1eb1f2acda4e69550e287f9",
+        "pngSha256": "24f31b17a42037ad3caf7902cc6e7437e57b3168c8b8187c2241f082675fcd5e",
+        "pngBytes": 176628
+      },
+      "sourceModule": "scripts/icons/families/mountain-dew.mjs"
     },
     {
       "slug": "liquid-death-mountain-water-still",
@@ -542,6 +1603,37 @@
       "sourceModule": "scripts/icons/families/pilot.mjs"
     },
     {
+      "slug": "simply-orange",
+      "family": "simply-juice-carafe",
+      "packageChoice": "US 46 fl oz Simply Orange clear PET carafe; documented manufacturer package selected for size-unspecified catalog row.",
+      "references": [
+        {
+          "pageUrl": "https://www.coca-cola.com/us/en/brands/simply/products/orange-juices",
+          "imageUrl": "https://www.coca-cola.com/content/dam/onexp/us/en/brands/simply/orange-/packshots/simply-orange-pulp-free.png",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Manufacturer Pulp Free image individually inspected: clear carafe with concave neck and wide flat-sided lower body, dark green ribbed cap/seal, bright opaque orange juice, white tapered label with orange PULP FREE header, black Simply Orange lettering and whole orange/green leaf. Manufacturer page lists 46oz as new size; no added-calcium or blend substituted."
+        }
+      ],
+      "uncertainty": "Exact manufacturer variant visually inspected. Representative US package selected; product-defining fruit, cap, juice color and label retained, lettering and fine text simplified using pinned fonts. Apple seasonal packaging is recorded rather than presented as a permanent label. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "f3ba3516-a058-5338-836c-ef56a5417727",
+      "name": "Orange Juice",
+      "brand": "Simply",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/simply-orange.svg",
+        "portableSvg": "portable-svg/simply-orange.svg",
+        "png": "png/simply-orange.png",
+        "svgSha256": "89a61078ebc2a77bd91d7e30958487453918e71904694ae3b74258ce336ca9f8",
+        "portableSvgSha256": "74dc030b643f604e03adae2448ac244314687b2001f87c7bfd2bf48206498992",
+        "pngSha256": "ea07546772c0a79d99888b75d4cbc6cff89334834eb914ff714eb19528d6a7c0",
+        "pngBytes": 103096
+      },
+      "sourceModule": "scripts/icons/families/juice-batch.mjs"
+    },
+    {
       "slug": "pepsi",
       "family": "standard-cola-can",
       "packageChoice": "US 12 fl oz / 355mL Pepsi aluminum can; representative package for the size-unspecified catalog row.",
@@ -602,6 +1694,68 @@
         "pngBytes": 111249
       },
       "sourceModule": "scripts/icons/families/colas.mjs"
+    },
+    {
+      "slug": "pure-leaf-lemon-tea",
+      "family": "tea-researched-batch",
+      "packageChoice": "US 18.5 fl oz Pure Leaf Lemon Tea PET bottle with black cap and yellow/black label.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/pure-leaf-lemon-iced-tea-bottle/0001200028618",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0001200028618",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Individual Lemon bottle photo visually inspected: amber long-neck PET, squared lower body, black ribbed cap; yellow header with black LEMON, black face and white stacked PURE LEAF, three green tea leaves, Real Brewed Tea. No lemon fruit illustration on this inspected version; yellow header distinguishes Lemon from Sweet blue and Unsweetened green."
+        }
+      ],
+      "uncertainty": "Representative US size selected because catalog has no package size. Brand lettering and package illustrations are simplified original vectors; tiny legal text omitted. Manufacturer site did not expose selected flavor packshot; retailer image used. Regular Lemon, not Zero Sugar or Subtly Sweet. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "395dd1c6-e711-561b-8307-adb8ef02533d",
+      "name": "Pure Leaf Lemon Tea",
+      "brand": "Pure Leaf",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/pure-leaf-lemon-tea.svg",
+        "portableSvg": "portable-svg/pure-leaf-lemon-tea.svg",
+        "png": "png/pure-leaf-lemon-tea.png",
+        "svgSha256": "c0542b8391cbd045a2331214f16ad5963bbac7fc3964e1125e2c0071b7e9d662",
+        "portableSvgSha256": "60698d8e2c6375b122fa4f1d8bbbf87127c12f7f88a729df6a295f55368ff170",
+        "pngSha256": "c40ed133a4bcc7cce366db37f2e2c7149721ba06edb255b0c91420094d58cd30",
+        "pngBytes": 75667
+      },
+      "sourceModule": "scripts/icons/families/tea-batch.mjs"
+    },
+    {
+      "slug": "pure-leaf-sweet-tea",
+      "family": "tea-researched-batch",
+      "packageChoice": "US 18.5 fl oz Pure Leaf Sweet Tea PET bottle, black ribbed cap and blue/black label.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/pure-leaf-sweet-black-iced-tea-bottle/0001200028619",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0001200028619",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Retailer Sweet Tea bottle visually inspected: slender long-neck amber PET, squared lower body, black cap, bright blue SWEET TEA header above black face, stacked white PURE LEAF, green tea-leaf sprig and Real Brewed Tea. Distinct blue sweet header rather than the existing green Unsweetened label."
+        }
+      ],
+      "uncertainty": "Representative US size selected because catalog has no package size. Brand lettering and package illustrations are simplified original vectors; tiny legal text omitted. Manufacturer product page had no retrievable selected flavor image; retailer evidence used. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "662ab338-9d5b-576d-ac1c-da4375bd120e",
+      "name": "Pure Leaf Sweet Tea",
+      "brand": "Pure Leaf",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/pure-leaf-sweet-tea.svg",
+        "portableSvg": "portable-svg/pure-leaf-sweet-tea.svg",
+        "png": "png/pure-leaf-sweet-tea.png",
+        "svgSha256": "2a9c1b164d0920f37918016646395840654f65403f5d9235f221df282a5398a5",
+        "portableSvgSha256": "d9da88d8dbe9823f774e6e970c45645e407d43aa65288584ce595db10c47b48a",
+        "pngSha256": "3a32dee7d29cdd59c9c1fea82e004257201a83cac722765eb4ab0daf75768c97",
+        "pngBytes": 76892
+      },
+      "sourceModule": "scripts/icons/families/tea-batch.mjs"
     },
     {
       "slug": "pure-leaf-unsweetened",
@@ -974,6 +2128,37 @@
         "pngBytes": 71617
       },
       "sourceModule": "scripts/icons/families/bottles-carton.mjs"
+    },
+    {
+      "slug": "welchs-white-grape-juice",
+      "family": "welchs-juice-bottle",
+      "packageChoice": "US 64 fl oz Welch's 100% White Grape Juice PET bottle.",
+      "references": [
+        {
+          "pageUrl": "https://welchs.com/en-us/juices/100-percent/white-grape/",
+          "imageUrl": "https://img.welchs.com/s--oI9SCW9c--/w_555%2Ch_555/zlqqykwjepubd27qccsd.webp?ts=1793259157642",
+          "inspectedAt": "2026-11-02",
+          "visuallyInspected": true,
+          "observations": "Manufacturer bottle image individually inspected: broad molded bottle with flowing shoulders, pale golden juice, purple ribbed cap, green label with white curved Welch’s banner/navy lettering, large pale green grape bunches, white 100% GRAPE JUICE and WHITE GRAPE. 64oz original White Grape, not sparkling or White Grape Peach."
+        }
+      ],
+      "uncertainty": "Manufacturer exact-product reference used; representative 64oz package selected from offered sizes. Fine label copy and certification badges omitted rather than invented. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "875d5d4b-a8b5-525a-aecc-d155228a1e95",
+      "name": "White Grape Juice",
+      "brand": "Welch's",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/welchs-white-grape-juice.svg",
+        "portableSvg": "portable-svg/welchs-white-grape-juice.svg",
+        "png": "png/welchs-white-grape-juice.png",
+        "svgSha256": "be7d40ed4eba655d746bc088769638f281f901272788fae97bd3f3ec3fb74360",
+        "portableSvgSha256": "2dcf9be4fe4b16a321ad9cd8ca7c20c31591b6b05e5ff97606f34e28759abe1a",
+        "pngSha256": "6a950c44c767376a3d0853f042bac2d9a1004113cf998b63f3ba7e90b80feca5",
+        "pngBytes": 135002
+      },
+      "sourceModule": "scripts/icons/families/juice-batch.mjs"
     },
     {
       "slug": "yakult-original",
