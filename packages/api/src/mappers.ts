@@ -532,13 +532,16 @@ export interface BevOfPeriodRpcRow {
 }
 
 function mapPeriodWinner(client: SupabaseClient, row: BevOfPeriodRpcRow): PeriodWinner {
-  // The score the winner was picked by: computed live in bev_of_period_at,
-  // like get_bev_leaderboard, and rounded to 2 dp at the RPC boundary while
-  // the winner itself is picked on the unrounded value (20261101000300).
-  // Not bev_stats.bayes_score -- every write path refreshes the Bevs it
-  // touched, but the prior moves with every ranking in the whole catalog and
-  // only the 15-minute refresh_global_stats re-stamps the rest, so a stored
-  // figure can disagree with a live one computed a moment later.
+  // The score the winner was picked by. bev_of_period_at recomputes it from
+  // the same inputs bev_stats holds (sum_score, rating_count, bayes_prior(null))
+  // rather than reading bev_stats.bayes_score, because that column is stored
+  // as numeric(4,2) and the winner has to be picked on the UNROUNDED value --
+  // two Bevs that round to the same 2 dp are separated by n_period next, not
+  // by chance. The rounding happens once, here at the RPC boundary
+  // (20261101000300). The only other difference is one accepted race, which
+  // that migration documents: a refresh_global_stats tick landing between
+  // refresh_bev_stats reading the prior and its upsert leaves that row on the
+  // previous prior until the next tick.
   const bayes = Number(row.bev_bayes_score);
   return {
     bev: mapBevSummary(client, {

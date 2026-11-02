@@ -8,7 +8,7 @@
 --   score-from-position.vectors.json: respaceBucket -> respace_bucket(uid, bucket) over a real bucket (15)
 --   rank-points.vectors.json: rankUsers -> get_user_leaderboard(50) (order, points and rank) (10)
 --
--- Fixture uuid band: ...000000024xxx. The respace user is ...000000002400, a rankUsers user is
+-- Fixture uuid band: ...000000024xxx. The respace user is ...000000024000, a rankUsers user is
 -- ...00000024<case><index> and a Bev it created is ...0000024b<case><index>. Checked against
 -- every other file in supabase/tests/ (a1, b1..b2, c1..c3, d1..d6, e1..e3, f1..f4, ffff,
 -- ff01..ff14, dead, a14NN, a16NN, ab0NN, be0NN, c13NN, ca0NN, d11aNNN, d12NN, ed0NN, ed7aNNN,
@@ -24,7 +24,7 @@ select plan(25);
 -- The respace user, and the first 13 active seeded soda Bevs in a stable order to fill its
 -- bucket from (the largest respace case is n=13).
 insert into auth.users (id, email, raw_user_meta_data, aud, role)
-values ('00000000-0000-4000-8000-000000002400', 'pgtaprespace@users.bevi.app',
+values ('00000000-0000-4000-8000-000000024000', 'pgtaprespace@users.bevi.app',
         '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated');
 
 create temporary table t_respace_bevs (idx integer primary key, id uuid not null) on commit drop;
@@ -38,164 +38,164 @@ select rn - 1, id
 -- score-from-position.vectors.json: respaceBucket -> respace_bucket(uid, bucket) over a real bucket
 
 -- respace LOVED n=0
-delete from public.rankings where user_id = '00000000-0000-4000-8000-000000002400';
-select public.respace_bucket('00000000-0000-4000-8000-000000002400', 3::smallint);
-select is((select count(*)::int from public.rankings where user_id = '00000000-0000-4000-8000-000000002400'), 0,
+delete from public.rankings where user_id = '00000000-0000-4000-8000-000000024000';
+select public.respace_bucket('00000000-0000-4000-8000-000000024000', 3::smallint);
+select is((select count(*)::int from public.rankings where user_id = '00000000-0000-4000-8000-000000024000'), 0,
           'respaceBucket: respace LOVED n=0: an empty bucket stays empty and the call does not raise');
 
 -- respace LOVED n=1
-delete from public.rankings where user_id = '00000000-0000-4000-8000-000000002400';
+delete from public.rankings where user_id = '00000000-0000-4000-8000-000000024000';
 insert into public.rankings (user_id, bev_id, bucket, position, score)
-select '00000000-0000-4000-8000-000000002400', b.id, 3::smallint, b.idx, 0
+select '00000000-0000-4000-8000-000000024000', b.id, 3::smallint, b.idx, 0
   from t_respace_bevs b where b.idx < 1;
-select public.respace_bucket('00000000-0000-4000-8000-000000002400', 3::smallint);
+select public.respace_bucket('00000000-0000-4000-8000-000000024000', 3::smallint);
 select is(
   (select array_agg(r.score order by r.position) from public.rankings r
-    where r.user_id = '00000000-0000-4000-8000-000000002400' and r.bucket = 3::smallint),
+    where r.user_id = '00000000-0000-4000-8000-000000024000' and r.bucket = 3::smallint),
   array[8.5]::numeric[],
   'respaceBucket: respace LOVED n=1');
 
 -- respace LOVED n=2
-delete from public.rankings where user_id = '00000000-0000-4000-8000-000000002400';
+delete from public.rankings where user_id = '00000000-0000-4000-8000-000000024000';
 insert into public.rankings (user_id, bev_id, bucket, position, score)
-select '00000000-0000-4000-8000-000000002400', b.id, 3::smallint, b.idx, 0
+select '00000000-0000-4000-8000-000000024000', b.id, 3::smallint, b.idx, 0
   from t_respace_bevs b where b.idx < 2;
-select public.respace_bucket('00000000-0000-4000-8000-000000002400', 3::smallint);
+select public.respace_bucket('00000000-0000-4000-8000-000000024000', 3::smallint);
 select is(
   (select array_agg(r.score order by r.position) from public.rankings r
-    where r.user_id = '00000000-0000-4000-8000-000000002400' and r.bucket = 3::smallint),
+    where r.user_id = '00000000-0000-4000-8000-000000024000' and r.bucket = 3::smallint),
   array[9, 8]::numeric[],
   'respaceBucket: respace LOVED n=2');
 
 -- respace LOVED n=5
-delete from public.rankings where user_id = '00000000-0000-4000-8000-000000002400';
+delete from public.rankings where user_id = '00000000-0000-4000-8000-000000024000';
 insert into public.rankings (user_id, bev_id, bucket, position, score)
-select '00000000-0000-4000-8000-000000002400', b.id, 3::smallint, b.idx, 0
+select '00000000-0000-4000-8000-000000024000', b.id, 3::smallint, b.idx, 0
   from t_respace_bevs b where b.idx < 5;
-select public.respace_bucket('00000000-0000-4000-8000-000000002400', 3::smallint);
+select public.respace_bucket('00000000-0000-4000-8000-000000024000', 3::smallint);
 select is(
   (select array_agg(r.score order by r.position) from public.rankings r
-    where r.user_id = '00000000-0000-4000-8000-000000002400' and r.bucket = 3::smallint),
+    where r.user_id = '00000000-0000-4000-8000-000000024000' and r.bucket = 3::smallint),
   array[9.5, 9, 8.5, 8, 7.5]::numeric[],
   'respaceBucket: respace LOVED n=5');
 
 -- respace LOVED n=13
-delete from public.rankings where user_id = '00000000-0000-4000-8000-000000002400';
+delete from public.rankings where user_id = '00000000-0000-4000-8000-000000024000';
 insert into public.rankings (user_id, bev_id, bucket, position, score)
-select '00000000-0000-4000-8000-000000002400', b.id, 3::smallint, b.idx, 0
+select '00000000-0000-4000-8000-000000024000', b.id, 3::smallint, b.idx, 0
   from t_respace_bevs b where b.idx < 13;
-select public.respace_bucket('00000000-0000-4000-8000-000000002400', 3::smallint);
+select public.respace_bucket('00000000-0000-4000-8000-000000024000', 3::smallint);
 select is(
   (select array_agg(r.score order by r.position) from public.rankings r
-    where r.user_id = '00000000-0000-4000-8000-000000002400' and r.bucket = 3::smallint),
+    where r.user_id = '00000000-0000-4000-8000-000000024000' and r.bucket = 3::smallint),
   array[9.79, 9.57, 9.36, 9.14, 8.93, 8.71, 8.5, 8.29, 8.07, 7.86, 7.64, 7.43, 7.21]::numeric[],
   'respaceBucket: respace LOVED n=13');
 
 -- respace FINE n=0
-delete from public.rankings where user_id = '00000000-0000-4000-8000-000000002400';
-select public.respace_bucket('00000000-0000-4000-8000-000000002400', 2::smallint);
-select is((select count(*)::int from public.rankings where user_id = '00000000-0000-4000-8000-000000002400'), 0,
+delete from public.rankings where user_id = '00000000-0000-4000-8000-000000024000';
+select public.respace_bucket('00000000-0000-4000-8000-000000024000', 2::smallint);
+select is((select count(*)::int from public.rankings where user_id = '00000000-0000-4000-8000-000000024000'), 0,
           'respaceBucket: respace FINE n=0: an empty bucket stays empty and the call does not raise');
 
 -- respace FINE n=1
-delete from public.rankings where user_id = '00000000-0000-4000-8000-000000002400';
+delete from public.rankings where user_id = '00000000-0000-4000-8000-000000024000';
 insert into public.rankings (user_id, bev_id, bucket, position, score)
-select '00000000-0000-4000-8000-000000002400', b.id, 2::smallint, b.idx, 0
+select '00000000-0000-4000-8000-000000024000', b.id, 2::smallint, b.idx, 0
   from t_respace_bevs b where b.idx < 1;
-select public.respace_bucket('00000000-0000-4000-8000-000000002400', 2::smallint);
+select public.respace_bucket('00000000-0000-4000-8000-000000024000', 2::smallint);
 select is(
   (select array_agg(r.score order by r.position) from public.rankings r
-    where r.user_id = '00000000-0000-4000-8000-000000002400' and r.bucket = 2::smallint),
+    where r.user_id = '00000000-0000-4000-8000-000000024000' and r.bucket = 2::smallint),
   array[5.5]::numeric[],
   'respaceBucket: respace FINE n=1');
 
 -- respace FINE n=2
-delete from public.rankings where user_id = '00000000-0000-4000-8000-000000002400';
+delete from public.rankings where user_id = '00000000-0000-4000-8000-000000024000';
 insert into public.rankings (user_id, bev_id, bucket, position, score)
-select '00000000-0000-4000-8000-000000002400', b.id, 2::smallint, b.idx, 0
+select '00000000-0000-4000-8000-000000024000', b.id, 2::smallint, b.idx, 0
   from t_respace_bevs b where b.idx < 2;
-select public.respace_bucket('00000000-0000-4000-8000-000000002400', 2::smallint);
+select public.respace_bucket('00000000-0000-4000-8000-000000024000', 2::smallint);
 select is(
   (select array_agg(r.score order by r.position) from public.rankings r
-    where r.user_id = '00000000-0000-4000-8000-000000002400' and r.bucket = 2::smallint),
+    where r.user_id = '00000000-0000-4000-8000-000000024000' and r.bucket = 2::smallint),
   array[6, 5]::numeric[],
   'respaceBucket: respace FINE n=2');
 
 -- respace FINE n=5
-delete from public.rankings where user_id = '00000000-0000-4000-8000-000000002400';
+delete from public.rankings where user_id = '00000000-0000-4000-8000-000000024000';
 insert into public.rankings (user_id, bev_id, bucket, position, score)
-select '00000000-0000-4000-8000-000000002400', b.id, 2::smallint, b.idx, 0
+select '00000000-0000-4000-8000-000000024000', b.id, 2::smallint, b.idx, 0
   from t_respace_bevs b where b.idx < 5;
-select public.respace_bucket('00000000-0000-4000-8000-000000002400', 2::smallint);
+select public.respace_bucket('00000000-0000-4000-8000-000000024000', 2::smallint);
 select is(
   (select array_agg(r.score order by r.position) from public.rankings r
-    where r.user_id = '00000000-0000-4000-8000-000000002400' and r.bucket = 2::smallint),
+    where r.user_id = '00000000-0000-4000-8000-000000024000' and r.bucket = 2::smallint),
   array[6.5, 6, 5.5, 5, 4.5]::numeric[],
   'respaceBucket: respace FINE n=5');
 
 -- respace FINE n=13
-delete from public.rankings where user_id = '00000000-0000-4000-8000-000000002400';
+delete from public.rankings where user_id = '00000000-0000-4000-8000-000000024000';
 insert into public.rankings (user_id, bev_id, bucket, position, score)
-select '00000000-0000-4000-8000-000000002400', b.id, 2::smallint, b.idx, 0
+select '00000000-0000-4000-8000-000000024000', b.id, 2::smallint, b.idx, 0
   from t_respace_bevs b where b.idx < 13;
-select public.respace_bucket('00000000-0000-4000-8000-000000002400', 2::smallint);
+select public.respace_bucket('00000000-0000-4000-8000-000000024000', 2::smallint);
 select is(
   (select array_agg(r.score order by r.position) from public.rankings r
-    where r.user_id = '00000000-0000-4000-8000-000000002400' and r.bucket = 2::smallint),
+    where r.user_id = '00000000-0000-4000-8000-000000024000' and r.bucket = 2::smallint),
   array[6.79, 6.57, 6.36, 6.14, 5.93, 5.71, 5.5, 5.29, 5.07, 4.86, 4.64, 4.43, 4.21]::numeric[],
   'respaceBucket: respace FINE n=13');
 
 -- respace DISLIKED n=0
-delete from public.rankings where user_id = '00000000-0000-4000-8000-000000002400';
-select public.respace_bucket('00000000-0000-4000-8000-000000002400', 1::smallint);
-select is((select count(*)::int from public.rankings where user_id = '00000000-0000-4000-8000-000000002400'), 0,
+delete from public.rankings where user_id = '00000000-0000-4000-8000-000000024000';
+select public.respace_bucket('00000000-0000-4000-8000-000000024000', 1::smallint);
+select is((select count(*)::int from public.rankings where user_id = '00000000-0000-4000-8000-000000024000'), 0,
           'respaceBucket: respace DISLIKED n=0: an empty bucket stays empty and the call does not raise');
 
 -- respace DISLIKED n=1
-delete from public.rankings where user_id = '00000000-0000-4000-8000-000000002400';
+delete from public.rankings where user_id = '00000000-0000-4000-8000-000000024000';
 insert into public.rankings (user_id, bev_id, bucket, position, score)
-select '00000000-0000-4000-8000-000000002400', b.id, 1::smallint, b.idx, 0
+select '00000000-0000-4000-8000-000000024000', b.id, 1::smallint, b.idx, 0
   from t_respace_bevs b where b.idx < 1;
-select public.respace_bucket('00000000-0000-4000-8000-000000002400', 1::smallint);
+select public.respace_bucket('00000000-0000-4000-8000-000000024000', 1::smallint);
 select is(
   (select array_agg(r.score order by r.position) from public.rankings r
-    where r.user_id = '00000000-0000-4000-8000-000000002400' and r.bucket = 1::smallint),
+    where r.user_id = '00000000-0000-4000-8000-000000024000' and r.bucket = 1::smallint),
   array[2]::numeric[],
   'respaceBucket: respace DISLIKED n=1');
 
 -- respace DISLIKED n=2
-delete from public.rankings where user_id = '00000000-0000-4000-8000-000000002400';
+delete from public.rankings where user_id = '00000000-0000-4000-8000-000000024000';
 insert into public.rankings (user_id, bev_id, bucket, position, score)
-select '00000000-0000-4000-8000-000000002400', b.id, 1::smallint, b.idx, 0
+select '00000000-0000-4000-8000-000000024000', b.id, 1::smallint, b.idx, 0
   from t_respace_bevs b where b.idx < 2;
-select public.respace_bucket('00000000-0000-4000-8000-000000002400', 1::smallint);
+select public.respace_bucket('00000000-0000-4000-8000-000000024000', 1::smallint);
 select is(
   (select array_agg(r.score order by r.position) from public.rankings r
-    where r.user_id = '00000000-0000-4000-8000-000000002400' and r.bucket = 1::smallint),
+    where r.user_id = '00000000-0000-4000-8000-000000024000' and r.bucket = 1::smallint),
   array[2.67, 1.33]::numeric[],
   'respaceBucket: respace DISLIKED n=2');
 
 -- respace DISLIKED n=5
-delete from public.rankings where user_id = '00000000-0000-4000-8000-000000002400';
+delete from public.rankings where user_id = '00000000-0000-4000-8000-000000024000';
 insert into public.rankings (user_id, bev_id, bucket, position, score)
-select '00000000-0000-4000-8000-000000002400', b.id, 1::smallint, b.idx, 0
+select '00000000-0000-4000-8000-000000024000', b.id, 1::smallint, b.idx, 0
   from t_respace_bevs b where b.idx < 5;
-select public.respace_bucket('00000000-0000-4000-8000-000000002400', 1::smallint);
+select public.respace_bucket('00000000-0000-4000-8000-000000024000', 1::smallint);
 select is(
   (select array_agg(r.score order by r.position) from public.rankings r
-    where r.user_id = '00000000-0000-4000-8000-000000002400' and r.bucket = 1::smallint),
+    where r.user_id = '00000000-0000-4000-8000-000000024000' and r.bucket = 1::smallint),
   array[3.33, 2.67, 2, 1.33, 0.67]::numeric[],
   'respaceBucket: respace DISLIKED n=5');
 
 -- respace DISLIKED n=13
-delete from public.rankings where user_id = '00000000-0000-4000-8000-000000002400';
+delete from public.rankings where user_id = '00000000-0000-4000-8000-000000024000';
 insert into public.rankings (user_id, bev_id, bucket, position, score)
-select '00000000-0000-4000-8000-000000002400', b.id, 1::smallint, b.idx, 0
+select '00000000-0000-4000-8000-000000024000', b.id, 1::smallint, b.idx, 0
   from t_respace_bevs b where b.idx < 13;
-select public.respace_bucket('00000000-0000-4000-8000-000000002400', 1::smallint);
+select public.respace_bucket('00000000-0000-4000-8000-000000024000', 1::smallint);
 select is(
   (select array_agg(r.score order by r.position) from public.rankings r
-    where r.user_id = '00000000-0000-4000-8000-000000002400' and r.bucket = 1::smallint),
+    where r.user_id = '00000000-0000-4000-8000-000000024000' and r.bucket = 1::smallint),
   array[3.71, 3.43, 3.14, 2.86, 2.57, 2.29, 2, 1.71, 1.43, 1.14, 0.86, 0.57, 0.29]::numeric[],
   'respaceBucket: respace DISLIKED n=13');
 
@@ -203,11 +203,11 @@ select is(
 
 -- ties share a rank and the next rank skips; tie order bevsRanked desc then createdAt asc
 insert into auth.users (id, email, raw_user_meta_data, aud, role) values
-  ('00000000-0000-4000-8000-000000024100', 'pgtapru100@users.bevi.app', '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated'),
-  ('00000000-0000-4000-8000-000000024101', 'pgtapru101@users.bevi.app', '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated'),
+  ('00000000-0000-4000-8000-000000024104', 'pgtapru100@users.bevi.app', '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated'),
+  ('00000000-0000-4000-8000-000000024103', 'pgtapru101@users.bevi.app', '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated'),
   ('00000000-0000-4000-8000-000000024102', 'pgtapru102@users.bevi.app', '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated'),
-  ('00000000-0000-4000-8000-000000024103', 'pgtapru103@users.bevi.app', '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated'),
-  ('00000000-0000-4000-8000-000000024104', 'pgtapru104@users.bevi.app', '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated');
+  ('00000000-0000-4000-8000-000000024101', 'pgtapru103@users.bevi.app', '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated'),
+  ('00000000-0000-4000-8000-000000024100', 'pgtapru104@users.bevi.app', '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated');
 update public.user_stats set rating_count = 4 where user_id = '00000000-0000-4000-8000-000000024100';
 update public.streaks set current_days = 2,
        last_ranked_on = (now() at time zone 'UTC')::date where user_id = '00000000-0000-4000-8000-000000024100';
@@ -232,13 +232,16 @@ insert into public.bevs (id, name, brand, category_id, price_tier, status, sourc
 values ('00000000-0000-4000-8000-00000024b100', 'pgTAP Rank 1-00', 'pgTAP', 'soda', 1, 'active', 'seed', '00000000-0000-4000-8000-000000024104');
 insert into public.rankings (user_id, bev_id, bucket, position, score)
 values ('00000000-0000-4000-8000-000000024100', '00000000-0000-4000-8000-00000024b100', 3::smallint, 0, 0);
-select is((select array_agg(l.user_id order by l.rn) from (select user_id, points, bevi_rank, row_number() over () as rn from public.get_user_leaderboard(50)) l),
+select is((select array_agg(l.user_id order by l.rn) from (select user_id, points, bevi_rank, ordinality as rn
+          from public.get_user_leaderboard(50) with ordinality) l),
           array['00000000-0000-4000-8000-000000024104', '00000000-0000-4000-8000-000000024101', '00000000-0000-4000-8000-000000024102', '00000000-0000-4000-8000-000000024100', '00000000-0000-4000-8000-000000024103']::uuid[],
           'rankUsers: ties share a rank and the next rank skips; tie order bevsRanked desc then createdAt asc: order');
-select is((select array_agg(l.points order by l.rn) from (select user_id, points, bevi_rank, row_number() over () as rn from public.get_user_leaderboard(50)) l),
+select is((select array_agg(l.points order by l.rn) from (select user_id, points, bevi_rank, ordinality as rn
+          from public.get_user_leaderboard(50) with ordinality) l),
           array[37, 10, 10, 10, 3]::integer[],
           'rankUsers: ties share a rank and the next rank skips; tie order bevsRanked desc then createdAt asc: points');
-select is((select array_agg(l.bevi_rank order by l.rn) from (select user_id, points, bevi_rank, row_number() over () as rn from public.get_user_leaderboard(50)) l),
+select is((select array_agg(l.bevi_rank order by l.rn) from (select user_id, points, bevi_rank, ordinality as rn
+          from public.get_user_leaderboard(50) with ordinality) l),
           array[1, 2, 2, 2, 5]::integer[],
           'rankUsers: ties share a rank and the next rank skips; tie order bevsRanked desc then createdAt asc: rank');
 update public.user_stats set rating_count = 0
@@ -246,9 +249,9 @@ update public.user_stats set rating_count = 0
 
 -- users with bevsRanked = 0 are Unranked: left out and not counted
 insert into auth.users (id, email, raw_user_meta_data, aud, role) values
-  ('00000000-0000-4000-8000-000000024200', 'pgtapru200@users.bevi.app', '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated'),
+  ('00000000-0000-4000-8000-000000024202', 'pgtapru200@users.bevi.app', '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated'),
   ('00000000-0000-4000-8000-000000024201', 'pgtapru201@users.bevi.app', '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated'),
-  ('00000000-0000-4000-8000-000000024202', 'pgtapru202@users.bevi.app', '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated');
+  ('00000000-0000-4000-8000-000000024200', 'pgtapru202@users.bevi.app', '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated');
 update public.user_stats set rating_count = 0 where user_id = '00000000-0000-4000-8000-000000024200';
 update public.streaks set current_days = 0,
        last_ranked_on = (now() at time zone 'UTC')::date where user_id = '00000000-0000-4000-8000-000000024200';
@@ -281,13 +284,16 @@ insert into public.bevs (id, name, brand, category_id, price_tier, status, sourc
 values ('00000000-0000-4000-8000-00000024b204', 'pgTAP Rank 2-04', 'pgTAP', 'soda', 1, 'active', 'seed', '00000000-0000-4000-8000-000000024200');
 insert into public.rankings (user_id, bev_id, bucket, position, score)
 values ('00000000-0000-4000-8000-000000024201', '00000000-0000-4000-8000-00000024b204', 3::smallint, 4, 0);
-select is((select array_agg(l.user_id order by l.rn) from (select user_id, points, bevi_rank, row_number() over () as rn from public.get_user_leaderboard(50)) l),
+select is((select array_agg(l.user_id order by l.rn) from (select user_id, points, bevi_rank, ordinality as rn
+          from public.get_user_leaderboard(50) with ordinality) l),
           array['00000000-0000-4000-8000-000000024201', '00000000-0000-4000-8000-000000024202']::uuid[],
           'rankUsers: users with bevsRanked = 0 are Unranked: left out and not counted: order');
-select is((select array_agg(l.points order by l.rn) from (select user_id, points, bevi_rank, row_number() over () as rn from public.get_user_leaderboard(50)) l),
+select is((select array_agg(l.points order by l.rn) from (select user_id, points, bevi_rank, ordinality as rn
+          from public.get_user_leaderboard(50) with ordinality) l),
           array[4, 2]::integer[],
           'rankUsers: users with bevsRanked = 0 are Unranked: left out and not counted: points');
-select is((select array_agg(l.bevi_rank order by l.rn) from (select user_id, points, bevi_rank, row_number() over () as rn from public.get_user_leaderboard(50)) l),
+select is((select array_agg(l.bevi_rank order by l.rn) from (select user_id, points, bevi_rank, ordinality as rn
+          from public.get_user_leaderboard(50) with ordinality) l),
           array[1, 2]::integer[],
           'rankUsers: users with bevsRanked = 0 are Unranked: left out and not counted: rank');
 update public.user_stats set rating_count = 0
@@ -295,8 +301,8 @@ update public.user_stats set rating_count = 0
 
 -- equal points, bevsRanked and createdAt fall back to userId
 insert into auth.users (id, email, raw_user_meta_data, aud, role) values
-  ('00000000-0000-4000-8000-000000024300', 'pgtapru300@users.bevi.app', '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated'),
-  ('00000000-0000-4000-8000-000000024301', 'pgtapru301@users.bevi.app', '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated');
+  ('00000000-0000-4000-8000-000000024301', 'pgtapru300@users.bevi.app', '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated'),
+  ('00000000-0000-4000-8000-000000024300', 'pgtapru301@users.bevi.app', '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated');
 update public.user_stats set rating_count = 5 where user_id = '00000000-0000-4000-8000-000000024300';
 update public.streaks set current_days = 0,
        last_ranked_on = (now() at time zone 'UTC')::date where user_id = '00000000-0000-4000-8000-000000024300';
@@ -305,13 +311,16 @@ update public.user_stats set rating_count = 5 where user_id = '00000000-0000-400
 update public.streaks set current_days = 0,
        last_ranked_on = (now() at time zone 'UTC')::date where user_id = '00000000-0000-4000-8000-000000024301';
 update public.profiles set timezone = 'UTC', created_at = '2026-10-01T00:00:00Z'::timestamptz where id = '00000000-0000-4000-8000-000000024301';
-select is((select array_agg(l.user_id order by l.rn) from (select user_id, points, bevi_rank, row_number() over () as rn from public.get_user_leaderboard(50)) l),
+select is((select array_agg(l.user_id order by l.rn) from (select user_id, points, bevi_rank, ordinality as rn
+          from public.get_user_leaderboard(50) with ordinality) l),
           array['00000000-0000-4000-8000-000000024300', '00000000-0000-4000-8000-000000024301']::uuid[],
           'rankUsers: equal points, bevsRanked and createdAt fall back to userId: order');
-select is((select array_agg(l.points order by l.rn) from (select user_id, points, bevi_rank, row_number() over () as rn from public.get_user_leaderboard(50)) l),
+select is((select array_agg(l.points order by l.rn) from (select user_id, points, bevi_rank, ordinality as rn
+          from public.get_user_leaderboard(50) with ordinality) l),
           array[5, 5]::integer[],
           'rankUsers: equal points, bevsRanked and createdAt fall back to userId: points');
-select is((select array_agg(l.bevi_rank order by l.rn) from (select user_id, points, bevi_rank, row_number() over () as rn from public.get_user_leaderboard(50)) l),
+select is((select array_agg(l.bevi_rank order by l.rn) from (select user_id, points, bevi_rank, ordinality as rn
+          from public.get_user_leaderboard(50) with ordinality) l),
           array[1, 1]::integer[],
           'rankUsers: equal points, bevsRanked and createdAt fall back to userId: rank');
 update public.user_stats set rating_count = 0

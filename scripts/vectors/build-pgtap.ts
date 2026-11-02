@@ -185,14 +185,21 @@ const uuid = (tail: string): string => `00000000-0000-4000-8000-${tail.padStart(
 const pad2 = (n: number): string => String(n).padStart(2, "0");
 
 /** The one user whose bucket gets respaced, and the 13 catalog Bevs it is filled from. */
-const RESPACE_UID = uuid("2400");
+const RESPACE_UID = uuid("024000");
 
 /**
  * respaceBucket -> respace_bucket(uid, bucket) over a real bucket.
  *
- * ranking_score is already pinned exhaustively by storedScore in the pure file, so what these
- * cases add is the bucket-wide application: that `n` is the bucket's own count, that position i
- * gets the score for (bucket, i, n), and that an empty bucket is a no-op rather than an error.
+ * storedScore pins ranking_score itself in the pure file, so what these cases add is the
+ * bucket-wide application: that every position i in the bucket ends up with the score for
+ * (bucket, i, n), and that an empty bucket is a no-op rather than an error. They also pin 39
+ * ranking_score values storedScore misses, since its cases cover n in 1..12, 15, 39, 50, 598,
+ * 599, 799 and 800 -- not 13.
+ *
+ * What they do NOT pin, deliberately: that respace_bucket scopes `n` and its UPDATE to the
+ * bucket it was passed. Every case clears the user's rankings first and fills one bucket, so a
+ * respace_bucket that dropped `and bucket = p_bucket` would still pass all 15. Scoping is a
+ * property of the function, not of these vectors; pinning it wants a two-bucket case of its own.
  * Each case rebuilds the bucket from scratch with a deliberately wrong score (0), calls
  * respace_bucket, and compares the whole bucket's scores in position order.
  */
@@ -266,10 +273,13 @@ interface RankUser {
  *
  * The fixture maps each case's userIds to uuids IN SORTED userId ORDER, so `p.id asc` -- the last
  * tie-break in SQL -- is the same comparison as rankUsers' `userId` fall-back. Each user's inputs
- * come from the three tables user_rank_points reads: user_stats.rating_count for bevsRanked,
- * streaks for the streak (with last_ranked_on set to today, so effective_streak keeps it), and
- * profiles.created_at. bevsCreated is the awkward one -- it is a count of Bevs the user created
- * that someone else has ranked -- so it is built out of real rows rather than written down.
+ * come from the three tables user_rank_points reads -- get_user_leaderboard selects from it and
+ * adds the ORDER BY: user_stats.rating_count for bevsRanked, streaks for the streak, and
+ * profiles.created_at. `last_ranked_on` is set to today because user_rank_points puts the streak
+ * through effective_streak, which zeroes one whose last_ranked_on is older than yesterday, and
+ * these cases are about the ranking rather than streak decay. bevsCreated is the awkward one --
+ * it is a count of Bevs the user created that someone else has ranked -- so it is built out of
+ * real rows rather than written down.
  *
  * A case ends by zeroing its own users' rating_count, which drops them from the board (the RPC
  * filters `bevs_ranked > 0`), so the next case sees only its own users and the empty case sees
@@ -316,7 +326,8 @@ function rankUsers(file: VectorFile): Section {
     if (sorted.length > 0) {
       lines.push("insert into auth.users (id, email, raw_user_meta_data, aud, role) values");
       lines.push(
-        sorted
+        [...sorted]
+          .reverse()
           .map(
             (u, i) =>
               `  (${q(u.uuid)}, 'pgtapru${ci}${pad2(i)}@users.bevi.app', '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated')`,
@@ -352,7 +363,8 @@ function rankUsers(file: VectorFile): Section {
       }
     }
 
-    const board = "(select user_id, points, bevi_rank, row_number() over () as rn from public.get_user_leaderboard(50)) l";
+    const board =
+      "(select user_id, points, bevi_rank, ordinality as rn\n          from public.get_user_leaderboard(50) with ordinality) l";
     if (want.length === 0) {
       lines.push(
         `select is((select count(*)::int from public.get_user_leaderboard(50)), 0,`,
@@ -460,7 +472,7 @@ export function buildFixtureVectorsSql(): string {
     "--",
     ...sections.map((s) => `--   ${s.title} (${s.count})`),
     "--",
-    "-- Fixture uuid band: ...000000024xxx. The respace user is ...000000002400, a rankUsers user is",
+    "-- Fixture uuid band: ...000000024xxx. The respace user is ...000000024000, a rankUsers user is",
     "-- ...00000024<case><index> and a Bev it created is ...0000024b<case><index>. Checked against",
     "-- every other file in supabase/tests/ (a1, b1..b2, c1..c3, d1..d6, e1..e3, f1..f4, ffff,",
     "-- ff01..ff14, dead, a14NN, a16NN, ab0NN, be0NN, c13NN, ca0NN, d11aNNN, d12NN, ed0NN, ed7aNNN,",
