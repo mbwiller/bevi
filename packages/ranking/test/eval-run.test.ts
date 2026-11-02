@@ -6,8 +6,20 @@ import { parseExport, prepareDataset, toExport, type EvalDataset } from '../eval
 import { formatReport, SYNTHETIC_BANNER } from '../eval/report.ts';
 import { COHORTS, cohortOf, dedupeComparisons, evaluate, temporalCutoff } from '../eval/run.ts';
 import { similarityDiagnostics } from '../eval/similarity-arms.ts';
-import { syntheticDataset, syntheticEdges } from '../eval/synthetic.ts';
-import { EDGE_MIN_WEIGHT, EDGE_TOP_K, layer1, layer2, predictScore } from '../src/index.ts';
+import { syntheticDataset, syntheticEdges, syntheticNeighbours } from '../eval/synthetic.ts';
+import {
+  blendUserSimilarity,
+  EDGE_MIN_WEIGHT,
+  EDGE_TOP_K,
+  layer1,
+  layer2,
+  predictScore,
+  TASTE_NEIGHBOUR_K,
+  TASTE_SIM_FLOOR,
+  tasteCatalog,
+  tasteVector,
+  zScoresFromRankings,
+} from '../src/index.ts';
 import { effectiveStatsOf, snapshotContext } from '../src/context.ts';
 import { syntheticSnapshot } from './snapshot-fixture.ts';
 
@@ -85,6 +97,65 @@ describe("the experimental edges arms run the real engine with bevSimilarity: 'e
     }
     // 120 Bevs over 7 categories: some category has more than K_E + 1 Bevs, so pruning by top K bites.
     expect(Math.max(...degree.values())).toBeGreaterThanOrEqual(EDGE_TOP_K);
+  });
+});
+
+describe("the experimental stored arms run the real engine with userSimilarity: 'stored' (Stage 4)", () => {
+  const base = syntheticSnapshot('stored-arms', 16, 40);
+  const arm = (id: string) => ARMS.find((a) => a.id === id)!;
+  const neighbours = syntheticNeighbours(base);
+
+  it('with neighbours: predictScore / layer2 with the option, and different from the reference', () => {
+    const snap = { ...base, userNeighbours: neighbours };
+    let differ = 0;
+    for (const u of Object.keys(snap.users)) {
+      for (const b of Object.keys(snap.bevs)) {
+        const p = predictScore(snap, u, b, { userSimilarity: 'stored' });
+        expect(arm('engine-stored').predict(snap, u, b)).toEqual({ score: p.score, support: p.layer2.support });
+        const eff = effectiveStatsOf(snapshotContext(snap), u);
+        const l2 = layer2(snap, u, b, { userSimilarity: 'stored' });
+        expect(arm('layer2-stored').predict(snap, u, b)).toEqual({ score: Math.min(10, Math.max(0, eff.mean + eff.stddev * l2.z)), support: l2.support });
+        if (p.score !== predictScore(snap, u, b).score) differ++;
+      }
+    }
+    expect(differ).toBeGreaterThan(0);
+    expect(ARMS.filter((a) => a.readsNeighbours).map((a) => a.id)).toEqual(['layer2-stored', 'engine-stored']);
+  });
+
+  it('without neighbours: each stored arm equals its cosine twin (the fallback)', () => {
+    for (const u of Object.keys(base.users)) {
+      for (const b of Object.keys(base.bevs)) {
+        expect(arm('engine-stored').predict(base, u, b)).toEqual(arm('engine').predict(base, u, b));
+        expect(arm('layer2-stored').predict(base, u, b)).toEqual(arm('layer2').predict(base, u, b));
+      }
+    }
+  });
+
+  it('syntheticNeighbours follows the user_neighbors rules: blended sim to 4 dp, floor, top K, order, no self-row', () => {
+    const z = zScoresFromRankings(base.rankings);
+    const catalog = tasteCatalog(Object.values(base.bevs).map((b) => ({ id: b.id, categoryId: b.categoryId, brand: b.brandKey, flavorBase: null })));
+    const t = (u: string) => tasteVector(z.get(u)!, catalog);
+    expect(Object.keys(neighbours).length).toBeGreaterThan(0);
+    for (const [u, list] of Object.entries(neighbours)) {
+      expect(list.length).toBeGreaterThan(0);
+      expect(list.length).toBeLessThanOrEqual(TASTE_NEIGHBOUR_K);
+      list.forEach((n, i) => {
+        expect(n.userId).not.toBe(u);
+        const r = blendUserSimilarity({ zu: z.get(u)!, zv: z.get(n.userId)!, tu: t(u), tv: t(n.userId) }, catalog);
+        expect(r.sim).toBeGreaterThanOrEqual(TASTE_SIM_FLOOR);
+        expect(n.sim).toBe(Math.round(r.sim * 1e4) / 1e4);
+        expect(n.common).toBe(r.common);
+        const prev = list[i - 1];
+        if (prev) expect(prev.sim > n.sim || (prev.sim === n.sim && prev.userId < n.userId)).toBe(true);
+      });
+    }
+    // Both directions: below K neighbours, a kept pair appears in both users' lists with the same numbers.
+    for (const [u, list] of Object.entries(neighbours)) {
+      for (const n of list) {
+        const back = neighbours[n.userId] ?? [];
+        if (back.length < TASTE_NEIGHBOUR_K) expect(back.find((x) => x.userId === u)).toEqual({ userId: u, sim: n.sim, common: n.common });
+      }
+    }
   });
 });
 
@@ -182,7 +253,7 @@ describe('evaluate (end to end on synthetic data, NOT an accuracy result)', () =
         expect(conc.draws).toBeLessThanOrEqual(50);
         expect(a.confusion.flat().reduce((x, y) => x + y, 0)).toBe(all.points);
         expect(a.delta === null).toBe(a.arm === 'engine');
-        expect(Number.isNaN(a.metrics.cfCoverage.point)).toBe(!['layer2', 'layer2-pearson', 'engine', 'engine-pearson', 'engine-edges'].includes(a.arm));
+        expect(Number.isNaN(a.metrics.cfCoverage.point)).toBe(!['layer2', 'layer2-pearson', 'engine', 'engine-pearson', 'engine-edges', 'layer2-stored', 'engine-stored'].includes(a.arm));
         expect(Number.isFinite(a.metrics.spearman.point)).toBe(s.listMetrics);
       }
       // A constant predictor orders nothing.

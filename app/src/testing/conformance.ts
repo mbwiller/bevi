@@ -414,6 +414,21 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       for (const b of filtered.items) expect(b.categoryId).toBe(bev!.categoryId);
     });
 
+    // 20261102000200: a query is whitespace-separated tokens, each matched as a substring of the
+    // Bev's name, brand, flavor, category and aliases; punctuation stays inside a token, so "A&W" is
+    // one token, not "a" and "w" (which Mountain Dew has). The live twin is
+    // packages/api/test/catalog-and-media.live.test.ts.
+    it('search matches by any piece of a Bev\'s words: "A&W" finds the A&W Bevs and not Mountain Dew', async () => {
+      await newUser();
+      const aw = await api.bevs.search({ q: 'A&W', limit: 50 });
+      expect(aw.items.length).toBeGreaterThan(0);
+      expect(aw.items[0]!.name.startsWith('A&W')).toBe(true);
+      expect(aw.items.some((b) => b.name.startsWith('Mountain Dew'))).toBe(false);
+      const words = await api.bevs.search({ q: 'root beer', limit: 50 });
+      expect(words.items.map((b) => b.name)).toContain('A&W Root Beer');
+      expect((await api.bevs.search({ q: 'zzqx' })).items).toEqual([]);
+    });
+
     it('get returns detail; unknown id is not_found', async () => {
       await newUser();
       const [id] = await starterIds(1);
@@ -471,6 +486,28 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       await expect(api.bevs.report(id!, 'wrong_info')).resolves.toBeUndefined();
       await expectCode(api.bevs.report('no-such-bev', 'wrong_info'), 'not_found');
       await expectCode(api.bevs.report(id!, ''), 'validation');
+    });
+
+    it('report: duplicateOfId names a visible Bev; itself, an unknown id or one a minor cannot see is validation', async () => {
+      await newUser();
+      const [id, original] = await starterIds(2);
+      await expect(api.bevs.report(id!, 'duplicate', { duplicateOfId: original! })).resolves.toBeUndefined();
+      const self = await expectCode(api.bevs.report(original!, 'duplicate', { duplicateOfId: original! }), 'validation');
+      expect(self.detail).toMatchObject({ field: 'duplicateOfId' });
+      // A well-formed id that names no Bev (a real backend wants a uuid here).
+      const unknown = await expectCode(
+        api.bevs.report(original!, 'duplicate', { duplicateOfId: '00000000-0000-4000-8000-000000000000' }),
+        'validation',
+      );
+      expect(unknown.detail).toMatchObject({ field: 'duplicateOfId' });
+
+      await newUser({ birthdate: MINOR_BIRTHDATE(new Date()) });
+      const [minorsBev] = await starterIds(1);
+      const hidden = await expectCode(
+        api.bevs.report(minorsBev!, 'duplicate', { duplicateOfId: options.alcoholicBevId }),
+        'validation',
+      );
+      expect(hidden.detail).toMatchObject({ field: 'duplicateOfId' });
     });
   });
 

@@ -162,7 +162,11 @@ function invalid(field: string, message: string, reason?: string): never {
 const round2 = (x: number) => Math.round(x * 100) / 100;
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
 const norm = (s: string | null | undefined) => (s ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
-const tokens = (s: string) => norm(s).split(/[^a-z0-9]+/).filter(Boolean);
+// Whitespace only, punctuation kept inside a token: "a&w" is one token, "barq's" is one. Splitting on
+// [^a-z0-9]+ (as this did until 20261102000200) made "a&w" the tokens "a" and "w", substrings of
+// almost every name. search_bevs/find_similar_bevs split the same way (20261102000200); the SQL side
+// also unaccents, which `norm` does not.
+const tokens = (s: string) => norm(s).split(' ').filter(Boolean);
 
 function paginate<T>(items: readonly T[], page: PageParams | undefined, defaultLimit: number): Page<T> {
   const limit = clamp(Math.floor(page?.limit ?? defaultLimit), 1, 100);
@@ -1169,7 +1173,10 @@ export class FakeApi implements BeviApi {
         true,
       ),
 
-    report: (id: string, reason: string) =>
+    // report_bev (20261101000500): `duplicateOfId` must name another Bev the caller can see. The
+    // fake has no hidden or merged Bevs, so "can see" is "exists, and not alcoholic for a minor";
+    // unknown, self and age-gated are one error, as on the server.
+    report: (id: string, reason: string, opts?: { duplicateOfId?: string }) =>
       this.call(
         'bevs.report',
         () => {
@@ -1177,7 +1184,14 @@ export class FakeApi implements BeviApi {
           this.bev(id);
           const r = (reason ?? '').trim();
           if (!r || r.length > REPORT_REASON_MAX) invalid('reason', 'Choose a reason', 'unknown_reason');
-          this.db.reports.push({ bevId: id, userId: me.id, reason: r, createdAt: this.nowIso() });
+          const duplicateOfId = opts?.duplicateOfId ?? null;
+          if (duplicateOfId !== null) {
+            const original = this.db.bevs.find((b) => b.id === duplicateOfId);
+            if (duplicateOfId === id || !original || !this.visible(original, me)) {
+              invalid('duplicateOfId', 'Choose the Bev this one duplicates');
+            }
+          }
+          this.db.reports.push({ bevId: id, userId: me.id, reason: r, duplicateOfId, createdAt: this.nowIso() });
         },
         true,
       ),

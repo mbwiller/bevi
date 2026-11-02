@@ -54,10 +54,11 @@ function median(xs: readonly number[]): number {
  * Unfilled slots (small pool) fall back to normal picks; exploration picks are tagged and never
  * repeated among the normal picks.
  *
- * `opts.userSimilarity` is Layer 2's (default 'cosine', the live engine) and `opts.bevSimilarity`
- * Layer 1's (default 'content'; 'edges' reads `snapshot.edges`, see `layer1`). Both only change the
- * predictions; candidates, the jitter draws, the exploration pool and the reason rule read those
- * predictions the same way in every mode. In edges mode `content` is exactly 0 for a candidate
+ * `opts.userSimilarity` is Layer 2's (default 'cosine', the live engine; 'stored' reads
+ * `snapshot.userNeighbours`, see `layer2`) and `opts.bevSimilarity` Layer 1's (default 'content';
+ * 'edges' reads `snapshot.edges`, see `layer1`). Both only change the predictions; candidates, the
+ * jitter draws, the exploration pool and the reason rule read those predictions the same way in
+ * every mode. In edges mode `content` is exactly 0 for a candidate
  * with no stored edge to the user's ranked Bevs; SIMILAR can then still win, at 0, when CATEGORY < 0
  * and NEIGHBOURS, POPULAR ≤ 0 (the reason rule's existing "largest term, ties in order" behaviour,
  * unchanged here).

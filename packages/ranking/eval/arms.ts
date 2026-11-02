@@ -28,6 +28,8 @@ export const ARM_IDS = [
   'engine',
   'engine-pearson',
   'engine-edges',
+  'layer2-stored',
+  'engine-stored',
 ] as const;
 export type ArmId = (typeof ARM_IDS)[number];
 
@@ -44,6 +46,11 @@ export interface Arm {
   id: ArmId;
   description: string;
   experimental: boolean;
+  /**
+   * True for the arms that read `snapshot.userNeighbours` (userSimilarity: 'stored'). The harness
+   * then attaches neighbours computed from each fold's own training rows (folds.ts, leak 6).
+   */
+  readsNeighbours?: boolean;
   predict: (snapshot: PredictionSnapshot, userId: UserId, bevId: BevId) => ArmPrediction;
 }
 
@@ -172,6 +179,27 @@ export const ARMS: readonly Arm[] = [
     experimental: true,
     predict: (s, u, b) => {
       const p = predictScore(s, u, b, { bevSimilarity: 'edges' });
+      return { score: p.score, support: p.layer2.support };
+    },
+  },
+  {
+    id: 'layer2-stored',
+    description:
+      "EXPERIMENTAL: layer2(…, { userSimilarity: 'stored' }), Layer 2 on stored taste neighbours weighted sim_B · min(1, n_v / 15), rebuilt per fold from training rows (Stage 4, off in production)",
+    experimental: true,
+    readsNeighbours: true,
+    predict: (s, u, b) => {
+      const l2 = layer2(s, u, b, { userSimilarity: 'stored' });
+      return { score: fromZ(s, u, l2.z), support: l2.support };
+    },
+  },
+  {
+    id: 'engine-stored',
+    description: "EXPERIMENTAL: predictScore(…, { userSimilarity: 'stored' }), the engine with Layer 2 on stored taste neighbours (Stage 4, off in production)",
+    experimental: true,
+    readsNeighbours: true,
+    predict: (s, u, b) => {
+      const p = predictScore(s, u, b, { userSimilarity: 'stored' });
       return { score: p.score, support: p.layer2.support };
     },
   },

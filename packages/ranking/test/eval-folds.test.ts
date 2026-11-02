@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { foldSnapshot, holdOut, rowKey } from '../eval/folds.ts';
 import { featuresOf, prepareDataset, type EvalBev, type EvalRanking } from '../eval/dataset.ts';
 import { ARMS } from '../eval/arms.ts';
-import { syntheticDataset } from '../eval/synthetic.ts';
+import { evaluate } from '../eval/run.ts';
+import { syntheticDataset, syntheticNeighbours } from '../eval/synthetic.ts';
 import {
   globalScore,
   populationStats,
@@ -153,5 +154,43 @@ describe('leak 4: re-spacing (a held-out Bev leaves a gap in its bucket)', () =>
     const all = [...uRows, row('v', 'a', 9.01, 'LOVED', 7)];
     const kept = holdOut(all, new Set([rowKey('u', 'x')]), true);
     expect(kept.find((r) => r.userId === 'v')).toBe(all[all.length - 1]);
+  });
+});
+
+describe('leak 6: stored taste neighbours are rebuilt from each fold’s training rows', () => {
+  const ds = syntheticDataset('leak6', 16, 30);
+  const prepared = prepareDataset(ds);
+  const STORED = { userSimilarity: 'stored' } as const;
+
+  it('the fold carries syntheticNeighbours of its own rows, and only when asked', () => {
+    const r = prepared.rankings[0] as EvalRanking;
+    const rows = holdOut(prepared.rankings, new Set([rowKey(r.userId, r.bevId)]), true);
+    const withN = foldSnapshot(prepared.catalog, rows, null, { neighbours: true });
+    expect(withN.userNeighbours).toEqual(syntheticNeighbours(foldSnapshot(prepared.catalog, rows)));
+    expect('userNeighbours' in foldSnapshot(prepared.catalog, rows)).toBe(false);
+  });
+
+  it('neighbours from the full data would see the held-out score and change the stored prediction', () => {
+    const fullN = syntheticNeighbours(foldSnapshot(prepared.catalog, prepared.rankings));
+    let leaks = 0;
+    for (const r of prepared.rankings.slice(0, 120)) {
+      const rows = holdOut(prepared.rankings, new Set([rowKey(r.userId, r.bevId)]), true);
+      const honest = foldSnapshot(prepared.catalog, rows, null, { neighbours: true });
+      const leaky: PredictionSnapshot = { ...foldSnapshot(prepared.catalog, rows), userNeighbours: fullN };
+      if (predictScore(honest, r.userId, r.bevId, STORED).score !== predictScore(leaky, r.userId, r.bevId, STORED).score) leaks++;
+    }
+    expect(leaks).toBeGreaterThan(0);
+  });
+
+  it('adding a stored arm (and so the per-fold neighbours) leaves every other arm’s report unchanged', () => {
+    const small = syntheticDataset('leak6-run', 10, 20);
+    const strip = (rep: ReturnType<typeof evaluate>) =>
+      rep.splits.map((sp) => ({ ...sp, groups: sp.groups.map((g) => ({ ...g, arms: g.arms.filter((a) => a.arm !== 'engine-stored') })) }));
+    const without = evaluate(small, { arms: ['engine', 'layer2'], bootstrapIterations: 20 });
+    const withStored = evaluate(small, { arms: ['engine', 'layer2', 'engine-stored'], bootstrapIterations: 20 });
+    expect(strip(withStored).map((sp) => sp.groups.map((g) => g.arms.map((a) => [a.arm, a.metrics, a.confusion])))).toEqual(
+      strip(without).map((sp) => sp.groups.map((g) => g.arms.map((a) => [a.arm, a.metrics, a.confusion]))),
+    );
+    expect(ARMS.filter((a) => a.readsNeighbours).every((a) => a.experimental)).toBe(true);
   });
 });

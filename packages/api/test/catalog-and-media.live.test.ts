@@ -74,6 +74,57 @@ describe.skipIf(!url || !publishableKey)('catalog, photos and privacy, against a
     }
   });
 
+  // 20261102000200: search matches every whitespace-separated token as a
+  // substring (word starts first). Before it, pg_trgm similarity("a&w", "a&w
+  // a&w root beer root beer") = 0.29 < 0.3 and "A&W" found nothing, while the
+  // FakeApi the app's tests use found all three. This is the test that would
+  // have caught it.
+  it('search finds a Bev by any piece of its words ("A&W", "root beer"); nonsense finds nothing', async () => {
+    const { api } = await newUser('1990-01-01');
+    try {
+      const aw = await api.bevs.search({ q: 'A&W' });
+      expect(aw.items.slice(0, 3).map((b) => b.name)).toContain('A&W Root Beer');
+      expect(aw.items.every((b) => `${b.brand ?? ''} ${b.name}`.toLowerCase().includes('a&w'))).toBe(true);
+      expect(aw.items.map((b) => b.name)).not.toContain('Mountain Dew');
+
+      const typing = await api.bevs.search({ q: 'a&' });
+      // Typeahead: a word being typed. Bevs with a word starting "a&" come first.
+      expect(typing.items.length).toBeGreaterThanOrEqual(3);
+      expect(typing.items.slice(0, 3).every((b) => /(^|\s)a&/.test(`${b.brand ?? ''} ${b.name}`.toLowerCase()))).toBe(true);
+
+      const rootBeer = await api.bevs.search({ q: 'root beer', limit: 50 });
+      expect(rootBeer.items.map((b) => b.name)).toContain('A&W Root Beer');
+
+      expect((await api.bevs.search({ q: 'zzqx' })).items).toEqual([]);
+    } finally {
+      await api.deleteAccount();
+    }
+  });
+
+  // S-13 (20261101000500). Reports cascade with the account, so this leaves
+  // nothing behind even against a shared project.
+  it('reports a duplicate naming the original; rejects naming itself or an unknown Bev', async () => {
+    const { api } = await newUser('1990-01-01');
+    try {
+      const [a, b] = await api.bevs.getStarterCandidates();
+      await expect(api.bevs.report(a!.id, 'duplicate', { duplicateOfId: b!.id })).resolves.toBeUndefined();
+      await expect(api.bevs.report(a!.id, 'wrong_info')).resolves.toBeUndefined(); // no original: still fine
+
+      const self = await errorOf(api.bevs.report(b!.id, 'duplicate', { duplicateOfId: b!.id }));
+      expect(isApiError(self) && self.code).toBe('validation');
+      expect(isApiError(self) && self.detail).toEqual({ field: 'duplicateOfId' });
+
+      const unknown = await errorOf(api.bevs.report(b!.id, 'duplicate', { duplicateOfId: crypto.randomUUID() }));
+      expect(isApiError(unknown) && unknown.code).toBe('validation');
+      expect(isApiError(unknown) && unknown.detail).toEqual({ field: 'duplicateOfId' });
+
+      const missing = await errorOf(api.bevs.report(crypto.randomUUID(), 'wrong_info'));
+      expect(isApiError(missing) && missing.code).toBe('not_found');
+    } finally {
+      await api.deleteAccount();
+    }
+  });
+
   it.skipIf(AGAINST_SHARED_PROJECT)('creates a Bev from an uploaded photo, visible to others; rejects unknown assets and exact duplicates', async () => {
     const a = await newUser('1990-01-01');
     const b = await newUser('1991-01-01');

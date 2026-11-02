@@ -160,7 +160,12 @@ export interface BevSummary {
   priceEstimated: boolean;
   /** Global number of rankings. */
   ratingCount: number;
-  /** Global Bayesian score; null below `MIN_RATERS`. */
+  /**
+   * Bayesian average with the board's prior: the global prior everywhere (it is what `bev_stats`
+   * stores), except on a category leaderboard's rows, which use the category prior. Set from the
+   * first rating (`ratingCount >= 1`) and null with none, so not gated on `MIN_RATERS`. Rounded to
+   * 2 dp everywhere.
+   */
   bayesScore: number | null;
 }
 

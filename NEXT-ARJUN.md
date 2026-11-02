@@ -1,22 +1,43 @@
 # Next up: Arjun
 
-Your queue, updated 2026-10-31, centred on Supabase and Neo4j. Matt's is in [`NEXT-MATT.md`](NEXT-MATT.md). The live status of every task is the board at the top of [`TASKS.md`](TASKS.md). Update your row there in the same PR whenever you start or finish something.
+Your queue, updated 2026-11-01, centred on Supabase and Neo4j. Matt's is in [`NEXT-MATT.md`](NEXT-MATT.md). The live status of every task is the board at the top of [`TASKS.md`](TASKS.md). Update your row there in the same PR whenever you start or finish something.
 
 **Your lane:** `supabase/`, `packages/api/`, `data/catalog/`, `scripts/` (catalog and graph). Branches are `be/*`. Your combined PRs also carry the `shared/` contract and the FakeApi (Matt reviews that part).
 
-## Start now (2026-10-31)
+## What landed from Matt's side on 2026-11-01 (read these first)
+
+Matt's lane had nothing unblocked, so with his OK the P1 items in your lane were built from his side and merged once `integrator` and CI's `db` job were green. **Your review is welcome after the fact**; each PR's "Heads-up for Arjun" is written for you.
+
+| PR | Migration | What | Follow-ups it found for you |
+|---|---|---|---|
+| **#147** | `20261101000100` | S-21 + Stage 4: `get_prediction_snapshot` returns `edges` (`[src, dst, w]`, every `bev_edges` row touching the caller's ranked Bevs, both endpoints visible) and `userNeighbors` (`[alias, sim, common]`, the viewer's rows via the alias CTE, `sim desc`, no `version` filter); `toViewerSnapshot` maps both only when present; pgTAP 17; `docs/graph*.md` §5 as built | — (both package modes stay off until a real export) |
+| **#149** | `20261101000200` | A-14 write path: append-only `ranking_events` (RLS, no policy) written by `submit_ranking`/`rerank_bev`; `touch_streak` reads it via the pure `streak_from_days`; a backfill from `rankings` ∪ `comparisons` ∪ `feed_events` ∪ the recorded `streaks` runs and a one-off recompute; `assert_comparison_log` checks Prop. 2.5 (compared Bev outside the bucket → `BEVI_STALE_BUCKET`/`conflict`; bad index → `validation`); pgTAP 18 pins all 29 day-period streak vectors | A past longest run containing a question-less ranking later moved or removed cannot be recovered |
+| **#150** | `20261101000300` | A-14 read/stats path: `refresh_bev_stats` writes `bayes_score` (null at 0); `get_feed`/`get_user_feed`/`get_explore`/`bev_of_period_at` read `bayes_prior(null)`; new `category_stats` (RLS, no policy) feeds `bayes_prior`'s category branch; live figures rounded to 2 dp at the RPC boundary (order unrounded); `scripts/vectors/build-pgtap.ts` generates `20_vectors.test.sql` (481 assertions) with `npm run vectors:pgtap -- --check` in `backend.yml`; `BevSummary.bayesScore` doc; `09` expects 7.33 | `refresh_bev_stats` still grants `authenticated` EXECUTE (since 20261011000200): revoke it. `respaceBucket`/`rankUsers` vectors untested in SQL. Two stale comments in `packages/api/src/mappers.ts` (~239, ~534) |
+| **#146** | `20261101000400` | `categories_depth_guard` also rejects moving a root that Bevs use as `category_id` under another root, and promoting a leaf that Bevs use as `leaf_category_id` | Re-parenting a populated leaf to a different root is still only caught on `bevs` writes |
+| **#151** | `20261101000500` | S-13 + A-12 duplicates, contract 2.9.0: `report_bev` validates `p_duplicate_of`; `get_bev` follows `merged_into`; Studio-only `merge_bev(src, dst)`; `pending_duplicate_reports` view; FakeApi + conformance; pgTAP 22 | `submit_ranking` and `add_want_to_try` still accept a merged Bev's id from a stale client |
+
+**Prod migrations: all five are on prod, confirmed 2026-11-01.** `npx supabase migration list` shows local and remote identical for all 52. Both prod bugs are fixed: `bev_stats` has 0 rows with `rating_count = 0 and bayes_score is not null`, and `ranking_events` holds 32 backfilled rows (`category_stats` 10). The next timestamps go after `20261101000500`.
+
+**How to merge a duplicate once `000500` is on prod:** in Studio, `select * from public.pending_duplicate_reports;`, check the pair, paste its `merge_sql` (`select public.merge_bev('<duplicate>', '<original>');`). It is one transaction and returns a jsonb summary. Merge the user-created copy into the catalog Bev; a user who ranked both keeps their ranking of the original.
+
+## Start now (2026-10-31, updated 2026-11-01)
 
 **Prod migrations:**
-- [ ] Confirm `supabase migration list` shows all four: `20261026000100`, `0200`, `0300` (#132, #133) and `20261031000100` (#135). If not, `npx supabase db push`, dry-run first, in timestamp order. Matt's M-21 app half calls #132's functions.
+- [x] Confirmed 2026-10-31: all four are on prod.
+- [x] Confirmed 2026-11-01: all five new ones are on prod (above). Nothing is waiting on a push.
 
 | Order | Task | What "done" means | Unblocks |
 |---|---|---|---|
-| 1 | **Approve #137** (M-27 (a) + M-22 package follow-ups, `RANKING_VERSION` 1.4.0) | Review the `shared/fixtures` changes: existing cases are unchanged as exact JSON, the new ones are recomputed by hand. Default output is byte-identical to 1.3.0, and `edgeWeight` is unchanged, so the next `graph:edges` run only re-stamps `bev_edges` | M-27 (a); M-21's package half, stacked on it (1.5.0) |
-| 2 | **A-14 follow-ups** | M-22's SQL list (TASKS.md M-22 item 3), still unbuilt. **Two are wrong on prod:** the streak history rewritten by re-ranks and removals, and `bayes_score` stale at `rating_count = 0`. #137 adds vector targets: the `bayesScoreStored` cases (pgTAP, item 7) and the event-streak cases (the `touch_streak` fix, item 1) | Correct streaks and scores |
-| 3 | **S-21 + Stage 4** (new), one combined PR | **S-21:** `get_prediction_snapshot` returns `edges` as `[src, dst, w]` tuples for every `bev_edges` row touching the caller's ranked Bevs, visible Bevs only, `[]` never null; `toViewerSnapshot` maps them with `num(w)`, only when the key is present. **Stage 4:** Layer 2 reads `user_neighbors` through the same RPC, with aliases. Agree the contract with Matt first, so the RPC changes once | Switching on M-27 (a)'s edges mode; taste neighbours in Layer 2 |
-| 4 | **`categories_depth_guard` follow-up** | Moving a leafless root (`water`, `sports`) under another root makes its Bevs' `category_id` a leaf. Reject that move. Service-role only, so the app can't reach it | — |
-| 5 | **First `graph-neighbours` run** | A `workflow_dispatch` dry-run. Expect few rows or none at today's volume | Stage 4's data |
-| 6 | **The Neo4j mirror** (optional) | A-16 steps 6, 8 and 9. Nothing the app reads depends on it | — |
+| 1 | ~~**Approve #137**~~ — **merged 2026-10-31 from Matt's side**, with #138 (1.5.0) and #144 (1.6.0), under the rule that a PR flagged for you only because it regenerates `shared/fixtures` merges once every pre-existing case is byte-identical (checked, 706 cases) and the `db` job is green | Your review of the fixture hunks is welcome after the fact. `edgeWeight` is unchanged in all three, so the next nightly `graph:edges` only re-stamps `bev_edges`; the `cop` term and `user_neighbors` are untouched | — |
+| 2 | ~~**A-14 follow-ups**~~ — **done in #149 and #150 from Matt's side** (2026-11-01). Left for you: the follow-ups in the table above | Correct streaks and scores once `000200`/`000300` are pushed |
+| 3 | ~~**S-21 + Stage 4**~~ — **done in #147 from Matt's side** (2026-11-01), exactly to #144's "Heads-up for Arjun"; the `20261026000300` comment that says `snapshot.userNeighbors` is corrected in `20261101000100`'s header (the package field is `userNeighbours`; `userNeighbors` is the RPC key) | Switching on M-27 (a)'s edges mode and stored neighbours in Layer 2 |
+| 4 | ~~**`categories_depth_guard` follow-up**~~ — **done in #146 from Matt's side** (2026-11-01) | — |
+| 5 | ~~**First `graph-neighbours` run**~~ — **done.** The `workflow_dispatch` on 2026-10-31 and the 05:20 UTC schedule on 2026-11-01 were both green, and prod `user_neighbors` holds **4 rows**. Few, as this row expected: the 3-co-rater gate is working, and stored mode has almost nothing to read yet | Stage 4's data, such as it is |
+| 6 | ~~**`refresh_bev_stats` grant and the merged-Bev writes**~~ — **#155**, `20261102000100`, CI running | `resolve_bev_id(uuid)` holds `get_bev`'s walk now, and all **five** write RPCs call it: `submit_ranking`, `rerank_bev`, `add_want_to_try`, `remove_ranking` and `remove_want_to_try`. The review named two; the other three were worse than expected — `rerank_bev` and `remove_ranking` raised `BEVI_NOT_FOUND` on a ranking that existed, and `remove_want_to_try` missed silently, so the bookmark stayed on. Plus the `authenticated` revoke on `refresh_bev_stats`, and pgTAP `23` (33 assertions). Matt's heads-up is in the PR: four existing functions accept more than they did, none returns anything new, so no contract or app change. **Push `20261102000100` after it merges** | A correct prod |
+| 7 | **The vector gap**, no migration | Emit `respaceBucket` and `rankUsers`, and drop both from `SKIPPED` in `scripts/vectors/build-pgtap.ts`. Both need fixture rows, which `20_vectors.test.sql` exists to avoid ("pure function calls, so no fixture rows"), so they go to a **second generated file** under the same `--check`. The SQL twins: `respace_bucket(uuid, smallint)` for the 15 respace cases — it only applies `ranking_score(bucket, position, n)` to a whole bucket, and `ranking_score` is already pinned by 438 `storedScore` assertions, so what these add is the bucket-wide application and the `n = 0` no-op — and **`get_user_leaderboard`**, not `user_rank_points`, for the 4 `rankUsers` cases, because the ordering the vectors encode (`points desc, bevs_ranked desc, created_at asc, id asc`) lives in the leaderboard RPC while `user_rank_points` returns an unordered set. `seed.sql` creates no users, so a pgTAP file sees only its own fixture and the global `rank()` is clean. Plus the two stale comments in `packages/api/src/mappers.ts` (~239, ~534) that still describe `bayes_score` as filled by a milestone-1.7 job | #150's last two follow-ups |
+| 8 | **S-10 + A-08 · Venues**, two halves | The next real feature in your lane, and the only thing Matt's M-16 waits on. Half 1 is the schema and the OSM import; half 2 is contract `2.10.0` and the read RPCs. Detail in "Later: P2" below | **M-16** |
+| 9 | **The Neo4j mirror** (optional) | A-16 steps 6, 8 and 9. Nothing the app reads depends on it | — |
+| — | ~~**`app.yml` path filter**~~ — in #148 (the icon batch 3 PR) | — |
 
 ## Done since 2026-10-19
 
@@ -60,28 +81,24 @@ The decision (2026-10-19): Neo4j holds Bevs, categories, brands and flavours as 
 
 | Task | Unblocks | Note |
 |---|---|---|
-| **S-10 + A-08 · Venues**, one combined PR | Matt's M-16 (the map) | Start with the **Upper East Side and Roosevelt Island** (D-13), keeping the CHECK at the full NYC bounds. Trimmed contract: `venues.inView`, `venues.get`. No `rankings.venue_id`. You also provide the Google Maps key (D-12) |
-| **S-13 + A-12 · Duplicates**, one combined PR | Matt's M-20 | The approved plan in TASKS.md S-13: `duplicateOfId` on reports (the database column already exists), an admin-only `merge_bev(src, dst)` run from Supabase Studio, and a Studio view of pending reports. Never merge automatically |
+| **S-10 + A-08 · Venues**, in two halves (A-16 (1)'s precedent) | Matt's M-16 (the map) | Start with the **Upper East Side and Roosevelt Island** (D-13), keeping the CHECK at the full NYC bounds. **Half 1, the data:** `venues` / `chains` / `venue_bevs`, RLS, a GiST index on the point, `scripts/venues/import-osm.ts` (Overpass over `area(3600175905)`, a reviewable CSV, upsert by `osm_id`, `source = manual` never overwritten), the OSM attribution, pgTAP for the bounds CHECK. **Half 2, the reads:** contract `2.10.0` — `VenuesApi { inView, get }`, `Venue`, `VenuePin`, and `NYC_BOUNDS` in `shared/` so M-16 restricts the map to the same numbers the CHECK uses — plus `venues_in_view` (zoom cap, 60 pins at z11 to 300 at z15), `venue_detail`, `neighborhoods`, `packages/api`, the FakeApi and conformance. Trimmed: no `rankings.venue_id`, no `venues_search`, no friends filter, no viewer's-best-score. DoD: `explain analyze` under 150 ms and pgTAP for the zoom cap. You also provide the Google Maps key (D-12) |
+| ~~**S-13 + A-12 · Duplicates**~~ — **done in #151 from Matt's side** (2026-11-01, `20261101000500`, contract 2.9.0) | ~~Matt's M-20~~ (#152, merged) | As approved: `duplicateOfId` on reports, Studio-only `merge_bev(src, dst)`, the `pending_duplicate_reports` view. Never merges automatically. **S-10 + A-08 (venues) is now the next thing in your lane** |
 
 ## What you owe Matt, and what he owes you
 
 | You hand Matt | So he can |
 |---|---|
-| Your approval of #137 (`shared/fixtures`) | Merge M-27 (a), then M-21's package half on top |
 | A-13 (#132: `categories.tree()`, `bevs.leaves()`), on prod | Build M-21's tiers |
-| S-21 + Stage 4, on prod | Switch on edges mode; Layer 2 reads `user_neighbors` |
+| ~~S-21 + Stage 4~~ (#147; Matt pushes `20261101000100`) | Switch on edges mode and stored neighbours (both options exist in the package) |
 | An M-26 re-export once there are more users (privately, outside the repo) | Judge switching on edges mode and Pearson |
-| S-10 + A-08 and the Maps key; S-13 + A-12 | Build M-16; build M-20 |
+| S-10 + A-08 and the Maps key (S-13 + A-12 is #151) | Build M-16 |
 | A heads-up before any migration that changes what an existing function returns | Keep the app and the FakeApi in step |
 
 | Matt hands you | So you can |
 |---|---|
-| M-22's SQL corrections (#128: two are wrong on prod today, streak history and stale `bayes_score`) | Fix them as A-14 follow-ups |
-| #137's vector targets: the `bayesScoreStored` cases and the event-streak cases | Test the A-14 follow-ups against them |
-| #137's `PredictionSnapshot.edges?` shape | Build S-21 |
-| The Stage 4 contract, agreed together | Build Stage 4 with S-21, so the RPC changes once |
+| ~~M-22's SQL corrections, #137's vector targets, the S-21 + Stage 4 RPC contract~~ | All built from Matt's side on 2026-11-01 (#149, #150, #147); your review after the fact |
 | A review of every FakeApi / conformance hunk in your PRs (they live in his lane) | Merge your combined PRs |
-| Advance warning of any `@bevi/ranking` formula or constant change (1.4.0 in #137, 1.5.0 in M-21) | Re-run the graph sync; your edge weights come from `edgeWeight()` |
+| Advance warning of any `@bevi/ranking` formula or constant change (1.4.0, 1.5.0 and 1.6.0 all merged on 2026-10-31; `edgeWeight` unchanged, so the nightly run only re-stamps) | Re-run the graph sync; your edge weights come from `edgeWeight()` |
 
 ## The shared map (identical in both plans)
 
@@ -91,22 +108,22 @@ D-04 taxonomy + 378 assignments ─────▶ A-13 hierarchy (#132) ──�
 M-22 maths review ──(SQL fixes)──────▶ A-14 follow-ups (open)         │
 #137 M-22 vectors ──(targets)────────▶ A-14 follow-ups                │
 M-27 (b) Bevs like this ◀───────────── A-16 (1) Bev graph + S-14 (2)  │
-M-21 placement (pkg, then app) ◀────── A-16 (1) + A-13 ◀──────────────┘
+M-21 placement (#138, app #140) ◀───── A-16 (1) + A-13 ◀──────────────┘
 M-28 taste formulas ──(#131)─────────▶ A-16 (2) taste graph (#133)
-M-27 (a) edges mode on (#137) ◀─────── S-21 edges in the snapshot
-Layer 2 reads user_neighbors ◀──────── Stage 4 (same RPC change)
+M-27 (a) edges mode on (#137) ◀─────── S-21 edges in the snapshot (#147)
+Stored neighbours on (#144) ◀──────── Stage 4 (same RPC change, #147)
 M-16 map UI ◀───────────────────────── S-10 + A-08 venues (P2)
-M-20 duplicate step ◀───────────────── S-13 + A-12 duplicates (P2)
+M-20 duplicate step (#152) ◀────────── S-13 + A-12 duplicates (#151)
 ```
 
 ## Files we both touch: where conflicts happen
 
 | Surface | Who edits it | Rule |
 |---|---|---|
-| `shared/src/` (the contract) and `CONTRACT_VERSION` | Mostly your combined PRs | One combined PR per feature (contract + migration + `packages/api` + FakeApi). Bump the minor version, currently `2.8.0` (A-13, #132). Whoever merges second rebases and takes the next number |
+| `shared/src/` (the contract) and `CONTRACT_VERSION` | Mostly your combined PRs | One combined PR per feature (contract + migration + `packages/api` + FakeApi). Bump the minor version, currently `2.9.0` (S-13, #151). Whoever merges second rebases and takes the next number |
 | `app/src/testing/fakeApi/*`, `conformance.ts` | You (in your combined PRs) and Matt | Every new API method needs a FakeApi version, or the app's typecheck fails. Write it to match your SQL, and Matt reviews it |
 | `packages/ranking/` | Matt | Your sync job and Edge Function import `edgeWeight` / `topEdges` from it; never copy the formulas. A `RANKING_VERSION` bump means re-running the sync |
-| `supabase/migrations/` | You | Timestamped and append-only; the next timestamps go after `20261031000100`. Two branches once both took `20261026000100`, so check `ls supabase/migrations` and the open PRs before picking one. App code that calls a new function merges **only after its migration is on prod**. Push in timestamp order |
+| `supabase/migrations/` | You | Timestamped and append-only; the next timestamps go after `20261101000500`. Two branches once both took `20261026000100`, so check `ls supabase/migrations` and the open PRs before picking one; with several PRs open, pre-assign timestamps and disjoint `create or replace` sets (two migrations re-creating one function silently revert each other). App code that calls a new function merges **only after its migration is on prod**. Push in timestamp order |
 | `TASKS.md` and `NEXT-*.md` | Both | Small PRs; rebase if they collide. The board at the top is the source of truth |
 | `.github/workflows/` | You (`graph-sync.yml`, `backend.yml`), Matt (`app.yml`) | Don't edit the other's workflow without a heads-up |
 | `docs/graph*.md` and `docs/bevi-ranking-math.tex` | You own the graph docs, Matt owns the paper | A change to one that affects the other gets a line in the PR's "Heads-up" section |

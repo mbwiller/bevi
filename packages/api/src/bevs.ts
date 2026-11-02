@@ -119,21 +119,25 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
     if (error) throw mapError(error);
     if (!data) throw new ApiError('not_found', `No Bev ${id}`);
     const row = data as GetBevRpcRow;
+    // get_bev follows a merge (20261101000500): asked for a Bev that was merged
+    // into another, it returns the surviving Bev. Everything below is about the
+    // Bev actually returned, so it keys off `row.id`, not the id asked for.
+    const bevId = row.id;
     // Started now, alongside the reads below; only used if the caller hasn't
     // ranked this Bev. Never rejects (predictionFor catches).
-    const prediction = predictionFor(uid, id);
+    const prediction = predictionFor(uid, bevId);
 
     // Read straight from the table rather than widening get_bev: the profile
     // has a select policy for authenticated, and changing an RPC's `returns
     // table` means dropping and recreating it.
     const [rankingRes, wantRes, followeeIds, profileRes] = await Promise.all([
-      client.from('rankings').select('bucket, position, score, note').eq('user_id', uid).eq('bev_id', id).maybeSingle(),
-      client.from('want_to_try').select('user_id').eq('user_id', uid).eq('bev_id', id).maybeSingle(),
+      client.from('rankings').select('bucket, position, score, note').eq('user_id', uid).eq('bev_id', bevId).maybeSingle(),
+      client.from('want_to_try').select('user_id').eq('user_id', uid).eq('bev_id', bevId).maybeSingle(),
       fetchFollowIds(client, 'follows', 'follower_id', uid),
       client
         .from('bev_flavor_profiles')
         .select('base, carbonated, caffeine, sweetness, dairy, alcohol, serve, source')
-        .eq('bev_id', id)
+        .eq('bev_id', bevId)
         .maybeSingle(),
     ]);
     if (rankingRes.error) throw mapError(rankingRes.error);
@@ -157,7 +161,7 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
       const { data: friendRankings, error: frError } = await client
         .from('rankings')
         .select('user_id, score, bucket')
-        .eq('bev_id', id)
+        .eq('bev_id', bevId)
         .in('user_id', followeeIds);
       if (frError) throw mapError(frError);
       const rows = (friendRankings ?? []) as Array<{ user_id: string; score: number; bucket: number }>;
@@ -268,9 +272,16 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
     return get(created.id);
   }
 
-  async function report(id: string, reason: string): Promise<void> {
+  async function report(id: string, reason: string, opts?: { duplicateOfId?: string }): Promise<void> {
     await requireUserId(client);
-    const { error } = await client.rpc('report_bev', { p_bev_id: id, p_reason: reason });
+    // report_bev (20261101000500) raises BEVI_VALIDATION with detail
+    // 'duplicateOfId' for a self-reference or a Bev the caller cannot see, which
+    // mapError turns into 'validation' with `detail.field = 'duplicateOfId'`.
+    const { error } = await client.rpc('report_bev', {
+      p_bev_id: id,
+      p_reason: reason,
+      p_duplicate_of: opts?.duplicateOfId ?? null,
+    });
     if (error) throw mapError(error);
   }
 

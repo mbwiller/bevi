@@ -201,6 +201,30 @@ export interface PredictionSnapshot {
    * allowed and ignored. Read lazily, only in edges mode.
    */
   edges?: BevEdge[] | null;
+  /**
+   * The stored taste neighbours that `userSimilarity: 'stored'` reads (Stage 4, LaTeX §6.4): for
+   * each user key, that user's `user_neighbors` rows, i.e. their top TASTE_NEIGHBOUR_K users by the
+   * blended similarity sim_B with sim ≥ TASTE_SIM_FLOOR, as the nightly job (A-16 (2)) stored them.
+   * Keyed by the user whose neighbours they are: the viewer, in the app (other users' ids are the
+   * snapshot's aliases); every user, in the eval harness. Absent (undefined or null) means "not
+   * provided": stored mode then falls back to the in-snapshot cosine for everyone. A key that is
+   * missing or holds an empty list means that user has no rows (not yet synced, or nobody above the
+   * floor), and that user falls back too. Rows naming users absent from the snapshot are allowed
+   * and weigh 0 (their reliability is that of n_v = 0). Row order does not matter. Read lazily,
+   * only in stored mode, and validated then (see `neighbourLookup` in context.ts).
+   */
+  userNeighbours?: Record<UserId, UserNeighbour[]> | null;
+}
+
+/**
+ * One stored taste neighbour of a user: a `user_neighbors` row (A-16 (2), LaTeX §6.4). `sim` is the
+ * blended similarity sim_B as stored (already significance-weighted, in [-1, 1]); `common` is
+ * |common(u, v)|, carried for diagnostics and not read by any formula.
+ */
+export interface UserNeighbour {
+  userId: UserId;
+  sim: number;
+  common: number;
 }
 
 export interface Layer1Result {
@@ -243,10 +267,13 @@ export interface Recommendation {
 /**
  * The user–user similarity Layer 2 weights neighbours by. 'cosine' is §8.9's cosine of the z-scores
  * on the common Bevs, the live engine. 'pearson' re-centres both users on the common Bevs first
- * (`pearsonSimilarity` in graph.ts, docs/graph_db_implementation.md Stage 3); it is off by default
- * until the eval harness has a real export to judge it on.
+ * (`pearsonSimilarity` in graph.ts, docs/graph_db_implementation.md Stage 3). 'stored' reads the
+ * user's stored taste neighbours from `snapshot.userNeighbours` (Stage 4): sim_B · min(1, n_v / N₀)
+ * for a listed neighbour, 0 for everyone else; it falls back to 'cosine' for a user with no stored
+ * rows (see `effectiveUserSimilarity`). Both alternatives are off by default until the eval harness
+ * has a real export to judge them on.
  */
-export type UserSimilarityKind = 'cosine' | 'pearson';
+export type UserSimilarityKind = 'cosine' | 'pearson' | 'stored';
 
 /**
  * The Bev–Bev similarity Layer 1's content term weights the user's ranked Bevs by. 'content' is

@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { BevArt, bevArtForCategory } from '@/components/BevArt';
-import { brandLine } from '@/components/BevParts';
+import { bevImageProps, brandLine } from '@/components/BevParts';
 import { BucketButton } from '@/components/BucketButton';
 import { Icon } from '@/components/Icon';
 import { IconButton } from '@/components/IconButton';
@@ -32,6 +32,8 @@ export function GutCheck({ bev, chosen, onChoose, onClose }: GutCheckProps) {
   const { colors } = useTheme();
   const cat = categoryById(bev.categoryId);
   const brand = brandLine(bev);
+  // Photo > icon > category art; an icon floats exactly as a photo does.
+  const { src } = bevImageProps(bev);
   return (
     <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.top}>
@@ -39,9 +41,9 @@ export function GutCheck({ bev, chosen, onChoose, onClose }: GutCheckProps) {
       </View>
       <View style={styles.hero}>
         <View style={styles.art} accessible accessibilityRole="image" accessibilityLabel={bev.name}>
-          {bev.photoUrl ? (
+          {src ? (
             <Image
-              source={{ uri: bev.photoUrl }}
+              source={{ uri: src }}
               style={styles.fill}
               contentFit="contain"
               cachePolicy="memory-disk"

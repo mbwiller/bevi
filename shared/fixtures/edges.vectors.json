@@ -1,7 +1,7 @@
 {
-  "version": "1.5.0",
+  "version": "1.6.0",
   "constants": {
-    "version": "1.5.0",
+    "version": "1.6.0",
     "bands": {
       "DISLIKED": [
         0,
@@ -121,6 +121,7 @@
     "bayesStoredRule": "bev_stats.bayes_score numeric(4,2) from exact inputs: m with at most 3 dp (global_stats.mean_score numeric(5,3), or the exact category mean), scores in cents; N = C*m_thousandths + 10*sum(score_cents), D = C + n; storedCents = round half away from zero of N / (10*D) = floor((2N + 10D) / (20D)); never round the floating-point bayes",
     "streakEvents": "streakFromTimestamps.timestamps are ranking EVENTS (submit_ranking and rerank_bev), never deleted: a re-rank adds its own day and keeps the original one; a removal adds and deletes nothing. When a case lists input.events, timestamps = events.map(at)",
     "layer1EdgesRule": "bevSimilarity 'edges': sim(b, b') = w of the snapshot.edges row for the unordered pair {b, b'} (either orientation), 0 when there is none; pairs with sim < simMin dropped as in 'content'; content = sum(sim * z) / (sum(sim) + 1); conf1 mass = n_{u,cat(b)} + sum(sim); affinity and g unchanged. A snapshot without an edges field (absent or null) uses contentSimilarity ('content'); an empty array means no edges",
+    "layer2StoredRule": "userSimilarity 'stored' (Stage 4), for the user u: N(u) = snapshot.userNeighbours[u] (u's user_neighbors rows, any order); sim'(u, v) = sim * min(1, n_v / neighbourReliabilityN) for v in N(u), with sim as stored and n_v = users[v].stats.n (derived from v's rankings when v is missing from users; 0 when v is unknown to the snapshot, so the row weighs 0); sim'(u, v) = 0 for every v not in N(u), whatever their co-ratings. Then Layer 2 exactly as in 'cosine' mode: the raters of b other than u with sim' > 0 (so a negative stored sim is dropped), sim' desc then userId asc, at most cfK; support = sum(sim'); z2 = sum(sim' * z_{v,b}) / support, 0 without neighbours. common is carried and read by no formula. Falls back to 'cosine' (the in-snapshot sim' of section 8.9) when the snapshot has no userNeighbours field (absent or null) or u has no rows (key missing or empty list). source = the similarity actually used. predictScore: lambda and confidence read this support",
     "placementTiersRule": "tier of a bucket Bev l relative to the new Bev b (placementTier constants): sameLeaf (1) when categoryId (the root) is equal and both leafCategoryId are non-null and equal; sameRoot (2) when categoryId is equal otherwise (a null leaf on either side, i.e. kind unknown, never reaches tier 1); edge (3) when the roots differ and weights[l.id] (the bev_edges w of {b, l}) is >= edgeMinWeight; null otherwise (no weight, or a weight below the floor). Without weights only tiers 1 and 2 occur",
     "anchoredPlacementRule": "startPlacement with tiers (one per orderedBevIds entry, filtered with the Bev itself): anchors A = the entries other than bevId whose tier equals the smallest non-null tier among the entries other than bevId (on a re-rank the Bev is still in the list and its tier against itself is ignored), in list order, at positions p_1 < ... < p_k of the filtered list; no anchors = the plain search. Phase 1 = binary search over anchor slots [aLo, aHi] = [0, k]: ask a_j with j = floor((aLo + aHi) / 2) (0-based), NEW_BETTER aHi = j, EXISTING_BETTER aLo = j + 1, TIE ends the placement at p_j + 1; after each answer the insertion range is lo = (aLo = 0 ? 0 : p_{aLo - 1} + 1), hi = (aHi = k ? n : p_{aHi}). Phase 2 = the plain search on [lo, hi] once aLo = aHi (none when lo = hi). insertIndex = lo; comparisons in the order asked; maxSteps = maxComparisons(k) + maxComparisons(widest gap between consecutive anchors, or before the first / after the last), constant. Undo restores lo, hi, aLo, aHi"
   },
@@ -1417,7 +1418,7 @@
       "fn": "layer1",
       "input": {
         "snapshot": {
-          "version": "1.5.0",
+          "version": "1.6.0",
           "generatedAt": "2026-10-31T00:00:00Z",
           "global": {
             "mean": 6.416666666666667,
@@ -1640,7 +1641,7 @@
       "fn": "layer1",
       "input": {
         "snapshot": {
-          "version": "1.5.0",
+          "version": "1.6.0",
           "generatedAt": "2026-10-31T00:00:00Z",
           "global": {
             "mean": 6.416666666666667,
@@ -1863,7 +1864,7 @@
       "fn": "layer1",
       "input": {
         "snapshot": {
-          "version": "1.5.0",
+          "version": "1.6.0",
           "generatedAt": "2026-10-31T00:00:00Z",
           "global": {
             "mean": 6.416666666666667,
@@ -2086,7 +2087,7 @@
       "fn": "layer1",
       "input": {
         "snapshot": {
-          "version": "1.5.0",
+          "version": "1.6.0",
           "generatedAt": "2026-10-31T00:00:00Z",
           "global": {
             "mean": 6.416666666666667,
@@ -2287,7 +2288,7 @@
       "fn": "layer1",
       "input": {
         "snapshot": {
-          "version": "1.5.0",
+          "version": "1.6.0",
           "generatedAt": "2026-10-31T00:00:00Z",
           "global": {
             "mean": 6.416666666666667,

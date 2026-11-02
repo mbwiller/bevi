@@ -66,6 +66,6 @@ Visual review covered all 30 icons and 40/56/96/155px square tiles with 8% paddi
 3. Prioritize the 22 remaining starters in `coverage.json`: Dr Pepper / Mountain Dew variants, juices, energy drinks, RTD coffees, smoothies, teas, boba, Gatorade and GT's Gingerade. None is claimed complete by this batch.
 4. Assign disjoint UUID/slug groups. Add family modules exporting `records`; keep shared primitives coordinator-owned. Research each exact package instead of recoloring from a category assumption.
 5. Rebuild, validate, inspect overview and small-size sheets, then update `review/review.json` with the exact reviewed hashes. Keep references and unresolved choices in recipes, not the generated inventory.
-6. Reconcile live Postgres IDs and implement UUID-based application image selection in a later integration pass; preserve real photo metadata.
+6. After each batch run `node scripts/icons/export-app.mjs` and commit `app/public/bev-icons/` and `app/src/lib/bevIcons.generated.ts`. The app picks a Bev's image as photo > icon > category art, so real photos are never replaced; `npm test -w app` fails if the app's copy drifts from the manifest (see the README's "Ship to the app").
 
 All resumed worker output is integrated into four new family modules (`colas`, `citrus-sodas`, `sparkling-starters`, `wine-cocktail`). No hidden worker batch remains to recover. The full reusable skill remains in `skill/SKILL.md`.

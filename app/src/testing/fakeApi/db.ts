@@ -118,6 +118,8 @@ export interface FakeReport {
   bevId: string;
   userId: string;
   reason: string;
+  /** S-13: the Bev this one duplicates, when the report names one. Missing on older stored dbs. */
+  duplicateOfId?: string | null;
   createdAt: string;
 }
 

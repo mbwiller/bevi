@@ -232,7 +232,12 @@ export interface BevsApi {
   /** Age-filtered server-side. @throws 'unauthorized'. */
   search(params: { q: string; categoryId?: CategoryId; limit?: number; cursor?: string }): Promise<Page<BevSummary>>;
 
-  /** @throws 'unauthorized', 'not_found', 'age_restricted'. */
+  /**
+   * A Bev that was merged into another (a duplicate, resolved by hand) resolves to
+   * the surviving Bev: the returned `id` is then the survivor's, not `id`, which is
+   * how a caller can tell it followed a merge (an old link or a cached id).
+   * @throws 'unauthorized', 'not_found', 'age_restricted' (judged on the Bev returned).
+   */
   get(id: string): Promise<Bev>;
 
   /** Up to 5 likely matches. @throws 'unauthorized'. */
@@ -250,8 +255,17 @@ export interface BevsApi {
    */
   create(input: CreateBevInput): Promise<Bev>;
 
-  /** @throws 'unauthorized', 'not_found', 'validation' (unknown reason), 'rate_limited'. */
-  report(id: string, reason: string): Promise<void>;
+  /**
+   * Reports a Bev for moderation. `opts.duplicateOfId` names the Bev this one
+   * duplicates: meant for `reason = 'duplicate'`, accepted with any reason, and
+   * optional even then (an operator reads the reports and merges by hand; a
+   * duplicate report without it is still a valid report).
+   * @throws 'unauthorized'; 'not_found' (no Bev `id`); 'validation' — an unknown
+   *   reason, or `detail.field = 'duplicateOfId'` when it equals `id` or names a Bev
+   *   the caller cannot see (unknown, not active, or alcoholic for a caller under
+   *   21 — one error for all three, so it reveals nothing); 'rate_limited'.
+   */
+  report(id: string, reason: string, opts?: { duplicateOfId?: string }): Promise<void>;
 
   /**
    * Age-filtered `isStarter` Bevs, at least 30, each with `ratingCount`. The app

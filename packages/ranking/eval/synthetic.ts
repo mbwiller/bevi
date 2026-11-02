@@ -8,13 +8,14 @@
 // probability `noise`. Stored scores, positions and the comparison log therefore come from the
 // actual pipeline, as DEVELOPMENT-MATT.md §11 asks.
 
-import { BUCKET_ORDER } from '../src/constants.ts';
+import { BUCKET_ORDER, TASTE_NEIGHBOUR_K, TASTE_SIM_FLOOR } from '../src/constants.ts';
 import { edgeWeight, topEdges, treeSimilarity } from '../src/edges.ts';
+import { blendUserSimilarity, tasteCatalog, tasteVector, topUserNeighbours, zScoresFromRankings, type TasteVector } from '../src/graph.ts';
 import { answer, currentPrompt, isDone, placementResult, startPlacement } from '../src/placement.ts';
 import { createPrng, randomInt } from '../src/prng.ts';
 import { bucketForScore, insertIntoBucket, respaceBucket } from '../src/score.ts';
 import { contentSimilarity } from '../src/similarity.ts';
-import type { BevEdge, BevFeatures, BevId, Bucket, PredictionSnapshot, UserId } from '../src/types.ts';
+import type { BevEdge, BevFeatures, BevId, Bucket, PredictionSnapshot, UserId, UserNeighbour } from '../src/types.ts';
 import { syntheticSnapshot } from '../test/snapshot-fixture.ts';
 import type { EvalBev, EvalComparison, EvalDataset, EvalRanking } from './dataset.ts';
 
@@ -113,6 +114,52 @@ export function syntheticEdges(bevs: ReadonlyArray<Pick<BevFeatures, 'id' | 'cat
     }
   }
   return [...kept.values()].sort((x, y) => (x.a < y.a ? -1 : x.a > y.a ? 1 : x.b < y.b ? -1 : x.b > y.b ? 1 : 0));
+}
+
+const round4 = (x: number) => Math.round(x * 1e4) / 1e4;
+
+/**
+ * Stand-in `user_neighbors` for a snapshot, built the way scripts/graph/neighbours-core.ts's
+ * `buildNeighbours` builds the real ones, with this package's exports: z-scores from every ranking
+ * in the snapshot (`zScoresFromRankings`, which for a fold snapshot equals what `snapshotContext`
+ * computes); a taste catalog over every Bev in the snapshot; `blendUserSimilarity` for EVERY
+ * unordered pair of users with a ranking (no candidate rule), in id order; each user keeping
+ * `topUserNeighbours` (sim ≥ TASTE_SIM_FLOOR, top TASTE_NEIGHBOUR_K, sim desc then id); both
+ * directions emitted independently; `sim` rounded to 4 dp afterwards, as `numeric(5,4)` stores it;
+ * `common` from the blend. A user with no row gets no key, as a user absent from the table would.
+ *
+ * Differences from the job, all forced by what a snapshot carries: every Bev counts as active (an
+ * eval export has no status), and `flavorBase` is null for every Bev because neither a snapshot nor
+ * an eval export carries `bev_flavor_profiles.base`. So the only bridging attribute is the brand,
+ * and the attribute term understates the real graph's.
+ *
+ * Used per fold by the harness for the `*-stored` arms (run.ts), on synthetic data and on a real
+ * export alike: stored neighbours derive from rankings, so neighbours from the full dataset (or a
+ * real `user_neighbors` dump) would leak the held-out rows.
+ */
+export function syntheticNeighbours(snapshot: PredictionSnapshot): Record<UserId, UserNeighbour[]> {
+  const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+  const catalog = tasteCatalog(Object.values(snapshot.bevs).map((b) => ({ id: b.id, categoryId: b.categoryId, brand: b.brandKey, flavorBase: null })));
+  const z = zScoresFromRankings(snapshot.rankings);
+  const users = [...z.keys()].sort(cmp);
+  const vectors = new Map<UserId, TasteVector>(users.map((u) => [u, tasteVector(z.get(u) as Map<BevId, number>, catalog)]));
+  const perUser = new Map<UserId, UserNeighbour[]>(users.map((u) => [u, []]));
+  for (let i = 0; i < users.length; i++) {
+    const u = users[i] as UserId;
+    for (let j = i + 1; j < users.length; j++) {
+      const v = users[j] as UserId;
+      const r = blendUserSimilarity({ zu: z.get(u) as Map<BevId, number>, zv: z.get(v) as Map<BevId, number>, tu: vectors.get(u) as TasteVector, tv: vectors.get(v) as TasteVector }, catalog);
+      if (r.sim < TASTE_SIM_FLOOR) continue;
+      perUser.get(u)?.push({ userId: v, sim: r.sim, common: r.common });
+      perUser.get(v)?.push({ userId: u, sim: r.sim, common: r.common });
+    }
+  }
+  const out: Record<UserId, UserNeighbour[]> = {};
+  for (const u of users) {
+    const kept = topUserNeighbours(perUser.get(u) as UserNeighbour[], TASTE_NEIGHBOUR_K, TASTE_SIM_FLOOR);
+    if (kept.length > 0) out[u] = kept.map((n) => ({ userId: n.userId, sim: round4(n.sim), common: n.common }));
+  }
+  return out;
 }
 
 /** syntheticSnapshot(seed, users, bevs) run through the placement pipeline, with `syntheticEdges`. */

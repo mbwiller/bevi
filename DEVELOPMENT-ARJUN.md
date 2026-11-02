@@ -870,7 +870,7 @@ select cmp_ok(abs(public.ranking_score(2,2,7) - 5.42), '<', 0.005, 'scoreFromPos
 select * from finish(); rollback;
 ```
 
-`supabase test db` runs them with the rest of your pgTAP suite. CI regenerates the SQL on every run (generated files are gitignored) so a `contract/*` PR that changes vectors fails your SQL until you update it; that's the intended coupling. Table-level cases use a `with fixture as (insert … returning *)` prelude inside the test transaction.
+`supabase test db` runs them with the rest of your pgTAP suite. As built (A-14 follow-ups, #150): `scripts/vectors/build-pgtap.ts` writes `supabase/tests/20_vectors.test.sql`, which **is committed**, and `backend.yml` runs `npm run vectors:pgtap -- --check`, so a `rank/*` PR that changes a vector case fails CI until `npm run vectors:pgtap` is re-run and the file committed; that's the intended coupling. Table-level cases use a `with fixture as (insert … returning *)` prelude inside the test transaction.
 
 ### 5.8 Recommendations: Edge Function + job queue (seam 5)
 
@@ -1054,6 +1054,8 @@ Friends-only, so optimistic: user-created Bevs go live as soon as the photo is p
 - Admin RPCs (`is_admin()` only): `merge_bevs(dup, canonical)` (re-point rankings, want_to_try, comparisons, events; if a user ranked both keep the canonical and remove the dup ranking, re-space, refresh stats; add alias; set `status='merged'`), `hide_bev(id, reason)`, `set_bev_photo(id, path)`, `edit_bev(id, fields)`.
 - Photo content: at 20 friends, eyeball the weekly moderation view. If this ever opens up, add a nudity/safety classifier on Replicate in `process-photo` before publishing; not now.
 - Expect the integrator agent to flag any PR that adds a write path bypassing these RPCs.
+
+**Duplicates (S-13 + A-12, `20261101000500`).** Flag, then merge by hand; nothing merges automatically. The app's report sheet sends `bevs.report(id, 'duplicate', { duplicateOfId })` → `report_bev(…, p_duplicate_of)`, which rejects naming the Bev itself or one the reporter cannot see (`validation`, `detail.field = 'duplicateOfId'`). In Studio, `select * from pending_duplicate_reports;` lists the open duplicate reports with both Bevs side by side and a ready-to-paste `merge_sql`; run it in the SQL editor as `select public.merge_bev('<duplicate>', '<original>');` (postgres/service role only, not callable from the app). It folds the duplicate's rankings (someone who ranked both keeps the original's, and the bucket is re-spaced), comparisons, Want to Try, feed posts, aliases (its name becomes one), reports, featured row and `bev_edges` into the original, marks it `merged`, and returns a jsonb summary. `get_bev` then redirects old links to the original. Merge the user-created copy into the catalog Bev, not the other way round; the migration header has every step and what it leaves alone.
 
 ---
 

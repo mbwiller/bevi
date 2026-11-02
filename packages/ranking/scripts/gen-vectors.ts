@@ -28,8 +28,10 @@ import {
   edgeWeight,
   embeddingSimilarity,
   effectiveBevSimilarity,
+  effectiveUserSimilarity,
   isDone,
   layer1,
+  layer2,
   leaderboardOrder,
   localDayKey,
   localPeriodKey,
@@ -40,6 +42,7 @@ import {
   placementResult,
   placementTiers,
   populationStats,
+  predictScore,
   profileSimilarity,
   randomInt,
   rankPoints,
@@ -59,6 +62,7 @@ import {
   topUserNeighbours,
   treeSimilarity,
   undo,
+  userSimilarity,
   userStats,
   zScore,
   zScoresFromRankings,
@@ -82,6 +86,7 @@ import {
   type TasteCatalog,
   type TasteVector,
   type Taxonomy,
+  type UserNeighbour,
 } from '../src/index.ts';
 
 const OUT_DIR = fileURLToPath(new URL('../../../shared/fixtures/', import.meta.url));
@@ -128,6 +133,8 @@ const constants = {
     'streakFromTimestamps.timestamps are ranking EVENTS (submit_ranking and rerank_bev), never deleted: a re-rank adds its own day and keeps the original one; a removal adds and deletes nothing. When a case lists input.events, timestamps = events.map(at)',
   layer1EdgesRule:
     "bevSimilarity 'edges': sim(b, b') = w of the snapshot.edges row for the unordered pair {b, b'} (either orientation), 0 when there is none; pairs with sim < simMin dropped as in 'content'; content = sum(sim * z) / (sum(sim) + 1); conf1 mass = n_{u,cat(b)} + sum(sim); affinity and g unchanged. A snapshot without an edges field (absent or null) uses contentSimilarity ('content'); an empty array means no edges",
+  layer2StoredRule:
+    "userSimilarity 'stored' (Stage 4), for the user u: N(u) = snapshot.userNeighbours[u] (u's user_neighbors rows, any order); sim'(u, v) = sim * min(1, n_v / neighbourReliabilityN) for v in N(u), with sim as stored and n_v = users[v].stats.n (derived from v's rankings when v is missing from users; 0 when v is unknown to the snapshot, so the row weighs 0); sim'(u, v) = 0 for every v not in N(u), whatever their co-ratings. Then Layer 2 exactly as in 'cosine' mode: the raters of b other than u with sim' > 0 (so a negative stored sim is dropped), sim' desc then userId asc, at most cfK; support = sum(sim'); z2 = sum(sim' * z_{v,b}) / support, 0 without neighbours. common is carried and read by no formula. Falls back to 'cosine' (the in-snapshot sim' of section 8.9) when the snapshot has no userNeighbours field (absent or null) or u has no rows (key missing or empty list). source = the similarity actually used. predictScore: lambda and confidence read this support",
   placementTiersRule:
     'tier of a bucket Bev l relative to the new Bev b (placementTier constants): sameLeaf (1) when categoryId (the root) is equal and both leafCategoryId are non-null and equal; sameRoot (2) when categoryId is equal otherwise (a null leaf on either side, i.e. kind unknown, never reaches tier 1); edge (3) when the roots differ and weights[l.id] (the bev_edges w of {b, l}) is >= edgeMinWeight; null otherwise (no weight, or a weight below the floor). Without weights only tiers 1 and 2 occur',
   anchoredPlacementRule:
@@ -931,7 +938,100 @@ function graphCases(): Case[] {
     input: { rankings: rows },
     expected: Object.fromEntries([...z].map(([u, m]) => [u, Object.fromEntries(m)])),
   });
+
+  // 1.6.0 (Stage 4): Layer 2 in userSimilarity 'stored' mode (layer2StoredRule) on a hand-built
+  // snapshot. The consumer is Arjun's Stage 4: the rows get_prediction_snapshot returns as
+  // `userNeighbors`, mapped by packages/api onto `snapshot.userNeighbours`. Sims have 4 dp, as
+  // user_neighbors.sim numeric(5,4) stores them.
+  const s2 = layer2StoredSnapshot();
+  const nb = (userId: string, sim: number, common: number): UserNeighbour => ({ userId, sim, common });
+  const amyRow = nb('amy', 0.6213, 3);
+  const amyList = [nb('u', 0.6213, 3), nb('dan', 0.5022, 3)];
+  const stored = (name: string, userNeighbours: PredictionSnapshot['userNeighbours'] | undefined, userSimilarity: 'cosine' | 'stored', fn: 'layer2' | 'predictScore' = 'layer2') => {
+    const snapshot: PredictionSnapshot = userNeighbours === undefined ? s2 : { ...s2, userNeighbours };
+    const opts = { userSimilarity };
+    const source = effectiveUserSimilarity(snapshot, 'u', opts);
+    const result = fn === 'layer2' ? layer2(snapshot, 'u', 'pepsi', opts) : predictScore(snapshot, 'u', 'pepsi', opts);
+    cases.push({ name, fn, input: { snapshot, userId: 'u', bevId: 'pepsi', userSimilarity }, expected: { source, ...result } });
+    return result;
+  };
+  // Each case must exercise what its name says; the generator refuses to write one that doesn't.
+  const assert = (ok: boolean, what: string) => {
+    if (!ok) throw new Error(`layer2 stored cases: ${what}`);
+  };
+  assert(userSimilarity(s2, 'u', 'dan') > 0, 'dan must be a cosine neighbour of u');
+  assert(userSimilarity(s2, 'u', 'eve') === 0, 'eve must share fewer than 2 Bevs with u');
+  assert(s2.users.eve === undefined && s2.users.amy?.stats.n === 18 && s2.users.ben?.stats.n === 3, 'n_v setup');
+  const case1 = { u: [amyRow, nb('ben', 0.4507, 2)], amy: amyList };
+  const c1 = stored('stored: amy (n_v = 18, reliability 1) and ben (n_v = 3, reliability 1/5) are listed and ranked pepsi', case1, 'stored') as { neighbours: string[] };
+  assert(c1.neighbours.join() === 'amy,ben', 'case 1 neighbours');
+  const c2 = stored('stored: cat is listed but did not rank pepsi; dan ranked it and is not listed, so he weighs 0 although the cosine weights him', { u: [nb('cat', 0.8, 3), amyRow], amy: amyList }, 'stored') as { neighbours: string[] };
+  assert(c2.neighbours.join() === 'amy', 'case 2 neighbours');
+  const c3 = stored('stored: eve shares one Bev with u (cosine 0) and counts through the attribute bridge; she is missing from users, so n_v = 4 comes from her rankings', { u: [nb('eve', 0.3511, 1)] }, 'stored') as { neighbours: string[] };
+  assert(c3.neighbours.join() === 'eve', 'case 3 neighbours');
+  const c4 = stored('stored: ghost is unknown to the snapshot (n_v = 0) and weighs 0', { u: [nb('ghost', 0.9, 4), amyRow] }, 'stored') as { neighbours: string[] };
+  assert(c4.neighbours.join() === 'amy', 'case 4 neighbours');
+  const cos = layer2(s2, 'u', 'pepsi');
+  assert(cos.neighbours.includes('dan') && !cos.neighbours.includes('eve'), 'cosine neighbours');
+  stored('stored requested, snapshot without the userNeighbours field: the in-snapshot cosine', undefined, 'stored');
+  stored('stored requested, userNeighbours null: the in-snapshot cosine', null, 'stored');
+  stored('stored requested, u has an empty list (nobody above the floor): the in-snapshot cosine', { u: [], amy: amyList }, 'stored');
+  stored('stored requested, u has no key (not yet synced): the in-snapshot cosine', { amy: amyList }, 'stored');
+  stored('cosine (the default) ignores a present userNeighbours field', case1, 'cosine');
+  const c8 = stored('stored: a negative stored sim (ben) is excluded by sim\' > 0', { u: [nb('ben', -0.4, 2), amyRow] }, 'stored') as { neighbours: string[] };
+  assert(c8.neighbours.join() === 'amy', 'case 8 neighbours');
+  stored('predictScore, stored: case 1 (the support, hence lambda, comes from the stored neighbours)', case1, 'stored', 'predictScore');
+  stored('predictScore, cosine: the same snapshot in the default mode', case1, 'cosine', 'predictScore');
   return cases;
+}
+
+/**
+ * The snapshot of the layer2 stored cases. u ranks coke, sprite, lacroix, topo. amy (whose complete
+ * stats say n = 18; the snapshot carries 4 of her rankings, as get_prediction_snapshot may), ben
+ * (n = 3), dan and eve ranked pepsi; cat did not. dan shares 3 Bevs with u, eve only coke, and eve is
+ * missing from `users` (her n comes from her rankings).
+ */
+function layer2StoredSnapshot(): PredictionSnapshot {
+  const bev = (id: string, categoryId: string, brandKey: string, flavorTokens: string[], priceTier: 1 | 2 | 3 | 4): BevFeatures => ({
+    id, categoryId, brandKey, flavorTokens, priceTier, ratingCount: 0, mean: 0, stddev: 0, isAlcoholic: false,
+  });
+  const list = [
+    bev('coke', 'soda', 'coca-cola', ['cola'], 1),
+    bev('pepsi', 'soda', 'pepsi', ['cola'], 1),
+    bev('sprite', 'soda', 'coca-cola', ['lemon', 'lime'], 1),
+    bev('lacroix', 'sparkling_water', 'lacroix', ['lime'], 2),
+    bev('topo', 'sparkling_water', 'topo chico', ['mineral'], 2),
+    bev('monster', 'energy', 'monster', ['energy'], 2),
+    bev('redbull', 'energy', 'red bull', ['energy'], 3),
+  ];
+  const r = (userId: string, bevId: string, score: number) => ({ userId, bevId, score });
+  const rankings = [
+    r('u', 'coke', 9), r('u', 'sprite', 6.5), r('u', 'lacroix', 3), r('u', 'topo', 5),
+    r('amy', 'coke', 8), r('amy', 'sprite', 7), r('amy', 'pepsi', 8.5), r('amy', 'lacroix', 2),
+    r('ben', 'coke', 7), r('ben', 'pepsi', 4), r('ben', 'topo', 6),
+    r('cat', 'coke', 9), r('cat', 'sprite', 5), r('cat', 'lacroix', 4),
+    r('dan', 'coke', 9.5), r('dan', 'sprite', 6), r('dan', 'lacroix', 2.5), r('dan', 'pepsi', 3),
+    r('eve', 'coke', 8), r('eve', 'pepsi', 9), r('eve', 'monster', 4), r('eve', 'redbull', 3),
+  ];
+  const bevs: Record<string, BevFeatures> = {};
+  for (const b of list) {
+    const st = populationStats(rankings.filter((x) => x.bevId === b.id).map((x) => x.score));
+    bevs[b.id] = { ...b, ratingCount: st.n, mean: st.mean, stddev: st.stddev };
+  }
+  const users: PredictionSnapshot['users'] = {};
+  for (const u of ['u', 'amy', 'ben', 'cat', 'dan']) {
+    const mine = rankings.filter((x) => x.userId === u);
+    const categoryStats: Record<string, Stats> = {};
+    for (const c of [...new Set(mine.map((x) => (bevs[x.bevId] as BevFeatures).categoryId))].sort()) {
+      categoryStats[c] = populationStats(mine.filter((x) => (bevs[x.bevId] as BevFeatures).categoryId === c).map((x) => x.score));
+    }
+    users[u] = { id: u, stats: populationStats(mine.map((x) => x.score)), categoryStats, canSeeAlcohol: true };
+  }
+  (users.amy as { stats: Stats }).stats = { n: 18, mean: 6.1, stddev: 2.2 };
+  const g = populationStats(rankings.map((x) => x.score));
+  const byCategoryMean: Record<string, number> = {};
+  for (const c of ['energy', 'soda', 'sparkling_water']) byCategoryMean[c] = populationStats(rankings.filter((x) => (bevs[x.bevId] as BevFeatures).categoryId === c).map((x) => x.score)).mean;
+  return { version: RANKING_VERSION, generatedAt: '2026-10-31T00:00:00Z', global: { mean: g.mean, stddev: g.stddev, byCategoryMean }, bevs, users, rankings };
 }
 
 // ---------------------------------------------------------------- write / check

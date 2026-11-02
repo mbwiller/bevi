@@ -1,7 +1,8 @@
 // The caller's PredictionSnapshot, for @bevi/ranking's predictScore() and
 // recommend(), which run here in the client (no Edge Function at Bevi's
-// size). `get_prediction_snapshot()` (20261012000600) returns the data as one
-// jsonb value; this maps it to the snapshot type, plus a BevSummary per Bev so
+// size). `get_prediction_snapshot()` (20261012000600; `edges` and
+// `userNeighbors` since 20261101000100) returns the data as one jsonb value;
+// this maps it to the snapshot type, plus a BevSummary per Bev so
 // recommendation cards need no second round trip. Cached per signed-in user
 // for a few minutes and dropped on every write that changes rankings or Bevs.
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -31,6 +32,10 @@ interface SnapshotJson {
   categoryStats: Array<[string, string, number, Num, Num]>;
   bevs: BevTuple[];
   rankings: Array<[string, string, Num]>;
+  /** S-21 (20261101000100): [src, dst, weight] per bev_edges row touching the viewer's ranked Bevs. */
+  edges?: Array<[string, string, Num]> | null;
+  /** Stage 4 (20261101000100): the viewer's user_neighbors rows as [alias, sim, common]. */
+  userNeighbors?: Array<[string, Num, number]> | null;
 }
 
 export interface ViewerSnapshot {
@@ -101,6 +106,17 @@ export function toViewerSnapshot(client: SupabaseClient, json: SnapshotJson): Vi
     users,
     rankings: json.rankings.map(([userId, bevId, score]) => ({ userId, bevId, score: num(score) })),
   };
+  // Both are optional in @bevi/ranking and read only by opt-in modes (`bevSimilarity: 'edges'`,
+  // `userSimilarity: 'stored'`). Set only when the key is present, even as []: an absent field means
+  // "not provided" (fall back), whereas [] means "provided, and there are none".
+  if (Array.isArray(json.edges)) {
+    snapshot.edges = json.edges.map(([a, b, w]) => ({ a, b, w: num(w) }));
+  }
+  if (Array.isArray(json.userNeighbors)) {
+    snapshot.userNeighbours = {
+      [viewer.id]: json.userNeighbors.map(([userId, sim, common]) => ({ userId, sim: num(sim), common })),
+    };
+  }
   return { snapshot, summaries, viewer };
 }
 

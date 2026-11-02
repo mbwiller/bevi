@@ -17,6 +17,7 @@
     "test:scripts": "node --experimental-strip-types --test scripts/graph/*.test.ts",
     "catalog:validate": "node --experimental-strip-types scripts/catalog/validate.ts",
     "catalog:migration": "node --experimental-strip-types scripts/catalog/build-seed-migration.ts",
+    "vectors:pgtap": "node --experimental-strip-types scripts/vectors/build-pgtap.ts",
     "graph:schema": "node --experimental-strip-types scripts/graph/apply-schema.ts",
     "graph:keepalive": "node --experimental-strip-types scripts/graph/keepalive.ts",
     "graph:backfill-embeddings": "node --experimental-strip-types scripts/graph/backfill-embeddings.ts",

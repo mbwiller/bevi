@@ -6,7 +6,7 @@ Start with the **complete [bevi-beverage-icons SKILL.md](skill/SKILL.md)**. It i
 
 [Overview 2](review/overview-02.png) · [Overview 3](review/overview-03.png)
 
-The current collection contains 30 reference-checked drafts, including 21 starter drinks. [The manifest](manifest.json) maps catalog UUIDs to editable SVGs, font-independent SVGs and transparent PNGs. [The work queue](coverage.json) lists the 348 remaining catalog drinks. These counts describe the repository catalog; live Postgres reconciliation and app integration are still pending.
+The current collection contains 30 reference-checked drafts, including 21 starter drinks. [The manifest](manifest.json) maps catalog UUIDs to editable SVGs, font-independent SVGs and transparent PNGs. [The work queue](coverage.json) lists the 348 remaining catalog drinks. These counts describe the repository catalog; live Postgres reconciliation is still pending. The app shows the icons (see [Ship to the app](#ship-to-the-app)).
 
 ## Give this to your coding agent
 
@@ -49,6 +49,19 @@ python3 -m venv /tmp/bevi-icon-review
 
 If the renderer is installed elsewhere, set `BEVI_RESVG_MODULE` to the absolute path of its `@resvg/resvg-js` package directory. The renderer must remain at 2.6.2.
 
+## Ship to the app
+
+From the repository root, after every batch (and after any redraw):
+
+```sh
+node scripts/icons/export-app.mjs          # copy the portable SVGs into the app and regenerate its map
+node scripts/icons/export-app.mjs --check  # writes nothing; exits 1 when the app's copy is stale
+```
+
+The script reads `manifest.json`, copies each record's `portable-svg/<slug>.svg` byte for byte to `app/public/bev-icons/<slug>.svg`, removes icons no record claims, and writes `app/src/lib/bevIcons.generated.ts` (catalog bevId → `/bev-icons/<slug>.svg?v=<first 8 hex of the SVG's sha256>`, so a redraw busts caches). It fails on a duplicate bevId or slug, a missing source, or a hash that disagrees with the manifest, and a second run changes nothing. Commit `app/public/bev-icons/` and the generated map with the batch; never edit either by hand. In the app a Bev's image is photo > icon > category art: a real photo always wins, and an icon only replaces the placeholder silhouette.
+
+The app's `src/lib/__tests__/bevIcons.test.ts` (part of `npm test -w app`) is the drift guard: it fails when the map or the shipped SVGs no longer match the manifest.
+
 ## Add a batch without changing the style
 
 1. Select remaining UUIDs/slugs from `coverage.json`, prioritizing `isStarter`. Tell collaborators which brand/package family you own to avoid duplicate work.
@@ -56,6 +69,6 @@ If the renderer is installed elsewhere, set `BEVI_RESVG_MODULE` to the absolute 
 3. Create a module under `scripts/icons/families/` exporting a `records` array. Follow `pilot.mjs` or `bottles-carton.mjs`; reuse the shared `wrap`, `shadow`, `ref` and `text` helpers from `style.mjs`. Each record includes `slug`, `family`, `packageChoice`, `references`, `uncertainty`, `status` and the full `svg` string. Each reference includes `pageUrl`, `imageUrl`, `inspectedAt`, `observations` and a truthful `visuallyInspected` value. Coordinate changes to shared primitives before altering them.
 4. Rebuild and validate. The build rejects duplicate/unknown slugs and generates assets, the UUID manifest, coverage and gallery. Edit recipes, not generated output. `inventory.ts` rebuilds the separate repository inventory; it does not preserve research entered into that generated inventory file.
 5. Inspect the resulting sheets at 40/56/96/155px on light and dark surfaces against the exact reference images. Keep drafts `needs-review` until the relevant review is complete. Update `review/review.json` with the reviewed asset hashes; the renderer does not automatically grant visual approval.
-6. Commit the family recipe, generated SVG/PNG assets, manifest, coverage, gallery and review evidence together. Preserve the original prototype and frozen reference set.
+6. Commit the family recipe, generated SVG/PNG assets, manifest, coverage, gallery and review evidence together, plus the app's copy from `node scripts/icons/export-app.mjs` (see [Ship to the app](#ship-to-the-app)). Preserve the original prototype and frozen reference set.
 
 The original prototype is a standalone design reference, not the deployed app. No icon authoring step requires changing Neo4j, Postgres, photos, or app behavior.
