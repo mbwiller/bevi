@@ -82,10 +82,12 @@
 --
 -- PERFORMANCE. The catalog is ~380 active Bevs and ~480 aliases, so building a
 -- haystack per visible Bev and scanning it with strpos is a few hundred short
--- string operations per keystroke-debounced call. The GIN trigram indexes
--- (bevs_search_trgm, bev_aliases_trgm) still serve the `%` predicates. Should
--- the catalog grow by orders of magnitude, a stored haystack column with its
--- own gin_trgm_ops index (pg_trgm accelerates LIKE '%tok%') is the next step.
+-- string operations per keystroke-debounced call. The `%` tests now sit in the
+-- select list of CTE `m` rather than in a WHERE, so the GIN trigram indexes
+-- (bevs_search_trgm, bev_aliases_trgm) are no longer used by search_bevs; at
+-- ~380 active Bevs that is a non-issue. Should the catalog grow by orders of
+-- magnitude, a stored haystack column with its own gin_trgm_ops index (pg_trgm
+-- accelerates LIKE '%tok%') is the next step.
 --
 -- Deliberately UNCHANGED, in both functions: the signature (names, types,
 -- defaults), the `returns table` column list (names, types, order), `stable
