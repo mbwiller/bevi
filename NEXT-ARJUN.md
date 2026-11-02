@@ -16,7 +16,7 @@ Matt's lane had nothing unblocked, so with his OK the P1 items in your lane were
 | **#146** | `20261101000400` | `categories_depth_guard` also rejects moving a root that Bevs use as `category_id` under another root, and promoting a leaf that Bevs use as `leaf_category_id` | Re-parenting a populated leaf to a different root is still only caught on `bevs` writes |
 | **#151** | `20261101000500` | S-13 + A-12 duplicates, contract 2.9.0: `report_bev` validates `p_duplicate_of`; `get_bev` follows `merged_into`; Studio-only `merge_bev(src, dst)`; `pending_duplicate_reports` view; FakeApi + conformance; pgTAP 22 | `submit_ranking` and `add_want_to_try` still accept a merged Bev's id from a stale client |
 
-**Prod migrations:** Matt pushes all five together, in timestamp order, from `../bevi-wt/db-push`. Nothing in the app calls a new RPC, so prod is consistent either way; the two prod bugs (streak history, stale `bayes_score`) are fixed the moment `000200` and `000300` land. The next timestamps go after `20261101000500`.
+**Prod migrations: all five are on prod, confirmed 2026-11-01.** `npx supabase migration list` shows local and remote identical for all 52. Both prod bugs are fixed: `bev_stats` has 0 rows with `rating_count = 0 and bayes_score is not null`, and `ranking_events` holds 32 backfilled rows (`category_stats` 10). The next timestamps go after `20261101000500`.
 
 **How to merge a duplicate once `000500` is on prod:** in Studio, `select * from public.pending_duplicate_reports;`, check the pair, paste its `merge_sql` (`select public.merge_bev('<duplicate>', '<original>');`). It is one transaction and returns a jsonb summary. Merge the user-created copy into the catalog Bev; a user who ranked both keeps their ranking of the original.
 
@@ -24,7 +24,7 @@ Matt's lane had nothing unblocked, so with his OK the P1 items in your lane were
 
 **Prod migrations:**
 - [x] Confirmed 2026-10-31: all four are on prod.
-- [ ] 2026-11-01: five new ones, Matt pushes (above).
+- [x] Confirmed 2026-11-01: all five new ones are on prod (above). Nothing is waiting on a push.
 
 | Order | Task | What "done" means | Unblocks |
 |---|---|---|---|
@@ -32,11 +32,12 @@ Matt's lane had nothing unblocked, so with his OK the P1 items in your lane were
 | 2 | ~~**A-14 follow-ups**~~ — **done in #149 and #150 from Matt's side** (2026-11-01). Left for you: the follow-ups in the table above | Correct streaks and scores once `000200`/`000300` are pushed |
 | 3 | ~~**S-21 + Stage 4**~~ — **done in #147 from Matt's side** (2026-11-01), exactly to #144's "Heads-up for Arjun"; the `20261026000300` comment that says `snapshot.userNeighbors` is corrected in `20261101000100`'s header (the package field is `userNeighbours`; `userNeighbors` is the RPC key) | Switching on M-27 (a)'s edges mode and stored neighbours in Layer 2 |
 | 4 | ~~**`categories_depth_guard` follow-up**~~ — **done in #146 from Matt's side** (2026-11-01) | — |
-| 5 | **First `graph-neighbours` run** — the nightly ran green on 2026-11-01 (05:20 UTC schedule); read its log for the row count. Expect few rows or none at today's volume | Stage 4's data |
-| 6 | **The Neo4j mirror** (optional) | A-16 steps 6, 8 and 9. Nothing the app reads depends on it | — |
-| 7 | ~~**`app.yml` path filter**~~ — in #148 (the icon batch 3 PR) | — |
-| 9 | **Live-test race** | `recs-and-stats.live.test.ts` (S-07) races the create test in `catalog-and-media.live.test.ts`; `fileParallelism: false` in `packages/api/vitest.config.ts` ends it (flaked once on #151) | Green `db` job |
-| 8 | **`refresh_bev_stats` grant** | Revoke EXECUTE from `authenticated` (it has had it since 20261011000200; only the definer RPCs call it). Found by #150's review | — |
+| 5 | ~~**First `graph-neighbours` run**~~ — **done.** The `workflow_dispatch` on 2026-10-31 and the 05:20 UTC schedule on 2026-11-01 were both green, and prod `user_neighbors` holds **4 rows**. Few, as this row expected: the 3-co-rater gate is working, and stored mode has almost nothing to read yet | Stage 4's data, such as it is |
+| 6 | **`refresh_bev_stats` grant and the merged-Bev writes**, one migration (`20261102000100`) | Revoke EXECUTE on `refresh_bev_stats` from `authenticated` (it has had it since 20261011000200; only the definer RPCs call it, and prod still grants it — checked). In the same migration, lift `get_bev`'s merge-following loop into `resolve_bev_id(uuid)` and call it from `get_bev`, `submit_ranking`, `rerank_bev` and `add_want_to_try`, so a stale client that names a merged Bev lands on the surviving one instead of a dead row. pgTAP `23`. Tell Matt: it changes what three existing functions accept | A correct prod |
+| 7 | **The vector gap and the live-test flake**, no migration | Emit `respaceBucket` and `rankUsers` from `scripts/vectors/build-pgtap.ts` (the SQL targets are `respace_bucket(uuid, smallint)` and `user_rank_points()`), drop both from its `SKIPPED` map and regenerate `20_vectors.test.sql`. Plus `fileParallelism: false` in `packages/api/vitest.config.ts` for the S-07 race, and the two stale comments in `packages/api/src/mappers.ts` (~239, ~534) that still describe `bayes_score` as filled by a milestone-1.7 job | Green `db` job; #150's last two follow-ups |
+| 8 | **S-10 + A-08 · Venues**, two halves | The next real feature in your lane, and the only thing Matt's M-16 waits on. Half 1 is the schema and the OSM import; half 2 is contract `2.10.0` and the read RPCs. Detail in "Later: P2" below | **M-16** |
+| 9 | **The Neo4j mirror** (optional) | A-16 steps 6, 8 and 9. Nothing the app reads depends on it | — |
+| — | ~~**`app.yml` path filter**~~ — in #148 (the icon batch 3 PR) | — |
 
 ## Done since 2026-10-19
 
@@ -80,7 +81,7 @@ The decision (2026-10-19): Neo4j holds Bevs, categories, brands and flavours as 
 
 | Task | Unblocks | Note |
 |---|---|---|
-| **S-10 + A-08 · Venues**, one combined PR | Matt's M-16 (the map) | Start with the **Upper East Side and Roosevelt Island** (D-13), keeping the CHECK at the full NYC bounds. Trimmed contract: `venues.inView`, `venues.get`. No `rankings.venue_id`. You also provide the Google Maps key (D-12) |
+| **S-10 + A-08 · Venues**, in two halves (A-16 (1)'s precedent) | Matt's M-16 (the map) | Start with the **Upper East Side and Roosevelt Island** (D-13), keeping the CHECK at the full NYC bounds. **Half 1, the data:** `venues` / `chains` / `venue_bevs`, RLS, a GiST index on the point, `scripts/venues/import-osm.ts` (Overpass over `area(3600175905)`, a reviewable CSV, upsert by `osm_id`, `source = manual` never overwritten), the OSM attribution, pgTAP for the bounds CHECK. **Half 2, the reads:** contract `2.10.0` — `VenuesApi { inView, get }`, `Venue`, `VenuePin`, and `NYC_BOUNDS` in `shared/` so M-16 restricts the map to the same numbers the CHECK uses — plus `venues_in_view` (zoom cap, 60 pins at z11 to 300 at z15), `venue_detail`, `neighborhoods`, `packages/api`, the FakeApi and conformance. Trimmed: no `rankings.venue_id`, no `venues_search`, no friends filter, no viewer's-best-score. DoD: `explain analyze` under 150 ms and pgTAP for the zoom cap. You also provide the Google Maps key (D-12) |
 | ~~**S-13 + A-12 · Duplicates**~~ — **done in #151 from Matt's side** (2026-11-01, `20261101000500`, contract 2.9.0) | ~~Matt's M-20~~ (#152, merged) | As approved: `duplicateOfId` on reports, Studio-only `merge_bev(src, dst)`, the `pending_duplicate_reports` view. Never merges automatically. **S-10 + A-08 (venues) is now the next thing in your lane** |
 
 ## What you owe Matt, and what he owes you
