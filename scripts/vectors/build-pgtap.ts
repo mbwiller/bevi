@@ -4,7 +4,7 @@
  * two:
  *
  *   supabase/tests/20_vectors.test.sql          pure function calls, no fixture rows
- *   supabase/tests/24_vectors_fixtures.test.sql cases that need users, rankings or a board
+ *   supabase/tests/25_vectors_fixtures.test.sql cases that need users, rankings or a board
  *
  *   npm run vectors:pgtap               # rewrite both files
  *   npm run vectors:pgtap -- --check    # exit 1 if either committed file is out of date (CI)
@@ -24,7 +24,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..", "..");
 const FIXTURES = join(ROOT, "shared", "fixtures");
 const OUT = join(ROOT, "supabase", "tests", "20_vectors.test.sql");
-const OUT_FIXTURES = join(ROOT, "supabase", "tests", "24_vectors_fixtures.test.sql");
+const OUT_FIXTURES = join(ROOT, "supabase", "tests", "25_vectors_fixtures.test.sql");
 
 interface VectorCase {
   name: string;
@@ -176,7 +176,7 @@ function rankPoints(file: VectorFile): Section {
 }
 
 // ---------------------------------------------------------------------------
-// The two kinds that need fixture rows. They go to 24_vectors_fixtures.test.sql.
+// The two kinds that need fixture rows. They go to 25_vectors_fixtures.test.sql.
 // ---------------------------------------------------------------------------
 
 /** A uuid in the …0000000024xxx band this file owns (checked against every other test file). */
