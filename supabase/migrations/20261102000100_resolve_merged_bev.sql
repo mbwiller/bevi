@@ -10,15 +10,33 @@
 --
 -- 2. 20261101000500 taught `get_bev` to follow `merged_into`, so a user who
 --    opens an old link to a merged duplicate lands on the Bev it was merged
---    into. The write RPCs were not taught the same thing: `submit_ranking`,
---    `rerank_bev`, `add_want_to_try`, `remove_ranking` and
---    `remove_want_to_try` all look the Bev up by id and never read `status`.
+--    into. The write RPCs were not taught the same thing. All six of them --
+--    `submit_ranking`, `rerank_bev`, `update_ranking_note`,
+--    `add_want_to_try`, `remove_ranking` and `remove_want_to_try` -- look
+--    the Bev up by id and never read `status`.
+--
+--    SIX IS THE WHOLE SET, and it was arrived at by enumerating every
+--    function in `public` that takes a `p_bev_id` and is granted to
+--    `authenticated`. The remainder are `get_bev` (already follows a merge;
+--    it is re-created here only to share the walk), the three read RPCs
+--    under "what does not change" below, and the internal
+--    `assert_comparison_log` / `infer_bev_flavor_profile`.
+--    `update_ranking_note` is the easiest of the six to miss, because it
+--    takes a Bev id but writes to `rankings`, so it reads like a ranking
+--    RPC; it was missed in the first draft of this migration and caught in
+--    review.
+--
 --    A client holding a stale list -- a cached feed, a screen opened before
 --    the merge, an app that has not refetched -- could therefore rank, want
 --    or unwant the row that went away. The ranking would be real (nothing
 --    stops a row in `rankings` pointing at a merged Bev) but invisible
 --    everywhere a read goes through `get_bev`, and `merge_bev` has already
---    run, so nothing would ever move it across.
+--    run, so nothing would ever move it across. The two that already raised
+--    an error raised the wrong one: `rerank_bev`, `remove_ranking` and
+--    `update_ranking_note` answered BEVI_NOT_FOUND for a ranking that
+--    existed, because `merge_bev` had moved it to `dst`. `remove_want_to_try`
+--    was the quietest: its DELETE missed silently, so the bookmark the user
+--    had just tapped off stayed on.
 --
 --    THE CHOICE: follow the merge, do not reject. The alternative was
 --    BEVI_NOT_FOUND, which is defensible -- the id really is gone -- but it
@@ -42,6 +60,27 @@
 --   * The comparison ids inside `p_comparisons` are not resolved. They name
 --     Bevs in the caller's own bucket, which the server listed, so they
 --     cannot be merged ids; `assert_comparison_log` would reject one anyway.
+--
+-- ONE ERROR PATH IS GENUINELY NEW, and it is worth stating rather than
+-- hiding: `resolve_bev_id` can raise BEVI_NOT_FOUND itself, on a cycle or a
+-- chain over 8 hops. For five of the six that changes nothing, since each
+-- already had a BEVI_NOT_FOUND path. `remove_want_to_try` did not -- the
+-- contract calls `WantToTryApi.remove` idempotent and documents only
+-- `unauthorized` -- so it can now raise where it previously could not.
+-- Left as is, deliberately: `merge_bev` cannot create a cycle
+-- (20261101000500 refuses a `src` or `dst` that is already merged), so
+-- reaching this needs someone to hand-write one in Studio, and when that has
+-- happened an error is the better answer than a silent no-op. pgTAP 23 pins
+-- both sides, so the behaviour is recorded rather than incidental.
+--
+-- TWO GRANTS ARE TIGHTENED IN PASSING. `add_want_to_try`'s 3-argument
+-- overload (20261014000100) and nothing since ever carried an explicit ACL
+-- or owner: 20261011000300 granted the 2-argument version, 20261011000400
+-- dropped that one, and the replacement was never revoked from `public, anon`
+-- or given `owner to postgres`. Prod shows `anon` cannot execute it, so this
+-- is explicitness rather than a live hole being closed, but it brings the
+-- overload in line with every other RPC here. `update_ranking_note` gets the
+-- same treatment, which in its case only restates 20261011000600.
 -- =====================================================================
 
 -- ---------------------------------------------------------------------------
@@ -553,3 +592,51 @@ $$;
 alter function public.remove_want_to_try(uuid) owner to postgres;
 revoke execute on function public.remove_want_to_try(uuid) from public, anon;
 grant execute on function public.remove_want_to_try(uuid) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- 9. update_ranking_note: edit the note on the ranking merge_bev moved
+-- ---------------------------------------------------------------------------
+-- The sixth one, and the one easiest to miss: it takes a Bev id but writes
+-- to `rankings`, so it reads like a ranking RPC rather than a Bev one. It is
+-- 20261011000600's, and it had the same shape of bug as `rerank_bev` -- the
+-- UPDATE matched nothing because `merge_bev` had moved the row to `dst`, and
+-- the user was told BEVI_NOT_FOUND while editing the note on a ranking that
+-- plainly existed in front of them. `BevsApi` does not reach it;
+-- `rankings.updateNote` does (shared/src/api.ts, packages/api/src/rankings.ts).
+create or replace function public.update_ranking_note(p_bev_id uuid, p_note text)
+returns public.rankings
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_row public.rankings;
+begin
+  if v_uid is null then
+    raise exception 'BEVI_UNAUTHORIZED' using errcode = '42501';
+  end if;
+
+  -- A-12 follow-up: a stale client may still hold a merged Bev's id.
+  p_bev_id := public.resolve_bev_id(p_bev_id);
+
+  if p_note is not null and char_length(p_note) > 140 then
+    raise exception 'BEVI_VALIDATION' using errcode = '22023', detail = 'note';
+  end if;
+
+  update public.rankings
+     set note = p_note, updated_at = now()
+   where user_id = v_uid and bev_id = p_bev_id
+  returning * into v_row;
+
+  if v_row.id is null then
+    raise exception 'BEVI_NOT_FOUND' using errcode = 'P0002';
+  end if;
+
+  return v_row;
+end;
+$$;
+
+alter function public.update_ranking_note(uuid, text) owner to postgres;
+revoke execute on function public.update_ranking_note(uuid, text) from public, anon;
+grant execute on function public.update_ranking_note(uuid, text) to authenticated;

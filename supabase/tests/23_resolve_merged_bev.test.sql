@@ -1,14 +1,17 @@
--- A-12 follow-up (20261102000100): resolve_bev_id, and the five write RPCs
+-- A-12 follow-up (20261102000100): resolve_bev_id, and the six write RPCs
 -- that now follow a merge, plus the finished refresh_bev_stats revoke.
 --
--- In order: (1) the shape and the grants -- resolve_bev_id is internal, and
--- refresh_bev_stats is no longer executable by `authenticated`, which is the
--- point of the first half of the migration; (2) resolve_bev_id itself, as
--- postgres: one hop, two hops, an id that does not exist, a cycle, and both
--- sides of the 8-hop bound; (3) get_bev, to show the refactor kept its
--- behaviour (22_duplicates covers it in full; these two assertions are the
--- ones the refactor could have broken); (4) the writes, from a signed-in user
--- holding a stale merged id -- the case the follow-up was raised for.
+-- In order: (1) the shape and the grants -- resolve_bev_id is internal,
+-- refresh_bev_stats is no longer executable by `authenticated` (the point of
+-- the migration's first half), and every signature and grant is checked one
+-- per assertion so a failure names which one moved; (2) resolve_bev_id
+-- itself, as postgres: one hop, two hops, an id that does not exist, a
+-- cycle, and both sides of the 8-hop bound; (3) get_bev, to show the
+-- refactor kept its behaviour (22_duplicates covers it in full; these two
+-- assertions are the ones the refactor could have broken); (4) the writes,
+-- from a signed-in user holding a stale merged id -- the case the follow-up
+-- was raised for -- including remove_want_to_try's new not_found path on a
+-- hand-made cycle, which is the one error path this migration adds.
 --
 -- Section 4 is the whole reason for the migration: before it, a client that
 -- had not refetched could rank, want or unwant the row `merge_bev` retired,
@@ -21,9 +24,9 @@
 -- d12NN, ed0NN, ed7aNNN. 23NN collides with none.
 --
 -- The people:
---   2301  adult  holds a stale merged id for a Bev he has not ranked
---   2302  adult  ranked dst already (the re-rank, the remove and the
---                already-ranked guard)
+--   2301  adult  holds a stale merged id for a Bev they have not ranked
+--   2302  adult  ranked dst already (the re-rank, the note, the remove and
+--                the already-ranked guard)
 --   2304  15     the age gate, which must still fire on the RESOLVED Bev
 --
 -- The Bevs: dst and T are the first two active seeded `water` Bevs by name
@@ -32,7 +35,7 @@
 -- C1 <-> C2 (a cycle), and H1..H9 (a chain of nine, H1 into dst). Everything
 -- rolls back.
 begin;
-select plan(33);
+select plan(50);
 
 -- ---------------------------------------------------------------------------
 -- 1. Shape and grants
@@ -57,24 +60,44 @@ select ok(
   'nor by anon'
 );
 
-select ok(
-  to_regprocedure('public.submit_ranking(uuid, smallint, integer, integer, jsonb, text, text)') is not null
-  and to_regprocedure('public.rerank_bev(uuid, smallint, integer, integer, jsonb, text)') is not null
-  and to_regprocedure('public.add_want_to_try(uuid, uuid, uuid)') is not null
-  and to_regprocedure('public.remove_ranking(uuid)') is not null
-  and to_regprocedure('public.remove_want_to_try(uuid)') is not null
-  and to_regprocedure('public.get_bev(uuid)') is not null,
-  'the five write RPCs and get_bev keep their signatures'
-);
+-- One assertion per function, not one `and` of seven: a failure has to name
+-- which signature moved (22_duplicates section 1 does the same).
+select ok(to_regprocedure('public.submit_ranking(uuid, smallint, integer, integer, jsonb, text, text)') is not null,
+          'submit_ranking keeps its signature');
+select ok(to_regprocedure('public.rerank_bev(uuid, smallint, integer, integer, jsonb, text)') is not null,
+          'rerank_bev keeps its signature');
+select ok(to_regprocedure('public.update_ranking_note(uuid, text)') is not null,
+          'update_ranking_note keeps its signature');
+select ok(to_regprocedure('public.add_want_to_try(uuid, uuid, uuid)') is not null,
+          'add_want_to_try keeps its signature');
+select ok(to_regprocedure('public.remove_ranking(uuid)') is not null,
+          'remove_ranking keeps its signature');
+select ok(to_regprocedure('public.remove_want_to_try(uuid)') is not null,
+          'remove_want_to_try keeps its signature');
+select ok(to_regprocedure('public.get_bev(uuid)') is not null,
+          'get_bev keeps its signature');
 
+select ok(has_function_privilege('authenticated', 'public.submit_ranking(uuid, smallint, integer, integer, jsonb, text, text)', 'EXECUTE'),
+          'submit_ranking is still granted to authenticated');
+select ok(has_function_privilege('authenticated', 'public.rerank_bev(uuid, smallint, integer, integer, jsonb, text)', 'EXECUTE'),
+          'rerank_bev is still granted to authenticated');
+select ok(has_function_privilege('authenticated', 'public.update_ranking_note(uuid, text)', 'EXECUTE'),
+          'update_ranking_note is still granted to authenticated');
+select ok(has_function_privilege('authenticated', 'public.add_want_to_try(uuid, uuid, uuid)', 'EXECUTE'),
+          'add_want_to_try is still granted to authenticated');
+select ok(has_function_privilege('authenticated', 'public.remove_ranking(uuid)', 'EXECUTE'),
+          'remove_ranking is still granted to authenticated');
+select ok(has_function_privilege('authenticated', 'public.remove_want_to_try(uuid)', 'EXECUTE'),
+          'remove_want_to_try is still granted to authenticated');
+select ok(has_function_privilege('authenticated', 'public.get_bev(uuid)', 'EXECUTE'),
+          'get_bev is still granted to authenticated');
+
+-- The two grants this migration tightens in passing, on the overload that
+-- never carried an explicit ACL.
 select ok(
-  has_function_privilege('authenticated', 'public.submit_ranking(uuid, smallint, integer, integer, jsonb, text, text)', 'EXECUTE')
-  and has_function_privilege('authenticated', 'public.rerank_bev(uuid, smallint, integer, integer, jsonb, text)', 'EXECUTE')
-  and has_function_privilege('authenticated', 'public.add_want_to_try(uuid, uuid, uuid)', 'EXECUTE')
-  and has_function_privilege('authenticated', 'public.remove_ranking(uuid)', 'EXECUTE')
-  and has_function_privilege('authenticated', 'public.remove_want_to_try(uuid)', 'EXECUTE')
-  and has_function_privilege('authenticated', 'public.get_bev(uuid)', 'EXECUTE'),
-  'and keep their grant to authenticated'
+  not has_function_privilege('anon', 'public.add_want_to_try(uuid, uuid, uuid)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.update_ranking_note(uuid, text)', 'EXECUTE'),
+  'anon can execute neither add_want_to_try''s 3-argument overload nor update_ranking_note'
 );
 
 -- ---------------------------------------------------------------------------
@@ -290,6 +313,17 @@ select lives_ok(
   'remove_want_to_try keeps its silence on an unknown id (its DELETE never raised)'
 );
 
+-- The one error path this migration genuinely adds: the contract calls
+-- WantToTryApi.remove idempotent and documents only `unauthorized`, and a
+-- cycle now reaches it. merge_bev cannot make a cycle, so this needs a
+-- hand-written one in Studio; the migration header says why an error is the
+-- better answer there than a silent no-op.
+select throws_ok(
+  $$ select public.remove_want_to_try('00000000-0000-4000-8000-000000002394') $$,
+  'P0002', 'BEVI_NOT_FOUND',
+  'a hand-made cycle raises out of remove_want_to_try, which had no not_found path before'
+);
+
 -- 2302, who ranked dst before the merge was ever run
 set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-000000002302", "role": "authenticated"}';
 
@@ -303,6 +337,27 @@ select is(
     where r.user_id = '00000000-0000-4000-8000-000000002302'),
   (select id from t_bevs where label = 'dst'),
   'and leaves it on the surviving Bev'
+);
+
+-- update_ranking_note, the sixth: it takes a Bev id but writes to
+-- `rankings`, so before this it answered BEVI_NOT_FOUND while the user was
+-- editing the note on a ranking that was plainly in front of them.
+select lives_ok(
+  $$ select public.update_ranking_note('00000000-0000-4000-8000-000000002391', 'pgTAP note') $$,
+  'update_ranking_note finds the ranking merge_bev moved'
+);
+
+select is(
+  (select r.note from public.rankings r
+    where r.user_id = '00000000-0000-4000-8000-000000002302'),
+  'pgTAP note',
+  'and the note lands on the surviving Bev''s ranking'
+);
+
+select throws_ok(
+  $$ select public.update_ranking_note('00000000-0000-4000-8000-00000000dead', 'x') $$,
+  'P0002', 'BEVI_NOT_FOUND',
+  'update_ranking_note still raises on an unknown id'
 );
 
 select lives_ok(
