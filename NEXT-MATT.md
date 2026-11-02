@@ -10,25 +10,27 @@ Your queue, updated 2026-11-01. Arjun's is in [`NEXT-ARJUN.md`](NEXT-ARJUN.md). 
 
 **2026-11-01, from your side with your OK (Arjun's lane, his review after the fact):** the P1 items that blocked you were built and merged: **#146** (`categories_depth_guard` follow-up), **#147** (S-21 + Stage 4: the snapshot RPC carries `edges` and `userNeighbors`, `packages/api` maps them), **#149** (A-14 write path: `ranking_events`, Prop. 2.5 check) and **#150** (A-14 read/stats path: fresh `bayes_score`, `bayes_prior` everywhere, `category_stats`, 2-dp live figures, `20_vectors.test.sql`). The paper's implementation notes were brought up to date in the same wave. P2 opened and closed the same evening: **#151** (S-13 + A-12 duplicates, contract 2.9.0) and **#152** (M-20 on top of it) are merged. Codex's icon batch 3 is **#148**.
 
+**Later on 2026-11-01:** #140 (M-21's app half) is merged after a click-through on prod from your account via Claude in Chrome; **#156** fixed search ("A&W" returned nothing; every typed token now matches anywhere in the Bev's words, word-prefix matches first, trigram only as the typo fallback). Arjun's #155 landed too.
+
 | PR / branch | What | State |
 |---|---|---|
-| **#140** · `ui/anchored-placement` | M-21's app half: RankFlow asks the like-for-like questions first; every failure degrades to today's search | **CI green, app-only.** Preview: https://bevi-hu7myzlpc-matts-projects-6b78eb05.vercel.app. **Your click-through checklist is in the PR**; rebase (main moved), then merge after it |
 | **#148** · `design/beverage-icon-pilot` | Icon batch 3: 19 new icons (49 total, 40 of 43 starters) exported into the app; three starter identities recorded as unresolved; `app.yml` also watches the icon manifest | **CI green.** **Your visual sign-off** (checklist in the PR), then merge; afterwards `git checkout design/beverage-icon-pilot && git reset --hard origin/main` in `~/Desktop/bevi` while Codex is idle, so batch 4 starts from `main` |
 
 **Prod migrations (yours to push, from `../bevi-wt/db-push`):**
 - [x] `20261026000100`, `0200`, `0300` and `20261031000100` confirmed on prod 2026-10-31.
 - [x] **All five confirmed on prod 2026-11-01**: `20261101000100` (#147), `20261101000200` (#149), `20261101000300` (#150), `20261101000400` (#146), `20261101000500` (#151). `npx supabase migration list` shows local and remote identical for all 52, and the post-push checks pass: 0 rows in `bev_stats` with `rating_count = 0 and bayes_score is not null`, 32 rows in `ranking_events`, 10 in `category_stats`. Both prod bugs (streaks, stale `bayes_score`) are closed.
+- [ ] **Two to push:** `20261102000100` (#155) and `20261102000200` (#156), together, in that order. Then type "A&" in Search on prod.
 
 ## Next: in this order
 
 | Task | Waits on | What "done" means |
 |---|---|---|
-| **M-21 · app half, #140** | Your click-through of the preview (the checklist is in the PR) | Merge it. No cap on the anchored question count (decided, Remark 10.7); every failure degrades to today's search |
 | **Icon batch 3, #148** | Your visual sign-off | Merge it, then reset `design/beverage-icon-pilot` onto `main`. Batch 4 onwards: Codex on that branch; after each batch `node scripts/icons/export-app.mjs`, commit `app/public/bev-icons/` and `src/lib/bevIcons.generated.ts` with it, your sign-off, merge, reset |
 | ~~**The five migrations**~~ | — | **Done:** all five are on prod, confirmed 2026-11-01 (above) |
 | **Duplicates, live** | — (`20261101000500` is on prod) | A "Duplicate of another Bev" report now carries `duplicateOfId` (#151, #152). To resolve one: Studio → `select * from pending_duplicate_reports;` → paste its `merge_sql` (`select public.merge_bev('<duplicate>', '<original>');`). Arjun's next migration makes `submit_ranking` and `add_want_to_try` follow a merge too, so a stale client can no longer write to the merged row |
 | **Switch-on plan: edges mode and stored neighbours** | Data only: `20261101000100` is on prod and the RPC returns both keys, but prod `user_neighbors` holds just **4 rows** at the 3-co-rater gate, so stored mode has almost nothing to read | Re-tune `CONF1_MASS` (edges mode drops mean conf1 from 0.585 to 0.400 in #137's synthetic eval) and review Layer 2's support under stored mode (#144's synthetic eval: every Δ CI includes 0). Then `recs.ts`/`bevs.ts` pass the options; the app itself does not change |
 | **Expo patches** | — | Routine (S-18): when the app workflow's advisory step warns, `npx expo install --fix` from `app/` in a small `ui/*` PR (#142 was the last; the step was quiet on 2026-11-01) |
+| **List glitch after a removal** | — | Small `ui/*` fix: after "Remove from Bev'd", the All list briefly showed a Disliked Bev between #5 and #6 until the next refetch (seen 2026-11-01). Check the optimistic update's ordering in the lists hook |
 
 ## Later: P2, after P0 and P1
 
