@@ -236,8 +236,10 @@ export function mapBevSummary(client: SupabaseClient, row: BevSummaryRow): BevSu
     priceTier: row.price_tier as PriceTier,
     priceEstimated: row.price_estimated,
     ratingCount: stats?.rating_count ?? 0,
-    // bev_stats.bayes_score is only populated once the leaderboard refresh
-    // job (milestone 1.7) runs; null until then is correct, not a bug.
+    // Since 20261101000300 every write path refreshes bev_stats.bayes_score,
+    // and it is null exactly when rating_count is 0 -- no Bayesian score is
+    // defined with no ratings. So null is correct here, not a stale row
+    // waiting on a job.
     bayesScore: stats?.bayes_score ?? null,
   };
 }
@@ -530,8 +532,13 @@ export interface BevOfPeriodRpcRow {
 }
 
 function mapPeriodWinner(client: SupabaseClient, row: BevOfPeriodRpcRow): PeriodWinner {
-  // The score the winner was picked by (live, like get_bev_leaderboard), not
-  // bev_stats.bayes_score, which the 15-minute refresh may not have caught up on.
+  // The score the winner was picked by: computed live in bev_of_period_at,
+  // like get_bev_leaderboard, and rounded to 2 dp at the RPC boundary while
+  // the winner itself is picked on the unrounded value (20261101000300).
+  // Not bev_stats.bayes_score -- every write path refreshes the Bevs it
+  // touched, but the prior moves with every ranking in the whole catalog and
+  // only the 15-minute refresh_global_stats re-stamps the rest, so a stored
+  // figure can disagree with a live one computed a moment later.
   const bayes = Number(row.bev_bayes_score);
   return {
     bev: mapBevSummary(client, {
