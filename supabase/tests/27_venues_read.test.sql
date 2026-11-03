@@ -181,8 +181,8 @@ set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-000000a08b01", 
 -- permissions against its OWNER and a test should not lean on that.
 select is(
   (select array_agg(name order by name) from public.venues_in_view('{"south": 40.7600, "north": 40.7900, "west": -73.9800, "east": -73.9400}'::jsonb, 15)),
-  array['pgTAP V1 Coffee Bar', 'pgTAP V2 Corner Store'],
-  'only the venues inside the viewport that have an assortment this caller may see'
+  array['pgTAP V1 Coffee Bar', 'pgTAP V2 Corner Store', 'pgTAP V6 Bar Only'],
+  'only the venues inside the viewport that have an assortment this caller may see (V6''s is alcoholic, and this caller is an adult)'
 );
 
 select is((select bev_count from public.venues_in_view('{"south": 40.7600, "north": 40.7900, "west": -73.9800, "east": -73.9400}'::jsonb, 15) where name = 'pgTAP V1 Coffee Bar'), 3,
@@ -217,8 +217,8 @@ select is(
   (select count(*)::int from public.venues_in_view(
      '{"south": 39, "north": 42, "west": -76, "east": -72}'::jsonb, 15)
    where name like 'pgTAP V%'),
-  3,
-  'the bounds are clamped to the city, not rejected: V1, V2 and V3 come back'
+  4,
+  'the bounds are clamped to the city, not rejected: V1, V2, V3 and V6 come back'
 );
 
 -- A viewport entirely outside the city is empty, not an error.
@@ -240,8 +240,8 @@ select is(
   (select array_agg(name order by name) from public.venues_in_view(
      '{"south": 40.7600, "north": 40.7900, "west": -73.9800, "east": -73.9400}'::jsonb, 15,
      null, array['craft'])),
-  array['pgTAP V1 Coffee Bar'],
-  'the kind filter narrows to craft'
+  array['pgTAP V1 Coffee Bar', 'pgTAP V6 Bar Only'],
+  'the kind filter narrows to craft, dropping the chain'
 );
 
 select is(
