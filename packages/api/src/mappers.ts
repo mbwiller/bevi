@@ -14,6 +14,7 @@ import type {
   BevPrediction,
   BevSimilarity,
   BevSummary,
+  Borough,
   Bucket,
   BucketBev,
   Category,
@@ -34,6 +35,10 @@ import type {
   Ranking,
   TasteProfileRow,
   UserLeaderboardRow,
+  Venue,
+  VenueDetail,
+  VenueKind,
+  VenuePin,
   WantToTryItem,
 } from '@bevi/shared';
 import { ApiError } from '@bevi/shared';
@@ -666,4 +671,132 @@ export function placeholderAppConfig(): AppConfig {
   // No versioning/maintenance-flag infra exists yet; this is a fixed
   // placeholder, not a read from the DB, until that's built.
   return { minAppVersion: '0.1.0', maintenance: false };
+}
+
+// --------------------------------------------------------------------------
+// venues (S-10 + A-08, half 2)
+// --------------------------------------------------------------------------
+
+/** One row of `venues_in_view` (20261102000400). Numerics may arrive as strings. */
+export interface VenuePinRow {
+  id: string;
+  name: string;
+  kind: string;
+  lat: number | string;
+  lng: number | string;
+  address: string | null;
+  neighborhood: string | null;
+  borough: string | null;
+  hours_osm: string | null;
+  hours_known: boolean;
+  website: string | null;
+  best_score: number | string | null;
+  predicted_score: number | string | null;
+  open_now: boolean | null;
+  bev_count: number;
+}
+
+const numOrNull = (value: number | string | null): number | null =>
+  value === null ? null : Number(value);
+
+function mapVenueFromPin(row: VenuePinRow): Venue {
+  return {
+    id: row.id,
+    name: row.name,
+    kind: row.kind as VenueKind,
+    lat: Number(row.lat),
+    lng: Number(row.lng),
+    address: row.address,
+    // Null for every venue today: OSM has no `addr:suburb` in New York, so the
+    // column is ours to fill. Not an error, and not worth a fallback string.
+    neighborhood: row.neighborhood,
+    borough: row.borough as Borough | null,
+    hoursOsm: row.hours_osm,
+    hoursKnown: row.hours_known,
+    website: row.website,
+  };
+}
+
+export function mapVenuePin(row: VenuePinRow): VenuePin {
+  return {
+    venue: mapVenueFromPin(row),
+    bestScore: numOrNull(row.best_score),
+    predictedScore: numOrNull(row.predicted_score),
+    // The RPC leaves this null whenever `hours_known` is false, so the app has
+    // one thing to test rather than two.
+    openNow: row.open_now,
+    bevCount: row.bev_count,
+  };
+}
+
+/**
+ * One row of `venue_detail` (20261102000400). The RPC returns the venue's
+ * columns repeated on every assortment row, which is the shape a single
+ * round trip can have; `mapVenueDetail` folds them back into one object.
+ */
+export interface VenueDetailRow {
+  venue_id: string;
+  name: string;
+  kind: string;
+  lat: number | string;
+  lng: number | string;
+  address: string | null;
+  neighborhood: string | null;
+  borough: string | null;
+  hours_osm: string | null;
+  hours_known: boolean;
+  website: string | null;
+  open_now: boolean | null;
+  bev_id: string;
+  bev_name: string;
+  bev_brand: string | null;
+  bev_flavor: string | null;
+  bev_category_id: string;
+  bev_photo_path: string | null;
+  bev_price_tier: number;
+  bev_price_estimated: boolean;
+  bev_rating_count: number;
+  bev_bayes_score: number | string | null;
+}
+
+export function mapVenueDetail(client: SupabaseClient, rows: VenueDetailRow[]): VenueDetail {
+  // The RPC raises BEVI_NOT_FOUND rather than returning an empty set, so a
+  // caller that got here has at least one row.
+  const first = rows[0];
+  if (!first) throw new ApiError('not_found', 'Venue has no visible assortment');
+
+  return {
+    venue: {
+      id: first.venue_id,
+      name: first.name,
+      kind: first.kind as VenueKind,
+      lat: Number(first.lat),
+      lng: Number(first.lng),
+      address: first.address,
+      neighborhood: first.neighborhood,
+      borough: first.borough as Borough | null,
+      hoursOsm: first.hours_osm,
+      hoursKnown: first.hours_known,
+      website: first.website,
+    },
+    openNow: first.open_now,
+    bevs: rows.map((row) =>
+      mapBevSummary(client, {
+        id: row.bev_id,
+        name: row.bev_name,
+        brand: row.bev_brand,
+        flavor: row.bev_flavor,
+        category_id: row.bev_category_id,
+        photo_path: row.bev_photo_path,
+        price_tier: row.bev_price_tier,
+        price_estimated: row.bev_price_estimated,
+        bev_stats: {
+          rating_count: row.bev_rating_count,
+          avg_score: null,
+          score_stddev: null,
+          bayes_score: numOrNull(row.bev_bayes_score),
+        },
+      }),
+    ),
+  };
 }

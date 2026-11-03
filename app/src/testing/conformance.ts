@@ -7,10 +7,11 @@
 // It only relies on what the contract promises, never on fixture data: it creates its own users
 // (unique usernames) and finds Bevs through `getStarterCandidates` (≥ 30 promised). Uses Jest globals.
 
-import { BANDS, MIN_N_USER, MIN_RATERS, normaliseBrand } from '@bevi/ranking';
+import { BANDS, MIN_N_USER, MIN_RATERS, compareCodePoints, normaliseBrand } from '@bevi/ranking';
 import {
   ApiError,
   BUCKET_ORDER,
+  NYC_BOUNDS,
   isApiError,
   type ApiErrorCode,
   type BeviApi,
@@ -999,6 +1000,129 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
         expect(row.brandKey).toBe(normaliseBrand(bev.brand));
       }
       expect(await api.rankings.listBucketBevs('DISLIKED')).toEqual([]);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // venues (S-10 + A-08)
+  // -------------------------------------------------------------------------
+  // Written against the CONTRACT only, which here means it must pass with no
+  // venues at all: prod has none until the import is run, and the FakeApi
+  // seeds four. So nothing below asserts a count, a name or a neighbourhood --
+  // only the invariants every implementation promises.
+  describe('venues', () => {
+    const MANHATTAN = { south: 40.74, north: 40.8, west: -74.0, east: -73.93 };
+
+    it('venues.inView: pins inside the viewport, each with an assortment behind it', async () => {
+      await newUser();
+      const pins = await api.venues.inView({ bounds: MANHATTAN, zoom: 14 });
+      for (const pin of pins) {
+        // D-13: no assortment, no pin.
+        expect(pin.bevCount).toBeGreaterThanOrEqual(1);
+        expect(pin.venue.lat).toBeGreaterThanOrEqual(MANHATTAN.south);
+        expect(pin.venue.lat).toBeLessThanOrEqual(MANHATTAN.north);
+        expect(pin.venue.lng).toBeGreaterThanOrEqual(MANHATTAN.west);
+        expect(pin.venue.lng).toBeLessThanOrEqual(MANHATTAN.east);
+        // `openNow` is null exactly when the hours are not ones we can read.
+        if (!pin.venue.hoursKnown) expect(pin.openNow).toBeNull();
+        if (pin.bestScore !== null) expect(pin.bestScore).toBeGreaterThanOrEqual(0);
+      }
+    });
+
+    it('venues.inView: the bounds are clamped to New York, not rejected', async () => {
+      await newUser();
+      // A viewport dragged into the Atlantic is empty, not an error.
+      const away = await api.venues.inView({
+        bounds: { south: 40.5, north: 40.6, west: -73.75, east: -73.71 },
+        zoom: 14,
+      });
+      expect(Array.isArray(away)).toBe(true);
+      // One that spills past the coast returns what is inside it.
+      const spilling = await api.venues.inView({
+        bounds: { south: 39, north: 42, west: -76, east: -72 },
+        zoom: 11,
+      });
+      for (const pin of spilling) {
+        expect(pin.venue.lat).toBeGreaterThanOrEqual(NYC_BOUNDS.south);
+        expect(pin.venue.lat).toBeLessThanOrEqual(NYC_BOUNDS.north);
+        expect(pin.venue.lng).toBeGreaterThanOrEqual(NYC_BOUNDS.west);
+        expect(pin.venue.lng).toBeLessThanOrEqual(NYC_BOUNDS.east);
+      }
+    });
+
+    it('venues.inView: the zoom cap thins the map rather than reordering it', async () => {
+      await newUser();
+      const wide = { south: NYC_BOUNDS.south, north: NYC_BOUNDS.north, west: NYC_BOUNDS.west, east: NYC_BOUNDS.east };
+      const far = await api.venues.inView({ bounds: wide, zoom: 11 });
+      const near = await api.venues.inView({ bounds: wide, zoom: 15 });
+      expect(far.length).toBeLessThanOrEqual(60);
+      expect(near.length).toBeLessThanOrEqual(300);
+      expect(far.length).toBeLessThanOrEqual(near.length);
+      // Zooming out keeps a prefix of the same order, so a pin never jumps in.
+      expect(near.slice(0, far.length).map((p) => p.venue.id)).toEqual(far.map((p) => p.venue.id));
+    });
+
+    it('venues.inView: filters narrow the result and never widen it', async () => {
+      await newUser();
+      const all = await api.venues.inView({ bounds: MANHATTAN, zoom: 15 });
+      const ids = new Set(all.map((p) => p.venue.id));
+
+      const craft = await api.venues.inView({ bounds: MANHATTAN, zoom: 15, filters: { kinds: ['craft'] } });
+      for (const pin of craft) {
+        expect(pin.venue.kind).toBe('craft');
+        expect(ids.has(pin.venue.id)).toBe(true);
+      }
+
+      const open = await api.venues.inView({ bounds: MANHATTAN, zoom: 15, filters: { openNow: true } });
+      for (const pin of open) {
+        expect(pin.openNow).toBe(true);
+        expect(pin.venue.hoursKnown).toBe(true);
+      }
+    });
+
+    it('venues.get: the venue and its assortment, and not_found for anything else', async () => {
+      await newUser();
+      const pins = await api.venues.inView({ bounds: MANHATTAN, zoom: 15 });
+      const first = pins[0];
+      if (first) {
+        const detail = await api.venues.get(first.venue.id);
+        expect(detail.venue.id).toBe(first.venue.id);
+        expect(detail.bevs.length).toBe(first.bevCount);
+        // Best Bayesian score first; nulls last.
+        const scores = detail.bevs.map((b) => b.bayesScore);
+        const ranked = scores.filter((x): x is number => x !== null);
+        expect(ranked).toEqual([...ranked].sort((a, b) => b - a));
+        expect(scores.indexOf(null) === -1 || scores.indexOf(null) >= ranked.length).toBe(true);
+      }
+      await expectCode(api.venues.get('00000000-0000-4000-8000-00000000dead'), 'not_found');
+    });
+
+    it('venues.neighborhoods: a vocabulary every option of which returns pins', async () => {
+      await newUser();
+      const names = await api.venues.neighborhoods();
+      expect(Array.isArray(names)).toBe(true);
+      // Sorted and distinct.
+      expect(names).toEqual([...new Set(names)]);
+      expect(names).toEqual([...names].sort(compareCodePoints));
+      // An empty list is the designed state today (OSM has no neighbourhood
+      // for any real venue), so this loop may not run -- but when it does,
+      // every option must select something.
+      for (const name of names) {
+        const pins = await api.venues.inView({
+          bounds: { south: NYC_BOUNDS.south, north: NYC_BOUNDS.north, west: NYC_BOUNDS.west, east: NYC_BOUNDS.east },
+          zoom: 15,
+          filters: { neighborhoods: [name] },
+        });
+        expect(pins.length).toBeGreaterThan(0);
+        for (const pin of pins) expect(pin.venue.neighborhood).toBe(name);
+      }
+    });
+
+    it('venues: every method needs a session', async () => {
+      await api.signOut();
+      await expectCode(api.venues.inView({ bounds: MANHATTAN, zoom: 14 }), 'unauthorized');
+      await expectCode(api.venues.get('00000000-0000-4000-8000-00000000dead'), 'unauthorized');
+      await expectCode(api.venues.neighborhoods(), 'unauthorized');
     });
   });
 }

@@ -416,3 +416,109 @@ export interface Page<T> {
   items: T[];
   nextCursor: string | null;
 }
+
+// ---------------------------------------------------------------------------
+// Venues (S-10 + A-08)
+// ---------------------------------------------------------------------------
+
+/**
+ * The five-borough bounding box, and the only copy the app should read
+ * (decision 36). THE SAME SIX FIGURES are the `venues_nyc_bounds` CHECK in
+ * `20261102000300` and the Overpass clip in `scripts/venues/import-core.ts`,
+ * so the map cannot pan to a region where a venue could not legally exist.
+ *
+ * M-16 passes this to Google Maps as
+ * `restriction: { latLngBounds: NYC_BOUNDS, strictBounds: true }`.
+ */
+export const NYC_BOUNDS = {
+  south: 40.477,
+  north: 40.918,
+  west: -74.26,
+  east: -73.7,
+} as const;
+
+/** A map viewport, in the same shape as `NYC_BOUNDS`. */
+export interface LatLngBounds {
+  south: number;
+  north: number;
+  west: number;
+  east: number;
+}
+
+export type VenueKind = 'chain' | 'craft';
+
+export type Borough = 'Manhattan' | 'Brooklyn' | 'Queens' | 'Bronx' | 'Staten Island';
+
+/**
+ * A venue: a shop, cafe or bar that carries Bevs. Imported from OpenStreetMap
+ * (ODbL, "© OpenStreetMap contributors" — M-16 shows the credit in the map's
+ * attribution control) plus our own curation.
+ */
+export interface Venue {
+  id: string;
+  name: string;
+  kind: VenueKind;
+  lat: number;
+  lng: number;
+  address: string | null;
+  /**
+   * Null for most venues today: OSM has no neighbourhood for any venue in the
+   * starting area, so this is filled by us rather than imported. Treat a null
+   * as "not known", not as an error.
+   */
+  neighborhood: string | null;
+  borough: Borough | null;
+  /**
+   * OSM's `opening_hours` string, verbatim and unparsed. Only meaningful when
+   * `hoursKnown` is true; otherwise show "Hours unknown" rather than trying to
+   * read it. Open now is best-effort by decision (A-08).
+   */
+  hoursOsm: string | null;
+  hoursKnown: boolean;
+  website: string | null;
+}
+
+/**
+ * One pin on the map. The score is of the venue's assortment, not of the
+ * venue: the best figure among the Bevs it carries.
+ *
+ * `bestScore` is the best stored Bayesian score among them, so it is the same
+ * number the leaderboard shows; `predictedScore` is the best prediction for
+ * the caller among the Bevs that have no Bayesian score yet. Both are null
+ * when neither applies, which is why the pin still exists — a venue with an
+ * assortment is worth showing even before anyone has rated what it sells.
+ *
+ * A venue with NO assortment gets no pin at all (D-13), so every `VenuePin`
+ * has at least one Bev behind it.
+ */
+export interface VenuePin {
+  venue: Venue;
+  bestScore: number | null;
+  predictedScore: number | null;
+  /**
+   * Whether the venue is open at the moment the server answered, or null when
+   * `venue.hoursKnown` is false. Best-effort (A-08).
+   */
+  openNow: boolean | null;
+  /** How many Bevs the venue is known to carry. Always at least 1. */
+  bevCount: number;
+}
+
+/** A venue with the Bevs it carries, for the detail sheet. */
+export interface VenueDetail {
+  venue: Venue;
+  openNow: boolean | null;
+  /** The assortment, best Bayesian score first, then by name. */
+  bevs: BevSummary[];
+}
+
+/** The filters `venues.inView` accepts. Every one is optional and ANDed. */
+export interface VenueFilters {
+  /** Root category ids; a venue matches when it carries a Bev in any of them. */
+  categoryIds?: CategoryId[];
+  kinds?: VenueKind[];
+  priceTiers?: PriceTier[];
+  neighborhoods?: string[];
+  /** Only venues we can evaluate as open right now (`hoursKnown`). */
+  openNow?: boolean;
+}
