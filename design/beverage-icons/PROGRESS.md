@@ -1,6 +1,23 @@
 # Beverage icon production checkpoint
 
-## Latest batch: 29-icon catalog expansion, 2026-11-02
+## Latest batch: 28 researched variants, 2026-11-02
+
+**96 drafts authored; 282 catalog entries remain. 35 of 43 starters covered.** Added 28 individually researched icons in four disjoint family modules:
+
+- `jarritos-variants.mjs`: Lime, Fruit Punch, Pineapple, Grapefruit, Guava, Tamarind and Watermelon (7).
+- `lacroix-variants.mjs`: Coconut, Berry, Mango, Passionfruit, Cran-Raspberry, Lemon, Orange, Key Lime, Pure and Peach-Pear (10).
+- `energy-variants.mjs`: Red Bull Sugarfree/Tropical/Watermelon, Monster Zero Ultra/Mango Loco/Pipeline Punch/Khaotic and Celsius Sparkling Watermelon (8).
+- `kombucha-batch.mjs`: GT’s SYNERGY Gingerade, Trilogy and Guava Goddess (3).
+
+All exact reference images were downloaded and independently visually inspected. Manufacturer images are preferred, with retailer/supplier fallbacks and artwork revision uncertainty documented per product. Distinct Jarritos liquid colors, glass tint and photographed open/capped states are preserved. LaCroix preserves flavor-specific washes, brushwork and headers; an exact older Cran-Raspberry can is documented rather than substituting current Razz-Cranberry packaging. Energy variants have independently checked patterns, typography and can sizes; Red Bull editions are not recolored Original cans. Kombucha bottles retain silver pointed labels, flavor flower art and distinct warm/rainbow/pink finishes; marketing halos are excluded.
+
+Monster Peachy Keen was deferred because the catalog calls it Juice while the manufacturer identifies Ultra/zero sugar. Celsius Watermelon replaced it in this batch. The conflict is retained in `identity-issues.json`, bringing the durable deferred-identity record count to six. No artwork is assigned to unresolved UUIDs.
+
+Coordinator reviewed all new renders and the 40/56/96/155px light/dark tiles with 8% padding; refined the Trilogy rainbow lettering and Gingerade ornamental rings. All 68 prior reviewed PNG/portable-SVG hashes remain unchanged. Supplemental previews are `review/large-batch-02-2026-11-02-01.png` through `-04.png`; exact reviewed hashes are appended to `review/review.json`. Final aesthetic approval and native-device review remain pending, so records remain `needs-review`.
+
+Built and validated all 96 assets, regenerated contact sheets, exported 28 app SVGs and UUID entries, and passed export freshness plus all **99 app icon tests**. Original prototype remains unchanged; live Postgres inventory reconciliation is still pending. Icon publication uses the dedicated `design/beverage-icons-catalog` branch with Arjun Cheema <arjuncheema@live.com>; GitHub confirmed author/committer account `acheema5`. The initial commit publishes the prior 38 additions and skill; this batch follows separately.
+
+## Previous batch: 29-icon catalog expansion, 2026-11-02
 
 **68 drafts authored; 310 catalog entries remain. 34 of 43 starters covered.** Added 29 individually researched icons in four disjoint recipe modules, using the existing shared primitives and asset locations:
 

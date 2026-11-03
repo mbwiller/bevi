@@ -1,9 +1,9 @@
 {
   "summary": {
     "catalog": 378,
-    "authored": 68,
-    "pending": 310,
-    "starterAuthored": 34,
+    "authored": 96,
+    "pending": 282,
+    "starterAuthored": 35,
     "starterTotal": 43,
     "livePostgresReconciled": false
   },
@@ -53,38 +53,6 @@
       "slug": "aw-diet-root-beer",
       "name": "A&W Diet Root Beer",
       "brand": "A&W",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "ea8e50b3-d9ae-5144-b7bb-a54f67d51e5a",
-      "slug": "jarritos-lime",
-      "name": "Jarritos Lime",
-      "brand": "Jarritos",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "dcfeeccb-259a-5c9c-b295-a9ea379374e0",
-      "slug": "jarritos-fruit-punch",
-      "name": "Jarritos Fruit Punch",
-      "brand": "Jarritos",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "f91bbda1-714b-50b1-a417-5fa949aba640",
-      "slug": "jarritos-pineapple",
-      "name": "Jarritos Pineapple",
-      "brand": "Jarritos",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "1e078af1-0f32-5886-82d7-e71958922abd",
-      "slug": "jarritos-grapefruit",
-      "name": "Jarritos Grapefruit",
-      "brand": "Jarritos",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -285,30 +253,6 @@
       "slug": "diet-rc-cola",
       "name": "Diet RC Cola",
       "brand": "RC Cola",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "4df2d5ec-9f14-51e2-bf4b-2136e75da53d",
-      "slug": "jarritos-guava",
-      "name": "Jarritos Guava",
-      "brand": "Jarritos",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "ec810a73-d556-5b3f-8ab1-bfa5f77beb66",
-      "slug": "jarritos-tamarind",
-      "name": "Jarritos Tamarind",
-      "brand": "Jarritos",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "255b342b-5db5-58e5-b08c-0f06ec6e2694",
-      "slug": "jarritos-watermelon",
-      "name": "Jarritos Watermelon",
-      "brand": "Jarritos",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -945,86 +889,6 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "c4092e73-04a2-5022-ae7d-239f312f9312",
-      "slug": "lacroix-coconut",
-      "name": "LaCroix Coconut",
-      "brand": "LaCroix",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "865152b1-1f1c-51c7-94c8-bc3b692a3b19",
-      "slug": "lacroix-berry",
-      "name": "LaCroix Berry",
-      "brand": "LaCroix",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "ed089284-f9f4-5664-9edb-e52b39522c66",
-      "slug": "lacroix-mango",
-      "name": "LaCroix Mango",
-      "brand": "LaCroix",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "25214330-9bd8-56dc-a536-510615bcbe6e",
-      "slug": "lacroix-passionfruit",
-      "name": "LaCroix Passionfruit",
-      "brand": "LaCroix",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "1a7ce413-5727-5ca0-a8e7-e77e229cff54",
-      "slug": "lacroix-cran-raspberry",
-      "name": "LaCroix Cran-Raspberry",
-      "brand": "LaCroix",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "8fdb827f-ae25-5d6f-b793-fcd4a53b39af",
-      "slug": "lacroix-lemon",
-      "name": "LaCroix Lemon",
-      "brand": "LaCroix",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "3f1107ea-cbb7-5bc5-8a39-e60a4a10f130",
-      "slug": "lacroix-orange",
-      "name": "LaCroix Orange",
-      "brand": "LaCroix",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "737a82b7-3519-5ce5-b4dd-33d0e6011b43",
-      "slug": "lacroix-key-lime",
-      "name": "LaCroix Key Lime",
-      "brand": "LaCroix",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "5bef0162-82c9-5891-a30b-3a366a05579b",
-      "slug": "lacroix-pure",
-      "name": "LaCroix Pure",
-      "brand": "LaCroix",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "c8ebbd70-f56e-5887-b8a0-036ee39d7b1b",
-      "slug": "lacroix-peach-pear",
-      "name": "LaCroix Peach-Pear",
-      "brand": "LaCroix",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "22572809-bd9d-54c5-86ae-e68e164f1113",
       "slug": "topo-chico-twist-lime",
       "name": "Topo Chico Twist of Lime",
@@ -1201,54 +1065,6 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "cb728448-96c4-54fc-8e91-6df453a652da",
-      "slug": "red-bull-sugarfree",
-      "name": "Red Bull Sugarfree",
-      "brand": "Red Bull",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "960be6a4-3815-5eb2-96bc-f75f6260f05f",
-      "slug": "red-bull-tropical",
-      "name": "Red Bull Tropical Edition",
-      "brand": "Red Bull",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "f488d82d-2de1-574e-a25e-2aaceca26537",
-      "slug": "red-bull-watermelon",
-      "name": "Red Bull Watermelon Edition",
-      "brand": "Red Bull",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "9f26a3df-0382-5d1c-b1c4-5d590a960176",
-      "slug": "monster-energy-zero-ultra",
-      "name": "Monster Energy Zero Ultra",
-      "brand": "Monster Energy",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "7002b775-1721-5b46-bf11-172d4f4cd898",
-      "slug": "monster-energy-mango-loco",
-      "name": "Monster Energy Mango Loco",
-      "brand": "Monster Energy",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "52e27135-ae49-512b-ac5e-0066dd764bcf",
-      "slug": "monster-energy-pipeline-punch",
-      "name": "Monster Energy Pipeline Punch",
-      "brand": "Monster Energy",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "bb39c51d-a574-512f-9211-b0bc43b67163",
       "slug": "monster-energy-peachy-keen",
       "name": "Monster Energy Juice Peachy Keen",
@@ -1257,25 +1073,9 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "e26f03dd-9913-5bc5-b713-98a047c11cc3",
-      "slug": "monster-energy-juice-khaotic",
-      "name": "Monster Energy Juice Monster Khaotic",
-      "brand": "Monster Energy",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "c6c4b6b5-c07a-50ac-817f-26e10e2c729f",
       "slug": "celsius-sparkling-peach-vibe",
       "name": "Celsius Sparkling Peach Vibe",
-      "brand": "Celsius",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "6fe3162e-53f8-58cb-9e6b-3636a7c11f6d",
-      "slug": "celsius-sparkling-watermelon",
-      "name": "Celsius Sparkling Watermelon",
       "brand": "Celsius",
       "isStarter": false,
       "status": "needs-reference"
@@ -2149,30 +1949,6 @@
       "slug": "ramune-melon",
       "name": "Ramune",
       "brand": "Hata Kosen",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "401c5efa-8e1e-5770-8e3c-469930e46a93",
-      "slug": "gts-kombucha-gingerade",
-      "name": "GT's Kombucha",
-      "brand": "GT's Living Foods",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "8eb50cc3-bd7d-5898-bc5b-8eaecd8ad0dd",
-      "slug": "gts-kombucha-trilogy",
-      "name": "GT's Kombucha",
-      "brand": "GT's Living Foods",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "49f18dfd-b77b-5b64-a7ec-27c19355d4a6",
-      "slug": "gts-kombucha-guava-goddess",
-      "name": "GT's Kombucha",
-      "brand": "GT's Living Foods",
       "isStarter": false,
       "status": "needs-reference"
     },

@@ -487,6 +487,190 @@
           "portableSvgSha256": "2dcf9be4fe4b16a321ad9cd8ca7c20c31591b6b05e5ff97606f34e28759abe1a"
         }
       ]
+    },
+    {
+      "batchId": "large-catalog-02-2026-11-02",
+      "reviewedAt": "2026-11-02",
+      "reviewer": "Codex coordinator with disjoint family authors",
+      "scope": "28 exact product renders/reference comparisons plus 40/56/96/155px light/dark tiles with 8% padding; Trilogy rainbow-letter and Gingerade ring refinement reviewed after final render.",
+      "outcome": "28 reference-checked drafts. Final aesthetic approval and native-device review pending; Peachy Keen identity conflict excluded.",
+      "contactSheets": [
+        "review/large-batch-02-2026-11-02-01.png",
+        "review/large-batch-02-2026-11-02-02.png",
+        "review/large-batch-02-2026-11-02-03.png",
+        "review/large-batch-02-2026-11-02-04.png"
+      ],
+      "identityIssues": "identity-issues.json",
+      "assets": [
+        {
+          "bevId": "6fe3162e-53f8-58cb-9e6b-3636a7c11f6d",
+          "slug": "celsius-sparkling-watermelon",
+          "pngSha256": "5413c06ae53f1b97e8cd862b8814b554b9a9c1cb796498789464aa0d80a7c0d6",
+          "portableSvgSha256": "538db89fc4be7ceee5416c24a8090620d191cd95f9da9300cf0edcd193acfa4b"
+        },
+        {
+          "bevId": "401c5efa-8e1e-5770-8e3c-469930e46a93",
+          "slug": "gts-kombucha-gingerade",
+          "pngSha256": "a94cfc8227bb06bf59a3c62c8fbeffffbf77f0855d3fecde5b16abb147eb2cf6",
+          "portableSvgSha256": "3b68a7a16aa37ee638aed7fa931328b25456618551fe273829c1a000d3f27fdc"
+        },
+        {
+          "bevId": "8eb50cc3-bd7d-5898-bc5b-8eaecd8ad0dd",
+          "slug": "gts-kombucha-trilogy",
+          "pngSha256": "aab6962e0a2d421b026b3a81cb9556b3c5adecb1030560478ea4fa1ce1ed6c54",
+          "portableSvgSha256": "57ea72fabce5989c7df8826b9a4c0d162b486c5aed74cf8e80b750316c1d0f7b"
+        },
+        {
+          "bevId": "49f18dfd-b77b-5b64-a7ec-27c19355d4a6",
+          "slug": "gts-kombucha-guava-goddess",
+          "pngSha256": "2eff3913a5cd8ec9a878c5ca2bab6f9873b89fdcf6c8258e90318ffdd32f89f8",
+          "portableSvgSha256": "e7369cdfea4c9d2257237da502c70655f7164a9bd6c222c7be970dfd456db787"
+        },
+        {
+          "bevId": "dcfeeccb-259a-5c9c-b295-a9ea379374e0",
+          "slug": "jarritos-fruit-punch",
+          "pngSha256": "ea016c16c05b783cda91348e0228c6eb2bb64c44e8a37fb26e69aead5a2a6ac7",
+          "portableSvgSha256": "c334e849b0d40084cc3918b59d1eccd508173c84c808ea184fafc3690b4e7ea2"
+        },
+        {
+          "bevId": "1e078af1-0f32-5886-82d7-e71958922abd",
+          "slug": "jarritos-grapefruit",
+          "pngSha256": "8bc72e08ae0240308f9715b31f859b7177b06b1fec8781ca7f912cd16624d754",
+          "portableSvgSha256": "791e98f267e30638715274c2dc7981d28fa67ef957c299ec594c6a2f86d7cddf"
+        },
+        {
+          "bevId": "4df2d5ec-9f14-51e2-bf4b-2136e75da53d",
+          "slug": "jarritos-guava",
+          "pngSha256": "450e763561ec731110f1c91848a9f45527330b325e54a5fc717f0bf39fd5d956",
+          "portableSvgSha256": "6eb3e81f99943e336067c5b4f61f840ca32026075e4b1ac3558549055ae298f2"
+        },
+        {
+          "bevId": "ea8e50b3-d9ae-5144-b7bb-a54f67d51e5a",
+          "slug": "jarritos-lime",
+          "pngSha256": "e4bf62864a2c3093736e28d31d79a61c25b1d62403858fcaade7623e94ad9216",
+          "portableSvgSha256": "e2812338b09c5d0588cab986becf070bb470498dd808883fba0302924171e120"
+        },
+        {
+          "bevId": "f91bbda1-714b-50b1-a417-5fa949aba640",
+          "slug": "jarritos-pineapple",
+          "pngSha256": "fc564718bfaba7816462370bdd85684ad9882f3657571db5f198f90f7598662a",
+          "portableSvgSha256": "220a1f70ab8f69044463bb73e7c7c7bda626ccceeb016c9c1909531292871f6b"
+        },
+        {
+          "bevId": "ec810a73-d556-5b3f-8ab1-bfa5f77beb66",
+          "slug": "jarritos-tamarind",
+          "pngSha256": "7983d1ad250fbe55cea2f6c08a4de6e1ed70ce3f51ba523ebfbf476cc2192b49",
+          "portableSvgSha256": "196fefdf9af399eb595a7e22f1bbb70d3423dceb5241e24838377c890e604c14"
+        },
+        {
+          "bevId": "255b342b-5db5-58e5-b08c-0f06ec6e2694",
+          "slug": "jarritos-watermelon",
+          "pngSha256": "5df649358ce83017f6ed5f4fd6c67a4945f86a2cd9307962c819ce45d85d0e74",
+          "portableSvgSha256": "061898e49e34d6c9872109d9981f7336ebbc27b4b2fbd0fe3020f5194bc90814"
+        },
+        {
+          "bevId": "865152b1-1f1c-51c7-94c8-bc3b692a3b19",
+          "slug": "lacroix-berry",
+          "pngSha256": "33bcdc3431ff6dff6c33a2aa49fb1631e5821314379dc7dfd7d4828fed59d0fd",
+          "portableSvgSha256": "1a2fa82d6400c5f8bf8e0d966ab214032d42cba91147f51b0569bd606e6f5409"
+        },
+        {
+          "bevId": "c4092e73-04a2-5022-ae7d-239f312f9312",
+          "slug": "lacroix-coconut",
+          "pngSha256": "a77aedfdaad25c533262569ed4ec2bf312aac996af5c89c6994f9adea0b34561",
+          "portableSvgSha256": "c998eb11ba12946dd6243dcc08a081d70fb79912e7bcce38482e3966d33c5e68"
+        },
+        {
+          "bevId": "1a7ce413-5727-5ca0-a8e7-e77e229cff54",
+          "slug": "lacroix-cran-raspberry",
+          "pngSha256": "895cf30d507e458d22210f716025459f2cedfdbd3cf700347cd2a5916d30ee80",
+          "portableSvgSha256": "57866f2e4b4775b6203b462a923586315406ff5184119bf4c7b0b0b55bd89d3c"
+        },
+        {
+          "bevId": "737a82b7-3519-5ce5-b4dd-33d0e6011b43",
+          "slug": "lacroix-key-lime",
+          "pngSha256": "5efc6c808c7b3a4f2a80ac3534ebb9b388a22d509a1c1ac61d34d32c40df4e82",
+          "portableSvgSha256": "07f7c5d5e8c02904367ab8fef096720817317916a55afd0a82f189c93b242a0c"
+        },
+        {
+          "bevId": "8fdb827f-ae25-5d6f-b793-fcd4a53b39af",
+          "slug": "lacroix-lemon",
+          "pngSha256": "cf99d078d9c46b2aedc02a133095de7435dd07ff87956893d2ee4638c25e92fd",
+          "portableSvgSha256": "fefe61ebed06f90d824535e11ceee59e3eed77fceae4580a8470cd027aba333b"
+        },
+        {
+          "bevId": "ed089284-f9f4-5664-9edb-e52b39522c66",
+          "slug": "lacroix-mango",
+          "pngSha256": "c6dddcfedee3823d660d06fbf237e737f7bc4598de029a2458ff7af38f7dc73c",
+          "portableSvgSha256": "ab14ae7aa514c65a9d86ea49ea0bec6efb1c7affe8b1335e9ef7a8791264f3af"
+        },
+        {
+          "bevId": "3f1107ea-cbb7-5bc5-8a39-e60a4a10f130",
+          "slug": "lacroix-orange",
+          "pngSha256": "628e2444470f12e73f1bafe26658a7be77caa9a2c919702968a0982b7fffa02e",
+          "portableSvgSha256": "af1585d358a276f8a046322e943a95daf22249961a7a7532be1b3000d9f105ea"
+        },
+        {
+          "bevId": "25214330-9bd8-56dc-a536-510615bcbe6e",
+          "slug": "lacroix-passionfruit",
+          "pngSha256": "7fffa9ac81cc36350d86cf80c74fbdb22fc76530ab036712a496579b6e4aab0d",
+          "portableSvgSha256": "d4511c1c636481c0859fddcb1ac1250b6e626d57b2bf7028d6b8da7e39198abe"
+        },
+        {
+          "bevId": "c8ebbd70-f56e-5887-b8a0-036ee39d7b1b",
+          "slug": "lacroix-peach-pear",
+          "pngSha256": "1d67b118c8ae82346eac259ee67f22ce34464c156ee78e8443aeb7d9c7423183",
+          "portableSvgSha256": "c8c0583ed823526f5d26bc3975bfdd432254825ab86537e489b06fa78c6aa0e7"
+        },
+        {
+          "bevId": "5bef0162-82c9-5891-a30b-3a366a05579b",
+          "slug": "lacroix-pure",
+          "pngSha256": "cf85193d3c2d2c1fed6a7e08e0176839d85d78936b35285cd975ce7416183dba",
+          "portableSvgSha256": "8baaa1f7afe0b00ec6864ceda8224221fd7191ae097dca7b57cfea45f9132b69"
+        },
+        {
+          "bevId": "e26f03dd-9913-5bc5-b713-98a047c11cc3",
+          "slug": "monster-energy-juice-khaotic",
+          "pngSha256": "d07ea8a32066a1cc2ef9ba38bd57cf6f82b1393ee31e25c023b0dc24f122b043",
+          "portableSvgSha256": "8e7c6115f347449e068d32a7b50b1c4329b0cf75f587d0da95802e8a0875158f"
+        },
+        {
+          "bevId": "7002b775-1721-5b46-bf11-172d4f4cd898",
+          "slug": "monster-energy-mango-loco",
+          "pngSha256": "5faa508f644989037685837b4f594f0d715d321d3259c942a69f9645f9779ffd",
+          "portableSvgSha256": "fdbbb8374c1319ba793e00fcc71f47d5a4013c12689033c56cf0a4d8eedd251c"
+        },
+        {
+          "bevId": "52e27135-ae49-512b-ac5e-0066dd764bcf",
+          "slug": "monster-energy-pipeline-punch",
+          "pngSha256": "190e3162656d5de4dfa560e9ab63b376f9539141a727b57394ed6a16b3f8eca3",
+          "portableSvgSha256": "3684f838db7c42b29a484ad9fd1fdb4794b4d01000fa7da5585306f766079309"
+        },
+        {
+          "bevId": "9f26a3df-0382-5d1c-b1c4-5d590a960176",
+          "slug": "monster-energy-zero-ultra",
+          "pngSha256": "4d9392b9bacdca4c56afafe51c39c9d703cb04c7d2848e31b2c06d07579f55d0",
+          "portableSvgSha256": "6e14ed073482245bb75b38d54ce6179172172b6ac40b980e48b5c42815dee37d"
+        },
+        {
+          "bevId": "cb728448-96c4-54fc-8e91-6df453a652da",
+          "slug": "red-bull-sugarfree",
+          "pngSha256": "95b26d9e53114adea08bba5a49236777866f743f9a80bb3ead3f071179c0dab6",
+          "portableSvgSha256": "b6404583f797ac5134a23263e3927c80fdf20b9936ce55452d99ce676671c6d2"
+        },
+        {
+          "bevId": "960be6a4-3815-5eb2-96bc-f75f6260f05f",
+          "slug": "red-bull-tropical",
+          "pngSha256": "810fb26779b6989749edb11ba0a175b08bea7046210a1988bdff48659d1224ed",
+          "portableSvgSha256": "c7bd2c16ce39104e0da10953e71ef0d3a8f42ab74af514b0b934f62796df7e55"
+        },
+        {
+          "bevId": "f488d82d-2de1-574e-a25e-2aaceca26537",
+          "slug": "red-bull-watermelon",
+          "pngSha256": "f2b0a54fceb00c9f67c6642994be41ea0bde334e6aa957ae772ab6a7b3b501f4",
+          "portableSvgSha256": "22aec25bf4e446daf253f3524490fd2ac1540d849e8253b613c1a57b57513b8c"
+        }
+      ]
     }
   ]
 }

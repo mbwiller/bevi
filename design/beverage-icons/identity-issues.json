@@ -101,6 +101,20 @@
         }
       ],
       "resolutionNeeded": "Confirm whether catalog row represents Arnold Palmer Lite or another formulation."
+    },
+    {
+      "bevId": "bb39c51d-a574-512f-9211-b0bc43b67163",
+      "slug": "monster-energy-peachy-keen",
+      "status": "needs-identity-resolution",
+      "reason": "Catalog names this Monster Energy Juice Peachy Keen; manufacturer identifies Ultra Peachy Keen as a zero-sugar Ultra product. Juice-versus-Ultra formulation is unresolved.",
+      "references": [
+        {
+          "pageUrl": "https://www.monsterenergy.com/en-us/energy-drinks/zero-sugar/ultra-peachy-keen/",
+          "inspectedAt": "2026-11-02",
+          "observations": "Energy batch author found manufacturer Ultra/zero-sugar identity, conflicting with catalog Juice designation."
+        }
+      ],
+      "resolutionNeeded": "Confirm intended Monster product line/formulation before drawing this UUID."
     }
   ]
 }
