@@ -107,105 +107,20 @@ export function overpassQuery(bbox: Bbox, areaId: number = NYC_AREA_ID): string 
   ].join("\n");
 }
 
-const DAY_INDEX: Record<string, number> = { Mo: 0, Tu: 1, We: 2, Th: 3, Fr: 4, Sa: 5, Su: 6 };
+// The recogniser moved to `shared/src/hours.ts` so the FakeApi answers
+// `openNow` with the same grammar this importer uses to set `hours_known`.
+// SQL carries its own copy (`venue_open_at`, 20261102000400) because it has
+// to; two definitions is the floor, three was not. Re-exported so this
+// module's callers and tests keep one import.
+// The file, not the package: `@bevi/shared`'s index uses extensionless
+// relative imports, which only a bundler or tsc resolves -- Node's ESM loader
+// refuses them, and everything in scripts/ runs under plain
+// `node --experimental-strip-types`. `hours.ts` imports nothing, so pointing
+// at it directly costs nothing and avoids rewriting the contract package's
+// imports for one helper.
+import { hoursKnown } from "../../shared/src/hours.ts";
 
-const DAY = "(?:Mo|Tu|We|Th|Fr|Sa|Su)";
-const DAY_PART = `${DAY}(?:-${DAY})?`;
-const DAYS = `${DAY_PART}(?:,${DAY_PART})*`;
-// 24:00 is allowed, and only as a closing time: "Mo-Su 08:00-24:00" is common
-// in OSM and means end of day. 25:00 and similar are not times.
-const TIME = "(?:[01][0-9]|2[0-3]):[0-5][0-9]";
-const CLOSE = `(?:${TIME}|24:00)`;
-const RULE = new RegExp(`^(${DAYS}) (${TIME})-(${CLOSE})$`);
-
-export interface HoursRule {
-  /** Day indices the rule covers, Monday = 0. */
-  days: number[];
-  /** Minutes from midnight. `close` may be 1440 for 24:00. */
-  open: number;
-  close: number;
-}
-
-const minutes = (hhmm: string): number => {
-  const [h, m] = hhmm.split(":").map(Number) as [number, number];
-  return h * 60 + m;
-};
-
-/** `Mo-We,Fr` -> [0, 1, 2, 4]; null if a range runs backwards or a day repeats. */
-function dayList(spec: string): number[] | null {
-  const out: number[] = [];
-  for (const part of spec.split(",")) {
-    const [from, to] = part.split("-");
-    const a = DAY_INDEX[from!];
-    if (a === undefined) return null;
-    if (to === undefined) {
-      out.push(a);
-      continue;
-    }
-    const b = DAY_INDEX[to];
-    // A backwards range like `Fr-Mo` is legal in the opening_hours spec (it
-    // wraps the week) but needs wrap-aware evaluation, so it is not something
-    // we claim to understand.
-    if (b === undefined || b <= a) return null;
-    for (let d = a; d <= b; d += 1) out.push(d);
-  }
-  return new Set(out).size === out.length ? out : null;
-}
-
-/**
- * The `opening_hours` strings we are willing to claim we understand, which is
- * what `hours_known` promises -- NOT merely that the string exists.
- *
- * Deliberately a narrow recogniser rather than the `opening_hours` npm parser:
- * this repo's scripts take no dependencies, and "Open now is best-effort"
- * (A-08) is satisfied by being honest about what we do not understand. Three
- * of these exclusions were false positives in the first draft, found in
- * review, and each one would have made a naive "is it open now?" wrong rather
- * than unknown:
- *
- *   * `;` is an OVERRIDE separator in the spec, not "and also". In
- *     `Mo-Su 11:00-22:00; We 11:00-15:00` the Wednesday rule REPLACES the
- *     general one, so OR-ing the rules says open at 20:00 on a Wednesday.
- *     Multiple rules are therefore accepted only when their day sets are
- *     DISJOINT, which is exactly when override and union agree -- that keeps
- *     the common `Mo-Fr ...; Sa-Su ...` and rejects the trap.
- *   * An OVERNIGHT range (`Mo-Su 18:00-02:00`) needs wrap-around handling, and
- *     we import bars and pubs, so it is the normal case for some venues. A
- *     rule whose close is not after its open is not understood.
- *   * A BACKWARDS day range (`Fr-Mo`) wraps the week; same reasoning.
- *
- * Everything else outside the grammar -- `24/7`, `PH off`, month ranges,
- * `sunrise`, open-ended `07:00+` -- is unknown too, so the UI says "Hours
- * unknown" instead of guessing.
- */
-export function parseHours(hoursOsm: string | null): HoursRule[] | null {
-  if (hoursOsm === null) return null;
-  const trimmed = hoursOsm.trim();
-  if (trimmed === "") return null;
-
-  const rules: HoursRule[] = [];
-  const claimed = new Set<number>();
-  for (const raw of trimmed.split(";")) {
-    const m = RULE.exec(raw.trim());
-    if (m === null) return null;
-    const days = dayList(m[1]!);
-    if (days === null) return null;
-    // Disjoint day sets only: see the note above on `;`.
-    for (const d of days) {
-      if (claimed.has(d)) return null;
-      claimed.add(d);
-    }
-    const open = minutes(m[2]!);
-    const close = m[3] === "24:00" ? 24 * 60 : minutes(m[3]!);
-    if (close <= open) return null;
-    rules.push({ days, open, close });
-  }
-  return rules;
-}
-
-export function hoursKnown(hoursOsm: string | null): boolean {
-  return parseHours(hoursOsm) !== null;
-}
+export { hoursKnown, openAt, parseHours, type HoursRule } from "../../shared/src/hours.ts";
 
 /** `addr:housenumber` + `addr:street`, which is as much as OSM reliably has. */
 function address(tags: Record<string, string>): string | null {

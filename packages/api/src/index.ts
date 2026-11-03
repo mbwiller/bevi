@@ -16,6 +16,7 @@ import { createMetaApi } from './meta';
 import { createProfileApi } from './profile';
 import { createRankingsApi } from './rankings';
 import { createRecsApi } from './recs';
+import { createVenuesApi } from './venues';
 import { createSnapshotCache } from './snapshot';
 import { createStatsApi } from './stats';
 import { createWantToTryApi } from './wantToTry';
@@ -61,6 +62,7 @@ export function createBeviApi(config: BeviApiConfig): BeviApi {
     comments: createCommentsApi(client),
     leaderboard: createLeaderboardApi(client),
     recs: createRecsApi(client, snapshots),
+    venues: createVenuesApi(client),
     meta: createMetaApi(),
   };
 }

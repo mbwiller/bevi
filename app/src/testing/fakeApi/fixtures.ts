@@ -7,7 +7,15 @@ import { BUCKET_ORDER, createPrng, randomInt, respaceBucket, type Bucket } from 
 import type { CategoryId } from '@bevi/shared';
 
 import { CATALOG_BEVS, CATALOG_CATEGORIES, type CatalogCategory } from './catalog';
-import { FAKE_DB_SCHEMA, type FakeBev, type FakeDb, type FakeRanking, type FakeUser } from './db';
+import {
+  FAKE_DB_SCHEMA,
+  type FakeBev,
+  type FakeDb,
+  type FakeRanking,
+  type FakeUser,
+  type FakeVenue,
+  type FakeVenueBev,
+} from './db';
 import { FIXTURE_FEATURED, FIXTURE_USERS } from './people';
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -142,6 +150,123 @@ export function buildFixtures(now: Date = new Date()): FakeDb {
     endsAt: null,
   }));
 
+  // A-08: six Upper East Side venues (one hidden, one with no assortment, one
+  // whose only Bev is alcoholic), enough to exercise the map without
+  // pretending to be a city. Deliberately UNLIKE prod in one way:
+  // `neighborhood` is set, because OSM leaves it null for every real venue and
+  // M-16's "Neighborhood" filter cannot be built against an empty vocabulary.
+  // `venues.neighborhoods()` says so in the contract.
+  const venues: FakeVenue[] = [
+    {
+      id: 'venue-1',
+      name: 'Yorkville Coffee Works',
+      kind: 'craft',
+      lat: 40.7762,
+      lng: -73.9495,
+      address: '1512 2nd Avenue',
+      neighborhood: 'Yorkville',
+      borough: 'Manhattan',
+      hoursOsm: 'Mo-Fr 07:00-19:00; Sa-Su 08:00-18:00',
+      hoursKnown: true,
+      website: 'https://example.test/yorkville-coffee',
+    },
+    {
+      id: 'venue-2',
+      name: 'Lexington Deli',
+      kind: 'craft',
+      lat: 40.7738,
+      lng: -73.9598,
+      address: '1246 Lexington Avenue',
+      neighborhood: 'Upper East Side',
+      borough: 'Manhattan',
+      // An overnight range: hoursKnown is false, so `openNow` is null and the
+      // UI says "Hours unknown". The one case most likely to be got wrong.
+      hoursOsm: 'Mo-Su 18:00-02:00',
+      hoursKnown: false,
+      website: null,
+    },
+    {
+      id: 'venue-3',
+      name: 'Duane Reade — 86th St',
+      kind: 'chain',
+      lat: 40.7794,
+      lng: -73.9517,
+      address: '1498 York Avenue',
+      neighborhood: 'Yorkville',
+      borough: 'Manhattan',
+      hoursOsm: 'Mo-Su 08:00-24:00',
+      hoursKnown: true,
+      website: null,
+    },
+    {
+      // On Roosevelt Island. It is INSIDE the conformance tests' MANHATTAN
+      // viewport too (40.74-40.80, -74.00 to -73.93); what keeps it off every
+      // pin list is that it has no assortment (D-13, below), which is the
+      // point of it.
+      id: 'venue-4',
+      name: 'Island Market',
+      kind: 'craft',
+      lat: 40.7614,
+      lng: -73.9502,
+      address: '555 Main Street',
+      neighborhood: 'Roosevelt Island',
+      borough: 'Manhattan',
+      hoursOsm: null,
+      hoursKnown: false,
+      website: null,
+    },
+    {
+      // Hidden by moderation, with an assortment, so `hidden` is the only
+      // reason it has no pin and `get` is not_found.
+      id: 'venue-5',
+      name: 'Closed Corner Cafe',
+      kind: 'craft',
+      lat: 40.7751,
+      lng: -73.9541,
+      address: '1590 2nd Avenue',
+      neighborhood: 'Upper East Side',
+      borough: 'Manhattan',
+      hoursOsm: 'Mo-Su 08:00-22:00',
+      hoursKnown: true,
+      website: null,
+      hidden: true,
+    },
+    {
+      // A bar whose ONLY Bev is alcoholic: an adult gets a pin, a minor has
+      // nothing to see and so gets no pin, not_found from `get`, and no
+      // "Carnegie Hill" in `neighborhoods()` (the age gate is on the
+      // assortment, as in the RPCs).
+      id: 'venue-6',
+      name: 'Carnegie Taproom',
+      kind: 'craft',
+      lat: 40.7843,
+      lng: -73.9536,
+      address: '1350 Madison Avenue',
+      neighborhood: 'Carnegie Hill',
+      borough: 'Manhattan',
+      hoursOsm: 'Mo-Su 18:00-02:00',
+      hoursKnown: false,
+      website: null,
+    },
+  ];
+
+  // Assortments. venue-4 gets none on purpose: a venue with no assortment
+  // exists but gets NO PIN (D-13), and that is worth having in the fixtures.
+  const pick = (categoryId: CategoryId, n: number): FakeBev[] =>
+    bevs.filter((b) => b.categoryId === categoryId).slice(0, n);
+  const venueBevs: FakeVenueBev[] = [
+    ...pick('coffee', 3).map((b) => ({ venueId: 'venue-1', bevId: b.id, source: 'menu' as const })),
+    ...pick('soda', 2).map((b) => ({ venueId: 'venue-2', bevId: b.id, source: 'menu' as const })),
+    ...pick('water', 1).map((b) => ({ venueId: 'venue-2', bevId: b.id, source: 'menu' as const })),
+    ...pick('soda', 4).map((b) => ({ venueId: 'venue-3', bevId: b.id, source: 'chain' as const })),
+    ...pick('energy', 2).map((b) => ({ venueId: 'venue-3', bevId: b.id, source: 'chain' as const })),
+    ...pick('coffee', 1).map((b) => ({ venueId: 'venue-5', bevId: b.id, source: 'menu' as const })),
+    ...bevs
+      .filter((b) => ALCOHOLIC.has(b.categoryId))
+      .slice(0, 1)
+      .map((b) => ({ venueId: 'venue-6', bevId: b.id, source: 'menu' as const })),
+  ];
+
   return {
     schema: FAKE_DB_SCHEMA,
     users,
@@ -154,6 +279,8 @@ export function buildFixtures(now: Date = new Date()): FakeDb {
     featured,
     assets: [],
     reports: [],
+    venues,
+    venueBevs,
     sessionUserId: null,
     seq,
     dirty: false,

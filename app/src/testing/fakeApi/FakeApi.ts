@@ -30,6 +30,7 @@ import {
   localDayKey,
   normaliseBrand,
   populationStats,
+  compareCodePoints,
   predictScore,
   rankPoints,
   rankUsers,
@@ -45,6 +46,9 @@ import {
 } from '@bevi/ranking';
 import {
   ApiError,
+  NYC_BOUNDS,
+  hoursKnown,
+  openAt,
   HANDLE_PATTERN,
   RESERVED_HANDLES,
   type ApiErrorCode,
@@ -94,6 +98,9 @@ import {
   type SubmitRankingInput,
   type SubmitRankingResult,
   type UpdateMeInput,
+  type Venue,
+  type VenuePin,
+  type VenuesApi,
   type WantToTryApi,
 } from '@bevi/shared';
 
@@ -108,6 +115,7 @@ import {
   type FakeFeedEvent,
   type FakeRanking,
   type FakeUser,
+  type FakeVenue,
   type StorageLike,
 } from './db';
 import { CATALOG_CATEGORY_NODES, type CatalogCategoryNode } from './catalog';
@@ -160,6 +168,20 @@ function invalid(field: string, message: string, reason?: string): never {
 }
 
 const round2 = (x: number) => Math.round(x * 100) / 100;
+
+/**
+ * Mirrors `public.venue_pin_cap`: 60 pins at zoom 11 up to 300 at zoom 15, flat outside. A
+ * fractional zoom is floored (packages/api floors it before the integer RPC parameter), and a
+ * non-finite one is 11, which is what the RPC makes of the null packages/api sends for it.
+ */
+const venuePinCap = (zoom: number): number => {
+  const z = Number.isFinite(zoom) ? Math.floor(zoom) : 11;
+  return 60 + (Math.min(Math.max(z, 11), 15) - 11) * 60;
+};
+
+/** An empty filter array is no filter (contract 2.10.0), as in `venues_in_view` and packages/api. */
+const activeFilter = <T>(values: readonly T[] | undefined): readonly T[] | null =>
+  values !== undefined && values.length > 0 ? values : null;
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
 const norm = (s: string | null | undefined) => (s ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
 // Whitespace only, punctuation kept inside a token: "a&w" is one token, "barq's" is one. Splitting on
@@ -375,6 +397,38 @@ export class FakeApi implements BeviApi {
 
   private user(id: string): FakeUser {
     return this.db.users.find((u) => u.id === id) ?? fail('not_found', 'No such user');
+  }
+
+  private venueRows(): FakeVenue[] {
+    return this.db.venues ?? [];
+  }
+
+  /** The Bevs a venue carries that this viewer may see (the age gate). */
+  private venueAssortment(venueId: string, viewer: FakeUser): FakeBev[] {
+    return (this.db.venueBevs ?? [])
+      .filter((vb) => vb.venueId === venueId)
+      .flatMap((vb) => {
+        const b = this.db.bevs.find((x) => x.id === vb.bevId);
+        return b && this.visible(b, viewer) ? [b] : [];
+      });
+  }
+
+  private toVenue(v: FakeVenue): Venue {
+    return {
+      id: v.id,
+      name: v.name,
+      kind: v.kind,
+      lat: v.lat,
+      lng: v.lng,
+      address: v.address,
+      neighborhood: v.neighborhood,
+      borough: v.borough,
+      hoursOsm: v.hoursOsm,
+      // What the evaluator understood, not just the column, as the RPCs report
+      // it: so `hoursKnown` is true exactly when `openNow` is not null.
+      hoursKnown: v.hoursKnown && hoursKnown(v.hoursOsm),
+      website: v.website,
+    };
   }
 
   private bev(id: string): FakeBev {
@@ -1828,6 +1882,115 @@ export class FakeApi implements BeviApi {
     refresh: () =>
       this.call('recs.refresh', () => {
         this.requireUser();
+      }),
+  };
+
+  /**
+   * A-08 half 2. The three venue tables have RLS on with no policy in the real
+   * backend, so `venues_in_view` / `venue_detail` / `venue_neighborhoods` are
+   * the whole surface there -- and the age gate lives in them. These mirror
+   * that: the gate is on the ASSORTMENT, so a venue whose every Bev is
+   * alcoholic has nothing to show a minor and therefore no pin.
+   */
+  venues: VenuesApi = {
+    inView: ({ bounds, zoom, filters }) =>
+      this.call('venues.inView', () => {
+        const me = this.requireUser();
+        // Clamped to the city, not rejected: a map gesture routinely drags the
+        // viewport past the coast, and the answer there is "what is inside".
+        const south = Math.max(bounds.south, NYC_BOUNDS.south);
+        const north = Math.min(bounds.north, NYC_BOUNDS.north);
+        const west = Math.max(bounds.west, NYC_BOUNDS.west);
+        const east = Math.min(bounds.east, NYC_BOUNDS.east);
+        if (south >= north || west >= east) return [];
+
+        const kinds = activeFilter(filters?.kinds);
+        const neighborhoods = activeFilter(filters?.neighborhoods);
+        const categoryIds = activeFilter(filters?.categoryIds);
+        const priceTiers = activeFilter(filters?.priceTiers);
+
+        const pins = this.venueRows()
+          .filter((v) => !v.hidden)
+          .filter((v) => v.lat >= south && v.lat <= north && v.lng >= west && v.lng <= east)
+          .filter((v) => !kinds || kinds.includes(v.kind))
+          .filter((v) => !neighborhoods || (v.neighborhood !== null && neighborhoods.includes(v.neighborhood)))
+          .flatMap((v) => {
+            const assortment = this.venueAssortment(v.id, me).filter(
+              (b) =>
+                (!categoryIds || categoryIds.includes(b.categoryId)) &&
+                (!priceTiers || priceTiers.includes(b.priceTier)),
+            );
+            // D-13: no assortment, no pin.
+            if (assortment.length === 0) return [];
+
+            const scores = assortment.map((b) => this.bayes(b.id));
+            const best = scores.filter((x): x is number => x !== null);
+            // A prediction only fills the gap for a Bev with no Bayesian score
+            // yet; it is not a second opinion on one that has it.
+            const predictions = assortment
+              .filter((b) => this.bayes(b.id) === null)
+              .map((b) => this.predictionFor(b, me, false)?.score ?? null)
+              .filter((x): x is number => x !== null);
+
+            const pin: VenuePin = {
+              venue: this.toVenue(v),
+              bestScore: best.length > 0 ? Math.max(...best) : null,
+              predictedScore: predictions.length > 0 ? round2(Math.max(...predictions)) : null,
+              openNow: v.hoursKnown ? openAt(v.hoursOsm, this.now()) : null,
+              bevCount: assortment.length,
+            };
+            return [pin];
+          })
+          .filter((pin) => !filters?.openNow || pin.openNow === true)
+          // The cap keeps the best venues, with a deterministic tail.
+          .sort(
+            (a, b) =>
+              (b.bestScore ?? -1) - (a.bestScore ?? -1) ||
+              (b.predictedScore ?? -1) - (a.predictedScore ?? -1) ||
+              b.bevCount - a.bevCount ||
+              compareCodePoints(a.venue.name, b.venue.name) ||
+              compareCodePoints(a.venue.id, b.venue.id),
+          );
+
+        return pins.slice(0, venuePinCap(zoom));
+      }),
+
+    get: (venueId) =>
+      this.call('venues.get', () => {
+        const me = this.requireUser();
+        const v = this.venueRows().find((x) => x.id === venueId && !x.hidden);
+        if (!v) fail('not_found', 'No such venue');
+        const assortment = this.venueAssortment(v.id, me);
+        // A venue whose whole assortment this caller may not see is not_found,
+        // not an empty sheet: there was no pin to have tapped.
+        if (assortment.length === 0) fail('not_found', 'No such venue');
+
+        return {
+          venue: this.toVenue(v),
+          openNow: v.hoursKnown ? openAt(v.hoursOsm, this.now()) : null,
+          bevs: assortment
+            .slice()
+            .sort(
+              (a, b) =>
+                (this.bayes(b.id) ?? -1) - (this.bayes(a.id) ?? -1) ||
+                compareCodePoints(a.name, b.name) ||
+                compareCodePoints(a.id, b.id),
+            )
+            .map((b) => this.toSummary(b)),
+        };
+      }),
+
+    neighborhoods: () =>
+      this.call('venues.neighborhoods', () => {
+        const me = this.requireUser();
+        // Only neighbourhoods with a PINNED venue, so the filter can never
+        // offer an option that returns nothing.
+        const names = new Set<string>();
+        for (const v of this.venueRows()) {
+          if (v.hidden || v.neighborhood === null) continue;
+          if (this.venueAssortment(v.id, me).length > 0) names.add(v.neighborhood);
+        }
+        return [...names].sort(compareCodePoints);
       }),
   };
 

@@ -23,6 +23,7 @@ import type {
   ExplorePost,
   FeaturedBev,
   FeedItem,
+  LatLngBounds,
   LeaderboardRow,
   Page,
   Profile,
@@ -34,6 +35,9 @@ import type {
   Session,
   TasteProfileRow,
   UserLeaderboardRow,
+  VenueDetail,
+  VenueFilters,
+  VenuePin,
   WantToTryItem,
 } from './types';
 
@@ -545,6 +549,46 @@ export interface RecsApi {
   refresh(): Promise<void>;
 }
 
+export interface VenuesApi {
+  /**
+   * The pins inside a viewport (S-10, trimmed). Venues with no assortment are
+   * never returned (D-13), so every pin has at least one Bev behind it.
+   *
+   * `zoom` caps how many come back -- about 60 at zoom 11 up to 300 at zoom 15
+   * -- because a city-wide view would otherwise return everything. The cap is
+   * applied after the filters and keeps the highest-scoring venues, so zooming
+   * out thins the map rather than changing which end of it you see. A
+   * fractional zoom (Google's vector maps report e.g. 12.5) is floored.
+   *
+   * Every filter is optional, and an EMPTY array is the same as leaving it
+   * out (no filter), not "match nothing": a multi-select with nothing ticked
+   * means "any".
+   *
+   * `bounds` is clamped to `NYC_BOUNDS` server-side, so a viewport that spills
+   * past the city returns only what is inside it. @throws 'unauthorized'.
+   */
+  inView(params: { bounds: LatLngBounds; zoom: number; filters?: VenueFilters }): Promise<VenuePin[]>;
+
+  /**
+   * One venue and its assortment. A hidden venue, an unknown id, an id that is
+   * not a venue id at all, and a venue whose whole assortment the caller may
+   * not see are all the same 'not_found'. @throws 'unauthorized', 'not_found'.
+   */
+  get(venueId: string): Promise<VenueDetail>;
+
+  /**
+   * The distinct neighbourhoods that have at least one pinned venue, for the
+   * "Neighborhood" filter (decision 36 turns the city filter into it).
+   *
+   * EXPECT THIS TO BE EMPTY for now. OSM has no neighbourhood for any venue in
+   * the starting area -- `addr:suburb` is unused in New York -- so the column
+   * is ours to fill and nothing has filled it yet. An empty list means "no
+   * vocabulary yet", so hide the filter rather than showing it with no
+   * options. @throws 'unauthorized'.
+   */
+  neighborhoods(): Promise<string[]>;
+}
+
 export interface MetaApi {
   /** Callable signed out. */
   getAppConfig(): Promise<AppConfig>;
@@ -563,5 +607,6 @@ export interface BeviApi extends AuthApi {
   comments: CommentsApi;
   leaderboard: LeaderboardApi;
   recs: RecsApi;
+  venues: VenuesApi;
   meta: MetaApi;
 }

@@ -121,7 +121,7 @@ M-20 duplicate step (#152) ◀────────── S-13 + A-12 duplica
 
 | Surface | Who edits it | Rule |
 |---|---|---|
-| `shared/src/` (the contract) and `CONTRACT_VERSION` | Mostly your combined PRs | One combined PR per feature (contract + migration + `packages/api` + FakeApi). Bump the minor version, currently `2.9.0` (S-13, #151). Whoever merges second rebases and takes the next number |
+| `shared/src/` (the contract) and `CONTRACT_VERSION` | Mostly your combined PRs | One combined PR per feature (contract + migration + `packages/api` + FakeApi). Bump the minor version, currently `2.10.0` (S-10 + A-08, #161). Whoever merges second rebases and takes the next number |
 | `app/src/testing/fakeApi/*`, `conformance.ts` | You (in your combined PRs) and Matt | Every new API method needs a FakeApi version, or the app's typecheck fails. Write it to match your SQL, and Matt reviews it |
 | `packages/ranking/` | Matt | Your sync job and Edge Function import `edgeWeight` / `topEdges` from it; never copy the formulas. A `RANKING_VERSION` bump means re-running the sync |
 | `supabase/migrations/` | You | Timestamped and append-only; the next timestamps go after `20261102000200`. Two branches once both took `20261026000100`, so check `ls supabase/migrations` and the open PRs before picking one; with several PRs open, pre-assign timestamps and disjoint `create or replace` sets (two migrations re-creating one function silently revert each other). App code that calls a new function merges **only after its migration is on prod**. Push in timestamp order |

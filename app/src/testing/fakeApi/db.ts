@@ -1,6 +1,6 @@
 // The FakeApi's in-memory database and its optional persistence. TEST-ONLY (src/testing/**).
 
-import type { Bucket, CategoryId, FeedEventKind, PriceTier } from '@bevi/shared';
+import type { Borough, Bucket, CategoryId, FeedEventKind, PriceTier, VenueKind } from '@bevi/shared';
 
 export interface FakeUser {
   id: string;
@@ -123,6 +123,35 @@ export interface FakeReport {
   createdAt: string;
 }
 
+/** A-08: a venue, mirroring `public.venues`. */
+export interface FakeVenue {
+  id: string;
+  name: string;
+  kind: VenueKind;
+  lat: number;
+  lng: number;
+  address: string | null;
+  /**
+   * Null for every imported venue today: OSM has no `addr:suburb` in New York,
+   * so the column is ours to fill. The seeds below set it, because the app
+   * needs a populated "Neighborhood" filter to be developable at all -- a
+   * deliberate difference from prod, noted in `venues.neighborhoods`.
+   */
+  neighborhood: string | null;
+  borough: Borough | null;
+  hoursOsm: string | null;
+  hoursKnown: boolean;
+  website: string | null;
+  hidden?: boolean;
+}
+
+/** A-08: one Bev a venue carries, mirroring `public.venue_bevs`. */
+export interface FakeVenueBev {
+  venueId: string;
+  bevId: string;
+  source: 'menu' | 'chain';
+}
+
 export interface FakeDb {
   schema: number;
   users: FakeUser[];
@@ -139,6 +168,10 @@ export interface FakeDb {
   featured: FakeFeatured[];
   assets: FakeAsset[];
   reports: FakeReport[];
+  /** Optional so a db stored before venues existed still loads. */
+  venues?: FakeVenue[];
+  /** Optional, as `venues`. */
+  venueBevs?: FakeVenueBev[];
   /** The signed-in user, persisted like a real session. */
   sessionUserId: string | null;
   /** Monotonic id counter. */
@@ -151,8 +184,12 @@ export interface FakeDb {
   dirty?: boolean;
 }
 
-/** Bump when FakeDb's shape changes; a stored db with another schema is discarded. */
-export const FAKE_DB_SCHEMA = 1;
+/**
+ * Bump when FakeDb's shape (or its seeded fixtures, when an older stored db would hide them)
+ * changes; a stored db with another schema is discarded. 2: venues (A-08), so a db persisted
+ * before them reloads with the venue fixtures instead of an empty map.
+ */
+export const FAKE_DB_SCHEMA = 2;
 
 export const STORAGE_KEY = 'bevi.fake.db';
 
