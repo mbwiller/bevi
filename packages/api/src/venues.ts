@@ -3,6 +3,16 @@ import { ApiError, type VenueDetail, type VenuePin, type VenuesApi } from '@bevi
 import { mapError } from './errors';
 import { mapVenueDetail, mapVenuePin, type VenueDetailRow, type VenuePinRow } from './mappers';
 
+// `venue_detail` takes a `uuid`, so anything else would come back as a raw
+// 22P02 (invalid_text_representation) that `mapError` has no reason to call
+// not_found. The FakeApi answers not_found for an id like 'venue-1', and so
+// does this, without the round trip.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** An empty filter array is no filter (contract 2.10.0), the same as leaving it out. */
+const nonEmpty = <T>(values: readonly T[] | undefined): readonly T[] | null =>
+  values !== undefined && values.length > 0 ? values : null;
+
 /**
  * S-10 + A-08 half 2. Every method goes through a `security definer` RPC
  * because the three venue tables have RLS on with NO policy: there is no
@@ -20,11 +30,15 @@ export function createVenuesApi(client: SupabaseClient): VenuesApi {
       // error. Nothing is validated here that the RPC does not also enforce.
       const { data, error } = await client.rpc('venues_in_view', {
         p_bounds: bounds,
-        p_zoom: zoom,
-        p_category_ids: filters?.categoryIds ?? null,
-        p_kinds: filters?.kinds ?? null,
-        p_price_tiers: filters?.priceTiers ?? null,
-        p_neighborhoods: filters?.neighborhoods ?? null,
+        // `p_zoom` is an integer, and Google's vector maps report fractional
+        // zooms (12.5), which Postgres would reject with 22P02. Floored, as
+        // the FakeApi floors it; a non-finite zoom goes as null, which the
+        // RPC reads as 11.
+        p_zoom: Number.isFinite(zoom) ? Math.floor(zoom) : null,
+        p_category_ids: nonEmpty(filters?.categoryIds),
+        p_kinds: nonEmpty(filters?.kinds),
+        p_price_tiers: nonEmpty(filters?.priceTiers),
+        p_neighborhoods: nonEmpty(filters?.neighborhoods),
         p_open_now: filters?.openNow ?? false,
       });
       if (error) throw mapError(error);
@@ -34,6 +48,9 @@ export function createVenuesApi(client: SupabaseClient): VenuesApi {
     async get(venueId: string): Promise<VenueDetail> {
       const { data: userData, error: userError } = await client.auth.getUser();
       if (userError || !userData.user) throw new ApiError('unauthorized', 'Not signed in');
+
+      // The same error `mapError` makes of the RPC's BEVI_NOT_FOUND.
+      if (!UUID_RE.test(venueId)) throw new ApiError('not_found', 'BEVI_NOT_FOUND');
 
       const { data, error } = await client.rpc('venue_detail', { p_venue_id: venueId });
       if (error) throw mapError(error);

@@ -7,7 +7,8 @@
 -- copies of the grammar are kept honest by asserting the same strings here;
 -- (3) the zoom cap's two anchors; (4) `venues_in_view` -- the viewport, the
 -- clamp, D-13's no-assortment rule, the age gate, each filter and the cap;
--- (5) `venue_detail`; (6) `venue_neighborhoods`.
+-- (5) `venue_detail`; (6) `venue_neighborhoods`; (7) the cap on real rows,
+-- and the neighbourhoods' code-point order.
 --
 -- Fixture uuid prefix: ...000000a08bNN ("a08b" for A-08, half b). Checked
 -- against every other file in supabase/tests/: a1, b1..b2, c1..c3, d1..d6,
@@ -19,9 +20,15 @@
 -- The venues: V1 craft on the Upper East Side with three sodas, V2 chain
 -- nearby with one soda, V3 on Staten Island (in the city, outside the test
 -- viewport), V4 with NO assortment (D-13), V5 hidden, V6 whose only Bev is
--- alcoholic (nothing for a minor to see, so no pin for one).
+-- alcoholic (nothing for a minor to see, so no pin for one), V7 whose only
+-- Bevs are one hidden and one merged (withdrawn Bevs are no assortment), D1 in
+-- Queens whose `hours_known` column says true over a string the evaluator
+-- refuses (the drift case). V1 also lists the hidden and the merged Bev, so
+-- every count of V1's assortment below proves they are left out.
+-- Section 7 adds 70 venues in DUMBO / Downtown Brooklyn, ids
+-- ...00000a08bNNN, after everything above has run.
 begin;
-select plan(52);
+select plan(65);
 
 -- ---------------------------------------------------------------------------
 -- 1. Grants
@@ -49,8 +56,9 @@ select ok(
 select ok(
   not has_function_privilege('authenticated', 'public.venue_open_at(text, timestamptz)', 'EXECUTE')
   and not has_function_privilege('authenticated', 'public.venue_pin_cap(integer)', 'EXECUTE')
-  and not has_function_privilege('authenticated', 'public.weekday_index(text)', 'EXECUTE'),
-  'the three internals are not callable by a client'
+  and not has_function_privilege('authenticated', 'public.weekday_index(text)', 'EXECUTE')
+  and not has_function_privilege('authenticated', 'public.hours_trim(text)', 'EXECUTE'),
+  'the four internals are not callable by a client'
 );
 
 -- ---------------------------------------------------------------------------
@@ -96,6 +104,12 @@ select is(public.venue_open_at(null, '2026-11-02 12:00 America/New_York'::timest
 select is(public.venue_open_at('Mo-Fr 7:00-19:00', '2026-11-02 12:00 America/New_York'::timestamptz), null,
           'an unpadded hour is not a time');
 
+-- Whitespace is trimmed exactly as JavaScript's trim() does (hours_trim), so
+-- a tab after `;`, a trailing newline or a leading NBSP is not a disagreement
+-- between the importer's `hours_known` and this evaluator.
+select is(public.venue_open_at(chr(160) || E'Mo-Fr 07:00-19:00;\tSa-Su 08:00-18:00\n', '2026-11-02 18:00 America/New_York'::timestamptz), true,
+          'tabs, newlines and NBSP around the rules are trimmed as JS trim() trims them');
+
 -- ---------------------------------------------------------------------------
 -- 3. venue_pin_cap: S-10's two anchors
 -- ---------------------------------------------------------------------------
@@ -103,6 +117,8 @@ select is(public.venue_pin_cap(11), 60, 'S-10: 60 pins at zoom 11');
 select is(public.venue_pin_cap(15), 300, 'S-10: 300 at zoom 15');
 select is(public.venue_pin_cap(10), 60, 'flat below the lower anchor (minZoom is 10)');
 select is(public.venue_pin_cap(20), 300, 'and above the upper one');
+select is(public.venue_pin_cap(2147483647), 300, 'a nonsense zoom is clamped before the arithmetic, so it cannot overflow');
+select is(public.venue_pin_cap(-2147483647), 60, 'nor underflow');
 
 -- ---------------------------------------------------------------------------
 -- Fixture
@@ -138,6 +154,14 @@ select 'alc', b.id
  limit 1;
 grant select on t_bevs to authenticated;
 
+-- One hidden Bev and one merged into s1. `source = 'seed'` keeps the embed
+-- trigger quiet, as in 22_duplicates and 23_resolve_merged_bev.
+insert into public.bevs (id, name, brand, category_id, price_tier, status, source)
+values ('00000000-0000-4000-8000-000000a08b21', 'pgTAP Venue Hidden Soda', 'pgTAP', 'soda', 1, 'hidden', 'seed');
+insert into public.bevs (id, name, brand, category_id, price_tier, status, merged_into, source)
+select '00000000-0000-4000-8000-000000a08b22', 'pgTAP Venue Merged Soda', 'pgTAP', 'soda', 1, 'merged', id, 'seed'
+  from t_bevs where label = 's1';
+
 insert into public.venues (id, name, kind, lat, lng, neighborhood, borough, source, hours_osm, hours_known, status)
 values ('00000000-0000-4000-8000-000000a08b11', 'pgTAP V1 Coffee Bar', 'craft',
         40.7740, -73.9560, 'Upper East Side', 'Manhattan', 'manual', 'Mo-Su 08:00-22:00', true, 'active'),
@@ -150,7 +174,11 @@ values ('00000000-0000-4000-8000-000000a08b11', 'pgTAP V1 Coffee Bar', 'craft',
        ('00000000-0000-4000-8000-000000a08b15', 'pgTAP V5 Hidden', 'craft',
         40.7746, -73.9566, 'Upper East Side', 'Manhattan', 'manual', null, false, 'hidden'),
        ('00000000-0000-4000-8000-000000a08b16', 'pgTAP V6 Bar Only', 'craft',
-        40.7747, -73.9567, 'Carnegie Hill', 'Manhattan', 'manual', null, false, 'active');
+        40.7747, -73.9567, 'Carnegie Hill', 'Manhattan', 'manual', null, false, 'active'),
+       ('00000000-0000-4000-8000-000000a08b17', 'pgTAP V7 Withdrawn Only', 'craft',
+        40.7748, -73.9568, 'Upper East Side', 'Manhattan', 'manual', null, false, 'active'),
+       ('00000000-0000-4000-8000-000000a08b18', 'pgTAP D1 Drifted Hours', 'craft',
+        40.7720, -73.9300, null, 'Queens', 'manual', '24/7', true, 'active');
 
 insert into public.venue_bevs (venue_id, bev_id, source)
 select '00000000-0000-4000-8000-000000a08b11'::uuid, id, 'menu' from t_bevs where label in ('s1', 's2', 's3')
@@ -161,7 +189,17 @@ select '00000000-0000-4000-8000-000000a08b13'::uuid, id, 'menu' from t_bevs wher
 union all
 select '00000000-0000-4000-8000-000000a08b15'::uuid, id, 'menu' from t_bevs where label = 's1'
 union all
-select '00000000-0000-4000-8000-000000a08b16'::uuid, id, 'menu' from t_bevs where label = 'alc';
+select '00000000-0000-4000-8000-000000a08b16'::uuid, id, 'menu' from t_bevs where label = 'alc'
+union all
+select '00000000-0000-4000-8000-000000a08b18'::uuid, id, 'menu' from t_bevs where label = 's3';
+
+-- The withdrawn pair: on V1 (alongside its three active sodas) and as V7's
+-- whole assortment.
+insert into public.venue_bevs (venue_id, bev_id, source)
+values ('00000000-0000-4000-8000-000000a08b11'::uuid, '00000000-0000-4000-8000-000000a08b21'::uuid, 'menu'),
+       ('00000000-0000-4000-8000-000000a08b11'::uuid, '00000000-0000-4000-8000-000000a08b22'::uuid, 'menu'),
+       ('00000000-0000-4000-8000-000000a08b17'::uuid, '00000000-0000-4000-8000-000000a08b21'::uuid, 'menu'),
+       ('00000000-0000-4000-8000-000000a08b17'::uuid, '00000000-0000-4000-8000-000000a08b22'::uuid, 'menu');
 
 -- A score on s1 so `best_score` has something to order by.
 insert into public.rankings (user_id, bev_id, bucket, position, score)
@@ -186,7 +224,20 @@ select is(
 );
 
 select is((select bev_count from public.venues_in_view('{"south": 40.7600, "north": 40.7900, "west": -73.9800, "east": -73.9400}'::jsonb, 15) where name = 'pgTAP V1 Coffee Bar'), 3,
-          'bev_count is the assortment the caller may see');
+          'bev_count is the assortment the caller may see (not the hidden or the merged Bev V1 also lists)');
+
+select ok(
+  not exists (select 1 from public.venues_in_view('{"south": 40.7600, "north": 40.7900, "west": -73.9800, "east": -73.9400}'::jsonb, 15) where name = 'pgTAP V7 Withdrawn Only'),
+  'a venue whose only Bevs are hidden or merged has no assortment, so no pin'
+);
+
+-- The drift case: the column says known, the evaluator says no.
+select ok(
+  (select not hours_known and open_now is null
+     from public.venues_in_view('{"south": 40.7650, "north": 40.7800, "west": -73.9350, "east": -73.9250}'::jsonb, 15)
+    where name = 'pgTAP D1 Drifted Hours'),
+  'hours_known is what the evaluator understood, so it is never true while open_now is null'
+);
 
 select is((select open_now from public.venues_in_view('{"south": 40.7600, "north": 40.7900, "west": -73.9800, "east": -73.9400}'::jsonb, 15) where name = 'pgTAP V1 Coffee Bar') is not null, true,
           'open_now is answered when the hours are ones we can read');
@@ -261,6 +312,14 @@ select is(
 );
 
 select is(
+  (select array_agg(name order by name) from public.venues_in_view(
+     '{"south": 40.7600, "north": 40.7900, "west": -73.9800, "east": -73.9400}'::jsonb, 15,
+     '{}'::text[], '{}'::text[], '{}'::smallint[], '{}'::text[])),
+  array['pgTAP V1 Coffee Bar', 'pgTAP V2 Corner Store', 'pgTAP V6 Bar Only'],
+  'an empty filter array is no filter, the same answer as null (as in the FakeApi and packages/api)'
+);
+
+select is(
   (select count(*)::int from public.venues_in_view(
      '{"south": 40.7600, "north": 40.7900, "west": -73.9800, "east": -73.9400}'::jsonb, 15,
      null, null, null, null, true)
@@ -331,6 +390,24 @@ select throws_ok(
   'and an id that does not exist'
 );
 
+select ok(
+  not exists (select 1 from public.venue_detail('00000000-0000-4000-8000-000000a08b11')
+               where bev_id in ('00000000-0000-4000-8000-000000a08b21'::uuid, '00000000-0000-4000-8000-000000a08b22'::uuid)),
+  'the detail leaves out a hidden and a merged Bev the venue lists'
+);
+
+select throws_ok(
+  $$ select * from public.venue_detail('00000000-0000-4000-8000-000000a08b17') $$,
+  'P0002', 'BEVI_NOT_FOUND',
+  'and a venue whose only Bevs are hidden or merged is not_found'
+);
+
+select ok(
+  (select not hours_known and open_now is null
+     from public.venue_detail('00000000-0000-4000-8000-000000a08b18') limit 1),
+  'venue_detail reports the drift case as Hours unknown too'
+);
+
 set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-000000a08b02", "role": "authenticated"}';
 select throws_ok(
   $$ select * from public.venue_detail('00000000-0000-4000-8000-000000a08b16') $$,
@@ -362,6 +439,67 @@ set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-000000a08b02", 
 select ok(
   not exists (select 1 from public.venue_neighborhoods() where neighborhood = 'Carnegie Hill'),
   'a minor does not see the neighbourhood whose only venue is a bar'
+);
+
+-- ---------------------------------------------------------------------------
+-- 7. The cap on real rows, and the neighbourhoods' order
+-- ---------------------------------------------------------------------------
+-- 70 pinnable venues in a small Brooklyn box, half of them in each of two
+-- neighbourhoods whose order differs between collations: under "C" 'U'
+-- (0x55) sorts before 'o' (0x6F), so DUMBO comes first; under en_US it is
+-- Downtown Brooklyn.
+
+reset role;
+
+insert into public.venues (id, name, kind, lat, lng, neighborhood, borough, source, status)
+select ('00000000-0000-4000-8000-00000a08b' || lpad(g::text, 3, '0'))::uuid,
+       'pgTAP Cap ' || lpad(g::text, 3, '0'),
+       'craft',
+       40.7000 + g * 0.0001,
+       -73.9900 + g * 0.0001,
+       case when g % 2 = 0 then 'DUMBO' else 'Downtown Brooklyn' end,
+       'Brooklyn',
+       'manual',
+       'active'
+  from generate_series(1, 70) as g;
+
+insert into public.venue_bevs (venue_id, bev_id, source)
+select v.id, t.id, 'menu'
+  from public.venues v
+  cross join t_bevs t
+ where v.name like 'pgTAP Cap %'
+   and t.label = 's2';
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-000000a08b01", "role": "authenticated"}';
+
+select is(
+  (select count(*)::int from public.venues_in_view(
+     '{"south": 40.6900, "north": 40.7200, "west": -74.0000, "east": -73.9700}'::jsonb, 11)),
+  60,
+  'the cap limits real rows: 70 pinnable venues in view, 60 at zoom 11'
+);
+
+select is(
+  (select count(*)::int from public.venues_in_view(
+     '{"south": 40.6900, "north": 40.7200, "west": -74.0000, "east": -73.9700}'::jsonb, 15)),
+  70,
+  'and all 70 at zoom 15, so it was the cap and not the box'
+);
+
+select is(
+  (select count(*)::int from public.venues_in_view(
+     '{"south": 40.6900, "north": 40.7200, "west": -74.0000, "east": -73.9700}'::jsonb, 2147483647)),
+  70,
+  'a nonsense zoom is the flat top of the cap, not an overflow'
+);
+
+select is(
+  (select array_agg(n.neighborhood order by n.ord)
+     from public.venue_neighborhoods() with ordinality as n(neighborhood, ord)
+    where n.neighborhood in ('DUMBO', 'Downtown Brooklyn')),
+  array['DUMBO', 'Downtown Brooklyn'],
+  'neighbourhoods sort by code point (collate "C"), as the FakeApi does: DUMBO before Downtown Brooklyn'
 );
 
 reset role;

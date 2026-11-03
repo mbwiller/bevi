@@ -497,7 +497,8 @@ export interface VenuePin {
   predictedScore: number | null;
   /**
    * Whether the venue is open at the moment the server answered, or null when
-   * `venue.hoursKnown` is false. Best-effort (A-08).
+   * `venue.hoursKnown` is false -- exactly then: `hoursKnown` is true only when
+   * the evaluator understood the string. Best-effort (A-08).
    */
   openNow: boolean | null;
   /** How many Bevs the venue is known to carry. Always at least 1. */
@@ -512,7 +513,10 @@ export interface VenueDetail {
   bevs: BevSummary[];
 }
 
-/** The filters `venues.inView` accepts. Every one is optional and ANDed. */
+/**
+ * The filters `venues.inView` accepts. Every one is optional and ANDed, and an
+ * empty array is the same as leaving that filter out.
+ */
 export interface VenueFilters {
   /** Root category ids; a venue matches when it carries a Bev in any of them. */
   categoryIds?: CategoryId[];

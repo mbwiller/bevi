@@ -184,8 +184,12 @@ export interface FakeDb {
   dirty?: boolean;
 }
 
-/** Bump when FakeDb's shape changes; a stored db with another schema is discarded. */
-export const FAKE_DB_SCHEMA = 1;
+/**
+ * Bump when FakeDb's shape (or its seeded fixtures, when an older stored db would hide them)
+ * changes; a stored db with another schema is discarded. 2: venues (A-08), so a db persisted
+ * before them reloads with the venue fixtures instead of an empty map.
+ */
+export const FAKE_DB_SCHEMA = 2;
 
 export const STORAGE_KEY = 'bevi.fake.db';
 

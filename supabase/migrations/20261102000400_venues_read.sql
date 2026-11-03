@@ -47,6 +47,30 @@ $$;
 alter function public.weekday_index(text) owner to postgres;
 revoke execute on function public.weekday_index(text) from public, anon, authenticated;
 
+-- JavaScript's `String.prototype.trim()`, which is what `shared/src/hours.ts`
+-- trims with -- the whole string and each `;`-separated rule. Plain `btrim`
+-- strips spaces only, so a rule after `;\t` or a string ending in `\n` was
+-- unknown here while TypeScript understood it: the importer would set
+-- `hours_known` and this side would answer null. This is the exact set
+-- `trim()` strips (ECMAScript WhiteSpace + LineTerminator): TAB, LF, VT, FF,
+-- CR, SPACE, NBSP, U+1680, U+2000..U+200A, U+2028, U+2029, U+202F, U+205F,
+-- U+3000 and the BOM.
+create or replace function public.hours_trim(p text)
+returns text
+language sql
+immutable
+set search_path = public
+as $$
+  select btrim(p,
+    chr(9) || chr(10) || chr(11) || chr(12) || chr(13) || chr(32) || chr(160) || chr(5760)
+    || chr(8192) || chr(8193) || chr(8194) || chr(8195) || chr(8196) || chr(8197)
+    || chr(8198) || chr(8199) || chr(8200) || chr(8201) || chr(8202)
+    || chr(8232) || chr(8233) || chr(8239) || chr(8287) || chr(12288) || chr(65279));
+$$;
+
+alter function public.hours_trim(text) owner to postgres;
+revoke execute on function public.hours_trim(text) from public, anon, authenticated;
+
 -- ---------------------------------------------------------------------------
 -- 1. venue_open_at(p_hours, p_at) -> boolean
 -- ---------------------------------------------------------------------------
@@ -90,7 +114,7 @@ declare
   v_answer     boolean := false;
   v_m          text[];
 begin
-  if p_hours is null or btrim(p_hours) = '' then
+  if p_hours is null or public.hours_trim(p_hours) = '' then
     return null;
   end if;
 
@@ -99,10 +123,10 @@ begin
   v_dow    := extract(isodow from v_local)::integer - 1;
   v_minute := extract(hour from v_local)::integer * 60 + extract(minute from v_local)::integer;
 
-  foreach v_rule in array string_to_array(btrim(p_hours), ';')
+  foreach v_rule in array string_to_array(public.hours_trim(p_hours), ';')
   loop
     v_m := regexp_match(
-      btrim(v_rule),
+      public.hours_trim(v_rule),
       '^((?:Mo|Tu|We|Th|Fr|Sa|Su)(?:-(?:Mo|Tu|We|Th|Fr|Sa|Su))?(?:,(?:Mo|Tu|We|Th|Fr|Sa|Su)(?:-(?:Mo|Tu|We|Th|Fr|Sa|Su))?)*) '
       || '((?:[01][0-9]|2[0-3]):[0-5][0-9])-((?:[01][0-9]|2[0-3]):[0-5][0-9]|24:00)$'
     );
@@ -166,13 +190,18 @@ revoke execute on function public.venue_open_at(text, timestamptz) from public, 
 -- between those two anchors, flat outside them, so zooming out thins the map
 -- instead of changing which end of it you see (the cap keeps the
 -- highest-scoring venues). `minZoom` is 10 in M-16, hence the floor.
+--
+-- The zoom is clamped to the anchors BEFORE the arithmetic, so the result is
+-- the same flat 60 / 300 outside them but a nonsense zoom (2^31 - 1, say)
+-- cannot overflow `(p_zoom - 11) * 60`. A fractional zoom never arrives:
+-- packages/api floors it, as the FakeApi does.
 create or replace function public.venue_pin_cap(p_zoom integer)
 returns integer
 language sql
 immutable
 set search_path = public
 as $$
-  select greatest(60, least(300, 60 + (coalesce(p_zoom, 11) - 11) * 60));
+  select 60 + (least(greatest(coalesce(p_zoom, 11), 11), 15) - 11) * 60;
 $$;
 
 alter function public.venue_pin_cap(integer) owner to postgres;
@@ -188,6 +217,14 @@ revoke execute on function public.venue_pin_cap(integer) from public, anon, auth
 --
 -- The viewport test is `geo <@ box(...)`, which the GiST index on `geo`
 -- serves. No PostGIS: see 20261102000300's header.
+--
+-- An EMPTY filter array is no filter, the same as null (and the same as the
+-- FakeApi and packages/api): a multi-select with nothing ticked means "any",
+-- and `= any('{}')` would otherwise quietly empty the map.
+--
+-- `hours_known` is reported as "the evaluator understood it", not as the
+-- column, so a pin can never say hours known while `open_now` is null: if the
+-- column and `venue_open_at` ever disagree, the answer is "Hours unknown".
 create or replace function public.venues_in_view(
   p_bounds        jsonb,
   p_zoom          integer default 12,
@@ -226,10 +263,14 @@ declare
   v_west  double precision;
   v_east  double precision;
   v_now   timestamptz := now();
+  v_adult boolean;
 begin
   if v_uid is null then
     raise exception 'BEVI_UNAUTHORIZED' using errcode = '42501';
   end if;
+
+  -- Once per call, not once per assortment row.
+  v_adult := public.viewer_is_adult();
 
   if p_bounds is null then
     raise exception 'BEVI_VALIDATION' using errcode = '22023', detail = 'bounds';
@@ -262,15 +303,15 @@ begin
       join public.categories c on c.id = b.category_id
       left join public.bev_stats s on s.bev_id = b.id
       left join public.user_bev_predictions pr on pr.bev_id = b.id and pr.user_id = v_uid
-     where not c.is_alcoholic or public.viewer_is_adult()
+     where not c.is_alcoholic or v_adult
   ),
   in_box as (
     select v.*
       from public.venues v
      where v.status = 'active'
        and v.geo <@ box(point(v_west, v_south), point(v_east, v_north))
-       and (p_kinds is null or v.kind = any(p_kinds))
-       and (p_neighborhoods is null or v.neighborhood = any(p_neighborhoods))
+       and (p_kinds is null or cardinality(p_kinds) = 0 or v.kind = any(p_kinds))
+       and (p_neighborhoods is null or cardinality(p_neighborhoods) = 0 or v.neighborhood = any(p_neighborhoods))
   ),
   agg as (
     select v.id,
@@ -281,20 +322,25 @@ begin
            count(*)::integer as bev_count
       from in_box v
       join visible vis on vis.venue_id = v.id
-     where (p_category_ids is null or vis.category_id = any(p_category_ids))
-       and (p_price_tiers is null or vis.price_tier = any(p_price_tiers))
+     where (p_category_ids is null or cardinality(p_category_ids) = 0 or vis.category_id = any(p_category_ids))
+       and (p_price_tiers is null or cardinality(p_price_tiers) = 0 or vis.price_tier = any(p_price_tiers))
      group by v.id
   )
   select v.id, v.name, v.kind, v.lat, v.lng, v.address, v.neighborhood, v.borough,
-         v.hours_osm, v.hours_known, v.website,
+         v.hours_osm, oa.is_open is not null, v.website,
          a.best_score,
          round(a.predicted_score, 2)::numeric(4,2),
-         case when v.hours_known then public.venue_open_at(v.hours_osm, v_now) end,
+         oa.is_open,
          a.bev_count
     from agg a
     join in_box v on v.id = a.id
+    -- Evaluated once per pin. Null when the column says unknown OR the
+    -- evaluator does not understand the string.
+    cross join lateral (
+      select case when v.hours_known then public.venue_open_at(v.hours_osm, v_now) end as is_open
+    ) oa
    where not coalesce(p_open_now, false)
-      or (v.hours_known and public.venue_open_at(v.hours_osm, v_now))
+      or coalesce(oa.is_open, false)
    -- The cap keeps the best venues, and the tail is broken deterministically
    -- so two calls on the same data agree.
    order by a.best_score desc nulls last,
@@ -352,10 +398,14 @@ declare
   v_row public.venues;
   v_now timestamptz := now();
   v_n   integer;
+  v_adult boolean;
+  v_open  boolean;
 begin
   if v_uid is null then
     raise exception 'BEVI_UNAUTHORIZED' using errcode = '42501';
   end if;
+
+  v_adult := public.viewer_is_adult();
 
   select * into v_row from public.venues v
    where v.id = p_venue_id and v.status = 'active';
@@ -369,16 +419,20 @@ begin
     join public.bevs b on b.id = vb.bev_id and b.status = 'active'
     join public.categories c on c.id = b.category_id
    where vb.venue_id = p_venue_id
-     and (not c.is_alcoholic or public.viewer_is_adult());
+     and (not c.is_alcoholic or v_adult);
 
   if v_n = 0 then
     raise exception 'BEVI_NOT_FOUND' using errcode = 'P0002';
   end if;
 
+  -- As in venues_in_view: `hours_known` is what the evaluator understood, so
+  -- it is true exactly when `open_now` is not null.
+  v_open := case when v_row.hours_known then public.venue_open_at(v_row.hours_osm, v_now) end;
+
   return query
   select v_row.id, v_row.name, v_row.kind, v_row.lat, v_row.lng, v_row.address,
-         v_row.neighborhood, v_row.borough, v_row.hours_osm, v_row.hours_known, v_row.website,
-         case when v_row.hours_known then public.venue_open_at(v_row.hours_osm, v_now) end,
+         v_row.neighborhood, v_row.borough, v_row.hours_osm, v_open is not null, v_row.website,
+         v_open,
          b.id, b.name, b.brand, b.flavor, b.category_id,
          coalesce(b.thumb_path, b.photo_path),
          b.price_tier, b.price_estimated,
@@ -388,7 +442,7 @@ begin
     join public.categories c on c.id = b.category_id
     left join public.bev_stats s on s.bev_id = b.id
    where vb.venue_id = p_venue_id
-     and (not c.is_alcoholic or public.viewer_is_adult())
+     and (not c.is_alcoholic or v_adult)
    order by s.bayes_score desc nulls last, b.name collate "C" asc, b.id asc;
 end;
 $$;
@@ -401,7 +455,10 @@ grant execute on function public.venue_detail(uuid) to authenticated;
 -- 5. venue_neighborhoods() -> the filter's vocabulary
 -- ---------------------------------------------------------------------------
 -- Only neighbourhoods that have at least one PINNED venue, so the filter can
--- never offer an option that returns nothing.
+-- never offer an option that returns nothing. Sorted by code point
+-- (`collate "C"`, as every other order here and the FakeApi's
+-- `compareCodePoints`), so `DUMBO` comes before `Downtown Brooklyn` whatever
+-- the database's default collation says.
 --
 -- EXPECT THIS EMPTY TODAY. OSM has no `addr:suburb` for any venue in the
 -- starting area -- 0 of 410 on the first real import -- so the column is ours
@@ -416,19 +473,22 @@ stable
 security definer
 set search_path = public, extensions
 as $$
-  select distinct v.neighborhood
-    from public.venues v
-   where v.status = 'active'
-     and v.neighborhood is not null
-     and exists (
-       select 1
-         from public.venue_bevs vb
-         join public.bevs b on b.id = vb.bev_id and b.status = 'active'
-         join public.categories c on c.id = b.category_id
-        where vb.venue_id = v.id
-          and (not c.is_alcoholic or public.viewer_is_adult())
-     )
-   order by v.neighborhood;
+  select n.neighborhood
+    from (
+      select distinct v.neighborhood
+        from public.venues v
+       where v.status = 'active'
+         and v.neighborhood is not null
+         and exists (
+           select 1
+             from public.venue_bevs vb
+             join public.bevs b on b.id = vb.bev_id and b.status = 'active'
+             join public.categories c on c.id = b.category_id
+            where vb.venue_id = v.id
+              and (not c.is_alcoholic or public.viewer_is_adult())
+         )
+    ) n
+   order by n.neighborhood collate "C";
 $$;
 
 alter function public.venue_neighborhoods() owner to postgres;

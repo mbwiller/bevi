@@ -26,6 +26,7 @@ import {
   START_BBOX,
   hoursKnown,
   inBounds,
+  openAt,
   overpassQuery,
   parseElements,
   parseHours,
@@ -303,6 +304,16 @@ test("hours_known refuses everything else it cannot evaluate, so the UI says Hou
   assert.equal(hoursKnown("Mo-Fr 07:00-25:00"), false); // not a time
   assert.equal(hoursKnown("Mo-Fr 24:00-25:00"), false); // 24:00 is a close only
   assert.equal(hoursKnown(""), false);
+});
+
+test("whitespace is trimmed as JS trim() trims it, which venue_open_at's hours_trim mirrors", () => {
+  // The same string as the pgTAP case in 27_venues_read: a leading NBSP, a
+  // tab after `;`, a trailing newline. SQL's plain btrim used to strip spaces
+  // only, so this was known here and null there.
+  const hours = "\u00a0Mo-Fr 07:00-19:00;\tSa-Su 08:00-18:00\n";
+  assert.equal(hoursKnown(hours), true);
+  // Monday 2026-11-02, 18:00 in New York.
+  assert.equal(openAt(hours, new Date("2026-11-02T23:00:00Z")), true);
 });
 
 test("parseHours gives half 2 the parsed rules, in minutes from midnight", () => {

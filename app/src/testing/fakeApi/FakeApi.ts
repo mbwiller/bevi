@@ -47,6 +47,7 @@ import {
 import {
   ApiError,
   NYC_BOUNDS,
+  hoursKnown,
   openAt,
   HANDLE_PATTERN,
   RESERVED_HANDLES,
@@ -168,8 +169,19 @@ function invalid(field: string, message: string, reason?: string): never {
 
 const round2 = (x: number) => Math.round(x * 100) / 100;
 
-/** Mirrors `public.venue_pin_cap`: 60 pins at zoom 11 up to 300 at zoom 15, flat outside. */
-const venuePinCap = (zoom: number): number => Math.max(60, Math.min(300, 60 + (Math.floor(zoom) - 11) * 60));
+/**
+ * Mirrors `public.venue_pin_cap`: 60 pins at zoom 11 up to 300 at zoom 15, flat outside. A
+ * fractional zoom is floored (packages/api floors it before the integer RPC parameter), and a
+ * non-finite one is 11, which is what the RPC makes of the null packages/api sends for it.
+ */
+const venuePinCap = (zoom: number): number => {
+  const z = Number.isFinite(zoom) ? Math.floor(zoom) : 11;
+  return 60 + (Math.min(Math.max(z, 11), 15) - 11) * 60;
+};
+
+/** An empty filter array is no filter (contract 2.10.0), as in `venues_in_view` and packages/api. */
+const activeFilter = <T>(values: readonly T[] | undefined): readonly T[] | null =>
+  values !== undefined && values.length > 0 ? values : null;
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
 const norm = (s: string | null | undefined) => (s ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
 // Whitespace only, punctuation kept inside a token: "a&w" is one token, "barq's" is one. Splitting on
@@ -412,7 +424,9 @@ export class FakeApi implements BeviApi {
       neighborhood: v.neighborhood,
       borough: v.borough,
       hoursOsm: v.hoursOsm,
-      hoursKnown: v.hoursKnown,
+      // What the evaluator understood, not just the column, as the RPCs report
+      // it: so `hoursKnown` is true exactly when `openNow` is not null.
+      hoursKnown: v.hoursKnown && hoursKnown(v.hoursOsm),
       website: v.website,
     };
   }
@@ -1890,16 +1904,21 @@ export class FakeApi implements BeviApi {
         const east = Math.min(bounds.east, NYC_BOUNDS.east);
         if (south >= north || west >= east) return [];
 
+        const kinds = activeFilter(filters?.kinds);
+        const neighborhoods = activeFilter(filters?.neighborhoods);
+        const categoryIds = activeFilter(filters?.categoryIds);
+        const priceTiers = activeFilter(filters?.priceTiers);
+
         const pins = this.venueRows()
           .filter((v) => !v.hidden)
           .filter((v) => v.lat >= south && v.lat <= north && v.lng >= west && v.lng <= east)
-          .filter((v) => !filters?.kinds || filters.kinds.includes(v.kind))
-          .filter((v) => !filters?.neighborhoods || (v.neighborhood !== null && filters.neighborhoods.includes(v.neighborhood)))
+          .filter((v) => !kinds || kinds.includes(v.kind))
+          .filter((v) => !neighborhoods || (v.neighborhood !== null && neighborhoods.includes(v.neighborhood)))
           .flatMap((v) => {
             const assortment = this.venueAssortment(v.id, me).filter(
               (b) =>
-                (!filters?.categoryIds || filters.categoryIds.includes(b.categoryId)) &&
-                (!filters?.priceTiers || filters.priceTiers.includes(b.priceTier)),
+                (!categoryIds || categoryIds.includes(b.categoryId)) &&
+                (!priceTiers || priceTiers.includes(b.priceTier)),
             );
             // D-13: no assortment, no pin.
             if (assortment.length === 0) return [];

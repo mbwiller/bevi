@@ -79,7 +79,14 @@ function dayList(spec: string): number[] | null {
   return new Set(out).size === out.length ? out : null;
 }
 
-/** The parsed rules, or null when the string is outside the grammar above. */
+/**
+ * The parsed rules, or null when the string is outside the grammar above.
+ *
+ * Whitespace around the whole string and around each `;`-separated rule is
+ * stripped with `String.prototype.trim()`, and `venue_open_at` strips exactly
+ * the same set (`public.hours_trim` in 20261102000400), so a tab after `;` or
+ * a trailing newline is understood on both sides or on neither.
+ */
 export function parseHours(hoursOsm: string | null): HoursRule[] | null {
   if (hoursOsm === null) return null;
   const trimmed = hoursOsm.trim();
@@ -109,6 +116,22 @@ export function hoursKnown(hoursOsm: string | null): boolean {
   return parseHours(hoursOsm) !== null;
 }
 
+// Built once, on first use: an `Intl.DateTimeFormat` is expensive to construct
+// and `openAt` runs once per pin. Lazy rather than at module load so importing
+// this file (the importer does, for `hoursKnown` alone) costs nothing.
+// `en-GB` gives a 24-hour clock and a stable `Mon`-style weekday.
+let nyFormat: Intl.DateTimeFormat | null = null;
+const newYorkFormat = (): Intl.DateTimeFormat =>
+  (nyFormat ??= new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'America/New_York',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }));
+
+const WEEKDAY: Record<string, number> = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
+
 /**
  * Whether the venue is open at `at`, or null when the string is not one we
  * understand. New York time, because the venues are in New York by
@@ -118,17 +141,9 @@ export function openAt(hoursOsm: string | null, at: Date): boolean | null {
   const rules = parseHours(hoursOsm);
   if (rules === null) return null;
 
-  // `en-GB` gives a 24-hour clock and a stable `Mon`-style weekday.
-  const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'America/New_York',
-    weekday: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).formatToParts(at);
+  const parts = newYorkFormat().formatToParts(at);
   const get = (type: string): string => parts.find((p) => p.type === type)?.value ?? '';
 
-  const WEEKDAY: Record<string, number> = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
   const dow = WEEKDAY[get('weekday')];
   if (dow === undefined) return null;
   // 24:00 arrives as hour "24" in some ICU versions at exactly midnight.

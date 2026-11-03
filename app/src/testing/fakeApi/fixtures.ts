@@ -150,7 +150,8 @@ export function buildFixtures(now: Date = new Date()): FakeDb {
     endsAt: null,
   }));
 
-  // A-08: four Upper East Side venues, enough to exercise the map without
+  // A-08: six Upper East Side venues (one hidden, one with no assortment, one
+  // whose only Bev is alcoholic), enough to exercise the map without
   // pretending to be a city. Deliberately UNLIKE prod in one way:
   // `neighborhood` is set, because OSM leaves it null for every real venue and
   // M-16's "Neighborhood" filter cannot be built against an empty vocabulary.
@@ -198,8 +199,10 @@ export function buildFixtures(now: Date = new Date()): FakeDb {
       website: null,
     },
     {
-      // On Roosevelt Island: inside the city box, outside a Manhattan-only
-      // viewport, which is what makes the bounds test meaningful.
+      // On Roosevelt Island. It is INSIDE the conformance tests' MANHATTAN
+      // viewport too (40.74-40.80, -74.00 to -73.93); what keeps it off every
+      // pin list is that it has no assortment (D-13, below), which is the
+      // point of it.
       id: 'venue-4',
       name: 'Island Market',
       kind: 'craft',
@@ -209,6 +212,39 @@ export function buildFixtures(now: Date = new Date()): FakeDb {
       neighborhood: 'Roosevelt Island',
       borough: 'Manhattan',
       hoursOsm: null,
+      hoursKnown: false,
+      website: null,
+    },
+    {
+      // Hidden by moderation, with an assortment, so `hidden` is the only
+      // reason it has no pin and `get` is not_found.
+      id: 'venue-5',
+      name: 'Closed Corner Cafe',
+      kind: 'craft',
+      lat: 40.7751,
+      lng: -73.9541,
+      address: '1590 2nd Avenue',
+      neighborhood: 'Upper East Side',
+      borough: 'Manhattan',
+      hoursOsm: 'Mo-Su 08:00-22:00',
+      hoursKnown: true,
+      website: null,
+      hidden: true,
+    },
+    {
+      // A bar whose ONLY Bev is alcoholic: an adult gets a pin, a minor has
+      // nothing to see and so gets no pin, not_found from `get`, and no
+      // "Carnegie Hill" in `neighborhoods()` (the age gate is on the
+      // assortment, as in the RPCs).
+      id: 'venue-6',
+      name: 'Carnegie Taproom',
+      kind: 'craft',
+      lat: 40.7843,
+      lng: -73.9536,
+      address: '1350 Madison Avenue',
+      neighborhood: 'Carnegie Hill',
+      borough: 'Manhattan',
+      hoursOsm: 'Mo-Su 18:00-02:00',
       hoursKnown: false,
       website: null,
     },
@@ -224,6 +260,11 @@ export function buildFixtures(now: Date = new Date()): FakeDb {
     ...pick('water', 1).map((b) => ({ venueId: 'venue-2', bevId: b.id, source: 'menu' as const })),
     ...pick('soda', 4).map((b) => ({ venueId: 'venue-3', bevId: b.id, source: 'chain' as const })),
     ...pick('energy', 2).map((b) => ({ venueId: 'venue-3', bevId: b.id, source: 'chain' as const })),
+    ...pick('coffee', 1).map((b) => ({ venueId: 'venue-5', bevId: b.id, source: 'menu' as const })),
+    ...bevs
+      .filter((b) => ALCOHOLIC.has(b.categoryId))
+      .slice(0, 1)
+      .map((b) => ({ venueId: 'venue-6', bevId: b.id, source: 'menu' as const })),
   ];
 
   return {

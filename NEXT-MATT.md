@@ -75,7 +75,7 @@ M-20 duplicate step (#152) ◀────────── S-13 + A-12 duplica
 
 | Surface | Who edits it | Rule |
 |---|---|---|
-| `shared/src/` (the contract) and `CONTRACT_VERSION` | Mostly Arjun's combined PRs | One combined PR per feature (contract + migration + `packages/api` + FakeApi). Bump the minor version, currently `2.9.0` (S-13, #151). Whoever merges second rebases and takes the next number |
+| `shared/src/` (the contract) and `CONTRACT_VERSION` | Mostly Arjun's combined PRs | One combined PR per feature (contract + migration + `packages/api` + FakeApi). Bump the minor version, currently `2.10.0` (S-10 + A-08, #161). Whoever merges second rebases and takes the next number |
 | `app/src/testing/fakeApi/*`, `conformance.ts` | Arjun (in his combined PRs) and you | Every new API method needs a FakeApi version, or the app's typecheck fails. Arjun writes it and you review it. Expect rebase conflicts if your branch edits the FakeApi too |
 | `packages/ranking/` | You | Arjun's sync job and Edge Function import it. Any formula or constant change, or `RANKING_VERSION` bump, changes his edge weights: tell him first |
 | `supabase/migrations/` | Arjun | Timestamped and append-only; the next timestamps go after `20261102000200`. Two branches once both took `20261026000100`, so check `ls supabase/migrations` and the open PRs before picking one; when several PRs are open at once, pre-assign the timestamps (today's five were `20261101000100`–`000500`) and give each a disjoint set of functions to `create or replace`, since two migrations re-creating the same function silently revert each other. Whatever calls a new database function merges **only after its migration is on prod**. Push migrations in timestamp order |

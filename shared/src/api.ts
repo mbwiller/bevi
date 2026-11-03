@@ -557,14 +557,23 @@ export interface VenuesApi {
    * `zoom` caps how many come back -- about 60 at zoom 11 up to 300 at zoom 15
    * -- because a city-wide view would otherwise return everything. The cap is
    * applied after the filters and keeps the highest-scoring venues, so zooming
-   * out thins the map rather than changing which end of it you see.
+   * out thins the map rather than changing which end of it you see. A
+   * fractional zoom (Google's vector maps report e.g. 12.5) is floored.
+   *
+   * Every filter is optional, and an EMPTY array is the same as leaving it
+   * out (no filter), not "match nothing": a multi-select with nothing ticked
+   * means "any".
    *
    * `bounds` is clamped to `NYC_BOUNDS` server-side, so a viewport that spills
    * past the city returns only what is inside it. @throws 'unauthorized'.
    */
   inView(params: { bounds: LatLngBounds; zoom: number; filters?: VenueFilters }): Promise<VenuePin[]>;
 
-  /** One venue and its assortment. @throws 'unauthorized', 'not_found'. */
+  /**
+   * One venue and its assortment. A hidden venue, an unknown id, an id that is
+   * not a venue id at all, and a venue whose whole assortment the caller may
+   * not see are all the same 'not_found'. @throws 'unauthorized', 'not_found'.
+   */
   get(venueId: string): Promise<VenueDetail>;
 
   /**
