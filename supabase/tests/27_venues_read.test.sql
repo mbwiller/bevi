@@ -153,19 +153,19 @@ values ('00000000-0000-4000-8000-000000a08b11', 'pgTAP V1 Coffee Bar', 'craft',
         40.7747, -73.9567, 'Carnegie Hill', 'Manhattan', 'manual', null, false, 'active');
 
 insert into public.venue_bevs (venue_id, bev_id, source)
-select '00000000-0000-4000-8000-000000a08b11', id, 'menu' from t_bevs where label in ('s1', 's2', 's3')
+select '00000000-0000-4000-8000-000000a08b11'::uuid, id, 'menu' from t_bevs where label in ('s1', 's2', 's3')
 union all
-select '00000000-0000-4000-8000-000000a08b12', id, 'chain' from t_bevs where label = 's4'
+select '00000000-0000-4000-8000-000000a08b12'::uuid, id, 'chain' from t_bevs where label = 's4'
 union all
-select '00000000-0000-4000-8000-000000a08b13', id, 'menu' from t_bevs where label = 's1'
+select '00000000-0000-4000-8000-000000a08b13'::uuid, id, 'menu' from t_bevs where label = 's1'
 union all
-select '00000000-0000-4000-8000-000000a08b15', id, 'menu' from t_bevs where label = 's1'
+select '00000000-0000-4000-8000-000000a08b15'::uuid, id, 'menu' from t_bevs where label = 's1'
 union all
-select '00000000-0000-4000-8000-000000a08b16', id, 'menu' from t_bevs where label = 'alc';
+select '00000000-0000-4000-8000-000000a08b16'::uuid, id, 'menu' from t_bevs where label = 'alc';
 
 -- A score on s1 so `best_score` has something to order by.
 insert into public.rankings (user_id, bev_id, bucket, position, score)
-select '00000000-0000-4000-8000-000000a08b01', id, 3::smallint, 0, public.ranking_score(3::smallint, 0, 1)
+select '00000000-0000-4000-8000-000000a08b01'::uuid, id, 3::smallint, 0, public.ranking_score(3::smallint, 0, 1)
   from t_bevs where label = 's1';
 select public.refresh_bev_stats(array(select id from t_bevs));
 
