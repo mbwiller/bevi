@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, type ViewStyle } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { motion, radius, spacing, type, useTheme } from '@/theme';
 
@@ -40,6 +41,9 @@ const SAFE_BOTTOM = (Platform.OS === 'web'
 export function Sheet({ open = false, title, snap = 40, onClose, children, scroll = true }: SheetProps) {
   const { colors } = useTheme();
   const { height: windowHeight } = useWindowDimensions();
+  // A 90% sheet would reach into the status bar (and its blur band, see StatusBarClearance): stop below the top inset.
+  const safeTop = useContext(SafeAreaInsetsContext)?.top ?? 0;
+  const height = Math.min((windowHeight * snap) / 100, windowHeight - safeTop);
   const reduced = useReducedMotion();
   const [mounted, setMounted] = useState(open);
   const progress = useSharedValue(open ? 1 : 0);
@@ -99,7 +103,7 @@ export function Sheet({ open = false, title, snap = 40, onClose, children, scrol
           style={[
             styles.sheet,
             SAFE_BOTTOM,
-            { height: (windowHeight * snap) / 100, backgroundColor: colors.surface },
+            { height, backgroundColor: colors.surface },
             sheetStyle,
           ]}
         >

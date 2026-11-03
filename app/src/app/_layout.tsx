@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { apiConfig } from '@/api/client';
 import { createQueryClient } from '@/api/queryClient';
+import { StatusBarClearance } from '@/components/StatusBarClearance';
 import { ConfigError, Splash } from '@/features/auth/Splash';
 import { useSessionBootstrap } from '@/features/auth/useSessionBootstrap';
 import { clearLegacyStorage } from '@/lib/clearLegacyStorage';
@@ -35,10 +36,13 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
-          <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-          {apiConfig.ok ? <SessionGate /> : <ConfigError problem={apiConfig.problem} />}
-        </QueryClientProvider>
+        {/* Pushes every screen's top edge below iOS's status-bar blur in the home-screen app. */}
+        <StatusBarClearance>
+          <QueryClientProvider client={queryClient}>
+            <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+            {apiConfig.ok ? <SessionGate /> : <ConfigError problem={apiConfig.problem} />}
+          </QueryClientProvider>
+        </StatusBarClearance>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
