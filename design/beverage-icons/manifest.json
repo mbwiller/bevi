@@ -55,9 +55,9 @@
   },
   "summary": {
     "catalog": 378,
-    "authored": 96,
-    "pending": 282,
-    "starterAuthored": 35,
+    "authored": 100,
+    "pending": 278,
+    "starterAuthored": 39,
     "starterTotal": 43,
     "livePostgresReconciled": false
   },
@@ -464,6 +464,44 @@
         "pngBytes": 97339
       },
       "sourceModule": "scripts/icons/families/energy-variants.mjs"
+    },
+    {
+      "slug": "kung-fu-tea-classic-milk-tea",
+      "family": "cafe-milk-tea-cup",
+      "packageChoice": "US Kung Fu Milk Tea (signature Earl Grey, cane sugar and milk powder), iced in the clear tapered café cup shown by the brand; no added topping. Exact cup volume unspecified.",
+      "references": [
+        {
+          "pageUrl": "https://www.kungfutea.com/products/",
+          "imageUrl": "https://www.kungfutea.com/wp-content/uploads/2026/10/kung-fu-tea-kung-fu-milk-tea.jpg",
+          "inspectedAt": "2026-10-31",
+          "visuallyInspected": true,
+          "observations": "Exact Kung Fu Milk Tea card: pale tan iced drink, clear rolled lip, stepped tapered cup, black round badge with red KUNG FU and white TEA. This image crops the cup base."
+        },
+        {
+          "pageUrl": "https://www.kungfutea.com/milk-tea-series/",
+          "imageUrl": "https://www.kungfutea.com/wp-content/uploads/2021/08/Coffee_MilkTea.jpg",
+          "inspectedAt": "2026-10-31",
+          "visuallyInspected": true,
+          "observations": "Full cup photo linked under KUNG FU MILK/MILK GREEN TEA: same ice arrangement, badge and liquid as the current exact product crop; narrow ribbed base and red PRINCIPLE 2: INNOVATIVE below badge. Filename says Coffee_MilkTea and the page reuses it for several items, so the current explicitly named product card is the identity anchor."
+        }
+      ],
+      "uncertainty": "Catalog says Classic Milk Tea; mapped to brand signature Kung Fu Milk Tea using its named official product card. No pearls were added: toppings are customizable and the inspected serving does not show a pearl layer. Promotional open-cup presentation; size not asserted. Seal preserves the photographed 功夫茶 characters as local Songti TC Regular glyph outlines; tiny filler marks omitted. Final aesthetic approval and native-app review pending.",
+      "status": "needs-review",
+      "bevId": "bc5baef9-da2c-5d97-a144-7b1a29b51293",
+      "name": "Classic Milk Tea (Kung Fu Tea)",
+      "brand": "Kung Fu Tea",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/kung-fu-tea-classic-milk-tea.svg",
+        "portableSvg": "portable-svg/kung-fu-tea-classic-milk-tea.svg",
+        "png": "png/kung-fu-tea-classic-milk-tea.png",
+        "svgSha256": "ea21a983cd4776296d880f4f4f7be5c0cf3df507922892124ff1f0e52f06c6cc",
+        "portableSvgSha256": "7fe968b02e202937a9e4f8d07ab7692a79746100e08bd7a6dbea6291d7ef0090",
+        "pngSha256": "e12ce3b03900ff96b5a0c676f51cb8c934a37f9405da46b6f93feec3a6a43584",
+        "pngBytes": 141449
+      },
+      "sourceModule": "scripts/icons/families/cafe-milk-tea.mjs"
     },
     {
       "slug": "coca-cola-classic",
@@ -2006,6 +2044,44 @@
       "sourceModule": "scripts/icons/families/juice-batch.mjs"
     },
     {
+      "slug": "jamba-juice-mango-a-go-go",
+      "family": "cafe-smoothie-cup",
+      "packageChoice": "US Jamba Mango-a-go-go, open clear tapered cup with orange straw as shown in official front thumbnail; serving volume not specified by image.",
+      "references": [
+        {
+          "pageUrl": "https://www.jamba.com/menu/smoothies/mango-a-go-go",
+          "imageUrl": "https://ctfassets.gotofoods.com/zqt8tllj2cy0/2wpTdxyro3vLc2jc7GndlF/b4a7ed95da704b2676807244ed0b4bcc/JAM-mango-a-go-go-thumbnail-544x544.png",
+          "inspectedAt": "2026-11-01",
+          "observations": "Inspected exact-product front thumbnail extracted from manufacturer page: golden yellow thick smoothie, clear tapered cup, raised upper ridges and lip, white descending spiral mark, orange straw, open top with smoothie crest. No lid, ice cubes, garnish or wordmark visible.",
+          "visuallyInspected": true
+        },
+        {
+          "pageUrl": "https://www.jamba.com/menu/smoothies/mango-a-go-go",
+          "imageUrl": "https://ctfassets.gotofoods.com/zqt8tllj2cy0/17tqyeqSRWivAi0fPnISiY/25550aa66cca9ea3f3ecf3a5d3e25918/746x600_Mango-a-go-go_OH.png",
+          "inspectedAt": "2026-11-01",
+          "observations": "Inspected exact-product overhead hero: creamy mango-yellow folded/swirl surface, orange straw and clear rim; confirms top treatment and consistency. Frontal thumbnail establishes the cup geometry and branding.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Manufacturer menu image has no serving-size annotation; volume deliberately unspecified. Perspective adapted to shared Bevi slightly elevated front view. Final aesthetic and native review pending.",
+      "status": "needs-review",
+      "bevId": "866e3a9c-eaf7-5739-a672-a7f5c9bb0fde",
+      "name": "Mango-a-go-go",
+      "brand": "Jamba Juice",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/jamba-juice-mango-a-go-go.svg",
+        "portableSvg": "portable-svg/jamba-juice-mango-a-go-go.svg",
+        "png": "png/jamba-juice-mango-a-go-go.png",
+        "svgSha256": "7c90a2258397c70a114f7ba256d891532699c0a58490192073bb714b95115f1f",
+        "portableSvgSha256": "9e8fb508431f5a002ef83f80cf91f0b4884c577df91dc1fca3f0147696da239d",
+        "pngSha256": "7fea8f6b57755b41842ea4791a77f218300dd187fe15a2a2c310e5e5e6b696e1",
+        "pngBytes": 124067
+      },
+      "sourceModule": "scripts/icons/families/smoothie-starters.mjs"
+    },
+    {
       "slug": "generic-margarita",
       "family": "served-rocks-cocktail",
       "packageChoice": "Unbranded classic margarita on ice in a clear straight-sided lowball, salted rim and lime garnish; representative serving, not frozen.",
@@ -2407,6 +2483,37 @@
         "pngBytes": 103096
       },
       "sourceModule": "scripts/icons/families/juice-batch.mjs"
+    },
+    {
+      "slug": "tropicana-orange-juice-original",
+      "family": "juice-pet-bottle",
+      "packageChoice": "US 46 fl oz / 1.36 L Pure Premium Original (No Pulp), transparent PET bottle and orange screw cap. Flagship representative choice; catalog pulp content is unspecified.",
+      "references": [
+        {
+          "pageUrl": "https://tropicana.com/products/original/",
+          "imageUrl": "https://tropicana.com/images/products/tropicana-pure-premium-no-pulp-320.png",
+          "observations": "Inspected official product image: slender rounded PET bottle, orange ribbed cap, bright opaque yellow-orange juice, white label with dark-green Tropicana and Pure Premium lettering, orange No Pulp oval, lower orange panel and whole orange with green leaf/red-white striped straw. Small package text reads 46 FL OZ (1.36 L). The named Original page identifies the selected No Pulp variant.",
+          "inspectedAt": "2026-10-31",
+          "visuallyInspected": true
+        }
+      ],
+      "status": "needs-review",
+      "uncertainty": "Catalog says Original without pulp level. This draft explicitly represents manufacturer flagship Original (No Pulp), not Some Pulp, Lots of Pulp, from-concentrate 100% Orange Juice, or Light. Catalog pulp preference remains unspecified; no formulation identity claim beyond this documented representative choice. Fine lettering simplified; final aesthetic and native review pending.",
+      "bevId": "87604a87-8cfc-58b2-b607-c2296eec1701",
+      "name": "Orange Juice",
+      "brand": "Tropicana",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/tropicana-orange-juice-original.svg",
+        "portableSvg": "portable-svg/tropicana-orange-juice-original.svg",
+        "png": "png/tropicana-orange-juice-original.png",
+        "svgSha256": "74e3094f515227828125ac489ef7da25277006bf523cf3f30b0ca0cb7ae28188",
+        "portableSvgSha256": "13e545fab7cbec577746859c329b3f9c6c02569a23946bf55c447fca62abd9ec",
+        "pngSha256": "6b8bd0a872f8682df58202e671f7f950cbdb5b3b316dded22406cdb8c661e480",
+        "pngBytes": 123844
+      },
+      "sourceModule": "scripts/icons/families/juice-starters.mjs"
     },
     {
       "slug": "pepsi",
@@ -2934,6 +3041,37 @@
         "pngBytes": 125654
       },
       "sourceModule": "scripts/icons/families/citrus-sodas.mjs"
+    },
+    {
+      "slug": "bolthouse-farms-strawberry-banana",
+      "family": "smoothie-pet-bottle",
+      "packageChoice": "US 450mL / 15.2 fl oz Bolthouse Farms Strawberry Banana juice smoothie, pink label and red screw cap.",
+      "references": [
+        {
+          "pageUrl": "https://www.bolthouse.com/product/strawberry-banana/",
+          "imageUrl": "https://www.bolthouse.com/wp-content/uploads/sites/4/2016/01/071464270407_bhf_us_bev_15_pi_blnd_sb_front_520x720.png-260x360.png",
+          "inspectedAt": "2026-11-01",
+          "observations": "Inspected manufacturer front image: narrow PET bottle with round shoulders, ribbed red/pink cap and tamper ring, pink sleeve, strawberries and banana at shoulder, white NO SUGAR ADDED circle, white two-line Bolthouse Farms script, darker pink STRAWBERRY BANANA band, angled white 100% JUICE SMOOTHIE stripe, muted strawberry smoothie at base. Bottom visibly reads 450mL / 15.2 FL OZ.",
+          "visuallyInspected": true
+        }
+      ],
+      "uncertainty": "Representative US single-serve package selected because catalog lacks size. Manufacturer source is a small image; typography and fruit motifs are simplified while retaining observed layout. Final aesthetic and native review pending.",
+      "status": "needs-review",
+      "bevId": "1b25e221-1411-5bd7-8475-0b82e9ba0dd3",
+      "name": "Strawberry Banana",
+      "brand": "Bolthouse Farms",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/bolthouse-farms-strawberry-banana.svg",
+        "portableSvg": "portable-svg/bolthouse-farms-strawberry-banana.svg",
+        "png": "png/bolthouse-farms-strawberry-banana.png",
+        "svgSha256": "35cfd8d78e1221c444707701d37772821a740ecebeb82dc22d482c9660c0b328",
+        "portableSvgSha256": "d97c084eeddf7ff0a9c9210d2c136189128211ba1e77d3c5a07527bcac7acbac",
+        "pngSha256": "d3b34e0396a23634d0e0652a01344080b6bad03dfa48b1eab3152c1dce52f3a2",
+        "pngBytes": 118446
+      },
+      "sourceModule": "scripts/icons/families/smoothie-starters.mjs"
     },
     {
       "slug": "topo-chico-original",
