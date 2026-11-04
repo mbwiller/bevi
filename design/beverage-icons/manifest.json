@@ -55,9 +55,9 @@
   },
   "summary": {
     "catalog": 378,
-    "authored": 96,
-    "pending": 282,
-    "starterAuthored": 35,
+    "authored": 124,
+    "pending": 254,
+    "starterAuthored": 37,
     "starterTotal": 43,
     "livePostgresReconciled": false
   },
@@ -123,6 +123,68 @@
         "pngBytes": 107654
       },
       "sourceModule": "scripts/icons/families/juice-batch.mjs"
+    },
+    {
+      "slug": "motts-apple-juice",
+      "family": "motts-juice-bottle",
+      "packageChoice": "US 64 fl oz / 1.89L Mott's original100% Apple Juice bottle.",
+      "references": [
+        {
+          "pageUrl": "https://www.motts.com/products/juice/motts-100-original-apple-juice",
+          "imageUrl": "https://www.motts.com/images/products/sizes/motts-100-original-apple-juice_64.png",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Manufacturer64oz Original Apple photo individually inspected: clear wide molded bottle, amber juice, small yellow ribbed cap, fluted shoulders, yellow upper/green lower label, large black angular MOTT’S, white100% JUICE/APPLE, red apple and green leaf; transparent molded base. Not Natural, Organic, Light or Tots."
+        }
+      ],
+      "uncertainty": " Each exact variant reference visually inspected; representative US package chosen because catalog does not specify size. Brand lettering, fruit art and small print simplified original vectors with pinned fonts. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "5344b4d8-fe71-5c38-9c3a-8d99d987ecbe",
+      "name": "Apple Juice",
+      "brand": "Mott's",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/motts-apple-juice.svg",
+        "portableSvg": "portable-svg/motts-apple-juice.svg",
+        "png": "png/motts-apple-juice.png",
+        "svgSha256": "82aae5a87a1dd3cdd66e32038d745a64b170e861b4c2dd2e1810b2cfc9b051ec",
+        "portableSvgSha256": "06b77e96afd03a0d3cfc79bb313654f01081788412bf9a17141ea35bec258ed9",
+        "pngSha256": "4f06d3cef72ccb1b22e433fa18f87d4b7bc06ac31990c64b41694da0e4964b39",
+        "pngBytes": 116595
+      },
+      "sourceModule": "scripts/icons/families/juice-expansion.mjs"
+    },
+    {
+      "slug": "minute-maid-apple-juice",
+      "family": "minute-maid-juice-bottle",
+      "packageChoice": "US 12 fl oz / 355mL Minute Maid100% Apple Juice bottle.",
+      "references": [
+        {
+          "pageUrl": "https://www.coca-cola.com/us/en/brands/minute-maid/products/minute-maid-variety-juices",
+          "imageUrl": "https://www.coca-cola.com/content/dam/onexp/us/en/brands/minute-maid/products/variety-juice/minutemaid-prod-apple-allbreakpoints.png",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Manufacturer Apple image individually inspected: slim waisted PET bottle with black screw cap and clear neck, predominantly green full-body wrap, tall black Minute Maid shield with white serif lettering, pale-green100% Apple Juice, large white100% Vit C, whole red apple and apple half/leaf at foot,12floz marking. Actual juice mostly concealed by wrap."
+        }
+      ],
+      "uncertainty": " Each exact variant reference visually inspected; representative US package chosen because catalog does not specify size. Brand lettering, fruit art and small print simplified original vectors with pinned fonts. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "6aed7049-e35a-5d43-9bdc-efa577b7aa82",
+      "name": "Apple Juice",
+      "brand": "Minute Maid",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/minute-maid-apple-juice.svg",
+        "portableSvg": "portable-svg/minute-maid-apple-juice.svg",
+        "png": "png/minute-maid-apple-juice.png",
+        "svgSha256": "3a8886301c52e06c61cdd9e032ccbca8cd1a7ef79857626f2c63659e61a6ac8f",
+        "portableSvgSha256": "eae32dd9db873aebeaf87d1aa125b331bb2cc92fbe5f2edf5d42a5a1606a1268",
+        "pngSha256": "691010d2a3f4abba82609aa82d2ed041e6ef6a5c67cb7bd11de89fa01f5f078f",
+        "pngBytes": 95128
+      },
+      "sourceModule": "scripts/icons/families/juice-expansion.mjs"
     },
     {
       "slug": "arizona-diet-green-tea",
@@ -280,6 +342,37 @@
       "sourceModule": "scripts/icons/families/tea-batch.mjs"
     },
     {
+      "slug": "naked-juice-blue-machine",
+      "family": "naked-smoothie-bottle",
+      "packageChoice": "US 15.2 fl oz / 450mL Naked Blue Machine, current manufacturer Boosted Smoothie / Machine package.",
+      "references": [
+        {
+          "pageUrl": "https://www.nakedsmoothie.com/our-products/machines/blue-machine",
+          "imageUrl": "https://www.nakedsmoothie.com/storage/app/media/2025/products/machine-blue.png",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Separate manufacturer current 15.2oz Blue Machine photo inspected: wide blue cap, purple/magenta smoothie in clear stout bottle, light-blue wrap, Naked white/blue banner, BOOSTED SMOOTHIE and bold blue BLUE MACHINE; apple slices, blueberries and banana slices. Juice is purple, not blue; current fiber/vitamin variant explicitly recorded."
+        }
+      ],
+      "uncertainty": "Current manufacturer flavor variant is explicitly selected; catalog has no formula/vintage metadata. This does not assert nutritional equivalence with older Naked Juice labels. Current Boosted Smoothie/Machine wording retained, nutritional claims omitted. Each exact variant reference visually inspected; representative US package chosen because catalog does not specify size. Brand lettering, fruit art and small print simplified original vectors with pinned fonts. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "3ad2c20f-853d-5c20-ac4f-199e1f2716f8",
+      "name": "Blue Machine",
+      "brand": "Naked Juice",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/naked-juice-blue-machine.svg",
+        "portableSvg": "portable-svg/naked-juice-blue-machine.svg",
+        "png": "png/naked-juice-blue-machine.png",
+        "svgSha256": "41ddb3688ae70d720fb9d5aad41c375dda72f936c94cfbc4c4bc66a00ba7ba39",
+        "portableSvgSha256": "5a49e41bd1e5072ba7ca6b05aef629cd5ca96a00ce48a50fd23a42225abe4634",
+        "pngSha256": "a3258df01fdd88e8fadf384cbf24579c872adec446cf1156dcd17c9a8fb27fd3",
+        "pngBytes": 112002
+      },
+      "sourceModule": "scripts/icons/families/juice-expansion.mjs"
+    },
+    {
       "slug": "dunkin-bottled-iced-coffee-french-vanilla",
       "family": "dunkin-pet-coffee-bottle",
       "packageChoice": "US 13.7 fl oz French Vanilla Dunkin bottled iced coffee, pale gold cap and gold/white sleeve.",
@@ -404,6 +497,37 @@
       "sourceModule": "scripts/icons/families/sparkling-starters.mjs"
     },
     {
+      "slug": "jamba-juice-caribbean-passion",
+      "family": "jamba-served-smoothie",
+      "packageChoice": "US café Caribbean Passion in the actual clear Jamba serving cup shown by manufacturer; representative standard serving, volume not inferred from photo.",
+      "references": [
+        {
+          "pageUrl": "https://www.jamba.com/menu/smoothies/caribbean-passion",
+          "imageUrl": "https://ctfassets.gotofoods.com/zqt8tllj2cy0/6Ajsy506KWvmcvBHTjThtU/3db41a612787b20ec1a810cf9f51c60a/JAM-caribbean-passion-thumbnail-544x544.png",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Exact manufacturer product thumbnail independently visually inspected: Deeper warm coral/orange-pink smoothie with red flecks and raised scoop ridge at center, orange straw, clear tapered cup and white descending swirl logo. Individually inspected, distinct from paler Strawberry Surf Rider. No fruit garnish or lid."
+        }
+      ],
+      "uncertainty": "Serving size and venue-specific container variations are not specified by catalog. Fine lettering, texture and package illustrations simplified as original vectors. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "26ac0b47-3c1f-5c73-a193-2d1a2ae52bc6",
+      "name": "Caribbean Passion",
+      "brand": "Jamba Juice",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/jamba-juice-caribbean-passion.svg",
+        "portableSvg": "portable-svg/jamba-juice-caribbean-passion.svg",
+        "png": "png/jamba-juice-caribbean-passion.png",
+        "svgSha256": "17dfce30bf412d24c717cd231924d9f36c187d70c0036a25a4ed3d748f377dfa",
+        "portableSvgSha256": "10ab23fb9eacea3b1733fb49736e7682f5fc172807e715d00d5cad34b25bc25d",
+        "pngSha256": "740d5faddf661ee5c235e293416a65e36422e7b537f1f6bdb8b3c1fb60e73908",
+        "pngBytes": 124441
+      },
+      "sourceModule": "scripts/icons/families/starter-smoothies.mjs"
+    },
+    {
       "slug": "celsius-sparkling-orange",
       "family": "energy-starter-can",
       "packageChoice": "US 12 fl oz / 355mL Celsius Sparkling Orange slim can, white/silver face and black lower information band as shown by the selected retailer photo.",
@@ -504,6 +628,68 @@
       "sourceModule": "scripts/icons/families/colas.mjs"
     },
     {
+      "slug": "high-brew-mexican-vanilla",
+      "family": "high-brew-coffee-can",
+      "packageChoice": "US 8 fl oz / 237mL Mexican Vanilla cold-brew coffee can, documented current blue package.",
+      "references": [
+        {
+          "pageUrl": "https://www.highbrewcoffee.com/products/mexican-vanilla",
+          "imageUrl": "https://www.highbrewcoffee.com/cdn/shop/files/Copy_of_1._Amazon_Core_MexicanVanilla_12Pack_1024x1024.png?v=1762051749",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Manufacturer exact single can in pack image inspected: slim short blue8oz can, silver lid/base, AUSTIN TEXAS near shoulder, large navy oval with white border and COLD-BREW/HIGH Brew/COFFEE; white brand lettering with red offset, dark Mexican VANILLA below, natural flavor and volume. Not Nitro or Vanilla Bean Triple Shot."
+        }
+      ],
+      "uncertainty": "Fine lettering, texture and package illustrations simplified as original vectors. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "cdcc0e60-0ef3-5e37-9535-a13fea816553",
+      "name": "Coffee Mexican Vanilla",
+      "brand": "High Brew Coffee",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/high-brew-mexican-vanilla.svg",
+        "portableSvg": "portable-svg/high-brew-mexican-vanilla.svg",
+        "png": "png/high-brew-mexican-vanilla.png",
+        "svgSha256": "0faf37605de709cd89d2f20b45133bb1acbacd08999032bfc1b217da43a205dd",
+        "portableSvgSha256": "a837c1c1455e6d6a002dd9d9fb30a85981d4983f097ca85a89ef86adc9f3a450",
+        "pngSha256": "6ea8bdd01d7a2efcb8fa16b2831941c8d7c1bad261e86359b1ddd80040ebbad9",
+        "pngBytes": 108816
+      },
+      "sourceModule": "scripts/icons/families/starter-smoothies.mjs"
+    },
+    {
+      "slug": "high-brew-salted-caramel",
+      "family": "high-brew-coffee-can",
+      "packageChoice": "US 8 fl oz / 237mL Salted Caramel cold brew coffee, documented orange/brown retailer package; not Nitro Caramel.",
+      "references": [
+        {
+          "pageUrl": "https://www.hy-vee.com/aisles-online/p/780223/high-brew-coffee-8-oz",
+          "imageUrl": "https://fa74d61d848a20b729bb-0251b36b713060ab3e0e8321940e01ff.ssl.cf2.rackcdn.com/6bf8abb2-0af0-407e-911b-f9034535b74e_large.png",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Retailer exact Salted Caramel can independently inspected: 8oz narrow aluminum can, silver top/base, orange top field marked90calories, deep brown lower field, navy oval COLD-BREW HIGH Brew COFFEE in white/red; white script Salted above CARAMEL and natural flavor. Manufacturer FAQ lists Salted Caramel separately from current Nitro."
+        }
+      ],
+      "uncertainty": "Manufacturer current Salted Caramel product page unavailable; manufacturer FAQ https://www.highbrewcoffee.com/pages/faq confirms product identity. Retailer package revision/availability unverified. Fine lettering, texture and package illustrations simplified as original vectors. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "9f19252f-2ee5-5f1f-98af-b67d09b52f91",
+      "name": "Coffee Salted Caramel",
+      "brand": "High Brew Coffee",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/high-brew-salted-caramel.svg",
+        "portableSvg": "portable-svg/high-brew-salted-caramel.svg",
+        "png": "png/high-brew-salted-caramel.png",
+        "svgSha256": "a64cab50c596724e6dd45b4d48674c7d2cf7e44c817c1b335f0b34bc43722c56",
+        "portableSvgSha256": "713dc46a1c0ae57f4f642e336510cb95dc90ec0cc6b1434ff749da7b61919465",
+        "pngSha256": "024707531f56ec1253b311cdb9591e151ee6ee91b542a919ce347aeab398a844",
+        "pngBytes": 106718
+      },
+      "sourceModule": "scripts/icons/families/starter-smoothies.mjs"
+    },
+    {
       "slug": "coke-zero-sugar",
       "family": "standard-cola-can",
       "packageChoice": "US 12 fl oz / 355mL Coca-Cola Zero Sugar aluminum can; representative package for the size-unspecified catalog row.",
@@ -540,6 +726,37 @@
         "pngBytes": 107176
       },
       "sourceModule": "scripts/icons/families/colas.mjs"
+    },
+    {
+      "slug": "stok-cold-brew-black",
+      "family": "stok-cold-brew-bottle",
+      "packageChoice": "US 48 fl oz SToK UN-SWEET Black/Bold & Smooth bottle, explicitly selected plain unsweetened variant; not Espresso/Extra Bold or sweetened.",
+      "references": [
+        {
+          "pageUrl": "https://www.stokbrew.com/cold-brew/cold-brew-coffee/unsweetened-cold-brew-coffee-48oz/",
+          "imageUrl": "https://www.stokbrew.com/wp-content/uploads/Stok-UnSw-BlkBoldSmooth-48oz.webp",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Manufacturer exact bottle image inspected: wide dark-brown/black PET bottle with tall black faceted screw cap, neck strip UN-SWEET/BLACK, teal front label and BOLD & SMOOTH header, oversized black STŌK COLD BREW COFFEE, arrow dividers and black droplet/snowflake at foot. Background radiating rays are promotional and excluded."
+        }
+      ],
+      "uncertainty": "Catalog says Black without roast detail; selected manufacturer flagship plain unsweetened Bold & Smooth package and recorded the choice. Fine lettering, texture and package illustrations simplified as original vectors. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "32e8e1d6-e57f-5e28-bf7f-bf570e0c4bcf",
+      "name": "Cold Brew Black",
+      "brand": "Stok",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/stok-cold-brew-black.svg",
+        "portableSvg": "portable-svg/stok-cold-brew-black.svg",
+        "png": "png/stok-cold-brew-black.png",
+        "svgSha256": "5b2fcea11ce1175504eff1238da4a564032b31763df6568214b778c689fa60d7",
+        "portableSvgSha256": "520dfae9aeb2c6c4aa13fc4529997014d5ccc8b235340eb2452ee27b7a1804b3",
+        "pngSha256": "2c795ed357642c868b19d36ccb76bdd60e6cd7a25faa09b7eee12fc2427d5316",
+        "pngBytes": 99220
+      },
+      "sourceModule": "scripts/icons/families/starter-smoothies.mjs"
     },
     {
       "slug": "diet-coke",
@@ -883,6 +1100,68 @@
       "sourceModule": "scripts/icons/families/citrus-sodas.mjs"
     },
     {
+      "slug": "tropicana-fruit-punch",
+      "family": "tropicana-juice-bottle",
+      "packageChoice": "US 46 fl oz Tropicana Refreshers Fruit Punch clear PET bottle.",
+      "references": [
+        {
+          "pageUrl": "https://www.tropicana.com/products/fruit-punch/",
+          "imageUrl": "https://www.tropicana.com/images/products/tropicana-fruit-punch-320.png",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Manufacturer 46oz Fruit Punch image inspected: clear rounded bottle with green ribbed cap and coral/red juice, red Fruit Punch oval, green Tropicana, lime-green REFRESHERS, white upper/teal lower label, apple/orange/pineapple/cherry fruit arrangement and striped straw. Manufacturer identifies this exact flavor as formerly Caribbean Sunset; Original Fruit Punch, not Zero Sugar."
+        }
+      ],
+      "uncertainty": "Manufacturer Current No Pulp/Some Pulp/Refreshers package explicitly selected. Separate catalog Original/No Pulp conflict is not resolved by assigning duplicate artwork. Each exact variant reference visually inspected; representative US package chosen because catalog does not specify size. Brand lettering, fruit art and small print simplified original vectors with pinned fonts. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "86fca922-eaba-5586-acd5-d3eb722eaf59",
+      "name": "Fruit Punch",
+      "brand": "Tropicana",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/tropicana-fruit-punch.svg",
+        "portableSvg": "portable-svg/tropicana-fruit-punch.svg",
+        "png": "png/tropicana-fruit-punch.png",
+        "svgSha256": "eeb9ae41c3730d701ee8a8d84ac9dff2361e33404676dbdfd0198029eb0cb891",
+        "portableSvgSha256": "fc5e3563818b137e908a7ed906364c70ad221c6dd91793518ac6a69bf8f86f37",
+        "pngSha256": "82118a5dd4bbc71ffa2678b6b96b2e23f7861aa57615e395d14c5ae95aac7933",
+        "pngBytes": 109187
+      },
+      "sourceModule": "scripts/icons/families/juice-expansion.mjs"
+    },
+    {
+      "slug": "minute-maid-fruit-punch",
+      "family": "minute-maid-juice-bottle",
+      "packageChoice": "US 20 fl oz / 591mL Minute Maid Fruit Punch contoured PET bottle.",
+      "references": [
+        {
+          "pageUrl": "https://www.coca-cola.com/us/en/brands/minute-maid/products/lemonades-and-fruit-drinks",
+          "imageUrl": "https://www.coca-cola.com/content/dam/onexp/us/en/brands/minute-maid/products/lemonades/mm-lem-fruit-drinks-product-img-fruit-punch.jpg",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Manufacturer Fruit Punch image individually inspected: black screw cap, clear neck/headspace, red drink in contoured bottle with tapered shoulders, blue center wrap with orange/pineapple/pear fruit art, black Minute Maid shield/white lettering, red Fruit Punch bar; dimpled waist and petaloid base.20fl oz label; not Zero Sugar or Tropical Punch."
+        }
+      ],
+      "uncertainty": " Each exact variant reference visually inspected; representative US package chosen because catalog does not specify size. Brand lettering, fruit art and small print simplified original vectors with pinned fonts. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "df907a72-d0ca-5ac3-ae19-bd5cf437a68b",
+      "name": "Fruit Punch",
+      "brand": "Minute Maid",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/minute-maid-fruit-punch.svg",
+        "portableSvg": "portable-svg/minute-maid-fruit-punch.svg",
+        "png": "png/minute-maid-fruit-punch.png",
+        "svgSha256": "56892298c9874b3a6a556250085cd74e7e412ea9b250fe4bd2800c400d3d1510",
+        "portableSvgSha256": "71eb6b53f87ce408b3861ce025d7a9fb1c98cf73d405da30ce006c9f274a104a",
+        "pngSha256": "d5e225edfa04e137774db6995a0fa6736b99afc688df8ecbca68630556ac54f2",
+        "pngBytes": 95853
+      },
+      "sourceModule": "scripts/icons/families/juice-expansion.mjs"
+    },
+    {
       "slug": "gatorade-lemon-lime",
       "family": "gatorade-contoured-bottle",
       "packageChoice": "US 28 fl oz / 828mL Gatorade Lemon Lime orange-capped contoured PET bottle; representative retail size for size-unspecified catalog row.",
@@ -1138,6 +1417,99 @@
       "sourceModule": "scripts/icons/families/gatorade-batch.mjs"
     },
     {
+      "slug": "gold-peak-peach-tea",
+      "family": "tea-expansion",
+      "packageChoice": "US 18.5 fl oz / 547mL Gold Peak Georgia Peach Tea PET bottle; gold cap and orange botanical label.",
+      "references": [
+        {
+          "pageUrl": "https://www.coca-cola.com/us/en/brands/gold-peak-tea/gold-peak-products",
+          "imageUrl": "https://www.coca-cola.com/content/dam/onexp/us/en/brands/gold-peak-tea/product-page/en_goldpeaktea_prod_georgiapeachtea_750x750.jpg",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Separate manufacturer Georgia Peach bottle inspected: same shoulder/waist molded PET family, gold cap, amber tea; warm orange outer label with peach fruit and green leaves, white pennant with gold GOLD PEAK, orange GEORGIA PEACH TEA header and cane-sugar band. Peach flavored regular black tea."
+        }
+      ],
+      "uncertainty": "Representative US package size chosen for size-unspecified catalog row. Exact reference inspected; brand lettering, fruit graphics and tiny legal copy simplified as original vectors.  Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "a0935c82-6863-5786-90fa-c473510663ae",
+      "name": "Gold Peak Peach Tea",
+      "brand": "Gold Peak",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/gold-peak-peach-tea.svg",
+        "portableSvg": "portable-svg/gold-peak-peach-tea.svg",
+        "png": "png/gold-peak-peach-tea.png",
+        "svgSha256": "fdff9e5a14552d0f290039a186efb833a1bab2cd4b300ce21b3cd2d156290265",
+        "portableSvgSha256": "1703e34f489ee0f112946f243a5213c938dd8f6b75cb5f71e4d01d5d76cb5901",
+        "pngSha256": "3adaff8863a9ea2b87fd145af0a4836c714dc673c80db0bfc0dec3c4a984a4ca",
+        "pngBytes": 94531
+      },
+      "sourceModule": "scripts/icons/families/tea-expansion.mjs"
+    },
+    {
+      "slug": "gold-peak-sweet-tea",
+      "family": "tea-expansion",
+      "packageChoice": "US 18.5 fl oz / 547mL Gold Peak Sweet Tea bottle; current green-cap botanical-label package.",
+      "references": [
+        {
+          "pageUrl": "https://www.coca-cola.com/us/en/brands/gold-peak-tea/gold-peak-products",
+          "imageUrl": "https://www.coca-cola.com/content/dam/onexp/us/en/brands/gold-peak-tea/product-images/GP_Sweet-Tea_750.jpg",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Manufacturer Sweet bottle inspected: green ribbed cap, long neck flowing into wide shoulder then indented waist and cylindrical lower body; amber tea, green label edges with botanical linework, white pennant, gold GOLD PEAK stacked, SWEET TEA on green header, REAL BREWED TEA and green cane-sugar ribbon. Flat molded foot."
+        }
+      ],
+      "uncertainty": "Representative US package size chosen for size-unspecified catalog row. Exact reference inspected; brand lettering, fruit graphics and tiny legal copy simplified as original vectors.  Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "f1c4013f-3b6e-5713-8e7f-aa19c17ba0a5",
+      "name": "Gold Peak Sweet Tea",
+      "brand": "Gold Peak",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/gold-peak-sweet-tea.svg",
+        "portableSvg": "portable-svg/gold-peak-sweet-tea.svg",
+        "png": "png/gold-peak-sweet-tea.png",
+        "svgSha256": "29a5eae72a7443716f78a21c2ced0b39e03ad7cf30f64fede5898e6df62d4dc9",
+        "portableSvgSha256": "3ce8ea6df74507188ee27adbe5029ac8fd10c8c73152050509bf3056beebac34",
+        "pngSha256": "01a5aef04cf95195c18e75275c287407f52bde798bef7ebcd08845f8ca521eab",
+        "pngBytes": 92855
+      },
+      "sourceModule": "scripts/icons/families/tea-expansion.mjs"
+    },
+    {
+      "slug": "gold-peak-unsweetened-tea",
+      "family": "tea-expansion",
+      "packageChoice": "US 18.5 fl oz Gold Peak Unsweetened Tea PET bottle; documented white-cap green-oval/red-banner retailer package.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/gold-peak-unsweetened-black-iced-tea-drink/0008390000577",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0008390000577",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Separate retailer Unsweetened bottle inspected: white/translucent ribbed cap, amber tea, characteristic flared upper shoulder and indented waist; dark-green rounded/arched label with gold GOLD PEAK, green tea leaves across lower label and red/orange UNSWEETENED TEA strip. Label differs from newer Sweet/Peach white-pennant packages."
+        }
+      ],
+      "uncertainty": "Representative US package size chosen for size-unspecified catalog row. Exact reference inspected; brand lettering, fruit graphics and tiny legal copy simplified as original vectors. Manufacturer current page did not expose an Unsweetened packshot; selected documented retailer revision. Packaging revision date unverified. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "b5b62fb6-fb1f-5694-963f-814e100b8857",
+      "name": "Gold Peak Unsweetened Tea",
+      "brand": "Gold Peak",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/gold-peak-unsweetened-tea.svg",
+        "portableSvg": "portable-svg/gold-peak-unsweetened-tea.svg",
+        "png": "png/gold-peak-unsweetened-tea.png",
+        "svgSha256": "22e7965ff9cc68bbd6ebe856143d09d037ece1b1edf7c60a4d693c8592fb48e2",
+        "portableSvgSha256": "20d6a652c2f6fd1b72bbffb6caa6f4270a3bb08980ee89752a610523fc5f943c",
+        "pngSha256": "777315c65db04720ae3d97447fe6c54f19cc9500629e7dae992a3ccb3daed100",
+        "pngBytes": 95105
+      },
+      "sourceModule": "scripts/icons/families/tea-expansion.mjs"
+    },
+    {
       "slug": "welchs-100-grape-juice",
       "family": "welchs-juice-bottle",
       "packageChoice": "US 64 fl oz Welch's 100% Concord Grape Juice PET bottle, original without added calcium/fiber.",
@@ -1198,6 +1570,37 @@
         "pngBytes": 94373
       },
       "sourceModule": "scripts/icons/families/juice-batch.mjs"
+    },
+    {
+      "slug": "naked-juice-green-machine",
+      "family": "naked-smoothie-bottle",
+      "packageChoice": "US 15.2 fl oz / 450mL Naked Green Machine, current manufacturer Boosted Smoothie / Machine package.",
+      "references": [
+        {
+          "pageUrl": "https://www.nakedsmoothie.com/our-products/machines/green-machine",
+          "imageUrl": "https://www.nakedsmoothie.com/storage/app/media/2025/products/machine-green.png",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Manufacturer current 15.2oz Green Machine front bottle individually inspected: stout straight-sided clear PET with short shoulders and wide blue ribbed cap; olive-green smoothie, light-green wrap, white Naked in blue banner, BOOSTED SMOOTHIE and bold green GREEN MACHINE; kiwi, mango, apple/banana and vegetable fruit arrangement. Current label explicitly includes fiber/vitamins; tiny claims omitted."
+        }
+      ],
+      "uncertainty": "Current manufacturer flavor variant is explicitly selected; catalog has no formula/vintage metadata. This does not assert nutritional equivalence with older Naked Juice labels. Current Boosted Smoothie/Machine wording retained, nutritional claims omitted. Each exact variant reference visually inspected; representative US package chosen because catalog does not specify size. Brand lettering, fruit art and small print simplified original vectors with pinned fonts. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "4357d69b-f30b-51d9-b779-70352a7dc7dc",
+      "name": "Green Machine",
+      "brand": "Naked Juice",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/naked-juice-green-machine.svg",
+        "portableSvg": "portable-svg/naked-juice-green-machine.svg",
+        "png": "png/naked-juice-green-machine.png",
+        "svgSha256": "4a2b4a744e8ee6203fe4f38b943237610ac116f769229b212d1916adb7aaec4b",
+        "portableSvgSha256": "350066663f9ab343b158a330dfaac1fadca45a58ec62cb539eaaf4095ba85a38",
+        "pngSha256": "238e7854477edb5fcc952c522264861fc6f8db0ed3b42864e5a6f51e80cca2ae",
+        "pngBytes": 107062
+      },
+      "sourceModule": "scripts/icons/families/juice-expansion.mjs"
     },
     {
       "slug": "gts-kombucha-gingerade",
@@ -1291,6 +1694,99 @@
         "pngBytes": 132447
       },
       "sourceModule": "scripts/icons/families/kombucha-batch.mjs"
+    },
+    {
+      "slug": "guayaki-yerba-mate-enlighten-mint",
+      "family": "tea-expansion",
+      "packageChoice": "US 11.5 fl oz / 340mL Guayaki Organic Yerba Mate Enlighten Mint sleek can; exact older Guayaki-branded package.",
+      "references": [
+        {
+          "pageUrl": "https://www.target.com/p/-/A-90413607",
+          "imageUrl": "https://target.scene7.com/is/image/Target/GUEST_e6b9b720-cbf8-4c7a-8864-262f396b8a51?fmt=pjpeg&hei=1000&wid=1000",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Target individual can inspected: tall slim yellow can, silver rims, dark-green neck/base bands and fine geometric green ornament around edges; burgundy GUAYAKÍ at top, green leafy South America wreath, ORGANIC and stacked burgundy YERBA MATE, green ENLIGHTEN MINT; visible 11.5 fl oz / 340mL. Exact Guayaki label, not current Yerba Madre package."
+        }
+      ],
+      "uncertainty": "Representative US package size chosen for size-unspecified catalog row. Exact reference inspected; brand lettering, fruit graphics and tiny legal copy simplified as original vectors. Manufacturer redirects to Yerba Madre and current Kroger image uses that new branding; this icon deliberately follows the exact Guayaki retailer can. Historical artwork revision date unverified. Small certification seal omitted. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "e08a0034-fda6-5144-bb0e-f08fb5c50cef",
+      "name": "Guayaki Yerba Mate Enlighten Mint",
+      "brand": "Guayaki",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/guayaki-yerba-mate-enlighten-mint.svg",
+        "portableSvg": "portable-svg/guayaki-yerba-mate-enlighten-mint.svg",
+        "png": "png/guayaki-yerba-mate-enlighten-mint.png",
+        "svgSha256": "832bbe702a6f3c13c035dec3d1ceb6128f1aa9c9c8777c2e3b39c7309a429d52",
+        "portableSvgSha256": "add0fb5a872bd406679c0c8f81053b3708c9cb028e7d46c4ccb8a25cde60e8fd",
+        "pngSha256": "98baaee85bb10ab43f5bfd0076137fc7bac8107e847885c00682470733eaaa4b",
+        "pngBytes": 160304
+      },
+      "sourceModule": "scripts/icons/families/tea-expansion.mjs"
+    },
+    {
+      "slug": "ito-en-matcha-green-tea",
+      "family": "tea-expansion",
+      "packageChoice": "US 16.9 fl oz / 500mL ITO EN Oi Ocha Cold Brew Matcha Green Tea unsweetened PET bottle.",
+      "references": [
+        {
+          "pageUrl": "https://itoen.com/products/cold-brew-matcha-green-tea",
+          "imageUrl": "https://itoen.com/cdn/shop/files/OiOchaColdBrewNew_1.png?v=1757621864&width=1200",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Separate manufacturer Matcha bottle inspected: bright lime-green cap and neck, green shoulder bearing ITO EN logo; pale yellow/cream body with thin lime and pink horizontal lines, dark-green Japanese Oi Ocha lettering/red seal, English Oi Ocha, large blue Cold Brew, green MATCHA GREEN TEA and Unsweetened. Molded lower rib details."
+        }
+      ],
+      "uncertainty": "Representative US package size chosen for size-unspecified catalog row. Exact reference inspected; brand lettering, fruit graphics and tiny legal copy simplified as original vectors. Catalog names no sub-brand/size; explicitly selected manufacturer ready-to-drink Oi Ocha Cold Brew Matcha Green Tea version. Japanese mark simplified as deterministic brush geometry; tiny seal characters omitted. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "0bedfd48-3c66-5e2d-ad29-4f3f9590f58f",
+      "name": "Ito En Matcha Green Tea",
+      "brand": "Ito En",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/ito-en-matcha-green-tea.svg",
+        "portableSvg": "portable-svg/ito-en-matcha-green-tea.svg",
+        "png": "png/ito-en-matcha-green-tea.png",
+        "svgSha256": "0c769fc53aa175efbba408345b841e0e107efb6dc4cc6484d0656debec71ff87",
+        "portableSvgSha256": "5ec84848f11043aee2440a0eb2cdf1a02d0c1e2ea8185ce866c3ce2339dc5e6b",
+        "pngSha256": "2b98910fcc713a54aab5d862d8ce8105c85df28e73ceb2459586161cbee4a42c",
+        "pngBytes": 96723
+      },
+      "sourceModule": "scripts/icons/families/tea-expansion.mjs"
+    },
+    {
+      "slug": "ito-en-oi-ocha-green-tea",
+      "family": "tea-expansion",
+      "packageChoice": "US 16.9 fl oz / 500mL ITO EN Oi Ocha Unsweetened Green Tea PET bottle with white cap.",
+      "references": [
+        {
+          "pageUrl": "https://itoen.com/products/unsweetened-green-tea",
+          "imageUrl": "https://itoen.com/cdn/shop/products/Oi-Ocha-Green-1.jpg?v=1643216018&width=1200",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Manufacturer bottle inspected: white screw cap, amber-green tea at clear neck; tapered shoulders, green sleeve with fine vertical bamboo-like striations and green shoulder ITO EN clover logo; large dark-green vertical Japanese Oi Ocha lettering, small red seal, English Oi Ocha / Unsweetened Green Tea; molded upper/lower ribs."
+        }
+      ],
+      "uncertainty": "Representative US package size chosen for size-unspecified catalog row. Exact reference inspected; brand lettering, fruit graphics and tiny legal copy simplified as original vectors. Japanese wordmark is simplified deterministic brush geometry. Tiny seal characters, nutrition badges and microcopy omitted. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "68f358af-dac8-5d66-a105-d8edb7632080",
+      "name": "Ito En Oi Ocha Green Tea",
+      "brand": "Ito En",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/ito-en-oi-ocha-green-tea.svg",
+        "portableSvg": "portable-svg/ito-en-oi-ocha-green-tea.svg",
+        "png": "png/ito-en-oi-ocha-green-tea.png",
+        "svgSha256": "02c7ebb1a3f949f31cceaf827bd314ba79df3db82c60ea559cdd17fb05793342",
+        "portableSvgSha256": "153bfca18f2b4d5e07db94d8de4f9720aecd34dfe13a8a7535a8ebab5f2581d0",
+        "pngSha256": "58b71822a48bb26fe2d5a7646b44a8006d8a1031f4f4e072cf322352e6861b52",
+        "pngBytes": 72034
+      },
+      "sourceModule": "scripts/icons/families/tea-expansion.mjs"
     },
     {
       "slug": "jarritos-fruit-punch",
@@ -2006,6 +2502,37 @@
       "sourceModule": "scripts/icons/families/juice-batch.mjs"
     },
     {
+      "slug": "jamba-juice-mango-a-go-go",
+      "family": "jamba-served-smoothie",
+      "packageChoice": "US café Mango-a-go-go in the actual clear Jamba serving cup shown by manufacturer; representative standard serving, volume not inferred from photo.",
+      "references": [
+        {
+          "pageUrl": "https://www.jamba.com/menu/smoothies/mango-a-go-go",
+          "imageUrl": "https://ctfassets.gotofoods.com/zqt8tllj2cy0/2wpTdxyro3vLc2jc7GndlF/b4a7ed95da704b2676807244ed0b4bcc/JAM-mango-a-go-go-thumbnail-544x544.png",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Exact manufacturer product thumbnail independently visually inspected: Golden-yellow blended smoothie, clear tapered cup and exposed rolled rim; pale thick scoop at top, orange straw tilting right, white descending swirl Jamba emblem. No lid, fruit garnish or visible ice cubes."
+        }
+      ],
+      "uncertainty": "Serving size and venue-specific container variations are not specified by catalog. Fine lettering, texture and package illustrations simplified as original vectors. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "866e3a9c-eaf7-5739-a672-a7f5c9bb0fde",
+      "name": "Mango-a-go-go",
+      "brand": "Jamba Juice",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/jamba-juice-mango-a-go-go.svg",
+        "portableSvg": "portable-svg/jamba-juice-mango-a-go-go.svg",
+        "png": "png/jamba-juice-mango-a-go-go.png",
+        "svgSha256": "767bc47a4841824a77796bd4dc5318571be7e6260a1b26dd2c55eaaba49da638",
+        "portableSvgSha256": "6aecbb1fa53041e3443a4350e8a0596a6d831ea13f924bbe53a6423b5311eb2b",
+        "pngSha256": "0301cef6c9a188ecd29a9ed7e64580582e4b52c60dcdf96cfee2e8a8c879cb8d",
+        "pngBytes": 113352
+      },
+      "sourceModule": "scripts/icons/families/starter-smoothies.mjs"
+    },
+    {
       "slug": "generic-margarita",
       "family": "served-rocks-cocktail",
       "packageChoice": "Unbranded classic margarita on ice in a clear straight-sided lowball, salted rim and lime garnish; representative serving, not frozen.",
@@ -2066,6 +2593,37 @@
         "pngBytes": 135071
       },
       "sourceModule": "scripts/icons/families/pilot.mjs"
+    },
+    {
+      "slug": "naked-juice-mighty-mango",
+      "family": "naked-smoothie-bottle",
+      "packageChoice": "US 15.2 fl oz / 450mL Naked Mighty Mango Machine, current manufacturer Boosted Smoothie / Machine package.",
+      "references": [
+        {
+          "pageUrl": "https://www.nakedsmoothie.com/our-products/machines/mighty-mango-machine",
+          "imageUrl": "https://www.nakedsmoothie.com/storage/app/media/2025/products/machine-mighty-mango.png",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Separate manufacturer 15.2oz Mighty Mango Machine photo inspected: opaque orange smoothie, blue cap, yellow/orange wrap, white/blue Naked banner, BOOSTED SMOOTHIE; narrow orange MIGHTY MANGO above bold MACHINE, mango half/orange wedge/banana fruit art. Exact current product called Mighty Mango Machine; current name/formulation selection explicitly recorded."
+        }
+      ],
+      "uncertainty": "Current manufacturer flavor variant is explicitly selected; catalog has no formula/vintage metadata. This does not assert nutritional equivalence with older Naked Juice labels. Current Boosted Smoothie/Machine wording retained, nutritional claims omitted. Each exact variant reference visually inspected; representative US package chosen because catalog does not specify size. Brand lettering, fruit art and small print simplified original vectors with pinned fonts. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "f5df8ed4-90b1-55fe-9d5a-1660bb1fea80",
+      "name": "Mighty Mango",
+      "brand": "Naked Juice",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/naked-juice-mighty-mango.svg",
+        "portableSvg": "portable-svg/naked-juice-mighty-mango.svg",
+        "png": "png/naked-juice-mighty-mango.png",
+        "svgSha256": "26c291dbaf68137fbe7576f033bfece46fbdbffde52056f15c91313a011c4b99",
+        "portableSvgSha256": "c7d86023ccf5013cee9c17d1593c56b84ca2b1dc3605d971cb2c89734f2acfdb",
+        "pngSha256": "dc663f9ce6c6175a8bb1229ac0b141951e712d7ac91869b80eab17561c7bbdc1",
+        "pngBytes": 105616
+      },
+      "sourceModule": "scripts/icons/families/juice-expansion.mjs"
     },
     {
       "slug": "monster-energy-juice-khaotic",
@@ -2378,6 +2936,37 @@
       "sourceModule": "scripts/icons/families/pilot.mjs"
     },
     {
+      "slug": "jamba-juice-orange-dream-machine",
+      "family": "jamba-served-smoothie",
+      "packageChoice": "US café Orange Dream Machine in the actual clear Jamba serving cup shown by manufacturer; representative standard serving, volume not inferred from photo.",
+      "references": [
+        {
+          "pageUrl": "https://www.jamba.com/menu/smoothies/orange-dream-machine",
+          "imageUrl": "https://ctfassets.gotofoods.com/zqt8tllj2cy0/1XRG0yzFav1yDsCIugLTGw/e34b978a82575b4d1607456abae11b82/JAM-orange-dream-machine-thumbnail-544x544.png",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Exact manufacturer product thumbnail independently visually inspected: Creamy pale yellow-orange smoothie with a smoother folded top, few visible flecks, orange straw and clear tapered cup with white descending swirl emblem. Manufacturer serving has no whipped cream, orange slice, lid or ice cubes."
+        }
+      ],
+      "uncertainty": "Serving size and venue-specific container variations are not specified by catalog. Fine lettering, texture and package illustrations simplified as original vectors. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "e7a57328-a731-5350-8675-6a52ba90d242",
+      "name": "Orange Dream Machine",
+      "brand": "Jamba Juice",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/jamba-juice-orange-dream-machine.svg",
+        "portableSvg": "portable-svg/jamba-juice-orange-dream-machine.svg",
+        "png": "png/jamba-juice-orange-dream-machine.png",
+        "svgSha256": "1e738a25f0498d4c6348c6c420e6d93b724aec0e8497a7a855e425daa6fc79bd",
+        "portableSvgSha256": "ffd49bb97101b54e97919e961c91241bd7273ab9061cb5a419bd26fb75564d03",
+        "pngSha256": "7c4a47cd3423e24c3132ebdcc00df0321e615d68331aa34d426873953d382f9d",
+        "pngBytes": 120161
+      },
+      "sourceModule": "scripts/icons/families/starter-smoothies.mjs"
+    },
+    {
       "slug": "simply-orange",
       "family": "simply-juice-carafe",
       "packageChoice": "US 46 fl oz Simply Orange clear PET carafe; documented manufacturer package selected for size-unspecified catalog row.",
@@ -2407,6 +2996,68 @@
         "pngBytes": 103096
       },
       "sourceModule": "scripts/icons/families/juice-batch.mjs"
+    },
+    {
+      "slug": "tropicana-orange-juice-no-pulp",
+      "family": "tropicana-juice-bottle",
+      "packageChoice": "US 46 fl oz Tropicana Pure Premium No Pulp clear PET bottle.",
+      "references": [
+        {
+          "pageUrl": "https://www.tropicana.com/products/original/",
+          "imageUrl": "https://www.tropicana.com/images/products/tropicana-pure-premium-no-pulp-320.png",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Exact manufacturer 46oz image inspected: clear tall rounded PET bottle, orange ribbed cap, opaque yellow/orange juice, white upper label with orange No Pulp oval, green Tropicana/PURE PREMIUM, orange lower panel, whole orange/leaf and striped straw. The manufacturer calls this Original (No Pulp). Only the explicit catalog No Pulp UUID is authored; separate Original row requires duplicate-identity reconciliation."
+        }
+      ],
+      "uncertainty": "Manufacturer Current No Pulp/Some Pulp/Refreshers package explicitly selected. Separate catalog Original/No Pulp conflict is not resolved by assigning duplicate artwork. Each exact variant reference visually inspected; representative US package chosen because catalog does not specify size. Brand lettering, fruit art and small print simplified original vectors with pinned fonts. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "374a0ade-2a53-5760-9e13-5c7f3dea9d53",
+      "name": "Orange Juice",
+      "brand": "Tropicana",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/tropicana-orange-juice-no-pulp.svg",
+        "portableSvg": "portable-svg/tropicana-orange-juice-no-pulp.svg",
+        "png": "png/tropicana-orange-juice-no-pulp.png",
+        "svgSha256": "9d6940679e52926c6fe025121e34152c69f4a4a42b248651dbef0607d816e082",
+        "portableSvgSha256": "2cb0f58973fbd946b73f0f92e50f527c38418297ee70de5f6bc1b4bbcacca62a",
+        "pngSha256": "3c02fc2d459c245224b004cc6d99d17fff465a3fae1c46330e9acdb63bca503f",
+        "pngBytes": 103927
+      },
+      "sourceModule": "scripts/icons/families/juice-expansion.mjs"
+    },
+    {
+      "slug": "tropicana-orange-juice-some-pulp",
+      "family": "tropicana-juice-bottle",
+      "packageChoice": "US 46 fl oz Tropicana Pure Premium Some Pulp clear PET bottle.",
+      "references": [
+        {
+          "pageUrl": "https://www.tropicana.com/products/some-pulp/",
+          "imageUrl": "https://www.tropicana.com/images/products/tropicana-pure-premium-homestyle-some-pulp-320.png",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Separate manufacturer 46oz Some Pulp image inspected: rounded clear bottle/orange cap, opaque orange juice, green Some Pulp oval above green Tropicana PURE PREMIUM; orange lower panel and whole orange/leaf with striped straw. Some Pulp is confirmed by actual label, independently from No Pulp."
+        }
+      ],
+      "uncertainty": "Manufacturer Current No Pulp/Some Pulp/Refreshers package explicitly selected. Separate catalog Original/No Pulp conflict is not resolved by assigning duplicate artwork. Each exact variant reference visually inspected; representative US package chosen because catalog does not specify size. Brand lettering, fruit art and small print simplified original vectors with pinned fonts. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "260f5aba-be32-5d1b-ac40-08775ae8c9d1",
+      "name": "Orange Juice",
+      "brand": "Tropicana",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/tropicana-orange-juice-some-pulp.svg",
+        "portableSvg": "portable-svg/tropicana-orange-juice-some-pulp.svg",
+        "png": "png/tropicana-orange-juice-some-pulp.png",
+        "svgSha256": "d58dc34553b35ffbd25d7978344eadb1ad6b5702fbcc2dc2250b0ce1f6e06e3a",
+        "portableSvgSha256": "41d988378fc55dc8fa97d821376b85c5b9195dffe8d051ace997ed4ce1e128c0",
+        "pngSha256": "76ed82a718ce23837542adeab9ab2fb8581a525c086c2c188b197a3dc62c4319",
+        "pngBytes": 98745
+      },
+      "sourceModule": "scripts/icons/families/juice-expansion.mjs"
     },
     {
       "slug": "pepsi",
@@ -2469,6 +3120,37 @@
         "pngBytes": 111249
       },
       "sourceModule": "scripts/icons/families/colas.mjs"
+    },
+    {
+      "slug": "pure-leaf-extra-sweet-tea",
+      "family": "tea-expansion",
+      "packageChoice": "US 18.5 fl oz / 547mL Pure Leaf Extra Sweet Tea PET bottle, black cap and purple/black label.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/pure-leaf-extra-sweet-iced-tea-bottle/0001200028617",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0001200028617",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Separate Extra Sweet bottle inspected: long neck, squared lower amber PET body, black ribbed cap; purple EXTRA SWEET TEA header/label edge, black face with stacked white PURE LEAF, green tea leaves and Real Brewed Tea. Purple distinguishes Extra Sweet from blue Sweet, green Unsweetened and yellow Lemon."
+        }
+      ],
+      "uncertainty": "Representative US package size chosen for size-unspecified catalog row. Exact reference inspected; brand lettering, fruit graphics and tiny legal copy simplified as original vectors. Manufacturer flavor page exposed no usable selected packshot; retailer reference used. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "fd401c29-cae6-5641-ae09-7cac5c036733",
+      "name": "Pure Leaf Extra Sweet Tea",
+      "brand": "Pure Leaf",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/pure-leaf-extra-sweet-tea.svg",
+        "portableSvg": "portable-svg/pure-leaf-extra-sweet-tea.svg",
+        "png": "png/pure-leaf-extra-sweet-tea.png",
+        "svgSha256": "f4d85bab7692979d478947d11e60978e698e7e507ea774c975193f920165520a",
+        "portableSvgSha256": "09809422d75dc97ed0ea3204ba8080e4a3040418cac9f8c4b639ef9dc7429823",
+        "pngSha256": "541b8dd17b2ceeef6c66db26a3dfc32a7303d9effc92374a40857300b29145aa",
+        "pngBytes": 81894
+      },
+      "sourceModule": "scripts/icons/families/tea-expansion.mjs"
     },
     {
       "slug": "pure-leaf-lemon-tea",
@@ -2719,6 +3401,99 @@
       "sourceModule": "scripts/icons/families/sparkling-starters.mjs"
     },
     {
+      "slug": "snapple-lemon-tea",
+      "family": "tea-expansion",
+      "packageChoice": "US 16 fl oz / 473mL regular Snapple Lemon Tea PET bottle with blue screw cap.",
+      "references": [
+        {
+          "pageUrl": "https://snapple.com/products",
+          "imageUrl": "https://snapple.com/images/products/lemon-tea-16.png",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Manufacturer Lemon bottle inspected: round PET shoulder, amber tea, blue ribbed cap and clear blue neck; bright yellow/cream sleeve, diagonal blue Snapple outlined white/red, blue Lemon Tea lozenge, large whole/cut lemon and leaves, blue Real Tea badge. Regular sweetened Lemon, not Zero Sugar."
+        }
+      ],
+      "uncertainty": "Representative US package size chosen for size-unspecified catalog row. Exact reference inspected; brand lettering, fruit graphics and tiny legal copy simplified as original vectors.  Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "89134e4b-6437-5496-8682-2dc51c5e90a9",
+      "name": "Snapple Lemon Tea",
+      "brand": "Snapple",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/snapple-lemon-tea.svg",
+        "portableSvg": "portable-svg/snapple-lemon-tea.svg",
+        "png": "png/snapple-lemon-tea.png",
+        "svgSha256": "91178e24f8261c98c9073ec2a0f18a4543ba4383bcc9fd3adf245db4ca7ee127",
+        "portableSvgSha256": "f2ca7bf60bc5b101f2b7bd743460fa31ddb7343b809709b210d60d3fe976939e",
+        "pngSha256": "6ea48a85072447455807fdc6816f11e7f0efe45fe0ef771b44f0cc2e17478307",
+        "pngBytes": 133262
+      },
+      "sourceModule": "scripts/icons/families/tea-expansion.mjs"
+    },
+    {
+      "slug": "snapple-peach-tea",
+      "family": "tea-expansion",
+      "packageChoice": "US 16 fl oz / 473mL regular Snapple Peach Tea PET bottle with blue screw cap.",
+      "references": [
+        {
+          "pageUrl": "https://snapple.com/products",
+          "imageUrl": "https://snapple.com/images/products/peach-tea-16.png",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Separate manufacturer Peach bottle inspected: amber tea under blue cap; peach-gold sleeve, blue Snapple wordmark outlined white/red, Peach Tea in blue lozenge, whole red/gold peach and yellow slice with green leaf, blue Real Tea badge. Regular Peach, not Zero Sugar."
+        }
+      ],
+      "uncertainty": "Representative US package size chosen for size-unspecified catalog row. Exact reference inspected; brand lettering, fruit graphics and tiny legal copy simplified as original vectors.  Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "f648835e-02e0-5e3d-a908-0c1fa5560f06",
+      "name": "Snapple Peach Tea",
+      "brand": "Snapple",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/snapple-peach-tea.svg",
+        "portableSvg": "portable-svg/snapple-peach-tea.svg",
+        "png": "png/snapple-peach-tea.png",
+        "svgSha256": "d01bf4629af6ed0c6aa9b64dfca3978532c9d27e9c19a5310a4e5895a884f5a5",
+        "portableSvgSha256": "0151a29779243b6f04d0c274ea49689496304a63fd91c3ff3cf4b00fa06a76de",
+        "pngSha256": "85220dda83ea1f9cb6c579fc760a7e31fb68e2402afdc3e438573ae174d637e7",
+        "pngBytes": 125910
+      },
+      "sourceModule": "scripts/icons/families/tea-expansion.mjs"
+    },
+    {
+      "slug": "snapple-raspberry-tea",
+      "family": "tea-expansion",
+      "packageChoice": "US 16 fl oz / 473mL regular Snapple Raspberry Tea PET bottle with blue screw cap.",
+      "references": [
+        {
+          "pageUrl": "https://snapple.com/products",
+          "imageUrl": "https://snapple.com/images/products/raspberry-tea-16.png",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Separate manufacturer Raspberry bottle inspected: amber tea/blue cap, magenta-to-pale-pink sleeve, navy Snapple with white/red outline and Raspberry Tea blue pill, large red raspberry fruit cluster, blue Real Tea roundel. Regular Raspberry, not Zero Sugar."
+        }
+      ],
+      "uncertainty": "Representative US package size chosen for size-unspecified catalog row. Exact reference inspected; brand lettering, fruit graphics and tiny legal copy simplified as original vectors.  Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "83d2c394-5a7e-5184-a801-ceb4e948c501",
+      "name": "Snapple Raspberry Tea",
+      "brand": "Snapple",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/snapple-raspberry-tea.svg",
+        "portableSvg": "portable-svg/snapple-raspberry-tea.svg",
+        "png": "png/snapple-raspberry-tea.png",
+        "svgSha256": "14e370998385821d9f8d2c6389bf7a387dd9e3db6a41a6b146bc4dfaa6a01942",
+        "portableSvgSha256": "6394c142b03728bd35c89c0823318ecbd8124e38b1180ecbc6a783186d8b666d",
+        "pngSha256": "fbc9d8e2a0da168b313a15a083c07b59ddea6bbeebdfdb0935bf66b9afd39567",
+        "pngBytes": 136223
+      },
+      "sourceModule": "scripts/icons/families/tea-expansion.mjs"
+    },
+    {
       "slug": "spindrift-grapefruit",
       "family": "standard-can",
       "packageChoice": "US 12 fl oz Grapefruit sparkling water; 2026 can design.",
@@ -2934,6 +3709,99 @@
         "pngBytes": 125654
       },
       "sourceModule": "scripts/icons/families/citrus-sodas.mjs"
+    },
+    {
+      "slug": "naked-juice-strawberry-banana",
+      "family": "naked-smoothie-bottle",
+      "packageChoice": "US 15.2 fl oz / 450mL Naked Strawberry Banana Machine, current manufacturer Boosted Smoothie / Machine package.",
+      "references": [
+        {
+          "pageUrl": "https://www.nakedsmoothie.com/our-products/machines/strawberry-banana-machine",
+          "imageUrl": "https://www.nakedsmoothie.com/storage/app/media/2025/products/machine-red.png",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Separate manufacturer 15.2oz Strawberry Banana Machine photo inspected: muted brownish-pink smoothie, wide blue cap, peach/pink wrap, white/blue Naked banner, BOOSTED SMOOTHIE and stacked red STRAWBERRY / BANANA / MACHINE; strawberries, banana slices and apple slice. Current Machine branding/fiber-vitamin variant is documented rather than assuming the older label/formula."
+        }
+      ],
+      "uncertainty": "Current manufacturer flavor variant is explicitly selected; catalog has no formula/vintage metadata. This does not assert nutritional equivalence with older Naked Juice labels. Current Boosted Smoothie/Machine wording retained, nutritional claims omitted. Each exact variant reference visually inspected; representative US package chosen because catalog does not specify size. Brand lettering, fruit art and small print simplified original vectors with pinned fonts. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "a93992da-ccf6-52ad-b002-754243d1b0cd",
+      "name": "Strawberry Banana",
+      "brand": "Naked Juice",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/naked-juice-strawberry-banana.svg",
+        "portableSvg": "portable-svg/naked-juice-strawberry-banana.svg",
+        "png": "png/naked-juice-strawberry-banana.png",
+        "svgSha256": "9f11faa7460497a0082d2083fe700bfcf89712b7144d63cf6b31e1ac6c3462ed",
+        "portableSvgSha256": "a2157539cb1961519f426df5540d1d33e03e4c3ae17855ef2980ca051036296f",
+        "pngSha256": "73e9b110e655afa8578af8e907751ed530d7431211de22e88ada89528823746b",
+        "pngBytes": 107474
+      },
+      "sourceModule": "scripts/icons/families/juice-expansion.mjs"
+    },
+    {
+      "slug": "bolthouse-farms-strawberry-banana",
+      "family": "bolthouse-smoothie-bottle",
+      "packageChoice": "US 15.2 fl oz Strawberry Banana juice smoothie bottle with pink cap/current pink sleeve.",
+      "references": [
+        {
+          "pageUrl": "https://www.bolthouse.com/product/strawberry-banana/",
+          "imageUrl": "https://www.bolthouse.com/wp-content/uploads/sites/4/2016/01/071464270407_bhf_us_bev_15_pi_blnd_sb_front_520x720.png-260x360.png",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Manufacturer bottle image inspected: clear tall PET bottle with curved shoulders, ribbed pink cap; pink/tan smoothie, pink full-body sleeve, strawberries and banana at shoulders, white Bolthouse Farms script, darker pink diagonal STRAWBERRY BANANA banner, white 100% JUICE SMOOTHIE band. Current page calls it a juice smoothie."
+        }
+      ],
+      "uncertainty": "Fine lettering, texture and package illustrations simplified as original vectors. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "1b25e221-1411-5bd7-8475-0b82e9ba0dd3",
+      "name": "Strawberry Banana",
+      "brand": "Bolthouse Farms",
+      "isStarter": true,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/bolthouse-farms-strawberry-banana.svg",
+        "portableSvg": "portable-svg/bolthouse-farms-strawberry-banana.svg",
+        "png": "png/bolthouse-farms-strawberry-banana.png",
+        "svgSha256": "541d7430cd2c4758511b333f7762c6148e5a8595f98fdb86937177417f3b720d",
+        "portableSvgSha256": "6adf4beb41a2274904351987d0abb59e4f3fc7299a68e30e8a8101b2ccb75af8",
+        "pngSha256": "5f6284ed69903ec5b08651bd3a2874369b71538cc3d9ee7672a063307a25d0c4",
+        "pngBytes": 108318
+      },
+      "sourceModule": "scripts/icons/families/starter-smoothies.mjs"
+    },
+    {
+      "slug": "jamba-juice-strawberry-surf-rider",
+      "family": "jamba-served-smoothie",
+      "packageChoice": "US café Strawberry Surf Rider in the actual clear Jamba serving cup shown by manufacturer; representative standard serving, volume not inferred from photo.",
+      "references": [
+        {
+          "pageUrl": "https://www.jamba.com/menu/smoothies/strawberry-surf-rider",
+          "imageUrl": "https://ctfassets.gotofoods.com/zqt8tllj2cy0/3ejBaXXHrFzCy2O3IX7qbZ/36375cb766dd70e4ca62569d7ba77717/JAM-strawberry-surf-rider-thumbnail-544x544.png",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Exact manufacturer product thumbnail independently visually inspected: Pale peach/coral smoothie with fine red fruit flecks, undulating exposed top and orange straw in a clear tapered cup with white descending swirl emblem. Individually checked lighter than Caribbean Passion; no lid or garnish."
+        }
+      ],
+      "uncertainty": "Serving size and venue-specific container variations are not specified by catalog. Fine lettering, texture and package illustrations simplified as original vectors. Final aesthetic approval and native-device review pending.",
+      "status": "needs-review",
+      "bevId": "846fdbe8-91ab-5f11-affd-7fd05b16acbc",
+      "name": "Strawberry Surf Rider",
+      "brand": "Jamba Juice",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/jamba-juice-strawberry-surf-rider.svg",
+        "portableSvg": "portable-svg/jamba-juice-strawberry-surf-rider.svg",
+        "png": "png/jamba-juice-strawberry-surf-rider.png",
+        "svgSha256": "5dbb2814e6bbed6f1b2a15e600b197809febe5633a5372b2ea0a78b069386283",
+        "portableSvgSha256": "66800fe9602d2182a7c6a265539013dd065a91b884be1ebb0ae2366d4ee4a9df",
+        "pngSha256": "35070bc25e733c668acc50733e0ccff36161ef4ef01d2159a7087644ae77d94d",
+        "pngBytes": 120137
+      },
+      "sourceModule": "scripts/icons/families/starter-smoothies.mjs"
     },
     {
       "slug": "topo-chico-original",
