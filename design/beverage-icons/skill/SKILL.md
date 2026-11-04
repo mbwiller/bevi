@@ -13,6 +13,8 @@ Read `design/beverage-icons/PROGRESS.md` for the latest checkpoint and `design/b
 
 Check `design/beverage-icons/identity-issues.json` before selecting work. It retains deferred product-identity research separately from regenerated coverage; resolve those questions before drawing the affected UUIDs.
 
+When the user authorizes ongoing production, continue successive researched batches without requesting routine checkpoints. Retain unresolved identities in the durable issue file and move to other ready products. Use the user's authorized GitHub account and commit email when publishing; platform-required permissions still apply.
+
 After researching and drawing the batch, run:
 
 ```sh

@@ -671,6 +671,190 @@
           "portableSvgSha256": "22aec25bf4e446daf253f3524490fd2ac1540d849e8253b613c1a57b57513b8c"
         }
       ]
+    },
+    {
+      "batchId": "large-catalog-03-2026-11-04",
+      "reviewedAt": "2026-11-04",
+      "reviewer": "Codex coordinator with disjoint family authors",
+      "scope": "28 individually inspected reference comparisons, final renders and 40/56/96/155px light/dark tiles with 8% padding.",
+      "outcome": "Smoothies, bottled juices and teas. Manufacturer and retailer references individually inspected. Ambiguous product identities are deferred with evidence instead of guessed. All prior reviewed artwork retained. Final aesthetic and native-device review remain pending.",
+      "contactSheets": [
+        "review/large-batch-03-2026-11-04-01.png",
+        "review/large-batch-03-2026-11-04-02.png",
+        "review/large-batch-03-2026-11-04-03.png",
+        "review/large-batch-03-2026-11-04-04.png"
+      ],
+      "identityIssues": "identity-issues.json",
+      "assets": [
+        {
+          "bevId": "5344b4d8-fe71-5c38-9c3a-8d99d987ecbe",
+          "slug": "motts-apple-juice",
+          "pngSha256": "4f06d3cef72ccb1b22e433fa18f87d4b7bc06ac31990c64b41694da0e4964b39",
+          "portableSvgSha256": "06b77e96afd03a0d3cfc79bb313654f01081788412bf9a17141ea35bec258ed9"
+        },
+        {
+          "bevId": "6aed7049-e35a-5d43-9bdc-efa577b7aa82",
+          "slug": "minute-maid-apple-juice",
+          "pngSha256": "691010d2a3f4abba82609aa82d2ed041e6ef6a5c67cb7bd11de89fa01f5f078f",
+          "portableSvgSha256": "eae32dd9db873aebeaf87d1aa125b331bb2cc92fbe5f2edf5d42a5a1606a1268"
+        },
+        {
+          "bevId": "3ad2c20f-853d-5c20-ac4f-199e1f2716f8",
+          "slug": "naked-juice-blue-machine",
+          "pngSha256": "a3258df01fdd88e8fadf384cbf24579c872adec446cf1156dcd17c9a8fb27fd3",
+          "portableSvgSha256": "5a49e41bd1e5072ba7ca6b05aef629cd5ca96a00ce48a50fd23a42225abe4634"
+        },
+        {
+          "bevId": "26ac0b47-3c1f-5c73-a193-2d1a2ae52bc6",
+          "slug": "jamba-juice-caribbean-passion",
+          "pngSha256": "740d5faddf661ee5c235e293416a65e36422e7b537f1f6bdb8b3c1fb60e73908",
+          "portableSvgSha256": "10ab23fb9eacea3b1733fb49736e7682f5fc172807e715d00d5cad34b25bc25d"
+        },
+        {
+          "bevId": "cdcc0e60-0ef3-5e37-9535-a13fea816553",
+          "slug": "high-brew-mexican-vanilla",
+          "pngSha256": "6ea8bdd01d7a2efcb8fa16b2831941c8d7c1bad261e86359b1ddd80040ebbad9",
+          "portableSvgSha256": "a837c1c1455e6d6a002dd9d9fb30a85981d4983f097ca85a89ef86adc9f3a450"
+        },
+        {
+          "bevId": "9f19252f-2ee5-5f1f-98af-b67d09b52f91",
+          "slug": "high-brew-salted-caramel",
+          "pngSha256": "024707531f56ec1253b311cdb9591e151ee6ee91b542a919ce347aeab398a844",
+          "portableSvgSha256": "713dc46a1c0ae57f4f642e336510cb95dc90ec0cc6b1434ff749da7b61919465"
+        },
+        {
+          "bevId": "32e8e1d6-e57f-5e28-bf7f-bf570e0c4bcf",
+          "slug": "stok-cold-brew-black",
+          "pngSha256": "2c795ed357642c868b19d36ccb76bdd60e6cd7a25faa09b7eee12fc2427d5316",
+          "portableSvgSha256": "520dfae9aeb2c6c4aa13fc4529997014d5ccc8b235340eb2452ee27b7a1804b3"
+        },
+        {
+          "bevId": "86fca922-eaba-5586-acd5-d3eb722eaf59",
+          "slug": "tropicana-fruit-punch",
+          "pngSha256": "82118a5dd4bbc71ffa2678b6b96b2e23f7861aa57615e395d14c5ae95aac7933",
+          "portableSvgSha256": "fc5e3563818b137e908a7ed906364c70ad221c6dd91793518ac6a69bf8f86f37"
+        },
+        {
+          "bevId": "df907a72-d0ca-5ac3-ae19-bd5cf437a68b",
+          "slug": "minute-maid-fruit-punch",
+          "pngSha256": "d5e225edfa04e137774db6995a0fa6736b99afc688df8ecbca68630556ac54f2",
+          "portableSvgSha256": "71eb6b53f87ce408b3861ce025d7a9fb1c98cf73d405da30ce006c9f274a104a"
+        },
+        {
+          "bevId": "a0935c82-6863-5786-90fa-c473510663ae",
+          "slug": "gold-peak-peach-tea",
+          "pngSha256": "3adaff8863a9ea2b87fd145af0a4836c714dc673c80db0bfc0dec3c4a984a4ca",
+          "portableSvgSha256": "1703e34f489ee0f112946f243a5213c938dd8f6b75cb5f71e4d01d5d76cb5901"
+        },
+        {
+          "bevId": "f1c4013f-3b6e-5713-8e7f-aa19c17ba0a5",
+          "slug": "gold-peak-sweet-tea",
+          "pngSha256": "01a5aef04cf95195c18e75275c287407f52bde798bef7ebcd08845f8ca521eab",
+          "portableSvgSha256": "3ce8ea6df74507188ee27adbe5029ac8fd10c8c73152050509bf3056beebac34"
+        },
+        {
+          "bevId": "b5b62fb6-fb1f-5694-963f-814e100b8857",
+          "slug": "gold-peak-unsweetened-tea",
+          "pngSha256": "777315c65db04720ae3d97447fe6c54f19cc9500629e7dae992a3ccb3daed100",
+          "portableSvgSha256": "20d6a652c2f6fd1b72bbffb6caa6f4270a3bb08980ee89752a610523fc5f943c"
+        },
+        {
+          "bevId": "4357d69b-f30b-51d9-b779-70352a7dc7dc",
+          "slug": "naked-juice-green-machine",
+          "pngSha256": "238e7854477edb5fcc952c522264861fc6f8db0ed3b42864e5a6f51e80cca2ae",
+          "portableSvgSha256": "350066663f9ab343b158a330dfaac1fadca45a58ec62cb539eaaf4095ba85a38"
+        },
+        {
+          "bevId": "e08a0034-fda6-5144-bb0e-f08fb5c50cef",
+          "slug": "guayaki-yerba-mate-enlighten-mint",
+          "pngSha256": "98baaee85bb10ab43f5bfd0076137fc7bac8107e847885c00682470733eaaa4b",
+          "portableSvgSha256": "add0fb5a872bd406679c0c8f81053b3708c9cb028e7d46c4ccb8a25cde60e8fd"
+        },
+        {
+          "bevId": "0bedfd48-3c66-5e2d-ad29-4f3f9590f58f",
+          "slug": "ito-en-matcha-green-tea",
+          "pngSha256": "2b98910fcc713a54aab5d862d8ce8105c85df28e73ceb2459586161cbee4a42c",
+          "portableSvgSha256": "5ec84848f11043aee2440a0eb2cdf1a02d0c1e2ea8185ce866c3ce2339dc5e6b"
+        },
+        {
+          "bevId": "68f358af-dac8-5d66-a105-d8edb7632080",
+          "slug": "ito-en-oi-ocha-green-tea",
+          "pngSha256": "58b71822a48bb26fe2d5a7646b44a8006d8a1031f4f4e072cf322352e6861b52",
+          "portableSvgSha256": "153bfca18f2b4d5e07db94d8de4f9720aecd34dfe13a8a7535a8ebab5f2581d0"
+        },
+        {
+          "bevId": "866e3a9c-eaf7-5739-a672-a7f5c9bb0fde",
+          "slug": "jamba-juice-mango-a-go-go",
+          "pngSha256": "0301cef6c9a188ecd29a9ed7e64580582e4b52c60dcdf96cfee2e8a8c879cb8d",
+          "portableSvgSha256": "6aecbb1fa53041e3443a4350e8a0596a6d831ea13f924bbe53a6423b5311eb2b"
+        },
+        {
+          "bevId": "f5df8ed4-90b1-55fe-9d5a-1660bb1fea80",
+          "slug": "naked-juice-mighty-mango",
+          "pngSha256": "dc663f9ce6c6175a8bb1229ac0b141951e712d7ac91869b80eab17561c7bbdc1",
+          "portableSvgSha256": "c7d86023ccf5013cee9c17d1593c56b84ca2b1dc3605d971cb2c89734f2acfdb"
+        },
+        {
+          "bevId": "e7a57328-a731-5350-8675-6a52ba90d242",
+          "slug": "jamba-juice-orange-dream-machine",
+          "pngSha256": "7c4a47cd3423e24c3132ebdcc00df0321e615d68331aa34d426873953d382f9d",
+          "portableSvgSha256": "ffd49bb97101b54e97919e961c91241bd7273ab9061cb5a419bd26fb75564d03"
+        },
+        {
+          "bevId": "374a0ade-2a53-5760-9e13-5c7f3dea9d53",
+          "slug": "tropicana-orange-juice-no-pulp",
+          "pngSha256": "3c02fc2d459c245224b004cc6d99d17fff465a3fae1c46330e9acdb63bca503f",
+          "portableSvgSha256": "2cb0f58973fbd946b73f0f92e50f527c38418297ee70de5f6bc1b4bbcacca62a"
+        },
+        {
+          "bevId": "260f5aba-be32-5d1b-ac40-08775ae8c9d1",
+          "slug": "tropicana-orange-juice-some-pulp",
+          "pngSha256": "76ed82a718ce23837542adeab9ab2fb8581a525c086c2c188b197a3dc62c4319",
+          "portableSvgSha256": "41d988378fc55dc8fa97d821376b85c5b9195dffe8d051ace997ed4ce1e128c0"
+        },
+        {
+          "bevId": "fd401c29-cae6-5641-ae09-7cac5c036733",
+          "slug": "pure-leaf-extra-sweet-tea",
+          "pngSha256": "541b8dd17b2ceeef6c66db26a3dfc32a7303d9effc92374a40857300b29145aa",
+          "portableSvgSha256": "09809422d75dc97ed0ea3204ba8080e4a3040418cac9f8c4b639ef9dc7429823"
+        },
+        {
+          "bevId": "89134e4b-6437-5496-8682-2dc51c5e90a9",
+          "slug": "snapple-lemon-tea",
+          "pngSha256": "6ea48a85072447455807fdc6816f11e7f0efe45fe0ef771b44f0cc2e17478307",
+          "portableSvgSha256": "f2ca7bf60bc5b101f2b7bd743460fa31ddb7343b809709b210d60d3fe976939e"
+        },
+        {
+          "bevId": "f648835e-02e0-5e3d-a908-0c1fa5560f06",
+          "slug": "snapple-peach-tea",
+          "pngSha256": "85220dda83ea1f9cb6c579fc760a7e31fb68e2402afdc3e438573ae174d637e7",
+          "portableSvgSha256": "0151a29779243b6f04d0c274ea49689496304a63fd91c3ff3cf4b00fa06a76de"
+        },
+        {
+          "bevId": "83d2c394-5a7e-5184-a801-ceb4e948c501",
+          "slug": "snapple-raspberry-tea",
+          "pngSha256": "fbc9d8e2a0da168b313a15a083c07b59ddea6bbeebdfdb0935bf66b9afd39567",
+          "portableSvgSha256": "6394c142b03728bd35c89c0823318ecbd8124e38b1180ecbc6a783186d8b666d"
+        },
+        {
+          "bevId": "a93992da-ccf6-52ad-b002-754243d1b0cd",
+          "slug": "naked-juice-strawberry-banana",
+          "pngSha256": "73e9b110e655afa8578af8e907751ed530d7431211de22e88ada89528823746b",
+          "portableSvgSha256": "a2157539cb1961519f426df5540d1d33e03e4c3ae17855ef2980ca051036296f"
+        },
+        {
+          "bevId": "1b25e221-1411-5bd7-8475-0b82e9ba0dd3",
+          "slug": "bolthouse-farms-strawberry-banana",
+          "pngSha256": "5f6284ed69903ec5b08651bd3a2874369b71538cc3d9ee7672a063307a25d0c4",
+          "portableSvgSha256": "6adf4beb41a2274904351987d0abb59e4f3fc7299a68e30e8a8101b2ccb75af8"
+        },
+        {
+          "bevId": "846fdbe8-91ab-5f11-affd-7fd05b16acbc",
+          "slug": "jamba-juice-strawberry-surf-rider",
+          "pngSha256": "35070bc25e733c668acc50733e0ccff36161ef4ef01d2159a7087644ae77d94d",
+          "portableSvgSha256": "66800fe9602d2182a7c6a265539013dd065a91b884be1ebb0ae2366d4ee4a9df"
+        }
+      ]
     }
   ]
 }

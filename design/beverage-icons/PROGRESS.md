@@ -1,6 +1,20 @@
 # Beverage icon production checkpoint
 
-## Latest batch: 28 researched variants, 2026-11-02
+## Latest batch: 28 icons, 2026-11-04
+
+**124 drafts authored; 254 catalog entries remain. 37 of 43 starters covered.**
+
+Smoothies, bottled juices and teas. Manufacturer and retailer references individually inspected. Ambiguous product identities are deferred with evidence instead of guessed. All prior reviewed artwork retained.
+
+- `scripts/icons/families/starter-smoothies.mjs`: jamba-juice-caribbean-passion, high-brew-mexican-vanilla, high-brew-salted-caramel, stok-cold-brew-black, jamba-juice-mango-a-go-go, jamba-juice-orange-dream-machine, bolthouse-farms-strawberry-banana, jamba-juice-strawberry-surf-rider (8).
+- `scripts/icons/families/tea-expansion.mjs`: gold-peak-peach-tea, gold-peak-sweet-tea, gold-peak-unsweetened-tea, guayaki-yerba-mate-enlighten-mint, ito-en-matcha-green-tea, ito-en-oi-ocha-green-tea, pure-leaf-extra-sweet-tea, snapple-lemon-tea, snapple-peach-tea, snapple-raspberry-tea (10).
+- `scripts/icons/families/juice-expansion.mjs`: motts-apple-juice, minute-maid-apple-juice, naked-juice-blue-machine, tropicana-fruit-punch, minute-maid-fruit-punch, naked-juice-green-machine, naked-juice-mighty-mango, tropicana-orange-juice-no-pulp, tropicana-orange-juice-some-pulp, naked-juice-strawberry-banana (10).
+
+References were individually visually inspected; exact package choices and simplifications remain in recipes. Reviewed all new renders and 40/56/96/155px light/dark tiles with 8% padding. Supplemental previews: `review/large-batch-03-2026-11-04-01.png`, `review/large-batch-03-2026-11-04-02.png`, `review/large-batch-03-2026-11-04-03.png`, `review/large-batch-03-2026-11-04-04.png`. All 96 prior reviewed PNG/portable-SVG hashes remain unchanged.
+
+Built and validated all 124 assets, regenerated review sheets, exported the batch to the app and passed export freshness plus all **127 app icon tests**. Final aesthetic approval and native-device review remain pending; records stay `needs-review`. Original prototype remains unchanged and live Postgres reconciliation remains pending. Git publication uses acheema5 / Arjun Cheema <arjuncheema@live.com>.
+
+## Previous batch: 28 researched variants, 2026-11-02
 
 **96 drafts authored; 282 catalog entries remain. 35 of 43 starters covered.** Added 28 individually researched icons in four disjoint family modules:
 

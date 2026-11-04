@@ -1,9 +1,9 @@
 {
   "summary": {
     "catalog": 378,
-    "authored": 96,
-    "pending": 282,
-    "starterAuthored": 35,
+    "authored": 124,
+    "pending": 254,
+    "starterAuthored": 37,
     "starterTotal": 43,
     "livePostgresReconciled": false
   },
@@ -609,22 +609,6 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "374a0ade-2a53-5760-9e13-5c7f3dea9d53",
-      "slug": "tropicana-orange-juice-no-pulp",
-      "name": "Orange Juice",
-      "brand": "Tropicana",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "260f5aba-be32-5d1b-ac40-08775ae8c9d1",
-      "slug": "tropicana-orange-juice-some-pulp",
-      "name": "Orange Juice",
-      "brand": "Tropicana",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "ddc4cce4-30d8-5843-9826-8c4f5354464a",
       "slug": "tropicana-pink-lemonade",
       "name": "Pink Lemonade",
@@ -633,66 +617,10 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "86fca922-eaba-5586-acd5-d3eb722eaf59",
-      "slug": "tropicana-fruit-punch",
-      "name": "Fruit Punch",
-      "brand": "Tropicana",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "6aed7049-e35a-5d43-9bdc-efa577b7aa82",
-      "slug": "minute-maid-apple-juice",
-      "name": "Apple Juice",
-      "brand": "Minute Maid",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "df907a72-d0ca-5ac3-ae19-bd5cf437a68b",
-      "slug": "minute-maid-fruit-punch",
-      "name": "Fruit Punch",
-      "brand": "Minute Maid",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "d91ed47d-22c9-570e-937d-520c50965a11",
       "slug": "minute-maid-lemonade",
       "name": "Lemonade",
       "brand": "Minute Maid",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "4357d69b-f30b-51d9-b779-70352a7dc7dc",
-      "slug": "naked-juice-green-machine",
-      "name": "Green Machine",
-      "brand": "Naked Juice",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "3ad2c20f-853d-5c20-ac4f-199e1f2716f8",
-      "slug": "naked-juice-blue-machine",
-      "name": "Blue Machine",
-      "brand": "Naked Juice",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "f5df8ed4-90b1-55fe-9d5a-1660bb1fea80",
-      "slug": "naked-juice-mighty-mango",
-      "name": "Mighty Mango",
-      "brand": "Naked Juice",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "a93992da-ccf6-52ad-b002-754243d1b0cd",
-      "slug": "naked-juice-strawberry-banana",
-      "name": "Strawberry Banana",
-      "brand": "Naked Juice",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -757,14 +685,6 @@
       "slug": "ocean-spray-cran-raspberry",
       "name": "Cran-Raspberry",
       "brand": "Ocean Spray",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "5344b4d8-fe71-5c38-9c3a-8d99d987ecbe",
-      "slug": "motts-apple-juice",
-      "name": "Apple Juice",
-      "brand": "Mott's",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -1361,14 +1281,6 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "32e8e1d6-e57f-5e28-bf7f-bf570e0c4bcf",
-      "slug": "stok-cold-brew-black",
-      "name": "Cold Brew Black",
-      "brand": "Stok",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "dd57b1eb-3286-5808-b27e-530c078f1196",
       "slug": "stok-cold-brew-not-too-sweet",
       "name": "Cold Brew Not Too Sweet",
@@ -1389,22 +1301,6 @@
       "slug": "califia-farms-cold-brew-almond-milk",
       "name": "Cold Brew Coffee with Almond Milk",
       "brand": "Califia Farms",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "cdcc0e60-0ef3-5e37-9535-a13fea816553",
-      "slug": "high-brew-mexican-vanilla",
-      "name": "Coffee Mexican Vanilla",
-      "brand": "High Brew Coffee",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "9f19252f-2ee5-5f1f-98af-b67d09b52f91",
-      "slug": "high-brew-salted-caramel",
-      "name": "Coffee Salted Caramel",
-      "brand": "High Brew Coffee",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -1473,38 +1369,6 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "866e3a9c-eaf7-5739-a672-a7f5c9bb0fde",
-      "slug": "jamba-juice-mango-a-go-go",
-      "name": "Mango-a-go-go",
-      "brand": "Jamba Juice",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "846fdbe8-91ab-5f11-affd-7fd05b16acbc",
-      "slug": "jamba-juice-strawberry-surf-rider",
-      "name": "Strawberry Surf Rider",
-      "brand": "Jamba Juice",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "26ac0b47-3c1f-5c73-a193-2d1a2ae52bc6",
-      "slug": "jamba-juice-caribbean-passion",
-      "name": "Caribbean Passion",
-      "brand": "Jamba Juice",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "e7a57328-a731-5350-8675-6a52ba90d242",
-      "slug": "jamba-juice-orange-dream-machine",
-      "name": "Orange Dream Machine",
-      "brand": "Jamba Juice",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "5f34b74b-5d4c-59f8-9072-80196114a575",
       "slug": "naked-protein-zone",
       "name": "Protein Zone",
@@ -1537,14 +1401,6 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "1b25e221-1411-5bd7-8475-0b82e9ba0dd3",
-      "slug": "bolthouse-farms-strawberry-banana",
-      "name": "Strawberry Banana",
-      "brand": "Bolthouse Farms",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "d0bb1e01-dbc7-5ba4-b18d-e6ac95cf31c0",
       "slug": "odwalla-superfood-smoothie",
       "name": "Superfood",
@@ -1561,66 +1417,10 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "fd401c29-cae6-5641-ae09-7cac5c036733",
-      "slug": "pure-leaf-extra-sweet-tea",
-      "name": "Pure Leaf Extra Sweet Tea",
-      "brand": "Pure Leaf",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "89134e4b-6437-5496-8682-2dc51c5e90a9",
-      "slug": "snapple-lemon-tea",
-      "name": "Snapple Lemon Tea",
-      "brand": "Snapple",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "f648835e-02e0-5e3d-a908-0c1fa5560f06",
-      "slug": "snapple-peach-tea",
-      "name": "Snapple Peach Tea",
-      "brand": "Snapple",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "83d2c394-5a7e-5184-a801-ceb4e948c501",
-      "slug": "snapple-raspberry-tea",
-      "name": "Snapple Raspberry Tea",
-      "brand": "Snapple",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "f0dc1cdd-ac0b-56bf-bd9f-82519a6df1ba",
       "slug": "snapple-diet-peach-tea",
       "name": "Snapple Diet Peach Tea",
       "brand": "Snapple",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "f1c4013f-3b6e-5713-8e7f-aa19c17ba0a5",
-      "slug": "gold-peak-sweet-tea",
-      "name": "Gold Peak Sweet Tea",
-      "brand": "Gold Peak",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "b5b62fb6-fb1f-5694-963f-814e100b8857",
-      "slug": "gold-peak-unsweetened-tea",
-      "name": "Gold Peak Unsweetened Tea",
-      "brand": "Gold Peak",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "a0935c82-6863-5786-90fa-c473510663ae",
-      "slug": "gold-peak-peach-tea",
-      "name": "Gold Peak Peach Tea",
-      "brand": "Gold Peak",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -1645,30 +1445,6 @@
       "slug": "lipton-diet-green-tea",
       "name": "Lipton Diet Green Tea",
       "brand": "Lipton",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "68f358af-dac8-5d66-a105-d8edb7632080",
-      "slug": "ito-en-oi-ocha-green-tea",
-      "name": "Ito En Oi Ocha Green Tea",
-      "brand": "Ito En",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "0bedfd48-3c66-5e2d-ad29-4f3f9590f58f",
-      "slug": "ito-en-matcha-green-tea",
-      "name": "Ito En Matcha Green Tea",
-      "brand": "Ito En",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "e08a0034-fda6-5144-bb0e-f08fb5c50cef",
-      "slug": "guayaki-yerba-mate-enlighten-mint",
-      "name": "Guayaki Yerba Mate Enlighten Mint",
-      "brand": "Guayaki",
       "isStarter": false,
       "status": "needs-reference"
     },

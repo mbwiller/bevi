@@ -6,13 +6,15 @@ Codex discovers this workflow through `.agents/skills/bevi-beverage-icons`, whic
 
 ![Beverage icons — overview 1](review/overview-01.png)
 
-[Overview 2](review/overview-02.png) · [Overview 3](review/overview-03.png) · [Overview 4](review/overview-04.png) · [Overview 5](review/overview-05.png) · [Overview 6](review/overview-06.png) · [Overview 7](review/overview-07.png) · [Overview 8](review/overview-08.png)
+[Overview 2](review/overview-02.png) · [Overview 3](review/overview-03.png) · [Overview 4](review/overview-04.png) · [Overview 5](review/overview-05.png) · [Overview 6](review/overview-06.png) · [Overview 7](review/overview-07.png) · [Overview 8](review/overview-08.png) · [Overview 9](review/overview-09.png) · [Overview 10](review/overview-10.png) · [Overview 11](review/overview-11.png)
 
-The current collection contains 96 reference-checked drafts, including 35 starter drinks. [The manifest](manifest.json) maps catalog UUIDs to editable SVGs, font-independent SVGs and transparent PNGs. [The work queue](coverage.json) lists the 282 remaining catalog drinks. These counts describe the repository catalog; live Postgres reconciliation is still pending. The app shows the icons (see [Ship to the app](#ship-to-the-app)).
+The current collection contains 124 reference-checked drafts, including 37 starter drinks. [The manifest](manifest.json) maps catalog UUIDs to editable SVGs, font-independent SVGs and transparent PNGs. [The work queue](coverage.json) lists the 254 remaining catalog drinks. These counts describe the repository catalog; live Postgres reconciliation is still pending. The app shows the icons (see [Ship to the app](#ship-to-the-app)).
 
-Latest **28-icon batch**: [sheet 1](review/large-batch-02-2026-11-02-01.png) · [sheet 2](review/large-batch-02-2026-11-02-02.png) · [sheet 3](review/large-batch-02-2026-11-02-03.png) · [sheet 4](review/large-batch-02-2026-11-02-04.png). Six deferred identities, including the Monster Peachy Keen product-line conflict, are retained in [identity-issues.json](identity-issues.json).
+Earlier **28-icon batch**: [sheet 1](review/large-batch-02-2026-11-02-01.png) · [sheet 2](review/large-batch-02-2026-11-02-02.png) · [sheet 3](review/large-batch-02-2026-11-02-03.png) · [sheet 4](review/large-batch-02-2026-11-02-04.png). Six deferred identities, including the Monster Peachy Keen product-line conflict, are retained in [identity-issues.json](identity-issues.json).
 
 Previous **29-icon batch**: [sheet 1](review/large-batch-2026-11-02-01.png) · [sheet 2](review/large-batch-2026-11-02-02.png) · [sheet 3](review/large-batch-2026-11-02-03.png) · [sheet 4](review/large-batch-2026-11-02-04.png). Deferred Starbucks/AriZona identities and inspected candidate evidence are retained in [identity-issues.json](identity-issues.json); those rows have no authored icons.
+
+Latest **28-icon batch (2026-11-04)**: [sheet 1](review/large-batch-03-2026-11-04-01.png) · [sheet 2](review/large-batch-03-2026-11-04-02.png) · [sheet 3](review/large-batch-03-2026-11-04-03.png) · [sheet 4](review/large-batch-03-2026-11-04-04.png).
 
 ## Give this to your coding agent
 
