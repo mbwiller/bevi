@@ -62,3 +62,19 @@ it('sizes to the snap point as a share of the window', async () => {
   );
   expect(StyleSheet.flatten(screen.getByTestId('sheet').props.style).height).toBeCloseTo(h * 0.9);
 });
+
+it('stops a 90% sheet below the top safe-area inset', async () => {
+  const { Dimensions, StyleSheet } = require('react-native');
+  const { SafeAreaProvider } = require('react-native-safe-area-context');
+  const { width, height } = Dimensions.get('window');
+  // An inset larger than the 10% a 90% sheet leaves above it (status bar + iOS's blur band).
+  const top = Math.ceil(height * 0.1) + 20;
+  await render(
+    <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width, height }, insets: { top, left: 0, right: 0, bottom: 0 } }}>
+      <Sheet open snap={90} title="Re-rank">
+        <Text>Body</Text>
+      </Sheet>
+    </SafeAreaProvider>,
+  );
+  expect(StyleSheet.flatten(screen.getByTestId('sheet').props.style).height).toBe(height - top);
+});
