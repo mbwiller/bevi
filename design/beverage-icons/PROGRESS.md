@@ -2,6 +2,20 @@
 
 ## Latest batch: 28 icons, 2026-11-04
 
+**152 drafts authored; 226 catalog entries remain. 37 of 43 starters covered.**
+
+Still waters, sparkling bottles/cans and eight unbranded served drinks. Exact photographs inspected; historical and representative packaging choices documented. Prior artwork retained.
+
+- `scripts/icons/families/served-drinks.mjs`: agua-fresca-jamaica, agua-fresca-tamarindo, generic-espresso-martini, horchata-traditional, generic-mojito, generic-moscow-mule, generic-old-fashioned, generic-pina-colada (8).
+- `scripts/icons/families/water-expansion.mjs`: voss-artesian-still-water, essentia-ionized-alkaline-water, arrowhead-mountain-spring-water, evian-natural-spring-water, poland-spring-natural-spring-water, deer-park-natural-spring-water, dasani-purified-water, aquafina-purified-water, mountain-valley-spring-water, smartwater-vapor-distilled (10).
+- `scripts/icons/families/sparkling-bottles.mjs`: perrier-lorange, perrier-original, san-pellegrino-aranciata, san-pellegrino-limonata, spindrift-blackberry, spindrift-cucumber, spindrift-half-tea-half-lemon, topo-chico-twist-grapefruit, topo-chico-twist-lime, topo-chico-twist-tangerine (10).
+
+References were individually visually inspected; exact package choices and simplifications remain in recipes. Reviewed all new renders and 40/56/96/155px light/dark tiles with 8% padding. Supplemental previews: `review/large-batch-05-2026-11-04-01.png`, `review/large-batch-05-2026-11-04-02.png`, `review/large-batch-05-2026-11-04-03.png`, `review/large-batch-05-2026-11-04-04.png`. All 124 prior reviewed PNG/portable-SVG hashes remain unchanged.
+
+Built and validated all 152 assets, regenerated review sheets, exported the batch to the app and passed export freshness plus all **155 app icon tests**. Final aesthetic approval and native-device review remain pending; records stay `needs-review`. Original prototype remains unchanged and live Postgres reconciliation remains pending. Git publication uses acheema5 / Arjun Cheema <arjuncheema@live.com>.
+
+## Previous batch: 28 icons, 2026-11-04
+
 **124 drafts authored; 254 catalog entries remain. 37 of 43 starters covered.**
 
 Smoothies, bottled juices and teas. Manufacturer and retailer references individually inspected. Ambiguous product identities are deferred with evidence instead of guessed. All prior reviewed artwork retained.

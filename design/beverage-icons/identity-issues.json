@@ -265,6 +265,59 @@
         }
       ],
       "resolutionNeeded": "Resolve documented duplicate/formulation identity before assigning artwork."
+    },
+    {
+      "bevId": "cdc8e9c9-27e7-5f19-8f47-35e4f2b325e0",
+      "slug": "waterloo-lime",
+      "status": "needs-identity-resolution",
+      "reason": "Historical Lime can unresolved: retailer Lime page depicts LEMON-LIME; current manufacturer lists Lemon Lime. Historical manufacturer document distinguishes Lime and Lemon. Exact historical Lime artwork is required.",
+      "resolutionNeeded": "Resolve exact intended formulation and inspect matching packaging before assigning artwork.",
+      "references": [
+        {
+          "pageUrl": "https://specialtyfoodsource.com/products/waterloo-sparkling-water-with-real-lime-flavor-12-oz-can-pack-of-8",
+          "inspectedAt": "2026-11-04",
+          "observations": "Batch04 family-author research."
+        },
+        {
+          "pageUrl": "https://www.drinkwaterloo.com/collections/flavors",
+          "inspectedAt": "2026-11-04",
+          "observations": "Batch04 family-author research."
+        },
+        {
+          "pageUrl": "https://dg6qn11ynnp6a.cloudfront.net/wp-content/uploads/2019/03/12162131/56ed55adfeead422dd19.pdf",
+          "inspectedAt": "2026-11-04",
+          "observations": "Batch04 family-author research."
+        }
+      ]
+    },
+    {
+      "bevId": "4637e593-5012-5414-a7b0-e7d97f1ce4c6",
+      "slug": "bodyarmor-lyte-fruit-punch",
+      "status": "needs-identity-resolution",
+      "reason": "Exact LYTE Fruit Punch unresolved: current manufacturer and retailer evidence identifies Zero Sugar Fruit Punch, while brand terms distinguish LYTE Berry Punch and Sports Drink Fruit Punch. Do not substitute these formulations.",
+      "resolutionNeeded": "Resolve exact intended formulation and inspect matching packaging before assigning artwork.",
+      "references": [
+        {
+          "pageUrl": "https://www.drinkbodyarmor.com/lyte/",
+          "inspectedAt": "2026-11-04",
+          "observations": "Batch04 family-author research."
+        },
+        {
+          "pageUrl": "https://www.drinkbodyarmor.com/zero-sugar/fruit-punch",
+          "inspectedAt": "2026-11-04",
+          "observations": "Batch04 family-author research."
+        },
+        {
+          "pageUrl": "https://www.kroger.com/p/bodyarmor-fruit-punch-zero-sugar-sports-drink-bottle/0081011383136",
+          "inspectedAt": "2026-11-04",
+          "observations": "Batch04 family-author research."
+        },
+        {
+          "pageUrl": "https://bodyarmorwinps5.com/terms.pdf",
+          "inspectedAt": "2026-11-04",
+          "observations": "Batch04 family-author research."
+        }
+      ]
     }
   ]
 }

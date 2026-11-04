@@ -855,6 +855,190 @@
           "portableSvgSha256": "66800fe9602d2182a7c6a265539013dd065a91b884be1ebb0ae2366d4ee4a9df"
         }
       ]
+    },
+    {
+      "batchId": "large-catalog-05-2026-11-04",
+      "reviewedAt": "2026-11-04",
+      "reviewer": "Codex coordinator with disjoint family authors",
+      "scope": "28 individually inspected reference comparisons, final renders and 40/56/96/155px light/dark tiles with 8% padding.",
+      "outcome": "Still waters, sparkling bottles/cans and eight unbranded served drinks. Exact photographs inspected; historical and representative packaging choices documented. Prior artwork retained. Final aesthetic and native-device review remain pending.",
+      "contactSheets": [
+        "review/large-batch-05-2026-11-04-01.png",
+        "review/large-batch-05-2026-11-04-02.png",
+        "review/large-batch-05-2026-11-04-03.png",
+        "review/large-batch-05-2026-11-04-04.png"
+      ],
+      "identityIssues": "identity-issues.json",
+      "assets": [
+        {
+          "bevId": "1bde6c49-9c9a-5070-bc73-a3073146d885",
+          "slug": "agua-fresca-jamaica",
+          "pngSha256": "4edddd3ffb7ab327f745f4501db92a3f9562e6e408b289ffd86578caa9e2a47b",
+          "portableSvgSha256": "828d992d759250d309e212f50508ed9b395dbb620b95a58212b442bff5c16fdd"
+        },
+        {
+          "bevId": "4d6383a4-25c9-5a4c-ba08-ade9c05a6f11",
+          "slug": "agua-fresca-tamarindo",
+          "pngSha256": "13cc237cd2a1349cede691fd6721f5da86c242f7894f05badbd9c0cf16e7e71a",
+          "portableSvgSha256": "1c01314174a5398337f4083e2f6ab8a8883950b06fe299462cb99717da81fdb7"
+        },
+        {
+          "bevId": "9f70776f-ba8e-555b-b0f4-b78255000657",
+          "slug": "voss-artesian-still-water",
+          "pngSha256": "b43c76b6f55cef098b345fcdfec0da2bb78ed03d756ce369f7b28bed1dd93242",
+          "portableSvgSha256": "1c581982414f3c375188b7eef33e0132d07ce3f984c0244b3bfaf15ef2e883c2"
+        },
+        {
+          "bevId": "9ca9380a-0569-5bb3-a805-6db42827ed9b",
+          "slug": "generic-espresso-martini",
+          "pngSha256": "842723af0d0a71b6a4007fd70dd020c8f96a93e2f8404287ba822edb70b44292",
+          "portableSvgSha256": "80a9b19f991ac2f9eb9e129e221a4889425367023e65c1d5d8c2c8157fef3bfa"
+        },
+        {
+          "bevId": "cff63ba5-9e5c-5272-ac40-58715b1102c0",
+          "slug": "horchata-traditional",
+          "pngSha256": "210b0346c5a108696db42068586a1d0719a570fcb6321e5658e2890ee3a8dda5",
+          "portableSvgSha256": "a23264fa3d8c458ada29a55c9d444995c242805ca2280728884507a5ca738166"
+        },
+        {
+          "bevId": "90d4a90c-84bd-5a49-baa0-38067b1b9411",
+          "slug": "essentia-ionized-alkaline-water",
+          "pngSha256": "117d47c7d679f001a896f2c6e02f4f34ae0918859e8f267b1de2140a770ea956",
+          "portableSvgSha256": "e6917064150d045ad58437edaeed49588b4ce2f8fc57c50caac0c60e5fccd01b"
+        },
+        {
+          "bevId": "f5967925-5813-583f-950b-2fb79b2ef174",
+          "slug": "generic-mojito",
+          "pngSha256": "a02b206c502109388cc4ceb82dc5111492393ed2061ce5e6f5c9fc974d53efe3",
+          "portableSvgSha256": "24b227fffcfb099d05ef67434336491c7b26fe457875d4043e38e834fbf64012"
+        },
+        {
+          "bevId": "f5cde824-6dbc-5cd9-9ffd-896e760f6f38",
+          "slug": "generic-moscow-mule",
+          "pngSha256": "ec8341492a75fe0ac1263ac72c1658fbd787e909c7b0a7e8cf88f5f7e07380c9",
+          "portableSvgSha256": "5b1c32d73cf3535925f3cd20cf3f2d91920e3ba214c8fdf777b92a2c2e960705"
+        },
+        {
+          "bevId": "629d6e29-516b-58e2-b7ab-19062a035c34",
+          "slug": "arrowhead-mountain-spring-water",
+          "pngSha256": "303ae1dac8423d70730edd1eab5e37d477e0987333b0ead6c08cbc99c70cc829",
+          "portableSvgSha256": "570fb361edcb91fb5487aa64512e3dd3272b681ce1325b8851716d5f1f1fcc24"
+        },
+        {
+          "bevId": "cd08bca0-25be-573b-94dd-d0a918a71f04",
+          "slug": "evian-natural-spring-water",
+          "pngSha256": "7967cc35fb8e617862cbf5fa586108260e9dce453c037c42ecae639d67144043",
+          "portableSvgSha256": "b6c18bea558e4eedf6a5172694eb61dafb0c1be33d5cac702b5514ff8e87028b"
+        },
+        {
+          "bevId": "74f25504-8c79-55c1-a101-c8b8e9b5ba1c",
+          "slug": "poland-spring-natural-spring-water",
+          "pngSha256": "ea425355081244bca74ed4113a32c559fa4f1c75f4805343a71b8a44bcf59492",
+          "portableSvgSha256": "e3dd7a5f75607bc65cced6e7b5dc1f893063726480e7fb85fbfd5bdcb8de7036"
+        },
+        {
+          "bevId": "6738dca5-961a-526d-9a6c-894c9fbbbb10",
+          "slug": "deer-park-natural-spring-water",
+          "pngSha256": "2b22e3208dbc72bb83ac9a6b2d78f8048c79a532fc2d31591b65babdf904a341",
+          "portableSvgSha256": "45e367c6b007aabcc68f3e8e4c7df945e5b2f7f3b2f4d372228bdbd62da91800"
+        },
+        {
+          "bevId": "20c73e8b-121e-522b-bea2-6f4aa75ad504",
+          "slug": "generic-old-fashioned",
+          "pngSha256": "fe0264efa62d59ac68f311c577ece1a373f0abefc9b8be92ac89df435481d1b1",
+          "portableSvgSha256": "7e7750440c7304b731a9064a1c483181d263e3b2a83c1c5ceafa99b01a7fa1df"
+        },
+        {
+          "bevId": "e5b0a7f2-f8f9-5e2e-a906-54a80d8b3cb5",
+          "slug": "perrier-lorange",
+          "pngSha256": "3bf3591e7bfd58afd685f9cb89418fbfbc1a01f785d572e4d8a020393ac81189",
+          "portableSvgSha256": "f60545d5de9f371d2c4faafd37ff47be7dd81704fb78209efbdc41a5f3a93473"
+        },
+        {
+          "bevId": "21c5ebf4-4477-598a-babb-ad6b02c8d76e",
+          "slug": "perrier-original",
+          "pngSha256": "8d471dd4446fd45713b6fe555bb580ce564c8e26bc029bb7702ffde2d4d9a2f0",
+          "portableSvgSha256": "d3020dc4ae2572172b866268dcbc6b3da708bec5584327fac2e7f841a1e25462"
+        },
+        {
+          "bevId": "225503ed-526f-5133-af49-759bfdbfe10f",
+          "slug": "generic-pina-colada",
+          "pngSha256": "63372b52f2edbbf66c01495bcb278f15e6f666c3622b4ec6a3b5dbee79b542cc",
+          "portableSvgSha256": "a7ad1f02037a944fc62ebd833e2b25c222703679cd187f41b55ccb58c103540b"
+        },
+        {
+          "bevId": "3e885915-d093-56c1-b1a7-440956361784",
+          "slug": "dasani-purified-water",
+          "pngSha256": "458c13e9e6396b200fbf59c10a9570fb58ec5222fe991e5baee0f153cd45675c",
+          "portableSvgSha256": "6acea5411dfed4ff5cabba81491c889d8ebf1bb7a55ab6c23906419fbe33153e"
+        },
+        {
+          "bevId": "50e3965b-441d-57d4-963c-07bcac690e7e",
+          "slug": "aquafina-purified-water",
+          "pngSha256": "17e02ebdb30922480eef40fe08447a6d6badacf312d13812218ca878b62c3604",
+          "portableSvgSha256": "3bcddab6dfb58de04fd5e90729dfe6d4be4553f55c1b3f3482ea5ca555356dfa"
+        },
+        {
+          "bevId": "69f0c670-7639-56d0-b808-38bec58376c0",
+          "slug": "san-pellegrino-aranciata",
+          "pngSha256": "3e420862cddfd1bef0f6dbf65545d509dfdc4f365553f3fc81c39171e2bda300",
+          "portableSvgSha256": "319caf861ecb731cf36d2c77268718da70e83d09bec0a1d2d2e8f44a50938c7b"
+        },
+        {
+          "bevId": "66679ef8-012e-50c6-86a6-978da77ad491",
+          "slug": "san-pellegrino-limonata",
+          "pngSha256": "97630fbbf48b24d7fc329991d3144dd0a8cf171c39d948ce73c8aff55a467cbf",
+          "portableSvgSha256": "b239eecb4a751486d537a73cf99827aa2cd6ebcc54d3301f579de71b51b5c785"
+        },
+        {
+          "bevId": "0713d838-b74c-53f2-82ed-0c09755be74f",
+          "slug": "spindrift-blackberry",
+          "pngSha256": "f3e28666a4a5e93f2ebd1837f68ff61b601c445537c6c98d782a2b8fbefd61f3",
+          "portableSvgSha256": "a0b2894c6db8bdeedd6f1277d232f2fd88b588ac99b1b0d01ff44d15fba5dfa3"
+        },
+        {
+          "bevId": "9261f1cf-5de4-5e9b-9b09-9673adb8cd92",
+          "slug": "spindrift-cucumber",
+          "pngSha256": "a3917da482ddd7d4fdf0a11333790d90b4d6356c41b9623e481b4ea7d8533a03",
+          "portableSvgSha256": "b040f0cd82d96c97bbd244832eed2ada5635773d2b03a8ead269f5fcddb7d3da"
+        },
+        {
+          "bevId": "48b72ee4-93e6-5ba2-ad30-718c48555d4d",
+          "slug": "spindrift-half-tea-half-lemon",
+          "pngSha256": "2653b5aa40c1652123f643ba006384b07318c81caf4fb7aaafcff30ad40d59ce",
+          "portableSvgSha256": "88d6b1920276561ea7b279282cc287d227710e2cdde15c767ca90285e01415b7"
+        },
+        {
+          "bevId": "6ebe6612-87e1-56d5-a1f9-e8b1db29f6c8",
+          "slug": "mountain-valley-spring-water",
+          "pngSha256": "aa1e20fb96b5c3967b9d30fb2fad115540d001fe36b8690fd15de6b1a83f9a02",
+          "portableSvgSha256": "ecdd8123e610af8fb2cca59d6f467a8e0b47b4750ef032255367f21c4840d01c"
+        },
+        {
+          "bevId": "aa285e39-7dfe-5976-b728-be85bbb2eca3",
+          "slug": "topo-chico-twist-grapefruit",
+          "pngSha256": "548a887b338aea3a115042beea8c00f104972c7d68fd9ec2117689b1cccd7f35",
+          "portableSvgSha256": "06484fbcff03946f503720ec694f25b2cf665ca87548b4c20954449f576bdc49"
+        },
+        {
+          "bevId": "22572809-bd9d-54c5-86ae-e68e164f1113",
+          "slug": "topo-chico-twist-lime",
+          "pngSha256": "5283d1b285e7c93d4a6af398e5fd357faa44a5700c362a07481ea63535278895",
+          "portableSvgSha256": "d0422fab074134ed63c4d857c00391b1dc2f56f839cfccce5962c3c99b46a2cd"
+        },
+        {
+          "bevId": "471f0c06-a9a7-5b6f-9709-9f7531290080",
+          "slug": "topo-chico-twist-tangerine",
+          "pngSha256": "2f8419ecd3a0caf85adb74f2ba0abd29e57a7bb403f030544b49234e48a30a93",
+          "portableSvgSha256": "51955ea165fc3b0d3d862f9dccfac4bb60a8c15e0705a425cfe96e581df2c0d0"
+        },
+        {
+          "bevId": "b64e5d9e-1f7c-5c90-850a-6c16bff5ea34",
+          "slug": "smartwater-vapor-distilled",
+          "pngSha256": "5935f115828f270d559bb2614209d705e5ed9e980a3c8fe0a5b2e7f367facbf2",
+          "portableSvgSha256": "26c5a7aa4d30ab3f470b6603dad44c71e7da3b72151ea938fbd2d909c2a12f2d"
+        }
+      ]
     }
   ]
 }

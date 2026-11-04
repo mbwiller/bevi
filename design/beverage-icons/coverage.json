@@ -1,8 +1,8 @@
 {
   "summary": {
     "catalog": 378,
-    "authored": 124,
-    "pending": 254,
+    "authored": 152,
+    "pending": 226,
     "starterAuthored": 37,
     "starterTotal": 43,
     "livePostgresReconciled": false
@@ -705,90 +705,10 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "cd08bca0-25be-573b-94dd-d0a918a71f04",
-      "slug": "evian-natural-spring-water",
-      "name": "Natural Spring Water",
-      "brand": "Evian",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "b64e5d9e-1f7c-5c90-850a-6c16bff5ea34",
-      "slug": "smartwater-vapor-distilled",
-      "name": "Vapor Distilled Water",
-      "brand": "Smartwater",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "ac939eca-7862-5813-975a-9e037a28a5db",
       "slug": "liquid-death-sparkling-severed-lime",
       "name": "Sparkling Water",
       "brand": "Liquid Death",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "90d4a90c-84bd-5a49-baa0-38067b1b9411",
-      "slug": "essentia-ionized-alkaline-water",
-      "name": "Ionized Alkaline Water",
-      "brand": "Essentia",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "629d6e29-516b-58e2-b7ab-19062a035c34",
-      "slug": "arrowhead-mountain-spring-water",
-      "name": "Mountain Spring Water",
-      "brand": "Arrowhead",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "3e885915-d093-56c1-b1a7-440956361784",
-      "slug": "dasani-purified-water",
-      "name": "Purified Water",
-      "brand": "Dasani",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "50e3965b-441d-57d4-963c-07bcac690e7e",
-      "slug": "aquafina-purified-water",
-      "name": "Purified Water",
-      "brand": "Aquafina",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "74f25504-8c79-55c1-a101-c8b8e9b5ba1c",
-      "slug": "poland-spring-natural-spring-water",
-      "name": "Natural Spring Water",
-      "brand": "Poland Spring",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "6738dca5-961a-526d-9a6c-894c9fbbbb10",
-      "slug": "deer-park-natural-spring-water",
-      "name": "Natural Spring Water",
-      "brand": "Deer Park",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "9f70776f-ba8e-555b-b0f4-b78255000657",
-      "slug": "voss-artesian-still-water",
-      "name": "Artesian Still Water",
-      "brand": "Voss",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "6ebe6612-87e1-56d5-a1f9-e8b1db29f6c8",
-      "slug": "mountain-valley-spring-water",
-      "name": "Spring Water",
-      "brand": "Mountain Valley Spring Water",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -805,54 +725,6 @@
       "slug": "just-water-still",
       "name": "Still Water",
       "brand": "Just Water",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "22572809-bd9d-54c5-86ae-e68e164f1113",
-      "slug": "topo-chico-twist-lime",
-      "name": "Topo Chico Twist of Lime",
-      "brand": "Topo Chico",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "aa285e39-7dfe-5976-b728-be85bbb2eca3",
-      "slug": "topo-chico-twist-grapefruit",
-      "name": "Topo Chico Twist of Grapefruit",
-      "brand": "Topo Chico",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "471f0c06-a9a7-5b6f-9709-9f7531290080",
-      "slug": "topo-chico-twist-tangerine",
-      "name": "Topo Chico Twist of Tangerine",
-      "brand": "Topo Chico",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "0713d838-b74c-53f2-82ed-0c09755be74f",
-      "slug": "spindrift-blackberry",
-      "name": "Spindrift Blackberry Sparkling Water",
-      "brand": "Spindrift",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "48b72ee4-93e6-5ba2-ad30-718c48555d4d",
-      "slug": "spindrift-half-tea-half-lemon",
-      "name": "Spindrift Half Tea Half Lemon",
-      "brand": "Spindrift",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "9261f1cf-5de4-5e9b-9b09-9673adb8cd92",
-      "slug": "spindrift-cucumber",
-      "name": "Spindrift Cucumber Sparkling Water",
-      "brand": "Spindrift",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -925,38 +797,6 @@
       "slug": "waterloo-watermelon",
       "name": "Waterloo Watermelon Sparkling Water",
       "brand": "Waterloo",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "21c5ebf4-4477-598a-babb-ad6b02c8d76e",
-      "slug": "perrier-original",
-      "name": "Perrier Original Sparkling Mineral Water",
-      "brand": "Perrier",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "e5b0a7f2-f8f9-5e2e-a906-54a80d8b3cb5",
-      "slug": "perrier-lorange",
-      "name": "Perrier L'Orange",
-      "brand": "Perrier",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "66679ef8-012e-50c6-86a6-978da77ad491",
-      "slug": "san-pellegrino-limonata",
-      "name": "San Pellegrino Limonata",
-      "brand": "San Pellegrino",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "69f0c670-7639-56d0-b808-38bec58376c0",
-      "slug": "san-pellegrino-aranciata",
-      "name": "San Pellegrino Aranciata",
-      "brand": "San Pellegrino",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -1673,30 +1513,6 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "cff63ba5-9e5c-5272-ac40-58715b1102c0",
-      "slug": "horchata-traditional",
-      "name": "Horchata",
-      "brand": "Generic",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "1bde6c49-9c9a-5070-bc73-a3073146d885",
-      "slug": "agua-fresca-jamaica",
-      "name": "Agua Fresca de Jamaica",
-      "brand": "Generic",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "4d6383a4-25c9-5a4c-ba08-ade9c05a6f11",
-      "slug": "agua-fresca-tamarindo",
-      "name": "Agua Fresca de Tamarindo",
-      "brand": "Generic",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "7fb900c7-c308-591a-8576-04e4ee685a5a",
       "slug": "calpico-original",
       "name": "Calpico",
@@ -1949,46 +1765,6 @@
       "slug": "josh-cellars-chardonnay",
       "name": "Josh Cellars Chardonnay",
       "brand": "Josh Cellars",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "20c73e8b-121e-522b-bea2-6f4aa75ad504",
-      "slug": "generic-old-fashioned",
-      "name": "Old Fashioned",
-      "brand": "Generic",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "9ca9380a-0569-5bb3-a805-6db42827ed9b",
-      "slug": "generic-espresso-martini",
-      "name": "Espresso Martini",
-      "brand": "Generic",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "f5cde824-6dbc-5cd9-9ffd-896e760f6f38",
-      "slug": "generic-moscow-mule",
-      "name": "Moscow Mule",
-      "brand": "Generic",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "f5967925-5813-583f-950b-2fb79b2ef174",
-      "slug": "generic-mojito",
-      "name": "Mojito",
-      "brand": "Generic",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "225503ed-526f-5133-af49-759bfdbfe10f",
-      "slug": "generic-pina-colada",
-      "name": "Pina Colada",
-      "brand": "Generic",
       "isStarter": false,
       "status": "needs-reference"
     },
