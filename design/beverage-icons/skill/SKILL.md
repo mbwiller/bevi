@@ -5,6 +5,26 @@ description: Research, create, and review product-specific Bevi beverage SVG ico
 
 # Bevi beverage icons
 
+## Run this skill
+
+Invoke as `$bevi-beverage-icons` with beverage names, UUIDs, a brand, or a batch size. For ongoing catalog production, default to larger batches of roughly 20–30 drinks unless the user specifies another size. Prioritize remaining starter drinks from `design/beverage-icons/coverage.json`, then extend their brand/package families. Defer unresolved identities and substitute other ready products instead of guessing to meet a count. Work from the Bevi repository root; paths below are repository-relative.
+
+Read `design/beverage-icons/PROGRESS.md` for the latest checkpoint and `design/beverage-icons/README.md` for dependency setup and build commands. Inspect the frozen style references and current review sheets before drawing. Author records in `scripts/icons/families/*.mjs` using `scripts/icons/style.mjs`; these recipes are the durable source of artwork and research evidence. Do not edit generated assets or the manifest directly.
+
+Check `design/beverage-icons/identity-issues.json` before selecting work. It retains deferred product-identity research separately from regenerated coverage; resolve those questions before drawing the affected UUIDs.
+
+After researching and drawing the batch, run:
+
+```sh
+node --experimental-strip-types scripts/icons/build.mjs
+node scripts/icons/validate.mjs
+python3 scripts/icons/review.py
+node scripts/icons/export-app.mjs
+node scripts/icons/export-app.mjs --check
+```
+
+Use the Python environment containing Pillow for review.py. Visually inspect the new artwork and small-size sheets; record the exact reviewed hashes in `design/beverage-icons/review/review.json`. Keep final aesthetic approval as `needs-review` unless actually granted. Export each batch through the existing app lookup (photo > icon > category art) and run the app's icon drift test. Update the production checkpoint and report new icons, unresolved identities, validation, and remaining coverage. Database reconciliation and database mutations require their own task scope.
+
 Work in the Bevi repository containing `data/catalog/bevs.csv`. Read `design/beverage-icons/PLAN.md` for the inventory/reconciliation workflow and inspect `design/beverage-icons/style-reference/index.html` plus relevant original SVGs. The root `index.html` is the user's preferred artwork; the app's existing flat `BevArt` is not the style master. Preserve the root prototype unless the user asks to edit it.
 
 ## Identity and references
