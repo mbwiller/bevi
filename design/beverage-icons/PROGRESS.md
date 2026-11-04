@@ -1,6 +1,22 @@
 # Beverage icon production checkpoint
 
-## Latest batch: 28 researched variants, 2026-11-02
+## Latest batch: 4 recovered starters, 2026-11-04
+
+**100 drafts authored; 278 catalog entries remain. 39 of 43 starters covered.** No new research. This batch recovers four starter icons that were authored in the batch-3 branch `design/beverage-icon-pilot` (PR #148) and never reached `main`: PR #160 expanded the collection 30 → 96 from the pre-batch-3 base and did not pick them up, so these four products sat in `coverage.json` as `needs-reference` while finished, reference-checked artwork for them already existed.
+
+- `juice-starters.mjs`: Tropicana Orange Juice Original (1).
+- `smoothie-starters.mjs`: Jamba Mango-a-go-go and Bolthouse Farms Strawberry Banana (2).
+- `cafe-milk-tea.mjs`: Kung Fu Tea Classic Milk Tea (1).
+
+The recipes were copied from the batch-3 modules with only the already-authored siblings removed; `scripts/icons/style.mjs` and `export-app.mjs` are byte-identical between the two branches, so the shared primitives are unchanged. Every rebuilt `svg`, `portable-svg` and `png` hash matches the hash batch 3 recorded on 2026-11-01, which proves this is the same artwork that was reviewed then rather than a redraw. All 96 pre-existing asset hashes are unchanged.
+
+**Starbucks Frappuccino Mocha was deliberately not recovered.** Batch 3 drew it as the bottled US 13.7 fl oz glass bottle, but the catalog row carries leaf `blended_coffee` with `frapp|frappe|mocha frappuccino` aliases and no bottled qualifier, and `identity-issues.json` already defers it on exactly that café-versus-bottled ambiguity. Drawing the bottle would turn an unresolved identity into an apparently verified one, so the deferral stands and the starter count is 39, not 40.
+
+Full-size artwork and a 40/56/96/155px sheet were visually inspected for all four. Open aesthetic notes, recorded in `review/review.json`: the Jamba white spiral reads as an ambiguous loop at 96/155px with no wordmark present (it is fine at 40/56px); Kung Fu Tea is drawn without pearls although the catalog category is `boba`, per batch 3's note that toppings are customizable and the official card shows no pearl layer; and Tropicana Original is drawn as flagship Pure Premium No Pulp while the catalog also carries separate `-no-pulp` and `-some-pulp` rows. Records remain `needs-review`; final aesthetic approval and native-device review are still pending.
+
+Built and validated all 100 assets, regenerated contact sheets, exported 4 app SVGs and UUID entries, and passed export freshness plus the app icon tests. Original prototype unchanged; live Postgres inventory reconciliation still pending.
+
+## Previous batch: 28 researched variants, 2026-11-02
 
 **96 drafts authored; 282 catalog entries remain. 35 of 43 starters covered.** Added 28 individually researched icons in four disjoint family modules:
 
