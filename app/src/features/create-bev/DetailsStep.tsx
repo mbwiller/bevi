@@ -35,7 +35,7 @@ export interface DetailsStepProps {
   onPickLabel: (source: PhotoSource) => void;
   /** "2 Bevs like this are already on Bevi" while typing. */
   similarCount: number;
-  /** The category the likely matches share, when it isn't the one chosen ("Most Bevs like this are Energy."). */
+  /** The category the likely matches share, when it isn't the one chosen ("Most Bevs like this are filed under Energy."). */
   categoryHint?: CategoryInfo | null;
   /** "Use Energy": sets the category to the hinted one. */
   onUseCategory?: (id: CategoryId) => void;

@@ -284,13 +284,13 @@ it('hints at the category the likely matches share, and "Use Energy" sets it wit
   await fillDetails({ name: 'Red Bull', category: 'Sports drink' });
   expect(screen.getByLabelText('Category, Sports drink')).toBeTruthy();
 
-  await screen.findByText('Most Bevs like this are Energy.');
+  await screen.findByText('Most Bevs like this are filed under Energy.');
   // Never automatic: still the chosen category.
   expect(screen.getByLabelText('Category, Sports drink')).toBeTruthy();
 
   await fireEvent.press(screen.getByRole('button', { name: 'Use Energy as the category' }));
   expect(screen.getByLabelText('Category, Energy')).toBeTruthy();
-  expect(screen.queryByText('Most Bevs like this are Energy.')).toBeNull();
+  expect(screen.queryByText('Most Bevs like this are filed under Energy.')).toBeNull();
   expect(screen.queryByRole('button', { name: 'Use Energy as the category' })).toBeNull();
 
   // Stays gone once the matches are re-fetched with the new category.

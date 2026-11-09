@@ -19,7 +19,7 @@ export const FIELD_REQUIRED = {
 } as const;
 
 /** Under the Category field when the likely matches share a different category than the one chosen. */
-export const categoryHintText = (categoryLabel: string) => `Most Bevs like this are ${categoryLabel}.`;
+export const categoryHintText = (categoryLabel: string) => `Most Bevs like this are filed under ${categoryLabel}.`;
 export const categoryUseText = (categoryLabel: string) => `Use ${categoryLabel}`;
 export const categoryUseLabel = (categoryLabel: string) => `Use ${categoryLabel} as the category`;
 
