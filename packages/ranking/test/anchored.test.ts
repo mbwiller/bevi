@@ -313,3 +313,50 @@ describe('fallback: the plain search', () => {
     expect(isDone(a)).toBe(true);
   });
 });
+
+// A real bucket (prod, 2026-11-09), best first, with each Bev's stored root and leaf. A Red Bull
+// created as `sports` by mistake was asked about Oikos Protein Shake first and an energy drink only
+// second. The engine was right for the category it was given; these pin both sides of that.
+describe('a real bucket: the first question follows the new Bev’s stored category', () => {
+  const BUCKET: Array<PlacementBevKind & { id: string }> = [
+    { id: 'dr-pepper', categoryId: 'soda', leafCategoryId: 'cola' },
+    { id: 'mexican-coke', categoryId: 'soda', leafCategoryId: 'cola' },
+    { id: 'celsius-cola', categoryId: 'energy', leafCategoryId: 'performance_energy' },
+    { id: 'celsius-orange', categoryId: 'energy', leafCategoryId: 'performance_energy' },
+    { id: 'alani-nu', categoryId: 'energy', leafCategoryId: 'performance_energy' },
+    { id: 'red-bull-original', categoryId: 'energy', leafCategoryId: 'classic_energy' },
+    { id: 'celsius-green-apple', categoryId: 'energy', leafCategoryId: null },
+    { id: 'kombucha', categoryId: 'other', leafCategoryId: 'kombucha' },
+    { id: 'grape-juice', categoryId: 'juice', leafCategoryId: 'grape_cranberry_juice' },
+    { id: 'oikos', categoryId: 'sports', leafCategoryId: null },
+    { id: 'sprite-zero', categoryId: 'diet_soda', leafCategoryId: 'diet_lemon_lime' },
+  ];
+  const ENERGY = new Set(BUCKET.filter((b) => b.categoryId === 'energy').map((b) => b.id));
+  const begin = (kind: PlacementBevKind) =>
+    startPlacement({ bevId: 'new', bucket: 'DISLIKED', orderedBevIds: BUCKET.map((b) => b.id), tiers: placementTiers(kind, BUCKET) });
+
+  it('a classic energy drink is asked about the same-leaf Bev first', () => {
+    expect(currentPrompt(begin({ categoryId: 'energy', leafCategoryId: 'classic_energy' }))?.comparedBevId).toBe('red-bull-original');
+  });
+
+  it('an energy drink of unknown leaf is asked only about energy drinks until Phase 1 ends', () => {
+    const s = begin({ categoryId: 'energy', leafCategoryId: null });
+    for (const script of [['NEW_BETTER', 'NEW_BETTER'], ['EXISTING_BETTER', 'EXISTING_BETTER'], ['NEW_BETTER', 'EXISTING_BETTER']] as ComparisonAnswer[][]) {
+      let t = s;
+      const asked: string[] = [];
+      while (placementPhase(t) === 'ANCHORS' && !isDone(t)) {
+        asked.push(currentPrompt(t)!.comparedBevId);
+        t = answer(t, script[asked.length - 1] ?? 'NEW_BETTER');
+      }
+      expect(asked.length).toBeGreaterThan(0);
+      expect(asked.every((id) => ENERGY.has(id))).toBe(true);
+    }
+  });
+
+  it('the same Bev stored as `sports` replays the reported session: Oikos, Alani Nu, Celsius Cola, Celsius Orange → index 3', () => {
+    const { state, asked } = run(begin({ categoryId: 'sports', leafCategoryId: null }), ['NEW_BETTER', 'NEW_BETTER', 'EXISTING_BETTER', 'NEW_BETTER']);
+    expect(asked).toEqual(['oikos', 'alani-nu', 'celsius-cola', 'celsius-orange']);
+    expect(isDone(state)).toBe(true);
+    expect(placementResult(state).insertIndex).toBe(3);
+  });
+});
