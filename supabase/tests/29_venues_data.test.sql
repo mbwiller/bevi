@@ -15,7 +15,7 @@
 -- (27) and the rest of 27's list. a08cNN collides with none. Fixture osm ids
 -- are node/8800NN, which no other file uses.
 begin;
-select plan(41);
+select plan(42);
 
 -- ---------------------------------------------------------------------------
 -- 1. Shape and grants
@@ -377,6 +377,24 @@ select ok(
 select ok(
   (public.venue_sync_report() ->> 'pinned')::int - (public.venue_sync_report() ->> 'pinned_for_minors')::int >= 1,
   'pinned_for_minors leaves out a venue whose whole assortment is alcoholic, as venues_in_view does'
+);
+
+-- ---------------------------------------------------------------------------
+-- 10. A chain preset never expands an alcoholic Bev, even if one gets in
+-- ---------------------------------------------------------------------------
+
+select public.upsert_chains(jsonb_build_array(
+  jsonb_build_object('id', 'pgtap-alc', 'name', 'pgTAP Alc', 'osm_brands', jsonb_build_array('pgTAP Alc'),
+                     'bev_ids', (select jsonb_agg(id) from t_bevs where label in ('alc', 's4')))));
+update public.venues set chain_id = 'pgtap-alc', kind = 'chain' where osm_id = 'node/880003';
+select public.expand_chain_assortments();
+
+select is(
+  (select array_agg(vb.bev_id order by vb.bev_id) from public.venue_bevs vb
+     join public.venues v on v.id = vb.venue_id
+    where v.osm_id = 'node/880003' and vb.source = 'chain'),
+  (select array_agg(id) from t_bevs where label = 's4'),
+  'the expansion skips an alcoholic Bev in a preset and keeps the rest'
 );
 
 select * from finish();

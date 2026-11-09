@@ -79,7 +79,9 @@ jobs:
       - name: sync
         env:
           SUPABASE_URL: ${{ vars.SUPABASE_URL || secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # A dry run writes nothing, so it does not get the key. (Not `dry_run && '' || key`:
+          # '' is falsy in an expression, so that form would always yield the key.)
+          SUPABASE_SERVICE_ROLE_KEY: ${{ !inputs.dry_run && secrets.SUPABASE_SERVICE_ROLE_KEY || '' }}
           DRY_RUN: ${{ inputs.dry_run }}
         # `if`, not `[ … ] && …`: under `bash -e` a false test fails the step.
         run: |

@@ -359,6 +359,12 @@ begin
       join public.chains c on c.id = v.chain_id
       cross join lateral unnest(c.assortment_bev_ids) as a(bev_id)
       join public.bevs b on b.id = a.bev_id and b.status = 'active'
+      -- No alcohol in a chain preset, enforced here as well as in the script
+      -- (curation-core.ts): a preset Bev later moved to an alcoholic category,
+      -- or a direct call, must not put it on every branch. A hand-entered
+      -- menu (source = 'menu') may still list one; the read RPCs' age gate
+      -- covers that.
+      join public.categories cat on cat.id = b.category_id and not cat.is_alcoholic
      where v.status = 'active'
   ),
   deleted as (
