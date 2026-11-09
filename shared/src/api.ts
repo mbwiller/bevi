@@ -594,6 +594,84 @@ export interface MetaApi {
   getAppConfig(): Promise<AppConfig>;
 }
 
+// ---------------------------------------------------------------------------
+// Bugs: the internal bug reporter (docs/bug-workflow.md). Internal-only —
+// every method is refused for an ordinary account, server-side, whatever the
+// client chooses to show. Linear owns the issue: nothing here reads or writes
+// its status, priority or comments, and the app never holds a tracker
+// credential.
+// ---------------------------------------------------------------------------
+
+/** Safe, allow-listed context the reporter sees before sending. No user content, ever. */
+export interface BugReportEnvironment {
+  /** The route the reporter was on, e.g. '/bev/[id]'. Never a URL with a query string. */
+  route?: string;
+  /** The feature area, for the tracker's component label. */
+  component?: string;
+  platform?: string;
+  osVersion?: string;
+  appVersion?: string;
+  build?: string;
+  /** 'production' | 'preview' | 'development', as the build knows itself. */
+  stage?: string;
+  /** e.g. '390x844'. */
+  viewport?: string;
+  /** ISO-8601. */
+  occurredAt?: string;
+  reproducibility?: 'always' | 'intermittent' | 'unknown';
+}
+
+export interface BugReportInput {
+  /** The observable symptom. Required; the only required field. */
+  title: string;
+  description?: string;
+  reproductionSteps?: string[];
+  expected?: string;
+  actual?: string;
+  environment?: BugReportEnvironment;
+  /**
+   * The screenshot, uploaded to private storage as part of this call and never
+   * before it — nothing leaves the device until the reporter submits.
+   */
+  evidence?: { file: Blob; mimeType: string };
+  /**
+   * A UUID the client generates once per draft and reuses on every retry of
+   * that draft. The same key never creates a second ticket.
+   */
+  idempotencyKey: string;
+}
+
+export interface BugReportResult {
+  /** The tracker's own identifier, e.g. 'BEV-104'. Never invented client-side. */
+  ticketId: string;
+  ticketUrl: string;
+  /** 'duplicate' = this idempotency key had already produced that ticket. */
+  status: 'created' | 'duplicate';
+}
+
+export interface BugsApi {
+  /**
+   * Whether this account may file internal bug reports. Drives whether the
+   * Report a bug entry point is shown; it is not the access check, which runs
+   * server-side on every `report()`. Never throws 'unauthorized' for a signed-in
+   * ordinary user — it answers false.
+   */
+  canReport(): Promise<boolean>;
+
+  /**
+   * Files one report: uploads the evidence (if any), then creates the tracker
+   * issue server-side and returns the identifier the tracker assigned.
+   *
+   * @throws 'unauthorized' — signed out, or not an internal reporter;
+   *   'validation' — missing title (`detail.field = 'title'`), unsupported or
+   *   oversized evidence (`'evidence'`), malformed key (`'idempotencyKey'`);
+   *   'conflict' — a submission for this key is already in flight;
+   *   'rate_limited'; 'unknown' — the tracker is unreachable or unconfigured
+   *   (the draft is still intact and the same key may be retried).
+   */
+  report(input: BugReportInput): Promise<BugReportResult>;
+}
+
 export interface BeviApi extends AuthApi {
   profile: ProfileApi;
   stats: StatsApi;
@@ -609,4 +687,5 @@ export interface BeviApi extends AuthApi {
   recs: RecsApi;
   venues: VenuesApi;
   meta: MetaApi;
+  bugs: BugsApi;
 }

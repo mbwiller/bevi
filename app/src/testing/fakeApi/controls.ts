@@ -17,6 +17,12 @@ export interface FakeControls {
   emptyUser(): void;
   /** Sign in as a fixture user without a password, e.g. ME.handle, FRIEND.handle, MINOR.handle (under 21). */
   signInAs(handle: string): void;
+  /**
+   * Make the signed-in user an internal bug reporter (`profiles.role` 'admin' or 'tester'), which
+   * is what `bugs.canReport()` answers and what `bugs.report()` requires. Off after
+   * `resetToFixtures()`.
+   */
+  setInternalReporter(internal: boolean): void;
 }
 
 export const controls: FakeControls = {
@@ -25,4 +31,5 @@ export const controls: FakeControls = {
   resetToFixtures: () => getFakeApi().resetToFixtures(),
   emptyUser: () => getFakeApi().emptyUser(),
   signInAs: (handle) => getFakeApi().signInAs(handle),
+  setInternalReporter: (internal) => getFakeApi().setInternalReporter(internal),
 };

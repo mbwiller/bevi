@@ -58,6 +58,8 @@ import {
   type BevOfPeriod,
   type BevPrediction,
   type BevsApi,
+  type BugReportResult,
+  type BugsApi,
   type BevLeaf,
   type BevSimilarity,
   type BevSummary,
@@ -140,6 +142,9 @@ const DISPLAY_NAME_MAX = 50;
 const REPORT_REASON_MAX = 500;
 const UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
 const UPLOAD_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+/** Narrower than UPLOAD_MIME_TYPES, matching the `bug-evidence` bucket (packages/api/src/bugs.ts). */
+const BUG_EVIDENCE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Default time the fake's "background removal" takes before a bev photo is 'ready'. */
 const PHOTO_PROCESSING_MS = 3000;
 
@@ -263,6 +268,15 @@ export class FakeApi implements BeviApi {
   private agg: Aggregates | null = null;
   /** ./graph.ts's mirror, keyed on the Bev table it was built from (see `edges()`). */
   private edgeCache: { source: FakeBev[]; size: number; mirror: EdgeMirror } | null = null;
+  /**
+   * Whether the signed-in user is an internal reporter (`profiles.role` in ('admin','tester')).
+   * Off by default, so a suite that doesn't opt in sees what an ordinary account sees. Not
+   * persisted: it is a property of the account on the server, not of the fake's data.
+   */
+  private internalReporter = false;
+  /** The fake's `bug_reports` ledger, keyed by idempotency key per user. */
+  private bugLedger = new Map<string, BugReportResult>();
+  private nextTicket = 100;
 
   constructor(options: FakeApiOptions = {}) {
     this.storage = options.storage ?? null;
@@ -299,6 +313,9 @@ export class FakeApi implements BeviApi {
     clearDb(this.storage);
     this.db = buildFixtures(this.clock());
     this.failures = [];
+    this.internalReporter = false;
+    this.bugLedger.clear();
+    this.nextTicket = 100;
     this.commit();
     this.emit();
   }
@@ -315,6 +332,11 @@ export class FakeApi implements BeviApi {
     me.birthdate = null;
     this.db.dirty = true;
     this.commit();
+  }
+
+  /** Make (or stop making) the signed-in user an internal bug reporter. */
+  setInternalReporter(internal: boolean): void {
+    this.internalReporter = internal;
   }
 
   /** Sign in as any fixture user without a password. */
@@ -1992,6 +2014,53 @@ export class FakeApi implements BeviApi {
         }
         return [...names].sort(compareCodePoints);
       }),
+  };
+
+  // -------------------------------------------------------------------------
+  // Bugs (the internal reporter). Linear is mocked out entirely: the fake
+  // mints `BEV-<n>` the way Linear mints an identifier, and keeps the same
+  // idempotency promise, so the UI's success, duplicate, validation and
+  // failure states are all reachable without a tracker.
+  // -------------------------------------------------------------------------
+
+  bugs: BugsApi = {
+    canReport: () =>
+      this.call('bugs.canReport', () => (this.sessionUser() ? this.internalReporter : false)),
+
+    report: (input) =>
+      this.call(
+        'bugs.report',
+        () => {
+          const me = this.requireUser();
+          if (!this.internalReporter) fail('unauthorized', 'This account cannot file internal bug reports');
+          if (!input.title?.trim()) invalid('title', 'Say what went wrong');
+          if (!UUID_RE.test(input.idempotencyKey ?? '')) invalid('idempotencyKey', 'Missing submission key');
+          if (input.evidence) {
+            if (!BUG_EVIDENCE_MIME_TYPES.includes(input.evidence.mimeType)) {
+              invalid('evidence', 'Attach a JPEG, PNG or WebP image');
+            }
+            if (typeof input.evidence.file?.size === 'number' && input.evidence.file.size > UPLOAD_MAX_BYTES) {
+              invalid('evidence', 'That screenshot is too large');
+            }
+          }
+
+          const key = `${me.id}:${input.idempotencyKey}`;
+          const seen = this.bugLedger.get(key);
+          if (seen) return { ...seen, status: 'duplicate' as const };
+
+          const ticketId = `BEV-${this.nextTicket++}`;
+          const result: BugReportResult = {
+            ticketId,
+            ticketUrl: `https://linear.app/bevi-fake/issue/${ticketId}`,
+            status: 'created',
+          };
+          this.bugLedger.set(key, result);
+          return result;
+        },
+        // Not a `db` write: the ledger is the fake's own, and a bug report
+        // changes nothing a screen reads.
+        false,
+      ),
   };
 
   meta: MetaApi = {

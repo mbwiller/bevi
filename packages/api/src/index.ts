@@ -5,6 +5,7 @@
 import type { BeviApi } from '@bevi/shared';
 import { createAuthApi } from './auth';
 import { createBevsApi } from './bevs';
+import { createBugsApi } from './bugs';
 import { createCategoriesApi } from './categories';
 import { type BeviApiConfig, createSupabaseClientFor } from './client';
 import { createCommentsApi } from './comments';
@@ -63,6 +64,7 @@ export function createBeviApi(config: BeviApiConfig): BeviApi {
     leaderboard: createLeaderboardApi(client),
     recs: createRecsApi(client, snapshots),
     venues: createVenuesApi(client),
+    bugs: createBugsApi(client),
     meta: createMetaApi(),
   };
 }

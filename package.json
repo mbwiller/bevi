@@ -24,7 +24,8 @@
     "graph:edges": "node --experimental-strip-types scripts/graph/build-edges.ts",
     "graph:neighbours": "node --experimental-strip-types scripts/graph/build-neighbours.ts",
     "venues:sync": "node --experimental-strip-types scripts/venues/import-osm.ts",
-    "venues:nta": "node --experimental-strip-types scripts/venues/build-nta.ts"
+    "venues:nta": "node --experimental-strip-types scripts/venues/build-nta.ts",
+    "bugs:purge-evidence": "node --experimental-strip-types scripts/bugs/purge-evidence.ts"
   },
   "overrides": {
     "react": "19.2.3"

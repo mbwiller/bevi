@@ -20,6 +20,8 @@ export const keys = {
   session: () => [...root, 'session'] as const,
   appConfig: () => [...root, 'appConfig'] as const,
   checkHandle: (handle: string) => [...root, 'checkHandle', handle] as const,
+  /** `bugs.canReport()`: whether this account may file internal bug reports. */
+  canReportBug: () => [...root, 'canReportBug'] as const,
 
   me: () => [...root, 'me'] as const,
 
