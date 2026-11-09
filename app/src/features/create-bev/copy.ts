@@ -18,6 +18,11 @@ export const FIELD_REQUIRED = {
   priceTier: 'Choose a price, or "Not sure".',
 } as const;
 
+/** Under the Category field when the likely matches share a different category than the one chosen. */
+export const categoryHintText = (categoryLabel: string) => `Most Bevs like this are ${categoryLabel}.`;
+export const categoryUseText = (categoryLabel: string) => `Use ${categoryLabel}`;
+export const categoryUseLabel = (categoryLabel: string) => `Use ${categoryLabel} as the category`;
+
 export const CATEGORY_RESTRICTED = "That category isn't available on your account.";
 export const LABEL_REUPLOAD = 'Add the label photo again.';
 export const PHOTO_REUPLOAD = 'Add the photo again.';

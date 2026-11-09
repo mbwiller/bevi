@@ -7,10 +7,10 @@ import { PRESSED } from '@/components/HitTarget';
 import { Icon } from '@/components/Icon';
 import { PriceTierPicker } from '@/components/PriceTierPicker';
 import { TextField } from '@/components/TextField';
-import { categoryById } from '@/lib/categories';
+import { categoryById, type CategoryInfo } from '@/lib/categories';
 import { radius, size, spacing, type, useTheme } from '@/theme';
 
-import { NAME_MAX_LENGTH } from './copy';
+import { categoryHintText, NAME_MAX_LENGTH, categoryUseLabel, categoryUseText } from './copy';
 import { PhotoStatusLine } from './PhotoStep';
 import type { PhotoSource } from './photo';
 import type { PhotoUpload } from './usePhotoUpload';
@@ -35,6 +35,10 @@ export interface DetailsStepProps {
   onPickLabel: (source: PhotoSource) => void;
   /** "2 Bevs like this are already on Bevi" while typing. */
   similarCount: number;
+  /** The category the likely matches share, when it isn't the one chosen ("Most Bevs like this are Energy."). */
+  categoryHint?: CategoryInfo | null;
+  /** "Use Energy": sets the category to the hinted one. */
+  onUseCategory?: (id: CategoryId) => void;
 }
 
 /** A field-styled button that opens the category sheet. */
@@ -71,7 +75,7 @@ function CategoryField({ value, error, onPress }: { value: CategoryId | null; er
 }
 
 /** Step 2: name, brand, flavor, category, price, and an optional nutrition label photo. */
-export function DetailsStep({ form, errors, onChange, onOpenCategories, label, onPickLabel, similarCount }: DetailsStepProps) {
+export function DetailsStep({ form, errors, onChange, onOpenCategories, label, onPickLabel, similarCount, categoryHint = null, onUseCategory }: DetailsStepProps) {
   const { colors } = useTheme();
   const hasLabel = !!label.photo;
   return (
@@ -102,7 +106,21 @@ export function DetailsStep({ form, errors, onChange, onOpenCategories, label, o
         error={errors.flavor}
         autoCapitalize="words"
       />
-      <CategoryField value={form.categoryId} error={errors.categoryId} onPress={onOpenCategories} />
+      <View style={styles.categoryGroup}>
+        <CategoryField value={form.categoryId} error={errors.categoryId} onPress={onOpenCategories} />
+        {categoryHint ? (
+          <View style={styles.hintRow} accessibilityLiveRegion="polite">
+            <Text style={[type.caption, styles.flex, { color: colors.textSecondary }]}>{categoryHintText(categoryHint.label)}</Text>
+            <Button
+              variant="ghost"
+              onPress={() => onUseCategory?.(categoryHint.id)}
+              accessibilityLabel={categoryUseLabel(categoryHint.label)}
+            >
+              {categoryUseText(categoryHint.label)}
+            </Button>
+          </View>
+        ) : null}
+      </View>
       <View style={styles.field}>
         <Text style={[type.caption, styles.label, { color: colors.textSecondary }]}>Price</Text>
         <PriceTierPicker
@@ -156,6 +174,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.input,
   },
   flex: { flex: 1 },
+  categoryGroup: { gap: spacing.xs, alignSelf: 'stretch' },
+  hintRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   labelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   labelActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap', flex: 1 },
 });

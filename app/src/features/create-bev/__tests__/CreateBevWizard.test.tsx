@@ -6,7 +6,7 @@ import { api } from '@/api/client';
 import { controls } from '@/testing/fakeApi';
 import { categoryById } from '@/lib/categories';
 
-import { CreateBevWizard } from '../CreateBevWizard';
+import { CreateBevWizard, DUPLICATES_DEBOUNCE_MS } from '../CreateBevWizard';
 import { pickImage, preparePhoto, UnsupportedImageError } from '../photo';
 
 const mockReplace = jest.fn();
@@ -273,4 +273,36 @@ it("an image that can't be read says so and is never uploaded", async () => {
   await screen.findByText("Bevi can't read that image. Try a JPEG or PNG.");
   expect(screen.queryByRole('button', { name: 'Retry upload' })).toBeNull();
   expect(upload).not.toHaveBeenCalled();
+});
+
+it('hints at the category the likely matches share, and "Use Energy" sets it without changing it on its own', async () => {
+  await renderWizard();
+  await addPhoto();
+  await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+
+  // The 2026-11-09 incident: a Red Bull filed as a Sports drink. The catalog's Red Bulls are all Energy.
+  await fillDetails({ name: 'Red Bull', category: 'Sports drink' });
+  expect(screen.getByLabelText('Category, Sports drink')).toBeTruthy();
+
+  await screen.findByText('Most Bevs like this are Energy.');
+  // Never automatic: still the chosen category.
+  expect(screen.getByLabelText('Category, Sports drink')).toBeTruthy();
+
+  await fireEvent.press(screen.getByRole('button', { name: 'Use Energy as the category' }));
+  expect(screen.getByLabelText('Category, Energy')).toBeTruthy();
+  expect(screen.queryByText('Most Bevs like this are Energy.')).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Use Energy as the category' })).toBeNull();
+
+  // Stays gone once the matches are re-fetched with the new category.
+  await new Promise((r) => setTimeout(r, DUPLICATES_DEBOUNCE_MS + 200));
+  expect(screen.queryByText(/Most Bevs like this are/)).toBeNull();
+});
+
+it('shows no category hint when the chosen category already matches the likely matches', async () => {
+  await renderWizard();
+  await addPhoto();
+  await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+  await fillDetails({ name: 'Red Bull', category: 'Energy' });
+  await screen.findByText(/already on Bevi/);
+  expect(screen.queryByText(/Most Bevs like this are/)).toBeNull();
 });
