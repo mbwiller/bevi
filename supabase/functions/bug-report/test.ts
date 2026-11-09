@@ -1,9 +1,9 @@
 // Deno tests for bug-report. Run with:
 //   deno test --allow-net --allow-env supabase/functions/bug-report/
 //
-// Everything here is pure: these files import ./redact.ts, ./issue.ts and
-// ./linear.ts, never ./index.ts, so nothing starts a server and no request
-// leaves the process. The Linear client is driven through its injected
+// Everything here is pure: these files import ./redact.ts, ./issue.ts,
+// ./linear.ts and ./ledger.ts, never ./index.ts, so nothing starts a server
+// and no request leaves the process. The Linear client is driven through its injected
 // `fetch`, which is how its error mapping, its two-step upload, its status
 // lookup and its one write can be asserted without an API key.
 //
@@ -16,6 +16,7 @@ import { assert, assertEquals, assertRejects, assertStringIncludes } from "jsr:@
 
 import { BREADCRUMB_LIMITS, clean, cleanBreadcrumbs, cleanEnvironment, cleanSteps, LIMITS, redact, REDACTED } from "./redact.ts";
 import { breadcrumbLine, buildDescription, parseReport, PRIORITY_BY_SEVERITY, ValidationError } from "./issue.ts";
+import { finishBugReport, ledgerQuery } from "./ledger.ts";
 import {
   authorizationHeader,
   createIssue,
@@ -578,4 +579,59 @@ Deno.test("readLinearConfig needs both the key and the team, splits the label li
   assertEquals(config?.doneStateId, "s-done");
   const plain = readLinearConfig((k) => ({ LINEAR_API_KEY: FAKE.linearKey("x"), LINEAR_TEAM_ID: "team-1" })[k]);
   assertEquals(plain?.labelIdByKind, undefined);
+});
+
+// ---------------------------------------------------------------------------
+// The ledger: the caller's rows only, and the write that must not be lost
+// ---------------------------------------------------------------------------
+
+Deno.test("the status and verify reads name the caller's reporter_id as well as reading through RLS", () => {
+  const query = ledgerQuery(UID, { limit: 50 });
+  assertStringIncludes(query, `reporter_id=eq.${UID}`);
+  assertStringIncludes(query, "state=eq.created");
+  assertStringIncludes(query, "order=created_at.desc&limit=50");
+  assertEquals(query.includes("ticket_identifier"), true); // in the select list
+  const one = ledgerQuery(UID, { ticketId: "BEV-9", limit: 50 });
+  assertStringIncludes(one, `reporter_id=eq.${UID}`);
+  assertStringIncludes(one, "ticket_identifier=eq.BEV-9");
+});
+
+const LEDGER_ENV = { url: "https://project.supabase.co", serviceRoleKey: "service-role" };
+
+Deno.test("finishBugReport retries a non-2xx answer once and confirms when the retry succeeds", async () => {
+  const statuses = [500, 200];
+  const { impl, calls } = stubFetch(() => new Response("", { status: statuses.shift() ?? 200 }));
+  const logged: string[] = [];
+  const ok = await finishBugReport(impl, LEDGER_ENV, 7, "created", { identifier: "BEV-9", url: "https://l/BEV-9" }, (l) => logged.push(l));
+  assertEquals(ok, true);
+  assertEquals(calls.length, 2);
+  assertEquals(logged, []);
+  const body = JSON.parse(String(calls[0]?.init?.body)) as Record<string, unknown>;
+  assertEquals(body.p_id, 7);
+  assertEquals(body.p_state, "created");
+  assertEquals(body.p_ticket_identifier, "BEV-9");
+  assertEquals((calls[0]?.init?.headers as Record<string, string>).Authorization, FAKE.bearer("service-role"));
+});
+
+Deno.test("finishBugReport gives up after two failures, logs the status code only, and does not throw", async () => {
+  const { impl, calls } = stubFetch(() => new Response('{"message":"the body would quote the request"}', { status: 500 }));
+  const logged: string[] = [];
+  const ok = await finishBugReport(impl, LEDGER_ENV, 7, "created", { identifier: "BEV-9", url: "https://l/BEV-9" }, (l) => logged.push(l));
+  assertEquals(ok, false);
+  assertEquals(calls.length, 2);
+  assertEquals(logged.length, 1);
+  assertStringIncludes(logged[0] ?? "", "status=500");
+  assertEquals((logged[0] ?? "").includes("quote the request"), false);
+});
+
+Deno.test("finishBugReport treats an unreachable database like a failed write", async () => {
+  let attempts = 0;
+  const impl = (_url: string, _init?: RequestInit) => {
+    attempts++;
+    return Promise.reject(new Error("connection reset"));
+  };
+  const logged: string[] = [];
+  assertEquals(await finishBugReport(impl, LEDGER_ENV, 7, "failed", { errorCode: "linear_error" }, (l) => logged.push(l)), false);
+  assertEquals(attempts, 2);
+  assertStringIncludes(logged[0] ?? "", "status=unreachable");
 });

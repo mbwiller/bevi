@@ -5,7 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { controls } from '@/testing/fakeApi';
 
-import { ReportBugLauncher } from '../ReportBugLauncher';
+import { hidesLauncher, ReportBugLauncher } from '../ReportBugLauncher';
 
 const mockPush = jest.fn();
 const mockPathname = { current: '/feed' };
@@ -64,6 +64,25 @@ describe('the Report a bug launcher', () => {
     await renderLauncher();
     await waitFor(() => expect(client.getQueryState(['bevi', 'canReportBug'])?.status).toBe('success'));
     expect(screen.queryByLabelText('Report a bug')).toBeNull();
+  });
+
+  it.each(['/rank/abc-123', '/add/new', '/image/https%3A%2F%2Fx'])(
+    'stays off %s: the full-screen modals keep their own bottom-left controls',
+    async (pathname) => {
+      controls.setInternalReporter(true);
+      mockPathname.current = pathname;
+      await renderLauncher();
+      await waitFor(() => expect(client.getQueryState(['bevi', 'canReportBug'])?.status).toBe('success'));
+      expect(screen.queryByLabelText('Report a bug')).toBeNull();
+    },
+  );
+
+  it('hides only on the reporter and the modal routes', () => {
+    expect(hidesLauncher('/feed')).toBe(false);
+    expect(hidesLauncher('/bev/abc')).toBe(false);
+    expect(hidesLauncher('/report-bug')).toBe(true);
+    expect(hidesLauncher('/rank/abc')).toBe(true);
+    expect(hidesLauncher(undefined)).toBe(false);
   });
 
   it('keeps a 44pt hit area under the 30pt pill', async () => {

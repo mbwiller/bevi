@@ -187,7 +187,7 @@ export function BugReportForm({ fromRoute, onClose, storage }: BugReportFormProp
   const failure = report.isError ? errorCopy(report.error) : null;
 
   return (
-    <Screen onClose={onClose} title="Report an issue" draft={!!restored}>
+    <Screen onClose={onClose} title="Report a bug" draft={!!restored}>
       <ScrollView
         contentContainerStyle={[styles.body, { paddingBottom: spacing.xxl + lift }]}
         keyboardShouldPersistTaps="handled"

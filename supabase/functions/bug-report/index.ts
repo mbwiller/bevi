@@ -18,9 +18,10 @@
 // ships in every copy of the app. So the real check is a database one: the
 // report route calls `claim_bug_report()` AS THE CALLER, and the two read
 // routes call `can_report_bugs()` AS THE CALLER; both answer from
-// `profiles.role` under auth.uid(). The ledger is read AS THE CALLER too, so
-// RLS limits every route to the caller's own rows. Hiding the Report a bug
-// button in the client is cosmetic; this is the gate.
+// `profiles.role` under auth.uid(). The ledger is read AS THE CALLER too and
+// filtered to the caller's reporter_id (the select policy also admits an
+// admin, and these routes are own-rows-only for admins as well). Hiding the
+// Report a bug button in the client is cosmetic; this is the gate.
 //
 // The Linear API key is read from the environment and never leaves this
 // function. The app never sees it, and no response or log line here contains
@@ -41,6 +42,7 @@ import {
   type Severity,
   ValidationError,
 } from "./issue.ts";
+import { finishBugReport, ledgerQuery } from "./ledger.ts";
 import {
   createIssue,
   fetchIssueStatuses,
@@ -235,33 +237,19 @@ async function deleteEvidence(env: Env, paths: string[]): Promise<void> {
   }
 }
 
-/** Records the outcome against the ledger row as the service role. */
+/**
+ * Records the outcome against the ledger row as the service role
+ * (ledger.ts: two attempts, status-only log line on failure). The created
+ * ticket is returned to the reporter either way; the log line is what tells
+ * an operator that a retry of this draft could now file a second ticket.
+ */
 async function finish(
   env: Env,
   id: number,
   state: "created" | "failed",
   extra: { identifier?: string; url?: string; errorCode?: string },
 ): Promise<void> {
-  try {
-    await fetch(`${env.url}/rest/v1/rpc/finish_bug_report`, {
-      method: "POST",
-      headers: {
-        apikey: env.serviceRoleKey,
-        Authorization: `Bearer ${env.serviceRoleKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        p_id: id,
-        p_state: state,
-        p_ticket_identifier: extra.identifier ?? null,
-        p_ticket_url: extra.url ?? null,
-        p_error_code: extra.errorCode ?? null,
-      }),
-    });
-  } catch {
-    // The ledger row stays 'pending' and goes stale, which claim_bug_report()
-    // already treats as retryable. Losing this write must not lose the ticket.
-  }
+  await finishBugReport(fetch, env, id, state, extra);
 }
 
 // ---------------------------------------------------------------------------
@@ -356,14 +344,14 @@ async function readBody(req: Request): Promise<Record<string, unknown> | Respons
   }
 }
 
-/** The caller's created tickets, newest first, through RLS. */
-async function ledgerRows(c: Caller, extra = ""): Promise<LedgerRow[] | Response> {
+/**
+ * The caller's created tickets, newest first: read as the caller (RLS) and
+ * filtered to the caller's `reporter_id` as well, since the select policy
+ * also admits an admin and these routes are own-rows-only for everyone.
+ */
+async function ledgerRows(c: Caller, ticketId?: string): Promise<LedgerRow[] | Response> {
   try {
-    const response = await select(
-      c.env,
-      c.jwt,
-      `bug_reports?select=id,ticket_identifier,ticket_url,title,kind,severity,created_at,updated_at&state=eq.created${extra}&order=created_at.desc&limit=${STATUS_LIMIT}`,
-    );
+    const response = await select(c.env, c.jwt, ledgerQuery(c.userId, { ticketId, limit: STATUS_LIMIT }));
     if (!response.ok) return json({ error: "database_error" }, 502);
     return (await response.json()) as LedgerRow[];
   } catch {
@@ -551,8 +539,9 @@ async function handleVerify(req: Request, c: Caller): Promise<Response> {
   if (!internal) return json({ error: "not_internal" }, 403);
 
   // Only a ticket the caller's own ledger holds can be verified from here:
-  // RLS scopes the read, so another reporter's identifier simply is not found.
-  const rows = await ledgerRows(c, `&ticket_identifier=eq.${encodeURIComponent(ticketId)}`);
+  // the read is the caller's rows only (RLS plus the reporter filter), so
+  // another reporter's identifier simply is not found.
+  const rows = await ledgerRows(c, ticketId);
   if (rows instanceof Response) return rows;
   const row = rows[0];
   if (!row) return json({ error: "not_found" }, 404);

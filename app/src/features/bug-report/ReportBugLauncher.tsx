@@ -27,8 +27,10 @@ export function ReportBugLauncher() {
   const insets = useSafeAreaInsets();
   const { data: canReport } = useCanReportBug();
 
-  // Never over the reporter itself.
-  if (!canReport || pathname === '/report-bug') return null;
+  // Never over the reporter itself, and never over the full-screen modals,
+  // whose bottom-left corner holds their own controls (the rank flow's
+  // bucket buttons, the create wizard, the photo viewer).
+  if (!canReport || hidesLauncher(pathname)) return null;
 
   return (
     <View
@@ -54,6 +56,14 @@ export function ReportBugLauncher() {
       </Pressable>
     </View>
   );
+}
+
+/** Routes the launcher stays off: the reporter, and the full-screen modals. */
+const HIDDEN_PREFIXES = ['/report-bug', '/rank/', '/add/', '/image/'];
+
+export function hidesLauncher(pathname: string | null | undefined): boolean {
+  if (!pathname) return false;
+  return HIDDEN_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix));
 }
 
 /** Clear of the 5-tab bar, which the tab screens draw above the safe area. */

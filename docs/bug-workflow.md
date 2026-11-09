@@ -19,8 +19,10 @@ refuses a submission from anyone else even if they call the endpoint directly.
 
 Two ways in, both leading to the same full-screen form:
 
-- the **Report a bug** pill in the bottom-left of any screen. Use this one: it
-  keeps the screen you were on and records its route on the ticket.
+- the **Report a bug** pill in the bottom-left of any screen except the
+  full-screen flows (ranking, creating a Bev, the photo viewer), whose
+  bottom-left corner holds their own controls. Use this one: it keeps the
+  screen you were on and records its route on the ticket.
 - **Settings → Internal → Report a bug**, for when you look there first.
 
 In the form:

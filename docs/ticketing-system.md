@@ -66,7 +66,9 @@ The database half is one migration,
   cosmetic. `claim_bug_report()` raises `BEVI_UNAUTHORIZED` for anyone whose
   role is not `admin` or `tester`, and it runs on every submission; the status
   and verify routes call `can_report_bugs()` the same way, and read the ledger
-  **as the caller**, so RLS limits them to the caller's own rows.
+  **as the caller** with an explicit `reporter_id` filter as well: the select
+  policy also admits an admin, and an admin's own tickets are still the only
+  ones My reports lists or `verify` moves.
   `verify_jwt = true` on the function is only an outer gate — the publishable
   key ships in every copy of the app, so it proves nothing about *who* is
   calling.
@@ -92,7 +94,10 @@ The database half is one migration,
   line saying so. `AGENTS.md` tells agents the same thing in the same words.
 - **One draft is one ticket.** The idempotency key is per draft, not per
   attempt. A replay returns the ticket that already exists; a concurrent
-  attempt gets 409 rather than a second issue.
+  attempt gets 409 rather than a second issue. The write that records the
+  ticket on the ledger is tried twice and, if it still fails, logged with its
+  status code (never the body): a row left `pending` after a created issue is
+  the one way a later retry could file a duplicate, so that log line is loud.
 - **No phantom tickets.** The identifier and URL come from Linear's response.
   If the provider does not confirm the issue, the client raises instead of
   showing an ID. The same for My reports: a row the ledger does not hold is
@@ -258,10 +263,10 @@ pretend otherwise.
 
 | Suite | Covers |
 |---|---|
-| `supabase/functions/bug-report/test.ts` (Deno, 43 tests) | Redaction, the diagnostics and breadcrumb allow-lists, kind/severity and path validation, the issue template (type and severity line, recent activity, numbered evidence), the priority mapping, label resolution by name across workspace and team labels with overrides, state mapping, and the Linear client's error mapping, two-step upload, status query and verify write — all against an injected `fetch`. |
-| `supabase/tests/28_bug_reports.test.sql` (pgTAP, 51 assertions) | The `tester` role and `set_profile_role` (the trigger still refuses a plain update, even from the owner; `authenticated` cannot call it; the bypass flag is reset), the grants (notably that `authenticated` cannot call `finish_bug_report`), the RLS shape, the private bucket and its policy, the authorisation refusal, kind/severity/title/path validation, and the idempotency ledger's cases including the re-arm and `forget_bug_evidence`. |
+| `supabase/functions/bug-report/test.ts` (Deno, 48 tests) | Redaction, the diagnostics and breadcrumb allow-lists, kind/severity and path validation, the issue template (type and severity line, recent activity, numbered evidence), the priority mapping, label resolution by name across workspace and team labels with overrides, state mapping, the Linear client's error mapping, two-step upload, status query and verify write, the reporter-scoped ledger query and the retried ledger write — all against an injected `fetch`. |
+| `supabase/tests/28_bug_reports.test.sql` (pgTAP, 65 assertions) | The `tester` role and `set_profile_role` (the trigger still refuses a plain update, even from the owner; `authenticated` cannot call it; the bypass flag is reset), the grants (notably that `authenticated` cannot call `finish_bug_report`), the RLS shape, the private bucket and its policy, the authorisation refusal, kind/severity/title/path validation (an over-long title included), the idempotency ledger's cases (in-flight, stale-pending re-arm keeping staged evidence, failed re-arm taking the retry's list), cross-reporter reads returning nothing, the 20-an-hour rate limit, and `forget_bug_evidence`. |
 | `packages/api/test/bugs.test.ts` (vitest, 21 cases) | That nothing is uploaded or invoked before the input validates, that every screenshot goes to the private bucket in order and the function gets only paths, that no credential is in the request body, the error-code mapping, `listMine` over the status route and `markVerified` over the verify route, and the refusal of a response with no confirmed ticket. |
-| `app/src/features/bug-report/__tests__/` (jest) | The form's type and severity controls, required-title, success, duplicate, failure-with-retry and draft-restore states; that the screenshot never reaches storage and is sent as a one-element list; the context preview; and the launcher's gating, route capture and 44pt hit area. |
+| `app/src/features/bug-report/__tests__/` (jest) | The form's type and severity controls, required-title, success, duplicate, failure-with-retry and draft-restore states; that the screenshot never reaches storage and is sent as a one-element list; the context preview; and the launcher's gating, route capture, 44pt hit area and absence from the full-screen modals. |
 
 **Not covered, honestly:** the live round trip to Linear. No test in this
 repository has ever called `api.linear.app`, because no credential exists here

@@ -8,17 +8,19 @@
 -- longer numeric suffixes. handle_new_user derives the handle from the email's
 -- local part, so b1's handle is 'pgtapbug1'.
 begin;
-select plan(51);
+select plan(65);
 
 insert into auth.users (id, email, raw_user_meta_data, aud, role)
 values ('00000000-0000-4000-8000-0000000000b1', 'pgtapbug1@users.bevi.app',
         '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated'),
        ('00000000-0000-4000-8000-0000000000b2', 'pgtapbug2@users.bevi.app',
+        '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated'),
+       ('00000000-0000-4000-8000-0000000000b3', 'pgtapbug3@users.bevi.app',
         '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated');
 
 -- ---------------------------------------------------------------------------
--- The operator path. b1 becomes the internal tester the way an operator does
--- it; b2 stays an ordinary user. protect_profile_columns raises
+-- The operator path. b1 and b3 become internal testers the way an operator
+-- does it; b2 stays an ordinary user. protect_profile_columns raises
 -- BEVI_UNAUTHORIZED on any role change made by someone who is not an admin,
 -- and Studio has no auth.uid(), so set_profile_role is the only way through.
 -- ---------------------------------------------------------------------------
@@ -42,6 +44,10 @@ select is(
   current_setting('bevi.rpc_bypass', true),
   'false',
   'set_profile_role turns the bypass flag back off before it returns'
+);
+select lives_ok(
+  $$ select public.set_profile_role('pgtapbug3', 'tester') $$,
+  'a second tester, for the cross-reporter checks below'
 );
 
 select throws_ok(
@@ -100,6 +106,14 @@ select ok(
 select ok(
   not has_function_privilege('authenticated', 'public.forget_bug_evidence(text[])', 'execute'),
   'authenticated may not clear evidence paths'
+);
+select ok(
+  not has_function_privilege('anon', 'public.finish_bug_report(bigint, text, text, text, text)', 'execute'),
+  'anon may not call finish_bug_report'
+);
+select ok(
+  not has_function_privilege('anon', 'public.forget_bug_evidence(text[])', 'execute'),
+  'anon may not clear evidence paths'
 );
 
 -- ---------------------------------------------------------------------------
@@ -214,6 +228,11 @@ select throws_ok(
   '22023', 'BEVI_VALIDATION',
   'a blank title is validation'
 );
+select throws_ok(
+  $$ select * from public.claim_bug_report('11111111-2222-4333-8444-555555555555', 'bug', 'bad', repeat('x', 161)) $$,
+  '22023', 'BEVI_VALIDATION',
+  'a title over 160 characters is validation'
+);
 
 select ok(
   (select claimed from public.claim_bug_report('11111111-2222-4333-8444-555555555555', 'bug', 'blocker', '  Ratings vanish  ',
@@ -246,6 +265,25 @@ select ok(
   'a second call while the first is in flight does NOT claim: the caller answers 409, never a duplicate ticket'
 );
 
+-- An attempt that died mid-flight: older than the two-minute stale window,
+-- still pending. The objects may still be in the bucket, so a retry that
+-- sends no paths keeps them.
+reset role;
+update public.bug_reports set updated_at = now() - interval '3 minutes'
+ where idempotency_key = '11111111-2222-4333-8444-555555555555';
+set local role authenticated;
+set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000000b1", "role": "authenticated"}';
+select ok(
+  (select claimed from public.claim_bug_report('11111111-2222-4333-8444-555555555555', 'bug', 'blocker', 'Ratings vanish')),
+  'a pending attempt older than the stale window is assumed dead and re-armed'
+);
+select is(
+  (select cardinality(evidence_paths) from public.bug_reports
+     where idempotency_key = '11111111-2222-4333-8444-555555555555'),
+  2,
+  'the stale-pending re-arm keeps the staged evidence when the retry sends none'
+);
+
 -- The Edge Function's service-role half records the outcome.
 reset role;
 select public.finish_bug_report(
@@ -266,8 +304,9 @@ select ok(
   'a replay never claims a second attempt'
 );
 
--- A failed attempt is retryable, and the retry's edits win while its staged
--- evidence is kept when the retry sends none.
+-- A failed attempt is retryable, and the retry's edits win. The function
+-- deletes the staged objects when the issue is never created, so after a
+-- failure the retry's evidence list replaces them even when it is empty.
 reset role;
 select public.finish_bug_report(
   (select id from public.bug_reports where idempotency_key = '11111111-2222-4333-8444-555555555555'),
@@ -286,10 +325,30 @@ select is(
   'the re-arm takes the retry''s kind, severity and title'
 );
 select is(
-  (select cardinality(evidence_paths) from public.bug_reports
+  (select evidence_paths from public.bug_reports
      where idempotency_key = '11111111-2222-4333-8444-555555555555'),
-  2,
-  'the re-arm keeps the staged evidence when the retry sends none'
+  '{}'::text[],
+  'after a failure the staged objects are gone, so the re-arm takes the retry''s list even when it is empty'
+);
+
+-- The same draft fails again and is retried with two fresh uploads.
+reset role;
+select public.finish_bug_report(
+  (select id from public.bug_reports where idempotency_key = '11111111-2222-4333-8444-555555555555'),
+  'failed', null, null, 'linear_unreachable'
+);
+set local role authenticated;
+set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000000b1", "role": "authenticated"}';
+select ok(
+  (select claimed from public.claim_bug_report('11111111-2222-4333-8444-555555555555', 'fix', 'annoying', 'Ratings vanish, still',
+     array['00000000-0000-4000-8000-0000000000b1/shot.jpg', '00000000-0000-4000-8000-0000000000b1/shot2.jpg'])),
+  'the failed draft is re-armed again by a retry that brings new uploads'
+);
+select is(
+  (select evidence_paths from public.bug_reports
+     where idempotency_key = '11111111-2222-4333-8444-555555555555'),
+  array['00000000-0000-4000-8000-0000000000b1/shot.jpg', '00000000-0000-4000-8000-0000000000b1/shot2.jpg'],
+  'the re-arm takes the retry''s evidence paths'
 );
 
 -- Reads are own-row.
@@ -305,6 +364,57 @@ select is(
   (select count(*)::int from public.bug_reports),
   0,
   'another user sees none of them'
+);
+
+-- A second tester files one; neither tester can read the other's row.
+reset role;
+set local role authenticated;
+set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000000b3", "role": "authenticated"}';
+select ok(
+  (select claimed from public.claim_bug_report('22222222-2222-4333-8444-555555555555', 'idea', 'polish', 'A dark mode toggle')),
+  'the second tester claims a key of their own'
+);
+select is(
+  (select count(*)::int from public.bug_reports where reporter_id = '00000000-0000-4000-8000-0000000000b1'),
+  0,
+  'a tester cannot read another reporter''s row'
+);
+select is(
+  (select count(*)::int from public.bug_reports),
+  1,
+  'a tester sees only their own row among several'
+);
+reset role;
+set local role authenticated;
+set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000000b1", "role": "authenticated"}';
+select is(
+  (select count(*)::int from public.bug_reports where reporter_id = '00000000-0000-4000-8000-0000000000b3'),
+  0,
+  'and the first tester cannot read the second''s'
+);
+
+-- The rate limit: 20 new keys an hour. b3 has one; nineteen more are fine,
+-- the twenty-first is refused. Re-arms of an existing key never count.
+reset role;
+set local role authenticated;
+set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000000b3", "role": "authenticated"}';
+do $$
+declare i int;
+begin
+  for i in 1..19 loop
+    perform public.claim_bug_report(
+      '33333333-2222-4333-8444-' || lpad(i::text, 12, '0'), 'bug', 'bad', 'Report number ' || i);
+  end loop;
+end $$;
+select is(
+  (select count(*)::int from public.bug_reports),
+  20,
+  'twenty new keys in an hour are accepted'
+);
+select throws_ok(
+  $$ select * from public.claim_bug_report('44444444-2222-4333-8444-555555555555', 'bug', 'bad', 'One too many') $$,
+  'P0001', 'BEVI_RATE_LIMITED',
+  'the twenty-first new key in an hour is rate limited'
 );
 
 -- finish_bug_report refuses to mark a ticket created without an identifier.

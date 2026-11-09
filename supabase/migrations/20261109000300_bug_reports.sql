@@ -131,8 +131,11 @@ grant execute on function public.assert_bug_report_rate() to authenticated;
 --                    flight right now; answer 409 rather than risk a duplicate.
 -- A previous attempt that failed, or one that died mid-flight and went stale,
 -- is re-armed and claimed; the re-arm takes the retry's kind, severity and
--- title (the reporter may have edited the draft) and its evidence paths when
--- it sent any, else keeps the ones already staged.
+-- title (the reporter may have edited the draft). Its evidence paths: after a
+-- FAILED attempt the function has already deleted the staged objects, so the
+-- retry's list replaces them even when it is empty; after a STALE pending
+-- attempt the objects may still be there, so the staged list is kept when the
+-- retry sends none.
 -- =====================================================================
 
 -- A pending row older than this is assumed dead (the function timed out, the
@@ -199,7 +202,11 @@ begin
              kind = p_kind,
              severity = p_severity,
              title = btrim(p_title),
-             evidence_paths = case when cardinality(v_paths) > 0 then v_paths else b.evidence_paths end,
+             evidence_paths = case
+                                when v_row.state = 'failed' then v_paths
+                                when cardinality(v_paths) > 0 then v_paths
+                                else b.evidence_paths
+                              end,
              error_code = null,
              updated_at = now()
        where b.id = v_row.id
