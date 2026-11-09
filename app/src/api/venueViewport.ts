@@ -50,7 +50,7 @@ export function normaliseVenueFilters(f: VenueFilters | undefined): VenueFilters
   if (kinds) out.kinds = kinds;
   if (priceTiers) out.priceTiers = priceTiers;
   if (neighborhoods) out.neighborhoods = neighborhoods;
-  if (f.openNow != null) out.openNow = f.openNow;
+  if (f.openNow === true) out.openNow = true;
   return out;
 }
 

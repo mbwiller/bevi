@@ -7,6 +7,7 @@ import { colors, elevation, motion } from '@/theme';
 import { attributionCss, OSM_ATTRIBUTION } from '../attribution';
 import { DEMO_MAP_ID, readMapConfig } from '../config';
 import { DEFAULT_CENTER, interactionOptions, mapOptions, toLatLngBounds } from '../mapOptions';
+import { noticeFor } from '../MapNotice';
 import { iconSvg, pinHtml, pinLabel, pinScore, pinSignature, pinZIndex, SELECTED_SCALE, SELECTED_Z } from '../pinContent';
 import { reconcileMarkers, type Entry } from '../reconcile';
 
@@ -79,12 +80,30 @@ describe('map options', () => {
   });
 });
 
+describe('noticeFor', () => {
+  const q = { isError: false, error: null, data: undefined, isFetching: false, isPlaceholderData: false };
+
+  it('offline (paused, nothing cached) is a network notice; paused with pins up says nothing', () => {
+    const n = noticeFor({ ...q, fetchStatus: 'paused' });
+    expect(n?.kind).toBe('error');
+    expect(n && n.kind === 'error' && (n.error as { code?: string }).code).toBe('network');
+    expect(noticeFor({ ...q, fetchStatus: 'paused', data: [1] })).toBeNull();
+  });
+
+  it('an empty settled result is "no spots"; loading is silent', () => {
+    expect(noticeFor({ ...q, data: [], fetchStatus: 'idle' })).toEqual({ kind: 'empty' });
+    expect(noticeFor({ ...q, fetchStatus: 'fetching', isFetching: true })).toBeNull();
+  });
+});
+
 describe('pin content', () => {
   const look = { colors: light, floating: elevation.light.floating, selected: false, reduced: false };
 
-  it('shows the best Bayesian score, or the predicted one with a dotted ring and "~"', () => {
+  it('shows the best Bayesian score, or the predicted one with a dotted ring and "~" when there is none', () => {
     expect(pinScore(pin('a'))).toEqual({ value: 8.24, predicted: false });
-    expect(pinScore(pin('a', { predictedScore: 7.06 }))).toEqual({ value: 7.06, predicted: true });
+    expect(pinScore(pin('a', { predictedScore: 7.06 }))).toEqual({ value: 8.24, predicted: false });
+    expect(pinScore(pin('a', { bestScore: null, predictedScore: 7.06 }))).toEqual({ value: 7.06, predicted: true });
+    expect(pinScore(pin('a', { bestScore: null }))).toEqual({ value: null, predicted: false });
 
     const best = pinHtml(pin('a'), look);
     expect(best).toContain('>8.2</span>');
@@ -139,7 +158,7 @@ describe('pin content', () => {
 
   it('labels the marker for screen readers', () => {
     expect(pinLabel(pin('a'))).toBe('Venue a, craft, score 8.2');
-    expect(pinLabel(pin('a', { predictedScore: 7 }, { kind: 'chain' }))).toBe('Venue a, chain, predicted score 7.0');
+    expect(pinLabel(pin('a', { bestScore: null, predictedScore: 7 }, { kind: 'chain' }))).toBe('Venue a, chain, predicted score 7.0');
   });
 
   it('its signature changes only with what it draws', () => {

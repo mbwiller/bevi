@@ -36,7 +36,8 @@ export function MapView(props: MapViewProps) {
 /** `MapView` with its config passed in, so tests can give it one. */
 export function MapViewWith({ config, passive, filters }: MapViewProps & { config: MapConfig }) {
   const status = useSyncExternalStore(subscribeMapStatus, getMapStatus, getMapStatus);
-  if (!config.ok || status === 'failed') return <MapPlaceholder />;
+  if (!config.ok) return <MapPlaceholder reason="no-key" />;
+  if (status === 'failed') return <MapPlaceholder />;
   return <LiveMap config={config} passive={passive} filters={filters} />;
 }
 
@@ -159,6 +160,7 @@ function LiveMap({ config, passive, filters }: MapViewProps & { config: Extract<
     data: pins.data,
     isFetching: pins.isFetching,
     isPlaceholderData: pins.isPlaceholderData,
+    fetchStatus: pins.fetchStatus,
   });
 
   return (

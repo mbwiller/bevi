@@ -54,10 +54,15 @@ export function iconSvg(icon: IconData, color: string, px: number, strokeWidth: 
   );
 }
 
-/** The score a pin shows: the predicted one when there is a prediction, else the best Bayesian. */
+/**
+ * The score a pin shows: the best Bayesian score of the venue's assortment when there is one, else
+ * the predicted score (dotted ring, "~"). Decided 2026-11-09: `predictedScore` only covers Bevs with
+ * no Bayesian score yet, so letting it win would put "~6.0" on a venue that sells a 9.2.
+ */
 export function pinScore(pin: VenuePin): { value: number | null; predicted: boolean } {
+  if (pin.bestScore != null) return { value: pin.bestScore, predicted: false };
   if (pin.predictedScore != null) return { value: pin.predictedScore, predicted: true };
-  return { value: pin.bestScore, predicted: false };
+  return { value: null, predicted: false };
 }
 
 /** Marker order: selected on top, then higher scores over lower (pins overlap; Beli doesn't cluster). */

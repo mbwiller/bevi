@@ -1,10 +1,14 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { ApiError } from '@bevi/shared';
+
 import { Pill } from '@/components/Pill';
 import { errorCopy } from '@/lib/errorCopy';
 import { MAX_FONT_SCALE_DENSE, radius, spacing, type, useTheme } from '@/theme';
 
 export const NO_SPOTS = 'No spots here yet';
+
+const OFFLINE = new ApiError('network', 'offline: the pins query is paused');
 
 export type Notice = { kind: 'error'; error: unknown } | { kind: 'empty' } | null;
 
@@ -13,8 +17,17 @@ export type Notice = { kind: 'error'; error: unknown } | { kind: 'empty' } | nul
  * nothing over it (the previous pins stay up while the next viewport loads) and a failure is a
  * small notice rather than an ErrorState covering the streets.
  */
-export function noticeFor(q: { isError: boolean; error: unknown; data: readonly unknown[] | undefined; isFetching: boolean; isPlaceholderData: boolean }): Notice {
+export function noticeFor(q: {
+  isError: boolean;
+  error: unknown;
+  data: readonly unknown[] | undefined;
+  isFetching: boolean;
+  isPlaceholderData: boolean;
+  /** react-query's `fetchStatus`: 'paused' means offline under the default network mode, which waits instead of failing. */
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
+}): Notice {
   if (q.isError) return { kind: 'error', error: q.error };
+  if (q.fetchStatus === 'paused' && !q.data) return { kind: 'error', error: OFFLINE };
   if (q.data && q.data.length === 0 && !q.isFetching && !q.isPlaceholderData) return { kind: 'empty' };
   return null;
 }

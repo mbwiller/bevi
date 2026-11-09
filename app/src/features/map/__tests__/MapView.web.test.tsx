@@ -14,7 +14,7 @@ import { api } from '@/api/client';
 import { controls } from '@/testing/fakeApi';
 
 import { MapViewWith } from '../MapView.web';
-import { MAP_UNAVAILABLE } from '../MapPlaceholder';
+import { MAP_COMING_SOON, MAP_UNAVAILABLE } from '../MapPlaceholder';
 import { VIEWPORT_DEBOUNCE_MS } from '../mapOptions';
 
 type Listener = () => void;
@@ -120,9 +120,10 @@ async function renderMap(passive = false) {
 }
 
 describe('fallbacks', () => {
-  it('no key: the placeholder, and Google is never loaded', async () => {
+  it('no key: the "coming soon" placeholder, and Google is never loaded', async () => {
     await render(wrap(<MapViewWith config={{ ok: false, problem: 'EXPO_PUBLIC_GOOGLE_MAPS_API_KEY is not set.' }} passive={false} />));
-    expect(screen.getByText(MAP_UNAVAILABLE)).toBeTruthy();
+    expect(screen.getByText(MAP_COMING_SOON)).toBeTruthy();
+    expect(screen.queryByText(MAP_UNAVAILABLE)).toBeNull();
     expect(mock.attach).not.toHaveBeenCalled();
     expect(mock.loadMap).not.toHaveBeenCalled();
   });
