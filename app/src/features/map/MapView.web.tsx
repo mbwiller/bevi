@@ -97,6 +97,8 @@ function LiveMap({
   const markers = useRef(new Map<string, Entry<Marker>>());
   const pinsById = useRef(new Map<string, VenuePin>());
   const pendingCenter = useRef<LatLng | null>(null);
+  /** The host the current markers were made on (see the markers effect). */
+  const markersHost = useRef<HTMLElement | null>(null);
   const live = useRef(true);
   const locatingNow = useRef(false);
 
@@ -126,12 +128,19 @@ function LiveMap({
   }, [config]);
 
   // Borrow the map's div into whichever host is showing. Switching hosts detaches the old one first;
-  // closing the full screen re-attaches the inline host.
+  // closing the full screen re-attaches the inline host. Moving the div takes Google's markers off
+  // the map (below), so the markers effect, declared after this one, rebuilds them on each attach.
   useEffect(() => {
     if (!host) return;
     attach(host);
     return () => detach(host);
   }, [host]);
+
+  // A cleared selection forgets any centring still waiting for the full screen's layout.
+  const clearSelection = useCallback(() => {
+    pendingCenter.current = null;
+    setSelected(null);
+  }, []);
 
   // The viewport, read on every `idle` (after a pan or zoom settles), and a tap on the map clears
   // the selected pin.
@@ -145,12 +154,12 @@ function LiveMap({
     };
     read();
     const idle = map.addListener('idle', read);
-    const click = map.addListener('click', () => setSelected(null));
+    const click = map.addListener('click', clearSelection);
     return () => {
       idle.remove();
       click.remove();
     };
-  }, [session]);
+  }, [session, clearSelection]);
 
   // The filters this viewer can use feed the pins (and the pills show them).
   const me = useMe();
@@ -185,9 +194,9 @@ function LiveMap({
   }, []);
   const closeFull = useCallback(() => {
     setFull(false);
-    setSelected(null);
+    clearSelection();
     setMode('map');
-  }, []);
+  }, [clearSelection]);
   // The panel coming up (a link focusing the bar) closes the full-screen map.
   useEffect(() => {
     if (passive) closeFull();
@@ -203,24 +212,25 @@ function LiveMap({
     [session, reduced],
   );
 
-  // A pin tap selects its venue (opening the full screen from inline).
-  const selectPin = useCallback((pin: VenuePin) => {
-    setSelected(pin);
-    setMode('map');
-    setFull(true);
-  }, []);
-
-  // A List row: back to the map, centred on the venue, its VenueSheet open.
+  // A pin tap or a List row selects its venue, opens its VenueSheet (and the full screen, from
+  // inline) and centres the map on it now. The full-screen host's next layout, with the sheet docked
+  // under it, centres it again, so it ends up in view above the sheet.
   const showOnMap = useCallback(
     (pin: VenuePin) => {
       const p = { lat: pin.venue.lat, lng: pin.venue.lng };
       pendingCenter.current = p;
       setSelected(pin);
       setMode('map');
+      setFull(true);
       move(p);
     },
     [move],
   );
+  // Markers keep their gmp-click handler for life, so they call the latest `showOnMap` through this.
+  const selectPin = useRef(showOnMap);
+  useEffect(() => {
+    selectPin.current = showOnMap;
+  }, [showOnMap]);
 
   // The full-screen map resized (the VenueSheet docked or left): centre on a List pick, or bring the
   // selected pin back into view if the sheet now covers where it was.
@@ -237,10 +247,19 @@ function LiveMap({
     later(() => move(target));
   }, [session, selected, move]);
 
-  // Markers, reconciled by venue id on every answer (and when the selection or theme changes).
+  // Markers, reconciled by venue id on every answer (and when the selection or theme changes), and
+  // rebuilt on every attach. Google takes an AdvancedMarkerElement off the map (`map` goes null, the
+  // element leaves the DOM) when the map's div is re-parented, so a host switch leaves every cached
+  // marker dead while reconcile would still think it was shown: the markers belong to the host that
+  // holds the map, and a new host starts from none.
   const selectedId = selected?.venue.id ?? null;
   useEffect(() => {
-    if (!session) return;
+    if (!session || !host) return;
+    if (markersHost.current !== host) {
+      for (const { marker } of markers.current.values()) marker.el.map = null;
+      markers.current.clear();
+      markersHost.current = host;
+    }
     const data = pins.data ?? [];
     pinsById.current = new Map(data.map((p) => [p.venue.id, p]));
     const isSelected = (pin: VenuePin) => pin.venue.id === selectedId;
@@ -261,7 +280,7 @@ function LiveMap({
         const id = pin.venue.id;
         el.addEventListener('gmp-click', () => {
           const p = pinsById.current.get(id);
-          if (p) selectPin(p);
+          if (p) selectPin.current(p);
         });
         const m = { el, content };
         paint(m, pin);
@@ -273,7 +292,7 @@ function LiveMap({
         m.el.map = null;
       },
     });
-  }, [session, pins.data, selectedId, colors, elevation.floating, reduced, scheme, selectPin]);
+  }, [session, host, pins.data, selectedId, colors, elevation.floating, reduced, scheme]);
 
   // This component's markers go with it; a remount rebuilds them from the cache.
   useEffect(() => {
@@ -281,13 +300,15 @@ function LiveMap({
     return () => {
       for (const { marker } of own.values()) marker.el.map = null;
       own.clear();
+      markersHost.current = null;
     };
   }, []);
 
-  // The blue dot: placed only after a tap on locate, never sent anywhere.
+  // The blue dot: placed only after a tap on locate, never sent anywhere. Put back on the map after
+  // each attach, like the pins.
   const dot = useRef<Marker | null>(null);
   useEffect(() => {
-    if (!session || !here) return;
+    if (!session || !here || !host) return;
     if (!dot.current) {
       const content = document.createElement('div');
       const el = new session.marker.AdvancedMarkerElement({ content, title: 'You are here', zIndex: SELECTED_Z + 1 });
@@ -295,8 +316,9 @@ function LiveMap({
     }
     dot.current.content.innerHTML = locationDotHtml(colors, elevation.floating);
     dot.current.el.position = here;
+    dot.current.el.map = null;
     dot.current.el.map = session.map;
-  }, [session, here, colors, elevation.floating]);
+  }, [session, here, host, colors, elevation.floating]);
   useEffect(
     () => () => {
       if (dot.current) dot.current.el.map = null;
@@ -368,7 +390,7 @@ function LiveMap({
         transparent
         animationType={reduced ? 'none' : 'fade'}
         // Escape (web) or back: the VenueSheet first, then the full screen.
-        onRequestClose={() => (selected ? setSelected(null) : closeFull())}
+        onRequestClose={() => (selected ? clearSelection() : closeFull())}
         {...({ 'aria-label': 'Map' } as object)}
       >
         <View testID="map-full" style={[styles.fill, { backgroundColor: colors.surface, paddingTop: insets.top }]}>
@@ -400,7 +422,7 @@ function LiveMap({
           {current && mode === 'map' ? (
             <VenuePanel
               pin={current}
-              onClose={() => setSelected(null)}
+              onClose={clearSelection}
               style={{ height: Math.round(windowHeight * VENUE_SHEET_SHARE) + insets.bottom, paddingBottom: insets.bottom }}
             />
           ) : (

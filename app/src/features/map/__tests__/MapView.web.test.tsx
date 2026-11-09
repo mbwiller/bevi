@@ -83,6 +83,12 @@ function fakeSession() {
     live: () => markers.filter((m) => m.map === map && m.title !== 'You are here'),
     pin: (name: string) => markers.find((m) => m.map === map && m.title.startsWith(name))!,
     emit: (name: string) => (listeners[name] ?? []).forEach((l) => l()),
+    /**
+     * What Maps JS (3.66, checked in Chrome) does when the map's div is re-parented: every
+     * AdvancedMarkerElement on it leaves the DOM and its `map` goes null. Setting `map` again (or a
+     * new marker) puts one back; changing its position does not.
+     */
+    divMoved: () => markers.forEach((m) => void (m.map === map && (m.map = null))),
   };
 }
 
@@ -94,6 +100,12 @@ const mock = {
   attach: jest.fn(),
   detach: jest.fn(),
   loadMap: jest.fn(),
+  /** The host holding the fake map's div, for the fake loader. */
+  holder: null as unknown,
+  /** The real loader moved the session div (`before` is where it was). */
+  moved: (before: Element | null | undefined) => {
+    if (before && mapDiv?.parentElement !== before) fake.divMoved();
+  },
 };
 
 // `mock.real` swaps in the real loader module (one session map, the div re-parented between hosts)
@@ -101,8 +113,18 @@ const mock = {
 jest.mock('../googleMaps', () => {
   const actual = jest.requireActual('../googleMaps');
   return {
-    attach: (h: unknown) => (mock.real ? actual.attach(mockDom(h)) : mock.attach(h)),
-    detach: (h: unknown) => (mock.real ? actual.detach(mockDom(h)) : mock.detach(h)),
+    attach: (h: unknown) => {
+      if (!mock.real) return mock.attach(h);
+      const before = mockMapDiv()?.parentElement;
+      actual.attach(mockDom(h));
+      mock.moved(before);
+    },
+    detach: (h: unknown) => {
+      if (!mock.real) return mock.detach(h);
+      const before = mockMapDiv()?.parentElement;
+      actual.detach(mockDom(h));
+      mock.moved(before);
+    },
     loadMap: (c: unknown) => (mock.real ? actual.loadMap(c) : mock.loadMap(c)),
     getMapSession: () => (mock.real ? actual.getMapSession() : null),
     getMapStatus: () => (mock.real ? actual.getMapStatus() : mock.status),
@@ -149,6 +171,7 @@ function mockLibrary(name: string) {
   return fake.session.marker;
 }
 let mapDiv: HTMLElement | null = null;
+const mockMapDiv = () => mapDiv;
 const realMaps = jest.requireActual<typeof import('../googleMaps')>('../googleMaps');
 
 const setStatus = (s: string) => {
@@ -165,8 +188,19 @@ beforeEach(() => {
   controls.signInAs('tester');
   fake = fakeSession();
   mock.status = 'idle';
-  mock.attach.mockClear();
-  mock.detach.mockClear();
+  // The fake loader: one div, moved between hosts, which takes the markers off the map as Google does.
+  mock.holder = null;
+  mock.attach.mockReset();
+  mock.attach.mockImplementation((h: unknown) => {
+    if (mock.holder && mock.holder !== h) fake.divMoved();
+    mock.holder = h;
+  });
+  mock.detach.mockReset();
+  mock.detach.mockImplementation((h: unknown) => {
+    if (mock.holder !== h) return;
+    fake.divMoved();
+    mock.holder = null;
+  });
   mock.loadMap.mockReset();
   mock.loadMap.mockImplementation(async () => {
     setStatus('ready');
@@ -419,6 +453,71 @@ describe('inline and full screen: one map', () => {
     await rerender(ui({ passive: true }));
     await rerender(ui({ passive: false }));
     expect(screen.queryByTestId('map-full')).toBeNull();
+  });
+});
+
+// Google drops every marker when the map's div moves host (fake.divMoved), so each attach rebuilds
+// them; before this, the full screen and then the inline map came back with none.
+describe('markers across the host switch', () => {
+  const ALL = ['Carnegie Taproom', 'Duane Reade — 86th St', 'Lexington Deli', 'Yorkville Coffee Works'];
+  const names = () => fake.live().map((m) => m.title.split(',')[0]).sort();
+
+  it('inline, full screen, inline again: every pin each time, and a filter change after still lands', async () => {
+    const { rerender } = await renderMap();
+    const inline = mock.attach.mock.calls[0]![0];
+    expect(names()).toEqual(ALL);
+
+    await tap('Yorkville Coffee Works');
+    await waitFor(() => expect(lastAttached()).not.toBe(inline));
+    expect(names()).toEqual(ALL);
+    // Still one marker per venue on the map, and the tapped one is drawn selected.
+    expect(fake.live()).toHaveLength(ALL.length);
+    expect(fake.pin('Yorkville Coffee Works').content.innerHTML).toContain('data-bevi-pin="selected"');
+
+    await fireEvent.press(screen.getByLabelText('Close map'));
+    expect(lastAttached()).toBe(inline);
+    expect(names()).toEqual(ALL);
+
+    // A neighbourhood that keeps two of the same venues (the click-through's Roosevelt Island case):
+    // reconcile keeps their markers, and they are on the map.
+    await rerender(ui({ filters: { neighborhoods: ['Yorkville'] } }));
+    await waitFor(() => expect(names()).toEqual(['Duane Reade — 86th St', 'Yorkville Coffee Works']));
+  });
+
+  it('works with the real loader moving the div too, and the blue dot comes back with the pins', async () => {
+    mock.real = true;
+    const nav = navigator as unknown as { geolocation?: unknown };
+    Object.defineProperty(navigator, 'geolocation', {
+      value: { getCurrentPosition: (ok: (p: unknown) => void) => ok({ coords: { latitude: 40.7712, longitude: -73.9561 } }) },
+      configurable: true,
+    });
+    try {
+      await render(ui());
+      await waitFor(() => expect(names()).toEqual(ALL));
+      await fireEvent.press(screen.getByLabelText('Open the full map'));
+      await waitFor(() => expect(mapDiv!.parentElement).toBe(hostDom('map-host-full').dom));
+      expect(names()).toEqual(ALL);
+      await fireEvent.press(screen.getByLabelText('Show where I am'));
+      const dot = () => fake.markers.find((m) => m.title === 'You are here')!;
+      expect(dot().map).toBe(fake.session.map);
+
+      await fireEvent.press(screen.getByLabelText('Close map'));
+      expect(mapDiv!.parentElement).toBe(hostDom('map-host').dom);
+      expect(names()).toEqual(ALL);
+      expect(dot().map).toBe(fake.session.map);
+    } finally {
+      delete nav.geolocation;
+    }
+  });
+
+  it('a pin tap centres the map on its venue, from inline and in the full screen', async () => {
+    await renderMap();
+    await tap('Lexington Deli');
+    expect(fake.session.map.panTo).toHaveBeenLastCalledWith({ lat: 40.7738, lng: -73.9598 });
+    await tap('Yorkville Coffee Works');
+    expect(fake.session.map.panTo).toHaveBeenLastCalledWith({ lat: 40.7762, lng: -73.9495 });
+    expect(sheet().getByText('Yorkville Coffee Works')).toBeTruthy();
+    expect(fake.session.map.setCenter).not.toHaveBeenCalled();
   });
 });
 
