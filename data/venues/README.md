@@ -2,6 +2,8 @@
 
 The curated inputs of the venue sync (A-08). `npm run venues:sync` (scripts/venues/import-osm.ts) reads all three files; `--dry-run` reads them, queries Overpass and prints what it would write, with no credentials.
 
+Optional env `OVERPASS_URL`: comma-separated https Overpass endpoints, tried in order, replacing the built-in list (overpass-api.de, then maps.mail.ru, which answers when the main instance 502s from GitHub Actions).
+
 | File | What it is | Who edits it |
 | --- | --- | --- |
 | `nyc-nta-2020.geojson` | NYC's 2020 Neighborhood Tabulation Areas, trimmed. Gives every venue its `neighborhood` and `borough`. | Rebuilt by script, never by hand |
