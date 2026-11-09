@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { EDGE_STRIP } from '@/components/StatusBarClearance';
 import { colors } from '@/theme';
 
 const publicDir = join(__dirname, '../../public');
@@ -63,11 +64,44 @@ describe('status-bar-style script', () => {
     expect(src).not.toBe('');
   });
 
-  it('switches to black-translucent when dark matches', () => {
-    expect(run(true)).toBe('black-translucent');
+  it('switches to the opaque black bar when dark matches', () => {
+    expect(run(true)).toBe('black');
+  });
+
+  it('never asks for black-translucent (iOS 26 lays a new install out one status bar short of the screen)', () => {
+    expect(html).not.toMatch(/content=["']black-translucent["']|'black-translucent'/);
   });
 
   it('stays default otherwise', () => {
     expect(run(false)).toBe('default');
+  });
+});
+
+describe('edge strip', () => {
+  const css = resetCss();
+
+  it('is in the body, outside the React root', () => {
+    expect(html).toMatch(/<div id="edge-strip" aria-hidden="true"><\/div>\s*<div id="root">/);
+  });
+
+  it('is hidden except in the home-screen app in portrait', () => {
+    expect(css).toMatch(/#edge-strip\s*\{\s*display:\s*none;/);
+    expect(css).toContain('@media (display-mode: standalone) and (orientation: portrait) {');
+  });
+
+  it('is fixed to the top edge, full width, EDGE_STRIP tall, and lets taps through', () => {
+    const rule = /@media \(display-mode: standalone\) and \(orientation: portrait\) \{\s*#edge-strip \{([^}]*)\}/.exec(css)?.[1] ?? '';
+    expect(rule).toContain('position: fixed;');
+    expect(rule).toContain('top: 0;');
+    expect(rule).toContain('left: 0;');
+    expect(rule).toContain('right: 0;');
+    expect(rule).toContain(`height: max(${EDGE_STRIP}px, env(safe-area-inset-top));`);
+    expect(rule).toContain('pointer-events: none;');
+    expect(rule).toContain(`background-color: ${colors.light.surface};`);
+  });
+
+  it('is the dark surface in dark mode', () => {
+    const dark = /@media \(display-mode: standalone\) and \(orientation: portrait\) and \(prefers-color-scheme: dark\) \{\s*#edge-strip \{\s*background-color:\s*([^;]+);/.exec(css);
+    expect(dark?.[1]).toBe(colors.dark.surface);
   });
 });

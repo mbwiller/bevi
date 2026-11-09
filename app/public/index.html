@@ -15,15 +15,17 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Bevi" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <!-- iOS reads the status-bar style at launch. black-translucent always draws white symbols, so it is only safe in
-         dark mode (the page's own dark background shows under it); light stays `default`. An appearance flip while the
-         app is open catches up on the next launch. -->
+    <!-- The home-screen app's status bar is opaque: `default` (white, dark symbols) in light mode, `black` (white symbols)
+         in dark mode. Not black-translucent: on iOS 26 a home-screen install made with it lays the page out one status bar
+         (62pt on a 402x874 iPhone) short of the screen bottom and leaves an empty band under the tab bar that no CSS can
+         reach (measured on Matt's iPhone, 2026-11-09). An opaque bar puts the page below the status bar, down to the real
+         bottom edge. iOS may keep the style it saw when the icon was added, so an older install keeps its old style. -->
     <script id="status-bar-style">
       (function () {
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
           document
             .querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')
-            .setAttribute('content', 'black-translucent');
+            .setAttribute('content', 'black');
         }
       })();
     </script>
@@ -56,6 +58,31 @@
         height: 100%;
         flex: 1;
       }
+      /* iOS 26+ blurs the top of a home-screen web app (a Liquid Glass edge effect) unless a painted, full-width fixed box
+         touches the top edge; then it draws a hard edge instead. Measured on Matt's iPhone with the opaque status bar: the
+         blur is gone. `surface`, light then dark, so it matches the page. Home-screen app in portrait only (landscape hides
+         the status bar). Its 12px is EDGE_STRIP in src/components/StatusBarClearance.tsx, which keeps content out from under it. */
+      #edge-strip {
+        display: none;
+      }
+      @media (display-mode: standalone) and (orientation: portrait) {
+        #edge-strip {
+          display: block;
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: max(12px, env(safe-area-inset-top));
+          background-color: #ffffff;
+          z-index: 1;
+          pointer-events: none;
+        }
+      }
+      @media (display-mode: standalone) and (orientation: portrait) and (prefers-color-scheme: dark) {
+        #edge-strip {
+          background-color: #121214;
+        }
+      }
       /* No browser focus ring on text boxes: TextField and SearchBar draw their own on the box around
          the input. outline-width: 0 alone isn't enough, Safari still draws its blue `auto` ring. */
       input:focus,
@@ -67,6 +94,7 @@
 
   <body>
     <noscript>You need to enable JavaScript to run Bevi.</noscript>
+    <div id="edge-strip" aria-hidden="true"></div>
     <div id="root"></div>
   </body>
 </html>

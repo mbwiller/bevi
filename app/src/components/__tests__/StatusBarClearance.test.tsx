@@ -2,20 +2,22 @@ import { render, screen } from '@testing-library/react-native';
 import { Platform, Text } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { EDGE_BLUR_BAND, edgeBlurClearance, isIosHomeScreenApp, StatusBarClearance } from '../StatusBarClearance';
+import { EDGE_BLUR_BAND, EDGE_STRIP, edgeBlurClearance, isIosHomeScreenApp, StatusBarClearance } from '../StatusBarClearance';
 
 const PORTRAIT = { width: 402, height: 874 };
 const LANDSCAPE = { width: 874, height: 402 };
+// A translucent-status-bar install (the page runs under the bar) and an opaque one (the page starts below it).
 const INSETS = { top: 62, left: 0, right: 0, bottom: 34 };
+const OPAQUE = { ...INSETS, top: 0 };
 
 function Probe() {
   const insets = useSafeAreaInsets();
   return <Text testID="insets">{JSON.stringify(insets)}</Text>;
 }
 
-async function renderedInsets() {
+async function renderedInsets(insets = INSETS) {
   await render(
-    <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, ...PORTRAIT }, insets: INSETS }}>
+    <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, ...PORTRAIT }, insets }}>
       <StatusBarClearance>
         <Probe />
       </StatusBarClearance>
@@ -25,16 +27,22 @@ async function renderedInsets() {
 }
 
 describe('edgeBlurClearance', () => {
-  it('is the blur band in the home-screen app in portrait', () => {
-    expect(edgeBlurClearance(true, PORTRAIT)).toBe(EDGE_BLUR_BAND);
+  it('is the blur band under a translucent status bar in portrait', () => {
+    expect(edgeBlurClearance(true, PORTRAIT, 62)).toBe(EDGE_BLUR_BAND);
+  });
+
+  it("is the strip's height under an opaque status bar in portrait", () => {
+    expect(edgeBlurClearance(true, PORTRAIT, 0)).toBe(EDGE_STRIP);
   });
 
   it('is 0 in landscape, where iOS hides the status bar', () => {
-    expect(edgeBlurClearance(true, LANDSCAPE)).toBe(0);
+    expect(edgeBlurClearance(true, LANDSCAPE, 62)).toBe(0);
+    expect(edgeBlurClearance(true, LANDSCAPE, 0)).toBe(0);
   });
 
   it('is 0 outside the home-screen app', () => {
-    expect(edgeBlurClearance(false, PORTRAIT)).toBe(0);
+    expect(edgeBlurClearance(false, PORTRAIT, 62)).toBe(0);
+    expect(edgeBlurClearance(false, PORTRAIT, 0)).toBe(0);
   });
 });
 
@@ -63,10 +71,15 @@ describe('StatusBarClearance', () => {
     expect(isIosHomeScreenApp()).toBe(false);
   });
 
-  it('adds the band to the top inset in the home-screen app, leaving the other edges alone', async () => {
+  it('adds the band to a translucent install, leaving the other edges alone', async () => {
     homeScreenWeb(true);
     // jest-expo's window is portrait.
     expect(await renderedInsets()).toEqual({ ...INSETS, top: INSETS.top + EDGE_BLUR_BAND });
+  });
+
+  it("adds the strip's height to an opaque install", async () => {
+    homeScreenWeb(true);
+    expect(await renderedInsets(OPAQUE)).toEqual({ ...OPAQUE, top: EDGE_STRIP });
   });
 
   it('passes the insets through unchanged in a browser tab', async () => {

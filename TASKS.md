@@ -498,6 +498,7 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
   - The single-valued `theme_color` is removed from `manifest.json`.
   - `src/__tests__/htmlShell.test.ts` ties the colours to the theme tokens.
 - **Known limit:** iOS reads the style at launch, so changing appearance while the app is open only takes effect on the next launch.
+- **Changed 2026-11-09 (`ui/status-bar-opaque`):** dark mode now gets the opaque `black` bar, not `black-translucent`. On iOS 26, a home-screen install made with `black-translucent` lays the page out one status bar (62pt) short of the screen bottom, leaving an empty band under the tab bar. The cause was measured with five test installs on Matt's iPhone. A 12px fixed `#edge-strip` plus `StatusBarClearance` keeps the top clear of iOS's edge blur.
 
 ### P1
 
