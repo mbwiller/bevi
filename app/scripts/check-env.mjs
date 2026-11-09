@@ -37,6 +37,14 @@ if (process.env.EXPO_PUBLIC_BEVI_API) {
   console.warn('note: EXPO_PUBLIC_BEVI_API is no longer read (the app always runs on Supabase); remove it.');
 }
 
+// The map (M-16) is optional for a build: without a key the Search tab says "Map unavailable right
+// now". Warn rather than fail, so a deploy never waits on the Maps key.
+if (!(process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? '').trim()) {
+  console.warn('note: EXPO_PUBLIC_GOOGLE_MAPS_API_KEY is not set: the Search tab shows "Map unavailable right now".');
+} else if (!(process.env.EXPO_PUBLIC_GOOGLE_MAP_ID ?? '').trim()) {
+  console.warn("note: EXPO_PUBLIC_GOOGLE_MAP_ID is not set: the map uses Google's DEMO_MAP_ID, fit for localhost only.");
+}
+
 if (problems.length) {
   console.error(`check-env: ${problems.join(' ')}`);
   process.exit(1);

@@ -28,18 +28,20 @@ jest.mock('expo-router', () => ({
   useNavigation: () => mockNavigation,
 }));
 
-// Counts mounts of the map area: the live map (M-16) must be created once, so the placeholder that
-// stands in for it must survive the panel opening and closing.
-const mockMap = { mounts: 0 };
-jest.mock('../MapPlaceholder', () => {
+// Counts mounts of the map area and records whether it was passive: the live map (M-16) is created
+// once per session, so the map area must survive the panel opening and closing, and it must take
+// no gestures while the panel covers it.
+const mockMap = { mounts: 0, passive: [] as boolean[] };
+jest.mock('@/features/map/MapView', () => {
   const React = require('react');
   const { Text } = require('react-native');
   return {
-    MapPlaceholder: () => {
+    MapView: ({ passive }: { passive: boolean }) => {
       React.useEffect(() => {
         mockMap.mounts += 1;
       }, []);
-      return React.createElement(Text, null, 'Map coming soon');
+      mockMap.passive.push(passive);
+      return React.createElement(Text, null, 'The map');
     },
   };
 });
@@ -53,6 +55,7 @@ beforeEach(() => {
   controls.signInAs('tester');
   mockParams = {};
   mockMap.mounts = 0;
+  mockMap.passive = [];
   mockTab.focused = true;
   client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false, gcTime: Infinity } },
@@ -92,9 +95,10 @@ function withRecent(bev: { id: string; name: string; brand: string | null }) {
 describe('the map area and the panel', () => {
   it('opens on the map; focusing the bar slides the panel over it and Cancel slides it away', async () => {
     await renderSearch();
-    expect(screen.getByText('Map coming soon')).toBeTruthy();
+    expect(screen.getByText('The map')).toBeTruthy();
     expect(screen.queryByTestId('search-panel')).toBeNull();
     expect(screen.getByTestId('search-map').props.pointerEvents).toBe('auto');
+    expect(mockMap.passive.at(-1)).toBe(false);
     expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
 
     await fireEvent(bar(), 'focus');
@@ -102,6 +106,8 @@ describe('the map area and the panel', () => {
     // The map takes no gestures and is hidden from screen readers while the panel is up.
     expect(screen.queryByTestId('search-map')).toBeNull();
     expect(screen.getByTestId('search-map', { includeHiddenElements: true }).props.pointerEvents).toBe('none');
+    // …and the map itself goes passive (MapView.web: no gestures, no keys, inert).
+    expect(mockMap.passive.at(-1)).toBe(true);
     expect(await screen.findByText('Suggested for you')).toBeTruthy();
 
     await type('coke');
@@ -110,6 +116,7 @@ describe('the map area and the panel', () => {
     expect(screen.queryByTestId('search-panel')).toBeNull();
     expect(bar().props.value).toBe('');
     expect(screen.getByTestId('search-map').props.pointerEvents).toBe('auto');
+    expect(mockMap.passive.at(-1)).toBe(false);
     // Never re-mounted: one map for the whole visit.
     expect(mockMap.mounts).toBe(1);
   });

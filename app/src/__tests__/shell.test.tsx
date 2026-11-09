@@ -80,7 +80,7 @@ describe('tab bar', () => {
 
   it('/search is the Search tab', async () => {
     const path = await start('ready', '/search');
-    expect(await screen.findByText('Map coming soon')).toBeTruthy();
+    expect(await screen.findByText('Map unavailable right now')).toBeTruthy();
     expect(path()).toBe('/add');
     expect(screen.getByLabelText('Search').props.accessibilityState).toEqual({ selected: true });
   });

@@ -6,7 +6,8 @@
     // @bevi/ranking is consumed as source and imports with explicit `.ts` extensions.
     "allowImportingTsExtensions": true,
     "noEmit": true,
-    "types": ["jest", "node"],
+    // google.maps: the global namespace the Maps JS API defines (only the web map, src/features/map, uses it).
+    "types": ["jest", "node", "google.maps"],
     "paths": { "@/*": ["./src/*"] }
   },
   "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
