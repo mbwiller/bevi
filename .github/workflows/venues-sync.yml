@@ -6,6 +6,10 @@ name: venues-sync
 # and the chain expansion -- in that order, as service-role RPCs of
 # 20261109000200. See data/venues/README.md.
 #
+# Overpass: overpass-api.de answers 502 to GitHub's runner IPs, so the script
+# falls back across public mirrors in order (set OVERPASS_URL, comma-separated,
+# to replace the list). The log names only the host that answered.
+#
 # MANUAL ONLY, and a DRY RUN BY DEFAULT. No schedule yet: A-08 says "re-run
 # monthly", and that cron is a one-line follow-up once the first real run has
 # been looked at. A dry run does every network call and every parse, prints

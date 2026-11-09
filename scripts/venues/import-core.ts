@@ -115,6 +115,54 @@ export const CHAIN_ONLY_AMENITIES = ["fast_food", "pharmacy"] as const;
 export const CHAIN_ONLY_SHOPS = ["chemist"] as const;
 
 /**
+ * The public Overpass instances, in the order they are tried. The main one
+ * (overpass-api.de) answers 502 to GitHub Actions' runner IPs while answering a
+ * laptop, so the sync falls back down this list rather than failing on one
+ * host. All of them serve the same OpenStreetMap data and the same query
+ * language; only the host differs.
+ *
+ * Measured 2026-11-09 with the real query (447 elements): overpass-api.de and
+ * maps.mail.ru answer; overpass.private.coffee and overpass.kumi.systems hung
+ * until 504 or a client timeout on every attempt, so they are NOT listed. Add
+ * a host here only after a `--dry-run` with `OVERPASS_URL=<it>` returns the
+ * same element count.
+ */
+export const DEFAULT_OVERPASS_ENDPOINTS: readonly string[] = [
+  "https://overpass-api.de/api/interpreter",
+  "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+];
+
+/**
+ * The endpoints to try, in order. `OVERPASS_URL` (comma-separated) REPLACES the
+ * default list, so one mirror can be pinned for a test or a different list
+ * used by an operator. Entries are trimmed, blanks and repeats dropped (first
+ * occurrence wins), and each must be an https URL: this script POSTs a query
+ * and reads the answer, so a plain-http or mistyped entry is refused loudly
+ * rather than skipped. An unset or blank override means the default list.
+ */
+export function overpassEndpoints(env: Readonly<Record<string, string | undefined>>): string[] {
+  const raw = env.OVERPASS_URL;
+  if (raw === undefined || raw.trim() === "") return [...DEFAULT_OVERPASS_ENDPOINTS];
+  const out: string[] = [];
+  for (const part of raw.split(",")) {
+    const entry = part.trim();
+    if (entry === "") continue;
+    let url: URL;
+    try {
+      url = new URL(entry);
+    } catch {
+      throw new Error(`OVERPASS_URL entry ${JSON.stringify(entry)} is not a URL`);
+    }
+    if (url.protocol !== "https:") {
+      throw new Error(`OVERPASS_URL entry ${JSON.stringify(entry)} must be an https URL`);
+    }
+    if (!out.includes(entry)) out.push(entry);
+  }
+  if (out.length === 0) return [...DEFAULT_OVERPASS_ENDPOINTS];
+  return out;
+}
+
+/**
  * A brand goes into an Overpass regex unescaped, so it must not contain a
  * regex metacharacter or a quote. Every real NYC chain brand fits (letters,
  * digits, spaces, `'`, `&`, `-`); `loadChains` refuses anything else rather

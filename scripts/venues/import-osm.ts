@@ -78,6 +78,14 @@
  * Neither is optional and neither has a default: a missing one is exit 1 with
  * the name in the message. `--dry-run` needs neither, so the CSV can be
  * reviewed before any credential is in the room.
+ *
+ * Optional:
+ *
+ *   OVERPASS_URL                comma-separated https Overpass endpoints, tried in
+ *                               order, REPLACING the built-in list (overpass-api.de,
+ *                               then maps.mail.ru; see `overpassEndpoints` in
+ *                               import-core.ts). The main instance answers 502 to
+ *                               GitHub Actions runners, hence the fallback.
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
@@ -101,6 +109,7 @@ import {
   START_BBOX,
   areasFromGeoJson,
   makeLocator,
+  overpassEndpoints,
   overpassQuery,
   parseElements,
   report,
@@ -114,8 +123,6 @@ const DATA_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "data
 const CHAINS_PATH = join(DATA_DIR, "chains.json");
 const MENUS_PATH = join(DATA_DIR, "menus.csv");
 const NTA_PATH = join(DATA_DIR, "nyc-nta-2020.geojson");
-
-const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
 
 /**
  * Overpass asks for a real User-Agent identifying the client (A-08, and its
@@ -167,51 +174,93 @@ function parseBbox(raw: string | null): Bbox {
  * and the second succeeded on the identical query, so a transient status is
  * retried rather than reported as a broken query -- an operator re-running by
  * hand learns nothing the script could not have done itself.
+ *
+ * Some failures are about WHERE the request comes from, not about load:
+ * overpass-api.de answered 502 to every GitHub Actions attempt while answering
+ * a laptop. So each endpoint gets RETRIES retries, then the next one is tried;
+ * only when every endpoint has failed does the script give up. A non-transient
+ * 4xx means the query is wrong, which no mirror will fix, so that still fails
+ * at once.
  */
 const TRANSIENT = new Set([429, 502, 503, 504]);
-const RETRIES = 3;
+const RETRIES = 2;
 const BACKOFF_MS = 15_000;
+/**
+ * A mirror that accepts the connection and never answers would otherwise stall
+ * the whole run (fetch has no timeout of its own). Overpass's own query timeout
+ * is 180s by default and this query is a few seconds, so 120s is generous.
+ */
+const REQUEST_TIMEOUT_MS = 120_000;
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
-async function overpass(query: string): Promise<OsmElement[]> {
+/** One endpoint: its elements, or null once it has failed transiently `RETRIES` times. */
+async function overpassOnce(endpoint: string, host: string, query: string): Promise<OsmElement[] | null> {
   for (let attempt = 1; ; attempt += 1) {
     let res: Response;
     try {
-      res = await fetch(OVERPASS_URL, {
+      res = await fetch(endpoint, {
         method: "POST",
         headers: { "content-type": "application/x-www-form-urlencoded", "user-agent": USER_AGENT },
         body: new URLSearchParams({ data: query }).toString(),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
     } catch (cause) {
       // A reset or DNS failure never reaches a status code, so the status
       // retry below cannot see it.
+      const why = cause instanceof Error ? cause.message : String(cause);
       if (attempt > RETRIES) {
-        die(`Overpass connection failed after ${RETRIES} retries: ${cause instanceof Error ? cause.message : String(cause)}`);
+        console.log(`  ${host}: connection failed after ${RETRIES} retries (${why})`);
+        return null;
       }
       const wait = BACKOFF_MS * attempt;
-      console.log(`  Overpass connection failed (${cause instanceof Error ? cause.message : String(cause)}); retrying in ${wait / 1000}s (attempt ${attempt} of ${RETRIES})`);
+      console.log(`  ${host}: connection failed (${why}); retrying in ${wait / 1000}s (attempt ${attempt} of ${RETRIES})`);
       await sleep(wait);
       continue;
     }
     if (res.ok) {
-      const body = (await res.json()) as { elements?: unknown };
-      if (!Array.isArray(body.elements)) die("Overpass returned no `elements` array");
+      let body: { elements?: unknown };
+      try {
+        body = (await res.json()) as { elements?: unknown };
+      } catch {
+        console.log(`  ${host}: answered 200 but not with JSON`);
+        return null;
+      }
+      if (!Array.isArray(body.elements)) {
+        console.log(`  ${host}: answered 200 with no \`elements\` array`);
+        return null;
+      }
       return body.elements as OsmElement[];
     }
-    if (TRANSIENT.has(res.status) && attempt <= RETRIES) {
-      const wait = BACKOFF_MS * attempt;
-      console.log(`  Overpass ${res.status}; retrying in ${wait / 1000}s (attempt ${attempt} of ${RETRIES})`);
-      await sleep(wait);
-      continue;
+    if (!TRANSIENT.has(res.status)) {
+      die(`Overpass (${host}) returned ${res.status} ${res.statusText}. Not a transient status, so check the query.`);
     }
-    die(
-      `Overpass returned ${res.status} ${res.statusText}. ` +
-        (TRANSIENT.has(res.status)
-          ? `Still failing after ${RETRIES} retries: the public instance is overloaded, try again later.`
-          : "Not a transient status, so check the query."),
-    );
+    if (attempt > RETRIES) {
+      console.log(`  ${host}: ${res.status} after ${RETRIES} retries`);
+      return null;
+    }
+    const wait = BACKOFF_MS * attempt;
+    console.log(`  ${host}: ${res.status}; retrying in ${wait / 1000}s (attempt ${attempt} of ${RETRIES})`);
+    await sleep(wait);
   }
+}
+
+async function overpass(query: string): Promise<OsmElement[]> {
+  let endpoints: string[];
+  try {
+    endpoints = overpassEndpoints(process.env);
+  } catch (e) {
+    return die(e instanceof Error ? e.message : String(e));
+  }
+  for (const endpoint of endpoints) {
+    const host = new URL(endpoint).hostname; // hostname only: the log is public
+    const elements = await overpassOnce(endpoint, host, query);
+    if (elements !== null) {
+      console.log(`  Overpass answered from ${host}`);
+      return elements;
+    }
+  }
+  return die(`every Overpass endpoint failed (${endpoints.length} tried); try again later or set OVERPASS_URL.`);
 }
 
 /** One service-role RPC call. The error text is PostgREST's, which names no secret. */

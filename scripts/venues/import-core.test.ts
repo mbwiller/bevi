@@ -25,6 +25,7 @@ import {
   AMENITIES,
   CHAIN_ONLY_AMENITIES,
   CHAIN_ONLY_SHOPS,
+  DEFAULT_OVERPASS_ENDPOINTS,
   LENOX_HILL_PROBE,
   NTA_DISPLAY_NAMES,
   NYC_AREA_ID,
@@ -38,6 +39,7 @@ import {
   makeLocator,
   ntaFileText,
   openAt,
+  overpassEndpoints,
   overpassQuery,
   parseElements,
   parseHours,
@@ -631,4 +633,37 @@ test("the locator fills neighbourhood and borough; a mapper's addr:suburb still 
     // No polygon: OSM's own city is the fallback.
     ["node/43", null, "Manhattan"],
   ]);
+});
+
+test("overpassEndpoints: the default list is https, distinct, and led by the main instance", () => {
+  const list = overpassEndpoints({});
+  assert.deepEqual(list, [...DEFAULT_OVERPASS_ENDPOINTS]);
+  assert.equal(list[0], "https://overpass-api.de/api/interpreter");
+  assert.ok(list.length >= 2, "a fallback needs at least one mirror");
+  assert.equal(new Set(list).size, list.length);
+  for (const u of list) assert.equal(new URL(u).protocol, "https:");
+  // A caller mutating the result must not corrupt the default.
+  list.pop();
+  assert.equal(overpassEndpoints({}).length, DEFAULT_OVERPASS_ENDPOINTS.length);
+});
+
+test("overpassEndpoints: a blank override means the default list", () => {
+  assert.deepEqual(overpassEndpoints({ OVERPASS_URL: "" }), [...DEFAULT_OVERPASS_ENDPOINTS]);
+  assert.deepEqual(overpassEndpoints({ OVERPASS_URL: "  , ," }), [...DEFAULT_OVERPASS_ENDPOINTS]);
+});
+
+test("overpassEndpoints: the override replaces the defaults, trimmed and de-duplicated in order", () => {
+  const env = {
+    OVERPASS_URL:
+      " https://b.example/api/interpreter ,https://a.example/api/interpreter,,https://b.example/api/interpreter ",
+  };
+  assert.deepEqual(overpassEndpoints(env), [
+    "https://b.example/api/interpreter",
+    "https://a.example/api/interpreter",
+  ]);
+});
+
+test("overpassEndpoints: a non-https or malformed entry is an error, never silently skipped", () => {
+  assert.throws(() => overpassEndpoints({ OVERPASS_URL: "http://a.example/api/interpreter" }), /https/);
+  assert.throws(() => overpassEndpoints({ OVERPASS_URL: "https://ok.example/x,not a url" }), /not a URL/);
 });
