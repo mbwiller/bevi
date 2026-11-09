@@ -85,6 +85,36 @@ describe('the session map', () => {
     expect(mockSetOptions).toHaveBeenCalledWith({ key: 'browser-key', v: 'weekly', mapIds: ['bevi-map'] });
   });
 
+  it('inline → full screen → inline (M-16 part 2): one Map, the same div, handed back to the inline host', async () => {
+    const inline = host();
+    attach(inline);
+    await loadMap(config);
+    const div = inline.firstElementChild;
+
+    // Opening the full screen: the inline host lets go, the full-screen host borrows the div.
+    const full = host();
+    detach(inline);
+    attach(full);
+    expect(full.firstElementChild).toBe(div);
+    expect(inline.childElementCount).toBe(0);
+    await loadMap(config);
+
+    // Closing it: the full-screen host lets go and the inline host takes the div back.
+    detach(full);
+    attach(inline);
+    expect(inline.firstElementChild).toBe(div);
+    expect(full.childElementCount).toBe(0);
+
+    // A second round trip, then the full-screen host unmounting late can't take it away again.
+    attach(full);
+    attach(inline);
+    detach(full);
+    expect(inline.firstElementChild).toBe(div);
+
+    expect(mockMapCtor).toHaveBeenCalledTimes(1);
+    expect(mapsCreated()).toBe(1);
+  });
+
   it('two hosts loading at once still make one map', async () => {
     attach(host());
     const [a, b] = await Promise.all([loadMap(config), loadMap(config)]);

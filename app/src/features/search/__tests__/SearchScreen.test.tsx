@@ -6,6 +6,7 @@ import SearchTab from '@/app/(tabs)/add/index';
 import { readRecents } from '@/features/add-bev/recents';
 import { controls } from '@/testing/fakeApi';
 
+import { useMapFilters } from '../mapFilters';
 import { ADD_NEW } from '../SearchPanel';
 import { SEARCH_PLACEHOLDER } from '../SearchScreen';
 
@@ -26,21 +27,27 @@ jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush, setParams: mockSetParams, canGoBack: () => true, back: jest.fn(), replace: jest.fn() }),
   useLocalSearchParams: () => mockParams,
   useNavigation: () => mockNavigation,
+  useIsFocused: () => mockTab.focused,
 }));
 
 // Counts mounts of the map area and records whether it was passive: the live map (M-16) is created
 // once per session, so the map area must survive the panel opening and closing, and it must take
 // no gestures while the panel covers it.
-const mockMap = { mounts: 0, passive: [] as boolean[] };
+const mockMap = {
+  mounts: 0,
+  passive: [] as boolean[],
+  last: null as null | { filters?: unknown; active?: boolean; onFiltersChange?: (f: unknown) => void },
+};
 jest.mock('@/features/map/MapView', () => {
   const React = require('react');
   const { Text } = require('react-native');
   return {
-    MapView: ({ passive }: { passive: boolean }) => {
+    MapView: (props: { passive: boolean; filters?: unknown; active?: boolean; onFiltersChange?: (f: unknown) => void }) => {
       React.useEffect(() => {
         mockMap.mounts += 1;
       }, []);
-      mockMap.passive.push(passive);
+      mockMap.passive.push(props.passive);
+      mockMap.last = props;
       return React.createElement(Text, null, 'The map');
     },
   };
@@ -56,6 +63,8 @@ beforeEach(() => {
   mockParams = {};
   mockMap.mounts = 0;
   mockMap.passive = [];
+  mockMap.last = null;
+  useMapFilters.getState().reset();
   mockTab.focused = true;
   client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false, gcTime: Infinity } },
@@ -184,6 +193,28 @@ describe('the map area and the panel', () => {
     expect(screen.getByTestId('search-panel')).toBeTruthy();
     expect(mockSetParams).toHaveBeenCalledWith({ tab: undefined, focus: undefined });
     expect(await screen.findByText('Suggested for you')).toBeTruthy();
+  });
+});
+
+describe('the map filters', () => {
+  it("live in the Search feature: the map gets them, its changes land there, and they outlive the screen", async () => {
+    const first = await renderSearch();
+    expect(mockMap.last?.filters).toEqual({});
+    await act(async () => mockMap.last!.onFiltersChange!({ categoryIds: ['coffee'], openNow: true, kinds: [] }));
+    expect(useMapFilters.getState().filters).toEqual({ categoryIds: ['coffee'], openNow: true });
+    expect(mockMap.last?.filters).toEqual({ categoryIds: ['coffee'], openNow: true });
+    // A tab switch remounts nothing it shouldn't, but a fresh screen still starts from them.
+    await first.unmount();
+    await renderSearch();
+    expect(mockMap.last?.filters).toEqual({ categoryIds: ['coffee'], openNow: true });
+  });
+
+  it('tells the map whether the Search tab is the screen on display', async () => {
+    await renderSearch();
+    expect(mockMap.last?.active).toBe(true);
+    mockTab.focused = false;
+    await renderSearch();
+    expect(mockMap.last?.active).toBe(false);
   });
 });
 

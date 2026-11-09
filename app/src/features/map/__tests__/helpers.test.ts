@@ -8,7 +8,7 @@ import { attributionCss, OSM_ATTRIBUTION } from '../attribution';
 import { DEMO_MAP_ID, readMapConfig } from '../config';
 import { DEFAULT_CENTER, interactionOptions, mapOptions, toLatLngBounds } from '../mapOptions';
 import { noticeFor } from '../MapNotice';
-import { iconSvg, pinHtml, pinLabel, pinScore, pinSignature, pinZIndex, SELECTED_SCALE, SELECTED_Z } from '../pinContent';
+import { iconSvg, locationDotHtml, NO_SCORE, pinHtml, pinLabel, pinScore, pinSignature, pinZIndex, SELECTED_LIFT, SELECTED_SCALE, SELECTED_Z } from '../pinContent';
 import { reconcileMarkers, type Entry } from '../reconcile';
 
 const light = colors.light;
@@ -132,9 +132,10 @@ describe('pin content', () => {
     expect(pinHtml(pin('a', {}, { kind: 'chain' }), look)).not.toBe(html);
   });
 
-  it('no score yet: just the glyph', () => {
+  it('no score yet: the glyph and "–" in textSecondary (MapCallout)', () => {
     const html = pinHtml(pin('a', { bestScore: null }), look);
     expect(html).not.toMatch(/\d\.\d<\/span>/);
+    expect(html).toContain(`color:${light.textSecondary};white-space:nowrap">${NO_SCORE}</span>`);
     expect(pinLabel(pin('a', { bestScore: null }))).toBe('Venue a, craft, no score yet');
   });
 
@@ -146,7 +147,8 @@ describe('pin content', () => {
 
   it('the selected pin is raised and grows; Reduce Motion drops the transition', () => {
     const selected = pinHtml(pin('a'), { ...look, selected: true });
-    expect(selected).toContain(`transform:scale(${SELECTED_SCALE})`);
+    expect(selected).toContain(`transform:translateY(-${SELECTED_LIFT}px) scale(${SELECTED_SCALE})`);
+    expect(pinHtml(pin('a'), look)).not.toContain('transform:translateY');
     expect(selected).toContain(`border:1px solid ${light.primary}`);
     expect(selected).toContain(`transition:transform ${motion.fast}ms`);
     expect(pinHtml(pin('a'), { ...look, selected: true, reduced: true })).not.toContain('transition');
@@ -168,6 +170,14 @@ describe('pin content', () => {
     expect(pinSignature(pin('a', { bestScore: 9 }), base)).not.toBe(sig);
     expect(pinSignature(pin('a'), { ...base, selected: true })).not.toBe(sig);
     expect(pinSignature(pin('a'), { ...base, scheme: 'dark' })).not.toBe(sig);
+  });
+
+  it('the blue dot: fizz on a surface ring, with no data in it', () => {
+    const dot = locationDotHtml(light, elevation.light.floating);
+    expect(dot).toContain(`background:${light.fizz}`);
+    expect(dot).toContain(`border:3px solid ${light.surface}`);
+    expect(dot).toContain('aria-hidden="true"');
+    expect(locationDotHtml(dark, elevation.dark.floating)).toContain(`background:${dark.fizz}`);
   });
 
   it('renders a Lucide icon as SVG markup', () => {

@@ -98,6 +98,10 @@ export const keys = {
      */
     inView: (p: { bounds: LatLngBounds; zoom: number; filters: VenueFilters }) =>
       [...root, 'venues', 'inView', p.bounds.south, p.bounds.west, p.bounds.north, p.bounds.east, p.zoom, p.filters] as const,
+    /** `venues.get`: one venue and the Bevs it carries (the VenueSheet). */
+    detail: (venueId: string) => [...root, 'venues', 'detail', venueId] as const,
+    /** `venues.neighborhoods`: the Neighborhood filter's vocabulary. */
+    neighborhoods: () => [...root, 'venues', 'neighborhoods'] as const,
   },
 
   recommendations: (limit?: number) => [...root, 'recommendations', limit ?? null] as const,

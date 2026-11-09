@@ -3,10 +3,17 @@ import type { VenueFilters } from '@bevi/shared';
 import { MapPlaceholder } from './MapPlaceholder';
 
 export interface MapViewProps {
-  /** The search results panel covers the map: it takes no gestures, keys or focus. */
+  /** The search results panel covers the map: it takes no gestures, keys or focus, and the full-screen map closes. */
   passive: boolean;
-  /** `venues.inView` filters (part 2's filter row). */
+  /** The map's filters, as the Search feature holds them (features/search/mapFilters.ts). */
   filters?: VenueFilters;
+  /** The filter row changed them. */
+  onFiltersChange?: (filters: VenueFilters) => void;
+  /**
+   * The Search tab is the screen on display. While it isn't (a Bev page pushed from the VenueSheet),
+   * the full-screen map steps aside and comes back as it was on return. Default true.
+   */
+  active?: boolean;
 }
 
 /**
