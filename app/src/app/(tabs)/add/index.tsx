@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useNavigation } from 'expo-router';
+import { useIsFocused, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useEffect, useState } from 'react';
 
 import { SearchScreen, type FocusRequest } from '@/features/search/SearchScreen';
@@ -23,6 +23,8 @@ export default function SearchTab() {
   const wantsPanel = people || params.focus === '1';
   const [focus, setFocus] = useState<FocusRequest>({ n: 0 });
   const [close, setClose] = useState(0);
+  // A Bev page pushed from the map's VenueSheet covers this tab: the full-screen map steps aside until it's back.
+  const focused = useIsFocused();
 
   useEffect(() => {
     if (!wantsPanel) return;
@@ -40,5 +42,5 @@ export default function SearchTab() {
     [navigation],
   );
 
-  return <SearchScreen focusRequest={focus} closeRequest={close} />;
+  return <SearchScreen focusRequest={focus} closeRequest={close} active={focused} />;
 }

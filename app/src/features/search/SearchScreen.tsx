@@ -13,6 +13,7 @@ import { MapView } from '@/features/map/MapView';
 import { useBack } from '@/lib/useBack';
 import { motion, spacing, useTheme } from '@/theme';
 
+import { useMapFilters } from './mapFilters';
 import { initialPanel, panelMode, panelReducer } from './panel';
 import { SearchPanel } from './SearchPanel';
 
@@ -29,22 +30,27 @@ export interface SearchScreenProps {
   focusRequest?: FocusRequest;
   /** Bumped by the route when the Search tab is pressed while showing: each new value closes the panel. */
   closeRequest?: number;
+  /** The Search tab is the screen on display (the full-screen map steps aside while it isn't). Default true. */
+  active?: boolean;
 }
 
 /**
- * The Search tab (TASKS.md M-15, decision 32; design system ScreenSearch): the wordmark header, one
- * bar for Bevs and people, Snap it, then the map area filling the rest. Focusing or typing in the
+ * The Search tab (TASKS.md M-15, M-16, decision 32; design system ScreenSearch): the wordmark header,
+ * one bar for Bevs and people, Snap it, then the live map filling the rest (its filters held here). Focusing or typing in the
  * bar slides the results panel over the map from under it; Cancel slides it away. The map area
  * stays mounted throughout (the live map, M-16, is created once per session and kept where it was)
  * and is passive while the panel is up: no gestures, keys, or screen-reader and keyboard focus.
  * Pressing the Search tab again closes the panel.
  */
-export function SearchScreen({ focusRequest, closeRequest = 0 }: SearchScreenProps) {
+export function SearchScreen({ focusRequest, closeRequest = 0, active = true }: SearchScreenProps) {
   const back = useBack();
   const router = useRouter();
   const { colors } = useTheme();
   const reduced = useReducedMotion();
   const [panel, dispatch] = useReducer(panelReducer, initialPanel);
+  // The map's filters live here, in the Search feature, for the browser session (mapFilters.ts).
+  const filters = useMapFilters((s) => s.filters);
+  const setFilters = useMapFilters((s) => s.setFilters);
   const mode = panelMode(panel);
   const up = mode !== 'map';
   // Debounced here, not in the panel: the panel mounts on the first keystroke, and a debounce that
@@ -111,7 +117,7 @@ export function SearchScreen({ focusRequest, closeRequest = 0 }: SearchScreenPro
           aria-hidden={up}
           tabIndex={up ? -1 : undefined}
         >
-          <MapView passive={up} />
+          <MapView passive={up} filters={filters} onFiltersChange={setFilters} active={active} />
         </View>
         {up ? (
           <Animated.View

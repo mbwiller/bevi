@@ -40,7 +40,7 @@ Use the tokens by name; never paste hex values.
 - 16pt screen gutter (`space-gutter`) on every screen. 44pt header row under the status bar. 4pt grid: `space-xs` 4 … `space-xxl` 24.
 - Every tap target is at least 44×44 (`size-target`), even when the visual is a 30pt Pill or a 28pt icon.
 - Radii are named by what they round: `radius-button` 8 (outlined profile buttons), `radius-input` 12 (search, fields, the big primary button), `radius-photo` 14 (Bev tiles, featured photos), `radius-card` 16 (cards, sheet tops), `radius-stat` 20 (profile stat cards), `radius-pill` 999.
-- **No elevation.** Separation is a 1pt `border`. Every focusable control shows `focus-ring` (a 2pt `surface` gap, then a 2pt `primary` ring). The gut-check BucketButtons use a 12% bucket tint and a 4px bucket bar, with no blur and no shadow; that is all the web app ever draws. The one exception is reserved for a native build: on iOS 26+ they may be liquid glass (`GlassView`) on `elevation-glass` over a BevGlow. Nothing else gets glass, blur or a shadow.
+- **No elevation.** Separation is a 1pt `border`. Every focusable control shows `focus-ring` (a 2pt `surface` gap, then a 2pt `primary` ring). The gut-check BucketButtons use a 12% bucket tint and a 4px bucket bar, with no blur and no shadow; that is all the web app ever draws. The one exception is reserved for a native build: on iOS 26+ they may be liquid glass (`GlassView`) on `elevation-glass` over a BevGlow. The Search tab's map is the one place things float: MapCallout pins and the MapControls (round buttons, `List | Map`, `View List`) sit on `elevation-floating` so they read over any tile. Nothing else gets glass, blur or a shadow.
 - Rows are full-bleed with 1pt dividers. Lists are one sorted list: buckets show through bubble colour, not section headers.
 
 ## Imagery
@@ -70,7 +70,7 @@ Use the tokens by name; never paste hex values.
 - Lists (Your Lists, Leaderboard): centred caps Header, ListScopeDropdown, SegmentedTabs, FilterPill row, SortToggle, numbered BevRows. Bev'd adds the ProgressStrip under the filters ("All Bevs · 37 of 378 tried · 9%"), which opens the CollectionSheet.
 - Ranking: a BevGlow with the floating cutout and three BucketButtons, then ProgressDots and CompareCard pairs, then the note step with the score revealed at once in a ScoreBubble 72 over "#4 of 31 in Loved", then a ScoreBubble 56 result that confirms it.
 - Profile: name Header, Avatar 100, counts, outlined Buttons, ProfileListRows, two StatCards, Activity tabs, FeedPosts.
-- Search: wordmark Header, the outlined SearchBar, Snap it, then the map area; focusing the bar slides a results panel over the map (Recents and suggestions while idle; BEVS and PEOPLE groups while typing) with "Can't find it? Add a new Bev" at its foot.
+- Search: wordmark Header, the outlined SearchBar, Snap it, then the live map of New York City with its MapFilterRow and MapControls; MapCallout pins; a pin, `View List` or "open the full map" opens the same map full screen, where a tapped pin docks a VenueSheet. Focusing the bar slides a results panel over the map (Recents and suggestions while idle; BEVS and PEOPLE groups while typing) with "Can't find it? Add a new Bev" at its foot.
 - The Screens group shows each of these composed at 393pt.
 
 ## In the app
@@ -90,3 +90,4 @@ The plan's component list (DEVELOPMENT-MATT §4) covers the screens that have a 
 - `Header`, `SectionHeader`, `IconButton`, `Button`: the header pattern, caps section labels, the close circle and the 36pt profile buttons, all described in §4 and §6 but not named as components.
 - `Icon`, `BevArt`: the icon set as one source, and placeholder drink art until catalog photos exist.
 - `ProgressStrip`, `CollectionSheet`: Bev'd's "you've tried this share of a category" (TASKS.md M-08), the collecting half of gamifying the list. The bar is grape because it is a share you earned.
+- `MapCallout`, `MapFilterRow`, `MapControls`, `VenueRow`, `VenueSheet`: the Search tab's map (TASKS.md M-16, §1c), Beli's map chrome plus the one addition Beli lacks, a sheet listing the Bevs a venue carries.

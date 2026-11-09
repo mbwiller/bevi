@@ -10,7 +10,8 @@ export const NO_SPOTS = 'No spots here yet';
 
 const OFFLINE = new ApiError('network', 'offline: the pins query is paused');
 
-export type Notice = { kind: 'error'; error: unknown } | { kind: 'empty' } | null;
+/** `info`: a one-off line from the map itself (the locate button's "You're outside New York City"). */
+export type Notice = { kind: 'error'; error: unknown } | { kind: 'empty' } | { kind: 'info'; text: string } | null;
 
 /**
  * What the map says about its pins, if anything. The map itself is the content, so loading shows
@@ -32,7 +33,7 @@ export function noticeFor(q: {
   return null;
 }
 
-/** A floating line at the top of the map: the error's title with Retry, or that there is nothing in view. */
+/** A floating line over the map: the error's title with Retry, that there is nothing in view, or an info line. */
 export function MapNotice({ notice, onRetry }: { notice: Exclude<Notice, null>; onRetry: () => void }) {
   const { colors } = useTheme();
   const copy = notice.kind === 'error' ? errorCopy(notice.error) : null;
@@ -47,7 +48,7 @@ export function MapNotice({ notice, onRetry }: { notice: Exclude<Notice, null>; 
       ]}
     >
       <Text style={[type.caption, { color: colors.text }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE_DENSE}>
-        {copy ? copy.title : NO_SPOTS}
+        {copy ? copy.title : notice.kind === 'info' ? notice.text : NO_SPOTS}
       </Text>
       {copy?.retry ? (
         <Pill variant="outlined" icon="refresh-cw" onPress={onRetry}>

@@ -1,17 +1,21 @@
-// A venue pin's look (M-16 part 1; TASKS.md §1c "white callout"): the markup an
-// AdvancedMarkerElement shows, built as a string by pure functions so jest checks it without a DOM
-// or Google. Part 2 replaces this with the design system's MapCallout.
+// A venue pin's look: the design system's MapCallout (M-16; TASKS.md §1c "white callout") as the
+// markup an AdvancedMarkerElement shows, built as a string by pure functions so jest checks it
+// without a DOM or Google. Also the blue "you are here" dot.
 //
 // Beli's Recs callout: a white rounded callout, a coloured circle holding a glyph, the score in
-// bold, and a small tail. Bevi's circle is `primary` (grape) with the venue kind's glyph, and a
-// predicted score gets ScoreBubble's predicted treatment: a dotted ring and a "~" prefix.
+// bold, and a small tail. Bevi's circle is `primary` (grape) with the venue kind's glyph, a
+// predicted score gets ScoreBubble's predicted treatment (a dotted ring and a "~" prefix), and a
+// venue with no score yet shows "–". The selected pin is raised, larger and on top.
 
 import type { VenuePin } from '@bevi/shared';
 import { __iconData as coffeeIcon } from 'lucide-react-native/icons/coffee';
 import { __iconData as storeIcon } from 'lucide-react-native/icons/store';
 
 import { formatScore } from '@/lib/format';
+import { KIND_LABEL } from '@/lib/venue';
 import { motion, radius, size, spacing, type, type Colors } from '@/theme';
+
+export { KIND_LABEL };
 
 type IconData = typeof storeIcon;
 
@@ -23,8 +27,14 @@ const GLYPH = 16;
 const GLYPH_STROKE = 2;
 /** The callout's tail, as on Beli's pins. No token names it. */
 const TAIL = 6;
-/** The selected pin is raised and grows by this much. */
+/** The selected pin is raised by this much and grows by SELECTED_SCALE (bundle.css `.bv-callout-selected`). */
+export const SELECTED_LIFT = spacing.xs;
 export const SELECTED_SCALE = 1.15;
+/** What a pin with no score shows. */
+export const NO_SCORE = '–';
+/** The blue dot: 16pt with a 3pt ring. No token names either. */
+const DOT = 16;
+const DOT_RING = 3;
 /** Marker stacking: the selected pin above every other, the rest best score on top. */
 export const SELECTED_Z = 10_000;
 
@@ -72,8 +82,6 @@ export function pinZIndex(pin: VenuePin, selected: boolean): number {
   return value == null ? 0 : Math.round(value * 10) + 1;
 }
 
-export const KIND_LABEL: Record<VenuePin['venue']['kind'], string> = { chain: 'Chain', craft: 'Craft' };
-
 /** The marker's accessible name (Google puts `title` on the focusable marker). */
 export function pinLabel(pin: VenuePin): string {
   const { value, predicted } = pinScore(pin);
@@ -104,19 +112,18 @@ export function pinHtml(pin: VenuePin, look: PinLook): string {
     iconSvg(KIND_ICON[pin.venue.kind], colors.onPrimary, GLYPH, GLYPH_STROKE) +
     '</span>';
   const num =
-    value == null
-      ? ''
-      : `<span style="font:700 ${type.heading.fontSize}px/${type.heading.lineHeight}px ${FONT};` +
-        `font-variant-numeric:tabular-nums;color:${colors.text};white-space:nowrap">` +
-        `${predicted ? '~' : ''}${formatScore(value)}</span>`;
-  const transform = selected ? `transform:scale(${SELECTED_SCALE});` : '';
+    `<span style="font:700 ${type.heading.fontSize}px/${type.heading.lineHeight}px ${FONT};` +
+    `font-variant-numeric:tabular-nums;color:${value == null ? colors.textSecondary : colors.text};white-space:nowrap">` +
+    `${value == null ? NO_SCORE : `${predicted ? '~' : ''}${formatScore(value)}`}</span>`;
+  const transform = selected ? `transform:translateY(-${SELECTED_LIFT}px) scale(${SELECTED_SCALE});` : '';
   const transition = reduced ? '' : `transition:transform ${motion.fast}ms ease-out;`;
   return (
     `<div data-bevi-pin="${selected ? 'selected' : 'idle'}" aria-hidden="true" style="display:flex;flex-direction:column;` +
     `align-items:center;justify-content:flex-end;min-width:${size.target}px;min-height:${size.target}px;cursor:pointer;` +
     `transform-origin:50% 100%;${transform}${transition}">` +
-    `<div style="display:flex;align-items:center;gap:${spacing.xs}px;padding:${spacing.xs}px;` +
-    `${value == null ? '' : `padding-right:${spacing.md}px;`}background:${colors.surface};` +
+    // position:relative leaves room for MapCallout's badge slot (trending, bookmark) once the contract has them.
+    `<div style="position:relative;display:flex;align-items:center;gap:${spacing.xs}px;padding:${spacing.xs}px;` +
+    `padding-right:${spacing.md}px;background:${colors.surface};` +
     `border:1px solid ${selected ? colors.primary : colors.border};border-radius:${radius.pill}px;box-shadow:${floating}">` +
     circle +
     num +
@@ -131,4 +138,12 @@ export function pinHtml(pin: VenuePin, look: PinLook): string {
 export function pinSignature(pin: VenuePin, look: Omit<PinLook, 'colors' | 'floating'> & { scheme: string }): string {
   const { value, predicted } = pinScore(pin);
   return [pin.venue.kind, value ?? '', predicted ? 1 : 0, look.selected ? 1 : 0, look.reduced ? 1 : 0, look.scheme].join('|');
+}
+
+/** The blue "you are here" dot: `fizz` with a `surface` ring, on the floating shadow. Holds no data. */
+export function locationDotHtml(colors: Colors, floating: string): string {
+  return (
+    `<div data-bevi-me aria-hidden="true" style="width:${DOT}px;height:${DOT}px;box-sizing:border-box;` +
+    `border-radius:${radius.pill}px;background:${colors.fizz};border:${DOT_RING}px solid ${colors.surface};box-shadow:${floating}"></div>`
+  );
 }

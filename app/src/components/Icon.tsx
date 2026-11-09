@@ -32,11 +32,14 @@ import List from 'lucide-react-native/icons/list';
 import ListFilter from 'lucide-react-native/icons/list-filter';
 import Lock from 'lucide-react-native/icons/lock';
 import MapIcon from 'lucide-react-native/icons/map'; // not `Map`, which would shadow the global
+import MapPin from 'lucide-react-native/icons/map-pin';
 import Martini from 'lucide-react-native/icons/martini';
+import Maximize2 from 'lucide-react-native/icons/maximize-2';
 import Meh from 'lucide-react-native/icons/face-neutral'; // Lucide renamed meh (the design system's name is kept)
 import Menu from 'lucide-react-native/icons/menu';
 import MessageCircle from 'lucide-react-native/icons/message-circle';
 import Milk from 'lucide-react-native/icons/milk';
+import Navigation from 'lucide-react-native/icons/navigation';
 import Newspaper from 'lucide-react-native/icons/newspaper';
 import Plus from 'lucide-react-native/icons/plus';
 import RefreshCw from 'lucide-react-native/icons/refresh-cw';
@@ -44,6 +47,7 @@ import Search from 'lucide-react-native/icons/search';
 import Settings from 'lucide-react-native/icons/settings';
 import Share from 'lucide-react-native/icons/share';
 import Sparkles from 'lucide-react-native/icons/sparkles';
+import Store from 'lucide-react-native/icons/store';
 import TriangleAlert from 'lucide-react-native/icons/triangle-alert';
 import Trophy from 'lucide-react-native/icons/trophy';
 import Undo2 from 'lucide-react-native/icons/undo-2';
@@ -118,6 +122,11 @@ const ICONS = {
   globe: Globe,
   // The Search tab's map area.
   map: MapIcon,
+  // The map's chrome (M-16): a chain's glyph, the Map segment and an address, locate, open the full map.
+  store: Store,
+  'map-pin': MapPin,
+  navigation: Navigation,
+  'maximize-2': Maximize2,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;

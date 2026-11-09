@@ -228,6 +228,44 @@ const R = {
 - Empty: an EmptyState with \`message-circle\`, "No comments yet" and "Start the conversation."
 - The composer is pinned to the bottom: your Avatar 32, a pill field "Add a comment…" (\`borderStrong\`, focus ring), and **Post** in \`primary\`, \`textSecondary\` and disabled while the field is empty. A comment is at most 280 characters: the remaining count appears beside Post from 20 left, and turns \`scoreLow\` and blocks Post below zero.
 - When posting fails the draft stays and a \`scoreLow\` caption under the composer says why ("Couldn't post your comment. Check your connection and try again.", "… Wait a minute, then try again.").`,
+  MapCallout: `A venue's pin on the Search tab's map (Beli's Recs callout): a white pill on \`elevation-floating\` with a 28pt grape circle holding the venue kind's glyph, the score in bold, and a 6pt tail pointing at the spot.
+
+- Provide: \`score\` (the best Bayesian score of the Bevs the venue carries; the predicted score only when none of them has one), \`predicted\`, \`kind\` (\`chain\` = \`store\`, \`craft\` = \`coffee\`), \`selected\`, \`label\`.
+- \`predicted\` = a dotted ring on the circle and a "~" before the number, as on ScoreBubble. No score at all = "–" in \`textSecondary\`.
+- \`selected\` (the venue whose VenueSheet is open): raised 4pt, 1.15× larger, a \`primary\` rim, and above every other pin. It grows in \`fast\`; under Reduce Motion it just changes.
+- The number stays \`text\`: a pin is about a place, so it never takes a score-band colour, and it always shows its number.
+- The whole pin is at least 44 × 44. Its accessible name starts with the venue's name ("Yorkville Coffee Works, craft, score 8.8"); the markup itself never carries venue text.
+- Pins overlap at every zoom and never cluster, as on Beli; the server caps how many come back per zoom.
+- Reserved: a \`badge\` slot at the top right for ↗ trending and a bookmark (a Want to Try Bev is sold here), once the contract has them. No teardrops: "your score" pins went with the venue step (2026-10-19).`,
+  MapFilterRow: `The filters over the map, one row that scrolls sideways: \`Filters N\`, \`Neighborhood ▾\`, \`Category ▾\`, \`Price ▾\`, \`Open now\` and \`Retailer ▾\`.
+
+- Provide: \`count\` (facets that are on, for "Filters N"), each facet's picked label (\`neighborhood\`, \`category\`, \`price\`, \`retailer\`; '' for nothing), \`openNow\`, \`neighborhoods\` (false leaves the Neighborhood pill out), and a handler per pill.
+- \`Filters N\` is the FilterPill with its label; it opens one 90% Sheet with every filter and "Reset filters".
+- Each ▾ pill opens a multi-select Sheet (a check per picked option, "Any …" at the top to clear it). Its label becomes what is picked: "Coffee", "Coffee +2", "$, $$", "Chains", "Chains, Craft". Picking nothing means no filter.
+- \`Open now\` toggles on the spot. It keeps only venues whose hours we could read and that are open; "Hours unknown" venues drop out while it is on.
+- A pill that is on takes the selected look of an outlined Pill and the FilterPill (\`primaryTint\`, \`primary\` rim and text).
+- Category offers the categories the viewer can see (never the alcoholic three under 21). Neighborhood is left out while the vocabulary is empty.
+- Pills keep their 44pt targets inside the row: it pads 7pt above and below.`,
+  MapControls: `The map's floating controls. Inline under the search bar: the filter row on top, and a round "open the full map" button over the \`View List\` pill at the bottom right. Full screen: \`List | Map\` with the close button on top, the filter row under them, and the round locate button over \`View List\`.
+
+- Provide: \`expanded\`, \`mode\` (\`map\` or \`list\`) and \`onModeChange\`, \`onExpand\`, \`onClose\`, \`onLocate\`, \`located\` (the blue dot is up: the arrow turns \`primary\`), \`locating\`, \`onViewList\`, and the MapFilterRow as \`children\`.
+- \`List | Map\` is a segmented control on a \`primary\` rim: the side that is on is filled \`primary\` with \`onPrimary\` text, the other reads \`primary\` on \`surface\`, as Beli fills its teal. No people button: friends' pins went with the venue step.
+- \`View List\` is a 44pt filled \`primary\` pill. In list mode the corner buttons go; \`List | Map\` brings the map back.
+- Tapping a pin, \`View List\` or "open the full map" opens the same map full screen; the close button (or Escape) returns to the inline map exactly where it was.
+- Everything sits clear of Google's logo (bottom left), Google's terms (bottom right) and the OpenStreetMap credit above the logo: the corner stack starts 36pt up.
+- Round buttons are 44pt \`surface\` circles with a hairline and \`elevation-floating\`, so they hold up over any tile. Locate asks for the position only when tapped, never on load, and it stays on the device.`,
+  VenueRow: `A venue in the map's List view: its name, "Craft · Yorkville", "Open now · 3 Bevs", and the pin's score in a ScoreBubble (predicted when the pin's is).
+
+- Provide: \`venue\`, \`openNow\`, \`score\`, \`predicted\`, \`bevs\`, \`onClick\` (switches to the map, centred on the venue, with its VenueSheet open).
+- The list is the venues in view, in the order the map asked for them (best first). No score yet: no bubble.
+- One button per row, its name read first.`,
+  VenueSheet: `The tapped venue, docked under the full-screen map: the map shrinks above it, so the raised pin, Google's logo and the OpenStreetMap credit stay in view, and the map keeps panning.
+
+- Order: the name (\`screenTitle\`) with the close circle; "Craft · Yorkville · Manhattan"; the open state with \`clock\` ("Open now", "Closed", "Hours unknown"; never "closed" for hours we couldn't read); the address with \`map-pin\`; the website as a \`primary\` link (its host, opening in a new tab); then "Bevs here (N)" and a BevRow per Bev; last, "© OpenStreetMap contributors" as a caption.
+- Each BevRow shows your score if you ranked the Bev (meta "Your score"), else your predicted score ("You'd rate it", dotted ring), else its Bayesian score with the rating count. Rank it and Want to Try as everywhere; tapping a row opens the Bev.
+- Loading: the pin's name, kind and open state fill the header at once, "Bevs here (N)" uses the pin's count, and Skeleton rows hold the list.
+- Gone since the pin was drawn (\`not_found\`): "This spot isn't here anymore". Any other failure: an ErrorState with Retry.
+- About 40% of the screen; it scrolls inside. Closing it (the close circle, Escape, a tap on the map) clears the selection.`,
 };
 
 const S = {
@@ -240,10 +278,13 @@ const S = {
   ScreenYourLists: `Your Lists › Bev'd (ref 06): centred "YOUR LISTS" Header, ListScopeDropdown, SegmentedTabs, the FilterPill row, the ProgressStrip ("All Bevs · 37 of 378 tried · 9%"), SortToggle, then numbered BevRows sorted by score.
 
 - Want to Try rows show the global score and a filled bookmark, with when or from whom you saved it in the meta line; Recommended rows show predicted bubbles and a reason in the meta line.`,
-  ScreenSearch: `Search tab (TASKS.md decision 32): wordmark Header with the close circle, the outlined SearchBar "Search a Bev or a person", a "Snap it" Pill, then the map area filling the rest of the screen.
+  ScreenSearch: `Search tab (TASKS.md decision 32, M-16): wordmark Header with the close circle, the outlined SearchBar "Search a Bev or a person", a "Snap it" Pill, then the live map of New York City filling the rest of the screen. The preview shows it inline (left) and full screen (right).
 
-- Until the live New York City map (M-16) the area is a placeholder in \`input\`: the \`map\` icon, "Map coming soon" and one line on what will show there. No pins and no fake streets.
-- The map area stays mounted while the results panel covers it, so the real map is created once per session, and it takes no gestures while the panel is up.`,
+- **Inline:** the map pans and zooms in place, with the MapFilterRow on top and the MapControls corner (open the full map, \`View List\`). Venue pins are MapCallouts.
+- **Full screen:** tapping a pin, \`View List\` or "open the full map" opens the same map over the whole screen with the full chrome: \`List | Map\`, the close button, the filters, locate and \`View List\`; a tapped pin docks its VenueSheet below. The close button or Escape returns to the inline map where it was. Focus stays inside while it is open.
+- One Google map per visit to the app: inline and full screen borrow the same map, so its viewport carries across, and leaving the tab never reloads it.
+- The map area stays mounted while the results panel covers it, and it takes no gestures while the panel is up.
+- Without a Google key in the build (and only then) the area is the placeholder: the \`map\` icon, "Map coming soon" and one line on what will show there. If Google fails to load or rejects the key: "Map unavailable right now". Never Google's grey box.`,
   ScreenSearchResults: `Search tab with the results panel up: focusing the bar slides the panel over the map area from under the bar (opacity and a short downward slide over \`base\`; under Reduce Motion it just appears), and a ghost **Cancel** joins the bar.
 
 - Idle: Recents (the Bevs you opened) and "Suggested for you" (people). Typing (debounced 250ms): one query searches both, grouped under "BEVS" (BevRows with \`showImage\` and the rating count) and "PEOPLE" (UserRows with Follow); an empty group is left out, and nothing in either shows one empty state.

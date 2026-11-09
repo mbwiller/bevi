@@ -400,6 +400,59 @@
 .bv-composer-error { margin: var(--space-xs) var(--space-gutter) 0; }
 @keyframes bv-sheet-in { from { transform: translateY(24px); opacity: .6; } to { transform: none; opacity: 1; } }
 
+/* Map (M-16). The one place Bevi floats: callouts and controls over the map sit on elevation-floating. */
+.bv-callout { position: relative; display: inline-flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  min-width: var(--size-target); min-height: var(--size-target); transform-origin: 50% 100%; transition: transform 150ms ease-out; }
+.bv-callout-body { position: relative; display: inline-flex; align-items: center; gap: var(--space-xs); padding: var(--space-xs) var(--space-md) var(--space-xs) var(--space-xs);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-pill); box-shadow: var(--elevation-floating); }
+.bv-callout-glyph { display: inline-flex; flex: none; align-items: center; justify-content: center; width: var(--size-icon); height: var(--size-icon);
+  border-radius: var(--radius-pill); background: var(--primary); color: var(--onPrimary); }
+.bv-callout-predicted .bv-callout-glyph { outline: 2px dotted var(--textSecondary); outline-offset: 1px; }
+.bv-callout-num { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); white-space: nowrap; }
+.bv-callout-empty .bv-callout-num { color: var(--textSecondary); }
+.bv-callout-tail { width: 0; height: 0; margin-top: -1px; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 6px solid var(--surface); }
+.bv-callout-badge { position: absolute; top: -6px; right: -6px; }
+.bv-callout-selected { z-index: 1; transform: translateY(-4px) scale(1.15); }
+.bv-callout-selected .bv-callout-body { border-color: var(--primary); }
+
+.bv-mapfilters { display: flex; gap: 10px; padding: 7px var(--space-gutter); overflow-x: auto; scrollbar-width: none; }
+.bv-mapfilters::-webkit-scrollbar { display: none; }
+
+.bv-mapctl { position: absolute; inset: 0; pointer-events: none; }
+.bv-mapctl button, .bv-mapctl [role="toolbar"] { pointer-events: auto; }
+.bv-mapctl-top { position: absolute; top: 0; left: 0; right: 0; display: flex; flex-direction: column; padding-top: var(--space-sm); }
+.bv-mapctl-bar { display: flex; align-items: center; justify-content: space-between; padding: 0 var(--space-gutter); }
+.bv-mapctl-spacer { width: var(--size-target); }
+/* Clear of Google's logo (bottom left), its terms strip (bottom right) and the OpenStreetMap credit. */
+.bv-mapctl-corner { position: absolute; right: var(--space-gutter); bottom: 36px; display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-md); }
+.bv-mapbtn { display: inline-flex; align-items: center; justify-content: center; width: var(--size-target); height: var(--size-target); border-radius: var(--radius-pill);
+  background: var(--surface); color: var(--text); border: 1px solid var(--border); box-shadow: var(--elevation-floating); }
+.bv-mapbtn-active { color: var(--primary); }
+.bv-mapseg { position: relative; display: inline-flex; padding: 2px; border: 1px solid var(--primary); border-radius: var(--radius-pill); background: var(--surface); box-shadow: var(--elevation-floating); }
+.bv-mapseg-opt { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 88px; height: 34px; padding: 0 var(--space-lg);
+  border-radius: var(--radius-pill); color: var(--primary); font-size: 17px; line-height: 22px; font-weight: 600; }
+.bv-mapseg-opt::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: var(--size-target); transform: translateY(-50%); }
+.bv-mapseg-on { background: var(--primary); color: var(--onPrimary); }
+.bv-viewlist { display: inline-flex; align-items: center; gap: var(--space-sm); height: var(--size-target); padding: 0 var(--space-xl); border-radius: var(--radius-pill);
+  background: var(--primary); color: var(--onPrimary); box-shadow: var(--elevation-floating); white-space: nowrap; }
+
+.bv-venuerow { display: flex; align-items: center; gap: var(--space-md); width: 100%; min-height: 88px; padding: var(--space-md) var(--space-gutter); text-align: left; }
+.bv-venuerow-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.bv-venuerow-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.bv-venuesheet { display: flex; flex-direction: column; min-height: 0; padding-top: var(--space-sm); border-top: 1px solid var(--border);
+  border-radius: var(--radius-card) var(--radius-card) 0 0; background: var(--surface); }
+.bv-venuesheet .bv-sheet-handle { margin-bottom: var(--space-xs); }
+.bv-venuesheet-scroll { flex: 1; min-height: 0; overflow: auto; }
+.bv-venuesheet-head { display: flex; flex-direction: column; gap: 2px; padding: 0 var(--space-gutter) var(--space-sm); }
+.bv-venuesheet-title { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-sm); }
+.bv-venuesheet-title h2 { padding-top: 10px; }
+.bv-venuesheet-title .bv-iconbtn { margin-right: -6px; }
+.bv-venuesheet-title-end { justify-content: flex-end; padding: 0 var(--space-gutter); }
+.bv-venuesheet-line { display: flex; align-items: center; gap: var(--space-sm); }
+.bv-venuesheet-web { display: inline-flex; align-items: center; align-self: flex-start; font-weight: 600; text-decoration: none; }
+.bv-venuesheet-osm { padding: var(--space-md) var(--space-gutter) var(--space-lg); }
+
 @media (prefers-reduced-motion: reduce) {
   .bv-skel::after, .bv-bevimg-processing::after, .bv-bevimg-loading::after { animation: none; }
   .bv-tabs-bar, .bv-compare, .bv-dot { transition: none; }
@@ -408,4 +461,5 @@
   .bv-bucket-liquid { transition: none; }
   .bv-like-pop { animation: none; }
   .bv-like-burst { animation-name: bv-like-fade; }
+  .bv-callout { transition: none; }
 }

@@ -1,4 +1,4 @@
-<!-- @dsCard group="Screens" height=852 width=393 page -->
+<!-- @dsCard group="Screens" height=852 width=802 page -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -25,13 +25,21 @@
   .gutter { padding: 0 16px; }
   .center { display: flex; flex-direction: column; align-items: center; text-align: center; }
 
+  .mapbg { position: absolute; inset: 0; overflow: hidden; background-color: color-mix(in srgb, var(--input) 65%, var(--surface));
+    background-image: repeating-linear-gradient(61deg, transparent 0 46px, var(--border) 46px 49px), repeating-linear-gradient(-29deg, transparent 0 17px, var(--border) 17px 19px); }
+  .mapbg-river { position: absolute; top: -20%; bottom: -20%; right: -36px; width: 74px; transform: rotate(29deg); background: color-mix(in srgb, var(--fizz) 22%, var(--surface)); }
+  .mapbg-pin { position: absolute; transform: translate(-50%, -100%); }
+  .mapbg-credit { position: absolute; left: 4px; bottom: 30px; padding: 0 4px; font-size: 10px; line-height: 13px; color: var(--text); background: var(--glassFill); }
+  .mapbg-logo { position: absolute; left: 6px; bottom: 6px; width: 64px; height: 20px; border-radius: 4px; background: color-mix(in srgb, var(--textSecondary) 30%, transparent); }
+  .mapbg-terms { position: absolute; right: 0; bottom: 0; width: 170px; height: 14px; background: color-mix(in srgb, var(--surface) 70%, transparent); }
   .scroll { display: flex; flex-direction: column; }
   .sr-q { display: flex; align-items: center; gap: 4px; padding: 16px 16px 12px; } .sr-q .bv-search { flex: 1; }
   .sr-pills { display: flex; gap: 10px; padding: 0 16px 8px; }
   .sr-area { position: relative; flex: 1; border-top: 1px solid var(--border); }
   .sr-map { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 0 40px; text-align: center; background: var(--input); color: var(--textSecondary); }
   .sr-panel { position: absolute; inset: 0; background: var(--surface); overflow: hidden; }
-  .sr-foot { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px; border-top: 1px solid var(--border); background: var(--surface); }</style>
+  .sr-foot { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px; border-top: 1px solid var(--border); background: var(--surface); }
+  .sr-two { display: flex; gap: 16px; } .sr-two > .phone { border: 1px solid var(--border); }</style>
 </head>
 <body>
 <div id="root"></div>
@@ -60,18 +68,32 @@
   var ARJUN = { name: 'Arjun Cheema', handle: 'acheema5' };
   var FRIENDS = [{ name: 'Jack Torres', handle: 'jackt' }, { name: 'Priya Nair', handle: 'priya' }, { name: 'Sam Okafor', handle: 'samo' }, { name: 'Lena Park', handle: 'lenap' }, ARJUN, { name: 'Diego Ruiz', handle: 'dr' }];
 
-  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'phone' },
+  ReactDOM.createRoot(document.getElementById('root')).render((function () {
+  var MAP_PINS_ALL = [[22, 30, 9.1, false, 'craft'], [58, 22, 8.4, false, 'chain'], [74, 44, 7.6, false, 'craft'], [35, 52, 8.8, false, 'craft', true],
+    [60, 64, 6.2, true, 'craft'], [18, 72, null, false, 'chain'], [80, 80, 9.3, false, 'craft']];
+  return h('div', { className: 'sr-two' },
+    
+h('div', { className: 'phone' },
   h('div', { className: 'status' }, '9:41', h('span', { className: 'status-r' }, h('span', { className: 'batt' }, h('i')))),
   h('div', { className: 'scroll' }, 
   h(F, null,
     h(B.Header, { wordmark: true, actions: [{ icon: 'x', label: 'Close', variant: 'filled' }] }),
     h('div', { className: 'sr-q' }, h(B.SearchBar, { variant: 'outlined', placeholder: 'Search a Bev or a person', id: 'search-q' })),
     h('div', { className: 'sr-pills' }, h(B.Pill, { variant: 'filled', icon: 'camera' }, 'Snap it')),
-    h('div', { className: 'sr-area' }, h('div', { className: 'sr-map' },
-        h(B.Icon, { name: 'map', size: 28, strokeWidth: 1.6 }),
-        h('p', { className: 'heading', style: { color: 'var(--text)' } }, 'Map coming soon'),
-        h('p', { className: 'body' }, 'Spots across New York City that carry your Bevs will show up here.'))))),
-  h('div', { className: 'tabbar' }, h(B.TabBar, { active: 'add', user: ME }))));
+    h('div', { className: 'sr-area' }, h('div', { className: 'mapbg' }, h('div', { className: 'mapbg-river' }),
+      MAP_PINS_ALL.map(function (p, i) { return h('span', { key: i, className: 'mapbg-pin', style: { left: p[0] + '%', top: p[1] + '%' } }, h(B.MapCallout, { score: p[2], predicted: p[3], kind: p[4], selected: !!p[5] })); }),
+      h('span', { className: 'mapbg-credit' }, '© OpenStreetMap contributors'), h('span', { className: 'mapbg-logo', title: "Google's logo" }), h('span', { className: 'mapbg-terms', title: "Google's terms" })), h(B.MapControls, {}, h(B.MapFilterRow, { neighborhoods: false }))))),
+  h('div', { className: 'tabbar' }, h(B.TabBar, { active: 'add', user: ME }))),
+    
+h('div', { className: 'phone' },
+  h('div', { className: 'status' }, '9:41', h('span', { className: 'status-r' }, h('span', { className: 'batt' }, h('i')))),
+  h('div', { className: 'scroll' }, 
+  h('div', { className: 'sr-area', style: { height: '100%' } }, h('div', { className: 'mapbg' }, h('div', { className: 'mapbg-river' }),
+      MAP_PINS_ALL.map(function (p, i) { return h('span', { key: i, className: 'mapbg-pin', style: { left: p[0] + '%', top: p[1] + '%' } }, h(B.MapCallout, { score: p[2], predicted: p[3], kind: p[4], selected: !!p[5] })); }),
+      h('span', { className: 'mapbg-credit' }, '© OpenStreetMap contributors'), h('span', { className: 'mapbg-logo', title: "Google's logo" }), h('span', { className: 'mapbg-terms', title: "Google's terms" })),
+    h(B.MapControls, { expanded: true }, h(B.MapFilterRow, { count: 1, neighborhoods: false, category: 'Coffee' })))),
+  null));
+})());
 </script>
 </body>
 </html>
