@@ -1,0 +1,89 @@
+name: venues-sync
+
+# A-08: the venue pipeline (scripts/venues/import-osm.ts, `npm run venues:sync`).
+# One Overpass query for D-13's starting area, the NTA neighbourhood fill, the
+# chain presets in data/venues/chains.json, the menus in data/venues/menus.csv,
+# and the chain expansion -- in that order, as service-role RPCs of
+# 20261109000200. See data/venues/README.md.
+#
+# MANUAL ONLY, and a DRY RUN BY DEFAULT. No schedule yet: A-08 says "re-run
+# monthly", and that cron is a one-line follow-up once the first real run has
+# been looked at. A dry run does every network call and every parse, prints
+# the forecast, and writes nothing; untick `dry_run` to write.
+#
+# Secrets and variables are graph-edges.yml's, unchanged:
+#   SUPABASE_SERVICE_ROLE_KEY   repository SECRET
+#   SUPABASE_URL                repository VARIABLE (a secret of the same name is accepted)
+#
+# THE LOG IS PUBLIC (this is a public repo). The script prints counts, chain
+# ids and neighbourhood names -- all already in the repo -- and never the
+# project URL or a key.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Query and parse, print the forecast, write nothing"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+# Two syncs at once would race on the same rows; never cancel one mid-write.
+concurrency:
+  group: venues-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # A dry run needs no credentials (the presets resolve from
+      # data/catalog by slug), so only a real run is held to them. Failing
+      # loudly rather than skipping, for graph-edges.yml's reason.
+      - name: credentials are present
+        if: ${{ !inputs.dry_run }}
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL || secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          missing=""
+          [ -n "$SUPABASE_URL" ] || missing="$missing SUPABASE_URL"
+          [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] || missing="$missing SUPABASE_SERVICE_ROLE_KEY"
+          if [ -n "$missing" ]; then
+            echo "::error::venues-sync cannot write: missing$missing (see graph-edges.yml)."
+            exit 1
+          fi
+          echo "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set."
+
+      # The scripts import nothing outside node: builtins and the repo, but
+      # `test:scripts` covers scripts/graph too, which needs @bevi/ranking's
+      # workspace symlink.
+      - run: npm ci
+
+      # The pure half: the NTA locator, the presets against the catalog (no
+      # alcohol, no typo), the menu parser.
+      - run: npm run test:scripts
+
+      - name: sync
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL || secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        # `if`, not `[ … ] && …`: under `bash -e` a false test fails the step.
+        run: |
+          args="--out=${RUNNER_TEMP}/venues-import.csv"
+          if [ "$DRY_RUN" = "true" ]; then args="$args --dry-run"; fi
+          echo "running: npm run venues:sync -- $args"
+          npm run venues:sync -- $args
