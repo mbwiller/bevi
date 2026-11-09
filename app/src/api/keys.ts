@@ -2,7 +2,7 @@
 // hierarchical so a prefix invalidates a whole family: `keys.rankings.all` covers listMine,
 // listUser and listBucket; `keys.bevs.all` covers detail, search, duplicates and starters.
 
-import type { Bucket, CategoryId, FindDuplicatesInput, RankingSort } from '@bevi/shared';
+import type { Bucket, CategoryId, FindDuplicatesInput, LatLngBounds, RankingSort, VenueFilters } from '@bevi/shared';
 
 const root = ['bevi'] as const;
 
@@ -88,6 +88,16 @@ export const keys = {
     all: [...root, 'leaderboard'] as const,
     bevs: (categoryId?: CategoryId) => [...root, 'leaderboard', 'bevs', categoryId ?? null] as const,
     users: () => [...root, 'leaderboard', 'users'] as const,
+  },
+
+  venues: {
+    all: [...root, 'venues'] as const,
+    /**
+     * `venues.inView` for one viewport. Pass `inViewParams` output (rounded bounds, floored zoom,
+     * canonical filters), never raw map numbers, so a 1px pan reuses the cached pins.
+     */
+    inView: (p: { bounds: LatLngBounds; zoom: number; filters: VenueFilters }) =>
+      [...root, 'venues', 'inView', p.bounds.south, p.bounds.west, p.bounds.north, p.bounds.east, p.zoom, p.filters] as const,
   },
 
   recommendations: (limit?: number) => [...root, 'recommendations', limit ?? null] as const,

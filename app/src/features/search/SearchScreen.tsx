@@ -9,10 +9,10 @@ import { Header } from '@/components/Header';
 import { Pill } from '@/components/Pill';
 import { SearchBar } from '@/components/SearchBar';
 import { useDebouncedValue } from '@/features/add-bev/useDebouncedValue';
+import { MapView } from '@/features/map/MapView';
 import { useBack } from '@/lib/useBack';
 import { motion, spacing, useTheme } from '@/theme';
 
-import { MapPlaceholder } from './MapPlaceholder';
 import { initialPanel, panelMode, panelReducer } from './panel';
 import { SearchPanel } from './SearchPanel';
 
@@ -35,9 +35,9 @@ export interface SearchScreenProps {
  * The Search tab (TASKS.md M-15, decision 32; design system ScreenSearch): the wordmark header, one
  * bar for Bevs and people, Snap it, then the map area filling the rest. Focusing or typing in the
  * bar slides the results panel over the map from under it; Cancel slides it away. The map area
- * stays mounted throughout (the live map, M-16, must be created once per session) and takes no
- * gestures (or screen-reader and keyboard focus) while the panel is up. Pressing the Search tab
- * again closes the panel.
+ * stays mounted throughout (the live map, M-16, is created once per session and kept where it was)
+ * and is passive while the panel is up: no gestures, keys, or screen-reader and keyboard focus.
+ * Pressing the Search tab again closes the panel.
  */
 export function SearchScreen({ focusRequest, closeRequest = 0 }: SearchScreenProps) {
   const back = useBack();
@@ -111,7 +111,7 @@ export function SearchScreen({ focusRequest, closeRequest = 0 }: SearchScreenPro
           aria-hidden={up}
           tabIndex={up ? -1 : undefined}
         >
-          <MapPlaceholder />
+          <MapView passive={up} />
         </View>
         {up ? (
           <Animated.View
