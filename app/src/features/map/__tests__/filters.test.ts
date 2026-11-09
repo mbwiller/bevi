@@ -5,7 +5,7 @@ import type { VenueFilters } from '@bevi/shared';
 
 import { MAP_FILTERS_KEY, reloadMapFiltersForTests, useMapFilters } from '@/features/search/mapFilters';
 
-import { activeFilterCount, pickedLabels, sanitiseFilters, toggled, usableFilters } from '../filters';
+import { activeFilterCount, keepHiddenCategories, pickedLabels, sanitiseFilters, toggled, usableFilters } from '../filters';
 
 describe('the pills', () => {
   it('count each facet that is on once, and Open now once', () => {
@@ -45,6 +45,29 @@ describe('usableFilters', () => {
     expect(usableFilters(f, true, ['Yorkville'])).toEqual({ neighborhoods: ['Yorkville'] });
     // Prod today: no vocabulary, so no neighbourhood filter can stay on behind a hidden pill.
     expect(usableFilters(f, true, [])).toEqual({});
+  });
+});
+
+describe('keepHiddenCategories', () => {
+  const stored = { categoryIds: ['beer', 'coffee'] } as const;
+  it('keeps a stored category the pills hide (before me loads, or under 21) through other changes', () => {
+    expect(
+      keepHiddenCategories({ categoryIds: ['coffee'], openNow: true }, { ...stored, categoryIds: [...stored.categoryIds] }, false),
+    ).toEqual({
+      categoryIds: ['coffee', 'beer'],
+      openNow: true,
+    });
+    expect(keepHiddenCategories({ categoryIds: ['coffee', 'tea'] }, { categoryIds: ['beer', 'coffee'] }, false)).toEqual({
+      categoryIds: ['coffee', 'tea', 'beer'],
+    });
+    expect(keepHiddenCategories({ priceTiers: [1] }, { categoryIds: ['beer'] }, false)).toEqual({ priceTiers: [1], categoryIds: ['beer'] });
+  });
+
+  it('changes nothing when nothing is hidden; Reset and Any category clear it', () => {
+    const next = { categoryIds: ['coffee' as const] };
+    expect(keepHiddenCategories(next, { categoryIds: ['beer'] }, true)).toBe(next);
+    expect(keepHiddenCategories({}, { categoryIds: ['beer'] }, false)).toEqual({});
+    expect(keepHiddenCategories({ categoryIds: [] }, { categoryIds: ['beer'] }, false)).toEqual({ categoryIds: [] });
   });
 });
 

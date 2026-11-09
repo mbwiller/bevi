@@ -134,7 +134,9 @@ export function VenueRow({ venue, openNow = null, score, predicted = false, bevs
  */
 export function VenueSheet({ venue, openNow = null, bevs = [], bevCount: count, loading = false, notFound = false, error, onClose, onRetry, onRank, onSave, onOpenBev, onWebsite, className }) {
   const meta = venue ? [KIND_LABEL[venue.kind], venue.neighborhood, venue.borough].filter(Boolean).join(' · ') : '';
-  const host = venue && venue.website ? venue.website.replace(/^https?:\/\//, '').replace(/\/$/, '') : null;
+  // Only http(s) websites (the value comes from OpenStreetMap): never a `javascript:` URL or a bare word.
+  const site = venue && venue.website && /^https?:\/\/[^\s/]+/i.test(venue.website.trim()) ? venue.website.trim() : null;
+  const host = site ? site.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/$/, '') : null;
   const n = count != null ? count : bevs.length;
   let body;
   if (notFound) body = <EmptyState icon="map-pin" title="This spot isn't here anymore" body="It may have closed, or it no longer carries any Bevs." />;
@@ -162,7 +164,7 @@ export function VenueSheet({ venue, openNow = null, bevs = [], bevCount: count, 
             {meta ? <p className="body bv-meta">{meta}</p> : null}
             <p className="body bv-venuesheet-line"><Icon name="clock" size={16} strokeWidth={2} /><span>{openLabel(openNow)}</span></p>
             {venue.address ? <p className="body bv-venuesheet-line"><Icon name="map-pin" size={16} strokeWidth={2} /><span>{venue.address}</span></p> : null}
-            {host ? <a className="body bv-link bv-venuesheet-web" href={venue.website} target="_blank" rel="noopener noreferrer" onClick={onWebsite}>{host}</a> : null}
+            {host ? <a className="body bv-link bv-venuesheet-web" href={site} target="_blank" rel="noopener noreferrer" onClick={onWebsite}>{host}</a> : null}
           </div>
         ) : (
           <div className="bv-venuesheet-title bv-venuesheet-title-end"><IconButton icon="x" variant="filled" label="Close" onClick={onClose} /></div>

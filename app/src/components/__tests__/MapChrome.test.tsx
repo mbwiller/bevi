@@ -3,7 +3,7 @@
 
 import { ApiError, type BevSummary, type Venue } from '@bevi/shared';
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import { Text } from 'react-native';
+import { Linking, Platform, Text } from 'react-native';
 
 import { venueBevScore } from '@/features/map/VenuePanel';
 import { openLabel, venueMeta, websiteLink } from '@/lib/venue';
@@ -102,9 +102,7 @@ describe('VenueRow', () => {
 describe('VenueSheet', () => {
   it('data: the header, the rows and the credit', async () => {
     await render(
-      <VenueSheet venue={venue} openNow bevCount={1}>
-        <Text>A row</Text>
-      </VenueSheet>,
+      <VenueSheet venue={venue} openNow bevCount={1} bevs={[{ id: 'b' } as BevSummary]} renderBev={() => <Text>A row</Text>} />,
     );
     expect(screen.getByRole('header', { name: 'Yorkville Coffee Works' })).toBeTruthy();
     expect(screen.getByText('Craft · Yorkville · Manhattan')).toBeTruthy();
@@ -113,6 +111,27 @@ describe('VenueSheet', () => {
     expect(screen.getByText('A row')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Website, yorkville.example' })).toBeTruthy();
     expect(screen.getByText('© OpenStreetMap contributors')).toBeTruthy();
+  });
+
+  it('the website: a real anchor on the web (new tab, no opener), the OS elsewhere', async () => {
+    const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    const { rerender } = await render(<VenueSheet venue={venue} />);
+    await fireEvent.press(screen.getByRole('link', { name: 'Website, yorkville.example' }));
+    expect(open).toHaveBeenCalledWith('https://www.yorkville.example/');
+    expect(screen.getByRole('link').props.href).toBeUndefined();
+
+    const os = Platform.OS;
+    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true });
+    try {
+      await rerender(<VenueSheet venue={{ ...venue, website: 'https://www.yorkville.example/' }} />);
+      const link = screen.getByRole('link', { name: 'Website, yorkville.example' });
+      expect(link.props).toMatchObject({ href: 'https://www.yorkville.example/', hrefAttrs: { target: '_blank', rel: 'noopener noreferrer' } });
+      await rerender(<VenueSheet venue={{ ...venue, website: 'javascript:alert(1)' }} />);
+      expect(screen.queryByRole('link')).toBeNull();
+    } finally {
+      Object.defineProperty(Platform, 'OS', { value: os, configurable: true });
+      open.mockRestore();
+    }
   });
 
   it('loading, empty, not found and failed', async () => {

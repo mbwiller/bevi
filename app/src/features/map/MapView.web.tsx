@@ -14,7 +14,7 @@ import { spacing, useTheme } from '@/theme';
 
 import { attributionCss } from './attribution';
 import { mapConfig, type MapConfig } from './config';
-import { usableFilters } from './filters';
+import { keepHiddenCategories, usableFilters } from './filters';
 import { attach, detach, getMapSession, getMapStatus, loadMap, subscribeMapStatus, type MapSession } from './googleMaps';
 import { browserGeolocation, locate, LOCATE_COPY, LOCATE_ZOOM, type LatLng } from './locate';
 import { MapFilters } from './MapFilters';
@@ -158,7 +158,11 @@ function LiveMap({
   const hoods = useVenueNeighborhoods();
   const vocabulary = hoods.data ?? (hoods.isError ? NO_NEIGHBORHOODS : undefined);
   const usable = useMemo(() => usableFilters(filters, canSeeAlcohol, vocabulary), [filters, canSeeAlcohol, vocabulary]);
-  const changeFilters = useCallback((f: VenueFilters) => onFiltersChange?.(f), [onFiltersChange]);
+  // Strip only for the request: what the viewer can't use yet stays in the stored selection.
+  const changeFilters = useCallback(
+    (f: VenueFilters) => onFiltersChange?.(keepHiddenCategories(f, filters, canSeeAlcohol)),
+    [onFiltersChange, filters, canSeeAlcohol],
+  );
 
   const settled = useDebouncedValue(viewport, VIEWPORT_DEBOUNCE_MS);
   const pins = useVenuesInView(settled, usable);

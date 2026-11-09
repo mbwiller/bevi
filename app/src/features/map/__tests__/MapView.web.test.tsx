@@ -26,6 +26,15 @@ jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush, back: jest.fn(), replace: jest.fn(), canGoBack: () => true }),
 }));
 
+// FlashList's own jest setup (@shopify/flash-list/jestSetup): a 400 × 900 window of 100pt rows, so it
+// virtualises as on a device instead of mounting every row.
+jest.mock('@shopify/flash-list/dist/recyclerview/utils/measureLayout', () => ({
+  ...jest.requireActual('@shopify/flash-list/dist/recyclerview/utils/measureLayout'),
+  measureParentSize: () => ({ x: 0, y: 0, width: 400, height: 900 }),
+  measureFirstChildLayout: () => ({ x: 0, y: 0, width: 400, height: 900 }),
+  measureItemLayout: () => ({ x: 0, y: 0, width: 100, height: 100 }),
+}));
+
 configure({ asyncUtilTimeout: VIEWPORT_DEBOUNCE_MS + 4000 });
 
 type Listener = () => void;
@@ -79,6 +88,7 @@ function fakeSession() {
 
 let fake: ReturnType<typeof fakeSession>;
 const mock = {
+  real: false,
   status: 'idle' as string,
   listeners: new Set<() => void>(),
   attach: jest.fn(),
@@ -86,17 +96,60 @@ const mock = {
   loadMap: jest.fn(),
 };
 
-jest.mock('../googleMaps', () => ({
-  attach: (h: unknown) => mock.attach(h),
-  detach: (h: unknown) => mock.detach(h),
-  loadMap: (c: unknown) => mock.loadMap(c),
-  getMapSession: () => null,
-  getMapStatus: () => mock.status,
-  subscribeMapStatus: (l: () => void) => {
-    mock.listeners.add(l);
-    return () => mock.listeners.delete(l);
-  },
+// `mock.real` swaps in the real loader module (one session map, the div re-parented between hosts)
+// over a fake Maps JS API, for the remount case; each React Native host stands in for a jsdom div.
+jest.mock('../googleMaps', () => {
+  const actual = jest.requireActual('../googleMaps');
+  return {
+    attach: (h: unknown) => (mock.real ? actual.attach(mockDom(h)) : mock.attach(h)),
+    detach: (h: unknown) => (mock.real ? actual.detach(mockDom(h)) : mock.detach(h)),
+    loadMap: (c: unknown) => (mock.real ? actual.loadMap(c) : mock.loadMap(c)),
+    getMapSession: () => (mock.real ? actual.getMapSession() : null),
+    getMapStatus: () => (mock.real ? actual.getMapStatus() : mock.status),
+    subscribeMapStatus: (l: () => void) => {
+      if (mock.real) return actual.subscribeMapStatus(l);
+      mock.listeners.add(l);
+      return () => mock.listeners.delete(l);
+    },
+  };
+});
+
+jest.mock('@googlemaps/js-api-loader', () => ({
+  setOptions: () => {},
+  importLibrary: async (name: string) => mockLibrary(name),
 }));
+
+const mockHosts = new Map<unknown, HTMLDivElement>();
+/** The jsdom div standing in for a React Native host (a View instance, with its testID in props). */
+function mockDom(h: unknown): HTMLDivElement {
+  let d = mockHosts.get(h);
+  if (!d) {
+    d = document.body.appendChild(document.createElement('div'));
+    mockHosts.set(h, d);
+  }
+  return d;
+}
+/** The newest host with this testID, and its div. */
+function hostDom(testID: string): { host: unknown; dom: HTMLDivElement } {
+  const all = [...mockHosts].filter(([h]) => (h as { props?: { testID?: string } }).props?.testID === testID);
+  const [host, dom] = all.at(-1)!;
+  return { host, dom };
+}
+/** The fake Maps JS API: `new Map` hands back the fake session's map and records the div it got. */
+function mockLibrary(name: string) {
+  if (name === 'core') return { ControlPosition: { LEFT_BOTTOM: 6 } };
+  if (name === 'maps') {
+    return {
+      Map: function FakeMap(div: HTMLElement) {
+        mapDiv = div;
+        return Object.assign(fake.session.map, { controls: [] });
+      },
+    };
+  }
+  return fake.session.marker;
+}
+let mapDiv: HTMLElement | null = null;
+const realMaps = jest.requireActual<typeof import('../googleMaps')>('../googleMaps');
 
 const setStatus = (s: string) => {
   mock.status = s;
@@ -126,6 +179,11 @@ beforeEach(() => {
 afterEach(() => {
   client.clear();
   jest.restoreAllMocks();
+  if (mock.real) realMaps.resetMapSessionForTests();
+  mock.real = false;
+  mockHosts.forEach((d) => d.remove());
+  mockHosts.clear();
+  mapDiv = null;
 });
 
 interface Props {
@@ -296,6 +354,30 @@ describe('inline and full screen: one map', () => {
     expect(mock.loadMap).toHaveBeenCalledTimes(1);
   });
 
+  it('unmounting while full screen, then a new inline map: still one Map, and its div in the new inline host', async () => {
+    mock.real = true;
+    const first = await render(ui());
+    await waitFor(() => expect(fake.live().length).toBeGreaterThan(0));
+    const inline = hostDom('map-host');
+    expect(mapDiv!.parentElement).toBe(inline.dom);
+
+    await tap('Yorkville Coffee Works');
+    expect(screen.getByTestId('map-full')).toBeTruthy();
+    await waitFor(() => expect(mapDiv!.parentElement).toBe(hostDom('map-host-full').dom));
+
+    // The Search screen goes (say, a tab reset) with the full screen still open.
+    await first.unmount();
+    expect(fake.live()).toHaveLength(0);
+
+    await render(ui());
+    await waitFor(() => expect(fake.live().length).toBeGreaterThan(0));
+    const next = hostDom('map-host');
+    expect(next.host).not.toBe(inline.host);
+    expect(screen.queryByTestId('map-full')).toBeNull();
+    expect(realMaps.mapsCreated()).toBe(1);
+    expect(mapDiv!.parentElement).toBe(next.dom);
+  });
+
   it('Escape closes the VenueSheet first, then the full screen', async () => {
     await renderMap();
     await tap('Yorkville Coffee Works');
@@ -402,6 +484,31 @@ describe('the VenueSheet', () => {
     expect(sheet().getByText("You'd rate it")).toBeTruthy();
     expect(sheet().getByLabelText('Predicted score 6.3')).toBeTruthy();
     if (plain!.bayesScore != null) expect(sheet().getAllByLabelText(`Score ${plain!.bayesScore.toFixed(1)}`).length).toBeGreaterThan(0);
+  });
+
+  it('a big shop: only the rows in view mount, so far fewer than one bevs.get per Bev', async () => {
+    const real = await api.venues.get('venue-1');
+    const many = Array.from({ length: 100 }, (_, i) => ({
+      ...real.bevs[i % real.bevs.length]!,
+      id: `${real.bevs[i % real.bevs.length]!.id}-${i}`,
+    }));
+    jest.spyOn(api.venues, 'get').mockResolvedValue({ ...real, bevs: many });
+    const realGet = api.bevs.get.bind(api.bevs);
+    const get = jest.spyOn(api.bevs, 'get').mockImplementation(async (id) => ({ ...(await realGet(id.replace(/-\d+$/, ''))), id }));
+    await renderMap();
+    await tap('Yorkville Coffee Works');
+    await waitFor(() => expect(sheet().getByText('Bevs here (100)')).toBeTruthy());
+    await waitFor(() => expect(sheet().getAllByLabelText(/^Rank /).length).toBeGreaterThan(0));
+    const mounted = sheet().getAllByLabelText(/^Rank /).length;
+    expect(mounted).toBeLessThan(25);
+    await waitFor(() => expect(get).toHaveBeenCalledTimes(mounted));
+    expect(new Set(get.mock.calls.map(([id]) => id)).size).toBe(mounted);
+
+    // Closing and reopening the sheet within VENUE_BEV_STALE_MS asks for none of them again.
+    await fireEvent.press(sheet().getByLabelText('Close'));
+    await tap('Yorkville Coffee Works');
+    await waitFor(() => expect(sheet().getAllByLabelText(/^Rank /).length).toBeGreaterThan(0));
+    expect(get).toHaveBeenCalledTimes(mounted);
   });
 
   it('Rank it starts ranking the Bev; tapping a row opens its page', async () => {

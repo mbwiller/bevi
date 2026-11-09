@@ -5,12 +5,14 @@ import { api } from '../client';
 import { keys } from '../keys';
 
 /** Bev detail. Pass `refetchInterval` to poll while `photoStatus === 'processing'`. */
-export function useBev(id: string | undefined, opts: { refetchInterval?: number | false } = {}) {
+export function useBev(id: string | undefined, opts: { refetchInterval?: number | false; staleTime?: number } = {}) {
   return useQuery({
     queryKey: keys.bevs.detail(id ?? ''),
     queryFn: () => api.bevs.get(id!),
     enabled: !!id,
     refetchInterval: opts.refetchInterval,
+    // Only when asked: an explicit `undefined` would override the client's default.
+    ...(opts.staleTime != null && { staleTime: opts.staleTime }),
   });
 }
 

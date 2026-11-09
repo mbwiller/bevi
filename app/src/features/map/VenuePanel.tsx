@@ -1,6 +1,6 @@
 import { ApiError, isApiError, type Bev, type BevSummary, type Bucket, type VenuePin } from '@bevi/shared';
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 
 import { useAddWantToTry, useBev, useMe, useRemoveWantToTry, useVenue } from '@/api/hooks';
@@ -30,9 +30,23 @@ export function venueBevScore(
   return { score: bev.bayesScore, variant: 'default' };
 }
 
+/**
+ * How long a row's Bev detail stays fresh. The rows mount as they scroll into view, so without this
+ * scrolling a big shop's list back and forth (or refocusing the tab) would ask for each Bev again.
+ */
+export const VENUE_BEV_STALE_MS = 5 * 60_000;
+
 /** One Bev the venue carries. Like a search result, it reads the Bev's detail for your score and the bookmark. */
-function VenueBevRow({ bev, onOpen, onRank }: { bev: BevSummary; onOpen: () => void; onRank: () => void }) {
-  const detail = useBev(bev.id);
+const VenueBevRow = memo(function VenueBevRow({
+  bev,
+  onOpen,
+  onRank,
+}: {
+  bev: BevSummary;
+  onOpen: (bev: BevSummary) => void;
+  onRank: (bev: BevSummary) => void;
+}) {
+  const detail = useBev(bev.id, { staleTime: VENUE_BEV_STALE_MS });
   const add = useAddWantToTry();
   const remove = useRemoveWantToTry();
   const saved = detail.data?.inWantToTry ?? false;
@@ -47,12 +61,12 @@ function VenueBevRow({ bev, onOpen, onRank }: { bev: BevSummary; onOpen: () => v
       meta={s.meta}
       count={bev.ratingCount}
       saved={saved}
-      onPress={onOpen}
-      onRank={onRank}
+      onPress={() => onOpen(bev)}
+      onRank={() => onRank(bev)}
       onSave={() => (saved ? remove.mutate(bev.id) : add.mutate({ bevId: bev.id }))}
     />
   );
-}
+});
 
 export interface VenuePanelProps {
   /** The tapped pin: it fills the header while `venues.get` loads. */
@@ -83,6 +97,16 @@ export function VenuePanel({ pin, onClose, style }: VenuePanelProps) {
   const bevs = !loading && q.data ? q.data.bevs.filter((b) => allowed.has(b.categoryId)) : [];
   const detail = q.data && !notFound ? q.data : null;
 
+  const onOpen = useCallback(
+    (b: BevSummary) => {
+      remember(b);
+      router.push({ pathname: '/bev/[id]', params: { id: b.id } });
+    },
+    [remember, router],
+  );
+  // The rows are a FlashList (only the ones in view mount, so only they ask for their Bev's detail).
+  const renderBev = useCallback((b: BevSummary) => <VenueBevRow bev={b} onRank={rank} onOpen={onOpen} />, [rank, onOpen]);
+
   return (
     <VenueSheet
       venue={notFound ? null : (detail?.venue ?? pin.venue)}
@@ -93,22 +117,10 @@ export function VenuePanel({ pin, onClose, style }: VenuePanelProps) {
       error={failed ? q.error : offline ? OFFLINE : undefined}
       onRetry={() => void q.refetch()}
       onClose={onClose}
+      bevs={bevs}
+      renderBev={renderBev}
       style={style}
-    >
-      {bevs.length
-        ? bevs.map((b) => (
-            <VenueBevRow
-              key={b.id}
-              bev={b}
-              onRank={() => rank(b)}
-              onOpen={() => {
-                remember(b);
-                router.push({ pathname: '/bev/[id]', params: { id: b.id } });
-              }}
-            />
-          ))
-        : null}
-    </VenueSheet>
+    />
   );
 }
 

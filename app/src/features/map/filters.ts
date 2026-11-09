@@ -55,6 +55,19 @@ export function usableFilters(f: VenueFilters, canSeeAlcohol: boolean, vocabular
 }
 
 /**
+ * A change from the pills, to store. The pills show `usableFilters`, so a category this viewer can't
+ * use yet (an alcoholic one before `me` has loaded, or under 21) isn't in what they hand back; it is
+ * kept from the stored selection, and `usableFilters` keeps it out of the request. Reset filters
+ * (`{}`) and an explicitly empty category list clear it too.
+ */
+export function keepHiddenCategories(next: VenueFilters, stored: VenueFilters, canSeeAlcohol: boolean): VenueFilters {
+  const allowed = new Set(visibleCategories(canSeeAlcohol).map((c) => c.id));
+  const hidden = (stored.categoryIds ?? []).filter((id) => !allowed.has(id));
+  if (hidden.length === 0 || Object.keys(next).length === 0 || next.categoryIds?.length === 0) return next;
+  return { ...next, categoryIds: [...(next.categoryIds ?? []), ...hidden.filter((id) => !next.categoryIds?.includes(id))] };
+}
+
+/**
  * Filters read back from storage, keeping only well-formed values: a stale or hand-edited
  * sessionStorage entry must never reach `venues.inView` as junk.
  */
