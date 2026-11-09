@@ -16,26 +16,47 @@
  */
 
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
   AMENITIES,
+  CHAIN_ONLY_AMENITIES,
+  CHAIN_ONLY_SHOPS,
+  LENOX_HILL_PROBE,
+  NTA_DISPLAY_NAMES,
   NYC_AREA_ID,
   NYC_BOUNDS,
   SHOPS,
   START_BBOX,
+  areasFromGeoJson,
+  chainKey,
   hoursKnown,
   inBounds,
+  makeLocator,
+  ntaFileText,
   openAt,
   overpassQuery,
   parseElements,
   parseHours,
+  pointInPolygon,
+  pointInRing,
   report,
   toCsv,
+  trimNtas,
+  trimRing,
   type OsmElement,
+  type PolygonCoords,
 } from "./import-core.ts";
 
-const CHAINS = new Set(["duane reade", "cvs pharmacy", "7-eleven"]);
+const CHAINS = new Map([
+  ["duane reade", "duane-reade"],
+  ["cvs pharmacy", "cvs"],
+  ["7-eleven", "7-eleven"],
+  ["gristedes", "gristedes"],
+]);
 
 const el = (over: Partial<OsmElement> & { id: number }): OsmElement => ({
   type: "node",
@@ -100,6 +121,7 @@ test("a named, located, in-bounds venue becomes a row", () => {
     osm_id: "node/1",
     name: "A Cafe",
     kind: "craft",
+    chain_id: null,
     lat: 40.7736,
     lng: -73.9566,
     address: null,
@@ -177,10 +199,10 @@ test("a known brand makes the venue a chain, so a preset can expand onto it", ()
     CHAINS,
   );
   assert.deepEqual(
-    rows.map((r) => [r.name, r.kind]),
+    rows.map((r) => [r.name, r.kind, r.chain_id]),
     [
-      ["Duane Reade", "chain"],
-      ["Corner Roasters", "craft"],
+      ["Duane Reade", "chain", "duane-reade"],
+      ["Corner Roasters", "craft", null],
     ],
   );
 });
@@ -357,13 +379,13 @@ test("the CSV quotes commas, quotes and newlines", () => {
   );
   const csv = toCsv(rows);
   const [header, row] = csv.split("\n");
-  assert.equal(header, "osm_id,name,kind,lat,lng,address,neighborhood,borough,hours_osm,hours_known,website");
+  assert.equal(header, "osm_id,name,kind,chain_id,lat,lng,address,neighborhood,borough,hours_osm,hours_known,website");
   assert.ok(row?.includes('"Joe, ""The"" Roaster"'), row);
   assert.ok(csv.endsWith("\n"), "ends with a newline");
 });
 
 test("an empty import is an empty CSV with a header, not an error", () => {
-  assert.equal(toCsv([]), "osm_id,name,kind,lat,lng,address,neighborhood,borough,hours_osm,hours_known,website\n");
+  assert.equal(toCsv([]), "osm_id,name,kind,chain_id,lat,lng,address,neighborhood,borough,hours_osm,hours_known,website\n");
 });
 
 test("the report accounts for every element, kept or dropped", () => {
@@ -388,5 +410,225 @@ test("the report accounts for every element, kept or dropped", () => {
     ["no name", 1],
     ["outside New York City", 1],
   ]);
+  assert.equal(r.withNeighborhood, 2);
+  assert.deepEqual(r.chainBranches, [["duane-reade", 1]]);
   assert.equal(r.total + r.skipped.reduce((a, [, n]) => a + n, 0), elements.length);
+});
+
+// ---------------------------------------------------------------------------
+// Chains in the query and in the match
+// ---------------------------------------------------------------------------
+
+test("with no chain brands the query is decision 35's two clauses, nothing more", () => {
+  const q = overpassQuery(START_BBOX);
+  assert.ok(!q.includes("brand"), q);
+  for (const t of [...CHAIN_ONLY_AMENITIES, ...CHAIN_ONLY_SHOPS]) assert.ok(!q.includes(t), `no ${t} without a chain`);
+});
+
+test("chain brands add fast food, pharmacies and chemists ONLY for those brands, in the same one query", () => {
+  const q = overpassQuery(START_BBOX, NYC_AREA_ID, ["Duane Reade", "Dunkin'", "Duane Reade"]);
+  assert.match(q, /nwr\["brand"~"\^\(Duane Reade\|Dunkin'\)\$",i\]\["amenity"~"\^\(fast_food\|pharmacy\)\$"\]/);
+  assert.match(q, /nwr\["brand"~"\^\(Duane Reade\|Dunkin'\)\$",i\]\["shop"~"\^\(chemist\)\$"\]/);
+  // Every clause, including the two new ones, is clipped to the city.
+  assert.equal(q.match(/\(area\.nyc\);/g)?.length, 4);
+  assert.equal(q.match(/out center tags;/g)?.length, 1, "one query");
+});
+
+test("a brand that would break the Overpass regex is refused, not escaped", () => {
+  assert.throws(() => overpassQuery(START_BBOX, NYC_AREA_ID, ["Joe (Coffee)"]), /not safe/);
+  assert.throws(() => overpassQuery(START_BBOX, NYC_AREA_ID, ['Say "Hi"']), /not safe/);
+});
+
+test("chainKey is the brand, or the exact name when there is no brand tag (the Gristedes case)", () => {
+  assert.equal(chainKey({ brand: " Duane Reade ", name: "Duane Reade #123" }), "duane reade");
+  assert.equal(chainKey({ name: "Gristedes" }), "gristedes");
+  assert.equal(chainKey({}), null);
+  const { rows } = parseElements(
+    [
+      el({ id: 30, tags: { shop: "supermarket", name: "Gristedes" } }),
+      el({ id: 31, tags: { shop: "alcohol", name: "Gristedes Wine & Liquor" } }),
+      // A brand tag that is not a chain wins over a name that is.
+      el({ id: 32, tags: { amenity: "cafe", name: "Gristedes", brand: "Someone Else" } }),
+    ],
+    CHAINS,
+  );
+  assert.deepEqual(rows.map((r) => [r.osm_id, r.chain_id, r.kind]), [
+    ["node/30", "gristedes", "chain"],
+    ["node/31", null, "craft"],
+    ["node/32", null, "craft"],
+  ]);
+});
+
+// ---------------------------------------------------------------------------
+// Point in polygon
+// ---------------------------------------------------------------------------
+
+// A 4x4 square with a 2x2 hole, as [lng, lat].
+const SQUARE: PolygonCoords = [
+  [[0, 0], [4, 0], [4, 4], [0, 4], [0, 0]],
+  [[1, 1], [3, 1], [3, 3], [1, 3], [1, 1]],
+];
+
+test("ray casting: inside the outer ring, outside it, and in the hole", () => {
+  assert.equal(pointInRing(0.5, 0.5, SQUARE[0]!), true);
+  assert.equal(pointInRing(5, 2, SQUARE[0]!), false);
+  assert.equal(pointInPolygon(0.5, 0.5, SQUARE), true, "between the outer ring and the hole");
+  assert.equal(pointInPolygon(2, 2, SQUARE), false, "a hole is not inside the polygon");
+  assert.equal(pointInPolygon(-1, 2, SQUARE), false);
+});
+
+test("ring orientation does not matter (even-odd), so holes need no winding", () => {
+  const cw = [...SQUARE[0]!].reverse();
+  assert.equal(pointInRing(0.5, 0.5, cw), true);
+  assert.equal(pointInRing(5, 2, cw), false);
+});
+
+test("a MultiPolygon locates in any member, and the first containing area wins", () => {
+  const areas = areasFromGeoJson({
+    features: [
+      { properties: { nta2020: "XX0001", name: "Twin", borough: "Queens" },
+        geometry: { type: "MultiPolygon", coordinates: [SQUARE, [[[10, 10], [12, 10], [12, 12], [10, 12], [10, 10]]]] } },
+      { properties: { nta2020: "XX0002", name: "Plain", borough: "Bronx" },
+        geometry: { type: "Polygon", coordinates: [[[20, 20], [21, 20], [21, 21], [20, 21], [20, 20]]] } },
+    ],
+  });
+  const locate = makeLocator(areas);
+  // locate takes (lat, lng): y first.
+  assert.deepEqual(locate(11, 11), { neighborhood: "Twin", borough: "Queens" });
+  assert.deepEqual(locate(0.5, 0.5), { neighborhood: "Twin", borough: "Queens" });
+  assert.equal(locate(2, 2), null, "in the hole");
+  assert.deepEqual(locate(20.5, 20.5), { neighborhood: "Plain", borough: "Bronx" });
+  assert.equal(locate(50, 50), null);
+});
+
+test("a malformed NTA file is an error, not a silently empty locator", () => {
+  assert.throws(() => areasFromGeoJson({ features: [] }), /no features/);
+  assert.throws(
+    () => areasFromGeoJson({ features: [{ properties: { nta2020: "X", name: "N", borough: "Jersey" }, geometry: { type: "Polygon", coordinates: [] } }] }),
+    /borough/,
+  );
+  assert.throws(
+    () => areasFromGeoJson({ features: [{ properties: { nta2020: "X", name: "N", borough: "Bronx" }, geometry: { type: "Point", coordinates: [0, 0] } }] }),
+    /Polygon or MultiPolygon/,
+  );
+});
+
+// ---------------------------------------------------------------------------
+// The committed NTA file, against places we know
+// ---------------------------------------------------------------------------
+
+const NTA_FILE = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "data", "venues", "nyc-nta-2020.geojson");
+const nyc = makeLocator(areasFromGeoJson(JSON.parse(readFileSync(NTA_FILE, "utf8"))));
+
+test("the Upper East Side reads as its neighbourhoods, not as census labels", () => {
+  // Second Avenue at East 76th.
+  assert.deepEqual(nyc(40.7736, -73.9566), { neighborhood: "Lenox Hill", borough: "Manhattan" });
+  // Madison Avenue at East 90th: the Fifth-to-Third strip, MN0802.
+  assert.deepEqual(nyc(40.7838, -73.9555), { neighborhood: "Upper East Side", borough: "Manhattan" });
+  // York Avenue at East 86th.
+  assert.deepEqual(nyc(40.776, -73.948), { neighborhood: "Yorkville", borough: "Manhattan" });
+  // The probe the Roosevelt Island split keys on is itself Lenox Hill.
+  assert.deepEqual(nyc(LENOX_HILL_PROBE.lat, LENOX_HILL_PROBE.lng), { neighborhood: "Lenox Hill", borough: "Manhattan" });
+});
+
+test("Roosevelt Island comes out as its own name, split off MN0801", () => {
+  // The tram station, and the north end by the lighthouse.
+  assert.deepEqual(nyc(40.7621, -73.9497), { neighborhood: "Roosevelt Island", borough: "Manhattan" });
+  assert.deepEqual(nyc(40.77, -73.944), { neighborhood: "Roosevelt Island", borough: "Manhattan" });
+  // ... while York Avenue at East 68th, inside the island's bounding box, is not.
+  assert.deepEqual(nyc(40.7646, -73.9547), { neighborhood: "Lenox Hill", borough: "Manhattan" });
+});
+
+test("other boroughs come back with theirs, and the river and New Jersey with nothing", () => {
+  assert.deepEqual(nyc(40.671, -73.9814), { neighborhood: "Park Slope", borough: "Brooklyn" });
+  assert.equal(nyc(40.768, -73.948)?.neighborhood ?? null, null, "the East River between York Avenue and the island");
+  assert.equal(nyc(40.744, -74.0324), null, "Hoboken");
+});
+
+test("the committed file is trimmed: three properties, 5 dp, under 1.5 MB", () => {
+  const text = readFileSync(NTA_FILE, "utf8");
+  assert.ok(text.length < 1.5 * 1024 * 1024, `${text.length} bytes`);
+  const fc = JSON.parse(text) as { features: Array<{ properties: Record<string, unknown>; geometry: { coordinates: number[][][][] } }> };
+  for (const f of fc.features) assert.deepEqual(Object.keys(f.properties).sort(), ["borough", "name", "nta2020"]);
+  const sample = fc.features[0]!.geometry.coordinates[0]![0]![0]!;
+  for (const n of sample) assert.equal(Math.round(n * 1e5) / 1e5, n);
+  const names = new Set(fc.features.map((f) => f.properties.name));
+  for (const n of [...Object.values(NTA_DISPLAY_NAMES), "Roosevelt Island"]) assert.ok(names.has(n), n);
+});
+
+// ---------------------------------------------------------------------------
+// Trimming the NYC Open Data download
+// ---------------------------------------------------------------------------
+
+test("trimRing rounds to 5 dp, drops the repeats rounding makes, simplifies, and stays closed", () => {
+  const ring: Array<[number, number]> = [
+    [0, 0], [0.000001, 0.000001], [1, 0], [2, 0.0000001], [2, 2], [0, 2], [0, 0],
+  ];
+  const t = trimRing(ring, 0.00001)!;
+  assert.deepEqual(t, [[0, 0], [2, 0], [2, 2], [0, 2], [0, 0]]);
+  assert.equal(trimRing([[0, 0], [0.000001, 0], [0, 0.000001], [0, 0]], 0.00001), null, "a sliver collapses");
+});
+
+const rawNta = (code: string, name: string, boro: string, coordinates: PolygonCoords[]) => ({
+  type: "Feature",
+  properties: { nta2020: code, ntaname: name, boroname: boro, shape_area: "1", cdtaname: "x" },
+  geometry: { type: "MultiPolygon", coordinates },
+});
+const box = (w: number, s: number, e: number, n: number): PolygonCoords => [[[w, s], [e, s], [e, n], [w, n], [w, s]]];
+
+test("trimNtas keeps three properties, renames the Upper East Side NTAs, and splits Roosevelt Island off MN0801", () => {
+  const p = LENOX_HILL_PROBE;
+  const mainland = box(p.lng - 0.005, p.lat - 0.005, p.lng + 0.003, p.lat + 0.005);
+  const island = box(-73.952, 40.755, -73.945, 40.77);
+  const islet = box(-73.9578, 40.7483, -73.9575, 40.7486);
+  const out = trimNtas({
+    features: [
+      rawNta("MN0803", "Upper East Side-Yorkville", "Manhattan", [box(-73.95, 40.775, -73.94, 40.785)]),
+      rawNta("MN0801", "Upper East Side-Lenox Hill-Roosevelt Island", "Manhattan", [islet, island, mainland]),
+      rawNta("BK0602", "Park Slope", "Brooklyn", [box(-73.99, 40.66, -73.97, 40.68)]),
+    ],
+  });
+  assert.deepEqual(out.map((f) => [f.properties.nta2020, f.properties.name, f.geometry.coordinates.length]), [
+    ["BK0602", "Park Slope", 1],
+    ["MN0801", "Lenox Hill", 1],
+    ["MN0801", "Roosevelt Island", 2],
+    ["MN0803", "Yorkville", 1],
+  ]);
+  for (const f of out) assert.deepEqual(Object.keys(f.properties).sort(), ["borough", "name", "nta2020"]);
+  const locate = makeLocator(areasFromGeoJson(JSON.parse(ntaFileText(out))));
+  assert.equal(locate(40.762, -73.9497)?.neighborhood, "Roosevelt Island");
+  assert.equal(locate(p.lat, p.lng)?.neighborhood, "Lenox Hill");
+});
+
+test("trimNtas refuses an MN0801 the probe no longer splits, rather than guessing", () => {
+  assert.throws(
+    () => trimNtas({ features: [rawNta("MN0801", "Upper East Side-Lenox Hill-Roosevelt Island", "Manhattan", [box(-73.952, 40.755, -73.945, 40.77)])] }),
+    /Lenox Hill probe/,
+  );
+});
+
+// ---------------------------------------------------------------------------
+// The NTA fill in parseElements
+// ---------------------------------------------------------------------------
+
+test("the locator fills neighbourhood and borough; a mapper's addr:suburb still wins the neighbourhood", () => {
+  const { rows } = parseElements(
+    [
+      el({ id: 40, lat: 40.7621, lon: -73.9497, tags: { amenity: "cafe", name: "Island Cafe" } }),
+      el({ id: 41, lat: 40.7736, lon: -73.9566, tags: { amenity: "cafe", name: "Named", "addr:suburb": "Upper East Side" } }),
+      // addr:city "New York" is what mappers write for every borough; the polygon knows better.
+      el({ id: 42, lat: 40.671, lon: -73.9814, tags: { amenity: "bar", name: "Slope Bar", "addr:city": "New York" } }),
+      el({ id: 43, lat: 40.768, lon: -73.948, tags: { amenity: "cafe", name: "Boat", "addr:city": "New York" } }),
+    ],
+    CHAINS,
+    undefined,
+    nyc,
+  );
+  assert.deepEqual(rows.map((r) => [r.osm_id, r.neighborhood, r.borough]), [
+    ["node/40", "Roosevelt Island", "Manhattan"],
+    ["node/41", "Upper East Side", "Manhattan"],
+    ["node/42", "Park Slope", "Brooklyn"],
+    // No polygon: OSM's own city is the fallback.
+    ["node/43", null, "Manhattan"],
+  ]);
 });
