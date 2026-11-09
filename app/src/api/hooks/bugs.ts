@@ -1,5 +1,5 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
-import type { BugReportInput } from '@bevi/shared';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { BugReportInput, BugReportSummary } from '@bevi/shared';
 
 import { api } from '../client';
 import { keys } from '../keys';
@@ -23,9 +23,45 @@ export function useCanReportBug() {
 }
 
 /**
- * Files one report. Nothing is invalidated: Linear owns the issue and no
- * screen in this app reads it.
+ * Files one report. My reports is refetched so the new ticket shows up there;
+ * nothing else in the app reads Linear.
  */
 export function useReportBug() {
-  return useMutation({ mutationFn: (input: BugReportInput) => api.bugs.report(input) });
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: BugReportInput) => api.bugs.report(input),
+    onSuccess: () => void client.invalidateQueries({ queryKey: keys.myBugReports() }),
+  });
+}
+
+/**
+ * The caller's own tickets with their live tracker state (My reports). Fresh
+ * for 30 seconds, so flipping between screens does not hit Linear each time;
+ * the function caches its answer for a minute behind this anyway.
+ */
+export function useMyBugReports(enabled = true) {
+  return useQuery({
+    queryKey: keys.myBugReports(),
+    queryFn: () => api.bugs.listMine(),
+    staleTime: 30_000,
+    enabled,
+  });
+}
+
+/**
+ * Moves one of the caller's tickets to Done after they checked the fix on the
+ * device. The list is patched with the ticket the tracker returned and then
+ * refetched.
+ */
+export function useMarkBugVerified() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (ticketId: string) => api.bugs.markVerified(ticketId),
+    onSuccess: (summary: BugReportSummary) => {
+      client.setQueryData<BugReportSummary[]>(keys.myBugReports(), (rows) =>
+        rows?.map((r) => (r.ticketId === summary.ticketId ? summary : r)),
+      );
+      void client.invalidateQueries({ queryKey: keys.myBugReports() });
+    },
+  });
 }

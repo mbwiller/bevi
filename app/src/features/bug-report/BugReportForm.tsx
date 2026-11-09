@@ -1,4 +1,4 @@
-import type { BugReportEnvironment, BugReportResult } from '@bevi/shared';
+import type { BugReportEnvironment, BugReportKind, BugReportResult, BugReportSeverity } from '@bevi/shared';
 import { Image } from 'expo-image';
 import * as Linking from 'expo-linking';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -9,6 +9,7 @@ import { useReportBug } from '@/api/hooks';
 import { Button } from '@/components/Button';
 import { Header } from '@/components/Header';
 import { Icon } from '@/components/Icon';
+import { Pill } from '@/components/Pill';
 import { TextField } from '@/components/TextField';
 import { pickImage, preparePhoto, revokeIfBlob, isUnsupportedImage, type PreparedPhoto } from '@/features/create-bev/photo';
 import { errorCopy } from '@/lib/errorCopy';
@@ -33,12 +34,14 @@ export interface BugReportFormProps {
 }
 
 /**
- * The internal bug reporter (DEVELOPMENT spec section 5, PNG 03). A full-screen
- * modal so it can be opened from any screen without losing it: closing returns
- * to where the reporter was.
+ * The internal bug reporter (docs/bug-workflow.md). A full-screen modal so it
+ * can be opened from any screen without losing it: closing returns to where
+ * the reporter was.
  *
- * Shape of a submission: title (required) and whatever else is quick to add,
- * plus safe automatic context the reporter can see before sending. The
+ * Shape of a submission: what it is and how bad it is (both visible, both
+ * preset so a quick report is two taps), a title (required) and whatever else
+ * is quick to add, plus safe automatic context the reporter can see before
+ * sending. The
  * screenshot is uploaded as part of the submit, never on pick — nothing leaves
  * the device until the reporter presses the button.
  */
@@ -50,6 +53,8 @@ export function BugReportForm({ fromRoute, onClose, storage }: BugReportFormProp
   const store = useMemo(() => (storage === undefined ? webStorage() : storage), [storage]);
   const restored = useMemo(() => loadDraft(store), [store]);
 
+  const [kind, setKind] = useState<BugReportKind>(restored?.kind ?? 'bug');
+  const [severity, setSeverity] = useState<BugReportSeverity>(restored?.severity ?? 'annoying');
   const [title, setTitle] = useState(restored?.title ?? '');
   const [description, setDescription] = useState(restored?.description ?? '');
   const [steps, setSteps] = useState(restored?.steps ?? '');
@@ -82,8 +87,8 @@ export function BugReportForm({ fromRoute, onClose, storage }: BugReportFormProp
   // lose it. Cleared the moment the report is filed.
   useEffect(() => {
     if (created) return;
-    saveDraft(store, { title, description, steps, idempotencyKey: idempotencyKey.current });
-  }, [store, title, description, steps, created]);
+    saveDraft(store, { kind, severity, title, description, steps, idempotencyKey: idempotencyKey.current });
+  }, [store, kind, severity, title, description, steps, created]);
 
   const choose = useCallback(async () => {
     setPicking(true);
@@ -120,11 +125,13 @@ export function BugReportForm({ fromRoute, onClose, storage }: BugReportFormProp
     if (!title.trim() || report.isPending) return;
     report.mutate(
       {
+        kind,
+        severity,
         title: title.trim(),
         description: description.trim(),
         reproductionSteps: parseSteps(steps),
         environment,
-        evidence: photo ? { file: photo.blob, mimeType: photo.mimeType } : undefined,
+        evidence: photo ? [{ file: photo.blob, mimeType: photo.mimeType }] : undefined,
         idempotencyKey: idempotencyKey.current,
       },
       {
@@ -136,7 +143,7 @@ export function BugReportForm({ fromRoute, onClose, storage }: BugReportFormProp
         },
       },
     );
-  }, [title, description, steps, environment, photo, report, store]);
+  }, [kind, severity, title, description, steps, environment, photo, report, store]);
 
   const copyTicketId = useCallback(() => {
     if (!created) return;
@@ -185,6 +192,21 @@ export function BugReportForm({ fromRoute, onClose, storage }: BugReportFormProp
         contentContainerStyle={[styles.body, { paddingBottom: spacing.xxl + lift }]}
         keyboardShouldPersistTaps="handled"
       >
+        <Choice
+          label="What is it?"
+          options={KIND_OPTIONS}
+          value={kind}
+          onChange={setKind}
+          disabled={report.isPending}
+        />
+        <Choice
+          label="How bad is it?"
+          options={SEVERITY_OPTIONS}
+          value={severity}
+          onChange={setSeverity}
+          disabled={report.isPending}
+        />
+
         <TextField
           label="What went wrong?"
           value={title}
@@ -313,6 +335,57 @@ export function BugReportForm({ fromRoute, onClose, storage }: BugReportFormProp
   );
 }
 
+const KIND_OPTIONS: { value: BugReportKind; label: string }[] = [
+  { value: 'bug', label: 'Bug' },
+  { value: 'fix', label: 'Fix suggestion' },
+  { value: 'idea', label: 'Idea' },
+  { value: 'design', label: 'Design nit' },
+];
+
+const SEVERITY_OPTIONS: { value: BugReportSeverity; label: string; hint: string }[] = [
+  { value: 'blocker', label: 'Blocker', hint: "Can't use the app, or data is wrong." },
+  { value: 'bad', label: 'Bad', hint: 'A core flow is broken.' },
+  { value: 'annoying', label: 'Annoying', hint: 'Works, with a workaround.' },
+  { value: 'polish', label: 'Polish', hint: 'Cosmetic.' },
+];
+
+/** One visible choice among a few: a row of outlined pills, the picked one active, with its hint under the row. */
+function Choice<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+  disabled = false,
+}: {
+  label: string;
+  options: { value: T; label: string; hint?: string }[];
+  value: T;
+  onChange: (value: T) => void;
+  disabled?: boolean;
+}) {
+  const { colors } = useTheme();
+  const current = options.find((option) => option.value === value);
+  return (
+    <View style={styles.choice} accessibilityRole="radiogroup" accessibilityLabel={label}>
+      <Text style={[type.caption, styles.choiceLabel, { color: colors.textSecondary }]}>{label}</Text>
+      <View style={styles.row}>
+        {options.map((option) => (
+          <Pill
+            key={option.value}
+            active={option.value === value}
+            disabled={disabled}
+            onPress={() => onChange(option.value)}
+            accessibilityLabel={option.label}
+          >
+            {option.label}
+          </Pill>
+        ))}
+      </View>
+      {current?.hint ? <Text style={[type.caption, { color: colors.textSecondary }]}>{current.hint}</Text> : null}
+    </View>
+  );
+}
+
 function Screen({
   title,
   draft = false,
@@ -343,6 +416,8 @@ const styles = StyleSheet.create({
   body: { gap: spacing.xl, padding: spacing.gutter },
   centred: { textAlign: 'center' },
   row: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
+  choice: { gap: spacing.sm },
+  choiceLabel: { fontWeight: '600' },
   draftNote: { paddingHorizontal: spacing.gutter, paddingBottom: spacing.sm },
   picker: {
     alignItems: 'center',

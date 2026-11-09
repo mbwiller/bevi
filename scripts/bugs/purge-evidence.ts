@@ -20,8 +20,9 @@
  * Deletion is in two halves, because they live in two places:
  *   1. the objects, through the Storage API (storage.objects is owned by
  *      supabase_storage_admin, so no SQL function of ours may delete them);
- *   2. the `evidence_path` columns, through `public.forget_bug_evidence()`,
- *      which is granted to the service role alone.
+ *   2. the paths in each row's `evidence_paths` array, through
+ *      `public.forget_bug_evidence()`, which is granted to the service role
+ *      alone and removes only the paths it is handed.
  * Order matters: objects first, bookkeeping second. A crash in between leaves
  * a path pointing at a deleted object, which the next run clears; the reverse
  * would leave an object nothing remembers.
@@ -77,18 +78,19 @@ const headers = {
 
 interface LedgerRow {
   id: number;
-  evidence_path: string;
+  evidence_paths: string[];
   created_at: string;
   state: string;
 }
 
-/** Every submission older than the cutoff that still names an evidence object. */
+/** Every submission older than the cutoff that still names at least one evidence object. */
 async function expiredRows(): Promise<LedgerRow[]> {
   const rows: LedgerRow[] = [];
   for (let offset = 0; ; offset += PAGE) {
     const query = new URLSearchParams({
-      select: 'id,evidence_path,created_at,state',
-      evidence_path: 'not.is.null',
+      select: 'id,evidence_paths,created_at,state',
+      // A non-empty array: PostgREST compares against the `{}` literal.
+      evidence_paths: 'neq.{}',
       created_at: `lt.${cutoff}`,
       order: 'created_at.asc',
       offset: String(offset),
@@ -127,20 +129,20 @@ async function forget(paths: string[]): Promise<number> {
 }
 
 const rows = await expiredRows();
-if (rows.length === 0) {
+const paths = rows.flatMap((r) => r.evidence_paths);
+if (paths.length === 0) {
   console.log(`No bug evidence older than ${days} days (cutoff ${cutoff}).`);
   process.exit(0);
 }
 
-console.log(`${rows.length} evidence object(s) older than ${days} days (cutoff ${cutoff}):`);
-for (const row of rows) console.log(`  ${row.created_at}  ${row.state.padEnd(7)}  ${row.evidence_path}`);
+console.log(`${paths.length} evidence object(s) on ${rows.length} submission(s) older than ${days} days (cutoff ${cutoff}):`);
+for (const row of rows) for (const path of row.evidence_paths) console.log(`  ${row.created_at}  ${row.state.padEnd(7)}  ${path}`);
 
 if (dryRun) {
   console.log('--dry-run: nothing was deleted.');
   process.exit(0);
 }
 
-const paths = rows.map((r) => r.evidence_path);
 const gone = await deleteObjects(paths);
 const cleared = await forget(gone);
 console.log(`Deleted ${gone.length}/${paths.length} object(s); cleared ${cleared} evidence path(s).`);

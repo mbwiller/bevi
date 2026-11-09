@@ -284,11 +284,14 @@ verify_jwt = false
 
 # bug-report: the internal bug reporter's server side (docs/ticketing-system.md).
 # verify_jwt stays on, but it is only the outer gate -- the real authorisation
-# is `claim_bug_report()`, which the function calls as the caller and which
-# raises unless `profiles.role` is 'admin' or 'tester'. LINEAR_API_KEY,
-# LINEAR_TEAM_ID and the optional LINEAR_PROJECT_ID / LINEAR_LABEL_IDS /
-# LINEAR_TRIAGE_STATE_ID come from supabase/.env locally and
-# `supabase secrets set` in the hosted project -- never from this file.
+# is `claim_bug_report()` / `can_report_bugs()`, which the function calls as
+# the caller and which answer from `profiles.role` ('admin' or 'tester').
+# Required: LINEAR_API_KEY, LINEAR_TEAM_ID. Optional: LINEAR_PROJECT_ID,
+# LINEAR_LABEL_IDS (on every ticket), LINEAR_LABEL_BUG / LINEAR_LABEL_FIX /
+# LINEAR_LABEL_IDEA / LINEAR_LABEL_DESIGN (per-kind label ids; else looked up
+# by name), LINEAR_TRIAGE_STATE_ID, LINEAR_DONE_STATE_ID. All come from
+# supabase/.env locally and `supabase secrets set` in the hosted project --
+# never from this file.
 [functions.bug-report]
 enabled = true
 verify_jwt = true

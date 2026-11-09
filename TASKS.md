@@ -17,6 +17,7 @@ Source: `CONVERSATION-2.md` (raw transcript). This file turns that conversation 
 
 | PR | What | Reviewer | What merging it unblocks |
 |---|---|---|---|
+| **`be/bug-reporter`** (#167) | **The internal bug reporter, Linear-first, contract 2.11.0** (plan: the Bevi ticketing system doc, 2026-11-09). Arjun's branch rebased onto `main`; `20261109000300`: `tester` role, `bug_reports` ledger (kind, severity, title, up to 3 evidence paths), `claim_bug_report` as the caller, `finish_bug_report` service-role only, private `bug-evidence` bucket, `set_profile_role` (the operator path the trigger otherwise blocks); the `bug-report` function with report, status and verify routes; `BugsApi.report/listMine/markVerified`; the form's Type and Severity controls; FakeApi + conformance; docs | **Matt** (`integrator` + `integrator-app` from his side; CI's `db` job is the first run of pgTAP 28 and the Deno tests); Arjun's review after the fact | Filing bugs from the phone once Matt pushes the migration, sets `LINEAR_*`, deploys the function and grants the roles; then `ui/bug-report-form` (auto-capture, breadcrumbs, strict fields), `ui/bug-reports-list` (My reports), `chore/ticketing-ops` (`/ticket`, evidence purge workflow) |
 | **#148** | Icon batch 3, `design/beverage-icon-pilot`: 19 new icons (49 total, 40 of 43 starters) exported into the app; `app.yml` also watches the icon manifest | **Matt: visual sign-off** (checklist in the PR), then merge and reset the pilot branch onto `main` | 49 icons in the app |
 
 **Prod migrations:**

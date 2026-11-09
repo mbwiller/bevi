@@ -1,3 +1,5 @@
+import type { BugReportKind, BugReportSeverity } from '@bevi/shared';
+
 /**
  * The reporter's draft, and the idempotency key that belongs to it.
  *
@@ -18,6 +20,9 @@
  */
 
 export interface BugDraft {
+  /** What the reporter said it is; absent on a draft saved before the controls existed. */
+  kind?: BugReportKind;
+  severity?: BugReportSeverity;
   title: string;
   description: string;
   steps: string;
@@ -79,7 +84,13 @@ export function loadDraft(storage: StorageLike | null, now: Date = new Date()): 
       clearDraft(storage);
       return null;
     }
+    const kinds: readonly string[] = ['bug', 'fix', 'idea', 'design'];
+    const severities: readonly string[] = ['blocker', 'bad', 'annoying', 'polish'];
     return {
+      ...(typeof draft.kind === 'string' && kinds.includes(draft.kind) ? { kind: draft.kind as BugReportKind } : {}),
+      ...(typeof draft.severity === 'string' && severities.includes(draft.severity)
+        ? { severity: draft.severity as BugReportSeverity }
+        : {}),
       title: typeof draft.title === 'string' ? draft.title : '',
       description: typeof draft.description === 'string' ? draft.description : '',
       steps: typeof draft.steps === 'string' ? draft.steps : '',

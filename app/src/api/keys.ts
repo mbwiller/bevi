@@ -22,6 +22,8 @@ export const keys = {
   checkHandle: (handle: string) => [...root, 'checkHandle', handle] as const,
   /** `bugs.canReport()`: whether this account may file internal bug reports. */
   canReportBug: () => [...root, 'canReportBug'] as const,
+  /** `bugs.listMine()`: the caller's own tickets with their live tracker state. */
+  myBugReports: () => [...root, 'myBugReports'] as const,
 
   me: () => [...root, 'me'] as const,
 

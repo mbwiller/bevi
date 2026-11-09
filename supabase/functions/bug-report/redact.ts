@@ -19,6 +19,20 @@ export const LIMITS = {
   steps: 12,
   envValue: 120,
   idempotencyKey: 100,
+  evidence: 3,
+} as const;
+
+/** Caps for the breadcrumb trail the app sends (docs/bug-workflow.md). */
+export const BREADCRUMB_LIMITS = {
+  /** The most recent entries are kept when the client sends more. */
+  count: 20,
+  at: 40,
+  route: 120,
+  method: 60,
+  code: 40,
+  statusMin: 100,
+  statusMax: 599,
+  msMax: 600_000,
 } as const;
 
 export const REDACTED = "[redacted]";
@@ -81,7 +95,7 @@ export function clean(value: unknown, max: number, { singleLine = false }: { sin
   let out = value.replace(/\r\n?/g, "\n");
   if (singleLine) out = out.replace(/\s+/g, " ");
   out = neutralise(redact(out)).trim();
-  return out.length > max ? `${out.slice(0, max - 1).trimEnd()}\u2026` : out;
+  return out.length > max ? `${out.slice(0, max - 1).trimEnd()}…` : out;
 }
 
 /** The reproduction steps: at most `LIMITS.steps`, each cleaned, empties dropped. */
@@ -103,8 +117,13 @@ export interface Environment {
   platform?: string;
   osVersion?: string;
   appVersion?: string;
+  /** The deploy's git SHA, as the build inlined it. */
   build?: string;
   stage?: string;
+  /** 'light' | 'dark', as the app rendered it. */
+  theme?: string;
+  /** 'online' | 'offline' at the moment the form opened. */
+  online?: string;
   viewport?: string;
   occurredAt?: string;
   reproducibility?: string;
@@ -119,6 +138,8 @@ export const ENVIRONMENT_KEYS: readonly (keyof Environment)[] = [
   "appVersion",
   "build",
   "stage",
+  "theme",
+  "online",
   "viewport",
   "occurredAt",
   "reproducibility",
@@ -133,6 +154,8 @@ export const ENVIRONMENT_LABELS: Record<keyof Environment, string> = {
   appVersion: "App version",
   build: "Build",
   stage: "Environment",
+  theme: "Theme",
+  online: "Connectivity",
   viewport: "Viewport",
   occurredAt: "Timestamp",
   reproducibility: "Reproducibility",
@@ -148,8 +171,69 @@ export function cleanEnvironment(value: unknown): Environment {
   const source = (typeof value === "object" && value !== null ? value : {}) as Record<string, unknown>;
   const out: Environment = {};
   for (const key of ENVIRONMENT_KEYS) {
-    const text = clean(source[key], LIMITS.envValue, { singleLine: true });
+    // The contract sends `online` as a boolean; the ticket prints a word.
+    const raw = key === "online" && typeof source[key] === "boolean" ? (source[key] ? "online" : "offline") : source[key];
+    const text = clean(raw, LIMITS.envValue, { singleLine: true });
     if (text) out[key] = text;
+  }
+  return out;
+}
+
+/**
+ * One entry of the trail the app keeps: where the reporter went, and which
+ * API calls failed, in the minutes before the report (docs/bug-workflow.md).
+ * Never arguments, never responses, never user content: a route pattern, a
+ * method name, an error code, a status and a duration.
+ */
+export interface Breadcrumb {
+  at: string;
+  kind: "nav" | "api";
+  route?: string;
+  method?: string;
+  code?: string;
+  status?: number;
+  ms?: number;
+}
+
+const METHOD_RE = /^[A-Za-z][A-Za-z0-9.]*$/;
+
+function integerIn(value: unknown, min: number, max: number): number | undefined {
+  if (typeof value !== "number" || !Number.isInteger(value)) return undefined;
+  return value >= min && value <= max ? value : undefined;
+}
+
+/**
+ * The breadcrumb allow-list: at most `BREADCRUMB_LIMITS.count` entries (the
+ * most recent when the client sends more), each with a known kind, a cleaned
+ * timestamp, and only the fields the shape allows. A `nav` entry without a
+ * route, or an `api` entry without a method, says nothing and is dropped.
+ */
+export function cleanBreadcrumbs(value: unknown): Breadcrumb[] {
+  if (!Array.isArray(value)) return [];
+  const recent = value.slice(-BREADCRUMB_LIMITS.count);
+  const out: Breadcrumb[] = [];
+  for (const entry of recent) {
+    if (typeof entry !== "object" || entry === null) continue;
+    const raw = entry as Record<string, unknown>;
+    const kind = raw.kind === "nav" || raw.kind === "api" ? raw.kind : null;
+    const at = clean(raw.at, BREADCRUMB_LIMITS.at, { singleLine: true });
+    if (!kind || !at) continue;
+
+    const crumb: Breadcrumb = { at, kind };
+    const route = clean(raw.route, BREADCRUMB_LIMITS.route, { singleLine: true });
+    if (route) crumb.route = route;
+    const method = typeof raw.method === "string" ? raw.method.trim() : "";
+    if (method && METHOD_RE.test(method) && method.length <= BREADCRUMB_LIMITS.method) crumb.method = method;
+    const code = clean(raw.code, BREADCRUMB_LIMITS.code, { singleLine: true });
+    if (code) crumb.code = code;
+    const status = integerIn(raw.status, BREADCRUMB_LIMITS.statusMin, BREADCRUMB_LIMITS.statusMax);
+    if (status !== undefined) crumb.status = status;
+    const ms = integerIn(raw.ms, 0, BREADCRUMB_LIMITS.msMax);
+    if (ms !== undefined) crumb.ms = ms;
+
+    if (kind === "nav" && !crumb.route) continue;
+    if (kind === "api" && !crumb.method) continue;
+    out.push(crumb);
   }
   return out;
 }

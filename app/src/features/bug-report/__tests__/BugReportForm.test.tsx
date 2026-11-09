@@ -133,8 +133,9 @@ describe('the bug reporter', () => {
     // idempotency key is one ticket. The FakeApi keeps the same ledger the
     // server does (supabase/tests/28_bug_reports.test.sql covers the real one).
     const idempotencyKey = '4f1d6c0a-4f4c-4f0e-9e0b-9a4a8f2b7c11';
-    const first = await api.bugs.report({ title: 'Duplicate cards in saved list', idempotencyKey });
-    const second = await api.bugs.report({ title: 'Duplicate cards in saved list', idempotencyKey });
+    const input = { kind: 'bug', severity: 'bad', title: 'Duplicate cards in saved list', idempotencyKey } as const;
+    const first = await api.bugs.report(input);
+    const second = await api.bugs.report(input);
     expect(first.status).toBe('created');
     expect(second).toEqual({ ...first, status: 'duplicate' });
   });
@@ -183,6 +184,61 @@ describe('the bug reporter', () => {
     await fireEvent.press(screen.getByLabelText('Submit bug report'));
     expect(await screen.findByText("You're signed out")).toBeTruthy();
     expect(screen.queryByText(/^Created BEV-/)).toBeNull();
+  });
+
+  it('shows Bug and Annoying picked by default, and sends what the reporter picks instead', async () => {
+    const spy = jest.spyOn(api.bugs, 'report');
+    await renderForm();
+    expect(screen.getByLabelText('Bug').props['aria-pressed']).toBe(true);
+    expect(screen.getByLabelText('Annoying').props['aria-pressed']).toBe(true);
+    expect(screen.getByText('Works, with a workaround.')).toBeTruthy();
+
+    await fireEvent.press(screen.getByLabelText('Design nit'));
+    await fireEvent.press(screen.getByLabelText('Blocker'));
+    expect(screen.getByLabelText('Blocker').props['aria-pressed']).toBe(true);
+    expect(screen.getByText("Can't use the app, or data is wrong.")).toBeTruthy();
+
+    await fireEvent.changeText(screen.getByLabelText('What went wrong?'), 'Icons are blurry on the leaderboard');
+    await fireEvent.press(screen.getByLabelText('Submit bug report'));
+    await screen.findByText(/^Created BEV-\d+$/);
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ kind: 'design', severity: 'blocker' }));
+    const mine = await api.bugs.listMine();
+    expect(mine[0]).toMatchObject({ kind: 'design', severity: 'blocker', state: 'triage', title: 'Icons are blurry on the leaderboard' });
+    spy.mockRestore();
+  });
+
+  it('sends the screenshot as a one-element evidence list', async () => {
+    const spy = jest.spyOn(api.bugs, 'report');
+    await renderForm();
+    await fireEvent.changeText(screen.getByLabelText('What went wrong?'), 'Cafe image loads wrong');
+    await act(async () => {
+      await fireEvent.press(screen.getByLabelText('Add a screenshot'));
+    });
+    await screen.findByLabelText('Attached screenshot');
+    await fireEvent.press(screen.getByLabelText('Submit bug report'));
+    await screen.findByText(/^Created BEV-\d+$/);
+    const input = spy.mock.calls[0]?.[0];
+    expect(input?.evidence).toHaveLength(1);
+    expect(input?.evidence?.[0]?.mimeType).toBe('image/jpeg');
+    spy.mockRestore();
+  });
+
+  it('restores the kind and severity with the draft', async () => {
+    storage = memoryStorage({
+      [DRAFT_KEY]: JSON.stringify({
+        kind: 'idea',
+        severity: 'polish',
+        title: 'A dark mode toggle',
+        description: '',
+        steps: '',
+        idempotencyKey: '4f1d6c0a-4f4c-4f0e-9e0b-9a4a8f2b7c11',
+        savedAt: new Date().toISOString(),
+      }),
+    });
+    await renderForm();
+    expect(screen.getByLabelText('Idea').props['aria-pressed']).toBe(true);
+    expect(screen.getByLabelText('Polish').props['aria-pressed']).toBe(true);
+    expect(screen.getByLabelText('Bug').props['aria-pressed']).toBe(false);
   });
 
   it('closes back to the screen the reporter came from', async () => {

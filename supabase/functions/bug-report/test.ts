@@ -4,19 +4,35 @@
 // Everything here is pure: these files import ./redact.ts, ./issue.ts and
 // ./linear.ts, never ./index.ts, so nothing starts a server and no request
 // leaves the process. The Linear client is driven through its injected
-// `fetch`, which is how its error mapping and its two-step upload can be
-// asserted without an API key.
+// `fetch`, which is how its error mapping, its two-step upload, its status
+// lookup and its one write can be asserted without an API key.
 //
 // What is NOT covered here, and is listed honestly in docs/ticketing-system.md:
 // the live round trip to Linear, and the Postgres half (claim_bug_report,
-// finish_bug_report, the storage policy), which is pgTAP's job in
-// supabase/tests/28_bug_reports.test.sql.
+// finish_bug_report, set_profile_role, the storage policy), which is pgTAP's
+// job in supabase/tests/28_bug_reports.test.sql.
 
 import { assert, assertEquals, assertRejects, assertStringIncludes } from "jsr:@std/assert@1";
 
-import { clean, cleanEnvironment, cleanSteps, LIMITS, redact, REDACTED } from "./redact.ts";
-import { buildDescription, parseReport, ValidationError } from "./issue.ts";
-import { authorizationHeader, createIssue, findTriageStateId, LinearError, readLinearConfig, uploadFile, type LinearConfig } from "./linear.ts";
+import { BREADCRUMB_LIMITS, clean, cleanBreadcrumbs, cleanEnvironment, cleanSteps, LIMITS, redact, REDACTED } from "./redact.ts";
+import { breadcrumbLine, buildDescription, parseReport, PRIORITY_BY_SEVERITY, ValidationError } from "./issue.ts";
+import {
+  authorizationHeader,
+  createIssue,
+  fetchIssueStatuses,
+  fetchKindLabels,
+  findDoneStateId,
+  findIssueId,
+  findTriageStateId,
+  issueNumber,
+  labelIdForKind,
+  LinearError,
+  mapStateType,
+  readLinearConfig,
+  updateIssueState,
+  uploadFile,
+  type LinearConfig,
+} from "./linear.ts";
 
 const KEY = "4f1d6c0a-4f4c-4f0e-9e0b-9a4a8f2b7c11";
 
@@ -32,9 +48,10 @@ const FAKE = {
   linearOauth: (suffix: string) => ["lin_", "oauth_", suffix].join(""),
   stripe: ["sk_", "live_", "abcdefgh1234"].join(""),
 };
+const UID = "4f1d6c0a-4f4c-4f0e-9e0b-9a4a8f2b7c11";
 
 function report(overrides: Record<string, unknown> = {}) {
-  return parseReport({ title: "Ratings disappear after refresh", idempotencyKey: KEY, ...overrides });
+  return parseReport({ kind: "bug", severity: "bad", title: "Ratings disappear after refresh", idempotencyKey: KEY, ...overrides });
 }
 
 // ---------------------------------------------------------------------------
@@ -107,9 +124,53 @@ Deno.test("cleanEnvironment is an allow-list, not a passthrough", () => {
   assertEquals(Object.keys(env).sort(), ["platform", "route"]);
 });
 
+Deno.test("cleanEnvironment keeps the build, the theme and the connectivity, printing online as a word", () => {
+  const env = cleanEnvironment({ build: "a1b2c3d", theme: "dark", online: false });
+  assertEquals(env.build, "a1b2c3d");
+  assertEquals(env.theme, "dark");
+  assertEquals(env.online, "offline");
+  assertEquals(cleanEnvironment({ online: true }).online, "online");
+});
+
 Deno.test("an environment value that is itself a secret is redacted, not just dropped", () => {
   const env = cleanEnvironment({ build: FAKE.bearer("fake-token-02") });
   assertEquals(env.build, REDACTED);
+});
+
+// ---------------------------------------------------------------------------
+// Breadcrumbs
+// ---------------------------------------------------------------------------
+
+Deno.test("cleanBreadcrumbs keeps only the known shape and drops entries that say nothing", () => {
+  const crumbs = cleanBreadcrumbs([
+    { at: "2026-11-09T10:00:00Z", kind: "nav", route: "/bev/[id]", extra: "dropped" },
+    { at: "2026-11-09T10:00:01Z", kind: "api", method: "rankings.submit", code: "conflict", status: 409, ms: 212 },
+    { at: "2026-11-09T10:00:02Z", kind: "nav" }, // no route
+    { at: "2026-11-09T10:00:03Z", kind: "api", method: "not a method name" }, // bad method
+    { at: "", kind: "nav", route: "/feed" }, // no timestamp
+    { at: "2026-11-09T10:00:04Z", kind: "console", route: "/feed" }, // unknown kind
+    "not an object",
+  ]);
+  assertEquals(crumbs.length, 2);
+  assertEquals(crumbs[0], { at: "2026-11-09T10:00:00Z", kind: "nav", route: "/bev/[id]" });
+  assertEquals(crumbs[1], { at: "2026-11-09T10:00:01Z", kind: "api", method: "rankings.submit", code: "conflict", status: 409, ms: 212 });
+});
+
+Deno.test("cleanBreadcrumbs keeps the most recent 20 and drops out-of-range numbers", () => {
+  const many = Array.from({ length: 30 }, (_, i) => ({ at: `t${i}`, kind: "nav", route: `/r${i}` }));
+  const crumbs = cleanBreadcrumbs(many);
+  assertEquals(crumbs.length, BREADCRUMB_LIMITS.count);
+  assertEquals(crumbs[0]?.route, "/r10");
+  assertEquals(crumbs[19]?.route, "/r29");
+
+  const [odd] = cleanBreadcrumbs([{ at: "t", kind: "api", method: "feed.list", status: 42, ms: -1 }]);
+  assertEquals(odd, { at: "t", kind: "api", method: "feed.list" });
+});
+
+Deno.test("a breadcrumb carrying a secret is redacted like everything else", () => {
+  const [crumb] = cleanBreadcrumbs([{ at: "t", kind: "nav", route: "/cb?access_token=abc", code: FAKE.bearer("fake-token-02") }]);
+  assertEquals(crumb?.route?.includes("access_token=abc"), false);
+  assertEquals(crumb?.code, REDACTED);
 });
 
 // ---------------------------------------------------------------------------
@@ -117,25 +178,36 @@ Deno.test("an environment value that is itself a secret is redacted, not just dr
 // ---------------------------------------------------------------------------
 
 Deno.test("an empty title is rejected with the field name", () => {
-  const e = assertThrowsValidation(() => parseReport({ title: "   ", idempotencyKey: KEY }));
+  const e = assertThrowsValidation(() => parseReport({ kind: "bug", severity: "bad", title: "   ", idempotencyKey: KEY }));
   assertEquals(e.field, "title");
 });
 
+Deno.test("an unknown kind or severity is rejected with the field name", () => {
+  assertEquals(assertThrowsValidation(() => parseReport({ kind: "rant", severity: "bad", title: "x", idempotencyKey: KEY })).field, "kind");
+  assertEquals(assertThrowsValidation(() => parseReport({ severity: "bad", title: "x", idempotencyKey: KEY })).field, "kind");
+  assertEquals(assertThrowsValidation(() => parseReport({ kind: "bug", severity: "meh", title: "x", idempotencyKey: KEY })).field, "severity");
+  for (const kind of ["bug", "fix", "idea", "design"]) assertEquals(report({ kind }).kind, kind);
+  for (const severity of ["blocker", "bad", "annoying", "polish"]) assertEquals(report({ severity }).severity, severity);
+});
+
 Deno.test("a non-UUID idempotency key is rejected", () => {
-  const e = assertThrowsValidation(() => parseReport({ title: "x", idempotencyKey: "short" }));
+  const e = assertThrowsValidation(() => parseReport({ kind: "bug", severity: "bad", title: "x", idempotencyKey: "short" }));
   assertEquals(e.field, "idempotencyKey");
 });
 
 Deno.test("an evidence path outside the bucket's shape is rejected", () => {
-  for (const path of ["../../etc/passwd", "someone-else/a.png", "4f1d6c0a-4f4c-4f0e-9e0b-9a4a8f2b7c11/a.exe"]) {
-    const e = assertThrowsValidation(() => parseReport({ title: "x", idempotencyKey: KEY, evidencePath: path }));
-    assertEquals(e.field, "evidencePath");
+  for (const path of ["../../etc/passwd", "someone-else/a.png", `${UID}/a.exe`]) {
+    const e = assertThrowsValidation(() => report({ evidencePaths: [path] }));
+    assertEquals(e.field, "evidencePaths");
   }
+  assertEquals(assertThrowsValidation(() => report({ evidencePaths: `${UID}/a.png` })).field, "evidencePaths");
 });
 
-Deno.test("a well-formed evidence path is accepted", () => {
-  const parsed = report({ evidencePath: "4f1d6c0a-4f4c-4f0e-9e0b-9a4a8f2b7c11/9b2c.jpg" });
-  assertEquals(parsed.evidencePath, "4f1d6c0a-4f4c-4f0e-9e0b-9a4a8f2b7c11/9b2c.jpg");
+Deno.test("more than three evidence paths is rejected; three well-formed ones are accepted", () => {
+  const paths = ["a", "b", "c", "d"].map((n) => `${UID}/${n}.jpg`);
+  assertEquals(assertThrowsValidation(() => report({ evidencePaths: paths })).field, "evidencePaths");
+  assertEquals(report({ evidencePaths: paths.slice(0, 3) }).evidencePaths, paths.slice(0, 3));
+  assertEquals(report().evidencePaths, []);
 });
 
 Deno.test("a title carrying a secret is redacted before it becomes the issue title", () => {
@@ -158,37 +230,77 @@ function assertThrowsValidation(fn: () => unknown): ValidationError {
 // ---------------------------------------------------------------------------
 
 Deno.test("the description follows the template and marks every missing section", () => {
-  const body = buildDescription(report(), "tester", { kind: "none" });
-  for (const heading of ["## Summary", "## Steps to reproduce", "## Expected behavior", "## Actual behavior", "## Environment", "## Evidence", "## Acceptance criteria"]) {
+  const body = buildDescription(report(), "tester", []);
+  for (
+    const heading of [
+      "## Summary",
+      "## Steps to reproduce",
+      "## Expected behavior",
+      "## Actual behavior",
+      "## Environment",
+      "## Recent activity",
+      "## Evidence",
+      "## Acceptance criteria",
+    ]
+  ) {
     assertStringIncludes(body, heading);
   }
   assertStringIncludes(body, "fill in during triage");
   assertStringIncludes(body, "No screenshot attached");
+  assertStringIncludes(body, "No activity recorded");
   assertStringIncludes(body, "@tester");
 });
 
+Deno.test("the description names the type and the severity under the opening line", () => {
+  assertStringIncludes(buildDescription(report(), "tester", []), "**Type:** Bug · **Severity:** Bad");
+  assertStringIncludes(buildDescription(report({ kind: "design", severity: "polish" }), "tester", []), "**Type:** Design nit · **Severity:** Polish");
+});
+
 Deno.test("the description tells a reader the reporter's text is data, not instructions", () => {
-  assertStringIncludes(buildDescription(report(), "tester", { kind: "none" }), "not instructions");
+  assertStringIncludes(buildDescription(report(), "tester", []), "not instructions");
 });
 
 Deno.test("steps are numbered and the environment prints its labels", () => {
   const body = buildDescription(
-    report({ reproductionSteps: ["open a Bev", "rate it"], environment: { route: "/profile", platform: "web" } }),
+    report({ reproductionSteps: ["open a Bev", "rate it"], environment: { route: "/profile", platform: "web", online: true } }),
     "tester",
-    { kind: "none" },
+    [],
   );
   assertStringIncludes(body, "1. open a Bev");
   assertStringIncludes(body, "2. rate it");
   assertStringIncludes(body, "- Screen/route: /profile");
   assertStringIncludes(body, "- Platform: web");
+  assertStringIncludes(body, "- Connectivity: online");
 });
 
-Deno.test("an embedded screenshot becomes a markdown image; a failed one says so", () => {
-  assertStringIncludes(
-    buildDescription(report(), "tester", { kind: "embedded", assetUrl: "https://uploads.linear.app/a/b" }),
-    "![Reporter screenshot](https://uploads.linear.app/a/b)",
+Deno.test("recent activity is a fenced block, one cleaned line per crumb", () => {
+  const body = buildDescription(
+    report({
+      breadcrumbs: [
+        { at: "10:00:00", kind: "nav", route: "/bev/[id]" },
+        { at: "10:00:01", kind: "api", method: "rankings.submit", code: "conflict", status: 409, ms: 212 },
+      ],
+    }),
+    "tester",
+    [],
   );
-  assertStringIncludes(buildDescription(report(), "tester", { kind: "failed", reason: "linear_upload_failed" }), "could not be uploaded");
+  assertStringIncludes(body, "```text\n10:00:00  nav  /bev/[id]\n10:00:01  api  rankings.submit  conflict  409  212 ms\n```");
+  assertEquals(breadcrumbLine({ at: "t", kind: "api", method: "feed.list" }), "t  api  feed.list");
+});
+
+Deno.test("each embedded screenshot becomes a numbered markdown image; failures are listed once", () => {
+  const body = buildDescription(report(), "tester", [
+    { kind: "embedded", assetUrl: "https://uploads.linear.app/a/1" },
+    { kind: "failed", reason: "linear_upload_failed" },
+    { kind: "embedded", assetUrl: "https://uploads.linear.app/a/2" },
+  ]);
+  assertStringIncludes(body, "![Reporter screenshot 1](https://uploads.linear.app/a/1)");
+  assertStringIncludes(body, "![Reporter screenshot 2](https://uploads.linear.app/a/2)");
+  assertStringIncludes(body, "A screenshot was attached but could not be uploaded to Linear (linear_upload_failed)");
+});
+
+Deno.test("severity maps onto Linear's priority scale, blocker first", () => {
+  assertEquals(PRIORITY_BY_SEVERITY, { blocker: 1, bad: 2, annoying: 3, polish: 4 });
 });
 
 // ---------------------------------------------------------------------------
@@ -210,22 +322,43 @@ function gql(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
 
+function sentVariables(call: { init?: RequestInit } | undefined): Record<string, unknown> {
+  return (JSON.parse(String(call?.init?.body)) as { variables: Record<string, unknown> }).variables;
+}
+
 Deno.test("a personal API key is sent raw and an OAuth token as a Bearer", () => {
   assertEquals(authorizationHeader(FAKE.linearKey("abc")), FAKE.linearKey("abc"));
   assertEquals(authorizationHeader(FAKE.linearOauth("abc")), FAKE.bearer(FAKE.linearOauth("abc")));
 });
 
-Deno.test("createIssue returns the identifier Linear assigned, never one of ours", async () => {
+Deno.test("createIssue returns the identifier Linear assigned, never one of ours, and sets priority and labels", async () => {
   const { impl, calls } = stubFetch(() =>
-    gql({ data: { issueCreate: { success: true, issue: { id: "i1", identifier: "BEV-207", url: "https://linear.app/x/issue/BEV-207" } } } }),
+    gql({ data: { issueCreate: { success: true, issue: { id: "i1", identifier: "BEV-207", url: "https://linear.app/x/issue/BEV-207" } } } })
   );
-  const issue = await createIssue(CONFIG, impl, { title: "t", description: "d", stateId: "state-triage" });
+  const issue = await createIssue({ ...CONFIG, labelIds: ["from-app"] }, impl, {
+    title: "t",
+    description: "d",
+    stateId: "state-triage",
+    priority: 2,
+    labelIds: ["label-bug", "from-app"],
+  });
   assertEquals(issue.identifier, "BEV-207");
-  const sent = JSON.parse(String(calls[0]?.init?.body)) as { variables: { input: Record<string, unknown> } };
-  assertEquals(sent.variables.input.teamId, "team-1");
-  assertEquals(sent.variables.input.stateId, "state-triage");
-  // Priority is a triage decision, not a client one.
-  assertEquals("priority" in sent.variables.input, false);
+  const input = sentVariables(calls[0]).input as Record<string, unknown>;
+  assertEquals(input.teamId, "team-1");
+  assertEquals(input.stateId, "state-triage");
+  assertEquals(input.priority, 2);
+  assertEquals(input.labelIds, ["from-app", "label-bug"]);
+});
+
+Deno.test("createIssue leaves priority and labels out when none are given", async () => {
+  const { impl, calls } = stubFetch(() =>
+    gql({ data: { issueCreate: { success: true, issue: { id: "i1", identifier: "BEV-1", url: "https://linear.app/x/issue/BEV-1" } } } })
+  );
+  await createIssue(CONFIG, impl, { title: "t", description: "d", stateId: null });
+  const input = sentVariables(calls[0]).input as Record<string, unknown>;
+  assertEquals("priority" in input, false);
+  assertEquals("labelIds" in input, false);
+  assertEquals("stateId" in input, false);
 });
 
 Deno.test("createIssue refuses a response that does not confirm the issue", async () => {
@@ -292,7 +425,7 @@ Deno.test("findTriageStateId prefers the configured id, then the triage type, th
   assertEquals(calls.length, 0);
 
   const byType = stubFetch(() =>
-    gql({ data: { team: { states: { nodes: [{ id: "s1", name: "Backlog", type: "backlog" }, { id: "s2", name: "Triage", type: "triage" }] } } } }),
+    gql({ data: { team: { states: { nodes: [{ id: "s1", name: "Backlog", type: "backlog" }, { id: "s2", name: "Triage", type: "triage" }] } } } })
   );
   assertEquals(await findTriageStateId(CONFIG, byType.impl), "s2");
 
@@ -303,11 +436,146 @@ Deno.test("findTriageStateId prefers the configured id, then the triage type, th
   assertEquals(await findTriageStateId(CONFIG, none.impl), null);
 });
 
-Deno.test("readLinearConfig needs both the key and the team, and splits the label list", () => {
+Deno.test("findDoneStateId prefers the configured id, then the completed state named Done, then any completed state", async () => {
+  assertEquals(await findDoneStateId({ ...CONFIG, doneStateId: "preset" }, stubFetch(() => gql({})).impl), "preset");
+  const named = stubFetch(() =>
+    gql({
+      data: {
+        team: {
+          states: {
+            nodes: [{ id: "c1", name: "Shipped", type: "completed" }, { id: "c2", name: "Done", type: "completed" }, { id: "x", name: "Canceled", type: "canceled" }],
+          },
+        },
+      },
+    })
+  );
+  assertEquals(await findDoneStateId(CONFIG, named.impl), "c2");
+  const first = stubFetch(() => gql({ data: { team: { states: { nodes: [{ id: "c1", name: "Shipped", type: "completed" }] } } } }));
+  assertEquals(await findDoneStateId(CONFIG, first.impl), "c1");
+  const none = stubFetch(() => gql({ data: { team: { states: { nodes: [{ id: "x", name: "Canceled", type: "canceled" }] } } } }));
+  assertEquals(await findDoneStateId(CONFIG, none.impl), null);
+});
+
+Deno.test("labels are resolved by name across the workspace, with the environment override winning", async () => {
+  const { impl, calls } = stubFetch(() =>
+    gql({
+      data: {
+        issueLabels: {
+          nodes: [
+            // Linear's default Bug label is workspace-wide: `team` is null.
+            { id: "l-bug-ws", name: "Bug", team: null },
+            { id: "l-fix", name: "Fix Suggestion", team: { id: "team-1" } },
+            // Another team's Idea label is not ours.
+            { id: "l-idea-other", name: "Idea", team: { id: "team-2" } },
+          ],
+        },
+      },
+    })
+  );
+  const labels = await fetchKindLabels(CONFIG, impl);
+  const variables = sentVariables(calls[0]);
+  assertEquals(variables.names, ["Bug", "Fix suggestion", "Idea", "Design nit"]);
+  assertEquals(labelIdForKind("bug", CONFIG, labels), "l-bug-ws");
+  assertEquals(labelIdForKind("fix", CONFIG, labels), "l-fix");
+  assertEquals(labelIdForKind("idea", CONFIG, labels), null);
+  assertEquals(labelIdForKind("idea", { ...CONFIG, labelIdByKind: { idea: "l-idea" } }, labels), "l-idea");
+  assertEquals(labelIdForKind("design", CONFIG, null), null);
+});
+
+Deno.test("a team-scoped label wins over a workspace label of the same name, whichever order Linear lists them", async () => {
+  const teamFirst = stubFetch(() =>
+    gql({ data: { issueLabels: { nodes: [{ id: "l-bug-team", name: "Bug", team: { id: "team-1" } }, { id: "l-bug-ws", name: "Bug", team: null }] } } })
+  );
+  assertEquals((await fetchKindLabels(CONFIG, teamFirst.impl)).bug, "l-bug-team");
+  const workspaceFirst = stubFetch(() =>
+    gql({ data: { issueLabels: { nodes: [{ id: "l-bug-ws", name: "Bug", team: null }, { id: "l-bug-team", name: "Bug", team: { id: "team-1" } }] } } })
+  );
+  assertEquals((await fetchKindLabels(CONFIG, workspaceFirst.impl)).bug, "l-bug-team");
+});
+
+Deno.test("Linear's state types map onto the contract's states, with the name deciding review", () => {
+  assertEquals(mapStateType("triage", "Triage"), "triage");
+  assertEquals(mapStateType("backlog", "Backlog"), "todo");
+  assertEquals(mapStateType("unstarted", "Todo"), "todo");
+  assertEquals(mapStateType("started", "In Progress"), "in_progress");
+  assertEquals(mapStateType("started", "In Review"), "in_review");
+  assertEquals(mapStateType("completed", "Done"), "done");
+  assertEquals(mapStateType("canceled", "Canceled"), "canceled");
+  assertEquals(mapStateType("something-new", "x"), "unknown");
+  assertEquals(mapStateType(undefined, undefined), "unknown");
+});
+
+Deno.test("issueNumber reads the number out of an identifier and nothing else", () => {
+  assertEquals(issueNumber("BEV-104"), 104);
+  assertEquals(issueNumber(" bev-104 "), null);
+  assertEquals(issueNumber("104"), null);
+  assertEquals(issueNumber("BEV-"), null);
+});
+
+Deno.test("fetchIssueStatuses filters by team and number and maps every node", async () => {
+  const { impl, calls } = stubFetch(() =>
+    gql({
+      data: {
+        issues: {
+          nodes: [
+            { identifier: "BEV-1", state: { name: "In Review", type: "started" }, priority: 2, updatedAt: "2026-11-09T10:00:00.000Z" },
+            { identifier: "BEV-2", state: null, priority: null, updatedAt: null },
+          ],
+        },
+      },
+    })
+  );
+  const statuses = await fetchIssueStatuses(CONFIG, impl, [1, 2]);
+  const variables = sentVariables(calls[0]);
+  assertEquals(variables.teamId, "team-1");
+  assertEquals(variables.numbers, [1, 2]);
+  assertEquals(statuses[0], { identifier: "BEV-1", state: "in_review", stateLabel: "In Review", priority: 2, updatedAt: "2026-11-09T10:00:00.000Z" });
+  assertEquals(statuses[1], { identifier: "BEV-2", state: "unknown", stateLabel: null, priority: null, updatedAt: null });
+  assertEquals(await fetchIssueStatuses(CONFIG, impl, []), []);
+  assertEquals(calls.length, 1);
+});
+
+Deno.test("verify looks the issue up by identifier and moves it; an unconfirmed update is an error", async () => {
+  const { impl, calls } = stubFetch((_url, init) => {
+    const body = String(init?.body);
+    if (body.includes("IssueId")) return gql({ data: { issue: { id: "uuid-1" } } });
+    return gql({
+      data: {
+        issueUpdate: {
+          success: true,
+          issue: { identifier: "BEV-9", state: { name: "Done", type: "completed" }, priority: 3, updatedAt: "2026-11-09T11:00:00.000Z" },
+        },
+      },
+    });
+  });
+  assertEquals(await findIssueId(CONFIG, impl, "BEV-9"), "uuid-1");
+  const status = await updateIssueState(CONFIG, impl, "uuid-1", "state-done");
+  assertEquals(status.state, "done");
+  assertEquals(sentVariables(calls[1]), { id: "uuid-1", input: { stateId: "state-done" } });
+
+  const missing = stubFetch(() => gql({ data: { issue: null } }));
+  assertEquals(await findIssueId(CONFIG, missing.impl, "BEV-404"), null);
+
+  const refused = stubFetch(() => gql({ data: { issueUpdate: { success: false, issue: null } } }));
+  const e = await assertRejects(() => updateIssueState(CONFIG, refused.impl, "uuid-1", "state-done"), LinearError);
+  assertEquals(e.code, "linear_update_failed");
+});
+
+Deno.test("readLinearConfig needs both the key and the team, splits the label list and reads the per-kind labels", () => {
   assertEquals(readLinearConfig(() => undefined), null);
   assertEquals(readLinearConfig((k) => (k === "LINEAR_API_KEY" ? FAKE.linearKey("x") : undefined)), null);
   const config = readLinearConfig((k) =>
-    ({ LINEAR_API_KEY: FAKE.linearKey("x"), LINEAR_TEAM_ID: "team-1", LINEAR_LABEL_IDS: " a , b ,, c " })[k]
+    ({
+      LINEAR_API_KEY: FAKE.linearKey("x"),
+      LINEAR_TEAM_ID: "team-1",
+      LINEAR_LABEL_IDS: " a , b ,, c ",
+      LINEAR_LABEL_BUG: "l-bug",
+      LINEAR_DONE_STATE_ID: "s-done",
+    })[k]
   );
   assertEquals(config?.labelIds, ["a", "b", "c"]);
+  assertEquals(config?.labelIdByKind, { bug: "l-bug" });
+  assertEquals(config?.doneStateId, "s-done");
+  const plain = readLinearConfig((k) => ({ LINEAR_API_KEY: FAKE.linearKey("x"), LINEAR_TEAM_ID: "team-1" })[k]);
+  assertEquals(plain?.labelIdByKind, undefined);
 });

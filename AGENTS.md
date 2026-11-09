@@ -73,6 +73,8 @@ priority and discussion (`docs/ticketing-system.md`). Given only a ticket ID:
 9. You may move a ticket to **In Review** when the work is genuinely up for
    review. **Never move a ticket to Done.** A merged PR is not a verified fix:
    a human confirms it on the device or environment where it was reported.
+   Leave the priority and the type label alone too: the reporter set them and
+   triage owns them.
 10. If you are blocked by a missing credential, a missing permission, or
     context you cannot reproduce, say exactly what is missing. Do not invent a
     value, a token, or an API you have not read.

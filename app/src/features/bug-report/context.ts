@@ -121,6 +121,8 @@ const LABELS: Record<keyof BugReportEnvironment, string> = {
   appVersion: 'App version',
   build: 'Build',
   stage: 'Environment',
+  theme: 'Theme',
+  online: 'Connectivity',
   viewport: 'Screen size',
   occurredAt: 'Time',
   reproducibility: 'Reproducibility',
@@ -136,11 +138,17 @@ export function contextRows(environment: BugReportEnvironment): ContextRow[] {
     'appVersion',
     'build',
     'stage',
+    'theme',
+    'online',
     'viewport',
     'occurredAt',
     'reproducibility',
   ];
   return order
-    .filter((key) => environment[key])
-    .map((key) => ({ label: LABELS[key], value: String(environment[key]) }));
+    .filter((key) => environment[key] !== undefined && environment[key] !== '')
+    .map((key) => ({
+      label: LABELS[key],
+      // `online` is the one boolean; the preview says it in words, as the ticket does.
+      value: key === 'online' ? (environment.online ? 'Online' : 'Offline') : String(environment[key]),
+    }));
 }

@@ -27,17 +27,24 @@ In the form:
 
 | Field | Required | Notes |
 |---|---|---|
+| What is it? | yes, preset to **Bug** | Bug, Fix suggestion, Idea or Design nit. Becomes the Linear label of the same name and the ticket's `Type` line. |
+| How bad is it? | yes, preset to **Annoying** | **Blocker**: cannot use the app, or data is wrong. **Bad**: a core flow is broken. **Annoying**: works, with a workaround. **Polish**: cosmetic. Becomes Linear's priority (Urgent, High, Medium, Low) and the ticket's `Severity` line. |
 | What went wrong? | yes | The observable symptom. This becomes the ticket title. |
 | Describe the problem | no | What you did, and what happened instead. |
 | Steps to reproduce | no | One per line; pasted numbering is stripped. |
-| Screenshot | no | Picked from the library or the camera. Resized and re-encoded to JPEG, which also strips EXIF/GPS. |
+| Screenshot | no | Picked from the library or the camera, up to three. Resized and re-encoded to JPEG, which also strips EXIF/GPS. |
 
 **Automatically included** expands to show exactly what is attached without you
 typing it: the screen's route, the platform and browser family, the OS family,
-the app version, the environment, the viewport and the time. That list is an
-allow-list in `app/src/features/bug-report/context.ts` — no account details, no
-page contents, no headers, no tokens, no breadcrumb log, and never the raw URL
-(which can carry a token in its fragment).
+the app version and build, the environment, the theme, whether you were online,
+the viewport and the time. That list is an allow-list in
+`app/src/features/bug-report/context.ts` — no account details, no page
+contents, no headers, no tokens, and never the raw URL (which can carry a
+token in its fragment). The server accepts one more thing, a short **recent
+activity** trail: the last 20 screens you moved between (route patterns, never
+ids) and API calls that failed (the method name, the error code, the status,
+how long it took), which the app sends once its next release records them.
+Nothing you typed, and nothing the server answered, is ever in that trail.
 
 Press **Submit bug report**. Nothing leaves the device before that press: the
 screenshot is held in memory until you submit.
@@ -59,18 +66,20 @@ Work the **Triage** view. For each new report:
    in a comment rather than guessing.
 2. Check for a duplicate. If it is one, link it and **Cancel** the new issue
    with the reason. Canceled is never "fixed".
-3. Set the type (`Bug`, `Feature`, `Task`) and a component label: `Ratings`,
+3. Check the type label the reporter chose (`Bug`, `Fix suggestion`, `Idea`,
+   `Design nit`) and add a component label: `Ratings`,
    `Profiles`, `Search`, `Discovery`, `Collections`, `Venues`, `Authentication`,
    `Navigation`, `Backend/API`, `Performance`, `Other`.
-4. Set the priority. The reporter never sets one — it is a judgement call with
-   the whole board in view, which a phone form does not have:
+4. Check the priority. The reporter's **How bad is it?** set it on create;
+   you have the whole board in view, which a phone form does not, so change
+   it when the board says otherwise:
 
-   | Priority | When |
-   |---|---|
-   | Urgent / P0 | Outage, data loss, a security problem, or the app is unusable |
-   | High / P1 | A core workflow is broken for everyone |
-   | Medium / P2 | A real usability defect with a workaround |
-   | Low / P3 | Cosmetic, or a small improvement |
+   | Reporter said | Priority on create | Means |
+   |---|---|---|
+   | Blocker | Urgent / P0 | Outage, data loss, a security problem, or the app is unusable |
+   | Bad | High / P1 | A core workflow is broken |
+   | Annoying | Medium / P2 | A real usability defect with a workaround |
+   | Polish | Low / P3 | Cosmetic, or a small improvement |
 
 5. Write the acceptance criterion if the template's is not specific enough.
    "Rating still shows after a refresh on iOS Safari" beats "fix the bug".
@@ -100,7 +109,12 @@ see below.
 code, and re-run the original report on the device and environment it came
 from.
 
-Only then, **Done**.
+Only then, **Done**. The reporter can do that from the phone: **Settings →
+Internal → My reports** lists your own tickets with their live Linear state,
+and a ticket in review carries a **Verified on device** action that moves it
+to Done through the function (`bugs.markVerified`, the one write the app ever
+makes to a ticket, and only to a ticket your own ledger holds). Linear's own
+UI works just as well.
 
 This is the one rule the whole workflow is built around, so it is worth being
 blunt about why. Almost everything reported from a phone is visual, or
@@ -135,15 +149,15 @@ Triage ──▶ Todo ──▶ In Progress ──▶ In Review ──▶ Done
 
 ## Becoming an internal reporter
 
-`profiles.role` has to be `admin` or `tester`. Only an admin can set it, and
-the profile trigger enforces that — see
-[`ticketing-system.md`](./ticketing-system.md#granting-the-tester-role) for the
-statement to run.
+`profiles.role` has to be `admin` or `tester`. An operator grants it with
+`select public.set_profile_role('<handle>', 'tester');` in Studio — the plain
+`update` cannot pass the profile trigger there — see
+[`ticketing-system.md`](./ticketing-system.md#granting-the-tester-role).
 
 ## What happens to the screenshots
 
 They go into a **private** Supabase bucket (`bug-evidence`), which has no public
-URL and no read policy at all. The Edge Function reads the object with the
+URL and no read policy at all. The Edge Function reads each object with the
 service role, uploads it to Linear so the ticket carries its own copy, and
-deletes the staged object if the issue is never created. Whatever survives that
+deletes the staged objects if the issue is never created. Whatever survives that
 is swept by `npm run bugs:purge-evidence` (90 days by default).

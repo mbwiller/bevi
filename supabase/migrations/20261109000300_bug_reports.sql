@@ -1,21 +1,25 @@
--- Internal bug reporting (beverage-ticketing-codex/docs/TICKETING_SYSTEM_SPEC.md).
+-- Internal bug reporting (docs/ticketing-system.md, docs/bug-workflow.md).
 --
 -- Linear is the issue system of record: this migration deliberately stores NO
 -- mutable issue state (status, priority, assignee, comments). What it does
 -- store is the submission ledger -- an immutable record of "this reporter sent
--- this idempotency key and we got back this Linear identifier" -- which is the
--- only way to make a repeated tap or a client retry not create a second ticket,
--- and the only record of an evidence object that needs expiring.
+-- this idempotency key, with this type, severity and title, and we got back
+-- this Linear identifier" -- which is the only way to make a repeated tap or a
+-- client retry not create a second ticket, the only record of the evidence
+-- objects that need expiring, and the list the app's My reports screen reads.
 --
 -- Shape of the flow (supabase/functions/bug-report/index.ts):
---   1. the app uploads the screenshot to the private `bug-evidence` bucket
---      (storage RLS below: internal reporters, own folder, on submit only);
+--   1. the app uploads up to three screenshots to the private `bug-evidence`
+--      bucket (storage RLS below: internal reporters, own folder, on submit
+--      only);
 --   2. the app calls the bug-report Edge Function with the caller's JWT;
 --   3. the function calls claim_bug_report() AS THE CALLER -- that is where
 --      authorisation and rate limiting happen, under auth.uid();
 --   4. the function talks to Linear with a server-only key;
 --   5. the function calls finish_bug_report() AS THE SERVICE ROLE to record
 --      the identifier, or the failure.
+-- The function's status and verify routes read the caller's own ledger rows
+-- through the SELECT policy below; nothing here mirrors Linear's state.
 --
 -- =====================================================================
 -- 1. `tester`: the non-admin internal role
@@ -25,7 +29,8 @@
 -- grows a third value. Changing a CHECK constraint is append-only-safe: the
 -- old migration file is untouched and every existing row still satisfies it.
 -- Only an admin can set `role` at all (protect_profile_columns, last rewritten
--- in 20261019000300) -- that rule is unchanged.
+-- in 20261019000300 and again in section 8 below) -- that rule is unchanged
+-- for clients.
 -- =====================================================================
 
 alter table public.profiles drop constraint if exists profiles_role_check;
@@ -61,12 +66,21 @@ create table public.bug_reports (
   -- network, a double tap) reuses it and resolves to the same Linear issue.
   idempotency_key   text not null check (char_length(idempotency_key) between 8 and 100),
   state             text not null default 'pending' check (state in ('pending', 'created', 'failed')),
+  -- What the reporter said it is. The function maps `kind` to a Linear label
+  -- and `severity` to Linear's priority at create time; after that Linear's
+  -- values are the truth and these are what was filed.
+  kind              text not null check (kind in ('bug', 'fix', 'idea', 'design')),
+  severity          text not null check (severity in ('blocker', 'bad', 'annoying', 'polish')),
+  -- The title as filed (the function redacts before it reaches Linear; this
+  -- copy is the reporter's own text, read back only by the reporter), so My
+  -- reports can list a ticket even while Linear is unreachable.
+  title             text not null check (char_length(title) between 1 and 160),
   -- Linear's own identifier and URL, e.g. 'BEV-104'. Never invented here:
   -- null until the provider confirmed the issue exists.
   ticket_identifier text check (char_length(ticket_identifier) <= 40),
   ticket_url        text check (char_length(ticket_url) <= 500),
-  -- Object path in the private `bug-evidence` bucket, for expiry. Never a URL.
-  evidence_path     text check (char_length(evidence_path) <= 300),
+  -- Object paths in the private `bug-evidence` bucket, for expiry. Never URLs.
+  evidence_paths    text[] not null default '{}' check (cardinality(evidence_paths) <= 3),
   -- A short provider/stage code for triage of the integration itself
   -- ('linear_error', 'linear_not_configured'...). Never a payload, never a secret.
   error_code        text check (char_length(error_code) <= 60),
@@ -77,14 +91,14 @@ create table public.bug_reports (
 
 create index bug_reports_reporter_idx on public.bug_reports (reporter_id, created_at desc);
 -- Drives the evidence retention sweep (scripts/bugs/purge-evidence.ts).
-create index bug_reports_evidence_idx on public.bug_reports (created_at) where evidence_path is not null;
+create index bug_reports_evidence_idx on public.bug_reports (created_at) where cardinality(evidence_paths) > 0;
 
 alter table public.bug_reports enable row level security;
 
 -- Read your own submissions (and an admin reads all) so a reporter can be told
--- what happened to a draft. No insert/update/delete policy for `authenticated`:
--- writes go through the two security-definer functions below, per the project
--- rule in supabase/CLAUDE.md.
+-- what happened to a draft, and so My reports can list them. No
+-- insert/update/delete policy for `authenticated`: writes go through the two
+-- security-definer functions below, per the project rule in supabase/CLAUDE.md.
 create policy bug_reports_select on public.bug_reports
   for select to authenticated using (reporter_id = auth.uid() or public.is_admin());
 
@@ -116,20 +130,28 @@ grant execute on function public.assert_bug_report_rate() to authenticated;
 --   claimed = false, state 'pending' -> another attempt for this key is in
 --                    flight right now; answer 409 rather than risk a duplicate.
 -- A previous attempt that failed, or one that died mid-flight and went stale,
--- is re-armed and claimed.
+-- is re-armed and claimed; the re-arm takes the retry's kind, severity and
+-- title (the reporter may have edited the draft) and its evidence paths when
+-- it sent any, else keeps the ones already staged.
 -- =====================================================================
 
 -- A pending row older than this is assumed dead (the function timed out, the
 -- worker was recycled) and may be retried. Shorter than any plausible Linear
 -- round trip would be a duplicate-ticket risk; much longer would strand a
 -- reporter behind a 409.
-create or replace function public.claim_bug_report(p_idempotency_key text, p_evidence_path text default null)
+create or replace function public.claim_bug_report(
+  p_idempotency_key text,
+  p_kind text,
+  p_severity text,
+  p_title text,
+  p_evidence_paths text[] default '{}'
+)
 returns table (
   id bigint,
   state text,
   ticket_identifier text,
   ticket_url text,
-  evidence_path text,
+  evidence_paths text[],
   claimed boolean
 )
 language plpgsql security definer set search_path = public as $$
@@ -137,6 +159,8 @@ declare
   v_row public.bug_reports;
   v_stale constant interval := interval '2 minutes';
   v_claimed boolean;
+  v_paths text[] := coalesce(p_evidence_paths, '{}');
+  v_path text;
 begin
   if not public.is_internal_reporter() then
     raise exception 'BEVI_UNAUTHORIZED' using errcode = '42501';
@@ -144,12 +168,24 @@ begin
   if p_idempotency_key is null or char_length(p_idempotency_key) not between 8 and 100 then
     raise exception 'BEVI_VALIDATION' using errcode = '22023', detail = 'idempotencyKey';
   end if;
-  if p_evidence_path is not null then
-    -- The uploader's own folder, as the storage policy enforces on insert.
-    if split_part(p_evidence_path, '/', 1) <> auth.uid()::text or char_length(p_evidence_path) > 300 then
-      raise exception 'BEVI_VALIDATION' using errcode = '22023', detail = 'evidencePath';
-    end if;
+  if p_kind is null or p_kind not in ('bug', 'fix', 'idea', 'design') then
+    raise exception 'BEVI_VALIDATION' using errcode = '22023', detail = 'kind';
   end if;
+  if p_severity is null or p_severity not in ('blocker', 'bad', 'annoying', 'polish') then
+    raise exception 'BEVI_VALIDATION' using errcode = '22023', detail = 'severity';
+  end if;
+  if p_title is null or char_length(btrim(p_title)) not between 1 and 160 then
+    raise exception 'BEVI_VALIDATION' using errcode = '22023', detail = 'title';
+  end if;
+  if cardinality(v_paths) > 3 then
+    raise exception 'BEVI_VALIDATION' using errcode = '22023', detail = 'evidencePaths';
+  end if;
+  foreach v_path in array v_paths loop
+    -- The uploader's own folder, as the storage policy enforces on insert.
+    if v_path is null or split_part(v_path, '/', 1) <> auth.uid()::text or char_length(v_path) > 300 then
+      raise exception 'BEVI_VALIDATION' using errcode = '22023', detail = 'evidencePaths';
+    end if;
+  end loop;
 
   -- Lock the existing row so two taps can't both decide they are the first.
   select * into v_row from public.bug_reports b
@@ -159,8 +195,13 @@ begin
   if found then
     if v_row.state = 'failed' or (v_row.state = 'pending' and v_row.updated_at < now() - v_stale) then
       update public.bug_reports b
-         set state = 'pending', evidence_path = coalesce(p_evidence_path, b.evidence_path),
-             error_code = null, updated_at = now()
+         set state = 'pending',
+             kind = p_kind,
+             severity = p_severity,
+             title = btrim(p_title),
+             evidence_paths = case when cardinality(v_paths) > 0 then v_paths else b.evidence_paths end,
+             error_code = null,
+             updated_at = now()
        where b.id = v_row.id
        returning * into v_row;
       v_claimed := true;
@@ -169,18 +210,18 @@ begin
     end if;
   else
     perform public.assert_bug_report_rate();
-    insert into public.bug_reports (reporter_id, idempotency_key, evidence_path)
-    values (auth.uid(), p_idempotency_key, p_evidence_path)
+    insert into public.bug_reports (reporter_id, idempotency_key, kind, severity, title, evidence_paths)
+    values (auth.uid(), p_idempotency_key, p_kind, p_severity, btrim(p_title), v_paths)
     returning * into v_row;
     v_claimed := true;
   end if;
 
   return query select v_row.id, v_row.state, v_row.ticket_identifier, v_row.ticket_url,
-                      v_row.evidence_path, v_claimed;
+                      v_row.evidence_paths, v_claimed;
 end $$;
 
-revoke execute on function public.claim_bug_report(text, text) from public, anon;
-grant execute on function public.claim_bug_report(text, text) to authenticated;
+revoke execute on function public.claim_bug_report(text, text, text, text, text[]) from public, anon;
+grant execute on function public.claim_bug_report(text, text, text, text, text[]) to authenticated;
 
 -- =====================================================================
 -- 5. finish_bug_report(): called by the Edge Function AS THE SERVICE ROLE
@@ -221,14 +262,22 @@ grant execute on function public.finish_bug_report(bigint, text, text, text, tex
 --
 -- scripts/bugs/purge-evidence.ts deletes the objects through the Storage API
 -- (storage.objects is owned by supabase_storage_admin, so a function here
--- cannot delete them) and then calls this to clear the paths it removed.
+-- cannot delete them) and then calls this to drop the paths it removed from
+-- each row's array. Only the named paths go; a row that still holds another
+-- object keeps it.
 -- =====================================================================
 
 create or replace function public.forget_bug_evidence(p_paths text[]) returns integer
 language sql security definer set search_path = public as $$
   with cleared as (
-    update public.bug_reports set evidence_path = null, updated_at = now()
-     where evidence_path = any(p_paths)
+    update public.bug_reports b
+       set evidence_paths = (
+             select coalesce(array_agg(p order by p), '{}')
+               from unnest(b.evidence_paths) as p
+              where p <> all (p_paths)
+           ),
+           updated_at = now()
+     where b.evidence_paths && p_paths
     returning 1
   ) select count(*)::int from cleared;
 $$;
@@ -264,3 +313,69 @@ create policy storage_bug_evidence_insert on storage.objects
     and (storage.foldername(name))[1] = auth.uid()::text
     and public.is_internal_reporter()
   );
+
+-- =====================================================================
+-- 8. set_profile_role(): the operator's way to hand out a role
+--
+-- protect_profile_columns (20261011000100, rewritten in 20261019000300)
+-- raises BEVI_UNAUTHORIZED on any `role` change unless is_admin() is true,
+-- and is_admin() reads auth.uid(). Studio's SQL editor has no auth.uid(), so
+-- the plain `update public.profiles set role = 'tester'` an operator would
+-- type can never pass the trigger -- and no admin exists to make the first
+-- admin. This function is the one sanctioned path: it sets the same
+-- transaction-local `bevi.rpc_bypass` flag the handle/avatar RPCs use, and the
+-- trigger below lets a role change through while that flag is on. The flag is
+-- set with set_config(..., true), so it lives only inside the calling
+-- transaction and only security-definer code can set it on a client's behalf.
+--
+-- Executable by the service role (Studio runs as the owner, which needs no
+-- grant, and a maintenance script runs with the service-role key). Never by
+-- `authenticated`: a signed-in user must not be able to promote anyone,
+-- themselves included.
+-- =====================================================================
+
+create or replace function public.set_profile_role(p_handle text, p_role text) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  v_id uuid;
+begin
+  if p_role is null or p_role not in ('user', 'admin', 'tester') then
+    raise exception 'BEVI_VALIDATION' using errcode = '22023', detail = 'role';
+  end if;
+  select id into v_id from public.profiles where handle = lower(btrim(coalesce(p_handle, '')));
+  if v_id is null then
+    raise exception 'BEVI_NOT_FOUND' using errcode = 'P0002', detail = 'handle';
+  end if;
+  perform set_config('bevi.rpc_bypass', 'true', true);
+  update public.profiles set role = p_role where id = v_id;
+  perform set_config('bevi.rpc_bypass', 'false', true);
+end $$;
+
+revoke execute on function public.set_profile_role(text, text) from public, anon, authenticated;
+grant execute on function public.set_profile_role(text, text) to service_role;
+
+-- The trigger function from 20261019000300, with one change: a role change
+-- passes when the bypass flag is set (set_profile_role above) OR the caller
+-- is an admin. Everything else is byte-for-byte the same rule.
+create or replace function public.protect_profile_columns() returns trigger
+language plpgsql as $$
+declare
+  v_bypass boolean := coalesce(current_setting('bevi.rpc_bypass', true), 'false') = 'true';
+begin
+  if new.role is distinct from old.role and not (v_bypass or public.is_admin()) then
+    raise exception 'BEVI_UNAUTHORIZED' using errcode = '42501';
+  end if;
+  if new.bevi_rank is distinct from old.bevi_rank then
+    new.bevi_rank := old.bevi_rank;
+  end if;
+  if new.handle is distinct from old.handle and not v_bypass then
+    raise exception 'BEVI_VALIDATION' using errcode = '22023', detail = 'handle changes only via set_handle()';
+  end if;
+  if new.birth_date is distinct from old.birth_date and not v_bypass then
+    new.birth_date := old.birth_date;
+  end if;
+  if new.avatar_path is distinct from old.avatar_path and not v_bypass then
+    new.avatar_path := old.avatar_path;
+  end if;
+  return new;
+end $$;

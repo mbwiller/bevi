@@ -59,6 +59,7 @@ import {
   type BevPrediction,
   type BevsApi,
   type BugReportResult,
+  type BugReportSummary,
   type BugsApi,
   type BevLeaf,
   type BevSimilarity,
@@ -144,6 +145,10 @@ const UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
 const UPLOAD_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
 /** Narrower than UPLOAD_MIME_TYPES, matching the `bug-evidence` bucket (packages/api/src/bugs.ts). */
 const BUG_EVIDENCE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const BUG_KINDS: readonly string[] = ['bug', 'fix', 'idea', 'design'];
+const BUG_SEVERITIES: readonly string[] = ['blocker', 'bad', 'annoying', 'polish'];
+/** Linear's priority as the function sets it from the severity (supabase/functions/bug-report/issue.ts). */
+const BUG_PRIORITY: Record<BugReportSummary['severity'], number> = { blocker: 1, bad: 2, annoying: 3, polish: 4 };
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Default time the fake's "background removal" takes before a bev photo is 'ready'. */
 const PHOTO_PROCESSING_MS = 3000;
@@ -274,8 +279,8 @@ export class FakeApi implements BeviApi {
    * persisted: it is a property of the account on the server, not of the fake's data.
    */
   private internalReporter = false;
-  /** The fake's `bug_reports` ledger, keyed by idempotency key per user. */
-  private bugLedger = new Map<string, BugReportResult>();
+  /** The fake's `bug_reports` ledger, keyed by idempotency key per user, with the summary My reports shows. */
+  private bugLedger = new Map<string, { userId: string; result: BugReportResult; summary: BugReportSummary }>();
   private nextTicket = 100;
 
   constructor(options: FakeApiOptions = {}) {
@@ -2018,9 +2023,10 @@ export class FakeApi implements BeviApi {
 
   // -------------------------------------------------------------------------
   // Bugs (the internal reporter). Linear is mocked out entirely: the fake
-  // mints `BEV-<n>` the way Linear mints an identifier, and keeps the same
-  // idempotency promise, so the UI's success, duplicate, validation and
-  // failure states are all reachable without a tracker.
+  // mints `BEV-<n>` the way Linear mints an identifier, keeps the same
+  // idempotency promise, and holds each ticket's state so the UI's success,
+  // duplicate, validation, failure and My reports states are all reachable
+  // without a tracker.
   // -------------------------------------------------------------------------
 
   bugs: BugsApi = {
@@ -2034,19 +2040,21 @@ export class FakeApi implements BeviApi {
           const me = this.requireUser();
           if (!this.internalReporter) fail('unauthorized', 'This account cannot file internal bug reports');
           if (!input.title?.trim()) invalid('title', 'Say what went wrong');
+          if (!BUG_KINDS.includes(input.kind)) invalid('kind', 'Say what kind of report this is');
+          if (!BUG_SEVERITIES.includes(input.severity)) invalid('severity', 'Say how bad it is');
           if (!UUID_RE.test(input.idempotencyKey ?? '')) invalid('idempotencyKey', 'Missing submission key');
-          if (input.evidence) {
-            if (!BUG_EVIDENCE_MIME_TYPES.includes(input.evidence.mimeType)) {
-              invalid('evidence', 'Attach a JPEG, PNG or WebP image');
-            }
-            if (typeof input.evidence.file?.size === 'number' && input.evidence.file.size > UPLOAD_MAX_BYTES) {
+          const evidence = input.evidence ?? [];
+          if (evidence.length > 3) invalid('evidence', 'Attach at most 3 screenshots');
+          for (const item of evidence) {
+            if (!BUG_EVIDENCE_MIME_TYPES.includes(item.mimeType)) invalid('evidence', 'Attach a JPEG, PNG or WebP image');
+            if (typeof item.file?.size === 'number' && item.file.size > UPLOAD_MAX_BYTES) {
               invalid('evidence', 'That screenshot is too large');
             }
           }
 
           const key = `${me.id}:${input.idempotencyKey}`;
           const seen = this.bugLedger.get(key);
-          if (seen) return { ...seen, status: 'duplicate' as const };
+          if (seen) return { ...seen.result, status: 'duplicate' as const };
 
           const ticketId = `BEV-${this.nextTicket++}`;
           const result: BugReportResult = {
@@ -2054,11 +2062,49 @@ export class FakeApi implements BeviApi {
             ticketUrl: `https://linear.app/bevi-fake/issue/${ticketId}`,
             status: 'created',
           };
-          this.bugLedger.set(key, result);
+          const at = this.now().toISOString();
+          const summary: BugReportSummary = {
+            ticketId,
+            ticketUrl: result.ticketUrl,
+            title: input.title.trim(),
+            kind: input.kind,
+            severity: input.severity,
+            createdAt: at,
+            state: 'triage',
+            stateLabel: 'Triage',
+            priority: BUG_PRIORITY[input.severity],
+            updatedAt: at,
+          };
+          this.bugLedger.set(key, { userId: me.id, result, summary });
           return result;
         },
         // Not a `db` write: the ledger is the fake's own, and a bug report
         // changes nothing a screen reads.
+        false,
+      ),
+
+    listMine: () =>
+      this.call('bugs.listMine', () => {
+        const me = this.requireUser();
+        if (!this.internalReporter) fail('unauthorized', 'This account cannot file internal bug reports');
+        return [...this.bugLedger.values()]
+          .filter((entry) => entry.userId === me.id)
+          .map((entry) => ({ ...entry.summary }))
+          .reverse();
+      }),
+
+    markVerified: (ticketId) =>
+      this.call(
+        'bugs.markVerified',
+        () => {
+          const me = this.requireUser();
+          if (!this.internalReporter) fail('unauthorized', 'This account cannot file internal bug reports');
+          if (!/^[A-Z][A-Z0-9]*-\d{1,9}$/.test(ticketId?.trim() ?? '')) invalid('ticketId', 'That is not a ticket identifier');
+          const entry = [...this.bugLedger.values()].find((e) => e.userId === me.id && e.summary.ticketId === ticketId.trim());
+          if (!entry) fail('not_found', "That ticket isn't one of yours");
+          entry.summary = { ...entry.summary, state: 'done', stateLabel: 'Done', updatedAt: this.now().toISOString() };
+          return { ...entry.summary };
+        },
         false,
       ),
   };
