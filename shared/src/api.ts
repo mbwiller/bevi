@@ -594,6 +594,176 @@ export interface MetaApi {
   getAppConfig(): Promise<AppConfig>;
 }
 
+// ---------------------------------------------------------------------------
+// Bugs: the internal bug reporter (docs/bug-workflow.md). Internal-only —
+// every method is refused for an ordinary account, server-side, whatever the
+// client chooses to show. Linear owns the issue: nothing here writes its
+// priority, labels or comments after create, and the app never holds a
+// tracker credential. The one write after create is `markVerified`, which
+// moves a ticket the reporter has checked on the device to Done.
+// ---------------------------------------------------------------------------
+
+/** What the reporter says it is. The server files each kind under a Linear label of the same name. */
+export type BugReportKind = 'bug' | 'fix' | 'idea' | 'design';
+
+/**
+ * How bad the reporter says it is: blocker = cannot use the app or data is
+ * wrong; bad = a core flow is broken; annoying = works with a workaround;
+ * polish = cosmetic. The server maps it to Linear priority 1–4 at create time.
+ */
+export type BugReportSeverity = 'blocker' | 'bad' | 'annoying' | 'polish';
+
+/** Safe, allow-listed context the reporter sees before sending. No user content, ever. */
+export interface BugReportEnvironment {
+  /** The route the reporter was on, e.g. '/bev/[id]'. Never a URL with a query string. */
+  route?: string;
+  /** The feature area, for the tracker's component label. */
+  component?: string;
+  platform?: string;
+  osVersion?: string;
+  appVersion?: string;
+  /** The deploy's git SHA (short), as the build inlined it. */
+  build?: string;
+  /** 'production' | 'preview' | 'development', as the build knows itself. */
+  stage?: string;
+  /** The colour scheme the app rendered in. */
+  theme?: 'light' | 'dark';
+  /** `navigator.onLine` when the form opened. */
+  online?: boolean;
+  /** e.g. '390x844'. */
+  viewport?: string;
+  /** ISO-8601. */
+  occurredAt?: string;
+  reproducibility?: 'always' | 'intermittent' | 'unknown';
+}
+
+/**
+ * One entry of the trail the app keeps in memory: a navigation (the route
+ * pattern, never ids or a query string) or a failed API call (the method
+ * name, the error code, the status, the duration). Never arguments, never
+ * responses, never anything a user typed. The server keeps at most 20 and
+ * redacts every string.
+ */
+export interface BugBreadcrumb {
+  /** ISO-8601. */
+  at: string;
+  kind: 'nav' | 'api';
+  /** `nav`: the route pattern, e.g. '/bev/[id]'. */
+  route?: string;
+  /** `api`: the BeviApi method, e.g. 'rankings.submit'. */
+  method?: string;
+  /** `api`: the ApiError code. */
+  code?: string;
+  /** `api`: the HTTP status when known. */
+  status?: number;
+  /** `api`: how long the call took. */
+  ms?: number;
+}
+
+export interface BugReportInput {
+  kind: BugReportKind;
+  severity: BugReportSeverity;
+  /** The observable symptom; becomes the ticket title. Required. */
+  title: string;
+  /** What happened. */
+  description?: string;
+  reproductionSteps?: string[];
+  expected?: string;
+  actual?: string;
+  environment?: BugReportEnvironment;
+  breadcrumbs?: BugBreadcrumb[];
+  /**
+   * The screenshots, at most 3, uploaded to private storage as part of this
+   * call and never before it — nothing leaves the device until the reporter
+   * submits.
+   */
+  evidence?: { file: Blob; mimeType: string }[];
+  /**
+   * A UUID the client generates once per draft and reuses on every retry of
+   * that draft. The same key never creates a second ticket.
+   */
+  idempotencyKey: string;
+}
+
+export interface BugReportResult {
+  /** The tracker's own identifier, e.g. 'BEV-104'. Never invented client-side. */
+  ticketId: string;
+  ticketUrl: string;
+  /** 'duplicate' = this idempotency key had already produced that ticket. */
+  status: 'created' | 'duplicate';
+}
+
+/**
+ * Where a ticket is in the workflow (docs/bug-workflow.md), derived from
+ * Linear's state type; 'unknown' when the tracker could not be asked.
+ */
+export type BugTicketState = 'triage' | 'todo' | 'in_progress' | 'in_review' | 'done' | 'canceled' | 'unknown';
+
+/** One of the caller's own tickets, as My reports lists it. */
+export interface BugReportSummary {
+  ticketId: string;
+  ticketUrl: string;
+  /** The title as filed. */
+  title: string;
+  kind: BugReportKind;
+  severity: BugReportSeverity;
+  /** ISO-8601, when it was filed. */
+  createdAt: string;
+  state: BugTicketState;
+  /** Linear's own state name, e.g. 'In Review'; null when `state` is 'unknown'. */
+  stateLabel: string | null;
+  /** Linear's priority 0–4; null when unknown. */
+  priority: number | null;
+  /** ISO-8601, Linear's last change; null when unknown. */
+  updatedAt: string | null;
+}
+
+export interface BugsApi {
+  /**
+   * Whether this account may file internal bug reports. Drives whether the
+   * Report a bug entry point is shown; it is not the access check, which runs
+   * server-side on every call. Never throws 'unauthorized' for a signed-in
+   * ordinary user — it answers false.
+   */
+  canReport(): Promise<boolean>;
+
+  /**
+   * Files one report: uploads the evidence (if any), then creates the tracker
+   * issue server-side and returns the identifier the tracker assigned.
+   *
+   * @throws 'unauthorized' — signed out, or not an internal reporter;
+   *   'validation' — missing title (`detail.field = 'title'`), unknown kind or
+   *   severity (`'kind'`, `'severity'`), unsupported, oversized or too many
+   *   attachments (`'evidence'`), malformed key (`'idempotencyKey'`);
+   *   'conflict' — a submission for this key is already in flight;
+   *   'rate_limited'; 'unknown' — the tracker is unreachable or unconfigured
+   *   (the draft is still intact and the same key may be retried).
+   */
+  report(input: BugReportInput): Promise<BugReportResult>;
+
+  /**
+   * The caller's own filed tickets, newest first, with their live tracker
+   * state. When the tracker cannot be asked the rows still come back with
+   * `state: 'unknown'`, so the list never disappears with the tracker.
+   *
+   * @throws 'unauthorized' — signed out, or not an internal reporter;
+   *   'unknown' — the ledger could not be read.
+   */
+  listMine(): Promise<BugReportSummary[]>;
+
+  /**
+   * Moves one of the caller's own tickets to Done, once they have checked the
+   * fix on the device where they saw the bug (the one state change the
+   * workflow reserves for a human). Returns the ticket as the tracker now
+   * reports it.
+   *
+   * @throws 'unauthorized' — signed out, or not an internal reporter;
+   *   'not_found' — not one of the caller's tickets; 'validation' — not a
+   *   ticket identifier; 'unknown' — the tracker refused or is unconfigured.
+   */
+  markVerified(ticketId: string): Promise<BugReportSummary>;
+}
+
 export interface BeviApi extends AuthApi {
   profile: ProfileApi;
   stats: StatsApi;
@@ -609,4 +779,5 @@ export interface BeviApi extends AuthApi {
   recs: RecsApi;
   venues: VenuesApi;
   meta: MetaApi;
+  bugs: BugsApi;
 }

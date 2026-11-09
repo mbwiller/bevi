@@ -2,12 +2,14 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { apiConfig } from '@/api/client';
 import { createQueryClient } from '@/api/queryClient';
 import { StatusBarClearance } from '@/components/StatusBarClearance';
+import { ReportBugLauncher } from '@/features/bug-report/ReportBugLauncher';
 import { ConfigError, Splash } from '@/features/auth/Splash';
 import { useSessionBootstrap } from '@/features/auth/useSessionBootstrap';
 import { clearLegacyStorage } from '@/lib/clearLegacyStorage';
@@ -56,34 +58,42 @@ function SessionGate() {
   // Only the launch check can show the splash (and its error); once the Stack is up it stays up.
   if (!checked) return <Splash error={error || undefined} onRetry={retry} />;
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.surface } }}>
-      <Stack.Screen name="index" />
+    // The launcher sits over the Stack so an internal reporter can file from
+    // any screen; it renders nothing for everyone else (ReportBugLauncher).
+    <View style={styles.fill}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.surface } }}>
+        <Stack.Screen name="index" />
 
-      <Stack.Protected guard={status === 'signedOut'}>
-        <Stack.Screen name="(auth)/sign-in" />
-        <Stack.Screen name="(auth)/sign-up" />
-      </Stack.Protected>
+        <Stack.Protected guard={status === 'signedOut'}>
+          <Stack.Screen name="(auth)/sign-in" />
+          <Stack.Screen name="(auth)/sign-up" />
+        </Stack.Protected>
 
-      <Stack.Protected guard={status === 'onboarding'}>
-        <Stack.Screen name="onboarding/profile" />
-        <Stack.Screen name="onboarding/starter" />
-      </Stack.Protected>
+        <Stack.Protected guard={status === 'onboarding'}>
+          <Stack.Screen name="onboarding/profile" />
+          <Stack.Screen name="onboarding/starter" />
+        </Stack.Protected>
 
-      <Stack.Protected guard={status === 'ready'}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="search" />
-        <Stack.Screen name="bev/[id]" />
-        <Stack.Screen name="user/[id]/index" />
-        <Stack.Screen name="user/[id]/followers" />
-        <Stack.Screen name="user/[id]/following" />
-        <Stack.Screen name="rank/[bevId]" options={{ presentation: 'fullScreenModal' }} />
-        <Stack.Screen name="add/new" options={{ presentation: 'fullScreenModal' }} />
-        <Stack.Screen name="settings/index" />
-        <Stack.Screen name="settings/account" />
-        <Stack.Screen name="settings/privacy" />
-        <Stack.Screen name="settings/delete-account" />
-        <Stack.Screen name="image/[url]" options={{ presentation: 'fullScreenModal' }} />
-      </Stack.Protected>
-    </Stack>
+        <Stack.Protected guard={status === 'ready'}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="search" />
+          <Stack.Screen name="bev/[id]" />
+          <Stack.Screen name="user/[id]/index" />
+          <Stack.Screen name="user/[id]/followers" />
+          <Stack.Screen name="user/[id]/following" />
+          <Stack.Screen name="rank/[bevId]" options={{ presentation: 'fullScreenModal' }} />
+          <Stack.Screen name="add/new" options={{ presentation: 'fullScreenModal' }} />
+          <Stack.Screen name="settings/index" />
+          <Stack.Screen name="settings/account" />
+          <Stack.Screen name="settings/privacy" />
+          <Stack.Screen name="settings/delete-account" />
+          <Stack.Screen name="image/[url]" options={{ presentation: 'fullScreenModal' }} />
+          <Stack.Screen name="report-bug" options={{ presentation: 'fullScreenModal' }} />
+        </Stack.Protected>
+      </Stack>
+      {status === 'ready' ? <ReportBugLauncher /> : null}
+    </View>
   );
 }
+
+const styles = StyleSheet.create({ fill: { flex: 1 } });

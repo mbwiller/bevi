@@ -1125,4 +1125,33 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       await expectCode(api.venues.neighborhoods(), 'unauthorized');
     });
   });
+
+  describe('bugs (the internal reporter)', () => {
+    const input = {
+      kind: 'bug',
+      severity: 'bad',
+      title: 'Ratings vanish after a refresh',
+      idempotencyKey: '4f1d6c0a-4f4c-4f0e-9e0b-9a4a8f2b7c11',
+    } as const;
+
+    it('an ordinary account cannot report: canReport is false and every call is unauthorized', async () => {
+      // Only an operator can make an account internal (set_profile_role), which
+      // the contract has no way to do, so the conformance suite can only pin
+      // the refusal. The FakeApi's own suite covers the internal path through
+      // controls.setInternalReporter().
+      await newUser();
+      expect(await api.bugs.canReport()).toBe(false);
+      await expectCode(api.bugs.report(input), 'unauthorized');
+      await expectCode(api.bugs.listMine(), 'unauthorized');
+      await expectCode(api.bugs.markVerified('BEV-1'), 'unauthorized');
+    });
+
+    it('signed out, canReport answers false rather than throwing, and the rest is unauthorized', async () => {
+      await api.signOut();
+      expect(await api.bugs.canReport()).toBe(false);
+      await expectCode(api.bugs.report(input), 'unauthorized');
+      await expectCode(api.bugs.listMine(), 'unauthorized');
+      await expectCode(api.bugs.markVerified('BEV-1'), 'unauthorized');
+    });
+  });
 }
