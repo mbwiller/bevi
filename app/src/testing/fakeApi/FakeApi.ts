@@ -1217,11 +1217,20 @@ export class FakeApi implements BeviApi {
             const inter = [...want].filter((t) => have.has(t)).length;
             const jaccard = inter / (want.size + have.size - inter);
             const nameHit = norm(b.name).includes(norm(input.name)) ? 0.3 : 0;
-            const catHit = input.categoryId && input.categoryId === b.categoryId ? 0.1 : 0;
-            return { b, s: jaccard + nameHit + catHit };
+            const sameCat = input.categoryId !== undefined && input.categoryId === b.categoryId;
+            const catHit = sameCat ? 0.1 : 0;
+            // As find_similar_bevs orders (20261109000400): every token present first, then the
+            // chosen category, then the score. The category reorders; it never excludes a Bev.
+            return { b, s: jaccard + nameHit + catHit, tokHit: inter === want.size, sameCat };
           })
           .filter((x) => x.s >= 0.3)
-          .sort((a, z) => z.s - a.s || a.b.name.localeCompare(z.b.name))
+          .sort(
+            (a, z) =>
+              Number(z.tokHit) - Number(a.tokHit) ||
+              Number(z.sameCat) - Number(a.sameCat) ||
+              z.s - a.s ||
+              a.b.name.localeCompare(z.b.name),
+          )
           .slice(0, 5)
           .map((x) => this.toSummary(x.b));
       }),

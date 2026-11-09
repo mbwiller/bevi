@@ -235,6 +235,11 @@ export interface FindDuplicatesInput {
   name: string;
   brand?: string;
   flavor?: string;
+  /**
+   * The category the creator picked. A ranking preference, never a filter: matches in this
+   * category sort first, and a matching Bev in any other category is still returned, so a
+   * miscategorised new Bev still finds its duplicate.
+   */
   categoryId?: CategoryId;
 }
 
@@ -250,7 +255,11 @@ export interface BevsApi {
    */
   get(id: string): Promise<Bev>;
 
-  /** Up to 5 likely matches. @throws 'unauthorized'. */
+  /**
+   * Up to 5 likely matches across every category (age-filtered server-side). `categoryId`
+   * ranks same-category matches first and never excludes another category.
+   * @throws 'unauthorized'.
+   */
   findLikelyDuplicates(input: FindDuplicatesInput): Promise<BevSummary[]>;
 
   /**
