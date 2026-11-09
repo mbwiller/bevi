@@ -41,6 +41,7 @@ supabase/functions/bug-report/    POST  /bug-report         validate → redact 
          │   redact.ts  credential/PII stripping, input caps, the breadcrumb allow-list
          │   issue.ts   kind and severity, the issue title and the template body
          │   linear.ts  the GraphQL client (fileUpload, issueCreate, states, labels, issues, issueUpdate)
+         │   cors.ts    the preflight answer and the allow headers every response carries
          ▼
 Linear                            the issue, its identifier, its lifecycle
 ```
@@ -105,6 +106,13 @@ The database half is one migration,
 - **One write after create.** `markVerified` moves a ticket to Done, and only
   a ticket the caller's own ledger holds. Nothing else in the app changes a
   ticket.
+- **The browser is a first-class caller.** This is the first function the app
+  invokes directly, so `cors.ts` answers the `OPTIONS` preflight before any
+  auth check (the browser sends it without a JWT) and every response carries
+  `Access-Control-Allow-Origin`. The origin is `*` on purpose: nothing here
+  authorises by origin, the JWT is the credential and Postgres is the gate, and
+  no cookies are involved. Without this the app only ever saw a network error,
+  which is how the first live submission on 2026-11-09 failed.
 - **Logs name the outcome, never the payload.** Each line carries a six-byte
   SHA-256 prefix of the idempotency key, the ticket identifier, and a provider
   error code.

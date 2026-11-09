@@ -23,6 +23,9 @@
 // admin, and these routes are own-rows-only for admins as well). Hiding the
 // Report a bug button in the client is cosmetic; this is the gate.
 //
+// The app calls this function from the browser, so cors.ts answers the
+// preflight and every response carries Access-Control-Allow-Origin.
+//
 // The Linear API key is read from the environment and never leaves this
 // function. The app never sees it, and no response or log line here contains
 // it, the service-role key, or the reporter's evidence.
@@ -33,6 +36,7 @@
 // API rather than @supabase/supabase-js, so CI's `deno check` type-checks this
 // file without resolving a module off the network.
 
+import { isPreflight, preflight, withCors } from "./cors.ts";
 import {
   buildDescription,
   type EvidenceItem,
@@ -80,7 +84,8 @@ const CONTENT_TYPE_BY_EXT: Record<string, string> = {
 function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json" },
+    // Every response carries the CORS headers (cors.ts): the browser drops one that does not.
+    headers: withCors({ "Content-Type": "application/json" }),
   });
 }
 
@@ -580,6 +585,9 @@ export function routeOf(pathname: string): "report" | "status" | "verify" | null
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
+  // The preflight comes first and carries no JWT, so it is answered before
+  // routing and before `caller()` would reject it as unauthenticated.
+  if (isPreflight(req)) return preflight();
   const route = routeOf(new URL(req.url).pathname);
   if (!route) return json({ error: "not_found" }, 404);
   const expected = route === "status" ? "GET" : "POST";

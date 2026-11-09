@@ -2,7 +2,7 @@
 //   deno test --allow-net --allow-env supabase/functions/bug-report/
 //
 // Everything here is pure: these files import ./redact.ts, ./issue.ts,
-// ./linear.ts and ./ledger.ts, never ./index.ts, so nothing starts a server
+// ./linear.ts, ./ledger.ts and ./cors.ts, never ./index.ts, so nothing starts a server
 // and no request leaves the process. The Linear client is driven through its injected
 // `fetch`, which is how its error mapping, its two-step upload, its status
 // lookup and its one write can be asserted without an API key.
@@ -17,6 +17,7 @@ import { assert, assertEquals, assertRejects, assertStringIncludes } from "jsr:@
 import { BREADCRUMB_LIMITS, clean, cleanBreadcrumbs, cleanEnvironment, cleanSteps, LIMITS, redact, REDACTED } from "./redact.ts";
 import { breadcrumbLine, buildDescription, parseReport, PRIORITY_BY_SEVERITY, ValidationError } from "./issue.ts";
 import { finishBugReport, ledgerQuery } from "./ledger.ts";
+import { CORS_HEADERS, isPreflight, preflight, withCors } from "./cors.ts";
 import {
   authorizationHeader,
   createIssue,
@@ -634,4 +635,36 @@ Deno.test("finishBugReport treats an unreachable database like a failed write", 
   assertEquals(await finishBugReport(impl, LEDGER_ENV, 7, "failed", { errorCode: "linear_error" }, (l) => logged.push(l)), false);
   assertEquals(attempts, 2);
   assertStringIncludes(logged[0] ?? "", "status=unreachable");
+});
+
+// ---------------------------------------------------------------------------
+// CORS: the browser calls this function directly, so the preflight must be
+// answered without a JWT and every response must carry the allow-origin header.
+// The first live submission (2026-11-09) failed exactly here.
+// ---------------------------------------------------------------------------
+
+Deno.test("an OPTIONS request is a preflight and nothing else is", () => {
+  assertEquals(isPreflight(new Request("https://x.supabase.co/functions/v1/bug-report", { method: "OPTIONS" })), true);
+  for (const method of ["GET", "POST", "DELETE"]) {
+    assertEquals(isPreflight(new Request("https://x.supabase.co/functions/v1/bug-report", { method })), false);
+  }
+});
+
+Deno.test("the preflight answer is a bodiless 204 with the allow headers the browser needs", async () => {
+  const res = preflight();
+  assertEquals(res.status, 204);
+  assertEquals(await res.text(), "");
+  assertEquals(res.headers.get("Access-Control-Allow-Origin"), "*");
+  assertEquals(res.headers.get("Access-Control-Allow-Methods"), "GET, POST, OPTIONS");
+  const allowed = (res.headers.get("Access-Control-Allow-Headers") ?? "").toLowerCase();
+  for (const h of ["authorization", "apikey", "content-type", "x-client-info"]) assertStringIncludes(allowed, h);
+});
+
+Deno.test("withCors adds the allow headers to a response's own and lets the response's keys win", () => {
+  const headers = withCors({ "Content-Type": "application/json", "Access-Control-Max-Age": "0" });
+  assertEquals(headers["Content-Type"], "application/json");
+  assertEquals(headers["Access-Control-Allow-Origin"], CORS_HEADERS["Access-Control-Allow-Origin"]);
+  assertEquals(headers["Access-Control-Max-Age"], "0");
+  // The shared constant is never mutated by a caller's overrides.
+  assertEquals(CORS_HEADERS["Access-Control-Max-Age"], "86400");
 });
