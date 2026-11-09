@@ -1,0 +1,66 @@
+<!-- @dsCard group="Map" height=560 width=802 subtitle="Inline and full screen" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MapControls</title>
+<style>
+  body { margin: 0; background: var(--surface); color: var(--text); font-family: var(--font-sans); }
+  .pv { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 20px 16px; }
+  .pv-col { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+  .pv-stack { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+  .pv-label { font-size: 12px; line-height: 16px; color: var(--textSecondary); }
+  .pv-narrow { max-width: 393px; }
+  .pv-frame { position: relative; width: 393px; max-width: 100%; overflow: hidden; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
+
+  .mapbg { position: absolute; inset: 0; overflow: hidden; background-color: color-mix(in srgb, var(--input) 65%, var(--surface));
+    background-image: repeating-linear-gradient(61deg, transparent 0 46px, var(--border) 46px 49px), repeating-linear-gradient(-29deg, transparent 0 17px, var(--border) 17px 19px); }
+  .mapbg-river { position: absolute; top: -20%; bottom: -20%; right: -36px; width: 74px; transform: rotate(29deg); background: color-mix(in srgb, var(--fizz) 22%, var(--surface)); }
+  .mapbg-pin { position: absolute; transform: translate(-50%, -100%); }
+  .mapbg-credit { position: absolute; left: 4px; bottom: 30px; padding: 0 4px; font-size: 10px; line-height: 13px; color: var(--text); background: var(--glassFill); }
+  .mapbg-logo { position: absolute; left: 6px; bottom: 6px; width: 64px; height: 20px; border-radius: 4px; background: color-mix(in srgb, var(--textSecondary) 30%, transparent); }
+  .mapbg-terms { position: absolute; right: 0; bottom: 0; width: 170px; height: 14px; background: color-mix(in srgb, var(--surface) 70%, transparent); }.two { display: flex; gap: 16px; padding: 10px; } .frame { position: relative; width: 377px; height: 520px; overflow: hidden; border: 1px solid var(--border); border-radius: 16px; }</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+  var B = window.Bevi, h = React.createElement, F = React.Fragment;
+  function L(text, el) { return h('div', { className: 'pv-stack' }, el, h('span', { className: 'pv-label' }, text)); }
+
+  var BEVS = {
+    dietCoke: { name: 'Diet Coke', brand: 'Coca-Cola', category: 'diet_soda', priceTier: 1, art: { kind: 'can', color: '#d6d6db', accent: '#c8102e' } },
+    mexicanCoke: { name: 'Mexican Coke', brand: 'Coca-Cola', category: 'soda', priceTier: 2, art: { kind: 'bottle', color: '#3b1d12', accent: '#e03a3e' } },
+    topo: { name: 'Topo Chico', brand: 'Topo Chico', category: 'sparkling_water', priceTier: 1, art: { kind: 'bottle', color: '#a9d8c9', accent: '#f2c94c' } },
+    pamplemousse: { name: 'LaCroix Pamplemousse', brand: 'LaCroix', flavor: 'Pamplemousse', category: 'sparkling_water', priceTier: 1, art: { kind: 'can', color: '#f4a7b9', accent: '#ffffff' } },
+    redBull: { name: 'Red Bull', brand: 'Red Bull', category: 'energy', priceTier: 2, art: { kind: 'slimCan', color: '#2d4fa1', accent: '#c0c4cc' } },
+    brownSugar: { name: 'Brown Sugar Boba', brand: 'Tiger Sugar', category: 'boba', priceTier: 2, art: { kind: 'boba', color: '#c9a27e', accent: '#7a4a2a' } },
+    horchata: { name: 'Horchata', brand: 'Tacos El Gordo', category: 'other', priceTier: 2, priceEstimated: true, art: { kind: 'icedCup', color: '#efe4d0', accent: '#b07a45' } },
+    coldBrew: { name: 'Cold Brew', brand: 'Blue Bottle', category: 'coffee', priceTier: 2, art: { kind: 'icedCup', color: '#4a2c1d', accent: '#3c7dd9' } },
+    sprite: { name: 'Sprite', brand: 'Coca-Cola', category: 'soda', priceTier: 1, art: { kind: 'can', color: '#1f8f4e', accent: '#f2d230' } },
+    gatorade: { name: 'Gatorade Cool Blue', brand: 'Gatorade', category: 'sports', priceTier: 1, art: { kind: 'waterBottle', color: '#3aa0e0', accent: '#f26b1d' } },
+    oj: { name: 'Orange Juice', brand: 'Tropicana', category: 'juice', priceTier: 1, art: { kind: 'carton', color: '#f6a623', accent: '#2f9e44' } },
+    poppi: { name: 'Strawberry Lemon', brand: 'Poppi', category: 'diet_soda', priceTier: 2, art: { kind: 'can', color: '#f7c6cf', accent: '#e8384f' } },
+    matcha: { name: 'Iced Matcha Latte', brand: 'Starbucks', category: 'tea', priceTier: 2, art: { kind: 'icedCup', color: '#9cbf6b', accent: '#1e7a46' } },
+  };
+  var ME = { name: 'Matt Willer', handle: 'mbwiller' };
+  // A stand-in profile photo for previews (an SVG gradient; real ones are the person's upload).
+  var PHOTO = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F2B263"/><stop offset="1" stop-color="#8E44AD"/></linearGradient></defs><rect width="100" height="100" fill="url(#g)"/><circle cx="50" cy="40" r="18" fill="#FFF4E0"/><ellipse cx="50" cy="86" rx="30" ry="22" fill="#FFF4E0"/></svg>');
+  var ARJUN = { name: 'Arjun Cheema', handle: 'acheema5' };
+  var FRIENDS = [{ name: 'Jack Torres', handle: 'jackt' }, { name: 'Priya Nair', handle: 'priya' }, { name: 'Sam Okafor', handle: 'samo' }, { name: 'Lena Park', handle: 'lenap' }, ARJUN, { name: 'Diego Ruiz', handle: 'dr' }];
+
+  ReactDOM.createRoot(document.getElementById('root')).render((function () {
+  var MAP_PINS_ALL = [[22, 30, 9.1, false, 'craft'], [58, 22, 8.4, false, 'chain'], [74, 44, 7.6, false, 'craft'], [35, 52, 8.8, false, 'craft', true],
+    [60, 64, 6.2, true, 'craft'], [18, 72, null, false, 'chain'], [80, 80, 9.3, false, 'craft']];
+  return h('div', { className: 'two' },
+    h('div', { className: 'frame' }, h('div', { className: 'mapbg' }, h('div', { className: 'mapbg-river' }),
+      MAP_PINS_ALL.map(function (p, i) { return h('span', { key: i, className: 'mapbg-pin', style: { left: p[0] + '%', top: p[1] + '%' } }, h(B.MapCallout, { score: p[2], predicted: p[3], kind: p[4], selected: !!p[5] })); }),
+      h('span', { className: 'mapbg-credit' }, '© OpenStreetMap contributors'), h('span', { className: 'mapbg-logo', title: "Google's logo" }), h('span', { className: 'mapbg-terms', title: "Google's terms" })),
+      h(B.MapControls, {}, h(B.MapFilterRow, { neighborhoods: false }))),
+    h('div', { className: 'frame' }, h('div', { className: 'mapbg' }, h('div', { className: 'mapbg-river' }),
+      MAP_PINS_ALL.map(function (p, i) { return h('span', { key: i, className: 'mapbg-pin', style: { left: p[0] + '%', top: p[1] + '%' } }, h(B.MapCallout, { score: p[2], predicted: p[3], kind: p[4], selected: !!p[5] })); }),
+      h('span', { className: 'mapbg-credit' }, '© OpenStreetMap contributors'), h('span', { className: 'mapbg-logo', title: "Google's logo" }), h('span', { className: 'mapbg-terms', title: "Google's terms" })),
+      h(B.MapControls, { expanded: true, mode: 'map', located: true }, h(B.MapFilterRow, { count: 1, neighborhoods: false, openNow: true }))));
+})());
+</script>
+</body>
+</html>

@@ -250,6 +250,81 @@ export interface CategoryProgressRow { categoryId: CategoryId; ranked: number; t
 export interface CollectionSheetProps { open?: boolean; rows?: CategoryProgressRow[]; onClose?: () => void; onSelect?: (categoryId: CategoryId) => void; className?: string }
 export declare function CollectionSheet(props: CollectionSheetProps): React.ReactElement | null;
 
+/** A venue as the map components read it (the contract's `Venue`, the fields they show). */
+export interface MapVenue { name: string; kind: 'chain' | 'craft'; neighborhood?: string | null; borough?: string | null; address?: string | null; website?: string | null }
+
+/** A venue's pin on the map: white callout, grape circle with the kind's glyph, the score in bold. */
+export interface MapCalloutProps {
+  /** The best Bayesian score of what the venue sells, else the predicted one; null or omitted shows "–". */
+  score?: number | null;
+  /** Dotted ring and "~": the score is a prediction (only when no Bev there has a Bayesian score). */
+  predicted?: boolean;
+  /** chain = `store`, craft = `coffee`. */
+  kind?: 'chain' | 'craft';
+  /** Overrides the kind's glyph (reserved for the category icon of the venue's best Bev). */
+  icon?: string;
+  /** Raised and 1.15× larger, with a `primary` rim. */
+  selected?: boolean;
+  /** Reserved slot at the top right (↗ trending, bookmark) for when the contract has them. */
+  badge?: React.ReactNode;
+  /** Accessible name; defaults to "Craft, score 8.2". The app puts the venue's name first. */
+  label?: string;
+  onClick?: () => void; className?: string;
+}
+export declare function MapCallout(props: MapCalloutProps): React.ReactElement;
+
+/** The filters over the map, scrolling sideways. Each facet takes the label of what is picked ('' for nothing). */
+export interface MapFilterRowProps {
+  /** Active filters, for "Filters N". */
+  count?: number;
+  /** false leaves the Neighborhood pill out (no vocabulary yet). */
+  neighborhoods?: boolean;
+  neighborhood?: string; category?: string; price?: string; retailer?: string; openNow?: boolean;
+  onFilters?: () => void; onNeighborhood?: () => void; onCategory?: () => void; onPrice?: () => void; onRetailer?: () => void; onOpenNow?: () => void;
+  className?: string;
+}
+export declare function MapFilterRow(props: MapFilterRowProps): React.ReactElement;
+
+/** The map's floating controls: inline (filters; open the full map, View List) or `expanded` (List | Map, close, filters; locate, View List). */
+export interface MapControlsProps {
+  expanded?: boolean;
+  mode?: 'map' | 'list';
+  onModeChange?: (mode: 'map' | 'list') => void;
+  onExpand?: () => void; onClose?: () => void; onLocate?: () => void;
+  /** The blue dot is showing: the locate arrow turns `primary`. */
+  located?: boolean;
+  locating?: boolean;
+  onViewList?: () => void;
+  /** The MapFilterRow, under the top bar. */
+  children?: React.ReactNode;
+  className?: string;
+}
+export declare function MapControls(props: MapControlsProps): React.ReactElement;
+
+/** A venue in the map's List view. */
+export interface VenueRowProps { venue: MapVenue; openNow?: boolean | null; score?: number | null; predicted?: boolean; bevs?: number; divider?: boolean; onClick?: () => void; className?: string }
+export declare function VenueRow(props: VenueRowProps): React.ReactElement;
+
+/** One Bev in a VenueSheet: your score if you ranked it, else predicted, else the Bayesian score. */
+export interface VenueBev { bev: Bev; score?: number | null; scoreVariant?: 'default' | 'predicted' | 'locked'; meta?: React.ReactNode; count?: number; saved?: boolean }
+/** The tapped venue, docked under the full-screen map. */
+export interface VenueSheetProps {
+  venue?: MapVenue;
+  openNow?: boolean | null;
+  bevs?: VenueBev[];
+  /** "Bevs here (N)": the pin's count while the rows load. */
+  bevCount?: number;
+  loading?: boolean;
+  /** "This spot isn't here anymore". */
+  notFound?: boolean;
+  /** Another failure's title: an ErrorState with Retry. */
+  error?: string;
+  onClose?: () => void; onRetry?: () => void;
+  onRank?: (row: VenueBev) => void; onSave?: (row: VenueBev) => void; onOpenBev?: (row: VenueBev) => void; onWebsite?: () => void;
+  className?: string;
+}
+export declare function VenueSheet(props: VenueSheetProps): React.ReactElement;
+
 declare global {
   interface Window {
     Bevi: {
@@ -261,6 +336,7 @@ declare global {
       FeedPost: typeof FeedPost; FeaturedCard: typeof FeaturedCard; BevOfCard: typeof BevOfCard; ProfileListRow: typeof ProfileListRow; StatCard: typeof StatCard;
       UserRow: typeof UserRow; ProgressStrip: typeof ProgressStrip; ProgressBar: typeof ProgressBar; TasteBar: typeof TasteBar; TasteProfile: typeof TasteProfile; BevGlow: typeof BevGlow; BucketButton: typeof BucketButton; CompareCard: typeof CompareCard; ProgressDots: typeof ProgressDots;
       EmptyState: typeof EmptyState; ErrorState: typeof ErrorState; Skeleton: typeof Skeleton; Sheet: typeof Sheet; CommentsSheet: typeof CommentsSheet; CollectionSheet: typeof CollectionSheet;
+      MapCallout: typeof MapCallout; MapFilterRow: typeof MapFilterRow; MapControls: typeof MapControls; VenueRow: typeof VenueRow; VenueSheet: typeof VenueSheet;
       /** The 15 category slugs with labels and icon names. */
       categories: { id: CategoryId; label: string; icon: string; isAlcoholic?: boolean }[];
       scoreBand(score: number): 'high' | 'mid' | 'low';

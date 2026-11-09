@@ -403,6 +403,75 @@ h('div', { className: 'pv-frame' },
     h('div', { className: 'opt' }, 'All Bevs', h(B.Icon, { name: 'check', size: 20, strokeWidth: 2.5, style: { color: 'var(--primary)' } })),
     B.categories.slice(0, 6).map(function (c) { return h('div', { key: c.id, className: 'opt' }, h('span', { style: { display: 'flex', gap: 12, alignItems: 'center' } }, h(B.Icon, { name: c.icon, size: 20 }), c.label)); })))`];
 
+// ---------- Map (M-16) ----------
+// A stand-in for the live Google map in previews only: muted blocks and a river, never drawn in the app.
+const MAP_CSS = `
+  .mapbg { position: absolute; inset: 0; overflow: hidden; background-color: color-mix(in srgb, var(--input) 65%, var(--surface));
+    background-image: repeating-linear-gradient(61deg, transparent 0 46px, var(--border) 46px 49px), repeating-linear-gradient(-29deg, transparent 0 17px, var(--border) 17px 19px); }
+  .mapbg-river { position: absolute; top: -20%; bottom: -20%; right: -36px; width: 74px; transform: rotate(29deg); background: color-mix(in srgb, var(--fizz) 22%, var(--surface)); }
+  .mapbg-pin { position: absolute; transform: translate(-50%, -100%); }
+  .mapbg-credit { position: absolute; left: 4px; bottom: 30px; padding: 0 4px; font-size: 10px; line-height: 13px; color: var(--text); background: var(--glassFill); }
+  .mapbg-logo { position: absolute; left: 6px; bottom: 6px; width: 64px; height: 20px; border-radius: 4px; background: color-mix(in srgb, var(--textSecondary) 30%, transparent); }
+  .mapbg-terms { position: absolute; right: 0; bottom: 0; width: 170px; height: 14px; background: color-mix(in srgb, var(--surface) 70%, transparent); }`;
+// Pins as [x%, y%, score, predicted, kind, selected].
+const MAP_PINS = `[[22, 30, 9.1, false, 'craft'], [58, 22, 8.4, false, 'chain'], [74, 44, 7.6, false, 'craft'], [35, 52, 8.8, false, 'craft', true],
+    [60, 64, 6.2, true, 'craft'], [18, 72, null, false, 'chain'], [80, 80, 9.3, false, 'craft']]`;
+const mapBackdrop = (pins = 'MAP_PINS_ALL') => `h('div', { className: 'mapbg' }, h('div', { className: 'mapbg-river' }),
+      ${pins}.map(function (p, i) { return h('span', { key: i, className: 'mapbg-pin', style: { left: p[0] + '%', top: p[1] + '%' } }, h(B.MapCallout, { score: p[2], predicted: p[3], kind: p[4], selected: !!p[5] })); }),
+      h('span', { className: 'mapbg-credit' }, '© OpenStreetMap contributors'), h('span', { className: 'mapbg-logo', title: "Google's logo" }), h('span', { className: 'mapbg-terms', title: "Google's terms" }))`;
+
+P.MapCallout = [{ group: 'Map', height: 170, subtitle: 'The venue pin' }, `.pv { gap: 28px; align-items: flex-end; padding: 32px 16px 24px; background: color-mix(in srgb, var(--input) 65%, var(--surface)); }`, `
+h('div', { className: 'pv' },
+  L('craft', h(B.MapCallout, { score: 8.8, kind: 'craft' })),
+  L('chain', h(B.MapCallout, { score: 9.1, kind: 'chain' })),
+  L('predicted', h(B.MapCallout, { score: 7.6, predicted: true, kind: 'craft' })),
+  L('no score yet', h(B.MapCallout, { kind: 'chain' })),
+  L('selected', h(B.MapCallout, { score: 8.4, kind: 'craft', selected: true })))`];
+
+P.MapFilterRow = [{ group: 'Map', height: 200, width: 393 }, `.cap { margin: 0 16px; padding-top: 14px; font-size: 12px; line-height: 16px; color: var(--textSecondary); }`, `
+h('div', { className: 'pv-narrow' },
+  h('p', { className: 'cap' }, 'Nothing picked'),
+  h(B.MapFilterRow, {}),
+  h('p', { className: 'cap' }, 'Two filters on; no neighborhoods yet, so no Neighborhood pill'),
+  h(B.MapFilterRow, { count: 2, neighborhoods: false, price: '$, $$', openNow: true }),
+  h('p', { className: 'cap' }, 'Scrolled: Category and Retailer picked'),
+  h(B.MapFilterRow, { count: 2, neighborhood: '', category: 'Coffee +1', retailer: 'Craft' }))`];
+
+P.MapControls = [{ group: 'Map', height: 560, width: 802, subtitle: 'Inline and full screen' }, MAP_CSS + `.two { display: flex; gap: 16px; padding: 10px; } .frame { position: relative; width: 377px; height: 520px; overflow: hidden; border: 1px solid var(--border); border-radius: 16px; }`, `
+(function () {
+  var MAP_PINS_ALL = ${MAP_PINS};
+  return h('div', { className: 'two' },
+    h('div', { className: 'frame' }, ${mapBackdrop()},
+      h(B.MapControls, {}, h(B.MapFilterRow, { neighborhoods: false }))),
+    h('div', { className: 'frame' }, ${mapBackdrop()},
+      h(B.MapControls, { expanded: true, mode: 'map', located: true }, h(B.MapFilterRow, { count: 1, neighborhoods: false, openNow: true }))));
+})()`];
+
+P.VenueRow = [{ group: 'Map', height: 300, width: 393, subtitle: "The map's List view" }, '', `
+h('div', { className: 'pv-narrow' },
+  h(B.VenueRow, { venue: { name: 'Yorkville Coffee Works', kind: 'craft', neighborhood: 'Yorkville' }, openNow: true, score: 8.8, bevs: 3 }),
+  h(B.VenueRow, { venue: { name: 'Duane Reade', kind: 'chain' }, openNow: false, score: 9.1, bevs: 6 }),
+  h(B.VenueRow, { venue: { name: 'Lexington Deli', kind: 'craft', neighborhood: 'Upper East Side' }, openNow: null, score: 6.2, predicted: true, bevs: 1 }))`];
+
+P.VenueSheet = [{ group: 'Map', height: 1480, width: 393, subtitle: 'Docked under the full-screen map' }, MAP_CSS + `.frame { position: relative; display: flex; flex-direction: column; width: 377px; margin: 10px 8px; overflow: hidden; border: 1px solid var(--border); border-radius: 16px; }
+.frame .map { position: relative; flex: none; height: 230px; } .frame .bv-venuesheet { flex: 1; }
+.cap { margin: 14px 16px 0; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--textSecondary); }`, `
+(function () {
+  var MAP_PINS_ALL = [[50, 62, 8.8, false, 'craft', true], [20, 40, 9.1, false, 'chain'], [80, 30, 7.4, false, 'craft']];
+  var venue = { name: 'Yorkville Coffee Works', kind: 'craft', neighborhood: 'Yorkville', borough: 'Manhattan', address: '1512 2nd Avenue', website: 'https://yorkvillecoffee.example' };
+  var rows = [
+    { bev: BEVS.coldBrew, score: 9.1, meta: 'Your score' },
+    { bev: BEVS.matcha, score: 8.2, scoreVariant: 'predicted', meta: "You'd rate it", saved: true },
+    { bev: BEVS.horchata, score: 7.4, count: 362 }];
+  return h(F, null,
+    h('p', { className: 'cap' }, 'Loaded'),
+    h('div', { className: 'frame', style: { height: 760 } }, h('div', { className: 'map' }, ${mapBackdrop()}), h(B.VenueSheet, { venue: venue, openNow: true, bevs: rows })),
+    h('p', { className: 'cap' }, 'Loading: the pin fills the header'),
+    h('div', { className: 'frame', style: { height: 380 } }, h(B.VenueSheet, { venue: { name: 'Duane Reade', kind: 'chain', borough: 'Manhattan', address: '1498 York Avenue' }, openNow: null, bevCount: 6, loading: true })),
+    h('p', { className: 'cap' }, 'Gone since the pin was drawn'),
+    h('div', { className: 'frame', style: { height: 250 } }, h(B.VenueSheet, { notFound: true })));
+})()`];
+
 // ---------- Screens (showcase pages) ----------
 const PHONE_CSS = `
   p, h1, h2 { margin: 0; }
@@ -581,32 +650,41 @@ P.ScreenLeaderboard = [{ group: 'Screens', height: 852, width: 393, isPage: true
     h(B.BevRow, { bev: BEVS.brownSugar, showImage: true, number: 3, score: 8.5, meta: 'Not ranked yet', saved: true }),
     h(B.BevRow, { bev: BEVS.topo, showImage: true, number: 4, score: 8.4, meta: 'Your score 7.9' }))`)];
 
-// The Search tab (M-15): the bar, Snap it, then the map area. Until the live NYC map (M-16) the
-// area is an honest placeholder: no pins, no fake streets.
-const SEARCH_CSS = PHONE_CSS + `
+// The Search tab (M-15, M-16): the bar, Snap it, then the live map with its chrome (inline), and the
+// same map full screen. "Map coming soon" is only what a build without a Google key shows.
+const SEARCH_CSS = PHONE_CSS + MAP_CSS + `
   .scroll { display: flex; flex-direction: column; }
   .sr-q { display: flex; align-items: center; gap: 4px; padding: 16px 16px 12px; } .sr-q .bv-search { flex: 1; }
   .sr-pills { display: flex; gap: 10px; padding: 0 16px 8px; }
   .sr-area { position: relative; flex: 1; border-top: 1px solid var(--border); }
   .sr-map { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 0 40px; text-align: center; background: var(--input); color: var(--textSecondary); }
   .sr-panel { position: absolute; inset: 0; background: var(--surface); overflow: hidden; }
-  .sr-foot { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px; border-top: 1px solid var(--border); background: var(--surface); }`;
+  .sr-foot { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px; border-top: 1px solid var(--border); background: var(--surface); }
+  .sr-two { display: flex; gap: 16px; } .sr-two > .phone { border: 1px solid var(--border); }`;
 const SEARCH_TOP = (value, cancel) => `
     h(B.Header, { wordmark: true, actions: [{ icon: 'x', label: 'Close', variant: 'filled' }] }),
     h('div', { className: 'sr-q' }, h(B.SearchBar, { variant: 'outlined', placeholder: 'Search a Bev or a person', id: 'search-q'${value ? `, value: '${value}'` : ''} })${cancel ? `, h(B.Button, { variant: 'ghost' }, 'Cancel')` : ''}),
     h('div', { className: 'sr-pills' }, h(B.Pill, { variant: 'filled', icon: 'camera' }, 'Snap it')),`;
-const MAP_PLACEHOLDER = `h('div', { className: 'sr-map' },
-        h(B.Icon, { name: 'map', size: 28, strokeWidth: 1.6 }),
-        h('p', { className: 'heading', style: { color: 'var(--text)' } }, 'Map coming soon'),
-        h('p', { className: 'body' }, 'Spots across New York City that carry your Bevs will show up here.'))`;
+const INLINE_MAP = `${mapBackdrop()}, h(B.MapControls, {}, h(B.MapFilterRow, { neighborhoods: false }))`;
 
-P.ScreenSearch = [{ group: 'Screens', height: 852, width: 393, isPage: true }, SEARCH_CSS, phone('add', `
+P.ScreenSearch = [{ group: 'Screens', height: 852, width: 802, isPage: true }, SEARCH_CSS, `
+(function () {
+  var MAP_PINS_ALL = ${MAP_PINS};
+  return h('div', { className: 'sr-two' },
+    ${phone('add', `
   h(F, null,${SEARCH_TOP('', false)}
-    h('div', { className: 'sr-area' }, ${MAP_PLACEHOLDER}))`)];
+    h('div', { className: 'sr-area' }, ${INLINE_MAP}))`)},
+    ${phone(null, `
+  h('div', { className: 'sr-area', style: { height: '100%' } }, ${mapBackdrop()},
+    h(B.MapControls, { expanded: true }, h(B.MapFilterRow, { count: 1, neighborhoods: false, category: 'Coffee' })))`)});
+})()`];
 
-P.ScreenSearchResults = [{ group: 'Screens', height: 852, width: 393, isPage: true }, SEARCH_CSS, phone('add', `
+P.ScreenSearchResults = [{ group: 'Screens', height: 852, width: 393, isPage: true }, SEARCH_CSS, `
+(function () {
+  var MAP_PINS_ALL = ${MAP_PINS};
+  return ${phone('add', `
   h(F, null,${SEARCH_TOP('co', true)}
-    h('div', { className: 'sr-area' }, ${MAP_PLACEHOLDER},
+    h('div', { className: 'sr-area' }, ${mapBackdrop()},
       h('div', { className: 'sr-panel' },
         h(B.SectionHeader, { title: 'Bevs' }),
         h(B.BevRow, { bev: BEVS.mexicanCoke, showImage: true, score: 8.7, count: 362 }),
@@ -614,7 +692,8 @@ P.ScreenSearchResults = [{ group: 'Screens', height: 852, width: 393, isPage: tr
         h(B.SectionHeader, { title: 'People' }),
         h(B.UserRow, { user: { name: 'Cody Lin', handle: 'codyl' }, following: false }),
         h(B.UserRow, { user: { name: 'Colette Ames', handle: 'colette' }, following: true, divider: false }),
-        h('div', { className: 'sr-foot' }, h(B.Button, { variant: 'outlined', block: true, icon: 'circle-plus' }, "Can't find it? Add a new Bev")))))`)];
+        h('div', { className: 'sr-foot' }, h(B.Button, { variant: 'outlined', block: true, icon: 'circle-plus' }, "Can't find it? Add a new Bev")))))`)};
+})()`];
 
 for (const [name, [opts, css, code]] of Object.entries(P)) {
   const dir = path.join(ROOT, 'project/components', name);
