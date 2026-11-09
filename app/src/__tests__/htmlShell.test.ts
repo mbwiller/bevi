@@ -84,9 +84,13 @@ describe('edge strip', () => {
     expect(html).toMatch(/<div id="edge-strip" aria-hidden="true"><\/div>\s*<div id="root">/);
   });
 
-  it('is hidden except in the home-screen app in portrait', () => {
+  it('is hidden except in the iOS home-screen app in portrait', () => {
     expect(css).toMatch(/#edge-strip\s*\{\s*display:\s*none;/);
-    expect(css).toContain('@media (display-mode: standalone) and (orientation: portrait) {');
+    // Every rule that shows it sits inside the iOS-only @supports block (Android and desktop installs have no clearance).
+    const ios = css.slice(css.indexOf('@supports (-webkit-touch-callout: none) {'));
+    expect(css.indexOf('@supports (-webkit-touch-callout: none) {')).toBeGreaterThan(-1);
+    expect(css.indexOf('@media (display-mode: standalone)')).toBeGreaterThan(css.indexOf('@supports (-webkit-touch-callout: none) {'));
+    expect(ios).toContain('@media (display-mode: standalone) and (orientation: portrait) {');
   });
 
   it('is fixed to the top edge, full width, EDGE_STRIP tall, and lets taps through', () => {

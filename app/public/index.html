@@ -65,22 +65,25 @@
       #edge-strip {
         display: none;
       }
-      @media (display-mode: standalone) and (orientation: portrait) {
-        #edge-strip {
-          display: block;
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: max(12px, env(safe-area-inset-top));
-          background-color: #ffffff;
-          z-index: 1;
-          pointer-events: none;
+      /* -webkit-touch-callout: iOS Safari only, so Android and desktop installed apps never get the strip. */
+      @supports (-webkit-touch-callout: none) {
+        @media (display-mode: standalone) and (orientation: portrait) {
+          #edge-strip {
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: max(12px, env(safe-area-inset-top));
+            background-color: #ffffff;
+            z-index: 1;
+            pointer-events: none;
+          }
         }
-      }
-      @media (display-mode: standalone) and (orientation: portrait) and (prefers-color-scheme: dark) {
-        #edge-strip {
-          background-color: #121214;
+        @media (display-mode: standalone) and (orientation: portrait) and (prefers-color-scheme: dark) {
+          #edge-strip {
+            background-color: #121214;
+          }
         }
       }
       /* No browser focus ring on text boxes: TextField and SearchBar draw their own on the box around
