@@ -28,6 +28,7 @@ async function open(url: string) {
       'user/[id]/index': Stub,
       '(tabs)/profile/index': Stub,
       '(tabs)/add/index': Stub,
+      people: Stub,
     },
     { initialUrl: url },
   );
@@ -84,5 +85,5 @@ it('a new user following no one sees the empty state with Find people', async ()
   const r = await open(`/user/${me.id}/following`);
   expect(await screen.findByText("You're not following anyone yet")).toBeTruthy();
   await fireEvent.press(screen.getByLabelText('Find people'));
-  expect(r.path()).toBe('/add?tab=people');
+  expect(r.path()).toBe('/people');
 });
