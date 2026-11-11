@@ -1,6 +1,6 @@
 % Bevi -- ranking, scoring and recommendation: mathematical specification.
 % Build: tectonic docs/bevi-ranking-math.tex   (or pdflatex twice)
-% Source of truth for the implemented parts: packages/ranking/src (RANKING_VERSION 1.6.0).
+% Source of truth for the implemented parts: packages/ranking/src (RANKING_VERSION 1.7.0).
 % Section 10 specifies the extensions discussed on 2026-10-14 (CONVERSATION-2.md, TASKS.md).
 % Revised 2026-10-24 (M-22 review): corrections in Sections 2, 3, 5, 6, 8, 9; Sections 10 and 11
 % brought up to date with #96, #101, #112, #113, #115, #117, #118 and #121. No version change.
@@ -11,6 +11,9 @@
 % decided, the algorithm as built, Theorem 10.6 reworded), the 1.5.0 row in Section 11, PLACEMENT_TIER in Appendix A.
 % RANKING_VERSION 1.6.0 (graph Stage 4, package half, 2026-10-31): Layer 2's stored mode in Section 6.4 (status, the
 % "Stored mode" paragraph), the Section 10 status, the 1.6.0 row in Section 11.
+% RANKING_VERSION 1.7.0 (graph signals, 2026-11-10): Section 10.9 (PageRank, modularity, Louvain, participation,
+% hubs), a pointer from Section 10.1, the Section 10 status, the 1.7.0 row in Section 11, Appendix A and B rows.
+% Section 10.9 is placed last so that Sections 10.2-10.8, cited by number in code and SQL comments, keep their numbers.
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{amsmath,amssymb,amsthm,mathtools}
@@ -61,9 +64,9 @@
 \newtheorem{implnote}[theorem]{Implementation note}
 
 \title{\textbf{The Bevi Ranking and Recommendation System}\\[4pt]
-\large Mathematical specification of \code{@bevi/ranking} v1.6.0\\ and the extensions proposed on 2026-10-14}
-\author{Bevi (Matt \& Arjun)\thanks{Drafted from \code{packages/ranking/src}, \code{DEVELOPMENT-MATT.md} \S 8 and the second planning session (\code{CONVERSATION-2.md}). Sections 2--9 describe what is implemented and tested; Section 10 specifies the extensions, several of which have since shipped (its introduction says which). Revised on 2026-10-24 after the M-22 review of this paper against the package and the SQL; the review's correction lists are under M-22 in \code{TASKS.md}. Revised again on 2026-10-31 for \code{RANKING\_VERSION} 1.4.0 and the category hierarchy, for 1.5.0, which builds the anchored placement of Section~\ref{sec:anchored} in the package, and for 1.6.0, in which Layer~2 can read the stored taste neighbours of Section~\ref{sec:tastegraph}. Formula changes must bump \code{RANKING\_VERSION} and regenerate the golden vectors in \code{shared/fixtures}.}}
-\date{14 October 2026, revised 24 and 31 October 2026}
+\large Mathematical specification of \code{@bevi/ranking} v1.7.0\\ and the extensions proposed on 2026-10-14}
+\author{Bevi (Matt \& Arjun)\thanks{Drafted from \code{packages/ranking/src}, \code{DEVELOPMENT-MATT.md} \S 8 and the second planning session (\code{CONVERSATION-2.md}). Sections 2--9 describe what is implemented and tested; Section 10 specifies the extensions, several of which have since shipped (its introduction says which). Revised on 2026-10-24 after the M-22 review of this paper against the package and the SQL; the review's correction lists are under M-22 in \code{TASKS.md}. Revised again on 2026-10-31 for \code{RANKING\_VERSION} 1.4.0 and the category hierarchy, for 1.5.0, which builds the anchored placement of Section~\ref{sec:anchored} in the package, and for 1.6.0, in which Layer~2 can read the stored taste neighbours of Section~\ref{sec:tastegraph}. Revised on 2026-11-10 for 1.7.0, which adds the graph signals of Section~\ref{sec:graphsignals}. Formula changes must bump \code{RANKING\_VERSION} and regenerate the golden vectors in \code{shared/fixtures}.}}
+\date{14 October 2026, revised 24 and 31 October and 10 November 2026}
 
 \begin{document}
 \maketitle
@@ -513,7 +516,7 @@ The day key of a ranking is the calendar date of its timestamp in the user's pro
 
 \section{Proposed extensions (session of 2026-10-14)}\label{sec:extensions}
 
-Status on 2026-10-24. Shipped: the edge weights and the graph pipeline of Section~\ref{sec:anchored} (\code{edges.ts}, \code{RANKING\_VERSION} 1.2.0; \code{bev\_edges} is live on prod), the Taste Profile data of Section~\ref{sec:taste} (A-11, \#101), the Bev of the day and week of Section~\ref{sec:bevof} (A-05, \#96), likes and the Explore ranking of Section~\ref{sec:likes} (A-02 \#70, A-04 \#113) and the one-ranking rule of Section~\ref{sec:binary}. Not built: anchored placement (M-21; waits on the taxonomy, D-04 and A-13), Smart Recommend (Section~\ref{sec:smart}, parked), nutrition (Section~\ref{sec:nutrition}) and the duplicate score and merge of Section~\ref{sec:duplicates} (the S-13 plan). Since then (2026-10-31): the category hierarchy of D-04 (A-13, \#132) and the measurement of the co-preference term (A-16~(2), \#133) are built, Layer~1 can read the stored weights (edges mode, Section~\ref{sec:predict}, \code{RANKING\_VERSION} 1.4.0), off until the evaluation harness has real data, anchored placement is built in the package (\code{placementTiers}, \code{startPlacement} with \code{tiers}, \code{RANKING\_VERSION} 1.5.0, M-21), with the app's wiring of it (\code{ui/anchored-placement}) the remaining step, and Layer~2 can read the stored taste neighbours (stored mode, Section~\ref{sec:tastegraph}, \code{RANKING\_VERSION} 1.6.0), off until the harness has real data and \code{get\_prediction\_snapshot} returns them. Each subsection gives the definition precisely enough to code and test; where a choice was open it now records the decision.
+Status on 2026-10-24. Shipped: the edge weights and the graph pipeline of Section~\ref{sec:anchored} (\code{edges.ts}, \code{RANKING\_VERSION} 1.2.0; \code{bev\_edges} is live on prod), the Taste Profile data of Section~\ref{sec:taste} (A-11, \#101), the Bev of the day and week of Section~\ref{sec:bevof} (A-05, \#96), likes and the Explore ranking of Section~\ref{sec:likes} (A-02 \#70, A-04 \#113) and the one-ranking rule of Section~\ref{sec:binary}. Not built: anchored placement (M-21; waits on the taxonomy, D-04 and A-13), Smart Recommend (Section~\ref{sec:smart}, parked), nutrition (Section~\ref{sec:nutrition}) and the duplicate score and merge of Section~\ref{sec:duplicates} (the S-13 plan). Since then (2026-10-31): the category hierarchy of D-04 (A-13, \#132) and the measurement of the co-preference term (A-16~(2), \#133) are built, Layer~1 can read the stored weights (edges mode, Section~\ref{sec:predict}, \code{RANKING\_VERSION} 1.4.0), off until the evaluation harness has real data, anchored placement is built in the package (\code{placementTiers}, \code{startPlacement} with \code{tiers}, \code{RANKING\_VERSION} 1.5.0, M-21), with the app's wiring of it (\code{ui/anchored-placement}) the remaining step, and Layer~2 can read the stored taste neighbours (stored mode, Section~\ref{sec:tastegraph}, \code{RANKING\_VERSION} 1.6.0), off until the harness has real data and \code{get\_prediction\_snapshot} returns them. Since 2026-11-10 the package also computes centrality, communities and bridges over the Bev graph (Section~\ref{sec:graphsignals}, \code{RANKING\_VERSION} 1.7.0), for the graph sync; nothing reads them yet. Each subsection gives the definition precisely enough to code and test; where a choice was open it now records the decision.
 
 \subsection{Category-aware comparisons over a weighted Bev graph}\label{sec:anchored}
 
@@ -562,7 +565,7 @@ Same leaf (cola) gives $\simi_T = 1$; content gives $0.5$ (same category and pri
 \paragraph{Profiles for user-created Bevs (D-11, decided 2026-10-19).} A Bev with no hand-labelled profile copies the profile of the nearest seeded Bev in the same category by embedding cosine (brand match, then id, as tie-breaks), marked \emph{inferred} with its source and the cosine, provided the cosine is at least $0.6$; below that no profile is written and the Bev's $\simi_{\mathrm{prof}}$ term is $0$, so it is weighed by the tree, content and embedding terms alone (\code{infer\_bev\_flavor\_profile}, 20261023000200).
 
 \begin{remark}[Where the graph lives]
-Decided 2026-10-14, built in \#115, \#117, \#118 and \#121 (A-15, A-16 (1)). Postgres is the system of record for Bevs, users and rankings, and it is also where the weights are computed: the \code{embed} Edge Function writes $e_b$ to \code{bev\_embeddings} (pgvector, $384$-d, on every Bev insert or update, plus a backfill), and the nightly job \code{scripts/graph/build-edges.ts} (04:50 UTC) reads Bevs, categories, profiles and embeddings, weighs the candidate pairs with \code{@bevi/ranking} and replaces \code{bev\_edges} in one transaction, stamping \code{RANKING\_VERSION}. No step of that pipeline touches Neo4j, so the ranking flow and the recommender read weights from Postgres and never wait on the graph. Neo4j AuraDB Free (\code{Bev}, \code{Category}, \code{Brand} and \code{Flavor} nodes; \code{SIMILAR\_TO} edges carrying $w$ and its components; pseudonymous \code{RANKED} edges; a vector index over $e_b$) is the mirror of \code{bev\_edges}, where similarity is inspected and where the co-rating neighbourhoods behind $\simi_{\mathrm{cop}}$ will be computed; the mirror sync (A-16 steps 6, 8 and 9) is a later increment, the instance sits on no request path, and the nightly \code{(:Meta)} write is what keeps a Free instance from pausing (\code{docs/graph.md}).
+Decided 2026-10-14, built in \#115, \#117, \#118 and \#121 (A-15, A-16 (1)). Postgres is the system of record for Bevs, users and rankings, and it is also where the weights are computed: the \code{embed} Edge Function writes $e_b$ to \code{bev\_embeddings} (pgvector, $384$-d, on every Bev insert or update, plus a backfill), and the nightly job \code{scripts/graph/build-edges.ts} (04:50 UTC) reads Bevs, categories, profiles and embeddings, weighs the candidate pairs with \code{@bevi/ranking} and replaces \code{bev\_edges} in one transaction, stamping \code{RANKING\_VERSION}. No step of that pipeline touches Neo4j, so the ranking flow and the recommender read weights from Postgres and never wait on the graph. Neo4j AuraDB Free (\code{Bev}, \code{Category}, \code{Brand} and \code{Flavor} nodes; \code{SIMILAR\_TO} edges carrying $w$ and its components; pseudonymous \code{RANKED} edges; a vector index over $e_b$) is the mirror of \code{bev\_edges}, where similarity is inspected and where the co-rating neighbourhoods behind $\simi_{\mathrm{cop}}$ will be computed; the mirror sync (A-16 steps 6, 8 and 9) is a later increment, the instance sits on no request path, and the nightly \code{(:Meta)} write is what keeps a Free instance from pausing (\code{docs/graph.md}). The centrality, community and bridge signals that sync computes over these edges are defined in Section~\ref{sec:graphsignals} (\code{RANKING\_VERSION} 1.7.0).
 \end{remark}
 
 \paragraph{Anchored placement.} Let $L = (\ell_0, \dots, \ell_{n-1})$ be the user's bucket list and $b$ the new Bev. Partition $L$ into \emph{tiers} by similarity to $b$. The original proposal said ``$T_1$ = same leaf category, $T_2$ = same parent, \dots, or more generally by decreasing $w(b, \ell_i)$ bands''; the rule built in \code{RANKING\_VERSION} 1.5.0 (M-21, \code{placementTiers}) is, for a bucket Bev $\ell$ with $w$ the stored \code{bev\_edges} weight of $\{b, \ell\}$ when there is one,
@@ -731,6 +734,109 @@ Vessels (can, glass bottle, plastic bottle) are \emph{not} distinct Bevs and mus
 
 The ranking relation is a partial function $U \times B \rightharpoonup [0, 10]$: a user has or has not ranked a Bev, and if so holds exactly one score. Re-ranking \emph{updates} this value (and re-spaces the old and new buckets); it never appends. Consequently $n_b$ counts people, not drinks, and ``how many times you drank it'' is deliberately not a quantity in this system (session decision; the database enforces it with a unique constraint on (user, Bev)).
 
+\subsection{Graph signals: centrality, communities and bridges (v1.7.0)}\label{sec:graphsignals}
+
+\paragraph{Status.} Implemented in \code{network.ts} (\code{RANKING\_VERSION} 1.7.0, vectors in \code{network.vectors.json}). This subsection follows the Bev graph of Section~\ref{sec:anchored}; it is numbered last only so that the subsections after Section~\ref{sec:anchored}, which code and SQL comments cite by number, keep their numbers. Three signals per Bev, for the nightly job that mirrors \code{bev\_edges} into Neo4j and stores them in \code{bev\_graph\_stats}:
+\begin{itemize}
+\item \emph{centrality}, a weighted PageRank: how representative a Bev is of its neighbourhood (many similar Bevs, heavily weighted, lead to it);
+\item \emph{community}, Louvain modularity clustering: data-driven \emph{taste neighbourhoods} that cut across the hand-built category tree (a cold brew may sit with the energy drinks it is actually similar to);
+\item \emph{bridge}, the participation coefficient: how much of a Bev's similarity mass is spread over several communities, i.e.\ a gateway from one neighbourhood into another.
+\end{itemize}
+\emph{Nothing consumes them in 1.7.0.} The prediction snapshot gains an optional field \code{bevGraph} (per Bev: the community's opaque id, the PageRank and the participation coefficient) that no function reads; \code{rank/graph-recs} will read it in \code{recommend()}, behind an option, for community-aware diversity and exploration. Every formula lives here and nowhere else: there is no SQL twin, the sync job calls these functions, and Neo4j's own graph-algorithm library (a paid product) is not used.
+
+\paragraph{Setting and order.} Let $G = (V, E, w)$ be the graph the sync sees: $V$ the Bevs, $E$ the stored pairs, $w_{ij} = w_{ji} > 0$ the weight \eqref{eq:w}; $n = \abs{V}$, $N(i)$ the neighbours of $i$,
+\[
+s_i = \sum_{j \in N(i)} w_{ij} \quad\text{(strength, the weighted degree)}, \qquad m = \tfrac12 \sum_{i \in V} s_i = \sum_{\{i,j\} \in E} w_{ij}.
+\]
+Node ids are compared with $\prec$, Unicode code-point order (\code{compareCodePoints}, SQL \code{collate "C"}, Implementation note~\ref{impl:codepoints}). Every sum over nodes runs in $\prec$ order and every sum over $N(i)$ in $\prec$ order, so each function is a function of the graph alone: not of the order of \code{nodes} or \code{edges}, nor of an edge's orientation. The summation orders are part of the contract and are spelled out in the vectors' header rules (\code{networkGraphRule} and the five that follow it). All six functions reject the same malformed inputs: a duplicate or empty id, an endpoint that is not a node, a self-loop, a pair given twice (in either orientation), a non-finite weight, or $w \le 0$. The empty graph is valid and gives empty results.
+
+\begin{definition}[Weighted PageRank]\label{def:pagerank}
+Let $d \in [0, 1)$ be the damping $\textsc{pagerank\_damping} = 0.85$ and $D = \{ i : s_i = 0 \}$ the isolated Bevs. For $p$ in the simplex $\Delta_n$ let
+\begin{equation}\label{eq:pagerank}
+F(p)_j = \frac{1 - d}{n} + d \Bigl( \sum_{i \in N(j)} p_i\, \frac{w_{ij}}{s_i} + \frac1n \sum_{i \in D} p_i \Bigr),
+\end{equation}
+the random walk $P_{ij} = w_{ij}/s_i$ followed with probability $d$, a uniform teleport otherwise, and the mass on isolated Bevs spread uniformly (back to themselves included). Start from $p^{(0)} = (1/n, \dots, 1/n)$ and iterate $p^{(t+1)} = F(p^{(t)})$ until $\lVert p^{(t+1)} - p^{(t)} \rVert_1 < \tau = \textsc{pagerank\_tolerance} = 10^{-10}$ or $t + 1 = T = \textsc{pagerank\_max\_iterations} = 200$, a safety rail that the defaults never reach (Remark~\ref{rem:pagerankcap}). The result is the last iterate divided by its own sum, $\pi = p / \sum_j p_j$. Each term of the inner sum is evaluated as $(p_i w_{ij}) / s_i$.
+\end{definition}
+
+\begin{proposition}\label{prop:pagerank}
+$F$ maps $\Delta_n$ to itself and is a contraction with constant $d$ in $\lVert\cdot\rVert_1$. Hence it has a unique fixed point $\pi^\ast$, $\lVert p^{(t)} - \pi^\ast \rVert_1 \le 2 d^t$, and the returned vector is non-negative and sums to $1$. If $D = \{z\}$, then $\pi^\ast_z = (1 - d)/(n - d)$. Scaling every weight by $\lambda > 0$ leaves $F$, hence $\pi^\ast$, unchanged.
+\end{proposition}
+\begin{proof}
+$\sum_j F(p)_j = (1 - d) + d\bigl(\sum_{i \notin D} p_i \sum_{j \in N(i)} w_{ij}/s_i + \sum_{i \in D} p_i\bigr) = (1 - d) + d \sum_i p_i = 1$, and $F(p) \ge 0$. For $p, q \in \Delta_n$, $F(p) - F(q) = d\, M (p - q)$ with $M_{ji} = w_{ij}/s_i$ for $i \notin D$ and $M_{ji} = 1/n$ for $i \in D$; every column of $M$ sums to $1$, so $\lVert M x \rVert_1 \le \lVert x \rVert_1$ and Banach's theorem applies, with $\lVert p^{(0)} - \pi^\ast \rVert_1 \le 2$. For a single isolated $z$, $N(z) = \emptyset$ and $\pi^\ast_z = (1 - d)/n + d\, \pi^\ast_z / n$. Scaling multiplies $w_{ij}$ and $s_i$ alike.
+\end{proof}
+
+\begin{remark}[The tolerance, not the cap, ends the iteration]\label{rem:pagerankcap}
+Since $F$ is a $d$-contraction, the $L_1$ step of iteration $t + 1$ is $\lVert p^{(t+1)} - p^{(t)} \rVert_1 \le d^t \lVert p^{(1)} - p^{(0)} \rVert_1 \le 2 d^t$ on every graph, and $\lVert p^{(t+1)} - \pi^\ast \rVert_1 \le \frac{d}{1-d} \lVert p^{(t+1)} - p^{(t)} \rVert_1$. At $d = 0.85$, $2 d^t < 10^{-10}$ once $t > 145.9$, so the iteration stops at the latest at step $147$, below $T = 200$, and the result is within $\frac{d}{1-d}\tau \approx 6 \cdot 10^{-10}$ of $\pi^\ast$ in $L_1$. The bound is attained on a bipartite component (a path, a star), where the walk has eigenvalue $-1$ and the iterates oscillate around $\pi^\ast$ with ratio $d$; even there the tolerance decides: the $3$-node path returns $0.4864864865$ for its centre, $18/37$ to ten digits. $T$ binds only when a caller passes a smaller \code{maxIterations} (or a larger $d$ or smaller $\tau$), and then the capped vector is still deterministic. The vectors pin the default runs, which a cap of $1000$ reproduces bit for bit.
+\end{remark}
+
+For an undirected graph and $d \to 1$, $\pi^\ast_i \to s_i / 2m$ on a connected graph, so PageRank is a smoothed strength: it also rewards being similar to Bevs that are themselves central, and the teleport keeps a weakly connected Bev above $0$. A Bev with high $\pi$ is a good \emph{representative} of its neighbourhood.
+
+\begin{definition}[Modularity]\label{def:modularity}
+For a partition $c : V \to \mathbb{Z}$ with communities $C$ and resolution $\gamma \ge 0$ ($\textsc{louvain\_resolution} = 1$),
+\begin{equation}\label{eq:modularity}
+Q_\gamma(c) = \sum_{C} \Bigl[ \frac{W_C}{m} - \gamma \Bigl( \frac{S_C}{2m} \Bigr)^{\!2} \Bigr], \qquad W_C = \sum_{\substack{\{i,j\} \in E\\ i, j \in C}} w_{ij}, \quad S_C = \sum_{i \in C} s_i,
+\end{equation}
+and $Q_\gamma = 0$ when $m = 0$. $W_C / m$ is the share of the weight inside $C$; $(S_C/2m)^2$ is that share for a random graph with the same strengths, so $Q$ measures how much more within-community similarity there is than chance. Above $\gamma = 1$ smaller communities are preferred, below it larger ones.
+\end{definition}
+
+$Q_\gamma \le 1$, the single community has $Q_\gamma = 1 - \gamma$, all singletons have $-\gamma \sum_i (s_i/2m)^2$, and $Q_\gamma$ is invariant under scaling $w$ (every term is a ratio of weights).
+
+\begin{lemma}[Move gain]\label{lem:gain}
+Let $i$ be a node of strength $k_i$ (at an aggregated level, its internal weight $\ell_i$ counted twice in $k_i$) and $C \not\ni i$ a community; write $k_{i,C}$ for the weight between $i$ and $C$ (not counting $\ell_i$). Then
+\begin{equation}\label{eq:louvaingain}
+Q_\gamma(i \text{ in } C) - Q_\gamma(i \text{ alone}) = \frac{k_{i,C}}{m} - \gamma\, \frac{S_C\, k_i}{2m^2} \eqqcolon \Delta Q(i, C).
+\end{equation}
+\end{lemma}
+\begin{proof}
+Joining $C$ adds $k_{i,C}$ to $W_C$ and $k_i$ to $S_C$, and removes $i$'s own term, whose $\ell_i/m$ reappears inside $W_C$. The null-model terms change by $-\gamma \bigl[(S_C + k_i)^2 - S_C^2 - k_i^2\bigr]/4m^2 = -\gamma\, S_C k_i / 2m^2$.
+\end{proof}
+
+\begin{definition}[Louvain communities, deterministic]\label{def:louvain}
+The two-phase method of Blondel et al.\ (2008), with every choice fixed:
+\begin{enumerate}[label=(\roman*)]
+\item \emph{Level $0$:} every node its own community.
+\item \emph{Local moves:} visit the nodes in $\prec$ order, in passes, until a whole pass moves nothing. Visiting $i$: take it out of its community $A$, then evaluate $\Delta Q(i, \cdot)$ of \eqref{eq:louvaingain} (with $S_C$ the strength of $C$ without $i$) for \emph{its own community $A \setminus \{i\}$ first}, possibly empty, and then for each community holding a neighbour of $i$, in ascending order of \emph{representative}, the $\prec$-smallest member id. A candidate replaces the best so far only if its gain is larger by more than $\varepsilon = \textsc{louvain\_tie\_epsilon} = 10^{-12}$. So a tie keeps $i$ where it was, otherwise it goes to the earlier candidate, and rounding noise between two equal gains never decides a move.
+\item \emph{Aggregation:} each community becomes one node whose id for ordering is its representative, the weight between two communities becomes one edge, and the internal weight becomes a self-loop $\ell$ that counts in $k$ but not in $k_{i,C}$. Return to (ii) on the new graph.
+\item \emph{Stop} at the first level whose local moves move nothing.
+\end{enumerate}
+The output lists each community's members in $\prec$ order, and the communities by size descending, then by first member in $\prec$ order; $c(i)$ is the index of $i$'s community in that list. Isolated Bevs are singletons; a graph without edges is all singletons with $Q = 0$.
+\end{definition}
+
+\begin{theorem}[Termination and monotonicity]\label{thm:louvain}
+In exact arithmetic every move raises $Q_\gamma$ by more than $\varepsilon$. The local moves of a level therefore stop after finitely many passes, at most $n$ levels run, and the result has $Q_\gamma$ at least that of all singletons. The result depends only on $G$ and $\gamma$, and it is unchanged when every weight is scaled by $\lambda > 0$.
+\end{theorem}
+\begin{proof}
+By Lemma~\ref{lem:gain}, moving $i$ from $A$ to $B$ changes $Q_\gamma$ by $\Delta Q(i, B) - \Delta Q(i, A \setminus \{i\}) > \varepsilon$. Since $Q_\gamma$ is bounded above by $1$, at most $(1 - Q_{\text{start}})/\varepsilon$ moves can happen. A move always goes to a non-empty community, so the number of non-empty communities never increases and the first move of a level lowers it; a level that moves anything leaves fewer nodes for the next. Aggregation preserves $Q_\gamma$, so $Q$ never decreases from the all-singletons start. Every step reads its inputs in $\prec$ order. Under scaling, every gain is a ratio of weights, so the comparisons come out the same (up to rounding far below $\varepsilon$).
+\end{proof}
+
+In floating point the gains of equal candidates differ by rounding of order $10^{-16}$, four orders of magnitude below $\varepsilon$. The implementation also stops with an error after $10{,}000$ passes within one level, a guard against a bug and not a formula input. Louvain is a heuristic. It finds a good partition, not necessarily the one of maximum modularity, and it shares modularity's resolution limit (Fortunato and Barth\'elemy, 2007): communities whose internal weight is small compared with $\sqrt{m}$ can be merged into larger ones. $\gamma$ is the lever if the taste neighbourhoods come out too coarse.
+
+\begin{definition}[Participation coefficient]\label{def:participation}
+Given a partition $c$ and $s_{i,C} = \sum_{j \in N(i),\, c(j) = C} w_{ij}$ (the own community included),
+\begin{equation}\label{eq:participation}
+P_i = 1 - \sum_C \Bigl( \frac{s_{i,C}}{s_i} \Bigr)^{\!2} \quad (s_i > 0), \qquad P_i = 0 \quad (s_i = 0),
+\end{equation}
+after Guimer\`a and Amaral (2005). Small negative rounding is clamped to $0$.
+\end{definition}
+
+$P_i = 0$ exactly when all of $i$'s similarity mass goes into one community. The implementation sums $s_{i,C}$ in the same order as $s_i$, so this holds bit for bit. If $i$ touches $\kappa_i$ communities then $P_i \le 1 - 1/\kappa_i < 1$, with equality for an even split. $P_i$ is unchanged by scaling $w$. A Bev with high $P_i$ is a \emph{bridge}, a natural ``if you like these, try those'' step out of a neighbourhood.
+
+\begin{definition}[Community hub]\label{def:hub}
+The hub of a community $C$ is
+\[
+h(C) = \argmax_{i \in C} \sum_{j \in N(i) \cap C} w_{ij},
+\]
+its member with the greatest within-community strength (compared as the exact doubles summed in $\prec$ order over $N(i)$), ties going to the $\prec$-smallest id. A singleton is its own hub. The hub identifies the community. The sync derives the community's public id from $h(C)$, hashed so that an age-gated hub's Bev id never reaches a client, and that id is opaque: clients compare it for equality only. Because the public id follows the hub, this rule is part of the contract (\code{communityHubs}, the header rule \code{communityHubRule}).
+\end{definition}
+
+\begin{example}[Two cliques and a weak bridge]\label{ex:cliques}
+Two $4$-cliques $\{a_1, \dots, a_4\}$ and $\{b_1, \dots, b_4\}$ with unit weights, joined by one edge $a_4 b_1$ of weight $0.1$: $m = 12.1$, $s = 3$ inside and $s_{a_4} = s_{b_1} = 3.1$. Louvain returns the two cliques, with
+\[
+Q_1 = 2\Bigl(\frac{6}{12.1} - \Bigl(\frac{12.1}{24.2}\Bigr)^{\!2}\Bigr) = \frac{12}{12.1} - \frac12 \approx 0.49174.
+\]
+Only the bridge endpoints participate, $P_{a_4} = P_{b_1} = 1 - (3/3.1)^2 - (0.1/3.1)^2 = 0.6/9.61 \approx 0.06243$. PageRank puts them slightly above the interior nodes ($\approx 0.12773$ against $\approx 0.12409$; the eight values sum to $1$), and the hubs are $a_1$ and $b_1$ (all within-strengths are $3$, so the smallest id wins). A ring of four triangles joined corner to corner gives four communities with $Q_1 = 4(3/16 - (8/32)^2) = 1/2$ and $P = 4/9$ at every corner that carries a ring edge.
+\end{example}
+
 \section{Implementation notes, divergences and versioning}\label{sec:impl}
 
 \begin{implnote}[Where the maths runs]
@@ -776,7 +882,8 @@ Version & Date & Change \\
 1.3.0 & 2026-10-24 & Taste formulas of Section~\ref{sec:tastegraph} (M-28): Pearson over the common subset \eqref{eq:pearson}, taste vectors \eqref{eq:taste}, attribute similarity, the blend \eqref{eq:blendsim}, neighbour selection and reliability, as \code{graph.vectors.json}. Layer~2 gains \code{userSimilarity: 'pearson'}, default \code{'cosine'}, so live predictions are unchanged; $w$ is unchanged. Fix: leaderboard and starter-set names now compare by Unicode code point as Section~\ref{sec:bayes} specifies, which resolves Implementation note~\ref{impl:codepoints} (they compared UTF-16 code units, which put astral characters before U+E000--U+FFFF), with one new \code{leaderboardOrder} vector; ASCII names, hence every catalogue name, order as before. Earlier vectors unchanged apart from the header \\
 1.4.0 & 2026-10-31 & Layer~1 edges mode (M-27~(a)): \code{bevSimilarity: 'edges'} reads the stored weights of \code{bev\_edges} from the snapshot's optional \code{edges} field as \eqref{eq:simE}, $0$ for a pair without an edge; a snapshot without the field falls back to \eqref{eq:sim}. The default \code{'content'} is byte-identical to 1.3.0. New golden cases, no other formula change: \code{layer1} in \code{edges.vectors.json} (an edge, no edge, either orientation, the missing field, the default ignoring the field); \code{bayesScoreStored} and the Example~\ref{ex:59} case in \code{bayesian.vectors.json}; two \code{streakFromTimestamps} cases written as ranking events. $w$ is unchanged. Earlier vectors unchanged apart from the header \\
 1.5.0 & 2026-10-31 & Anchored placement (M-21, Section~\ref{sec:anchored}) in the package: \code{placementTiers} \eqref{eq:tiers} (same leaf 1, same root 2, stored edge across roots 3, else none; the taxonomy first, a weight only ever adds tier 3) and \code{startPlacement} with an optional \code{tiers} array, running Algorithm~\ref{alg:anchored} inside the existing state machine (\code{anchored} on the state, both ranges on every history step, undo across the phase boundary, the same \code{PlacementResult}). Without \code{tiers}, and with tiers that select no anchor, the machine is byte-identical to 1.4.0: $252{,}144$ states, prompts, flags and results compared in lockstep against the 1.4.0 source, $0$ differences. New golden cases in \code{placement.vectors.json}, with two header rules (\code{placementTiersRule}, \code{anchoredPlacementRule}): \code{placementTiers} over D-04 \S 3's pairs, and \code{anchoredPlacement} scripts (the figure above, ties in either phase, undo across the boundary, re-rank, each tier alone, the two fallbacks, a 20-Bev oracle) recording the questions asked with their phase, the anchors, \code{maxSteps} and the result. No SQL change: \code{submit\_ranking} receives the same shape, and Implementation note~\ref{impl:logcheck} applies unchanged. Earlier vectors unchanged apart from the header \\
-1.6.0 & 2026-10-31 & Layer~2 stored mode (graph Stage~4, package half): \code{userSimilarity: 'stored'} reads the user's stored taste neighbours from the snapshot's optional \code{userNeighbours} field as \eqref{eq:simstored}, $0$ for a user not listed; a snapshot without the field, or a user without rows, falls back to \eqref{eq:usersim}. The default \code{'cosine'} is byte-identical to 1.5.0. No new constant ($N_0 = \textsc{neighbour\_reliability\_n} = 15$ exists since 1.3.0) and no other formula change. New golden cases in \code{graph.vectors.json}, with the header rule \code{layer2StoredRule}: \code{layer2} (two listed raters with reliabilities $1$ and $1/5$, a listed non-rater beside an unlisted rater, a neighbour with one co-rated Bev, a neighbour unknown to the snapshot, a negative $\simi_B$, the four fallbacks, the default ignoring the field), each recording the similarity used as \code{source}, and two \code{predictScore} cases. The SQL change is the backend's: \code{get\_prediction\_snapshot} returns the viewer's rows. Earlier vectors unchanged apart from the header; current \\
+1.6.0 & 2026-10-31 & Layer~2 stored mode (graph Stage~4, package half): \code{userSimilarity: 'stored'} reads the user's stored taste neighbours from the snapshot's optional \code{userNeighbours} field as \eqref{eq:simstored}, $0$ for a user not listed; a snapshot without the field, or a user without rows, falls back to \eqref{eq:usersim}. The default \code{'cosine'} is byte-identical to 1.5.0. No new constant ($N_0 = \textsc{neighbour\_reliability\_n} = 15$ exists since 1.3.0) and no other formula change. New golden cases in \code{graph.vectors.json}, with the header rule \code{layer2StoredRule}: \code{layer2} (two listed raters with reliabilities $1$ and $1/5$, a listed non-rater beside an unlisted rater, a neighbour with one co-rated Bev, a neighbour unknown to the snapshot, a negative $\simi_B$, the four fallbacks, the default ignoring the field), each recording the similarity used as \code{source}, and two \code{predictScore} cases. The SQL change is the backend's: \code{get\_prediction\_snapshot} returns the viewer's rows. Earlier vectors unchanged apart from the header \\
+1.7.0 & 2026-11-10 & Graph signals of Section~\ref{sec:graphsignals} in \code{network.ts}: \code{graphStrength}, weighted PageRank \eqref{eq:pagerank} (\code{pageRank}), modularity \eqref{eq:modularity}, deterministic Louvain (Definition~\ref{def:louvain}, \code{louvainCommunities}), the participation coefficient \eqref{eq:participation} and the community hub (\code{communityHubs}), with five new constants (\textsc{pagerank\_damping}, \textsc{pagerank\_tolerance}, \textsc{pagerank\_max\_iterations}, \textsc{louvain\_resolution}, \textsc{louvain\_tie\_epsilon}) and an optional snapshot field \code{bevGraph} that nothing reads. No existing formula changes. New file \code{network.vectors.json} (hand-built graphs, no PRNG) with six header rules (\code{networkGraphRule}, \code{pageRankRule}, \code{modularityRule}, \code{louvainRule}, \code{participationRule}, \code{communityHubRule}). No SQL twin: the graph sync calls the package. Earlier vectors unchanged apart from the header and the \code{version} each embedded snapshot carries; current \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -785,7 +892,7 @@ Version & Date & Change \\
 
 \section{Constants}\label{app:constants}
 
-All values from \code{packages/ranking/src/constants.ts}, \code{RANKING\_VERSION} 1.6.0.
+All values from \code{packages/ranking/src/constants.ts}, \code{RANKING\_VERSION} 1.7.0.
 
 \begin{center}
 \small
@@ -842,6 +949,10 @@ Constant & Value & Role \\
 \code{TASTE\_SIM\_FLOOR},\newline \code{TASTE\_NEIGHBOUR\_K} & 0.1, 25 & Least similarity kept and neighbours kept per user in \code{user\_neighbors} \\
 \code{NEIGHBOUR\_RELIABILITY\_N} & 15 & $N_0$ of the reliability weight $\min(1, n_v/N_0)$ (chosen; the doc leaves it open) \\
 \code{PLACEMENT\_TIER} & 1 / 2 / 3 & Anchored placement tiers \eqref{eq:tiers}: same leaf, same root, stored edge across roots (the floor is \code{EDGE\_MIN\_WEIGHT}) \\
+\code{PAGERANK\_DAMPING} & 0.85 & PageRank damping $d$ \eqref{eq:pagerank} \\
+\code{PAGERANK\_TOLERANCE},\newline \code{PAGERANK\_MAX\_ITERATIONS} & $10^{-10}$, 200 & PageRank stops when the $L_1$ step is below $\tau$; $T$ is a safety rail, never reached at the defaults ($2d^t < \tau$ for $t > 146$) \\
+\code{LOUVAIN\_RESOLUTION} & 1 & Modularity resolution $\gamma$ \eqref{eq:modularity} \\
+\code{LOUVAIN\_TIE\_EPSILON} & $10^{-12}$ & Margin a Louvain candidate must beat the best gain by (Definition~\ref{def:louvain}) \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -873,6 +984,8 @@ $\simi_E$ & Stored edge weight as Layer~1's similarity in edges mode \eqref{eq:s
 $\mathrm{tier}(b, \ell)$ & Tier of a bucket Bev in anchored placement \eqref{eq:tiers}: 1 same leaf, 2 same root, 3 stored edge, or none \\
 $A, G, k, g$ & Anchors, gap, and their sizes in anchored placement; $p_j$ the position of $a_j$ in $L$, $j^\ast$ the anchor slot Phase 1 returns \\
 $\hot(p, t)$ & Time-decayed popularity of a post (eq.~\ref{eq:hot}) \\
+$s_i, m, \prec$ & Strength (weighted degree) of a Bev in the Bev graph, its total edge weight, code-point order (Section~\ref{sec:graphsignals}) \\
+$\pi, Q_\gamma, P_i, h(C)$ & PageRank \eqref{eq:pagerank}, modularity \eqref{eq:modularity}, participation coefficient \eqref{eq:participation}, community hub \\
 \bottomrule
 \end{tabular}
 \end{center}

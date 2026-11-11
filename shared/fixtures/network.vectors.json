@@ -1,0 +1,2399 @@
+{
+  "version": "1.7.0",
+  "constants": {
+    "version": "1.7.0",
+    "bands": {
+      "DISLIKED": [
+        0,
+        4
+      ],
+      "FINE": [
+        4,
+        7
+      ],
+      "LOVED": [
+        7,
+        10
+      ]
+    },
+    "bucketOrder": [
+      "LOVED",
+      "FINE",
+      "DISLIKED"
+    ],
+    "bucketDb": {
+      "LOVED": 3,
+      "FINE": 2,
+      "DISLIKED": 1
+    },
+    "sigmaFloor": 1,
+    "minNUser": 3,
+    "minNCat": 3,
+    "globalFallback": {
+      "mean": 5,
+      "stddev": 2.5
+    },
+    "placementTier": {
+      "sameLeaf": 1,
+      "sameRoot": 2,
+      "edge": 3
+    },
+    "kAff": 2,
+    "bayesC": 3,
+    "bayesCategoryPriorMin": 30,
+    "minRaters": 2,
+    "kG": 3,
+    "rankPointsWeights": {
+      "bevsRanked": 1,
+      "currentStreak": 3,
+      "bevsCreated": 2
+    },
+    "streakPeriod": "day",
+    "simWeights": {
+      "category": 0.4,
+      "brand": 0.3,
+      "flavor": 0.2,
+      "tier": 0.1
+    },
+    "simMin": 0.1,
+    "layer1Weights": {
+      "affinity": 0.4,
+      "content": 0.4,
+      "global": 0.2
+    },
+    "conf1UserN": 10,
+    "conf1Mass": 4,
+    "cfK": 10,
+    "cfMinCommon": 2,
+    "cfSignificance": 5,
+    "lambdaMax": 0.7,
+    "lambdaUserN": 15,
+    "epsilon": 0.15,
+    "jitterSd": 0.15,
+    "edgeWeights": {
+      "tree": 0.25,
+      "content": 0.15,
+      "emb": 0.3,
+      "profile": 0.3,
+      "cop": 0
+    },
+    "edgeTopK": 20,
+    "edgeMinWeight": 0.3,
+    "profileWeights": {
+      "base": 0.4,
+      "carbonated": 0.15,
+      "dairy": 0.1,
+      "alcohol": 0.05,
+      "caffeine": 0.15,
+      "sweetness": 0.15
+    },
+    "profileLevelSpan": 3,
+    "tasteK": 2,
+    "tasteMinAttrBevs": 2,
+    "tasteAlpha": 0.5,
+    "tasteSharedMin": 0.2,
+    "tasteMinSharedAttrs": 2,
+    "tasteBridgeKinds": [
+      "brand",
+      "flavor"
+    ],
+    "tasteSimFloor": 0.1,
+    "tasteNeighbourK": 25,
+    "neighbourReliabilityN": 15,
+    "pagerankDamping": 0.85,
+    "pagerankTolerance": 1e-10,
+    "pagerankMaxIterations": 200,
+    "louvainResolution": 1,
+    "louvainTieEpsilon": 1e-12,
+    "storedScoreRule": "cents = floor((2N + D) / (2D)) with D = n + 1, N = 100*(hi*D - (hi - lo)*(index + 1)); capped at hi*100 - 1 for FINE and DISLIKED; storedScore = cents / 100",
+    "stddev": "population (stddev_pop)",
+    "nameOrder": "Unicode code point, not UTF-16 code unit (SQL collate \"C\" on UTF-8), then bevId the same way",
+    "streakDayKey": "calendar date of the ranking instant in the profile timezone: (created_at AT TIME ZONE timezone)::date; week = ISO week of that date (YYYY-Www)",
+    "rankOrder": "points desc, bevsRanked desc, createdAt asc, userId asc; rank = 1 + count(points > mine); bevsRanked = 0 excluded",
+    "treeDepth": "Wu-Palmer depth from an implicit root (depth 0) above the top-level categories; a top-level category (parent null or not in the taxonomy) has depth 1",
+    "profileRule": "N / 300 with N = 3*(40*[base] + 15*[carbonated] + 10*[dairy] + 5*[alcohol]) + 15*(3 - |dCaffeine|) + 15*(3 - |dSweetness|)",
+    "embeddingRule": "min(1, max(0, dot / sqrt(|a|^2 * |b|^2))); 0 when either vector is zero",
+    "edgeWeightRule": "tree*0.25 + content*0.15 + emb*0.30 + profile*0.30 + cop*0, summed in that order, clamped to [0, 1]",
+    "edgeOrder": "w desc, then bevId asc (code unit); keep w >= edgeMinWeight; at most edgeTopK",
+    "pearsonRule": "r over common(u, v) = R(u) & R(v) in bevId order: sum((x - mean x)(y - mean y)) / sqrt(sum((x - mean x)^2) * sum((y - mean y)^2)), clamped to [-1, 1]; 0 when |common| < cfMinCommon or either side is constant (all entries equal); sim = r * min(1, |common| / cfSignificance)",
+    "tasteAttributeKey": "'category:' + categoryId, 'brand:' + normaliseBrand(brand) when non-empty, 'flavor:' + trim(flavorBase) when non-empty; kept when it covers >= tasteMinAttrBevs catalog Bevs",
+    "tasteVectorRule": "t_u[a] = sum of z_{u,b} over b in R(u) carrying a / (n_{u,a} + tasteK); Bevs outside the catalog skipped",
+    "attributeSimilarityRule": "cosine of the taste vectors as sparse vectors (missing = 0), clamped to [-1, 1]; 0 when either is all zeros",
+    "sharedAttrsRule": "count of attributes a of a tasteBridgeKinds kind with |t_u[a]| >= tasteSharedMin and |t_v[a]| >= tasteSharedMin that u and v reach through distinct Bevs: some b in R(u) and b2 in R(v) carry a with b != b2 (one co-rated Bev is not a bridge)",
+    "blendRule": "alpha = tasteAlpha if |common| >= cfMinCommon else 0; attributeSim = attributeSimilarity if |common| >= cfMinCommon or sharedAttrs >= tasteMinSharedAttrs else 0; sim = alpha * pearson.sim + (1 - alpha) * attributeSim, clamped to [-1, 1]; method = attr (alpha 0), pearson (alpha 1), else blend",
+    "neighbourOrder": "sim desc, then userId asc (code point, SQL collate \"C\"); keep sim >= tasteSimFloor; at most tasteNeighbourK",
+    "reliabilityRule": "min(1, n_v / neighbourReliabilityN); applied by Layer 2 per neighbour, not stored in user_neighbors.sim",
+    "bayesStoredRule": "bev_stats.bayes_score numeric(4,2) from exact inputs: m with at most 3 dp (global_stats.mean_score numeric(5,3), or the exact category mean), scores in cents; N = C*m_thousandths + 10*sum(score_cents), D = C + n; storedCents = round half away from zero of N / (10*D) = floor((2N + 10D) / (20D)); never round the floating-point bayes",
+    "streakEvents": "streakFromTimestamps.timestamps are ranking EVENTS (submit_ranking and rerank_bev), never deleted: a re-rank adds its own day and keeps the original one; a removal adds and deletes nothing. When a case lists input.events, timestamps = events.map(at)",
+    "layer1EdgesRule": "bevSimilarity 'edges': sim(b, b') = w of the snapshot.edges row for the unordered pair {b, b'} (either orientation), 0 when there is none; pairs with sim < simMin dropped as in 'content'; content = sum(sim * z) / (sum(sim) + 1); conf1 mass = n_{u,cat(b)} + sum(sim); affinity and g unchanged. A snapshot without an edges field (absent or null) uses contentSimilarity ('content'); an empty array means no edges",
+    "layer2StoredRule": "userSimilarity 'stored' (Stage 4), for the user u: N(u) = snapshot.userNeighbours[u] (u's user_neighbors rows, any order); sim'(u, v) = sim * min(1, n_v / neighbourReliabilityN) for v in N(u), with sim as stored and n_v = users[v].stats.n (derived from v's rankings when v is missing from users; 0 when v is unknown to the snapshot, so the row weighs 0); sim'(u, v) = 0 for every v not in N(u), whatever their co-ratings. Then Layer 2 exactly as in 'cosine' mode: the raters of b other than u with sim' > 0 (so a negative stored sim is dropped), sim' desc then userId asc, at most cfK; support = sum(sim'); z2 = sum(sim' * z_{v,b}) / support, 0 without neighbours. common is carried and read by no formula. Falls back to 'cosine' (the in-snapshot sim' of section 8.9) when the snapshot has no userNeighbours field (absent or null) or u has no rows (key missing or empty list). source = the similarity actually used. predictScore: lambda and confidence read this support",
+    "placementTiersRule": "tier of a bucket Bev l relative to the new Bev b (placementTier constants): sameLeaf (1) when categoryId (the root) is equal and both leafCategoryId are non-null and equal; sameRoot (2) when categoryId is equal otherwise (a null leaf on either side, i.e. kind unknown, never reaches tier 1); edge (3) when the roots differ and weights[l.id] (the bev_edges w of {b, l}) is >= edgeMinWeight; null otherwise (no weight, or a weight below the floor). Without weights only tiers 1 and 2 occur",
+    "anchoredPlacementRule": "startPlacement with tiers (one per orderedBevIds entry, filtered with the Bev itself): anchors A = the entries other than bevId whose tier equals the smallest non-null tier among the entries other than bevId (on a re-rank the Bev is still in the list and its tier against itself is ignored), in list order, at positions p_1 < ... < p_k of the filtered list; no anchors = the plain search. Phase 1 = binary search over anchor slots [aLo, aHi] = [0, k]: ask a_j with j = floor((aLo + aHi) / 2) (0-based), NEW_BETTER aHi = j, EXISTING_BETTER aLo = j + 1, TIE ends the placement at p_j + 1; after each answer the insertion range is lo = (aLo = 0 ? 0 : p_{aLo - 1} + 1), hi = (aHi = k ? n : p_{aHi}). Phase 2 = the plain search on [lo, hi] once aLo = aHi (none when lo = hi). insertIndex = lo; comparisons in the order asked; maxSteps = maxComparisons(k) + maxComparisons(widest gap between consecutive anchors, or before the first / after the last), constant. Undo restores lo, hi, aLo, aHi",
+    "networkGraphRule": "undirected weighted graph { nodes, edges: [{ a, b, w }] }; throws on a duplicate or empty node id, an endpoint not in nodes, a self-loop, a duplicate unordered pair (either orientation), a non-finite w or w <= 0. Nodes are processed in code-point order (SQL collate \"C\"), each node's neighbours in that order, so results do not depend on the order of nodes or edges or on edge orientation. strength s_i = sum of w over the neighbours in order; m = (sum of s_i in node order) / 2",
+    "pageRankRule": "start p_j = 1/n; each iteration, for j in node order: acc = sum over neighbours i of j in order of (p_i * w_ij) / s_i; D = sum of p_i over isolated nodes (s_i = 0) in node order; p'_j = (1 - d)/n + d * (acc + D/n); stop when sum_j |p'_j - p_j| (node order) < tolerance or after maxIterations iterations; return p' / sum(p') (node order). Defaults d = pagerankDamping, tolerance = pagerankTolerance, maxIterations = pagerankMaxIterations; at the fixed point a lone isolated node holds (1 - d)/(n - d)",
+    "modularityRule": "Q = sum over community labels ascending of (W_c / m - gamma * (S_c / (2m))^2); W_c = weight of edges with both ends in c (each edge once, from its smaller endpoint, node order), S_c = sum of members' s_i in node order; m = 0 gives 0; labels are any integers, every node needs one, extra keys ignored; gamma defaults to louvainResolution",
+    "louvainRule": "level 0: every node its own community; visit nodes in code-point order in passes until a full pass moves nothing. Visiting i: remove it from its community; gain(C) = k_{i,C}/m - gamma * S_C * k_i / (2m^2) (k_{i,C} = i's weight into C over its neighbours in order, S_C = C's strength without i, k_i = i's strength incl. twice its internal weight); candidates in order: its own (possibly emptied) community first, then each neighbouring community by ascending representative (the community's smallest member id, code point); a candidate replaces the best only if its gain exceeds the best by more than louvainTieEpsilon, so a tie keeps i where it is. Then each community becomes a super-node (its internal weight kept as a self-loop, counted in k but not in k_{i,C}; its id for ordering is its representative) and the next level runs; stop at the first level that moves nothing. Output: communities = member lists in code-point order, sorted by size desc then first member asc; communityOf[id] = index in communities; modularity = modularity(graph, communityOf, gamma). No edges: all singletons, modularity 0",
+    "participationRule": "P_i = 1 - sum over labels ascending of (s_{i,c} / s_i)^2, s_{i,c} = i's weight into community c (its own included) over its neighbours in order, the order s_i is summed in (so a node whose neighbours all share its community is exactly 0); isolated node 0; clamped at 0 below; in [0, 1)",
+    "communityHubRule": "hub of a community = the member with the greatest within-community strength (weight to the other members, over its neighbours in order), compared as exact doubles, ties to the smallest id (code point); a singleton is its own hub; keyed by community label. The hub identifies the community: the graph sync derives the community's opaque public id from it (hashed, so an age-gated hub's Bev id never reaches a client)"
+  },
+  "cases": [
+    {
+      "name": "twoCliques",
+      "fn": "graphStrength",
+      "input": {
+        "graph": {
+          "nodes": [
+            "b1",
+            "b2",
+            "b3",
+            "b4",
+            "a1",
+            "a2",
+            "a3",
+            "a4"
+          ],
+          "edges": [
+            {
+              "a": "a1",
+              "b": "a2",
+              "w": 1
+            },
+            {
+              "a": "a1",
+              "b": "a3",
+              "w": 1
+            },
+            {
+              "a": "a1",
+              "b": "a4",
+              "w": 1
+            },
+            {
+              "a": "a2",
+              "b": "a3",
+              "w": 1
+            },
+            {
+              "a": "a2",
+              "b": "a4",
+              "w": 1
+            },
+            {
+              "a": "a3",
+              "b": "a4",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "b2",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "b3",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "b4",
+              "w": 1
+            },
+            {
+              "a": "b2",
+              "b": "b3",
+              "w": 1
+            },
+            {
+              "a": "b2",
+              "b": "b4",
+              "w": 1
+            },
+            {
+              "a": "b3",
+              "b": "b4",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "a4",
+              "w": 0.1
+            }
+          ]
+        }
+      },
+      "expected": {
+        "a1": {
+          "degree": 3,
+          "strength": 3
+        },
+        "a2": {
+          "degree": 3,
+          "strength": 3
+        },
+        "a3": {
+          "degree": 3,
+          "strength": 3
+        },
+        "a4": {
+          "degree": 4,
+          "strength": 3.1
+        },
+        "b1": {
+          "degree": 4,
+          "strength": 3.1
+        },
+        "b2": {
+          "degree": 3,
+          "strength": 3
+        },
+        "b3": {
+          "degree": 3,
+          "strength": 3
+        },
+        "b4": {
+          "degree": 3,
+          "strength": 3
+        }
+      }
+    },
+    {
+      "name": "isolated",
+      "fn": "graphStrength",
+      "input": {
+        "graph": {
+          "nodes": [
+            "z",
+            "a",
+            "b"
+          ],
+          "edges": [
+            {
+              "a": "b",
+              "b": "a",
+              "w": 0.5
+            }
+          ]
+        }
+      },
+      "expected": {
+        "a": {
+          "degree": 1,
+          "strength": 0.5
+        },
+        "b": {
+          "degree": 1,
+          "strength": 0.5
+        },
+        "z": {
+          "degree": 0,
+          "strength": 0
+        }
+      }
+    },
+    {
+      "name": "star",
+      "fn": "graphStrength",
+      "input": {
+        "graph": {
+          "nodes": [
+            "z",
+            "l1",
+            "l2",
+            "l3",
+            "l4"
+          ],
+          "edges": [
+            {
+              "a": "z",
+              "b": "l1",
+              "w": 1
+            },
+            {
+              "a": "z",
+              "b": "l2",
+              "w": 1
+            },
+            {
+              "a": "z",
+              "b": "l3",
+              "w": 1
+            },
+            {
+              "a": "z",
+              "b": "l4",
+              "w": 1
+            }
+          ]
+        }
+      },
+      "expected": {
+        "l1": {
+          "degree": 1,
+          "strength": 1
+        },
+        "l2": {
+          "degree": 1,
+          "strength": 1
+        },
+        "l3": {
+          "degree": 1,
+          "strength": 1
+        },
+        "l4": {
+          "degree": 1,
+          "strength": 1
+        },
+        "z": {
+          "degree": 4,
+          "strength": 4
+        }
+      }
+    },
+    {
+      "name": "weightedPath",
+      "fn": "graphStrength",
+      "input": {
+        "graph": {
+          "nodes": [
+            "a",
+            "b",
+            "c"
+          ],
+          "edges": [
+            {
+              "a": "a",
+              "b": "b",
+              "w": 1
+            },
+            {
+              "a": "c",
+              "b": "b",
+              "w": 0.1
+            }
+          ]
+        }
+      },
+      "expected": {
+        "a": {
+          "degree": 1,
+          "strength": 1
+        },
+        "b": {
+          "degree": 2,
+          "strength": 1.1
+        },
+        "c": {
+          "degree": 1,
+          "strength": 0.1
+        }
+      }
+    },
+    {
+      "name": "empty",
+      "fn": "graphStrength",
+      "input": {
+        "graph": {
+          "nodes": [],
+          "edges": []
+        }
+      },
+      "expected": {}
+    },
+    {
+      "name": "single edge: 0.5 / 0.5",
+      "fn": "pageRank",
+      "input": {
+        "graph": {
+          "nodes": [
+            "a",
+            "b"
+          ],
+          "edges": [
+            {
+              "a": "a",
+              "b": "b",
+              "w": 0.7
+            }
+          ]
+        }
+      },
+      "expected": {
+        "a": 0.5,
+        "b": 0.5
+      }
+    },
+    {
+      "name": "3-node path: ends 19/74, centre 18/37 (bipartite; the tolerance still ends it before the cap)",
+      "fn": "pageRank",
+      "input": {
+        "graph": {
+          "nodes": [
+            "a",
+            "b",
+            "c"
+          ],
+          "edges": [
+            {
+              "a": "a",
+              "b": "b",
+              "w": 1
+            },
+            {
+              "a": "b",
+              "b": "c",
+              "w": 1
+            }
+          ]
+        }
+      },
+      "expected": {
+        "a": 0.2567567567668202,
+        "b": 0.4864864864663596,
+        "c": 0.2567567567668202
+      }
+    },
+    {
+      "name": "star: hub 88/185",
+      "fn": "pageRank",
+      "input": {
+        "graph": {
+          "nodes": [
+            "z",
+            "l1",
+            "l2",
+            "l3",
+            "l4"
+          ],
+          "edges": [
+            {
+              "a": "z",
+              "b": "l1",
+              "w": 1
+            },
+            {
+              "a": "z",
+              "b": "l2",
+              "w": 1
+            },
+            {
+              "a": "z",
+              "b": "l3",
+              "w": 1
+            },
+            {
+              "a": "z",
+              "b": "l4",
+              "w": 1
+            }
+          ]
+        }
+      },
+      "expected": {
+        "l1": 0.1310810810755189,
+        "l2": 0.1310810810755189,
+        "l3": 0.1310810810755189,
+        "l4": 0.1310810810755189,
+        "z": 0.47567567569792446
+      }
+    },
+    {
+      "name": "triangle: uniform",
+      "fn": "pageRank",
+      "input": {
+        "graph": {
+          "nodes": [
+            "a",
+            "b",
+            "c"
+          ],
+          "edges": [
+            {
+              "a": "a",
+              "b": "b",
+              "w": 0.4
+            },
+            {
+              "a": "b",
+              "b": "c",
+              "w": 0.4
+            },
+            {
+              "a": "c",
+              "b": "a",
+              "w": 0.4
+            }
+          ]
+        }
+      },
+      "expected": {
+        "a": 0.3333333333333333,
+        "b": 0.3333333333333333,
+        "c": 0.3333333333333333
+      }
+    },
+    {
+      "name": "isolated node: (1 - d)/(n - d) = 3/43",
+      "fn": "pageRank",
+      "input": {
+        "graph": {
+          "nodes": [
+            "z",
+            "a",
+            "b"
+          ],
+          "edges": [
+            {
+              "a": "b",
+              "b": "a",
+              "w": 0.5
+            }
+          ]
+        }
+      },
+      "expected": {
+        "a": 0.4651162790645971,
+        "b": 0.4651162790645971,
+        "z": 0.0697674418708057
+      }
+    },
+    {
+      "name": "two cliques: the bridge endpoints rank highest",
+      "fn": "pageRank",
+      "input": {
+        "graph": {
+          "nodes": [
+            "b1",
+            "b2",
+            "b3",
+            "b4",
+            "a1",
+            "a2",
+            "a3",
+            "a4"
+          ],
+          "edges": [
+            {
+              "a": "a1",
+              "b": "a2",
+              "w": 1
+            },
+            {
+              "a": "a1",
+              "b": "a3",
+              "w": 1
+            },
+            {
+              "a": "a1",
+              "b": "a4",
+              "w": 1
+            },
+            {
+              "a": "a2",
+              "b": "a3",
+              "w": 1
+            },
+            {
+              "a": "a2",
+              "b": "a4",
+              "w": 1
+            },
+            {
+              "a": "a3",
+              "b": "a4",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "b2",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "b3",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "b4",
+              "w": 1
+            },
+            {
+              "a": "b2",
+              "b": "b3",
+              "w": 1
+            },
+            {
+              "a": "b2",
+              "b": "b4",
+              "w": 1
+            },
+            {
+              "a": "b3",
+              "b": "b4",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "a4",
+              "w": 0.1
+            }
+          ]
+        }
+      },
+      "expected": {
+        "a1": 0.1240903253412627,
+        "a2": 0.1240903253412627,
+        "a3": 0.1240903253412627,
+        "a4": 0.12772902397621202,
+        "b1": 0.12772902397621202,
+        "b2": 0.12409032534126269,
+        "b3": 0.12409032534126269,
+        "b4": 0.12409032534126269
+      }
+    },
+    {
+      "name": "weighted path: the heavy end outranks the light end",
+      "fn": "pageRank",
+      "input": {
+        "graph": {
+          "nodes": [
+            "a",
+            "b",
+            "c"
+          ],
+          "edges": [
+            {
+              "a": "a",
+              "b": "b",
+              "w": 1
+            },
+            {
+              "a": "c",
+              "b": "b",
+              "w": 0.1
+            }
+          ]
+        }
+      },
+      "expected": {
+        "a": 0.425921375939673,
+        "b": 0.4864864864663596,
+        "c": 0.08759213759396732
+      }
+    },
+    {
+      "name": "options: damping 0.5, tolerance 1e-6, maxIterations 3",
+      "fn": "pageRank",
+      "input": {
+        "graph": {
+          "nodes": [
+            "p1",
+            "p2",
+            "p3",
+            "q1",
+            "q2",
+            "q3",
+            "r1",
+            "r2",
+            "r3",
+            "s1",
+            "s2",
+            "s3"
+          ],
+          "edges": [
+            {
+              "a": "p1",
+              "b": "p2",
+              "w": 1
+            },
+            {
+              "a": "p2",
+              "b": "p3",
+              "w": 1
+            },
+            {
+              "a": "p1",
+              "b": "p3",
+              "w": 1
+            },
+            {
+              "a": "q1",
+              "b": "q2",
+              "w": 1
+            },
+            {
+              "a": "q2",
+              "b": "q3",
+              "w": 1
+            },
+            {
+              "a": "q1",
+              "b": "q3",
+              "w": 1
+            },
+            {
+              "a": "r1",
+              "b": "r2",
+              "w": 1
+            },
+            {
+              "a": "r2",
+              "b": "r3",
+              "w": 1
+            },
+            {
+              "a": "r1",
+              "b": "r3",
+              "w": 1
+            },
+            {
+              "a": "s1",
+              "b": "s2",
+              "w": 1
+            },
+            {
+              "a": "s2",
+              "b": "s3",
+              "w": 1
+            },
+            {
+              "a": "s1",
+              "b": "s3",
+              "w": 1
+            },
+            {
+              "a": "p3",
+              "b": "q1",
+              "w": 1
+            },
+            {
+              "a": "q3",
+              "b": "r1",
+              "w": 1
+            },
+            {
+              "a": "r3",
+              "b": "s1",
+              "w": 1
+            },
+            {
+              "a": "s3",
+              "b": "p1",
+              "w": 1
+            }
+          ]
+        },
+        "opts": {
+          "damping": 0.5,
+          "tolerance": 0.000001,
+          "maxIterations": 3
+        }
+      },
+      "expected": {
+        "p1": 0.08931327160493827,
+        "p2": 0.07137345679012345,
+        "p3": 0.08931327160493827,
+        "q1": 0.08931327160493827,
+        "q2": 0.07137345679012345,
+        "q3": 0.08931327160493827,
+        "r1": 0.08931327160493827,
+        "r2": 0.07137345679012345,
+        "r3": 0.08931327160493827,
+        "s1": 0.08931327160493827,
+        "s2": 0.07137345679012345,
+        "s3": 0.08931327160493827
+      }
+    },
+    {
+      "name": "two cliques split in two: 12/12.1 - 1/2",
+      "fn": "modularity",
+      "input": {
+        "graph": {
+          "nodes": [
+            "b1",
+            "b2",
+            "b3",
+            "b4",
+            "a1",
+            "a2",
+            "a3",
+            "a4"
+          ],
+          "edges": [
+            {
+              "a": "a1",
+              "b": "a2",
+              "w": 1
+            },
+            {
+              "a": "a1",
+              "b": "a3",
+              "w": 1
+            },
+            {
+              "a": "a1",
+              "b": "a4",
+              "w": 1
+            },
+            {
+              "a": "a2",
+              "b": "a3",
+              "w": 1
+            },
+            {
+              "a": "a2",
+              "b": "a4",
+              "w": 1
+            },
+            {
+              "a": "a3",
+              "b": "a4",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "b2",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "b3",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "b4",
+              "w": 1
+            },
+            {
+              "a": "b2",
+              "b": "b3",
+              "w": 1
+            },
+            {
+              "a": "b2",
+              "b": "b4",
+              "w": 1
+            },
+            {
+              "a": "b3",
+              "b": "b4",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "a4",
+              "w": 0.1
+            }
+          ]
+        },
+        "communityOf": {
+          "a1": 0,
+          "a2": 0,
+          "a3": 0,
+          "a4": 0,
+          "b1": 1,
+          "b2": 1,
+          "b3": 1,
+          "b4": 1
+        }
+      },
+      "expected": 0.49173553719008267
+    },
+    {
+      "name": "two cliques, resolution 2",
+      "fn": "modularity",
+      "input": {
+        "graph": {
+          "nodes": [
+            "b1",
+            "b2",
+            "b3",
+            "b4",
+            "a1",
+            "a2",
+            "a3",
+            "a4"
+          ],
+          "edges": [
+            {
+              "a": "a1",
+              "b": "a2",
+              "w": 1
+            },
+            {
+              "a": "a1",
+              "b": "a3",
+              "w": 1
+            },
+            {
+              "a": "a1",
+              "b": "a4",
+              "w": 1
+            },
+            {
+              "a": "a2",
+              "b": "a3",
+              "w": 1
+            },
+            {
+              "a": "a2",
+              "b": "a4",
+              "w": 1
+            },
+            {
+              "a": "a3",
+              "b": "a4",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "b2",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "b3",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "b4",
+              "w": 1
+            },
+            {
+              "a": "b2",
+              "b": "b3",
+              "w": 1
+            },
+            {
+              "a": "b2",
+              "b": "b4",
+              "w": 1
+            },
+            {
+              "a": "b3",
+              "b": "b4",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "a4",
+              "w": 0.1
+            }
+          ]
+        },
+        "communityOf": {
+          "a1": 0,
+          "a2": 0,
+          "a3": 0,
+          "a4": 0,
+          "b1": 1,
+          "b2": 1,
+          "b3": 1,
+          "b4": 1
+        },
+        "resolution": 2
+      },
+      "expected": -0.008264462809917328
+    },
+    {
+      "name": "path as one community: 0",
+      "fn": "modularity",
+      "input": {
+        "graph": {
+          "nodes": [
+            "a",
+            "b",
+            "c"
+          ],
+          "edges": [
+            {
+              "a": "a",
+              "b": "b",
+              "w": 1
+            },
+            {
+              "a": "b",
+              "b": "c",
+              "w": 1
+            }
+          ]
+        },
+        "communityOf": {
+          "a": 0,
+          "b": 0,
+          "c": 0
+        }
+      },
+      "expected": 0
+    },
+    {
+      "name": "path as singletons, any integer labels: -6/16",
+      "fn": "modularity",
+      "input": {
+        "graph": {
+          "nodes": [
+            "a",
+            "b",
+            "c"
+          ],
+          "edges": [
+            {
+              "a": "a",
+              "b": "b",
+              "w": 1
+            },
+            {
+              "a": "b",
+              "b": "c",
+              "w": 1
+            }
+          ]
+        },
+        "communityOf": {
+          "a": -3,
+          "b": 7,
+          "c": 40
+        }
+      },
+      "expected": -0.375
+    },
+    {
+      "name": "weighted square paired along the light edges",
+      "fn": "modularity",
+      "input": {
+        "graph": {
+          "nodes": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "edges": [
+            {
+              "a": "a",
+              "b": "b",
+              "w": 0.1
+            },
+            {
+              "a": "b",
+              "b": "c",
+              "w": 1
+            },
+            {
+              "a": "c",
+              "b": "d",
+              "w": 0.1
+            },
+            {
+              "a": "d",
+              "b": "a",
+              "w": 1
+            }
+          ]
+        },
+        "communityOf": {
+          "a": 0,
+          "b": 0,
+          "c": 1,
+          "d": 1
+        }
+      },
+      "expected": -0.40909090909090906
+    },
+    {
+      "name": "no edges: 0",
+      "fn": "modularity",
+      "input": {
+        "graph": {
+          "nodes": [
+            "y",
+            "x"
+          ],
+          "edges": []
+        },
+        "communityOf": {
+          "x": 0,
+          "y": 1
+        }
+      },
+      "expected": 0
+    },
+    {
+      "name": "two cliques joined by a weak edge: the two cliques",
+      "fn": "louvainCommunities",
+      "input": {
+        "graph": {
+          "nodes": [
+            "b1",
+            "b2",
+            "b3",
+            "b4",
+            "a1",
+            "a2",
+            "a3",
+            "a4"
+          ],
+          "edges": [
+            {
+              "a": "a1",
+              "b": "a2",
+              "w": 1
+            },
+            {
+              "a": "a1",
+              "b": "a3",
+              "w": 1
+            },
+            {
+              "a": "a1",
+              "b": "a4",
+              "w": 1
+            },
+            {
+              "a": "a2",
+              "b": "a3",
+              "w": 1
+            },
+            {
+              "a": "a2",
+              "b": "a4",
+              "w": 1
+            },
+            {
+              "a": "a3",
+              "b": "a4",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "b2",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "b3",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "b4",
+              "w": 1
+            },
+            {
+              "a": "b2",
+              "b": "b3",
+              "w": 1
+            },
+            {
+              "a": "b2",
+              "b": "b4",
+              "w": 1
+            },
+            {
+              "a": "b3",
+              "b": "b4",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "a4",
+              "w": 0.1
+            }
+          ]
+        }
+      },
+      "expected": {
+        "communities": [
+          [
+            "a1",
+            "a2",
+            "a3",
+            "a4"
+          ],
+          [
+            "b1",
+            "b2",
+            "b3",
+            "b4"
+          ]
+        ],
+        "communityOf": {
+          "a1": 0,
+          "a2": 0,
+          "a3": 0,
+          "a4": 0,
+          "b1": 1,
+          "b2": 1,
+          "b3": 1,
+          "b4": 1
+        },
+        "modularity": 0.49173553719008267
+      }
+    },
+    {
+      "name": "ring of four triangles: four communities, Q = 0.5",
+      "fn": "louvainCommunities",
+      "input": {
+        "graph": {
+          "nodes": [
+            "p1",
+            "p2",
+            "p3",
+            "q1",
+            "q2",
+            "q3",
+            "r1",
+            "r2",
+            "r3",
+            "s1",
+            "s2",
+            "s3"
+          ],
+          "edges": [
+            {
+              "a": "p1",
+              "b": "p2",
+              "w": 1
+            },
+            {
+              "a": "p2",
+              "b": "p3",
+              "w": 1
+            },
+            {
+              "a": "p1",
+              "b": "p3",
+              "w": 1
+            },
+            {
+              "a": "q1",
+              "b": "q2",
+              "w": 1
+            },
+            {
+              "a": "q2",
+              "b": "q3",
+              "w": 1
+            },
+            {
+              "a": "q1",
+              "b": "q3",
+              "w": 1
+            },
+            {
+              "a": "r1",
+              "b": "r2",
+              "w": 1
+            },
+            {
+              "a": "r2",
+              "b": "r3",
+              "w": 1
+            },
+            {
+              "a": "r1",
+              "b": "r3",
+              "w": 1
+            },
+            {
+              "a": "s1",
+              "b": "s2",
+              "w": 1
+            },
+            {
+              "a": "s2",
+              "b": "s3",
+              "w": 1
+            },
+            {
+              "a": "s1",
+              "b": "s3",
+              "w": 1
+            },
+            {
+              "a": "p3",
+              "b": "q1",
+              "w": 1
+            },
+            {
+              "a": "q3",
+              "b": "r1",
+              "w": 1
+            },
+            {
+              "a": "r3",
+              "b": "s1",
+              "w": 1
+            },
+            {
+              "a": "s3",
+              "b": "p1",
+              "w": 1
+            }
+          ]
+        }
+      },
+      "expected": {
+        "communities": [
+          [
+            "p1",
+            "p2",
+            "p3"
+          ],
+          [
+            "q1",
+            "q2",
+            "q3"
+          ],
+          [
+            "r1",
+            "r2",
+            "r3"
+          ],
+          [
+            "s1",
+            "s2",
+            "s3"
+          ]
+        ],
+        "communityOf": {
+          "p1": 0,
+          "p2": 0,
+          "p3": 0,
+          "q1": 1,
+          "q2": 1,
+          "q3": 1,
+          "r1": 2,
+          "r2": 2,
+          "r3": 2,
+          "s1": 3,
+          "s2": 3,
+          "s3": 3
+        },
+        "modularity": 0.5
+      }
+    },
+    {
+      "name": "unweighted square: a joins b first; the tie with one community keeps the pairs",
+      "fn": "louvainCommunities",
+      "input": {
+        "graph": {
+          "nodes": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "edges": [
+            {
+              "a": "a",
+              "b": "b",
+              "w": 1
+            },
+            {
+              "a": "b",
+              "b": "c",
+              "w": 1
+            },
+            {
+              "a": "c",
+              "b": "d",
+              "w": 1
+            },
+            {
+              "a": "d",
+              "b": "a",
+              "w": 1
+            }
+          ]
+        }
+      },
+      "expected": {
+        "communities": [
+          [
+            "a",
+            "b"
+          ],
+          [
+            "c",
+            "d"
+          ]
+        ],
+        "communityOf": {
+          "a": 0,
+          "b": 0,
+          "c": 1,
+          "d": 1
+        },
+        "modularity": 0
+      }
+    },
+    {
+      "name": "weighted square: pairs along the heavy edges",
+      "fn": "louvainCommunities",
+      "input": {
+        "graph": {
+          "nodes": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "edges": [
+            {
+              "a": "a",
+              "b": "b",
+              "w": 0.1
+            },
+            {
+              "a": "b",
+              "b": "c",
+              "w": 1
+            },
+            {
+              "a": "c",
+              "b": "d",
+              "w": 0.1
+            },
+            {
+              "a": "d",
+              "b": "a",
+              "w": 1
+            }
+          ]
+        }
+      },
+      "expected": {
+        "communities": [
+          [
+            "a",
+            "d"
+          ],
+          [
+            "b",
+            "c"
+          ]
+        ],
+        "communityOf": {
+          "a": 0,
+          "d": 0,
+          "b": 1,
+          "c": 1
+        },
+        "modularity": 0.40909090909090906
+      }
+    },
+    {
+      "name": "star: one community",
+      "fn": "louvainCommunities",
+      "input": {
+        "graph": {
+          "nodes": [
+            "z",
+            "l1",
+            "l2",
+            "l3",
+            "l4"
+          ],
+          "edges": [
+            {
+              "a": "z",
+              "b": "l1",
+              "w": 1
+            },
+            {
+              "a": "z",
+              "b": "l2",
+              "w": 1
+            },
+            {
+              "a": "z",
+              "b": "l3",
+              "w": 1
+            },
+            {
+              "a": "z",
+              "b": "l4",
+              "w": 1
+            }
+          ]
+        }
+      },
+      "expected": {
+        "communities": [
+          [
+            "l1",
+            "l2",
+            "l3",
+            "l4",
+            "z"
+          ]
+        ],
+        "communityOf": {
+          "l1": 0,
+          "l2": 0,
+          "l3": 0,
+          "l4": 0,
+          "z": 0
+        },
+        "modularity": 0
+      }
+    },
+    {
+      "name": "isolated node: a singleton after the pair",
+      "fn": "louvainCommunities",
+      "input": {
+        "graph": {
+          "nodes": [
+            "z",
+            "a",
+            "b"
+          ],
+          "edges": [
+            {
+              "a": "b",
+              "b": "a",
+              "w": 0.5
+            }
+          ]
+        }
+      },
+      "expected": {
+        "communities": [
+          [
+            "a",
+            "b"
+          ],
+          [
+            "z"
+          ]
+        ],
+        "communityOf": {
+          "a": 0,
+          "b": 0,
+          "z": 1
+        },
+        "modularity": 0
+      }
+    },
+    {
+      "name": "no edges: singletons, modularity 0",
+      "fn": "louvainCommunities",
+      "input": {
+        "graph": {
+          "nodes": [
+            "y",
+            "x"
+          ],
+          "edges": []
+        }
+      },
+      "expected": {
+        "communities": [
+          [
+            "x"
+          ],
+          [
+            "y"
+          ]
+        ],
+        "communityOf": {
+          "x": 0,
+          "y": 1
+        },
+        "modularity": 0
+      }
+    },
+    {
+      "name": "two cliques, resolution 3",
+      "fn": "louvainCommunities",
+      "input": {
+        "graph": {
+          "nodes": [
+            "b1",
+            "b2",
+            "b3",
+            "b4",
+            "a1",
+            "a2",
+            "a3",
+            "a4"
+          ],
+          "edges": [
+            {
+              "a": "a1",
+              "b": "a2",
+              "w": 1
+            },
+            {
+              "a": "a1",
+              "b": "a3",
+              "w": 1
+            },
+            {
+              "a": "a1",
+              "b": "a4",
+              "w": 1
+            },
+            {
+              "a": "a2",
+              "b": "a3",
+              "w": 1
+            },
+            {
+              "a": "a2",
+              "b": "a4",
+              "w": 1
+            },
+            {
+              "a": "a3",
+              "b": "a4",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "b2",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "b3",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "b4",
+              "w": 1
+            },
+            {
+              "a": "b2",
+              "b": "b3",
+              "w": 1
+            },
+            {
+              "a": "b2",
+              "b": "b4",
+              "w": 1
+            },
+            {
+              "a": "b3",
+              "b": "b4",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "a4",
+              "w": 0.1
+            }
+          ]
+        },
+        "opts": {
+          "resolution": 3
+        }
+      },
+      "expected": {
+        "communities": [
+          [
+            "a1"
+          ],
+          [
+            "a2"
+          ],
+          [
+            "a3"
+          ],
+          [
+            "a4"
+          ],
+          [
+            "b1"
+          ],
+          [
+            "b2"
+          ],
+          [
+            "b3"
+          ],
+          [
+            "b4"
+          ]
+        ],
+        "communityOf": {
+          "a1": 0,
+          "a2": 1,
+          "a3": 2,
+          "a4": 3,
+          "b1": 4,
+          "b2": 5,
+          "b3": 6,
+          "b4": 7
+        },
+        "modularity": -0.37507683901372857
+      }
+    },
+    {
+      "name": "two cliques: only the bridge endpoints are non-zero",
+      "fn": "participationCoefficient",
+      "input": {
+        "graph": {
+          "nodes": [
+            "b1",
+            "b2",
+            "b3",
+            "b4",
+            "a1",
+            "a2",
+            "a3",
+            "a4"
+          ],
+          "edges": [
+            {
+              "a": "a1",
+              "b": "a2",
+              "w": 1
+            },
+            {
+              "a": "a1",
+              "b": "a3",
+              "w": 1
+            },
+            {
+              "a": "a1",
+              "b": "a4",
+              "w": 1
+            },
+            {
+              "a": "a2",
+              "b": "a3",
+              "w": 1
+            },
+            {
+              "a": "a2",
+              "b": "a4",
+              "w": 1
+            },
+            {
+              "a": "a3",
+              "b": "a4",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "b2",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "b3",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "b4",
+              "w": 1
+            },
+            {
+              "a": "b2",
+              "b": "b3",
+              "w": 1
+            },
+            {
+              "a": "b2",
+              "b": "b4",
+              "w": 1
+            },
+            {
+              "a": "b3",
+              "b": "b4",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "a4",
+              "w": 0.1
+            }
+          ]
+        },
+        "communityOf": {
+          "a1": 0,
+          "a2": 0,
+          "a3": 0,
+          "a4": 0,
+          "b1": 1,
+          "b2": 1,
+          "b3": 1,
+          "b4": 1
+        }
+      },
+      "expected": {
+        "a1": 0,
+        "a2": 0,
+        "a3": 0,
+        "a4": 0.06243496357960465,
+        "b1": 0.06243496357960465,
+        "b2": 0,
+        "b3": 0,
+        "b4": 0
+      }
+    },
+    {
+      "name": "ring of triangles: connectors 4/9, middles 0",
+      "fn": "participationCoefficient",
+      "input": {
+        "graph": {
+          "nodes": [
+            "p1",
+            "p2",
+            "p3",
+            "q1",
+            "q2",
+            "q3",
+            "r1",
+            "r2",
+            "r3",
+            "s1",
+            "s2",
+            "s3"
+          ],
+          "edges": [
+            {
+              "a": "p1",
+              "b": "p2",
+              "w": 1
+            },
+            {
+              "a": "p2",
+              "b": "p3",
+              "w": 1
+            },
+            {
+              "a": "p1",
+              "b": "p3",
+              "w": 1
+            },
+            {
+              "a": "q1",
+              "b": "q2",
+              "w": 1
+            },
+            {
+              "a": "q2",
+              "b": "q3",
+              "w": 1
+            },
+            {
+              "a": "q1",
+              "b": "q3",
+              "w": 1
+            },
+            {
+              "a": "r1",
+              "b": "r2",
+              "w": 1
+            },
+            {
+              "a": "r2",
+              "b": "r3",
+              "w": 1
+            },
+            {
+              "a": "r1",
+              "b": "r3",
+              "w": 1
+            },
+            {
+              "a": "s1",
+              "b": "s2",
+              "w": 1
+            },
+            {
+              "a": "s2",
+              "b": "s3",
+              "w": 1
+            },
+            {
+              "a": "s1",
+              "b": "s3",
+              "w": 1
+            },
+            {
+              "a": "p3",
+              "b": "q1",
+              "w": 1
+            },
+            {
+              "a": "q3",
+              "b": "r1",
+              "w": 1
+            },
+            {
+              "a": "r3",
+              "b": "s1",
+              "w": 1
+            },
+            {
+              "a": "s3",
+              "b": "p1",
+              "w": 1
+            }
+          ]
+        },
+        "communityOf": {
+          "p1": 0,
+          "p2": 0,
+          "p3": 0,
+          "q1": 1,
+          "q2": 1,
+          "q3": 1,
+          "r1": 2,
+          "r2": 2,
+          "r3": 2,
+          "s1": 3,
+          "s2": 3,
+          "s3": 3
+        }
+      },
+      "expected": {
+        "p1": 0.4444444444444444,
+        "p2": 0,
+        "p3": 0.4444444444444444,
+        "q1": 0.4444444444444444,
+        "q2": 0,
+        "q3": 0.4444444444444444,
+        "r1": 0.4444444444444444,
+        "r2": 0,
+        "r3": 0.4444444444444444,
+        "s1": 0.4444444444444444,
+        "s2": 0,
+        "s3": 0.4444444444444444
+      }
+    },
+    {
+      "name": "isolated node: 0",
+      "fn": "participationCoefficient",
+      "input": {
+        "graph": {
+          "nodes": [
+            "z",
+            "a",
+            "b"
+          ],
+          "edges": [
+            {
+              "a": "b",
+              "b": "a",
+              "w": 0.5
+            }
+          ]
+        },
+        "communityOf": {
+          "a": 0,
+          "b": 0,
+          "z": 1
+        }
+      },
+      "expected": {
+        "a": 0,
+        "b": 0,
+        "z": 0
+      }
+    },
+    {
+      "name": "an even split over three communities: 2/3",
+      "fn": "participationCoefficient",
+      "input": {
+        "graph": {
+          "nodes": [
+            "h",
+            "x",
+            "y",
+            "z",
+            "q"
+          ],
+          "edges": [
+            {
+              "a": "h",
+              "b": "x",
+              "w": 0.3
+            },
+            {
+              "a": "h",
+              "b": "y",
+              "w": 0.3
+            },
+            {
+              "a": "h",
+              "b": "z",
+              "w": 0.3
+            }
+          ]
+        },
+        "communityOf": {
+          "h": 0,
+          "x": 1,
+          "y": 2,
+          "z": 3,
+          "q": 4
+        }
+      },
+      "expected": {
+        "h": 0.6666666666666666,
+        "q": 0,
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "name": "weighted square against a fixed split",
+      "fn": "participationCoefficient",
+      "input": {
+        "graph": {
+          "nodes": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "edges": [
+            {
+              "a": "a",
+              "b": "b",
+              "w": 0.1
+            },
+            {
+              "a": "b",
+              "b": "c",
+              "w": 1
+            },
+            {
+              "a": "c",
+              "b": "d",
+              "w": 0.1
+            },
+            {
+              "a": "d",
+              "b": "a",
+              "w": 1
+            }
+          ]
+        },
+        "communityOf": {
+          "a": 0,
+          "b": 0,
+          "c": 1,
+          "d": 1
+        }
+      },
+      "expected": {
+        "a": 0.16528925619834722,
+        "b": 0.16528925619834722,
+        "c": 0.16528925619834722,
+        "d": 0.16528925619834722
+      }
+    },
+    {
+      "name": "two cliques: all tie at 3, smallest id wins",
+      "fn": "communityHubs",
+      "input": {
+        "graph": {
+          "nodes": [
+            "b1",
+            "b2",
+            "b3",
+            "b4",
+            "a1",
+            "a2",
+            "a3",
+            "a4"
+          ],
+          "edges": [
+            {
+              "a": "a1",
+              "b": "a2",
+              "w": 1
+            },
+            {
+              "a": "a1",
+              "b": "a3",
+              "w": 1
+            },
+            {
+              "a": "a1",
+              "b": "a4",
+              "w": 1
+            },
+            {
+              "a": "a2",
+              "b": "a3",
+              "w": 1
+            },
+            {
+              "a": "a2",
+              "b": "a4",
+              "w": 1
+            },
+            {
+              "a": "a3",
+              "b": "a4",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "b2",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "b3",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "b4",
+              "w": 1
+            },
+            {
+              "a": "b2",
+              "b": "b3",
+              "w": 1
+            },
+            {
+              "a": "b2",
+              "b": "b4",
+              "w": 1
+            },
+            {
+              "a": "b3",
+              "b": "b4",
+              "w": 1
+            },
+            {
+              "a": "b1",
+              "b": "a4",
+              "w": 0.1
+            }
+          ]
+        },
+        "communityOf": {
+          "a1": 0,
+          "a2": 0,
+          "a3": 0,
+          "a4": 0,
+          "b1": 1,
+          "b2": 1,
+          "b3": 1,
+          "b4": 1
+        }
+      },
+      "expected": {
+        "0": "a1",
+        "1": "b1"
+      }
+    },
+    {
+      "name": "star: the hub z beats the smaller leaf ids",
+      "fn": "communityHubs",
+      "input": {
+        "graph": {
+          "nodes": [
+            "z",
+            "l1",
+            "l2",
+            "l3",
+            "l4"
+          ],
+          "edges": [
+            {
+              "a": "z",
+              "b": "l1",
+              "w": 1
+            },
+            {
+              "a": "z",
+              "b": "l2",
+              "w": 1
+            },
+            {
+              "a": "z",
+              "b": "l3",
+              "w": 1
+            },
+            {
+              "a": "z",
+              "b": "l4",
+              "w": 1
+            }
+          ]
+        },
+        "communityOf": {
+          "z": 0,
+          "l1": 0,
+          "l2": 0,
+          "l3": 0,
+          "l4": 0
+        }
+      },
+      "expected": {
+        "0": "z"
+      }
+    },
+    {
+      "name": "the heavy cross edge b-d does not count",
+      "fn": "communityHubs",
+      "input": {
+        "graph": {
+          "nodes": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "edges": [
+            {
+              "a": "a",
+              "b": "b",
+              "w": 0.5
+            },
+            {
+              "a": "a",
+              "b": "c",
+              "w": 0.2
+            },
+            {
+              "a": "b",
+              "b": "c",
+              "w": 0.6
+            },
+            {
+              "a": "b",
+              "b": "d",
+              "w": 0.9
+            }
+          ]
+        },
+        "communityOf": {
+          "a": 0,
+          "b": 0,
+          "c": 0,
+          "d": 1
+        }
+      },
+      "expected": {
+        "0": "b",
+        "1": "d"
+      }
+    },
+    {
+      "name": "other split",
+      "fn": "communityHubs",
+      "input": {
+        "graph": {
+          "nodes": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "edges": [
+            {
+              "a": "a",
+              "b": "b",
+              "w": 0.5
+            },
+            {
+              "a": "a",
+              "b": "c",
+              "w": 0.2
+            },
+            {
+              "a": "b",
+              "b": "c",
+              "w": 0.6
+            },
+            {
+              "a": "b",
+              "b": "d",
+              "w": 0.9
+            }
+          ]
+        },
+        "communityOf": {
+          "a": 0,
+          "b": 0,
+          "c": 1,
+          "d": 1
+        }
+      },
+      "expected": {
+        "0": "a",
+        "1": "c"
+      }
+    },
+    {
+      "name": "singletons are their own hubs, keyed by label",
+      "fn": "communityHubs",
+      "input": {
+        "graph": {
+          "nodes": [
+            "z",
+            "a",
+            "b"
+          ],
+          "edges": [
+            {
+              "a": "b",
+              "b": "a",
+              "w": 0.5
+            }
+          ]
+        },
+        "communityOf": {
+          "a": 3,
+          "b": 3,
+          "z": 9
+        }
+      },
+      "expected": {
+        "3": "a",
+        "9": "z"
+      }
+    },
+    {
+      "name": "tie broken by code point, not UTF-16 unit: U+FF23 before U+1F600",
+      "fn": "communityHubs",
+      "input": {
+        "graph": {
+          "nodes": [
+            "😀",
+            "Ｃ",
+            "a"
+          ],
+          "edges": [
+            {
+              "a": "a",
+              "b": "😀",
+              "w": 0.6
+            },
+            {
+              "a": "a",
+              "b": "Ｃ",
+              "w": 0.6
+            }
+          ]
+        },
+        "communityOf": {
+          "a": 0,
+          "😀": 1,
+          "Ｃ": 1
+        }
+      },
+      "expected": {
+        "0": "a",
+        "1": "Ｃ"
+      }
+    }
+  ]
+}

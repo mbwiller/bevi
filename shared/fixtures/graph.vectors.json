@@ -1,7 +1,7 @@
 {
-  "version": "1.6.0",
+  "version": "1.7.0",
   "constants": {
-    "version": "1.6.0",
+    "version": "1.7.0",
     "bands": {
       "DISLIKED": [
         0,
@@ -100,6 +100,11 @@
     "tasteSimFloor": 0.1,
     "tasteNeighbourK": 25,
     "neighbourReliabilityN": 15,
+    "pagerankDamping": 0.85,
+    "pagerankTolerance": 1e-10,
+    "pagerankMaxIterations": 200,
+    "louvainResolution": 1,
+    "louvainTieEpsilon": 1e-12,
     "storedScoreRule": "cents = floor((2N + D) / (2D)) with D = n + 1, N = 100*(hi*D - (hi - lo)*(index + 1)); capped at hi*100 - 1 for FINE and DISLIKED; storedScore = cents / 100",
     "stddev": "population (stddev_pop)",
     "nameOrder": "Unicode code point, not UTF-16 code unit (SQL collate \"C\" on UTF-8), then bevId the same way",
@@ -123,7 +128,13 @@
     "layer1EdgesRule": "bevSimilarity 'edges': sim(b, b') = w of the snapshot.edges row for the unordered pair {b, b'} (either orientation), 0 when there is none; pairs with sim < simMin dropped as in 'content'; content = sum(sim * z) / (sum(sim) + 1); conf1 mass = n_{u,cat(b)} + sum(sim); affinity and g unchanged. A snapshot without an edges field (absent or null) uses contentSimilarity ('content'); an empty array means no edges",
     "layer2StoredRule": "userSimilarity 'stored' (Stage 4), for the user u: N(u) = snapshot.userNeighbours[u] (u's user_neighbors rows, any order); sim'(u, v) = sim * min(1, n_v / neighbourReliabilityN) for v in N(u), with sim as stored and n_v = users[v].stats.n (derived from v's rankings when v is missing from users; 0 when v is unknown to the snapshot, so the row weighs 0); sim'(u, v) = 0 for every v not in N(u), whatever their co-ratings. Then Layer 2 exactly as in 'cosine' mode: the raters of b other than u with sim' > 0 (so a negative stored sim is dropped), sim' desc then userId asc, at most cfK; support = sum(sim'); z2 = sum(sim' * z_{v,b}) / support, 0 without neighbours. common is carried and read by no formula. Falls back to 'cosine' (the in-snapshot sim' of section 8.9) when the snapshot has no userNeighbours field (absent or null) or u has no rows (key missing or empty list). source = the similarity actually used. predictScore: lambda and confidence read this support",
     "placementTiersRule": "tier of a bucket Bev l relative to the new Bev b (placementTier constants): sameLeaf (1) when categoryId (the root) is equal and both leafCategoryId are non-null and equal; sameRoot (2) when categoryId is equal otherwise (a null leaf on either side, i.e. kind unknown, never reaches tier 1); edge (3) when the roots differ and weights[l.id] (the bev_edges w of {b, l}) is >= edgeMinWeight; null otherwise (no weight, or a weight below the floor). Without weights only tiers 1 and 2 occur",
-    "anchoredPlacementRule": "startPlacement with tiers (one per orderedBevIds entry, filtered with the Bev itself): anchors A = the entries other than bevId whose tier equals the smallest non-null tier among the entries other than bevId (on a re-rank the Bev is still in the list and its tier against itself is ignored), in list order, at positions p_1 < ... < p_k of the filtered list; no anchors = the plain search. Phase 1 = binary search over anchor slots [aLo, aHi] = [0, k]: ask a_j with j = floor((aLo + aHi) / 2) (0-based), NEW_BETTER aHi = j, EXISTING_BETTER aLo = j + 1, TIE ends the placement at p_j + 1; after each answer the insertion range is lo = (aLo = 0 ? 0 : p_{aLo - 1} + 1), hi = (aHi = k ? n : p_{aHi}). Phase 2 = the plain search on [lo, hi] once aLo = aHi (none when lo = hi). insertIndex = lo; comparisons in the order asked; maxSteps = maxComparisons(k) + maxComparisons(widest gap between consecutive anchors, or before the first / after the last), constant. Undo restores lo, hi, aLo, aHi"
+    "anchoredPlacementRule": "startPlacement with tiers (one per orderedBevIds entry, filtered with the Bev itself): anchors A = the entries other than bevId whose tier equals the smallest non-null tier among the entries other than bevId (on a re-rank the Bev is still in the list and its tier against itself is ignored), in list order, at positions p_1 < ... < p_k of the filtered list; no anchors = the plain search. Phase 1 = binary search over anchor slots [aLo, aHi] = [0, k]: ask a_j with j = floor((aLo + aHi) / 2) (0-based), NEW_BETTER aHi = j, EXISTING_BETTER aLo = j + 1, TIE ends the placement at p_j + 1; after each answer the insertion range is lo = (aLo = 0 ? 0 : p_{aLo - 1} + 1), hi = (aHi = k ? n : p_{aHi}). Phase 2 = the plain search on [lo, hi] once aLo = aHi (none when lo = hi). insertIndex = lo; comparisons in the order asked; maxSteps = maxComparisons(k) + maxComparisons(widest gap between consecutive anchors, or before the first / after the last), constant. Undo restores lo, hi, aLo, aHi",
+    "networkGraphRule": "undirected weighted graph { nodes, edges: [{ a, b, w }] }; throws on a duplicate or empty node id, an endpoint not in nodes, a self-loop, a duplicate unordered pair (either orientation), a non-finite w or w <= 0. Nodes are processed in code-point order (SQL collate \"C\"), each node's neighbours in that order, so results do not depend on the order of nodes or edges or on edge orientation. strength s_i = sum of w over the neighbours in order; m = (sum of s_i in node order) / 2",
+    "pageRankRule": "start p_j = 1/n; each iteration, for j in node order: acc = sum over neighbours i of j in order of (p_i * w_ij) / s_i; D = sum of p_i over isolated nodes (s_i = 0) in node order; p'_j = (1 - d)/n + d * (acc + D/n); stop when sum_j |p'_j - p_j| (node order) < tolerance or after maxIterations iterations; return p' / sum(p') (node order). Defaults d = pagerankDamping, tolerance = pagerankTolerance, maxIterations = pagerankMaxIterations; at the fixed point a lone isolated node holds (1 - d)/(n - d)",
+    "modularityRule": "Q = sum over community labels ascending of (W_c / m - gamma * (S_c / (2m))^2); W_c = weight of edges with both ends in c (each edge once, from its smaller endpoint, node order), S_c = sum of members' s_i in node order; m = 0 gives 0; labels are any integers, every node needs one, extra keys ignored; gamma defaults to louvainResolution",
+    "louvainRule": "level 0: every node its own community; visit nodes in code-point order in passes until a full pass moves nothing. Visiting i: remove it from its community; gain(C) = k_{i,C}/m - gamma * S_C * k_i / (2m^2) (k_{i,C} = i's weight into C over its neighbours in order, S_C = C's strength without i, k_i = i's strength incl. twice its internal weight); candidates in order: its own (possibly emptied) community first, then each neighbouring community by ascending representative (the community's smallest member id, code point); a candidate replaces the best only if its gain exceeds the best by more than louvainTieEpsilon, so a tie keeps i where it is. Then each community becomes a super-node (its internal weight kept as a self-loop, counted in k but not in k_{i,C}; its id for ordering is its representative) and the next level runs; stop at the first level that moves nothing. Output: communities = member lists in code-point order, sorted by size desc then first member asc; communityOf[id] = index in communities; modularity = modularity(graph, communityOf, gamma). No edges: all singletons, modularity 0",
+    "participationRule": "P_i = 1 - sum over labels ascending of (s_{i,c} / s_i)^2, s_{i,c} = i's weight into community c (its own included) over its neighbours in order, the order s_i is summed in (so a node whose neighbours all share its community is exactly 0); isolated node 0; clamped at 0 below; in [0, 1)",
+    "communityHubRule": "hub of a community = the member with the greatest within-community strength (weight to the other members, over its neighbours in order), compared as exact doubles, ties to the smallest id (code point); a singleton is its own hub; keyed by community label. The hub identifies the community: the graph sync derives the community's opaque public id from it (hashed, so an age-gated hub's Bev id never reaches a client)"
   },
   "cases": [
     {
@@ -3243,7 +3254,7 @@
       "fn": "layer2",
       "input": {
         "snapshot": {
-          "version": "1.6.0",
+          "version": "1.7.0",
           "generatedAt": "2026-10-31T00:00:00Z",
           "global": {
             "mean": 5.863636363636363,
@@ -3613,7 +3624,7 @@
       "fn": "layer2",
       "input": {
         "snapshot": {
-          "version": "1.6.0",
+          "version": "1.7.0",
           "generatedAt": "2026-10-31T00:00:00Z",
           "global": {
             "mean": 5.863636363636363,
@@ -3982,7 +3993,7 @@
       "fn": "layer2",
       "input": {
         "snapshot": {
-          "version": "1.6.0",
+          "version": "1.7.0",
           "generatedAt": "2026-10-31T00:00:00Z",
           "global": {
             "mean": 5.863636363636363,
@@ -4334,7 +4345,7 @@
       "fn": "layer2",
       "input": {
         "snapshot": {
-          "version": "1.6.0",
+          "version": "1.7.0",
           "generatedAt": "2026-10-31T00:00:00Z",
           "global": {
             "mean": 5.863636363636363,
@@ -4691,7 +4702,7 @@
       "fn": "layer2",
       "input": {
         "snapshot": {
-          "version": "1.6.0",
+          "version": "1.7.0",
           "generatedAt": "2026-10-31T00:00:00Z",
           "global": {
             "mean": 5.863636363636363,
@@ -5036,7 +5047,7 @@
       "fn": "layer2",
       "input": {
         "snapshot": {
-          "version": "1.6.0",
+          "version": "1.7.0",
           "generatedAt": "2026-10-31T00:00:00Z",
           "global": {
             "mean": 5.863636363636363,
@@ -5382,7 +5393,7 @@
       "fn": "layer2",
       "input": {
         "snapshot": {
-          "version": "1.6.0",
+          "version": "1.7.0",
           "generatedAt": "2026-10-31T00:00:00Z",
           "global": {
             "mean": 5.863636363636363,
@@ -5742,7 +5753,7 @@
       "fn": "layer2",
       "input": {
         "snapshot": {
-          "version": "1.6.0",
+          "version": "1.7.0",
           "generatedAt": "2026-10-31T00:00:00Z",
           "global": {
             "mean": 5.863636363636363,
@@ -6101,7 +6112,7 @@
       "fn": "layer2",
       "input": {
         "snapshot": {
-          "version": "1.6.0",
+          "version": "1.7.0",
           "generatedAt": "2026-10-31T00:00:00Z",
           "global": {
             "mean": 5.863636363636363,
@@ -6472,7 +6483,7 @@
       "fn": "layer2",
       "input": {
         "snapshot": {
-          "version": "1.6.0",
+          "version": "1.7.0",
           "generatedAt": "2026-10-31T00:00:00Z",
           "global": {
             "mean": 5.863636363636363,
@@ -6829,7 +6840,7 @@
       "fn": "predictScore",
       "input": {
         "snapshot": {
-          "version": "1.6.0",
+          "version": "1.7.0",
           "generatedAt": "2026-10-31T00:00:00Z",
           "global": {
             "mean": 5.863636363636363,
@@ -7215,7 +7226,7 @@
       "fn": "predictScore",
       "input": {
         "snapshot": {
-          "version": "1.6.0",
+          "version": "1.7.0",
           "generatedAt": "2026-10-31T00:00:00Z",
           "global": {
             "mean": 5.863636363636363,

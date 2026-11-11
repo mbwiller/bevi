@@ -17,6 +17,7 @@ import {
   BAYES_C,
   categoryAffinity,
   categoryPrior,
+  communityHubs,
   computeStreak,
   contentSimilarity,
   createPrng,
@@ -27,6 +28,7 @@ import {
   effectiveUserStats,
   edgeWeight,
   embeddingSimilarity,
+  graphStrength,
   effectiveBevSimilarity,
   effectiveUserSimilarity,
   isDone,
@@ -35,7 +37,11 @@ import {
   leaderboardOrder,
   localDayKey,
   localPeriodKey,
+  louvainCommunities,
+  modularity,
   neighbourReliability,
+  pageRank,
+  participationCoefficient,
   pearsonCorrelation,
   pearsonSimilarity,
   placementPhase,
@@ -73,6 +79,8 @@ import {
   type EdgeComponents,
   type FlavorProfile,
   type LeaderboardInputRow,
+  type LouvainOptions,
+  type PageRankOptions,
   type PredictionSnapshot,
   type PlacementBevKind,
   type PlacementListBev,
@@ -87,6 +95,7 @@ import {
   type TasteVector,
   type Taxonomy,
   type UserNeighbour,
+  type WeightedGraph,
 } from '../src/index.ts';
 
 const OUT_DIR = fileURLToPath(new URL('../../../shared/fixtures/', import.meta.url));
@@ -139,6 +148,18 @@ const constants = {
     'tier of a bucket Bev l relative to the new Bev b (placementTier constants): sameLeaf (1) when categoryId (the root) is equal and both leafCategoryId are non-null and equal; sameRoot (2) when categoryId is equal otherwise (a null leaf on either side, i.e. kind unknown, never reaches tier 1); edge (3) when the roots differ and weights[l.id] (the bev_edges w of {b, l}) is >= edgeMinWeight; null otherwise (no weight, or a weight below the floor). Without weights only tiers 1 and 2 occur',
   anchoredPlacementRule:
     'startPlacement with tiers (one per orderedBevIds entry, filtered with the Bev itself): anchors A = the entries other than bevId whose tier equals the smallest non-null tier among the entries other than bevId (on a re-rank the Bev is still in the list and its tier against itself is ignored), in list order, at positions p_1 < ... < p_k of the filtered list; no anchors = the plain search. Phase 1 = binary search over anchor slots [aLo, aHi] = [0, k]: ask a_j with j = floor((aLo + aHi) / 2) (0-based), NEW_BETTER aHi = j, EXISTING_BETTER aLo = j + 1, TIE ends the placement at p_j + 1; after each answer the insertion range is lo = (aLo = 0 ? 0 : p_{aLo - 1} + 1), hi = (aHi = k ? n : p_{aHi}). Phase 2 = the plain search on [lo, hi] once aLo = aHi (none when lo = hi). insertIndex = lo; comparisons in the order asked; maxSteps = maxComparisons(k) + maxComparisons(widest gap between consecutive anchors, or before the first / after the last), constant. Undo restores lo, hi, aLo, aHi',
+  networkGraphRule:
+    'undirected weighted graph { nodes, edges: [{ a, b, w }] }; throws on a duplicate or empty node id, an endpoint not in nodes, a self-loop, a duplicate unordered pair (either orientation), a non-finite w or w <= 0. Nodes are processed in code-point order (SQL collate "C"), each node\'s neighbours in that order, so results do not depend on the order of nodes or edges or on edge orientation. strength s_i = sum of w over the neighbours in order; m = (sum of s_i in node order) / 2',
+  pageRankRule:
+    'start p_j = 1/n; each iteration, for j in node order: acc = sum over neighbours i of j in order of (p_i * w_ij) / s_i; D = sum of p_i over isolated nodes (s_i = 0) in node order; p\'_j = (1 - d)/n + d * (acc + D/n); stop when sum_j |p\'_j - p_j| (node order) < tolerance or after maxIterations iterations; return p\' / sum(p\') (node order). Defaults d = pagerankDamping, tolerance = pagerankTolerance, maxIterations = pagerankMaxIterations; at the fixed point a lone isolated node holds (1 - d)/(n - d)',
+  modularityRule:
+    'Q = sum over community labels ascending of (W_c / m - gamma * (S_c / (2m))^2); W_c = weight of edges with both ends in c (each edge once, from its smaller endpoint, node order), S_c = sum of members\' s_i in node order; m = 0 gives 0; labels are any integers, every node needs one, extra keys ignored; gamma defaults to louvainResolution',
+  louvainRule:
+    'level 0: every node its own community; visit nodes in code-point order in passes until a full pass moves nothing. Visiting i: remove it from its community; gain(C) = k_{i,C}/m - gamma * S_C * k_i / (2m^2) (k_{i,C} = i\'s weight into C over its neighbours in order, S_C = C\'s strength without i, k_i = i\'s strength incl. twice its internal weight); candidates in order: its own (possibly emptied) community first, then each neighbouring community by ascending representative (the community\'s smallest member id, code point); a candidate replaces the best only if its gain exceeds the best by more than louvainTieEpsilon, so a tie keeps i where it is. Then each community becomes a super-node (its internal weight kept as a self-loop, counted in k but not in k_{i,C}; its id for ordering is its representative) and the next level runs; stop at the first level that moves nothing. Output: communities = member lists in code-point order, sorted by size desc then first member asc; communityOf[id] = index in communities; modularity = modularity(graph, communityOf, gamma). No edges: all singletons, modularity 0',
+  participationRule:
+    'P_i = 1 - sum over labels ascending of (s_{i,c} / s_i)^2, s_{i,c} = i\'s weight into community c (its own included) over its neighbours in order, the order s_i is summed in (so a node whose neighbours all share its community is exactly 0); isolated node 0; clamped at 0 below; in [0, 1)',
+  communityHubRule:
+    'hub of a community = the member with the greatest within-community strength (weight to the other members, over its neighbours in order), compared as exact doubles, ties to the smallest id (code point); a singleton is its own hub; keyed by community label. The hub identifies the community: the graph sync derives the community\'s opaque public id from it (hashed, so an age-gated hub\'s Bev id never reaches a client)',
 };
 
 /** A plausible stored score: some position in some bucket. */
@@ -1034,6 +1055,113 @@ function layer2StoredSnapshot(): PredictionSnapshot {
   return { version: RANKING_VERSION, generatedAt: '2026-10-31T00:00:00Z', global: { mean: g.mean, stddev: g.stddev, byCategoryMean }, bevs, users, rankings };
 }
 
+// ---------------------------------------------------------------- graph signals (network.ts, 1.7.0)
+// No PRNG: hand-built graphs (the table test's), so adding this file leaves every earlier file's
+// cases unchanged. Rules: networkGraphRule, pageRankRule, modularityRule, louvainRule,
+// participationRule, communityHubRule in the header.
+
+function networkCases(): Case[] {
+  const cases: Case[] = [];
+  const E = (a: string, b: string, w = 1) => ({ a, b, w });
+  const clique = (p: string) => {
+    const nodes = [1, 2, 3, 4].map((i) => `${p}${i}`);
+    const edges = [];
+    for (let i = 0; i < 4; i++) for (let j = i + 1; j < 4; j++) edges.push(E(nodes[i] as string, nodes[j] as string));
+    return { nodes, edges };
+  };
+  const A = clique('a');
+  const B = clique('b');
+  const ringNodes: string[] = [];
+  const ringEdges: Array<{ a: string; b: string; w: number }> = [];
+  for (const t of ['p', 'q', 'r', 's']) {
+    ringNodes.push(`${t}1`, `${t}2`, `${t}3`);
+    ringEdges.push(E(`${t}1`, `${t}2`), E(`${t}2`, `${t}3`), E(`${t}1`, `${t}3`));
+  }
+  ringEdges.push(E('p3', 'q1'), E('q3', 'r1'), E('r3', 's1'), E('s3', 'p1'));
+  const g: Record<string, WeightedGraph> = {
+    empty: { nodes: [], edges: [] },
+    noEdges: { nodes: ['y', 'x'], edges: [] },
+    single: { nodes: ['a', 'b'], edges: [E('a', 'b', 0.7)] },
+    path: { nodes: ['a', 'b', 'c'], edges: [E('a', 'b'), E('b', 'c')] },
+    weightedPath: { nodes: ['a', 'b', 'c'], edges: [E('a', 'b', 1), E('c', 'b', 0.1)] },
+    star: { nodes: ['z', 'l1', 'l2', 'l3', 'l4'], edges: ['l1', 'l2', 'l3', 'l4'].map((l) => E('z', l)) },
+    triangle: { nodes: ['a', 'b', 'c'], edges: [E('a', 'b', 0.4), E('b', 'c', 0.4), E('c', 'a', 0.4)] },
+    isolated: { nodes: ['z', 'a', 'b'], edges: [E('b', 'a', 0.5)] },
+    twoCliques: { nodes: [...B.nodes, ...A.nodes], edges: [...A.edges, ...B.edges, E('b1', 'a4', 0.1)] },
+    ring: { nodes: ringNodes, edges: ringEdges },
+    square: { nodes: ['a', 'b', 'c', 'd'], edges: [E('a', 'b'), E('b', 'c'), E('c', 'd'), E('d', 'a')] },
+    weightedSquare: { nodes: ['a', 'b', 'c', 'd'], edges: [E('a', 'b', 0.1), E('b', 'c'), E('c', 'd', 0.1), E('d', 'a')] },
+    hubs: { nodes: ['a', 'b', 'c', 'd'], edges: [E('a', 'b', 0.5), E('a', 'c', 0.2), E('b', 'c', 0.6), E('b', 'd', 0.9)] },
+    // Code-point order differs from UTF-16 order: U+1F600 (surrogates 0xD83D 0xDE00) sorts after U+FF23.
+    astral: { nodes: ['\u{1F600}', 'Ｃ', 'a'], edges: [E('a', '\u{1F600}', 0.6), E('a', 'Ｃ', 0.6)] },
+  };
+  const graph = (k: string) => g[k] as WeightedGraph;
+
+  for (const k of ['twoCliques', 'isolated', 'star', 'weightedPath', 'empty']) {
+    cases.push({ name: k, fn: 'graphStrength', input: { graph: graph(k) }, expected: graphStrength(graph(k)) });
+  }
+
+  const pr = (name: string, k: string, opts?: PageRankOptions) =>
+    cases.push({ name, fn: 'pageRank', input: opts ? { graph: graph(k), opts } : { graph: graph(k) }, expected: pageRank(graph(k), opts) });
+  pr('single edge: 0.5 / 0.5', 'single');
+  pr('3-node path: ends 19/74, centre 18/37 (bipartite; the tolerance still ends it before the cap)', 'path');
+  pr('star: hub 88/185', 'star');
+  pr('triangle: uniform', 'triangle');
+  pr('isolated node: (1 - d)/(n - d) = 3/43', 'isolated');
+  pr('two cliques: the bridge endpoints rank highest', 'twoCliques');
+  pr('weighted path: the heavy end outranks the light end', 'weightedPath');
+  pr('options: damping 0.5, tolerance 1e-6, maxIterations 3', 'ring', { damping: 0.5, tolerance: 1e-6, maxIterations: 3 });
+
+  const mod = (name: string, k: string, communityOf: Record<string, number>, resolution?: number) =>
+    cases.push({
+      name,
+      fn: 'modularity',
+      input: resolution === undefined ? { graph: graph(k), communityOf } : { graph: graph(k), communityOf, resolution },
+      expected: modularity(graph(k), communityOf, resolution),
+    });
+  const cliques = { a1: 0, a2: 0, a3: 0, a4: 0, b1: 1, b2: 1, b3: 1, b4: 1 };
+  mod('two cliques split in two: 12/12.1 - 1/2', 'twoCliques', cliques);
+  mod('two cliques, resolution 2', 'twoCliques', cliques, 2);
+  mod('path as one community: 0', 'path', { a: 0, b: 0, c: 0 });
+  mod('path as singletons, any integer labels: -6/16', 'path', { a: -3, b: 7, c: 40 });
+  mod('weighted square paired along the light edges', 'weightedSquare', { a: 0, b: 0, c: 1, d: 1 });
+  mod('no edges: 0', 'noEdges', { x: 0, y: 1 });
+
+  const louvain = (name: string, k: string, opts?: LouvainOptions) =>
+    cases.push({ name, fn: 'louvainCommunities', input: opts ? { graph: graph(k), opts } : { graph: graph(k) }, expected: louvainCommunities(graph(k), opts) });
+  louvain('two cliques joined by a weak edge: the two cliques', 'twoCliques');
+  louvain('ring of four triangles: four communities, Q = 0.5', 'ring');
+  louvain('unweighted square: a joins b first; the tie with one community keeps the pairs', 'square');
+  louvain('weighted square: pairs along the heavy edges', 'weightedSquare');
+  louvain('star: one community', 'star');
+  louvain('isolated node: a singleton after the pair', 'isolated');
+  louvain('no edges: singletons, modularity 0', 'noEdges');
+  louvain('two cliques, resolution 3', 'twoCliques', { resolution: 3 });
+
+  const part = (name: string, k: string) => {
+    const { communityOf } = louvainCommunities(graph(k));
+    cases.push({ name, fn: 'participationCoefficient', input: { graph: graph(k), communityOf }, expected: participationCoefficient(graph(k), communityOf) });
+  };
+  part('two cliques: only the bridge endpoints are non-zero', 'twoCliques');
+  part('ring of triangles: connectors 4/9, middles 0', 'ring');
+  part('isolated node: 0', 'isolated');
+  const hubSplit = { h: 0, x: 1, y: 2, z: 3, q: 4 };
+  const evenSplit: WeightedGraph = { nodes: ['h', 'x', 'y', 'z', 'q'], edges: [E('h', 'x', 0.3), E('h', 'y', 0.3), E('h', 'z', 0.3)] };
+  cases.push({ name: 'an even split over three communities: 2/3', fn: 'participationCoefficient', input: { graph: evenSplit, communityOf: hubSplit }, expected: participationCoefficient(evenSplit, hubSplit) });
+  const sqLabels = { a: 0, b: 0, c: 1, d: 1 };
+  cases.push({ name: 'weighted square against a fixed split', fn: 'participationCoefficient', input: { graph: graph('weightedSquare'), communityOf: sqLabels }, expected: participationCoefficient(graph('weightedSquare'), sqLabels) });
+
+  const hubs = (name: string, k: string, communityOf: Record<string, number>) =>
+    cases.push({ name, fn: 'communityHubs', input: { graph: graph(k), communityOf }, expected: communityHubs(graph(k), communityOf) });
+  hubs('two cliques: all tie at 3, smallest id wins', 'twoCliques', cliques);
+  hubs('star: the hub z beats the smaller leaf ids', 'star', { z: 0, l1: 0, l2: 0, l3: 0, l4: 0 });
+  hubs('the heavy cross edge b-d does not count', 'hubs', { a: 0, b: 0, c: 0, d: 1 });
+  hubs('other split', 'hubs', { a: 0, b: 0, c: 1, d: 1 });
+  hubs('singletons are their own hubs, keyed by label', 'isolated', { a: 3, b: 3, z: 9 });
+  hubs('tie broken by code point, not UTF-16 unit: U+FF23 before U+1F600', 'astral', { a: 0, '\u{1F600}': 1, 'Ｃ': 1 });
+  return cases;
+}
+
 // ---------------------------------------------------------------- write / check
 
 const files: Record<string, Case[]> = {
@@ -1046,6 +1174,7 @@ const files: Record<string, Case[]> = {
   'rank-points.vectors.json': rankPointsCases(),
   'edges.vectors.json': edgeCases(),
   'graph.vectors.json': graphCases(),
+  'network.vectors.json': networkCases(),
 };
 
 const check = process.argv.includes('--check');

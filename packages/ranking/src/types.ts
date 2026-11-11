@@ -214,6 +214,23 @@ export interface PredictionSnapshot {
    * only in stored mode, and validated then (see `neighbourLookup` in context.ts).
    */
   userNeighbours?: Record<UserId, UserNeighbour[]> | null;
+  /**
+   * Each Bev's place in the similarity graph (`bev_graph_stats`, network.ts, LaTeX §10.9), as the
+   * nightly graph sync computed it. Absent (undefined or null) means "not provided". Nothing in
+   * 1.7.0 reads it; `rank/graph-recs` will, behind an option, for community-aware diversity and
+   * exploration in `recommend()`.
+   */
+  bevGraph?: Record<BevId, BevGraphStats> | null;
+}
+
+/** One Bev's place in the similarity graph, from the nightly graph sync (bev_graph_stats). */
+export interface BevGraphStats {
+  /** The community's opaque, stable id. The sync derives it from the community's hub (communityHubs), hashed so that an age-gated hub's Bev id never reaches a client. Compare for equality only. */
+  community: string;
+  /** Weighted PageRank over SIMILAR_TO; sums to 1 over the graph the sync saw. */
+  pagerank: number;
+  /** Participation coefficient in [0, 1). */
+  bridge: number;
 }
 
 /**
