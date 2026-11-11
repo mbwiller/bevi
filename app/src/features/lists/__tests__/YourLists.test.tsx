@@ -1,8 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
+import { StyleSheet } from 'react-native';
 import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
 
 import { api } from '@/api/client';
+import { BEV_ROW_FOOT_OVERLAY_BOTTOM } from '@/components/BevRow';
 import { categoryById } from '@/lib/categories';
 import { controls } from '@/testing/fakeApi';
 import ListsScreen from '@/app/(tabs)/lists/index';
@@ -49,6 +51,19 @@ it("Bev'd lists the user's rankings numbered across buckets", async () => {
   expect(screen.getByLabelText(`More for ${first.bev.name}`)).toBeTruthy();
 });
 
+it("centres the Bev'd overflow button on the row's 32pt foot line, keeping its 44pt target", async () => {
+  const first = (await api.rankings.listMine()).items[0]!;
+  await start();
+  const more = await screen.findByLabelText(`More for ${first.bev.name}`);
+  const style = StyleSheet.flatten(more.props.style);
+  expect(style.position).toBe('absolute');
+  expect(style.bottom).toBe(BEV_ROW_FOOT_OVERLAY_BOTTOM);
+  expect(style.minHeight).toBe(44);
+  // Foot line centre, from the bottom of the row: 4pt padding + 1pt divider + half of 32. The button's
+  // centre (its bottom + half of 44) must be the same point.
+  expect(style.bottom + 44 / 2).toBe(4 + 1 + 32 / 2);
+});
+
 it('switches tabs through ?tab=', async () => {
   const saved = (await api.wantToTry.list()).items[0]!;
   const recs = await api.recs.getRecommendations();
@@ -59,7 +74,7 @@ it('switches tabs through ?tab=', async () => {
   expect(r.searchParams()).toEqual({ tab: 'want' });
   expect(await screen.findByLabelText(saved.bev.name)).toBeTruthy();
 
-  await fireEvent.press(screen.getByLabelText('Recommended'));
+  await fireEvent.press(screen.getByLabelText('For you'));
   expect(r.searchParams()).toEqual({ tab: 'recommended' });
   expect(await screen.findByText(new RegExp(`^Based on ${recs.basedOnCount} Bevs you've ranked`))).toBeTruthy();
   // findAllByLabelText, not findBy: a row's label is the Bev's name, and catalog names are not
@@ -83,7 +98,7 @@ it('shows each tab’s empty state, and Recommended locked below 3 rankings', as
   expect(await screen.findByText('Add your first Bev')).toBeTruthy();
   await fireEvent.press(screen.getByLabelText('Want to Try'));
   expect(await screen.findByText('Nothing saved yet')).toBeTruthy();
-  await fireEvent.press(screen.getByLabelText('Recommended'));
+  await fireEvent.press(screen.getByLabelText('For you'));
   expect(await screen.findByText('Rank 3 Bevs to see recommendations')).toBeTruthy();
 });
 

@@ -4,7 +4,9 @@ import { ScoreBubble, Pill, FilterPill, IconButton, Skeleton } from './primitive
 import { SectionHeader, BevRow } from './rows.jsx';
 import { EmptyState, ErrorState } from './flow.jsx';
 
-// The Search tab's map (TASKS.md M-16, §1c): Beli's map chrome on a live Google map of New York City.
+// The venue map (TASKS.md M-16, §1c): Beli's map chrome on a live Google map of New York City.
+// Parked on 2026-11-11 with the navigation redesign: the map left the Search tab (now Add Bev) and no screen composes these.
+// They stay so the map can return. The Map tab's own art is FindBevArt (flow.jsx).
 // The map is the one place Bevi lets things float: callouts and controls sit on `elevation-floating`.
 
 const KIND_ICON = { chain: 'store', craft: 'coffee' };

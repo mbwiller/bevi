@@ -15,6 +15,10 @@ export interface Bev {
   /** Placeholder art when there is no photo yet. */
   art?: BevArtProps;
   photoStatus?: 'ready' | 'processing' | 'loading';
+  /** The Bev's Bayesian score on Bevi (the contract's `BevSummary.bayesScore`); a FeedPost prints it under the note. */
+  bayesScore?: number | null;
+  /** How many people have ranked it (`BevSummary.ratingCount`). */
+  ratingCount?: number;
 }
 export type CategoryId = 'soda' | 'diet_soda' | 'juice' | 'water' | 'sparkling_water' | 'energy' | 'coffee' | 'tea' | 'boba' | 'sports' | 'smoothie' | 'beer' | 'wine' | 'spirits_cocktails' | 'other';
 export type Bucket = 'loved' | 'fine' | 'disliked';
@@ -107,7 +111,7 @@ export declare function FilterPill(props: FilterPillProps): React.ReactElement;
 export interface SortToggleProps { label?: string; onClick: () => void; /** The search icon shows only when this is given. */ onSearch?: () => void; className?: string }
 export declare function SortToggle(props: SortToggleProps): React.ReactElement;
 
-export interface SearchBarProps { placeholder?: string; value?: string; onChange?: (v: string) => void; variant?: 'filled' | 'outlined'; autoFocus?: boolean; onClear?: () => void; /** The field took focus: the Search tab opens its results panel. */ onFocus?: () => void; id?: string; className?: string }
+export interface SearchBarProps { placeholder?: string; value?: string; onChange?: (v: string) => void; variant?: 'filled' | 'outlined'; autoFocus?: boolean; onClear?: () => void; /** The field took focus, where that changes the screen. */ onFocus?: () => void; id?: string; className?: string }
 export declare function SearchBar(props: SearchBarProps): React.ReactElement;
 
 export interface TextFieldProps { label?: string; value?: string; defaultValue?: string; placeholder?: string; prefix?: string; hint?: string; error?: string; type?: string; id?: string; onChange?: React.ChangeEventHandler<HTMLInputElement>; className?: string }
@@ -130,7 +134,9 @@ export interface Tab { id: string; label: string; icon?: string; chevron?: boole
 export interface SegmentedTabsProps { tabs: Tab[]; value?: string; onChange?: (id: string) => void; variant?: 'underline-text' | 'underline-icon'; accent?: 'text' | 'primary'; className?: string }
 export declare function SegmentedTabs(props: SegmentedTabsProps): React.ReactElement;
 
-export interface TabBarProps { active?: 'feed' | 'lists' | 'add' | 'leaderboard' | 'profile'; user?: Person; onChange?: (id: string) => void; safeArea?: boolean; className?: string }
+/** The five tabs, left to right: Feed, Lists, Add Bev (the raised `primary` circle), Map, Profile. */
+export type TabId = 'feed' | 'lists' | 'add' | 'map' | 'profile';
+export interface TabBarProps { active?: TabId; user?: Person; onChange?: (id: TabId) => void; safeArea?: boolean; className?: string }
 export declare function TabBar(props: TabBarProps): React.ReactElement;
 
 export interface BevRowProps {
@@ -146,12 +152,21 @@ export declare function BevRow(props: BevRowProps): React.ReactElement;
 
 export interface FeedPostProps {
   actor?: Person; you?: boolean; bev: Bev; score?: number; scoreVariant?: 'default' | 'predicted' | 'locked';
-  note?: string; time?: string; saved?: boolean; photos?: { src?: string; art?: BevArtProps }[];
+  note?: string;
+  /** "5 hours ago", "Wednesday": printed after the brand in the meta line under the sentence. */
+  time?: string;
+  saved?: boolean;
+  /** The ranker's own photos, as a scrolling strip with the note under it. Omit for the Bev's own picture beside the note; [] draws no picture. */
+  photos?: { src?: string; art?: BevArtProps }[];
+  /** People the viewer follows who ranked this Bev too (not the author, not the viewer): the first two show as Avatars 24 and bold first names. Empty or omitted: no line. */
+  alsoBevdBy?: Person[];
+  /** How many such people there are in all; past the two shown it reads "and 3 others". Defaults to `alsoBevdBy.length`. */
+  alsoBevdCount?: number;
   /** The viewer liked this post: the heart is filled `primary`. */
   liked?: boolean;
   /** Likes on the post, beside the heart; hidden at 0. */
   likeCount?: number;
-  /** Toggles the like from the heart. A double-tap outside the photo strip calls it only when not yet liked. Without it the post has no heart and no double-tap. */
+  /** Toggles the like from the heart. A double-tap outside the picture calls it only when not yet liked. Without it the post has no heart and no double-tap. */
   onLike?: () => void;
   /** Comments on the post (the contract's first seven, oldest first), shown inline as "**handle** text" while `commentCount` ≤ 7. */
   comments?: PostComment[];
@@ -161,7 +176,7 @@ export interface FeedPostProps {
   onComment?: () => void;
   /** The viewer follows the author: the Follow pill is outlined "Following". */
   following?: boolean;
-  /** Shows the author's Follow pill (UserRow's) at the start of the action group, where the heart sits on a feed post. Explore only. */
+  /** Shows the author's Follow pill (UserRow's) at the start of the action row, where the heart sits on a feed post. Explore only. */
   onFollow?: () => void;
   /** Without `onRank` / `onSave` the post has no Rank it / Want to Try action. */
   onRank?: () => void; onSave?: () => void; onOpen?: () => void; divider?: boolean; className?: string;
@@ -173,7 +188,8 @@ export declare function FeaturedCard(props: FeaturedCardProps): React.ReactEleme
 
 /** Bev of the day / Bev of the week on the Feed: half of a pair, a caps label, the Bev's square tile (it follows the card's width), its name and the score it won with. Not a post. */
 export interface BevOfCardProps {
-  period?: 'day' | 'week'; bev: Bev;
+  /** `both`: the same Bev won the day and the week, so the Feed shows this one card ("Bev of the day and week") at the width one of the pair has. */
+  period?: 'day' | 'week' | 'both'; bev: Bev;
   /** The Bayesian score it won with. */
   score?: number | null;
   /** Only when the winner is from an earlier period: "Oct 17" (day), "Week of Oct 12" (week). */
@@ -204,7 +220,12 @@ export declare function TasteProfile(props: TasteProfileProps): React.ReactEleme
 export interface StatCardProps { icon: string; label: string; value: React.ReactNode; onClick?: () => void; className?: string }
 export declare function StatCard(props: StatCardProps): React.ReactElement;
 
-export interface UserRowProps { user: Person; rank?: number; meta?: string; streak?: number; following?: boolean; self?: boolean; onFollow?: () => void; onClick?: () => void; divider?: boolean; className?: string }
+export interface UserRowProps {
+  user: Person; rank?: number; meta?: string; streak?: number;
+  /** A third line under the handle, with a 14pt `users` icon: "Followed by Sam and Arjun". The row is 72pt with it, 64pt without. */
+  context?: string;
+  following?: boolean; self?: boolean; onFollow?: () => void; onClick?: () => void; divider?: boolean; className?: string;
+}
 export declare function UserRow(props: UserRowProps): React.ReactElement;
 
 /** Gut-check choice: a `primary` ring filled to a level (loved full, fine half, disliked empty) over its label. */
@@ -245,6 +266,10 @@ export interface CategoryProgressRow { categoryId: CategoryId; ranked: number; t
 /** "Your collection" in a 90% Sheet: one row per category with a total, in catalog order, "9 of 40" and a bar; a row calls `onSelect` with its category. */
 export interface CollectionSheetProps { open?: boolean; rows?: CategoryProgressRow[]; onClose?: () => void; onSelect?: (categoryId: CategoryId) => void; className?: string }
 export declare function CollectionSheet(props: CollectionSheetProps): React.ReactElement | null;
+
+/** The Map tab's art: a round minimap, dark until walked, with a lit path from you to the nearest Bev. One picture, not a live map. */
+export interface FindBevArtProps { size?: number; title?: string; className?: string }
+export declare function FindBevArt(props: FindBevArtProps): React.ReactElement;
 
 /** A venue as the map components read it (the contract's `Venue`, the fields they show). */
 export interface MapVenue { name: string; kind: 'chain' | 'craft'; neighborhood?: string | null; borough?: string | null; address?: string | null; website?: string | null }
@@ -332,7 +357,7 @@ declare global {
       FeedPost: typeof FeedPost; FeaturedCard: typeof FeaturedCard; BevOfCard: typeof BevOfCard; ProfileListRow: typeof ProfileListRow; StatCard: typeof StatCard;
       UserRow: typeof UserRow; ProgressStrip: typeof ProgressStrip; ProgressBar: typeof ProgressBar; TasteBar: typeof TasteBar; TasteProfile: typeof TasteProfile; BucketButton: typeof BucketButton; CompareCard: typeof CompareCard; ProgressDots: typeof ProgressDots;
       EmptyState: typeof EmptyState; ErrorState: typeof ErrorState; Skeleton: typeof Skeleton; Sheet: typeof Sheet; CommentsSheet: typeof CommentsSheet; CollectionSheet: typeof CollectionSheet;
-      MapCallout: typeof MapCallout; MapFilterRow: typeof MapFilterRow; MapControls: typeof MapControls; VenueRow: typeof VenueRow; VenueSheet: typeof VenueSheet;
+      FindBevArt: typeof FindBevArt; MapCallout: typeof MapCallout; MapFilterRow: typeof MapFilterRow; MapControls: typeof MapControls; VenueRow: typeof VenueRow; VenueSheet: typeof VenueSheet;
       /** The 15 category slugs with labels and icon names. */
       categories: { id: CategoryId; label: string; icon: string; isAlcoholic?: boolean }[];
       scoreBand(score: number): 'high' | 'mid' | 'low';

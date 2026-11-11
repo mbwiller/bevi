@@ -9,11 +9,6 @@ export function memberSince(createdAt: string): string {
   return `Member since ${d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`;
 }
 
-/** The counts row's third column: "#12", or a dash before the first ranking. */
-export function rankShort(stats: ProfileStats): string {
-  return stats.rankOnBevi != null ? `#${stats.rankOnBevi}` : '–';
-}
-
 /** The "Rank on Bevi" card: "#12 · 42 pts", or "Unranked" until there is at least one ranking. */
 export function rankCardValue(stats: ProfileStats): string {
   if (stats.rankOnBevi == null || stats.bevdCount === 0) return 'Unranked';
