@@ -1,19 +1,23 @@
+import { MIN_RATERS } from '@bevi/ranking';
+import type { LeaderboardRow } from '@bevi/shared';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, configure, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { Keyboard } from 'react-native';
 
 import { api } from '@/api/client';
-import SearchTab from '@/app/(tabs)/add/index';
+import { keys } from '@/api/keys';
+import AddBevTab from '@/app/(tabs)/add/index';
 import { readRecents } from '@/features/add-bev/recents';
 import { controls } from '@/testing/fakeApi';
 
-import { useMapFilters } from '../mapFilters';
-import { ADD_NEW } from '../SearchPanel';
-import { SEARCH_PLACEHOLDER } from '../SearchScreen';
+import { POPULAR_COUNT } from '../popular';
+import { ADD_NEW, POPULAR_TITLE } from '../SearchPanel';
+import { SEARCH_PLACEHOLDER, SEARCH_TITLE } from '../SearchScreen';
 
 const mockPush = jest.fn();
 const mockSetParams = jest.fn();
-let mockParams: { tab?: string; focus?: string } = {};
-// The tab navigator as the route sees it: tests fire its tabPress listeners to press the Search tab.
+let mockParams: { focus?: string } = {};
+// The tab navigator as the route sees it: tests fire its tabPress listeners to press the Add Bev tab.
 const mockTab = { listeners: new Set<() => void>(), focused: true };
 const mockNavigation = {
   addListener: (_type: string, listener: () => void) => {
@@ -30,29 +34,6 @@ jest.mock('expo-router', () => ({
   useIsFocused: () => mockTab.focused,
 }));
 
-// Counts mounts of the map area and records whether it was passive: the live map (M-16) is created
-// once per session, so the map area must survive the panel opening and closing, and it must take
-// no gestures while the panel covers it.
-const mockMap = {
-  mounts: 0,
-  passive: [] as boolean[],
-  last: null as null | { filters?: unknown; active?: boolean; onFiltersChange?: (f: unknown) => void },
-};
-jest.mock('@/features/map/MapView', () => {
-  const React = require('react');
-  const { Text } = require('react-native');
-  return {
-    MapView: (props: { passive: boolean; filters?: unknown; active?: boolean; onFiltersChange?: (f: unknown) => void }) => {
-      React.useEffect(() => {
-        mockMap.mounts += 1;
-      }, []);
-      mockMap.passive.push(props.passive);
-      mockMap.last = props;
-      return React.createElement(Text, null, 'The map');
-    },
-  };
-});
-
 configure({ asyncUtilTimeout: 5000 });
 let client: QueryClient;
 
@@ -61,10 +42,6 @@ beforeEach(() => {
   controls.resetToFixtures();
   controls.signInAs('tester');
   mockParams = {};
-  mockMap.mounts = 0;
-  mockMap.passive = [];
-  mockMap.last = null;
-  useMapFilters.getState().reset();
   mockTab.focused = true;
   client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false, gcTime: Infinity } },
@@ -82,139 +59,269 @@ afterEach(async () => {
 const renderSearch = () =>
   render(
     <QueryClientProvider client={client}>
-      <SearchTab />
+      <AddBevTab />
     </QueryClientProvider>,
   );
 
 const bar = () => screen.getByLabelText(SEARCH_PLACEHOLDER);
 const type = async (q: string) => fireEvent.changeText(bar(), q);
-const headings = () => screen.getAllByRole('heading').map((h) => h.props.children as string);
+/** Section headings in the results list (level 2; the screen title is level 1). */
+const headings = () =>
+  screen
+    .getAllByRole('heading')
+    .filter((h) => h.props['aria-level'] === 2)
+    .map((h) => h.props.children as string);
+/** The Bev names the list offers to rank, in order. */
+const rankable = () => screen.queryAllByLabelText(/^Rank /).map((b) => (b.props.accessibilityLabel as string).replace(/^Rank /, ''));
 
-/** A localStorage holding one Recents entry for the test user; returns a restore function. */
-function withRecent(bev: { id: string; name: string; brand: string | null }) {
-  const store = new Map([[`bevi.add.recents:user-tester`, JSON.stringify([bev])]]);
+/** A localStorage for the test, optionally holding Recents for the test user; returns a restore function. */
+function withStorage(recents: { id: string; name: string; brand: string | null }[] = []) {
+  const store = new Map<string, string>(recents.length ? [[`bevi.add.recents:user-tester`, JSON.stringify(recents)]] : []);
   const g = globalThis as { localStorage?: unknown };
   const saved = g.localStorage;
   g.localStorage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) };
-  return () => {
-    g.localStorage = saved;
+  return {
+    store,
+    restore: () => {
+      g.localStorage = saved;
+    },
   };
 }
 
-describe('the map area and the panel', () => {
-  it('opens on the map; focusing the bar slides the panel over it and Cancel slides it away', async () => {
+/** Puts `row` at the top of the all-categories board the screen reads. */
+function withTopRow(row: LeaderboardRow) {
+  const real = api.leaderboard.bevs.bind(api.leaderboard);
+  jest.spyOn(api.leaderboard, 'bevs').mockImplementation(async (p) => {
+    const page = await real(p);
+    return { ...page, items: [row, ...page.items] };
+  });
+}
+
+const LAGER: LeaderboardRow = {
+  rank: 1,
+  bev: {
+    id: 'x-beer',
+    name: 'Test Lager',
+    brand: null,
+    flavor: null,
+    categoryId: 'beer',
+    photoUrl: null,
+    photoStatus: 'ready',
+    priceTier: 1,
+    priceEstimated: false,
+    ratingCount: 40,
+    bayesScore: 9.1,
+  },
+  bayesScore: 9.1,
+  ratingCount: 40,
+  myScore: null,
+};
+
+describe('the screen', () => {
+  it('is headed "Add a Bev" with no close action, the outlined bar and Snap it, and no map', async () => {
     await renderSearch();
-    expect(screen.getByText('The map')).toBeTruthy();
-    expect(screen.queryByTestId('search-panel')).toBeNull();
-    expect(screen.getByTestId('search-map').props.pointerEvents).toBe('auto');
-    expect(mockMap.passive.at(-1)).toBe(false);
+    expect(screen.getByRole('heading', { name: SEARCH_TITLE })).toBeTruthy();
+    expect(screen.queryByLabelText('Close')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
-
-    await fireEvent(bar(), 'focus');
-    expect(screen.getByTestId('search-panel')).toBeTruthy();
-    // The map takes no gestures and is hidden from screen readers while the panel is up.
     expect(screen.queryByTestId('search-map')).toBeNull();
-    expect(screen.getByTestId('search-map', { includeHiddenElements: true }).props.pointerEvents).toBe('none');
-    // …and the map itself goes passive (MapView.web: no gestures, no keys, inert).
-    expect(mockMap.passive.at(-1)).toBe(true);
-    expect(await screen.findByText('Suggested for you')).toBeTruthy();
-
-    await type('coke');
-    await screen.findAllByLabelText(/^Rank /);
-    await fireEvent.press(screen.getByRole('button', { name: 'Cancel' }));
-    expect(screen.queryByTestId('search-panel')).toBeNull();
-    expect(bar().props.value).toBe('');
-    expect(screen.getByTestId('search-map').props.pointerEvents).toBe('auto');
-    expect(mockMap.passive.at(-1)).toBe(false);
-    // Never re-mounted: one map for the whole visit.
-    expect(mockMap.mounts).toBe(1);
+    expect(bar()).toBeTruthy();
+    expect(screen.getByLabelText('Snap it: add a Bev from a photo')).toBeTruthy();
+    expect(await screen.findByText(POPULAR_TITLE)).toBeTruthy();
   });
 
-  it('clearing the bar keeps the panel up on Recents and suggestions', async () => {
+  it('?focus=1 focuses the bar once and clears the param', async () => {
+    mockParams = { focus: '1' };
+    await renderSearch();
+    expect(bar().props.autoFocus).toBe(true);
+    expect(mockSetParams).toHaveBeenCalledWith({ focus: undefined });
+  });
+
+  it('opens without focusing the bar', async () => {
+    await renderSearch();
+    expect(bar().props.autoFocus).toBe(false);
+    expect(mockSetParams).not.toHaveBeenCalled();
+  });
+
+  it('pressing the Add Bev tab while it shows clears and blurs the bar; a press from another tab does not', async () => {
+    const dismiss = jest.spyOn(Keyboard, 'dismiss');
     await renderSearch();
     await type('coke');
     await screen.findAllByLabelText(/^Rank /);
-    await fireEvent.press(screen.getByLabelText('Clear search'));
-    expect(screen.getByTestId('search-panel')).toBeTruthy();
-    expect(await screen.findByText('Suggested for you')).toBeTruthy();
-  });
-
-  it('pressing the Search tab while it shows closes the panel; a press from another tab does not', async () => {
-    await renderSearch();
-    await type('coke');
-    expect(screen.getByTestId('search-panel')).toBeTruthy();
     mockTab.focused = false;
     await act(async () => mockTab.listeners.forEach((l) => l()));
-    expect(screen.getByTestId('search-panel')).toBeTruthy();
+    expect(bar().props.value).toBe('coke');
+    expect(dismiss).not.toHaveBeenCalled();
     mockTab.focused = true;
     await act(async () => mockTab.listeners.forEach((l) => l()));
-    expect(screen.queryByTestId('search-panel')).toBeNull();
     expect(bar().props.value).toBe('');
-    expect(mockMap.mounts).toBe(1);
+    expect(dismiss).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText(POPULAR_TITLE)).toBeTruthy();
   });
 
-  it('idle: Recents, then suggestions', async () => {
-    const restore = withRecent({ id: 'b-1', name: 'Topo Chico', brand: 'Topo Chico' });
-    try {
-      await renderSearch();
-      await fireEvent(bar(), 'focus');
-      await screen.findByText('Suggested for you');
-      expect(headings()).toEqual(['Recents', 'Suggested for you']);
-    } finally {
-      restore();
-    }
-  });
-
-  it('Find people (?tab=people) puts suggestions above Recents', async () => {
-    const restore = withRecent({ id: 'b-1', name: 'Topo Chico', brand: 'Topo Chico' });
-    try {
-      mockParams = { tab: 'people' };
-      await renderSearch();
-      await screen.findByText('Suggested for you');
-      expect(headings()).toEqual(['Suggested for you', 'Recents']);
-    } finally {
-      restore();
-    }
-  });
-
-  it('a failed "Suggested for you" shows ErrorState under its header, and Retry loads it', async () => {
-    controls.failNext('network', 'follows.suggested');
-    mockParams = { tab: 'people' };
+  it('Cancel shows only while the bar is in use; it clears the query and puts the keyboard away', async () => {
+    const dismiss = jest.spyOn(Keyboard, 'dismiss');
+    const cancel = () => screen.queryByRole('button', { name: 'Cancel' });
     await renderSearch();
-    expect(await screen.findByText("You're offline")).toBeTruthy();
-    expect(screen.getByText('Suggested for you')).toBeTruthy();
-    await fireEvent.press(screen.getByLabelText('Retry'));
-    expect((await screen.findAllByLabelText(/^Follow /)).length).toBeGreaterThan(0);
+    await screen.findByText(POPULAR_TITLE);
+    expect(cancel()).toBeNull();
+
+    await fireEvent(bar(), 'focus');
+    expect(cancel()).toBeTruthy();
+    await type('coke');
+    await screen.findAllByLabelText(/^Rank /);
+    expect(cancel()).toBeTruthy();
+
+    await fireEvent.press(cancel()!);
+    expect(bar().props.value).toBe('');
+    expect(dismiss).toHaveBeenCalledTimes(1);
+    expect(cancel()).toBeNull();
+    expect(await screen.findByText(POPULAR_TITLE)).toBeTruthy();
   });
 
-  it.each([{ tab: 'people' }, { focus: '1' }])('%p opens the panel once and clears the params', async (params) => {
-    mockParams = params;
+  it('typing without a focus event still shows Cancel; the Add Bev tab press hides it again', async () => {
     await renderSearch();
-    expect(screen.getByTestId('search-panel')).toBeTruthy();
-    expect(mockSetParams).toHaveBeenCalledWith({ tab: undefined, focus: undefined });
-    expect(await screen.findByText('Suggested for you')).toBeTruthy();
+    await type('co');
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy();
+    await act(async () => mockTab.listeners.forEach((l) => l()));
+    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+  });
+
+  it('Snap it opens the create-Bev wizard', async () => {
+    await renderSearch();
+    await fireEvent.press(screen.getByLabelText('Snap it: add a Bev from a photo'));
+    expect(mockPush).toHaveBeenCalledWith('/add/new');
   });
 });
 
-describe('the map filters', () => {
-  it("live in the Search feature: the map gets them, its changes land there, and they outlive the screen", async () => {
-    const first = await renderSearch();
-    expect(mockMap.last?.filters).toEqual({});
-    await act(async () => mockMap.last!.onFiltersChange!({ categoryIds: ['coffee'], openNow: true, kinds: [] }));
-    expect(useMapFilters.getState().filters).toEqual({ categoryIds: ['coffee'], openNow: true });
-    expect(mockMap.last?.filters).toEqual({ categoryIds: ['coffee'], openNow: true });
-    // A tab switch remounts nothing it shouldn't, but a fresh screen still starts from them.
-    await first.unmount();
-    await renderSearch();
-    expect(mockMap.last?.filters).toEqual({ categoryIds: ['coffee'], openNow: true });
+describe('idle', () => {
+  it('Recents, then "Popular on Bevi"; no "Suggested for you"', async () => {
+    const { restore } = withStorage([{ id: 'b-1', name: 'Topo Chico', brand: 'Topo Chico' }]);
+    try {
+      // Recents are keyed by your id: with it known up front they're in the list before Popular
+      // arrives (FlashList's cells otherwise sit in arrival order in the test tree, not on screen).
+      client.setQueryData(keys.me(), await api.profile.getMe());
+      await renderSearch();
+      await screen.findByText(POPULAR_TITLE);
+      expect(headings()).toEqual(['Recents', POPULAR_TITLE]);
+      expect(screen.queryByText('Suggested for you')).toBeNull();
+      expect(screen.queryAllByLabelText(/^Follow /)).toHaveLength(0);
+    } finally {
+      restore();
+    }
   });
 
-  it('tells the map whether the Search tab is the screen on display', async () => {
+  it('clearing the bar goes back to "Popular on Bevi"', async () => {
     await renderSearch();
-    expect(mockMap.last?.active).toBe(true);
-    mockTab.focused = false;
+    await type('coke');
+    await screen.findAllByLabelText(/^Rank /);
+    expect(screen.queryByText(POPULAR_TITLE)).toBeNull();
+    await fireEvent.press(screen.getByLabelText('Clear search'));
+    expect(await screen.findByText(POPULAR_TITLE)).toBeTruthy();
+    expect(screen.queryByText('Bevs')).toBeNull();
+  });
+});
+
+describe('Popular on Bevi', () => {
+  it('lists the top Bevs you have not ranked, at most ten, with the board score and rating count', async () => {
+    const board = (await api.leaderboard.bevs()).items;
+    // Rank the board's top unranked Bev: it must drop out of the list.
+    const top = board.find((r) => r.myScore == null)!;
+    const loved = await api.rankings.listBucket('LOVED');
+    await api.rankings.submitRanking({ bevId: top.bev.id, bucket: 'LOVED', insertIndex: 0, expectedBucketSize: loved.length, comparisons: [] });
+    const after = (await api.leaderboard.bevs()).items;
+    const expected = after.filter((r) => r.myScore == null && r.ratingCount >= MIN_RATERS).slice(0, POPULAR_COUNT);
+    expect(expected.length).toBeGreaterThan(0);
+    expect(after.some((r) => r.myScore != null)).toBe(true);
+
     await renderSearch();
-    expect(mockMap.last?.active).toBe(false);
+    await waitFor(() => expect(rankable()).toEqual(expected.map((r) => r.bev.name)));
+    expect(rankable()).not.toContain(top.bev.name);
+    for (const ranked of after.filter((r) => r.myScore != null)) expect(rankable()).not.toContain(ranked.bev.name);
+    const first = expected[0]!;
+    expect(screen.getAllByText(`${first.ratingCount} ratings`).length).toBeGreaterThan(0);
+    expect(screen.getAllByLabelText(/^Saved? to Want to Try$/)).toHaveLength(expected.length);
+  });
+
+  it('stops at ten', async () => {
+    const rows = Array.from({ length: POPULAR_COUNT + 5 }, (_, i): LeaderboardRow => ({
+      ...LAGER,
+      rank: i + 1,
+      bev: { ...LAGER.bev, id: `pop-${i}`, name: `Popular ${i}`, categoryId: 'soda' },
+    }));
+    jest.spyOn(api.leaderboard, 'bevs').mockResolvedValue({ items: rows, nextCursor: null });
+    await renderSearch();
+    await waitFor(() => expect(rankable()).toHaveLength(POPULAR_COUNT));
+    expect(rankable()).toEqual(rows.slice(0, POPULAR_COUNT).map((r) => r.bev.name));
+  });
+
+  it('never lists an alcoholic Bev to an under-21 viewer', async () => {
+    controls.signInAs('minor_user');
+    withTopRow(LAGER);
+    await renderSearch();
+    await waitFor(() => expect(rankable().length).toBeGreaterThan(0));
+    expect(screen.queryByText('Test Lager')).toBeNull();
+  });
+
+  it('lists it to an adult', async () => {
+    withTopRow(LAGER);
+    await renderSearch();
+    await waitFor(() => expect(rankable()[0]).toBe('Test Lager'));
+  });
+
+  it('See all opens Lists on the Top tab', async () => {
+    await renderSearch();
+    await fireEvent.press(await screen.findByLabelText(`See all ${POPULAR_TITLE.toLowerCase()}`));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/lists', params: { tab: 'top' } });
+  });
+
+  it('Rank it ranks the Bev and remembers it in Recents', async () => {
+    const { restore } = withStorage();
+    try {
+      await renderSearch();
+      await waitFor(() => expect(rankable().length).toBeGreaterThan(0));
+      const name = rankable()[0]!;
+      const id = (await api.leaderboard.bevs()).items.find((r) => r.bev.name === name)!.bev.id;
+      await fireEvent.press(screen.getByLabelText(`Rank ${name}`));
+      expect(mockPush).toHaveBeenLastCalledWith({ pathname: '/rank/[bevId]', params: { bevId: id } });
+      expect(readRecents('user-tester')[0]?.name).toBe(name);
+    } finally {
+      restore();
+    }
+  });
+
+  it('holds its place with Skeleton rows while it loads', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const real = api.leaderboard.bevs.bind(api.leaderboard);
+    jest.spyOn(api.leaderboard, 'bevs').mockImplementation(async (p) => {
+      await gate;
+      return real(p);
+    });
+    await renderSearch();
+    expect(screen.getByText(POPULAR_TITLE)).toBeTruthy();
+    expect(screen.getByLabelText('Loading popular Bevs')).toBeTruthy();
+    await act(async () => release());
+    await waitFor(() => expect(screen.queryByLabelText('Loading popular Bevs')).toBeNull());
+    expect(rankable().length).toBeGreaterThan(0);
+  });
+
+  it('offline: ErrorState under its header, and Retry loads it', async () => {
+    controls.failNext('network', 'leaderboard.bevs');
+    await renderSearch();
+    expect(await screen.findByText("You're offline")).toBeTruthy();
+    expect(screen.getByText(POPULAR_TITLE)).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText('Retry'));
+    await waitFor(() => expect(rankable().length).toBeGreaterThan(0));
+    expect(screen.queryByText("You're offline")).toBeNull();
+  });
+
+  it('is left out once you have ranked everything on it; with no Recents either, the empty state shows', async () => {
+    jest
+      .spyOn(api.leaderboard, 'bevs')
+      .mockResolvedValue({ items: [{ ...LAGER, bev: { ...LAGER.bev, categoryId: 'soda' }, myScore: 8 }], nextCursor: null });
+    await renderSearch();
+    expect(await screen.findByText('Find a Bev or a friend')).toBeTruthy();
+    expect(screen.queryByText(POPULAR_TITLE)).toBeNull();
   });
 });
 
@@ -236,6 +343,7 @@ describe('grouped results', () => {
     expect(userSearch).toHaveBeenCalledTimes(1);
     expect(userSearch.mock.calls[0]![0]).toMatchObject({ q });
     if ((await bevSearch.mock.results[0]!.value).items.length) expect(screen.getByText('Bevs')).toBeTruthy();
+    expect(screen.queryByText(POPULAR_TITLE)).toBeNull();
   });
 
   it('leaves out an empty group', async () => {
@@ -274,12 +382,6 @@ describe('grouped results', () => {
     await type('zzqqxx');
     expect(await screen.findByText('No Bevs or people match "zzqqxx"')).toBeTruthy();
     await fireEvent.press(screen.getByLabelText(ADD_NEW));
-    expect(mockPush).toHaveBeenCalledWith('/add/new');
-  });
-
-  it('Snap it opens the create-Bev wizard', async () => {
-    await renderSearch();
-    await fireEvent.press(screen.getByLabelText('Snap it: add a Bev from a photo'));
     expect(mockPush).toHaveBeenCalledWith('/add/new');
   });
 
@@ -328,11 +430,10 @@ describe('grouped results', () => {
 
   it('hides alcoholic results from an under-21 viewer', async () => {
     controls.signInAs('minor_user');
-    const alcoholic = { id: 'x-beer', name: 'Test Lager', brand: null, flavor: null, categoryId: 'beer', photoUrl: null, photoStatus: 'ready', priceTier: 1, priceEstimated: false, ratingCount: 0, bayesScore: null } as const;
     const real = api.bevs.search.bind(api.bevs);
     jest.spyOn(api.bevs, 'search').mockImplementation(async (p) => {
       const page = await real(p);
-      return { ...page, items: [alcoholic, ...page.items] };
+      return { ...page, items: [LAGER.bev, ...page.items] };
     });
     await renderSearch();
     await type('coke');
@@ -379,35 +480,35 @@ describe('Bev rows', () => {
   });
 
   it('remembers opened Bevs as Recents (in localStorage) and forgets them', async () => {
-    const store = new Map<string, string>();
-    const g = globalThis as { localStorage?: unknown };
-    const saved = g.localStorage;
-    g.localStorage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) };
-    await renderSearch();
-    await type('coke');
-    const [rank] = await screen.findAllByLabelText(/^Rank /);
-    const name = rank!.props.accessibilityLabel.replace(/^Rank /, '');
-    await fireEvent.press(screen.getByRole('button', { name }));
-    expect(readRecents('user-tester')[0]?.name).toBe(name);
-    // Another account on this browser has its own (empty) list; the key predates the Search tab.
-    expect(readRecents('user-friend_a')).toEqual([]);
-    expect([...store.keys()]).toEqual(['bevi.add.recents:user-tester']);
+    const { store, restore } = withStorage();
+    try {
+      await renderSearch();
+      await type('coke');
+      const [rank] = await screen.findAllByLabelText(/^Rank /);
+      const name = rank!.props.accessibilityLabel.replace(/^Rank /, '');
+      await fireEvent.press(screen.getByRole('button', { name }));
+      expect(readRecents('user-tester')[0]?.name).toBe(name);
+      // Another account on this browser has its own (empty) list; the key predates the Add Bev tab.
+      expect(readRecents('user-friend_a')).toEqual([]);
+      expect([...store.keys()]).toEqual(['bevi.add.recents:user-tester']);
 
-    await fireEvent.press(screen.getByLabelText('Clear search'));
-    expect(await screen.findByText('Recents')).toBeTruthy();
-    await fireEvent.press(screen.getByLabelText(`Forget ${name}`));
-    expect(screen.queryByText('Recents')).toBeNull();
-    expect(readRecents('user-tester')).toEqual([]);
-    g.localStorage = saved;
+      await fireEvent.press(screen.getByLabelText('Clear search'));
+      expect(await screen.findByText('Recents')).toBeTruthy();
+      await fireEvent.press(screen.getByLabelText(`Forget ${name}`));
+      expect(screen.queryByText('Recents')).toBeNull();
+      expect(readRecents('user-tester')).toEqual([]);
+    } finally {
+      restore();
+    }
   });
 });
 
 describe('people rows', () => {
-  it('suggestions carry follow pills that toggle optimistically', async () => {
+  it('results carry follow pills that toggle optimistically', async () => {
     const first = (await api.follows.suggested())[0]!;
     expect(first.isFollowing).toBe(false);
-    mockParams = { tab: 'people' };
     await renderSearch();
+    await type(`@${first.handle}`);
     const pill = await screen.findByLabelText(`Follow ${first.displayName}`);
     expect(pill.props['aria-pressed']).toBe(false);
 
@@ -422,8 +523,8 @@ describe('people rows', () => {
 
   it('rolls a failed follow back', async () => {
     const first = (await api.follows.suggested())[0]!;
-    mockParams = { tab: 'people' };
     await renderSearch();
+    await type(`@${first.handle}`);
     const pill = await screen.findByLabelText(`Follow ${first.displayName}`);
     controls.failNext('network', 'follows.follow');
     await fireEvent.press(pill);

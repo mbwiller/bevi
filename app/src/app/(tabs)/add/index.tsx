@@ -1,4 +1,4 @@
-import { useIsFocused, useLocalSearchParams, useNavigation } from 'expo-router';
+import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { useEffect, useState } from 'react';
 
 import { SearchScreen, type FocusRequest } from '@/features/search/SearchScreen';
@@ -7,40 +7,36 @@ import { SearchScreen, type FocusRequest } from '@/features/search/SearchScreen'
 interface TabNavigation {
   addListener(type: 'tabPress', listener: () => void): () => void;
   isFocused(): boolean;
-  setParams(params: { tab?: string; focus?: string }): void;
+  setParams(params: { focus?: string }): void;
 }
 
 /**
- * The Search tab (TASKS.md M-15; the URL stays /add, and /search redirects here). `?focus=1` (Feed's
- * search bar, "Add a Bev" links) and `?tab=people` (Find people, with "Suggested for you" first)
- * open the results panel with the bar focused, once: the params are cleared so a later tab press
- * lands on the map. Pressing the Search tab while it shows closes the panel.
+ * The Add Bev tab (the URL is /add, and /search redirects here). `?focus=1` (Feed's search bar,
+ * "Add a Bev" links) focuses the bar, once: the param is cleared so a later visit doesn't. Pressing
+ * the Add Bev tab while it shows empties the bar and blurs it.
  */
-export default function SearchTab() {
+export default function AddBevTab() {
   const navigation = useNavigation() as unknown as TabNavigation;
-  const params = useLocalSearchParams<{ tab?: string; focus?: string }>();
-  const people = params.tab === 'people';
-  const wantsPanel = people || params.focus === '1';
+  const params = useLocalSearchParams<{ focus?: string }>();
+  const wantsFocus = params.focus === '1';
   const [focus, setFocus] = useState<FocusRequest>({ n: 0 });
-  const [close, setClose] = useState(0);
-  // A Bev page pushed from the map's VenueSheet covers this tab: the full-screen map steps aside until it's back.
-  const focused = useIsFocused();
+  const [reset, setReset] = useState(0);
 
   useEffect(() => {
-    if (!wantsPanel) return;
-    setFocus((f) => ({ n: f.n + 1, people }));
+    if (!wantsFocus) return;
+    setFocus((f) => ({ n: f.n + 1 }));
     // The screen's own navigation, not the router's: on a cold-start deep link the router isn't
     // ready yet when this runs, and router.setParams throws.
-    navigation.setParams({ tab: undefined, focus: undefined });
-  }, [wantsPanel, people, navigation]);
+    navigation.setParams({ focus: undefined });
+  }, [wantsFocus, navigation]);
 
   useEffect(
     () =>
       navigation.addListener('tabPress', () => {
-        if (navigation.isFocused()) setClose((n) => n + 1);
+        if (navigation.isFocused()) setReset((n) => n + 1);
       }),
     [navigation],
   );
 
-  return <SearchScreen focusRequest={focus} closeRequest={close} active={focused} />;
+  return <SearchScreen focusRequest={focus} resetRequest={reset} />;
 }
