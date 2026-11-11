@@ -1,7 +1,7 @@
 {
-  "version": "1.7.0",
+  "version": "1.8.0",
   "constants": {
-    "version": "1.7.0",
+    "version": "1.8.0",
     "bands": {
       "DISLIKED": [
         0,
@@ -105,6 +105,8 @@
     "pagerankMaxIterations": 200,
     "louvainResolution": 1,
     "louvainTieEpsilon": 1e-12,
+    "diversityPenalty": 0.2,
+    "exploreBridgeWeight": 1,
     "storedScoreRule": "cents = floor((2N + D) / (2D)) with D = n + 1, N = 100*(hi*D - (hi - lo)*(index + 1)); capped at hi*100 - 1 for FINE and DISLIKED; storedScore = cents / 100",
     "stddev": "population (stddev_pop)",
     "nameOrder": "Unicode code point, not UTF-16 code unit (SQL collate \"C\" on UTF-8), then bevId the same way",
@@ -134,7 +136,8 @@
     "modularityRule": "Q = sum over community labels ascending of (W_c / m - gamma * (S_c / (2m))^2); W_c = weight of edges with both ends in c (each edge once, from its smaller endpoint, node order), S_c = sum of members' s_i in node order; m = 0 gives 0; labels are any integers, every node needs one, extra keys ignored; gamma defaults to louvainResolution",
     "louvainRule": "level 0: every node its own community; visit nodes in code-point order in passes until a full pass moves nothing. Visiting i: remove it from its community; gain(C) = k_{i,C}/m - gamma * S_C * k_i / (2m^2) (k_{i,C} = i's weight into C over its neighbours in order, S_C = C's strength without i, k_i = i's strength incl. twice its internal weight); candidates in order: its own (possibly emptied) community first, then each neighbouring community by ascending representative (the community's smallest member id, code point); a candidate replaces the best only if its gain exceeds the best by more than louvainTieEpsilon, so a tie keeps i where it is. Then each community becomes a super-node (its internal weight kept as a self-loop, counted in k but not in k_{i,C}; its id for ordering is its representative) and the next level runs; stop at the first level that moves nothing. Output: communities = member lists in code-point order, sorted by size desc then first member asc; communityOf[id] = index in communities; modularity = modularity(graph, communityOf, gamma). No edges: all singletons, modularity 0",
     "participationRule": "P_i = 1 - sum over labels ascending of (s_{i,c} / s_i)^2, s_{i,c} = i's weight into community c (its own included) over its neighbours in order, the order s_i is summed in (so a node whose neighbours all share its community is exactly 0); isolated node 0; clamped at 0 below; in [0, 1)",
-    "communityHubRule": "hub of a community = the member with the greatest within-community strength (weight to the other members, over its neighbours in order), compared as exact doubles, ties to the smallest id (code point); a singleton is its own hub; keyed by community label. The hub identifies the community: the graph sync derives the community's opaque public id from it (hashed, so an age-gated hub's Bev id never reaches a client)"
+    "communityHubRule": "hub of a community = the member with the greatest within-community strength (weight to the other members, over its neighbours in order), compared as exact doubles, ties to the smallest id (code point); a singleton is its own hub; keyed by community label. The hub identifies the community: the graph sync derives the community's opaque public id from it (hashed, so an age-gated hub's Bev id never reaches a client)",
+    "attributeProjectionRule": "one-mode projection of a bipartite node-attribute graph { nodes, memberships: [{ node, attribute }] }, Adamic-Adar weighted: w_ab = sum over attributes x carried by both a and b of 1 / ln(deg(x)), deg(x) = number of distinct nodes carrying x, each term computed as 1 / Math.log(deg). Throws on a duplicate or empty node id, an empty attribute, a membership whose node is not in nodes, or a duplicate (node, attribute) row. An attribute with deg 1 is skipped (joins nothing). Attributes are processed in code-point order, each attribute's nodes in code-point order, and each pair's weight is accumulated from 0 in that attribute order. Output nodes in code-point order; edges oriented a < b (code point), sorted by (a, b), only for pairs sharing at least one attribute with deg >= 2; a node sharing nothing stays in nodes with no edge. The result is a valid graph for networkGraphRule. No constant: the caller chooses the attributes (the graph sync passes flavor:<base> and note:<token>, leaving out the base other), and the sync stores community = the Louvain community of this projection (the taste family)"
   },
   "cases": [
     {
@@ -1429,7 +1432,7 @@
       "fn": "layer1",
       "input": {
         "snapshot": {
-          "version": "1.7.0",
+          "version": "1.8.0",
           "generatedAt": "2026-10-31T00:00:00Z",
           "global": {
             "mean": 6.416666666666667,
@@ -1652,7 +1655,7 @@
       "fn": "layer1",
       "input": {
         "snapshot": {
-          "version": "1.7.0",
+          "version": "1.8.0",
           "generatedAt": "2026-10-31T00:00:00Z",
           "global": {
             "mean": 6.416666666666667,
@@ -1875,7 +1878,7 @@
       "fn": "layer1",
       "input": {
         "snapshot": {
-          "version": "1.7.0",
+          "version": "1.8.0",
           "generatedAt": "2026-10-31T00:00:00Z",
           "global": {
             "mean": 6.416666666666667,
@@ -2098,7 +2101,7 @@
       "fn": "layer1",
       "input": {
         "snapshot": {
-          "version": "1.7.0",
+          "version": "1.8.0",
           "generatedAt": "2026-10-31T00:00:00Z",
           "global": {
             "mean": 6.416666666666667,
@@ -2299,7 +2302,7 @@
       "fn": "layer1",
       "input": {
         "snapshot": {
-          "version": "1.7.0",
+          "version": "1.8.0",
           "generatedAt": "2026-10-31T00:00:00Z",
           "global": {
             "mean": 6.416666666666667,
