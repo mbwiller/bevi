@@ -184,20 +184,14 @@ const R = {
 
 - Provide: \`user\` ({ name, handle }), \`meta\` ("84 Bevs", "212 pts"), optional \`rank\` and \`streak\`, \`following\` to show the Follow/Following pill, \`self\` to highlight your own row in \`primaryTint\`.
 - Pin your own row at the bottom of the leaderboard when it's off screen.`,
-  BucketButton: `Gut-check choice in the ranking flow: a capsule with a glossy orb in its bucket colour that fills with that colour when chosen. It is a flat tint by default, and always on the Bevi web app; liquid glass only with the native glass material on iOS 26+.
+  BucketButton: `Gut-check choice in the ranking flow: a \`primary\` ring filled to a level, over its label. Loved is full, fine is half, disliked is empty, so the order reads without colour.
 
-- Provide: \`bucket\` (loved, fine, disliked), \`selected\`, \`material\`, \`onClick\`. Always show all three, in that order, 14pt apart, full width on the 16pt gutter.
-- Labels and faces are fixed: "Loved it" (laugh), "It was fine" (meh), "Didn't like it" (frown). The label always shows, so a bucket is never told apart by colour alone; the chosen one also gets a ring and a filled check.
-- \`material="tint"\` (default): 64pt high, \`radius-card\` corners, a 12% bucket tint and a 4px bucket bar on the left; no blur, no shadow. The Bevi web app always uses it, in every browser, including the home-screen app on iOS 26.
-- \`material="glass"\`: \`glassFill\` with a 24px blur over a BevGlow, a \`glassStroke\` rim, a top sheen and \`elevation-glass\`. Render it only where the OS has a real glass material: iOS 26+, with the native \`GlassView\` from expo-glass-effect, which only a native build has. Never imitate it with a blur view or CSS \`backdrop-filter\`. The orb, label, check and pour are identical in both materials. Reduce Transparency switches glass to tint on every platform.
-- Choosing one pours: the liquid (the bucket colour mixed 45% into \`surface\`, 70% opaque) rises to two-thirds in 450ms under a moving surface with a light meniscus and a few rising bubbles. The meniscus stays above the label, never across it. Reduce Motion keeps the level and stops the waves and bubbles. Draw the waves with react-native-svg and drive the pour with Reanimated.
-- Contrast, worst case (glass over any BevGlow, checked against black, white and saturated drink colours with every blob overlapping): \`text\` stays at least 9.8:1 in light and 5.7:1 in dark, poured or not. On the tint material it stays at least 7.3:1.
-- Don't add a fourth option, use glass for other buttons, or tint the label text with the bucket colour.`,
-  BevGlow: `Soft colour field for the gut check: the Bev's own colour, \`primary\` and \`fizz\`, blurred into the \`surface\` behind the gut-check BucketButtons.
-
-- Provide: \`color\` (the drink's main colour, the same one its photo is mostly made of), children. It fills its container; size the container.
-- Use it only on the gut-check step. Everywhere else Bevi is flat \`surface\` with hairlines.
-- On the gut check, the Bev's cutout floats on the glow at 200pt with no BevImage tile.`,
+- Provide: \`bucket\` (loved, fine, disliked), \`selected\`, \`dimmed\`, \`onClick\`. Always show all three, in that order, in one row of three equal columns on the 16pt gutter, under a centred "How was it?".
+- Labels are fixed: "Loved it", "It was okay", "Not for me", in \`body\` at weight 600, centred under the ring. The label always shows.
+- The ring is 76pt with a 2.5pt \`primary\` border and a 4pt gap to the fill. One colour only: no score colours, no faces, no gradient, no shadow, and nothing blurred behind the row. It sits on plain \`surface\`.
+- Chosen: a 26pt check badge (\`text\` on a 3pt \`surface\` gap) at the ring's top right. Pass \`dimmed\` to the other two: the ring drops to 35% and the label goes \`textSecondary\`.
+- Motion: the ring presses to 94% and the badge scales in over \`fast\` (150ms). Reduce Motion shows the badge at once.
+- Don't add a fourth option, colour the rings by bucket, or tint the label.`,
   CompareCard: `One side of "Which was better?": BevImage 96, the name at 20pt bold, the brand, and where the incumbent sits now.
 
 - Provide: \`bev\`, \`isNew\` for the Bev being ranked (top card) or \`rankLabel\` ("#3 in Loved") for the incumbent (bottom card), \`selected\`, \`onClick\`.
@@ -290,9 +284,9 @@ const S = {
 - Idle: Recents (the Bevs you opened) and "Suggested for you" (people). Typing (debounced 250ms): one query searches both, grouped under "BEVS" (BevRows with \`showImage\` and the rating count) and "PEOPLE" (UserRows with Follow); an empty group is left out, and nothing in either shows one empty state.
 - A sticky "Can't find it? Add a new Bev" closes the panel's bottom and turns \`primary\` when no Bev matches. It always sits above the keyboard.
 - Cancel (or clearing the bar, then Cancel) slides the panel away and leaves the map exactly where it was.`,
-  ScreenGutCheck: `Ranking flow, step 1 (no reference): a BevGlow in the drink's colour fills the screen; the cutout floats at 200pt over its name, brand and category; "How was it?"; three BucketButtons in the tint material; a hint that comparisons come next.
+  ScreenGutCheck: `Ranking flow, step 1 (no reference): plain \`surface\`; the cutout floats at 200pt over its name, brand and category; a centred "How was it?"; three BucketButtons in a row; a hint that comparisons come next.
 
-- Choosing a bucket pours it, then moves on to comparisons. An empty bucket skips straight to the note: "First one in Loved".`,
+- Choosing a bucket checks it and fades the other two, then moves on to comparisons. An empty bucket skips straight to the note: "First one in Loved".`,
   ScreenRanking: `Ranking flow, step 2 (no reference): ProgressDots and the close circle, "Which was better?", two CompareCards (new on top), "Too close to call" and Undo.
 
 - After placement, the note step (ScreenRankingNote) reveals the score at once, then the result confirms it: ScoreBubble 56 and "#4 of 31 in Loved · 8.9".`,

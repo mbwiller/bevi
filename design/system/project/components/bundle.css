@@ -291,62 +291,21 @@
 .bv-userrow-name, .bv-userrow-text .bv-meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bv-flame { display: inline-block; vertical-align: -2px; color: var(--primary); }
 
-/* BucketButton: liquid glass (material="glass", native GlassView on iOS 26+ only; the default is the tint material below) */
-.bv-bucket { position: relative; isolation: isolate; display: flex; align-items: center; gap: var(--space-md); width: 100%; height: 64px; padding: 0 var(--space-md) 0 var(--space-sm);
-  overflow: hidden; border-radius: var(--radius-pill); color: var(--text); text-align: left;
-  background: var(--glassFill); -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
-  box-shadow: inset 0 1px 0 var(--glassHighlight), inset 0 0 0 1px var(--glassStroke), inset 0 -12px 20px -16px var(--glassHighlight), var(--elevation-glass);
-  transition: transform 150ms ease, box-shadow 250ms ease; }
-.bv-bucket::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; border-radius: inherit;
-  background: linear-gradient(180deg, var(--glassHighlight) 0%, transparent 48%); opacity: .5; }
-.bv-bucket:active { transform: scale(.98); }
-.bv-bucket > :not(.bv-bucket-liquid) { position: relative; z-index: 2; }
-.bv-bucket-on { box-shadow: inset 0 1px 0 var(--glassHighlight), inset 0 0 0 1.5px color-mix(in srgb, var(--band) 70%, transparent), var(--elevation-glass); }
-/* The liquid is the bucket colour mixed into `surface`: pale in light, deep in dark, so `text` always reads on it. */
-.bv-bucket-liquid { position: absolute; left: 0; right: 0; bottom: 0; z-index: 0; height: 0; opacity: 0; background: color-mix(in srgb, color-mix(in srgb, var(--band) 45%, var(--surface)) 70%, transparent);
-  transition: height 450ms cubic-bezier(.3, 1.25, .5, 1), opacity 150ms ease; }
-/* 66% puts the meniscus just above the label's cap height, never across it. */
-.bv-bucket-on .bv-bucket-liquid { height: 66%; opacity: 1; }
-.bv-bucket-wave { position: absolute; left: 0; bottom: calc(100% - 1px); width: 200%; height: 12px; fill: color-mix(in srgb, color-mix(in srgb, var(--band) 45%, var(--surface)) 70%, transparent); animation: bv-wave 5s linear infinite; }
-.bv-bucket-wave-back { bottom: calc(100% + 1px); fill: color-mix(in srgb, var(--glassHighlight) 70%, transparent); animation-duration: 7s; animation-direction: reverse; }
-@keyframes bv-wave { to { transform: translateX(-50%); } }
-.bv-bucket-fizz { position: absolute; bottom: 6px; width: 5px; height: 5px; border-radius: var(--radius-pill); background: var(--glassHighlight); opacity: 0; }
-.bv-bucket-fizz:nth-child(3) { left: 58%; } .bv-bucket-fizz:nth-child(4) { left: 71%; width: 4px; height: 4px; } .bv-bucket-fizz:nth-child(5) { left: 84%; width: 6px; height: 6px; }
-.bv-bucket-on .bv-bucket-fizz { animation: bv-rise 2.6s ease-in infinite; }
-.bv-bucket-on .bv-bucket-fizz:nth-child(4) { animation-delay: .9s; } .bv-bucket-on .bv-bucket-fizz:nth-child(5) { animation-delay: 1.7s; }
-@keyframes bv-rise { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: .9; } 100% { transform: translateY(-28px); opacity: 0; } }
-.bv-bucket-orb { display: flex; flex: none; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: var(--radius-pill); color: var(--onScore);
-  background: radial-gradient(circle at 32% 26%, color-mix(in srgb, var(--band) 40%, var(--glassHighlight)) 0%, var(--band) 56%, color-mix(in srgb, var(--band) 78%, black) 100%);
-  box-shadow: inset 0 1px 1px var(--glassHighlight), inset 0 -3px 6px color-mix(in srgb, var(--band) 60%, black), 0 3px 10px color-mix(in srgb, var(--band) 35%, transparent); }
-.bv-bucket-label { flex: 1; min-width: 0; }
-.bv-bucket-check { display: flex; flex: none; align-items: center; justify-content: center; width: 26px; height: 26px; margin-right: var(--space-xs); border-radius: var(--radius-pill);
-  box-shadow: inset 0 0 0 1.5px var(--borderStrong); color: var(--onScore); transition: background-color 150ms ease; }
-.bv-bucket-on .bv-bucket-check { background: var(--band); box-shadow: none; }
-/* Tint material: the default, and always the web app's (also Android, iOS before 26, Reduce Transparency).
-   Same orb, label, check and pour; a 12% bucket tint and a 4px bucket bar instead of glass. */
-.bv-bucket-tint { border-radius: var(--radius-card); padding-left: 14px; background: color-mix(in srgb, var(--band) 12%, var(--surface));
-  -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; }
-.bv-bucket-tint::before { inset: 0 auto 0 0; width: 4px; border-radius: 0; background: var(--band); opacity: 1; }
-.bv-bucket-tint.bv-bucket-on { box-shadow: inset 0 0 0 2px var(--band); }
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .bv-bucket { border-radius: var(--radius-card); padding-left: 14px; background: color-mix(in srgb, var(--band) 12%, var(--surface)); box-shadow: none; }
-  .bv-bucket::before { inset: 0 auto 0 0; width: 4px; border-radius: 0; background: var(--band); opacity: 1; }
-  .bv-bucket.bv-bucket-on { box-shadow: inset 0 0 0 2px var(--band); }
-}
-@media (prefers-reduced-transparency: reduce) {
-  .bv-bucket { border-radius: var(--radius-card); padding-left: 14px; background: color-mix(in srgb, var(--band) 12%, var(--surface)); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; }
-  .bv-bucket::before { inset: 0 auto 0 0; width: 4px; border-radius: 0; background: var(--band); opacity: 1; }
-  .bv-bucket.bv-bucket-on { box-shadow: inset 0 0 0 2px var(--band); }
-  .bv-glow-blob { display: none; }
-}
-
-/* BevGlow */
-.bv-glow { position: relative; isolation: isolate; overflow: hidden; background: var(--surface); }
-.bv-glow-blob { position: absolute; z-index: 0; aspect-ratio: 1; border-radius: var(--radius-pill); filter: blur(48px); opacity: .55; pointer-events: none; }
-.bv-glow-a { width: 78%; left: 11%; top: 2%; background: var(--glow, var(--primary)); }
-.bv-glow-b { width: 58%; right: -18%; top: 46%; background: var(--fizz); opacity: .4; }
-.bv-glow-c { width: 64%; left: -20%; bottom: -6%; background: var(--primary); opacity: .35; }
-.bv-glow-content { position: relative; z-index: 1; }
+/* BucketButton: a `primary` ring filled to a level (loved full, fine half, disliked empty) over its label */
+.bv-bucket { display: flex; flex: 1; min-width: 0; flex-direction: column; align-items: center; gap: var(--space-md); padding: var(--space-xs) 0; color: var(--text); text-align: center; transition: color 150ms ease; }
+.bv-bucket-disc { position: relative; box-sizing: border-box; width: 76px; height: 76px; padding: 4px; border: 2.5px solid var(--primary); border-radius: var(--radius-pill); transition: transform 150ms ease, opacity 150ms ease; }
+.bv-bucket:active .bv-bucket-disc { transform: scale(.94); }
+.bv-bucket-well { position: relative; display: block; width: 100%; height: 100%; overflow: hidden; border-radius: var(--radius-pill); }
+.bv-bucket-fill { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: var(--primary); }
+.bv-bucket-loved .bv-bucket-fill { height: 100%; }
+.bv-bucket-fine .bv-bucket-fill { height: 50%; }
+/* The check badge: `text` on a 3px `surface` gap, so it reads over the ring and over a full disc. */
+.bv-bucket-badge { position: absolute; top: -6px; right: -6px; display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: var(--radius-pill);
+  background: var(--text); color: var(--surface); box-shadow: 0 0 0 3px var(--surface); opacity: 0; transform: scale(.6); transition: opacity 150ms ease, transform 150ms ease; }
+.bv-bucket-on .bv-bucket-badge { opacity: 1; transform: none; }
+.bv-bucket-label { font-weight: 600; }
+.bv-bucket-dim { color: var(--textSecondary); }
+.bv-bucket-dim .bv-bucket-disc { opacity: .35; }
 
 /* CompareCard, ProgressDots */
 .bv-compare { position: relative; display: flex; align-items: center; gap: var(--space-lg); width: 100%; padding: var(--space-lg); border: 1px solid var(--border);
@@ -457,8 +416,7 @@
   .bv-skel::after, .bv-bevimg-processing::after, .bv-bevimg-loading::after { animation: none; }
   .bv-tabs-bar, .bv-compare, .bv-dot { transition: none; }
   .bv-sheet { animation: none; }
-  .bv-bucket-wave, .bv-bucket-on .bv-bucket-fizz { animation: none; }
-  .bv-bucket-liquid { transition: none; }
+  .bv-bucket, .bv-bucket-disc, .bv-bucket-badge { transition: none; }
   .bv-like-pop { animation: none; }
   .bv-like-burst { animation-name: bv-like-fade; }
   .bv-callout { transition: none; }

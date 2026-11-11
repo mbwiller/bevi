@@ -130,39 +130,21 @@ export function PriceTierPicker({ value, estimated = false, onChange, className 
   );
 }
 
-const BUCKET_ICON = { loved: 'laugh', fine: 'meh', disliked: 'frown' };
-const WAVE = 'M0 8 Q30 1 60 8 T120 8 T180 8 T240 8 V16 H0 Z';
 /**
- * Gut-check choice: a capsule with a glossy orb in its bucket colour. Choosing it pours that colour in
- * (two-thirds full, a moving surface, a few rising bubbles). Sit it on a BevGlow.
- * `material="tint"` (default, and always on the web app): 12% bucket tint and a bucket bar.
- * `material="glass"`: liquid glass, only with the native GlassView on iOS 26+; never imitated with a blur.
+ * Gut-check choice: a `primary` ring filled to a level (loved full, fine half, disliked empty) over its label.
+ * The level carries the order, so it never leans on colour. The chosen one gets a check badge; pass `dimmed`
+ * to the other two once one is chosen.
  */
-export function BucketButton({ bucket = 'loved', selected = false, material = 'tint', onClick, className }) {
+export function BucketButton({ bucket = 'loved', selected = false, dimmed = false, onClick, className }) {
   const b = BUCKETS[bucket];
   return (
-    <button type="button" className={cx('bv', 'bv-bucket', 'bv-band-' + b.band, material === 'tint' && 'bv-bucket-tint', selected && 'bv-bucket-on', className)} onClick={onClick} aria-pressed={selected}>
-      <span className="bv-bucket-liquid" aria-hidden="true">
-        <svg className="bv-bucket-wave bv-bucket-wave-back" viewBox="0 0 240 16" preserveAspectRatio="none"><path d={WAVE} /></svg>
-        <svg className="bv-bucket-wave" viewBox="0 0 240 16" preserveAspectRatio="none"><path d={WAVE} /></svg>
-        <i className="bv-bucket-fizz" /><i className="bv-bucket-fizz" /><i className="bv-bucket-fizz" />
+    <button type="button" className={cx('bv', 'bv-bucket', 'bv-bucket-' + bucket, selected && 'bv-bucket-on', dimmed && 'bv-bucket-dim', className)} onClick={onClick} aria-pressed={selected}>
+      <span className="bv-bucket-disc" aria-hidden="true">
+        <span className="bv-bucket-well"><span className="bv-bucket-fill" /></span>
+        <span className="bv-bucket-badge"><Icon name="check" size={16} strokeWidth={3} /></span>
       </span>
-      <span className="bv-bucket-orb"><Icon name={BUCKET_ICON[bucket]} size={22} strokeWidth={2.25} /></span>
-      <span className="heading bv-bucket-label">{b.label}</span>
-      <span className="bv-bucket-check">{selected ? <Icon name="check" size={16} strokeWidth={3} /> : null}</span>
+      <span className="body bv-bucket-label">{b.label}</span>
     </button>
-  );
-}
-
-/** Soft colour field behind glass: the Bev's own colour with `primary` and `fizz`, blurred. Wraps the gut check. */
-export function BevGlow({ color, children, className, style }) {
-  return (
-    <div className={cx('bv', 'bv-glow', className)} style={Object.assign({}, style, color ? { '--glow': color } : null)}>
-      <span className="bv-glow-blob bv-glow-a" aria-hidden="true" />
-      <span className="bv-glow-blob bv-glow-b" aria-hidden="true" />
-      <span className="bv-glow-blob bv-glow-c" aria-hidden="true" />
-      <div className="bv-glow-content">{children}</div>
-    </div>
   );
 }
 

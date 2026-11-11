@@ -331,28 +331,21 @@ h(function Demo() {
 })`];
 
 // ---------- Ranking ----------
-P.BucketButton = [{ group: 'Ranking', height: 560, width: 393, subtitle: 'Tap one to pour' }, `.gc { display: flex; flex-direction: column; gap: 14px; padding: 6px 16px 24px; }
-.mat { margin: 0; padding: 20px 16px 8px; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--textSecondary); }`, `
+P.BucketButton = [{ group: 'Ranking', height: 360, width: 393, subtitle: 'Tap one to choose it' }, `.gc { display: flex; gap: 4px; padding: 20px 16px 24px; }
+.mat { margin: 0; padding: 20px 16px 0; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--textSecondary); }`, `
 h(function Demo() {
   function Set(props) {
     var st = React.useState(props.start), v = st[0], set = st[1];
     return h('div', { className: 'gc' }, ['loved', 'fine', 'disliked'].map(function (k) {
-      return h(B.BucketButton, { key: k, bucket: k, material: props.material, selected: v === k, onClick: function () { set(k); } });
+      return h(B.BucketButton, { key: k, bucket: k, selected: v === k, dimmed: v != null && v !== k, onClick: function () { set(v === k ? null : k); } });
     }));
   }
-  return h(B.BevGlow, { color: '#f4a7b9' },
-    h('p', { className: 'mat' }, 'Tint · default, and the web app'),
-    h(Set, { material: 'tint', start: 'loved' }),
-    h('p', { className: 'mat' }, 'Liquid glass · native GlassView, iOS 26+ only'),
-    h(Set, { material: 'glass', start: 'fine' }));
+  return h('div', null,
+    h('p', { className: 'mat' }, 'Nothing chosen'),
+    h(Set, { start: null }),
+    h('p', { className: 'mat' }, 'One chosen, the others dimmed'),
+    h(Set, { start: 'fine' }));
 })`];
-
-P.BevGlow = [{ group: 'Ranking', height: 300, width: 393 }, `.hero { display: flex; flex-direction: column; align-items: center; padding: 24px 16px 32px; text-align: center; } .art { width: 168px; height: 168px; }`, `
-h(B.BevGlow, { color: '#c9a27e' },
-  h('div', { className: 'hero' },
-    h('div', { className: 'art' }, h(B.BevArt, BEVS.brownSugar.art)),
-    h('p', { className: 'screenTitle', style: { margin: '8px 0 0' } }, 'Brown Sugar Boba'),
-    h('p', { className: 'body bv-meta', style: { margin: 0 } }, 'Tiger Sugar')))`];
 
 P.CompareCard = [{ group: 'Ranking', height: 310, width: 393 }, '', `
 h('div', { className: 'pv-col' },
@@ -549,16 +542,15 @@ P.ScreenRankingNote = [{ group: 'Screens', height: 852, width: 393, isPage: true
     h('div', { className: 'nt-kb', 'aria-hidden': true }))`)];
 
 P.ScreenGutCheck = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHONE_CSS + `
-  .phone > .bv-glow { position: absolute; inset: 0; }
   .gc-top { display: flex; justify-content: flex-end; align-items: center; height: 44px; padding: 0 8px; }
   .gc-hero { display: flex; flex-direction: column; align-items: center; padding: 8px 16px 0; text-align: center; }
   .gc-art { width: 200px; height: 200px; }
   .gc-cat { display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; }
-  .gc-q { margin: 36px 16px 16px; }
-  .gc-btns { display: flex; flex-direction: column; gap: 14px; padding: 0 16px; }
+  .gc-q { margin: 36px 16px 20px; text-align: center; }
+  .gc-btns { display: flex; gap: 4px; padding: 0 16px; }
   .gc-hint { margin: 20px 16px 0; text-align: center; }`, `
 h('div', { className: 'phone' },
-  h(B.BevGlow, { color: '#f4a7b9' },
+  h('div', { className: 'gc-screen' },
     h('div', { className: 'status' }, '9:41', h('span', { className: 'status-r' }, h('span', { className: 'batt' }, h('i')))),
     h('div', { className: 'gc-top' }, h(B.IconButton, { icon: 'x', label: 'Discard ranking', variant: 'filled' })),
     h('div', { className: 'gc-hero' },
@@ -567,7 +559,7 @@ h('div', { className: 'phone' },
       h('p', { className: 'body bv-meta' }, 'LaCroix'),
       h('p', { className: 'body gc-cat' }, h(B.Icon, { name: 'droplets', size: 16, strokeWidth: 2 }), ' Sparkling water • ', h(B.PriceTier, { tier: 1 }))),
     h('p', { className: 'displayDrop gc-q' }, 'How was it?'),
-    h('div', { className: 'gc-btns' }, h(B.BucketButton, { bucket: 'loved', selected: true }), h(B.BucketButton, { bucket: 'fine' }), h(B.BucketButton, { bucket: 'disliked' })),
+    h('div', { className: 'gc-btns' }, h(B.BucketButton, { bucket: 'loved', selected: true }), h(B.BucketButton, { bucket: 'fine', dimmed: true }), h(B.BucketButton, { bucket: 'disliked', dimmed: true })),
     h('p', { className: 'caption bv-meta gc-hint' }, "Next, you'll compare it with Bevs you've already ranked.")))`];
 
 // Bev detail scrolls: the first phone is the top of the screen, the second is the same screen

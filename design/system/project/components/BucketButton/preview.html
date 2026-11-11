@@ -1,4 +1,4 @@
-<!-- @dsCard group="Ranking" height=560 width=393 subtitle="Tap one to pour" -->
+<!-- @dsCard group="Ranking" height=360 width=393 subtitle="Tap one to choose it" -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -12,8 +12,8 @@
   .pv-label { font-size: 12px; line-height: 16px; color: var(--textSecondary); }
   .pv-narrow { max-width: 393px; }
   .pv-frame { position: relative; width: 393px; max-width: 100%; overflow: hidden; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
-.gc { display: flex; flex-direction: column; gap: 14px; padding: 6px 16px 24px; }
-.mat { margin: 0; padding: 20px 16px 8px; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--textSecondary); }</style>
+.gc { display: flex; gap: 4px; padding: 20px 16px 24px; }
+.mat { margin: 0; padding: 20px 16px 0; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--textSecondary); }</style>
 </head>
 <body>
 <div id="root"></div>
@@ -46,14 +46,14 @@
   function Set(props) {
     var st = React.useState(props.start), v = st[0], set = st[1];
     return h('div', { className: 'gc' }, ['loved', 'fine', 'disliked'].map(function (k) {
-      return h(B.BucketButton, { key: k, bucket: k, material: props.material, selected: v === k, onClick: function () { set(k); } });
+      return h(B.BucketButton, { key: k, bucket: k, selected: v === k, dimmed: v != null && v !== k, onClick: function () { set(v === k ? null : k); } });
     }));
   }
-  return h(B.BevGlow, { color: '#f4a7b9' },
-    h('p', { className: 'mat' }, 'Tint · default, and the web app'),
-    h(Set, { material: 'tint', start: 'loved' }),
-    h('p', { className: 'mat' }, 'Liquid glass · native GlassView, iOS 26+ only'),
-    h(Set, { material: 'glass', start: 'fine' }));
+  return h('div', null,
+    h('p', { className: 'mat' }, 'Nothing chosen'),
+    h(Set, { start: null }),
+    h('p', { className: 'mat' }, 'One chosen, the others dimmed'),
+    h(Set, { start: 'fine' }));
 }));
 </script>
 </body>

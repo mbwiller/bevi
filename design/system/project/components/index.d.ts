@@ -207,18 +207,14 @@ export declare function StatCard(props: StatCardProps): React.ReactElement;
 export interface UserRowProps { user: Person; rank?: number; meta?: string; streak?: number; following?: boolean; self?: boolean; onFollow?: () => void; onClick?: () => void; divider?: boolean; className?: string }
 export declare function UserRow(props: UserRowProps): React.ReactElement;
 
-/** Gut-check choice; selecting it pours the bucket colour in. Place on a BevGlow. */
+/** Gut-check choice: a `primary` ring filled to a level (loved full, fine half, disliked empty) over its label. */
 export interface BucketButtonProps {
   bucket: Bucket; selected?: boolean;
-  /** tint (default; always on the Bevi web app): 12% bucket tint and a 4px bucket bar. glass: liquid glass, only with the native GlassView on iOS 26+, never imitated with a blur. Reduce Transparency forces tint. */
-  material?: 'glass' | 'tint';
+  /** Another bucket is chosen: the ring fades and the label goes `textSecondary`. */
+  dimmed?: boolean;
   onClick?: () => void; className?: string;
 }
 export declare function BucketButton(props: BucketButtonProps): React.ReactElement;
-
-/** Blurred colour field behind the gut-check BucketButtons: the Bev's colour plus `primary` and `fizz`. */
-export interface BevGlowProps { color?: string; children?: React.ReactNode; className?: string; style?: React.CSSProperties }
-export declare function BevGlow(props: BevGlowProps): React.ReactElement;
 
 export interface CompareCardProps { bev: Bev; rankLabel?: string; isNew?: boolean; selected?: boolean; onClick?: () => void; className?: string }
 export declare function CompareCard(props: CompareCardProps): React.ReactElement;
@@ -334,7 +330,7 @@ declare global {
       TextField: typeof TextField; PriceTierPicker: typeof PriceTierPicker; Header: typeof Header; SectionHeader: typeof SectionHeader;
       ListScopeDropdown: typeof ListScopeDropdown; SegmentedTabs: typeof SegmentedTabs; TabBar: typeof TabBar; BevRow: typeof BevRow;
       FeedPost: typeof FeedPost; FeaturedCard: typeof FeaturedCard; BevOfCard: typeof BevOfCard; ProfileListRow: typeof ProfileListRow; StatCard: typeof StatCard;
-      UserRow: typeof UserRow; ProgressStrip: typeof ProgressStrip; ProgressBar: typeof ProgressBar; TasteBar: typeof TasteBar; TasteProfile: typeof TasteProfile; BevGlow: typeof BevGlow; BucketButton: typeof BucketButton; CompareCard: typeof CompareCard; ProgressDots: typeof ProgressDots;
+      UserRow: typeof UserRow; ProgressStrip: typeof ProgressStrip; ProgressBar: typeof ProgressBar; TasteBar: typeof TasteBar; TasteProfile: typeof TasteProfile; BucketButton: typeof BucketButton; CompareCard: typeof CompareCard; ProgressDots: typeof ProgressDots;
       EmptyState: typeof EmptyState; ErrorState: typeof ErrorState; Skeleton: typeof Skeleton; Sheet: typeof Sheet; CommentsSheet: typeof CommentsSheet; CollectionSheet: typeof CollectionSheet;
       MapCallout: typeof MapCallout; MapFilterRow: typeof MapFilterRow; MapControls: typeof MapControls; VenueRow: typeof VenueRow; VenueSheet: typeof VenueSheet;
       /** The 15 category slugs with labels and icon names. */
