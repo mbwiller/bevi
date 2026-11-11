@@ -33,6 +33,7 @@ import type {
   Ranking,
   RecommendationsResult,
   Session,
+  SuggestedProfile,
   TasteProfileRow,
   UserLeaderboardRow,
   VenueDetail,
@@ -187,8 +188,13 @@ export interface FollowsApi {
   /** @throws 'unauthorized', 'not_found'. */
   listFollowing(id: string, page?: PageParams): Promise<Page<ProfileRow>>;
 
-  /** Users with the most rankings the caller doesn't follow. @throws 'unauthorized'. */
-  suggested(): Promise<ProfileRow[]>;
+  /**
+   * Users with the most rankings the caller doesn't follow. Each row carries
+   * who among the people the caller follows already follows that user
+   * (`followedBy`, at most two, and `followedByCount`, the total).
+   * @throws 'unauthorized'.
+   */
+  suggested(): Promise<SuggestedProfile[]>;
 }
 
 export interface CategoriesApi {
@@ -464,7 +470,8 @@ export interface FeedApi {
 
   /**
    * One user's RANKING posts, newest first, in the same shape as `getFeed`
-   * (likes, and the first seven comments inline). Only posts the caller may
+   * (likes, the first seven comments inline, and `alsoBevdBy`, which is
+   * always relative to the caller, not to `userId`). Only posts the caller may
    * see: their own and followed users'; empty for anyone else, whose Activity
    * uses `rankings.listUser`.
    * @throws 'unauthorized'; 'not_found' — no such user.
@@ -539,6 +546,24 @@ export interface LeaderboardApi {
 
   /** @throws 'unauthorized'. */
   users(page?: PageParams): Promise<Page<UserLeaderboardRow>>;
+
+  /**
+   * The same board among friends: the caller plus the people the caller
+   * follows, ranked among themselves by exactly the `points` `users()` ranks
+   * by. `rank` is the competition rank within that set, from 1, and the rows
+   * come in the global board's order (points, then Bevs ranked, then the
+   * older account, then id), so a tie is broken the same way on both boards.
+   *
+   * As on `users()`, someone with no rankings is Unranked and has no row —
+   * that includes the caller, so the page is empty until the caller or
+   * someone they follow has ranked a Bev. With no follows it is the caller
+   * alone, at rank 1.
+   *
+   * Paged by `nextCursor`; `rank` is the rank in the whole set, not the
+   * position on the page.
+   * @throws 'unauthorized'.
+   */
+  friends(page?: PageParams): Promise<Page<UserLeaderboardRow>>;
 }
 
 export interface RecsApi {
