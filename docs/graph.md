@@ -430,9 +430,10 @@ does not notice ("the one rule", above).
 committed at 02:29 UTC with 385 Bevs, 75 categories, 148 brands, 23 flavours,
 203 notes and 4 users; 4,653 `SIMILAR_TO`, 42 `RANKED`, 21 `LIKES` and 13
 `DISLIKES`. The vector index answered, and Coke–Pepsi read back as 0.9001, the
-weight `bev_edges` holds. That generation predates the analytics phase, so it
-carries no `(:Community)` and no computed property; see "Known gaps" for what
-of the analytics phase has and has not run.
+weight `bev_edges` holds. The scheduled runs followed on their own the same
+day (after `graph-edges` at 12:13 UTC and on the cron at 12:58 UTC, both
+green). The analytics phase (A-16 (4), #180) first committed in Actions run 43076312450 at 18:18 UTC: 385 Bevs, 4,664 `SIMILAR_TO`, **11 taste families** (sizes 50, 49, 47, 46, 41, 36, 34, 32, 29, 20 and 1), modularity 0.6485, category purity 0.4649, bridge non-zero for 334 of 385 Bevs (median 0.6220), and `bev_graph_stats` replaced with 385 rows at version 1.8.0;
+see "Graph signals" below.
 
 ```bash
 npm run graph:sync                # read Postgres, write the graph, verify, commit
@@ -1355,24 +1356,25 @@ right choice: a Bolt connection pool has nothing to pool.
   answered and Coke–Pepsi read back as 0.9001.
 - **So the instance holds the production graph**, and `graph-query`'s
   `similar`, `bev` and `why` templates have data to return.
-- **The graph signals are built (A-16 (4), `be/graph-stats`), and only partly
-  run.** What **has** run, on 2026-11-11 against the live instance: the one new
-  constraint (`community_id_unique`, applied); `npm run graph:sync --
-  --fixture`, i.e. every upsert, the analytics phase with the flavour
-  projection, both sweeps and all 32 verification checks on the catalog
-  fixture, **rolled back**; and the generation-A-then-B check of the community
-  sweep, also rolled back. What has
-  **not** run anywhere: **any of the SQL** (`20261110000100` and pgTAP 30 —
-  there is no Docker or psql on the machine it was built on, so CI's `db` job
-  on the PR is the first execution); the **Postgres write-back**
-  (`replace_bev_graph_stats` through PostgREST); the analytics phase's
-  **commit path** (the committed graph still has no `(:Community)` and no
-  computed property; the real catalog's numbers quoted under "Graph signals"
-  were computed read-only and written nowhere); and `deno check` on
-  `graph-query` (no Deno there either). The first real run is the first
-  `graph-sync` after the merge — and **`20261110000100` must be on prod before
-  that merge**, or the nightly run calls an RPC that does not exist (the graph
-  would still commit; the run would be red every night).
+- **The graph signals are built and running (A-16 (4), #180).** Migration
+  `20261110000100` was pushed to production on 2026-11-11 (one migration, after
+  a dry run showed nothing else pending; `migration list` shows local and
+  remote equal). #180 itself was merged about forty minutes BEFORE that push,
+  against its own banner; no `graph-sync` ran in between, so no run failed,
+  but the order was luck rather than design. Then a `dry_run` dispatch and a
+  real one both succeeded: run 43076312450 committed at 18:18 UTC on 2026-11-11: 385 Bevs, 4,664 `SIMILAR_TO`, **11 taste families** (sizes 50, 49, 47, 46, 41, 36, 34, 32, 29, 20 and 1), modularity 0.6485, category purity 0.4649, bridge non-zero for 334 of 385 Bevs (median 0.6220), and `bev_graph_stats` replaced with 385 rows at version 1.8.0.
+  Read back from the instance afterwards: 11 `(:Community)`, 385
+  `IN_COMMUNITY`, one hub per family, every community id of the opaque shape,
+  Σ PageRank = 1. CI's `db` job ran all of the SQL from a clean reset first
+  (pgTAP 30, 81 assertions). The re-created `get_prediction_snapshot()` was
+  checked on production after the push: the app's Recommended tab loaded for a
+  signed-in user with the RPC answering 200 and a full list rendered (it
+  differs from the previous definition only by the added `bevGraph` key).
+  **Not verified:** `deno check` on `graph-query` outside CI, and the function
+  is still undeployed.
+- **Nothing reads the signals yet.** `recommend()`'s `diversity: 'community'`
+  and `exploration: 'community'` (M-31, 1.8.0) ship off, and switching them on
+  waits on ranking data, like `edges` and `stored`.
 - **A taste family is only as good as the flavour labels.** It is driven
   mostly by the hand-labelled base plus shared words in names ("Graph
   signals", above); the Bevs with base `other` and the user-created ones with
