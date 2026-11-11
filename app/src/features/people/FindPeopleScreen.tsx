@@ -14,9 +14,12 @@ import { SectionHeader } from '@/components/SectionHeader';
 import { UserRow } from '@/components/UserRow';
 import { useDebouncedValue } from '@/features/add-bev/useDebouncedValue';
 import { isPointsRankingItem, usePointsRanking, type PointsRankingItem } from '@/features/leaderboard/PeopleBoard';
+import { usePointsScope } from '@/features/leaderboard/pointsScope';
+import { ScopePills } from '@/features/leaderboard/ScopePills';
 import { useBack } from '@/lib/useBack';
 import { spacing, useTheme } from '@/theme';
 
+import { followedByContext } from './copy';
 import { PeopleSkeleton } from './PeopleList';
 
 export const PEOPLE_PLACEHOLDER = 'Search people';
@@ -29,7 +32,8 @@ const SEARCH_SKELETON_ROWS = 4;
 type Item =
   | PointsRankingItem
   | { kind: 'suggested-header'; key: string; more: boolean }
-  | { kind: 'person'; key: string; row: ProfileRow }
+  /** `context`: a suggestion's "Followed by …" line. */
+  | { kind: 'person'; key: string; row: ProfileRow; context?: string }
   | { kind: 'loading'; key: string; count: number; label: string }
   | { kind: 'error'; key: string; error: unknown; retry: () => void }
   | { kind: 'no-match'; key: string; query: string };
@@ -40,8 +44,9 @@ const typeOf = (i: Item) => i.kind;
 /**
  * People (`/people`, TASKS.md M-32; design system ScreenPeople): finding people and the points ranking, in one list. A back header,
  * then a filled "Search people" bar. Idle: "Suggested for you" (`follows.suggested`, the first few
- * with "See all") and then the points ranking (`usePointsRanking`: "Ranked by points", the "How
- * points work" sheet, your own row tinted and pinned under the list while it's off screen). Typing
+ * with "See all", each saying who you follow already follows them) and then the points ranking
+ * (`usePointsRanking`: "Ranked by points", the "How points work" sheet, the Friends | Everyone
+ * pills, your own row tinted and pinned under the list while it's off screen). Typing
  * replaces both with people search results (debounced, as the Search screen's). Your own profile is
  * never suggested or found. Follow toggles optimistically everywhere; every row opens the person.
  */
@@ -58,7 +63,11 @@ export function FindPeopleScreen() {
   const searching = typed.length > 0;
   const settled = searching && query === typed;
 
-  const ranking = usePointsRanking({ active: !searching });
+  // Friends by default; the choice outlives the screen (usePointsScope).
+  const scope = usePointsScope((s) => s.scope);
+  const setScope = usePointsScope((s) => s.setScope);
+  const scopePills = useMemo(() => <ScopePills value={scope} onChange={setScope} />, [scope, setScope]);
+  const ranking = usePointsRanking({ scope, header: scopePills, active: !searching });
   const { toggleFollow, renderItem: renderRanking } = ranking;
 
   const suggested = useSuggested();
@@ -99,7 +108,11 @@ export function FindPeopleScreen() {
       // Left out when there's no one left to suggest.
       out.push({ kind: 'suggested-header', key: 'suggested-header', more });
       const shown = more ? suggestions.slice(0, SUGGESTED_PREVIEW) : suggestions;
-      for (const row of shown) out.push({ kind: 'person', key: `s:${row.id}`, row });
+      for (const row of shown) {
+        // Defaulted, like FeedPostItem's alsoBevdBy, so a row in an older shape can't take People down.
+        const context = followedByContext(row.followedBy ?? [], row.followedByCount ?? 0);
+        out.push({ kind: 'person', key: `s:${row.id}`, row, context });
+      }
     }
     return [...out, ...ranking.items];
   }, [
@@ -139,6 +152,7 @@ export function FindPeopleScreen() {
           return (
             <UserRow
               user={item.row}
+              context={item.context}
               following={item.row.isFollowing}
               onFollow={() => toggleFollow(item.row.id, item.row.isFollowing)}
               onPress={() => openUser(item.row.id)}
