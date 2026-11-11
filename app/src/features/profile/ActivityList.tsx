@@ -6,6 +6,7 @@ import { useCallback, useMemo, type ReactElement, type RefObject } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { FOLLOW_MUTATION, flattenPages, useMe, useTasteProfile, useUserFeed, useUserRankings } from '@/api/hooks';
+import { Arrive, useArrival } from '@/components/Arrive';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { FeedPost } from '@/components/FeedPost';
@@ -87,24 +88,32 @@ export function ActivityList({ profile, self, following = false, header, tab, on
   const readout = useMemo(() => tasteReadout(tasteRows, self ? undefined : first), [tasteRows, self, first]);
   const shown = tab === 'taste' ? tasteQuery : query;
   const { renderItem: renderPost, commentsFor, closeComments, postGone, notice } = useFeedPostActions({ linkActors: false });
+  // Arrive: what replaces each tab's skeleton rises in once; later pages and rows scrolled into view
+  // hold still. Pending counts only while that tab shows its skeleton (the taste query is disabled,
+  // so pending, whenever its tab is closed).
+  const activityArrival = useArrival(tab === 'activity' && query.isPending);
+  const tasteArrival = useArrival(tab === 'taste' && tasteQuery.isPending);
 
   const renderItem = useCallback(
-    ({ item }: { item: ActivityRow }) =>
-      'actor' in item ? (
-        renderPost({ item })
-      ) : (
-        <FeedPost
-          actor={profile}
-          you={self}
-          bev={item.bev}
-          score={item.score}
-          bucket={item.bucket}
-          note={item.note}
-          time={item.createdAt}
-          onOpen={() => router.push({ pathname: '/bev/[id]', params: { id: item.bev.id } })}
-        />
-      ),
-    [profile, self, router, renderPost],
+    ({ item }: { item: ActivityRow }) => (
+      <Arrive progress={activityArrival}>
+        {'actor' in item ? (
+          renderPost({ item })
+        ) : (
+          <FeedPost
+            actor={profile}
+            you={self}
+            bev={item.bev}
+            score={item.score}
+            bucket={item.bucket}
+            note={item.note}
+            time={item.createdAt}
+            onOpen={() => router.push({ pathname: '/bev/[id]', params: { id: item.bev.id } })}
+          />
+        )}
+      </Arrive>
+    ),
+    [profile, self, router, renderPost, activityArrival],
   );
 
   const listHeader = (
@@ -123,38 +132,46 @@ export function ActivityList({ profile, self, following = false, header, tab, on
           <Skeleton variant="text" />
           <Skeleton variant="text" />
         </View>
-      ) : tasteQuery.isError ? (
-        <ErrorState error={tasteQuery.error} onRetry={() => void tasteQuery.refetch()} />
-      ) : tasteRows.length > 0 ? (
-        <TasteProfile rows={tasteRows} readout={readout} />
-      ) : self ? (
-        <EmptyState
-          icon="chart-no-axes-column"
-          title="No taste profile yet"
-          body="Rank a few Bevs and your categories will show up here."
-          action="Rank your first Bev"
-          onAction={onEmptyAction}
-        />
       ) : (
-        <EmptyState icon="chart-no-axes-column" title="No taste profile yet" body="Their taste profile will show up here." />
+        <Arrive progress={tasteArrival}>
+          {tasteQuery.isError ? (
+            <ErrorState error={tasteQuery.error} onRetry={() => void tasteQuery.refetch()} />
+          ) : tasteRows.length > 0 ? (
+            <TasteProfile rows={tasteRows} readout={readout} />
+          ) : self ? (
+            <EmptyState
+              icon="chart-no-axes-column"
+              title="No taste profile yet"
+              body="Rank a few Bevs and your categories will show up here."
+              action="Rank your first Bev"
+              onAction={onEmptyAction}
+            />
+          ) : (
+            <EmptyState icon="chart-no-axes-column" title="No taste profile yet" body="Their taste profile will show up here." />
+          )}
+        </Arrive>
       )
     ) : query.isPending ? (
       <View accessibilityLabel="Loading" testID="activity-skeleton">
         <Skeleton variant="post" />
         <Skeleton variant="post" />
       </View>
-    ) : query.isError ? (
-      <ErrorState error={query.error} onRetry={() => void query.refetch()} />
-    ) : self ? (
-      <EmptyState
-        icon="file-text"
-        title="Your rankings will show up here"
-        body="Rank a Bev and it lands on your profile."
-        action="Rank your first Bev"
-        onAction={onEmptyAction}
-      />
     ) : (
-      <EmptyState icon="file-text" title={`${first} hasn't Bev'd anything yet`} body="Their rankings will show up here." />
+      <Arrive progress={activityArrival}>
+        {query.isError ? (
+          <ErrorState error={query.error} onRetry={() => void query.refetch()} />
+        ) : self ? (
+          <EmptyState
+            icon="file-text"
+            title="Your rankings will show up here"
+            body="Rank a Bev and it lands on your profile."
+            action="Rank your first Bev"
+            onAction={onEmptyAction}
+          />
+        ) : (
+          <EmptyState icon="file-text" title={`${first} hasn't Bev'd anything yet`} body="Their rankings will show up here." />
+        )}
+      </Arrive>
     );
 
   return (

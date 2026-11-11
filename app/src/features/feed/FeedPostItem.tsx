@@ -3,6 +3,7 @@ import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { FeedPost, POST_AVATAR } from '@/components/FeedPost';
+import { usePressFeedback, type PressFeedback } from '@/components/PressFeedback';
 import { spacing, type, useTheme } from '@/theme';
 
 export interface FeedPostItemProps {
@@ -40,6 +41,8 @@ export const FeedPostItem = memo(function FeedPostItem({
   onOpenActor,
 }: FeedPostItemProps) {
   const { colors } = useTheme();
+  // The actor link is transparent: while it is held, the avatar under it gives way (Press).
+  const actorPress = usePressFeedback();
   return (
     <View testID={`feed-post-${item.id}`} style={[styles.item, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
       <FeedPost
@@ -60,6 +63,7 @@ export const FeedPostItem = memo(function FeedPostItem({
         onRank={onRank}
         onSave={onSave}
         onOpen={onOpenBev}
+        avatarPressStyle={onOpenActor ? actorPress.style : undefined}
         divider={false}
       />
       {likeError ? (
@@ -67,7 +71,7 @@ export const FeedPostItem = memo(function FeedPostItem({
           {likeError}
         </Text>
       ) : null}
-      {onOpenActor ? <ActorLink label={you ? 'Your profile' : actorLabel(item.actor)} onPress={onOpenActor} /> : null}
+      {onOpenActor ? <ActorLink label={you ? 'Your profile' : actorLabel(item.actor)} onPress={onOpenActor} press={actorPress} /> : null}
     </View>
   );
 });
@@ -75,9 +79,22 @@ export const FeedPostItem = memo(function FeedPostItem({
 /** The actor link's accessible name: "Friend A, @friend_a". */
 export const actorLabel = (actor: Pick<Profile, 'displayName' | 'handle'>) => `${actor.displayName}, @${actor.handle}`;
 
-/** The transparent target over a FeedPost's avatar that opens the actor's profile. Inside the post's wrapper View. */
-export function ActorLink({ label, onPress }: { label: string; onPress: () => void }) {
-  return <Pressable onPress={onPress} accessibilityRole="link" accessibilityLabel={label} style={styles.actor} />;
+/**
+ * The transparent target over a FeedPost's avatar that opens the actor's profile. Inside the post's
+ * wrapper View. `press` drives the avatar's Press feedback (give the same object's `style` to the
+ * FeedPost's `avatarPressStyle`).
+ */
+export function ActorLink({ label, onPress, press }: { label: string; onPress: () => void; press?: PressFeedback }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={press?.onPressIn}
+      onPressOut={press?.onPressOut}
+      accessibilityRole="link"
+      accessibilityLabel={label}
+      style={styles.actor}
+    />
+  );
 }
 
 const styles = StyleSheet.create({

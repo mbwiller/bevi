@@ -23,6 +23,7 @@ import { BevImage } from './BevImage';
 import { CommentButton } from './CommentButton';
 import { Icon } from './Icon';
 import { LikeButton } from './LikeButton';
+import { FeedbackPressable, type PressFeedback } from './PressFeedback';
 import { ScoreBubble } from './ScoreBubble';
 import { FollowPill } from './UserRow';
 
@@ -82,6 +83,11 @@ export interface FeedPostProps {
   onRank?: () => void;
   onSave?: () => void;
   onOpen?: () => void;
+  /**
+   * The press feedback of a target laid over the avatar from outside (FeedPostItem's actor link):
+   * the avatar gives way while that target is held.
+   */
+  avatarPressStyle?: PressFeedback['style'];
   divider?: boolean;
   style?: StyleProp<ViewStyle>;
 }
@@ -193,6 +199,7 @@ export function FeedPost({
   onRank,
   onSave,
   onOpen,
+  avatarPressStyle,
   divider = true,
   style,
 }: FeedPostProps) {
@@ -273,7 +280,9 @@ export function FeedPost({
       ]}
     >
       <View style={styles.head}>
-        <Avatar name={name || who} src={actor?.avatarUrl ?? undefined} size={POST_AVATAR} />
+        <Animated.View style={avatarPressStyle}>
+          <Avatar name={name || who} src={actor?.avatarUrl ?? undefined} size={POST_AVATAR} />
+        </Animated.View>
         <View style={styles.headText}>
           {/* A long Bev name wraps to two lines at most, and the bubble keeps its place. */}
           <Text style={[type.heading, styles.regular, textColor]} numberOfLines={2}>
@@ -307,9 +316,9 @@ export function FeedPost({
         <View style={styles.body} testID="post-body">
           {/* Top-aligned and no taller than the picture, so the burst stays centred on it when the note runs long. */}
           <View style={styles.picture}>
-            <Pressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={`Open ${bev.name}`} testID="post-picture">
+            <FeedbackPressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={`Open ${bev.name}`} testID="post-picture">
               <BevImage size={POST_PICTURE} src={image.src} art={image.art} alt={bev.name} status={image.status} />
-            </Pressable>
+            </FeedbackPressable>
             {burst ? <LikeBurst key={burst} /> : null}
           </View>
           {noteText || beviLine ? (
@@ -336,9 +345,9 @@ export function FeedPost({
             >
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stripContent}>
                 {photos!.map((t, i) => (
-                  <Pressable key={i} onPress={onOpen} accessibilityRole="button" accessibilityLabel={`Open ${bev.name}`}>
+                  <FeedbackPressable key={i} onPress={onOpen} accessibilityRole="button" accessibilityLabel={`Open ${bev.name}`}>
                     <BevImage size={size.bevImageStrip} src={t.src} art={t.art} alt={bev.name} />
-                  </Pressable>
+                  </FeedbackPressable>
                 ))}
               </ScrollView>
             </Pressable>

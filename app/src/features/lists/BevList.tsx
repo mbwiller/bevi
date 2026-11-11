@@ -1,7 +1,8 @@
 import { FlashList, type FlashListRef, type ListRenderItem } from '@shopify/flash-list';
-import { useEffect, useRef, type ReactElement, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, type ReactElement, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { Arrive, useArrival } from '@/components/Arrive';
 import { ErrorState } from '@/components/ErrorState';
 import { Skeleton } from '@/components/Skeleton';
 import { spacing } from '@/theme';
@@ -47,9 +48,16 @@ export interface BevListProps<T> {
  * an empty state, infinite scroll on `nextCursor` and pull-to-refresh (native only; harmless on web).
  * Maintain-visible-content-position is off: these lists are top-anchored and append at the bottom, and
  * with it on, a re-sort scrolls to wherever the old first row landed. `resetScrollKey` returns to the top.
+ * What replaces the skeleton (the rows, or the empty or error state) arrives (`Arrive`): the rows of
+ * the first paint rise together, and rows from a later page or scrolled into view hold still.
  */
 export function BevList<T>({ data, query, renderItem, keyExtractor, header, empty, resetScrollKey }: BevListProps<T>) {
   const listRef = useRef<FlashListRef<T>>(null);
+  const arrival = useArrival(query.isPending);
+  const renderRow = useCallback<ListRenderItem<T>>(
+    (info) => <Arrive progress={arrival}>{renderItem(info)}</Arrive>,
+    [renderItem, arrival],
+  );
   const lastKey = useRef(resetScrollKey);
   useEffect(() => {
     if (lastKey.current === resetScrollKey) return;
@@ -58,17 +66,17 @@ export function BevList<T>({ data, query, renderItem, keyExtractor, header, empt
   }, [resetScrollKey]);
   const body = query.isPending ? (
     <SkeletonRows />
-  ) : query.isError && data.length === 0 ? (
-    <ErrorState error={query.error} onRetry={() => void query.refetch()} />
   ) : (
-    empty
+    <Arrive progress={arrival}>
+      {query.isError && data.length === 0 ? <ErrorState error={query.error} onRetry={() => void query.refetch()} /> : empty}
+    </Arrive>
   );
   return (
     <FlashList
       ref={listRef}
       maintainVisibleContentPosition={{ disabled: true }}
       data={data}
-      renderItem={renderItem}
+      renderItem={renderRow}
       keyExtractor={keyExtractor}
       ListHeaderComponent={header}
       ListEmptyComponent={<>{body}</>}

@@ -19,3 +19,18 @@ it('omits the count when none is given', async () => {
   await render(<ProfileListRow icon="heart" label="Recommended for you" />);
   expect(screen.getByRole('button', { name: 'Recommended for you' })).toBeTruthy();
 });
+
+it('Press: the content gives way, the full-bleed row and its divider stay put', async () => {
+  const onPress = jest.fn();
+  await render(<ProfileListRow icon="circle-check" label="Bev'd" count={42} onPress={onPress} />);
+  const row = screen.getByRole('button', { name: "Bev'd, 42" });
+  const rowStyle = StyleSheet.flatten(row.props.style) as ViewStyle;
+  expect(rowStyle.borderBottomWidth).toBe(1);
+  expect(rowStyle.transform).toBeUndefined();
+  const content = StyleSheet.flatten(screen.getByTestId('profile-list-row-content').props.style) as ViewStyle;
+  expect(content).toMatchObject({ flexDirection: 'row', opacity: 1, transform: [{ scale: 1 }] });
+  await fireEvent(row, 'pressIn');
+  await fireEvent(row, 'pressOut');
+  await fireEvent.press(row);
+  expect(onPress).toHaveBeenCalledTimes(1);
+});

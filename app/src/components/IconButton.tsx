@@ -1,9 +1,10 @@
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { MAX_FONT_SCALE_DENSE, radius, size as sizes, useTheme } from '@/theme';
 
 import { TARGET_MIN } from './HitTarget';
 import { Icon, type IconName } from './Icon';
+import { FeedbackPressable } from './PressFeedback';
 
 export interface IconButtonProps {
   icon: IconName;
@@ -22,11 +23,14 @@ export interface IconButtonProps {
 
 const DISC = 32;
 
-/** A bare 28pt outline icon with a 44pt target (`plain`), or the grey 32pt close circle (`filled`). */
+/**
+ * A bare 28pt outline icon with a 44pt target (`plain`), or the grey 32pt close circle (`filled`).
+ * Under the finger the whole target, badge and all, gives way (Press).
+ */
 export function IconButton({ icon, label, variant = 'plain', badge, size = sizes.icon, onPress, disabled, style }: IconButtonProps) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <FeedbackPressable
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
@@ -48,7 +52,7 @@ export function IconButton({ icon, label, variant = 'plain', badge, size = sizes
           </Text>
         </View>
       ) : null}
-    </Pressable>
+    </FeedbackPressable>
   );
 }
 
