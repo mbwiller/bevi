@@ -3,6 +3,7 @@ import { StyleSheet, View, type DimensionValue, type StyleProp, type ViewStyle }
 import { radius, size, spacing, type, useTheme } from '@/theme';
 
 import { Shimmer } from './BevImage';
+import { BEV_ROW_FOOT_LINE } from './BevRow';
 
 export interface SkeletonProps {
   /** row: a BevRow. post: a FeedPost. text, block and circle: plain shapes sized by `width`/`height`. */
@@ -21,9 +22,6 @@ const TITLE = 20;
 const BLOCK = 120;
 const CIRCLE = 40;
 const AVATAR = 60;
-/** A BevRow's foot line, and the action glyph at its right. */
-const ROW_FOOT = 32;
-const ACTION = 28;
 
 /** One grey `input` bone with the shimmer (which holds still under reduced motion). */
 function Bone({ width, height, round, style }: { width: DimensionValue; height: number; round?: boolean; style?: StyleProp<ViewStyle> }) {
@@ -47,19 +45,19 @@ export function Skeleton({ variant = 'text', width, height, lines = 1, style }: 
     return (
       <View style={[styles.row, { borderBottomColor: colors.border }, style]} {...busy}>
         <View style={styles.rowTop}>
-          <View style={styles.lines}>
-            <View style={styles.rowTitle}>
+          <View style={styles.rowText} testID="skeleton-row-text">
+            <View style={styles.rowTitle} testID="skeleton-row-title">
               <Bone width="58%" height={TITLE} />
             </View>
-            <View style={styles.rowLine}>
+            <View style={styles.rowLine} testID="skeleton-row-line">
               <Bone width="40%" height={LINE} />
             </View>
           </View>
           <Bone width={CIRCLE} height={CIRCLE} round style={styles.rowScore} />
         </View>
-        <View style={styles.rowFoot}>
+        <View style={styles.rowFoot} testID="skeleton-row-foot">
           <Bone width="28%" height={LINE} />
-          <Bone width={ACTION} height={ACTION} round />
+          <Bone width={size.icon} height={size.icon} round />
         </View>
       </View>
     );
@@ -109,10 +107,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   rowTop: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  // No gap, unlike `lines`: the two slots are exactly the real row's 25pt name and 20pt category lines.
+  rowText: { flex: 1, minWidth: 0 },
   rowTitle: { height: type.screenTitle.lineHeight, justifyContent: 'center' },
   rowLine: { height: type.body.lineHeight, justifyContent: 'center' },
   rowScore: { marginTop: 2, marginRight: spacing.xs },
-  rowFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: ROW_FOOT },
+  rowFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: BEV_ROW_FOOT_LINE },
   post: { gap: spacing.lg, paddingVertical: spacing.lg, paddingHorizontal: spacing.gutter },
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxl },
 });

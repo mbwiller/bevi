@@ -126,8 +126,8 @@ const IMAGE = 56;
 /** The foot's left edge with an image: the text column's, past the image and the gap. */
 const TEXT_INDENT = IMAGE + spacing.md;
 /** The foot line is 32pt; the 44pt action buttons overlap it by (44 - 32) / 2 above and below. */
-const FOOT_LINE = 32;
-const ACTION_OVERLAP = (size.target - FOOT_LINE) / 2;
+export const BEV_ROW_FOOT_LINE = 32;
+const ACTION_OVERLAP = (size.target - BEV_ROW_FOOT_LINE) / 2;
 const DIVIDER_WIDTH = 1;
 
 /**
@@ -158,9 +158,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    minHeight: FOOT_LINE,
+    minHeight: BEV_ROW_FOOT_LINE,
   },
-  footWithImage: { paddingLeft: TEXT_INDENT },
+  // A margin, not padding: the foot's box must start at the text column so it never covers the image's
+  // lower 11pt (which overhangs the 45pt text block) and steals its taps.
+  footWithImage: { marginLeft: TEXT_INDENT },
   // BevActions already has marginRight -8; these negative margins let the 44pt buttons overhang the 32pt line.
   actions: { marginVertical: -ACTION_OVERLAP },
 });

@@ -4,7 +4,7 @@ import { StyleSheet } from 'react-native';
 
 import { MAX_FONT_SCALE_DENSE, size, spacing } from '@/theme';
 
-import { BevRow } from '../BevRow';
+import { BEV_ROW_FOOT_LINE, BevRow } from '../BevRow';
 
 const BEV: BevSummary = {
   id: 'b1',
@@ -89,12 +89,15 @@ const footOf = () => screen.getByText('Ranked Oct 3').parent!;
 it('puts the foot under the text column with an image and across the full row without one', async () => {
   const { rerender } = await render(<BevRow bev={BEV} meta="Ranked Oct 3" onRank={() => {}} />);
   const noImage = StyleSheet.flatten(footOf().props.style);
-  expect(noImage.minHeight).toBe(32);
-  expect(noImage.paddingLeft ?? 0).toBe(0);
+  expect(noImage.minHeight).toBe(BEV_ROW_FOOT_LINE);
+  expect(noImage.marginLeft ?? 0).toBe(0);
   await rerender(<BevRow bev={BEV} showImage meta="Ranked Oct 3" onRank={() => {}} />);
   const withImage = StyleSheet.flatten(footOf().props.style);
-  // Indented past the 56pt image and the gap, so it lines up with the name.
-  expect(withImage.paddingLeft).toBe(56 + spacing.md);
+  // Indented past the 56pt image and the gap, so it lines up with the name. A margin, not padding: the
+  // foot's box then starts at the text column and cannot cover (and steal taps from) the image's lower
+  // 11pt, which overhangs the text block.
+  expect(withImage.marginLeft).toBe(56 + spacing.md);
+  expect(withImage.paddingLeft ?? 0).toBe(0);
 });
 
 it('keeps 44pt targets on the actions inside the 32pt foot line', async () => {
