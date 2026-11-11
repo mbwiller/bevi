@@ -128,6 +128,15 @@ const TEXT_INDENT = IMAGE + spacing.md;
 /** The foot line is 32pt; the 44pt action buttons overlap it by (44 - 32) / 2 above and below. */
 const FOOT_LINE = 32;
 const ACTION_OVERLAP = (size.target - FOOT_LINE) / 2;
+const DIVIDER_WIDTH = 1;
+
+/**
+ * For a caller that overlays its own 44pt control on a row (the Bev'd list's overflow menu): the
+ * `bottom` that centres it on the foot line, measured from the bottom of the View that wraps the row
+ * (a row with its divider, the default). The foot line ends `spacing.xs` plus the divider above the
+ * row's bottom edge, and the control overhangs it by the same 6pt the row's own actions do.
+ */
+export const BEV_ROW_FOOT_OVERLAY_BOTTOM = spacing.xs + DIVIDER_WIDTH - ACTION_OVERLAP;
 
 const styles = StyleSheet.create({
   row: {
@@ -136,7 +145,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xs,
     paddingHorizontal: spacing.gutter,
   },
-  divider: { borderBottomWidth: 1 },
+  divider: { borderBottomWidth: DIVIDER_WIDTH },
   top: { flexDirection: 'row', alignItems: 'flex-start' },
   main: { flex: 1, minWidth: 0 },
   mainWithImage: { paddingLeft: TEXT_INDENT },
