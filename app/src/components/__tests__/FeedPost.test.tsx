@@ -23,8 +23,13 @@ const PRIYA = { displayName: 'Priya Rao', handle: 'priya', avatarUrl: 'https://e
 const SAM = { displayName: 'Sam Okafor', handle: 'sam', avatarUrl: null };
 
 const FIVE_HOURS_AGO = () => new Date(Date.now() - 5 * 3_600_000).toISOString();
-/** The meta line under the sentence: the brand and the time. A plain text line, so a double-tap target. */
+/** The meta line under the sentence, as it reads: the brand, then the time. */
 const META = 'Tacos El Gordo · 5 hours ago';
+/** The time on the meta line: its own text node, plain text, so a double-tap target. */
+const WHEN = '5 hours ago';
+/** Every string under a node, in render order: what the line reads as. */
+const textOf = (n: { children?: unknown[] } | string): string =>
+  typeof n === 'string' ? n : ((n.children ?? []) as ({ children?: unknown[] } | string)[]).map(textOf).join('');
 /** People's own photos: the strip layout. */
 const PHOTOS = [{ src: 'https://example.com/1.jpg' }, { src: 'https://example.com/2.jpg' }];
 const LONG_NOTE = `${'tastes like flat Sprite, in a good way. '.repeat(6)}the end`;
@@ -72,16 +77,36 @@ describe('the head', () => {
 
   it('the meta line is the brand and the relative time', async () => {
     await render(<FeedPost actor={ARJUN} bev={BEV} score={9.5} time={FIVE_HOURS_AGO()} />);
-    const meta = within(screen.getByTestId('post-meta'));
-    expect(meta.getByText(META).props.numberOfLines).toBe(1);
-    // The time is its own node inside the line.
-    expect(meta.getByText('5 hours ago')).toBeTruthy();
+    const line = screen.getByTestId('post-meta');
+    // It reads as one line, in order, as it did when it was a single text.
+    expect(textOf(line)).toBe(META);
+    const meta = within(line);
+    // The time is its own node with the exact relative time.
+    expect(meta.getByText(WHEN)).toBeTruthy();
+    expect(meta.getByTestId('post-meta-brand').props.numberOfLines).toBe(1);
+  });
+
+  it('a very long brand truncates on its own; the time is never inside it and never shrinks', async () => {
+    const brand = 'The Extraordinarily Long Artisanal Small Batch Cold Brew Coffee Company of Greater Brooklyn';
+    await render(<FeedPost actor={ARJUN} bev={{ ...BEV, brand }} score={9.5} time={FIVE_HOURS_AGO()} />);
+    const brandNode = screen.getByTestId('post-meta-brand');
+    expect(brandNode.props.numberOfLines).toBe(1);
+    expect(flat(brandNode.props.style)).toMatchObject({ flexShrink: 1, minWidth: 0 });
+    expect(within(brandNode).queryByText(WHEN)).toBeNull();
+    expect(textOf(brandNode)).toBe(brand);
+    // The time, in full, in a sibling that keeps its width.
+    const whenNode = screen.getByTestId('post-meta-when');
+    expect(flat(whenNode.props.style).flexShrink).toBe(0);
+    expect(within(whenNode).getByText(WHEN)).toBeTruthy();
+    expect(textOf(whenNode)).toBe(` · ${WHEN}`);
+    expect(textOf(screen.getByTestId('post-meta'))).toBe(`${brand} · ${WHEN}`);
   });
 
   it('the time alone when there is neither a brand nor a category', async () => {
     await render(<FeedPost actor={ARJUN} bev={{ ...BEV, brand: null, categoryId: 'no-such-category' as BevSummary['categoryId'] }} score={9.5} time={FIVE_HOURS_AGO()} />);
-    expect(within(screen.getByTestId('post-meta')).getByText('5 hours ago')).toBeTruthy();
-    expect(screen.queryByText(/·/)).toBeNull();
+    expect(within(screen.getByTestId('post-meta')).getByText(WHEN)).toBeTruthy();
+    expect(textOf(screen.getByTestId('post-meta'))).toBe(WHEN);
+    expect(screen.queryByTestId('post-meta-brand')).toBeNull();
   });
 
   it('the meta line is the category with no brand, the brand alone with no time, and never a price', async () => {
@@ -89,7 +114,7 @@ describe('the head', () => {
     expect(screen.getByText('Tacos El Gordo')).toBeTruthy();
     expect(screen.queryByText(/\$/)).toBeNull();
     await rerender(<FeedPost actor={ARJUN} bev={{ ...BEV, brand: null }} score={9.5} time={FIVE_HOURS_AGO()} />);
-    expect(screen.getByText('Other · 5 hours ago')).toBeTruthy();
+    expect(textOf(screen.getByTestId('post-meta'))).toBe(`Other · ${WHEN}`);
   });
 });
 
@@ -266,7 +291,7 @@ describe('the foot', () => {
       'Save to Want to Try',
     ]);
     expect(foot.queryByText(/ago/)).toBeNull();
-    expect(screen.getByText(META)).toBeTruthy();
+    expect(screen.getByText(WHEN)).toBeTruthy();
   });
 
   it('every control has a 44pt target', async () => {
@@ -322,10 +347,10 @@ describe('likes', () => {
   it('a double-tap outside the picture likes once and bursts over the picture; a single tap does nothing', async () => {
     const onLike = jest.fn();
     await render(<FeedPost actor={ARJUN} bev={SCORED} score={7} time={FIVE_HOURS_AGO()} note="perfect" onLike={onLike} />);
-    await fireEvent.press(screen.getByText(META));
+    await fireEvent.press(screen.getByText(WHEN));
     expect(onLike).not.toHaveBeenCalled();
     expect(screen.queryByTestId('like-burst', hidden)).toBeNull();
-    await fireEvent.press(screen.getByText(META));
+    await fireEvent.press(screen.getByText(WHEN));
     expect(onLike).toHaveBeenCalledTimes(1);
     expect(within(screen.getByTestId('post-body')).getByTestId('like-burst', hidden)).toBeTruthy();
     // On the sentence, the note and the Bevi score line too: anywhere on the post outside the picture.
@@ -348,9 +373,9 @@ describe('likes', () => {
     try {
       await render(<FeedPost actor={ARJUN} bev={BEV} score={7} time={FIVE_HOURS_AGO()} onLike={onLike} />);
       now.mockReturnValue(1_000_000);
-      await fireEvent.press(screen.getByText(META));
+      await fireEvent.press(screen.getByText(WHEN));
       now.mockReturnValue(1_000_000 + DOUBLE_TAP_MS + 1);
-      await fireEvent.press(screen.getByText(META));
+      await fireEvent.press(screen.getByText(WHEN));
       expect(onLike).not.toHaveBeenCalled();
     } finally {
       now.mockRestore();
@@ -377,7 +402,7 @@ describe('likes', () => {
     await doubleTap(screen.getByTestId('feed-post-strip'));
     expect(onLike).not.toHaveBeenCalled();
     expect(screen.queryByTestId('like-burst', hidden)).toBeNull();
-    await doubleTap(screen.getByText(META));
+    await doubleTap(screen.getByText(WHEN));
     expect(onLike).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('like-burst', hidden)).toBeTruthy();
     expect(within(screen.getByTestId('feed-post-strip')).queryByTestId('like-burst', hidden)).toBeNull();
@@ -386,7 +411,7 @@ describe('likes', () => {
   it("double-tapping an already-liked post bursts but doesn't call onLike (it never unlikes)", async () => {
     const onLike = jest.fn();
     await render(<FeedPost actor={ARJUN} bev={BEV} score={7} time={FIVE_HOURS_AGO()} liked likeCount={3} onLike={onLike} />);
-    await doubleTap(screen.getByText(META));
+    await doubleTap(screen.getByText(WHEN));
     expect(onLike).not.toHaveBeenCalled();
     expect(screen.getByTestId('like-burst', hidden)).toBeTruthy();
   });
@@ -405,13 +430,13 @@ describe('likes', () => {
   it('with no photo the burst plays over the post', async () => {
     await render(<FeedPost actor={ARJUN} bev={BEV} score={7} time={FIVE_HOURS_AGO()} photos={[]} onLike={() => {}} />);
     expect(screen.queryByRole('button', { name: 'Open Horchata' })).toBeNull();
-    await doubleTap(screen.getByText(META));
+    await doubleTap(screen.getByText(WHEN));
     expect(screen.getByTestId('like-burst', hidden)).toBeTruthy();
   });
 
   it('without onLike a double-tap does nothing', async () => {
     await render(<FeedPost actor={ARJUN} bev={BEV} score={7} time={FIVE_HOURS_AGO()} />);
-    await doubleTap(screen.getByText(META));
+    await doubleTap(screen.getByText(WHEN));
     expect(screen.queryByTestId('like-burst', hidden)).toBeNull();
   });
 });
@@ -518,7 +543,7 @@ describe('comments', () => {
     const { rerender } = await render(
       <FeedPost actor={ARJUN} bev={BEV} score={7} time={time} commentCount={3} comments={thread(3)} onLike={onLike} onComment={onComment} />,
     );
-    await doubleTap(screen.getByText(META));
+    await doubleTap(screen.getByText(WHEN));
     expect(onLike).toHaveBeenCalledTimes(1);
     await doubleTap(screen.getByText('user2 comment 2'));
     expect(onLike).toHaveBeenCalledTimes(2);

@@ -24,10 +24,9 @@ export interface FeedPostItemProps {
 }
 
 /**
- * One feed post. FeedPost has no actor handler yet (see the PR's contract/component gaps), so a
- * transparent target over its avatar (`POST_AVATAR`, 44pt, at the post's top-left padding) opens
- * the actor's profile. The divider is drawn here so a
- * like error sits inside the post, above it.
+ * One feed post. FeedPost has no prop for opening the actor, so a transparent target over its
+ * avatar (`POST_AVATAR`, 44pt, at the post's top-left padding) opens the actor's profile. The
+ * divider is drawn here so a like error sits inside the post, above it.
  */
 export const FeedPostItem = memo(function FeedPostItem({
   item,

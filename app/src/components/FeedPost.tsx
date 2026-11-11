@@ -92,19 +92,21 @@ export const INLINE_COMMENTS = 7;
 /** The head's Avatar. FeedPostItem lays its actor link over it. */
 export const POST_AVATAR = 44;
 
-/** The Bev's own picture beside the note (SPEC §3 FeedPost; no size token names it). */
+/** The Bev's own picture beside the note, in pt (no size token names it). */
 export const POST_PICTURE = 112;
 
 /**
- * Notes longer than `max` characters truncate to about `cut` with "See more". Under a photo strip
- * the note has the post's full width (FeedPost README: 160). Beside the 112pt picture the column is
- * about 220pt wide on the narrowest phone, so the collapsed note plus " … See more" stays within
- * four `bodyLarge` lines.
+ * Notes longer than `max` characters truncate to about `cut` with "See more". The cut is by
+ * character count, not by line. Under a photo strip the note has the post's full width (the design
+ * system's FeedPost README: 160). Beside the picture the column is the screen width less the two
+ * gutters, the picture and the gap: 164pt on a 320pt screen, 237pt on a 393pt one. The shorter cut
+ * keeps the collapsed note near four `bodyLarge` lines on a typical phone, but it can run past four
+ * on a narrow screen or at large text sizes. Nothing is clipped: the note has no line limit.
  */
 const NOTE_FULL = { max: 160, cut: 150 };
 const NOTE_SIDE = { max: 84, cut: 72 };
 
-/** `.mk-post-meta { margin-top: 2px }` and `.mk-post-side { padding: 2px 0 }` (no spacing token is 2). */
+/** The meta line's gap under the sentence and the note column's top and bottom inset, in pt (no spacing token is 2). */
 const HAIRLINE_OFFSET = 2;
 
 /** "Bev'd it too": the AvatarStack and the names stop at two. */
@@ -274,12 +276,21 @@ export function FeedPost({
           </Text>
           <View style={styles.meta} testID="post-meta">
             {cat ? <Icon name={cat.icon} size={16} strokeWidth={2} color={colors.textSecondary} /> : null}
-            <Text style={[type.body, styles.shrink, secondary]} numberOfLines={1}>
-              {meta.brand}
-              {meta.brand && meta.when ? ' · ' : ''}
-              {/* Its own node: the time reads as one piece, apart from the brand. */}
-              {meta.when ? <Text>{meta.when}</Text> : null}
-            </Text>
+            {/* The brand gives way first: it truncates on its own and " · time" always shows in full. */}
+            <View style={styles.metaText}>
+              {meta.brand ? (
+                <Text style={[type.body, styles.shrink, secondary]} numberOfLines={1} testID="post-meta-brand">
+                  {meta.brand}
+                </Text>
+              ) : null}
+              {meta.when ? (
+                <Text style={[type.body, styles.keep, secondary]} numberOfLines={1} testID="post-meta-when">
+                  {meta.brand ? ' · ' : ''}
+                  {/* Its own node, the exact relative time. */}
+                  <Text>{meta.when}</Text>
+                </Text>
+              ) : null}
+            </View>
           </View>
         </View>
         {score != null || scoreVariant ? <ScoreBubble score={score} variant={scoreVariant} bucket={bucket ?? undefined} /> : null}
@@ -358,7 +369,7 @@ export function FeedPost({
 
       {hasFoot ? (
         <View style={styles.foot} testID="post-foot">
-          {/* About the post: the heart's glyph lines up with the gutter (`.mk-post-social`); a leading pill has no padding to pull back. */}
+          {/* About the post. The group pulls back by the heart's side padding so its glyph lines up with the gutter; a leading pill has no padding to pull back. */}
           <View style={[styles.group, !onFollow && social && styles.socialEdge]} testID="post-social">
             {onFollow ? <FollowPill following={following} name={name || who} onPress={onFollow} /> : null}
             {onLike ? <LikeButton liked={liked} count={likeCount} onPress={onLike} /> : null}
@@ -445,7 +456,7 @@ function LikeBurst() {
 }
 
 const styles = StyleSheet.create({
-  // `.mk-post { padding: lg gutter sm }`.
+  // The design system's FeedPost: `lg` above, `sm` below, the gutter at the sides.
   post: {
     paddingTop: spacing.lg,
     paddingBottom: spacing.sm,
@@ -459,14 +470,17 @@ const styles = StyleSheet.create({
   divider: { borderBottomWidth: 1 },
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   headText: { flex: 1, minWidth: 0 },
-  // `.mk-post-sentence`: the verb regular, the names bold.
+  // The sentence: the verb regular, the names bold.
   regular: { fontWeight: '400' },
   bold: { fontWeight: '700' },
   meta: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: HAIRLINE_OFFSET },
+  // The brand and " · time" side by side with no gap between them; only the brand shrinks.
+  metaText: { flexDirection: 'row', alignItems: 'center', flexShrink: 1, minWidth: 0 },
   shrink: { flexShrink: 1, minWidth: 0 },
+  keep: { flexShrink: 0 },
   // `overflow-wrap: anywhere` so a long unbroken word wraps instead of widening the post.
   wrap: Platform.OS === 'web' ? ({ overflowWrap: 'anywhere' } as TextStyle) : {},
-  // `.mk-post-body` / `.mk-post-side`: the picture, and beside it the note over the Bevi score line.
+  // The picture, and beside it a column with the note over the Bevi score line.
   body: { flexDirection: 'row', alignItems: 'stretch', gap: spacing.md, marginTop: spacing.md },
   picture: { alignSelf: 'flex-start' },
   side: { flex: 1, minWidth: 0, justifyContent: 'space-between', gap: spacing.sm, paddingVertical: HAIRLINE_OFFSET },
@@ -477,9 +491,9 @@ const styles = StyleSheet.create({
   stripContent: { gap: spacing.sm, paddingHorizontal: spacing.gutter },
   noteUnder: { marginTop: spacing.md },
   noteTarget: { minHeight: size.target },
-  // `.mk-post-also`.
+  // The "Bev'd it too" line: the AvatarStack, then the sentence.
   also: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md },
-  // `.mk-post-foot` / `.mk-post-social`.
+  // The foot: the post's controls on the left, the Bev's on the right.
   foot: {
     flexDirection: 'row',
     alignItems: 'center',
