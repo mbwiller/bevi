@@ -154,6 +154,8 @@ app/
 
 ### Navigation (5 tabs + stacks)
 
+**Superseded 2026-11-11 (TASKS.md D-16, M-32/M-33):** the tabs are Feed · Lists · Add Bev · Map · Profile, People (`/people`, opened from the Feed header) sits inside the tabs group so the tab bar stays under it, `/leaderboard` and `/search` only redirect, and the tree below predates all of that.
+
 ```
 src/app/
   _layout.tsx                      root: QueryClientProvider, session gate (signed-out → (auth), no profile → onboarding)
@@ -347,6 +349,8 @@ Common to every screen unless noted: loading = skeleton of the final layout; err
 
 ### 6.8 Search tab (ref 08)
 
+**Superseded 2026-11-11 (TASKS.md D-16, M-32/M-33):** the centre tab is **Add Bev** again, with no map: an "Add a Bev" header, one outlined bar for Bevs and people, Snap it, then Recents and "Popular on Bevi" while the bar is empty and grouped results once it has text (`features/search/`, design system ScreenAddBev).
+
 The centre tab, labelled **Search** since M-15 ([#104](https://github.com/mbwiller/bevi/pull/104)); it was "Add Bev". The route folder is still `(tabs)/add/` (URL `/add`; `/search` redirects to it, params kept). Code: `features/search/` (`SearchScreen`, `SearchPanel`, `panel.ts`, `MapPlaceholder`); design system `ScreenSearch` and `ScreenSearchResults`. The Bevs · People segmented control is gone (D-10: one bar, grouped results).
 
 - Contents: header with wordmark left and a grey 32pt ✕ circle right (closes to the previous tab); one outlined `SearchBar` ("Search a Bev or a person"), with a ghost **Cancel** beside it while the results panel is up; a "Snap it" camera `Pill` (replaces Beli's Reserve/Order/Recs pills); then the **map area** filling the rest of the screen.
@@ -386,12 +390,16 @@ The centre tab, labelled **Search** since M-15 ([#104](https://github.com/mbwill
 
 ### 6.12 Leaderboard tab (no reference screenshot; Beli's own leaderboard was not captured)
 
+**Superseded 2026-11-11 (TASKS.md D-16, M-32/M-33):** there is no Leaderboard tab: the Bevs board is the Lists tab's **Top** and the points ranking is on People (`/people`), and `/leaderboard` redirects to one or the other.
+
 - Contents: header "LEADERBOARD" centred; `SegmentedTabs underline-text` Bevs · People; `ListScopeDropdown` "All ⌄" for category on the Bevs tab. Bevs rows: `BevRow` numbered by rank, `ScoreBubble 40` = Bayesian score with the rating-count badge, your own score as a small secondary bubble if you ranked it. People rows: rank number, `Avatar 44`, name/@handle, points, "N Bevs", flame + streak; your own row pinned at the bottom if off-screen.
 - Data: `leaderboard.bevs({ categoryId?, cursor, limit: 50 })`, `leaderboard.users({ cursor })`.
 - States: category with no Bev at `MIN_RATERS` (= 2) → "Not enough rankings yet"; Phase 3 adds a "This month" toggle.
 - Interactions: tap → Bev detail / user profile; dropdown choice persists per session.
 
 ### 6.13 Profile tab (own): pixel spec from ref 02, 03, 04, 09
+
+**Superseded 2026-11-11 (TASKS.md D-16, M-32/M-33):** the profile now runs counts (Bev'd · Followers · Following, no rank), Edit profile and Share profile as two equal buttons, the two StatCards, then only Want to Try and Recommended for you (no Bev'd row), as the design system's ScreenProfile draws it; the order in the spec below predates that.
 
 All values in pt on the 393-wide reference (px ÷ 3). The reference uses list rows + two stat cards where vision §6 says "three tappable tiles"; the rows are what we build (§18 item 12).
 
@@ -445,6 +453,8 @@ y   0   status bar (59 on Dynamic Island phones; use safe-area insets)
 - States: empty.
 
 ### 6.16 Find people
+
+**Superseded 2026-11-11 (TASKS.md D-16, M-32/M-33):** finding people is the **People** screen (`/people`, the Feed header's Find people icon, design system ScreenPeople): a "Search people" bar, "Suggested for you", then the points ranking, with the tab bar under it.
 
 No screen of its own: people are searched in the Search tab's one bar and shown under the **People** group (§6.8, D-10; [#104](https://github.com/mbwiller/bevi/pull/104)). Feed's find-people icon deep-links to `add?tab=people`, which opens the panel with "Suggested for you" first. Followers and Following (§6.15) are separate lists.
 

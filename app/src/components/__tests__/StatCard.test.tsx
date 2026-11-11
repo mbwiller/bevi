@@ -12,3 +12,10 @@ it('shows label over value, as a button only when pressable', async () => {
   expect(screen.getByLabelText('Current Streak, 4 days')).toBeTruthy();
   expect(screen.getByText('4 days')).toBeTruthy();
 });
+
+it('wraps a long label to a second line instead of truncating it, as values do', async () => {
+  // "Current streak" is wider than a 393pt phone's card text (about 110pt), so it needs the second line.
+  await render(<StatCard icon="flame" label="Current streak" value="Rank today to start" />);
+  expect(screen.getByText('Current streak').props.numberOfLines).toBe(2);
+  expect(screen.getByText('Rank today to start').props.numberOfLines).toBe(2);
+});
