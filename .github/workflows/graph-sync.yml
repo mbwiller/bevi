@@ -180,12 +180,8 @@ jobs:
       # added to schema.cypher (note_token_unique, with this job) exists before
       # the first sync that MERGEs on it, with no manual step to forget.
       #
-      # apply-schema.ts prints the Query API URL (the sync itself never does).
-      # On this instance the host's first label and the database are the
-      # instance id, which is also the value of the NEO4J_USERNAME and
-      # NEO4J_DATABASE secrets, and Actions masks secret values in a log -- so
-      # it should print as ***. CHECK THAT IN THE FIRST RUN'S LOG; if it does
-      # not, stop apply-schema.ts printing the URL before the next run.
+      # Neither this step nor the sync prints the Query API URL: its host and
+      # database are the instance id, and this log is public.
       - name: apply the schema
         env:
           NEO4J_URI: ${{ secrets.NEO4J_URI }}

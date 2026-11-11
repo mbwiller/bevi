@@ -901,7 +901,12 @@ schema in `scripts/graph/schema.cypher` is applied (all ten statements, the
 was written by hand the day the instance was created. Because the instance id
 is the host, the username and the database at once, **none of the three may
 appear in a log**: `neo4j.ts` never prints the URL and redacts all of them from
-server messages.
+server messages, `apply-schema.ts` no longer prints the URL either (it runs in
+`graph-sync.yml`, whose log is public), and `postgrest.ts` blanks anything
+shaped like a uuid or a pseudonym in a PostgREST error body. The id itself is
+not a credential, but it was committed as a test fixture in
+`scripts/graph/apply-schema.test.ts` from #121 until this change replaced it
+with a made-up one, so treat it as public and rely on the password alone.
 
 ## Access paths
 

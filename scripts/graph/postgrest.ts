@@ -25,6 +25,13 @@ export interface PostgrestClient {
   rpcRows<T>(name: string, body: Record<string, unknown>): Promise<T[]>;
 }
 
+/** Blanks uuids and 64-hex runs (the shape of a user id and of a pseudonym) in text bound for a public log. */
+export function redactIds(text: string): string {
+  return text
+    .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, "<uuid>")
+    .replace(/[0-9a-f]{64}/gi, "<hex>");
+}
+
 export function createPostgrestClient(url: string, key: string, doFetch: typeof fetch = fetch): PostgrestClient {
   const base = `${url.replace(/\/+$/, "")}/rest/v1`;
   const headers = {
@@ -39,8 +46,10 @@ export function createPostgrestClient(url: string, key: string, doFetch: typeof 
     const text = await response.text();
     if (!response.ok) {
       // The key is in a header, not the URL, so the path is safe to print. The
-      // body of a PostgREST error is its own {code, message, hint}, not rows.
-      throw new Error(`${response.status} ${response.statusText} on ${path}\n  ${text.slice(0, 600)}`);
+      // body of a PostgREST error is its own {code, message, hint}, not rows,
+      // but a hint can quote a value, and this log is public: anything shaped
+      // like a uuid or a 64-hex pseudonym is blanked, as neo4j.ts does.
+      throw new Error(`${response.status} ${response.statusText} on ${path}\n  ${redactIds(text.slice(0, 600))}`);
     }
     return text === "" ? null : JSON.parse(text);
   };

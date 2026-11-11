@@ -369,6 +369,19 @@ test("a PostgREST error names the path and never the key", async () => {
   });
 });
 
+test("a PostgREST error body that quotes a user id or a pseudonym is blanked before it can reach a public log", async () => {
+  const userId = "5b2f6a1e-9c3d-4e7f-8a1b-2c3d4e5f6a7b";
+  const pseudonym = "ab".repeat(32);
+  const body = JSON.stringify({ code: "23505", message: "duplicate key", details: `Key (user_id)=(${userId}) already exists; ${pseudonym}` });
+  const { fetch } = fakeFetch([{ status: 409, text: body }]);
+  await assert.rejects(createPostgrestClient("https://p.supabase.co", "k", fetch).select("/rankings?order=user_id"), (error: Error) => {
+    assert.ok(!error.message.includes(userId));
+    assert.ok(!error.message.includes(pseudonym));
+    assert.match(error.message, /Key \(user_id\)=\(<uuid>\) already exists; <hex>/);
+    return true;
+  });
+});
+
 test("rpc posts a body; rpcRows pages it", async () => {
   const { fetch, calls } = fakeFetch([
     { status: 200, body: 7 },
