@@ -12,7 +12,7 @@ import { test } from "node:test";
 
 import { Neo4jError, createNeo4jClient, isTransient, missingEnv, neo4jConfigFromEnv, redactor, statementHead } from "./neo4j.ts";
 import type { Neo4jConfig } from "./neo4j.ts";
-import { PAGE, createPostgrestClient } from "./postgrest.ts";
+import { PAGE, PostgrestError, createPostgrestClient, isTransientPostgrestError } from "./postgrest.ts";
 
 // Made-up values in the shape of the real ones: the instance id is the host's
 // first label, the username AND the database.
@@ -378,6 +378,49 @@ test("a PostgREST error body that quotes a user id or a pseudonym is blanked bef
     assert.ok(!error.message.includes(userId));
     assert.ok(!error.message.includes(pseudonym));
     assert.match(error.message, /Key \(user_id\)=\(<uuid>\) already exists; <hex>/);
+    return true;
+  });
+});
+
+test("a PostgREST failure carries its status, and is transient only for 429, 5xx and no response at all", async () => {
+  const failing = async (reply: Reply): Promise<unknown> => {
+    const { fetch } = fakeFetch([reply]);
+    try {
+      await createPostgrestClient("https://p.supabase.co", "k", fetch).rpc("replace_bev_graph_stats", { p_rows: [], p_version: "x" });
+    } catch (error: unknown) {
+      return error;
+    }
+    return assert.fail("the call did not throw");
+  };
+  for (const [status, transient] of [
+    [400, false],
+    [401, false],
+    [404, false],
+    [409, false],
+    [429, true],
+    [500, true],
+    [502, true],
+    [503, true],
+  ] as const) {
+    const error = await failing({ status, text: '{"message":"x"}' });
+    assert.ok(error instanceof PostgrestError, String(status));
+    assert.equal(error.status, status);
+    assert.equal(error.path, "/rpc/replace_bev_graph_stats");
+    assert.equal(error.transient, transient, String(status));
+    assert.equal(isTransientPostgrestError(error), transient);
+    assert.match(error.message, new RegExp(`^${status} .*on /rpc/replace_bev_graph_stats`));
+  }
+  assert.equal(isTransientPostgrestError(new Error("503")), false, "only this client's own error counts");
+});
+
+test("no response at all is a transient PostgrestError that names the path and the error code, never the host", async () => {
+  const { fetch } = fakeFetch([Object.assign(new TypeError("fetch failed"), { cause: { code: "ENOTFOUND", hostname: "p.supabase.co" } })]);
+  await assert.rejects(createPostgrestClient("https://p.supabase.co", "k", fetch).rpc("replace_bev_graph_stats", {}), (error: Error) => {
+    assert.ok(error instanceof PostgrestError);
+    assert.equal(error.status, null);
+    assert.equal(error.transient, true);
+    assert.equal(error.message, "network failure (ENOTFOUND) on /rpc/replace_bev_graph_stats");
+    assert.ok(!error.message.includes("supabase.co"));
     return true;
   });
 });

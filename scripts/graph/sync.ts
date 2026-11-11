@@ -80,7 +80,7 @@ import { computeGraphStats, flavourProjection, graphStatsDbRows, graphStatsRepor
 import type { BevGraphStatsDbRow, GraphEdge, GraphStats } from "./analytics-core.ts";
 import { createNeo4jClient, isTransient, missingEnv, neo4jConfigFromEnv, NEO4J_ENV } from "./neo4j.ts";
 import type { Neo4jClient, Neo4jRunner, Neo4jTransaction } from "./neo4j.ts";
-import { createPostgrestClient } from "./postgrest.ts";
+import { createPostgrestClient, isTransientPostgrestError } from "./postgrest.ts";
 import type { PostgrestClient } from "./postgrest.ts";
 import {
   COMPUTED_LABELS,
@@ -320,9 +320,10 @@ export function postgresPublisher(db: PostgrestClient): PublishGraphStats {
 }
 
 /**
- * The graph committed a generation and Postgres did not get its stats. Never
- * retried as a sync: the graph is right, and running the transaction again
- * would not make Postgres reachable.
+ * The graph committed a generation and Postgres did not get its stats, after
+ * the write-back's own retries (`publishStats`). Never retried as a SYNC: the
+ * graph is right, and running the transaction again would not make Postgres
+ * reachable.
  */
 export class GraphStatsPublishError extends Error {
   constructor(syncId: string, cause: string) {
@@ -498,9 +499,10 @@ export async function syncOnce(plan: GraphPlan, options: SyncOptions, deps: Sync
  *
  * After a commit, and only then, the computed stats are written back to
  * Postgres (`deps.publishGraphStats`), before the reports, so a report that
- * cannot be read never costs the write. If the write-back fails the run
- * throws `GraphStatsPublishError`: the graph is one generation ahead of
- * `bev_graph_stats` until the next run.
+ * cannot be read never costs the write. The write-back is retried on a
+ * transient failure, up to `maxAttempts` times with the same backoff. If it
+ * still fails the run throws `GraphStatsPublishError`: the graph is one
+ * generation ahead of `bev_graph_stats` until the next run.
  */
 export async function runSync(plan: GraphPlan, options: SyncOptions, deps: SyncDeps): Promise<void> {
   const maxAttempts = options.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
@@ -565,7 +567,7 @@ export async function runSync(plan: GraphPlan, options: SyncOptions, deps: SyncD
   }
   deps.log(`confirmed: (:Meta).syncId = ${options.syncId}, lastSyncAt = ${String(meta.lastSyncAt)}`);
 
-  await publishStats(stats, plan, options.syncId, deps);
+  await publishStats(stats, plan, options.syncId, deps, maxAttempts, backoffMs);
   await readBackReport(committed, plan, options, deps, "committed");
   analyticsReport(stats, plan, deps.log);
 }
@@ -574,14 +576,42 @@ export async function runSync(plan: GraphPlan, options: SyncOptions, deps: SyncD
  * The Postgres half of the analytics phase: every row, in one RPC call, which
  * is one transaction. `replace_bev_graph_stats` validates the whole payload
  * before it deletes anything, so a refused call leaves last night's rows.
+ *
+ * RETRIED, BOUNDED. By now the graph has committed, and the call is a
+ * whole-table replace, so sending it again is safe whatever happened to the
+ * first one: one dropped connection should not turn the night red. Up to
+ * `maxAttempts` attempts, the pause before attempt n+1 being `backoffMs * n`
+ * (the sync's own schedule), and ONLY on a transient failure -- no response,
+ * HTTP 429 or a 5xx. A 4xx is never retried: a `BEVI_VALIDATION` 400 or a 404
+ * for a function that is not there will fail the same way again.
  */
-async function publishStats(stats: GraphStats, plan: GraphPlan, syncId: string, deps: SyncDeps): Promise<void> {
+async function publishStats(
+  stats: GraphStats,
+  plan: GraphPlan,
+  syncId: string,
+  deps: SyncDeps,
+  maxAttempts: number,
+  backoffMs: number,
+): Promise<void> {
   const rows = graphStatsDbRows(stats);
+  const publish = deps.publishGraphStats as PublishGraphStats;
   let written: number;
-  try {
-    written = await (deps.publishGraphStats as PublishGraphStats)(rows, plan.rankingVersion);
-  } catch (error: unknown) {
-    throw new GraphStatsPublishError(syncId, message(error));
+  for (let attempt = 1; ; attempt++) {
+    try {
+      written = await publish(rows, plan.rankingVersion);
+      break;
+    } catch (error: unknown) {
+      if (isTransientPostgrestError(error) && attempt < maxAttempts) {
+        const wait = backoffMs * attempt;
+        deps.log(
+          `::warning::bev_graph_stats write-back attempt ${attempt}/${maxAttempts} failed with a transient error ` +
+            `(the graph has already committed); retrying in ${wait} ms\n${message(error)}`,
+        );
+        await deps.sleep(wait);
+        continue;
+      }
+      throw new GraphStatsPublishError(syncId, message(error));
+    }
   }
   if (written !== rows.length) {
     throw new GraphStatsPublishError(syncId, `replace_bev_graph_stats answered ${String(written)} for ${rows.length} rows sent`);

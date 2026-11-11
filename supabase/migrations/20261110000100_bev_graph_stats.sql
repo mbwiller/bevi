@@ -30,7 +30,8 @@
 -- the numbers are COMPUTED, and this table is where they LIVE and are READ.
 --
 -- This migration creates:
---   1. `public.bev_graph_stats`, with RLS and its one select policy;
+--   1. `public.bev_graph_stats`, with RLS on and NO policy: no client reads or
+--      writes it;
 --   2. `public.replace_bev_graph_stats(p_rows jsonb, p_version text)`, the
 --      service-role-only whole-table writer the sync calls;
 --   3. one revision of `public.get_prediction_snapshot()` with ONE added key,
@@ -118,7 +119,9 @@
 --
 -- THE ONE FAILURE MODE WORTH KNOWING. The graph and Postgres cannot commit
 -- together. The sync commits the graph first and calls
--- `replace_bev_graph_stats` second; if that call fails, the job exits 1 saying
+-- `replace_bev_graph_stats` second, retrying that call up to three times on a
+-- transient failure (it is an idempotent whole-table replace); if it still
+-- fails, or fails with a 4xx, the job exits 1 saying
 -- so, this table keeps the PREVIOUS night's rows (complete and
 -- self-consistent, one generation behind the graph), and the next run repairs
 -- it. A Bev created since then simply has no row, which `bevGraph` renders as
@@ -141,8 +144,9 @@ set search_path = public, extensions;
 -- 1. bev_graph_stats
 -- ---------------------------------------------------------------------------
 -- One row per Bev the last sync saw: the active ones. A Bev hidden since then
--- keeps its row until the next run (the policy and the snapshot both withhold
--- it meanwhile), and a hard-deleted Bev's row goes with it.
+-- keeps its row until the next run (no client can read the table, and the
+-- snapshot withholds the row meanwhile), and a hard-deleted Bev's row goes
+-- with it.
 --
 -- The CHECKs are the ranges the formulas guarantee, so a row that violates one
 -- was not produced by them:
@@ -180,45 +184,48 @@ comment on column public.bev_graph_stats.bridge is
 create index bev_graph_stats_community_idx on public.bev_graph_stats (community_id);
 
 -- ---------------------------------------------------------------------------
--- 2. RLS
+-- 2. RLS: on, with NO policy at all
 -- ---------------------------------------------------------------------------
--- Derived catalog data, like `bev_embeddings`: a `select` policy for
--- `authenticated` and NO insert/update/delete policy, because the only writer
--- is the service role (through the function below), which bypasses RLS. That
--- is the supabase/CLAUDE.md rule for content tables.
+-- No client reads or writes this table. The precedent is `user_neighbors`
+-- (20261026000300, section 2): RLS enabled and not one policy, so for
+-- `authenticated` and `anon` a select returns no rows, an insert is refused
+-- (42501: with RLS on and no policy every new row violates it) and an update
+-- or a delete matches nothing. The service role bypasses RLS, and so does the
+-- `security definer` function below that reads the table, because it is owned
+-- by postgres.
 --
--- The predicate is `bev_embeddings_select`'s (20261019000500), for the same
--- reasons, which that file argues at length:
---   * BOTH halves of `bevs_select`. A row here says "this Bev exists, is this
---     central, and belongs with those". For a Bev moderation has hidden, or an
---     alcoholic one in front of an under-21 viewer, that is exactly what the
---     gate withholds; a hidden Bev's row survives in this table until the next
---     nightly run, so without the status half a plain
---     `GET /rest/v1/bev_graph_stats` would keep serving it.
---   * A POSITIVE `exists`. A policy's own table references are subject to
---     those tables' RLS, so a negative `not exists` over `bevs` is fail-OPEN:
---     `bevs_select` has already hidden the alcoholic Bev from the under-21
---     caller, the inner select finds nothing, and the row is served. A
---     positive `exists` is fail-closed under either reading: an invisible
---     `bevs` row simply yields false.
---   * Only 'active', not `bevs_select`'s `pending_photo` branch.
--- The app does not read this table directly -- `get_prediction_snapshot`
--- below is the path, and it applies the same gate through `visible` -- so the
--- policy is what stands behind that, not a hot path.
+-- An earlier draft of this migration gave the table `bev_embeddings_select`'s
+-- policy (a positive `exists` over the Bev: active, and alcoholic only for an
+-- adult). It was dropped before the migration reached anyone, for three
+-- reasons:
+--   (a) THE ONLY READER IS `get_prediction_snapshot()`. It is `security
+--       definer`, it already filters to its own `visible` gate, and it emits
+--       exactly `[bev_id, community_id, pagerank, bridge]`. The policy served
+--       nobody.
+--   (b) `community_size` COUNTS HIDDEN AND ALCOHOLIC MEMBERS. A row an
+--       under-21 viewer could read for a Bev they may see would tell them how
+--       many Bevs they may NOT see belong to its taste family: say, a lemonade
+--       in a family of 38 of which they can list 31. That is the class of inference
+--       the `bev_edges` policy exists to prevent (20261019000500: an edge is a
+--       statement about two Bevs), and no per-row predicate on the Bev can
+--       remove it, because the leak is in a column, not in which rows are
+--       served. `pagerank` has the same property in a weaker form: the values
+--       a viewer can read sum to less than 1 by the share of what is hidden.
+--   (c) NO SCREEN NEEDS THE TABLE. Nothing in the app reads it directly.
+--
+-- NO SEPARATE REVOKE, on purpose. Whatever table privileges the stack's
+-- default grants give `anon` and `authenticated` (Supabase lays them down on
+-- every new table in this schema), with RLS on and no policy they reach no
+-- row, which is the mechanism `user_neighbors` relies on and pgTAP 30 asserts
+-- here. Adding
+-- `revoke ... from anon, authenticated` would be a second lock on the same
+-- door, kept in step by nobody.
+--
+-- If a screen ever does need a per-Bev read, add a definer RPC that returns
+-- the columns it needs through the `visible` gate; do not add a table policy
+-- while `community_size` is a column.
 
 alter table public.bev_graph_stats enable row level security;
-
-create policy bev_graph_stats_select on public.bev_graph_stats
-  for select to authenticated using (
-    exists (
-      select 1
-        from public.bevs b
-        join public.categories c on c.id = b.category_id
-       where b.id = bev_graph_stats.bev_id
-         and b.status = 'active'
-         and (not c.is_alcoholic or public.viewer_is_adult())
-    )
-  );
 
 -- ---------------------------------------------------------------------------
 -- 3. replace_bev_graph_stats(p_rows, p_version) -> int

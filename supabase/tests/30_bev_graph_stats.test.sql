@@ -3,16 +3,23 @@
 -- gained.
 --
 -- What this file is for, in order: the table's shape (floats are double
--- precision, the community id has a shape) and that RLS is on with exactly ONE
--- policy, a select for `authenticated`; that the writer is the service role's
--- and nobody else's; that `bevGraph` is `[]` (never null) while the table is
--- empty; that the writer REPLACES rather than appends; that EACH validation
--- rejects with BEVI_VALIDATION and its own detail and leaves the previous rows
--- exactly as they were; what a signed-in adult, a signed-in minor and anon can
--- read directly, and that no client role can write; and the snapshot key --
--- the tuple shape [bev_id, community_id, pagerank, bridge], bev_id order, the
--- rounding, visible Bevs only for an adult and for a minor, every pre-existing
--- key still present, the grants unchanged.
+-- precision, the community id has a shape) and that RLS is on with NO policy
+-- at all, the `user_neighbors` arrangement; that the writer is the service
+-- role's and nobody else's; that `bevGraph` is `[]` (never null) while the
+-- table is empty; that the writer REPLACES rather than appends; that EACH
+-- validation rejects with BEVI_VALIDATION and its own detail and leaves the
+-- previous rows exactly as they were; that a signed-in adult and a signed-in
+-- minor can read NO row directly although rows exist, and that no client
+-- role, anon included, can write one; and the snapshot key -- the tuple shape
+-- [bev_id, community_id, pagerank, bridge], bev_id order, the rounding,
+-- visible Bevs only for an adult and for a minor, every pre-existing key
+-- still present, the grants unchanged.
+--
+-- The snapshot is the ONLY place the visible-only rule is enforced now (the
+-- table has no client policy to enforce it a second time), so section 6
+-- asserts both halves there: the hidden Bev's tuple is absent for everyone,
+-- and the alcoholic Bev's tuple is present for the adult and absent for the
+-- minor.
 --
 -- Every snapshot is taken as the signed-in user and stored in t_snap; the
 -- assertions then read t_snap as the owner.
@@ -45,7 +52,7 @@
 -- 0.412345678912 + 0.3 + 0.187654321088 + 0.1 = 1; the first is there to be
 -- rounded to 8 decimals, and B's bridge 0.123456 to 4.
 begin;
-select plan(75);
+select plan(81);
 
 -- ---------------------------------------------------------------------------
 -- People and Bevs
@@ -146,28 +153,13 @@ select ok(
   (select relrowsecurity from pg_class where oid = 'public.bev_graph_stats'::regclass),
   'bev_graph_stats has RLS enabled'
 );
+-- No policy at all, for any role and any command: no client read path and no
+-- client write path. The sync writes as the service role, which bypasses RLS;
+-- the app reads through the definer snapshot RPC, which applies its own gate.
 select is(
   (select count(*)::int from pg_policies where schemaname = 'public' and tablename = 'bev_graph_stats'),
-  1,
-  'it has exactly one policy'
-);
-select is(
-  (select policyname || ' ' || cmd || ' ' || array_to_string(roles, ',') from pg_policies
-    where schemaname = 'public' and tablename = 'bev_graph_stats'),
-  'bev_graph_stats_select SELECT authenticated',
-  'and that one is a select for authenticated: no insert, update or delete policy for anyone'
-);
--- The predicate is a POSITIVE exists over bevs and categories with both halves
--- of bevs_select; a negative one would be fail-open (the migration says why).
-select alike(
-  (select qual from pg_policies where schemaname = 'public' and tablename = 'bev_graph_stats'),
-  '%EXISTS%bevs%categories%status%''active''%is_alcoholic%viewer_is_adult()%',
-  'the policy is an exists over the Bev: active, and alcoholic only for an adult'
-);
-select unalike(
-  (select qual from pg_policies where schemaname = 'public' and tablename = 'bev_graph_stats'),
-  '%NOT (EXISTS%',
-  'and it is not written as a negative exists'
+  0,
+  'it has ZERO policies: no client reads or writes the table'
 );
 select is(
   (select string_agg(a.attname || ' ' || format_type(a.atttypid, a.atttypmod), ', ' order by a.attnum)
@@ -375,7 +367,7 @@ select is(pg_temp.outcome(pg_temp.broken('{0,pagerank}', '0.99999'::jsonb), '1.7
 select is(pg_temp.fingerprint(), (select print from t_before), 'the previous rows are intact');
 
 -- ---------------------------------------------------------------------------
--- 5. Direct reads and writes under RLS
+-- 5. Direct access under RLS with no policy: nothing to read, nothing to write
 -- ---------------------------------------------------------------------------
 
 -- Tonight's generation: all four, the hidden one and the alcoholic one too.
@@ -384,74 +376,76 @@ select is(
   4,
   'the full generation is written for the read tests'
 );
+-- Counted as the owner first, so every 0 below is the absence of a policy and
+-- not an empty table.
+select is((select count(*)::int from public.bev_graph_stats), 4,
+          'the table holds four rows, counted as the owner');
+
+create temporary table t_full (print text not null) on commit drop;
+insert into t_full (print) values (pg_temp.fingerprint());
 
 set local role authenticated;
 set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-000000a16401", "role": "authenticated"}';
 
 select is(
-  (select array_agg(right(bev_id::text, 6) order by bev_id) from public.bev_graph_stats),
-  array['a16411', 'a16412', 'a16414'],
-  'an adult reads the rows of the active Bevs, the alcoholic one included, and NOT the hidden Bev''s'
+  (select count(*)::int from public.bev_graph_stats),
+  0,
+  'a signed-in adult selecting from the table sees ZERO rows, although four exist'
 );
--- D is active, visible to this caller and has no row, so the only thing that
--- can refuse this insert is the absence of an insert policy (or of the
--- privilege): either way 42501.
+select is(
+  (select count(*)::int from public.bev_graph_stats where bev_id = '00000000-0000-4000-8000-000000a16411'),
+  0,
+  'not even the row of an active, non-alcoholic Bev they can see everywhere else: community_size would count the ones they cannot'
+);
+-- D is active, visible to this caller and has no row, so nothing but RLS can
+-- refuse this: with RLS on and no policy every new row violates it.
 select throws_ok(
   $$ insert into public.bev_graph_stats (bev_id, community_id, community_size, pagerank, strength, degree, bridge, version)
      values ('00000000-0000-4000-8000-000000a16415', 'c_ffffffffffffffff', 1, 0.5, 0, 0, 0, '1.7.0') $$,
   '42501', null,
   'authenticated cannot insert: the sync writes as the service role'
 );
+-- NOT throws_ok for these two: with no UPDATE or DELETE policy no row is
+-- visible to the command, so it affects zero rows and raises nothing
+-- (16_taste_graph asserts the same of user_neighbors). What matters is that
+-- the data survives, which is checked as the owner below.
+select lives_ok(
+  $$ update public.bev_graph_stats set pagerank = 0, community_id = 'c_ffffffffffffffff' where true $$,
+  'an UPDATE of every row by authenticated does not raise: it matches nothing'
+);
+select lives_ok(
+  $$ delete from public.bev_graph_stats where true $$,
+  'nor does a DELETE of every row'
+);
 select throws_ok(
   $$ select public.replace_bev_graph_stats('[]'::jsonb, '1.7.0') $$,
   '42501', null,
   'and authenticated cannot call the writer at all'
 );
--- An update or a delete with no policy matches no row and raises nothing (and
--- on a stack that grants the role no such privilege it raises 42501). Both
--- are "cannot": try each, swallow only that error, and compare the table
--- afterwards.
-do $$
-begin
-  begin
-    update public.bev_graph_stats set pagerank = 0, community_id = 'c_ffffffffffffffff' where true;
-  exception when insufficient_privilege then null;
-  end;
-  begin
-    delete from public.bev_graph_stats where true;
-  exception when insufficient_privilege then null;
-  end;
-end $$;
 
 set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-000000a16402", "role": "authenticated"}';
 select is(
-  (select array_agg(right(bev_id::text, 6) order by bev_id) from public.bev_graph_stats),
-  array['a16411', 'a16412'],
-  'a minor reads neither the alcoholic Bev''s row nor the hidden one''s'
+  (select count(*)::int from public.bev_graph_stats),
+  0,
+  'a signed-in minor sees zero rows too'
 );
-do $$
-begin
-  begin
-    update public.bev_graph_stats set bridge = 0.5 where true;
-  exception when insufficient_privilege then null;
-  end;
-  begin
-    delete from public.bev_graph_stats where true;
-  exception when insufficient_privilege then null;
-  end;
-end $$;
 reset role;
 
 select is(
   pg_temp.fingerprint(),
+  (select print from t_full),
+  'and the four rows are exactly as they were: the UPDATE and the DELETE changed nothing'
+);
+select is(
+  pg_temp.fingerprint(),
   'a16411 c_aaaaaaaaaaaaaaaa 2 0.412345678912 3.25 4 0.25 1.7.0 | a16412 c_aaaaaaaaaaaaaaaa 2 0.3 1 1 0.123456 1.7.0 | '
     || 'a16413 c_bbbbbbbbbbbbbbbb 1 0.187654321088 0.5 1 0 1.7.0 | a16414 c_cccccccccccccccc 1 0.1 0 0 0 1.7.0',
-  'an update and a delete of every row, tried by the adult and by the minor, changed nothing'
+  'which is the generation the writer stored, value for value'
 );
 
--- anon: what stops anon READING is that the table's one policy names
--- `authenticated`, which section 1 asserts from the catalog; it is not read
--- as anon here. What is tried as anon is the two ways of writing.
+-- anon: no policy names it either. It is not READ as anon here (no other file
+-- reads a table as anon, so this one does not lean on anon holding the table
+-- privilege); what is tried as anon is the two ways of writing.
 set local role anon;
 set local request.jwt.claims = '{"role": "anon"}';
 select throws_ok(
@@ -499,10 +493,37 @@ select ok(
                       or jsonb_typeof(x -> 2) <> 'number' or jsonb_typeof(x -> 3) <> 'number')),
   'every tuple is [string, string, number, number]: the two signals are JSON numbers, not strings'
 );
+-- The visible-only rule, asserted on the snapshot because it is enforced
+-- nowhere else. Each id is looked up on its own, so a wrong whole-value
+-- comparison above cannot hide which half broke.
 select is(
   (select position('00000000-0000-4000-8000-000000a16413' in (j -> 'bevGraph')::text) from t_snap where label = 'adult'),
   0,
-  'the hidden Bev''s row is in the table but not in the adult''s bevGraph'
+  'HIDDEN: the hidden Bev''s row is in the table but not in the adult''s bevGraph'
+);
+select is(
+  (select position('00000000-0000-4000-8000-000000a16413' in (j -> 'bevGraph')::text) from t_snap where label = 'minor'),
+  0,
+  'HIDDEN: nor in the minor''s'
+);
+select ok(
+  (select position('00000000-0000-4000-8000-000000a16414' in (j -> 'bevGraph')::text) > 0 from t_snap where label = 'adult'),
+  'ALCOHOLIC: an adult does get the alcoholic Bev''s tuple (the control for the next assertion)'
+);
+select is(
+  (select position('00000000-0000-4000-8000-000000a16414' in (j -> 'bevGraph')::text) from t_snap where label = 'minor'),
+  0,
+  'ALCOHOLIC: an under-21 viewer does not'
+);
+-- community_size is the column that made a table policy unsafe; it must not
+-- ride along in the snapshot either. A's family has 2 members in the table,
+-- and no element of A's tuple is that number.
+select ok(
+  (select jsonb_array_length(j -> 'bevGraph' -> 0) = 4
+          and j -> 'bevGraph' -> 0 ->> 0 = '00000000-0000-4000-8000-000000a16411'
+          and (j -> 'bevGraph' -> 0 ->> 2)::numeric < 1 and (j -> 'bevGraph' -> 0 ->> 3)::numeric < 1
+     from t_snap where label = 'minor'),
+  'the tuple carries no community_size, strength or degree: four elements, the last two below 1'
 );
 select is(
   (select j -> 'bevGraph' from t_snap where label = 'minor'),

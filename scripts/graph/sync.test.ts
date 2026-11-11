@@ -19,6 +19,7 @@ import { RANKING_VERSION } from "@bevi/ranking";
 import { computeGraphStats, flavourProjection, graphStatsDbRows, graphStatsWrites } from "./analytics-core.ts";
 import type { BevGraphStatsDbRow, GraphStats } from "./analytics-core.ts";
 import { Neo4jError } from "./neo4j.ts";
+import { PostgrestError } from "./postgrest.ts";
 import type { Neo4jClient, Parameters, Row } from "./neo4j.ts";
 import {
   COUNT_STAMPED,
@@ -105,8 +106,8 @@ interface FakeOptions {
   vector?: Row[];
   /** Rewrites what the analytics phase reads back from the graph (`READ_BEV_IDS`, `READ_SIMILAR_TO`, `READ_BEV_ATTRIBUTES`). */
   readBack?: (statement: string, rows: Row[]) => Row[];
-  /** What `replace_bev_graph_stats` does: throw, or answer a row count. Default: the number of rows sent. */
-  publish?: (rows: readonly BevGraphStatsDbRow[], version: string) => number;
+  /** What `replace_bev_graph_stats` does on its n-th call (1-based): throw, or answer a row count. Default: the number of rows sent. */
+  publish?: (rows: readonly BevGraphStatsDbRow[], version: string, call: number) => number;
 }
 
 interface Published {
@@ -149,7 +150,7 @@ function fake(options: FakeOptions = {}): Fake {
     published: [],
     async publish(rows, version) {
       state.published.push({ rows, version, commitsBefore: state.commits, statementsBefore: state.statements.length });
-      return options.publish === undefined ? rows.length : options.publish(rows, version);
+      return options.publish === undefined ? rows.length : options.publish(rows, version, state.published.length);
     },
     client: {
       async query(statement, parameters = {}) {
@@ -223,6 +224,17 @@ const permanent = (): Neo4jError =>
     status: 400,
     statement: "UNWIND $rows AS row",
     transient: false,
+  });
+
+/** What postgrest.ts raises: a status (null = no response arrived), and from it the one bit the write-back retries on. */
+const postgrest = (status: number | null, body = ""): PostgrestError =>
+  new PostgrestError({
+    message:
+      status === null
+        ? "network failure (ECONNRESET) on /rpc/replace_bev_graph_stats"
+        : `${status} on /rpc/replace_bev_graph_stats${body === "" ? "" : `\n  ${body}`}`,
+    status,
+    path: "/rpc/replace_bev_graph_stats",
   });
 
 const inTx = (f: Fake, n: number): Recorded[] => f.statements.filter((s) => s.where === `tx${n}`);
@@ -464,9 +476,15 @@ test("bev_graph_stats is written ONCE, only AFTER the commit, with every row and
 });
 
 test("--dry-run never writes bev_graph_stats, and says so", async () => {
-  const f = fake();
+  // A publisher that would fail transiently for ever: a dry run must not call it even once.
+  const f = fake({
+    publish: () => {
+      throw postgrest(503);
+    },
+  });
   await runSync(PLAN, { syncId: SYNC_ID, dryRun: true }, deps(f));
   assert.equal(f.published.length, 0);
+  assert.deepEqual(f.sleeps, []);
   assert.match(f.logs.join("\n"), /--dry-run: bev_graph_stats in Postgres was NOT written either/);
   // --fixture has no Postgres at all: a dry run needs no publisher.
   const g = fake();
@@ -498,32 +516,105 @@ test("nothing is written to Postgres when the transaction does not commit", asyn
   }
 });
 
-test("a failed write-back says the graph committed and Postgres was NOT updated, and is not retried as a sync", async () => {
-  const f = fake({
-    publish: () => {
-      throw new Error("503 Service Unavailable on /rpc/replace_bev_graph_stats");
-    },
-  });
-  await assert.rejects(runSync(PLAN, { syncId: SYNC_ID, dryRun: false }, deps(f)), (error: Error) => {
-    assert.ok(error instanceof GraphStatsPublishError);
-    assert.match(error.message, new RegExp(`the graph COMMITTED generation ${SYNC_ID}, but bev_graph_stats in Postgres was NOT updated`));
-    assert.match(error.message, /still holds the previous night's values/);
-    assert.match(error.message, /The next graph:sync run repairs it/);
-    assert.match(error.message, /503 Service Unavailable on \/rpc\/replace_bev_graph_stats/);
-    return true;
-  });
-  // The graph is right and stays: one transaction, committed, not rolled back, not run again.
+/** The message every final write-back failure carries, whatever caused it. */
+const assertPublishError = (error: Error, cause: RegExp): true => {
+  assert.ok(error instanceof GraphStatsPublishError);
+  assert.match(error.message, new RegExp(`the graph COMMITTED generation ${SYNC_ID}, but bev_graph_stats in Postgres was NOT updated`));
+  assert.match(error.message, /still holds the previous night's values/);
+  assert.match(error.message, /The next graph:sync run repairs it/);
+  assert.match(error.message, cause);
+  return true;
+};
+
+/** The graph is right and stays: one transaction, committed, not rolled back, not run again, and not marked failed. */
+const assertGraphStands = (f: Fake): void => {
   assert.equal(f.begins, 1);
   assert.equal(f.commits, 1);
   assert.equal(f.rollbacks, 0);
   assert.equal(f.committedSyncId, SYNC_ID);
-  assert.equal(f.published.length, 1, "one attempt");
-  assert.deepEqual(f.sleeps, []);
-  // The graph's own attempt succeeded, so (:Meta).lastAttemptOk is not flipped to false.
-  assert.ok(!f.statements.some((s) => s.statement === STAMP_FAILED_ATTEMPT));
+  assert.ok(!f.statements.some((s) => s.statement === STAMP_FAILED_ATTEMPT), "(:Meta).lastAttemptOk is not flipped to false");
+};
+
+test("a transient write-back failure is retried: the second call succeeds and so does the run", async () => {
+  for (const first of [postgrest(503), postgrest(429), postgrest(null)]) {
+    const f = fake({
+      publish: (rows, _version, call) => {
+        if (call === 1) throw first;
+        return rows.length;
+      },
+    });
+    await runSync(PLAN, { syncId: SYNC_ID, dryRun: false, backoffMs: 11 }, deps(f));
+    assert.equal(f.published.length, 2, `two calls after ${String(first.status)}`);
+    assert.deepEqual(f.sleeps, [11], "the sync's own backoff");
+    // The same whole payload both times: the call is an idempotent replace.
+    assert.deepEqual(f.published[1]?.rows, f.published[0]?.rows);
+    assert.equal(f.published[1]?.version, RANKING_VERSION);
+    assertGraphStands(f);
+    const log = f.logs.join("\n");
+    assert.match(log, /::warning::bev_graph_stats write-back attempt 1\/3 failed with a transient error \(the graph has already committed\); retrying in 11 ms/);
+    assert.match(log, new RegExp(`bev_graph_stats: replaced with ${PLAN.counts.nodes.Bev} rows`));
+    // The reports still follow a write-back that needed a second try.
+    assert.match(log, /--- graph signals/);
+  }
 });
 
-test("a write-back that answers the wrong row count is the same failure", async () => {
+test("a 4xx write-back failure is NOT retried: one call, then the graph-committed message", async () => {
+  for (const [status, body, cause] of [
+    [400, '{"code":"22023","details":"rows: pagerank does not sum to 1","message":"BEVI_VALIDATION"}', /rows: pagerank does not sum to 1/],
+    [404, '{"code":"PGRST202","message":"Could not find the function public.replace_bev_graph_stats"}', /Could not find the function/],
+    [401, '{"message":"Invalid API key"}', /401 on \/rpc\/replace_bev_graph_stats/],
+  ] as const) {
+    const f = fake({
+      publish: () => {
+        throw postgrest(status, body);
+      },
+    });
+    await assert.rejects(runSync(PLAN, { syncId: SYNC_ID, dryRun: false, backoffMs: 11 }, deps(f)), (error: Error) => assertPublishError(error, cause));
+    assert.equal(f.published.length, 1, `one call on ${status}`);
+    assert.deepEqual(f.sleeps, []);
+    assertGraphStands(f);
+  }
+});
+
+test("three transient write-back failures give up: three calls, then the graph-committed message", async () => {
+  const f = fake({
+    publish: () => {
+      throw postgrest(503, "upstream connect error");
+    },
+  });
+  await assert.rejects(runSync(PLAN, { syncId: SYNC_ID, dryRun: false, backoffMs: 5 }, deps(f)), (error: Error) =>
+    assertPublishError(error, /503 on \/rpc\/replace_bev_graph_stats/),
+  );
+  assert.equal(f.published.length, 3);
+  assert.deepEqual(f.sleeps, [5, 10]);
+  assertGraphStands(f);
+  // maxAttempts bounds the write-back as it bounds the sync.
+  const g = fake({
+    publish: () => {
+      throw postgrest(null);
+    },
+  });
+  await assert.rejects(runSync(PLAN, { syncId: SYNC_ID, dryRun: false, backoffMs: 1, maxAttempts: 2 }, deps(g)), (error: Error) =>
+    assertPublishError(error, /network failure \(ECONNRESET\)/),
+  );
+  assert.equal(g.published.length, 2);
+});
+
+test("an error that is not a PostgrestError is not transient: one call", async () => {
+  const f = fake({
+    publish: () => {
+      throw new Error("503 Service Unavailable, said a plain Error");
+    },
+  });
+  await assert.rejects(runSync(PLAN, { syncId: SYNC_ID, dryRun: false }, deps(f)), (error: Error) =>
+    assertPublishError(error, /said a plain Error/),
+  );
+  assert.equal(f.published.length, 1, "one attempt");
+  assert.deepEqual(f.sleeps, []);
+  assertGraphStands(f);
+});
+
+test("a write-back that answers the wrong row count is the same failure, and is not retried", async () => {
   const f = fake({ publish: (rows) => rows.length - 1 });
   await assert.rejects(runSync(PLAN, { syncId: SYNC_ID, dryRun: false }, deps(f)), (error: Error) => {
     assert.ok(error instanceof GraphStatsPublishError);
@@ -532,6 +623,7 @@ test("a write-back that answers the wrong row count is the same failure", async 
     return true;
   });
   assert.equal(f.commits, 1);
+  assert.equal(f.published.length, 1);
 });
 
 test("postgresPublisher calls replace_bev_graph_stats with p_rows and p_version, once", async () => {

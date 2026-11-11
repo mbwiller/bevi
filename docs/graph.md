@@ -647,14 +647,22 @@ but anything written against this server should know:
   false` says what happened.
 - **The graph committed and Postgres was not updated.** The two stores cannot
   commit together, so the order is: the graph commits, then
-  `replace_bev_graph_stats` replaces `bev_graph_stats`. If that call fails (or
-  answers a different row count), the run exits 1 and says exactly that:
-  the graph committed generation `<syncId>`, `bev_graph_stats` was **not**
-  updated and still holds the previous night's values. Those are complete and
-  self-consistent, one generation behind the graph; nothing the app reads is
-  broken; the next run repairs it (or re-dispatch the workflow). It is not
-  retried as a sync, because the graph is right, and `(:Meta).lastAttemptOk`
-  stays true, because the graph's attempt did succeed. The RPC validates the
+  `replace_bev_graph_stats` replaces `bev_graph_stats`. **That call is retried,
+  up to three attempts with the sync's own backoff, on a transient failure
+  only** — no response at all, HTTP 429 or a 5xx. It is an idempotent
+  whole-table replace and the graph has already committed, so sending it again
+  is safe and one dropped connection should not turn the night red. A 4xx is
+  never retried: a `BEVI_VALIDATION` 400 or a 404 for a function that is not
+  there will fail the same way again. (`postgrest.ts` raises a
+  `PostgrestError` that carries the status, so this is decided on a field,
+  not by reading a message.) If it still fails, or answers a different row
+  count, the run exits 1 and says exactly that: the graph committed generation
+  `<syncId>`, `bev_graph_stats` was **not** updated and still holds the
+  previous night's values. Those are complete and self-consistent, one
+  generation behind the graph; nothing the app reads is broken; the next run
+  repairs it (or re-dispatch the workflow). It is not retried as a *sync*,
+  because the graph is right, and `(:Meta).lastAttemptOk` stays true, because
+  the graph's attempt did succeed. The RPC validates the
   whole payload before deleting anything, so a refused call cannot leave the
   table half-written or empty.
 - **An empty read is refused before a transaction is opened.** Zero active
@@ -899,14 +907,32 @@ bev_graph_stats(bev_id         uuid primary key references bevs(id) on delete ca
 `double precision`, not `numeric`, on purpose: these are derived floats, not
 money, and a `numeric` can reach a client as a JSON string.
 
-**RLS** is on, with one policy: `select` for `authenticated`, and **no**
-insert/update/delete policy — the sync writes as the service role. The
-predicate is `bev_embeddings_select`'s, for the same reasons ("The Postgres
-half", above): a **positive** `exists` over the Bev, requiring
-`status = 'active'` and (the category is not alcoholic or `viewer_is_adult()`).
-A hidden Bev's row survives in the table until the next nightly run, so the
-status half is what stops a plain `GET /rest/v1/bev_graph_stats` from serving
-it meanwhile.
+**RLS is on with no policy at all: no client reads or writes the table.** It
+is the `user_neighbors` arrangement ("Taste neighbours", below), and for
+`authenticated` and `anon` it means a select returns no rows, an insert is
+refused (42501) and an update or a delete matches nothing. The sync writes as
+the service role, which bypasses RLS. Three reasons, recorded in the
+migration too:
+
+1. **The only reader is `get_prediction_snapshot()`.** It is `security
+   definer`, it already filters to its own `visible` gate, and it emits
+   exactly `[bev_id, community_id, pagerank, bridge]`.
+2. **`community_size` counts hidden and alcoholic members.** A direct read of
+   the row of a Bev an under-21 viewer may see would tell them how many Bevs
+   they may *not* see belong to its taste family — say, a lemonade in a family
+   of 38 of which they can list 31. That is the class of inference the
+   `bev_edges` policy exists to prevent, and no per-row predicate can remove
+   it, because the leak is in a column and not in which rows are served.
+3. **No screen needs the table.**
+
+There is **no separate `revoke`**, on purpose: with RLS on and no policy the
+default table grants reach no row, so a revoke would be a second lock on the
+same door. So the visible-only rule is enforced in exactly one place, the
+snapshot, and pgTAP 30 asserts both halves of it there (a hidden Bev's tuple
+is absent for everyone; an alcoholic Bev's is present for an adult and absent
+for a minor). If a screen ever needs a per-Bev read, add a definer RPC behind
+the `visible` gate; do not add a table policy while `community_size` is a
+column.
 
 **The writer** is `replace_bev_graph_stats(p_rows jsonb, p_version text)`,
 service role only, modelled on `replace_bev_edges`: one call is one
@@ -946,8 +972,8 @@ to `packages/api`.
 ### The failure mode: graph committed, Postgres not updated
 
 The graph and Postgres cannot commit together. The sync commits the graph
-first and writes `bev_graph_stats` second, and says plainly when the second
-step fails — "Failure, and what stays in place", above. Until the next run the
+first and writes `bev_graph_stats` second (retrying that write up to three
+times on a transient error), and says plainly when the second step fails — "Failure, and what stays in place", above. Until the next run the
 graph is one generation ahead of the table; both are complete and
 self-consistent. A Bev created since the last successful write simply has no
 row and no `bevGraph` tuple, which the package reads as "no signal".
