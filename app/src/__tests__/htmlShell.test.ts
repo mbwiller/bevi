@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { EDGE_STRIP } from '@/components/StatusBarClearance';
+import { COLUMN_MAX_WIDTH } from '@/lib/column';
 import { colors } from '@/theme';
 
 const publicDir = join(__dirname, '../../public');
@@ -107,5 +108,53 @@ describe('edge strip', () => {
   it('is the dark surface in dark mode', () => {
     const dark = /@media \(display-mode: standalone\) and \(orientation: portrait\) and \(prefers-color-scheme: dark\) \{\s*#edge-strip \{\s*background-color:\s*([^;]+);/.exec(css);
     expect(dark?.[1]).toBe(colors.dark.surface);
+  });
+});
+
+describe('the centred column on a wide viewport', () => {
+  const css = resetCss();
+  const wide = `@media (min-width: ${COLUMN_MAX_WIDTH + 1}px) and (min-height: ${COLUMN_MAX_WIDTH + 1}px)`;
+  const block = (start: string) => {
+    const i = css.indexOf(start);
+    expect(i).toBeGreaterThan(-1);
+    // Up to the next @media (or the end): the block's rules.
+    const next = css.indexOf('@media', i + start.length);
+    return css.slice(i, next === -1 ? undefined : next);
+  };
+  const rule = (src: string, selector: string) => {
+    const at = src.indexOf(`${selector} {`);
+    expect(at).toBeGreaterThan(-1);
+    return src.slice(at, src.indexOf('}', at));
+  };
+
+  it('uses the same numbers as lib/column.ts, so no phone in either orientation matches', () => {
+    expect(css).toContain(`${wide} {`);
+    expect(css).toContain(`${wide} and (prefers-color-scheme: dark) {`);
+  });
+
+  it('caps #root at the column width, centred, on surface, with the quiet input fill around it', () => {
+    const light = block(`${wide} {`);
+    expect(rule(light, '#root')).toContain(`max-width: ${COLUMN_MAX_WIDTH}px;`);
+    expect(rule(light, '#root')).toContain('margin: 0 auto;');
+    expect(rule(light, '#root')).toContain(`background-color: ${colors.light.surface};`);
+    expect(rule(light, 'body')).toContain(`background-color: ${colors.light.input};`);
+    const dark = block(`${wide} and (prefers-color-scheme: dark) {`);
+    expect(rule(dark, '#root')).toContain(`background-color: ${colors.dark.surface};`);
+    expect(rule(dark, 'body')).toContain(`background-color: ${colors.dark.input};`);
+  });
+
+  it('gives a Modal portal (a bare div on body) the column box and makes it the containing block of its fixed layers', () => {
+    const portal = rule(block(`${wide} {`), 'body > div:not([id]):not([class])');
+    for (const decl of ['position: fixed;', 'top: 0;', 'bottom: 0;', 'left: 0;', 'right: 0;', `max-width: ${COLUMN_MAX_WIDTH}px;`, 'margin: 0 auto;', 'transform: translateZ(0);', 'pointer-events: none;']) {
+      expect(portal).toContain(decl);
+    }
+    // Above #root's positioned layers, as the Modal's own container is.
+    expect(portal).toContain('z-index: 9999;');
+    // What an open portal holds takes clicks again, at zero specificity.
+    expect(rule(block(`${wide} {`), ':where(body > div:not([id]):not([class])) > *')).toContain('pointer-events: auto;');
+  });
+
+  it('matches neither #root nor #edge-strip with the portal selector (both have ids)', () => {
+    expect(html).toMatch(/<div id="edge-strip"[^>]*><\/div>\s*<div id="root"><\/div>/);
   });
 });

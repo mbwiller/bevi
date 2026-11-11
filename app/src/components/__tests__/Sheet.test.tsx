@@ -78,3 +78,61 @@ it('stops a 90% sheet below the top safe-area inset', async () => {
   );
   expect(StyleSheet.flatten(screen.getByTestId('sheet').props.style).height).toBe(height - top);
 });
+
+describe('on a wide viewport', () => {
+  const { Dimensions, StyleSheet } = require('react-native');
+  const frame = () => StyleSheet.flatten(screen.getByTestId('sheet-frame', { includeHiddenElements: true }).props.style);
+  let saved: { window: object; screen: object };
+
+  beforeEach(() => {
+    saved = { window: Dimensions.get('window'), screen: Dimensions.get('screen') };
+  });
+  afterEach(() => act(() => Dimensions.set(saved)));
+
+  const resize = (width: number, height: number) =>
+    act(() => Dimensions.set({ window: { width, height, scale: 2, fontScale: 1 }, screen: { width, height, scale: 2, fontScale: 1 } }));
+
+  it('keeps the sheet and its scrim inside the centred 480pt column', async () => {
+    await resize(1440, 900);
+    await render(
+      <Sheet open title="Sort by">
+        <Text>Score</Text>
+      </Sheet>,
+    );
+    expect(frame()).toMatchObject({ width: '100%', maxWidth: 480, alignSelf: 'center' });
+    // The scrim and the panel are both inside that frame, so neither reaches past the column.
+    const inFrame = (id: string) => {
+      let node = screen.getByTestId(id, { includeHiddenElements: true }) as unknown as { parent: unknown; props: { testID?: string } } | null;
+      while (node && node.props.testID !== 'sheet-frame') node = node.parent as typeof node;
+      return !!node;
+    };
+    expect(inFrame('sheet-scrim')).toBe(true);
+    expect(inFrame('sheet')).toBe(true);
+  });
+
+  it('still sizes its height by the window', async () => {
+    await resize(1440, 900);
+    await render(
+      <Sheet open snap={40} title="Sort by">
+        <Text>Score</Text>
+      </Sheet>,
+    );
+    expect(StyleSheet.flatten(screen.getByTestId('sheet').props.style).height).toBeCloseTo(900 * 0.4);
+  });
+
+  it.each([
+    [393, 852],
+    [320, 568],
+    [852, 393],
+  ])('leaves a %ix%i phone exactly as before', async (width, height) => {
+    await resize(width, height);
+    await render(
+      <Sheet open title="Sort by">
+        <Text>Score</Text>
+      </Sheet>,
+    );
+    expect(frame().maxWidth).toBeUndefined();
+    expect(frame().alignSelf).toBeUndefined();
+    expect(frame().width).toBeUndefined();
+  });
+});

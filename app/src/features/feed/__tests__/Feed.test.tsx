@@ -6,9 +6,10 @@ import type { FeedItem, PeriodWinner } from '@bevi/shared';
 
 import { api } from '@/api/client';
 import { bevOfCardLabel } from '@/components/BevOfCard';
+import { bevOfPeriodCards } from '@/features/feed/BevOfPeriod';
 import { likeLabel } from '@/components/LikeButton';
 import { keys } from '@/api/keys';
-import { formatPeriodStart, formatRelativeTime } from '@/lib/time';
+import { formatRelativeTime } from '@/lib/time';
 import { FRIEND, ME, controls, userIdFor } from '@/testing/fakeApi';
 import FeedScreen from '@/app/(tabs)/feed/index';
 
@@ -60,9 +61,9 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-/** The card's accessible name for a winner, as BevOfPeriod renders it. */
-function cardName(period: 'day' | 'week', w: PeriodWinner): string {
-  return bevOfCardLabel(period, w.bev.name, w.bev.bayesScore, w.isCurrent ? undefined : formatPeriodStart(w.periodStart, period));
+/** The cards' accessible names for the winners, as BevOfPeriod renders them (one card when one Bev won both). */
+function cardNames(day: PeriodWinner | null, week: PeriodWinner | null): string[] {
+  return bevOfPeriodCards(day, week).map((c) => bevOfCardLabel(c.period, c.winner.bev.name, c.winner.bev.bayesScore, c.date));
 }
 
 it('renders Bev of the day and week (not Featured) above the feed posts', async () => {
@@ -75,8 +76,9 @@ it('renders Bev of the day and week (not Featured) above the feed posts', async 
   await start();
 
   const row = await screen.findByTestId('bev-of-period');
-  expect(within(row).getByLabelText(cardName('day', period.day!))).toBeTruthy();
-  expect(within(row).getByLabelText(cardName('week', period.week!))).toBeTruthy();
+  const names = cardNames(period.day, period.week);
+  expect(names.length).toBeGreaterThan(0);
+  for (const name of names) expect(within(row).getByLabelText(name)).toBeTruthy();
   expect(screen.queryByTestId('featured-carousel')).toBeNull();
   expect(screen.queryByText('Featured Bevs')).toBeNull();
 

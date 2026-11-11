@@ -86,6 +86,54 @@
           }
         }
       }
+      /* Wider and taller than any phone (a laptop, a tablet): the app is one phone-width column in the middle of the
+         window, never stretched edge to edge, on `input` (light then dark), the quiet fill around it. No phone matches:
+         the largest is 440pt wide in portrait and 440pt tall in landscape. The numbers are COLUMN_MAX_WIDTH in
+         src/lib/column.ts, which code that sizes by the window's width reads instead of the window.
+         #root holds every screen, the tab bar, the stack's full-screen modals and the splash.
+         A react-native-web Modal (every Sheet) is portalled into a bare <div>, no id and no class, appended to <body>
+         outside #root, and draws its layers with position: fixed. Giving that portal the column's box and a transform
+         makes it the containing block of those fixed layers, so a sheet and its scrim fill the column, not the window.
+         The transform also makes it a stacking context, so it takes the Modal's own z-index (9999) to stay above
+         #root's positioned layers. A closed Sheet keeps an empty portal, which must not catch clicks: pointer-events
+         is none on the portal and auto on what it holds, at zero specificity (:where) so react-native-web's own
+         pointer-events classes still win. */
+      @media (min-width: 481px) and (min-height: 481px) {
+        html,
+        body {
+          background-color: #ededed;
+        }
+        #root {
+          width: 100%;
+          max-width: 480px;
+          margin: 0 auto;
+          background-color: #ffffff;
+        }
+        body > div:not([id]):not([class]) {
+          position: fixed;
+          top: 0;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          max-width: 480px;
+          margin: 0 auto;
+          transform: translateZ(0);
+          z-index: 9999;
+          pointer-events: none;
+        }
+        :where(body > div:not([id]):not([class])) > * {
+          pointer-events: auto;
+        }
+      }
+      @media (min-width: 481px) and (min-height: 481px) and (prefers-color-scheme: dark) {
+        html,
+        body {
+          background-color: #232326;
+        }
+        #root {
+          background-color: #121214;
+        }
+      }
       /* No browser focus ring on text boxes: TextField and SearchBar draw their own on the box around
          the input. outline-width: 0 alone isn't enough, Safari still draws its blue `auto` ring. */
       input:focus,

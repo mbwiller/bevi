@@ -28,7 +28,8 @@ import { spacing, type, useTheme } from '@/theme';
  * the stat cards) with Follow / Following (optimistic) and Share profile, then their rankings. The Bev'd
  * count is a button that does what the old Bev'd row did: it shows their rankings, switching to the
  * Activity tab or, when already there, scrolling to the first ranking (their Bev'd list is that Activity;
- * `/lists` is only yours). No list rows (Recommended is private, Want to Try has no read) and no
+ * `/lists` is only yours). With no rankings and the Activity tab already showing it has nothing to do,
+ * so it is plain text. No list rows (Recommended is private, Want to Try has no read) and no
  * Settings. Your own id redirects to the Profile tab.
  */
 export default function UserProfileScreen() {
@@ -74,6 +75,8 @@ export default function UserProfileScreen() {
   } else {
     const profile = user.data;
     const s = stats.data;
+    // Nothing to show: no rankings, and the Activity tab (their empty Bev'd list) is already on screen.
+    const bevdIdle = tab === 'activity' && s.bevdCount === 0;
     const toPeople = (which: 'followers' | 'following') =>
       router.push({ pathname: which === 'followers' ? '/user/[id]/followers' : '/user/[id]/following', params: { id: profile.id } });
     body = (
@@ -93,12 +96,16 @@ export default function UserProfileScreen() {
             <ProfileHero
               profile={profile}
               stats={s}
-              onBevd={() => {
-                // Their Bev'd list is the Activity below (rankings.listUser), and `/lists` is only yours.
-                if (tab !== 'activity') router.setParams({ tab: 'activity' });
-                else if (s.bevdCount > 0) void listRef.current?.scrollToIndex({ index: 0, animated: true });
-              }}
-              bevdLabel={`Bev'd, ${s.bevdCount}, show their rankings`}
+              onBevd={
+                bevdIdle
+                  ? undefined
+                  : () => {
+                      // Their Bev'd list is the Activity below (rankings.listUser), and `/lists` is only yours.
+                      if (tab !== 'activity') router.setParams({ tab: 'activity' });
+                      else void listRef.current?.scrollToIndex({ index: 0, animated: true });
+                    }
+              }
+              bevdLabel={bevdIdle ? undefined : `Bev'd, ${s.bevdCount}, show their rankings`}
               onFollowers={() => toPeople('followers')}
               onFollowing={() => toPeople('following')}
             />

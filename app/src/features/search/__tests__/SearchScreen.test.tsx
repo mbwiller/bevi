@@ -178,6 +178,53 @@ describe('the screen', () => {
     expect(await screen.findByText(POPULAR_TITLE)).toBeTruthy();
   });
 
+  describe('Cancel and blur', () => {
+    const cancel = () => screen.queryByRole('button', { name: 'Cancel' });
+
+    it('hides when the empty bar loses focus', async () => {
+      await renderSearch();
+      await screen.findByText(POPULAR_TITLE);
+      await fireEvent(bar(), 'focus');
+      expect(cancel()).toBeTruthy();
+      await fireEvent(bar(), 'blur');
+      expect(cancel()).toBeNull();
+    });
+
+    it('stays while the bar holds text, focused or not', async () => {
+      await renderSearch();
+      await fireEvent(bar(), 'focus');
+      await type('co');
+      await fireEvent(bar(), 'blur');
+      expect(cancel()).toBeTruthy();
+    });
+
+    it('is still pressable: the blur its own press causes does not hide it first', async () => {
+      const dismiss = jest.spyOn(Keyboard, 'dismiss');
+      await renderSearch();
+      await screen.findByText(POPULAR_TITLE);
+      await fireEvent(bar(), 'focus');
+      // A real press: pointer down on Cancel, the bar blurs, then the press lands.
+      await fireEvent(screen.getByTestId('search-cancel'), 'pointerDown');
+      await fireEvent(bar(), 'blur');
+      expect(cancel()).toBeTruthy();
+      await fireEvent.press(cancel()!);
+      expect(dismiss).toHaveBeenCalledTimes(1);
+      expect(cancel()).toBeNull();
+      expect(bar().props.value).toBe('');
+    });
+
+    it('only the blur right after its pointer down is spared: the next one hides it', async () => {
+      await renderSearch();
+      await fireEvent(bar(), 'focus');
+      await fireEvent(screen.getByTestId('search-cancel'), 'pointerDown');
+      await fireEvent(bar(), 'blur');
+      // The press was dragged off and never landed. Focusing and leaving the bar again hides Cancel.
+      await fireEvent(bar(), 'focus');
+      await fireEvent(bar(), 'blur');
+      expect(cancel()).toBeNull();
+    });
+  });
+
   it('typing without a focus event still shows Cancel; the Add Bev tab press hides it again', async () => {
     await renderSearch();
     await type('co');

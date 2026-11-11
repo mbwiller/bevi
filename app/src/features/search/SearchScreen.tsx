@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Keyboard, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -32,14 +32,20 @@ export interface SearchScreenProps {
  * results list as the screen's body (Recents and "Popular on Bevi" while the bar is empty, grouped
  * Bevs and People once it has text). While the bar is in use (focused or holding text) a ghost
  * Cancel sits beside it; Cancel, or pressing the Add Bev tab again, empties the bar and puts the
- * keyboard away. SearchBar reports focus but not blur, so "in use" lasts from the first focus or
- * keystroke until one of those two resets it.
+ * keyboard away. Focusing the empty bar and then tapping elsewhere hides Cancel again.
+ *
+ * Pressing Cancel blurs the bar first (on pointer down), well before the press lands (on click). If that
+ * blur hid Cancel, the bar would widen into its place and the click would land on the bar and focus it
+ * again. So Cancel's pointer down marks the next blur as its own, and that blur leaves Cancel up for the
+ * press to reset everything.
  */
 export function SearchScreen({ focusRequest, resetRequest = 0 }: SearchScreenProps) {
   const router = useRouter();
   const { colors } = useTheme();
   const [q, setQ] = useState('');
-  const [engaged, setEngaged] = useState(false);
+  const [focused, setFocused] = useState(false);
+  /** Set on Cancel's pointer down; the blur that follows it consumes it (see above). */
+  const cancelling = useRef(false);
   // Debounced here, not in the list, so the first keystroke doesn't search on its own.
   const query = useDebouncedValue(q.trim());
 
@@ -51,8 +57,9 @@ export function SearchScreen({ focusRequest, resetRequest = 0 }: SearchScreenPro
   }, [focusN]);
 
   const reset = useCallback(() => {
+    cancelling.current = false;
     setQ('');
-    setEngaged(false);
+    setFocused(false);
     // Blurs the focused field (react-native-web's Keyboard.dismiss blurs the active input).
     Keyboard.dismiss();
   }, []);
@@ -61,7 +68,7 @@ export function SearchScreen({ focusRequest, resetRequest = 0 }: SearchScreenPro
     if (resetRequest) reset();
   }, [resetRequest, reset]);
 
-  const showCancel = engaged || q.length > 0;
+  const showCancel = focused || q.length > 0;
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.screen, { backgroundColor: colors.surface }]}>
@@ -73,15 +80,24 @@ export function SearchScreen({ focusRequest, resetRequest = 0 }: SearchScreenPro
           placeholder={SEARCH_PLACEHOLDER}
           value={q}
           onChange={setQ}
-          onFocus={() => setEngaged(true)}
+          onFocus={() => {
+            cancelling.current = false;
+            setFocused(true);
+          }}
+          onBlur={() => {
+            if (cancelling.current) cancelling.current = false;
+            else setFocused(false);
+          }}
           autoFocus={barKey > 0}
           id="search-q"
           style={styles.bar}
         />
         {showCancel ? (
-          <Button variant="ghost" onPress={reset}>
-            Cancel
-          </Button>
+          <View onPointerDown={() => (cancelling.current = true)} testID="search-cancel">
+            <Button variant="ghost" onPress={reset}>
+              Cancel
+            </Button>
+          </View>
         ) : null}
       </View>
       <View style={styles.pills}>

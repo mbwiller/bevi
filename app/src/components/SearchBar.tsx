@@ -21,6 +21,8 @@ export interface SearchBarProps {
   onSubmit?: (v: string) => void;
   /** The field took focus (the Search tab opens its results panel). */
   onFocus?: () => void;
+  /** The field lost focus (Add Bev hides its Cancel when the bar is also empty). */
+  onBlur?: () => void;
   /** The input's DOM id on web. */
   id?: string;
   style?: StyleProp<ViewStyle>;
@@ -39,6 +41,7 @@ export function SearchBar({
   onClear,
   onSubmit,
   onFocus,
+  onBlur,
   id,
   style,
 }: SearchBarProps) {
@@ -89,7 +92,10 @@ export function SearchBar({
           setFocused(true);
           onFocus?.();
         }}
-        onBlur={() => setFocused(false)}
+        onBlur={() => {
+          setFocused(false);
+          onBlur?.();
+        }}
         // Web: a Search return key, no autocorrect or capitalisation. No inputMode="search": react-native-web
         // turns it into type="search", whose WebKit cancel button would double up with our clear button.
         enterKeyHint="search"
