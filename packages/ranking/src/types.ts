@@ -216,20 +216,23 @@ export interface PredictionSnapshot {
   userNeighbours?: Record<UserId, UserNeighbour[]> | null;
   /**
    * Each Bev's place in the similarity graph (`bev_graph_stats`, network.ts, LaTeX §10.9), as the
-   * nightly graph sync computed it. Absent (undefined or null) means "not provided". Nothing in
-   * 1.7.0 reads it; `rank/graph-recs` will, behind an option, for community-aware diversity and
-   * exploration in `recommend()`.
+   * nightly graph sync computed it: its taste family, PageRank and bridge score. Absent (undefined or null) means "not provided". Since 1.8.0
+   * `recommend()` reads `community` and `bridge` (never `pagerank`), and only under
+   * `diversity: 'community'` or `exploration: 'community'`; both are off by default and fall back
+   * to the default when this field is absent. A Bev in `bevs` with no entry (created since the last
+   * sync) is its own singleton community with bridge 0; entries for Bevs not in `bevs` are allowed
+   * and ignored. Read lazily, and validated then (see `bevGraphLookup` in context.ts).
    */
   bevGraph?: Record<BevId, BevGraphStats> | null;
 }
 
 /** One Bev's place in the similarity graph, from the nightly graph sync (bev_graph_stats). */
 export interface BevGraphStats {
-  /** The community's opaque, stable id. The sync derives it from the community's hub (communityHubs), hashed so that an age-gated hub's Bev id never reaches a client. Compare for equality only. */
+  /** The Bev's taste family: its Louvain community in the flavour projection of the graph (Bevs joined through shared flavour bases and notes, attributeProjection). An opaque, stable id; the sync derives it from the family's hub, hashed so an age-gated hub's Bev id never reaches a client. Compare for equality only. */
   community: string;
   /** Weighted PageRank over SIMILAR_TO; sums to 1 over the graph the sync saw. */
   pagerank: number;
-  /** Participation coefficient in [0, 1). */
+  /** Participation coefficient in [0, 1): how much of the Bev's SIMILAR_TO weight goes to Bevs of OTHER taste families. */
   bridge: number;
 }
 
@@ -309,6 +312,27 @@ export interface PredictOptions {
   bevSimilarity?: BevSimilarityKind;
 }
 
+/**
+ * How `recommend` orders its normal (non-exploration) picks. 'none' is §8.11's order, jittered ẑ
+ * descending: the live engine. 'community' interleaves TASTE FAMILIES (the `community` of
+ * `snapshot.bevGraph`, so Coke, Diet Coke and Pepsi count as one family although they sit in two
+ * categories): the list is built greedily, each further pick from one family costing
+ * DIVERSITY_PENALTY z (`diversifyByCommunity`, LaTeX §7);
+ * it falls back to 'none' when the snapshot has no `bevGraph` field (see `effectiveDiversity`).
+ * Off by default until there is ranking data to evaluate it on.
+ */
+export type DiversityKind = 'none' | 'community';
+
+/**
+ * How `recommend` defines its exploration pool. 'category' is §8.11's rule (low-affinity or unranked
+ * categories, drawn ∝ exp(g_b)): the live engine. 'community' takes the candidates with g_b ≥ 0 in
+ * the taste families (`snapshot.bevGraph`) the user has not ranked anything in, drawn
+ * ∝ exp(g_b)·(1 + EXPLORE_BRIDGE_WEIGHT·bridge_b), and uses the 'category' pool for a call where
+ * that pool is empty; it falls back to 'category' entirely when the snapshot has no `bevGraph` field
+ * (see `effectiveExploration`). Off by default until there is ranking data to evaluate it on.
+ */
+export type ExplorationKind = 'category' | 'community';
+
 export interface RecommendOptions extends PredictOptions {
   /** List length. */
   n: number;
@@ -317,6 +341,10 @@ export interface RecommendOptions extends PredictOptions {
   /** Exploration share; default EPSILON. */
   epsilon?: number;
   excludeBevIds?: BevId[];
+  /** How the normal (non-exploration) list is diversified. Default 'none' (today's order). */
+  diversity?: DiversityKind;
+  /** How the exploration pool is defined. Default 'category' (today's rule). */
+  exploration?: ExplorationKind;
 }
 
 // ---------------------------------------------------------------- taste neighbourhoods (graph.ts)

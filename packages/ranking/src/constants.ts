@@ -1,7 +1,7 @@
 import type { Bucket, TasteAttributeKind } from './types.ts';
 
 /** Bumped with any formula or constant change; equals the `version` field of every vectors file. */
-export const RANKING_VERSION = '1.7.0';
+export const RANKING_VERSION = '1.8.0';
 
 /**
  * Score band per bucket as integer [lo, hi] edges on the 0–10 scale (Beli-style 7 / 4, decided 2026-10-09).
@@ -122,6 +122,25 @@ export const EPSILON = 0.15;
 export const JITTER_SD = 0.15;
 /** Default recommendation list length. */
 export const RECOMMEND_N = 20;
+/**
+ * Community diversity (`diversity: 'community'`, 1.8.0): the penalty, in z-units, that `recommend`
+ * subtracts from a normal candidate's jittered ẑ for each normal pick ALREADY chosen from its taste
+ * family (the `community` of `snapshot.bevGraph`). So a second pick from one family must beat the
+ * best alternative by 0.2 z, a third by 0.4 z, and so on: the list interleaves taste families
+ * without burying a much stronger candidate. The same order of magnitude as JITTER_SD. Unvalidated
+ * on real data: the option ships off.
+ */
+export const DIVERSITY_PENALTY = 0.2;
+/**
+ * Community exploration (`exploration: 'community'`, 1.8.0): a candidate in a taste family the user
+ * has not ranked anything in is drawn with weight exp(g_b)·(1 + EXPLORE_BRIDGE_WEIGHT·bridge_b),
+ * bridge_b the participation coefficient in [0, 1) from `snapshot.bevGraph` (the share of its
+ * similarity weight that reaches other families). Dimensionless (a multiplier per unit of bridge):
+ * at 1 a bridge is up to twice as likely as an interior Bev with the same g_b, because a bridge is
+ * the gentlest way into a family the user has not tried. Unvalidated on real data: the
+ * option ships off.
+ */
+export const EXPLORE_BRIDGE_WEIGHT = 1;
 
 // ---------------------------------------------------------------- starter set (§8.12)
 
@@ -217,7 +236,9 @@ export const NEIGHBOUR_RELIABILITY_N = 15;
 
 // ---------------------------------------------------------------- graph signals (network.ts, LaTeX §10.9)
 // Centrality, communities and bridges of the Bev similarity graph, computed by the nightly graph
-// sync. Nothing in 1.7.0 reads them on a prediction path.
+// sync (whose stored `community` is the taste family: Louvain over `attributeProjection`, which has
+// no constant). No prediction reads them; since 1.8.0 `recommend()` can read the families and
+// bridges, behind two options that ship off (DIVERSITY_PENALTY and EXPLORE_BRIDGE_WEIGHT above).
 
 /** PageRank damping d: the walk follows an edge with probability d and teleports with 1 − d (the usual 0.85). */
 export const PAGERANK_DAMPING = 0.85;
@@ -288,4 +309,6 @@ export const RANKING_CONSTANTS = {
   pagerankMaxIterations: PAGERANK_MAX_ITERATIONS,
   louvainResolution: LOUVAIN_RESOLUTION,
   louvainTieEpsilon: LOUVAIN_TIE_EPSILON,
+  diversityPenalty: DIVERSITY_PENALTY,
+  exploreBridgeWeight: EXPLORE_BRIDGE_WEIGHT,
 } as const;

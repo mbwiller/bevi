@@ -1,7 +1,9 @@
 // Graph signals of the Bev similarity graph (LaTeX §10.9): centrality (weighted PageRank),
-// communities (Louvain modularity clustering) and bridges (the participation coefficient). The
-// nightly graph sync calls these over `bev_edges` and stores the result per Bev; nothing here does
-// I/O, and nothing in 1.7.0 reads the result on a prediction path.
+// communities (Louvain modularity clustering), bridges (the participation coefficient) and, since
+// 1.8.0, the Adamic–Adar projection of a Bev–attribute graph that the taste families are clustered
+// on. The nightly graph sync calls these and stores the result per Bev; nothing here does I/O, no
+// prediction reads the result, and `recommend()` reads the stored families and bridges only behind
+// two options that ship off.
 //
 // Determinism. Every function validates the graph with one rule set, then works over the nodes in
 // `compareCodePoints` order (Unicode code point, SQL `collate "C"`) with each node's neighbours in
@@ -458,4 +460,86 @@ export function communityHubs(graph: WeightedGraph, communityOf: Readonly<Record
   const out: Record<number, string> = {};
   for (const c of [...best.keys()].sort((x, y) => x - y)) out[c] = g.ids[(best.get(c) as { i: number }).i] as string;
   return out;
+}
+
+// ---------------------------------------------------------------- attribute projection (1.8.0)
+
+/** One row of a bipartite node–attribute graph: `node` carries `attribute`. */
+export interface AttributeMembership {
+  node: string;
+  attribute: string;
+}
+
+/**
+ * The one-mode projection of a bipartite node–attribute graph, Adamic–Adar weighted (Adamic and
+ * Adar 2003):
+ *   w_ab = Σ over attributes x carried by both a and b of 1 / ln(deg(x)),
+ * deg(x) = the number of distinct nodes carrying x. A common attribute says little, a rare one a lot.
+ * The graph sync clusters the Bevs on this projection (`louvainCommunities`) to get their taste
+ * families, the `community` of `BevGraphStats` (LaTeX §10.9).
+ *
+ * Rules (the vectors' header rule `attributeProjectionRule`):
+ * - Throws, in the style of the graph validator: TypeError when `nodes` or `memberships` is not an
+ *   array, a node id is not a string, or a row is not { node, attribute } of strings; RangeError on a
+ *   duplicate or empty node id, an empty attribute, a row whose node is not in `nodes`, or a
+ *   duplicate (node, attribute) row.
+ * - An attribute carried by exactly one node joins nothing and is skipped (ln 1 = 0 would divide by
+ *   zero); deg ≥ 2 gives a strictly positive, finite term, computed as 1 / Math.log(deg).
+ * - Determinism: attributes are processed in code-point order, each attribute's nodes in code-point
+ *   order, and each pair's weight is accumulated (from 0) in that attribute order. Output `nodes` in
+ *   code-point order; `edges` oriented a < b (code point) and sorted by (a, b); only pairs sharing
+ *   at least one counted attribute appear. A node that shares nothing stays in `nodes` with no edge
+ *   (a singleton community). The result passes this file's graph validator, so
+ *   `louvainCommunities(attributeProjection(...))` composes.
+ * - No option and no constant: which attributes to project on is the caller's data selection. The
+ *   sync passes `flavor:<base>` and `note:<token>` memberships and leaves out the catch-all base
+ *   `other`, which is not a flavour.
+ *
+ * Cost O(Σ_x deg(x)²) time and O(number of pairs) memory: fine at the catalogue's size (hundreds of
+ * Bevs); a very common attribute would dominate it, and weighs little anyway.
+ */
+export function attributeProjection(nodes: readonly string[], memberships: ReadonlyArray<AttributeMembership>): WeightedGraph {
+  if (!Array.isArray(nodes)) throw new TypeError('nodes must be an array of node ids');
+  if (!Array.isArray(memberships)) throw new TypeError('memberships must be an array of { node, attribute } rows');
+  for (const id of nodes) {
+    if (typeof id !== 'string') throw new TypeError(`node ids must be strings, got ${typeof id}`);
+    if (id === '') throw new RangeError('node ids must be non-empty');
+  }
+  const ids = [...nodes].sort(cmp);
+  const index = new Map<string, number>();
+  ids.forEach((id, i) => {
+    if (index.has(id)) throw new RangeError(`duplicate node "${id}"`);
+    index.set(id, i);
+  });
+  const carriers = new Map<string, Set<number>>();
+  for (const row of memberships) {
+    if (row === null || typeof row !== 'object') throw new TypeError('memberships must be { node, attribute } objects');
+    if (typeof row.node !== 'string' || typeof row.attribute !== 'string') throw new TypeError('membership node and attribute must be strings');
+    if (row.attribute === '') throw new RangeError(`empty attribute on node "${row.node}"`);
+    const i = index.get(row.node);
+    if (i === undefined) throw new RangeError(`membership node "${row.node}" is not a node`);
+    let set = carriers.get(row.attribute);
+    if (!set) carriers.set(row.attribute, (set = new Set()));
+    if (set.has(i)) throw new RangeError(`duplicate membership ("${row.node}", "${row.attribute}")`);
+    set.add(i);
+  }
+  // pair (i < j, node indices in code-point order) → accumulated weight.
+  const acc: Array<Map<number, number>> = ids.map(() => new Map());
+  for (const x of [...carriers.keys()].sort(cmp)) {
+    const members = [...(carriers.get(x) as Set<number>)].sort((p, q) => p - q);
+    if (members.length < 2) continue;
+    const term = 1 / Math.log(members.length);
+    for (let s = 0; s < members.length; s++) {
+      const row = acc[members[s] as number] as Map<number, number>;
+      for (let t = s + 1; t < members.length; t++) {
+        const j = members[t] as number;
+        row.set(j, (row.get(j) ?? 0) + term);
+      }
+    }
+  }
+  const edges: Array<{ a: string; b: string; w: number }> = [];
+  acc.forEach((row, i) => {
+    for (const j of [...row.keys()].sort((p, q) => p - q)) edges.push({ a: ids[i] as string, b: ids[j] as string, w: row.get(j) as number });
+  });
+  return { nodes: ids, edges };
 }

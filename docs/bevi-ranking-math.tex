@@ -1,6 +1,6 @@
 % Bevi -- ranking, scoring and recommendation: mathematical specification.
 % Build: tectonic docs/bevi-ranking-math.tex   (or pdflatex twice)
-% Source of truth for the implemented parts: packages/ranking/src (RANKING_VERSION 1.7.0).
+% Source of truth for the implemented parts: packages/ranking/src (RANKING_VERSION 1.8.0).
 % Section 10 specifies the extensions discussed on 2026-10-14 (CONVERSATION-2.md, TASKS.md).
 % Revised 2026-10-24 (M-22 review): corrections in Sections 2, 3, 5, 6, 8, 9; Sections 10 and 11
 % brought up to date with #96, #101, #112, #113, #115, #117, #118 and #121. No version change.
@@ -13,6 +13,9 @@
 % "Stored mode" paragraph), the Section 10 status, the 1.6.0 row in Section 11.
 % RANKING_VERSION 1.7.0 (graph signals, 2026-11-10): Section 10.9 (PageRank, modularity, Louvain, participation,
 % hubs), a pointer from Section 10.1, the Section 10 status, the 1.7.0 row in Section 11, Appendix A and B rows.
+% RANKING_VERSION 1.8.0 (taste families, 2026-11-10): Section 7 (community diversity and exploration, off by default),
+% Section 10.9 (the flavour projection, the measurement, what the sync stores), the Section 10 status, the 1.8.0 row
+% in Section 11, Appendix A rows.
 % Section 10.9 is placed last so that Sections 10.2-10.8, cited by number in code and SQL comments, keep their numbers.
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
@@ -64,7 +67,7 @@
 \newtheorem{implnote}[theorem]{Implementation note}
 
 \title{\textbf{The Bevi Ranking and Recommendation System}\\[4pt]
-\large Mathematical specification of \code{@bevi/ranking} v1.7.0\\ and the extensions proposed on 2026-10-14}
+\large Mathematical specification of \code{@bevi/ranking} v1.8.0\\ and the extensions proposed on 2026-10-14}
 \author{Bevi (Matt \& Arjun)\thanks{Drafted from \code{packages/ranking/src}, \code{DEVELOPMENT-MATT.md} \S 8 and the second planning session (\code{CONVERSATION-2.md}). Sections 2--9 describe what is implemented and tested; Section 10 specifies the extensions, several of which have since shipped (its introduction says which). Revised on 2026-10-24 after the M-22 review of this paper against the package and the SQL; the review's correction lists are under M-22 in \code{TASKS.md}. Revised again on 2026-10-31 for \code{RANKING\_VERSION} 1.4.0 and the category hierarchy, for 1.5.0, which builds the anchored placement of Section~\ref{sec:anchored} in the package, and for 1.6.0, in which Layer~2 can read the stored taste neighbours of Section~\ref{sec:tastegraph}. Revised on 2026-11-10 for 1.7.0, which adds the graph signals of Section~\ref{sec:graphsignals}. Formula changes must bump \code{RANKING\_VERSION} and regenerate the golden vectors in \code{shared/fixtures}.}}
 \date{14 October 2026, revised 24 and 31 October and 10 November 2026}
 
@@ -494,6 +497,41 @@ $p_{s-1} = \floor{s(L+1)/(s+1)} - 1 \le L - 1$ since $s(L+1)/(s+1) < L + 1$; $p_
 Let $\mathrm{med}$ be the median of $\{\aff_{u,c} : n_{u,c} > 0\}$ ($0$ if the user has no rankings). The pool is every candidate $b$ with $g_b \ge 0$ whose category the user has never ranked or has $\aff_{u,\cat(b)} \le \mathrm{med}$. Slots are filled by weighted sampling without replacement with weights $\exp(g_b)$ (a Boltzmann distribution over global quality at unit temperature), using the same generator after the jitter draws. Picks are tagged \code{isExploration} (``Something different''). Unfilled slots fall back to normal picks; the remaining positions take the non-exploration candidates in decreasing $\tilde z$.
 \end{definition}
 
+\paragraph{Taste families: two options, off by default (v1.8.0).} \code{recommend} has two options that read the snapshot's optional \code{bevGraph} field, each Bev's \emph{taste family}, PageRank and bridge score from the nightly graph sync (Section~\ref{sec:graphsignals}). Write $\phi(b)$ for $b$'s family; a Bev without an entry (created since the last sync) is a family of its own, which cannot coincide with any stored family, and so is a ranked Bev no longer in the snapshot. Write $P_b \in [0, 1]$ for its bridge score \eqref{eq:participation} (0 without an entry). The live engine passes neither option, and \emph{both are unvalidated}: neither constant below has been fitted or tested on real rankings, and the only measurement so far is the synthetic list report of the evaluation harness (\code{eval -- --lists}), a check that the code runs. With the options omitted, set to their defaults, or set when the snapshot has no \code{bevGraph} field (the fallbacks \code{effectiveDiversity}, \code{effectiveExploration}), the list is byte-identical to 1.7.0's: $6{,}000$ generated lists compared against the 1.7.0 source, $0$ differences, including snapshots whose \code{bevGraph} is present or malformed, which the default never reads. A malformed entry (an empty family id, a negative or non-finite PageRank, a bridge outside $[0, 1]$) throws, in community mode only.
+
+\begin{definition}[Community diversity]\label{def:diversity}
+Option \code{diversity: 'community'} (default \code{'none'}, the order above). Let $N$ be the candidates that are not exploration picks and $L' = L - (\text{number of exploration picks})$ the positions they fill. Instead of taking $N$ in decreasing $\tilde z$, build the list greedily: with $k_t(\phi)$ the number of the first $t$ picks in family $\phi$,
+\begin{equation}\label{eq:diversity}
+b_{t+1} = \argmax_{b \in N \setminus \{b_1, \dots, b_t\}} \Bigl( \tilde z_b - \delta\, k_t\bigl(\phi(b)\bigr) \Bigr), \qquad \delta = \textsc{diversity\_penalty} = 0.2,
+\end{equation}
+ties to the smaller id, for $t = 0, \dots, L' - 1$; $b_1, b_2, \dots$ fill the non-exploration positions in order. Exploration picks neither count in $k_t$ nor move, the jitter draws and the exploration draws are those of the default, and the displayed score is still the un-jittered $\shat$: only the order of the normal picks changes.
+\end{definition}
+
+$\delta$ is in z-units: a second pick from one family must beat the best alternative by $0.2$, a third by $0.4$. That is the order of \textsc{jitter\_sd}, enough to interleave families whose predictions are close without burying a much stronger candidate.
+
+\begin{proposition}\label{prop:diversity}
+(i) $b_1$ is the normal candidate of largest $\tilde z$, so the top normal pick never changes. (ii) If $\delta = 0$, or every family is a singleton, $(b_t)$ is the default order. (iii) A candidate is placed after a candidate of another family with smaller $\tilde z$ only when its own family already has $k \ge 1$ picks and its lead is at most $\delta k$; a lead above $\delta (L'-1)$ is never overturned.
+\end{proposition}
+\begin{proof}
+(i) and (ii): $k_0 \equiv 0$, and with $\delta k_t \equiv 0$ \eqref{eq:diversity} is the argmax of $\tilde z$ with the same tie rule. (iii): $b$ precedes $a$ only if at that step $\tilde z_b - \delta k_t(\phi(b)) \ge \tilde z_a - \delta k_t(\phi(a))$; with $\tilde z_a > \tilde z_b$ this needs $\delta k_t(\phi(a)) > \tilde z_a - \tilde z_b > 0$ (or equality with a tie), and $k_t \le L' - 1$.
+\end{proof}
+
+Within a family every candidate carries the same penalty, so the best one left in a family is the first in that family's $\tilde z$ order. The implementation (\code{diversifyByCommunity}) therefore sorts once, queues the candidates by family and compares only the queue heads at each step: $O(\abs{N} \log \abs{N} + L' C)$ for $C$ families, with no re-sort per pick.
+
+\begin{example}[A cola lover]\label{ex:diversity}
+Normal candidates with $\tilde z$: four colas $1.00, 0.95, 0.90, 0.85$ (one family, whichever the brand or category), teas $0.80, 0.50$, a berry water $0.70$. The default lists the four colas first. Under \eqref{eq:diversity}: cola $1.00$; then cola $0.95 - 0.2 = 0.75$ loses to tea $0.80$; cola $0.75$ beats tea $0.50 - 0.2$ and berry $0.70$; cola $0.90 - 0.4 = 0.50$ loses to berry $0.70$; cola $0.50$ beats tea $0.30$; cola $0.85 - 0.6 = 0.25$ loses to tea $0.30$; last the cola. Order: cola, tea, cola, berry, cola, tea, cola. Had the colas been $3.0, 2.9, 2.8, 2.7$ against $2.0$ and $1.9$, the lead of $0.7$ would exceed the penalty $0.6$ of the fourth cola and all four would stay first.
+\end{example}
+
+\begin{definition}[Community exploration]\label{def:communityexplore}
+Option \code{exploration: 'community'} (default \code{'category'}, the pool above). The user's \emph{charted} families are $\Phi_u = \{\phi(b) : b \in R(u)\}$; a ranked Bev without an entry charts only itself. The pool is every candidate $b$ with $g_b \ge 0$ and $\phi(b) \notin \Phi_u$, the uncharted taste families, drawn without replacement with weights
+\begin{equation}\label{eq:communityexplore}
+e^{g_b} \bigl(1 + \beta P_b\bigr), \qquad \beta = \textsc{explore\_bridge\_weight} = 1.
+\end{equation}
+If this pool is empty (the user has ranked in every family, or every uncharted candidate has $g_b < 0$), that call uses the category pool and weights above. The number and positions of the slots \eqref{eq:slots}, the generator and the draw order are unchanged; a pool smaller than the slots leaves the rest to normal picks, as before.
+\end{definition}
+
+A bridge is the gentlest way into a family the user has not tried: much of its similarity weight goes to families they know. At $\beta = 1$ a Bev with $P_b$ near $1$ is drawn up to twice as often as an interior Bev ($P_b = 0$) of the same $g_b$; with $P_b = 0.9$ against $0$ the odds are $1.9 : 1$ (the package's test draws the bridge $65.5\%$ of the time in expectation). The two options are independent: diversity reorders only the normal picks, so the exploration picks and their positions are the same under either diversity setting.
+
 \begin{definition}[Reason]
 Each recommendation names the largest contribution to \eqref{eq:zblend}: \textsc{category} $= (1-\lambda)\,0.4\,\aff$, \textsc{similar} $= (1-\lambda)\,0.4\,\mathrm{content}$, \textsc{neighbours} $= \lambda\, \zhat^{(2)}$, \textsc{popular} $= (1-\lambda)\,0.2\, g_b$, ties in that order; all zero gives \textsc{popular}.
 \end{definition}
@@ -516,7 +554,7 @@ The day key of a ranking is the calendar date of its timestamp in the user's pro
 
 \section{Proposed extensions (session of 2026-10-14)}\label{sec:extensions}
 
-Status on 2026-10-24. Shipped: the edge weights and the graph pipeline of Section~\ref{sec:anchored} (\code{edges.ts}, \code{RANKING\_VERSION} 1.2.0; \code{bev\_edges} is live on prod), the Taste Profile data of Section~\ref{sec:taste} (A-11, \#101), the Bev of the day and week of Section~\ref{sec:bevof} (A-05, \#96), likes and the Explore ranking of Section~\ref{sec:likes} (A-02 \#70, A-04 \#113) and the one-ranking rule of Section~\ref{sec:binary}. Not built: anchored placement (M-21; waits on the taxonomy, D-04 and A-13), Smart Recommend (Section~\ref{sec:smart}, parked), nutrition (Section~\ref{sec:nutrition}) and the duplicate score and merge of Section~\ref{sec:duplicates} (the S-13 plan). Since then (2026-10-31): the category hierarchy of D-04 (A-13, \#132) and the measurement of the co-preference term (A-16~(2), \#133) are built, Layer~1 can read the stored weights (edges mode, Section~\ref{sec:predict}, \code{RANKING\_VERSION} 1.4.0), off until the evaluation harness has real data, anchored placement is built in the package (\code{placementTiers}, \code{startPlacement} with \code{tiers}, \code{RANKING\_VERSION} 1.5.0, M-21), with the app's wiring of it (\code{ui/anchored-placement}) the remaining step, and Layer~2 can read the stored taste neighbours (stored mode, Section~\ref{sec:tastegraph}, \code{RANKING\_VERSION} 1.6.0), off until the harness has real data and \code{get\_prediction\_snapshot} returns them. Since 2026-11-10 the package also computes centrality, communities and bridges over the Bev graph (Section~\ref{sec:graphsignals}, \code{RANKING\_VERSION} 1.7.0), for the graph sync; nothing reads them yet. Each subsection gives the definition precisely enough to code and test; where a choice was open it now records the decision.
+Status on 2026-10-24. Shipped: the edge weights and the graph pipeline of Section~\ref{sec:anchored} (\code{edges.ts}, \code{RANKING\_VERSION} 1.2.0; \code{bev\_edges} is live on prod), the Taste Profile data of Section~\ref{sec:taste} (A-11, \#101), the Bev of the day and week of Section~\ref{sec:bevof} (A-05, \#96), likes and the Explore ranking of Section~\ref{sec:likes} (A-02 \#70, A-04 \#113) and the one-ranking rule of Section~\ref{sec:binary}. Not built: anchored placement (M-21; waits on the taxonomy, D-04 and A-13), Smart Recommend (Section~\ref{sec:smart}, parked), nutrition (Section~\ref{sec:nutrition}) and the duplicate score and merge of Section~\ref{sec:duplicates} (the S-13 plan). Since then (2026-10-31): the category hierarchy of D-04 (A-13, \#132) and the measurement of the co-preference term (A-16~(2), \#133) are built, Layer~1 can read the stored weights (edges mode, Section~\ref{sec:predict}, \code{RANKING\_VERSION} 1.4.0), off until the evaluation harness has real data, anchored placement is built in the package (\code{placementTiers}, \code{startPlacement} with \code{tiers}, \code{RANKING\_VERSION} 1.5.0, M-21), with the app's wiring of it (\code{ui/anchored-placement}) the remaining step, and Layer~2 can read the stored taste neighbours (stored mode, Section~\ref{sec:tastegraph}, \code{RANKING\_VERSION} 1.6.0), off until the harness has real data and \code{get\_prediction\_snapshot} returns them. Since 2026-11-10 the package also computes centrality, communities and bridges over the Bev graph (Section~\ref{sec:graphsignals}, \code{RANKING\_VERSION} 1.7.0), for the graph sync, and (1.8.0) the flavour projection the stored taste families are clustered on; \code{recommend()} can read the families and bridges behind two options that ship off (Section~\ref{sec:recommend}). Each subsection gives the definition precisely enough to code and test; where a choice was open it now records the decision.
 
 \subsection{Category-aware comparisons over a weighted Bev graph}\label{sec:anchored}
 
@@ -734,15 +772,15 @@ Vessels (can, glass bottle, plastic bottle) are \emph{not} distinct Bevs and mus
 
 The ranking relation is a partial function $U \times B \rightharpoonup [0, 10]$: a user has or has not ranked a Bev, and if so holds exactly one score. Re-ranking \emph{updates} this value (and re-spaces the old and new buckets); it never appends. Consequently $n_b$ counts people, not drinks, and ``how many times you drank it'' is deliberately not a quantity in this system (session decision; the database enforces it with a unique constraint on (user, Bev)).
 
-\subsection{Graph signals: centrality, communities and bridges (v1.7.0)}\label{sec:graphsignals}
+\subsection{Graph signals: centrality, communities and bridges (v1.7.0, taste families v1.8.0)}\label{sec:graphsignals}
 
-\paragraph{Status.} Implemented in \code{network.ts} (\code{RANKING\_VERSION} 1.7.0, vectors in \code{network.vectors.json}). This subsection follows the Bev graph of Section~\ref{sec:anchored}; it is numbered last only so that the subsections after Section~\ref{sec:anchored}, which code and SQL comments cite by number, keep their numbers. Three signals per Bev, for the nightly job that mirrors \code{bev\_edges} into Neo4j and stores them in \code{bev\_graph\_stats}:
+\paragraph{Status.} Implemented in \code{network.ts} (\code{RANKING\_VERSION} 1.7.0; the flavour projection of Definition~\ref{def:projection} in 1.8.0; vectors in \code{network.vectors.json}). This subsection follows the Bev graph of Section~\ref{sec:anchored}; it is numbered last only so that the subsections after Section~\ref{sec:anchored}, which code and SQL comments cite by number, keep their numbers. Three signals per Bev, for the nightly job that mirrors \code{bev\_edges} into Neo4j and stores them in \code{bev\_graph\_stats}:
 \begin{itemize}
 \item \emph{centrality}, a weighted PageRank: how representative a Bev is of its neighbourhood (many similar Bevs, heavily weighted, lead to it);
-\item \emph{community}, Louvain modularity clustering: data-driven \emph{taste neighbourhoods} that cut across the hand-built category tree (a cold brew may sit with the energy drinks it is actually similar to);
-\item \emph{bridge}, the participation coefficient: how much of a Bev's similarity mass is spread over several communities, i.e.\ a gateway from one neighbourhood into another.
+\item \emph{community}, Louvain modularity clustering: data-driven \emph{taste neighbourhoods} that cut across the hand-built category tree. Since 1.8.0 the community the sync stores is the Bev's \emph{taste family}: Louvain over the flavour projection of Definition~\ref{def:projection}, not over the similarity graph itself, which mostly rediscovers the categories (the measurement after Definition~\ref{def:projection}). A family holds Coke, Diet Coke and Pepsi together whatever their categories;
+\item \emph{bridge}, the participation coefficient over the similarity graph with the taste families as the partition: how much of a Bev's similarity weight goes to Bevs of \emph{other} families, i.e.\ a gateway from one family into another.
 \end{itemize}
-\emph{Nothing consumes them in 1.7.0.} The prediction snapshot gains an optional field \code{bevGraph} (per Bev: the community's opaque id, the PageRank and the participation coefficient) that no function reads; \code{rank/graph-recs} will read it in \code{recommend()}, behind an option, for community-aware diversity and exploration. Every formula lives here and nowhere else: there is no SQL twin, the sync job calls these functions, and Neo4j's own graph-algorithm library (a paid product) is not used.
+\emph{No prediction consumes them.} The prediction snapshot carries them in an optional field \code{bevGraph} (per Bev: the family's opaque id, the PageRank and the participation coefficient), which nothing read in 1.7.0; since 1.8.0 \code{recommend()} reads the family and the bridge, never the PageRank, behind two options that ship off (Definitions~\ref{def:diversity} and~\ref{def:communityexplore}). Every formula lives here and nowhere else: there is no SQL twin, the sync job calls these functions, and Neo4j's own graph-algorithm library (a paid product) is not used.
 
 \paragraph{Setting and order.} Let $G = (V, E, w)$ be the graph the sync sees: $V$ the Bevs, $E$ the stored pairs, $w_{ij} = w_{ji} > 0$ the weight \eqref{eq:w}; $n = \abs{V}$, $N(i)$ the neighbours of $i$,
 \[
@@ -837,6 +875,20 @@ Q_1 = 2\Bigl(\frac{6}{12.1} - \Bigl(\frac{12.1}{24.2}\Bigr)^{\!2}\Bigr) = \frac{
 Only the bridge endpoints participate, $P_{a_4} = P_{b_1} = 1 - (3/3.1)^2 - (0.1/3.1)^2 = 0.6/9.61 \approx 0.06243$. PageRank puts them slightly above the interior nodes ($\approx 0.12773$ against $\approx 0.12409$; the eight values sum to $1$), and the hubs are $a_1$ and $b_1$ (all within-strengths are $3$, so the smallest id wins). A ring of four triangles joined corner to corner gives four communities with $Q_1 = 4(3/16 - (8/32)^2) = 1/2$ and $P = 4/9$ at every corner that carries a ring edge.
 \end{example}
 
+\paragraph{Taste families (v1.8.0).} The definitions above apply to any weighted graph. The sync runs PageRank and the participation coefficient on the similarity graph $G$, and Louvain on a second graph built from the Bevs' flavours.
+
+\begin{definition}[Attribute projection, Adamic--Adar]\label{def:projection}
+Let $V$ be the Bevs and $X$ a set of attributes, with $b \sim x$ when Bev $b$ carries attribute $x$, and $\deg(x) = \abs{\{ b : b \sim x \}}$. The one-mode projection $G_F = (V, E_F, w^F)$ joins two Bevs that share an attribute, with the weight of Adamic and Adar (2003)
+\begin{equation}\label{eq:projection}
+w^F_{ab} = \sum_{\substack{x:\ a \sim x,\ b \sim x}} \frac{1}{\ln \deg(x)} ,
+\end{equation}
+so a common attribute says little and a rare one a lot. An attribute carried by one Bev joins nothing and is skipped ($\ln 1 = 0$); every other term is positive and finite. Attributes are processed in $\prec$ order, each attribute's Bevs in $\prec$ order, and each pair's weight is accumulated from $0$ in that attribute order. The output lists $V$ in $\prec$ order and each edge once as $a \prec b$, sorted, only for pairs that share an attribute; a Bev that shares nothing stays as an isolated node (a singleton family). Duplicate or empty ids, an empty attribute, an unknown Bev and a repeated (Bev, attribute) row are rejected. The result is a valid graph for every function above. There is no constant: which attributes to project on is the caller's choice (\code{attributeProjection}, the header rule \code{attributeProjectionRule}, with cases in \code{network.vectors.json}).
+\end{definition}
+
+The sync projects on \code{flavor:}\textit{base} and \code{note:}\textit{token} (the bases and notes of the flavour profiles), leaving out the catch-all base \code{other}, which is not a flavour, and stores as $\phi(b)$ the Louvain community of $b$ in $G_F$, identified by its hub in $G_F$ (Definition~\ref{def:hub}). The cost is $O(\sum_x \deg(x)^2)$, small at the catalogue's size. In the example of two flavour groups of three Bevs, each pair sharing three attributes of degree $3$ ($w^F = 3/\ln 3 \approx 2.7307$) and one cross pair sharing a rare note of degree $2$ ($1/\ln 2 \approx 1.4427$), Louvain over $G_F$ returns the two groups.
+
+\paragraph{Why families and not similarity communities (measured 2026-11-10).} On the live graph (385 Bevs, 4{,}653 stored pairs), Louvain over $G$ itself mostly rediscovers the root categories: the share of Bevs in their community's most common category (the category purity) is $0.84$ at $\gamma = 1$ and $0.97$ at $\gamma = 3$, because \eqref{eq:w} is dominated by its taxonomy terms. Such a community would tell \code{recommend()} little that the category does not. Louvain over $G_F$ gives ten cross-category families (citrus and lemon-lime $50$, berry $49$, tropical $47$, tea $46$, orange, grape and apple $41$, cola $36$, coffee $34$, root beer, ginger and cream $32$, mineral and herbal $29$, hop and wine $20$), with category purity $0.47$; $61\%$ of projected pairs cross root categories against $14\%$ of the stored pairs. The partition hardly depends on the weighting: Rand index $0.97$--$0.99$ between \eqref{eq:projection}, the unweighted projection and a base-only one. So the stored community is the taste family, and the bridge stays a property of the similarity graph: a Bev whose similar Bevs lie in other families.
+
 \section{Implementation notes, divergences and versioning}\label{sec:impl}
 
 \begin{implnote}[Where the maths runs]
@@ -883,7 +935,8 @@ Version & Date & Change \\
 1.4.0 & 2026-10-31 & Layer~1 edges mode (M-27~(a)): \code{bevSimilarity: 'edges'} reads the stored weights of \code{bev\_edges} from the snapshot's optional \code{edges} field as \eqref{eq:simE}, $0$ for a pair without an edge; a snapshot without the field falls back to \eqref{eq:sim}. The default \code{'content'} is byte-identical to 1.3.0. New golden cases, no other formula change: \code{layer1} in \code{edges.vectors.json} (an edge, no edge, either orientation, the missing field, the default ignoring the field); \code{bayesScoreStored} and the Example~\ref{ex:59} case in \code{bayesian.vectors.json}; two \code{streakFromTimestamps} cases written as ranking events. $w$ is unchanged. Earlier vectors unchanged apart from the header \\
 1.5.0 & 2026-10-31 & Anchored placement (M-21, Section~\ref{sec:anchored}) in the package: \code{placementTiers} \eqref{eq:tiers} (same leaf 1, same root 2, stored edge across roots 3, else none; the taxonomy first, a weight only ever adds tier 3) and \code{startPlacement} with an optional \code{tiers} array, running Algorithm~\ref{alg:anchored} inside the existing state machine (\code{anchored} on the state, both ranges on every history step, undo across the phase boundary, the same \code{PlacementResult}). Without \code{tiers}, and with tiers that select no anchor, the machine is byte-identical to 1.4.0: $252{,}144$ states, prompts, flags and results compared in lockstep against the 1.4.0 source, $0$ differences. New golden cases in \code{placement.vectors.json}, with two header rules (\code{placementTiersRule}, \code{anchoredPlacementRule}): \code{placementTiers} over D-04 \S 3's pairs, and \code{anchoredPlacement} scripts (the figure above, ties in either phase, undo across the boundary, re-rank, each tier alone, the two fallbacks, a 20-Bev oracle) recording the questions asked with their phase, the anchors, \code{maxSteps} and the result. No SQL change: \code{submit\_ranking} receives the same shape, and Implementation note~\ref{impl:logcheck} applies unchanged. Earlier vectors unchanged apart from the header \\
 1.6.0 & 2026-10-31 & Layer~2 stored mode (graph Stage~4, package half): \code{userSimilarity: 'stored'} reads the user's stored taste neighbours from the snapshot's optional \code{userNeighbours} field as \eqref{eq:simstored}, $0$ for a user not listed; a snapshot without the field, or a user without rows, falls back to \eqref{eq:usersim}. The default \code{'cosine'} is byte-identical to 1.5.0. No new constant ($N_0 = \textsc{neighbour\_reliability\_n} = 15$ exists since 1.3.0) and no other formula change. New golden cases in \code{graph.vectors.json}, with the header rule \code{layer2StoredRule}: \code{layer2} (two listed raters with reliabilities $1$ and $1/5$, a listed non-rater beside an unlisted rater, a neighbour with one co-rated Bev, a neighbour unknown to the snapshot, a negative $\simi_B$, the four fallbacks, the default ignoring the field), each recording the similarity used as \code{source}, and two \code{predictScore} cases. The SQL change is the backend's: \code{get\_prediction\_snapshot} returns the viewer's rows. Earlier vectors unchanged apart from the header \\
-1.7.0 & 2026-11-10 & Graph signals of Section~\ref{sec:graphsignals} in \code{network.ts}: \code{graphStrength}, weighted PageRank \eqref{eq:pagerank} (\code{pageRank}), modularity \eqref{eq:modularity}, deterministic Louvain (Definition~\ref{def:louvain}, \code{louvainCommunities}), the participation coefficient \eqref{eq:participation} and the community hub (\code{communityHubs}), with five new constants (\textsc{pagerank\_damping}, \textsc{pagerank\_tolerance}, \textsc{pagerank\_max\_iterations}, \textsc{louvain\_resolution}, \textsc{louvain\_tie\_epsilon}) and an optional snapshot field \code{bevGraph} that nothing reads. No existing formula changes. New file \code{network.vectors.json} (hand-built graphs, no PRNG) with six header rules (\code{networkGraphRule}, \code{pageRankRule}, \code{modularityRule}, \code{louvainRule}, \code{participationRule}, \code{communityHubRule}). No SQL twin: the graph sync calls the package. Earlier vectors unchanged apart from the header and the \code{version} each embedded snapshot carries; current \\
+1.7.0 & 2026-11-10 & Graph signals of Section~\ref{sec:graphsignals} in \code{network.ts}: \code{graphStrength}, weighted PageRank \eqref{eq:pagerank} (\code{pageRank}), modularity \eqref{eq:modularity}, deterministic Louvain (Definition~\ref{def:louvain}, \code{louvainCommunities}), the participation coefficient \eqref{eq:participation} and the community hub (\code{communityHubs}), with five new constants (\textsc{pagerank\_damping}, \textsc{pagerank\_tolerance}, \textsc{pagerank\_max\_iterations}, \textsc{louvain\_resolution}, \textsc{louvain\_tie\_epsilon}) and an optional snapshot field \code{bevGraph} that nothing reads. No existing formula changes. New file \code{network.vectors.json} (hand-built graphs, no PRNG) with six header rules (\code{networkGraphRule}, \code{pageRankRule}, \code{modularityRule}, \code{louvainRule}, \code{participationRule}, \code{communityHubRule}). No SQL twin: the graph sync calls the package. Earlier vectors unchanged apart from the header and the \code{version} each embedded snapshot carries \\
+1.8.0 & 2026-11-10 & Taste families in \code{recommend()}, both options off by default and unvalidated: \code{diversity: 'community'} orders the normal picks by the greedy penalised selection \eqref{eq:diversity} (\code{diversifyByCommunity}), and \code{exploration: 'community'} draws from the uncharted families with weights \eqref{eq:communityexplore}, falling back to the category pool when that pool is empty; both fall back to the default when the snapshot has no \code{bevGraph} field. Two new constants (\textsc{diversity\_penalty} $= 0.2$, \textsc{explore\_bridge\_weight} $= 1$). The default, and every option over a snapshot without \code{bevGraph}, is byte-identical to 1.7.0 ($6{,}000$ lists compared against the 1.7.0 source, $0$ differences). The stored community becomes the taste family, Louvain over the Adamic--Adar flavour projection \eqref{eq:projection} (\code{attributeProjection}, header rule \code{attributeProjectionRule}, eight new cases appended to \code{network.vectors.json} and one Louvain case over a projection); the field's shape is unchanged. No SQL twin and no SQL change: the snapshot key \code{bevGraph} is the only coupling. Earlier vectors unchanged apart from the header and the \code{version} each embedded snapshot carries; current \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -892,7 +945,7 @@ Version & Date & Change \\
 
 \section{Constants}\label{app:constants}
 
-All values from \code{packages/ranking/src/constants.ts}, \code{RANKING\_VERSION} 1.7.0.
+All values from \code{packages/ranking/src/constants.ts}, \code{RANKING\_VERSION} 1.8.0.
 
 \begin{center}
 \small
@@ -953,6 +1006,8 @@ Constant & Value & Role \\
 \code{PAGERANK\_TOLERANCE},\newline \code{PAGERANK\_MAX\_ITERATIONS} & $10^{-10}$, 200 & PageRank stops when the $L_1$ step is below $\tau$; $T$ is a safety rail, never reached at the defaults ($2d^t < \tau$ for $t > 146$) \\
 \code{LOUVAIN\_RESOLUTION} & 1 & Modularity resolution $\gamma$ \eqref{eq:modularity} \\
 \code{LOUVAIN\_TIE\_EPSILON} & $10^{-12}$ & Margin a Louvain candidate must beat the best gain by (Definition~\ref{def:louvain}) \\
+\code{DIVERSITY\_PENALTY} & 0.2 & z-units per earlier pick from the same taste family \eqref{eq:diversity}; option off, unvalidated \\
+\code{EXPLORE\_BRIDGE\_WEIGHT} & 1 & Bridge multiplier $\beta$ of the community exploration weight \eqref{eq:communityexplore}; option off, unvalidated \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -986,6 +1041,8 @@ $A, G, k, g$ & Anchors, gap, and their sizes in anchored placement; $p_j$ the po
 $\hot(p, t)$ & Time-decayed popularity of a post (eq.~\ref{eq:hot}) \\
 $s_i, m, \prec$ & Strength (weighted degree) of a Bev in the Bev graph, its total edge weight, code-point order (Section~\ref{sec:graphsignals}) \\
 $\pi, Q_\gamma, P_i, h(C)$ & PageRank \eqref{eq:pagerank}, modularity \eqref{eq:modularity}, participation coefficient \eqref{eq:participation}, community hub \\
+$G_F, w^F, \phi(b)$ & Flavour projection and its Adamic--Adar weight \eqref{eq:projection}; the taste family of $b$ (Section~\ref{sec:recommend}) \\
+$\delta, \beta, \Phi_u$ & Diversity penalty \eqref{eq:diversity}, bridge weight \eqref{eq:communityexplore}, the families charted by $u$ \\
 \bottomrule
 \end{tabular}
 \end{center}
