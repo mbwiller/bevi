@@ -79,6 +79,7 @@ export function useUpdateMe() {
       void qc.invalidateQueries({ queryKey: keys.commentsAll });
       void qc.invalidateQueries({ queryKey: keys.follows.all });
       void qc.invalidateQueries({ queryKey: keys.leaderboard.users() });
+      void qc.invalidateQueries({ queryKey: keys.leaderboard.friends() });
     },
   });
 }

@@ -59,6 +59,8 @@ export const FeedPostItem = memo(function FeedPostItem({
         onLike={onLike}
         comments={item.comments}
         commentCount={item.commentCount}
+        alsoBevdBy={alsoBevdProfiles(item)}
+        alsoBevdCount={item.alsoBevdCount ?? 0}
         onComment={onComment}
         onRank={onRank}
         onSave={onSave}
@@ -75,6 +77,14 @@ export const FeedPostItem = memo(function FeedPostItem({
     </View>
   );
 });
+
+/**
+ * "Bev'd it too": the people FeedPost names, from the post's `alsoBevdBy` (people you follow who
+ * ranked the Bev, newest first). FeedPost draws their names and avatars, not their scores. The
+ * contract always sends the list; `?? []` keeps a post in an older shape (a mock, a fixture, a
+ * cached object from before 2.12.0) from taking the Feed down.
+ */
+const alsoBevdProfiles = (item: FeedItem) => (item.alsoBevdBy ?? []).map((f) => f.profile);
 
 /** The actor link's accessible name: "Friend A, @friend_a". */
 export const actorLabel = (actor: Pick<Profile, 'displayName' | 'handle'>) => `${actor.displayName}, @${actor.handle}`;
