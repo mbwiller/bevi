@@ -213,7 +213,7 @@ select r.viewer, r.src, r.ord,
          select coalesce(u.label, 'unexpected user')
            from jsonb_array_elements(r.also_bevd -> 'items') with ordinality i(item, ord)
            left join t_users u on u.id = (i.item ->> 'user_id')::uuid
-          order by i.ord), ',') as also
+          order by i.ord), ',') as also_txt
   from t_raw r
   left join t_posts p on p.id = r.id;
 grant select on v_feed to authenticated;
@@ -236,7 +236,7 @@ select r.viewer, r.ord,
          select coalesce(u.label, 'unexpected user')
            from jsonb_array_elements(r.followed_by) with ordinality i(item, ord)
            left join t_users u on u.id = (i.item ->> 'user_id')::uuid
-          order by i.ord), ',') as by
+          order by i.ord), ',') as by_txt
   from t_fb_raw r
   left join t_users a on a.id = r.user_id;
 grant select on v_fb to authenticated;
