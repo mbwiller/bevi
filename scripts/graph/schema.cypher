@@ -24,15 +24,24 @@ CREATE CONSTRAINT category_id_unique IF NOT EXISTS
 FOR (c:Category) REQUIRE c.id IS UNIQUE
 ;
 
-// Brand.key is the lowercased brand string; bevs.brand is free text in
-// Postgres with no brands table yet, so the graph is where a brand first
-// becomes an entity.
+// Brand.key is normaliseBrand(bevs.brand) from @bevi/ranking (lowercased,
+// trimmed, inner whitespace collapsed); bevs.brand is free text in Postgres
+// with no brands table yet, so the graph is where a brand first becomes an
+// entity.
 CREATE CONSTRAINT brand_key_unique IF NOT EXISTS
 FOR (br:Brand) REQUIRE br.key IS UNIQUE
 ;
 
 CREATE CONSTRAINT flavor_name_unique IF NOT EXISTS
 FOR (f:Flavor) REQUIRE f.name IS UNIQUE
+;
+
+// Note.token is one of flavorTokens(name, flavor) from @bevi/ranking -- the
+// same token set the content term's Jaccard is taken over. Only tokens shared
+// by at least two active Bevs become nodes (scripts/graph/sync-core.ts), so a
+// (:Note) is always a bridge between Bevs and never a dead end.
+CREATE CONSTRAINT note_token_unique IF NOT EXISTS
+FOR (n:Note) REQUIRE n.token IS UNIQUE
 ;
 
 // User.pseudonym is hmac(user_id, BEVI_PSEUDONYM_SALT) -- stable across syncs
@@ -42,8 +51,9 @@ CREATE CONSTRAINT user_pseudonym_unique IF NOT EXISTS
 FOR (u:User) REQUIRE u.pseudonym IS UNIQUE
 ;
 
-// One row, holding lastSyncAt. The nightly write to it is also the keep-alive
-// that stops Aura Free auto-pausing after 72 hours (docs/graph.md).
+// One row, holding lastSyncAt, the syncId of the generation the graph holds
+// and one count per label and type. The nightly write to it is also the
+// keep-alive that stops Aura Free auto-pausing after 72 hours (docs/graph.md).
 CREATE CONSTRAINT meta_singleton_unique IF NOT EXISTS
 FOR (m:Meta) REQUIRE m.key IS UNIQUE
 ;
@@ -51,8 +61,9 @@ FOR (m:Meta) REQUIRE m.key IS UNIQUE
 // ---------------------------------------------------------------------------
 // Lookup indexes
 // ---------------------------------------------------------------------------
-// The sync builds candidate pairs from "same category subtree" and "same
-// brand", so both of those are index lookups rather than scans.
+// "Bevs in this root category" and "Bevs of this brand" are index lookups
+// rather than scans. categoryId is the ROOT category on every Bev; the leaf,
+// when there is one, is leafCategoryId and the target of IN_CATEGORY.
 
 CREATE INDEX bev_category_idx IF NOT EXISTS
 FOR (b:Bev) ON (b.categoryId)
@@ -66,10 +77,11 @@ FOR (b:Bev) ON (b.brand)
 // Vector index on Bev.embedding
 // ---------------------------------------------------------------------------
 // 384 dimensions, cosine: the output of Supabase Edge Functions' built-in
-// gte-small model (decision 30b). The index is created now so the schema is
-// complete, but nothing populates Bev.embedding until A-16 -- the embed step,
-// bev_embeddings and pgvector all land there. An empty vector index is valid
-// and costs nothing.
+// gte-small model (decision 30b). The nightly sync copies bev_embeddings onto
+// Bev.embedding, every component through toFloat(): JSON renders 0 and 1 as
+// integers, and the index wants a list of floats. A Bev with no row in
+// bev_embeddings has no embedding property and is simply absent from the
+// index.
 
 CREATE VECTOR INDEX bev_embedding_idx IF NOT EXISTS
 FOR (b:Bev) ON (b.embedding)
@@ -84,12 +96,38 @@ OPTIONS { indexConfig: {
 // ---------------------------------------------------------------------------
 // Neo4j cannot express "at most one SIMILAR_TO per unordered pair", so the
 // sync enforces it by only ever writing the direction where src.id < dst.id
-// and reading the edge undirected. Same for CHILD_OF, IN_CATEGORY, BY_BRAND,
-// TASTES_OF and RANKED: MERGE on the pattern is what keeps them single.
+// and reading the edge undirected. Every other type is kept single the same
+// way: the sync MERGEs on the pattern, and it verifies the counts against
+// Postgres inside the transaction before it commits.
 //
-//   (:Bev)-[:IN_CATEGORY]->(:Category)-[:CHILD_OF]->(:Category)
+// The model scripts/graph/sync.ts writes (docs/graph.md has the full tables):
+//
+//   (:Category {id, name, isAlcoholic, sortOrder, depth, parentId})
+//   (:Brand    {key, name})
+//   (:Flavor   {name})
+//   (:Note     {token, bevCount})
+//   (:Bev      {id, name, brand, brandKey, flavor, categoryId, leafCategoryId,
+//               priceTier, isAlcoholic, isStarter, source,
+//               base, carbonated, caffeine, sweetness, dairy, alcohol, serve,
+//               profileSource,              -- only with a flavour profile
+//               embedding, embeddingModel}) -- only with an embedding
+//   (:User     {pseudonym})                 -- and nothing else, ever
+//   (:Meta     {key: 'singleton', lastSyncAt, syncId, rankingVersion,
+//               edgesVersion, <one count per label and type>,
+//               lastAttemptAt, lastAttemptOk, lastKeepAliveAt})
+//
+//   (:Category)-[:CHILD_OF]->(:Category)        leaf -> its root
+//   (:Bev)-[:IN_CATEGORY]->(:Category)          exactly one, to the LEAF when
+//                                               the Bev has one, else the root
 //   (:Bev)-[:BY_BRAND]->(:Brand)
 //   (:Bev)-[:TASTES_OF]->(:Flavor)
-//   (:User {pseudonym})-[:RANKED {score, z, bucket, rankedAt}]->(:Bev)
+//   (:Bev)-[:HAS_NOTE]->(:Note)
 //   (:Bev)-[:SIMILAR_TO {w, tree, content, emb, profile, cop, version,
-//                        computedAt}]->(:Bev)
+//                        computedAt}]->(:Bev)   bev_edges, row for row
+//   (:User)-[:RANKED {score, z, bucket, rankedAt}]->(:Bev)
+//   (:User)-[:LIKES {w}]->(:Bev)                derived: z >= +0.25, w = z
+//   (:User)-[:DISLIKES {w}]->(:Bev)             derived: z <= -0.25, w = -z
+//
+// Every node and relationship the sync owns also carries `syncId`, the stamp
+// of the run that last wrote it. The sync sweeps whatever does not carry its
+// own, which is how a removed ranking or a hidden Bev leaves the graph.

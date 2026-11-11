@@ -30,6 +30,22 @@ rest. Where the two disagree, this document is the newer decision and
 > `docs/graph.md` is the current description of how edges are computed; where
 > the two disagree about `bev_edges`, `docs/graph.md` wins.
 
+> **Update, 2026-11-10. Stage 2's sync is built** (`be/graph-sync`, A-16 steps
+> 6, 8 and 9): `scripts/graph/sync.ts` and `.github/workflows/graph-sync.yml`
+> mirror the catalog, `bev_edges` and the pseudonymised rankings into Neo4j
+> nightly, in one transaction that MERGEs, stamps, sweeps, verifies the counts
+> against Postgres and only then commits. It implements §1's model with four
+> differences, all recorded in `docs/graph.md` ("The sync"), which is the
+> current description and wins where the two disagree: `SIMILAR_TO` **is**
+> mirrored (from `bev_edges`), there is a `(:Note)` label for shared flavour
+> tokens, `IN_CATEGORY` targets a Bev's **leaf**, and every owned node and
+> relationship carries a `syncId`. Of §4's ten steps it does 1–5, the count
+> validation of 8, 9 and 10; the rest of 6–8 (the Cypher aggregation and
+> publishing `user_neighbors`) stays with `build-neighbours.ts`, which has
+> computed that table from Postgres alone since #133. The first production run is pending the merge; what has run is
+> the whole transaction on the catalog fixture against the live instance,
+> rolled back.
+
 ## Objective
 
 Predict how much an individual user will enjoy a specific drink. Not "find

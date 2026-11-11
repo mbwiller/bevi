@@ -1,0 +1,215 @@
+name: graph-sync
+
+# A-16 steps 6, 8 and 9: the nightly mirror of the Bev graph from Postgres into
+# Neo4j AuraDB Free (scripts/graph/sync.ts).
+#
+# POSTGRES STAYS THE SYSTEM OF RECORD, AND NEO4J IS NEVER ON A REQUEST PATH
+# (docs/graph.md, "the one rule"). The app reads `bev_edges` in Postgres, which
+# `graph-edges` rebuilds with no Neo4j involved. This job copies that table,
+# the catalog around it and the pseudonymised rankings into the graph, so a red
+# run here costs the app nothing: yesterday's graph stays exactly as it was.
+#
+# The whole write is ONE Cypher transaction -- upsert, stamp, sweep, verify the
+# counts against Postgres by reading the graph back, then commit. Any error or
+# any mismatch rolls back. There is no half-written night.
+#
+# ---------------------------------------------------------------------------
+# WHEN IT RUNS, AND WHY THERE ARE TWO TRIGGERS
+# ---------------------------------------------------------------------------
+#   workflow_run   after `graph-edges` completes SUCCESSFULLY. This is the one
+#                  that gives the right ORDER: the graph mirrors `bev_edges`,
+#                  so it should be copied after that table was rebuilt. Cron
+#                  order is not a guarantee here -- GitHub has delayed this
+#                  repository's schedules by hours (the 04:50 `graph-edges` has
+#                  run at 11:30) -- so "an hour later" proves nothing.
+#
+#   schedule       05:50 UTC, independently. This is the one that keeps Aura
+#                  AWAKE: the instance auto-pauses after 72 hours without
+#                  activity and never resumes by itself, and a `workflow_run`
+#                  trigger does not fire while `graph-edges` is failing. A sync
+#                  of yesterday's edges is a correct graph of yesterday; a
+#                  paused instance is a manual console action.
+#
+# Both can fire on one night. That is fine and is why the concurrency group
+# queues rather than cancels: the sync is idempotent, the second run rewrites
+# the same graph with a new stamp, and the later one has the fresher edges.
+#
+# A `workflow_run` trigger only exists once this file is on the default branch,
+# and it also fires after a manual `graph-edges` dispatch (including a dry run
+# of it). Harmless, for the same reason.
+#
+# ---------------------------------------------------------------------------
+# THE SEVEN VALUES THIS NEEDS
+# ---------------------------------------------------------------------------
+#   SUPABASE_URL                repository VARIABLE (`vars`), not a secret: the
+#                               project's public REST origin. A secret of the
+#                               same name is accepted as a fallback.
+#   SUPABASE_SERVICE_ROLE_KEY   repository SECRET. Reads `bevs`, `categories`,
+#                               `bev_flavor_profiles`, `bev_embeddings`,
+#                               `bev_edges` and `rankings` past RLS.
+#   NEO4J_URI                   repository SECRETS, all four copied verbatim
+#   NEO4J_USERNAME              from the credentials file Aura showed once. On
+#   NEO4J_PASSWORD              this instance the username AND the database are
+#   NEO4J_DATABASE              the instance id, not `neo4j`, so none of them
+#                               has a usable default.
+#   BEVI_PSEUDONYM_SALT         repository SECRET, set 2026-11-10. The HMAC key
+#                               behind (:User {pseudonym}). At least 16
+#                               characters. NEVER ROTATE IT CASUALLY: a new
+#                               salt renames every user, so every (:User) node
+#                               is swept and recreated and nothing accumulates
+#                               across the change.
+#
+# All are documented in docs/graph.md's secrets table and supabase/.env.example.
+#
+# ---------------------------------------------------------------------------
+# A MISSING VALUE FAILS LOUDLY. THAT IS THE POINT.
+# ---------------------------------------------------------------------------
+# `graph-keepalive.yml` reported SUCCESS every day from 2026-10-15 while doing
+# nothing at all, because `scripts/graph/keepalive.ts` exits 0 with a warning
+# when NEO4J_URI is unset. So: the preflight step below exits 1 naming EVERY
+# missing value, before anything else runs, and `sync.ts` refuses to start for
+# the same reason. There is no skip path and no soft default.
+#
+# ---------------------------------------------------------------------------
+# THIS REPOSITORY IS PUBLIC, AND SO ARE THESE LOGS
+# ---------------------------------------------------------------------------
+# The job prints catalog names, Bev ids and counts. It never prints a user id,
+# a pseudonym, a secret, the Neo4j host or its URL; for users the log carries
+# counts only. Keep it that way when adding output.
+#
+# ---------------------------------------------------------------------------
+# graph-keepalive.yml STAYS, FOR NOW
+# ---------------------------------------------------------------------------
+# docs/graph.md: keep `graph-keepalive.yml` and `scripts/graph/keepalive.ts`
+# until this workflow has run green for a week, then delete both. A sync that
+# fails still stamps (:Meta).lastAttemptAt, which is activity, but an instance
+# that is unreachable cannot be stamped at all -- so the bridge stays until the
+# sync has earned its removal.
+
+on:
+  schedule:
+    # 05:50 UTC, nightly: an hour after `graph-edges` (04:50) and 30 minutes
+    # after `graph-neighbours` (05:20), when GitHub runs them on time.
+    - cron: "50 5 * * *"
+  workflow_run:
+    workflows: ["graph-edges"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Read, plan, run the whole transaction and its verification, then ROLL BACK"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Two syncs at once would each open a transaction over the same nodes and one
+# would wait on the other's locks until it timed out. Never cancel a run in
+# progress: a cancelled run's transaction simply expires and rolls back, which
+# is safe, but it is a wasted night.
+concurrency:
+  group: graph-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    # After `graph-edges`, only when that run succeeded: a failed rebuild left
+    # `bev_edges` as it was, and the 05:50 schedule will mirror it regardless.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: credentials are present
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL || secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEO4J_URI: ${{ secrets.NEO4J_URI }}
+          NEO4J_USERNAME: ${{ secrets.NEO4J_USERNAME }}
+          NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
+          NEO4J_DATABASE: ${{ secrets.NEO4J_DATABASE }}
+          BEVI_PSEUDONYM_SALT: ${{ secrets.BEVI_PSEUDONYM_SALT }}
+        run: |
+          missing=""
+          [ -n "$SUPABASE_URL" ] || missing="$missing SUPABASE_URL"
+          [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] || missing="$missing SUPABASE_SERVICE_ROLE_KEY"
+          [ -n "$NEO4J_URI" ] || missing="$missing NEO4J_URI"
+          [ -n "$NEO4J_USERNAME" ] || missing="$missing NEO4J_USERNAME"
+          [ -n "$NEO4J_PASSWORD" ] || missing="$missing NEO4J_PASSWORD"
+          [ -n "$NEO4J_DATABASE" ] || missing="$missing NEO4J_DATABASE"
+          [ -n "$BEVI_PSEUDONYM_SALT" ] || missing="$missing BEVI_PSEUDONYM_SALT"
+          if [ -n "$missing" ]; then
+            echo "::error::graph-sync cannot run: missing$missing."
+            echo ""
+            echo "Add them before the next scheduled run:"
+            echo "  gh variable set SUPABASE_URL              # e.g. https://<project-ref>.supabase.co"
+            echo "  gh secret set SUPABASE_SERVICE_ROLE_KEY   # the project's service-role key"
+            echo "  gh secret set NEO4J_URI                   # all four NEO4J_* verbatim from Aura's"
+            echo "  gh secret set NEO4J_USERNAME              # credentials file; the username and the"
+            echo "  gh secret set NEO4J_PASSWORD              # database are the instance id, not neo4j"
+            echo "  gh secret set NEO4J_DATABASE"
+            echo "  gh secret set BEVI_PSEUDONYM_SALT         # 16+ random characters, set once and kept"
+            echo ""
+            echo "This step fails on purpose rather than skipping. graph-keepalive.yml reported"
+            echo "success for eight days while doing nothing, because it exits 0 when its"
+            echo "secrets are unset. See docs/graph.md."
+            exit 1
+          fi
+          echo "All seven values are set."
+
+      # Needed even though the script has no dependencies of its own: it
+      # imports @bevi/ranking, which npm workspaces expose as a symlink in
+      # node_modules.
+      - run: npm ci
+
+      # The pure half of the job and the fake-transaction tests of its
+      # orchestration, with no database. Cheap, and it catches a bad
+      # @bevi/ranking bump before it reaches the graph.
+      - run: npm run test:scripts
+
+      # Idempotent: every statement is IF NOT EXISTS. It is here so a constraint
+      # added to schema.cypher (note_token_unique, with this job) exists before
+      # the first sync that MERGEs on it, with no manual step to forget.
+      #
+      # apply-schema.ts prints the Query API URL (the sync itself never does).
+      # On this instance the host's first label and the database are the
+      # instance id, which is also the value of the NEO4J_USERNAME and
+      # NEO4J_DATABASE secrets, and Actions masks secret values in a log -- so
+      # it should print as ***. CHECK THAT IN THE FIRST RUN'S LOG; if it does
+      # not, stop apply-schema.ts printing the URL before the next run.
+      - name: apply the schema
+        env:
+          NEO4J_URI: ${{ secrets.NEO4J_URI }}
+          NEO4J_USERNAME: ${{ secrets.NEO4J_USERNAME }}
+          NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
+          NEO4J_DATABASE: ${{ secrets.NEO4J_DATABASE }}
+        run: npm run graph:schema
+
+      - name: sync the graph
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL || secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEO4J_URI: ${{ secrets.NEO4J_URI }}
+          NEO4J_USERNAME: ${{ secrets.NEO4J_USERNAME }}
+          NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
+          NEO4J_DATABASE: ${{ secrets.NEO4J_DATABASE }}
+          BEVI_PSEUDONYM_SALT: ${{ secrets.BEVI_PSEUDONYM_SALT }}
+          # Empty on a schedule and on a workflow_run, so those are real runs.
+          DRY_RUN: ${{ inputs.dry_run }}
+        # `if`, not `[ … ] && …`: a false test is a non-zero exit status, and
+        # GitHub runs these steps under `bash -e`, so the shorthand would fail
+        # the step whenever the box was left unchecked.
+        run: |
+          args=""
+          if [ "$DRY_RUN" = "true" ]; then args="$args --dry-run"; fi
+          echo "running: npm run graph:sync --$args"
+          npm run graph:sync -- $args
