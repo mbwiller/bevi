@@ -3,7 +3,7 @@ import Svg, { Circle, ClipPath, Defs, G, Path, Rect } from 'react-native-svg';
 import { mix } from '@/lib/color';
 import { useTheme } from '@/theme';
 
-/** The art's side in pt (`.mk-find-map`); the drawing below is in this 224-unit box. */
+/** The art's side in pt (bundle.css `.bv-findart`); the drawing below is in this 224-unit box. */
 export const FIND_ART_SIZE = 224;
 const C = FIND_ART_SIZE / 2;
 /** The disc's radius: a unit inside the box so its 1pt `border` edge isn't cut. */
@@ -29,7 +29,7 @@ const YOU = { cx: 74, cy: 176, r: 10 };
 const HEADING = 'M74 150 L84 168 L64 168 Z';
 
 /**
- * The Map tab's round minimap (the approved mock's `FindArt`): a `tasteCard` disc with a faint
+ * The Map tab's round minimap (design system `FindBevArt`): a `tasteCard` disc with a faint
  * `onDeep` street grid, a lit path from a `fizz` you-are-here dot (with its heading) to a `primary`
  * destination along a `primary` route line. Art only; the tab's button does the navigating.
  */

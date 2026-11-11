@@ -128,6 +128,32 @@ describe('tab bar', () => {
     }
   });
 
+  it("Feed's Find people opens the People screen", async () => {
+    const path = await start('ready', '/feed');
+    await fireEvent.press(await screen.findByLabelText('Find people'));
+    expect(await screen.findByRole('heading', { name: 'People' })).toBeTruthy();
+    expect(path()).toBe('/people');
+  });
+
+  it('/people is out of reach when signed out', async () => {
+    const path = await start('signedOut', '/people');
+    await screen.findByText('Create account');
+    expect(path()).toBe('/sign-in');
+  });
+
+  it('/leaderboard lands on Lists, Top', async () => {
+    const path = await start('ready', '/leaderboard');
+    await waitFor(() => expect(path()).toBe('/lists'));
+    expect(screen.getByLabelText('Lists').props.accessibilityState).toEqual({ selected: true });
+    expect(screen.getByLabelText('Top').props.accessibilityState).toEqual({ selected: true });
+  });
+
+  it('/leaderboard?scope=users lands on People', async () => {
+    const path = await start('ready', '/leaderboard?scope=users');
+    expect(await screen.findByRole('heading', { name: 'People' })).toBeTruthy();
+    expect(path()).toBe('/people');
+  });
+
   it('shows the session profile on the Profile tab', async () => {
     useSession.setState({
       status: 'ready',

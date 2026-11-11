@@ -38,7 +38,7 @@ const keyOf = (i: Item) => i.key;
 const typeOf = (i: Item) => i.kind;
 
 /**
- * People (`/people`, SPEC §2): finding people and the points ranking, in one list. A back header,
+ * People (`/people`, TASKS.md M-32; design system ScreenPeople): finding people and the points ranking, in one list. A back header,
  * then a filled "Search people" bar. Idle: "Suggested for you" (`follows.suggested`, the first few
  * with "See all") and then the points ranking (`usePointsRanking`: "Ranked by points", the "How
  * points work" sheet, your own row tinted and pinned under the list while it's off screen). Typing

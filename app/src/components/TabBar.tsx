@@ -26,9 +26,9 @@ const TABS: { id: TabId; label: string; icon?: IconName }[] = [
   { id: 'profile', label: 'Profile' },
 ];
 
-/** The 32pt box every tab's icon sits in (`.mk-tab-icon`). */
+/** The 32pt box every tab's icon sits in (bundle.css `.bv-tabbar-icon`). */
 const ICON_BOX = 32;
-/** The Add Bev circle (`.mk-tab-add`): 46pt, its bottom on the icon box's, so it rises 14pt above the other icons. */
+/** The Add Bev circle (bundle.css `.bv-tabbar-add`): 46pt, its bottom on the icon box's, so it rises 14pt above the other icons. */
 const ADD = 46;
 /** The `surface` ring that parts the raised circle from the bar's top hairline. */
 const ADD_RING = 4;
@@ -113,7 +113,7 @@ export function TabBar({ active = 'feed', user, onChange, safeArea = true, style
   );
 }
 
-// Geometry from the approved mock's `.mk-tabbar` (the design system's `.bv-tabbar` with the raised centre).
+// Geometry from bundle.css `.bv-tabbar` (the raised centre is `.bv-tabbar-add`).
 const styles = StyleSheet.create({
   bar: {
     flexDirection: 'row',

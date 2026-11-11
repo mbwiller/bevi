@@ -21,7 +21,7 @@ async function open(url: string) {
   return () => result.getPathnameWithParams();
 }
 
-// /leaderboard is no longer a tab (SPEC §1): old links land on the board's new home.
+// /leaderboard is no longer a tab (TASKS.md M-32): old links land on the board's new home.
 it('sends ?scope=users to /people', async () => {
   const path = await open('/leaderboard?scope=users');
   expect(await screen.findByText('People screen')).toBeTruthy();

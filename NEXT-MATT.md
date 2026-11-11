@@ -41,6 +41,7 @@ Your queue, updated 2026-11-01. Arjun's is in [`NEXT-ARJUN.md`](NEXT-ARJUN.md). 
 | Task | Waits on (Arjun) | Note |
 |---|---|---|
 | **M-16 · The map** | **S-10 + A-08**, plus the Maps key | Centred on the Upper East Side with Roosevelt Island in frame. Pins are venues with a curated assortment. No Find Bev button and no "your score" pins (those were removed) |
+| **M-32 to M-34 · Navigation redesign** (2026-11-11, D-16) | — | M-16's venue map is parked. Tabs are Feed · Lists · Add Bev · Map · Profile; the Map tab opens Bev Maps. See the board in `TASKS.md` |
 | **`index.html` design pass** | — | Planned, not scoped |
 
 ## What you owe Arjun, and what he owes you

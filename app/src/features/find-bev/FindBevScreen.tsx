@@ -15,7 +15,7 @@ export const FIND_BEV_CAPTION = 'Opens Bev Maps';
 
 /** The primary Button's `lg` height (Button.tsx); the link below is drawn as that Button. */
 const BUTTON_LG = 52;
-/** `.mk-find-copy { max-width: 280px }`: keeps the line under the title to two short lines. */
+/** The design system's ScreenMap copy block (`max-width: 280px`): keeps the line under the title to two short lines. */
 const COPY_MAX = 280;
 
 /**
@@ -62,7 +62,7 @@ export function FindBevScreen() {
   );
 }
 
-// The approved mock's `.mk-find*`.
+// Geometry from the design system's ScreenMap preview.
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   body: {
