@@ -1,7 +1,7 @@
 import type { Bucket, TasteAttributeKind } from './types.ts';
 
 /** Bumped with any formula or constant change; equals the `version` field of every vectors file. */
-export const RANKING_VERSION = '1.6.0';
+export const RANKING_VERSION = '1.7.0';
 
 /**
  * Score band per bucket as integer [lo, hi] edges on the 0–10 scale (Beli-style 7 / 4, decided 2026-10-09).
@@ -215,6 +215,25 @@ export const TASTE_NEIGHBOUR_K = 25;
  */
 export const NEIGHBOUR_RELIABILITY_N = 15;
 
+// ---------------------------------------------------------------- graph signals (network.ts, LaTeX §10.9)
+// Centrality, communities and bridges of the Bev similarity graph, computed by the nightly graph
+// sync. Nothing in 1.7.0 reads them on a prediction path.
+
+/** PageRank damping d: the walk follows an edge with probability d and teleports with 1 − d (the usual 0.85). */
+export const PAGERANK_DAMPING = 0.85;
+/** PageRank stops once the L1 change of one iteration, Σ|p′ − p|, is below this. */
+export const PAGERANK_TOLERANCE = 1e-10;
+/** PageRank stops after this many iterations whatever the change (the error contracts by at least d per step; 0.85^100 ≈ 9e-8). */
+export const PAGERANK_MAX_ITERATIONS = 100;
+/** Modularity resolution γ: 1 is Newman–Girvan modularity; above 1 favours smaller communities, below 1 larger ones. */
+export const LOUVAIN_RESOLUTION = 1;
+/**
+ * A Louvain candidate community replaces the best so far only if its modularity gain beats it by more
+ * than this, so float noise between equal gains never decides a move: a tie keeps the node where it
+ * is, else goes to the earlier candidate. Every move therefore raises modularity by more than ε.
+ */
+export const LOUVAIN_TIE_EPSILON = 1e-12;
+
 /** Everything a SQL twin or the vectors need, in one object. */
 export const RANKING_CONSTANTS = {
   version: RANKING_VERSION,
@@ -259,4 +278,9 @@ export const RANKING_CONSTANTS = {
   tasteSimFloor: TASTE_SIM_FLOOR,
   tasteNeighbourK: TASTE_NEIGHBOUR_K,
   neighbourReliabilityN: NEIGHBOUR_RELIABILITY_N,
+  pagerankDamping: PAGERANK_DAMPING,
+  pagerankTolerance: PAGERANK_TOLERANCE,
+  pagerankMaxIterations: PAGERANK_MAX_ITERATIONS,
+  louvainResolution: LOUVAIN_RESOLUTION,
+  louvainTieEpsilon: LOUVAIN_TIE_EPSILON,
 } as const;
