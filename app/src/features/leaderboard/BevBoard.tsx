@@ -14,8 +14,8 @@ import { useAllPages, useToggleSet } from './useToggleSet';
 
 export interface BevBoardProps {
   categoryId: CategoryId | undefined;
-  /** The scope dropdown: scrolls with the list. */
-  header: ReactElement;
+  /** The scope dropdown: scrolls with the list. Omit when the caller shows it elsewhere (Lists > Top). */
+  header?: ReactElement;
 }
 
 export function myScoreMeta(myScore: number | null): string {
