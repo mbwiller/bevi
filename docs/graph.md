@@ -989,3 +989,97 @@ right choice: a Bolt connection pool has nothing to pool.
   leaves (D-04), `build-edges.ts` measures the tree term at each Bev's leaf
   while the content term keeps the root, and the sync mirrors that shape —
   `[:CHILD_OF]` from each leaf, `[:IN_CATEGORY]` to the leaf.
+
+## Local graph dashboard
+
+Run `npm run graph:dashboard` from the repository root and open
+<http://127.0.0.1:4317>. Requires Node 22.9+ and the four existing `NEO4J_*`
+variables in `supabase/.env` or the environment. Optional
+`GRAPH_DASHBOARD_PORT` changes the port. Stop with Ctrl-C.
+
+On another developer's machine:
+
+1. Check out the dashboard PR branch (or pull `main` after merge). Use Node
+   22.9 or newer; run `npm ci` at the repository root for development checks.
+2. Add these four variables to your existing, gitignored `supabase/.env`
+   without replacing other settings. Use the actual values from the team's
+   securely shared Neo4j credentials; do not paste credentials into the PR:
+
+   ```dotenv
+   NEO4J_URI=neo4j+s://YOUR_AURA_HOST
+   NEO4J_USERNAME=YOUR_NEO4J_USERNAME
+   NEO4J_PASSWORD=YOUR_NEO4J_PASSWORD
+   NEO4J_DATABASE=YOUR_NEO4J_DATABASE
+   ```
+
+   The username and database are not necessarily `neo4j`. Environment variables
+   already exported in the shell take precedence over the file.
+3. Run `npm run graph:dashboard` and leave that terminal running. Open
+   **http://127.0.0.1:4317** on that same machine (use this exact hostname;
+   `localhost` is intentionally rejected by the Host check).
+4. Expect a Connected status and graph counts. The dashboard needs the remote
+   Aura instance to be running; it does not require Docker, a local Supabase
+   stack, a service-role key, a database reset, or a graph sync to start.
+
+If the browser says the site cannot be reached, restart the command and check
+its terminal output. A missing-credentials message requires configuring the
+four variables and restarting. A Neo4j-unavailable message requires checking
+credentials and the Aura instance's status; a paused instance must be resumed
+in the Aura console. For an occupied port, run
+`GRAPH_DASHBOARD_PORT=4318 npm run graph:dashboard` and use
+`http://127.0.0.1:4318` instead. Refresh the browser after pulling UI changes;
+restart the command after pulling server changes.
+
+This is a local internal explorer, separate from the consumer app. It binds
+only to loopback and rejects foreign Host/Origin headers. Credentials stay
+server-side. Queries are fixed and read-only; the dashboard does not sync or
+modify either database. It includes alcoholic Bevs and pseudonymous User
+nodes; do not expose this server publicly. Raw pseudonyms and embedding
+vectors are excluded from the response, and Meta bookkeeping is displayed
+separately from the network.
+
+The full network, Bev-only similarity view, and selected node's immediate
+neighborhood share search, layer filters, node inspection, zoom, pan and fit.
+Select a node to inspect its relationships, directions and weight properties.
+Degree and PageRank are calculated locally over the complete selected view,
+before display filters. Degree counts unique undirected neighbors (parallel
+edges count once; self-loops ignored). PageRank uses this same unweighted
+adjacency, damping 0.85, L1 tolerance 1e-6, at most 100 iterations, and uniform
+dangling-node redistribution. Scores are exploratory dashboard metrics, not
+persisted graph properties or changes to ranking math. No paid GDS calls.
+
+The browser reads a fresh snapshot every 30 seconds while visible and on
+returning to the tab; manual refresh is also available. Property changes,
+additions and deletions are reflected without rebuilding. Existing node
+positions, viewport and filters are retained. An unavailable instance leaves
+the last successful snapshot visible with a stale status. Fetch time and
+Neo4j's last sync time are separate: the Postgres-to-Neo4j sync remains nightly.
+The renderer loads the entire graph in memory; it is intended for the current
+catalog-scale network, not an unlimited graph database visualization.
+
+Validation: `npm run typecheck:scripts` and
+`node --experimental-strip-types --test scripts/graph/dashboard.test.ts scripts/graph/neo4j.test.ts`.
+
+
+### Exploring a dense network
+
+The default **Overview** draws all structural relationships and the top three
+similarity ties per node (by stored `w`). **All relationships** restores every
+filtered edge; **Only focused connections** hides edges until a node is
+hovered or selected. The drawn-edge counter makes this distinction explicit.
+These display choices do not change centrality calculations.
+
+Hover previews the node, visible connection counts, degree, PageRank and its
+strongest visible similarity tie. Hover or selection shows all of that node's
+filtered incident edges, including those omitted by Overview, and fades
+unrelated nodes. Labels prioritize the focused node and skip collisions.
+Click keeps focus; the sidebar exposes closest Bevs and clickable connections
+with directions and weights. Click empty space, Clear selection, or Escape
+with the canvas focused to clear it.
+
+Drag a node to reposition it, or drag empty space to pan. Scroll and trackpad
+pinch zoom around the cursor; touch supports two-finger pinch and pan.
+Double-click zooms in. With the canvas focused, arrow keys pan, +/- zoom,
+and 0 fits the network. Manual interaction stops the initial layout animation
+so it cannot pull the viewport away. Reset layout reruns spacing; otherwise
+positions are retained across data refreshes.
