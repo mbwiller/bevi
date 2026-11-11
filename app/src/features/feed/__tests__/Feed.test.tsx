@@ -34,6 +34,7 @@ async function start(url = '/feed') {
       'user/[id]/index': Stub,
       'profile/index': Stub,
       'add/index': Stub,
+      people: Stub,
     },
     { initialUrl: url },
   );
@@ -120,7 +121,14 @@ it('following nobody: the follow empty state under YOUR FEED, the Bev of the day
   const buttons = screen.getAllByLabelText('Find people');
   expect(buttons).toHaveLength(2);
   await fireEvent.press(buttons[1]!);
-  expect(r.path()).toBe('/add?tab=people');
+  expect(r.path()).toBe('/people');
+});
+
+it("the header's Find people opens People", async () => {
+  const r = await start();
+  await screen.findByText('Your feed');
+  await fireEvent.press(screen.getByRole('button', { name: 'Find people' }));
+  expect(r.path()).toBe('/people');
 });
 
 it('saves to Want to Try optimistically, and rolls back on error', async () => {
