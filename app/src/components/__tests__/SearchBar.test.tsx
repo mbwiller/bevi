@@ -34,6 +34,18 @@ it('follows a controlled value and submits', async () => {
   expect(onSubmit).toHaveBeenCalledWith('topo');
 });
 
+it('reports blur, and only on blur', async () => {
+  const onFocus = jest.fn();
+  const onBlur = jest.fn();
+  await render(<SearchBar onFocus={onFocus} onBlur={onBlur} />);
+  const input = screen.getByLabelText('Search a Bev or a person');
+  await fireEvent(input, 'focus');
+  expect(onBlur).not.toHaveBeenCalled();
+  await fireEvent(input, 'blur');
+  expect(onBlur).toHaveBeenCalledTimes(1);
+  expect(onFocus).toHaveBeenCalledTimes(1);
+});
+
 it('reports focus (the Search tab opens its results panel on it)', async () => {
   const onFocus = jest.fn();
   await render(<SearchBar onFocus={onFocus} />);

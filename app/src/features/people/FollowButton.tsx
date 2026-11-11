@@ -30,8 +30,6 @@ export interface FollowButtonProps {
   name: string;
   /** Whether the viewer follows them now (`ProfileRow.isFollowing`). */
   following: boolean;
-  /** Fixed width, e.g. 120 in the profile button row. Defaults to the label's width. */
-  width?: number;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -40,7 +38,7 @@ export interface FollowButtonProps {
  * (`aria-pressed` = following), 36pt tall with a 44pt hit area. Wires up `useFollowToggle` itself.
  * In list rows, UserRow's own pill takes `useFollowToggle` directly.
  */
-export function FollowButton({ userId, name, following, width, style }: FollowButtonProps) {
+export function FollowButton({ userId, name, following, style }: FollowButtonProps) {
   const { colors } = useTheme();
   const toggle = useFollowToggle();
   return (
@@ -52,7 +50,6 @@ export function FollowButton({ userId, name, following, width, style }: FollowBu
       {...({ 'aria-pressed': following } as object)}
       style={({ pressed }) => [
         styles.button,
-        width != null && { width },
         following
           ? { backgroundColor: colors.surface, borderColor: colors.borderStrong, borderWidth: 1 }
           : { backgroundColor: colors.primary },
@@ -60,7 +57,7 @@ export function FollowButton({ userId, name, following, width, style }: FollowBu
         style,
       ]}
     >
-      <HitTarget height={HEIGHT} width={width} borderWidth={following ? 1 : 0} />
+      <HitTarget height={HEIGHT} borderWidth={following ? 1 : 0} />
       <Text style={[type.body, styles.label, { color: following ? colors.text : colors.onPrimary }]} numberOfLines={1}>
         {following ? 'Following' : 'Follow'}
       </Text>
