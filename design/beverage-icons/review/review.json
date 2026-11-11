@@ -2514,6 +2514,142 @@
           "portableSvgSha256": "c742de6983d79d99d5eca547ef2365daa6bbeffcbe5c007ae3102af4279e9f3d"
         }
       ]
+    },
+    {
+      "reviewedAt": "2026-11-11",
+      "reviewer": "Codex",
+      "scope": "20 exact soda references independently downloaded and visually inspected; large artwork and40/56/96/155px light/dark tiles with8%padding. Refined Squirt/Vernors lettering, Royal Crown footer, cap colors and Bundaberg ring-pull.",
+      "outcome": "20 needs-review drafts, all214 prior hashes unchanged; final aesthetic approval and web-device review pending.",
+      "sheets": [
+        "review/batch-09-2026-11-11-01.png",
+        "review/batch-09-2026-11-11-02.png",
+        "review/batch-09-2026-11-11-03.png",
+        "review/batch-09-2026-11-11-04.png",
+        "review/batch-09-large-2026-11-11-01.png",
+        "review/batch-09-large-2026-11-11-02.png"
+      ],
+      "assets": [
+        {
+          "bevId": "9a8a0be9-81a0-5ffb-a5ea-7b9f05cb2a82",
+          "slug": "aw-cream-soda",
+          "pngSha256": "12ff73b6f75cafc2c0a1b76b565216d15caed6b581ac72680496bb1d32b4491d",
+          "portableSvgSha256": "e812ac38c76c58b949ac7b90d08b74c9ed2a30d32a05f1464e92a2eea84d0a75"
+        },
+        {
+          "bevId": "a5d8393f-47b3-570f-8edc-ae8917a16888",
+          "slug": "aw-root-beer",
+          "pngSha256": "a9067026a716418e236f1f99c8ccacec7b1c4722a5734cbc9a3a9a663950ab85",
+          "portableSvgSha256": "0de0a3c40e47acf27a2d1e4643682b4d478ed2bc30a157821d6681139c315aa6"
+        },
+        {
+          "bevId": "25f32d35-36f7-5865-b447-e1c52714079d",
+          "slug": "barqs-root-beer",
+          "pngSha256": "d74b5c9e3bb4291a06d7a7872623a240b90c052a2c43762fd396e4e65ca010be",
+          "portableSvgSha256": "557649d115c659e9e1b6e22affa61d5a7120df0b3b511ed9bea725af52b0917d"
+        },
+        {
+          "bevId": "690b9cb5-235f-5882-b66c-171e62743aef",
+          "slug": "big-red",
+          "pngSha256": "d147a8fa59e57071597f6a4a7fd9958840885006a1de9b919e4e851c2f41d8b4",
+          "portableSvgSha256": "e21a543285405d98873664eeda92a98c8f7af30de74e06d498f48181899e574c"
+        },
+        {
+          "bevId": "5ffffcaf-5e63-5113-838c-eda997ade0a0",
+          "slug": "boylan-birch-beer",
+          "pngSha256": "c5c977bb129e36845de40f06f412ed0da3a4d12df169bee731f7230093d5a0bc",
+          "portableSvgSha256": "cd864bd63ccf598e35cdba0641a7452f9d1269ef02b582c7c833f078cd155e16"
+        },
+        {
+          "bevId": "b156ee8d-6393-541b-9abc-0fcfffea6676",
+          "slug": "bundaberg-ginger-beer",
+          "pngSha256": "3d8696cdee0a3192bac9f341089b3139700855c56f37d285b79c0d3dec564b65",
+          "portableSvgSha256": "4689fd72c7b031f03cb9381da789b2d36909a186f93c8cc13e3c1b1fd76ac2b0"
+        },
+        {
+          "bevId": "e8511a96-1026-5087-8d15-5de6042b8d8c",
+          "slug": "canada-dry-ginger-ale",
+          "pngSha256": "7fa941caed728fa55f71e37486dffbe937da8aee499646c0740ae2b622844cae",
+          "portableSvgSha256": "728f129b74580f340aff1273983108c081a89f4fd4fe4d09dd2855d4af70e0b1"
+        },
+        {
+          "bevId": "5485e9ea-1b4b-5fc7-8f0e-5948e33df9fc",
+          "slug": "crush-grape",
+          "pngSha256": "c48684dfb14031b3a65ab5126d2b47e2ccdbb38ecaabd5754e17e9127c01a578",
+          "portableSvgSha256": "df209a28563ba89a9fdb71cdfcb180e73bb34ac8590be5c25e8d430f505b67c7"
+        },
+        {
+          "bevId": "5a896b9b-e375-5458-87fd-a140d3c147d8",
+          "slug": "crush-orange",
+          "pngSha256": "b5a2dc51e8344950ce7825a3aa98c29efe91977e67d37fa7c8f29e3254c2cdd0",
+          "portableSvgSha256": "3d5d0faf2fe1ec84d6f3281d62f7523f1f7c456bc6c9806f4156d33f97e75131"
+        },
+        {
+          "bevId": "b4e9df36-99e2-5e9d-a5e2-ea13275e4676",
+          "slug": "faygo-red-pop",
+          "pngSha256": "28ab5bea6f89d4b62865a94ea0149e54b70cd58d9e1d7c76c7bb21200deaf949",
+          "portableSvgSha256": "24e86dbddee9f9f87ffab998aff53e049e1f3ed30021da97237631e697c16327"
+        },
+        {
+          "bevId": "f1d527a5-f25d-5893-9b7d-20aa98551086",
+          "slug": "faygo-rock-and-rye",
+          "pngSha256": "9fb2c1bd4c62da34acacccf2ce084cb8fb2524b0ab97534ab641de32c0cba77a",
+          "portableSvgSha256": "8ced4831274419483260c00fd6347c195ce8bde6a54ffc2b761ac36544d2e78f"
+        },
+        {
+          "bevId": "0cb9894d-f4f4-5ac2-badc-fd5e3d856e5f",
+          "slug": "ibc-root-beer",
+          "pngSha256": "f998b471dd979fef200a110bdaf73dd41bf7e17c4b4d35ea587542c9610e5bc6",
+          "portableSvgSha256": "a08dfe123ff9c9c349834358ef19514eab2ddeb1314108abc0254259f679d893"
+        },
+        {
+          "bevId": "2f9d6990-b220-585a-8bcb-0cde8e72ea63",
+          "slug": "mexican-coca-cola",
+          "pngSha256": "b5e2052475f257f2e773f38acf93e1e399e2d3986658ab832f0446d3d6e7e6e2",
+          "portableSvgSha256": "0a925269fb3a9b574083bb845af6d0aeed3ee8e6bec23da8cff5530a63707b11"
+        },
+        {
+          "bevId": "1e6ec950-4c34-5a76-890c-e3536bca9043",
+          "slug": "mug-root-beer",
+          "pngSha256": "1fecfcdd69781c1a12cb07c9128de46a4a01cae1a4cd26657d516945c2a9b619",
+          "portableSvgSha256": "6b2f56b34a4e695bb467b6e692c36781edc53e37337dcb6c9c35e4a25efec25d"
+        },
+        {
+          "bevId": "c55098b8-6831-5b29-a7f4-8da515b70af3",
+          "slug": "rc-cola",
+          "pngSha256": "fb6c68e455577a1c50fe98d5d2cf5841007917aa0bf8ca48db43da978d345ccb",
+          "portableSvgSha256": "c60bafd03684b58721dcdccbc7e55675df7aade9a46ebf0eb34d6f12f63d8a4a"
+        },
+        {
+          "bevId": "f51a46e4-a5d0-5712-91b1-798745d51b86",
+          "slug": "squirt",
+          "pngSha256": "efb21d5246b7a7109129046301685389863f3f65a7e050cc103914d2b63b2abc",
+          "portableSvgSha256": "e38d148ca600dc40b8ec38fc11c1ea6e05c90459f130705bdae6c529f1798a9e"
+        },
+        {
+          "bevId": "6ebf7a55-1ec0-5d36-831c-cd44ee05784a",
+          "slug": "stewarts-orange-n-cream",
+          "pngSha256": "fe1109cdacf36d77c42cb78ba2cdd77d7cfedbf3bfc5dafb429e8cc612797376",
+          "portableSvgSha256": "53757226ffd11e7a633b1b0bb4c0c18f680bb6d8ff09748cab463b9a9b3030a8"
+        },
+        {
+          "bevId": "cdd7fd40-ea34-5988-bded-19801a4b64a0",
+          "slug": "stewarts-root-beer",
+          "pngSha256": "c8f63b671cf5fcb138605600d9223763795c70071d1fa61f8251ce722f1f03bc",
+          "portableSvgSha256": "f9ba6faf1d8ca9f95ec36b4cc10111bdb6123bcf6705e05b6403f3ae104b5fe5"
+        },
+        {
+          "bevId": "1f985ad9-58cc-57b8-ac88-628841d89898",
+          "slug": "sunkist-orange",
+          "pngSha256": "d6b5d90d3e3ed3052fa0e03192699170085303b4f746922d8786433c3a053831",
+          "portableSvgSha256": "08babf9c2ed25c9a521f86d92353908274ffb569b74b9a5d2aca4602d10179e6"
+        },
+        {
+          "bevId": "05dbdefa-3d2d-59bd-8827-93f2106fcb18",
+          "slug": "vernors-ginger-ale",
+          "pngSha256": "6112c724281e863225b063c54b7897ca352d1d5dcb41d8188fb88422e33721d3",
+          "portableSvgSha256": "494357f9327b77a9b5e2255d96b0eed1884612516c6925d0bb52497e5e8cf241"
+        }
+      ]
     }
   ]
 }
