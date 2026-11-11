@@ -71,10 +71,10 @@ rest. Where the two disagree, this document is the newer decision and
 > categories (category purity 0.84 against 0.47, measured read-only on the
 > production graph); they are driven mostly by the hand-labelled flavour base
 > plus words shared between names.
-> `docs/graph.md` ("Graph signals") is the description and says what has and
-> has not run; in short, the Cypher has run on the live instance in
-> transactions that were rolled back, and none of the SQL has run anywhere
-> before CI.
+> `docs/graph.md` ("Graph signals" and "Known gaps") is the description and
+> says what has run: migration `20261110000100` is on production and the first
+> real run with the analytics phase committed on 2026-11-11 (11 taste families,
+> `bev_graph_stats` filled with 385 rows).
 
 ## Objective
 
