@@ -97,13 +97,13 @@ it('ranking 3 turns Done on; finishing marks the profile onboarded and lands on 
   await rankFirstIn('Loved it', set[0]!.name);
   await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
   await skip(set[1]!.name);
-  await rankFirstIn('It was fine', set[2]!.name);
+  await rankFirstIn('It was okay', set[2]!.name);
   await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
   await screen.findByRole('header', { name: set[3]!.name });
   expect(screen.getByText('Rank 1 more so we can learn your taste')).toBeTruthy();
   expect(doneButton()).toBeDisabled();
 
-  await rankFirstIn("Didn't like it", set[3]!.name);
+  await rankFirstIn('Not for me', set[3]!.name);
   // Counted at once: Done is on the "Placed" screen before the rankings refetch.
   expect(screen.getByRole('button', { name: 'Done' })).toBeEnabled();
   expect(submit).toHaveBeenCalledTimes(3);

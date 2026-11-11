@@ -5,7 +5,7 @@ Build iOS-first at 393×852pt. Every size below is in pt.
 ## Voice and copy
 
 - **The nouns are ours.** A drink is a **Bev** ("Add a new Bev", "Top 10 Sparkling Waters"). Ranking one is to **Bev** it: "**Arjun** Bev'd **Horchata**", the Bev'd list. Saved drinks are **Want to Try**. The algorithm's list is **Recommended for you**.
-- **Ranking language is fixed.** Gut check: "Loved it", "It was fine", "Didn't like it". Comparison: "Which was better?", "Too close to call", "Undo". Prediction: "You'd rate it" with a `~8.2` bubble; on a list row the reason sits in the meta line ("You love diet sodas", "People who rank like you", "Something different").
+- **Ranking language is fixed.** Gut check: "Loved it", "It was okay", "Not for me". Comparison: "Which was better?", "Too close to call", "Undo". Prediction: "You'd rate it" with a `~8.2` bubble; on a list row the reason sits in the meta line ("You love diet sodas", "People who rank like you", "Something different").
 - **Sentence case** for buttons, tabs and titles ("Edit profile", "Want to Try" keeps its capitals because it is a list's name). Section labels are set in caps by `sectionCaps`, not typed in caps.
 - **Second person, plain and short.** Empty states say what will appear and how to make it happen: "Follow friends to see their Bevs" + Find people. Errors say what happened and what to do, without apologies: "You're offline. We'll show your list again as soon as you're back online."
 - **Numbers:** scores always one decimal (`9.3`, never `9.30` or `93`); rank as `#12`; counts as Beli prints them (`362`, `5k`); price as `$`–`$$$$`, with `~` when Bevi estimated it, never on rows or posts (D-06); dates as "Ranked Oct 3", times as "5 hours ago" or a weekday.
@@ -21,9 +21,9 @@ Use the tokens by name; never paste hex values.
 - `primary` (Bevi grape) goes exactly where Beli uses its teal: filled Pills, the primary Button, the Search tab circle, a saved bookmark, a liked heart, the FilterPill count, StatCard values and icons, SortToggle, "See all" and the fill of a progress bar. Nothing else is grape, so a grape thing is always something to tap or a value you earned. Text on a `primary` fill is `onPrimary` (white in light, dark ink in dark mode).
 - `primaryTint` behind `primary` text marks a selected chip or an active filter.
 - **Score colours follow the bucket bands**: `scoreHigh` 7–10 (Loved), `scoreMid` 4–7 (Fine), `scoreLow` 0–4 (Didn't like). Use them for score numbers, bucket bars and 12% bucket tints, never for decoration. They share a lightness, so a score always shows its number and a bucket always shows its label.
-- `fizz` is the wordmark's bubbles and one blob of the BevGlow; it never carries text or meaning.
+- `fizz` is the wordmark's bubbles; it never carries text or meaning.
 - `tasteCard`, `photoScrim` and `onDeep` (white) are the fixed-dark set: the Taste Profile card, photo overlays and the text on them.
-- `glassFill`, `glassStroke` and `glassHighlight` make the liquid-glass material. The gut-check BucketButtons use their tint material by default, and always on the Bevi web app. Glass is only for a native build on iOS 26+ (the native `GlassView`), only over a BevGlow; it is never imitated with a blur.
+- `glassFill`, `glassStroke` and `glassHighlight` make the liquid-glass material. Nothing in the Bevi web app uses it. Glass is only for a native build on iOS 26+ (the native `GlassView`); it is never imitated with a blur.
 - `borderStrong` outlines controls (outlined Pills and Buttons, text fields, the outlined search bar) so they meet 3:1; `border` is for hairlines.
 - Beli's measured grey and score colours failed the plan's 4.5:1 rule, so the tokens are darker versions of the same hues. Each token's note records Beli's value.
 
@@ -40,13 +40,13 @@ Use the tokens by name; never paste hex values.
 - 16pt screen gutter (`space-gutter`) on every screen. 44pt header row under the status bar. 4pt grid: `space-xs` 4 … `space-xxl` 24.
 - Every tap target is at least 44×44 (`size-target`), even when the visual is a 30pt Pill or a 28pt icon.
 - Radii are named by what they round: `radius-button` 8 (outlined profile buttons), `radius-input` 12 (search, fields, the big primary button), `radius-photo` 14 (Bev tiles, featured photos), `radius-card` 16 (cards, sheet tops), `radius-stat` 20 (profile stat cards), `radius-pill` 999.
-- **No elevation.** Separation is a 1pt `border`. Every focusable control shows `focus-ring` (a 2pt `surface` gap, then a 2pt `primary` ring). The gut-check BucketButtons use a 12% bucket tint and a 4px bucket bar, with no blur and no shadow; that is all the web app ever draws. The one exception is reserved for a native build: on iOS 26+ they may be liquid glass (`GlassView`) on `elevation-glass` over a BevGlow. The Search tab's map is the one place things float: MapCallout pins and the MapControls (round buttons, `List | Map`, `View List`) sit on `elevation-floating` so they read over any tile. Nothing else gets glass, blur or a shadow.
+- **No elevation.** Separation is a 1pt `border`. Every focusable control shows `focus-ring` (a 2pt `surface` gap, then a 2pt `primary` ring). The gut-check BucketButtons are flat `primary` rings on plain `surface`, with no tint, blur or shadow. The Search tab's map is the one place things float: MapCallout pins and the MapControls (round buttons, `List | Map`, `View List`) sit on `elevation-floating` so they read over any tile. Nothing else gets glass, blur or a shadow.
 - Rows are full-bleed with 1pt dividers. Lists are one sorted list: buckets show through bubble colour, not section headers.
 
 ## Imagery
 
 - **Every Bev has a photo, and it is a cutout**: PNG with alpha, the product filling 70–90% of the longest side, no baked-in shadow, no text overlays, at least 600px. User photos get the same look after background removal; while that runs, BevImage shows `status="processing"`.
-- The cutout sits in a BevImage tile (a soft `input` tint, `radius-photo`), never on a busy photo. The one exception is the gut check, where it floats at 200pt on a BevGlow of its own colour. FeaturedCards may use polished full-bleed images under `photoScrim`.
+- The cutout sits in a BevImage tile (a soft `input` tint, `radius-photo`), never on a busy photo. The one exception is the gut check, where it floats at 200pt on plain `surface`. FeaturedCards may use polished full-bleed images under `photoScrim`.
 - Until catalog photos exist, mock screens with `BevArt` (can, slimCan, bottle, waterBottle, boba, icedCup, mug, wine, pint, carton) in the product's colours. Never draw brand logos.
 
 ## Iconography
@@ -59,16 +59,15 @@ Use the tokens by name; never paste hex values.
 ## Motion
 
 - `fast` 150ms for presses, colour changes and the like pop, `base` 250ms for tab underlines, sheets and the compare-card swap, `springy` (Reanimated spring, damping 18, stiffness 180) for the result bubble, `pour` 450ms for the score reveal on the note step (the ScoreBubble 72 pours in and counts up from its bucket's lower edge to the score; under reduced motion the number shows at once).
-- The pour: choosing a bucket fills its button in 450ms with a slight overshoot; the surface drifts in a 5s loop and a few bubbles rise. It is the one ambient animation in the app.
 - The like burst: a double-tap on a post grows a filled `primary` heart over its photo, holds it and fades it within 800ms.
-- Animate transform and opacity (and the pour's height) only. Under reduced motion, swaps become cross-fades, shimmers stop, the like burst only fades, and the pour lands without waves or bubbles. Under reduced transparency, glass becomes the tint material.
+- Animate transform and opacity only. Under reduced motion, swaps become cross-fades, shimmers stop, the like burst only fades, and the BucketButton's check badge shows at once.
 
 ## Building screens
 
 - Wrap content the way the screens in this system do: `Header`, then content on `surface`, then `TabBar` at the bottom. Load `tokens.css` and `components/bundle.css` before using `window.Bevi`.
 - Feed: wordmark Header, filled SearchBar, the Bev of the day and Bev of the week pair (BevOfCard), SectionHeader + FeedPosts. Each post's action row starts with the heart and the comment bubble; up to seven comments show under it, more collapse to "View all N comments", and both open the CommentsSheet.
 - Lists (Your Lists, Leaderboard): centred caps Header, ListScopeDropdown, SegmentedTabs, FilterPill row, SortToggle, numbered BevRows. Bev'd adds the ProgressStrip under the filters ("All Bevs · 37 of 378 tried · 9%"), which opens the CollectionSheet.
-- Ranking: a BevGlow with the floating cutout and three BucketButtons, then ProgressDots and CompareCard pairs, then the note step with the score revealed at once in a ScoreBubble 72 over "#4 of 31 in Loved", then a ScoreBubble 56 result that confirms it.
+- Ranking: the floating cutout over a row of three BucketButtons, then ProgressDots and CompareCard pairs, then the note step with the score revealed at once in a ScoreBubble 72 over "#4 of 31 in Loved", then a ScoreBubble 56 result that confirms it.
 - Profile: name Header, Avatar 100, counts, outlined Buttons, ProfileListRows, two StatCards, Activity tabs, FeedPosts.
 - Search: wordmark Header, the outlined SearchBar, Snap it, then the live map of New York City with its MapFilterRow and MapControls; MapCallout pins; a pin, `View List` or "open the full map" opens the same map full screen, where a tapped pin docks a VenueSheet. Focusing the bar slides a results panel over the map (Recents and suggestions while idle; BEVS and PEOPLE groups while typing) with "Can't find it? Add a new Bev" at its foot.
 - The Screens group shows each of these composed at 393pt.
@@ -81,8 +80,7 @@ The tokens map one to one onto `app/src/theme/tokens.ts`: colour names are the s
 
 The plan's component list (DEVELOPMENT-MATT §4) covers the screens that have a Beli reference. These were added for the screens that don't, or to keep the rest consistent:
 
-- `BucketButton`, `CompareCard`, `ProgressDots`: the ranking flow (§6.9). BucketButton is a tinted capsule with an orb and a pour rather than §6.9's tinted bar (glass only on a native iOS 26+ build).
-- `BevGlow`: the colour field behind the BucketButtons on the gut check.
+- `BucketButton`, `CompareCard`, `ProgressDots`: the ranking flow (§6.9). BucketButton is a `primary` ring filled to a level over its label, three in a row, rather than §6.9's tinted bar.
 - `BevOfCard`: Bev of the day and Bev of the week at the top of the Feed (M-05), in the slot Featured Bevs had.
 - `UserRow`, `AvatarStack`: People search, followers, the user leaderboard and "Friends who've had it" (§6.8, §6.11, §6.12).
 - `AvatarPicker`: your own profile photo on Edit profile and the onboarding profile step (§6.2, §6.19); the photo then shows in every `Avatar` of you.

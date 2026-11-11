@@ -14,8 +14,8 @@ export const BUCKET_ORDER: readonly Bucket[] = ['LOVED', 'FINE', 'DISLIKED'];
 /** Gut-check copy, per the design system's voice. */
 export const BUCKET_LABEL: Readonly<Record<Bucket, string>> = {
   LOVED: 'Loved it',
-  FINE: 'It was fine',
-  DISLIKED: "Didn't like it",
+  FINE: 'It was okay',
+  DISLIKED: 'Not for me',
 };
 
 export type CategoryId =

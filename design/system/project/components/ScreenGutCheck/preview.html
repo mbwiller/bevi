@@ -25,13 +25,12 @@
   .gutter { padding: 0 16px; }
   .center { display: flex; flex-direction: column; align-items: center; text-align: center; }
 
-  .phone > .bv-glow { position: absolute; inset: 0; }
   .gc-top { display: flex; justify-content: flex-end; align-items: center; height: 44px; padding: 0 8px; }
   .gc-hero { display: flex; flex-direction: column; align-items: center; padding: 8px 16px 0; text-align: center; }
   .gc-art { width: 200px; height: 200px; }
   .gc-cat { display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; }
-  .gc-q { margin: 36px 16px 16px; }
-  .gc-btns { display: flex; flex-direction: column; gap: 14px; padding: 0 16px; }
+  .gc-q { margin: 36px 16px 20px; text-align: center; }
+  .gc-btns { display: flex; gap: 4px; padding: 0 16px; }
   .gc-hint { margin: 20px 16px 0; text-align: center; }</style>
 </head>
 <body>
@@ -62,7 +61,7 @@
   var FRIENDS = [{ name: 'Jack Torres', handle: 'jackt' }, { name: 'Priya Nair', handle: 'priya' }, { name: 'Sam Okafor', handle: 'samo' }, { name: 'Lena Park', handle: 'lenap' }, ARJUN, { name: 'Diego Ruiz', handle: 'dr' }];
 
   ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'phone' },
-  h(B.BevGlow, { color: '#f4a7b9' },
+  h('div', { className: 'gc-screen' },
     h('div', { className: 'status' }, '9:41', h('span', { className: 'status-r' }, h('span', { className: 'batt' }, h('i')))),
     h('div', { className: 'gc-top' }, h(B.IconButton, { icon: 'x', label: 'Discard ranking', variant: 'filled' })),
     h('div', { className: 'gc-hero' },
@@ -71,7 +70,7 @@
       h('p', { className: 'body bv-meta' }, 'LaCroix'),
       h('p', { className: 'body gc-cat' }, h(B.Icon, { name: 'droplets', size: 16, strokeWidth: 2 }), ' Sparkling water • ', h(B.PriceTier, { tier: 1 }))),
     h('p', { className: 'displayDrop gc-q' }, 'How was it?'),
-    h('div', { className: 'gc-btns' }, h(B.BucketButton, { bucket: 'loved', selected: true }), h(B.BucketButton, { bucket: 'fine' }), h(B.BucketButton, { bucket: 'disliked' })),
+    h('div', { className: 'gc-btns' }, h(B.BucketButton, { bucket: 'loved', selected: true }), h(B.BucketButton, { bucket: 'fine', dimmed: true }), h(B.BucketButton, { bucket: 'disliked', dimmed: true })),
     h('p', { className: 'caption bv-meta gc-hint' }, "Next, you'll compare it with Bevs you've already ranked."))));
 </script>
 </body>

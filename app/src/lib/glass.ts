@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 
 // Bevi is web-only, so it never renders real glass (the native GlassView on iOS 26+) and never imitates it
 // with CSS `backdrop-filter`. What remains here is the viewer's Reduce Transparency setting, which
-// BevGlow honours by dropping its blur.
+// the map honours.
 
 const REDUCED_TRANSPARENCY = '(prefers-reduced-transparency: reduce)';
 
