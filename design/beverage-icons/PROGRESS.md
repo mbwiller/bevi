@@ -1,5 +1,15 @@
 # Beverage icon production checkpoint
 
+## Production release: 94 additional icons, 2026-11-10
+
+**194 authored icons; 184 catalog entries remain; 39 of 43 starters covered.**
+
+Integrated the locally authored, reference-checked batches onto current main. All 100 existing production SVG/PNG hashes are preserved, including the four recovered starter masters. Added 94 missing icons from nine family modules: starter-smoothies (6 new; its two already-shipped siblings remain owned by smoothie-starters), tea-expansion (10), juice-expansion (10), served-drinks (8), water-expansion (10), sparkling-bottles (10), hydration-expansion (10), sparkling-expansion (10), soda-expansion (20).
+
+Exact reference evidence, package choices and uncertainty remain in each recipe. Retained original inspected hashes and batch-review records in review/review.json. OLIPOP explicitly uses the 9g-fiber package. Historical/representative retail packaging is documented. Catalog Tropicana Original/No Pulp overlap remains an open identity note; existing production Original retained. No metadata/database changes, photo replacement, contract edits, or unrelated backend work included. App precedence remains photo > UUID icon > category art.
+
+Final aesthetic status remains needs-review; user explicitly authorized production publication. Release tests and deployment result are recorded in the PR.
+
 ## Latest batch: 4 recovered starters, 2026-11-04
 
 **100 drafts authored; 278 catalog entries remain. 39 of 43 starters covered.** No new research. This batch recovers four starter icons that were authored in the batch-3 branch `design/beverage-icon-pilot` (PR #148) and never reached `main`: PR #160 expanded the collection 30 → 96 from the pre-batch-3 base and did not pick them up, so these four products sat in `coverage.json` as `needs-reference` while finished, reference-checked artwork for them already existed.
