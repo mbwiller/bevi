@@ -755,7 +755,7 @@ Let $d \in [0, 1)$ be the damping $\textsc{pagerank\_damping} = 0.85$ and $D = \
 \begin{equation}\label{eq:pagerank}
 F(p)_j = \frac{1 - d}{n} + d \Bigl( \sum_{i \in N(j)} p_i\, \frac{w_{ij}}{s_i} + \frac1n \sum_{i \in D} p_i \Bigr),
 \end{equation}
-the random walk $P_{ij} = w_{ij}/s_i$ followed with probability $d$, a uniform teleport otherwise, and the mass on isolated Bevs spread uniformly (back to themselves included). Start from $p^{(0)} = (1/n, \dots, 1/n)$ and iterate $p^{(t+1)} = F(p^{(t)})$ until $\lVert p^{(t+1)} - p^{(t)} \rVert_1 < \tau = \textsc{pagerank\_tolerance} = 10^{-10}$ or $t + 1 = T = \textsc{pagerank\_max\_iterations} = 100$. The result is the last iterate divided by its own sum, $\pi = p / \sum_j p_j$. Each term of the inner sum is evaluated as $(p_i w_{ij}) / s_i$.
+the random walk $P_{ij} = w_{ij}/s_i$ followed with probability $d$, a uniform teleport otherwise, and the mass on isolated Bevs spread uniformly (back to themselves included). Start from $p^{(0)} = (1/n, \dots, 1/n)$ and iterate $p^{(t+1)} = F(p^{(t)})$ until $\lVert p^{(t+1)} - p^{(t)} \rVert_1 < \tau = \textsc{pagerank\_tolerance} = 10^{-10}$ or $t + 1 = T = \textsc{pagerank\_max\_iterations} = 200$, a safety rail that the defaults never reach (Remark~\ref{rem:pagerankcap}). The result is the last iterate divided by its own sum, $\pi = p / \sum_j p_j$. Each term of the inner sum is evaluated as $(p_i w_{ij}) / s_i$.
 \end{definition}
 
 \begin{proposition}\label{prop:pagerank}
@@ -765,8 +765,8 @@ $F$ maps $\Delta_n$ to itself and is a contraction with constant $d$ in $\lVert\
 $\sum_j F(p)_j = (1 - d) + d\bigl(\sum_{i \notin D} p_i \sum_{j \in N(i)} w_{ij}/s_i + \sum_{i \in D} p_i\bigr) = (1 - d) + d \sum_i p_i = 1$, and $F(p) \ge 0$. For $p, q \in \Delta_n$, $F(p) - F(q) = d\, M (p - q)$ with $M_{ji} = w_{ij}/s_i$ for $i \notin D$ and $M_{ji} = 1/n$ for $i \in D$; every column of $M$ sums to $1$, so $\lVert M x \rVert_1 \le \lVert x \rVert_1$ and Banach's theorem applies, with $\lVert p^{(0)} - \pi^\ast \rVert_1 \le 2$. For a single isolated $z$, $N(z) = \emptyset$ and $\pi^\ast_z = (1 - d)/n + d\, \pi^\ast_z / n$. Scaling multiplies $w_{ij}$ and $s_i$ alike.
 \end{proof}
 
-\begin{remark}[When the cap binds]
-The bound $d^t$ is attained on a bipartite component (a path, a star), where the walk has eigenvalue $-1$ and the iterates oscillate around $\pi^\ast$ with ratio $d$; there $\tau$ is not reached within $T = 100$ iterations and the result is within about $0.85^{100} \approx 9 \cdot 10^{-8}$ of $\pi^\ast$ (the $3$-node path returns $0.4864864731$ for its centre, against $18/37 = 0.4864864865$). The vectors pin the capped value. The real graph ($383$ Bevs, about $24$ edges each) is far from bipartite, so the cap should rarely bind there; not measured yet, and a sync that wants to know can compare a run with a larger \code{maxIterations}.
+\begin{remark}[The tolerance, not the cap, ends the iteration]\label{rem:pagerankcap}
+Since $F$ is a $d$-contraction, the $L_1$ step of iteration $t + 1$ is $\lVert p^{(t+1)} - p^{(t)} \rVert_1 \le d^t \lVert p^{(1)} - p^{(0)} \rVert_1 \le 2 d^t$ on every graph, and $\lVert p^{(t+1)} - \pi^\ast \rVert_1 \le \frac{d}{1-d} \lVert p^{(t+1)} - p^{(t)} \rVert_1$. At $d = 0.85$, $2 d^t < 10^{-10}$ once $t > 145.9$, so the iteration stops at the latest at step $147$, below $T = 200$, and the result is within $\frac{d}{1-d}\tau \approx 6 \cdot 10^{-10}$ of $\pi^\ast$ in $L_1$. The bound is attained on a bipartite component (a path, a star), where the walk has eigenvalue $-1$ and the iterates oscillate around $\pi^\ast$ with ratio $d$; even there the tolerance decides: the $3$-node path returns $0.4864864865$ for its centre, $18/37$ to ten digits. $T$ binds only when a caller passes a smaller \code{maxIterations} (or a larger $d$ or smaller $\tau$), and then the capped vector is still deterministic. The vectors pin the default runs, which a cap of $1000$ reproduces bit for bit.
 \end{remark}
 
 For an undirected graph and $d \to 1$, $\pi^\ast_i \to s_i / 2m$ on a connected graph, so PageRank is a smoothed strength: it also rewards being similar to Bevs that are themselves central, and the teleport keeps a weakly connected Bev above $0$. A Bev with high $\pi$ is a good \emph{representative} of its neighbourhood.
@@ -950,7 +950,7 @@ Constant & Value & Role \\
 \code{NEIGHBOUR\_RELIABILITY\_N} & 15 & $N_0$ of the reliability weight $\min(1, n_v/N_0)$ (chosen; the doc leaves it open) \\
 \code{PLACEMENT\_TIER} & 1 / 2 / 3 & Anchored placement tiers \eqref{eq:tiers}: same leaf, same root, stored edge across roots (the floor is \code{EDGE\_MIN\_WEIGHT}) \\
 \code{PAGERANK\_DAMPING} & 0.85 & PageRank damping $d$ \eqref{eq:pagerank} \\
-\code{PAGERANK\_TOLERANCE},\newline \code{PAGERANK\_MAX\_ITERATIONS} & $10^{-10}$, 100 & PageRank stops when the $L_1$ step is below $\tau$, or after $T$ iterations \\
+\code{PAGERANK\_TOLERANCE},\newline \code{PAGERANK\_MAX\_ITERATIONS} & $10^{-10}$, 200 & PageRank stops when the $L_1$ step is below $\tau$; $T$ is a safety rail, never reached at the defaults ($2d^t < \tau$ for $t > 146$) \\
 \code{LOUVAIN\_RESOLUTION} & 1 & Modularity resolution $\gamma$ \eqref{eq:modularity} \\
 \code{LOUVAIN\_TIE\_EPSILON} & $10^{-12}$ & Margin a Louvain candidate must beat the best gain by (Definition~\ref{def:louvain}) \\
 \bottomrule

@@ -102,7 +102,7 @@
     "neighbourReliabilityN": 15,
     "pagerankDamping": 0.85,
     "pagerankTolerance": 1e-10,
-    "pagerankMaxIterations": 100,
+    "pagerankMaxIterations": 200,
     "louvainResolution": 1,
     "louvainTieEpsilon": 1e-12,
     "storedScoreRule": "cents = floor((2N + D) / (2D)) with D = n + 1, N = 100*(hi*D - (hi - lo)*(index + 1)); capped at hi*100 - 1 for FINE and DISLIKED; storedScore = cents / 100",

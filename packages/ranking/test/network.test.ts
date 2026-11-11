@@ -16,8 +16,9 @@ import {
 } from '../src/index.ts';
 
 // Hand-built graphs with closed-form answers (LaTeX §10.9). d = 0.85 throughout unless stated.
-// PageRank values are compared at 1e-7: on a bipartite graph (the path, the star) the power iteration
-// oscillates with factor d and stops at the 100-iteration cap about 1e-8 from the fixed point.
+// PageRank values are compared with the closed forms at 1e-9: the L1 step of iteration k is at most
+// 2·d^k, so at the defaults the 1e-10 tolerance ends the iteration (k ≤ 147) before the cap of 200,
+// even on a bipartite graph (the path, the star), where the iterates oscillate with factor d.
 
 const E = (a: string, b: string, w = 1) => ({ a, b, w });
 const d = PAGERANK_DAMPING;
@@ -60,9 +61,9 @@ const empty: WeightedGraph = { nodes: [], edges: [] };
 
 describe('constants', () => {
   it('are the textbook values and ride in RANKING_CONSTANTS', () => {
-    expect([PAGERANK_DAMPING, PAGERANK_TOLERANCE, PAGERANK_MAX_ITERATIONS]).toEqual([0.85, 1e-10, 100]);
+    expect([PAGERANK_DAMPING, PAGERANK_TOLERANCE, PAGERANK_MAX_ITERATIONS]).toEqual([0.85, 1e-10, 200]);
     expect([LOUVAIN_RESOLUTION, LOUVAIN_TIE_EPSILON]).toEqual([1, 1e-12]);
-    expect(RANKING_CONSTANTS).toMatchObject({ pagerankDamping: 0.85, pagerankTolerance: 1e-10, pagerankMaxIterations: 100, louvainResolution: 1, louvainTieEpsilon: 1e-12 });
+    expect(RANKING_CONSTANTS).toMatchObject({ pagerankDamping: 0.85, pagerankTolerance: 1e-10, pagerankMaxIterations: 200, louvainResolution: 1, louvainTieEpsilon: 1e-12 });
   });
 });
 
@@ -79,20 +80,21 @@ describe('pageRank', () => {
     expect(pageRank(single)).toEqual({ a: 0.5, b: 0.5 });
   });
 
-  it('a 3-node path: centre 18/37, ends 19/74 each', () => {
+  it('a 3-node path: centre 18/37, ends (1 − 18/37)/2 = 19/74 each', () => {
     // x = (1 − d)/3 + d·y/2, y = (1 − d)/3 + d·2x, 2x + y = 1  ⇒  x = 0.475 / 1.85 = 19/74.
     const p = pageRank(path);
-    expect(p.a).toBeCloseTo(19 / 74, 7);
+    expect(p.a).toBeCloseTo((1 - 18 / 37) / 2, 9);
+    expect(p.a).toBeCloseTo(19 / 74, 9);
     expect(p.c).toBe(p.a);
-    expect(p.b).toBeCloseTo(18 / 37, 7);
+    expect(p.b).toBeCloseTo(18 / 37, 9);
     expect(p.b as number).toBeGreaterThan(p.a as number);
   });
 
   it('a star with 4 leaves: hub 88/185, each leaf (1 − 88/185)/4', () => {
     // h = (1 − d)/5 + d·4x and h + 4x = 1  ⇒  h = (0.03 + 0.85) / 1.85.
     const p = pageRank(star);
-    expect(p.z).toBeCloseTo(88 / 185, 7);
-    for (const l of ['l1', 'l2', 'l3', 'l4']) expect(p[l]).toBeCloseTo((1 - 88 / 185) / 4, 7);
+    expect(p.z).toBeCloseTo(88 / 185, 9);
+    for (const l of ['l1', 'l2', 'l3', 'l4']) expect(p[l]).toBeCloseTo((1 - 88 / 185) / 4, 9);
   });
 
   it('a triangle is uniform, exactly', () => {
@@ -122,6 +124,22 @@ describe('pageRank', () => {
     const p = pageRank({ nodes: ['a', 'b', 'c'], edges: [E('a', 'b', 1), E('b', 'c', 0.1)] });
     expect(p.a as number).toBeGreaterThan(p.c as number);
     expect(pageRank(path).a).toBe(pageRank(path).c);
+  });
+
+  it('at the defaults the tolerance, not the cap, ends the iteration, even on bipartite graphs', () => {
+    // If the cap of 200 bound, a larger cap would change the vector; it does not, to the bit.
+    for (const g of [path, star, twoCliques, ring]) {
+      expect(pageRank(g, { maxIterations: 1000 })).toEqual(pageRank(g));
+      expect(pageRank(g, { maxIterations: PAGERANK_MAX_ITERATIONS })).toEqual(pageRank(g));
+    }
+  });
+
+  it('an explicit small maxIterations caps deterministically, short of the fixed point', () => {
+    const capped = pageRank(path, { maxIterations: 10 });
+    expect(pageRank(path, { maxIterations: 10 })).toEqual(capped);
+    // After 10 steps the bipartite oscillation is still about 2·0.85^10 ≈ 0.4 times its start: visibly off.
+    expect(Math.abs((capped.b as number) - 18 / 37)).toBeGreaterThan(1e-3);
+    expect(pageRank(path, { maxIterations: 11 }).b).not.toBe(capped.b);
   });
 
   it('damping 0 gives the uniform vector; maxIterations 1 stops after one step', () => {

@@ -72,6 +72,14 @@ describe('pageRank properties', () => {
     );
   });
 
+  it('at the defaults the tolerance ends the iteration: a cap of 1000 gives the identical vector', () => {
+    fc.assert(
+      fc.property(graphArb, (g) => {
+        expect(pageRank(g, { maxIterations: 1000 })).toEqual(pageRank(g));
+      }),
+    );
+  });
+
   it('automorphic nodes get equal PageRank: the two ends of a path, the leaves of a star', () => {
     fc.assert(
       fc.property(fc.integer({ min: 2, max: 12 }), fc.integer({ min: 1, max: 20 }), (n, k) => {

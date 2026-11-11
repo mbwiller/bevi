@@ -29,7 +29,7 @@ export interface PageRankOptions {
   damping?: number;
   /** Stop once Σ|p′ − p| < tolerance; > 0; default PAGERANK_TOLERANCE = 1e-10. */
   tolerance?: number;
-  /** A positive integer; default PAGERANK_MAX_ITERATIONS = 100. */
+  /** A positive integer; default PAGERANK_MAX_ITERATIONS = 200 (never reached at the default d and tolerance). */
   maxIterations?: number;
 }
 

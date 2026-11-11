@@ -223,8 +223,13 @@ export const NEIGHBOUR_RELIABILITY_N = 15;
 export const PAGERANK_DAMPING = 0.85;
 /** PageRank stops once the L1 change of one iteration, Σ|p′ − p|, is below this. */
 export const PAGERANK_TOLERANCE = 1e-10;
-/** PageRank stops after this many iterations whatever the change (the error contracts by at least d per step; 0.85^100 ≈ 9e-8). */
-export const PAGERANK_MAX_ITERATIONS = 100;
+/**
+ * PageRank stops after this many iterations whatever the change: a safety rail only. The L1 change of
+ * step k is at most 2·d^k (the map contracts by d), so at d = 0.85 it is below the 1e-10 tolerance
+ * once k > 146 on any graph, bipartite included; 200 leaves margin, so at the defaults the tolerance,
+ * not the cap, ends the iteration.
+ */
+export const PAGERANK_MAX_ITERATIONS = 200;
 /** Modularity resolution γ: 1 is Newman–Girvan modularity; above 1 favours smaller communities, below 1 larger ones. */
 export const LOUVAIN_RESOLUTION = 1;
 /**

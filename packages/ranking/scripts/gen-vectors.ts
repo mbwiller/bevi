@@ -1104,7 +1104,7 @@ function networkCases(): Case[] {
   const pr = (name: string, k: string, opts?: PageRankOptions) =>
     cases.push({ name, fn: 'pageRank', input: opts ? { graph: graph(k), opts } : { graph: graph(k) }, expected: pageRank(graph(k), opts) });
   pr('single edge: 0.5 / 0.5', 'single');
-  pr('3-node path: ends 19/74, centre 18/37 (stops at the iteration cap, ~1e-8 off)', 'path');
+  pr('3-node path: ends 19/74, centre 18/37 (bipartite; the tolerance still ends it before the cap)', 'path');
   pr('star: hub 88/185', 'star');
   pr('triangle: uniform', 'triangle');
   pr('isolated node: (1 - d)/(n - d) = 3/43', 'isolated');
