@@ -8,9 +8,9 @@
  * These do NOT re-test PageRank, Louvain or the participation coefficient:
  * those have their own vectors in packages/ranking. What is tested here is
  * what this file owns -- which package function feeds which column, that the
- * community graph is a separate input from the similarity graph, that a
- * community's public id is opaque, what throws, and that the report prints
- * names and nothing else.
+ * community graph (the flavour projection, in the sync) is a separate input
+ * from the similarity graph, that a community's public id is opaque, what
+ * throws, and that the report prints names and nothing else.
  */
 
 import assert from "node:assert/strict";
@@ -18,18 +18,27 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { RANKING_VERSION, louvainCommunities, modularity, pageRank, participationCoefficient } from "@bevi/ranking";
+import {
+  RANKING_VERSION,
+  attributeProjection,
+  louvainCommunities,
+  modularity,
+  pageRank,
+  participationCoefficient,
+} from "@bevi/ranking";
 
 import {
+  CATCH_ALL_FLAVOR,
   COMMUNITY_ID_PATTERN,
   categoryPurity,
   computeGraphStats,
+  flavourProjection,
   graphStatsDbRows,
   graphStatsReport,
   graphStatsWrites,
 } from "./analytics-core.ts";
 import type { GraphEdge, GraphStats, ReportBev } from "./analytics-core.ts";
-import { buildGraphPlan } from "./sync-core.ts";
+import { buildGraphPlan, expectedMemberships } from "./sync-core.ts";
 import type { GraphPlan } from "./sync-core.ts";
 import { FIXTURE_BEVS, FIXTURE_PSEUDONYM_SALT, buildFixtureSource } from "./sync-fixture.ts";
 import { communityIdentifier, pseudonymiser } from "./sync.ts";
@@ -40,7 +49,7 @@ import { communityIdentifier, pseudonymiser } from "./sync.ts";
 
 const communityIdOf = communityIdentifier("a-test-key-of-sixteen-or-more");
 
-/** `computeGraphStats` the way the sync calls it today: the similarity graph is the partition graph too. */
+/** `computeGraphStats` with ONE graph for both inputs: the simplest case, in which a community is a similarity cluster. */
 const statsOf = (nodes: readonly string[], edges: readonly GraphEdge[]): GraphStats =>
   computeGraphStats({ nodes, similarity: edges, partition: { nodes, edges }, communityIdOf });
 
@@ -243,6 +252,119 @@ test("a partition graph over a different set of Bevs is refused", () => {
 });
 
 // ---------------------------------------------------------------------------
+// The flavour projection: what the sync passes as the partition
+// ---------------------------------------------------------------------------
+
+/**
+ * The same six Bevs, with flavours that CUT ACROSS the two similarity cliques:
+ * a1 and b1 are colas, a2 and b2 share the note "cherry" (and a base), a3 and
+ * b3 are citrus. Each attribute is carried by exactly two Bevs.
+ */
+const SPLIT_MEMBERSHIPS = [
+  { node: "a1", attribute: "flavor:cola" },
+  { node: "b1", attribute: "flavor:cola" },
+  { node: "a2", attribute: "flavor:berry" },
+  { node: "b2", attribute: "flavor:berry" },
+  { node: "a2", attribute: "note:cherry" },
+  { node: "b2", attribute: "note:cherry" },
+  { node: "a3", attribute: "flavor:citrus" },
+  { node: "b3", attribute: "flavor:citrus" },
+];
+
+test("flavourProjection is the package's attributeProjection of the rows, and computes no weight of its own", () => {
+  const { partition, memberships } = flavourProjection(TWO_NODES, SPLIT_MEMBERSHIPS);
+  assert.deepEqual(memberships, SPLIT_MEMBERSHIPS);
+  assert.deepEqual(partition, attributeProjection(TWO_NODES, SPLIT_MEMBERSHIPS));
+  // Three pairs. Two Bevs sharing two attributes weigh twice what a pair sharing one does.
+  assert.deepEqual(
+    partition.edges.map((e) => [e.a, e.b]),
+    [["a1", "b1"], ["a2", "b2"], ["a3", "b3"]],
+  );
+  const weight = (a: string) => partition.edges.find((e) => e.a === a)?.w as number;
+  near(weight("a2"), 2 * weight("a1"), "a pair sharing a base and a note");
+  // Extra columns on a row read back from the graph are ignored; the order of rows does not matter.
+  const again = flavourProjection([...TWO_NODES].reverse(), [...SPLIT_MEMBERSHIPS].reverse().map((row) => ({ ...row, extra: 1 })));
+  assert.deepEqual(again.partition, partition);
+});
+
+test("two cliques by similarity, split differently by flavour: families follow the projection, centrality the similarity", () => {
+  const { partition } = flavourProjection(TWO_NODES, SPLIT_MEMBERSHIPS);
+  const stats = computeGraphStats({ nodes: TWO_NODES, similarity: TWO_EDGES, partition, communityIdOf });
+  const bySimilarity = statsOf(TWO_NODES, TWO_EDGES);
+
+  // Three families of two, each with one Bev from each similarity clique.
+  assert.equal(stats.communities.length, 3);
+  for (const [x, y] of [["a1", "b1"], ["a2", "b2"], ["a3", "b3"]] as const) {
+    assert.equal(rowOf(stats, x).communityId, rowOf(stats, y).communityId, `${x} and ${y}`);
+  }
+  assert.equal(new Set(stats.rows.map((r) => r.communityId)).size, 3);
+  // The hub of a family is its hub IN THE PROJECTION: each pair ties, so the smaller id.
+  assert.deepEqual(stats.communities.map((c) => c.hubBevId).sort(), ["a1", "a2", "a3"]);
+  for (const community of stats.communities) assert.equal(community.id, communityIdOf(community.hubBevId));
+
+  // PageRank, strength and degree are the similarity graph's, untouched by the partition.
+  for (const row of stats.rows) {
+    const before = rowOf(bySimilarity, row.bevId);
+    assert.deepEqual([row.pagerank, row.strength, row.degree], [before.pagerank, before.strength, before.degree]);
+  }
+
+  // The bridge score reflects the mismatch. Clustered by similarity, four of the
+  // six scored 0; clustered by flavour, EVERY Bev's similarity weight goes mostly
+  // to other families, because its clique-mates are all in them.
+  assert.equal(bySimilarity.rows.filter((r) => r.bridge === 0).length, 4);
+  for (const row of stats.rows) assert.ok(row.bridge > 0.4, `${row.bevId}: ${row.bridge}`);
+  // a1: 1 to a2 (the berry family) and 0.5 to a3 (citrus), nothing to its own.
+  near(rowOf(stats, "a1").bridge, 1 - (1 / 1.5) ** 2 - (0.5 / 1.5) ** 2, "bridge of a1");
+  // And it is exactly participationCoefficient(similarity, the projection's communities).
+  const direct = participationCoefficient({ nodes: TWO_NODES, edges: TWO_EDGES }, louvainCommunities(partition).communityOf);
+  for (const row of stats.rows) assert.equal(row.bridge, direct[row.bevId]);
+  assert.equal(stats.modularity, modularity(partition, louvainCommunities(partition).communityOf));
+  assert.equal(stats.counts.partitionEdges, 3);
+});
+
+test("a Bev with no membership is a family of its own, and keeps its similarity signals", () => {
+  // b3 carries nothing; a3 carries a base nobody shares, which joins nothing either.
+  const rows = SPLIT_MEMBERSHIPS.filter((m) => m.node !== "b3");
+  const { partition } = flavourProjection(TWO_NODES, rows);
+  assert.ok(!partition.edges.some((e) => e.a === "b3" || e.b === "b3" || e.a === "a3" || e.b === "a3"));
+  const stats = computeGraphStats({ nodes: TWO_NODES, similarity: TWO_EDGES, partition, communityIdOf });
+
+  for (const id of ["a3", "b3"]) {
+    const row = rowOf(stats, id);
+    assert.equal(row.communitySize, 1, id);
+    assert.deepEqual(stats.communities.find((c) => c.id === row.communityId), { id: communityIdOf(id), size: 1, hubBevId: id });
+    // A singleton FAMILY is not an isolated Bev: it still has its edges, its strength and its PageRank ...
+    assert.ok(row.degree > 0 && row.strength > 0 && row.pagerank > 0, id);
+    // ... and, since every neighbour is in another family, a bridge score well above 0.
+    assert.ok(row.bridge > 0, id);
+  }
+  assert.equal(stats.counts.singletons, 2);
+  assert.equal(stats.counts.isolated, 0);
+  assert.equal(stats.counts.communities, 4);
+});
+
+test("flavourProjection refuses the catch-all base, a malformed row, and what the package refuses", () => {
+  assert.equal(CATCH_ALL_FLAVOR, "other");
+  assert.throws(
+    () => flavourProjection(TWO_NODES, [...SPLIT_MEMBERSHIPS, { node: "a1", attribute: "flavor:other" }]),
+    /row 9 \(Bev a1\) carries the catch-all base "other", which is not a flavour/,
+  );
+  // A NOTE spelled "other" is a word in a name, not the catch-all base.
+  assert.doesNotThrow(() => flavourProjection(TWO_NODES, [...SPLIT_MEMBERSHIPS, { node: "a1", attribute: "note:other" }]));
+  for (const attribute of ["cola", "flavor:", "note:", "brand:fizz", "", null, 7]) {
+    assert.throws(() => flavourProjection(TWO_NODES, [{ node: "a1", attribute }]), /is not "flavor:<base>" or "note:<token>"/, String(attribute));
+  }
+  assert.throws(() => flavourProjection(TWO_NODES, [{ node: null, attribute: "flavor:cola" }]), /membership row 1 has no Bev id/);
+  assert.throws(() => flavourProjection(TWO_NODES, [{ node: "zz", attribute: "flavor:cola" }]), /is not a node/);
+  assert.throws(
+    () => flavourProjection(TWO_NODES, [{ node: "a1", attribute: "flavor:cola" }, { node: "a1", attribute: "flavor:cola" }]),
+    /duplicate membership/,
+  );
+  // No membership at all is legal: every Bev is a family of one.
+  assert.deepEqual(flavourProjection(TWO_NODES, []).partition.edges, []);
+});
+
+// ---------------------------------------------------------------------------
 // The opaque community id
 // ---------------------------------------------------------------------------
 
@@ -336,10 +458,13 @@ const PLAN: GraphPlan = buildGraphPlan(buildFixtureSource(), {
 const FIXTURE_NODES = PLAN.nodes.bevs.map((b) => b.id);
 const FIXTURE_EDGES: GraphEdge[] = PLAN.relationships.similarTo.map((e) => ({ a: e.src, b: e.dst, w: e.w }));
 const fixtureIdOf = communityIdentifier(FIXTURE_PSEUDONYM_SALT);
+/** The memberships the graph hands back for the fixture: flavour bases (not `other`) and shared notes. */
+const FIXTURE_MEMBERSHIPS = expectedMemberships(PLAN);
+/** As the sync computes it: SIMILAR_TO for centrality and bridge, the flavour projection for the families. */
 const FIXTURE: GraphStats = computeGraphStats({
   nodes: FIXTURE_NODES,
   similarity: FIXTURE_EDGES,
-  partition: { nodes: FIXTURE_NODES, edges: FIXTURE_EDGES },
+  partition: flavourProjection(FIXTURE_NODES, FIXTURE_MEMBERSHIPS).partition,
   communityIdOf: fixtureIdOf,
 });
 
@@ -373,10 +498,10 @@ test("on the fixture: communitySize is the number of rows carrying that id, and 
   assert.equal(FIXTURE.counts.singletons, FIXTURE.communities.filter((c) => c.size === 1).length);
 });
 
-test("on the fixture: the two Bevs with no edge are singletons, and every hub is a member of its community", () => {
+test("on the fixture: the two Bevs with no SIMILAR_TO edge score 0, and every hub is a member of its family", () => {
   for (const id of [FIXTURE_BEVS.userNoBrand, FIXTURE_BEVS.userBlankBrand]) {
     const row = rowOf(FIXTURE, id);
-    assert.deepEqual([row.degree, row.strength, row.bridge, row.communitySize], [0, 0, 0, 1]);
+    assert.deepEqual([row.degree, row.strength, row.bridge], [0, 0, 0]);
   }
   assert.equal(FIXTURE.counts.isolated, 2);
   for (const community of FIXTURE.communities) {
@@ -396,6 +521,29 @@ test("on the fixture: no Bev id, and no piece of one, appears in any community i
   }
 });
 
+test("on the fixture: the taste families cut across the root categories, and most Bevs bridge", () => {
+  // No membership carries the catch-all base, and every one is a flavour or a note.
+  assert.ok(FIXTURE_MEMBERSHIPS.length > 1000, `only ${FIXTURE_MEMBERSHIPS.length} memberships`);
+  assert.ok(!FIXTURE_MEMBERSHIPS.some((m) => m.attribute === "flavor:other"));
+  assert.ok(FIXTURE_MEMBERSHIPS.every((m) => /^(flavor|note):.+$/.test(m.attribute)));
+  assert.ok(PLAN.relationships.tastesOf.some((link) => link.to === "other"), "the fixture has Bevs whose base is the catch-all");
+  assert.equal(
+    FIXTURE_MEMBERSHIPS.length,
+    PLAN.relationships.tastesOf.filter((link) => link.to !== "other").length + PLAN.relationships.hasNote.length,
+  );
+
+  // About ten broad families rather than one per root category or one per base.
+  const families = FIXTURE.communities.filter((c) => c.size > 1);
+  assert.ok(families.length >= 6 && families.length <= 16, `${families.length} families`);
+  assert.ok(FIXTURE.counts.partitionEdges > FIXTURE.counts.edges, "the projection is denser than SIMILAR_TO");
+  // They do not follow the taxonomy: well under the 0.84 that clustering SIMILAR_TO gives on the real graph.
+  const purity = categoryPurity(FIXTURE, PLAN.nodes.bevs);
+  assert.ok(purity > 0.2 && purity < 0.7, `purity ${purity}`);
+  // And so a non-zero bridge score is the rule: SIMILAR_TO follows categories, the families do not.
+  const bridging = FIXTURE.rows.filter((r) => r.bridge > 0).length;
+  assert.ok(bridging > FIXTURE.rows.length / 2, `${bridging} of ${FIXTURE.rows.length} bridge`);
+});
+
 function shuffled<T>(items: readonly T[], seed: number): T[] {
   const out = [...items];
   let state = seed;
@@ -411,7 +559,8 @@ test("shuffled nodes, shuffled edges and flipped orientations give the identical
   for (const seed of [1, 7, 2026]) {
     const nodes = shuffled(FIXTURE_NODES, seed);
     const edges = shuffled(FIXTURE_EDGES, seed + 1).map((e, i) => (i % 2 === 0 ? e : { a: e.b, b: e.a, w: e.w }));
-    const again = computeGraphStats({ nodes, similarity: edges, partition: { nodes: shuffled(nodes, seed + 2), edges: shuffled(edges, seed + 3) }, communityIdOf: fixtureIdOf });
+    const partition = flavourProjection(shuffled(nodes, seed + 2), shuffled(FIXTURE_MEMBERSHIPS, seed + 3)).partition;
+    const again = computeGraphStats({ nodes, similarity: edges, partition, communityIdOf: fixtureIdOf });
     assert.deepEqual(again, FIXTURE, `seed ${seed}`);
   }
 });
@@ -464,12 +613,12 @@ test("graphStatsWrites: one IN_COMMUNITY per Bev, exactly one hub per community,
 // ---------------------------------------------------------------------------
 
 const REPORT_BEVS: ReportBev[] = [
-  { id: "a1", name: "Cola", brand: "Fizz", flavor: null, categoryId: "soda" },
-  { id: "a2", name: "Cola", brand: "Fizz", flavor: "Cherry", categoryId: "soda" },
-  { id: "a3", name: "Cherry Soda", brand: "  ", flavor: "cherry", categoryId: "soda" },
-  { id: "b1", name: "Lager", brand: "Hops", flavor: null, categoryId: "beer" },
-  { id: "b2", name: "Stout", brand: "Hops", flavor: null, categoryId: "beer" },
-  { id: "b3", name: "Iced Tea", brand: null, flavor: "Peach", categoryId: "tea" },
+  { id: "a1", name: "Cola", brand: "Fizz", flavor: null, base: "cola", categoryId: "soda" },
+  { id: "a2", name: "Cola", brand: "Fizz", flavor: "Cherry", base: "cola", categoryId: "soda" },
+  { id: "a3", name: "Cherry Soda", brand: "  ", flavor: "cherry", base: "berry", categoryId: "soda" },
+  { id: "b1", name: "Lager", brand: "Hops", flavor: null, base: "hop", categoryId: "beer" },
+  { id: "b2", name: "Stout", brand: "Hops", flavor: null, base: "grain", categoryId: "beer" },
+  { id: "b3", name: "Iced Tea", brand: null, flavor: "Peach", base: null, categoryId: "tea" },
 ];
 
 test("the report names the communities, the central Bevs and the bridges, and gives the purity", () => {
@@ -477,13 +626,22 @@ test("the report names the communities, the central Bevs and the bridges, and gi
   const lines = graphStatsReport(stats, REPORT_BEVS);
   const text = lines.join("\n");
 
-  assert.match(lines[0] ?? "", /^modularity Q = 0\.\d{4} over 2 communities \(0 of one Bev\), Louvain on a partition graph of 7 edges$/);
+  assert.match(lines[0] ?? "", /^modularity Q = 0\.\d{4} over 2 taste families \(0 of one Bev\), Louvain on a partition graph of 7 pairs$/);
+  assert.ok((lines[0] ?? "").includes(stats.modularity.toFixed(4)), "the modularity printed is the partition's");
   assert.match(lines[1] ?? "", /^6 Bevs, 7 SIMILAR_TO edges .* 0 Bev\(s\) have no SIMILAR_TO edge$/);
-  // One line per community: size, hub, three members, the share in its commonest root category.
+  // One line per family: size, hub, its commonest flavour bases (what it IS),
+  // three members, the share in its commonest root category.
   const communityLines = lines.filter((line) => /^\s+\d+\.\s+\d+\s+hub: /.test(line));
   assert.equal(communityLines.length, 2);
-  assert.ok(communityLines.some((line) => /hub: Cola, Cherry \(Fizz\) {2}\| {2}top: .* {2}\| {2}100% soda$/.test(line)), text);
-  assert.ok(communityLines.some((line) => /hub: Lager \(Hops\) {2}\| {2}top: .* {2}\| {2}67% beer$/.test(line)), text);
+  assert.ok(
+    communityLines.some((line) => /hub: Cola, Cherry \(Fizz\) {2}\| {2}bases: cola 2, berry 1 {2}\| {2}top: .* {2}\| {2}100% soda$/.test(line)),
+    text,
+  );
+  // A tie between bases goes to the smaller name; a Bev with no profile counts as "(no base)".
+  assert.ok(
+    communityLines.some((line) => /hub: Lager \(Hops\) {2}\| {2}bases: \(no base\) 1, grain 1, hop 1 {2}\| {2}top: .* {2}\| {2}67% beer$/.test(line)),
+    text,
+  );
   // The flavour is added only when the name does not already say it; a blank brand is no brand.
   assert.ok(text.includes("Cola, Cherry (Fizz)"));
   assert.ok(text.includes("Cherry Soda [soda]"));
@@ -492,10 +650,15 @@ test("the report names the communities, the central Bevs and the bridges, and gi
 
   assert.ok(lines.includes("the 6 most central Bevs (weighted PageRank)"));
   assert.equal(lines.filter((line) => /^ {4}0\.\d{6} {2}/.test(line)).length, 6);
-  assert.ok(lines.includes("2 of 6 Bevs have SIMILAR_TO edges into more than one community; the 2 highest bridge scores (participation coefficient)"));
-  const bridgeLines = lines.filter((line) => /^ {4}0\.\d{4} {2}.* in the community of /.test(line));
+  assert.ok(
+    lines.includes(
+      "2 of 6 Bevs have SIMILAR_TO edges into more than one taste family (median bridge 0.0000); the 2 highest bridge scores (participation coefficient)",
+    ),
+    text,
+  );
+  const bridgeLines = lines.filter((line) => /^ {4}0\.\d{4} {2}.* in the family of /.test(line));
   assert.equal(bridgeLines.length, 2);
-  assert.match(bridgeLines[0] ?? "", /Cherry Soda \[soda\] {2}in the community of Cola, Cherry \(Fizz\)$/);
+  assert.match(bridgeLines[0] ?? "", /Cherry Soda \[soda\] {2}in the family of Cola, Cherry \(Fizz\)$/);
 
   // Purity: 3 of 3 in soda, 2 of 3 in beer -> 5/6.
   near(categoryPurity(stats, REPORT_BEVS), 5 / 6, "purity");
@@ -526,7 +689,8 @@ test("on the fixture the report prints catalog names only: no Bev id, no communi
   // One line per community, ten central Bevs, at most ten bridges, one purity figure.
   assert.equal(lines.filter((line) => /^\s+\d+\.\s+\d+\s+hub: /.test(line)).length, FIXTURE.communities.length);
   assert.equal(lines.filter((line) => /^ {4}0\.\d{6} {2}/.test(line)).length, 10);
-  assert.ok(lines.filter((line) => / in the community of /.test(line)).length <= 10);
+  assert.equal(lines.filter((line) => / in the family of /.test(line)).length, 10);
+  assert.ok(lines.filter((line) => / {2}\| {2}bases: /.test(line)).length === FIXTURE.communities.length, "every family line names its bases");
   assert.equal(lines.filter((line) => line.startsWith("category purity ")).length, 1);
   assert.ok(text.includes("Coca-Cola") || text.includes("Shasta"), "catalog names are what it prints");
 
@@ -538,7 +702,7 @@ test("on the fixture the report prints catalog names only: no Bev id, no communi
 // The rule the header states
 // ---------------------------------------------------------------------------
 
-test("every formula is @bevi/ranking's: this file imports exactly the five network functions and does no maths of its own", () => {
+test("every formula is @bevi/ranking's: this file imports exactly six network functions and does no maths of its own", () => {
   const source = readFileSync(fileURLToPath(new URL("./analytics-core.ts", import.meta.url)), "utf8");
   const imports = [...source.matchAll(/import\s+(type\s+)?\{([^}]*)\}\s+from\s+"([^"]+)"/g)];
   assert.deepEqual(
@@ -547,7 +711,14 @@ test("every formula is @bevi/ranking's: this file imports exactly the five netwo
     "analytics-core.ts imports from one module",
   );
   const names = (imports[0]?.[2] ?? "").split(",").map((name) => name.trim()).filter((name) => name !== "");
-  assert.deepEqual(names.sort(), ["communityHubs", "graphStrength", "louvainCommunities", "pageRank", "participationCoefficient"]);
+  assert.deepEqual(names.sort(), [
+    "attributeProjection",
+    "communityHubs",
+    "graphStrength",
+    "louvainCommunities",
+    "pageRank",
+    "participationCoefficient",
+  ]);
   // The tools a reimplementation would reach for.
   for (const forbidden of ["Math.sqrt", "Math.log", "Math.exp", "Math.pow", "damping", "gds."]) {
     assert.ok(!source.includes(forbidden), `analytics-core.ts contains ${forbidden}`);

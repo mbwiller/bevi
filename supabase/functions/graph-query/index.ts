@@ -39,7 +39,8 @@ const TEMPLATES = {
   // one, so the relationship no longer answers "which of the 15".
   // `pagerank`, `community` and `bridge` are the graph signals the sync
   // computes inside its transaction (scripts/graph/analytics-core.ts).
-  // `community` is an opaque id, never a Bev id: compare it for equality only.
+  // `community` is the Bev's taste family as an opaque id, never a Bev id:
+  // compare it for equality only.
   bev: `
     MATCH (b:Bev { id: $bevId })
     WHERE coalesce(b.isAlcoholic, true) = false

@@ -18,7 +18,7 @@ import { test } from "node:test";
 
 import { RANKING_VERSION, flavorTokens, zScoresFromRankings } from "@bevi/ranking";
 
-import { computeGraphStats, graphStatsWrites } from "./analytics-core.ts";
+import { computeGraphStats, flavourProjection, graphStatsWrites } from "./analytics-core.ts";
 import type { GraphStats } from "./analytics-core.ts";
 import {
   ALL_STATEMENTS,
@@ -30,6 +30,7 @@ import {
   MIRRORED_TYPES,
   OWNED_LABELS,
   OWNED_TYPES,
+  READ_BEV_ATTRIBUTES,
   READ_BEV_IDS,
   READ_SIMILAR_TO,
   SET_BEV_GRAPH_STATS,
@@ -47,6 +48,7 @@ import {
   analyticsWriteSteps,
   buildGraphPlan,
   chunk,
+  expectedMemberships,
   expectedVerification,
   findBevByName,
   instant,
@@ -205,14 +207,14 @@ const fixturePlan = (): GraphPlan =>
     rankingVersion: RANKING_VERSION,
   }));
 
-/** The graph signals of a plan, computed the way the sync does today: SIMILAR_TO is the partition graph too. */
+/** The graph signals of a plan, computed the way the sync does: SIMILAR_TO for centrality, the flavour projection for the families. */
 function statsFor(p: GraphPlan): GraphStats {
   const nodes = p.nodes.bevs.map((b) => b.id);
   const similarity = p.relationships.similarTo.map((e) => ({ a: e.src, b: e.dst, w: e.w }));
   return computeGraphStats({
     nodes,
     similarity,
-    partition: { nodes, edges: similarity },
+    partition: flavourProjection(nodes, expectedMemberships(p)).partition,
     communityIdOf: communityIdentifier(FIXTURE_PSEUDONYM_SALT),
   });
 }
@@ -1105,8 +1107,8 @@ test("a User is written with a pseudonym and the sync stamp, and nothing else", 
 // The analytics phase's Cypher
 // ---------------------------------------------------------------------------
 
-test("the two reads of the analytics phase are read-only, ordered, and take no parameter", () => {
-  for (const statement of [READ_BEV_IDS, READ_SIMILAR_TO]) {
+test("the three reads of the analytics phase are read-only, ordered, and take no parameter", () => {
+  for (const statement of [READ_BEV_IDS, READ_SIMILAR_TO, READ_BEV_ATTRIBUTES]) {
     assert.ok(!/\b(MERGE|SET|DELETE|CREATE|REMOVE)\b/.test(statement), statement);
     assert.ok(!statement.includes("$"), "a fixed statement with no parameter");
     assert.match(statement, /\nORDER BY /);
@@ -1116,6 +1118,58 @@ test("the two reads of the analytics phase are read-only, ordered, and take no p
   assert.ok(READ_SIMILAR_TO.includes("MATCH (a:Bev)-[s:SIMILAR_TO]->(b:Bev)"));
   assert.ok(READ_SIMILAR_TO.includes("RETURN a.id AS a, b.id AS b, s.w AS w"));
   assert.ok(READ_SIMILAR_TO.includes("ORDER BY a.id, b.id"));
+});
+
+test("the membership read extracts flavour bases and notes, leaves out the catch-all base, and weighs nothing", () => {
+  // One row per TASTES_OF as flavor:<name>, one per HAS_NOTE as note:<token>.
+  assert.ok(READ_BEV_ATTRIBUTES.includes("MATCH (b:Bev)-[:TASTES_OF]->(f:Flavor)"));
+  assert.ok(READ_BEV_ATTRIBUTES.includes("RETURN b.id AS node, 'flavor:' + f.name AS attribute"));
+  assert.ok(READ_BEV_ATTRIBUTES.includes("MATCH (b:Bev)-[:HAS_NOTE]->(n:Note)"));
+  assert.ok(READ_BEV_ATTRIBUTES.includes("RETURN b.id AS node, 'note:' + n.token AS attribute"));
+  // `other` is not a flavour: it is filtered in the flavour branch, and only there.
+  assert.ok(READ_BEV_ATTRIBUTES.includes("WHERE f.name <> 'other'"));
+  assert.equal(READ_BEV_ATTRIBUTES.split("'other'").length - 1, 1);
+  assert.ok(READ_BEV_ATTRIBUTES.indexOf("WHERE f.name <> 'other'") < READ_BEV_ATTRIBUTES.indexOf("UNION ALL"));
+  // The ORDER BY is outside the subquery, so it orders the whole union.
+  assert.match(READ_BEV_ATTRIBUTES, /\}\nRETURN node, attribute\nORDER BY node, attribute$/);
+  // Cypher extracts; the projection's weights are the package's. No graph-algorithm
+  // procedure, no arithmetic, no aggregation.
+  assert.ok(!/gds\./i.test(READ_BEV_ATTRIBUTES));
+  assert.ok(!/apoc\./i.test(READ_BEV_ATTRIBUTES));
+  assert.ok(!/\b(count|sum|log|collect|size)\s*\(/i.test(READ_BEV_ATTRIBUTES));
+  assert.ok(Object.values(ALL_STATEMENTS).includes(READ_BEV_ATTRIBUTES));
+});
+
+test("expectedMemberships: one flavor row per TASTES_OF that is not `other`, one note row per HAS_NOTE, sorted", () => {
+  const small = plan();
+  assert.deepEqual(expectedMemberships(small), [
+    { node: B.coke, attribute: "flavor:cola" },
+    { node: B.cherry, attribute: "flavor:cola" },
+    { node: B.cherry, attribute: "note:cherry" },
+    { node: B.pepsi, attribute: "flavor:cola" },
+    { node: B.pepsi, attribute: "note:cherry" },
+    { node: B.mug, attribute: "flavor:root-beer" },
+    { node: B.modelo, attribute: "flavor:grain" },
+    { node: B.tap, attribute: "note:water" },
+    { node: B.blank, attribute: "note:water" },
+  ]);
+
+  // A Bev whose base is the catch-all keeps its notes and loses the base.
+  const source = smallSource();
+  (source.profiles[0] as SourceProfile).base = "other";
+  const withOther = plan(source);
+  assert.ok(withOther.relationships.tastesOf.some((link) => link.from === B.coke && link.to === "other"), "still mirrored as TASTES_OF");
+  assert.ok(!expectedMemberships(withOther).some((m) => m.attribute === "flavor:other"));
+  assert.equal(expectedMemberships(withOther).length, expectedMemberships(small).length - 1);
+
+  // On the fixture: the count the sync holds the graph's answer to, and what flavourProjection accepts.
+  const p = fixturePlan();
+  const rows = expectedMemberships(p);
+  assert.equal(rows.length, p.relationships.tastesOf.filter((link) => link.to !== "other").length + p.relationships.hasNote.length);
+  assert.ok(rows.length < p.counts.relationships.TASTES_OF + p.counts.relationships.HAS_NOTE, "the fixture has `other` Bevs to leave out");
+  const sorted = [...rows].sort((x, y) => (x.node < y.node ? -1 : x.node > y.node ? 1 : x.attribute < y.attribute ? -1 : x.attribute > y.attribute ? 1 : 0));
+  assert.deepEqual(rows, sorted);
+  assert.doesNotThrow(() => flavourProjection(p.nodes.bevs.map((b) => b.id), rows));
 });
 
 test("the five computed Bev properties are set by their own statement, never folded into the Bev upsert", () => {

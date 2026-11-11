@@ -10,10 +10,15 @@
 --
 --   pagerank    weighted PageRank over SIMILAR_TO: how central the Bev is.
 --               Sums to 1 over the Bevs of one run.
---   community   the Louvain community the Bev falls in, as an OPAQUE id.
+--   community   the Bev's TASTE FAMILY, as an OPAQUE id: its Louvain community
+--               in the flavour projection of the graph (Bevs joined through
+--               the flavour bases and notes they share).
 --   bridge      the participation coefficient in [0, 1): 0 when all of the
---               Bev's similarity weight stays inside its own community, higher
---               the more it is spread across several.
+--               Bev's similarity weight stays inside its own taste family,
+--               higher the more of it goes to Bevs of other families. Most
+--               Bevs score well above 0 (median about 0.62 on the first real
+--               graph): SIMILAR_TO follows categories and the families cut
+--               across them, so a high score is not a rare flag.
 --   (and `strength`, `degree`: the weighted and unweighted SIMILAR_TO degree,
 --   kept for diagnostics; `community_size`, so "how big is this Bev's
 --   community" needs no aggregate.)
@@ -38,7 +43,7 @@
 -- rounds two of them on the way out.
 --
 -- THE COMMUNITY ID IS OPAQUE, AND THE CHECK ON ITS SHAPE IS PART OF THAT.
--- A community is named after its hub Bev, which keeps the name stable from
+-- A taste family is named after its hub Bev, which keeps the name stable from
 -- night to night. But a hub can be an ALCOHOLIC Bev, `community_id` reaches
 -- every client in the snapshot, and a catalog Bev's id is derivable by anyone
 -- (uuid v5 of a public slug under a public namespace). So the id is
@@ -50,17 +55,26 @@
 -- mistake: a hub's own id does not fit. Clients compare the ids for EQUALITY
 -- ONLY. Which Bev is the hub is NOT stored in Postgres at all.
 --
--- WHAT THE COMMUNITIES ARE COMMUNITIES OF is the sync's input, not this
--- table's business: today Louvain runs on the SIMILAR_TO graph itself, and it
--- is about to run on the flavour projection instead (Bevs joined through
--- shared flavour bases and notes). Nothing here depends on which, so that
--- change needs no migration.
+-- WHAT A TASTE FAMILY IS. PageRank, strength and degree are measured on the
+-- SIMILAR_TO graph. The families are NOT clusters of that graph: every
+-- SIMILAR_TO weight carries the category, so clustering it only hands back the
+-- root categories (category purity 0.84 on the first real graph). They are
+-- Louvain communities of the FLAVOUR PROJECTION -- two Bevs are joined when
+-- they share a flavour base (the catch-all `other` excepted) or a note, each
+-- shared attribute weighted by `attributeProjection` in @bevi/ranking -- which
+-- gave ten families that cut across the tree (purity 0.47): citrus, berry,
+-- tropical, tea, cola, coffee and so on. Said plainly, a family is driven
+-- mostly by the hand-labelled flavour base plus words shared between names;
+-- no ranking and no embedding enters it. Which graph is clustered is the sync
+-- job's choice and this table does not depend on it: a different partition
+-- needs no migration.
 --
 -- THE CONTRACT of the new snapshot key, fixed on the package side by #172
 -- (`PredictionSnapshot.bevGraph` and `BevGraphStats` in
 -- packages/ranking/src/types.ts), so nothing below is a choice made here:
 --
 --   bevGraph   [[bev_id, community_id, pagerank, bridge], ...]
+--              `community_id` is the Bev's taste family.
 --              One tuple per row of `bev_graph_stats` whose Bev is in
 --              `visible` -- this function's own gate: status 'active', and
 --              alcoholic Bevs only for a 21+ viewer. So a hidden Bev's row
@@ -71,9 +85,9 @@
 --
 -- packages/api/src/snapshot.ts maps it onto `snapshot.bevGraph =
 -- { [bevId]: { community, pagerank, bridge } }`, only when the key is present.
--- NOTHING READS THAT FIELD YET: @bevi/ranking 1.7.0 declares it and leaves it
--- unread, and the package PR that reads it does so behind an option that is
--- off by default. So this migration changes no prediction and no
+-- NO PREDICTION READS THAT FIELD. Since @bevi/ranking 1.8.0 `recommend()` can
+-- read the families and the bridge scores, behind two options that ship off
+-- and that nothing passes yet. So this migration changes no prediction and no
 -- recommendation.
 --
 -- WHY THE TWO NUMBERS ARE ROUNDED ON THE WAY OUT. The snapshot carries one
@@ -133,7 +147,7 @@ set search_path = public, extensions;
 -- The CHECKs are the ranges the formulas guarantee, so a row that violates one
 -- was not produced by them:
 --   pagerank in [0, 1]   a probability; exactly 1 only in a one-Bev catalog
---   strength >= 0        a sum of weights in (0, 1]
+--   strength >= 0        a sum of weights, each in (0, 1]; often above 1
 --   degree >= 0          a count of edges
 --   bridge in [0, 1)     1 - sum of squared shares; never reaches 1
 --   community_size >= 1  the Bev itself is a member
@@ -155,9 +169,11 @@ create table public.bev_graph_stats (
 );
 
 comment on table public.bev_graph_stats is
-  'A-16 (4): per-Bev graph signals (weighted PageRank, Louvain community as an opaque id, participation coefficient), computed nightly by graph-sync from the Neo4j graph with @bevi/ranking and written by replace_bev_graph_stats as the service role. Empty until the first sync after this migration.';
+  'A-16 (4): per-Bev graph signals (weighted PageRank over SIMILAR_TO, the taste family as an opaque id, the participation coefficient across families), computed nightly by graph-sync from the Neo4j graph with @bevi/ranking and written by replace_bev_graph_stats as the service role. Empty until the first sync after this migration.';
 comment on column public.bev_graph_stats.community_id is
-  'Opaque: c_ + 16 hex of a keyed HMAC of the community''s hub Bev id. Never a Bev id. Compare for equality only.';
+  'The Bev''s taste family: its Louvain community in the flavour projection (Bevs joined through shared flavour bases and notes). Opaque: c_ + 16 hex of a keyed HMAC of the family''s hub Bev id. Never a Bev id. Compare for equality only.';
+comment on column public.bev_graph_stats.bridge is
+  'Participation coefficient in [0, 1): how much of the Bev''s SIMILAR_TO weight goes to Bevs of other taste families. Non-zero for most Bevs by design.';
 
 -- "The other Bevs of this Bev's community" and "how many communities are
 -- there" are the two reads this table invites beyond the primary key.

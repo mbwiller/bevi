@@ -3,30 +3,42 @@
  * A-16 (4); scripts/graph/sync.ts is the I/O half, and the Cypher it sends is
  * in sync-core.ts with every other statement).
  *
- * Every night, inside the sync's one transaction, the similarity graph is READ
- * BACK OUT OF NEO4J -- every `(:Bev)` id and every `SIMILAR_TO` as (a, b, w) --
- * and `computeGraphStats` turns it into three numbers and one label per Bev:
+ * Every night, inside the sync's one transaction, the graph is READ BACK OUT
+ * OF NEO4J -- every `(:Bev)` id, every `SIMILAR_TO` as (a, b, w), and every
+ * Bev's flavour base and notes -- and turned into three numbers and one label
+ * per Bev:
  *
  *   pagerank   weighted PageRank: how central a Bev is in the similarity graph
- *   community  the Louvain community it falls in, as an OPAQUE id
- *   bridge     the participation coefficient: 0 when every neighbour is in its
- *              own community, towards 1 when its edges are spread over many
+ *   community  its TASTE FAMILY, as an OPAQUE id
+ *   bridge     the participation coefficient: the more of a Bev's similarity
+ *              weight goes to Bevs of OTHER taste families, the higher
  *   (plus `strength` and `degree`, the weighted and unweighted degree)
  *
  * TWO GRAPHS, ON PURPOSE. `similarity` is the `SIMILAR_TO` graph: PageRank,
  * strength and degree are measured on it, and it is the graph whose weight the
- * bridge score spreads across communities. `partition` is the graph Louvain
- * runs on, and it is a SEPARATE INPUT over the same Bevs. Today the sync passes
- * the `SIMILAR_TO` graph for both. That is not a promise: Louvain over
- * `SIMILAR_TO` largely rediscovers the root categories, and the partition
- * graph is about to become the flavour projection (Bevs joined through shared
- * `(:Flavor)` and `(:Note)` nodes) once the package function that builds it is
- * on `main`. Nothing here assumes the two are the same graph.
+ * bridge score spreads across families. `partition` is the graph Louvain runs
+ * on, a SEPARATE INPUT over the same Bevs, and the sync passes the FLAVOUR
+ * PROJECTION (`flavourProjection` below): two Bevs are joined when they share
+ * a flavour base or a note, each shared attribute weighted 1 / ln(how many
+ * Bevs carry it) by the package's `attributeProjection`.
  *
- * NOTHING HERE REIMPLEMENTS A FORMULA. The five numbers come from
- * `graphStrength`, `pageRank`, `louvainCommunities`, `participationCoefficient`
- * and `communityHubs` in @bevi/ranking (packages/ranking/src/network.ts, paper
- * section 10.9), and from nothing else. This file arranges their output into
+ * Why not cluster `SIMILAR_TO` itself: every edge weight carries the category
+ * (the tree term and the content term), so Louvain over it hands back the root
+ * categories -- 11 communities at category purity 0.84 on the live graph of
+ * 2026-11-11 -- which is the taxonomy we already have. The projection gave ten
+ * families that cut across categories (purity 0.47). The price is that a
+ * family and the similarity graph disagree BY DESIGN, so most Bevs have a
+ * non-zero bridge score: it is not a rare flag.
+ *
+ * What a family is made of, said plainly: mostly the hand-labelled flavour
+ * base, plus words shared between names. The clustering merges 23 uneven
+ * labels into about ten broad families and places the Bevs whose base is
+ * `other` or missing by their notes alone.
+ *
+ * NOTHING HERE REIMPLEMENTS A FORMULA. The numbers come from `graphStrength`,
+ * `pageRank`, `louvainCommunities`, `participationCoefficient`,
+ * `communityHubs` and `attributeProjection` in @bevi/ranking
+ * (packages/ranking/src/network.ts, paper section 10.9), and from nothing else. This file arranges their output into
  * rows, checks it, and writes a report. Those functions are deterministic in
  * the SET of nodes and edges, so this is too: shuffled input gives the same
  * rows.
@@ -49,6 +61,7 @@
  */
 
 import {
+  attributeProjection,
   communityHubs,
   graphStrength,
   louvainCommunities,
@@ -73,10 +86,16 @@ export interface PartitionGraph {
   edges: readonly GraphEdge[];
 }
 
+/** One `(:Bev)`-to-attribute membership: `flavor:<base>` or `note:<token>`. The package's `AttributeMembership`. */
+export interface Membership {
+  node: string;
+  attribute: string;
+}
+
 /** One Bev's graph signals: a row of `public.bev_graph_stats`, in camelCase. */
 export interface GraphStatsRow {
   bevId: string;
-  /** Opaque: `communityIdOf(hub)`. Equal for two Bevs exactly when they share a community. */
+  /** Opaque: `communityIdOf(hub)`. Equal for two Bevs exactly when they share a community (a taste family). */
   communityId: string;
   /** How many Bevs carry this `communityId`, this one included. */
   communitySize: number;
@@ -112,7 +131,7 @@ export interface GraphStats {
     bevs: number;
     /** `SIMILAR_TO` edges: the graph PageRank, strength, degree and bridge are measured on. */
     edges: number;
-    /** Edges of the graph Louvain ran on. Equal to `edges` while the sync passes `SIMILAR_TO` for both. */
+    /** Edges of the graph Louvain ran on: in the sync, the pairs of the flavour projection. */
     partitionEdges: number;
     communities: number;
     /** Communities of one Bev. */
@@ -154,6 +173,55 @@ function finite(value: unknown, what: string): number {
 }
 
 // ---------------------------------------------------------------------------
+// The partition graph: the flavour projection
+// ---------------------------------------------------------------------------
+
+/**
+ * The catch-all flavour base. It is not a flavour: it is where a Bev goes when
+ * none of the others fits, so joining two Bevs through it would glue unrelated
+ * drinks into one family. The statement that reads the memberships leaves it
+ * out (`READ_BEV_ATTRIBUTES` in sync-core.ts), and `flavourProjection` refuses
+ * it, so the rule holds even if the statement is edited.
+ */
+export const CATCH_ALL_FLAVOR = "other";
+
+const ATTRIBUTE_PATTERN = /^(flavor|note):.+$/;
+
+/**
+ * The graph the taste families are Louvain communities of: `nodes` joined
+ * through the flavour bases and notes they share, weighted by
+ * `attributeProjection` in @bevi/ranking (Adamic-Adar: a shared attribute
+ * counts 1 / ln(the number of Bevs carrying it), so a rare one says a lot and
+ * a common one little). No weight is computed here.
+ *
+ * `rows` are the memberships exactly as read back from the graph:
+ * `{ node: <Bev id>, attribute }` with `attribute` either `flavor:<base>` or
+ * `note:<token>`. THROWS on a row of any other shape, and on `flavor:other`.
+ * The package throws on a membership whose node is not in `nodes` and on a
+ * duplicate row.
+ *
+ * A Bev that shares no counted attribute with any other stays in the graph
+ * with no edge, and is a family of its own. That is legal.
+ */
+export function flavourProjection(
+  nodes: readonly string[],
+  rows: ReadonlyArray<{ node?: unknown; attribute?: unknown }>,
+): { partition: PartitionGraph; memberships: Membership[] } {
+  const memberships: Membership[] = rows.map((row, i) => {
+    const { node, attribute } = row;
+    if (typeof node !== "string" || node === "") throw new RangeError(`membership row ${i + 1} has no Bev id`);
+    if (typeof attribute !== "string" || !ATTRIBUTE_PATTERN.test(attribute)) {
+      throw new RangeError(`membership row ${i + 1} (Bev ${node}) is not "flavor:<base>" or "note:<token>": ${String(attribute).slice(0, 40)}`);
+    }
+    if (attribute === `flavor:${CATCH_ALL_FLAVOR}`) {
+      throw new RangeError(`membership row ${i + 1} (Bev ${node}) carries the catch-all base "${CATCH_ALL_FLAVOR}", which is not a flavour and must be left out`);
+    }
+    return { node, attribute };
+  });
+  return { partition: attributeProjection([...nodes], memberships), memberships };
+}
+
+// ---------------------------------------------------------------------------
 // The computation
 // ---------------------------------------------------------------------------
 
@@ -172,9 +240,11 @@ function finite(value: unknown, what: string): number {
  *   hub                communityHubs(partition, communityOf)
  *   bridge             participationCoefficient(similarity, communityOf)
  *
- * A Bev with no edge in the partition graph is a community of its own. A Bev
+ * A Bev with no edge in the partition graph is a community of its own (in the
+ * sync: a Bev that shares no flavour base and no note with any other). A Bev
  * with no `SIMILAR_TO` edge has strength 0, degree 0 and bridge 0, and still
- * gets its share of PageRank.
+ * gets its share of PageRank. The two are independent: a singleton family can
+ * be well connected by similarity, and then its bridge score is high.
  *
  * THROWS, so nothing wrong is ever written: a partition over a different set
  * of Bevs, a non-finite or out-of-range result, a PageRank that does not sum
@@ -334,18 +404,21 @@ export function graphStatsWrites(stats: GraphStats): GraphStatsWrites {
 // The report
 // ---------------------------------------------------------------------------
 
-/** What the report needs to know about a Bev: its catalog name and its ROOT category. */
+/** What the report needs to know about a Bev: its catalog name, its flavour base and its ROOT category. */
 export interface ReportBev {
   id: string;
   name: string;
   brand: string | null;
   flavor: string | null;
+  /** `bev_flavor_profiles.base`, or null for a Bev with no profile. */
+  base: string | null;
   /** One of the 15 roots, as on `bevs.category_id` and `(:Bev).categoryId`. */
   categoryId: string;
 }
 
 const REPORT_TOP = 10;
 const REPORT_COMMUNITY_MEMBERS = 3;
+const REPORT_COMMUNITY_BASES = 3;
 
 const present = (value: string | null): value is string => typeof value === "string" && value.trim() !== "";
 
@@ -366,6 +439,19 @@ function dominantCategory(members: readonly ReportBev[]): { categoryId: string; 
   for (const bev of members) tally.set(bev.categoryId, (tally.get(bev.categoryId) ?? 0) + 1);
   const [categoryId, count] = [...tally].sort((x, y) => y[1] - x[1] || cmp(x[0], y[0]))[0] ?? ["", 0];
   return { categoryId, count };
+}
+
+/** The commonest flavour bases among `members`, as `base count`, most common first; a tie goes to the smaller name. */
+function commonBases(members: readonly ReportBev[], limit: number): string[] {
+  const tally = new Map<string, number>();
+  for (const bev of members) {
+    const base = present(bev.base) ? bev.base.trim() : "(no base)";
+    tally.set(base, (tally.get(base) ?? 0) + 1);
+  }
+  return [...tally]
+    .sort((x, y) => y[1] - x[1] || cmp(x[0], y[0]))
+    .slice(0, limit)
+    .map(([base, count]) => `${base} ${count}`);
 }
 
 /**
@@ -391,10 +477,12 @@ export function categoryPurity(stats: GraphStats, bevs: readonly ReportBev[]): n
 }
 
 /**
- * The analytics report, as lines: modularity and the number of communities;
- * one line per community (size, hub, its three highest-PageRank members, the
- * share of its members in its most common root category); the ten most
- * central Bevs; the ten highest bridge scores; and the overall category purity.
+ * The analytics report, as lines: the modularity of the partition (measured on
+ * the partition graph) and the number of taste families; one line per family
+ * (size, hub, its three commonest flavour bases -- what the family IS -- its
+ * three highest-PageRank members, the share of its members in its most common
+ * root category); the ten most central Bevs; the ten highest bridge scores
+ * with how common a non-zero one is; and the overall category purity.
  *
  * CATALOG NAMES ONLY. No Bev id, no community id and nothing about a user
  * reaches a line: the log this is printed to is public, and a community id
@@ -414,19 +502,21 @@ export function graphStatsReport(stats: GraphStats, bevs: readonly ReportBev[]):
 
   const c = stats.counts;
   const lines: string[] = [
-    `modularity Q = ${stats.modularity.toFixed(4)} over ${c.communities} communities (${c.singletons} of one Bev), ` +
-      `Louvain on a partition graph of ${c.partitionEdges} edges`,
+    `modularity Q = ${stats.modularity.toFixed(4)} over ${c.communities} taste families (${c.singletons} of one Bev), ` +
+      `Louvain on a partition graph of ${c.partitionEdges} pairs`,
     `${c.bevs} Bevs, ${c.edges} SIMILAR_TO edges (PageRank, strength and bridge are measured on these); ` +
       `${c.isolated} Bev(s) have no SIMILAR_TO edge`,
-    "communities, largest first: size, hub, top members by PageRank, share in its most common root category",
+    "taste families, largest first: size, hub, commonest flavour bases, top members by PageRank, share in its most common root category",
   ];
 
   stats.communities.forEach((community, i) => {
     const members = byRank.filter((row) => row.communityId === community.id);
-    const top = members.slice(0, REPORT_COMMUNITY_MEMBERS).map((row) => label(bev(row.bevId)));
-    const dominant = dominantCategory(members.map((row) => bev(row.bevId)));
+    const memberBevs = members.map((row) => bev(row.bevId));
+    const top = memberBevs.slice(0, REPORT_COMMUNITY_MEMBERS).map(label);
+    const dominant = dominantCategory(memberBevs);
     lines.push(
       `  ${String(i + 1).padStart(3)}. ${String(community.size).padStart(4)}  hub: ${hubNameOf.get(community.id)}` +
+        `  |  bases: ${commonBases(memberBevs, REPORT_COMMUNITY_BASES).join(", ")}` +
         `  |  top: ${top.join(", ")}  |  ${percent(dominant.count, community.size)} ${dominant.categoryId}`,
     );
   });
@@ -437,22 +527,24 @@ export function graphStatsReport(stats: GraphStats, bevs: readonly ReportBev[]):
     lines.push(`    ${row.pagerank.toFixed(6)}  ${label(b)} [${b.categoryId}]  degree ${row.degree}`);
   }
 
-  // Most Bevs score exactly 0 (every neighbour in their own community), so
-  // only the non-zero ones are worth a line.
+  // With the flavour projection as the partition a non-zero score is the
+  // rule, not the exception (SIMILAR_TO follows categories, the families cut
+  // across them), so the line says how common it is and what the middle is.
   const bridging = byBridge.filter((row) => row.bridge > 0);
+  const median = byBridge.length === 0 ? 0 : (byBridge[Math.floor(byBridge.length / 2)] as GraphStatsRow).bridge;
   lines.push(
-    `${bridging.length} of ${c.bevs} Bevs have SIMILAR_TO edges into more than one community; ` +
+    `${bridging.length} of ${c.bevs} Bevs have SIMILAR_TO edges into more than one taste family (median bridge ${median.toFixed(4)}); ` +
       `the ${Math.min(REPORT_TOP, bridging.length)} highest bridge scores (participation coefficient)`,
   );
   if (bridging.length === 0) lines.push("    (none)");
   for (const row of bridging.slice(0, REPORT_TOP)) {
     const b = bev(row.bevId);
-    lines.push(`    ${row.bridge.toFixed(4)}  ${label(b)} [${b.categoryId}]  in the community of ${hubNameOf.get(row.communityId)}`);
+    lines.push(`    ${row.bridge.toFixed(4)}  ${label(b)} [${b.categoryId}]  in the family of ${hubNameOf.get(row.communityId)}`);
   }
 
   lines.push(
-    `category purity ${categoryPurity(stats, bevs).toFixed(4)}: the share of Bevs that sit in their community's most common ` +
-      `root category (1 = the communities follow the taxonomy exactly)`,
+    `category purity ${categoryPurity(stats, bevs).toFixed(4)}: the share of Bevs that sit in their family's most common ` +
+      `root category (1 = the families follow the taxonomy exactly; lower = they cut across it)`,
   );
   return lines;
 }

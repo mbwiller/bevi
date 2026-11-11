@@ -51,20 +51,26 @@ rest. Where the two disagree, this document is the newer decision and
 
 > **Update, 2026-11-11. Graph signals per Bev** (`be/graph-stats`, A-16 (4)).
 > The sync now also *computes* on the graph it mirrors: inside the same
-> transaction it reads `SIMILAR_TO` back, computes each Bev's centrality
-> (weighted PageRank), community (Louvain) and bridge score (participation
-> coefficient) with `@bevi/ranking`'s `network.ts` (paper §10.9, #172) — never
+> transaction it reads `SIMILAR_TO` and each Bev's flavour base and notes
+> back, and computes each Bev's centrality (weighted PageRank over
+> `SIMILAR_TO`), **taste family** (Louvain over the flavour projection:
+> Bevs joined through shared `(:Flavor)` and `(:Note)` nodes) and bridge score
+> (the participation coefficient of its `SIMILAR_TO` weight across families)
+> with `@bevi/ranking`'s `network.ts` (paper §10.9, #172 and #176) — never
 > `gds.*`, which is a paid product — stores them on the nodes, and after the
 > commit writes them to a new Postgres table, `bev_graph_stats`
 > (`20261110000100`), which `get_prediction_snapshot` serves as `bevGraph`.
 > That is a fourth table beside §3's three, and a signal on the **Bev** side
-> rather than the user side: it does not enter Layer 2 and nothing reads it
-> yet (`rank/graph-recs` will, in `recommend()`, behind an off-by-default
-> option), so §5's "graph signals enter Layer 2 only" still describes
+> rather than the user side: it does not enter Layer 2, and only
+> `recommend()` can read it, behind two options that ship off (#176), so §5's
+> "graph signals enter Layer 2 only" still describes
 > everything that affects a prediction. The community id is an opaque keyed
 > hash, never a Bev id, for the reason §"Leakage and privacy" gives for
-> `neighbor_id`. The graph the communities are computed on is an input of the
-> computation: `SIMILAR_TO` today, the flavour projection next.
+> `neighbor_id`. The families are clustered on the flavour projection and not
+> on `SIMILAR_TO`, because clustering `SIMILAR_TO` only rediscovers the root
+> categories (category purity 0.84 against 0.47, measured read-only on the
+> production graph); they are driven mostly by the hand-labelled flavour base
+> plus words shared between names.
 > `docs/graph.md` ("Graph signals") is the description and says what has and
 > has not run; in short, the Cypher has run on the live instance in
 > transactions that were rolled back, and none of the SQL has run anywhere

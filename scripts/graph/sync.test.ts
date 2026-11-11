@@ -16,12 +16,13 @@ import { test } from "node:test";
 
 import { RANKING_VERSION } from "@bevi/ranking";
 
-import { computeGraphStats, graphStatsDbRows, graphStatsWrites } from "./analytics-core.ts";
+import { computeGraphStats, flavourProjection, graphStatsDbRows, graphStatsWrites } from "./analytics-core.ts";
 import type { BevGraphStatsDbRow, GraphStats } from "./analytics-core.ts";
 import { Neo4jError } from "./neo4j.ts";
 import type { Neo4jClient, Parameters, Row } from "./neo4j.ts";
 import {
   COUNT_STAMPED,
+  READ_BEV_ATTRIBUTES,
   READ_BEV_IDS,
   READ_META,
   READ_SIMILAR_TO,
@@ -37,6 +38,7 @@ import {
   analyticsSweepSteps,
   analyticsWriteSteps,
   buildGraphPlan,
+  expectedMemberships,
   expectedVerification,
   sweepSteps,
   writeSteps,
@@ -64,15 +66,20 @@ const PLAN: GraphPlan = buildGraphPlan(buildFixtureSource(), {
 });
 const SYNC_ID = "20261110T055000000Z-0123456789ab";
 
-/** What the fake graph hands back to the analytics phase: the plan's Bevs and edges, as the real one would. */
+/** What the fake graph hands back to the analytics phase: the plan's Bevs, edges and memberships, as the real one would. */
 const GRAPH_BEVS = PLAN.nodes.bevs.map((b) => ({ id: b.id }));
 const GRAPH_EDGES = PLAN.relationships.similarTo.map((e) => ({ a: e.src, b: e.dst, w: e.w }));
+const GRAPH_MEMBERSHIPS = expectedMemberships(PLAN);
 const COMMUNITY_ID_OF = communityIdentifier(FIXTURE_PSEUDONYM_SALT);
-/** The stats the sync must compute from that read, computed here the same way. */
+/**
+ * The stats the sync must compute from that read, computed here the same way:
+ * SIMILAR_TO for centrality and bridge, the flavour projection for the taste
+ * families.
+ */
 const STATS: GraphStats = computeGraphStats({
   nodes: GRAPH_BEVS.map((b) => b.id),
   similarity: GRAPH_EDGES,
-  partition: { nodes: GRAPH_BEVS.map((b) => b.id), edges: GRAPH_EDGES },
+  partition: flavourProjection(GRAPH_BEVS.map((b) => b.id), GRAPH_MEMBERSHIPS).partition,
   communityIdOf: COMMUNITY_ID_OF,
 });
 
@@ -96,7 +103,7 @@ interface FakeOptions {
   failCommit?: (transaction: number) => Error | undefined;
   /** What the vector index answers. */
   vector?: Row[];
-  /** Rewrites what the analytics phase reads back from the graph (`READ_BEV_IDS`, `READ_SIMILAR_TO`). */
+  /** Rewrites what the analytics phase reads back from the graph (`READ_BEV_IDS`, `READ_SIMILAR_TO`, `READ_BEV_ATTRIBUTES`). */
   readBack?: (statement: string, rows: Row[]) => Row[];
   /** What `replace_bev_graph_stats` does: throw, or answer a row count. Default: the number of rows sent. */
   publish?: (rows: readonly BevGraphStatsDbRow[], version: string) => number;
@@ -184,6 +191,7 @@ function fake(options: FakeOptions = {}): Fake {
     if (statement === VERIFY_INVARIANTS) return (options.verify ?? ((r) => r))(invariants.map((r) => ({ ...r })));
     if (statement === READ_BEV_IDS) return (options.readBack ?? ((_s, r) => r))(statement, GRAPH_BEVS.map((r) => ({ ...r })));
     if (statement === READ_SIMILAR_TO) return (options.readBack ?? ((_s, r) => r))(statement, GRAPH_EDGES.map((r) => ({ ...r })));
+    if (statement === READ_BEV_ATTRIBUTES) return (options.readBack ?? ((_s, r) => r))(statement, GRAPH_MEMBERSHIPS.map((r) => ({ ...r })));
     if (statement === READ_META) return [{ syncId: state.committedSyncId, lastSyncAt: "2026-11-10T05:50:07Z" }];
     if (statement === COUNT_STAMPED) return [{ n: 0 }];
     if (statement === REPORT_NEIGHBOURS) return [{ name: "Pepsi", brand: "Pepsi", categoryId: "soda", w: 0.9001 }];
@@ -240,6 +248,7 @@ test("a real run: upserts, sweep, analytics, verification, stamp -- in that orde
     // it, sweep last night's communities.
     READ_BEV_IDS,
     READ_SIMILAR_TO,
+    READ_BEV_ATTRIBUTES,
     ...requests(analyticsWriteSteps(graphStatsWrites(STATS))),
     ...analyticsSweepSteps().map((s) => s.statement),
     VERIFY_COUNTS,
@@ -297,7 +306,8 @@ test("the analytics phase reads the graph back AFTER the mirror sweep and writes
   assert.ok(lastUpsert < sent.indexOf(sweepSteps()[0]?.statement as string), "the sweep follows every upsert");
   assert.ok(lastMirrorSweep < sent.indexOf(READ_BEV_IDS), "the graph is read back only once it holds this generation alone");
   assert.ok(sent.indexOf(READ_BEV_IDS) < sent.indexOf(READ_SIMILAR_TO));
-  assert.ok(sent.indexOf(READ_SIMILAR_TO) < sent.indexOf(SET_BEV_GRAPH_STATS));
+  assert.ok(sent.indexOf(READ_SIMILAR_TO) < sent.indexOf(READ_BEV_ATTRIBUTES));
+  assert.ok(sent.indexOf(READ_BEV_ATTRIBUTES) < sent.indexOf(SET_BEV_GRAPH_STATS), "all three reads precede any computed write");
   assert.ok(sent.indexOf(SET_BEV_GRAPH_STATS) < sent.indexOf(UPSERT_COMMUNITIES));
   assert.ok(sent.indexOf(UPSERT_COMMUNITIES) < sent.indexOf(UPSERT_IN_COMMUNITY));
   // Last night's communities are swept only after tonight's are stamped ...
@@ -306,8 +316,8 @@ test("the analytics phase reads the graph back AFTER the mirror sweep and writes
   // ... and all of it before anything is verified or stamped.
   assert.ok(sweepNodes < sent.indexOf(VERIFY_COUNTS));
   assert.ok(sent.indexOf(VERIFY_INVARIANTS) < sent.indexOf(STAMP_META));
-  // Each of the two reads is sent once, with no parameter, inside the transaction.
-  for (const read of [READ_BEV_IDS, READ_SIMILAR_TO]) {
+  // Each of the three reads is sent once, with no parameter, inside the transaction.
+  for (const read of [READ_BEV_IDS, READ_SIMILAR_TO, READ_BEV_ATTRIBUTES]) {
     const calls = f.statements.filter((s) => s.statement === read);
     assert.equal(calls.length, 1);
     assert.equal(calls[0]?.where, "tx1");
@@ -331,7 +341,61 @@ test("what the analytics phase writes is what the package computes from the grap
   // One row per Bev, exactly one hub per community.
   assert.equal(writes.bevs.length, PLAN.counts.nodes.Bev);
   assert.equal(writes.inCommunity.filter((link) => link.hub).length, STATS.counts.communities);
-  assert.match(f.logs.join("\n"), new RegExp(`read {3}${PLAN.counts.nodes.Bev} \\(:Bev\\) and ${PLAN.counts.relationships.SIMILAR_TO} SIMILAR_TO back from the graph`));
+  assert.match(
+    f.logs.join("\n"),
+    new RegExp(
+      `read {3}${PLAN.counts.nodes.Bev} \\(:Bev\\), ${PLAN.counts.relationships.SIMILAR_TO} SIMILAR_TO and ${GRAPH_MEMBERSHIPS.length} flavour and note memberships back from the graph`,
+    ),
+  );
+  assert.match(
+    f.logs.join("\n"),
+    new RegExp(`stats {2}${STATS.counts.communities} taste families \\(${STATS.counts.singletons} of one Bev\\) over ${STATS.counts.partitionEdges} projected pairs`),
+  );
+});
+
+test("the taste families follow the MEMBERSHIPS read back; centrality does not move with them", async () => {
+  // The graph hands back the same number of memberships, but every flavour
+  // base is now one and the same: a different projection, so different families.
+  const f = fake({
+    readBack: (statement, rows) =>
+      statement === READ_BEV_ATTRIBUTES
+        ? rows.map((row) => (String(row.attribute).startsWith("flavor:") ? { ...row, attribute: "flavor:everything" } : row))
+        : rows,
+  });
+  // The fake's verification rows are for the real families, so the run may end in a VerificationError; the writes are what is read.
+  await runSync(PLAN, { syncId: SYNC_ID, dryRun: true }, deps(f)).catch(() => undefined);
+  const sentRows = <T>(statement: string): T[] => inTx(f, 1).filter((s) => s.statement === statement).flatMap((s) => s.parameters.rows as T[]);
+  const planned = graphStatsWrites(STATS);
+
+  const communities = sentRows<{ id: string; size: number }>(UPSERT_COMMUNITIES);
+  assert.ok(communities.length > 0);
+  assert.notDeepEqual(communities, planned.communities, "the families were computed from what was read, not from the plan");
+  const bevs = sentRows<{ id: string; pagerank: number; strength: number; degree: number; community: string }>(SET_BEV_GRAPH_STATS);
+  const plannedBev = new Map(planned.bevs.map((b) => [b.id, b]));
+  assert.equal(bevs.length, PLAN.counts.nodes.Bev);
+  for (const row of bevs) {
+    const before = plannedBev.get(row.id);
+    // PageRank, strength and degree are SIMILAR_TO's, which this read did not touch.
+    assert.deepEqual([row.pagerank, row.strength, row.degree], [before?.pagerank, before?.strength, before?.degree]);
+  }
+  assert.ok(bevs.some((row) => row.community !== plannedBev.get(row.id)?.community));
+});
+
+test("a membership carrying the catch-all base, or of an unknown kind, stops the run before anything is written", async () => {
+  for (const [attribute, pattern] of [
+    ["flavor:other", /carries the catch-all base "other"/],
+    ["brand:coca-cola", /is not "flavor:<base>" or "note:<token>"/],
+  ] as const) {
+    const f = fake({
+      readBack: (statement, rows) => (statement === READ_BEV_ATTRIBUTES ? rows.map((row, i) => (i === 0 ? { ...row, attribute } : row)) : rows),
+    });
+    await assert.rejects(runSync(PLAN, { syncId: SYNC_ID, dryRun: false }, deps(f)), pattern);
+    assert.equal(f.commits, 0);
+    assert.equal(f.rollbacks, 1);
+    assert.equal(f.begins, 1, "never retried");
+    assert.ok(!f.statements.some((s) => s.statement === SET_BEV_GRAPH_STATS));
+    assert.equal(f.published.length, 0);
+  }
 });
 
 test("the stats follow the GRAPH, not the plan: a different read gives different writes", async () => {
@@ -350,10 +414,11 @@ test("the stats follow the GRAPH, not the plan: a different read gives different
   for (const row of moved.slice(0, 20)) assert.ok(Math.abs(row.strength - (planned.get(row.id) as number) / 2) < 1e-9);
 });
 
-test("a read-back that does not hold the plan's Bevs or edges rolls back before anything is computed", async () => {
+test("a read-back that does not hold the plan's Bevs, edges or memberships rolls back before anything is computed", async () => {
   for (const [dropFrom, pattern] of [
     [READ_BEV_IDS, /the graph read back \d+ \(:Bev\), the plan has \d+/],
     [READ_SIMILAR_TO, /the graph read back \d+ SIMILAR_TO, the plan has \d+/],
+    [READ_BEV_ATTRIBUTES, /the graph read back \d+ flavour and note memberships, the plan has \d+/],
   ] as const) {
     const f = fake({ readBack: (statement, rows) => (statement === dropFrom ? rows.slice(1) : rows) });
     await assert.rejects(runSync(PLAN, { syncId: SYNC_ID, dryRun: false }, deps(f)), (error: Error) => {
@@ -492,7 +557,9 @@ test("the analytics report is printed after the read-back report, committed or n
     const readBack = log.indexOf("--- read-back report");
     const signals = log.indexOf("--- graph signals (computed from the graph as read back");
     assert.ok(readBack > 0 && signals > readBack, `dryRun ${dryRun}`);
-    assert.match(log, new RegExp(`modularity Q = ${STATS.modularity.toFixed(4)} over ${STATS.counts.communities} communities`));
+    assert.match(log, new RegExp(`modularity Q = ${STATS.modularity.toFixed(4)} over ${STATS.counts.communities} taste families`));
+    assert.match(log, /taste families are Louvain communities of the flavour projection; centrality and bridge are measured on SIMILAR_TO/);
+    assert.match(log, / {2}\| {2}bases: /);
     assert.match(log, /the 10 most central Bevs \(weighted PageRank\)/);
     assert.match(log, /category purity \d\.\d{4}: /);
     if (dryRun) assert.ok(signals < log.indexOf("--dry-run: the transaction was ROLLED BACK"), "printed before the rollback line");
@@ -619,7 +686,7 @@ test("--dry-run does everything, then rolls back and does NOT commit", async () 
     [READ_META, COUNT_STAMPED],
   );
   // The analytics phase ran in full inside it, all the same.
-  for (const statement of [READ_BEV_IDS, READ_SIMILAR_TO, SET_BEV_GRAPH_STATS, UPSERT_COMMUNITIES, UPSERT_IN_COMMUNITY]) {
+  for (const statement of [READ_BEV_IDS, READ_SIMILAR_TO, READ_BEV_ATTRIBUTES, SET_BEV_GRAPH_STATS, UPSERT_COMMUNITIES, UPSERT_IN_COMMUNITY]) {
     assert.ok(sent.includes(statement));
   }
 });

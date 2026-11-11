@@ -24,9 +24,11 @@
  *      not this run's (a removed ranking, a hidden Bev). `(:Meta)` is never
  *      swept;
  *   3. the analytics phase: READ the graph back (every `(:Bev)` id, every
- *      `SIMILAR_TO`), compute the signals with @bevi/ranking
- *      (analytics-core.ts), write them -- five properties on each `(:Bev)`,
- *      `(:Community)` nodes, `[:IN_COMMUNITY]` -- and sweep last night's
+ *      `SIMILAR_TO`, every Bev's flavour base and notes), compute the signals
+ *      with @bevi/ranking (analytics-core.ts) -- centrality and bridge on the
+ *      similarity graph, the community as the TASTE FAMILY: Louvain over the
+ *      flavour projection -- write them (five properties on each `(:Bev)`,
+ *      `(:Community)` nodes, `[:IN_COMMUNITY]`) and sweep last night's
  *      communities;
  *   4. verify, still inside the transaction, by reading the graph back: the
  *      count per label and per type must equal the plan (and, for the computed
@@ -74,7 +76,7 @@ import { fileURLToPath } from "node:url";
 
 import { RANKING_VERSION } from "@bevi/ranking";
 
-import { computeGraphStats, graphStatsDbRows, graphStatsReport, graphStatsWrites } from "./analytics-core.ts";
+import { computeGraphStats, flavourProjection, graphStatsDbRows, graphStatsReport, graphStatsWrites } from "./analytics-core.ts";
 import type { BevGraphStatsDbRow, GraphEdge, GraphStats } from "./analytics-core.ts";
 import { createNeo4jClient, isTransient, missingEnv, neo4jConfigFromEnv, NEO4J_ENV } from "./neo4j.ts";
 import type { Neo4jClient, Neo4jRunner, Neo4jTransaction } from "./neo4j.ts";
@@ -86,6 +88,7 @@ import {
   COUNT_STAMPED,
   MIRRORED_LABELS,
   MIRRORED_TYPES,
+  READ_BEV_ATTRIBUTES,
   READ_BEV_IDS,
   READ_META,
   READ_SIMILAR_TO,
@@ -100,6 +103,7 @@ import {
   analyticsWriteSteps,
   buildGraphPlan,
   chunk,
+  expectedMemberships,
   findBevByName,
   metaParameters,
   numeric,
@@ -345,11 +349,13 @@ const logUpsert = (log: Log, name: string, rows: number, requests: number): void
  * plan it was written from. If the two disagree the verification fails; they
  * are compared here first so the failure names the cause.
  *
- * `partition`, the graph Louvain runs on, is passed separately from the
- * similarity graph (analytics-core.ts). TODAY IT IS THE SAME `SIMILAR_TO`
- * GRAPH. It becomes the flavour projection once the package function that
- * builds one is on `main`; that change is a second read here (each Bev's
- * `(:Flavor)` and `(:Note)` memberships) and a different value on one line.
+ * TWO GRAPHS COME BACK. `SIMILAR_TO` is what centrality, strength and the
+ * bridge score are measured on. The Bev-to-flavour and Bev-to-note memberships
+ * are what the communities are clustered on: `flavourProjection` joins the
+ * Bevs that share a base or a note (the package's `attributeProjection`), and
+ * Louvain over that projection gives the TASTE FAMILIES. Clustering
+ * `SIMILAR_TO` itself would only hand back the root categories
+ * (analytics-core.ts says why, with the numbers).
  */
 async function analyticsPhase(
   tx: Neo4jRunner,
@@ -368,25 +374,30 @@ async function analyticsPhase(
     }
     return { a: row.a, b: row.b, w: numeric(row.w, `SIMILAR_TO (${row.a}, ${row.b}) w as read back`) };
   });
+  const attributeRows = await tx.run(READ_BEV_ATTRIBUTES);
+  const planned = expectedMemberships(plan).length;
   const mismatches = [
     nodes.length === plan.counts.nodes.Bev ? "" : `the graph read back ${nodes.length} (:Bev), the plan has ${plan.counts.nodes.Bev}`,
     similarity.length === plan.counts.relationships.SIMILAR_TO
       ? ""
       : `the graph read back ${similarity.length} SIMILAR_TO, the plan has ${plan.counts.relationships.SIMILAR_TO}`,
+    attributeRows.length === planned
+      ? ""
+      : `the graph read back ${attributeRows.length} flavour and note memberships, the plan has ${planned}`,
   ].filter((line) => line !== "");
   if (mismatches.length > 0) throw new VerificationError(mismatches);
-  deps.log(`  read   ${nodes.length} (:Bev) and ${similarity.length} SIMILAR_TO back from the graph`);
-
-  // 3b. compute: every formula is @bevi/ranking's (network.ts)
-  const stats = computeGraphStats({
-    nodes,
-    similarity,
-    partition: { nodes, edges: similarity },
-    communityIdOf: deps.communityIdOf,
-  });
   deps.log(
-    `  stats  ${stats.counts.communities} communities (${stats.counts.singletons} of one Bev), ` +
-      `modularity ${stats.modularity.toFixed(4)}, ${stats.counts.isolated} Bev(s) without an edge`,
+    `  read   ${nodes.length} (:Bev), ${similarity.length} SIMILAR_TO and ${attributeRows.length} flavour and note memberships back from the graph`,
+  );
+
+  // 3b. compute: every formula is @bevi/ranking's (network.ts). The partition
+  // is the flavour projection; the similarity graph is not clustered.
+  const { partition } = flavourProjection(nodes, attributeRows);
+  const stats = computeGraphStats({ nodes, similarity, partition, communityIdOf: deps.communityIdOf });
+  deps.log(
+    `  stats  ${stats.counts.communities} taste families (${stats.counts.singletons} of one Bev) over ` +
+      `${stats.counts.partitionEdges} projected pairs, modularity ${stats.modularity.toFixed(4)}; ` +
+      `${stats.counts.isolated} Bev(s) without a SIMILAR_TO edge`,
   );
 
   // 3c. write
@@ -581,6 +592,7 @@ async function publishStats(stats: GraphStats, plan: GraphPlan, syncId: string, 
 /** The analytics report (analytics-core.ts): catalog names only, no id of any kind. */
 function analyticsReport(stats: GraphStats, plan: GraphPlan, log: Log): void {
   log("\n--- graph signals (computed from the graph as read back; @bevi/ranking network.ts) ---");
+  log("taste families are Louvain communities of the flavour projection; centrality and bridge are measured on SIMILAR_TO");
   for (const line of graphStatsReport(stats, plan.nodes.bevs)) log(line);
 }
 

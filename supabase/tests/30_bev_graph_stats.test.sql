@@ -449,8 +449,9 @@ select is(
   'an update and a delete of every row, tried by the adult and by the minor, changed nothing'
 );
 
--- anon: the table's one policy names `authenticated` (section 1), so with RLS
--- on anon can read no row; and it cannot write one.
+-- anon: what stops anon READING is that the table's one policy names
+-- `authenticated`, which section 1 asserts from the catalog; it is not read
+-- as anon here. What is tried as anon is the two ways of writing.
 set local role anon;
 set local request.jwt.claims = '{"role": "anon"}';
 select throws_ok(

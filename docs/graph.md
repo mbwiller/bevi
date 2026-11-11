@@ -23,7 +23,7 @@ returns a 503 rather than a fallback when the instance is unreachable.
 
 The graph itself is a **mirror**, written nightly by `graph-sync` (see "The
 sync", below) from tables Postgres already holds. Since A-16 (4) the same job
-also **computes on it** — each Bev's centrality, community and bridge score —
+also **computes on it** — each Bev's centrality, taste family and bridge score —
 and writes the result back to Postgres ("Graph signals", below), so even what
 the graph computes does not live only there.
 
@@ -45,7 +45,7 @@ from it. The graph holds a copy, shaped as relationships.
 | `bev_stats`, `global_stats`, `category_stats`, `user_neighbors` | — |
 | `comparisons`, `want_to_try`, `follows`, `profiles`, auth, birth dates, handles, the age gate | — (never leaves Postgres) |
 | trigram search, dedupe, the prediction snapshot | — |
-| **`bev_graph_stats`** — written by `graph-sync` after each commit, **computed from the graph as read back** | `Bev.pagerank`, `strength`, `degree`, `bridge`, `community`; `(:Community)` with `[:IN_COMMUNITY]`. The one thing the graph computes rather than copies, and Postgres holds it too |
+| **`bev_graph_stats`** — written by `graph-sync` after each commit, **computed from the graph as read back** | `Bev.pagerank`, `strength`, `degree`, `bridge`, `community`; `(:Community)` (a **taste family**) with `[:IN_COMMUNITY]`. The one thing the graph computes rather than copies, and Postgres holds it too |
 | | `(:Meta {key: 'singleton'})`: `lastSyncAt`, `syncId`, counts — the graph's own bookkeeping |
 
 ```
@@ -56,8 +56,8 @@ bev_embeddings (pgvector, gte-small) ─────── graph-sync ───�
 rankings (pseudonymised, z in TypeScript) ── graph-sync ───────────▶ (:User {pseudonym})-[:RANKED {score, z, bucket, rankedAt}]->(:Bev), [:LIKES], [:DISLIKES]
 bev_edges ◀── graph-edges (Postgres only)
 bev_edges ────────────────────────────────── graph-sync ───────────▶ (:Bev)-[:SIMILAR_TO {w, tree, content, emb, profile, cop}]-(:Bev)
-   ▲                                                                       │ read back inside the sync transaction,
-   │                                                                       ▼ PageRank / Louvain / participation (@bevi/ranking)
+   ▲                                                                       │ read back inside the sync transaction (with each Bev's flavour base and notes),
+   │                                                                       ▼ PageRank / flavour projection + Louvain / participation (@bevi/ranking)
    │                                                                 Bev.pagerank, .bridge, .community; (:Bev)-[:IN_COMMUNITY]->(:Community)
 bev_graph_stats ◀─────────────────────────── graph-sync, after the commit ──┘
    ▲
@@ -418,8 +418,8 @@ Postgres into the Aura instance: the catalog, the similarity edges
 mirror computes nothing new.** Every weight was computed by `build-edges.ts`
 and every z-score by `zScoresFromRankings`; this job copies them, so the graph
 cannot disagree with the tables it mirrors. Then, in the same transaction, the
-**analytics phase** (A-16 (4)) reads the similarity graph back and computes
-each Bev's centrality, community and bridge score — "Graph signals", below.
+**analytics phase** (A-16 (4)) reads the graph back and computes each Bev's
+centrality, taste family and bridge score — "Graph signals", below.
 
 **Nothing the app reads depends on Neo4j answering.** A red run leaves
 yesterday's graph, and yesterday's `bev_graph_stats`, in place, and the app
@@ -447,7 +447,7 @@ The files, split the way `build-edges.ts` / `edges-core.ts` are:
 | File | What it is |
 |---|---|
 | `sync-core.ts` | The pure half: `buildGraphPlan(source, { pseudonymOf, rankingVersion })` and every Cypher statement, as fixed string constants. No fetch, no environment, no clock. |
-| `analytics-core.ts` | The pure half of the analytics phase: `computeGraphStats({ nodes, similarity, partition, communityIdOf })`, which calls `@bevi/ranking`'s network functions and nothing else, and the analytics report. |
+| `analytics-core.ts` | The pure half of the analytics phase: `flavourProjection(nodes, memberships)` and `computeGraphStats({ nodes, similarity, partition, communityIdOf })`, which call `@bevi/ranking`'s network functions and nothing else, and the analytics report. |
 | `sync.ts` | The I/O half: the reads, the two HMACs (user pseudonyms, community ids), the one transaction, the retries, the Postgres write-back, the reports. |
 | `neo4j.ts` | A dependency-free Query API client with explicit transactions and a typed, redacted error. |
 | `postgrest.ts` | The paged PostgREST client (`build-edges.ts` and `build-neighbours.ts` keep their own private copies and were not touched). The sync also calls `replace_bev_graph_stats` through it. |
@@ -478,7 +478,7 @@ stored in Postgres as well, in `bev_graph_stats`.
 | `(:Note)` | `token` = one of `flavorTokens(name, flavor)` | `bevCount`. **Only a token shared by at least two active Bevs becomes a node** (`TASTE_MIN_ATTR_BEVS`): a one-Bev token is a dead end for traversal |
 | `(:Bev)` | `id` | `name`, `brand` (raw), `brandKey`, `flavor`, `categoryId` (**the root**), `leafCategoryId`, `priceTier`, `isAlcoholic` (the root category's flag; **mandatory**), `isStarter`, `source`; with a flavour profile also `base`, `carbonated`, `caffeine`, `sweetness`, `dairy`, `alcohol`, `serve`, `profileSource`; with an embedding also `embedding` (384 floats) and `embeddingModel`. **Computed, on every Bev:** `pagerank`, `strength`, `bridge` (floats), `degree` (integer), `community` (the opaque id of its `(:Community)`) |
 | `(:User)` | `pseudonym` | **nothing else** |
-| `(:Community)` — **computed** | `id` = `c_` + 16 hex, **opaque** (see "Graph signals") | `size` |
+| `(:Community)` — **computed**: a **taste family** | `id` = `c_` + 16 hex, **opaque** (see "Graph signals") | `size` |
 | `(:Meta {key: 'singleton'})` | | `lastSyncAt`, `syncId`, `rankingVersion`, `edgesVersion`, one integer count per label and type (`bevCount`, `similarToCount`, `communityCount`, `inCommunityCount`, …), `modularity` (float), `analyticsVersion` (the `RANKING_VERSION` whose `network.ts` made the signals), `lastAttemptAt`, `lastAttemptOk`; `lastKeepAliveAt` is left untouched |
 
 | Relationship | Rule |
@@ -492,7 +492,7 @@ stored in Postgres as well, in `bev_graph_stats`.
 | `(:User)-[:RANKED {score, z, bucket, rankedAt}]->(:Bev)` | one per ranking of an **active** Bev. `z` comes from `zScoresFromRankings` called once over **every** ranking, active Bev or not, through `activeZScores` — the rule `graph-neighbours` uses |
 | `(:User)-[:LIKES {w}]->(:Bev)` | derived: `z >= +0.25`, `w = z` |
 | `(:User)-[:DISLIKES {w}]->(:Bev)` | derived: `z <= -0.25`, `w = -z`. The dead band gets neither |
-| `(:Bev)-[:IN_COMMUNITY {hub}]->(:Community)` — **computed** | exactly one per Bev; `hub = true` on exactly one member of each community (the one the community's id is derived from) |
+| `(:Bev)-[:IN_COMMUNITY {hub}]->(:Community)` — **computed** | exactly one per Bev, to its taste family; `hub = true` on exactly one member of each family (the one the family's id is derived from) |
 
 Every node and relationship of those seven labels and ten types also carries
 `syncId`, the stamp of the run that last wrote it. In the code the first six
@@ -530,9 +530,11 @@ Inside **one explicit transaction** (the Query API's `/tx` endpoints):
    the graph. `(:Meta)` is not an owned label and no sweep statement can match
    it.
 3. **The analytics phase** ("Graph signals", below), in four moves:
-   **read** every `(:Bev)` id and every `SIMILAR_TO` as `(a, b, w)` back out of
-   the graph (two fixed, ordered statements; about 4,700 rows come back in one
-   response); **compute** with `computeGraphStats`; **write** the five
+   **read** every `(:Bev)` id, every `SIMILAR_TO` as `(a, b, w)` and every
+   Bev's flavour base and notes as `{ node, attribute }` back out of the graph
+   (three fixed, ordered statements; about 4,700 edges and 1,400 memberships
+   come back, one response each); **compute** with `flavourProjection` and
+   `computeGraphStats`; **write** the five
    properties on each `(:Bev)` — with their own statement, because the Bev
    upsert of step 1 replaced the whole property map, so they are set afresh
    every run — plus the `(:Community)` nodes and `[:IN_COMMUNITY]`, stamped
@@ -563,16 +565,17 @@ analytics would be wrong. `IN_COMMUNITY` and `Community` are swept **after**
 tonight's were stamped: a Bev that changed community keeps its old
 relationship until then, and a community whose hub changed keeps its old node.
 This was proven on the live server on 2026-11-11 in one transaction that was
-rolled back: generation A (the fixture: 380 Bevs, 17 communities), then a
-changed generation B (the hubs of A's five largest communities hidden and
-every edge below 0.62 removed: 375 Bevs, 25 communities, 8 of A's community
-ids gone, 287 Bevs in a different community). B verified with zero failures;
-0 `(:Community)` and 0 `IN_COMMUNITY` not stamped B remained; none of the 8
-ids survived. As a control, the same graph was written a second time with
-every community renamed and **no** sweep: the verification failed on four
-checks (34 communities against 17, 760 memberships against 380, 380 Bevs
-without exactly one, 380 whose property disagreed with their relationship),
-and the sweep alone made it pass.
+rolled back: generation A (the fixture: 380 Bevs, 11 taste families), then a
+changed generation B (the hubs of A's five largest families hidden, every
+citrus Bev relabelled berry and every tea Bev coffee, and every edge below
+0.62 removed: 375 Bevs, 9 families, 7 of A's community ids gone, 277 Bevs in
+a different family). B verified with zero failures; 0 `(:Community)` and 0
+`IN_COMMUNITY` not stamped B remained; none of the 7 ids survived. As a
+control, the same graph was written a second time with every community
+renamed and **no** sweep: the verification failed on four checks (22
+communities against 11, 760 memberships against 380, 380 Bevs without exactly
+one, 380 whose property disagreed with their relationship), and the sweep
+alone made it pass.
 
 After the commit it confirms with one read that `(:Meta).syncId` is this run's,
 then **writes the computed stats to Postgres** (`replace_bev_graph_stats`; see
@@ -582,8 +585,9 @@ and Red Bull; one two-hop traversal `bev_edges` cannot express (Bevs that share
 a `(:Flavor)` **and** a `(:Note)` with Coca-Cola Classic but have no direct
 `SIMILAR_TO` to it); and a probe of the vector index. The index updates
 asynchronously after a commit, so an empty answer is retried briefly and then
-reported as a warning. The **analytics report** follows it (modularity, the
-communities, the most central Bevs, the bridges, the category purity).
+reported as a warning. The **analytics report** follows it (the modularity of
+the partition, each taste family with its hub and its commonest flavour bases,
+the most central Bevs, the bridges, the category purity).
 
 So the graph only ever moves from one complete, verified generation to the
 next. A reader never sees a half-written night, and the signals on a
@@ -687,12 +691,14 @@ Bevs, 75 categories, 145 brands, 23 flavours, 201 notes, 5 users; 3,931
 `SIMILAR_TO`, 1,040 `HAS_NOTE`, 14 `RANKED`, 5 `LIKES`, 4 `DISLIKES`; all 23
 verification checks equal to the plan. It was run again on 2026-11-11 with the
 analytics phase, against the instance that by then held the production graph,
-and passed all **32** checks, rolled back: 17 communities (the 15 root
-categories exactly, plus the two user-created Bevs that have no edge, each a
-community of one), modularity 0.8918, category purity 1.0000, four Bevs with a
-non-zero bridge score. Those are the **fixture's** numbers, not prod's: its
-embeddings are synthetic and clustered by root category on purpose, so its
-communities follow the taxonomy more exactly than real ones do.
+and passed all **32** checks, rolled back: 1,400 flavour and note memberships
+read back, 7,042 projected pairs, 10 taste families and one Bev alone (sizes
+56, 50, 46, 39, 38, 36, 33, 32, 29, 20 and 1), modularity 0.6518, category
+purity 0.4684, 286 of 380 Bevs with a non-zero bridge score. Those are the
+**fixture's** numbers, not prod's, but they are close: the families are
+clustered on the catalog's flavour bases and names, which the fixture shares
+with prod, and not on its synthetic embeddings (those only shape `SIMILAR_TO`,
+hence centrality and the bridge scores).
 
 ### The nightly workflow
 
@@ -721,32 +727,31 @@ any 64-hex run out of every server message before it can reach an error.
 ## Graph signals: centrality, communities, bridges (A-16 (4))
 
 This is the graph earning its keep. Every night, inside the sync's one
-transaction, the similarity graph is **read back out of Neo4j** and three
-signals are computed per Bev, stored on the graph's nodes, and written to
-Postgres.
+transaction, the graph is **read back out of Neo4j** and three signals are
+computed per Bev, stored on the graph's nodes, and written to Postgres.
 
 | Signal | What it is | What it is for |
 |---|---|---|
 | **centrality** (`pagerank`) | Weighted PageRank over `SIMILAR_TO`, damping 0.85. Sums to 1 over the Bevs of one run | How representative a Bev is of its neighbourhood: many similar Bevs, heavily weighted, lead to it. A smoothed strength — it also rewards being similar to Bevs that are themselves central |
-| **community** (`community`) | The Louvain community (modularity clustering, resolution 1) the Bev falls in, as an **opaque id** | Data-driven taste neighbourhoods, for community-aware diversity and exploration in `recommend()` |
-| **bridge** (`bridge`) | The participation coefficient, in [0, 1): 0 when all of a Bev's `SIMILAR_TO` weight stays inside its own community, higher the more it is spread over several | A gateway from one neighbourhood into another |
+| **community** (`community`) | The Bev's **taste family**: its Louvain community (modularity clustering, resolution 1) in the **flavour projection** of the graph — Bevs joined through the flavour bases and notes they share. An **opaque id** | Families that cut across the category tree (citrus, berry, cola, coffee, …), for community-aware diversity and exploration in `recommend()` |
+| **bridge** (`bridge`) | The participation coefficient, in [0, 1): the share of a Bev's `SIMILAR_TO` weight that goes to Bevs of **other** taste families, measured as 1 − Σ (share per family)² | A gateway from one family into another. **Not a rare flag:** see below |
 
 `strength` (the sum of a Bev's `SIMILAR_TO` weights) and `degree` (how many it
 has) are stored alongside, for diagnostics.
 
-**Nothing consumes them yet.** `@bevi/ranking` 1.7.0 declares
-`PredictionSnapshot.bevGraph` and leaves it unread; the package PR
-`rank/graph-recs` reads it in `recommend()` behind an option that is off by
-default. So this work changes no prediction and no recommendation.
+**Nothing predicts from them.** No prediction reads `bevGraph`. Since
+`@bevi/ranking` 1.8.0 (#176) `recommend()` can read the families and the
+bridge scores, behind two options that ship **off**, and nothing passes them
+yet. So this work changes no prediction and no recommendation.
 
 ### Where the formulas live
 
 In `@bevi/ranking`, `packages/ranking/src/network.ts`, paper §10.9
 (`docs/bevi-ranking-math.tex`, "Graph signals"): `graphStrength`, `pageRank`,
 `louvainCommunities`, `participationCoefficient`, `communityHubs`.
-`scripts/graph/analytics-core.ts` calls those five and nothing else — a unit
-test reads its imports to hold that down — and there is no SQL twin and no
-Cypher twin. The functions are deterministic in the *set* of nodes and edges,
+and, since 1.8.0, `attributeProjection`. `scripts/graph/analytics-core.ts`
+calls those six and nothing else — a unit test reads its imports to hold that
+down — and there is no SQL twin and no Cypher twin. The functions are deterministic in the *set* of nodes and edges,
 so shuffled input gives identical rows.
 
 ### Why not GDS
@@ -759,54 +764,84 @@ checks every statement. The graph is the **substrate** — the place the
 relationships live and are read from — and the arithmetic is ours, which also
 means it is the same arithmetic the package's golden vectors pin.
 
-### The two graphs: similarity, and the partition
+### Two graphs: similarity for centrality, the flavour projection for the families
 
 `computeGraphStats({ nodes, similarity, partition, communityIdOf })` takes the
 graph the communities are computed on as a **separate input** from the
-similarity graph:
+similarity graph, and the sync passes two different graphs:
 
 | | Computed from |
 |---|---|
-| `strength`, `degree` | `graphStrength(similarity)` |
-| `pagerank` | `pageRank(similarity)` |
-| `community` | `louvainCommunities(partition)` |
-| the hub | `communityHubs(partition, communityOf)` |
-| `bridge` | `participationCoefficient(similarity, communityOf)`: a Bev's `SIMILAR_TO` weight, spread across the partition's communities |
+| `strength`, `degree` | `graphStrength(similarity)` — `SIMILAR_TO` |
+| `pagerank` | `pageRank(similarity)` — `SIMILAR_TO` |
+| `community` | `louvainCommunities(partition)` — the **flavour projection** |
+| the hub | `communityHubs(partition, communityOf)` — the hub **over the projection** |
+| `bridge` | `participationCoefficient(similarity, communityOf)`: a Bev's `SIMILAR_TO` weight, spread across the families |
 
-**Today the sync passes the `SIMILAR_TO` graph as the partition too. That is
-not a promise about what a community is.** Louvain over `SIMILAR_TO` largely
-rediscovers the root categories (the tree term and the content term both carry
-the category), which is the taxonomy we already have. Computed read-only from
-the committed production graph on 2026-11-11, with nothing written: 11
-communities over 385 Bevs (sizes 65, 53, 41, 41, 41, 40, 33, 30, 22, 18 and
-one Bev with no edge), modularity 0.8265, **category purity 0.84**. Six of the
-ten are a single root category; the one that is not close to one (33 Bevs,
-39% in its commonest category) is where wine, spirits, kombucha and coconut
-water ended up together, and it holds every one of the ten highest bridge
-scores.
+**The partition is the flavour projection.** Inside the transaction the sync
+reads each Bev's memberships back from the graph (`READ_BEV_ATTRIBUTES`, a
+fixed, ordered statement):
 
-The partition graph is about to become the **flavour projection**: Bevs joined
-through the `(:Flavor)` and `(:Note)` nodes they share, which cuts across
-categories (measured from Matt's side on the same graph: ten families,
-category purity 0.47; that figure was not reproduced in this PR, because the
-package function that builds the projection is not on `main` yet). When it is,
-the analytics phase gains one more read (each Bev's flavour and note
-memberships) and passes the projection as `partition`. No migration, no
-contract change and no change to the table: a community id is opaque either
-way. The analytics report prints the number that shows the difference, the
-**category purity** (Σ over communities of the size of its largest
-root-category group, divided by the number of Bevs: 1 when every community
-sits inside one root category).
+- one `flavor:<name>` row per `(:Bev)-[:TASTES_OF]->(:Flavor)`, **except the
+  catch-all base `other`** — it is not a flavour, it is where a Bev goes when
+  no base fits, and joining Bevs through it would glue unrelated drinks into
+  one family;
+- one `note:<token>` row per `(:Bev)-[:HAS_NOTE]->(:Note)`.
+
+Cypher only **extracts** the memberships. `attributeProjection` in
+`@bevi/ranking` turns them into a weighted graph over the Bevs (Adamic–Adar:
+each attribute two Bevs share adds 1 / ln(the number of Bevs carrying it), so
+a rare shared attribute says a lot and a common one little), and Louvain over
+that graph gives the families. A Bev that shares no counted attribute with any
+other is a family of one; that is legal.
+
+**Why not cluster `SIMILAR_TO` itself.** Because it only rediscovers the root
+categories: every edge weight carries the category (the tree term and the
+content term), so Louvain over it hands back the taxonomy we already have.
+Both were measured on the committed production graph on 2026-11-11, read-only,
+with nothing written (385 Bevs, 4,653 `SIMILAR_TO`):
+
+| Partition graph | Communities | Modularity | Category purity |
+|---|---|---|---|
+| `SIMILAR_TO` | 10, plus one Bev with no edge (sizes 65, 53, 41, 41, 41, 40, 33, 30, 22, 18, 1). Six of the ten are one root category exactly | 0.8265 | **0.84** |
+| the flavour projection (1,422 memberships → 7,306 projected pairs) | 10 families, plus one Bev alone (sizes 50, 49, 47, 46, 41, 36, 34, 32, 29, 20, 1) | 0.6478 | **0.47** |
+
+The ten families read as citrus and lemon-lime; berry; tropical; tea; orange,
+grape and apple; cola; coffee; root beer, ginger and cream; mineral and
+herbal; and beer with wine. The one Bev alone is Yakult. **Category purity**
+is Σ over communities of the size of its largest root-category group, divided
+by the number of Bevs — 1 when every community sits inside one root category,
+lower the more the families cut across the tree. The analytics report prints
+it every night, with each family's hub and its three commonest flavour bases.
+
+**What a family is made of, said plainly.** Mostly the **hand-labelled flavour
+base** (`bev_flavor_profiles.base`), plus **words shared between names**. The
+clustering merges 23 uneven labels into about ten broad families, and it
+places the Bevs whose base is `other` or missing by their notes alone. It does
+not discover taste from behaviour: no ranking and no embedding enters it. A
+relabelled base moves a Bev to another family the next night.
+
+**So a high bridge score is not rare, and that is by design.** `SIMILAR_TO`
+follows categories and the families cut across them, so most of a typical
+Bev's similar Bevs belong to other families. On the production graph the
+bridge score is zero for only 52 of 385 Bevs, its median is 0.62 and its
+maximum 0.83. Read it as a ranking among Bevs — which ones reach furthest
+outside their own family — not as a flag that something unusual was found.
+(Clustered on `SIMILAR_TO` instead, 129 Bevs scored 0 and the ten highest
+scores all sat in one leftover community.)
 
 ### The community id is opaque
 
 A community is named after its **hub**: the member with the greatest
-within-community strength (`communityHubs`; a tie goes to the smallest id).
-That keeps a community's name stable from night to night for as long as its
-hub stays its hub.
+within-community strength **in the flavour projection** (`communityHubs`; a
+tie goes to the smallest id). That keeps a family's name stable from night to
+night for as long as its hub stays its hub.
 
 But the id reaches every client in the prediction snapshot, a hub can be an
-**alcoholic** Bev, and a catalog Bev's id can be derived by anyone (it is a
+**alcoholic** Bev (on the production graph the hub of the beer-and-wine family
+is a wine, and in the fixture a hard seltzer is the hub of the berry family,
+whose commonest category is energy drinks), and a catalog Bev's id can be
+derived by anyone (it is a
 uuid v5 of a public slug under a public namespace). So neither the hub's id
 nor a plain hash of it may be the public id — an under-21 client could confirm
 "my lemonade's community is led by that beer" by hashing the catalog. The id
@@ -883,7 +918,7 @@ The same migration revises `get_prediction_snapshot()` — the latest definition
 bevGraph: [[bev_id, community_id, pagerank, bridge], …]
 ```
 
-One tuple per row whose Bev is in the function's own `visible` gate, so a
+`community_id` is the Bev's taste family. One tuple per row whose Bev is in the function's own `visible` gate, so a
 hidden Bev's row never appears and, for an under-21 viewer, neither does an
 alcoholic Bev's. Ordered by `bev_id`. `[]`, never null. `pagerank` is rounded
 to 8 decimals and `bridge` to 4 on the way out, to keep about 385 tuples per
@@ -1279,9 +1314,10 @@ right choice: a Bolt connection pool has nothing to pool.
 - **The graph signals are built (A-16 (4), `be/graph-stats`), and only partly
   run.** What **has** run, on 2026-11-11 against the live instance: the one new
   constraint (`community_id_unique`, applied); `npm run graph:sync --
-  --fixture`, i.e. every upsert, the analytics phase, both sweeps and all 32
-  verification checks on the catalog fixture, **rolled back**; and the
-  generation-A-then-B check of the community sweep, also rolled back. What has
+  --fixture`, i.e. every upsert, the analytics phase with the flavour
+  projection, both sweeps and all 32 verification checks on the catalog
+  fixture, **rolled back**; and the generation-A-then-B check of the community
+  sweep, also rolled back. What has
   **not** run anywhere: **any of the SQL** (`20261110000100` and pgTAP 30 —
   there is no Docker or psql on the machine it was built on, so CI's `db` job
   on the PR is the first execution); the **Postgres write-back**
@@ -1293,11 +1329,13 @@ right choice: a Bolt connection pool has nothing to pool.
   `graph-sync` after the merge — and **`20261110000100` must be on prod before
   that merge**, or the nightly run calls an RPC that does not exist (the graph
   would still commit; the run would be red every night).
-- **The partition graph is `SIMILAR_TO` for now**, so the first communities
-  will largely follow the root categories (purity 0.84 on the real graph). The flavour projection replaces it
-  once its package function is on `main` ("Graph signals", above).
-- **Nothing reads `bevGraph` yet.** `rank/graph-recs` does, behind an option
-  that is off by default.
+- **A taste family is only as good as the flavour labels.** It is driven
+  mostly by the hand-labelled base plus shared words in names ("Graph
+  signals", above); the Bevs with base `other` and the user-created ones with
+  no profile are placed by their notes alone, or not at all.
+- **Nothing passes the options that read `bevGraph` yet.** `recommend()` can
+  read the families and bridges since 1.8.0 (#176), behind two options that
+  ship off.
 - `graph-keepalive.yml` and `keepalive.ts` are still there on purpose, until
   the sync has run green for a week.
 - `graph-query`'s Deno tests cover input handling only and skip without a

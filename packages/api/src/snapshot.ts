@@ -37,7 +37,7 @@ interface SnapshotJson {
   edges?: Array<[string, string, Num]> | null;
   /** Stage 4 (20261101000100): the viewer's user_neighbors rows as [alias, sim, common]. */
   userNeighbors?: Array<[string, Num, number]> | null;
-  /** A-16 (4) (20261110000100): [bev_id, community_id, pagerank, bridge] per visible Bev with a bev_graph_stats row. */
+  /** A-16 (4) (20261110000100): [bev_id, community_id (the taste family), pagerank, bridge] per visible Bev with a bev_graph_stats row. */
   bevGraph?: Array<[string, string, Num, Num]> | null;
 }
 
@@ -120,11 +120,12 @@ export function toViewerSnapshot(client: SupabaseClient, json: SnapshotJson): Vi
       [viewer.id]: json.userNeighbors.map(([userId, sim, common]) => ({ userId, sim: num(sim), common })),
     };
   }
-  // Each Bev's place in the similarity graph, as the nightly graph sync computed it. Optional in
-  // @bevi/ranking and read by nothing in 1.7.0. Same rule as above: set only when the key is
-  // present, even as [] (which maps to {}: "provided, and no Bev has stats yet"), so an older
-  // payload without the key maps to a snapshot without the field. `community` is an opaque id,
-  // to be compared for equality only.
+  // Each Bev's place in the graph, as the nightly graph sync computed it: its taste family
+  // (`community`), its PageRank and its bridge score. Optional in @bevi/ranking and read only by
+  // opt-in modes of `recommend()`. Same rule as above: set only when the key is present, even as
+  // [] (which maps to {}: "provided, and no Bev has stats yet"), so an older payload without the
+  // key maps to a snapshot without the field. `community` is an opaque id, to be compared for
+  // equality only.
   if (Array.isArray(json.bevGraph)) {
     const bevGraph: NonNullable<PredictionSnapshot['bevGraph']> = {};
     for (const [bevId, community, pagerank, bridge] of json.bevGraph) {

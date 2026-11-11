@@ -51,12 +51,15 @@ CREATE CONSTRAINT user_pseudonym_unique IF NOT EXISTS
 FOR (u:User) REQUIRE u.pseudonym IS UNIQUE
 ;
 
-// Community.id is an OPAQUE id: "c_" plus 16 hex characters of a keyed HMAC of
-// the community's hub Bev id (scripts/graph/sync.ts, communityIdentifier). It
-// is never the hub's id and never an unkeyed hash of it, because the same id
-// reaches clients in the prediction snapshot and a hub can be an alcoholic
-// Bev. Communities are COMPUTED nightly inside the sync transaction from the
-// graph as read back (scripts/graph/analytics-core.ts), not mirrored.
+// A (:Community) is a TASTE FAMILY: a Louvain community of the flavour
+// projection of this graph (Bevs joined through the (:Flavor) and (:Note)
+// nodes they share). Community.id is an OPAQUE id: "c_" plus 16 hex characters
+// of a keyed HMAC of the family's hub Bev id (scripts/graph/sync.ts,
+// communityIdentifier). It is never the hub's id and never an unkeyed hash of
+// it, because the same id reaches clients in the prediction snapshot and a hub
+// can be an alcoholic Bev. Families are COMPUTED nightly inside the sync
+// transaction from the graph as read back (scripts/graph/analytics-core.ts),
+// not mirrored.
 CREATE CONSTRAINT community_id_unique IF NOT EXISTS
 FOR (c:Community) REQUIRE c.id IS UNIQUE
 ;
@@ -124,7 +127,8 @@ OPTIONS { indexConfig: {
 //               pagerank, strength, degree, bridge, community})
 //                                           -- COMPUTED, on every Bev; below
 //   (:User     {pseudonym})                 -- and nothing else, ever
-//   (:Community {id, size})                 -- COMPUTED; id is opaque
+//   (:Community {id, size})                 -- COMPUTED: a taste family; id
+//                                              is opaque
 //   (:Meta     {key: 'singleton', lastSyncAt, syncId, rankingVersion,
 //               edgesVersion, <one count per label and type>,
 //               modularity, analyticsVersion,
@@ -141,24 +145,29 @@ OPTIONS { indexConfig: {
 //   (:User)-[:RANKED {score, z, bucket, rankedAt}]->(:Bev)
 //   (:User)-[:LIKES {w}]->(:Bev)                derived: z >= +0.25, w = z
 //   (:User)-[:DISLIKES {w}]->(:Bev)             derived: z <= -0.25, w = -z
-//   (:Bev)-[:IN_COMMUNITY {hub}]->(:Community)  COMPUTED: exactly one per Bev;
-//                                               hub = true on exactly one
-//                                               member of each community
+//   (:Bev)-[:IN_COMMUNITY {hub}]->(:Community)  COMPUTED: exactly one per Bev,
+//                                               to its taste family; hub =
+//                                               true on exactly one member
+//                                               of each family
 //
 // The computed part (A-16 (4)). After the mirror is written and swept, the
-// sync reads every (:Bev) id and every SIMILAR_TO back out of the graph and
-// computes, with @bevi/ranking's network.ts and nothing else:
+// sync reads every (:Bev) id, every SIMILAR_TO and every Bev's TASTES_OF and
+// HAS_NOTE memberships back out of the graph and computes, with @bevi/ranking's
+// network.ts and nothing else:
 //
 //   Bev.pagerank   FLOAT    weighted PageRank over SIMILAR_TO; sums to 1
 //   Bev.strength   FLOAT    the sum of the Bev's SIMILAR_TO weights
 //   Bev.degree     INTEGER  how many SIMILAR_TO it has
-//   Bev.bridge     FLOAT    participation coefficient in [0, 1): how its
-//                           SIMILAR_TO weight is spread across communities
+//   Bev.bridge     FLOAT    participation coefficient in [0, 1): how much of
+//                           its SIMILAR_TO weight goes to Bevs of OTHER
+//                           taste families. Non-zero for most Bevs
 //   Bev.community  STRING   the opaque id of its (:Community)
 //
-// Communities are Louvain communities of a PARTITION graph that is an input
-// of the computation: today the SIMILAR_TO graph itself, soon the flavour
-// projection (Bevs joined through shared (:Flavor) and (:Note) nodes). These
+// Centrality is measured on SIMILAR_TO; the families are clustered on the
+// FLAVOUR PROJECTION: (:Bev)-[:TASTES_OF]->(:Flavor) -- all but the catch-all
+// base 'other' -- and (:Bev)-[:HAS_NOTE]->(:Note), projected onto the Bevs by
+// attributeProjection in @bevi/ranking. Clustering SIMILAR_TO itself only
+// rediscovers the root categories (docs/graph.md has the measurement). These
 // five are set by their own statement after the Bev upsert, which replaces
 // the whole property map, so they are fresh every run. Postgres holds the
 // same numbers in bev_graph_stats, written after the commit. No gds.*

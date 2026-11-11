@@ -36,7 +36,8 @@
  * list -- it is the scalar and the all-integer list that go wrong, silently.
  *
  * TWO KINDS OF OWNED DATA (A-16 (4)). The MIRRORED labels and types are copied
- * from Postgres and counted by the plan. The COMPUTED ones -- `(:Community)`,
+ * from Postgres and counted by the plan. The COMPUTED ones -- `(:Community)`
+ * (a taste family),
  * `[:IN_COMMUNITY]` and five properties on `(:Bev)` -- are derived inside the
  * transaction from the graph as read back (analytics-core.ts), counted by the
  * `GraphStats` that computation returns, and written back to Postgres after
@@ -45,7 +46,8 @@
 
 import { TASTE_MIN_ATTR_BEVS, flavorTokens, normaliseBrand } from "@bevi/ranking";
 
-import type { GraphStats, GraphStatsWrites } from "./analytics-core.ts";
+import { CATCH_ALL_FLAVOR } from "./analytics-core.ts";
+import type { GraphStats, GraphStatsWrites, Membership } from "./analytics-core.ts";
 import { treeNodeOf } from "./edges-core.ts";
 import { activeZScores } from "./neighbours-core.ts";
 
@@ -1029,9 +1031,9 @@ export function writeSteps(plan: GraphPlan): WriteStep[] {
 //
 // After the mirror sweep the transaction holds exactly this generation, and
 // the graph is READ BACK: the signals are computed from what the graph holds,
-// not from the plan the graph was written from. Both reads are ordered, so the
-// rows arrive in the same order every night (the package functions do not
-// depend on it; a reader of two logs does).
+// not from the plan the graph was written from. All three reads are ordered,
+// so the rows arrive in the same order every night (the package functions do
+// not depend on it; a reader of two logs does).
 
 export const READ_BEV_IDS = `
 MATCH (b:Bev)
@@ -1043,6 +1045,49 @@ export const READ_SIMILAR_TO = `
 MATCH (a:Bev)-[s:SIMILAR_TO]->(b:Bev)
 RETURN a.id AS a, b.id AS b, s.w AS w
 ORDER BY a.id, b.id`;
+
+/**
+ * Each Bev's flavour base and notes, as `{ node, attribute }` rows: what the
+ * taste families are clustered on (`flavourProjection` in analytics-core.ts).
+ * Cypher only EXTRACTS the memberships; the weights of the projection are
+ * `attributeProjection`'s in @bevi/ranking.
+ *
+ * THE CATCH-ALL BASE `other` IS LEFT OUT. It is not a flavour -- it is where a
+ * Bev goes when no base fits -- and joining Bevs through it would glue
+ * unrelated drinks into one family. A Bev whose base is `other`, or that has
+ * no profile at all, is placed by its notes alone.
+ *
+ * The `UNION ALL` sits in a subquery because an `ORDER BY` after a bare
+ * `UNION` orders only its last branch.
+ */
+export const READ_BEV_ATTRIBUTES = `
+CALL () {
+  MATCH (b:Bev)-[:TASTES_OF]->(f:Flavor)
+  WHERE f.name <> 'other'
+  RETURN b.id AS node, 'flavor:' + f.name AS attribute
+  UNION ALL
+  MATCH (b:Bev)-[:HAS_NOTE]->(n:Note)
+  RETURN b.id AS node, 'note:' + n.token AS attribute
+}
+RETURN node, attribute
+ORDER BY node, attribute`;
+
+/**
+ * The memberships `READ_BEV_ATTRIBUTES` must hand back for this plan, in
+ * (node, attribute) order: one `flavor:<base>` per `TASTES_OF` that is not the
+ * catch-all, one `note:<token>` per `HAS_NOTE`. The sync compares the COUNT
+ * with what the graph returned before it clusters anything; the tests use the
+ * rows as the graph's answer.
+ */
+export function expectedMemberships(plan: GraphPlan): Membership[] {
+  const rows: Membership[] = [
+    ...plan.relationships.tastesOf
+      .filter((link) => link.to !== CATCH_ALL_FLAVOR)
+      .map((link) => ({ node: link.from, attribute: `flavor:${link.to}` })),
+    ...plan.relationships.hasNote.map((link) => ({ node: link.from, attribute: `note:${link.to}` })),
+  ];
+  return rows.sort((x, y) => cmp(x.node, y.node) || cmp(x.attribute, y.attribute));
+}
 
 /**
  * The five computed properties of a `(:Bev)`. NOT part of `UPSERT_BEVS`:
@@ -1432,6 +1477,7 @@ export const ALL_STATEMENTS: Record<string, string> = {
   UPSERT_DISLIKES,
   READ_BEV_IDS,
   READ_SIMILAR_TO,
+  READ_BEV_ATTRIBUTES,
   SET_BEV_GRAPH_STATS,
   UPSERT_COMMUNITIES,
   UPSERT_IN_COMMUNITY,
