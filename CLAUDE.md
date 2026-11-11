@@ -1,5 +1,10 @@
 # Bevi — repo-wide notes for Claude Code agents
 
+@AGENTS.md
+
+The import above keeps `AGENTS.md` (ticket workflow, rules that hold
+everywhere) loaded: Claude Code reads it only when no root `CLAUDE.md` exists.
+
 Lanes: `supabase/`, `packages/api/`, `shared/`, `data/catalog/` are Arjun's;
 `app/`, `packages/ranking/`, `design/` are Matt's. Each lane's `CLAUDE.md`
 holds its rules and wins over anything here.
