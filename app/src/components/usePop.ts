@@ -3,6 +3,8 @@ import { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withSequenc
 
 import { motion } from '@/theme';
 
+import { NO_TRANSFORM } from './PressFeedback';
+
 /** bundle.css `@keyframes bv-pop { 45% { transform: scale(1.22) } }` over `base`. */
 export const POP_SCALE = 1.22;
 /** The share of `motion.base` spent growing; the rest settles back to 1. */
@@ -19,7 +21,8 @@ const EASE = Easing.bezier(0.2, 0.8, 0.2, 1);
 export function usePop() {
   const reduced = useReducedMotion();
   const scale = useSharedValue(1);
-  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  // No transform at rest (`NO_TRANSFORM`); the pop always settles back on exactly 1.
+  const style = useAnimatedStyle(() => ({ transform: scale.value === 1 ? NO_TRANSFORM : [{ scale: scale.value }] }));
   const pop = useCallback(() => {
     if (reduced) return;
     scale.value = withSequence(

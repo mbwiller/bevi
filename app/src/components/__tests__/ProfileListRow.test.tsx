@@ -28,7 +28,7 @@ it('Press: the content gives way, the full-bleed row and its divider stay put', 
   expect(rowStyle.borderBottomWidth).toBe(1);
   expect(rowStyle.transform).toBeUndefined();
   const content = StyleSheet.flatten(screen.getByTestId('profile-list-row-content').props.style) as ViewStyle;
-  expect(content).toMatchObject({ flexDirection: 'row', opacity: 1, transform: [{ scale: 1 }] });
+  expect(content).toMatchObject({ flexDirection: 'row', opacity: 1, transform: [] });
   await fireEvent(row, 'pressIn');
   await fireEvent(row, 'pressOut');
   await fireEvent.press(row);

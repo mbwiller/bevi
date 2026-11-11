@@ -11,7 +11,7 @@ import { ProfileHero } from '@/features/profile/ProfileParts';
 import { controls } from '@/testing/fakeApi';
 import { size } from '@/theme';
 
-import { BevActions } from '../BevParts';
+import { BevActions, SaveButton } from '../BevParts';
 import { FeedPost } from '../FeedPost';
 import { usePressFeedback } from '../PressFeedback';
 import { TabBar, type TabId } from '../TabBar';
@@ -21,11 +21,14 @@ import { FollowPill, UserRow } from '../UserRow';
 // place is checked to carry them, to keep its press firing once, and to pop only on its own press.
 jest.mock('react-native-reanimated', () => {
   const mock = jest.requireActual('react-native-reanimated/mock');
-  return { ...mock, useReducedMotion: () => false, withSequence: jest.fn(() => 1) };
+  return { ...mock, useReducedMotion: () => false, withSequence: jest.fn(() => 1), withTiming: jest.fn(mock.withTiming) };
 });
-const { withSequence } = jest.requireMock('react-native-reanimated') as { withSequence: jest.Mock };
+const { withSequence, withTiming } = jest.requireMock('react-native-reanimated') as { withSequence: jest.Mock; withTiming: jest.Mock };
 
-beforeEach(() => withSequence.mockClear());
+beforeEach(() => {
+  withSequence.mockClear();
+  withTiming.mockClear();
+});
 
 const BEV: BevSummary = {
   id: 'b2',
@@ -42,8 +45,8 @@ const BEV: BevSummary = {
 };
 const ARJUN = { displayName: 'Arjun Cheema', handle: 'acheema5', avatarUrl: null };
 
-/** The press style at rest, on whatever gives way. */
-const AT_REST = { opacity: 1, transform: [{ scale: 1 }] };
+/** The press style at rest, on whatever gives way: fully opaque, with no transform. */
+const AT_REST = { opacity: 1, transform: [] };
 const styleOf = (el: { props: { style?: unknown } }) => StyleSheet.flatten(el.props.style as never) as Record<string, unknown>;
 
 describe('Press', () => {
@@ -135,6 +138,17 @@ describe('Change', () => {
     expect(screen.getByRole('button', { name: 'Saved to Want to Try' }).props['aria-pressed']).toBe(true);
     expect(withSequence).toHaveBeenCalledTimes(1);
     expect(onRank).toHaveBeenCalledTimes(1);
+  });
+
+  it('a bookmark with no handler stays inert: no onPress, no press feedback, no pop', async () => {
+    await render(<SaveButton saved={false} />);
+    const save = screen.getByRole('button', { name: 'Save to Want to Try' });
+    await fireEvent(save, 'pressIn');
+    await fireEvent.press(save);
+    expect(styleOf(save)).toMatchObject(AT_REST);
+    expect(withSequence).not.toHaveBeenCalled();
+    expect(withTiming).not.toHaveBeenCalled();
+    expect(styleOf(screen.getByTestId('save-pop')).transform).toEqual([]);
   });
 
   it("FollowButton pops on its press and keeps its pressed dim and the caller's layout", async () => {

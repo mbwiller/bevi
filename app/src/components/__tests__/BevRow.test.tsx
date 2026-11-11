@@ -121,7 +121,7 @@ it('Press: the row button gives way under the finger, not the row with its divid
   const onPress = jest.fn();
   await render(<BevRow bev={BEV} number={1} onPress={onPress} />);
   const button = screen.getByRole('button', { name: '1. Diet Coke' });
-  expect(StyleSheet.flatten(button.props.style)).toMatchObject({ opacity: 1, transform: [{ scale: 1 }] });
+  expect(StyleSheet.flatten(button.props.style)).toMatchObject({ opacity: 1, transform: [] });
   // The row's own box (background and divider) has no press transform.
   let row = button.parent;
   while (row && !(typeof row.type === 'string' && StyleSheet.flatten(row.props.style)?.borderBottomWidth)) row = row.parent;

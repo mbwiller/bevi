@@ -39,7 +39,7 @@ it('gives way under the finger, scale 0.98 and opacity 0.7 over motion.fast, and
       <Text>Row</Text>
     </FeedbackPressable>,
   );
-  expect(pose()).toEqual({ opacity: 1, transform: [{ scale: 1 }] });
+  expect(pose()).toEqual({ opacity: 1, transform: [] });
 
   await fireEvent(screen.getByRole('button', { name: 'Row' }), 'pressIn');
   expect(withTiming).toHaveBeenLastCalledWith(1, { duration: motion.fast });
@@ -48,18 +48,18 @@ it('gives way under the finger, scale 0.98 and opacity 0.7 over motion.fast, and
 
   await fireEvent(screen.getByRole('button', { name: 'Row' }), 'pressOut');
   expect(withTiming).toHaveBeenLastCalledWith(0, { duration: motion.fast });
-  expect(pose()).toEqual({ opacity: 1, transform: [{ scale: 1 }] });
+  expect(pose()).toEqual({ opacity: 1, transform: [] });
 });
 
-it('under Reduce Motion only dims: the scale stays 1', async () => {
+it('under Reduce Motion only dims: no scale, no transform', async () => {
   mockReduced = true;
   await render(
-    <FeedbackPressable accessibilityRole="button" accessibilityLabel="Row">
+    <FeedbackPressable accessibilityRole="button" accessibilityLabel="Row" onPress={() => {}}>
       <Text>Row</Text>
     </FeedbackPressable>,
   );
   await fireEvent(screen.getByRole('button', { name: 'Row' }), 'pressIn');
-  expect(pose()).toEqual({ opacity: PRESS_OPACITY, transform: [{ scale: 1 }] });
+  expect(pose()).toEqual({ opacity: PRESS_OPACITY, transform: [] });
 });
 
 it("fires onPress exactly once per tap, and still runs the caller's own pressIn and pressOut", async () => {
@@ -106,4 +106,30 @@ it("usePressFeedback hands out the handlers and the style separately, for a full
   expect(pose()).toEqual({ opacity: PRESS_OPACITY, transform: [{ scale: PRESS_SCALE }] });
   await fireEvent.press(screen.getByRole('button'));
   expect(onPress).toHaveBeenCalledTimes(1);
+});
+
+it('at rest it carries no transform at all, so the control is no stacking context', async () => {
+  await render(
+    <FeedbackPressable accessibilityRole="button" accessibilityLabel="Row" onPress={() => {}}>
+      <Text>Row</Text>
+    </FeedbackPressable>,
+  );
+  expect(screen.getByRole('button', { name: 'Row' })).toHaveStyle({ transform: [] });
+});
+
+it('without an onPress, or disabled, it gives no feedback: nothing will happen, so nothing looks like it', async () => {
+  const { rerender } = await render(
+    <FeedbackPressable accessibilityRole="button" accessibilityLabel="Row">
+      <Text>Row</Text>
+    </FeedbackPressable>,
+  );
+  await fireEvent(screen.getByRole('button', { name: 'Row' }), 'pressIn');
+  expect(withTiming).not.toHaveBeenCalled();
+  await rerender(
+    <FeedbackPressable accessibilityRole="button" accessibilityLabel="Row" onPress={() => {}} disabled>
+      <Text>Row</Text>
+    </FeedbackPressable>,
+  );
+  await fireEvent(screen.getByRole('button', { name: 'Row' }), 'pressIn');
+  expect(withTiming).not.toHaveBeenCalled();
 });

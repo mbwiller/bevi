@@ -116,11 +116,14 @@ export function FollowPill({ following, name, onPress }: { following: boolean; n
   return (
     <Animated.View style={pop.style} testID="follow-pop">
       <Pressable
-        onPress={() => {
-          if (!onPress) return;
-          pop.pop();
-          onPress();
-        }}
+        onPress={
+          onPress
+            ? () => {
+                pop.pop();
+                onPress();
+              }
+            : undefined
+        }
         accessibilityRole="button"
         accessibilityLabel={`Follow ${name}`}
         {...({ 'aria-pressed': following } as object)}

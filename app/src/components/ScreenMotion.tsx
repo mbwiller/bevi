@@ -9,12 +9,15 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
+import { columnWidth } from '@/lib/column';
 import { motion } from '@/theme';
+
+import { NO_TRANSFORM } from './PressFeedback';
 
 /**
  * Move (design system README, Motion): how a screen comes on.
  * - `fade`: a tab's content fades in over `motion.fast` (bundle.css `.bv-move-fade`).
- * - `push`: a pushed screen slides in from the right by 22% of the width, fading in, over `motion.base` (`.bv-move-push`).
+ * - `push`: a pushed screen slides in from the right by 22% of the screen's width (the column's on a wide window), fading in, over `motion.base` (`.bv-move-push`).
  * - `rise`: a full-screen modal rises by 8% of the height, fading in, over `motion.base` (`.bv-move-rise`).
  * Under Reduce Motion each is a fade only, over the same time.
  */
@@ -37,15 +40,24 @@ function play(progress: SharedValue<number>, variant: MoveVariant) {
   progress.value = withTiming(1, { duration: moveDuration(variant), easing: variant === 'fade' ? EASE_FADE : EASE_MOVE });
 }
 
-/** The animated wrapper: fills the scene, so the screen's own layout is unchanged. */
+/**
+ * The animated wrapper: fills the scene, so the screen's own layout is unchanged. The shifts are
+ * shares of the scene's own size: on a wide window the app is the centred column (`@/lib/column`),
+ * so the push takes 22% of the column's width, not the window's; the column is the window's full
+ * height, so the rise takes 8% of that.
+ */
 function MoveView({ progress, variant, children }: { progress: SharedValue<number>; variant: MoveVariant; children: ReactNode }) {
   const reduced = useReducedMotion();
-  const { width, height } = useWindowDimensions();
-  const dx = !reduced && variant === 'push' ? width * PUSH_SHIFT : 0;
-  const dy = !reduced && variant === 'rise' ? height * RISE_SHIFT : 0;
+  const window = useWindowDimensions();
+  const dx = !reduced && variant === 'push' ? columnWidth(window) * PUSH_SHIFT : 0;
+  const dy = !reduced && variant === 'rise' ? window.height * RISE_SHIFT : 0;
   const style = useAnimatedStyle(() => ({
     opacity: progress.value,
-    transform: [{ translateX: (1 - progress.value) * dx }, { translateY: (1 - progress.value) * dy }],
+    // No transform once settled, nor ever for a fade (`NO_TRANSFORM`).
+    transform:
+      (dx === 0 && dy === 0) || progress.value >= 1
+        ? NO_TRANSFORM
+        : [{ translateX: (1 - progress.value) * dx }, { translateY: (1 - progress.value) * dy }],
   }));
   return (
     <Animated.View style={[styles.fill, style]} testID="screen-move">

@@ -1,14 +1,23 @@
-import { render, screen } from '@testing-library/react-native';
-import { Text, useWindowDimensions } from 'react-native';
+import { act, render, screen } from '@testing-library/react-native';
+import { Dimensions, Text, type ScaledSize } from 'react-native';
 
 import { motion } from '@/theme';
 
 import { PUSH_SHIFT, RISE_SHIFT, StackScene, TabScene, type TabHistory } from '../ScreenMotion';
 
 let mockReduced = false;
+const mockWorklets: (() => Record<string, unknown>)[] = [];
 jest.mock('react-native-reanimated', () => {
   const mock = jest.requireActual('react-native-reanimated/mock');
-  return { ...mock, useReducedMotion: () => mockReduced, withTiming: jest.fn((to: number) => to) };
+  return {
+    ...mock,
+    useReducedMotion: () => mockReduced,
+    useAnimatedStyle: (worklet: () => Record<string, unknown>) => {
+      mockWorklets.push(worklet);
+      return worklet();
+    },
+    withTiming: jest.fn((to: number) => to),
+  };
 });
 const { withTiming } = jest.requireMock('react-native-reanimated') as { withTiming: jest.Mock };
 
@@ -22,21 +31,28 @@ const played = () => withTiming.mock.calls.map(([, config]) => (config as { dura
 /** The scene's pose as first painted (the mock evaluates the style once per render). */
 const pose = () => screen.getByTestId('screen-move');
 
-let window = { width: 0, height: 0 };
-function Size() {
-  window = useWindowDimensions();
-  return null;
+/** A phone in portrait, and a desktop window where the app is the centred 480pt column. */
+const PHONE = { width: 393, height: 852 };
+const DESKTOP = { width: 1440, height: 900 };
+let saved: { window: ScaledSize; screen: ScaledSize };
+function windowOf(size: { width: number; height: number }) {
+  const d = { ...size, scale: 2, fontScale: 1 };
+  Dimensions.set({ window: d, screen: d });
 }
+beforeEach(() => {
+  saved = { window: Dimensions.get('window'), screen: Dimensions.get('screen') };
+  windowOf(PHONE);
+});
+afterEach(() => Dimensions.set(saved));
 
 describe('StackScene', () => {
   it('a pushed screen slides in from 22% of the width, fading in, over motion.base, once', async () => {
     const { rerender } = await render(
       <StackScene variant="push" enter>
-        <Size />
         <Text>Bev</Text>
       </StackScene>,
     );
-    expect(pose()).toHaveStyle({ opacity: 0, transform: [{ translateX: window.width * PUSH_SHIFT }, { translateY: 0 }] });
+    expect(pose()).toHaveStyle({ opacity: 0, transform: [{ translateX: PHONE.width * PUSH_SHIFT }, { translateY: 0 }] });
     expect(PUSH_SHIFT).toBe(0.22);
     expect(played()).toEqual([motion.base]);
     // The Stack re-renders it on every navigation: nothing replays.
@@ -48,23 +64,51 @@ describe('StackScene', () => {
     expect(played()).toEqual([motion.base]);
   });
 
-  it('a full-screen modal rises by 8% of the height instead', async () => {
+  it("on a wide window the push takes 22% of the 480pt column, not of the window", async () => {
+    windowOf(DESKTOP);
     await render(
-      <StackScene variant="rise" enter>
-        <Size />
+      <StackScene variant="push" enter>
+        <Text>Bev</Text>
       </StackScene>,
     );
-    expect(pose()).toHaveStyle({ opacity: 0, transform: [{ translateX: 0 }, { translateY: window.height * RISE_SHIFT }] });
-    expect(played()).toEqual([motion.base]);
+    expect(pose()).toHaveStyle({ opacity: 0, transform: [{ translateX: 0.22 * 480 }, { translateY: 0 }] });
   });
 
-  it('the screens the Stack starts with just show', async () => {
+  it('a full-screen modal rises by 8% of the height instead; the column is the full height, on a wide window too', async () => {
+    await render(
+      <StackScene variant="rise" enter>
+        <Text>Rank</Text>
+      </StackScene>,
+    );
+    expect(pose()).toHaveStyle({ opacity: 0, transform: [{ translateX: 0 }, { translateY: PHONE.height * RISE_SHIFT }] });
+    expect(RISE_SHIFT).toBe(0.08);
+    expect(played()).toEqual([motion.base]);
+    await act(async () => windowOf(DESKTOP));
+    await render(
+      <StackScene variant="rise" enter>
+        <Text>Rank</Text>
+      </StackScene>,
+    );
+    expect(screen.getAllByTestId('screen-move').at(-1)).toHaveStyle({ transform: [{ translateX: 0 }, { translateY: DESKTOP.height * RISE_SHIFT }] });
+  });
+
+  it('once the entrance has played, the screen carries no transform', async () => {
+    await render(
+      <StackScene variant="push" enter>
+        <Text>Bev</Text>
+      </StackScene>,
+    );
+    // The mount's worklet, read again after the entrance ran to 1.
+    expect(mockWorklets.at(-1)!()).toEqual({ opacity: 1, transform: [] });
+  });
+
+  it('the screens the Stack starts with just show, with no transform', async () => {
     await render(
       <StackScene variant="push" enter={false}>
         <Text>Feed</Text>
       </StackScene>,
     );
-    expect(pose()).toHaveStyle({ opacity: 1, transform: [{ translateX: 0 }, { translateY: 0 }] });
+    expect(pose()).toHaveStyle({ opacity: 1, transform: [] });
     expect(played()).toEqual([]);
   });
 
@@ -82,14 +126,14 @@ describe('StackScene', () => {
     expect(played()).toEqual([]);
   });
 
-  it('under Reduce Motion a push and a rise are fades only', async () => {
+  it('under Reduce Motion a push and a rise are fades only, with no transform', async () => {
     mockReduced = true;
     await render(
       <StackScene variant="push" enter>
         <Text>Bev</Text>
       </StackScene>,
     );
-    expect(pose()).toHaveStyle({ opacity: 0, transform: [{ translateX: 0 }, { translateY: 0 }] });
+    expect(pose()).toHaveStyle({ opacity: 0, transform: [] });
     expect(played()).toEqual([motion.base]);
   });
 });
@@ -127,7 +171,7 @@ describe('TabScene', () => {
     const history: TabHistory = { current: null };
     const { rerender } = await render(<Tabs current="feed" mounted={['feed']} history={history} />);
     await rerender(<Tabs current="lists" mounted={['feed', 'lists']} history={history} />);
-    expect(screen.getByText('lists').parent!).toHaveStyle({ opacity: 0, transform: [{ translateX: 0 }, { translateY: 0 }] });
+    expect(screen.getByText('lists').parent!).toHaveStyle({ opacity: 0, transform: [] });
   });
 
   it('People slides in like a pushed screen, and leaving it for the Feed is going back: nothing plays', async () => {

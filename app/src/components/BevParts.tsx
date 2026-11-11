@@ -37,18 +37,22 @@ export function brandLine(bev: Pick<BevSummary, 'brand' | 'flavor'>): string {
 
 /**
  * The Want to Try bookmark: `primary` and filled once saved. Gives way under the finger like
- * IconButton (Press), and a press pops the bookmark like the heart (Change).
+ * IconButton (Press), and a press pops the bookmark like the heart (Change). Without `onPress` it
+ * is inert, as before: no handler, no feedback, no pop.
  */
 export function SaveButton({ saved, onPress }: { saved: boolean; onPress?: () => void }) {
   const { colors } = useTheme();
   const pop = usePop();
   return (
     <FeedbackPressable
-      onPress={() => {
-        if (!onPress) return;
-        pop.pop();
-        onPress();
-      }}
+      onPress={
+        onPress
+          ? () => {
+              pop.pop();
+              onPress();
+            }
+          : undefined
+      }
       accessibilityRole="button"
       accessibilityLabel={saved ? 'Saved to Want to Try' : 'Save to Want to Try'}
       // react-native-web drops accessibilityState.selected/checked for buttons; aria-pressed renders.

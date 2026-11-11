@@ -12,6 +12,8 @@ import Animated, {
 
 import { motion } from '@/theme';
 
+import { NO_TRANSFORM } from './PressFeedback';
+
 /** bundle.css `@keyframes bv-arrive { from { opacity: 0; transform: translateY(6px) } }`, in pt. */
 export const ARRIVE_RISE = 6;
 /** bundle.css `.bv-arrive`'s `ease`. */
@@ -64,7 +66,8 @@ export function Arrive({ progress, children, style }: ArriveProps) {
   const reduced = useReducedMotion();
   const animated = useAnimatedStyle(() => ({
     opacity: progress.value,
-    transform: [{ translateY: reduced ? 0 : (1 - progress.value) * ARRIVE_RISE }],
+    // No transform once arrived, nor ever under Reduce Motion (`NO_TRANSFORM`).
+    transform: reduced || progress.value >= 1 ? NO_TRANSFORM : [{ translateY: (1 - progress.value) * ARRIVE_RISE }],
   }));
   return <Animated.View style={[style, animated]}>{children}</Animated.View>;
 }

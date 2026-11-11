@@ -36,7 +36,8 @@ describe('Arrive', () => {
         <Text>Rows</Text>
       </Arrive>,
     );
-    expect(box()).toHaveStyle({ opacity: 1, transform: [{ translateY: 0 }] });
+    // Arrived: no transform left on it, so it is no stacking context and no containing block.
+    expect(box()).toHaveStyle({ opacity: 1, transform: [] });
   });
 
   it('under Reduce Motion only fades: it never moves', async () => {
@@ -46,7 +47,7 @@ describe('Arrive', () => {
         <Text>Rows</Text>
       </Arrive>,
     );
-    expect(screen.getByText('Rows').parent!).toHaveStyle({ opacity: 0, transform: [{ translateY: 0 }] });
+    expect(screen.getByText('Rows').parent!).toHaveStyle({ opacity: 0, transform: [] });
   });
 });
 

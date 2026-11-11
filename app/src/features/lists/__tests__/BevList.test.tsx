@@ -90,7 +90,7 @@ describe('Arrive', () => {
     // Each row sits in the arrival's wrapper (transform and opacity only) and first paints its start pose.
     expect(view.getByText('a').parent).toHaveStyle({ opacity: 0, transform: [{ translateY: 6 }] });
     await view.rerender(rows({ isRefetching: true }));
-    expect(view.getByText('a').parent).toHaveStyle({ opacity: 1, transform: [{ translateY: 0 }] });
+    expect(view.getByText('a').parent).toHaveStyle({ opacity: 1, transform: [] });
     await view.rerender(rows({ isFetchingNextPage: true }, ['a', 'b', 'c']));
     await view.rerender(rows({}, ['a', 'b', 'c']));
     expect(arrivals()).toHaveLength(1);
