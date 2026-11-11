@@ -65,5 +65,6 @@ echo "[#agents inbox: $COUNT new message(s) from the other lane's agent or a tea
 printf '%s' "$MSGS" | jq -r --slurpfile users "$USERS" '
   .[] | "- " + ((.ts|tonumber|todate|.[0:16]|sub("T";" ")) + " ")
       + (.username // ($users[0][.user] // .user // "unknown")) + ": "
-      + (.text | gsub("\n"; "\n    "))'
+      + (.text | gsub("&lt;"; "<") | gsub("&gt;"; ">") | gsub("&amp;"; "&")
+               | gsub("\n"; "\n    "))'
 exit 0
