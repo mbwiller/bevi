@@ -1,8 +1,10 @@
 import path from 'path';
 
-import { act, fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
+import { act, fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
 
+import { api } from '@/api/client';
 import { useSession, type SessionStatus } from '@/state/session';
+import { controls } from '@/testing/fakeApi';
 
 // The real route tree in src/app, rendered by expo-router's test harness.
 const APP_DIR = path.resolve(__dirname, '../app');
@@ -62,7 +64,50 @@ describe('session gate', () => {
   });
 });
 
+describe('Report a bug, for an internal reporter', () => {
+  beforeEach(() => {
+    signInFake();
+    controls.setInternalReporter(true);
+  });
+  afterEach(() => controls.resetToFixtures());
+
+  // Pressing it is covered by the launcher's suite: the reporter route lazy-loads its form, which this harness can't import.
+  it("is the first of the Feed header's actions", async () => {
+    await start('ready', '/feed');
+    await screen.findByRole('button', { name: 'Report a bug' });
+    const header = screen.getByLabelText('Find people').parent!;
+    expect(within(header).getAllByRole('button').map((b) => b.props.accessibilityLabel)).toEqual(['Report a bug', 'Find people']);
+  });
+
+  it('is in the header on a pushed screen (People)', async () => {
+    await start('ready', '/people');
+    expect(await screen.findByRole('button', { name: 'Report a bug' })).toBeTruthy();
+    expect(screen.getAllByLabelText('Report a bug')).toHaveLength(1);
+  });
+
+  it('falls back to the pill on the not-found page, which has no header', async () => {
+    await start('ready', '/no/such/page');
+    await screen.findByText('Page not found');
+    expect(await screen.findByRole('button', { name: 'Report a bug' })).toBeTruthy();
+    expect(screen.getAllByLabelText('Report a bug')).toHaveLength(1);
+  });
+});
+
 const SEARCH_BAR = 'Search a Bev or a person';
+
+/** The People history cases need real rows, so the fake API gets a signed-in account with no latency. */
+function signInFake() {
+  controls.setLatency(0);
+  controls.resetToFixtures();
+  controls.signInAs('tester');
+}
+
+/** One tab bar on screen: exactly the five tabs (People adds none), with Feed the current one. */
+function expectFeedMarkedOnFiveTabs() {
+  const bar = screen.getByLabelText('Main');
+  expect(within(bar).getAllByRole('button').map((b) => b.props.accessibilityLabel)).toEqual(['Feed', 'Lists', 'Add Bev', 'Map', 'Profile']);
+  expect(within(bar).getByLabelText('Feed').props.accessibilityState).toEqual({ selected: true });
+}
 
 describe('tab bar', () => {
   it('/add is the Add Bev tab: "Add a Bev", the bar, no map and no Cancel', async () => {
@@ -135,10 +180,73 @@ describe('tab bar', () => {
     expect(path()).toBe('/people');
   });
 
-  it('/people is out of reach when signed out', async () => {
-    const path = await start('signedOut', '/people');
-    await screen.findByText('Create account');
-    expect(path()).toBe('/sign-in');
+  it('/people keeps the bar, with Feed marked and still five tabs (design system ScreenPeople)', async () => {
+    const path = await start('ready', '/people');
+    expect(await screen.findByRole('heading', { name: 'People' })).toBeTruthy();
+    expect(path()).toBe('/people');
+    expectFeedMarkedOnFiveTabs();
+  });
+
+  it("People's back returns to the Feed it was opened from", async () => {
+    const path = await start('ready', '/feed');
+    await fireEvent.press(await screen.findByLabelText('Find people'));
+    await screen.findByRole('heading', { name: 'People' });
+    expectFeedMarkedOnFiveTabs();
+    await fireEvent.press(screen.getByRole('button', { name: 'Back' }));
+    await waitFor(() => expect(path()).toBe('/feed'));
+    expect(screen.queryByRole('heading', { name: 'People' })).toBeNull();
+  });
+
+  it('opening a person from People and going back returns to People', async () => {
+    signInFake();
+    const me = await api.profile.getMe();
+    const person = (await api.follows.suggested()).find((r) => r.id !== me.id)!;
+    const path = await start('ready', '/people');
+    // The person can be both suggested and on the board; the first row is the suggestion.
+    await fireEvent.press((await screen.findAllByLabelText(new RegExp(`^${person.displayName}, @${person.handle}`)))[0]!);
+    await waitFor(() => expect(path()).toBe(`/user/${person.id}`));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Back' }));
+    await waitFor(() => expect(path()).toBe('/people'));
+    expect(await screen.findByRole('heading', { name: 'People' })).toBeTruthy();
+    expectFeedMarkedOnFiveTabs();
+  });
+
+  it("People opened from the Following list's Find people goes back to that list", async () => {
+    signInFake();
+    controls.emptyUser();
+    try {
+      const me = await api.profile.getMe();
+      const path = await start('ready', `/user/${me.id}/following`);
+      await screen.findByText("You're not following anyone yet");
+      await fireEvent.press(screen.getByLabelText('Find people'));
+      expect(await screen.findByRole('heading', { name: 'People' })).toBeTruthy();
+      expect(path()).toBe('/people');
+      expectFeedMarkedOnFiveTabs();
+      await fireEvent.press(screen.getByRole('button', { name: 'Back' }));
+      await waitFor(() => expect(path()).toBe(`/user/${me.id}/following`));
+      expect(await screen.findByText("You're not following anyone yet")).toBeTruthy();
+    } finally {
+      controls.resetToFixtures();
+    }
+  });
+
+  it('a tab pressed on People leaves it for that tab', async () => {
+    const path = await start('ready', '/people');
+    await screen.findByRole('heading', { name: 'People' });
+    await fireEvent.press(screen.getByLabelText('Lists'));
+    expect(path()).toBe('/lists');
+    expect(screen.getByLabelText('Lists').props.accessibilityState).toEqual({ selected: true });
+    await fireEvent.press(screen.getByLabelText('Feed'));
+    expect(path()).toBe('/feed');
+  });
+
+  it.each([
+    ['signedOut', '/sign-in', 'Create account'],
+    ['onboarding', '/onboarding/profile', 'Your profile'],
+  ] as const)('/people is out of reach when %s', async (status, pathname, text) => {
+    const path = await start(status, '/people');
+    expect((await screen.findAllByText(text)).length).toBeGreaterThan(0);
+    expect(path()).toBe(pathname);
   });
 
   it('/leaderboard lands on Lists, Top', async () => {
@@ -148,10 +256,11 @@ describe('tab bar', () => {
     expect(screen.getByLabelText('Top').props.accessibilityState).toEqual({ selected: true });
   });
 
-  it('/leaderboard?scope=users lands on People', async () => {
+  it('/leaderboard?scope=users lands on People, with the bar', async () => {
     const path = await start('ready', '/leaderboard?scope=users');
     expect(await screen.findByRole('heading', { name: 'People' })).toBeTruthy();
     expect(path()).toBe('/people');
+    expectFeedMarkedOnFiveTabs();
   });
 
   it('shows the session profile on the Profile tab', async () => {

@@ -6,7 +6,7 @@ import { Slot } from 'expo-router';
 import { act, fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
 
 import { api } from '@/api/client';
-import PeopleRoute from '@/app/people';
+import PeopleRoute from '@/app/(tabs)/people/index';
 import { pointsRules } from '@/features/leaderboard/copy';
 import { pointsMeta } from '@/features/leaderboard/PeopleBoard';
 import { controls } from '@/testing/fakeApi';
@@ -29,7 +29,7 @@ async function start(url = '/people') {
   const result = renderRouter(
     {
       _layout: Layout,
-      people: PeopleRoute,
+      'people/index': PeopleRoute,
       index: Stub,
       'user/[id]/index': Stub,
       'profile/index': Stub,

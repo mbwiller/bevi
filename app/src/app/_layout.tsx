@@ -2,14 +2,13 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { apiConfig } from '@/api/client';
 import { createQueryClient } from '@/api/queryClient';
 import { StatusBarClearance } from '@/components/StatusBarClearance';
-import { ReportBugLauncher } from '@/features/bug-report/ReportBugLauncher';
+import { ReportBugHeaderAction } from '@/features/bug-report/ReportBugLauncher';
 import { ConfigError, Splash } from '@/features/auth/Splash';
 import { useSessionBootstrap } from '@/features/auth/useSessionBootstrap';
 import { clearLegacyStorage } from '@/lib/clearLegacyStorage';
@@ -58,9 +57,10 @@ function SessionGate() {
   // Only the launch check can show the splash (and its error); once the Stack is up it stays up.
   if (!checked) return <Splash error={error || undefined} onRetry={retry} />;
   return (
-    // The launcher sits over the Stack so an internal reporter can file from
-    // any screen; it renders nothing for everyone else (ReportBugLauncher).
-    <View style={styles.fill}>
+    // Every screen's Header gets the Report a bug action for an internal reporter once signed in;
+    // everyone else's headers are unchanged (ReportBugHeaderAction). The provider stays mounted
+    // through status changes so the Stack is never remounted.
+    <ReportBugHeaderAction active={status === 'ready'}>
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.surface } }}>
         <Stack.Screen name="index" />
 
@@ -77,7 +77,6 @@ function SessionGate() {
         <Stack.Protected guard={status === 'ready'}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="search" />
-          <Stack.Screen name="people" />
           <Stack.Screen name="leaderboard" />
           <Stack.Screen name="bev/[id]" />
           <Stack.Screen name="user/[id]/index" />
@@ -93,9 +92,6 @@ function SessionGate() {
           <Stack.Screen name="report-bug" options={{ presentation: 'fullScreenModal' }} />
         </Stack.Protected>
       </Stack>
-      {status === 'ready' ? <ReportBugLauncher /> : null}
-    </View>
+    </ReportBugHeaderAction>
   );
 }
-
-const styles = StyleSheet.create({ fill: { flex: 1 } });

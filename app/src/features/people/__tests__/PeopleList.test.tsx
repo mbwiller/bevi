@@ -28,7 +28,7 @@ async function open(url: string) {
       'user/[id]/index': Stub,
       '(tabs)/profile/index': Stub,
       '(tabs)/add/index': Stub,
-      people: Stub,
+      '(tabs)/people/index': Stub,
     },
     { initialUrl: url },
   );

@@ -12,7 +12,7 @@ async function open(url: string) {
   const result = renderRouter(
     {
       leaderboard: LeaderboardRedirect,
-      people: Named('People screen'),
+      'people/index': Named('People screen'),
       'lists/index': Named('Lists screen'),
     },
     { initialUrl: url },
