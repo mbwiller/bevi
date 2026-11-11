@@ -46,6 +46,22 @@ export type ProfileRow = Profile & {
   isFollowing: boolean;
 };
 
+/**
+ * A suggested person with the social proof for the suggestion ("Followed by
+ * ana and 3 others"), from `follows.suggested`. The people behind `followedBy`
+ * are the ones the caller follows who follow this person, so neither the
+ * caller nor the suggested person is ever among them.
+ */
+export type SuggestedProfile = ProfileRow & {
+  /**
+   * At most two of them, the one who followed this person most recently
+   * first. Empty when nobody the caller follows does.
+   */
+  followedBy: Profile[];
+  /** How many there are in all, so `followedByCount - followedBy.length` is the "and N others". */
+  followedByCount: number;
+};
+
 export interface ProfileStats {
   followers: number;
   following: number;
@@ -208,6 +224,7 @@ export interface BevPrediction {
   rankingVersion: string;
 }
 
+/** Someone the caller follows and their ranking of a Bev (`Bev.friends`, `FeedItem.alsoBevdBy`). */
 export interface FriendScore {
   profile: Profile;
   score: number;
@@ -288,6 +305,16 @@ export interface FeedItem {
    * with `comments.list`.
    */
   comments: Comment[];
+  /**
+   * People the caller follows who have also ranked this post's Bev, each with
+   * their own score and bucket for it ("Also Bev'd by ana 8.4"). Never the
+   * post's actor and never the caller. At most three, the most recently
+   * ranked first; `alsoBevdCount` is how many there are in all. Empty on a
+   * Bev nobody else the caller follows has ranked.
+   */
+  alsoBevdBy: FriendScore[];
+  /** The total behind `alsoBevdBy`, so it is never less than `alsoBevdBy.length`. */
+  alsoBevdCount: number;
 }
 
 export interface Comment {
@@ -338,6 +365,12 @@ export interface LeaderboardRow {
 }
 
 export interface UserLeaderboardRow {
+  /**
+   * Competition rank by `points`: ties share a rank and the next rank skips
+   * (1, 2, 2, 4). On `leaderboard.users` it is the rank on Bevi; on
+   * `leaderboard.friends` it is the rank among the caller and the people they
+   * follow, starting again from 1.
+   */
   rank: number;
   profile: Profile;
   points: number;
@@ -375,8 +408,15 @@ export interface WantToTryItem {
  * `likeCount`, `likedByMe`, `commentCount` and `comments` rather than those
  * fields nulled, so a screen cannot render a heart or a count by accident —
  * `get_explore` does not return them either.
+ *
+ * It also leaves out `alsoBevdBy` and `alsoBevdCount` (contract 2.12.0):
+ * those are computed for the feed and a user's activity only, and
+ * `get_explore` is unchanged.
  */
-export type ExplorePost = Omit<FeedItem, 'likeCount' | 'likedByMe' | 'commentCount' | 'comments'>;
+export type ExplorePost = Omit<
+  FeedItem,
+  'likeCount' | 'likedByMe' | 'commentCount' | 'comments' | 'alsoBevdBy' | 'alsoBevdCount'
+>;
 
 /**
  * One Bev-graph edge weight, as `bevs.similarities` returns it: how similar

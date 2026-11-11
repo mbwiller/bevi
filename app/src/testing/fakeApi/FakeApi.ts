@@ -77,6 +77,7 @@ import {
   type FeedApi,
   type FeedItem,
   type FollowsApi,
+  type FriendScore,
   type LeaderboardApi,
   type MediaApi,
   type MetaApi,
@@ -97,6 +98,7 @@ import {
   type SignInInput,
   type SignUpInput,
   type StatsApi,
+  type SuggestedProfile,
   type TasteProfileRow,
   type SubmitRankingInput,
   type SubmitRankingResult,
@@ -215,6 +217,9 @@ function paginate<T>(items: readonly T[], page: PageParams | undefined, defaultL
 /** `comments.add` refuses longer bodies (contract); `get_feed` carries this many comments per post. */
 const COMMENT_MAX = 280;
 const FEED_INLINE_COMMENTS = 7;
+/** Contract 2.12.0: how many people `FeedItem.alsoBevdBy` and `SuggestedProfile.followedBy` list (20261111000100). */
+const ALSO_BEVD_MAX = 3;
+const FOLLOWED_BY_MAX = 2;
 /** Bev of the day / week is "strictly New York City" (get_bev_of_period, 20261018000100). */
 const BEV_OF_PERIOD_ZONE = 'America/New_York';
 /** D-01: below this many users Explore widens from two hops to everyone (get_explore, 20261019000300). */
@@ -720,9 +725,13 @@ export class FakeApi implements BeviApi {
   // Stats
   // -------------------------------------------------------------------------
 
-  /** "Rank on Bevi": @bevi/ranking's rankUsers (which drops Unranked users) in display order. */
-  private userBoard() {
-    const inputs = this.db.users.map((u) => ({
+  /**
+   * "Rank on Bevi": @bevi/ranking's rankUsers (which drops Unranked users) in display order.
+   * Given a subset of the users, the same board among just them: the same points and the same
+   * order, with the ranks counted within the subset (`leaderboard.friends`).
+   */
+  private userBoard(users: readonly FakeUser[] = this.db.users) {
+    const inputs = users.map((u) => ({
       u,
       streak: this.streakOf(u),
       bevsRanked: this.db.rankings.filter((r) => r.userId === u.id).length,
@@ -1097,9 +1106,29 @@ export class FakeApi implements BeviApi {
           .filter((u) => u.id !== me.id && !this.isFollowing(me.id, u.id))
           .sort((a, z) => count(z.id) - count(a.id) || a.handle.localeCompare(z.handle))
           .slice(0, 10)
-          .map((u) => this.toRow(u, me));
+          .map((u): SuggestedProfile => ({ ...this.toRow(u, me), ...this.followedBy(u, me) }));
       }),
   };
+
+  /**
+   * get_followed_by: the people `me` follows who follow `u`. All of them are counted; the first
+   * FOLLOWED_BY_MAX are listed, the one who followed `u` most recently first.
+   *
+   * Two follows written in the same millisecond tie on `createdAt`, which happens here (two
+   * calls of one test easily land in one millisecond) and in practice never in Postgres. The
+   * fake breaks that tie by which was written later, the nearer reading of "most recently"; the
+   * SQL breaks it by id, only to keep its order total.
+   */
+  private followedBy(u: FakeUser, me: FakeUser): Pick<SuggestedProfile, 'followedBy' | 'followedByCount'> {
+    const mutual = this.db.follows
+      .map((f, written) => ({ f, written }))
+      .filter(({ f }) => f.followeeId === u.id && this.isFollowing(me.id, f.followerId))
+      .sort((a, z) => z.f.createdAt.localeCompare(a.f.createdAt) || z.written - a.written);
+    return {
+      followedBy: mutual.slice(0, FOLLOWED_BY_MAX).map(({ f }) => this.toProfile(this.user(f.followerId), me)),
+      followedByCount: mutual.length,
+    };
+  }
 
   categories: CategoriesApi = {
     list: () =>
@@ -1581,6 +1610,27 @@ export class FakeApi implements BeviApi {
     return new Set([me.id, ...this.db.follows.filter((f) => f.followerId === me.id).map((f) => f.followeeId)]);
   }
 
+  /**
+   * feed_also_bevd: the people `me` follows, other than the post's actor (and never `me`), who
+   * have ranked the Bev. All of them are counted; the first ALSO_BEVD_MAX are listed with their
+   * own score and bucket, the most recently ranked first. A tie on the timestamp goes to the
+   * ranking written later (its id's sequence number), for the reason `followedBy` gives.
+   */
+  private alsoBevd(me: FakeUser, actorId: string, bevId: string): Pick<FeedItem, 'alsoBevdBy' | 'alsoBevdCount'> {
+    const written = (r: FakeRanking) => Number(r.id.split('-')[1]);
+    const friends = this.db.rankings
+      .filter(
+        (r) => r.bevId === bevId && r.userId !== actorId && r.userId !== me.id && this.isFollowing(me.id, r.userId),
+      )
+      .sort((a, z) => z.createdAt.localeCompare(a.createdAt) || written(z) - written(a));
+    return {
+      alsoBevdBy: friends.slice(0, ALSO_BEVD_MAX).map(
+        (r): FriendScore => ({ profile: this.toProfile(this.user(r.userId), me), score: r.score, bucket: r.bucket }),
+      ),
+      alsoBevdCount: friends.length,
+    };
+  }
+
   /** get_feed's rows for these actors, newest first, age-gated like the SQL. */
   private feedItems(me: FakeUser, actors: Set<string>): FeedItem[] {
     const saved = new Set(this.db.wantToTry.filter((w) => w.userId === me.id).map((w) => w.bevId));
@@ -1611,6 +1661,9 @@ export class FakeApi implements BeviApi {
         commentCount: this.liveComments(e.id).length,
         // The first seven, oldest first, as get_feed returns them.
         comments: this.liveComments(e.id).slice(0, FEED_INLINE_COMMENTS).map((c) => this.toComment(c, me)),
+        // Relative to the caller, whoever's page this is. The Bev is visible to `me` (checked
+        // above), which is the only age gate the SQL applies to it too.
+        ...this.alsoBevd(me, e.actorId, bev.id),
       });
     }
     return items;
@@ -1872,6 +1925,22 @@ export class FakeApi implements BeviApi {
       this.call('leaderboard.users', () => {
         const me = this.requireUser();
         const rows = this.userBoard().map((r) => ({
+          rank: r.rank,
+          profile: this.toProfile(r.u, me),
+          points: r.points,
+          bevsRanked: r.bevsRanked,
+          currentStreak: r.streak.current,
+        }));
+        return paginate(rows, page, 50);
+      }),
+
+    // get_friends_leaderboard: the caller and the people they follow, on the same board. Someone
+    // with no rankings is Unranked there too, the caller included.
+    friends: (page?: PageParams) =>
+      this.call('leaderboard.friends', () => {
+        const me = this.requireUser();
+        const members = this.db.users.filter((u) => u.id === me.id || this.isFollowing(me.id, u.id));
+        const rows = this.userBoard(members).map((r) => ({
           rank: r.rank,
           profile: this.toProfile(r.u, me),
           points: r.points,

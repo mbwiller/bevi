@@ -114,6 +114,8 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       await expectCode(api.feed.getFeed(), 'unauthorized');
       await expectCode(api.feed.getBevOfPeriod(), 'unauthorized');
       await expectCode(api.feed.listUser('anyone'), 'unauthorized');
+      await expectCode(api.leaderboard.friends(), 'unauthorized');
+      await expectCode(api.follows.suggested(), 'unauthorized');
       await expectCode(api.rankings.listMine(), 'unauthorized');
       await expectCode(api.rankings.listBucketBevs('LOVED'), 'unauthorized');
       await expectCode(api.bevs.similar('anything'), 'unauthorized');
@@ -308,6 +310,62 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       const ids = (await api.follows.suggested()).map((u) => u.id);
       expect(ids).not.toContain(me.userId);
       expect(ids).not.toContain(a.userId);
+    });
+
+    it('suggested: followedBy is who the caller follows that follows them, at most two, with the total', async () => {
+      // Someone with a ranking, so there is a person to suggest even in an empty database. Who
+      // is actually suggested is the implementation's ranking of everyone, so the suite takes
+      // whoever comes first rather than expecting this user.
+      await newUser();
+      const [x] = await starterIds(1);
+      await rankAtBottom(x!);
+
+      const me = await newUser();
+      const before = await api.follows.suggested();
+      expect(before.length).toBeGreaterThan(0);
+      // The caller follows nobody yet, so nobody they follow can follow anyone.
+      for (const person of before) expect(person).toMatchObject({ followedBy: [], followedByCount: 0 });
+      const target = before[0]!;
+
+      // Three people follow the target, oldest follow first; a fourth does too, but the caller
+      // will not follow that one.
+      const connectors: Session[] = [];
+      for (let i = 0; i < 3; i++) {
+        connectors.push(await newUser());
+        await api.follows.follow(target.id);
+      }
+      const bystander = await newUser();
+      await api.follows.follow(target.id);
+
+      await signInAs(me);
+      for (const c of connectors) await api.follows.follow(c.userId);
+
+      const after = await api.follows.suggested();
+      const row = after.find((u) => u.id === target.id);
+      // Following other people does not change that the target is suggested.
+      expect(row).toBeDefined();
+      expect(row!.isFollowing).toBe(false);
+      expect(row!.followedByCount).toBe(3);
+      // At most two, the most recent follower first.
+      expect(row!.followedBy.map((p) => p.id)).toEqual([connectors[2]!.userId, connectors[1]!.userId]);
+      expect(row!.followedBy[0]).toMatchObject({ handle: connectors[2]!.handle, birthdate: null });
+
+      for (const person of after) {
+        expect(person.followedBy.length).toBeLessThanOrEqual(2);
+        expect(person.followedByCount).toBeGreaterThanOrEqual(person.followedBy.length);
+        const ids = person.followedBy.map((p) => p.id);
+        expect(ids).not.toContain(me.userId);
+        expect(ids).not.toContain(person.id);
+        expect(ids).not.toContain(bystander.userId);
+        // Everyone listed is someone the caller follows.
+        for (const id of ids) expect(connectors.map((c) => c.userId)).toContain(id);
+      }
+
+      // Unfollowing one of them takes that person out of the list and the count.
+      await api.follows.unfollow(connectors[2]!.userId);
+      const fewer = (await api.follows.suggested()).find((u) => u.id === target.id);
+      expect(fewer).toMatchObject({ followedByCount: 2 });
+      expect(fewer!.followedBy.map((p) => p.id)).toEqual([connectors[1]!.userId, connectors[0]!.userId]);
     });
 
     it('stats for a new user are zero; getUser of an unknown id is not_found', async () => {
@@ -810,6 +868,130 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       } while (cursor);
       rows.forEach((r, i) => i > 0 && expect(r.rank).toBeGreaterThanOrEqual(rows[i - 1]!.rank));
       expect(rows.some((r) => r.profile.id === me.userId)).toBe(true);
+    });
+
+    it('leaderboard.friends: the caller and the people they follow, ranked among themselves, paged', async () => {
+      const top = await newUser();
+      const [x, y] = await starterIds(2);
+      await rankAtBottom(x!);
+      await rankAtBottom(y!);
+      const idle = await newUser();
+      const stranger = await newUser();
+      await rankAtBottom(x!);
+      await rankAtBottom(y!);
+
+      const me = await newUser();
+      // No rankings and nobody followed: nobody to rank, the caller included (Unranked, as on `users`).
+      expect(await api.leaderboard.friends()).toEqual({ items: [], nextCursor: null });
+
+      await rankAtBottom(x!);
+      // Following nobody: the caller alone, at rank 1 whatever their rank on Bevi is.
+      const alone = await api.leaderboard.friends();
+      expect(alone.items.map((r) => [r.profile.id, r.rank])).toEqual([[me.userId, 1]]);
+      expect(alone.nextCursor).toBeNull();
+
+      await api.follows.follow(top.userId);
+      await api.follows.follow(idle.userId);
+      const board = await api.leaderboard.friends();
+      // `top` has ranked two Bevs to the caller's one, so more points. `idle` is followed but
+      // Unranked, and `stranger` is ranked but not followed: neither has a row.
+      expect(board.items.map((r) => r.profile.id)).toEqual([top.userId, me.userId]);
+      expect(board.items.map((r) => r.rank)).toEqual([1, 2]);
+      expect(board.items.map((r) => r.profile.id)).not.toContain(stranger.userId);
+      expect(board.items.map((r) => r.bevsRanked)).toEqual([2, 1]);
+      expect(board.items[0]!.points).toBeGreaterThan(board.items[1]!.points);
+      for (const row of board.items) {
+        // Exactly the points the global board ranks by, and a rank that can only be as good or better.
+        const stats = await api.stats.getUser(row.profile.id);
+        expect(row.points).toBe(stats.rankPoints);
+        expect(stats.rankOnBevi).not.toBeNull();
+        expect(row.rank).toBeLessThanOrEqual(stats.rankOnBevi!);
+        // Another user's birthdate is never on the board.
+        if (row.profile.id !== me.userId) expect(row.profile.birthdate).toBeNull();
+      }
+
+      const first = await api.leaderboard.friends({ limit: 1 });
+      expect(first.items.map((r) => [r.profile.id, r.rank])).toEqual([[top.userId, 1]]);
+      expect(first.nextCursor).not.toBeNull();
+      const second = await api.leaderboard.friends({ limit: 1, cursor: first.nextCursor! });
+      // The rank is the one in the whole set, not the position on the page.
+      expect(second.items.map((r) => [r.profile.id, r.rank])).toEqual([[me.userId, 2]]);
+
+      // Two followed people on the same points share a rank, and the caller comes after both.
+      await api.follows.follow(stranger.userId);
+      const tied = await api.leaderboard.friends();
+      expect(tied.items.map((r) => r.rank)).toEqual([1, 1, 3]);
+      expect(new Set(tied.items.slice(0, 2).map((r) => r.profile.id))).toEqual(new Set([top.userId, stranger.userId]));
+      expect(tied.items[2]!.profile.id).toBe(me.userId);
+    });
+
+    it('feed: alsoBevdBy is followed users who also ranked the Bev, never the actor or the caller', async () => {
+      const author = await newUser();
+      const [x, y] = await starterIds(2);
+      await rankAtBottom(x!);
+      await rankAtBottom(y!);
+      // Four friends rank the same Bev one after another, so friends[3] ranked it most recently.
+      const friends: Session[] = [];
+      for (let i = 0; i < 4; i++) {
+        friends.push(await newUser());
+        await rankAtBottom(x!, 'FINE');
+      }
+      const stranger = await newUser();
+      await rankAtBottom(x!);
+
+      const me = await newUser();
+      await rankAtBottom(x!);
+      await api.follows.follow(author.userId);
+      for (const f of friends) await api.follows.follow(f.userId);
+
+      const feed = (await api.feed.getFeed({ limit: 50 })).items;
+      const newestThree = [friends[3]!.userId, friends[2]!.userId, friends[1]!.userId];
+
+      // The author's post: all four friends count, the three most recent are listed, newest first.
+      const post = feed.find((i) => i.actor.id === author.userId && i.bev.id === x)!;
+      expect(post.alsoBevdCount).toBe(4);
+      expect(post.alsoBevdBy.map((f) => f.profile.id)).toEqual(newestThree);
+      // Each with their own ranking of it, not the actor's.
+      for (const f of post.alsoBevdBy) {
+        expect(f.bucket).toBe('FINE');
+        expect(typeof f.score).toBe('number');
+        expect(f.profile.birthdate).toBeNull();
+      }
+      expect(post).toMatchObject({ bucket: 'LOVED', actor: { id: author.userId } });
+
+      // A friend's post of the same Bev: that friend is the actor, so is out, and the author is in.
+      const friendPost = feed.find((i) => i.actor.id === friends[0]!.userId)!;
+      expect(friendPost.alsoBevdCount).toBe(4);
+      expect(friendPost.alsoBevdBy.map((f) => f.profile.id)).toEqual(newestThree);
+
+      // The caller's own post: everyone they follow who ranked it, and never the caller.
+      const mine = feed.find((i) => i.actor.id === me.userId)!;
+      expect(mine.alsoBevdCount).toBe(5);
+      expect(mine.alsoBevdBy.map((f) => f.profile.id)).toEqual(newestThree);
+
+      // Nobody else ranked the second Bev.
+      expect(feed.find((i) => i.bev.id === y)).toMatchObject({ alsoBevdBy: [], alsoBevdCount: 0 });
+
+      for (const item of feed) {
+        const ids = item.alsoBevdBy.map((f) => f.profile.id);
+        expect(ids.length).toBeLessThanOrEqual(3);
+        expect(item.alsoBevdCount).toBeGreaterThanOrEqual(ids.length);
+        expect(ids).not.toContain(item.actor.id);
+        expect(ids).not.toContain(me.userId);
+        // Ranked it, but the caller does not follow them.
+        expect(ids).not.toContain(stranger.userId);
+      }
+
+      // A user's activity carries the same values for the same posts.
+      const activity = (await api.feed.listUser(author.userId)).items;
+      expect(activity.find((i) => i.bev.id === x)).toMatchObject({ alsoBevdCount: 4, alsoBevdBy: post.alsoBevdBy });
+      expect(activity.find((i) => i.bev.id === y)).toMatchObject({ alsoBevdBy: [], alsoBevdCount: 0 });
+
+      // It follows the caller's follows: unfollow the most recent one and the next takes the place.
+      await api.follows.unfollow(friends[3]!.userId);
+      const again = (await api.feed.getFeed({ limit: 50 })).items.find((i) => i.actor.id === author.userId && i.bev.id === x)!;
+      expect(again.alsoBevdCount).toBe(3);
+      expect(again.alsoBevdBy.map((f) => f.profile.id)).toEqual([friends[2]!.userId, friends[1]!.userId, friends[0]!.userId]);
     });
 
     it('recommendations are empty below MIN_N_USER rankings, then exclude ranked Bevs', async () => {

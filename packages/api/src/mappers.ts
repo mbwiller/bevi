@@ -26,6 +26,7 @@ import type {
   FeedEventKind,
   FeedItem,
   FlavorProfile,
+  FriendScore,
   LeaderboardRow,
   PeriodWinner,
   PhotoStatus,
@@ -33,6 +34,7 @@ import type {
   Profile,
   ProfileRow,
   Ranking,
+  SuggestedProfile,
   TasteProfileRow,
   UserLeaderboardRow,
   Venue,
@@ -116,6 +118,59 @@ export function mapProfile(client: SupabaseClient, row: ProfileViewRow): Profile
 
 export function mapProfileRow(client: SupabaseClient, row: ProfileViewRow, isFollowing: boolean): ProfileRow {
   return { ...mapProfile(client, row), isFollowing };
+}
+
+/**
+ * Another user's profile as the social-context functions embed it in jsonb
+ * (20261111000100: `feed_also_bevd`'s items and `get_followed_by`'s
+ * `followed_by`). `created_at` is the profile's.
+ */
+export interface EmbeddedProfileRow {
+  user_id: string;
+  handle: string;
+  display_name: string;
+  avatar_path: string | null;
+  timezone: string;
+  onboarded: boolean;
+  created_at: string;
+}
+
+export function mapEmbeddedProfile(client: SupabaseClient, row: EmbeddedProfileRow): Profile {
+  return {
+    id: row.user_id,
+    handle: row.handle,
+    displayName: row.display_name,
+    avatarUrl: publicUrl(client, 'avatars', row.avatar_path),
+    timezone: row.timezone,
+    createdAt: row.created_at,
+    // Same rule as profiles_view (and mapComment): these are never the
+    // caller, so no birthdate and no canSeeAlcohol. The functions do not
+    // return either.
+    birthdate: null,
+    canSeeAlcohol: false,
+    onboarded: row.onboarded,
+  };
+}
+
+/** One row of `get_followed_by` (20261111000100): who the caller follows that follows `user_id`. */
+export interface FollowedByRpcRow {
+  user_id: string;
+  followed_by_count: number;
+  /** At most two, the most recent follower first. */
+  followed_by: EmbeddedProfileRow[];
+}
+
+/** `context` is undefined for someone `get_followed_by` returned no row for: nobody, so 0 and []. */
+export function mapSuggestedProfile(
+  client: SupabaseClient,
+  row: ProfileRow,
+  context: FollowedByRpcRow | undefined,
+): SuggestedProfile {
+  return {
+    ...row,
+    followedBy: (context?.followed_by ?? []).map((p) => mapEmbeddedProfile(client, p)),
+    followedByCount: context?.followed_by_count ?? 0,
+  };
 }
 
 // --------------------------------------------------------------------------
@@ -426,13 +481,35 @@ export interface FeedRpcRow {
   comment_count: number;
   /** `get_feed` builds the first seven, oldest first, with `jsonb_build_object`. */
   comments: CommentRpcRow[];
+  /**
+   * `feed_also_bevd` (20261111000100): the caller's followees, other than the
+   * actor, who ranked this Bev. Optional because a database that has not had
+   * that migration yet does not return the column at all; see `mapFeedItem`.
+   */
+  also_bevd?: AlsoBevdRpc | null;
+}
+
+/** `count` is everyone; `items` is the three who ranked most recently, newest first. */
+export interface AlsoBevdRpc {
+  count: number;
+  items: AlsoBevdRpcItem[];
+}
+
+/** A friend's profile with their own ranking of the Bev. `score` is a numeric inside jsonb. */
+export interface AlsoBevdRpcItem extends EmbeddedProfileRow {
+  score: number | string;
+  bucket: number;
 }
 
 /**
  * `get_explore`'s row (20261019000300): get_feed's columns minus the four
- * engagement ones, which the function does not return at all (D-15).
+ * engagement ones, which the function does not return at all (D-15), and
+ * minus `also_bevd`, which only the feed functions compute.
  */
-export type ExploreRpcRow = Omit<FeedRpcRow, 'like_count' | 'liked_by_me' | 'comment_count' | 'comments'>;
+export type ExploreRpcRow = Omit<
+  FeedRpcRow,
+  'like_count' | 'liked_by_me' | 'comment_count' | 'comments' | 'also_bevd'
+>;
 
 export interface CommentRpcRow {
   id: number;
@@ -505,13 +582,30 @@ export function mapExplorePost(client: SupabaseClient, row: ExploreRpcRow, actor
   };
 }
 
+export function mapAlsoBevdItem(client: SupabaseClient, item: AlsoBevdRpcItem): FriendScore {
+  return {
+    profile: mapEmbeddedProfile(client, item),
+    score: Number(item.score),
+    bucket: bucketFromDb(item.bucket),
+  };
+}
+
 export function mapFeedItem(client: SupabaseClient, row: FeedRpcRow, actor: Profile): FeedItem {
+  // A database without 20261111000100 returns no `also_bevd` column. That is
+  // the state between this client shipping and the migration being pushed, if
+  // they happen in that order, and the feed must keep loading through it: no
+  // column reads as "nobody", which is what the older server could tell us.
+  // Once the migration is in, the column is never null (feed_also_bevd always
+  // returns an object), so this branch is dead from then on.
+  const also = row.also_bevd ?? { count: 0, items: [] };
   return {
     ...mapExplorePost(client, row, actor),
     likeCount: row.like_count,
     likedByMe: row.liked_by_me,
     commentCount: row.comment_count,
     comments: row.comments.map((c) => mapComment(client, c)),
+    alsoBevdBy: also.items.map((item) => mapAlsoBevdItem(client, item)),
+    alsoBevdCount: also.count,
   };
 }
 
@@ -665,6 +759,20 @@ export function mapUserLeaderboardRow(client: SupabaseClient, row: UserLeaderboa
     bevsRanked: row.rating_count ?? 0,
     currentStreak: row.current_streak_days ?? 0,
   };
+}
+
+/**
+ * One row of `get_friends_leaderboard` (20261111000100): get_user_leaderboard's
+ * columns that `mapUserLeaderboardRow` reads, with `friend_rank` -- the rank
+ * among the caller and the people they follow -- where the global board has
+ * `bevi_rank`.
+ */
+export type FriendsLeaderboardRpcRow = Omit<UserLeaderboardRpcRow, 'bevi_rank'> & { friend_rank: number };
+
+// Same shape and the same competition ranking as the global board's row; only
+// the set the rank is counted in differs.
+export function mapFriendsLeaderboardRow(client: SupabaseClient, row: FriendsLeaderboardRpcRow): UserLeaderboardRow {
+  return mapUserLeaderboardRow(client, { ...row, bevi_rank: row.friend_rank });
 }
 
 export function placeholderAppConfig(): AppConfig {

@@ -106,4 +106,66 @@ describe.skipIf(!url || !publishableKey)('feed, against a live local stack', () 
       await author.deleteAccount();
     }
   });
+
+  // Contract 2.12.0 (20261111000100), end to end through PostgREST: the jsonb
+  // `also_bevd` column, get_friends_leaderboard and get_followed_by. The exact
+  // cases (caps, order, ties, the age gate) are in 31_social_context.test.sql;
+  // this is the wire shape and the mapping.
+  it('social context: alsoBevdBy on the feed and a user page, leaderboard.friends, and suggested', async () => {
+    const author = createBeviApi({ url: url!, publishableKey: publishableKey!, authStorage: memoryStorage() });
+    const friend = createBeviApi({ url: url!, publishableKey: publishableKey!, authStorage: memoryStorage() });
+    const viewer = createBeviApi({ url: url!, publishableKey: publishableKey!, authStorage: memoryStorage() });
+    const password = 'correct-horse-battery-staple';
+    const { userId: authorId } = await author.signUp({ username: randomTestUsername(), password, inviteCode: TEST_INVITE_CODE });
+    const { userId: friendId } = await friend.signUp({ username: randomTestUsername(), password, inviteCode: TEST_INVITE_CODE });
+    await viewer.signUp({ username: randomTestUsername(), password, inviteCode: TEST_INVITE_CODE });
+
+    try {
+      const [shared, lonely] = await author.bevs.getStarterCandidates();
+      await author.rankings.submitRanking({ bevId: shared!.id, bucket: 'LOVED', insertIndex: 0, expectedBucketSize: 0, comparisons: [] });
+      await author.rankings.submitRanking({ bevId: lonely!.id, bucket: 'FINE', insertIndex: 0, expectedBucketSize: 0, comparisons: [] });
+      await friend.rankings.submitRanking({ bevId: shared!.id, bucket: 'FINE', insertIndex: 0, expectedBucketSize: 0, comparisons: [] });
+      await viewer.follows.follow(authorId);
+      await viewer.follows.follow(friendId);
+
+      const feed = await viewer.feed.getFeed();
+      const authorsPost = feed.items.find((i) => i.actor.id === authorId && i.bev.id === shared!.id);
+      expect(authorsPost).toBeDefined();
+      // The friend also ranked it; the actor and the caller are never listed.
+      expect(authorsPost!.alsoBevdCount).toBe(1);
+      expect(authorsPost!.alsoBevdBy.map((f) => f.profile.id)).toEqual([friendId]);
+      expect(authorsPost!.alsoBevdBy[0]).toMatchObject({ bucket: 'FINE', profile: { birthdate: null, canSeeAlcohol: false } });
+      expect(typeof authorsPost!.alsoBevdBy[0]!.score).toBe('number');
+      // On the friend's post of the same Bev it is the other way round.
+      const friendsPost = feed.items.find((i) => i.actor.id === friendId);
+      expect(friendsPost!.alsoBevdBy.map((f) => f.profile.id)).toEqual([authorId]);
+      expect(feed.items.find((i) => i.bev.id === lonely!.id)).toMatchObject({ alsoBevdBy: [], alsoBevdCount: 0 });
+
+      const page = await viewer.feed.listUser(authorId);
+      expect(page.items.find((i) => i.bev.id === shared!.id)).toMatchObject({ alsoBevdCount: 1 });
+      expect(page.items.find((i) => i.bev.id === lonely!.id)).toMatchObject({ alsoBevdBy: [], alsoBevdCount: 0 });
+
+      // The viewer has ranked nothing, so is Unranked and has no row. Points
+      // are bevsRanked + 3 * streak (1 day, from today's rankings): 5 and 4.
+      const board = await viewer.leaderboard.friends();
+      expect(board.items.map((r) => [r.profile.id, r.rank, r.points])).toEqual([
+        [authorId, 1, 5],
+        [friendId, 2, 4],
+      ]);
+      expect(board.nextCursor).toBeNull();
+      // Following nobody: alone, at rank 1, whatever the rank on Bevi is.
+      expect((await author.leaderboard.friends()).items.map((r) => [r.profile.id, r.rank])).toEqual([[authorId, 1]]);
+
+      // Who is suggested depends on everyone else in the database; the shape does not.
+      for (const person of await viewer.follows.suggested()) {
+        expect(person.isFollowing).toBe(false);
+        expect(person.followedBy.length).toBeLessThanOrEqual(2);
+        expect(person.followedByCount).toBeGreaterThanOrEqual(person.followedBy.length);
+      }
+    } finally {
+      await viewer.deleteAccount();
+      await friend.deleteAccount();
+      await author.deleteAccount();
+    }
+  });
 });
