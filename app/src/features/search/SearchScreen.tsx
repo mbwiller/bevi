@@ -1,134 +1,80 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useReducer, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Keyboard, StyleSheet, View } from 'react-native';
-import Animated, { FadeInDown, FadeOutUp, useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button } from '@/components/Button';
 import { Header } from '@/components/Header';
 import { Pill } from '@/components/Pill';
 import { SearchBar } from '@/components/SearchBar';
 import { useDebouncedValue } from '@/features/add-bev/useDebouncedValue';
-import { MapView } from '@/features/map/MapView';
-import { useBack } from '@/lib/useBack';
-import { motion, spacing, useTheme } from '@/theme';
+import { spacing, useTheme } from '@/theme';
 
-import { useMapFilters } from './mapFilters';
-import { initialPanel, panelMode, panelReducer } from './panel';
 import { SearchPanel } from './SearchPanel';
 
+export const SEARCH_TITLE = 'Add a Bev';
 export const SEARCH_PLACEHOLDER = 'Search a Bev or a person';
 
-/** A link asked for the panel up and the bar focused; each new `n` opens it once. */
+/** A link asked for the bar focused; each new `n` focuses it once. */
 export interface FocusRequest {
   n: number;
-  /** Find people: "Suggested for you" above Recents. */
-  people?: boolean;
 }
 
 export interface SearchScreenProps {
   focusRequest?: FocusRequest;
-  /** Bumped by the route when the Search tab is pressed while showing: each new value closes the panel. */
-  closeRequest?: number;
-  /** The Search tab is the screen on display (the full-screen map steps aside while it isn't). Default true. */
-  active?: boolean;
+  /** Bumped by the route when the Add Bev tab is pressed while showing: each new value clears and blurs the bar. */
+  resetRequest?: number;
 }
 
 /**
- * The Search tab (TASKS.md M-15, M-16, decision 32; design system ScreenSearch): the wordmark header,
- * one bar for Bevs and people, Snap it, then the live map filling the rest (its filters held here). Focusing or typing in the
- * bar slides the results panel over the map from under it; Cancel slides it away. The map area
- * stays mounted throughout (the live map, M-16, is created once per session and kept where it was)
- * and is passive while the panel is up: no gestures, keys, or screen-reader and keyboard focus.
- * Pressing the Search tab again closes the panel.
+ * The Add Bev tab (design system ScreenSearch, without the map since the 2026-11 navigation
+ * redesign): the "Add a Bev" header, one outlined bar for Bevs and people, Snap it, then the
+ * results list as the screen's body (Recents and "Popular on Bevi" while the bar is empty, grouped
+ * Bevs and People once it has text). Pressing the Add Bev tab again empties the bar and puts the
+ * keyboard away.
  */
-export function SearchScreen({ focusRequest, closeRequest = 0, active = true }: SearchScreenProps) {
-  const back = useBack();
+export function SearchScreen({ focusRequest, resetRequest = 0 }: SearchScreenProps) {
   const router = useRouter();
   const { colors } = useTheme();
-  const reduced = useReducedMotion();
-  const [panel, dispatch] = useReducer(panelReducer, initialPanel);
-  // The map's filters live here, in the Search feature, for the browser session (mapFilters.ts).
-  const filters = useMapFilters((s) => s.filters);
-  const setFilters = useMapFilters((s) => s.setFilters);
-  const mode = panelMode(panel);
-  const up = mode !== 'map';
-  // Debounced here, not in the panel: the panel mounts on the first keystroke, and a debounce that
-  // started there would search for that first character at once.
-  const query = useDebouncedValue(panel.q.trim());
+  const [q, setQ] = useState('');
+  // Debounced here, not in the list, so the first keystroke doesn't search on its own.
+  const query = useDebouncedValue(q.trim());
 
-  // A link asked for the panel: open it and remount the bar with autoFocus to bring the keyboard up.
+  // A link asked for the bar focused: remount it with autoFocus to bring the keyboard up.
   const [barKey, setBarKey] = useState(0);
-  const [suggestionsFirst, setSuggestionsFirst] = useState(false);
   const focusN = focusRequest?.n ?? 0;
-  const focusPeople = focusRequest?.people ?? false;
   useEffect(() => {
-    if (!focusN) return;
-    dispatch({ type: 'focus' });
-    setSuggestionsFirst(focusPeople);
-    setBarKey((k) => k + 1);
-  }, [focusN, focusPeople]);
+    if (focusN) setBarKey((k) => k + 1);
+  }, [focusN]);
 
-  const cancel = useCallback(() => {
-    dispatch({ type: 'cancel' });
-    setSuggestionsFirst(false);
+  useEffect(() => {
+    if (!resetRequest) return;
+    setQ('');
+    // Blurs the focused field (react-native-web's Keyboard.dismiss blurs the active input).
     Keyboard.dismiss();
-  }, []);
-
-  useEffect(() => {
-    if (closeRequest) cancel();
-  }, [closeRequest, cancel]);
+  }, [resetRequest]);
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.screen, { backgroundColor: colors.surface }]}>
-      <Header wordmark actions={[{ icon: 'x', label: 'Close', variant: 'filled', onPress: back }]} />
+      <Header title={SEARCH_TITLE} />
       <View style={styles.query}>
         <SearchBar
           key={barKey}
           variant="outlined"
           placeholder={SEARCH_PLACEHOLDER}
-          value={panel.q}
-          onChange={(q) => dispatch({ type: 'type', q })}
-          onClear={() => dispatch({ type: 'clear' })}
-          onFocus={() => dispatch({ type: 'focus' })}
+          value={q}
+          onChange={setQ}
           autoFocus={barKey > 0}
           id="search-q"
           style={styles.bar}
         />
-        {up ? (
-          <Button variant="ghost" onPress={cancel}>
-            Cancel
-          </Button>
-        ) : null}
       </View>
       <View style={styles.pills}>
         <Pill variant="filled" icon="camera" onPress={() => router.push('/add/new')} accessibilityLabel="Snap it: add a Bev from a photo">
           Snap it
         </Pill>
       </View>
-      <View style={[styles.area, { borderTopColor: colors.border }]}>
-        <View
-          testID="search-map"
-          style={StyleSheet.absoluteFill}
-          pointerEvents={up ? 'none' : 'auto'}
-          importantForAccessibility={up ? 'no-hide-descendants' : 'auto'}
-          accessibilityElementsHidden={up}
-          // react-native-web ignores the two above: hide it from screen readers and the Tab key there.
-          aria-hidden={up}
-          tabIndex={up ? -1 : undefined}
-        >
-          <MapView passive={up} filters={filters} onFiltersChange={setFilters} active={active} />
-        </View>
-        {up ? (
-          <Animated.View
-            testID="search-panel"
-            entering={reduced ? undefined : FadeInDown.duration(motion.base)}
-            exiting={reduced ? undefined : FadeOutUp.duration(motion.fast)}
-            style={[StyleSheet.absoluteFill, { backgroundColor: colors.surface }]}
-          >
-            <SearchPanel q={panel.q} query={query} suggestionsFirst={suggestionsFirst} />
-          </Animated.View>
-        ) : null}
+      <View testID="search-results" style={[styles.body, { borderTopColor: colors.border }]}>
+        <SearchPanel q={q} query={query} />
       </View>
     </SafeAreaView>
   );
@@ -136,15 +82,9 @@ export function SearchScreen({ focusRequest, closeRequest = 0, active = true }: 
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  query: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
-    paddingHorizontal: spacing.gutter,
-  },
-  bar: { flex: 1 },
+  // The mock's `.sr-q-tight`: the header sits directly above, so the bar's top padding drops to `xs`.
+  query: { paddingTop: spacing.xs, paddingBottom: spacing.md, paddingHorizontal: spacing.gutter },
+  bar: { alignSelf: 'stretch' },
   pills: { flexDirection: 'row', paddingHorizontal: spacing.gutter, paddingBottom: spacing.sm },
-  area: { flex: 1, borderTopWidth: 1 },
+  body: { flex: 1, borderTopWidth: 1 },
 });
