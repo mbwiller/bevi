@@ -10,12 +10,11 @@ import { Button } from '@/components/Button';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { Header } from '@/components/Header';
-import { ProfileListRow } from '@/components/ProfileListRow';
 import { useBack } from '@/lib/useBack';
 import { FollowButton } from '@/features/people/FollowButton';
 import { ActivityList, parseProfileTab, type ActivityRow } from '@/features/profile/ActivityList';
 import {
-  PROFILE_BUTTON_WIDTH,
+  PROFILE_BUTTON,
   ProfileButtonRow,
   ProfileHero,
   ProfileSkeleton,
@@ -25,8 +24,11 @@ import { useShareProfile } from '@/features/profile/useShareProfile';
 import { spacing, type, useTheme } from '@/theme';
 
 /**
- * Another user's profile (§6.14): the Profile layout with Follow / Following (optimistic) and Share
- * profile, their Bev'd count, stat cards and rankings. No Recommended row (it's private) and no
+ * Another user's profile (§6.14): the Profile layout (Bev'd · Followers · Following, then the buttons and
+ * the stat cards) with Follow / Following (optimistic) and Share profile, then their rankings. The Bev'd
+ * count is a button that does what the old Bev'd row did: it shows their rankings, switching to the
+ * Activity tab or, when already there, scrolling to the first ranking (their Bev'd list is that Activity;
+ * `/lists` is only yours). No list rows (Recommended is private, Want to Try has no read) and no
  * Settings. Your own id redirects to the Profile tab.
  */
 export default function UserProfileScreen() {
@@ -91,12 +93,18 @@ export default function UserProfileScreen() {
             <ProfileHero
               profile={profile}
               stats={s}
+              onBevd={() => {
+                // Their Bev'd list is the Activity below (rankings.listUser), and `/lists` is only yours.
+                if (tab !== 'activity') router.setParams({ tab: 'activity' });
+                else if (s.bevdCount > 0) void listRef.current?.scrollToIndex({ index: 0, animated: true });
+              }}
+              bevdLabel={`Bev'd, ${s.bevdCount}, show their rankings`}
               onFollowers={() => toPeople('followers')}
               onFollowing={() => toPeople('following')}
             />
             <ProfileButtonRow>
-              <FollowButton userId={profile.id} name={profile.displayName} following={profile.isFollowing} width={PROFILE_BUTTON_WIDTH} />
-              <Button style={styles.button} onPress={() => void share()}>
+              <FollowButton userId={profile.id} name={profile.displayName} following={profile.isFollowing} style={PROFILE_BUTTON} />
+              <Button style={PROFILE_BUTTON} onPress={() => void share()}>
                 Share profile
               </Button>
             </ProfileButtonRow>
@@ -105,19 +113,6 @@ export default function UserProfileScreen() {
                 {notice}
               </Text>
             ) : null}
-            <View style={[styles.rows, { borderTopColor: colors.border }]}>
-              {/* Their Bev'd list is the Activity below (rankings.listUser), so the row scrolls to it. The
-                  contract has no read of another user's Want to Try, so that row is left out. */}
-              <ProfileListRow
-                icon="circle-check"
-                label="Bev'd"
-                count={s.bevdCount}
-                onPress={() => {
-                  if (tab !== 'activity') router.setParams({ tab: 'activity' });
-                  else if (s.bevdCount > 0) void listRef.current?.scrollToIndex({ index: 0, animated: true });
-                }}
-              />
-            </View>
             <ProfileStatCards stats={s} self={false} />
           </View>
         }
@@ -136,7 +131,5 @@ export default function UserProfileScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   body: { flex: 1 },
-  button: { width: PROFILE_BUTTON_WIDTH, paddingHorizontal: 0 },
-  notice: { textAlign: 'center', paddingHorizontal: spacing.gutter, paddingBottom: spacing.sm },
-  rows: { borderTopWidth: 1 },
+  notice: { textAlign: 'center', paddingHorizontal: spacing.gutter, paddingTop: spacing.sm },
 });

@@ -10,12 +10,14 @@ import { keys } from '../keys';
  * server runs again on every submission (docs/bug-workflow.md).
  *
  * Cached for the session: an account's internal role does not change while the
- * app is open, and the launcher mounts on every screen.
+ * app is open, and every screen's header reads it. `enabled: false` (the root
+ * layout before sign-in finishes) asks nothing and leaves `data` undefined.
  */
-export function useCanReportBug() {
+export function useCanReportBug({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: keys.canReportBug(),
     queryFn: () => api.bugs.canReport(),
+    enabled,
     staleTime: Infinity,
     // The gate answers false rather than throwing, so a retry buys nothing.
     retry: false,

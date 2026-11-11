@@ -11,10 +11,9 @@ import { ProfileListRow } from '@/components/ProfileListRow';
 import { ActivityList, parseProfileTab } from '@/features/profile/ActivityList';
 import { EditProfileSheet } from '@/features/profile/EditProfileSheet';
 import {
-  PROFILE_BUTTON_WIDTH,
+  PROFILE_BUTTON,
   ProfileButtonRow,
   ProfileHero,
-  ProfileMenuButton,
   ProfileSkeleton,
   ProfileStatCards,
 } from '@/features/profile/ProfileParts';
@@ -24,8 +23,9 @@ import { spacing, type, useTheme } from '@/theme';
 
 /**
  * Your profile (§6.13, design system ScreenProfile): name header with Settings, Avatar 100, handle,
- * counts, Edit profile / Share profile / Settings, the three list rows, the two stat cards, then
- * Activity (your rankings as FeedPosts) and Taste Profile (the category bars and the preference read-out). `?tab=activity|taste`.
+ * counts (Bev'd · Followers · Following), Edit profile / Share profile, the two stat cards, the Want to
+ * Try and Recommended rows, then Activity (your rankings as FeedPosts) and Taste Profile (the category
+ * bars and the preference read-out). `?tab=activity|taste`.
  */
 export default function ProfileScreen() {
   const { colors } = useTheme();
@@ -81,29 +81,28 @@ export default function ProfileScreen() {
             <ProfileHero
               profile={profile}
               stats={s}
+              onBevd={() => toList('bevd')}
               onFollowers={() => toPeople('followers')}
               onFollowing={() => toPeople('following')}
             />
             <ProfileButtonRow>
-              <Button style={styles.button} onPress={() => setEditing(true)}>
+              <Button style={PROFILE_BUTTON} onPress={() => setEditing(true)}>
                 Edit profile
               </Button>
-              <Button style={styles.button} onPress={() => void share()}>
+              <Button style={PROFILE_BUTTON} onPress={() => void share()}>
                 Share profile
               </Button>
-              <ProfileMenuButton onPress={openSettings} />
             </ProfileButtonRow>
             {notice ? (
               <Text style={[type.body, styles.notice, { color: colors.textSecondary }]} accessibilityLiveRegion="polite" role="status">
                 {notice}
               </Text>
             ) : null}
+            <ProfileStatCards stats={s} self />
             <View style={[styles.rows, { borderTopColor: colors.border }]}>
-              <ProfileListRow icon="circle-check" label="Bev'd" count={s.bevdCount} onPress={() => toList('bevd')} />
               <ProfileListRow icon="bookmark" iconFilled label="Want to Try" count={s.wantToTryCount} onPress={() => toList('want')} />
               <ProfileListRow icon="heart" label="Recommended for you" onPress={() => toList('recommended')} />
             </View>
-            <ProfileStatCards stats={s} self />
           </View>
         }
       />
@@ -122,7 +121,6 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   body: { flex: 1 },
-  button: { width: PROFILE_BUTTON_WIDTH, paddingHorizontal: 0 },
-  notice: { textAlign: 'center', paddingHorizontal: spacing.gutter, paddingBottom: spacing.sm },
+  notice: { textAlign: 'center', paddingHorizontal: spacing.gutter, paddingTop: spacing.sm },
   rows: { borderTopWidth: 1 },
 });

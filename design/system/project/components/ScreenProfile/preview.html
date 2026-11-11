@@ -28,10 +28,9 @@
   .pf-id { display: flex; flex-direction: column; align-items: center; padding-top: 1px; }
   .pf-counts { display: grid; grid-template-columns: repeat(3, 1fr); padding: 16px 0 0; text-align: center; }
   .pf-counts p { margin: 0; }
-  .pf-btns { display: flex; justify-content: center; gap: 4px; padding: 20px 0 14px; }
-  .pf-btns > :nth-child(-n+2) { width: 120px; } .pf-btns > :last-child { width: 34px; padding: 0; }
-  .pf-rows { border-top: 1px solid var(--border); }
-  .pf-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 20px 10px 14px; }</style>
+  .pf-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 20px 16px 0; }
+  .pf-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px 10px; }
+  .pf-rows { border-top: 1px solid var(--border); }</style>
 </head>
 <body>
 <div id="root"></div>
@@ -40,19 +39,19 @@
   function L(text, el) { return h('div', { className: 'pv-stack' }, el, h('span', { className: 'pv-label' }, text)); }
 
   var BEVS = {
-    dietCoke: { name: 'Diet Coke', brand: 'Coca-Cola', category: 'diet_soda', priceTier: 1, art: { kind: 'can', color: '#d6d6db', accent: '#c8102e' } },
-    mexicanCoke: { name: 'Mexican Coke', brand: 'Coca-Cola', category: 'soda', priceTier: 2, art: { kind: 'bottle', color: '#3b1d12', accent: '#e03a3e' } },
-    topo: { name: 'Topo Chico', brand: 'Topo Chico', category: 'sparkling_water', priceTier: 1, art: { kind: 'bottle', color: '#a9d8c9', accent: '#f2c94c' } },
+    dietCoke: { name: 'Diet Coke', brand: 'Coca-Cola', category: 'diet_soda', priceTier: 1, art: { kind: 'can', color: '#d6d6db', accent: '#c8102e' }, bayesScore: 8.8, ratingCount: 204 },
+    mexicanCoke: { name: 'Mexican Coke', brand: 'Coca-Cola', category: 'soda', priceTier: 2, art: { kind: 'bottle', color: '#3b1d12', accent: '#e03a3e' }, bayesScore: 8.7, ratingCount: 362 },
+    topo: { name: 'Topo Chico', brand: 'Topo Chico', category: 'sparkling_water', priceTier: 1, art: { kind: 'bottle', color: '#a9d8c9', accent: '#f2c94c' }, bayesScore: 8.4, ratingCount: 97 },
     pamplemousse: { name: 'LaCroix Pamplemousse', brand: 'LaCroix', flavor: 'Pamplemousse', category: 'sparkling_water', priceTier: 1, art: { kind: 'can', color: '#f4a7b9', accent: '#ffffff' } },
     redBull: { name: 'Red Bull', brand: 'Red Bull', category: 'energy', priceTier: 2, art: { kind: 'slimCan', color: '#2d4fa1', accent: '#c0c4cc' } },
-    brownSugar: { name: 'Brown Sugar Boba', brand: 'Tiger Sugar', category: 'boba', priceTier: 2, art: { kind: 'boba', color: '#c9a27e', accent: '#7a4a2a' } },
-    horchata: { name: 'Horchata', brand: 'Tacos El Gordo', category: 'other', priceTier: 2, priceEstimated: true, art: { kind: 'icedCup', color: '#efe4d0', accent: '#b07a45' } },
-    coldBrew: { name: 'Cold Brew', brand: 'Blue Bottle', category: 'coffee', priceTier: 2, art: { kind: 'icedCup', color: '#4a2c1d', accent: '#3c7dd9' } },
+    brownSugar: { name: 'Brown Sugar Boba', brand: 'Tiger Sugar', category: 'boba', priceTier: 2, art: { kind: 'boba', color: '#c9a27e', accent: '#7a4a2a' }, bayesScore: 8.5, ratingCount: 5120 },
+    horchata: { name: 'Horchata', brand: 'Tacos El Gordo', category: 'other', priceTier: 2, priceEstimated: true, art: { kind: 'icedCup', color: '#efe4d0', accent: '#b07a45' }, bayesScore: 8.9, ratingCount: 362 },
+    coldBrew: { name: 'Cold Brew', brand: 'Blue Bottle', category: 'coffee', priceTier: 2, art: { kind: 'icedCup', color: '#4a2c1d', accent: '#3c7dd9' }, bayesScore: 8.1, ratingCount: 41 },
     sprite: { name: 'Sprite', brand: 'Coca-Cola', category: 'soda', priceTier: 1, art: { kind: 'can', color: '#1f8f4e', accent: '#f2d230' } },
     gatorade: { name: 'Gatorade Cool Blue', brand: 'Gatorade', category: 'sports', priceTier: 1, art: { kind: 'waterBottle', color: '#3aa0e0', accent: '#f26b1d' } },
     oj: { name: 'Orange Juice', brand: 'Tropicana', category: 'juice', priceTier: 1, art: { kind: 'carton', color: '#f6a623', accent: '#2f9e44' } },
     poppi: { name: 'Strawberry Lemon', brand: 'Poppi', category: 'diet_soda', priceTier: 2, art: { kind: 'can', color: '#f7c6cf', accent: '#e8384f' } },
-    matcha: { name: 'Iced Matcha Latte', brand: 'Starbucks', category: 'tea', priceTier: 2, art: { kind: 'icedCup', color: '#9cbf6b', accent: '#1e7a46' } },
+    matcha: { name: 'Iced Matcha Latte', brand: 'Starbucks', category: 'tea', priceTier: 2, art: { kind: 'icedCup', color: '#9cbf6b', accent: '#1e7a46' }, bayesScore: 8.4, ratingCount: 41 },
   };
   var ME = { name: 'Matt Willer', handle: 'mbwiller' };
   // A stand-in profile photo for previews (an SVG gradient; real ones are the person's upload).
@@ -64,21 +63,20 @@
   h('div', { className: 'status' }, '9:41', h('span', { className: 'status-r' }, h('span', { className: 'batt' }, h('i')))),
   h('div', { className: 'scroll' }, 
   h(F, null,
-    h(B.Header, { title: 'Matt Willer', actions: [{ icon: 'share', label: 'Share profile' }, { icon: 'menu', label: 'Settings' }] }),
+    h(B.Header, { title: 'Matt Willer', actions: [{ icon: 'menu', label: 'Settings' }] }),
     h('div', { className: 'pf-id' },
       h(B.Avatar, { name: ME.name, size: 100 }),
       h('p', { className: 'heading', style: { marginTop: 16, fontWeight: 700 } }, '@mbwiller'),
       h('p', { className: 'body bv-meta' }, 'Member since Oct 2026')),
     h('div', { className: 'pf-counts' },
+      h('div', null, h('p', { className: 'heading' }, '42'), h('p', { className: 'body bv-meta' }, "Bev'd")),
       h('div', null, h('p', { className: 'heading' }, '7'), h('p', { className: 'body bv-meta' }, 'Followers')),
-      h('div', null, h('p', { className: 'heading' }, '9'), h('p', { className: 'body bv-meta' }, 'Following')),
-      h('div', null, h('p', { className: 'heading' }, '#12'), h('p', { className: 'body bv-meta' }, 'Rank on Bevi'))),
-    h('div', { className: 'pf-btns' }, h(B.Button, null, 'Edit profile'), h(B.Button, null, 'Share profile'), h(B.Button, { icon: 'chevron-down', 'aria-label': 'Settings' })),
+      h('div', null, h('p', { className: 'heading' }, '9'), h('p', { className: 'body bv-meta' }, 'Following'))),
+    h('div', { className: 'pf-btns' }, h(B.Button, null, 'Edit profile'), h(B.Button, null, 'Share profile')),
+    h('div', { className: 'pf-stats' }, h(B.StatCard, { icon: 'trophy', label: 'Rank on Bevi', value: '#12' }), h(B.StatCard, { icon: 'flame', label: 'Current streak', value: '4 days' })),
     h('div', { className: 'pf-rows' },
-      h(B.ProfileListRow, { icon: 'circle-check', label: "Bev'd", count: 42 }),
       h(B.ProfileListRow, { icon: 'bookmark', iconFilled: true, label: 'Want to Try', count: 7 }),
       h(B.ProfileListRow, { icon: 'heart', label: 'Recommended for you' })),
-    h('div', { className: 'pf-stats' }, h(B.StatCard, { icon: 'trophy', label: 'Rank on Bevi', value: '#12' }), h(B.StatCard, { icon: 'flame', label: 'Current Streak', value: '4 days' })),
     h(B.SegmentedTabs, { variant: 'underline-icon', tabs: [{ id: 'activity', label: 'Activity', icon: 'file-text' }, { id: 'taste', label: 'Taste Profile', icon: 'chart-no-axes-column' }], value: 'activity' }),
     h(B.FeedPost, { you: true, actor: ME, bev: BEVS.dietCoke, score: 9.3, time: 'Wednesday', likeCount: 6, note: 'the fountain one at the dining hall hits different',
       onLike: function () {}, onComment: function () {}, onSave: function () {} }))),
