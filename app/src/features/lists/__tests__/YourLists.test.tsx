@@ -1,8 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
+import { StyleSheet } from 'react-native';
 import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
 
 import { api } from '@/api/client';
+import { BEV_ROW_FOOT_OVERLAY_BOTTOM } from '@/components/BevRow';
 import { categoryById } from '@/lib/categories';
 import { controls } from '@/testing/fakeApi';
 import ListsScreen from '@/app/(tabs)/lists/index';
@@ -47,6 +49,19 @@ it("Bev'd lists the user's rankings numbered across buckets", async () => {
   await start();
   expect(await screen.findByLabelText(`1. ${first.bev.name}`)).toBeTruthy();
   expect(screen.getByLabelText(`More for ${first.bev.name}`)).toBeTruthy();
+});
+
+it("centres the Bev'd overflow button on the row's 32pt foot line, keeping its 44pt target", async () => {
+  const first = (await api.rankings.listMine()).items[0]!;
+  await start();
+  const more = await screen.findByLabelText(`More for ${first.bev.name}`);
+  const style = StyleSheet.flatten(more.props.style);
+  expect(style.position).toBe('absolute');
+  expect(style.bottom).toBe(BEV_ROW_FOOT_OVERLAY_BOTTOM);
+  expect(style.minHeight).toBe(44);
+  // Foot line centre, from the bottom of the row: 4pt padding + 1pt divider + half of 32. The button's
+  // centre (its bottom + half of 44) must be the same point.
+  expect(style.bottom + 44 / 2).toBe(4 + 1 + 32 / 2);
 });
 
 it('switches tabs through ?tab=', async () => {
