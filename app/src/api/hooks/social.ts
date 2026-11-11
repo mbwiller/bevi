@@ -51,6 +51,10 @@ function settleFollow(qc: QueryClient, userId: string) {
   // next fresh sequence (pull to refresh, opening Explore again) drops or adds them.
   void qc.invalidateQueries({ queryKey: keys.explore(), refetchType: 'none' });
   void qc.invalidateQueries({ queryKey: keys.bevs.all }); // Bev detail "friends who've had it"
+  // Who is on the Friends board. Only after the server has the follow, never optimistically, so a
+  // press doesn't reorder the ranking under the reader; the People board holds its rows still after
+  // a press on one of them (`usePointsRanking`). The Everyone board doesn't depend on follows.
+  void qc.invalidateQueries({ queryKey: keys.leaderboard.friends() });
 }
 
 /** Both follow and unfollow share this key; the variable is the user id. */

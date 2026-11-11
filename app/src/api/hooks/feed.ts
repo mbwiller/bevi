@@ -183,11 +183,26 @@ export function useLeaderboardBevs(categoryId?: CategoryId) {
   });
 }
 
-export function useLeaderboardUsers() {
+/** The points board among everyone on Bevi, 50 per page. `enabled: false` keeps it cached but idle. */
+export function useLeaderboardUsers({ enabled = true }: { enabled?: boolean } = {}) {
   return useInfiniteQuery({
     queryKey: keys.leaderboard.users(),
     queryFn: ({ pageParam }) => api.leaderboard.users({ cursor: pageParam, limit: 50 }),
     ...cursorPaging,
+    enabled,
+  });
+}
+
+/**
+ * The same board among you and the people you follow (`leaderboard.friends`, contract 2.12.0), 50 per
+ * page; `rank` counts within that set. Empty until one of you has ranked a Bev.
+ */
+export function useLeaderboardFriends({ enabled = true }: { enabled?: boolean } = {}) {
+  return useInfiniteQuery({
+    queryKey: keys.leaderboard.friends(),
+    queryFn: ({ pageParam }) => api.leaderboard.friends({ cursor: pageParam, limit: 50 }),
+    ...cursorPaging,
+    enabled,
   });
 }
 

@@ -1,16 +1,18 @@
-import type { UserLeaderboardRow } from '@bevi/shared';
+import type { ProfileRow, SuggestedProfile, UserLeaderboardRow } from '@bevi/shared';
 import { RANK_POINTS_WEIGHTS, STREAK_PERIOD } from '@bevi/ranking';
 import { FlashList } from '@shopify/flash-list';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Slot } from 'expo-router';
-import { act, fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
+import { router, Slot } from 'expo-router';
+import { act, fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
 
 import { api } from '@/api/client';
 import PeopleRoute from '@/app/(tabs)/people/index';
-import { pointsRules } from '@/features/leaderboard/copy';
+import { BOARD_EMPTY, pointsRules } from '@/features/leaderboard/copy';
 import { pointsMeta } from '@/features/leaderboard/PeopleBoard';
-import { controls } from '@/testing/fakeApi';
+import { usePointsScope } from '@/features/leaderboard/pointsScope';
+import { FAKE_INVITE_CODE, ME, controls, userIdFor } from '@/testing/fakeApi';
 
+import { followedByContext } from '../copy';
 import { PEOPLE_PLACEHOLDER, SUGGESTED_PREVIEW, SUGGESTED_TITLE } from '../FindPeopleScreen';
 
 let client: QueryClient;
@@ -62,7 +64,12 @@ beforeEach(() => {
   controls.setLatency(0);
   controls.resetToFixtures();
   controls.signInAs('tester');
+  // The scope outlives the screen, so each test starts from the default.
+  usePointsScope.setState({ scope: 'friends' });
 });
+
+/** Most of the suite predates the pills and is about the Everyone board. */
+const onEveryone = () => usePointsScope.setState({ scope: 'everyone' });
 
 afterEach(async () => {
   controls.setLatency(0);
@@ -72,9 +79,17 @@ afterEach(async () => {
 });
 
 /** UserRow's accessible name. */
-function rowLabel(p: { displayName: string; handle: string }, meta?: string, streak?: number, self = false) {
-  return `${p.displayName}${self ? ' (you)' : ''}, @${p.handle}${meta ? `, ${meta}` : ''}${streak ? `, ${streak} day streak` : ''}`;
+function rowLabel(p: { displayName: string; handle: string }, meta?: string, streak?: number, self = false, context?: string) {
+  return `${p.displayName}${self ? ' (you)' : ''}, @${p.handle}${meta ? `, ${meta}` : ''}${streak ? `, ${streak} day streak` : ''}${context ? `, ${context}` : ''}`;
 }
+
+/** A suggestion's accessible name, with its "Followed by …" line. */
+function suggestedLabel(r: SuggestedProfile) {
+  return rowLabel(r, undefined, undefined, false, followedByContext(r.followedBy, r.followedByCount));
+}
+
+/** A ProfileRow as a suggestion nobody you follow follows. */
+const asSuggestion = (r: ProfileRow): SuggestedProfile => ({ ...r, followedBy: [], followedByCount: 0 });
 
 function boardLabel(r: UserLeaderboardRow, self = false) {
   return rowLabel(r.profile, pointsMeta(r.points, r.bevsRanked), r.currentStreak, self);
@@ -117,7 +132,7 @@ describe('idle', () => {
     const me = await api.profile.getMe();
     const board = (await api.leaderboard.users()).items;
     // More suggestions than the preview shows (the fixtures leave the tester two).
-    const suggested = board.filter((r) => r.profile.id !== me.id).map((r) => ({ ...r.profile, isFollowing: false }));
+    const suggested = board.filter((r) => r.profile.id !== me.id).map((r) => asSuggestion({ ...r.profile, isFollowing: false }));
     expect(suggested.length).toBeGreaterThan(SUGGESTED_PREVIEW);
     jest.spyOn(api.follows, 'suggested').mockResolvedValue(suggested);
     await start();
@@ -141,13 +156,14 @@ describe('idle', () => {
     expect(await screen.findByLabelText(rowLabel(hidden))).toBeTruthy();
     expect(screen.queryByRole('link', { name: 'See all suggestions' })).toBeNull();
 
-    // The board, numbered by points.
-    expect((await screen.findAllByLabelText(boardLabel(board[0]!, board[0]!.profile.id === me.id))).length).toBeGreaterThan(0);
+    // The board (Friends, the default), numbered by points.
+    const friends = (await api.leaderboard.friends()).items;
+    expect((await screen.findAllByLabelText(boardLabel(friends[0]!, friends[0]!.profile.id === me.id))).length).toBeGreaterThan(0);
   });
 
   it('never suggests you', async () => {
     const me = await api.profile.getMe();
-    jest.spyOn(api.follows, 'suggested').mockResolvedValue([{ ...me, isFollowing: false }]);
+    jest.spyOn(api.follows, 'suggested').mockResolvedValue([asSuggestion({ ...me, isFollowing: false })]);
     await start();
     await screen.findAllByText(/\(you\)/);
     // Nothing left to suggest: the section is left out.
@@ -158,7 +174,7 @@ describe('idle', () => {
     const me = await api.profile.getMe();
     const first = (await api.follows.suggested()).filter((r) => r.id !== me.id)[0]!;
     const r = await start();
-    await fireEvent.press(await screen.findByLabelText(rowLabel(first)));
+    await fireEvent.press(await screen.findByLabelText(suggestedLabel(first)));
     expect(r.path()).toBe(`/user/${first.id}`);
   });
 
@@ -172,7 +188,8 @@ describe('idle', () => {
 });
 
 describe('following', () => {
-  it('follows a suggestion optimistically, and the same person on the board flips with it', async () => {
+  it('follows a suggestion optimistically, and the same person on the Everyone board flips with it', async () => {
+    onEveryone();
     const me = await api.profile.getMe();
     const board = (await api.leaderboard.users()).items;
     const onBoard = new Set(board.map((r) => r.profile.id));
@@ -297,7 +314,9 @@ describe('search', () => {
   });
 });
 
-describe('ranking', () => {
+describe('ranking (Everyone)', () => {
+  beforeEach(onEveryone);
+
   it('tints your own row and gives everyone else Follow', async () => {
     const me = await api.profile.getMe();
     const people = (await api.leaderboard.users()).items;
@@ -445,7 +464,8 @@ describe('states', () => {
     expect(screen.getByText(SUGGESTED_TITLE)).toBeTruthy();
   });
 
-  it('shows the board error with Retry', async () => {
+  it('shows the Everyone board error with Retry', async () => {
+    onEveryone();
     controls.failNext('network', 'leaderboard.users');
     await start();
     expect(await screen.findByText("You're offline")).toBeTruthy();
@@ -454,11 +474,364 @@ describe('states', () => {
     expect(await screen.findAllByText(/\(you\)/)).toBeTruthy();
   });
 
-  it('says when no one is on the board yet', async () => {
+  it('says when no one is on the Everyone board yet', async () => {
+    onEveryone();
     jest.spyOn(api.leaderboard, 'users').mockResolvedValue({ items: [], nextCursor: null });
     await start();
-    expect(await screen.findByText("No one's on the board yet")).toBeTruthy();
-    expect(screen.getByText('Rank a Bev to get on the board.')).toBeTruthy();
+    expect(await screen.findByText(BOARD_EMPTY.everyone.title)).toBeTruthy();
+    expect(screen.getByText(BOARD_EMPTY.everyone.body)).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// Friends | Everyone (TASKS.md M-34, contract 2.12.0 `leaderboard.friends`)
+// ---------------------------------------------------------------------------------------------
+
+const pill = (name: 'Friends' | 'Everyone') => screen.getByRole('button', { name });
+const pressedPills = () => ({ friends: pill('Friends').props['aria-pressed'], everyone: pill('Everyone').props['aria-pressed'] });
+
+/**
+ * The ranking rows, top to bottom, as "rank handle". The order is the list's data (FlashList recycles
+ * cells, so the tree's order after an insert isn't the screen's); every one of them must also be
+ * drawn with that rank, and nothing else ranked (the pinned row is outside the list).
+ */
+function boardOnScreen(): string[] {
+  const listed: string[] = list()
+    .props.data.filter((i: { kind: string }) => i.kind === 'rank-row')
+    .map((i: { row: UserLeaderboardRow }) => `${i.row.rank} ${i.row.profile.handle}`);
+  const drawn = within(screen.getByTestId('people-list'))
+    .queryAllByTestId('user-row')
+    .flatMap((row) => {
+      const rank = within(row).queryByLabelText(/^Rank \d+$/);
+      if (!rank) return [];
+      const who = String(within(row).getAllByRole('button')[0]!.props.accessibilityLabel);
+      return [`${rank.props.children} ${/@(\w+)/.exec(who)![1]}`];
+    });
+  expect([...drawn].sort()).toEqual([...listed].sort());
+  return listed;
+}
+const asShown = (rows: UserLeaderboardRow[]) => rows.map((r) => `${r.rank} ${r.profile.handle}`);
+const friendsBoard = async () => (await api.leaderboard.friends()).items;
+const everyoneBoard = async () => (await api.leaderboard.users()).items;
+const kinds = (): string[] => list().props.data.map((i: { kind: string }) => i.kind);
+const settled = () => waitFor(() => expect(client.isMutating() + client.isFetching()).toBe(0));
+
+/** Signs up someone who has ranked nothing, and signs back in as the tester. */
+async function newcomer(handle: string): Promise<string> {
+  const { userId } = await api.signUp({ username: handle, password: 'newcomer-pass-1', inviteCode: FAKE_INVITE_CODE });
+  controls.signInAs(ME.handle);
+  return userId;
+}
+
+async function unfollowEveryone() {
+  const me = await api.profile.getMe();
+  for (const p of (await api.follows.listFollowing(me.id)).items) await api.follows.unfollow(p.id);
+}
+
+describe('Friends | Everyone', () => {
+  it('opens on Friends: two pills between "Ranked by points" and the rows, the chosen one pressed', async () => {
+    const friends = await friendsBoard();
+    await start();
+    await waitFor(() => expect(boardOnScreen()).toEqual(asShown(friends)));
+    const pills = within(screen.getByTestId('points-scope')).getAllByRole('button');
+    expect(pills.map((p) => p.props.accessibilityLabel)).toEqual(['Friends', 'Everyone']);
+    expect(pressedPills()).toEqual({ friends: true, everyone: false });
+    const at = kinds().indexOf('rank-header');
+    expect(kinds().slice(at, at + 3)).toEqual(['rank-header', 'rank-slot', 'rank-row']);
+
+    // Pressing the chosen one changes nothing.
+    const calls = jest.spyOn(api.leaderboard, 'friends');
+    await fireEvent.press(pill('Friends'));
+    expect(pressedPills()).toEqual({ friends: true, everyone: false });
+    expect(calls).not.toHaveBeenCalled();
+  });
+
+  it('Friends ranks you and the people you follow among yourselves; Everyone ranks everyone', async () => {
+    const me = await api.profile.getMe();
+    const friends = await friendsBoard();
+    const everyone = await everyoneBoard();
+    // The fixtures: you follow four of the six others, so you are 5th of 5 there and 7th of 7 here.
+    expect(friends.map((r) => r.profile.handle)).toEqual(['friend_a', 'friend_b', 'friend_c', 'friend_d', ME.handle]);
+    expect(friends.find((r) => r.profile.id === me.id)!.rank).toBe(5);
+    expect(everyone.find((r) => r.profile.id === me.id)!.rank).toBe(7);
+
+    await start();
+    await waitFor(() => expect(boardOnScreen()).toEqual(asShown(friends)));
+    expect(screen.getAllByLabelText(boardLabel(friends.at(-1)!, true)).length).toBeGreaterThan(0);
+
+    await fireEvent.press(pill('Everyone'));
+    expect(pressedPills()).toEqual({ friends: false, everyone: true });
+    await waitFor(() => expect(boardOnScreen()).toEqual(asShown(everyone)));
+
+    // Back to Friends: its rows are still there, with no skeleton in between.
+    await fireEvent.press(pill('Friends'));
+    expect(pressedPills()).toEqual({ friends: true, everyone: false });
+    expect(boardOnScreen()).toEqual(asShown(friends));
+    expect(kinds()).not.toContain('rank-loading');
+  });
+
+  it('remembers the choice after leaving People and coming back', async () => {
+    const everyone = await everyoneBoard();
+    const r = await start();
+    await screen.findByText('Ranked by points');
+    await fireEvent.press(pill('Everyone'));
+    await fireEvent.press(screen.getByLabelText('Back'));
+    expect(r.path()).toBe('/');
+    expect(screen.queryByText('Ranked by points')).toBeNull();
+
+    await act(async () => router.push('/people'));
+    await screen.findByText('Ranked by points');
+    expect(pressedPills()).toEqual({ friends: false, everyone: true });
+    await waitFor(() => expect(boardOnScreen()).toEqual(asShown(everyone)));
+  });
+
+  it('pages the Friends board at the end of the list', async () => {
+    const me = await api.profile.getMe();
+    const [first, ...rest] = await friendsBoard();
+    const spy = jest
+      .spyOn(api.leaderboard, 'friends')
+      .mockImplementation(async (page) => (page?.cursor ? { items: rest, nextCursor: null } : { items: [first!], nextCursor: 'f2' }));
+    const users = jest.spyOn(api.leaderboard, 'users');
+    await start();
+    // Jest has no layout, so the end is always on screen and the list asks for the next page itself.
+    await waitFor(() => expect(boardOnScreen()).toEqual(asShown([first!, ...rest])));
+    expect(spy).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: 'f2' }));
+    const calls = spy.mock.calls.length;
+    await act(async () => list().props.onEndReached());
+    expect(spy).toHaveBeenCalledTimes(calls);
+    // The other board isn't asked for.
+    expect(users).not.toHaveBeenCalled();
+    expect(rest.some((r) => r.profile.id === me.id)).toBe(true);
+  });
+
+  it('pull to refresh on Friends reloads that board and your stats, not Everyone', async () => {
+    await start();
+    await waitFor(() => expect(boardOnScreen().length).toBeGreaterThan(0));
+    const friends = jest.spyOn(api.leaderboard, 'friends');
+    const users = jest.spyOn(api.leaderboard, 'users');
+    const stats = jest.spyOn(api.stats, 'getMine');
+    await act(async () => list().props.onRefresh());
+    await waitFor(() => {
+      expect(friends).toHaveBeenCalled();
+      expect(stats).toHaveBeenCalled();
+    });
+    expect(users).not.toHaveBeenCalled();
+  });
+
+  it('shows a skeleton under the pills while Friends loads', async () => {
+    controls.setLatency(300);
+    await start();
+    await waitFor(() => expect(kinds()).toContain('rank-loading'));
+    expect(screen.getByTestId('points-scope')).toBeTruthy();
+    await waitFor(() => expect(boardOnScreen().length).toBeGreaterThan(0), { timeout: 3000 });
+    expect(kinds()).not.toContain('rank-loading');
+  });
+
+  it('shows the Friends error with Retry, and Everyone still loads', async () => {
+    const friends = await friendsBoard();
+    controls.failNext('network', 'leaderboard.friends');
+    await start();
+    expect(await screen.findByText("You're offline")).toBeTruthy();
+    expect(screen.getByTestId('points-scope')).toBeTruthy();
+
+    await fireEvent.press(pill('Everyone'));
+    await waitFor(() => expect(boardOnScreen().length).toBeGreaterThan(0));
+    expect(screen.queryByText("You're offline")).toBeNull();
+
+    await fireEvent.press(pill('Friends'));
+    // A board that failed is retried when it comes back into view, or from Retry.
+    await waitFor(() => expect(boardOnScreen()).toEqual(asShown(friends)));
+  });
+
+  it('Retry on the Friends error reloads it', async () => {
+    const friends = await friendsBoard();
+    controls.failNext('network', 'leaderboard.friends');
+    await start();
+    expect(await screen.findByText("You're offline")).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText('Retry'));
+    await waitFor(() => expect(boardOnScreen()).toEqual(asShown(friends)));
+  });
+
+  describe('empty', () => {
+    it('following nobody, with no rankings: "Follow people to see how you compare", under the suggestions', async () => {
+      controls.emptyUser();
+      expect(await friendsBoard()).toEqual([]);
+      await start();
+      expect(await screen.findByText(BOARD_EMPTY.noFollows.title)).toBeTruthy();
+      expect(screen.getByText(BOARD_EMPTY.noFollows.body)).toBeTruthy();
+      expect(screen.getByText(SUGGESTED_TITLE)).toBeTruthy();
+      expect(boardOnScreen()).toEqual([]);
+      expect(screen.queryByText(BOARD_EMPTY.friends.title)).toBeNull();
+    });
+
+    it('following nobody, with rankings: you alone at 1, and the same nudge under your row', async () => {
+      await unfollowEveryone();
+      const friends = await friendsBoard();
+      expect(asShown(friends)).toEqual([`1 ${ME.handle}`]);
+      await start();
+      await waitFor(() => expect(boardOnScreen()).toEqual([`1 ${ME.handle}`]));
+      expect(await screen.findByText(BOARD_EMPTY.noFollows.title)).toBeTruthy();
+      expect(kinds().slice(-2)).toEqual(['rank-row', 'rank-empty']);
+    });
+
+    it('following people, none of whom (you included) has ranked: "No one here has ranked a Bev yet"', async () => {
+      const id = await newcomer('newcomer_one');
+      controls.emptyUser();
+      await api.follows.follow(id);
+      expect(await friendsBoard()).toEqual([]);
+      await start();
+      expect(await screen.findByText(BOARD_EMPTY.friends.title)).toBeTruthy();
+      expect(screen.getByText(BOARD_EMPTY.friends.body)).toBeTruthy();
+      expect(screen.queryByText(BOARD_EMPTY.noFollows.title)).toBeNull();
+    });
+  });
+
+  describe('your pinned row', () => {
+    it('on Friends pins your row from the Friends board, with your rank there', async () => {
+      const me = await api.profile.getMe();
+      const friends = await friendsBoard();
+      const mine = friends.find((r) => r.profile.id === me.id)!;
+      await start();
+      await waitFor(() => expect(boardOnScreen()).toEqual(asShown(friends)));
+      await reportOnScreen(friends.filter((r) => r.profile.id !== me.id).slice(0, 2));
+      const pinned = await screen.findByTestId('pinned-self');
+      expect(within(pinned).getByLabelText(boardLabel(mine, true))).toBeTruthy();
+      expect(within(pinned).getByLabelText(`Rank ${mine.rank}`)).toBeTruthy();
+
+      // On Everyone it is your rank there.
+      const everyone = await everyoneBoard();
+      const there = everyone.find((r) => r.profile.id === me.id)!;
+      await fireEvent.press(pill('Everyone'));
+      await waitFor(() => expect(boardOnScreen()).toEqual(asShown(everyone)));
+      expect(screen.queryByTestId('pinned-self')).toBeNull(); // unknown again until the list reports
+      await reportOnScreen(everyone.filter((r) => r.profile.id !== me.id).slice(0, 2));
+      const again = await screen.findByTestId('pinned-self');
+      expect(within(again).getByLabelText(`Rank ${there.rank}`)).toBeTruthy();
+    });
+
+    it('with no rankings: nothing pinned on Friends; "Unranked" from your stats on Everyone', async () => {
+      const me = await api.profile.getMe();
+      controls.emptyUser();
+      await api.follows.follow(userIdFor('friend_a'));
+      const friends = await friendsBoard();
+      expect(asShown(friends)).toEqual(['1 friend_a']);
+      await start();
+      await waitFor(() => expect(boardOnScreen()).toEqual(['1 friend_a']));
+      await reportOnScreen(friends);
+      await settled();
+      expect(screen.queryByTestId('pinned-self')).toBeNull();
+
+      const everyone = await everyoneBoard();
+      await fireEvent.press(pill('Everyone'));
+      await waitFor(() => expect(boardOnScreen()).toEqual(asShown(everyone)));
+      await reportOnScreen(everyone.slice(0, 2));
+      const pinned = await screen.findByTestId('pinned-self');
+      expect(within(pinned).getByLabelText(rowLabel(me, 'Unranked', undefined, true))).toBeTruthy();
+    });
+  });
+
+  describe('following, and what it does to Friends', () => {
+    it('a follow from a suggestion leaves the ranking still while it is pending, then adds them once the server has it', async () => {
+      const suggestions = await api.follows.suggested();
+      const target = suggestions.find((r) => r.handle === 'friend_e')!;
+      const before = asShown(await friendsBoard());
+      await start();
+      await waitFor(() => expect(boardOnScreen()).toEqual(before));
+      const follow = () => screen.getAllByLabelText(`Follow ${target.displayName}`);
+      expect(follow()).toHaveLength(1); // not on the Friends board yet
+
+      controls.setLatency(300);
+      await fireEvent.press(follow()[0]!);
+      await waitFor(() => expect(follow()[0]!.props['aria-pressed']).toBe(true));
+      expect(client.isMutating()).toBe(1);
+      // Nothing in the ranking moves while the follow is in flight.
+      expect(boardOnScreen()).toEqual(before);
+      controls.setLatency(0);
+
+      await waitFor(() => expect(boardOnScreen().some((r) => r.endsWith(' friend_e'))).toBe(true), { timeout: 3000 });
+      await settled();
+      expect(boardOnScreen()).toEqual(asShown(await friendsBoard()));
+      // The suggestion stays where it was, now Following.
+      expect(screen.getByLabelText(suggestedLabel(target))).toBeTruthy();
+      expect(follow().every((p) => p.props['aria-pressed'] === true)).toBe(true);
+    });
+
+    it('a follow from an Everyone row shows on Friends when you switch back', async () => {
+      // As fresh as the app keeps reads (createQueryClient), so only the follow's invalidation
+      // makes the cached Friends board refetch on the way back.
+      client.setDefaultOptions({ queries: { ...client.getDefaultOptions().queries, staleTime: 30_000 } });
+      const friendsBefore = asShown(await friendsBoard());
+      await start();
+      await waitFor(() => expect(boardOnScreen()).toEqual(friendsBefore));
+      await fireEvent.press(pill('Everyone'));
+      const everyone = await everyoneBoard();
+      await waitFor(() => expect(boardOnScreen()).toEqual(asShown(everyone)));
+
+      const target = everyone.find((r) => r.profile.handle === 'friend_e')!;
+      // The suggestion's pill comes first in the list, the ranking row's after it.
+      const onBoard = screen.getAllByLabelText(`Follow ${target.profile.displayName}`).at(-1)!;
+      await fireEvent.press(onBoard);
+      await waitFor(async () => expect((await api.profile.getUser(target.profile.id)).isFollowing).toBe(true));
+      await settled();
+      // Everyone doesn't depend on follows.
+      expect(boardOnScreen()).toEqual(asShown(everyone));
+
+      await fireEvent.press(pill('Friends'));
+      const after = asShown(await friendsBoard());
+      expect(after).not.toEqual(friendsBefore);
+      await waitFor(() => expect(boardOnScreen()).toEqual(after));
+    });
+
+    it('an unfollow from a Friends row keeps the row (now Follow) until pull to refresh', async () => {
+      const friends = await friendsBoard();
+      const target = friends.find((r) => r.profile.handle === 'friend_b')!.profile;
+      const before = asShown(friends);
+      await start();
+      await waitFor(() => expect(boardOnScreen()).toEqual(before));
+      const button = () => screen.getByLabelText(`Follow ${target.displayName}`);
+      expect(button().props['aria-pressed']).toBe(true);
+
+      await fireEvent.press(button());
+      await waitFor(() => expect(button().props['aria-pressed']).toBe(false));
+      await waitFor(async () => expect((await api.profile.getUser(target.id)).isFollowing).toBe(false));
+      await settled();
+      // The server's Friends board no longer has them; the screen holds still.
+      const after = asShown(await friendsBoard());
+      expect(after).not.toContain(`2 ${target.handle}`);
+      expect(boardOnScreen()).toEqual(before);
+      expect(button().props['aria-pressed']).toBe(false);
+
+      await act(async () => list().props.onRefresh());
+      await waitFor(() => expect(boardOnScreen()).toEqual(after));
+    });
+  });
+});
+
+describe('Suggested for you: who you follow already follows them', () => {
+  it('says so on each suggestion, by display name', async () => {
+    const suggestions = await api.follows.suggested();
+    // The fixtures: two people you don't follow, followed by two and by one of the people you do.
+    expect(suggestions.map((r) => r.followedByCount).sort()).toEqual([1, 2]);
+    await start();
+    for (const r of suggestions) {
+      expect(await screen.findByLabelText(suggestedLabel(r))).toBeTruthy();
+      const [a, b] = r.followedBy;
+      expect(screen.getByText(b ? `Followed by ${a!.displayName} and ${b.displayName}` : `Followed by ${a!.displayName}`)).toBeTruthy();
+    }
+  });
+
+  it('counts the rest past two, and says nothing when no one you follow follows them', async () => {
+    const [two, one] = [...(await api.follows.suggested())].sort((a, z) => z.followedByCount - a.followedByCount);
+    jest.spyOn(api.follows, 'suggested').mockResolvedValue([
+      { ...two!, followedByCount: 5 },
+      { ...one!, followedBy: [], followedByCount: 0 },
+    ]);
+    await start();
+    const [a, b] = two!.followedBy;
+    expect(await screen.findByText(`Followed by ${a!.displayName}, ${b!.displayName} and 3 others`)).toBeTruthy();
+    expect(await screen.findByLabelText(rowLabel(one!))).toBeTruthy();
+    expect(screen.queryByText(new RegExp(`^Followed by .*${one!.displayName}`))).toBeNull();
+    expect(screen.getAllByText(/^Followed by/)).toHaveLength(1);
   });
 });
 

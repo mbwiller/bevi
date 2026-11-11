@@ -92,6 +92,8 @@ export const keys = {
     all: [...root, 'leaderboard'] as const,
     bevs: (categoryId?: CategoryId) => [...root, 'leaderboard', 'bevs', categoryId ?? null] as const,
     users: () => [...root, 'leaderboard', 'users'] as const,
+    /** `leaderboard.friends`: you and the people you follow. A follow or unfollow invalidates it (`settleFollow`). */
+    friends: () => [...root, 'leaderboard', 'friends'] as const,
   },
 
   venues: {
