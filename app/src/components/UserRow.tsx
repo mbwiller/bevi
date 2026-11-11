@@ -1,11 +1,14 @@
 import type { Profile } from '@bevi/shared';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { MAX_FONT_SCALE_DENSE, radius, size, spacing, type, useTheme } from '@/theme';
 
 import { Avatar } from './Avatar';
 import { HitTarget, PRESSED } from './HitTarget';
 import { Icon } from './Icon';
+import { FeedbackPressable } from './PressFeedback';
+import { usePop } from './usePop';
 
 export type UserRowUser = Pick<Profile, 'displayName' | 'handle' | 'avatarUrl'>;
 
@@ -56,7 +59,7 @@ export function UserRow({ user, rank, meta, streak, context, following, self = f
           {rank}
         </Text>
       ) : null}
-      <Pressable
+      <FeedbackPressable
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={`${user.displayName}${self ? ' (you)' : ''}, @${user.handle}${meta ? `, ${meta}` : ''}${streak ? `, ${streak} day streak` : ''}${context ? `, ${context}` : ''}`}
@@ -96,7 +99,7 @@ export function UserRow({ user, rank, meta, streak, context, following, self = f
             </View>
           ) : null}
         </View>
-      </Pressable>
+      </FeedbackPressable>
       {following != null && !self ? <FollowPill following={following} name={user.displayName} onPress={onFollow} /> : null}
     </View>
   );
@@ -104,33 +107,44 @@ export function UserRow({ user, rank, meta, streak, context, following, self = f
 
 /**
  * Pill's look (filled Follow, outlined Following) with `aria-pressed` reporting the follow state.
- * Also the author's Follow pill on an Explore FeedPost.
+ * Also the author's Follow pill on an Explore FeedPost. A press pops it like the heart (Change);
+ * new data alone never does.
  */
 export function FollowPill({ following, name, onPress }: { following: boolean; name: string; onPress?: () => void }) {
   const { colors } = useTheme();
+  const pop = usePop();
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`Follow ${name}`}
-      {...({ 'aria-pressed': following } as object)}
-      style={({ pressed }) => [
-        styles.pill,
-        following
-          ? { backgroundColor: colors.surface, borderColor: colors.borderStrong, borderWidth: 1 }
-          : { backgroundColor: colors.primary },
-        pressed && PRESSED,
-      ]}
-    >
-      <HitTarget height={size.pill} borderWidth={following ? 1 : 0} />
-      <Text
-        {...DENSE}
-        style={[type.body, following ? styles.pillOutlined : styles.pillFilled, { color: following ? colors.text : colors.onPrimary }]}
-        numberOfLines={1}
+    <Animated.View style={pop.style} testID="follow-pop">
+      <Pressable
+        onPress={
+          onPress
+            ? () => {
+                pop.pop();
+                onPress();
+              }
+            : undefined
+        }
+        accessibilityRole="button"
+        accessibilityLabel={`Follow ${name}`}
+        {...({ 'aria-pressed': following } as object)}
+        style={({ pressed }) => [
+          styles.pill,
+          following
+            ? { backgroundColor: colors.surface, borderColor: colors.borderStrong, borderWidth: 1 }
+            : { backgroundColor: colors.primary },
+          pressed && PRESSED,
+        ]}
       >
-        {following ? 'Following' : 'Follow'}
-      </Text>
-    </Pressable>
+        <HitTarget height={size.pill} borderWidth={following ? 1 : 0} />
+        <Text
+          {...DENSE}
+          style={[type.body, following ? styles.pillOutlined : styles.pillFilled, { color: following ? colors.text : colors.onPrimary }]}
+          numberOfLines={1}
+        >
+          {following ? 'Following' : 'Follow'}
+        </Text>
+      </Pressable>
+    </Animated.View>
   );
 }
 

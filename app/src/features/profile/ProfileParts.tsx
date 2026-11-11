@@ -1,9 +1,9 @@
 import type { Profile, ProfileStats } from '@bevi/shared';
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
-import { PRESSED } from '@/components/HitTarget';
+import { FeedbackPressable } from '@/components/PressFeedback';
 import { Skeleton } from '@/components/Skeleton';
 import { StatCard } from '@/components/StatCard';
 import { formatCount } from '@/lib/format';
@@ -40,15 +40,16 @@ function Count({ value, label, onPress, pressLabel, pressRole = 'link' }: CountP
       </Text>
     </>
   );
+  // Press: the count gives way under the finger (it had only a brightness dim, which text barely shows).
   return onPress ? (
-    <Pressable
+    <FeedbackPressable
       onPress={onPress}
       accessibilityRole={pressRole}
       accessibilityLabel={pressLabel ?? `${value} ${label}`}
-      style={({ pressed }) => [styles.count, pressed && PRESSED]}
+      style={styles.count}
     >
       {body}
-    </Pressable>
+    </FeedbackPressable>
   ) : (
     <View style={styles.count} accessible accessibilityLabel={`${label}, ${value}`}>
       {body}

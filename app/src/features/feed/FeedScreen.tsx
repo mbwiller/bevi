@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { flattenPages, restartExplore, useFeed, useStats } from '@/api/hooks';
 import { keys } from '@/api/keys';
+import { Arrive, useArrival } from '@/components/Arrive';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { Header } from '@/components/Header';
@@ -83,9 +84,19 @@ export function FeedScreen() {
         : posts.map((item) => ({ kind: 'post', item })),
     [exploring, explore.posts, posts],
   );
+  // Arrive: each segment's first page rises in once, in place of its skeleton; later pages and
+  // rows scrolled into view hold still. Pending counts only while that segment shows its skeleton
+  // (Explore's query is disabled, so pending, until Explore is opened).
+  const feedArrival = useArrival(!exploring && feed.isPending);
+  const exploreArrival = useArrival(exploring && explore.query.isPending);
   const renderItem = useCallback(
-    ({ item: row }: { item: Row }) => (row.kind === 'post' ? renderPost({ item: row.item }) : renderExplore(row.item)),
-    [renderPost, renderExplore],
+    ({ item: row }: { item: Row }) =>
+      row.kind === 'post' ? (
+        <Arrive progress={feedArrival}>{renderPost({ item: row.item })}</Arrive>
+      ) : (
+        <Arrive progress={exploreArrival}>{renderExplore(row.item)}</Arrive>
+      ),
+    [renderPost, renderExplore, feedArrival, exploreArrival],
   );
 
   const followingNobody = stats.data?.following === 0;
@@ -129,19 +140,27 @@ export function FeedScreen() {
   const empty = exploring ? (
     xq.isPending ? (
       <PostSkeletons count={3} />
-    ) : xq.isError ? (
-      <ErrorState error={xq.error} onRetry={() => void xq.refetch()} />
     ) : (
-      <EmptyState icon="sparkles" title={EXPLORE_EMPTY_TITLE} body={EXPLORE_EMPTY_BODY} />
+      <Arrive progress={exploreArrival}>
+        {xq.isError ? (
+          <ErrorState error={xq.error} onRetry={() => void xq.refetch()} />
+        ) : (
+          <EmptyState icon="sparkles" title={EXPLORE_EMPTY_TITLE} body={EXPLORE_EMPTY_BODY} />
+        )}
+      </Arrive>
     )
   ) : feed.isPending ? (
     <PostSkeletons count={3} />
-  ) : feed.isError ? (
-    <ErrorState error={feed.error} onRetry={() => void feed.refetch()} />
-  ) : followingNobody ? (
-    followPrompt
   ) : (
-    <EmptyState icon="newspaper" title="No Bevs from friends yet" body="When people you follow Bev something, it shows up here." />
+    <Arrive progress={feedArrival}>
+      {feed.isError ? (
+        <ErrorState error={feed.error} onRetry={() => void feed.refetch()} />
+      ) : followingNobody ? (
+        followPrompt
+      ) : (
+        <EmptyState icon="newspaper" title="No Bevs from friends yet" body="When people you follow Bev something, it shows up here." />
+      )}
+    </Arrive>
   );
 
   // The segment's paging and refresh. Explore never asks for its next page while a fresh sequence is

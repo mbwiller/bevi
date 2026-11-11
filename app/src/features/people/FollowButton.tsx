@@ -1,8 +1,10 @@
-import { useCallback } from 'react';
-import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
+import { useCallback, useState } from 'react';
+import { StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
 
 import { useFollow, useUnfollow } from '@/api/hooks';
 import { HitTarget, PRESSED } from '@/components/HitTarget';
+import { AnimatedPressable } from '@/components/PressFeedback';
+import { usePop } from '@/components/usePop';
 import { radius, size, spacing, type, useTheme } from '@/theme';
 
 /** The 36pt outlined profile buttons (§6.13): Follow sits where Edit profile is on your own profile. */
@@ -41,27 +43,38 @@ export interface FollowButtonProps {
 export function FollowButton({ userId, name, following, style }: FollowButtonProps) {
   const { colors } = useTheme();
   const toggle = useFollowToggle();
+  // A press pops the button like the heart (Change). The button itself scales, so the caller's
+  // `style` (the profile row's `flex: 1`) still lands on it; an animated Pressable takes no style
+  // function, so the pressed dim is tracked here.
+  const pop = usePop();
+  const [pressed, setPressed] = useState(false);
   return (
-    <Pressable
-      onPress={() => toggle(userId, following)}
+    <AnimatedPressable
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      onPress={() => {
+        pop.pop();
+        toggle(userId, following);
+      }}
       accessibilityRole="button"
       accessibilityLabel={`Follow ${name}`}
       accessibilityState={{ selected: following }}
       {...({ 'aria-pressed': following } as object)}
-      style={({ pressed }) => [
+      style={[
         styles.button,
         following
           ? { backgroundColor: colors.surface, borderColor: colors.borderStrong, borderWidth: 1 }
           : { backgroundColor: colors.primary },
         pressed && PRESSED,
         style,
+        pop.style,
       ]}
     >
       <HitTarget height={HEIGHT} borderWidth={following ? 1 : 0} />
       <Text style={[type.body, styles.label, { color: following ? colors.text : colors.onPrimary }]} numberOfLines={1}>
         {following ? 'Following' : 'Follow'}
       </Text>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 

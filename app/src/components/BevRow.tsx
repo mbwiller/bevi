@@ -1,6 +1,6 @@
 import type { BevSummary, Bucket } from '@bevi/shared';
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { categoryById } from '@/lib/categories';
 import { formatRatings } from '@/lib/format';
@@ -9,6 +9,7 @@ import { MAX_FONT_SCALE_DENSE, size, spacing, type, useTheme } from '@/theme';
 import { BevActions, bevImageProps, brandLine } from './BevParts';
 import { BevImage } from './BevImage';
 import { Icon } from './Icon';
+import { FeedbackPressable } from './PressFeedback';
 import { ScoreBubble } from './ScoreBubble';
 
 export interface BevRowProps {
@@ -76,7 +77,8 @@ export function BevRow({
       ]}
     >
       <View style={styles.top}>
-        <Pressable
+        {/* Press: the button (image and text) gives way; the row's background and divider stay put. */}
+        <FeedbackPressable
           onPress={onPress}
           accessibilityRole="button"
           accessibilityLabel={prefix + bev.name}
@@ -101,7 +103,7 @@ export function BevRow({
               ) : null}
             </View>
           </View>
-        </Pressable>
+        </FeedbackPressable>
         {score !== undefined || scoreVariant ? (
           <View style={styles.score}>
             <ScoreBubble score={score} variant={scoreVariant} bucket={bucket} />

@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
-import type { ComponentProps } from 'react';
+import { useRef, type ComponentProps } from 'react';
 
+import { TabScene, type TabHistory } from '@/components/ScreenMotion';
 import { TabBar, type TabId } from '@/components/TabBar';
 import { useSession } from '@/state/session';
 
@@ -54,9 +55,31 @@ function AppTabBar({ state, navigation }: TabBarRenderProps) {
   );
 }
 
+type ScreenLayout = NonNullable<ComponentProps<typeof Tabs>['screenLayout']>;
+
 export default function TabsLayout() {
+  // Move: switching tabs fades the new one in; People slides in like a pushed screen (TabScene).
+  const history = useRef<TabHistory['current']>(null);
+  const screenLayout: ScreenLayout = ({ route, navigation, children }) => {
+    const state = navigation.getState();
+    return (
+      <TabScene
+        name={route.name}
+        variant={route.name in NON_TAB_ROUTES ? 'push' : 'fade'}
+        active={state.routes[state.index]?.key === route.key}
+        history={history}
+      >
+        {children}
+      </TabScene>
+    );
+  };
   return (
-    <Tabs backBehavior="history" screenOptions={{ headerShown: false }} tabBar={(props) => <AppTabBar {...props} />}>
+    <Tabs
+      backBehavior="history"
+      screenOptions={{ headerShown: false }}
+      screenLayout={screenLayout}
+      tabBar={(props) => <AppTabBar {...props} />}
+    >
       {TAB_IDS.map((id) => (
         <Tabs.Screen key={id} name={TAB_ROUTES[id]} />
       ))}

@@ -1,10 +1,13 @@
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { radius, size, spacing, type, useTheme } from '@/theme';
 
 import { Avatar } from './Avatar';
 import { Icon, type IconName } from './Icon';
+import { usePopWhenOn } from './usePop';
 
 export type TabId = 'feed' | 'lists' | 'add' | 'map' | 'profile';
 
@@ -71,7 +74,7 @@ export function TabBar({ active = 'feed', user, onChange, safeArea = true, style
             {...(on ? ({ 'aria-current': 'page' } as object) : null)}
             style={({ pressed }) => [styles.item, pressed && styles.pressed]}
           >
-            <View style={[styles.icon, t.id === 'add' && styles.iconAdd]}>
+            <TabIcon on={on} style={[styles.icon, t.id === 'add' && styles.iconAdd]}>
               {t.id === 'add' ? (
                 <View
                   testID="tab-add-circle"
@@ -97,7 +100,7 @@ export function TabBar({ active = 'feed', user, onChange, safeArea = true, style
               ) : (
                 <Icon name={t.icon!} size={28} strokeWidth={stroke} color={tint} />
               )}
-            </View>
+            </TabIcon>
             <Text
               style={[type.tabBar, { color: tint }, on && styles.labelOn]}
               maxFontSizeMultiplier={1}
@@ -111,6 +114,12 @@ export function TabBar({ active = 'feed', user, onChange, safeArea = true, style
       })}
     </View>
   );
+}
+
+/** A tab's 32pt icon box. The newly active tab's icon pops once (Change's pop); Reduce Motion holds it still. */
+function TabIcon({ on, style, children }: { on: boolean; style: StyleProp<ViewStyle>; children: ReactNode }) {
+  const pop = usePopWhenOn(on);
+  return <Animated.View style={[style, pop]}>{children}</Animated.View>;
 }
 
 // Geometry from bundle.css `.bv-tabbar` (the raised centre is `.bv-tabbar-add`).

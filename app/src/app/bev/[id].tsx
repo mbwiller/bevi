@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAddWantToTry, useBev, useMe, useRemoveWantToTry, useStats } from '@/api/hooks';
+import { Arrive, useArrival } from '@/components/Arrive';
 import { bevImageProps, brandLine } from '@/components/BevParts';
 import { BevImage } from '@/components/BevImage';
 import { EmptyState } from '@/components/EmptyState';
@@ -50,6 +51,8 @@ export default function BevDetailScreen() {
   const add = useAddWantToTry();
   const remove = useRemoveWantToTry();
   const [reporting, setReporting] = useState(false);
+  // Arrive: what replaces the skeleton rises in once (not on a refetch, nor for a Bev already cached).
+  const arrival = useArrival(query.isPending);
 
   const bev = query.data;
   const cat = bev ? categoryById(bev.categoryId) : undefined;
@@ -182,7 +185,9 @@ export default function BevDetailScreen() {
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.screen, { backgroundColor: colors.surface }]}>
       {header}
-      <ScrollView contentContainerStyle={styles.scroll}>{body}</ScrollView>
+      <ScrollView contentContainerStyle={styles.scroll}>
+        {query.isPending ? body : <Arrive progress={arrival}>{body}</Arrive>}
+      </ScrollView>
     </SafeAreaView>
   );
 }

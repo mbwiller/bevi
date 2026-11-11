@@ -116,3 +116,19 @@ it('does not add a second button for the image: the name is the row button', asy
   await render(<BevRow bev={BEV} showImage actions={false} />);
   expect(screen.getAllByRole('button')).toHaveLength(1);
 });
+
+it('Press: the row button gives way under the finger, not the row with its divider, and still fires once', async () => {
+  const onPress = jest.fn();
+  await render(<BevRow bev={BEV} number={1} onPress={onPress} />);
+  const button = screen.getByRole('button', { name: '1. Diet Coke' });
+  expect(StyleSheet.flatten(button.props.style)).toMatchObject({ opacity: 1, transform: [] });
+  // The row's own box (background and divider) has no press transform.
+  let row = button.parent;
+  while (row && !(typeof row.type === 'string' && StyleSheet.flatten(row.props.style)?.borderBottomWidth)) row = row.parent;
+  expect(row).toBeTruthy();
+  expect(StyleSheet.flatten(row!.props.style).transform).toBeUndefined();
+  await fireEvent(button, 'pressIn');
+  await fireEvent(button, 'pressOut');
+  await fireEvent.press(button);
+  expect(onPress).toHaveBeenCalledTimes(1);
+});
