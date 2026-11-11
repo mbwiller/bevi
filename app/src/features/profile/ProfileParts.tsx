@@ -23,9 +23,12 @@ interface CountProps {
   value: string;
   label: string;
   onPress?: () => void;
+  /** Overrides the pressable count's label ("12 Followers") and role (link). */
+  pressLabel?: string;
+  pressRole?: 'link' | 'button';
 }
 
-function Count({ value, label, onPress }: CountProps) {
+function Count({ value, label, onPress, pressLabel, pressRole = 'link' }: CountProps) {
   const { colors } = useTheme();
   const body = (
     <>
@@ -40,8 +43,8 @@ function Count({ value, label, onPress }: CountProps) {
   return onPress ? (
     <Pressable
       onPress={onPress}
-      accessibilityRole="link"
-      accessibilityLabel={`${value} ${label}`}
+      accessibilityRole={pressRole}
+      accessibilityLabel={pressLabel ?? `${value} ${label}`}
       style={({ pressed }) => [styles.count, pressed && PRESSED]}
     >
       {body}
@@ -56,14 +59,16 @@ function Count({ value, label, onPress }: CountProps) {
 export interface ProfileHeroProps {
   profile: Pick<Profile, 'displayName' | 'handle' | 'avatarUrl' | 'createdAt'>;
   stats: ProfileStats;
-  /** Omit where that person's Bev'd list has no screen: the count is then plain text. */
+  /** Makes the Bev'd count a button. Omit where there is nothing for it to do: it is then plain text. */
   onBevd?: () => void;
+  /** The Bev'd button's accessible name; defaults to "12 Bev'd" (your own, which opens your list). */
+  bevdLabel?: string;
   onFollowers?: () => void;
   onFollowing?: () => void;
 }
 
 /** Avatar 100, @handle, "Member since", then Bev'd · Followers · Following. */
-export function ProfileHero({ profile, stats, onBevd, onFollowers, onFollowing }: ProfileHeroProps) {
+export function ProfileHero({ profile, stats, onBevd, bevdLabel, onFollowers, onFollowing }: ProfileHeroProps) {
   const { colors } = useTheme();
   return (
     <View>
@@ -75,7 +80,7 @@ export function ProfileHero({ profile, stats, onBevd, onFollowers, onFollowing }
         <Text style={[type.body, { color: colors.textSecondary }]}>{memberSince(profile.createdAt)}</Text>
       </View>
       <View style={styles.counts}>
-        <Count value={formatCount(stats.bevdCount)} label="Bev'd" onPress={onBevd} />
+        <Count value={formatCount(stats.bevdCount)} label="Bev'd" onPress={onBevd} pressLabel={bevdLabel} pressRole={bevdLabel ? 'button' : 'link'} />
         <Count value={formatCount(stats.followers)} label="Followers" onPress={onFollowers} />
         <Count value={formatCount(stats.following)} label="Following" onPress={onFollowing} />
       </View>

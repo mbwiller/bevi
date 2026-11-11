@@ -221,16 +221,14 @@ describe("another user's profile", () => {
     await waitFor(() => expect(screen.getByLabelText(`Follow ${j.displayName}`).props['aria-pressed']).toBe(false));
   });
 
-  it('shows Bev\'d · Followers · Following, plain Bev\'d text and no list rows', async () => {
+  it('shows Bev\'d · Followers · Following and no list rows', async () => {
     const j = await jules();
     const s = await api.stats.getUser(j.id);
     await open(`/user/${j.id}`);
     expect(await screen.findByLabelText(`${s.followers} Followers`)).toBeTruthy();
     expect(screen.getByLabelText(`${s.following} Following`)).toBeTruthy();
-    // Their Bev'd list has no screen, so the count is read-only text: a labelled group, not a link or button.
-    const bevd = screen.getByLabelText(`Bev'd, ${s.bevdCount}`);
-    expect(bevd.props.accessibilityRole).toBeUndefined();
-    expect(screen.queryByLabelText(`${s.bevdCount} Bev'd`)).toBeNull();
+    // The count is a button that shows their rankings (see OtherUserBevd.test.tsx for what it does).
+    expect(screen.getByLabelText(`Bev'd, ${s.bevdCount}, show their rankings`).props.accessibilityRole).toBe('button');
     expect(screen.getByLabelText('Share profile')).toBeTruthy();
     expect(screen.getByLabelText(/^Rank on Bevi, /)).toBeTruthy();
     expect(screen.queryByLabelText(/^Want to Try/)).toBeNull();

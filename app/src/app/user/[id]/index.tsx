@@ -1,5 +1,7 @@
 import { isApiError } from '@bevi/shared';
+import type { FlashListRef } from '@shopify/flash-list';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,7 +12,7 @@ import { ErrorState } from '@/components/ErrorState';
 import { Header } from '@/components/Header';
 import { useBack } from '@/lib/useBack';
 import { FollowButton } from '@/features/people/FollowButton';
-import { ActivityList, parseProfileTab } from '@/features/profile/ActivityList';
+import { ActivityList, parseProfileTab, type ActivityRow } from '@/features/profile/ActivityList';
 import {
   PROFILE_BUTTON,
   ProfileButtonRow,
@@ -24,8 +26,9 @@ import { spacing, type, useTheme } from '@/theme';
 /**
  * Another user's profile (§6.14): the Profile layout (Bev'd · Followers · Following, then the buttons and
  * the stat cards) with Follow / Following (optimistic) and Share profile, then their rankings. The Bev'd
- * count is plain text: the contract has no read of another user's Bev'd list beyond the Activity below,
- * and `/lists` is only yours. No list rows (Recommended is private, Want to Try has no read) and no
+ * count is a button that does what the old Bev'd row did: it shows their rankings, switching to the
+ * Activity tab or, when already there, scrolling to the first ranking (their Bev'd list is that Activity;
+ * `/lists` is only yours). No list rows (Recommended is private, Want to Try has no read) and no
  * Settings. Your own id redirects to the Profile tab.
  */
 export default function UserProfileScreen() {
@@ -39,6 +42,7 @@ export default function UserProfileScreen() {
   const user = useUser(isMe ? undefined : id);
   const stats = useStats(isMe ? undefined : id);
   const { share, notice } = useShareProfile(id);
+  const listRef = useRef<FlashListRef<ActivityRow> | null>(null);
 
   if (isMe) return <Redirect href="/profile" />;
 
@@ -77,6 +81,7 @@ export default function UserProfileScreen() {
         profile={profile}
         self={false}
         following={profile.isFollowing}
+        listRef={listRef}
         tab={tab}
         onTab={(t) => router.setParams({ tab: t })}
         onRefresh={() => {
@@ -88,6 +93,12 @@ export default function UserProfileScreen() {
             <ProfileHero
               profile={profile}
               stats={s}
+              onBevd={() => {
+                // Their Bev'd list is the Activity below (rankings.listUser), and `/lists` is only yours.
+                if (tab !== 'activity') router.setParams({ tab: 'activity' });
+                else if (s.bevdCount > 0) void listRef.current?.scrollToIndex({ index: 0, animated: true });
+              }}
+              bevdLabel={`Bev'd, ${s.bevdCount}, show their rankings`}
               onFollowers={() => toPeople('followers')}
               onFollowing={() => toPeople('following')}
             />
