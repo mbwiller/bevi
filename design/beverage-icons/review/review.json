@@ -2378,6 +2378,142 @@
           ]
         }
       ]
+    },
+    {
+      "reviewedAt": "2026-11-11",
+      "reviewer": "Codex",
+      "scope": "20 energy drinks, exact downloaded product images independently inspected; final large renders and 40/56/96/155px light/dark tiles with 8% padding. Corrected front-versus-side reference selection for Alani, refined GURU lettering fit and GHOST logo/flavor separation.",
+      "outcome": "20 needs-review drafts; final aesthetic approval and web-device review pending. All 194 prior asset hashes unchanged.",
+      "sheets": [
+        "review/batch-08-2026-11-11-01.png",
+        "review/batch-08-2026-11-11-02.png",
+        "review/batch-08-2026-11-11-03.png",
+        "review/batch-08-2026-11-11-04.png",
+        "review/batch-08-large-2026-11-11-01.png",
+        "review/batch-08-large-2026-11-11-02.png"
+      ],
+      "assets": [
+        {
+          "bevId": "915228fb-914c-53bf-a5ef-76cfdfe6bc1a",
+          "slug": "alani-nu-breezeberry",
+          "pngSha256": "3af82bb46b7e1282a7c751b9a62583316668b8368e66af9cedfb6ddc20d851b4",
+          "portableSvgSha256": "b837aa74114218ee71f427aa88d2711919a8978153281c02f67ed1a83ad48346"
+        },
+        {
+          "bevId": "c2d2ef80-07ab-54de-be22-b0164fafc0a7",
+          "slug": "alani-nu-cosmic-stardust",
+          "pngSha256": "0709a2045811e027823b58668f402ff891a50ec9cae01f2d1e7724e1b0f3c177",
+          "portableSvgSha256": "6db484fe8f29446bae3b175c58ba503086b4388a59bf3ab66c7d537fca44ac32"
+        },
+        {
+          "bevId": "63234312-8b4f-51dc-b012-d7a81133198c",
+          "slug": "alani-nu-witchs-brew",
+          "pngSha256": "fa6289148e73578d83f9326591a493fd4adf9a2b550eba899f184cc122091b70",
+          "portableSvgSha256": "abca71b23f1830c92947f59590cde379248fc894831aa07afde25cc2aa0e640b"
+        },
+        {
+          "bevId": "0f06d68f-c7f9-5262-bae3-c55a559a8fc5",
+          "slug": "bang-blue-razz",
+          "pngSha256": "f403ae2761c6cd091e1074f6e047621a2a4f4521a7014b7a0027dcfa3bf696e6",
+          "portableSvgSha256": "bc6b48efa48722b35486bc1190beb480261d2a51f369cb58f8cc15a0f7e136d9"
+        },
+        {
+          "bevId": "c3a99004-b273-5393-82d9-aabd06e44f23",
+          "slug": "bang-peach-mango",
+          "pngSha256": "214a817998ae31c76f01015640e0573ef7762ea8b6ba131776522c5385c173e1",
+          "portableSvgSha256": "9a20e2497132f5d774e9bd3e7ae16ab431f453b553850e5b3ae552eac54fad74"
+        },
+        {
+          "bevId": "7e2f2719-6cc6-5a96-a07e-4cf8178c7b3a",
+          "slug": "bang-star-blast",
+          "pngSha256": "6519a3db8515333dd8be039ed07af2529e716f69446a416ada5e3c5937b2dbad",
+          "portableSvgSha256": "027eefaab332e8f31a36b2fbf52588cd5557ccfef12cf78803f9b2c2cae976b1"
+        },
+        {
+          "bevId": "ca3f14fc-f6d4-5080-8310-304e7838a38d",
+          "slug": "c4-energy-frozen-bombsicle",
+          "pngSha256": "3ca2d4fdbece4d0e8bbd8f3d859af455035faa65e922886cc92afefe0bef3e9b",
+          "portableSvgSha256": "f91554b6749755305080738d15c3bb89013c8b4aa89f92c47cef7e1391b03c2a"
+        },
+        {
+          "bevId": "55bf9ed4-5570-514d-8a10-30282e4516fa",
+          "slug": "celsius-arctic-vibe",
+          "pngSha256": "da77c960fc47fc29147da4ae6f24423b1200e01e0b019290988649ea1ecab457",
+          "portableSvgSha256": "cbe725d2c05c94477ba444eebc08256760522074c98807316bec831f9d1b2d25"
+        },
+        {
+          "bevId": "ab3183ad-af5d-5acc-9f4d-b1c247f4cbf7",
+          "slug": "celsius-sparkling-cola",
+          "pngSha256": "1ecfb1ca3cccff81f569ce430a7d7d4391f9429eec55b5fc627ee5fa556d0273",
+          "portableSvgSha256": "b7098d3114103094c29ee400b09bcf6b65372c6598ca7eff45657da13b7d4638"
+        },
+        {
+          "bevId": "593ab124-e1fa-5217-a8ef-424a7fa57065",
+          "slug": "celsius-kiwi-guava",
+          "pngSha256": "341b7d0fc40c8d71565f954ed0285c065b2969e88ef29d59dd9c55c511695d53",
+          "portableSvgSha256": "285461992a7b75af52413c3585e35b4d3bbfb28c7799c4c746ed6ea480495be0"
+        },
+        {
+          "bevId": "c6c4b6b5-c07a-50ac-817f-26e10e2c729f",
+          "slug": "celsius-sparkling-peach-vibe",
+          "pngSha256": "37526601f06c4b49f48c8b3dbb14ed88b265f363bcff773995f7206008637224",
+          "portableSvgSha256": "7b11648a50875957bac8dbd07c956039da82330f3ca4c1b20635e3aaf3e85b8c"
+        },
+        {
+          "bevId": "5d0b23cb-dfca-5fd1-bc08-11d4ba2a49e3",
+          "slug": "celsius-sparkling-wild-berry",
+          "pngSha256": "7c4ba0dcc9f1137d47ebef96160dfc4bc98db22067d0380c5426eaaa62bd814f",
+          "portableSvgSha256": "fa9977c0283d6dd0541ee5e727d54a47027a1a81d0ba00ce9843d5a62aefca40"
+        },
+        {
+          "bevId": "0fbd031b-c7e3-58d2-b585-15c930949fd5",
+          "slug": "full-throttle-original",
+          "pngSha256": "5b42383be76df642baad297adc8979cae635b86dac4830e3d247a1d7c2784f72",
+          "portableSvgSha256": "ea56bb79e051542a85c2bb090ccb6b520593dee0856e3f4281fb5915ae7068bc"
+        },
+        {
+          "bevId": "13af1ca1-463b-5184-874f-f1d667ef00b8",
+          "slug": "ghost-energy-cherry-limeade",
+          "pngSha256": "6c2e2658e6b8f507307e677e7b537ddd7b4b9f1fe858fa05bdf8a8ddcbd1ea38",
+          "portableSvgSha256": "ccdbc200950307ee8eb82135d0eb2c6cc424ee866bb12c8f870c48bc9deee5b7"
+        },
+        {
+          "bevId": "a46484f3-a819-5baf-8deb-891eb8babe44",
+          "slug": "ghost-energy-sour-patch-kids-redberry",
+          "pngSha256": "33956bba2a6f0d8b5689e2fac6ff36aa3354be3ecc48f6345f8dbb136846fd06",
+          "portableSvgSha256": "41564edacdaf68cefba993d053a665b0696e59b3d4e97b53ad59904c40bdf86c"
+        },
+        {
+          "bevId": "608ca5f9-d15f-5b9d-be8c-a2075e7f29db",
+          "slug": "guru-organic-energy-original",
+          "pngSha256": "52b45658723728c37b6966444ca26d5fd3e1196d721e759779508093f0423da7",
+          "portableSvgSha256": "4628f7e5c0696af420edcf3408cd2af6d49fb2d0ae8e63080c061bc92cb7e56a"
+        },
+        {
+          "bevId": "8151a62a-6c91-5ec6-bbec-dcf8d5f30058",
+          "slug": "nos-original",
+          "pngSha256": "1643c37b1f9ef0ff42a0827210f2e73ecaffb887d8f36d6e0b183efd3b5499b4",
+          "portableSvgSha256": "ef794d9536760384e224b1fbb908b6c558d8350f4449396009755d7b530d2f05"
+        },
+        {
+          "bevId": "4e258698-4bf4-5dc1-aeec-1c504da19670",
+          "slug": "reign-melon-mania",
+          "pngSha256": "b26b404a8e07507f5b2fcaf77c38d89c6f84eab025046cac5bb6fe3e489fd5d3",
+          "portableSvgSha256": "183e6035160b2515517abb4d56c002692974d7ee888e34db061468a0a3247c89"
+        },
+        {
+          "bevId": "63726174-9c40-57ac-9711-4ce09d5b4d32",
+          "slug": "reign-razzle-berry",
+          "pngSha256": "2da31c2aede965e991e5fb8acec6d2df22832548a669ff223b56ec030922e853",
+          "portableSvgSha256": "2c689eeb3a0a571687879d6706b5a1c7c29a135211e7ab407246c6c058e58321"
+        },
+        {
+          "bevId": "06d31bf1-d4e5-5488-b1ed-a0cd8d50c6d5",
+          "slug": "rockstar-original",
+          "pngSha256": "aa1d703f03aead2c2ed164713d21b94557e8c82665b6dbd5303b3e2fd1932943",
+          "portableSvgSha256": "c742de6983d79d99d5eca547ef2365daa6bbeffcbe5c007ae3102af4279e9f3d"
+        }
+      ]
     }
   ]
 }

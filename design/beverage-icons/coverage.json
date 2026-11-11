@@ -1,8 +1,8 @@
 {
   "summary": {
     "catalog": 378,
-    "authored": 194,
-    "pending": 184,
+    "authored": 214,
+    "pending": 164,
     "starterAuthored": 39,
     "starterTotal": 43,
     "livePostgresReconciled": false
@@ -585,74 +585,10 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "c6c4b6b5-c07a-50ac-817f-26e10e2c729f",
-      "slug": "celsius-sparkling-peach-vibe",
-      "name": "Celsius Sparkling Peach Vibe",
-      "brand": "Celsius",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "593ab124-e1fa-5217-a8ef-424a7fa57065",
-      "slug": "celsius-kiwi-guava",
-      "name": "Celsius Sparkling Kiwi Guava",
-      "brand": "Celsius",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "ab3183ad-af5d-5acc-9f4d-b1c247f4cbf7",
-      "slug": "celsius-sparkling-cola",
-      "name": "Celsius Sparkling Cola",
-      "brand": "Celsius",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "0185e29e-12f6-5f46-8223-a22a1fc1144c",
       "slug": "celsius-cucumber-lime",
       "name": "Celsius Cucumber Lime",
       "brand": "Celsius",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "55bf9ed4-5570-514d-8a10-30282e4516fa",
-      "slug": "celsius-arctic-vibe",
-      "name": "Celsius Arctic Vibe",
-      "brand": "Celsius",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "5d0b23cb-dfca-5fd1-bc08-11d4ba2a49e3",
-      "slug": "celsius-sparkling-wild-berry",
-      "name": "Celsius Sparkling Wild Berry",
-      "brand": "Celsius",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "63234312-8b4f-51dc-b012-d7a81133198c",
-      "slug": "alani-nu-witchs-brew",
-      "name": "Alani Nu Energy Witch's Brew",
-      "brand": "Alani Nu",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "915228fb-914c-53bf-a5ef-76cfdfe6bc1a",
-      "slug": "alani-nu-breezeberry",
-      "name": "Alani Nu Energy Breezeberry",
-      "brand": "Alani Nu",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "c2d2ef80-07ab-54de-be22-b0164fafc0a7",
-      "slug": "alani-nu-cosmic-stardust",
-      "name": "Alani Nu Energy Cosmic Stardust",
-      "brand": "Alani Nu",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -665,22 +601,6 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "7e2f2719-6cc6-5a96-a07e-4cf8178c7b3a",
-      "slug": "bang-star-blast",
-      "name": "Bang Energy Star Blast",
-      "brand": "Bang Energy",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "c3a99004-b273-5393-82d9-aabd06e44f23",
-      "slug": "bang-peach-mango",
-      "name": "Bang Energy Peach Mango",
-      "brand": "Bang Energy",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "ce13c1fc-955d-5ce3-abbf-7f075fe1570a",
       "slug": "bang-rainbow-unicorn",
       "name": "Bang Energy Rainbow Unicorn",
@@ -689,50 +609,10 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "0f06d68f-c7f9-5262-bae3-c55a559a8fc5",
-      "slug": "bang-blue-razz",
-      "name": "Bang Energy Blue Razz",
-      "brand": "Bang Energy",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "13af1ca1-463b-5184-874f-f1d667ef00b8",
-      "slug": "ghost-energy-cherry-limeade",
-      "name": "Ghost Energy Cherry Limeade",
-      "brand": "Ghost Energy",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "a46484f3-a819-5baf-8deb-891eb8babe44",
-      "slug": "ghost-energy-sour-patch-kids-redberry",
-      "name": "Ghost Energy Sour Patch Kids Redberry",
-      "brand": "Ghost Energy",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "c3fc3877-1a93-5bd4-a155-c4a4be8a281d",
       "slug": "ghost-energy-faze-berry",
       "name": "Ghost Energy x FaZe Berry",
       "brand": "Ghost Energy",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "4e258698-4bf4-5dc1-aeec-1c504da19670",
-      "slug": "reign-melon-mania",
-      "name": "Reign Total Body Fuel Melon Mania",
-      "brand": "Reign Total Body Fuel",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "63726174-9c40-57ac-9711-4ce09d5b4d32",
-      "slug": "reign-razzle-berry",
-      "name": "Reign Total Body Fuel Razzle Berry",
-      "brand": "Reign Total Body Fuel",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -757,46 +637,6 @@
       "slug": "five-hour-energy-pink-lemonade",
       "name": "5-hour Energy Pink Lemonade",
       "brand": "5-hour Energy",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "06d31bf1-d4e5-5488-b1ed-a0cd8d50c6d5",
-      "slug": "rockstar-original",
-      "name": "Rockstar Original Energy Drink",
-      "brand": "Rockstar",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "8151a62a-6c91-5ec6-bbec-dcf8d5f30058",
-      "slug": "nos-original",
-      "name": "NOS Original Energy Drink",
-      "brand": "NOS",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "0fbd031b-c7e3-58d2-b585-15c930949fd5",
-      "slug": "full-throttle-original",
-      "name": "Full Throttle Original Energy Drink",
-      "brand": "Full Throttle",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "ca3f14fc-f6d4-5080-8310-304e7838a38d",
-      "slug": "c4-energy-frozen-bombsicle",
-      "name": "C4 Energy Frozen Bombsicle",
-      "brand": "C4 Energy",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "608ca5f9-d15f-5b9d-be8c-a2075e7f29db",
-      "slug": "guru-organic-energy-original",
-      "name": "Guru Organic Energy Original",
-      "brand": "Guru Organic Energy",
       "isStarter": false,
       "status": "needs-reference"
     },
