@@ -1,0 +1,102 @@
+<svg width="200" height="260" viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <radialGradient id="bev-horchata-traditional-shadow" cx="0.5" cy="0.5" r="0.5" fx="0.5" fy="0.5">
+            <stop offset="0" stop-color="#3c372d" stop-opacity="0.18"/>
+            <stop offset="1" stop-color="#3c372d" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="bev-horchata-traditional-base" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#d4e1db" stop-opacity="0.6"/>
+            <stop offset="0.35" stop-color="#fcfff4" stop-opacity="0.9"/>
+            <stop offset="1" stop-color="#9cb2a6" stop-opacity="0.7"/>
+        </linearGradient>
+        <linearGradient id="bev-horchata-traditional-glass" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#ffffff" stop-opacity="0.65"/>
+            <stop offset="0.18" stop-color="#ffffff" stop-opacity="0.12"/>
+            <stop offset="0.65" stop-color="#ffffff" stop-opacity="0.02"/>
+            <stop offset="1" stop-color="#75867c" stop-opacity="0.35"/>
+        </linearGradient>
+        <linearGradient id="bev-horchata-traditional-liquid" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#d0bb8e"/>
+            <stop offset="0.25" stop-color="#eee0bd"/>
+            <stop offset="0.6" stop-color="#eee0bd"/>
+            <stop offset="1" stop-color="#d0bb8e"/>
+        </linearGradient>
+        <linearGradient id="bev-horchata-traditional-ice" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#ffffff" stop-opacity="0.56"/>
+            <stop offset="0.45" stop-color="#f5f9e4" stop-opacity="0.13"/>
+            <stop offset="1" stop-color="#d4e1cf" stop-opacity="0.39"/>
+        </linearGradient>
+    </defs>
+    <path fill="url(#bev-horchata-traditional-shadow)" stroke="none" d="M 147 239 C 147 245.07513 125.95739 250 100 250 C 74.04262 250 53 245.07513 53 239 C 53 232.92485 74.04262 228 100 228 C 125.95739 228 147 232.92485 147 239 Z"/>
+    <path fill="url(#bev-horchata-traditional-base)" stroke="#b3c7b6" stroke-width="0.9" d="M 133 233 C 133 236.3137 118.225395 239 100 239 C 81.774605 239 67 236.3137 67 233 C 67 229.6863 81.774605 227 100 227 C 118.225395 227 133 229.6863 133 233 Z"/>
+    <path fill="url(#bev-horchata-traditional-glass)" stroke="#d2dfd0" d="M 97 198 L 97 223 Q 97 229 85 231 L 115 231 Q 103 229 103 223 L 103 198 Z"/>
+    <g opacity="0.65">
+        <path fill="#000000" stroke="#ffffff" stroke-width="1.3" d="M 100 202 L 100 225"/>
+    </g>
+    <path fill="url(#bev-horchata-traditional-glass)" stroke="#b2c6b5" stroke-width="0.9" d="M 59 79 Q 100 67 141 79 C 146 119 140 169 120 189 Q 100 209 80 189 C 60 169 54 119 59 79 Z"/>
+    <path fill="url(#bev-horchata-traditional-liquid)" stroke="none" d="M 61 98 Q 100 88 139 98 C 141 135 133 171 116 188 Q 100 202 84 188 C 67 171 59 135 61 98 Z"/>
+    <path fill="#f4e8cc" stroke="none" d="M 139 98 C 139 102.86011 121.539116 106.8 100 106.8 C 78.46089 106.8 60.999992 102.86011 61 98 C 60.999992 93.13989 78.46089 89.2 100 89.2 C 121.539116 89.2 139 93.13989 139 98 Z"/>
+    <g transform="matrix(0.99026805 -0.1391731 0.1391731 0.99026805 77 91)">
+        <path fill="url(#bev-horchata-traditional-ice)" stroke="#fffdf1" stroke-opacity="0.6" stroke-width="0.8" d="M 4 0 L 22 0 C 24.209139 0 26 1.790861 26 4 L 26 19 C 26 21.209139 24.209139 23 22 23 L 4 23 C 1.790861 23 0 21.209139 0 19 L 0 4 C 0 1.790861 1.790861 0 4 0 Z"/>
+        <path fill="none" stroke="#ffffff" stroke-opacity="0.65" stroke-width="1.1" d="M 4 19 L 4 7 Q 4 4 7 4 L 20 4"/>
+        <path fill="none" stroke="#a5bcac" stroke-opacity="0.3" stroke-width="0.6" d="M 5 20 L 22 18"/>
+    </g>
+    <g transform="matrix(0.97437006 0.22495106 -0.22495106 0.97437006 108 92)">
+        <path fill="url(#bev-horchata-traditional-ice)" stroke="#fffdf1" stroke-opacity="0.6" stroke-width="0.8" d="M 4 0 L 17 0 C 19.209139 0 21 1.790861 21 4 L 21 19 C 21 21.209139 19.209139 23 17 23 L 4 23 C 1.790861 23 0 21.209139 0 19 L 0 4 C 0 1.790861 1.790861 0 4 0 Z"/>
+        <path fill="none" stroke="#ffffff" stroke-opacity="0.65" stroke-width="1.1" d="M 4 19 L 4 7 Q 4 4 7 4 L 15 4"/>
+        <path fill="none" stroke="#a5bcac" stroke-opacity="0.3" stroke-width="0.6" d="M 5 20 L 17 18"/>
+    </g>
+    <g opacity="0.65">
+        <path fill="#8d6d44" stroke="none" d="M 68.65 96 C 68.65 96.1933 68.358986 96.350006 68 96.350006 C 67.641014 96.350006 67.35 96.1933 67.35 96 C 67.35 95.8067 67.641014 95.649994 68 95.649994 C 68.358986 95.649994 68.65 95.8067 68.65 96 Z"/>
+    </g>
+    <g opacity="0.65">
+        <path fill="#8d6d44" stroke="none" d="M 81.65 103 C 81.65 103.193306 81.358986 103.35 81 103.35 C 80.641014 103.35 80.35 103.193306 80.35 103 C 80.35 102.8067 80.641014 102.65 81 102.65 C 81.358986 102.65 81.65 102.8067 81.65 103 Z"/>
+    </g>
+    <g opacity="0.65">
+        <path fill="#8d6d44" stroke="none" d="M 94.65 101 C 94.65 101.1933 94.358986 101.35 94 101.35 C 93.641014 101.35 93.35 101.1933 93.35 101 C 93.35 100.806694 93.641014 100.65 94 100.65 C 94.358986 100.65 94.65 100.806694 94.65 101 Z"/>
+    </g>
+    <g opacity="0.65">
+        <path fill="#8d6d44" stroke="none" d="M 107.649994 99 C 107.649994 99.193306 107.358986 99.35 107 99.35 C 106.64102 99.35 106.35 99.193306 106.35 99 C 106.35 98.8067 106.64102 98.65 107 98.65 C 107.358986 98.65 107.649994 98.8067 107.649994 99 Z"/>
+    </g>
+    <g opacity="0.65">
+        <path fill="#8d6d44" stroke="none" d="M 120.65 97 C 120.65 97.1933 120.358986 97.35 120 97.35 C 119.641014 97.35 119.35 97.1933 119.35 97 C 119.35 96.806694 119.641014 96.65 120 96.65 C 120.358986 96.65 120.65 96.806694 120.65 97 Z"/>
+    </g>
+    <g opacity="0.65">
+        <path fill="#8d6d44" stroke="none" d="M 71.65 104 C 71.65 104.1933 71.358986 104.350006 71 104.350006 C 70.641014 104.350006 70.35 104.1933 70.35 104 C 70.35 103.8067 70.641014 103.649994 71 103.649994 C 71.358986 103.649994 71.65 103.8067 71.65 104 Z"/>
+    </g>
+    <g opacity="0.65">
+        <path fill="#8d6d44" stroke="none" d="M 84.65 102 C 84.65 102.1933 84.358986 102.35 84 102.35 C 83.641014 102.35 83.35 102.1933 83.35 102 C 83.35 101.8067 83.641014 101.65 84 101.65 C 84.358986 101.65 84.65 101.8067 84.65 102 Z"/>
+    </g>
+    <g opacity="0.65">
+        <path fill="#8d6d44" stroke="none" d="M 97.65 100 C 97.65 100.1933 97.35898 100.350006 97 100.350006 C 96.641014 100.350006 96.350006 100.1933 96.350006 100 C 96.350006 99.8067 96.641014 99.649994 97 99.649994 C 97.35898 99.649994 97.65 99.8067 97.65 100 Z"/>
+    </g>
+    <g opacity="0.65">
+        <path fill="#8d6d44" stroke="none" d="M 110.65 98 C 110.65 98.1933 110.358986 98.35 110 98.35 C 109.641014 98.35 109.35 98.1933 109.35 98 C 109.35 97.8067 109.641014 97.65 110 97.65 C 110.358986 97.65 110.65 97.8067 110.65 98 Z"/>
+    </g>
+    <g opacity="0.65">
+        <path fill="#8d6d44" stroke="none" d="M 123.649994 96 C 123.649994 96.1933 123.358986 96.350006 123 96.350006 C 122.64102 96.350006 122.35 96.1933 122.35 96 C 122.35 95.8067 122.64102 95.649994 123 95.649994 C 123.358986 95.649994 123.649994 95.8067 123.649994 96 Z"/>
+    </g>
+    <g opacity="0.65">
+        <path fill="#8d6d44" stroke="none" d="M 74.65 103 C 74.65 103.193306 74.358986 103.35 74 103.35 C 73.641014 103.35 73.35 103.193306 73.35 103 C 73.35 102.8067 73.641014 102.65 74 102.65 C 74.358986 102.65 74.65 102.8067 74.65 103 Z"/>
+    </g>
+    <g opacity="0.65">
+        <path fill="#8d6d44" stroke="none" d="M 87.649994 101 C 87.649994 101.1933 87.358986 101.35 87 101.35 C 86.64102 101.35 86.35 101.1933 86.35 101 C 86.35 100.806694 86.64102 100.65 87 100.65 C 87.358986 100.65 87.649994 100.806694 87.649994 101 Z"/>
+    </g>
+    <g opacity="0.65">
+        <path fill="#8d6d44" stroke="none" d="M 100.65 99 C 100.65 99.193306 100.358986 99.35 100 99.35 C 99.641014 99.35 99.35 99.193306 99.35 99 C 99.35 98.8067 99.641014 98.65 100 98.65 C 100.358986 98.65 100.65 98.8067 100.65 99 Z"/>
+    </g>
+    <g opacity="0.65">
+        <path fill="#8d6d44" stroke="none" d="M 113.65 97 C 113.65 97.1933 113.35898 97.35 113 97.35 C 112.641014 97.35 112.350006 97.1933 112.350006 97 C 112.350006 96.806694 112.641014 96.65 113 96.65 C 113.35898 96.65 113.65 96.806694 113.65 97 Z"/>
+    </g>
+    <g opacity="0.65">
+        <path fill="#8d6d44" stroke="none" d="M 126.65 104 C 126.65 104.1933 126.358986 104.350006 126 104.350006 C 125.641014 104.350006 125.35 104.1933 125.35 104 C 125.35 103.8067 125.641014 103.649994 126 103.649994 C 126.358986 103.649994 126.65 103.8067 126.65 104 Z"/>
+    </g>
+    <g opacity="0.65">
+        <path fill="#8d6d44" stroke="none" d="M 77.65 102 C 77.65 102.1933 77.358986 102.35 77 102.35 C 76.641014 102.35 76.35 102.1933 76.35 102 C 76.35 101.8067 76.641014 101.65 77 101.65 C 77.358986 101.65 77.65 101.8067 77.65 102 Z"/>
+    </g>
+    <g opacity="0.65">
+        <path fill="#8d6d44" stroke="none" d="M 90.65 100 C 90.65 100.1933 90.358986 100.350006 90 100.350006 C 89.641014 100.350006 89.35 100.1933 89.35 100 C 89.35 99.8067 89.641014 99.649994 90 99.649994 C 90.358986 99.649994 90.65 99.8067 90.65 100 Z"/>
+    </g>
+    <path fill="none" stroke="#fffef1" stroke-opacity="0.5" stroke-width="2.1" d="M 64 91 Q 61 151 83 177 M 136 91 Q 139 151 117 177"/>
+    <path fill="none" stroke="#e5f2df" stroke-width="1.6" d="M 141 79 C 141 84.52285 122.643684 89 100 89 C 77.35632 89 59 84.52285 59 79 C 59 73.47715 77.35632 69 100 69 C 122.643684 69 141 73.47715 141 79 Z"/>
+</svg>
