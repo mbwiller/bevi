@@ -12,14 +12,15 @@ const POPULAR_MAX_PAGES = 3;
 
 /**
  * "Popular on Bevi" (Add Bev, idle): the first `POPULAR_COUNT` rows of the Bevs leaderboard the viewer
- * hasn't ranked, never an alcoholic Bev for a viewer who can't see alcohol (the server filters those
- * already; this is the belt to its braces). Each summary carries the board's own Bayesian score and
+ * hasn't ranked, never an alcoholic Bev (nor one of an unknown category) for a viewer who can't see
+ * alcohol (the server filters those already; this is the belt to its braces). Each summary carries the board's own Bayesian score and
  * rating count, so the row shows what the leaderboard shows.
  */
 export function popularBevs(rows: readonly LeaderboardRow[], canSeeAlcohol: boolean): BevSummary[] {
   return rows
     .filter((r) => r.myScore == null && isLeaderboardEligible(r.ratingCount))
-    .filter((r) => canSeeAlcohol || !categoryById(r.bev.categoryId)?.isAlcoholic)
+    // An unknown category can't be shown to be alcohol-free, so it is hidden from a viewer who can't see alcohol.
+    .filter((r) => canSeeAlcohol || categoryById(r.bev.categoryId)?.isAlcoholic === false)
     .slice(0, POPULAR_COUNT)
     .map((r) => ({ ...r.bev, bayesScore: r.bayesScore, ratingCount: r.ratingCount }));
 }

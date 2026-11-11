@@ -1,5 +1,5 @@
 import type { Profile, UserLeaderboardRow } from '@bevi/shared';
-import { FlashList, type ViewToken } from '@shopify/flash-list';
+import type { ViewToken } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useRef, useState, type ReactElement } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -93,8 +93,8 @@ function useBoardQuery(_scope: PointsScope) {
  * The points ranking as a section of a host list (§6.12, §8.13): "Ranked by points" with the "How
  * points work" sheet, then UserRows by points with Bevs ranked and the streak, paged. Your own row
  * is tinted in the list, and pinned under the list (from your stats when you're past the loaded
- * pages) whenever it isn't on screen. The People screen puts it under its suggestions in one
- * FlashList; `PeopleBoard` gives it a list of its own.
+ * pages) whenever it isn't on screen. The People screen (`/people`) puts it under its suggestions
+ * in one FlashList, its only host.
  */
 export function usePointsRanking({ scope = 'everyone', header = null, active = true }: PointsRankingOptions = {}): PointsRanking {
   const { colors } = useTheme();
@@ -256,40 +256,7 @@ export function usePointsRanking({ scope = 'everyone', header = null, active = t
 
 type RowItem = Extract<PointsRankingItem, { kind: 'rank-row' }>;
 
-const keyOf = (i: PointsRankingItem) => i.key;
-const typeOf = (i: PointsRankingItem) => i.kind;
-
-/**
- * People board (§6.12, §8.13): the points ranking in a list of its own. With no props it is the
- * everyone board, as the Leaderboard screen's People tab shows it.
- */
-export function PeopleBoard(options: Omit<PointsRankingOptions, 'active'> = {}) {
-  const ranking = usePointsRanking(options);
-  const { renderItem: renderSection } = ranking;
-  const renderItem = useCallback(({ item }: { item: PointsRankingItem }) => renderSection(item), [renderSection]);
-  return (
-    <View style={styles.body}>
-      <FlashList
-        data={ranking.items}
-        renderItem={renderItem}
-        keyExtractor={keyOf}
-        getItemType={typeOf}
-        ListFooterComponent={ranking.footer}
-        onEndReached={ranking.loadMore}
-        onEndReachedThreshold={0.5}
-        viewabilityConfig={ranking.viewabilityConfig}
-        onViewableItemsChanged={ranking.onViewableItemsChanged}
-        refreshing={ranking.refreshing}
-        onRefresh={ranking.refresh}
-      />
-      {ranking.pinned}
-      {ranking.sheet}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  body: { flex: 1 },
   foot: { height: spacing.xxl },
   rules: { gap: spacing.md, paddingHorizontal: spacing.gutter, paddingTop: spacing.sm },
   pinned: { borderTopWidth: 1 },

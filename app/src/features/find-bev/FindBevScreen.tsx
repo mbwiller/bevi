@@ -12,6 +12,8 @@ import { BEV_MAPS_URL } from './links';
 export const FIND_BEV_TITLE = 'Find Bev';
 export const FIND_BEV_BODY = 'Walk to the closest open place to grab a drink.';
 export const FIND_BEV_CAPTION = 'Opens Bev Maps';
+/** The link's accessible name: the visible "Find Bev", plus where it goes and that it leaves the app. */
+export const FIND_BEV_LINK_LABEL = 'Find Bev, opens Bev Maps in a new tab';
 
 /** The primary Button's `lg` height (Button.tsx); the link below is drawn as that Button. */
 const BUTTON_LG = 52;
@@ -46,7 +48,7 @@ export function FindBevScreen() {
               ? ({ href: BEV_MAPS_URL, hrefAttrs: { target: '_blank', rel: 'noopener noreferrer' } } as object)
               : { onPress: () => void Linking.openURL(BEV_MAPS_URL) })}
             accessibilityRole="link"
-            accessibilityLabel={FIND_BEV_TITLE}
+            accessibilityLabel={FIND_BEV_LINK_LABEL}
             style={({ pressed }) => [styles.button, { backgroundColor: colors.primary }, pressed && PRESSED]}
           >
             <HitTarget height={BUTTON_LG} />
