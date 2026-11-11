@@ -16,19 +16,19 @@ const BASE_CSS = `
 
 const SAMPLES = `
   var BEVS = {
-    dietCoke: { name: 'Diet Coke', brand: 'Coca-Cola', category: 'diet_soda', priceTier: 1, art: { kind: 'can', color: '#d6d6db', accent: '#c8102e' } },
-    mexicanCoke: { name: 'Mexican Coke', brand: 'Coca-Cola', category: 'soda', priceTier: 2, art: { kind: 'bottle', color: '#3b1d12', accent: '#e03a3e' } },
-    topo: { name: 'Topo Chico', brand: 'Topo Chico', category: 'sparkling_water', priceTier: 1, art: { kind: 'bottle', color: '#a9d8c9', accent: '#f2c94c' } },
+    dietCoke: { name: 'Diet Coke', brand: 'Coca-Cola', category: 'diet_soda', priceTier: 1, art: { kind: 'can', color: '#d6d6db', accent: '#c8102e' }, bayesScore: 8.8, ratingCount: 204 },
+    mexicanCoke: { name: 'Mexican Coke', brand: 'Coca-Cola', category: 'soda', priceTier: 2, art: { kind: 'bottle', color: '#3b1d12', accent: '#e03a3e' }, bayesScore: 8.7, ratingCount: 362 },
+    topo: { name: 'Topo Chico', brand: 'Topo Chico', category: 'sparkling_water', priceTier: 1, art: { kind: 'bottle', color: '#a9d8c9', accent: '#f2c94c' }, bayesScore: 8.4, ratingCount: 97 },
     pamplemousse: { name: 'LaCroix Pamplemousse', brand: 'LaCroix', flavor: 'Pamplemousse', category: 'sparkling_water', priceTier: 1, art: { kind: 'can', color: '#f4a7b9', accent: '#ffffff' } },
     redBull: { name: 'Red Bull', brand: 'Red Bull', category: 'energy', priceTier: 2, art: { kind: 'slimCan', color: '#2d4fa1', accent: '#c0c4cc' } },
-    brownSugar: { name: 'Brown Sugar Boba', brand: 'Tiger Sugar', category: 'boba', priceTier: 2, art: { kind: 'boba', color: '#c9a27e', accent: '#7a4a2a' } },
-    horchata: { name: 'Horchata', brand: 'Tacos El Gordo', category: 'other', priceTier: 2, priceEstimated: true, art: { kind: 'icedCup', color: '#efe4d0', accent: '#b07a45' } },
-    coldBrew: { name: 'Cold Brew', brand: 'Blue Bottle', category: 'coffee', priceTier: 2, art: { kind: 'icedCup', color: '#4a2c1d', accent: '#3c7dd9' } },
+    brownSugar: { name: 'Brown Sugar Boba', brand: 'Tiger Sugar', category: 'boba', priceTier: 2, art: { kind: 'boba', color: '#c9a27e', accent: '#7a4a2a' }, bayesScore: 8.5, ratingCount: 5120 },
+    horchata: { name: 'Horchata', brand: 'Tacos El Gordo', category: 'other', priceTier: 2, priceEstimated: true, art: { kind: 'icedCup', color: '#efe4d0', accent: '#b07a45' }, bayesScore: 8.9, ratingCount: 362 },
+    coldBrew: { name: 'Cold Brew', brand: 'Blue Bottle', category: 'coffee', priceTier: 2, art: { kind: 'icedCup', color: '#4a2c1d', accent: '#3c7dd9' }, bayesScore: 8.1, ratingCount: 41 },
     sprite: { name: 'Sprite', brand: 'Coca-Cola', category: 'soda', priceTier: 1, art: { kind: 'can', color: '#1f8f4e', accent: '#f2d230' } },
     gatorade: { name: 'Gatorade Cool Blue', brand: 'Gatorade', category: 'sports', priceTier: 1, art: { kind: 'waterBottle', color: '#3aa0e0', accent: '#f26b1d' } },
     oj: { name: 'Orange Juice', brand: 'Tropicana', category: 'juice', priceTier: 1, art: { kind: 'carton', color: '#f6a623', accent: '#2f9e44' } },
     poppi: { name: 'Strawberry Lemon', brand: 'Poppi', category: 'diet_soda', priceTier: 2, art: { kind: 'can', color: '#f7c6cf', accent: '#e8384f' } },
-    matcha: { name: 'Iced Matcha Latte', brand: 'Starbucks', category: 'tea', priceTier: 2, art: { kind: 'icedCup', color: '#9cbf6b', accent: '#1e7a46' } },
+    matcha: { name: 'Iced Matcha Latte', brand: 'Starbucks', category: 'tea', priceTier: 2, art: { kind: 'icedCup', color: '#9cbf6b', accent: '#1e7a46' }, bayesScore: 8.4, ratingCount: 41 },
   };
   var ME = { name: 'Matt Willer', handle: 'mbwiller' };
   // A stand-in profile photo for previews (an SVG gradient; real ones are the person's upload).
@@ -109,7 +109,7 @@ h('div', { className: 'pv', style: { gap: 32 } },
   [1, 2, 3, 4].map(function (t) { return h(F, { key: t }, L('tier ' + t, h('span', { className: 'line' }, h(B.PriceTier, { tier: t }), ' • Soda'))); }),
   L('estimated', h('span', { className: 'line' }, h(B.PriceTier, { tier: 2, estimated: true }), ' • Other')))`];
 
-P.BevRow = [{ group: 'Bev', height: 700, width: 393 }, '', `
+P.BevRow = [{ group: 'Bev', height: 500, width: 393, subtitle: 'About 94pt' }, '', `
 h('div', { className: 'pv-narrow' },
   h(B.BevRow, { bev: BEVS.dietCoke, number: 1, score: 9.3, meta: 'Ranked Oct 3' }),
   h(B.BevRow, { bev: BEVS.horchata, number: 2, score: 8.8, meta: 'Ranked Sep 28', saved: false }),
@@ -146,18 +146,23 @@ h('div', { className: 'row' },
   h(B.FeaturedCard, { title: 'Top 10 Sparkling Waters', subtitle: "You've had 3 of 10", art: BEVS.topo.art, tint: '#cfe8e0' }),
   h(B.FeaturedCard, { title: 'Red Bull', subtitle: 'Energy • $$', art: BEVS.redBull.art, tint: '#d8def0' }))`];
 
-P.BevOfCard = [{ group: 'Bev', height: 300, width: 393 }, '', `
-h('div', { className: 'bv-bevof-pair' },
-  h(B.BevOfCard, { period: 'day', bev: BEVS.horchata, score: 8.9 }),
-  h(B.BevOfCard, { period: 'week', bev: BEVS.topo, score: 8.4, date: 'Week of Oct 12' }))`];
+P.BevOfCard = [{ group: 'Bev', height: 600, width: 393 }, `.cap { margin: 0 16px; padding-top: 14px; font-size: 12px; line-height: 16px; color: var(--textSecondary); }`, `
+h('div', { className: 'pv-narrow' },
+  h('p', { className: 'cap' }, 'Two winners'),
+  h('div', { className: 'bv-bevof-pair' },
+    h(B.BevOfCard, { period: 'day', bev: BEVS.horchata, score: 8.9 }),
+    h(B.BevOfCard, { period: 'week', bev: BEVS.topo, score: 8.4, date: 'Week of Oct 12' })),
+  h('p', { className: 'cap' }, 'The same Bev won the day and the week: one card'),
+  h('div', { className: 'bv-bevof-pair' },
+    h(B.BevOfCard, { period: 'both', bev: BEVS.horchata, score: 8.9 })))`];
 
 // ---------- People ----------
 P.Avatar = [{ group: 'People', height: 150 }, '', `
 h('div', { className: 'pv', style: { alignItems: 'flex-end' } },
   L('24 · comments', h(B.Avatar, { name: FRIENDS[1].name, size: 24 })),
   L('32 · tab bar', h(B.Avatar, { name: ME.name, size: 32 })),
-  L('44 · rows', h(B.Avatar, { name: ARJUN.name, size: 44 })),
-  L('60 · posts', h(B.Avatar, { name: 'Priya Nair', size: 60 })),
+  L('44 · rows and posts', h(B.Avatar, { name: ARJUN.name, size: 44 })),
+  L('60', h(B.Avatar, { name: 'Priya Nair', size: 60 })),
   L('100 · profile', h(B.Avatar, { name: ME.name, size: 100 })))`];
 
 P.AvatarPicker = [{ group: 'People', height: 230, subtitle: 'Edit profile and onboarding' }, '', `
@@ -170,23 +175,24 @@ h('div', { className: 'pv', style: { alignItems: 'flex-start', gap: 40 } },
 P.AvatarStack = [{ group: 'People', height: 96 }, '', `
 h('div', { className: 'pv', style: { gap: 40 } },
   L('Friends who have had it', h(B.AvatarStack, { people: FRIENDS })),
-  L('two friends', h(B.AvatarStack, { people: FRIENDS.slice(0, 2) })))`];
+  L('two friends', h(B.AvatarStack, { people: FRIENDS.slice(0, 2) })),
+  L("24 · Bev'd it too, on a post", h(B.AvatarStack, { people: FRIENDS.slice(0, 2), size: 24, max: 2 })))`];
 
-P.UserRow = [{ group: 'People', height: 330, width: 393 }, '', `
+P.UserRow = [{ group: 'People', height: 410, width: 393, subtitle: 'Tap Follow' }, '', `
 h('div', { className: 'pv-narrow' },
   h(B.UserRow, { user: ARJUN, meta: '84 Bevs', following: true }),
-  h(B.UserRow, { user: FRIENDS[1], meta: '31 Bevs', following: false }),
+  h(function Row() { var st = React.useState(false); return h(B.UserRow, { user: FRIENDS[1], meta: '31 Bevs', following: st[0], onFollow: function () { st[1](!st[0]); } }); }),
+  h(B.UserRow, { user: FRIENDS[3], meta: '52 Bevs', context: 'Followed by Sam and Arjun', following: false }),
   h(B.UserRow, { user: FRIENDS[0], rank: 1, meta: '212 pts', streak: 14 }),
   h(B.UserRow, { user: ME, rank: 12, meta: '96 pts', streak: 4, self: true, divider: false }))`];
 
 P.StatCard = [{ group: 'People', height: 130, width: 393 }, `.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 16px 10px; }`, `
 h('div', { className: 'two' },
   h(B.StatCard, { icon: 'trophy', label: 'Rank on Bevi', value: '#12' }),
-  h(B.StatCard, { icon: 'flame', label: 'Current Streak', value: '4 days' }))`];
+  h(B.StatCard, { icon: 'flame', label: 'Current streak', value: '4 days' }))`];
 
-P.ProfileListRow = [{ group: 'People', height: 170, width: 393 }, `.list { padding-top: 12px; border-top: 1px solid var(--border); }`, `
+P.ProfileListRow = [{ group: 'People', height: 126, width: 393 }, `.list { padding-top: 12px; border-top: 1px solid var(--border); }`, `
 h('div', { className: 'pv-narrow' },
-  h(B.ProfileListRow, { icon: 'circle-check', label: "Bev'd", count: 42 }),
   h(B.ProfileListRow, { icon: 'bookmark', iconFilled: true, label: 'Want to Try', count: 7 }),
   h(B.ProfileListRow, { icon: 'heart', label: 'Recommended for you' }))`];
 
@@ -220,10 +226,10 @@ h('div', { className: 'pv' },
   h(B.Pill, { variant: 'outlined', active: true }, 'Not tried'),
   h(B.Pill, { variant: 'outlined' }, 'Too close to call'))`];
 
-P.Button = [{ group: 'Actions', height: 200, width: 393 }, `.prof { display: flex; gap: 4px; justify-content: center; } .prof > :nth-child(-n+2) { width: 120px; } .prof > :last-child { width: 34px; padding: 0; }`, `
+P.Button = [{ group: 'Actions', height: 200, width: 393 }, `.prof { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }`, `
 h('div', { className: 'pv-col' },
   h('div', { className: 'prof' },
-    h(B.Button, null, 'Edit profile'), h(B.Button, null, 'Share profile'), h(B.Button, { icon: 'chevron-down', 'aria-label': 'More' })),
+    h(B.Button, null, 'Edit profile'), h(B.Button, null, 'Share profile')),
   h(B.Button, { variant: 'primary', block: true }, 'Rank it'),
   h('div', { style: { display: 'flex', gap: 12 } }, h(B.Button, { variant: 'primary', loading: true }, 'Rank it'), h(B.Button, { variant: 'ghost', size: 'md' }, 'Skip')))`];
 
@@ -280,12 +286,13 @@ P.PriceTierPicker = [{ group: 'Inputs', height: 140, width: 393 }, '', `
 h('div', { className: 'pv-col' }, h(B.PriceTierPicker, { value: 2 }))`];
 
 // ---------- Navigation ----------
-P.Header = [{ group: 'Navigation', height: 260, width: 393 }, `.hd { border-bottom: 1px solid var(--border); }`, `
+P.Header = [{ group: 'Navigation', height: 300, width: 393 }, `.hd { border-bottom: 1px solid var(--border); }`, `
 h('div', { className: 'pv-narrow' },
   h('div', { className: 'hd' }, h(B.Header, { wordmark: true, actions: [{ icon: 'user-plus', label: 'Find people' }] })),
-  h('div', { className: 'hd' }, h(B.Header, { title: 'Matt Willer', actions: [{ icon: 'share', label: 'Share profile' }, { icon: 'settings', label: 'Settings' }] })),
-  h('div', { className: 'hd' }, h(B.Header, { centered: true, title: 'Your lists', actions: [{ icon: 'share', label: 'Share' }] })),
-  h('div', { className: 'hd' }, h(B.Header, { wordmark: true, actions: [{ icon: 'x', label: 'Close', variant: 'filled' }] })),
+  h('div', { className: 'hd' }, h(B.Header, { title: 'Matt Willer', actions: [{ icon: 'menu', label: 'Settings' }] })),
+  h('div', { className: 'hd' }, h(B.Header, { centered: true, title: 'Lists' })),
+  h('div', { className: 'hd' }, h(B.Header, { title: 'Add a Bev' })),
+  h('div', { className: 'hd' }, h(B.Header, { title: 'People', onBack: function () {} })),
   h(B.Header, { title: 'Diet Coke', onBack: function () {}, actions: [{ icon: 'ellipsis', label: 'More' }] }))`];
 
 P.SectionHeader = [{ group: 'Navigation', height: 110, width: 393 }, '', `
@@ -296,13 +303,14 @@ h('div', { className: 'pv', style: { gap: 40 } }, h(B.ListScopeDropdown, { label
 
 P.SegmentedTabs = [{ group: 'Navigation', height: 200, width: 393 }, '', `
 h('div', { className: 'pv-narrow', style: { display: 'flex', flexDirection: 'column', gap: 24, paddingTop: 12 } },
-  h(B.SegmentedTabs, { tabs: [{ id: 'bevd', label: "Bev'd" }, { id: 'want', label: 'Want to Try' }, { id: 'recs', label: 'Recommended' }], value: 'recs' }),
+  h(function Tabs() { var st = React.useState('recommended'); return h(B.SegmentedTabs, { tabs: [{ id: 'bevd', label: "Bev'd" }, { id: 'want', label: 'Want to Try' }, { id: 'recommended', label: 'For you' }, { id: 'top', label: 'Top' }], value: st[0], onChange: st[1] }); }),
   h(B.SegmentedTabs, { variant: 'underline-icon', tabs: [{ id: 'activity', label: 'Activity', icon: 'file-text' }, { id: 'taste', label: 'Taste Profile', icon: 'chart-no-axes-column' }], value: 'activity' }),
   h(B.SegmentedTabs, { variant: 'underline-icon', accent: 'primary', tabs: [{ id: 'bevs', label: 'Bevs', icon: 'cup-soda' }, { id: 'people', label: 'People', icon: 'users' }], value: 'bevs' }))`];
 
-P.TabBar = [{ group: 'Navigation', height: 210, width: 393 }, '', `
-h('div', { className: 'pv-narrow', style: { display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 16 } },
-  h(B.TabBar, { active: 'feed', user: ME, safeArea: false }),
+P.TabBar = [{ group: 'Navigation', height: 330, width: 393, subtitle: 'Tap a tab' }, '', `
+h('div', { className: 'pv-narrow', style: { display: 'flex', flexDirection: 'column', gap: 28, paddingTop: 28 } },
+  h(function Bar() { var st = React.useState('feed'); return h(B.TabBar, { active: st[0], user: ME, safeArea: false, onChange: st[1] }); }),
+  h(B.TabBar, { active: 'map', user: ME, safeArea: false }),
   h(B.TabBar, { active: 'profile', user: ME }))`];
 
 // ---------- Feed ----------
@@ -316,6 +324,7 @@ h(function Demo() {
   var ACTIONS = { onLike: NOOP, onComment: NOOP, onRank: NOOP, onSave: NOOP };
   return h('div', { className: 'pv-narrow' },
     h(B.FeedPost, { actor: ARJUN, bev: BEVS.horchata, score: 9.5, time: '5 hours ago', liked: aOn, likeCount: aOn ? 4 : 3, onLike: function () { setA(!aOn); }, onComment: NOOP, onRank: NOOP, onSave: NOOP,
+      alsoBevdBy: [FRIENDS[0], FRIENDS[1]], alsoBevdCount: 5,
       comments: [
         { author: FRIENDS[1], body: 'ok this is going on my list' },
         { author: ME, body: 'the one on 3rd ave or the truck?' },
@@ -323,8 +332,12 @@ h(function Demo() {
       commentCount: 3,
       note: "went back with my mom and she pulled out a sleeper: the cinnamon is way stronger than the dining hall one and it's not too sweet. honestly the best thing on this whole block, and it costs less than a cold brew. getting two next time" }),
     h(B.FeedPost, { actor: FRIENDS[0], bev: BEVS.brownSugar, score: 7.8, saved: true, time: 'Wednesday', liked: bOn, likeCount: bOn ? 12 : 11, onLike: function () { setB(!bOn); }, onComment: NOOP, onRank: NOOP, onSave: NOOP,
+      alsoBevdBy: [ARJUN],
       comments: [{ author: FRIENDS[2], body: 'tiger sugar > everything' }], commentCount: 12 }),
-    h(B.FeedPost, Object.assign({ actor: FRIENDS[3], bev: BEVS.topo, score: 6.1, time: 'Monday', likeCount: 1 }, ACTIONS)),
+    h(B.FeedPost, Object.assign({ actor: FRIENDS[3], bev: BEVS.topo, score: 6.1, time: 'Monday', likeCount: 1, note: 'fine. it is water' }, ACTIONS)),
+    h('p', { className: 'pv-label pv-mat' }, "With the ranker's own photos: the strip scrolls and the note follows"),
+    h(B.FeedPost, Object.assign({ actor: FRIENDS[1], bev: BEVS.coldBrew, score: 8.6, time: 'Sunday', note: 'the nitro tap at the 3rd ave one',
+      photos: [{ art: BEVS.coldBrew.art }, { art: BEVS.matcha.art }, { art: BEVS.horchata.art }] }, ACTIONS)),
     h('p', { className: 'pv-label pv-mat' }, "Explore: the plain post (no heart, counts or comments) with the author's Follow pill"),
     h(B.FeedPost, { actor: FRIENDS[2], bev: BEVS.matcha, score: 8.2, time: '2 days ago', note: 'oat milk, half sweet. the only one I order now',
       following: cOn, onFollow: function () { setC(!cOn); } }));
@@ -362,7 +375,7 @@ h(B.EmptyState, { icon: 'users', title: 'Follow friends to see their Bevs', body
 P.ErrorState = [{ group: 'Feedback', height: 260, width: 393 }, '', `
 h(B.ErrorState, { icon: 'wifi-off', title: "You're offline", message: "We'll show your list again as soon as you're back online." })`];
 
-P.Skeleton = [{ group: 'Feedback', height: 420, width: 393 }, '', `
+P.Skeleton = [{ group: 'Feedback', height: 330, width: 393 }, '', `
 h('div', { className: 'pv-narrow' }, h(B.Skeleton, { variant: 'row' }), h(B.Skeleton, { variant: 'post' }))`];
 
 P.CommentsSheet = [{ group: 'Feed', height: 1470, width: 393, subtitle: 'Your own comments can be deleted' }, `.pv-frame { height: 440px; margin: 10px auto; } .cap { margin: 14px 16px 0; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--textSecondary); }`, `
@@ -396,7 +409,8 @@ h('div', { className: 'pv-frame' },
     h('div', { className: 'opt' }, 'All Bevs', h(B.Icon, { name: 'check', size: 20, strokeWidth: 2.5, style: { color: 'var(--primary)' } })),
     B.categories.slice(0, 6).map(function (c) { return h('div', { key: c.id, className: 'opt' }, h('span', { style: { display: 'flex', gap: 12, alignItems: 'center' } }, h(B.Icon, { name: c.icon, size: 20 }), c.label)); })))`];
 
-// ---------- Map (M-16) ----------
+// ---------- Map ----------
+// FindBevArt is the Map tab's art. The venue-map components below it (M-16) are parked: no screen composes them.
 // A stand-in for the live Google map in previews only: muted blocks and a river, never drawn in the app.
 const MAP_CSS = `
   .mapbg { position: absolute; inset: 0; overflow: hidden; background-color: color-mix(in srgb, var(--input) 65%, var(--surface));
@@ -413,7 +427,12 @@ const mapBackdrop = (pins = 'MAP_PINS_ALL') => `h('div', { className: 'mapbg' },
       ${pins}.map(function (p, i) { return h('span', { key: i, className: 'mapbg-pin', style: { left: p[0] + '%', top: p[1] + '%' } }, h(B.MapCallout, { score: p[2], predicted: p[3], kind: p[4], selected: !!p[5] })); }),
       h('span', { className: 'mapbg-credit' }, '© OpenStreetMap contributors'), h('span', { className: 'mapbg-logo', title: "Google's logo" }), h('span', { className: 'mapbg-terms', title: "Google's terms" }))`;
 
-P.MapCallout = [{ group: 'Map', height: 170, subtitle: 'The venue pin' }, `.pv { gap: 28px; align-items: flex-end; padding: 32px 16px 24px; background: color-mix(in srgb, var(--input) 65%, var(--surface)); }`, `
+P.FindBevArt = [{ group: 'Map', height: 280, subtitle: "The Map tab's art" }, '', `
+h('div', { className: 'pv', style: { gap: 32, justifyContent: 'center' } },
+  L('224 · the Map tab', h(B.FindBevArt, {})),
+  L('112', h(B.FindBevArt, { size: 112 })))`];
+
+P.MapCallout = [{ group: 'Map', height: 170, subtitle: 'The venue pin (parked)' }, `.pv { gap: 28px; align-items: flex-end; padding: 32px 16px 24px; background: color-mix(in srgb, var(--input) 65%, var(--surface)); }`, `
 h('div', { className: 'pv' },
   L('craft', h(B.MapCallout, { score: 8.8, kind: 'craft' })),
   L('chain', h(B.MapCallout, { score: 9.1, kind: 'chain' })),
@@ -492,22 +511,47 @@ P.ScreenFeed = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHO
     h('div', { className: 'bv-bevof-pair' },
       h(B.BevOfCard, { period: 'day', bev: BEVS.horchata, score: 8.9 }),
       h(B.BevOfCard, { period: 'week', bev: BEVS.topo, score: 8.4 })),
-    h(B.SegmentedTabs, { tabs: [{ id: 'feed', label: 'Your feed' }, { id: 'explore', label: 'Explore' }], value: 'explore' }),
-    h(B.FeedPost, { actor: FRIENDS[2], bev: BEVS.matcha, score: 8.2, time: '2 days ago', note: 'oat milk, half sweet. the only one I order now', onFollow: function () {} }),
-    h(B.FeedPost, { actor: FRIENDS[5], bev: BEVS.coldBrew, score: 9.1, time: '5 hours ago', following: true, onFollow: function () {} }))`)];
+    h(B.SegmentedTabs, { tabs: [{ id: 'feed', label: 'Your feed' }, { id: 'explore', label: 'Explore' }], value: 'feed' }),
+    h(B.FeedPost, { actor: FRIENDS[2], bev: BEVS.matcha, score: 8.2, time: '2 days ago', note: 'oat milk, half sweet. the only one I order now',
+      liked: true, likeCount: 12, commentCount: 1, comments: [{ author: ARJUN, body: 'need to try this' }], alsoBevdBy: [ARJUN, FRIENDS[1]],
+      onLike: function () {}, onComment: function () {}, onRank: function () {}, onSave: function () {} }),
+    h(B.FeedPost, { actor: FRIENDS[5], bev: BEVS.coldBrew, score: 9.1, time: '5 hours ago', onLike: function () {}, onComment: function () {}, onRank: function () {}, onSave: function () {} }))`)];
 
-P.ScreenYourLists = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHONE_CSS + `.top { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; } .filters { display: flex; gap: 10px; padding: 12px 16px 4px; overflow: hidden; }`, phone('lists', `
-  h(F, null,
-    h(B.Header, { centered: true, title: 'Your lists', actions: [{ icon: 'share', label: 'Share' }] }),
+// Lists: Bev'd (left) and Top (right). Bev'd rows carry the app's overflow menu in the foot instead of Rank it and Want to Try.
+const LISTS_TOP = (value) => `
+    h(B.Header, { centered: true, title: 'Lists' }),
     h('div', { className: 'top' }, h(B.ListScopeDropdown, { label: 'All' })),
-    h(B.SegmentedTabs, { tabs: [{ id: 'bevd', label: "Bev'd" }, { id: 'want', label: 'Want to Try' }, { id: 'recs', label: 'Recommended' }], value: 'bevd' }),
-    h('div', { className: 'filters' }, h(B.FilterPill, { count: 0 }), h(B.FilterPill, { label: 'Bucket', icon: null, chevron: true }), h(B.FilterPill, { label: 'Price', icon: null, chevron: true }), h(B.FilterPill, { label: 'Category', icon: null, chevron: true })),
+    h(B.SegmentedTabs, { tabs: [{ id: 'bevd', label: "Bev'd" }, { id: 'want', label: 'Want to Try' }, { id: 'recommended', label: 'For you' }, { id: 'top', label: 'Top' }], value: '${value}' }),`;
+P.ScreenYourLists = [{ group: 'Screens', height: 852, width: 802, isPage: true }, PHONE_CSS + `
+  .yl-pair { display: flex; gap: 16px; align-items: flex-start; }
+  .top { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; } .filters { display: flex; gap: 10px; padding: 12px 16px 4px; overflow: hidden; }
+  .yl-row { position: relative; } .yl-more { position: absolute; right: 8px; bottom: -2px; }`, `
+(function () {
+  var bevd = function (bev, n, score, meta) {
+    return h('div', { className: 'yl-row', key: n }, h(B.BevRow, { bev: bev, number: n, score: score, meta: meta, actions: false }),
+      h('span', { className: 'yl-more' }, h(B.IconButton, { icon: 'ellipsis', label: 'More for ' + bev.name })));
+  };
+  return h('div', { className: 'yl-pair' },
+    ${phone('lists', `
+  h(F, null,${LISTS_TOP('bevd')}
+    h('div', { className: 'filters' }, h(B.FilterPill, { count: 0 }), h(B.FilterPill, { label: 'Bucket', icon: null, chevron: true }), h(B.FilterPill, { label: 'Category', icon: null, chevron: true })),
     h(B.ProgressStrip, { label: 'All Bevs', ranked: 37, total: 378, onClick: function () {} }),
     h(B.SortToggle, { label: 'Score', onClick: function () {}, onSearch: function () {} }),
-    h(B.BevRow, { bev: BEVS.horchata, number: 1, score: 9.5, meta: 'Ranked Oct 8' }),
-    h(B.BevRow, { bev: BEVS.dietCoke, number: 2, score: 9.3, meta: 'Ranked Oct 3' }),
-    h(B.BevRow, { bev: BEVS.mexicanCoke, number: 3, score: 8.9, meta: 'Ranked Sep 30' }),
-    h(B.BevRow, { bev: BEVS.redBull, number: 4, score: 6.1, meta: 'Ranked Sep 22' }))`)];
+    bevd(BEVS.horchata, 1, 9.5, 'Ranked Oct 8'),
+    bevd(BEVS.dietCoke, 2, 9.3, 'Ranked Oct 3'),
+    bevd(BEVS.mexicanCoke, 3, 8.9, 'Ranked Sep 30'),
+    bevd(BEVS.topo, 4, 7.9, 'Ranked Sep 26'),
+    bevd(BEVS.redBull, 5, 6.1, 'Ranked Sep 22'))`)},
+    ${phone('lists', `
+  h(F, null,${LISTS_TOP('top')}
+    h(B.BevRow, { bev: BEVS.horchata, showImage: true, number: 1, score: 8.9, meta: 'Your score 9.5' }),
+    h(B.BevRow, { bev: BEVS.mexicanCoke, showImage: true, number: 2, score: 8.7, meta: 'Your score 8.9' }),
+    h(B.BevRow, { bev: BEVS.brownSugar, showImage: true, number: 3, score: 8.5, meta: 'Not ranked yet', saved: true }),
+    h(B.BevRow, { bev: BEVS.topo, showImage: true, number: 4, score: 8.4, meta: 'Your score 7.9' }),
+    h(B.BevRow, { bev: BEVS.coldBrew, showImage: true, number: 5, score: 8.1, meta: 'Not ranked yet' }),
+    h(B.BevRow, { bev: BEVS.matcha, showImage: true, number: 6, score: 8.0, meta: 'Not ranked yet' }),
+    h(B.BevRow, { bev: BEVS.dietCoke, showImage: true, number: 7, score: 7.8, meta: 'Your score 9.3' }))`)});
+})()`];
 
 P.ScreenRanking = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHONE_CSS + `
   .rk-top { display: flex; align-items: center; justify-content: space-between; padding: 0 8px 0 16px; height: 44px; }
@@ -608,84 +652,109 @@ P.ScreenProfile = [{ group: 'Screens', height: 852, width: 393, isPage: true }, 
   .pf-id { display: flex; flex-direction: column; align-items: center; padding-top: 1px; }
   .pf-counts { display: grid; grid-template-columns: repeat(3, 1fr); padding: 16px 0 0; text-align: center; }
   .pf-counts p { margin: 0; }
-  .pf-btns { display: flex; justify-content: center; gap: 4px; padding: 20px 0 14px; }
-  .pf-btns > :nth-child(-n+2) { width: 120px; } .pf-btns > :last-child { width: 34px; padding: 0; }
-  .pf-rows { border-top: 1px solid var(--border); }
-  .pf-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 20px 10px 14px; }`, phone('profile', `
+  .pf-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 20px 16px 0; }
+  .pf-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px 10px; }
+  .pf-rows { border-top: 1px solid var(--border); }`, phone('profile', `
   h(F, null,
-    h(B.Header, { title: 'Matt Willer', actions: [{ icon: 'share', label: 'Share profile' }, { icon: 'menu', label: 'Settings' }] }),
+    h(B.Header, { title: 'Matt Willer', actions: [{ icon: 'menu', label: 'Settings' }] }),
     h('div', { className: 'pf-id' },
       h(B.Avatar, { name: ME.name, size: 100 }),
       h('p', { className: 'heading', style: { marginTop: 16, fontWeight: 700 } }, '@mbwiller'),
       h('p', { className: 'body bv-meta' }, 'Member since Oct 2026')),
     h('div', { className: 'pf-counts' },
+      h('div', null, h('p', { className: 'heading' }, '42'), h('p', { className: 'body bv-meta' }, "Bev'd")),
       h('div', null, h('p', { className: 'heading' }, '7'), h('p', { className: 'body bv-meta' }, 'Followers')),
-      h('div', null, h('p', { className: 'heading' }, '9'), h('p', { className: 'body bv-meta' }, 'Following')),
-      h('div', null, h('p', { className: 'heading' }, '#12'), h('p', { className: 'body bv-meta' }, 'Rank on Bevi'))),
-    h('div', { className: 'pf-btns' }, h(B.Button, null, 'Edit profile'), h(B.Button, null, 'Share profile'), h(B.Button, { icon: 'chevron-down', 'aria-label': 'Settings' })),
+      h('div', null, h('p', { className: 'heading' }, '9'), h('p', { className: 'body bv-meta' }, 'Following'))),
+    h('div', { className: 'pf-btns' }, h(B.Button, null, 'Edit profile'), h(B.Button, null, 'Share profile')),
+    h('div', { className: 'pf-stats' }, h(B.StatCard, { icon: 'trophy', label: 'Rank on Bevi', value: '#12' }), h(B.StatCard, { icon: 'flame', label: 'Current streak', value: '4 days' })),
     h('div', { className: 'pf-rows' },
-      h(B.ProfileListRow, { icon: 'circle-check', label: "Bev'd", count: 42 }),
       h(B.ProfileListRow, { icon: 'bookmark', iconFilled: true, label: 'Want to Try', count: 7 }),
       h(B.ProfileListRow, { icon: 'heart', label: 'Recommended for you' })),
-    h('div', { className: 'pf-stats' }, h(B.StatCard, { icon: 'trophy', label: 'Rank on Bevi', value: '#12' }), h(B.StatCard, { icon: 'flame', label: 'Current Streak', value: '4 days' })),
     h(B.SegmentedTabs, { variant: 'underline-icon', tabs: [{ id: 'activity', label: 'Activity', icon: 'file-text' }, { id: 'taste', label: 'Taste Profile', icon: 'chart-no-axes-column' }], value: 'activity' }),
     h(B.FeedPost, { you: true, actor: ME, bev: BEVS.dietCoke, score: 9.3, time: 'Wednesday', likeCount: 6, note: 'the fountain one at the dining hall hits different',
       onLike: function () {}, onComment: function () {}, onSave: function () {} }))`)];
 
-P.ScreenLeaderboard = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHONE_CSS + `.top { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; }`, phone('leaderboard', `
+// People: pushed from the Feed header's person-plus icon. Search, suggestions, then the points ranking.
+P.ScreenPeople = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHONE_CSS + `
+  .pp-q { padding: 4px 16px 4px; }
+  .pp-scope { display: flex; gap: 8px; padding: 0 16px 8px; }`, phone('feed', `
   h(F, null,
-    h(B.Header, { centered: true, title: 'Leaderboard' }),
-    h(B.SegmentedTabs, { tabs: [{ id: 'bevs', label: 'Bevs' }, { id: 'people', label: 'People' }], value: 'bevs' }),
-    h('div', { className: 'top' }, h(B.ListScopeDropdown, { label: 'All' })),
-    h(B.BevRow, { bev: BEVS.horchata, showImage: true, number: 1, score: 8.9, meta: 'Your score 9.5', actions: true }),
-    h(B.BevRow, { bev: BEVS.mexicanCoke, showImage: true, number: 2, score: 8.7, meta: 'Your score 8.9' }),
-    h(B.BevRow, { bev: BEVS.brownSugar, showImage: true, number: 3, score: 8.5, meta: 'Not ranked yet', saved: true }),
-    h(B.BevRow, { bev: BEVS.topo, showImage: true, number: 4, score: 8.4, meta: 'Your score 7.9' }))`)];
+    h(B.Header, { title: 'People', onBack: function () {} }),
+    h('div', { className: 'pp-q' }, h(B.SearchBar, { placeholder: 'Search people', id: 'people-q' })),
+    h(B.SectionHeader, { title: 'Suggested for you' }),
+    h(B.UserRow, { user: FRIENDS[3], meta: '52 Bevs', context: 'Followed by Sam and Arjun', following: false }),
+    h(B.UserRow, { user: FRIENDS[5], meta: '31 Bevs', context: 'Followed by Priya', following: false }),
+    h(B.SectionHeader, { title: 'Ranked by points', action: 'How points work', actionLabel: 'How points work' }),
+    h('div', { className: 'pp-scope' }, h(B.Pill, { variant: 'outlined', active: true }, 'Friends'), h(B.Pill, { variant: 'outlined' }, 'Everyone')),
+    h(B.UserRow, { user: FRIENDS[0], rank: 1, meta: '212 pts · 84 Bevs', streak: 14, following: true }),
+    h(B.UserRow, { user: ARJUN, rank: 2, meta: '180 pts · 61 Bevs', streak: 6, following: true }),
+    h(B.UserRow, { user: FRIENDS[1], rank: 3, meta: '140 pts · 44 Bevs', streak: 2, following: true }),
+    h(B.UserRow, { user: ME, rank: 4, meta: '96 pts · 42 Bevs', streak: 4, self: true }),
+    h(B.UserRow, { user: FRIENDS[2], rank: 5, meta: '71 pts · 30 Bevs', following: true }))`)];
 
-// The Search tab (M-15, M-16): the bar, Snap it, then the live map with its chrome (inline), and the
-// same map full screen. "Map coming soon" is only what a build without a Google key shows.
-const SEARCH_CSS = PHONE_CSS + MAP_CSS + `
+// Add Bev (the centre tab): the bar, Snap it, then the fastest routes to ranking something. No map.
+const ADD_CSS = PHONE_CSS + `
+  .scroll { position: relative; display: flex; flex-direction: column; }
+  .ab-q { display: flex; align-items: center; gap: 4px; padding: 4px 16px 12px; } .ab-q .bv-search { flex: 1; }
+  .ab-pills { display: flex; gap: 10px; padding: 0 16px 8px; }
+  .ab-recent { display: flex; align-items: center; min-height: 60px; padding-left: 16px; }
+  .ab-recent-main { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+  .ab-recent-text { display: flex; flex-direction: column; min-width: 0; }
+  .ab-foot { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px; border-top: 1px solid var(--border); background: var(--surface); }`;
+const ADD_TOP = (value, cancel) => `
+    h(B.Header, { title: 'Add a Bev' }),
+    h('div', { className: 'ab-q' }, h(B.SearchBar, { variant: 'outlined', placeholder: 'Search a Bev or a person', id: 'add-q'${value ? `, value: '${value}'` : ''} })${cancel ? `, h(B.Button, { variant: 'ghost' }, 'Cancel')` : ''}),
+    h('div', { className: 'ab-pills' }, h(B.Pill, { variant: 'filled', icon: 'camera' }, 'Snap it')),`;
+const ADD_FOOT = `h('div', { className: 'ab-foot' }, h(B.Button, { variant: 'outlined', block: true, icon: 'circle-plus' }, "Can't find it? Add a new Bev"))`;
+
+P.ScreenAddBev = [{ group: 'Screens', height: 852, width: 393, isPage: true }, ADD_CSS, `
+(function () {
+  var recent = function (bev) {
+    return h('div', { className: 'bv ab-recent bv-divider' },
+      h('div', { className: 'ab-recent-main' }, h(B.Icon, { name: 'clock', size: 22, className: 'bv-meta' }),
+        h('div', { className: 'ab-recent-text' }, h('p', { className: 'bodyLarge' }, bev.name), h('p', { className: 'body bv-meta' }, bev.brand))),
+      h(B.IconButton, { icon: 'x', label: 'Forget ' + bev.name, size: 20 }));
+  };
+  // The parentheses matter: phone() starts on a new line, and a bare return would end the statement there.
+  return (${phone('add', `
+  h(F, null,${ADD_TOP('', false)}
+    h(B.SectionHeader, { title: 'Recents' }),
+    recent(BEVS.redBull),
+    recent(BEVS.sprite),
+    h(B.SectionHeader, { title: 'Popular on Bevi', action: 'See all' }),
+    h(B.BevRow, { bev: BEVS.mexicanCoke, showImage: true, score: 8.7, count: 362 }),
+    h(B.BevRow, { bev: BEVS.brownSugar, showImage: true, score: 8.5, count: 5120, saved: true }),
+    h(B.BevRow, { bev: BEVS.topo, showImage: true, score: 8.4, count: 97 }),
+    h(B.BevRow, { bev: BEVS.coldBrew, showImage: true, score: 8.1, count: 41 }),
+    ${ADD_FOOT})`)});
+})()`];
+
+P.ScreenSearchResults = [{ group: 'Screens', height: 852, width: 393, isPage: true }, ADD_CSS, phone('add', `
+  h(F, null,${ADD_TOP('co', true)}
+    h(B.SectionHeader, { title: 'Bevs' }),
+    h(B.BevRow, { bev: BEVS.mexicanCoke, showImage: true, score: 8.7, count: 362 }),
+    h(B.BevRow, { bev: BEVS.coldBrew, showImage: true, score: 8.1, count: 41, saved: true }),
+    h(B.SectionHeader, { title: 'People' }),
+    h(B.UserRow, { user: { name: 'Cody Lin', handle: 'codyl' }, following: false }),
+    h(B.UserRow, { user: { name: 'Colette Ames', handle: 'colette' }, following: true, divider: false }),
+    ${ADD_FOOT})`)];
+
+// Map: for now a doorway to Bev Maps (Find Bev). The in-app map is a later project.
+P.ScreenMap = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHONE_CSS + `
   .scroll { display: flex; flex-direction: column; }
-  .sr-q { display: flex; align-items: center; gap: 4px; padding: 16px 16px 12px; } .sr-q .bv-search { flex: 1; }
-  .sr-pills { display: flex; gap: 10px; padding: 0 16px 8px; }
-  .sr-area { position: relative; flex: 1; border-top: 1px solid var(--border); }
-  .sr-map { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 0 40px; text-align: center; background: var(--input); color: var(--textSecondary); }
-  .sr-panel { position: absolute; inset: 0; background: var(--surface); overflow: hidden; }
-  .sr-foot { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px; border-top: 1px solid var(--border); background: var(--surface); }
-  .sr-two { display: flex; gap: 16px; } .sr-two > .phone { border: 1px solid var(--border); }`;
-const SEARCH_TOP = (value, cancel) => `
-    h(B.Header, { wordmark: true, actions: [{ icon: 'x', label: 'Close', variant: 'filled' }] }),
-    h('div', { className: 'sr-q' }, h(B.SearchBar, { variant: 'outlined', placeholder: 'Search a Bev or a person', id: 'search-q'${value ? `, value: '${value}'` : ''} })${cancel ? `, h(B.Button, { variant: 'ghost' }, 'Cancel')` : ''}),
-    h('div', { className: 'sr-pills' }, h(B.Pill, { variant: 'filled', icon: 'camera' }, 'Snap it')),`;
-const INLINE_MAP = `${mapBackdrop()}, h(B.MapControls, {}, h(B.MapFilterRow, { neighborhoods: false }))`;
-
-P.ScreenSearch = [{ group: 'Screens', height: 852, width: 802, isPage: true }, SEARCH_CSS, `
-(function () {
-  var MAP_PINS_ALL = ${MAP_PINS};
-  return h('div', { className: 'sr-two' },
-    ${phone('add', `
-  h(F, null,${SEARCH_TOP('', false)}
-    h('div', { className: 'sr-area' }, ${INLINE_MAP}))`)},
-    ${phone(null, `
-  h('div', { className: 'sr-area', style: { height: '100%' } }, ${mapBackdrop()},
-    h(B.MapControls, { expanded: true }, h(B.MapFilterRow, { count: 1, neighborhoods: false, category: 'Coffee' })))`)});
-})()`];
-
-P.ScreenSearchResults = [{ group: 'Screens', height: 852, width: 393, isPage: true }, SEARCH_CSS, `
-(function () {
-  var MAP_PINS_ALL = ${MAP_PINS};
-  return ${phone('add', `
-  h(F, null,${SEARCH_TOP('co', true)}
-    h('div', { className: 'sr-area' }, ${mapBackdrop()},
-      h('div', { className: 'sr-panel' },
-        h(B.SectionHeader, { title: 'Bevs' }),
-        h(B.BevRow, { bev: BEVS.mexicanCoke, showImage: true, score: 8.7, count: 362 }),
-        h(B.BevRow, { bev: BEVS.coldBrew, showImage: true, score: 8.1, count: 41, saved: true }),
-        h(B.SectionHeader, { title: 'People' }),
-        h(B.UserRow, { user: { name: 'Cody Lin', handle: 'codyl' }, following: false }),
-        h(B.UserRow, { user: { name: 'Colette Ames', handle: 'colette' }, following: true, divider: false }),
-        h('div', { className: 'sr-foot' }, h(B.Button, { variant: 'outlined', block: true, icon: 'circle-plus' }, "Can't find it? Add a new Bev")))))`)};
-})()`];
+  .fm { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 0 24px 24px; text-align: center; }
+  .fm-copy { display: flex; flex-direction: column; gap: 4px; max-width: 280px; margin-top: 8px; }
+  .fm-cta { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px; }`, phone('map', `
+  h(F, null,
+    h(B.Header, { title: 'Map' }),
+    h('div', { className: 'fm' },
+      h(B.FindBevArt, {}),
+      h('div', { className: 'fm-copy' },
+        h('h1', { className: 'displayDrop' }, 'Find Bev'),
+        h('p', { className: 'bodyLarge bv-meta' }, 'Walk to the closest open place to grab a drink.')),
+      h('div', { className: 'fm-cta' },
+        h(B.Button, { variant: 'primary', block: true, icon: 'navigation' }, 'Find Bev'),
+        h('p', { className: 'caption bv-meta' }, 'Opens Bev Maps'))))`)];
 
 for (const [name, [opts, css, code]] of Object.entries(P)) {
   const dir = path.join(ROOT, 'project/components', name);

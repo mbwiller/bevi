@@ -21,19 +21,19 @@
   function L(text, el) { return h('div', { className: 'pv-stack' }, el, h('span', { className: 'pv-label' }, text)); }
 
   var BEVS = {
-    dietCoke: { name: 'Diet Coke', brand: 'Coca-Cola', category: 'diet_soda', priceTier: 1, art: { kind: 'can', color: '#d6d6db', accent: '#c8102e' } },
-    mexicanCoke: { name: 'Mexican Coke', brand: 'Coca-Cola', category: 'soda', priceTier: 2, art: { kind: 'bottle', color: '#3b1d12', accent: '#e03a3e' } },
-    topo: { name: 'Topo Chico', brand: 'Topo Chico', category: 'sparkling_water', priceTier: 1, art: { kind: 'bottle', color: '#a9d8c9', accent: '#f2c94c' } },
+    dietCoke: { name: 'Diet Coke', brand: 'Coca-Cola', category: 'diet_soda', priceTier: 1, art: { kind: 'can', color: '#d6d6db', accent: '#c8102e' }, bayesScore: 8.8, ratingCount: 204 },
+    mexicanCoke: { name: 'Mexican Coke', brand: 'Coca-Cola', category: 'soda', priceTier: 2, art: { kind: 'bottle', color: '#3b1d12', accent: '#e03a3e' }, bayesScore: 8.7, ratingCount: 362 },
+    topo: { name: 'Topo Chico', brand: 'Topo Chico', category: 'sparkling_water', priceTier: 1, art: { kind: 'bottle', color: '#a9d8c9', accent: '#f2c94c' }, bayesScore: 8.4, ratingCount: 97 },
     pamplemousse: { name: 'LaCroix Pamplemousse', brand: 'LaCroix', flavor: 'Pamplemousse', category: 'sparkling_water', priceTier: 1, art: { kind: 'can', color: '#f4a7b9', accent: '#ffffff' } },
     redBull: { name: 'Red Bull', brand: 'Red Bull', category: 'energy', priceTier: 2, art: { kind: 'slimCan', color: '#2d4fa1', accent: '#c0c4cc' } },
-    brownSugar: { name: 'Brown Sugar Boba', brand: 'Tiger Sugar', category: 'boba', priceTier: 2, art: { kind: 'boba', color: '#c9a27e', accent: '#7a4a2a' } },
-    horchata: { name: 'Horchata', brand: 'Tacos El Gordo', category: 'other', priceTier: 2, priceEstimated: true, art: { kind: 'icedCup', color: '#efe4d0', accent: '#b07a45' } },
-    coldBrew: { name: 'Cold Brew', brand: 'Blue Bottle', category: 'coffee', priceTier: 2, art: { kind: 'icedCup', color: '#4a2c1d', accent: '#3c7dd9' } },
+    brownSugar: { name: 'Brown Sugar Boba', brand: 'Tiger Sugar', category: 'boba', priceTier: 2, art: { kind: 'boba', color: '#c9a27e', accent: '#7a4a2a' }, bayesScore: 8.5, ratingCount: 5120 },
+    horchata: { name: 'Horchata', brand: 'Tacos El Gordo', category: 'other', priceTier: 2, priceEstimated: true, art: { kind: 'icedCup', color: '#efe4d0', accent: '#b07a45' }, bayesScore: 8.9, ratingCount: 362 },
+    coldBrew: { name: 'Cold Brew', brand: 'Blue Bottle', category: 'coffee', priceTier: 2, art: { kind: 'icedCup', color: '#4a2c1d', accent: '#3c7dd9' }, bayesScore: 8.1, ratingCount: 41 },
     sprite: { name: 'Sprite', brand: 'Coca-Cola', category: 'soda', priceTier: 1, art: { kind: 'can', color: '#1f8f4e', accent: '#f2d230' } },
     gatorade: { name: 'Gatorade Cool Blue', brand: 'Gatorade', category: 'sports', priceTier: 1, art: { kind: 'waterBottle', color: '#3aa0e0', accent: '#f26b1d' } },
     oj: { name: 'Orange Juice', brand: 'Tropicana', category: 'juice', priceTier: 1, art: { kind: 'carton', color: '#f6a623', accent: '#2f9e44' } },
     poppi: { name: 'Strawberry Lemon', brand: 'Poppi', category: 'diet_soda', priceTier: 2, art: { kind: 'can', color: '#f7c6cf', accent: '#e8384f' } },
-    matcha: { name: 'Iced Matcha Latte', brand: 'Starbucks', category: 'tea', priceTier: 2, art: { kind: 'icedCup', color: '#9cbf6b', accent: '#1e7a46' } },
+    matcha: { name: 'Iced Matcha Latte', brand: 'Starbucks', category: 'tea', priceTier: 2, art: { kind: 'icedCup', color: '#9cbf6b', accent: '#1e7a46' }, bayesScore: 8.4, ratingCount: 41 },
   };
   var ME = { name: 'Matt Willer', handle: 'mbwiller' };
   // A stand-in profile photo for previews (an SVG gradient; real ones are the person's upload).
@@ -50,6 +50,7 @@
   var ACTIONS = { onLike: NOOP, onComment: NOOP, onRank: NOOP, onSave: NOOP };
   return h('div', { className: 'pv-narrow' },
     h(B.FeedPost, { actor: ARJUN, bev: BEVS.horchata, score: 9.5, time: '5 hours ago', liked: aOn, likeCount: aOn ? 4 : 3, onLike: function () { setA(!aOn); }, onComment: NOOP, onRank: NOOP, onSave: NOOP,
+      alsoBevdBy: [FRIENDS[0], FRIENDS[1]], alsoBevdCount: 5,
       comments: [
         { author: FRIENDS[1], body: 'ok this is going on my list' },
         { author: ME, body: 'the one on 3rd ave or the truck?' },
@@ -57,8 +58,12 @@
       commentCount: 3,
       note: "went back with my mom and she pulled out a sleeper: the cinnamon is way stronger than the dining hall one and it's not too sweet. honestly the best thing on this whole block, and it costs less than a cold brew. getting two next time" }),
     h(B.FeedPost, { actor: FRIENDS[0], bev: BEVS.brownSugar, score: 7.8, saved: true, time: 'Wednesday', liked: bOn, likeCount: bOn ? 12 : 11, onLike: function () { setB(!bOn); }, onComment: NOOP, onRank: NOOP, onSave: NOOP,
+      alsoBevdBy: [ARJUN],
       comments: [{ author: FRIENDS[2], body: 'tiger sugar > everything' }], commentCount: 12 }),
-    h(B.FeedPost, Object.assign({ actor: FRIENDS[3], bev: BEVS.topo, score: 6.1, time: 'Monday', likeCount: 1 }, ACTIONS)),
+    h(B.FeedPost, Object.assign({ actor: FRIENDS[3], bev: BEVS.topo, score: 6.1, time: 'Monday', likeCount: 1, note: 'fine. it is water' }, ACTIONS)),
+    h('p', { className: 'pv-label pv-mat' }, "With the ranker's own photos: the strip scrolls and the note follows"),
+    h(B.FeedPost, Object.assign({ actor: FRIENDS[1], bev: BEVS.coldBrew, score: 8.6, time: 'Sunday', note: 'the nitro tap at the 3rd ave one',
+      photos: [{ art: BEVS.coldBrew.art }, { art: BEVS.matcha.art }, { art: BEVS.horchata.art }] }, ACTIONS)),
     h('p', { className: 'pv-label pv-mat' }, "Explore: the plain post (no heart, counts or comments) with the author's Follow pill"),
     h(B.FeedPost, { actor: FRIENDS[2], bev: BEVS.matcha, score: 8.2, time: '2 days ago', note: 'oat milk, half sweet. the only one I order now',
       following: cOn, onFollow: function () { setC(!cOn); } }));

@@ -143,14 +143,18 @@
 .bv-tabs-accent-primary .bv-tabs-bar { background: var(--primary); }
 .bv-tabs-accent-primary .bv-tab-active { color: var(--primary); }
 
-/* TabBar */
-.bv-tabbar { display: flex; align-items: flex-start; border-top: 1px solid var(--border); background: var(--surface); padding: 6px var(--space-xs) 0; }
+/* TabBar. It paints above the screen content (position + z-index) so the raised Add Bev circle is never clipped.
+   The circle's ring is a 4px `surface` spread with no blur: it only separates the circle from the bar's hairline. */
+.bv-tabbar { position: relative; z-index: 1; display: flex; align-items: flex-start; border-top: 1px solid var(--border); background: var(--surface); padding: 6px var(--space-xs) 0; }
 .bv-tabbar-safe { padding-bottom: 34px; }
 .bv-tabbar-item { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; gap: 3px; min-height: var(--size-target); color: var(--text); }
 .bv-tabbar-icon { display: flex; align-items: center; justify-content: center; height: 32px; }
-.bv-tabbar-add { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: var(--radius-pill); background: var(--primary); color: var(--onPrimary); }
+.bv-tabbar-icon-add { align-items: flex-end; }
+.bv-tabbar-add { display: flex; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: var(--radius-pill); background: var(--primary); color: var(--onPrimary);
+  box-shadow: 0 0 0 4px var(--surface); }
+.bv-tabbar-active { color: var(--primary); }
 .bv-tabbar-active .bv-tabbar-label { font-weight: 700; }
-.bv-tabbar-active .bv-avatar { border: 1.5px solid var(--text); }
+.bv-tabbar-active .bv-avatar { box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px var(--primary); }
 
 /* SearchBar */
 .bv-search { display: flex; align-items: center; gap: var(--space-sm); color: var(--textSecondary); cursor: text; }
@@ -180,20 +184,27 @@
 .bv-tierpick-cell + .bv-tierpick-cell { border-left: 1px solid var(--border); }
 .bv-tierpick-on { background: var(--primary); color: var(--onPrimary); }
 
-/* BevRow */
-.bv-bevrow { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "main score" "foot foot";
-  min-height: var(--size-row-min); padding: var(--space-md) var(--space-gutter) var(--space-xs); background: var(--surface); }
-.bv-bevrow-main { grid-area: main; display: flex; align-items: flex-start; gap: var(--space-md); min-width: 0; text-align: left; }
+/* BevRow, about 94pt: [56pt image] [text column] [ScoreBubble]. The foot sits under the category line, from the text
+   column's left edge to the row's right edge; its line is 32pt and the 44pt action targets overlap it by 6pt each way. */
+.bv-bevrow { position: relative; display: flex; align-items: flex-start; gap: var(--space-md); min-height: var(--size-row-min);
+  padding: var(--space-md) var(--space-gutter) var(--space-xs); background: var(--surface); }
+.bv-bevrow-img { display: inline-flex; flex: none; }
+.bv-bevrow-body { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.bv-bevrow-top { display: flex; align-items: flex-start; }
+.bv-bevrow-main { display: flex; flex: 1; min-width: 0; text-align: left; }
 .bv-bevrow-text { display: flex; flex-direction: column; min-width: 0; }
 .bv-bevrow-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bv-bevrow-line { display: flex; align-items: center; gap: var(--space-xs); color: var(--text); white-space: nowrap; overflow: hidden; }
 .bv-bevrow-line-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.bv-bevrow-score { grid-area: score; padding: 2px 4px 0 var(--space-md); }
-.bv-bevrow-foot { grid-area: foot; display: flex; align-items: center; justify-content: space-between; min-height: var(--size-target); margin-top: var(--space-md); }
+.bv-bevrow-score { flex: none; padding: 2px 4px 0 var(--space-md); }
+.bv-bevrow-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); min-height: 32px; }
+.bv-bevrow-meta { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bv-bevrow-foot .bv-actions { flex: none; margin-top: -6px; margin-bottom: -6px; }
 .bv-actions { display: flex; align-items: center; margin-right: -8px; }
 .bv-catmark { color: var(--text); }
 
-/* FeedPost */
+/* FeedPost: Avatar 44 and the sentence, then the Bev's picture beside the note (or the ranker's photo strip with the
+   note under it), the "Bev'd it too" line, and a foot with the social actions on the left and the Bev's on the right. */
 .bv-post { position: relative; padding: var(--space-lg) var(--space-gutter) var(--space-xs); background: var(--surface); touch-action: manipulation; }
 .bv-post-media { position: relative; }
 /* The double-tap burst: over the photo strip, or the post's centre when there is none. Grows on the springy curve, holds, fades. */
@@ -201,18 +212,32 @@
   animation: bv-like-burst 800ms cubic-bezier(.2,.8,.2,1); }
 @keyframes bv-like-burst { 0% { transform: scale(.4); opacity: 0; } 20% { transform: scale(1.1); opacity: 1; } 32% { transform: scale(1); } 70% { opacity: 1; } 100% { transform: scale(1); opacity: 0; } }
 @keyframes bv-like-fade { 0% { opacity: 0; } 25% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; } }
-.bv-post-head { display: flex; align-items: flex-start; gap: var(--space-xxl); }
-.bv-post-head-text { flex: 1; min-width: 0; padding-top: var(--space-xs); }
+.bv-post-head { display: flex; align-items: flex-start; gap: var(--space-md); }
+.bv-post-head-text { flex: 1; min-width: 0; }
+.bv-post-line { font-weight: 400; }
 .bv-post-verb { font-weight: 400; }
-.bv-post-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; margin-top: var(--space-xs); }
-.bv-post-score { margin-top: var(--space-xs); }
-.bv-post-strip { display: flex; gap: var(--space-sm); margin: var(--space-lg) calc(-1 * var(--space-gutter)) 0; padding: 0 var(--space-gutter); overflow-x: auto; scrollbar-width: none; }
+.bv-post-meta { display: flex; align-items: center; gap: var(--space-xs); margin-top: 2px; }
+.bv-post-meta-text { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bv-post-score { flex: none; }
+.bv-post-body { display: flex; align-items: stretch; gap: var(--space-md); margin-top: var(--space-md); }
+.bv-post-side { display: flex; flex-direction: column; gap: var(--space-sm); flex: 1; min-width: 0; padding: 2px 0; }
+.bv-post-strip { display: flex; gap: var(--space-sm); margin: var(--space-md) calc(-1 * var(--space-gutter)) 0; padding: 0 var(--space-gutter); overflow-x: auto; scrollbar-width: none; }
 .bv-post-strip::-webkit-scrollbar { display: none; }
-.bv-post-tile { flex: none; border-radius: var(--radius-photo); }
-.bv-post-note { margin-top: var(--space-lg); }
+.bv-post-tile { display: inline-flex; flex: none; border-radius: var(--radius-photo); }
+.bv-post-note { margin-top: var(--space-md); overflow-wrap: anywhere; }
+.bv-post-bevi { margin-top: var(--space-xs); }
+/* Beside the picture the Bevi score rests on the tile's bottom edge, with or without a note above it. */
+.bv-post-side .bv-post-note { margin-top: 0; }
+.bv-post-side .bv-post-bevi { margin-top: auto; }
 .bv-seemore { color: var(--textSecondary); }
-.bv-post-foot { display: flex; align-items: center; justify-content: space-between; min-height: var(--size-target); margin-top: var(--space-sm); }
-.bv-post-end { display: flex; align-items: center; gap: var(--space-sm); }
+.bv-post-also { display: flex; align-items: center; gap: var(--space-sm); margin-top: var(--space-md); }
+.bv-post-also .bv-avatar-stack > * + * { margin-left: -6px; }
+.bv-post-also-text { min-width: 0; }
+.bv-post-also-text b { color: var(--text); }
+.bv-post-foot { display: flex; align-items: center; justify-content: space-between; min-height: var(--size-target); margin-top: var(--space-xs); }
+/* The heart carries 8px of side padding inside its target: pull the group back so the heart sits on the gutter. */
+.bv-post-social { display: flex; align-items: center; margin-left: calc(-1 * var(--space-sm)); }
+.bv-post-social > .bv-pop-box:first-child { margin: 0 var(--space-xs) 0 var(--space-sm); }
 .bv-post-comments { display: flex; flex-direction: column; gap: var(--space-xs); margin: var(--space-xs) 0 var(--space-sm); padding: 0; list-style: none; }
 .bv-post-comment { display: flex; align-items: flex-start; gap: var(--space-sm); margin: 0; }
 .bv-post-comment-text { flex: 1; min-width: 0; margin: 0; padding-top: 2px; overflow-wrap: anywhere; }
@@ -278,17 +303,22 @@
 .bv-bevof-pair > .bv-bevof:only-child { flex: 0 1 calc(50% - var(--space-lg) / 2); }
 .bv-bevof .bv-bevimg { width: 100% !important; height: auto !important; aspect-ratio: 1 / 1; }
 .bv-bevof-label { color: var(--textSecondary); }
+/* One card for both periods keeps half the row; its longer label runs past the tile instead of wrapping. */
+.bv-bevof-both .bv-bevof-label { white-space: nowrap; }
 .bv-bevof-foot { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-sm); }
 .bv-bevof-name { min-width: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .bv-bevof-date { margin-top: calc(-1 * var(--space-xs)); color: var(--textSecondary); }
 
 /* UserRow */
 .bv-userrow { display: flex; align-items: center; gap: var(--space-md); min-height: 64px; padding: var(--space-sm) var(--space-gutter); background: var(--surface); }
+.bv-userrow-tall { min-height: 72px; }
 .bv-userrow-self { background: var(--primaryTint); }
 .bv-userrow-rank { width: 28px; flex: none; text-align: center; font-variant-numeric: tabular-nums; }
 .bv-userrow-main { flex: 1; display: flex; align-items: center; gap: var(--space-md); min-width: 0; text-align: left; }
 .bv-userrow-text { display: flex; flex-direction: column; min-width: 0; }
 .bv-userrow-name, .bv-userrow-text .bv-meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bv-userrow-context { display: flex; align-items: center; gap: var(--space-xs); min-width: 0; color: var(--textSecondary); }
+.bv-userrow-context-text { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bv-flame { display: inline-block; vertical-align: -2px; color: var(--primary); }
 
 /* BucketButton: a `primary` ring filled to a level (loved full, fine half, disliked empty) over its label */
@@ -331,8 +361,9 @@
 .bv-skel-circle { border-radius: var(--radius-pill); flex: none; }
 .bv-skel-lines { display: flex; flex-direction: column; gap: var(--space-sm); flex: 1; min-width: 0; }
 .bv-skel-row { display: flex; gap: var(--space-md); min-height: var(--size-row-min); padding: var(--space-md) var(--space-gutter); border-bottom: 1px solid var(--border); }
-.bv-skel-post { display: flex; flex-direction: column; gap: var(--space-lg); padding: var(--space-lg) var(--space-gutter); }
-.bv-skel-head { display: flex; align-items: center; gap: var(--space-xxl); }
+.bv-skel-post { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-lg) var(--space-gutter); }
+.bv-skel-head { display: flex; align-items: center; gap: var(--space-md); }
+.bv-skel-body { display: flex; align-items: flex-start; gap: var(--space-md); }
 
 /* Sheet */
 .bv-sheet-wrap { position: absolute; inset: 0; z-index: 10; display: flex; flex-direction: column; justify-content: flex-end; }
@@ -358,6 +389,41 @@
 .bv-composer-post:disabled { color: var(--textSecondary); }
 .bv-composer-error { margin: var(--space-xs) var(--space-gutter) 0; }
 @keyframes bv-sheet-in { from { transform: translateY(24px); opacity: .6; } to { transform: none; opacity: 1; } }
+
+/* FindBevArt: the Map tab's round minimap. The ground and the lit path are the fixed-dark pair, so it reads the same in both themes. */
+.bv-findart { display: block; flex: none; }
+.bv-findart-ground { fill: var(--tasteCard); }
+.bv-findart-street { fill: none; stroke: var(--onDeep); stroke-width: 3; opacity: .12; }
+.bv-findart-lit { fill: none; stroke: color-mix(in srgb, var(--onDeep) 90%, var(--primary)); stroke-width: 44; stroke-linecap: round; stroke-linejoin: round; }
+.bv-findart-route { fill: none; stroke: var(--primary); stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+.bv-findart-dest { fill: var(--primary); stroke: var(--onDeep); stroke-width: 4; }
+.bv-findart-heading { fill: var(--fizz); }
+.bv-findart-you { fill: var(--fizz); stroke: var(--onDeep); stroke-width: 4; }
+.bv-findart-rim { fill: none; stroke: var(--border); stroke-width: 1; }
+
+/* Motion (README, Motion): Press, Arrive, Change and Move. Transform and opacity only.
+   Press: every tappable row, card and icon gives way a little under the finger. Pills and Buttons keep their own
+   `:active` dim above; BucketButton and CompareCard keep theirs. */
+.bv-press, .bv-bevrow-main, .bv-bevrow-img, .bv-post-tile, .bv-plrow, button.bv-statcard, .bv-iconbtn, .bv-like, .bv-bevof, .bv-featured,
+.bv-userrow-main, .bv-tabbar-item, button.bv-progress, .bv-scope, .bv-link, .bv-sort-btn, .bv-sort-search {
+  transition: transform 150ms ease, opacity 150ms ease; }
+.bv-press:active, .bv-bevrow-main:active, .bv-bevrow-img:active, .bv-post-tile:active, .bv-plrow:active, button.bv-statcard:active, .bv-iconbtn:active, .bv-like:active,
+.bv-bevof:active, .bv-featured:active, .bv-userrow-main:active, .bv-tabbar-item:active, button.bv-progress:active, .bv-scope:active, .bv-link:active,
+.bv-sort-btn:active, .bv-sort-search:active { transform: scale(.98); opacity: .7; }
+/* Arrive: content that replaces a Skeleton rises 6px and fades in. */
+.bv-arrive { animation: bv-arrive 250ms ease both; }
+@keyframes bv-arrive { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+/* Change: Follow / Following and the Want to Try bookmark pop like the heart when toggled. */
+.bv-pop-box { display: inline-flex; }
+.bv-pop { animation: bv-pop 250ms cubic-bezier(.2,.8,.2,1); }
+@keyframes bv-pop { 0% { transform: scale(1); } 45% { transform: scale(1.22); } 100% { transform: scale(1); } }
+/* Move: a tab's content cross-fades in, a pushed screen slides in from the right, a full-screen modal rises. */
+.bv-move-fade { animation: bv-fade 150ms ease both; }
+.bv-move-push { animation: bv-push 250ms cubic-bezier(.2,.8,.2,1) both; }
+.bv-move-rise { animation: bv-rise 250ms cubic-bezier(.2,.8,.2,1) both; }
+@keyframes bv-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes bv-push { from { opacity: 0; transform: translateX(22%); } to { opacity: 1; transform: none; } }
+@keyframes bv-rise { from { opacity: 0; transform: translateY(8%); } to { opacity: 1; transform: none; } }
 
 /* Map (M-16). The one place Bevi floats: callouts and controls over the map sit on elevation-floating. */
 .bv-callout { position: relative; display: inline-flex; flex-direction: column; align-items: center; justify-content: flex-end;
@@ -420,4 +486,10 @@
   .bv-like-pop { animation: none; }
   .bv-like-burst { animation-name: bv-like-fade; }
   .bv-callout { transition: none; }
+  /* Press keeps its dim and drops the scale; Arrive, push and rise become fades; the pop is skipped. */
+  .bv-press:active, .bv-bevrow-main:active, .bv-bevrow-img:active, .bv-post-tile:active, .bv-plrow:active, button.bv-statcard:active, .bv-iconbtn:active, .bv-like:active,
+  .bv-bevof:active, .bv-featured:active, .bv-userrow-main:active, .bv-tabbar-item:active, button.bv-progress:active, .bv-scope:active, .bv-link:active,
+  .bv-sort-btn:active, .bv-sort-search:active { transform: none; }
+  .bv-arrive, .bv-move-push, .bv-move-rise { animation-name: bv-fade; }
+  .bv-pop { animation: none; }
 }

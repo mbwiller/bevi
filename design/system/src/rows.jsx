@@ -1,6 +1,6 @@
 import React from 'react';
 import { cx, Icon, Wordmark, BevArt, categoryById, formatRatings, formatTried, spokenTried, formatScore, scoreBand } from './core.jsx';
-import { ScoreBubble, Avatar, BevImage, Pill, IconButton, LikeButton, CommentButton, ProgressBar } from './primitives.jsx';
+import { ScoreBubble, Avatar, AvatarStack, BevImage, IconButton, LikeButton, CommentButton, SaveButton, FollowPill, ProgressBar } from './primitives.jsx';
 
 /** Comments shown on the post itself; above this many, the post collapses to "View all N comments". */
 export const INLINE_COMMENTS = 7;
@@ -51,38 +51,47 @@ export function ListScopeDropdown({ label = 'All', onClick, className }) {
 }
 
 /**
- * The list row: name, one line of category icon, category and brand, a meta line, actions, and a ScoreBubble 40.
- * No price on a row (D-06).
+ * The list row, about 94pt: an optional 56pt image, then the name and one line of category icon, category
+ * and brand, with a ScoreBubble 40 at the right. The foot (the meta line on the left, the actions on the
+ * right) sits directly under the category line and runs from the text column's left edge to the row's
+ * right edge, so with no image it spans the row. No price on a row (D-06).
  * The meta line is `meta` when given; otherwise the rating count ("362 ratings") when `count` > 0.
- * No image by default, as in the reference; pass `showImage` for search results.
+ * No image by default, as in the reference; pass `showImage` for search results and the Top list.
  */
 export function BevRow({ bev, number, score, scoreVariant, count, meta, saved = false, onRank, onSave, actions = true, showImage = false, divider = true, onClick, className }) {
   const cat = categoryById(bev.category);
   return (
     <div className={cx('bv', 'bv-bevrow', divider && 'bv-divider', className)}>
-      <button type="button" className="bv-bevrow-main" onClick={onClick} aria-label={(number ? number + '. ' : '') + bev.name}>
-        {showImage ? <BevImage size={56} src={bev.src} art={bev.art} alt={bev.name} status={bev.photoStatus} /> : null}
-        <span className="bv-bevrow-text">
-          <span className="screenTitle bv-bevrow-name">{number != null ? number + '. ' : ''}{bev.name}</span>
-          <span className="body bv-bevrow-line">
-            <CategoryMark category={bev.category} />
-            <span className="bv-bevrow-line-text">{[cat ? cat.label : null, brandLine(bev) || null].filter(Boolean).join(' · ')}</span>
+      {showImage ? (
+        // The picture opens the Bev too; the name button is the one a screen reader and the Tab key meet.
+        <button type="button" className="bv-bevrow-img" onClick={onClick} tabIndex={-1} aria-hidden="true">
+          <BevImage size={56} src={bev.src} art={bev.art} alt={bev.name} status={bev.photoStatus} />
+        </button>
+      ) : null}
+      <div className="bv-bevrow-body">
+        <div className="bv-bevrow-top">
+          <button type="button" className="bv-bevrow-main" onClick={onClick} aria-label={(number ? number + '. ' : '') + bev.name}>
+            <span className="bv-bevrow-text">
+              <span className="screenTitle bv-bevrow-name">{number != null ? number + '. ' : ''}{bev.name}</span>
+              <span className="body bv-bevrow-line">
+                <CategoryMark category={bev.category} />
+                <span className="bv-bevrow-line-text">{[cat ? cat.label : null, brandLine(bev) || null].filter(Boolean).join(' · ')}</span>
+              </span>
+            </span>
+          </button>
+          <span className="bv-bevrow-score">
+            {score !== undefined || scoreVariant ? <ScoreBubble score={score} variant={scoreVariant} /> : null}
           </span>
-        </span>
-      </button>
-      <span className="bv-bevrow-score">
-        {score !== undefined || scoreVariant ? <ScoreBubble score={score} variant={scoreVariant} /> : null}
-      </span>
-      <div className="bv-bevrow-foot">
-        <span className="body bv-meta">{meta != null && meta !== '' ? meta : count > 0 ? formatRatings(count) : null}</span>
-        {actions ? (
-          <span className="bv-actions">
-            <IconButton icon="circle-plus" label={'Rank ' + bev.name} onClick={onRank} />
-            <button type="button" className={cx('bv-iconbtn', 'bv-iconbtn-plain', saved && 'bv-saved')} onClick={onSave} aria-pressed={saved} aria-label={saved ? 'Saved to Want to Try' : 'Save to Want to Try'}>
-              <Icon name="bookmark" size={28} strokeWidth={1.6} filled={saved} />
-            </button>
-          </span>
-        ) : null}
+        </div>
+        <div className="bv-bevrow-foot">
+          <span className="body bv-meta bv-bevrow-meta">{meta != null && meta !== '' ? meta : count > 0 ? formatRatings(count) : null}</span>
+          {actions ? (
+            <span className="bv-actions">
+              <IconButton icon="circle-plus" label={'Rank ' + bev.name} onClick={onRank} />
+              <SaveButton saved={saved} onClick={onSave} />
+            </span>
+          ) : null}
+        </div>
       </div>
     </div>
   );
@@ -97,79 +106,129 @@ function LikeBurst() {
   );
 }
 
+/** Notes longer than this truncate with "See more": about four lines beside the picture, more under a photo strip. */
+const NOTE_MAX = { side: 96, strip: 160 };
+const NOTE_CUT = { side: 86, strip: 150 };
+const firstName = (p) => ((p && p.name) || '').split(' ')[0] || (p && p.handle) || '';
+
+/** "**Arjun** Bev'd it too", "**Arjun** and **Priya** Bev'd it too", "**Arjun**, **Priya** and 3 others Bev'd it too". */
+function AlsoBevd({ people, count }) {
+  const shown = people.slice(0, 2);
+  const total = Math.max(count != null ? count : people.length, shown.length);
+  const others = total - shown.length;
+  const [a, b] = shown;
+  return (
+    <div className="bv-post-also">
+      <AvatarStack people={shown} size={24} max={2} />
+      <p className="caption bv-meta bv-post-also-text">
+        <b>{firstName(a)}</b>
+        {b ? (others > 0 ? ', ' : ' and ') : null}
+        {b ? <b>{firstName(b)}</b> : null}
+        {others > 0 ? ' and ' + others + (others === 1 ? ' other' : ' others') : null}
+        {" Bev'd it too"}
+      </p>
+    </div>
+  );
+}
+
 /**
  * A ranking in the Feed and on Profile › Activity. Names bold, verb regular.
- * Double-tap anywhere outside the photo strip likes it (never unlikes); the heart in the action row is the way to unlike.
+ * With the Bev's own picture the note sits beside it; with the ranker's photos (`photos`) the strip
+ * scrolls and the note follows. Double-tap anywhere outside the picture likes it (never unlikes); the
+ * heart in the action row is the way to unlike.
  */
-export function FeedPost({ actor = {}, you = false, bev, score, scoreVariant, note, time, saved = false, liked = false, likeCount = 0, comments = [], commentCount = 0, photos, following = false, onFollow, onRank, onSave, onLike, onComment, onOpen, divider = true, className }) {
+export function FeedPost({ actor = {}, you = false, bev, score, scoreVariant, note, time, saved = false, liked = false, likeCount = 0, comments = [], commentCount = 0, photos, alsoBevdBy = [], alsoBevdCount, following = false, onFollow, onRank, onSave, onLike, onComment, onOpen, divider = true, className }) {
   const [open, setOpen] = React.useState(false);
   const [burst, setBurst] = React.useState(0);
   const cat = categoryById(bev.category);
-  const tiles = photos || [{ src: bev.src, art: bev.art }];
+  // No `photos`: the Bev's own picture, beside the note. `photos`: the ranker's own, as a strip ([] draws none).
+  const side = !photos;
+  const tiles = photos || [];
+  const max = side ? NOTE_MAX.side : NOTE_MAX.strip;
+  const cutAt = side ? NOTE_CUT.side : NOTE_CUT.strip;
   const onDoubleClick = (e) => {
     // A read-only post (no onLike: Explore, a stranger's Activity) has no double-tap at all.
     if (!onLike) return;
-    // The photo strip keeps single tap = open the Bev; buttons keep their own action.
+    // The picture keeps single tap = open the Bev; buttons keep their own action.
     if (e.target.closest && e.target.closest('.bv-post-strip, button')) return;
     setBurst((n) => n + 1);
     if (!liked) onLike();
   };
+  const noteEl = note ? (
+    <p className="bodyLarge bv-post-note">
+      {open || note.length <= max ? note : note.slice(0, cutAt).replace(/\s+\S*$/, '') + ' … '}
+      {!open && note.length > max ? <button type="button" className="bv-seemore" onClick={() => setOpen(true)}>See more</button> : null}
+    </p>
+  ) : null;
+  // The Bevi score the ranker's own score can be read against. Left out until the Bev has one.
+  const bevi = bev.bayesScore != null
+    ? <p className="caption bv-meta bv-post-bevi">{formatScore(bev.bayesScore) + ' on Bevi' + (bev.ratingCount > 0 ? ' · ' + formatRatings(bev.ratingCount) : '')}</p>
+    : null;
+  const social = onFollow || onLike || onComment;
+  const own = onRank || onSave;
   return (
     <article className={cx('bv', 'bv-post', divider && 'bv-divider', className)} onDoubleClick={onDoubleClick}>
       <div className="bv-post-head">
-        <Avatar name={actor.name} src={actor.src} size={60} />
+        <Avatar name={actor.name} src={actor.src} size={44} />
         <div className="bv-post-head-text">
-          <p className="screenTitle bv-post-line">
-            <b>{you ? 'You' : (actor.name || '').split(' ')[0]}</b>
+          <p className="heading bv-post-line">
+            <b>{you ? 'You' : firstName(actor)}</b>
             <span className="bv-post-verb">{" Bev'd "}</span>
             <b>{bev.name}</b>
           </p>
           <p className="body bv-meta bv-post-meta">
             {cat ? <Icon name={cat.icon} size={16} strokeWidth={2} /> : null}
-            <span>{' ' + (bev.brand || (cat ? cat.label : ''))}</span>
+            <span className="bv-post-meta-text">{[bev.brand || (cat ? cat.label : ''), time].filter(Boolean).join(' · ')}</span>
           </p>
         </div>
         {score != null || scoreVariant ? <ScoreBubble score={score} variant={scoreVariant} className="bv-post-score" /> : null}
       </div>
-      {tiles.length ? (
-        <div className="bv-post-media">
-          <div className="bv-post-strip" role="list">
-            {tiles.map((t, i) => (
-              <button type="button" role="listitem" key={i} className="bv-post-tile" onClick={onOpen} aria-label={'Open ' + bev.name}>
-                <BevImage size={155} src={t.src} art={t.art} alt={bev.name} />
-              </button>
-            ))}
+      {side ? (
+        <div className="bv-post-media bv-post-body">
+          <button type="button" className="bv-post-tile" onClick={onOpen} aria-label={'Open ' + bev.name}>
+            <BevImage size={112} src={bev.src} art={bev.art} alt={bev.name} />
+          </button>
+          <div className="bv-post-side">
+            {noteEl}
+            {bevi}
           </div>
           {burst ? <LikeBurst key={burst} /> : null}
         </div>
-      ) : burst ? <LikeBurst key={burst} /> : null}
-      {note ? (
-        <p className="bodyLarge bv-post-note">
-          <b>Notes:</b> {open || note.length <= 160 ? note : note.slice(0, 150).replace(/\s+\S*$/, '') + ' …'}
-          {!open && note.length > 160 ? <button type="button" className="bv-seemore" onClick={() => setOpen(true)}>See more</button> : null}
-        </p>
-      ) : null}
-      <div className="bv-post-foot">
-        <span className="body bv-meta">{time}</span>
-        <span className="bv-post-end">
-          {onFollow ? (
-            // The author's Follow pill (Explore): UserRow's pill, leading the group where the heart sits on a feed post.
-            <Pill variant={following ? 'outlined' : 'filled'} onClick={onFollow} aria-pressed={following} aria-label={'Follow ' + (actor.name || actor.handle || '')}>{following ? 'Following' : 'Follow'}</Pill>
-          ) : null}
-          {onLike || onComment || onRank || onSave ? (
+      ) : (
+        <>
+          {tiles.length ? (
+            <div className="bv-post-media">
+              <div className="bv-post-strip" role="list">
+                {tiles.map((t, i) => (
+                  <button type="button" role="listitem" key={i} className="bv-post-tile" onClick={onOpen} aria-label={'Open ' + bev.name}>
+                    <BevImage size={155} src={t.src} art={t.art} alt={bev.name} />
+                  </button>
+                ))}
+              </div>
+              {burst ? <LikeBurst key={burst} /> : null}
+            </div>
+          ) : burst ? <LikeBurst key={burst} /> : null}
+          {noteEl}
+          {bevi}
+        </>
+      )}
+      {alsoBevdBy && alsoBevdBy.length ? <AlsoBevd people={alsoBevdBy} count={alsoBevdCount} /> : null}
+      {social || own ? (
+        <div className="bv-post-foot">
+          <span className="bv-post-social">
+            {/* The author's Follow pill (Explore): UserRow's pill, leading the row where the heart sits on a feed post. */}
+            {onFollow ? <FollowPill following={following} onClick={onFollow} label={'Follow ' + (actor.name || actor.handle || '')} /> : null}
+            {onLike ? <LikeButton liked={liked} count={likeCount} onClick={onLike} /> : null}
+            {onComment ? <CommentButton count={commentCount} onClick={onComment} /> : null}
+          </span>
+          {own ? (
             <span className="bv-actions">
-              {onLike ? <LikeButton liked={liked} count={likeCount} onClick={onLike} /> : null}
-              {onComment ? <CommentButton count={commentCount} onClick={onComment} /> : null}
               {onRank ? <IconButton icon="circle-plus" label={'Rank ' + bev.name} onClick={onRank} /> : null}
-              {onSave ? (
-                <button type="button" className={cx('bv-iconbtn', 'bv-iconbtn-plain', saved && 'bv-saved')} onClick={onSave} aria-pressed={saved} aria-label={saved ? 'Saved to Want to Try' : 'Save to Want to Try'}>
-                  <Icon name="bookmark" size={28} strokeWidth={1.6} filled={saved} />
-                </button>
-              ) : null}
+              {onSave ? <SaveButton saved={saved} onClick={onSave} /> : null}
             </span>
           ) : null}
-        </span>
-      </div>
+        </div>
+      ) : null}
       {commentCount > INLINE_COMMENTS ? (
         <button type="button" className="body bv-post-allcomments" onClick={onComment}>{'View all ' + commentCount + ' comments'}</button>
       ) : comments.length ? (
@@ -291,18 +350,20 @@ export function FeaturedCard({ title, subtitle, src, art, tint, onClick, classNa
   );
 }
 
-const BEV_OF_LABEL = { day: 'Bev of the day', week: 'Bev of the week' };
+const BEV_OF_LABEL = { day: 'Bev of the day', week: 'Bev of the week', both: 'Bev of the day and week' };
 
 /**
  * Bev of the day / Bev of the week: half of a pair under the Feed's search bar. Just the Bev, not a
  * post: a caps label, its square tile, its name and the score it won with. `date` ("Oct 17",
- * "Week of Oct 12") shows only when the winner is from an earlier period.
+ * "Week of Oct 12") shows only when the winner is from an earlier period. `period="both"` is the one
+ * card the Feed shows when the same Bev won the day and the week ("Bev of the day and week"), at the
+ * width one card of the pair has.
  */
 export function BevOfCard({ period = 'day', bev, score, date, onClick, className }) {
-  const label = BEV_OF_LABEL[period];
+  const label = BEV_OF_LABEL[period] || BEV_OF_LABEL.day;
   const spoken = label + ': ' + bev.name + (score != null ? ', ' + formatScore(score) : '') + (date ? ', ' + date : '');
   return (
-    <button type="button" className={cx('bv', 'bv-bevof', className)} onClick={onClick} aria-label={spoken}>
+    <button type="button" className={cx('bv', 'bv-bevof', period === 'both' && 'bv-bevof-both', className)} onClick={onClick} aria-label={spoken}>
       <span className="sectionCaps bv-bevof-label">{label}</span>
       <BevImage size={164} src={bev.src} art={bev.art} status={bev.photoStatus} />
       <span className="bv-bevof-foot">
@@ -314,10 +375,13 @@ export function BevOfCard({ period = 'day', bev, score, date, onClick, className
   );
 }
 
-/** Person row for People search, followers and the user leaderboard. */
-export function UserRow({ user = {}, rank, meta, streak, following, self = false, onFollow, onClick, divider = true, className }) {
+/**
+ * Person row for People search, suggestions, followers and the points ranking. `context` adds a third
+ * line under the handle ("Followed by Sam and Arjun") and the row grows from 64 to 72pt.
+ */
+export function UserRow({ user = {}, rank, meta, streak, context, following, self = false, onFollow, onClick, divider = true, className }) {
   return (
-    <div className={cx('bv', 'bv-userrow', divider && 'bv-divider', self && 'bv-userrow-self', className)}>
+    <div className={cx('bv', 'bv-userrow', context && 'bv-userrow-tall', divider && 'bv-divider', self && 'bv-userrow-self', className)}>
       {rank != null ? <span className="heading bv-userrow-rank">{rank}</span> : null}
       <button type="button" className="bv-userrow-main" onClick={onClick}>
         <Avatar name={user.name} src={user.src} size={44} />
@@ -328,11 +392,15 @@ export function UserRow({ user = {}, rank, meta, streak, following, self = false
             {meta ? ' · ' + meta : ''}
             {streak ? <><span> · </span><Icon name="flame" size={14} strokeWidth={2.25} className="bv-flame" /> {streak}</> : null}
           </span>
+          {context ? (
+            <span className="caption bv-userrow-context">
+              <Icon name="users" size={14} strokeWidth={2} />
+              <span className="bv-userrow-context-text">{context}</span>
+            </span>
+          ) : null}
         </span>
       </button>
-      {following != null && !self ? (
-        <Pill variant={following ? 'outlined' : 'filled'} onClick={onFollow} aria-pressed={following}>{following ? 'Following' : 'Follow'}</Pill>
-      ) : null}
+      {following != null && !self ? <FollowPill following={following} onClick={onFollow} /> : null}
     </div>
   );
 }

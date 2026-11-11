@@ -9,3 +9,4 @@ The filters over the map, one row that scrolls sideways: `Filters N`, `Neighborh
 - A pill that is on takes the selected look of an outlined Pill and the FilterPill (`primaryTint`, `primary` rim and text).
 - Category offers the categories the viewer can see (never the alcoholic three under 21). Neighborhood is left out while the vocabulary is empty.
 - Pills keep their 44pt targets inside the row: it pads 7pt above and below.
+- **Parked (2026-11-11).** The venue map left the app with the navigation redesign, and no screen composes this component. It stays in the design system, and its code stays in the app unmounted, so the map can come back.
