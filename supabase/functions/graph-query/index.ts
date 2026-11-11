@@ -37,13 +37,18 @@ const TEMPLATES = {
   // `categoryId` is the ROOT category and comes from the property: since the
   // sync (scripts/graph/sync.ts) IN_CATEGORY targets the Bev's LEAF when it has
   // one, so the relationship no longer answers "which of the 15".
+  // `pagerank`, `community` and `bridge` are the graph signals the sync
+  // computes inside its transaction (scripts/graph/analytics-core.ts).
+  // `community` is the Bev's taste family as an opaque id, never a Bev id:
+  // compare it for equality only.
   bev: `
     MATCH (b:Bev { id: $bevId })
     WHERE coalesce(b.isAlcoholic, true) = false
     OPTIONAL MATCH (b)-[:BY_BRAND]->(br:Brand)
     RETURN b.id AS id, b.name AS name, b.brand AS brand,
            b.categoryId AS categoryId, b.leafCategoryId AS leafCategoryId,
-           br.key AS brandKey
+           br.key AS brandKey,
+           b.pagerank AS pagerank, b.community AS community, b.bridge AS bridge
   `,
   // Why two Bevs are near each other: the attribute nodes they both hang from
   // (brand, flavour base, shared name/flavour tokens, the same category node),

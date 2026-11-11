@@ -15,6 +15,13 @@
  *
  * EVERY PATH MUST CARRY A TOTAL ORDER (`order=` on the primary key), because
  * `limit`/`offset` over an unordered result can repeat or skip rows.
+ *
+ * Every failure is a `PostgrestError` that carries the HTTP status (null when
+ * no response arrived) and one bit, `transient`: a network failure, HTTP 429
+ * or a 5xx, the cases where the same request can succeed a moment later. The
+ * sync retries its one idempotent write (`replace_bev_graph_stats`) on that
+ * bit and on nothing else; a 4xx is the caller's bug or a missing function
+ * and will not fix itself.
  */
 
 export const PAGE = 1000;
@@ -23,6 +30,33 @@ export interface PostgrestClient {
   select<T>(path: string): Promise<T[]>;
   rpc<T>(name: string, body: Record<string, unknown>): Promise<T>;
   rpcRows<T>(name: string, body: Record<string, unknown>): Promise<T[]>;
+}
+
+export interface PostgrestErrorInit {
+  message: string;
+  /** The HTTP status, or null when no response arrived. */
+  status: number | null;
+  path: string;
+}
+
+/** Every failure this client raises. The message has already been through `redactIds`. */
+export class PostgrestError extends Error {
+  readonly status: number | null;
+  readonly path: string;
+  /** True for a network failure, HTTP 429 and any 5xx. Never for another 4xx. */
+  readonly transient: boolean;
+
+  constructor(init: PostgrestErrorInit) {
+    super(init.message);
+    this.name = "PostgrestError";
+    this.status = init.status;
+    this.path = init.path;
+    this.transient = init.status === null || init.status === 429 || init.status >= 500;
+  }
+}
+
+export function isTransientPostgrestError(error: unknown): boolean {
+  return error instanceof PostgrestError && error.transient;
 }
 
 /** Blanks uuids and 64-hex runs (the shape of a user id and of a pseudonym) in text bound for a public log. */
@@ -42,14 +76,28 @@ export function createPostgrestClient(url: string, key: string, doFetch: typeof 
   };
 
   const request = async (path: string, init?: RequestInit): Promise<unknown> => {
-    const response = await doFetch(`${base}${path}`, { ...init, headers: { ...headers, ...(init?.headers ?? {}) } });
-    const text = await response.text();
+    let response: Response;
+    let text: string;
+    try {
+      response = await doFetch(`${base}${path}`, { ...init, headers: { ...headers, ...(init?.headers ?? {}) } });
+      text = await response.text();
+    } catch (error: unknown) {
+      // No response at all. The cause of a `fetch failed` names the host, so
+      // it is reduced to its error code, as neo4j.ts does.
+      const cause = error instanceof Error ? (error.cause as { code?: unknown } | undefined) : undefined;
+      const code = typeof cause?.code === "string" ? ` (${cause.code})` : "";
+      throw new PostgrestError({ message: `network failure${code} on ${path}`, status: null, path });
+    }
     if (!response.ok) {
       // The key is in a header, not the URL, so the path is safe to print. The
       // body of a PostgREST error is its own {code, message, hint}, not rows,
       // but a hint can quote a value, and this log is public: anything shaped
       // like a uuid or a 64-hex pseudonym is blanked, as neo4j.ts does.
-      throw new Error(`${response.status} ${response.statusText} on ${path}\n  ${redactIds(text.slice(0, 600))}`);
+      throw new PostgrestError({
+        message: `${response.status} ${response.statusText} on ${path}\n  ${redactIds(text.slice(0, 600))}`,
+        status: response.status,
+        path,
+      });
     }
     return text === "" ? null : JSON.parse(text);
   };

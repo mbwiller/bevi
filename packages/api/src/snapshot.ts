@@ -1,7 +1,8 @@
 // The caller's PredictionSnapshot, for @bevi/ranking's predictScore() and
 // recommend(), which run here in the client (no Edge Function at Bevi's
 // size). `get_prediction_snapshot()` (20261012000600; `edges` and
-// `userNeighbors` since 20261101000100) returns the data as one jsonb value;
+// `userNeighbors` since 20261101000100; `bevGraph` since 20261110000100)
+// returns the data as one jsonb value;
 // this maps it to the snapshot type, plus a BevSummary per Bev so
 // recommendation cards need no second round trip. Cached per signed-in user
 // for a few minutes and dropped on every write that changes rankings or Bevs.
@@ -36,6 +37,8 @@ interface SnapshotJson {
   edges?: Array<[string, string, Num]> | null;
   /** Stage 4 (20261101000100): the viewer's user_neighbors rows as [alias, sim, common]. */
   userNeighbors?: Array<[string, Num, number]> | null;
+  /** A-16 (4) (20261110000100): [bev_id, community_id (the taste family), pagerank, bridge] per visible Bev with a bev_graph_stats row. */
+  bevGraph?: Array<[string, string, Num, Num]> | null;
 }
 
 export interface ViewerSnapshot {
@@ -116,6 +119,19 @@ export function toViewerSnapshot(client: SupabaseClient, json: SnapshotJson): Vi
     snapshot.userNeighbours = {
       [viewer.id]: json.userNeighbors.map(([userId, sim, common]) => ({ userId, sim: num(sim), common })),
     };
+  }
+  // Each Bev's place in the graph, as the nightly graph sync computed it: its taste family
+  // (`community`), its PageRank and its bridge score. Optional in @bevi/ranking and read only by
+  // opt-in modes of `recommend()`. Same rule as above: set only when the key is present, even as
+  // [] (which maps to {}: "provided, and no Bev has stats yet"), so an older payload without the
+  // key maps to a snapshot without the field. `community` is an opaque id, to be compared for
+  // equality only.
+  if (Array.isArray(json.bevGraph)) {
+    const bevGraph: NonNullable<PredictionSnapshot['bevGraph']> = {};
+    for (const [bevId, community, pagerank, bridge] of json.bevGraph) {
+      bevGraph[bevId] = { community, pagerank: num(pagerank), bridge: num(bridge) };
+    }
+    snapshot.bevGraph = bevGraph;
   }
   return { snapshot, summaries, viewer };
 }

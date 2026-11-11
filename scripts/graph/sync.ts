@@ -1,7 +1,10 @@
 /**
  * Mirrors the Bev graph from Postgres into Neo4j AuraDB Free, nightly
  * (TASKS.md A-16 steps 6, 8 and 9: the Cypher `MERGE`, the `RANKED` mirror and
- * the `(:Meta)` stamp).
+ * the `(:Meta)` stamp), and makes the graph earn its keep (A-16 (4)): inside
+ * the same transaction it reads the similarity graph back, computes each Bev's
+ * centrality, community and bridge score, stores them on the nodes, and after
+ * the commit writes them to `bev_graph_stats` in Postgres.
  *
  *   npm run graph:sync                 # read Postgres, write the graph, verify, commit
  *   npm run graph:sync -- --dry-run    # everything, then ROLL BACK: nothing is written
@@ -10,24 +13,39 @@
  *
  * POSTGRES STAYS THE SYSTEM OF RECORD. Nothing lives only in the graph, and
  * Neo4j is never on a request path (docs/graph.md, "the one rule"): the app
- * reads `bev_edges` in Postgres, which `graph-edges` writes without this job.
- * A red run here costs the app nothing; it leaves yesterday's graph in place.
+ * reads `bev_edges` and `bev_graph_stats` in Postgres. A red run here costs
+ * the app nothing; it leaves yesterday's graph, and yesterday's stats, in place.
  *
- * THE WRITE IS ONE EXPLICIT TRANSACTION -- MERGE, stamp, sweep, verify:
+ * THE WRITE IS ONE EXPLICIT TRANSACTION -- MERGE, stamp, sweep, compute, verify:
  *
  *   1. upsert every node, then every relationship, in batched `UNWIND $rows`
  *      statements, each stamped with this run's `syncId`;
- *   2. sweep: delete every owned relationship and node whose `syncId` is not
- *      this run's (a removed ranking, a hidden Bev). `(:Meta)` is never swept;
- *   3. (the analytics phase of the next PR goes here);
+ *   2. sweep: delete every mirrored relationship and node whose `syncId` is
+ *      not this run's (a removed ranking, a hidden Bev). `(:Meta)` is never
+ *      swept;
+ *   3. the analytics phase: READ the graph back (every `(:Bev)` id, every
+ *      `SIMILAR_TO`, every Bev's flavour base and notes), compute the signals
+ *      with @bevi/ranking (analytics-core.ts) -- centrality and bridge on the
+ *      similarity graph, the community as the TASTE FAMILY: Louvain over the
+ *      flavour projection -- write them (five properties on each `(:Bev)`,
+ *      `(:Community)` nodes, `[:IN_COMMUNITY]`) and sweep last night's
+ *      communities;
  *   4. verify, still inside the transaction, by reading the graph back: the
- *      count per label and per type must equal the plan EXACTLY, plus the
- *      invariants in `VERIFY_INVARIANTS`. Any mismatch rolls back;
+ *      count per label and per type must equal the plan (and, for the computed
+ *      ones, the computation) EXACTLY, plus the invariants in
+ *      `VERIFY_INVARIANTS`. Any mismatch rolls back;
  *   5. stamp `(:Meta)` and commit.
  *
  * So the graph only ever moves from one complete, verified generation to the
  * next. Any error rolls the transaction back, and a reader never sees a
  * half-written night.
+ *
+ * AFTER THE COMMIT, and never in a dry run: `replace_bev_graph_stats` replaces
+ * `public.bev_graph_stats` with the same rows, in one Postgres transaction.
+ * The two stores cannot commit together, so there is one failure mode worth
+ * naming: the graph committed and Postgres did not. The run then exits 1 and
+ * says so, `bev_graph_stats` keeps the previous night's rows (complete and
+ * self-consistent, one generation behind), and the next run repairs it.
  *
  * Conventions follow scripts/graph/build-edges.ts: Node 22,
  * `--experimental-strip-types`, NO DEPENDENCIES, `fetch` only, a pure half
@@ -39,16 +57,18 @@
  * because its script exits 0 when a secret is unset):
  *
  *   SUPABASE_URL                 the project's REST origin (not a secret)
- *   SUPABASE_SERVICE_ROLE_KEY    reads every table past RLS
+ *   SUPABASE_SERVICE_ROLE_KEY    reads every table past RLS, and calls
+ *                                the service-role-only `replace_bev_graph_stats`
  *   NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD, NEO4J_DATABASE
- *   BEVI_PSEUDONYM_SALT          the HMAC key behind (:User {pseudonym}); at
- *                                least 16 characters. Changing it renames every
- *                                user, so it is set once and kept.
+ *   BEVI_PSEUDONYM_SALT          the HMAC key behind (:User {pseudonym}) and
+ *                                behind every community id; at least 16
+ *                                characters. Changing it renames every user and
+ *                                every community, so it is set once and kept.
  *
  * THIS REPOSITORY AND ITS ACTIONS LOGS ARE PUBLIC. No line this job prints
- * contains a user id, a pseudonym, a secret, the Neo4j host or its URL.
- * Catalog names and Bev ids are public data and are printed freely; for users
- * the log carries COUNTS ONLY.
+ * contains a user id, a pseudonym, a community id, a secret, the Neo4j host
+ * or its URL. Catalog names and Bev ids are public data and are printed
+ * freely; for users the log carries COUNTS ONLY.
  */
 
 import { createHmac, randomBytes } from "node:crypto";
@@ -56,15 +76,29 @@ import { fileURLToPath } from "node:url";
 
 import { RANKING_VERSION } from "@bevi/ranking";
 
+import {
+  MASKED_BEV_LABEL,
+  computeGraphStats,
+  flavourProjection,
+  graphStatsDbRows,
+  graphStatsReport,
+  graphStatsWrites,
+} from "./analytics-core.ts";
+import type { BevGraphStatsDbRow, GraphEdge, GraphStats } from "./analytics-core.ts";
 import { createNeo4jClient, isTransient, missingEnv, neo4jConfigFromEnv, NEO4J_ENV } from "./neo4j.ts";
 import type { Neo4jClient, Neo4jRunner, Neo4jTransaction } from "./neo4j.ts";
-import { createPostgrestClient } from "./postgrest.ts";
+import { createPostgrestClient, isTransientPostgrestError } from "./postgrest.ts";
 import type { PostgrestClient } from "./postgrest.ts";
 import {
+  COMPUTED_LABELS,
+  COMPUTED_TYPES,
   COUNT_STAMPED,
-  OWNED_LABELS,
-  OWNED_TYPES,
+  MIRRORED_LABELS,
+  MIRRORED_TYPES,
+  READ_BEV_ATTRIBUTES,
+  READ_BEV_IDS,
   READ_META,
+  READ_SIMILAR_TO,
   REPORT_NEIGHBOURS,
   REPORT_TWO_HOP,
   REPORT_VECTOR,
@@ -72,10 +106,14 @@ import {
   STAMP_META,
   VERIFY_COUNTS,
   VERIFY_INVARIANTS,
+  analyticsSweepSteps,
+  analyticsWriteSteps,
   buildGraphPlan,
   chunk,
+  expectedMemberships,
   findBevByName,
   metaParameters,
+  numeric,
   sourceFromRows,
   sweepSteps,
   verificationFailures,
@@ -150,6 +188,24 @@ export function checkEnvironment(env: Readonly<Record<string, string | undefined
  */
 export function pseudonymiser(salt: string): (userId: string) => string {
   return (userId: string) => createHmac("sha256", salt).update(userId).digest("hex");
+}
+
+/**
+ * A community's public id: `c_` plus the first 16 hex characters of
+ * `hmac-sha256(salt, "community:" + hubBevId)`.
+ *
+ * OPAQUE ON PURPOSE (analytics-core.ts has the whole argument). The id reaches
+ * every client in the prediction snapshot; a community's hub can be an
+ * alcoholic Bev; and a catalog Bev id can be derived by anyone from the public
+ * catalog. An unkeyed hash of the hub would let an under-21 client test "is my
+ * drink's community led by that beer?" by hashing every catalog id. The key is
+ * the pseudonym salt, which the sync already requires and which lives in
+ * Actions secrets only; the `community:` prefix keeps these apart from the
+ * user pseudonyms made with the same key. Stable while a community keeps its
+ * hub, so the id means the same thing from one night to the next.
+ */
+export function communityIdentifier(salt: string): (hubBevId: string) => string {
+  return (hubBevId: string) => `c_${createHmac("sha256", salt).update(`community:${hubBevId}`).digest("hex").slice(0, 16)}`;
 }
 
 /** A timestamp plus random hex: unique per run, and sortable by eye in `(:Meta).syncId`. */
@@ -241,47 +297,169 @@ export interface SyncOptions {
   vectorProbeDelayMs?: number;
 }
 
+/**
+ * Replaces `public.bev_graph_stats` with `rows` and resolves to the number of
+ * rows Postgres says it holds afterwards. Injected, so the orchestration can
+ * be tested without a database; `postgresPublisher` is the real one.
+ */
+export type PublishGraphStats = (rows: readonly BevGraphStatsDbRow[], version: string) => Promise<number>;
+
 export interface SyncDeps {
   client: Neo4jClient;
   log: Log;
   sleep: (ms: number) => Promise<void>;
+  /** hub Bev id -> opaque community id (`communityIdentifier(salt)`). */
+  communityIdOf: (hubBevId: string) => string;
+  /**
+   * The Postgres write-back, called ONCE, after a commit. null when there is
+   * no Postgres to write to (`--fixture`); a run that is not a dry run refuses
+   * to start without it.
+   */
+  publishGraphStats: PublishGraphStats | null;
 }
 
 const DEFAULT_MAX_ATTEMPTS = 3;
 const DEFAULT_BACKOFF_MS = 5000;
 
-/**
- * The next PR (`be/graph-stats`) computes centrality and communities inside
- * this same transaction, after the sweep and before the verification, so its
- * output is published atomically with the generation it was computed from.
- * Until then this does nothing.
- */
-async function analyticsPhase(_tx: Neo4jRunner, _plan: GraphPlan, _syncId: string): Promise<void> {}
+/** `replace_bev_graph_stats` through PostgREST, as the service role. One call is one Postgres transaction. */
+export function postgresPublisher(db: PostgrestClient): PublishGraphStats {
+  return (rows, version) => db.rpc<number>("replace_bev_graph_stats", { p_rows: rows, p_version: version });
+}
 
-/** Steps 1-5 on an open transaction. Throws on any failure; the caller owns commit and rollback. */
-async function writeGeneration(tx: Neo4jRunner, plan: GraphPlan, syncId: string, log: Log): Promise<void> {
+/**
+ * The graph committed a generation and Postgres did not get its stats, after
+ * the write-back's own retries (`publishStats`). Never retried as a SYNC: the
+ * graph is right, and running the transaction again would not make Postgres
+ * reachable.
+ */
+export class GraphStatsPublishError extends Error {
+  constructor(syncId: string, cause: string) {
+    super(
+      `the graph COMMITTED generation ${syncId}, but bev_graph_stats in Postgres was NOT updated.\n` +
+        `  Postgres still holds the previous night's values (or none, if it has never been written): complete and\n` +
+        `  self-consistent, one generation behind the graph.\n` +
+        `  Nothing the app reads is broken. The next graph:sync run repairs it; re-dispatch the workflow to repair it now.\n` +
+        `  ${cause}`,
+    );
+    this.name = "GraphStatsPublishError";
+  }
+}
+
+const logUpsert = (log: Log, name: string, rows: number, requests: number): void =>
+  log(`  upsert ${name.padEnd(12)} ${String(rows).padStart(6)} row(s) in ${requests} request(s)`);
+
+/**
+ * Step 3, on the open transaction, after the mirror sweep: read the graph
+ * back, compute, write, sweep last night's communities.
+ *
+ * THE READ IS THE POINT. The signals are computed from what the graph holds --
+ * the generation this transaction has just written and swept -- not from the
+ * plan it was written from. If the two disagree the verification fails; they
+ * are compared here first so the failure names the cause.
+ *
+ * TWO GRAPHS COME BACK. `SIMILAR_TO` is what centrality, strength and the
+ * bridge score are measured on. The Bev-to-flavour and Bev-to-note memberships
+ * are what the communities are clustered on: `flavourProjection` joins the
+ * Bevs that share a base or a note (the package's `attributeProjection`), and
+ * Louvain over that projection gives the TASTE FAMILIES. Clustering
+ * `SIMILAR_TO` itself would only hand back the root categories
+ * (analytics-core.ts says why, with the numbers).
+ */
+async function analyticsPhase(
+  tx: Neo4jRunner,
+  plan: GraphPlan,
+  syncId: string,
+  deps: Pick<SyncDeps, "log" | "communityIdOf">,
+): Promise<GraphStats> {
+  // 3a. read
+  const nodes = (await tx.run(READ_BEV_IDS)).map((row) => {
+    if (typeof row.id !== "string" || row.id === "") throw new VerificationError(["a (:Bev) read back from the graph has no string id"]);
+    return row.id;
+  });
+  const similarity: GraphEdge[] = (await tx.run(READ_SIMILAR_TO)).map((row) => {
+    if (typeof row.a !== "string" || typeof row.b !== "string") {
+      throw new VerificationError(["a SIMILAR_TO read back from the graph has an endpoint without a string id"]);
+    }
+    return { a: row.a, b: row.b, w: numeric(row.w, `SIMILAR_TO (${row.a}, ${row.b}) w as read back`) };
+  });
+  const attributeRows = await tx.run(READ_BEV_ATTRIBUTES);
+  const planned = expectedMemberships(plan).length;
+  const mismatches = [
+    nodes.length === plan.counts.nodes.Bev ? "" : `the graph read back ${nodes.length} (:Bev), the plan has ${plan.counts.nodes.Bev}`,
+    similarity.length === plan.counts.relationships.SIMILAR_TO
+      ? ""
+      : `the graph read back ${similarity.length} SIMILAR_TO, the plan has ${plan.counts.relationships.SIMILAR_TO}`,
+    attributeRows.length === planned
+      ? ""
+      : `the graph read back ${attributeRows.length} flavour and note memberships, the plan has ${planned}`,
+  ].filter((line) => line !== "");
+  if (mismatches.length > 0) throw new VerificationError(mismatches);
+  deps.log(
+    `  read   ${nodes.length} (:Bev), ${similarity.length} SIMILAR_TO and ${attributeRows.length} flavour and note memberships back from the graph`,
+  );
+
+  // 3b. compute: every formula is @bevi/ranking's (network.ts). The partition
+  // is the flavour projection; the similarity graph is not clustered.
+  const { partition } = flavourProjection(nodes, attributeRows);
+  const stats = computeGraphStats({ nodes, similarity, partition, communityIdOf: deps.communityIdOf });
+  deps.log(
+    `  stats  ${stats.counts.communities} taste families (${stats.counts.singletons} of one Bev) over ` +
+      `${stats.counts.partitionEdges} projected pairs, modularity ${stats.modularity.toFixed(4)}; ` +
+      `${stats.counts.isolated} Bev(s) without a SIMILAR_TO edge`,
+  );
+
+  // 3c. write
+  for (const step of analyticsWriteSteps(graphStatsWrites(stats))) {
+    const batches = chunk(step.rows, step.batchSize);
+    for (const rows of batches) await tx.run(step.statement, { rows, syncId });
+    logUpsert(deps.log, step.name, step.rows.length, batches.length);
+  }
+
+  // 3d. sweep the computed label and type, AFTER tonight's were stamped
+  // (sync-core.ts, "The sweep runs in two parts").
+  for (const step of analyticsSweepSteps()) await tx.run(step.statement, { syncId });
+  deps.log(`  sweep  ${COMPUTED_TYPES.length} computed relationship type and ${COMPUTED_LABELS.length} computed label not stamped ${syncId}`);
+  return stats;
+}
+
+/**
+ * Steps 1-5 on an open transaction. Throws on any failure; the caller owns
+ * commit and rollback. Exported so two generations can be pushed through one
+ * transaction that is then rolled back, which is how the sweep of last
+ * night's communities was proven on the live server (docs/graph.md).
+ */
+export async function writeGeneration(
+  tx: Neo4jRunner,
+  plan: GraphPlan,
+  syncId: string,
+  deps: Pick<SyncDeps, "log" | "communityIdOf">,
+): Promise<GraphStats> {
+  const { log } = deps;
   // 1. upsert nodes, then relationships
   for (const step of writeSteps(plan)) {
     const batches = chunk(step.rows, step.batchSize);
     for (const rows of batches) await tx.run(step.statement, { rows, syncId });
-    log(`  upsert ${step.name.padEnd(12)} ${String(step.rows.length).padStart(6)} row(s) in ${batches.length} request(s)`);
+    logUpsert(log, step.name, step.rows.length, batches.length);
   }
 
-  // 2. sweep whatever this run did not stamp
+  // 2. sweep whatever of the MIRRORED types and labels this run did not stamp.
+  // Before the analytics phase, which reads the graph back and must see this
+  // generation and nothing else.
   for (const step of sweepSteps()) await tx.run(step.statement, { syncId });
-  log(`  sweep  ${OWNED_TYPES.length} relationship types and ${OWNED_LABELS.length} labels not stamped ${syncId}`);
+  log(`  sweep  ${MIRRORED_TYPES.length} relationship types and ${MIRRORED_LABELS.length} labels not stamped ${syncId}`);
 
-  // --- analytics phase (be/graph-stats) goes here ---
-  await analyticsPhase(tx, plan, syncId);
+  // 3. the analytics phase: read back, compute, write, sweep its own
+  const stats = await analyticsPhase(tx, plan, syncId, deps);
 
   // 4. verify, by reading the graph back inside the transaction
   const answered = [...(await tx.run(VERIFY_COUNTS)), ...(await tx.run(VERIFY_INVARIANTS))];
-  const failures = verificationFailures(plan, answered);
+  const failures = verificationFailures(plan, stats, answered);
   if (failures.length > 0) throw new VerificationError(failures);
-  log(`  verify ${answered.length} checks read back from the graph: all equal the plan`);
+  log(`  verify ${answered.length} checks read back from the graph: all equal the plan and the computed stats`);
 
   // 5. stamp (:Meta). The commit is the caller's.
-  await tx.run(STAMP_META, metaParameters(plan, syncId));
+  await tx.run(STAMP_META, metaParameters(plan, syncId, stats));
+  return stats;
 }
 
 /**
@@ -290,20 +468,23 @@ async function writeGeneration(tx: Neo4jRunner, plan: GraphPlan, syncId: string,
  * report from inside the transaction, and rolls back. Any error rolls back
  * (best effort) and rethrows, so yesterday's generation stays in place.
  */
-export async function syncOnce(plan: GraphPlan, options: SyncOptions, deps: SyncDeps): Promise<void> {
+export async function syncOnce(plan: GraphPlan, options: SyncOptions, deps: SyncDeps): Promise<GraphStats> {
   const tx: Neo4jTransaction = await deps.client.beginTransaction();
   try {
-    await writeGeneration(tx, plan, options.syncId, deps.log);
+    const stats = await writeGeneration(tx, plan, options.syncId, deps);
     if (options.dryRun) {
       // The committed graph will never hold this generation, so the report is
       // read here, through the transaction that can still see it.
       await readBackReport(tx, plan, { ...options, vectorProbeAttempts: 1 }, deps, "uncommitted");
+      analyticsReport(stats, plan, deps.log);
       await tx.rollback();
       deps.log("--dry-run: the transaction was ROLLED BACK. Nothing was written to the graph.");
+      deps.log("--dry-run: bev_graph_stats in Postgres was NOT written either. The stats above were computed and discarded.");
     } else {
       await tx.commit();
       deps.log(`committed generation ${options.syncId}`);
     }
+    return stats;
   } catch (error: unknown) {
     try {
       await tx.rollback();
@@ -322,15 +503,26 @@ export async function syncOnce(plan: GraphPlan, options: SyncOptions, deps: Sync
  * After a final failure of a real run it stamps `(:Meta).lastAttemptAt` and
  * `lastAttemptOk = false` in a separate implicit transaction, best effort, and
  * rethrows. A dry run stamps nothing: it promised to write nothing.
+ *
+ * After a commit, and only then, the computed stats are written back to
+ * Postgres (`deps.publishGraphStats`), before the reports, so a report that
+ * cannot be read never costs the write. The write-back is retried on a
+ * transient failure, up to `maxAttempts` times with the same backoff. If it
+ * still fails the run throws `GraphStatsPublishError`: the graph is one
+ * generation ahead of `bev_graph_stats` until the next run.
  */
 export async function runSync(plan: GraphPlan, options: SyncOptions, deps: SyncDeps): Promise<void> {
   const maxAttempts = options.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
   const backoffMs = options.backoffMs ?? DEFAULT_BACKOFF_MS;
+  if (!options.dryRun && deps.publishGraphStats === null) {
+    throw new Error("a run that commits needs a Postgres write-back for bev_graph_stats; none was given. Nothing was sent to Neo4j.");
+  }
 
+  let stats: GraphStats;
   for (let attempt = 1; ; attempt++) {
     try {
       deps.log(`attempt ${attempt}/${maxAttempts}: one transaction, syncId ${options.syncId}${options.dryRun ? " (dry run)" : ""}`);
-      await syncOnce(plan, options, deps);
+      stats = await syncOnce(plan, options, deps);
       break;
     } catch (error: unknown) {
       if (isTransient(error) && attempt < maxAttempts) {
@@ -381,7 +573,64 @@ export async function runSync(plan: GraphPlan, options: SyncOptions, deps: SyncD
     throw new Error(`the commit was acknowledged but (:Meta).syncId is ${JSON.stringify(meta?.syncId ?? null)}, not ${options.syncId}`);
   }
   deps.log(`confirmed: (:Meta).syncId = ${options.syncId}, lastSyncAt = ${String(meta.lastSyncAt)}`);
+
+  await publishStats(stats, plan, options.syncId, deps, maxAttempts, backoffMs);
   await readBackReport(committed, plan, options, deps, "committed");
+  analyticsReport(stats, plan, deps.log);
+}
+
+/**
+ * The Postgres half of the analytics phase: every row, in one RPC call, which
+ * is one transaction. `replace_bev_graph_stats` validates the whole payload
+ * before it deletes anything, so a refused call leaves last night's rows.
+ *
+ * RETRIED, BOUNDED. By now the graph has committed, and the call is a
+ * whole-table replace, so sending it again is safe whatever happened to the
+ * first one: one dropped connection should not turn the night red. Up to
+ * `maxAttempts` attempts, the pause before attempt n+1 being `backoffMs * n`
+ * (the sync's own schedule), and ONLY on a transient failure -- no response,
+ * HTTP 429 or a 5xx. A 4xx is never retried: a `BEVI_VALIDATION` 400 or a 404
+ * for a function that is not there will fail the same way again.
+ */
+async function publishStats(
+  stats: GraphStats,
+  plan: GraphPlan,
+  syncId: string,
+  deps: SyncDeps,
+  maxAttempts: number,
+  backoffMs: number,
+): Promise<void> {
+  const rows = graphStatsDbRows(stats);
+  const publish = deps.publishGraphStats as PublishGraphStats;
+  let written: number;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      written = await publish(rows, plan.rankingVersion);
+      break;
+    } catch (error: unknown) {
+      if (isTransientPostgrestError(error) && attempt < maxAttempts) {
+        const wait = backoffMs * attempt;
+        deps.log(
+          `::warning::bev_graph_stats write-back attempt ${attempt}/${maxAttempts} failed with a transient error ` +
+            `(the graph has already committed); retrying in ${wait} ms\n${message(error)}`,
+        );
+        await deps.sleep(wait);
+        continue;
+      }
+      throw new GraphStatsPublishError(syncId, message(error));
+    }
+  }
+  if (written !== rows.length) {
+    throw new GraphStatsPublishError(syncId, `replace_bev_graph_stats answered ${String(written)} for ${rows.length} rows sent`);
+  }
+  deps.log(`bev_graph_stats: replaced with ${written} rows (version ${plan.rankingVersion}) for generation ${syncId}`);
+}
+
+/** The analytics report (analytics-core.ts): catalog names only, no id of any kind. */
+function analyticsReport(stats: GraphStats, plan: GraphPlan, log: Log): void {
+  log("\n--- graph signals (computed from the graph as read back; @bevi/ranking network.ts) ---");
+  log("taste families are Louvain communities of the flavour projection; centrality and bridge are measured on SIMILAR_TO");
+  for (const line of graphStatsReport(stats, plan.nodes.bevs)) log(line);
 }
 
 // ---------------------------------------------------------------------------
@@ -393,8 +642,11 @@ const PROBE_NAMES = ["Coca-Cola Classic", "Pepsi", "Matcha", "Red Bull"] as cons
 const COKE_NAME = "Coca-Cola Classic";
 
 const fixed = (value: unknown): string => (typeof value === "number" ? value.toFixed(4) : String(value));
-const named = (row: { name?: unknown; brand?: unknown }): string =>
-  `${String(row.name)}${typeof row.brand === "string" && row.brand.trim() !== "" ? ` (${row.brand})` : ""}`;
+/** A Bev as the public log may show it: its name and brand, or a placeholder when it is alcoholic. */
+const named = (row: { name?: unknown; brand?: unknown; isAlcoholic?: unknown }): string =>
+  row.isAlcoholic === true || typeof row.name !== "string"
+    ? MASKED_BEV_LABEL
+    : `${row.name}${typeof row.brand === "string" && row.brand.trim() !== "" ? ` (${row.brand})` : ""}`;
 
 /**
  * The proof that the graph ANSWERS, produced by Cypher against the graph
@@ -473,8 +725,9 @@ const message = (error: unknown): string => (error instanceof Error ? error.mess
 
 function logPlan(plan: GraphPlan, log: Log): void {
   log("plan:");
-  for (const label of OWNED_LABELS) log(`  (:${label})`.padEnd(18) + String(plan.counts.nodes[label]).padStart(6));
-  for (const type of OWNED_TYPES) log(`  [:${type}]`.padEnd(18) + String(plan.counts.relationships[type]).padStart(6));
+  for (const label of MIRRORED_LABELS) log(`  (:${label})`.padEnd(18) + String(plan.counts.nodes[label]).padStart(6));
+  for (const type of MIRRORED_TYPES) log(`  [:${type}]`.padEnd(18) + String(plan.counts.relationships[type]).padStart(6));
+  log("  (:Community) and [:IN_COMMUNITY] are computed from the graph inside the transaction, not planned");
   log(
     `  ${plan.counts.bevsWithEmbedding}/${plan.counts.nodes.Bev} Bevs carry an embedding, ` +
       `${plan.counts.bevsWithProfile}/${plan.counts.nodes.Bev} a flavour profile; ` +
@@ -501,8 +754,10 @@ async function main(): Promise<void> {
 
   let source: GraphSource;
   let salt: string;
+  let publishGraphStats: PublishGraphStats | null = null;
   if (opts.fixture) {
     log("--fixture: the source is data/catalog plus synthetic users, NOT Postgres. Forcing --dry-run.");
+    log("--fixture: there is no Postgres here, so bev_graph_stats is never written.");
     source = buildFixtureSource();
     salt = FIXTURE_PSEUDONYM_SALT;
   } else {
@@ -511,6 +766,8 @@ async function main(): Promise<void> {
       throw new Error(`reading Postgres failed, so nothing was sent to Neo4j and the graph is as it was.\n${message(error)}`);
     });
     salt = process.env.BEVI_PSEUDONYM_SALT as string;
+    publishGraphStats = postgresPublisher(db);
+    if (opts.dryRun) log("--dry-run: bev_graph_stats in Postgres will NOT be written.");
   }
   log(
     `source: ${source.bevs.length} Bevs, ${source.categories.length} categories, ${source.profiles.length} flavour profiles, ` +
@@ -525,7 +782,13 @@ async function main(): Promise<void> {
   await runSync(
     plan,
     { syncId: newSyncId(), dryRun: opts.dryRun },
-    { client, log, sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)) },
+    {
+      client,
+      log,
+      sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+      communityIdOf: communityIdentifier(salt),
+      publishGraphStats,
+    },
   );
   log(opts.dryRun ? "\ngraph:sync dry run complete. The graph is unchanged." : "\ngraph:sync complete.");
 }
