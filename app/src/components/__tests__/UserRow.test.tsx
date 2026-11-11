@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { StyleSheet, type ViewStyle } from 'react-native';
 
 import { UserRow } from '../UserRow';
 
@@ -31,4 +32,28 @@ it('marks your own row and never shows Follow on it', async () => {
   await render(<UserRow user={ARJUN} self following={false} />);
   expect(screen.getByText(/\(you\)/)).toBeTruthy();
   expect(screen.queryByText('Follow')).toBeNull();
+});
+
+describe('context line', () => {
+  it('shows a third line, with the users icon, and puts it in the label', async () => {
+    await render(<UserRow user={ARJUN} meta="212 pts" context="Followed by Sam and Priya" />);
+    const line = screen.getByText('Followed by Sam and Priya');
+    expect(line.props.numberOfLines).toBe(1);
+    expect(screen.getByRole('button', { name: 'Arjun Cheema, @acheema5, 212 pts, Followed by Sam and Priya' })).toBeTruthy();
+  });
+
+  it('draws nothing extra when absent', async () => {
+    await render(<UserRow user={ARJUN} meta="212 pts" />);
+    expect(screen.queryByText(/Followed by/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Arjun Cheema, @acheema5, 212 pts' })).toBeTruthy();
+  });
+
+  it('is 72pt tall at least with the line and 64 without', async () => {
+    const minHeight = (el: { props: { style?: unknown } }) =>
+      (StyleSheet.flatten(el.props.style as ViewStyle) as ViewStyle).minHeight;
+    const { rerender } = await render(<UserRow user={ARJUN} context="Followed by Sam" />);
+    expect(minHeight(screen.getByTestId('user-row'))).toBe(72);
+    await rerender(<UserRow user={ARJUN} />);
+    expect(minHeight(screen.getByTestId('user-row'))).toBe(64);
+  });
 });

@@ -17,6 +17,8 @@ export interface UserRowProps {
   meta?: string;
   /** Current streak in days; shows a flame. */
   streak?: number;
+  /** A third line with a `users` icon: "Followed by Sam and Arjun". One line, truncated. */
+  context?: string;
   /** Shows the Follow / Following pill (never on your own row). */
   following?: boolean;
   /** Your own row: "(you)" and a `primaryTint` highlight. */
@@ -28,19 +30,23 @@ export interface UserRowProps {
 }
 
 const DENSE = { maxFontSizeMultiplier: MAX_FONT_SCALE_DENSE } as const;
-/** bundle.css `.bv-userrow { min-height: 64px }` and `.bv-userrow-rank { width: 28px }`. */
+/** bundle.css `.bv-userrow { min-height: 64px }` and `.bv-userrow-rank { width: 28px }`; 72 with a context line. */
 const ROW_MIN = 64;
+const ROW_MIN_CONTEXT = 72;
+const CONTEXT_ICON = 14;
 const RANK_W = 28;
 
 /** Person row for People search, followers and the user leaderboard. */
-export function UserRow({ user, rank, meta, streak, following, self = false, onFollow, onPress, divider = true, style }: UserRowProps) {
+export function UserRow({ user, rank, meta, streak, context, following, self = false, onFollow, onPress, divider = true, style }: UserRowProps) {
   const { colors } = useTheme();
   const secondary = { color: colors.textSecondary };
   return (
     <View
+      testID="user-row"
       style={[
         styles.row,
         { backgroundColor: self ? colors.primaryTint : colors.surface, borderBottomColor: colors.border },
+        context ? styles.rowContext : null,
         divider && styles.divider,
         style,
       ]}
@@ -53,7 +59,7 @@ export function UserRow({ user, rank, meta, streak, following, self = false, onF
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
-        accessibilityLabel={`${user.displayName}${self ? ' (you)' : ''}, @${user.handle}${meta ? `, ${meta}` : ''}${streak ? `, ${streak} day streak` : ''}`}
+        accessibilityLabel={`${user.displayName}${self ? ' (you)' : ''}, @${user.handle}${meta ? `, ${meta}` : ''}${streak ? `, ${streak} day streak` : ''}${context ? `, ${context}` : ''}`}
         style={styles.main}
       >
         <Avatar name={user.displayName} src={user.avatarUrl ?? undefined} size={44} />
@@ -75,6 +81,14 @@ export function UserRow({ user, rank, meta, streak, following, self = false, onF
               </>
             ) : null}
           </View>
+          {context ? (
+            <View style={styles.metaLine}>
+              <Icon name="users" size={CONTEXT_ICON} strokeWidth={2} color={colors.textSecondary} />
+              <Text {...DENSE} style={[type.caption, styles.shrink, styles.contextText, secondary]} numberOfLines={1}>
+                {context}
+              </Text>
+            </View>
+          ) : null}
         </View>
       </Pressable>
       {following != null && !self ? <FollowPill following={following} name={user.displayName} onPress={onFollow} /> : null}
@@ -123,12 +137,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.gutter,
   },
+  rowContext: { minHeight: ROW_MIN_CONTEXT },
   divider: { borderBottomWidth: 1 },
   rank: { width: RANK_W, textAlign: 'center', fontVariant: ['tabular-nums'] },
   main: { flex: 1, minWidth: 0, minHeight: size.target, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   text: { flex: 1, minWidth: 0 },
   metaLine: { flexDirection: 'row', alignItems: 'center' },
   shrink: { flexShrink: 1, minWidth: 0 },
+  contextText: { marginLeft: spacing.xs },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
