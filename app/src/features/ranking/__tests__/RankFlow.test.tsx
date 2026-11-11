@@ -113,7 +113,7 @@ it('an empty bucket skips comparisons: "First one in …"', async () => {
   controls.emptyUser();
   const submit = jest.spyOn(api.rankings, 'submitRanking');
   await renderRank(bev!.id);
-  await chooseBucket('It was fine');
+  await chooseBucket('It was okay');
   await screen.findByText('First one in Fine', {}, { timeout: 3000 });
   await fireEvent.press(screen.getByLabelText('Skip'));
   await screen.findByText(/^#1 of 1 in Fine · /);
@@ -149,7 +149,7 @@ it('offline on save keeps the placement and retries', async () => {
   const [bev] = await unranked(1);
   const submit = jest.spyOn(api.rankings, 'submitRanking');
   await renderRank(bev!.id);
-  await chooseBucket("Didn't like it");
+  await chooseBucket('Not for me');
   await waitFor(() => expect(screen.queryByText('How was it?')).toBeNull(), { timeout: 3000 });
   if (!screen.queryByText(/^#\d+ of \d+ in Didn't like$/) && !screen.queryByText(/^First one in/)) await answerAllNewBetter(bev!.name);
 
@@ -346,7 +346,7 @@ describe('the score on the note step (Reduce Motion: no count-up)', () => {
     controls.emptyUser();
     const submit = jest.spyOn(api.rankings, 'submitRanking');
     await renderRank(bev!.id);
-    await chooseBucket('It was fine');
+    await chooseBucket('It was okay');
     await screen.findByText('First one in Fine', {}, { timeout: 3000 });
 
     const local = storedScore(0, 1, 'FINE');

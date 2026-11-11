@@ -360,7 +360,7 @@ The centre tab, labelled **Search** since M-15 ([#104](https://github.com/mbwill
 
 ### 6.9 Ranking flow (`rank/[bevId]`), full-screen modal (no reference screenshot)
 
-- Step 1 Gut check: `BevImage 155`, name, brand, three full-width 52pt buttons: Loved it / It was fine / Didn't like it, each tinted with its score colour at 12% with a coloured left bar.
+- Step 1 Gut check: `BevImage 155`, name, brand, a centred "How was it?" and three `BucketButton`s in a row: Loved it / It was okay / Not for me, each a `primary` ring filled to a level (full, half, empty) over its label.
 - Step 2 Compare: two stacked cards (new Bev on top, incumbent below; each `BevImage 96` left, name 20pt bold, brand 15pt), prompt "Which was better?", tap a card; secondary row: "Too close to call" (outlined `Pill`) and Undo (text); progress dots = `maxComparisons(n)`; card swap animates 250ms; prefetch both possible next candidates after each answer.
 - Step 3 Note: optional 140-char note ("Tastes like flat Sprite"), Skip.
 - Step 4 Result: `ScoreBubble 56` animates in, "#4 of 31 in Loved · 8.9", Done. Every ranking is a feed item; no separate share step.

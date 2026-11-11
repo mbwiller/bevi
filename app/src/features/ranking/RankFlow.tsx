@@ -7,8 +7,6 @@ import { useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useBev, useMe, usePlacementList, useRerankBev, useSubmitRanking } from '@/api/hooks';
-import { bevArtForCategory } from '@/components/BevArt';
-import { BevGlow } from '@/components/BevGlow';
 import { ErrorState } from '@/components/ErrorState';
 import { Header } from '@/components/Header';
 import { Skeleton } from '@/components/Skeleton';
@@ -253,7 +251,6 @@ export function RankFlow({ bevId, rerank = false, detailIfRanked = false }: Rank
         </Screen>
       ) : (
         <View style={[styles.fill, { backgroundColor: colors.surface }]}>
-          <BevGlow color={bevArtForCategory(bev.categoryId).color} style={StyleSheet.absoluteFill} />
           <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.fill}>
             <GutCheck bev={bev} chosen={bucket} onChoose={choose} onClose={close} />
           </SafeAreaView>

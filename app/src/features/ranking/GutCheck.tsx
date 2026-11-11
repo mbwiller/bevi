@@ -19,14 +19,13 @@ export interface GutCheckProps {
   onClose: () => void;
 }
 
-// ScreenGutCheck geometry: the cutout floats at 200pt; buckets 14pt apart; 36pt above the question.
+// ScreenGutCheck geometry: the cutout floats at 200pt; 36pt above the question.
 const ART = 200;
-const BUCKET_GAP = 14;
 const QUESTION_TOP = 36;
 
 /**
- * Ranking flow step 1 (design system ScreenGutCheck): the Bev floating on its own BevGlow (the
- * route draws the glow behind this), "How was it?" and the three BucketButtons.
+ * Ranking flow step 1 (design system ScreenGutCheck): the Bev floating on plain `surface`, a centred
+ * "How was it?" and the three BucketButtons in a row.
  */
 export function GutCheck({ bev, chosen, onChoose, onClose }: GutCheckProps) {
   const { colors } = useTheme();
@@ -69,7 +68,13 @@ export function GutCheck({ bev, chosen, onChoose, onClose }: GutCheckProps) {
       <Text style={[type.displayDrop, styles.question, { color: colors.text }]}>How was it?</Text>
       <View style={styles.buckets}>
         {BUCKET_ORDER.map((b) => (
-          <BucketButton key={b} bucket={b} selected={chosen === b} onPress={() => onChoose(b)} />
+          <BucketButton
+            key={b}
+            bucket={b}
+            selected={chosen === b}
+            dimmed={chosen !== null && chosen !== b}
+            onPress={() => onChoose(b)}
+          />
         ))}
       </View>
       <Text style={[type.caption, styles.hint, { color: colors.textSecondary }]}>
@@ -87,7 +92,7 @@ const styles = StyleSheet.create({
   fill: { width: '100%', height: '100%' },
   name: { marginTop: spacing.md, textAlign: 'center' },
   cat: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: 2 },
-  question: { marginTop: QUESTION_TOP, marginBottom: spacing.lg, marginHorizontal: spacing.gutter },
-  buckets: { gap: BUCKET_GAP, paddingHorizontal: spacing.gutter },
+  question: { marginTop: QUESTION_TOP, marginBottom: spacing.xl, marginHorizontal: spacing.gutter, textAlign: 'center' },
+  buckets: { flexDirection: 'row', gap: spacing.xs, paddingHorizontal: spacing.gutter },
   hint: { marginTop: spacing.xl, marginHorizontal: spacing.gutter, textAlign: 'center' },
 });
