@@ -1,3 +1,4 @@
+// Parked 2026-11-11 (TASKS.md D-16, M-32): unmounted, kept for the Bev Maps integration.
 // The Search tab map's filters (M-16, §1c), owned by the Search feature. They outlive the screen
 // (a tab switch, a Bev page and back) and last for the browser session: kept in sessionStorage, so a
 // reload in the same tab keeps them and a new tab starts clean. Nothing here is sent anywhere but
