@@ -90,7 +90,7 @@ export function FeedScreen() {
 
   const followingNobody = stats.data?.following === 0;
 
-  const findPeople = useCallback(() => router.push({ pathname: '/add', params: { tab: 'people' } }), [router]);
+  const findPeople = useCallback(() => router.push('/people'), [router]);
 
   const followPrompt = (
     <EmptyState

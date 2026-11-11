@@ -32,7 +32,7 @@ export default function SettingsIndexScreen() {
         <SettingsRow label="Account" onPress={() => router.push('/settings/account')} />
         <SettingsRow label="Privacy" onPress={() => router.push('/settings/privacy')} />
       </SettingsSection>
-      {/* Internal only, and only as a second way in: the floating launcher
+      {/* Internal only, and only as a second way in: the header action
           (ReportBugLauncher) is the one that keeps the reporter's screen. */}
       {canReportBug ? (
         <SettingsSection title="Internal">

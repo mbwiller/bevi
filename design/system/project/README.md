@@ -18,10 +18,10 @@ Use the tokens by name; never paste hex values.
 
 - `surface` is the page and every card. Cards are separated with a 1pt `border`, never a shadow or a grey fill. Grey fills (`input`) are for the search bar, BevImage tiles, skeletons and progress-bar tracks only.
 - `text` for content, `textSecondary` for meta lines, labels, timestamps and placeholders. Both clear 4.5:1 on `surface`, `input` and `avatarFill` in both themes.
-- `primary` (Bevi grape) goes exactly where Beli uses its teal: filled Pills, the primary Button, the Search tab circle, a saved bookmark, a liked heart, the FilterPill count, StatCard values and icons, SortToggle, "See all" and the fill of a progress bar. Nothing else is grape, so a grape thing is always something to tap or a value you earned. Text on a `primary` fill is `onPrimary` (white in light, dark ink in dark mode).
+- `primary` (Bevi grape) goes exactly where Beli uses its teal: filled Pills, the primary Button, the Add Bev circle and the current tab in the tab bar, a saved bookmark, a liked heart, the FilterPill count, StatCard values and icons, SortToggle, "See all" and the fill of a progress bar. Nothing else is grape, so a grape thing is always something to tap or a value you earned. Text on a `primary` fill is `onPrimary` (white in light, dark ink in dark mode).
 - `primaryTint` behind `primary` text marks a selected chip or an active filter.
 - **Score colours follow the bucket bands**: `scoreHigh` 7–10 (Loved), `scoreMid` 4–7 (Fine), `scoreLow` 0–4 (Didn't like). Use them for score numbers, bucket bars and 12% bucket tints, never for decoration. They share a lightness, so a score always shows its number and a bucket always shows its label.
-- `fizz` is the wordmark's bubbles; it never carries text or meaning.
+- `fizz` is the wordmark's bubbles and the you-are-here dot on a map (FindBevArt; the parked venue map's blue dot). It never carries text.
 - `tasteCard`, `photoScrim` and `onDeep` (white) are the fixed-dark set: the Taste Profile card, photo overlays and the text on them.
 - `glassFill`, `glassStroke` and `glassHighlight` make the liquid-glass material. Nothing in the Bevi web app uses it. Glass is only for a native build on iOS 26+ (the native `GlassView`); it is never imitated with a blur.
 - `borderStrong` outlines controls (outlined Pills and Buttons, text fields, the outlined search bar) so they meet 3:1; `border` is for hairlines.
@@ -29,8 +29,8 @@ Use the tokens by name; never paste hex values.
 
 ## Type
 
-- **System font only** in the app (`--font-sans`: SF Pro on iOS, Roboto on Android). The scale, measured from the reference: `displayDrop` 28 bold (the "All ⌄" scope), `screenTitle` 20 bold (header titles, row names, post sentences, stat values), `tabLabel` 20 semibold, `heading` 17 semibold (score numbers, counts, the sort toggle), `bodyLarge` 17 (notes, search text), `body` 15 (meta lines, buttons), `sectionCaps` 15 bold, tracked 0.5, always uppercase, `caption` 13, `tabBar` 10 (bold when active).
-- In a feed sentence the names are bold and the verb is regular: "**Arjun** Bev'd **Horchata**".
+- **System font only** in the app (`--font-sans`: SF Pro on iOS, Roboto on Android). The scale, measured from the reference: `displayDrop` 28 bold (the "All ⌄" scope), `screenTitle` 20 bold (header titles, row names, stat values), `tabLabel` 20 semibold, `heading` 17 semibold (score numbers, counts, the sort toggle, a post's sentence), `bodyLarge` 17 (notes, search text), `body` 15 (meta lines, buttons), `sectionCaps` 15 bold, tracked 0.5, always uppercase, `caption` 13, `tabBar` 10 (bold when active).
+- In a feed sentence the names are bold and the verb is regular: "**Arjun** Bev'd **Horchata**". It is set in `heading` (17), beside an Avatar 44.
 - Use `font-variant-numeric: tabular-nums` wherever scores, counts or ranks line up.
 - Fredoka (`--font-display`) is the wordmark's face. The app never loads it; it appears only in brand art.
 - Cap Dynamic Type at 1.3× on dense rows; body text scales freely.
@@ -40,8 +40,9 @@ Use the tokens by name; never paste hex values.
 - 16pt screen gutter (`space-gutter`) on every screen. 44pt header row under the status bar. 4pt grid: `space-xs` 4 … `space-xxl` 24.
 - Every tap target is at least 44×44 (`size-target`), even when the visual is a 30pt Pill or a 28pt icon.
 - Radii are named by what they round: `radius-button` 8 (outlined profile buttons), `radius-input` 12 (search, fields, the big primary button), `radius-photo` 14 (Bev tiles, featured photos), `radius-card` 16 (cards, sheet tops), `radius-stat` 20 (profile stat cards), `radius-pill` 999.
-- **No elevation.** Separation is a 1pt `border`. Every focusable control shows `focus-ring` (a 2pt `surface` gap, then a 2pt `primary` ring). The gut-check BucketButtons are flat `primary` rings on plain `surface`, with no tint, blur or shadow. The Search tab's map is the one place things float: MapCallout pins and the MapControls (round buttons, `List | Map`, `View List`) sit on `elevation-floating` so they read over any tile. Nothing else gets glass, blur or a shadow.
-- Rows are full-bleed with 1pt dividers. Lists are one sorted list: buckets show through bubble colour, not section headers.
+- **No elevation.** Separation is a 1pt `border`. Every focusable control shows `focus-ring` (a 2pt `surface` gap, then a 2pt `primary` ring). The gut-check BucketButtons are flat `primary` rings on plain `surface`, with no tint, blur or shadow. The tab bar's Add Bev circle rises above the bar inside a 4pt `surface` ring, which is a spread with no blur, not a shadow. The parked venue map was the one place things floated (MapCallout pins and the MapControls on `elevation-floating`). Nothing else gets glass, blur or a shadow.
+- Rows are full-bleed with 1pt dividers. Lists are one sorted list: buckets show through bubble colour, not section headers. A BevRow is about 94pt (`size-row-min`): its meta line and actions sit under the category line, beside the picture, instead of on a row of their own.
+- On a wide screen the app is one phone-width column in the middle of the window, never stretched edge to edge.
 
 ## Imagery
 
@@ -59,17 +60,24 @@ Use the tokens by name; never paste hex values.
 ## Motion
 
 - `fast` 150ms for presses, colour changes and the like pop, `base` 250ms for tab underlines, sheets and the compare-card swap, `springy` (Reanimated spring, damping 18, stiffness 180) for the result bubble, `pour` 450ms for the score reveal on the note step (the ScoreBubble 72 pours in and counts up from its bucket's lower edge to the score; under reduced motion the number shows at once).
-- The like burst: a double-tap on a post grows a filled `primary` heart over its photo, holds it and fades it within 800ms.
+- The like burst: a double-tap on a post grows a filled `primary` heart over its picture, holds it and fades it within 800ms.
+- **Press.** Every tappable row, card and icon gives way a little under the finger: scale 0.98 and opacity 0.7 over `fast` (`.bv-press`, built into BevRow, FeedPost's picture, ProfileListRow, StatCard, IconButton, BevOfCard, UserRow and the tab bar). Pills and Buttons keep their own dim. Under reduced motion, opacity only.
+- **Arrive.** Content that replaces a Skeleton rises 6pt and fades in over `base` (`.bv-arrive`). Under reduced motion, a fade only.
+- **Change.** Follow / Following and the Want to Try bookmark pop like the heart when toggled: scale 1 → 1.22 → 1 over `base` (`.bv-pop`). Under reduced motion, no pop.
+- **Move.** Switching tabs cross-fades over `fast` (`.bv-move-fade`); a pushed screen slides in from the right by 22% of the width with a fade over `base` (`.bv-move-push`); a full-screen modal rises (`.bv-move-rise`). Under reduced motion, fades only.
 - Animate transform and opacity only. Under reduced motion, swaps become cross-fades, shimmers stop, the like burst only fades, and the BucketButton's check badge shows at once.
 
 ## Building screens
 
 - Wrap content the way the screens in this system do: `Header`, then content on `surface`, then `TabBar` at the bottom. Load `tokens.css` and `components/bundle.css` before using `window.Bevi`.
-- Feed: wordmark Header, filled SearchBar, the Bev of the day and Bev of the week pair (BevOfCard), SectionHeader + FeedPosts. Each post's action row starts with the heart and the comment bubble; up to seven comments show under it, more collapse to "View all N comments", and both open the CommentsSheet.
-- Lists (Your Lists, Leaderboard): centred caps Header, ListScopeDropdown, SegmentedTabs, FilterPill row, SortToggle, numbered BevRows. Bev'd adds the ProgressStrip under the filters ("All Bevs · 37 of 378 tried · 9%"), which opens the CollectionSheet.
+- The five tabs: Feed, Lists, Add Bev (the raised circle), Map, Profile. People is a screen pushed from the Feed header, not a tab.
+- Feed: wordmark Header (its person-plus icon opens People), filled SearchBar, the Bev of the day and Bev of the week pair (BevOfCard; one card when the same Bev won both), SegmentedTabs + FeedPosts. Each post's action row has the heart and the comment bubble on the left and Rank it and Want to Try on the right; up to seven comments show under it, more collapse to "View all N comments", and both open the CommentsSheet.
+- Lists: centred caps Header ("LISTS"), ListScopeDropdown, SegmentedTabs (Bev'd · Want to Try · For you · Top), then that tab's BevRows. Bev'd adds the FilterPill row, the ProgressStrip ("All Bevs · 37 of 378 tried · 9%", which opens the CollectionSheet) and the SortToggle. Top is the Bevs leaderboard: numbered rows with the image and "Your score 9.5".
 - Ranking: the floating cutout over a row of three BucketButtons, then ProgressDots and CompareCard pairs, then the note step with the score revealed at once in a ScoreBubble 72 over "#4 of 31 in Loved", then a ScoreBubble 56 result that confirms it.
-- Profile: name Header, Avatar 100, counts, outlined Buttons, ProfileListRows, two StatCards, Activity tabs, FeedPosts.
-- Search: wordmark Header, the outlined SearchBar, Snap it, then the live map of New York City with its MapFilterRow and MapControls; MapCallout pins; a pin, `View List` or "open the full map" opens the same map full screen, where a tapped pin docks a VenueSheet. Focusing the bar slides a results panel over the map (Recents and suggestions while idle; BEVS and PEOPLE groups while typing) with "Can't find it? Add a new Bev" at its foot.
+- Profile: name Header, Avatar 100, counts (Bev'd · Followers · Following), two outlined Buttons filling the row, two StatCards, two ProfileListRows (Want to Try, Recommended for you), Activity tabs, FeedPosts.
+- Add Bev (the centre tab): Header titled "Add a Bev", the outlined SearchBar, Snap it, then Recents and Popular on Bevi while the bar is empty, or the BEVS and PEOPLE groups while typing, with "Can't find it? Add a new Bev" pinned at the foot. No map.
+- People: Header with Back, the filled SearchBar ("Search people"), Suggested for you (UserRows with `context`), then Ranked by points with its Friends and Everyone pills and your own row tinted.
+- Map: Header, FindBevArt, "Find Bev" and one `primary` Button that opens Bev Maps. The venue-map components are parked: nothing composes them.
 - The Screens group shows each of these composed at 393pt.
 
 ## In the app
@@ -82,10 +90,11 @@ The plan's component list (DEVELOPMENT-MATT §4) covers the screens that have a 
 
 - `BucketButton`, `CompareCard`, `ProgressDots`: the ranking flow (§6.9). BucketButton is a `primary` ring filled to a level over its label, three in a row, rather than §6.9's tinted bar.
 - `BevOfCard`: Bev of the day and Bev of the week at the top of the Feed (M-05), in the slot Featured Bevs had.
-- `UserRow`, `AvatarStack`: People search, followers, the user leaderboard and "Friends who've had it" (§6.8, §6.11, §6.12).
+- `UserRow`, `AvatarStack`: People (search, suggestions, the points ranking), followers, "Friends who've had it" on Bev detail and "Bev'd it too" on a FeedPost (§6.8, §6.11, §6.12).
 - `AvatarPicker`: your own profile photo on Edit profile and the onboarding profile step (§6.2, §6.19); the photo then shows in every `Avatar` of you.
 - `TextField`, `PriceTierPicker`: onboarding and the create-Bev wizard (§6.2, §6.10).
 - `Header`, `SectionHeader`, `IconButton`, `Button`: the header pattern, caps section labels, the close circle and the 36pt profile buttons, all described in §4 and §6 but not named as components.
 - `Icon`, `BevArt`: the icon set as one source, and placeholder drink art until catalog photos exist.
 - `ProgressStrip`, `CollectionSheet`: Bev'd's "you've tried this share of a category" (TASKS.md M-08), the collecting half of gamifying the list. The bar is grape because it is a share you earned.
-- `MapCallout`, `MapFilterRow`, `MapControls`, `VenueRow`, `VenueSheet`: the Search tab's map (TASKS.md M-16, §1c), Beli's map chrome plus the one addition Beli lacks, a sheet listing the Bevs a venue carries.
+- `FindBevArt`: the Map tab's picture, a round minimap standing for Bev Maps (Find Bev).
+- `MapCallout`, `MapFilterRow`, `MapControls`, `VenueRow`, `VenueSheet`: the venue map (TASKS.md M-16, §1c), Beli's map chrome plus a sheet listing the Bevs a venue carries. **Parked on 2026-11-11** with the navigation redesign: the map left the Search tab, no screen composes them, and they stay here so it can return.

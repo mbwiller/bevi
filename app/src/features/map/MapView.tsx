@@ -1,3 +1,4 @@
+// Parked 2026-11-11 (TASKS.md D-16, M-32): unmounted, kept for the Bev Maps integration.
 import type { VenueFilters } from '@bevi/shared';
 
 import { MapPlaceholder } from './MapPlaceholder';
