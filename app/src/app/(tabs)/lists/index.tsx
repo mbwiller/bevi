@@ -11,23 +11,28 @@ import { SegmentedTabs } from '@/components/SegmentedTabs';
 import { BevdTab } from '@/features/lists/BevdTab';
 import { CategorySheet } from '@/features/lists/ListSheets';
 import { RecommendedTab } from '@/features/lists/RecommendedTab';
+import { TopTab } from '@/features/lists/TopTab';
 import { WantToTryTab } from '@/features/lists/WantToTryTab';
 import { visibleCategories } from '@/lib/categories';
 import { spacing, useTheme } from '@/theme';
 
-export type ListsTab = 'bevd' | 'want' | 'recommended';
+export type ListsTab = 'bevd' | 'want' | 'recommended' | 'top';
 
 const TABS = [
   { id: 'bevd', label: "Bev'd" },
   { id: 'want', label: 'Want to Try' },
-  { id: 'recommended', label: 'Recommended' },
+  { id: 'recommended', label: 'For you' },
+  { id: 'top', label: 'Top' },
 ] as const;
 
 function parseTab(v: string | string[] | undefined): ListsTab {
-  return v === 'want' || v === 'recommended' ? v : 'bevd';
+  return v === 'want' || v === 'recommended' || v === 'top' ? v : 'bevd';
 }
 
-/** Your Lists (§6.5–§6.7): Bev'd, Want to Try and Recommended, scoped by category. `?tab=` picks the tab. */
+/**
+ * Lists (§6.5–§6.7, §6.12): Bev'd, Want to Try, For you (Recommended for you) and Top (the Bevs
+ * leaderboard), all scoped by one category dropdown. `?tab=` picks the tab.
+ */
 export default function ListsScreen() {
   const { colors } = useTheme();
   const router = useRouter();
@@ -41,11 +46,14 @@ export default function ListsScreen() {
   const categoryId = categories.some((c) => c.id === picked) ? picked : undefined;
   const scopeLabel = categories.find((c) => c.id === categoryId)?.label ?? 'All';
 
+  // Never load a scope that may be alcoholic before the age is known (it would be ignored once it is).
+  const waitingForAge = picked !== undefined && categoryId === undefined && me.isPending;
+
   const tabProps = { categoryId, categories, onCategory: setPicked, onCategoryPress: () => setScopeOpen(true) };
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.screen, { backgroundColor: colors.surface }]}>
-      <Header centered title="Your lists" />
+      <Header centered title="Lists" />
       <View style={styles.scope}>
         <ListScopeDropdown label={scopeLabel} onPress={() => setScopeOpen(true)} />
       </View>
@@ -54,6 +62,7 @@ export default function ListsScreen() {
         {tab === 'bevd' ? <BevdTab {...tabProps} /> : null}
         {tab === 'want' ? <WantToTryTab {...tabProps} /> : null}
         {tab === 'recommended' ? <RecommendedTab {...tabProps} /> : null}
+        {tab === 'top' && !waitingForAge ? <TopTab categoryId={categoryId} /> : null}
       </View>
       <CategorySheet
         open={scopeOpen}

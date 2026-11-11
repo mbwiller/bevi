@@ -197,6 +197,40 @@ export function SortToggle({ label = 'Score', onClick, onSearch, className }) {
   );
 }
 
+/**
+ * The Want to Try bookmark with its 44pt target: outline until saved, then filled `primary`.
+ * A press pops it like the heart (transform only). Shared by BevRow and FeedPost.
+ */
+export function SaveButton({ saved = false, onClick, className }) {
+  const [pop, setPop] = React.useState(0);
+  return (
+    <button
+      type="button"
+      className={cx('bv-iconbtn', 'bv-iconbtn-plain', saved && 'bv-saved', className)}
+      aria-pressed={saved}
+      aria-label={saved ? 'Saved to Want to Try' : 'Save to Want to Try'}
+      onClick={() => { setPop((n) => n + 1); if (onClick) onClick(); }}
+    >
+      <span key={pop} className={cx('bv-pop-box', pop > 0 && 'bv-pop')}><Icon name="bookmark" size={28} strokeWidth={1.6} filled={saved} /></span>
+    </button>
+  );
+}
+
+/**
+ * The Follow / Following pill of a person row and an Explore post: filled `primary` "Follow", outlined
+ * "Following". A press pops it like the heart (transform only).
+ */
+export function FollowPill({ following = false, onClick, label }) {
+  const [pop, setPop] = React.useState(0);
+  return (
+    <span key={pop} className={cx('bv-pop-box', pop > 0 && 'bv-pop')}>
+      <Pill variant={following ? 'outlined' : 'filled'} aria-pressed={following} aria-label={label} onClick={() => { setPop((n) => n + 1); if (onClick) onClick(); }}>
+        {following ? 'Following' : 'Follow'}
+      </Pill>
+    </span>
+  );
+}
+
 /** A 4pt track in `input` with a `primary` fill: a share you've earned (ProgressStrip, CollectionSheet). `tone` recolours the fill with a score band (TasteBar). Decorative; its parent says the number. */
 export function ProgressBar({ value = 0, tone = 'primary', className }) {
   const pct = Math.max(0, Math.min(1, value)) * 100;
@@ -215,8 +249,7 @@ export function Skeleton({ variant = 'text', width, height, lines = 1, className
         <div className="bv-skel-lines">
           <span className="bv-skel" style={{ width: '58%', height: 20 }} />
           <span className="bv-skel" style={{ width: '34%', height: 14 }} />
-          <span className="bv-skel" style={{ width: '46%', height: 14 }} />
-          <span className="bv-skel" style={{ width: '28%', height: 14, marginTop: 18 }} />
+          <span className="bv-skel" style={{ width: '28%', height: 14, marginTop: 8 }} />
         </div>
         <span className="bv-skel bv-skel-circle" style={{ width: 40, height: 40 }} />
       </div>
@@ -226,14 +259,19 @@ export function Skeleton({ variant = 'text', width, height, lines = 1, className
     return (
       <div className={cx('bv', 'bv-skel-post', className)} aria-busy="true" aria-label="Loading">
         <div className="bv-skel-head">
-          <span className="bv-skel bv-skel-circle" style={{ width: 60, height: 60 }} />
+          <span className="bv-skel bv-skel-circle" style={{ width: 44, height: 44 }} />
           <div className="bv-skel-lines">
-            <span className="bv-skel" style={{ width: '80%', height: 20 }} />
+            <span className="bv-skel" style={{ width: '80%', height: 18 }} />
             <span className="bv-skel" style={{ width: '50%', height: 14 }} />
           </div>
         </div>
-        <span className="bv-skel" style={{ width: 155, height: 155, borderRadius: 14 }} />
-        <span className="bv-skel" style={{ width: '90%', height: 14 }} />
+        <div className="bv-skel-body">
+          <span className="bv-skel" style={{ width: 112, height: 112, borderRadius: 14, flex: 'none' }} />
+          <div className="bv-skel-lines">
+            <span className="bv-skel" style={{ width: '92%', height: 14 }} />
+            <span className="bv-skel" style={{ width: '70%', height: 14 }} />
+          </div>
+        </div>
       </div>
     );
   }

@@ -1,7 +1,7 @@
 import { Wordmark, Icon, BevArt, categories, scoreBand, formatScore, iconNames, bevArtKinds } from './core.jsx';
 import { BevImage, ScoreBubble, PriceTier, Avatar, AvatarStack, AvatarPicker, Pill, Button, IconButton, LikeButton, CommentButton, FilterPill, SortToggle, Skeleton, ProgressBar } from './primitives.jsx';
 import { Header, SectionHeader, ListScopeDropdown, BevRow, FeedPost, FeaturedCard, BevOfCard, ProfileListRow, StatCard, UserRow, ProgressStrip, TasteBar, TasteProfile } from './rows.jsx';
-import { SegmentedTabs, TabBar, SearchBar, TextField, PriceTierPicker, BucketButton, CompareCard, ProgressDots, EmptyState, ErrorState, Sheet, CommentsSheet, CollectionSheet } from './flow.jsx';
+import { SegmentedTabs, TabBar, FindBevArt, SearchBar, TextField, PriceTierPicker, BucketButton, CompareCard, ProgressDots, EmptyState, ErrorState, Sheet, CommentsSheet, CollectionSheet } from './flow.jsx';
 import { MapCallout, MapFilterRow, MapControls, VenueRow, VenueSheet } from './map.jsx';
 
 // Order = catalogue order (mirrored in the @ds-bundle header by build.mjs).
@@ -12,7 +12,7 @@ export const COMPONENTS = {
   BevRow, FeedPost, FeaturedCard, BevOfCard, ProfileListRow, StatCard, UserRow, ProgressStrip, ProgressBar, TasteBar, TasteProfile,
   BucketButton, CompareCard, ProgressDots,
   EmptyState, ErrorState, Skeleton, Sheet, CommentsSheet, CollectionSheet,
-  MapCallout, MapFilterRow, MapControls, VenueRow, VenueSheet,
+  FindBevArt, MapCallout, MapFilterRow, MapControls, VenueRow, VenueSheet,
 };
 const g = window;
 g.Bevi = Object.assign(g.Bevi || {}, COMPONENTS, { categories, scoreBand, formatScore, iconNames, bevArtKinds });

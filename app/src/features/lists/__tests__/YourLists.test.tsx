@@ -74,7 +74,7 @@ it('switches tabs through ?tab=', async () => {
   expect(r.searchParams()).toEqual({ tab: 'want' });
   expect(await screen.findByLabelText(saved.bev.name)).toBeTruthy();
 
-  await fireEvent.press(screen.getByLabelText('Recommended'));
+  await fireEvent.press(screen.getByLabelText('For you'));
   expect(r.searchParams()).toEqual({ tab: 'recommended' });
   expect(await screen.findByText(new RegExp(`^Based on ${recs.basedOnCount} Bevs you've ranked`))).toBeTruthy();
   // findAllByLabelText, not findBy: a row's label is the Bev's name, and catalog names are not
@@ -98,7 +98,7 @@ it('shows each tab’s empty state, and Recommended locked below 3 rankings', as
   expect(await screen.findByText('Add your first Bev')).toBeTruthy();
   await fireEvent.press(screen.getByLabelText('Want to Try'));
   expect(await screen.findByText('Nothing saved yet')).toBeTruthy();
-  await fireEvent.press(screen.getByLabelText('Recommended'));
+  await fireEvent.press(screen.getByLabelText('For you'));
   expect(await screen.findByText('Rank 3 Bevs to see recommendations')).toBeTruthy();
 });
 
