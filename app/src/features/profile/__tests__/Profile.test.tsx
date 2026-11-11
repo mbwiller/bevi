@@ -20,6 +20,17 @@ function Layout() {
 
 const Stub = () => null;
 
+/** Every accessibilityLabel in the rendered tree, in document order. */
+function renderedLabels(node: unknown, out: string[] = []): string[] {
+  if (Array.isArray(node)) node.forEach((n) => renderedLabels(n, out));
+  else if (node && typeof node === 'object') {
+    const n = node as { props?: Record<string, unknown>; children?: unknown };
+    if (typeof n.props?.accessibilityLabel === 'string') out.push(n.props.accessibilityLabel);
+    renderedLabels(n.children, out);
+  }
+  return out;
+}
+
 async function open(url: string) {
   const result = renderRouter(
     {
@@ -70,7 +81,7 @@ afterEach(async () => {
 });
 
 describe('own profile', () => {
-  it('shows the hero, counts, list rows, stat cards and your rankings', async () => {
+  it('shows the hero, counts, buttons, stat cards, list rows and your rankings', async () => {
     const me = await api.profile.getMe();
     const stats = await api.stats.getMine();
     const latest = (await api.rankings.listUser(me.id)).items[0]!;
@@ -79,7 +90,16 @@ describe('own profile', () => {
     expect(await screen.findByText(`@${me.handle}`)).toBeTruthy();
     expect(screen.getByText(me.displayName)).toBeTruthy();
     expect(screen.getByLabelText(`${stats.followers} Followers`)).toBeTruthy();
-    expect(screen.getByLabelText(`Bev'd, ${stats.bevdCount}`)).toBeTruthy();
+    expect(screen.getByLabelText(`${stats.bevdCount} Bev'd`)).toBeTruthy();
+    expect(screen.getByLabelText(`${stats.following} Following`)).toBeTruthy();
+    // Rank on Bevi is no longer a count; it lives in its card only.
+    expect(screen.queryByLabelText(/^#\d+ Rank on Bevi$/)).toBeNull();
+    expect(screen.getAllByLabelText(/Rank on Bevi/)).toHaveLength(1);
+    // The Bev'd row and the small Settings arrow button are gone.
+    expect(screen.queryByLabelText(`Bev'd, ${stats.bevdCount}`)).toBeNull();
+    expect(screen.getAllByLabelText('Settings')).toHaveLength(1); // the header menu only
+    expect(screen.getByLabelText('Edit profile')).toBeTruthy();
+    expect(screen.getByLabelText('Share profile')).toBeTruthy();
     expect(screen.getByLabelText(`Want to Try, ${stats.wantToTryCount}`)).toBeTruthy();
     expect(screen.getByLabelText('Recommended for you')).toBeTruthy();
     expect(screen.getByLabelText(`Rank on Bevi, #${stats.rankOnBevi} · ${stats.rankPoints} pts`)).toBeTruthy();
@@ -91,7 +111,38 @@ describe('own profile', () => {
     expect(r.path()).toBe('/lists?tab=want');
   });
 
-  it('opens your followers from the count', async () => {
+  it('puts the cards directly under the buttons, then the two list rows, in order', async () => {
+    const stats = await api.stats.getMine();
+    await open('/profile');
+    await screen.findByLabelText('Edit profile');
+    const labels = renderedLabels(screen.toJSON());
+    const wanted = [
+      (l: string) => l === 'Edit profile',
+      (l: string) => l === 'Share profile',
+      (l: string) => l.startsWith('Rank on Bevi, '),
+      (l: string) => l.startsWith('Current streak, '),
+      (l: string) => l === `Want to Try, ${stats.wantToTryCount}`,
+      (l: string) => l === 'Recommended for you',
+    ];
+    const at = wanted.map((m) => labels.findIndex(m));
+    expect(at.every((n) => n >= 0)).toBe(true);
+    expect([...at].sort((x, y) => x - y)).toEqual(at);
+  });
+
+  it('opens your Bev\'d list from the Bev\'d count', async () => {
+    const stats = await api.stats.getMine();
+    const r = await open('/profile');
+    await fireEvent.press(await screen.findByLabelText(`${stats.bevdCount} Bev'd`));
+    expect(r.path()).toBe('/lists?tab=bevd');
+  });
+
+  it('opens Recommended for you from its row', async () => {
+    const r = await open('/profile');
+    await fireEvent.press(await screen.findByLabelText('Recommended for you'));
+    expect(r.path()).toBe('/lists?tab=recommended');
+  });
+
+  it('opens your followers and following from their counts', async () => {
     const me = await api.profile.getMe();
     const stats = await api.stats.getMine();
     const r = await open('/profile');
@@ -99,11 +150,19 @@ describe('own profile', () => {
     expect(r.path()).toBe(`/user/${me.id}/followers`);
   });
 
+  it('opens your following from the count', async () => {
+    const me = await api.profile.getMe();
+    const stats = await api.stats.getMine();
+    const r = await open('/profile');
+    await fireEvent.press(await screen.findByLabelText(`${stats.following} Following`));
+    expect(r.path()).toBe(`/user/${me.id}/following`);
+  });
+
   it('a brand-new user sees zeros, Unranked and the Activity empty state', async () => {
     controls.emptyUser();
     await open('/profile');
     expect(await screen.findByText('Your rankings will show up here')).toBeTruthy();
-    expect(screen.getByLabelText("Bev'd, 0")).toBeTruthy();
+    expect(screen.getByLabelText("0 Bev'd")).toBeTruthy();
     expect(screen.getByLabelText('Rank on Bevi, Unranked')).toBeTruthy();
     expect(screen.getByLabelText('Current streak, Rank today to start')).toBeTruthy();
   });
@@ -160,6 +219,30 @@ describe("another user's profile", () => {
     controls.failNext('network', 'follows.follow');
     await fireEvent.press(button);
     await waitFor(() => expect(screen.getByLabelText(`Follow ${j.displayName}`).props['aria-pressed']).toBe(false));
+  });
+
+  it('shows Bev\'d · Followers · Following, plain Bev\'d text and no list rows', async () => {
+    const j = await jules();
+    const s = await api.stats.getUser(j.id);
+    await open(`/user/${j.id}`);
+    expect(await screen.findByLabelText(`${s.followers} Followers`)).toBeTruthy();
+    expect(screen.getByLabelText(`${s.following} Following`)).toBeTruthy();
+    // Their Bev'd list has no screen, so the count is read-only text: a labelled group, not a link or button.
+    const bevd = screen.getByLabelText(`Bev'd, ${s.bevdCount}`);
+    expect(bevd.props.accessibilityRole).toBeUndefined();
+    expect(screen.queryByLabelText(`${s.bevdCount} Bev'd`)).toBeNull();
+    expect(screen.getByLabelText('Share profile')).toBeTruthy();
+    expect(screen.getByLabelText(/^Rank on Bevi, /)).toBeTruthy();
+    expect(screen.queryByLabelText(/^Want to Try/)).toBeNull();
+    expect(screen.queryByLabelText('Settings')).toBeNull();
+  });
+
+  it('opens their followers and following from the counts', async () => {
+    const j = await jules();
+    const s = await api.stats.getUser(j.id);
+    const r = await open(`/user/${j.id}`);
+    await fireEvent.press(await screen.findByLabelText(`${s.followers} Followers`));
+    expect(r.path()).toBe(`/user/${j.id}/followers`);
   });
 
   it('shows their rankings and no Recommended row', async () => {

@@ -3,22 +3,21 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
-import { HitTarget, PRESSED } from '@/components/HitTarget';
-import { Icon } from '@/components/Icon';
+import { PRESSED } from '@/components/HitTarget';
 import { Skeleton } from '@/components/Skeleton';
 import { StatCard } from '@/components/StatCard';
 import { formatCount } from '@/lib/format';
-import { MAX_FONT_SCALE_DENSE, radius, size, spacing, type, useTheme } from '@/theme';
+import { MAX_FONT_SCALE_DENSE, size, spacing, type, useTheme } from '@/theme';
 
-import { memberSince, rankCardValue, rankShort, streakCardValue } from './copy';
+import { memberSince, rankCardValue, streakCardValue } from './copy';
 
-/** §6.13: the outlined buttons are 120 wide, the chevron 34, with 4pt gaps. */
-export const PROFILE_BUTTON_WIDTH = 120;
-const MENU_BUTTON_WIDTH = 34;
+/** The two profile buttons are equal and fill the row between the gutters; 36pt tall. */
 const BUTTON_HEIGHT = 36;
 const AVATAR = 100;
 /** §6.13: the stat cards sit 10pt from the screen edges and 10pt apart. */
 const STAT_INSET = 10;
+/** StatCard's `min-height`. */
+const STAT_CARD_HEIGHT = 84;
 
 interface CountProps {
   value: string;
@@ -57,12 +56,14 @@ function Count({ value, label, onPress }: CountProps) {
 export interface ProfileHeroProps {
   profile: Pick<Profile, 'displayName' | 'handle' | 'avatarUrl' | 'createdAt'>;
   stats: ProfileStats;
+  /** Omit where that person's Bev'd list has no screen: the count is then plain text. */
+  onBevd?: () => void;
   onFollowers?: () => void;
   onFollowing?: () => void;
 }
 
-/** Avatar 100, @handle, "Member since", then Followers · Following · Rank on Bevi (§6.13). */
-export function ProfileHero({ profile, stats, onFollowers, onFollowing }: ProfileHeroProps) {
+/** Avatar 100, @handle, "Member since", then Bev'd · Followers · Following. */
+export function ProfileHero({ profile, stats, onBevd, onFollowers, onFollowing }: ProfileHeroProps) {
   const { colors } = useTheme();
   return (
     <View>
@@ -74,37 +75,19 @@ export function ProfileHero({ profile, stats, onFollowers, onFollowing }: Profil
         <Text style={[type.body, { color: colors.textSecondary }]}>{memberSince(profile.createdAt)}</Text>
       </View>
       <View style={styles.counts}>
+        <Count value={formatCount(stats.bevdCount)} label="Bev'd" onPress={onBevd} />
         <Count value={formatCount(stats.followers)} label="Followers" onPress={onFollowers} />
         <Count value={formatCount(stats.following)} label="Following" onPress={onFollowing} />
-        <Count value={rankShort(stats)} label="Rank on Bevi" />
       </View>
     </View>
   );
 }
 
-/** The centred row of 36pt buttons under the counts. */
+/** The row of two equal 36pt buttons under the counts: each child takes `PROFILE_BUTTON` to share the width. */
+export const PROFILE_BUTTON = { flex: 1, minWidth: 0, paddingHorizontal: 0 } as const;
+
 export function ProfileButtonRow({ children }: { children: ReactNode }) {
   return <View style={styles.buttons}>{children}</View>;
-}
-
-/** The 34pt chevron at the end of your own button row; opens Settings. Its hit area is 44pt. */
-export function ProfileMenuButton({ onPress }: { onPress: () => void }) {
-  const { colors } = useTheme();
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel="Settings"
-      style={({ pressed }) => [
-        styles.menu,
-        { backgroundColor: colors.surface, borderColor: colors.borderStrong },
-        pressed && PRESSED,
-      ]}
-    >
-      <HitTarget height={BUTTON_HEIGHT} width={MENU_BUTTON_WIDTH} borderWidth={1} />
-      <Icon name="chevron-down" size={18} strokeWidth={2} color={colors.text} />
-    </Pressable>
-  );
 }
 
 /** "Rank on Bevi" and "Current streak", side by side. */
@@ -121,7 +104,7 @@ export function ProfileStatCards({ stats, self }: { stats: ProfileStats; self: b
   );
 }
 
-/** Loading: the hero, the button row and two rows in their final shapes. */
+/** Loading: the hero, the button row, the two stat cards and a post in their final shapes. */
 export function ProfileSkeleton() {
   return (
     <View accessibilityLabel="Loading" testID="profile-skeleton" style={styles.skeleton}>
@@ -138,8 +121,16 @@ export function ProfileSkeleton() {
         ))}
       </View>
       <View style={styles.buttons}>
-        <Skeleton variant="block" width={PROFILE_BUTTON_WIDTH} height={BUTTON_HEIGHT} />
-        <Skeleton variant="block" width={PROFILE_BUTTON_WIDTH} height={BUTTON_HEIGHT} />
+        <Skeleton variant="block" width="100%" height={BUTTON_HEIGHT} style={styles.skelButton} />
+        <Skeleton variant="block" width="100%" height={BUTTON_HEIGHT} style={styles.skelButton} />
+      </View>
+      <View style={styles.stats}>
+        <View style={styles.statCell}>
+          <Skeleton variant="block" width="100%" height={STAT_CARD_HEIGHT} />
+        </View>
+        <View style={styles.statCell}>
+          <Skeleton variant="block" width="100%" height={STAT_CARD_HEIGHT} />
+        </View>
       </View>
       <Skeleton variant="post" />
     </View>
@@ -154,21 +145,12 @@ const styles = StyleSheet.create({
   countValue: { fontVariant: ['tabular-nums'] },
   buttons: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing.xs,
+    gap: spacing.sm,
     paddingTop: spacing.xl,
-    paddingBottom: spacing.md,
     paddingHorizontal: spacing.gutter,
   },
-  menu: {
-    width: MENU_BUTTON_WIDTH,
-    height: BUTTON_HEIGHT,
-    borderWidth: 1,
-    borderRadius: radius.button,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stats: { flexDirection: 'row', gap: STAT_INSET, paddingTop: spacing.xl, paddingBottom: spacing.md, paddingHorizontal: STAT_INSET },
+  skelButton: { flex: 1, minWidth: 0 },
+  stats: { flexDirection: 'row', gap: STAT_INSET, paddingTop: spacing.lg, paddingBottom: spacing.lg, paddingHorizontal: STAT_INSET },
   statCell: { flex: 1, minWidth: 0 },
   skeleton: { paddingTop: spacing.sm },
   skelLine: { marginTop: spacing.md },
