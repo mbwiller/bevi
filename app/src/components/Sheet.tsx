@@ -3,6 +3,7 @@ import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDime
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
+import { COLUMN_MAX_WIDTH, isWideViewport } from '@/lib/column';
 import { motion, radius, spacing, type, useTheme } from '@/theme';
 
 export interface SheetProps {
@@ -37,10 +38,16 @@ const SAFE_BOTTOM = (Platform.OS === 'web'
  * Bottom sheet over a `scrim`, at 40% or 90% of the window. Built on React Native's Modal (a portal on
  * the web, with its own Escape handling and focus trap) and Reanimated. The handle is a visual cue
  * only: there are no drag gestures, so close with the scrim, Escape or a row inside.
+ *
+ * On a wide viewport the scrim and the panel stay inside the app's centred column (`lib/column.ts`).
+ * The Modal's portal is a child of `<body>`, outside `#root`, so `public/index.html` also narrows the
+ * portal itself; this keeps the sheet in the column even if that CSS doesn't match.
  */
 export function Sheet({ open = false, title, snap = 40, onClose, children, scroll = true }: SheetProps) {
   const { colors } = useTheme();
-  const { height: windowHeight } = useWindowDimensions();
+  const win = useWindowDimensions();
+  const windowHeight = win.height;
+  const wide = isWideViewport(win);
   // A 90% sheet would reach into the status bar (and its blur band, see StatusBarClearance): stop below the top inset.
   const safeTop = useContext(SafeAreaInsetsContext)?.top ?? 0;
   const height = Math.min((windowHeight * snap) / 100, windowHeight - safeTop);
@@ -84,7 +91,7 @@ export function Sheet({ open = false, title, snap = 40, onClose, children, scrol
       // react-native-web renders the Modal's own wrapper as role="dialog"; name it too.
       {...({ 'aria-label': title } as object)}
     >
-      <View style={styles.wrap}>
+      <View style={[styles.wrap, wide && styles.column]} testID="sheet-frame">
         <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: colors.scrim }, scrimStyle]}>
           <Pressable
             style={StyleSheet.absoluteFill}
@@ -122,6 +129,7 @@ export function Sheet({ open = false, title, snap = 40, onClose, children, scrol
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, justifyContent: 'flex-end' },
+  column: { width: '100%', maxWidth: COLUMN_MAX_WIDTH, alignSelf: 'center' },
   sheet: {
     paddingTop: spacing.sm,
     paddingHorizontal: spacing.gutter,

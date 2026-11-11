@@ -467,8 +467,8 @@
   },
   "lastChange": {
     "by": "Matt Willer",
-    "at": "2026-10-25T03:30:31Z",
-    "via": "Claude Code (re-sync from mbwiller/bevi main @ c14dfda)",
-    "note": "M-19 TasteBar/TasteProfile and the ProgressBar tone (#125), M-27 (b) Bevs like this on ScreenBevDetail (#126), M-04 Explore segment on ScreenFeed and FeedPost following/onFollow, actions shown only with handlers (#129). Also carries #111's AvatarPicker."
+    "at": "2026-11-11T19:45:13Z",
+    "via": "Claude Code (re-sync from mbwiller/bevi main @ bd28651)",
+    "note": "Navigation redesign (#185): TabBar (Feed, Lists, Add Bev, Map, Profile), ScreenAddBev, ScreenPeople, ScreenMap, FindBevArt, compact BevRow (size-row-min 94), the new FeedPost, UserRow context, BevOfCard both, Press / Arrive / Change / Move motion. Also carries the M-16 map components (#169, now parked) and the gut check's Levels rings (#175, BevGlow removed)."
   }
 }

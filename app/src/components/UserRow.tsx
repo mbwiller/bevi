@@ -71,17 +71,23 @@ export function UserRow({ user, rank, meta, streak, context, following, self = f
             {user.displayName}
             {self ? ' (you)' : ''}
           </Text>
+          {/* The handle and meta truncate; the streak after them never shrinks or wraps, so on a narrow row
+              the flame and its number stay on this line, whole, and the text before them takes the ellipsis. */}
           <View style={styles.metaLine}>
-            <Text {...DENSE} style={[type.body, styles.shrink, secondary]} numberOfLines={1}>
+            <Text {...DENSE} style={[type.body, styles.shrink, secondary]} numberOfLines={1} testID="user-row-meta">
               @{user.handle}
               {meta ? ` · ${meta}` : ''}
-              {streak ? ' · ' : ''}
             </Text>
             {streak ? (
-              <>
+              <View style={styles.streak} testID="user-row-streak">
+                <Text {...DENSE} style={[type.body, styles.dot, secondary]} numberOfLines={1}>
+                  ·
+                </Text>
                 <Icon name="flame" size={14} strokeWidth={2.25} color={colors.primary} />
-                <Text {...DENSE} style={[type.body, secondary]}>{` ${streak}`}</Text>
-              </>
+                <Text {...DENSE} style={[type.body, styles.streakDays, secondary]} numberOfLines={1}>
+                  {streak}
+                </Text>
+              </View>
             ) : null}
           </View>
           {context ? (
@@ -155,6 +161,10 @@ const styles = StyleSheet.create({
   text: { flex: 1, minWidth: 0 },
   metaLine: { flexDirection: 'row', alignItems: 'center' },
   shrink: { flexShrink: 1, minWidth: 0 },
+  // Spaces would collapse at the ends of a nowrap line, so the gaps around the dot and the number are margins.
+  streak: { flexDirection: 'row', alignItems: 'center', flexShrink: 0 },
+  dot: { marginHorizontal: spacing.xs },
+  streakDays: { marginLeft: spacing.xs },
   contextText: { marginLeft: spacing.xs },
   pill: {
     flexDirection: 'row',

@@ -88,13 +88,31 @@ describe("another user's Bev'd count", () => {
     expect(mockScrollToIndex).toHaveBeenCalledWith({ index: 0, animated: true });
   });
 
-  it('does not scroll when they have no rankings', async () => {
+  it('is plain text, not a button, when they have no rankings and Activity is already showing', async () => {
     const j = await jules();
     const s = await api.stats.getUser(j.id);
     jest.spyOn(api.stats, 'getUser').mockResolvedValue({ ...s, bevdCount: 0 });
     await open(`/user/${j.id}`);
-    await fireEvent.press(await screen.findByLabelText("Bev'd, 0, show their rankings"));
+    const bevd = await screen.findByLabelText("Bev'd, 0");
+    expect(bevd.props.accessibilityRole).toBeUndefined();
+    expect(screen.queryByLabelText("Bev'd, 0, show their rankings")).toBeNull();
+    expect(screen.queryByRole('button', { name: /show their rankings/ })).toBeNull();
+    await fireEvent.press(bevd);
     expect(mockScrollToIndex).not.toHaveBeenCalled();
+  });
+
+  it('with no rankings on another tab it is still the button that switches to Activity', async () => {
+    const j = await jules();
+    const s = await api.stats.getUser(j.id);
+    jest.spyOn(api.stats, 'getUser').mockResolvedValue({ ...s, bevdCount: 0 });
+    const r = await open(`/user/${j.id}?tab=taste`);
+    const bevd = await screen.findByLabelText("Bev'd, 0, show their rankings");
+    expect(bevd.props.accessibilityRole).toBe('button');
+    await fireEvent.press(bevd);
+    await waitFor(() => expect(r.path()).toContain('tab=activity'));
+    // Now on Activity with nothing in it: plain text.
+    expect(await screen.findByLabelText("Bev'd, 0")).toBeTruthy();
+    expect(screen.queryByLabelText("Bev'd, 0, show their rankings")).toBeNull();
   });
 });
 
