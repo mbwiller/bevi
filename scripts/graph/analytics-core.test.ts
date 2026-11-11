@@ -30,6 +30,7 @@ import {
 import {
   CATCH_ALL_FLAVOR,
   COMMUNITY_ID_PATTERN,
+  MASKED_BEV_LABEL,
   categoryPurity,
   computeGraphStats,
   flavourProjection,
@@ -613,12 +614,12 @@ test("graphStatsWrites: one IN_COMMUNITY per Bev, exactly one hub per community,
 // ---------------------------------------------------------------------------
 
 const REPORT_BEVS: ReportBev[] = [
-  { id: "a1", name: "Cola", brand: "Fizz", flavor: null, base: "cola", categoryId: "soda" },
-  { id: "a2", name: "Cola", brand: "Fizz", flavor: "Cherry", base: "cola", categoryId: "soda" },
-  { id: "a3", name: "Cherry Soda", brand: "  ", flavor: "cherry", base: "berry", categoryId: "soda" },
-  { id: "b1", name: "Lager", brand: "Hops", flavor: null, base: "hop", categoryId: "beer" },
-  { id: "b2", name: "Stout", brand: "Hops", flavor: null, base: "grain", categoryId: "beer" },
-  { id: "b3", name: "Iced Tea", brand: null, flavor: "Peach", base: null, categoryId: "tea" },
+  { id: "a1", name: "Cola", brand: "Fizz", flavor: null, base: "cola", categoryId: "soda", isAlcoholic: false },
+  { id: "a2", name: "Cola", brand: "Fizz", flavor: "Cherry", base: "cola", categoryId: "soda", isAlcoholic: false },
+  { id: "a3", name: "Cherry Soda", brand: "  ", flavor: "cherry", base: "berry", categoryId: "soda", isAlcoholic: false },
+  { id: "b1", name: "Lager", brand: "Hops", flavor: null, base: "hop", categoryId: "beer", isAlcoholic: true },
+  { id: "b2", name: "Stout", brand: "Hops", flavor: null, base: "grain", categoryId: "beer", isAlcoholic: true },
+  { id: "b3", name: "Iced Tea", brand: null, flavor: "Peach", base: null, categoryId: "tea", isAlcoholic: false },
 ];
 
 test("the report names the communities, the central Bevs and the bridges, and gives the purity", () => {
@@ -638,10 +639,15 @@ test("the report names the communities, the central Bevs and the bridges, and gi
     text,
   );
   // A tie between bases goes to the smaller name; a Bev with no profile counts as "(no base)".
+  // The hub of this family is a beer, so it is NOT named: the log is public.
   assert.ok(
-    communityLines.some((line) => /hub: Lager \(Hops\) {2}\| {2}bases: \(no base\) 1, grain 1, hop 1 {2}\| {2}top: .* {2}\| {2}67% beer$/.test(line)),
+    communityLines.some((line) => /hub: \(a 21\+ Bev\) {2}\| {2}bases: \(no base\) 1, grain 1, hop 1 {2}\| {2}top: .* {2}\| {2}67% beer$/.test(line)),
     text,
   );
+  // No alcoholic Bev's name reaches any line, as a hub, a member, a central Bev or a bridge;
+  // its root category still does.
+  assert.ok(!text.includes("Lager") && !text.includes("Stout") && !text.includes("Hops"), text);
+  assert.ok(text.includes(MASKED_BEV_LABEL) && text.includes("[beer]"), text);
   // The flavour is added only when the name does not already say it; a blank brand is no brand.
   assert.ok(text.includes("Cola, Cherry (Fizz)"));
   assert.ok(text.includes("Cherry Soda [soda]"));
@@ -693,6 +699,14 @@ test("on the fixture the report prints catalog names only: no Bev id, no communi
   assert.ok(lines.filter((line) => / {2}\| {2}bases: /.test(line)).length === FIXTURE.communities.length, "every family line names its bases");
   assert.equal(lines.filter((line) => line.startsWith("category purity ")).length, 1);
   assert.ok(text.includes("Coca-Cola") || text.includes("Shasta"), "catalog names are what it prints");
+  // ...but never an alcoholic Bev's: every beer, wine and cocktail in the catalog is masked.
+  const alcoholic = PLAN.nodes.bevs.filter((bev) => bev.isAlcoholic);
+  assert.ok(alcoholic.length > 0, "the fixture has alcoholic Bevs");
+  const softNames = new Set(PLAN.nodes.bevs.filter((bev) => !bev.isAlcoholic).map((bev) => bev.name));
+  for (const bev of alcoholic) {
+    // A name a soft drink also carries cannot be told apart by text alone; every other one must be absent.
+    if (!softNames.has(bev.name)) assert.ok(!text.includes(bev.name), `the report names an alcoholic Bev: ${bev.name}`);
+  }
 
   const purity = categoryPurity(FIXTURE, PLAN.nodes.bevs);
   assert.ok(purity > 0 && purity <= 1, `purity ${purity}`);

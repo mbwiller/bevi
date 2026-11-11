@@ -681,6 +681,21 @@ test("a commit the graph does not show is a failure", async () => {
   await assert.rejects(runSync(PLAN, { syncId: SYNC_ID, dryRun: false }, { ...deps(f), client }), /commit was acknowledged but \(:Meta\)\.syncId is "someone-elses"/);
 });
 
+test("an alcoholic Bev in the read-back report is printed as a placeholder, never by name", async () => {
+  // What REPORT_VECTOR returns for an alcoholic neighbour: no name, no brand, the flag.
+  const f = fake({
+    vector: [
+      { name: "Coca-Cola Classic", brand: "Coca-Cola", isAlcoholic: false, score: 1 },
+      { name: null, brand: null, isAlcoholic: true, score: 0.97 },
+    ],
+  });
+  await runSync(PLAN, { syncId: SYNC_ID, dryRun: false }, deps(f));
+  const text = f.logs.join("\n");
+  assert.match(text, /^ {4}0\.9700 {2}\(a 21\+ Bev\)$/m);
+  assert.match(text, /^ {4}1\.0000 {2}Coca-Cola Classic \(Coca-Cola\)$/m);
+  assert.ok(!/\bnull\b/.test(text), "a masked row must not print as null");
+});
+
 test("an empty vector index after the commit is retried briefly, then a warning, not a failure", async () => {
   const f = fake({ vector: [] });
   await runSync(PLAN, { syncId: SYNC_ID, dryRun: false, vectorProbeAttempts: 3, vectorProbeDelayMs: 7 }, deps(f));

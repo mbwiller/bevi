@@ -1057,6 +1057,17 @@ test("every integer-valued property is written through toInteger", () => {
   assert.ok(STAMP_META.includes("m.inCommunityCount = toInteger($counts.IN_COMMUNITY)"));
 });
 
+test("the report statements never return an alcoholic Bev's name or brand: the log they feed is public", () => {
+  for (const name of ["REPORT_NEIGHBOURS", "REPORT_TWO_HOP", "REPORT_VECTOR"]) {
+    const statement = ALL_STATEMENTS[name] as string;
+    // Fail closed, as graph-query does: a node without the flag counts as alcoholic.
+    assert.match(statement, /CASE WHEN coalesce\(\w+\.isAlcoholic, true\) THEN null ELSE \w+\.name END AS name/, name);
+    assert.match(statement, /CASE WHEN coalesce\(\w+\.isAlcoholic, true\) THEN null ELSE \w+\.brand END AS brand/, name);
+    assert.match(statement, /coalesce\(\w+\.isAlcoholic, true\) AS isAlcoholic/, name);
+    assert.ok(!/RETURN \w+\.name AS name/.test(statement), `${name} returns a bare name`);
+  }
+});
+
 test("no statement calls a gds procedure, and none depends on APOC", () => {
   for (const [name, statement] of Object.entries(ALL_STATEMENTS)) {
     assert.ok(!/gds\./i.test(statement), `${name} calls gds`);

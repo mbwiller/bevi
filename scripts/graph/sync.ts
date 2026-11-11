@@ -76,7 +76,14 @@ import { fileURLToPath } from "node:url";
 
 import { RANKING_VERSION } from "@bevi/ranking";
 
-import { computeGraphStats, flavourProjection, graphStatsDbRows, graphStatsReport, graphStatsWrites } from "./analytics-core.ts";
+import {
+  MASKED_BEV_LABEL,
+  computeGraphStats,
+  flavourProjection,
+  graphStatsDbRows,
+  graphStatsReport,
+  graphStatsWrites,
+} from "./analytics-core.ts";
 import type { BevGraphStatsDbRow, GraphEdge, GraphStats } from "./analytics-core.ts";
 import { createNeo4jClient, isTransient, missingEnv, neo4jConfigFromEnv, NEO4J_ENV } from "./neo4j.ts";
 import type { Neo4jClient, Neo4jRunner, Neo4jTransaction } from "./neo4j.ts";
@@ -635,8 +642,11 @@ const PROBE_NAMES = ["Coca-Cola Classic", "Pepsi", "Matcha", "Red Bull"] as cons
 const COKE_NAME = "Coca-Cola Classic";
 
 const fixed = (value: unknown): string => (typeof value === "number" ? value.toFixed(4) : String(value));
-const named = (row: { name?: unknown; brand?: unknown }): string =>
-  `${String(row.name)}${typeof row.brand === "string" && row.brand.trim() !== "" ? ` (${row.brand})` : ""}`;
+/** A Bev as the public log may show it: its name and brand, or a placeholder when it is alcoholic. */
+const named = (row: { name?: unknown; brand?: unknown; isAlcoholic?: unknown }): string =>
+  row.isAlcoholic === true || typeof row.name !== "string"
+    ? MASKED_BEV_LABEL
+    : `${row.name}${typeof row.brand === "string" && row.brand.trim() !== "" ? ` (${row.brand})` : ""}`;
 
 /**
  * The proof that the graph ANSWERS, produced by Cypher against the graph

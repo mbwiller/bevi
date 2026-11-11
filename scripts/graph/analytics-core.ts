@@ -414,7 +414,12 @@ export interface ReportBev {
   base: string | null;
   /** One of the 15 roots, as on `bevs.category_id` and `(:Bev).categoryId`. */
   categoryId: string;
+  /** The root category's flag. An alcoholic Bev is never NAMED in the report; see `label`. */
+  isAlcoholic: boolean;
 }
+
+/** What the report prints in place of an alcoholic Bev's name. */
+export const MASKED_BEV_LABEL = "(a 21+ Bev)";
 
 const REPORT_TOP = 10;
 const REPORT_COMMUNITY_MEMBERS = 3;
@@ -426,8 +431,16 @@ const present = (value: string | null): value is string => typeof value === "str
  * `Name, Flavour (Brand)`. The flavour is added only when the name does not
  * already say it: the catalog has several Bevs that share a name and a brand
  * and differ by flavour alone, and a report line should tell them apart.
+ *
+ * AN ALCOHOLIC BEV IS NOT NAMED. The log is public, and a line such as "in the
+ * family of <a wine>" beside a soft drink's name would publish exactly the
+ * relation the age gate withholds from an under-21 viewer -- that a Bev they
+ * can see resembles one they cannot, and which one. The opaque community id
+ * keeps that out of the snapshot; this keeps it out of the log. Its root
+ * category is still printed, because the taxonomy is not a fact about one Bev.
  */
 function label(bev: ReportBev): string {
+  if (bev.isAlcoholic) return MASKED_BEV_LABEL;
   const flavor = present(bev.flavor) && !bev.name.toLowerCase().includes(bev.flavor.trim().toLowerCase()) ? `, ${bev.flavor.trim()}` : "";
   return `${bev.name}${flavor}${present(bev.brand) ? ` (${bev.brand.trim()})` : ""}`;
 }
@@ -484,9 +497,11 @@ export function categoryPurity(stats: GraphStats, bevs: readonly ReportBev[]): n
  * root category); the ten most central Bevs; the ten highest bridge scores
  * with how common a non-zero one is; and the overall category purity.
  *
- * CATALOG NAMES ONLY. No Bev id, no community id and nothing about a user
- * reaches a line: the log this is printed to is public, and a community id
- * printed beside its hub's name would undo the opacity the id exists for.
+ * CATALOG NAMES ONLY, AND ONLY OF NON-ALCOHOLIC BEVS. No Bev id, no community
+ * id and nothing about a user reaches a line: the log this is printed to is
+ * public, and a community id printed beside its hub's name would undo the
+ * opacity the id exists for. An alcoholic hub, member or bridge appears as
+ * `MASKED_BEV_LABEL` (see `label`).
  */
 export function graphStatsReport(stats: GraphStats, bevs: readonly ReportBev[]): string[] {
   const bevOf = new Map(bevs.map((bev) => [bev.id, bev]));

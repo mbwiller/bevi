@@ -1431,9 +1431,17 @@ RETURN count(n) AS n`;
 // Cypher: the read-back report
 // ---------------------------------------------------------------------------
 
+// The three report statements never return an alcoholic Bev's name or brand
+// (a node without `isAlcoholic` counts as alcoholic, as in graph-query): the
+// log they are printed to is public, and "X's nearest neighbour is <a wine>"
+// is the relation the age gate withholds. The row says `isAlcoholic` instead,
+// and the report prints a placeholder.
+
 export const REPORT_NEIGHBOURS = `
 MATCH (b:Bev { id: $bevId })-[s:SIMILAR_TO]-(o:Bev)
-RETURN o.name AS name, o.brand AS brand, o.categoryId AS categoryId, s.w AS w
+RETURN CASE WHEN coalesce(o.isAlcoholic, true) THEN null ELSE o.name END AS name,
+       CASE WHEN coalesce(o.isAlcoholic, true) THEN null ELSE o.brand END AS brand,
+       coalesce(o.isAlcoholic, true) AS isAlcoholic, o.categoryId AS categoryId, s.w AS w
 ORDER BY s.w DESC, o.id ASC
 LIMIT 5`;
 
@@ -1447,7 +1455,9 @@ WHERE o <> b AND NOT (b)-[:SIMILAR_TO]-(o)
 MATCH (b)-[:HAS_NOTE]->(n:Note)<-[:HAS_NOTE]-(o)
 WITH o, f, n ORDER BY n.token
 WITH o, f, collect(n.token) AS notes
-RETURN o.name AS name, o.brand AS brand, f.name AS flavor, notes
+RETURN CASE WHEN coalesce(o.isAlcoholic, true) THEN null ELSE o.name END AS name,
+       CASE WHEN coalesce(o.isAlcoholic, true) THEN null ELSE o.brand END AS brand,
+       coalesce(o.isAlcoholic, true) AS isAlcoholic, f.name AS flavor, notes
 ORDER BY size(notes) DESC, o.id ASC
 LIMIT 5`;
 
@@ -1455,7 +1465,9 @@ export const REPORT_VECTOR = `
 MATCH (b:Bev { id: $bevId })
 WHERE b.embedding IS NOT NULL
 CALL db.index.vector.queryNodes('bev_embedding_idx', 5, b.embedding) YIELD node, score
-RETURN node.name AS name, node.brand AS brand, score
+RETURN CASE WHEN coalesce(node.isAlcoholic, true) THEN null ELSE node.name END AS name,
+       CASE WHEN coalesce(node.isAlcoholic, true) THEN null ELSE node.brand END AS brand,
+       coalesce(node.isAlcoholic, true) AS isAlcoholic, score
 ORDER BY score DESC, node.id ASC`;
 
 /** Every statement the sync can send, for the tests that hold the rules above down. */

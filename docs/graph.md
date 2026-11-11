@@ -729,7 +729,13 @@ sync that needs it) and then the sync.
 **The log is public.** The job prints catalog names, Bev ids and counts. It
 never prints a user id, a pseudonym, a community id, a secret, the Neo4j host
 or its URL; for users it prints counts only, and the analytics report names
-communities by their hub's catalog name, never by id. `neo4j.ts` redacts the credentials, the host and
+communities by their hub's catalog name, never by id. **An alcoholic Bev is
+never named**, in either report: the three read-back statements return no name
+or brand for one (a node without `isAlcoholic` counts as alcoholic), and the
+analytics report prints `(a 21+ Bev)` in its place, as a hub, a member, a
+central Bev or a bridge. A line such as "in the family of <a wine>" beside a
+soft drink would publish the relation the age gate withholds, which is the same
+reason the community id is opaque. `neo4j.ts` redacts the credentials, the host and
 any 64-hex run out of every server message before it can reach an error.
 
 ## Graph signals: centrality, communities, bridges (A-16 (4))
