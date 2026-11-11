@@ -8,7 +8,7 @@ Codex discovers this workflow through `.agents/skills/bevi-beverage-icons`, whic
 
 [Overview 2](review/overview-02.png) · [Overview 3](review/overview-03.png) · [Overview 4](review/overview-04.png) · [Overview 5](review/overview-05.png) · [Overview 6](review/overview-06.png) · [Overview 7](review/overview-07.png) · [Overview 8](review/overview-08.png) · [Overview 9](review/overview-09.png)
 
-The current collection contains 100 reference-checked drafts, including 39 starter drinks. [The manifest](manifest.json) maps catalog UUIDs to editable SVGs, font-independent SVGs and transparent PNGs. [The work queue](coverage.json) lists the 278 remaining catalog drinks. These counts describe the repository catalog; live Postgres reconciliation is still pending. The app shows the icons (see [Ship to the app](#ship-to-the-app)).
+The current collection contains 194 reference-checked drafts, including 39 starter drinks. [The manifest](manifest.json) maps catalog UUIDs to editable SVGs, font-independent SVGs and transparent PNGs. [The work queue](coverage.json) lists the 184 remaining catalog drinks. These counts describe the repository catalog; live Postgres reconciliation is still pending. The app shows the icons (see [Ship to the app](#ship-to-the-app)).
 
 Latest **4-icon starter recovery**: Tropicana Orange Juice Original, Jamba Mango-a-go-go, Bolthouse Farms Strawberry Banana and Kung Fu Tea Classic Milk Tea. These were drawn in the batch-3 branch that never merged; their recipes were rebuilt on `main` and every asset hash matches the original batch-3 review record. Starbucks Frappuccino Mocha was deliberately left out: the catalog row is `blended_coffee`, so the café-versus-bottled identity stays deferred in [identity-issues.json](identity-issues.json).
 

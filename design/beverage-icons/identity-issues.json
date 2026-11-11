@@ -115,6 +115,193 @@
         }
       ],
       "resolutionNeeded": "Confirm intended Monster product line/formulation before drawing this UUID."
+    },
+    {
+      "bevId": "ddc4cce4-30d8-5843-9826-8c4f5354464a",
+      "slug": "tropicana-pink-lemonade",
+      "status": "needs-reference",
+      "reason": "Current manufacturer refrigerated lineup lacks Pink Lemonade; manufacturer distributor verifies fountain format but no exact image was available for visual inspection.",
+      "references": [
+        {
+          "pageUrl": "https://www.pepsicopartners.com/pepsico/en/USD/OTHER-BRANDS/TROPICANA%C2%AE/TROPICANA/LEMONADE/c/brand_tropicana_subbrand_tropicana_flavor_lemonade",
+          "inspectedAt": "2026-11-04",
+          "observations": "Distributor lists Pink Lemonade fountain3gal/5gal; marketing hub lists Glass Fountain Cup, without accessible inspected exact image."
+        }
+      ],
+      "resolutionNeeded": "Resolve documented identity or inspect an exact matching product reference before assigning artwork."
+    },
+    {
+      "bevId": "f0dc1cdd-ac0b-56bf-bd9f-82519a6df1ba",
+      "slug": "snapple-diet-peach-tea",
+      "status": "needs-reference",
+      "reason": "Manufacturer says Diet was replaced by Zero Sugar; exact historical Diet Peach artwork needs inspection before mapping the catalog Diet formulation.",
+      "references": [
+        {
+          "pageUrl": "https://snapple.com/faq",
+          "inspectedAt": "2026-11-04",
+          "observations": "Manufacturer FAQ establishes replacement naming; no exact historical Diet Peach image inspected."
+        }
+      ],
+      "resolutionNeeded": "Resolve documented identity or inspect an exact matching product reference before assigning artwork."
+    },
+    {
+      "bevId": "cda59b34-3839-552a-bd83-864d9a71cf25",
+      "slug": "lipton-iced-tea",
+      "status": "needs-identity-resolution",
+      "reason": "Catalog row lacks flavor/formulation while US manufacturer bottled offerings specify Lemon, Citrus or Mixed Berry. Select exact intended variant before mapping artwork.",
+      "references": [
+        {
+          "pageUrl": "https://www.liptonicedtea.com/en-us/our-iced-teas/diet-iced-tea/diet-green-tea-citrus",
+          "inspectedAt": "2026-11-04",
+          "observations": "Manufacturer product choices include Diet Green Tea Citrus and Mixed Berry; catalog does not specify which."
+        }
+      ],
+      "resolutionNeeded": "Resolve documented identity or inspect an exact matching product reference before assigning artwork."
+    },
+    {
+      "bevId": "f3361059-c2f8-5bc5-bc37-fe2726a79451",
+      "slug": "lipton-green-tea",
+      "status": "needs-identity-resolution",
+      "reason": "Catalog row lacks flavor/formulation while US manufacturer bottled offerings specify Lemon, Citrus or Mixed Berry. Select exact intended variant before mapping artwork.",
+      "references": [
+        {
+          "pageUrl": "https://www.liptonicedtea.com/en-us/our-iced-teas/diet-iced-tea/diet-green-tea-citrus",
+          "inspectedAt": "2026-11-04",
+          "observations": "Manufacturer product choices include Diet Green Tea Citrus and Mixed Berry; catalog does not specify which."
+        }
+      ],
+      "resolutionNeeded": "Resolve documented identity or inspect an exact matching product reference before assigning artwork."
+    },
+    {
+      "bevId": "7fe7a045-cf4c-5673-a7c2-d19741ec8967",
+      "slug": "lipton-diet-green-tea",
+      "status": "needs-identity-resolution",
+      "reason": "Catalog row lacks flavor/formulation while US manufacturer bottled offerings specify Lemon, Citrus or Mixed Berry. Select exact intended variant before mapping artwork.",
+      "references": [
+        {
+          "pageUrl": "https://www.liptonicedtea.com/en-us/our-iced-teas/diet-iced-tea/diet-green-tea-citrus",
+          "inspectedAt": "2026-11-04",
+          "observations": "Manufacturer product choices include Diet Green Tea Citrus and Mixed Berry; catalog does not specify which."
+        }
+      ],
+      "resolutionNeeded": "Resolve documented identity or inspect an exact matching product reference before assigning artwork."
+    },
+    {
+      "bevId": "82073fb8-fefc-5c82-8f44-89fba13198cf",
+      "slug": "bolthouse-farms-green-goodness-juice",
+      "status": "needs-identity-resolution",
+      "reason": "Catalog contains distinct Juice and Smoothie UUIDs but manufacturer exposes one Green Goodness100%juice smoothie. Resolve duplicate catalog ownership rather than inventing separate formulas.",
+      "references": [
+        {
+          "pageUrl": "https://www.bolthouse.com/product/green-goodness/",
+          "imageUrl": "https://www.bolthouse.com/wp-content/uploads/sites/4/2016/01/071464240400_bhf_us_bev_15_pi_good_grn_front_520x720-260x360.png",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Smoothie batch author independently inspected manufacturer image; current product established, catalog identity not established."
+        }
+      ],
+      "resolutionNeeded": "Resolve documented duplicate/formulation identity before assigning artwork."
+    },
+    {
+      "bevId": "3df12c22-201d-5a3c-8e73-9be64ce78c2a",
+      "slug": "bolthouse-farms-green-goodness-smoothie",
+      "status": "needs-identity-resolution",
+      "reason": "Catalog contains distinct Juice and Smoothie UUIDs but manufacturer exposes one Green Goodness100%juice smoothie. Resolve duplicate catalog ownership rather than inventing separate formulas.",
+      "references": [
+        {
+          "pageUrl": "https://www.bolthouse.com/product/green-goodness/",
+          "imageUrl": "https://www.bolthouse.com/wp-content/uploads/sites/4/2016/01/071464240400_bhf_us_bev_15_pi_good_grn_front_520x720-260x360.png",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Smoothie batch author independently inspected manufacturer image; current product established, catalog identity not established."
+        }
+      ],
+      "resolutionNeeded": "Resolve documented duplicate/formulation identity before assigning artwork."
+    },
+    {
+      "bevId": "b1822179-f0e2-5667-86d2-fa7128a0f78c",
+      "slug": "bolthouse-farms-perfectly-protein-chocolate",
+      "status": "needs-identity-resolution",
+      "reason": "Catalog historical Perfectly Protein name differs from manufacturer Protein Plus Chocolate30g; exact historical formula/package equivalence unverified.",
+      "references": [
+        {
+          "pageUrl": "https://www.bolthouse.com/product/protein-plus-chocolate/",
+          "imageUrl": "https://www.bolthouse.com/wp-content/uploads/sites/4/2016/01/071464306502_BHF_US_BEV_15_PI_PP_Choc_Front_520x720-260x360.png",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Smoothie batch author independently inspected manufacturer image; current product established, catalog identity not established."
+        }
+      ],
+      "resolutionNeeded": "Resolve documented duplicate/formulation identity before assigning artwork."
+    },
+    {
+      "bevId": "228e535d-3b76-5cd8-b5e0-ac7a5bc70fb4",
+      "slug": "bolthouse-farms-perfectly-protein-vanilla-chai",
+      "status": "needs-identity-resolution",
+      "reason": "Catalog Perfectly Protein Vanilla Chai smoothie differs from current manufacturer Cafe Vanilla Chai13g; historical formula/package equivalence unverified.",
+      "references": [
+        {
+          "pageUrl": "https://www.bolthouse.com/product/vanilla-chai/",
+          "imageUrl": "https://www.bolthouse.com/wp-content/uploads/sites/4/2015/12/071464260408_bhf_us_bev_15_pi_cafe_vc_front_520x720.png-260x360.png",
+          "inspectedAt": "2026-11-04",
+          "visuallyInspected": true,
+          "observations": "Smoothie batch author independently inspected manufacturer image; current product established, catalog identity not established."
+        }
+      ],
+      "resolutionNeeded": "Resolve documented duplicate/formulation identity before assigning artwork."
+    },
+    {
+      "bevId": "cdc8e9c9-27e7-5f19-8f47-35e4f2b325e0",
+      "slug": "waterloo-lime",
+      "status": "needs-identity-resolution",
+      "reason": "Historical Lime can unresolved: retailer Lime page depicts LEMON-LIME; current manufacturer lists Lemon Lime. Historical manufacturer document distinguishes Lime and Lemon. Exact historical Lime artwork is required.",
+      "resolutionNeeded": "Resolve exact intended formulation and inspect matching packaging before assigning artwork.",
+      "references": [
+        {
+          "pageUrl": "https://specialtyfoodsource.com/products/waterloo-sparkling-water-with-real-lime-flavor-12-oz-can-pack-of-8",
+          "inspectedAt": "2026-11-04",
+          "observations": "Batch04 family-author research."
+        },
+        {
+          "pageUrl": "https://www.drinkwaterloo.com/collections/flavors",
+          "inspectedAt": "2026-11-04",
+          "observations": "Batch04 family-author research."
+        },
+        {
+          "pageUrl": "https://dg6qn11ynnp6a.cloudfront.net/wp-content/uploads/2019/03/12162131/56ed55adfeead422dd19.pdf",
+          "inspectedAt": "2026-11-04",
+          "observations": "Batch04 family-author research."
+        }
+      ]
+    },
+    {
+      "bevId": "4637e593-5012-5414-a7b0-e7d97f1ce4c6",
+      "slug": "bodyarmor-lyte-fruit-punch",
+      "status": "needs-identity-resolution",
+      "reason": "Exact LYTE Fruit Punch unresolved: current manufacturer and retailer evidence identifies Zero Sugar Fruit Punch, while brand terms distinguish LYTE Berry Punch and Sports Drink Fruit Punch. Do not substitute these formulations.",
+      "resolutionNeeded": "Resolve exact intended formulation and inspect matching packaging before assigning artwork.",
+      "references": [
+        {
+          "pageUrl": "https://www.drinkbodyarmor.com/lyte/",
+          "inspectedAt": "2026-11-04",
+          "observations": "Batch04 family-author research."
+        },
+        {
+          "pageUrl": "https://www.drinkbodyarmor.com/zero-sugar/fruit-punch",
+          "inspectedAt": "2026-11-04",
+          "observations": "Batch04 family-author research."
+        },
+        {
+          "pageUrl": "https://www.kroger.com/p/bodyarmor-fruit-punch-zero-sugar-sports-drink-bottle/0081011383136",
+          "inspectedAt": "2026-11-04",
+          "observations": "Batch04 family-author research."
+        },
+        {
+          "pageUrl": "https://bodyarmorwinps5.com/terms.pdf",
+          "inspectedAt": "2026-11-04",
+          "observations": "Batch04 family-author research."
+        }
+      ]
     }
   ]
 }
