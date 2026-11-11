@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { ApiError, type FollowsApi, type Page, type PageParams, type ProfileRow } from '@bevi/shared';
+import { ApiError, type FollowsApi, type Page, type PageParams, type ProfileRow, type SuggestedProfile } from '@bevi/shared';
 import { mapError } from './errors';
-import { mapProfileRow, type ProfileViewRow } from './mappers';
+import { mapProfileRow, mapSuggestedProfile, type FollowedByRpcRow, type ProfileViewRow } from './mappers';
 import { clampLimit, decodeCursor, toPage } from './paging';
 
 async function requireUserId(client: SupabaseClient): Promise<string> {
@@ -52,6 +52,32 @@ async function fetchProfileRows(
     .map((row) => mapProfileRow(client, row, row.id === selfId ? false : followingSet.has(row.id)));
 }
 
+/** PostgREST's "no such function in the schema cache": the database predates the function's migration. */
+const POSTGREST_NO_SUCH_FUNCTION = 'PGRST202';
+
+/**
+ * `get_followed_by` (20261111000100) for these people: who among the people
+ * the caller follows already follows each of them. Keyed by user id; someone
+ * with no entry has nobody.
+ *
+ * A database that does not have the function yet answers PGRST202. That is the
+ * state between this client shipping and the migration being pushed, if they
+ * happen in that order, and the suggestions themselves do not depend on it,
+ * so that one error reads as "no context" rather than failing the list. Every
+ * other error is thrown.
+ */
+async function fetchFollowedBy(client: SupabaseClient, ids: string[]): Promise<Map<string, FollowedByRpcRow>> {
+  const byId = new Map<string, FollowedByRpcRow>();
+  if (ids.length === 0) return byId;
+  const { data, error } = await client.rpc('get_followed_by', { p_user_ids: ids });
+  if (error) {
+    if ((error as { code?: string }).code === POSTGREST_NO_SUCH_FUNCTION) return byId;
+    throw mapError(error);
+  }
+  for (const row of (data ?? []) as FollowedByRpcRow[]) byId.set(row.user_id, row);
+  return byId;
+}
+
 export function createFollowsApi(client: SupabaseClient): FollowsApi {
   return {
     async follow(id: string): Promise<void> {
@@ -84,7 +110,7 @@ export function createFollowsApi(client: SupabaseClient): FollowsApi {
       return toPage(rows, limit, () => ({ offset: offset + limit }) satisfies OffsetCursor);
     },
 
-    async suggested(): Promise<ProfileRow[]> {
+    async suggested(): Promise<SuggestedProfile[]> {
       const uid = await requireUserId(client);
       const alreadyFollowing = new Set(await fetchFollowIds(client, 'follows', 'follower_id', uid));
       alreadyFollowing.add(uid);
@@ -103,7 +129,13 @@ export function createFollowsApi(client: SupabaseClient): FollowsApi {
         .filter((id) => !alreadyFollowing.has(id))
         .slice(0, 10);
 
-      return fetchProfileRows(client, uid, candidateIds, candidateIds.length, 0);
+      // Who is suggested, and in what order, is decided above and is not
+      // touched by the social context: it only decorates these rows.
+      const [rows, followedBy] = await Promise.all([
+        fetchProfileRows(client, uid, candidateIds, candidateIds.length, 0),
+        fetchFollowedBy(client, candidateIds),
+      ]);
+      return rows.map((row) => mapSuggestedProfile(client, row, followedBy.get(row.id)));
     },
   };
 }
