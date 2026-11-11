@@ -1,5 +1,17 @@
 # Beverage icon production checkpoint
 
+## Latest batch: 20 energy icons, 2026-11-11
+
+**214 drafts authored; 164 catalog entries remain. 39 of 43 starters covered.**
+
+Added `scripts/icons/families/energy-expansion.mjs` with Celsius Arctic Vibe, Peach Vibe, Kiwi Guava, Wild Berry and Cola (5); Alani Nu Breezeberry, Cosmic Stardust and 2026 Witch’s Brew (3); Bang Star Blast, Peach Mango and Blue Razz (3); Reign Melon Mania and Razzle Berry (2); GHOST Cherry Limeade and Sour Patch Kids Redberry (2); NOS Original, Rockstar Original, GURU Organic Original, C4 Frozen Bombsicle and Full Throttle Original (5).
+
+Individually downloaded and inspected all exact references. Manufacturer first, retailer fallback for NOS/Reign/GHOST. Alani front views explicitly checked after side-panel candidates; Reign Razzle Berry single-can photo supplements supplier case image. Historical Reign/Redberry catalog identities retained with dated supporting product evidence; no current gummy/Sour Punch/Hydration substitution. Celsius uses exact manufacturer image family with 2023 directory dates. Catalog size unspecified; selected US12oz slim or16oz formats documented per recipe.
+
+Reviewed all artwork large and at40/56/96/155px on light/dark tiles with8%padding. Refined GURU wordmark fit, GHOST logo/flavor separation and Witch’s Brew script. Sheets `review/batch-08-2026-11-11-01.png` through `-04.png` and `review/batch-08-large-2026-11-11-01.png` / `-02.png`; exact reviewed hashes in `review/review.json`. All194 prior assets unchanged. Final aesthetic approval and web-device review remain pending; records stay needs-review. No new unresolved identities assigned artwork; prior deferred queue preserved.
+
+Build,214-asset validation, app export freshness and review-sheet generation passed. Release validation commands: `npm ci`, `npm run typecheck`, `npm test`, ranking `bundle:smoke` and `vectors -- --check`, Expo web export with CI placeholder configuration plus bundle scan. Exact results and publication status recorded in the release PR. No database, contract, dependency or app precedence changes; live Postgres reconciliation remains pending.
+
 ## Production release: 94 additional icons, 2026-11-10
 
 **194 authored icons; 184 catalog entries remain; 39 of 43 starters covered.**

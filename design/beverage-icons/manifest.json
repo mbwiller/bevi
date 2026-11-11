@@ -55,8 +55,8 @@
   },
   "summary": {
     "catalog": 378,
-    "authored": 194,
-    "pending": 184,
+    "authored": 214,
+    "pending": 164,
     "starterAuthored": 39,
     "starterTotal": 43,
     "livePostgresReconciled": false
@@ -125,6 +125,68 @@
       "sourceModule": "scripts/icons/families/served-drinks.mjs"
     },
     {
+      "slug": "alani-nu-breezeberry",
+      "family": "alani-slim-can",
+      "packageChoice": "Representative US 12 fl oz / 355mL Alani Nu breezeberry aluminum can, exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.alaninu.com/products/energy-drink-breezeberry",
+          "imageUrl": "https://www.alaninu.com/cdn/shop/files/stretch_AN-Website-12oz-PDP-BRZ-01_1_v1.png?v=1782928623&width=1000",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact manufacturer front image independently inspected: dark navy body, cyan neck, mint vertical Alani script/NU, pink ENERGY, blue raspberry clusters and swooping blue/lilac fluid ribbons. Aqua lower accents; silver rims. Side/back panel photos checked only as supplemental evidence; drawing uses verified front."
+        }
+      ],
+      "uncertainty": "Catalog has no package size. Exact photographed package selected; label art, wordmarks, tiny claims and fine illustrations simplified as original vectors.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "915228fb-914c-53bf-a5ef-76cfdfe6bc1a",
+      "name": "Alani Nu Energy Breezeberry",
+      "brand": "Alani Nu",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/alani-nu-breezeberry.svg",
+        "portableSvg": "portable-svg/alani-nu-breezeberry.svg",
+        "png": "png/alani-nu-breezeberry.png",
+        "svgSha256": "b9e211abc85dc7197802beaa739e8b3be1adac98d9b4f7558fe6b576563c96fe",
+        "portableSvgSha256": "b837aa74114218ee71f427aa88d2711919a8978153281c02f67ed1a83ad48346",
+        "pngSha256": "3af82bb46b7e1282a7c751b9a62583316668b8368e66af9cedfb6ddc20d851b4",
+        "pngBytes": 133415
+      },
+      "sourceModule": "scripts/icons/families/energy-expansion.mjs"
+    },
+    {
+      "slug": "alani-nu-cosmic-stardust",
+      "family": "alani-slim-can",
+      "packageChoice": "Representative US 12 fl oz / 355mL Alani Nu cosmic-stardust aluminum can, exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.alaninu.com/products/energy-drink-cosmic-stardust",
+          "imageUrl": "https://www.alaninu.com/cdn/shop/files/stretch_AN-Website-12oz-PDP-CSD-01-2_v1.png?v=1782921685&width=1000",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact manufacturer front image independently inspected: dark purple/black body, lavender neck, mint vertical Alani/NU, pink ENERGY, pastel planets, rocket, stars and purple ribbon artwork. Aqua lower accents; silver rims. Side/back panel photos checked only as supplemental evidence; drawing uses verified front."
+        }
+      ],
+      "uncertainty": "Catalog has no package size. Exact photographed package selected; label art, wordmarks, tiny claims and fine illustrations simplified as original vectors.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "c2d2ef80-07ab-54de-be22-b0164fafc0a7",
+      "name": "Alani Nu Energy Cosmic Stardust",
+      "brand": "Alani Nu",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/alani-nu-cosmic-stardust.svg",
+        "portableSvg": "portable-svg/alani-nu-cosmic-stardust.svg",
+        "png": "png/alani-nu-cosmic-stardust.png",
+        "svgSha256": "3a5b4bf8d9e70ceb46be4aed2403218727df4bca520218da05d05787155fbc4b",
+        "portableSvgSha256": "6db484fe8f29446bae3b175c58ba503086b4388a59bf3ab66c7d537fca44ac32",
+        "pngSha256": "0709a2045811e027823b58668f402ff891a50ec9cae01f2d1e7724e1b0f3c177",
+        "pngBytes": 125328
+      },
+      "sourceModule": "scripts/icons/families/energy-expansion.mjs"
+    },
+    {
       "slug": "alani-nu-hawaiian-shaved-ice",
       "family": "energy-starter-can",
       "packageChoice": "US 12 fl oz / 355mL Alani Nu Hawaiian Shaved Ice slim can; current manufacturer purple/pink/tropical package.",
@@ -154,6 +216,37 @@
         "pngBytes": 160453
       },
       "sourceModule": "scripts/icons/families/energy-starters.mjs"
+    },
+    {
+      "slug": "alani-nu-witchs-brew",
+      "family": "alani-slim-can",
+      "packageChoice": "Representative US 12 fl oz / 355mL Alani Nu witchs-brew aluminum can, exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.alaninu.com/products/energy-drink-witchs-brew-2026?koala_external_link=1",
+          "imageUrl": "https://www.alaninu.com/cdn/shop/files/Stretch_AN-Website-12oz-PDP-WBR-01_V2.png?v=1785982428&width=1000",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact manufacturer front image independently inspected: 2026 purple/bright-green Witch’s Brew, white horizontal Alani script, green/teal bubbling cauldron and small horror-eye/flower graphics. Green lower accents; silver rims. Side/back panel photos checked only as supplemental evidence; drawing uses verified front."
+        }
+      ],
+      "uncertainty": "Catalog has no package size. Exact photographed package selected; label art, wordmarks, tiny claims and fine illustrations simplified as original vectors. Documented seasonal 2026 artwork; do not substitute earlier Halloween cans. Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "63234312-8b4f-51dc-b012-d7a81133198c",
+      "name": "Alani Nu Energy Witch's Brew",
+      "brand": "Alani Nu",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/alani-nu-witchs-brew.svg",
+        "portableSvg": "portable-svg/alani-nu-witchs-brew.svg",
+        "png": "png/alani-nu-witchs-brew.png",
+        "svgSha256": "d9d54e3eda601ca5071ddb39323178de8dc5828932344435d415321e3f1775c1",
+        "portableSvgSha256": "abca71b23f1830c92947f59590cde379248fc894831aa07afde25cc2aa0e640b",
+        "pngSha256": "fa6289148e73578d83f9326591a493fd4adf9a2b550eba899f184cc122091b70",
+        "pngBytes": 117382
+      },
+      "sourceModule": "scripts/icons/families/energy-expansion.mjs"
     },
     {
       "slug": "simply-apple",
@@ -433,6 +526,99 @@
         "pngBytes": 44926
       },
       "sourceModule": "scripts/icons/families/water-expansion.mjs"
+    },
+    {
+      "slug": "bang-blue-razz",
+      "family": "bang-energy-can",
+      "packageChoice": "Representative US 16 fl oz / 473mL Bang BLUE RAZZ aluminum can, exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.bangenergy.com/en-us/products/blue-razz/",
+          "imageUrl": "https://web-assests.monsterenergy.com/mnst/c6278556-1aee-475b-b522-16ba49b89bca.png",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact current manufacturer BLUE RAZZ can individually inspected: white/silver 16oz body, #00b4cf neck border and FUEL YOUR DESTINY, large outlined lowercase b/target with #00b7d1 center, black head/brain motif, matching bang and ENERGY lettering; stacked BLUE RAZZ flavor. Colored zero badge low at right. Colored studio backdrop excluded. Shared logo geometry follows each inspected front, with independently checked accent colors."
+        }
+      ],
+      "uncertainty": "Catalog has no package size. Exact photographed package selected; label art, wordmarks, tiny claims and fine illustrations simplified as original vectors.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "0f06d68f-c7f9-5262-bae3-c55a559a8fc5",
+      "name": "Bang Energy Blue Razz",
+      "brand": "Bang Energy",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/bang-blue-razz.svg",
+        "portableSvg": "portable-svg/bang-blue-razz.svg",
+        "png": "png/bang-blue-razz.png",
+        "svgSha256": "6507b3ed3ff764bfe523dd747c5020ca36c1b1c707c5f86737150511cdd6971b",
+        "portableSvgSha256": "bc6b48efa48722b35486bc1190beb480261d2a51f369cb58f8cc15a0f7e136d9",
+        "pngSha256": "f403ae2761c6cd091e1074f6e047621a2a4f4521a7014b7a0027dcfa3bf696e6",
+        "pngBytes": 97039
+      },
+      "sourceModule": "scripts/icons/families/energy-expansion.mjs"
+    },
+    {
+      "slug": "bang-peach-mango",
+      "family": "bang-energy-can",
+      "packageChoice": "Representative US 16 fl oz / 473mL Bang PEACH MANGO aluminum can, exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.bangenergy.com/en-us/products/peach-mango/",
+          "imageUrl": "https://web-assests.monsterenergy.com/mnst/60c2522e-693d-4448-818e-3346fe45a894.png",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact current manufacturer PEACH MANGO can individually inspected: white/silver 16oz body, #ee8d26 neck border and FUEL YOUR DESTINY, large outlined lowercase b/target with #afc437 center, black head/brain motif, matching bang and ENERGY lettering; stacked PEACH MANGO flavor. Colored zero badge low at right. Colored studio backdrop excluded. Shared logo geometry follows each inspected front, with independently checked accent colors."
+        }
+      ],
+      "uncertainty": "Catalog has no package size. Exact photographed package selected; label art, wordmarks, tiny claims and fine illustrations simplified as original vectors.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "c3a99004-b273-5393-82d9-aabd06e44f23",
+      "name": "Bang Energy Peach Mango",
+      "brand": "Bang Energy",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/bang-peach-mango.svg",
+        "portableSvg": "portable-svg/bang-peach-mango.svg",
+        "png": "png/bang-peach-mango.png",
+        "svgSha256": "b5a1c2903e4ea2a6e12d4db5edb4736fb61d55fcefc49d9895a77b76cbb445f6",
+        "portableSvgSha256": "9a20e2497132f5d774e9bd3e7ae16ab431f453b553850e5b3ae552eac54fad74",
+        "pngSha256": "214a817998ae31c76f01015640e0573ef7762ea8b6ba131776522c5385c173e1",
+        "pngBytes": 97669
+      },
+      "sourceModule": "scripts/icons/families/energy-expansion.mjs"
+    },
+    {
+      "slug": "bang-star-blast",
+      "family": "bang-energy-can",
+      "packageChoice": "Representative US 16 fl oz / 473mL Bang STAR BLAST aluminum can, exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.bangenergy.com/en-us/products/star-blast/",
+          "imageUrl": "https://web-assests.monsterenergy.com/mnst/929024b2-6940-4e7a-9b13-dd69a1f0dc64.png",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact current manufacturer STAR BLAST can individually inspected: white/silver 16oz body, #058bc3 neck border and FUEL YOUR DESTINY, large outlined lowercase b/target with #e72d40 center, black head/brain motif, matching bang and ENERGY lettering; stacked STAR BLAST flavor. Colored zero badge low at right. Colored studio backdrop excluded. Shared logo geometry follows each inspected front, with independently checked accent colors."
+        }
+      ],
+      "uncertainty": "Catalog has no package size. Exact photographed package selected; label art, wordmarks, tiny claims and fine illustrations simplified as original vectors.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "7e2f2719-6cc6-5a96-a07e-4cf8178c7b3a",
+      "name": "Bang Energy Star Blast",
+      "brand": "Bang Energy",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/bang-star-blast.svg",
+        "portableSvg": "portable-svg/bang-star-blast.svg",
+        "png": "png/bang-star-blast.png",
+        "svgSha256": "1387cddf0df04b7d396a773d8c663fb3b10c4d5785bd839f80e78189d3b254ea",
+        "portableSvgSha256": "027eefaab332e8f31a36b2fbf52588cd5557ccfef12cf78803f9b2c2cae976b1",
+        "pngSha256": "6519a3db8515333dd8be039ed07af2529e716f69446a416ada5e3c5937b2dbad",
+        "pngBytes": 96284
+      },
+      "sourceModule": "scripts/icons/families/energy-expansion.mjs"
     },
     {
       "slug": "naked-juice-blue-machine",
@@ -838,6 +1024,37 @@
       "sourceModule": "scripts/icons/families/sparkling-expansion.mjs"
     },
     {
+      "slug": "c4-energy-frozen-bombsicle",
+      "family": "c4-energy-can",
+      "packageChoice": "Representative US 16 fl oz / 473mL C4 Frozen Bombsicle aluminum can, exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://cellucor.com/products/c4-performance-energy-frozen-bombsicle",
+          "imageUrl": "https://cellucor.com/cdn/shop/files/C4BEV_3114_Digital_FrozenBomb_Wave0_Performance_BasicPDPs-Hero-Grey-Sticker.png?v=1775067428&width=1000",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact manufacturer current Performance Energy16oz Frozen Bombsicle can inspected: yellow main body, oversized vertical black C4, blue vertical PERFORMANCE ENERGY, blue flavor shoulder strip, red/blue/white fractured ice graphics down left, black ZERO SUGAR footer. Promotional NEW LOOK NEW FORMULA label outside can excluded. Manufacturer states redesigned package; documented selected revision, not old yellow/black formula."
+        }
+      ],
+      "uncertainty": "Catalog has no package size. Exact photographed package selected; label art, wordmarks, tiny claims and fine illustrations simplified as original vectors.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "ca3f14fc-f6d4-5080-8310-304e7838a38d",
+      "name": "C4 Energy Frozen Bombsicle",
+      "brand": "C4 Energy",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/c4-energy-frozen-bombsicle.svg",
+        "portableSvg": "portable-svg/c4-energy-frozen-bombsicle.svg",
+        "png": "png/c4-energy-frozen-bombsicle.png",
+        "svgSha256": "3c1bf859be0f487b13aa7d67b5c020519f29bccf8bb966f5e802e5f7bfd24038",
+        "portableSvgSha256": "f91554b6749755305080738d15c3bb89013c8b4aa89f92c47cef7e1391b03c2a",
+        "pngSha256": "3ca2d4fdbece4d0e8bbd8f3d859af455035faa65e922886cc92afefe0bef3e9b",
+        "pngBytes": 137894
+      },
+      "sourceModule": "scripts/icons/families/energy-expansion.mjs"
+    },
+    {
       "slug": "jamba-juice-caribbean-passion",
       "family": "jamba-served-smoothie",
       "packageChoice": "US café Caribbean Passion in the actual clear Jamba serving cup shown by manufacturer; representative standard serving, volume not inferred from photo.",
@@ -867,6 +1084,99 @@
         "pngBytes": 124441
       },
       "sourceModule": "scripts/icons/families/starter-smoothies.mjs"
+    },
+    {
+      "slug": "celsius-arctic-vibe",
+      "family": "celsius-slim-can",
+      "packageChoice": "Representative US 12 fl oz / 355mL CELSIUS ARCTIC VIBE aluminum can, exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.celsius.com/products/",
+          "imageUrl": "https://www.celsius.com/wp-content/uploads/2023/08/Arctic-Vibe-front.png",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Manufacturer exact ARCTIC VIBE front can inspected: white/silver slim can, gray lower C and #0687c7/#193f95 upper swoosh, degree symbol, black CELSIUS and flavor-colored LIVE FIT. Blue diagonal hatchwork, Arctic Vibe title and gray mountains. Metallic lower information strip and silver rims. Official image directory dates 2023; exact documented label retained without claiming latest revision."
+        }
+      ],
+      "uncertainty": "Catalog has no package size. Exact photographed package selected; label art, wordmarks, tiny claims and fine illustrations simplified as original vectors.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "55bf9ed4-5570-514d-8a10-30282e4516fa",
+      "name": "Celsius Arctic Vibe",
+      "brand": "Celsius",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/celsius-arctic-vibe.svg",
+        "portableSvg": "portable-svg/celsius-arctic-vibe.svg",
+        "png": "png/celsius-arctic-vibe.png",
+        "svgSha256": "27b32700145f659839a49243c81384e07bc0c4a8308e33efd43cad95c7e5eef5",
+        "portableSvgSha256": "cbe725d2c05c94477ba444eebc08256760522074c98807316bec831f9d1b2d25",
+        "pngSha256": "da77c960fc47fc29147da4ae6f24423b1200e01e0b019290988649ea1ecab457",
+        "pngBytes": 135045
+      },
+      "sourceModule": "scripts/icons/families/energy-expansion.mjs"
+    },
+    {
+      "slug": "celsius-sparkling-cola",
+      "family": "celsius-slim-can",
+      "packageChoice": "Representative US 12 fl oz / 355mL CELSIUS COLA aluminum can, exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.celsius.com/products/",
+          "imageUrl": "https://www.celsius.com/wp-content/uploads/2023/08/Cola-front.png",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Manufacturer exact COLA front can inspected: white/silver slim can, gray lower C and #c88c29/#7e3c23 upper swoosh, degree symbol, black CELSIUS and flavor-colored LIVE FIT. Small amber/brown effervescent cola dot field. Black lower information strip and silver rims. Official image directory dates 2023; exact documented label retained without claiming latest revision."
+        }
+      ],
+      "uncertainty": "Catalog has no package size. Exact photographed package selected; label art, wordmarks, tiny claims and fine illustrations simplified as original vectors.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "ab3183ad-af5d-5acc-9f4d-b1c247f4cbf7",
+      "name": "Celsius Sparkling Cola",
+      "brand": "Celsius",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/celsius-sparkling-cola.svg",
+        "portableSvg": "portable-svg/celsius-sparkling-cola.svg",
+        "png": "png/celsius-sparkling-cola.png",
+        "svgSha256": "08dd840f16c939e98ff559c505c883b372d6164777019050ef1e537a27a5b151",
+        "portableSvgSha256": "b7098d3114103094c29ee400b09bcf6b65372c6598ca7eff45657da13b7d4638",
+        "pngSha256": "1ecfb1ca3cccff81f569ce430a7d7d4391f9429eec55b5fc627ee5fa556d0273",
+        "pngBytes": 93573
+      },
+      "sourceModule": "scripts/icons/families/energy-expansion.mjs"
+    },
+    {
+      "slug": "celsius-kiwi-guava",
+      "family": "celsius-slim-can",
+      "packageChoice": "Representative US 12 fl oz / 355mL CELSIUS KIWI GUAVA aluminum can, exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.celsius.com/products/",
+          "imageUrl": "https://www.celsius.com/wp-content/uploads/2023/08/Kiwi-Guava-front.png",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Manufacturer exact KIWI GUAVA front can inspected: white/silver slim can, gray lower C and #ed8199/#58a42a upper swoosh, degree symbol, black CELSIUS and flavor-colored LIVE FIT. Separate guava wedge and green kiwi wheel. Black lower information strip and silver rims. Official image directory dates 2023; exact documented label retained without claiming latest revision."
+        }
+      ],
+      "uncertainty": "Catalog has no package size. Exact photographed package selected; label art, wordmarks, tiny claims and fine illustrations simplified as original vectors.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "593ab124-e1fa-5217-a8ef-424a7fa57065",
+      "name": "Celsius Sparkling Kiwi Guava",
+      "brand": "Celsius",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/celsius-kiwi-guava.svg",
+        "portableSvg": "portable-svg/celsius-kiwi-guava.svg",
+        "png": "png/celsius-kiwi-guava.png",
+        "svgSha256": "f4daacaceeed27b18d0e131b6984c18d431321aaafb1fa7320583fee02b042ac",
+        "portableSvgSha256": "285461992a7b75af52413c3585e35b4d3bbfb28c7799c4c746ed6ea480495be0",
+        "pngSha256": "341b7d0fc40c8d71565f954ed0285c065b2969e88ef29d59dd9c55c511695d53",
+        "pngBytes": 103617
+      },
+      "sourceModule": "scripts/icons/families/energy-expansion.mjs"
     },
     {
       "slug": "celsius-sparkling-orange",
@@ -900,6 +1210,37 @@
       "sourceModule": "scripts/icons/families/energy-starters.mjs"
     },
     {
+      "slug": "celsius-sparkling-peach-vibe",
+      "family": "celsius-slim-can",
+      "packageChoice": "Representative US 12 fl oz / 355mL CELSIUS PEACH VIBE aluminum can, exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.celsius.com/products/",
+          "imageUrl": "https://www.celsius.com/wp-content/uploads/2023/08/Peach-Vibe-front.png",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Manufacturer exact PEACH VIBE front can inspected: white/silver slim can, gray lower C and #e02a48/#cc2041 upper swoosh, degree symbol, black CELSIUS and flavor-colored LIVE FIT. Red/teal dotted textures, red outline PEACH VIBE and palm tree. Metallic lower information strip and silver rims. Official image directory dates 2023; exact documented label retained without claiming latest revision."
+        }
+      ],
+      "uncertainty": "Catalog has no package size. Exact photographed package selected; label art, wordmarks, tiny claims and fine illustrations simplified as original vectors.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "c6c4b6b5-c07a-50ac-817f-26e10e2c729f",
+      "name": "Celsius Sparkling Peach Vibe",
+      "brand": "Celsius",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/celsius-sparkling-peach-vibe.svg",
+        "portableSvg": "portable-svg/celsius-sparkling-peach-vibe.svg",
+        "png": "png/celsius-sparkling-peach-vibe.png",
+        "svgSha256": "0cf8aa5f4aad27455b176f58d7998e16a628c0114ec71a8ea7a03dd687c9599b",
+        "portableSvgSha256": "7b11648a50875957bac8dbd07c956039da82330f3ca4c1b20635e3aaf3e85b8c",
+        "pngSha256": "37526601f06c4b49f48c8b3dbb14ed88b265f363bcff773995f7206008637224",
+        "pngBytes": 112650
+      },
+      "sourceModule": "scripts/icons/families/energy-expansion.mjs"
+    },
+    {
       "slug": "celsius-sparkling-watermelon",
       "family": "energy-variant-can",
       "packageChoice": "US 12 fl oz / 355mL Celsius Sparkling Watermelon, white/silver can with red/gray C and watermelon wedge.",
@@ -929,6 +1270,37 @@
         "pngBytes": 97339
       },
       "sourceModule": "scripts/icons/families/energy-variants.mjs"
+    },
+    {
+      "slug": "celsius-sparkling-wild-berry",
+      "family": "celsius-slim-can",
+      "packageChoice": "Representative US 12 fl oz / 355mL CELSIUS WILD BERRY aluminum can, exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.celsius.com/products/",
+          "imageUrl": "https://www.celsius.com/wp-content/uploads/2023/08/Wild-Berry-front.png",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Manufacturer exact WILD BERRY front can inspected: white/silver slim can, gray lower C and #d62d58/#8c1f59 upper swoosh, degree symbol, black CELSIUS and flavor-colored LIVE FIT. Red raspberry with dark blueberries. Black lower information strip and silver rims. Official image directory dates 2023; exact documented label retained without claiming latest revision."
+        }
+      ],
+      "uncertainty": "Catalog has no package size. Exact photographed package selected; label art, wordmarks, tiny claims and fine illustrations simplified as original vectors.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "5d0b23cb-dfca-5fd1-bc08-11d4ba2a49e3",
+      "name": "Celsius Sparkling Wild Berry",
+      "brand": "Celsius",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/celsius-sparkling-wild-berry.svg",
+        "portableSvg": "portable-svg/celsius-sparkling-wild-berry.svg",
+        "png": "png/celsius-sparkling-wild-berry.png",
+        "svgSha256": "41e32a8938d0b1601b6169a5bf994c23a2d634f169c74283f2f672281b5a6631",
+        "portableSvgSha256": "fa9977c0283d6dd0541ee5e727d54a47027a1a81d0ba00ce9843d5a62aefca40",
+        "pngSha256": "7c4ba0dcc9f1137d47ebef96160dfc4bc98db22067d0380c5426eaaa62bd814f",
+        "pngBytes": 104859
+      },
+      "sourceModule": "scripts/icons/families/energy-expansion.mjs"
     },
     {
       "slug": "cherry-coke",
@@ -1727,6 +2099,37 @@
       "sourceModule": "scripts/icons/families/juice-expansion.mjs"
     },
     {
+      "slug": "full-throttle-original",
+      "family": "full-throttle-energy-can",
+      "packageChoice": "Representative US 16 fl oz / 473mL Full Throttle Original Citrus aluminum can, exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.drinkfullthrottle.com/en-us/products/",
+          "imageUrl": "https://web-assests.monsterenergy.com/mnst/dda5900f-e7d5-46e6-9c36-2685705286ff.png",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact manufacturer Original Citrus front can inspected: black16oz body, gold ORIGINAL/CITRUS shoulder, large white/gray bald eagle and spread feather wings, gold beak/talons, US red/white/blue shield with stars and gold outlined Full Throttle lettering, small lightning accents. Intricate feather/engraving detail simplified as original vector artwork; no promotional backdrop included."
+        }
+      ],
+      "uncertainty": "Catalog has no package size. Exact photographed package selected; label art, wordmarks, tiny claims and fine illustrations simplified as original vectors.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "0fbd031b-c7e3-58d2-b585-15c930949fd5",
+      "name": "Full Throttle Original Energy Drink",
+      "brand": "Full Throttle",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/full-throttle-original.svg",
+        "portableSvg": "portable-svg/full-throttle-original.svg",
+        "png": "png/full-throttle-original.png",
+        "svgSha256": "e72cc09cf8de0fbeac00ac574405c0db7a4cb388efe2df65a0cb2ebdb630135d",
+        "portableSvgSha256": "ea56bb79e051542a85c2bb090ccb6b520593dee0856e3f4281fb5915ae7068bc",
+        "pngSha256": "5b42383be76df642baad297adc8979cae635b86dac4830e3d247a1d7c2784f72",
+        "pngBytes": 161158
+      },
+      "sourceModule": "scripts/icons/families/energy-expansion.mjs"
+    },
+    {
       "slug": "gatorade-lemon-lime",
       "family": "gatorade-contoured-bottle",
       "packageChoice": "US 28 fl oz / 828mL Gatorade Lemon Lime orange-capped contoured PET bottle; representative retail size for size-unspecified catalog row.",
@@ -1980,6 +2383,68 @@
         "pngBytes": 152250
       },
       "sourceModule": "scripts/icons/families/gatorade-batch.mjs"
+    },
+    {
+      "slug": "ghost-energy-cherry-limeade",
+      "family": "ghost-energy-can",
+      "packageChoice": "Representative US 16 fl oz / 473mL GHOST Cherry Limeade aluminum can, exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.meijer.com/shopping/product/-/81002829894",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0081002829894",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact retailer US 16oz Cherry Limeade can inspected: red main body, lime-green shoulder/base and cherry motif, outlined white vertical GHOST with small ghost character above, black/white ENERGY ZERO SUGAR badge at shoulder, dense tone-on-tone line doodles, Cherry Limeade near foot. Retail image annotations excluded."
+        }
+      ],
+      "uncertainty": "Catalog has no package size. Exact photographed package selected; label art, wordmarks, tiny claims and fine illustrations simplified as original vectors. Manufacturer pages were JS-only for exact flavor artwork; retailer front image used. Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "13af1ca1-463b-5184-874f-f1d667ef00b8",
+      "name": "Ghost Energy Cherry Limeade",
+      "brand": "Ghost Energy",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/ghost-energy-cherry-limeade.svg",
+        "portableSvg": "portable-svg/ghost-energy-cherry-limeade.svg",
+        "png": "png/ghost-energy-cherry-limeade.png",
+        "svgSha256": "5fadfa0bef235c7f3f3cc47fa9663411d12b6528ac4e9fc3be63081fa931d132",
+        "portableSvgSha256": "ccdbc200950307ee8eb82135d0eb2c6cc424ee866bb12c8f870c48bc9deee5b7",
+        "pngSha256": "6c2e2658e6b8f507307e677e7b537ddd7b4b9f1fe858fa05bdf8a8ddcbd1ea38",
+        "pngBytes": 135741
+      },
+      "sourceModule": "scripts/icons/families/energy-expansion.mjs"
+    },
+    {
+      "slug": "ghost-energy-sour-patch-kids-redberry",
+      "family": "ghost-energy-can",
+      "packageChoice": "Representative US 16 fl oz / 473mL GHOST Sour Patch Kids Redberry aluminum can, exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/ghost-zero-sugar-sour-patch-kids-redberry-energy-drink-can/0081002829329",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0081002829329",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact retailer US 16oz Sour Patch Kids Redberry can inspected: yellow main body, red shoulder/base, red candy-kid and black SOUR PATCH Kids mark, outlined white vertical GHOST with small ghost character above, black/white ENERGY ZERO SUGAR badge at shoulder, dense tone-on-tone line doodles, Sour Patch Kids Redberry near foot. Retail image annotations excluded."
+        }
+      ],
+      "uncertainty": "Catalog has no package size. Exact photographed package selected; label art, wordmarks, tiny claims and fine illustrations simplified as original vectors. Exact historical licensed SOUR PATCH Kids artwork retained. Dated supporting image source: https://consultgroup.co/wp-content/uploads/2024/02/2024-Consult-Group-Beverage-Catalogue-1.pdf ; not replaced with Sour Punch or Hydration. Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "a46484f3-a819-5baf-8deb-891eb8babe44",
+      "name": "Ghost Energy Sour Patch Kids Redberry",
+      "brand": "Ghost Energy",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/ghost-energy-sour-patch-kids-redberry.svg",
+        "portableSvg": "portable-svg/ghost-energy-sour-patch-kids-redberry.svg",
+        "png": "png/ghost-energy-sour-patch-kids-redberry.png",
+        "svgSha256": "623ef3523560dcd437b5a8be202ca2bc4913ad4ea81ab9b15914e70bf4e81ea6",
+        "portableSvgSha256": "41564edacdaf68cefba993d053a665b0696e59b3d4e97b53ad59904c40bdf86c",
+        "pngSha256": "33956bba2a6f0d8b5689e2fac6ff36aa3354be3ecc48f6345f8dbb136846fd06",
+        "pngBytes": 140147
+      },
+      "sourceModule": "scripts/icons/families/energy-expansion.mjs"
     },
     {
       "slug": "gold-peak-peach-tea",
@@ -2290,6 +2755,37 @@
         "pngBytes": 160304
       },
       "sourceModule": "scripts/icons/families/tea-expansion.mjs"
+    },
+    {
+      "slug": "guru-organic-energy-original",
+      "family": "guru-slim-can",
+      "packageChoice": "Representative US 12 fl oz / 355mL GURU Organic Original aluminum can, exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://guruenergy.com/en-us/collections/fees-products/products/guru-organic-energy-us",
+          "imageUrl": "https://guruenergy.com/cdn/shop/files/OG-355-1_a82de2e5-37d1-4e92-8f53-b3651c55c962.png?v=1769037637&width=1000",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact manufacturer US355mL/12oz Original can inspected: slim red can with white diagonal bold GURU and leaf marks, white GOOD ENERGY and ORIGINAL, fine organic-energy copy at foot, silver rims. Image named OG-355; explicit US product page and12oz size option used. USDA seal omitted rather than invented."
+        }
+      ],
+      "uncertainty": "Catalog has no package size. Exact photographed package selected; label art, wordmarks, tiny claims and fine illustrations simplified as original vectors.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "608ca5f9-d15f-5b9d-be8c-a2075e7f29db",
+      "name": "Guru Organic Energy Original",
+      "brand": "Guru Organic Energy",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/guru-organic-energy-original.svg",
+        "portableSvg": "portable-svg/guru-organic-energy-original.svg",
+        "png": "png/guru-organic-energy-original.png",
+        "svgSha256": "65442048d48d11161a69d5dca49b158eb36c5c190b8cc98cb068824a9a990fc0",
+        "portableSvgSha256": "4628f7e5c0696af420edcf3408cd2af6d49fb2d0ae8e63080c061bc92cb7e56a",
+        "pngSha256": "52b45658723728c37b6966444ca26d5fd3e1196d721e759779508093f0423da7",
+        "pngBytes": 92761
+      },
+      "sourceModule": "scripts/icons/families/energy-expansion.mjs"
     },
     {
       "slug": "horchata-traditional",
@@ -3725,6 +4221,37 @@
       "sourceModule": "scripts/icons/families/water-expansion.mjs"
     },
     {
+      "slug": "nos-original",
+      "family": "nos-energy-can",
+      "packageChoice": "Representative US 16 fl oz / 473mL NOS Original aluminum can, exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/nos-original-energy-drink-can/0081515402000",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0081515402000",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact retailer Original 16oz front can inspected: cyan/blue body, black shoulder with orange HIGH PERFORMANCE, huge vertical white angular NOS outlined black, orange vertical HIGH PERFORMANCE ENERGY DRINK at right; silver lid/base. No bottle-shaped NOS tank substituted. Manufacturer product grid was JS-only; documented exact retail can used."
+        }
+      ],
+      "uncertainty": "Catalog has no package size. Exact photographed package selected; label art, wordmarks, tiny claims and fine illustrations simplified as original vectors.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "8151a62a-6c91-5ec6-bbec-dcf8d5f30058",
+      "name": "NOS Original Energy Drink",
+      "brand": "NOS",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/nos-original.svg",
+        "portableSvg": "portable-svg/nos-original.svg",
+        "png": "png/nos-original.png",
+        "svgSha256": "6c9dce770e8aaa92bd541fcfc8c1f431d43cf96f13059235892be0db81b5e933",
+        "portableSvgSha256": "ef794d9536760384e224b1fbb908b6c558d8350f4449396009755d7b530d2f05",
+        "pngSha256": "1643c37b1f9ef0ff42a0827210f2e73ecaffb887d8f36d6e0b183efd3b5499b4",
+        "pngBytes": 118804
+      },
+      "sourceModule": "scripts/icons/families/energy-expansion.mjs"
+    },
+    {
       "slug": "generic-old-fashioned",
       "family": "unbranded-served-drink",
       "packageChoice": "Unbranded classic Old Fashioned over ice in etched rocks glass, orange/cherry garnish.",
@@ -4932,6 +5459,99 @@
         "pngBytes": 117110
       },
       "sourceModule": "scripts/icons/families/energy-variants.mjs"
+    },
+    {
+      "slug": "reign-melon-mania",
+      "family": "reign-energy-can",
+      "packageChoice": "Representative US 16 fl oz / 473mL REIGN MELON MANIA aluminum can, exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.homedepot.com/p/312154017",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0081515402164",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact earlier US 16oz MELON MANIA can photo independently inspected: matte/textured black body, #df2332/#54bd32 split crown/helmet emblem; #df2332 BCAA AMINOS on shoulder, large REIGN, white TOTAL BODY FUEL, matching flavor low on can. Black rim and colored pull tab. Manufacturer current lineup omits this flavor; exact earlier retail package retained, not substituted with a current gummy flavor."
+        }
+      ],
+      "uncertainty": "Catalog has no package size. Exact photographed package selected; label art, wordmarks, tiny claims and fine illustrations simplified as original vectors. Historical US product documented additionally in the 2024-08-29 commissary planogram https://prod.commissaries.com/filebrowser/download/10528?fid=10528 ; current availability unverified. Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "4e258698-4bf4-5dc1-aeec-1c504da19670",
+      "name": "Reign Total Body Fuel Melon Mania",
+      "brand": "Reign Total Body Fuel",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/reign-melon-mania.svg",
+        "portableSvg": "portable-svg/reign-melon-mania.svg",
+        "png": "png/reign-melon-mania.png",
+        "svgSha256": "6bee002bdbc7cf7077424a6edb7816dc3ba28f90d34d9b581434b87a02955f3f",
+        "portableSvgSha256": "183e6035160b2515517abb4d56c002692974d7ee888e34db061468a0a3247c89",
+        "pngSha256": "b26b404a8e07507f5b2fcaf77c38d89c6f84eab025046cac5bb6fe3e489fd5d3",
+        "pngBytes": 87000
+      },
+      "sourceModule": "scripts/icons/families/energy-expansion.mjs"
+    },
+    {
+      "slug": "reign-razzle-berry",
+      "family": "reign-energy-can",
+      "packageChoice": "Representative US 16 fl oz / 473mL REIGN RAZZLE BERRY aluminum can, exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.chefstore.com/p/reign-razzle-berry-energy-drink_9775714/",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0081515402166",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact earlier US 16oz RAZZLE BERRY can photo independently inspected: matte/textured black body, #02adc9/#7130b5 split crown/helmet emblem; #02adc9 BCAA AMINOS on shoulder, large REIGN, white TOTAL BODY FUEL, matching flavor low on can. Black rim and colored pull tab. Manufacturer current lineup omits this flavor; exact earlier retail package retained, not substituted with a current gummy flavor."
+        }
+      ],
+      "uncertainty": "Catalog has no package size. Exact photographed package selected; label art, wordmarks, tiny claims and fine illustrations simplified as original vectors. Historical US product documented additionally in the 2024-08-29 commissary planogram https://prod.commissaries.com/filebrowser/download/10528?fid=10528 ; current availability unverified. Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "63726174-9c40-57ac-9711-4ce09d5b4d32",
+      "name": "Reign Total Body Fuel Razzle Berry",
+      "brand": "Reign Total Body Fuel",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/reign-razzle-berry.svg",
+        "portableSvg": "portable-svg/reign-razzle-berry.svg",
+        "png": "png/reign-razzle-berry.png",
+        "svgSha256": "19d8ad9ad9327b9762ce17cfff094f188f31c508dc4819b02bdcff63f06c23ac",
+        "portableSvgSha256": "2c689eeb3a0a571687879d6706b5a1c7c29a135211e7ab407246c6c058e58321",
+        "pngSha256": "2da31c2aede965e991e5fb8acec6d2df22832548a669ff223b56ec030922e853",
+        "pngBytes": 88240
+      },
+      "sourceModule": "scripts/icons/families/energy-expansion.mjs"
+    },
+    {
+      "slug": "rockstar-original",
+      "family": "rockstar-energy-can",
+      "packageChoice": "Representative US 16 fl oz / 473mL Rockstar Original aluminum can, exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.rockstarenergy.com/products/the-original",
+          "imageUrl": "https://www.rockstarenergy.com/cdn/shop/files/1720545676-original_d4e37562-d26e-4fc8-a3b9-e9df99785b21.png?v=1761060858&width=1000",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact manufacturer US16oz The Original packshot inspected: black can, gold neck with black ORIGINAL, wraparound gold ROCKSTAR ENERGY DRINK, large outlined gold five-point star with mirrored-R emblem, gold SUSTAINS MIND-BODY ENERGY and gold footer. Selected The Original rather than separate Original O.G. throwback or24oz. Tiny footer seals omitted."
+        }
+      ],
+      "uncertainty": "Catalog has no package size. Exact photographed package selected; label art, wordmarks, tiny claims and fine illustrations simplified as original vectors.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "06d31bf1-d4e5-5488-b1ed-a0cd8d50c6d5",
+      "name": "Rockstar Original Energy Drink",
+      "brand": "Rockstar",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/rockstar-original.svg",
+        "portableSvg": "portable-svg/rockstar-original.svg",
+        "png": "png/rockstar-original.png",
+        "svgSha256": "46f32971b986f87ba89f5d9b95abc10ebf5c822028c324b6bd25b70846dcee28",
+        "portableSvgSha256": "c742de6983d79d99d5eca547ef2365daa6bbeffcbe5c007ae3102af4279e9f3d",
+        "pngSha256": "aa1d703f03aead2c2ed164713d21b94557e8c82665b6dbd5303b3e2fd1932943",
+        "pngBytes": 114867
+      },
+      "sourceModule": "scripts/icons/families/energy-expansion.mjs"
     },
     {
       "slug": "san-pellegrino-aranciata",
