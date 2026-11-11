@@ -203,6 +203,25 @@ describe("Bev'd it too on the Feed", () => {
   });
 });
 
+describe('a post in an older shape', () => {
+  it('draws without alsoBevdBy or alsoBevdCount, with no line, and the Feed stays up', async () => {
+    const getFeed = api.feed.getFeed.bind(api.feed);
+    // As a mock, a fixture or a post cached before contract 2.12.0 would have it.
+    jest.spyOn(api.feed, 'getFeed').mockImplementation(async (page) => {
+      const res = await getFeed(page);
+      return { ...res, items: res.items.map(({ alsoBevdBy: _a, alsoBevdCount: _c, ...old }) => old as FeedItem) };
+    });
+    const posts = (await getFeed({ limit: 20 })).items;
+    const withFriends = posts.find((p) => p.alsoBevdCount > 0)!;
+    expect(withFriends).toBeDefined();
+    await start();
+    await screen.findByTestId(`feed-post-${withFriends.id}`);
+    expect(alsoLine(withFriends)).toBeNull();
+    expect(screen.queryByText(/Bev'd it too/)).toBeNull();
+    expect(screen.getByText('Your feed')).toBeTruthy();
+  });
+});
+
 describe("Bev'd it too on a person's Activity", () => {
   it("passes the same line on the author's profile, relative to you", async () => {
     const posts = await seed();

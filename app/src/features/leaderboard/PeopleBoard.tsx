@@ -29,6 +29,23 @@ import { useAllPages, useToggleSet } from './useToggleSet';
 
 export type { PointsScope } from './pointsScope';
 
+/**
+ * The Friends rows while some are held (see `usePointsRanking`): the rows that were on screen at the
+ * press, in that order and with those ranks (each with the live row's data when it still has one, so
+ * a new name or photo shows), then every live row that isn't among them, in live order with its live
+ * rank. Later pages keep arriving after the held ones; until a refresh, a rank there can repeat one
+ * above it (the board below an unfollow has moved up by one).
+ */
+export function holdRows(held: readonly UserLeaderboardRow[], live: readonly UserLeaderboardRow[]): UserLeaderboardRow[] {
+  const liveById = new Map(live.map((r) => [r.profile.id, r]));
+  const heldIds = new Set(held.map((r) => r.profile.id));
+  const kept = held.map((h) => {
+    const now = liveById.get(h.profile.id);
+    return now ? { ...now, rank: h.rank } : h;
+  });
+  return [...kept, ...live.filter((r) => !heldIds.has(r.profile.id))];
+}
+
 /** "212 pts · 84 Bevs". */
 export function pointsMeta(points: number, bevsRanked: number): string {
   return `${formatCount(points)} pts · ${formatCount(bevsRanked)} ${bevsRanked === 1 ? 'Bev' : 'Bevs'}`;
@@ -61,6 +78,7 @@ export type PointsRankingItem =
  * `noFollows` — on Friends you follow nobody.
  */
 export type EmptyReason = 'everyone' | 'friends' | 'noFollows';
+type FriendsReason = Exclude<EmptyReason, 'everyone'>;
 
 export function isPointsRankingItem(item: { kind: string }): item is PointsRankingItem {
   return item.kind.startsWith('rank-');
@@ -118,9 +136,9 @@ function useBoardQuery(scope: PointsScope) {
  * suggestions in one FlashList, its only host.
  *
  * Friends changes with your follows. A follow or unfollow anywhere refetches it once the server has
- * it, but a press on one of its own rows holds the rows as they were (the unfollowed person stays,
- * now with Follow) until pull to refresh, a switch of scope, or a search, so a row never leaves from
- * under the finger that pressed it.
+ * it, but a press on one of its own rows holds the rows on screen as they were (the unfollowed person
+ * stays, now with Follow) until pull to refresh, a switch of scope, or a search, so a row never
+ * leaves from under the finger that pressed it. Paging goes on below them (`holdRows`).
  */
 export function usePointsRanking({ scope = DEFAULT_POINTS_SCOPE, header = null, active = true }: PointsRankingOptions = {}): PointsRanking {
   const { colors } = useTheme();
@@ -131,9 +149,9 @@ export function usePointsRanking({ scope = DEFAULT_POINTS_SCOPE, header = null, 
   const fresh = useMemo(() => flattenPages(query.data), [query.data]);
   const meId = me.data?.id;
   const [explainer, setExplainer] = useState(false);
-  // The Friends rows as they were when the reader pressed Follow on one of them (see above).
+  // The Friends rows that were on screen when the reader pressed Follow on one of them (see above).
   const [held, setHeld] = useState<UserLeaderboardRow[] | null>(null);
-  const rows = held ?? fresh;
+  const rows = useMemo(() => (held ? holdRows(held, fresh) : fresh), [held, fresh]);
 
   const following = useFollowing(meId);
   useAllPages(following);
@@ -153,10 +171,11 @@ export function usePointsRanking({ scope = DEFAULT_POINTS_SCOPE, header = null, 
 
   const followOnBoard = useCallback(
     (userId: string, isFollowing: boolean) => {
-      if (scope === 'friends') setHeld((h) => h ?? fresh);
+      // What is on screen now; a second press keeps the first hold, plus any page that came since.
+      if (scope === 'friends') setHeld(rows);
       toggleFollow(userId, isFollowing);
     },
-    [scope, fresh, toggleFollow],
+    [scope, rows, toggleFollow],
   );
 
   // Unknown until the list first reports what's on screen, so the pinned row never flashes over a
@@ -174,11 +193,15 @@ export function usePointsRanking({ scope = DEFAULT_POINTS_SCOPE, header = null, 
     setHeld(null);
   }
 
-  // With no rows, which empty state. While the Friends board refetches (after a follow, say) the last
-  // answer stands, so the Following list landing first can't flash the other one.
-  const settledReason = useRef<EmptyReason>('friends');
-  if (scope === 'friends' && !query.isFetching && followingKnown) settledReason.current = followsNobody ? 'noFollows' : 'friends';
-  const emptyReason: EmptyReason = scope === 'everyone' ? 'everyone' : settledReason.current;
+  // With no rows, which empty state on Friends. Decided only once the board and your Following list
+  // have both settled; while the board refetches (after a follow, say) the last answer stands, so the
+  // Following list landing first can't flash the other one. Kept in state, adjusted while rendering
+  // (as above), so every render of one commit agrees.
+  const settledReason: FriendsReason | null =
+    scope === 'friends' && !query.isFetching && followingKnown ? (followsNobody ? 'noFollows' : 'friends') : null;
+  const [friendsReason, setFriendsReason] = useState<FriendsReason>(settledReason ?? 'friends');
+  if (settledReason && settledReason !== friendsReason) setFriendsReason(settledReason);
+  const emptyReason: EmptyReason = scope === 'everyone' ? 'everyone' : (settledReason ?? friendsReason);
   const meIdRef = useRef(meId);
   meIdRef.current = meId;
   // Stable for FlashList; reads the id through a ref.
@@ -250,7 +273,9 @@ export function usePointsRanking({ scope = DEFAULT_POINTS_SCOPE, header = null, 
 
   // Your row as the board has it, else from your stats (you may be past the loaded pages). The
   // stats rank is your rank among everyone, so it only stands in on that board: on Friends, with no
-  // row of your own (you haven't ranked a Bev), nothing is pinned.
+  // row of your own (you haven't ranked a Bev), nothing is pinned. Nor is it for a ranked caller
+  // beyond the loaded Friends pages, until they page to their row: the contract has no Friends rank
+  // in your stats to stand in.
   const ownRow = rows.find((r) => r.profile.id === meId);
   const ownStats = scope === 'everyone' ? stats.data : undefined;
   const pinned =

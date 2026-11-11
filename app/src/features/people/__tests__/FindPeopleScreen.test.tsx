@@ -807,7 +807,63 @@ describe('Friends | Everyone', () => {
   });
 });
 
+describe('Friends paging while rows are held', () => {
+  it('a press on a first-page row holds those rows, and the second page still arrives below them', async () => {
+    const original = api.leaderboard.friends.bind(api.leaderboard);
+    const PAGE = 3;
+    // Page two is slow, so it lands after the press.
+    const SLOW_PAGE_MS = 300;
+    // The real (fake) board, cut into two pages of the live data at the time of each call.
+    const spy = jest.spyOn(api.leaderboard, 'friends').mockImplementation(async (page) => {
+      const all = (await original()).items;
+      if (!page?.cursor) return { items: all.slice(0, PAGE), nextCursor: all.length > PAGE ? 'f2' : null };
+      await new Promise((resolve) => setTimeout(resolve, SLOW_PAGE_MS));
+      return { items: all.slice(PAGE), nextCursor: null };
+    });
+    const before = (await original()).items;
+    const firstPage = asShown(before.slice(0, PAGE));
+    expect(before.length).toBeGreaterThan(PAGE);
+    const target = before[1]!.profile; // friend_b, on the first page
+
+    await start();
+    await waitFor(() => expect(boardOnScreen()).toEqual(firstPage));
+    // The list asks for page two by itself (no layout in Jest); it is still on its way.
+    await waitFor(() => expect(spy).toHaveBeenCalledWith(expect.objectContaining({ cursor: 'f2' })));
+
+    const button = () => screen.getByLabelText(`Follow ${target.displayName}`);
+    await fireEvent.press(button());
+    await waitFor(() => expect(button().props['aria-pressed']).toBe(false));
+    await waitFor(async () => expect((await api.profile.getUser(target.id)).isFollowing).toBe(false));
+
+    // The live board without friend_b; whatever wasn't on screen at the press comes after the held rows.
+    const live = (await original()).items;
+    const held = new Set(before.slice(0, PAGE).map((r) => r.profile.id));
+    const expected = [...firstPage, ...asShown(live.filter((r) => !held.has(r.profile.id)))];
+    await waitFor(() => expect(boardOnScreen()).toEqual(expected));
+    expect(expected.length).toBeGreaterThan(PAGE);
+    // The held rows did not move, and friend_b is still there, now with Follow.
+    expect(boardOnScreen().slice(0, PAGE)).toEqual(firstPage);
+    expect(button().props['aria-pressed']).toBe(false);
+    await settled();
+    expect(boardOnScreen()).toEqual(expected);
+
+    // Pull to refresh lets go: the live board, both pages.
+    await act(async () => list().props.onRefresh());
+    await waitFor(() => expect(boardOnScreen()).toEqual(asShown(live)));
+  });
+});
+
 describe('Suggested for you: who you follow already follows them', () => {
+  it('draws a suggestion without followedBy or followedByCount (an older shape) with no context line', async () => {
+    const [first] = await api.follows.suggested();
+    const { followedBy: _a, followedByCount: _b, ...bare } = first!;
+    jest.spyOn(api.follows, 'suggested').mockResolvedValue([bare as SuggestedProfile]);
+    await start();
+    expect(await screen.findByLabelText(rowLabel(bare))).toBeTruthy();
+    expect(screen.queryByText(/^Followed by/)).toBeNull();
+    expect(screen.getByText(SUGGESTED_TITLE)).toBeTruthy();
+  });
+
   it('says so on each suggestion, by display name', async () => {
     const suggestions = await api.follows.suggested();
     // The fixtures: two people you don't follow, followed by two and by one of the people you do.

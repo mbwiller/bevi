@@ -109,7 +109,9 @@ export function FindPeopleScreen() {
       out.push({ kind: 'suggested-header', key: 'suggested-header', more });
       const shown = more ? suggestions.slice(0, SUGGESTED_PREVIEW) : suggestions;
       for (const row of shown) {
-        out.push({ kind: 'person', key: `s:${row.id}`, row, context: followedByContext(row.followedBy, row.followedByCount) });
+        // Defaulted, like FeedPostItem's alsoBevdBy, so a row in an older shape can't take People down.
+        const context = followedByContext(row.followedBy ?? [], row.followedByCount ?? 0);
+        out.push({ kind: 'person', key: `s:${row.id}`, row, context });
       }
     }
     return [...out, ...ranking.items];
