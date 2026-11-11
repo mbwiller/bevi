@@ -625,8 +625,13 @@ describe('the VenueSheet', () => {
 describe('the filters', () => {
   it('feed venues.inView in canonical form (empty means no filter)', async () => {
     const inView = jest.spyOn(api.venues, 'inView');
-    await renderMap({ filters: { priceTiers: [2, 1], kinds: [], categoryIds: ['coffee'], openNow: true } });
-    expect(inView).toHaveBeenCalledWith(expect.objectContaining({ filters: { categoryIds: ['coffee'], priceTiers: [1, 2], openNow: true } }));
+    // Not `renderMap`: it waits for a pin, and with `openNow` on, whether the fake has one depends on
+    // the wall clock (its coffee venue closes at 19:00 New York time), so this failed every evening.
+    // What is under test is the request, so wait for that.
+    await render(ui({ filters: { priceTiers: [2, 1], kinds: [], categoryIds: ['coffee'], openNow: true } }));
+    await waitFor(() =>
+      expect(inView).toHaveBeenCalledWith(expect.objectContaining({ filters: { categoryIds: ['coffee'], priceTiers: [1, 2], openNow: true } })),
+    );
     // The pills say what is on.
     expect(screen.getByLabelText('Filters, 3 on')).toBeTruthy();
     expect(screen.getByLabelText('Category: Coffee')).toBeTruthy();
