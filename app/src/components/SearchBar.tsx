@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, TextInput, type StyleProp, type TextInputProps, type ViewStyle } from 'react-native';
 
 import { radius, spacing, type, useTheme } from '@/theme';
 
@@ -21,12 +21,18 @@ export interface SearchBarProps {
   onSubmit?: (v: string) => void;
   /** The field took focus (the Search tab opens its results panel). */
   onFocus?: () => void;
-  /** The field lost focus (Add Bev hides its Cancel when the bar is also empty). */
-  onBlur?: () => void;
+  /**
+   * The field lost focus (Add Bev hides its Cancel when the bar is also empty). On the web the event's
+   * `nativeEvent.relatedTarget` is the element taking focus, if any.
+   */
+  onBlur?: (e: SearchBarBlurEvent) => void;
   /** The input's DOM id on web. */
   id?: string;
   style?: StyleProp<ViewStyle>;
 }
+
+/** The TextInput's blur event, passed through to `onBlur`. */
+export type SearchBarBlurEvent = Parameters<NonNullable<TextInputProps['onBlur']>>[0];
 
 const HEIGHT = { filled: 36, outlined: 48 } as const;
 const CLEAR = 32;
@@ -92,9 +98,9 @@ export function SearchBar({
           setFocused(true);
           onFocus?.();
         }}
-        onBlur={() => {
+        onBlur={(e) => {
           setFocused(false);
-          onBlur?.();
+          onBlur?.(e);
         }}
         // Web: a Search return key, no autocorrect or capitalisation. No inputMode="search": react-native-web
         // turns it into type="search", whose WebKit cancel button would double up with our clear button.

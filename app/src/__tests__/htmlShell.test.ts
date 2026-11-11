@@ -154,6 +154,16 @@ describe('the centred column on a wide viewport', () => {
     expect(rule(block(`${wide} {`), ':where(body > div:not([id]):not([class])) > *')).toContain('pointer-events: auto;');
   });
 
+  it("keeps the iOS edge strip (an iPad home-screen install is wide too) to the column, after the strip's own rules", () => {
+    const light = block(`${wide} {`);
+    const strip = rule(light, '#edge-strip');
+    for (const decl of ['left: 0;', 'right: 0;', `max-width: ${COLUMN_MAX_WIDTH}px;`, 'margin: 0 auto;']) expect(strip).toContain(decl);
+    // It never shows the strip itself: display stays with the iOS standalone rules.
+    expect(strip).not.toContain('display');
+    // Later in the sheet than the strip's own position rules, so it wins at the same specificity.
+    expect(css.indexOf(`${wide} {`)).toBeGreaterThan(css.indexOf('@supports (-webkit-touch-callout: none) {'));
+  });
+
   it('matches neither #root nor #edge-strip with the portal selector (both have ids)', () => {
     expect(html).toMatch(/<div id="edge-strip"[^>]*><\/div>\s*<div id="root"><\/div>/);
   });

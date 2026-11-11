@@ -24,13 +24,16 @@ function dateOf(winner: PeriodWinner, period: BevOfPeriodKind): string | undefin
 }
 
 /**
- * The row's cards. When the same Bev won the day and the week it is one `both` card, never the same Bev
- * twice side by side. Its date is the day's when the day is an earlier one (that day lies in the week
- * that also won, and is the more exact of the two), else the week's; with both current, none.
+ * The row's cards. When the same Bev won the day and the week, and both wins are current or both are
+ * from earlier periods, it is one `both` card. Both current: no date. Both earlier: the day's date, the
+ * more exact of the two (the last day anything was ranked lies in the last week anything was).
+ * When only one of the two wins is current, a single card could not say which period its date belongs
+ * to ("Bev of the day and week, Week of Oct 12" reads as if the day were old), so the row keeps its
+ * usual two cards, each with its own label and date.
  */
 export function bevOfPeriodCards(day: PeriodWinner | null, week: PeriodWinner | null): Card[] {
-  if (day && week && day.bev.id === week.bev.id) {
-    return [{ period: 'both', winner: day, date: dateOf(day, 'day') ?? dateOf(week, 'week') }];
+  if (day && week && day.bev.id === week.bev.id && day.isCurrent === week.isCurrent) {
+    return [{ period: 'both', winner: day, date: dateOf(day, 'day') }];
   }
   return PERIODS.flatMap((period) => {
     const winner = period === 'day' ? day : week;

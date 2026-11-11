@@ -12,7 +12,7 @@ import { controls } from '@/testing/fakeApi';
 
 import { POPULAR_COUNT } from '../popular';
 import { ADD_NEW, POPULAR_TITLE } from '../SearchPanel';
-import { SEARCH_PLACEHOLDER, SEARCH_TITLE } from '../SearchScreen';
+import { CANCEL_SETTLE_MS, SEARCH_PLACEHOLDER, SEARCH_TITLE } from '../SearchScreen';
 
 const mockPush = jest.fn();
 const mockSetParams = jest.fn();
@@ -198,29 +198,108 @@ describe('the screen', () => {
       expect(cancel()).toBeTruthy();
     });
 
-    it('is still pressable: the blur its own press causes does not hide it first', async () => {
+    /** A web blur's event, whose `relatedTarget` (the element taking focus) sits inside the element with `id`. */
+    const focusTo = (id: string | null) => ({
+      nativeEvent: { relatedTarget: id ? { closest: (selector: string) => (selector === `#${id}` ? {} : null) } : null },
+    });
+    const wrapper = () => screen.getByTestId('search-cancel');
+    const afterSettle = () => act(() => new Promise((r) => setTimeout(r, CANCEL_SETTLE_MS + 20)));
+
+    it('is still pressable: the blur its own press causes does not hide it first, and it lands once', async () => {
       const dismiss = jest.spyOn(Keyboard, 'dismiss');
       await renderSearch();
       await screen.findByText(POPULAR_TITLE);
       await fireEvent(bar(), 'focus');
-      // A real press: pointer down on Cancel, the bar blurs, then the press lands.
-      await fireEvent(screen.getByTestId('search-cancel'), 'pointerDown');
-      await fireEvent(bar(), 'blur');
+      // A real press: pointer down on Cancel, the bar blurs, pointer up, then the press lands.
+      await fireEvent(wrapper(), 'pointerDown');
+      await fireEvent(bar(), 'blur', focusTo(null));
+      expect(cancel()).toBeTruthy();
+      await fireEvent(wrapper(), 'pointerUp');
       expect(cancel()).toBeTruthy();
       await fireEvent.press(cancel()!);
       expect(dismiss).toHaveBeenCalledTimes(1);
       expect(cancel()).toBeNull();
       expect(bar().props.value).toBe('');
+      // The settle timer the pointer up started does nothing more.
+      await afterSettle();
+      expect(dismiss).toHaveBeenCalledTimes(1);
+      expect(cancel()).toBeNull();
     });
 
-    it('only the blur right after its pointer down is spared: the next one hides it', async () => {
+    it('a touch press (pointer up, then leave, then the press) still lands once', async () => {
+      const dismiss = jest.spyOn(Keyboard, 'dismiss');
       await renderSearch();
       await fireEvent(bar(), 'focus');
-      await fireEvent(screen.getByTestId('search-cancel'), 'pointerDown');
-      await fireEvent(bar(), 'blur');
-      // The press was dragged off and never landed. Focusing and leaving the bar again hides Cancel.
+      await fireEvent(wrapper(), 'pointerDown');
+      await fireEvent(bar(), 'blur', focusTo(null));
+      await fireEvent(wrapper(), 'pointerUp');
+      await fireEvent(wrapper(), 'pointerLeave');
+      expect(cancel()).toBeTruthy();
+      await fireEvent.press(cancel()!);
+      expect(dismiss).toHaveBeenCalledTimes(1);
+      expect(cancel()).toBeNull();
+    });
+
+    it('a press dragged off and released elsewhere: once it settles, the empty, blurred bar has no Cancel', async () => {
+      const dismiss = jest.spyOn(Keyboard, 'dismiss');
+      await renderSearch();
       await fireEvent(bar(), 'focus');
-      await fireEvent(bar(), 'blur');
+      await fireEvent(wrapper(), 'pointerDown');
+      await fireEvent(bar(), 'blur', focusTo(null));
+      await fireEvent(wrapper(), 'pointerLeave');
+      expect(cancel()).toBeTruthy();
+      await afterSettle();
+      expect(cancel()).toBeNull();
+      // Nothing was pressed.
+      expect(dismiss).not.toHaveBeenCalled();
+    });
+
+    it('a cancelled pointer (a scroll took it) hides Cancel at once', async () => {
+      await renderSearch();
+      await fireEvent(bar(), 'focus');
+      await fireEvent(wrapper(), 'pointerDown');
+      await fireEvent(bar(), 'blur', focusTo(null));
+      await fireEvent(wrapper(), 'pointerCancel');
+      expect(cancel()).toBeNull();
+    });
+
+    it('an abandoned press with text in the bar keeps Cancel', async () => {
+      await renderSearch();
+      await fireEvent(bar(), 'focus');
+      await type('co');
+      await fireEvent(wrapper(), 'pointerDown');
+      await fireEvent(bar(), 'blur', focusTo(null));
+      await fireEvent(wrapper(), 'pointerCancel');
+      expect(cancel()).toBeTruthy();
+    });
+
+    it('keyboard: Tab from the empty bar lands on Cancel, which stays until focus moves on', async () => {
+      await renderSearch();
+      await fireEvent(bar(), 'focus');
+      // Tab: the bar blurs toward Cancel, and Cancel takes focus.
+      await fireEvent(bar(), 'blur', focusTo('search-cancel'));
+      expect(cancel()).toBeTruthy();
+      await fireEvent(wrapper(), 'focus');
+      expect(cancel()).toBeTruthy();
+      // Shift+Tab back to the bar: still up.
+      await fireEvent(wrapper(), 'blur', focusTo('search-q'));
+      await fireEvent(bar(), 'focus');
+      expect(cancel()).toBeTruthy();
+      // Tab to Cancel, then on past it: gone.
+      await fireEvent(bar(), 'blur', focusTo('search-cancel'));
+      await fireEvent(wrapper(), 'focus');
+      await fireEvent(wrapper(), 'blur', focusTo(null));
+      expect(cancel()).toBeNull();
+    });
+
+    it('keyboard: Enter on the focused Cancel resets the bar once', async () => {
+      const dismiss = jest.spyOn(Keyboard, 'dismiss');
+      await renderSearch();
+      await fireEvent(bar(), 'focus');
+      await fireEvent(bar(), 'blur', focusTo('search-cancel'));
+      await fireEvent(wrapper(), 'focus');
+      await fireEvent.press(cancel()!);
+      expect(dismiss).toHaveBeenCalledTimes(1);
       expect(cancel()).toBeNull();
     });
   });

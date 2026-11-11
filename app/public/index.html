@@ -97,7 +97,10 @@
          The transform also makes it a stacking context, so it takes the Modal's own z-index (9999) to stay above
          #root's positioned layers. A closed Sheet keeps an empty portal, which must not catch clicks: pointer-events
          is none on the portal and auto on what it holds, at zero specificity (:where) so react-native-web's own
-         pointer-events classes still win. */
+         pointer-events classes still win.
+         #edge-strip only shows in an iOS home-screen install in portrait, which an iPad also is: there it keeps to the
+         column too, so its opaque surface doesn't band across the margins. This block comes after the strip's own rules,
+         so its left, right and margin win; it never shows the strip anywhere it is hidden. */
       @media (min-width: 481px) and (min-height: 481px) {
         html,
         body {
@@ -123,6 +126,12 @@
         }
         :where(body > div:not([id]):not([class])) > * {
           pointer-events: auto;
+        }
+        #edge-strip {
+          left: 0;
+          right: 0;
+          max-width: 480px;
+          margin: 0 auto;
         }
       }
       @media (min-width: 481px) and (min-height: 481px) and (prefers-color-scheme: dark) {
