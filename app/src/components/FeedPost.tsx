@@ -121,6 +121,13 @@ export const DOUBLE_TAP_MS = 300;
 /** A person as the post names them: the first name, else the handle. */
 const firstName = (p: Pick<Profile, 'displayName' | 'handle'>) => p.displayName.split(' ')[0] || `@${p.handle}`;
 
+/**
+ * Between the brand and the time on the meta line: " · " with non-breaking spaces. The time starts
+ * its own text box, and the web collapses an ordinary space at the start of a box, which would
+ * print "Brand· 5 hours ago". A screen reader reads a non-breaking space as a space.
+ */
+export const META_SEPARATOR = ' · ';
+
 /** The meta line's parts, "Brand · 5 hours ago": the brand (the category's name with no brand), then the relative time. */
 function metaParts(bev: BevSummary, categoryLabel: string | undefined, time: string | undefined): { brand: string; when: string } {
   return { brand: bev.brand || categoryLabel || '', when: time ? formatRelativeTime(time) : '' };
@@ -285,7 +292,7 @@ export function FeedPost({
               ) : null}
               {meta.when ? (
                 <Text style={[type.body, styles.keep, secondary]} numberOfLines={1} testID="post-meta-when">
-                  {meta.brand ? ' · ' : ''}
+                  {meta.brand ? META_SEPARATOR : ''}
                   {/* Its own node, the exact relative time. */}
                   <Text>{meta.when}</Text>
                 </Text>

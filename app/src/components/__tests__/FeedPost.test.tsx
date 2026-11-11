@@ -23,8 +23,10 @@ const PRIYA = { displayName: 'Priya Rao', handle: 'priya', avatarUrl: 'https://e
 const SAM = { displayName: 'Sam Okafor', handle: 'sam', avatarUrl: null };
 
 const FIVE_HOURS_AGO = () => new Date(Date.now() - 5 * 3_600_000).toISOString();
+/** Non-breaking spaces around the meta line's dot: an ordinary space at the start of the time's box collapses on the web. */
+const SEP = '\u00A0·\u00A0';
 /** The meta line under the sentence, as it reads: the brand, then the time. */
-const META = 'Tacos El Gordo · 5 hours ago';
+const META = `Tacos El Gordo${SEP}5 hours ago`;
 /** The time on the meta line: its own text node, plain text, so a double-tap target. */
 const WHEN = '5 hours ago';
 /** Every string under a node, in render order: what the line reads as. */
@@ -80,6 +82,10 @@ describe('the head', () => {
     const line = screen.getByTestId('post-meta');
     // It reads as one line, in order, as it did when it was a single text.
     expect(textOf(line)).toBe(META);
+    // A screen reader hears a non-breaking space as a space: "Tacos El Gordo · 5 hours ago".
+    expect(textOf(line).replace(/ /g, ' ')).toBe('Tacos El Gordo · 5 hours ago');
+    // The time's box starts with no ordinary space for the web to collapse ("Tacos El Gordo· 5 hours ago").
+    expect(textOf(screen.getByTestId('post-meta-when'))).toMatch(/^ · /);
     const meta = within(line);
     // The time is its own node with the exact relative time.
     expect(meta.getByText(WHEN)).toBeTruthy();
@@ -98,8 +104,8 @@ describe('the head', () => {
     const whenNode = screen.getByTestId('post-meta-when');
     expect(flat(whenNode.props.style).flexShrink).toBe(0);
     expect(within(whenNode).getByText(WHEN)).toBeTruthy();
-    expect(textOf(whenNode)).toBe(` · ${WHEN}`);
-    expect(textOf(screen.getByTestId('post-meta'))).toBe(`${brand} · ${WHEN}`);
+    expect(textOf(whenNode)).toBe(`${SEP}${WHEN}`);
+    expect(textOf(screen.getByTestId('post-meta'))).toBe(`${brand}${SEP}${WHEN}`);
   });
 
   it('the time alone when there is neither a brand nor a category', async () => {
@@ -114,7 +120,7 @@ describe('the head', () => {
     expect(screen.getByText('Tacos El Gordo')).toBeTruthy();
     expect(screen.queryByText(/\$/)).toBeNull();
     await rerender(<FeedPost actor={ARJUN} bev={{ ...BEV, brand: null }} score={9.5} time={FIVE_HOURS_AGO()} />);
-    expect(textOf(screen.getByTestId('post-meta'))).toBe(`Other · ${WHEN}`);
+    expect(textOf(screen.getByTestId('post-meta'))).toBe(`Other${SEP}${WHEN}`);
   });
 });
 
