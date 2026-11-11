@@ -158,6 +158,34 @@ describe('the screen', () => {
     expect(await screen.findByText(POPULAR_TITLE)).toBeTruthy();
   });
 
+  it('Cancel shows only while the bar is in use; it clears the query and puts the keyboard away', async () => {
+    const dismiss = jest.spyOn(Keyboard, 'dismiss');
+    const cancel = () => screen.queryByRole('button', { name: 'Cancel' });
+    await renderSearch();
+    await screen.findByText(POPULAR_TITLE);
+    expect(cancel()).toBeNull();
+
+    await fireEvent(bar(), 'focus');
+    expect(cancel()).toBeTruthy();
+    await type('coke');
+    await screen.findAllByLabelText(/^Rank /);
+    expect(cancel()).toBeTruthy();
+
+    await fireEvent.press(cancel()!);
+    expect(bar().props.value).toBe('');
+    expect(dismiss).toHaveBeenCalledTimes(1);
+    expect(cancel()).toBeNull();
+    expect(await screen.findByText(POPULAR_TITLE)).toBeTruthy();
+  });
+
+  it('typing without a focus event still shows Cancel; the Add Bev tab press hides it again', async () => {
+    await renderSearch();
+    await type('co');
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy();
+    await act(async () => mockTab.listeners.forEach((l) => l()));
+    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+  });
+
   it('Snap it opens the create-Bev wizard', async () => {
     await renderSearch();
     await fireEvent.press(screen.getByLabelText('Snap it: add a Bev from a photo'));

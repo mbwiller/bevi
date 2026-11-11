@@ -62,35 +62,63 @@ describe('session gate', () => {
   });
 });
 
+const SEARCH_BAR = 'Search a Bev or a person';
+
 describe('tab bar', () => {
-  it("Feed's Find people opens Search with the results panel up", async () => {
-    const path = await start('ready', '/feed');
-    await fireEvent.press(await screen.findByLabelText('Find people'));
+  it('/add is the Add Bev tab: "Add a Bev", the bar, no map and no Cancel', async () => {
+    const path = await start('ready', '/add');
+    expect(await screen.findByRole('heading', { name: 'Add a Bev' })).toBeTruthy();
     expect(path()).toBe('/add');
-    expect(await screen.findByRole('button', { name: 'Cancel' })).toBeTruthy();
+    expect(screen.getByLabelText(SEARCH_BAR)).toBeTruthy();
+    expect(screen.getByLabelText('Add Bev').props.accessibilityState).toEqual({ selected: true });
+    expect(screen.queryByText('Map unavailable right now')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+    expect(screen.queryByLabelText('Close')).toBeNull();
   });
 
-  it('pressing the Search tab while it shows closes the results panel', async () => {
-    const path = await start('ready', '/add?tab=people');
-    expect(await screen.findByRole('button', { name: 'Cancel' })).toBeTruthy();
-    await fireEvent.press(screen.getByLabelText('Search'));
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull());
+  it('pressing the Add Bev tab while it shows clears the query and hides Cancel', async () => {
+    const path = await start('ready', '/add');
+    const bar = await screen.findByLabelText(SEARCH_BAR);
+    await fireEvent.changeText(bar, 'coke');
+    expect(screen.getByLabelText(SEARCH_BAR).props.value).toBe('coke');
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText('Add Bev'));
+    await waitFor(() => expect(screen.getByLabelText(SEARCH_BAR).props.value).toBe(''));
+    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
     expect(path()).toBe('/add');
   });
 
-  it('/search is the Search tab', async () => {
+  it('Cancel on /add shows while typing, and clears the query and itself', async () => {
+    const path = await start('ready', '/add');
+    const bar = await screen.findByLabelText(SEARCH_BAR);
+    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+    await fireEvent.changeText(bar, 'coke');
+    await fireEvent.press(screen.getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.getByLabelText(SEARCH_BAR).props.value).toBe(''));
+    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+    expect(path()).toBe('/add');
+  });
+
+  it('?focus=1 focuses the Add Bev bar', async () => {
+    const path = await start('ready', '/add?focus=1');
+    await waitFor(() => expect(screen.getByLabelText(SEARCH_BAR).props.autoFocus).toBe(true));
+    expect(path()).toBe('/add');
+  });
+
+  it('/search is the Add Bev tab', async () => {
     const path = await start('ready', '/search');
-    expect(await screen.findByText('Map unavailable right now')).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Add a Bev' })).toBeTruthy();
     expect(path()).toBe('/add');
-    expect(screen.getByLabelText('Search').props.accessibilityState).toEqual({ selected: true });
+    expect(screen.getByLabelText('Add Bev').props.accessibilityState).toEqual({ selected: true });
+    expect(screen.queryByText('Map unavailable right now')).toBeNull();
   });
 
-  it('navigates between tabs and marks the current one', async () => {
+  it('navigates between the five tabs and marks the current one', async () => {
     const path = await start('ready', '/feed');
     for (const [label, pathname] of [
-      ['Leaderboard', '/leaderboard'],
-      ['Your Lists', '/lists'],
-      ['Search', '/add'],
+      ['Lists', '/lists'],
+      ['Add Bev', '/add'],
+      ['Map', '/map'],
       ['Profile', '/profile'],
       ['Feed', '/feed'],
     ] as const) {
