@@ -2,7 +2,7 @@ import type { FeedItem, Profile } from '@bevi/shared';
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { FeedPost } from '@/components/FeedPost';
+import { FeedPost, POST_AVATAR } from '@/components/FeedPost';
 import { spacing, type, useTheme } from '@/theme';
 
 export interface FeedPostItemProps {
@@ -23,12 +23,10 @@ export interface FeedPostItemProps {
   onOpenActor?: () => void;
 }
 
-/** FeedPost draws a 60pt avatar at the post's top-left padding; the actor target sits over it. */
-const AVATAR = 60;
-
 /**
  * One feed post. FeedPost has no actor handler yet (see the PR's contract/component gaps), so a
- * 60pt transparent target over the avatar opens the actor's profile. The divider is drawn here so a
+ * transparent target over its avatar (`POST_AVATAR`, 44pt, at the post's top-left padding) opens
+ * the actor's profile. The divider is drawn here so a
  * like error sits inside the post, above it.
  */
 export const FeedPostItem = memo(function FeedPostItem({
@@ -78,7 +76,7 @@ export const FeedPostItem = memo(function FeedPostItem({
 /** The actor link's accessible name: "Friend A, @friend_a". */
 export const actorLabel = (actor: Pick<Profile, 'displayName' | 'handle'>) => `${actor.displayName}, @${actor.handle}`;
 
-/** The 60pt transparent target over a FeedPost's avatar that opens the actor's profile. Inside the post's wrapper View. */
+/** The transparent target over a FeedPost's avatar that opens the actor's profile. Inside the post's wrapper View. */
 export function ActorLink({ label, onPress }: { label: string; onPress: () => void }) {
   return <Pressable onPress={onPress} accessibilityRole="link" accessibilityLabel={label} style={styles.actor} />;
 }
@@ -86,5 +84,5 @@ export function ActorLink({ label, onPress }: { label: string; onPress: () => vo
 const styles = StyleSheet.create({
   item: { borderBottomWidth: 1 },
   error: { paddingHorizontal: spacing.gutter, paddingBottom: spacing.md },
-  actor: { position: 'absolute', top: spacing.lg, left: spacing.gutter, width: AVATAR, height: AVATAR, borderRadius: AVATAR / 2 },
+  actor: { position: 'absolute', top: spacing.lg, left: spacing.gutter, width: POST_AVATAR, height: POST_AVATAR, borderRadius: POST_AVATAR / 2 },
 });
