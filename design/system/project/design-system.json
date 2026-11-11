@@ -467,8 +467,8 @@
   },
   "lastChange": {
     "by": "Matt Willer",
-    "at": "2026-11-11T19:45:13Z",
-    "via": "Claude Code (re-sync from mbwiller/bevi main @ bd28651)",
-    "note": "Navigation redesign (#185): TabBar (Feed, Lists, Add Bev, Map, Profile), ScreenAddBev, ScreenPeople, ScreenMap, FindBevArt, compact BevRow (size-row-min 94), the new FeedPost, UserRow context, BevOfCard both, Press / Arrive / Change / Move motion. Also carries the M-16 map components (#169, now parked) and the gut check's Levels rings (#175, BevGlow removed)."
+    "at": "2026-11-11T21:32:23Z",
+    "via": "Claude Code (re-sync from mbwiller/bevi main @ 3dc2222)",
+    "note": "FeedPost guidance (#190): a plain post with no handlers has no action row; Explore's Follow pill gives it one again."
   }
 }
