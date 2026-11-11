@@ -1,7 +1,8 @@
 import type { BevSummary } from '@bevi/shared';
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 
-import { MAX_FONT_SCALE_DENSE } from '@/theme';
+import { MAX_FONT_SCALE_DENSE, size, spacing } from '@/theme';
 
 import { BevRow } from '../BevRow';
 
@@ -81,4 +82,34 @@ it('shows the rating count in the meta line only when there is no meta', async (
   expect(screen.queryByText(/ratings?$/)).toBeNull();
   await rerender(<BevRow bev={BEV} score={null} scoreVariant="locked" count={362} />);
   expect(screen.getByText('362 ratings')).toBeTruthy();
+});
+
+const footOf = () => screen.getByText('Ranked Oct 3').parent!;
+
+it('puts the foot under the text column with an image and across the full row without one', async () => {
+  const { rerender } = await render(<BevRow bev={BEV} meta="Ranked Oct 3" onRank={() => {}} />);
+  const noImage = StyleSheet.flatten(footOf().props.style);
+  expect(noImage.minHeight).toBe(32);
+  expect(noImage.paddingLeft ?? 0).toBe(0);
+  await rerender(<BevRow bev={BEV} showImage meta="Ranked Oct 3" onRank={() => {}} />);
+  const withImage = StyleSheet.flatten(footOf().props.style);
+  // Indented past the 56pt image and the gap, so it lines up with the name.
+  expect(withImage.paddingLeft).toBe(56 + spacing.md);
+});
+
+it('keeps 44pt targets on the actions inside the 32pt foot line', async () => {
+  await render(<BevRow bev={BEV} meta="Ranked Oct 3" onRank={() => {}} onSave={() => {}} />);
+  for (const name of ['Rank Diet Coke', 'Save to Want to Try']) {
+    const style = StyleSheet.flatten(screen.getByRole('button', { name }).props.style);
+    expect(style.minWidth).toBe(size.target);
+    expect(style.minHeight).toBe(size.target);
+  }
+  // The wrapper overhangs the foot line by 6pt top and bottom instead of using hitSlop.
+  const actions = screen.getByRole('button', { name: 'Rank Diet Coke' }).parent!.parent!;
+  expect(StyleSheet.flatten(actions.props.style).marginVertical).toBe(-6);
+});
+
+it('does not add a second button for the image: the name is the row button', async () => {
+  await render(<BevRow bev={BEV} showImage actions={false} />);
+  expect(screen.getAllByRole('button')).toHaveLength(1);
 });

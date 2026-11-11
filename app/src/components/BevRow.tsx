@@ -39,8 +39,11 @@ export interface BevRowProps {
 const DENSE = { maxFontSizeMultiplier: MAX_FONT_SCALE_DENSE } as const;
 
 /**
- * The ~126pt list row: name, one line of category icon and "Category · Brand", a meta line, actions and a ScoreBubble 40.
- * No price on a row (D-06): it shows on Bev detail only.
+ * The compact (~94pt) list row: an optional 56pt image, the name and one line of category icon and
+ * "Category · Brand", and a ScoreBubble 40. The foot (meta left, actions right) sits directly under the
+ * category line, from the text column's left edge to the row's right edge (the full row with no image).
+ * The foot line is 32pt; the action buttons keep their 44pt targets by overlapping it 6pt above and below
+ * (no `hitSlop`: react-native-web ignores it). No price on a row (D-06): it shows on Bev detail only.
  */
 export function BevRow({
   bev,
@@ -73,9 +76,19 @@ export function BevRow({
       ]}
     >
       <View style={styles.top}>
-        <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={prefix + bev.name} style={styles.main}>
-          {showImage ? <BevImage size={56} {...bevImageProps(bev)} /> : null}
-          <View style={styles.text}>
+        <Pressable
+          onPress={onPress}
+          accessibilityRole="button"
+          accessibilityLabel={prefix + bev.name}
+          style={[styles.main, showImage && styles.mainWithImage]}
+        >
+          {/* Absolute, so the button is only as tall as the text and the foot starts right under it. */}
+          {showImage ? (
+            <View style={styles.image}>
+              <BevImage size={IMAGE} {...bevImageProps(bev)} />
+            </View>
+          ) : null}
+          <View>
             <Text {...DENSE} style={[type.screenTitle, { color: colors.text }]} numberOfLines={1}>
               {prefix + bev.name}
             </Text>
@@ -95,15 +108,26 @@ export function BevRow({
           </View>
         ) : null}
       </View>
-      <View style={styles.foot}>
+      <View style={[styles.foot, showImage && styles.footWithImage]}>
         <Text {...DENSE} style={[type.body, styles.shrink, { color: colors.textSecondary }]} numberOfLines={1}>
           {meta != null && meta !== '' ? meta : count != null && count > 0 ? formatRatings(count) : null}
         </Text>
-        {actions ? <BevActions name={bev.name} saved={saved} onRank={onRank} onSave={onSave} /> : null}
+        {actions ? (
+          <View style={styles.actions}>
+            <BevActions name={bev.name} saved={saved} onRank={onRank} onSave={onSave} />
+          </View>
+        ) : null}
       </View>
     </View>
   );
 }
+
+const IMAGE = 56;
+/** The foot's left edge with an image: the text column's, past the image and the gap. */
+const TEXT_INDENT = IMAGE + spacing.md;
+/** The foot line is 32pt; the 44pt action buttons overlap it by (44 - 32) / 2 above and below. */
+const FOOT_LINE = 32;
+const ACTION_OVERLAP = (size.target - FOOT_LINE) / 2;
 
 const styles = StyleSheet.create({
   row: {
@@ -114,8 +138,9 @@ const styles = StyleSheet.create({
   },
   divider: { borderBottomWidth: 1 },
   top: { flexDirection: 'row', alignItems: 'flex-start' },
-  main: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
-  text: { flex: 1, minWidth: 0 },
+  main: { flex: 1, minWidth: 0 },
+  mainWithImage: { paddingLeft: TEXT_INDENT },
+  image: { position: 'absolute', left: 0, top: 0 },
   line: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   shrink: { flexShrink: 1, minWidth: 0 },
   // bundle.css `.bv-bevrow-score { padding: 2px 4px 0 var(--space-md) }`.
@@ -124,7 +149,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    minHeight: size.target,
-    marginTop: spacing.md,
+    minHeight: FOOT_LINE,
   },
+  footWithImage: { paddingLeft: TEXT_INDENT },
+  // BevActions already has marginRight -8; these negative margins let the 44pt buttons overhang the 32pt line.
+  actions: { marginVertical: -ACTION_OVERLAP },
 });
