@@ -1,4 +1,4 @@
-import type { UserLeaderboardRow } from '@bevi/shared';
+import type { ProfileRow, SuggestedProfile, UserLeaderboardRow } from '@bevi/shared';
 import { RANK_POINTS_WEIGHTS, STREAK_PERIOD } from '@bevi/ranking';
 import { FlashList } from '@shopify/flash-list';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -10,6 +10,9 @@ import PeopleRoute from '@/app/(tabs)/people/index';
 import { pointsRules } from '@/features/leaderboard/copy';
 import { pointsMeta } from '@/features/leaderboard/PeopleBoard';
 import { controls } from '@/testing/fakeApi';
+
+/** A ProfileRow as a suggestion nobody you follow follows (contract 2.12.0's SuggestedProfile). */
+const asSuggestion = (r: ProfileRow): SuggestedProfile => ({ ...r, followedBy: [], followedByCount: 0 });
 
 import { PEOPLE_PLACEHOLDER, SUGGESTED_PREVIEW, SUGGESTED_TITLE } from '../FindPeopleScreen';
 
@@ -117,7 +120,7 @@ describe('idle', () => {
     const me = await api.profile.getMe();
     const board = (await api.leaderboard.users()).items;
     // More suggestions than the preview shows (the fixtures leave the tester two).
-    const suggested = board.filter((r) => r.profile.id !== me.id).map((r) => ({ ...r.profile, isFollowing: false }));
+    const suggested = board.filter((r) => r.profile.id !== me.id).map((r) => asSuggestion({ ...r.profile, isFollowing: false }));
     expect(suggested.length).toBeGreaterThan(SUGGESTED_PREVIEW);
     jest.spyOn(api.follows, 'suggested').mockResolvedValue(suggested);
     await start();
@@ -147,7 +150,7 @@ describe('idle', () => {
 
   it('never suggests you', async () => {
     const me = await api.profile.getMe();
-    jest.spyOn(api.follows, 'suggested').mockResolvedValue([{ ...me, isFollowing: false }]);
+    jest.spyOn(api.follows, 'suggested').mockResolvedValue([asSuggestion({ ...me, isFollowing: false })]);
     await start();
     await screen.findAllByText(/\(you\)/);
     // Nothing left to suggest: the section is left out.
