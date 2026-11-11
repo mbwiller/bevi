@@ -90,7 +90,7 @@ Dedupe guardrail: before creating a new Bev, show likely matches ("Did you mean�
 
 The comparison approach is well known and not hard to implement. Our version:
 
-1. **Gut check.** After trying a Bev, the user picks one of three buckets: *Loved it* / *It was fine* / *Didn't like it*.
+1. **Gut check.** After trying a Bev, the user picks one of three buckets: *Loved it* / *It was okay* / *Not for me*.
 2. **Pairwise placement.** Bevi shows the new Bev next to one the user already ranked in that bucket and asks "Which was better?" Using **binary search** over the user's ordered list for that bucket, it finds the exact slot in about log₂(n) comparisons (≈ 4–7 taps even for a long list).
 3. **Score from position.** Each bucket maps to a score band: Loved 7–10, Fine 4–7, Didn't like 0–4 (Beli-style; decided 2026-10-09). A Bev's score is interpolated from its position within its bucket. Inserting a new Bev re-spaces scores in that bucket.
 4. **Store both** the ordered position and the derived 0–10 score per user per Bev, plus the raw comparisons (useful later for re-ranking and for the recommendation model).

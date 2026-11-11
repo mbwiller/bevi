@@ -70,6 +70,8 @@ export function BucketButton({ bucket, selected = false, dimmed = false, onPress
             </View>
             <Animated.View
               testID="bucket-badge"
+              aria-hidden
+              importantForAccessibility="no-hide-descendants"
               style={[styles.badge, { backgroundColor: colors.text, boxShadow: `0 0 0 ${BADGE_GAP}px ${colors.surface}` }, badgeStyle]}
             >
               <Icon name="check" size={16} strokeWidth={3} color={colors.surface} />

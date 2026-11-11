@@ -59,9 +59,8 @@ Use the tokens by name; never paste hex values.
 ## Motion
 
 - `fast` 150ms for presses, colour changes and the like pop, `base` 250ms for tab underlines, sheets and the compare-card swap, `springy` (Reanimated spring, damping 18, stiffness 180) for the result bubble, `pour` 450ms for the score reveal on the note step (the ScoreBubble 72 pours in and counts up from its bucket's lower edge to the score; under reduced motion the number shows at once).
-- The pour: choosing a bucket fills its button in 450ms with a slight overshoot; the surface drifts in a 5s loop and a few bubbles rise. It is the one ambient animation in the app.
 - The like burst: a double-tap on a post grows a filled `primary` heart over its photo, holds it and fades it within 800ms.
-- Animate transform and opacity (and the pour's height) only. Under reduced motion, swaps become cross-fades, shimmers stop, the like burst only fades, and the pour lands without waves or bubbles. Under reduced transparency, glass becomes the tint material.
+- Animate transform and opacity only. Under reduced motion, swaps become cross-fades, shimmers stop, the like burst only fades, and the BucketButton's check badge shows at once.
 
 ## Building screens
 
