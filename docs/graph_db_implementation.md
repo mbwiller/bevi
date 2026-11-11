@@ -42,9 +42,33 @@ rest. Where the two disagree, this document is the newer decision and
 > relationship carries a `syncId`. Of §4's ten steps it does 1–5, the count
 > validation of 8, 9 and 10; the rest of 6–8 (the Cypher aggregation and
 > publishing `user_neighbors`) stays with `build-neighbours.ts`, which has
-> computed that table from Postgres alone since #133. The first production run is pending the merge; what has run is
-> the whole transaction on the catalog fixture against the live instance,
-> rolled back.
+> computed that table from Postgres alone since #133. **It has run:** #174
+> merged on 2026-11-11 (UTC), and after a `dry_run` dispatch a real one
+> committed at 02:29 UTC (Actions run 42946278280): 385 Bevs, 75 categories,
+> 148 brands, 23 flavours, 203 notes, 4 users; 4,653 `SIMILAR_TO`, 42
+> `RANKED`, 21 `LIKES`, 13 `DISLIKES`; the vector index answered, and
+> Coke–Pepsi read back as 0.9001.
+
+> **Update, 2026-11-11. Graph signals per Bev** (`be/graph-stats`, A-16 (4)).
+> The sync now also *computes* on the graph it mirrors: inside the same
+> transaction it reads `SIMILAR_TO` back, computes each Bev's centrality
+> (weighted PageRank), community (Louvain) and bridge score (participation
+> coefficient) with `@bevi/ranking`'s `network.ts` (paper §10.9, #172) — never
+> `gds.*`, which is a paid product — stores them on the nodes, and after the
+> commit writes them to a new Postgres table, `bev_graph_stats`
+> (`20261110000100`), which `get_prediction_snapshot` serves as `bevGraph`.
+> That is a fourth table beside §3's three, and a signal on the **Bev** side
+> rather than the user side: it does not enter Layer 2 and nothing reads it
+> yet (`rank/graph-recs` will, in `recommend()`, behind an off-by-default
+> option), so §5's "graph signals enter Layer 2 only" still describes
+> everything that affects a prediction. The community id is an opaque keyed
+> hash, never a Bev id, for the reason §"Leakage and privacy" gives for
+> `neighbor_id`. The graph the communities are computed on is an input of the
+> computation: `SIMILAR_TO` today, the flavour projection next.
+> `docs/graph.md` ("Graph signals") is the description and says what has and
+> has not run; in short, the Cypher has run on the live instance in
+> transactions that were rolled back, and none of the SQL has run anywhere
+> before CI.
 
 ## Objective
 

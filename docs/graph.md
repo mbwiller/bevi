@@ -12,16 +12,20 @@ Decided in TASKS.md revision 2, items 28–31.
 
 Nothing a user taps waits on a cross-cloud call. The ranking flow,
 recommendations, Bev detail and "similar Bevs" rows all read `bev_edges` in
-Postgres, which the nightly job writes. If the Aura instance is paused,
-deleted or simply down, the app behaves exactly as it did the day before — it
-reads slightly staler edges, and nothing else changes.
+Postgres, which the nightly job writes; the graph signals reach the app the
+same way, through `bev_graph_stats` in Postgres. If the Aura instance is
+paused, deleted or simply down, the app behaves exactly as it did the day
+before — it reads slightly staler edges and signals, and nothing else changes.
 
 The one exception is the `graph-query` Edge Function, which queries the graph
 directly for on-demand exploration. It is not wired into any screen, and it
 returns a 503 rather than a fallback when the instance is unreachable.
 
 The graph itself is a **mirror**, written nightly by `graph-sync` (see "The
-sync", below) from tables Postgres already holds.
+sync", below) from tables Postgres already holds. Since A-16 (4) the same job
+also **computes on it** — each Bev's centrality, community and bridge score —
+and writes the result back to Postgres ("Graph signals", below), so even what
+the graph computes does not live only there.
 
 ## What lives where
 
@@ -41,6 +45,7 @@ from it. The graph holds a copy, shaped as relationships.
 | `bev_stats`, `global_stats`, `category_stats`, `user_neighbors` | — |
 | `comparisons`, `want_to_try`, `follows`, `profiles`, auth, birth dates, handles, the age gate | — (never leaves Postgres) |
 | trigram search, dedupe, the prediction snapshot | — |
+| **`bev_graph_stats`** — written by `graph-sync` after each commit, **computed from the graph as read back** | `Bev.pagerank`, `strength`, `degree`, `bridge`, `community`; `(:Community)` with `[:IN_COMMUNITY]`. The one thing the graph computes rather than copies, and Postgres holds it too |
 | | `(:Meta {key: 'singleton'})`: `lastSyncAt`, `syncId`, counts — the graph's own bookkeeping |
 
 ```
@@ -51,20 +56,31 @@ bev_embeddings (pgvector, gte-small) ─────── graph-sync ───�
 rankings (pseudonymised, z in TypeScript) ── graph-sync ───────────▶ (:User {pseudonym})-[:RANKED {score, z, bucket, rankedAt}]->(:Bev), [:LIKES], [:DISLIKES]
 bev_edges ◀── graph-edges (Postgres only)
 bev_edges ────────────────────────────────── graph-sync ───────────▶ (:Bev)-[:SIMILAR_TO {w, tree, content, emb, profile, cop}]-(:Bev)
+   ▲                                                                       │ read back inside the sync transaction,
+   │                                                                       ▼ PageRank / Louvain / participation (@bevi/ranking)
+   │                                                                 Bev.pagerank, .bridge, .community; (:Bev)-[:IN_COMMUNITY]->(:Community)
+bev_graph_stats ◀─────────────────────────── graph-sync, after the commit ──┘
    ▲
-   └── read by the app's hot path. Neo4j is not in this picture at request time.
+   └── both read by the app's hot path (the prediction snapshot). Neo4j is not in this picture at request time.
 ```
 
 The arrow that used to point **back** from the graph to `bev_edges` is gone:
 A-16 (1) found that the edges need no graph to compute, so `graph-edges` fills
-the table from Postgres and `graph-sync` copies it out. Nothing flows from
-Neo4j to Postgres.
+the table from Postgres and `graph-sync` copies it out. **One arrow points back
+since A-16 (4): `bev_graph_stats`.** The signals in it are computed from the
+graph, by the sync job itself, and written to Postgres by that job after the
+graph commits; no request ever asks Neo4j for them.
 
 ## Nothing lives only in the graph
 
 Every node and property is derived from Postgres. The graph can be dropped and
 rebuilt from a single sync run, which is what makes the Aura Free constraints
 below tolerable. Do not add a property that has no Postgres source.
+
+The computed signals keep to that rule from the other side: they are derived
+inside the sync from nodes and edges that are themselves copies, so a rebuilt
+graph recomputes them, and the copy the app reads is the Postgres table
+`bev_graph_stats`, not the node properties.
 
 `User` nodes carry **only** a pseudonym — `hmac(user_id, BEVI_PSEUDONYM_SALT)`,
 stable across runs so co-rating can accumulate over time — beside the `syncId`
@@ -95,11 +111,13 @@ those rotate and co-rating needs stability.
    Aura console and press resume, then re-run the workflow.
 
 Capacity: 200,000 nodes, 400,000 relationships, 1 GB. The catalog fixture is
-about 830 nodes and 6,200 relationships — under 0.5% of the node cap and under
-2% of the relationship cap.
+about 850 nodes and 6,600 relationships with its communities — under 0.5% of
+the node cap and under 2% of the relationship cap.
 
 Graph Data Science is a separate paid product. We compute similarity ourselves
-(`@bevi/ranking`, M-24) and the graph only stores the result. **The instance
+(`@bevi/ranking`, M-24) and the graph only stores the result; the graph
+signals are computed the same way, by `network.ts` in that package, on rows
+read back with plain Cypher. **The instance
 does list `gds.*` procedures, and they are deliberately never called:** they
 are stubs for paid "Aura Graph Analytics" sessions, and calling one could start
 a billed session. No statement in `scripts/graph/` contains `gds.`, and a unit
@@ -118,16 +136,18 @@ Every statement is `IF NOT EXISTS`, so re-running is a no-op. That is the
 idempotency guarantee A-15's definition of done asks for — run it twice and the
 second run changes nothing.
 
-Seven uniqueness constraints (`Bev.id`, `Category.id`, `Brand.key`,
+Eight uniqueness constraints (`Bev.id`, `Category.id`, `Brand.key`,
 `Flavor.name`, **`Note.token`** — added with the sync and applied to the
-instance on 2026-11-10 — `User.pseudonym`, `Meta.key`), two lookup indexes
+instance on 2026-11-10 — `User.pseudonym`, **`Community.id`** — added with the
+graph signals and applied on 2026-11-11 UTC — and `Meta.key`), two lookup indexes
 (`Bev.categoryId`, `Bev.brand`) and the vector index on `Bev.embedding`. The
 uniqueness constraints are what make the sync's `MERGE` on a key an index
 lookup, and `graph-sync.yml` runs `graph:schema` before every sync so a new one
 exists before it is needed.
 
-`(:Bev)` properties the sync writes are listed under "The sync" below. Two are
-worth knowing here. **`isAlcoholic`** is the Bev's root category's flag and is
+`(:Bev)` properties the sync writes are listed under "The sync" below, and the
+five it computes (`pagerank`, `strength`, `degree`, `bridge`, `community`)
+under "Graph signals". Two are worth knowing here. **`isAlcoholic`** is the Bev's root category's flag and is
 mandatory: `graph-query` treats a Bev without it as alcoholic and never returns
 it, and the sync refuses to commit a generation in which any Bev lacks it.
 **`categoryId` is always one of the 15 roots**, exactly as `bevs.category_id`
@@ -394,13 +414,25 @@ the rest.
 
 `scripts/graph/sync.ts` (`npm run graph:sync`) mirrors the whole Bev graph from
 Postgres into the Aura instance: the catalog, the similarity edges
-`graph-edges` wrote to `bev_edges`, and the rankings, pseudonymised. It
-computes nothing new. Every weight was computed by `build-edges.ts` and every
-z-score by `zScoresFromRankings`; this job copies them, so the graph cannot
-disagree with the tables it mirrors.
+`graph-edges` wrote to `bev_edges`, and the rankings, pseudonymised. **The
+mirror computes nothing new.** Every weight was computed by `build-edges.ts`
+and every z-score by `zScoresFromRankings`; this job copies them, so the graph
+cannot disagree with the tables it mirrors. Then, in the same transaction, the
+**analytics phase** (A-16 (4)) reads the similarity graph back and computes
+each Bev's centrality, community and bridge score — "Graph signals", below.
 
-**Nothing the app reads depends on it.** A red run leaves yesterday's graph in
-place and the app does not notice ("the one rule", above).
+**Nothing the app reads depends on Neo4j answering.** A red run leaves
+yesterday's graph, and yesterday's `bev_graph_stats`, in place, and the app
+does not notice ("the one rule", above).
+
+**It has run.** #174 merged on 2026-11-11 (UTC). A `dry_run` dispatch of
+`graph-sync` and then a real one both succeeded: Actions run 42946278280
+committed at 02:29 UTC with 385 Bevs, 75 categories, 148 brands, 23 flavours,
+203 notes and 4 users; 4,653 `SIMILAR_TO`, 42 `RANKED`, 21 `LIKES` and 13
+`DISLIKES`. The vector index answered, and Coke–Pepsi read back as 0.9001, the
+weight `bev_edges` holds. That generation predates the analytics phase, so it
+carries no `(:Community)` and no computed property; see "Known gaps" for what
+of the analytics phase has and has not run.
 
 ```bash
 npm run graph:sync                # read Postgres, write the graph, verify, commit
@@ -415,9 +447,10 @@ The files, split the way `build-edges.ts` / `edges-core.ts` are:
 | File | What it is |
 |---|---|
 | `sync-core.ts` | The pure half: `buildGraphPlan(source, { pseudonymOf, rankingVersion })` and every Cypher statement, as fixed string constants. No fetch, no environment, no clock. |
-| `sync.ts` | The I/O half: the reads, the HMAC, the one transaction, the retries, the report. |
+| `analytics-core.ts` | The pure half of the analytics phase: `computeGraphStats({ nodes, similarity, partition, communityIdOf })`, which calls `@bevi/ranking`'s network functions and nothing else, and the analytics report. |
+| `sync.ts` | The I/O half: the reads, the two HMACs (user pseudonyms, community ids), the one transaction, the retries, the Postgres write-back, the reports. |
 | `neo4j.ts` | A dependency-free Query API client with explicit transactions and a typed, redacted error. |
-| `postgrest.ts` | The paged PostgREST client (`build-edges.ts` and `build-neighbours.ts` keep their own private copies and were not touched). |
+| `postgrest.ts` | The paged PostgREST client (`build-edges.ts` and `build-neighbours.ts` keep their own private copies and were not touched). The sync also calls `replace_bev_graph_stats` through it. |
 | `sync-fixture.ts` | A source built from `data/catalog`, for the tests and for `--fixture`. |
 
 ### What it reads
@@ -433,7 +466,9 @@ form or as an array, and both are handled.
 
 ### The model
 
-Every property has a Postgres source.
+Every mirrored property has a Postgres source. The **computed** ones (marked
+below) are derived inside the transaction from the mirrored graph and are
+stored in Postgres as well, in `bev_graph_stats`.
 
 | Node | Key | Properties |
 |---|---|---|
@@ -441,9 +476,10 @@ Every property has a Postgres source.
 | `(:Brand)` | `key` = `normaliseBrand(bevs.brand)` | `name` = the most common raw spelling among its Bevs (a tie goes to the smaller in code-unit order) |
 | `(:Flavor)` | `name` = `bev_flavor_profiles.base` | — |
 | `(:Note)` | `token` = one of `flavorTokens(name, flavor)` | `bevCount`. **Only a token shared by at least two active Bevs becomes a node** (`TASTE_MIN_ATTR_BEVS`): a one-Bev token is a dead end for traversal |
-| `(:Bev)` | `id` | `name`, `brand` (raw), `brandKey`, `flavor`, `categoryId` (**the root**), `leafCategoryId`, `priceTier`, `isAlcoholic` (the root category's flag; **mandatory**), `isStarter`, `source`; with a flavour profile also `base`, `carbonated`, `caffeine`, `sweetness`, `dairy`, `alcohol`, `serve`, `profileSource`; with an embedding also `embedding` (384 floats) and `embeddingModel` |
+| `(:Bev)` | `id` | `name`, `brand` (raw), `brandKey`, `flavor`, `categoryId` (**the root**), `leafCategoryId`, `priceTier`, `isAlcoholic` (the root category's flag; **mandatory**), `isStarter`, `source`; with a flavour profile also `base`, `carbonated`, `caffeine`, `sweetness`, `dairy`, `alcohol`, `serve`, `profileSource`; with an embedding also `embedding` (384 floats) and `embeddingModel`. **Computed, on every Bev:** `pagerank`, `strength`, `bridge` (floats), `degree` (integer), `community` (the opaque id of its `(:Community)`) |
 | `(:User)` | `pseudonym` | **nothing else** |
-| `(:Meta {key: 'singleton'})` | | `lastSyncAt`, `syncId`, `rankingVersion`, `edgesVersion`, one integer count per label and type (`bevCount`, `similarToCount`, …), `lastAttemptAt`, `lastAttemptOk`; `lastKeepAliveAt` is left untouched |
+| `(:Community)` — **computed** | `id` = `c_` + 16 hex, **opaque** (see "Graph signals") | `size` |
+| `(:Meta {key: 'singleton'})` | | `lastSyncAt`, `syncId`, `rankingVersion`, `edgesVersion`, one integer count per label and type (`bevCount`, `similarToCount`, `communityCount`, `inCommunityCount`, …), `modularity` (float), `analyticsVersion` (the `RANKING_VERSION` whose `network.ts` made the signals), `lastAttemptAt`, `lastAttemptOk`; `lastKeepAliveAt` is left untouched |
 
 | Relationship | Rule |
 |---|---|
@@ -456,9 +492,13 @@ Every property has a Postgres source.
 | `(:User)-[:RANKED {score, z, bucket, rankedAt}]->(:Bev)` | one per ranking of an **active** Bev. `z` comes from `zScoresFromRankings` called once over **every** ranking, active Bev or not, through `activeZScores` — the rule `graph-neighbours` uses |
 | `(:User)-[:LIKES {w}]->(:Bev)` | derived: `z >= +0.25`, `w = z` |
 | `(:User)-[:DISLIKES {w}]->(:Bev)` | derived: `z <= -0.25`, `w = -z`. The dead band gets neither |
+| `(:Bev)-[:IN_COMMUNITY {hub}]->(:Community)` — **computed** | exactly one per Bev; `hub = true` on exactly one member of each community (the one the community's id is derived from) |
 
-Every node and relationship of those six labels and nine types also carries
-`syncId`, the stamp of the run that last wrote it.
+Every node and relationship of those seven labels and ten types also carries
+`syncId`, the stamp of the run that last wrote it. In the code the first six
+labels and nine types are `MIRRORED_*` (the plan counts them) and `Community`
+and `IN_COMMUNITY` are `COMPUTED_*` (the analytics phase counts them); together
+they are `OWNED_*`.
 
 **Dropped, counted and logged, not errors:** anything hanging off a Bev that is
 not `active`. A `bev_edges` row can reference a Bev hidden since the last edges
@@ -471,7 +511,7 @@ category tree deeper than two levels, an edge with `src >= dst`, a weight or
 component outside [0, 1] or non-finite, an embedding that is not 384 finite
 numbers, and a duplicate key anywhere.
 
-### One transaction: MERGE, stamp, sweep, verify
+### One transaction: MERGE, stamp, sweep, compute, verify
 
 Every Cypher statement is a **fixed string constant** in `sync-core.ts`. Data
 travels only as parameters (`$rows`, `$syncId`); nothing is ever interpolated.
@@ -484,35 +524,70 @@ Inside **one explicit transaction** (the Query API's `/tx` endpoints):
    for Bevs, which carry the embedding. `SET n = { … }` **replaces** the
    property map, so a property that disappeared in Postgres (a deleted profile)
    disappears in the graph; a null in the map is simply not stored.
-2. **Sweep**: delete every relationship of each owned type, then `DETACH
-   DELETE` every node of each owned label, whose `syncId` is missing or is not
-   this run's. That is how a removed ranking or a hidden Bev leaves the graph.
-   `(:Meta)` is not an owned label and no sweep statement can match it.
-3. *(The analytics phase of `be/graph-stats` goes here. Today it is an empty
-   seam in `sync.ts`: centrality and communities will be computed inside this
-   same transaction, so they publish atomically with the generation they
-   describe.)*
+2. **Sweep** the mirror: delete every relationship of each mirrored type, then
+   `DETACH DELETE` every node of each mirrored label, whose `syncId` is missing
+   or is not this run's. That is how a removed ranking or a hidden Bev leaves
+   the graph. `(:Meta)` is not an owned label and no sweep statement can match
+   it.
+3. **The analytics phase** ("Graph signals", below), in four moves:
+   **read** every `(:Bev)` id and every `SIMILAR_TO` as `(a, b, w)` back out of
+   the graph (two fixed, ordered statements; about 4,700 rows come back in one
+   response); **compute** with `computeGraphStats`; **write** the five
+   properties on each `(:Bev)` — with their own statement, because the Bev
+   upsert of step 1 replaced the whole property map, so they are set afresh
+   every run — plus the `(:Community)` nodes and `[:IN_COMMUNITY]`, stamped
+   with `syncId`; and **sweep** `IN_COMMUNITY` and `Community`.
 4. **Verify**, still inside the transaction, by reading the graph back: the
-   count per label and per type must equal the plan **exactly**; zero
+   count per label and per type must equal the plan **exactly** (for
+   `Community` and `IN_COMMUNITY`, the computation's counts); zero
    `SIMILAR_TO` with `startNode.id >= endNode.id`; zero Bevs without
    `isAlcoholic`; every Bev has exactly one `IN_CATEGORY`; the number of Bevs
    with an `embedding` equals the plan's, each stored as 384 floats; zero
-   `(:User)` with any property other than `pseudonym` and `syncId`; and the
-   float and integer properties are stored with those types. **Any mismatch
-   rolls back** and exits 1 naming the check and both numbers.
+   `(:User)` with any property other than `pseudonym` and `syncId`; the float
+   and integer properties are stored with those types; and, for the analytics
+   phase, every Bev has exactly one `IN_COMMUNITY`, every `(:Community)` has
+   exactly one member with `hub = true` and a `size` equal to its member
+   count, every Bev's `community` property names the community it points at,
+   `pagerank`/`strength`/`bridge` are `FLOAT NOT NULL`, `degree` is `INTEGER
+   NOT NULL`, `community` a string, `hub` a boolean, and the PageRanks sum to 1
+   within 1e-6. That is 32 checks. **Any mismatch rolls back** and exits 1
+   naming the check and both numbers.
 5. **Stamp `(:Meta)`** and commit.
 
+**Why the sweep is in two parts, in that order.** The analytics phase reads
+the graph back, so by then the transaction must hold this generation and
+nothing else: a Bev hidden yesterday, or an edge that dropped out of
+`bev_edges`, would otherwise be ranked and clustered with the rest. So the
+mirror is swept **before** the read, and moving the whole sweep after the
+analytics would be wrong. `IN_COMMUNITY` and `Community` are swept **after**
+tonight's were stamped: a Bev that changed community keeps its old
+relationship until then, and a community whose hub changed keeps its old node.
+This was proven on the live server on 2026-11-11 in one transaction that was
+rolled back: generation A (the fixture: 380 Bevs, 17 communities), then a
+changed generation B (the hubs of A's five largest communities hidden and
+every edge below 0.62 removed: 375 Bevs, 25 communities, 8 of A's community
+ids gone, 287 Bevs in a different community). B verified with zero failures;
+0 `(:Community)` and 0 `IN_COMMUNITY` not stamped B remained; none of the 8
+ids survived. As a control, the same graph was written a second time with
+every community renamed and **no** sweep: the verification failed on four
+checks (34 communities against 17, 760 memberships against 380, 380 Bevs
+without exactly one, 380 whose property disagreed with their relationship),
+and the sweep alone made it pass.
+
 After the commit it confirms with one read that `(:Meta).syncId` is this run's,
-then prints a **read-back report** produced by Cypher against the committed
-graph: the top-5 `SIMILAR_TO` neighbours of Coca-Cola Classic, Pepsi, a matcha
+then **writes the computed stats to Postgres** (`replace_bev_graph_stats`; see
+"Graph signals"), then prints a **read-back report** produced by Cypher against
+the committed graph: the top-5 `SIMILAR_TO` neighbours of Coca-Cola Classic, Pepsi, a matcha
 and Red Bull; one two-hop traversal `bev_edges` cannot express (Bevs that share
 a `(:Flavor)` **and** a `(:Note)` with Coca-Cola Classic but have no direct
 `SIMILAR_TO` to it); and a probe of the vector index. The index updates
 asynchronously after a commit, so an empty answer is retried briefly and then
-reported as a warning.
+reported as a warning. The **analytics report** follows it (modularity, the
+communities, the most central Bevs, the bridges, the category purity).
 
 So the graph only ever moves from one complete, verified generation to the
-next. A reader never sees a half-written night.
+next. A reader never sees a half-written night, and the signals on a
+generation are always the ones computed from that generation.
 
 ### The float-coercion rule
 
@@ -538,6 +613,20 @@ Two more things the first live dry run settled:
 - The vector index does not see an uncommitted transaction, so a dry run's
   probe is always empty and says so.
 
+And one the analytics work found (2026-11-11), which the sync is not exposed to
+but anything written against this server should know:
+
+- **A node whose properties were `SET` and which is then deleted in the same
+  transaction is still returned by a seek on its uniqueness index.**
+  `MATCH (b:Bev) WHERE b.id IN $ids` counted such nodes as present, and reading
+  a property of one raised `EntityNotFound` (which ends the transaction). A
+  label scan (`USING SCAN b:Bev`) does not see them, and a node that is only
+  deleted, or created and deleted, behaves. The sync never does both to one
+  node in one transaction: it stamps a node or sweeps it. It showed up in the
+  two-generations-in-one-transaction test above, where A set five Bevs and B
+  swept them. The verification's counts are label scans and were right
+  throughout.
+
 ### Failure, and what stays in place
 
 - **Any error rolls the transaction back** (best effort; an unreachable server
@@ -552,6 +641,18 @@ Two more things the first live dry run settled:
   exits 1. A failing sync is therefore still activity as far as Aura's 72-hour
   auto-pause is concerned, and a stale `lastSyncAt` beside `lastAttemptOk =
   false` says what happened.
+- **The graph committed and Postgres was not updated.** The two stores cannot
+  commit together, so the order is: the graph commits, then
+  `replace_bev_graph_stats` replaces `bev_graph_stats`. If that call fails (or
+  answers a different row count), the run exits 1 and says exactly that:
+  the graph committed generation `<syncId>`, `bev_graph_stats` was **not**
+  updated and still holds the previous night's values. Those are complete and
+  self-consistent, one generation behind the graph; nothing the app reads is
+  broken; the next run repairs it (or re-dispatch the workflow). It is not
+  retried as a sync, because the graph is right, and `(:Meta).lastAttemptOk`
+  stays true, because the graph's attempt did succeed. The RPC validates the
+  whole payload before deleting anything, so a refused call cannot leave the
+  table half-written or empty.
 - **An empty read is refused before a transaction is opened.** Zero active
   Bevs, zero categories or zero `bev_edges` rows is a broken read, not a state,
   and syncing it would sweep the graph away. Zero rankings is a real state and
@@ -561,11 +662,13 @@ Two more things the first live dry run settled:
 
 ### `--dry-run` and `--fixture`
 
-`--dry-run` does everything — the reads, the plan, the full transaction, the
-in-transaction verification, the `(:Meta)` stamp, the report (read through the
-transaction) — and then **rolls back instead of committing**, says so, and
-confirms from outside the transaction that no node carries its `syncId`. It
-stamps nothing on failure either.
+`--dry-run` does everything — the reads, the plan, the full transaction with
+its analytics phase, the in-transaction verification, the `(:Meta)` stamp, both
+reports (read through the transaction) — and then **rolls back instead of
+committing**, says so, and confirms from outside the transaction that no node
+carries its `syncId`. It stamps nothing on failure either, and it **never
+writes `bev_graph_stats`**: the stats are computed, printed and discarded, and
+the log says so.
 
 `--fixture` swaps Postgres for `sync-fixture.ts` and forces `--dry-run`: the
 378 catalog Bevs, 75 categories and 378 profiles from `data/catalog`,
@@ -575,12 +678,21 @@ extra Bevs (two active user-created ones with no profile, embedding or brand,
 and a hidden one that still has an edge and a ranking), and six synthetic users
 on, inside and outside the ±0.25 band. It exists because neither CI nor a
 laptop has a Postgres to read: it is the only way to push a full-sized graph
-through the real Cypher on the real server.
+through the real Cypher on the real server. It has no Postgres to write to
+either, so it never calls `replace_bev_graph_stats`, and it derives community
+ids from the fixture's constant instead of `BEVI_PSEUDONYM_SALT`.
 
-That run was done on 2026-11-10 and passed end to end, rolled back: 380 Bevs,
-75 categories, 145 brands, 23 flavours, 201 notes, 5 users; 3,931 `SIMILAR_TO`,
-1,040 `HAS_NOTE`, 14 `RANKED`, 5 `LIKES`, 4 `DISLIKES`; all 23 verification
-checks equal to the plan. Those are the **fixture's** numbers, not prod's.
+That run was first done on 2026-11-10 and passed end to end, rolled back: 380
+Bevs, 75 categories, 145 brands, 23 flavours, 201 notes, 5 users; 3,931
+`SIMILAR_TO`, 1,040 `HAS_NOTE`, 14 `RANKED`, 5 `LIKES`, 4 `DISLIKES`; all 23
+verification checks equal to the plan. It was run again on 2026-11-11 with the
+analytics phase, against the instance that by then held the production graph,
+and passed all **32** checks, rolled back: 17 communities (the 15 root
+categories exactly, plus the two user-created Bevs that have no edge, each a
+community of one), modularity 0.8918, category purity 1.0000, four Bevs with a
+non-zero bridge score. Those are the **fixture's** numbers, not prod's: its
+embeddings are synthetic and clustered by root category on purpose, so its
+communities follow the taxonomy more exactly than real ones do.
 
 ### The nightly workflow
 
@@ -601,9 +713,197 @@ every missing one of its seven values, `npm ci`, `npm run test:scripts`,
 sync that needs it) and then the sync.
 
 **The log is public.** The job prints catalog names, Bev ids and counts. It
-never prints a user id, a pseudonym, a secret, the Neo4j host or its URL; for
-users it prints counts only. `neo4j.ts` redacts the credentials, the host and
+never prints a user id, a pseudonym, a community id, a secret, the Neo4j host
+or its URL; for users it prints counts only, and the analytics report names
+communities by their hub's catalog name, never by id. `neo4j.ts` redacts the credentials, the host and
 any 64-hex run out of every server message before it can reach an error.
+
+## Graph signals: centrality, communities, bridges (A-16 (4))
+
+This is the graph earning its keep. Every night, inside the sync's one
+transaction, the similarity graph is **read back out of Neo4j** and three
+signals are computed per Bev, stored on the graph's nodes, and written to
+Postgres.
+
+| Signal | What it is | What it is for |
+|---|---|---|
+| **centrality** (`pagerank`) | Weighted PageRank over `SIMILAR_TO`, damping 0.85. Sums to 1 over the Bevs of one run | How representative a Bev is of its neighbourhood: many similar Bevs, heavily weighted, lead to it. A smoothed strength — it also rewards being similar to Bevs that are themselves central |
+| **community** (`community`) | The Louvain community (modularity clustering, resolution 1) the Bev falls in, as an **opaque id** | Data-driven taste neighbourhoods, for community-aware diversity and exploration in `recommend()` |
+| **bridge** (`bridge`) | The participation coefficient, in [0, 1): 0 when all of a Bev's `SIMILAR_TO` weight stays inside its own community, higher the more it is spread over several | A gateway from one neighbourhood into another |
+
+`strength` (the sum of a Bev's `SIMILAR_TO` weights) and `degree` (how many it
+has) are stored alongside, for diagnostics.
+
+**Nothing consumes them yet.** `@bevi/ranking` 1.7.0 declares
+`PredictionSnapshot.bevGraph` and leaves it unread; the package PR
+`rank/graph-recs` reads it in `recommend()` behind an option that is off by
+default. So this work changes no prediction and no recommendation.
+
+### Where the formulas live
+
+In `@bevi/ranking`, `packages/ranking/src/network.ts`, paper §10.9
+(`docs/bevi-ranking-math.tex`, "Graph signals"): `graphStrength`, `pageRank`,
+`louvainCommunities`, `participationCoefficient`, `communityHubs`.
+`scripts/graph/analytics-core.ts` calls those five and nothing else — a unit
+test reads its imports to hold that down — and there is no SQL twin and no
+Cypher twin. The functions are deterministic in the *set* of nodes and edges,
+so shuffled input gives identical rows.
+
+### Why not GDS
+
+Neo4j's Graph Data Science library has PageRank and Louvain built in, and the
+instance even lists the `gds.*` procedures. They are stubs for paid "Aura Graph
+Analytics" sessions, and calling one could start a billed session. They are
+never called: no statement in `scripts/graph/` contains `gds.`, and a unit test
+checks every statement. The graph is the **substrate** — the place the
+relationships live and are read from — and the arithmetic is ours, which also
+means it is the same arithmetic the package's golden vectors pin.
+
+### The two graphs: similarity, and the partition
+
+`computeGraphStats({ nodes, similarity, partition, communityIdOf })` takes the
+graph the communities are computed on as a **separate input** from the
+similarity graph:
+
+| | Computed from |
+|---|---|
+| `strength`, `degree` | `graphStrength(similarity)` |
+| `pagerank` | `pageRank(similarity)` |
+| `community` | `louvainCommunities(partition)` |
+| the hub | `communityHubs(partition, communityOf)` |
+| `bridge` | `participationCoefficient(similarity, communityOf)`: a Bev's `SIMILAR_TO` weight, spread across the partition's communities |
+
+**Today the sync passes the `SIMILAR_TO` graph as the partition too. That is
+not a promise about what a community is.** Louvain over `SIMILAR_TO` largely
+rediscovers the root categories (the tree term and the content term both carry
+the category), which is the taxonomy we already have. Computed read-only from
+the committed production graph on 2026-11-11, with nothing written: 11
+communities over 385 Bevs (sizes 65, 53, 41, 41, 41, 40, 33, 30, 22, 18 and
+one Bev with no edge), modularity 0.8265, **category purity 0.84**. Six of the
+ten are a single root category; the one that is not close to one (33 Bevs,
+39% in its commonest category) is where wine, spirits, kombucha and coconut
+water ended up together, and it holds every one of the ten highest bridge
+scores.
+
+The partition graph is about to become the **flavour projection**: Bevs joined
+through the `(:Flavor)` and `(:Note)` nodes they share, which cuts across
+categories (measured from Matt's side on the same graph: ten families,
+category purity 0.47; that figure was not reproduced in this PR, because the
+package function that builds the projection is not on `main` yet). When it is,
+the analytics phase gains one more read (each Bev's flavour and note
+memberships) and passes the projection as `partition`. No migration, no
+contract change and no change to the table: a community id is opaque either
+way. The analytics report prints the number that shows the difference, the
+**category purity** (Σ over communities of the size of its largest
+root-category group, divided by the number of Bevs: 1 when every community
+sits inside one root category).
+
+### The community id is opaque
+
+A community is named after its **hub**: the member with the greatest
+within-community strength (`communityHubs`; a tie goes to the smallest id).
+That keeps a community's name stable from night to night for as long as its
+hub stays its hub.
+
+But the id reaches every client in the prediction snapshot, a hub can be an
+**alcoholic** Bev, and a catalog Bev's id can be derived by anyone (it is a
+uuid v5 of a public slug under a public namespace). So neither the hub's id
+nor a plain hash of it may be the public id — an under-21 client could confirm
+"my lemonade's community is led by that beer" by hashing the catalog. The id
+is therefore
+
+```
+"c_" + hex(hmac_sha256(BEVI_PSEUDONYM_SALT, "community:" + hubBevId)).slice(0, 16)
+```
+
+(`communityIdentifier` in `sync.ts`). The key is the salt the sync already
+requires, which exists only in Actions secrets; the `community:` prefix keeps
+these apart from the user pseudonyms made with the same key. `--fixture` uses
+the fixture's constant. **Clients compare community ids for equality and
+nothing else.**
+
+What holds that down: `computeGraphStats` refuses an id that is not `c_` + 16
+hex, that is itself a Bev id or cut from the hub's own, or that two communities
+share; the table's CHECK (`^c_[0-9a-f]{16}$`) means a uuid cannot be stored in
+`community_id` at all; which Bev is the hub is **not stored in Postgres**; in
+the graph it is only the `hub` flag on `[:IN_COMMUNITY]`, and `graph-query`'s
+`bev` template returns the id, not the hub; and no log line prints a community
+id — the report names a community by its hub's catalog name, and a unit test
+checks that no `c_…` reaches the log. Rotating `BEVI_PSEUDONYM_SALT` renames
+every community as well as every user.
+
+### `bev_graph_stats`
+
+`supabase/migrations/20261110000100_bev_graph_stats.sql`.
+
+```sql
+bev_graph_stats(bev_id         uuid primary key references bevs(id) on delete cascade,
+                community_id   text not null check (community_id ~ '^c_[0-9a-f]{16}$'),
+                community_size integer not null check (community_size >= 1),
+                pagerank       double precision not null check (pagerank >= 0 and pagerank <= 1),
+                strength       double precision not null check (strength >= 0),
+                degree         integer not null check (degree >= 0),
+                bridge         double precision not null check (bridge >= 0 and bridge < 1),
+                version        text not null,              -- RANKING_VERSION at compute time
+                computed_at    timestamptz not null default now())
+  -- index on (community_id).
+```
+
+`double precision`, not `numeric`, on purpose: these are derived floats, not
+money, and a `numeric` can reach a client as a JSON string.
+
+**RLS** is on, with one policy: `select` for `authenticated`, and **no**
+insert/update/delete policy — the sync writes as the service role. The
+predicate is `bev_embeddings_select`'s, for the same reasons ("The Postgres
+half", above): a **positive** `exists` over the Bev, requiring
+`status = 'active'` and (the category is not alcoholic or `viewer_is_adult()`).
+A hidden Bev's row survives in the table until the next nightly run, so the
+status half is what stops a plain `GET /rest/v1/bev_graph_stats` from serving
+it meanwhile.
+
+**The writer** is `replace_bev_graph_stats(p_rows jsonb, p_version text)`,
+service role only, modelled on `replace_bev_edges`: one call is one
+transaction, it validates the **whole** payload before deleting anything, it
+uses `delete … where true` (pg_safeupdate) and `insert` rather than `truncate`,
+and it returns the row count, which the job compares with what it sent. It
+refuses, as `BEVI_VALIDATION` with a `detail`: a blank version; a payload that
+is not an array; an **empty** array (an empty result is a broken run); a null
+column; a value out of range; a `community_id` of the wrong shape; a duplicate
+`bev_id`; an unknown Bev id; a `community_size` that disagrees with the number
+of rows carrying that `community_id`; and PageRanks that do not sum to 1 within
+1e-6. The last two are what make a payload a *generation* rather than a set of
+rows: they can only hold for the complete output of one run.
+
+### The `bevGraph` snapshot key
+
+The same migration revises `get_prediction_snapshot()` — the latest definition
+(`20261101000100`) byte-for-byte, with one added key:
+
+```
+bevGraph: [[bev_id, community_id, pagerank, bridge], …]
+```
+
+One tuple per row whose Bev is in the function's own `visible` gate, so a
+hidden Bev's row never appears and, for an under-21 viewer, neither does an
+alcoholic Bev's. Ordered by `bev_id`. `[]`, never null. `pagerank` is rounded
+to 8 decimals and `bridge` to 4 on the way out, to keep about 385 tuples per
+snapshot small; the table keeps the full doubles. So the rounded PageRanks of
+one payload need not sum to exactly 1, and an under-21 viewer's never do. No
+`version` filter, as for `edges` and `userNeighbors`.
+
+`packages/api/src/snapshot.ts` maps it onto `snapshot.bevGraph = { [bevId]: {
+community, pagerank, bridge } }`, only when the key is present (`[]` maps to
+`{}`). No `shared/` change and no `BeviApi` change: the snapshot is internal
+to `packages/api`.
+
+### The failure mode: graph committed, Postgres not updated
+
+The graph and Postgres cannot commit together. The sync commits the graph
+first and writes `bev_graph_stats` second, and says plainly when the second
+step fails — "Failure, and what stays in place", above. Until the next run the
+graph is one generation ahead of the table; both are complete and
+self-consistent. A Bev created since the last successful write simply has no
+row and no `bevGraph` tuple, which the package reads as "no signal".
 
 ## How edges are computed — and `bev_edges` is filled without Neo4j
 
@@ -883,8 +1183,8 @@ See `supabase/.env.example`.
 | `NEO4J_USERNAME` | same | same |
 | `NEO4J_PASSWORD` | same | same |
 | `NEO4J_DATABASE` | same; `graph:schema`, `graph:keepalive` and `graph-query` default it to `neo4j`, which is wrong for our instance, so it is always set. **The sync has no default and refuses to start without it** | same |
-| `BEVI_PSEUDONYM_SALT` | **Actions secret only** — set 2026-11-10 | **`graph-sync.yml` / `npm run graph:sync`**: the HMAC-SHA256 key behind `(:User {pseudonym})`. At least 16 characters, or the sync refuses to start. **Set once and kept:** a new salt renames every user, so every `(:User)` is swept and recreated. Never in an Edge Function, never anywhere `packages/api` or `app/` can reach. `--fixture` does not read it (it pseudonymises made-up users with a constant) |
-| `SUPABASE_SERVICE_ROLE_KEY` | **Actions secret** — set 2026-10-24; `supabase/.env` locally | **`graph-edges.yml` / `npm run graph:edges`** and **`graph-neighbours.yml` / `npm run graph:neighbours`**, to read Postgres past RLS and call the service-role RPCs; **`graph-sync.yml` / `npm run graph:sync`**, to read the six tables it mirrors |
+| `BEVI_PSEUDONYM_SALT` | **Actions secret only** — set 2026-11-10 | **`graph-sync.yml` / `npm run graph:sync`**: the HMAC-SHA256 key behind `(:User {pseudonym})` **and behind every community id** (`c_…` in the graph, in `bev_graph_stats` and in the snapshot's `bevGraph`). At least 16 characters, or the sync refuses to start. **Set once and kept:** a new salt renames every user, so every `(:User)` is swept and recreated, and renames every community. Never in an Edge Function, never anywhere `packages/api` or `app/` can reach. `--fixture` does not read it (it uses a constant for both) |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Actions secret** — set 2026-10-24; `supabase/.env` locally | **`graph-edges.yml` / `npm run graph:edges`** and **`graph-neighbours.yml` / `npm run graph:neighbours`**, to read Postgres past RLS and call the service-role RPCs; **`graph-sync.yml` / `npm run graph:sync`**, to read the six tables it mirrors and to call `replace_bev_graph_stats` after the commit |
 | `SUPABASE_URL` | injected into Edge Functions; an Actions **variable** (`vars`) for the three graph workflows; `supabase/.env` locally. Not a secret | same |
 | `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_ID`, `SUPABASE_DB_PASSWORD` | Actions secrets (already used by `backend.yml`) | deploying the function and pushing migrations |
 
@@ -896,8 +1196,9 @@ The live instance is `bevi-graph-db`, created 2026-10-24 in the Aura project
 `c03f2541-d8b6-4cf4-8383-a0d3d8be8c04`. Its credentials file sets
 `NEO4J_USERNAME` and `NEO4J_DATABASE` to the instance id rather than to
 `neo4j`, so both must be read from that file and neither may be assumed. The
-schema in `scripts/graph/schema.cypher` is applied (all ten statements, the
-`note_token_unique` constraint since 2026-11-10), and `(:Meta).lastKeepAliveAt`
+schema in `scripts/graph/schema.cypher` is applied (all eleven statements: the
+`note_token_unique` constraint since 2026-11-10, `community_id_unique` since
+2026-11-11 UTC), and `(:Meta).lastKeepAliveAt`
 was written by hand the day the instance was created. Because the instance id
 is the host, the username and the database at once, **none of the three may
 appear in a log**: `neo4j.ts` never prints the URL and redacts all of them from
@@ -919,7 +1220,7 @@ keep that property.
 | Template | Takes | Returns |
 |---|---|---|
 | `similar` | `bevId`, `limit` (1–50) | the nearest Bevs by `SIMILAR_TO` weight, with all five terms (`tree`, `content`, `emb`, `profile`, `cop`) |
-| `bev` | `bevId` | the Bev's own node: `categoryId` (the root, from the property — `IN_CATEGORY` targets the leaf), `leafCategoryId`, `brandKey` |
+| `bev` | `bevId` | the Bev's own node: `categoryId` (the root, from the property — `IN_CATEGORY` targets the leaf), `leafCategoryId`, `brandKey`, and the graph signals `pagerank`, `community` (the opaque id) and `bridge` — null until a sync with the analytics phase has committed |
 | `why` | `bevId`, `otherId` | the attribute nodes the two Bevs **share** — `kind` (`Brand`, `Flavor`, `Note`, `Category`) and `value` — plus the direct `SIMILAR_TO` `weight` when the pair has an edge. A visible pair that shares nothing is one row with a null `kind` |
 | `meta` | — | `lastSyncAt`, `lastKeepAliveAt` |
 
@@ -966,19 +1267,37 @@ right choice: a Bolt connection pool has nothing to pool.
   current volume — see "Taste neighbours". Both tables reach the client through
   the prediction snapshot since `20261101000100` (S-21 + Stage 4), and both
   package modes that read them ship off.
-- **The Neo4j side of A-16 — steps 6, 8 and 9 — is built** (`be/graph-sync`,
-  2026-11-10): `scripts/graph/sync.ts` and `graph-sync.yml`, described under
-  "The sync". **Its first production run is pending the merge.** What has been
-  run is `npm run graph:sync -- --fixture` against the live instance: the
-  whole transaction and its verification, on the catalog fixture, rolled back.
-  The reads of prod Postgres and the real commit path have not run anywhere
-  yet — there is no Postgres credential on the machine it was built on.
-- **So the instance still holds exactly one node, `(:Meta)`,** until that first
-  run. `graph-query`'s `similar`, `bev` and `why` templates correctly return
-  zero rows, and `Bev.embedding` is set on nothing.
-- **The centrality and community properties are not built.** `sync.ts` leaves
-  an empty seam for them inside the transaction (`be/graph-stats`, the next
-  PR). They will be computed in TypeScript or plain Cypher: `gds.*` is paid.
+- **The Neo4j side of A-16 — steps 6, 8 and 9 — is built and has run**
+  (#174, merged 2026-11-11 UTC): `scripts/graph/sync.ts` and `graph-sync.yml`,
+  described under "The sync". A `dry_run` dispatch and then a real dispatch
+  both succeeded; Actions run 42946278280 committed at 02:29 UTC with 385
+  Bevs, 75 categories, 148 brands, 23 flavours, 203 notes and 4 users; 4,653
+  `SIMILAR_TO`, 42 `RANKED`, 21 `LIKES` and 13 `DISLIKES`. The vector index
+  answered and Coke–Pepsi read back as 0.9001.
+- **So the instance holds the production graph**, and `graph-query`'s
+  `similar`, `bev` and `why` templates have data to return.
+- **The graph signals are built (A-16 (4), `be/graph-stats`), and only partly
+  run.** What **has** run, on 2026-11-11 against the live instance: the one new
+  constraint (`community_id_unique`, applied); `npm run graph:sync --
+  --fixture`, i.e. every upsert, the analytics phase, both sweeps and all 32
+  verification checks on the catalog fixture, **rolled back**; and the
+  generation-A-then-B check of the community sweep, also rolled back. What has
+  **not** run anywhere: **any of the SQL** (`20261110000100` and pgTAP 30 —
+  there is no Docker or psql on the machine it was built on, so CI's `db` job
+  on the PR is the first execution); the **Postgres write-back**
+  (`replace_bev_graph_stats` through PostgREST); the analytics phase's
+  **commit path** (the committed graph still has no `(:Community)` and no
+  computed property; the real catalog's numbers quoted under "Graph signals"
+  were computed read-only and written nowhere); and `deno check` on
+  `graph-query` (no Deno there either). The first real run is the first
+  `graph-sync` after the merge — and **`20261110000100` must be on prod before
+  that merge**, or the nightly run calls an RPC that does not exist (the graph
+  would still commit; the run would be red every night).
+- **The partition graph is `SIMILAR_TO` for now**, so the first communities
+  will largely follow the root categories (purity 0.84 on the real graph). The flavour projection replaces it
+  once its package function is on `main` ("Graph signals", above).
+- **Nothing reads `bevGraph` yet.** `rank/graph-recs` does, behind an option
+  that is off by default.
 - `graph-keepalive.yml` and `keepalive.ts` are still there on purpose, until
   the sync has run green for a week.
 - `graph-query`'s Deno tests cover input handling only and skip without a

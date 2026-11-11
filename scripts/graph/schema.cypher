@@ -51,6 +51,16 @@ CREATE CONSTRAINT user_pseudonym_unique IF NOT EXISTS
 FOR (u:User) REQUIRE u.pseudonym IS UNIQUE
 ;
 
+// Community.id is an OPAQUE id: "c_" plus 16 hex characters of a keyed HMAC of
+// the community's hub Bev id (scripts/graph/sync.ts, communityIdentifier). It
+// is never the hub's id and never an unkeyed hash of it, because the same id
+// reaches clients in the prediction snapshot and a hub can be an alcoholic
+// Bev. Communities are COMPUTED nightly inside the sync transaction from the
+// graph as read back (scripts/graph/analytics-core.ts), not mirrored.
+CREATE CONSTRAINT community_id_unique IF NOT EXISTS
+FOR (c:Community) REQUIRE c.id IS UNIQUE
+;
+
 // One row, holding lastSyncAt, the syncId of the generation the graph holds
 // and one count per label and type. The nightly write to it is also the
 // keep-alive that stops Aura Free auto-pausing after 72 hours (docs/graph.md).
@@ -110,10 +120,14 @@ OPTIONS { indexConfig: {
 //               priceTier, isAlcoholic, isStarter, source,
 //               base, carbonated, caffeine, sweetness, dairy, alcohol, serve,
 //               profileSource,              -- only with a flavour profile
-//               embedding, embeddingModel}) -- only with an embedding
+//               embedding, embeddingModel,  -- only with an embedding
+//               pagerank, strength, degree, bridge, community})
+//                                           -- COMPUTED, on every Bev; below
 //   (:User     {pseudonym})                 -- and nothing else, ever
+//   (:Community {id, size})                 -- COMPUTED; id is opaque
 //   (:Meta     {key: 'singleton', lastSyncAt, syncId, rankingVersion,
 //               edgesVersion, <one count per label and type>,
+//               modularity, analyticsVersion,
 //               lastAttemptAt, lastAttemptOk, lastKeepAliveAt})
 //
 //   (:Category)-[:CHILD_OF]->(:Category)        leaf -> its root
@@ -127,6 +141,28 @@ OPTIONS { indexConfig: {
 //   (:User)-[:RANKED {score, z, bucket, rankedAt}]->(:Bev)
 //   (:User)-[:LIKES {w}]->(:Bev)                derived: z >= +0.25, w = z
 //   (:User)-[:DISLIKES {w}]->(:Bev)             derived: z <= -0.25, w = -z
+//   (:Bev)-[:IN_COMMUNITY {hub}]->(:Community)  COMPUTED: exactly one per Bev;
+//                                               hub = true on exactly one
+//                                               member of each community
+//
+// The computed part (A-16 (4)). After the mirror is written and swept, the
+// sync reads every (:Bev) id and every SIMILAR_TO back out of the graph and
+// computes, with @bevi/ranking's network.ts and nothing else:
+//
+//   Bev.pagerank   FLOAT    weighted PageRank over SIMILAR_TO; sums to 1
+//   Bev.strength   FLOAT    the sum of the Bev's SIMILAR_TO weights
+//   Bev.degree     INTEGER  how many SIMILAR_TO it has
+//   Bev.bridge     FLOAT    participation coefficient in [0, 1): how its
+//                           SIMILAR_TO weight is spread across communities
+//   Bev.community  STRING   the opaque id of its (:Community)
+//
+// Communities are Louvain communities of a PARTITION graph that is an input
+// of the computation: today the SIMILAR_TO graph itself, soon the flavour
+// projection (Bevs joined through shared (:Flavor) and (:Note) nodes). These
+// five are set by their own statement after the Bev upsert, which replaces
+// the whole property map, so they are fresh every run. Postgres holds the
+// same numbers in bev_graph_stats, written after the commit. No gds.*
+// procedure is involved: Graph Data Science is a paid product here.
 //
 // Every node and relationship the sync owns also carries `syncId`, the stamp
 // of the run that last wrote it. The sync sweeps whatever does not carry its

@@ -34,10 +34,18 @@
  * as INTEGER; a list of whole numbers as LIST<INTEGER>; a list MIXING the two
  * is stored, widened to LIST<FLOAT>. So this server does not reject a mixed
  * list -- it is the scalar and the all-integer list that go wrong, silently.
+ *
+ * TWO KINDS OF OWNED DATA (A-16 (4)). The MIRRORED labels and types are copied
+ * from Postgres and counted by the plan. The COMPUTED ones -- `(:Community)`,
+ * `[:IN_COMMUNITY]` and five properties on `(:Bev)` -- are derived inside the
+ * transaction from the graph as read back (analytics-core.ts), counted by the
+ * `GraphStats` that computation returns, and written back to Postgres after
+ * the commit (`bev_graph_stats`), so they do not live only in the graph either.
  */
 
 import { TASTE_MIN_ATTR_BEVS, flavorTokens, normaliseBrand } from "@bevi/ranking";
 
+import type { GraphStats, GraphStatsWrites } from "./analytics-core.ts";
 import { treeNodeOf } from "./edges-core.ts";
 import { activeZScores } from "./neighbours-core.ts";
 
@@ -65,12 +73,20 @@ export const NOTE_MIN_BEVS = TASTE_MIN_ATTR_BEVS;
 /** Rows per request: small node rows, relationship rows, and anything carrying a 384-float embedding. */
 export const BATCH = { nodes: 500, relationships: 1000, embeddings: 100 } as const;
 
+/** The labels mirrored from Postgres: the plan holds every node of them. */
+export const MIRRORED_LABELS = ["Bev", "Category", "Brand", "Flavor", "Note", "User"] as const;
+export type MirroredLabel = (typeof MIRRORED_LABELS)[number];
+
+/** The labels the analytics phase computes from the graph itself (analytics-core.ts). */
+export const COMPUTED_LABELS = ["Community"] as const;
+export type ComputedLabel = (typeof COMPUTED_LABELS)[number];
+
 /** The labels this job owns: it writes every node of them and sweeps every stale one. NEVER `Meta`. */
-export const OWNED_LABELS = ["Bev", "Category", "Brand", "Flavor", "Note", "User"] as const;
+export const OWNED_LABELS = [...MIRRORED_LABELS, ...COMPUTED_LABELS] as const;
 export type OwnedLabel = (typeof OWNED_LABELS)[number];
 
-/** The relationship types this job owns. */
-export const OWNED_TYPES = [
+/** The relationship types mirrored from Postgres. */
+export const MIRRORED_TYPES = [
   "CHILD_OF",
   "IN_CATEGORY",
   "BY_BRAND",
@@ -81,6 +97,14 @@ export const OWNED_TYPES = [
   "LIKES",
   "DISLIKES",
 ] as const;
+export type MirroredType = (typeof MIRRORED_TYPES)[number];
+
+/** The relationship types the analytics phase computes. */
+export const COMPUTED_TYPES = ["IN_COMMUNITY"] as const;
+export type ComputedType = (typeof COMPUTED_TYPES)[number];
+
+/** The relationship types this job owns. */
+export const OWNED_TYPES = [...MIRRORED_TYPES, ...COMPUTED_TYPES] as const;
 export type OwnedType = (typeof OWNED_TYPES)[number];
 
 const cmp = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
@@ -435,9 +459,10 @@ export interface GraphPlan {
     likes: PreferenceRel[];
     dislikes: PreferenceRel[];
   };
+  /** The MIRRORED labels and types only: what the analytics phase adds is counted by its `GraphStats`. */
   counts: {
-    nodes: Record<OwnedLabel, number>;
-    relationships: Record<OwnedType, number>;
+    nodes: Record<MirroredLabel, number>;
+    relationships: Record<MirroredType, number>;
     bevsWithEmbedding: number;
     bevsWithProfile: number;
   };
@@ -999,6 +1024,65 @@ export function writeSteps(plan: GraphPlan): WriteStep[] {
 }
 
 // ---------------------------------------------------------------------------
+// Cypher: the analytics phase (A-16 (4))
+// ---------------------------------------------------------------------------
+//
+// After the mirror sweep the transaction holds exactly this generation, and
+// the graph is READ BACK: the signals are computed from what the graph holds,
+// not from the plan the graph was written from. Both reads are ordered, so the
+// rows arrive in the same order every night (the package functions do not
+// depend on it; a reader of two logs does).
+
+export const READ_BEV_IDS = `
+MATCH (b:Bev)
+RETURN b.id AS id
+ORDER BY b.id`;
+
+/** Every edge once, in the stored direction `a.id < b.id`. About 4,700 rows in one response. */
+export const READ_SIMILAR_TO = `
+MATCH (a:Bev)-[s:SIMILAR_TO]->(b:Bev)
+RETURN a.id AS a, b.id AS b, s.w AS w
+ORDER BY a.id, b.id`;
+
+/**
+ * The five computed properties of a `(:Bev)`. NOT part of `UPSERT_BEVS`:
+ * that statement runs before the graph can be read back, and its `SET b = {}`
+ * REPLACES the property map, so each run starts every Bev without these five
+ * and this statement sets them afresh. A Bev it does not reach keeps none, and
+ * the verification counts it.
+ */
+export const SET_BEV_GRAPH_STATS = `
+UNWIND $rows AS row
+MATCH (b:Bev { id: row.id })
+SET b.pagerank = toFloat(row.pagerank),
+    b.strength = toFloat(row.strength),
+    b.degree = toInteger(row.degree),
+    b.bridge = toFloat(row.bridge),
+    b.community = row.community`;
+
+/** `id` is the OPAQUE community id (analytics-core.ts). The hub is marked on the relationship, never named here. */
+export const UPSERT_COMMUNITIES = `
+UNWIND $rows AS row
+MERGE (c:Community { id: row.id })
+SET c = { id: row.id, size: toInteger(row.size), syncId: $syncId }`;
+
+export const UPSERT_IN_COMMUNITY = `
+UNWIND $rows AS row
+MATCH (b:Bev { id: row.from })
+MATCH (c:Community { id: row.to })
+MERGE (b)-[r:IN_COMMUNITY]->(c)
+SET r = { hub: row.hub, syncId: $syncId }`;
+
+/** The analytics writes in the order they must run: properties, then the nodes the relationships MATCH. */
+export function analyticsWriteSteps(writes: GraphStatsWrites): WriteStep[] {
+  return [
+    { name: "Bev stats", statement: SET_BEV_GRAPH_STATS, rows: writes.bevs, batchSize: BATCH.nodes },
+    { name: "Community", statement: UPSERT_COMMUNITIES, rows: writes.communities, batchSize: BATCH.nodes },
+    { name: "IN_COMMUNITY", statement: UPSERT_IN_COMMUNITY, rows: writes.inCommunity, batchSize: BATCH.relationships },
+  ];
+}
+
+// ---------------------------------------------------------------------------
 // Cypher: the sweep
 // ---------------------------------------------------------------------------
 //
@@ -1008,6 +1092,26 @@ export function writeSteps(plan: GraphPlan): WriteStep[] {
 // written before stamps existed -- is stale, and goes. Relationships first, so
 // the node sweep's DETACH has little left to do. `(:Meta)` is not an owned
 // label and no statement here can match it.
+//
+// THE SWEEP RUNS IN TWO PARTS, AND THE ORDER IS LOAD-BEARING.
+//
+//   1. `sweepSteps()`, the MIRRORED types and labels, straight after the
+//      upserts and BEFORE the analytics phase. The analytics phase reads the
+//      graph back, so by then the transaction must hold this generation and
+//      nothing else: a Bev hidden yesterday, or an edge that dropped out of
+//      `bev_edges`, would otherwise be ranked and clustered with the rest.
+//      (That is why "move the whole sweep after the analytics" is wrong.)
+//   2. `analyticsSweepSteps()`, `IN_COMMUNITY` and `Community`, AFTER the
+//      analytics writes have stamped tonight's. A Bev that changed community
+//      keeps its old relationship until this deletes it, and a community that
+//      no longer exists (its hub changed, so its id did) keeps its node.
+//
+// Sweeping the two computed ones in part 1 as well would also work -- nothing
+// of them carries this run's stamp yet, so it would delete them all and the
+// writes would recreate them -- but it would make "stamp, then sweep what was
+// not stamped" mean something different for one label, and it would give
+// every `(:Community)` a new node every night instead of keeping the ones
+// that survive.
 
 export const SWEEP_RELATIONSHIPS: Record<OwnedType, string> = {
   CHILD_OF: "MATCH ()-[r:CHILD_OF]->() WHERE r.syncId IS NULL OR r.syncId <> $syncId DELETE r",
@@ -1019,6 +1123,7 @@ export const SWEEP_RELATIONSHIPS: Record<OwnedType, string> = {
   RANKED: "MATCH ()-[r:RANKED]->() WHERE r.syncId IS NULL OR r.syncId <> $syncId DELETE r",
   LIKES: "MATCH ()-[r:LIKES]->() WHERE r.syncId IS NULL OR r.syncId <> $syncId DELETE r",
   DISLIKES: "MATCH ()-[r:DISLIKES]->() WHERE r.syncId IS NULL OR r.syncId <> $syncId DELETE r",
+  IN_COMMUNITY: "MATCH ()-[r:IN_COMMUNITY]->() WHERE r.syncId IS NULL OR r.syncId <> $syncId DELETE r",
 };
 
 export const SWEEP_NODES: Record<OwnedLabel, string> = {
@@ -1028,13 +1133,22 @@ export const SWEEP_NODES: Record<OwnedLabel, string> = {
   Flavor: "MATCH (n:Flavor) WHERE n.syncId IS NULL OR n.syncId <> $syncId DETACH DELETE n",
   Note: "MATCH (n:Note) WHERE n.syncId IS NULL OR n.syncId <> $syncId DETACH DELETE n",
   User: "MATCH (n:User) WHERE n.syncId IS NULL OR n.syncId <> $syncId DETACH DELETE n",
+  Community: "MATCH (n:Community) WHERE n.syncId IS NULL OR n.syncId <> $syncId DETACH DELETE n",
 };
 
-/** The sweep in the order it runs: every owned relationship type, then every owned label. */
+/** Part 1, before the analytics phase: every MIRRORED relationship type, then every MIRRORED label. */
 export function sweepSteps(): Array<{ name: string; statement: string }> {
   return [
-    ...OWNED_TYPES.map((type) => ({ name: type, statement: SWEEP_RELATIONSHIPS[type] })),
-    ...OWNED_LABELS.map((label) => ({ name: label, statement: SWEEP_NODES[label] })),
+    ...MIRRORED_TYPES.map((type) => ({ name: type, statement: SWEEP_RELATIONSHIPS[type] })),
+    ...MIRRORED_LABELS.map((label) => ({ name: label, statement: SWEEP_NODES[label] })),
+  ];
+}
+
+/** Part 2, after the analytics writes: the COMPUTED relationship type, then the COMPUTED label. */
+export function analyticsSweepSteps(): Array<{ name: string; statement: string }> {
+  return [
+    ...COMPUTED_TYPES.map((type) => ({ name: type, statement: SWEEP_RELATIONSHIPS[type] })),
+    ...COMPUTED_LABELS.map((label) => ({ name: label, statement: SWEEP_NODES[label] })),
   ];
 }
 
@@ -1059,6 +1173,7 @@ UNION ALL MATCH (n:Brand) WITH count(n) AS n RETURN 'nodes.Brand' AS name, n
 UNION ALL MATCH (n:Flavor) WITH count(n) AS n RETURN 'nodes.Flavor' AS name, n
 UNION ALL MATCH (n:Note) WITH count(n) AS n RETURN 'nodes.Note' AS name, n
 UNION ALL MATCH (n:User) WITH count(n) AS n RETURN 'nodes.User' AS name, n
+UNION ALL MATCH (n:Community) WITH count(n) AS n RETURN 'nodes.Community' AS name, n
 UNION ALL MATCH ()-[r:CHILD_OF]->() WITH count(r) AS n RETURN 'relationships.CHILD_OF' AS name, n
 UNION ALL MATCH ()-[r:IN_CATEGORY]->() WITH count(r) AS n RETURN 'relationships.IN_CATEGORY' AS name, n
 UNION ALL MATCH ()-[r:BY_BRAND]->() WITH count(r) AS n RETURN 'relationships.BY_BRAND' AS name, n
@@ -1067,15 +1182,22 @@ UNION ALL MATCH ()-[r:HAS_NOTE]->() WITH count(r) AS n RETURN 'relationships.HAS
 UNION ALL MATCH ()-[r:SIMILAR_TO]->() WITH count(r) AS n RETURN 'relationships.SIMILAR_TO' AS name, n
 UNION ALL MATCH ()-[r:RANKED]->() WITH count(r) AS n RETURN 'relationships.RANKED' AS name, n
 UNION ALL MATCH ()-[r:LIKES]->() WITH count(r) AS n RETURN 'relationships.LIKES' AS name, n
-UNION ALL MATCH ()-[r:DISLIKES]->() WITH count(r) AS n RETURN 'relationships.DISLIKES' AS name, n`;
+UNION ALL MATCH ()-[r:DISLIKES]->() WITH count(r) AS n RETURN 'relationships.DISLIKES' AS name, n
+UNION ALL MATCH ()-[r:IN_COMMUNITY]->() WITH count(r) AS n RETURN 'relationships.IN_COMMUNITY' AS name, n`;
 
 /**
  * The invariants a count cannot see. Every row but `bevs with an embedding` is
  * a count of VIOLATIONS and must be 0.
  *
- * The three `stored as` rows are the float-coercion rule, read back: a value
- * written without `toFloat`/`toInteger` would be stored with whatever type
- * its JSON rendering happened to have, and these would count it.
+ * The `stored` rows are the float-coercion rule, read back: a value written
+ * without `toFloat`/`toInteger` would be stored with whatever type its JSON
+ * rendering happened to have, and these would count it.
+ *
+ * The last seven are the analytics phase's (A-16 (4)). The PageRank one is a
+ * count of violations like the rest: the single row holding the sum survives
+ * the `WHERE` only when the sum is more than 1e-6 from 1, and the count over
+ * what survives is 0 or 1. Neo4j adds the 385 floats in its own order, which
+ * is why the bound is 1e-6 here and 1e-9 in analytics-core.ts.
  */
 export const VERIFY_INVARIANTS = `
 MATCH (a:Bev)-[:SIMILAR_TO]->(b:Bev) WHERE a.id >= b.id
@@ -1104,13 +1226,52 @@ WITH count(s) AS n RETURN 'SIMILAR_TO terms not stored as floats' AS name, n
 UNION ALL
 MATCH ()-[r:RANKED]->()
 WHERE NOT (r.score IS :: FLOAT NOT NULL AND r.z IS :: FLOAT NOT NULL AND r.bucket IS :: INTEGER NOT NULL)
-WITH count(r) AS n RETURN 'RANKED score, z or bucket stored with the wrong type' AS name, n`;
+WITH count(r) AS n RETURN 'RANKED score, z or bucket stored with the wrong type' AS name, n
+UNION ALL
+MATCH (b:Bev) WHERE COUNT { (b)-[:IN_COMMUNITY]->(:Community) } <> 1
+WITH count(b) AS n RETURN 'Bevs without exactly one IN_COMMUNITY' AS name, n
+UNION ALL
+MATCH (c:Community) WHERE COUNT { (:Bev)-[:IN_COMMUNITY { hub: true }]->(c) } <> 1
+WITH count(c) AS n RETURN 'Communities without exactly one hub' AS name, n
+UNION ALL
+MATCH (c:Community) WHERE NOT c.size IS :: INTEGER NOT NULL OR c.size <> COUNT { (:Bev)-[:IN_COMMUNITY]->(c) }
+WITH count(c) AS n RETURN 'Communities whose size is not their member count' AS name, n
+UNION ALL
+MATCH (b:Bev)-[:IN_COMMUNITY]->(c:Community) WHERE b.community IS NULL OR b.community <> c.id
+WITH count(b) AS n RETURN 'Bevs whose community property is not their IN_COMMUNITY target' AS name, n
+UNION ALL
+MATCH (b:Bev)
+WHERE NOT (b.pagerank IS :: FLOAT NOT NULL AND b.strength IS :: FLOAT NOT NULL AND b.bridge IS :: FLOAT NOT NULL
+  AND b.degree IS :: INTEGER NOT NULL AND b.community IS :: STRING NOT NULL)
+WITH count(b) AS n RETURN 'Bev pagerank, strength, bridge, degree or community stored with the wrong type' AS name, n
+UNION ALL
+MATCH ()-[r:IN_COMMUNITY]->() WHERE NOT r.hub IS :: BOOLEAN NOT NULL
+WITH count(r) AS n RETURN 'IN_COMMUNITY hub not stored as a boolean' AS name, n
+UNION ALL
+MATCH (b:Bev) WITH sum(b.pagerank) AS total WHERE abs(total - 1.0) > 0.000001
+WITH count(*) AS n RETURN 'Bev pagerank not summing to 1 within 1e-6' AS name, n`;
 
-/** Every name the two verification statements return, with the number each must equal. */
-export function expectedVerification(plan: GraphPlan): Record<string, number> {
+/** One count per owned label and type: the plan's for the mirrored ones, the analytics phase's for the computed. */
+export function ownedCounts(plan: GraphPlan, stats: GraphStats): Record<OwnedLabel | OwnedType, number> {
+  return {
+    ...plan.counts.nodes,
+    ...plan.counts.relationships,
+    Community: stats.counts.communities,
+    // Exactly one per Bev the analytics phase saw.
+    IN_COMMUNITY: stats.counts.bevs,
+  };
+}
+
+/**
+ * Every name the two verification statements return, with the number each
+ * must equal: the plan's counts for what was mirrored, `stats`' for what the
+ * analytics phase computed from the graph.
+ */
+export function expectedVerification(plan: GraphPlan, stats: GraphStats): Record<string, number> {
+  const counts = ownedCounts(plan, stats);
   const expected: Record<string, number> = {};
-  for (const label of OWNED_LABELS) expected[`nodes.${label}`] = plan.counts.nodes[label];
-  for (const type of OWNED_TYPES) expected[`relationships.${type}`] = plan.counts.relationships[type];
+  for (const label of OWNED_LABELS) expected[`nodes.${label}`] = counts[label];
+  for (const type of OWNED_TYPES) expected[`relationships.${type}`] = counts[type];
   expected["SIMILAR_TO not oriented src.id < dst.id"] = 0;
   expected["Bevs without isAlcoholic"] = 0;
   expected["Bevs without exactly one IN_CATEGORY"] = 0;
@@ -1119,6 +1280,13 @@ export function expectedVerification(plan: GraphPlan): Record<string, number> {
   expected["Users with a property other than pseudonym and syncId"] = 0;
   expected["SIMILAR_TO terms not stored as floats"] = 0;
   expected["RANKED score, z or bucket stored with the wrong type"] = 0;
+  expected["Bevs without exactly one IN_COMMUNITY"] = 0;
+  expected["Communities without exactly one hub"] = 0;
+  expected["Communities whose size is not their member count"] = 0;
+  expected["Bevs whose community property is not their IN_COMMUNITY target"] = 0;
+  expected["Bev pagerank, strength, bridge, degree or community stored with the wrong type"] = 0;
+  expected["IN_COMMUNITY hub not stored as a boolean"] = 0;
+  expected["Bev pagerank not summing to 1 within 1e-6"] = 0;
   return expected;
 }
 
@@ -1127,11 +1295,15 @@ export function expectedVerification(plan: GraphPlan): Record<string, number> {
  * line per failing check, naming it and BOTH numbers; an empty array is a
  * pass. A check the graph did not answer at all is a failure too.
  */
-export function verificationFailures(plan: GraphPlan, rows: ReadonlyArray<Record<string, unknown>>): string[] {
+export function verificationFailures(
+  plan: GraphPlan,
+  stats: GraphStats,
+  rows: ReadonlyArray<Record<string, unknown>>,
+): string[] {
   const actual = new Map<string, unknown>();
   for (const row of rows) actual.set(String(row.name), row.n);
   const failures: string[] = [];
-  for (const [name, expected] of Object.entries(expectedVerification(plan))) {
+  for (const [name, expected] of Object.entries(expectedVerification(plan, stats))) {
     const got = actual.get(name);
     if (got === undefined) failures.push(`${name}: the graph returned no row, expected ${expected}`);
     else if (got !== expected) failures.push(`${name}: the graph has ${String(got)}, the plan has ${expected}`);
@@ -1169,15 +1341,26 @@ SET m.lastSyncAt = datetime(),
     m.similarToCount = toInteger($counts.SIMILAR_TO),
     m.rankedCount = toInteger($counts.RANKED),
     m.likesCount = toInteger($counts.LIKES),
-    m.dislikesCount = toInteger($counts.DISLIKES)`;
+    m.dislikesCount = toInteger($counts.DISLIKES),
+    m.communityCount = toInteger($counts.Community),
+    m.inCommunityCount = toInteger($counts.IN_COMMUNITY),
+    m.modularity = toFloat($modularity),
+    m.analyticsVersion = $analyticsVersion`;
 
-/** The parameters `STAMP_META` takes. */
-export function metaParameters(plan: GraphPlan, syncId: string): Record<string, unknown> {
+/**
+ * The parameters `STAMP_META` takes. `analyticsVersion` is the RANKING_VERSION
+ * whose network.ts produced the signals: the same value as `rankingVersion`
+ * today, kept as its own property so "which formulas made these communities"
+ * has one obvious place to be read.
+ */
+export function metaParameters(plan: GraphPlan, syncId: string, stats: GraphStats): Record<string, unknown> {
   return {
     syncId,
     rankingVersion: plan.rankingVersion,
     edgesVersion: plan.edgesVersion,
-    counts: { ...plan.counts.nodes, ...plan.counts.relationships },
+    counts: ownedCounts(plan, stats),
+    modularity: stats.modularity,
+    analyticsVersion: plan.rankingVersion,
   };
 }
 
@@ -1247,6 +1430,11 @@ export const ALL_STATEMENTS: Record<string, string> = {
   UPSERT_RANKED,
   UPSERT_LIKES,
   UPSERT_DISLIKES,
+  READ_BEV_IDS,
+  READ_SIMILAR_TO,
+  SET_BEV_GRAPH_STATS,
+  UPSERT_COMMUNITIES,
+  UPSERT_IN_COMMUNITY,
   ...Object.fromEntries(Object.entries(SWEEP_RELATIONSHIPS).map(([type, s]) => [`SWEEP_RELATIONSHIPS.${type}`, s])),
   ...Object.fromEntries(Object.entries(SWEEP_NODES).map(([label, s]) => [`SWEEP_NODES.${label}`, s])),
   VERIFY_COUNTS,

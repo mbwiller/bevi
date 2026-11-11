@@ -9,9 +9,12 @@ name: graph-sync
 # the catalog around it and the pseudonymised rankings into the graph, so a red
 # run here costs the app nothing: yesterday's graph stays exactly as it was.
 #
-# The whole write is ONE Cypher transaction -- upsert, stamp, sweep, verify the
-# counts against Postgres by reading the graph back, then commit. Any error or
-# any mismatch rolls back. There is no half-written night.
+# The whole write is ONE Cypher transaction -- upsert, stamp, sweep, compute the
+# graph signals from the graph as read back, verify the counts by reading the
+# graph back again, then commit. Any error or any mismatch rolls back. There is
+# no half-written night. After the commit the signals are written to
+# `bev_graph_stats` in Postgres; if THAT fails the run is red and says the graph
+# committed and Postgres was not updated (docs/graph.md, "Graph signals").
 #
 # ---------------------------------------------------------------------------
 # WHEN IT RUNS, AND WHY THERE ARE TWO TRIGGERS
@@ -46,18 +49,21 @@ name: graph-sync
 #                               same name is accepted as a fallback.
 #   SUPABASE_SERVICE_ROLE_KEY   repository SECRET. Reads `bevs`, `categories`,
 #                               `bev_flavor_profiles`, `bev_embeddings`,
-#                               `bev_edges` and `rankings` past RLS.
+#                               `bev_edges` and `rankings` past RLS, and, after
+#                               the graph commits, calls the service-role-only
+#                               `replace_bev_graph_stats` (A-16 (4)).
 #   NEO4J_URI                   repository SECRETS, all four copied verbatim
 #   NEO4J_USERNAME              from the credentials file Aura showed once. On
 #   NEO4J_PASSWORD              this instance the username AND the database are
 #   NEO4J_DATABASE              the instance id, not `neo4j`, so none of them
 #                               has a usable default.
 #   BEVI_PSEUDONYM_SALT         repository SECRET, set 2026-11-10. The HMAC key
-#                               behind (:User {pseudonym}). At least 16
-#                               characters. NEVER ROTATE IT CASUALLY: a new
-#                               salt renames every user, so every (:User) node
-#                               is swept and recreated and nothing accumulates
-#                               across the change.
+#                               behind (:User {pseudonym}) and behind every
+#                               community id. At least 16 characters. NEVER
+#                               ROTATE IT CASUALLY: a new salt renames every
+#                               user, so every (:User) node is swept and
+#                               recreated and nothing accumulates across the
+#                               change, and it renames every community.
 #
 # All are documented in docs/graph.md's secrets table and supabase/.env.example.
 #

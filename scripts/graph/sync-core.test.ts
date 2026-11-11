@@ -18,20 +18,33 @@ import { test } from "node:test";
 
 import { RANKING_VERSION, flavorTokens, zScoresFromRankings } from "@bevi/ranking";
 
+import { computeGraphStats, graphStatsWrites } from "./analytics-core.ts";
+import type { GraphStats } from "./analytics-core.ts";
 import {
   ALL_STATEMENTS,
   BATCH,
+  COMPUTED_LABELS,
+  COMPUTED_TYPES,
   EMBEDDING_DIMENSIONS,
+  MIRRORED_LABELS,
+  MIRRORED_TYPES,
   OWNED_LABELS,
   OWNED_TYPES,
+  READ_BEV_IDS,
+  READ_SIMILAR_TO,
+  SET_BEV_GRAPH_STATS,
   STAMP_FAILED_ATTEMPT,
   STAMP_META,
   SWEEP_NODES,
   SWEEP_RELATIONSHIPS,
   UPSERT_BEVS,
+  UPSERT_COMMUNITIES,
+  UPSERT_IN_COMMUNITY,
   UPSERT_USERS,
   VERIFY_COUNTS,
   VERIFY_INVARIANTS,
+  analyticsSweepSteps,
+  analyticsWriteSteps,
   buildGraphPlan,
   chunk,
   expectedVerification,
@@ -39,6 +52,7 @@ import {
   instant,
   metaParameters,
   numeric,
+  ownedCounts,
   parseEmbedding,
   preferenceOf,
   sourceFromRows,
@@ -56,7 +70,7 @@ import type {
   SourceRanking,
 } from "./sync-core.ts";
 import { FIXTURE_BEVS, FIXTURE_PSEUDONYM_SALT, FIXTURE_USERS, buildFixtureSource } from "./sync-fixture.ts";
-import { pseudonymiser } from "./sync.ts";
+import { communityIdentifier, pseudonymiser } from "./sync.ts";
 
 // ---------------------------------------------------------------------------
 // A small hand-built source
@@ -190,6 +204,21 @@ const fixturePlan = (): GraphPlan =>
     pseudonymOf: pseudonymiser(FIXTURE_PSEUDONYM_SALT),
     rankingVersion: RANKING_VERSION,
   }));
+
+/** The graph signals of a plan, computed the way the sync does today: SIMILAR_TO is the partition graph too. */
+function statsFor(p: GraphPlan): GraphStats {
+  const nodes = p.nodes.bevs.map((b) => b.id);
+  const similarity = p.relationships.similarTo.map((e) => ({ a: e.src, b: e.dst, w: e.w }));
+  return computeGraphStats({
+    nodes,
+    similarity,
+    partition: { nodes, edges: similarity },
+    communityIdOf: communityIdentifier(FIXTURE_PSEUDONYM_SALT),
+  });
+}
+
+let fixtureStatsCache: GraphStats | undefined;
+const fixtureStats = (): GraphStats => (fixtureStatsCache ??= statsFor(fixturePlan()));
 
 // ---------------------------------------------------------------------------
 // Counts
@@ -905,14 +934,14 @@ test("writeSteps upserts every label before any relationship, with the right bat
   const steps = writeSteps(fixturePlan());
   assert.deepEqual(
     steps.map((s) => s.name),
-    ["Category", "Brand", "Flavor", "Note", "User", "Bev", ...OWNED_TYPES],
+    ["Category", "Brand", "Flavor", "Note", "User", "Bev", ...MIRRORED_TYPES],
   );
-  assert.deepEqual([...steps.slice(0, 6).map((s) => s.name)].sort(), [...OWNED_LABELS].sort());
+  assert.deepEqual([...steps.slice(0, 6).map((s) => s.name)].sort(), [...MIRRORED_LABELS].sort());
   const size = new Map(steps.map((s) => [s.name, s.batchSize]));
   assert.equal(size.get("Bev"), 100);
   assert.equal(BATCH.embeddings, 100);
   for (const label of ["Category", "Brand", "Flavor", "Note", "User"]) assert.equal(size.get(label), 500);
-  for (const type of OWNED_TYPES) assert.equal(size.get(type), 1000);
+  for (const type of MIRRORED_TYPES) assert.equal(size.get(type), 1000);
   // Whatever carries an embedding goes 100 to a request.
   for (const step of steps) {
     if (step.rows.some((row) => Array.isArray((row as { embedding?: unknown }).embedding))) assert.equal(step.batchSize, 100);
@@ -923,12 +952,43 @@ test("writeSteps upserts every label before any relationship, with the right bat
   assert.equal(steps.reduce((n, s) => n + s.rows.length, 0), total);
 });
 
-test("the sweep covers every owned type and label, relationships first, and never Meta", () => {
-  const steps = sweepSteps();
+test("Community and IN_COMMUNITY are owned: computed, not mirrored, and in no plan count", () => {
+  assert.deepEqual([...COMPUTED_LABELS], ["Community"]);
+  assert.deepEqual([...COMPUTED_TYPES], ["IN_COMMUNITY"]);
+  assert.deepEqual([...OWNED_LABELS], [...MIRRORED_LABELS, "Community"]);
+  assert.deepEqual([...OWNED_TYPES], [...MIRRORED_TYPES, "IN_COMMUNITY"]);
+  assert.ok(!(MIRRORED_LABELS as readonly string[]).includes("Community"));
+  assert.ok(!(MIRRORED_TYPES as readonly string[]).includes("IN_COMMUNITY"));
+  const p = fixturePlan();
+  assert.deepEqual(Object.keys(p.counts.nodes).sort(), [...MIRRORED_LABELS].sort());
+  assert.deepEqual(Object.keys(p.counts.relationships).sort(), [...MIRRORED_TYPES].sort());
+});
+
+test("the sweep runs in two parts that together cover every owned type and label exactly once", () => {
+  // Part 1, before the analytics phase reads the graph back: the mirrored ones.
   assert.deepEqual(
-    steps.map((s) => s.name),
-    [...OWNED_TYPES, ...OWNED_LABELS],
+    sweepSteps().map((s) => s.name),
+    [...MIRRORED_TYPES, ...MIRRORED_LABELS],
   );
+  // Part 2, after the analytics writes: the computed ones, relationship first.
+  assert.deepEqual(
+    analyticsSweepSteps().map((s) => s.name),
+    ["IN_COMMUNITY", "Community"],
+  );
+  assert.deepEqual(
+    analyticsSweepSteps().map((s) => s.statement),
+    [SWEEP_RELATIONSHIPS.IN_COMMUNITY, SWEEP_NODES.Community],
+  );
+  const all = [...sweepSteps(), ...analyticsSweepSteps()].map((s) => s.name);
+  assert.deepEqual([...all].sort(), [...OWNED_TYPES, ...OWNED_LABELS].sort());
+  assert.equal(new Set(all).size, all.length);
+  // Nothing computed is swept before it has been written.
+  for (const step of sweepSteps()) assert.ok(!/Community|IN_COMMUNITY/.test(step.statement), step.name);
+});
+
+test("the sweep covers every owned type and label, relationships first, and never Meta", () => {
+  const steps = [...sweepSteps(), ...analyticsSweepSteps()];
+  assert.equal(steps.length, OWNED_TYPES.length + OWNED_LABELS.length);
   assert.ok(!(OWNED_LABELS as readonly string[]).includes("Meta"));
   for (const type of OWNED_TYPES) {
     assert.equal(SWEEP_RELATIONSHIPS[type], `MATCH ()-[r:${type}]->() WHERE r.syncId IS NULL OR r.syncId <> $syncId DELETE r`);
@@ -958,9 +1018,16 @@ test("every float-valued property is written through toFloat", () => {
     }
   }
   assert.ok(UPSERT_BEVS.includes("[x IN row.embedding | toFloat(x)]"));
+  // The three computed floats: a PageRank or a bridge score can be exactly 0,
+  // and a strength exactly 1.
+  for (const property of ["pagerank", "strength", "bridge"]) {
+    assert.ok(SET_BEV_GRAPH_STATS.includes(`b.${property} = toFloat(row.${property})`), `SET_BEV_GRAPH_STATS writes ${property} uncoerced`);
+    assert.ok(!new RegExp(`(?<!toFloat\\()row\\.${property}\\b`).test(SET_BEV_GRAPH_STATS));
+  }
+  assert.ok(STAMP_META.includes("m.modularity = toFloat($modularity)"));
 
   // And the general rule: a float-valued row field is never referenced bare.
-  const floats = ["w", "tree", "content", "emb", "profile", "cop", "score", "z"];
+  const floats = ["w", "tree", "content", "emb", "profile", "cop", "score", "z", "pagerank", "strength", "bridge"];
   for (const [name, statement] of upserts) {
     for (const property of floats) {
       const bare = new RegExp(`(?<!toFloat\\()row\\.${property}\\b`);
@@ -971,7 +1038,7 @@ test("every float-valued property is written through toFloat", () => {
 });
 
 test("every integer-valued property is written through toInteger", () => {
-  const integers = ["sortOrder", "depth", "bevCount", "priceTier", "caffeine", "sweetness", "bucket"];
+  const integers = ["sortOrder", "depth", "bevCount", "priceTier", "caffeine", "sweetness", "bucket", "size"];
   let seen = 0;
   for (const [name, statement] of upserts) {
     for (const property of integers) {
@@ -981,7 +1048,11 @@ test("every integer-valued property is written through toInteger", () => {
     }
   }
   assert.equal(seen, integers.length);
+  assert.ok(SET_BEV_GRAPH_STATS.includes("b.degree = toInteger(row.degree)"));
+  assert.ok(!/(?<!toInteger\()row\.degree\b/.test(SET_BEV_GRAPH_STATS));
   for (const key of [...OWNED_LABELS, ...OWNED_TYPES]) assert.ok(STAMP_META.includes(`toInteger($counts.${key})`), key);
+  assert.ok(STAMP_META.includes("m.communityCount = toInteger($counts.Community)"));
+  assert.ok(STAMP_META.includes("m.inCommunityCount = toInteger($counts.IN_COMMUNITY)"));
 });
 
 test("no statement calls a gds procedure, and none depends on APOC", () => {
@@ -1002,6 +1073,10 @@ test("every statement is a fixed string: data travels only as parameters", () =>
   const steps = writeSteps(fixturePlan());
   assert.equal(JSON.stringify(ALL_STATEMENTS), before);
   for (const step of steps) assert.ok(Object.values(ALL_STATEMENTS).includes(step.statement));
+  for (const step of [...sweepSteps(), ...analyticsSweepSteps(), ...analyticsWriteSteps(graphStatsWrites(fixtureStats()))]) {
+    assert.ok(Object.values(ALL_STATEMENTS).includes(step.statement), step.name);
+  }
+  assert.equal(JSON.stringify(ALL_STATEMENTS), before);
   for (const [name, statement] of upserts) {
     assert.ok(statement.includes("UNWIND $rows AS row"), name);
     assert.ok(statement.includes("syncId: $syncId"), `${name} does not stamp syncId`);
@@ -1010,7 +1085,7 @@ test("every statement is a fixed string: data travels only as parameters", () =>
 });
 
 test("node upserts replace the property map; the Meta stamp does not", () => {
-  for (const name of ["UPSERT_CATEGORIES", "UPSERT_BRANDS", "UPSERT_FLAVORS", "UPSERT_NOTES", "UPSERT_USERS", "UPSERT_BEVS"]) {
+  for (const name of ["UPSERT_CATEGORIES", "UPSERT_BRANDS", "UPSERT_FLAVORS", "UPSERT_NOTES", "UPSERT_USERS", "UPSERT_BEVS", "UPSERT_COMMUNITIES"]) {
     assert.match(ALL_STATEMENTS[name] as string, /\nSET \w+ = \{/, `${name} does not use replace semantics`);
   }
   // (:Meta) keeps lastKeepAliveAt, so it is individual SETs and never a replace.
@@ -1026,6 +1101,108 @@ test("a User is written with a pseudonym and the sync stamp, and nothing else", 
   assert.ok(UPSERT_USERS.includes("SET u = { pseudonym: row.pseudonym, syncId: $syncId }"));
 });
 
+// ---------------------------------------------------------------------------
+// The analytics phase's Cypher
+// ---------------------------------------------------------------------------
+
+test("the two reads of the analytics phase are read-only, ordered, and take no parameter", () => {
+  for (const statement of [READ_BEV_IDS, READ_SIMILAR_TO]) {
+    assert.ok(!/\b(MERGE|SET|DELETE|CREATE|REMOVE)\b/.test(statement), statement);
+    assert.ok(!statement.includes("$"), "a fixed statement with no parameter");
+    assert.match(statement, /\nORDER BY /);
+  }
+  assert.ok(READ_BEV_IDS.includes("MATCH (b:Bev)") && READ_BEV_IDS.includes("RETURN b.id AS id") && READ_BEV_IDS.includes("ORDER BY b.id"));
+  // Directed, so each stored edge comes back once, in the orientation it was written.
+  assert.ok(READ_SIMILAR_TO.includes("MATCH (a:Bev)-[s:SIMILAR_TO]->(b:Bev)"));
+  assert.ok(READ_SIMILAR_TO.includes("RETURN a.id AS a, b.id AS b, s.w AS w"));
+  assert.ok(READ_SIMILAR_TO.includes("ORDER BY a.id, b.id"));
+});
+
+test("the five computed Bev properties are set by their own statement, never folded into the Bev upsert", () => {
+  for (const property of ["pagerank", "strength", "degree", "bridge", "community"]) {
+    assert.ok(new RegExp(`b\\.${property} = `).test(SET_BEV_GRAPH_STATS), property);
+    assert.ok(!new RegExp(`\\b${property}\\b`).test(UPSERT_BEVS), `UPSERT_BEVS mentions ${property}`);
+  }
+  // Individual SETs on a MATCHed node: it must not replace the map the upsert
+  // wrote, must not create a Bev, and must not restamp one.
+  assert.ok(SET_BEV_GRAPH_STATS.includes("UNWIND $rows AS row\nMATCH (b:Bev { id: row.id })"));
+  assert.ok(!/SET b = /.test(SET_BEV_GRAPH_STATS));
+  assert.ok(!SET_BEV_GRAPH_STATS.includes("MERGE"));
+  assert.ok(!SET_BEV_GRAPH_STATS.includes("syncId"));
+  assert.ok(SET_BEV_GRAPH_STATS.includes("b.community = row.community"));
+});
+
+test("a Community is its opaque id, its size and the stamp; IN_COMMUNITY carries hub and the stamp", () => {
+  assert.ok(UPSERT_COMMUNITIES.includes("MERGE (c:Community { id: row.id })"));
+  assert.ok(UPSERT_COMMUNITIES.includes("SET c = { id: row.id, size: toInteger(row.size), syncId: $syncId }"));
+  assert.ok(!/hub/i.test(UPSERT_COMMUNITIES), "the hub is never named on the node");
+  assert.ok(UPSERT_IN_COMMUNITY.includes("MATCH (b:Bev { id: row.from })\nMATCH (c:Community { id: row.to })\nMERGE (b)-[r:IN_COMMUNITY]->(c)"));
+  assert.ok(UPSERT_IN_COMMUNITY.includes("SET r = { hub: row.hub, syncId: $syncId }"));
+});
+
+test("analyticsWriteSteps: properties, then communities, then the relationships that MATCH them", () => {
+  const stats = fixtureStats();
+  const steps = analyticsWriteSteps(graphStatsWrites(stats));
+  assert.deepEqual(
+    steps.map((s) => [s.name, s.statement, s.rows.length, s.batchSize]),
+    [
+      ["Bev stats", SET_BEV_GRAPH_STATS, stats.counts.bevs, BATCH.nodes],
+      ["Community", UPSERT_COMMUNITIES, stats.counts.communities, BATCH.nodes],
+      ["IN_COMMUNITY", UPSERT_IN_COMMUNITY, stats.counts.bevs, BATCH.relationships],
+    ],
+  );
+});
+
+test("ownedCounts: the plan's counts for the mirror, the computation's for Community and IN_COMMUNITY", () => {
+  const p = fixturePlan();
+  const stats = fixtureStats();
+  const counts = ownedCounts(p, stats);
+  assert.deepEqual(Object.keys(counts).sort(), [...OWNED_LABELS, ...OWNED_TYPES].sort());
+  assert.equal(counts.Bev, p.counts.nodes.Bev);
+  assert.equal(counts.SIMILAR_TO, p.counts.relationships.SIMILAR_TO);
+  assert.equal(counts.Community, stats.counts.communities);
+  assert.equal(counts.IN_COMMUNITY, p.counts.nodes.Bev, "exactly one per Bev");
+});
+
+test("the analytics invariants: one membership, one hub, the right types, pagerank summing to 1", () => {
+  const expected = expectedVerification(fixturePlan(), fixtureStats());
+  for (const name of [
+    "Bevs without exactly one IN_COMMUNITY",
+    "Communities without exactly one hub",
+    "Communities whose size is not their member count",
+    "Bevs whose community property is not their IN_COMMUNITY target",
+    "Bev pagerank, strength, bridge, degree or community stored with the wrong type",
+    "IN_COMMUNITY hub not stored as a boolean",
+    "Bev pagerank not summing to 1 within 1e-6",
+  ]) {
+    assert.equal(expected[name], 0, name);
+    assert.ok(VERIFY_INVARIANTS.includes(`RETURN '${name}' AS name, n`), name);
+  }
+  assert.equal(expected["nodes.Community"], fixtureStats().counts.communities);
+  assert.equal(expected["relationships.IN_COMMUNITY"], fixturePlan().counts.nodes.Bev);
+
+  assert.ok(VERIFY_INVARIANTS.includes("WHERE COUNT { (b)-[:IN_COMMUNITY]->(:Community) } <> 1"));
+  assert.ok(VERIFY_INVARIANTS.includes("WHERE COUNT { (:Bev)-[:IN_COMMUNITY { hub: true }]->(c) } <> 1"));
+  for (const typed of [
+    "b.pagerank IS :: FLOAT NOT NULL",
+    "b.strength IS :: FLOAT NOT NULL",
+    "b.bridge IS :: FLOAT NOT NULL",
+    "b.degree IS :: INTEGER NOT NULL",
+    "b.community IS :: STRING NOT NULL",
+    "c.size IS :: INTEGER NOT NULL",
+    "r.hub IS :: BOOLEAN NOT NULL",
+  ]) {
+    assert.ok(VERIFY_INVARIANTS.includes(typed), typed);
+  }
+  // A count of violations: the row holding the sum survives the WHERE only
+  // when it is more than 1e-6 from 1.
+  assert.ok(
+    VERIFY_INVARIANTS.includes(
+      "MATCH (b:Bev) WITH sum(b.pagerank) AS total WHERE abs(total - 1.0) > 0.000001\nWITH count(*) AS n RETURN 'Bev pagerank not summing to 1 within 1e-6' AS name, n",
+    ),
+  );
+});
+
 test("every verification branch aggregates without a grouping key, so zero matches is a row saying 0", () => {
   for (const statement of [VERIFY_COUNTS, VERIFY_INVARIANTS]) {
     const branches = statement.split("UNION ALL");
@@ -1038,39 +1215,56 @@ test("every verification branch aggregates without a grouping key, so zero match
 
 test("the verification statements return exactly the names expectedVerification knows", () => {
   const names = [...`${VERIFY_COUNTS}\n${VERIFY_INVARIANTS}`.matchAll(/RETURN '([^']+)' AS name/g)].map((m) => m[1] as string);
-  assert.deepEqual([...names].sort(), Object.keys(expectedVerification(fixturePlan())).sort());
+  assert.deepEqual([...names].sort(), Object.keys(expectedVerification(fixturePlan(), fixtureStats())).sort());
   assert.equal(new Set(names).size, names.length);
 });
 
-const answersFor = (p: GraphPlan): Array<Record<string, unknown>> =>
-  Object.entries(expectedVerification(p)).map(([name, n]) => ({ name, n }));
+const answersFor = (p: GraphPlan, stats: GraphStats = statsFor(p)): Array<Record<string, unknown>> =>
+  Object.entries(expectedVerification(p, stats)).map(([name, n]) => ({ name, n }));
 
 test("verificationFailures passes an exact match and names the check and both numbers otherwise", () => {
   const p = fixturePlan();
-  assert.deepEqual(verificationFailures(p, answersFor(p)), []);
+  const stats = fixtureStats();
+  assert.deepEqual(verificationFailures(p, stats, answersFor(p)), []);
 
   const short = answersFor(p).map((row) => (row.name === "relationships.SIMILAR_TO" ? { ...row, n: (row.n as number) - 2 } : row));
-  assert.deepEqual(verificationFailures(p, short), [
+  assert.deepEqual(verificationFailures(p, stats, short), [
     `relationships.SIMILAR_TO: the graph has ${p.counts.relationships.SIMILAR_TO - 2}, the plan has ${p.counts.relationships.SIMILAR_TO}`,
   ]);
 
   const extra = answersFor(p).map((row) => (row.name === "nodes.User" ? { ...row, n: (row.n as number) + 1 } : row));
-  assert.equal(verificationFailures(p, extra).length, 1);
+  assert.equal(verificationFailures(p, stats, extra).length, 1);
 
   const misoriented = answersFor(p).map((row) => (String(row.name).startsWith("SIMILAR_TO not oriented") ? { ...row, n: 3 } : row));
-  assert.deepEqual(verificationFailures(p, misoriented), ["SIMILAR_TO not oriented src.id < dst.id: the graph has 3, the plan has 0"]);
+  assert.deepEqual(verificationFailures(p, stats, misoriented), ["SIMILAR_TO not oriented src.id < dst.id: the graph has 3, the plan has 0"]);
 
   const missing = answersFor(p).filter((row) => row.name !== "Bevs without isAlcoholic");
-  assert.deepEqual(verificationFailures(p, missing), ["Bevs without isAlcoholic: the graph returned no row, expected 0"]);
+  assert.deepEqual(verificationFailures(p, stats, missing), ["Bevs without isAlcoholic: the graph returned no row, expected 0"]);
+
+  // The computed counts are held to the computation, not to the plan.
+  const strayCommunity = answersFor(p).map((row) => (row.name === "nodes.Community" ? { ...row, n: (row.n as number) + 1 } : row));
+  assert.deepEqual(verificationFailures(p, stats, strayCommunity), [
+    `nodes.Community: the graph has ${stats.counts.communities + 1}, the plan has ${stats.counts.communities}`,
+  ]);
+  const twoHubs = answersFor(p).map((row) => (row.name === "Communities without exactly one hub" ? { ...row, n: 2 } : row));
+  assert.deepEqual(verificationFailures(p, stats, twoHubs), ["Communities without exactly one hub: the graph has 2, the plan has 0"]);
+  const offByALittle = answersFor(p).map((row) => (String(row.name).startsWith("Bev pagerank not summing") ? { ...row, n: 1 } : row));
+  assert.equal(verificationFailures(p, stats, offByALittle).length, 1);
 
   // A count that came back as a string is not the number.
   const stringly = answersFor(p).map((row) => (row.name === "nodes.Bev" ? { ...row, n: String(row.n) } : row));
-  assert.equal(verificationFailures(p, stringly).length, 1);
+  assert.equal(verificationFailures(p, stats, stringly).length, 1);
 });
 
-test("metaParameters carries the versions and one count per label and type", () => {
+test("metaParameters carries the versions, one count per label and type, the modularity and the analytics version", () => {
   const p = fixturePlan();
-  const parameters = metaParameters(p, "sync-1");
+  const stats = fixtureStats();
+  const parameters = metaParameters(p, "sync-1", stats);
+  assert.equal((parameters.counts as Record<string, number>).Community, stats.counts.communities);
+  assert.equal((parameters.counts as Record<string, number>).IN_COMMUNITY, p.counts.nodes.Bev);
+  assert.equal(parameters.modularity, stats.modularity);
+  assert.equal(parameters.analyticsVersion, RANKING_VERSION);
+  assert.ok(STAMP_META.includes("m.analyticsVersion = $analyticsVersion"));
   assert.equal(parameters.syncId, "sync-1");
   assert.equal(parameters.rankingVersion, RANKING_VERSION);
   assert.equal(parameters.edgesVersion, RANKING_VERSION);
