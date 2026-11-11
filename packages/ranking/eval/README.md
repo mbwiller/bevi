@@ -13,6 +13,7 @@ npm run eval -w packages/ranking -- <export.json>          # text report
 npm run eval -w packages/ranking -- <export.json> --json   # the EvalReport as JSON
 npm run eval -w packages/ranking -- --synthetic            # harness check, NOT an accuracy result
 npm run eval -w packages/ranking -- --write-sample out.json   # a synthetic file in the export format
+npm run eval -w packages/ranking -- --lists                # list report of recommend()'s options, synthetic only
 ```
 
 Options: `--split loo|temporal`, `--no-respace`, `--quantile 0.8`, `--bootstrap 1000`,
@@ -124,6 +125,35 @@ and only when a stored arm is in the run, since it scores every user pair per fo
 carries no flavour bases, so in the harness brand is the only bridging attribute and the attribute
 term understates the real graph's. A user with no neighbour above the 0.1 floor falls back to the
 cosine, exactly as in the app.
+
+## List report (`--lists`, synthetic only): a harness check, NOT an accuracy result
+
+The arms above score single predictions. `recommend()`'s two 1.8.0 options (`diversity` and
+`exploration`, both `'community'` or the default, LaTeX §7) change *lists*, so `eval/lists.ts`
+scores lists, on `syntheticSnapshot()` only, behind the same banner as `--synthetic` plus one more
+line: list metrics describe what an option does to a list, never whether anyone would prefer it.
+
+It builds the snapshot's `bevGraph` the way the graph sync builds the real one, with the package's
+own functions: taste families = `louvainCommunities(attributeProjection(Bevs, memberships))`, one
+`note:<token>` membership per entry of each Bev's `flavorTokens` (a snapshot carries no flavour
+base); `pagerank` = `pageRank` over the similarity graph (`syntheticEdges`); `bridge` =
+`participationCoefficient(similarity graph, families)`; family ids from `communityHubs` over the
+projection. Then, for every user with at least 3 rankings and `--days` seeds each (default 7), it
+runs `recommend()` with n = 20 under `{}`, `{ diversity: 'community' }` and `{ diversity:
+'community', exploration: 'community' }` and reports, as means over the lists:
+
+- **families@10**: distinct taste families in the top 10;
+- **ILD@10**: intra-list diversity, 1 − the mean pairwise `contentSimilarity` over the top 10;
+- **mean z@10**: the mean un-jittered predicted ẑ of the top 10, the price paid for diversity;
+- **uncharted**: the share of all exploration picks (whole list) in a family where the user has
+  ranked nothing.
+
+It also prints the families (count, sizes, modularity, category purity), the share of similarity
+edges that cross families, and how many users have ranked in every family (for them
+`exploration: 'community'` has no uncharted family and uses the category pool). Synthetic Bevs
+have 8 flavour tokens, so there are only a handful of families, and most synthetic users touch all
+of them: the numbers exercise the plumbing and show each metric moving, nothing more. Options:
+`--users N --bevs N --seed s --days N`, and `--json` for the `ListReport`.
 
 ## Caveats
 

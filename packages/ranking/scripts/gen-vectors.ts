@@ -11,6 +11,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
   answer,
+  attributeProjection,
   attributeSimilarity,
   bayesianAverage,
   blendUserSimilarity,
@@ -160,6 +161,8 @@ const constants = {
     'P_i = 1 - sum over labels ascending of (s_{i,c} / s_i)^2, s_{i,c} = i\'s weight into community c (its own included) over its neighbours in order, the order s_i is summed in (so a node whose neighbours all share its community is exactly 0); isolated node 0; clamped at 0 below; in [0, 1)',
   communityHubRule:
     'hub of a community = the member with the greatest within-community strength (weight to the other members, over its neighbours in order), compared as exact doubles, ties to the smallest id (code point); a singleton is its own hub; keyed by community label. The hub identifies the community: the graph sync derives the community\'s opaque public id from it (hashed, so an age-gated hub\'s Bev id never reaches a client)',
+  attributeProjectionRule:
+    'one-mode projection of a bipartite node-attribute graph { nodes, memberships: [{ node, attribute }] }, Adamic-Adar weighted: w_ab = sum over attributes x carried by both a and b of 1 / ln(deg(x)), deg(x) = number of distinct nodes carrying x, each term computed as 1 / Math.log(deg). Throws on a duplicate or empty node id, an empty attribute, a membership whose node is not in nodes, or a duplicate (node, attribute) row. An attribute with deg 1 is skipped (joins nothing). Attributes are processed in code-point order, each attribute\'s nodes in code-point order, and each pair\'s weight is accumulated from 0 in that attribute order. Output nodes in code-point order; edges oriented a < b (code point), sorted by (a, b), only for pairs sharing at least one attribute with deg >= 2; a node sharing nothing stays in nodes with no edge. The result is a valid graph for networkGraphRule. No constant: the caller chooses the attributes (the graph sync passes flavor:<base> and note:<token>, leaving out the base other), and the sync stores community = the Louvain community of this projection (the taste family)',
 };
 
 /** A plausible stored score: some position in some bucket. */
@@ -1055,10 +1058,10 @@ function layer2StoredSnapshot(): PredictionSnapshot {
   return { version: RANKING_VERSION, generatedAt: '2026-10-31T00:00:00Z', global: { mean: g.mean, stddev: g.stddev, byCategoryMean }, bevs, users, rankings };
 }
 
-// ---------------------------------------------------------------- graph signals (network.ts, 1.7.0)
+// ---------------------------------------------------------------- graph signals (network.ts, 1.7.0; projection 1.8.0)
 // No PRNG: hand-built graphs (the table test's), so adding this file leaves every earlier file's
 // cases unchanged. Rules: networkGraphRule, pageRankRule, modularityRule, louvainRule,
-// participationRule, communityHubRule in the header.
+// participationRule, communityHubRule and (1.8.0) attributeProjectionRule in the header.
 
 function networkCases(): Case[] {
   const cases: Case[] = [];
@@ -1159,6 +1162,30 @@ function networkCases(): Case[] {
   hubs('other split', 'hubs', { a: 0, b: 0, c: 1, d: 1 });
   hubs('singletons are their own hubs, keyed by label', 'isolated', { a: 3, b: 3, z: 9 });
   hubs('tie broken by code point, not UTF-16 unit: U+FF23 before U+1F600', 'astral', { a: 0, '\u{1F600}': 1, 'Ｃ': 1 });
+
+  // attributeProjection (1.8.0), appended after the 1.7.0 cases so those stay byte-identical. Rule:
+  // attributeProjectionRule in the header.
+  const M = (node: string, attribute: string) => ({ node, attribute });
+  const proj = (name: string, nodes: string[], memberships: Array<{ node: string; attribute: string }>) =>
+    cases.push({ name, fn: 'attributeProjection', input: { nodes, memberships }, expected: attributeProjection(nodes, memberships) });
+  proj('one shared attribute of degree 2: 1 / ln 2', ['b', 'a'], [M('b', 'x'), M('a', 'x')]);
+  proj('degree 3: 1 / ln 3 on each of the three pairs', ['c', 'a', 'b'], [M('c', 'x'), M('a', 'x'), M('b', 'x')]);
+  proj('two shared attributes: 1 / ln 2 + 1 / ln 3, in attribute order', ['a', 'b', 'c'], [M('c', 'y'), M('b', 'y'), M('a', 'y'), M('b', 'x'), M('a', 'x')]);
+  proj('a degree-1 attribute adds nothing; an isolated node is kept', ['a', 'b', 'z'], [M('a', 'solo'), M('a', 'x'), M('b', 'x'), M('z', 'own')]);
+  proj('nothing shared: no edges', ['a', 'b'], [M('a', 'x'), M('b', 'y')]);
+  proj('empty', [], []);
+  proj('code-point order: U+FF23 before U+1F600', ['\u{1F600}', 'Ｃ'], [M('\u{1F600}', 'k'), M('Ｃ', 'k')]);
+  const citrus = ['c1', 'c2', 'c3'];
+  const berry = ['b1', 'b2', 'b3'];
+  const families = [
+    ...citrus.flatMap((n) => ['flavor:citrus', 'note:lemon', 'note:zest'].map((x) => M(n, x))),
+    ...berry.flatMap((n) => ['flavor:berry', 'note:jam', 'note:tart'].map((x) => M(n, x))),
+    M('c3', 'note:mint'),
+    M('b1', 'note:mint'),
+  ];
+  proj('two flavour groups joined by one rare note', [...berry, ...citrus], families);
+  const familyGraph = attributeProjection([...berry, ...citrus], families);
+  cases.push({ name: 'taste families: Louvain over the two-group projection returns the two groups', fn: 'louvainCommunities', input: { graph: familyGraph }, expected: louvainCommunities(familyGraph) });
   return cases;
 }
 

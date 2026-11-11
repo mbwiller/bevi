@@ -1,11 +1,26 @@
 // Derived data for one PredictionSnapshot (effective stats, z-scores, raters per Bev, user
-// similarities, the stored edge and neighbour lookups), computed once per snapshot and cached in a
-// WeakMap.
+// similarities, the stored edge, neighbour and Bev-graph lookups), computed once per snapshot and
+// cached in a WeakMap.
 // Snapshots are treated as immutable once passed to predictScore / recommend.
 
 import { RANKING_VERSION } from './constants.ts';
 import { effectiveGlobalStats, effectiveUserStats, populationStats, zScore } from './stats.ts';
-import type { BevId, MeanStd, PredictionSnapshot, Stats, UserId, UserNeighbour } from './types.ts';
+import type { BevGraphStats, BevId, MeanStd, PredictionSnapshot, Stats, UserId, UserNeighbour } from './types.ts';
+
+/**
+ * A Bev's place in the similarity graph as `recommend` reads it (`bevGraphLookup`). `community` is a
+ * namespaced key, not the stored id: 'c:' + the stored community id, or 'b:' + the Bev's own id for
+ * a Bev with no `bevGraph` entry, which is a singleton community of its own. Two Bevs share a
+ * community exactly when their keys are equal, and the different prefixes keep a singleton from ever
+ * matching a real community, whatever string the sync chose for it.
+ */
+export interface BevGraphNode {
+  community: string;
+  /** As stored; 0 for a Bev with no entry. Read by no formula in 1.8.0. */
+  pagerank: number;
+  /** As stored, in [0, 1]; 0 for a Bev with no entry. */
+  bridge: number;
+}
 
 export interface SnapshotContext {
   globalEffective: MeanStd;
@@ -37,6 +52,12 @@ export interface SnapshotContext {
    * validates the neighbours.
    */
   neighbourSims?: Map<UserId, Map<UserId, number>> | null;
+  /**
+   * Lazily filled on the first community-mode call of `recommend`: Bev → its graph node, for every
+   * Bev in `snapshot.bevs`; null when the snapshot has no `bevGraph` field. Undefined until then, so
+   * the default ('none' / 'category') path never reads or validates the field.
+   */
+  bevGraph?: Map<BevId, BevGraphNode> | null;
 }
 
 const cache = new WeakMap<PredictionSnapshot, SnapshotContext>();
@@ -165,6 +186,53 @@ export function neighbourLookup(snapshot: PredictionSnapshot): Map<UserId, Map<U
     m.set(u, sims);
   }
   return (ctx.neighbourSims = m);
+}
+
+/**
+ * The lookup Bev → `BevGraphNode` of `snapshot.bevGraph`, built once per snapshot, with an entry for
+ * EVERY Bev in `snapshot.bevs`: a Bev with no `bevGraph` entry (created since the last nightly sync)
+ * is a singleton community of its own (key 'b:' + its id) with bridge 0. Entries for Bevs not in
+ * `snapshot.bevs` are left out of the map, but validated like the rest, as `edgeLookup` and
+ * `neighbourLookup` validate every row. Null when the snapshot carries no `bevGraph` field (undefined
+ * or null). Throws a RangeError when the field is not a plain object keyed by Bev id, or on a
+ * malformed entry, naming the Bev: not an object, `community` not a non-empty string, `pagerank`
+ * not a finite number ≥ 0, `bridge` not a finite number in [0, 1] (`bev_graph_stats`' CHECKs rule
+ * these out in SQL; the participation coefficient is in fact below 1).
+ */
+export function bevGraphLookup(snapshot: PredictionSnapshot): Map<BevId, BevGraphNode> | null {
+  const ctx = snapshotContext(snapshot);
+  if (ctx.bevGraph !== undefined) return ctx.bevGraph;
+  const field: unknown = snapshot.bevGraph;
+  if (field === undefined || field === null) return (ctx.bevGraph = null);
+  const proto = typeof field === 'object' ? Object.getPrototypeOf(field) : undefined;
+  if (typeof field !== 'object' || Array.isArray(field) || (proto !== Object.prototype && proto !== null)) {
+    throw new RangeError('snapshot.bevGraph must be a plain object keyed by Bev id');
+  }
+  const stored = new Map<BevId, BevGraphStats>();
+  for (const [id, entry] of Object.entries(field as Record<string, unknown>)) {
+    const where = `snapshot.bevGraph["${id}"]`;
+    if (id === '') throw new RangeError('snapshot.bevGraph: a key must be a non-empty Bev id');
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) throw new RangeError(`${where} must be an object { community, pagerank, bridge }`);
+    const { community, pagerank, bridge } = entry as Partial<Record<keyof BevGraphStats, unknown>>;
+    if (typeof community !== 'string' || community === '') throw new RangeError(`${where}: community must be a non-empty string, got ${String(community)}`);
+    if (typeof pagerank !== 'number' || !Number.isFinite(pagerank) || pagerank < 0) throw new RangeError(`${where}: pagerank must be a finite number ≥ 0, got ${String(pagerank)}`);
+    if (typeof bridge !== 'number' || !(bridge >= 0 && bridge <= 1)) throw new RangeError(`${where}: bridge must be a number in [0, 1], got ${String(bridge)}`);
+    stored.set(id, { community, pagerank, bridge });
+  }
+  const m = new Map<BevId, BevGraphNode>();
+  for (const id of Object.keys(snapshot.bevs)) {
+    const e = stored.get(id);
+    m.set(id, e ? { community: `c:${e.community}`, pagerank: e.pagerank, bridge: e.bridge } : { community: `b:${id}`, pagerank: 0, bridge: 0 });
+  }
+  return (ctx.bevGraph = m);
+}
+
+/**
+ * `id`'s community key in a `bevGraphLookup` map; a Bev outside the map (one the user ranked that
+ * is no longer in `snapshot.bevs`) is a singleton, like a Bev with no entry.
+ */
+export function communityKeyOf(graph: ReadonlyMap<BevId, BevGraphNode>, id: BevId): string {
+  return graph.get(id)?.community ?? `b:${id}`;
 }
 
 export function effectiveStatsOf(ctx: SnapshotContext, u: UserId): MeanStd {
