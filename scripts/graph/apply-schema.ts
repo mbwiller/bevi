@@ -104,7 +104,9 @@ async function main(): Promise<void> {
   const url = queryApiUrl(uri!, database);
   const auth = `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`;
 
-  console.log(`applying ${statements.length} statement(s) to ${url}`);
+  // Not the URL: its host and database are the instance id, and graph-sync.yml
+  // runs this in public Actions logs.
+  console.log(`applying ${statements.length} statement(s)`);
   for (const [i, statement] of statements.entries()) {
     const label = statement.split("\n")[0]!.slice(0, 72);
     await run(statement, url, auth);

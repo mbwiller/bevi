@@ -32,7 +32,7 @@ Deno.test({
     const { status, json } = await post({ template: "MATCH (n) DETACH DELETE n" });
     assertEquals(status, 400);
     assertEquals(json.error, "unknown_template");
-    assertEquals(json.allowed, ["similar", "bev", "meta"]);
+    assertEquals(json.allowed, ["similar", "bev", "why", "meta"]);
   },
 });
 
@@ -51,6 +51,30 @@ Deno.test({
   ignore: !serving,
   fn: async () => {
     const { status, json } = await post({ template: "similar", bevId: "' OR 1=1 --" });
+    assertEquals(status, 400);
+    assertEquals(json.error, "invalid_bev_id");
+  },
+});
+
+Deno.test({
+  name: "why rejects a non-uuid otherId before any upstream call",
+  ignore: !serving,
+  fn: async () => {
+    const { status, json } = await post({
+      template: "why",
+      bevId: "00000000-0000-4000-8000-000000000001",
+      otherId: "x' OR 1=1 --",
+    });
+    assertEquals(status, 400);
+    assertEquals(json.error, "invalid_bev_id");
+  },
+});
+
+Deno.test({
+  name: "why rejects a missing otherId",
+  ignore: !serving,
+  fn: async () => {
+    const { status, json } = await post({ template: "why", bevId: "00000000-0000-4000-8000-000000000001" });
     assertEquals(status, 400);
     assertEquals(json.error, "invalid_bev_id");
   },

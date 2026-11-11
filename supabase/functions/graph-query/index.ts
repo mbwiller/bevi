@@ -1,7 +1,8 @@
 // graph-query: read-only, on-demand exploration of the Bev graph (A-15).
 //
 // This is NOT on any hot path. The ranking flow, recommendations and Bev
-// detail read `bev_edges` in Postgres, which the nightly sync (A-16) writes.
+// detail read `bev_edges` in Postgres, which the nightly `graph-edges` job
+// writes; `graph-sync` then mirrors that table into the graph this reads.
 // This function exists for "Bevs similar to X" style queries that want the
 // graph directly, and it degrades to an error -- never to wrong data -- when
 // the Aura instance is paused.
@@ -28,18 +29,41 @@ const TEMPLATES = {
       AND coalesce(other.isAlcoholic, true) = false
     RETURN other.id AS id, other.name AS name, other.brand AS brand,
            s.w AS weight, s.tree AS tree, s.content AS content,
-           s.emb AS emb, s.profile AS profile
+           s.emb AS emb, s.profile AS profile, s.cop AS cop
     ORDER BY s.w DESC
     LIMIT $limit
   `,
   // The Bev's own node, for checking what the sync actually wrote.
+  // `categoryId` is the ROOT category and comes from the property: since the
+  // sync (scripts/graph/sync.ts) IN_CATEGORY targets the Bev's LEAF when it has
+  // one, so the relationship no longer answers "which of the 15".
   bev: `
     MATCH (b:Bev { id: $bevId })
     WHERE coalesce(b.isAlcoholic, true) = false
-    OPTIONAL MATCH (b)-[:IN_CATEGORY]->(c:Category)
     OPTIONAL MATCH (b)-[:BY_BRAND]->(br:Brand)
     RETURN b.id AS id, b.name AS name, b.brand AS brand,
-           c.id AS categoryId, br.key AS brandKey
+           b.categoryId AS categoryId, b.leafCategoryId AS leafCategoryId,
+           br.key AS brandKey
+  `,
+  // Why two Bevs are near each other: the attribute nodes they both hang from
+  // (brand, flavour base, shared name/flavour tokens, the same category node),
+  // plus the stored SIMILAR_TO weight when the pair has an edge. One row per
+  // shared attribute; a visible pair that shares nothing is one row with a
+  // null kind. The age gate is on BOTH Bevs: an alcoholic or unknown Bev on
+  // either side returns no rows at all, exactly as if it did not exist.
+  why: `
+    MATCH (a:Bev { id: $bevId })
+    MATCH (b:Bev { id: $otherId })
+    WHERE coalesce(a.isAlcoholic, true) = false
+      AND coalesce(b.isAlcoholic, true) = false
+    OPTIONAL MATCH (a)-[s:SIMILAR_TO]-(b)
+    WITH a, b, max(s.w) AS weight
+    OPTIONAL MATCH (a)-[:BY_BRAND|TASTES_OF|HAS_NOTE|IN_CATEGORY]->(x)<-[:BY_BRAND|TASTES_OF|HAS_NOTE|IN_CATEGORY]-(b)
+    WHERE x:Brand OR x:Flavor OR x:Note OR x:Category
+    RETURN labels(x)[0] AS kind,
+           coalesce(x.name, x.key, x.token, x.id) AS value,
+           weight
+    ORDER BY kind, value
   `,
   // When the sync last ran. The app has no use for this; it is here so a
   // human can check liveness without the Aura console.
@@ -56,6 +80,7 @@ const MAX_LIMIT = 50;
 interface RequestBody {
   template?: string;
   bevId?: string;
+  otherId?: string;
   limit?: number;
 }
 
@@ -92,9 +117,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const statement = TEMPLATES[name as TemplateName];
 
   const parameters: Record<string, unknown> = {};
-  if (name === "similar" || name === "bev") {
+  if (name === "similar" || name === "bev" || name === "why") {
     if (!isUuid(body.bevId)) return json({ error: "invalid_bev_id" }, 400);
     parameters.bevId = body.bevId;
+  }
+  if (name === "why") {
+    // The second Bev is validated exactly as the first, and bound the same way.
+    if (!isUuid(body.otherId)) return json({ error: "invalid_bev_id" }, 400);
+    parameters.otherId = body.otherId;
   }
   if (name === "similar") {
     const limit = typeof body.limit === "number" && Number.isFinite(body.limit) ? Math.trunc(body.limit) : 10;
