@@ -1,5 +1,19 @@
 # Beverage icon production checkpoint
 
+## Latest batch: 20 Fresca, soda and juice icons, 2026-11-12
+
+**254 drafts authored; 124 catalog entries remain. 39 of 43 starters covered.**
+
+Prioritized both catalog Fresca drinks: Original Grapefruit Citrus and Black Cherry Citrus, each matched to its exact manufacturer original non-prebiotic US12oz can. Turquoise fan/scallop pattern, white/teal center and separate yellow/red flavor bands retained. Added three family recipes: `fresca.mjs` (2), `soda-final-expansion.mjs` (10), `juice-final-expansion.mjs` (8).
+
+Other additions: 7UP Original, Reed’s Original Ginger Beer, Dr Pepper Cherry, Mountain Dew Code Red, Shasta Cola/Grape, Coca-Cola Vanilla/Vanilla Zero Sugar/Cherry Zero Sugar, Caffeine Free Diet Coke, Minute Maid Lemonade, V8 Original Vegetable Juice, historical V8 V-Fusion Strawberry Banana, Ocean Spray Cranberry Cocktail/Cran-Grape/Cran-Raspberry, Juicy Juice Apple and Hi-C Flashin’ Fruit Punch. Manufacturer references preferred; exact retailer fallback documented. Current Original7UP US revision explicitly selected; historical V-Fusion label sourced instead of substituting renamed current Blends. Reference photos individually inspected; lettering/illustrations are simplified vectors.
+
+Deferred Zevia Mountain Twist (Mountain Zevia identity), Mountain Dew Spark (catalog Cherry Citrus versus Raspberry Lemonade), and DietRC (historical Diet versus current Zero Sugar) in durable identity issues, using other ready products to complete20. No guessed identities assigned artwork; earlier deferred queue retained.
+
+Reviewed large artwork and40/56/96/155px light/dark tiles with8%padding. Refined Shasta/CodeRed/V-Fusion lettering fit, removed retailer DrPepper size overlay, and retained distinct Fresca flavor colors. Sheets `review/batch-10-2026-11-12-01.png` through `-04.png` plus two `batch-10-large-2026-11-12` sheets; exact reviewed hashes in `review/review.json`. All234 prior master/portableSVG/PNG hashes unchanged. Final aesthetic approval and interactive device review pending; records remain needs-review.
+
+Build, validation, export freshness, app drift checks and release checks are recorded with final results in the release PR. No contract, backend, dependency or photo precedence changes. Counts describe repository catalog; live Postgres reconciliation remains pending.
+
 ## Latest batch: 20 classic soda icons, 2026-11-11
 
 **234 drafts authored; 144 catalog entries remain. 39 of 43 starters covered.**
