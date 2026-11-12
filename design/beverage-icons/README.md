@@ -8,7 +8,7 @@ Codex discovers this workflow through `.agents/skills/bevi-beverage-icons`, whic
 
 [Overview 2](review/overview-02.png) · [Overview 3](review/overview-03.png) · [Overview 4](review/overview-04.png) · [Overview 5](review/overview-05.png) · [Overview 6](review/overview-06.png) · [Overview 7](review/overview-07.png) · [Overview 8](review/overview-08.png) · [Overview 9](review/overview-09.png)
 
-The current collection contains 234 reference-checked drafts, including 39 starter drinks. [The manifest](manifest.json) maps catalog UUIDs to editable SVGs, font-independent SVGs and transparent PNGs. [The work queue](coverage.json) lists the 144 remaining catalog drinks. These counts describe the repository catalog; live Postgres reconciliation is still pending. The app shows the icons (see [Ship to the app](#ship-to-the-app)).
+The current collection contains 254 reference-checked drafts, including 39 starter drinks. [The manifest](manifest.json) maps catalog UUIDs to editable SVGs, font-independent SVGs and transparent PNGs. [The work queue](coverage.json) lists the 124 remaining catalog drinks. These counts describe the repository catalog; live Postgres reconciliation is still pending. The app shows the icons (see [Ship to the app](#ship-to-the-app)).
 
 Latest **4-icon starter recovery**: Tropicana Orange Juice Original, Jamba Mango-a-go-go, Bolthouse Farms Strawberry Banana and Kung Fu Tea Classic Milk Tea. These were drawn in the batch-3 branch that never merged; their recipes were rebuilt on `main` and every asset hash matches the original batch-3 review record. Starbucks Frappuccino Mocha was deliberately left out: the catalog row is `blended_coffee`, so the café-versus-bottled identity stays deferred in [identity-issues.json](identity-issues.json).
 
@@ -19,6 +19,8 @@ Earlier **29-icon batch**: [sheet 1](review/large-batch-2026-11-02-01.png) · [s
 Latest **20 energy icons (2026-11-11)**: [large sheet 1](review/batch-08-large-2026-11-11-01.png) · [large sheet 2](review/batch-08-large-2026-11-11-02.png). All prior artwork retained; final aesthetic approval pending.
 
 Latest **20 classic soda icons (2026-11-11)**: [large sheet 1](review/batch-09-large-2026-11-11-01.png) · [large sheet 2](review/batch-09-large-2026-11-11-02.png). Package-specific bottles and cans; all prior artwork retained.
+
+Latest **20 Fresca, soda and juice icons (2026-11-12)**: [large sheet 1](review/batch-10-large-2026-11-12-01.png) · [large sheet 2](review/batch-10-large-2026-11-12-02.png). Includes both catalog Frescas: Original Grapefruit Citrus and Black Cherry Citrus. All prior artwork retained.
 
 ## Give this to your coding agent
 

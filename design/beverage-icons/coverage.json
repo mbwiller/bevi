@@ -1,8 +1,8 @@
 {
   "summary": {
     "catalog": 378,
-    "authored": 234,
-    "pending": 144,
+    "authored": 254,
+    "pending": 124,
     "starterAuthored": 39,
     "starterTotal": 43,
     "livePostgresReconciled": false
@@ -25,14 +25,6 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "5ed1a9b6-46ac-5249-9bd6-2c0712bf631b",
-      "slug": "seven-up",
-      "name": "7Up",
-      "brand": "7Up",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "bec8b166-60c1-5a37-a3c2-698146bef1d4",
       "slug": "diet-seven-up",
       "name": "Diet 7Up",
@@ -45,14 +37,6 @@
       "slug": "diet-sunkist-orange",
       "name": "Diet Sunkist Orange",
       "brand": "Sunkist",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "bef825d8-a134-5e4d-8688-b11e9ca142c1",
-      "slug": "reeds-ginger-beer",
-      "name": "Reed's Original Ginger Beer",
-      "brand": "Reed's",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -73,26 +57,10 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "479f4f79-4c7b-5c68-860f-06d7f8402b9a",
-      "slug": "dr-pepper-cherry",
-      "name": "Dr Pepper Cherry",
-      "brand": "Dr Pepper",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "19d2d0a4-abfa-5c01-800c-7a81f5912cbc",
       "slug": "sprite-cherry",
       "name": "Sprite Cherry",
       "brand": "Sprite",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "76ef1cae-bfd3-5680-83ed-9732391bb88f",
-      "slug": "mountain-dew-code-red",
-      "name": "Mountain Dew Code Red",
-      "brand": "Mountain Dew",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -105,34 +73,10 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "3aee034e-122d-599c-8215-95836a62a054",
-      "slug": "coca-cola-vanilla",
-      "name": "Coca-Cola Vanilla",
-      "brand": "Coca-Cola",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "1e89d7f1-f6e1-588d-97da-335b7b7f5087",
       "slug": "hires-root-beer",
       "name": "Hires Root Beer",
       "brand": "Hires",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "d3afe698-87f5-5b53-b843-02ee81906d1e",
-      "slug": "shasta-cola",
-      "name": "Shasta Cola",
-      "brand": "Shasta",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "59fac707-b933-5a79-b714-5996d496c771",
-      "slug": "shasta-grape",
-      "name": "Shasta Grape",
-      "brand": "Shasta",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -173,30 +117,6 @@
       "slug": "diet-coke-feisty-cherry",
       "name": "Diet Coke Feisty Cherry",
       "brand": "Diet Coke",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "9a47cf82-7e48-5a2e-9866-d65219f1c7e6",
-      "slug": "diet-coke-caffeine-free",
-      "name": "Diet Coke Caffeine Free",
-      "brand": "Diet Coke",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "e3e5a072-e596-5920-bb12-c000c53850df",
-      "slug": "coca-cola-cherry-zero-sugar",
-      "name": "Coca-Cola Cherry Zero Sugar",
-      "brand": "Coca-Cola",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "52e1cc03-c200-5a14-af3f-435e360d66dd",
-      "slug": "coca-cola-zero-sugar-vanilla",
-      "name": "Coca-Cola Zero Sugar Vanilla",
-      "brand": "Coca-Cola",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -265,34 +185,10 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "074510ec-7ebf-50f1-8e0c-3004e1c131f1",
-      "slug": "fresca-original",
-      "name": "Fresca Original",
-      "brand": "Fresca",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "8ce58bef-2c78-5d4d-81d5-4fc2d70bd2a5",
-      "slug": "fresca-black-cherry-citrus",
-      "name": "Fresca Black Cherry Citrus",
-      "brand": "Fresca",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "ddc4cce4-30d8-5843-9826-8c4f5354464a",
       "slug": "tropicana-pink-lemonade",
       "name": "Pink Lemonade",
       "brand": "Tropicana",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "d91ed47d-22c9-570e-937d-520c50965a11",
-      "slug": "minute-maid-lemonade",
-      "name": "Lemonade",
-      "brand": "Minute Maid",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -317,62 +213,6 @@
       "slug": "bolthouse-farms-green-goodness-juice",
       "name": "Green Goodness",
       "brand": "Bolthouse Farms",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "da2ea418-da8b-5c44-8ebe-54134ed0abbe",
-      "slug": "v8-original-vegetable-juice",
-      "name": "Vegetable Juice",
-      "brand": "V8",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "d3f10ff6-2544-5d92-8e1e-f99af4453755",
-      "slug": "v8-v-fusion-strawberry-banana",
-      "name": "V-Fusion",
-      "brand": "V8",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "3399ed7b-d485-580e-96ba-55b12039266e",
-      "slug": "ocean-spray-cranberry-juice-cocktail",
-      "name": "Cranberry Juice Cocktail",
-      "brand": "Ocean Spray",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "603d2423-a343-5d01-9821-3bf5402a89e8",
-      "slug": "ocean-spray-cran-grape",
-      "name": "Cran-Grape",
-      "brand": "Ocean Spray",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "cb32e51b-c848-5ebf-b892-b1d5f75b0694",
-      "slug": "ocean-spray-cran-raspberry",
-      "name": "Cran-Raspberry",
-      "brand": "Ocean Spray",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "78376c87-91e5-5267-a665-d1ed8f0cf293",
-      "slug": "juicy-juice-apple",
-      "name": "Apple Juice",
-      "brand": "Juicy Juice",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "b24167be-6011-5c1d-a390-a343a4ff85bf",
-      "slug": "hi-c-fruit-punch",
-      "name": "Fruit Punch",
-      "brand": "Hi-C",
       "isStarter": false,
       "status": "needs-reference"
     },
