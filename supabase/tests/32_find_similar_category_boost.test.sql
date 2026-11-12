@@ -1,4 +1,4 @@
--- 20261109000400: find_similar_bevs ranks the chosen category first and never
+-- 20261112000100: find_similar_bevs ranks the chosen category first and never
 -- filters by it.
 --
 -- The production bug this pins (2026-11-09): a Red Bull flavour was created

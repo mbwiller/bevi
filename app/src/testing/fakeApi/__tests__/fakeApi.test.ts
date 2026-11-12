@@ -116,7 +116,7 @@ describe('fixtures through the API', () => {
     expect(bev).toMatchObject({ photoStatus: 'ready', photoUrl: up.url });
   });
 
-  it('findLikelyDuplicates ranks the chosen category first and never filters by it (20261109000400)', async () => {
+  it('findLikelyDuplicates ranks the chosen category first and never filters by it (20261112000100)', async () => {
     // The 2026-11-09 incident: a Red Bull flavour created under Sports Drinks by mistake. The
     // catalog's Red Bulls are all `energy`; the duplicate check must still offer them.
     let now = new Date('2026-10-11T12:00:00Z');

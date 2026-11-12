@@ -1219,7 +1219,7 @@ export class FakeApi implements BeviApi {
             const nameHit = norm(b.name).includes(norm(input.name)) ? 0.3 : 0;
             const sameCat = input.categoryId !== undefined && input.categoryId === b.categoryId;
             const catHit = sameCat ? 0.1 : 0;
-            // As find_similar_bevs orders (20261109000400): every token present first, then the
+            // As find_similar_bevs orders (20261112000100): every token present first, then the
             // chosen category, then the score. The category reorders; it never excludes a Bev.
             return { b, s: jaccard + nameHit + catHit, tokHit: inter === want.size, sameCat };
           })
