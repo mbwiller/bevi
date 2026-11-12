@@ -302,6 +302,20 @@
           "observations": "Batch04 family-author research."
         }
       ]
+    },
+    {
+      "bevId": "fdf715a1-7783-58b2-b657-d9afad7530c4",
+      "slug": "tiger-sugar-brown-sugar-boba-milk-tea",
+      "status": "needs-identity-resolution",
+      "reason": "Catalog names Brown Sugar Boba Milk Tea with classic_milk_tea leaf; inspected US cafe menu separates signature Brown Sugar Boba Milk + Pearl With Cream Mousse from Black Tea Latte + Cream Mousse + Brown Sugar With Boba and Green Tea Latte. Milk-versus-tea formulation is not specified by the catalog alias.",
+      "references": [
+        {
+          "pageUrl": "https://tigersugarec.com/menu.html",
+          "inspectedAt": "2026-11-11",
+          "observations": "Cafe menu lists distinct signature fresh-milk drinks and black/green tea latte products; no exact catalog-name match establishes which is intended."
+        }
+      ],
+      "resolutionNeeded": "Confirm signature brown-sugar fresh milk versus a tea-based latte before assigning this starter UUID."
     }
   ]
 }

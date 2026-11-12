@@ -55,13 +55,75 @@
   },
   "summary": {
     "catalog": 378,
-    "authored": 214,
-    "pending": 164,
+    "authored": 234,
+    "pending": 144,
     "starterAuthored": 39,
     "starterTotal": 43,
     "livePostgresReconciled": false
   },
   "records": [
+    {
+      "slug": "aw-cream-soda",
+      "family": "aw-pet-bottle",
+      "packageChoice": "Representative US 20 fl oz / 591mL A&W Cream Soda PET bottle; exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.rootbeer.com/",
+          "imageUrl": "https://www.rootbeer.com/images/catalog/cream-on.png",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact manufacturer A&W Cream Soda bottle inspected: brown ribbed screw cap, broad rounded PET with molded A&W shoulder and lobed base; transparent golden soda, pale cream label, oval white/brown/orange A&W and brown Cream Soda. Chosen manufacturer20oz bottle rather than assuming a can."
+        }
+      ],
+      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "9a8a0be9-81a0-5ffb-a5ea-7b9f05cb2a82",
+      "name": "A&W Cream Soda",
+      "brand": "A&W",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/aw-cream-soda.svg",
+        "portableSvg": "portable-svg/aw-cream-soda.svg",
+        "png": "png/aw-cream-soda.png",
+        "svgSha256": "3eb03d85295f5ec0d61743893c384e6d7f820e462c279a3a331292551ca28abc",
+        "portableSvgSha256": "e812ac38c76c58b949ac7b90d08b74c9ed2a30d32a05f1464e92a2eea84d0a75",
+        "pngSha256": "12ff73b6f75cafc2c0a1b76b565216d15caed6b581ac72680496bb1d32b4491d",
+        "pngBytes": 109777
+      },
+      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
+    },
+    {
+      "slug": "aw-root-beer",
+      "family": "aw-pet-bottle",
+      "packageChoice": "Representative US 20 fl oz / 591mL A&W Root Beer PET bottle; exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.rootbeer.com/",
+          "imageUrl": "https://www.rootbeer.com/images/catalog/aw-on.png",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact manufacturer A&W Root Beer bottle inspected: brown ribbed screw cap, broad rounded PET with molded A&W shoulder and lobed base; dark amber root beer, wooden-barrel label and creamy foam header, oval white/brown/orange A&W and white ROOT BEER. Chosen manufacturer20oz bottle rather than assuming a can."
+        }
+      ],
+      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "a5d8393f-47b3-570f-8edc-ae8917a16888",
+      "name": "A&W Root Beer",
+      "brand": "A&W",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/aw-root-beer.svg",
+        "portableSvg": "portable-svg/aw-root-beer.svg",
+        "png": "png/aw-root-beer.png",
+        "svgSha256": "2b514e349503696ce7ae9256bbbb3b35dd796084954a1a02645ee644096aee46",
+        "portableSvgSha256": "0de0a3c40e47acf27a2d1e4643682b4d478ed2bc30a157821d6681139c315aa6",
+        "pngSha256": "a9067026a716418e236f1f99c8ccacec7b1c4722a5734cbc9a3a9a663950ab85",
+        "pngBytes": 110682
+      },
+      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
+    },
     {
       "slug": "agua-fresca-jamaica",
       "family": "unbranded-served-drink",
@@ -621,6 +683,68 @@
       "sourceModule": "scripts/icons/families/energy-expansion.mjs"
     },
     {
+      "slug": "barqs-root-beer",
+      "family": "classic-soda-can",
+      "packageChoice": "Representative US 12 fl oz / 355mL Barq’s Root Beer aluminum can; exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/barq-s-root-beer-soda/0004900003012",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0004900003012",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact retailer US12oz Barq’s can inspected beside its carton: silver diamond-lattice body, slanted white script outlined black/green, small red and green flourish beneath, black ROOT BEER. Manufacturer product page unavailable. No caffeine/formulation claim is drawn."
+        }
+      ],
+      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "25f32d35-36f7-5865-b447-e1c52714079d",
+      "name": "Barq's Root Beer",
+      "brand": "Barq's",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/barqs-root-beer.svg",
+        "portableSvg": "portable-svg/barqs-root-beer.svg",
+        "png": "png/barqs-root-beer.png",
+        "svgSha256": "796e15ed865e776d47448a5b8493bc548bad6baae27caeb334447b8516df5706",
+        "portableSvgSha256": "557649d115c659e9e1b6e22affa61d5a7120df0b3b511ed9bea725af52b0917d",
+        "pngSha256": "d74b5c9e3bb4291a06d7a7872623a240b90c052a2c43762fd396e4e65ca010be",
+        "pngBytes": 182866
+      },
+      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
+    },
+    {
+      "slug": "big-red",
+      "family": "classic-soda-can",
+      "packageChoice": "Representative US 12 fl oz / 355mL Big Red aluminum can; exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/big-red-soda/0007181703329",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0007181703329",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact retailer US12oz Big Red regular can inspected beside carton: red body with tiny gold/red bubbles, stacked italic white BIG RED with navy shadow outline, small round since1937 seal lower-right. External12OZ retail annotation omitted; not Big Red Zero."
+        }
+      ],
+      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "690b9cb5-235f-5882-b66c-171e62743aef",
+      "name": "Big Red",
+      "brand": "Big Red",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/big-red.svg",
+        "portableSvg": "portable-svg/big-red.svg",
+        "png": "png/big-red.png",
+        "svgSha256": "94a1dc2f7f2f7ff16c5833a2bd2d7dd71676f6e6c96cb45569a14a3e2cb40283",
+        "portableSvgSha256": "e21a543285405d98873664eeda92a98c8f7af30de74e06d498f48181899e574c",
+        "pngSha256": "d147a8fa59e57071597f6a4a7fd9958840885006a1de9b919e4e851c2f41d8b4",
+        "pngBytes": 105117
+      },
+      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
+    },
+    {
       "slug": "naked-juice-blue-machine",
       "family": "naked-smoothie-bottle",
       "packageChoice": "US 15.2 fl oz / 450mL Naked Blue Machine, current manufacturer Boosted Smoothie / Machine package.",
@@ -838,6 +962,37 @@
       "sourceModule": "scripts/icons/families/coffee-batch.mjs"
     },
     {
+      "slug": "boylan-birch-beer",
+      "family": "boylan-glass-bottle",
+      "packageChoice": "Representative US 12 fl oz / 355mL Boylan Original Birch Beer glass bottle; exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://boylanbottling.com/products/original-birch-beer",
+          "imageUrl": "https://boylanbottling.com/cdn/shop/products/boylan-birch-banner_1000x1000.jpg?v=1622750745",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact manufacturer product photo inspected: very dark amber long-neck glass bottle, black crown cap, embossed BOYLAN BOTTLING CO shoulder, black/gold oval front label with white BOYLAN at top, gold central field and white BIRCH BEER / CANE SUGAR, white BOTTLING CO lower ring. Manufacturer labels bottle12fl oz; background/carrier/birch wood excluded. Original Birch Beer, not Creamy Red Birch or Root Beer."
+        }
+      ],
+      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "5ffffcaf-5e63-5113-838c-eda997ade0a0",
+      "name": "Boylan Birch Beer",
+      "brand": "Boylan Bottling",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/boylan-birch-beer.svg",
+        "portableSvg": "portable-svg/boylan-birch-beer.svg",
+        "png": "png/boylan-birch-beer.png",
+        "svgSha256": "59f31c62808bb35b7ad69376e2ec4336d2529e092521e927dc654de625e1ba17",
+        "portableSvgSha256": "cd864bd63ccf598e35cdba0641a7452f9d1269ef02b582c7c833f078cd155e16",
+        "pngSha256": "c5c977bb129e36845de40f06f412ed0da3a4d12df169bee731f7230093d5a0bc",
+        "pngBytes": 85992
+      },
+      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
+    },
+    {
       "slug": "bubly-blackberry",
       "family": "sparkling-standard-can",
       "packageChoice": "US 12 fl oz aluminum can; promotional raised pull tab rendered closed to match frozen can perspective.",
@@ -1024,6 +1179,37 @@
       "sourceModule": "scripts/icons/families/sparkling-expansion.mjs"
     },
     {
+      "slug": "bundaberg-ginger-beer",
+      "family": "bundaberg-stubby-glass-bottle",
+      "packageChoice": "Representative US 12.7 fl oz / 375mL Bundaberg Ginger Beer glass bottle; exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.bundaberg.com/en-us/brew/ginger-beer/",
+          "imageUrl": "https://www.bundaberg.com/wp-content/uploads/brew-ginger-beer-bottle-US.png",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact US manufacturer375mL/12.7oz amber stubby glass bottle inspected: short ring-pull gold cap, broad rounded shoulder, amber glass, yellow/tan bordered label with arched black Bundaberg, central wooden barrel, red GINGER BEER banner, Australian Family Owned and3Days brew badge. Sediment/glass texture simplified; no can or diet substitution."
+        }
+      ],
+      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "b156ee8d-6393-541b-9abc-0fcfffea6676",
+      "name": "Bundaberg Ginger Beer",
+      "brand": "Bundaberg",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/bundaberg-ginger-beer.svg",
+        "portableSvg": "portable-svg/bundaberg-ginger-beer.svg",
+        "png": "png/bundaberg-ginger-beer.png",
+        "svgSha256": "599c7f450a29e78094791c465357c37588c99e402a4e8e9fc7c0b05ed2ab9f0c",
+        "portableSvgSha256": "4689fd72c7b031f03cb9381da789b2d36909a186f93c8cc13e3c1b1fd76ac2b0",
+        "pngSha256": "3d8696cdee0a3192bac9f341089b3139700855c56f37d285b79c0d3dec564b65",
+        "pngBytes": 124246
+      },
+      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
+    },
+    {
       "slug": "c4-energy-frozen-bombsicle",
       "family": "c4-energy-can",
       "packageChoice": "Representative US 16 fl oz / 473mL C4 Frozen Bombsicle aluminum can, exact inspected package.",
@@ -1053,6 +1239,37 @@
         "pngBytes": 137894
       },
       "sourceModule": "scripts/icons/families/energy-expansion.mjs"
+    },
+    {
+      "slug": "canada-dry-ginger-ale",
+      "family": "classic-soda-can",
+      "packageChoice": "Representative US 12 fl oz / 355mL Canada Dry Ginger Ale aluminum can; exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.canadadry.com/products",
+          "imageUrl": "https://www.canadadry.com/images/catalog/ginger_ale.png",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact manufacturer green12oz can inspected: dark green body with fine gold/green wavy contour lines and dots, gold crown, cream globe/shield, red CANADA DRY, white GINGER ALE below. Silver rims. This is Original Ginger Ale, not fruit splash or Zero Sugar."
+        }
+      ],
+      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "e8511a96-1026-5087-8d15-5de6042b8d8c",
+      "name": "Canada Dry Ginger Ale",
+      "brand": "Canada Dry",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/canada-dry-ginger-ale.svg",
+        "portableSvg": "portable-svg/canada-dry-ginger-ale.svg",
+        "png": "png/canada-dry-ginger-ale.png",
+        "svgSha256": "f8049f71f301367574da4be73bb69a1179db58645f64dc450cc93940b4f3503b",
+        "portableSvgSha256": "728f129b74580f340aff1273983108c081a89f4fd4fe4d09dd2855d4af70e0b1",
+        "pngSha256": "7fa941caed728fa55f71e37486dffbe937da8aee499646c0740ae2b622844cae",
+        "pngBytes": 134453
+      },
+      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
     },
     {
       "slug": "jamba-juice-caribbean-passion",
@@ -1539,6 +1756,68 @@
         "pngBytes": 99220
       },
       "sourceModule": "scripts/icons/families/starter-smoothies.mjs"
+    },
+    {
+      "slug": "crush-grape",
+      "family": "citrus-soda-pet-bottle",
+      "packageChoice": "Representative US 20 fl oz / 591mL Crush Grape PET bottle; exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.crushsoda.com/",
+          "imageUrl": "https://www.crushsoda.com/images/products/CRUSH_GRAPE_20.png",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact manufacturer20oz Crush Grape PET inspected: sculpted waist, lobed base, green screw cap, dark purple soda. Full wrap with purple grape clusters, large white Crush outlined green and flavor beneath. Independent variant colors and fruit motifs preserved."
+        }
+      ],
+      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "5485e9ea-1b4b-5fc7-8f0e-5948e33df9fc",
+      "name": "Crush Grape",
+      "brand": "Crush",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/crush-grape.svg",
+        "portableSvg": "portable-svg/crush-grape.svg",
+        "png": "png/crush-grape.png",
+        "svgSha256": "54d970d63a8fb02039b3a2b0ba7a3f783d2d4fbd30bf06c9eb6fa08521fa169b",
+        "portableSvgSha256": "df209a28563ba89a9fdb71cdfcb180e73bb34ac8590be5c25e8d430f505b67c7",
+        "pngSha256": "c48684dfb14031b3a65ab5126d2b47e2ccdbb38ecaabd5754e17e9127c01a578",
+        "pngBytes": 146150
+      },
+      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
+    },
+    {
+      "slug": "crush-orange",
+      "family": "citrus-soda-pet-bottle",
+      "packageChoice": "Representative US 20 fl oz / 591mL Crush Orange PET bottle; exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.crushsoda.com/",
+          "imageUrl": "https://www.crushsoda.com/images/products/CRUSH_ORANGE_20.png",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact manufacturer20oz Crush Orange PET inspected: sculpted waist, lobed base, green screw cap, bright orange soda. Full wrap with orange slices and leaves, large white Crush outlined green and flavor beneath. Independent variant colors and fruit motifs preserved."
+        }
+      ],
+      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "5a896b9b-e375-5458-87fd-a140d3c147d8",
+      "name": "Crush Orange",
+      "brand": "Crush",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/crush-orange.svg",
+        "portableSvg": "portable-svg/crush-orange.svg",
+        "png": "png/crush-orange.png",
+        "svgSha256": "532b52207668954559ef861ec0a24cad48c598034499c413f40da38916730c09",
+        "portableSvgSha256": "3d5d0faf2fe1ec84d6f3281d62f7523f1f7c456bc6c9806f4156d33f97e75131",
+        "pngSha256": "b5a2dc51e8344950ce7825a3aa98c29efe91977e67d37fa7c8f29e3254c2cdd0",
+        "pngBytes": 124024
+      },
+      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
     },
     {
       "slug": "diet-coke",
@@ -2035,6 +2314,68 @@
         "pngBytes": 116092
       },
       "sourceModule": "scripts/icons/families/soda-expansion.mjs"
+    },
+    {
+      "slug": "faygo-red-pop",
+      "family": "faygo-pet-bottle",
+      "packageChoice": "Representative US 24 fl oz / 710mL Faygo Redpop PET bottle; exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.faygo.com/flavors/",
+          "imageUrl": "https://www.faygo.com/wp-content/uploads/2018/06/redpop.png",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact manufacturer24oz Faygo Redpop PET individually inspected: gray/white screw cap, red bright ruby-red soda, broad cylindrical body/lobed base, yellow Big24oz label band, diagonal silver/white Faygo outlined dark, red strawberry graphic and yellow Redpop. Exact24oz package chosen; no zero-sugar formula substituted."
+        }
+      ],
+      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "b4e9df36-99e2-5e9d-a5e2-ea13275e4676",
+      "name": "Faygo Red Pop",
+      "brand": "Faygo",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/faygo-red-pop.svg",
+        "portableSvg": "portable-svg/faygo-red-pop.svg",
+        "png": "png/faygo-red-pop.png",
+        "svgSha256": "4b8578cfb47b4426e7025d6532c76974680b4bb6ff36c480b810163e37e223c9",
+        "portableSvgSha256": "24e86dbddee9f9f87ffab998aff53e049e1f3ed30021da97237631e697c16327",
+        "pngSha256": "28ab5bea6f89d4b62865a94ea0149e54b70cd58d9e1d7c76c7bb21200deaf949",
+        "pngBytes": 138048
+      },
+      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
+    },
+    {
+      "slug": "faygo-rock-and-rye",
+      "family": "faygo-pet-bottle",
+      "packageChoice": "Representative US 24 fl oz / 710mL Faygo Rock & Rye PET bottle; exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.faygo.com/flavors/",
+          "imageUrl": "https://www.faygo.com/wp-content/uploads/2018/06/rocknrye.png",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact manufacturer24oz Faygo Rock & Rye PET individually inspected: gray/white screw cap, red dark brown-red soda, broad cylindrical body/lobed base, yellow Big24oz label band, diagonal silver/white Faygo outlined dark, navy/red patterned lower field with yellow Rock & Rye. Exact24oz package chosen; no zero-sugar formula substituted."
+        }
+      ],
+      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "f1d527a5-f25d-5893-9b7d-20aa98551086",
+      "name": "Faygo Rock & Rye",
+      "brand": "Faygo",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/faygo-rock-and-rye.svg",
+        "portableSvg": "portable-svg/faygo-rock-and-rye.svg",
+        "png": "png/faygo-rock-and-rye.png",
+        "svgSha256": "984ab17c891add72074c8c84d94cf74cd07baed1396e4b516ec963611b7eeebb",
+        "portableSvgSha256": "8ced4831274419483260c00fd6347c195ce8bde6a54ffc2b761ac36544d2e78f",
+        "pngSha256": "9fb2c1bd4c62da34acacccf2ce084cb8fb2524b0ab97534ab641de32c0cba77a",
+        "pngBytes": 143832
+      },
+      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
     },
     {
       "slug": "tropicana-fruit-punch",
@@ -2817,6 +3158,37 @@
         "pngBytes": 84219
       },
       "sourceModule": "scripts/icons/families/served-drinks.mjs"
+    },
+    {
+      "slug": "ibc-root-beer",
+      "family": "ibc-glass-bottle",
+      "packageChoice": "Representative US 12 fl oz / 355mL IBC Root Beer glass bottle; exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.ibcrootbeer.com/",
+          "imageUrl": "https://www.kdpproductfacts.com/smedia/kdpproductfacts.com/www/product_images/medium/IBC_ROOT_BEER_12.png",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact manufacturer12oz IBC Root Beer glass bottle inspected: amber long-neck bottle, rust-red crown cap, small burgundy IBC neck label, red/cream shield with large white serif IBC, gold ROOT BEER ribbon and Since1919 below. Bottle retained; no generic can substitution."
+        }
+      ],
+      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "0cb9894d-f4f4-5ac2-badc-fd5e3d856e5f",
+      "name": "IBC Root Beer",
+      "brand": "IBC",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/ibc-root-beer.svg",
+        "portableSvg": "portable-svg/ibc-root-beer.svg",
+        "png": "png/ibc-root-beer.png",
+        "svgSha256": "e8f15be25a757c1521d072e449964b393839cdded3ae23bff03d79b4f629682a",
+        "portableSvgSha256": "a08dfe123ff9c9c349834358ef19514eab2ddeb1314108abc0254259f679d893",
+        "pngSha256": "f998b471dd979fef200a110bdaf73dd41bf7e17c4b4d35ea587542c9610e5bc6",
+        "pngBytes": 85470
+      },
+      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
     },
     {
       "slug": "essentia-ionized-alkaline-water",
@@ -3725,6 +4097,37 @@
       "sourceModule": "scripts/icons/families/pilot.mjs"
     },
     {
+      "slug": "mexican-coca-cola",
+      "family": "mexican-cola-contour-glass-bottle",
+      "packageChoice": "Representative US 12 fl oz / 355mL Coca-Cola de Mexico glass bottle; exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/coca-cola-mexican-soda-bottles/0004900007546",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0004900007546",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact retailer12oz Coca-Cola de Mexico glass bottle inspected beside4-pack: red crown cap, long clear neck with ridges, curved contour shoulder/waist and fluted base, dark cola, red central wrap with white script. Mexico retail annotation excluded. Imported de Mexico identity retained, not newly introduced domestic cane-sugar Coke."
+        }
+      ],
+      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "2f9d6990-b220-585a-8bcb-0cde8e72ea63",
+      "name": "Mexican Coca-Cola",
+      "brand": "Coca-Cola",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/mexican-coca-cola.svg",
+        "portableSvg": "portable-svg/mexican-coca-cola.svg",
+        "png": "png/mexican-coca-cola.png",
+        "svgSha256": "690cee3fab250a65c8a0c12fdf742e6ada2d821b90f825264e57d446c3f67b62",
+        "portableSvgSha256": "0a925269fb3a9b574083bb845af6d0aeed3ee8e6bec23da8cff5530a63707b11",
+        "pngSha256": "b5e2052475f257f2e773f38acf93e1e399e2d3986658ab832f0446d3d6e7e6e2",
+        "pngBytes": 93066
+      },
+      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
+    },
+    {
       "slug": "naked-juice-mighty-mango",
       "family": "naked-smoothie-bottle",
       "packageChoice": "US 15.2 fl oz / 450mL Naked Mighty Mango Machine, current manufacturer Boosted Smoothie / Machine package.",
@@ -4095,6 +4498,37 @@
         "pngBytes": 132078
       },
       "sourceModule": "scripts/icons/families/sparkling-starters.mjs"
+    },
+    {
+      "slug": "mug-root-beer",
+      "family": "classic-soda-can",
+      "packageChoice": "Representative US 12 fl oz / 355mL Mug Root Beer aluminum can; exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/mug-root-beer-caffeine-free-soda-cans/0001200081000",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0001200081000",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact retailer US12oz Mug Original can inspected: brown/tan barrel-like body with cream foamy shoulder, massive cream/gold MUG on red field, tan bulldog face in center, ROOT BEER below and yellow NO CAFFEINE footer. Dog/lettering simplified as original vector shapes; external carton excluded."
+        }
+      ],
+      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "1e6ec950-4c34-5a76-890c-e3536bca9043",
+      "name": "Mug Root Beer",
+      "brand": "Mug",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/mug-root-beer.svg",
+        "portableSvg": "portable-svg/mug-root-beer.svg",
+        "png": "png/mug-root-beer.png",
+        "svgSha256": "b7055b7356514a46750ed41cf5b7f8612d213cb24477f4c9269dba1762449b2f",
+        "portableSvgSha256": "6b2f56b34a4e695bb467b6e692c36781edc53e37337dcb6c9c35e4a25efec25d",
+        "pngSha256": "1fecfcdd69781c1a12cb07c9128de46a4a01cae1a4cd26657d516945c2a9b619",
+        "pngBytes": 117094
+      },
+      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
     },
     {
       "slug": "fiji-natural-artesian-water",
@@ -5337,6 +5771,37 @@
       "sourceModule": "scripts/icons/families/water-expansion.mjs"
     },
     {
+      "slug": "rc-cola",
+      "family": "classic-soda-can",
+      "packageChoice": "Representative US 12 fl oz / 355mL RC Cola aluminum can; exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.myrccola.com/",
+          "imageUrl": "https://www.myrccola.com/images/products/RC_COLA_12.png",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact US manufacturer RC COLA12 image inspected: cyan lower body, white/silver upper curved field, blue Me and My, enormous red italic RC, curved white ROYAL CROWN COLA. Silver rims; reference label is representative older US package rather than international red/blue or new blue can."
+        }
+      ],
+      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "c55098b8-6831-5b29-a7f4-8da515b70af3",
+      "name": "RC Cola",
+      "brand": "RC Cola",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/rc-cola.svg",
+        "portableSvg": "portable-svg/rc-cola.svg",
+        "png": "png/rc-cola.png",
+        "svgSha256": "171ae9cd513ffc3f2cdf7f1a563b18665f5ea09face577854307b8fa4a521faa",
+        "portableSvgSha256": "c60bafd03684b58721dcdccbc7e55675df7aade9a46ebf0eb34d6f12f63d8a4a",
+        "pngSha256": "fb6c68e455577a1c50fe98d5d2cf5841007917aa0bf8ca48db43da978d345ccb",
+        "pngBytes": 96441
+      },
+      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
+    },
+    {
       "slug": "red-bull-original",
       "family": "slim-can",
       "packageChoice": "US 8.4 fl oz / 250 mL original energy drink.",
@@ -6019,6 +6484,37 @@
       "sourceModule": "scripts/icons/families/citrus-sodas.mjs"
     },
     {
+      "slug": "squirt",
+      "family": "classic-soda-can",
+      "packageChoice": "Representative US 12 fl oz / 355mL Squirt aluminum can; exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.squirtsoda.com/",
+          "imageUrl": "https://www.squirtsoda.com/images/can1.png",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact manufacturer Original Squirt12oz can inspected: bright yellow field, red diagonal script Squirt outlined pale, small green/lime grapefruit leaf/motif at upper-left, grapefruit slice low-left and green Grapefruit Soda footer. Not Ruby Red or Zero Sugar."
+        }
+      ],
+      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "f51a46e4-a5d0-5712-91b1-798745d51b86",
+      "name": "Squirt",
+      "brand": "Squirt",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/squirt.svg",
+        "portableSvg": "portable-svg/squirt.svg",
+        "png": "png/squirt.png",
+        "svgSha256": "1e8d7e165d588694bd71246d052c881178cc992e93d6a7779c1d3790418c7c60",
+        "portableSvgSha256": "e38d148ca600dc40b8ec38fc11c1ea6e05c90459f130705bdae6c529f1798a9e",
+        "pngSha256": "efb21d5246b7a7109129046301685389863f3f65a7e050cc103914d2b63b2abc",
+        "pngBytes": 115743
+      },
+      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
+    },
+    {
       "slug": "starry-lemon-lime",
       "family": "citrus-soda-can",
       "packageChoice": "US 16 fl oz sleek can, PepsiCo SKU 321253; green/yellow Original lemon-lime.",
@@ -6079,6 +6575,68 @@
         "pngBytes": 125654
       },
       "sourceModule": "scripts/icons/families/citrus-sodas.mjs"
+    },
+    {
+      "slug": "stewarts-orange-n-cream",
+      "family": "stewarts-glass-bottle",
+      "packageChoice": "Representative US 12 fl oz / 355mL Stewart’s Orange ’n Cream glass bottle; exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.drinkstewarts.com/",
+          "imageUrl": "https://www.kdpproductfacts.com/smedia/kdpproductfacts.com/www/product_images/medium/STEWARTS_ORANGE_NCREAM_12.png",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact manufacturer12oz Stewart’s Orange ’n Cream glass bottle inspected: long slim neck and modest curved shoulder, clear amber-orange soda, green crown cap/1924 diamond, embossed Stewart’s glass shoulder, white flavor above green lozenge/script label, Fountain Classics, orange creamsicle illustration below. Original non-diet variant; label engraving/filler simplified."
+        }
+      ],
+      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "6ebf7a55-1ec0-5d36-831c-cd44ee05784a",
+      "name": "Stewart's Orange N' Cream",
+      "brand": "Stewart's",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/stewarts-orange-n-cream.svg",
+        "portableSvg": "portable-svg/stewarts-orange-n-cream.svg",
+        "png": "png/stewarts-orange-n-cream.png",
+        "svgSha256": "2cd21a0dac3d3d326893fc26455f794d534d12ada5aa0b2253b47aa7f10afc92",
+        "portableSvgSha256": "53757226ffd11e7a633b1b0bb4c0c18f680bb6d8ff09748cab463b9a9b3030a8",
+        "pngSha256": "fe1109cdacf36d77c42cb78ba2cdd77d7cfedbf3bfc5dafb429e8cc612797376",
+        "pngBytes": 105629
+      },
+      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
+    },
+    {
+      "slug": "stewarts-root-beer",
+      "family": "stewarts-glass-bottle",
+      "packageChoice": "Representative US 12 fl oz / 355mL Stewart’s Root Beer glass bottle; exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.drinkstewarts.com/",
+          "imageUrl": "https://www.kdpproductfacts.com/smedia/kdpproductfacts.com/www/product_images/medium/STEWARTS_ROOT_BEER_SODA_12.png",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact manufacturer12oz Stewart’s Root Beer glass bottle inspected: long slim neck and modest curved shoulder, very dark brown soda, orange crown cap/1924 diamond, embossed Stewart’s glass shoulder, white flavor above orange lozenge/script label, Fountain Classics, tilted foamy root-beer mug below. Original non-diet variant; label engraving/filler simplified."
+        }
+      ],
+      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "cdd7fd40-ea34-5988-bded-19801a4b64a0",
+      "name": "Stewart's Root Beer",
+      "brand": "Stewart's",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/stewarts-root-beer.svg",
+        "portableSvg": "portable-svg/stewarts-root-beer.svg",
+        "png": "png/stewarts-root-beer.png",
+        "svgSha256": "2d81dff273d4d5cfa064c73a971b439a5ab7548a4fa2e305b617a451a646c73b",
+        "portableSvgSha256": "f9ba6faf1d8ca9f95ec36b4cc10111bdb6123bcf6705e05b6403f3ae104b5fe5",
+        "pngSha256": "c8f63b671cf5fcb138605600d9223763795c70071d1fa61f8251ce722f1f03bc",
+        "pngBytes": 99449
+      },
+      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
     },
     {
       "slug": "naked-juice-strawberry-banana",
@@ -6172,6 +6730,37 @@
         "pngBytes": 120137
       },
       "sourceModule": "scripts/icons/families/starter-smoothies.mjs"
+    },
+    {
+      "slug": "sunkist-orange",
+      "family": "citrus-soda-pet-bottle",
+      "packageChoice": "Representative US 20 fl oz / 591mL Sunkist Orange PET bottle; exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.sunkistsoda.com/",
+          "imageUrl": "https://s7d1.scene7.com/is/image/kdrp/SK_Orange_20oz_Legacy_Wet?$Dynamic-PublicURL-PNG$&wid=500&hei=1000",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact manufacturer20oz Sunkist Orange PET inspected: sculpted waist, lobed base, blue screw cap, bright orange soda. Orange wrap with yellow sunburst and navy/white script Sunkist, Orange below. Independent variant colors and fruit motifs preserved."
+        }
+      ],
+      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "1f985ad9-58cc-57b8-ac88-628841d89898",
+      "name": "Sunkist Orange",
+      "brand": "Sunkist",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/sunkist-orange.svg",
+        "portableSvg": "portable-svg/sunkist-orange.svg",
+        "png": "png/sunkist-orange.png",
+        "svgSha256": "6b6d86b7b52b31e726052f39d3a259a7425f6841986202ba2c0ceacac568b430",
+        "portableSvgSha256": "08babf9c2ed25c9a521f86d92353908274ffb569b74b9a5d2aca4602d10179e6",
+        "pngSha256": "d6b5d90d3e3ed3052fa0e03192699170085303b4f746922d8786433c3a053831",
+        "pngBytes": 118607
+      },
+      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
     },
     {
       "slug": "topo-chico-original",
@@ -6327,6 +6916,37 @@
         "pngBytes": 41932
       },
       "sourceModule": "scripts/icons/families/water-expansion.mjs"
+    },
+    {
+      "slug": "vernors-ginger-ale",
+      "family": "classic-soda-can",
+      "packageChoice": "Representative US 12 fl oz / 355mL Vernors Ginger Soda aluminum can; exact inspected package.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/vernors-ginger-soda-cans/0007800018016",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0007800018016",
+          "inspectedAt": "2026-11-11",
+          "visuallyInspected": true,
+          "observations": "Exact retailer12oz Vernors Original ginger soda can inspected: dark green body, subtle vertical texture, yellow decorative top/base bands, large diagonal cream Vernors outlined dark green, small The Original Ginger Soda below. Separate from Diet; retail image12OZ annotation excluded."
+        }
+      ],
+      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "status": "needs-review",
+      "bevId": "05dbdefa-3d2d-59bd-8827-93f2106fcb18",
+      "name": "Vernors Ginger Ale",
+      "brand": "Vernors",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/vernors-ginger-ale.svg",
+        "portableSvg": "portable-svg/vernors-ginger-ale.svg",
+        "png": "png/vernors-ginger-ale.png",
+        "svgSha256": "854be05168711d0d3d7b7799dc5186a5270fc2b9d8a9f5617c7e460c0366af0e",
+        "portableSvgSha256": "494357f9327b77a9b5e2255d96b0eed1884612516c6925d0bb52497e5e8cf241",
+        "pngSha256": "6112c724281e863225b063c54b7897ca352d1d5dcb41d8188fb88422e33721d3",
+        "pngBytes": 93083
+      },
+      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
     },
     {
       "slug": "vita-coco-coconut-water-original",

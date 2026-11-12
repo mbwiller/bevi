@@ -1,50 +1,18 @@
 {
   "summary": {
     "catalog": 378,
-    "authored": 214,
-    "pending": 164,
+    "authored": 234,
+    "pending": 144,
     "starterAuthored": 39,
     "starterTotal": 43,
     "livePostgresReconciled": false
   },
   "pending": [
     {
-      "bevId": "2f9d6990-b220-585a-8bcb-0cde8e72ea63",
-      "slug": "mexican-coca-cola",
-      "name": "Mexican Coca-Cola",
-      "brand": "Coca-Cola",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "a5d8393f-47b3-570f-8edc-ae8917a16888",
-      "slug": "aw-root-beer",
-      "name": "A&W Root Beer",
-      "brand": "A&W",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "6a1784e0-7780-562e-9988-1b6df1d6de02",
       "slug": "aw-diet-root-beer",
       "name": "A&W Diet Root Beer",
       "brand": "A&W",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "25f32d35-36f7-5865-b447-e1c52714079d",
-      "slug": "barqs-root-beer",
-      "name": "Barq's Root Beer",
-      "brand": "Barq's",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "e8511a96-1026-5087-8d15-5de6042b8d8c",
-      "slug": "canada-dry-ginger-ale",
-      "name": "Canada Dry Ginger Ale",
-      "brand": "Canada Dry",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -73,58 +41,10 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "1e6ec950-4c34-5a76-890c-e3536bca9043",
-      "slug": "mug-root-beer",
-      "name": "Mug Root Beer",
-      "brand": "Mug",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "1f985ad9-58cc-57b8-ac88-628841d89898",
-      "slug": "sunkist-orange",
-      "name": "Sunkist Orange",
-      "brand": "Sunkist",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "bdd0a5d5-3cb0-50fe-8f76-17237860f097",
       "slug": "diet-sunkist-orange",
       "name": "Diet Sunkist Orange",
       "brand": "Sunkist",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "5a896b9b-e375-5458-87fd-a140d3c147d8",
-      "slug": "crush-orange",
-      "name": "Crush Orange",
-      "brand": "Crush",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "690b9cb5-235f-5882-b66c-171e62743aef",
-      "slug": "big-red",
-      "name": "Big Red",
-      "brand": "Big Red",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "9a8a0be9-81a0-5ffb-a5ea-7b9f05cb2a82",
-      "slug": "aw-cream-soda",
-      "name": "A&W Cream Soda",
-      "brand": "A&W",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "f51a46e4-a5d0-5712-91b1-798745d51b86",
-      "slug": "squirt",
-      "name": "Squirt",
-      "brand": "Squirt",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -141,14 +61,6 @@
       "slug": "zevia-mountain-twist",
       "name": "Zevia Mountain Twist",
       "brand": "Zevia",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "c55098b8-6831-5b29-a7f4-8da515b70af3",
-      "slug": "rc-cola",
-      "name": "RC Cola",
-      "brand": "RC Cola",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -201,30 +113,6 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "5485e9ea-1b4b-5fc7-8f0e-5948e33df9fc",
-      "slug": "crush-grape",
-      "name": "Crush Grape",
-      "brand": "Crush",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "05dbdefa-3d2d-59bd-8827-93f2106fcb18",
-      "slug": "vernors-ginger-ale",
-      "name": "Vernors Ginger Ale",
-      "brand": "Vernors",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "0cb9894d-f4f4-5ac2-badc-fd5e3d856e5f",
-      "slug": "ibc-root-beer",
-      "name": "IBC Root Beer",
-      "brand": "IBC",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "1e89d7f1-f6e1-588d-97da-335b7b7f5087",
       "slug": "hires-root-beer",
       "name": "Hires Root Beer",
@@ -245,54 +133,6 @@
       "slug": "shasta-grape",
       "name": "Shasta Grape",
       "brand": "Shasta",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "b4e9df36-99e2-5e9d-a5e2-ea13275e4676",
-      "slug": "faygo-red-pop",
-      "name": "Faygo Red Pop",
-      "brand": "Faygo",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "f1d527a5-f25d-5893-9b7d-20aa98551086",
-      "slug": "faygo-rock-and-rye",
-      "name": "Faygo Rock & Rye",
-      "brand": "Faygo",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "cdd7fd40-ea34-5988-bded-19801a4b64a0",
-      "slug": "stewarts-root-beer",
-      "name": "Stewart's Root Beer",
-      "brand": "Stewart's",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "6ebf7a55-1ec0-5d36-831c-cd44ee05784a",
-      "slug": "stewarts-orange-n-cream",
-      "name": "Stewart's Orange N' Cream",
-      "brand": "Stewart's",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "5ffffcaf-5e63-5113-838c-eda997ade0a0",
-      "slug": "boylan-birch-beer",
-      "name": "Boylan Birch Beer",
-      "brand": "Boylan Bottling",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "b156ee8d-6393-541b-9abc-0fcfffea6676",
-      "slug": "bundaberg-ginger-beer",
-      "name": "Bundaberg Ginger Beer",
-      "brand": "Bundaberg",
       "isStarter": false,
       "status": "needs-reference"
     },

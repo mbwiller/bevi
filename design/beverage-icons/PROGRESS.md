@@ -1,5 +1,19 @@
 # Beverage icon production checkpoint
 
+## Latest batch: 20 classic soda icons, 2026-11-11
+
+**234 drafts authored; 144 catalog entries remain. 39 of 43 starters covered.**
+
+Added `scripts/icons/families/classic-soda-expansion.mjs`: A&W Root Beer/Cream Soda, Canada Dry Ginger Ale, Sunkist Orange, Crush Orange/Grape, Squirt, RC Cola, IBC Root Beer, Stewart’s Root Beer/Orange ’n Cream, Bundaberg Ginger Beer, Faygo Redpop/Rock & Rye, Barq’s Root Beer, Mug Root Beer, Vernors Ginger Soda, Big Red, Coca-Cola de Mexico, Boylan Original Birch Beer.
+
+All20 exact reference images independently downloaded/visually inspected. Actual package families preserved:20oz PET A&W/Crush/Sunkist,24oz Faygo PET,12oz cans,12oz long-neck glass and12.7oz Bundaberg stubby ring-pull glass. Manufacturer sources used except documented retailer fallback for Barq’s, Mug, Vernors, Big Red and Mexican Coke. No literal retail size annotations or photo backdrops included. Brand lettering/fine illustration are original simplified vectors.
+
+Researched remaining Tiger Sugar starter: catalog classic_milk_tea name conflicts with the café’s separate signature brown-sugar fresh-milk and tea-latte choices. Retained a new durable needs-identity-resolution record; did not guess which serving to draw. Other deferred identities remain unchanged.
+
+Reviewed large renders and40/56/96/155px light/dark tiles at8%padding; refined Squirt/Vernors lettering, RC footer fit, cap colors and Bundaberg ring-pull. All214 previously shipped asset hashes remain unchanged. Sheets `review/batch-09-2026-11-11-01.png` through `-04.png` and `review/batch-09-large-2026-11-11-01.png` / `-02.png`; exact hashes in `review/review.json`. All new icons remain needs-review for final aesthetic approval; no browser/device session performed.
+
+Build,234-asset validation and app export freshness passed. Release checks: isolated npm ci, npm run typecheck, npm test, ranking bundle:smoke/vectors check, Expo web export with CI placeholder config and bundle scan; final results/publication recorded in PR. No contract, database, dependency or precedence changes. Live Postgres reconciliation remains pending.
+
 ## Latest batch: 20 energy icons, 2026-11-11
 
 **214 drafts authored; 164 catalog entries remain. 39 of 43 starters covered.**
