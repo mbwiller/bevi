@@ -11,7 +11,7 @@ import { Icon } from '@/components/Icon';
 import { ProgressDots } from '@/components/ProgressDots';
 import { useDebouncedValue } from '@/features/add-bev/useDebouncedValue';
 import { formErrorMessage } from '@/features/auth/formError';
-import { visibleCategories } from '@/lib/categories';
+import { categoryById, visibleCategories } from '@/lib/categories';
 import { useBack } from '@/lib/useBack';
 import { radius, spacing, type, useTheme } from '@/theme';
 
@@ -27,6 +27,7 @@ import {
   UNREADABLE_IMAGE,
   UPLOAD_FAILED,
 } from './copy';
+import { suggestCategory } from './categoryHint';
 import { createWhenReady, isAssetNotReady } from './createWhenReady';
 import { DetailsStep, type DetailsForm, type FieldErrors } from './DetailsStep';
 import { DuplicatesStep, ExistingBev } from './DuplicatesStep';
@@ -110,6 +111,12 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
   const debounced = useDebouncedValue(lookup, DUPLICATES_DEBOUNCE_MS);
   // Live while typing (debounced); on step 3 the form is settled, so look up exactly what was entered.
   const duplicatesQ = useLikelyDuplicates(step === 2 ? lookup : debounced, { enabled: step >= 1 });
+
+  // Catch a wrong category at the source: the matches (from every category) mostly share another one.
+  const categoryHint = useMemo(() => {
+    const id = suggestCategory(duplicatesQ.data ?? [], form.categoryId, categories);
+    return id ? categoryById(id) : null;
+  }, [duplicatesQ.data, form.categoryId, categories]);
 
   const dirty =
     !!photo.photo ||
@@ -302,6 +309,8 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
         label={label}
         onPickLabel={(s) => void pickLabel(s)}
         similarCount={duplicatesQ.data?.length ?? 0}
+        categoryHint={categoryHint}
+        onUseCategory={(categoryId) => patch({ categoryId })}
       />
     );
   } else {
