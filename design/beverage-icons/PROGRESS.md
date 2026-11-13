@@ -1,5 +1,15 @@
 # Beverage icon production checkpoint
 
+## Latest batch: 20 beer and refreshment icons plus Diet 7UP, 2026-11-13
+
+**275 drafts authored; 103 catalog entries remain. 39 of 43 starters covered.**
+
+Added 7 beer bottles, 3 beer cans, 8 refreshment products and both Hata Kosen Ramune 200mL glass bottles in `beer-expansion.mjs`, `beer-cans-expansion.mjs`, `refreshment-expansion.mjs` and `ramune.mjs`. Added Diet 7UP as a separately requested extra in `diet-seven-up.mjs`; its current US package is branded 7UP Zero Sugar, and the source records that catalog-to-package naming distinction. The wrong-brand Kimura 410mL Ramune photo was rejected; both Ramune references show the exact Hata Kosen Original and Melon package.
+
+Inspected all21 package references and reviewed large artwork plus40/56/96/155px light/dark tiles with8%padding. Corrected the Ramune glass fill/pattern rendering before final review. `review/batch-11-2026-11-12-01.png` through `-05.png` and three `batch-11-large-2026-11-12` sheets show the batch; `review/review.json` records per-asset hashes. All254 prior asset hashes are unchanged. Final aesthetic approval and interactive device review remain pending; new records stay needs-review.
+
+Build, validation, tests, Expo export, CI, merge to main and production hash verification are pending. No catalog contract or backend changes. Live Postgres reconciliation remains pending.
+
 ## Latest batch: 20 Fresca, soda and juice icons, 2026-11-12
 
 **254 drafts authored; 124 catalog entries remain. 39 of 43 starters covered.**
