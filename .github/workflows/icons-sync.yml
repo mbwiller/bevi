@@ -1,0 +1,95 @@
+name: icons-sync
+
+# Publishes the authored beverage icons to the backend
+# (scripts/icons/publish.ts, `npm run icons:publish`): the portable SVGs named
+# by design/beverage-icons/manifest.json go to the public `bev-icons` Storage
+# bucket under content-addressed keys, then `publish_bev_icons` (service role,
+# 20261112000200) replaces `public.bev_icons` with the manifest and returns a
+# report that reconciles it against the live catalog. Last, one object is
+# fetched through its public URL and its headers are printed (the line starts
+# `public URL check:`). See design/beverage-icons/README.md.
+#
+# MANUAL ONLY, and a DRY RUN BY DEFAULT. A dry run reads the manifest, checks
+# every SVG's sha256 and safety, prints the counts, and needs no credentials;
+# untick `dry_run` to upload and write. NO PUSH TRIGGER YET: the app still
+# bundles its own copy of the icons (scripts/icons/export-app.mjs), so nothing
+# reads what this publishes. Running it on every push to the manifest is the
+# follow-up for when the app stops bundling icons and reads `bev_icons`.
+#
+# Secrets and variables are venues-sync.yml's (and graph-edges.yml's), unchanged:
+#   SUPABASE_SERVICE_ROLE_KEY   repository SECRET
+#   SUPABASE_URL                repository VARIABLE (a secret of the same name is accepted)
+#
+# THE LOG IS PUBLIC (this is a public repo). The script prints counts, slugs
+# and Bev ids -- catalog ids are already derivable from the repo -- and never
+# the project URL or a key.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Read and check every icon, print the counts, upload and write nothing"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+# Two publishes at once would race on the same table; never cancel one mid-write.
+concurrency:
+  group: icons-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # A dry run needs no credentials, so only a real run is held to them.
+      # Failing loudly rather than skipping, for graph-edges.yml's reason.
+      - name: credentials are present
+        if: ${{ !inputs.dry_run }}
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL || secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          missing=""
+          [ -n "$SUPABASE_URL" ] || missing="$missing SUPABASE_URL"
+          [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] || missing="$missing SUPABASE_SERVICE_ROLE_KEY"
+          if [ -n "$missing" ]; then
+            echo "::error::icons-sync cannot write: missing$missing (see graph-edges.yml)."
+            exit 1
+          fi
+          echo "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set."
+
+      # The script imports nothing outside node: builtins and the repo, but
+      # `test:scripts` covers scripts/graph too, which needs @bevi/ranking's
+      # workspace symlink.
+      - run: npm ci
+
+      # The pure half: manifest validation, the object path, the SVG safety
+      # check, the duplicate-upload rule, the report.
+      - run: npm run test:scripts
+
+      - name: publish
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL || secrets.SUPABASE_URL }}
+          # A dry run writes nothing, so it does not get the key. (Not `dry_run && '' || key`:
+          # '' is falsy in an expression, so that form would always yield the key.)
+          SUPABASE_SERVICE_ROLE_KEY: ${{ !inputs.dry_run && secrets.SUPABASE_SERVICE_ROLE_KEY || '' }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        # `if`, not `[ … ] && …`: under `bash -e` a false test fails the step.
+        run: |
+          args=""
+          if [ "$DRY_RUN" = "true" ]; then args="--dry-run"; fi
+          echo "running: npm run icons:publish -- $args"
+          npm run icons:publish -- $args
