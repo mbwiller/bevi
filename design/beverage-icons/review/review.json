@@ -2912,8 +2912,8 @@
         {
           "bevId": "34405280-1223-56e6-b5c5-2d63826744c1",
           "slug": "ramune-melon",
-          "pngSha256": "72e69f915fca84ce026173d53903cd21c2df4f724c38ec278844fb6ff88c7e77",
-          "portableSvgSha256": "341a28c55aebb70fc1f6ab98faca98bd03ba92c4e1cead95af7af4ac5ff7d3f8"
+          "pngSha256": "1f3e82c534567c660f5905bb832d8786c0d58b09f53440cedf03c3e6631351f7",
+          "portableSvgSha256": "d49864cd5875e91d80cbf7bd6426b52f9b4af2643160a6b03c2dc453635629a1"
         },
         {
           "bevId": "ac939eca-7862-5813-975a-9e037a28a5db",
@@ -2936,4 +2936,4 @@
       ]
     }
   ]
-}
+}\n
