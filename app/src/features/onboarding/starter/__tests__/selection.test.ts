@@ -18,6 +18,7 @@ function bev(i: number): BevSummary {
     flavor: null,
     categoryId: CATS[i % CATS.length]!,
     photoUrl: null,
+    iconUrl: null,
     photoStatus: 'ready',
     priceTier: 1,
     priceEstimated: false,
