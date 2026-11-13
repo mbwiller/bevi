@@ -82,7 +82,7 @@ The same icons also live in Supabase, where the app will read them once it stops
 
 ```sh
 npm run icons:publish -- --dry-run   # no credentials; checks every hash and refuses unsafe SVG markup
-npm run icons:publish                # SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (supabase/.env)
+npm run icons:publish                # needs SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY exported in the shell
 ```
 
 Or run the manual **icons-sync** workflow, which is a dry run unless `dry_run` is unticked. A real run uploads only objects not yet published, then replaces `bev_icons` with the manifest in one call. Its report reconciles the manifest against the live database: Bevs it names that do not exist there, icons that followed a merge, and how many active Bevs have neither a photo nor an icon.

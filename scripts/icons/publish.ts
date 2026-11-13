@@ -276,4 +276,7 @@ async function main(argv: readonly string[]): Promise<void> {
   console.log("icons:publish: done");
 }
 
-await main(process.argv.slice(2));
+// A rejected `fetch` (DNS, reset, TLS) would otherwise reach Node's default
+// handler, which prints the error's `cause`, and that names the project host.
+// Only the message is printed here; for a network failure it is "fetch failed".
+await main(process.argv.slice(2)).catch((e: unknown) => die(e instanceof Error ? e.message : String(e)));

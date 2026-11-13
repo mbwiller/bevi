@@ -33,7 +33,7 @@
 --   MRG4    1c0d4         merged into W6
 --   MISSING 1c0e1         never inserted (a user-created Bev that exists only on prod)
 begin;
-select plan(78);
+select plan(79);
 
 -- ---------------------------------------------------------------------------
 -- Fixture
@@ -261,6 +261,13 @@ select throws_ok(
        pg_temp.icon('00000000-0000-4000-8000-00000001c0a2', 'pgtap-icon-w2'),
        pg_temp.icon('00000000-0000-4000-8000-00000001c0a1', 'pgtap-icon-w1-again'))) $$,
   '22023', 'BEVI_VALIDATION', 'a duplicate bev_id is refused, even among good rows');
+-- Well-formed rows that name no Bev at all (the job pointed at the wrong
+-- stack): refused, because writing them would delete every existing row.
+select throws_ok(
+  $$ select public.publish_bev_icons(jsonb_build_array(
+       pg_temp.icon('00000000-0000-4000-8000-00000001c0fe', 'pgtap-icon-nowhere-1'),
+       pg_temp.icon('00000000-0000-4000-8000-00000001c0fd', 'pgtap-icon-nowhere-2'))) $$,
+  '22023', 'BEVI_VALIDATION', 'a payload in which no row names an existing Bev is refused');
 
 select is(
   (select array_agg(slug) from public.bev_icons where bev_id::text like '00000000-0000-4000-8000-00000001c0%'),

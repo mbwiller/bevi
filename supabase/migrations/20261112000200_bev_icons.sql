@@ -316,6 +316,18 @@ begin
         left join public.bevs b on b.id = t.target
     ) x;
 
+  -- A payload in which NO row names a Bev that exists is the wrong database
+  -- (or a freshly reset one), not a manifest. Writing it would delete every
+  -- row and still return a report, so it is refused for the same reason as
+  -- the empty array above. One row that resolves is enough to proceed.
+  if not exists (
+    select 1 from jsonb_to_recordset(v_resolved) as k(found boolean, rn integer)
+     where k.found and k.rn = 1
+  ) then
+    raise exception 'BEVI_VALIDATION' using errcode = '22023',
+      detail = 'no row names a Bev that exists; refusing to clear bev_icons';
+  end if;
+
   select coalesce(jsonb_agg(to_jsonb(r.bev_id) order by r.bev_id) filter (where not r.found), '[]'::jsonb),
          coalesce(jsonb_agg(jsonb_build_object('from', r.bev_id, 'to', r.target) order by r.bev_id)
                     filter (where r.found and r.rn = 1 and r.bev_id <> r.target), '[]'::jsonb),
