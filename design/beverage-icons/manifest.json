@@ -6742,6 +6742,13 @@
           "inspectedAt": "2026-11-12",
           "visuallyInspected": true,
           "observations": "Exact Hata Kosen 200mL export bottle inspected: clear Codd-neck glass with bulb chamber and narrow waist, white sealed cap printed with red HATA, pale cyan drink, blue checker wrap, large red calligraphic label mark, small yellow vertical block and Hata Kosen footer. Retail background omitted; fine Japanese/legal copy simplified."
+        },
+        {
+          "pageUrl": "https://pub-mediabox-storage.rxweb-prd.com/exhibitor/document/exh-e56f0e5d-8b58-4fff-86e9-aa20c0e27686/d4fad4e5-cb96-4e6d-9c93-25897f6a79f8.pdf",
+          "imageUrl": "https://pub-mediabox-storage.rxweb-prd.com/exhibitor/document/exh-e56f0e5d-8b58-4fff-86e9-aa20c0e27686/d4fad4e5-cb96-4e6d-9c93-25897f6a79f8.pdf",
+          "inspectedAt": "2026-11-12",
+          "visuallyInspected": true,
+          "observations": "Hata Kosen manufacturer catalog lists Ramune, 200mL glass bottle, JAN 4902494008004. Product name and barcode corroborate brand/flavor identity."
         }
       ],
       "uncertainty": "Catalog flavor recorded as Original; manufacturer Hata Kosen product catalog lists the corresponding 200mL SKU. Exact export package depicted; regional label revisions may vary. Original vector simplification, not an exact label reproduction. A different Kimura 410mL Melon Ramune package was rejected as the wrong brand. Final aesthetic approval and web-device review pending.",
@@ -6773,6 +6780,13 @@
           "inspectedAt": "2026-11-12",
           "visuallyInspected": true,
           "observations": "Exact Hata Kosen Melon 200mL bottle image inspected: clear Codd-neck glass, white cap with red HATA, vivid green checker label, white HATA outlined green, vertical melon Ramune lettering with yellow and white outlines, pale apple-green drink and small smiling netted melons. Retail background omitted; fine Japanese/legal copy simplified."
+        },
+        {
+          "pageUrl": "https://pub-mediabox-storage.rxweb-prd.com/exhibitor/document/exh-e56f0e5d-8b58-4fff-86e9-aa20c0e27686/d4fad4e5-cb96-4e6d-9c93-25897f6a79f8.pdf",
+          "imageUrl": "https://pub-mediabox-storage.rxweb-prd.com/exhibitor/document/exh-e56f0e5d-8b58-4fff-86e9-aa20c0e27686/d4fad4e5-cb96-4e6d-9c93-25897f6a79f8.pdf",
+          "inspectedAt": "2026-11-12",
+          "visuallyInspected": true,
+          "observations": "Hata Kosen manufacturer catalog lists Ramune Melon Flavor, 200mL glass bottle, JAN 4902494090177. Product name and barcode corroborate brand/flavor identity."
         }
       ],
       "uncertainty": "Catalog flavor recorded as Melon; manufacturer Hata Kosen product catalog lists the corresponding 200mL SKU. Exact export package depicted; regional label revisions may vary. Original vector simplification, not an exact label reproduction. A different Kimura 410mL Melon Ramune package was rejected as the wrong brand. Final aesthetic approval and web-device review pending.",
@@ -6786,10 +6800,10 @@
         "svg": "svg/ramune-melon.svg",
         "portableSvg": "portable-svg/ramune-melon.svg",
         "png": "png/ramune-melon.png",
-        "svgSha256": "abeaf422927f504329d8b334986ac2d5f479646981b5e96459e2b0f91306107b",
-        "portableSvgSha256": "341a28c55aebb70fc1f6ab98faca98bd03ba92c4e1cead95af7af4ac5ff7d3f8",
-        "pngSha256": "72e69f915fca84ce026173d53903cd21c2df4f724c38ec278844fb6ff88c7e77",
-        "pngBytes": 78154
+        "svgSha256": "c900ca7eac79e5b346243b71f95c79867f1da9fce4b47897bbf387d50e4dc52d",
+        "portableSvgSha256": "d49864cd5875e91d80cbf7bd6426b52f9b4af2643160a6b03c2dc453635629a1",
+        "pngSha256": "1f3e82c534567c660f5905bb832d8786c0d58b09f53440cedf03c3e6631351f7",
+        "pngBytes": 78763
       },
       "sourceModule": "scripts/icons/families/ramune.mjs"
     },
