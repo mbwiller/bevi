@@ -19,11 +19,10 @@ After researching and drawing the batch, run:
 node --experimental-strip-types scripts/icons/build.mjs
 node scripts/icons/validate.mjs
 python3 scripts/icons/review.py
-node scripts/icons/export-app.mjs
-node scripts/icons/export-app.mjs --check
+npm run icons:publish -- --dry-run
 ```
 
-Use the Python environment containing Pillow for review.py. Visually inspect the new artwork and small-size sheets; record the exact reviewed hashes in `design/beverage-icons/review/review.json`. Keep final aesthetic approval as `needs-review` unless actually granted. Export each batch through the existing app lookup (photo > icon > category art) and run the app's icon drift test. Update the production checkpoint and report new icons, unresolved identities, validation, and remaining coverage. Database reconciliation and database mutations require their own task scope.
+Use the Python environment containing Pillow for review.py. Visually inspect the new artwork and small-size sheets; record the exact reviewed hashes in `design/beverage-icons/review/review.json`. Keep final aesthetic approval as `needs-review` unless actually granted. Merging the batch to `main` publishes it to the backend through `icons-sync`; the dry run above checks hashes and SVG safety locally. Nothing is copied into `app/`. Update the production checkpoint and report new icons, unresolved identities, validation, and remaining coverage. Database reconciliation and database mutations require their own task scope.
 
 Work in the Bevi repository containing `data/catalog/bevs.csv`. Read `design/beverage-icons/PLAN.md` for the inventory/reconciliation workflow and inspect `design/beverage-icons/style-reference/index.html` plus relevant original SVGs. The root `index.html` is the user's preferred artwork; the app's existing flat `BevArt` is not the style master. Preserve the root prototype unless the user asks to edit it.
 

@@ -8,8 +8,8 @@
  *
  * IN ORDER:
  *
- *   1. design/beverage-icons/manifest.json, validated by export-app.mjs's
- *      rules (publish-core.ts `validateManifest`). Every record's portable SVG
+ *   1. design/beverage-icons/manifest.json, validated by
+ *      publish-core.ts `validateManifest`. Every record's portable SVG
  *      is read and its sha256 checked against the manifest; every SVG is
  *      checked for script, event attributes, <foreignObject> and non-#id
  *      links (`svgSafetyProblems`), because the bucket serves it from our
