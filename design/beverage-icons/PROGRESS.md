@@ -8,7 +8,7 @@ Added 7 beer bottles, 3 beer cans, 8 refreshment products and both Hata Kosen Ra
 
 Inspected all21 package references and reviewed large artwork plus40/56/96/155px light/dark tiles with8%padding. Corrected the Ramune glass fill/pattern rendering before final review. `review/batch-11-2026-11-12-01.png` through `-05.png` and three `batch-11-large-2026-11-12` sheets show the batch; `review/review.json` records per-asset hashes. All254 prior asset hashes are unchanged. Final aesthetic approval and interactive device review remain pending; new records stay needs-review.
 
-Build, validation, tests, Expo export, CI, merge to main and production hash verification are pending. No catalog contract or backend changes. Live Postgres reconciliation remains pending.
+Build, validation, typecheck, full tests, Expo export, app export freshness and the backend publisher dry run passed locally. GitHub CI, merge to main, production deployment, backend icon sync and live hash verification are pending. No catalog contract or backend changes in this batch; live Postgres reconciliation awaits the publisher report.
 
 ## Latest batch: 20 Fresca, soda and juice icons, 2026-11-12
 
