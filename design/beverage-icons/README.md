@@ -8,7 +8,7 @@ Codex discovers this workflow through `.agents/skills/bevi-beverage-icons`, whic
 
 [Overview 2](review/overview-02.png) · [Overview 3](review/overview-03.png) · [Overview 4](review/overview-04.png) · [Overview 5](review/overview-05.png) · [Overview 6](review/overview-06.png) · [Overview 7](review/overview-07.png) · [Overview 8](review/overview-08.png) · [Overview 9](review/overview-09.png)
 
-The current collection contains 254 reference-checked drafts, including 39 starter drinks. [The manifest](manifest.json) maps catalog UUIDs to editable SVGs, font-independent SVGs and transparent PNGs. [The work queue](coverage.json) lists the 124 remaining catalog drinks. These counts describe the repository catalog; live Postgres reconciliation is still pending. The app shows the icons (see [Ship to the app](#ship-to-the-app)).
+The current collection contains 254 reference-checked drafts, including 39 starter drinks. [The manifest](manifest.json) maps catalog UUIDs to editable SVGs, font-independent SVGs and transparent PNGs. [The work queue](coverage.json) lists the 124 remaining catalog drinks. These counts describe the repository catalog; the publish job's report reconciles the manifest against the live database (see [Publish to the backend](#publish-to-the-backend)). The app shows the icons (see [Ship to the app](#ship-to-the-app)).
 
 Latest **4-icon starter recovery**: Tropicana Orange Juice Original, Jamba Mango-a-go-go, Bolthouse Farms Strawberry Banana and Kung Fu Tea Classic Milk Tea. These were drawn in the batch-3 branch that never merged; their recipes were rebuilt on `main` and every asset hash matches the original batch-3 review record. Starbucks Frappuccino Mocha was deliberately left out: the catalog row is `blended_coffee`, so the café-versus-bottled identity stays deferred in [identity-issues.json](identity-issues.json).
 
@@ -75,6 +75,17 @@ node scripts/icons/export-app.mjs --check  # writes nothing; exits 1 when the ap
 The script reads `manifest.json`, copies each record's `portable-svg/<slug>.svg` byte for byte to `app/public/bev-icons/<slug>.svg`, removes icons no record claims, and writes `app/src/lib/bevIcons.generated.ts` (catalog bevId → `/bev-icons/<slug>.svg?v=<first 8 hex of the SVG's sha256>`, so a redraw busts caches). It fails on a duplicate bevId or slug, a missing source, or a hash that disagrees with the manifest, and a second run changes nothing. Commit `app/public/bev-icons/` and the generated map with the batch; never edit either by hand. In the app a Bev's image is photo > icon > category art: a real photo always wins, and an icon only replaces the placeholder silhouette.
 
 The app's `src/lib/__tests__/bevIcons.test.ts` (part of `npm test -w app`) is the drift guard: it fails when the map or the shipped SVGs no longer match the manifest.
+
+## Publish to the backend
+
+The same icons also live in Supabase, where the app will read them once it stops bundling its own copy. Each portable SVG is an object in the public `bev-icons` Storage bucket at `<slug>.<first 16 hex of its sha256>.svg`; a redraw is a new object, never an overwrite, so every URL can be cached for a year. `public.bev_icons` links each Bev to its object (`supabase/migrations/20261112000200_bev_icons.sql`), and signed-in users can read a row exactly when they can see the Bev.
+
+```sh
+npm run icons:publish -- --dry-run   # no credentials; checks every hash and refuses unsafe SVG markup
+npm run icons:publish                # SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (supabase/.env)
+```
+
+Or run the manual **icons-sync** workflow, which is a dry run unless `dry_run` is unticked. A real run uploads only objects not yet published, then replaces `bev_icons` with the manifest in one call. Its report reconciles the manifest against the live database: Bevs it names that do not exist there, icons that followed a merge, and how many active Bevs have neither a photo nor an icon.
 
 ## Add a batch without changing the style
 
