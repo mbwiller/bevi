@@ -2,7 +2,9 @@ import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { bevIconUri, hasBevIcon } from '../bevIcons';
+import type { BevIcon } from '@bevi/shared';
+
+import { bevIconUri, hasBevIcon, resolveBevIcon } from '../bevIcons';
 import { BEV_ICONS } from '../bevIcons.generated';
 
 // The drift guard: no workflow runs scripts/icons/export-app.mjs, so this fails when the manifest
@@ -54,4 +56,61 @@ it('looks icons up by bevId', () => {
   expect(hasBevIcon('00000000-0000-5000-8000-000000000000')).toBe(false);
   // Not fooled by Object.prototype.
   expect(bevIconUri('constructor')).toBeUndefined();
+});
+
+// ---------------------------------------------------------------------------
+// resolveBevIcon: the four-step precedence
+// ---------------------------------------------------------------------------
+// The ids come from the generated map rather than being hard-coded, so these
+// keep working through a redraw.
+
+const [DRAWN_A, DRAWN_B] = Object.keys(BEV_ICONS) as [string, string];
+const UNDRAWN = '00000000-0000-4000-8000-00000000fa01';
+
+const icon = (over: Partial<BevIcon> = {}): BevIcon => ({
+  bevId: UNDRAWN,
+  iconUrl: null,
+  iconStatus: 'none',
+  fallbackBevIds: [],
+  labelBand: null,
+  ...over,
+});
+
+describe('resolveBevIcon', () => {
+  it('prefers the generated illustration over everything', () => {
+    const url = 'https://example.test/bev-icons/x/icon-1024.png';
+    // Even for a Bev that has authored art of its own: a generated icon exists
+    // only because someone photographed that exact drink.
+    expect(resolveBevIcon(DRAWN_A, icon({ iconUrl: url, iconStatus: 'completed' }))).toEqual({
+      uri: url,
+      source: 'generated',
+    });
+  });
+
+  it("falls back to the Bev's own authored icon", () => {
+    expect(resolveBevIcon(DRAWN_A, icon())).toEqual({ uri: bevIconUri(DRAWN_A), source: 'authored' });
+    // And with no BevIcon row at all, which is what every screen sees before
+    // `bevs.icons()` resolves.
+    expect(resolveBevIcon(DRAWN_A)).toEqual({ uri: bevIconUri(DRAWN_A), source: 'authored' });
+  });
+
+  it('borrows the first candidate that actually has art, skipping undrawn ones', () => {
+    const resolved = resolveBevIcon(UNDRAWN, icon({ fallbackBevIds: [UNDRAWN, DRAWN_B, DRAWN_A] }));
+    expect(resolved).toEqual({ uri: bevIconUri(DRAWN_B), source: 'borrowed' });
+  });
+
+  it('is undefined when nothing applies, so the caller draws category art', () => {
+    expect(resolveBevIcon(UNDRAWN, icon())).toBeUndefined();
+    expect(resolveBevIcon(UNDRAWN, icon({ fallbackBevIds: [UNDRAWN] }))).toBeUndefined();
+    expect(resolveBevIcon(UNDRAWN, null)).toBeUndefined();
+    expect(resolveBevIcon(UNDRAWN)).toBeUndefined();
+  });
+
+  it('never treats a non-completed status as art, whatever path came with it', () => {
+    // finish_bev_icon_job is the only writer of both columns so they cannot
+    // legitimately disagree, and mapBevIcon nulls the url unless 'completed'.
+    for (const iconStatus of ['pending', 'processing', 'failed', 'none'] as const) {
+      expect(resolveBevIcon(UNDRAWN, icon({ iconStatus }))).toBeUndefined();
+    }
+  });
 });

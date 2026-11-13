@@ -1,7 +1,7 @@
 // Test controls for the FakeApi. Suites import `controls` from '@/testing/fakeApi'. After a control
 // changes data, invalidate TanStack Query (`queryClient.invalidateQueries()`) to refetch.
 
-import type { ApiErrorCode } from '@bevi/shared';
+import type { ApiErrorCode, IconStatus } from '@bevi/shared';
 
 import { getFakeApi } from './instance';
 import type { Latency } from './FakeApi';
@@ -23,6 +23,14 @@ export interface FakeControls {
    * `resetToFixtures()`.
    */
   setInternalReporter(internal: boolean): void;
+  /**
+   * Force a Bev's generated-icon state, for rendering a state a clock cannot
+   * reach: 'processing', 'failed', or 'completed' straight away. 'none' also
+   * clears the schedule, so the Bev reads as never eligible. `null` hands it
+   * back to the clock. Setting this does NOT run a generation job -- there is
+   * no job in the fake, only the state a screen would see.
+   */
+  setIconStatus(bevId: string, status: IconStatus | null): void;
 }
 
 export const controls: FakeControls = {
@@ -32,4 +40,5 @@ export const controls: FakeControls = {
   emptyUser: () => getFakeApi().emptyUser(),
   signInAs: (handle) => getFakeApi().signInAs(handle),
   setInternalReporter: (internal) => getFakeApi().setInternalReporter(internal),
+  setIconStatus: (bevId, status) => getFakeApi().setIconStatus(bevId, status),
 };

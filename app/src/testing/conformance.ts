@@ -539,6 +539,64 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       await expectCode(api.bevs.create({ ...base, categoryId: 'beer', photoAssetId: photo.assetId }), 'age_restricted');
     });
 
+    // The AI-icon feature's one non-negotiable requirement, at the contract
+    // level: generation is initiated by creating a brand-new Bev WITH a
+    // photograph, and by nothing else. `iconStatus` is how a caller tells
+    // "never eligible" ('none') from "waiting", so these two cases are the
+    // whole eligibility rule as the app can observe it.
+    it('create without a photo makes a Bev that is never eligible for an icon', async () => {
+      const me = await newUser();
+      const name = `Conformance Homemade ${makeUsername()}`;
+      const bev = await api.bevs.create({
+        name, categoryId: 'smoothie' as const, priceTier: 2 as const, priceEstimated: false,
+      });
+      expect(bev).toMatchObject({ name, createdBy: { id: me.userId } });
+      const [icon] = await api.bevs.icons([bev.id]);
+      expect(icon).toMatchObject({ bevId: bev.id, iconUrl: null, iconStatus: 'none' });
+      // With no icon of its own it is offered catalog art to borrow. Which ids
+      // come back depends on how much of the category is drawn, so assert the
+      // shape and the invariants, not a coverage figure.
+      expect(Array.isArray(icon!.fallbackBevIds)).toBe(true);
+      expect(icon!.fallbackBevIds).not.toContain(bev.id);
+      expect(new Set(icon!.fallbackBevIds).size).toBe(icon!.fallbackBevIds.length);
+    });
+
+    it('create with a photo makes a Bev that IS eligible, and the photo survives', async () => {
+      await newUser();
+      const photo = await api.media.upload({ kind: 'bev-photo', file: new Blob(['img'], { type: 'image/png' }), mimeType: 'image/png' });
+      await waitForAsset(photo.assetId);
+      const bev = await api.bevs.create({
+        name: `Conformance Espresso Martini ${makeUsername()}`, categoryId: 'coffee' as const,
+        priceTier: 3 as const, priceEstimated: false, photoAssetId: photo.assetId,
+      });
+      // The user's own photograph is the post's content and is never replaced
+      // by the illustration, so it must be there whatever the icon is doing.
+      expect(bev.photoUrl).toBeTruthy();
+      const [icon] = await api.bevs.icons([bev.id]);
+      // Anything but 'none': the job may already have run, or may be queued.
+      expect(icon!.iconStatus).not.toBe('none');
+      if (icon!.iconStatus === 'completed') {
+        expect(icon!.iconUrl).toBeTruthy();
+        // It has art of its own, so it is offered none to borrow.
+        expect(icon!.fallbackBevIds).toEqual([]);
+      } else {
+        expect(icon!.iconUrl).toBeNull();
+      }
+    });
+
+    it("icons: catalog Bevs are 'none', unknown ids are omitted, reading twice changes nothing", async () => {
+      await newUser();
+      const ids = await starterIds(2);
+      const first = await api.bevs.icons([...ids, 'no-such-bev']);
+      // An id the caller cannot see contributes no row rather than an error.
+      expect(first.map((i) => i.bevId).sort()).toEqual([...ids].sort());
+      for (const icon of first) expect(icon).toMatchObject({ iconUrl: null, iconStatus: 'none' });
+      // Read-only: drawing a screen must never schedule generation.
+      const second = await api.bevs.icons(ids);
+      expect(second).toEqual(first.filter((i) => ids.includes(i.bevId)));
+      expect(await api.bevs.icons([])).toEqual([]);
+    });
+
     it('report: works for a real Bev, not_found for an unknown one, validation for an empty reason', async () => {
       await newUser();
       const [id] = await starterIds(1);

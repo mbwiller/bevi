@@ -1,3 +1,5 @@
+import type { BevIcon } from '@bevi/shared';
+
 import { BEV_ICONS } from './bevIcons.generated';
 
 /**
@@ -13,4 +15,40 @@ export function bevIconUri(bevId: string): string | undefined {
 /** True when the Bev has an authored icon. */
 export function hasBevIcon(bevId: string): boolean {
   return bevIconUri(bevId) !== undefined;
+}
+
+/** Where a resolved icon came from, so a caller can treat borrowed art differently if it wants. */
+export type BevIconSource = 'generated' | 'authored' | 'borrowed';
+
+export interface ResolvedBevIcon {
+  uri: string;
+  source: BevIconSource;
+}
+
+/**
+ * A Bev's icon, in precedence order:
+ *
+ *   1. `generated` — the AI illustration made for this Bev when it was created with a photo.
+ *   2. `authored`  — this Bev's own hand-drawn catalog icon.
+ *   3. `borrowed`  — the first of `icon.fallbackBevIds` that has authored art. The server ranks
+ *                    those candidates (same leaf category, then most-rated); only the client knows
+ *                    which Bevs actually have art, so the choosing happens here.
+ *
+ * `undefined` means none of the three applies and the caller draws `bevArtForCategory`. That is the
+ * normal state of a brand-new custom drink in a thinly-drawn category, not an error.
+ *
+ * Pure: it reads a shipped map and the argument. It starts no generation job and makes no request,
+ * which is what lets the feed, the collection and search call it on every render safely.
+ */
+export function resolveBevIcon(bevId: string, icon?: BevIcon | null): ResolvedBevIcon | undefined {
+  if (icon?.iconUrl) return { uri: icon.iconUrl, source: 'generated' };
+
+  const own = bevIconUri(bevId);
+  if (own) return { uri: own, source: 'authored' };
+
+  for (const candidateId of icon?.fallbackBevIds ?? []) {
+    const borrowed = bevIconUri(candidateId);
+    if (borrowed) return { uri: borrowed, source: 'borrowed' };
+  }
+  return undefined;
 }

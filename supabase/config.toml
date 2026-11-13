@@ -282,6 +282,31 @@ verify_jwt = true
 enabled = true
 verify_jwt = false
 
+# generate-bev-icon: the custom-Bev icon worker. Its only callers are
+# `enqueue_bev_icon_job()` over pg_net (20261111000200) and the every-minute
+# `drain_bev_icon_jobs()` cron (20261111000400).
+#
+# verify_jwt = false ON PURPOSE, and it is not the weaker setting here -- the
+# same reasoning as `embed`. verify_jwt only proves the request carries a key
+# the project issued, and the publishable key ships in every copy of the app.
+# This function writes as the service role and spends a metered daily image
+# allocation per call, so "anyone who installed the app" is exactly the wrong
+# audience, and neither real caller holds a user JWT anyway. The gate is
+# ICON_WEBHOOK_SECRET and only that, compared in constant time inside index.ts.
+# It does NOT fall back to the service-role key: that would make an
+# RLS-bypassing credential the webhook password, and since the SQL side sends
+# this value as a pg_net header, pg_net would persist that key in
+# `net.http_request_queue` on every eligible create and every minute of cron.
+# Unset, the function refuses every request -- a loud failure, not a silent
+# exposure. The same value goes in the Vault secret `icon_webhook_token`.
+#
+# Secrets (ICON_WEBHOOK_SECRET, CF_ACCOUNT_ID, CF_API_TOKEN; SUPABASE_URL and
+# SUPABASE_SERVICE_ROLE_KEY are injected) come from supabase/.env locally and
+# `supabase secrets set` in the hosted project -- never from this file.
+[functions.generate-bev-icon]
+enabled = true
+verify_jwt = false
+
 # bug-report: the internal bug reporter's server side (docs/ticketing-system.md).
 # verify_jwt stays on, but it is only the outer gate -- the real authorisation
 # is `claim_bug_report()` / `can_report_bugs()`, which the function calls as

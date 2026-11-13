@@ -9,6 +9,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
   AppConfig,
   Bev,
+  BevIcon,
+  BevIconLabelBand,
   BevLeaf,
   BevOfPeriod,
   BevPrediction,
@@ -27,6 +29,7 @@ import type {
   FeedItem,
   FlavorProfile,
   FriendScore,
+  IconStatus,
   LeaderboardRow,
   PeriodWinner,
   PhotoStatus,
@@ -385,6 +388,35 @@ export interface BevLeafRow {
 
 export function mapBevLeaf(row: BevLeafRow): BevLeaf {
   return { bevId: row.bev_id, leafCategoryId: row.leaf_category_id };
+}
+
+/** `get_bev_icons` (20261111000300). */
+export interface BevIconRow {
+  bev_id: string;
+  generated_icon_path: string | null;
+  icon_status: string;
+  /** Postgres uuid[]; PostgREST hands it over as a JSON array of strings. */
+  fallback_bev_ids: string[] | null;
+  icon_label_band: BevIconLabelBand | null;
+}
+
+/**
+ * A row of `get_bev_icons`. The path only becomes a URL when the job actually
+ * completed: a half-written path on a 'processing' row would render as a broken
+ * image, and `finish_bev_icon_job` is the only writer of either column, so the
+ * two cannot legitimately disagree -- this just refuses to trust them if they
+ * ever do.
+ */
+export function mapBevIcon(client: SupabaseClient, row: BevIconRow): BevIcon {
+  const status = row.icon_status as IconStatus;
+  return {
+    bevId: row.bev_id,
+    iconUrl: status === 'completed' ? publicUrl(client, 'bev-icons', row.generated_icon_path) : null,
+    iconStatus: status,
+    fallbackBevIds: row.fallback_bev_ids ?? [],
+    // Only meaningful with art to draw it on.
+    labelBand: status === 'completed' ? row.icon_label_band ?? null : null,
+  };
 }
 
 /** `list_bucket_bevs` (20261019000500). */

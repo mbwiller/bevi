@@ -58,10 +58,11 @@ import {
   type BevOfPeriod,
   type BevPrediction,
   type BevsApi,
+  type BevIcon,
+  type BevLeaf,
   type BugReportResult,
   type BugReportSummary,
   type BugsApi,
-  type BevLeaf,
   type BevSimilarity,
   type BevSummary,
   type Bucket,
@@ -78,6 +79,7 @@ import {
   type FeedItem,
   type FollowsApi,
   type FriendScore,
+  type IconStatus,
   type LeaderboardApi,
   type MediaApi,
   type MetaApi,
@@ -114,6 +116,7 @@ import {
   clone,
   loadDb,
   saveDb,
+  type FakeAsset,
   type FakeBev,
   type FakeComment,
   type FakeDb,
@@ -154,6 +157,10 @@ const BUG_PRIORITY: Record<BugReportSummary['severity'], number> = { blocker: 1,
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Default time the fake's "background removal" takes before a bev photo is 'ready'. */
 const PHOTO_PROCESSING_MS = 3000;
+/** How long the fake icon pipeline "takes" once an eligible Bev is created. */
+const ICON_GENERATION_MS = 4000;
+/** Catalog Bevs offered as art to borrow. Matches `v_candidates` in 20261111000300. */
+const FALLBACK_CANDIDATES = 8;
 
 /** Writes that only change the session; they leave seeded fixtures "clean" (see FakeDb.dirty). */
 const SESSION_ONLY_METHODS = new Set(['signIn', 'signOut']);
@@ -169,6 +176,8 @@ export interface FakeApiOptions {
   now?: () => Date;
   /** How long an uploaded bev photo stays 'processing'. Default 3000 ms. */
   photoProcessingMs?: number;
+  /** How long a generated icon takes to appear. Default 4000; 0 makes it immediate. */
+  iconGenerationMs?: number;
 }
 
 function fail(code: ApiErrorCode, message: string, detail?: unknown): never {
@@ -272,6 +281,7 @@ export class FakeApi implements BeviApi {
   private readonly storage: StorageLike | null;
   private readonly clock: () => Date;
   private readonly photoProcessingMs: number;
+  private readonly iconGenerationMs: number;
   private latency: readonly [number, number];
   private readonly listeners = new Set<(session: Session | null) => void>();
   private failures: { code: ApiErrorCode; method?: string }[] = [];
@@ -292,6 +302,7 @@ export class FakeApi implements BeviApi {
     this.storage = options.storage ?? null;
     this.clock = options.now ?? (() => new Date());
     this.photoProcessingMs = options.photoProcessingMs ?? PHOTO_PROCESSING_MS;
+    this.iconGenerationMs = options.iconGenerationMs ?? ICON_GENERATION_MS;
     this.latency = FakeApi.toRange(options.latency ?? [200, 600]);
     const stored = loadDb(this.storage);
     if (stored && stored.dirty !== false) {
@@ -618,6 +629,49 @@ export class FakeApi implements BeviApi {
     const a = assetId ? this.db.assets.find((x) => x.id === assetId) : undefined;
     if (!a) return { url: null, status: 'ready' };
     return { url: a.url, status: this.now().getTime() >= Date.parse(a.readyAt) ? 'ready' : 'processing' };
+  }
+
+  /**
+   * A Bev's generated-icon state, derived the way `assetUrlAndStatus` derives a
+   * photo's: from the clock, so no timer has to run.
+   *
+   * `iconReadyAt === null` is the load-bearing case -- the Bev was never
+   * eligible, so the answer is 'none' and the caller stops polling. An
+   * override set by `controls.setIconStatus` wins, which is how a suite renders
+   * 'processing' or 'failed'.
+   */
+  private iconFor(b: FakeBev): { url: string | null; status: IconStatus } {
+    const status: IconStatus =
+      b.iconStatusOverride ??
+      (b.iconReadyAt === null ? 'none' : this.now().getTime() >= Date.parse(b.iconReadyAt) ? 'completed' : 'pending');
+    return { url: status === 'completed' ? `https://fake.bevi.test/bev-icons/${b.id}/icon-1024.png` : null, status };
+  }
+
+  /**
+   * Catalog Bevs whose authored art `bev` may borrow, ranked as
+   * `get_bev_icons` ranks them: same leaf category first, then most-rated,
+   * then by id so the list is deterministic. Only seeded Bevs, so one user's
+   * custom Bev can never lend its art to another's.
+   */
+  private fallbackBevIdsFor(bev: FakeBev, viewer: FakeUser): string[] {
+    const counts = this.aggregates().byBev;
+    return this.db.bevs
+      .filter(
+        (b) =>
+          b.createdById === null && // seeded catalog art
+          b.id !== bev.id &&
+          b.categoryId === bev.categoryId &&
+          this.visible(b, viewer),
+      )
+      .sort((a, z) => {
+        const leaf = Number(z.leafCategoryId !== null && z.leafCategoryId === bev.leafCategoryId)
+          - Number(a.leafCategoryId !== null && a.leafCategoryId === bev.leafCategoryId);
+        if (leaf !== 0) return leaf;
+        const rated = (counts.get(z.id)?.length ?? 0) - (counts.get(a.id)?.length ?? 0);
+        return rated !== 0 ? rated : cmp(a.id, z.id);
+      })
+      .slice(0, FALLBACK_CANDIDATES)
+      .map((b) => b.id);
   }
 
   private bayes(bevId: string): number | null {
@@ -1242,10 +1296,17 @@ export class FakeApi implements BeviApi {
           if (!CATEGORIES.some((c) => c.id === input.categoryId)) invalid('categoryId', 'Choose a category');
           if (input.priceTier === null && !input.priceEstimated) invalid('priceTier', 'Choose a price or "Not sure"');
           if (input.priceTier !== null && ![1, 2, 3, 4].includes(input.priceTier)) invalid('priceTier', 'Choose a price');
-          const photo = this.db.assets.find((a) => a.id === input.photoAssetId && a.userId === me.id && a.kind === 'bev-photo');
-          if (!photo) invalid('photoAssetId', 'Upload a photo first', 'unknown_asset');
-          if (this.assetUrlAndStatus(photo.id).status !== 'ready') {
-            invalid('photoAssetId', 'The photo is still processing', 'asset_not_ready');
+          // The photo is optional (contract 3.0.0). When it is absent the Bev is
+          // still created and is INELIGIBLE for icon generation; when it is
+          // present it must be a real, finished upload of the caller's, exactly
+          // as `create_bev` checks the storage object's bucket, folder and owner.
+          let photo: FakeAsset | undefined;
+          if (input.photoAssetId !== undefined) {
+            photo = this.db.assets.find((a) => a.id === input.photoAssetId && a.userId === me.id && a.kind === 'bev-photo');
+            if (!photo) invalid('photoAssetId', 'Upload a photo first', 'unknown_asset');
+            if (this.assetUrlAndStatus(photo.id).status !== 'ready') {
+              invalid('photoAssetId', 'The photo is still processing', 'asset_not_ready');
+            }
           }
           if (input.labelAssetId !== undefined) {
             const label = this.db.assets.find((a) => a.id === input.labelAssetId && a.userId === me.id && a.kind === 'label');
@@ -1274,8 +1335,14 @@ export class FakeApi implements BeviApi {
             priceEstimated: input.priceTier === null ? true : input.priceEstimated,
             isStarter: false,
             aliases: [],
-            photoAssetId: photo.id,
+            photoAssetId: photo?.id ?? null,
             labelAssetId: input.labelAssetId ?? null,
+            // THE TRIGGER, and the fake's whole model of it: a creation request
+            // that carried a photo schedules generation, and nothing else in
+            // this class ever sets `iconReadyAt`. No photo means null, which is
+            // 'none' for good -- adding one later cannot make it eligible.
+            iconReadyAt: photo ? new Date(this.now().getTime() + this.iconGenerationMs).toISOString() : null,
+            iconStatusOverride: null,
             createdById: me.id,
             createdAt: this.nowIso(),
           };
@@ -1358,6 +1425,32 @@ export class FakeApi implements BeviApi {
         return out.sort((a, z) => cmp(a.bevId, z.bevId));
       }),
 
+    // Copied from `leaves` on purpose, down to the cap and the omit-what-you-
+    // cannot-see rule -- `get_bev_icons` (20261111000300) is copied from
+    // `get_bev_leaves` for the same reason. READ-ONLY: drawing a screen must
+    // never schedule generation, so nothing here touches `iconReadyAt`.
+    icons: (bevIds: readonly string[]) =>
+      this.call('bevs.icons', () => {
+        const me = this.requireUser();
+        if (bevIds.length > SIMILARITIES_MAX_IDS) invalid('bevIds', 'Too many Bevs to look up at once');
+        const out: BevIcon[] = [];
+        for (const id of new Set(bevIds)) {
+          const bev = this.db.bevs.find((b) => b.id === id);
+          if (!bev || !this.visible(bev, me)) continue;
+          const icon = this.iconFor(bev);
+          out.push({
+            bevId: bev.id,
+            iconUrl: icon.url,
+            iconStatus: icon.status,
+            fallbackBevIds: icon.url ? [] : this.fallbackBevIdsFor(bev, me),
+            // The real worker detects this from the render; the fake just has
+            // to give the app something plausible to letter.
+            labelBand: icon.url ? { x: 0.33, y: 0.29, width: 0.34, height: 0.25, dark: true } : null,
+          });
+        }
+        return out.sort((a, z) => cmp(a.bevId, z.bevId));
+      }),
+
     // get_similar_bevs: the heaviest neighbours, both stored orientations merged, age-filtered.
     similar: (bevId: string, n?: number) =>
       this.call('bevs.similar', () => {
@@ -1373,6 +1466,23 @@ export class FakeApi implements BeviApi {
           .map((b) => this.toSummary(b));
       }),
   };
+
+  // -------------------------------------------------------------------------
+  // controls.setIconStatus
+  // -------------------------------------------------------------------------
+
+  /**
+   * Force a Bev's generated-icon state, so a suite can render 'processing' or
+   * 'failed' without waiting on a clock. Passing 'none' also clears
+   * `iconReadyAt`, so the Bev reads as never eligible.
+   */
+  setIconStatus(bevId: string, status: IconStatus | null): void {
+    const bev = this.db.bevs.find((b) => b.id === bevId);
+    if (!bev) return;
+    bev.iconStatusOverride = status;
+    if (status === 'none') bev.iconReadyAt = null;
+    this.db.dirty = true;
+  }
 
   media: MediaApi = {
     upload: (input) =>
