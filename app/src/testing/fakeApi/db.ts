@@ -1,6 +1,14 @@
 // The FakeApi's in-memory database and its optional persistence. TEST-ONLY (src/testing/**).
 
-import type { Borough, Bucket, CategoryId, FeedEventKind, PriceTier, VenueKind } from '@bevi/shared';
+import type {
+  Borough,
+  Bucket,
+  CategoryId,
+  FeedEventKind,
+  IconStatus,
+  PriceTier,
+  VenueKind,
+} from '@bevi/shared';
 
 export interface FakeUser {
   id: string;
@@ -34,6 +42,18 @@ export interface FakeBev {
   /** Asset ids from `media.upload`; null for seeded Bevs (the UI falls back to BevArt). */
   photoAssetId: string | null;
   labelAssetId: string | null;
+  /**
+   * When this Bev's generated icon "finishes", mirroring how `FakeAsset.readyAt`
+   * models background removal.
+   *
+   * **null means the Bev was never ELIGIBLE** for generation -- a seeded catalog
+   * row, or one `bevs.create` made without a photo -- and its `iconStatus` is
+   * `'none'` for good. Only `bevs.create` with a photo ever sets it, which is
+   * the fake's whole model of the trigger.
+   */
+  iconReadyAt: string | null;
+  /** Forced by `controls.setIconStatus`, so a suite can render any state (incl. 'failed'). */
+  iconStatusOverride: IconStatus | null;
   createdById: string | null;
   createdAt: string;
 }

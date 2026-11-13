@@ -21,3 +21,11 @@ supabase/.branches/
 
 # The venue import writes a reviewable CSV next to the repo by default.
 venues-import.csv
+
+# Rendered style references for the icon generator. Derived from the authored
+# SVG masters by scripts/icons/export-style-refs.mjs and uploaded to the
+# private bev-style-refs bucket; the bucket is what the worker reads, so the
+# local copy is an intermediate. Not committed, because its hashes depend on
+# whatever icon batch is in flight -- committing them would ship a drift guard
+# that fails on a clean checkout.
+design/beverage-icons/style-refs/

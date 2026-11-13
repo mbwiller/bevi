@@ -53,6 +53,10 @@ export function buildFixtures(now: Date = new Date()): FakeDb {
     aliases: [...cb.aliases],
     photoAssetId: null,
     labelAssetId: null,
+    // A seeded catalog Bev has an authored icon or category art, never a
+    // generated one, so it is not eligible and never pending.
+    iconReadyAt: null,
+    iconStatusOverride: null,
     createdById: null,
     createdAt: catalogCreated,
   }));

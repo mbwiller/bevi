@@ -10,6 +10,7 @@ import type {
   FlavorBase,
   FlavorProfileSource,
   FlavorServe,
+  IconStatus,
   PhotoStatus,
   PriceTier,
 } from './enums';
@@ -132,6 +133,65 @@ export interface CategoryNode {
 export interface BevLeaf {
   bevId: string;
   leafCategoryId: string | null;
+}
+
+/**
+ * A Bev's generated icon (`bevs.icons()`), the illustrated Bevi-style asset for
+ * a custom Bev someone created with a photograph.
+ *
+ * It is NOT on `BevSummary`, deliberately: a summary arrives from about a dozen
+ * RPCs and only some could carry it, so a field there would be null for
+ * reasons that have nothing to do with whether the icon exists. One batch call
+ * per screen answers for a whole list instead, exactly as `leaves()` does.
+ *
+ * `iconUrl` is set only when `iconStatus` is `'completed'`. An id the caller
+ * cannot see is OMITTED from the result, so a short result is normal; a Bev
+ * that exists with no icon comes back with `'none'` (never eligible) or
+ * `'pending'`/`'processing'`/`'failed'`. In every case but `'completed'` the
+ * caller draws the authored catalog icon, then the category art.
+ *
+ * Fetching this never starts a generation job.
+ */
+export interface BevIcon {
+  bevId: string;
+  /** The illustrated asset, or null unless `iconStatus` is 'completed'. */
+  iconUrl: string | null;
+  iconStatus: IconStatus;
+  /**
+   * Catalog Bevs whose authored art this Bev may borrow, best first — so a
+   * custom drink with no generated icon shows a real Bevi illustration instead
+   * of a generic category silhouette.
+   *
+   * Empty when `iconUrl` is set (it needs none). The server RANKS these; the
+   * caller CHOOSES, walking the list until one has authored art, because only
+   * the client knows which Bevs do: that map is `bevIcons.generated.ts`, a
+   * shipped asset rather than a database row. A list where none match is
+   * normal — fall through to the category art.
+   */
+  fallbackBevIds: string[];
+  /**
+   * Where the drink's label sits on `iconUrl`, normalised 0-1, so the app can
+   * draw the wordmark across it from the Bev's own `brand` / `name`.
+   *
+   * The lettering is deliberately NOT part of the generated image: the image
+   * model rejects a recognisable brand mark outright, so asking for one fails
+   * the whole generation. Drawing it here is also crisper -- vector type at
+   * every size, and omittable at icon sizes where it would only be a smudge.
+   *
+   * Null when the drink has no label band at all (a cafe latte, a homemade
+   * smoothie), which is the correct answer for those: draw no wordmark.
+   */
+  labelBand: BevIconLabelBand | null;
+}
+
+/** All normalised 0-1 against the icon, so they survive any resize. */
+export interface BevIconLabelBand {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  /** True when the band is dark enough that white type reads on it. */
+  dark: boolean;
 }
 
 /**
