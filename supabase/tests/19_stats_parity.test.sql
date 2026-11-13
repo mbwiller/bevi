@@ -364,7 +364,7 @@ select is(
   (select array_agg(b.label order by l.ord)
      from public.get_bev_leaderboard('juice') with ordinality
           as l(id, name, brand, flavor, category_id, photo_path, thumb_path,
-               price_tier, rating_count, avg_score, bayes_score, ord)
+               price_tier, rating_count, avg_score, bayes_score, icon_path, ord)
      join t_bevs b on b.id = l.id),
   array['J3', 'J4', 'J5', 'J6', 'J7', 'J8', 'J1', 'J2'],
   'a tie on the rounded and the exact figure still breaks rating_count desc, then name, then id'
@@ -378,7 +378,7 @@ select is(
   (select array_agg(b.label order by l.ord)
      from public.get_bev_leaderboard('water') with ordinality
           as l(id, name, brand, flavor, category_id, photo_path, thumb_path,
-               price_tier, rating_count, avg_score, bayes_score, ord)
+               price_tier, rating_count, avg_score, bayes_score, icon_path, ord)
      join t_bevs b on b.id = l.id),
   array['W2', 'W1'],
   'W2 (5.8108) before W1 (5.8088): the order reads the exact figure, not the name tie-break'
