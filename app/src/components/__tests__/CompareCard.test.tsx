@@ -10,6 +10,7 @@ const BEV: BevSummary = {
   flavor: null,
   categoryId: 'soda',
   photoUrl: null,
+  iconUrl: null,
   photoStatus: 'ready',
   priceTier: 2,
   priceEstimated: false,

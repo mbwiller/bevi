@@ -66,6 +66,10 @@ describe.skipIf(!url || !publishableKey)('catalog, photos and privacy, against a
       const detail = await api.bevs.get(found.items[0]!.id);
       expect(detail.name).toBeTruthy();
       expect(detail.photoUrl).toBeNull(); // seeded Bevs have no photo yet: the app draws placeholder art
+      // Contract 2.13.0: every read carries iconUrl, null or a public URL in the bev-icons bucket.
+      // getStarterCandidates reads through the `bev_icons(path)` embed, search and get through RPCs.
+      const iconOk = (u: string | null | undefined) => u === null || (typeof u === 'string' && u.includes('/bev-icons/'));
+      expect([...starters, ...found.items, detail].every((b) => iconOk(b.iconUrl))).toBe(true);
       // A-17: every seeded Bev carries its hand-labelled flavour profile, and every Bev a
       // search for "coke" can return to an under-21 viewer is a cola.
       expect(detail.flavorProfile).toMatchObject({ base: 'cola', carbonated: true, alcohol: false, source: 'catalog' });
