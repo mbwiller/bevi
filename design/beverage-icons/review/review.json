@@ -2786,6 +2786,154 @@
           "portableSvgSha256": "6a83b6c0e168d2accb3bc9715143cd3b35828b923e83bc38db691eba02b00225"
         }
       ]
+    },
+    {
+      "batchId": "batch-11-2026-11-13",
+      "reviewedAt": "2026-11-13",
+      "reviewer": "Codex coordinator",
+      "scope": "21 exact package references inspected; large renders and 40/56/96/155px light/dark tiles with 8% padding reviewed. Includes beer, refreshment, Hata Kosen Ramune, and Diet 7UP. Diet 7UP uses current US 7UP Zero Sugar packaging mapped to the catalog entry; wrong-brand Ramune candidate excluded.",
+      "outcome": "21 new needs-review drafts; all 254 prior master, portable SVG and PNG hashes unchanged. Final aesthetic approval and interactive device review remain pending.",
+      "sheets": [
+        "review/batch-11-2026-11-12-01.png",
+        "review/batch-11-2026-11-12-02.png",
+        "review/batch-11-2026-11-12-03.png",
+        "review/batch-11-2026-11-12-04.png",
+        "review/batch-11-2026-11-12-05.png",
+        "review/batch-11-large-2026-11-12-01.png",
+        "review/batch-11-large-2026-11-12-02.png",
+        "review/batch-11-large-2026-11-12-03.png"
+      ],
+      "identityIssues": [
+        "None for assigned icons; rejected Kimura 410mL candidate for Hata Kosen Ramune Melon."
+      ],
+      "assets": [
+        {
+          "bevId": "cd58181d-8189-5faf-a8c8-ecf19aa22390",
+          "slug": "aha-lime-watermelon",
+          "pngSha256": "79469692e743c7638a5eac725ae7471b2a6120a6b264a1c919d4884158927c70",
+          "portableSvgSha256": "42034f91f473bd65b83a4a135afa5483761c7572a636f89fc087bfce568aea8b"
+        },
+        {
+          "bevId": "91ece6c3-db2e-53e6-b3b4-7c9536a05a12",
+          "slug": "blue-moon-belgian-white",
+          "pngSha256": "e5cc0a3e0984421d8805cc264f9dbdaa9e2ca7b7c7935c9cd406d03bd64f010f",
+          "portableSvgSha256": "5cdcc4aa7c796e912d343983e6e8508b259327d665e22b5b0af1c6fc5d6c8451"
+        },
+        {
+          "bevId": "7091e074-b90f-5773-aed5-e6b45947b9d6",
+          "slug": "bud-light",
+          "pngSha256": "67f0024757c76bd51af3aa6f0adfb39a876ce863d720192fb70c90dbf1855d11",
+          "portableSvgSha256": "595dd6258100e0f939498ae7e117cf257e8f1710c8fd7814998ebc83f30e0f8e"
+        },
+        {
+          "bevId": "7fb900c7-c308-591a-8576-04e4ee685a5a",
+          "slug": "calpico-original",
+          "pngSha256": "2bfe2c1b4e77848d6fcb5fc1d1ef301b7683d5d5fffe321fb09fa0c6937a495d",
+          "portableSvgSha256": "5c6126f8b6bc979cb9d4f7768c7a00ee0a3ce94807439783ad6e4299381d6477"
+        },
+        {
+          "bevId": "9670c5b3-2f1f-5db2-978a-72694dbddd00",
+          "slug": "calpico-mango",
+          "pngSha256": "b15245152fd367619494bc5d6bdde6234439f8cf27ff1e032cc9df224be66e63",
+          "portableSvgSha256": "1fe15ea2d2b1cecbb70327d1822b33360b4763213f23696f7d0651f1fa0bc15a"
+        },
+        {
+          "bevId": "ef3210a7-23cd-544c-98e7-37c64e1c7721",
+          "slug": "coors-light",
+          "pngSha256": "deb86437e71694725b7b4615386a917806434a436054c584e59b8af83900ee7e",
+          "portableSvgSha256": "a213f640a2675437f92fd9ebf40c91c2a8727085d4bcc1a2596f9bd7885cdefe"
+        },
+        {
+          "bevId": "49564d83-135c-5822-980c-0f351550284a",
+          "slug": "corona-extra",
+          "pngSha256": "8d9c7d5dd57e2cac55fa14b6863931c03083b59e64a1bd204047ab7d6a456c2a",
+          "portableSvgSha256": "24a6befe38041d32e0b7e27019c491dcbffa0fa8f9d59b7d85b256fd78f14d90"
+        },
+        {
+          "bevId": "84724510-b1eb-5ddb-b259-498efaa1b840",
+          "slug": "corona-light",
+          "pngSha256": "71752ca4ccfc87a3e1d7e9dfd99c0f482826b7efed75e07ef92caa4a6042f534",
+          "portableSvgSha256": "e17e786fe6f33be5689f8a504841bf801601a3901955c6cbdbb76951ca6f3562"
+        },
+        {
+          "bevId": "bec8b166-60c1-5a37-a3c2-698146bef1d4",
+          "slug": "diet-seven-up",
+          "pngSha256": "d8fd1a9ab6ec121e1a03956971e305590454c7ea095149caead2e02aa7cdec92",
+          "portableSvgSha256": "cadb977d05c11fba6df93de18928865249bd51e4b658b4f02b3063c671eabfa1"
+        },
+        {
+          "bevId": "2d08eb01-769c-5d47-a6bf-e7c05337c392",
+          "slug": "guinness-draught",
+          "pngSha256": "20f3c9c3d8de64c4eee9d07463de2a72dad77ce5d79257e7913413f06982dd3b",
+          "portableSvgSha256": "446d735db1722ed74ec9eb290f5c7b94d08f29a38557e772feb5310683450d1c"
+        },
+        {
+          "bevId": "2926168c-6df4-59d9-b9b7-02beaca5039e",
+          "slug": "harmless-harvest-coconut-water",
+          "pngSha256": "bc698f8febc297d81731011d350605b787686cf860b1a919f52b03defe8dfec6",
+          "portableSvgSha256": "6a3a31bdf0b0fccc379de9c574b1599841f0fdb4979a3f96bd8188ee91bffb7f"
+        },
+        {
+          "bevId": "f6c8dd9d-928c-5918-b781-8f31d6a97d90",
+          "slug": "heineken-original-lager",
+          "pngSha256": "152a84e376eb6ea52da8bf1545db31c613b95d4b03a18927835b7c184b50fad1",
+          "portableSvgSha256": "49c828905be1d82423833f474e9d5faed40b8868a5b004a5faa76b59c1cfb8d7"
+        },
+        {
+          "bevId": "14283b54-f4ae-5a46-9145-465aee801b3c",
+          "slug": "miller-lite",
+          "pngSha256": "2da291b60b53040c6a027ce5756eecf2bf07e03083379565436fdb2fc01ec8bc",
+          "portableSvgSha256": "776e30dbbddceba966b4a988c863188fbd9f2e1ebcad78f649e11fed73f7e420"
+        },
+        {
+          "bevId": "22dbc1b9-f262-56ad-aafe-56f8fae99111",
+          "slug": "modelo-especial",
+          "pngSha256": "d62156c1a59f22b30f15af729b02d06a379af4967eb0113ad0d9fc3124ac63b2",
+          "portableSvgSha256": "15ee110fb1b7532dfe3cca81fc3dc529a84bc15ade22a99c2e2676736aa2a447"
+        },
+        {
+          "bevId": "d5355adb-957f-58c9-9cd5-5db9c455b3b8",
+          "slug": "core-hydration-nutrient-enhanced-water",
+          "pngSha256": "70169e82b88d01254bd7223a5864609ecdf7db2446aeb551bfb4f88482143f93",
+          "portableSvgSha256": "cab12ab5a1594ffe12a09efaf76169a326ec22662f6aa85d9cf46124877f7fdc"
+        },
+        {
+          "bevId": "a82bcd1a-15f2-53bf-bfd1-35b87afdef9f",
+          "slug": "propel-water-berry",
+          "pngSha256": "5438282e6c59b7241181bd5d2586930d061353ddd28b9ada63e8d8a76999a984",
+          "portableSvgSha256": "e117d14b548cd09b8e610cdeb63942dc2d2ad55b7d6fe4c80633671018bc0843"
+        },
+        {
+          "bevId": "6df7af3f-c022-5005-a606-99a122537661",
+          "slug": "ramune-original",
+          "pngSha256": "b860aa42404c1a0d83959e25bb0ca4adf563226d7c80a0b079194bc7794922e2",
+          "portableSvgSha256": "ba3bf3acaa10afb477db753a5d5df1e692be1cabe83e37b4343ff43fa10deb2a"
+        },
+        {
+          "bevId": "34405280-1223-56e6-b5c5-2d63826744c1",
+          "slug": "ramune-melon",
+          "pngSha256": "1f3e82c534567c660f5905bb832d8786c0d58b09f53440cedf03c3e6631351f7",
+          "portableSvgSha256": "d49864cd5875e91d80cbf7bd6426b52f9b4af2643160a6b03c2dc453635629a1"
+        },
+        {
+          "bevId": "ac939eca-7862-5813-975a-9e037a28a5db",
+          "slug": "liquid-death-sparkling-severed-lime",
+          "pngSha256": "5967d29b63f5ba49e7fa34a8e2aea3d0690b145f2d5cfda480ee0dc21d352f69",
+          "portableSvgSha256": "eea8847d3885e09a70f82d6aebd6c7597ac19733ddace71bd54fc1726fdb4083"
+        },
+        {
+          "bevId": "41e04a34-8406-54c1-a563-a2f2bb7e07dd",
+          "slug": "stella-artois-lager",
+          "pngSha256": "747935f07561c5b01508fed8e660dec6d5086ccfae795b1a510dc190eeef8e56",
+          "portableSvgSha256": "eaa1713b8a47abe48daa9abefa7e5e9b1e5d5c4eccfb21445fe1ce65a5c15055"
+        },
+        {
+          "bevId": "9d7ffdad-7d84-5bbf-8d06-114d4c41d61a",
+          "slug": "just-water-still",
+          "pngSha256": "d04bfaa712563bdcd2ba88f4dde220c20ea56d4478dc0390655ff712e1d828e0",
+          "portableSvgSha256": "a99e9a1316bd6ab0eccc8097038ed163646337287ed2ae03e77baad2055dd7f3"
+        }
+      ]
     }
   ]
-}
+}\n
