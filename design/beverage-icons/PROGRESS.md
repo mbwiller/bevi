@@ -1,6 +1,16 @@
 # Beverage icon production checkpoint
 
-## Latest batch: 20 beer and refreshment icons plus Diet 7UP, 2026-11-13
+## Latest batch: 30 soda, energy, seltzer, beer and cocktail icons, 2026-11-14
+
+**305 drafts authored; 73 catalog entries remain. 40 of 43 starters covered.**
+
+Added 10 diet sodas plus Sprite Cherry; all three remaining 5-hour Energy variants; CELSIUS Cucumber Lime, Alani Nu Mimosa and Bang Rainbow Unicorn; White Claw Black Cherry/Mango/Natural Lime and Truly Wild Berry/Lemonade; Pacifico Clara and Dos Equis Lager Especial; Jack & Coke, High Noon Watermelon/Peach and Cutwater Lime Margarita/Vodka Mule; and Tito’s Soda Lime as a served highball. The starter 5-hour ENERGY Original now has an icon.
+
+Deferred GHOST Energy x FaZe Berry because the inspected FaZe Berry product is G FUEL, while GHOST’s FaZe products use different names. Deferred White Claw Lime because its catalog has a separate Natural Lime and the brand’s “Lime” listing does not establish a distinct product. Both questions are in `identity-issues.json`; no substitute artwork was assigned. Three starters remain unresolved: Starbucks Frappuccino Mocha, Lipton Iced Tea and Tiger Sugar Brown Sugar Boba Milk Tea.
+
+Inspected all 30 package/serving references and reviewed full artwork plus 40/56/96/155px tiles on light and dark surfaces. Batch sheets `review/batch-12-2026-11-14-01.png`, `review/batch-12-2026-11-14-sizes-light.png` and `review/batch-12-2026-11-14-sizes-dark.png`; `review/review.json` records exact hashes. New assets remain `needs-review`; final aesthetic and device review are pending. Build, SVG validation and review-sheet generation pass. Main’s current pipeline reads icons from the backend and publishes the full manifest when this change merges; no app export script exists in this main revision. Production sync and live catalog counts will be recorded after merge.
+
+## Previous batch: 20 beer and refreshment icons plus Diet 7UP, 2026-11-13
 
 **275 drafts authored; 103 catalog entries remain. 39 of 43 starters covered.**
 
