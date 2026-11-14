@@ -104,65 +104,66 @@ it('no winner in either period: the row is left out', async () => {
   expect(screen.queryByTestId('bev-of-period')).toBeNull();
 });
 
+// BEV-10: one Bev winning both periods used to merge into one "Bev of the day and week" card, alone on the
+// left, which read as a missing winner. It is two cards, as for any other pair.
 describe('the same Bev won the day and the week', () => {
   /** The fixture's two winners, made into one Bev if they aren't already: the week's winner is the day's. */
   async function sameBev(day: Partial<PeriodWinner> = {}, week: Partial<PeriodWinner> = {}) {
     const w = await fixtureWinners();
-    const both: BevOfPeriodData = { day: { ...w.day!, ...day }, week: { ...w.week!, bev: w.day!.bev, ...week } };
-    jest.spyOn(api.feed, 'getBevOfPeriod').mockResolvedValue(both);
-    return both;
+    const same: BevOfPeriodData = { day: { ...w.day!, ...day }, week: { ...w.week!, bev: w.day!.bev, ...week } };
+    jest.spyOn(api.feed, 'getBevOfPeriod').mockResolvedValue(same);
+    return same;
   }
 
-  it('the fixture as it is: its day and week winners are one Bev, so the row is one card', async () => {
+  it('the fixture as it is: its day and week winners are one Bev, and the row is still two cards', async () => {
     const { day, week } = await fixtureWinners();
     expect(week!.bev.id).toBe(day!.bev.id);
-    // Both wins are from the same kind of period (current or earlier), so they merge.
-    expect(week!.isCurrent).toBe(day!.isCurrent);
     await start();
     const row = await screen.findByTestId('bev-of-period');
-    expect(within(row).getAllByRole('button')).toHaveLength(1);
-    expect(within(row).getByText('Bev of the day and week')).toBeTruthy();
+    expect(within(row).getAllByRole('button')).toHaveLength(2);
+    expect(within(row).getByLabelText(cardName('day', day!))).toBeTruthy();
+    expect(within(row).getByLabelText(cardName('week', week!))).toBeTruthy();
   });
 
-  it('shows one card, "Bev of the day and week", at half the row, and it opens the Bev', async () => {
-    const { day } = await sameBev({ isCurrent: true }, { isCurrent: true });
+  it('shows the Bev twice, as "Bev of the day" and "Bev of the week", each half the row, and either opens it', async () => {
+    const { day, week } = await sameBev({ isCurrent: true }, { isCurrent: true });
     const r = await start();
     const row = await screen.findByTestId('bev-of-period');
-    expect(within(row).getAllByRole('button')).toHaveLength(1);
-    expect(within(row).getByText('Bev of the day and week')).toBeTruthy();
-    expect(within(row).queryByText('Bev of the day')).toBeNull();
-    expect(within(row).queryByText('Bev of the week')).toBeNull();
-    expect(within(row).getAllByText(day!.bev.name)).toHaveLength(1);
-    const card = within(row).getByRole('button');
-    expect(card.props.accessibilityLabel).toBe(bevOfCardLabel('both', day!.bev.name, day!.bev.bayesScore));
-    // One card of the pair's width: flex 1 beside the half-row spacer.
-    expect(StyleSheet.flatten(card.props.style)).toMatchObject({ flex: 1, minWidth: 0 });
-    expect(StyleSheet.flatten(within(row).getByTestId('bev-of-period-spacer').props.style)).toMatchObject({ flex: 1 });
-    await fireEvent.press(card);
+    expect(within(row).getAllByRole('button')).toHaveLength(2);
+    expect(within(row).getByText('Bev of the day')).toBeTruthy();
+    expect(within(row).getByText('Bev of the week')).toBeTruthy();
+    expect(within(row).queryByText('Bev of the day and week')).toBeNull();
+    expect(within(row).getAllByText(day!.bev.name)).toHaveLength(2);
+    // A full pair: both cards share the row and no spacer holds a half open.
+    for (const name of [cardName('day', day!), cardName('week', week!)]) {
+      expect(StyleSheet.flatten(within(row).getByLabelText(name).props.style)).toMatchObject({ flex: 1, minWidth: 0 });
+    }
+    expect(within(row).queryByTestId('bev-of-period-spacer')).toBeNull();
+    await fireEvent.press(within(row).getByLabelText(cardName('week', week!)));
     expect(r.path()).toBe(`/bev/${day!.bev.id}`);
   });
 
-  it('from an earlier day: the card carries the day\'s date', async () => {
+  it('both from earlier periods: each card carries its own date', async () => {
     await sameBev({ periodStart: '2026-10-14', isCurrent: false }, { periodStart: '2026-10-12', isCurrent: false });
     await start();
     const row = await screen.findByTestId('bev-of-period');
+    expect(within(row).getAllByRole('button')).toHaveLength(2);
     expect(within(row).getByText(formatPeriodStart('2026-10-14', 'day'))).toBeTruthy();
-    expect(within(row).queryByText(formatPeriodStart('2026-10-12', 'week'))).toBeNull();
+    expect(within(row).getByText(formatPeriodStart('2026-10-12', 'week'))).toBeTruthy();
   });
 
-  it('one win current and the other earlier: the usual two cards, each with its own label and date', async () => {
+  it('one win current and the other earlier: two cards, only the earlier one dated', async () => {
     const { day } = await sameBev({ isCurrent: true }, { periodStart: '2026-10-12', isCurrent: false });
     await start();
     const row = await screen.findByTestId('bev-of-period');
     expect(within(row).getAllByRole('button')).toHaveLength(2);
-    expect(within(row).queryByText('Bev of the day and week')).toBeNull();
     expect(within(row).getByLabelText(bevOfCardLabel('day', day!.bev.name, day!.bev.bayesScore))).toBeTruthy();
     expect(
       within(row).getByLabelText(bevOfCardLabel('week', day!.bev.name, day!.bev.bayesScore, formatPeriodStart('2026-10-12', 'week'))),
     ).toBeTruthy();
   });
 
-  it('under 21 and alcoholic: the one card is hidden and the row left out', async () => {
+  it('under 21 and alcoholic: both cards are hidden and the row left out', async () => {
     const { week } = await winners();
     const beer: PeriodWinner = { ...week!, bev: { ...week!.bev, id: 'beer-winner', name: 'Pilsner', categoryId: 'beer' } };
     controls.signInAs(MINOR.handle);
@@ -174,7 +175,7 @@ describe('the same Bev won the day and the week', () => {
 });
 
 describe('bevOfPeriodCards', () => {
-  it('two different winners stay two cards, day first; one side alone is one card', async () => {
+  it('two different winners are two cards, day first; one side alone is one card', async () => {
     const { day, week } = await winners();
     expect(bevOfPeriodCards(day, week).map((c) => c.period)).toEqual(['day', 'week']);
     expect(bevOfPeriodCards(null, week).map((c) => c.period)).toEqual(['week']);
@@ -182,41 +183,26 @@ describe('bevOfPeriodCards', () => {
     expect(bevOfPeriodCards(null, null)).toEqual([]);
   });
 
-  describe('the same Bev won both', () => {
-    async function pair(dayCurrent: boolean, weekCurrent: boolean) {
+  describe('the same Bev won both: always two cards, each dated only when its own period is an earlier one', () => {
+    const DAY = formatPeriodStart('2026-10-14', 'day');
+    const WEEK = formatPeriodStart('2026-10-12', 'week');
+
+    it.each([
+      [true, true, undefined, undefined],
+      [false, false, DAY, WEEK],
+      [true, false, undefined, WEEK],
+      [false, true, DAY, undefined],
+    ])('day current %s, week current %s', async (dayCurrent, weekCurrent, dayDate, weekDate) => {
       const { day, week } = await winners();
-      return bevOfPeriodCards(
+      const cards = bevOfPeriodCards(
         { ...day!, isCurrent: dayCurrent, periodStart: '2026-10-14' },
         { ...week!, bev: day!.bev, isCurrent: weekCurrent, periodStart: '2026-10-12' },
       );
-    }
-
-    it('both current: one "both" card with no date', async () => {
-      const cards = await pair(true, true);
-      expect(cards.map((c) => c.period)).toEqual(['both']);
-      expect(cards[0]!.date).toBeUndefined();
-    });
-
-    it("both from earlier periods: one \"both\" card with the day's date", async () => {
-      const cards = await pair(false, false);
-      expect(cards.map((c) => c.period)).toEqual(['both']);
-      expect(cards[0]!.date).toBe(formatPeriodStart('2026-10-14', 'day'));
-    });
-
-    it("the day current, the week from an earlier week: two cards, only the week's dated", async () => {
-      const cards = await pair(true, false);
       expect(cards.map((c) => [c.period, c.date])).toEqual([
-        ['day', undefined],
-        ['week', formatPeriodStart('2026-10-12', 'week')],
+        ['day', dayDate],
+        ['week', weekDate],
       ]);
-    });
-
-    it("the week current, the day from an earlier day: two cards, only the day's dated", async () => {
-      const cards = await pair(false, true);
-      expect(cards.map((c) => [c.period, c.date])).toEqual([
-        ['day', formatPeriodStart('2026-10-14', 'day')],
-        ['week', undefined],
-      ]);
+      expect(cards.map((c) => c.winner.bev.id)).toEqual([day!.bev.id, day!.bev.id]);
     });
   });
 });

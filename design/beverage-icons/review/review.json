@@ -1,7 +1,7 @@
 {
-  "reviewedAt": "2026-10-31",
+  "reviewedAt": "2026-11-14",
   "reviewer": "Codex coordinator with independent batch-review agent",
-  "scope": "Raster artwork, inspected reference comparison, and 40/56/96/155px light/dark contact sheets; no interactive browser or native Expo session",
+  "scope": "Rendered artwork and batch contact sheets at 40/56/96/155px on light/dark backgrounds; exact product references individually inspected; no interactive browser or native Expo session",
   "sizes": [
     40,
     56,
@@ -14,13 +14,16 @@
     "dark"
   ],
   "sourceImagesVisuallyInspected": true,
-  "outcome": "30 drafts visually reviewed; original 12 praised by user, final approval of new 18 and native review pending",
+  "outcome": "Batch 12: 30 new drafts reviewed against product references and small-size sheets. Final aesthetic approval and device review pending; records remain needs-review.",
   "openItems": [
     "OLIPOP catalog does not distinguish 6g vs 9g formula; 9g packaging explicitly selected.",
     "La Marca manufacturer image filename contains DemiSec while its visible label and linking page identify flagship Prosecco DOC; discrepancy retained in evidence.",
     "Starry Original uses inspected 16oz sleek format; Zero Sugar uses inspected 12oz standard format.",
-    "Fine lettering and complex brand marks are simplified; final aesthetic review of new 18 pending.",
-    "Native integration, live Postgres reconciliation and remaining 348 catalog entries pending."
+    "Fine lettering and complex brand marks are simplified; final aesthetic review remains pending for needs-review records.",
+    "The app reads published icons from the backend; live Postgres reconciliation remains separate, and 73 repository catalog drinks remain pending.",
+    "Batch 12: two catalog identities deferred in identity-issues.json (GHOST FaZe Berry and White Claw Lime).",
+    "Batch 12 vector details are simplified; final aesthetic approval and web/native device review pending.",
+    "Live Postgres reconciliation remains separate from icon authoring."
   ],
   "assets": [
     {
@@ -202,6 +205,186 @@
       "slug": "yakult-original",
       "pngSha256": "04ba1debd613043ad518037153879808193debc7eb6bf3fc59c5acd86cb71844",
       "portableSvgSha256": "4f68fff4c6c1952dc6f706399386f9b3646ff13bf67b4881b6005806252968a7"
+    },
+    {
+      "bevId": "dcae3c67-280f-5f1b-865c-9e88aab217cd",
+      "slug": "five-hour-energy-extra-strength",
+      "pngSha256": "1df3c06e1f9e738f1370e2b996f61d5606d2b5dc3abb003144244b4db6172242",
+      "portableSvgSha256": "0c8e7918945b9a0a8bb190ea103bdcf15c007a0b15fdfa0d48dc987454fd3e18"
+    },
+    {
+      "bevId": "99a18b9b-5d18-574f-a54c-a7bfbd3d7fd7",
+      "slug": "five-hour-energy-original",
+      "pngSha256": "16344a16a84e4416cc3b5e13a3493b118d70e9cd935d302197a1caafade343b9",
+      "portableSvgSha256": "8c8e5328629060b79dea8e6b9acc79da3d34da57a7d2510f2cd2cec2a95a51dc"
+    },
+    {
+      "bevId": "e8a7f6c7-7d83-5c59-a2b5-b11bb930479b",
+      "slug": "five-hour-energy-pink-lemonade",
+      "pngSha256": "e1ab672d338636ac0517e4ef8d7763f42b6ef399d2c956a6dddfd99ef2c40d9c",
+      "portableSvgSha256": "431e8f64ed2c0d33c558814f49a62262892a5b3706dc0f4d19299457c9c29680"
+    },
+    {
+      "bevId": "6a1784e0-7780-562e-9988-1b6df1d6de02",
+      "slug": "aw-diet-root-beer",
+      "pngSha256": "4df7235318546fa0071aa5436cf9be8ba08719c7aea1c009acf91548e711e210",
+      "portableSvgSha256": "925d087e45affcd5731330e563d5833e81bfa7ddb562e245aa33ed5d02c6d218"
+    },
+    {
+      "bevId": "d5fae22e-0812-5472-bd0b-883336a11cc9",
+      "slug": "alani-nu-mimosa",
+      "pngSha256": "c5344d952b378c37603e1eb93920bbe961319eecf37bb123462cfbb01832fe7b",
+      "portableSvgSha256": "15dc7993a4beac459e2b929b4c6f92effb9fae9696bcdb93c5fa390a4e8b5286"
+    },
+    {
+      "bevId": "ce13c1fc-955d-5ce3-abbf-7f075fe1570a",
+      "slug": "bang-rainbow-unicorn",
+      "pngSha256": "b46e912ef8516f1847ad98327fe639ca9ac953643482d37befd1bd27d978a8ed",
+      "portableSvgSha256": "46f875d11edd3d5a9c1ca8e4415324ec07bec76958ab8c3de8aeff0d6c28317b"
+    },
+    {
+      "bevId": "f5fc4367-0ad3-53cd-8329-7029e9785c0e",
+      "slug": "canada-dry-diet-ginger-ale",
+      "pngSha256": "89e70015469c685b1f899910a1d0f3f4a37264fa5ee60a082af1d869d7ad0be5",
+      "portableSvgSha256": "af94d5c03490b015a75a5d6dd33317101fab3004f949d94ea2dafa7528ce9279"
+    },
+    {
+      "bevId": "0185e29e-12f6-5f46-8223-a22a1fc1144c",
+      "slug": "celsius-cucumber-lime",
+      "pngSha256": "e37cd040a3da98233f81d4adfac33f3b13c31c638bf3b16e02a7d0e1132eb01d",
+      "portableSvgSha256": "a070243f68e87d48fa88be954d10eee5726418b5d79d48e6d4c098aad2fdd2b2"
+    },
+    {
+      "bevId": "8adbfd7e-77c9-5c99-a55f-5ffc03bfd754",
+      "slug": "cutwater-spirits-margarita",
+      "pngSha256": "02a4d133e462a35e69b7a36c9cb98ff851ba99e866b9a22bc81e35b9129b70d2",
+      "portableSvgSha256": "66193de22e7765b1fddc253417bb9352777570556fe028dd9c726079aefb6036"
+    },
+    {
+      "bevId": "6e665aa0-7abc-50e7-8475-978c62c81133",
+      "slug": "cutwater-spirits-vodka-mule",
+      "pngSha256": "5d10cb39fc790d8d4c94a64db06e3f230fb1c48287f2b03d27ecad29c2665fe6",
+      "portableSvgSha256": "4ffa01b92815c07399ce2b584f2f6db429b44a9346b2dcfd0d52dbf001cbfba0"
+    },
+    {
+      "bevId": "7696f382-d1dc-530a-ad78-e55684050b2f",
+      "slug": "diet-barqs-root-beer",
+      "pngSha256": "5f6548125e46f203e57e53e3c09de2ee6ecba796187bfb3fdea58088a8890391",
+      "portableSvgSha256": "5cc9d9db28de10a3d2eb2a273861993c1532e656721367d41d742454c881722e"
+    },
+    {
+      "bevId": "79a9510e-5645-5a27-be84-12d51d4320fd",
+      "slug": "diet-mug-root-beer",
+      "pngSha256": "c977d5c23cd3affe25226615376ef1a7d7ce37879f38c68d8bdce9a1e9f35074",
+      "portableSvgSha256": "07aad9cc38afd37ed71444c395b06c2887c28ca103fe408bc2a14540bd6fc9ed"
+    },
+    {
+      "bevId": "d2e6c5b6-8c89-52c9-96e0-1ff327eb6cfb",
+      "slug": "diet-orange-crush",
+      "pngSha256": "2bed013f85318971469572c9331ae54cae66b6638e2664f22ae96b30d646f64f",
+      "portableSvgSha256": "dfe883471217981ac8902de9c317fa2875c41f82646976728ac47b6eed4c4390"
+    },
+    {
+      "bevId": "5ff248d3-5dfd-5fdb-95c7-ed304a50970c",
+      "slug": "diet-pepsi-caffeine-free",
+      "pngSha256": "3dd5615d62f517bbe3f68d66b1f093850aeb44a6be8611b4766f0f2edd626710",
+      "portableSvgSha256": "7705316c54492805fe9ad083d7df761e1e76fa2c02f024f6424749967310da0d"
+    },
+    {
+      "bevId": "dc8b7b75-0987-5dc9-a4cd-e64739d84094",
+      "slug": "diet-squirt",
+      "pngSha256": "0228b1984e06fd83ea17f66c70e120a2fea13961170e262a7a608101ecc63b75",
+      "portableSvgSha256": "aba9578023d332eb28f056cefb90c213416db2d887aa83803cf77f46617e03bd"
+    },
+    {
+      "bevId": "bdd0a5d5-3cb0-50fe-8f76-17237860f097",
+      "slug": "diet-sunkist-orange",
+      "pngSha256": "a497a945b6d340d101b4c760214ba47303c79fc5d33758d7bb74444fa61b5dd7",
+      "portableSvgSha256": "5a8fffa637c07a6e04684df5264e8d6f3357f08f89bd196d9b51cdc43ae79274"
+    },
+    {
+      "bevId": "007e1a80-c178-5280-8fff-f743d28b1b11",
+      "slug": "diet-vernors",
+      "pngSha256": "41e2d716e08934fccfa57ec15aa36ea655df68ad60574e67f2135df1d58128b7",
+      "portableSvgSha256": "56ed37042d0950dfb1fdfe1254af61f94025a84cfad57db8eb8749706e0f0609"
+    },
+    {
+      "bevId": "39bc813f-40f4-5724-b3d6-31dda409f850",
+      "slug": "dos-equis-lager-especial",
+      "pngSha256": "1a63a8af5bb65f7ce7781127bfb0bf6608915bd756e6cbc51e455e70e7fa7259",
+      "portableSvgSha256": "8d4c50271e5aabd7485d4db739d9f105a23e98498c254622a872d2740528c665"
+    },
+    {
+      "bevId": "b227f854-bdfa-5a02-a1d1-ebac6e0245c1",
+      "slug": "high-noon-vodka-soda-watermelon",
+      "pngSha256": "5ffa7144098f66cfb91e4fb03587c3ea59ae0143635b9b8ddb82c964c1562e13",
+      "portableSvgSha256": "5a09e409784c3e23b72e4ab600a73668053bcd7c5486002fa621bbdcc0984aaa"
+    },
+    {
+      "bevId": "718762fe-6d32-59dc-ae45-baac2d630681",
+      "slug": "high-noon-vodka-soda-peach",
+      "pngSha256": "4c74996f0947928ff1e68d31671ae70dfe2a63b6b09573b7e05c497cb7aa7336",
+      "portableSvgSha256": "d6a8fe22b3d3a937d479dbb02deb5c478b1e902cdf7c2456a9c81102edbd52ec"
+    },
+    {
+      "bevId": "70da1493-bf1b-5bf2-8dc6-87e6d0ab6aab",
+      "slug": "jack-daniels-and-coke",
+      "pngSha256": "c5d3dd868d579298217c088f1227e3b5a31848902561fc67e50ffcec8e321ffc",
+      "portableSvgSha256": "5d53ee37683b4d04a0c24450ff3c3f6769916345e833f977dfe578f20f16f7af"
+    },
+    {
+      "bevId": "7e46ce4b-c3e7-50d6-9730-a569fc6da933",
+      "slug": "pacifico-clara",
+      "pngSha256": "3d120b499b817897ea48cf444a7115bef6df667a00e6ded10775c96635377bcf",
+      "portableSvgSha256": "a714cd1d524a7b710d7e72a5c7af3123fe4a3c692e9f20760bd98bd80b13e3b5"
+    },
+    {
+      "bevId": "14bd6307-5818-5ca2-b25e-34632eaed9f0",
+      "slug": "shasta-diet-cola",
+      "pngSha256": "a53fc6e22adf66d1e1389e393fa2379fda10421f4e9717a59e347c5279a5d8cc",
+      "portableSvgSha256": "80fafc8aaa429a12213065441bf29e276cd3a937b4b1f51c4ed515aade43a451"
+    },
+    {
+      "bevId": "19d2d0a4-abfa-5c01-800c-7a81f5912cbc",
+      "slug": "sprite-cherry",
+      "pngSha256": "c03f5fe7c63a26e3e625903daae743c11e566d495104cd298568c5625f8d4301",
+      "portableSvgSha256": "2e92a767cd5fa57ad11631f97821f9f17169980f284518415c99821137560478"
+    },
+    {
+      "bevId": "947cd3ec-462b-515e-90d9-9967fb46d88d",
+      "slug": "titos-handmade-vodka-soda",
+      "pngSha256": "f177dd51ab58c2074b5d4433140fac24897f82968401f327d6dd5e97ff95388b",
+      "portableSvgSha256": "07eeae1188f887ea27b70fe9d2c1d2585a95fde3c88b6ec0f80a4ce1541cd96f"
+    },
+    {
+      "bevId": "e5b6a6e7-972a-5e37-99e2-01f84a5505eb",
+      "slug": "truly-wild-berry",
+      "pngSha256": "f7f04db51fbea1ab445287bbc91a3961116f07a2b1fe0ec65f3167b833bb68d4",
+      "portableSvgSha256": "5018873964080ea5a876db4052c2de338d225eb71c41422541110c687a73f629"
+    },
+    {
+      "bevId": "a2195743-a1c6-57ff-b8b1-d856e201cf54",
+      "slug": "truly-lemonade",
+      "pngSha256": "4a2a5d4defcdd5b5bc6965052321f96667f5530b6f9d53128de01d80ff0dc82a",
+      "portableSvgSha256": "832cf1c013699ad0a9a833ac560ea269751082eb0455bd687932300bf9e8bccd"
+    },
+    {
+      "bevId": "38b4a3ca-c179-514d-a822-79dcf5998894",
+      "slug": "white-claw-black-cherry",
+      "pngSha256": "a51497841fdc5c9dadff50cbce08aae4a075ddbb51fb02d852fe2bc57c091fa2",
+      "portableSvgSha256": "89e919c4964ce8c753c3fb2ac270866312b5ad27907cb5d4e0bd8475e5d79891"
+    },
+    {
+      "bevId": "9f8e6bcd-41d5-520b-bc4a-2093ad7bbc84",
+      "slug": "white-claw-mango",
+      "pngSha256": "c69f789958f5d2dee5696ac988103ecfc89507a632781f2fe01025e6a3f19795",
+      "portableSvgSha256": "d0795f13732f6da5990f54dd0216416ee4c94844cf663d741ba1d0520fc52edd"
+    },
+    {
+      "bevId": "d1b17c57-826a-576d-b6a3-2a8554dcc4c0",
+      "slug": "white-claw-natural-lime",
+      "pngSha256": "2585eb54a8c1d6a5913f37c0ca0c6528b5df547cea499fd2056ecad556002b84",
+      "portableSvgSha256": "ab6e5c7c6ba0c4765f29d74b373f14f624506ad0c348338cfa26c730f735be9c"
     }
   ],
   "batch2": {
@@ -2934,6 +3117,201 @@
           "portableSvgSha256": "a99e9a1316bd6ab0eccc8097038ed163646337287ed2ae03e77baad2055dd7f3"
         }
       ]
+    },
+    {
+      "batchId": "batch-12-2026-11-14",
+      "reviewedAt": "2026-11-14",
+      "reviewer": "Codex",
+      "scope": "30 exact beverage package references inspected; batch contact sheets and 40/56/96/155px light/dark tiles reviewed.",
+      "outcome": "30 new needs-review drafts; aesthetic approval and device review pending.",
+      "sheets": [
+        "review/batch-12-2026-11-14-01.png",
+        "review/batch-12-2026-11-14-sizes-light.png",
+        "review/batch-12-2026-11-14-sizes-dark.png"
+      ],
+      "identityIssues": [],
+      "assets": [
+        {
+          "bevId": "dcae3c67-280f-5f1b-865c-9e88aab217cd",
+          "slug": "five-hour-energy-extra-strength",
+          "pngSha256": "1df3c06e1f9e738f1370e2b996f61d5606d2b5dc3abb003144244b4db6172242",
+          "portableSvgSha256": "0c8e7918945b9a0a8bb190ea103bdcf15c007a0b15fdfa0d48dc987454fd3e18"
+        },
+        {
+          "bevId": "99a18b9b-5d18-574f-a54c-a7bfbd3d7fd7",
+          "slug": "five-hour-energy-original",
+          "pngSha256": "16344a16a84e4416cc3b5e13a3493b118d70e9cd935d302197a1caafade343b9",
+          "portableSvgSha256": "8c8e5328629060b79dea8e6b9acc79da3d34da57a7d2510f2cd2cec2a95a51dc"
+        },
+        {
+          "bevId": "e8a7f6c7-7d83-5c59-a2b5-b11bb930479b",
+          "slug": "five-hour-energy-pink-lemonade",
+          "pngSha256": "e1ab672d338636ac0517e4ef8d7763f42b6ef399d2c956a6dddfd99ef2c40d9c",
+          "portableSvgSha256": "431e8f64ed2c0d33c558814f49a62262892a5b3706dc0f4d19299457c9c29680"
+        },
+        {
+          "bevId": "6a1784e0-7780-562e-9988-1b6df1d6de02",
+          "slug": "aw-diet-root-beer",
+          "pngSha256": "4df7235318546fa0071aa5436cf9be8ba08719c7aea1c009acf91548e711e210",
+          "portableSvgSha256": "925d087e45affcd5731330e563d5833e81bfa7ddb562e245aa33ed5d02c6d218"
+        },
+        {
+          "bevId": "d5fae22e-0812-5472-bd0b-883336a11cc9",
+          "slug": "alani-nu-mimosa",
+          "pngSha256": "c5344d952b378c37603e1eb93920bbe961319eecf37bb123462cfbb01832fe7b",
+          "portableSvgSha256": "15dc7993a4beac459e2b929b4c6f92effb9fae9696bcdb93c5fa390a4e8b5286"
+        },
+        {
+          "bevId": "ce13c1fc-955d-5ce3-abbf-7f075fe1570a",
+          "slug": "bang-rainbow-unicorn",
+          "pngSha256": "ce94bd49592fb2eb2f7e0cad8f63d0f0b72e19fd63cdb3215effa47c311288e4",
+          "portableSvgSha256": "d067e9b14d0c327f1902900835f9986a8c2eea4ef29e297eebba224fd38b9cc6"
+        },
+        {
+          "bevId": "f5fc4367-0ad3-53cd-8329-7029e9785c0e",
+          "slug": "canada-dry-diet-ginger-ale",
+          "pngSha256": "89e70015469c685b1f899910a1d0f3f4a37264fa5ee60a082af1d869d7ad0be5",
+          "portableSvgSha256": "af94d5c03490b015a75a5d6dd33317101fab3004f949d94ea2dafa7528ce9279"
+        },
+        {
+          "bevId": "0185e29e-12f6-5f46-8223-a22a1fc1144c",
+          "slug": "celsius-cucumber-lime",
+          "pngSha256": "e37cd040a3da98233f81d4adfac33f3b13c31c638bf3b16e02a7d0e1132eb01d",
+          "portableSvgSha256": "a070243f68e87d48fa88be954d10eee5726418b5d79d48e6d4c098aad2fdd2b2"
+        },
+        {
+          "bevId": "8adbfd7e-77c9-5c99-a55f-5ffc03bfd754",
+          "slug": "cutwater-spirits-margarita",
+          "pngSha256": "02a4d133e462a35e69b7a36c9cb98ff851ba99e866b9a22bc81e35b9129b70d2",
+          "portableSvgSha256": "66193de22e7765b1fddc253417bb9352777570556fe028dd9c726079aefb6036"
+        },
+        {
+          "bevId": "6e665aa0-7abc-50e7-8475-978c62c81133",
+          "slug": "cutwater-spirits-vodka-mule",
+          "pngSha256": "5d10cb39fc790d8d4c94a64db06e3f230fb1c48287f2b03d27ecad29c2665fe6",
+          "portableSvgSha256": "4ffa01b92815c07399ce2b584f2f6db429b44a9346b2dcfd0d52dbf001cbfba0"
+        },
+        {
+          "bevId": "7696f382-d1dc-530a-ad78-e55684050b2f",
+          "slug": "diet-barqs-root-beer",
+          "pngSha256": "5f6548125e46f203e57e53e3c09de2ee6ecba796187bfb3fdea58088a8890391",
+          "portableSvgSha256": "5cc9d9db28de10a3d2eb2a273861993c1532e656721367d41d742454c881722e"
+        },
+        {
+          "bevId": "79a9510e-5645-5a27-be84-12d51d4320fd",
+          "slug": "diet-mug-root-beer",
+          "pngSha256": "c977d5c23cd3affe25226615376ef1a7d7ce37879f38c68d8bdce9a1e9f35074",
+          "portableSvgSha256": "07aad9cc38afd37ed71444c395b06c2887c28ca103fe408bc2a14540bd6fc9ed"
+        },
+        {
+          "bevId": "d2e6c5b6-8c89-52c9-96e0-1ff327eb6cfb",
+          "slug": "diet-orange-crush",
+          "pngSha256": "2bed013f85318971469572c9331ae54cae66b6638e2664f22ae96b30d646f64f",
+          "portableSvgSha256": "dfe883471217981ac8902de9c317fa2875c41f82646976728ac47b6eed4c4390"
+        },
+        {
+          "bevId": "5ff248d3-5dfd-5fdb-95c7-ed304a50970c",
+          "slug": "diet-pepsi-caffeine-free",
+          "pngSha256": "3dd5615d62f517bbe3f68d66b1f093850aeb44a6be8611b4766f0f2edd626710",
+          "portableSvgSha256": "7705316c54492805fe9ad083d7df761e1e76fa2c02f024f6424749967310da0d"
+        },
+        {
+          "bevId": "dc8b7b75-0987-5dc9-a4cd-e64739d84094",
+          "slug": "diet-squirt",
+          "pngSha256": "0228b1984e06fd83ea17f66c70e120a2fea13961170e262a7a608101ecc63b75",
+          "portableSvgSha256": "aba9578023d332eb28f056cefb90c213416db2d887aa83803cf77f46617e03bd"
+        },
+        {
+          "bevId": "bdd0a5d5-3cb0-50fe-8f76-17237860f097",
+          "slug": "diet-sunkist-orange",
+          "pngSha256": "a497a945b6d340d101b4c760214ba47303c79fc5d33758d7bb74444fa61b5dd7",
+          "portableSvgSha256": "5a8fffa637c07a6e04684df5264e8d6f3357f08f89bd196d9b51cdc43ae79274"
+        },
+        {
+          "bevId": "007e1a80-c178-5280-8fff-f743d28b1b11",
+          "slug": "diet-vernors",
+          "pngSha256": "41e2d716e08934fccfa57ec15aa36ea655df68ad60574e67f2135df1d58128b7",
+          "portableSvgSha256": "56ed37042d0950dfb1fdfe1254af61f94025a84cfad57db8eb8749706e0f0609"
+        },
+        {
+          "bevId": "39bc813f-40f4-5724-b3d6-31dda409f850",
+          "slug": "dos-equis-lager-especial",
+          "pngSha256": "1a63a8af5bb65f7ce7781127bfb0bf6608915bd756e6cbc51e455e70e7fa7259",
+          "portableSvgSha256": "8d4c50271e5aabd7485d4db739d9f105a23e98498c254622a872d2740528c665"
+        },
+        {
+          "bevId": "b227f854-bdfa-5a02-a1d1-ebac6e0245c1",
+          "slug": "high-noon-vodka-soda-watermelon",
+          "pngSha256": "5ffa7144098f66cfb91e4fb03587c3ea59ae0143635b9b8ddb82c964c1562e13",
+          "portableSvgSha256": "5a09e409784c3e23b72e4ab600a73668053bcd7c5486002fa621bbdcc0984aaa"
+        },
+        {
+          "bevId": "718762fe-6d32-59dc-ae45-baac2d630681",
+          "slug": "high-noon-vodka-soda-peach",
+          "pngSha256": "4c74996f0947928ff1e68d31671ae70dfe2a63b6b09573b7e05c497cb7aa7336",
+          "portableSvgSha256": "d6a8fe22b3d3a937d479dbb02deb5c478b1e902cdf7c2456a9c81102edbd52ec"
+        },
+        {
+          "bevId": "70da1493-bf1b-5bf2-8dc6-87e6d0ab6aab",
+          "slug": "jack-daniels-and-coke",
+          "pngSha256": "c5d3dd868d579298217c088f1227e3b5a31848902561fc67e50ffcec8e321ffc",
+          "portableSvgSha256": "5d53ee37683b4d04a0c24450ff3c3f6769916345e833f977dfe578f20f16f7af"
+        },
+        {
+          "bevId": "7e46ce4b-c3e7-50d6-9730-a569fc6da933",
+          "slug": "pacifico-clara",
+          "pngSha256": "3d120b499b817897ea48cf444a7115bef6df667a00e6ded10775c96635377bcf",
+          "portableSvgSha256": "a714cd1d524a7b710d7e72a5c7af3123fe4a3c692e9f20760bd98bd80b13e3b5"
+        },
+        {
+          "bevId": "14bd6307-5818-5ca2-b25e-34632eaed9f0",
+          "slug": "shasta-diet-cola",
+          "pngSha256": "a53fc6e22adf66d1e1389e393fa2379fda10421f4e9717a59e347c5279a5d8cc",
+          "portableSvgSha256": "80fafc8aaa429a12213065441bf29e276cd3a937b4b1f51c4ed515aade43a451"
+        },
+        {
+          "bevId": "19d2d0a4-abfa-5c01-800c-7a81f5912cbc",
+          "slug": "sprite-cherry",
+          "pngSha256": "c03f5fe7c63a26e3e625903daae743c11e566d495104cd298568c5625f8d4301",
+          "portableSvgSha256": "2e92a767cd5fa57ad11631f97821f9f17169980f284518415c99821137560478"
+        },
+        {
+          "bevId": "947cd3ec-462b-515e-90d9-9967fb46d88d",
+          "slug": "titos-handmade-vodka-soda",
+          "pngSha256": "f177dd51ab58c2074b5d4433140fac24897f82968401f327d6dd5e97ff95388b",
+          "portableSvgSha256": "07eeae1188f887ea27b70fe9d2c1d2585a95fde3c88b6ec0f80a4ce1541cd96f"
+        },
+        {
+          "bevId": "e5b6a6e7-972a-5e37-99e2-01f84a5505eb",
+          "slug": "truly-wild-berry",
+          "pngSha256": "f7f04db51fbea1ab445287bbc91a3961116f07a2b1fe0ec65f3167b833bb68d4",
+          "portableSvgSha256": "5018873964080ea5a876db4052c2de338d225eb71c41422541110c687a73f629"
+        },
+        {
+          "bevId": "a2195743-a1c6-57ff-b8b1-d856e201cf54",
+          "slug": "truly-lemonade",
+          "pngSha256": "4a2a5d4defcdd5b5bc6965052321f96667f5530b6f9d53128de01d80ff0dc82a",
+          "portableSvgSha256": "832cf1c013699ad0a9a833ac560ea269751082eb0455bd687932300bf9e8bccd"
+        },
+        {
+          "bevId": "38b4a3ca-c179-514d-a822-79dcf5998894",
+          "slug": "white-claw-black-cherry",
+          "pngSha256": "a51497841fdc5c9dadff50cbce08aae4a075ddbb51fb02d852fe2bc57c091fa2",
+          "portableSvgSha256": "89e919c4964ce8c753c3fb2ac270866312b5ad27907cb5d4e0bd8475e5d79891"
+        },
+        {
+          "bevId": "9f8e6bcd-41d5-520b-bc4a-2093ad7bbc84",
+          "slug": "white-claw-mango",
+          "pngSha256": "c69f789958f5d2dee5696ac988103ecfc89507a632781f2fe01025e6a3f19795",
+          "portableSvgSha256": "d0795f13732f6da5990f54dd0216416ee4c94844cf663d741ba1d0520fc52edd"
+        },
+        {
+          "bevId": "d1b17c57-826a-576d-b6a3-2a8554dcc4c0",
+          "slug": "white-claw-natural-lime",
+          "pngSha256": "2585eb54a8c1d6a5913f37c0ca0c6528b5df547cea499fd2056ecad556002b84",
+          "portableSvgSha256": "ab6e5c7c6ba0c4765f29d74b373f14f624506ad0c348338cfa26c730f735be9c"
+        }
+      ]
     }
   ]
-}\n
+}

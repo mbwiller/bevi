@@ -350,20 +350,19 @@ export function FeaturedCard({ title, subtitle, src, art, tint, onClick, classNa
   );
 }
 
-const BEV_OF_LABEL = { day: 'Bev of the day', week: 'Bev of the week', both: 'Bev of the day and week' };
+const BEV_OF_LABEL = { day: 'Bev of the day', week: 'Bev of the week' };
 
 /**
  * Bev of the day / Bev of the week: half of a pair under the Feed's search bar. Just the Bev, not a
  * post: a caps label, its square tile, its name and the score it won with. `date` ("Oct 17",
- * "Week of Oct 12") shows only when the winner is from an earlier period. `period="both"` is the one
- * card the Feed shows when the same Bev won the day and the week ("Bev of the day and week"), at the
- * width one card of the pair has.
+ * "Week of Oct 12") shows only when the winner is from an earlier period. The same Bev winning the day
+ * and the week is still two cards, one per period.
  */
 export function BevOfCard({ period = 'day', bev, score, date, onClick, className }) {
   const label = BEV_OF_LABEL[period] || BEV_OF_LABEL.day;
   const spoken = label + ': ' + bev.name + (score != null ? ', ' + formatScore(score) : '') + (date ? ', ' + date : '');
   return (
-    <button type="button" className={cx('bv', 'bv-bevof', period === 'both' && 'bv-bevof-both', className)} onClick={onClick} aria-label={spoken}>
+    <button type="button" className={cx('bv', 'bv-bevof', className)} onClick={onClick} aria-label={spoken}>
       <span className="sectionCaps bv-bevof-label">{label}</span>
       <BevImage size={164} src={bev.src} art={bev.art} status={bev.photoStatus} />
       <span className="bv-bevof-foot">

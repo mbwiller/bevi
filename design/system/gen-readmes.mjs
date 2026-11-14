@@ -152,10 +152,10 @@ const R = {
 - Not on the Feed since M-05: Bev of the day and Bev of the week (BevOfCard) took its slot under the search bar.`,
   BevOfCard: `Bev of the day or Bev of the week, a pair side by side under the Feed's search bar: a caps label, the Bev's square tile, its name and the score it won with. Just the Bev, never a post.
 
-- Provide: \`period\` ("day", "week" or "both"), \`bev\`, \`score\` (the Bayesian score it won with, set even when the Bev has a single rating), \`date\`, \`onClick\` (opens the Bev).
+- Provide: \`period\` ("day" or "week"), \`bev\`, \`score\` (the Bayesian score it won with, set even when the Bev has a single rating), \`date\`, \`onClick\` (opens the Bev).
 - The winner is the best Bayesian score among Bevs ranked that New York day or ISO week. When nobody ranked anything in the current period it is the latest period's winner, and \`date\` says which: "Oct 17", "Week of Oct 12". The current period shows no date.
 - The pair splits the row between the gutters, with a 16pt gap; each card is half and its tile follows that width, so it fits any phone. No winner for either period: leave the row out. Only one: it keeps half the row, on the left.
-- **The same Bev for both:** one card with \`period="both"\`, labelled "Bev of the day and week", at the width one card of the pair has. Never the same Bev twice side by side. Its label is longer than the tile and runs past it on one line.
+- **The same Bev for both:** still two cards, one per period, each with its own label and date. Never one merged card: a lone card on the left reads as if the other winner were missing.
 - The whole card is one button: "Bev of the day: Horchata, 8.9" (with the date when there is one). The name wraps to two lines.`,
   ProfileListRow: `The profile's 44pt link rows: Want to Try and Recommended for you.
 
@@ -293,7 +293,7 @@ const S = {
   ScreenFeed: `Feed tab (ref 01, 12): Header with the wordmark and Find people, the filled SearchBar, Bev of the day and Bev of the week side by side (BevOfCard), then SegmentedTabs "Your feed · Explore" and that segment's FeedPosts, over the TabBar.
 
 - The person-plus icon in the Header opens People. The search bar is a doorway to Add Bev, which opens with its bar focused.
-- The same Bev winning the day and the week shows as one card ("Bev of the day and week"), not twice.
+- The same Bev winning the day and the week shows as two cards, one per period: never merged into one, which leaves half the row empty and reads as a winner that failed to load.
 - The tabs replace the YOUR FEED section header, in the same place: under the Bev of the day and week, which stay on both segments. Text tabs (\`underline-text\`), as on Lists. "Your feed" is the default.
 - **Your feed:** followed people's rankings, newest first. Each post carries the heart and the comment bubble on the left of its action row and Rank it and Want to Try on the right; up to seven comments show under the row, more collapse to "View all N comments". Following nobody: an EmptyState under the tabs ("Follow friends to see their Bevs" + Find people, which opens People).
 - **Explore:** rankings by people you don't follow yet, up to two follows away (everyone while Bevi is small), the most liked first rather than the newest. Each is the plain post (no heart, counts or comments) with the author's Follow pill. A followed author's posts stay, marked "Following", until Explore reloads; then they move to Your feed. Nothing yet: an EmptyState with \`sparkles\` ("Nothing popular yet", "Popular Bevs from people you don't follow show up here").
