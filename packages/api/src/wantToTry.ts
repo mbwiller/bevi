@@ -29,7 +29,7 @@ export function createWantToTryApi(client: SupabaseClient): WantToTryApi {
 
       const { data, error } = await client
         .from('want_to_try')
-        .select('created_at, source_user_id, bevs(*, bev_stats(*))')
+        .select('created_at, source_user_id, bevs(*, bev_stats(*), bev_icons(path))')
         .eq('user_id', uid)
         .order('created_at', { ascending: false });
       if (error) throw mapError(error);

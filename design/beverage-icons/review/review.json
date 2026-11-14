@@ -2650,6 +2650,142 @@
           "portableSvgSha256": "494357f9327b77a9b5e2255d96b0eed1884612516c6925d0bb52497e5e8cf241"
         }
       ]
+    },
+    {
+      "reviewedAt": "2026-11-12",
+      "reviewer": "Codex coordinator with independent integrator and family authors",
+      "scope": "20 exact Fresca/soda/juice reference photos inspected; large renders and40/56/96/155px light/dark tiles with8%padding. Correct historical V-Fusion label, distinct Fresca flavors; lettering fit and retailer overlay cleanup.",
+      "outcome": "20 needs-review drafts; all234 prior master/portableSVG/PNG hashes unchanged. Final aesthetic approval and interactive device review pending.",
+      "sheets": [
+        "review/batch-10-2026-11-12-01.png",
+        "review/batch-10-2026-11-12-02.png",
+        "review/batch-10-2026-11-12-03.png",
+        "review/batch-10-2026-11-12-04.png",
+        "review/batch-10-large-2026-11-12-01.png",
+        "review/batch-10-large-2026-11-12-02.png"
+      ],
+      "assets": [
+        {
+          "bevId": "5ed1a9b6-46ac-5249-9bd6-2c0712bf631b",
+          "slug": "seven-up",
+          "pngSha256": "d1fe41d3f5347294cc36819a53aa4efc58b973129e3fbfb81e7c3aff41043070",
+          "portableSvgSha256": "bc21fe0c59931dc2ee6ba1b42099d67d042787756472a533ef9efed38fa330c1"
+        },
+        {
+          "bevId": "78376c87-91e5-5267-a665-d1ed8f0cf293",
+          "slug": "juicy-juice-apple",
+          "pngSha256": "2be3c2d12016e3a38eda87cb57f5d87b454a0d298b7b4c6b3f977037010782ac",
+          "portableSvgSha256": "4418d641b09d32f973cc384bb9650fbc27dbf75984167c618ffccfa366defdbc"
+        },
+        {
+          "bevId": "e3e5a072-e596-5920-bb12-c000c53850df",
+          "slug": "coca-cola-cherry-zero-sugar",
+          "pngSha256": "e7b0faff0df79439545af7e490f9dd461e9fbfafb5f305a6d20a53ae86057f3e",
+          "portableSvgSha256": "2940591d4535e1006bc1f86e258f250335872e2b28e647cab38d2a0f56a7382a"
+        },
+        {
+          "bevId": "3aee034e-122d-599c-8215-95836a62a054",
+          "slug": "coca-cola-vanilla",
+          "pngSha256": "61b7bb0c546aefbca550453bf533b5d088e50a2851d7f8ad28e247624662f5a4",
+          "portableSvgSha256": "debcc9b30aee501c4d7c10cec637fec02a82d7a46ce66bcb393e4b2e79575196"
+        },
+        {
+          "bevId": "52e1cc03-c200-5a14-af3f-435e360d66dd",
+          "slug": "coca-cola-zero-sugar-vanilla",
+          "pngSha256": "02e4f8b40f32f0098f0551c6e322b7d8ec27f93312b27dc04350a65c02135254",
+          "portableSvgSha256": "4e650a2e1098469e1a469a2eec10df51cd6fda6f817794d097b68e88bc5ce675"
+        },
+        {
+          "bevId": "603d2423-a343-5d01-9821-3bf5402a89e8",
+          "slug": "ocean-spray-cran-grape",
+          "pngSha256": "27712da1146d0841cc7b9785b68a0129df29cbb0eba589a2aa8e9942dacb2b32",
+          "portableSvgSha256": "4adbee4004d2fa9443dc8d04902e28666a2665fa6fa159b67331ec46446b6cd3"
+        },
+        {
+          "bevId": "cb32e51b-c848-5ebf-b892-b1d5f75b0694",
+          "slug": "ocean-spray-cran-raspberry",
+          "pngSha256": "088b2b5e9991e87ba1eb3ff63e288b75735822a80cad5cc313d9b283246f9140",
+          "portableSvgSha256": "81bb8c42b752266091feece02dd98d252e3837c47798e1f500f95b75b3b0dca0"
+        },
+        {
+          "bevId": "3399ed7b-d485-580e-96ba-55b12039266e",
+          "slug": "ocean-spray-cranberry-juice-cocktail",
+          "pngSha256": "ac769f04942ba7141b8f9e43c54999be43c64b78955cb089b23e6bac0e7b278c",
+          "portableSvgSha256": "98356d5adedb9be97002a15eb6f75c4b446f29cb1ab807311340d3bc61b66d85"
+        },
+        {
+          "bevId": "9a47cf82-7e48-5a2e-9866-d65219f1c7e6",
+          "slug": "diet-coke-caffeine-free",
+          "pngSha256": "a2b54b1d543e900f44f68626e4a0d26c4d8911c4f3c5ba3578cd9522cff05dae",
+          "portableSvgSha256": "76695a1c26d9249ac897978fef6dffb2930e98b58cafb97b0433af70a8e5ddf2"
+        },
+        {
+          "bevId": "479f4f79-4c7b-5c68-860f-06d7f8402b9a",
+          "slug": "dr-pepper-cherry",
+          "pngSha256": "20238f4bb1a3d7e33fb615c9c6acaa1b2f45b76982912d836c0191bc843b6e21",
+          "portableSvgSha256": "ea5a55a135e9acb10bdab02a0325cb3f3e469966a0de7a9c45bec6855cf979da"
+        },
+        {
+          "bevId": "8ce58bef-2c78-5d4d-81d5-4fc2d70bd2a5",
+          "slug": "fresca-black-cherry-citrus",
+          "pngSha256": "4c5528e4fb0fbd7c13f7e61bb9ff64aa2fe5fef7d5e5ed0ca4315be3a0e4d138",
+          "portableSvgSha256": "77ae21a1f92a08a02c5881312de8950ddf37cebe0987cf85374391334c1af00c"
+        },
+        {
+          "bevId": "074510ec-7ebf-50f1-8e0c-3004e1c131f1",
+          "slug": "fresca-original",
+          "pngSha256": "1b8d4cd4cf046105cce8f8e1a5fe96d1b7a37706de6d1f9b402a85aa936f0cc7",
+          "portableSvgSha256": "83e26d6f091619e097f6903f96edfadab577173a2637db6c9ffd90122c38b764"
+        },
+        {
+          "bevId": "b24167be-6011-5c1d-a390-a343a4ff85bf",
+          "slug": "hi-c-fruit-punch",
+          "pngSha256": "ae8162005294331a70c722e8b5900c600138bf4ccd6c75b2b48d169cdf80787e",
+          "portableSvgSha256": "3a44002a5117f2923ee2e22a76c3e0a437c61350a63b905fa9dada302304d020"
+        },
+        {
+          "bevId": "d91ed47d-22c9-570e-937d-520c50965a11",
+          "slug": "minute-maid-lemonade",
+          "pngSha256": "86f54a234fc4ccac2c1553cb73b2702bbe1214eca94b74fe7055e54d72bbfde2",
+          "portableSvgSha256": "6e477390ae4eca58042892c433fa48cdaa691d3ecae5a0574b70a31385110cf2"
+        },
+        {
+          "bevId": "76ef1cae-bfd3-5680-83ed-9732391bb88f",
+          "slug": "mountain-dew-code-red",
+          "pngSha256": "c7f54c0e8755cebdfcf024034d3a425f431b1af5f264e8f99225cf899ef8be0e",
+          "portableSvgSha256": "79a6f47944618bd3dfa8843107df035b7066674065f2d5c6f63fb0a3dcfdcff4"
+        },
+        {
+          "bevId": "bef825d8-a134-5e4d-8688-b11e9ca142c1",
+          "slug": "reeds-ginger-beer",
+          "pngSha256": "742bd8c7a244374497499c2ba70769d12156e6e6ed3a2c04acd4aa4483fd20fd",
+          "portableSvgSha256": "cd7ec69d2743d431560e53e5adcc567857fdfc35c459b6b4d57dbd621c6e6cf6"
+        },
+        {
+          "bevId": "d3afe698-87f5-5b53-b843-02ee81906d1e",
+          "slug": "shasta-cola",
+          "pngSha256": "7aad5ec10f2c7f8ce5e21f2f3f65c026142e635e22e00fe5bc4120614cfc280e",
+          "portableSvgSha256": "25922a8a6872afdade9e4a4c2019e925544eb10c7d8a22f5317d6f8554efae25"
+        },
+        {
+          "bevId": "59fac707-b933-5a79-b714-5996d496c771",
+          "slug": "shasta-grape",
+          "pngSha256": "ed3006bc49b031ed4352d571c0c7f00b86a185503531e89b116d237e5b07c054",
+          "portableSvgSha256": "e74b3f529bd3f071c827e49377522b397d3fadb63d63b07cf786ca8a48a31bb5"
+        },
+        {
+          "bevId": "d3f10ff6-2544-5d92-8e1e-f99af4453755",
+          "slug": "v8-v-fusion-strawberry-banana",
+          "pngSha256": "c3848295433516dfecfbfc88434aca495429a714930fd55918f1a9398786ecf2",
+          "portableSvgSha256": "02dcb316104bc3f7343ef6d52b0c662ed91a3f163fd735e899c4ca1841211a0e"
+        },
+        {
+          "bevId": "da2ea418-da8b-5c44-8ebe-54134ed0abbe",
+          "slug": "v8-original-vegetable-juice",
+          "pngSha256": "303b7c4b7dfd53e04d318dad008683601efb2fc1edd1070ec1bcb1f3fa55b375",
+          "portableSvgSha256": "6a83b6c0e168d2accb3bc9715143cd3b35828b923e83bc38db691eba02b00225"
+        }
+      ]
     }
   ]
 }

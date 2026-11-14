@@ -316,6 +316,48 @@
         }
       ],
       "resolutionNeeded": "Confirm signature brown-sugar fresh milk versus a tea-based latte before assigning this starter UUID."
+    },
+    {
+      "bevId": "9a2ef1e8-693c-5c10-9628-b95450354734",
+      "slug": "zevia-mountain-twist",
+      "status": "needs-identity-resolution",
+      "reason": "Catalog names Mountain Twist flavor and aliases zevia mtn dew; current manufacturer identifies Mountain Zevia. No exact Mountain Twist package or historical equivalence inspected.",
+      "references": [
+        {
+          "pageUrl": "https://zevia.com/products/mountain-zevia",
+          "inspectedAt": "2026-11-12",
+          "observations": "Catalog names Mountain Twist flavor and aliases zevia mtn dew; current manufacturer identifies Mountain Zevia. No exact Mountain Twist package or historical equivalence inspected."
+        }
+      ],
+      "resolutionNeeded": "Confirm whether catalog Mountain Twist is intended to mean Mountain Zevia before assigning its artwork."
+    },
+    {
+      "bevId": "11f52e23-5357-58c1-94df-02644a5e6f98",
+      "slug": "mountain-dew-spark",
+      "status": "needs-identity-resolution",
+      "reason": "Catalog flavor says Cherry Citrus; manufacturer/distributor and retailer identify Spark as Raspberry Lemonade. Do not silently substitute formulas.",
+      "references": [
+        {
+          "pageUrl": "https://www.jaycfoods.com/p/mountain-dew-spark-soda-cans-limits-may-apply/0001200021172",
+          "inspectedAt": "2026-11-12",
+          "observations": "Catalog flavor says Cherry Citrus; manufacturer/distributor and retailer identify Spark as Raspberry Lemonade. Do not silently substitute formulas."
+        }
+      ],
+      "resolutionNeeded": "Resolve Cherry Citrus catalog flavor versus Raspberry Lemonade Spark identity."
+    },
+    {
+      "bevId": "e1dad545-c9ce-52bf-b64a-66c0ac2f5363",
+      "slug": "diet-rc-cola",
+      "status": "needs-identity-resolution",
+      "reason": "Current manufacturer lineup identifies RC Cola Zero Sugar rather than Diet RC. Exact historical DietRC reference not inspected; no proof of formula equivalence.",
+      "references": [
+        {
+          "pageUrl": "https://www.myrccola.com/",
+          "inspectedAt": "2026-11-12",
+          "observations": "Current manufacturer lineup identifies RC Cola Zero Sugar rather than Diet RC. Exact historical DietRC reference not inspected; no proof of formula equivalence."
+        }
+      ],
+      "resolutionNeeded": "Inspect exact historical DietRC package or confirm intended product/formulation rather than substitute current Zero Sugar."
     }
   ]
 }
