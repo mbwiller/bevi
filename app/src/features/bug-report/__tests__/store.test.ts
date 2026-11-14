@@ -16,7 +16,9 @@ import {
   markLevels,
   navigate,
   pressReportButton,
+  removeShot,
   removeSteps,
+  sendNote,
   removeMark,
   removePhoto,
   resetReport,
@@ -33,7 +35,7 @@ import type { PickLevel, Shot } from '../types';
 
 // The engine is another task's; here it is what its contract says it returns.
 jest.mock('../capture', () => ({ captureScreen: jest.fn(), releaseShot: jest.fn() }));
-jest.mock('../pick', () => ({ pickAt: jest.fn(() => []), pickScreen: jest.fn(() => null) }));
+jest.mock('../pick', () => ({ pickAt: jest.fn(() => []) }));
 jest.mock('../pickMode', () => ({ startPickMode: jest.fn(() => () => {}), isPickModeOn: jest.fn(() => false) }));
 jest.mock('../trail', () => ({
   startTrail: jest.fn(() => () => {}),
@@ -43,7 +45,6 @@ jest.mock('../trail', () => ({
   hadRecentFailure: jest.fn(() => false),
   startStepRecording: jest.fn(),
   stopStepRecording: jest.fn(() => []),
-  isRecordingSteps: jest.fn(() => false),
 }));
 jest.mock('../infer', () => ({ inferKind: jest.fn(() => 'bug'), titleFor: jest.fn((note: string) => note) }));
 
@@ -258,6 +259,7 @@ describe('persistence', () => {
   it('saves the text and the marks as they change, never the pictures, and forgets a discarded note', async () => {
     const store = memory();
     setReportStorage(store);
+    hydrate('tester');
     markLevels([level('A')]);
     setText('Too heavy');
     await settle();
@@ -272,10 +274,11 @@ describe('persistence', () => {
     saveDraft(store, {
       text: 'Too heavy',
       marks: [{ n: 1, title: 'A', target: { component: 'A' }, route: '/feed' }],
+      owner: 'tester',
       idempotencyKey: '4f1d6c0a-4f4c-4f0e-9e0b-9a4a8f2b7c11',
     });
     setReportStorage(store);
-    hydrate(undefined);
+    hydrate('tester');
     expect(draft()).toMatchObject({ text: 'Too heavy', idempotencyKey: '4f1d6c0a-4f4c-4f0e-9e0b-9a4a8f2b7c11', restored: true });
     expect(draft().marks[0]).toMatchObject({ n: 1, route: '/feed', noPicture: 'restored' });
     expect(pictureNotices(draft())).toEqual(["Screenshots weren't kept. Mark it again to add one."]);
@@ -284,11 +287,118 @@ describe('persistence', () => {
 
   it('keeps the tickets to place under their own key', () => {
     const store = memory();
-    store.setItem('bevi.bug-report.unplaced', JSON.stringify(['BEV-4']));
+    saveUnplaced(store, ['BEV-4'], 'tester');
     setReportStorage(store);
-    hydrate(undefined);
+    hydrate('tester');
     expect(useReport.getState().unplaced).toEqual(['BEV-4']);
   });
+
+  it('writes nothing before it knows whose this is', async () => {
+    const store = memory();
+    setReportStorage(store);
+    pressReportButton();
+    setText('Typed before hydrate');
+    addUnplaced('BEV-5');
+    await settle();
+    expect(store.map.size).toBe(0);
+    // State from before `hydrate` belongs to nobody known, so it is not adopted either.
+    hydrate('tester');
+    expect(useReport.getState().draft).toBeNull();
+    pressReportButton();
+    setText('Typed after');
+    expect(loadDraft(store)).toMatchObject({ text: 'Typed after', owner: 'tester' });
+  });
+
+  it('clears an ownerless (legacy) draft and a bare unplaced list instead of showing them to anyone', () => {
+    const store = memory();
+    // As the old form saved it: no owner, no text.
+    store.setItem(
+      'bevi.bug-report.draft',
+      JSON.stringify({ title: 'Ratings vanish', description: '', steps: '', idempotencyKey: '4f1d6c0a-4f4c-4f0e-9e0b-9a4a8f2b7c11', savedAt: new Date().toISOString() }),
+    );
+    store.setItem('bevi.bug-report.unplaced', JSON.stringify(['BEV-4']));
+    setReportStorage(store);
+    hydrate('tester-b');
+    expect(useReport.getState()).toMatchObject({ draft: null, unplaced: [] });
+    expect(store.map.has('bevi.bug-report.draft')).toBe(false);
+    expect(store.map.has('bevi.bug-report.unplaced')).toBe(false);
+  });
+
+  it('clears an ownerless draft saved by this build, too', () => {
+    const store = memory();
+    saveDraft(store, { text: 'No owner', marks: [], idempotencyKey: '4f1d6c0a-4f4c-4f0e-9e0b-9a4a8f2b7c11' });
+    setReportStorage(store);
+    hydrate('tester-b');
+    expect(useReport.getState().draft).toBeNull();
+    expect(loadDraft(store)).toBeNull();
+  });
+});
+
+describe('pictures removed, and the limit', () => {
+  it('marks of a removed marked picture say so, and are not retaken on their own', async () => {
+    markLevels([level('A')]);
+    markLevels([level('B')]);
+    await settle();
+    mockCapture.mockClear();
+    removeShot(draft().shots[0]!.id);
+    expect(draft().shots).toEqual([]);
+    expect(draft().marks.map((m) => m.noPicture)).toEqual(['removed', 'removed']);
+    expect(pictureNotices(draft())).toEqual(['This mark has no picture. Select it again to add one.']);
+    expect(mockCapture).not.toHaveBeenCalled();
+    // Selecting again on that screen takes the picture with every mark.
+    markLevels([level('C')]);
+    await settle();
+    expect(draft().marks.map((m) => m.noPicture)).toEqual([undefined, undefined, undefined]);
+    expect(pictureNotices(draft())).toEqual([]);
+  });
+
+  it('says "3 pictures is the limit" only while there are three; after one is removed, the true line', async () => {
+    for (let i = 0; i < 3; i++) {
+      captureWholeScreen();
+      await settle();
+    }
+    navigate('/lists', '/lists');
+    markLevels([level('A')]);
+    await settle();
+    expect(pictureNotices(draft())).toEqual(['3 pictures is the limit; this mark has no picture.']);
+    removeShot(draft().shots[0]!.id);
+    expect(draft().marks[0]!.noPicture).toBe('limit');
+    expect(pictureNotices(draft())).toEqual(['This mark has no picture. Select it again to add one.']);
+  });
+});
+
+describe('a send that lands after the account changed', () => {
+  afterEach(() => useSession.setState({ status: 'signedOut', profile: undefined }));
+
+  async function signOutWhileSending(outcome: 'resolve' | 'reject') {
+    const store = memory();
+    setReportStorage(store);
+    useSession.setState({ status: 'ready', profile: { handle: 'tester-a', displayName: 'A', avatarUrl: null } });
+    hydrate('tester-a');
+    markLevels([level('A')]);
+    setText('Sent by A');
+    await settle();
+    const shotA = draft().shots[0]!.shot!;
+    let finish: (ok: boolean) => void = () => {};
+    const sender = () =>
+      new Promise<{ ticketId: string; ticketUrl: string; status: 'created' }>((resolve, reject) => {
+        finish = (ok) => (ok ? resolve({ ticketId: 'BEV-77', ticketUrl: 'https://x/BEV-77', status: 'created' }) : reject(new Error('offline')));
+      });
+    const sending = sendNote(sender);
+    await Promise.resolve();
+    await Promise.resolve();
+    useSession.setState({ status: 'signedOut', profile: undefined });
+    useSession.setState({ status: 'ready', profile: { handle: 'tester-b', displayName: 'B', avatarUrl: null } });
+    hydrate('tester-b');
+    finish(outcome === 'resolve');
+    await sending;
+    expect(useReport.getState()).toMatchObject({ unplaced: [], toast: null, outbox: [], draft: null, owner: 'tester-b' });
+    expect(mockRelease).toHaveBeenCalledWith(shotA);
+    expect(loadUnplaced(store)).toEqual({ ids: [] });
+  }
+
+  it('leaves B no ticket to place, no toast and no outbox row when it was filed', () => signOutWhileSending('resolve'));
+  it('and nothing either when it failed', () => signOutWhileSending('reject'));
 });
 
 describe('the floating button', () => {

@@ -21,8 +21,11 @@ export const EVIDENCE_MAX = 3;
 /** The contract's cap on `targets`. */
 export const MARKS_MAX = 6;
 
-/** Why a mark has no picture, for the line the note shows about it. */
-export type NoPicture = 'limit' | 'failed' | 'restored';
+/**
+ * Why a mark has no picture, for the line the note shows about it: there was no room ('limit'),
+ * the capture failed, it came back from storage, or its picture was removed.
+ */
+export type NoPicture = 'limit' | 'failed' | 'restored' | 'removed';
 
 export interface Mark {
   id: string;
@@ -58,7 +61,7 @@ export interface Draft {
   /** One per note, reused on every retry, so a retry never files a second ticket. */
   idempotencyKey: string;
   text: string;
-  /** Set only when the tester taps the kind chip. */
+  /** Set only when the tester picks a type in the note's type dropdown. */
   kindOverride?: BugReportKind;
   marks: Mark[];
   shots: ShotEntry[];
@@ -120,11 +123,6 @@ export function captureMarksFor(d: Draft, visit: number): CaptureMark[] {
 /** Whether there is room for one more picture of any kind. */
 export function hasRoom(d: Draft): boolean {
   return evidenceCount(d) < EVIDENCE_MAX;
-}
-
-/** Whether the visit can have a marked picture: it already has one (redrawn), or there is room for one. */
-export function canCapture(d: Draft, visit: number): boolean {
-  return !!shotOfVisit(d, visit) || evidenceCount(d) < EVIDENCE_MAX;
 }
 
 export interface AddMarkInput {
@@ -229,7 +227,10 @@ export function removeMark(d: Draft, id: string, renumber = true): { draft: Draf
   return { draft: { ...next, shots: d.shots.filter((s) => s !== entry) }, release: entry.shot ? [entry.shot] : [] };
 }
 
-/** Removes a visit's picture (a whole-screen one has no mark chip to remove it by). */
+/**
+ * Removes a picture. The marks a removed marked picture showed keep their details and say they have
+ * no picture; it is not taken again on its own (selecting the element again does that).
+ */
 export function removeShot(d: Draft, id: string): { draft: Draft; release: Shot[] } {
   const entry = d.shots.find((s) => s.id === id);
   if (!entry) return { draft: d, release: [] };
@@ -237,7 +238,7 @@ export function removeShot(d: Draft, id: string): { draft: Draft; release: Shot[
     draft: {
       ...d,
       shots: d.shots.filter((s) => s !== entry),
-      marks: d.marks.map((m) => (m.shotId === id ? { ...m, shotId: undefined } : m)),
+      marks: d.marks.map((m) => (m.shotId === id ? { ...m, shotId: undefined, noPicture: 'removed' as const } : m)),
     },
     release: entry.shot ? [entry.shot] : [],
   };
@@ -276,7 +277,13 @@ export function pictureNotices(d: Draft): string[] {
   if (d.restored && d.shots.length === 0 && d.photos.length === 0) {
     out.push("Screenshots weren't kept. Mark it again to add one.");
   }
-  if (d.marks.some((m) => m.noPicture === 'limit')) out.push('3 pictures is the limit; this mark has no picture.');
+  // The limit line is only true while there are three pictures; once one is removed, a mark that
+  // missed out is in the same state as one whose picture was removed.
+  const full = !hasRoom(d);
+  if (full && d.marks.some((m) => m.noPicture === 'limit')) out.push('3 pictures is the limit; this mark has no picture.');
+  if (d.marks.some((m) => m.noPicture === 'removed' || (!full && m.noPicture === 'limit'))) {
+    out.push('This mark has no picture. Select it again to add one.');
+  }
   if (d.marks.some((m) => m.noPicture === 'failed')) {
     out.push("Couldn't take a picture of this screen. The component details are still attached.");
   } else if (d.screenFailed) {

@@ -13,7 +13,7 @@ import { RankSheet } from '../RankSheet';
 import { addUnplaced, openRank, resetReport, setReportStorage, useReport } from '../store';
 
 jest.mock('../capture', () => ({ captureScreen: jest.fn(async () => null), releaseShot: jest.fn() }));
-jest.mock('../pick', () => ({ pickAt: jest.fn(() => []), pickScreen: jest.fn(() => null) }));
+jest.mock('../pick', () => ({ pickAt: jest.fn(() => []) }));
 
 function memory(): StorageLike {
   const map = new Map<string, string>();

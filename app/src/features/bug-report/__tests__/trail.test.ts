@@ -7,7 +7,6 @@ import { tapTitle } from '../pick';
 import { isPickModeOn } from '../pickMode';
 import {
   hadRecentFailure,
-  isRecordingSteps,
   recordNav,
   routePattern,
   startStepRecording,
@@ -174,7 +173,7 @@ describe('the trail', () => {
     stop();
     expect(trailSnapshot()).toEqual([]);
     // A recording in progress goes with it.
-    expect(isRecordingSteps()).toBe(false);
+    expect(stopStepRecording()).toEqual([]);
     tapTitleMock.mockReturnValue('Header · Feed');
     click(document.body);
     window.dispatchEvent(new ErrorEvent('error', { message: 'after stop' }));
@@ -203,9 +202,8 @@ describe('a step recording', () => {
 
   it('starts with where it started, and tells the listener each step as it happens', () => {
     const onStep = jest.fn();
-    expect(isRecordingSteps()).toBe(false);
+    expect(stopStepRecording()).toEqual([]);
     startStepRecording('/lists?tab=want#x', onStep);
-    expect(isRecordingSteps()).toBe(true);
     expect(onStep).toHaveBeenLastCalledWith(['Start on /lists']);
 
     tapTitleMock.mockReturnValue('SegmentedTabs › Want to Try');
@@ -218,7 +216,8 @@ describe('a step recording', () => {
     recordNav('/bev/[id]');
     expect(onStep).toHaveBeenCalledTimes(4);
     expect(stopStepRecording()).toEqual(['Start on /lists', 'Tap SegmentedTabs › Want to Try', 'Tap BevRow · Coca-Cola', 'Open /bev/[id]']);
-    expect(isRecordingSteps()).toBe(false);
+    // Stopped: nothing is left to stop.
+    expect(stopStepRecording()).toEqual([]);
   });
 
   it('hands the listener a copy each time', () => {

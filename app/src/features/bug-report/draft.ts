@@ -33,9 +33,9 @@ export interface BugDraft {
   /** The steps the tester recorded (Record steps); absent when there are none. */
   steps?: string[];
   /**
-   * The handle of the account that wrote it. A draft saved under another handle is never restored:
-   * a second account on the same device must not inherit the first one's note. Absent on a draft
-   * saved before this existed (the old form's), which is restored as before.
+   * The handle of the account that wrote it. A draft saved under another handle, or under none (the
+   * old form's, saved before this existed), is never restored: a second account on the same device
+   * must not inherit the first one's note.
    */
   owner?: string;
   /** The UUID this draft files under, on every attempt. */
@@ -140,14 +140,9 @@ export function loadDraft(storage: StorageLike | null, now: Date = new Date()): 
     return null;
   }
 
-  // A draft saved by the old form had a title, a description and typed steps; the note is one text.
-  const text =
-    typeof draft.text === 'string'
-      ? draft.text
-      : [draft.title, draft.description, draft.steps]
-          .filter((part): part is string => typeof part === 'string' && part.trim() !== '')
-          .map((part) => part.trim())
-          .join('\n\n');
+  // A draft saved by the old form (title, description, steps) has no `text` and no owner: it loads
+  // as an empty, ownerless note, which the store clears rather than restores (store.hydrate).
+  const text = typeof draft.text === 'string' ? draft.text : '';
 
   return {
     text,
@@ -178,7 +173,7 @@ export function clearDraft(storage: StorageLike | null): void {
   remove(storage, DRAFT_KEY);
 }
 
-/** The tickets to place, and whose they are. A bare array is the shape saved before the owner was kept. */
+/** The tickets to place, and whose they are. Anything else (an older bare list) reads as ownerless and empty. */
 export interface StoredUnplaced {
   ids: string[];
   owner?: string;
@@ -186,8 +181,9 @@ export interface StoredUnplaced {
 
 export function loadUnplaced(storage: StorageLike | null): StoredUnplaced {
   const raw = readJson(storage, UNPLACED_KEY);
-  const list = Array.isArray(raw) ? raw : raw && typeof raw === 'object' && Array.isArray((raw as { ids?: unknown }).ids) ? (raw as { ids: unknown[] }).ids : [];
-  const owner = raw && !Array.isArray(raw) && typeof (raw as { owner?: unknown }).owner === 'string' ? (raw as { owner: string }).owner : undefined;
+  const record = raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as { ids?: unknown; owner?: unknown }) : null;
+  const list = Array.isArray(record?.ids) ? record.ids : [];
+  const owner = typeof record?.owner === 'string' && record.owner ? record.owner : undefined;
   const ids = [...new Set(list.filter((id): id is string => typeof id === 'string' && id !== ''))];
   return owner ? { ids, owner } : { ids };
 }

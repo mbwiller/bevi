@@ -304,16 +304,25 @@ function install(): () => void {
 
 /**
  * The selecting tap's own click can still be on its way when the UI turns select mode off inside
- * `onPick`: a browser that did not honour the prevented `touchend` delivers it up to 300ms later,
- * and it would press whatever was just selected. For the rest of LATE_CLICK_MS after that tap, a
- * mouse event or click near it is swallowed; the first click ends the guard.
+ * `onPick`: a browser that did not honour the prevented `touchend` makes up mouse events and a
+ * click from that touch, up to 300ms later, and they would press whatever was just selected.
+ *
+ * Only a touch pick needs this. A mouse pick happens on the `click`, the last event of its
+ * gesture, so nothing of that gesture is left to arrive once select mode is off.
+ *
+ * For the rest of LATE_CLICK_MS after the tap, a `mousedown`, `mouseup` or `click` within
+ * LATE_CLICK_SLOP of it is taken for the made-up echo and swallowed (the `mousedown` too, since it
+ * is what would focus a field); the first such click ends the guard. A made-up sequence never
+ * starts with a `touchstart` or a `pointerdown`, so either of those means a fresh tap by the
+ * tester: the guard is dropped at once and the tap is the app's.
  */
 function guardLateClick(): void {
   const tapped = lastTouchTap;
   if (!tapped) return;
   const left = LATE_CLICK_MS - (Date.now() - tapped.at);
   if (left <= 0 || left > LATE_CLICK_MS) return;
-  const types = ['mousedown', 'mouseup', 'click'] as const;
+  const echoes = ['mousedown', 'mouseup', 'click'] as const;
+  const fresh = ['touchstart', 'pointerdown'] as const;
   const onLate = (event: MouseEvent): void => {
     if (inReporter(event) || far(tapped, { x: event.clientX, y: event.clientY }, LATE_CLICK_SLOP)) return;
     swallow(event, true);
@@ -323,10 +332,12 @@ function guardLateClick(): void {
     if (dropGuard !== drop) return;
     dropGuard = null;
     clearTimeout(timer);
-    for (const type of types) document.removeEventListener(type, onLate, true);
+    for (const type of echoes) document.removeEventListener(type, onLate, true);
+    for (const type of fresh) document.removeEventListener(type, drop, true);
   };
   const timer = setTimeout(drop, left);
-  for (const type of types) document.addEventListener(type, onLate, true);
+  for (const type of echoes) document.addEventListener(type, onLate, true);
+  for (const type of fresh) document.addEventListener(type, drop, true);
   dropGuard = drop;
 }
 
@@ -334,7 +345,9 @@ function guardLateClick(): void {
  * Turns select mode on and returns the function that turns it off. While it is on:
  *   - a tap or click on the app never reaches the control under it: nothing is pressed, focused,
  *     navigated or submitted;
- *   - scrolling still works, and a scroll gesture is not a tap;
+ *   - scrolling stays native, and a scroll gesture is not a tap; but gestures built on pointer
+ *     events, such as panning the map, do not work while selecting (their pointer events are
+ *     stopped);
  *   - anything inside `[data-report-ui]` behaves normally (the reporter's own Cancel button);
  *   - the trail records nothing.
  * Off the web it does nothing and returns a no-op. Never throws.

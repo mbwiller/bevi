@@ -20,7 +20,7 @@ jest.mock('../capture', () => ({
   captureScreen: jest.fn(async () => ({ blob: new Blob(['jpeg']), mimeType: 'image/jpeg', uri: 'blob:shot', width: 390, height: 844 })),
   releaseShot: jest.fn(),
 }));
-jest.mock('../pick', () => ({ pickAt: jest.fn(() => []), pickScreen: jest.fn(() => null) }));
+jest.mock('../pick', () => ({ pickAt: jest.fn(() => []) }));
 jest.mock('../pickMode', () => ({ startPickMode: jest.fn(), isPickModeOn: jest.fn(() => false) }));
 jest.mock('../trail', () => ({
   startTrail: jest.fn(() => () => {}),
@@ -30,7 +30,6 @@ jest.mock('../trail', () => ({
   hadRecentFailure: jest.fn(() => false),
   startStepRecording: jest.fn(),
   stopStepRecording: jest.fn(() => []),
-  isRecordingSteps: jest.fn(() => false),
 }));
 jest.mock('../infer', () => ({
   inferKind: jest.fn((_n: string, s: { hasTarget: boolean }) => (s.hasTarget ? 'design' : 'bug')),
@@ -489,5 +488,33 @@ describe('Record steps', () => {
     await act(async () => onStep!(Array.from({ length: 30 }, (_, i) => `Open /s${i}`)));
     expect(screen.getByText('Recording · 30 steps')).toBeTruthy();
     expect(screen.getByText('30 steps is the limit')).toBeTruthy();
+  });
+});
+
+describe('the host going away (sign-out, the reporter role taken away)', () => {
+  it('ends select mode with it, so no select-mode listener outlives the banner', async () => {
+    const stop = jest.fn();
+    mockPickMode.mockImplementation(() => stop);
+    const view = await renderHost();
+    await act(async () => openBlankNote());
+    await fireEvent.press(screen.getByLabelText('Select element'));
+    expect(useReport.getState().selecting).toBe(true);
+    await act(async () => view.unmount());
+    expect(stop).toHaveBeenCalled();
+    expect(useReport.getState()).toMatchObject({ selecting: false, picking: null });
+  });
+
+  it('stops and discards a recording, so a host mounted later never shows Stop', async () => {
+    mockStopRec.mockReturnValue(['Start on /feed', 'Open /lists']);
+    const view = await renderHost();
+    await act(async () => openBlankNote());
+    await fireEvent.press(screen.getByLabelText('Record steps'));
+    expect(useReport.getState().recording).not.toBeNull();
+    await act(async () => view.unmount());
+    expect(mockStopRec).toHaveBeenCalled();
+    expect(useReport.getState().recording).toBeNull();
+    expect(useReport.getState().draft?.steps).toEqual([]);
+    await renderHost();
+    expect(screen.getByTestId('report-button').props.accessibilityLabel).not.toBe('Stop recording steps');
   });
 });

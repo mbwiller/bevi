@@ -169,8 +169,15 @@ function environmentNow(): BugReportEnvironment {
   }
 }
 
+/**
+ * Bumped by every reset. A send started before a reset (a sign-out, an account switch) checks it
+ * when it lands and, finding it changed, leaves no trace: no ticket to place, no toast, no row.
+ */
+let generation = 0;
+
 /** Back to nothing: every picture let go of, select mode and any recording stopped. Storage is left alone. */
 export function resetReport(): void {
+  generation += 1;
   stopPicking?.();
   stopPicking = null;
   if (get().recording) safeStopStepRecording();
@@ -198,7 +205,7 @@ useSession.subscribe((s, prev) => {
 
 // ---------------------------------------------------------------- persistence
 
-function toStored(d: Draft): Omit<BugDraft, 'savedAt'> {
+function toStored(d: Draft, owner: string): Omit<BugDraft, 'savedAt'> {
   return {
     text: d.text,
     ...(d.kindOverride ? { kindOverride: d.kindOverride } : {}),
@@ -207,7 +214,7 @@ function toStored(d: Draft): Omit<BugDraft, 'savedAt'> {
       return level ? [{ n: m.n, title: level.title, target: level.target, route: m.route }] : [];
     }),
     ...(d.steps.length ? { steps: d.steps } : {}),
-    ...(get().owner ? { owner: get().owner } : {}),
+    owner,
     idempotencyKey: d.idempotencyKey,
   };
 }
@@ -222,27 +229,32 @@ function persistedDraft(s: ReportState): Draft | null {
   return null;
 }
 
+// Storage is written only for a known account: before `hydrate` has said whose this state is (or
+// after a reset), nothing is saved, so nothing ownerless is ever left for the next account.
 useReport.subscribe((s, prev) => {
+  const owner = s.owner;
+  if (!owner) return;
   if (s.draft !== prev.draft || s.outbox !== prev.outbox) {
     const d = persistedDraft(s);
-    if (d) saveDraft(storage(), toStored(d));
+    if (d) saveDraft(storage(), toStored(d, owner));
     else clearDraft(storage());
   }
-  if (s.unplaced !== prev.unplaced) saveUnplaced(storage(), s.unplaced, s.owner);
+  if (s.unplaced !== prev.unplaced) saveUnplaced(storage(), s.unplaced, owner);
 });
 
 /**
  * Loads what storage kept (a note, the tickets to place) for `owner`, the signed-in handle. Called
- * by the host on mount. State or storage that belongs to another handle is wiped instead: a second
- * account on this device never sees the first one's note. (Storage saved before the owner was kept
- * has none, and loads as before.)
+ * by the host on mount. State or storage that belongs to anyone else is wiped instead: a second
+ * account on this device never sees the first one's note. Storage with no owner counts as someone
+ * else's and is cleared, never restored: that includes the old form's draft (saved before the owner
+ * was kept), which is therefore dropped once on upgrade, and a bare `unplaced` list from then.
  */
 export function hydrate(owner: string | undefined, now: Date = new Date()): void {
   if (get().owner !== owner) {
     if (get().owner !== undefined || get().draft || get().unplaced.length) resetReport();
     set({ owner });
   }
-  const mine = (o: string | undefined) => o === undefined || o === owner;
+  const mine = (o: string | undefined) => o !== undefined && o === owner;
   const unplaced = loadUnplaced(storage());
   if (!mine(unplaced.owner)) clearUnplaced(storage());
   const stored = get().draft ? null : loadDraft(storage(), now);
@@ -438,6 +450,19 @@ export function startSelecting(): void {
   else stop();
 }
 
+/**
+ * The host is going away (sign-out, the reporter role taken away): select mode and any recording
+ * end with it, so no select-mode listener outlives the banner that cancels it and a host mounted
+ * later never shows Stop with nothing recording. A recording's steps are discarded.
+ */
+export function abandonModes(): void {
+  if (get().selecting) endSelecting();
+  if (get().recording) {
+    safeStopStepRecording();
+    set({ recording: null });
+  }
+}
+
 /** Cancel, Escape or a navigation: select mode off, the note back as it was. */
 export function cancelSelecting(): void {
   if (!get().selecting) return;
@@ -534,10 +559,6 @@ export function setPanelHeight(panelHeight: number): void {
 }
 
 // ---------------------------------------------------------------- the note
-
-export function openNote(): void {
-  set({ panel: 'open', sheet: null });
-}
 
 /** The note, a new empty one (no capture) when there is none. Settings' "Report a bug" too. */
 export function openBlankNote(): void {
@@ -668,13 +689,18 @@ function patchOutbox(key: string, patch: Partial<OutboxItem>): void {
 let toastId = 0;
 
 async function dispatch(key: string, sender: Sender, trail: BugBreadcrumb[]): Promise<void> {
+  // Taken before any wait: a reset while this is in flight (sign-out, another account) means its
+  // answer belongs to nobody here any more.
+  const started = generation;
   await settleCaptures(key);
+  if (generation !== started) return;
   const item = get().outbox.find((o) => o.key === key);
   if (!item?.draft) return;
   const input = buildInput(item.draft, trail);
   try {
     const result = await sender(input);
     releaseDraft(item.draft);
+    if (generation !== started) return;
     set((s) => ({
       outbox: s.outbox.map((o) => (o.key === key ? { key, title: o.title, status: 'sent' as const, result } : o)),
       unplaced:
@@ -682,6 +708,11 @@ async function dispatch(key: string, sender: Sender, trail: BugBreadcrumb[]): Pr
       toast: { ticketId: result.ticketId, duplicate: result.status === 'duplicate', id: ++toastId },
     }));
   } catch (error) {
+    if (generation !== started) {
+      // The reset let go of the outbox; let go of this note's pictures too (safe twice).
+      releaseDraft(item.draft);
+      return;
+    }
     set((s) => ({
       outbox: s.outbox.map((o) =>
         o.key === key ? { ...o, status: 'failed' as const, error, draft: o.draft ? { ...o.draft, error } : o.draft } : o,

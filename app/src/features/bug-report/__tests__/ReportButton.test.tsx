@@ -23,7 +23,7 @@ jest.mock('@/features/bug-report/capture', () => ({
   captureScreen: jest.fn(async () => ({ blob: new Blob(['jpeg']), mimeType: 'image/jpeg', uri: 'blob:shot', width: 390, height: 844 })),
   releaseShot: jest.fn(),
 }));
-jest.mock('@/features/bug-report/pick', () => ({ pickAt: jest.fn(() => []), pickScreen: jest.fn(() => null) }));
+jest.mock('@/features/bug-report/pick', () => ({ pickAt: jest.fn(() => []) }));
 jest.mock('@/features/bug-report/pickMode', () => ({ startPickMode: jest.fn(() => () => {}), isPickModeOn: jest.fn(() => false) }));
 jest.mock('@/features/bug-report/trail', () => ({
   startTrail: jest.fn(() => () => {}),
@@ -33,7 +33,6 @@ jest.mock('@/features/bug-report/trail', () => ({
   hadRecentFailure: jest.fn(() => false),
   startStepRecording: jest.fn(),
   stopStepRecording: jest.fn(() => []),
-  isRecordingSteps: jest.fn(() => false),
 }));
 jest.mock('@/features/bug-report/infer', () => ({
   inferKind: jest.fn(() => 'bug'),
@@ -155,15 +154,16 @@ describe('pressing the button', () => {
 });
 
 describe('Settings, Internal, and the old link', () => {
-  it('"Report a bug" opens a new note without a capture; "My reports" opens the sheet', async () => {
+  it('"Report a bug" opens a new note without a capture; "Filed reports" opens the sheet', async () => {
     await start('ready', '/settings');
     await screen.findByRole('button', { name: 'Report' });
     await fireEvent.press(await screen.findByLabelText('Report a bug'));
     expect(await screen.findByTestId('report-note')).toBeTruthy();
     expect(mockCapture).not.toHaveBeenCalled();
     await fireEvent.press(screen.getByLabelText('Set aside'));
-    await fireEvent.press(screen.getByLabelText('My reports'));
-    expect(await screen.findByText('Filed reports')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('link', { name: 'Filed reports' }));
+    // The sheet's title (the Settings row has the same words).
+    expect(await screen.findByRole('header', { name: 'Filed reports' })).toBeTruthy();
   });
 
   it('the old /report-bug link opens a note and goes back', async () => {

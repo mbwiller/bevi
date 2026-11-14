@@ -22,7 +22,7 @@ jest.mock('../trail', () => ({
   routePattern: jest.fn(() => '/'),
 }));
 jest.mock('../capture', () => ({ captureScreen: jest.fn(), releaseShot: jest.fn() }));
-jest.mock('../pick', () => ({ pickAt: jest.fn(() => []), pickScreen: jest.fn(() => null) }));
+jest.mock('../pick', () => ({ pickAt: jest.fn(() => []) }));
 
 const KEY = '4f1d6c0a-4f4c-4f0e-9e0b-9a4a8f2b7c11';
 const ENV = { route: '/feed', occurredAt: '2026-11-13T10:00:00.000Z', platform: 'web / Safari' };

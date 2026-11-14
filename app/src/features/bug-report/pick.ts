@@ -935,7 +935,8 @@ function fileOf(tree: Tree, index: number): string | undefined {
   return COMPONENT_FILES[name];
 }
 
-function describe(tree: Tree, level: Found, box: Box = level.box): PickLevel {
+function describe(tree: Tree, level: Found): PickLevel {
+  const box = level.box;
   const app = tree.apps[level.owner]!;
   const { label, role } = namingOf(level);
   const target: BugReportTarget = { component: app.name };
@@ -982,29 +983,6 @@ export function pickAt(x: number, y: number): PickLevel[] {
     return levelsOf(tree).map((level) => describe(tree, level));
   } catch {
     return [];
-  }
-}
-
-/**
- * The whole screen as one level: the current route's screen component, with the app column as its
- * box. Null off the web. Never throws.
- */
-export function pickScreen(): PickLevel | null {
-  try {
-    if (!onWeb()) return null;
-    const column = columnBox();
-    if (!column) return null;
-    const element = elementAt(column.x + column.width / 2, column.y + column.height / 2);
-    if (!element) return null;
-    const tree = treeFrom(element);
-    // The screen is the outermost level. A splash or a config error has no route screen; there the
-    // outermost component stands in.
-    const level = tree.found.filter((found) => !found.part).pop();
-    if (!level) return null;
-    level.screen = true;
-    return describe({ apps: tree.apps, found: [level] }, level, column);
-  } catch {
-    return null;
   }
 }
 

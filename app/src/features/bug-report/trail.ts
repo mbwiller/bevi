@@ -2,6 +2,7 @@ import type { BugBreadcrumb } from '@bevi/shared';
 
 import { setApiListener, type ApiCall } from '@/api/observe';
 
+import { MAX_STEPS } from './limits';
 import { tapTitle } from './pick';
 import { isPickModeOn } from './pickMode';
 
@@ -26,7 +27,6 @@ import { isPickModeOn } from './pickMode';
  */
 
 const MAX_CRUMBS = 40;
-const MAX_STEPS = 30;
 const MAX_MESSAGE = 200;
 const MAX_TARGET = 80;
 const RECENT_MS = 60_000;
@@ -220,7 +220,3 @@ export function stopStepRecording(): string[] {
   return endRecording();
 }
 
-/** Whether a step recording is running. */
-export function isRecordingSteps(): boolean {
-  return recording !== null;
-}

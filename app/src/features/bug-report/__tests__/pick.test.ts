@@ -1,5 +1,5 @@
 /** @jest-environment jsdom */
-import { columnBox, pickAt, pickScreen, resetPickCache, tapTitle } from '../pick';
+import { columnBox, pickAt, resetPickCache, tapTitle } from '../pick';
 import { REPORT_UI_ATTR } from '../types';
 
 // A small manifest of its own, so the app gaining or losing a component never changes these tests.
@@ -435,7 +435,6 @@ describe('pickAt', () => {
     const foreign = document.body.appendChild(document.createElement('div'));
     document.elementsFromPoint = jest.fn(() => [foreign, el(s.score), el(s.row)]);
     expect(pickAt(420, 100)[0]!.title).toBe('ScoreBubble · 8.2');
-    expect(pickScreen()!.title).toBe('FeedScreen');
   });
 
   it('collapses a level drawn exactly where the one inside it is, keeping the inner name', () => {
@@ -586,7 +585,6 @@ describe('pickAt', () => {
     expect(levels[0]!.title).toBe('FeedScreen › Header');
     expect(levels[1]!.target.text).toBe('Add a note Not editable');
     expect(JSON.stringify(levels)).not.toContain('secret');
-    expect(JSON.stringify(pickScreen())).not.toContain('secret');
 
     // Pointing at the field itself, or at something inside the editable box: still nothing typed.
     for (const inside of [note, search, rich, nested]) {
@@ -691,7 +689,6 @@ describe('pickAt', () => {
     (broken as unknown as Record<string, unknown>).__reactFiber$test = trap;
     document.elementsFromPoint = jest.fn(() => [broken]);
     expect(pickAt(1, 1)).toEqual([]);
-    expect(pickScreen()).toBeNull();
     expect(tapTitle(broken, 1, 1)).toBeUndefined();
 
     // A text node, null, a detached element.
@@ -707,29 +704,10 @@ describe('pickAt', () => {
   });
 });
 
-describe('pickScreen', () => {
-  it('is the route\'s screen component, with the app column as its box', () => {
-    const s = scene();
-    under(s.post, s.screen, s.root);
-    const level = pickScreen();
-    expect(document.elementsFromPoint).toHaveBeenCalledWith(240, 384);
-    expect(level).toMatchObject({
-      title: 'FeedScreen',
-      box: { x: 0, y: 0, width: 480, height: 768 },
-      target: {
-        component: 'FeedScreen',
-        path: ['FeedScreen'],
-        file: 'app/src/features/feed/FeedScreen.tsx',
-        rect: { x: 0, y: 0, width: 480, height: 768 },
-      },
-    });
-    expect(level!.target.text).toBeUndefined();
+describe('columnBox', () => {
+  it('is the app column', () => {
+    scene();
     expect(columnBox()).toEqual({ x: 0, y: 0, width: 480, height: 768 });
-  });
-
-  it('is null when nothing React rendered is on show', () => {
-    document.body.appendChild(document.createElement('div')).id = 'root';
-    expect(pickScreen()).toBeNull();
   });
 });
 

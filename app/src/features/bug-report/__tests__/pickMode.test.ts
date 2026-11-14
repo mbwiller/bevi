@@ -261,6 +261,41 @@ describe('select mode with a finger', () => {
     expect(onControl).toHaveBeenCalledWith('click');
   });
 
+  it('drops that guard at once for a fresh tap: a new touchstart (or pointerdown) is never the echo', () => {
+    handlers.onPick.mockImplementation(() => stop());
+    touch('touchstart', control, [[100, 200]]);
+    touch('touchend', control, [[100, 200]]);
+    expect(isPickModeOn()).toBe(false);
+    jest.advanceTimersByTime(150);
+    // The tester taps again near the same spot: the browser honoured the prevented touchend, so no echo came.
+    touch('touchstart', control, [[102, 201]]);
+    touch('touchend', control, [[102, 201]]);
+    const click = mouse('click', control, 102, 201);
+    expect(click.defaultPrevented).toBe(false);
+    expect(onControl).toHaveBeenCalledWith('click');
+
+    // The same with a pointerdown first.
+    stop = startPickMode(handlers);
+    touch('touchstart', control, [[100, 200]]);
+    touch('touchend', control, [[100, 200]]);
+    jest.advanceTimersByTime(100);
+    onControl.mockClear();
+    control.dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true }));
+    expect(mouse('click', control, 101, 200).defaultPrevented).toBe(false);
+    expect(onControl).toHaveBeenCalledWith('click');
+  });
+
+  it('arms no guard after a mouse pick: the click was the last event of its gesture', () => {
+    handlers.onPick.mockImplementation(() => stop());
+    mouse('mousedown', control);
+    mouse('click', control);
+    expect(handlers.onPick).toHaveBeenCalledTimes(1);
+    expect(isPickModeOn()).toBe(false);
+    const next = mouse('click', control);
+    expect(next.defaultPrevented).toBe(false);
+    expect(onControl).toHaveBeenCalledWith('click');
+  });
+
   it('keeps no guard when select mode is turned off by anything but a tap', () => {
     mouse('mousedown', control);
     mouse('click', control);

@@ -6,6 +6,7 @@ import { PRESSED } from '@/components/HitTarget';
 import { Icon } from '@/components/Icon';
 import { MAX_FONT_SCALE_DENSE, radius, size, spacing, type, useTheme } from '@/theme';
 
+import { MAX_STEPS } from './limits';
 import { REPORT_UI, useLayer } from './ReportLayer';
 import { hasFailed, pressReportButton, useReport } from './store';
 
@@ -22,8 +23,6 @@ import { hasFailed, pressReportButton, useReport } from './store';
 export const BUTTON_SIZE = size.target;
 /** Clear of a tab bar's height above the safe area. */
 const TAB_BAR_CLEARANCE = 76;
-/** The engine caps a recording at this many steps. */
-export const STEP_LIMIT = 30;
 const STOP = 14;
 /** The triangle's size, outlined or filled. */
 const GLYPH = 22;
@@ -61,9 +60,9 @@ export function ReportButton({ toPlace }: { toPlace: number }) {
               {`Recording · ${count} ${count === 1 ? 'step' : 'steps'}`}
             </Text>
           </View>
-          {count >= STEP_LIMIT ? (
+          {count >= MAX_STEPS ? (
             <Text style={[type.caption, { color: colors.textSecondary }]} maxFontSizeMultiplier={MAX_FONT_SCALE_DENSE}>
-              {`${STEP_LIMIT} steps is the limit`}
+              {`${MAX_STEPS} steps is the limit`}
             </Text>
           ) : null}
         </View>

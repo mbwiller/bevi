@@ -77,7 +77,7 @@ times you press it.
 
 There is no "How bad is it?" any more. Every report is filed at Medium, and
 **where you rank it** sets the priority: "Place it" on the filed message, or
-**Filed reports** (the list icon in the note, or Settings → Internal → My
+**Filed reports** (the list icon in the note, or Settings → Internal → Filed
 reports), asks "Which is worse?" against your other open reports, using the
 same placement the app uses to rank a Bev. The answer is written to Linear as
 the issue's manual order, and the priority follows from the position: the top
@@ -144,7 +144,7 @@ code, and re-run the original report on the device and environment it came
 from.
 
 Only then, **Done**. The reporter can do that from the phone: **Settings →
-Internal → My reports** lists your own tickets with their live Linear state,
+Internal → Filed reports** lists your own tickets with their live Linear state,
 and a ticket in review carries a **Verified on device** action that moves it
 to Done through the function (`bugs.markVerified`, one of the two writes the
 app ever makes to a ticket, and only to a ticket your own ledger holds; the
@@ -198,7 +198,7 @@ ticket landed:
 | Any position, ticket already Urgent | Urgent (1), unchanged |
 
 The position is measured at the middle of the ticket's slot, so a reporter
-with one open ticket gets Medium, and with two, High then Medium. My reports
+with one open ticket gets Medium, and with two, High then Medium. Filed reports
 reads the rank back from Linear's `sortOrder`, so dragging the issue in a
 manually ordered Linear view changes the rank the app shows. A ticket in
 review, done, canceled or of unknown state has no rank and cannot be placed.

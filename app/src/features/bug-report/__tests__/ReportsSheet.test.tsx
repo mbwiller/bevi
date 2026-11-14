@@ -11,7 +11,7 @@ import { ReportsSheet } from '../ReportsSheet';
 import { addUnplaced, openReports, resetReport, setReportStorage, useReport, type Sender } from '../store';
 
 jest.mock('../capture', () => ({ captureScreen: jest.fn(async () => null), releaseShot: jest.fn() }));
-jest.mock('../pick', () => ({ pickAt: jest.fn(() => []), pickScreen: jest.fn(() => null) }));
+jest.mock('../pick', () => ({ pickAt: jest.fn(() => []) }));
 jest.mock('../trail', () => ({
   startTrail: jest.fn(() => () => {}),
   recordNav: jest.fn(),

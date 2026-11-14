@@ -18,6 +18,7 @@ import { ReportsSheet } from './ReportsSheet';
 import { ReportToast } from './ReportToast';
 import { SelectBanner } from './SelectBanner';
 import {
+  abandonModes,
   hydrate,
   navigate,
   openBlankNote,
@@ -48,6 +49,9 @@ export default function ReportHost() {
 
   // Effects run in order: the trail first, so the first navigation is in it.
   useEffect(() => safeStartTrail(), []);
+
+  // Select mode and a recording never outlive the host (store.abandonModes).
+  useEffect(() => () => abandonModes(), []);
 
   useEffect(() => {
     setContextInput({ scheme, insets: { top: insets.top, right: insets.right, bottom: insets.bottom, left: insets.left } });

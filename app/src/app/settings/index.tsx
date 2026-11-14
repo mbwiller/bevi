@@ -10,7 +10,7 @@ import { useSession } from '@/state/session';
 import { spacing, type, useTheme } from '@/theme';
 
 /**
- * Settings (§6.18): Account, Privacy, Sign out, Delete account, plus Report a bug and My reports
+ * Settings (§6.18): Account, Privacy, Sign out, Delete account, plus Report a bug and Filed reports
  * for internal reporters (docs/bug-workflow.md). Signing out clears the session;
  * the root gate then lands on sign in.
  */
@@ -38,7 +38,7 @@ export default function SettingsIndexScreen() {
       {canReportBug ? (
         <SettingsSection title="Internal">
           <SettingsRow label="Report a bug" onPress={() => requestReport('note')} />
-          <SettingsRow label="My reports" onPress={() => requestReport('reports')} />
+          <SettingsRow label="Filed reports" onPress={() => requestReport('reports')} />
         </SettingsSection>
       ) : null}
       <SettingsSection>

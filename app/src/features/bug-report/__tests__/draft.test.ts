@@ -55,27 +55,11 @@ describe('the bug-report draft', () => {
     expect(Object.keys((stored.marks as object[])[0]!).sort()).toEqual(['n', 'route', 'target', 'title']);
   });
 
-  it('maps a draft the old form saved (title, description) into the note text', () => {
-    const old = {
-      kind: 'bug',
-      severity: 'bad',
-      title: 'Ratings vanish',
-      description: 'after a refresh',
-      steps: '',
-      idempotencyKey: KEY,
-      savedAt: NOW.toISOString(),
-    };
-    expect(loadDraft(memory({ [DRAFT_KEY]: JSON.stringify(old) }), NOW)).toEqual({
-      text: 'Ratings vanish\n\nafter a refresh',
-      marks: [],
-      idempotencyKey: KEY,
-      savedAt: NOW.toISOString(),
-    });
-  });
-
-  it('keeps typed steps from an old draft too, rather than dropping them', () => {
-    const old = { title: 'Crash', description: '', steps: '1. Open\n2. Tap', idempotencyKey: KEY, savedAt: NOW.toISOString() };
-    expect(loadDraft(memory({ [DRAFT_KEY]: JSON.stringify(old) }), NOW)?.text).toBe('Crash\n\n1. Open\n2. Tap');
+  it('reads a draft the old form saved as an empty note with no owner (the store then clears it)', () => {
+    const old = { kind: 'bug', severity: 'bad', title: 'Ratings vanish', description: 'after a refresh', steps: '', idempotencyKey: KEY, savedAt: NOW.toISOString() };
+    const loaded = loadDraft(memory({ [DRAFT_KEY]: JSON.stringify(old) }), NOW);
+    expect(loaded).toEqual({ text: '', marks: [], idempotencyKey: KEY, savedAt: NOW.toISOString() });
+    expect(loaded?.owner).toBeUndefined();
   });
 
   it('drops marks it cannot read and an unknown kind', () => {
@@ -156,8 +140,8 @@ describe('the tickets to place', () => {
     expect(store.map.has(UNPLACED_KEY)).toBe(false);
   });
 
-  it('reads the bare list saved before the owner was kept, as having no owner', () => {
-    expect(loadUnplaced(memory({ [UNPLACED_KEY]: JSON.stringify(['BEV-3']) }))).toEqual({ ids: ['BEV-3'] });
+  it('reads an older bare list as ownerless and empty, and clears it', () => {
+    expect(loadUnplaced(memory({ [UNPLACED_KEY]: JSON.stringify(['BEV-3']) }))).toEqual({ ids: [] });
     const store = memory({ [UNPLACED_KEY]: JSON.stringify(['BEV-3']) });
     clearUnplaced(store);
     expect(store.map.has(UNPLACED_KEY)).toBe(false);

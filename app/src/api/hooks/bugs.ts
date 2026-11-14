@@ -26,7 +26,7 @@ export function useCanReportBug({ enabled = true }: { enabled?: boolean } = {}) 
 }
 
 /**
- * Files one report. My reports is refetched so the new ticket shows up there;
+ * Files one report. Filed reports is refetched so the new ticket shows up there;
  * nothing else in the app reads Linear.
  */
 export function useReportBug() {
@@ -38,7 +38,7 @@ export function useReportBug() {
 }
 
 /**
- * The caller's own tickets with their live tracker state (My reports). Fresh
+ * The caller's own tickets with their live tracker state (Filed reports). Fresh
  * for 30 seconds, so flipping between screens does not hit Linear each time;
  * the function caches its answer for a minute behind this anyway.
  */
@@ -71,7 +71,7 @@ export function useMarkBugVerified() {
 
 /**
  * Places one of the caller's open tickets directly below `afterTicketId` in their ranked list (at
- * the top when null). The server answers with the whole list re-ranked, which replaces My reports'
+ * the top when null). The server answers with the whole list re-ranked, which replaces Filed reports'
  * cached rows as it is.
  */
 export function usePlaceBug() {

@@ -77,7 +77,7 @@ The database half is one migration,
   verify and place routes call `can_report_bugs()` the same way, and read the
   ledger **as the caller** with an explicit `reporter_id` filter as well: the
   select policy also admits an admin, and an admin's own tickets are still the
-  only ones My reports lists, `verify` moves or `place` ranks.
+  only ones Filed reports lists, `verify` moves or `place` ranks.
   `verify_jwt = true` on the function is only an outer gate — the publishable
   key ships in every copy of the app, so it proves nothing about *who* is
   calling.
@@ -142,7 +142,7 @@ The database half is one migration,
   the one way a later retry could file a duplicate, so that log line is loud.
 - **No phantom tickets.** The identifier and URL come from Linear's response.
   If the provider does not confirm the issue, the client raises instead of
-  showing an ID. The same for My reports: a row the ledger does not hold is
+  showing an ID. The same for Filed reports: a row the ledger does not hold is
   never shown, and a row Linear cannot describe is shown as "unknown".
 - **The place route's not-found says which kind it is, to the owner only.**
   A ticket that is not in the caller's ledger answers
@@ -309,10 +309,10 @@ there is enough history for one to mean anything.
 | Steps from a recording (**Record steps** … stop; `stepsSource: 'recorded'`, up to 30) | The same numbered list, under the line `_Recorded by the app while the reporter reproduced it, not typed by them._` |
 | The app's recent activity trail | The Recent activity section, a fenced block of one line per entry: `nav`, `api`, `error` (the message), and `tap` (what was tapped, only during a recording) |
 | Screenshots (up to 3), each with an optional caption | Images in the Evidence section, each uploaded to Linear's own storage and numbered by its place in the list (the number a pointed-at component's "Screenshot N" refers to). A caption becomes the image's alt text and an italic line under it. |
-| The "which is worse?" placement after filing | The issue's `sortOrder` (Linear's manual order) and its priority, by the bands above; My reports reads the rank back from `sortOrder`, so a drag in Linear moves it there too |
+| The "which is worse?" placement after filing | The issue's `sortOrder` (Linear's manual order) and its priority, by the bands above; Filed reports reads the rank back from `sortOrder`, so a drag in Linear moves it there too |
 
 Triage may change the priority or the label with the board in view; Linear's
-values are the truth from then on, and My reports shows Linear's state. A
+values are the truth from then on, and Filed reports shows Linear's state. A
 later placement from the app does set the priority again from the new
 position, except on an Urgent ticket.
 
