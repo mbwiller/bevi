@@ -349,7 +349,7 @@ P.BucketButton = [{ group: 'Ranking', height: 360, width: 393, subtitle: 'Tap on
 h(function Demo() {
   function Set(props) {
     var st = React.useState(props.start), v = st[0], set = st[1];
-    return h('div', { className: 'gc' }, ['loved', 'fine', 'disliked'].map(function (k) {
+    return h('div', { className: 'gc' }, ['disliked', 'fine', 'loved'].map(function (k) {
       return h(B.BucketButton, { key: k, bucket: k, selected: v === k, dimmed: v != null && v !== k, onClick: function () { set(v === k ? null : k); } });
     }));
   }
@@ -603,7 +603,7 @@ h('div', { className: 'phone' },
       h('p', { className: 'body bv-meta' }, 'LaCroix'),
       h('p', { className: 'body gc-cat' }, h(B.Icon, { name: 'droplets', size: 16, strokeWidth: 2 }), ' Sparkling water • ', h(B.PriceTier, { tier: 1 }))),
     h('p', { className: 'displayDrop gc-q' }, 'How was it?'),
-    h('div', { className: 'gc-btns' }, h(B.BucketButton, { bucket: 'loved', selected: true }), h(B.BucketButton, { bucket: 'fine', dimmed: true }), h(B.BucketButton, { bucket: 'disliked', dimmed: true })),
+    h('div', { className: 'gc-btns' }, h(B.BucketButton, { bucket: 'disliked', dimmed: true }), h(B.BucketButton, { bucket: 'fine', dimmed: true }), h(B.BucketButton, { bucket: 'loved', selected: true })),
     h('p', { className: 'caption bv-meta gc-hint' }, "Next, you'll compare it with Bevs you've already ranked.")))`];
 
 // Bev detail scrolls: the first phone is the top of the screen, the second is the same screen

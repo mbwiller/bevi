@@ -22,10 +22,13 @@ export interface GutCheckProps {
 // ScreenGutCheck geometry: the cutout floats at 200pt; 36pt above the question.
 const ART = 200;
 const QUESTION_TOP = 36;
+// The row reads worst to best, so the rings fill up from the left and "Loved it" is on the right (BEV-9).
+// Lists and filters keep `BUCKET_ORDER` (best first).
+const GUT_CHECK_ORDER: readonly Bucket[] = [...BUCKET_ORDER].reverse();
 
 /**
  * Ranking flow step 1 (design system ScreenGutCheck): the Bev floating on plain `surface`, a centred
- * "How was it?" and the three BucketButtons in a row.
+ * "How was it?" and the three BucketButtons in a row, worst to best.
  */
 export function GutCheck({ bev, chosen, onChoose, onClose }: GutCheckProps) {
   const { colors } = useTheme();
@@ -67,7 +70,7 @@ export function GutCheck({ bev, chosen, onChoose, onClose }: GutCheckProps) {
       </View>
       <Text style={[type.displayDrop, styles.question, { color: colors.text }]}>How was it?</Text>
       <View style={styles.buckets}>
-        {BUCKET_ORDER.map((b) => (
+        {GUT_CHECK_ORDER.map((b) => (
           <BucketButton
             key={b}
             bucket={b}

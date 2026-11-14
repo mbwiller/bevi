@@ -33,8 +33,8 @@ const LEVEL: Record<Bucket, DimensionValue> = { LOVED: '100%', FINE: '50%', DISL
 
 /**
  * Gut-check choice: a `primary` ring filled to a level (loved full, fine half, disliked empty) over its
- * label. Always show all three, in `BUCKET_ORDER`, in one row on plain `surface`. The chosen one gets a
- * check badge; pass `dimmed` to the other two once one is chosen.
+ * label. Always show all three in one row on plain `surface`, worst to best from the left (disliked, fine,
+ * loved). The chosen one gets a check badge; pass `dimmed` to the other two once one is chosen.
  */
 export function BucketButton({ bucket, selected = false, dimmed = false, onPress, style }: BucketButtonProps) {
   const { colors } = useTheme();
