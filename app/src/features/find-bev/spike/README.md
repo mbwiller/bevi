@@ -22,6 +22,9 @@ camera (hashed classes, `composes`, backdrop-filter, the Modal portal outside `#
   `expo-env.d.ts`). Commit `/// <reference types="expo/types" />`, not a hand-written declaration.
 - `@types/react-dom` is not installed; the island's tests need it (or a shim) for `react-dom/client`.
 - jest needs a `moduleNameMapper` for `\.module\.css$` (`jest.cssModule.js`).
+- The camera view's own jsdom suite (react-dom `createRoot` + `act`, 6 tests) passed locally but was
+  dropped from #204: the app CI job's jest workers ran out of heap with it in (the Feed route suites
+  already peak at about 3.3 GB). The real port's layer 5b needs that memory problem solved first.
 
 ## S2, on an iPhone: the checklist
 
