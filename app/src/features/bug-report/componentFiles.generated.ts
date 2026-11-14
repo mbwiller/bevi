@@ -68,6 +68,7 @@ export const COMPONENT_FILES: Readonly<Record<string, string>> = {
   FeedPostItem: 'app/src/features/feed/FeedPostItem.tsx',
   FeedScreen: 'app/src/features/feed/FeedScreen.tsx',
   FeedbackPressable: 'app/src/components/PressFeedback.tsx',
+  FilledAlert: 'app/src/features/bug-report/ReportButton.tsx',
   FilterPill: 'app/src/components/FilterPill.tsx',
   FilterSheet: 'app/src/features/lists/ListSheets.tsx',
   FindArt: 'app/src/features/find-bev/FindArt.tsx',

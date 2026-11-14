@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path } from 'react-native-svg';
 
 import { PRESSED } from '@/components/HitTarget';
 import { Icon } from '@/components/Icon';
@@ -12,8 +13,9 @@ import { hasFailed, pressReportButton, useReport } from './store';
  * The reporter's one entry: a plain round button floating at the bottom-right of the column, above
  * the tab bar, on every signed-in screen. Press it to open the note (a new empty one when there is
  * none); press it again to set the note aside. While steps are being recorded it is the Stop
- * control, with a count of the steps beside it. It never moves and never animates: its pressed
- * state is the app's ordinary instant dim, and its badges are static.
+ * control, with a count of the steps beside it. Its triangle is an outline until a note exists
+ * and filled for as long as one does, open or set aside. It never moves and never animates: its
+ * pressed state is the app's ordinary instant dim, and its badges are static.
  */
 
 /** The round button's size: the 44pt target itself. */
@@ -23,6 +25,8 @@ const TAB_BAR_CLEARANCE = 76;
 /** The engine caps a recording at this many steps. */
 export const STEP_LIMIT = 30;
 const STOP = 14;
+/** The triangle's size, outlined or filled. */
+const GLYPH = 22;
 
 /** How far the button's bottom sits above the column's: above the tab bar, and above the note when it is open. */
 export function buttonBottom(insetBottom: number, panelHeight: number): number {
@@ -35,6 +39,8 @@ export function ReportButton({ toPlace }: { toPlace: number }) {
   const layer = useLayer();
   const panelHeight = useReport((s) => (s.panel === 'open' && s.draft && s.sheet === null && !s.recording ? s.panelHeight : 0));
   const aside = useReport((s) => s.draft !== null && s.panel === 'closed' && !s.recording);
+  // A note exists, open or set aside: the triangle is filled for as long as it does.
+  const inProgress = useReport((s) => s.draft !== null);
   const failed = useReport(hasFailed);
   const selecting = useReport((s) => s.selecting);
   const recording = useReport((s) => s.recording);
@@ -74,7 +80,7 @@ export function ReportButton({ toPlace }: { toPlace: number }) {
     );
   }
 
-  const states = [aside ? 'Note set aside' : null, toPlace > 0 ? `${toPlace} to place` : null, failed ? "A report didn't send" : null].filter(
+  const states = [inProgress && !aside ? 'Note in progress' : null, aside ? 'Note set aside' : null, toPlace > 0 ? `${toPlace} to place` : null, failed ? "A report didn't send" : null].filter(
     Boolean,
   );
 
@@ -89,7 +95,11 @@ export function ReportButton({ toPlace }: { toPlace: number }) {
         testID="report-button"
         style={({ pressed }) => [styles.button, { backgroundColor: colors.surface, borderColor: colors.borderStrong, boxShadow: elevation.floating }, pressed && PRESSED]}
       >
-        <Icon name="triangle-alert" size={22} strokeWidth={2} color={colors.primary} />
+        {inProgress ? (
+          <FilledAlert size={GLYPH} fill={colors.primary} mark={colors.onPrimary} />
+        ) : (
+          <Icon name="triangle-alert" size={GLYPH} strokeWidth={2} color={colors.primary} />
+        )}
         {toPlace > 0 ? (
           <View style={[styles.count, { backgroundColor: colors.primary, borderColor: colors.surface }]} pointerEvents="none">
             <Text style={[styles.countText, { color: colors.onPrimary }]} maxFontSizeMultiplier={MAX_FONT_SCALE_DENSE} numberOfLines={1}>
@@ -104,6 +114,21 @@ export function ReportButton({ toPlace }: { toPlace: number }) {
         ) : null}
       </Pressable>
     </View>
+  );
+}
+
+/**
+ * The `triangle-alert` glyph with its triangle filled, for a note in progress. `Icon`'s own fill
+ * paints every path one colour, which would bury the exclamation mark, so the same three Lucide
+ * paths are drawn here with the mark in a second colour.
+ */
+function FilledAlert({ size: side, fill, mark }: { size: number; fill: string; mark: string }) {
+  return (
+    <Svg width={side} height={side} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" testID="report-button-filled">
+      <Path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" fill={fill} stroke={fill} />
+      <Path d="M12 9v4" stroke={mark} />
+      <Path d="M12 17h.01" stroke={mark} />
+    </Svg>
   );
 }
 

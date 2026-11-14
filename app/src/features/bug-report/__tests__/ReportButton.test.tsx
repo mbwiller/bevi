@@ -131,6 +131,27 @@ describe('pressing the button', () => {
     await settled();
     expect(mockCapture).not.toHaveBeenCalled();
   });
+
+  it('the triangle is an outline with no note and filled while one is in progress, open or set aside', async () => {
+    await start('ready', '/feed');
+    await screen.findByRole('button', { name: 'Report' });
+    expect(screen.queryByTestId('report-button-filled')).toBeNull();
+
+    // Open.
+    await fireEvent.press(screen.getByRole('button', { name: 'Report' }));
+    expect(await screen.findByTestId('report-button-filled')).toBeTruthy();
+
+    // Set aside: still filled, and the dot is there too.
+    await fireEvent.press(screen.getByRole('button', { name: 'Report' }));
+    expect(screen.getByTestId('report-button-filled')).toBeTruthy();
+    expect(screen.getByTestId('report-button-aside')).toBeTruthy();
+
+    // Discarded: back to the outline.
+    await fireEvent.press(screen.getByRole('button', { name: 'Report' }));
+    await fireEvent.press(await screen.findByLabelText('Discard'));
+    await fireEvent.press(await screen.findByText('Discard'));
+    expect(screen.queryByTestId('report-button-filled')).toBeNull();
+  });
 });
 
 describe('Settings, Internal, and the old link', () => {
