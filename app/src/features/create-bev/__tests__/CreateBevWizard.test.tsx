@@ -1,10 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { configure, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import type { BevSummary } from '@bevi/shared';
 
 import { api } from '@/api/client';
 import { controls } from '@/testing/fakeApi';
 import { categoryById } from '@/lib/categories';
+import { type } from '@/theme';
 
 import { CreateBevWizard, DUPLICATES_DEBOUNCE_MS } from '../CreateBevWizard';
 import { pickImage, preparePhoto, UnsupportedImageError } from '../photo';
@@ -296,6 +298,30 @@ it('hints at the category the likely matches share, and "Use Energy" sets it wit
   // Stays gone once the matches are re-fetched with the new category.
   await new Promise((r) => setTimeout(r, DUPLICATES_DEBOUNCE_MS + 200));
   expect(screen.queryByText(/Most Bevs like this are/)).toBeNull();
+});
+
+// BEV-7: "1 Bev like this is already on Bevi." appeared and disappeared under Name with every lookup, so Brand
+// and the fields below jumped while they were being typed in. jest has no layout engine, so this checks what
+// keeps them still: the hint's line is there, one caption line tall, before, during and after the hint.
+it('keeps the line under Name open whether or not the "already on Bevi" hint is showing', async () => {
+  await renderWizard();
+  await addPhoto();
+  await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+  const line = () => screen.getByTestId(`${screen.getByLabelText('Name').props.id}-msg`, { includeHiddenElements: true });
+  const held = () => expect(StyleSheet.flatten(line().props.style)).toMatchObject({ minHeight: type.caption.lineHeight });
+
+  // Nothing typed: no hint, the line already holds its place.
+  expect(screen.queryByText(/already on Bevi/)).toBeNull();
+  held();
+
+  await fireEvent.changeText(screen.getByLabelText('Name'), 'Red Bull');
+  expect(await screen.findByText(/already on Bevi/)).toBe(line());
+  held();
+
+  // A name nothing matches: the hint goes, the line stays.
+  await fireEvent.changeText(screen.getByLabelText('Name'), 'Zzyzx Qwv');
+  await waitFor(() => expect(screen.queryByText(/already on Bevi/)).toBeNull());
+  held();
 });
 
 it('shows no category hint when the chosen category already matches the likely matches', async () => {
