@@ -8,7 +8,7 @@ Added 7 beer bottles, 3 beer cans, 8 refreshment products and both Hata Kosen Ra
 
 Inspected all21 package references and reviewed large artwork plus40/56/96/155px light/dark tiles with8%padding. Corrected the Ramune glass fill/pattern rendering before final review. `review/batch-11-2026-11-12-01.png` through `-05.png` and three `batch-11-large-2026-11-12` sheets show the batch; `review/review.json` records per-asset hashes. All254 prior asset hashes are unchanged. Final aesthetic approval and interactive device review remain pending; new records stay needs-review.
 
-Build, validation, typecheck, full tests, Expo export, app export freshness and the backend publisher dry run passed locally. GitHub CI, merge to main, production deployment, backend icon sync and live hash verification are pending. No catalog contract or backend changes in this batch; live Postgres reconciliation awaits the publisher report.
+All eight Jarritos catalog drinks—Mandarin, Lime, Fruit Punch, Pineapple, Grapefruit, Guava, Tamarind and Watermelon—already have manifest icons. The automatic icons-sync job publishes the complete manifest on merge, so all eight ship with this batch. Icon build/validation, publisher dry run, typecheck and Expo web export pass locally. On the updated main base, a full local suite run had three 30-second timeouts in existing feed/comment tests; 1,119 app tests passed. Main CI is green; this rebased PR must pass its own CI before merge. No catalog contract or backend code changes in this batch; production reconciliation comes from the publish report.
 
 ## Latest batch: 20 Fresca, soda and juice icons, 2026-11-12
 
