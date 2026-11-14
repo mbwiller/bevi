@@ -79,7 +79,7 @@ const R = {
 - No likes on comments.`,
   FilterPill: `Outlined pill that opens the filter sheet; it shows a \`primary\` count badge and turns \`primaryTint\` while filters are on.
 
-- Provide: \`count\` (active filters), optional \`label\` with \`chevron\` for single-facet pills (Bucket, Price, Category), \`icon={null}\` to drop the filter glyph.
+- Provide: \`count\` (active filters), optional \`label\` with \`chevron\` for single-facet pills (Reaction, Price, Category; "Reaction" is the gut-check answer, never called a bucket in the UI), \`icon={null}\` to drop the filter glyph.
 - Sits first in the list filter row, followed by the SortToggle line.`,
   SortToggle: `"↓↑ Score" in \`primary\` with a search icon at the right edge: the sort line above every list.
 

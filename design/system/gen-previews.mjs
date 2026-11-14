@@ -263,7 +263,7 @@ h('div', { className: 'pv', style: { gap: 16 } },
 P.FilterPill = [{ group: 'Actions', height: 96, width: 393 }, '', `
 h('div', { className: 'pv', style: { gap: 10, flexWrap: 'nowrap', overflow: 'hidden' } },
   h(B.FilterPill, { count: 3 }),
-  h(B.FilterPill, { label: 'Bucket', chevron: true, icon: null }),
+  h(B.FilterPill, { label: 'Reaction', chevron: true, icon: null }),
   h(B.FilterPill, { label: 'Price', chevron: true, icon: null }),
   h(B.FilterPill, { count: 0 }))`];
 
@@ -534,7 +534,7 @@ P.ScreenYourLists = [{ group: 'Screens', height: 852, width: 802, isPage: true }
   return h('div', { className: 'yl-pair' },
     ${phone('lists', `
   h(F, null,${LISTS_TOP('bevd')}
-    h('div', { className: 'filters' }, h(B.FilterPill, { count: 0 }), h(B.FilterPill, { label: 'Bucket', icon: null, chevron: true }), h(B.FilterPill, { label: 'Category', icon: null, chevron: true })),
+    h('div', { className: 'filters' }, h(B.FilterPill, { count: 0 }), h(B.FilterPill, { label: 'Reaction', icon: null, chevron: true }), h(B.FilterPill, { label: 'Category', icon: null, chevron: true })),
     h(B.ProgressStrip, { label: 'All Bevs', ranked: 37, total: 378, onClick: function () {} }),
     h(B.SortToggle, { label: 'Score', onClick: function () {}, onSearch: function () {} }),
     bevd(BEVS.horchata, 1, 9.5, 'Ranked Oct 8'),
