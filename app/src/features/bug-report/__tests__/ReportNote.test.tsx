@@ -87,6 +87,12 @@ const bevd: PickLevel = {
 const tabs: PickLevel = { target: { component: 'ListsScreen' }, box: { x: 0, y: 0, width: 390, height: 844 }, title: 'ListsScreen' };
 const button = () => screen.getByTestId('report-button');
 
+/** Add photos opens its menu; the library row leads to the picker (iOS's own sheet). */
+async function fromLibrary(tile: string) {
+  await fireEvent.press(screen.getByLabelText(tile));
+  await fireEvent.press(screen.getByLabelText('Photo library or camera'));
+}
+
 beforeEach(() => {
   controls.setLatency(0);
   controls.resetToFixtures();
@@ -120,27 +126,31 @@ describe('the note: several photos (BEV-8)', () => {
     await openNote();
 
     libraryPicks(1);
-    await fireEvent.press(screen.getByLabelText('Add photos, 3 left'));
+    await fromLibrary('Add photos, 3 left');
     await screen.findByLabelText('Photo 1');
     expect(mockLibrary).toHaveBeenLastCalledWith(expect.objectContaining({ allowsMultipleSelection: true, selectionLimit: 3 }));
 
     libraryPicks(2);
-    await fireEvent.press(screen.getByLabelText('Add photos, 2 left'));
+    await fromLibrary('Add photos, 2 left');
     await screen.findByLabelText('Photo 3');
     expect(mockLibrary).toHaveBeenLastCalledWith(expect.objectContaining({ allowsMultipleSelection: true, selectionLimit: 2 }));
     expect(screen.getAllByLabelText(/^Photo \d$/)).toHaveLength(3);
 
-    const full = screen.getByLabelText('Add photos, 3 pictures is the limit');
-    expect(full.props.accessibilityState).toMatchObject({ disabled: true });
-    await fireEvent.press(full);
+    // At three the menu still opens, and both of its rows say why they are off.
+    await fireEvent.press(screen.getByLabelText('Add photos, 3 pictures is the limit'));
+    expect(screen.getByLabelText('Screenshot of this screen, 3 pictures is the limit').props.accessibilityState).toMatchObject({ disabled: true });
+    const library = screen.getByLabelText('Photo library or camera, 3 pictures is the limit');
+    expect(library.props.accessibilityState).toMatchObject({ disabled: true });
+    await fireEvent.press(library);
     expect(mockLibrary).toHaveBeenCalledTimes(2);
+    await fireEvent.press(screen.getByTestId('note-menu-outside'));
     // Capture screen is out of pictures too.
     expect(screen.getByLabelText('Capture screen, 3 pictures is the limit').props.accessibilityState).toMatchObject({ disabled: true });
 
     await fireEvent.press(screen.getByLabelText('Remove photo 2'));
     expect(screen.getAllByLabelText(/^Photo \d$/)).toHaveLength(2);
     libraryPicks(1);
-    await fireEvent.press(screen.getByLabelText('Add photos, 1 left'));
+    await fromLibrary('Add photos, 1 left');
     await waitFor(() => expect(screen.getAllByLabelText(/^Photo \d$/)).toHaveLength(3));
 
     await fireEvent.changeText(screen.getByLabelText("What's going on?"), 'The list jumps when I scroll');
@@ -255,7 +265,7 @@ describe('the type dropdown', () => {
     await openNote();
     await fireEvent.press(screen.getByLabelText('Type: Bug'));
     expect(screen.getByLabelText('Type', { exact: true })).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('type-menu-outside'));
+    await fireEvent.press(screen.getByTestId('note-menu-outside'));
     expect(screen.queryByLabelText('Type', { exact: true })).toBeNull();
     expect(useReport.getState().draft?.kindOverride).toBeUndefined();
   });
@@ -327,8 +337,86 @@ describe('Capture screen', () => {
     expect(mockCapture).toHaveBeenCalledWith([]);
     expect(await screen.findByLabelText('Picture of /feed, whole screen. Press to open.')).toBeTruthy();
     expect(useReport.getState().draft?.shots).toHaveLength(1);
-    await fireEvent.press(screen.getByLabelText('Remove the picture'));
+    await fireEvent.press(screen.getByLabelText('Remove the picture of /feed, whole screen'));
     expect(useReport.getState().draft?.shots).toHaveLength(0);
+  });
+
+  it('every press adds a new picture: two of one screen are both kept and both sent, numbered', async () => {
+    const report = jest.spyOn(api.bugs, 'report');
+    await openNote();
+    await fireEvent.press(screen.getByLabelText('Capture screen'));
+    await screen.findByLabelText('Picture of /feed, whole screen. Press to open.');
+    await fireEvent.press(screen.getByLabelText('Capture screen'));
+    expect(await screen.findByLabelText('Picture of /feed, whole screen (2). Press to open.')).toBeTruthy();
+    expect(mockCapture).toHaveBeenCalledTimes(2);
+    await fireEvent.changeText(screen.getByLabelText("What's going on?"), 'The sheet covers the button');
+    await fireEvent.press(screen.getByRole('button', { name: 'Send' }));
+    await waitFor(() => expect(report).toHaveBeenCalled());
+    expect(report.mock.calls[0]![0].evidence?.map((e) => e.caption)).toEqual(['/feed, whole screen', '/feed, whole screen (2)']);
+  });
+
+  it('stays available after Select element and adds a second picture beside the marked one', async () => {
+    const stop = jest.fn();
+    let handlers: PickModeHandlers | undefined;
+    mockPickMode.mockImplementation((h) => {
+      handlers = h;
+      return stop;
+    });
+    await openNote();
+    await fireEvent.press(screen.getByLabelText('Select element'));
+    await act(async () => handlers!.onPick([bevd]));
+    await screen.findByLabelText('Picture of /feed. Press to open.');
+    const capture = screen.getByLabelText('Capture screen');
+    expect(capture.props.accessibilityState).toMatchObject({ disabled: false });
+    await fireEvent.press(capture);
+    expect(await screen.findByLabelText('Picture of /feed, whole screen. Press to open.')).toBeTruthy();
+    expect(useReport.getState().draft?.shots.map((x) => x.kind)).toEqual(['marked', 'screen']);
+    // The marked picture is still the one with the mark.
+    expect(screen.getByLabelText("Mark 1, SegmentedTabs › Bev'd")).toBeTruthy();
+  });
+
+  it('shows the shimmer while it runs, and a failed one leaves no placeholder and says so', async () => {
+    let land: (shot: null) => void = () => {};
+    mockCapture.mockImplementationOnce(() => new Promise((resolve) => (land = resolve)));
+    await openNote();
+    await fireEvent.press(screen.getByLabelText('Capture screen'));
+    expect(screen.getByLabelText('Taking the picture')).toBeTruthy();
+    await act(async () => land(null));
+    expect(screen.queryByLabelText('Taking the picture')).toBeNull();
+    expect(useReport.getState().draft?.shots).toEqual([]);
+    expect(screen.getByText("Couldn't take a picture of this screen.")).toBeTruthy();
+  });
+});
+
+describe('the Add photos menu', () => {
+  it('opens under the tile with two rows; the screenshot row adds a picture without the picker', async () => {
+    await openNote();
+    const tile = screen.getByLabelText('Add photos, 3 left');
+    expect(tile.props['aria-haspopup']).toBe('menu');
+    expect(tile.props.accessibilityState).toMatchObject({ expanded: false });
+    await fireEvent.press(tile);
+    expect(screen.getByLabelText('Add photos, 3 left').props.accessibilityState).toMatchObject({ expanded: true });
+    const menu = screen.getByLabelText('Add photos', { exact: true });
+    const rows = within(menu).getAllByLabelText(/^(Screenshot of this screen|Photo library or camera)$/);
+    expect(rows.map((r) => r.props.role)).toEqual(['menuitem', 'menuitem']);
+    await fireEvent.press(within(menu).getByLabelText('Screenshot of this screen'));
+    expect(screen.queryByLabelText('Add photos', { exact: true })).toBeNull();
+    expect(mockCapture).toHaveBeenCalledWith([]);
+    expect(mockLibrary).not.toHaveBeenCalled();
+    expect(await screen.findByLabelText('Picture of /feed, whole screen. Press to open.')).toBeTruthy();
+    expect(screen.getByLabelText('Add photos, 2 left')).toBeTruthy();
+  });
+
+  it('the library row opens the picker; a press outside closes the menu', async () => {
+    await openNote();
+    await fireEvent.press(screen.getByLabelText('Add photos, 3 left'));
+    await fireEvent.press(screen.getByTestId('note-menu-outside'));
+    expect(screen.queryByLabelText('Add photos', { exact: true })).toBeNull();
+    libraryPicks(1);
+    await fromLibrary('Add photos, 3 left');
+    expect(await screen.findByLabelText('Photo 1')).toBeTruthy();
+    expect(mockLibrary).toHaveBeenCalledTimes(1);
+    expect(mockCapture).not.toHaveBeenCalled();
   });
 });
 

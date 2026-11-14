@@ -48,8 +48,8 @@ function twoScreens(): Draft {
     { id: 'm3', n: 1, levels: [level('Header', 'Header'), level('ListsScreen', 'ListsScreen')], levelIndex: 1, route: '/lists', visit: 2, shotId: 's2' },
   ];
   d.shots = [
-    { id: 's1', shot: shot('blob:feed'), route: '/feed', visit: 1, seq: 1, pending: false },
-    { id: 's2', shot: shot('blob:lists'), route: '/lists', visit: 2, seq: 2, pending: false },
+    { id: 's1', kind: 'marked', shot: shot('blob:feed'), route: '/feed', visit: 1, seq: 1, pending: false },
+    { id: 's2', kind: 'marked', shot: shot('blob:lists'), route: '/lists', visit: 2, seq: 2, pending: false },
   ];
   d.photos = [{ uri: 'blob:photo', blob: new Blob(['p']), mimeType: 'image/jpeg', width: 1, height: 1 }];
   d.steps = ['Start on /feed', 'Tap TabBar › Add Bev', 'Open /lists'];
@@ -112,7 +112,7 @@ describe('buildInput', () => {
   it('a whole-screen note has no targets, a "whole screen" caption and an unprefixed title', () => {
     const d = emptyDraft(KEY, ENV);
     d.text = 'The feed is blank';
-    d.shots = [{ id: 's1', shot: shot('blob:feed'), route: '/feed', visit: 1, seq: 1, pending: false }];
+    d.shots = [{ id: 's1', kind: 'screen', shot: shot('blob:feed'), route: '/feed', visit: 1, seq: 0, pending: false }];
     const input = buildInput(d, TRAIL);
     expect(input.targets).toBeUndefined();
     expect(input.title).toBe('The feed is blank');
@@ -139,5 +139,19 @@ describe('buildInput', () => {
     const input = buildInput(twoScreens(), TRAIL);
     expect(input.title).toBe('TabBar › Add Bev: too heavy, make it flat');
     expect(input.kind).toBe('design');
+  });
+
+  it('keeps two whole-screen pictures of one screen, numbered, and points a mark at its marked picture wherever it sits', () => {
+    const d = emptyDraft(KEY, ENV);
+    d.text = 'The list jumps';
+    d.marks = [{ id: 'm1', n: 1, levels: [level('BevRow', 'BevRow · Coca-Cola')], levelIndex: 0, route: '/lists', visit: 3, shotId: 'm' }];
+    d.shots = [
+      { id: 'a', kind: 'screen', shot: shot('blob:a'), route: '/lists', visit: 3, seq: 0, pending: false },
+      { id: 'b', kind: 'screen', shot: shot('blob:b'), route: '/lists', visit: 3, seq: 0, pending: false },
+      { id: 'm', kind: 'marked', shot: shot('blob:m'), route: '/lists', visit: 3, seq: 1, pending: false },
+    ];
+    const input = buildInput(d, TRAIL);
+    expect(input.evidence?.map((e) => e.caption)).toEqual(['/lists, whole screen', '/lists, whole screen (2)', '/lists, with 1 marked']);
+    expect(input.targets?.[0]).toMatchObject({ component: 'BevRow', mark: 1, evidenceIndex: 2 });
   });
 });

@@ -142,7 +142,7 @@ describe('Settings, Internal, and the old link', () => {
     expect(mockCapture).not.toHaveBeenCalled();
     await fireEvent.press(screen.getByLabelText('Set aside'));
     await fireEvent.press(screen.getByLabelText('My reports'));
-    expect(await screen.findByText('Your reports')).toBeTruthy();
+    expect(await screen.findByText('Filed reports')).toBeTruthy();
   });
 
   it('the old /report-bug link opens a note and goes back', async () => {

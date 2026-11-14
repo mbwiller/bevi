@@ -59,7 +59,7 @@ beforeEach(() => {
 
 afterEach(() => client.clear());
 
-describe('Your reports', () => {
+describe('Filed reports', () => {
   it('sorts tickets into Open (in rank order), In review and a folded Closed', async () => {
     const a = await file('Ticket A');
     await file('Ticket B');
@@ -152,12 +152,32 @@ describe('Your reports', () => {
     await renderSheet();
     expect(await screen.findByText("You're offline")).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
-    expect(await screen.findByText('No reports yet')).toBeTruthy();
+    expect(await screen.findByText('Nothing filed yet')).toBeTruthy();
   });
 
-  it('is empty before anything is filed', async () => {
+  it('is empty before anything is filed, and says what it will hold', async () => {
     await renderSheet();
-    const empty = await screen.findByText('No reports yet');
-    expect(within(empty.parent!.parent!).queryByText(/Press the report button/)).toBeTruthy();
+    expect(await screen.findByText('Filed reports')).toBeTruthy();
+    const empty = await screen.findByText('Nothing filed yet');
+    expect(within(empty.parent!.parent!).getByText('Reports you send show up here with their status and where you ranked them.')).toBeTruthy();
+  });
+
+  it('lists every ticket from a server that predates ranking (all ranks null, some state unknown) under Open, newest first', async () => {
+    const a = await file('First filed');
+    const b = await file('Second filed');
+    const c = await file('Third filed');
+    controls.setBugTicketState(b, 'unknown');
+    const real = api.bugs.listMine.bind(api.bugs);
+    const list = jest.spyOn(api.bugs, 'listMine').mockImplementation(async () => (await real()).map((r) => ({ ...r, rank: null })));
+    await renderSheet();
+    expect(await screen.findByText('Open')).toBeTruthy();
+    const links = screen.getAllByRole('link').map((l) => l.props.accessibilityLabel as string);
+    expect(links).toEqual([
+      expect.stringMatching(new RegExp(`^Third filed, ${c} · `)),
+      expect.stringMatching(new RegExp(`^Second filed, ${b} · Status unavailable · `)),
+      expect.stringMatching(new RegExp(`^First filed, ${a} · `)),
+    ]);
+    expect(screen.queryByText('Nothing filed yet')).toBeNull();
+    list.mockRestore();
   });
 });

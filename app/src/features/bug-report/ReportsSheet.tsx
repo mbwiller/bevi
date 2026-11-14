@@ -19,7 +19,7 @@ import { REPORT_UI } from './ReportLayer';
 import { closeSheet, openRank, retrySend, useReport, type OutboxItem, type Sender } from './store';
 
 /**
- * Your reports: what is still sending, what is waiting to be placed, and every ticket filed from
+ * Filed reports: the tickets already filed from this account (not drafts in progress): what is still sending, what is waiting to be placed, and every ticket filed from
  * this account by where it is in the workflow (docs/bug-workflow.md). Open tickets are in the
  * tester's own rank order, each with Place to move it; In review ones are where the tester checks
  * the fix on the device and says so; closed ones are folded away.
@@ -27,7 +27,7 @@ import { closeSheet, openRank, retrySend, useReport, type OutboxItem, type Sende
 export function ReportsSheet({ sender }: { sender: Sender }) {
   const open = useReport((s) => s.sheet === 'reports');
   return (
-    <Sheet open={open} title="Your reports" snap={90} onClose={closeSheet}>
+    <Sheet open={open} title="Filed reports" snap={90} onClose={closeSheet}>
       {open ? <ReportsBody sender={sender} /> : null}
     </Sheet>
   );
@@ -42,9 +42,11 @@ function ReportsBody({ sender }: { sender: Sender }) {
   const pending = outbox.filter((o) => o.status !== 'sent');
 
   const rows = query.data ?? [];
-  const openRows = rows.filter((r) => isOpen(r) || r.state === 'unknown').sort(byRank);
   const review = rows.filter((r) => r.state === 'in_review');
   const closed = rows.filter((r) => r.state === 'done' || r.state === 'canceled');
+  // Everything else is Open, so no row is ever dropped: open states, 'unknown', and whatever a
+  // server that predates ranking answers (every rank null). Unranked rows sort newest first.
+  const openRows = rows.filter((r) => !review.includes(r) && !closed.includes(r)).sort(byRank);
   const openIds = new Set(rows.filter(isOpen).map((r) => r.ticketId));
   const toPlace = unplaced.filter((id) => openIds.has(id));
 
@@ -78,7 +80,7 @@ function ReportsBody({ sender }: { sender: Sender }) {
       ) : query.isError ? (
         <ErrorState error={query.error} onRetry={() => void query.refetch()} />
       ) : rows.length === 0 && pending.length === 0 ? (
-        <EmptyState icon="file-text" title="No reports yet" body="Press the report button on any screen to write one." />
+        <EmptyState icon="file-text" title="Nothing filed yet" body="Reports you send show up here with their status and where you ranked them." />
       ) : (
         <>
           {openRows.length ? (

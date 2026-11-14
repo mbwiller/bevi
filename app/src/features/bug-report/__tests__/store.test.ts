@@ -149,22 +149,42 @@ describe('marking', () => {
     expect(pictureNotices(draft())).toContain("Couldn't take a picture of this screen. The component details are still attached.");
   });
 
-  it('Capture screen takes one whole-screen picture for this screen, and none over a marked one', async () => {
+  it('Capture screen adds a new unmarked picture on every press, beside a marked one, until three', async () => {
     captureWholeScreen();
     await settle();
     expect(mockCapture).toHaveBeenCalledWith([]);
     expect(draft().marks).toEqual([]);
-    expect(draft().shots).toHaveLength(1);
     captureWholeScreen();
     await settle();
-    expect(draft().shots).toHaveLength(1);
+    expect(draft().shots.map((x) => [x.kind, x.route])).toEqual([
+      ['screen', '/feed'],
+      ['screen', '/feed'],
+    ]);
     navigate('/lists', '/lists');
     markLevels([level('A')]);
     await settle();
+    expect(draft().shots.map((x) => x.kind)).toEqual(['screen', 'screen', 'marked']);
     mockCapture.mockClear();
     captureWholeScreen();
     expect(mockCapture).not.toHaveBeenCalled();
-    expect(draft().shots).toHaveLength(2);
+    expect(draft().shots).toHaveLength(3);
+    // A second mark on the marked screen still redraws its one marked picture.
+    markLevels([level('B')]);
+    await settle();
+    expect(mockCapture).toHaveBeenCalledWith([
+      { box: level('A').box, n: 1 },
+      { box: level('B').box, n: 2 },
+    ]);
+    expect(draft().shots).toHaveLength(3);
+  });
+
+  it('a screen picture that cannot be taken leaves nothing behind and says so', async () => {
+    mockCapture.mockResolvedValueOnce(null);
+    captureWholeScreen();
+    expect(draft().shots).toMatchObject([{ kind: 'screen', pending: true, shot: null }]);
+    await settle();
+    expect(draft().shots).toEqual([]);
+    expect(pictureNotices(draft())).toEqual(["Couldn't take a picture of this screen."]);
   });
 
   it('Wider and Narrower step through the levels and retake the picture', async () => {

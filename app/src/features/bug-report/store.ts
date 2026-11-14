@@ -33,8 +33,9 @@ import {
   captureMarksFor,
   currentLevel,
   emptyDraft,
+  beginScreenCapture,
   finishCapture,
-  hasMarkedPicture,
+  finishScreenCapture,
   localId,
   markLimit,
   removeMark as removeMarkFrom,
@@ -446,14 +447,31 @@ export function cancelSelecting(): void {
 
 // ---------------------------------------------------------------- capture screen
 
-/** Capture screen: a picture of the whole screen as this visit's, unless its picture already shows marks. */
+/**
+ * Capture screen, and Add photos' "Screenshot of this screen": a new, unmarked picture of the screen
+ * as it is now (the note is never in it: the engine leaves `[data-report-ui]` out), added to the
+ * note until there are three pictures. It never replaces an earlier one, so the tester can capture,
+ * open a sheet and capture again.
+ */
 export function captureWholeScreen(): void {
-  ensureDraft();
-  const { visit } = get().nav;
-  const d = get().draft!;
-  if (hasMarkedPicture(d, visit)) return;
-  set({ panel: 'open', sheet: null });
-  capture(visit);
+  const { draft: d } = ensureDraft();
+  const { visit, route } = get().nav;
+  const id = localId('shot');
+  const begun = beginScreenCapture(d, visit, route, id);
+  if (!begun) return;
+  const key = d.idempotencyKey;
+  set({ draft: begun, panel: 'open', sheet: null });
+  const p = safeCapture([]).then((shot) => {
+    const current = draftByKey(key);
+    if (!current) {
+      safeRelease(shot);
+      return;
+    }
+    const { draft, release } = finishScreenCapture(current, id, shot);
+    release.forEach(safeRelease);
+    if (draft !== current) updateDraftByKey(key, () => draft);
+  });
+  track(key, p);
 }
 
 // ---------------------------------------------------------------- step recording

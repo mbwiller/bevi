@@ -27,13 +27,14 @@ export function titleOf(draft: Pick<Draft, 'text' | 'marks'>): string {
 }
 
 export function buildInput(draft: Draft, trail: readonly BugBreadcrumb[]): BugReportInput {
-  // Pictures: the visits' captures in the order they were first taken, then the photos; at most 3.
+  // Pictures: the captures (marked and screen) in the order they were first taken, then the photos; at most 3.
   const ready = draft.shots.filter((s) => s.shot !== null);
   const evidence: NonNullable<BugReportInput['evidence']> = [];
   const indexOfVisit = new Map<number, number>();
   for (const entry of ready) {
     if (evidence.length >= EVIDENCE_MAX) break;
-    indexOfVisit.set(entry.visit, evidence.length);
+    // A mark points at its visit's marked picture, wherever that sits among the pictures.
+    if (entry.kind === 'marked') indexOfVisit.set(entry.visit, evidence.length);
     evidence.push({ file: entry.shot!.blob, mimeType: entry.shot!.mimeType, caption: shotCaption(draft, entry) });
   }
   for (const photo of draft.photos) {

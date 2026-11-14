@@ -1,6 +1,6 @@
 import { isApiError, type BugReportEnvironment, type BugReportKind } from '@bevi/shared';
 import { Image } from 'expo-image';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,13 +19,13 @@ import { contextRows } from './context';
 import { safeTrailSnapshot } from './engine';
 import { KIND_LABEL } from './labels';
 import {
-  canCapture,
   currentLevel,
-  hasMarkedPicture,
+  hasRoom,
   marksOfVisit,
   MARKS_MAX,
   photoSlots,
   pictureNotices,
+  shotCaption,
   type Draft,
   type Mark,
   type ShotEntry,
@@ -89,9 +89,16 @@ function NotePanel({ draft, onSend }: { draft: Draft; onSend: () => void }) {
   const focusNote = useReport((s) => s.focusNote);
   const notice = useReport((s) => s.notice);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  // One menu at a time: the type, or Add photos'.
+  const [menu, setMenu] = useState<null | 'type' | 'photos'>(null);
   const [headerHeight, setHeaderHeight] = useState<number>(size.target);
-  const trigger = useRef<View>(null);
+  const [panelH, setPanelH] = useState(0);
+  // Where the actions row sits in the panel, so Add photos' menu can hang from its right-most tile.
+  const [actionsAt, setActionsAt] = useState<{ wrap: number; top: number; height: number }>({ wrap: 0, top: 0, height: size.target });
+  const typeTrigger = useRef<View>(null);
+  const photosTrigger = useRef<View>(null);
+  const photos = usePhotoPicker(draft);
+  const closeMenu = useCallback(() => setMenu(null), []);
 
   // Rises in once when it opens (Reduce Motion: just shows).
   const shown = useSharedValue(reduced ? 1 : 0);
@@ -114,6 +121,7 @@ function NotePanel({ draft, onSend }: { draft: Draft; onSend: () => void }) {
       testID="report-note"
       onLayout={(e) => {
         measured.current = e.nativeEvent.layout.height;
+        setPanelH(measured.current);
         setPanelHeight(measured.current + lift);
       }}
       style={[
@@ -146,14 +154,23 @@ function NotePanel({ draft, onSend }: { draft: Draft; onSend: () => void }) {
         </View>
       ) : (
         <View style={styles.header} onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}>
-          <TypeTrigger ref={trigger} kind={kind} open={menuOpen} onPress={() => setMenuOpen((v) => !v)} />
+          <TypeTrigger ref={typeTrigger} kind={kind} open={menu === 'type'} onPress={() => setMenu((m) => (m === 'type' ? null : 'type'))} />
           <View style={styles.grow} />
-          <IconButton icon="list" label="Your reports" size={24} onPress={openReports} />
+          <IconButton icon="list" label="Filed reports" size={24} onPress={openReports} />
           <IconButton icon="chevron-down" label="Set aside" size={24} onPress={setAside} />
           <IconButton icon="x" label="Discard" size={24} onPress={() => setConfirmDiscard(true)} />
         </View>
       )}
-      <Actions draft={draft} />
+      <View onLayout={(e) => setActionsAt((a) => ({ ...a, wrap: e.nativeEvent.layout.y }))}>
+        <Actions
+          draft={draft}
+          photos={photos}
+          photosOpen={menu === 'photos'}
+          photosTrigger={photosTrigger}
+          onPhotos={() => setMenu((m) => (m === 'photos' ? null : 'photos'))}
+          onRowLayout={(top, height) => setActionsAt((a) => ({ ...a, top, height }))}
+        />
+      </View>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         <Failure error={draft.error} />
         {notice ? (
@@ -173,8 +190,48 @@ function NotePanel({ draft, onSend }: { draft: Draft; onSend: () => void }) {
         </Button>
       </View>
       {/* At the panel's level, above the scroller, so the scroller can't clip it. */}
-      {menuOpen && !confirmDiscard ? (
-        <TypeMenu kind={kind} top={headerHeight + spacing.xs} trigger={trigger} onClose={() => setMenuOpen(false)} />
+      {menu === 'type' && !confirmDiscard ? (
+        <NoteMenu
+          label="Type"
+          position={{ top: headerHeight + spacing.xs, left: spacing.gutter }}
+          trigger={typeTrigger}
+          onClose={closeMenu}
+          items={KINDS.map((k) => ({
+            key: k,
+            role: 'menuitemradio' as const,
+            label: KIND_LABEL[k],
+            checked: k === kind,
+            onPress: () => setKind(k),
+          }))}
+        />
+      ) : null}
+      {menu === 'photos' ? (
+        <NoteMenu
+          label="Add photos"
+          position={photosMenuPosition(actionsAt, panelH)}
+          trigger={photosTrigger}
+          onClose={closeMenu}
+          items={[
+            {
+              key: 'screenshot',
+              role: 'menuitem',
+              icon: 'camera',
+              label: 'Screenshot of this screen',
+              disabled: !hasRoom(draft),
+              a11y: hasRoom(draft) ? 'Screenshot of this screen' : 'Screenshot of this screen, 3 pictures is the limit',
+              onPress: captureWholeScreen,
+            },
+            {
+              key: 'library',
+              role: 'menuitem',
+              icon: 'image',
+              label: 'Photo library or camera',
+              disabled: photoSlots(draft) === 0,
+              a11y: photoSlots(draft) > 0 ? 'Photo library or camera' : 'Photo library or camera, 3 pictures is the limit',
+              onPress: () => void photos.choose(),
+            },
+          ]}
+        />
       ) : null}
     </Animated.View>
   );
@@ -203,11 +260,40 @@ function TypeTrigger({ ref, kind, open, onPress }: { ref: RefObject<View | null>
   );
 }
 
+export interface MenuItem {
+  key: string;
+  role: 'menuitem' | 'menuitemradio';
+  label: string;
+  /** The accessible name, when it says more than the label (why a row is disabled). */
+  a11y?: string;
+  icon?: IconName;
+  /** menuitemradio: the current choice, with a check. */
+  checked?: boolean;
+  disabled?: boolean;
+  onPress: () => void;
+}
+
+/** How tall a two-row menu is, to decide whether it fits below its trigger. */
+const MENU_ROWS_PAD = spacing.xs * 2 + 2;
+
 /**
- * The type menu: the four types as rows, a check on the current one. Choosing one pins it; a press
- * anywhere else, or Escape, closes it.
+ * A minimal menu anchored to a trigger in the note (the type, Add photos): rows of 44pt, drawn at
+ * the panel's level so the scroller can't clip it. Choosing a row closes it, and so do a press
+ * anywhere else and Escape.
  */
-function TypeMenu({ kind, top, trigger, onClose }: { kind: BugReportKind; top: number; trigger: RefObject<View | null>; onClose: () => void }) {
+function NoteMenu({
+  label,
+  items,
+  position,
+  trigger,
+  onClose,
+}: {
+  label: string;
+  items: MenuItem[];
+  position: { top: number; left?: number; right?: number };
+  trigger: RefObject<View | null>;
+  onClose: () => void;
+}) {
   const { colors, elevation } = useTheme();
   const menu = useRef<View>(null);
 
@@ -242,69 +328,107 @@ function TypeMenu({ kind, top, trigger, onClose }: { kind: BugReportKind; top: n
         accessibilityRole="button"
         accessibilityLabel="Close the menu"
         focusable={false}
-        testID="type-menu-outside"
+        testID="note-menu-outside"
       />
       <View
         ref={menu}
         role="menu"
-        accessibilityLabel="Type"
-        style={[styles.menu, { top, backgroundColor: colors.surface, borderColor: colors.border, boxShadow: elevation.floating }]}
+        accessibilityLabel={label}
+        style={[styles.menu, position, { backgroundColor: colors.surface, borderColor: colors.border, boxShadow: elevation.floating }]}
       >
-        {KINDS.map((k) => {
-          const checked = k === kind;
-          return (
-            <Pressable
-              key={k}
-              {...({ role: 'menuitemradio' } as object)}
-              aria-checked={checked}
-              accessibilityState={{ checked }}
-              accessibilityLabel={KIND_LABEL[k]}
-              onPress={() => {
-                setKind(k);
-                onClose();
-              }}
-              style={({ pressed }) => [styles.menuRow, pressed && { backgroundColor: colors.input }]}
-            >
-              <Text style={[type.body, styles.grow, { color: checked ? colors.primary : colors.text }]} numberOfLines={1}>
-                {KIND_LABEL[k]}
-              </Text>
-              {checked ? <Icon name="check" size={18} strokeWidth={2} color={colors.primary} /> : <View style={styles.checkSpace} />}
-            </Pressable>
-          );
-        })}
+        {items.map((item) => (
+          <Pressable
+            key={item.key}
+            {...({ role: item.role } as object)}
+            {...(item.role === 'menuitemradio' ? { 'aria-checked': !!item.checked } : null)}
+            accessibilityState={item.role === 'menuitemradio' ? { checked: !!item.checked, disabled: !!item.disabled } : { disabled: !!item.disabled }}
+            accessibilityLabel={item.a11y ?? item.label}
+            disabled={item.disabled}
+            onPress={() => {
+              // Closed first, so nothing of it is about when the row's action runs.
+              onClose();
+              item.onPress();
+            }}
+            style={({ pressed }) => [styles.menuRow, item.disabled && styles.disabled, pressed && { backgroundColor: colors.input }]}
+          >
+            {item.icon ? <Icon name={item.icon} size={20} strokeWidth={2} color={colors.primary} /> : null}
+            <Text style={[type.body, styles.grow, { color: item.checked ? colors.primary : colors.text }]} numberOfLines={1}>
+              {item.label}
+            </Text>
+            {item.role === 'menuitemradio' ? (
+              item.checked ? (
+                <Icon name="check" size={18} strokeWidth={2} color={colors.primary} />
+              ) : (
+                <View style={styles.checkSpace} />
+              )
+            ) : null}
+          </Pressable>
+        ))}
       </View>
     </>
   );
 }
 
-/** The four ways to attach something to the note. */
-function Actions({ draft }: { draft: Draft }) {
-  const visit = useReport((s) => s.nav.visit);
-  const [photoError, setPhotoError] = useState<string | null>(null);
-  const [picking, setPicking] = useState(false);
-  const { colors } = useTheme();
-  const slots = photoSlots(draft);
-  const atMarkLimit = draft.marks.length >= MARKS_MAX;
-  const captureBlocked = hasMarkedPicture(draft, visit) || !canCapture(draft, visit);
+/**
+ * Add photos' menu hangs from the right-most tile: its right edge on the tile's, opening downwards,
+ * or upwards when the panel has no room below the row.
+ */
+function photosMenuPosition(at: { wrap: number; top: number; height: number }, panelHeight: number): { top: number; right: number } {
+  const height = size.target * 2 + MENU_ROWS_PAD;
+  const rowTop = at.wrap + at.top;
+  const below = rowTop + at.height + spacing.xs;
+  const fits = panelHeight === 0 || below + height <= panelHeight;
+  return { top: fits ? below : rowTop - height - spacing.xs, right: spacing.gutter };
+}
 
+/** Add photos' library picker (iOS's own sheet: library, camera, files), several at once. */
+function usePhotoPicker(draft: Draft) {
+  const [error, setError] = useState<string | null>(null);
+  const [picking, setPicking] = useState(false);
+  const slots = photoSlots(draft);
   const choose = async () => {
-    setPhotoError(null);
+    setError(null);
     setPicking(true);
     try {
       const { photos, failed } = await pickPhotos(slots);
       const rejected = addPhotos(photos);
-      if (failed) setPhotoError(failed === 1 ? "One image couldn't be read. Try another." : `${failed} images couldn't be read. Try others.`);
-      else if (rejected.length) setPhotoError('3 pictures is the limit; the rest were left out.');
+      if (failed) setError(failed === 1 ? "One image couldn't be read. Try another." : `${failed} images couldn't be read. Try others.`);
+      else if (rejected.length) setError('3 pictures is the limit; the rest were left out.');
     } catch {
-      setPhotoError("Those images couldn't be attached. Try others.");
+      setError("Those images couldn't be attached. Try others.");
     } finally {
       setPicking(false);
     }
   };
+  return { choose, picking, error };
+}
+
+type PhotoPicker = ReturnType<typeof usePhotoPicker>;
+
+/** The four ways to attach something to the note. */
+function Actions({
+  draft,
+  photos,
+  photosOpen,
+  photosTrigger,
+  onPhotos,
+  onRowLayout,
+}: {
+  draft: Draft;
+  photos: PhotoPicker;
+  photosOpen: boolean;
+  photosTrigger: RefObject<View | null>;
+  onPhotos: () => void;
+  onRowLayout: (top: number, height: number) => void;
+}) {
+  const { colors } = useTheme();
+  const slots = photoSlots(draft);
+  const atMarkLimit = draft.marks.length >= MARKS_MAX;
+  const room = hasRoom(draft);
 
   return (
     <View style={styles.actionsWrap}>
-      <View style={styles.actions}>
+      <View style={styles.actions} onLayout={(e) => onRowLayout(e.nativeEvent.layout.y, e.nativeEvent.layout.height)}>
         <Action
           glyph="select"
           icon="search"
@@ -316,29 +440,26 @@ function Actions({ draft }: { draft: Draft }) {
         <Action
           icon="camera"
           label="Capture screen"
-          a11y={
-            hasMarkedPicture(draft, visit)
-              ? 'Capture screen, this screen has its picture'
-              : captureBlocked
-                ? 'Capture screen, 3 pictures is the limit'
-                : 'Capture screen'
-          }
-          disabled={captureBlocked}
+          a11y={room ? 'Capture screen' : 'Capture screen, 3 pictures is the limit'}
+          disabled={!room}
           onPress={captureWholeScreen}
         />
         <Action glyph="record" icon="navigation" label="Record steps" a11y="Record steps" onPress={startRecording} />
+        {/* Opens a menu, so it stays pressable at the limit: the menu says why its rows are off. */}
         <Action
+          ref={photosTrigger}
           icon="image"
-          label={picking ? 'Opening…' : 'Add photos'}
+          label={photos.picking ? 'Opening…' : 'Add photos'}
           a11y={slots === 0 ? 'Add photos, 3 pictures is the limit' : `Add photos, ${slots} left`}
-          disabled={slots === 0 || picking}
-          busy={picking}
-          onPress={() => void choose()}
+          disabled={photos.picking}
+          busy={photos.picking}
+          expanded={photosOpen}
+          onPress={onPhotos}
         />
       </View>
-      {photoError ? (
+      {photos.error ? (
         <Text style={[type.caption, { color: colors.textSecondary }]} accessibilityLiveRegion="polite">
-          {photoError}
+          {photos.error}
         </Text>
       ) : null}
     </View>
@@ -346,14 +467,19 @@ function Actions({ draft }: { draft: Draft }) {
 }
 
 function Action({
+  ref,
   icon,
   glyph,
   label,
   a11y,
   disabled = false,
   busy = false,
+  expanded,
   onPress,
 }: {
+  ref?: RefObject<View | null>;
+  /** Set when the action opens a menu: whether it is open. */
+  expanded?: boolean;
   icon: IconName;
   /** One of the reporter's own glyphs, drawn instead of `icon` (icons.ts). */
   glyph?: ReportGlyph;
@@ -367,11 +493,13 @@ function Action({
   const Glyph = glyph ? REPORT_GLYPHS[glyph] : null;
   return (
     <Pressable
+      ref={ref}
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={a11y}
-      accessibilityState={{ disabled, busy }}
+      accessibilityState={expanded === undefined ? { disabled, busy } : { disabled, busy, expanded }}
+      {...(expanded === undefined ? null : ({ 'aria-haspopup': 'menu', 'aria-expanded': expanded } as object))}
       aria-disabled={disabled}
       style={({ pressed }) => [styles.action, { borderColor: colors.border }, disabled && styles.disabled, pressed && PRESSED]}
     >
@@ -416,13 +544,13 @@ function Pictures({ draft }: { draft: Draft }) {
             <View key={entry.id} style={styles.group}>
               <ShotThumb
                 entry={entry}
-                hasMarks={marksOfVisit(draft, entry.visit).length > 0}
+                caption={shotCaption(draft, entry)}
                 expanded={expanded === entry.id}
                 onToggle={() => setExpanded((id) => (id === entry.id ? null : entry.id))}
               />
-              {marksOfVisit(draft, entry.visit).map((m) => (
-                <MarkChip key={m.id} mark={m} selected={m.id === selectedId} />
-              ))}
+              {entry.kind === 'marked'
+                ? marksOfVisit(draft, entry.visit).map((m) => <MarkChip key={m.id} mark={m} selected={m.id === selectedId} />)
+                : null}
             </View>
           ))}
           {unshot.map((m) => (
@@ -459,9 +587,14 @@ function Pictures({ draft }: { draft: Draft }) {
   );
 }
 
-function ShotThumb({ entry, hasMarks, expanded, onToggle }: { entry: ShotEntry; hasMarks: boolean; expanded: boolean; onToggle: () => void }) {
+/**
+ * One captured picture. A screen picture has its own remove; a marked one goes with its marks.
+ * `caption` is the ticket's ('/lists, whole screen (2)'); a marked picture is named by its route.
+ */
+function ShotThumb({ entry, caption, expanded, onToggle }: { entry: ShotEntry; caption: string; expanded: boolean; onToggle: () => void }) {
   const { colors } = useTheme();
-  const label = `Picture of ${entry.route}${hasMarks ? '' : ', whole screen'}`;
+  const screen = entry.kind === 'screen';
+  const label = screen ? `Picture of ${caption}` : `Picture of ${entry.route}`;
   return (
     <View style={styles.thumbWrap}>
       {entry.shot ? (
@@ -474,7 +607,7 @@ function ShotThumb({ entry, hasMarks, expanded, onToggle }: { entry: ShotEntry; 
           <Skeleton variant="block" width={THUMB_W} height={THUMB_H} />
         </View>
       ) : null}
-      {hasMarks || !entry.shot ? null : <RemoveButton label="Remove the picture" onPress={() => removeShot(entry.id)} />}
+      {screen && entry.shot ? <RemoveButton label={`Remove the picture of ${caption}`} onPress={() => removeShot(entry.id)} /> : null}
     </View>
   );
 }

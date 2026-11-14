@@ -9,9 +9,12 @@ import type { CaptureMark, PickLevel, Shot } from './types';
  * store (store.ts) runs these and does the capturing; these only decide what is kept.
  *
  * Pictures. The server, the bucket and the ledger all take at most `EVIDENCE_MAX` images, so the
- * note never holds more: one capture per visit (a stay on one route) showing every mark made on
- * that visit, in the order the visits were first captured, then the photos from the library. A mark
- * made once the pictures are used up is kept with its component details and takes no picture.
+ * note never holds more. There are two kinds of capture: a visit's *marked* picture (a visit is a
+ * stay on one route), one per visit, showing every mark made on it and redrawn when they change;
+ * and *screen* pictures (Capture screen, "Screenshot of this screen"), unmarked, as many as there
+ * is room for, each kept as taken. The captures go in the order they were first taken, then the
+ * photos from the library. A mark made once the pictures are used up is kept with its component
+ * details and takes no picture.
  */
 
 export const EVIDENCE_MAX = 3;
@@ -36,9 +39,13 @@ export interface Mark {
   noPicture?: NoPicture;
 }
 
-/** One visit's picture. `shot` is null while the first capture runs; `pending` while any does. */
+/**
+ * One captured picture. `shot` is null while the first capture runs; `pending` while any does.
+ * 'marked': the visit's one picture of its marks. 'screen': a plain picture of the screen.
+ */
 export interface ShotEntry {
   id: string;
+  kind: 'marked' | 'screen';
   shot: Shot | null;
   route: string;
   visit: number;
@@ -58,6 +65,8 @@ export interface Draft {
   photos: PreparedPhoto[];
   /** The steps the tester recorded with Record steps, in order; [] when none were. */
   steps: string[];
+  /** The last screen picture couldn't be taken (cleared by the next one). */
+  screenFailed?: boolean;
   /** Collected when the note was started, so its time is when the thing was seen. */
   environment: BugReportEnvironment;
   /** The last failed send. */
@@ -91,8 +100,9 @@ export function marksOfVisit(d: Draft, visit: number): Mark[] {
   return d.marks.filter((m) => m.visit === visit);
 }
 
+/** The visit's marked picture, if it has one. */
 export function shotOfVisit(d: Draft, visit: number): ShotEntry | undefined {
-  return d.shots.find((s) => s.visit === visit);
+  return d.shots.find((s) => s.visit === visit && s.kind === 'marked');
 }
 
 export function currentLevel(m: Mark): PickLevel | undefined {
@@ -107,12 +117,12 @@ export function captureMarksFor(d: Draft, visit: number): CaptureMark[] {
   });
 }
 
-/** Whether the visit's picture shows marks (Capture screen would only repeat it). */
-export function hasMarkedPicture(d: Draft, visit: number): boolean {
-  return !!shotOfVisit(d, visit) && marksOfVisit(d, visit).length > 0;
+/** Whether there is room for one more picture of any kind. */
+export function hasRoom(d: Draft): boolean {
+  return evidenceCount(d) < EVIDENCE_MAX;
 }
 
-/** Whether the visit can have a picture: it already has one (replaced), or there is room for one. */
+/** Whether the visit can have a marked picture: it already has one (redrawn), or there is room for one. */
 export function canCapture(d: Draft, visit: number): boolean {
   return !!shotOfVisit(d, visit) || evidenceCount(d) < EVIDENCE_MAX;
 }
@@ -144,7 +154,7 @@ export function beginCapture(d: Draft, visit: number, route: string, seq: number
   }
   const entry: ShotEntry = existing
     ? { ...existing, seq, pending: true }
-    : { id: newId, shot: null, route, visit, seq, pending: true };
+    : { id: newId, kind: 'marked' as const, shot: null, route, visit, seq, pending: true };
   const shots = existing ? d.shots.map((s) => (s === existing ? entry : s)) : [...d.shots, entry];
   const marks = d.marks.map((m) => (m.visit === visit ? { ...m, shotId: entry.id, noPicture: undefined } : m));
   return { ...d, shots, marks };
@@ -183,6 +193,21 @@ export function finishCapture(d: Draft, visit: number, seq: number, shot: Shot |
     draft: { ...d, shots: d.shots.map((s) => (s === entry ? { ...s, shot, pending: false } : s)) },
     release: entry.shot ? [entry.shot] : [],
   };
+}
+
+/** A screen picture is starting: a placeholder at the end of the captures, or null with no room. */
+export function beginScreenCapture(d: Draft, visit: number, route: string, id: string): Draft | null {
+  if (!hasRoom(d)) return null;
+  const entry: ShotEntry = { id, kind: 'screen', shot: null, route, visit, seq: 0, pending: true };
+  return { ...d, shots: [...d.shots, entry], screenFailed: false };
+}
+
+/** A screen picture landed; null (it couldn't be taken) removes its placeholder and says so. */
+export function finishScreenCapture(d: Draft, id: string, shot: Shot | null): { draft: Draft; release: Shot[] } {
+  const entry = d.shots.find((s) => s.id === id);
+  if (!entry) return { draft: d, release: shot ? [shot] : [] };
+  if (!shot) return { draft: { ...d, shots: d.shots.filter((s) => s !== entry), screenFailed: true }, release: [] };
+  return { draft: { ...d, shots: d.shots.map((s) => (s === entry ? { ...s, shot, pending: false } : s)) }, release: [] };
 }
 
 /**
@@ -254,6 +279,8 @@ export function pictureNotices(d: Draft): string[] {
   if (d.marks.some((m) => m.noPicture === 'limit')) out.push('3 pictures is the limit; this mark has no picture.');
   if (d.marks.some((m) => m.noPicture === 'failed')) {
     out.push("Couldn't take a picture of this screen. The component details are still attached.");
+  } else if (d.screenFailed) {
+    out.push("Couldn't take a picture of this screen.");
   }
   if (d.marks.length >= MARKS_MAX) out.push('6 marks is the limit for one note.');
   return out;
@@ -265,12 +292,20 @@ export function joinNumbers(ns: number[]): string {
   return `${ns.slice(0, -1).join(', ')} and ${ns[ns.length - 1]}`;
 }
 
-/** What a visit's picture shows: '/feed, with 1 and 2 marked', '/lists, whole screen'. */
+/**
+ * What a picture shows: '/feed, with 1 and 2 marked' for a marked one; '/lists, whole screen' for a
+ * screen picture, numbered from the second of the same route on ('/lists, whole screen (2)').
+ */
 export function shotCaption(d: Draft, entry: ShotEntry): string {
-  const ns = marksOfVisit(d, entry.visit)
-    .map((m) => m.n)
-    .sort((a, b) => a - b);
-  return ns.length ? `${entry.route}, with ${joinNumbers(ns)} marked` : `${entry.route}, whole screen`;
+  if (entry.kind === 'marked') {
+    const ns = marksOfVisit(d, entry.visit)
+      .map((m) => m.n)
+      .sort((a, b) => a - b);
+    if (ns.length) return `${entry.route}, with ${joinNumbers(ns)} marked`;
+  }
+  const same = d.shots.filter((s) => s.kind === 'screen' && s.route === entry.route);
+  const n = same.indexOf(entry) + 1;
+  return n > 1 ? `${entry.route}, whole screen (${n})` : `${entry.route}, whole screen`;
 }
 
 export const PHOTO_CAPTION = 'Photo from the library';
