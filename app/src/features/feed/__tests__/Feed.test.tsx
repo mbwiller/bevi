@@ -13,6 +13,12 @@ import { formatRelativeTime } from '@/lib/time';
 import { FRIEND, ME, controls, userIdFor } from '@/testing/fakeApi';
 import FeedScreen from '@/app/(tabs)/feed/index';
 
+// Each test here mounts the whole Feed route (renderRouter). That is 2 to 4 seconds on a laptop and
+// several times that on GitHub's runners, where the slowest tests ran past the 30s default from
+// jest.config.js on three CI runs on 2026-11-11. They are slow there, not stuck: the same commit
+// passes on a rerun.
+jest.setTimeout(90_000);
+
 let client: QueryClient;
 
 function Layout() {
