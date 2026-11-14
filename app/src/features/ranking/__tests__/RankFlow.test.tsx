@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { configure, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { maxAnchoredComparisons, maxComparisons, storedScore } from '@bevi/ranking';
-import { ApiError, type BevSummary, type Bucket, type SubmitRankingResult } from '@bevi/shared';
+import { ApiError, BUCKET_LABEL, type BevSummary, type Bucket, type SubmitRankingResult } from '@bevi/shared';
 
 import { api } from '@/api/client';
 import { formatScore } from '@/lib/format';
@@ -81,6 +81,19 @@ async function answerAllNewBetter(name: string) {
     await fireEvent.press(next);
   }
 }
+
+// BEV-9: the scale's best end is on the right. The row is `flexDirection: 'row'`, so render order is left to right.
+it('gut check lists the buckets worst to best, with "Loved it" last (rightmost)', async () => {
+  const [bev] = await unranked(1);
+  await renderRank(bev!.id);
+  await screen.findByText('How was it?');
+  const bucketLabels: string[] = Object.values(BUCKET_LABEL);
+  const row = screen
+    .getAllByRole('button')
+    .map((b) => b.props.accessibilityLabel as string)
+    .filter((label) => bucketLabels.includes(label));
+  expect(row).toEqual(['Not for me', 'It was okay', 'Loved it']);
+});
 
 it('gut check → comparisons → note → submit with expectedBucketSize → result', async () => {
   const [bev] = await unranked(1);

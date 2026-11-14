@@ -25,6 +25,11 @@ export interface TextFieldProps {
   hint?: string;
   /** Replaces the hint in `scoreLow` and turns the outline `scoreLow`. Say what to do: "That handle is taken." */
   error?: string;
+  /**
+   * Keeps the hint line's height open when there is no hint or error, for a hint that comes and goes while
+   * the person types: the fields below never move.
+   */
+  reserveHint?: boolean;
   /** The HTML input type it stands for: `password` hides the text, `email`/`tel`/`url`/`numeric` pick the keyboard. */
   type?: 'text' | 'password' | 'email' | 'tel' | 'url' | 'numeric' | 'search';
   /** The input's DOM id on web. */
@@ -63,6 +68,7 @@ export function TextField({
   prefix,
   hint,
   error,
+  reserveHint = false,
   type: kind = 'text',
   id,
   onChange,
@@ -133,11 +139,14 @@ export function TextField({
           style={[styles.input, { color: colors.text }]}
         />
       </Pressable>
-      {message ? (
+      {message || reserveHint ? (
+        // With `reserveHint` this one Text stays mounted, empty or not, so its line never opens or closes.
         <Text
           id={`${fid}-msg`}
-          style={[type.caption, { color: error ? colors.scoreLow : colors.textSecondary }]}
+          testID={`${fid}-msg`}
+          style={[type.caption, reserveHint && styles.reserved, { color: error ? colors.scoreLow : colors.textSecondary }]}
           accessibilityLiveRegion={error ? 'polite' : undefined}
+          aria-hidden={message ? undefined : true}
         >
           {message}
         </Text>
@@ -158,6 +167,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.input,
   },
   prefix: { marginRight: 2 },
+  // bundle.css `.bv-field-reserve`: one caption line, held open while there is no message.
+  reserved: { minHeight: type.caption.lineHeight },
   // 17pt (bodyLarge) also keeps iOS Safari from zooming the page on focus (it zooms below 16px).
   input: { ...type.bodyLarge, flex: 1, minWidth: 0, alignSelf: 'stretch', padding: 0, borderWidth: 0, outlineWidth: 0 },
 });

@@ -53,5 +53,11 @@
     "jest": "~29.7.0",
     "jest-expo": "~57.0.6",
     "typescript": "~6.0.3"
-  }
+  },
+  "browserslist": [
+    "iOS >= 16",
+    "last 2 Chrome versions",
+    "last 2 Safari versions",
+    "last 2 Firefox versions"
+  ]
 }

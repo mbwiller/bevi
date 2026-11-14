@@ -20,8 +20,8 @@ it('shows the active count in its badge and label', async () => {
 });
 
 it('names a single-facet pill by its label', async () => {
-  await render(<FilterPill label="Bucket" chevron icon={null} />);
-  expect(screen.getByRole('button', { name: 'Bucket' })).toBeTruthy();
+  await render(<FilterPill label="Reaction" chevron icon={null} />);
+  expect(screen.getByRole('button', { name: 'Reaction' })).toBeTruthy();
 });
 
 it('reaches a 44pt hit area', async () => {

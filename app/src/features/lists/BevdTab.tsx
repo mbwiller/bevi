@@ -123,7 +123,7 @@ export function BevdTab({ categoryId, categories, onCategory, onCategoryPress }:
     <View>
       <View style={listStyles.filters}>
         <FilterPill count={(bucket ? 1 : 0) + (categoryId ? 1 : 0)} onPress={() => setSheet('filters')} />
-        <FilterPill label={bucket ? BUCKET_SHORT[bucket] : 'Bucket'} icon={null} chevron onPress={() => setSheet('bucket')} />
+        <FilterPill label={bucket ? BUCKET_SHORT[bucket] : 'Reaction'} icon={null} chevron onPress={() => setSheet('bucket')} />
         <FilterPill label={category?.label ?? 'Category'} icon={null} chevron onPress={onCategoryPress} />
       </View>
       <CategoryProgressStrip categoryId={categoryId} onPress={() => setSheet('collection')} />
@@ -140,7 +140,7 @@ export function BevdTab({ categoryId, categories, onCategory, onCategoryPress }:
       <EmptyState
         icon="list-filter"
         title="No Bevs match these filters"
-        body="Try another bucket or category."
+        body="Try another reaction or category."
         action="Clear filters"
         onAction={() => {
           setBucket(undefined);

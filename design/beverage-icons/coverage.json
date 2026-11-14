@@ -1,8 +1,8 @@
 {
   "summary": {
     "catalog": 378,
-    "authored": 254,
-    "pending": 124,
+    "authored": 275,
+    "pending": 103,
     "starterAuthored": 39,
     "starterTotal": 43,
     "livePostgresReconciled": false
@@ -21,14 +21,6 @@
       "slug": "canada-dry-diet-ginger-ale",
       "name": "Canada Dry Diet Ginger Ale",
       "brand": "Canada Dry",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "bec8b166-60c1-5a37-a3c2-698146bef1d4",
-      "slug": "diet-seven-up",
-      "name": "Diet 7Up",
-      "brand": "7Up",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -217,42 +209,10 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "ac939eca-7862-5813-975a-9e037a28a5db",
-      "slug": "liquid-death-sparkling-severed-lime",
-      "name": "Sparkling Water",
-      "brand": "Liquid Death",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "d5355adb-957f-58c9-9cd5-5db9c455b3b8",
-      "slug": "core-hydration-nutrient-enhanced-water",
-      "name": "Nutrient Enhanced Water",
-      "brand": "Core Hydration",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "9d7ffdad-7d84-5bbf-8d06-114d4c41d61a",
-      "slug": "just-water-still",
-      "name": "Still Water",
-      "brand": "Just Water",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "cdc8e9c9-27e7-5f19-8f47-35e4f2b325e0",
       "slug": "waterloo-lime",
       "name": "Waterloo Lime Sparkling Water",
       "brand": "Waterloo",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "cd58181d-8189-5faf-a8c8-ecf19aa22390",
-      "slug": "aha-lime-watermelon",
-      "name": "AHA Lime + Watermelon",
-      "brand": "AHA",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -689,54 +649,6 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "a82bcd1a-15f2-53bf-bfd1-35b87afdef9f",
-      "slug": "propel-water-berry",
-      "name": "Propel Water",
-      "brand": "Propel",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "7fb900c7-c308-591a-8576-04e4ee685a5a",
-      "slug": "calpico-original",
-      "name": "Calpico",
-      "brand": "Calpico",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "9670c5b3-2f1f-5db2-978a-72694dbddd00",
-      "slug": "calpico-mango",
-      "name": "Calpico",
-      "brand": "Calpico",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "6df7af3f-c022-5005-a606-99a122537661",
-      "slug": "ramune-original",
-      "name": "Ramune",
-      "brand": "Hata Kosen",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "34405280-1223-56e6-b5c5-2d63826744c1",
-      "slug": "ramune-melon",
-      "name": "Ramune",
-      "brand": "Hata Kosen",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "2926168c-6df4-59d9-b9b7-02beaca5039e",
-      "slug": "harmless-harvest-coconut-water",
-      "name": "Harmless Harvest Coconut Water",
-      "brand": "Harmless Harvest",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "4aae2aae-97de-57d8-b283-34d049111f23",
       "slug": "health-ade-kombucha-pink-lady-apple",
       "name": "Health-Ade Kombucha",
@@ -749,86 +661,6 @@
       "slug": "suja-kombucha-strawberry-basil-lemonade",
       "name": "Suja Kombucha",
       "brand": "Suja",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "22dbc1b9-f262-56ad-aafe-56f8fae99111",
-      "slug": "modelo-especial",
-      "name": "Modelo Especial",
-      "brand": "Modelo",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "49564d83-135c-5822-980c-0f351550284a",
-      "slug": "corona-extra",
-      "name": "Corona Extra",
-      "brand": "Corona",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "84724510-b1eb-5ddb-b259-498efaa1b840",
-      "slug": "corona-light",
-      "name": "Corona Light",
-      "brand": "Corona",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "ef3210a7-23cd-544c-98e7-37c64e1c7721",
-      "slug": "coors-light",
-      "name": "Coors Light",
-      "brand": "Coors",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "7091e074-b90f-5773-aed5-e6b45947b9d6",
-      "slug": "bud-light",
-      "name": "Bud Light",
-      "brand": "Bud Light",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "14283b54-f4ae-5a46-9145-465aee801b3c",
-      "slug": "miller-lite",
-      "name": "Miller Lite",
-      "brand": "Miller",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "f6c8dd9d-928c-5918-b781-8f31d6a97d90",
-      "slug": "heineken-original-lager",
-      "name": "Heineken Original Lager",
-      "brand": "Heineken",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "41e04a34-8406-54c1-a563-a2f2bb7e07dd",
-      "slug": "stella-artois-lager",
-      "name": "Stella Artois Lager",
-      "brand": "Stella Artois",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "2d08eb01-769c-5d47-a6bf-e7c05337c392",
-      "slug": "guinness-draught",
-      "name": "Guinness Draught",
-      "brand": "Guinness",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "91ece6c3-db2e-53e6-b3b4-7c9536a05a12",
-      "slug": "blue-moon-belgian-white",
-      "name": "Blue Moon Belgian White",
-      "brand": "Blue Moon",
       "isStarter": false,
       "status": "needs-reference"
     },

@@ -142,12 +142,45 @@ it('cycles the sort Score, Recent, Name and keeps the filters on screen', async 
   await fireEvent.press(screen.getByLabelText('Sort by Score'));
   expect(await screen.findByLabelText('Sort by Recent')).toBeTruthy();
   await waitFor(() => expect(firstRowLabel().endsWith(`. ${recent.bev.name}`)).toBe(true));
-  expect(screen.getByLabelText(/Bucket/)).toBeTruthy();
+  expect(screen.getByLabelText('Reaction')).toBeTruthy();
 
   await fireEvent.press(screen.getByLabelText('Sort by Recent'));
   expect(await screen.findByLabelText('Sort by Name')).toBeTruthy();
   await waitFor(() => expect(firstRowLabel().endsWith(`. ${byName.bev.name}`)).toBe(true));
-  expect(screen.getByLabelText(/Bucket/)).toBeTruthy();
+  expect(screen.getByLabelText('Reaction')).toBeTruthy();
+});
+
+// BEV-11: the gut-check filter was labelled "Bucket", an internal word that says nothing about what it filters.
+describe('the Reaction filter', () => {
+  it('is named Reaction on its pill and its sheet, and the pill takes the chosen reaction', async () => {
+    await start();
+    await fireEvent.press(await screen.findByRole('button', { name: 'Reaction' }));
+    expect(await screen.findByRole('header', { name: 'Reaction' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'All reactions' })).toBeTruthy();
+    expect(screen.queryByText(/bucket/i)).toBeNull();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Loved' }));
+    expect(await screen.findByRole('button', { name: 'Loved' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Reaction' })).toBeNull();
+  });
+
+  it('says "reaction", not "bucket", when the filters match nothing', async () => {
+    controls.emptyUser();
+    await start();
+    await fireEvent.press(await screen.findByRole('button', { name: 'Reaction' }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Loved' }));
+    expect(await screen.findByText('No Bevs match these filters')).toBeTruthy();
+    expect(screen.getByText('Try another reaction or category.')).toBeTruthy();
+    expect(screen.queryByText(/bucket/i)).toBeNull();
+  });
+
+  it('is the Reaction section of the Filters sheet', async () => {
+    await start();
+    await fireEvent.press(await screen.findByRole('button', { name: 'Filters' }));
+    expect(await screen.findByRole('header', { name: 'Reaction' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'All reactions' })).toBeTruthy();
+    expect(screen.queryByText(/bucket/i)).toBeNull();
+  });
 });
 
 it('formats the Recommended summary line', () => {
