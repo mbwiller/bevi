@@ -80,7 +80,7 @@ test("validateManifest accepts a good record and maps it to a publish row", () =
   });
 });
 
-test("validateManifest refuses what export-app.mjs refuses", () => {
+test("validateManifest refuses a malformed manifest", () => {
   assert.throws(() => validateManifest({}), /no records array/);
   assert.throws(() => validateManifest({ records: [record({ bevId: "5ED1A9B6-46AC-5249-9BD6-2C0712BF631B" })] }), /lowercase UUID/);
   assert.throws(() => validateManifest({ records: [record({ slug: "Seven Up" })] }), /kebab-case/);

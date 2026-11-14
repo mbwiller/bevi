@@ -1,5 +1,15 @@
 # Beverage icon production checkpoint
 
+## Latest batch: 20 beer and refreshment icons plus Diet 7UP, 2026-11-13
+
+**275 drafts authored; 103 catalog entries remain. 39 of 43 starters covered.**
+
+Added 7 beer bottles, 3 beer cans, 8 refreshment products and both Hata Kosen Ramune 200mL glass bottles in `beer-expansion.mjs`, `beer-cans-expansion.mjs`, `refreshment-expansion.mjs` and `ramune.mjs`. Added Diet 7UP as a separately requested extra in `diet-seven-up.mjs`; its current US package is branded 7UP Zero Sugar, and the source records that catalog-to-package naming distinction. The wrong-brand Kimura 410mL Ramune photo was rejected; both Ramune references show the exact Hata Kosen Original and Melon package.
+
+Inspected all21 package references and reviewed large artwork plus40/56/96/155px light/dark tiles with8%padding. Corrected the Ramune glass fill/pattern rendering before final review. `review/batch-11-2026-11-12-01.png` through `-05.png` and three `batch-11-large-2026-11-12` sheets show the batch; `review/review.json` records per-asset hashes. All254 prior asset hashes are unchanged. Final aesthetic approval and interactive device review remain pending; new records stay needs-review.
+
+All eight Jarritos catalog drinks—Mandarin, Lime, Fruit Punch, Pineapple, Grapefruit, Guava, Tamarind and Watermelon—already have manifest icons. The automatic icons-sync job publishes the complete manifest on merge, so all eight ship with this batch. Icon build/validation, publisher dry run, typecheck and Expo web export pass locally. On the updated main base, a full local suite run had three 30-second timeouts in existing feed/comment tests; 1,119 app tests passed. Main CI is green; this rebased PR must pass its own CI before merge. No catalog contract or backend code changes in this batch; production reconciliation comes from the publish report.
+
 ## Latest batch: 20 Fresca, soda and juice icons, 2026-11-12
 
 **254 drafts authored; 124 catalog entries remain. 39 of 43 starters covered.**
@@ -194,6 +204,6 @@ Visual review covered all 30 icons and 40/56/96/155px square tiles with 8% paddi
 3. Prioritize the 22 remaining starters in `coverage.json`: Dr Pepper / Mountain Dew variants, juices, energy drinks, RTD coffees, smoothies, teas, boba, Gatorade and GT's Gingerade. None is claimed complete by this batch.
 4. Assign disjoint UUID/slug groups. Add family modules exporting `records`; keep shared primitives coordinator-owned. Research each exact package instead of recoloring from a category assumption.
 5. Rebuild, validate, inspect overview and small-size sheets, then update `review/review.json` with the exact reviewed hashes. Keep references and unresolved choices in recipes, not the generated inventory.
-6. After each batch run `node scripts/icons/export-app.mjs` and commit `app/public/bev-icons/` and `app/src/lib/bevIcons.generated.ts`. The app picks a Bev's image as photo > icon > category art, so real photos are never replaced; `npm test -w app` fails if the app's copy drifts from the manifest (see the README's "Ship to the app").
+6. After each batch run `npm run icons:publish -- --dry-run` and commit `design/beverage-icons/`; merging to `main` publishes it through `icons-sync`. The app picks a Bev's image as photo > icon > category art, so real photos are never replaced (see the README's "Publish to the backend").
 
 All resumed worker output is integrated into four new family modules (`colas`, `citrus-sodas`, `sparkling-starters`, `wine-cocktail`). No hidden worker batch remains to recover. The full reusable skill remains in `skill/SKILL.md`.

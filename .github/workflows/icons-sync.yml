@@ -9,12 +9,12 @@ name: icons-sync
 # fetched through its public URL and its headers are printed (the line starts
 # `public URL check:`). See design/beverage-icons/README.md.
 #
-# MANUAL ONLY, and a DRY RUN BY DEFAULT. A dry run reads the manifest, checks
-# every SVG's sha256 and safety, prints the counts, and needs no credentials;
-# untick `dry_run` to upload and write. NO PUSH TRIGGER YET: the app still
-# bundles its own copy of the icons (scripts/icons/export-app.mjs), so nothing
-# reads what this publishes. Running it on every push to the manifest is the
-# follow-up for when the app stops bundling icons and reads `bev_icons`.
+# A push to main that changes the manifest or the portable SVGs runs it FOR
+# REAL (there is no `inputs.dry_run` on a push, so the credentials check runs,
+# the key is passed and DRY_RUN is empty), so an icon batch is published when
+# it merges. A manual dispatch is a DRY RUN BY DEFAULT: it reads the manifest,
+# checks every SVG's sha256 and safety, prints the counts, and needs no
+# credentials; untick `dry_run` to upload and write.
 #
 # Secrets and variables are venues-sync.yml's (and graph-edges.yml's), unchanged:
 #   SUPABASE_SERVICE_ROLE_KEY   repository SECRET
@@ -25,6 +25,11 @@ name: icons-sync
 # the project URL or a key.
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - design/beverage-icons/manifest.json
+      - design/beverage-icons/portable-svg/**
   workflow_dispatch:
     inputs:
       dry_run:

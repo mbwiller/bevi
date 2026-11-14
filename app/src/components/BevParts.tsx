@@ -2,7 +2,6 @@ import type { BevSummary } from '@bevi/shared';
 import { StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
-import { bevIconUri } from '@/lib/bevIcons';
 import { useTheme } from '@/theme';
 
 import { bevArtForCategory } from './BevArt';
@@ -17,18 +16,13 @@ import { usePop } from './usePop';
 
 /**
  * A Bev's BevImage props, photo > icon > category art: its cutout when it has one, else its authored
- * icon (`iconUrl`, served from the `bev-icons` bucket since contract 2.13.0), else its category's
- * BevArt; shimmer while processing. The one place this precedence lives: screens that draw a Bev's
- * image use this rather than reading `photoUrl` or `iconUrl`.
- *
- * The bundled lookup (`bevIconUri`, `@/lib/bevIcons`) is the icon's last fallback, for the reads
- * that do not carry `iconUrl` yet: `bevs.findLikelyDuplicates` (find_similar_bevs gains the column
- * in a follow-up migration) and any client talking to a database from before 20261112000300. It is
- * removed in the follow-up that retires the bundled icons. `??` also covers a BevSummary cached
- * before 2.13.0, whose `iconUrl` is undefined.
+ * icon (`iconUrl`, served from the `bev-icons` bucket), else its category's BevArt; shimmer while
+ * processing. The one place this precedence lives: screens that draw a Bev's image use this rather
+ * than reading `photoUrl` or `iconUrl`. `??` also covers a BevSummary cached before contract 2.13.0,
+ * whose `iconUrl` is undefined.
  */
 export function bevImageProps(bev: BevSummary): Pick<BevImageProps, 'src' | 'art' | 'alt' | 'status'> {
-  const src = bev.photoUrl ?? bev.iconUrl ?? bevIconUri(bev.id);
+  const src = bev.photoUrl ?? bev.iconUrl ?? undefined;
   return {
     src,
     art: src ? undefined : bevArtForCategory(bev.categoryId),
