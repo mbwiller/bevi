@@ -358,6 +358,23 @@ it('keeps the "already on Bevi" hint on screen while the next lookup is still in
   release([]);
 });
 
+// The kept answer is only for a lookup that is coming. Below three characters there is none, so the last
+// one must go: otherwise "4 Bevs like this are already on Bevi." stays under a shortened or emptied Name.
+it.each([
+  ['shortened below three characters', 'Re'],
+  ['cleared', ''],
+])('drops the "already on Bevi" hint once the name is %s', async (_case, shorter) => {
+  await renderWizard();
+  await addPhoto();
+  await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+
+  await fireEvent.changeText(screen.getByLabelText('Name'), 'Red Bull');
+  await screen.findByText(/already on Bevi/);
+
+  await fireEvent.changeText(screen.getByLabelText('Name'), shorter);
+  await waitFor(() => expect(screen.queryByText(/already on Bevi/)).toBeNull(), { timeout: DUPLICATES_DEBOUNCE_MS + 3000 });
+});
+
 // The other side of that trade: step 3 decides "is this already on Bevi?", so it must never answer with
 // the previous name's matches. It waits, visibly, instead.
 it('the duplicates step waits with "Checking Bevi…" instead of showing the previous name\'s matches', async () => {

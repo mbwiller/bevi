@@ -43,11 +43,14 @@ export function useLikelyDuplicates(
   input: FindDuplicatesInput,
   opts: { enabled?: boolean; keepPrevious?: boolean } = {},
 ) {
+  const enabled = (opts.enabled ?? true) && input.name.trim().length >= 3;
   return useQuery({
     queryKey: keys.bevs.duplicates(input),
     queryFn: () => api.bevs.findLikelyDuplicates(input),
-    enabled: (opts.enabled ?? true) && input.name.trim().length >= 3,
-    ...(opts.keepPrevious ? { placeholderData: keepPreviousData } : {}),
+    enabled,
+    // Only while a lookup is coming. A name too short to look up has no next answer to wait for, and a
+    // disabled query would hold the last one for good: "4 Bevs like this" under an emptied Name field.
+    ...(opts.keepPrevious && enabled ? { placeholderData: keepPreviousData } : {}),
   });
 }
 
