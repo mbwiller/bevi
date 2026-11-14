@@ -152,9 +152,10 @@ h('div', { className: 'pv-narrow' },
   h('div', { className: 'bv-bevof-pair' },
     h(B.BevOfCard, { period: 'day', bev: BEVS.horchata, score: 8.9 }),
     h(B.BevOfCard, { period: 'week', bev: BEVS.topo, score: 8.4, date: 'Week of Oct 12' })),
-  h('p', { className: 'cap' }, 'The same Bev won the day and the week: one card'),
+  h('p', { className: 'cap' }, 'The same Bev won the day and the week: still two cards'),
   h('div', { className: 'bv-bevof-pair' },
-    h(B.BevOfCard, { period: 'both', bev: BEVS.horchata, score: 8.9 })))`];
+    h(B.BevOfCard, { period: 'day', bev: BEVS.horchata, score: 8.9 }),
+    h(B.BevOfCard, { period: 'week', bev: BEVS.horchata, score: 8.9 })))`];
 
 // ---------- People ----------
 P.Avatar = [{ group: 'People', height: 150 }, '', `
