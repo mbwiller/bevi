@@ -140,7 +140,7 @@ export function BevdTab({ categoryId, categories, onCategory, onCategoryPress }:
       <EmptyState
         icon="list-filter"
         title="No Bevs match these filters"
-        body="Try another bucket or category."
+        body="Try another reaction or category."
         action="Clear filters"
         onAction={() => {
           setBucket(undefined);

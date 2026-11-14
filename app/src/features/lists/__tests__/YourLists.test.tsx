@@ -164,6 +164,16 @@ describe('the Reaction filter', () => {
     expect(screen.queryByRole('button', { name: 'Reaction' })).toBeNull();
   });
 
+  it('says "reaction", not "bucket", when the filters match nothing', async () => {
+    controls.emptyUser();
+    await start();
+    await fireEvent.press(await screen.findByRole('button', { name: 'Reaction' }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Loved' }));
+    expect(await screen.findByText('No Bevs match these filters')).toBeTruthy();
+    expect(screen.getByText('Try another reaction or category.')).toBeTruthy();
+    expect(screen.queryByText(/bucket/i)).toBeNull();
+  });
+
   it('is the Reaction section of the Filters sheet', async () => {
     await start();
     await fireEvent.press(await screen.findByRole('button', { name: 'Filters' }));
