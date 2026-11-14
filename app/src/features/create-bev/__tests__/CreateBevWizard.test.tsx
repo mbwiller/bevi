@@ -324,6 +324,62 @@ it('keeps the line under Name open whether or not the "already on Bevi" hint is 
   held();
 });
 
+// BEV-7, the other half: every keystroke is a new query key, so without `keepPrevious` `data` falls to
+// `undefined` between lookups and everything it feeds -- the "already on Bevi" hint and the category hint
+// row -- unmounts and remounts, shifting the fields under the keyboard.
+//
+// Both tests below hold the next lookup open rather than racing it: with zero latency the in-flight
+// window is otherwise too short to observe, and a test that cannot fail is not a regression test.
+/** Replaces the next duplicates lookup with a promise this test resolves by hand. */
+function holdNextLookup() {
+  let release!: (rows: BevSummary[]) => void;
+  const held = new Promise<BevSummary[]>((resolve) => {
+    release = resolve;
+  });
+  jest.spyOn(api.bevs, 'findLikelyDuplicates').mockReturnValueOnce(held);
+  return (rows: BevSummary[] = []) => release(rows);
+}
+
+it('keeps the "already on Bevi" hint on screen while the next lookup is still in flight', async () => {
+  await renderWizard();
+  await addPhoto();
+  await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+
+  await fireEvent.changeText(screen.getByLabelText('Name'), 'Red Bull');
+  await screen.findByText(/already on Bevi/);
+
+  const release = holdNextLookup();
+  // A genuinely different name, so the query key changes and a new lookup starts.
+  await fireEvent.changeText(screen.getByLabelText('Name'), 'Red Bull Sugarfree');
+  await waitFor(() => expect(api.bevs.findLikelyDuplicates).toHaveBeenCalled(), { timeout: 5000 });
+
+  // Without keepPrevious the hint is gone here, taking its line and the fields' position with it.
+  expect(screen.getByText(/already on Bevi/)).toBeTruthy();
+  release([]);
+});
+
+// The other side of that trade: step 3 decides "is this already on Bevi?", so it must never answer with
+// the previous name's matches. It waits, visibly, instead.
+it('the duplicates step waits with "Checking Bevi…" instead of showing the previous name\'s matches', async () => {
+  await renderWizard();
+  await addPhoto();
+  await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+
+  // Settle a lookup that found matches, so there is a previous answer available to leak.
+  await fillDetails({ name: 'Red Bull', category: 'Energy' });
+  await screen.findByText(/already on Bevi/);
+
+  const release = holdNextLookup();
+  await fireEvent.changeText(screen.getByLabelText('Name'), 'Zzyzx Qwv Nonesuch');
+  await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+
+  // Step 3's own lookup is in flight: it must show its waiting state, not the Red Bull matches.
+  expect(await screen.findByText('Checking Bevi…')).toBeTruthy();
+  expect(screen.queryByText('Did you mean…?')).toBeNull();
+  release([]);
+  await screen.findByText('Looks new', {}, READY_TIMEOUT);
+});
+
 it('shows no category hint when the chosen category already matches the likely matches', async () => {
   await renderWizard();
   await addPhoto();
