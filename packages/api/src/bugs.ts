@@ -19,8 +19,9 @@ import { mapError } from './errors';
 //   2. the `bug-report` Edge Function is invoked with the caller's JWT. It
 //      redacts, claims the idempotency slot, talks to Linear, and answers with
 //      the identifier Linear assigned.
-// `listMine()` and `markVerified()` are the function's two other routes
-// (`bug-report/status`, `bug-report/verify`), gated the same way server-side.
+// `listMine()`, `markVerified()` and `place()` are the function's other routes
+// (`bug-report/status`, `bug-report/verify`, `bug-report/place`), gated the
+// same way server-side.
 //
 // The tracker credential lives in the function's environment. Nothing in this
 // file, and nothing the app bundles, can reach it. The evidence objects are
@@ -34,6 +35,7 @@ const EVIDENCE_BUCKET = 'bug-evidence';
 const FUNCTION_NAME = 'bug-report';
 const STATUS_ROUTE = 'bug-report/status';
 const VERIFY_ROUTE = 'bug-report/verify';
+const PLACE_ROUTE = 'bug-report/place';
 
 // Matches the bucket's `allowed_mime_types`. Narrower than media.upload's list
 // on purpose: `preparePhoto` in the app re-encodes everything to JPEG, and a
@@ -48,6 +50,8 @@ const EXT_BY_MIME_TYPE: Record<string, string> = {
 const MAX_EVIDENCE_BYTES = 10 * 1024 * 1024;
 // Matches `cardinality(evidence_paths) <= 3` on the ledger.
 const MAX_EVIDENCE = 3;
+// The function keeps the first 6 (redact.ts `TARGET_LIMITS.count`); sending more is wasted bytes.
+const MAX_TARGETS = 6;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TICKET_RE = /^[A-Z][A-Z0-9]*-\d{1,9}$/;
@@ -86,23 +90,39 @@ interface FunctionErrorBody {
   error?: string;
   field?: string;
   message?: string;
+  /** Set by the place route on its own not-found; absent from a function that predates it. */
+  route?: string;
+  /** The place route's `not_open`: the ticket is the caller's, but no longer open. */
+  reason?: string;
+}
+
+interface FunctionErrorResponse {
+  status: number;
+  body: FunctionErrorBody | null;
 }
 
 /**
  * supabase-js's `functions.invoke` rejects with a `FunctionsHttpError` whose
  * body has to be read off the attached `Response`, so the function's own error
- * code is only reachable asynchronously. Anything it cannot read becomes
- * 'unknown' rather than a guess.
+ * code is only reachable asynchronously. Null when there is no response to read.
  */
-async function mapFunctionError(error: unknown): Promise<ApiError> {
+async function readFunctionError(error: unknown): Promise<FunctionErrorResponse | null> {
   const response = (error as { context?: Response } | null)?.context;
-  if (response && typeof response.json === 'function') {
-    let body: FunctionErrorBody | null = null;
-    try {
-      body = (await response.json()) as FunctionErrorBody;
-    } catch {
-      body = null;
-    }
+  if (!response || typeof response.json !== 'function') return null;
+  let body: FunctionErrorBody | null = null;
+  try {
+    body = (await response.json()) as FunctionErrorBody;
+  } catch {
+    body = null;
+  }
+  return { status: response.status, body };
+}
+
+/** The function's error, as the contract's. Anything it cannot read becomes 'unknown' rather than a guess. */
+async function mapFunctionError(error: unknown, read?: FunctionErrorResponse | null): Promise<ApiError> {
+  const answer = read === undefined ? await readFunctionError(error) : read;
+  if (answer) {
+    const { body, status } = answer;
     if (body?.error === 'validation') {
       return new ApiError('validation', body.message ?? 'Check the report and try again', {
         field: body.field,
@@ -110,11 +130,11 @@ async function mapFunctionError(error: unknown): Promise<ApiError> {
     }
     const known = body?.error ? ERROR_CODES[body.error] : undefined;
     if (known) return new ApiError(known.code, known.message, body?.error);
-    if (response.status === 401 || response.status === 403) {
+    if (status === 401 || status === 403) {
       return new ApiError('unauthorized', 'This account cannot file internal bug reports');
     }
-    if (response.status === 404) return new ApiError('not_found', "That ticket isn't one of yours");
-    if (response.status === 429) return new ApiError('rate_limited', 'Too many reports in the last hour');
+    if (status === 404) return new ApiError('not_found', "That ticket isn't one of yours");
+    if (status === 429) return new ApiError('rate_limited', 'Too many reports in the last hour');
   }
   return mapError(error);
 }
@@ -137,7 +157,13 @@ function toSummary(raw: unknown): BugReportSummary | null {
     stateLabel: typeof r.stateLabel === 'string' ? r.stateLabel : null,
     priority: typeof r.priority === 'number' ? r.priority : null,
     updatedAt: typeof r.updatedAt === 'string' ? r.updatedAt : null,
+    rank: typeof r.rank === 'number' && Number.isInteger(r.rank) && r.rank > 0 ? r.rank : null,
   };
+}
+
+function toSummaries(raw: unknown): BugReportSummary[] {
+  const rows = Array.isArray(raw) ? raw : [];
+  return rows.map(toSummary).filter((r): r is BugReportSummary => r !== null);
 }
 
 export function createBugsApi(client: SupabaseClient): BugsApi {
@@ -172,14 +198,14 @@ export function createBugsApi(client: SupabaseClient): BugsApi {
       if (evidence.length > MAX_EVIDENCE) {
         throw new ApiError('validation', `Attach at most ${MAX_EVIDENCE} screenshots`, { field: 'evidence' });
       }
-      const planned: { file: Blob; mimeType: string; ext: string }[] = [];
+      const planned: { file: Blob; mimeType: string; ext: string; caption: string }[] = [];
       for (const item of evidence) {
         const ext = EXT_BY_MIME_TYPE[item.mimeType];
         if (!ext) throw new ApiError('validation', 'Attach a JPEG, PNG or WebP image', { field: 'evidence' });
         if (typeof item.file?.size === 'number' && item.file.size > MAX_EVIDENCE_BYTES) {
           throw new ApiError('validation', 'That screenshot is too large', { field: 'evidence' });
         }
-        planned.push({ file: item.file, mimeType: item.mimeType, ext });
+        planned.push({ file: item.file, mimeType: item.mimeType, ext, caption: typeof item.caption === 'string' ? item.caption : '' });
       }
 
       const evidencePaths: string[] = [];
@@ -203,7 +229,11 @@ export function createBugsApi(client: SupabaseClient): BugsApi {
           actual: input.actual ?? '',
           environment: input.environment ?? {},
           breadcrumbs: input.breadcrumbs ?? [],
+          targets: (input.targets ?? []).slice(0, MAX_TARGETS),
+          stepsSource: input.stepsSource ?? 'typed',
           evidencePaths,
+          // One per uploaded path, in the same order.
+          evidenceCaptions: planned.map((item) => item.caption),
           idempotencyKey: input.idempotencyKey,
         },
       });
@@ -220,8 +250,7 @@ export function createBugsApi(client: SupabaseClient): BugsApi {
       await requireUserId(client);
       const { data, error } = await client.functions.invoke<{ reports?: unknown[] }>(STATUS_ROUTE, { method: 'GET' });
       if (error) throw await mapFunctionError(error);
-      const rows = Array.isArray(data?.reports) ? data.reports : [];
-      return rows.map(toSummary).filter((r): r is BugReportSummary => r !== null);
+      return toSummaries(data?.reports);
     },
 
     async markVerified(ticketId: string): Promise<BugReportSummary> {
@@ -233,6 +262,35 @@ export function createBugsApi(client: SupabaseClient): BugsApi {
       const summary = toSummary(data?.report);
       if (!summary) throw new ApiError('unknown', "The issue tracker didn't confirm the change");
       return summary;
+    },
+
+    async place(ticketId: string, afterTicketId: string | null): Promise<BugReportSummary[]> {
+      await requireUserId(client);
+      const id = ticketId?.trim() ?? '';
+      if (!TICKET_RE.test(id)) throw new ApiError('validation', 'That is not a ticket identifier', { field: 'ticketId' });
+      const after = afterTicketId === null || afterTicketId === undefined ? null : afterTicketId.trim();
+      if (after !== null && !TICKET_RE.test(after)) {
+        throw new ApiError('validation', 'That is not a ticket identifier', { field: 'afterTicketId' });
+      }
+      if (after === id) throw new ApiError('validation', 'A ticket cannot be placed after itself', { field: 'afterTicketId' });
+
+      const { data, error } = await client.functions.invoke<{ reports?: unknown[] }>(PLACE_ROUTE, {
+        body: { ticketId: id, afterTicketId: after },
+      });
+      if (error) {
+        const read = await readFunctionError(error);
+        // The place route's own not-found carries `route: 'place'`. A bare 404
+        // is a deployed function that does not know this route yet.
+        if (read?.status === 404 && read.body?.route !== 'place') {
+          throw new ApiError('unknown', 'Ranking is not available on the server yet', { reason: 'place_unsupported' });
+        }
+        if (read?.status === 404 && read.body?.reason === 'not_open') {
+          throw new ApiError('conflict', "That report isn't open any more", { reason: 'not_open' });
+        }
+        if (read?.status === 404) throw new ApiError('not_found', "That report isn't one of yours", { reason: 'not_found' });
+        throw await mapFunctionError(error, read);
+      }
+      return toSummaries(data?.reports);
     },
   };
 }

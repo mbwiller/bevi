@@ -38,6 +38,12 @@ export interface ConformanceOptions {
    * Check streaks (a ranking today → currentStreak 1). Default true (the FakeApi runs with it on).
    */
   checkStreaks?: boolean;
+  /**
+   * Makes the signed-in user an internal bug reporter. The contract has no way to do that (an
+   * operator runs set_profile_role), so the bugs cases that need one run only when this is given:
+   * the FakeApi passes `controls.setInternalReporter(true)`; a live run would need an operator hook.
+   */
+  makeInternalReporter?: (api: BeviApi) => void | Promise<void>;
 }
 
 const MINOR_BIRTHDATE = (now: Date) => `${now.getUTCFullYear() - 15}-01-01`;
@@ -1326,6 +1332,8 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       await expectCode(api.bugs.report(input), 'unauthorized');
       await expectCode(api.bugs.listMine(), 'unauthorized');
       await expectCode(api.bugs.markVerified('BEV-1'), 'unauthorized');
+      await expectCode(api.bugs.place('BEV-1', null), 'unauthorized');
+      await expectCode(api.bugs.place('BEV-1', 'BEV-2'), 'unauthorized');
     });
 
     it('signed out, canReport answers false rather than throwing, and the rest is unauthorized', async () => {
@@ -1334,6 +1342,105 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       await expectCode(api.bugs.report(input), 'unauthorized');
       await expectCode(api.bugs.listMine(), 'unauthorized');
       await expectCode(api.bugs.markVerified('BEV-1'), 'unauthorized');
+      await expectCode(api.bugs.place('BEV-1', null), 'unauthorized');
+    });
+
+    const makeInternal = options.makeInternalReporter;
+    const internalIt = makeInternal ? it : it.skip;
+
+    const hex = (n: number) => Array.from({ length: n }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+    /** A fresh idempotency key: a v4-shaped UUID. */
+    const newKey = () => `${hex(8)}-${hex(4)}-4${hex(3)}-8${hex(3)}-${hex(12)}`;
+
+    /** A fresh internal reporter, and a filer that returns the ticket identifier. */
+    async function newReporter() {
+      await newUser();
+      await makeInternal!(api);
+      return async (title: string, severity: 'blocker' | 'bad' | 'annoying' | 'polish' = 'bad') =>
+        (await api.bugs.report({ ...input, title, severity, idempotencyKey: newKey() })).ticketId;
+    }
+
+    const ranks = async () => Object.fromEntries((await api.bugs.listMine()).map((r) => [r.ticketId, r.rank]));
+
+    internalIt('listMine carries a rank for open tickets, and a new ticket goes to the top', async () => {
+      const file = await newReporter();
+      const a = await file('first');
+      const b = await file('second');
+      const c = await file('third');
+      expect(await ranks()).toEqual({ [c]: 1, [b]: 2, [a]: 3 });
+    });
+
+    internalIt('place puts a ticket at the top or directly below another, returning the new ranks', async () => {
+      const file = await newReporter();
+      const a = await file('first');
+      const b = await file('second');
+      const c = await file('third');
+
+      const top = await api.bugs.place(a, null);
+      expect(Object.fromEntries(top.map((r) => [r.ticketId, r.rank]))).toEqual({ [a]: 1, [c]: 2, [b]: 3 });
+      // Three open tickets: the top slot is High, the middle Medium, the bottom Low.
+      expect(top.find((r) => r.ticketId === a)?.priority).toBe(2);
+
+      const below = await api.bugs.place(a, b);
+      expect(Object.fromEntries(below.map((r) => [r.ticketId, r.rank]))).toEqual({ [c]: 1, [b]: 2, [a]: 3 });
+      expect(below.find((r) => r.ticketId === a)?.priority).toBe(4);
+      expect(await ranks()).toEqual({ [c]: 1, [b]: 2, [a]: 3 });
+
+      const middle = await api.bugs.place(c, b);
+      expect(Object.fromEntries(middle.map((r) => [r.ticketId, r.rank]))).toEqual({ [b]: 1, [c]: 2, [a]: 3 });
+      expect(middle.find((r) => r.ticketId === c)?.priority).toBe(3);
+    });
+
+    internalIt('place never downgrades an Urgent ticket', async () => {
+      const file = await newReporter();
+      const urgent = await file('blocker', 'blocker');
+      const other = await file('other', 'polish');
+      const placed = await api.bugs.place(urgent, other);
+      const row = placed.find((r) => r.ticketId === urgent);
+      expect(row?.rank).toBe(2);
+      expect(row?.priority).toBe(1);
+    });
+
+    internalIt('place refuses a bad identifier, a ticket after itself, and a ticket that is not an open one of yours', async () => {
+      const file = await newReporter();
+      const a = await file('first');
+      const b = await file('second');
+      expect((await expectCode(api.bugs.place('drop table', null), 'validation')).detail).toMatchObject({ field: 'ticketId' });
+      expect((await expectCode(api.bugs.place(a, 'nope'), 'validation')).detail).toMatchObject({ field: 'afterTicketId' });
+      expect((await expectCode(api.bugs.place(a, a), 'validation')).detail).toMatchObject({ field: 'afterTicketId' });
+      expect((await expectCode(api.bugs.place('BEV-999999', null), 'not_found')).detail).toMatchObject({ reason: 'not_found' });
+      await expectCode(api.bugs.place(a, 'BEV-999999'), 'not_found');
+
+      // A verified ticket is closed: it has no rank, and placing it (or after it) is a conflict,
+      // not a not_found: it is still the caller's.
+      await api.bugs.markVerified(b);
+      expect(await ranks()).toEqual({ [a]: 1, [b]: null });
+      expect((await expectCode(api.bugs.place(b, null), 'conflict')).detail).toEqual({ reason: 'not_open' });
+      expect((await expectCode(api.bugs.place(a, b), 'conflict')).detail).toEqual({ reason: 'not_open' });
+    });
+
+    internalIt("another reporter's ticket cannot be placed", async () => {
+      const file = await newReporter();
+      const theirs = await file('theirs');
+      const mine = await newReporter();
+      const own = await mine('mine');
+      await expectCode(api.bugs.place(theirs, null), 'not_found');
+      await expectCode(api.bugs.place(own, theirs), 'not_found');
+    });
+
+    internalIt('report keeps the first six pointed-at components and accepts a thirty-step recording', async () => {
+      await newReporter();
+      const targets = Array.from({ length: 8 }, (_, i) => ({ component: `C${i}` }));
+      const reproductionSteps = Array.from({ length: 30 }, (_, i) => `Step ${i + 1}`);
+      const result = await api.bugs.report({
+        ...input,
+        idempotencyKey: newKey(),
+        targets,
+        reproductionSteps,
+        stepsSource: 'recorded',
+      });
+      expect(result.status).toBe('created');
+      expect(result.ticketId).toMatch(/^[A-Z][A-Z0-9]*-\d+$/);
     });
   });
 }

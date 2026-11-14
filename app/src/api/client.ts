@@ -8,6 +8,7 @@ import type { BeviApi } from '@bevi/shared';
 
 import { webAuthStorage } from './authStorage';
 import { readApiConfig, unconfiguredApi, type ApiConfig } from './config';
+import { observed } from './observe';
 
 /** Read literally so Expo inlines the values at build time. */
 export const apiConfig: ApiConfig = readApiConfig(
@@ -15,6 +16,8 @@ export const apiConfig: ApiConfig = readApiConfig(
   process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
 );
 
+// `observed` lets the internal bug reporter's trail see which calls failed (observe.ts); until it
+// subscribes, a call through it costs one null check.
 export const api: BeviApi = apiConfig.ok
-  ? createBeviApi({ url: apiConfig.url, publishableKey: apiConfig.publishableKey, authStorage: webAuthStorage() })
+  ? observed(createBeviApi({ url: apiConfig.url, publishableKey: apiConfig.publishableKey, authStorage: webAuthStorage() }))
   : unconfiguredApi(apiConfig.problem);

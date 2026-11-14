@@ -632,9 +632,11 @@ export interface MetaApi {
 // Bugs: the internal bug reporter (docs/bug-workflow.md). Internal-only —
 // every method is refused for an ordinary account, server-side, whatever the
 // client chooses to show. Linear owns the issue: nothing here writes its
-// priority, labels or comments after create, and the app never holds a
-// tracker credential. The one write after create is `markVerified`, which
-// moves a ticket the reporter has checked on the device to Done.
+// labels or comments after create, and the app never holds a tracker
+// credential. There are two writes after create, both to the caller's own
+// tickets: `markVerified`, which moves a ticket the reporter has checked on
+// the device to Done, and `place`, which puts a ticket in the reporter's
+// ranked list (Linear's manual order, and the priority that position implies).
 // ---------------------------------------------------------------------------
 
 /** What the reporter says it is. The server files each kind under a Linear label of the same name. */
@@ -647,7 +649,7 @@ export type BugReportKind = 'bug' | 'fix' | 'idea' | 'design';
  */
 export type BugReportSeverity = 'blocker' | 'bad' | 'annoying' | 'polish';
 
-/** Safe, allow-listed context the reporter sees before sending. No user content, ever. */
+/** Safe, allow-listed context about the build, the device and the screen. The reporter can see it before sending. */
 export interface BugReportEnvironment {
   /** The route the reporter was on, e.g. '/bev/[id]'. Never a URL with a query string. */
   route?: string;
@@ -669,19 +671,71 @@ export interface BugReportEnvironment {
   /** ISO-8601. */
   occurredAt?: string;
   reproducibility?: 'always' | 'intermittent' | 'unknown';
+  /** The concrete path the reporter was on, e.g. '/bev/8f3a…'. Never a query string or a fragment. */
+  path?: string;
+  /** 'home screen' when the app runs as an installed web app, 'browser' in a tab. */
+  display?: 'home screen' | 'browser';
+  /** `window.devicePixelRatio`. */
+  pixelRatio?: number;
+  /** The safe-area insets in CSS px as 'top,right,bottom,left', e.g. '59,0,34,0'. */
+  safeArea?: string;
+  /** Whether the device asks for reduced motion. */
+  reducedMotion?: boolean;
+}
+
+/**
+ * A component the reporter pointed at, as the app read it off the screen at
+ * that moment: which component, where its source is, what it showed and how
+ * it was drawn. Collected only for internal reporters; the server caps and
+ * redacts every string and drops anything this shape does not name.
+ */
+export interface BugReportTarget {
+  /** The component's name as the app's source writes it, e.g. 'TabBar'. */
+  component: string;
+  /** Its ancestry, outermost first and ending with `component`, e.g. ['FeedScreen', 'TabBar']. At most 8. */
+  path?: string[];
+  /** The repo-relative source file, when the app's component manifest knows it. */
+  file?: string;
+  /** Its accessible label, e.g. 'Add Bev'. */
+  label?: string;
+  /** Its ARIA role, e.g. 'button'. */
+  role?: string;
+  /** Its visible text, trimmed. At most 160 characters. */
+  text?: string;
+  /** Its props that are strings, numbers or booleans. At most 12. */
+  props?: Record<string, string | number | boolean>;
+  /** Where it sat in the viewport, in CSS px. */
+  rect?: { x: number; y: number; width: number; height: number };
+  /**
+   * How it was drawn, as design-token names where one matches and the raw
+   * value where none does, e.g. { backgroundColor: 'colors.primary',
+   * borderRadius: '13px (no token)' }. At most 12.
+   */
+  styles?: Record<string, string>;
+  /** The route pattern of the screen it was on. */
+  route?: string;
+  /** Which entry of `evidence` shows it (0-based). */
+  evidenceIndex?: number;
+  /** The number drawn on it in that screenshot (1-based). */
+  mark?: number;
 }
 
 /**
  * One entry of the trail the app keeps in memory: a navigation (the route
- * pattern, never ids or a query string) or a failed API call (the method
- * name, the error code, the status, the duration). Never arguments, never
- * responses, never anything a user typed. The server keeps at most 20 and
- * redacts every string.
+ * pattern, never ids or a query string), a failed API call (the method
+ * name, the error code, the status, the duration), a tap (the component and
+ * its label) or an uncaught error (its message). Never arguments, never
+ * responses, never anything a user typed. The server keeps the most recent
+ * 40 and redacts every string.
  */
 export interface BugBreadcrumb {
   /** ISO-8601. */
   at: string;
-  kind: 'nav' | 'api';
+  kind: 'nav' | 'api' | 'tap' | 'error';
+  /** `tap`: what was tapped, e.g. 'TabBar › Add Bev'. */
+  target?: string;
+  /** `error`: the error's message. */
+  message?: string;
   /** `nav`: the route pattern, e.g. '/bev/[id]'. */
   route?: string;
   /** `api`: the BeviApi method, e.g. 'rankings.submit'. */
@@ -702,16 +756,24 @@ export interface BugReportInput {
   /** What happened. */
   description?: string;
   reproductionSteps?: string[];
+  /**
+   * Who wrote `reproductionSteps`: the reporter ('typed', the default) or the
+   * app, from the taps and screens it recorded ('recorded'). The ticket says
+   * which, so nobody reads a recorded trail as a person's account.
+   */
+  stepsSource?: 'typed' | 'recorded';
   expected?: string;
   actual?: string;
   environment?: BugReportEnvironment;
   breadcrumbs?: BugBreadcrumb[];
+  /** The components the reporter pointed at, in the order they were marked. At most 6. */
+  targets?: BugReportTarget[];
   /**
    * The screenshots, at most 3, uploaded to private storage as part of this
    * call and never before it — nothing leaves the device until the reporter
-   * submits.
+   * submits. `caption` says what one shows, e.g. 'Feed, with 1 marked'.
    */
-  evidence?: { file: Blob; mimeType: string }[];
+  evidence?: { file: Blob; mimeType: string; caption?: string }[];
   /**
    * A UUID the client generates once per draft and reuses on every retry of
    * that draft. The same key never creates a second ticket.
@@ -750,6 +812,14 @@ export interface BugReportSummary {
   priority: number | null;
   /** ISO-8601, Linear's last change; null when unknown. */
   updatedAt: string | null;
+  /**
+   * Where this ticket sits among the caller's own open tickets (triage, todo
+   * and in progress), 1 being the one that bothers them most. It is Linear's
+   * manual order read back, so it follows a drag in Linear too. Null for a
+   * ticket that is in review, closed or unknown, and when the tracker could
+   * not be asked.
+   */
+  rank: number | null;
 }
 
 export interface BugsApi {
@@ -796,6 +866,25 @@ export interface BugsApi {
    *   ticket identifier; 'unknown' — the tracker refused or is unconfigured.
    */
   markVerified(ticketId: string): Promise<BugReportSummary>;
+
+  /**
+   * Places one of the caller's own open tickets in their ranked list:
+   * directly below `afterTicketId` (another of their open tickets), or at the
+   * top when it is null. The server writes the position to the tracker as its
+   * manual order and sets the priority from where the ticket landed (the top
+   * quarter High, the middle half Medium, the rest Low; a ticket already
+   * Urgent stays Urgent). Returns the caller's tickets as `listMine` does,
+   * with the new ranks.
+   *
+   * @throws 'unauthorized' — signed out, or not an internal reporter;
+   *   'not_found' — either ticket is not one of the caller's;
+   *   'conflict' — one of them is the caller's but is no longer open
+   *   (`detail.reason = 'not_open'`): refetch the list;
+   *   'validation' — not a ticket identifier, or a ticket placed after itself;
+   *   'unknown' — the tracker refused, is unconfigured, or the server
+   *   predates ranking.
+   */
+  place(ticketId: string, afterTicketId: string | null): Promise<BugReportSummary[]>;
 }
 
 export interface BeviApi extends AuthApi {
