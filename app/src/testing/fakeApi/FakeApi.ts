@@ -637,8 +637,8 @@ export class FakeApi implements BeviApi {
       flavor: b.flavor,
       categoryId: b.categoryId,
       photoUrl: photo.url,
-      // The real API serves an icon from the `bev-icons` bucket (contract 2.13.0). The fake catalog
-      // has no icon rows, so none: bevImageProps then falls back to the bundled icon, as before.
+      // The real API serves an icon from the `bev-icons` bucket. The fake catalog has no icon rows,
+      // so none: bevImageProps then falls back to the category art.
       iconUrl: null,
       photoStatus: photo.status,
       priceTier: b.priceTier,

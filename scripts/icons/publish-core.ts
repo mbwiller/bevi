@@ -7,11 +7,9 @@
  * Conventions follow scripts/venues/import-core.ts: no dependencies, Node 22
  * type stripping, and the impure shell stays as thin as it can be.
  *
- * THE RULES MIRROR scripts/icons/export-app.mjs, which still ships the same
- * icons into the app bundle: a lowercase uuid bevId, a kebab-case slug, a
- * 64-hex portableSvgSha256, a portableSvg path inside design/beverage-icons/,
- * no duplicate bevId and no duplicate slug. A manifest one script accepts and
- * the other refuses would let the app and the backend disagree about an icon.
+ * THE RULES: a lowercase uuid bevId, a kebab-case slug, a 64-hex
+ * portableSvgSha256, a portableSvg path inside design/beverage-icons/, no
+ * duplicate bevId and no duplicate slug.
  */
 
 import { posix } from "node:path";
@@ -76,8 +74,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /**
  * Validates manifest.json's parsed contents and returns one entry per record,
- * in manifest order. Throws on the first problem, naming the record, exactly
- * as export-app.mjs does (it exits on the first `fail`).
+ * in manifest order. Throws on the first problem, naming the record.
  */
 export function validateManifest(manifest: unknown): IconEntry[] {
   if (!isRecord(manifest) || !Array.isArray(manifest.records)) {
