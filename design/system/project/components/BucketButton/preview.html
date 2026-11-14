@@ -45,7 +45,7 @@
   ReactDOM.createRoot(document.getElementById('root')).render(h(function Demo() {
   function Set(props) {
     var st = React.useState(props.start), v = st[0], set = st[1];
-    return h('div', { className: 'gc' }, ['loved', 'fine', 'disliked'].map(function (k) {
+    return h('div', { className: 'gc' }, ['disliked', 'fine', 'loved'].map(function (k) {
       return h(B.BucketButton, { key: k, bucket: k, selected: v === k, dimmed: v != null && v !== k, onClick: function () { set(v === k ? null : k); } });
     }));
   }
