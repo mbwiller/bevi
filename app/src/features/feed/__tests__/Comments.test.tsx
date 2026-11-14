@@ -13,6 +13,12 @@ import { POST_GONE } from '../FeedScreen';
 // Comments on feed posts (M-03), against the FakeApi through the real Feed route. Its own file
 // rather than more of Feed.test.tsx: each renderRouter test holds a lot of memory until the file ends.
 
+// Each test here mounts the whole Feed route (renderRouter). That is 2 to 4 seconds on a laptop and
+// several times that on GitHub's runners, where the slowest tests ran past the 30s default from
+// jest.config.js on three CI runs on 2026-11-11. They are slow there, not stuck: the same commit
+// passes on a rerun.
+jest.setTimeout(90_000);
+
 let client: QueryClient;
 
 function Layout() {

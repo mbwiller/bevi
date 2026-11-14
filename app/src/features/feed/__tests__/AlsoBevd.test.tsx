@@ -15,6 +15,12 @@ import UserProfileScreen from '@/app/user/[id]/index';
 // FakeApi: the friends rank the Bevs, then the post's author does, so each author's post is the one
 // with the friends before it. Its own file, as Comments.test.tsx is.
 
+// Each test here mounts the whole Feed route (renderRouter). That is 2 to 4 seconds on a laptop and
+// several times that on GitHub's runners, where the slowest tests ran past the 30s default from
+// jest.config.js on three CI runs on 2026-11-11. They are slow there, not stuck: the same commit
+// passes on a rerun.
+jest.setTimeout(90_000);
+
 let client: QueryClient;
 
 function Layout() {
