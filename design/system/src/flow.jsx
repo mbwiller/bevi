@@ -128,7 +128,7 @@ export function SearchBar({ placeholder = 'Search a Bev or a person', value, onC
 }
 
 /** Labelled 48pt text field for onboarding and the create wizard. */
-export function TextField({ label, value, defaultValue, placeholder, prefix, hint, error, onChange, id, type = 'text', className }) {
+export function TextField({ label, value, defaultValue, placeholder, prefix, hint, error, reserveHint = false, onChange, id, type = 'text', className }) {
   const fid = id || 'bv-field-' + (label || placeholder || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
   return (
     <div className={cx('bv', 'bv-field', error && 'bv-field-error', className)}>
@@ -137,7 +137,7 @@ export function TextField({ label, value, defaultValue, placeholder, prefix, hin
         {prefix ? <span className="bodyLarge bv-field-prefix">{prefix}</span> : null}
         <input id={fid} className="bodyLarge" type={type} value={value} defaultValue={defaultValue} placeholder={placeholder} onChange={onChange} aria-invalid={error ? true : undefined} aria-describedby={hint || error ? fid + '-msg' : undefined} />
       </div>
-      {error || hint ? <p id={fid + '-msg'} className={cx('caption', error ? 'bv-field-errmsg' : 'bv-meta')}>{error || hint}</p> : null}
+      {error || hint || reserveHint ? <p id={fid + '-msg'} className={cx('caption', error ? 'bv-field-errmsg' : 'bv-meta', reserveHint && 'bv-field-reserve')} aria-hidden={error || hint ? undefined : true}>{error || hint}</p> : null}
     </div>
   );
 }

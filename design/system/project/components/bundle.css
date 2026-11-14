@@ -176,6 +176,8 @@
 .bv-field-prefix { color: var(--textSecondary); margin-right: 2px; }
 .bv-field-error .bv-field-box { border-color: var(--scoreLow); }
 .bv-field-errmsg { color: var(--scoreLow); }
+/* reserveHint: one caption line stays open under the box, so a hint that comes and goes moves nothing below it. */
+.bv-field-reserve { min-height: 18px; }
 
 /* PriceTierPicker */
 .bv-tierpick { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-md); }

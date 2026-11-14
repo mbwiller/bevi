@@ -29,12 +29,28 @@ export function useBevSearch(q: string, categoryId?: CategoryId, opts: { enabled
   });
 }
 
-/** "Did you mean…" in the create wizard (up to 5). */
-export function useLikelyDuplicates(input: FindDuplicatesInput, opts: { enabled?: boolean } = {}) {
+/**
+ * "Did you mean…" in the create wizard (up to 5).
+ *
+ * `keepPrevious` holds the last answer while the next lookup runs, as `useBevSearch` does. The wizard
+ * sets it while the person is still typing: every keystroke is a new query key, and without it `data`
+ * falls to `undefined` between lookups, so the hints that depend on it flicker and move the fields
+ * under the keyboard (BEV-7). Leave it off where an answer must be the answer to what was asked --
+ * the duplicates step, which would otherwise show the previous name's matches instead of "Checking
+ * Bevi…" while it waits.
+ */
+export function useLikelyDuplicates(
+  input: FindDuplicatesInput,
+  opts: { enabled?: boolean; keepPrevious?: boolean } = {},
+) {
+  const enabled = (opts.enabled ?? true) && input.name.trim().length >= 3;
   return useQuery({
     queryKey: keys.bevs.duplicates(input),
     queryFn: () => api.bevs.findLikelyDuplicates(input),
-    enabled: (opts.enabled ?? true) && input.name.trim().length >= 3,
+    enabled,
+    // Only while a lookup is coming. A name too short to look up has no next answer to wait for, and a
+    // disabled query would hold the last one for good: "4 Bevs like this" under an emptied Name field.
+    ...(opts.keepPrevious && enabled ? { placeholderData: keepPreviousData } : {}),
   });
 }
 
