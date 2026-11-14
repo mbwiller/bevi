@@ -133,10 +133,13 @@ function NotePanel({ draft, onSend }: { draft: Draft; onSend: () => void }) {
         <Pictures draft={draft} />
         <NoteField draft={draft} autoFocus={focusNote} />
         <Attached draft={draft} />
+      </ScrollView>
+      {/* Outside the scroller, so Send is on screen however much the note holds. */}
+      <View style={styles.footer}>
         <Button variant="primary" block disabled={!draft.text.trim()} onPress={onSend}>
           {draft.error ? 'Try again' : 'Send'}
         </Button>
-      </ScrollView>
+      </View>
     </Animated.View>
   );
 }
@@ -471,6 +474,7 @@ const styles = StyleSheet.create({
   grow: { flex: 1, minWidth: 0 },
   scroll: { flexGrow: 0, flexShrink: 1 },
   body: { gap: spacing.md, paddingHorizontal: spacing.gutter, paddingTop: spacing.xs },
+  footer: { paddingHorizontal: spacing.gutter, paddingTop: spacing.sm },
   failure: { gap: spacing.xs },
   pictures: { gap: spacing.sm },
   // Vertical padding keeps the 44pt expanders of the 30pt chips inside the horizontal scroller's clip.
