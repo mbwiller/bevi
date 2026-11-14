@@ -110,7 +110,12 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
   );
   const debounced = useDebouncedValue(lookup, DUPLICATES_DEBOUNCE_MS);
   // Live while typing (debounced); on step 3 the form is settled, so look up exactly what was entered.
-  const duplicatesQ = useLikelyDuplicates(step === 2 ? lookup : debounced, { enabled: step >= 1 });
+  // While typing, the last answer stays until the next one lands, so the hints it feeds don't flicker
+  // and shift the fields (BEV-7). Step 3 keeps its honest "Checking Bevi…" instead of a stale answer.
+  const duplicatesQ = useLikelyDuplicates(step === 2 ? lookup : debounced, {
+    enabled: step >= 1,
+    keepPrevious: step !== 2,
+  });
 
   // Catch a wrong category at the source: the matches (from every category) mostly share another one.
   const categoryHint = useMemo(() => {

@@ -276,11 +276,14 @@ h('div', { className: 'pv-col' },
   h(B.SearchBar, { placeholder: 'Search a Bev or a person', id: 'feed-search' }),
   h(B.SearchBar, { variant: 'outlined', placeholder: 'Search a Bev, brand or flavor', value: 'horch', id: 'add-search' }))`];
 
-P.TextField = [{ group: 'Inputs', height: 300, width: 393 }, '', `
+P.TextField = [{ group: 'Inputs', height: 560, width: 393 }, '', `
 h('div', { className: 'pv-col', style: { gap: 18 } },
   h(B.TextField, { label: 'Display name', defaultValue: 'Matt Willer', id: 'f-name' }),
   h(B.TextField, { label: 'Handle', prefix: '@', defaultValue: 'mbwiller', hint: 'Lowercase, 3–20 characters.', id: 'f-handle' }),
-  h(B.TextField, { label: 'Handle', prefix: '@', defaultValue: 'arjun', error: 'That handle is taken.', id: 'f-taken' }))`];
+  h(B.TextField, { label: 'Handle', prefix: '@', defaultValue: 'arjun', error: 'That handle is taken.', id: 'f-taken' }),
+  h('p', { className: 'pv-label' }, 'reserveHint: the same field with and without its hint. The line is held either way, so nothing below it moves.'),
+  h(B.TextField, { label: 'Name', defaultValue: 'Mexican Coke', reserveHint: true, hint: '1 Bev like this is already on Bevi.', id: 'f-reserve-hint' }),
+  h(B.TextField, { label: 'Name', defaultValue: 'Mexican Cola', reserveHint: true, id: 'f-reserve-empty' }))`];
 
 P.PriceTierPicker = [{ group: 'Inputs', height: 140, width: 393 }, '', `
 h('div', { className: 'pv-col' }, h(B.PriceTierPicker, { value: 2 }))`];

@@ -87,6 +87,8 @@ export function DetailsStep({ form, errors, onChange, onOpenCategories, label, o
         onChange={(name) => onChange({ name })}
         error={errors.name}
         hint={similarCount > 0 ? `${similarCount === 1 ? '1 Bev like this is' : `${similarCount} Bevs like this are`} already on Bevi.` : undefined}
+        // The hint comes and goes with every lookup while typing; its line stays open so Brand and the rest don't jump (BEV-7).
+        reserveHint
         maxLength={NAME_MAX_LENGTH}
         autoCapitalize="words"
       />

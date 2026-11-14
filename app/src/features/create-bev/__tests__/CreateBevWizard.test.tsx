@@ -1,10 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { configure, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import type { BevSummary } from '@bevi/shared';
 
 import { api } from '@/api/client';
 import { controls } from '@/testing/fakeApi';
 import { categoryById } from '@/lib/categories';
+import { type } from '@/theme';
 
 import { CreateBevWizard, DUPLICATES_DEBOUNCE_MS } from '../CreateBevWizard';
 import { pickImage, preparePhoto, UnsupportedImageError } from '../photo';
@@ -296,6 +298,103 @@ it('hints at the category the likely matches share, and "Use Energy" sets it wit
   // Stays gone once the matches are re-fetched with the new category.
   await new Promise((r) => setTimeout(r, DUPLICATES_DEBOUNCE_MS + 200));
   expect(screen.queryByText(/Most Bevs like this are/)).toBeNull();
+});
+
+// BEV-7: "1 Bev like this is already on Bevi." appeared and disappeared under Name with every lookup, so Brand
+// and the fields below jumped while they were being typed in. jest has no layout engine, so this checks what
+// keeps them still: the hint's line is there, one caption line tall, before, during and after the hint.
+it('keeps the line under Name open whether or not the "already on Bevi" hint is showing', async () => {
+  await renderWizard();
+  await addPhoto();
+  await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+  const line = () => screen.getByTestId(`${screen.getByLabelText('Name').props.id}-msg`, { includeHiddenElements: true });
+  const held = () => expect(StyleSheet.flatten(line().props.style)).toMatchObject({ minHeight: type.caption.lineHeight });
+
+  // Nothing typed: no hint, the line already holds its place.
+  expect(screen.queryByText(/already on Bevi/)).toBeNull();
+  held();
+
+  await fireEvent.changeText(screen.getByLabelText('Name'), 'Red Bull');
+  expect(await screen.findByText(/already on Bevi/)).toBe(line());
+  held();
+
+  // A name nothing matches: the hint goes, the line stays.
+  await fireEvent.changeText(screen.getByLabelText('Name'), 'Zzyzx Qwv');
+  await waitFor(() => expect(screen.queryByText(/already on Bevi/)).toBeNull());
+  held();
+});
+
+// BEV-7, the other half: every keystroke is a new query key, so without `keepPrevious` `data` falls to
+// `undefined` between lookups and everything it feeds -- the "already on Bevi" hint and the category hint
+// row -- unmounts and remounts, shifting the fields under the keyboard.
+//
+// Both tests below hold the next lookup open rather than racing it: with zero latency the in-flight
+// window is otherwise too short to observe, and a test that cannot fail is not a regression test.
+/** Replaces the next duplicates lookup with a promise this test resolves by hand. */
+function holdNextLookup() {
+  let release!: (rows: BevSummary[]) => void;
+  const held = new Promise<BevSummary[]>((resolve) => {
+    release = resolve;
+  });
+  jest.spyOn(api.bevs, 'findLikelyDuplicates').mockReturnValueOnce(held);
+  return (rows: BevSummary[] = []) => release(rows);
+}
+
+it('keeps the "already on Bevi" hint on screen while the next lookup is still in flight', async () => {
+  await renderWizard();
+  await addPhoto();
+  await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+
+  await fireEvent.changeText(screen.getByLabelText('Name'), 'Red Bull');
+  await screen.findByText(/already on Bevi/);
+
+  const release = holdNextLookup();
+  // A genuinely different name, so the query key changes and a new lookup starts.
+  await fireEvent.changeText(screen.getByLabelText('Name'), 'Red Bull Sugarfree');
+  await waitFor(() => expect(api.bevs.findLikelyDuplicates).toHaveBeenCalled(), { timeout: 5000 });
+
+  // Without keepPrevious the hint is gone here, taking its line and the fields' position with it.
+  expect(screen.getByText(/already on Bevi/)).toBeTruthy();
+  release([]);
+});
+
+// The kept answer is only for a lookup that is coming. Below three characters there is none, so the last
+// one must go: otherwise "4 Bevs like this are already on Bevi." stays under a shortened or emptied Name.
+it.each([
+  ['shortened below three characters', 'Re'],
+  ['cleared', ''],
+])('drops the "already on Bevi" hint once the name is %s', async (_case, shorter) => {
+  await renderWizard();
+  await addPhoto();
+  await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+
+  await fireEvent.changeText(screen.getByLabelText('Name'), 'Red Bull');
+  await screen.findByText(/already on Bevi/);
+
+  await fireEvent.changeText(screen.getByLabelText('Name'), shorter);
+  await waitFor(() => expect(screen.queryByText(/already on Bevi/)).toBeNull(), { timeout: DUPLICATES_DEBOUNCE_MS + 3000 });
+});
+
+// The other side of that trade: step 3 decides "is this already on Bevi?", so it must never answer with
+// the previous name's matches. It waits, visibly, instead.
+it('the duplicates step waits with "Checking Bevi…" instead of showing the previous name\'s matches', async () => {
+  await renderWizard();
+  await addPhoto();
+  await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+
+  // Settle a lookup that found matches, so there is a previous answer available to leak.
+  await fillDetails({ name: 'Red Bull', category: 'Energy' });
+  await screen.findByText(/already on Bevi/);
+
+  const release = holdNextLookup();
+  await fireEvent.changeText(screen.getByLabelText('Name'), 'Zzyzx Qwv Nonesuch');
+  await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+
+  // Step 3's own lookup is in flight: it must show its waiting state, not the Red Bull matches.
+  expect(await screen.findByText('Checking Bevi…')).toBeTruthy();
+  expect(screen.queryByText('Did you mean…?')).toBeNull();
+  release([]);
+  await screen.findByText('Looks new', {}, READY_TIMEOUT);
 });
 
 it('shows no category hint when the chosen category already matches the likely matches', async () => {
