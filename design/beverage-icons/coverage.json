@@ -1,37 +1,13 @@
 {
   "summary": {
     "catalog": 378,
-    "authored": 275,
-    "pending": 103,
-    "starterAuthored": 39,
+    "authored": 305,
+    "pending": 73,
+    "starterAuthored": 40,
     "starterTotal": 43,
     "livePostgresReconciled": false
   },
   "pending": [
-    {
-      "bevId": "6a1784e0-7780-562e-9988-1b6df1d6de02",
-      "slug": "aw-diet-root-beer",
-      "name": "A&W Diet Root Beer",
-      "brand": "A&W",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "f5fc4367-0ad3-53cd-8329-7029e9785c0e",
-      "slug": "canada-dry-diet-ginger-ale",
-      "name": "Canada Dry Diet Ginger Ale",
-      "brand": "Canada Dry",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "bdd0a5d5-3cb0-50fe-8f76-17237860f097",
-      "slug": "diet-sunkist-orange",
-      "name": "Diet Sunkist Orange",
-      "brand": "Sunkist",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
     {
       "bevId": "9a2ef1e8-693c-5c10-9628-b95450354734",
       "slug": "zevia-mountain-twist",
@@ -45,14 +21,6 @@
       "slug": "diet-rc-cola",
       "name": "Diet RC Cola",
       "brand": "RC Cola",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "19d2d0a4-abfa-5c01-800c-7a81f5912cbc",
-      "slug": "sprite-cherry",
-      "name": "Sprite Cherry",
-      "brand": "Sprite",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -121,62 +89,6 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "5ff248d3-5dfd-5fdb-95c7-ed304a50970c",
-      "slug": "diet-pepsi-caffeine-free",
-      "name": "Diet Pepsi Caffeine Free",
-      "brand": "Diet Pepsi",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "79a9510e-5645-5a27-be84-12d51d4320fd",
-      "slug": "diet-mug-root-beer",
-      "name": "Diet Mug Root Beer",
-      "brand": "Mug",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "7696f382-d1dc-530a-ad78-e55684050b2f",
-      "slug": "diet-barqs-root-beer",
-      "name": "Diet Barq's Root Beer",
-      "brand": "Barq's",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "d2e6c5b6-8c89-52c9-96e0-1ff327eb6cfb",
-      "slug": "diet-orange-crush",
-      "name": "Diet Orange Crush",
-      "brand": "Crush",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "dc8b7b75-0987-5dc9-a4cd-e64739d84094",
-      "slug": "diet-squirt",
-      "name": "Diet Squirt",
-      "brand": "Squirt",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "007e1a80-c178-5280-8fff-f743d28b1b11",
-      "slug": "diet-vernors",
-      "name": "Diet Vernors",
-      "brand": "Vernors",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "14bd6307-5818-5ca2-b25e-34632eaed9f0",
-      "slug": "shasta-diet-cola",
-      "name": "Shasta Diet Cola",
-      "brand": "Shasta",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "ddc4cce4-30d8-5843-9826-8c4f5354464a",
       "slug": "tropicana-pink-lemonade",
       "name": "Pink Lemonade",
@@ -225,58 +137,10 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "0185e29e-12f6-5f46-8223-a22a1fc1144c",
-      "slug": "celsius-cucumber-lime",
-      "name": "Celsius Cucumber Lime",
-      "brand": "Celsius",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "d5fae22e-0812-5472-bd0b-883336a11cc9",
-      "slug": "alani-nu-mimosa",
-      "name": "Alani Nu Energy Mimosa",
-      "brand": "Alani Nu",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "ce13c1fc-955d-5ce3-abbf-7f075fe1570a",
-      "slug": "bang-rainbow-unicorn",
-      "name": "Bang Energy Rainbow Unicorn",
-      "brand": "Bang Energy",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "c3fc3877-1a93-5bd4-a155-c4a4be8a281d",
       "slug": "ghost-energy-faze-berry",
       "name": "Ghost Energy x FaZe Berry",
       "brand": "Ghost Energy",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "99a18b9b-5d18-574f-a54c-a7bfbd3d7fd7",
-      "slug": "five-hour-energy-original",
-      "name": "5-hour Energy Original",
-      "brand": "5-hour Energy",
-      "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "dcae3c67-280f-5f1b-865c-9e88aab217cd",
-      "slug": "five-hour-energy-extra-strength",
-      "name": "5-hour Energy Extra Strength",
-      "brand": "5-hour Energy",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "e8a7f6c7-7d83-5c59-a2b5-b11bb930479b",
-      "slug": "five-hour-energy-pink-lemonade",
-      "name": "5-hour Energy Pink Lemonade",
-      "brand": "5-hour Energy",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -665,66 +529,10 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "7e46ce4b-c3e7-50d6-9730-a569fc6da933",
-      "slug": "pacifico-clara",
-      "name": "Pacifico Clara",
-      "brand": "Pacifico",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "39bc813f-40f4-5724-b3d6-31dda409f850",
-      "slug": "dos-equis-lager-especial",
-      "name": "Dos Equis Lager Especial",
-      "brand": "Dos Equis",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "38b4a3ca-c179-514d-a822-79dcf5998894",
-      "slug": "white-claw-black-cherry",
-      "name": "White Claw Hard Seltzer",
-      "brand": "White Claw",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "9f8e6bcd-41d5-520b-bc4a-2093ad7bbc84",
-      "slug": "white-claw-mango",
-      "name": "White Claw Hard Seltzer",
-      "brand": "White Claw",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "40b879d0-2350-5517-a4cd-d030e0de72c3",
       "slug": "white-claw-lime",
       "name": "White Claw Hard Seltzer",
       "brand": "White Claw",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "d1b17c57-826a-576d-b6a3-2a8554dcc4c0",
-      "slug": "white-claw-natural-lime",
-      "name": "White Claw Hard Seltzer",
-      "brand": "White Claw",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "e5b6a6e7-972a-5e37-99e2-01f84a5505eb",
-      "slug": "truly-wild-berry",
-      "name": "Truly Hard Seltzer",
-      "brand": "Truly",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "a2195743-a1c6-57ff-b8b1-d856e201cf54",
-      "slug": "truly-lemonade",
-      "name": "Truly Hard Seltzer",
-      "brand": "Truly",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -781,54 +589,6 @@
       "slug": "josh-cellars-chardonnay",
       "name": "Josh Cellars Chardonnay",
       "brand": "Josh Cellars",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "947cd3ec-462b-515e-90d9-9967fb46d88d",
-      "slug": "titos-handmade-vodka-soda",
-      "name": "Tito's Vodka Soda",
-      "brand": "Tito's Handmade Vodka",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "70da1493-bf1b-5bf2-8dc6-87e6d0ab6aab",
-      "slug": "jack-daniels-and-coke",
-      "name": "Jack Daniel's And Coke",
-      "brand": "Jack Daniel's",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "b227f854-bdfa-5a02-a1d1-ebac6e0245c1",
-      "slug": "high-noon-vodka-soda-watermelon",
-      "name": "High Noon Vodka Soda",
-      "brand": "High Noon",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "718762fe-6d32-59dc-ae45-baac2d630681",
-      "slug": "high-noon-vodka-soda-peach",
-      "name": "High Noon Vodka Soda",
-      "brand": "High Noon",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "8adbfd7e-77c9-5c99-a55f-5ffc03bfd754",
-      "slug": "cutwater-spirits-margarita",
-      "name": "Cutwater Spirits Margarita",
-      "brand": "Cutwater Spirits",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "6e665aa0-7abc-50e7-8475-978c62c81133",
-      "slug": "cutwater-spirits-vodka-mule",
-      "name": "Cutwater Spirits Vodka Mule",
-      "brand": "Cutwater Spirits",
       "isStarter": false,
       "status": "needs-reference"
     }
