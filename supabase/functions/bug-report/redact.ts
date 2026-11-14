@@ -25,9 +25,13 @@ export const LIMITS = {
 /** Caps for the breadcrumb trail the app sends (docs/bug-workflow.md). */
 export const BREADCRUMB_LIMITS = {
   /** The most recent entries are kept when the client sends more. */
-  count: 20,
+  count: 40,
   at: 40,
   route: 120,
+  /** `tap`: what was tapped, e.g. 'TabBar › Add Bev'. */
+  target: 120,
+  /** `error`: the error's message. */
+  message: 200,
   method: 60,
   code: 40,
   statusMin: 100,
@@ -127,6 +131,16 @@ export interface Environment {
   viewport?: string;
   occurredAt?: string;
   reproducibility?: string;
+  /** The concrete path, e.g. '/bev/8f3a…'. Dropped if it carries a query string or a fragment. */
+  path?: string;
+  /** 'home screen' | 'browser'. */
+  display?: string;
+  /** The contract sends a number; the ticket prints it. */
+  pixelRatio?: string;
+  /** 'top,right,bottom,left' in CSS px. */
+  safeArea?: string;
+  /** The contract sends a boolean; the ticket prints 'yes' or 'no'. */
+  reducedMotion?: string;
 }
 
 /** The keys that may appear in the ticket, in the order the template prints them. */
@@ -143,6 +157,11 @@ export const ENVIRONMENT_KEYS: readonly (keyof Environment)[] = [
   "viewport",
   "occurredAt",
   "reproducibility",
+  "path",
+  "display",
+  "pixelRatio",
+  "safeArea",
+  "reducedMotion",
 ];
 
 /** The label each environment key prints under in the ticket. */
@@ -159,7 +178,20 @@ export const ENVIRONMENT_LABELS: Record<keyof Environment, string> = {
   viewport: "Viewport",
   occurredAt: "Timestamp",
   reproducibility: "Reproducibility",
+  path: "Path",
+  display: "Opened as",
+  pixelRatio: "Pixel ratio",
+  safeArea: "Safe area (t,r,b,l)",
+  reducedMotion: "Reduced motion",
 };
+
+/** The typed values the contract sends as something other than a string, as the word the ticket prints. */
+function environmentValue(key: keyof Environment, value: unknown): unknown {
+  if (key === "online" && typeof value === "boolean") return value ? "online" : "offline";
+  if (key === "reducedMotion" && typeof value === "boolean") return value ? "yes" : "no";
+  if (key === "pixelRatio") return typeof value === "number" && Number.isFinite(value) ? String(value) : undefined;
+  return value;
+}
 
 /**
  * Keeps only the known keys, cleans every value, and drops everything else the
@@ -171,23 +203,31 @@ export function cleanEnvironment(value: unknown): Environment {
   const source = (typeof value === "object" && value !== null ? value : {}) as Record<string, unknown>;
   const out: Environment = {};
   for (const key of ENVIRONMENT_KEYS) {
-    // The contract sends `online` as a boolean; the ticket prints a word.
-    const raw = key === "online" && typeof source[key] === "boolean" ? (source[key] ? "online" : "offline") : source[key];
-    const text = clean(raw, LIMITS.envValue, { singleLine: true });
-    if (text) out[key] = text;
+    const text = clean(environmentValue(key, source[key]), LIMITS.envValue, { singleLine: true });
+    if (!text) continue;
+    // The path is the one value that is a real URL piece, so it is the one
+    // that could carry a token: anything with a query string or a fragment, or
+    // that is not an absolute path, is dropped rather than trimmed.
+    if (key === "path" && (!text.startsWith("/") || /[?#]/.test(text))) continue;
+    out[key] = text;
   }
   return out;
 }
 
 /**
- * One entry of the trail the app keeps: where the reporter went, and which
- * API calls failed, in the minutes before the report (docs/bug-workflow.md).
- * Never arguments, never responses, never user content: a route pattern, a
- * method name, an error code, a status and a duration.
+ * One entry of the trail the app keeps: where the reporter went, what they
+ * tapped, which API calls failed and which errors went uncaught, in the
+ * minutes before the report (docs/bug-workflow.md). Never arguments, never
+ * responses, never anything typed: a route pattern, a component and its
+ * label, a method name, an error code, a status, a duration, an error message.
  */
 export interface Breadcrumb {
   at: string;
-  kind: "nav" | "api";
+  kind: "nav" | "api" | "tap" | "error";
+  /** `tap` only. */
+  target?: string;
+  /** `error` only. */
+  message?: string;
   route?: string;
   method?: string;
   code?: string;
@@ -202,11 +242,14 @@ function integerIn(value: unknown, min: number, max: number): number | undefined
   return value >= min && value <= max ? value : undefined;
 }
 
+const BREADCRUMB_KINDS: readonly Breadcrumb["kind"][] = ["nav", "api", "tap", "error"];
+
 /**
  * The breadcrumb allow-list: at most `BREADCRUMB_LIMITS.count` entries (the
  * most recent when the client sends more), each with a known kind, a cleaned
  * timestamp, and only the fields the shape allows. A `nav` entry without a
- * route, or an `api` entry without a method, says nothing and is dropped.
+ * route, an `api` entry without a method, a `tap` without a target or an
+ * `error` without a message says nothing and is dropped.
  */
 export function cleanBreadcrumbs(value: unknown): Breadcrumb[] {
   if (!Array.isArray(value)) return [];
@@ -215,11 +258,19 @@ export function cleanBreadcrumbs(value: unknown): Breadcrumb[] {
   for (const entry of recent) {
     if (typeof entry !== "object" || entry === null) continue;
     const raw = entry as Record<string, unknown>;
-    const kind = raw.kind === "nav" || raw.kind === "api" ? raw.kind : null;
+    const kind = (BREADCRUMB_KINDS as readonly unknown[]).includes(raw.kind) ? (raw.kind as Breadcrumb["kind"]) : null;
     const at = clean(raw.at, BREADCRUMB_LIMITS.at, { singleLine: true });
     if (!kind || !at) continue;
 
     const crumb: Breadcrumb = { at, kind };
+    if (kind === "tap") {
+      const target = clean(raw.target, BREADCRUMB_LIMITS.target, { singleLine: true });
+      if (target) crumb.target = target;
+    }
+    if (kind === "error") {
+      const message = clean(raw.message, BREADCRUMB_LIMITS.message, { singleLine: true });
+      if (message) crumb.message = message;
+    }
     const route = clean(raw.route, BREADCRUMB_LIMITS.route, { singleLine: true });
     if (route) crumb.route = route;
     const method = typeof raw.method === "string" ? raw.method.trim() : "";
@@ -233,7 +284,169 @@ export function cleanBreadcrumbs(value: unknown): Breadcrumb[] {
 
     if (kind === "nav" && !crumb.route) continue;
     if (kind === "api" && !crumb.method) continue;
+    if (kind === "tap" && !crumb.target) continue;
+    if (kind === "error" && !crumb.message) continue;
     out.push(crumb);
   }
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// Targets: the components the reporter pointed at
+// ---------------------------------------------------------------------------
+
+/** Caps for the pointed-at components (`BugReportTarget` in @bevi/shared). */
+export const TARGET_LIMITS = {
+  count: 6,
+  component: 60,
+  pathNames: 8,
+  file: 160,
+  label: 160,
+  role: 40,
+  text: 160,
+  route: 120,
+  entries: 12,
+  key: 40,
+  value: 80,
+  rectMin: -10_000,
+  rectMax: 100_000,
+  evidenceIndexMax: 2,
+  markMin: 1,
+  markMax: 9,
+  caption: 120,
+} as const;
+
+/**
+ * One component the reporter pointed at, cleaned. Every string went through
+ * `clean()`; the names and the file are also held to a strict shape, because
+ * they are printed inside backticks and are what an agent will search for.
+ */
+export interface Target {
+  component: string;
+  path?: string[];
+  file?: string;
+  label?: string;
+  role?: string;
+  text?: string;
+  props?: Record<string, string | number | boolean>;
+  styles?: Record<string, string>;
+  rect?: { x: number; y: number; width: number; height: number };
+  route?: string;
+  evidenceIndex?: number;
+  mark?: number;
+}
+
+/** A component name as source writes it: `TabBar`, `Bev.Card`. */
+const COMPONENT_RE = /^[A-Za-z_$][\w$.]*$/;
+/** A repo-relative source file under one of the three trees the app is built from. */
+const FILE_RE = /^(app|packages|shared)\/[\w.\/()\[\]+@-]+\.(tsx?|jsx?)$/;
+/** A prop or style key: an identifier. */
+const KEY_RE = /^[A-Za-z_$][\w$]*$/;
+
+function name(value: unknown, max: number): string | null {
+  if (typeof value !== "string") return null;
+  const text = value.trim();
+  // An identifier can still be shaped like a key (`sb_secret_…`); one that
+  // redaction would touch is dropped rather than printed half-redacted.
+  return text.length > 0 && text.length <= max && COMPONENT_RE.test(text) && redact(text) === text ? text : null;
+}
+
+/** The first `TARGET_LIMITS.entries` well-keyed entries of a plain object, values shaped by `keep`. */
+function entries<T>(value: unknown, keep: (v: unknown) => T | undefined): Record<string, T> | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+  const out: Record<string, T> = {};
+  let n = 0;
+  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
+    if (n === TARGET_LIMITS.entries) break;
+    if (key.length > TARGET_LIMITS.key || !KEY_RE.test(key)) continue;
+    const kept = keep(raw);
+    if (kept === undefined) continue;
+    out[key] = kept;
+    n++;
+  }
+  return n ? out : undefined;
+}
+
+function finiteIn(value: unknown, min: number, max: number): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
+  const rounded = Math.round(value);
+  return rounded >= min && rounded <= max ? rounded : undefined;
+}
+
+function cleanTarget(value: unknown): Target | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  const component = name(raw.component, TARGET_LIMITS.component);
+  if (!component) return null;
+  const out: Target = { component };
+
+  if (Array.isArray(raw.path)) {
+    const path = raw.path
+      .slice(0, TARGET_LIMITS.pathNames)
+      .map((n) => name(n, TARGET_LIMITS.component))
+      .filter((n): n is string => n !== null);
+    if (path.length) out.path = path;
+  }
+
+  if (typeof raw.file === "string") {
+    const file = raw.file.trim();
+    if (file.length <= TARGET_LIMITS.file && FILE_RE.test(file) && !file.includes("..") && redact(file) === file) out.file = file;
+  }
+
+  const label = clean(raw.label, TARGET_LIMITS.label, { singleLine: true });
+  if (label) out.label = label;
+  const role = clean(raw.role, TARGET_LIMITS.role, { singleLine: true });
+  if (role) out.role = role;
+  const text = clean(raw.text, TARGET_LIMITS.text, { singleLine: true });
+  if (text) out.text = text;
+  const route = clean(raw.route, TARGET_LIMITS.route, { singleLine: true });
+  if (route) out.route = route;
+
+  const props = entries<string | number | boolean>(raw.props, (v) => {
+    if (typeof v === "boolean") return v;
+    if (typeof v === "number") return Number.isFinite(v) ? v : undefined;
+    const s = clean(v, TARGET_LIMITS.value, { singleLine: true });
+    return s ? s : undefined;
+  });
+  if (props) out.props = props;
+  const styles = entries<string>(raw.styles, (v) => {
+    const s = clean(v, TARGET_LIMITS.value, { singleLine: true });
+    return s ? s : undefined;
+  });
+  if (styles) out.styles = styles;
+
+  if (typeof raw.rect === "object" && raw.rect !== null) {
+    const r = raw.rect as Record<string, unknown>;
+    const x = finiteIn(r.x, TARGET_LIMITS.rectMin, TARGET_LIMITS.rectMax);
+    const y = finiteIn(r.y, TARGET_LIMITS.rectMin, TARGET_LIMITS.rectMax);
+    const width = finiteIn(r.width, TARGET_LIMITS.rectMin, TARGET_LIMITS.rectMax);
+    const height = finiteIn(r.height, TARGET_LIMITS.rectMin, TARGET_LIMITS.rectMax);
+    if (x !== undefined && y !== undefined && width !== undefined && height !== undefined) out.rect = { x, y, width, height };
+  }
+
+  const evidenceIndex = integerIn(raw.evidenceIndex, 0, TARGET_LIMITS.evidenceIndexMax);
+  if (evidenceIndex !== undefined) out.evidenceIndex = evidenceIndex;
+  const mark = integerIn(raw.mark, TARGET_LIMITS.markMin, TARGET_LIMITS.markMax);
+  if (mark !== undefined) out.mark = mark;
+  return out;
+}
+
+/**
+ * The target allow-list: the first `TARGET_LIMITS.count` entries the client
+ * sent, each cleaned by `cleanTarget`. A target whose component name is not a
+ * plain identifier is dropped whole; anything else the object carries that
+ * this shape does not name never reaches the ticket.
+ */
+export function cleanTargets(value: unknown): Target[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .slice(0, TARGET_LIMITS.count)
+    .map(cleanTarget)
+    .filter((t): t is Target => t !== null);
+}
+
+/** One cleaned single-line caption per evidence path, '' where the client sent none. */
+export function cleanCaptions(value: unknown, count: number): string[] {
+  const list = Array.isArray(value) ? value : [];
+  return Array.from({ length: count }, (_, i) => clean(list[i], TARGET_LIMITS.caption, { singleLine: true }));
 }

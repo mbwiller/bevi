@@ -3,14 +3,15 @@ import { useRouter } from 'expo-router';
 import { StyleSheet, Text } from 'react-native';
 
 import { useCanReportBug, useSignOut } from '@/api/hooks';
+import { requestReport } from '@/features/bug-report/commands';
 import { errorCopy } from '@/lib/errorCopy';
 import { SettingsRow, SettingsScreen, SettingsSection } from '@/features/settings/SettingsRow';
 import { useSession } from '@/state/session';
 import { spacing, type, useTheme } from '@/theme';
 
 /**
- * Settings (§6.18): Account, Privacy, Sign out, Delete account, plus Report a bug for internal
- * reporters (docs/bug-workflow.md). Signing out clears the session;
+ * Settings (§6.18): Account, Privacy, Sign out, Delete account, plus Report a bug and My reports
+ * for internal reporters (docs/bug-workflow.md). Signing out clears the session;
  * the root gate then lands on sign in.
  */
 export default function SettingsIndexScreen() {
@@ -32,11 +33,12 @@ export default function SettingsIndexScreen() {
         <SettingsRow label="Account" onPress={() => router.push('/settings/account')} />
         <SettingsRow label="Privacy" onPress={() => router.push('/settings/privacy')} />
       </SettingsSection>
-      {/* Internal only, and only as a second way in: the header action
-          (ReportBugLauncher) is the one that keeps the reporter's screen. */}
+      {/* Internal only, and only a second way in: the drop on every screen is the one that can
+          point at what is wrong. These open the note (with no capture) and the reports sheet. */}
       {canReportBug ? (
         <SettingsSection title="Internal">
-          <SettingsRow label="Report a bug" onPress={() => router.push('/report-bug')} />
+          <SettingsRow label="Report a bug" onPress={() => requestReport('note')} />
+          <SettingsRow label="My reports" onPress={() => requestReport('reports')} />
         </SettingsSection>
       ) : null}
       <SettingsSection>

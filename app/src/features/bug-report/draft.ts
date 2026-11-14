@@ -1,37 +1,47 @@
-import type { BugReportKind, BugReportSeverity } from '@bevi/shared';
+import type { BugReportKind, BugReportTarget } from '@bevi/shared';
 
 /**
- * The reporter's draft, and the idempotency key that belongs to it.
+ * The reporter's draft as it is kept in `localStorage`, and the idempotency key that belongs to it.
  *
- * Why a draft survives at all: a bug is often found on a flaky connection, and
- * losing the typed report to a failed send is the fastest way to stop people
- * reporting bugs. So the text is kept in `localStorage` until the report is
- * filed, and restored when the form reopens.
+ * Why a draft survives at all: a bug is often found on a flaky connection, and losing the typed
+ * note to a failed send (or a reload) is the fastest way to stop people reporting bugs. So the text
+ * and what was pointed at are kept until the report is filed, and restored when the app reloads.
  *
- * What is NOT kept: the screenshot. An attachment is held in memory for the
- * life of the form and nowhere else — persisting a picture of whatever was on
- * someone's screen, indefinitely, in a store the app never prunes, is not a
- * trade worth making for a convenience. Reopening a restored draft asks for
- * the screenshot again, which the UI says plainly.
+ * What is NOT kept: the pictures. Captures and photos are held in memory for the life of the page
+ * and nowhere else — persisting a picture of whatever was on someone's screen, indefinitely, in a
+ * store the app never prunes, is not a trade worth making for a convenience. A restored note keeps
+ * its marks' details (the component, its route, its title) and says plainly that the screenshots
+ * weren't kept.
  *
- * The idempotency key is part of the draft, not of the submission: the same
- * draft retried after a failure must reuse its key, or the retry creates a
- * second ticket. A filed report clears both.
+ * The idempotency key is part of the draft, not of the submission: the same draft retried after a
+ * failure must reuse its key, or the retry creates a second ticket. A filed report clears both.
  */
 
-export interface BugDraft {
-  /** What the reporter said it is; absent on a draft saved before the controls existed. */
-  kind?: BugReportKind;
-  severity?: BugReportSeverity;
+/** A mark's metadata, without its picture or its on-screen box. */
+export interface StoredMark {
+  n: number;
   title: string;
-  description: string;
-  steps: string;
+  target: BugReportTarget;
+  route: string;
+}
+
+export interface BugDraft {
+  text: string;
+  /** Set only when the tester pinned a kind. */
+  kindOverride?: BugReportKind;
+  marks: StoredMark[];
+  /** Absent on a draft saved before the switch existed: on. */
+  includeSteps?: boolean;
   /** The UUID this draft files under, on every attempt. */
   idempotencyKey: string;
   savedAt: string;
 }
 
 export const DRAFT_KEY = 'bevi.bug-report.draft';
+/** Ticket ids filed from this device and not yet placed in the tester's ranked list. */
+export const UNPLACED_KEY = 'bevi.bug-report.unplaced';
+/** Where the drop is docked. */
+export const DOCK_KEY = 'bevi.bug-report.dock';
 
 /** The subset of the Web Storage API this module uses. */
 export interface StorageLike {
@@ -42,6 +52,8 @@ export interface StorageLike {
 
 /** A draft older than this is stale enough that restoring it would confuse more than it helps. */
 export const DRAFT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+const KINDS: readonly string[] = ['bug', 'fix', 'idea', 'design'];
 
 export function newIdempotencyKey(): string {
   const g = globalThis as { crypto?: { randomUUID?: () => string; getRandomValues?: (a: Uint8Array) => Uint8Array } };
@@ -67,75 +79,122 @@ export function webStorage(): StorageLike | null {
   }
 }
 
-export function loadDraft(storage: StorageLike | null, now: Date = new Date()): BugDraft | null {
+function readJson(storage: StorageLike | null, key: string): unknown {
   if (!storage) return null;
-  let raw: string | null;
   try {
-    raw = storage.getItem(DRAFT_KEY);
+    const raw = storage.getItem(key);
+    return raw ? (JSON.parse(raw) as unknown) : null;
   } catch {
-    return null;
-  }
-  if (!raw) return null;
-  try {
-    const draft = JSON.parse(raw) as Partial<BugDraft>;
-    if (typeof draft.idempotencyKey !== 'string' || !draft.idempotencyKey) return null;
-    const savedAt = typeof draft.savedAt === 'string' ? Date.parse(draft.savedAt) : NaN;
-    if (!Number.isFinite(savedAt) || now.getTime() - savedAt > DRAFT_MAX_AGE_MS) {
-      clearDraft(storage);
-      return null;
-    }
-    const kinds: readonly string[] = ['bug', 'fix', 'idea', 'design'];
-    const severities: readonly string[] = ['blocker', 'bad', 'annoying', 'polish'];
-    return {
-      ...(typeof draft.kind === 'string' && kinds.includes(draft.kind) ? { kind: draft.kind as BugReportKind } : {}),
-      ...(typeof draft.severity === 'string' && severities.includes(draft.severity)
-        ? { severity: draft.severity as BugReportSeverity }
-        : {}),
-      title: typeof draft.title === 'string' ? draft.title : '',
-      description: typeof draft.description === 'string' ? draft.description : '',
-      steps: typeof draft.steps === 'string' ? draft.steps : '',
-      idempotencyKey: draft.idempotencyKey,
-      savedAt: draft.savedAt as string,
-    };
-  } catch {
-    clearDraft(storage);
     return null;
   }
 }
 
-export function saveDraft(
-  storage: StorageLike | null,
-  draft: Omit<BugDraft, 'savedAt'>,
-  now: Date = new Date(),
-): void {
+function writeJson(storage: StorageLike | null, key: string, value: unknown): void {
   if (!storage) return;
-  // An empty draft is not worth keeping, and keeping it would restore a blank
-  // form with a used-looking key.
-  if (!draft.title.trim() && !draft.description.trim() && !draft.steps.trim()) {
+  try {
+    storage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Storage full or blocked: the note lives in memory either way.
+  }
+}
+
+function remove(storage: StorageLike | null, key: string): void {
+  if (!storage) return;
+  try {
+    storage.removeItem(key);
+  } catch {
+    // Nothing to do.
+  }
+}
+
+function storedMark(raw: unknown): StoredMark | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const m = raw as Partial<StoredMark>;
+  if (typeof m.title !== 'string' || typeof m.route !== 'string' || !m.target || typeof m.target.component !== 'string') return null;
+  return { n: typeof m.n === 'number' && m.n > 0 ? m.n : 1, title: m.title, target: m.target, route: m.route };
+}
+
+export function loadDraft(storage: StorageLike | null, now: Date = new Date()): BugDraft | null {
+  if (!storage) return null;
+  let found: boolean;
+  try {
+    found = storage.getItem(DRAFT_KEY) !== null;
+  } catch {
+    return null;
+  }
+  if (!found) return null;
+  const raw = readJson(storage, DRAFT_KEY);
+  if (!raw || typeof raw !== 'object') {
+    clearDraft(storage);
+    return null;
+  }
+  const draft = raw as Record<string, unknown>;
+  if (typeof draft.idempotencyKey !== 'string' || !draft.idempotencyKey) return null;
+  const savedAt = typeof draft.savedAt === 'string' ? Date.parse(draft.savedAt) : NaN;
+  if (!Number.isFinite(savedAt) || now.getTime() - savedAt > DRAFT_MAX_AGE_MS) {
+    clearDraft(storage);
+    return null;
+  }
+
+  // A draft saved by the old form had a title, a description and typed steps; the note is one text.
+  const text =
+    typeof draft.text === 'string'
+      ? draft.text
+      : [draft.title, draft.description, draft.steps]
+          .filter((part): part is string => typeof part === 'string' && part.trim() !== '')
+          .map((part) => part.trim())
+          .join('\n\n');
+
+  return {
+    text,
+    ...(typeof draft.kindOverride === 'string' && KINDS.includes(draft.kindOverride)
+      ? { kindOverride: draft.kindOverride as BugReportKind }
+      : {}),
+    marks: Array.isArray(draft.marks) ? draft.marks.map(storedMark).filter((m): m is StoredMark => m !== null) : [],
+    ...(typeof draft.includeSteps === 'boolean' ? { includeSteps: draft.includeSteps } : {}),
+    idempotencyKey: draft.idempotencyKey,
+    savedAt: draft.savedAt as string,
+  };
+}
+
+export function saveDraft(storage: StorageLike | null, draft: Omit<BugDraft, 'savedAt'>, now: Date = new Date()): void {
+  if (!storage) return;
+  // An empty draft is not worth keeping, and keeping it would restore a blank note with a used-looking key.
+  if (!draft.text.trim() && draft.marks.length === 0) {
     clearDraft(storage);
     return;
   }
-  try {
-    storage.setItem(DRAFT_KEY, JSON.stringify({ ...draft, savedAt: now.toISOString() }));
-  } catch {
-    // Storage full or blocked: the draft lives in component state either way.
-  }
+  writeJson(storage, DRAFT_KEY, { ...draft, savedAt: now.toISOString() });
 }
 
 export function clearDraft(storage: StorageLike | null): void {
-  if (!storage) return;
-  try {
-    storage.removeItem(DRAFT_KEY);
-  } catch {
-    // Nothing to do; the draft is gone from state when the form closes.
-  }
+  remove(storage, DRAFT_KEY);
 }
 
-/** The typed steps, one per line, as the contract's `reproductionSteps`. */
-export function parseSteps(steps: string): string[] {
-  return steps
-    .split('\n')
-    // A pasted list often arrives as "1. open the app"; the numbers are ours to add back.
-    .map((line) => line.replace(/^\s*(?:\d+[.)]|[-*•])\s*/, '').trim())
-    .filter(Boolean);
+export function loadUnplaced(storage: StorageLike | null): string[] {
+  const raw = readJson(storage, UNPLACED_KEY);
+  return Array.isArray(raw) ? [...new Set(raw.filter((id): id is string => typeof id === 'string' && id !== ''))] : [];
+}
+
+export function saveUnplaced(storage: StorageLike | null, ids: readonly string[]): void {
+  if (ids.length === 0) remove(storage, UNPLACED_KEY);
+  else writeJson(storage, UNPLACED_KEY, ids);
+}
+
+/** Which edge the drop docks against, and how far its bottom sits above the layer's bottom. */
+export interface Dock {
+  side: 'left' | 'right';
+  bottom: number;
+}
+
+export function loadDock(storage: StorageLike | null): Dock | null {
+  const raw = readJson(storage, DOCK_KEY) as Partial<Dock> | null;
+  if (!raw || (raw.side !== 'left' && raw.side !== 'right') || typeof raw.bottom !== 'number' || !Number.isFinite(raw.bottom)) {
+    return null;
+  }
+  return { side: raw.side, bottom: raw.bottom };
+}
+
+export function saveDock(storage: StorageLike | null, dock: Dock): void {
+  writeJson(storage, DOCK_KEY, dock);
 }

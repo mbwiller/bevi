@@ -9,6 +9,7 @@
     "android": "expo start --android",
     "typecheck": "tsc --noEmit",
     "test": "jest",
+    "gen:components": "node scripts/gen-component-files.mjs",
     "doctor": "expo-doctor"
   },
   "dependencies": {
@@ -31,6 +32,7 @@
     "expo-splash-screen": "~57.0.10",
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.4",
+    "html2canvas-pro": "2.5.0",
     "lucide-react-native": "^1.55.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",

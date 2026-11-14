@@ -152,6 +152,34 @@ const BUG_SEVERITIES: readonly string[] = ['blocker', 'bad', 'annoying', 'polish
 /** Linear's priority as the function sets it from the severity (supabase/functions/bug-report/issue.ts). */
 const BUG_PRIORITY: Record<BugReportSummary['severity'], number> = { blocker: 1, bad: 2, annoying: 3, polish: 4 };
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const BUG_TICKET_RE = /^[A-Z][A-Z0-9]*-\d{1,9}$/;
+/** At most this many pointed-at components per report (`BugReportInput.targets`). */
+const BUG_MAX_TARGETS = 6;
+/** The states a ticket is ranked in (supabase/functions/bug-report/rank.ts `OPEN_STATES`). */
+const BUG_OPEN_STATES: readonly BugReportSummary['state'][] = ['triage', 'todo', 'in_progress'];
+const BUG_STATE_LABELS: Record<BugReportSummary['state'], string | null> = {
+  triage: 'Triage',
+  todo: 'Todo',
+  in_progress: 'In Progress',
+  in_review: 'In Review',
+  done: 'Done',
+  canceled: 'Canceled',
+  unknown: null,
+};
+
+/**
+ * The priority a rank implies, as the function computes it (rank.ts `priorityForRank`): the top
+ * quarter High (2), the middle half Medium (3), the rest Low (4), measured at the middle of the
+ * slot; an Urgent (1) ticket stays Urgent.
+ */
+function bugPriorityForRank(index: number, count: number, current: number | null): number {
+  if (current === 1) return 1;
+  const f = (index + 0.5) / Math.max(count, 1);
+  if (f <= 0.25) return 2;
+  if (f <= 0.75) return 3;
+  return 4;
+}
+
 /** Default time the fake's "background removal" takes before a bev photo is 'ready'. */
 const PHOTO_PROCESSING_MS = 3000;
 
@@ -286,6 +314,12 @@ export class FakeApi implements BeviApi {
   private internalReporter = false;
   /** The fake's `bug_reports` ledger, keyed by idempotency key per user, with the summary My reports shows. */
   private bugLedger = new Map<string, { userId: string; result: BugReportResult; summary: BugReportSummary }>();
+  /**
+   * Each user's manual order of their tickets, top first: the fake's stand-in for Linear's
+   * `sortOrder`. A new ticket goes to the top, as Linear puts a new issue. Ranks count only the
+   * open ones (BUG_OPEN_STATES).
+   */
+  private bugOrder = new Map<string, string[]>();
   private nextTicket = 100;
 
   constructor(options: FakeApiOptions = {}) {
@@ -325,6 +359,7 @@ export class FakeApi implements BeviApi {
     this.failures = [];
     this.internalReporter = false;
     this.bugLedger.clear();
+    this.bugOrder.clear();
     this.nextTicket = 100;
     this.commit();
     this.emit();
@@ -347,6 +382,35 @@ export class FakeApi implements BeviApi {
   /** Make (or stop making) the signed-in user an internal bug reporter. */
   setInternalReporter(internal: boolean): void {
     this.internalReporter = internal;
+  }
+
+  /**
+   * Move one of the fake's tickets to a workflow state, as triage or an agent would in Linear
+   * (e.g. 'in_review', so My reports offers Verified on device; or 'done', so it leaves the ranks).
+   */
+  setBugTicketState(ticketId: string, state: BugReportSummary['state']): void {
+    const entry = [...this.bugLedger.values()].find((e) => e.summary.ticketId === ticketId);
+    if (!entry) throw new Error(`setBugTicketState: no ticket ${ticketId}`);
+    entry.summary = { ...entry.summary, state, stateLabel: BUG_STATE_LABELS[state], updatedAt: this.now().toISOString() };
+  }
+
+  /** The user's tickets with their ranks, newest first (what `bugs.listMine` answers). */
+  private bugSummaries(userId: string): BugReportSummary[] {
+    const ranks = new Map(this.openBugOrder(userId).map((id, i) => [id, i + 1]));
+    return [...this.bugLedger.values()]
+      .filter((entry) => entry.userId === userId)
+      .map((entry) => ({ ...entry.summary, rank: ranks.get(entry.summary.ticketId) ?? null }))
+      .reverse();
+  }
+
+  /** The user's open tickets in their manual order, top first. */
+  private openBugOrder(userId: string): string[] {
+    const open = new Set(
+      [...this.bugLedger.values()]
+        .filter((e) => e.userId === userId && BUG_OPEN_STATES.includes(e.summary.state))
+        .map((e) => e.summary.ticketId),
+    );
+    return (this.bugOrder.get(userId) ?? []).filter((id) => open.has(id));
   }
 
   /** Sign in as any fixture user without a password. */
@@ -2126,6 +2190,9 @@ export class FakeApi implements BeviApi {
           if (!UUID_RE.test(input.idempotencyKey ?? '')) invalid('idempotencyKey', 'Missing submission key');
           const evidence = input.evidence ?? [];
           if (evidence.length > 3) invalid('evidence', 'Attach at most 3 screenshots');
+          if ((input.targets ?? []).length > BUG_MAX_TARGETS) {
+            invalid('targets', `Point at most ${BUG_MAX_TARGETS} components`);
+          }
           for (const item of evidence) {
             if (!BUG_EVIDENCE_MIME_TYPES.includes(item.mimeType)) invalid('evidence', 'Attach a JPEG, PNG or WebP image');
             if (typeof item.file?.size === 'number' && item.file.size > UPLOAD_MAX_BYTES) {
@@ -2155,8 +2222,10 @@ export class FakeApi implements BeviApi {
             stateLabel: 'Triage',
             priority: BUG_PRIORITY[input.severity],
             updatedAt: at,
+            rank: null,
           };
           this.bugLedger.set(key, { userId: me.id, result, summary });
+          this.bugOrder.set(me.id, [ticketId, ...(this.bugOrder.get(me.id) ?? [])]);
           return result;
         },
         // Not a `db` write: the ledger is the fake's own, and a bug report
@@ -2168,10 +2237,7 @@ export class FakeApi implements BeviApi {
       this.call('bugs.listMine', () => {
         const me = this.requireUser();
         if (!this.internalReporter) fail('unauthorized', 'This account cannot file internal bug reports');
-        return [...this.bugLedger.values()]
-          .filter((entry) => entry.userId === me.id)
-          .map((entry) => ({ ...entry.summary }))
-          .reverse();
+        return this.bugSummaries(me.id);
       }),
 
     markVerified: (ticketId) =>
@@ -2180,11 +2246,51 @@ export class FakeApi implements BeviApi {
         () => {
           const me = this.requireUser();
           if (!this.internalReporter) fail('unauthorized', 'This account cannot file internal bug reports');
-          if (!/^[A-Z][A-Z0-9]*-\d{1,9}$/.test(ticketId?.trim() ?? '')) invalid('ticketId', 'That is not a ticket identifier');
+          if (!BUG_TICKET_RE.test(ticketId?.trim() ?? '')) invalid('ticketId', 'That is not a ticket identifier');
           const entry = [...this.bugLedger.values()].find((e) => e.userId === me.id && e.summary.ticketId === ticketId.trim());
           if (!entry) fail('not_found', "That ticket isn't one of yours");
-          entry.summary = { ...entry.summary, state: 'done', stateLabel: 'Done', updatedAt: this.now().toISOString() };
+          entry.summary = { ...entry.summary, state: 'done', stateLabel: 'Done', updatedAt: this.now().toISOString(), rank: null };
           return { ...entry.summary };
+        },
+        false,
+      ),
+
+    place: (ticketId, afterTicketId) =>
+      this.call(
+        'bugs.place',
+        () => {
+          const me = this.requireUser();
+          // Validation before the role check, as packages/api/src/bugs.ts and the function order them.
+          const id = ticketId?.trim() ?? '';
+          if (!BUG_TICKET_RE.test(id)) invalid('ticketId', 'That is not a ticket identifier');
+          const after = afterTicketId === null || afterTicketId === undefined ? null : afterTicketId.trim();
+          if (after !== null && !BUG_TICKET_RE.test(after)) invalid('afterTicketId', 'That is not a ticket identifier');
+          if (after === id) invalid('afterTicketId', 'A ticket cannot be placed after itself');
+          if (!this.internalReporter) fail('unauthorized', 'This account cannot file internal bug reports');
+
+          // Both must be the caller's own open tickets, as the function checks.
+          const open = this.openBugOrder(me.id);
+          if (!open.includes(id) || (after !== null && !open.includes(after))) {
+            fail('not_found', "That ticket isn't one of your open tickets");
+          }
+
+          const others = open.filter((t) => t !== id);
+          const index = after === null ? 0 : others.indexOf(after) + 1;
+          const entry = [...this.bugLedger.values()].find((e) => e.userId === me.id && e.summary.ticketId === id)!;
+          entry.summary = {
+            ...entry.summary,
+            priority: bugPriorityForRank(index, open.length, entry.summary.priority),
+            updatedAt: this.now().toISOString(),
+          };
+
+          // Rewrite the full order: the moving ticket goes directly below `after` (or above every
+          // open ticket); closed ones keep their slots, since they carry no rank.
+          const full = (this.bugOrder.get(me.id) ?? []).filter((t) => t !== id);
+          const anchor = after === null ? (others[0] ?? null) : after;
+          const at = anchor === null ? 0 : full.indexOf(anchor) + (after === null ? 0 : 1);
+          full.splice(at, 0, id);
+          this.bugOrder.set(me.id, full);
+          return this.bugSummaries(me.id);
         },
         false,
       ),

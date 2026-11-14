@@ -84,6 +84,12 @@ Work the **Triage** view. For each new report:
    | Annoying | Medium / P2 | A real usability defect with a workaround |
    | Polish | Low / P3 | Cosmetic, or a small improvement |
 
+   The reporter's own ranking can set it again later (see
+   [Where the ranking lives](#where-the-ranking-lives)): a placement from the
+   app rewrites the priority from the ticket's new position, except on an
+   Urgent ticket. Mark something Urgent in Linear when it must stay at the top
+   whatever the reporter's list says.
+
 5. Write the acceptance criterion if the template's is not specific enough.
    "Rating still shows after a refresh on iOS Safari" beats "fix the bug".
 6. Move it to **Todo**.
@@ -115,9 +121,9 @@ from.
 Only then, **Done**. The reporter can do that from the phone: **Settings →
 Internal → My reports** lists your own tickets with their live Linear state,
 and a ticket in review carries a **Verified on device** action that moves it
-to Done through the function (`bugs.markVerified`, the one write the app ever
-makes to a ticket, and only to a ticket your own ledger holds). Linear's own
-UI works just as well.
+to Done through the function (`bugs.markVerified`, one of the two writes the
+app ever makes to a ticket, and only to a ticket your own ledger holds; the
+other is the ranking below). Linear's own UI works just as well.
 
 This is the one rule the whole workflow is built around, so it is worth being
 blunt about why. Almost everything reported from a phone is visual, or
@@ -149,6 +155,34 @@ Triage ──▶ Todo ──▶ In Progress ──▶ In Review ──▶ Done
 | **In Review** | The fix exists and is awaiting code review *and* device verification. |
 | **Done** | A human confirmed the original report no longer reproduces. |
 | **Canceled** | Terminal, with a documented reason. Not a synonym for fixed. |
+
+## Where the ranking lives
+
+After filing, the app asks "which is worse?" and places the new ticket in the
+reporter's own ranked list of open tickets (Triage, Todo, In Progress). There
+is no table for this in the database. The position is written to Linear as the
+issue's manual order (`sortOrder`, lower first) through
+`POST /bug-report/place` (`bugs.place`), and the priority is set from where the
+ticket landed:
+
+| Position among the reporter's open tickets | Priority written |
+|---|---|
+| Top quarter | High (2) |
+| Middle half | Medium (3) |
+| Bottom quarter | Low (4) |
+| Any position, ticket already Urgent | Urgent (1), unchanged |
+
+The position is measured at the middle of the ticket's slot, so a reporter
+with one open ticket gets Medium, and with two, High then Medium. My reports
+reads the rank back from Linear's `sortOrder`, so dragging the issue in a
+manually ordered Linear view changes the rank the app shows. A ticket in
+review, done, canceled or of unknown state has no rank and cannot be placed.
+
+The server reads the reporter's tickets fresh from Linear for every
+placement, writes the midpoint between the two neighbours, and only when they
+are too close to split rewrites the reporter's other open tickets to whole
+steps first. None of this has run against the real Linear API yet; see the
+honest list in [`ticketing-system.md`](./ticketing-system.md#tests-and-what-they-do-and-do-not-cover).
 
 ## Becoming an internal reporter
 

@@ -1,6 +1,6 @@
 // bug-report: the authenticated server side of the in-app bug reporter.
 //
-// Three routes, all from `api.bugs` (packages/api/src/bugs.ts), all carrying
+// Four routes, all from `api.bugs` (packages/api/src/bugs.ts), all carrying
 // the caller's user JWT:
 //   POST .../bug-report          file a report: validate and redact, claim an
 //                                idempotency slot in `public.bug_reports`,
@@ -10,15 +10,20 @@
 //                                Linear state, for My reports.
 //   POST .../bug-report/verify   move one of the caller's tickets to Done,
 //                                once they have checked the fix on the device.
+//   POST .../bug-report/place    put one of the caller's open tickets in their
+//                                ranked list: Linear's manual order
+//                                (`sortOrder`) and the priority the position
+//                                implies (rank.ts). Never run against the
+//                                real Linear API yet.
 //
 // ---------------------------------------------------------------------------
 // AUTHORISATION. `verify_jwt = true` in config.toml is the outer gate, and on
 // its own it proves only that the caller holds a key this project issued --
 // graph-query's header comment makes the same point, and the publishable key
 // ships in every copy of the app. So the real check is a database one: the
-// report route calls `claim_bug_report()` AS THE CALLER, and the two read
-// routes call `can_report_bugs()` AS THE CALLER; both answer from
-// `profiles.role` under auth.uid(). The ledger is read AS THE CALLER too and
+// report route calls `claim_bug_report()` AS THE CALLER, and the status,
+// verify and place routes call `can_report_bugs()` AS THE CALLER; both answer
+// from `profiles.role` under auth.uid(). The ledger is read AS THE CALLER too and
 // filtered to the caller's reporter_id (the select policy also admits an
 // admin, and these routes are own-rows-only for admins as well). Hiding the
 // Report a bug button in the client is cosmetic; this is the gate.
@@ -59,10 +64,23 @@ import {
   labelIdForKind,
   LinearError,
   type LinearConfig,
+  placeIssue,
   readLinearConfig,
   updateIssueState,
   uploadFile,
 } from "./linear.ts";
+import {
+  isOpen,
+  MAX_RESPACE_WRITES,
+  type Ordered,
+  positionFor,
+  priorityForRank,
+  ranksOf,
+  respaced,
+  sortedByRank,
+  withMoved,
+} from "./rank.ts";
+import { methodFor, parsePlace, routeOf } from "./routes.ts";
 
 /** Bigger than any screenshot-free report; the evidence itself never comes through this body. */
 const MAX_BODY_BYTES = 64 * 1024;
@@ -200,6 +218,8 @@ interface Summary {
   stateLabel: string | null;
   priority: number | null;
   updatedAt: string | null;
+  /** 1-based among the caller's open tickets by Linear's manual order; null otherwise. */
+  rank: number | null;
 }
 
 /** The reporter's handle, for the issue's Reporter line. Falls back to the id's prefix. */
@@ -364,7 +384,25 @@ async function ledgerRows(c: Caller, ticketId?: string): Promise<LedgerRow[] | R
   }
 }
 
-function summarise(row: LedgerRow, status: IssueStatus | undefined): Summary {
+/** The caller's open tickets that Linear gave a manual order, as rank.ts takes them. */
+function openOrdered(statuses: IssueStatus[]): Ordered[] {
+  return statuses
+    .filter((s) => isOpen(s.state) && s.sortOrder !== null)
+    .map((s) => ({ identifier: s.identifier, sortOrder: s.sortOrder as number }));
+}
+
+/** Every ledger row as the contract's summary, ranked among the ones that are open. */
+function summariseAll(rows: LedgerRow[], statuses: IssueStatus[]): Summary[] {
+  const mine = new Set(rows.map((r) => r.ticket_identifier).filter(Boolean));
+  const byIdentifier = new Map(statuses.filter((s) => mine.has(s.identifier)).map((s) => [s.identifier, s]));
+  const ranks = ranksOf(openOrdered([...byIdentifier.values()]));
+  return rows.map((r) => {
+    const id = r.ticket_identifier ?? "";
+    return summarise(r, byIdentifier.get(id), ranks.get(id) ?? null);
+  });
+}
+
+function summarise(row: LedgerRow, status: IssueStatus | undefined, rank: number | null = null): Summary {
   return {
     ticketId: row.ticket_identifier ?? "",
     ticketUrl: row.ticket_url ?? "",
@@ -376,6 +414,7 @@ function summarise(row: LedgerRow, status: IssueStatus | undefined): Summary {
     stateLabel: status?.stateLabel ?? null,
     priority: status?.priority ?? null,
     updatedAt: status?.updatedAt ?? null,
+    rank,
   };
 }
 
@@ -438,7 +477,10 @@ async function handleReport(req: Request, c: Caller): Promise<Response> {
   }
 
   // Evidence first: the issue body embeds the asset URLs, and a screenshot
-  // that cannot be uploaded must not cost the reporter their ticket.
+  // that cannot be uploaded must not cost the reporter their ticket. A caption
+  // follows its path, not its index: a re-armed claim can hold an earlier
+  // attempt's paths.
+  const captionByPath = new Map(report.evidencePaths.map((p, i) => [p, report.evidenceCaptions[i] ?? ""]));
   const evidence: EvidenceItem[] = [];
   for (const [i, path] of staged.entries()) {
     const file = await readEvidence(c.env, path);
@@ -452,7 +494,8 @@ async function handleReport(req: Request, c: Caller): Promise<Response> {
         contentType: file.contentType,
         filename: `bug-${report.idempotencyKey}-${i + 1}.${path.split(".").pop()}`,
       });
-      evidence.push({ kind: "embedded", assetUrl });
+      const caption = captionByPath.get(path);
+      evidence.push(caption ? { kind: "embedded", assetUrl, caption } : { kind: "embedded", assetUrl });
     } catch (e) {
       const code = e instanceof LinearError ? e.code : "upload_failed";
       console.error(`bug-report: evidence upload failed key=${fingerprint} index=${i} code=${code}`);
@@ -477,7 +520,7 @@ async function handleReport(req: Request, c: Caller): Promise<Response> {
     console.log(
       `bug-report: created key=${fingerprint} ticket=${issue.identifier} kind=${report.kind} severity=${report.severity} evidence=${
         evidence.filter((e) => e.kind === "embedded").length
-      }/${staged.length}`,
+      }/${staged.length} targets=${report.targets.length} steps=${report.stepsSource}`,
     );
     return json({ ticketId: issue.identifier, ticketUrl: issue.url, status: "created" }, 201);
   } catch (e) {
@@ -495,8 +538,13 @@ async function handleReport(req: Request, c: Caller): Promise<Response> {
 // GET /bug-report/status
 // ---------------------------------------------------------------------------
 
-async function statusesFor(c: Caller, linear: LinearConfig, rows: LedgerRow[]): Promise<{ statuses: IssueStatus[]; error?: string }> {
-  const cached = statusCache.get(c.userId);
+async function statusesFor(
+  c: Caller,
+  linear: LinearConfig,
+  rows: LedgerRow[],
+  { fresh = false }: { fresh?: boolean } = {},
+): Promise<{ statuses: IssueStatus[]; error?: string }> {
+  const cached = fresh ? undefined : statusCache.get(c.userId);
   if (cached && Date.now() - cached.at < STATUS_CACHE_MS) return { statuses: cached.statuses };
   const numbers = rows.map((r) => (r.ticket_identifier ? issueNumber(r.ticket_identifier) : null)).filter((n): n is number => n !== null);
   try {
@@ -524,8 +572,7 @@ async function handleStatus(c: Caller): Promise<Response> {
   }
 
   const { statuses, error } = await statusesFor(c, linear, rows);
-  const byIdentifier = new Map(statuses.map((s) => [s.identifier, s]));
-  const reports = rows.map((r) => summarise(r, r.ticket_identifier ? byIdentifier.get(r.ticket_identifier) : undefined));
+  const reports = summariseAll(rows, statuses);
   return json(error ? { reports, trackerError: error } : { reports }, 200);
 }
 
@@ -572,17 +619,100 @@ async function handleVerify(req: Request, c: Caller): Promise<Response> {
 }
 
 // ---------------------------------------------------------------------------
-// Dispatch
+// POST /bug-report/place
 // ---------------------------------------------------------------------------
 
-/** 'report' | 'status' | 'verify' from the request path, whichever host prefix the gateway used. */
-export function routeOf(pathname: string): "report" | "status" | "verify" | null {
-  const path = pathname.replace(/\/+$/, "");
-  if (path.endsWith("/bug-report")) return "report";
-  if (path.endsWith("/bug-report/status")) return "status";
-  if (path.endsWith("/bug-report/verify")) return "verify";
-  return null;
+/**
+ * The place route's not-found. The `route` key is how the client tells it
+ * from a deployed function that predates this route, which answers a bare
+ * `{ error: "not_found" }` for any path it does not know.
+ */
+function placeNotFound(): Response {
+  return json({ error: "not_found", route: "place" }, 404);
 }
+
+function trackerFailure(e: unknown, ticketId: string): Response {
+  const code = e instanceof LinearError ? e.code : "linear_error";
+  console.error(`bug-report: place failed ticket=${ticketId} code=${code}`);
+  return json({ error: "tracker_error", code }, code === "linear_rate_limited" ? 429 : 502);
+}
+
+async function handlePlace(req: Request, c: Caller): Promise<Response> {
+  const raw = await readBody(req);
+  if (raw instanceof Response) return raw;
+  const parsed = parsePlace(raw);
+  if ("field" in parsed) return json({ error: "validation", field: parsed.field }, 400);
+  const { ticketId, afterTicketId } = parsed;
+
+  const internal = await isInternal(c);
+  if (internal instanceof Response) return internal;
+  if (!internal) return json({ error: "not_internal" }, 403);
+
+  // The caller's rows only (RLS plus the reporter filter), so another
+  // reporter's identifier is simply not in this list.
+  const rows = await ledgerRows(c);
+  if (rows instanceof Response) return rows;
+  const mine = new Set(rows.map((r) => r.ticket_identifier).filter(Boolean));
+  if (!mine.has(ticketId) || (afterTicketId !== null && !mine.has(afterTicketId))) return placeNotFound();
+
+  const linear = readLinearConfig((key) => Deno.env.get(key));
+  if (!linear) return json({ error: "tracker_not_configured" }, 503);
+
+  // Fresh, never the cache: a placement computed against a minute-old order
+  // could land a ticket somewhere the reporter did not put it.
+  const numbers = rows.map((r) => (r.ticket_identifier ? issueNumber(r.ticket_identifier) : null)).filter((n): n is number => n !== null);
+  let statuses: IssueStatus[];
+  try {
+    statuses = (await fetchIssueStatuses(linear, fetch, numbers)).filter((s) => mine.has(s.identifier));
+  } catch (e) {
+    return trackerFailure(e, ticketId);
+  }
+
+  const order = sortedByRank(openOrdered(statuses));
+  const movingStatus = statuses.find((s) => s.identifier === ticketId);
+  const isListed = (id: string) => order.some((o) => o.identifier === id);
+  if (!movingStatus || !isListed(ticketId) || (afterTicketId !== null && !isListed(afterTicketId))) return placeNotFound();
+
+  const position = positionFor(order, ticketId, afterTicketId);
+  const priority = priorityForRank(position.index, order.length, movingStatus.priority);
+
+  try {
+    let sortOrder = position.sortOrder;
+    let rewritten = 0;
+    if (position.respace) {
+      const plan = respaced(withMoved(order, { identifier: ticketId, sortOrder }, position.index), position.index);
+      const before = new Map(order.map((o) => [o.identifier, o.sortOrder]));
+      const changed = plan.others.filter((o) => before.get(o.identifier) !== o.sortOrder).slice(0, MAX_RESPACE_WRITES);
+      // Sequential, and before the moving ticket. Not atomic: if one write
+      // fails part-way, the tickets already rewritten and the ones not yet
+      // rewritten can interleave, and the moving ticket keeps its old place.
+      // The client gets the tracker error and the reporter can place again,
+      // which respaces again from whatever Linear then holds.
+      for (const o of changed) {
+        const written = await placeIssue(linear, fetch, o.identifier, { sortOrder: o.sortOrder });
+        if (!written) return placeNotFound();
+        rewritten++;
+      }
+      sortOrder = plan.moving.sortOrder;
+    }
+    const placed = await placeIssue(linear, fetch, ticketId, { sortOrder, priority });
+    if (!placed) return placeNotFound();
+    console.log(`bug-report: placed ticket=${ticketId} index=${position.index} priority=${priority} respaced=${rewritten}`);
+  } catch (e) {
+    return trackerFailure(e, ticketId);
+  } finally {
+    statusCache.delete(c.userId);
+  }
+
+  // Read back, as the status route would: Linear may have adjusted positions.
+  const { statuses: after, error } = await statusesFor(c, linear, rows, { fresh: true });
+  const reports = summariseAll(rows, after);
+  return json(error ? { reports, trackerError: error } : { reports }, 200);
+}
+
+// ---------------------------------------------------------------------------
+// Dispatch (routeOf lives in routes.ts so test.ts can import it)
+// ---------------------------------------------------------------------------
 
 Deno.serve(async (req: Request): Promise<Response> => {
   // The preflight comes first and carries no JWT, so it is answered before
@@ -590,13 +720,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (isPreflight(req)) return preflight();
   const route = routeOf(new URL(req.url).pathname);
   if (!route) return json({ error: "not_found" }, 404);
-  const expected = route === "status" ? "GET" : "POST";
-  if (req.method !== expected) return json({ error: "method_not_allowed" }, 405);
+  if (req.method !== methodFor(route)) return json({ error: "method_not_allowed" }, 405);
 
   const c = caller(req);
   if (c instanceof Response) return c;
 
   if (route === "status") return await handleStatus(c);
   if (route === "verify") return await handleVerify(req, c);
+  if (route === "place") return await handlePlace(req, c);
   return await handleReport(req, c);
 });

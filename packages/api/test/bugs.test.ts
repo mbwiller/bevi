@@ -191,14 +191,40 @@ describe('bugs.report submission', () => {
       'breadcrumbs',
       'description',
       'environment',
+      'evidenceCaptions',
       'evidencePaths',
       'expected',
       'idempotencyKey',
       'kind',
       'reproductionSteps',
       'severity',
+      'stepsSource',
+      'targets',
       'title',
     ]);
+  });
+
+  it('sends the targets, the steps source and one caption per uploaded path, with the defaults when absent', async () => {
+    const calls = newCalls();
+    const target = { component: 'TabBar', file: 'app/src/components/TabBar.tsx', label: 'Add Bev', mark: 1, evidenceIndex: 0 };
+    await createBugsApi(fakeClient(calls, { invokeData: CREATED })).report({
+      ...BASE,
+      targets: [target],
+      stepsSource: 'recorded',
+      reproductionSteps: ['Opened Feed', 'Tapped Add Bev'],
+      evidence: [{ ...jpeg(), caption: 'Feed, with 1 marked' }, jpeg()],
+    });
+    const body = calls.invokes[0]?.init?.body;
+    expect(body?.targets).toEqual([target]);
+    expect(body?.stepsSource).toBe('recorded');
+    expect(body?.evidenceCaptions).toEqual(['Feed, with 1 marked', '']);
+    expect((body?.evidencePaths as string[]).length).toBe(2);
+
+    const plain = newCalls();
+    await createBugsApi(fakeClient(plain, { invokeData: CREATED })).report(BASE);
+    expect(plain.invokes[0]?.init?.body?.targets).toEqual([]);
+    expect(plain.invokes[0]?.init?.body?.stepsSource).toBe('typed');
+    expect(plain.invokes[0]?.init?.body?.evidenceCaptions).toEqual([]);
   });
 
   it('reports a failed evidence upload instead of filing a ticket with no screenshot', async () => {
@@ -267,6 +293,7 @@ const SUMMARY = {
   stateLabel: 'In Review',
   priority: 2,
   updatedAt: '2026-11-09T11:00:00.000Z',
+  rank: null,
 };
 
 describe('bugs.listMine', () => {
@@ -286,6 +313,23 @@ describe('bugs.listMine', () => {
     ).listMine();
     expect(rows.length).toBe(1);
     expect(rows[0]?.state).toBe('unknown');
+  });
+
+  it('carries a positive integer rank and turns anything else into null', async () => {
+    const rows = await createBugsApi(
+      fakeClient(newCalls(), {
+        invokeData: {
+          reports: [
+            { ...SUMMARY, ticketId: 'BEV-1', state: 'todo', rank: 1 },
+            { ...SUMMARY, ticketId: 'BEV-2', rank: 0 },
+            { ...SUMMARY, ticketId: 'BEV-3', rank: 1.5 },
+            { ...SUMMARY, ticketId: 'BEV-4', rank: '2' },
+            { ...SUMMARY, ticketId: 'BEV-5' },
+          ],
+        },
+      }),
+    ).listMine();
+    expect(rows.map((r) => r.rank)).toEqual([1, null, null, null, null]);
   });
 
   it('is unauthorized signed out, and maps the function refusal for an ordinary account', async () => {
@@ -320,5 +364,69 @@ describe('bugs.markVerified', () => {
       createBugsApi(fakeClient(newCalls(), { invokeError: functionError(404, { error: 'not_found' }) })).markVerified('BEV-1'),
     ).rejects.toMatchObject({ code: 'not_found' });
     await expect(createBugsApi(fakeClient(newCalls(), { invokeData: {} })).markVerified('BEV-1')).rejects.toMatchObject({ code: 'unknown' });
+  });
+});
+
+describe('bugs.place', () => {
+  const OPEN = { ...SUMMARY, state: 'todo', stateLabel: 'Todo' };
+
+  it('posts both identifiers to the place route and returns the re-ranked list', async () => {
+    const calls = newCalls();
+    const reports = [
+      { ...OPEN, ticketId: 'BEV-2', rank: 1 },
+      { ...OPEN, ticketId: 'BEV-7', rank: 2, priority: 3 },
+    ];
+    const rows = await createBugsApi(fakeClient(calls, { invokeData: { reports } })).place(' BEV-7 ', ' BEV-2 ');
+    expect(calls.invokes[0]?.name).toBe('bug-report/place');
+    expect(calls.invokes[0]?.init?.body).toEqual({ ticketId: 'BEV-7', afterTicketId: 'BEV-2' });
+    expect(rows).toEqual(reports);
+  });
+
+  it('sends null to put a ticket at the top', async () => {
+    const calls = newCalls();
+    await createBugsApi(fakeClient(calls, { invokeData: { reports: [] } })).place('BEV-7', null);
+    expect(calls.invokes[0]?.init?.body).toEqual({ ticketId: 'BEV-7', afterTicketId: null });
+  });
+
+  it('rejects a bad identifier on either side, or a ticket placed after itself, before calling anything', async () => {
+    const calls = newCalls();
+    const api = createBugsApi(fakeClient(calls));
+    await expect(api.place('drop table', null)).rejects.toMatchObject({ code: 'validation', detail: { field: 'ticketId' } });
+    await expect(api.place('BEV-7', 'nope')).rejects.toMatchObject({ code: 'validation', detail: { field: 'afterTicketId' } });
+    await expect(api.place('BEV-7', 'BEV-7')).rejects.toMatchObject({ code: 'validation', detail: { field: 'afterTicketId' } });
+    expect(calls.invokes).toEqual([]);
+  });
+
+  it('is unauthorized signed out, and maps the refusal for an ordinary account', async () => {
+    await expect(createBugsApi(fakeClient(newCalls(), { user: null })).place('BEV-7', null)).rejects.toMatchObject({ code: 'unauthorized' });
+    await expect(
+      createBugsApi(fakeClient(newCalls(), { invokeError: functionError(403, { error: 'not_internal' }) })).place('BEV-7', null),
+    ).rejects.toMatchObject({ code: 'unauthorized' });
+  });
+
+  it("maps the place route's own not-found to not_found", async () => {
+    await expect(
+      createBugsApi(fakeClient(newCalls(), { invokeError: functionError(404, { error: 'not_found', route: 'place' }) })).place('BEV-7', 'BEV-2'),
+    ).rejects.toMatchObject({ code: 'not_found' });
+  });
+
+  it('treats a bare 404 as a server that predates ranking', async () => {
+    for (const body of [{ error: 'not_found' }, 'not json']) {
+      await expect(
+        createBugsApi(fakeClient(newCalls(), { invokeError: functionError(404, body) })).place('BEV-7', null),
+      ).rejects.toMatchObject({ code: 'unknown', detail: { reason: 'place_unsupported' } });
+    }
+  });
+
+  it('maps a tracker failure and a validation answer like the other routes', async () => {
+    await expect(
+      createBugsApi(fakeClient(newCalls(), { invokeError: functionError(502, { error: 'tracker_error', code: 'linear_error' }) })).place('BEV-7', null),
+    ).rejects.toMatchObject({ code: 'unknown' });
+    await expect(
+      createBugsApi(fakeClient(newCalls(), { invokeError: functionError(429, { error: 'tracker_error', code: 'linear_rate_limited' }) })).place('BEV-7', null),
+    ).rejects.toMatchObject({ code: 'unknown' });
+    await expect(
+      createBugsApi(fakeClient(newCalls(), { invokeError: functionError(400, { error: 'validation', field: 'afterTicketId' }) })).place('BEV-7', 'BEV-2'),
+    ).rejects.toMatchObject({ code: 'validation', detail: { field: 'afterTicketId' } });
   });
 });

@@ -1,15 +1,16 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef, useState, type ComponentProps } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, type ComponentProps } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { apiConfig } from '@/api/client';
+import { useCanReportBug } from '@/api/hooks';
 import { createQueryClient } from '@/api/queryClient';
 import { StackScene } from '@/components/ScreenMotion';
 import { StatusBarClearance } from '@/components/StatusBarClearance';
-import { ReportBugHeaderAction } from '@/features/bug-report/ReportBugLauncher';
+import { loadReportHost } from '@/features/bug-report/loadHost';
 import { ConfigError, Splash } from '@/features/auth/Splash';
 import { useSessionBootstrap } from '@/features/auth/useSessionBootstrap';
 import { clearLegacyStorage } from '@/lib/clearLegacyStorage';
@@ -18,6 +19,9 @@ import { useTheme } from '@/theme';
 
 // The old in-browser mock's data (fake users, plain-text passwords) may still sit in localStorage.
 clearLegacyStorage();
+
+// The internal bug reporter (docs/bug-workflow.md): its own chunk, fetched only for an internal reporter.
+const ReportHost = lazy(loadReportHost);
 
 // Root layout. One agent at a time owns this file and (tabs)/_layout.tsx (app/CLAUDE.md).
 //
@@ -74,10 +78,7 @@ function SessionGate() {
   // Only the launch check can show the splash (and its error); once the Stack is up it stays up.
   if (!checked) return <Splash error={error || undefined} onRetry={retry} />;
   return (
-    // Every screen's Header gets the Report a bug action for an internal reporter once signed in;
-    // everyone else's headers are unchanged (ReportBugHeaderAction). The provider stays mounted
-    // through status changes so the Stack is never remounted.
-    <ReportBugHeaderAction active={status === 'ready'}>
+    <>
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.surface } }} screenLayout={screenLayout}>
         <Stack.Screen name="index" />
 
@@ -109,6 +110,24 @@ function SessionGate() {
           <Stack.Screen name="report-bug" options={{ presentation: 'fullScreenModal' }} />
         </Stack.Protected>
       </Stack>
-    </ReportBugHeaderAction>
+      {/* A sibling of the Stack, so it coming and going never remounts a screen. */}
+      <Reporter ready={status === 'ready'} />
+    </>
+  );
+}
+
+/**
+ * The bug reporter's drop, on every signed-in screen including the full-screen flows, for an
+ * internal reporter only. `bugs.canReport()` is not asked until the session is ready, and an
+ * ordinary account never loads the reporter's code. Presentation, not protection: the server
+ * refuses a report from anyone else (supabase/functions/bug-report).
+ */
+function Reporter({ ready }: { ready: boolean }) {
+  const { data: canReport } = useCanReportBug({ enabled: ready });
+  if (!ready || canReport !== true) return null;
+  return (
+    <Suspense fallback={null}>
+      <ReportHost />
+    </Suspense>
   );
 }

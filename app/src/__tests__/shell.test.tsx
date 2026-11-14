@@ -6,6 +6,11 @@ import { api } from '@/api/client';
 import { useSession, type SessionStatus } from '@/state/session';
 import { controls } from '@/testing/fakeApi';
 
+// jest can't run a dynamic import(); the root layout's lazy bug reporter gets the module directly.
+jest.mock('@/features/bug-report/loadHost', () => ({
+  loadReportHost: () => Promise.resolve({ default: require('@/features/bug-report/ReportHost').default }),
+}));
+
 // The real route tree in src/app, rendered by expo-router's test harness.
 const APP_DIR = path.resolve(__dirname, '../app');
 
@@ -64,32 +69,27 @@ describe('session gate', () => {
   });
 });
 
-describe('Report a bug, for an internal reporter', () => {
+describe('the bug reporter, for an internal reporter', () => {
   beforeEach(() => {
     signInFake();
     controls.setInternalReporter(true);
   });
   afterEach(() => controls.resetToFixtures());
 
-  // Pressing it is covered by the launcher's suite: the reporter route lazy-loads its form, which this harness can't import.
-  it("is the first of the Feed header's actions", async () => {
+  // The drop itself is covered by features/bug-report (ReportDrop.test.tsx).
+  it("puts the drop on the Feed and nothing in the Feed header's actions", async () => {
     await start('ready', '/feed');
-    await screen.findByRole('button', { name: 'Report a bug' });
+    expect(await screen.findByRole('button', { name: 'Report' })).toBeTruthy();
     const header = screen.getByLabelText('Find people').parent!;
-    expect(within(header).getAllByRole('button').map((b) => b.props.accessibilityLabel)).toEqual(['Report a bug', 'Find people']);
+    expect(within(header).getAllByRole('button').map((b) => b.props.accessibilityLabel)).toEqual(['Find people']);
+    expect(screen.queryByLabelText('Report a bug')).toBeNull();
   });
 
-  it('is in the header on a pushed screen (People)', async () => {
-    await start('ready', '/people');
-    expect(await screen.findByRole('button', { name: 'Report a bug' })).toBeTruthy();
-    expect(screen.getAllByLabelText('Report a bug')).toHaveLength(1);
-  });
-
-  it('falls back to the pill on the not-found page, which has no header', async () => {
+  it('keeps the drop on the not-found page, which has no header', async () => {
     await start('ready', '/no/such/page');
     await screen.findByText('Page not found');
-    expect(await screen.findByRole('button', { name: 'Report a bug' })).toBeTruthy();
-    expect(screen.getAllByLabelText('Report a bug')).toHaveLength(1);
+    expect(await screen.findByRole('button', { name: 'Report' })).toBeTruthy();
+    expect(screen.getAllByLabelText('Report')).toHaveLength(1);
   });
 });
 

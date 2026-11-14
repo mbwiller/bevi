@@ -6,12 +6,13 @@ import { keys } from '../keys';
 
 /**
  * Whether this account may file internal bug reports. It decides whether the
- * Report a bug entry points appear; it is not the access check, which the
- * server runs again on every submission (docs/bug-workflow.md).
+ * reporter (the drop, Settings' Internal rows) loads at all; it is not the
+ * access check, which the server runs again on every submission
+ * (docs/bug-workflow.md).
  *
  * Cached for the session: an account's internal role does not change while the
- * app is open, and every screen's header reads it. `enabled: false` (the root
- * layout before sign-in finishes) asks nothing and leaves `data` undefined.
+ * app is open. `enabled: false` (the root layout before sign-in finishes) asks
+ * nothing and leaves `data` undefined.
  */
 export function useCanReportBug({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery({
@@ -65,5 +66,19 @@ export function useMarkBugVerified() {
       );
       void client.invalidateQueries({ queryKey: keys.myBugReports() });
     },
+  });
+}
+
+/**
+ * Places one of the caller's open tickets directly below `afterTicketId` in their ranked list (at
+ * the top when null). The server answers with the whole list re-ranked, which replaces My reports'
+ * cached rows as it is.
+ */
+export function usePlaceBug() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ticketId, afterTicketId }: { ticketId: string; afterTicketId: string | null }) =>
+      api.bugs.place(ticketId, afterTicketId),
+    onSuccess: (rows: BugReportSummary[]) => client.setQueryData<BugReportSummary[]>(keys.myBugReports(), rows),
   });
 }
