@@ -1,22 +1,32 @@
 import type { PreparedPhoto } from '@/features/create-bev/photo';
+import { useSession } from '@/state/session';
 
 import { captureScreen, releaseShot } from '../capture';
-import { loadDraft, saveDraft, type StorageLike } from '../draft';
+import { loadDraft, loadUnplaced, saveDraft, saveUnplaced, type StorageLike } from '../draft';
+import { startPickMode, type PickModeHandlers } from '../pickMode';
+import { startStepRecording, stopStepRecording } from '../trail';
 import { pictureNotices } from '../model';
 import {
   addPhotos,
+  addUnplaced,
+  cancelSelecting,
   captureWholeScreen,
   discardNote,
   hydrate,
   markLevels,
   navigate,
+  pressReportButton,
+  removeSteps,
   removeMark,
   removePhoto,
   resetReport,
   setReportStorage,
   setText,
   settleCaptures,
+  startRecording,
+  startSelecting,
   stepLevel,
+  stopRecording,
   useReport,
 } from '../store';
 import type { PickLevel, Shot } from '../types';
@@ -24,18 +34,24 @@ import type { PickLevel, Shot } from '../types';
 // The engine is another task's; here it is what its contract says it returns.
 jest.mock('../capture', () => ({ captureScreen: jest.fn(), releaseShot: jest.fn() }));
 jest.mock('../pick', () => ({ pickAt: jest.fn(() => []), pickScreen: jest.fn(() => null) }));
+jest.mock('../pickMode', () => ({ startPickMode: jest.fn(() => () => {}), isPickModeOn: jest.fn(() => false) }));
 jest.mock('../trail', () => ({
   startTrail: jest.fn(() => () => {}),
   recordNav: jest.fn(),
   routePattern: jest.fn(() => '/'),
   trailSnapshot: jest.fn(() => []),
-  recordedSteps: jest.fn(() => []),
   hadRecentFailure: jest.fn(() => false),
+  startStepRecording: jest.fn(),
+  stopStepRecording: jest.fn(() => []),
+  isRecordingSteps: jest.fn(() => false),
 }));
 jest.mock('../infer', () => ({ inferKind: jest.fn(() => 'bug'), titleFor: jest.fn((note: string) => note) }));
 
 const mockCapture = captureScreen as jest.MockedFunction<typeof captureScreen>;
 const mockRelease = releaseShot as jest.MockedFunction<typeof releaseShot>;
+const mockPickMode = startPickMode as jest.MockedFunction<typeof startPickMode>;
+const mockStartRec = startStepRecording as jest.MockedFunction<typeof startStepRecording>;
+const mockStopRec = stopStepRecording as jest.MockedFunction<typeof stopStepRecording>;
 
 function level(name: string, y = 100): PickLevel {
   return { target: { component: name }, box: { x: 10, y, width: 100, height: 40 }, title: name };
@@ -133,13 +149,22 @@ describe('marking', () => {
     expect(pictureNotices(draft())).toContain("Couldn't take a picture of this screen. The component details are still attached.");
   });
 
-  it('a whole-screen capture is a note with one picture and no marks', async () => {
+  it('Capture screen takes one whole-screen picture for this screen, and none over a marked one', async () => {
     captureWholeScreen();
     await settle();
     expect(mockCapture).toHaveBeenCalledWith([]);
     expect(draft().marks).toEqual([]);
     expect(draft().shots).toHaveLength(1);
-    expect(useReport.getState()).toMatchObject({ panel: 'open', focusNote: true });
+    captureWholeScreen();
+    await settle();
+    expect(draft().shots).toHaveLength(1);
+    navigate('/lists', '/lists');
+    markLevels([level('A')]);
+    await settle();
+    mockCapture.mockClear();
+    captureWholeScreen();
+    expect(mockCapture).not.toHaveBeenCalled();
+    expect(draft().shots).toHaveLength(2);
   });
 
   it('Wider and Narrower step through the levels and retake the picture', async () => {
@@ -230,7 +255,7 @@ describe('persistence', () => {
       idempotencyKey: '4f1d6c0a-4f4c-4f0e-9e0b-9a4a8f2b7c11',
     });
     setReportStorage(store);
-    hydrate();
+    hydrate(undefined);
     expect(draft()).toMatchObject({ text: 'Too heavy', idempotencyKey: '4f1d6c0a-4f4c-4f0e-9e0b-9a4a8f2b7c11', restored: true });
     expect(draft().marks[0]).toMatchObject({ n: 1, route: '/feed', noPicture: 'restored' });
     expect(pictureNotices(draft())).toEqual(["Screenshots weren't kept. Mark it again to add one."]);
@@ -241,7 +266,157 @@ describe('persistence', () => {
     const store = memory();
     store.setItem('bevi.bug-report.unplaced', JSON.stringify(['BEV-4']));
     setReportStorage(store);
-    hydrate();
+    hydrate(undefined);
     expect(useReport.getState().unplaced).toEqual(['BEV-4']);
+  });
+});
+
+describe('the floating button', () => {
+  it('opens an empty note without capturing, then sets it aside, then opens it again', () => {
+    pressReportButton();
+    expect(useReport.getState()).toMatchObject({ panel: 'open', focusNote: true });
+    expect(draft().shots).toEqual([]);
+    pressReportButton();
+    expect(useReport.getState().panel).toBe('closed');
+    pressReportButton();
+    expect(useReport.getState().panel).toBe('open');
+    expect(mockCapture).not.toHaveBeenCalled();
+  });
+});
+
+describe('select mode', () => {
+  it('steps the note aside, highlights on hover, and a pick marks, captures and reopens the note', async () => {
+    const stop = jest.fn();
+    let handlers: PickModeHandlers | undefined;
+    mockPickMode.mockImplementationOnce((h) => {
+      handlers = h;
+      return stop;
+    });
+    pressReportButton();
+    startSelecting();
+    expect(useReport.getState()).toMatchObject({ selecting: true, panel: 'closed' });
+    handlers!.onHover([level('Hovered')]);
+    expect(useReport.getState().picking?.levels[0]?.title).toBe('Hovered');
+    handlers!.onPick([level('Picked')]);
+    expect(stop).toHaveBeenCalled();
+    expect(useReport.getState()).toMatchObject({ selecting: false, panel: 'open', picking: null });
+    expect(draft().marks[0]).toMatchObject({ n: 1, levels: [{ title: 'Picked' }] });
+    expect(useReport.getState().selectedMarkId).toBe(draft().marks[0]!.id);
+    await settle();
+    expect(mockCapture).toHaveBeenCalledWith([{ box: level('Picked').box, n: 1 }]);
+  });
+
+  it('Cancel, Escape and a navigation end it with the note back as it was', () => {
+    const stop = jest.fn();
+    let handlers: PickModeHandlers | undefined;
+    mockPickMode.mockImplementation((h) => {
+      handlers = h;
+      return stop;
+    });
+    pressReportButton();
+    startSelecting();
+    cancelSelecting();
+    expect(useReport.getState()).toMatchObject({ selecting: false, panel: 'open' });
+    startSelecting();
+    handlers!.onCancel();
+    expect(useReport.getState()).toMatchObject({ selecting: false, panel: 'open' });
+    startSelecting();
+    navigate('/lists', '/lists');
+    expect(useReport.getState()).toMatchObject({ selecting: false, panel: 'open' });
+    expect(stop).toHaveBeenCalledTimes(3);
+    expect(draft().marks).toEqual([]);
+    mockPickMode.mockReset();
+    mockPickMode.mockImplementation(() => () => {});
+  });
+
+  it('says so, with the note back, when select mode cannot start', () => {
+    mockPickMode.mockImplementationOnce(() => {
+      throw new Error('not implemented');
+    });
+    pressReportButton();
+    startSelecting();
+    expect(useReport.getState()).toMatchObject({ selecting: false, panel: 'open', notice: "Selecting isn't available here." });
+  });
+});
+
+describe('recording steps', () => {
+  it('records only between Record steps and Stop, and the steps go into the note', () => {
+    let onStep: ((steps: string[]) => void) | undefined;
+    mockStartRec.mockImplementationOnce((_route, cb) => {
+      onStep = cb;
+      cb?.(['Start on /feed']);
+    });
+    pressReportButton();
+    startRecording();
+    expect(mockStartRec).toHaveBeenCalledWith('/feed', expect.any(Function));
+    expect(useReport.getState()).toMatchObject({ panel: 'closed', recording: { steps: ['Start on /feed'] } });
+    onStep!(['Start on /feed', 'Open /lists']);
+    expect(useReport.getState().recording?.steps).toHaveLength(2);
+    mockStopRec.mockReturnValueOnce(['Start on /feed', 'Open /lists']);
+    // While recording, the floating button is Stop.
+    pressReportButton();
+    expect(useReport.getState()).toMatchObject({ recording: null, panel: 'open' });
+    expect(draft().steps).toEqual(['Start on /feed', 'Open /lists']);
+    removeSteps();
+    expect(draft().steps).toEqual([]);
+  });
+
+  it('stopRecording without a recording does nothing; a recording that cannot start says so', () => {
+    stopRecording();
+    expect(useReport.getState().draft).toBeNull();
+    mockStartRec.mockImplementationOnce(() => {
+      throw new Error('not implemented');
+    });
+    pressReportButton();
+    startRecording();
+    expect(useReport.getState()).toMatchObject({ recording: null, panel: 'open', notice: "Recording isn't available here." });
+  });
+});
+
+describe('one account at a time', () => {
+  afterEach(() => useSession.setState({ status: 'signedOut', profile: undefined }));
+
+  it("signing out wipes tester A's note and tickets to place, in memory and in storage", async () => {
+    const store = memory();
+    setReportStorage(store);
+    useSession.setState({ status: 'ready', profile: { handle: 'tester-a', displayName: 'A', avatarUrl: null } });
+    hydrate('tester-a');
+    markLevels([level('A')]);
+    setText('Note by A');
+    addUnplaced('BEV-7');
+    await settle();
+    const shotA = draft().shots[0]!.shot!;
+    expect(loadDraft(store)).toMatchObject({ text: 'Note by A', owner: 'tester-a' });
+    expect(loadUnplaced(store)).toEqual({ ids: ['BEV-7'], owner: 'tester-a' });
+
+    useSession.setState({ status: 'signedOut', profile: undefined });
+    expect(useReport.getState()).toMatchObject({ draft: null, unplaced: [], outbox: [] });
+    expect(mockRelease).toHaveBeenCalledWith(shotA);
+    expect(loadDraft(store)).toBeNull();
+    expect(loadUnplaced(store)).toEqual({ ids: [] });
+
+    useSession.setState({ status: 'ready', profile: { handle: 'tester-b', displayName: 'B', avatarUrl: null } });
+    hydrate('tester-b');
+    expect(useReport.getState()).toMatchObject({ draft: null, unplaced: [] });
+  });
+
+  it("never restores another handle's stored note or tickets, and forgets them", () => {
+    const store = memory();
+    saveDraft(store, { text: 'Note by A', marks: [], owner: 'tester-a', idempotencyKey: '4f1d6c0a-4f4c-4f0e-9e0b-9a4a8f2b7c11' });
+    saveUnplaced(store, ['BEV-7'], 'tester-a');
+    setReportStorage(store);
+    hydrate('tester-b');
+    expect(useReport.getState()).toMatchObject({ draft: null, unplaced: [] });
+    expect(loadDraft(store)).toBeNull();
+    expect(loadUnplaced(store)).toEqual({ ids: [] });
+  });
+
+  it('wipes what is in memory when the host mounts for a different handle', () => {
+    hydrate('tester-a');
+    pressReportButton();
+    setText('Note by A');
+    hydrate('tester-b');
+    expect(useReport.getState().draft).toBeNull();
+    expect(useReport.getState().owner).toBe('tester-b');
   });
 });

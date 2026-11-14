@@ -83,7 +83,7 @@ import {
 import { methodFor, parsePlace, routeOf } from "./routes.ts";
 
 /** Bigger than any screenshot-free report; the evidence itself never comes through this body. */
-const MAX_BODY_BYTES = 64 * 1024;
+const MAX_BODY_BYTES = 128 * 1024;
 const EVIDENCE_BUCKET = "bug-evidence";
 /** Matches the bucket's `file_size_limit` in 20261109000300_bug_reports.sql. */
 const MAX_EVIDENCE_BYTES = 10 * 1024 * 1024;
@@ -626,9 +626,14 @@ async function handleVerify(req: Request, c: Caller): Promise<Response> {
  * The place route's not-found. The `route` key is how the client tells it
  * from a deployed function that predates this route, which answers a bare
  * `{ error: "not_found" }` for any path it does not know.
+ *
+ * `reason: "not_open"` is added only once both tickets have passed the
+ * ledger check, i.e. both are the caller's own: it says one of them is in
+ * review, closed, of unknown state or has no manual order in Linear, and
+ * reveals nothing about anyone else's tickets.
  */
-function placeNotFound(): Response {
-  return json({ error: "not_found", route: "place" }, 404);
+function placeNotFound(reason?: "not_open"): Response {
+  return json(reason ? { error: "not_found", route: "place", reason } : { error: "not_found", route: "place" }, 404);
 }
 
 function trackerFailure(e: unknown, ticketId: string): Response {
@@ -671,7 +676,7 @@ async function handlePlace(req: Request, c: Caller): Promise<Response> {
   const order = sortedByRank(openOrdered(statuses));
   const movingStatus = statuses.find((s) => s.identifier === ticketId);
   const isListed = (id: string) => order.some((o) => o.identifier === id);
-  if (!movingStatus || !isListed(ticketId) || (afterTicketId !== null && !isListed(afterTicketId))) return placeNotFound();
+  if (!movingStatus || !isListed(ticketId) || (afterTicketId !== null && !isListed(afterTicketId))) return placeNotFound("not_open");
 
   const position = positionFor(order, ticketId, afterTicketId);
   const priority = priorityForRank(position.index, order.length, movingStatus.priority);

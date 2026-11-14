@@ -34,7 +34,7 @@ In the form:
 | How bad is it? | yes, preset to **Annoying** | **Blocker**: cannot use the app, or data is wrong. **Bad**: a core flow is broken. **Annoying**: works, with a workaround. **Polish**: cosmetic. Becomes Linear's priority (Urgent, High, Medium, Low) and the ticket's `Severity` line. |
 | What went wrong? | yes | The observable symptom. This becomes the ticket title. |
 | Describe the problem | no | What you did, and what happened instead. |
-| Steps to reproduce | no | One per line; pasted numbering is stripped. |
+| Steps to reproduce | no | Recorded, not typed: press **Record steps**, reproduce the bug, and stop. The app writes one step per screen you open and per tap, at most 30, each at most 300 characters. The ticket says the app recorded them. Nothing is recorded unless you press it. |
 | Screenshot | no | Picked from the library or the camera, up to three. Resized and re-encoded to JPEG, which also strips EXIF/GPS. |
 
 **Automatically included** expands to show exactly what is attached without you
@@ -44,10 +44,12 @@ the viewport and the time. That list is an allow-list in
 `app/src/features/bug-report/context.ts` — no account details, no page
 contents, no headers, no tokens, and never the raw URL (which can carry a
 token in its fragment). The server accepts one more thing, a short **recent
-activity** trail: the last 20 screens you moved between (route patterns, never
-ids) and API calls that failed (the method name, the error code, the status,
-how long it took), which the app sends once its next release records them.
-Nothing you typed, and nothing the server answered, is ever in that trail.
+activity** trail, of which it keeps the last 40 entries: the screens you moved
+between (route patterns, never ids), API calls that failed (the method name,
+the error code, the status, how long it took), uncaught errors (the message
+only, redacted and capped at 200 characters), and taps (the component and its
+label) only while a step recording is running. Nothing you typed, and nothing
+the server answered, is ever in that trail.
 
 Press **Submit bug report**. Nothing leaves the device before that press: the
 screenshot is held in memory until you submit.

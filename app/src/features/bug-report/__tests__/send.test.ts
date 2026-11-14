@@ -3,7 +3,7 @@ import type { BugBreadcrumb } from '@bevi/shared';
 import { inferKind, titleFor } from '../infer';
 import { emptyDraft, type Draft } from '../model';
 import { buildInput } from '../send';
-import { hadRecentFailure, recordedSteps } from '../trail';
+import { hadRecentFailure } from '../trail';
 import type { PickLevel, Shot } from '../types';
 
 // The engine's pure functions, standing in for the engine task's, so this suite pins how the
@@ -15,7 +15,6 @@ jest.mock('../infer', () => ({
   titleFor: jest.fn((note: string, pointedAt?: string) => (pointedAt ? `${pointedAt}: ${note}` : note)),
 }));
 jest.mock('../trail', () => ({
-  recordedSteps: jest.fn(() => ['Open /feed', 'Tap TabBar › Add Bev', 'Open /lists']),
   hadRecentFailure: jest.fn(() => false),
   trailSnapshot: jest.fn(() => []),
   startTrail: jest.fn(() => () => {}),
@@ -53,6 +52,7 @@ function twoScreens(): Draft {
     { id: 's2', shot: shot('blob:lists'), route: '/lists', visit: 2, seq: 2, pending: false },
   ];
   d.photos = [{ uri: 'blob:photo', blob: new Blob(['p']), mimeType: 'image/jpeg', width: 1, height: 1 }];
+  d.steps = ['Start on /feed', 'Tap TabBar › Add Bev', 'Open /lists'];
   return d;
 }
 
@@ -68,7 +68,7 @@ describe('buildInput', () => {
       severity: 'annoying',
       title: 'TabBar › Add Bev: too heavy, make it flat',
       description: 'too heavy, make it flat',
-      reproductionSteps: ['Open /feed', 'Tap TabBar › Add Bev', 'Open /lists'],
+      reproductionSteps: ['Start on /feed', 'Tap TabBar › Add Bev', 'Open /lists'],
       stepsSource: 'recorded',
       breadcrumbs: TRAIL,
       environment: ENV,
@@ -83,7 +83,6 @@ describe('buildInput', () => {
     expect(input.evidence?.map((e) => e.caption)).toEqual(['/feed, with 1 and 2 marked', '/lists, with 1 marked', 'Photo from the library']);
     expect(input.evidence?.every((e) => e.mimeType === 'image/jpeg')).toBe(true);
     expect(titleFor).toHaveBeenCalledWith('too heavy, make it flat', 'TabBar › Add Bev');
-    expect(recordedSteps).toHaveBeenCalledWith(TRAIL);
   });
 
   it('never sends more than 3 pictures: captures first, then photos', () => {
@@ -121,12 +120,13 @@ describe('buildInput', () => {
     expect(input.evidence?.map((e) => e.caption)).toEqual(['/feed, whole screen']);
   });
 
-  it('leaves the recorded steps out when the switch is off', () => {
+  it('sends no steps, and no stepsSource, when none were recorded; the trail still goes as breadcrumbs', () => {
     const d = twoScreens();
-    d.includeSteps = false;
+    d.steps = [];
     const input = buildInput(d, TRAIL);
     expect(input.reproductionSteps).toBeUndefined();
     expect(input.stepsSource).toBeUndefined();
+    expect(input.breadcrumbs).toEqual(TRAIL);
   });
 
   it('still files when the engine throws: a plain title and the no-signal kind', () => {

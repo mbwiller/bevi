@@ -10,6 +10,7 @@ import { useCanReportBug } from '@/api/hooks';
 import { createQueryClient } from '@/api/queryClient';
 import { StackScene } from '@/components/ScreenMotion';
 import { StatusBarClearance } from '@/components/StatusBarClearance';
+import { clearReportCommand, useReportCommands } from '@/features/bug-report/commands';
 import { loadReportHost } from '@/features/bug-report/loadHost';
 import { ConfigError, Splash } from '@/features/auth/Splash';
 import { useSessionBootstrap } from '@/features/auth/useSessionBootstrap';
@@ -124,7 +125,14 @@ function SessionGate() {
  */
 function Reporter({ ready }: { ready: boolean }) {
   const { data: canReport } = useCanReportBug({ enabled: ready });
-  if (!ready || canReport !== true) return null;
+  const allowed = ready && canReport === true;
+  // A request (Settings, /report-bug) is only for an account that can report: one made, or still
+  // waiting, while this account can't is dropped, never left for the next one to sign in.
+  const pending = useReportCommands((s) => s.pending);
+  useEffect(() => {
+    if (!allowed && pending) clearReportCommand();
+  }, [allowed, pending]);
+  if (!allowed) return null;
   return (
     <Suspense fallback={null}>
       <ReportHost />

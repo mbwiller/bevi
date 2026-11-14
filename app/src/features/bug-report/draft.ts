@@ -27,21 +27,25 @@ export interface StoredMark {
 
 export interface BugDraft {
   text: string;
-  /** Set only when the tester pinned a kind. */
+  /** Set only when the tester picked a type. */
   kindOverride?: BugReportKind;
   marks: StoredMark[];
-  /** Absent on a draft saved before the switch existed: on. */
-  includeSteps?: boolean;
+  /** The steps the tester recorded (Record steps); absent when there are none. */
+  steps?: string[];
+  /**
+   * The handle of the account that wrote it. A draft saved under another handle is never restored:
+   * a second account on the same device must not inherit the first one's note. Absent on a draft
+   * saved before this existed (the old form's), which is restored as before.
+   */
+  owner?: string;
   /** The UUID this draft files under, on every attempt. */
   idempotencyKey: string;
   savedAt: string;
 }
 
 export const DRAFT_KEY = 'bevi.bug-report.draft';
-/** Ticket ids filed from this device and not yet placed in the tester's ranked list. */
+/** Ticket ids filed from this device and not yet placed in the tester's ranked list, with their owner. */
 export const UNPLACED_KEY = 'bevi.bug-report.unplaced';
-/** Where the drop is docked. */
-export const DOCK_KEY = 'bevi.bug-report.dock';
 
 /** The subset of the Web Storage API this module uses. */
 export interface StorageLike {
@@ -151,7 +155,10 @@ export function loadDraft(storage: StorageLike | null, now: Date = new Date()): 
       ? { kindOverride: draft.kindOverride as BugReportKind }
       : {}),
     marks: Array.isArray(draft.marks) ? draft.marks.map(storedMark).filter((m): m is StoredMark => m !== null) : [],
-    ...(typeof draft.includeSteps === 'boolean' ? { includeSteps: draft.includeSteps } : {}),
+    ...(Array.isArray(draft.steps) && draft.steps.some((x) => typeof x === 'string')
+      ? { steps: draft.steps.filter((x): x is string => typeof x === 'string') }
+      : {}),
+    ...(typeof draft.owner === 'string' && draft.owner ? { owner: draft.owner } : {}),
     idempotencyKey: draft.idempotencyKey,
     savedAt: draft.savedAt as string,
   };
@@ -160,7 +167,7 @@ export function loadDraft(storage: StorageLike | null, now: Date = new Date()): 
 export function saveDraft(storage: StorageLike | null, draft: Omit<BugDraft, 'savedAt'>, now: Date = new Date()): void {
   if (!storage) return;
   // An empty draft is not worth keeping, and keeping it would restore a blank note with a used-looking key.
-  if (!draft.text.trim() && draft.marks.length === 0) {
+  if (!draft.text.trim() && draft.marks.length === 0 && !draft.steps?.length) {
     clearDraft(storage);
     return;
   }
@@ -171,30 +178,25 @@ export function clearDraft(storage: StorageLike | null): void {
   remove(storage, DRAFT_KEY);
 }
 
-export function loadUnplaced(storage: StorageLike | null): string[] {
+/** The tickets to place, and whose they are. A bare array is the shape saved before the owner was kept. */
+export interface StoredUnplaced {
+  ids: string[];
+  owner?: string;
+}
+
+export function loadUnplaced(storage: StorageLike | null): StoredUnplaced {
   const raw = readJson(storage, UNPLACED_KEY);
-  return Array.isArray(raw) ? [...new Set(raw.filter((id): id is string => typeof id === 'string' && id !== ''))] : [];
+  const list = Array.isArray(raw) ? raw : raw && typeof raw === 'object' && Array.isArray((raw as { ids?: unknown }).ids) ? (raw as { ids: unknown[] }).ids : [];
+  const owner = raw && !Array.isArray(raw) && typeof (raw as { owner?: unknown }).owner === 'string' ? (raw as { owner: string }).owner : undefined;
+  const ids = [...new Set(list.filter((id): id is string => typeof id === 'string' && id !== ''))];
+  return owner ? { ids, owner } : { ids };
 }
 
-export function saveUnplaced(storage: StorageLike | null, ids: readonly string[]): void {
+export function saveUnplaced(storage: StorageLike | null, ids: readonly string[], owner?: string): void {
   if (ids.length === 0) remove(storage, UNPLACED_KEY);
-  else writeJson(storage, UNPLACED_KEY, ids);
+  else writeJson(storage, UNPLACED_KEY, owner ? { ids, owner } : { ids });
 }
 
-/** Which edge the drop docks against, and how far its bottom sits above the layer's bottom. */
-export interface Dock {
-  side: 'left' | 'right';
-  bottom: number;
-}
-
-export function loadDock(storage: StorageLike | null): Dock | null {
-  const raw = readJson(storage, DOCK_KEY) as Partial<Dock> | null;
-  if (!raw || (raw.side !== 'left' && raw.side !== 'right') || typeof raw.bottom !== 'number' || !Number.isFinite(raw.bottom)) {
-    return null;
-  }
-  return { side: raw.side, bottom: raw.bottom };
-}
-
-export function saveDock(storage: StorageLike | null, dock: Dock): void {
-  writeJson(storage, DOCK_KEY, dock);
+export function clearUnplaced(storage: StorageLike | null): void {
+  remove(storage, UNPLACED_KEY);
 }

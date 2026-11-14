@@ -1,11 +1,12 @@
 import type { BugBreadcrumb, BugReportInput, BugReportKind, BugReportTarget } from '@bevi/shared';
 
-import { safeHadRecentFailure, safeInferKind, safeRecordedSteps, safeTitleFor } from './engine';
+import { safeHadRecentFailure, safeInferKind, safeTitleFor } from './engine';
 import { currentLevel, EVIDENCE_MAX, MARKS_MAX, markTarget, PHOTO_CAPTION, shotCaption, type Draft } from './model';
 
 /**
  * A note as the contract files it. Pure: the trail is passed in (taken at send time), and the
- * engine's `titleFor` / `inferKind` / `recordedSteps` are plain functions of their arguments.
+ * engine's `titleFor` / `inferKind` are plain functions of their arguments. The steps are the ones
+ * the tester recorded on purpose (Record steps), never inferred from the trail.
  *
  * The severity is always 'annoying': the reporter is never asked how bad it is. Where the ticket
  * lands in the tester's ranked list (RankSheet) sets its priority afterwards.
@@ -47,7 +48,8 @@ export function buildInput(draft: Draft, trail: readonly BugBreadcrumb[]): BugRe
     return [index === undefined ? target : { ...target, evidenceIndex: index }];
   });
 
-  const steps = draft.includeSteps ? safeRecordedSteps(trail) : [];
+  // Steps exist only when the tester recorded them (Record steps); nothing is inferred from the trail.
+  const steps = draft.steps.filter((step) => step.trim() !== '');
 
   return {
     kind: kindOf(draft, trail),

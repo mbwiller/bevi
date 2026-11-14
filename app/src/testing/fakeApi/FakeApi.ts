@@ -153,8 +153,6 @@ const BUG_SEVERITIES: readonly string[] = ['blocker', 'bad', 'annoying', 'polish
 const BUG_PRIORITY: Record<BugReportSummary['severity'], number> = { blocker: 1, bad: 2, annoying: 3, polish: 4 };
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const BUG_TICKET_RE = /^[A-Z][A-Z0-9]*-\d{1,9}$/;
-/** At most this many pointed-at components per report (`BugReportInput.targets`). */
-const BUG_MAX_TARGETS = 6;
 /** The states a ticket is ranked in (supabase/functions/bug-report/rank.ts `OPEN_STATES`). */
 const BUG_OPEN_STATES: readonly BugReportSummary['state'][] = ['triage', 'todo', 'in_progress'];
 const BUG_STATE_LABELS: Record<BugReportSummary['state'], string | null> = {
@@ -2190,9 +2188,8 @@ export class FakeApi implements BeviApi {
           if (!UUID_RE.test(input.idempotencyKey ?? '')) invalid('idempotencyKey', 'Missing submission key');
           const evidence = input.evidence ?? [];
           if (evidence.length > 3) invalid('evidence', 'Attach at most 3 screenshots');
-          if ((input.targets ?? []).length > BUG_MAX_TARGETS) {
-            invalid('targets', `Point at most ${BUG_MAX_TARGETS} components`);
-          }
+          // More than six pointed-at components is not an error: packages/api sends the first six
+          // and the function keeps the first six, so the fake (which stores none) has nothing to do.
           for (const item of evidence) {
             if (!BUG_EVIDENCE_MIME_TYPES.includes(item.mimeType)) invalid('evidence', 'Attach a JPEG, PNG or WebP image');
             if (typeof item.file?.size === 'number' && item.file.size > UPLOAD_MAX_BYTES) {
@@ -2268,10 +2265,17 @@ export class FakeApi implements BeviApi {
           if (after === id) invalid('afterTicketId', 'A ticket cannot be placed after itself');
           if (!this.internalReporter) fail('unauthorized', 'This account cannot file internal bug reports');
 
-          // Both must be the caller's own open tickets, as the function checks.
+          // Both must be the caller's own tickets (else not_found, which says nothing about anyone
+          // else's), and both open (else conflict with reason 'not_open'), as the function checks.
+          const mine = new Set(
+            [...this.bugLedger.values()].filter((e) => e.userId === me.id).map((e) => e.summary.ticketId),
+          );
+          if (!mine.has(id) || (after !== null && !mine.has(after))) {
+            fail('not_found', "That report isn't one of yours", { reason: 'not_found' });
+          }
           const open = this.openBugOrder(me.id);
           if (!open.includes(id) || (after !== null && !open.includes(after))) {
-            fail('not_found', "That ticket isn't one of your open tickets");
+            fail('conflict', "That report isn't open any more", { reason: 'not_open' });
           }
 
           const others = open.filter((t) => t !== id);

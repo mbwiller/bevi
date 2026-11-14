@@ -12,7 +12,8 @@
 // taken for the app's; mangled, as they always were, they cannot be. It is also cheaper.
 //
 // How: Metro calls the minifier once per module with `filename` relative to the project root
-// (`src/components/TabBar.tsx`, `../node_modules/…`, `../shared/src/…`) and `config`, the
+// (`src/components/TabBar.tsx`, `../node_modules/…`, `../shared/src/…`; `isAppSource` below also
+// takes an absolute path, should a later Metro pass one) and `config`, the
 // `transformer.minifierConfig`, which metro-minify-terser hands to terser.minify. Terser's
 // top-level `keep_fnames` / `keep_classnames` apply to both its compressor and its mangler and take
 // a RegExp. They cover function declarations and named function expressions, which is how every
@@ -25,8 +26,17 @@
 
 const path = require('path');
 
-const APP_SOURCE = /^src[\\/]/;
 const COMPONENT_NAME = /^[A-Z]/;
+
+/**
+ * Whether a module is the app's own source. Metro passes `src/…` today; an absolute path, or one
+ * relative to the repo root, would carry the segment `/app/src/` instead. Never a dependency.
+ */
+function isAppSource(filename) {
+  const name = String(filename ?? '').replace(/\\/g, '/');
+  if (/(^|\/)node_modules\//.test(name)) return false;
+  return /^(\.\/)?src\//.test(name) || /(^|\/)app\/src\//.test(name);
+}
 
 /** metro-minify-terser is Metro's dependency, not the app's: `expo` brings `@expo/metro`, which re-exports it. */
 function loadTerserMinifier() {
@@ -43,9 +53,12 @@ function loadTerserMinifier() {
 const terserMinifier = loadTerserMinifier();
 
 module.exports = function minify(options) {
-  if (!APP_SOURCE.test(options.filename ?? '')) return terserMinifier(options);
+  if (!isAppSource(options.filename)) return terserMinifier(options);
   return terserMinifier({
     ...options,
     config: { ...options.config, keep_fnames: COMPONENT_NAME, keep_classnames: COMPONENT_NAME },
   });
 };
+
+// So the rule can be checked from node (`require('./metro.minify.js').isAppSource(path)`); Metro only calls the function.
+module.exports.isAppSource = isAppSource;

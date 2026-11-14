@@ -877,7 +877,9 @@ export interface BugsApi {
    * with the new ranks.
    *
    * @throws 'unauthorized' — signed out, or not an internal reporter;
-   *   'not_found' — either ticket is not one of the caller's open tickets;
+   *   'not_found' — either ticket is not one of the caller's;
+   *   'conflict' — one of them is the caller's but is no longer open
+   *   (`detail.reason = 'not_open'`): refetch the list;
    *   'validation' — not a ticket identifier, or a ticket placed after itself;
    *   'unknown' — the tracker refused, is unconfigured, or the server
    *   predates ranking.

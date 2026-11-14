@@ -15,14 +15,19 @@ import { REPORT_UI_ATTR, type Box, type PickLevel } from './types';
  * level: its name, source file, label, text, props, box and the design tokens it was drawn with.
  * The levels stop at the route's screen; above it are layouts and providers, the same everywhere.
  *
- * Two refinements on "one level per app component":
+ * Three refinements on "one level per app component", so that a level is the thing a person
+ * would name and its file is the one to open:
  *   * a labelled element that is not a component's own root (a tab inside the TabBar, the input
  *     inside a TextField) is a level too, named after the component that owns it:
  *     'TabBar › Add Bev';
- *   * a component with no label and no text of its own that sits inside a labelled control (the
- *     Icon inside that tab) is left out, so the first level is the thing a person would name.
+ *   * a wrapper, a component that only puts one element around the children its caller gave it
+ *     (a pressable, an animation), is named the same way, as a part of the component that used
+ *     it: 'BevRow › Cold Brew Black', with BevRow's file;
+ *   * a component with nothing to name it inside a labelled control (the Icon inside that tab),
+ *     or a helper that only repeats what the labelled component around it shows, is left out.
  *
- * Nothing here reads what a person typed: never a field's value, and never a `value` prop.
+ * Nothing here reads what a person typed: a field and anything editable is skipped when text is
+ * read, whatever level it sits under, and a prop's string is read only under a presentational name.
  *
  * In a production build the names survive because metro.minify.js keeps them, for app/src only.
  */
@@ -53,7 +58,7 @@ export function componentFile(name: string): string | undefined {
 
 // ---------------------------------------------------------------------------------------------
 // React internals. Fibers are not a public API: every read is defensive, nothing is written, and
-// nothing outside the five functions of this section touches a fiber's fields. If React changes
+// nothing outside the functions of this section touches a fiber's fields. If React changes
 // them, picking quietly finds nothing; it never throws.
 // ---------------------------------------------------------------------------------------------
 
@@ -187,10 +192,84 @@ function rootHosts(fiber: Fiber): Element[] {
   return hosts;
 }
 
-/** Props that hold what a person typed, or a credential. */
-const TYPED_PROP = /^(value|defaultValue|text|query)$|password|secret|token/i;
+/**
+ * Whether a component is only a wrapper: one element around the children its caller gave it, with
+ * nothing of its own inside (`<Animated.View style={…}>{children}</Animated.View>`). What such a
+ * component shows is written in its caller's file, not its own. Told by identity: the one element
+ * it renders has, as its children, the very object the component was given as `children`.
+ */
+function wrapsChildren(fiber: Fiber): boolean {
+  try {
+    const children = (fiber.memoizedProps as { children?: unknown } | null | undefined)?.children;
+    if (!children || typeof children !== 'object') return false;
+    let node = fiber.child;
+    for (let depth = 0; node && depth < 12; depth++, node = node.child) {
+      if (node.sibling) return false;
+      if (hostElement(node)) return (node.memoizedProps as { children?: unknown } | null | undefined)?.children === children;
+    }
+  } catch {
+    // Falls through.
+  }
+  return false;
+}
 
-/** A fiber's props that say something in a ticket: scalars only, and never what a person typed. */
+/**
+ * Prop names that may hold what a person typed, a credential or contact details. A prop with such
+ * a name is never read, whatever its type. Deliberately broad (`pinned` and `keyboardType` match
+ * too): leaving out a harmless prop costs a ticket nothing.
+ */
+const SENSITIVE_PROP = /^(value|defaultValue|text|query)$|pass|secret|token|auth|cookie|key|pin|otp|code|email|phone/i;
+
+/**
+ * The only props whose strings are read: names that say how a component is drawn or labelled.
+ * A string under any other name (an id, a URL, a note, a message) is dropped, because nothing
+ * about an unknown name says its value is not somebody's content.
+ */
+const STRING_PROPS: ReadonlySet<string> = new Set([
+  // which variation of the component
+  'variant',
+  'scoreVariant',
+  'size',
+  'tone',
+  'accent',
+  'kind',
+  'type',
+  'mode',
+  'state',
+  'status',
+  'bucket',
+  'active',
+  // how it is laid out and drawn
+  'align',
+  'direction',
+  'layout',
+  'snap',
+  'position',
+  'shape',
+  'weight',
+  'color',
+  // what it is called on screen
+  'icon',
+  'name',
+  'label',
+  'title',
+  'placeholder',
+  'prefix',
+  'action',
+  'role',
+  'accessibilityRole',
+  'accessibilityLabel',
+  // how a field behaves
+  'inputMode',
+  'autoCapitalize',
+  'autoComplete',
+]);
+
+/**
+ * A fiber's props that say something in a ticket. Numbers and booleans are kept unless the name
+ * is a sensitive one; a string is kept only under a name on the list above, and only a short one.
+ * Never `children`, a style, a handler, an object, or what a person typed.
+ */
 function scalarProps(fiber: Fiber): Record<string, string | number | boolean> | undefined {
   const out: Record<string, string | number | boolean> = {};
   let count = 0;
@@ -199,10 +278,14 @@ function scalarProps(fiber: Fiber): Record<string, string | number | boolean> | 
     if (!props || typeof props !== 'object') return undefined;
     for (const key of Object.keys(props)) {
       if (count >= MAX_PROPS) break;
-      if (key === 'children' || key === 'style' || key === 'testID' || key.startsWith('on') || TYPED_PROP.test(key)) continue;
+      if (key === 'children' || key === 'style' || key === 'testID' || key.startsWith('on') || SENSITIVE_PROP.test(key)) continue;
       const value = (props as Record<string, unknown>)[key];
       const kept =
-        typeof value === 'string' ? value.length <= MAX_PROP_STRING : typeof value === 'number' ? Number.isFinite(value) : typeof value === 'boolean';
+        typeof value === 'string'
+          ? STRING_PROPS.has(key) && value.length <= MAX_PROP_STRING
+          : typeof value === 'number'
+            ? Number.isFinite(value)
+            : typeof value === 'boolean';
       if (!kept) continue;
       out[key] = value as string | number | boolean;
       count++;
@@ -325,23 +408,71 @@ function isControl(element: Element): boolean {
 }
 
 const TEXT_TTL_MS = 400;
+/** Enough to tell "short", "cut to 160" and "too long to be a screen's text" apart; no more is ever read. */
+const TEXT_READ = MAX_TEXT + 1;
 let textCache = new WeakMap<Element, { at: number; text: string }>();
 
+const NO_TEXT_TAGS = new Set(['input', 'textarea', 'select', 'option', 'script', 'style', 'noscript', 'template', 'svg', 'canvas', 'iframe']);
+const INLINE_TAGS = new Set(['span', 'a', 'b', 'i', 'em', 'strong', 'small', 'sub', 'sup', 'u', 's', 'code', 'label', 'abbr', 'mark', 'bdi', 'bdo']);
+
+/** Whether an element's subtree is never read for text: a field, anything editable in place, or something that holds none to show. */
+function skipsText(element: Element): boolean {
+  if (NO_TEXT_TAGS.has(element.tagName.toLowerCase())) return true;
+  const editable = element.getAttribute('contenteditable');
+  return (editable !== null && editable !== 'false') || (element as HTMLElement).isContentEditable === true;
+}
+
+/** Whether an element is not displayed at all. The other tabs' screens stay mounted that way. */
+function isNotDisplayed(element: Element): boolean {
+  // No boxes: either `display: none` somewhere above, or `display: contents`, whose children still show.
+  return element.getClientRects().length === 0 && window.getComputedStyle(element).display === 'none';
+}
+
+/** The nearest ancestor that starts a line of its own; text in two different ones is two pieces. */
+function blockOf(node: Node): Element | null {
+  let element = node.parentElement;
+  while (element && INLINE_TAGS.has(element.tagName.toLowerCase())) element = element.parentElement;
+  return element;
+}
+
 /**
- * The text an element shows, whitespace collapsed. `innerText` leaves out what is not displayed
- * (the other tabs' screens stay mounted) and never includes a field's value. A drag asks for the
- * same screen's text many times a second, so each element's answer is kept for a moment.
+ * The text an element shows, whitespace collapsed, up to TEXT_READ characters.
+ *
+ * Read text node by text node rather than with `innerText` or `textContent`, so that what is
+ * skipped is decided here: a field (`<input>`, `<textarea>`, `<select>`), anything editable in
+ * place and everything under it, so nothing a person typed is ever read, even when the level is
+ * the whole screen around the field; the reporter's own UI; and anything not displayed. The walk
+ * stops as soon as it has enough, so a long screen costs no more than a short one. A drag asks
+ * for the same screen's text many times a second, so each element's answer is kept for a moment.
  */
 function textOfElement(element: Element): string {
-  if (isEditable(element)) return '';
   const now = Date.now();
   const cached = textCache.get(element);
   if (cached && now - cached.at < TEXT_TTL_MS) return cached.text;
   let text = '';
   try {
-    if (!element.querySelector('[contenteditable]:not([contenteditable="false"])')) {
-      const shown: unknown = (element as HTMLElement).innerText;
-      text = collapse(typeof shown === 'string' ? shown : (element.textContent ?? ''));
+    if (!skipsText(element) && !isReportUi(element) && element.closest('[contenteditable]:not([contenteditable="false"])') === null) {
+      const walker = document.createTreeWalker(element, 5 /* NodeFilter.SHOW_ELEMENT | SHOW_TEXT */, {
+        acceptNode(node: Node): number {
+          if (node.nodeType !== 1) return 1; // FILTER_ACCEPT: a text node
+          const child = node as Element;
+          if (skipsText(child) || child.hasAttribute(REPORT_UI_ATTR) || isNotDisplayed(child)) return 2; // FILTER_REJECT: skip the subtree
+          return child.tagName.toLowerCase() === 'br' ? 1 : 3; // FILTER_SKIP: look inside
+        },
+      });
+      let lastBlock: Element | null = null;
+      let seen = 0;
+      for (let node = walker.nextNode(); node && text.length < TEXT_READ * 2 && seen < WALK_LIMIT; node = walker.nextNode(), seen++) {
+        if (node.nodeType === 1) {
+          text += ' ';
+          continue;
+        }
+        const block = blockOf(node);
+        if (block !== lastBlock) text += ' ';
+        lastBlock = block;
+        text += node.nodeValue ?? '';
+      }
+      text = collapse(text).slice(0, TEXT_READ);
     }
   } catch {
     text = '';
@@ -552,8 +683,10 @@ interface Naming {
 interface Found {
   /** Index into `Tree.apps`: the component this level is, or for a labelled part the component that owns it. */
   owner: number;
-  /** A labelled element inside `owner` that is not its root. */
+  /** Not a component of its own: a labelled element inside `owner` that is not its root, or a wrapper `owner` put around something. */
   part: boolean;
+  /** For a wrapper: its name and its fiber. */
+  wrapper?: AppFiber;
   elements: Element[];
   box: Box;
   screen: boolean;
@@ -563,7 +696,7 @@ interface Found {
 }
 
 interface Tree {
-  /** The app components from the element up, innermost first, ending at the route's screen when there is one. */
+  /** The app components from the element up, innermost first, ending at the route's screen when there is one. Wrappers are not among them. */
   apps: AppFiber[];
   found: Found[];
 }
@@ -598,12 +731,18 @@ function treeFrom(start: Element): Tree {
 
   const chain = fiberChain(fiber);
   const apps: AppFiber[] = [];
+  const wrappers = new Map<Fiber, string>();
   let screenAt = -1;
   for (const link of chain) {
     if (hostElement(link)) continue;
     const name = componentName(link);
     if (!isAppComponent(name)) continue;
-    if (has(SCREEN_ROUTES, name)) screenAt = apps.length;
+    const screen = has(SCREEN_ROUTES, name);
+    if (!screen && wrapsChildren(link)) {
+      wrappers.set(link, name);
+      continue;
+    }
+    if (screen) screenAt = apps.length;
     apps.push({ fiber: link, name });
   }
   if (screenAt >= 0) apps.length = screenAt + 1;
@@ -611,6 +750,15 @@ function treeFrom(start: Element): Tree {
   const found: Found[] = [];
   let labelled: Element[] = [];
   let next = 0;
+  /** The labelled elements passed since the last level, as parts of the component they are in; not `own`, which label the level itself. */
+  const flushParts = (own: readonly Element[]): void => {
+    for (const part of labelled) {
+      if (own.includes(part)) continue;
+      const box = boxOf([part]);
+      if (box) found.push({ owner: next, part: true, elements: [part], box, screen: false });
+    }
+    labelled = [];
+  };
   for (const link of chain) {
     if (next >= apps.length) break;
     const element = hostElement(link);
@@ -618,15 +766,16 @@ function treeFrom(start: Element): Tree {
       if (labelOf(element)) labelled.push(element);
       continue;
     }
-    if (link !== apps[next]!.fiber) continue;
+    const wrapper = wrappers.get(link);
+    if (wrapper === undefined && link !== apps[next]!.fiber) continue;
     const hosts = rootHosts(link);
-    for (const part of labelled) {
-      if (hosts.includes(part)) continue;
-      const box = boxOf([part]);
-      if (box) found.push({ owner: next, part: true, elements: [part], box, screen: false });
-    }
-    labelled = [];
+    flushParts(hosts);
     const box = boxOf(hosts);
+    if (wrapper !== undefined) {
+      // A wrapper is a part of the component that used it: that is whose file says what it shows.
+      if (box) found.push({ owner: next, part: true, elements: hosts, box, screen: false, wrapper: { fiber: link, name: wrapper } });
+      continue;
+    }
     if (box) found.push({ owner: next, part: false, elements: hosts, box, screen: next === screenAt });
     next++;
   }
@@ -666,6 +815,26 @@ function readNaming(level: Found): Naming {
   return { role: first ? roleOf(first) : undefined, control: level.elements.some(isControl) };
 }
 
+/** Whether a level holds more than one thing to press or name: its text is then a row of labels, not a name for it. */
+function holdsSeveral(level: Found): boolean {
+  try {
+    let count = 0;
+    for (const element of level.elements) {
+      count += element.querySelectorAll('[aria-label], [role="button"], [role="tab"], [role="link"], a, button, input, textarea').length;
+      if (count > 1) return true;
+    }
+  } catch {
+    // Falls through.
+  }
+  return false;
+}
+
+/** Text short enough, and single enough, to name a level that has no label. */
+function namingText(level: Found): string | undefined {
+  const text = textOf(level);
+  return text && text.length <= TITLE_TEXT && !holdsSeveral(level) ? text : undefined;
+}
+
 function inherit(level: Found, from: Found): void {
   const theirs = namingOf(from);
   if (theirs.label === undefined || namingOf(level).label !== undefined) return;
@@ -678,16 +847,34 @@ function textOf(level: Found): string {
 }
 
 /**
- * The levels to offer, innermost first: components with nothing to name them inside a labelled
- * control are dropped, then a level drawn exactly where the one inside it is, then all but eight.
+ * The levels to offer, innermost first. Left out, in this order: a component or wrapper with
+ * nothing to name it inside a labelled control (the Icon in a tab); a helper with no label that
+ * shows only what the labelled component around it, from the same file, shows (the number inside
+ * a ScoreBubble); a level drawn exactly where the one inside it is; and all but eight.
  */
 function levelsOf(tree: Tree): Found[] {
   let levels = tree.found;
 
   const control = levels.findIndex((level) => namingOf(level).control && namingOf(level).label !== undefined);
   if (control > 0) {
-    levels = levels.filter((level, i) => i >= control || level.part || namingOf(level).label !== undefined || textOf(level) !== '');
+    levels = levels.filter((level, i) => i >= control || namingOf(level).label !== undefined || textOf(level) !== '');
   }
+  // From the outside in, so a helper inside a helper is measured against the component that stays.
+  const said: Found[] = [];
+  for (let i = levels.length - 1; i >= 0; i--) {
+    const level = levels[i]!;
+    const outer = said[0];
+    const repeats =
+      outer !== undefined &&
+      !level.part &&
+      !outer.part &&
+      namingOf(level).label === undefined &&
+      namingOf(outer).label !== undefined &&
+      fileOf(tree, level.owner) === fileOf(tree, outer.owner) &&
+      textOf(level) === textOf(outer);
+    if (!repeats) said.unshift(level);
+  }
+  levels = said;
 
   const kept: Found[] = [];
   for (const level of levels) {
@@ -713,21 +900,22 @@ function levelsOf(tree: Tree): Found[] {
 
 function fitTitle(head: string, joiner: string, detail: string): string {
   const room = MAX_TITLE - head.length - joiner.length;
-  return room < 4 ? cut(head, MAX_TITLE) : `${head}${joiner}${cut(detail, room)}`;
+  return room < 4 || !detail ? cut(head, MAX_TITLE) : `${head}${joiner}${cut(detail, room)}`;
 }
 
 /**
  * A level's short name. 'TabBar › Add Bev' for a labelled part of a component; 'BevRow · Coca-Cola'
- * for a component with a label, or else with text short enough to name it; otherwise
- * 'FeedPost › Pill', the component under its parent. The same string goes in the trail.
+ * for a component with a label, or else with text that names it; otherwise 'FeedPost › Pill', the
+ * component under the one that uses it. The same string goes in the steps.
  */
 function titleOf(tree: Tree, level: Found): string {
   const name = tree.apps[level.owner]!.name;
   const { label } = namingOf(level);
-  if (level.part) return label ? fitTitle(name, ' › ', label) : cut(name, MAX_TITLE);
-  if (label) return fitTitle(name, ' · ', label);
-  const text = textOf(level);
-  if (text && text.length <= TITLE_TEXT) return fitTitle(name, ' · ', text);
+  if (level.part) return fitTitle(name, ' › ', label ?? level.wrapper?.name ?? '');
+  // A screen or a layout is its name, whatever it happens to say and whatever is above it.
+  if (level.screen || fileOf(tree, level.owner)?.endsWith('/_layout.tsx')) return cut(name, MAX_TITLE);
+  const detail = label ?? namingText(level);
+  if (detail) return fitTitle(name, ' · ', detail);
   const parent = tree.apps[level.owner + 1]?.name;
   return parent ? fitTitle(parent, ' › ', name) : cut(name, MAX_TITLE);
 }
@@ -766,7 +954,8 @@ function describe(tree: Tree, level: Found, box: Box = level.box): PickLevel {
   const wholeScreen = level.screen || (column !== null && level.box.width * level.box.height >= column.width * column.height * 0.8);
   if (text && !(wholeScreen && text.length > MAX_TEXT)) target.text = cut(text, MAX_TEXT);
 
-  const props = level.part ? undefined : scalarProps(app.fiber);
+  // A labelled element has no props of its own; a wrapper's are the wrapper's.
+  const props = level.part ? (level.wrapper ? scalarProps(level.wrapper.fiber) : undefined) : scalarProps(app.fiber);
   if (props) target.props = props;
   target.rect = rounded(box);
   const first = level.elements[0];

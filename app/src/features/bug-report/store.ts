@@ -2,23 +2,30 @@ import type { BugBreadcrumb, BugReportEnvironment, BugReportInput, BugReportKind
 import { create } from 'zustand';
 
 import { revokeIfBlob, type PreparedPhoto } from '@/features/create-bev/photo';
+import { useSession } from '@/state/session';
 
 import { collectContext, type ContextSources } from './context';
 import {
   clearDraft,
-  loadDock,
+  clearUnplaced,
   loadDraft,
   loadUnplaced,
   newIdempotencyKey,
-  saveDock,
   saveDraft,
   saveUnplaced,
   webStorage,
   type BugDraft,
-  type Dock,
   type StorageLike,
 } from './draft';
-import { safeCapture, safeRecordNav, safeRelease, safeTrailSnapshot } from './engine';
+import {
+  safeCapture,
+  safeRecordNav,
+  safeRelease,
+  safeStartPickMode,
+  safeStartStepRecording,
+  safeStopStepRecording,
+  safeTrailSnapshot,
+} from './engine';
 import {
   addMark,
   addPhotos as addPhotosTo,
@@ -27,6 +34,7 @@ import {
   currentLevel,
   emptyDraft,
   finishCapture,
+  hasMarkedPicture,
   localId,
   markLimit,
   removeMark as removeMarkFrom,
@@ -40,9 +48,10 @@ import { buildInput, titleOf } from './send';
 import type { PickLevel, Shot } from './types';
 
 /**
- * The reporter's state, module-level so it survives every navigation: the note being written, the
- * live highlight while the drop is dragged, the outbox of notes being filed, and the tickets still
- * to be placed in the tester's ranked list. The transitions on the note are the pure functions of
+ * The reporter's state, module-level so it survives every navigation: the note being written, select
+ * mode and its live highlight, a step recording, the outbox of notes being filed, and the tickets
+ * still to be placed in the tester's ranked list. It belongs to one signed-in account: leaving the
+ * signed-in state wipes it, and storage is never restored for another handle. The transitions on the note are the pure functions of
  * model.ts; this file runs them and does the capturing, through the guarded engine (engine.ts).
  *
  * Components read it with `useReport(selector)` and change it only through the functions exported
@@ -83,10 +92,16 @@ export interface ReportState {
   /** The screen on show: a visit is one stay on one path. */
   nav: { visit: number; route: string; path: string };
   toast: Toast | null;
-  /** Where the drop rests; null until the tester moves it (the default spot, above the tab bar). */
-  dock: Dock | null;
-  /** The open note's height, so the drop rests above it rather than under it. */
+  /** The open note's height, so the floating button rests above it rather than under it. */
   panelHeight: number;
+  /** Select mode is on: a tap on the app marks what it lands on. */
+  selecting: boolean;
+  /** A step recording is running, with the steps so far. */
+  recording: null | { steps: string[] };
+  /** One line for the note about something that didn't work ("Selecting isn't available here."). */
+  notice: string | null;
+  /** The handle of the account this state belongs to. */
+  owner: string | undefined;
 }
 
 function initialState(): ReportState {
@@ -102,8 +117,11 @@ function initialState(): ReportState {
     focusNote: false,
     nav: { visit: 0, route: '/', path: '/' },
     toast: null,
-    dock: null,
     panelHeight: 0,
+    selecting: false,
+    recording: null,
+    notice: null,
+    owner: undefined,
   };
 }
 
@@ -150,13 +168,32 @@ function environmentNow(): BugReportEnvironment {
   }
 }
 
-/** Back to nothing (tests). */
+/** Back to nothing: every picture let go of, select mode and any recording stopped. Storage is left alone. */
 export function resetReport(): void {
+  stopPicking?.();
+  stopPicking = null;
+  if (get().recording) safeStopStepRecording();
   for (const item of get().outbox) releaseDraft(item.draft);
   releaseDraft(get().draft);
   inflight.clear();
   set(initialState(), true);
 }
+
+/** `resetReport`, and the persisted note and tickets to place forgotten too. */
+export function wipeReport(): void {
+  resetReport();
+  clearDraft(storage());
+  clearUnplaced(storage());
+}
+
+// Leaving the signed-in state (sign-out, account deletion, an expired session) or switching to
+// another account wipes the reporter, so the next account on this device starts from nothing.
+// Here, at module level, rather than in the host's unmount: this module outlives the host.
+useSession.subscribe((s, prev) => {
+  const left = prev.status === 'ready' && s.status !== 'ready';
+  const switched = s.status === 'ready' && !!prev.profile?.handle && !!s.profile?.handle && prev.profile.handle !== s.profile.handle;
+  if (left || switched) wipeReport();
+});
 
 // ---------------------------------------------------------------- persistence
 
@@ -168,7 +205,8 @@ function toStored(d: Draft): Omit<BugDraft, 'savedAt'> {
       const level = currentLevel(m);
       return level ? [{ n: m.n, title: level.title, target: level.target, route: m.route }] : [];
     }),
-    includeSteps: d.includeSteps,
+    ...(d.steps.length ? { steps: d.steps } : {}),
+    ...(get().owner ? { owner: get().owner } : {}),
     idempotencyKey: d.idempotencyKey,
   };
 }
@@ -189,22 +227,32 @@ useReport.subscribe((s, prev) => {
     if (d) saveDraft(storage(), toStored(d));
     else clearDraft(storage());
   }
-  if (s.unplaced !== prev.unplaced) saveUnplaced(storage(), s.unplaced);
+  if (s.unplaced !== prev.unplaced) saveUnplaced(storage(), s.unplaced, s.owner);
 });
 
-/** Loads what storage kept (a note, the tickets to place). Called once by the host on mount. */
-export function hydrate(now: Date = new Date()): void {
+/**
+ * Loads what storage kept (a note, the tickets to place) for `owner`, the signed-in handle. Called
+ * by the host on mount. State or storage that belongs to another handle is wiped instead: a second
+ * account on this device never sees the first one's note. (Storage saved before the owner was kept
+ * has none, and loads as before.)
+ */
+export function hydrate(owner: string | undefined, now: Date = new Date()): void {
+  if (get().owner !== owner) {
+    if (get().owner !== undefined || get().draft || get().unplaced.length) resetReport();
+    set({ owner });
+  }
+  const mine = (o: string | undefined) => o === undefined || o === owner;
   const unplaced = loadUnplaced(storage());
-  const dock = loadDock(storage());
+  if (!mine(unplaced.owner)) clearUnplaced(storage());
   const stored = get().draft ? null : loadDraft(storage(), now);
+  if (stored && !mine(stored.owner)) clearDraft(storage());
   const next: Partial<ReportState> = {};
-  if (unplaced.length && get().unplaced.length === 0) next.unplaced = unplaced;
-  if (dock && !get().dock) next.dock = dock;
-  if (stored) {
+  if (mine(unplaced.owner) && unplaced.ids.length && get().unplaced.length === 0) next.unplaced = unplaced.ids;
+  if (stored && mine(stored.owner)) {
     const d = emptyDraft(stored.idempotencyKey, environmentNow());
     d.text = stored.text;
     if (stored.kindOverride) d.kindOverride = stored.kindOverride;
-    if (stored.includeSteps === false) d.includeSteps = false;
+    if (stored.steps) d.steps = stored.steps;
     d.restored = true;
     // A restored mark keeps what it pointed at, not where: it was on a screen of an earlier page
     // load, so it gets a visit of its own that no live visit (0 and up) will share.
@@ -224,11 +272,12 @@ export function hydrate(now: Date = new Date()): void {
 
 // ---------------------------------------------------------------- navigation
 
-/** The host calls this on every route change; a new path is a new visit. */
+/** The host calls this on every route change; a new path is a new visit, and ends select mode. */
 export function navigate(route: string, path: string): void {
   const { nav } = get();
   safeRecordNav(route);
   if (nav.path === path && nav.route === route) return;
+  if (get().selecting) cancelSelecting();
   set({ nav: { visit: nav.visit + 1, route, path }, picking: null });
 }
 
@@ -322,9 +371,9 @@ function landCapture(key: string, visit: number, seq: number, shot: Shot | null)
   if (draft !== d) updateDraftByKey(key, () => draft);
 }
 
-// ---------------------------------------------------------------- the drop
+// ---------------------------------------------------------------- select mode
 
-/** The live highlight while dragging; unchanged levels don't re-render anything. */
+/** The live highlight in select mode; unchanged levels don't re-render anything. */
 export function setPicking(levels: PickLevel[] | null): void {
   const current = get().picking?.levels[0];
   const next = levels?.[0];
@@ -337,7 +386,7 @@ function sameBox(a: PickLevel['box'], b: PickLevel['box']): boolean {
   return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
 }
 
-/** Marks the component under the drop's tip: the note opens at once, the picture follows. */
+/** Marks what was selected: the note reopens at once with it selected, the picture follows. */
 export function markLevels(levels: PickLevel[]): boolean {
   set({ picking: null });
   if (levels.length === 0) return false;
@@ -354,32 +403,112 @@ export function markLevels(levels: PickLevel[]): boolean {
   return true;
 }
 
-/** A press with no note: a note with one picture of the whole screen and no marks. */
+let stopPicking: (() => void) | null = null;
+
+function endSelecting(): void {
+  stopPicking?.();
+  stopPicking = null;
+  set({ selecting: false, picking: null });
+}
+
+/**
+ * Select element: the note steps aside and a tap on the app selects what it lands on (the engine's
+ * select mode). If select mode can't start, the note comes back and says so.
+ */
+export function startSelecting(): void {
+  ensureDraft();
+  endSelecting();
+  set({ panel: 'closed', selecting: true, notice: null, sheet: null });
+  const stop = safeStartPickMode({
+    onHover: (levels) => setPicking(levels.length ? levels : null),
+    onPick: (levels) => {
+      if (levels.length === 0) return;
+      endSelecting();
+      markLevels(levels);
+    },
+    onCancel: () => cancelSelecting(),
+  });
+  if (!stop) {
+    set({ selecting: false, panel: 'open', notice: "Selecting isn't available here." });
+    return;
+  }
+  // A pick can land while starting; only keep the stop function if select mode is still on.
+  if (get().selecting) stopPicking = stop;
+  else stop();
+}
+
+/** Cancel, Escape or a navigation: select mode off, the note back as it was. */
+export function cancelSelecting(): void {
+  if (!get().selecting) return;
+  endSelecting();
+  set({ panel: 'open' });
+}
+
+// ---------------------------------------------------------------- capture screen
+
+/** Capture screen: a picture of the whole screen as this visit's, unless its picture already shows marks. */
 export function captureWholeScreen(): void {
-  const { created } = ensureDraft();
-  set({ panel: 'open', focusNote: created, selectedMarkId: null, sheet: null });
-  capture(get().nav.visit);
+  ensureDraft();
+  const { visit } = get().nav;
+  const d = get().draft!;
+  if (hasMarkedPicture(d, visit)) return;
+  set({ panel: 'open', sheet: null });
+  capture(visit);
 }
 
-/** A press on the drop: the note if there is one, else the last failed one, else a new capture. */
-export function pressDrop(): void {
+// ---------------------------------------------------------------- step recording
+
+/**
+ * Record steps: the note steps aside and, from this screen on, every screen opened and every tap is
+ * a step until Stop. Nothing is recorded unless the tester starts it.
+ */
+export function startRecording(): void {
+  ensureDraft();
+  if (get().selecting) endSelecting();
+  // On before the engine starts: it reports the first step ('Start on /lists') while starting.
+  set({ panel: 'closed', notice: null, sheet: null, toast: null, recording: { steps: [] } });
+  const started = safeStartStepRecording(get().nav.route, (steps) => {
+    if (get().recording) set({ recording: { steps } });
+  });
+  if (!started) set({ recording: null, panel: 'open', notice: "Recording isn't available here." });
+}
+
+/** Stop: the steps go into the note, which reopens. */
+export function stopRecording(): void {
+  if (!get().recording) return;
+  const steps = safeStopStepRecording();
+  const { draft } = ensureDraft();
+  set({ recording: null, draft: { ...draft, steps: steps.length ? steps : get().recording?.steps ?? [] }, panel: 'open' });
+}
+
+export function removeSteps(): void {
+  updateDraft((d) => ({ ...d, steps: [] }));
+}
+
+// ---------------------------------------------------------------- the floating button
+
+/**
+ * The floating button: Stop while recording; set the note aside while it is open; otherwise open
+ * it (the last failed note when there is no other, else a new empty one). Never captures.
+ */
+export function pressReportButton(): void {
   const s = get();
-  if (s.draft) {
-    openNote();
+  if (s.recording) {
+    stopRecording();
     return;
   }
-  const failed = [...s.outbox].reverse().find((o) => o.status === 'failed' && o.draft);
-  if (failed) {
-    restoreFailed(failed.key);
+  if (s.draft && s.panel === 'open' && s.sheet === null) {
+    setAside();
     return;
   }
-  captureWholeScreen();
-}
-
-/** The drop was let go of in the dock strip: it rests there from now on, on this device. */
-export function setDock(dock: Dock): void {
-  saveDock(storage(), dock);
-  set({ dock });
+  if (!s.draft) {
+    const failed = [...s.outbox].reverse().find((o) => o.status === 'failed' && o.draft);
+    if (failed) {
+      restoreFailed(failed.key);
+      return;
+    }
+  }
+  openBlankNote();
 }
 
 export function setPanelHeight(panelHeight: number): void {
@@ -392,7 +521,7 @@ export function openNote(): void {
   set({ panel: 'open', sheet: null });
 }
 
-/** Settings' "Report a bug": the note, a new one with no capture when there is none. */
+/** The note, a new empty one (no capture) when there is none. Settings' "Report a bug" too. */
 export function openBlankNote(): void {
   const { created } = ensureDraft();
   set({ panel: 'open', focusNote: created, sheet: null });
@@ -408,7 +537,7 @@ export function noteFocused(): void {
 
 export function discardNote(): void {
   releaseDraft(get().draft);
-  set({ draft: null, panel: 'closed', selectedMarkId: null, focusNote: false });
+  set({ draft: null, panel: 'closed', selectedMarkId: null, focusNote: false, notice: null });
 }
 
 function updateDraft(update: (d: Draft) => Draft): void {
@@ -420,16 +549,9 @@ export function setText(text: string): void {
   updateDraft((d) => ({ ...d, text }));
 }
 
-const KIND_ORDER: readonly BugReportKind[] = ['bug', 'fix', 'idea', 'design'];
-
-/** The chip: from the kind on show (inferred or pinned) to the next, pinned. */
-export function cycleKind(shown: BugReportKind): void {
-  const next = KIND_ORDER[(KIND_ORDER.indexOf(shown) + 1) % KIND_ORDER.length]!;
-  updateDraft((d) => ({ ...d, kindOverride: next }));
-}
-
-export function setIncludeSteps(includeSteps: boolean): void {
-  updateDraft((d) => ({ ...d, includeSteps }));
+/** The type dropdown: the type the note files as from now on. */
+export function setKind(kind: BugReportKind): void {
+  updateDraft((d) => ({ ...d, kindOverride: kind }));
 }
 
 export function selectMark(id: string | null): void {
@@ -507,6 +629,7 @@ export function sendNote(sender: Sender): Promise<void> {
     selectedMarkId: null,
     focusNote: false,
     picking: null,
+    notice: null,
     outbox: [...s.outbox.filter((o) => o.key !== item.key), item],
   }));
   return dispatch(item.key, sender, trail);

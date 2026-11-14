@@ -1,13 +1,11 @@
 import {
   clearDraft,
-  DOCK_KEY,
+  clearUnplaced,
   DRAFT_KEY,
   DRAFT_MAX_AGE_MS,
-  loadDock,
   loadDraft,
   loadUnplaced,
   newIdempotencyKey,
-  saveDock,
   saveDraft,
   saveUnplaced,
   UNPLACED_KEY,
@@ -34,14 +32,16 @@ const MARK = {
 };
 
 describe('the bug-report draft', () => {
-  it('round-trips the text, the pinned kind, the marks and the key the draft files under', () => {
+  it('round-trips the text, the picked type, the marks, the recorded steps, the owner and the key', () => {
     const store = memory();
-    saveDraft(store, { text: 'Too heavy', kindOverride: 'design', marks: [MARK], includeSteps: false, idempotencyKey: KEY }, NOW);
+    const steps = ['Start on /lists', 'Tap SegmentedTabs › Bev\'d'];
+    saveDraft(store, { text: 'Too heavy', kindOverride: 'design', marks: [MARK], steps, owner: 'tester', idempotencyKey: KEY }, NOW);
     expect(loadDraft(store, NOW)).toEqual({
       text: 'Too heavy',
       kindOverride: 'design',
       marks: [MARK],
-      includeSteps: false,
+      steps,
+      owner: 'tester',
       idempotencyKey: KEY,
       savedAt: NOW.toISOString(),
     });
@@ -135,7 +135,7 @@ describe('the bug-report draft', () => {
     expect(loadDraft(throwing, NOW)).toBeNull();
     expect(() => saveDraft(throwing, { text: 'x', marks: [], idempotencyKey: KEY }, NOW)).not.toThrow();
     expect(() => clearDraft(throwing)).not.toThrow();
-    expect(loadUnplaced(throwing)).toEqual([]);
+    expect(loadUnplaced(throwing)).toEqual({ ids: [] });
     expect(() => saveUnplaced(throwing, ['BEV-1'])).not.toThrow();
   });
 
@@ -145,21 +145,22 @@ describe('the bug-report draft', () => {
   });
 });
 
-describe('the tickets to place and the dock', () => {
-  it('keeps the unplaced ticket ids under their own key, without repeats, and clears an empty list', () => {
+describe('the tickets to place', () => {
+  it('keeps the unplaced ticket ids and their owner under their own key, without repeats, and clears an empty list', () => {
     const store = memory();
-    saveUnplaced(store, ['BEV-1', 'BEV-2']);
-    expect(JSON.parse(store.map.get(UNPLACED_KEY)!)).toEqual(['BEV-1', 'BEV-2']);
-    expect(loadUnplaced(memory({ [UNPLACED_KEY]: JSON.stringify(['BEV-1', 'BEV-1', 4, '']) }))).toEqual(['BEV-1']);
+    saveUnplaced(store, ['BEV-1', 'BEV-2'], 'tester');
+    expect(JSON.parse(store.map.get(UNPLACED_KEY)!)).toEqual({ ids: ['BEV-1', 'BEV-2'], owner: 'tester' });
+    expect(loadUnplaced(store)).toEqual({ ids: ['BEV-1', 'BEV-2'], owner: 'tester' });
+    expect(loadUnplaced(memory({ [UNPLACED_KEY]: JSON.stringify({ ids: ['BEV-1', 'BEV-1', 4, ''] }) }))).toEqual({ ids: ['BEV-1'] });
     saveUnplaced(store, []);
     expect(store.map.has(UNPLACED_KEY)).toBe(false);
   });
 
-  it('remembers where the drop docks, and ignores a malformed value', () => {
-    const store = memory();
-    saveDock(store, { side: 'left', bottom: 200 });
-    expect(loadDock(store)).toEqual({ side: 'left', bottom: 200 });
-    expect(loadDock(memory({ [DOCK_KEY]: JSON.stringify({ side: 'top', bottom: 1 }) }))).toBeNull();
+  it('reads the bare list saved before the owner was kept, as having no owner', () => {
+    expect(loadUnplaced(memory({ [UNPLACED_KEY]: JSON.stringify(['BEV-3']) }))).toEqual({ ids: ['BEV-3'] });
+    const store = memory({ [UNPLACED_KEY]: JSON.stringify(['BEV-3']) });
+    clearUnplaced(store);
+    expect(store.map.has(UNPLACED_KEY)).toBe(false);
   });
 });
 

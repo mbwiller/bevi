@@ -1,7 +1,7 @@
 import type { BugReportTarget } from '@bevi/shared';
 
 /**
- * The shapes the reporter's engine (pick, capture, trail, infer) and its UI (the drop, the note,
+ * The shapes the reporter's engine (pick, capture, trail, infer) and its UI (the button, the note,
  * the reports sheet) pass to each other. The engine never renders; the UI never touches the DOM
  * or React's internals directly.
  */

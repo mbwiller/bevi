@@ -1348,15 +1348,16 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
     const makeInternal = options.makeInternalReporter;
     const internalIt = makeInternal ? it : it.skip;
 
+    const hex = (n: number) => Array.from({ length: n }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+    /** A fresh idempotency key: a v4-shaped UUID. */
+    const newKey = () => `${hex(8)}-${hex(4)}-4${hex(3)}-8${hex(3)}-${hex(12)}`;
+
     /** A fresh internal reporter, and a filer that returns the ticket identifier. */
     async function newReporter() {
       await newUser();
       await makeInternal!(api);
-      const hex = (n: number) => Array.from({ length: n }, () => Math.floor(Math.random() * 16).toString(16)).join('');
-      return async (title: string, severity: 'blocker' | 'bad' | 'annoying' | 'polish' = 'bad') => {
-        const key = `${hex(8)}-${hex(4)}-4${hex(3)}-8${hex(3)}-${hex(12)}`;
-        return (await api.bugs.report({ ...input, title, severity, idempotencyKey: key })).ticketId;
-      };
+      return async (title: string, severity: 'blocker' | 'bad' | 'annoying' | 'polish' = 'bad') =>
+        (await api.bugs.report({ ...input, title, severity, idempotencyKey: newKey() })).ticketId;
     }
 
     const ranks = async () => Object.fromEntries((await api.bugs.listMine()).map((r) => [r.ticketId, r.rank]));
@@ -1407,14 +1408,15 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       expect((await expectCode(api.bugs.place('drop table', null), 'validation')).detail).toMatchObject({ field: 'ticketId' });
       expect((await expectCode(api.bugs.place(a, 'nope'), 'validation')).detail).toMatchObject({ field: 'afterTicketId' });
       expect((await expectCode(api.bugs.place(a, a), 'validation')).detail).toMatchObject({ field: 'afterTicketId' });
-      await expectCode(api.bugs.place('BEV-999999', null), 'not_found');
+      expect((await expectCode(api.bugs.place('BEV-999999', null), 'not_found')).detail).toMatchObject({ reason: 'not_found' });
       await expectCode(api.bugs.place(a, 'BEV-999999'), 'not_found');
 
-      // A verified ticket is closed: it has no rank and cannot be placed, or placed after.
+      // A verified ticket is closed: it has no rank, and placing it (or after it) is a conflict,
+      // not a not_found: it is still the caller's.
       await api.bugs.markVerified(b);
       expect(await ranks()).toEqual({ [a]: 1, [b]: null });
-      await expectCode(api.bugs.place(b, null), 'not_found');
-      await expectCode(api.bugs.place(a, b), 'not_found');
+      expect((await expectCode(api.bugs.place(b, null), 'conflict')).detail).toEqual({ reason: 'not_open' });
+      expect((await expectCode(api.bugs.place(a, b), 'conflict')).detail).toEqual({ reason: 'not_open' });
     });
 
     internalIt("another reporter's ticket cannot be placed", async () => {
@@ -1424,6 +1426,21 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       const own = await mine('mine');
       await expectCode(api.bugs.place(theirs, null), 'not_found');
       await expectCode(api.bugs.place(own, theirs), 'not_found');
+    });
+
+    internalIt('report keeps the first six pointed-at components and accepts a thirty-step recording', async () => {
+      await newReporter();
+      const targets = Array.from({ length: 8 }, (_, i) => ({ component: `C${i}` }));
+      const reproductionSteps = Array.from({ length: 30 }, (_, i) => `Step ${i + 1}`);
+      const result = await api.bugs.report({
+        ...input,
+        idempotencyKey: newKey(),
+        targets,
+        reproductionSteps,
+        stepsSource: 'recorded',
+      });
+      expect(result.status).toBe('created');
+      expect(result.ticketId).toMatch(/^[A-Z][A-Z0-9]*-\d+$/);
     });
   });
 }

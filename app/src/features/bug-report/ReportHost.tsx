@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useMyBugReports, useReportBug } from '@/api/hooks';
+import { useSession } from '@/state/session';
 import { useTheme } from '@/theme';
 
 import { takeReportCommand, useReportCommands } from './commands';
@@ -10,11 +11,12 @@ import { safeRoutePattern, safeStartTrail } from './engine';
 import { isOpen } from './labels';
 import { Highlight } from './Highlight';
 import { RankSheet } from './RankSheet';
-import { ReportDrop } from './ReportDrop';
+import { ReportButton } from './ReportButton';
 import { ReportLayer } from './ReportLayer';
 import { ReportNote } from './ReportNote';
 import { ReportsSheet } from './ReportsSheet';
 import { ReportToast } from './ReportToast';
+import { SelectBanner } from './SelectBanner';
 import {
   hydrate,
   navigate,
@@ -32,8 +34,9 @@ import {
  * internal reporter, and lazy-loaded so no other account downloads any of it.
  *
  * It keeps the trail running, tells the store about every navigation (a new path is a new visit,
- * which gets its own picture), files notes through the `bugs.report` mutation, and draws the drop,
- * the highlight, the note, the toast and the two sheets on a layer above everything (ReportLayer).
+ * which gets its own picture), files notes through the `bugs.report` mutation, and draws the
+ * floating button, select mode's banner and highlight, the note, the toast and the two sheets on a
+ * layer above everything (ReportLayer). While steps are recorded only the button (as Stop) shows.
  */
 export default function ReportHost() {
   const segments = useSegments();
@@ -41,6 +44,7 @@ export default function ReportHost() {
   const { scheme } = useTheme();
   const insets = useSafeAreaInsets();
   const { mutateAsync } = useReportBug();
+  const handle = useSession((s) => s.profile?.handle);
 
   // Effects run in order: the trail first, so the first navigation is in it.
   useEffect(() => safeStartTrail(), []);
@@ -54,8 +58,9 @@ export default function ReportHost() {
     navigate(safeRoutePattern(segmentKey ? segmentKey.split('/') : []), pathname || '/');
   }, [segmentKey, pathname]);
 
-  // After the two above, so a restored note's environment is this screen's.
-  useEffect(() => hydrate(), []);
+  // After the two above, so a restored note's environment is this screen's. Another account's
+  // state or storage is wiped here rather than restored.
+  useEffect(() => hydrate(handle), [handle]);
 
   // Requests from the rest of the app (Settings, the old /report-bug link), including one made
   // before this finished loading.
@@ -81,14 +86,26 @@ export default function ReportHost() {
   }, [mine.data, openIds]);
   const canPlace = useCallback((ticketId: string) => [...openIds].some((id) => id !== ticketId), [openIds]);
 
+  const recording = useReport((s) => s.recording !== null);
+  const selecting = useReport((s) => s.selecting);
+
   return (
     <ReportLayer>
-      <Highlight />
-      <ReportNote onSend={send} />
-      <ReportToast canPlace={canPlace} />
-      <ReportDrop toPlace={toPlace} />
-      <ReportsSheet sender={sender} />
-      <RankSheet />
+      {recording ? null : <Highlight />}
+      {selecting ? <SelectBanner /> : null}
+      {recording || selecting ? null : (
+        <>
+          <ReportNote onSend={send} />
+          <ReportToast canPlace={canPlace} />
+        </>
+      )}
+      <ReportButton toPlace={toPlace} />
+      {recording ? null : (
+        <>
+          <ReportsSheet sender={sender} />
+          <RankSheet />
+        </>
+      )}
     </ReportLayer>
   );
 }

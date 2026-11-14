@@ -54,6 +54,19 @@ function Placement({ ticketId }: { ticketId: string }) {
   const [state, setState] = useState<PlacementState | null>(null);
   const started = useRef(false);
   const lastIndex = useRef(0);
+  const placedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // "Placed #3 of 12" waits a moment before the next ticket. Unmounted before that (the sheet
+  // closed), the wait is cancelled; the ticket is placed all the same, so it leaves the list to place.
+  useEffect(
+    () => () => {
+      if (!placedTimer.current) return;
+      clearTimeout(placedTimer.current);
+      placedTimer.current = null;
+      finishRanking(ticketId, true);
+    },
+    [ticketId],
+  );
   const fetching = query.isFetching;
 
   useEffect(() => {
@@ -79,7 +92,10 @@ function Placement({ ticketId }: { ticketId: string }) {
         onSuccess: (list) => {
           const placed = list.find((r) => r.ticketId === ticketId);
           setDone({ kind: 'placed', rank: placed?.rank ?? index + 1, of: openInRankOrder(list).length, priority: priorityLabel(placed?.priority) });
-          setTimeout(() => finishRanking(ticketId, true), PLACED_MS);
+          placedTimer.current = setTimeout(() => {
+            placedTimer.current = null;
+            finishRanking(ticketId, true);
+          }, PLACED_MS);
         },
       },
     );
@@ -260,7 +276,7 @@ const styles = StyleSheet.create({
   center: { textAlign: 'center' },
   notice: { gap: spacing.sm },
   card: { gap: spacing.xs, padding: spacing.lg, borderWidth: 1, borderRadius: radius.card, minHeight: size.rowMin },
-  tag: { alignSelf: 'flex-start', paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: radius.pill },
+  tag: { alignSelf: 'flex-start', paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radius.pill },
   tagText: { fontWeight: '600' },
   actions: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: spacing.sm },
 });

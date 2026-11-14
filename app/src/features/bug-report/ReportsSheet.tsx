@@ -78,7 +78,7 @@ function ReportsBody({ sender }: { sender: Sender }) {
       ) : query.isError ? (
         <ErrorState error={query.error} onRetry={() => void query.refetch()} />
       ) : rows.length === 0 && pending.length === 0 ? (
-        <EmptyState icon="file-text" title="No reports yet" body="Drag the drop onto something to report it, or press it to capture the screen." />
+        <EmptyState icon="file-text" title="No reports yet" body="Press the report button on any screen to write one." />
       ) : (
         <>
           {openRows.length ? (
@@ -236,6 +236,6 @@ const styles = StyleSheet.create({
   ticket: { paddingVertical: spacing.sm, borderBottomWidth: 1, gap: spacing.sm },
   ticketTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   ticketMain: { flex: 1, minWidth: 0, minHeight: size.target, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  rank: { minWidth: 36, fontVariant: ['tabular-nums'] },
+  rank: { minWidth: size.target, fontVariant: ['tabular-nums'] },
   verify: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
 });

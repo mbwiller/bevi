@@ -1,13 +1,13 @@
-import { isApiError, type BugReportEnvironment } from '@bevi/shared';
+import { isApiError, type BugReportEnvironment, type BugReportKind } from '@bevi/shared';
 import { Image } from 'expo-image';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { HitTarget, PRESSED, TARGET_MIN } from '@/components/HitTarget';
-import { Icon } from '@/components/Icon';
+import { Icon, type IconName } from '@/components/Icon';
 import { IconButton } from '@/components/IconButton';
 import { Pill } from '@/components/Pill';
 import { Skeleton } from '@/components/Skeleton';
@@ -16,26 +16,41 @@ import { useKeyboardInset } from '@/lib/useKeyboardInset';
 import { MAX_FONT_SCALE_DENSE, motion, radius, size, spacing, type, useTheme } from '@/theme';
 
 import { contextRows } from './context';
-import { safeRecordedSteps, safeTrailSnapshot } from './engine';
+import { safeTrailSnapshot } from './engine';
 import { KIND_LABEL } from './labels';
-import { currentLevel, marksOfVisit, photoSlots, pictureNotices, type Draft, type Mark, type ShotEntry } from './model';
+import {
+  canCapture,
+  currentLevel,
+  hasMarkedPicture,
+  marksOfVisit,
+  MARKS_MAX,
+  photoSlots,
+  pictureNotices,
+  type Draft,
+  type Mark,
+  type ShotEntry,
+} from './model';
 import { pickPhotos } from './photos';
 import { REPORT_UI, useLayer } from './ReportLayer';
 import { kindOf } from './send';
+import { REPORT_GLYPHS, type ReportGlyph } from './icons';
 import {
   addPhotos,
-  cycleKind,
+  captureWholeScreen,
   discardNote,
   noteFocused,
   openReports,
   removeMark,
   removePhoto,
   removeShot,
+  removeSteps,
   selectMark,
   setAside,
-  setIncludeSteps,
+  setKind,
   setPanelHeight,
   setText,
+  startRecording,
+  startSelecting,
   stepLevel,
   useReport,
 } from './store';
@@ -43,16 +58,20 @@ import {
 /** The server's own cap on the description. */
 export const NOTE_MAX = 4000;
 const LINE = type.bodyLarge.lineHeight;
+const MIN_LINES = 2;
 const MAX_LINES = 5;
+const FIELD_PAD = spacing.md;
 const THUMB_W = 56;
 const THUMB_H = 84;
 const RISE = 24;
+const KINDS: readonly BugReportKind[] = ['bug', 'fix', 'idea', 'design'];
 
 /**
- * The note: a panel along the bottom of the column with one field and Send. No scrim and not
- * modal: the app above it stays usable, so the tester can scroll, tap and drag the drop onto
- * something else while it is open. It lifts with the keyboard and scrolls inside past 60% of the
- * window.
+ * The note: a panel along the bottom of the column. No scrim and not modal: the app above it stays
+ * usable. Top to bottom: the type and the panel's own controls, the four ways to attach something
+ * (select an element, capture the screen, record steps, add photos), what is attached, the text,
+ * and Send, which stays on screen under a long note. It lifts with the keyboard and scrolls inside
+ * past 60% of the window.
  */
 export function ReportNote({ onSend }: { onSend: () => void }) {
   const draft = useReport((s) => s.draft);
@@ -68,7 +87,11 @@ function NotePanel({ draft, onSend }: { draft: Draft; onSend: () => void }) {
   const lift = useKeyboardInset();
   const reduced = useReducedMotion();
   const focusNote = useReport((s) => s.focusNote);
+  const notice = useReport((s) => s.notice);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [headerHeight, setHeaderHeight] = useState<number>(size.target);
+  const trigger = useRef<View>(null);
 
   // Rises in once when it opens (Reduce Motion: just shows).
   const shown = useSharedValue(reduced ? 1 : 0);
@@ -77,10 +100,12 @@ function NotePanel({ draft, onSend }: { draft: Draft; onSend: () => void }) {
   }, [reduced, shown]);
   const rise = useAnimatedStyle(() => ({ opacity: shown.value, transform: [{ translateY: (1 - shown.value) * RISE }] }));
 
-  // How much of the column the panel covers, so the drop rests above it: its height plus the keyboard under it.
+  // How much of the column the panel covers, so the button rests above it: its height plus the keyboard under it.
   const measured = useRef(0);
   useEffect(() => setPanelHeight(measured.current + lift), [lift]);
   useEffect(() => () => setPanelHeight(0), []);
+
+  const kind = useMemo(() => kindOf(draft, safeTrailSnapshot()), [draft]);
 
   return (
     <Animated.View
@@ -120,17 +145,24 @@ function NotePanel({ draft, onSend }: { draft: Draft; onSend: () => void }) {
           </Button>
         </View>
       ) : (
-        <View style={styles.header}>
-          <KindChip draft={draft} />
+        <View style={styles.header} onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}>
+          <TypeTrigger ref={trigger} kind={kind} open={menuOpen} onPress={() => setMenuOpen((v) => !v)} />
           <View style={styles.grow} />
           <IconButton icon="list" label="Your reports" size={24} onPress={openReports} />
           <IconButton icon="chevron-down" label="Set aside" size={24} onPress={setAside} />
           <IconButton icon="x" label="Discard" size={24} onPress={() => setConfirmDiscard(true)} />
         </View>
       )}
+      <Actions draft={draft} />
       <ScrollView style={styles.scroll} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         <Failure error={draft.error} />
+        {notice ? (
+          <Text style={[type.caption, { color: colors.textSecondary }]} accessibilityLiveRegion="polite">
+            {notice}
+          </Text>
+        ) : null}
         <Pictures draft={draft} />
+        <Steps draft={draft} />
         <NoteField draft={draft} autoFocus={focusNote} />
         <Attached draft={draft} />
       </ScrollView>
@@ -140,46 +172,120 @@ function NotePanel({ draft, onSend }: { draft: Draft; onSend: () => void }) {
           {draft.error ? 'Try again' : 'Send'}
         </Button>
       </View>
+      {/* At the panel's level, above the scroller, so the scroller can't clip it. */}
+      {menuOpen && !confirmDiscard ? (
+        <TypeMenu kind={kind} top={headerHeight + spacing.xs} trigger={trigger} onClose={() => setMenuOpen(false)} />
+      ) : null}
     </Animated.View>
   );
 }
 
-/** One quiet chip: the kind the note will be filed as, inferred until pressed, then pinned. */
-function KindChip({ draft }: { draft: Draft }) {
-  const kind = useMemo(() => kindOf(draft, safeTrailSnapshot()), [draft]);
+/** The type, in a small pill with a chevron: it opens the type menu. */
+function TypeTrigger({ ref, kind, open, onPress }: { ref: RefObject<View | null>; kind: BugReportKind; open: boolean; onPress: () => void }) {
+  const { colors } = useTheme();
   const label = KIND_LABEL[kind];
   return (
-    <Pill onPress={() => cycleKind(kind)} accessibilityLabel={`Type: ${label}. Press to change.`} active={!!draft.kindOverride}>
-      {label}
-    </Pill>
+    <Pressable
+      ref={ref}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Type: ${label}`}
+      accessibilityState={{ expanded: open }}
+      {...({ 'aria-haspopup': 'menu', 'aria-expanded': open } as object)}
+      style={({ pressed }) => [styles.trigger, { borderColor: colors.borderStrong, backgroundColor: colors.surface }, pressed && PRESSED]}
+    >
+      <HitTarget height={size.pill} borderWidth={1} />
+      <Text style={[type.body, styles.triggerText, { color: colors.text }]} maxFontSizeMultiplier={MAX_FONT_SCALE_DENSE} numberOfLines={1}>
+        {label}
+      </Text>
+      <Icon name="chevron-down" size={16} strokeWidth={2} color={colors.textSecondary} />
+    </Pressable>
   );
 }
 
-/** The last send's failure, in the app's words, and the server's when it says something more specific. */
-function Failure({ error }: { error: unknown }) {
-  const { colors } = useTheme();
-  if (!error) return null;
-  const copy = errorCopy(error);
-  const specific = isApiError(error) && error.code === 'validation' && error.message ? error.message : null;
+/**
+ * The type menu: the four types as rows, a check on the current one. Choosing one pins it; a press
+ * anywhere else, or Escape, closes it.
+ */
+function TypeMenu({ kind, top, trigger, onClose }: { kind: BugReportKind; top: number; trigger: RefObject<View | null>; onClose: () => void }) {
+  const { colors, elevation } = useTheme();
+  const menu = useRef<View>(null);
+
+  // On the web, a press anywhere outside the menu (the app included) and Escape close it. A press
+  // on the trigger is left to the trigger, which toggles it.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const el = menu.current as unknown as HTMLElement | null;
+    const opener = trigger.current as unknown as HTMLElement | null;
+    const onDown = (e: PointerEvent) => {
+      if (!(e.target instanceof Node)) return;
+      if (el?.contains(e.target) || opener?.contains(e.target)) return;
+      onClose();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('pointerdown', onDown, true);
+    document.addEventListener('keydown', onKey, true);
+    return () => {
+      document.removeEventListener('pointerdown', onDown, true);
+      document.removeEventListener('keydown', onKey, true);
+    };
+  }, [onClose, trigger]);
+
   return (
-    <View role="alert" accessibilityLiveRegion="assertive" style={styles.failure}>
-      <Text style={[type.heading, { color: colors.scoreLow }]}>{`${copy.title}. Your note is kept.`}</Text>
-      <Text style={[type.body, { color: colors.textSecondary }]}>{specific ? `${specific}.` : copy.message}</Text>
-    </View>
+    <>
+      {/* Outside presses within the panel (and the only outside there is off the web). */}
+      <Pressable
+        style={StyleSheet.absoluteFill}
+        onPress={onClose}
+        accessibilityRole="button"
+        accessibilityLabel="Close the menu"
+        focusable={false}
+        testID="type-menu-outside"
+      />
+      <View
+        ref={menu}
+        role="menu"
+        accessibilityLabel="Type"
+        style={[styles.menu, { top, backgroundColor: colors.surface, borderColor: colors.border, boxShadow: elevation.floating }]}
+      >
+        {KINDS.map((k) => {
+          const checked = k === kind;
+          return (
+            <Pressable
+              key={k}
+              {...({ role: 'menuitemradio' } as object)}
+              aria-checked={checked}
+              accessibilityState={{ checked }}
+              accessibilityLabel={KIND_LABEL[k]}
+              onPress={() => {
+                setKind(k);
+                onClose();
+              }}
+              style={({ pressed }) => [styles.menuRow, pressed && { backgroundColor: colors.input }]}
+            >
+              <Text style={[type.body, styles.grow, { color: checked ? colors.primary : colors.text }]} numberOfLines={1}>
+                {KIND_LABEL[k]}
+              </Text>
+              {checked ? <Icon name="check" size={18} strokeWidth={2} color={colors.primary} /> : <View style={styles.checkSpace} />}
+            </Pressable>
+          );
+        })}
+      </View>
+    </>
   );
 }
 
-function Pictures({ draft }: { draft: Draft }) {
-  const { colors } = useTheme();
-  const selectedId = useReport((s) => s.selectedMarkId);
-  const [expanded, setExpanded] = useState<string | null>(null);
+/** The four ways to attach something to the note. */
+function Actions({ draft }: { draft: Draft }) {
+  const visit = useReport((s) => s.nav.visit);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
-  const notices = pictureNotices(draft);
+  const { colors } = useTheme();
   const slots = photoSlots(draft);
-  const selected = draft.marks.find((m) => m.id === selectedId);
-  const unshot = draft.marks.filter((m) => !draft.shots.some((s) => s.visit === m.visit));
-  const big = draft.shots.find((s) => s.id === expanded && s.shot);
+  const atMarkLimit = draft.marks.length >= MARKS_MAX;
+  const captureBlocked = hasMarkedPicture(draft, visit) || !canCapture(draft, visit);
 
   const choose = async () => {
     setPhotoError(null);
@@ -197,52 +303,139 @@ function Pictures({ draft }: { draft: Draft }) {
   };
 
   return (
-    <View style={styles.pictures}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.strip} keyboardShouldPersistTaps="handled">
-        {draft.shots.map((entry) => (
-          <View key={entry.id} style={styles.group}>
-            <ShotThumb
-              entry={entry}
-              hasMarks={marksOfVisit(draft, entry.visit).length > 0}
-              expanded={expanded === entry.id}
-              onToggle={() => setExpanded((id) => (id === entry.id ? null : entry.id))}
-            />
-            {marksOfVisit(draft, entry.visit).map((m) => (
-              <MarkChip key={m.id} mark={m} selected={m.id === selectedId} />
-            ))}
-          </View>
-        ))}
-        {unshot.map((m) => (
-          <MarkChip key={m.id} mark={m} selected={m.id === selectedId} />
-        ))}
-        {draft.photos.map((p, i) => (
-          <View key={p.uri} style={styles.thumbWrap}>
-            <Image source={{ uri: p.uri }} style={[styles.thumb, { backgroundColor: colors.input }]} contentFit="cover" accessibilityLabel={`Photo ${i + 1}`} />
-            <RemoveButton label={`Remove photo ${i + 1}`} onPress={() => removePhoto(p.uri)} />
-          </View>
-        ))}
-        <Pressable
-          onPress={() => void choose()}
+    <View style={styles.actionsWrap}>
+      <View style={styles.actions}>
+        <Action
+          glyph="select"
+          icon="search"
+          label="Select element"
+          a11y={atMarkLimit ? 'Select element, 6 marks is the limit' : 'Select element'}
+          disabled={atMarkLimit}
+          onPress={startSelecting}
+        />
+        <Action
+          icon="camera"
+          label="Capture screen"
+          a11y={
+            hasMarkedPicture(draft, visit)
+              ? 'Capture screen, this screen has its picture'
+              : captureBlocked
+                ? 'Capture screen, 3 pictures is the limit'
+                : 'Capture screen'
+          }
+          disabled={captureBlocked}
+          onPress={captureWholeScreen}
+        />
+        <Action glyph="record" icon="navigation" label="Record steps" a11y="Record steps" onPress={startRecording} />
+        <Action
+          icon="image"
+          label={picking ? 'Opening…' : 'Add photos'}
+          a11y={slots === 0 ? 'Add photos, 3 pictures is the limit' : `Add photos, ${slots} left`}
           disabled={slots === 0 || picking}
-          accessibilityRole="button"
-          accessibilityLabel={slots === 0 ? 'Add photos, 3 pictures is the limit' : `Add photos, ${slots} left`}
-          accessibilityState={{ disabled: slots === 0 || picking, busy: picking }}
-          style={({ pressed }) => [
-            styles.addTile,
-            { borderColor: colors.borderStrong },
-            slots === 0 && styles.disabled,
-            pressed && PRESSED,
-          ]}
-        >
-          <Icon name="image" size={20} strokeWidth={2} color={colors.primary} />
-          <Text style={[type.caption, styles.center, { color: colors.text }]} maxFontSizeMultiplier={MAX_FONT_SCALE_DENSE} numberOfLines={2}>
-            {picking ? 'Opening…' : 'Add photos'}
-          </Text>
-          <Text style={[type.caption, { color: colors.textSecondary }]} maxFontSizeMultiplier={MAX_FONT_SCALE_DENSE}>
-            {slots === 0 ? 'None left' : `${slots} left`}
-          </Text>
-        </Pressable>
-      </ScrollView>
+          busy={picking}
+          onPress={() => void choose()}
+        />
+      </View>
+      {photoError ? (
+        <Text style={[type.caption, { color: colors.textSecondary }]} accessibilityLiveRegion="polite">
+          {photoError}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+function Action({
+  icon,
+  glyph,
+  label,
+  a11y,
+  disabled = false,
+  busy = false,
+  onPress,
+}: {
+  icon: IconName;
+  /** One of the reporter's own glyphs, drawn instead of `icon` (icons.ts). */
+  glyph?: ReportGlyph;
+  label: string;
+  a11y: string;
+  disabled?: boolean;
+  busy?: boolean;
+  onPress: () => void;
+}) {
+  const { colors } = useTheme();
+  const Glyph = glyph ? REPORT_GLYPHS[glyph] : null;
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={a11y}
+      accessibilityState={{ disabled, busy }}
+      aria-disabled={disabled}
+      style={({ pressed }) => [styles.action, { borderColor: colors.border }, disabled && styles.disabled, pressed && PRESSED]}
+    >
+      {Glyph ? <Glyph size={20} strokeWidth={2} color={colors.primary} /> : <Icon name={icon} size={20} strokeWidth={2} color={colors.primary} />}
+      <Text style={[type.caption, styles.center, { color: colors.text }]} maxFontSizeMultiplier={MAX_FONT_SCALE_DENSE} numberOfLines={1}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+/** The last send's failure, in the app's words, and the server's when it says something more specific. */
+function Failure({ error }: { error: unknown }) {
+  const { colors } = useTheme();
+  if (!error) return null;
+  const copy = errorCopy(error);
+  const specific = isApiError(error) && error.code === 'validation' && error.message ? error.message : null;
+  return (
+    <View role="alert" accessibilityLiveRegion="assertive" style={styles.failure}>
+      <Text style={[type.heading, { color: colors.scoreLow }]}>{`${copy.title}. Your note is kept.`}</Text>
+      <Text style={[type.body, { color: colors.textSecondary }]}>{specific ? `${specific}.` : copy.message}</Text>
+    </View>
+  );
+}
+
+/** The pictures and selections, then the selected one's details and Wider / Narrower. */
+function Pictures({ draft }: { draft: Draft }) {
+  const { colors } = useTheme();
+  const selectedId = useReport((s) => s.selectedMarkId);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const notices = pictureNotices(draft);
+  const selected = draft.marks.find((m) => m.id === selectedId);
+  const unshot = draft.marks.filter((m) => !draft.shots.some((s) => s.visit === m.visit));
+  const big = draft.shots.find((s) => s.id === expanded && s.shot);
+  const empty = draft.shots.length === 0 && draft.photos.length === 0 && draft.marks.length === 0;
+
+  return (
+    <View style={styles.pictures}>
+      {empty ? null : (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.strip} keyboardShouldPersistTaps="handled">
+          {draft.shots.map((entry) => (
+            <View key={entry.id} style={styles.group}>
+              <ShotThumb
+                entry={entry}
+                hasMarks={marksOfVisit(draft, entry.visit).length > 0}
+                expanded={expanded === entry.id}
+                onToggle={() => setExpanded((id) => (id === entry.id ? null : entry.id))}
+              />
+              {marksOfVisit(draft, entry.visit).map((m) => (
+                <MarkChip key={m.id} mark={m} selected={m.id === selectedId} />
+              ))}
+            </View>
+          ))}
+          {unshot.map((m) => (
+            <MarkChip key={m.id} mark={m} selected={m.id === selectedId} />
+          ))}
+          {draft.photos.map((p, i) => (
+            <View key={p.uri} style={styles.thumbWrap}>
+              <Image source={{ uri: p.uri }} style={[styles.thumb, { backgroundColor: colors.input }]} contentFit="cover" accessibilityLabel={`Photo ${i + 1}`} />
+              <RemoveButton label={`Remove photo ${i + 1}`} onPress={() => removePhoto(p.uri)} />
+            </View>
+          ))}
+        </ScrollView>
+      )}
 
       {big?.shot ? (
         <Pressable onPress={() => setExpanded(null)} accessibilityRole="button" accessibilityLabel="Close the picture">
@@ -255,9 +448,9 @@ function Pictures({ draft }: { draft: Draft }) {
         </Pressable>
       ) : null}
 
-      {selected && selected.levels.length > 1 ? <LevelControls mark={selected} /> : null}
+      {selected ? <MarkDetail mark={selected} /> : null}
 
-      {[...notices, ...(photoError ? [photoError] : [])].map((line) => (
+      {notices.map((line) => (
         <Text key={line} style={[type.caption, { color: colors.textSecondary }]} accessibilityLiveRegion="polite">
           {line}
         </Text>
@@ -298,7 +491,8 @@ function MarkChip({ mark, selected }: { mark: Mark; selected: boolean }) {
         accessibilityState={{ selected }}
         style={styles.markLabel}
       >
-        <HitTarget height={size.pill} />
+        {/* The chip is 30pt; the expander makes the label's target 44pt tall. */}
+        <HitTarget height={size.pill} borderWidth={1} />
         <Text
           style={[type.caption, styles.markText, { color: selected ? colors.primary : colors.text }]}
           numberOfLines={1}
@@ -308,35 +502,69 @@ function MarkChip({ mark, selected }: { mark: Mark; selected: boolean }) {
         </Text>
       </Pressable>
       <Pressable onPress={() => removeMark(mark.id)} accessibilityRole="button" accessibilityLabel={`Remove mark ${mark.n}`} style={styles.markRemove}>
-        <HitTarget height={size.pill} width={24} />
+        {/* 44pt wide already; the expander makes it 44pt tall. */}
+        <HitTarget height={size.pill} borderWidth={1} />
         <Icon name="x" size={14} strokeWidth={2.25} color={colors.textSecondary} />
       </Pressable>
     </View>
   );
 }
 
+/** A 44pt target at the thumbnail's corner, holding the small round remove mark. */
 function RemoveButton({ label, onPress }: { label: string; onPress: () => void }) {
   const { colors } = useTheme();
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={[styles.remove, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      <HitTarget height={REMOVE} width={REMOVE} borderWidth={1} />
-      <Icon name="x" size={12} strokeWidth={2.5} color={colors.text} />
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={styles.removeTarget}>
+      <View style={[styles.remove, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Icon name="x" size={12} strokeWidth={2.5} color={colors.text} />
+      </View>
     </Pressable>
   );
 }
 
-/** Wider and Narrower: the component around the marked one, or the one inside it. */
-function LevelControls({ mark }: { mark: Mark }) {
+/** What was selected, plainly: the component and its source file, then Wider / Narrower. */
+function MarkDetail({ mark }: { mark: Mark }) {
+  const { colors } = useTheme();
+  const level = currentLevel(mark);
+  if (!level) return null;
+  const line = [level.target.component, level.target.file].filter(Boolean).join(' · ');
   const atInner = mark.levelIndex <= 0;
   const atOuter = mark.levelIndex >= mark.levels.length - 1;
   return (
-    <View style={styles.levels}>
-      <Pill onPress={() => stepLevel(mark.id, -1)} disabled={atInner} accessibilityLabel={`Narrower, mark ${mark.n}`}>
-        Narrower
-      </Pill>
-      <Pill onPress={() => stepLevel(mark.id, 1)} disabled={atOuter} accessibilityLabel={`Wider, mark ${mark.n}`}>
-        Wider
-      </Pill>
+    <View style={styles.detail} testID="report-mark-detail">
+      <Text style={[type.caption, { color: colors.text }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE_DENSE}>
+        {line}
+      </Text>
+      {mark.levels.length > 1 ? (
+        <View style={styles.levels}>
+          <Pill onPress={() => stepLevel(mark.id, -1)} disabled={atInner} accessibilityLabel={`Narrower, mark ${mark.n}`}>
+            Narrower
+          </Pill>
+          <Pill onPress={() => stepLevel(mark.id, 1)} disabled={atOuter} accessibilityLabel={`Wider, mark ${mark.n}`}>
+            Wider
+          </Pill>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+/** The steps the tester recorded, numbered, with Record again and Remove steps. Nothing when there are none. */
+function Steps({ draft }: { draft: Draft }) {
+  const { colors } = useTheme();
+  if (draft.steps.length === 0) return null;
+  return (
+    <View style={styles.stepsBlock} testID="report-steps">
+      <Text style={[type.caption, styles.stepsTitle, { color: colors.textSecondary }]}>Steps</Text>
+      {draft.steps.map((step, i) => (
+        <Text key={`${i}-${step}`} style={[type.caption, { color: colors.text }]} maxFontSizeMultiplier={MAX_FONT_SCALE_DENSE}>
+          {`${i + 1}. ${step}`}
+        </Text>
+      ))}
+      <View style={styles.levels}>
+        <Pill onPress={startRecording}>Record again</Pill>
+        <Pill onPress={removeSteps}>Remove steps</Pill>
+      </View>
     </View>
   );
 }
@@ -344,7 +572,7 @@ function LevelControls({ mark }: { mark: Mark }) {
 function NoteField({ draft, autoFocus }: { draft: Draft; autoFocus: boolean }) {
   const { colors, elevation } = useTheme();
   const [focused, setFocused] = useState(false);
-  const [height, setHeight] = useState(LINE * 2);
+  const [height, setHeight] = useState(LINE * MIN_LINES);
   const input = useRef<TextInput>(null);
   const placeholder = draft.marks.length > 0 ? 'What about it?' : "What's going on?";
 
@@ -354,6 +582,20 @@ function NoteField({ draft, autoFocus }: { draft: Draft; autoFocus: boolean }) {
     input.current?.focus();
     noteFocused();
   }, [autoFocus]);
+
+  // On the web the field's own content-size events over-report (an empty field read about five
+  // lines), so the height is measured off the textarea itself: shrunk to its two rows, then its
+  // scroll height read. (The input is the DOM textarea there.) Native keeps onContentSizeChange.
+  useLayoutEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const el = input.current as unknown as HTMLTextAreaElement | null;
+    if (!el || typeof el.scrollHeight !== 'number' || !el.style) return;
+    const previous = el.style.height;
+    el.style.height = '0px';
+    const content = el.scrollHeight - FIELD_PAD * 2;
+    el.style.height = previous;
+    if (content > 0) setHeight(content);
+  }, [draft.text]);
 
   return (
     <TextInput
@@ -368,12 +610,13 @@ function NoteField({ draft, autoFocus }: { draft: Draft; autoFocus: boolean }) {
       submitBehavior="newline"
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
-      onContentSizeChange={(e) => setHeight(e.nativeEvent.contentSize.height)}
+      onContentSizeChange={Platform.OS === 'web' ? undefined : (e) => setHeight(e.nativeEvent.contentSize.height)}
+      {...(Platform.OS === 'web' ? ({ rows: MIN_LINES } as object) : null)}
       style={[
         type.bodyLarge,
         styles.field,
         {
-          height: Math.min(LINE * MAX_LINES, Math.max(LINE * 2, height)) + spacing.md * 2,
+          height: Math.min(LINE * MAX_LINES, Math.max(LINE * MIN_LINES, height)) + FIELD_PAD * 2,
           color: colors.text,
           backgroundColor: colors.surface,
           borderColor: focused ? colors.primary : colors.borderStrong,
@@ -384,14 +627,12 @@ function NoteField({ draft, autoFocus }: { draft: Draft; autoFocus: boolean }) {
   );
 }
 
-/** What goes with the note, in one line; pressed, the whole list and the steps switch. */
+/** What goes with the note, in one line; pressed, the whole list. */
 function Attached({ draft }: { draft: Draft }) {
   const { colors } = useTheme();
   const [open, setOpen] = useState(false);
-  // The trail is outside React; read again whenever the note changes, which is often enough for a summary.
-  const steps = useMemo(() => safeRecordedSteps(safeTrailSnapshot()), [draft]);
   const rows = useMemo(() => contextRows(draft.environment), [draft.environment]);
-  const summary = attachedSummary(draft, steps.length);
+  const summary = attachedSummary(draft);
   return (
     <View style={[styles.attached, { borderColor: colors.border }]}>
       <Pressable
@@ -418,25 +659,6 @@ function Attached({ draft }: { draft: Draft }) {
               </Text>
             </View>
           ))}
-          <View style={styles.row}>
-            <Text style={[type.body, styles.grow, { color: colors.text }]}>Include recorded steps</Text>
-            <Switch
-              value={draft.includeSteps}
-              onValueChange={setIncludeSteps}
-              accessibilityLabel="Include recorded steps"
-              trackColor={{ true: colors.primary, false: colors.input }}
-              thumbColor={colors.surface}
-            />
-          </View>
-          {draft.includeSteps && steps.length ? (
-            <View style={styles.steps}>
-              {steps.map((step, i) => (
-                <Text key={`${i}-${step}`} style={[type.caption, { color: colors.text }]} maxFontSizeMultiplier={MAX_FONT_SCALE_DENSE}>
-                  {`${i + 1}. ${step}`}
-                </Text>
-              ))}
-            </View>
-          ) : null}
           <Text style={[type.caption, { color: colors.textSecondary }]}>Only what you see here is sent. Nothing you typed elsewhere.</Text>
         </View>
       ) : null}
@@ -444,14 +666,13 @@ function Attached({ draft }: { draft: Draft }) {
   );
 }
 
-/** '1 picture · 6 recorded steps · iOS, home screen · build a1b2c3d'. */
-export function attachedSummary(draft: Draft, stepCount: number): string {
+/** '1 picture · iOS, home screen · build a1b2c3d'. */
+export function attachedSummary(draft: Draft): string {
   const pictures = draft.shots.length + draft.photos.length;
   const env: BugReportEnvironment = draft.environment;
   const device = [env.osVersion ?? env.platform, env.display].filter(Boolean).join(', ');
   const parts = [
     pictures ? `${pictures} ${pictures === 1 ? 'picture' : 'pictures'}` : null,
-    draft.includeSteps && stepCount ? `${stepCount} recorded ${stepCount === 1 ? 'step' : 'steps'}` : null,
     device || null,
     env.build ? `build ${env.build}` : null,
   ].filter(Boolean);
@@ -472,26 +693,66 @@ const styles = StyleSheet.create({
   },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.gutter, minHeight: size.target },
   grow: { flex: 1, minWidth: 0 },
+  trigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    height: size.pill,
+    paddingLeft: spacing.md,
+    paddingRight: spacing.sm,
+    borderWidth: 1,
+    borderRadius: radius.pill,
+  },
+  triggerText: { fontWeight: '500' },
+  menu: {
+    position: 'absolute',
+    left: spacing.gutter,
+    minWidth: 200,
+    paddingVertical: spacing.xs,
+    borderWidth: 1,
+    borderRadius: radius.input,
+  },
+  menuRow: { minHeight: size.target, flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg },
+  checkSpace: { width: 18 },
+  actionsWrap: { gap: spacing.xs, paddingHorizontal: spacing.gutter, paddingTop: spacing.xs },
+  actions: { flexDirection: 'row', gap: spacing.sm },
+  action: {
+    ...TARGET_MIN,
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    borderWidth: 1,
+    borderRadius: radius.button,
+  },
   scroll: { flexGrow: 0, flexShrink: 1 },
-  body: { gap: spacing.md, paddingHorizontal: spacing.gutter, paddingTop: spacing.xs },
+  body: { gap: spacing.md, paddingHorizontal: spacing.gutter, paddingTop: spacing.sm },
   footer: { paddingHorizontal: spacing.gutter, paddingTop: spacing.sm },
   failure: { gap: spacing.xs },
   pictures: { gap: spacing.sm },
   // Vertical padding keeps the 44pt expanders of the 30pt chips inside the horizontal scroller's clip.
-  strip: { gap: spacing.sm, alignItems: 'center', paddingVertical: spacing.sm },
+  strip: { gap: spacing.sm, alignItems: 'center', paddingVertical: spacing.sm, paddingRight: spacing.sm },
   group: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   thumbWrap: { width: THUMB_W, height: THUMB_H },
   thumb: { width: THUMB_W, height: THUMB_H, borderRadius: radius.button, overflow: 'hidden' },
   overlay: { position: 'absolute', top: 0, left: 0, opacity: 0.6 },
   big: { width: '100%', maxHeight: 360, borderRadius: radius.input },
   mark: { flexDirection: 'row', alignItems: 'center', height: size.pill, borderWidth: 1, borderRadius: radius.pill, paddingLeft: spacing.md },
-  markLabel: { height: size.pill, justifyContent: 'center', maxWidth: 180 },
+  markLabel: { height: size.pill, justifyContent: 'center', maxWidth: 180, paddingRight: spacing.xs },
   markText: { fontWeight: '600' },
-  markRemove: { width: 28, height: size.pill, alignItems: 'center', justifyContent: 'center' },
-  remove: {
+  markRemove: { width: size.target, height: size.pill, alignItems: 'center', justifyContent: 'center' },
+  // The target sits over the thumbnail's top-right corner; the visible mark is its top-right 22pt.
+  removeTarget: {
     position: 'absolute',
     top: -spacing.xs,
     right: -spacing.xs,
+    width: size.target,
+    height: size.target,
+    alignItems: 'flex-end',
+    justifyContent: 'flex-start',
+  },
+  remove: {
     width: REMOVE,
     height: REMOVE,
     borderRadius: radius.pill,
@@ -499,23 +760,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  addTile: {
-    ...TARGET_MIN,
-    width: THUMB_W + spacing.xl,
-    height: THUMB_H,
-    gap: 2,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderRadius: radius.button,
-    paddingHorizontal: spacing.xs,
-  },
   disabled: { opacity: 0.45 },
   center: { textAlign: 'center' },
-  levels: { flexDirection: 'row', gap: spacing.sm },
+  detail: { gap: spacing.sm },
+  levels: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
+  stepsBlock: { gap: spacing.xs },
+  stepsTitle: { fontWeight: '600' },
   field: {
     alignSelf: 'stretch',
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingVertical: FIELD_PAD,
     borderWidth: 1,
     borderRadius: radius.input,
     textAlignVertical: 'top',
@@ -526,5 +780,4 @@ const styles = StyleSheet.create({
   attachedBody: { gap: spacing.sm, paddingBottom: spacing.sm },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.lg },
   rowValue: { flexShrink: 1, textAlign: 'right' },
-  steps: { gap: 2 },
 });

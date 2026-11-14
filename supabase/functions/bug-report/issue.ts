@@ -18,6 +18,7 @@ import {
   ENVIRONMENT_KEYS,
   ENVIRONMENT_LABELS,
   LIMITS,
+  redact,
   type Environment,
   type Target,
 } from "./redact.ts";
@@ -173,7 +174,7 @@ function section(heading: string, body: string): string {
   return `## ${heading}\n\n${body}\n`;
 }
 
-const RECORDED_STEPS = "_Recorded by the app from the reporter's screens and taps, not typed by them._";
+const RECORDED_STEPS = "_Recorded by the app while the reporter reproduced it, not typed by them._";
 const NOTHING_POINTED_AT = "_Nothing was pointed at; the note is about the whole screen._";
 
 /** What the second column of a crumb says: the route, the call, the tap or the error. */
@@ -204,6 +205,15 @@ function code(value: string): string {
   return `\`${value.replace(/`/g, "")}\``;
 }
 
+/**
+ * Whether a `key=value` pair passes redaction untouched. `cleanTargets` saw
+ * the key and the value separately, so the `secret = value` patterns only
+ * get to see them together here; a pair they would touch is dropped whole.
+ */
+function survivesRedaction(pair: string): boolean {
+  return redact(pair) === pair;
+}
+
 function propValue(value: string | number | boolean): string {
   return typeof value === "string" ? `"${value}"` : String(value);
 }
@@ -223,11 +233,16 @@ export function targetBlock(target: Target, position: number): string {
   else if (target.label) lines.push(`- Label: "${target.label}"`);
   if (target.text) lines.push(`- Text: "${target.text}"`);
   if (target.props) {
-    const props = Object.entries(target.props).map(([k, v]) => code(`${k}=${propValue(v)}`));
+    const props = Object.entries(target.props)
+      .map(([k, v]) => `${k}=${propValue(v)}`)
+      .filter(survivesRedaction)
+      .map(code);
     if (props.length) lines.push(`- Props: ${props.join(", ")}`);
   }
   if (target.styles) {
-    const styles = Object.entries(target.styles).map(([k, v]) => `${k} ${v}`);
+    const styles = Object.entries(target.styles)
+      .filter(([k, v]) => survivesRedaction(`${k}=${v}`))
+      .map(([k, v]) => `${k} ${v}`);
     if (styles.length) lines.push(`- Drawn with: ${styles.join("; ")}`);
   }
   if (target.rect) {
@@ -281,9 +296,10 @@ export function buildDescription(report: CleanReport, handle: string, evidence: 
       evidenceLines.push(`![Reporter screenshot ${i + 1}](${e.assetUrl})`);
       return;
     }
-    // Alt text cannot hold a bracket, and the italic line cannot hold an underscore that would end it early.
-    const alt = e.caption.replace(/[\[\]]/g, "");
-    evidenceLines.push(`![${alt}](${e.assetUrl})\n_${e.caption.replace(/_/g, "\\_")}_`);
+    // The caption's brackets are already escaped (cleanCaptions), so it is
+    // safe as alt text; the italic line also cannot hold an underscore that
+    // would end it early.
+    evidenceLines.push(`![${e.caption}](${e.assetUrl})\n_${e.caption.replace(/_/g, "\\_")}_`);
   });
   if (failed.length) {
     evidenceLines.push(

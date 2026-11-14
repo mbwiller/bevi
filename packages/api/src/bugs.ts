@@ -50,6 +50,8 @@ const EXT_BY_MIME_TYPE: Record<string, string> = {
 const MAX_EVIDENCE_BYTES = 10 * 1024 * 1024;
 // Matches `cardinality(evidence_paths) <= 3` on the ledger.
 const MAX_EVIDENCE = 3;
+// The function keeps the first 6 (redact.ts `TARGET_LIMITS.count`); sending more is wasted bytes.
+const MAX_TARGETS = 6;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TICKET_RE = /^[A-Z][A-Z0-9]*-\d{1,9}$/;
@@ -90,6 +92,8 @@ interface FunctionErrorBody {
   message?: string;
   /** Set by the place route on its own not-found; absent from a function that predates it. */
   route?: string;
+  /** The place route's `not_open`: the ticket is the caller's, but no longer open. */
+  reason?: string;
 }
 
 interface FunctionErrorResponse {
@@ -225,7 +229,7 @@ export function createBugsApi(client: SupabaseClient): BugsApi {
           actual: input.actual ?? '',
           environment: input.environment ?? {},
           breadcrumbs: input.breadcrumbs ?? [],
-          targets: input.targets ?? [],
+          targets: (input.targets ?? []).slice(0, MAX_TARGETS),
           stepsSource: input.stepsSource ?? 'typed',
           evidencePaths,
           // One per uploaded path, in the same order.
@@ -280,6 +284,10 @@ export function createBugsApi(client: SupabaseClient): BugsApi {
         if (read?.status === 404 && read.body?.route !== 'place') {
           throw new ApiError('unknown', 'Ranking is not available on the server yet', { reason: 'place_unsupported' });
         }
+        if (read?.status === 404 && read.body?.reason === 'not_open') {
+          throw new ApiError('conflict', "That report isn't open any more", { reason: 'not_open' });
+        }
+        if (read?.status === 404) throw new ApiError('not_found', "That report isn't one of yours", { reason: 'not_found' });
         throw await mapFunctionError(error, read);
       }
       return toSummaries(data?.reports);

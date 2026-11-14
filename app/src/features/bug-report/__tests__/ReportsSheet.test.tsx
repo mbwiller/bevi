@@ -17,7 +17,6 @@ jest.mock('../trail', () => ({
   recordNav: jest.fn(),
   routePattern: jest.fn(() => '/'),
   trailSnapshot: jest.fn(() => []),
-  recordedSteps: jest.fn(() => []),
   hadRecentFailure: jest.fn(() => false),
 }));
 jest.mock('../infer', () => ({ inferKind: jest.fn(() => 'bug'), titleFor: jest.fn((note: string) => note) }));
@@ -159,6 +158,6 @@ describe('Your reports', () => {
   it('is empty before anything is filed', async () => {
     await renderSheet();
     const empty = await screen.findByText('No reports yet');
-    expect(within(empty.parent!.parent!).queryByText(/Drag the drop/)).toBeTruthy();
+    expect(within(empty.parent!.parent!).queryByText(/Press the report button/)).toBeTruthy();
   });
 });

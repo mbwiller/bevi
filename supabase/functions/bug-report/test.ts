@@ -17,6 +17,9 @@ import { assert, assertEquals, assertRejects, assertStringIncludes } from "jsr:@
 
 import {
   BREADCRUMB_LIMITS,
+  escapeLinks,
+  safePath,
+  SENSITIVE_KEY_RE,
   clean,
   cleanBreadcrumbs,
   cleanCaptions,
@@ -133,9 +136,13 @@ Deno.test("clean() caps length, collapses single-line fields and neutralises mar
 });
 
 Deno.test("cleanSteps caps the number of steps and drops empties", () => {
-  const steps = cleanSteps(["  open a Bev  ", "", "   ", ...Array.from({ length: 20 }, (_, i) => `step ${i}`)]);
-  assertEquals(steps.length, LIMITS.steps);
+  const steps = cleanSteps(["  open a Bev  ", "", "   ", ...Array.from({ length: 40 }, (_, i) => `step ${i}`)]);
+  // An explicit recording can hold 30 steps.
+  assertEquals(LIMITS.steps, 30);
+  assertEquals(steps.length, 30);
   assertEquals(steps[0], "open a Bev");
+  assertEquals(steps[29], "step 28");
+  assertEquals(cleanSteps(["x".repeat(500)])[0]?.length, LIMITS.step);
 });
 
 Deno.test("cleanEnvironment is an allow-list, not a passthrough", () => {
@@ -817,8 +824,8 @@ Deno.test("props and styles are capped at 12 well-keyed entries with typed or cl
   assertEquals("obj" in (t?.props ?? {}), false);
   assertEquals("nan" in (t?.props ?? {}), false);
 
-  const [s] = cleanTargets([{ component: "A", props: { token: FAKE.bearer("fake-token-04"), on: false }, styles: { color: "#fff", width: 12, long: "y".repeat(200) } }]);
-  assertEquals(s?.props?.token, REDACTED);
+  const [s] = cleanTargets([{ component: "A", props: { tone: FAKE.bearer("fake-token-04"), on: false }, styles: { color: "#fff", width: 12, long: "y".repeat(200) } }]);
+  assertEquals(s?.props?.tone, REDACTED);
   assertEquals(s?.props?.on, false);
   assertEquals(s?.styles?.color, "#fff");
   assertEquals("width" in (s?.styles ?? {}), false); // styles are strings only
@@ -907,10 +914,10 @@ Deno.test("a backtick in a prop value cannot close the code span it is printed i
 });
 
 Deno.test("recorded steps carry the line saying the app wrote them; typed steps do not", () => {
-  const recorded = buildDescription(report({ reproductionSteps: ["Opened Feed", "Tapped Add Bev"], stepsSource: "recorded" }), "t", []);
+  const recorded = buildDescription(report({ reproductionSteps: ["Start on /lists", "Tap SegmentedTabs › Want to Try"], stepsSource: "recorded" }), "t", []);
   assertStringIncludes(
     recorded,
-    "## Steps to reproduce\n\n_Recorded by the app from the reporter's screens and taps, not typed by them._\n\n1. Opened Feed\n2. Tapped Add Bev\n",
+    "## Steps to reproduce\n\n_Recorded by the app while the reporter reproduced it, not typed by them._\n\n1. Start on /lists\n2. Tap SegmentedTabs › Want to Try\n",
   );
   const typed = buildDescription(report({ reproductionSteps: ["Opened Feed"] }), "t", []);
   assertEquals(typed.includes("Recorded by the app"), false);
@@ -919,13 +926,15 @@ Deno.test("recorded steps carry the line saying the app wrote them; typed steps 
 });
 
 Deno.test("a caption becomes the image's alt text and an italic line under it", () => {
+  // Captions reach buildDescription through cleanCaptions, as index.ts passes them.
+  const [plain, linky] = cleanCaptions(["Feed, with 1 marked", "a [link](x) and snake_case"], 2);
   const body = buildDescription(report(), "t", [
-    { kind: "embedded", assetUrl: "https://uploads.linear.app/a/1", caption: "Feed, with 1 marked" },
-    { kind: "embedded", assetUrl: "https://uploads.linear.app/a/2", caption: "a [link](x) and snake_case" },
+    { kind: "embedded", assetUrl: "https://uploads.linear.app/a/1", caption: plain },
+    { kind: "embedded", assetUrl: "https://uploads.linear.app/a/2", caption: linky },
     { kind: "embedded", assetUrl: "https://uploads.linear.app/a/3" },
   ]);
   assertStringIncludes(body, "![Feed, with 1 marked](https://uploads.linear.app/a/1)\n_Feed, with 1 marked_");
-  assertStringIncludes(body, "![a link(x) and snake_case](https://uploads.linear.app/a/2)\n_a [link](x) and snake\\_case_");
+  assertStringIncludes(body, "![a \\[link\\](x) and snake_case](https://uploads.linear.app/a/2)\n_a \\[link\\](x) and snake\\_case_");
   assertStringIncludes(body, "![Reporter screenshot 3](https://uploads.linear.app/a/3)");
 });
 
@@ -1092,4 +1101,96 @@ Deno.test("a respacing write sends sortOrder alone; a missing issue is null; a r
 
   const limited = stubFetch(() => new Response("slow down", { status: 429 }));
   assertEquals((await assertRejects(() => placeIssue(CONFIG, limited.impl, "BEV-5", { sortOrder: 1 }), LinearError)).code, "linear_rate_limited");
+});
+
+// ---------------------------------------------------------------------------
+// Round 2: props that carry a secret, markdown in labels and captions, opaque
+// path segments, the not-open placement
+// ---------------------------------------------------------------------------
+
+Deno.test("a prop or style whose key could carry a secret or typed text is dropped, whatever its value's type", () => {
+  for (const props of [{ password: "hunter2" }, { token: "abc123" }, { secret: 123456 }, { value: "my pin is 4821" }, { authHeader: true }, { onChangeText: "draft" }]) {
+    const [t] = cleanTargets([{ component: "TextField", props }]);
+    assertEquals(t?.props, undefined, JSON.stringify(props));
+    const body = pointedAt(cleanTargets([{ component: "TextField", props }]));
+    for (const v of Object.values(props)) assertEquals(body.includes(String(v)), false, JSON.stringify(props));
+  }
+  const [styled] = cleanTargets([{ component: "A", styles: { apiKey: "x", color: "colors.ink" } }]);
+  assertEquals(styled?.styles, { color: "colors.ink" });
+  for (const key of ["password", "token", "secret", "value", "pin", "otp", "email", "phone", "searchQuery", "note", "bio"]) {
+    assert(SENSITIVE_KEY_RE.test(key), key);
+  }
+});
+
+Deno.test("a key=value pair the redaction patterns catch together is dropped when printed", () => {
+  // `pwd` is not in the key filter, but `pwd=…` is a secret assignment once the pair is composed.
+  const body = pointedAt(cleanTargets([{ component: "A", props: { pwd: "hunter2", variant: "primary" } }]));
+  assertEquals(body.includes("hunter2"), false);
+  assertEquals(body.includes(REDACTED), false);
+  assertStringIncludes(body, '- Props: `variant="primary"`');
+});
+
+Deno.test("ordinary props still print", () => {
+  const body = pointedAt(cleanTargets([{ component: "Button", props: { variant: "primary", block: true, size: 44 } }]));
+  assertStringIncludes(body, '- Props: `variant="primary"`, `block=true`, `size=44`');
+});
+
+Deno.test("escapeLinks defuses links, images, angle brackets and a trailing backslash", () => {
+  assertEquals(escapeLinks("[click](https://evil.example)"), "\\[click\\](https://evil.example)");
+  assertEquals(escapeLinks("![](https://x/p.png)"), "\\!\\[\\](https://x/p.png)");
+  assertEquals(escapeLinks("<https://evil.example>"), "\\<https://evil.example\\>");
+  assertEquals(escapeLinks("Feed (2 marked)\\"), "Feed (2 marked)");
+  assertEquals(escapeLinks("Wow! [x]"), "Wow! \\[x\\]");
+  // A backslash the reporter typed cannot cancel an escape.
+  assertEquals(escapeLinks("\\[x\\](u)"), "\\\\\\[x\\\\\\](u)");
+  assertEquals(escapeLinks("Save (draft)"), "Save (draft)");
+});
+
+Deno.test("a caption, label, text or role cannot become a live link or a remote image in the issue", () => {
+  const link = "[click](https://evil.example)";
+  const image = "![](https://x/p.png)";
+  const [t] = cleanTargets([{ component: "A", label: link, text: image, role: "<b>button</b>" }]);
+  assertEquals(t?.label, "\\[click\\](https://evil.example)");
+  assertEquals(t?.text, "\\!\\[\\](https://x/p.png)");
+  assertEquals(t?.role, "\\<b\\>button\\</b\\>");
+  const parsed = report({ targets: [{ component: "A", label: link, text: image }], evidencePaths: [`${UID}/a.jpg`, `${UID}/b.jpg`], evidenceCaptions: [link, image] });
+  const body = buildDescription(parsed, "t", [
+    { kind: "embedded", assetUrl: "https://uploads.linear.app/a/1", caption: parsed.evidenceCaptions[0] },
+    { kind: "embedded", assetUrl: "https://uploads.linear.app/a/2", caption: parsed.evidenceCaptions[1] },
+  ]);
+  // The only images and links left are the ones the template itself wrote.
+  assertEquals([...body.matchAll(/(?<!\\)!\[/g)].length, 2);
+  assertEquals(body.includes("](https://evil.example)") && !body.includes("\\](https://evil.example)"), false);
+  assertEquals(/(?<!\\)\[click/.test(body), false);
+  assertStringIncludes(body, "![\\[click\\](https://evil.example)](https://uploads.linear.app/a/1)");
+});
+
+Deno.test("a caption ending in a backslash cannot break the image line", () => {
+  const [caption] = cleanCaptions(["Feed\\\\"], 1);
+  assertEquals(caption, "Feed");
+  const body = buildDescription(report(), "t", [{ kind: "embedded", assetUrl: "https://uploads.linear.app/a/1", caption }]);
+  assertStringIncludes(body, "![Feed](https://uploads.linear.app/a/1)\n_Feed_");
+});
+
+Deno.test("tap targets and error messages are only ever printed inside the Recent activity fence", () => {
+  const body = buildDescription(
+    report({ breadcrumbs: [{ at: "t1", kind: "tap", target: "[click](https://evil.example)" }, { at: "t2", kind: "error", message: "![](https://x/p.png)" }] }),
+    "t",
+    [],
+  );
+  const fence = body.slice(body.indexOf("```text"), body.indexOf("```", body.indexOf("```text") + 7) + 3);
+  assertStringIncludes(fence, "t1  tap  [click](https://evil.example)");
+  assertStringIncludes(fence, "t2  error  ![](https://x/p.png)");
+  assertEquals(body.replace(fence, "").includes("evil.example"), false);
+  assertEquals(body.replace(fence, "").includes("x/p.png"), false);
+});
+
+Deno.test("a path carrying an opaque token segment, or starting with //, is dropped; a UUID segment is kept", () => {
+  for (const path of ["/reset/9f8a7c6b5d4e3f2a1b0c9d8e", "/auth/callback/abcdefghijklmnopqrstuvwx_yz", "//evil.example/feed", "/a/" + "A".repeat(24)]) {
+    assertEquals(cleanEnvironment({ path }).path, undefined, path);
+    assertEquals(safePath(path), false, path);
+  }
+  for (const path of ["/bev/8f3a2c1e-4b5d-4e6f-9a0b-1c2d3e4f5a6b", "/lists", "/u/some_handle", "/a/" + "A".repeat(23), "/"]) {
+    assertEquals(cleanEnvironment({ path }).path, path, path);
+  }
 });

@@ -56,7 +56,8 @@ export interface Draft {
   marks: Mark[];
   shots: ShotEntry[];
   photos: PreparedPhoto[];
-  includeSteps: boolean;
+  /** The steps the tester recorded with Record steps, in order; [] when none were. */
+  steps: string[];
   /** Collected when the note was started, so its time is when the thing was seen. */
   environment: BugReportEnvironment;
   /** The last failed send. */
@@ -73,7 +74,7 @@ export function localId(prefix: string): string {
 }
 
 export function emptyDraft(idempotencyKey: string, environment: BugReportEnvironment): Draft {
-  return { idempotencyKey, text: '', marks: [], shots: [], photos: [], includeSteps: true, environment };
+  return { idempotencyKey, text: '', marks: [], shots: [], photos: [], steps: [], environment };
 }
 
 /** Pictures held or being taken, plus photos. */
@@ -104,6 +105,11 @@ export function captureMarksFor(d: Draft, visit: number): CaptureMark[] {
     const level = currentLevel(m);
     return level ? [{ box: level.box, n: m.n }] : [];
   });
+}
+
+/** Whether the visit's picture shows marks (Capture screen would only repeat it). */
+export function hasMarkedPicture(d: Draft, visit: number): boolean {
+  return !!shotOfVisit(d, visit) && marksOfVisit(d, visit).length > 0;
 }
 
 /** Whether the visit can have a picture: it already has one (replaced), or there is room for one. */

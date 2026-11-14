@@ -227,6 +227,20 @@ describe('bugs.report submission', () => {
     expect(plain.invokes[0]?.init?.body?.evidenceCaptions).toEqual([]);
   });
 
+  it('sends at most the first six targets, which is all the function keeps', async () => {
+    const calls = newCalls();
+    const targets = Array.from({ length: 8 }, (_, i) => ({ component: `C${i}` }));
+    await createBugsApi(fakeClient(calls, { invokeData: CREATED })).report({ ...BASE, targets });
+    expect(calls.invokes[0]?.init?.body?.targets).toEqual(targets.slice(0, 6));
+  });
+
+  it('sends a recording of thirty steps as it is', async () => {
+    const calls = newCalls();
+    const steps = Array.from({ length: 30 }, (_, i) => `Step ${i + 1}`);
+    await createBugsApi(fakeClient(calls, { invokeData: CREATED })).report({ ...BASE, reproductionSteps: steps, stepsSource: 'recorded' });
+    expect(calls.invokes[0]?.init?.body?.reproductionSteps).toEqual(steps);
+  });
+
   it('reports a failed evidence upload instead of filing a ticket with no screenshot', async () => {
     const calls = newCalls();
     const api = createBugsApi(
@@ -405,9 +419,19 @@ describe('bugs.place', () => {
   });
 
   it("maps the place route's own not-found to not_found", async () => {
-    await expect(
-      createBugsApi(fakeClient(newCalls(), { invokeError: functionError(404, { error: 'not_found', route: 'place' }) })).place('BEV-7', 'BEV-2'),
-    ).rejects.toMatchObject({ code: 'not_found' });
+    const e = await createBugsApi(fakeClient(newCalls(), { invokeError: functionError(404, { error: 'not_found', route: 'place' }) }))
+      .place('BEV-7', 'BEV-2')
+      .catch((x: unknown) => x);
+    expect(e).toMatchObject({ code: 'not_found', message: "That report isn't one of yours", detail: { reason: 'not_found' } });
+  });
+
+  it('maps a ticket that is the caller\'s but no longer open to conflict', async () => {
+    const e = await createBugsApi(
+      fakeClient(newCalls(), { invokeError: functionError(404, { error: 'not_found', route: 'place', reason: 'not_open' }) }),
+    )
+      .place('BEV-7', null)
+      .catch((x: unknown) => x);
+    expect(e).toMatchObject({ code: 'conflict', message: "That report isn't open any more", detail: { reason: 'not_open' } });
   });
 
   it('treats a bare 404 as a server that predates ranking', async () => {

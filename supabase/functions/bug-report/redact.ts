@@ -16,7 +16,8 @@ export const LIMITS = {
   title: 160,
   description: 4000,
   step: 300,
-  steps: 12,
+  /** An explicit recording can hold this many; each is still capped at `step`. */
+  steps: 30,
   envValue: 120,
   idempotencyKey: 100,
   evidence: 3,
@@ -91,6 +92,24 @@ export function neutralise(value: string): string {
     .replace(/```/g, "'''")
     .replace(/^(\s*)(#{1,6}\s)/gm, "$1\\$2")
     .replace(/^(\s*)(-{3,}|={3,})\s*$/gm, "$1\\$2");
+}
+
+/**
+ * Defuses what would make a link or an image in rendered markdown: `[`, `]`,
+ * `<`, `>` are backslash-escaped, and so is a `!` directly before `[`.
+ * Parentheses stay (real labels use them; without a bracket they link
+ * nothing). Trailing backslashes are stripped first, because one at the end
+ * of a caption would escape whatever the template prints after it; any other
+ * backslash is itself escaped, so it cannot cancel one of these escapes.
+ */
+export function escapeLinks(value: string): string {
+  return value
+    .replace(/\\+$/, "")
+    // The reporter's own backslashes first, or `\[x\](u)` would come out as
+    // `\\[x\\](u)`: two literal backslashes around a live link.
+    .replace(/\\/g, "\\\\")
+    .replace(/!(?=\[)/g, "\\!")
+    .replace(/[[\]<>]/g, (c) => `\\${c}`);
 }
 
 /** Collapses whitespace, redacts, neutralises and caps. Returns '' for anything unusable. */
@@ -193,6 +212,23 @@ function environmentValue(key: keyof Environment, value: unknown): unknown {
   return value;
 }
 
+const UUID_SEGMENT_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** A long opaque segment: what a reset token or a magic-link code looks like in a path. */
+const OPAQUE_SEGMENT_RE = /^[A-Za-z0-9_-]{24,}$/;
+
+/**
+ * The path is the one value that is a real URL piece, so it is the one that
+ * could carry a token. It is dropped, not trimmed, when it is not an absolute
+ * path, when it starts with `//` (a protocol-relative URL to another host),
+ * when it carries a query string or a fragment, or when any segment is 24 or
+ * more characters of `[A-Za-z0-9_-]` that is not a UUID (Bev ids are UUIDs and
+ * are wanted; `/reset/9f8a7c6b5d4e3f2a1b0c9d8e` is not).
+ */
+export function safePath(path: string): boolean {
+  if (!path.startsWith("/") || path.startsWith("//") || /[?#]/.test(path)) return false;
+  return path.split("/").every((segment) => !OPAQUE_SEGMENT_RE.test(segment) || UUID_SEGMENT_RE.test(segment));
+}
+
 /**
  * Keeps only the known keys, cleans every value, and drops everything else the
  * client sent. An extra field a future client invents cannot reach the ticket
@@ -205,10 +241,7 @@ export function cleanEnvironment(value: unknown): Environment {
   for (const key of ENVIRONMENT_KEYS) {
     const text = clean(environmentValue(key, source[key]), LIMITS.envValue, { singleLine: true });
     if (!text) continue;
-    // The path is the one value that is a real URL piece, so it is the one
-    // that could carry a token: anything with a query string or a fragment, or
-    // that is not an absolute path, is dropped rather than trimmed.
-    if (key === "path" && (!text.startsWith("/") || /[?#]/.test(text))) continue;
+    if (key === "path" && !safePath(text)) continue;
     out[key] = text;
   }
   return out;
@@ -342,6 +375,15 @@ const COMPONENT_RE = /^[A-Za-z_$][\w$.]*$/;
 const FILE_RE = /^(app|packages|shared)\/[\w.\/()\[\]+@-]+\.(tsx?|jsx?)$/;
 /** A prop or style key: an identifier. */
 const KEY_RE = /^[A-Za-z_$][\w$]*$/;
+/**
+ * A prop or style key that could be carrying what someone typed or a
+ * credential. Its value is never looked at: `{ password: "hunter2" }` and
+ * `{ value: "my pin is 4821" }` are dropped whatever the value's type, because
+ * redaction sees the value alone and has no way to know it is a password.
+ * Deliberately broad (it also drops harmless keys such as `textAlign`); the
+ * app keeps its own allow-list of prop names, and this holds without it.
+ */
+export const SENSITIVE_KEY_RE = /pass|secret|token|auth|cookie|key|pin|otp|code|email|phone|value|text|query|search|note|message|draft|bio/i;
 
 function name(value: unknown, max: number): string | null {
   if (typeof value !== "string") return null;
@@ -358,7 +400,7 @@ function entries<T>(value: unknown, keep: (v: unknown) => T | undefined): Record
   let n = 0;
   for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
     if (n === TARGET_LIMITS.entries) break;
-    if (key.length > TARGET_LIMITS.key || !KEY_RE.test(key)) continue;
+    if (key.length > TARGET_LIMITS.key || !KEY_RE.test(key) || SENSITIVE_KEY_RE.test(key)) continue;
     const kept = keep(raw);
     if (kept === undefined) continue;
     out[key] = kept;
@@ -393,11 +435,12 @@ function cleanTarget(value: unknown): Target | null {
     if (file.length <= TARGET_LIMITS.file && FILE_RE.test(file) && !file.includes("..") && redact(file) === file) out.file = file;
   }
 
-  const label = clean(raw.label, TARGET_LIMITS.label, { singleLine: true });
+  // Printed as markdown (not in a code span or a fence), so links are defused too.
+  const label = escapeLinks(clean(raw.label, TARGET_LIMITS.label, { singleLine: true }));
   if (label) out.label = label;
-  const role = clean(raw.role, TARGET_LIMITS.role, { singleLine: true });
+  const role = escapeLinks(clean(raw.role, TARGET_LIMITS.role, { singleLine: true }));
   if (role) out.role = role;
-  const text = clean(raw.text, TARGET_LIMITS.text, { singleLine: true });
+  const text = escapeLinks(clean(raw.text, TARGET_LIMITS.text, { singleLine: true }));
   if (text) out.text = text;
   const route = clean(raw.route, TARGET_LIMITS.route, { singleLine: true });
   if (route) out.route = route;
@@ -445,8 +488,8 @@ export function cleanTargets(value: unknown): Target[] {
     .filter((t): t is Target => t !== null);
 }
 
-/** One cleaned single-line caption per evidence path, '' where the client sent none. */
+/** One cleaned single-line caption per evidence path, '' where the client sent none. Links are defused. */
 export function cleanCaptions(value: unknown, count: number): string[] {
   const list = Array.isArray(value) ? value : [];
-  return Array.from({ length: count }, (_, i) => clean(list[i], TARGET_LIMITS.caption, { singleLine: true }));
+  return Array.from({ length: count }, (_, i) => escapeLinks(clean(list[i], TARGET_LIMITS.caption, { singleLine: true })));
 }

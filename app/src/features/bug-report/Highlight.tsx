@@ -14,7 +14,7 @@ const CHIP_GAP = spacing.xs;
 const CHIP_MAX = 240;
 
 /**
- * The outline on the app: the component under the drop's tip while dragging, else (while the note
+ * The outline on the app: the component under the pointer in select mode, else (while the note
  * is open) the selected mark at its chosen level, when its screen is the one on show. A 2pt
  * `primary` box with a faint `primary` fill, and its name in a chip above it (below when there is
  * no room above). It never takes a touch.
@@ -22,7 +22,7 @@ const CHIP_MAX = 240;
 export function Highlight() {
   const picking = useReport((s) => s.picking?.levels[0]);
   const selected = useReport((s) => {
-    if (s.panel !== 'open' || s.sheet) return undefined;
+    if (s.panel !== 'open' || s.sheet || s.recording) return undefined;
     const mark = selectedMark(s);
     return mark && mark.visit === s.nav.visit ? currentLevel(mark) : undefined;
   });

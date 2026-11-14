@@ -5,17 +5,22 @@ import { REPORT_UI_ATTR } from '../types';
 // A small manifest of its own, so the app gaining or losing a component never changes these tests.
 jest.mock('../componentFiles.generated', () => ({
   COMPONENT_FILES: {
+    Arrive: 'app/src/components/Arrive.tsx',
     BevImage: 'app/src/components/BevImage.tsx',
     BevRow: 'app/src/components/BevRow.tsx',
     FeedPost: 'app/src/components/FeedPost.tsx',
     FeedPostItem: 'app/src/features/feed/FeedPostItem.tsx',
     FeedScreen: 'app/src/features/feed/FeedScreen.tsx',
+    FeedbackPressable: 'app/src/components/PressFeedback.tsx',
     Header: 'app/src/components/Header.tsx',
     Icon: 'app/src/components/Icon.tsx',
+    Num: 'app/src/components/ScoreBubble.tsx',
+    NumText: 'app/src/components/ScoreBubble.tsx',
     RankFlow: 'app/src/features/ranking/RankFlow.tsx',
     RootLayout: 'app/src/app/_layout.tsx',
     ScoreBubble: 'app/src/components/ScoreBubble.tsx',
     Screen: 'app/src/features/onboarding/starter/StarterStep.tsx',
+    SegmentedTabs: 'app/src/components/SegmentedTabs.tsx',
     Spacer: 'app/src/components/Spacer.tsx',
     TabBar: 'app/src/components/TabBar.tsx',
     TabIcon: 'app/src/components/TabBar.tsx',
@@ -155,16 +160,33 @@ function scene(): Scene {
   const headerComponent = component(
     named('Header'),
     {
+      // Strings under presentational names, short enough: kept.
       title: 'Feed',
+      variant: 'plain',
+      justFits: 'not on the list, however short',
+      label: 'y'.repeat(80),
+      placeholder: 'x'.repeat(81),
+      // Numbers and booleans: kept, unless the name is a sensitive one.
       count: 3,
       large: true,
+      pinCode: 1234,
+      hasPassword: true,
+      authenticated: true,
+      keyboardVisible: true,
+      phoneVerified: false,
+      // Strings under any other name: dropped, whatever they hold.
+      id: '8f3a2b1c',
+      userId: 'u_1',
+      src: 'https://example.test/a.jpg',
+      note: 'what someone wrote',
+      error: 'Something went wrong',
+      email: 'someone@example.test',
+      // Never read at all.
       children: 'never',
       style: { flex: 1 },
       testID: 'header',
       onBack: () => {},
-      onlineStatus: 'kept: only handlers are skipped',
-      tooLong: 'x'.repeat(81),
-      justFits: 'y'.repeat(80),
+      onlineStatus: 'a handler by its name',
       object: { a: 1 },
       list: [1, 2],
       nothing: null,
@@ -172,6 +194,8 @@ function scene(): Scene {
       notANumber: Number.NaN,
       value: 'what someone typed',
       defaultValue: 'what someone typed',
+      text: 'what someone typed',
+      query: 'what someone searched',
       password: 'hunter2',
       authToken: 'abc',
     },
@@ -284,7 +308,7 @@ describe('pickAt', () => {
     under(s.svg, s.tabIcon, s.addBev, s.nav, s.root);
     const levels = pickAt(240, 710);
     // The Icon and TabIcon inside the tab have nothing to name them and are left out.
-    expect(levels.map((level) => level.title)).toEqual(['TabBar › Add Bev', 'TabBar · Main', 'RootLayout › TabsLayout']);
+    expect(levels.map((level) => level.title)).toEqual(['TabBar › Add Bev', 'TabBar · Main', 'TabsLayout']);
     expect(levels[0]!.target).toMatchObject({
       component: 'TabBar',
       path: ['RootLayout', 'TabsLayout', 'TabBar'],
@@ -296,6 +320,96 @@ describe('pickAt', () => {
     // The part is an element, not a component: it carries no props. The component does.
     expect(levels[0]!.target.props).toBeUndefined();
     expect(levels[1]!.target).toMatchObject({ component: 'TabBar', label: 'Main', role: 'navigation', props: { active: 'feed', safeArea: true } });
+  });
+
+  /** A component that only puts one element around the children its caller gave it. */
+  function wrapper(name: string, props: Record<string, unknown>, options: HostOptions, children: FakeFiber[]): FakeFiber {
+    const given = { passed: 'by the caller' };
+    const element = host('div', options, children);
+    element.memoizedProps = { children: given };
+    return component(named(name), { ...props, children: given }, [component(Pressable, {}, [element])]);
+  }
+
+  it('names a wrapper as a part of the component that used it, with that component\'s file', () => {
+    const title = host('div', { rect: [16, 60, 300, 40], text: '1. Cold Brew Black' });
+    const pressable = wrapper(
+      'FeedbackPressable',
+      { accessibilityLabel: 'Cold Brew Black, 9.7', accessibilityRole: 'button', onPress: () => {} },
+      { rect: [16, 60, 392, 45], attrs: { 'aria-label': 'Cold Brew Black, 9.7', role: 'button', tabindex: '0' } },
+      [title],
+    );
+    const number = host('div', { rect: [943, 70, 27, 22], text: '9.7' });
+    // ScoreBubble > Num > NumText, all in ScoreBubble.tsx: two helpers deep.
+    const helpers = component(named('Num'), { score: 9.7 }, [component(named('NumText'), { score: 9.7 }, [number])]);
+    const bubble = host('div', { rect: [436, 60, 40, 40], attrs: { 'aria-label': 'Score 9.7' } }, [helpers]);
+    const row = host('div', { rect: [0, 50, 480, 94] }, [pressable, component(named('ScoreBubble'), { score: 9.7 }, [bubble])]);
+    // The list wraps each row in an animation, and the row fills it.
+    const arrive = wrapper('Arrive', { progress: 1 }, { rect: [0, 50, 480, 94] }, [component(named('BevRow'), { rank: 1 }, [row])]);
+    const list = host('div', { rect: [0, 0, 480, 600], text: LONG_TEXT }, [arrive]);
+    mount(component(named('FeedScreen'), {}, [list]), document.body);
+
+    under(title);
+    const levels = pickAt(20, 70);
+    expect(levels.map((level) => level.title)).toEqual(['BevRow › Cold Brew Black, 9.7', 'FeedScreen › BevRow', 'FeedScreen']);
+    expect(levels[0]!.target).toMatchObject({
+      component: 'BevRow',
+      file: 'app/src/components/BevRow.tsx',
+      path: ['FeedScreen', 'BevRow'],
+      label: 'Cold Brew Black, 9.7',
+      role: 'button',
+      props: { accessibilityLabel: 'Cold Brew Black, 9.7', accessibilityRole: 'button' },
+      rect: { x: 16, y: 60, width: 392, height: 45 },
+    });
+    // The animation wrapper is nobody's parent, in nobody's ancestry, and not a level: BevRow fills it.
+    expect(JSON.stringify(levels)).not.toContain('Arrive');
+    expect(tapTitle(el(title), 20, 70)).toBe('BevRow › Cold Brew Black, 9.7');
+
+    // A helper that shows only what the labelled component around it shows, from the same file, is not a level.
+    under(number);
+    expect(pickAt(950, 80).map((level) => level.title)).toEqual(['ScoreBubble · Score 9.7', 'FeedScreen › BevRow', 'FeedScreen']);
+  });
+
+  it('names a wrapper with no label by its own name, under the component that used it', () => {
+    const inner = host('div', { rect: [0, 0, 100, 40], text: LONG_TEXT });
+    const moving = wrapper('Arrive', { progress: 1 }, { rect: [0, 0, 480, 200] }, [inner]);
+    const screen = host('div', { rect: [0, 0, 480, 700] }, [component(named('Header'), {}, [host('div', { rect: [0, 0, 480, 300] }, [moving])])]);
+    mount(component(named('FeedScreen'), {}, [screen]), document.body);
+    under(inner);
+    const levels = pickAt(10, 10);
+    expect(levels.map((level) => level.title)).toEqual(['Header › Arrive', 'FeedScreen › Header', 'FeedScreen']);
+    expect(levels[0]!.target).toMatchObject({ component: 'Header', file: 'app/src/components/Header.tsx', props: { progress: 1 } });
+  });
+
+  it('does not take a component for a wrapper when it draws something of its own, or wraps plain text', () => {
+    const given = { passed: 'by the caller' };
+    const inner = host('div', { rect: [0, 0, 100, 40], text: 'Body' });
+    const frame = host('div', { rect: [0, 0, 480, 200] }, [inner]);
+    frame.memoizedProps = { children: [{ its: 'own title' }, given] };
+    const text = host('div', { rect: [0, 200, 100, 20], text: 'Caption' });
+    text.memoizedProps = { children: 'Caption' };
+    const screen = host('div', { rect: [0, 0, 480, 700] }, [
+      component(named('Header'), { children: given }, [frame]),
+      component(named('NumText'), { children: 'Caption' }, [text]),
+    ]);
+    mount(component(named('FeedScreen'), {}, [screen]), document.body);
+    under(inner);
+    expect(pickAt(10, 10).map((level) => level.title)).toEqual(['Header · Body', 'FeedScreen']);
+    under(text);
+    expect(pickAt(10, 210)[0]!.target.component).toBe('NumText');
+  });
+
+  it('does not name a group of controls by the row of their labels', () => {
+    const tab = (label: string, x: number): FakeFiber =>
+      component(Pressable, {}, [host('div', { rect: [x, 88, 60, 44], text: label, attrs: { role: 'tab', 'aria-label': label, tabindex: '0' } })]);
+    const first = tab("Bev'd", 16);
+    const bar = host('div', { rect: [0, 88, 480, 44], attrs: { role: 'tablist' } }, [first, tab('Want to Try', 90), tab('Top', 170)]);
+    const screen = host('div', { rect: [0, 0, 480, 700], text: LONG_TEXT }, [component(named('SegmentedTabs'), { active: 'bevd' }, [bar])]);
+    mount(component(named('FeedScreen'), {}, [screen]), document.body);
+    document.elementsFromPoint = jest.fn(() => [first.child!.stateNode as Element]);
+    const levels = pickAt(30, 100);
+    expect(levels.map((level) => level.title)).toEqual(["SegmentedTabs › Bev'd", 'FeedScreen › SegmentedTabs', 'FeedScreen']);
+    expect(levels[0]!.target).toMatchObject({ component: 'SegmentedTabs', file: 'app/src/components/SegmentedTabs.tsx', label: "Bev'd", role: 'tab' });
+    expect(levels[1]!.target).toMatchObject({ component: 'SegmentedTabs', text: "Bev'd Want to Try Top", props: { active: 'bevd' } });
   });
 
   it('leaves out a component with no label and no text inside a labelled control', () => {
@@ -357,16 +471,22 @@ describe('pickAt', () => {
     expect(pickAt(10, 760).map((level) => level.target.component)).toEqual(['FeedScreen']);
   });
 
-  it('keeps only scalar props, and never a handler, a style, children or what someone typed', () => {
+  it('keeps numbers and booleans, and a string only under a presentational name', () => {
     const s = scene();
     under(s.header);
     const [header] = pickAt(10, 10);
     expect(header!.target.props).toEqual({
       title: 'Feed',
+      variant: 'plain',
+      label: 'y'.repeat(80),
       count: 3,
       large: true,
-      justFits: 'y'.repeat(80),
     });
+    // Nothing typed, no credential, no contact detail, no id and no URL, under any name.
+    const sent = JSON.stringify(pickAt(10, 10));
+    for (const leak of ['someone', 'hunter2', 'abc', '1234', '8f3a2b1c', 'u_1', 'example.test', 'Something went wrong']) {
+      expect(sent).not.toContain(leak);
+    }
   });
 
   it('keeps at most 12 props', () => {
@@ -441,6 +561,59 @@ describe('pickAt', () => {
     expect(levels[0]!.target.text).toBeUndefined();
     expect(levels[1]!.target.props).toEqual({ label: 'Search' });
     expect(JSON.stringify(levels)).not.toContain('secret');
+  });
+
+  it('never reads a field, or anything editable, in the text of a level around it', () => {
+    const note = host('textarea', { rect: [10, 60, 300, 80], attrs: { 'aria-label': 'Note' } });
+    (el(note) as HTMLTextAreaElement).value = 'typed secret one';
+    // A textarea's default text is its child text node, which `textContent` would hand over.
+    el(note).appendChild(document.createTextNode('typed secret two'));
+    const search = host('input', { rect: [10, 150, 300, 40], attrs: { placeholder: 'Search' } });
+    (el(search) as HTMLInputElement).value = 'typed secret three';
+    const nested = host('span', { rect: [10, 200, 100, 20], text: 'typed secret five' });
+    const rich = host('div', { rect: [10, 200, 300, 40], attrs: { contenteditable: 'true' }, text: 'typed secret four' }, [nested]);
+    const plain = host('div', { rect: [10, 250, 300, 40], attrs: { contenteditable: 'false' }, text: 'Not editable' });
+    const heading = host('div', { rect: [10, 10, 300, 40], text: 'Add a note' });
+    const card = host('div', { rect: [0, 0, 320, 300] }, [heading, note, search, rich, plain]);
+    const screen = host('div', { rect: [0, 0, 480, 700] }, [component(named('Header'), {}, [card])]);
+    mount(component(named('FeedScreen'), {}, [screen]), document.body);
+
+    under(card);
+    const levels = pickAt(20, 20);
+    expect(levels.map((level) => level.target.component)).toEqual(['Header', 'FeedScreen']);
+    expect(levels[0]!.target.text).toBe('Add a note Not editable');
+    // Several things to press or fill in: its text is a row of labels, not a name for it.
+    expect(levels[0]!.title).toBe('FeedScreen › Header');
+    expect(levels[1]!.target.text).toBe('Add a note Not editable');
+    expect(JSON.stringify(levels)).not.toContain('secret');
+    expect(JSON.stringify(pickScreen())).not.toContain('secret');
+
+    // Pointing at the field itself, or at something inside the editable box: still nothing typed.
+    for (const inside of [note, search, rich, nested]) {
+      under(inside);
+      const picked = pickAt(20, 80);
+      expect(picked.length).toBeGreaterThan(0);
+      expect(JSON.stringify(picked)).not.toContain('secret');
+      expect(tapTitle(el(inside), 20, 80)).not.toContain('secret');
+    }
+    under(note);
+    expect(pickAt(20, 80)[0]).toMatchObject({ title: 'Header › Note', target: { label: 'Note', role: 'textbox' } });
+  });
+
+  it('reads text as it shows: one piece per line, inline runs joined, nothing hidden and none of its own UI', () => {
+    const title = host('div', { rect: [0, 0, 200, 20], text: 'Coca-' });
+    el(title).appendChild(document.createElement('span')).textContent = 'Cola';
+    el(title).appendChild(document.createTextNode(' Zero'));
+    const meta = host('div', { rect: [0, 20, 200, 20], text: 'Soda' });
+    el(meta).appendChild(document.createElement('br'));
+    el(meta).appendChild(document.createTextNode('330 ml'));
+    const hidden = host('div', { rect: [0, 0, 0, 0], style: { display: 'none' }, text: 'Another tab entirely' });
+    const own = host('div', { rect: [0, 40, 200, 20], attrs: { [REPORT_UI_ATTR]: 'true' }, text: 'Select element' });
+    const art = host('svg', { rect: [0, 60, 20, 20], text: 'vector title' });
+    const row = host('div', { rect: [0, 0, 200, 100] }, [title, meta, hidden, own, art]);
+    mount(component(named('BevRow'), {}, [row]), document.body);
+    under(row);
+    expect(pickAt(1, 1)[0]!.target.text).toBe('Coca-Cola Zero Soda 330 ml');
   });
 
   it('takes the file of a neighbour for a name two files define', () => {

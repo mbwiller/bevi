@@ -96,13 +96,28 @@ The database half is one migration,
   finite number and `reducedMotion` a boolean). `cleanBreadcrumbs()` keeps the
   most recent 40 entries of four kinds with fixed fields: `nav` (route
   pattern), `api` (method name, error code, status, duration), `tap` (what was
-  tapped, at most 120 characters) and `error` (an uncaught error's message, at
-  most 200). `cleanTargets()` keeps at most 6 pointed-at components: the
+  tapped, at most 120 characters; the app sends taps only while the reporter
+  is recording steps) and `error` (an uncaught error's message, at most 200).
+  `cleanSteps()` keeps at most 30 steps of 300 characters, which is what an
+  explicit recording can hold. `cleanTargets()` keeps at most 6 pointed-at components: the
   component name and each ancestry name must be plain identifiers (a target
   whose name is not is dropped whole), the source file must be a `.ts`/`.tsx`/
   `.js`/`.jsx` path under `app/`, `packages/` or `shared/` with no `..`, at most
   12 props (strings, numbers, booleans) and 12 styles with identifier keys, a
-  rect of four bounded numbers, a screenshot index 0–2 and a mark 1–9.
+  rect of four bounded numbers, a screenshot index 0–2 and a mark 1–9. A prop
+  or style whose key could carry a credential or typed text (it matches
+  `pass|secret|token|auth|cookie|key|pin|otp|code|email|phone|value|text|query|search|note|message|draft|bio`,
+  case-insensitive) is dropped whatever its value, and when the body is built
+  each `key=value` pair goes through `redact()` once more and is dropped if
+  redaction would change it, because the secret-assignment patterns only see
+  key and value together there. The concrete `path` is also dropped when it
+  starts with `//` or has a segment of 24 or more `[A-Za-z0-9_-]` characters
+  that is not a UUID (a reset token or a magic-link code; Bev ids are UUIDs and
+  are kept). The request body is capped at 128 KB (131,072 bytes). With every
+  field at these caps the largest body the app sends is 54,537 bytes in plain
+  ASCII (about 27 KB of it the six targets) and about 94 KB when the free text
+  is all two-byte UTF-8; a body over the cap is refused with 413
+  (`payload_too_large`).
   `cleanCaptions()` keeps one 120-character caption per screenshot. Everything
   else the client sent is dropped, so a future client cannot widen what is
   collected without a server change.
@@ -110,7 +125,11 @@ The database half is one migration,
   reporter text cannot restructure the issue body, and the body opens with a
   line saying so. Values the body prints inside a code span (component names,
   source files, props) have their backticks removed, so none can close the
-  span early. `AGENTS.md` tells agents the same thing in the same words.
+  span early. A target's label, text and role and every screenshot caption
+  have `[`, `]`, `<`, `>`, a `!` before `[` and any backslash escaped, and a
+  trailing backslash stripped, so none can render as a link or a remote image.
+  Tap targets and error messages are printed only inside the Recent activity
+  code fence, where markdown is not rendered, so they are not escaped. `AGENTS.md` tells agents the same thing in the same words.
 - **One draft is one ticket.** The idempotency key is per draft, not per
   attempt. A replay returns the ticket that already exists; a concurrent
   attempt gets 409 rather than a second issue. The write that records the
@@ -121,6 +140,14 @@ The database half is one migration,
   If the provider does not confirm the issue, the client raises instead of
   showing an ID. The same for My reports: a row the ledger does not hold is
   never shown, and a row Linear cannot describe is shown as "unknown".
+- **The place route's not-found says which kind it is, to the owner only.**
+  A ticket that is not in the caller's ledger answers
+  `{ "error": "not_found", "route": "place" }`, whoever owns it. Only once
+  both tickets have passed the ledger check (both are the caller's) does a
+  ticket that is in review, closed, of unknown state or without a manual
+  order answer `{ "error": "not_found", "route": "place", "reason": "not_open" }`,
+  which the client turns into a `conflict`. Neither reveals anything about
+  another reporter's tickets.
 - **Two writes after create, both to the caller's own tickets.**
   `markVerified` moves a ticket to Done, and `place` writes one open ticket's
   `sortOrder` (Linear's manual order) and the priority its new position
@@ -275,8 +302,8 @@ there is enough history for one to mean anything.
 | Describe the problem, steps, expected, actual | Their sections |
 | Automatically included | The Environment section |
 | The components pointed at (up to 6) | The **Pointed at** section, directly after Summary: one numbered block per component (its mark, else its position) with the source file, ancestry, role and label, text, props, how it was drawn, where it sat on screen, and which screenshot and mark show it. Only lines with data are printed; with none, the section says the note is about the whole screen. |
-| Steps the app recorded (`stepsSource: 'recorded'`) | The same numbered list, under a line saying the app recorded them from the reporter's screens and taps |
-| The app's recent activity trail | The Recent activity section, a fenced block of one line per entry: `nav`, `api`, `tap` (what was tapped) and `error` (the message) |
+| Steps from a recording (**Record steps** … stop; `stepsSource: 'recorded'`, up to 30) | The same numbered list, under the line `_Recorded by the app while the reporter reproduced it, not typed by them._` |
+| The app's recent activity trail | The Recent activity section, a fenced block of one line per entry: `nav`, `api`, `error` (the message), and `tap` (what was tapped, only during a recording) |
 | Screenshots (up to 3), each with an optional caption | Images in the Evidence section, each uploaded to Linear's own storage and numbered by its place in the list (the number a pointed-at component's "Screenshot N" refers to). A caption becomes the image's alt text and an italic line under it. |
 | The "which is worse?" placement after filing | The issue's `sortOrder` (Linear's manual order) and its priority, by the bands above; My reports reads the rank back from `sortOrder`, so a drag in Linear moves it there too |
 
@@ -304,10 +331,10 @@ pretend otherwise.
 
 | Suite | Covers |
 |---|---|
-| `supabase/functions/bug-report/test.ts` (Deno, 85 tests) | Redaction; the environment allow-list (including the dropped query-string path and the typed pixel ratio and reduced-motion values), the breadcrumb allow-list (tap and error entries, the 40 cap) and the target allow-list (bad component names, `..` in a file, the 12-entry prop cap, range checks, the 6-target cap) and captions; kind/severity and path validation; the issue template (type and severity line, the exact Pointed at markdown for a full target, a sparse one and none, backticks that cannot close a code span, the recorded-steps line, recent activity, numbered and captioned evidence); every function in `rank.ts` (top, bottom, middle, alone, respacing, the bands, Urgent kept); `routeOf` and the place route's body; the priority mapping, label resolution, state mapping, the Linear client's error mapping, two-step upload, the status query (which selects `sortOrder`), the verify write and `placeIssue`'s request; the reporter-scoped ledger query and the retried ledger write — all against an injected `fetch`. The place route's handler itself (`handlePlace` in `index.ts`) is not exercised: index.ts starts a server when imported. |
+| `supabase/functions/bug-report/test.ts` (Deno, 93 tests) | Redaction; the environment allow-list (including the dropped query-string, `//` and opaque-segment paths with a UUID segment kept, and the typed pixel ratio and reduced-motion values), the 30-step cap, the breadcrumb allow-list (tap and error entries, the 40 cap) and the target allow-list (bad component names, `..` in a file, the 12-entry prop cap, props and styles with sensitive keys dropped, a `key=value` pair redaction catches dropped, ordinary props kept, range checks, the 6-target cap), captions, and link/image escaping in labels, text, roles and captions (including a trailing backslash); kind/severity and path validation; the issue template (type and severity line, the exact Pointed at markdown for a full target, a sparse one and none, backticks that cannot close a code span, the recorded-steps line, recent activity, numbered and captioned evidence); every function in `rank.ts` (top, bottom, middle, alone, respacing, the bands, Urgent kept); `routeOf` and the place route's body; the priority mapping, label resolution, state mapping, the Linear client's error mapping, two-step upload, the status query (which selects `sortOrder`), the verify write and `placeIssue`'s request; the reporter-scoped ledger query and the retried ledger write — all against an injected `fetch`. The place route's handler itself (`handlePlace` in `index.ts`) is not exercised: index.ts starts a server when imported. |
 | `supabase/tests/28_bug_reports.test.sql` (pgTAP, 65 assertions) | The `tester` role and `set_profile_role` (the trigger still refuses a plain update, even from the owner; `authenticated` cannot call it; the bypass flag is reset), the grants (notably that `authenticated` cannot call `finish_bug_report`), the RLS shape, the private bucket and its policy, the authorisation refusal, kind/severity/title/path validation (an over-long title included), the idempotency ledger's cases (in-flight, stale-pending re-arm keeping staged evidence, failed re-arm taking the retry's list), cross-reporter reads returning nothing, the 20-an-hour rate limit, and `forget_bug_evidence`. |
-| `packages/api/test/bugs.test.ts` (vitest, 30 cases) | That nothing is uploaded or invoked before the input validates, that every screenshot goes to the private bucket in order and the function gets only paths (and one caption per path), that targets and the steps source are sent, that no credential is in the request body, the error-code mapping, `listMine` over the status route (including `rank`), `markVerified` over the verify route, `place` over the place route (validation, its own not-found versus a bare 404 from a server that predates ranking, tracker failures), and the refusal of a response with no confirmed ticket. |
-| `app/src/testing/conformance.ts` against the FakeApi (jest) | The bugs refusals for an ordinary and a signed-out account, and, with an internal reporter, `rank` on `listMine` (a new ticket at the top), `place` to the top and below another ticket with the new ranks and priorities, Urgent kept, and its validation and not-found cases (a closed ticket, another reporter's ticket). |
+| `packages/api/test/bugs.test.ts` (vitest, 33 cases) | That nothing is uploaded or invoked before the input validates, that every screenshot goes to the private bucket in order and the function gets only paths (and one caption per path), that targets (the first six) and the steps source are sent, and a thirty-step recording as it is, that no credential is in the request body, the error-code mapping, `listMine` over the status route (including `rank`), `markVerified` over the verify route, `place` over the place route (validation, its own not-found, its `not_open` as a conflict, a bare 404 from a server that predates ranking, tracker failures), and the refusal of a response with no confirmed ticket. |
+| `app/src/testing/conformance.ts` against the FakeApi (jest) | The bugs refusals for an ordinary and a signed-out account, and, with an internal reporter, `rank` on `listMine` (a new ticket at the top), `place` to the top and below another ticket with the new ranks and priorities, Urgent kept, and its validation, not-found (another reporter's ticket, an unknown one) and conflict (`reason: 'not_open'`, a closed ticket of the caller's) cases; and that `report` accepts more than six targets (the first six are kept) and a thirty-step recording. |
 | `app/src/features/bug-report/__tests__/` (jest) | The form's type and severity controls, required-title, success, duplicate, failure-with-retry and draft-restore states; that the screenshot never reaches storage and is sent as a one-element list; the context preview; and the launcher's gating, route capture and absence from the full-screen modals: it is a header action, first in every shared `Header`'s icons, with a floating pill only on the not-found page, which has no header. |
 
 **Not covered, honestly:** the live round trip to Linear. No test in this
@@ -331,7 +358,7 @@ test, and it should be treated as one — see the end-to-end checklist in
 
 - **No console capture.** The breadcrumb trail is navigations, failed API
   calls (method name, code, status, duration), taps (the component and its
-  label) and uncaught errors (the message only, redacted and capped at 200
+  label, only while the reporter is recording steps) and uncaught errors (the message only, redacted and capped at 200
   characters; never a stack or arguments). Captured `console.error` output is
   the easiest way to leak user content into a ticket, and nothing has needed
   it yet.

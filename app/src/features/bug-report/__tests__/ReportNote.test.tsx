@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -9,8 +9,10 @@ import { controls } from '@/testing/fakeApi';
 
 import { captureScreen } from '../capture';
 import type { StorageLike } from '../draft';
+import { startPickMode, type PickModeHandlers } from '../pickMode';
 import ReportHost from '../ReportHost';
-import { markLevels, openBlankNote, resetReport, setReportStorage, useReport } from '../store';
+import { openBlankNote, resetReport, setReportStorage, useReport } from '../store';
+import { startStepRecording, stopStepRecording } from '../trail';
 import type { PickLevel } from '../types';
 
 // The engine is another task's; here it answers as its contract says.
@@ -19,13 +21,16 @@ jest.mock('../capture', () => ({
   releaseShot: jest.fn(),
 }));
 jest.mock('../pick', () => ({ pickAt: jest.fn(() => []), pickScreen: jest.fn(() => null) }));
+jest.mock('../pickMode', () => ({ startPickMode: jest.fn(), isPickModeOn: jest.fn(() => false) }));
 jest.mock('../trail', () => ({
   startTrail: jest.fn(() => () => {}),
   recordNav: jest.fn(),
   routePattern: jest.fn(() => '/feed'),
   trailSnapshot: jest.fn(() => [{ at: '2026-11-13T10:00:00.000Z', kind: 'nav', route: '/feed' }]),
-  recordedSteps: jest.fn(() => ['Open /feed', 'Tap TabBar › Lists']),
   hadRecentFailure: jest.fn(() => false),
+  startStepRecording: jest.fn(),
+  stopStepRecording: jest.fn(() => []),
+  isRecordingSteps: jest.fn(() => false),
 }));
 jest.mock('../infer', () => ({
   inferKind: jest.fn((_n: string, s: { hasTarget: boolean }) => (s.hasTarget ? 'design' : 'bug')),
@@ -38,6 +43,10 @@ jest.mock('@/features/create-bev/photo', () => ({ ...jest.requireActual('@/featu
 
 const mockLibrary = ImagePicker.launchImageLibraryAsync as jest.MockedFunction<typeof ImagePicker.launchImageLibraryAsync>;
 const mockPrepare = preparePhoto as jest.MockedFunction<typeof preparePhoto>;
+const mockPickMode = startPickMode as jest.MockedFunction<typeof startPickMode>;
+const mockStartRec = startStepRecording as jest.MockedFunction<typeof startStepRecording>;
+const mockStopRec = stopStepRecording as jest.MockedFunction<typeof stopStepRecording>;
+const mockCapture = captureScreen as jest.MockedFunction<typeof captureScreen>;
 
 function memory(): StorageLike {
   const map = new Map<string, string>();
@@ -65,13 +74,18 @@ async function renderHost() {
   );
 }
 
-const level = (title: string): PickLevel => ({ target: { component: 'TabBar', label: title }, box: { x: 10, y: 700, width: 80, height: 44 }, title });
-const drop = () => screen.getByTestId('report-drop');
-
-async function pressDrop() {
-  await fireEvent(drop(), 'pointerDown', { nativeEvent: { clientX: 370, clientY: 600, pointerId: 1 } });
-  await fireEvent(drop(), 'pointerUp', { nativeEvent: { clientX: 370, clientY: 600, pointerId: 1 } });
+async function openNote() {
+  await renderHost();
+  await act(async () => openBlankNote());
 }
+
+const bevd: PickLevel = {
+  target: { component: 'SegmentedTabs', label: "Bev'd", file: 'app/src/components/SegmentedTabs.tsx', role: 'tab' },
+  box: { x: 120, y: 200, width: 90, height: 36 },
+  title: "SegmentedTabs › Bev'd",
+};
+const tabs: PickLevel = { target: { component: 'ListsScreen' }, box: { x: 0, y: 0, width: 390, height: 844 }, title: 'ListsScreen' };
+const button = () => screen.getByTestId('report-button');
 
 beforeEach(() => {
   controls.setLatency(0);
@@ -83,6 +97,11 @@ beforeEach(() => {
   client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false, gcTime: Infinity } } });
   mockLibrary.mockReset();
   mockPrepare.mockReset();
+  mockPickMode.mockReset();
+  mockStartRec.mockReset();
+  mockStopRec.mockReset();
+  mockStopRec.mockReturnValue([]);
+  mockCapture.mockClear();
   photoCount = 0;
   mockPrepare.mockImplementation(async () => {
     photoCount += 1;
@@ -96,10 +115,9 @@ afterEach(() => {
 });
 
 describe('the note: several photos (BEV-8)', () => {
-  it('adds one photo, then two more; the tile stops at three; removing one frees a slot; all three are filed', async () => {
+  it('adds one photo, then two more; the action stops at three; removing one frees a slot; all three are filed', async () => {
     const report = jest.spyOn(api.bugs, 'report');
-    await renderHost();
-    await act(async () => openBlankNote());
+    await openNote();
 
     libraryPicks(1);
     await fireEvent.press(screen.getByLabelText('Add photos, 3 left'));
@@ -116,6 +134,8 @@ describe('the note: several photos (BEV-8)', () => {
     expect(full.props.accessibilityState).toMatchObject({ disabled: true });
     await fireEvent.press(full);
     expect(mockLibrary).toHaveBeenCalledTimes(2);
+    // Capture screen is out of pictures too.
+    expect(screen.getByLabelText('Capture screen, 3 pictures is the limit').props.accessibilityState).toMatchObject({ disabled: true });
 
     await fireEvent.press(screen.getByLabelText('Remove photo 2'));
     expect(screen.getAllByLabelText(/^Photo \d$/)).toHaveLength(2);
@@ -132,33 +152,48 @@ describe('the note: several photos (BEV-8)', () => {
   });
 });
 
+describe('the floating button', () => {
+  it('opens an empty note without capturing, and sets it aside when pressed again', async () => {
+    await renderHost();
+    expect(button().props.accessibilityLabel).toBe('Report');
+    await fireEvent.press(button());
+    expect(screen.getByTestId('report-note')).toBeTruthy();
+    expect(screen.getByLabelText("What's going on?")).toBeTruthy();
+    await fireEvent.changeText(screen.getByLabelText("What's going on?"), 'Half typed');
+    await fireEvent.press(button());
+    expect(screen.queryByTestId('report-note')).toBeNull();
+    expect(screen.getByTestId('report-button-aside')).toBeTruthy();
+    expect(button().props.accessibilityValue).toEqual({ text: 'Note set aside' });
+    await fireEvent.press(button());
+    expect(screen.getByLabelText("What's going on?").props.value).toBe('Half typed');
+    expect(mockCapture).not.toHaveBeenCalled();
+  });
+});
+
 describe('the note', () => {
   it('Send clears the panel at once; the outbox goes from sending to sent, and the toast names the ticket', async () => {
-    await renderHost();
-    await act(async () => openBlankNote());
+    await openNote();
     await fireEvent.changeText(screen.getByLabelText("What's going on?"), 'The feed is blank');
     controls.setLatency(100);
     await fireEvent.press(screen.getByRole('button', { name: 'Send' }));
     expect(screen.queryByTestId('report-note')).toBeNull();
     expect(useReport.getState().outbox.map((o) => o.status)).toEqual(['sending']);
     expect(useReport.getState().draft).toBeNull();
-    expect(screen.getByTestId('report-drop-sending')).toBeTruthy();
     expect(await screen.findByText(/^Filed BEV-\d+$/)).toBeTruthy();
     expect(useReport.getState().outbox.map((o) => o.status)).toEqual(['sent']);
     expect(useReport.getState().unplaced).toHaveLength(1);
   });
 
-  it('a failed send keeps the note; pressing the drop restores it and Try again uses the same key', async () => {
+  it('a failed send keeps the note; pressing the button restores it and Try again uses the same key', async () => {
     const report = jest.spyOn(api.bugs, 'report');
-    await renderHost();
-    await act(async () => openBlankNote());
+    await openNote();
     await fireEvent.changeText(screen.getByLabelText("What's going on?"), 'Ratings vanish after a refresh');
     controls.failNext('network', 'bugs.report');
     await fireEvent.press(screen.getByRole('button', { name: 'Send' }));
     await waitFor(() => expect(useReport.getState().outbox[0]?.status).toBe('failed'));
-    expect(screen.getByTestId('report-drop-failed')).toBeTruthy();
+    expect(screen.getByTestId('report-button-failed')).toBeTruthy();
 
-    await pressDrop();
+    await fireEvent.press(button());
     expect(screen.getByLabelText("What's going on?").props.value).toBe('Ratings vanish after a refresh');
     expect(screen.getByText("You're offline. Your note is kept.")).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
@@ -167,22 +202,8 @@ describe('the note', () => {
     expect(report.mock.calls[1]![0].idempotencyKey).toBe(report.mock.calls[0]![0].idempotencyKey);
   });
 
-  it('set aside keeps the note; pressing the drop reopens it', async () => {
-    await renderHost();
-    await act(async () => openBlankNote());
-    await fireEvent.changeText(screen.getByLabelText("What's going on?"), 'Half typed');
-    await fireEvent.press(screen.getByLabelText('Set aside'));
-    expect(screen.queryByTestId('report-note')).toBeNull();
-    expect(screen.getByTestId('report-drop-aside')).toBeTruthy();
-    expect(drop().props.accessibilityValue).toEqual({ text: 'Note set aside' });
-    await pressDrop();
-    expect(screen.getByLabelText("What's going on?").props.value).toBe('Half typed');
-    expect(captureScreen).not.toHaveBeenCalled();
-  });
-
   it('discard asks first', async () => {
-    await renderHost();
-    await act(async () => openBlankNote());
+    await openNote();
     await fireEvent.changeText(screen.getByLabelText("What's going on?"), 'Never mind');
     await fireEvent.press(screen.getByLabelText('Discard'));
     expect(screen.getByText('Discard this note?')).toBeTruthy();
@@ -194,27 +215,191 @@ describe('the note', () => {
     expect(screen.queryByTestId('report-note')).toBeNull();
   });
 
-  it('the kind chip shows the inferred kind and pins the next one on press', async () => {
-    await renderHost();
-    await act(async () => void markLevels([level('TabBar › Add Bev')]));
-    expect(screen.getByLabelText('Type: Design nit. Press to change.')).toBeTruthy();
-    await fireEvent.press(screen.getByLabelText('Type: Design nit. Press to change.'));
-    expect(screen.getByLabelText('Type: Bug. Press to change.')).toBeTruthy();
-    expect(useReport.getState().draft?.kindOverride).toBe('bug');
-    expect(screen.getByLabelText('What about it?')).toBeTruthy();
-    expect(screen.getByLabelText('Mark 1, TabBar › Add Bev')).toBeTruthy();
+  it('the attached line says what goes with the note, not steps, and expands to the full list', async () => {
+    await openNote();
+    const line = screen.getByLabelText(/^Sent with it: /);
+    expect(line.props.accessibilityLabel).not.toMatch(/step/);
+    await fireEvent.press(line);
+    expect(screen.getByText('Only what you see here is sent. Nothing you typed elsewhere.')).toBeTruthy();
+    expect(screen.queryByText('Include recorded steps')).toBeNull();
+  });
+});
+
+describe('the type dropdown', () => {
+  it('opens a menu of the four types with the inferred one checked; picking one closes it and is sent', async () => {
+    const report = jest.spyOn(api.bugs, 'report');
+    await openNote();
+    const trigger = screen.getByLabelText('Type: Bug');
+    expect(trigger.props['aria-haspopup']).toBe('menu');
+    // React Native folds aria-expanded into the accessibility state; react-native-web renders it back.
+    expect(trigger.props.accessibilityState).toMatchObject({ expanded: false });
+    await fireEvent.press(trigger);
+    expect(screen.getByLabelText('Type: Bug').props.accessibilityState).toMatchObject({ expanded: true });
+    const menu = screen.getByLabelText('Type', { exact: true });
+    const rows = within(menu).getAllByLabelText(/^(Bug|Fix suggestion|Idea|Design nit)$/);
+    expect(rows.map((r) => r.props.role)).toEqual(['menuitemradio', 'menuitemradio', 'menuitemradio', 'menuitemradio']);
+    expect(rows.map((r) => r.props.accessibilityLabel)).toEqual(['Bug', 'Fix suggestion', 'Idea', 'Design nit']);
+    expect(rows.map((r) => r.props.accessibilityState?.checked)).toEqual([true, false, false, false]);
+
+    await fireEvent.press(within(menu).getByLabelText('Idea'));
+    expect(screen.queryByLabelText('Type', { exact: true })).toBeNull();
+    expect(screen.getByLabelText('Type: Idea')).toBeTruthy();
+
+    await fireEvent.changeText(screen.getByLabelText("What's going on?"), 'Could we sort by price?');
+    await fireEvent.press(screen.getByRole('button', { name: 'Send' }));
+    await waitFor(() => expect(report).toHaveBeenCalled());
+    expect(report.mock.calls[0]![0].kind).toBe('idea');
   });
 
-  it('the attached line says what goes with the note and expands to the full list', async () => {
-    await renderHost();
-    await act(async () => void markLevels([level('TabBar › Add Bev')]));
-    const line = await screen.findByLabelText(/^Sent with it: 1 picture · 2 recorded steps/);
-    expect(screen.queryByText('Include recorded steps')).toBeNull();
-    await fireEvent.press(line);
-    expect(screen.getByText('Include recorded steps')).toBeTruthy();
-    expect(screen.getByText('1. Open /feed')).toBeTruthy();
-    expect(screen.getByText('Only what you see here is sent. Nothing you typed elsewhere.')).toBeTruthy();
-    await fireEvent(screen.getByLabelText('Include recorded steps'), 'valueChange', false);
-    expect(useReport.getState().draft?.includeSteps).toBe(false);
+  it('closes on a press outside it, choosing nothing', async () => {
+    await openNote();
+    await fireEvent.press(screen.getByLabelText('Type: Bug'));
+    expect(screen.getByLabelText('Type', { exact: true })).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('type-menu-outside'));
+    expect(screen.queryByLabelText('Type', { exact: true })).toBeNull();
+    expect(useReport.getState().draft?.kindOverride).toBeUndefined();
+  });
+});
+
+describe('Select element', () => {
+  function pickModeHandlers() {
+    const stop = jest.fn();
+    const box: { h?: PickModeHandlers } = {};
+    mockPickMode.mockImplementation((h) => {
+      box.h = h;
+      return stop;
+    });
+    return { stop, handlers: () => box.h! };
+  }
+
+  it('steps the note aside for select mode; hover highlights, a pick marks, captures and shows the selection', async () => {
+    const { stop, handlers } = pickModeHandlers();
+    await openNote();
+    await fireEvent.press(screen.getByLabelText('Select element'));
+    expect(mockPickMode).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('report-note')).toBeNull();
+    expect(screen.getByText('Tap what you mean')).toBeTruthy();
+    expect(screen.queryByTestId('report-button')).toBeNull();
+
+    await act(async () => handlers().onHover([bevd, tabs]));
+    expect(screen.getByTestId('report-highlight')).toBeTruthy();
+    expect(screen.getByText("SegmentedTabs › Bev'd")).toBeTruthy();
+
+    await act(async () => handlers().onPick([bevd, tabs]));
+    expect(stop).toHaveBeenCalled();
+    expect(screen.queryByText('Tap what you mean')).toBeNull();
+    expect(await screen.findByLabelText("Mark 1, SegmentedTabs › Bev'd")).toBeTruthy();
+    expect(screen.getByText('SegmentedTabs · app/src/components/SegmentedTabs.tsx')).toBeTruthy();
+    expect(screen.getByLabelText('What about it?')).toBeTruthy();
+    await waitFor(() => expect(mockCapture).toHaveBeenCalledWith([{ box: bevd.box, n: 1 }]));
+    expect(await screen.findByLabelText('Picture of /feed. Press to open.')).toBeTruthy();
+
+    await fireEvent.press(screen.getByLabelText('Wider, mark 1'));
+    expect(screen.getAllByText('ListsScreen').length).toBeGreaterThan(0);
+  });
+
+  it('Cancel ends select mode and brings the note back unchanged', async () => {
+    const { stop } = pickModeHandlers();
+    await openNote();
+    await fireEvent.changeText(screen.getByLabelText("What's going on?"), 'Kept');
+    await fireEvent.press(screen.getByLabelText('Select element'));
+    await fireEvent.press(screen.getByRole('button', { name: 'Cancel' }));
+    expect(stop).toHaveBeenCalled();
+    expect(screen.getByLabelText("What's going on?").props.value).toBe('Kept');
+    expect(useReport.getState().draft?.marks).toEqual([]);
+  });
+
+  it('says so when select mode is not available', async () => {
+    mockPickMode.mockImplementation(() => {
+      throw new Error('pickMode.ts: not implemented');
+    });
+    await openNote();
+    await fireEvent.press(screen.getByLabelText('Select element'));
+    expect(screen.getByTestId('report-note')).toBeTruthy();
+    expect(screen.getByText("Selecting isn't available here.")).toBeTruthy();
+  });
+});
+
+describe('Capture screen', () => {
+  it('adds one whole-screen picture to the note, with its own remove', async () => {
+    await openNote();
+    await fireEvent.press(screen.getByLabelText('Capture screen'));
+    expect(mockCapture).toHaveBeenCalledWith([]);
+    expect(await screen.findByLabelText('Picture of /feed, whole screen. Press to open.')).toBeTruthy();
+    expect(useReport.getState().draft?.shots).toHaveLength(1);
+    await fireEvent.press(screen.getByLabelText('Remove the picture'));
+    expect(useReport.getState().draft?.shots).toHaveLength(0);
+  });
+});
+
+describe('Record steps', () => {
+  it('records from a start the tester chose until Stop; the steps go into the note and are sent', async () => {
+    const report = jest.spyOn(api.bugs, 'report');
+    let onStep: ((steps: string[]) => void) | undefined;
+    mockStartRec.mockImplementation((_route, cb) => {
+      onStep = cb;
+      cb?.(['Start on /feed']);
+    });
+    await openNote();
+    await fireEvent.press(screen.getByLabelText('Record steps'));
+    expect(mockStartRec).toHaveBeenCalledWith('/feed', expect.any(Function));
+    expect(screen.queryByTestId('report-note')).toBeNull();
+    expect(button().props.accessibilityLabel).toBe('Stop recording steps');
+    expect(screen.getByTestId('report-button-stop')).toBeTruthy();
+    expect(screen.getByText('Recording · 1 step')).toBeTruthy();
+
+    await act(async () => onStep!(['Start on /feed', 'Open /lists', "Tap SegmentedTabs › Bev'd"]));
+    expect(screen.getByText('Recording · 3 steps')).toBeTruthy();
+
+    mockStopRec.mockReturnValueOnce(['Start on /feed', 'Open /lists', "Tap SegmentedTabs › Bev'd"]);
+    await fireEvent.press(button());
+    expect(screen.getByTestId('report-note')).toBeTruthy();
+    expect(screen.getByText('1. Start on /feed')).toBeTruthy();
+    expect(screen.getByText("3. Tap SegmentedTabs › Bev'd")).toBeTruthy();
+
+    await fireEvent.changeText(screen.getByLabelText("What's going on?"), "Bev'd shows the wrong count");
+    await fireEvent.press(screen.getByRole('button', { name: 'Send' }));
+    await waitFor(() => expect(report).toHaveBeenCalled());
+    expect(report.mock.calls[0]![0]).toMatchObject({
+      reproductionSteps: ['Start on /feed', 'Open /lists', "Tap SegmentedTabs › Bev'd"],
+      stepsSource: 'recorded',
+    });
+  });
+
+  it('"Record again" starts over and "Remove steps" clears them; with no recording no steps are sent', async () => {
+    const report = jest.spyOn(api.bugs, 'report');
+    await openNote();
+    await fireEvent.press(screen.getByLabelText('Record steps'));
+    mockStopRec.mockReturnValueOnce(['Start on /feed', 'Open /lists']);
+    await fireEvent.press(button());
+    expect(screen.getByText('2. Open /lists')).toBeTruthy();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Record again' }));
+    expect(mockStartRec).toHaveBeenCalledTimes(2);
+    expect(button().props.accessibilityLabel).toBe('Stop recording steps');
+    mockStopRec.mockReturnValueOnce(['Start on /feed']);
+    await fireEvent.press(button());
+    expect(screen.queryByText('2. Open /lists')).toBeNull();
+    expect(screen.getByText('1. Start on /feed')).toBeTruthy();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Remove steps' }));
+    expect(screen.queryByTestId('report-steps')).toBeNull();
+    await fireEvent.changeText(screen.getByLabelText("What's going on?"), 'No steps here');
+    await fireEvent.press(screen.getByRole('button', { name: 'Send' }));
+    await waitFor(() => expect(report).toHaveBeenCalled());
+    expect(report.mock.calls[0]![0].reproductionSteps).toBeUndefined();
+    expect(report.mock.calls[0]![0].stepsSource).toBeUndefined();
+  });
+
+  it('says when the 30-step limit is reached', async () => {
+    let onStep: ((steps: string[]) => void) | undefined;
+    mockStartRec.mockImplementation((_route, cb) => {
+      onStep = cb;
+    });
+    await openNote();
+    await fireEvent.press(screen.getByLabelText('Record steps'));
+    await act(async () => onStep!(Array.from({ length: 30 }, (_, i) => `Open /s${i}`)));
+    expect(screen.getByText('Recording · 30 steps')).toBeTruthy();
+    expect(screen.getByText('30 steps is the limit')).toBeTruthy();
   });
 });

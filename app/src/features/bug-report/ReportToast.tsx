@@ -5,21 +5,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { MAX_FONT_SCALE_DENSE, radius, size, spacing, type, useTheme } from '@/theme';
 
-import { defaultDock, DROP_BOX_H } from './ReportDrop';
+import { BUTTON_SIZE, buttonBottom } from './ReportButton';
 import { REPORT_UI } from './ReportLayer';
 import { hideToast, openRank, useReport } from './store';
 
 const TOAST_MS = 4000;
 
 /**
- * "Filed BEV-14", for about four seconds, next to the drop. "Place it" starts ranking the ticket
+ * "Filed BEV-14", for about four seconds, just above the floating button. "Place it" starts ranking the ticket
  * when there is at least one other open ticket to compare it with.
  */
 export function ReportToast({ canPlace }: { canPlace: (ticketId: string) => boolean }) {
   const { colors, elevation } = useTheme();
   const insets = useSafeAreaInsets();
   const toast = useReport((s) => s.toast);
-  const dock = useReport((s) => s.dock);
   const panelHeight = useReport((s) => (s.panel === 'open' && s.draft ? s.panelHeight : 0));
 
   useEffect(() => {
@@ -29,15 +28,14 @@ export function ReportToast({ canPlace }: { canPlace: (ticketId: string) => bool
   }, [toast]);
 
   if (!toast) return null;
-  const { side, bottom: dockBottom } = dock ?? defaultDock(insets.bottom);
-  const bottom = Math.max(dockBottom, panelHeight + spacing.sm) + DROP_BOX_H + spacing.sm;
+  const bottom = buttonBottom(insets.bottom, panelHeight) + BUTTON_SIZE + spacing.sm;
   const place = toast.duplicate ? false : canPlace(toast.ticketId);
   return (
     <View
       {...REPORT_UI}
       style={[
         styles.toast,
-        side === 'right' ? { right: spacing.sm } : { left: spacing.sm },
+        { right: spacing.sm },
         { bottom, backgroundColor: colors.surface, borderColor: colors.border, boxShadow: elevation.floating },
       ]}
       accessibilityLiveRegion="polite"

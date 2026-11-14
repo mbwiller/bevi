@@ -2,9 +2,17 @@ import type { BugBreadcrumb, BugReportKind } from '@bevi/shared';
 
 import { captureScreen, releaseShot } from './capture';
 import { inferKind, titleFor } from './infer';
-import { pickAt } from './pick';
-import { hadRecentFailure, recordedSteps, recordNav, routePattern, startTrail, trailSnapshot } from './trail';
-import type { CaptureMark, PickLevel, Shot } from './types';
+import { startPickMode, type PickModeHandlers } from './pickMode';
+import {
+  hadRecentFailure,
+  recordNav,
+  routePattern,
+  startStepRecording,
+  startTrail,
+  stopStepRecording,
+  trailSnapshot,
+} from './trail';
+import type { CaptureMark, Shot } from './types';
 
 /**
  * The reporter's UI reaches the engine (pick, capture, trail, infer) only through these. Each one
@@ -13,10 +21,57 @@ import type { CaptureMark, PickLevel, Shot } from './types';
  * of an internal account, including the ones they are trying to report.
  */
 
-export function safePickAt(x: number, y: number): PickLevel[] {
+/**
+ * Select mode on, or null when it could not be turned on (the engine threw or answered with
+ * something that isn't a stop function). The handlers are guarded too: a throw inside one is the
+ * UI's bug, and must not leave select mode stuck on.
+ */
+export function safeStartPickMode(handlers: PickModeHandlers): (() => void) | null {
+  const guard =
+    <A extends unknown[]>(fn: (...args: A) => void) =>
+    (...args: A) => {
+      try {
+        fn(...args);
+      } catch {
+        // Nothing to do: the reporter's own state is unchanged.
+      }
+    };
   try {
-    const levels = pickAt(x, y);
-    return Array.isArray(levels) ? levels : [];
+    const stop = startPickMode({
+      onHover: guard((levels) => handlers.onHover(Array.isArray(levels) ? levels : [])),
+      onPick: guard((levels) => handlers.onPick(Array.isArray(levels) ? levels : [])),
+      onCancel: guard(() => handlers.onCancel()),
+    });
+    if (typeof stop !== 'function') return null;
+    return () => {
+      try {
+        stop();
+      } catch {
+        // Already off.
+      }
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Starts a step recording; false when the engine couldn't. */
+export function safeStartStepRecording(startRoute: string, onStep: (steps: string[]) => void): boolean {
+  try {
+    startStepRecording(startRoute, (steps) => {
+      if (Array.isArray(steps)) onStep(steps.filter((x): x is string => typeof x === 'string'));
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Stops the recording and returns its steps; [] when there was none or the engine threw. */
+export function safeStopStepRecording(): string[] {
+  try {
+    const steps = stopStepRecording();
+    return Array.isArray(steps) ? steps.filter((x): x is string => typeof x === 'string') : [];
   } catch {
     return [];
   }
@@ -73,15 +128,6 @@ export function safeTrailSnapshot(): BugBreadcrumb[] {
   try {
     const crumbs = trailSnapshot();
     return Array.isArray(crumbs) ? crumbs : [];
-  } catch {
-    return [];
-  }
-}
-
-export function safeRecordedSteps(crumbs: readonly BugBreadcrumb[]): string[] {
-  try {
-    const steps = recordedSteps(crumbs);
-    return Array.isArray(steps) ? steps : [];
   } catch {
     return [];
   }

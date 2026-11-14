@@ -33,8 +33,8 @@ export default function SettingsIndexScreen() {
         <SettingsRow label="Account" onPress={() => router.push('/settings/account')} />
         <SettingsRow label="Privacy" onPress={() => router.push('/settings/privacy')} />
       </SettingsSection>
-      {/* Internal only, and only a second way in: the drop on every screen is the one that can
-          point at what is wrong. These open the note (with no capture) and the reports sheet. */}
+      {/* Internal only, and only a second way in: the report button on every screen is the main
+          one. These open the note (with no capture) and the reports sheet. */}
       {canReportBug ? (
         <SettingsSection title="Internal">
           <SettingsRow label="Report a bug" onPress={() => requestReport('note')} />

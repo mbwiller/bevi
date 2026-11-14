@@ -76,8 +76,8 @@ describe('the bug reporter, for an internal reporter', () => {
   });
   afterEach(() => controls.resetToFixtures());
 
-  // The drop itself is covered by features/bug-report (ReportDrop.test.tsx).
-  it("puts the drop on the Feed and nothing in the Feed header's actions", async () => {
+  // The button itself is covered by features/bug-report (ReportButton.test.tsx).
+  it("puts the report button on the Feed and nothing in the Feed header's actions", async () => {
     await start('ready', '/feed');
     expect(await screen.findByRole('button', { name: 'Report' })).toBeTruthy();
     const header = screen.getByLabelText('Find people').parent!;
@@ -85,7 +85,7 @@ describe('the bug reporter, for an internal reporter', () => {
     expect(screen.queryByLabelText('Report a bug')).toBeNull();
   });
 
-  it('keeps the drop on the not-found page, which has no header', async () => {
+  it('keeps the report button on the not-found page, which has no header', async () => {
     await start('ready', '/no/such/page');
     await screen.findByText('Page not found');
     expect(await screen.findByRole('button', { name: 'Report' })).toBeTruthy();
