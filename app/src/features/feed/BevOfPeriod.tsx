@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { useBevOfPeriod, useMe } from '@/api/hooks';
-import { BevOfCard, type BevOfCardPeriod, type BevOfPeriodKind } from '@/components/BevOfCard';
+import { BevOfCard, type BevOfPeriodKind } from '@/components/BevOfCard';
 import { Skeleton } from '@/components/Skeleton';
 import { categoryById } from '@/lib/categories';
 import { formatPeriodStart } from '@/lib/time';
@@ -11,9 +11,9 @@ import { spacing } from '@/theme';
 
 const PERIODS: BevOfPeriodKind[] = ['day', 'week'];
 
-/** One card in the row: a period's winner, or the one Bev that won both. */
+/** One card in the row: a period's winner. */
 interface Card {
-  period: BevOfCardPeriod;
+  period: BevOfPeriodKind;
   winner: PeriodWinner;
   date?: string;
 }
@@ -24,17 +24,11 @@ function dateOf(winner: PeriodWinner, period: BevOfPeriodKind): string | undefin
 }
 
 /**
- * The row's cards. When the same Bev won the day and the week, and both wins are current or both are
- * from earlier periods, it is one `both` card. Both current: no date. Both earlier: the day's date, the
- * more exact of the two (the last day anything was ranked lies in the last week anything was).
- * When only one of the two wins is current, a single card could not say which period its date belongs
- * to ("Bev of the day and week, Week of Oct 12" reads as if the day were old), so the row keeps its
- * usual two cards, each with its own label and date.
+ * The row's cards: one per period that has a winner, day first. The same Bev winning the day and the
+ * week is still two cards, each with its own label and date (BEV-10): merged into one, the row looked
+ * as if a winner were missing.
  */
 export function bevOfPeriodCards(day: PeriodWinner | null, week: PeriodWinner | null): Card[] {
-  if (day && week && day.bev.id === week.bev.id && day.isCurrent === week.isCurrent) {
-    return [{ period: 'both', winner: day, date: dateOf(day, 'day') }];
-  }
   return PERIODS.flatMap((period) => {
     const winner = period === 'day' ? day : week;
     return winner ? [{ period, winner, date: dateOf(winner, period) }] : [];
@@ -43,9 +37,9 @@ export function bevOfPeriodCards(day: PeriodWinner | null, week: PeriodWinner | 
 
 /**
  * M-05: Bev of the day and Bev of the week, side by side under the Feed's search bar (the slot
- * Featured Bevs had). A winner from an earlier period carries its date. The same Bev winning both is
- * one card, "Bev of the day and week", at the width one of the pair has. Like Featured before it, this
- * is a nice-to-have above the feed: no winner at all, or an error, leaves the row out.
+ * Featured Bevs had). A winner from an earlier period carries its date. The same Bev winning both
+ * shows twice, once per period. Like Featured before it, this is a nice-to-have above the feed: no
+ * winner at all, or an error, leaves the row out.
  */
 export function BevOfPeriod() {
   const router = useRouter();
@@ -83,7 +77,7 @@ export function BevOfPeriod() {
           onPress={() => router.push({ pathname: '/bev/[id]', params: { id: winner.bev.id } })}
         />
       ))}
-      {/* A lone card (one winner, or one Bev that won both) keeps half the row, on the left. */}
+      {/* A lone winner keeps half the row, on the left. */}
       {cards.length === 1 ? <View style={styles.half} testID="bev-of-period-spacer" /> : null}
     </View>
   );
