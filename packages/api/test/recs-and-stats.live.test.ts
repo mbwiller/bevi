@@ -163,7 +163,8 @@ describe.skipIf(!url || !publishableKey)('recommendations, predictions and stats
 
       const dups = await api.bevs.findLikelyDuplicates({ name: full.name, brand: full.brand ?? undefined, flavor: full.flavor ?? undefined });
       const same = dups.find((d) => d.id === full.id);
-      expect(same).toMatchObject({ categoryId: full.categoryId, priceTier: full.priceTier });
+      // 20261113000100: the duplicate check reads the same bev_icons row get_bev does.
+      expect(same).toMatchObject({ categoryId: full.categoryId, priceTier: full.priceTier, iconUrl: full.iconUrl });
     } finally {
       await api.deleteAccount();
     }
