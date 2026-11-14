@@ -188,8 +188,7 @@ export declare function FeaturedCard(props: FeaturedCardProps): React.ReactEleme
 
 /** Bev of the day / Bev of the week on the Feed: half of a pair, a caps label, the Bev's square tile (it follows the card's width), its name and the score it won with. Not a post. */
 export interface BevOfCardProps {
-  /** `both`: the same Bev won the day and the week, so the Feed shows this one card ("Bev of the day and week") at the width one of the pair has. */
-  period?: 'day' | 'week' | 'both'; bev: Bev;
+  period?: 'day' | 'week'; bev: Bev;
   /** The Bayesian score it won with. */
   score?: number | null;
   /** Only when the winner is from an earlier period: "Oct 17" (day), "Week of Oct 12" (week). */

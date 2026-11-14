@@ -303,8 +303,6 @@
 .bv-bevof-pair > .bv-bevof:only-child { flex: 0 1 calc(50% - var(--space-lg) / 2); }
 .bv-bevof .bv-bevimg { width: 100% !important; height: auto !important; aspect-ratio: 1 / 1; }
 .bv-bevof-label { color: var(--textSecondary); }
-/* One card for both periods keeps half the row; its longer label runs past the tile instead of wrapping. */
-.bv-bevof-both .bv-bevof-label { white-space: nowrap; }
 .bv-bevof-foot { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-sm); }
 .bv-bevof-name { min-width: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .bv-bevof-date { margin-top: calc(-1 * var(--space-xs)); color: var(--textSecondary); }
