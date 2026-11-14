@@ -150,3 +150,29 @@ export function hadRecentFailure(crumbs: readonly BugBreadcrumb[], withinMs: num
     return Number.isFinite(at) && end - at <= withinMs && at - end <= withinMs;
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// STUB (signatures only; the engine task replaces these bodies and removes this banner).
+// Explicit step recording: steps exist only between a start and a stop the reporter pressed.
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * Starts recording steps. The first step is `Start on <startRoute>`; from then until
+ * `stopStepRecording`, every screen change ('Open /lists') and every tap outside the reporter's
+ * own UI ('Tap SegmentedTabs › Want to Try') is a step, at most 30, consecutive repeats collapsed.
+ * `onStep` is called with a copy of the steps so far after each one, the first included. Starting
+ * again discards a recording in progress. Nothing typed is ever a step.
+ */
+export function startStepRecording(_startRoute: string, _onStep?: (steps: string[]) => void): void {
+  throw new Error('trail.ts: startStepRecording not implemented');
+}
+
+/** Stops recording and returns the steps (a copy). [] when no recording was running. */
+export function stopStepRecording(): string[] {
+  throw new Error('trail.ts: stopStepRecording not implemented');
+}
+
+/** Whether a step recording is running. */
+export function isRecordingSteps(): boolean {
+  throw new Error('trail.ts: isRecordingSteps not implemented');
+}
