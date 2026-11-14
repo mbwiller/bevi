@@ -75,11 +75,7 @@ interface FindSimilarRpcRow {
   price_estimated: boolean;
   rating_count: number;
   bayes_score: number | null;
-  /**
-   * Not returned yet: find_similar_bevs is re-created by open PR #197, so its
-   * icon column follows in a later migration. Until then this is undefined and
-   * maps to a null iconUrl.
-   */
+  /** 20261113000100; absent on a database without it, where it maps to a null iconUrl. */
   icon_path?: string | null;
 }
 
