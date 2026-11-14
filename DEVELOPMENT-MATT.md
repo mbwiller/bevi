@@ -328,7 +328,7 @@ Common to every screen unless noted: loading = skeleton of the final layout; err
 
 ### 6.5 Your Lists tab: Bev'd (ref 06)
 
-- Contents: header "YOUR LISTS" centred, share icon (Phase 3) right; `ListScopeDropdown` "All ⌄" (All Bevs / one category); `SegmentedTabs underline-text` Bev'd · Want to Try · Recommended; filter row: `FilterPill` with count (opens a sheet: bucket, price tier, category), then `SortToggle` "↓↑ Score" (toggles Score / Recent / Name) with a search icon that reveals an inline search field. Rows: `BevRow` numbered "1. Diet Coke", line 2 category icon + "Diet soda · Coca-Cola", bottom-left "Ranked Oct 3", `ScoreBubble 40` coloured by bucket. One list sorted by score, as in the reference; buckets show through colour, not sections.
+- Contents: header "YOUR LISTS" centred, share icon (Phase 3) right; `ListScopeDropdown` "All ⌄" (All Bevs / one category); `SegmentedTabs underline-text` Bev'd · Want to Try · Recommended; filter row: `FilterPill` with count (opens a sheet: reaction, price tier, category), then `SortToggle` "↓↑ Score" (toggles Score / Recent / Name) with a search icon that reveals an inline search field. Rows: `BevRow` numbered "1. Diet Coke", line 2 category icon + "Diet soda · Coca-Cola", bottom-left "Ranked Oct 3", `ScoreBubble 40` coloured by bucket. One list sorted by score, as in the reference; buckets show through colour, not sections.
 - Data: `rankings.listMine({ bucket?, categoryId?, sort, cursor })` ordered by `(bucket desc, position)`; the numbering is the global index across buckets.
 - States: nothing ranked → "Add your first Bev" CTA to the Search tab; filter yields nothing; a Bev whose photo is still processing shows the shimmer tile.
 - Interactions: tap → Bev detail; long-press/swipe → sheet: Re-rank (6.9 via `rerankBev`), Edit note, Remove (confirm; explains other scores in that bucket shift).
@@ -364,7 +364,7 @@ The centre tab, labelled **Search** since M-15 ([#104](https://github.com/mbwill
 
 ### 6.9 Ranking flow (`rank/[bevId]`), full-screen modal (no reference screenshot)
 
-- Step 1 Gut check: `BevImage 155`, name, brand, a centred "How was it?" and three `BucketButton`s in a row: Loved it / It was okay / Not for me, each a `primary` ring filled to a level (full, half, empty) over its label.
+- Step 1 Gut check: `BevImage 155`, name, brand, a centred "How was it?" and three `BucketButton`s in a row, worst to best: Not for me / It was okay / Loved it, each a `primary` ring filled to a level (empty, half, full) over its label, so the rings fill up towards the right.
 - Step 2 Compare: two stacked cards (new Bev on top, incumbent below; each `BevImage 96` left, name 20pt bold, brand 15pt), prompt "Which was better?", tap a card; secondary row: "Too close to call" (outlined `Pill`) and Undo (text); progress dots = `maxComparisons(n)`; card swap animates 250ms; prefetch both possible next candidates after each answer.
 - Step 3 Note: optional 140-char note ("Tastes like flat Sprite"), Skip.
 - Step 4 Result: `ScoreBubble 56` animates in, "#4 of 31 in Loved · 8.9", Done. Every ranking is a feed item; no separate share step.

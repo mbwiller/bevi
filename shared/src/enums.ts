@@ -8,7 +8,7 @@
  */
 export type Bucket = 'LOVED' | 'FINE' | 'DISLIKED';
 
-/** Best bucket first: the order lists and the gut-check buttons use. */
+/** Best bucket first: the order lists, filters, counts and sorting use. */
 export const BUCKET_ORDER: readonly Bucket[] = ['LOVED', 'FINE', 'DISLIKED'];
 
 /** Gut-check copy, per the design system's voice. */
