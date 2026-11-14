@@ -52,6 +52,8 @@ interface SearchBevRpcRow {
   rating_count: number;
   avg_score: number | null;
   bayes_score: number | null;
+  /** 20261112000300; absent on a database without it. */
+  icon_path?: string | null;
 }
 
 function mapSearchRow(client: SupabaseClient, row: SearchBevRpcRow): BevSummary {
@@ -73,6 +75,8 @@ interface FindSimilarRpcRow {
   price_estimated: boolean;
   rating_count: number;
   bayes_score: number | null;
+  /** 20261113000100; absent on a database without it, where it maps to a null iconUrl. */
+  icon_path?: string | null;
 }
 
 interface GetBevRpcRow {
@@ -94,6 +98,8 @@ interface GetBevRpcRow {
   avg_score: number | null;
   score_stddev: number | null;
   bayes_score: number | null;
+  /** 20261112000300; absent on a database without it. */
+  icon_path?: string | null;
 }
 
 export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache): BevsApi {
@@ -189,6 +195,7 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
       flavor: row.flavor,
       category_id: row.category_id,
       photo_path: row.photo_path,
+      icon_path: row.icon_path,
       price_tier: row.price_tier,
       price_estimated: row.price_estimated,
       bev_stats: {
@@ -245,6 +252,7 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
         flavor: row.flavor,
         category_id: row.category_id,
         photo_path: row.thumb_path,
+        icon_path: row.icon_path,
         price_tier: row.price_tier,
         price_estimated: row.price_estimated,
         bev_stats: { rating_count: row.rating_count, avg_score: null, score_stddev: null, bayes_score: row.bayes_score },
@@ -289,7 +297,7 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
     await requireUserId(client);
     // `bevs_select` RLS already age-filters; `is_starter` Bevs are
     // seeded active, so no extra filtering needed here.
-    const { data, error } = await client.from('bevs').select('*, bev_stats(*)').eq('is_starter', true).eq('status', 'active');
+    const { data, error } = await client.from('bevs').select('*, bev_stats(*), bev_icons(path)').eq('is_starter', true).eq('status', 'active');
     if (error) throw mapError(error);
     return (data ?? []).map((row) => mapBevSummary(client, row as unknown as BevSummaryRow));
   }

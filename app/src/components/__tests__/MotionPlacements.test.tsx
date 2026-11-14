@@ -37,6 +37,7 @@ const BEV: BevSummary = {
   flavor: null,
   categoryId: 'other',
   photoUrl: null,
+  iconUrl: null,
   photoStatus: 'ready',
   priceTier: 2,
   priceEstimated: false,

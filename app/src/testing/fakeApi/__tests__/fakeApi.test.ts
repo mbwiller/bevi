@@ -115,6 +115,42 @@ describe('fixtures through the API', () => {
     const bev = await api.bevs.create(input);
     expect(bev).toMatchObject({ photoStatus: 'ready', photoUrl: up.url });
   });
+
+  it('findLikelyDuplicates ranks the chosen category first and never filters by it (20261112000100)', async () => {
+    // The 2026-11-09 incident: a Red Bull flavour created under Sports Drinks by mistake. The
+    // catalog's Red Bulls are all `energy`; the duplicate check must still offer them.
+    let now = new Date('2026-10-11T12:00:00Z');
+    const api = new FakeApi({ storage: null, latency: 0, now: () => now });
+    await signInMe(api);
+    const up = await api.media.upload({ kind: 'bev-photo', file: new Blob(['x']), mimeType: 'image/jpeg' });
+    now = new Date(now.getTime() + 5000);
+    const sports = await api.bevs.create({
+      name: 'Red Bull',
+      brand: 'Red Bull',
+      flavor: 'Fiji Apple & Ginger',
+      categoryId: 'sports',
+      priceTier: 1,
+      priceEstimated: false,
+      photoAssetId: up.assetId,
+    });
+
+    const inSports = await api.bevs.findLikelyDuplicates({ name: 'Red Bull', categoryId: 'sports' });
+    expect(inSports[0]?.id).toBe(sports.id);
+    expect(inSports.map((b) => b.id)).toContain('red-bull-original');
+    expect(inSports.slice(1).every((b) => b.categoryId === 'energy')).toBe(true);
+
+    const inEnergy = await api.bevs.findLikelyDuplicates({ name: 'Red Bull', categoryId: 'energy' });
+    expect(inEnergy.map((b) => b.categoryId)).toEqual(['energy', 'energy', 'energy', 'energy', 'sports']);
+
+    const asTyped = await api.bevs.findLikelyDuplicates({
+      name: 'Red Bull',
+      brand: 'Red Bull',
+      flavor: 'Fiji Apple & Ginger',
+      categoryId: 'sports',
+    });
+    expect(asTyped[0]?.id).toBe(sports.id);
+    expect(asTyped.map((b) => b.id)).toContain('red-bull-original');
+  });
 });
 
 describe('persistence', () => {

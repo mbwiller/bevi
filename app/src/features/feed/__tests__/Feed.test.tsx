@@ -67,7 +67,7 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-/** The cards' accessible names for the winners, as BevOfPeriod renders them (one card when one Bev won both). */
+/** The cards' accessible names for the winners, as BevOfPeriod renders them (one card per period). */
 function cardNames(day: PeriodWinner | null, week: PeriodWinner | null): string[] {
   return bevOfPeriodCards(day, week).map((c) => bevOfCardLabel(c.period, c.winner.bev.name, c.winner.bev.bayesScore, c.date));
 }

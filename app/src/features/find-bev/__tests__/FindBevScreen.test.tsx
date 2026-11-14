@@ -2,9 +2,9 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Linking, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import MapTab from '@/app/(tabs)/map/index';
-
-import { FIND_BEV_BODY, FIND_BEV_CAPTION, FIND_BEV_LINK_LABEL, FIND_BEV_TITLE } from '../FindBevScreen';
+// The Map tab route wraps this screen with the internal camera-test entry (spike/MapTabWithSpike, which
+// has its own suite and needs a QueryClient), so this suite renders the screen directly.
+import { FIND_BEV_BODY, FIND_BEV_CAPTION, FIND_BEV_LINK_LABEL, FIND_BEV_TITLE, FindBevScreen as MapTab } from '../FindBevScreen';
 import { BEV_MAPS_URL } from '../links';
 
 const METRICS = { frame: { x: 0, y: 0, width: 393, height: 852 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } };

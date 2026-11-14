@@ -16,10 +16,14 @@
 //   * `issueLabels(filter: { name: { in } })` -> the workspace's and the team's
 //     labels of the four kind names (Bug, Fix suggestion, Idea, Design nit),
 //     since Linear's default `Bug` label lives at workspace level.
-//   * `issues(filter)` -> state, priority and updatedAt for the caller's
-//     tickets, which My reports shows.
-//   * `issue(id)` + `issueUpdate` -> the one write after create: moving a
-//     ticket the reporter verified on the device to Done.
+//   * `issues(filter)` -> state, priority, updatedAt and sortOrder for the
+//     caller's tickets, which My reports shows (sortOrder is the rank).
+//   * `issue(id)` + `issueUpdate` -> the two writes after create: moving a
+//     ticket the reporter verified on the device to Done, and placing one in
+//     the reporter's ranked list (`sortOrder`, and the priority that position
+//     implies; rank.ts). Linear's schema documents `Issue.sortOrder: Float!`
+//     and `IssueUpdateInput.sortOrder`/`priority`; this code has not yet run
+//     against the real API.
 //
 // Priority IS set on create, from the reporter's severity (docs/bug-workflow.md):
 // Blocker 1, Bad 2, Annoying 3, Polish 4. Triage can still change it with the
@@ -335,6 +339,8 @@ export interface IssueStatus {
   stateLabel: string | null;
   priority: number | null;
   updatedAt: string | null;
+  /** Linear's manual order, lower first; null when Linear did not send one. */
+  sortOrder: number | null;
 }
 
 interface IssueNode {
@@ -342,6 +348,7 @@ interface IssueNode {
   state: { name: string; type: string } | null;
   priority: number | null;
   updatedAt: string | null;
+  sortOrder?: number | null;
 }
 
 function toStatus(node: IssueNode): IssueStatus {
@@ -351,13 +358,14 @@ function toStatus(node: IssueNode): IssueStatus {
     stateLabel: node.state?.name ?? null,
     priority: typeof node.priority === "number" ? node.priority : null,
     updatedAt: node.updatedAt ?? null,
+    sortOrder: typeof node.sortOrder === "number" && Number.isFinite(node.sortOrder) ? node.sortOrder : null,
   };
 }
 
 const ISSUE_STATUSES_QUERY = `
   query IssueStatuses($teamId: ID!, $numbers: [Float!]!) {
     issues(filter: { team: { id: { eq: $teamId } }, number: { in: $numbers } }, first: 50) {
-      nodes { identifier state { name type } priority updatedAt }
+      nodes { identifier state { name type } priority updatedAt sortOrder }
     }
   }
 `;
@@ -372,7 +380,7 @@ export function issueNumber(identifier: string): number | null {
   return m ? Number(m[1]) : null;
 }
 
-/** State, priority and updatedAt for the team's issues with these numbers (at most 50). */
+/** State, priority, updatedAt and sortOrder for the team's issues with these numbers (at most 50). */
 export async function fetchIssueStatuses(config: LinearConfig, fetchImpl: FetchLike, numbers: number[]): Promise<IssueStatus[]> {
   if (!numbers.length) return [];
   const data = await graphql<IssueStatusesData>(config, fetchImpl, ISSUE_STATUSES_QUERY, {
@@ -402,13 +410,20 @@ const ISSUE_UPDATE_MUTATION = `
   mutation IssueUpdate($id: String!, $input: IssueUpdateInput!) {
     issueUpdate(id: $id, input: $input) {
       success
-      issue { identifier state { name type } priority updatedAt }
+      issue { identifier state { name type } priority updatedAt sortOrder }
     }
   }
 `;
 
 interface IssueUpdateData {
   issueUpdate: { success: boolean; issue: IssueNode | null } | null;
+}
+
+async function updateIssue(config: LinearConfig, fetchImpl: FetchLike, issueId: string, input: Record<string, unknown>): Promise<IssueStatus> {
+  const data = await graphql<IssueUpdateData>(config, fetchImpl, ISSUE_UPDATE_MUTATION, { id: issueId, input });
+  const issue = data.issueUpdate?.issue;
+  if (!data.issueUpdate?.success || !issue) throw new LinearError("linear_update_failed", "Linear did not confirm the update");
+  return toStatus(issue);
 }
 
 /** Moves one issue to a state and returns what Linear says it is now. */
@@ -418,10 +433,26 @@ export async function updateIssueState(
   issueId: string,
   stateId: string,
 ): Promise<IssueStatus> {
-  const data = await graphql<IssueUpdateData>(config, fetchImpl, ISSUE_UPDATE_MUTATION, { id: issueId, input: { stateId } });
-  const issue = data.issueUpdate?.issue;
-  if (!data.issueUpdate?.success || !issue) throw new LinearError("linear_update_failed", "Linear did not confirm the update");
-  return toStatus(issue);
+  return await updateIssue(config, fetchImpl, issueId, { stateId });
+}
+
+/**
+ * Writes one issue's place in the manual order, and the priority that place
+ * implies when one is given (a respacing write leaves priority alone). Looks
+ * the issue up by identifier the way `verify` does; null when Linear has no
+ * such issue. Same error codes as every other call here.
+ */
+export async function placeIssue(
+  config: LinearConfig,
+  fetchImpl: FetchLike,
+  identifier: string,
+  placement: { sortOrder: number; priority?: number },
+): Promise<IssueStatus | null> {
+  const issueId = await findIssueId(config, fetchImpl, identifier);
+  if (!issueId) return null;
+  const input: Record<string, unknown> = { sortOrder: placement.sortOrder };
+  if (placement.priority !== undefined) input.priority = placement.priority;
+  return await updateIssue(config, fetchImpl, issueId, input);
 }
 
 // ---------------------------------------------------------------------------

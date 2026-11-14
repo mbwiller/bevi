@@ -141,11 +141,12 @@ values ('00000000-0000-4000-8000-0000000000d1', (select id from t_bevs where lab
 -- ---------------------------------------------------------------------------
 
 -- get_explore's TABLE(...) is get_feed's with the last four columns cut, so
--- dropping its closing paren leaves a prefix of get_feed's.
+-- dropping its closing paren leaves a prefix of get_feed's. Since
+-- 20261112000300 both also end in bev_icon_path, which is set aside first.
 select ok(
   starts_with(
-    pg_get_function_result('public.get_feed(int, bigint)'::regprocedure),
-    left(pg_get_function_result('public.get_explore(int, timestamptz, int)'::regprocedure), -1)
+    replace(pg_get_function_result('public.get_feed(int, bigint)'::regprocedure), ', bev_icon_path text', ''),
+    left(replace(pg_get_function_result('public.get_explore(int, timestamptz, int)'::regprocedure), ', bev_icon_path text', ''), -1)
   ),
   'get_explore returns get_feed''s columns, in order, up to in_my_want_to_try'
 );

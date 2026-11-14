@@ -263,6 +263,11 @@ export interface BevStatsRow {
   bayes_score: number | null;
 }
 
+/** The `bev_icons(path)` embed (20261112000200): one row per Bev that has an icon. */
+export interface BevIconRow {
+  path: string;
+}
+
 export interface BevSummaryRow {
   id: string;
   name: string;
@@ -273,11 +278,32 @@ export interface BevSummaryRow {
   price_tier: number;
   price_estimated: boolean;
   bev_stats?: BevStatsRow | BevStatsRow[] | null;
+  /**
+   * The icon's object key in the `bev-icons` bucket, as the RPCs return it
+   * (`icon_path` / `bev_icon_path`, 20261112000300). Optional: a database
+   * without that migration does not return the column, and that reads as "no
+   * icon".
+   */
+  icon_path?: string | null;
+  /** The same key through a PostgREST embed, `bevs(..., bev_icons(path))`. */
+  bev_icons?: BevIconRow | BevIconRow[] | null;
 }
 
 function oneBevStats(stats: BevSummaryRow['bev_stats']): BevStatsRow | null {
   if (!stats) return null;
   return Array.isArray(stats) ? stats[0] ?? null : stats;
+}
+
+// bev_icons.bev_id is the table's primary key, so PostgREST embeds it as one
+// object or null; an array is handled anyway, as for bev_stats.
+function oneBevIcon(icon: BevSummaryRow['bev_icons']): BevIconRow | null {
+  if (!icon) return null;
+  return Array.isArray(icon) ? icon[0] ?? null : icon;
+}
+
+/** A Bev's icon path, however the row carries it; null when it has none or the server did not say. */
+function iconPathOf(row: BevSummaryRow): string | null {
+  return row.icon_path ?? oneBevIcon(row.bev_icons)?.path ?? null;
 }
 
 export function mapBevSummary(client: SupabaseClient, row: BevSummaryRow): BevSummary {
@@ -289,6 +315,7 @@ export function mapBevSummary(client: SupabaseClient, row: BevSummaryRow): BevSu
     flavor: row.flavor,
     categoryId: row.category_id as CategoryId,
     photoUrl: publicUrl(client, 'bev-photos', row.photo_path),
+    iconUrl: publicUrl(client, 'bev-icons', iconPathOf(row)),
     // Placeholder until the process-photo pipeline (milestone 1.6) exists:
     // there's no column tracking async background-removal state yet, so
     // once a Bev has a photo_path it's treated as 'ready'.
@@ -472,6 +499,8 @@ export interface FeedRpcRow {
   bev_status: string | null;
   bev_rating_count: number | null;
   bev_bayes_score: number | null;
+  /** 20261112000300; optional for the same reason as `also_bevd`. */
+  bev_icon_path?: string | null;
   score: number | null;
   bucket: number | null;
   note: string | null;
@@ -568,6 +597,7 @@ export function mapExplorePost(client: SupabaseClient, row: ExploreRpcRow, actor
       flavor: row.bev_flavor,
       categoryId: row.bev_category_id as CategoryId,
       photoUrl: publicUrl(client, 'bev-photos', row.bev_thumb_path),
+      iconUrl: publicUrl(client, 'bev-icons', row.bev_icon_path ?? null),
       photoStatus: 'ready',
       priceTier: (row.bev_price_tier ?? 1) as PriceTier,
       priceEstimated: row.bev_price_estimated ?? true,
@@ -628,6 +658,8 @@ export interface BevOfPeriodRpcRow {
   bev_price_estimated: boolean;
   bev_rating_count: number;
   bev_bayes_score: number | string;
+  /** 20261112000300; absent on a database without it. */
+  bev_icon_path?: string | null;
 }
 
 function mapPeriodWinner(client: SupabaseClient, row: BevOfPeriodRpcRow): PeriodWinner {
@@ -650,6 +682,7 @@ function mapPeriodWinner(client: SupabaseClient, row: BevOfPeriodRpcRow): Period
       flavor: row.bev_flavor,
       category_id: row.bev_category_id,
       photo_path: row.bev_thumb_path,
+      icon_path: row.bev_icon_path,
       price_tier: row.bev_price_tier,
       price_estimated: row.bev_price_estimated,
       bev_stats: { rating_count: row.bev_rating_count, avg_score: null, score_stddev: null, bayes_score: bayes },
@@ -693,6 +726,8 @@ export interface BevLeaderboardRpcRow {
   rating_count: number;
   avg_score: number | null;
   bayes_score: number;
+  /** 20261112000300; absent on a database without it. */
+  icon_path?: string | null;
 }
 
 export function mapBevLeaderboardRow(
@@ -710,6 +745,7 @@ export function mapBevLeaderboardRow(
       flavor: row.flavor,
       categoryId: row.category_id as CategoryId,
       photoUrl: publicUrl(client, 'bev-photos', row.photo_path),
+      iconUrl: publicUrl(client, 'bev-icons', row.icon_path ?? null),
       photoStatus: 'ready',
       priceTier: row.price_tier as PriceTier,
       priceEstimated: false,
@@ -865,6 +901,8 @@ export interface VenueDetailRow {
   bev_price_estimated: boolean;
   bev_rating_count: number;
   bev_bayes_score: number | string | null;
+  /** 20261112000300; absent on a database without it. */
+  bev_icon_path?: string | null;
 }
 
 export function mapVenueDetail(client: SupabaseClient, rows: VenueDetailRow[]): VenueDetail {
@@ -896,6 +934,7 @@ export function mapVenueDetail(client: SupabaseClient, rows: VenueDetailRow[]): 
         flavor: row.bev_flavor,
         category_id: row.bev_category_id,
         photo_path: row.bev_photo_path,
+        icon_path: row.bev_icon_path,
         price_tier: row.bev_price_tier,
         price_estimated: row.bev_price_estimated,
         bev_stats: {

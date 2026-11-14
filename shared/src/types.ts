@@ -167,8 +167,17 @@ export interface BevSummary {
   brand: string | null;
   flavor: string | null;
   categoryId: CategoryId;
-  /** null until a photo exists; show `BevArt` placeholder. */
+  /**
+   * The Bev's photo; null until one exists. A Bev's image is photo > icon >
+   * category art, so with none, draw `iconUrl`, and with neither, `BevArt`.
+   */
   photoUrl: string | null;
+  /**
+   * The Bev's authored icon (drawn art, not a photo), a public URL in the
+   * `bev-icons` bucket; null when it has none. Shown only when `photoUrl` is
+   * null.
+   */
+  iconUrl: string | null;
   photoStatus: PhotoStatus;
   /** Always set on reads: when the creator chose "not sure" the server estimates it. */
   priceTier: PriceTier;

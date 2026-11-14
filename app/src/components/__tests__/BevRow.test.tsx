@@ -13,6 +13,7 @@ const BEV: BevSummary = {
   flavor: 'Original',
   categoryId: 'diet_soda',
   photoUrl: null,
+  iconUrl: null,
   photoStatus: 'ready',
   priceTier: 2,
   priceEstimated: true,

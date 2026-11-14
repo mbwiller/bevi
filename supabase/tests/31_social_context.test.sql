@@ -249,7 +249,8 @@ select is((select count(*)::int from t_posts), 6, 'fixture: all six posts were w
 select is((select count(distinct id)::int from t_bevs), 4, 'fixture: four distinct seed Bevs');
 
 select ok(
-  pg_get_function_result('public.get_feed(int, bigint)'::regprocedure) ~ 'comments jsonb, also_bevd jsonb\)$',
+  -- 20261112000300 appends bev_icon_path after it (34_bev_icon_paths).
+  pg_get_function_result('public.get_feed(int, bigint)'::regprocedure) ~ 'comments jsonb, also_bevd jsonb(, bev_icon_path text)?\)$',
   'get_feed gained exactly one column, also_bevd, after comments'
 );
 select is(
@@ -257,10 +258,11 @@ select is(
   pg_get_function_result('public.get_feed(int, bigint)'::regprocedure),
   'get_user_feed still returns exactly get_feed''s columns'
 );
+-- Both end in bev_icon_path since 20261112000300, which is set aside first.
 select ok(
   starts_with(
-    pg_get_function_result('public.get_feed(int, bigint)'::regprocedure),
-    left(pg_get_function_result('public.get_explore(int, timestamptz, int)'::regprocedure), -1)
+    replace(pg_get_function_result('public.get_feed(int, bigint)'::regprocedure), ', bev_icon_path text', ''),
+    left(replace(pg_get_function_result('public.get_explore(int, timestamptz, int)'::regprocedure), ', bev_icon_path text', ''), -1)
   ),
   'get_explore''s columns are still a prefix of get_feed''s'
 );

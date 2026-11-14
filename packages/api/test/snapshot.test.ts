@@ -211,3 +211,31 @@ describe('toViewerSnapshot: bevGraph', () => {
     expect(snapshot.bevGraph).toEqual({ [BEV_A]: { community: COMMUNITY_A, pagerank: 1, bridge: 0 } });
   });
 });
+
+// Contract 2.13.0 (20261112000300): each `bevs` tuple gains a 14th element, the
+// icon path, which becomes the Bev's summary iconUrl in the bev-icons bucket.
+describe('toViewerSnapshot: the icon path on each Bev', () => {
+  const byBucket = {
+    storage: {
+      from: (bucket: string) => ({ getPublicUrl: (path: string) => ({ data: { publicUrl: `https://cdn/${bucket}/${path}` } }) }),
+    },
+  } as unknown as SupabaseClient;
+
+  it('maps a 14th element to iconUrl, and a null one to null', () => {
+    const json = baseJson();
+    json.bevs = [
+      [BEV_A, 'Cola', 'Brand', null, 'soda', 2, false, 'a.jpg', false, 2, '7.0', '1.0', '6.9', 'cola.0123456789abcdef.svg'],
+      [BEV_B, 'Lemon Soda', 'Brand', 'lemon', 'soda', 1, true, null, false, 0, null, null, null, null],
+    ];
+    const { summaries } = toViewerSnapshot(byBucket, json);
+    expect(summaries.get(BEV_A)?.iconUrl).toBe('https://cdn/bev-icons/cola.0123456789abcdef.svg');
+    expect(summaries.get(BEV_A)?.photoUrl).toBe('https://cdn/bev-photos/a.jpg');
+    expect(summaries.get(BEV_B)?.iconUrl).toBeNull();
+  });
+
+  it('maps a 13-element tuple (a payload from before 20261112000300) to a null iconUrl', () => {
+    const { summaries } = toViewerSnapshot(byBucket, baseJson());
+    expect(summaries.get(BEV_A)?.iconUrl).toBeNull();
+    expect(summaries.get(BEV_B)?.iconUrl).toBeNull();
+  });
+});

@@ -27,6 +27,7 @@
     "venues:sync": "node --experimental-strip-types scripts/venues/import-osm.ts",
     "venues:nta": "node --experimental-strip-types scripts/venues/build-nta.ts",
     "bugs:purge-evidence": "node --experimental-strip-types scripts/bugs/purge-evidence.ts",
+    "icons:publish": "node --experimental-strip-types scripts/icons/publish.ts",
     "graph:dashboard": "node --env-file-if-exists=supabase/.env --experimental-strip-types scripts/graph/dashboard.ts"
   },
   "overrides": {

@@ -64,6 +64,8 @@ interface FeaturedRpcRow {
   bev_price_estimated: boolean;
   bev_rating_count: number;
   bev_bayes_score: number | null;
+  /** 20261112000300; absent on a database without it. */
+  bev_icon_path?: string | null;
 }
 
 /** The actors of these rows, joined from profiles_view in one round trip. */
@@ -160,6 +162,7 @@ export function createFeedApi(client: SupabaseClient): FeedApi {
           flavor: row.bev_flavor,
           category_id: row.bev_category_id,
           photo_path: row.bev_thumb_path,
+          icon_path: row.bev_icon_path,
           price_tier: row.bev_price_tier,
           price_estimated: row.bev_price_estimated,
           bev_stats: { rating_count: row.bev_rating_count, avg_score: null, score_stddev: null, bayes_score: row.bev_bayes_score },

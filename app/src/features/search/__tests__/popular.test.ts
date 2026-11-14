@@ -13,6 +13,7 @@ function row(id: string, categoryId: string): LeaderboardRow {
       // A category the app's table doesn't know (a newer catalog than this build).
       categoryId: categoryId as CategoryId,
       photoUrl: null,
+      iconUrl: null,
       photoStatus: 'ready',
       priceTier: 1,
       priceEstimated: false,

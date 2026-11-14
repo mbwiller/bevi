@@ -114,7 +114,7 @@ export declare function SortToggle(props: SortToggleProps): React.ReactElement;
 export interface SearchBarProps { placeholder?: string; value?: string; onChange?: (v: string) => void; variant?: 'filled' | 'outlined'; autoFocus?: boolean; onClear?: () => void; /** The field took focus, where that changes the screen. */ onFocus?: () => void; id?: string; className?: string }
 export declare function SearchBar(props: SearchBarProps): React.ReactElement;
 
-export interface TextFieldProps { label?: string; value?: string; defaultValue?: string; placeholder?: string; prefix?: string; hint?: string; error?: string; type?: string; id?: string; onChange?: React.ChangeEventHandler<HTMLInputElement>; className?: string }
+export interface TextFieldProps { label?: string; value?: string; defaultValue?: string; placeholder?: string; prefix?: string; hint?: string; error?: string; /** Keeps the hint line's 18pt open when there is no hint or error, for a hint that comes and goes while the person types. */ reserveHint?: boolean; type?: string; id?: string; onChange?: React.ChangeEventHandler<HTMLInputElement>; className?: string }
 export declare function TextField(props: TextFieldProps): React.ReactElement;
 
 export interface PriceTierPickerProps { value?: 1 | 2 | 3 | 4 | null; estimated?: boolean; onChange?: (tier: number | null, estimated: boolean) => void; className?: string }
@@ -188,8 +188,7 @@ export declare function FeaturedCard(props: FeaturedCardProps): React.ReactEleme
 
 /** Bev of the day / Bev of the week on the Feed: half of a pair, a caps label, the Bev's square tile (it follows the card's width), its name and the score it won with. Not a post. */
 export interface BevOfCardProps {
-  /** `both`: the same Bev won the day and the week, so the Feed shows this one card ("Bev of the day and week") at the width one of the pair has. */
-  period?: 'day' | 'week' | 'both'; bev: Bev;
+  period?: 'day' | 'week'; bev: Bev;
   /** The Bayesian score it won with. */
   score?: number | null;
   /** Only when the winner is from an earlier period: "Oct 17" (day), "Week of Oct 12" (week). */

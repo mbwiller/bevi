@@ -8,7 +8,9 @@ Codex discovers this workflow through `.agents/skills/bevi-beverage-icons`, whic
 
 [Overview 2](review/overview-02.png) · [Overview 3](review/overview-03.png) · [Overview 4](review/overview-04.png) · [Overview 5](review/overview-05.png) · [Overview 6](review/overview-06.png) · [Overview 7](review/overview-07.png) · [Overview 8](review/overview-08.png) · [Overview 9](review/overview-09.png)
 
-The current collection contains 214 reference-checked drafts, including 39 starter drinks. [The manifest](manifest.json) maps catalog UUIDs to editable SVGs, font-independent SVGs and transparent PNGs. [The work queue](coverage.json) lists the 164 remaining catalog drinks. These counts describe the repository catalog; live Postgres reconciliation is still pending. The app shows the icons (see [Ship to the app](#ship-to-the-app)).
+The current collection contains 305 reference-checked drafts, including 40 starter drinks. [The manifest](manifest.json) maps catalog UUIDs to editable SVGs, font-independent SVGs and transparent PNGs. [The work queue](coverage.json) lists the 73 remaining catalog drinks. These counts describe the repository catalog; the publish job's report reconciles it against the live database (see [Publish to the backend](#publish-to-the-backend)). The app reads the published icons through the backend.
+
+Latest **30-icon batch (2026-11-14)**: [full artwork](review/batch-12-2026-11-14-01.png) · [small-size tiles on light](review/batch-12-2026-11-14-sizes-light.png) · [small-size tiles on dark](review/batch-12-2026-11-14-sizes-dark.png). Added diet sodas, 5-hour Energy, energy cans, hard seltzers, Mexican lagers and ready-to-drink cocktails. GHOST FaZe Berry and White Claw Lime remain deferred in [identity-issues.json](identity-issues.json).
 
 Latest **4-icon starter recovery**: Tropicana Orange Juice Original, Jamba Mango-a-go-go, Bolthouse Farms Strawberry Banana and Kung Fu Tea Classic Milk Tea. These were drawn in the batch-3 branch that never merged; their recipes were rebuilt on `main` and every asset hash matches the original batch-3 review record. Starbucks Frappuccino Mocha was deliberately left out: the catalog row is `blended_coffee`, so the café-versus-bottled identity stays deferred in [identity-issues.json](identity-issues.json).
 
@@ -17,6 +19,12 @@ Previous **28-icon batch**: [sheet 1](review/large-batch-02-2026-11-02-01.png) �
 Earlier **29-icon batch**: [sheet 1](review/large-batch-2026-11-02-01.png) · [sheet 2](review/large-batch-2026-11-02-02.png) · [sheet 3](review/large-batch-2026-11-02-03.png) · [sheet 4](review/large-batch-2026-11-02-04.png). Deferred Starbucks/AriZona identities and inspected candidate evidence are retained in [identity-issues.json](identity-issues.json); those rows have no authored icons.
 
 Latest **20 energy icons (2026-11-11)**: [large sheet 1](review/batch-08-large-2026-11-11-01.png) · [large sheet 2](review/batch-08-large-2026-11-11-02.png). All prior artwork retained; final aesthetic approval pending.
+
+Latest **20 classic soda icons (2026-11-11)**: [large sheet 1](review/batch-09-large-2026-11-11-01.png) · [large sheet 2](review/batch-09-large-2026-11-11-02.png). Package-specific bottles and cans; all prior artwork retained.
+
+Latest **20 Fresca, soda and juice icons (2026-11-12)**: [large sheet 1](review/batch-10-large-2026-11-12-01.png) · [large sheet 2](review/batch-10-large-2026-11-12-02.png). Includes both catalog Frescas: Original Grapefruit Citrus and Black Cherry Citrus. All prior artwork retained.
+
+Latest **20 beer and refreshment icons plus Diet 7UP (2026-11-13)**: [large sheet 1](review/batch-11-large-2026-11-12-01.png) · [large sheet 2](review/batch-11-large-2026-11-12-02.png) · [large sheet 3](review/batch-11-large-2026-11-12-03.png). Includes both Hata Kosen Ramune varieties and the current 7UP Zero Sugar can mapped to the Diet 7UP catalog entry. Final aesthetic approval remains pending.
 
 ## Give this to your coding agent
 
@@ -59,18 +67,17 @@ python3 -m venv /tmp/bevi-icon-review
 
 If the renderer is installed elsewhere, set `BEVI_RESVG_MODULE` to the absolute path of its `@resvg/resvg-js` package directory. The renderer must remain at 2.6.2.
 
-## Ship to the app
+## Publish to the backend
 
-From the repository root, after every batch (and after any redraw):
+Nothing is copied into `app/`. The app reads each Bev's icon from the backend (`BevSummary.iconUrl`). Each portable SVG is an object in the public `bev-icons` Storage bucket at `<slug>.<first 16 hex of its sha256>.svg`; a redraw is a new object, never an overwrite, so every URL can be cached for a year. `public.bev_icons` links each Bev to its object (`supabase/migrations/20261112000200_bev_icons.sql`), and signed-in users can read a row exactly when they can see the Bev. In the app a Bev's image is photo > icon > category art: a real photo always wins.
+
+After every batch (and after any redraw), build and validate (above), then commit `design/beverage-icons/` and any recipes under `scripts/icons/`. Merging to `main` publishes automatically: the **icons-sync** workflow runs on a push that changes `manifest.json` or `portable-svg/`. To check locally first, with no credentials:
 
 ```sh
-node scripts/icons/export-app.mjs          # copy the portable SVGs into the app and regenerate its map
-node scripts/icons/export-app.mjs --check  # writes nothing; exits 1 when the app's copy is stale
+npm run icons:publish -- --dry-run   # checks every hash and refuses unsafe SVG markup; writes nothing
 ```
 
-The script reads `manifest.json`, copies each record's `portable-svg/<slug>.svg` byte for byte to `app/public/bev-icons/<slug>.svg`, removes icons no record claims, and writes `app/src/lib/bevIcons.generated.ts` (catalog bevId → `/bev-icons/<slug>.svg?v=<first 8 hex of the SVG's sha256>`, so a redraw busts caches). It fails on a duplicate bevId or slug, a missing source, or a hash that disagrees with the manifest, and a second run changes nothing. Commit `app/public/bev-icons/` and the generated map with the batch; never edit either by hand. In the app a Bev's image is photo > icon > category art: a real photo always wins, and an icon only replaces the placeholder silhouette.
-
-The app's `src/lib/__tests__/bevIcons.test.ts` (part of `npm test -w app`) is the drift guard: it fails when the map or the shipped SVGs no longer match the manifest.
+A real run (`npm run icons:publish` with `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` exported) is for the workflow, not for authors. icons-sync can also be started by hand; a manual run is a dry run unless `dry_run` is unticked. A real run uploads only objects not yet published, then replaces `bev_icons` with the manifest in one call. Its report reconciles the manifest against the live database: Bevs it names that do not exist there, icons that followed a merge, and how many active Bevs have neither a photo nor an icon.
 
 ## Add a batch without changing the style
 
@@ -79,6 +86,6 @@ The app's `src/lib/__tests__/bevIcons.test.ts` (part of `npm test -w app`) is th
 3. Create a module under `scripts/icons/families/` exporting a `records` array. Follow `pilot.mjs` or `bottles-carton.mjs`; reuse the shared `wrap`, `shadow`, `ref` and `text` helpers from `style.mjs`. Each record includes `slug`, `family`, `packageChoice`, `references`, `uncertainty`, `status` and the full `svg` string. Each reference includes `pageUrl`, `imageUrl`, `inspectedAt`, `observations` and a truthful `visuallyInspected` value. Coordinate changes to shared primitives before altering them.
 4. Rebuild and validate. The build rejects duplicate/unknown slugs and generates assets, the UUID manifest, coverage and gallery. Edit recipes, not generated output. `inventory.ts` rebuilds the separate repository inventory; it does not preserve research entered into that generated inventory file.
 5. Inspect the resulting sheets at 40/56/96/155px on light and dark surfaces against the exact reference images. Keep drafts `needs-review` until the relevant review is complete. Update `review/review.json` with the reviewed asset hashes; the renderer does not automatically grant visual approval.
-6. Commit the family recipe, generated SVG/PNG assets, manifest, coverage, gallery and review evidence together, plus the app's copy from `node scripts/icons/export-app.mjs` (see [Ship to the app](#ship-to-the-app)). Preserve the original prototype and frozen reference set.
+6. Commit the family recipe, generated SVG/PNG assets, manifest, coverage, gallery and review evidence together (see [Publish to the backend](#publish-to-the-backend) for how it ships). Preserve the original prototype and frozen reference set.
 
 The original prototype is a standalone design reference, not the deployed app. No icon authoring step requires changing Neo4j, Postgres, photos, or app behavior.

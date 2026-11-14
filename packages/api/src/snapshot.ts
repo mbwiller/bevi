@@ -23,7 +23,8 @@ import { publicUrl } from './mappers';
 const TTL_MS = 5 * 60 * 1000;
 
 type Num = number | string | null;
-type BevTuple = [string, string, string | null, string | null, string, number, boolean, string | null, boolean, number, Num, Num, Num];
+// The 14th element, the icon path, since 20261112000300; absent from an older payload.
+type BevTuple = [string, string, string | null, string | null, string, number, boolean, string | null, boolean, number, Num, Num, Num, (string | null)?];
 
 interface SnapshotJson {
   generatedAt: string;
@@ -62,7 +63,7 @@ export function toViewerSnapshot(client: SupabaseClient, json: SnapshotJson): Vi
 
   const bevs: Record<string, BevFeatures> = {};
   const summaries = new Map<string, BevSummary>();
-  for (const [id, name, brand, flavor, categoryId, priceTier, priceEstimated, photoPath, isAlcoholic, ratingCount, mean, sd, bayes] of json.bevs) {
+  for (const [id, name, brand, flavor, categoryId, priceTier, priceEstimated, photoPath, isAlcoholic, ratingCount, mean, sd, bayes, iconPath] of json.bevs) {
     bevs[id] = {
       id,
       categoryId: categoryId as CategoryId,
@@ -81,6 +82,7 @@ export function toViewerSnapshot(client: SupabaseClient, json: SnapshotJson): Vi
       flavor,
       categoryId: categoryId as CategoryId,
       photoUrl: publicUrl(client, 'bev-photos', photoPath),
+      iconUrl: publicUrl(client, 'bev-icons', iconPath ?? null),
       photoStatus: 'ready' as PhotoStatus,
       priceTier: priceTier as PriceTier,
       priceEstimated,

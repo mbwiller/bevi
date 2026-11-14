@@ -1,5 +1,53 @@
 # Beverage icon production checkpoint
 
+## Latest batch: 30 soda, energy, seltzer, beer and cocktail icons, 2026-11-14
+
+**305 drafts authored; 73 catalog entries remain. 40 of 43 starters covered.**
+
+Added 10 diet sodas plus Sprite Cherry; all three remaining 5-hour Energy variants; CELSIUS Cucumber Lime, Alani Nu Mimosa and Bang Rainbow Unicorn; White Claw Black Cherry/Mango/Natural Lime and Truly Wild Berry/Lemonade; Pacifico Clara and Dos Equis Lager Especial; Jack & Coke, High Noon Watermelon/Peach and Cutwater Lime Margarita/Vodka Mule; and Tito’s Soda Lime as a served highball. The starter 5-hour ENERGY Original now has an icon.
+
+Deferred GHOST Energy x FaZe Berry because the inspected FaZe Berry product is G FUEL, while GHOST’s FaZe products use different names. Deferred White Claw Lime because its catalog has a separate Natural Lime and the brand’s “Lime” listing does not establish a distinct product. Both questions are in `identity-issues.json`; no substitute artwork was assigned. Three starters remain unresolved: Starbucks Frappuccino Mocha, Lipton Iced Tea and Tiger Sugar Brown Sugar Boba Milk Tea.
+
+Inspected all 30 package/serving references and reviewed full artwork plus 40/56/96/155px tiles on light and dark surfaces. Batch sheets `review/batch-12-2026-11-14-01.png`, `review/batch-12-2026-11-14-sizes-light.png` and `review/batch-12-2026-11-14-sizes-dark.png`; `review/review.json` records exact hashes. New assets remain `needs-review`; final aesthetic and device review are pending. Build, SVG validation and review-sheet generation pass. Main’s current pipeline reads icons from the backend and publishes the full manifest when this change merges; no app export script exists in this main revision. Production sync and live catalog counts will be recorded after merge.
+
+## Previous batch: 20 beer and refreshment icons plus Diet 7UP, 2026-11-13
+
+**275 drafts authored; 103 catalog entries remain. 39 of 43 starters covered.**
+
+Added 7 beer bottles, 3 beer cans, 8 refreshment products and both Hata Kosen Ramune 200mL glass bottles in `beer-expansion.mjs`, `beer-cans-expansion.mjs`, `refreshment-expansion.mjs` and `ramune.mjs`. Added Diet 7UP as a separately requested extra in `diet-seven-up.mjs`; its current US package is branded 7UP Zero Sugar, and the source records that catalog-to-package naming distinction. The wrong-brand Kimura 410mL Ramune photo was rejected; both Ramune references show the exact Hata Kosen Original and Melon package.
+
+Inspected all21 package references and reviewed large artwork plus40/56/96/155px light/dark tiles with8%padding. Corrected the Ramune glass fill/pattern rendering before final review. `review/batch-11-2026-11-12-01.png` through `-05.png` and three `batch-11-large-2026-11-12` sheets show the batch; `review/review.json` records per-asset hashes. All254 prior asset hashes are unchanged. Final aesthetic approval and interactive device review remain pending; new records stay needs-review.
+
+All eight Jarritos catalog drinks—Mandarin, Lime, Fruit Punch, Pineapple, Grapefruit, Guava, Tamarind and Watermelon—already have manifest icons. The automatic icons-sync job publishes the complete manifest on merge, so all eight ship with this batch. Icon build/validation, publisher dry run, typecheck and Expo web export pass locally. On the updated main base, a full local suite run had three 30-second timeouts in existing feed/comment tests; 1,119 app tests passed. Main CI is green; this rebased PR must pass its own CI before merge. No catalog contract or backend code changes in this batch; production reconciliation comes from the publish report.
+
+## Latest batch: 20 Fresca, soda and juice icons, 2026-11-12
+
+**254 drafts authored; 124 catalog entries remain. 39 of 43 starters covered.**
+
+Prioritized both catalog Fresca drinks: Original Grapefruit Citrus and Black Cherry Citrus, each matched to its exact manufacturer original non-prebiotic US12oz can. Turquoise fan/scallop pattern, white/teal center and separate yellow/red flavor bands retained. Added three family recipes: `fresca.mjs` (2), `soda-final-expansion.mjs` (10), `juice-final-expansion.mjs` (8).
+
+Other additions: 7UP Original, Reed’s Original Ginger Beer, Dr Pepper Cherry, Mountain Dew Code Red, Shasta Cola/Grape, Coca-Cola Vanilla/Vanilla Zero Sugar/Cherry Zero Sugar, Caffeine Free Diet Coke, Minute Maid Lemonade, V8 Original Vegetable Juice, historical V8 V-Fusion Strawberry Banana, Ocean Spray Cranberry Cocktail/Cran-Grape/Cran-Raspberry, Juicy Juice Apple and Hi-C Flashin’ Fruit Punch. Manufacturer references preferred; exact retailer fallback documented. Current Original7UP US revision explicitly selected; historical V-Fusion label sourced instead of substituting renamed current Blends. Reference photos individually inspected; lettering/illustrations are simplified vectors.
+
+Deferred Zevia Mountain Twist (Mountain Zevia identity), Mountain Dew Spark (catalog Cherry Citrus versus Raspberry Lemonade), and DietRC (historical Diet versus current Zero Sugar) in durable identity issues, using other ready products to complete20. No guessed identities assigned artwork; earlier deferred queue retained.
+
+Reviewed large artwork and40/56/96/155px light/dark tiles with8%padding. Refined Shasta/CodeRed/V-Fusion lettering fit, removed retailer DrPepper size overlay, and retained distinct Fresca flavor colors. Sheets `review/batch-10-2026-11-12-01.png` through `-04.png` plus two `batch-10-large-2026-11-12` sheets; exact reviewed hashes in `review/review.json`. All234 prior master/portableSVG/PNG hashes unchanged. Final aesthetic approval and interactive device review pending; records remain needs-review.
+
+Build, validation, export freshness, app drift checks and release checks are recorded with final results in the release PR. No contract, backend, dependency or photo precedence changes. Counts describe repository catalog; live Postgres reconciliation remains pending.
+
+## Latest batch: 20 classic soda icons, 2026-11-11
+
+**234 drafts authored; 144 catalog entries remain. 39 of 43 starters covered.**
+
+Added `scripts/icons/families/classic-soda-expansion.mjs`: A&W Root Beer/Cream Soda, Canada Dry Ginger Ale, Sunkist Orange, Crush Orange/Grape, Squirt, RC Cola, IBC Root Beer, Stewart’s Root Beer/Orange ’n Cream, Bundaberg Ginger Beer, Faygo Redpop/Rock & Rye, Barq’s Root Beer, Mug Root Beer, Vernors Ginger Soda, Big Red, Coca-Cola de Mexico, Boylan Original Birch Beer.
+
+All20 exact reference images independently downloaded/visually inspected. Actual package families preserved:20oz PET A&W/Crush/Sunkist,24oz Faygo PET,12oz cans,12oz long-neck glass and12.7oz Bundaberg stubby ring-pull glass. Manufacturer sources used except documented retailer fallback for Barq’s, Mug, Vernors, Big Red and Mexican Coke. No literal retail size annotations or photo backdrops included. Brand lettering/fine illustration are original simplified vectors.
+
+Researched remaining Tiger Sugar starter: catalog classic_milk_tea name conflicts with the café’s separate signature brown-sugar fresh-milk and tea-latte choices. Retained a new durable needs-identity-resolution record; did not guess which serving to draw. Other deferred identities remain unchanged.
+
+Reviewed large renders and40/56/96/155px light/dark tiles at8%padding; refined Squirt/Vernors lettering, RC footer fit, cap colors and Bundaberg ring-pull. All214 previously shipped asset hashes remain unchanged. Sheets `review/batch-09-2026-11-11-01.png` through `-04.png` and `review/batch-09-large-2026-11-11-01.png` / `-02.png`; exact hashes in `review/review.json`. All new icons remain needs-review for final aesthetic approval; no browser/device session performed.
+
+Build,234-asset validation and app export freshness passed. Release checks: isolated npm ci, npm run typecheck, npm test, ranking bundle:smoke/vectors check, Expo web export with CI placeholder config and bundle scan; final results/publication recorded in PR. No contract, database, dependency or precedence changes. Live Postgres reconciliation remains pending.
+
 ## Latest batch: 20 energy icons, 2026-11-11
 
 **214 drafts authored; 164 catalog entries remain. 39 of 43 starters covered.**
@@ -166,6 +214,6 @@ Visual review covered all 30 icons and 40/56/96/155px square tiles with 8% paddi
 3. Prioritize the 22 remaining starters in `coverage.json`: Dr Pepper / Mountain Dew variants, juices, energy drinks, RTD coffees, smoothies, teas, boba, Gatorade and GT's Gingerade. None is claimed complete by this batch.
 4. Assign disjoint UUID/slug groups. Add family modules exporting `records`; keep shared primitives coordinator-owned. Research each exact package instead of recoloring from a category assumption.
 5. Rebuild, validate, inspect overview and small-size sheets, then update `review/review.json` with the exact reviewed hashes. Keep references and unresolved choices in recipes, not the generated inventory.
-6. After each batch run `node scripts/icons/export-app.mjs` and commit `app/public/bev-icons/` and `app/src/lib/bevIcons.generated.ts`. The app picks a Bev's image as photo > icon > category art, so real photos are never replaced; `npm test -w app` fails if the app's copy drifts from the manifest (see the README's "Ship to the app").
+6. After each batch run `npm run icons:publish -- --dry-run` and commit `design/beverage-icons/`; merging to `main` publishes it through `icons-sync`. The app picks a Bev's image as photo > icon > category art, so real photos are never replaced (see the README's "Publish to the backend").
 
 All resumed worker output is integrated into four new family modules (`colas`, `citrus-sodas`, `sparkling-starters`, `wine-cocktail`). No hidden worker batch remains to recover. The full reusable skill remains in `skill/SKILL.md`.

@@ -74,6 +74,11 @@ function lockstep(
   }
 }
 
+// 3000 fixed-seed scripts × three lockstep runs: about 2.3s alone, but 6.2s on a GitHub runner
+// sharing its cores with the other test files, which failed `ranking` on main at f5958de against
+// vitest's 5s default with 0 differences. The work is fixed, so the budget is wall clock only.
+const COMPAT_TIMEOUT_MS = 60_000;
+
 describe('startPlacement without tiers is byte-identical to 1.4.0', () => {
   it('states, prompts, done flags and results agree on every step of every generated script', () => {
     fc.assert(
@@ -89,7 +94,7 @@ describe('startPlacement without tiers is byte-identical to 1.4.0', () => {
     );
     expect(differences).toBe(0);
     expect(compared).toBeGreaterThan(100_000);
-  });
+  }, COMPAT_TIMEOUT_MS);
 
   it('maxComparisons, removeFromBucket are unchanged', () => {
     for (let n = 0; n <= 2048; n++) same(old.maxComparisons(n), cur.maxComparisons(n));

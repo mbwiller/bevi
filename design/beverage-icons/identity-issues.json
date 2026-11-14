@@ -302,6 +302,100 @@
           "observations": "Batch04 family-author research."
         }
       ]
+    },
+    {
+      "bevId": "fdf715a1-7783-58b2-b657-d9afad7530c4",
+      "slug": "tiger-sugar-brown-sugar-boba-milk-tea",
+      "status": "needs-identity-resolution",
+      "reason": "Catalog names Brown Sugar Boba Milk Tea with classic_milk_tea leaf; inspected US cafe menu separates signature Brown Sugar Boba Milk + Pearl With Cream Mousse from Black Tea Latte + Cream Mousse + Brown Sugar With Boba and Green Tea Latte. Milk-versus-tea formulation is not specified by the catalog alias.",
+      "references": [
+        {
+          "pageUrl": "https://tigersugarec.com/menu.html",
+          "inspectedAt": "2026-11-11",
+          "observations": "Cafe menu lists distinct signature fresh-milk drinks and black/green tea latte products; no exact catalog-name match establishes which is intended."
+        }
+      ],
+      "resolutionNeeded": "Confirm signature brown-sugar fresh milk versus a tea-based latte before assigning this starter UUID."
+    },
+    {
+      "bevId": "9a2ef1e8-693c-5c10-9628-b95450354734",
+      "slug": "zevia-mountain-twist",
+      "status": "needs-identity-resolution",
+      "reason": "Catalog names Mountain Twist flavor and aliases zevia mtn dew; current manufacturer identifies Mountain Zevia. No exact Mountain Twist package or historical equivalence inspected.",
+      "references": [
+        {
+          "pageUrl": "https://zevia.com/products/mountain-zevia",
+          "inspectedAt": "2026-11-12",
+          "observations": "Catalog names Mountain Twist flavor and aliases zevia mtn dew; current manufacturer identifies Mountain Zevia. No exact Mountain Twist package or historical equivalence inspected."
+        }
+      ],
+      "resolutionNeeded": "Confirm whether catalog Mountain Twist is intended to mean Mountain Zevia before assigning its artwork."
+    },
+    {
+      "bevId": "11f52e23-5357-58c1-94df-02644a5e6f98",
+      "slug": "mountain-dew-spark",
+      "status": "needs-identity-resolution",
+      "reason": "Catalog flavor says Cherry Citrus; manufacturer/distributor and retailer identify Spark as Raspberry Lemonade. Do not silently substitute formulas.",
+      "references": [
+        {
+          "pageUrl": "https://www.jaycfoods.com/p/mountain-dew-spark-soda-cans-limits-may-apply/0001200021172",
+          "inspectedAt": "2026-11-12",
+          "observations": "Catalog flavor says Cherry Citrus; manufacturer/distributor and retailer identify Spark as Raspberry Lemonade. Do not silently substitute formulas."
+        }
+      ],
+      "resolutionNeeded": "Resolve Cherry Citrus catalog flavor versus Raspberry Lemonade Spark identity."
+    },
+    {
+      "bevId": "e1dad545-c9ce-52bf-b64a-66c0ac2f5363",
+      "slug": "diet-rc-cola",
+      "status": "needs-identity-resolution",
+      "reason": "Current manufacturer lineup identifies RC Cola Zero Sugar rather than Diet RC. Exact historical DietRC reference not inspected; no proof of formula equivalence.",
+      "references": [
+        {
+          "pageUrl": "https://www.myrccola.com/",
+          "inspectedAt": "2026-11-12",
+          "observations": "Current manufacturer lineup identifies RC Cola Zero Sugar rather than Diet RC. Exact historical DietRC reference not inspected; no proof of formula equivalence."
+        }
+      ],
+      "resolutionNeeded": "Inspect exact historical DietRC package or confirm intended product/formulation rather than substitute current Zero Sugar."
+    },
+    {
+      "bevId": "c3fc3877-1a93-5bd4-a155-c4a4be8a281d",
+      "slug": "ghost-energy-faze-berry",
+      "status": "needs-identity-resolution",
+      "reason": "Catalog says GHOST Energy x FaZe Berry, but research found GHOST FaZe Pop/FaZe Up and a separate G FUEL Fazeberry product. Those are distinct brands/flavors; no exact GHOST FaZe Berry package was verified.",
+      "references": [
+        {
+          "pageUrl": "https://www.ghostenergy.com/",
+          "inspectedAt": "2026-11-14",
+          "observations": "GHOST product search/catalog evidence identifies FaZe Pop and FaZe Up; retailer evidence for the exact Berry name instead resolves to G FUEL Fazeberry. No GHOST FaZe Berry art assigned."
+        },
+        {
+          "pageUrl": "https://americancandyco.co.uk/products/g-fuel-fazeberry-strawberry-blueberry-medley-flavour-energy-drink-473ml",
+          "inspectedAt": "2026-11-14",
+          "observations": "Visually inspected G FUEL Fazeberry front can. This is not GHOST and was rejected as an identity match."
+        }
+      ],
+      "resolutionNeeded": "Confirm whether the catalog means GHOST FaZe Pop/FaZe Up, G FUEL Fazeberry, or another exact product before assigning artwork."
+    },
+    {
+      "bevId": "40b879d0-2350-5517-a4cd-d030e0de72c3",
+      "slug": "white-claw-lime",
+      "status": "needs-identity-resolution",
+      "reason": "Catalog has both White Claw Lime and White Claw Natural Lime, while the brand's Lime product listing describes its flavor as Natural Lime and current flavor range lists Natural Lime. The exact separate Lime formulation/package is not established.",
+      "references": [
+        {
+          "pageUrl": "https://shop.whiteclaw.com/products/white-claw_lime_6pk_12oz_can_5_0_abv",
+          "inspectedAt": "2026-11-14",
+          "observations": "Official product listing is titled White Claw Lime but its description calls it Natural Lime; it did not establish a separate Lime SKU appearance."
+        },
+        {
+          "pageUrl": "https://www.whiteclaw.com/products/natural-lime",
+          "inspectedAt": "2026-11-14",
+          "observations": "Official current Natural Lime product page and can image inspected."
+        }
+      ],
+      "resolutionNeeded": "Confirm whether catalog White Claw Lime is a duplicate/alias of Natural Lime or an exact historical distinct package."
     }
   ]
 }

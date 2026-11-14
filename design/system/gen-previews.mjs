@@ -152,9 +152,10 @@ h('div', { className: 'pv-narrow' },
   h('div', { className: 'bv-bevof-pair' },
     h(B.BevOfCard, { period: 'day', bev: BEVS.horchata, score: 8.9 }),
     h(B.BevOfCard, { period: 'week', bev: BEVS.topo, score: 8.4, date: 'Week of Oct 12' })),
-  h('p', { className: 'cap' }, 'The same Bev won the day and the week: one card'),
+  h('p', { className: 'cap' }, 'The same Bev won the day and the week: still two cards'),
   h('div', { className: 'bv-bevof-pair' },
-    h(B.BevOfCard, { period: 'both', bev: BEVS.horchata, score: 8.9 })))`];
+    h(B.BevOfCard, { period: 'day', bev: BEVS.horchata, score: 8.9 }),
+    h(B.BevOfCard, { period: 'week', bev: BEVS.horchata, score: 8.9 })))`];
 
 // ---------- People ----------
 P.Avatar = [{ group: 'People', height: 150 }, '', `
@@ -263,7 +264,7 @@ h('div', { className: 'pv', style: { gap: 16 } },
 P.FilterPill = [{ group: 'Actions', height: 96, width: 393 }, '', `
 h('div', { className: 'pv', style: { gap: 10, flexWrap: 'nowrap', overflow: 'hidden' } },
   h(B.FilterPill, { count: 3 }),
-  h(B.FilterPill, { label: 'Bucket', chevron: true, icon: null }),
+  h(B.FilterPill, { label: 'Reaction', chevron: true, icon: null }),
   h(B.FilterPill, { label: 'Price', chevron: true, icon: null }),
   h(B.FilterPill, { count: 0 }))`];
 
@@ -276,11 +277,14 @@ h('div', { className: 'pv-col' },
   h(B.SearchBar, { placeholder: 'Search a Bev or a person', id: 'feed-search' }),
   h(B.SearchBar, { variant: 'outlined', placeholder: 'Search a Bev, brand or flavor', value: 'horch', id: 'add-search' }))`];
 
-P.TextField = [{ group: 'Inputs', height: 300, width: 393 }, '', `
+P.TextField = [{ group: 'Inputs', height: 560, width: 393 }, '', `
 h('div', { className: 'pv-col', style: { gap: 18 } },
   h(B.TextField, { label: 'Display name', defaultValue: 'Matt Willer', id: 'f-name' }),
   h(B.TextField, { label: 'Handle', prefix: '@', defaultValue: 'mbwiller', hint: 'Lowercase, 3–20 characters.', id: 'f-handle' }),
-  h(B.TextField, { label: 'Handle', prefix: '@', defaultValue: 'arjun', error: 'That handle is taken.', id: 'f-taken' }))`];
+  h(B.TextField, { label: 'Handle', prefix: '@', defaultValue: 'arjun', error: 'That handle is taken.', id: 'f-taken' }),
+  h('p', { className: 'pv-label' }, 'reserveHint: the same field with and without its hint. The line is held either way, so nothing below it moves.'),
+  h(B.TextField, { label: 'Name', defaultValue: 'Mexican Coke', reserveHint: true, hint: '1 Bev like this is already on Bevi.', id: 'f-reserve-hint' }),
+  h(B.TextField, { label: 'Name', defaultValue: 'Mexican Cola', reserveHint: true, id: 'f-reserve-empty' }))`];
 
 P.PriceTierPicker = [{ group: 'Inputs', height: 140, width: 393 }, '', `
 h('div', { className: 'pv-col' }, h(B.PriceTierPicker, { value: 2 }))`];
@@ -349,7 +353,7 @@ P.BucketButton = [{ group: 'Ranking', height: 360, width: 393, subtitle: 'Tap on
 h(function Demo() {
   function Set(props) {
     var st = React.useState(props.start), v = st[0], set = st[1];
-    return h('div', { className: 'gc' }, ['loved', 'fine', 'disliked'].map(function (k) {
+    return h('div', { className: 'gc' }, ['disliked', 'fine', 'loved'].map(function (k) {
       return h(B.BucketButton, { key: k, bucket: k, selected: v === k, dimmed: v != null && v !== k, onClick: function () { set(v === k ? null : k); } });
     }));
   }
@@ -534,7 +538,7 @@ P.ScreenYourLists = [{ group: 'Screens', height: 852, width: 802, isPage: true }
   return h('div', { className: 'yl-pair' },
     ${phone('lists', `
   h(F, null,${LISTS_TOP('bevd')}
-    h('div', { className: 'filters' }, h(B.FilterPill, { count: 0 }), h(B.FilterPill, { label: 'Bucket', icon: null, chevron: true }), h(B.FilterPill, { label: 'Category', icon: null, chevron: true })),
+    h('div', { className: 'filters' }, h(B.FilterPill, { count: 0 }), h(B.FilterPill, { label: 'Reaction', icon: null, chevron: true }), h(B.FilterPill, { label: 'Category', icon: null, chevron: true })),
     h(B.ProgressStrip, { label: 'All Bevs', ranked: 37, total: 378, onClick: function () {} }),
     h(B.SortToggle, { label: 'Score', onClick: function () {}, onSearch: function () {} }),
     bevd(BEVS.horchata, 1, 9.5, 'Ranked Oct 8'),
@@ -603,7 +607,7 @@ h('div', { className: 'phone' },
       h('p', { className: 'body bv-meta' }, 'LaCroix'),
       h('p', { className: 'body gc-cat' }, h(B.Icon, { name: 'droplets', size: 16, strokeWidth: 2 }), ' Sparkling water • ', h(B.PriceTier, { tier: 1 }))),
     h('p', { className: 'displayDrop gc-q' }, 'How was it?'),
-    h('div', { className: 'gc-btns' }, h(B.BucketButton, { bucket: 'loved', selected: true }), h(B.BucketButton, { bucket: 'fine', dimmed: true }), h(B.BucketButton, { bucket: 'disliked', dimmed: true })),
+    h('div', { className: 'gc-btns' }, h(B.BucketButton, { bucket: 'disliked', dimmed: true }), h(B.BucketButton, { bucket: 'fine', dimmed: true }), h(B.BucketButton, { bucket: 'loved', selected: true })),
     h('p', { className: 'caption bv-meta gc-hint' }, "Next, you'll compare it with Bevs you've already ranked.")))`];
 
 // Bev detail scrolls: the first phone is the top of the screen, the second is the same screen

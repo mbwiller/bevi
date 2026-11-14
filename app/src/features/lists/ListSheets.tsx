@@ -40,7 +40,7 @@ function BucketOptions({
 }) {
   return (
     <>
-      <SheetOption label="All buckets" selected={value === undefined} onPress={() => onSelect(undefined)} />
+      <SheetOption label="All reactions" selected={value === undefined} onPress={() => onSelect(undefined)} />
       {BUCKET_ORDER.map((b) => (
         <SheetOption key={b} label={BUCKET_SHORT[b]} detail={countOf(counts, b)} selected={value === b} onPress={() => onSelect(b)} />
       ))}
@@ -91,7 +91,7 @@ export function BucketSheet({
   onClose: () => void;
 }) {
   return (
-    <Sheet open={open} title="Bucket" onClose={onClose}>
+    <Sheet open={open} title="Reaction" onClose={onClose}>
       <BucketOptions
         value={value}
         counts={counts}
@@ -141,7 +141,7 @@ export function FilterSheet({
       ) : null}
       {onBucket ? (
         <>
-          <SheetSection title="Bucket" />
+          <SheetSection title="Reaction" />
           <BucketOptions value={bucket} counts={counts} onSelect={onBucket} />
         </>
       ) : null}
