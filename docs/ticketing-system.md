@@ -4,12 +4,14 @@ How the internal bug reporter is wired, what has to be configured outside this
 repository, and what is still unverified. The workflow it serves is in
 [`bug-workflow.md`](./bug-workflow.md).
 
-> **Status.** Everything in this repository is implemented and tested. The
-> Linear side is **not configured yet**: no workspace, team, API key or MCP
-> connection has been set up from here, and nothing below should be read as a
-> claim that one exists. The function answers `tracker_not_configured` (503)
-> until `LINEAR_API_KEY` and `LINEAR_TEAM_ID` are set, and the app turns that
-> into "The issue tracker is not configured yet".
+> **Status.** Live since 2026-11-09: the Linear workspace, the `BEV` team, the
+> labels, the secrets and the function are configured, and tickets filed from
+> the app land in Triage (BEV-5 onward). What has **not** run against the real
+> Linear API is everything the 2.13.0 contract added: the "Pointed at" section,
+> recorded steps, and the `place` route that writes `sortOrder` and priority.
+> Those reach production only when the `bug-report` function is redeployed;
+> until then the app files with the older template and says ranking is not
+> available yet.
 
 ## Why Linear, and not a dashboard in this repo
 
@@ -28,8 +30,10 @@ own views (below).
 ## The pieces
 
 ```
-app/src/features/bug-report/      the reporter (form, context, draft, launcher)
-app/src/app/report-bug.tsx        its full-screen modal route
+app/src/features/bug-report/      the reporter: the report button and the note (ReportButton, ReportNote),
+         │                        the engine (pick, pickMode, capture, trail, infer, context),
+         │                        the note's model and store, Filed reports and the rank sheet
+app/src/app/_layout.tsx           mounts it, lazily, for an internal reporter only
          │  BeviApi.bugs.report() / listMine() / markVerified() / place()
          ▼
 packages/api/src/bugs.ts          uploads up to 3 screenshots to a PRIVATE bucket,
@@ -335,7 +339,7 @@ pretend otherwise.
 | `supabase/tests/28_bug_reports.test.sql` (pgTAP, 65 assertions) | The `tester` role and `set_profile_role` (the trigger still refuses a plain update, even from the owner; `authenticated` cannot call it; the bypass flag is reset), the grants (notably that `authenticated` cannot call `finish_bug_report`), the RLS shape, the private bucket and its policy, the authorisation refusal, kind/severity/title/path validation (an over-long title included), the idempotency ledger's cases (in-flight, stale-pending re-arm keeping staged evidence, failed re-arm taking the retry's list), cross-reporter reads returning nothing, the 20-an-hour rate limit, and `forget_bug_evidence`. |
 | `packages/api/test/bugs.test.ts` (vitest, 33 cases) | That nothing is uploaded or invoked before the input validates, that every screenshot goes to the private bucket in order and the function gets only paths (and one caption per path), that targets (the first six) and the steps source are sent, and a thirty-step recording as it is, that no credential is in the request body, the error-code mapping, `listMine` over the status route (including `rank`), `markVerified` over the verify route, `place` over the place route (validation, its own not-found, its `not_open` as a conflict, a bare 404 from a server that predates ranking, tracker failures), and the refusal of a response with no confirmed ticket. |
 | `app/src/testing/conformance.ts` against the FakeApi (jest) | The bugs refusals for an ordinary and a signed-out account, and, with an internal reporter, `rank` on `listMine` (a new ticket at the top), `place` to the top and below another ticket with the new ranks and priorities, Urgent kept, and its validation, not-found (another reporter's ticket, an unknown one) and conflict (`reason: 'not_open'`, a closed ticket of the caller's) cases; and that `report` accepts more than six targets (the first six are kept) and a thirty-step recording. |
-| `app/src/features/bug-report/__tests__/` (jest) | The form's type and severity controls, required-title, success, duplicate, failure-with-retry and draft-restore states; that the screenshot never reaches storage and is sent as a one-element list; the context preview; and the launcher's gating, route capture and absence from the full-screen modals: it is a header action, first in every shared `Header`'s icons, with a floating pill only on the not-found page, which has no header. |
+| `app/src/features/bug-report/__tests__/` (jest) | The report button's gating (hidden for an ordinary account, shown on tab and full-screen routes, never captures on press, filled while a note exists); the note: the type dropdown, Select element through select mode to a marked picture with the component and its source file, Capture screen, the Add photos menu and the three-picture limit, Record steps to Stop and the steps sent as recorded, send in the background, a failed send restored with the same key, set aside and discard; the pure model and the report it builds (targets, captions, `evidenceIndex`); picking a component from fibers with an allowlist of props and no typed text; select mode swallowing taps but not scrolls; the trail and explicit step recording; the inferred type; the context allow-list; the draft's persistence, its owner and the wipe on sign-out; Filed reports and the rank sheet against the FakeApi's `place`; and that the generated component manifest is current. |
 
 **Not covered, honestly:** the live round trip to Linear. No test in this
 repository has ever called `api.linear.app`, because no credential exists here
