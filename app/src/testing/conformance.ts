@@ -552,7 +552,7 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       });
       expect(bev).toMatchObject({ name, createdBy: { id: me.userId } });
       const [icon] = await api.bevs.icons([bev.id]);
-      expect(icon).toMatchObject({ bevId: bev.id, iconUrl: null, iconStatus: 'none' });
+      expect(icon).toMatchObject({ bevId: bev.id, generatedIconUrl: null, iconStatus: 'none' });
       // With no icon of its own it is offered catalog art to borrow. Which ids
       // come back depends on how much of the category is drawn, so assert the
       // shape and the invariants, not a coverage figure.
@@ -576,11 +576,11 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       // Anything but 'none': the job may already have run, or may be queued.
       expect(icon!.iconStatus).not.toBe('none');
       if (icon!.iconStatus === 'completed') {
-        expect(icon!.iconUrl).toBeTruthy();
+        expect(icon!.generatedIconUrl).toBeTruthy();
         // It has art of its own, so it is offered none to borrow.
         expect(icon!.fallbackBevIds).toEqual([]);
       } else {
-        expect(icon!.iconUrl).toBeNull();
+        expect(icon!.generatedIconUrl).toBeNull();
       }
     });
 
@@ -590,7 +590,7 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       const first = await api.bevs.icons([...ids, 'no-such-bev']);
       // An id the caller cannot see contributes no row rather than an error.
       expect(first.map((i) => i.bevId).sort()).toEqual([...ids].sort());
-      for (const icon of first) expect(icon).toMatchObject({ iconUrl: null, iconStatus: 'none' });
+      for (const icon of first) expect(icon).toMatchObject({ generatedIconUrl: null, iconStatus: 'none' });
       // Read-only: drawing a screen must never schedule generation.
       const second = await api.bevs.icons(ids);
       expect(second).toEqual(first.filter((i) => ids.includes(i.bevId)));

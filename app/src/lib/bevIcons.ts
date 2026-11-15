@@ -41,7 +41,7 @@ export interface ResolvedBevIcon {
  * which is what lets the feed, the collection and search call it on every render safely.
  */
 export function resolveBevIcon(bevId: string, icon?: BevIcon | null): ResolvedBevIcon | undefined {
-  if (icon?.iconUrl) return { uri: icon.iconUrl, source: 'generated' };
+  if (icon?.generatedIconUrl) return { uri: icon.generatedIconUrl, source: 'generated' };
 
   const own = bevIconUri(bevId);
   if (own) return { uri: own, source: 'authored' };

@@ -10,6 +10,7 @@
 
 import { decodePng, encodePng, type Raster } from './png.ts';
 import { decodeJpeg } from './jpeg.ts';
+import { ICON_BUCKET, iconUploadUrl } from './index.ts';
 import {
   compositeShadow,
   downscale,
@@ -418,4 +419,26 @@ Deno.test('object keys: traversal is rejected, and would otherwise escape the bu
 Deno.test('object keys: the shape media.upload actually builds is accepted', () => {
   const key = '00000000-0000-4000-8000-00000000fa01/9f8e7d6c-1234.jpg';
   assertEquals(safeObjectPath(key), key, 'a normal upload path passes through unchanged');
+});
+
+// --------------------------------------------------------------------------
+// The upload target
+// --------------------------------------------------------------------------
+// This exists because the bucket rename reached the migration and the reader
+// but NOT the writer, and both suites stayed green: pgTAP cannot see
+// TypeScript, and nothing asserted the URL. Every icon would have been
+// refused on mime type and burned all five attempts, with the feature looking
+// healthy. One assertion is the difference.
+
+Deno.test('upload: the URL targets the generated-icon bucket, not the authored one', () => {
+  assertEquals(ICON_BUCKET, 'bev-generated-icons', 'the bucket the migration creates');
+  const url = iconUploadUrl('https://p.supabase.co', 'bev-1/icon-768.png');
+  assertEquals(
+    url,
+    'https://p.supabase.co/storage/v1/object/bev-generated-icons/bev-1/icon-768.png',
+    'the upload URL is built from ICON_BUCKET',
+  );
+  // `bev-icons` is main's authored-SVG bucket: image/svg+xml only, 512 KiB, so
+  // a PNG posted there is refused and the job burns every attempt.
+  assert(!url.includes('/object/bev-icons/'), 'never the authored-icon bucket');
 });

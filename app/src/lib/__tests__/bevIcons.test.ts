@@ -69,7 +69,7 @@ const UNDRAWN = '00000000-0000-4000-8000-00000000fa01';
 
 const icon = (over: Partial<BevIcon> = {}): BevIcon => ({
   bevId: UNDRAWN,
-  iconUrl: null,
+  generatedIconUrl: null,
   iconStatus: 'none',
   fallbackBevIds: [],
   labelBand: null,
@@ -81,7 +81,7 @@ describe('resolveBevIcon', () => {
     const url = 'https://example.test/bev-icons/x/icon-1024.png';
     // Even for a Bev that has authored art of its own: a generated icon exists
     // only because someone photographed that exact drink.
-    expect(resolveBevIcon(DRAWN_A, icon({ iconUrl: url, iconStatus: 'completed' }))).toEqual({
+    expect(resolveBevIcon(DRAWN_A, icon({ generatedIconUrl: url, iconStatus: 'completed' }))).toEqual({
       uri: url,
       source: 'generated',
     });

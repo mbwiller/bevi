@@ -144,7 +144,7 @@ export interface BevLeaf {
  * reasons that have nothing to do with whether the icon exists. One batch call
  * per screen answers for a whole list instead, exactly as `leaves()` does.
  *
- * `iconUrl` is set only when `iconStatus` is `'completed'`. An id the caller
+ * `generatedIconUrl` is set only when `iconStatus` is `'completed'`. An id the caller
  * cannot see is OMITTED from the result, so a short result is normal; a Bev
  * that exists with no icon comes back with `'none'` (never eligible) or
  * `'pending'`/`'processing'`/`'failed'`. In every case but `'completed'` the
@@ -154,15 +154,25 @@ export interface BevLeaf {
  */
 export interface BevIcon {
   bevId: string;
-  /** The illustrated asset, or null unless `iconStatus` is 'completed'. */
-  iconUrl: string | null;
+  /**
+   * The AI illustration generated for a custom Bev, or null unless
+   * `iconStatus` is 'completed'.
+   *
+   * NOT `BevSummary.iconUrl`, which is a different thing that arrived in
+   * 2.13.0: that one is the AUTHORED catalogue icon, an SVG published from
+   * `design/beverage-icons/manifest.json` into `public.bev_icons`. This is a
+   * raster PNG matted from a user's photograph, in `bev-generated-icons`. A
+   * Bev can have either, both or neither, so they are separate fields in
+   * separate buckets and the names say which is which.
+   */
+  generatedIconUrl: string | null;
   iconStatus: IconStatus;
   /**
    * Catalog Bevs whose authored art this Bev may borrow, best first — so a
    * custom drink with no generated icon shows a real Bevi illustration instead
    * of a generic category silhouette.
    *
-   * Empty when `iconUrl` is set (it needs none). The server RANKS these; the
+   * Empty when `generatedIconUrl` is set (it needs none). The server RANKS these; the
    * caller CHOOSES, walking the list until one has authored art, because only
    * the client knows which Bevs do: that map is `bevIcons.generated.ts`, a
    * shipped asset rather than a database row. A list where none match is

@@ -68,7 +68,28 @@ const MAX_PROVIDER_BYTES = 24 * 1024 * 1024;
 const MAX_IMAGE_B64 = 8_000_000;
 /** No JPEG frame larger than this is worth decoding; we asked for 768x1024. */
 const MAX_DECODE_EDGE = 4096;
-/** The `bev-icons` bucket's own file_size_limit, checked before we upload. */
+/**
+ * Where generated icons go. A named constant because this string lived inline
+ * in the upload and silently kept pointing at main's `bev-icons` through a
+ * bucket rename that reached the migration and the reader but not the writer.
+ *
+ * NOT `bev-icons`. That is the AUTHORED catalogue art (20261112000200):
+ * `image/svg+xml` only, 512 KiB. A ~450 KiB PNG posted there is refused on
+ * mime type, the worker takes its upload_failed branch, and the job burns
+ * every attempt -- while both test suites stay green, because pgTAP cannot see
+ * TypeScript and nothing asserted this URL. `test.ts` now does.
+ */
+export const ICON_BUCKET = 'bev-generated-icons';
+
+/**
+ * The object URL a finished icon is uploaded to. Extracted so a test can
+ * assert it, which is the gap that let the rename miss the writer: asserting
+ * the CONSTANT would not have caught an upload that ignored it.
+ */
+export function iconUploadUrl(supabaseUrl: string, objectPath: string): string {
+  return `${supabaseUrl}/storage/v1/object/${ICON_BUCKET}/${objectPath}`;
+}
+/** The `bev-generated-icons` bucket's own file_size_limit, checked before we upload. */
 const MAX_ICON_BYTES = 2 * 1024 * 1024;
 
 interface ClaimedJob {
@@ -430,7 +451,7 @@ async function processOne(job: ClaimedJob, ctx: Context): Promise<Outcome> {
     return { kind: 'failed', error: `icon_too_large(${fullPng.length}): exceeds the bucket limit` };
   }
   for (const [path, bytes] of [[fullPath, fullPng], [thumbPath, thumbPng]] as const) {
-    const up = await fetch(`${ctx.supabaseUrl}/storage/v1/object/bev-icons/${path}`, {
+    const up = await fetch(iconUploadUrl(ctx.supabaseUrl, path), {
       method: 'POST',
       headers: { ...headers, 'Content-Type': 'image/png', 'x-upsert': 'true', 'Cache-Control': 'max-age=31536000' },
       body: bytes as unknown as BodyInit,
