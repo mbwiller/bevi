@@ -115,20 +115,20 @@ it('removes from Want to Try optimistically, and rolls back on error', async () 
   expect(await screen.findByLabelText(target.bev.name, undefined, { timeout: 3000 })).toBeTruthy();
 });
 
-it('opens the row actions sheet with Re-rank, Edit note and Remove', async () => {
+it('opens the row actions sheet with Bev it again, Edit note and Remove', async () => {
   const first = (await api.rankings.listMine()).items[0]!;
   await start();
   await fireEvent.press(await screen.findByLabelText(`More for ${first.bev.name}`));
-  expect(await screen.findByLabelText('Re-rank')).toBeTruthy();
+  expect(await screen.findByLabelText('Bev it again')).toBeTruthy();
   await fireEvent.press(screen.getByLabelText("Remove from Bev'd"));
   expect(await screen.findByText(`Remove ${first.bev.name}?`)).toBeTruthy();
 });
 
-it('Re-rank opens the ranking flow in re-rank mode', async () => {
+it('Bev it again opens the ranking flow in re-rank mode', async () => {
   const first = (await api.rankings.listMine()).items[0]!;
   const r = await start();
   await fireEvent.press(await screen.findByLabelText(`More for ${first.bev.name}`));
-  await fireEvent.press(await screen.findByLabelText('Re-rank'));
+  await fireEvent.press(await screen.findByLabelText('Bev it again'));
   expect(r.path()).toBe(`/rank/${first.bevId}?mode=rerank`);
 });
 
