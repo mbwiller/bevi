@@ -1,5 +1,34 @@
 # Beverage icon production checkpoint
 
+## Redraw 01, 2026-11-15: 19 icons from the Needs work queue
+
+19 icons from batches 12 and 13 were redrawn from their real packages. Matt sorted all 19 Good in the swipe tool the same day, so the collection stands at 224 good and 111 need work (`REVIEW.md`). These 19 are reference examples for the redraws that follow.
+
+| New recipe module | Icons |
+|---|---|
+| `redraw-white-claw-truly.mjs` | White Claw Black Cherry, Mango, Natural Lime; Truly Wild Berry, Lemonade |
+| `redraw-high-noon-cutwater.mjs` | High Noon Peach, Watermelon; Cutwater Lime Margarita, Vodka Mule |
+| `redraw-diet-coke-flavors.mjs` | Diet Coke Feisty Cherry, Ginger Lime, Twisted Mango, Zesty Blood Orange |
+| `redraw-starbucks-doubleshot.mjs` | Doubleshot Energy Coffee, Energy Vanilla, Espresso & Cream |
+| `redraw-energy-siblings.mjs` | Alani Nu Mimosa, Bang Rainbow Unicorn, Celsius Cucumber Lime |
+
+- The old recipes were removed from `refreshments-12.mjs` (12) and `canned-coffee-refreshments-13.mjs` (7). The other 316 portable SVGs are byte-identical, so no other icon returns to the deck.
+- Method: one module per brand group; each icon drawn from a downloaded front packshot, compared with it side by side, and checked at 40 and 56 px beside Good icons of the same can shape. Package choices, references and simplifications are in each record.
+- Choices a reviewer should know: Bang Rainbow Unicorn and High Noon are drawn as the current cans (High Noon now reads "VODKA SELTZER"; the catalog name is still "Vodka Soda"); Truly Lemonade is the current black 12 oz can; the White Claw and Truly cans are 72 units wide and the Diet Coke cans 66, though all are 12 oz sleek cans.
+- Not redrawn: `starbucks-doubleshot-original`. No product of that name was found; the row is either a duplicate of Espresso & Cream or the discontinued cafe drink. Its rejected icon is unchanged until the catalog question is settled.
+- The Starbucks Siren and the Espresso can's lettering are vectorised from the packshots; the Diet Coke wordmark comes from the 2018 logo vector on Wikimedia Commons. Each module's header says so.
+- Rebuilding on Node 26 changes the last float digit in three `svg/gts-kombucha-*.svg` masters; their portable SVGs and PNGs are unchanged.
+
+## Human review, 2026-11-14: 205 good, 130 need work
+
+Matt sorted all 335 icons in the swipe tool (`npm run icons:swipe`). The result is in `REVIEW.md`, generated from `verdicts/matt.json`. No notes were recorded with the verdicts.
+
+- **205 are Good** and are the reference examples for all new work.
+- **130 need work** and form the redraw queue. Every icon of the two latest batches is in it (`refreshments-12.mjs`, 30 of 30; `canned-coffee-refreshments-13.mjs`, 30 of 30), with 14 of 20 in `classic-soda-expansion.mjs`, 7 of 8 in `juice-final-expansion.mjs` and 7 of 10 in `hydration-expansion.mjs`. 22 recipe modules are entirely Good.
+- The manifest `status` of every record is still `needs-review`. The verdict files, not the manifest, hold the approval.
+
+Redraws come from the queue in `REVIEW.md` and are held to the standard in the skill's "The quality bar" section, as is every new drink.
+
 ## Latest batch: 30 soda, coffee, tea, smoothie and wine icons, 2026-11-14
 
 **335 drafts authored; 43 catalog entries remain. 40 of 43 starters covered.**

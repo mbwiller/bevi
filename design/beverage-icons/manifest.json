@@ -467,18 +467,18 @@
     },
     {
       "slug": "alani-nu-mimosa",
-      "family": "energy-slim-can",
-      "packageChoice": "12 oz aluminum can",
+      "family": "alani-slim-can",
+      "packageChoice": "US 12 fl oz / 355 mL Alani Nu Energy Mimosa slim can, the white-bodied retail can with orange neck and mint foot. Mimosa is not in the manufacturer's current product feed (alaninu.com/products.json, checked 2026-11-15), so this is the last retail package of a retired flavor rather than a current listing.",
       "references": [
         {
           "pageUrl": "https://shop.fivestarbreaktime.com/product/alani-nu-energy-mimosa-12oz-can/",
           "imageUrl": "https://ocs-images.nywebconsulting.com/121824.jpg",
-          "inspectedAt": "2026-11-14",
+          "inspectedAt": "2026-11-15",
           "visuallyInspected": true,
-          "observations": "US 12 oz slim can inspected: white field, Alani teal script, orange MIMOSA/NATURALLY FLAVORED lettering, orange/lemon slices and zero-sugar callout. Fine energy copy simplified."
+          "observations": "Distributor front packshot (1625 px render) of the 12 fl oz can: pearl-white body, solid orange neck band, small spaced orange MIMOSA with thin NATURALLY FLAVORED beneath, vertical mint Alani script with thin NU beside it, italic ENERGY in a pink-to-purple fade, mint foot band with white 12 FL OZ (355ML). Flavor art around the edges: half orange slices with a peach stretch of rind and pale-yellow pith at upper left and middle left, an orange wheel cut off by the neck at upper right and a large one rising from the foot band, pink/purple branching splash shapes at top and bottom, yellow bubbles down both sides, two-tone mint leaves, and an orange hexagon 0 SUGAR badge at lower right."
         }
       ],
-      "uncertainty": "Catalog omits package size for this product. Fine print and small promotional copy are simplified; major brand, flavor and package features are retained. Aesthetic approval pending.",
+      "uncertainty": "Catalog has no package size; the 12 fl oz can is the only one found. Script wordmark keeps the geometry of the Good Alani icons, so it is shorter than on the photographed can (about 34% of the can height against 40%), and NU is set in Arial rather than the can's thin bracket-style letters. ENERGY is set smaller than on the sibling icons to match this can and clear the fruit. Bubble and splash positions follow the reference but are simplified; halftone grain on the fruit, ENERGY DRINK and (355ML) in the foot band are omitted. Current availability not confirmed: retailer listings exist, the manufacturer no longer lists the flavor.",
       "status": "needs-review",
       "bevId": "d5fae22e-0812-5472-bd0b-883336a11cc9",
       "name": "Alani Nu Energy Mimosa",
@@ -489,12 +489,12 @@
         "svg": "svg/alani-nu-mimosa.svg",
         "portableSvg": "portable-svg/alani-nu-mimosa.svg",
         "png": "png/alani-nu-mimosa.png",
-        "svgSha256": "9ba6103434e4df3c2750cfdd7c540b5d078ae0e9a45a174e8b23da5952249770",
-        "portableSvgSha256": "15dc7993a4beac459e2b929b4c6f92effb9fae9696bcdb93c5fa390a4e8b5286",
-        "pngSha256": "c5344d952b378c37603e1eb93920bbe961319eecf37bb123462cfbb01832fe7b",
-        "pngBytes": 66757
+        "svgSha256": "9cf905e8124626bda3195cbd1726249e948a6968d53f2400f16325da60308a6e",
+        "portableSvgSha256": "13001cfc1a8bc285a5e3af08210223b20cc6eeb0d014d9835e8909b10218b41c",
+        "pngSha256": "cecc5cd24807c0225bfc20726d89a8537881edc73b16f31e4f5599c50e3dcf70",
+        "pngBytes": 128418
       },
-      "sourceModule": "scripts/icons/families/refreshments-12.mjs"
+      "sourceModule": "scripts/icons/families/redraw-energy-siblings.mjs"
     },
     {
       "slug": "alani-nu-witchs-brew",
@@ -901,18 +901,25 @@
     },
     {
       "slug": "bang-rainbow-unicorn",
-      "family": "energy-slim-can",
-      "packageChoice": "16 oz energy can",
+      "family": "bang-energy-can",
+      "packageChoice": "Current US 16 fl oz / 473 mL Bang Energy Rainbow Unicorn can as shown on the manufacturer product page: the white-bodied \"FUEL YOUR DESTINY\" design shared by the current Blue Razz, Peach Mango and Star Blast cans. The earlier all-blue and pink VPX-era can (\"SUPER CREATINE\" neck) that the rejected icon cited is the previous package and was not drawn.",
       "references": [
+        {
+          "pageUrl": "https://www.bangenergy.com/en-us/products/rainbow-unicorn/",
+          "imageUrl": "https://web-assests.monsterenergy.com/mnst/43cbe86b-521a-4553-a776-d87bdf03dcdb.png",
+          "inspectedAt": "2026-11-15",
+          "visuallyInspected": true,
+          "observations": "Manufacturer front packshot (hero image of the Rainbow Unicorn product page, read through the 2025-08-15 Wayback Machine capture because the live site refuses scripted requests; the image itself was downloaded from the live asset host on 2026-11-15). White/silver 16 fl oz can; teal neck band with white italic FUEL YOUR DESTINY! and a thin pink stripe under it; large lowercase target b with teal outer outline, black inner outline, white face and a yellow offset edge, pink centre disc with the black head motif and black cross-hairs; pink outlined bang wordmark, teal ENERGY, pink stacked RAINBOW UNICORN; teal sweeps with a pink pinstripe rising from both foot corners; pink 0 CALORIES disc with a yellow ring at lower right; grey NATURAL FLAVORS and 16 fl oz (1 PT) 473 mL at the foot."
+        },
         {
           "pageUrl": "https://www.heb.com/product-detail/bang-energy-drink-rainbow-unicorn/2447502",
           "imageUrl": "https://www.citrolava.com/cdn/shop/files/bang_-_rainbow_-_2.jpg?v=1719193275&width=1946",
-          "inspectedAt": "2026-11-14",
+          "inspectedAt": "2026-11-15",
           "visuallyInspected": true,
-          "observations": "US 16 oz Bang can front inspected: bold blue/turquoise and pink color blocks, colorful BANG target and Rainbow Unicorn treatment with zero-calorie badge. Target and rainbow/unicorn marks simplified; fine claim text omitted."
+          "observations": "The reference recorded by the rejected batch, inspected for comparison only: the earlier Rainbow Unicorn can with a cyan-blue body, pink SUPER CREATINE neck, pink foot section and yellow flavor name. It is the pre-redesign package and differs from the manufacturer's current can, so it was not used for the drawing."
         }
       ],
-      "uncertainty": "Catalog omits package size for this product. Fine print and small promotional copy are simplified; major brand, flavor and package features are retained. Aesthetic approval pending.",
+      "uncertainty": "Catalog has no package size or package generation. The current manufacturer can was drawn; if the catalog row is meant as the older blue and pink can, this is the wrong generation and needs a separate drawing. Target mark, wordmark (Arial Bold standing in for the custom bang lettering) and layout deliberately reuse the geometry of the Good Bang icons; the cross-hair cut through the wordmark, registered marks, CALORIES and NATURAL FLAVORS microcopy are omitted. Live product page could not be fetched directly (HTTP 403 to scripted clients).",
       "status": "needs-review",
       "bevId": "ce13c1fc-955d-5ce3-abbf-7f075fe1570a",
       "name": "Bang Energy Rainbow Unicorn",
@@ -923,12 +930,12 @@
         "svg": "svg/bang-rainbow-unicorn.svg",
         "portableSvg": "portable-svg/bang-rainbow-unicorn.svg",
         "png": "png/bang-rainbow-unicorn.png",
-        "svgSha256": "2e8468ff33b88b0a18ae554c31cd3047d751b6f36e5a48d7728285ebae9f4063",
-        "portableSvgSha256": "d067e9b14d0c327f1902900835f9986a8c2eea4ef29e297eebba224fd38b9cc6",
-        "pngSha256": "ce94bd49592fb2eb2f7e0cad8f63d0f0b72e19fd63cdb3215effa47c311288e4",
-        "pngBytes": 79076
+        "svgSha256": "b40fcc14525de949177a3ee4f0fd9e2074966f4b7a9af1e30687b70c53a28fdb",
+        "portableSvgSha256": "8a7299edc0b2dc2d963da03e69c2d5117a0093996e9f54887c774ede9c8e49a9",
+        "pngSha256": "935b1448b1095e740b4ebb26a4034dd1b842eab967ef7829c4b0a5743d44115a",
+        "pngBytes": 109805
       },
-      "sourceModule": "scripts/icons/families/refreshments-12.mjs"
+      "sourceModule": "scripts/icons/families/redraw-energy-siblings.mjs"
     },
     {
       "slug": "bang-star-blast",
@@ -1831,18 +1838,25 @@
     },
     {
       "slug": "celsius-cucumber-lime",
-      "family": "energy-slim-can",
-      "packageChoice": "12 oz aluminum can",
+      "family": "celsius-slim-can",
+      "packageChoice": "US 12 fl oz / 355 mL Celsius Sparkling Cucumber Lime slim can. Cucumber Lime was only sold in the stevia-sweetened Celsius line (launched as the natural-channel extension), so the catalog's plain \"Celsius Cucumber Lime\" is this can: white body, NO SUGAR • NO PRESERVATIVES at the shoulder, lime-green claims panel. No separate standard-line Cucumber Lime can was found. The flavor is absent from celsius.com/products (checked 2026-11-15); this is its last retail package.",
       "references": [
         {
           "pageUrl": "https://www.shipt.com/up/celsius-stevia-sparkling-cucumber-lime-functional-essential-energy-drink-12-fl-oz-single-can/ddd36b82-0d0a-f3a4-56cb-b35d2ee7ab1e",
           "imageUrl": "https://dsom-imager-prod.shipt.com/ddd36b82-0d0a-f3a4-56cb-b35d2ee7ab1e/543791c5-dbcd-4c55-ba4e-2ff2b5b07759.jpeg",
-          "inspectedAt": "2026-11-14",
+          "inspectedAt": "2026-11-15",
           "visuallyInspected": true,
-          "observations": "US 12 oz can inspected: white/silver body, gray-green Celsius C and wordmark, cucumber/lime slices, natural caffeine and zero-sugar cues. Retailer front package used; fine benefit copy simplified."
+          "observations": "Retailer straight-on front packshot of the single 12 fl oz can: white slim can with silver neck and foot, dark-green NO SUGAR • NO PRESERVATIVES at the shoulder, silver C whose whole upper arm is a yellow-green to green swoosh, grey degree ring, black CELSIUS, green LIVE FIT. Halftone illustration of a cucumber slice (dark skin with small bumps, pale flesh, three seed chambers) with a lime wedge in front at its left and loose bubbles; thin SPARKLING over green CUCUMBER LIME; lime-green claims panel with four white lines and a silver block at its left; silver foot with 0 SUGAR and NON GMO badges and three round activity icons, then CLINICALLY PROVEN / DIETARY SUPPLEMENT and 12 FL OZ (355 mL)."
+        },
+        {
+          "pageUrl": "https://www.energydrinkmania.net/en/celsius/celsius_sparkling_cucumber_lime.html",
+          "imageUrl": "https://www.energydrinkmania.net/celsius/celsius_sparkling_cucumber_lime001.jpg",
+          "inspectedAt": "2026-11-15",
+          "visuallyInspected": true,
+          "observations": "Reviewer's photograph of a purchased can, used to confirm the packshot against a real can: same layout and colors; on this later printing the first panel line reads ESSENTIAL ENERGY (the retailer render reads HEALTHY ENERGY). The review states the flavor belonged to the stevia-sweetened natural series and left the manufacturer site by 2024."
         }
       ],
-      "uncertainty": "Catalog omits package size for this product. Fine print and small promotional copy are simplified; major brand, flavor and package features are retained. Aesthetic approval pending.",
+      "uncertainty": "Catalog has no package size or line; drawn as the stevia-line can because no other Cucumber Lime can was found. First panel line follows the later photographed printing (ESSENTIAL ENERGY) rather than the retailer render (HEALTHY ENERGY). The C keeps the outline of the Good Celsius icons with the swoosh as a gradient, not a separate leaf shape. The halftone fruit is redrawn as flat-shaded vectors; CLINICALLY PROVEN / DIETARY SUPPLEMENT is omitted, and the foot is compressed because the house can has less room below the panel than the photographed can. Discontinued flavor: current availability not confirmed.",
       "status": "needs-review",
       "bevId": "0185e29e-12f6-5f46-8223-a22a1fc1144c",
       "name": "Celsius Cucumber Lime",
@@ -1853,12 +1867,12 @@
         "svg": "svg/celsius-cucumber-lime.svg",
         "portableSvg": "portable-svg/celsius-cucumber-lime.svg",
         "png": "png/celsius-cucumber-lime.png",
-        "svgSha256": "ff53cf96c9763e653f790d481ab2b5e9e500b44f4dfcb2d37d056f9bb54ade62",
-        "portableSvgSha256": "a070243f68e87d48fa88be954d10eee5726418b5d79d48e6d4c098aad2fdd2b2",
-        "pngSha256": "e37cd040a3da98233f81d4adfac33f3b13c31c638bf3b16e02a7d0e1132eb01d",
-        "pngBytes": 64097
+        "svgSha256": "9b026f8fa97aaea2912618bca135a030b40677463f9644bb70c22f96bac0acfa",
+        "portableSvgSha256": "249494d67eb2295ac99d82bc40e30b8c11afa6830d8f1736e4d775b6f64d562e",
+        "pngSha256": "e5942b09a88f2269646b0686e780b798776fb5d642dd3042d2080d02fa9ac340",
+        "pngBytes": 119732
       },
-      "sourceModule": "scripts/icons/families/refreshments-12.mjs"
+      "sourceModule": "scripts/icons/families/redraw-energy-siblings.mjs"
     },
     {
       "slug": "celsius-sparkling-cola",
@@ -2751,18 +2765,18 @@
     },
     {
       "slug": "cutwater-spirits-margarita",
-      "family": "ready-to-drink-cocktail-can",
-      "packageChoice": "12 oz aluminum can",
+      "family": "cutwater-cocktail-can",
+      "packageChoice": "Current US 12 fl oz (355 mL) standard can of Cutwater Lime Margarita, 12.5% ABV. The catalog row says only \"Margarita\"; Lime Margarita is Cutwater's standard margarita (the others are named flavors such as Mango or Strawberry), so that can was drawn.",
       "references": [
         {
           "pageUrl": "https://www.cutwaterspirits.com/canned-cocktails/lime-margarita",
           "imageUrl": "https://bevmo.com/cdn/shop/files/b73ab8dd-17cd-4ed1-905e-96c7813088eb-padded_b108dd9b-df97-4758-987f-b9f65e29028a.png?v=1771273308",
-          "inspectedAt": "2026-11-14",
+          "inspectedAt": "2026-11-15",
           "visuallyInspected": true,
-          "observations": "US 12 oz can inspected: white upper label, deep green lower field, navy Cutwater/Lime Margarita lettering, lime wedges and agave leaves. 12.5% ABV callout simplified."
+          "observations": "Front packshot of a standard 12 oz can. White upper half: grey rim line (MADE WITH AWARD-WINNING REAL SPIRITS), blocky navy CUTWATER wordmark, LIME / MARGARITA in tall condensed navy capitals, 12.5% ALC. BY VOL. in dark green, and the navy eagle emblem at the point of a white V. Below the V a bright green field with navy, teal and lime agave spikes and white-outlined lime wedges, and three lines of small white copy (MARGARITA MADE WITH CUTWATER TEQUILA, TRIPLE SEC & LIME JUICE). Wordmark and eagle construction checked against the logo files on cutwaterspirits.com."
         }
       ],
-      "uncertainty": "Catalog omits package size for this product. Fine print and small promotional copy are simplified; major brand, flavor and package features are retained. Aesthetic approval pending.",
+      "uncertainty": "Can drawn at the house standard-can proportions, narrower than the photographed can, so the title capitals are a little more condensed. Title lettering is redrawn geometry approximating the condensed grotesque, not the brand typeface. The lower pattern is a simplified redraw of the printed illustration (fewer, cleaner shapes); the round \"MADE WITH REAL …\" side medallion that wraps off the left/right edge is omitted. Registered-mark symbol omitted.",
       "status": "needs-review",
       "bevId": "8adbfd7e-77c9-5c99-a55f-5ffc03bfd754",
       "name": "Cutwater Spirits Margarita",
@@ -2773,27 +2787,27 @@
         "svg": "svg/cutwater-spirits-margarita.svg",
         "portableSvg": "portable-svg/cutwater-spirits-margarita.svg",
         "png": "png/cutwater-spirits-margarita.png",
-        "svgSha256": "89dfee08e7bb42bfb9003cbd2d1d1f70b39d99eaf3e523850883a325494fe765",
-        "portableSvgSha256": "66193de22e7765b1fddc253417bb9352777570556fe028dd9c726079aefb6036",
-        "pngSha256": "02a4d133e462a35e69b7a36c9cb98ff851ba99e866b9a22bc81e35b9129b70d2",
-        "pngBytes": 70706
+        "svgSha256": "ded14ae6ac56af55d18e2cf2ab6e1537e23f73403c5f8e6674bdcbaab0b15d90",
+        "portableSvgSha256": "23562258922ad910f525dff999b003da45a6575c00d26ff1510e9e87464959b9",
+        "pngSha256": "7cf0242f1b961722a5edac15a5922c98a7f0e45a2505ff0362921f571e1dd40b",
+        "pngBytes": 137681
       },
-      "sourceModule": "scripts/icons/families/refreshments-12.mjs"
+      "sourceModule": "scripts/icons/families/redraw-high-noon-cutwater.mjs"
     },
     {
       "slug": "cutwater-spirits-vodka-mule",
-      "family": "ready-to-drink-cocktail-can",
-      "packageChoice": "12 oz aluminum can",
+      "family": "cutwater-cocktail-can",
+      "packageChoice": "Current US 12 fl oz (355 mL) standard can of Cutwater Vodka Mule, 7% ABV, as shown on the manufacturer's product page.",
       "references": [
         {
           "pageUrl": "https://www.cutwaterspirits.com/canned-cocktails/vodka-mule",
-          "imageUrl": "https://www.meijer.com/content/dam/meijer/product/0816/75/1020/59/0816751020590_1_A1C1_1200.jpg",
-          "inspectedAt": "2026-11-14",
+          "imageUrl": "https://cdn.builder.io/api/v1/image/assets%2F7405b7c3d2954599a0e1a3c04cde0d38%2F390d6fb979eb48fbaeb41762f1af3471?width=1200",
+          "inspectedAt": "2026-11-15",
           "visuallyInspected": true,
-          "observations": "Official page confirms the exact 12 oz vodka-mule cocktail; Meijer front can inspected: cream/white top, bold blue Cutwater/Vodka Mule text, copper-orange lower field with lime and mint. 7% text omitted."
+          "observations": "Manufacturer front packshot of a standard 12 oz can (with condensation, not drawn). Same structure as the margarita: white upper half with the grey rim line, navy CUTWATER wordmark, VODKA / MULE in heavy condensed navy capitals, 7% ALC. BY VOL. in grey, and the navy eagle at the point of a white V. Below it a copper-orange field with serrated mint leaves (solid green, and green with white-and-lime striped halves) and lime wheels with bright lime segments, and three lines of small white copy (CUTWATER VODKA WITH GINGER BEER & LIME FLAVOR). The Meijer image recorded by the rejected batch no longer downloads (returns an HTML page)."
         }
       ],
-      "uncertainty": "Catalog omits package size for this product. Fine print and small promotional copy are simplified; major brand, flavor and package features are retained. Aesthetic approval pending.",
+      "uncertainty": "Can drawn at the house standard-can proportions, narrower than the photographed can, so the title capitals are a little more condensed. Title lettering is redrawn geometry approximating the condensed grotesque, not the brand typeface. The lower pattern is a simplified redraw of the printed illustration (fewer, cleaner shapes); the round \"MADE WITH REAL …\" side medallion that wraps off the left/right edge is omitted. Registered-mark symbol omitted.",
       "status": "needs-review",
       "bevId": "6e665aa0-7abc-50e7-8475-978c62c81133",
       "name": "Cutwater Spirits Vodka Mule",
@@ -2804,12 +2818,12 @@
         "svg": "svg/cutwater-spirits-vodka-mule.svg",
         "portableSvg": "portable-svg/cutwater-spirits-vodka-mule.svg",
         "png": "png/cutwater-spirits-vodka-mule.png",
-        "svgSha256": "52a9c6278d93466a2d9e72406388b0e325d938289fcf48f5455bfc2bdf5df9e6",
-        "portableSvgSha256": "4ffa01b92815c07399ce2b584f2f6db429b44a9346b2dcfd0d52dbf001cbfba0",
-        "pngSha256": "5d10cb39fc790d8d4c94a64db06e3f230fb1c48287f2b03d27ecad29c2665fe6",
-        "pngBytes": 69040
+        "svgSha256": "9f484ed44fb4489d7a0637bb7a35a5d11fc1afd6eaa92d334ac3a57d843bc6e9",
+        "portableSvgSha256": "0c014f14f15d7817d249b9f7419707841692709229fd1fc85acc93b3bcdf1e7b",
+        "pngSha256": "a1ba876716fbb450aa9073aaa91647ccfb082d6d5218a04228655421c24d32a1",
+        "pngBytes": 132270
       },
-      "sourceModule": "scripts/icons/families/refreshments-12.mjs"
+      "sourceModule": "scripts/icons/families/redraw-high-noon-cutwater.mjs"
     },
     {
       "slug": "diet-seven-up",
@@ -2937,18 +2951,25 @@
     },
     {
       "slug": "diet-coke-feisty-cherry",
-      "family": "coffee-soda-can-expansion",
-      "packageChoice": "Historical US 12 fl oz slim Diet Coke flavor can from the 2018 line.",
+      "family": "diet-coke-slim-can",
+      "packageChoice": "US 12 fl oz (355 mL) sleek aluminum can of Diet Coke Feisty Cherry, the package the flavor launched in nationally in January 2018 (singles and eight-packs). Historical: the flavor is no longer sold, and the catalog row names this 2018 line.",
       "references": [
         {
-          "pageUrl": "https://www.ralphs.com/p/diet-coke-feisty-cherry-soda/0004900007511",
+          "pageUrl": "https://www.bevindustry.com/articles/90846-diet-coke-ginger-lime-feisty-cherry-zesty-blood-orange-twisted-mango",
           "imageUrl": "https://www.kroger.com/product/images/large/front/0004900007511",
-          "inspectedAt": "2026-11-14",
+          "inspectedAt": "2026-11-15",
           "visuallyInspected": true,
-          "observations": "Historical US 12 fl oz slim can; silver body, magenta stripe, white Diet Coke mark and paired cherry illustration."
+          "observations": "Kroger front packshot (500 px retailer render) of Diet Coke Feisty Cherry. Tall, slim 12 fl oz sleek can in bright brushed silver with a single wide flavor-colored stripe running the full height of the front, centred, about 41 to 44 percent of the visible width. At the top of the stripe the flavor name in small white bold sans capitals; below it the Diet Coke wordmark in white, very large, reading bottom to top: script \"Diet\" followed on the same line by the heavy serif \"Coke\" with a registered mark. On the silver to the right a white \"0 CALORIES PER CAN\" lozenge above black \"12 FL OZ (355 mL)\"; at lower left a small red stacked Diet Coke logo with a black flavor descriptor. Stripe is a dark berry purple (sampled #6e1147). Name on two lines, FEISTY / CHERRY. Illustration at the foot: two cherries overlapping the stripe, a pale silver stippled cherry behind on the left with a thin stem rising up and left across the silver, and a dark purple cherry in front with a fine white outline, a white highlight speck and light stippling, its pale stem rising up and right past the stripe edge."
+        },
+        {
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Diet_Coke_logo.svg",
+          "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/3/3c/Diet_Coke_logo.svg",
+          "inspectedAt": "2026-11-15",
+          "visuallyInspected": true,
+          "observations": "Public-domain vector of the 2018 Diet Coke logo (file dated 2017-12-25): heavy serif \"Coke\" with a small script \"Diet\" stacked over the k and e. Rendered and compared with the wordmark cropped from the BevNET Ginger Lime photo: the letterforms match; the can sets the two words on one line with \"Diet\" about 1.7 times larger relative to \"Coke\", which is how they are placed here. The stacked arrangement is reused only for the small red logo at the foot of the can."
         }
       ],
-      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Discontinued US Diet Coke flavor packaging is retained as historical package evidence; current reformulations were not substituted. Final aesthetic approval and device review pending.",
+      "uncertainty": "Body drawn at the house slim-can width (ratio 0.31, identical to the Good Celsius and Alani cans) although the photos measure 0.35 to 0.38. Wordmark letterforms are the 2018 logo vector re-set on one line; the size of \"Diet\" relative to \"Coke\" and all positions were measured on the BevNET Ginger Lime photo and reused for the four flavors. Flavor name is Arial Bold condensed with textLength (the can uses a geometric sans). \"CALORIES PER CAN\" and the flavor descriptor are reduced to hairlines; \"12 FL OZ (355 mL)\" is set small and heavily condensed. The house lid hides the top of the stripe, so the flavor name sits slightly lower than on the can. Historical package: the retailer and BevNET product pages the earlier batch recorded refuse automated requests, so the page recorded is the dated trade article that names the four flavors and the sleek 12 oz can; the image was opened directly. Discontinuation date not confirmed here. Reference is a small retailer render, so the cherries' stippled shading is reduced to a few dots and a gradient; the front cherry is filled slightly lighter than the stripe so it stays visible at tile size.",
       "status": "needs-review",
       "bevId": "e3fd7e33-df20-5d6f-a7b5-e4f22c2b52ea",
       "name": "Diet Coke Feisty Cherry",
@@ -2959,27 +2980,34 @@
         "svg": "svg/diet-coke-feisty-cherry.svg",
         "portableSvg": "portable-svg/diet-coke-feisty-cherry.svg",
         "png": "png/diet-coke-feisty-cherry.png",
-        "svgSha256": "0d9ec4b8fa1468eebf8f429d704a4722068787622bfbc046105876a819a7756c",
-        "portableSvgSha256": "24feefcf9994095bc18d477d874158bb16df7ea49ec0e0bbfbb65c81ff4f54d6",
-        "pngSha256": "cd755467628634b748b794db0fd6a5f0e49b9ffdfbc8767fa29a496a63ef6211",
-        "pngBytes": 34786
+        "svgSha256": "a6f738a83e1e886db447d128d780fd185738b7a9ccd5e787f2f7765e36b4b75c",
+        "portableSvgSha256": "1a06c8539b51f6d1a994dcfb7194d50e34ce6e2039307cf785b94576e57336fa",
+        "pngSha256": "62e0e74265f261bad8bd4923cb6857bebcfc2248ba4c016b2c5507a2a4d9c57a",
+        "pngBytes": 82490
       },
-      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+      "sourceModule": "scripts/icons/families/redraw-diet-coke-flavors.mjs"
     },
     {
       "slug": "diet-coke-ginger-lime",
-      "family": "coffee-soda-can-expansion",
-      "packageChoice": "Historical US 12 fl oz slim Diet Coke flavor can from the 2018 line.",
+      "family": "diet-coke-slim-can",
+      "packageChoice": "US 12 fl oz (355 mL) sleek aluminum can of Diet Coke Ginger Lime, the package the flavor launched in nationally in January 2018 (singles and eight-packs). Historical: the flavor is no longer sold, and the catalog row names this 2018 line.",
       "references": [
         {
-          "pageUrl": "https://www.cocacola.com/us/en/brands/diet-coke",
+          "pageUrl": "https://www.bevindustry.com/articles/90846-diet-coke-ginger-lime-feisty-cherry-zesty-blood-orange-twisted-mango",
           "imageUrl": "https://d2iiahg0ip5afn.cloudfront.net/media/diet_coke/images/818375593.cocacola-12oz-diet-gingerlime-front.jpg",
-          "inspectedAt": "2026-11-14",
+          "inspectedAt": "2026-11-15",
           "visuallyInspected": true,
-          "observations": "Historical US 12 fl oz slim can from the 2018 Diet Coke flavor launch. Inspected silver body, vertical green stripe, white Diet Coke mark, Ginger Lime flavor and small lime/ginger art."
+          "observations": "BevNET front photograph (800x1200, EXIF date 2018-01-17) of Diet Coke Ginger Lime. Tall, slim 12 fl oz sleek can in bright brushed silver with a single wide flavor-colored stripe running the full height of the front, centred, about 41 to 44 percent of the visible width. At the top of the stripe the flavor name in small white bold sans capitals; below it the Diet Coke wordmark in white, very large, reading bottom to top: script \"Diet\" followed on the same line by the heavy serif \"Coke\" with a registered mark. On the silver to the right a white \"0 CALORIES PER CAN\" lozenge above black \"12 FL OZ (355 mL)\"; at lower left a small red stacked Diet Coke logo with a black flavor descriptor. Stripe is lime green (sampled #6ea200). Name on two lines, GINGER / LIME. Illustration at the foot, drawn as line art that is green on the silver and white on the stripe: a lime half-slice with a green rind band and pale segments at left, a green lime wedge with white-outlined segments at right running past the stripe edge, a pale dotted peel between them, a long ginger stick at upper left and a small ginger chunk at upper right."
+        },
+        {
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Diet_Coke_logo.svg",
+          "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/3/3c/Diet_Coke_logo.svg",
+          "inspectedAt": "2026-11-15",
+          "visuallyInspected": true,
+          "observations": "Public-domain vector of the 2018 Diet Coke logo (file dated 2017-12-25): heavy serif \"Coke\" with a small script \"Diet\" stacked over the k and e. Rendered and compared with the wordmark cropped from the BevNET Ginger Lime photo: the letterforms match; the can sets the two words on one line with \"Diet\" about 1.7 times larger relative to \"Coke\", which is how they are placed here. The stacked arrangement is reused only for the small red logo at the foot of the can."
         }
       ],
-      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Discontinued US Diet Coke flavor packaging is retained as historical package evidence; current reformulations were not substituted. Final aesthetic approval and device review pending.",
+      "uncertainty": "Body drawn at the house slim-can width (ratio 0.31, identical to the Good Celsius and Alani cans) although the photos measure 0.35 to 0.38. Wordmark letterforms are the 2018 logo vector re-set on one line; the size of \"Diet\" relative to \"Coke\" and all positions were measured on the BevNET Ginger Lime photo and reused for the four flavors. Flavor name is Arial Bold condensed with textLength (the can uses a geometric sans). \"CALORIES PER CAN\" and the flavor descriptor are reduced to hairlines; \"12 FL OZ (355 mL)\" is set small and heavily condensed. The house lid hides the top of the stripe, so the flavor name sits slightly lower than on the can. Historical package: the retailer and BevNET product pages the earlier batch recorded refuse automated requests, so the page recorded is the dated trade article that names the four flavors and the sleek 12 oz can; the image was opened directly. Discontinuation date not confirmed here. Lime segments are simplified (four dividers on the slice, five outlined segments on the wedge, scalloped segment edges omitted); the peel carries 16 dots where the can has many finer ones.",
       "status": "needs-review",
       "bevId": "64d60399-0197-545d-b1dc-d020d09955ef",
       "name": "Diet Coke Ginger Lime",
@@ -2990,27 +3018,34 @@
         "svg": "svg/diet-coke-ginger-lime.svg",
         "portableSvg": "portable-svg/diet-coke-ginger-lime.svg",
         "png": "png/diet-coke-ginger-lime.png",
-        "svgSha256": "397bcb2b5e87312c44c49bef80798f220ffff3c403b0f1a0478ca48b05acdcd9",
-        "portableSvgSha256": "f96c2beb293c02b1fd0fd75cedf537c2d1646fdf01e08bd5c92a3fe0781d6b00",
-        "pngSha256": "280ca00ae001b343274b2a346b578e9c651afd4c6e3244bb168bcbce9e66c7fc",
-        "pngBytes": 35088
+        "svgSha256": "f3eae67fc1146f8e269436225588e85ee010be084698df9bab2cf5a5bcb5f4e9",
+        "portableSvgSha256": "e66774f26a7eb1cd2b5053a4e9ae5cd9d4dec454f5016a03fbab657e97ce8b98",
+        "pngSha256": "3229825f71c460e0442324f1d177d4768c1f766e9e2a67fedee12914fb1224d3",
+        "pngBytes": 87803
       },
-      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+      "sourceModule": "scripts/icons/families/redraw-diet-coke-flavors.mjs"
     },
     {
       "slug": "diet-coke-twisted-mango",
-      "family": "coffee-soda-can-expansion",
-      "packageChoice": "Historical US 12 fl oz slim Diet Coke flavor can from the 2018 line.",
+      "family": "diet-coke-slim-can",
+      "packageChoice": "US 12 fl oz (355 mL) sleek aluminum can of Diet Coke Twisted Mango, the package the flavor launched in nationally in January 2018 (singles and eight-packs). Historical: the flavor is no longer sold, and the catalog row names this 2018 line.",
       "references": [
         {
-          "pageUrl": "https://www.heb.com/product-detail/coca-cola-diet-twisted-mango-coke/2203808",
+          "pageUrl": "https://www.bevindustry.com/articles/90846-diet-coke-ginger-lime-feisty-cherry-zesty-blood-orange-twisted-mango",
           "imageUrl": "https://images.heb.com/is/image/HEBGrocery/002203808-1",
-          "inspectedAt": "2026-11-14",
+          "inspectedAt": "2026-11-15",
           "visuallyInspected": true,
-          "observations": "Historical US 12 fl oz slim can; silver body, vertical golden-yellow stripe, white Diet Coke logo and stylized mango slices."
+          "observations": "H-E-B front packshot (960 px retailer render) of Diet Coke Twisted Mango. Tall, slim 12 fl oz sleek can in bright brushed silver with a single wide flavor-colored stripe running the full height of the front, centred, about 41 to 44 percent of the visible width. At the top of the stripe the flavor name in small white bold sans capitals; below it the Diet Coke wordmark in white, very large, reading bottom to top: script \"Diet\" followed on the same line by the heavy serif \"Coke\" with a registered mark. On the silver to the right a white \"0 CALORIES PER CAN\" lozenge above black \"12 FL OZ (355 mL)\"; at lower left a small red stacked Diet Coke logo with a black flavor descriptor. Stripe is mango yellow-orange (sampled #fbab1c). Name on two lines, TWISTED / MANGO. Illustration at the foot: an orange mango wedge in front with a fine pale outline and a silver dotted cut face below it, a second slice behind it rising to the upper right with white flesh and orange skin, and a small white-and-orange piece at the left."
+        },
+        {
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Diet_Coke_logo.svg",
+          "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/3/3c/Diet_Coke_logo.svg",
+          "inspectedAt": "2026-11-15",
+          "visuallyInspected": true,
+          "observations": "Public-domain vector of the 2018 Diet Coke logo (file dated 2017-12-25): heavy serif \"Coke\" with a small script \"Diet\" stacked over the k and e. Rendered and compared with the wordmark cropped from the BevNET Ginger Lime photo: the letterforms match; the can sets the two words on one line with \"Diet\" about 1.7 times larger relative to \"Coke\", which is how they are placed here. The stacked arrangement is reused only for the small red logo at the foot of the can."
         }
       ],
-      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Discontinued US Diet Coke flavor packaging is retained as historical package evidence; current reformulations were not substituted. Final aesthetic approval and device review pending.",
+      "uncertainty": "Body drawn at the house slim-can width (ratio 0.31, identical to the Good Celsius and Alani cans) although the photos measure 0.35 to 0.38. Wordmark letterforms are the 2018 logo vector re-set on one line; the size of \"Diet\" relative to \"Coke\" and all positions were measured on the BevNET Ginger Lime photo and reused for the four flavors. Flavor name is Arial Bold condensed with textLength (the can uses a geometric sans). \"CALORIES PER CAN\" and the flavor descriptor are reduced to hairlines; \"12 FL OZ (355 mL)\" is set small and heavily condensed. The house lid hides the top of the stripe, so the flavor name sits slightly lower than on the can. Historical package: the retailer and BevNET product pages the earlier batch recorded refuse automated requests, so the page recorded is the dated trade article that names the four flavors and the sleek 12 oz can; the image was opened directly. Discontinuation date not confirmed here. The mango pieces are filled slightly deeper than the stripe so they separate from it at tile size; the reference shows them almost the same orange with only a hairline outline.",
       "status": "needs-review",
       "bevId": "db370993-fb57-5486-b188-c22a5e8cae4f",
       "name": "Diet Coke Twisted Mango",
@@ -3021,27 +3056,34 @@
         "svg": "svg/diet-coke-twisted-mango.svg",
         "portableSvg": "portable-svg/diet-coke-twisted-mango.svg",
         "png": "png/diet-coke-twisted-mango.png",
-        "svgSha256": "855e37603fb2eaaca2f0a8d2fb3cc158b30ab2bdbebb379a1e3fef23de4cced4",
-        "portableSvgSha256": "3eb6bca69a984a1948f2e76a3da1fbca3fecc6bfd81268188b23db64d70307cf",
-        "pngSha256": "1f10b95a9ff54707e3d41a35b8d7416f46b1384a662590f7f96fa1dc01641d8f",
-        "pngBytes": 33007
+        "svgSha256": "3a1371dc8a689bd2b6764f118a0a65670fa91a18c6c3eb7810bf6d62e383b9fa",
+        "portableSvgSha256": "3babf1a65dbe3a416611313b300a09d10880c30c55ce3b420b7be3ef1020b398",
+        "pngSha256": "3f9ffc88f6853d7bffc6f14bcdd6e824015f0287c045f422becee5e59b5d0307",
+        "pngBytes": 79357
       },
-      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+      "sourceModule": "scripts/icons/families/redraw-diet-coke-flavors.mjs"
     },
     {
       "slug": "diet-coke-zesty-blood-orange",
-      "family": "coffee-soda-can-expansion",
-      "packageChoice": "Historical US 12 fl oz slim Diet Coke flavor can from the 2018 line.",
+      "family": "diet-coke-slim-can",
+      "packageChoice": "US 12 fl oz (355 mL) sleek aluminum can of Diet Coke Zesty Blood Orange, the package the flavor launched in nationally in January 2018 (singles and eight-packs). Historical: the flavor is no longer sold, and the catalog row names this 2018 line.",
       "references": [
         {
-          "pageUrl": "https://www.bevnet.com/brands/diet_coke/allproducts",
+          "pageUrl": "https://www.bevindustry.com/articles/90846-diet-coke-ginger-lime-feisty-cherry-zesty-blood-orange-twisted-mango",
           "imageUrl": "https://d2iiahg0ip5afn.cloudfront.net/media/diet_coke/images-primary/100922106.cocacola-12oz-diet-zestybloodorange-front.jpg",
-          "inspectedAt": "2026-11-14",
+          "inspectedAt": "2026-11-15",
           "visuallyInspected": true,
-          "observations": "Historical US 12 fl oz slim can; silver body, vertical orange stripe, white Diet Coke logo and blood-orange slice illustration."
+          "observations": "BevNET front photograph (800x1200, EXIF date 2018-01-17) of Diet Coke Zesty Blood Orange. Tall, slim 12 fl oz sleek can in bright brushed silver with a single wide flavor-colored stripe running the full height of the front, centred, about 41 to 44 percent of the visible width. At the top of the stripe the flavor name in small white bold sans capitals; below it the Diet Coke wordmark in white, very large, reading bottom to top: script \"Diet\" followed on the same line by the heavy serif \"Coke\" with a registered mark. On the silver to the right a white \"0 CALORIES PER CAN\" lozenge above black \"12 FL OZ (355 mL)\"; at lower left a small red stacked Diet Coke logo with a black flavor descriptor. Stripe is red-orange (sampled #f34a00). Name on three lines, ZESTY / BLOOD / ORANGE. Illustration at the foot: an orange wedge at left with its pulp cells drawn in white and a dotted rind band beneath it, overlapping a cut half orange at right whose face is pale with the cells drawn in orange line, sitting in an orange rind crescent with white dots that runs past the stripe edge."
+        },
+        {
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Diet_Coke_logo.svg",
+          "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/3/3c/Diet_Coke_logo.svg",
+          "inspectedAt": "2026-11-15",
+          "visuallyInspected": true,
+          "observations": "Public-domain vector of the 2018 Diet Coke logo (file dated 2017-12-25): heavy serif \"Coke\" with a small script \"Diet\" stacked over the k and e. Rendered and compared with the wordmark cropped from the BevNET Ginger Lime photo: the letterforms match; the can sets the two words on one line with \"Diet\" about 1.7 times larger relative to \"Coke\", which is how they are placed here. The stacked arrangement is reused only for the small red logo at the foot of the can."
         }
       ],
-      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Discontinued US Diet Coke flavor packaging is retained as historical package evidence; current reformulations were not substituted. Final aesthetic approval and device review pending.",
+      "uncertainty": "Body drawn at the house slim-can width (ratio 0.31, identical to the Good Celsius and Alani cans) although the photos measure 0.35 to 0.38. Wordmark letterforms are the 2018 logo vector re-set on one line; the size of \"Diet\" relative to \"Coke\" and all positions were measured on the BevNET Ginger Lime photo and reused for the four flavors. Flavor name is Arial Bold condensed with textLength (the can uses a geometric sans). \"CALORIES PER CAN\" and the flavor descriptor are reduced to hairlines; \"12 FL OZ (355 mL)\" is set small and heavily condensed. The house lid hides the top of the stripe, so the flavor name sits slightly lower than on the can. Historical package: the retailer and BevNET product pages the earlier batch recorded refuse automated requests, so the page recorded is the dated trade article that names the four flavors and the sleek 12 oz can; the image was opened directly. Discontinuation date not confirmed here. The pulp cells are a regular pattern (ten segments on the cut face, nine veins on the wedge) standing in for the can's dense irregular hand-drawn cells; rind dots are fewer and larger.",
       "status": "needs-review",
       "bevId": "e53f5366-4c5c-55be-afaf-ffd3f2ed5ff0",
       "name": "Diet Coke Zesty Blood Orange",
@@ -3052,12 +3094,12 @@
         "svg": "svg/diet-coke-zesty-blood-orange.svg",
         "portableSvg": "portable-svg/diet-coke-zesty-blood-orange.svg",
         "png": "png/diet-coke-zesty-blood-orange.png",
-        "svgSha256": "6079aeec40e9d9054369e20012b034bd93aa58fee4a167ba9da5e4bd645f5336",
-        "portableSvgSha256": "3a386e47b6653b2b87d96419bc718e7ac6957752bb2343127580d62c95c73aa2",
-        "pngSha256": "29bb6da0af2f2c750518d59b74902237252cccbf38bf890cc7c739b3d025ba13",
-        "pngBytes": 35262
+        "svgSha256": "ff752d837c9f7774ab4bc7a5568c2343d353c0bc5d81c0d49a4b4997478f968d",
+        "portableSvgSha256": "f6e2de561f758b516d26c0e9da98ec7224a59518afcc9076fde69e6e0df1d6fd",
+        "pngSha256": "bb737d5fad93ec4b75a15a1c6b6c8905a7c3dc6d8683e1cc1ba636640675e07b",
+        "pngBytes": 92020
       },
-      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+      "sourceModule": "scripts/icons/families/redraw-diet-coke-flavors.mjs"
     },
     {
       "slug": "diet-dr-pepper",
@@ -3402,18 +3444,25 @@
     },
     {
       "slug": "starbucks-doubleshot-energy-coffee",
-      "family": "coffee-soda-can-expansion",
-      "packageChoice": "Representative US single-serve aluminum can matching the inspected product.",
+      "family": "starbucks-doubleshot-energy-can",
+      "packageChoice": "US 15 fl oz (443 mL) Starbucks Doubleshot Energy can, Coffee flavor, in the design the manufacturer portal shows now (green wordmark, green, caramel and brown wave). PepsiCo Partners lists it under the catalog name, \"Starbucks Doubleshot Energy Coffee\", as a 12 x 15oz can, UPC 012000028472; Coffee is the plain flavor of the six Energy flavors listed there. The can is drawn a little shorter than the 16 oz energy cans, at the same width.",
       "references": [
+        {
+          "pageUrl": "https://www.pepsicopartners.com/pepsico/en/USD/BEVERAGES/Coffees-Teas/Starbucks-Doubleshot-Energy-Coffee/p/1-11XOG-1",
+          "imageUrl": "https://www.pepsicopartners.com/medias/1200Wx1200H-1-11XOG-1.jpg?context=bWFzdGVyfHJvb3R8NzA4MTB8aW1hZ2UvanBlZ3xhRFZqTDJnNE55OHhNVGN6TWpFek56Z3dNemd3Tmk4eE1qQXdWM2d4TWpBd1NGOHhMVEV4V0U5SExURXVhbkJufDE2ZDMxMDg5ZDVjYTc2N2JkOWRiYTVhNTdhNzM0NzM4M2M1YWIwMGRlOTE0OTZhOGNkMWUwYWRjOTY3NGQ2OWE",
+          "inspectedAt": "2026-11-15",
+          "visuallyInspected": true,
+          "observations": "Manufacturer packshot, front view, measured for this drawing. Tall standard-width can (height about 2.46 times the width), silver lid and base rim, matte tan body. Top: COFFEE in green capitals over a small italic FLAVORED WITH OTHER NATURAL FLAVORS. Green Siren disc about 47% of the can width, centred at 23% of the height. Below it STARBUCKS in small heavy spaced capitals, DOUBLESHOT with DOUBLE bold and SHOT light, ENERGY bold, all green; then B VITAMINS • GINSENG • GUARANA in small brown capitals. Lower third: a wave of stacked ribbons running from a crest at the left down to the right and up again at the right edge: a thin caramel edge, green, caramel, light tan, caramel, dark brown. Over it ENERGY COFFEE BEVERAGE in white condensed capitals with a brown outline, and 15 FL OZ (443 mL). A white 220-calories badge sits at the lower right."
+        },
         {
           "pageUrl": "https://www.pepsicopartners.com/pepsico/en/USD/PEPSICO-BRANDS/STARBUCKS%C2%AE/DOUBLESHOT/c/brand_starbucks_subbrand_doubleshot?fromSubbrand=Y&root=beverages",
           "imageUrl": "https://www.kroger.com/product/images/xlarge/front/0001200002847",
-          "inspectedAt": "2026-11-14",
+          "inspectedAt": "2026-11-15",
           "visuallyInspected": true,
-          "observations": "US 15 fl oz aluminum can inspected: warm tan metallic body, green siren, DOUBLESHOT ENERGY lettering, focus callout, green/brown wave bands and 15 fl oz footer."
+          "observations": "Retailer image for the same UPC (the image id is the UPC): the same Coffee can and label as the manufacturer packshot, without the volume line and badge. The listing page shows the six current Doubleshot Energy flavors: Caramel, Coffee, Vanilla, Mocha, French Vanilla Zero Sugar, Dark Chocolate Zero Sugar; none is called Original."
         }
       ],
-      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "uncertainty": "Drawn from the photographed front of the can, so the wave bands follow the packshot view and not the flat label. The Siren is a simplified vectorisation of the mark on the inspected can; STARBUCKS reuses the letters vectorised from the Espresso can with wider spacing; DOUBLESHOT and ENERGY are set in Arial (bold and regular), which is close to but not the can's geometric sans, and are narrowed about 14% to fit the photographed width. ENERGY COFFEE BEVERAGE and 15 FL OZ (443 mL) are composed from condensed letters vectorised on the Espresso can plus constructed N, Y, C, 4 and 3. Omitted: the registered-trademark signs, the calories-per-can badge at the lower right and the side-panel copy. The small italic flavor declaration under the flavor name is kept at its real size and is not legible at tile sizes. An older design of this can (brown wordmark, round ingredient seal, single brown swoosh) is still shown by some retailers; the manufacturer portal shows the design drawn here.",
       "status": "needs-review",
       "bevId": "a6603ea8-c696-5cf2-a61c-db1aaa1e451a",
       "name": "Doubleshot Energy Coffee",
@@ -3424,27 +3473,27 @@
         "svg": "svg/starbucks-doubleshot-energy-coffee.svg",
         "portableSvg": "portable-svg/starbucks-doubleshot-energy-coffee.svg",
         "png": "png/starbucks-doubleshot-energy-coffee.png",
-        "svgSha256": "8c0ea54d5289beb15f4ea3ccad9e52b62b504b08eb469658de49258b68360c41",
-        "portableSvgSha256": "f29b1234c53531c81f5ff64d8e5920e219bd112f57af97257a6a28f5aa014eff",
-        "pngSha256": "3ac4d8954b090e0e84ff2c374a5b2973c6981b6e1fa5a9f9d63afe7298e21ccb",
-        "pngBytes": 68942
+        "svgSha256": "241ff0ee9e8613b1a03dd3b871c23ae6f58a59dc48f57f8873ad64e000e0943d",
+        "portableSvgSha256": "9417babaa9e9f75818f968366776f2f9f147fb97d1564d812a1ad2887afbe6a5",
+        "pngSha256": "11bb38c7f8eb8845ad592a93c260a57ba8347f84381cdd00ad05a18b38d5d591",
+        "pngBytes": 162330
       },
-      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+      "sourceModule": "scripts/icons/families/redraw-starbucks-doubleshot.mjs"
     },
     {
       "slug": "starbucks-doubleshot-espresso-cream",
-      "family": "coffee-soda-can-expansion",
-      "packageChoice": "Representative US 6.5 fl oz Starbucks Doubleshot espresso can.",
+      "family": "starbucks-doubleshot-espresso-can",
+      "packageChoice": "US 6.5 fl oz (192 mL) Starbucks Doubleshot Espresso can, Espresso & Cream, current design. The short, narrow can is drawn at about 0.83 of the width and 0.71 of the height of the 15 fl oz Energy can, on the same ground line.",
       "references": [
         {
           "pageUrl": "https://www.vons.com/shop/pd/starbucks-doubleshot-espresso-beverage-espresso-and-cream-6-5-fl-oz/108100772",
           "imageUrl": "https://i5.walmartimages.com/seo/Starbucks-Doubleshot-Espresso-Cream-Premium-Coffee-Drink-Ready-To-Drink-Coffee-6-5-fl-oz-Cans-12-Pack_9adbb9db-cde2-4abc-b17f-a67c7118da76_1.30a5e89e1d607db356cc4cb5eb0482ef.jpeg",
-          "inspectedAt": "2026-11-14",
+          "inspectedAt": "2026-11-15",
           "visuallyInspected": true,
-          "observations": "US 6.5 fl oz can with dark brown lower portion, warm metallic upper portion, green siren, Espresso & Cream line and silver rims."
+          "observations": "Single-can front packshot (3000 px) from a retailer listing; the page confirms the name Starbucks Doubleshot Espresso Beverage, Espresso & Cream, 6.5 fl oz. Stubby straight-sided can, height about 2.1 times the width, grey steel lid and base rim. A metallic gold-brown field covers the top and ends in a diagonal sweep that runs from 40% of the height at the left up to 18% at the right, edged with a silver stripe; below it the body fades from pale silver under the sweep to dark brown at the base. ESPRESSO & CREAM in white capitals on the gold. The green Siren disc, about 58% of the can width, overlaps the sweep. Below: STARBUCKS in small heavy capitals, DOUBLESHOT in tall condensed capitals with DOUBLE light and SHOT heavy, ESPRESSO in heavy capitals, then PREMIUM ESPRESSO BEVERAGE and 6.5 FL OZ (192 mL) in condensed capitals, all white."
         }
       ],
-      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "uncertainty": "The Siren and all lettering on this can are vectorised from the inspected packshot with the cylinder distortion removed, then fitted to the photographed widths, so the wordmark is slightly narrower than on a flat label. The metallic highlights of the gold field are reduced to one soft band; the registered-trademark signs are omitted. The Siren green is drawn as the brand green used on the Energy cans, a little cleaner than the muted green of this retailer image.",
       "status": "needs-review",
       "bevId": "41ea96f6-810e-5edd-877d-3d1dc3bcef1e",
       "name": "Doubleshot Espresso & Cream",
@@ -3455,12 +3504,12 @@
         "svg": "svg/starbucks-doubleshot-espresso-cream.svg",
         "portableSvg": "portable-svg/starbucks-doubleshot-espresso-cream.svg",
         "png": "png/starbucks-doubleshot-espresso-cream.png",
-        "svgSha256": "cfa0ef439cbd1b2e699b527a3ae530e3848f437b9fb485e62e5bbd43033f8ea0",
-        "portableSvgSha256": "1ccfd4cf5e4ac4b5c5b778c39045294d679d4e52cac83c39c968afd5e9dca6d2",
-        "pngSha256": "c1bb914421fec05498a07c2236689fe2c2dbda0f15961f36edf7bbf759905bc1",
-        "pngBytes": 48817
+        "svgSha256": "e8b8cfbe19f09bb3c81fa3403aa68f335615c43a9168fdad247eb2caa0474813",
+        "portableSvgSha256": "5a634ac83ab2ee38045ac6f2e3735e9efd0fb76ca4e187789b065e7a98978f2f",
+        "pngSha256": "75d8a511a088aa9981cf2bd6ee41399583d9142624f16ca4f6b331398f2fb13a",
+        "pngBytes": 115689
       },
-      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+      "sourceModule": "scripts/icons/families/redraw-starbucks-doubleshot.mjs"
     },
     {
       "slug": "starbucks-doubleshot-original",
@@ -3495,18 +3544,25 @@
     },
     {
       "slug": "starbucks-doubleshot-vanilla",
-      "family": "coffee-soda-can-expansion",
-      "packageChoice": "Representative US single-serve aluminum can matching the inspected product.",
+      "family": "starbucks-doubleshot-energy-can",
+      "packageChoice": "US 15 fl oz (443 mL) Starbucks Doubleshot Energy can, Vanilla flavor, current design. The catalog row says only \"Doubleshot Vanilla\". The 6.5 fl oz Doubleshot Espresso line has no vanilla (its flavors are Espresso & Cream, Espresso & Cream Light, Salted Caramel Cream, Cubano and Americano), so the Energy can is the only US Doubleshot can sold as Vanilla. PepsiCo Partners lists it as \"Starbucks Doubleshot Energy Coffee Vanilla\", 12 x 15oz can, UPC 012000028496 (an 11 oz can also exists; the 15 oz is the standard single).",
       "references": [
         {
-          "pageUrl": "https://dev2.pepsicopartners.com/pepsico/en/USD/PEPSICO-BRANDS/STARBUCKS%C2%AE/DOUBLESHOT/ENERGY-VANILLA/Starbucks-Doubleshot-Energy-Coffee-Vanilla/p/1-11XOG-3",
-          "imageUrl": "https://www.instacart.com/image-server/1864x1864/www.instacart.com/assets/domains/product-image/file/large_fd024092-0451-4e88-9fd8-54ee3e751920.jpeg",
-          "inspectedAt": "2026-11-14",
+          "pageUrl": "https://www.pepsicopartners.com/pepsico/en/USD/BEVERAGES/Coffees-Teas/Starbucks-Doubleshot-Energy-Coffee-Vanilla/p/1-11XOG-3",
+          "imageUrl": "https://www.pepsicopartners.com/medias/1200Wx1200H-1-11XOG-3.jpg?context=bWFzdGVyfHJvb3R8NzQyMzV8aW1hZ2UvanBlZ3xhRGs1TDJoaU5DOHhNVGN6TnpVM09EY3pNelU1T0M4eE1qQXdWM2d4TWpBd1NGOHhMVEV4V0U5SExUTXVhbkJufDQwNjBhMzNjYWE4YWJlOGVhZjA1ZjNiOTE5MzMwYTY4NDJmNTQxMjkwYjc1NTE5N2QzNzIwNTEwMTE1NTExMzI",
+          "inspectedAt": "2026-11-15",
           "visuallyInspected": true,
-          "observations": "US 15 fl oz vanilla energy coffee can individually inspected: cream/beige metallic base, green siren, green-brown lower waves, VANILLA and B vitamins/ginseng/guarana callouts."
+          "observations": "Manufacturer packshot, front view. Same can and layout as the Coffee flavor, with a pale cream body, VANILLA at the top, the same green Siren and green wordmark, and the wave in green, caramel, a cream band lighter than the body, and a mid tan ribbon where the Coffee can has dark brown. ENERGY COFFEE BEVERAGE and 15 FL OZ (443 mL) in white with a tan outline; a 210-calories badge at the lower right."
+        },
+        {
+          "pageUrl": "https://www.pepsicopartners.com/pepsico/en/USD/BEVERAGES/Coffees-Teas/Starbucks-Doubleshot-Energy-Coffee-Vanilla/p/1-11XOG-3",
+          "imageUrl": "https://www.instacart.com/image-server/1864x1864/www.instacart.com/assets/domains/product-image/file/large_fd024092-0451-4e88-9fd8-54ee3e751920.jpeg",
+          "inspectedAt": "2026-11-15",
+          "visuallyInspected": true,
+          "observations": "Larger retailer image of the same Vanilla can, used to check the label layout and colors: identical design to the manufacturer packshot."
         }
       ],
-      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. This catalog item is mapped to the documented 15 fl oz Energy Vanilla SKU; the manifest distinguishes it from the plain Doubleshot Espresso entry. Final aesthetic approval and device review pending.",
+      "uncertainty": "The catalog name does not say Energy; the mapping rests on the absence of a vanilla flavor in the 6.5 fl oz line, checked against retailer and reference listings and not against a Starbucks statement. Drawn from the photographed front of the can, so the wave bands follow the packshot view and not the flat label. The Siren is a simplified vectorisation of the mark on the inspected can; STARBUCKS reuses the letters vectorised from the Espresso can with wider spacing; DOUBLESHOT and ENERGY are set in Arial (bold and regular), which is close to but not the can's geometric sans, and are narrowed about 14% to fit the photographed width. ENERGY COFFEE BEVERAGE and 15 FL OZ (443 mL) are composed from condensed letters vectorised on the Espresso can plus constructed N, Y, C, 4 and 3. Omitted: the registered-trademark signs, the calories-per-can badge at the lower right and the side-panel copy. The small italic flavor declaration under the flavor name is kept at its real size and is not legible at tile sizes. An older design of this can (brown wordmark, round ingredient seal, single brown swoosh) is still shown by some retailers; the manufacturer portal shows the design drawn here.",
       "status": "needs-review",
       "bevId": "d95f0856-c8ca-5a97-9221-db5a6d4a5a78",
       "name": "Doubleshot Vanilla",
@@ -3517,12 +3573,12 @@
         "svg": "svg/starbucks-doubleshot-vanilla.svg",
         "portableSvg": "portable-svg/starbucks-doubleshot-vanilla.svg",
         "png": "png/starbucks-doubleshot-vanilla.png",
-        "svgSha256": "7c24cb5f8c75d50ab387cc09723e3341ab63ece1fa43ab765a19bd688fc9b797",
-        "portableSvgSha256": "4a697790a9bb39fab973c87189a69a3763c12de77b0348a2ea75eb88fe684ef4",
-        "pngSha256": "51ef79814a502ceaca690a6de0168f9ea2cd4599d5c242de2341b6759a68fdc1",
-        "pngBytes": 62660
+        "svgSha256": "db098dd5d8d23a19e9cdf8597b128be20370e9fc5826992fc976da039f24570e",
+        "portableSvgSha256": "da5bfd0ea386705bfccb4ac8417dd00a80d0406560e18aec7c16e53d8dc7a53b",
+        "pngSha256": "ff80d99a81d4341203907def3ad81ef8baea1fb99aee1f57b3e1fea1e30a7f31",
+        "pngBytes": 150038
       },
-      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+      "sourceModule": "scripts/icons/families/redraw-starbucks-doubleshot.mjs"
     },
     {
       "slug": "dr-pepper",
@@ -4733,7 +4789,7 @@
         "svg": "svg/gts-kombucha-gingerade.svg",
         "portableSvg": "portable-svg/gts-kombucha-gingerade.svg",
         "png": "png/gts-kombucha-gingerade.png",
-        "svgSha256": "4debcc7f7be7712bcc269a59c14f0b7dbe4bbe0b91f8f046fb77f1b609901ba7",
+        "svgSha256": "180ea044680bdf6641ca96d5181bf5e7e9a773b475977b3a2d45417df0518d3f",
         "portableSvgSha256": "3b68a7a16aa37ee638aed7fa931328b25456618551fe273829c1a000d3f27fdc",
         "pngSha256": "a94cfc8227bb06bf59a3c62c8fbeffffbf77f0855d3fecde5b16abb147eb2cf6",
         "pngBytes": 149894
@@ -4764,7 +4820,7 @@
         "svg": "svg/gts-kombucha-trilogy.svg",
         "portableSvg": "portable-svg/gts-kombucha-trilogy.svg",
         "png": "png/gts-kombucha-trilogy.png",
-        "svgSha256": "9a92001e8337c2fed3bc45068a6cffe7df431e3d9f69eafbd2c0b2bbb107cbe0",
+        "svgSha256": "f5b94dab84b80245dde31fe7ad8d915cf02f9b9309c483ec9c327494d6cc16b6",
         "portableSvgSha256": "57ea72fabce5989c7df8826b9a4c0d162b486c5aed74cf8e80b750316c1d0f7b",
         "pngSha256": "aab6962e0a2d421b026b3a81cb9556b3c5adecb1030560478ea4fa1ce1ed6c54",
         "pngBytes": 114497
@@ -4795,7 +4851,7 @@
         "svg": "svg/gts-kombucha-guava-goddess.svg",
         "portableSvg": "portable-svg/gts-kombucha-guava-goddess.svg",
         "png": "png/gts-kombucha-guava-goddess.png",
-        "svgSha256": "c32251e7b939cc5d339b441260683eace3f529c249224f73a17b95f703a4db2e",
+        "svgSha256": "56461ef17ac1b72e5b881285d2f092c2b99dea0f08b47db2a401b37c05473253",
         "portableSvgSha256": "e7369cdfea4c9d2257237da502c70655f7164a9bd6c222c7be970dfd456db787",
         "pngSha256": "2eff3913a5cd8ec9a878c5ca2bab6f9873b89fdcf6c8258e90318ffdd32f89f8",
         "pngBytes": 132447
@@ -4990,18 +5046,25 @@
     },
     {
       "slug": "high-noon-vodka-soda-watermelon",
-      "family": "high-noon-cocktail-can",
-      "packageChoice": "12 oz aluminum can",
+      "family": "high-noon-slim-can",
+      "packageChoice": "Current US 12 fl oz (355 mL) slim can of High Noon Watermelon, as shown on the manufacturer's product page today. High Noon now labels this drink \"Vodka Seltzer\"; the catalog row and the older can say \"Vodka Soda\" / \"Vodka & Soda\". Same product and flavor; the current single can was drawn.",
       "references": [
+        {
+          "pageUrl": "https://www.highnoonspirits.com/watermelon-vodka-seltzer.html",
+          "imageUrl": "https://www.highnoonspirits.com/dw/image/v2/bfwt_prd/on/demandware.static/-/Sites-highnoon-Library/default/dw9aa0a87d/Products/August%202026%20Cans/HNB_VdkaWate_NV_355_front_210088047.png",
+          "inspectedAt": "2026-11-15",
+          "visuallyInspected": true,
+          "observations": "Straight-on front packshot of a tall slim can. White neck with a rim line in blue capitals (NO ADDED SUGAR • 100 CALORIES • GLUTEN FREE). Sky-blue field over roughly the upper half holding a golden-yellow disc almost as wide as the can, with HIGH / NOON reversed out in the field blue in two lines of wide geometric capitals. White lower half: VODKA / SELTZER in blue condensed capitals, a tilted watermelon wedge (dark red flesh, green seeds, white gap, green rind), WATERMELON in green condensed capitals, two blue descriptor lines and a 4.5% ALC. / 355 ML line."
+        },
         {
           "pageUrl": "https://www.acebevdc.com/products/high-noon-watermelon-vodka-soda-cans-4-pack",
           "imageUrl": "https://www.acebevdc.com/cdn/shop/files/d90e58d0b8f0e3ac90dd656a4d834dc6.png?v=1726155318",
-          "inspectedAt": "2026-11-14",
+          "inspectedAt": "2026-11-15",
           "visuallyInspected": true,
-          "observations": "US 12 oz slim can inspected: blue/white split, yellow sun mark, watermelon slice and Watermelon Made with Real Juice line. Fine nutrition and ABV copy simplified."
+          "observations": "The reference recorded by the rejected batch: the earlier \"VODKA & SODA\" can with SUN SIPS under the wordmark and MADE WITH REAL JUICE under the flavor. Same sun-on-blue structure; used only to confirm the product, not drawn."
         }
       ],
-      "uncertainty": "Catalog omits package size for this product. Fine print and small promotional copy are simplified; major brand, flavor and package features are retained. Aesthetic approval pending.",
+      "uncertainty": "The older \"VODKA & SODA\" can (sun disc with SUN SIPS, \"MADE WITH REAL JUICE\") is still shown by some retailers; the current manufacturer packshot was preferred. Can drawn at the house slim-can proportions, a little narrower than the photographed can, so the blue field is slightly taller relative to the disc. Lettering is redrawn geometry, not the brand typeface. The two descriptor lines and the ABV line are set in small type; the wraparound rim line is cropped by the can edge as in the packshot.",
       "status": "needs-review",
       "bevId": "b227f854-bdfa-5a02-a1d1-ebac6e0245c1",
       "name": "High Noon Vodka Soda",
@@ -5012,27 +5075,34 @@
         "svg": "svg/high-noon-vodka-soda-watermelon.svg",
         "portableSvg": "portable-svg/high-noon-vodka-soda-watermelon.svg",
         "png": "png/high-noon-vodka-soda-watermelon.png",
-        "svgSha256": "21eb9f68ad131b83e0e6686471580b02c54dcc6a68bf79a83e9e35a8ecb26b49",
-        "portableSvgSha256": "5a09e409784c3e23b72e4ab600a73668053bcd7c5486002fa621bbdcc0984aaa",
-        "pngSha256": "5ffa7144098f66cfb91e4fb03587c3ea59ae0143635b9b8ddb82c964c1562e13",
-        "pngBytes": 65071
+        "svgSha256": "82c662107b97f3d845d01e6969cbcf930acdc271071389b7039a98cd63fe1ac0",
+        "portableSvgSha256": "49122b0d8a2cf49453f841967efc8606e543ba937ff8a4c4913fbe4e749ad5c8",
+        "pngSha256": "b0cefe36f6de9a9aeed6602cf8b8588bc3d22ae292d773bf5a80b835c3171f67",
+        "pngBytes": 88148
       },
-      "sourceModule": "scripts/icons/families/refreshments-12.mjs"
+      "sourceModule": "scripts/icons/families/redraw-high-noon-cutwater.mjs"
     },
     {
       "slug": "high-noon-vodka-soda-peach",
-      "family": "high-noon-cocktail-can",
-      "packageChoice": "12 oz aluminum can",
+      "family": "high-noon-slim-can",
+      "packageChoice": "Current US 12 fl oz (355 mL) slim can of High Noon Peach, as shown on the manufacturer's product page today. High Noon now labels this drink \"Vodka Seltzer\"; the catalog row and the older can say \"Vodka Soda\" / \"Vodka & Soda\". Same product and flavor; the current single can was drawn.",
       "references": [
+        {
+          "pageUrl": "https://www.highnoonspirits.com/peach-vodka-seltzer.html",
+          "imageUrl": "https://www.highnoonspirits.com/dw/image/v2/bfwt_prd/on/demandware.static/-/Sites-highnoon-Library/default/dw6d72eac1/Products/August%202026%20Cans/HNB_VdkaPeac_NV_355_front_210085151.png",
+          "inspectedAt": "2026-11-15",
+          "visuallyInspected": true,
+          "observations": "Straight-on front packshot of a tall slim can, same layout as the other flavors: white neck with a blue rim line, sky-blue upper field with the large golden-yellow disc and HIGH / NOON reversed out in blue, white lower half with VODKA / SELTZER in blue condensed capitals. Flavor art is a single dusty-pink peach with a green stem and leaf and two white highlights; PEACH below in the same dusty pink; two blue descriptor lines and the 4.5% ALC. / 355 ML line."
+        },
         {
           "pageUrl": "https://www.delmesaliquor.com/products/high-noon-peach-vodka-soda-4-pack",
           "imageUrl": "https://www.delmesaliquor.com/cdn/shop/products/HighNoonPeachVodka_Soda_grande.png?v=1629069702",
-          "inspectedAt": "2026-11-14",
+          "inspectedAt": "2026-11-15",
           "visuallyInspected": true,
-          "observations": "Inspected representative 12 oz slim can: blue/white split, round yellow High Noon Sun Sips mark, peach icon and Vodka & Soda line. Details match exact Peach SKU."
+          "observations": "The reference recorded by the rejected batch: a 2021 photo of the earlier \"VODKA & SODA\" can (SUN SIPS, MADE WITH REAL JUICE), covered in condensation. Same sun-on-blue structure; used only to confirm the product, not drawn."
         }
       ],
-      "uncertainty": "Catalog omits package size for this product. Fine print and small promotional copy are simplified; major brand, flavor and package features are retained. Aesthetic approval pending.",
+      "uncertainty": "The older \"VODKA & SODA\" can (sun disc with SUN SIPS, \"MADE WITH REAL JUICE\") is still shown by some retailers; the current manufacturer packshot was preferred. Can drawn at the house slim-can proportions, a little narrower than the photographed can, so the blue field is slightly taller relative to the disc. Lettering is redrawn geometry, not the brand typeface. The two descriptor lines and the ABV line are set in small type; the wraparound rim line is cropped by the can edge as in the packshot.",
       "status": "needs-review",
       "bevId": "718762fe-6d32-59dc-ae45-baac2d630681",
       "name": "High Noon Vodka Soda",
@@ -5043,12 +5113,12 @@
         "svg": "svg/high-noon-vodka-soda-peach.svg",
         "portableSvg": "portable-svg/high-noon-vodka-soda-peach.svg",
         "png": "png/high-noon-vodka-soda-peach.png",
-        "svgSha256": "dce4794adbbdb87f4c72284d40912e2841aaf0bc815a5a3c61b853144763d95d",
-        "portableSvgSha256": "d6a8fe22b3d3a937d479dbb02deb5c478b1e902cdf7c2456a9c81102edbd52ec",
-        "pngSha256": "4c74996f0947928ff1e68d31671ae70dfe2a63b6b09573b7e05c497cb7aa7336",
-        "pngBytes": 63187
+        "svgSha256": "deb67af1a717c117109ff686644f5651256dec03d6c19eb4ede969c3c26ab8d9",
+        "portableSvgSha256": "19407ace53e8716cb539bf2760bb10ff48ef7d9e0b7d6e8ca70cee6ad89b7425",
+        "pngSha256": "f5fd7990cf3e658aca90a291d21e49ef00e23c053d8c7754e7c3a508c1d84d19",
+        "pngBytes": 85364
       },
-      "sourceModule": "scripts/icons/families/refreshments-12.mjs"
+      "sourceModule": "scripts/icons/families/redraw-high-noon-cutwater.mjs"
     },
     {
       "slug": "hires-root-beer",
@@ -9754,18 +9824,18 @@
     },
     {
       "slug": "truly-wild-berry",
-      "family": "hard-seltzer-slim-can",
-      "packageChoice": "12 oz aluminum can",
+      "family": "truly-slim-can",
+      "packageChoice": "Current US Truly Hard Seltzer Wild Berry 12 fl oz (355 mL) slim can, standard artwork from the manufacturer product page. The image the rejected batch recorded (Gopuff) is a U.S. Soccer co-branded promotional can and was used only as a straight-on check of the shared layout; its crest, stars, blue halftone and sponsor line are not drawn.",
       "references": [
         {
-          "pageUrl": "https://www.gopuff.com/p/truly-hard-seltzer-wild-berry-12-oz-can/p188102",
-          "imageUrl": "https://images.gopuff.com/blob/gopuffcatalogstorageprod/catalog-images-container/resize/cf/version%3D1_2%2Cformat%3Dauto%2Cfit%3Dscale-down%2Cwidth%3D800%2Cheight%3D800/97b7c051-131f-480d-8aa0-7ad306fb70e5-padded.png",
-          "inspectedAt": "2026-11-14",
+          "pageUrl": "https://www.trulyhardseltzer.com/flavors/light-flavor/wild-berry",
+          "imageUrl": "https://edge.sitecorecloud.io/bostonbeerc916d-bostonbeerda77-prod8a10-c798/media/project/boston-beer/truly-hard-seltzer/products/product-detail-page/wild-berry-can-lg.png",
+          "inspectedAt": "2026-11-15",
           "visuallyInspected": true,
-          "observations": "US 12 oz silver can front inspected; red WILD BERRY typography, berry illustrations above the Truly name and 5% ABV line. Retail listing includes a temporary soccer campaign crest which is omitted as an event variation."
+          "observations": "Manufacturer packshot, 281x855 transparent PNG, three-quarter view. White slim can with silver edges. Under the rim a photographic cluster of fruit: a blackberry at the left, a large strawberry in the centre, a raspberry at the right, a second blackberry and red berries behind, over a soft pink glow with fine red specks. TRULY runs up the can in very heavy black grotesque caps about a third of the can width tall, left of centre, with a grey sheen on the cap-top side. WILD BERRY runs up beside it in red (#e5173f) bold caps, then WITH OTHER NATURAL FLAVORS in small red condensed caps. Level at the foot: HARD SELTZER in black, a short red rule, 5% ALC./VOL., and a wrap-around line CONTAINS ALCOHOL | 12 FL. OZ. (355 mL.). Proportions (can 0.351 wide to tall, wordmark from 25% to 78% of the height) were measured on the straight-on Gopuff packshot of the same 12 oz can."
         }
       ],
-      "uncertainty": "Catalog omits package size for this product. Fine print and small promotional copy are simplified; major brand, flavor and package features are retained. Aesthetic approval pending.",
+      "uncertainty": "The fruit is a simplified vector cluster after a photograph: positions and kinds match, drupelet counts and lighting do not. WILD BERRY, the small copy and HARD SELTZER are set in Arial Bold, which is lighter and less extended than the brand face; the TRULY wordmark is drawn as outlines from the packshot. The registered mark, condensation and the reflection under the can are omitted. The wrap-around legal line is repeated to fill the width as on the can. The can body is 72 units wide against 66 for the Good narrow cans, to hold the measured proportion.",
       "status": "needs-review",
       "bevId": "e5b6a6e7-972a-5e37-99e2-01f84a5505eb",
       "name": "Truly Hard Seltzer",
@@ -9776,27 +9846,27 @@
         "svg": "svg/truly-wild-berry.svg",
         "portableSvg": "portable-svg/truly-wild-berry.svg",
         "png": "png/truly-wild-berry.png",
-        "svgSha256": "c3ffedc10aa8992b91a967095abe1f52939cc79e7250ca655d5233befa47a376",
-        "portableSvgSha256": "5018873964080ea5a876db4052c2de338d225eb71c41422541110c687a73f629",
-        "pngSha256": "f7f04db51fbea1ab445287bbc91a3961116f07a2b1fe0ec65f3167b833bb68d4",
-        "pngBytes": 63379
+        "svgSha256": "269e0d71375af684a2e88ceb0bb28c7fc5db25d34ef80207c681eef5ce1d0104",
+        "portableSvgSha256": "197cb3ea38a54e6f19f3488b5b6542e67209df1589a7d960b2575d25eab3c4a0",
+        "pngSha256": "398fcffa586efbd60c2d63de45837394136cf540d71421fa0f54a95a099182be",
+        "pngBytes": 131929
       },
-      "sourceModule": "scripts/icons/families/refreshments-12.mjs"
+      "sourceModule": "scripts/icons/families/redraw-white-claw-truly.mjs"
     },
     {
       "slug": "truly-lemonade",
-      "family": "hard-seltzer-slim-can",
-      "packageChoice": "24 oz hard-seltzer can",
+      "family": "truly-slim-can",
+      "packageChoice": "Current US Truly Hard Seltzer Original Lemonade 12 fl oz (355 mL) slim can, from the manufacturer product page; the catalog row gives no size, and this replaces the 24 oz H-E-B can the rejected batch drew. The can is black on the manufacturer packshot: the whole Truly Lemonade line ships in black cans, unlike the white core flavors.",
       "references": [
         {
-          "pageUrl": "https://www.heb.com/product-detail/truly-truly-hard-seltzer-original-lemonade-24-oz-can/3734015",
-          "imageUrl": "https://images.heb.com/is/image/HEBGrocery/003734015-1?fit=constrain&hei=1400&jpegSize=150&qlt=75&v=1",
-          "inspectedAt": "2026-11-14",
+          "pageUrl": "https://www.trulyhardseltzer.com/flavors/bold-flavor/original-lemonade",
+          "imageUrl": "https://edge.sitecorecloud.io/bostonbeerc916d-bostonbeerda77-prod8a10-c798/media/project/boston-beer/truly-hard-seltzer/products/product-detail-page/original-lemonade-can-lg.png",
+          "inspectedAt": "2026-11-15",
           "visuallyInspected": true,
-          "observations": "US Original Lemonade 24 oz can inspected: matte black body, large white/yellow Truly Lemonade lettering and lemon slice near the crown, 5% label. Catalog has no size; representative larger 24 oz package selected and documented."
+          "observations": "Manufacturer packshot, 281x855 transparent PNG, three-quarter view, reading 12 FL. OZ. (355 mL.) on the base line. Gloss black slim can. Under the rim a large lemon slice with pale yellow flesh, a white pith ring and orange-yellow rind, a second slice behind it to the right, and a spray of yellow specks falling onto the black. TRULY runs up the can in very heavy white grotesque caps with a grey sheen on the cap-top side. ORIGINAL LEMONADE runs up beside it in yellow bold caps, smaller than the flavor name on the white cans, then WITH OTHER NATURAL FLAVORS in small yellow condensed caps. Level at the foot: HARD SELTZER in white, a short yellow rule, 5% ALC./VOL., and the line CONTAINS ALCOHOL | 12 FL. OZ. (355 mL.) | CONTAINS <1% JUICE. The H-E-B 24 oz packshot shows the same artwork on a taller can."
         }
       ],
-      "uncertainty": "Catalog omits package size for this product. Fine print and small promotional copy are simplified; major brand, flavor and package features are retained. Aesthetic approval pending.",
+      "uncertainty": "The lemon is a simplified vector after a photograph. The straight-on proportions are taken from the Wild Berry 12 oz can, which shares the layout; no straight-on single 12 oz Original Lemonade packshot was found, only the three-quarter manufacturer render. ORIGINAL LEMONADE, the small copy and HARD SELTZER are set in Arial Bold rather than the brand face; the TRULY wordmark is drawn as outlines. The registered mark and condensation are omitted. The can body is 72 units wide against 66 for the Good narrow cans, to hold the measured proportion.",
       "status": "needs-review",
       "bevId": "a2195743-a1c6-57ff-b8b1-d856e201cf54",
       "name": "Truly Hard Seltzer",
@@ -9807,12 +9877,12 @@
         "svg": "svg/truly-lemonade.svg",
         "portableSvg": "portable-svg/truly-lemonade.svg",
         "png": "png/truly-lemonade.png",
-        "svgSha256": "e5ae2f7e39cf62a80f2ed51352f70263fb717aead1a42b6723897b9d242d0976",
-        "portableSvgSha256": "832cf1c013699ad0a9a833ac560ea269751082eb0455bd687932300bf9e8bccd",
-        "pngSha256": "4a2a5d4defcdd5b5bc6965052321f96667f5530b6f9d53128de01d80ff0dc82a",
-        "pngBytes": 65235
+        "svgSha256": "5c25ca66b370556f0f3c2d296e6ff6a820735a0eaacdc93c75567351b19e0aa1",
+        "portableSvgSha256": "7ea7ad7fb64c8bffd880060f4850c9f90ea0dcb39f749031680a5658243b2bcc",
+        "pngSha256": "56ebabbe176bb85021711176afd9695ea4b44a1032ff2f1fa4a5525555000afa",
+        "pngBytes": 117558
       },
-      "sourceModule": "scripts/icons/families/refreshments-12.mjs"
+      "sourceModule": "scripts/icons/families/redraw-white-claw-truly.mjs"
     },
     {
       "slug": "v8-v-fusion-strawberry-banana",
@@ -10095,18 +10165,18 @@
     },
     {
       "slug": "white-claw-black-cherry",
-      "family": "hard-seltzer-slim-can",
-      "packageChoice": "12 oz aluminum can",
+      "family": "white-claw-slim-can",
+      "packageChoice": "Current US White Claw Hard Seltzer Black Cherry 12 fl oz (355 mL) slim can, the standard retail single can shown on the manufacturer product page.",
       "references": [
         {
           "pageUrl": "https://www.whiteclaw.com/products/black-cherry",
           "imageUrl": "https://www.whiteclaw.com/wp-content/uploads/2025/02/Black-Cherry_383-x-800_1.png?t=1772622575093",
-          "inspectedAt": "2026-11-14",
+          "inspectedAt": "2026-11-15",
           "visuallyInspected": true,
-          "observations": "US 12 oz slim white can; black wave logo, flavor-colored red brush band, small dark cherry mark and hard-seltzer/ABV details. Manufacturer product image inspected; tiny label text simplified."
+          "observations": "Manufacturer front packshot, 543x1135 transparent PNG; the can measures about 0.356 wide to tall. Matte white slim can. The hero is a round emblem in black line art, about 85% of the can width, centred a third of the way down: WHITE CLAW in heavy geometric caps on an arc over the top (rotated a little anticlockwise), an engraved illustration of three cresting waves with a gull, and a ring around the lower half with HARD SELTZER set inside it. Below it a brushed swash rises to the right across the full width: a magenta-pink swash (#e05389) over a deeper magenta streak (#c13b75), magenta neck band and a pink pull tab. The flavor name BLACK CHERRY is set level on the swash in black caps. A black disc reading 5% ALC/VOL, ringed by 100 CALORIES and GLUTEN FREE, sits on the lower edge of the swash, then SPIKED SPARKLING WATER / WITH A HINT OF BLACK CHERRY. The neck has a flavor-colored band, a white band of small black copy (MADE PURE, 100 CALORIES, 2g CARBS) and a thin flavor-colored line."
         }
       ],
-      "uncertainty": "Catalog omits package size for this product. Fine print and small promotional copy are simplified; major brand, flavor and package features are retained. Aesthetic approval pending.",
+      "uncertainty": "The can body is drawn 72 units wide against 66 for the Good narrow cans, to hold the measured 0.356 proportion. The wave is a hand-drawn simplification of the engraving: about 43 tapered strokes where the original has several times that, same composition. The lettering is a purpose-drawn geometric alphabet matched to the can by eye, not the brand typeface. The emblem is drawn flat, without the foreshortening of the cylinder. The neck copy and badge ring text are set in Arial Bold; the grey line near the base (HARD SELTZER WITH FLAVORS) is omitted; condensation and the vertical ABV/deposit copy at the sides are omitted. Pull-tab color follows the packshot render and may be silver on shelf cans.",
       "status": "needs-review",
       "bevId": "38b4a3ca-c179-514d-a822-79dcf5998894",
       "name": "White Claw Hard Seltzer",
@@ -10117,27 +10187,27 @@
         "svg": "svg/white-claw-black-cherry.svg",
         "portableSvg": "portable-svg/white-claw-black-cherry.svg",
         "png": "png/white-claw-black-cherry.png",
-        "svgSha256": "e63f03b262db7c5aaee3866e8fe9a00abcfa0fe6575ec0fc0150c214462216db",
-        "portableSvgSha256": "89e919c4964ce8c753c3fb2ac270866312b5ad27907cb5d4e0bd8475e5d79891",
-        "pngSha256": "a51497841fdc5c9dadff50cbce08aae4a075ddbb51fb02d852fe2bc57c091fa2",
-        "pngBytes": 68536
+        "svgSha256": "650ee756de49f34be08719658af58ad30f99233559b3581164ef23404c55c43c",
+        "portableSvgSha256": "7dc12d4d43d5d5309c6c5e2783537dc8aaeff4fd8695e77582d1ad2b7803d522",
+        "pngSha256": "d3cc6dbb83a187215754e7318c178f64a7f77c692d0670ced942d0961009fd49",
+        "pngBytes": 126005
       },
-      "sourceModule": "scripts/icons/families/refreshments-12.mjs"
+      "sourceModule": "scripts/icons/families/redraw-white-claw-truly.mjs"
     },
     {
       "slug": "white-claw-mango",
-      "family": "hard-seltzer-slim-can",
-      "packageChoice": "12 oz aluminum can",
+      "family": "white-claw-slim-can",
+      "packageChoice": "Current US White Claw Hard Seltzer Mango 12 fl oz (355 mL) slim can, the standard retail single can shown on the manufacturer product page.",
       "references": [
         {
           "pageUrl": "https://www.whiteclaw.com/products/mango",
           "imageUrl": "https://www.whiteclaw.com/wp-content/uploads/2025/04/Mango_383-x-800_1.png?t=1772622532952",
-          "inspectedAt": "2026-11-14",
+          "inspectedAt": "2026-11-15",
           "visuallyInspected": true,
-          "observations": "Inspected current US White Claw Mango can: white slim can, black wave mark, orange-gold flavor swash and mango accent. Fine ABV/nutrition copy omitted."
+          "observations": "Manufacturer front packshot, 543x1135 transparent PNG; the can measures about 0.356 wide to tall. Matte white slim can. The hero is a round emblem in black line art, about 85% of the can width, centred a third of the way down: WHITE CLAW in heavy geometric caps on an arc over the top (rotated a little anticlockwise), an engraved illustration of three cresting waves with a gull, and a ring around the lower half with HARD SELTZER set inside it. Below it a brushed swash rises to the right across the full width: a metallic gold swash (#f4be51) over a coral-orange streak (#f39864), coral neck band and a yellow pull tab. The flavor name MANGO is set level on the swash in black caps. A black disc reading 5% ALC/VOL, ringed by 100 CALORIES and GLUTEN FREE, sits on the lower edge of the swash, then SPIKED SPARKLING WATER / WITH A HINT OF MANGO. The neck has a flavor-colored band, a white band of small black copy (MADE PURE, 100 CALORIES, 2g CARBS) and a thin flavor-colored line."
         }
       ],
-      "uncertainty": "Catalog omits package size for this product. Fine print and small promotional copy are simplified; major brand, flavor and package features are retained. Aesthetic approval pending.",
+      "uncertainty": "The can body is drawn 72 units wide against 66 for the Good narrow cans, to hold the measured 0.356 proportion. The wave is a hand-drawn simplification of the engraving: about 43 tapered strokes where the original has several times that, same composition. The lettering is a purpose-drawn geometric alphabet matched to the can by eye, not the brand typeface. The emblem is drawn flat, without the foreshortening of the cylinder. The neck copy and badge ring text are set in Arial Bold; the grey line near the base (HARD SELTZER WITH FLAVORS) is omitted; condensation and the vertical ABV/deposit copy at the sides are omitted. Pull-tab color follows the packshot render and may be silver on shelf cans.",
       "status": "needs-review",
       "bevId": "9f8e6bcd-41d5-520b-bc4a-2093ad7bbc84",
       "name": "White Claw Hard Seltzer",
@@ -10148,27 +10218,27 @@
         "svg": "svg/white-claw-mango.svg",
         "portableSvg": "portable-svg/white-claw-mango.svg",
         "png": "png/white-claw-mango.png",
-        "svgSha256": "8d9c9aeb7c9b137f991de8359fd076c191506f03c25a1fe0ec03d2fbe25d2fd1",
-        "portableSvgSha256": "d0795f13732f6da5990f54dd0216416ee4c94844cf663d741ba1d0520fc52edd",
-        "pngSha256": "c69f789958f5d2dee5696ac988103ecfc89507a632781f2fe01025e6a3f19795",
-        "pngBytes": 63036
+        "svgSha256": "c85c2474e03dc36157d66162f7107b4c3ef2c0ce7dfab6958b3dc84980e7a29e",
+        "portableSvgSha256": "f3746040352cdee6be1329d052560b36dc3e85350b1189d91671414d56975d20",
+        "pngSha256": "e7d63ef9301d8e1b2b324cac8d74c5acfcb8291a3102e327d571ef9906d2d9af",
+        "pngBytes": 124902
       },
-      "sourceModule": "scripts/icons/families/refreshments-12.mjs"
+      "sourceModule": "scripts/icons/families/redraw-white-claw-truly.mjs"
     },
     {
       "slug": "white-claw-natural-lime",
-      "family": "hard-seltzer-slim-can",
-      "packageChoice": "12 oz aluminum can",
+      "family": "white-claw-slim-can",
+      "packageChoice": "Current US White Claw Hard Seltzer Natural Lime 12 fl oz (355 mL) slim can, the standard retail single can shown on the manufacturer product page.",
       "references": [
         {
           "pageUrl": "https://www.whiteclaw.com/products/natural-lime",
           "imageUrl": "https://www.whiteclaw.com/wp-content/uploads/2025/05/Natural-Lime_383-x-800_1.png?t=1772622408420",
-          "inspectedAt": "2026-11-14",
+          "inspectedAt": "2026-11-15",
           "visuallyInspected": true,
-          "observations": "Current US Natural Lime package inspected: white slim can, black wave brand device, green flavor swash and lime wedge. ABV/nutrition copy omitted."
+          "observations": "Manufacturer front packshot, 543x1135 transparent PNG; the can measures about 0.356 wide to tall. Matte white slim can. The hero is a round emblem in black line art, about 85% of the can width, centred a third of the way down: WHITE CLAW in heavy geometric caps on an arc over the top (rotated a little anticlockwise), an engraved illustration of three cresting waves with a gull, and a ring around the lower half with HARD SELTZER set inside it. Below it a brushed swash rises to the right across the full width: a yellow-green swash (#c3d344) over a greener streak (#accc52), green neck band and a lime-green pull tab. The flavor name NATURAL LIME is set level on the swash in black caps. A black disc reading 5% ALC/VOL, ringed by 100 CALORIES and GLUTEN FREE, sits on the lower edge of the swash, then SPIKED SPARKLING WATER / WITH A HINT OF NATURAL LIME. The neck has a flavor-colored band, a white band of small black copy (MADE PURE, 100 CALORIES, 2g CARBS) and a thin flavor-colored line."
         }
       ],
-      "uncertainty": "Catalog omits package size for this product. Fine print and small promotional copy are simplified; major brand, flavor and package features are retained. Aesthetic approval pending.",
+      "uncertainty": "The can body is drawn 72 units wide against 66 for the Good narrow cans, to hold the measured 0.356 proportion. The wave is a hand-drawn simplification of the engraving: about 43 tapered strokes where the original has several times that, same composition. The lettering is a purpose-drawn geometric alphabet matched to the can by eye, not the brand typeface. The emblem is drawn flat, without the foreshortening of the cylinder. The neck copy and badge ring text are set in Arial Bold; the grey line near the base (HARD SELTZER WITH FLAVORS) is omitted; condensation and the vertical ABV/deposit copy at the sides are omitted. Pull-tab color follows the packshot render and may be silver on shelf cans.",
       "status": "needs-review",
       "bevId": "d1b17c57-826a-576d-b6a3-2a8554dcc4c0",
       "name": "White Claw Hard Seltzer",
@@ -10179,12 +10249,12 @@
         "svg": "svg/white-claw-natural-lime.svg",
         "portableSvg": "portable-svg/white-claw-natural-lime.svg",
         "png": "png/white-claw-natural-lime.png",
-        "svgSha256": "199d3b4f89f6cfd499d7df31f30f4adfbf9f2c46eaefb659c7566ccee524eb63",
-        "portableSvgSha256": "ab6e5c7c6ba0c4765f29d74b373f14f624506ad0c348338cfa26c730f735be9c",
-        "pngSha256": "2585eb54a8c1d6a5913f37c0ca0c6528b5df547cea499fd2056ecad556002b84",
-        "pngBytes": 67854
+        "svgSha256": "5388fd20dfa86d8a9bf934f05e8ded2641c715312afceea32e0d8c71f01dd46d",
+        "portableSvgSha256": "f930c6e3db205493f50aee2f76e20c52c33a6d459504c411ddd8905e735ebe1c",
+        "pngSha256": "c690a4c7028e7b1bc335811819b81868e7ab1798a49ad592a23ccce852aec93d",
+        "pngBytes": 124341
       },
-      "sourceModule": "scripts/icons/families/refreshments-12.mjs"
+      "sourceModule": "scripts/icons/families/redraw-white-claw-truly.mjs"
     },
     {
       "slug": "welchs-white-grape-juice",
