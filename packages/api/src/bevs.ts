@@ -136,7 +136,7 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
     // Read straight from the table rather than widening get_bev: the profile
     // has a select policy for authenticated, and changing an RPC's `returns
     // table` means dropping and recreating it.
-    const [rankingRes, wantRes, followeeIds, profileRes] = await Promise.all([
+    const [rankingRes, wantRes, followeeIds, profileRes, nutritionRes] = await Promise.all([
       client.from('rankings').select('bucket, position, score, note').eq('user_id', uid).eq('bev_id', bevId).maybeSingle(),
       client.from('want_to_try').select('user_id').eq('user_id', uid).eq('bev_id', bevId).maybeSingle(),
       fetchFollowIds(client, 'follows', 'follower_id', uid),
@@ -145,10 +145,13 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
         .select('base, carbonated, caffeine, sweetness, dairy, alcohol, serve, source')
         .eq('bev_id', bevId)
         .maybeSingle(),
+      client.from('bev_nutrition').select('nutrition').eq('bev_id', bevId).maybeSingle(),
     ]);
     if (rankingRes.error) throw mapError(rankingRes.error);
     if (wantRes.error) throw mapError(wantRes.error);
     if (profileRes.error) throw mapError(profileRes.error);
+    // A migration-first rollout is required for writes. Older stacks still render Bev detail.
+    if (nutritionRes.error && !['PGRST205', '42P01'].includes(nutritionRes.error.code)) throw mapError(nutritionRes.error);
 
     let myRanking: MyRankingRow | null = null;
     if (rankingRes.data) {
@@ -210,13 +213,13 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
       created_by: row.created_by_id && row.created_by_handle ? { id: row.created_by_id, handle: row.created_by_handle } : null,
       is_starter: row.is_starter,
     };
-    return mapBev(client, bevRow, {
+    return { ...mapBev(client, bevRow, {
       myRanking,
       inWantToTry: wantRes.data !== null,
       friends,
       flavorProfile: profileRes.data as FlavorProfileRow | null,
       prediction: myRanking ? null : await prediction,
-    });
+    }), nutrition: (nutritionRes.data?.nutrition as import('@bevi/shared').NutritionPreview | undefined) ?? null };
   }
 
   // The contract's `Bev.prediction`: null when the caller ranked the Bev or has
@@ -263,7 +266,7 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
   async function create(input: CreateBevInput): Promise<Bev> {
     await requireUserId(client);
     const { data, error } = await client
-      .rpc('create_bev', {
+      .rpc(input.nutrition ? 'create_bev_with_nutrition' : 'create_bev', {
         p_name: input.name,
         p_brand: input.brand ?? null,
         p_flavor: input.flavor ?? null,
@@ -272,6 +275,7 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
         p_price_estimated: input.priceEstimated,
         p_photo_asset_id: input.photoAssetId,
         p_label_asset_id: input.labelAssetId ?? null,
+        ...(input.nutrition ? { p_nutrition: input.nutrition } : {}),
       })
       .single();
     if (error) throw mapError(error);
