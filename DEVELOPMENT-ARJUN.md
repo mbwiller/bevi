@@ -312,7 +312,7 @@ create table public.rankings (
   score       numeric(4,2) not null check (score >= 0 and score <= 10),
   note        text check (char_length(note) <= 280),
   photo_path  text,                                          -- optional "my drink" photo in the feed (raw-uploads → bev-photos/user/...)
-  ranked_at   timestamptz not null default now(),            -- first ranked (drives streaks + feed)
+  ranked_at   timestamptz not null default now(),            -- last placed; rerank_bev re-inserts, so it re-dates (feed; streaks read ranking_events)
   updated_at  timestamptz not null default now(),
   unique (user_id, bev_id),
   unique (user_id, bucket, position) deferrable initially deferred
