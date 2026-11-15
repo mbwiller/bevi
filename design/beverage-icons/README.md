@@ -28,11 +28,14 @@ Latest **20 Fresca, soda and juice icons (2026-11-12)**: [large sheet 1](review/
 
 Latest **20 beer and refreshment icons plus Diet 7UP (2026-11-13)**: [large sheet 1](review/batch-11-large-2026-11-12-01.png) · [large sheet 2](review/batch-11-large-2026-11-12-02.png) · [large sheet 3](review/batch-11-large-2026-11-12-03.png). Includes both Hata Kosen Ramune varieties and the current 7UP Zero Sugar can mapped to the Diet 7UP catalog entry. Final aesthetic approval remains pending.
 
+**Human review: [REVIEW.md](REVIEW.md).** Every icon has been sorted Good or Needs work by a person. The Good icons are the examples new work has to match; the Needs work icons are the redraw queue. See [Sort the icons](#sort-the-icons-good-or-needs-work).
+
 ## Give this to your coding agent
 
 ```text
-Read the entire design/beverage-icons/skill/SKILL.md and
-design/beverage-icons/PROGRESS.md before generating artwork.
+Read the entire design/beverage-icons/skill/SKILL.md,
+design/beverage-icons/PROGRESS.md and design/beverage-icons/REVIEW.md
+before generating artwork.
 Inspect design/beverage-icons/style-reference/ and the current review sheets.
 Use scripts/icons/style.mjs and the existing family recipes as the shared
 rendering system. Research and visually inspect real product references.
@@ -55,9 +58,9 @@ Open `design/beverage-icons/index.html` locally in a browser. Search by drink or
 - **New icons arrive on their own.** The server re-reads the manifest as it changes, so a build or a `git pull` adds its icons to the deck while the page is open.
 - **A redrawn icon comes back.** A verdict records the art it was given to (the first 16 hex digits of the portable SVG's SHA-256). When the art changes, the icon returns to the front of the deck, labelled with the verdict and note it answers.
 - **Verdicts are files.** Each person's swipes are written to `verdicts/<name>.json`, one icon per line, so two people never conflict in git. The piles are shared: the newest verdict from either person decides. Commit and push the file to share your sorting; pull to get the other person's.
-- **The rework queue** is every `"verdict":"needs-work"` line in `verdicts/*.json`, with the reviewer's note when they left one. The sorted piles in the tool show the same list.
+- **[REVIEW.md](REVIEW.md) is the readable result.** `npm run icons:report` rewrites it from the verdict files: the Needs work icons grouped by the recipe module that draws them (the redraw queue), and the Good icons grouped by package family (the reference examples for new work). Run it after sorting and after a build, and commit it with the verdicts.
 
-The logic is in `scripts/icons/swipe-core.ts` (tested by `swipe-core.test.ts`), the server in `scripts/icons/swipe.ts`, the page in `scripts/icons/swipe/`.
+The logic is in `scripts/icons/swipe-core.ts` (tested by `swipe-core.test.ts`), the server in `scripts/icons/swipe.ts`, the page in `scripts/icons/swipe/`, the report in `scripts/icons/verdict-report-core.ts`.
 
 ## Build and validate
 

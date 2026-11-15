@@ -29,6 +29,7 @@
     "bugs:purge-evidence": "node --experimental-strip-types scripts/bugs/purge-evidence.ts",
     "icons:publish": "node --experimental-strip-types scripts/icons/publish.ts",
     "icons:swipe": "node --experimental-strip-types scripts/icons/swipe.ts",
+    "icons:report": "node --experimental-strip-types scripts/icons/verdict-report.ts",
     "graph:dashboard": "node --env-file-if-exists=supabase/.env --experimental-strip-types scripts/graph/dashboard.ts"
   },
   "overrides": {

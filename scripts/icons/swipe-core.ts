@@ -26,6 +26,8 @@ export type VerdictFiles = Partial<Record<Reviewer, Record<string, Entry>>>;
 export interface ManifestRecord {
   slug: string; name: string; brand: string; family: string; isStarter: boolean;
   packageChoice?: unknown; uncertainty?: unknown;
+  /** The recipe file that draws the icon, e.g. scripts/icons/families/colas.mjs. */
+  sourceModule?: string;
   references?: { pageUrl?: unknown }[];
   assets: { portableSvg: string; portableSvgSha256: string };
 }

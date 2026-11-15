@@ -1,5 +1,15 @@
 # Beverage icon production checkpoint
 
+## Human review, 2026-11-14: 205 good, 130 need work
+
+Matt sorted all 335 icons in the swipe tool (`npm run icons:swipe`). The result is in `REVIEW.md`, generated from `verdicts/matt.json`. No notes were recorded with the verdicts.
+
+- **205 are Good** and are the reference examples for all new work.
+- **130 need work** and form the redraw queue. Every icon of the two latest batches is in it (`refreshments-12.mjs`, 30 of 30; `canned-coffee-refreshments-13.mjs`, 30 of 30), with 14 of 20 in `classic-soda-expansion.mjs`, 7 of 8 in `juice-final-expansion.mjs` and 7 of 10 in `hydration-expansion.mjs`. 22 recipe modules are entirely Good.
+- The manifest `status` of every record is still `needs-review`. The verdict files, not the manifest, hold the approval.
+
+Redraws come from the queue in `REVIEW.md` and are held to the standard in the skill's "The quality bar" section, as is every new drink.
+
 ## Latest batch: 30 soda, coffee, tea, smoothie and wine icons, 2026-11-14
 
 **335 drafts authored; 43 catalog entries remain. 40 of 43 starters covered.**
