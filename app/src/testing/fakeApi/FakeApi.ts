@@ -185,7 +185,7 @@ function bugPriorityForRank(index: number, count: number, current: number | null
 const PHOTO_PROCESSING_MS = 3000;
 /** How long the fake icon pipeline "takes" once an eligible Bev is created. */
 const ICON_GENERATION_MS = 4000;
-/** Catalog Bevs offered as art to borrow. Matches `v_candidates` in 20261111000300. */
+/** Catalog Bevs offered as art to borrow. Matches `v_candidates` in 20261114000200. */
 const FALLBACK_CANDIDATES = 8;
 
 /** Writes that only change the session; they leave seeded fixtures "clean" (see FakeDb.dirty). */
@@ -1497,7 +1497,7 @@ export class FakeApi implements BeviApi {
       }),
 
     // Copied from `leaves` on purpose, down to the cap and the omit-what-you-
-    // cannot-see rule -- `get_bev_icons` (20261111000300) is copied from
+    // cannot-see rule -- `get_bev_icons` (20261114000200) is copied from
     // `get_bev_leaves` for the same reason. READ-ONLY: drawing a screen must
     // never schedule generation, so nothing here touches `iconReadyAt`.
     icons: (bevIds: readonly string[]) =>

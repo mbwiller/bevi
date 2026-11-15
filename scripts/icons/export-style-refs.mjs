@@ -19,7 +19,7 @@
  * The `generate-bev-icon` Edge Function cannot read this repository, so the
  * references it sends to the image model have to live somewhere it can reach.
  * This renders them from the authored SVG masters and uploads them to the
- * private `bev-style-refs` bucket (20261111000400).
+ * private `bev-style-refs` bucket (20261114000300).
  *
  * ---------------------------------------------------------------------------
  * ONLY UNBRANDED ARTWORK, AND THAT IS A CORRECTNESS RULE

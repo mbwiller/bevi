@@ -1,5 +1,5 @@
 -- Custom Bevs, part 1: the generated-icon job ledger
--- (20261111000200_bev_icon_jobs.sql).
+-- (20261114000100_bev_icon_jobs.sql).
 --
 -- The feature's one non-negotiable requirement is a negative: an
 -- image-generation job exists for a brand-new Bev created WITH an uploaded
@@ -625,7 +625,7 @@ select is(
 -- ---------------------------------------------------------------------------
 -- I. get_bev_icons: the read path, and the art it offers to borrow
 -- ---------------------------------------------------------------------------
--- 20261111000300. Read-only by construction, which section J re-checks by
+-- 20261114000200. Read-only by construction, which section J re-checks by
 -- counting jobs afterwards. The borrowed-art list is what keeps a collection
 -- of custom drinks from being a wall of identical category silhouettes.
 
@@ -723,7 +723,7 @@ select is(
 );
 
 -- ---------------------------------------------------------------------------
--- K. 20261111000400: the worker's half
+-- K. 20261114000300: the worker's half
 -- ---------------------------------------------------------------------------
 -- release_bev_icon_job, pending_bev_icon_failures, drain_bev_icon_jobs and the
 -- style bucket had no coverage at all, which was the wrong gap to leave: this

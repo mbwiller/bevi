@@ -54,7 +54,7 @@ export type PriceTier = 1 | 2 | 3 | 4;
 export type PhotoStatus = 'processing' | 'ready';
 
 /**
- * A Bev's generated-icon state (`bevs.icon_status`, 20261111000200).
+ * A Bev's generated-icon state (`bevs.icon_status`, 20261114000100).
  *
  * `'none'` is the one that matters: it means the Bev was never ELIGIBLE for
  * generation -- a seeded catalog row, or a custom Bev created without a

@@ -283,8 +283,8 @@ enabled = true
 verify_jwt = false
 
 # generate-bev-icon: the custom-Bev icon worker. Its only callers are
-# `enqueue_bev_icon_job()` over pg_net (20261111000200) and the every-minute
-# `drain_bev_icon_jobs()` cron (20261111000400).
+# `enqueue_bev_icon_job()` over pg_net (20261114000100) and the every-minute
+# `drain_bev_icon_jobs()` cron (20261114000300).
 #
 # verify_jwt = false ON PURPOSE, and it is not the weaker setting here -- the
 # same reasoning as `embed`. verify_jwt only proves the request carries a key
