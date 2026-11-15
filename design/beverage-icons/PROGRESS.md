@@ -1,6 +1,16 @@
 # Beverage icon production checkpoint
 
-## Latest batch: 30 soda, energy, seltzer, beer and cocktail icons, 2026-11-14
+## Latest batch: 30 soda, coffee, tea, smoothie and wine icons, 2026-11-14
+
+**335 drafts authored; 43 catalog entries remain. 40 of 43 starters covered.**
+
+Added four historical Diet Coke flavor cans (Ginger Lime, Zesty Blood Orange, Twisted Mango and Feisty Cherry), Hires Root Beer, Diet RC Cola, Mountain Zevia and Waterloo Lime; Health-Ade Pink Lady Apple, Lipton Green Tea Citrus and Diet Snapple Peach Tea; five Starbucks Doubleshot packages; STōK Not Too Sweet, Chameleon Black, illy issimo Cappuccino, RISE Nitro Original Black/Oat Latte, Kitu Super Coffee Mocha, Bulletproof Vanilla and Death Wish Cold Brew; Naked Protein Zone/Berry Blast, Bolthouse Green Goodness, Odwalla Superfood; Barefoot Cabernet Sauvignon, Josh Cellars Chardonnay and a generic served Cabernet glass. Exact packages and serving form are recorded in `scripts/icons/families/canned-coffee-refreshments-13.mjs`.
+
+All 30 package/serving references were inspected; full artwork and 40/56/96/155px light/dark sheets are in `review/batch-13-2026-11-14-01.png`, `review/batch-13-2026-11-14-sizes-light.png` and `review/batch-13-2026-11-14-sizes-dark.png`. Reviewed hashes are in `review/review.json`. New assets remain `needs-review`; final aesthetic approval and device review are pending. Build and validation pass for 335 authored assets. The production publisher dry run and live sync will be checked before/after merge.
+
+Historical Diet Coke cans represent the discontinued 2018 US flavor line; they were not replaced with current flavors. Starbucks Vanilla is mapped to the documented 15 fl oz Energy Vanilla package, while Starbucks Espresso and Espresso & Cream use 6.5 fl oz cans. The other 43 pending rows remain in `coverage.json`; no artwork was assigned to an unresolved identity in this batch.
+
+## Previous batch: 30 soda, energy, seltzer, beer and cocktail icons, 2026-11-14
 
 **305 drafts authored; 73 catalog entries remain. 40 of 43 starters covered.**
 
