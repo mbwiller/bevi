@@ -2,7 +2,7 @@
 
 ## Redraw 01, 2026-11-15: 19 icons from the Needs work queue
 
-19 icons from batches 12 and 13 were redrawn from their real packages. They are not sorted yet: each returns to the swipe deck labelled with the Needs work verdict it answers, and `REVIEW.md` lists them as not sorted until a person does.
+19 icons from batches 12 and 13 were redrawn from their real packages. Matt sorted all 19 Good in the swipe tool the same day, so the collection stands at 224 good and 111 need work (`REVIEW.md`). These 19 are reference examples for the redraws that follow.
 
 | New recipe module | Icons |
 |---|---|
