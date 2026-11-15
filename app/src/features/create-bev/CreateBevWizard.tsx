@@ -1,4 +1,4 @@
-import { isApiError, type BevSummary, type CreateBevInput, type FindDuplicatesInput, type ValidationErrorDetail } from '@bevi/shared';
+import { isApiError, type NutritionPreview, type BevSummary, type CreateBevInput, type FindDuplicatesInput, type ValidationErrorDetail } from '@bevi/shared';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -64,6 +64,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
   const createBev = useCreateBev();
   const photo = usePhotoUpload('bev-photo');
   const label = usePhotoUpload('label');
+  const [nutrition, setNutrition] = useState<NutritionPreview | null>(null);
 
   const [step, setStep] = useState<Step>(0);
   const [form, setForm] = useState<DetailsForm>({
@@ -124,6 +125,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
   }, [duplicatesQ.data, form.categoryId, categories]);
 
   const dirty =
+    !!nutrition ||
     !!photo.photo ||
     !!label.photo ||
     !!form.name.trim() ||
@@ -226,6 +228,12 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
       }
       case 'validation': {
         const field = (e.detail as ValidationErrorDetail | undefined)?.field;
+        if (field === 'nutrition') {
+          setNutrition(null);
+          setErrors({ nutrition: 'Nutrition could not be saved. Scan the barcode again or continue without it.' });
+          setStep(1);
+          return;
+        }
         if (field && DETAIL_FIELDS.has(field)) {
           setErrors({ [field]: e.message });
           return setStep(1);
@@ -278,6 +286,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
         priceEstimated: form.priceEstimated,
         photoAssetId,
         ...(labelAssetId ? { labelAssetId } : {}),
+        ...(nutrition ? { nutrition } : {}),
       };
       try {
         const bev = await createWhenReady(createBev.mutateAsync, input, {
@@ -312,6 +321,8 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
         onChange={patch}
         onOpenCategories={() => setCategoryOpen(true)}
         label={label}
+        nutrition={nutrition}
+        onNutritionChange={(value) => { setNutrition(value); setErrors((e) => ({ ...e, nutrition: undefined })); }}
         onPickLabel={(s) => void pickLabel(s)}
         similarCount={duplicatesQ.data?.length ?? 0}
         categoryHint={categoryHint}

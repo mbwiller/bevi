@@ -19,6 +19,8 @@ jest.mock('expo-router', () => ({
 }));
 
 // The picker and the canvas resize are browser-only; the wizard sees what they would return.
+jest.mock('../BarcodeCamera', () => ({ BarcodeCamera: () => null }));
+
 jest.mock('../photo', () => ({
   ...jest.requireActual('../photo'),
   pickImage: jest.fn(),
@@ -404,4 +406,32 @@ it('shows no category hint when the chosen category already matches the likely m
   await fillDetails({ name: 'Red Bull', category: 'Energy' });
   await screen.findByText(/already on Bevi/);
   expect(screen.queryByText(/Most Bevs like this are/)).toBeNull();
+});
+
+it('keeps confirmed barcode nutrition across steps and persists it with the new Bev', async () => {
+  const nutrition = {
+    barcode: '012345678901', productName: 'Test water', basis: 'Per serving (355 ml)',
+    calories: 0, fatGrams: null, carbohydrateGrams: 0, sugarGrams: 0, proteinGrams: null,
+    sodiumMg: 4, sourceUrl: 'https://world.openfoodfacts.org/product/012345678901',
+  };
+  jest.spyOn(api.nutrition!, 'lookupBarcode').mockResolvedValue(nutrition);
+  const create = jest.spyOn(api.bevs, 'create');
+  await renderWizard();
+  await addPhoto();
+  await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+  await fillDetails({ name: 'Qzx Glimmer LabDrink', brand: 'Nowhere Co', category: 'Water' });
+  await fireEvent.press(screen.getByLabelText('Scan barcode for nutrition'));
+  await fireEvent.changeText(screen.getByLabelText('Or enter barcode digits'), nutrition.barcode);
+  await fireEvent.press(screen.getByLabelText('Look up entered barcode'));
+  await fireEvent.press(await screen.findByLabelText('Use this nutrition label'));
+  await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+  await screen.findByText('Looks new');
+  await fireEvent.press(screen.getByLabelText('Back'));
+  expect(screen.getByText('Nutrition added to this Bev.')).toBeTruthy();
+  await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+  await fireEvent.press(await screen.findByRole('button', { name: 'Add and rank it' }));
+  await waitFor(() => expect(mockReplace).toHaveBeenCalled(), READY_TIMEOUT);
+  expect(create.mock.calls.at(-1)![0].nutrition).toEqual(nutrition);
+  const made = await create.mock.results.at(-1)!.value;
+  expect((await api.bevs.get(made.id)).nutrition).toEqual(nutrition);
 });

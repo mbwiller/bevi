@@ -294,6 +294,7 @@ interface UserStreak extends StreakResult {
 }
 
 export class FakeApi implements BeviApi {
+  nutrition: NonNullable<BeviApi['nutrition']> = { lookupBarcode: async () => null };
   private db: FakeDb;
   private readonly storage: StorageLike | null;
   private readonly clock: () => Date;
@@ -751,6 +752,7 @@ export class FakeApi implements BeviApi {
       ...this.toSummary(b),
       status: 'active',
       nutritionLabelUrl: label.url,
+      nutrition: b.nutrition ? { ...b.nutrition } : null,
       avgScore: s ? round2(s.mean) : null,
       scoreStddev: s ? round2(s.stddev) : null,
       createdBy: creator ? { id: creator.id, handle: creator.handle } : null,
@@ -1347,6 +1349,7 @@ export class FakeApi implements BeviApi {
             aliases: [],
             photoAssetId: photo.id,
             labelAssetId: input.labelAssetId ?? null,
+            ...(input.nutrition ? { nutrition: { ...input.nutrition } } : {}),
             createdById: me.id,
             createdAt: this.nowIso(),
           };

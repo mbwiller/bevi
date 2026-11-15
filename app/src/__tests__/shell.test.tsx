@@ -275,3 +275,20 @@ describe('tab bar', () => {
     expect(screen.getByText('TU')).toBeTruthy();
   });
 });
+
+
+describe('standalone nutrition demo', () => {
+  it('opens the scanner while signed out when explicitly enabled', async () => {
+    const previous = process.env.EXPO_PUBLIC_NUTRITION_SCAN_DEMO;
+    process.env.EXPO_PUBLIC_NUTRITION_SCAN_DEMO = '1';
+    try {
+      await start('signedOut');
+      expect(await screen.findByText('Scan a Bev')).toBeTruthy();
+      expect(screen.getByLabelText('Scan barcode for nutrition')).toBeTruthy();
+      expect(screen.queryByText('Sign in')).toBeNull();
+    } finally {
+      if (previous === undefined) delete process.env.EXPO_PUBLIC_NUTRITION_SCAN_DEMO;
+      else process.env.EXPO_PUBLIC_NUTRITION_SCAN_DEMO = previous;
+    }
+  });
+});

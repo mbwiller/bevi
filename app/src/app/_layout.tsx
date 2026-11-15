@@ -5,6 +5,8 @@ import { lazy, Suspense, useEffect, useRef, useState, type ComponentProps } from
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { NutritionDemo } from '@/features/create-bev/NutritionDemo';
+
 import { apiConfig } from '@/api/client';
 import { useCanReportBug } from '@/api/hooks';
 import { createQueryClient } from '@/api/queryClient';
@@ -47,7 +49,9 @@ export default function RootLayout() {
         <StatusBarClearance>
           <QueryClientProvider client={queryClient}>
             <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-            {apiConfig.ok ? <SessionGate /> : <ConfigError problem={apiConfig.problem} />}
+            {__DEV__ && process.env.EXPO_PUBLIC_NUTRITION_SCAN_DEMO === '1'
+              ? <NutritionDemo />
+              : apiConfig.ok ? <SessionGate /> : <ConfigError problem={apiConfig.problem} />}
           </QueryClientProvider>
         </StatusBarClearance>
       </SafeAreaProvider>
