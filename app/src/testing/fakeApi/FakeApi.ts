@@ -1511,7 +1511,7 @@ export class FakeApi implements BeviApi {
           const icon = this.iconFor(bev);
           out.push({
             bevId: bev.id,
-            iconUrl: icon.url,
+            generatedIconUrl: icon.url,
             iconStatus: icon.status,
             fallbackBevIds: icon.url ? [] : this.fallbackBevIdsFor(bev, me),
             // The real worker detects this from the render; the fake just has

@@ -100,7 +100,7 @@ alter table public.bevs
 -- A path, never a URL -- the same convention as photo_path, thumb_path and
 -- avatar_path. packages/api turns it into a public URL with `publicUrl()`.
 comment on column public.bevs.generated_icon_path is
-  'Object path in the public `bev-icons` bucket for this Bev''s generated illustration, or null. Written only by finish_bev_icon_job().';
+  'Object path in the public `bev-generated-icons` bucket for this Bev''s generated illustration, or null. Written only by finish_bev_icon_job().';
 comment on column public.bevs.icon_status is
   '''none'' = never eligible for generation (no creation photo, or a seeded row). Otherwise the state of this Bev''s one icon-generation job.';
 
@@ -161,7 +161,7 @@ alter table public.bev_icon_jobs enable row level security;
 -- a read returning rows either way; this stops it being a REST endpoint that
 -- discloses the schema, and means one permissive policy added later cannot
 -- quietly expose last_error, attempt_count and source_photo_path.
-revoke all on public.bev_icon_jobs from anon, authenticated;
+revoke all on public.bev_icon_jobs from public, anon, authenticated;
 
 comment on table public.bev_icon_jobs is
   'At most one initial icon-generation job per eligible Bev (primary key on bev_id). Created only by create_bev, for a brand-new Bev whose creation request carried an uploaded photo. RLS on with no policy: security-definer functions only.';
@@ -390,7 +390,10 @@ begin
              when j.created_at < now() - public.bev_icon_give_up_after()
                then 'gave up: still unfinished after bev_icon_give_up_after()'
              else 'abandoned: worker did not report back' end
-     where j.status <> 'completed'
+     -- 'completed' is terminal, and so is a job that already failed with a real
+     -- provider diagnostic: re-reaping that one would overwrite `last_error`
+     -- with the generic give-up text and lose why it actually died.
+     where j.status not in ('completed', 'failed')
        and (
          -- A worker that died mid-flight with no attempts left.
          (j.status = 'processing'
@@ -528,15 +531,26 @@ grant execute on function public.finish_bev_icon_job(uuid, text, text, text, jso
 -- =====================================================================
 -- 6. The bucket
 --
--- Public, like bev-photos: these are illustrations shown in the feed, on the
--- Bev screen, in search results and in the profile collection, so they are
--- served from the CDN by public URL.
+-- `bev-generated-icons`, and NOT `bev-icons`, which 20261112000200 owns.
 --
--- NO storage policy for `authenticated`. The service role is the only writer
--- -- a user never uploads here -- and public buckets need no SELECT policy
--- (the /object/public/... endpoint bypasses RLS entirely; 20261011000900's
--- header has the reasoning). 2 MB is generous for a 1024px transparent PNG of
--- one drink on nothing.
+-- Those two are not interchangeable and cannot be merged. `bev-icons` holds
+-- the AUTHORED catalogue art: content-addressed SVG, 512 KiB, and its
+-- allowed_mime_types is `image/svg+xml` alone. What this pipeline produces is
+-- a raster PNG with an alpha channel, around 450 KiB, because it is matted
+-- from a photograph and there is no vector to serve. Writing one into the
+-- other bucket is refused by its mime allowlist, so this is a separate
+-- bucket by necessity rather than by preference.
+--
+-- Public, like `bev-icons`, and for the same reason: these are drawn in the
+-- feed, on the Bev screen, in search results and in the profile collection,
+-- so they are served from the CDN by public URL.
+--
+-- NO storage.objects policy for `authenticated`. The service role is the only
+-- writer and a public bucket needs no SELECT policy (the /object/public/...
+-- endpoint bypasses RLS entirely; 20261011000900's header has the reasoning).
+-- 20261112000200 makes the sharper version of the same point: granting a
+-- signed-in account write access to our storage origin is how a user-supplied
+-- document ends up served from it.
 --
 -- Paths are `<bev_id>/icon-768.png` and `<bev_id>/icon-192.png`, matching
 -- OUT_WIDTH and THUMB_WIDTH in the worker: two pre-rendered sizes, because
@@ -547,7 +561,7 @@ grant execute on function public.finish_bev_icon_job(uuid, text, text, text, jso
 -- =====================================================================
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('bev-icons', 'bev-icons', true, 2097152, array['image/png', 'image/webp'])
+values ('bev-generated-icons', 'bev-generated-icons', true, 2097152, array['image/png', 'image/webp'])
 on conflict (id) do update
   set public = true,
       file_size_limit = excluded.file_size_limit,

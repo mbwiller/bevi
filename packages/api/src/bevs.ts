@@ -23,7 +23,7 @@ import {
   mapBevSimilarity,
   mapBevSummary,
   mapProfile,
-  type BevIconRow,
+  type GeneratedBevIconRow,
   type BevLeafRow,
   type BevRow,
   type BevSimilarityRow,
@@ -365,7 +365,7 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
     if (bevIds.length === 0) return [];
     const { data, error } = await client.rpc('get_bev_icons', { p_bev_ids: [...bevIds] });
     if (error) throw mapError(error);
-    return ((data ?? []) as BevIconRow[]).map((row) => mapBevIcon(client, row));
+    return ((data ?? []) as GeneratedBevIconRow[]).map((row) => mapBevIcon(client, row));
   }
 
   return { search, get, findLikelyDuplicates, create, report, getStarterCandidates, similarities, similar, leaves, icons };

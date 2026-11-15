@@ -236,3 +236,60 @@ select cron.schedule(
   '* * * * *',
   $cron$ select public.drain_bev_icon_jobs(); $cron$
 );
+
+-- =====================================================================
+-- 5. A merge carries the generated icon too
+--
+-- 20261112000200 added `bevs_merge_moves_icon`, which re-points a Bev's
+-- AUTHORED icon (`public.bev_icons`) to the surviving Bev when `merge_bev`
+-- marks it 'merged'. Nothing did the same for the GENERATED one, and the
+-- asymmetry is the bug: `generated_icon_path` and `icon_label_band` stayed on
+-- the row nothing renders, so merging a custom Bev that had art into one that
+-- did not LOST that art permanently. Permanently, because a generation job is
+-- only ever created by `create_bev` (20261111000200) -- there is no path that
+-- regenerates an icon for an existing Bev, by design.
+--
+-- Same trigger shape and the same WHEN clause as main's, so the two fire
+-- together on the one status change and a reader finds them side by side.
+--
+-- Only when the survivor has none: a destination that already has its own
+-- generated icon keeps it. The surviving Bev is the canonical one, so its art
+-- wins; this fills a gap rather than overwriting a choice.
+-- =====================================================================
+
+create or replace function public.bev_generated_icon_follow_merge()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+begin
+  if new.merged_into is null then
+    return null;
+  end if;
+
+  update public.bevs dest
+     set generated_icon_path = new.generated_icon_path,
+         icon_label_band     = new.icon_label_band,
+         icon_status         = 'completed'
+   where dest.id = new.merged_into
+     and dest.generated_icon_path is null
+     and new.generated_icon_path is not null;
+
+  return null;
+end;
+$$;
+
+comment on function public.bev_generated_icon_follow_merge() is
+  'Carries a merged Bev''s generated icon to the surviving Bev when it has none of its own. The mirror of bev_icons_follow_merge (20261112000200) for generated art; without it a merge loses art that nothing can regenerate.';
+
+alter function public.bev_generated_icon_follow_merge() owner to postgres;
+revoke execute on function public.bev_generated_icon_follow_merge()
+  from public, anon, authenticated, service_role;
+
+drop trigger if exists bevs_merge_moves_generated_icon on public.bevs;
+create trigger bevs_merge_moves_generated_icon
+  after update of status on public.bevs
+  for each row
+  when (new.status = 'merged' and old.status is distinct from 'merged')
+  execute function public.bev_generated_icon_follow_merge();

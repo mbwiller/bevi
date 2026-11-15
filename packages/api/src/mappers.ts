@@ -390,8 +390,12 @@ export function mapBevLeaf(row: BevLeafRow): BevLeaf {
   return { bevId: row.bev_id, leafCategoryId: row.leaf_category_id };
 }
 
-/** `get_bev_icons` (20261111000300). */
-export interface BevIconRow {
+/**
+ * `get_bev_icons` (20261111000300). NOT `BevIconRow`, which 2.13.0 uses for a
+ * `public.bev_icons` row -- the authored catalogue icon. This is the
+ * generated-icon read.
+ */
+export interface GeneratedBevIconRow {
   bev_id: string;
   generated_icon_path: string | null;
   icon_status: string;
@@ -407,11 +411,12 @@ export interface BevIconRow {
  * two cannot legitimately disagree -- this just refuses to trust them if they
  * ever do.
  */
-export function mapBevIcon(client: SupabaseClient, row: BevIconRow): BevIcon {
+export function mapBevIcon(client: SupabaseClient, row: GeneratedBevIconRow): BevIcon {
   const status = row.icon_status as IconStatus;
   return {
     bevId: row.bev_id,
-    iconUrl: status === 'completed' ? publicUrl(client, 'bev-icons', row.generated_icon_path) : null,
+    generatedIconUrl:
+      status === 'completed' ? publicUrl(client, 'bev-generated-icons', row.generated_icon_path) : null,
     iconStatus: status,
     fallbackBevIds: row.fallback_bev_ids ?? [],
     // Only meaningful with art to draw it on.

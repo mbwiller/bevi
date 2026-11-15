@@ -35,7 +35,7 @@
 -- short a1..f4, d1..d6, ff01..ff14 and ffff. fa0 collides with none.
 
 begin;
-select plan(88);
+select plan(91);
 
 insert into auth.users (id, email, raw_user_meta_data, aud, role)
 values ('00000000-0000-4000-8000-0000000fa0a1', 'pgtapicon1@users.bevi.app',
@@ -154,26 +154,39 @@ select ok(
 -- ---------------------------------------------------------------------------
 
 select ok(
-  (select public from storage.buckets where id = 'bev-icons'),
-  'the bev-icons bucket exists and is public, so icons are served from the CDN'
+  (select public from storage.buckets where id = 'bev-generated-icons'),
+  'bev-generated-icons exists and is public, so icons are served from the CDN'
 );
 select ok(
   (select file_size_limit = 2097152
      and allowed_mime_types @> array['image/png', 'image/webp']
      and array_length(allowed_mime_types, 1) = 2
-     from storage.buckets where id = 'bev-icons'),
-  'bev-icons caps objects at 2 MB and accepts only png and webp'
+     from storage.buckets where id = 'bev-generated-icons'),
+  'bev-generated-icons caps objects at 2 MB and accepts only png and webp'
 );
--- A user never uploads an icon: the service role writes them and public
--- objects are read through the endpoint that bypasses RLS entirely.
+
+-- The bucket this pipeline must NOT write to, and the reason it has its own.
+-- 20261112000200 owns `bev-icons` for the authored catalogue SVGs: a raster
+-- PNG posted there is refused on mime type, and the worker would burn every
+-- attempt while both suites stayed green. Asserting the two are distinct, and
+-- that this feature leaves main's settings alone, is what makes that
+-- impossible to reintroduce quietly.
+select ok(
+  (select allowed_mime_types = array['image/svg+xml'] and file_size_limit = 524288
+     from storage.buckets where id = 'bev-icons'),
+  'bev-icons is still main''s authored-SVG bucket: this feature does not touch it'
+);
+
+-- A user never uploads a generated icon: the service role writes them, and
+-- public objects are read through the endpoint that bypasses RLS.
 select is(
   (select count(*)::int from pg_policies
     where schemaname = 'storage' and tablename = 'objects'
       -- coalesce BOTH: `qual` is null on an INSERT-only policy, and a null
       -- concatenation would make such a policy invisible to this count.
-      and coalesce(qual, '') || coalesce(with_check, '') like '%bev-icons%'),
+      and coalesce(qual, '') || coalesce(with_check, '') like '%bev-generated-icons%'),
   0,
-  'no storage policy mentions bev-icons: nothing but the service role writes there'
+  'no storage policy mentions bev-generated-icons: nothing but the service role writes there'
 );
 
 -- ---------------------------------------------------------------------------
@@ -835,6 +848,51 @@ select is(
 select ok(
   (select count(*) from public.bev_icon_jobs) > 0,
   'while the owner sees the very rows the signed-in user could not'
+);
+
+-- ---------------------------------------------------------------------------
+-- L. A merge carries the generated icon
+-- ---------------------------------------------------------------------------
+-- 20261112000200 carries the AUTHORED icon across a merge; without the mirror
+-- trigger the GENERATED one is lost, and lost for good, because only
+-- create_bev ever makes a job.
+
+insert into public.bevs (id, name, brand, flavor, category_id, price_tier, status, source,
+                         photo_path, thumb_path, created_by, generated_icon_path, icon_status)
+values ('00000000-0000-4000-8000-0000000fa021', 'pgTAP Icon Merge Source', 'pgTAP Merge', null,
+        'soda', 2, 'active', 'user', 'fa0a1/m1.jpg', 'fa0a1/m1.jpg',
+        '00000000-0000-4000-8000-0000000fa0a1',
+        '00000000-0000-4000-8000-0000000fa021/icon-768.png', 'completed'),
+       ('00000000-0000-4000-8000-0000000fa022', 'pgTAP Icon Merge Dest', 'pgTAP Merge', null,
+        'soda', 2, 'active', 'user', 'fa0a1/m2.jpg', 'fa0a1/m2.jpg',
+        '00000000-0000-4000-8000-0000000fa0a1', null, 'none');
+
+update public.bevs
+   set status = 'merged', merged_into = '00000000-0000-4000-8000-0000000fa022'
+ where id = '00000000-0000-4000-8000-0000000fa021';
+
+select is(
+  (select generated_icon_path || ':' || icon_status from public.bevs
+    where id = '00000000-0000-4000-8000-0000000fa022'),
+  '00000000-0000-4000-8000-0000000fa021/icon-768.png:completed',
+  'the survivor inherits the merged Bev''s generated icon, which nothing could regenerate'
+);
+
+-- A destination with art of its own keeps it: the survivor is canonical.
+insert into public.bevs (id, name, brand, flavor, category_id, price_tier, status, source,
+                         photo_path, thumb_path, created_by, generated_icon_path, icon_status)
+values ('00000000-0000-4000-8000-0000000fa023', 'pgTAP Icon Merge Source Two', 'pgTAP Merge', 'B',
+        'soda', 2, 'active', 'user', 'fa0a1/m3.jpg', 'fa0a1/m3.jpg',
+        '00000000-0000-4000-8000-0000000fa0a1',
+        '00000000-0000-4000-8000-0000000fa023/icon-768.png', 'completed');
+update public.bevs
+   set status = 'merged', merged_into = '00000000-0000-4000-8000-0000000fa022'
+ where id = '00000000-0000-4000-8000-0000000fa023';
+
+select is(
+  (select generated_icon_path from public.bevs where id = '00000000-0000-4000-8000-0000000fa022'),
+  '00000000-0000-4000-8000-0000000fa021/icon-768.png',
+  'and a survivor that already had art keeps its own'
 );
 
 select * from finish();
