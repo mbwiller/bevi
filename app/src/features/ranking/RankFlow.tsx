@@ -30,7 +30,7 @@ export interface RankFlowProps {
   rerank?: boolean;
   /**
    * `?entry=search`: opened by tapping a search result before its ranked state was known. A Bev
-   * you've already ranked opens its detail instead (§6.8: detail, with Re-rank there).
+   * you've already ranked opens its detail instead (§6.8: detail, with Bev it again there).
    */
   detailIfRanked?: boolean;
 }

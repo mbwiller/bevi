@@ -58,14 +58,14 @@ beforeEach(() => {
 
 afterEach(() => client.clear());
 
-it('a ranked Bev shows your score, its place in the bucket, and Re-rank', async () => {
+it('a ranked Bev shows your score, its place in the bucket, and Bev it again', async () => {
   const ranked = (await api.rankings.listMine()).items[0]!;
   const r = await open(ranked.bevId);
   expect(await screen.findByRole('header', { name: ranked.bev.name })).toBeTruthy();
   expect(screen.getByText('Your score')).toBeTruthy();
   expect(screen.getByText(`#${ranked.position + 1} in Loved`)).toBeTruthy();
   expect(screen.getByText('Bevi score')).toBeTruthy();
-  await fireEvent.press(screen.getByLabelText(`Re-rank ${ranked.bev.name}`));
+  await fireEvent.press(screen.getByLabelText(`Bev ${ranked.bev.name} again`));
   expect(r.path()).toBe(`/rank/${ranked.bevId}?mode=rerank`);
 });
 

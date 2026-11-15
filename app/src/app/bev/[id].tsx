@@ -134,7 +134,7 @@ export default function BevDetailScreen() {
             variant="filled"
             icon={ranked ? 'arrow-up-down' : 'circle-plus'}
             style={styles.button}
-            accessibilityLabel={ranked ? `Re-rank ${bev.name}` : `Rank ${bev.name}`}
+            accessibilityLabel={ranked ? `Bev ${bev.name} again` : `Rank ${bev.name}`}
             onPress={() =>
               router.push({
                 pathname: '/rank/[bevId]',
@@ -142,7 +142,7 @@ export default function BevDetailScreen() {
               })
             }
           >
-            {ranked ? 'Re-rank' : 'Rank it'}
+            {ranked ? 'Bev it again' : 'Rank it'}
           </Pill>
           {ranked ? null : (
             <Pill
