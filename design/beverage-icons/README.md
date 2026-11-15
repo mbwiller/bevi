@@ -48,6 +48,17 @@ The full skill includes product-identity rules, reference requirements, shared d
 
 Open `design/beverage-icons/index.html` locally in a browser. Search by drink or brand, switch tile sizes, and compare light/dark/transparent backgrounds. Every card links to product evidence and downloadable files. GitHub displays the overview above; download or check out the repository to use the HTML gallery.
 
+## Sort the icons: Good or Needs work
+
+`npm run icons:swipe`, from the repository root, starts a local server and opens the deck: every icon in `manifest.json`, one card at a time. Swipe right (or press →) for **Good**, left (or ←) for **Needs work**; `Z` undoes. A sorted icon stays in its pile. The terminal prints a second address for a phone on the same Wi-Fi. `-- --local` keeps it to this Mac, `-- --no-open` skips the browser.
+
+- **New icons arrive on their own.** The server re-reads the manifest as it changes, so a build or a `git pull` adds its icons to the deck while the page is open.
+- **A redrawn icon comes back.** A verdict records the art it was given to (the first 16 hex digits of the portable SVG's SHA-256). When the art changes, the icon returns to the front of the deck, labelled with the verdict and note it answers.
+- **Verdicts are files.** Each person's swipes are written to `verdicts/<name>.json`, one icon per line, so two people never conflict in git. The piles are shared: the newest verdict from either person decides. Commit and push the file to share your sorting; pull to get the other person's.
+- **The rework queue** is every `"verdict":"needs-work"` line in `verdicts/*.json`, with the reviewer's note when they left one. The sorted piles in the tool show the same list.
+
+The logic is in `scripts/icons/swipe-core.ts` (tested by `swipe-core.test.ts`), the server in `scripts/icons/swipe.ts`, the page in `scripts/icons/swipe/`.
+
 ## Build and validate
 
 The current authoring/export environment is **macOS, Node 22.6+ and Python 3.9+**. The renderer uses the Arial, Georgia and Times New Roman font files in `/System/Library/Fonts/Supplemental`; exact font hashes are recorded in the manifest. Other systems can use all committed PNGs and outlined SVGs without these fonts, and can run `validate.mjs`; rebuilding editable text requires the documented macOS font setup. Do not silently substitute fonts, which would change the artwork.
