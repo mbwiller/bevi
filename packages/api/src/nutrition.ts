@@ -4,7 +4,7 @@ const FIELDS = 'product_name,serving_size,nutriments';
 const NUTRIENTS = ['energy-kcal', 'fat', 'carbohydrates', 'sugars', 'proteins', 'sodium'];
 const TIMEOUT_MS = 12000;
 const number = (value: unknown): number | null =>
-  typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
+  typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1_000_000 ? value : null;
 
 /** OFF normalized nutrient fields use grams, including sodium. Never turn missing values into 0. */
 export function parseNutrition(barcode: string, data: unknown): NutritionPreview | null {
@@ -23,7 +23,7 @@ export function parseNutrition(barcode: string, data: unknown): NutritionPreview
     productName: typeof p.product_name === 'string' && p.product_name.trim() ? p.product_name.trim().slice(0, 256) : 'Scanned Bev',
     basis: serving ? `Per serving (${String(p.serving_size).trim().slice(0, 220)})` : 'Per 100 g / 100 ml (as listed)',
     calories: get('energy-kcal'), fatGrams: get('fat'), carbohydrateGrams: get('carbohydrates'),
-    sugarGrams: get('sugars'), proteinGrams: get('proteins'), sodiumMg: sodium === null ? null : sodium * 1000,
+    sugarGrams: get('sugars'), proteinGrams: get('proteins'), sodiumMg: sodium === null ? null : number(sodium * 1000),
     sourceUrl: `https://world.openfoodfacts.org/product/${barcode}`,
   };
   return [result.calories, result.fatGrams, result.carbohydrateGrams, result.sugarGrams, result.proteinGrams, result.sodiumMg]

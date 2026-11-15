@@ -28,3 +28,16 @@ describe('barcode nutrition', () => {
     await expect(createNutritionApi().lookupBarcode('012345678901')).rejects.toMatchObject({ code: 'rate_limited' });
   });
 });
+
+it('rejects provider amounts outside the database bounds, including converted sodium', () => {
+  const result = parseNutrition('012345678901', { product: { nutriments: {
+    'energy-kcal_100g': 0, fat_100g: 1_000_001, sodium_100g: Number.MAX_VALUE,
+    carbohydrates_100g: Infinity, sugars_100g: NaN,
+  } } });
+  expect(result).toMatchObject({ calories: 0, fatGrams: null, sodiumMg: null, carbohydrateGrams: null, sugarGrams: null });
+  expect(parseNutrition('012345678901', { product: { nutriments: { sodium_100g: 1001 } } })).toBeNull();
+});
+it('uses a labeled serving when calories are missing but another serving nutrient exists', () => {
+  expect(parseNutrition('012345678901', { product: { serving_size: '250 ml', nutriments: { sugars_serving: 12, sugars_100g: 4.8 } } }))
+    .toMatchObject({ basis: 'Per serving (250 ml)', calories: null, sugarGrams: 12 });
+});
