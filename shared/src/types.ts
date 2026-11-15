@@ -168,19 +168,23 @@ export interface BevIcon {
   generatedIconUrl: string | null;
   iconStatus: IconStatus;
   /**
-   * Catalog Bevs whose authored art this Bev may borrow, best first — so a
-   * custom drink with no generated icon shows a real Bevi illustration instead
-   * of a generic category silhouette.
+   * The one authored catalogue icon this Bev may borrow, or null — so a custom
+   * drink with no generated icon of its own shows a real Bevi illustration
+   * instead of a generic category silhouette.
    *
-   * Empty when `generatedIconUrl` is set (it needs none). The server RANKS these; the
-   * caller CHOOSES, walking the list until one has authored art, because only
-   * the client knows which Bevs do: that map is `bevIcons.generated.ts`, a
-   * shipped asset rather than a database row. A list where none match is
-   * normal — fall through to the category art.
+   * Null when `generatedIconUrl` is set (it needs none), and null when nothing
+   * in the Bev's category is drawn yet. The second case is normal and not an
+   * error: fall through to the category art.
+   *
+   * The SERVER chooses it, having joined `public.bev_icons` so that an undrawn
+   * candidate is never offered. Earlier drafts of this same unreleased field
+   * were `fallbackBevIds`, a ranked list of ids the client walked against a
+   * bundled map of which Bevs were drawn; #201 retired that map, so the
+   * database answers it instead. Nothing shipped the list shape.
    */
-  fallbackBevIds: string[];
+  fallbackIconUrl: string | null;
   /**
-   * Where the drink's label sits on `iconUrl`, normalised 0-1, so the app can
+   * Where the drink's label sits on `generatedIconUrl`, normalised 0-1, so the app can
    * draw the wordmark across it from the Bev's own `brand` / `name`.
    *
    * The lettering is deliberately NOT part of the generated image: the image

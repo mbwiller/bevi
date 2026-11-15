@@ -185,8 +185,6 @@ function bugPriorityForRank(index: number, count: number, current: number | null
 const PHOTO_PROCESSING_MS = 3000;
 /** How long the fake icon pipeline "takes" once an eligible Bev is created. */
 const ICON_GENERATION_MS = 4000;
-/** Catalog Bevs offered as art to borrow. Matches `v_candidates` in 20261114000200. */
-const FALLBACK_CANDIDATES = 8;
 
 /** Writes that only change the session; they leave seeded fixtures "clean" (see FakeDb.dirty). */
 const SESSION_ONLY_METHODS = new Set(['signIn', 'signOut']);
@@ -710,30 +708,22 @@ export class FakeApi implements BeviApi {
   }
 
   /**
-   * Catalog Bevs whose authored art `bev` may borrow, ranked as
-   * `get_bev_icons` ranks them: same leaf category first, then most-rated,
-   * then by id so the list is deterministic. Only seeded Bevs, so one user's
-   * custom Bev can never lend its art to another's.
+   * The authored catalogue icon `bev` may borrow, as `get_bev_icons` picks it:
+   * the best match in its own category that is ACTUALLY PUBLISHED.
+   *
+   * Always null here, and that is the honest answer rather than a gap. The
+   * real one joins `public.bev_icons`, which holds the published catalogue
+   * art; this fake has no published icons at all -- `iconUrl` is null for
+   * every Bev it serves, for the same reason. So there is nothing to borrow
+   * and screens fall through to the category art, which is exactly what they
+   * do against a database whose catalogue has not been published yet.
+   *
+   * To exercise the borrow path in a screen test, give the fake a few pretend
+   * published icons and return one here; the ranking to copy is in the
+   * migration's lateral join.
    */
-  private fallbackBevIdsFor(bev: FakeBev, viewer: FakeUser): string[] {
-    const counts = this.aggregates().byBev;
-    return this.db.bevs
-      .filter(
-        (b) =>
-          b.createdById === null && // seeded catalog art
-          b.id !== bev.id &&
-          b.categoryId === bev.categoryId &&
-          this.visible(b, viewer),
-      )
-      .sort((a, z) => {
-        const leaf = Number(z.leafCategoryId !== null && z.leafCategoryId === bev.leafCategoryId)
-          - Number(a.leafCategoryId !== null && a.leafCategoryId === bev.leafCategoryId);
-        if (leaf !== 0) return leaf;
-        const rated = (counts.get(z.id)?.length ?? 0) - (counts.get(a.id)?.length ?? 0);
-        return rated !== 0 ? rated : cmp(a.id, z.id);
-      })
-      .slice(0, FALLBACK_CANDIDATES)
-      .map((b) => b.id);
+  private fallbackIconUrlFor(_bev: FakeBev, _viewer: FakeUser): string | null {
+    return null;
   }
 
   private bayes(bevId: string): number | null {
@@ -1513,7 +1503,7 @@ export class FakeApi implements BeviApi {
             bevId: bev.id,
             generatedIconUrl: icon.url,
             iconStatus: icon.status,
-            fallbackBevIds: icon.url ? [] : this.fallbackBevIdsFor(bev, me),
+            fallbackIconUrl: icon.url ? null : this.fallbackIconUrlFor(bev, me),
             // The real worker detects this from the render; the fake just has
             // to give the app something plausible to letter.
             labelBand: icon.url ? { x: 0.33, y: 0.29, width: 0.34, height: 0.25, dark: true } : null,

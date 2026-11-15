@@ -35,7 +35,7 @@
 -- short a1..f4, d1..d6, ff01..ff14 and ffff. fa0 collides with none.
 
 begin;
-select plan(91);
+select plan(93);
 
 insert into auth.users (id, email, raw_user_meta_data, aud, role)
 values ('00000000-0000-4000-8000-0000000fa0a1', 'pgtapicon1@users.bevi.app',
@@ -626,8 +626,14 @@ select is(
 -- I. get_bev_icons: the read path, and the art it offers to borrow
 -- ---------------------------------------------------------------------------
 -- 20261114000200. Read-only by construction, which section J re-checks by
--- counting jobs afterwards. The borrowed-art list is what keeps a collection
--- of custom drinks from being a wall of identical category silhouettes.
+-- counting jobs afterwards. The borrowed icon is what keeps a collection of
+-- custom drinks from being a wall of identical category silhouettes.
+--
+-- `fallback_icon_path` names ONE authored icon, chosen here, and it is chosen
+-- by joining `public.bev_icons` -- so an undrawn candidate is never offered.
+-- `bev_icons` is empty after a reset (publishing is the icons-sync job's
+-- work, not a migration's), which is why the miss is asserted first and the
+-- published rows are fixtures of this test.
 
 select ok(
   has_function_privilege('authenticated', 'public.get_bev_icons(uuid[])', 'execute')
@@ -638,9 +644,8 @@ select ok(
 set local role authenticated;
 set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000fa0a1", "role": "authenticated"}';
 
--- A seeded catalog Bev: never eligible, no generated art, and it is offered
--- siblings to borrow from (it has authored art of its own, but only the client
--- knows that, so the server offers regardless).
+-- A seeded catalog Bev: never eligible for generation, and it has no
+-- generated art of its own.
 select is(
   (select i.icon_status from public.get_bev_icons(
      array[(select id from public.bevs where source = 'seed' and category_id = 'soda' order by id limit 1)]
@@ -648,37 +653,88 @@ select is(
   'none',
   'a seeded Bev reads as never eligible'
 );
-select ok(
-  (select cardinality(i.fallback_bev_ids) > 0 from public.get_bev_icons(
+-- Nothing in the catalogue is published yet, so there is nothing to borrow.
+-- Null is the correct answer here and NOT an error: the app falls through to
+-- the category art, exactly as it does on a project whose icons-sync has
+-- never run.
+select is(
+  (select i.fallback_icon_path from public.get_bev_icons(
      array[(select id from public.bevs where source = 'seed' and category_id = 'soda' order by id limit 1)]
    ) i),
-  'and it is offered catalog art to borrow'
+  null,
+  'with no published icon in the category, there is nothing to borrow'
 );
-select ok(
-  (select not (i.bev_id = any(i.fallback_bev_ids)) from public.get_bev_icons(
+
+-- Publish three: a sibling of the target, the target's own, and a custom Bev's.
+-- As the owner -- `bev_icons` has RLS and no insert policy, because only the
+-- publish job writes it.
+reset role;
+insert into public.bev_icons (bev_id, slug, path, sha256, style_version, status)
+values ((select id from public.bevs where source = 'seed' and category_id = 'soda' order by id limit 1 offset 1),
+        'pgtap-sibling-soda', 'pgtap-sibling-soda.aaaaaaaaaaaaaaaa.svg',
+        repeat('a', 64), 'bevi-dimensional-v1', 'needs-review'),
+       ((select id from public.bevs where source = 'seed' and category_id = 'soda' order by id limit 1),
+        'pgtap-target-soda', 'pgtap-target-soda.bbbbbbbbbbbbbbbb.svg',
+        repeat('b', 64), 'bevi-dimensional-v1', 'needs-review'),
+       ('00000000-0000-4000-8000-0000000fa012',
+        'pgtap-user-soda', 'pgtap-user-soda.cccccccccccccccc.svg',
+        repeat('c', 64), 'bevi-dimensional-v1', 'needs-review');
+set local role authenticated;
+set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000fa0a1", "role": "authenticated"}';
+
+select isnt(
+  (select i.fallback_icon_path from public.get_bev_icons(
      array[(select id from public.bevs where source = 'seed' and category_id = 'soda' order by id limit 1)]
    ) i),
-  'and the list never offers the Bev its own art'
+  null,
+  'once an icon in the category is published, it is offered to borrow'
 );
--- Only the authored catalog is on offer, so one user's custom Bev can never
--- lend its art to another's.
+
+-- The invariants, asserted on the path itself rather than on a list: it is a
+-- PUBLISHED icon, belonging to a DIFFERENT Bev, of the SAME category, and
+-- that Bev is ours rather than someone's custom drink.
 select ok(
-  not exists (
-    select 1 from public.get_bev_icons(
-      array[(select id from public.bevs where source = 'seed' and category_id = 'soda' order by id limit 1)]
-    ) i
-    cross join unnest(i.fallback_bev_ids) as f(id)
-    join public.bevs b on b.id = f.id
-    where b.source <> 'seed'
-  ),
-  'and every candidate is a seeded Bev, never a user-created one'
+  (select exists (
+     select 1
+       from public.get_bev_icons(array[t.id]) i
+       join public.bev_icons bi on bi.path = i.fallback_icon_path
+       join public.bevs b on b.id = bi.bev_id
+      where b.id <> t.id
+        and b.category_id = t.category_id
+        and b.source in ('seed', 'featured')
+        and b.status = 'active'
+   )
+   from (select id, category_id from public.bevs
+          where source = 'seed' and category_id = 'soda' order by id limit 1) t),
+  'the borrowed icon is a published one from another seeded Bev in the same category'
+);
+
+-- It has authored art of its own, and is still never offered it: what the app
+-- borrows is art for a Bev that has none, and `BevSummary.iconUrl` already
+-- carries a Bev's own authored icon.
+select isnt(
+  (select i.fallback_icon_path from public.get_bev_icons(
+     array[(select id from public.bevs where source = 'seed' and category_id = 'soda' order by id limit 1)]
+   ) i),
+  'pgtap-target-soda.bbbbbbbbbbbbbbbb.svg',
+  'and never the Bev''s own authored icon'
+);
+
+-- Only the authored catalogue is on offer, so one user's custom Bev can never
+-- lend its art to another's -- even once that custom Bev has a published icon.
+select isnt(
+  (select i.fallback_icon_path from public.get_bev_icons(
+     array[(select id from public.bevs where source = 'seed' and category_id = 'soda' order by id limit 1)]
+   ) i),
+  'pgtap-user-soda.cccccccccccccccc.svg',
+  'and never a user-created Bev''s icon'
 );
 
 -- A Bev that already has a generated icon needs nothing to borrow.
 select is(
-  (select i.icon_status || ':' || cardinality(i.fallback_bev_ids)::text
+  (select i.icon_status || ':' || coalesce(i.fallback_icon_path, 'null')
      from public.get_bev_icons(array['00000000-0000-4000-8000-0000000fa011'::uuid]) i),
-  'completed:0',
+  'completed:null',
   'a Bev with its own generated icon is offered no art to borrow'
 );
 

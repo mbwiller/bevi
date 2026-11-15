@@ -559,12 +559,13 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       expect(bev).toMatchObject({ name, createdBy: { id: me.userId } });
       const [icon] = await api.bevs.icons([bev.id]);
       expect(icon).toMatchObject({ bevId: bev.id, generatedIconUrl: null, iconStatus: 'none' });
-      // With no icon of its own it is offered catalog art to borrow. Which ids
-      // come back depends on how much of the category is drawn, so assert the
-      // shape and the invariants, not a coverage figure.
-      expect(Array.isArray(icon!.fallbackBevIds)).toBe(true);
-      expect(icon!.fallbackBevIds).not.toContain(bev.id);
-      expect(new Set(icon!.fallbackBevIds).size).toBe(icon!.fallbackBevIds.length);
+      // With no icon of its own it may be offered catalog art to borrow. Null
+      // is a legitimate answer -- it means nothing in this category is drawn
+      // yet -- so assert the type, and that anything non-null is a usable URL
+      // rather than a bare object path.
+      const borrowed = icon!.fallbackIconUrl;
+      expect(borrowed === null || typeof borrowed === 'string').toBe(true);
+      if (borrowed !== null) expect(borrowed).toMatch(/^https?:\/\//);
     });
 
     it('create with a photo makes a Bev that IS eligible, and the photo survives', async () => {
@@ -584,7 +585,7 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       if (icon!.iconStatus === 'completed') {
         expect(icon!.generatedIconUrl).toBeTruthy();
         // It has art of its own, so it is offered none to borrow.
-        expect(icon!.fallbackBevIds).toEqual([]);
+        expect(icon!.fallbackIconUrl).toBeNull();
       } else {
         expect(icon!.generatedIconUrl).toBeNull();
       }

@@ -43,7 +43,7 @@
 -- `attempt_count` stay in `bev_icon_jobs`, which no client can read at all.
 --
 -- ---------------------------------------------------------------------------
--- fallback_bev_ids: ART TO BORROW, DECIDED HERE AND CHOSEN THERE
+-- fallback_icon_path: ART TO BORROW, DECIDED HERE
 -- ---------------------------------------------------------------------------
 -- Without this, a Bev with no generated icon falls all the way through to a
 -- generic category silhouette, and a profile collection of custom drinks is a
@@ -51,12 +51,19 @@
 -- growing set of hand-authored, exactly on-style icons, so a custom drink can
 -- borrow one.
 --
--- The split matters: this function RANKS the candidates, the client CHOOSES.
--- Postgres has no idea which Bevs have authored art -- that map is
--- `app/src/lib/bevIcons.generated.ts`, a client asset generated from
--- `design/beverage-icons/manifest.json`, and deliberately so (an icon is a
--- shipped file, not a database row). So this returns up to 8 plausible catalog
--- Bevs, best first, and the app walks the list until `hasBevIcon` is true.
+-- This function picks it. It used to only RANK candidates -- up to 8 bev_ids,
+-- best first -- and leave the CHOICE to the app, because Postgres could not
+-- tell which Bevs were drawn: that map was `app/src/lib/bevIcons.generated.ts`,
+-- a client asset built from `design/beverage-icons/manifest.json`, on the
+-- reasoning that an icon is a shipped file rather than a database row.
+--
+-- That reasoning expired. 20261112000200 put the published icons in
+-- `public.bev_icons`, and #201 retired the bundled client copy, so the app
+-- can no longer answer the question and the database now can. Joining
+-- `bev_icons` here is strictly better than the old split: undrawn candidates
+-- are skipped rather than offered and rejected, so the "all 8 happened to be
+-- undrawn" miss cannot occur, and the answer is one path instead of a list
+-- plus a lookup table.
 --
 -- Ranked by same leaf category first, then by `rating_count` as a proxy for
 -- "the most recognisable drink in this category". NOT by graph similarity,
@@ -78,7 +85,7 @@ returns table (
   bev_id              uuid,
   generated_icon_path text,
   icon_status         text,
-  fallback_bev_ids    uuid[],
+  fallback_icon_path  text,
   icon_label_band     jsonb
 )
 language plpgsql
@@ -93,12 +100,6 @@ declare
   -- reason: it caps the work one call can ask for, so exceeding it is the
   -- caller's bug and is reported as one.
   v_max constant int := 500;
-  -- How many catalog Bevs to offer as art to borrow. The client walks the list
-  -- until it finds one it has authored art for, so this has to be long enough
-  -- to survive the gaps -- only part of the catalog is drawn at any time, and
-  -- that fraction keeps growing as icon batches land. Eight makes a miss
-  -- unlikely without making the list big enough to be worth caching.
-  v_candidates constant int := 8;
 begin
   if v_uid is null then
     raise exception 'BEVI_UNAUTHORIZED' using errcode = '42501';
@@ -118,40 +119,54 @@ begin
          and (not c.is_alcoholic or public.viewer_is_adult())
     )
     select v.id, v.generated_icon_path, v.icon_status,
-           coalesce(f.ids, '{}'::uuid[]), v.icon_label_band
+           f.path, v.icon_label_band
       from visible v
       left join lateral (
-        select array_agg(cand.id order by cand.same_leaf desc, cand.rating_count desc, cand.id) as ids
-          from (
-            select b2.id,
-                   (b2.leaf_category_id is not null
-                    and b2.leaf_category_id = v.leaf_category_id) as same_leaf,
-                   coalesce(bs.rating_count, 0) as rating_count
-              from public.bevs b2
-              left join public.bev_stats bs on bs.bev_id = b2.id
-             where v.generated_icon_path is null   -- a Bev with art needs none
-               -- The authored catalogue is 'seed' AND 'featured'; both are
-               -- ours and both may be drawn. What is excluded is 'user', so
-               -- one person's custom Bev can never lend art to another's.
-               and b2.source in ('seed', 'featured')
-               and b2.status = 'active'
-               and b2.category_id = v.category_id
-               and b2.id <> v.id
-             -- Same leaf first ("a mocha looks like other mochas"), then the
-             -- most-rated, which is a decent proxy for the most recognisable
-             -- drink in the category. `id` last so the list is deterministic.
-             order by (b2.leaf_category_id is not null
-                       and b2.leaf_category_id = v.leaf_category_id) desc,
-                      coalesce(bs.rating_count, 0) desc, b2.id
-             limit v_candidates
-          ) cand
+        -- The ONE authored icon this Bev may borrow, or no row at all.
+        --
+        -- The join to `public.bev_icons` is what makes this answerable here.
+        -- It used to return a ranked list of up to eight bev_ids and let the
+        -- caller walk it, because only the app knew which Bevs were drawn --
+        -- that map was a bundled asset. 20261112000200 put the published
+        -- icons in the database and #201 retired the bundled copy, so the
+        -- server can now do what the client never could: skip the undrawn
+        -- candidates outright and name the winner. No list, no walking, and
+        -- no "none of these eight happened to be drawn" miss.
+        --
+        -- Presence of the row is the whole test. `bev_icons.status` is the
+        -- manifest's own review vocabulary (free text, e.g. 'needs-review'),
+        -- not a publish flag, so it is deliberately NOT filtered on.
+        select bi.path
+          from public.bevs b2
+          join public.bev_icons bi on bi.bev_id = b2.id
+          left join public.bev_stats bs on bs.bev_id = b2.id
+         where v.generated_icon_path is null   -- a Bev with art needs none
+           -- The authored catalogue is 'seed' AND 'featured'; both are ours
+           -- and both may be drawn. What is excluded is 'user', so one
+           -- person's custom Bev can never lend art to another's.
+           and b2.source in ('seed', 'featured')
+           and b2.status = 'active'
+           -- Same category, which also settles the age gate: `is_alcoholic`
+           -- is a property of the category, so a candidate sharing `v`'s
+           -- category is visible to anyone who can see `v`. That mattered
+           -- less when this returned ids; it matters now that the answer is
+           -- an image the app will draw.
+           and b2.category_id = v.category_id
+           and b2.id <> v.id
+         -- Same leaf first ("a mocha looks like other mochas"), then the
+         -- most-rated, which is a decent proxy for the most recognisable
+         -- drink in the category. `id` last so the choice is deterministic.
+         order by (b2.leaf_category_id is not null
+                   and b2.leaf_category_id = v.leaf_category_id) desc,
+                  coalesce(bs.rating_count, 0) desc, b2.id
+         limit 1
       ) f on true
      order by v.id;
 end;
 $$;
 
 comment on function public.get_bev_icons(uuid[]) is
-  'Each requested visible Bev''s generated icon path, icon_status, and -- when it has no generated icon -- up to 8 catalog Bevs whose authored art it may borrow, best first. Read-only and age-gated; invisible Bevs are omitted, not errors. Starts no generation job: nothing in this function writes.';
+  'Each requested visible Bev''s generated icon path, icon_status, and -- when it has no generated icon -- the path of the one authored catalogue icon it may borrow (best match in its category that is actually published, else null). Read-only and age-gated; invisible Bevs are omitted, not errors. Starts no generation job: nothing in this function writes.';
 
 -- The project's convention (20261019000500 explains why the anon revoke has to
 -- be explicit on Supabase): owned by postgres, nothing for public or anon,

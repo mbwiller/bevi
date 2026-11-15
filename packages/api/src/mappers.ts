@@ -399,8 +399,8 @@ export interface GeneratedBevIconRow {
   bev_id: string;
   generated_icon_path: string | null;
   icon_status: string;
-  /** Postgres uuid[]; PostgREST hands it over as a JSON array of strings. */
-  fallback_bev_ids: string[] | null;
+  /** An object key in the `bev-icons` bucket -- the AUTHORED icon being borrowed. */
+  fallback_icon_path: string | null;
   icon_label_band: BevIconLabelBand | null;
 }
 
@@ -418,7 +418,9 @@ export function mapBevIcon(client: SupabaseClient, row: GeneratedBevIconRow): Be
     generatedIconUrl:
       status === 'completed' ? publicUrl(client, 'bev-generated-icons', row.generated_icon_path) : null,
     iconStatus: status,
-    fallbackBevIds: row.fallback_bev_ids ?? [],
+    // The authored bucket, not `bev-generated-icons`: what is borrowed is a
+    // published catalogue SVG belonging to some other Bev.
+    fallbackIconUrl: publicUrl(client, 'bev-icons', row.fallback_icon_path),
     // Only meaningful with art to draw it on.
     labelBand: status === 'completed' ? row.icon_label_band ?? null : null,
   };
