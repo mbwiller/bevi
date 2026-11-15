@@ -685,6 +685,31 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       await expectCode(api.rankings.rerankBev({ bevId: c!, bucket: 'FINE', insertIndex: 0, expectedBucketSize: 2, comparisons: [] }), 'not_found');
     });
 
+    // `Ranking.createdAt` is the time of the latest placement, not of the first one: `rerank_bev`
+    // deletes the row and re-inserts it, so `ranked_at` moves. Everything that reads the field wants
+    // that -- the Bev'd row's "Ranked Oct 3", Activity's post time, and the Recent sort, which would
+    // otherwise bury a Bev you just re-ranked. Pinned here because the two implementations disagreed:
+    // the FakeApi mutated its row in place and kept the original date, matching a stale doc comment
+    // rather than the server, and nothing in this suite looked.
+    it('rerankBev re-dates the ranking: createdAt moves to the re-rank', async () => {
+      await newUser();
+      const [a, b] = await starterIds(2);
+      await rankAtBottom(a!, 'LOVED');
+      await rankAtBottom(b!, 'FINE');
+      const first = (await api.rankings.listMine()).items.find((r) => r.bevId === a!)!;
+
+      // The clock has to move for the comparison to mean anything.
+      await new Promise((r) => setTimeout(r, 1100));
+      const moved = await api.rankings.rerankBev({ bevId: a!, bucket: 'FINE', insertIndex: 1, expectedBucketSize: 1, comparisons: [{ winnerBevId: b!, loserBevId: a!, tie: true }] });
+
+      expect(Date.parse(moved.ranking.createdAt)).toBeGreaterThan(Date.parse(first.createdAt));
+      const after = (await api.rankings.listMine()).items.find((r) => r.bevId === a!)!;
+      expect(after.createdAt).toBe(moved.ranking.createdAt);
+      // And so the Recent sort puts it first, which is the behaviour that actually depends on this.
+      const recent = await api.rankings.listMine({ sort: 'recent' });
+      expect(recent.items[0]!.bevId).toBe(a!);
+    });
+
     it('updateNote sets and clears a note; not_found when unranked; validation when too long', async () => {
       await newUser();
       const [a, b] = await starterIds(2);

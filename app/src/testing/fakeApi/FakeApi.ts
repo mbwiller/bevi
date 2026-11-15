@@ -1600,6 +1600,10 @@ export class FakeApi implements BeviApi {
           const next = insertIntoBucket(target, row.bevId, input.insertIndex);
           this.writeBucket(me.id, input.bucket, next);
           const at = this.nowIso();
+          // `rerank_bev` deletes the row and re-inserts it, so the server's `ranked_at` -- the contract's
+          // `createdAt` -- becomes the re-rank's time. Mutating in place here is fine, but the date has to
+          // move with it, or the Recent sort and "Ranked Oct 3" behave one way in tests and another on prod.
+          row.createdAt = at;
           row.updatedAt = at;
           if (note !== undefined) row.note = note;
           this.logPlacement(me, row.id, row.bevId, input.comparisons, at);
