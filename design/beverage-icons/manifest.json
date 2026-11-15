@@ -55,8 +55,8 @@
   },
   "summary": {
     "catalog": 378,
-    "authored": 305,
-    "pending": 73,
+    "authored": 335,
+    "pending": 43,
     "starterAuthored": 40,
     "starterTotal": 43,
     "livePostgresReconciled": false
@@ -962,6 +962,37 @@
       "sourceModule": "scripts/icons/families/energy-expansion.mjs"
     },
     {
+      "slug": "barefoot-cellars-cabernet-sauvignon",
+      "family": "wine-bottle-expansion",
+      "packageChoice": "Representative US 750 mL retail wine bottle; catalog omits vintage and exact closure.",
+      "references": [
+        {
+          "pageUrl": "https://www.walmart.com/ip/10984501",
+          "imageUrl": "https://i5.walmartimages.com/seo/Barefoot-Cellars-Cabernet-Sauvignon-Red-Wine-750ml-Bottle_bfbae5c5-68ba-4ba9-a667-79874135aed6.d156d321126c4cbe581076590b22ca3e.jpeg?odnBg=FFFFFF&odnHeight=768&odnWidth=768",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "US 750 mL bottle inspected: dark green glass, burgundy screw cap with gold seal, white label with gold Barefoot lettering, red footprint and Cabernet Sauvignon / Rich & Smooth."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "8387862d-bb35-5787-a877-eb7375d1f056",
+      "name": "Barefoot Cellars Cabernet Sauvignon",
+      "brand": "Barefoot Cellars",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/barefoot-cellars-cabernet-sauvignon.svg",
+        "portableSvg": "portable-svg/barefoot-cellars-cabernet-sauvignon.svg",
+        "png": "png/barefoot-cellars-cabernet-sauvignon.png",
+        "svgSha256": "7128882d8bee1d83afa256f0d753b366d31ad6d9c8ec85f5119cde14bad15730",
+        "portableSvgSha256": "3e1efef8825e94abed70b9c4a00e22c3a5ac242614f1bcc885565a4e580f9696",
+        "pngSha256": "be73d2d2693441170ae4dc5fe83f340a973d7555dc340ce1c504c224bcb434d9",
+        "pngBytes": 53561
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+    },
+    {
       "slug": "barqs-root-beer",
       "family": "classic-soda-can",
       "packageChoice": "Representative US 12 fl oz / 355mL Barq’s Root Beer aluminum can; exact inspected package.",
@@ -991,6 +1022,37 @@
         "pngBytes": 182866
       },
       "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
+    },
+    {
+      "slug": "naked-berry-blast",
+      "family": "coffee-tea-pet-bottle-expansion",
+      "packageChoice": "Representative US single-serve PET bottle; catalog omits package size.",
+      "references": [
+        {
+          "pageUrl": "https://www.walmart.com/ip/Naked-Juice-Fruit-Smoothie-Berry-Blast-15-2-oz-Bottle/10801725",
+          "imageUrl": "https://i5.walmartimages.com/seo/Naked-Juice-Berry-Blast-15-2-fl-oz-Bottle_2c5167df-33b7-4b76-a2ee-5eaffbca1b41_1.5f3e3e802f3cc36f02ba649b9f11250e.jpeg",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "US 15.2 fl oz clear bottle of red berry smoothie; inspected blue-cap/white brush label, Naked mark, berry fruit collage and no-added-sugar callouts."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "f6d6fc9c-d510-5246-85a0-1f8dcdcac3f1",
+      "name": "Berry Blast",
+      "brand": "Naked",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/naked-berry-blast.svg",
+        "portableSvg": "portable-svg/naked-berry-blast.svg",
+        "png": "png/naked-berry-blast.png",
+        "svgSha256": "693449419cb52e450a4ede3967d8efeac77df5dd3304638c2c01793b72eb79e4",
+        "portableSvgSha256": "3d75def47bdd96be3ad8443262cf52c1782dd5ae3867c33791946f3d04f29be5",
+        "pngSha256": "78a9f965dbee9c6e06075b3aa83ef683b1630fb31c7cbfbff0f0d17b448900cd",
+        "pngBytes": 60528
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
     },
     {
       "slug": "big-red",
@@ -2054,6 +2116,37 @@
       "sourceModule": "scripts/icons/families/cafe-milk-tea.mjs"
     },
     {
+      "slug": "bulletproof-coffee-rtd-vanilla",
+      "family": "coffee-tea-pet-bottle-expansion",
+      "packageChoice": "Representative US 11.1 fl oz gable carton.",
+      "references": [
+        {
+          "pageUrl": "https://www.instacart.com/products/17632657-bulletproof-coffee-cold-brew-vanilla-11-1-oz",
+          "imageUrl": "https://www.instacart.com/image-server/1864x1864/www.instacart.com/assets/domains/product-image/file/large_39de316f-8ad4-42ac-820c-2ec3d0bce55e.png",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "US 11.1 fl oz gable carton inspected: white/red Bulletproof Cold Brew face, blue Vanilla bar, 0g sugar and grass-fed butter / Brain Octane callouts."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "c35f82a7-45ab-52a0-9346-1c5cfbb7c383",
+      "name": "Clean Coffee RTD Vanilla",
+      "brand": "Bulletproof",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/bulletproof-coffee-rtd-vanilla.svg",
+        "portableSvg": "portable-svg/bulletproof-coffee-rtd-vanilla.svg",
+        "png": "png/bulletproof-coffee-rtd-vanilla.png",
+        "svgSha256": "8e56da2e0c54a40b95516386b3573a36f44da9ec58491e4ef6973628cb9f7d4a",
+        "portableSvgSha256": "8d4e819adeeb694ce7e2a5802831024989b7dd77b1ef9076f97e6b6df49ac309",
+        "pngSha256": "5a4d21224c9c09bcf0f3161c893edf101caa24a083bfa1df63c84b2c4b5e43e4",
+        "pngBytes": 45620
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+    },
+    {
       "slug": "coca-cola-cherry-zero-sugar",
       "family": "soda-expansion-can",
       "packageChoice": "Representative US 12 fl oz / 355mL Coca-Cola Cherry Zero Sugar aluminum can; exact independently inspected package.",
@@ -2216,6 +2309,37 @@
       "sourceModule": "scripts/icons/families/starter-smoothies.mjs"
     },
     {
+      "slug": "death-wish-coffee-rtd-black",
+      "family": "coffee-soda-can-expansion",
+      "packageChoice": "Representative US single-serve aluminum can matching the inspected product.",
+      "references": [
+        {
+          "pageUrl": "https://www.deathwishcoffee.com/collections/coffee",
+          "imageUrl": "https://cdn.shopify.com/s/files/1/0271/7209/products/Death_Wish_Coffee_Cold_Brew_Black_Front.jpg?v=1624449660",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "US 8 fl oz matte black aluminum can inspected on manufacturer product collection; white skull/crossbones roundel, COLD BREW and unsweetened black coffee details."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "2dcc28a3-e881-5a77-854e-c0f57c196613",
+      "name": "Coffee RTD Black Coffee",
+      "brand": "Death Wish Coffee",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/death-wish-coffee-rtd-black.svg",
+        "portableSvg": "portable-svg/death-wish-coffee-rtd-black.svg",
+        "png": "png/death-wish-coffee-rtd-black.png",
+        "svgSha256": "e18ec3ae81529203f9d9072694889cdb4b1907859b32039a18b66d3455927e91",
+        "portableSvgSha256": "669ca7f1f7ca37b6d85ad85314c21b6a6699add78de5a0c2460396e5912a9978",
+        "pngSha256": "222ad8f2d42ec3fc7816e3dcb51d1b20a5618cfc4282c71453f4918ef9734b9a",
+        "pngBytes": 59275
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+    },
+    {
       "slug": "high-brew-salted-caramel",
       "family": "high-brew-coffee-can",
       "packageChoice": "US 8 fl oz / 237mL Salted Caramel cold brew coffee, documented orange/brown retailer package; not Nitro Caramel.",
@@ -2285,6 +2409,37 @@
       "sourceModule": "scripts/icons/families/colas.mjs"
     },
     {
+      "slug": "chameleon-cold-brew-black",
+      "family": "coffee-tea-pet-bottle-expansion",
+      "packageChoice": "Representative US ready-to-drink glass coffee bottle.",
+      "references": [
+        {
+          "pageUrl": "https://delivery.mothersmarket.com/store/mothers-market/products/2681936-chameleon-organic-cold-brew-black-coffee-10-oza",
+          "imageUrl": "https://d2lnr5mha7bycj.cloudfront.net/product-image/file/large_e6f34aaa-bdff-473a-a3c5-60b2cb1cf596.png",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "US 10 fl oz glass bottle with dark coffee and black cap; cream label, green mosaic chameleon, CHAMELEON COLD-BREW and Black Coffee."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "58c62238-4df9-51ad-8a52-536bbc25a8b4",
+      "name": "Cold Brew Black",
+      "brand": "Chameleon Cold Brew",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/chameleon-cold-brew-black.svg",
+        "portableSvg": "portable-svg/chameleon-cold-brew-black.svg",
+        "png": "png/chameleon-cold-brew-black.png",
+        "svgSha256": "4dc0a55772a4012a3d293553fff9fb39b2c2857bb6bdaeec8ea6360b0f36c82f",
+        "portableSvgSha256": "b4b3125b908d68bdcf23c429c2614cc74f8b81cee83744d22cc1c655d5379709",
+        "pngSha256": "8ea29ac635012f36cc15fe4a920e125bc36b96e47d86008d1147a9396e623db1",
+        "pngBytes": 62608
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+    },
+    {
       "slug": "stok-cold-brew-black",
       "family": "stok-cold-brew-bottle",
       "packageChoice": "US 48 fl oz SToK UN-SWEET Black/Bold & Smooth bottle, explicitly selected plain unsweetened variant; not Espresso/Extra Bold or sweetened.",
@@ -2314,6 +2469,37 @@
         "pngBytes": 99220
       },
       "sourceModule": "scripts/icons/families/starter-smoothies.mjs"
+    },
+    {
+      "slug": "stok-cold-brew-not-too-sweet",
+      "family": "coffee-tea-pet-bottle-expansion",
+      "packageChoice": "Representative US single-serve PET bottle; catalog omits package size.",
+      "references": [
+        {
+          "pageUrl": "https://shop.pricechopper.com/store/price-chopper-ny/products/16865672-stok-cold-brew-coffee-not-too-sweet-13-7-fl-oz",
+          "imageUrl": "https://www.instacart.com/assets/domains/product-image/file/large_450a999f-ff1a-4415-9a97-011cf74c14bc.jpg",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "US 13.7 fl oz bottle reference inspected: broad dark coffee-brown PET with ribbed silhouette, black/red STōK label and NOT TOO SWEET variant text."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "dd57b1eb-3286-5808-b27e-530c078f1196",
+      "name": "Cold Brew Not Too Sweet",
+      "brand": "Stok",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/stok-cold-brew-not-too-sweet.svg",
+        "portableSvg": "portable-svg/stok-cold-brew-not-too-sweet.svg",
+        "png": "png/stok-cold-brew-not-too-sweet.png",
+        "svgSha256": "28c931460d871cd97e6a2bb9cce9e8eeed649051d6a653f272b658d92b55f687",
+        "portableSvgSha256": "2353b0e2755485bd53bf57a0e8b53d6003c6c4a52c62b4f43a28ce770d85c0c3",
+        "pngSha256": "09b3e217d761f3a986a9212959720ca3c4ced8e336625815839e6d06c36eaee8",
+        "pngBytes": 58180
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
     },
     {
       "slug": "coors-light",
@@ -2750,6 +2936,130 @@
       "sourceModule": "scripts/icons/families/soda-final-expansion.mjs"
     },
     {
+      "slug": "diet-coke-feisty-cherry",
+      "family": "coffee-soda-can-expansion",
+      "packageChoice": "Historical US 12 fl oz slim Diet Coke flavor can from the 2018 line.",
+      "references": [
+        {
+          "pageUrl": "https://www.ralphs.com/p/diet-coke-feisty-cherry-soda/0004900007511",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0004900007511",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "Historical US 12 fl oz slim can; silver body, magenta stripe, white Diet Coke mark and paired cherry illustration."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Discontinued US Diet Coke flavor packaging is retained as historical package evidence; current reformulations were not substituted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "e3fd7e33-df20-5d6f-a7b5-e4f22c2b52ea",
+      "name": "Diet Coke Feisty Cherry",
+      "brand": "Diet Coke",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/diet-coke-feisty-cherry.svg",
+        "portableSvg": "portable-svg/diet-coke-feisty-cherry.svg",
+        "png": "png/diet-coke-feisty-cherry.png",
+        "svgSha256": "0d9ec4b8fa1468eebf8f429d704a4722068787622bfbc046105876a819a7756c",
+        "portableSvgSha256": "24feefcf9994095bc18d477d874158bb16df7ea49ec0e0bbfbb65c81ff4f54d6",
+        "pngSha256": "cd755467628634b748b794db0fd6a5f0e49b9ffdfbc8767fa29a496a63ef6211",
+        "pngBytes": 34786
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+    },
+    {
+      "slug": "diet-coke-ginger-lime",
+      "family": "coffee-soda-can-expansion",
+      "packageChoice": "Historical US 12 fl oz slim Diet Coke flavor can from the 2018 line.",
+      "references": [
+        {
+          "pageUrl": "https://www.cocacola.com/us/en/brands/diet-coke",
+          "imageUrl": "https://d2iiahg0ip5afn.cloudfront.net/media/diet_coke/images/818375593.cocacola-12oz-diet-gingerlime-front.jpg",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "Historical US 12 fl oz slim can from the 2018 Diet Coke flavor launch. Inspected silver body, vertical green stripe, white Diet Coke mark, Ginger Lime flavor and small lime/ginger art."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Discontinued US Diet Coke flavor packaging is retained as historical package evidence; current reformulations were not substituted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "64d60399-0197-545d-b1dc-d020d09955ef",
+      "name": "Diet Coke Ginger Lime",
+      "brand": "Diet Coke",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/diet-coke-ginger-lime.svg",
+        "portableSvg": "portable-svg/diet-coke-ginger-lime.svg",
+        "png": "png/diet-coke-ginger-lime.png",
+        "svgSha256": "397bcb2b5e87312c44c49bef80798f220ffff3c403b0f1a0478ca48b05acdcd9",
+        "portableSvgSha256": "f96c2beb293c02b1fd0fd75cedf537c2d1646fdf01e08bd5c92a3fe0781d6b00",
+        "pngSha256": "280ca00ae001b343274b2a346b578e9c651afd4c6e3244bb168bcbce9e66c7fc",
+        "pngBytes": 35088
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+    },
+    {
+      "slug": "diet-coke-twisted-mango",
+      "family": "coffee-soda-can-expansion",
+      "packageChoice": "Historical US 12 fl oz slim Diet Coke flavor can from the 2018 line.",
+      "references": [
+        {
+          "pageUrl": "https://www.heb.com/product-detail/coca-cola-diet-twisted-mango-coke/2203808",
+          "imageUrl": "https://images.heb.com/is/image/HEBGrocery/002203808-1",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "Historical US 12 fl oz slim can; silver body, vertical golden-yellow stripe, white Diet Coke logo and stylized mango slices."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Discontinued US Diet Coke flavor packaging is retained as historical package evidence; current reformulations were not substituted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "db370993-fb57-5486-b188-c22a5e8cae4f",
+      "name": "Diet Coke Twisted Mango",
+      "brand": "Diet Coke",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/diet-coke-twisted-mango.svg",
+        "portableSvg": "portable-svg/diet-coke-twisted-mango.svg",
+        "png": "png/diet-coke-twisted-mango.png",
+        "svgSha256": "855e37603fb2eaaca2f0a8d2fb3cc158b30ab2bdbebb379a1e3fef23de4cced4",
+        "portableSvgSha256": "3eb6bca69a984a1948f2e76a3da1fbca3fecc6bfd81268188b23db64d70307cf",
+        "pngSha256": "1f10b95a9ff54707e3d41a35b8d7416f46b1384a662590f7f96fa1dc01641d8f",
+        "pngBytes": 33007
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+    },
+    {
+      "slug": "diet-coke-zesty-blood-orange",
+      "family": "coffee-soda-can-expansion",
+      "packageChoice": "Historical US 12 fl oz slim Diet Coke flavor can from the 2018 line.",
+      "references": [
+        {
+          "pageUrl": "https://www.bevnet.com/brands/diet_coke/allproducts",
+          "imageUrl": "https://d2iiahg0ip5afn.cloudfront.net/media/diet_coke/images-primary/100922106.cocacola-12oz-diet-zestybloodorange-front.jpg",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "Historical US 12 fl oz slim can; silver body, vertical orange stripe, white Diet Coke logo and blood-orange slice illustration."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Discontinued US Diet Coke flavor packaging is retained as historical package evidence; current reformulations were not substituted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "e53f5366-4c5c-55be-afaf-ffd3f2ed5ff0",
+      "name": "Diet Coke Zesty Blood Orange",
+      "brand": "Diet Coke",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/diet-coke-zesty-blood-orange.svg",
+        "portableSvg": "portable-svg/diet-coke-zesty-blood-orange.svg",
+        "png": "png/diet-coke-zesty-blood-orange.png",
+        "svgSha256": "6079aeec40e9d9054369e20012b034bd93aa58fee4a167ba9da5e4bd645f5336",
+        "portableSvgSha256": "3a386e47b6653b2b87d96419bc718e7ac6957752bb2343127580d62c95c73aa2",
+        "pngSha256": "29bb6da0af2f2c750518d59b74902237252cccbf38bf890cc7c739b3d025ba13",
+        "pngBytes": 35262
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+    },
+    {
       "slug": "diet-dr-pepper",
       "family": "dr-pepper-can",
       "packageChoice": "US 12 fl oz / 355mL Diet Dr Pepper aluminum can with football-season package graphics; representative size for the size-unspecified catalog row.",
@@ -2936,6 +3246,37 @@
       "sourceModule": "scripts/icons/families/refreshments-12.mjs"
     },
     {
+      "slug": "diet-rc-cola",
+      "family": "coffee-soda-can-expansion",
+      "packageChoice": "Representative US single-serve aluminum can matching the inspected product.",
+      "references": [
+        {
+          "pageUrl": "https://www.instacart.com/products/16850609-rc-diet-cola-12-oz",
+          "imageUrl": "https://www.instacart.com/image-server/1200x1200/www.instacart.com/assets/domains/product-image/file/large_4eb1c2d4-3a6e-4d18-bbbc-887a0545b7aa.JPG",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "Current US 12 fl oz silver can; red and blue RC crown mark, blue script Diet and Royal Crown Cola line, with a silver metallic field."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "e1dad545-c9ce-52bf-b64a-66c0ac2f5363",
+      "name": "Diet RC Cola",
+      "brand": "RC Cola",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/diet-rc-cola.svg",
+        "portableSvg": "portable-svg/diet-rc-cola.svg",
+        "png": "png/diet-rc-cola.png",
+        "svgSha256": "67831d6d3257730b60b5264241761b7f2ca3abb215a7cce67ef397dea0858672",
+        "portableSvgSha256": "d7e92c77e5e14f2268a6031796c147baff3681bf477385177937a2019524e56c",
+        "pngSha256": "be785178c372b0815b74e90438fc2cc4b710cf915c9734fbb9042ec3066072f4",
+        "pngBytes": 52132
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+    },
+    {
       "slug": "diet-squirt",
       "family": "soda-can",
       "packageChoice": "12 oz aluminum can",
@@ -3058,6 +3399,130 @@
         "pngBytes": 78769
       },
       "sourceModule": "scripts/icons/families/refreshments-12.mjs"
+    },
+    {
+      "slug": "starbucks-doubleshot-energy-coffee",
+      "family": "coffee-soda-can-expansion",
+      "packageChoice": "Representative US single-serve aluminum can matching the inspected product.",
+      "references": [
+        {
+          "pageUrl": "https://www.pepsicopartners.com/pepsico/en/USD/PEPSICO-BRANDS/STARBUCKS%C2%AE/DOUBLESHOT/c/brand_starbucks_subbrand_doubleshot?fromSubbrand=Y&root=beverages",
+          "imageUrl": "https://www.kroger.com/product/images/xlarge/front/0001200002847",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "US 15 fl oz aluminum can inspected: warm tan metallic body, green siren, DOUBLESHOT ENERGY lettering, focus callout, green/brown wave bands and 15 fl oz footer."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "a6603ea8-c696-5cf2-a61c-db1aaa1e451a",
+      "name": "Doubleshot Energy Coffee",
+      "brand": "Starbucks",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/starbucks-doubleshot-energy-coffee.svg",
+        "portableSvg": "portable-svg/starbucks-doubleshot-energy-coffee.svg",
+        "png": "png/starbucks-doubleshot-energy-coffee.png",
+        "svgSha256": "8c0ea54d5289beb15f4ea3ccad9e52b62b504b08eb469658de49258b68360c41",
+        "portableSvgSha256": "f29b1234c53531c81f5ff64d8e5920e219bd112f57af97257a6a28f5aa014eff",
+        "pngSha256": "3ac4d8954b090e0e84ff2c374a5b2973c6981b6e1fa5a9f9d63afe7298e21ccb",
+        "pngBytes": 68942
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+    },
+    {
+      "slug": "starbucks-doubleshot-espresso-cream",
+      "family": "coffee-soda-can-expansion",
+      "packageChoice": "Representative US 6.5 fl oz Starbucks Doubleshot espresso can.",
+      "references": [
+        {
+          "pageUrl": "https://www.vons.com/shop/pd/starbucks-doubleshot-espresso-beverage-espresso-and-cream-6-5-fl-oz/108100772",
+          "imageUrl": "https://i5.walmartimages.com/seo/Starbucks-Doubleshot-Espresso-Cream-Premium-Coffee-Drink-Ready-To-Drink-Coffee-6-5-fl-oz-Cans-12-Pack_9adbb9db-cde2-4abc-b17f-a67c7118da76_1.30a5e89e1d607db356cc4cb5eb0482ef.jpeg",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "US 6.5 fl oz can with dark brown lower portion, warm metallic upper portion, green siren, Espresso & Cream line and silver rims."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "41ea96f6-810e-5edd-877d-3d1dc3bcef1e",
+      "name": "Doubleshot Espresso & Cream",
+      "brand": "Starbucks",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/starbucks-doubleshot-espresso-cream.svg",
+        "portableSvg": "portable-svg/starbucks-doubleshot-espresso-cream.svg",
+        "png": "png/starbucks-doubleshot-espresso-cream.png",
+        "svgSha256": "cfa0ef439cbd1b2e699b527a3ae530e3848f437b9fb485e62e5bbd43033f8ea0",
+        "portableSvgSha256": "1ccfd4cf5e4ac4b5c5b778c39045294d679d4e52cac83c39c968afd5e9dca6d2",
+        "pngSha256": "c1bb914421fec05498a07c2236689fe2c2dbda0f15961f36edf7bbf759905bc1",
+        "pngBytes": 48817
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+    },
+    {
+      "slug": "starbucks-doubleshot-original",
+      "family": "coffee-soda-can-expansion",
+      "packageChoice": "Representative US 6.5 fl oz Starbucks Doubleshot espresso can.",
+      "references": [
+        {
+          "pageUrl": "https://www.bevnet.com/brands/starbucksdoubleshot/allproducts",
+          "imageUrl": "https://images.gopuff.com/blob/gopuffcatalogstorageprod/catalog-images-container/resize/cf/version%3D1_2%2Cformat%3Dauto%2Cfit%3Dscale-down%2Cwidth%3D800%2Cheight%3D800/943ca51d-e421-411c-b206-f8b831bfdd25.png",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "US 6.5 oz espresso can reference individually inspected: short can proportion, dark brown/silver two-part finish, green Starbucks siren and white Doubleshot Espresso mark."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "13f5a93b-704f-5bae-86d7-a2d6b219b44f",
+      "name": "Doubleshot Original",
+      "brand": "Starbucks",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/starbucks-doubleshot-original.svg",
+        "portableSvg": "portable-svg/starbucks-doubleshot-original.svg",
+        "png": "png/starbucks-doubleshot-original.png",
+        "svgSha256": "55687da5c6867aa16985d4ff39cef67779053312719348c78d0d06f342973d53",
+        "portableSvgSha256": "d325392718216d003a57457578e2494076ac931434d5c15eb96affbc4c8dce31",
+        "pngSha256": "11deb7034d00348ca4c2c9dacecb58f326f7d550c2807015ddf11361b7f02deb",
+        "pngBytes": 49623
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+    },
+    {
+      "slug": "starbucks-doubleshot-vanilla",
+      "family": "coffee-soda-can-expansion",
+      "packageChoice": "Representative US single-serve aluminum can matching the inspected product.",
+      "references": [
+        {
+          "pageUrl": "https://dev2.pepsicopartners.com/pepsico/en/USD/PEPSICO-BRANDS/STARBUCKS%C2%AE/DOUBLESHOT/ENERGY-VANILLA/Starbucks-Doubleshot-Energy-Coffee-Vanilla/p/1-11XOG-3",
+          "imageUrl": "https://www.instacart.com/image-server/1864x1864/www.instacart.com/assets/domains/product-image/file/large_fd024092-0451-4e88-9fd8-54ee3e751920.jpeg",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "US 15 fl oz vanilla energy coffee can individually inspected: cream/beige metallic base, green siren, green-brown lower waves, VANILLA and B vitamins/ginseng/guarana callouts."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. This catalog item is mapped to the documented 15 fl oz Energy Vanilla SKU; the manifest distinguishes it from the plain Doubleshot Espresso entry. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "d95f0856-c8ca-5a97-9221-db5a6d4a5a78",
+      "name": "Doubleshot Vanilla",
+      "brand": "Starbucks",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/starbucks-doubleshot-vanilla.svg",
+        "portableSvg": "portable-svg/starbucks-doubleshot-vanilla.svg",
+        "png": "png/starbucks-doubleshot-vanilla.png",
+        "svgSha256": "7c24cb5f8c75d50ab387cc09723e3341ab63ece1fa43ab765a19bd688fc9b797",
+        "portableSvgSha256": "4a697790a9bb39fab973c87189a69a3763c12de77b0348a2ea75eb88fe684ef4",
+        "pngSha256": "51ef79814a502ceaca690a6de0168f9ea2cd4599d5c242de2341b6759a68fdc1",
+        "pngBytes": 62660
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
     },
     {
       "slug": "dr-pepper",
@@ -4183,6 +4648,37 @@
       "sourceModule": "scripts/icons/families/juice-batch.mjs"
     },
     {
+      "slug": "bolthouse-farms-green-goodness-smoothie",
+      "family": "coffee-tea-pet-bottle-expansion",
+      "packageChoice": "Representative US single-serve PET bottle; catalog omits package size.",
+      "references": [
+        {
+          "pageUrl": "https://www.fairwaymarket.com/product/bolthouse-farms-green-goodness-100-fruit-juice-smoothie-152-fl-oz-00071464240400",
+          "imageUrl": "https://storage.googleapis.com/images-prs-prd-c7e7986.prs.prd.v8.commerce.mi9cloud.com/product-images/zoom/00071464240400_1",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "US 15.2 fl oz clear PET smoothie with vivid green cap/label; Bolthouse Farms brand, fruit illustrations and Green Goodness / Superfood Greens details."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "3df12c22-201d-5a3c-8e73-9be64ce78c2a",
+      "name": "Green Goodness",
+      "brand": "Bolthouse Farms",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/bolthouse-farms-green-goodness-smoothie.svg",
+        "portableSvg": "portable-svg/bolthouse-farms-green-goodness-smoothie.svg",
+        "png": "png/bolthouse-farms-green-goodness-smoothie.png",
+        "svgSha256": "2e493ce5deadb27a3bb760f527c5a751d8bb386c08c259f83f8340f5681f9cd5",
+        "portableSvgSha256": "c75005230126990abc05919f61d1ba7befcbe549790480e8ef943e3d89a1ad89",
+        "pngSha256": "d99b36bd7b3d00504bdf7c568cfa116c5415183dbb2f82d285fcfbc23766cbc8",
+        "pngBytes": 54310
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+    },
+    {
       "slug": "naked-juice-green-machine",
       "family": "naked-smoothie-bottle",
       "packageChoice": "US 15.2 fl oz / 450mL Naked Green Machine, current manufacturer Boosted Smoothie / Machine package.",
@@ -4431,6 +4927,37 @@
       "sourceModule": "scripts/icons/families/refreshment-expansion.mjs"
     },
     {
+      "slug": "health-ade-kombucha-pink-lady-apple",
+      "family": "coffee-tea-pet-bottle-expansion",
+      "packageChoice": "Representative US single-serve PET bottle; catalog omits package size.",
+      "references": [
+        {
+          "pageUrl": "https://health-ade.com/products/kombucha-pink-lady-apple",
+          "imageUrl": "https://storage.googleapis.com/images-lnb-prd-8936dd0.lnb.prd.v8.commerce.mi9cloud.com/product-images/zoom/00851861006126.png",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "US 16 fl oz amber glass bottle with black cap; inspected cream-to-red gradient label, navy anchor mark, HEALTH·ADE and PINK LADY APPLE."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "4aae2aae-97de-57d8-b283-34d049111f23",
+      "name": "Health-Ade Kombucha",
+      "brand": "Health-Ade",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/health-ade-kombucha-pink-lady-apple.svg",
+        "portableSvg": "portable-svg/health-ade-kombucha-pink-lady-apple.svg",
+        "png": "png/health-ade-kombucha-pink-lady-apple.png",
+        "svgSha256": "69bd613f8a7c30a551919480bb6f15e6e8f0d2bece7c3bc2924b2a308b4611c7",
+        "portableSvgSha256": "4c59a7495362561c011e430262d03c2a296db42d731ea4224120f333196952e5",
+        "pngSha256": "ef2fae3d602160fb6eefea13455b0c0bbadfe9e02d849a7e1e317287cb3dc135",
+        "pngBytes": 60673
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+    },
+    {
       "slug": "heineken-original-lager",
       "family": "beer-glass-bottle",
       "packageChoice": "Representative US 12 fl oz / 355mL Heineken Original glass bottle; exact independently inspected package.",
@@ -4524,6 +5051,37 @@
       "sourceModule": "scripts/icons/families/refreshments-12.mjs"
     },
     {
+      "slug": "hires-root-beer",
+      "family": "coffee-soda-can-expansion",
+      "packageChoice": "Representative US single-serve aluminum can matching the inspected product.",
+      "references": [
+        {
+          "pageUrl": "https://www.kdpproductfacts.com/product/a0e3h000003LK1GAAW/hires-root-beer-12-fl-oz-us",
+          "imageUrl": "https://s7d1.scene7.com/is/image/kdrp/HI_Rootbeer_12oz_Can_Dry1?%24Dynamic-PublicURL-PNG%24=&hei=480&wid=480",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "Current US 12 fl oz can from Keurig Dr Pepper: dark brown body, red/gold pinstripes, cream oval Hires label and red ROOT BEER lettering."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "1e89d7f1-f6e1-588d-97da-335b7b7f5087",
+      "name": "Hires Root Beer",
+      "brand": "Hires",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/hires-root-beer.svg",
+        "portableSvg": "portable-svg/hires-root-beer.svg",
+        "png": "png/hires-root-beer.png",
+        "svgSha256": "b1ecb96f6fd27b604a0406190ffa0cf77a902daf10f985211161f7a3adff0211",
+        "portableSvgSha256": "488e36b668ee3e8635658f1a168f3101565bc219e8477eb24ee3f9c6f9fd81c4",
+        "pngSha256": "557a8d5140bcfc7b04f6c1ae7ba5371fa4a56a281e1b437c49ea9d07ab360aff",
+        "pngBytes": 59494
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+    },
+    {
       "slug": "horchata-traditional",
       "family": "unbranded-served-drink",
       "packageChoice": "Unbranded Mexican rice/cinnamon horchata, iced, in documented short-stem goblet.",
@@ -4553,6 +5111,37 @@
         "pngBytes": 84219
       },
       "sourceModule": "scripts/icons/families/served-drinks.mjs"
+    },
+    {
+      "slug": "generic-house-red-cabernet-sauvignon",
+      "family": "generic-served-wine-glass",
+      "packageChoice": "Unbranded Cabernet Sauvignon served in a clear stemmed wine glass, based on the catalog beverage form.",
+      "references": [
+        {
+          "pageUrl": "https://www.notyouraveragejoes.com/items/house-red-wine",
+          "imageUrl": "https://popmenucloud.com/cdn-cgi/image/width=1200,height=1200,fit=scale-down,format=auto,quality=60/fngtxmyb/c244923b-8a9d-4f3a-9383-ed19670cb7bc.jpg",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "Restaurant menu photo inspected: single clear, unbranded stemmed wine glass filled with deep ruby-red house wine; no bottle or garnish shown. Catalog specifies Cabernet Sauvignon, so only the wine color/type is conveyed."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "2dde0eec-e995-599e-81a4-7e939dfbc81d",
+      "name": "House Red Cabernet Sauvignon",
+      "brand": "Generic",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/generic-house-red-cabernet-sauvignon.svg",
+        "portableSvg": "portable-svg/generic-house-red-cabernet-sauvignon.svg",
+        "png": "png/generic-house-red-cabernet-sauvignon.png",
+        "svgSha256": "2f25eec3c29179d14940d0a32a96c52a8a79379b5fa0548075a2a1edac014aa9",
+        "portableSvgSha256": "99659e8896d0e5d9ced0bd1ae91d46cf1e5d779fdf53c11c0d8b991bf3cdca6f",
+        "pngSha256": "cd23ca62c64c56b47dabe564dc567328c796d35fa74c3135e4b6eb520bc138ae",
+        "pngBytes": 32222
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
     },
     {
       "slug": "ibc-root-beer",
@@ -4615,6 +5204,37 @@
         "pngBytes": 39222
       },
       "sourceModule": "scripts/icons/families/water-expansion.mjs"
+    },
+    {
+      "slug": "illy-issimo-cappuccino",
+      "family": "coffee-tea-pet-bottle-expansion",
+      "packageChoice": "Representative US ready-to-drink glass coffee bottle.",
+      "references": [
+        {
+          "pageUrl": "https://www.instacart.com/products/210659-illy-issimo-cappucino-with-lowfat-milk-coffee-iced-coffee-drink-9-5-fl-oz",
+          "imageUrl": "https://www.instacart.com/image-server/1864x1864/www.instacart.com/assets/domains/product-image/file/large_97f174b6-a491-462b-ae35-3f7671098985.png",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "US 9.5 fl oz glass bottle with dark coffee and brown cap; silver/bronze wrap, red illy logo, issimo cappuccino and frothy coffee/cocoa illustration."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "e4946a37-827c-582d-ad95-ab6cfa672a6e",
+      "name": "issimo Cappuccino",
+      "brand": "illy",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/illy-issimo-cappuccino.svg",
+        "portableSvg": "portable-svg/illy-issimo-cappuccino.svg",
+        "png": "png/illy-issimo-cappuccino.png",
+        "svgSha256": "3031aa32b391dd774f31b0ce97776040fe147d1f8d0f5e83540f22ea7f47967c",
+        "portableSvgSha256": "f211c36f0ac6678ecf35a66072cac42a0cedbef5ad5f35d8a96373f224a96b82",
+        "pngSha256": "32c259d1ca47f132740782e1b109d957a5c778c05ccf8541f22020d9ccc24a6e",
+        "pngBytes": 60538
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
     },
     {
       "slug": "ito-en-matcha-green-tea",
@@ -4956,6 +5576,37 @@
         "pngBytes": 106692
       },
       "sourceModule": "scripts/icons/families/jarritos-variants.mjs"
+    },
+    {
+      "slug": "josh-cellars-chardonnay",
+      "family": "wine-bottle-expansion",
+      "packageChoice": "Representative US 750 mL retail wine bottle; catalog omits vintage and exact closure.",
+      "references": [
+        {
+          "pageUrl": "https://www.binnys.com/wine/white-wines/chardonnay/josh-cellars-chardonnay-119533/",
+          "imageUrl": "https://www.binnys.com/cdn-cgi/image/width%3D1000%2Cheight%3D1000%2Cfit%3Dpad%2Cbackground%3D%23fff%2Cformat%3Dauto/globalassets/catalogs/binnys/11/1195/119533/119533.jpg?v=638744415260000000",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "US 750 mL bottle inspected: clear pale wine, gold screw cap, cream label with cursive Josh / Josh Cellars and red Chardonnay lettering."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "bfeb046e-4589-55b9-bd02-83b12f5bc59d",
+      "name": "Josh Cellars Chardonnay",
+      "brand": "Josh Cellars",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/josh-cellars-chardonnay.svg",
+        "portableSvg": "portable-svg/josh-cellars-chardonnay.svg",
+        "png": "png/josh-cellars-chardonnay.png",
+        "svgSha256": "91a16e24e233dc91012b6dead462bf7aef6028ec8674c918a63b89697f4aae55",
+        "portableSvgSha256": "a503627089bc2a17246995883f2dc887c2a1c557a0f2b54325d89e03801c4c44",
+        "pngSha256": "e9bf3183cdbf02ef4ffc188ecf36c2d4ea8a829cefc8d8323b4b8abed1a5d705",
+        "pngBytes": 54067
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
     },
     {
       "slug": "la-marca-prosecco",
@@ -5452,6 +6103,37 @@
         "pngBytes": 100578
       },
       "sourceModule": "scripts/icons/families/juice-batch.mjs"
+    },
+    {
+      "slug": "lipton-green-tea",
+      "family": "coffee-tea-pet-bottle-expansion",
+      "packageChoice": "Representative US single-serve PET bottle; catalog omits package size.",
+      "references": [
+        {
+          "pageUrl": "https://www.pepsico.com/brands/lipton",
+          "imageUrl": "https://digitalassets.pepsico.com/transform/b915df37-eb7c-44e9-aece-b86139c1fdf8/lipton-rtd-green-tea-citrus",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "Current manufacturer PET reference: clear bottle, pale tea, yellow cap, bright green wrap label with Lipton red/yellow logo, citrus illustrations and Green Tea Citrus text."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "f3361059-c2f8-5bc5-bc37-fe2726a79451",
+      "name": "Lipton Green Tea",
+      "brand": "Lipton",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/lipton-green-tea.svg",
+        "portableSvg": "portable-svg/lipton-green-tea.svg",
+        "png": "png/lipton-green-tea.png",
+        "svgSha256": "400b40efd45c200dbac5bffafd03da3d36c11f47eb1ed8b7ed21de50ec5c4421",
+        "portableSvgSha256": "1a0842944a35c160ad89e98a2e266615f8509770ae3b058b39753bd3a7cc8a11",
+        "pngSha256": "2d9596d9b9df5496a5e81ced6899c84a1a814049c3ae6f6498bd6b84425a29e0",
+        "pngBytes": 49537
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
     },
     {
       "slug": "jamba-juice-mango-a-go-go",
@@ -6203,6 +6885,68 @@
         "pngBytes": 72043
       },
       "sourceModule": "scripts/icons/families/water-expansion.mjs"
+    },
+    {
+      "slug": "rise-brewing-nitro-cold-brew-oat-latte",
+      "family": "coffee-soda-can-expansion",
+      "packageChoice": "Representative US single-serve aluminum can matching the inspected product.",
+      "references": [
+        {
+          "pageUrl": "https://www.walmart.com/ip/798063167",
+          "imageUrl": "https://i5.walmartimages.com/seo/RISE-Brewing-Co-Oat-Milk-Latte-Nitro-Cold-Brew-Dairy-Free-7-fl-oz-Can_275b407f-7880-46fe-9b82-fe04e1677b07.98aca971d23a9972019f1155e9adf972.jpeg",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "US 7 fl oz slim can: cream/beige face, red RISE logo with sunburst, oat milk latte and nitro cold brew text, organic mark and silver ends."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "cdb9504a-deab-51f9-a17f-9f4243f957e3",
+      "name": "Nitro Cold Brew Oat Milk Latte",
+      "brand": "Rise Brewing Co.",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/rise-brewing-nitro-cold-brew-oat-latte.svg",
+        "portableSvg": "portable-svg/rise-brewing-nitro-cold-brew-oat-latte.svg",
+        "png": "png/rise-brewing-nitro-cold-brew-oat-latte.png",
+        "svgSha256": "e9d0b13299c20e2f84f37928d7ff4b281f9e3876a148ae4c6bec3c83c85aaef5",
+        "portableSvgSha256": "bd8f8220dd6282e6f64cb526bc78007d038c2b2291ec1d0f6d92a72c5971caa1",
+        "pngSha256": "54a705815d2cfbea9ca0b05e8710f75ab04d142ab029d9626403f162f47c558b",
+        "pngBytes": 60314
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+    },
+    {
+      "slug": "rise-brewing-nitro-cold-brew-black",
+      "family": "coffee-soda-can-expansion",
+      "packageChoice": "Representative US single-serve aluminum can matching the inspected product.",
+      "references": [
+        {
+          "pageUrl": "https://delivery.publix.com/landing?postal_code=37211&product_id=18406416&retailer_id=57",
+          "imageUrl": "https://www.instacart.com/image-server/1864x1864/www.instacart.com/assets/domains/product-image/file/large_dcfe702b-7640-47b3-8169-d713c41d2fed.JPG",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "US 7 fl oz slim can individually inspected: gold/cream upper rayburst, red/yellow RISE lettering, black lower field with Original Black / Nitro Cold Brew / Dairy Free and organic seal."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "d78a4407-706c-5d48-9632-4c79981f3354",
+      "name": "Nitro Cold Brew Original Black",
+      "brand": "Rise Brewing Co.",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/rise-brewing-nitro-cold-brew-black.svg",
+        "portableSvg": "portable-svg/rise-brewing-nitro-cold-brew-black.svg",
+        "png": "png/rise-brewing-nitro-cold-brew-black.png",
+        "svgSha256": "78bf0363e475a362462ca75eefe6162e65723edea6eaee428a725005714df810",
+        "portableSvgSha256": "ac55a67cd2d70aef79a44e18847b0529d8931b746b67a9c49afa63a5f77d67b7",
+        "pngSha256": "f56da199df6061131b55eb704e66d82ced0b9b37a0af708ec028a310670d1bd7",
+        "pngBytes": 68022
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
     },
     {
       "slug": "nos-original",
@@ -7228,6 +7972,37 @@
       "sourceModule": "scripts/icons/families/refreshment-expansion.mjs"
     },
     {
+      "slug": "naked-protein-zone",
+      "family": "coffee-tea-pet-bottle-expansion",
+      "packageChoice": "Representative US single-serve PET bottle; catalog omits package size.",
+      "references": [
+        {
+          "pageUrl": "https://www.instacart.com/products/2607398-naked-protein-zone-protein-juice-smoothie-32-fl-oz",
+          "imageUrl": "https://www.instacart.com/image-server/1864x1864/www.instacart.com/assets/domains/product-image/file/large_691eaad3-b352-4075-a931-268bb427075b.png",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "32 fl oz clear plastic bottle with purple cap and purple fruit-forward label; tropical fruit art, Protein Zone and 16g protein callout inspected."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "5f34b74b-5d4c-59f8-9072-80196114a575",
+      "name": "Protein Zone",
+      "brand": "Naked",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/naked-protein-zone.svg",
+        "portableSvg": "portable-svg/naked-protein-zone.svg",
+        "png": "png/naked-protein-zone.png",
+        "svgSha256": "182ca4892e5be1627f932a566738bf61b2472cace27e15d9f8373451832c0a2e",
+        "portableSvgSha256": "5f2ce0fcc916b210d1b3c3787cc2e6ae0549e8fda228635b38c28c7e17d51537",
+        "pngSha256": "47a286882909e5e8cf071dac7803db72c2c7d2bb6dba626fe32321058230acb8",
+        "pngBytes": 56264
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+    },
+    {
       "slug": "pure-leaf-extra-sweet-tea",
       "family": "tea-expansion",
       "packageChoice": "US 18.5 fl oz / 547mL Pure Leaf Extra Sweet Tea PET bottle, black cap and purple/black label.",
@@ -7953,6 +8728,37 @@
         "pngBytes": 151214
       },
       "sourceModule": "scripts/icons/families/soda-final-expansion.mjs"
+    },
+    {
+      "slug": "snapple-diet-peach-tea",
+      "family": "coffee-tea-pet-bottle-expansion",
+      "packageChoice": "Representative US single-serve PET bottle; catalog omits package size.",
+      "references": [
+        {
+          "pageUrl": "https://www.freshbybrookshires.com/product/snapple-peach-tea-diet-16-fluid-ounce-id-00076183003145",
+          "imageUrl": "https://images.cdn.retail.brookshires.com/detail/00076183003145_C1C1.jpeg",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "US 16 fl oz clear recycled-plastic bottle with amber tea and white wrap label; diet Snapple wordmark, peach/leaf illustration, orange peach-tea line."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "f0dc1cdd-ac0b-56bf-bd9f-82519a6df1ba",
+      "name": "Snapple Diet Peach Tea",
+      "brand": "Snapple",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/snapple-diet-peach-tea.svg",
+        "portableSvg": "portable-svg/snapple-diet-peach-tea.svg",
+        "png": "png/snapple-diet-peach-tea.png",
+        "svgSha256": "615bb27ce7f0d61d5352b2dfb73a11377485d9e4662f01c37ed5cf8730ba2964",
+        "portableSvgSha256": "76b5f0cf583fa1a52449e6c322123bb0a652c90997fa6f45e9bc22f5c04b6dcd",
+        "pngSha256": "6804e5c0940801297fb758f860b2378206e1c1442b77b9a79f5b0a4b2e165b40",
+        "pngBytes": 60622
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
     },
     {
       "slug": "snapple-lemon-tea",
@@ -8730,6 +9536,68 @@
       "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
     },
     {
+      "slug": "kitu-super-coffee-mocha",
+      "family": "coffee-tea-pet-bottle-expansion",
+      "packageChoice": "Representative US single-serve PET bottle; catalog omits package size.",
+      "references": [
+        {
+          "pageUrl": "https://bevmo.com/products/14491",
+          "imageUrl": "https://bevmo.com/cdn/shop/files/58e0b2b3-c35c-42e3-b3a1-811defb8de89.png?v=1718894088&width=416",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "12 fl oz white/bronze PET bottle inspected; brown cap, Kitu Super Coffee wordmark, diagonal mocha panel, zero sugar / protein / MCT callouts."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "3c1f9326-3ea7-5f78-a0c4-875e4e1ccb9a",
+      "name": "Super Coffee Mocha",
+      "brand": "Kitu",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/kitu-super-coffee-mocha.svg",
+        "portableSvg": "portable-svg/kitu-super-coffee-mocha.svg",
+        "png": "png/kitu-super-coffee-mocha.png",
+        "svgSha256": "6c9240893f5c8794adc649899622f77c52dcb1d9717b842cb4262b0669b3e98b",
+        "portableSvgSha256": "153830d81744659987717250314ce96425fbbca753d9bbcddfc677da78e1e9ea",
+        "pngSha256": "31d02414b36d765dec80d99689180c4350b88a83948cae54d5978b709cab587b",
+        "pngBytes": 47745
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+    },
+    {
+      "slug": "odwalla-superfood-smoothie",
+      "family": "coffee-tea-pet-bottle-expansion",
+      "packageChoice": "Representative US single-serve PET bottle; catalog omits package size.",
+      "references": [
+        {
+          "pageUrl": "https://www.cokesolutions.com/products/brands/odwalla/odwalla-smoothie.html",
+          "imageUrl": "https://www.cokesolutions.com/content/dam/cokesolutions/us/images/Products/Odwalla-Smoothie-Refreshers-Original-Superfood-PET.jpg",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "Current US 15.2 fl oz plant-based PET bottle inspected: bright green cap, green/white Original Superfood label, colorful fruit imagery and 100% juice smoothie text."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "d0bb1e01-dbc7-5ba4-b18d-e6ac95cf31c0",
+      "name": "Superfood",
+      "brand": "Odwalla",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/odwalla-superfood-smoothie.svg",
+        "portableSvg": "portable-svg/odwalla-superfood-smoothie.svg",
+        "png": "png/odwalla-superfood-smoothie.png",
+        "svgSha256": "ccbe7e89a1c627c17e7b8a447856dd637713931085434704e5b22859c7417e12",
+        "portableSvgSha256": "a41a89ccac119073f04a134da6f8a771e9917e5b2d59583333921b454cd00d7a",
+        "pngSha256": "8a8bb65274804f37d8da9bb542f479c355d701b08305033d986441effcf4e9d3",
+        "pngBytes": 64568
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+    },
+    {
       "slug": "titos-handmade-vodka-soda",
       "family": "served-cocktail-glass",
       "packageChoice": "Served highball glass with vodka, sparkling water, ice and lime",
@@ -9164,6 +10032,37 @@
       "sourceModule": "scripts/icons/families/sparkling-expansion.mjs"
     },
     {
+      "slug": "waterloo-lime",
+      "family": "coffee-soda-can-expansion",
+      "packageChoice": "Representative US single-serve aluminum can matching the inspected product.",
+      "references": [
+        {
+          "pageUrl": "https://www.couchpotatoatx.com/products/waterloo-sparkling-water-lime",
+          "imageUrl": "https://cdn.shopify.com/s/files/1/0371/5507/8189/products/can_lime_580x.png?v=1584975434",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "US 12 oz Lime can inspected: pale green field, dark green WATERLOO lettering, decorative scrollwork and lime-slice illustration, silver rims."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "cdc8e9c9-27e7-5f19-8f47-35e4f2b325e0",
+      "name": "Waterloo Lime Sparkling Water",
+      "brand": "Waterloo",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/waterloo-lime.svg",
+        "portableSvg": "portable-svg/waterloo-lime.svg",
+        "png": "png/waterloo-lime.png",
+        "svgSha256": "ebcdbc87a9fd94899f5a55421f3802e31a110c2a87086e5e725e49f068177fbe",
+        "portableSvgSha256": "403dd73ac20168865176aa1fab709622e33b4db4a38d8e7298fa4eab9accdf00",
+        "pngSha256": "c1004210c47b233f9321002ab2392407451f6123381121c195e91467090d0143",
+        "pngBytes": 75178
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+    },
+    {
       "slug": "waterloo-watermelon",
       "family": "sparkling-standard-can",
       "packageChoice": "US 12 fl oz can; earlier retail packaging.",
@@ -9534,6 +10433,37 @@
         "pngBytes": 166739
       },
       "sourceModule": "scripts/icons/families/soda-expansion.mjs"
+    },
+    {
+      "slug": "zevia-mountain-twist",
+      "family": "coffee-soda-can-expansion",
+      "packageChoice": "Representative US single-serve aluminum can matching the inspected product.",
+      "references": [
+        {
+          "pageUrl": "https://zevia.com/products/mountain-zevia",
+          "imageUrl": "https://zevia.com/cdn/shop/files/2025_ZVA_US_12oz_Soda_Standard_MountainZevia_Dry_WithShadow_ea77bb41-a69f-4f60-b57d-37c8d1e4f0f2.png?v=1770340041&width=3000",
+          "inspectedAt": "2026-11-14",
+          "visuallyInspected": true,
+          "observations": "Manufacturer US 12 oz can individually inspected: saturated green field, tall white Zevia wordmark, crisp natural flavor and no fake colors claims, stylized citrus/mountain lower artwork."
+        }
+      ],
+      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "status": "needs-review",
+      "bevId": "9a2ef1e8-693c-5c10-9628-b95450354734",
+      "name": "Zevia Mountain Twist",
+      "brand": "Zevia",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/zevia-mountain-twist.svg",
+        "portableSvg": "portable-svg/zevia-mountain-twist.svg",
+        "png": "png/zevia-mountain-twist.png",
+        "svgSha256": "e8bd5574bfe4ab0b724f7b84d2f09673f79a2770c2dcfd6ced7d2c9aa66d9f8c",
+        "portableSvgSha256": "be85a1eef8d5e8755205a41cc06359281b1ed454202cf2f9111e7abd10ac7727",
+        "pngSha256": "44f081e1ee6d661a43360e03b41576272d8c05e4006ccb538e5a02113a48b4cf",
+        "pngBytes": 71970
+      },
+      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
     },
     {
       "slug": "zevia-orange",

@@ -1,0 +1,16 @@
+<svg width="200" height="260" viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <radialGradient id="bev-generic-house-red-cabernet-sauvignon-shadow" cx="0.5" cy="0.5" r="0.5" fx="0.5" fy="0.5">
+            <stop offset="0" stop-color="#3c372d" stop-opacity="0.18"/>
+            <stop offset="1" stop-color="#3c372d" stop-opacity="0"/>
+        </radialGradient>
+    </defs>
+    <path fill="url(#bev-generic-house-red-cabernet-sauvignon-shadow)" stroke="none" d="M 142 239 C 142 245.07513 123.19597 250 100 250 C 76.80404 250 58 245.07513 58 239 C 58 232.92485 76.80404 228 100 228 C 123.19597 228 142 232.92485 142 239 Z"/>
+    <path fill="#dcebe5" fill-opacity="0.24" stroke="#bbcbc4" stroke-width="2" d="M 53 54 Q 100 39 147 54 L 139 112 Q 135 136 112 149 L 112 210 Q 112 219 128 222 L 72 222 Q 88 219 88 210 L 88 149 Q 65 136 61 112 Z"/>
+    <path fill="#6e1428" stroke="none" d="M 61 89 Q 100 101 139 89 L 135 112 Q 131 135 100 146 Q 69 135 65 112 Z"/>
+    <path fill="#7d2033" stroke="none" d="M 139 90 C 139 93.866 121.539116 97 100 97 C 78.46089 97 61 93.866 61 90 C 61 86.134 78.46089 83 100 83 C 121.539116 83 139 86.134 139 90 Z"/>
+    <path fill="none" stroke="#ffffff" stroke-opacity="0.58" stroke-width="2.4" d="M 66 61 Q 62 99 74 126 M 134 61 Q 138 99 126 126"/>
+    <path fill="#e4eee8" fill-opacity="0.28" stroke="#c2d0c9" stroke-width="1.4" d="M 100 149 L 100 211 Q 100 220 116 223 L 84 223 Q 100 220 100 211 L 100 149 Z"/>
+    <path fill="#d7e3dc" fill-opacity="0.45" stroke="#bbc9c2" stroke-width="1.4" d="M 126 223 C 126 225.48528 114.359406 227.49998 100 227.49998 C 85.640594 227.49998 74 225.48528 74 223 C 74 220.51474 85.640594 218.5 100 218.5 C 114.359406 218.5 126 220.51474 126 223 Z"/>
+    <path fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="1.5" d="M 58 86 Q 100 98 142 86"/>
+</svg>

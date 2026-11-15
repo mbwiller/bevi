@@ -1,29 +1,13 @@
 {
   "summary": {
     "catalog": 378,
-    "authored": 305,
-    "pending": 73,
+    "authored": 335,
+    "pending": 43,
     "starterAuthored": 40,
     "starterTotal": 43,
     "livePostgresReconciled": false
   },
   "pending": [
-    {
-      "bevId": "9a2ef1e8-693c-5c10-9628-b95450354734",
-      "slug": "zevia-mountain-twist",
-      "name": "Zevia Mountain Twist",
-      "brand": "Zevia",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "e1dad545-c9ce-52bf-b64a-66c0ac2f5363",
-      "slug": "diet-rc-cola",
-      "name": "Diet RC Cola",
-      "brand": "RC Cola",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
     {
       "bevId": "11f52e23-5357-58c1-94df-02644a5e6f98",
       "slug": "mountain-dew-spark",
@@ -33,50 +17,10 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "1e89d7f1-f6e1-588d-97da-335b7b7f5087",
-      "slug": "hires-root-beer",
-      "name": "Hires Root Beer",
-      "brand": "Hires",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "29070fd5-1689-5eef-a7c5-5efec70cfdd9",
       "slug": "olipop-dr-wow",
       "name": "Olipop Dr Wow",
       "brand": "Olipop",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "64d60399-0197-545d-b1dc-d020d09955ef",
-      "slug": "diet-coke-ginger-lime",
-      "name": "Diet Coke Ginger Lime",
-      "brand": "Diet Coke",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "e53f5366-4c5c-55be-afaf-ffd3f2ed5ff0",
-      "slug": "diet-coke-zesty-blood-orange",
-      "name": "Diet Coke Zesty Blood Orange",
-      "brand": "Diet Coke",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "db370993-fb57-5486-b188-c22a5e8cae4f",
-      "slug": "diet-coke-twisted-mango",
-      "name": "Diet Coke Twisted Mango",
-      "brand": "Diet Coke",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "e3fd7e33-df20-5d6f-a7b5-e4f22c2b52ea",
-      "slug": "diet-coke-feisty-cherry",
-      "name": "Diet Coke Feisty Cherry",
-      "brand": "Diet Coke",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -117,14 +61,6 @@
       "slug": "bolthouse-farms-green-goodness-juice",
       "name": "Green Goodness",
       "brand": "Bolthouse Farms",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "cdc8e9c9-27e7-5f19-8f47-35e4f2b325e0",
-      "slug": "waterloo-lime",
-      "name": "Waterloo Lime Sparkling Water",
-      "brand": "Waterloo",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -185,54 +121,6 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "13f5a93b-704f-5bae-86d7-a2d6b219b44f",
-      "slug": "starbucks-doubleshot-original",
-      "name": "Doubleshot Original",
-      "brand": "Starbucks",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "41ea96f6-810e-5edd-877d-3d1dc3bcef1e",
-      "slug": "starbucks-doubleshot-espresso-cream",
-      "name": "Doubleshot Espresso & Cream",
-      "brand": "Starbucks",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "d95f0856-c8ca-5a97-9221-db5a6d4a5a78",
-      "slug": "starbucks-doubleshot-vanilla",
-      "name": "Doubleshot Vanilla",
-      "brand": "Starbucks",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "a6603ea8-c696-5cf2-a61c-db1aaa1e451a",
-      "slug": "starbucks-doubleshot-energy-coffee",
-      "name": "Doubleshot Energy Coffee",
-      "brand": "Starbucks",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "dd57b1eb-3286-5808-b27e-530c078f1196",
-      "slug": "stok-cold-brew-not-too-sweet",
-      "name": "Cold Brew Not Too Sweet",
-      "brand": "Stok",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "58c62238-4df9-51ad-8a52-536bbc25a8b4",
-      "slug": "chameleon-cold-brew-black",
-      "name": "Cold Brew Black",
-      "brand": "Chameleon Cold Brew",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "769babf7-8666-5642-bd4d-75b08b2addd5",
       "slug": "califia-farms-cold-brew-almond-milk",
       "name": "Cold Brew Coffee with Almond Milk",
@@ -249,74 +137,10 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "e4946a37-827c-582d-ad95-ab6cfa672a6e",
-      "slug": "illy-issimo-cappuccino",
-      "name": "issimo Cappuccino",
-      "brand": "illy",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "6695bffe-48c6-5412-8d4f-ef724319750a",
       "slug": "nescafe-frappe-caramel",
       "name": "Frappe Caramel",
       "brand": "Nescafe",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "2dcc28a3-e881-5a77-854e-c0f57c196613",
-      "slug": "death-wish-coffee-rtd-black",
-      "name": "Coffee RTD Black Coffee",
-      "brand": "Death Wish Coffee",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "d78a4407-706c-5d48-9632-4c79981f3354",
-      "slug": "rise-brewing-nitro-cold-brew-black",
-      "name": "Nitro Cold Brew Original Black",
-      "brand": "Rise Brewing Co.",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "cdb9504a-deab-51f9-a17f-9f4243f957e3",
-      "slug": "rise-brewing-nitro-cold-brew-oat-latte",
-      "name": "Nitro Cold Brew Oat Milk Latte",
-      "brand": "Rise Brewing Co.",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "3c1f9326-3ea7-5f78-a0c4-875e4e1ccb9a",
-      "slug": "kitu-super-coffee-mocha",
-      "name": "Super Coffee Mocha",
-      "brand": "Kitu",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "c35f82a7-45ab-52a0-9346-1c5cfbb7c383",
-      "slug": "bulletproof-coffee-rtd-vanilla",
-      "name": "Clean Coffee RTD Vanilla",
-      "brand": "Bulletproof",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "5f34b74b-5d4c-59f8-9072-80196114a575",
-      "slug": "naked-protein-zone",
-      "name": "Protein Zone",
-      "brand": "Naked",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "f6d6fc9c-d510-5246-85a0-1f8dcdcac3f1",
-      "slug": "naked-berry-blast",
-      "name": "Berry Blast",
-      "brand": "Naked",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -329,34 +153,10 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "3df12c22-201d-5a3c-8e73-9be64ce78c2a",
-      "slug": "bolthouse-farms-green-goodness-smoothie",
-      "name": "Green Goodness",
-      "brand": "Bolthouse Farms",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "d0bb1e01-dbc7-5ba4-b18d-e6ac95cf31c0",
-      "slug": "odwalla-superfood-smoothie",
-      "name": "Superfood",
-      "brand": "Odwalla",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "e9b9fe9d-fe79-5561-95a2-7c45b476ea36",
       "slug": "arizona-half-and-half",
       "name": "Arizona Half & Half",
       "brand": "Arizona",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "f0dc1cdd-ac0b-56bf-bd9f-82519a6df1ba",
-      "slug": "snapple-diet-peach-tea",
-      "name": "Snapple Diet Peach Tea",
-      "brand": "Snapple",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -366,14 +166,6 @@
       "name": "Lipton Iced Tea",
       "brand": "Lipton",
       "isStarter": true,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "f3361059-c2f8-5bc5-bc37-fe2726a79451",
-      "slug": "lipton-green-tea",
-      "name": "Lipton Green Tea",
-      "brand": "Lipton",
-      "isStarter": false,
       "status": "needs-reference"
     },
     {
@@ -513,14 +305,6 @@
       "status": "needs-reference"
     },
     {
-      "bevId": "4aae2aae-97de-57d8-b283-34d049111f23",
-      "slug": "health-ade-kombucha-pink-lady-apple",
-      "name": "Health-Ade Kombucha",
-      "brand": "Health-Ade",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
       "bevId": "39c47e3d-fcd0-53d9-a4c0-1f20fae13e56",
       "slug": "suja-kombucha-strawberry-basil-lemonade",
       "name": "Suja Kombucha",
@@ -533,14 +317,6 @@
       "slug": "white-claw-lime",
       "name": "White Claw Hard Seltzer",
       "brand": "White Claw",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "2dde0eec-e995-599e-81a4-7e939dfbc81d",
-      "slug": "generic-house-red-cabernet-sauvignon",
-      "name": "House Red Cabernet Sauvignon",
-      "brand": "Generic",
       "isStarter": false,
       "status": "needs-reference"
     },
@@ -573,22 +349,6 @@
       "slug": "generic-rose",
       "name": "Rose",
       "brand": "Generic",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "8387862d-bb35-5787-a877-eb7375d1f056",
-      "slug": "barefoot-cellars-cabernet-sauvignon",
-      "name": "Barefoot Cellars Cabernet Sauvignon",
-      "brand": "Barefoot Cellars",
-      "isStarter": false,
-      "status": "needs-reference"
-    },
-    {
-      "bevId": "bfeb046e-4589-55b9-bd02-83b12f5bc59d",
-      "slug": "josh-cellars-chardonnay",
-      "name": "Josh Cellars Chardonnay",
-      "brand": "Josh Cellars",
       "isStarter": false,
       "status": "needs-reference"
     }
