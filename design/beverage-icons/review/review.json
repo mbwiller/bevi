@@ -24,7 +24,8 @@
     "Batch 12: two catalog identities deferred in identity-issues.json (GHOST FaZe Berry and White Claw Lime).",
     "Batch 12 vector details are simplified; final aesthetic approval and web/native device review pending.",
     "Live Postgres reconciliation remains separate from icon authoring.",
-    "Batch 13 includes historical 2018 Diet Coke flavors and legacy RTD coffee packages documented as reference choices."
+    "Batch 13 includes historical 2018 Diet Coke flavors and legacy RTD coffee packages documented as reference choices.",
+    "2026-11-15 redraw: 19 icons from batches 12 and 13 that were sorted Needs work were redrawn from their real packages (scripts/icons/families/redraw-*.mjs) and each compared with its reference photo and with Good icons at 40/56px on light and dark; their hashes here are the redrawn art. They are needs-review until a person sorts them in icons:swipe. starbucks-doubleshot-original was not redrawn: the catalog row does not identify a distinct product."
   ],
   "assets": [
     {
@@ -234,14 +235,14 @@
     {
       "bevId": "d5fae22e-0812-5472-bd0b-883336a11cc9",
       "slug": "alani-nu-mimosa",
-      "pngSha256": "c5344d952b378c37603e1eb93920bbe961319eecf37bb123462cfbb01832fe7b",
-      "portableSvgSha256": "15dc7993a4beac459e2b929b4c6f92effb9fae9696bcdb93c5fa390a4e8b5286"
+      "pngSha256": "cecc5cd24807c0225bfc20726d89a8537881edc73b16f31e4f5599c50e3dcf70",
+      "portableSvgSha256": "13001cfc1a8bc285a5e3af08210223b20cc6eeb0d014d9835e8909b10218b41c"
     },
     {
       "bevId": "ce13c1fc-955d-5ce3-abbf-7f075fe1570a",
       "slug": "bang-rainbow-unicorn",
-      "pngSha256": "b46e912ef8516f1847ad98327fe639ca9ac953643482d37befd1bd27d978a8ed",
-      "portableSvgSha256": "46f875d11edd3d5a9c1ca8e4415324ec07bec76958ab8c3de8aeff0d6c28317b"
+      "pngSha256": "935b1448b1095e740b4ebb26a4034dd1b842eab967ef7829c4b0a5743d44115a",
+      "portableSvgSha256": "8a7299edc0b2dc2d963da03e69c2d5117a0093996e9f54887c774ede9c8e49a9"
     },
     {
       "bevId": "f5fc4367-0ad3-53cd-8329-7029e9785c0e",
@@ -252,20 +253,20 @@
     {
       "bevId": "0185e29e-12f6-5f46-8223-a22a1fc1144c",
       "slug": "celsius-cucumber-lime",
-      "pngSha256": "e37cd040a3da98233f81d4adfac33f3b13c31c638bf3b16e02a7d0e1132eb01d",
-      "portableSvgSha256": "a070243f68e87d48fa88be954d10eee5726418b5d79d48e6d4c098aad2fdd2b2"
+      "pngSha256": "e5942b09a88f2269646b0686e780b798776fb5d642dd3042d2080d02fa9ac340",
+      "portableSvgSha256": "249494d67eb2295ac99d82bc40e30b8c11afa6830d8f1736e4d775b6f64d562e"
     },
     {
       "bevId": "8adbfd7e-77c9-5c99-a55f-5ffc03bfd754",
       "slug": "cutwater-spirits-margarita",
-      "pngSha256": "02a4d133e462a35e69b7a36c9cb98ff851ba99e866b9a22bc81e35b9129b70d2",
-      "portableSvgSha256": "66193de22e7765b1fddc253417bb9352777570556fe028dd9c726079aefb6036"
+      "pngSha256": "7cf0242f1b961722a5edac15a5922c98a7f0e45a2505ff0362921f571e1dd40b",
+      "portableSvgSha256": "23562258922ad910f525dff999b003da45a6575c00d26ff1510e9e87464959b9"
     },
     {
       "bevId": "6e665aa0-7abc-50e7-8475-978c62c81133",
       "slug": "cutwater-spirits-vodka-mule",
-      "pngSha256": "5d10cb39fc790d8d4c94a64db06e3f230fb1c48287f2b03d27ecad29c2665fe6",
-      "portableSvgSha256": "4ffa01b92815c07399ce2b584f2f6db429b44a9346b2dcfd0d52dbf001cbfba0"
+      "pngSha256": "a1ba876716fbb450aa9073aaa91647ccfb082d6d5218a04228655421c24d32a1",
+      "portableSvgSha256": "0c014f14f15d7817d249b9f7419707841692709229fd1fc85acc93b3bcdf1e7b"
     },
     {
       "bevId": "7696f382-d1dc-530a-ad78-e55684050b2f",
@@ -318,14 +319,14 @@
     {
       "bevId": "b227f854-bdfa-5a02-a1d1-ebac6e0245c1",
       "slug": "high-noon-vodka-soda-watermelon",
-      "pngSha256": "5ffa7144098f66cfb91e4fb03587c3ea59ae0143635b9b8ddb82c964c1562e13",
-      "portableSvgSha256": "5a09e409784c3e23b72e4ab600a73668053bcd7c5486002fa621bbdcc0984aaa"
+      "pngSha256": "b0cefe36f6de9a9aeed6602cf8b8588bc3d22ae292d773bf5a80b835c3171f67",
+      "portableSvgSha256": "49122b0d8a2cf49453f841967efc8606e543ba937ff8a4c4913fbe4e749ad5c8"
     },
     {
       "bevId": "718762fe-6d32-59dc-ae45-baac2d630681",
       "slug": "high-noon-vodka-soda-peach",
-      "pngSha256": "4c74996f0947928ff1e68d31671ae70dfe2a63b6b09573b7e05c497cb7aa7336",
-      "portableSvgSha256": "d6a8fe22b3d3a937d479dbb02deb5c478b1e902cdf7c2456a9c81102edbd52ec"
+      "pngSha256": "f5fd7990cf3e658aca90a291d21e49ef00e23c053d8c7754e7c3a508c1d84d19",
+      "portableSvgSha256": "19407ace53e8716cb539bf2760bb10ff48ef7d9e0b7d6e8ca70cee6ad89b7425"
     },
     {
       "bevId": "70da1493-bf1b-5bf2-8dc6-87e6d0ab6aab",
@@ -360,32 +361,74 @@
     {
       "bevId": "e5b6a6e7-972a-5e37-99e2-01f84a5505eb",
       "slug": "truly-wild-berry",
-      "pngSha256": "f7f04db51fbea1ab445287bbc91a3961116f07a2b1fe0ec65f3167b833bb68d4",
-      "portableSvgSha256": "5018873964080ea5a876db4052c2de338d225eb71c41422541110c687a73f629"
+      "pngSha256": "398fcffa586efbd60c2d63de45837394136cf540d71421fa0f54a95a099182be",
+      "portableSvgSha256": "197cb3ea38a54e6f19f3488b5b6542e67209df1589a7d960b2575d25eab3c4a0"
     },
     {
       "bevId": "a2195743-a1c6-57ff-b8b1-d856e201cf54",
       "slug": "truly-lemonade",
-      "pngSha256": "4a2a5d4defcdd5b5bc6965052321f96667f5530b6f9d53128de01d80ff0dc82a",
-      "portableSvgSha256": "832cf1c013699ad0a9a833ac560ea269751082eb0455bd687932300bf9e8bccd"
+      "pngSha256": "56ebabbe176bb85021711176afd9695ea4b44a1032ff2f1fa4a5525555000afa",
+      "portableSvgSha256": "7ea7ad7fb64c8bffd880060f4850c9f90ea0dcb39f749031680a5658243b2bcc"
     },
     {
       "bevId": "38b4a3ca-c179-514d-a822-79dcf5998894",
       "slug": "white-claw-black-cherry",
-      "pngSha256": "a51497841fdc5c9dadff50cbce08aae4a075ddbb51fb02d852fe2bc57c091fa2",
-      "portableSvgSha256": "89e919c4964ce8c753c3fb2ac270866312b5ad27907cb5d4e0bd8475e5d79891"
+      "pngSha256": "d3cc6dbb83a187215754e7318c178f64a7f77c692d0670ced942d0961009fd49",
+      "portableSvgSha256": "7dc12d4d43d5d5309c6c5e2783537dc8aaeff4fd8695e77582d1ad2b7803d522"
     },
     {
       "bevId": "9f8e6bcd-41d5-520b-bc4a-2093ad7bbc84",
       "slug": "white-claw-mango",
-      "pngSha256": "c69f789958f5d2dee5696ac988103ecfc89507a632781f2fe01025e6a3f19795",
-      "portableSvgSha256": "d0795f13732f6da5990f54dd0216416ee4c94844cf663d741ba1d0520fc52edd"
+      "pngSha256": "e7d63ef9301d8e1b2b324cac8d74c5acfcb8291a3102e327d571ef9906d2d9af",
+      "portableSvgSha256": "f3746040352cdee6be1329d052560b36dc3e85350b1189d91671414d56975d20"
     },
     {
       "bevId": "d1b17c57-826a-576d-b6a3-2a8554dcc4c0",
       "slug": "white-claw-natural-lime",
-      "pngSha256": "2585eb54a8c1d6a5913f37c0ca0c6528b5df547cea499fd2056ecad556002b84",
-      "portableSvgSha256": "ab6e5c7c6ba0c4765f29d74b373f14f624506ad0c348338cfa26c730f735be9c"
+      "pngSha256": "c690a4c7028e7b1bc335811819b81868e7ab1798a49ad592a23ccce852aec93d",
+      "portableSvgSha256": "f930c6e3db205493f50aee2f76e20c52c33a6d459504c411ddd8905e735ebe1c"
+    },
+    {
+      "bevId": "e3fd7e33-df20-5d6f-a7b5-e4f22c2b52ea",
+      "slug": "diet-coke-feisty-cherry",
+      "pngSha256": "62e0e74265f261bad8bd4923cb6857bebcfc2248ba4c016b2c5507a2a4d9c57a",
+      "portableSvgSha256": "1a06c8539b51f6d1a994dcfb7194d50e34ce6e2039307cf785b94576e57336fa"
+    },
+    {
+      "bevId": "64d60399-0197-545d-b1dc-d020d09955ef",
+      "slug": "diet-coke-ginger-lime",
+      "pngSha256": "3229825f71c460e0442324f1d177d4768c1f766e9e2a67fedee12914fb1224d3",
+      "portableSvgSha256": "e66774f26a7eb1cd2b5053a4e9ae5cd9d4dec454f5016a03fbab657e97ce8b98"
+    },
+    {
+      "bevId": "db370993-fb57-5486-b188-c22a5e8cae4f",
+      "slug": "diet-coke-twisted-mango",
+      "pngSha256": "3f9ffc88f6853d7bffc6f14bcdd6e824015f0287c045f422becee5e59b5d0307",
+      "portableSvgSha256": "3babf1a65dbe3a416611313b300a09d10880c30c55ce3b420b7be3ef1020b398"
+    },
+    {
+      "bevId": "e53f5366-4c5c-55be-afaf-ffd3f2ed5ff0",
+      "slug": "diet-coke-zesty-blood-orange",
+      "pngSha256": "bb737d5fad93ec4b75a15a1c6b6c8905a7c3dc6d8683e1cc1ba636640675e07b",
+      "portableSvgSha256": "f6e2de561f758b516d26c0e9da98ec7224a59518afcc9076fde69e6e0df1d6fd"
+    },
+    {
+      "bevId": "a6603ea8-c696-5cf2-a61c-db1aaa1e451a",
+      "slug": "starbucks-doubleshot-energy-coffee",
+      "pngSha256": "11bb38c7f8eb8845ad592a93c260a57ba8347f84381cdd00ad05a18b38d5d591",
+      "portableSvgSha256": "9417babaa9e9f75818f968366776f2f9f147fb97d1564d812a1ad2887afbe6a5"
+    },
+    {
+      "bevId": "41ea96f6-810e-5edd-877d-3d1dc3bcef1e",
+      "slug": "starbucks-doubleshot-espresso-cream",
+      "pngSha256": "75d8a511a088aa9981cf2bd6ee41399583d9142624f16ca4f6b331398f2fb13a",
+      "portableSvgSha256": "5a634ac83ab2ee38045ac6f2e3735e9efd0fb76ca4e187789b065e7a98978f2f"
+    },
+    {
+      "bevId": "d95f0856-c8ca-5a97-9221-db5a6d4a5a78",
+      "slug": "starbucks-doubleshot-vanilla",
+      "pngSha256": "ff80d99a81d4341203907def3ad81ef8baea1fb99aee1f57b3e1fea1e30a7f31",
+      "portableSvgSha256": "da5bfd0ea386705bfccb4ac8417dd00a80d0406560e18aec7c16e53d8dc7a53b"
     }
   ],
   "batch2": {
