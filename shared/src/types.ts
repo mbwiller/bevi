@@ -587,6 +587,11 @@ export interface VenueFilters {
 export interface NutritionPreview {
   barcode: string;
   productName: string;
+  /**
+   * Stable presentation strings: `Per serving (${servingSize})` or
+   * `Per 100 g / 100 ml (as listed)`. NutritionCard parses these exact English
+   * forms, so changing them requires a versioned move to structured fields.
+   */
   basis: string;
   calories: number | null;
   fatGrams: number | null;
