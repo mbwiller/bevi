@@ -61,15 +61,16 @@ insert into public.bev_nutrition (bev_id, nutrition, source, created_at) values
   '{"barcode":"222222222222","productName":"Keep destination","basis":"Per 100 g / 100 ml (as listed)","sourceUrl":"https://world.openfoodfacts.org/product/222222222222","calories":60,"fatGrams":null,"carbohydrateGrams":15,"sugarGrams":12,"proteinGrams":null,"sodiumMg":30}',
   'openfoodfacts','2025-03-04T05:06:07Z');
 select public.merge_bev('00000000-0000-4000-8000-0000000fb101','00000000-0000-4000-8000-0000000fb102');
-select ok((select n.nutrition->>'productName' = 'Carry source'
+select ok((select n.nutrition = '{"barcode":"012345678901","productName":"Carry source","basis":"Per serving (355 ml)","sourceUrl":"https://world.openfoodfacts.org/product/012345678901","calories":20,"fatGrams":null,"carbohydrateGrams":5,"sugarGrams":4,"proteinGrams":null,"sodiumMg":10}'::jsonb
                   and n.source = 'openfoodfacts'
                   and n.created_at = '2025-01-02T03:04:05Z'::timestamptz
              from public.bev_nutrition n where n.bev_id = '00000000-0000-4000-8000-0000000fb102'),
-          'merge carries nutrition, source and created_at to an empty destination');
+          'merge carries the full nutrition snapshot, source and created_at');
 select public.merge_bev('00000000-0000-4000-8000-0000000fb103','00000000-0000-4000-8000-0000000fb104');
-select ok((select n.nutrition->>'productName' = 'Keep destination'
+select ok((select n.nutrition = '{"barcode":"222222222222","productName":"Keep destination","basis":"Per 100 g / 100 ml (as listed)","sourceUrl":"https://world.openfoodfacts.org/product/222222222222","calories":60,"fatGrams":null,"carbohydrateGrams":15,"sugarGrams":12,"proteinGrams":null,"sodiumMg":30}'::jsonb
+                  and n.source = 'openfoodfacts'
                   and n.created_at = '2025-03-04T05:06:07Z'::timestamptz
              from public.bev_nutrition n where n.bev_id = '00000000-0000-4000-8000-0000000fb104'),
-          'merge keeps the destination snapshot when both Bevs have nutrition');
+          'merge keeps the full destination snapshot when both Bevs have nutrition');
 select * from finish();
 rollback;
