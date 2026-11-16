@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121214" media="(prefers-color-scheme: dark)">
+<title>Bevi · Icon check</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand"><span class="wordmark">bevi.</span><span class="sub">icon check</span></div>
+    <button id="who" class="who" type="button" aria-label="Change who is sorting"></button>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Piles">
+    <button role="tab" type="button" data-pile="needs-work" aria-selected="false">Needs work <b id="n-needs-work"></b></button>
+    <button role="tab" type="button" data-pile="unsorted" aria-selected="true">To sort <b id="n-unsorted"></b></button>
+    <button role="tab" type="button" data-pile="good" aria-selected="false">Good <b id="n-good"></b></button>
+  </nav>
+  <div class="progress" role="progressbar" aria-label="Icons sorted" aria-valuemin="0" id="progress"><span id="bar-good"></span><span id="bar-needs-work"></span></div>
+  <p id="banner" class="banner" role="status" hidden></p>
+
+  <main>
+    <section id="deck-view" class="deck-view" aria-label="Icons to sort">
+      <div id="stack" class="stack"></div>
+      <div id="done" class="done" hidden>
+        <p class="done-title">All sorted.</p>
+        <p id="done-text"></p>
+      </div>
+      <div class="actions">
+        <button id="nope" class="act nope" type="button" aria-label="Needs work">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
+          <span>Needs work</span>
+        </button>
+        <button id="undo" class="act undo" type="button" aria-label="Undo the last swipe" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5L4 9l4 4M4 9h10a6 6 0 010 12h-3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Undo</span>
+        </button>
+        <button id="yep" class="act yep" type="button" aria-label="Good">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Good</span>
+        </button>
+      </div>
+      <p class="keys" aria-hidden="true"><kbd>←</kbd> needs work <kbd>→</kbd> good <kbd>Z</kbd> undo <kbd>I</kbd> details</p>
+    </section>
+
+    <section id="list-view" class="list-view" hidden>
+      <input id="search" class="search" type="search" placeholder="Find a drink or brand" aria-label="Filter this pile" autocomplete="off">
+      <div id="grid" class="grid"></div>
+      <p id="list-empty" class="list-empty" hidden></p>
+    </section>
+  </main>
+</div>
+
+<dialog id="sheet" class="sheet" aria-labelledby="sheet-name">
+  <button id="sheet-close" class="close" type="button" aria-label="Close">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+  </button>
+  <div class="sheet-body">
+    <div class="sheet-art">
+      <div class="surface light"><img id="sheet-img-light" alt=""></div>
+      <div class="surface dark"><img id="sheet-img-dark" alt=""></div>
+    </div>
+    <h2 id="sheet-name"></h2>
+    <p id="sheet-meta" class="meta-line"></p>
+    <p id="sheet-status" class="status-line"></p>
+    <div id="sheet-note-wrap" class="note-wrap" hidden>
+      <label for="sheet-note">What needs work?</label>
+      <textarea id="sheet-note" rows="3" maxlength="500" placeholder="Label too small, wrong cap colour, reads as a can…"></textarea>
+      <button id="sheet-save" class="btn primary" type="button">Save note</button>
+    </div>
+    <div id="sheet-moves" class="moves"></div>
+    <dl class="facts">
+      <dt>Package drawn</dt><dd id="sheet-package"></dd>
+      <dt>Known gaps</dt><dd id="sheet-uncertainty"></dd>
+      <dt>Product references</dt><dd id="sheet-refs"></dd>
+    </dl>
+  </div>
+</dialog>
+
+<dialog id="picker" class="picker" aria-labelledby="picker-title">
+  <h2 id="picker-title">Who's sorting?</h2>
+  <p>Your swipes are saved under your name. This device remembers.</p>
+  <div id="picker-choices" class="choices"></div>
+</dialog>
+
+<div id="toast" class="toast" role="status" hidden><span id="toast-text"></span><button id="toast-action" type="button" hidden></button></div>
+<script type="module" src="/app.mjs"></script>
+</body>
+</html>

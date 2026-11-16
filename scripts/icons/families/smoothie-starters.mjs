@@ -42,45 +42,10 @@ ${Array.from({length:45},(_,i)=>`<ellipse cx="${54+(i*23)%92}" cy="${97+(i*31)%1
 
 const strawberry=(x,y,s=1,a=0)=>`<g transform="translate(${x} ${y}) rotate(${a}) scale(${s})"><path d="M0 20C-5 18-21-4-13-11C-8-16-2-14 0-12C6-17 18-13 16-5C14 7 6 19 0 20Z" fill="${ref('berry')}"/><path d="m0-11-5-8 6 4 5-8 1 8 8-3-5 7 7 4-11-1-4 7-2-8-9 1Z" fill="#388346"/>${[[-8,-5],[-2,-5],[6,-4],[-6,2],[2,2],[9,3],[-2,9],[4,10],[1,15]].map(([a,b])=>`<ellipse cx="${a}" cy="${b}" rx=".7" ry="1.3" fill="#f8cb83" transform="rotate(-20 ${a} ${b})"/>`).join('')}</g>`;
 const bottleShape='M79 43h42v13q0 11 10 23 9 11 9 24l-3 117q0 14-37 14t-37-14l-3-117q0-13 9-24 10-12 10-23Z';
-const bolthouse=wrap('bolthouse-farms-strawberry-banana','Bolthouse Farms Strawberry Banana',`${shadow(53)}
-<path d="${bottleShape}" fill="${ref('smoothie')}" stroke="#b77378" stroke-width=".9"/>
-<g clip-path="${ref('bottleclip')}">
-<path d="M75 45h50v28H75Z" fill="#e3e8de"/>
-<path d="M60 56h80v86l-80 8Z" fill="#e65c8d"/>
-<path d="M96 51h30l13 44-38 8Z" fill="#fff6d5"/>
-<path d="M117 52c-7 14-11 29-23 38 10 4 19-2 26-13 6-11 9-21 5-25Z" fill="#f6d94f"/>
-<path d="M123 53c-5 18-10 29-22 36 12 0 21-12 25-25" fill="none" stroke="#fff3a2" stroke-width="2"/>
-${strawberry(73,87,.74,-19)}${strawberry(128,84,.72,14)}${strawberry(105,52,.53,-7)}${strawberry(140,135,.65,12)}
-<circle cx="101" cy="76" r="12" fill="#fff9ef"/>
-${text(101,73,'NO',4,'#dc4b77','font-weight="bold"')}${text(101,78,'SUGAR',4,'#dc4b77','font-weight="bold"')}${text(101,83,'ADDED',4,'#dc4b77','font-weight="bold"')}
-<g transform="rotate(-5 100 117)">${text(100,116,'Bolthouse',15,'#fff7eb','font-weight="bold" font-style="italic" letter-spacing="-.7" textLength="70" lengthAdjust="spacingAndGlyphs"')}${text(104,132,'Farms',15,'#fff7eb','font-weight="bold" font-style="italic" letter-spacing="-.8"')}</g>
-<path d="M59 145 140 138 140 180 60 188Z" fill="#cc426a"/>
-${text(100,159,'STRAWBERRY',9,'#ffdba7','font-weight="900" textLength="67" lengthAdjust="spacingAndGlyphs" transform="rotate(-5 100 159)"')}
-${text(100,171,'BANANA',9,'#ffdba7','font-weight="900" transform="rotate(-5 100 171)"')}
-<path d="M70 181 132 176v10l-62 6Z" fill="#fff8ef"/>
-${text(101,186,'100% JUICE SMOOTHIE',4.8,'#cf4a77','font-weight="bold" textLength="57" lengthAdjust="spacingAndGlyphs" transform="rotate(-5 101 186)"')}
-${text(100,222,'450 mL (15.2 FL OZ)',4,'#ffe2d3')}
-<path d="${bottleShape}" fill="${ref('shade')}" opacity=".73"/>
-<path d="M68 101 70 219" stroke="#fff" stroke-opacity=".24" stroke-width="3"/><path d="M134 103 132 218" stroke="#fff" stroke-opacity=".16" stroke-width="1.7"/>
-</g>
-<path d="M78 44h44M79 48h42" stroke="#e8e9df" stroke-opacity=".8" stroke-width="1.7"/>
-<rect x="77" y="25" width="46" height="17" rx="4" fill="${ref('cap')}"/>
-<ellipse cx="100" cy="26" rx="22" ry="4.5" fill="#fc587b"/>
-${Array.from({length:20},(_,i)=>`<path d="M${79+i*2.2} 29v10" stroke="${i%2?'#f88195':'#b9254c'}" stroke-opacity=".65" stroke-width=".7"/>`).join('')}
-<rect x="77" y="40" width="46" height="7" rx="2" fill="#e94068"/>
-<path d="M80 46h40" stroke="#f994a5" stroke-width="1.2"/>
-<path d="M67 226q33 9 66 0" fill="none" stroke="#f3ada1" stroke-opacity=".5" stroke-width="1.4"/>
-`, `<clipPath id="__ID__bottleclip"><path d="${bottleShape}"/></clipPath>
-<linearGradient id="__ID__smoothie"><stop stop-color="#ab666a"/><stop offset=".25" stop-color="#d39187"/><stop offset=".58" stop-color="#c27f79"/><stop offset="1" stop-color="#a9626b"/></linearGradient>
-<linearGradient id="__ID__berry"><stop stop-color="#c82c3a"/><stop offset=".38" stop-color="#ee4c4c"/><stop offset="1" stop-color="#b82342"/></linearGradient>
-<linearGradient id="__ID__cap"><stop stop-color="#d52c56"/><stop offset=".25" stop-color="#fb5176"/><stop offset=".65" stop-color="#f33362"/><stop offset="1" stop-color="#b9234a"/></linearGradient>`);
 
 export const records=[
  record('jamba-juice-mango-a-go-go','cafe-smoothie-cup','US Jamba Mango-a-go-go, open clear tapered cup with orange straw as shown in official front thumbnail; serving volume not specified by image.',[
  reference('https://www.jamba.com/menu/smoothies/mango-a-go-go','https://ctfassets.gotofoods.com/zqt8tllj2cy0/2wpTdxyro3vLc2jc7GndlF/b4a7ed95da704b2676807244ed0b4bcc/JAM-mango-a-go-go-thumbnail-544x544.png','Inspected exact-product front thumbnail extracted from manufacturer page: golden yellow thick smoothie, clear tapered cup, raised upper ridges and lip, white descending spiral mark, orange straw, open top with smoothie crest. No lid, ice cubes, garnish or wordmark visible.'),
  reference('https://www.jamba.com/menu/smoothies/mango-a-go-go','https://ctfassets.gotofoods.com/zqt8tllj2cy0/17tqyeqSRWivAi0fPnISiY/25550aa66cca9ea3f3ecf3a5d3e25918/746x600_Mango-a-go-go_OH.png','Inspected exact-product overhead hero: creamy mango-yellow folded/swirl surface, orange straw and clear rim; confirms top treatment and consistency. Frontal thumbnail establishes the cup geometry and branding.')
  ],jamba,'Manufacturer menu image has no serving-size annotation; volume deliberately unspecified. Perspective adapted to shared Bevi slightly elevated front view. Final aesthetic and native review pending.'),
- record('bolthouse-farms-strawberry-banana','smoothie-pet-bottle','US 450mL / 15.2 fl oz Bolthouse Farms Strawberry Banana juice smoothie, pink label and red screw cap.',[
- reference('https://www.bolthouse.com/product/strawberry-banana/','https://www.bolthouse.com/wp-content/uploads/sites/4/2016/01/071464270407_bhf_us_bev_15_pi_blnd_sb_front_520x720.png-260x360.png','Inspected manufacturer front image: narrow PET bottle with round shoulders, ribbed red/pink cap and tamper ring, pink sleeve, strawberries and banana at shoulder, white NO SUGAR ADDED circle, white two-line Bolthouse Farms script, darker pink STRAWBERRY BANANA band, angled white 100% JUICE SMOOTHIE stripe, muted strawberry smoothie at base. Bottom visibly reads 450mL / 15.2 FL OZ.')
- ],bolthouse,'Representative US single-serve package selected because catalog lacks size. Manufacturer source is a small image; typography and fruit motifs are simplified while retaining observed layout. Final aesthetic and native review pending.')
 ];
