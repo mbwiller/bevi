@@ -265,19 +265,27 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
 
   async function create(input: CreateBevInput): Promise<Bev> {
     await requireUserId(client);
-    const { data, error } = await client
-      .rpc(input.nutrition ? 'create_bev_with_nutrition' : 'create_bev', {
-        p_name: input.name,
-        p_brand: input.brand ?? null,
-        p_flavor: input.flavor ?? null,
-        p_category_id: input.categoryId,
-        p_price_tier: input.priceTier,
-        p_price_estimated: input.priceEstimated,
-        p_photo_asset_id: input.photoAssetId,
-        p_label_asset_id: input.labelAssetId ?? null,
-        ...(input.nutrition ? { p_nutrition: input.nutrition } : {}),
-      })
-      .single();
+    const args = {
+      p_name: input.name,
+      p_brand: input.brand ?? null,
+      p_flavor: input.flavor ?? null,
+      p_category_id: input.categoryId,
+      p_price_tier: input.priceTier,
+      p_price_estimated: input.priceEstimated,
+      p_photo_asset_id: input.photoAssetId,
+      p_label_asset_id: input.labelAssetId ?? null,
+    };
+    const rpcName = input.nutrition ? 'create_bev_with_nutrition' : 'create_bev';
+    let result = await client.rpc(rpcName, {
+      ...args,
+      ...(input.nutrition ? { p_nutrition: input.nutrition } : {}),
+    }).single();
+    // The migration is applied manually after the backend deploy. If it is not
+    // there yet, preserve Bev creation and omit only the optional snapshot.
+    if (input.nutrition && result.error?.code === 'PGRST202') {
+      result = await client.rpc('create_bev', args).single();
+    }
+    const { data, error } = result;
     if (error) throw mapError(error);
     snapshots.invalidate();
     const created = data as { id: string };

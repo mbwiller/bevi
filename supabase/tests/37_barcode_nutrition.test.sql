@@ -1,5 +1,5 @@
 begin;
-select plan(21);
+select plan(23);
 insert into auth.users (id,email,raw_user_meta_data,aud,role) values
  ('00000000-0000-4000-8000-0000000fb0a1','pgtapnutrition1@users.bevi.app','{"invite_code":"local-test-invite-code"}','authenticated','authenticated'),
  ('00000000-0000-4000-8000-0000000fb0a2','pgtapnutrition2@users.bevi.app','{"invite_code":"local-test-invite-code"}','authenticated','authenticated');
@@ -43,5 +43,33 @@ select throws_ok($$ select public.create_bev_with_nutrition('Extra keys',null,nu
 select throws_ok($$ select public.create_bev_with_nutrition('Invalid asset',null,null,'soda',2::smallint,false,'someone-elses-photo',null,current_setting('test.nutrition')::jsonb) $$,'22023','BEVI_VALIDATION','original create asset ownership checks still run');
 reset role;
 select is((select count(*)::int from public.bevs where name in ('Invalid negative','Invalid string','Invalid link','Missing keys','Extra keys','Invalid asset')),0,'failed submissions never leave orphan Bevs');
+-- Merging a scanned duplicate carries its snapshot to a destination with none,
+-- while retaining the destination's own snapshot when both sides have one.
+insert into public.bevs (id, name, category_id, photo_path, price_tier, status, source) values
+ ('00000000-0000-4000-8000-0000000fb101','Nutrition Merge Source','water','nutrition/source.jpg',1,'active','seed'),
+ ('00000000-0000-4000-8000-0000000fb102','Nutrition Merge Empty','water','nutrition/empty.jpg',1,'active','seed'),
+ ('00000000-0000-4000-8000-0000000fb103','Nutrition Merge Source Two','water','nutrition/source-two.jpg',1,'active','seed'),
+ ('00000000-0000-4000-8000-0000000fb104','Nutrition Merge Destination Two','water','nutrition/destination-two.jpg',1,'active','seed');
+insert into public.bev_nutrition (bev_id, nutrition, source, created_at) values
+ ('00000000-0000-4000-8000-0000000fb101',
+  '{"barcode":"012345678901","productName":"Carry source","basis":"Per serving (355 ml)","sourceUrl":"https://world.openfoodfacts.org/product/012345678901","calories":20,"fatGrams":null,"carbohydrateGrams":5,"sugarGrams":4,"proteinGrams":null,"sodiumMg":10}',
+  'openfoodfacts','2025-01-02T03:04:05Z'),
+ ('00000000-0000-4000-8000-0000000fb103',
+  '{"barcode":"111111111111","productName":"Discarded source","basis":"Per 100 g / 100 ml (as listed)","sourceUrl":"https://world.openfoodfacts.org/product/111111111111","calories":40,"fatGrams":null,"carbohydrateGrams":10,"sugarGrams":8,"proteinGrams":null,"sodiumMg":20}',
+  'openfoodfacts','2025-02-03T04:05:06Z'),
+ ('00000000-0000-4000-8000-0000000fb104',
+  '{"barcode":"222222222222","productName":"Keep destination","basis":"Per 100 g / 100 ml (as listed)","sourceUrl":"https://world.openfoodfacts.org/product/222222222222","calories":60,"fatGrams":null,"carbohydrateGrams":15,"sugarGrams":12,"proteinGrams":null,"sodiumMg":30}',
+  'openfoodfacts','2025-03-04T05:06:07Z');
+select public.merge_bev('00000000-0000-4000-8000-0000000fb101','00000000-0000-4000-8000-0000000fb102');
+select ok((select n.nutrition->>'productName' = 'Carry source'
+                  and n.source = 'openfoodfacts'
+                  and n.created_at = '2025-01-02T03:04:05Z'::timestamptz
+             from public.bev_nutrition n where n.bev_id = '00000000-0000-4000-8000-0000000fb102'),
+          'merge carries nutrition, source and created_at to an empty destination');
+select public.merge_bev('00000000-0000-4000-8000-0000000fb103','00000000-0000-4000-8000-0000000fb104');
+select ok((select n.nutrition->>'productName' = 'Keep destination'
+                  and n.created_at = '2025-03-04T05:06:07Z'::timestamptz
+             from public.bev_nutrition n where n.bev_id = '00000000-0000-4000-8000-0000000fb104'),
+          'merge keeps the destination snapshot when both Bevs have nutrition');
 select * from finish();
 rollback;
