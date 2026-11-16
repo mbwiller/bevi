@@ -209,18 +209,25 @@
     },
     {
       "slug": "aw-cream-soda",
-      "family": "aw-pet-bottle",
-      "packageChoice": "Representative US 20 fl oz / 591mL A&W Cream Soda PET bottle; exact inspected package.",
+      "family": "aw-soda-can",
+      "packageChoice": "Current US 12 fl oz (355 mL) A&W Cream Soda can, not the 20 oz bottle the old icon showed: the Good A&W Zero Sugar (aw-diet-root-beer) icon is this can, and the A&W regulars must sit beside it as the same package.",
       "references": [
         {
           "pageUrl": "https://www.rootbeer.com/",
-          "imageUrl": "https://www.rootbeer.com/images/catalog/cream-on.png",
-          "inspectedAt": "2026-11-11",
+          "imageUrl": "https://s7d1.scene7.com/is/image/kdrp/AW_CreamSoda_12oz_Can_Dry?%24Dynamic-PublicURL-PNG%24=&hei=1600&wid=1600",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Exact manufacturer A&W Cream Soda bottle inspected: brown ribbed screw cap, broad rounded PET with molded A&W shoulder and lobed base; transparent golden soda, pale cream label, oval white/brown/orange A&W and brown Cream Soda. Chosen manufacturer20oz bottle rather than assuming a can."
+          "observations": "Manufacturer front packshot (1600 x 1600, Keurig Dr Pepper image server) of the 12 oz can. Pale cream-yellow body, mottled, with soft orange streaks fanning out from behind the logo and a warmer tone at the edges. The tilted A&W oval logo in the middle, the same as on the root beer can; \"Cream Soda\" in a heavy orange serif with a dark brown outline below it. No foam and no other front text."
+        },
+        {
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:A%26W_Root_Beer_logo.svg",
+          "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/06/A%26W_Root_Beer_logo.svg/1920px-A%26W_Root_Beer_logo.svg.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+          "inspectedAt": "2026-11-16",
+          "visuallyInspected": true,
+          "observations": "Wikimedia Commons flat vector of the A&W Root Beer logo, opened as its 1920 x 1318 PNG render. The tilted inner oval matches the can mark: brown outline, white field, orange-red crescent at the lower left, brown crescent at the upper right, brown A&W with gold shadows and an orange &. It adds an outer gold band reading SINCE 1919 / ROOT BEER that the can does not use. Taken from it: the letters, &, letter shadows and the two crescents (traced and re-coloured to the can), and the field ellipse; the outer band was not used."
         }
       ],
-      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "uncertainty": "The A&W logo is rebuilt as on the root beer can: rings and field are fitted ellipses, and the letters, &, letter shadows and crescents come from the flat Wikimedia vector (second reference), scaled uniformly so the oval ends sit just inside the can edges. \"Cream Soda\" is set in Georgia Bold at the measured width and baseline (61 units wide, baseline y 187.6), dark brown with a thin light stroke behind, because a trace of the glossy lettering stayed blobby at 56 px; the real face is a heavier serif. The mottled background is simplified to a gradient, an edge tint, twelve faint streaks and a few soft blotches; their exact pattern is not copied.",
       "status": "needs-review",
       "bevId": "9a8a0be9-81a0-5ffb-a5ea-7b9f05cb2a82",
       "name": "A&W Cream Soda",
@@ -231,12 +238,12 @@
         "svg": "svg/aw-cream-soda.svg",
         "portableSvg": "portable-svg/aw-cream-soda.svg",
         "png": "png/aw-cream-soda.png",
-        "svgSha256": "3eb03d85295f5ec0d61743893c384e6d7f820e462c279a3a331292551ca28abc",
-        "portableSvgSha256": "e812ac38c76c58b949ac7b90d08b74c9ed2a30d32a05f1464e92a2eea84d0a75",
-        "pngSha256": "12ff73b6f75cafc2c0a1b76b565216d15caed6b581ac72680496bb1d32b4491d",
-        "pngBytes": 109777
+        "svgSha256": "a98fb88c827d69a9b6a1ba6f8a97778cf86a63d09f4d9f90fe6afd9b0c60a70d",
+        "portableSvgSha256": "1810812d8cf14edfb5e40bed0b92e52cff1c77e74dfe23822097dce848d43cb2",
+        "pngSha256": "2feddf96abeeb73f8ce30666707b4d0797b0513b9cdb393429a7e5a255351408",
+        "pngBytes": 180865
       },
-      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-mug-rc-aw.mjs"
     },
     {
       "slug": "aw-diet-root-beer",
@@ -271,18 +278,25 @@
     },
     {
       "slug": "aw-root-beer",
-      "family": "aw-pet-bottle",
-      "packageChoice": "Representative US 20 fl oz / 591mL A&W Root Beer PET bottle; exact inspected package.",
+      "family": "aw-soda-can",
+      "packageChoice": "Current US 12 fl oz (355 mL) A&W Root Beer can, not the 20 oz bottle the old icon showed: the Good A&W Zero Sugar (aw-diet-root-beer) icon is this can, and the regular root beer must sit beside it as the same package.",
       "references": [
         {
           "pageUrl": "https://www.rootbeer.com/",
-          "imageUrl": "https://www.rootbeer.com/images/catalog/aw-on.png",
-          "inspectedAt": "2026-11-11",
+          "imageUrl": "https://s7d1.scene7.com/is/image/kdrp/AW_RootBeer_12oz_Can_Dry?%24Dynamic-PublicURL-PNG%24=&hei=1600&wid=1600",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Exact manufacturer A&W Root Beer bottle inspected: brown ribbed screw cap, broad rounded PET with molded A&W shoulder and lobed base; dark amber root beer, wooden-barrel label and creamy foam header, oval white/brown/orange A&W and white ROOT BEER. Chosen manufacturer20oz bottle rather than assuming a can."
+          "observations": "Manufacturer front packshot (1600 x 1600, Keurig Dr Pepper image server) of the 12 oz can. Dark brown wooden barrel staves with vertical seams and grain; creamy root beer foam spills over the top, lower on the left with a drip at centre; a metal hoop shows under the foam at upper right and a riveted hoop near the foot. The tilted A&W oval (brown outline, orange ring, red crescent, white field, brown A&W with orange shadow, red &) fills the middle; ROOT BEER in cream serif capitals with a dark outline and SINCE 1919 below it."
+        },
+        {
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:A%26W_Root_Beer_logo.svg",
+          "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/06/A%26W_Root_Beer_logo.svg/1920px-A%26W_Root_Beer_logo.svg.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+          "inspectedAt": "2026-11-16",
+          "visuallyInspected": true,
+          "observations": "Wikimedia Commons flat vector of the A&W Root Beer logo, opened as its 1920 x 1318 PNG render. The tilted inner oval matches the can mark: brown outline, white field, orange-red crescent at the lower left, brown crescent at the upper right, brown A&W with gold shadows and an orange &. It adds an outer gold band reading SINCE 1919 / ROOT BEER that the can does not use. Taken from it: the letters, &, letter shadows and the two crescents (traced and re-coloured to the can), and the field ellipse; the outer band was not used."
         }
       ],
-      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "uncertainty": "The oval is rebuilt from fitted ellipses and the letters come from the flat Wikimedia vector (second reference), placed by an ellipse fit to the white field on the can; it is scaled so the oval ends sit just inside the can edges, which makes it about 39 percent of the can height (the photo reads slightly taller because the can face is foreshortened). Wood grain, seams, hoops and rivets are simplified by hand from measured positions; foam bubbles are reduced to two tones; the lower edge of the foam is measured column by column on the packshot. ROOT BEER and SINCE 1919 are traced; their dark outline is a stroke.",
       "status": "needs-review",
       "bevId": "a5d8393f-47b3-570f-8edc-ae8917a16888",
       "name": "A&W Root Beer",
@@ -293,12 +307,12 @@
         "svg": "svg/aw-root-beer.svg",
         "portableSvg": "portable-svg/aw-root-beer.svg",
         "png": "png/aw-root-beer.png",
-        "svgSha256": "2b514e349503696ce7ae9256bbbb3b35dd796084954a1a02645ee644096aee46",
-        "portableSvgSha256": "0de0a3c40e47acf27a2d1e4643682b4d478ed2bc30a157821d6681139c315aa6",
-        "pngSha256": "a9067026a716418e236f1f99c8ccacec7b1c4722a5734cbc9a3a9a663950ab85",
-        "pngBytes": 110682
+        "svgSha256": "13a9a5453285a7998fa5d79a667675dc1da270a066ddbfe12dbc3a4153b6e58e",
+        "portableSvgSha256": "8ee78977cc3165f92ffedd5b718f27da4ff17f5cc1c200ee5ab630d3c5572cc6",
+        "pngSha256": "b8df54dfa1b859cc3a4289f25e02577e2c77afa5051681b13a257867445ec070",
+        "pngBytes": 162691
       },
-      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-mug-rc-aw.mjs"
     },
     {
       "slug": "agua-fresca-jamaica",
@@ -1116,17 +1130,17 @@
     {
       "slug": "naked-juice-blue-machine",
       "family": "naked-smoothie-bottle",
-      "packageChoice": "US 15.2 fl oz / 450mL Naked Blue Machine, current manufacturer Boosted Smoothie / Machine package.",
+      "packageChoice": "Naked Boosted Smoothie Blue Machine, 15.2 fl oz single-serve PET bottle, current 2025 US label; redrawn on the round-3 Naked bottle so it matches Green Machine and its siblings.",
       "references": [
         {
           "pageUrl": "https://www.nakedsmoothie.com/our-products/machines/blue-machine",
           "imageUrl": "https://www.nakedsmoothie.com/storage/app/media/2025/products/machine-blue.png",
-          "inspectedAt": "2026-11-04",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Separate manufacturer current 15.2oz Blue Machine photo inspected: wide blue cap, purple/magenta smoothie in clear stout bottle, light-blue wrap, Naked white/blue banner, BOOSTED SMOOTHIE and bold blue BLUE MACHINE; apple slices, blueberries and banana slices. Juice is purple, not blue; current fiber/vitamin variant explicitly recorded."
+          "observations": "Front packshot of the 15.2 fl oz PET bottle: deep purple juice above and below a tall light-blue watercolor label, blue ribbed cap. Naked banner and wordmark, BOOSTED SMOOTHIE, BLUE / MACHINE in mid blue, swirl arrow, FIBER & 6 ESSENTIAL VITAMINS & MINERALS box, 250 cals, two-line ingredient statement (3 juices), fruit: blueberries, two banana slices and two red apple wedges, no added sugar badge, 15.2 FL OZ (450 mL)."
         }
       ],
-      "uncertainty": "Current manufacturer flavor variant is explicitly selected; catalog has no formula/vintage metadata. This does not assert nutritional equivalence with older Naked Juice labels. Current Boosted Smoothie/Machine wording retained, nutritional claims omitted. Each exact variant reference visually inspected; representative US package chosen because catalog does not specify size. Brand lettering, fruit art and small print simplified original vectors with pinned fonts. Final aesthetic approval and native-device review pending.",
+      "uncertainty": "Banner, wordmark, swirl, box, badge and ring are the round-3 traces shared with Green Machine (their positions on Blue Machine differ by about 2 units at most); title and calorie line are traces of this packshot; the ingredient statement is squeezed Arial Bold; the fruit photo is redrawn as shapes in three tones. The watercolor texture of the label is reduced to a gradient. The packshot shows no blackberries, so none are drawn.",
       "status": "needs-review",
       "bevId": "3ad2c20f-853d-5c20-ac4f-199e1f2716f8",
       "name": "Blue Machine",
@@ -1137,12 +1151,12 @@
         "svg": "svg/naked-juice-blue-machine.svg",
         "portableSvg": "portable-svg/naked-juice-blue-machine.svg",
         "png": "png/naked-juice-blue-machine.png",
-        "svgSha256": "41ddb3688ae70d720fb9d5aad41c375dda72f936c94cfbc4c4bc66a00ba7ba39",
-        "portableSvgSha256": "5a49e41bd1e5072ba7ca6b05aef629cd5ca96a00ce48a50fd23a42225abe4634",
-        "pngSha256": "a3258df01fdd88e8fadf384cbf24579c872adec446cf1156dcd17c9a8fb27fd3",
-        "pngBytes": 112002
+        "svgSha256": "fc770b6526a199adb82097508a3c5dc523240b61a3ca326134e2d2e727dc8441",
+        "portableSvgSha256": "4719bebdac6e174da6749620a5f6126f6223292e599f1562a3063feb639cad7d",
+        "pngSha256": "c1cde0a99e9516c4e67713e2151c2895eec2b37b27a0d216b549bf33bfc469e7",
+        "pngBytes": 119383
       },
-      "sourceModule": "scripts/icons/families/juice-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-prime-blue-machine.mjs"
     },
     {
       "slug": "blue-moon-belgian-white",
@@ -2687,18 +2701,18 @@
     },
     {
       "slug": "ocean-spray-cran-grape",
-      "family": "researched-juice-expansion",
-      "packageChoice": "US 64 fl oz / 1.89L Ocean Spray Cran-Grape PET bottle.",
+      "family": "ocean-spray-juice-bottle",
+      "packageChoice": "The 64 fl oz (1.89 L) PET bottle, current US retail design, the same bottle as the rest of the family.",
       "references": [
         {
           "pageUrl": "https://www.oceanspray.com/products/cran-grape-grape-cranberry-juice-drink-64-oz",
           "imageUrl": "https://images.ctfassets.net/fk5croonv4b3/5V36jD12CgAYMRodC39DtH/27a2838015bde945d7062afacc9c4462/64oz_OS_CranGrape_front_00002_0000032233__7868_.png",
-          "inspectedAt": "2026-11-12",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Exact manufacturer64oz photo individually inspected: short white/gray screw cap, broad rounded ribbed shoulder, waist/grip sides and wide straight lower body. Dark burgundy drink, purple CRAN x GRAPE banner with purple grapes. Blue oval Ocean Spray brand on clear shoulder, blue/white splashing water lower label with red cranberries. Regular juice drink/cocktail, not Diet or100% Juice. Source PNG metadata checksum required macOS decoding for inspection; artwork is independent SVG."
+          "observations": "Same bottle and Ocean Spray oval as Cranberry, with darker purple-red juice. Purple name block reaching the right label edge with CRAN x GRAPE in condensed white capitals; the same blue wave splash with cranberries and about eight dark purple grapes; Grape Cranberry Flavored Juice Drink fine print, 100% VITAMIN C, 64 FL OZ (1.89 L), 100 CALORIES badge."
         }
       ],
-      "uncertainty": "Catalog does not specify size; representative US package selected. Product lettering and fruit graphics are simplified original vectors; small legal/nutrition copy omitted.  Final aesthetic approval and web-device review pending.",
+      "uncertainty": "Grapes and cranberries are placed from measured positions; grapes are drawn as three-tone bodies with a bloom highlight. The two fine-print lines are hairlines; the TM is left out.",
       "status": "needs-review",
       "bevId": "603d2423-a343-5d01-9821-3bf5402a89e8",
       "name": "Cran-Grape",
@@ -2709,27 +2723,27 @@
         "svg": "svg/ocean-spray-cran-grape.svg",
         "portableSvg": "portable-svg/ocean-spray-cran-grape.svg",
         "png": "png/ocean-spray-cran-grape.png",
-        "svgSha256": "5509fe8c0b368bffeb6110a245f8e9b2b27bee04591d134f38841befec6fc926",
-        "portableSvgSha256": "4adbee4004d2fa9443dc8d04902e28666a2665fa6fa159b67331ec46446b6cd3",
-        "pngSha256": "27712da1146d0841cc7b9785b68a0129df29cbb0eba589a2aa8e9942dacb2b32",
-        "pngBytes": 148888
+        "svgSha256": "fa1f816e35925451c37c37ea6bb4dacbd3d7bd496d05788256391b4773ad4db1",
+        "portableSvgSha256": "6bc0c8952cac4d8c573d6ea463a5d4a76af8f3a21e89026af8cb0948ee0cfad3",
+        "pngSha256": "66eee2e581a7deeb0cd05f5c0ced0ffbb7b0263b795228d40be8853cecefe164",
+        "pngBytes": 157990
       },
-      "sourceModule": "scripts/icons/families/juice-final-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-ocean-spray.mjs"
     },
     {
       "slug": "ocean-spray-cran-raspberry",
-      "family": "researched-juice-expansion",
-      "packageChoice": "US 64 fl oz / 1.89L Ocean Spray Cran-Raspberry PET bottle.",
+      "family": "ocean-spray-juice-bottle",
+      "packageChoice": "The 64 fl oz (1.89 L) PET bottle, current US retail design, the same bottle as the rest of the family.",
       "references": [
         {
           "pageUrl": "https://www.oceanspray.com/products/cran-raspberry-cranberry-raspberry-juice-drink-64-oz",
           "imageUrl": "https://images.ctfassets.net/fk5croonv4b3/4x5GZfDZnvbnfbmZOB35MZ/8a88e3b0c4564e9aa5c819fed0ef28a5/64oz_OS_CranRaspberry_front_00002_0000032263__7870_.png",
-          "inspectedAt": "2026-11-12",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Exact manufacturer64oz photo individually inspected: short white/gray screw cap, broad rounded ribbed shoulder, waist/grip sides and wide straight lower body. Burgundy-red drink, pink CRAN x RASPBERRY banner with raspberries. Blue oval Ocean Spray brand on clear shoulder, blue/white splashing water lower label with red cranberries. Regular juice drink/cocktail, not Diet or100% Juice. Source PNG metadata checksum required macOS decoding for inspection; artwork is independent SVG."
+          "observations": "Same bottle and Ocean Spray oval as Cranberry, with deep red juice. Pink name block on a magenta outer band, CRAN x RASPBERRY in condensed white capitals; the blue wave splash with cranberries and about five raspberries, some with green calyx tips; Cranberry Raspberry Flavored Juice Drink fine print, 100% VITAMIN C, 64 FL OZ (1.89 L), 100 CALORIES badge."
         }
       ],
-      "uncertainty": "Catalog does not specify size; representative US package selected. Product lettering and fruit graphics are simplified original vectors; small legal/nutrition copy omitted.  Final aesthetic approval and web-device review pending.",
+      "uncertainty": "Raspberries are built from ten drupelets each on a dark body with a small calyx, placed from measured positions. Fine print is hairlines; the TM is left out.",
       "status": "needs-review",
       "bevId": "cb32e51b-c848-5ebf-b892-b1d5f75b0694",
       "name": "Cran-Raspberry",
@@ -2740,27 +2754,27 @@
         "svg": "svg/ocean-spray-cran-raspberry.svg",
         "portableSvg": "portable-svg/ocean-spray-cran-raspberry.svg",
         "png": "png/ocean-spray-cran-raspberry.png",
-        "svgSha256": "78179b3b54796d4c015c3b88067c7eee12f1e445fed76479aa9e6996803ff689",
-        "portableSvgSha256": "81bb8c42b752266091feece02dd98d252e3837c47798e1f500f95b75b3b0dca0",
-        "pngSha256": "088b2b5e9991e87ba1eb3ff63e288b75735822a80cad5cc313d9b283246f9140",
-        "pngBytes": 148601
+        "svgSha256": "de1e3fc54ab70d723170c032281f89d2c8257f7e162fb28fde25b1f00ab6118c",
+        "portableSvgSha256": "5bf169c82b0ecee4fff04229d9f1dc88a05dbdd69814dae2b8779e7014fb81af",
+        "pngSha256": "0f21c885c21c559cb5488e45cba3f34f63e7f3a6d2d854da5a97e643c28f10a3",
+        "pngBytes": 157963
       },
-      "sourceModule": "scripts/icons/families/juice-final-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-ocean-spray.mjs"
     },
     {
       "slug": "ocean-spray-cranberry-juice-cocktail",
-      "family": "researched-juice-expansion",
-      "packageChoice": "US 64 fl oz / 1.89L Ocean Spray Cranberry Juice Cocktail PET bottle.",
+      "family": "ocean-spray-juice-bottle",
+      "packageChoice": "The 64 fl oz (1.89 L) PET bottle, current US retail design: the multi-serve bottle the brand is known by and the one the old record named.",
       "references": [
         {
           "pageUrl": "https://www.oceanspray.com/products/cranberry-juice-cocktail-64-oz",
           "imageUrl": "https://images.ctfassets.net/fk5croonv4b3/7eJjV4XFIn6vua5J7prv5y/ae24c86258e9142dde7d6032d28dc611/64oz_OS_Cranberry_front_00002_0000032249__7886_.png",
-          "inspectedAt": "2026-11-12",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Exact manufacturer64oz photo individually inspected: short white/gray screw cap, broad rounded ribbed shoulder, waist/grip sides and wide straight lower body. Bright red cranberry cocktail, red THE ORIGINAL CRANBERRY label. Blue oval Ocean Spray brand on clear shoulder, blue/white splashing water lower label with red cranberries. Regular juice drink/cocktail, not Diet or100% Juice. Source PNG metadata checksum required macOS decoding for inspection; artwork is independent SVG."
+          "observations": "Front render of the 64 oz bottle: white ribbed cap, rounded shoulders with molded ripples, waist pinch, dark red juice. Ocean Spray oval (white ring, navy field, blue wave with white crests, white script) high on the shoulder. Label: darker red outer band with a bright red center block holding THE ORIGINAL, CRANBERRY in tall condensed white capitals and JUICE COCKTAIL; below, a blue wave curling to the right with about 30 cranberries splashing, white spray over the block; deep blue foot with 100% VITAMIN C, FROM CONCENTRATE, 64 FL OZ (1.89 L) and a 110 CALORIES badge."
         }
       ],
-      "uncertainty": "Catalog does not specify size; representative US package selected. Product lettering and fruit graphics are simplified original vectors; small legal/nutrition copy omitted.  Final aesthetic approval and web-device review pending.",
+      "uncertainty": "The splash is rebuilt by hand from measured berry positions (30 berries, each a three-tone radial body, glint and blossom dot); spray and water texture are simplified to a few tones and streaks. FROM CONCENTRATE is a hairline; the logo oval is an ellipse fitted to the traced mask.",
       "status": "needs-review",
       "bevId": "3399ed7b-d485-580e-96ba-55b12039266e",
       "name": "Cranberry Juice Cocktail",
@@ -2771,27 +2785,27 @@
         "svg": "svg/ocean-spray-cranberry-juice-cocktail.svg",
         "portableSvg": "portable-svg/ocean-spray-cranberry-juice-cocktail.svg",
         "png": "png/ocean-spray-cranberry-juice-cocktail.png",
-        "svgSha256": "1f25adbdf1eb33e97605cd5353e2e0242055b966ed295a0a51e31fd111453ea8",
-        "portableSvgSha256": "98356d5adedb9be97002a15eb6f75c4b446f29cb1ab807311340d3bc61b66d85",
-        "pngSha256": "ac769f04942ba7141b8f9e43c54999be43c64b78955cb089b23e6bac0e7b278c",
-        "pngBytes": 151060
+        "svgSha256": "d162491045fa1abc62fd6c4535b1c5389250f0b5158875f3003236e3236b2628",
+        "portableSvgSha256": "57ee52e8123e9918523be44786aee84c1b5542bf65428958483a1689f0067609",
+        "pngSha256": "f8783e9646fa572426408ae27493db6d2b4cfc59ef30364f192210ab7653cf1a",
+        "pngBytes": 149779
       },
-      "sourceModule": "scripts/icons/families/juice-final-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-ocean-spray.mjs"
     },
     {
       "slug": "crush-grape",
-      "family": "citrus-soda-pet-bottle",
-      "packageChoice": "Representative US 20 fl oz / 591mL Crush Grape PET bottle; exact inspected package.",
+      "family": "crush-soda-can",
+      "packageChoice": "Current US 12 fl oz can of Crush Grape. The rejected icon was a 20 oz bottle; the 12 oz can is the standard single-serve package and matches its sibling crush-orange and the Good diet-orange-crush can, so the Crush flavours sit together as one package.",
       "references": [
         {
           "pageUrl": "https://www.crushsoda.com/",
-          "imageUrl": "https://www.crushsoda.com/images/products/CRUSH_GRAPE_20.png",
-          "inspectedAt": "2026-11-11",
+          "imageUrl": "https://s7d1.scene7.com/is/image/kdrp/CR_Grape_12oz_Can_Wet?$Dynamic-PublicURL-PNG$&wid=1000&hei=2000",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Exact manufacturer20oz Crush Grape PET inspected: sculpted waist, lobed base, green screw cap, dark purple soda. Full wrap with purple grape clusters, large white Crush outlined green and flavor beneath. Independent variant colors and fruit motifs preserved."
+          "observations": "Keurig Dr Pepper front render of the 12 oz can (source 481 x 960 px): purple can with clusters of dark violet and translucent lavender grapes and green grape leaves along the top and bottom; the same white Crush letters with teal extrusion, here over a dark purple drop shadow; \"Grape\" in white script with a teal shadow below the C-r-u-s-h, right of centre; no other copy on the front."
         }
       ],
-      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "uncertainty": "Crush letters are the round-2 trace placed by the same matrix as crush-orange; \"Grape\" was traced here from the 481 px render, so its edges are softer than the traced Crush letters. Grape clusters are redrawn as circles at measured positions, not each berry of the original; leaves are a single drawn grape-leaf shape. Condensation drops are left out.",
       "status": "needs-review",
       "bevId": "5485e9ea-1b4b-5fc7-8f0e-5948e33df9fc",
       "name": "Crush Grape",
@@ -2802,27 +2816,27 @@
         "svg": "svg/crush-grape.svg",
         "portableSvg": "portable-svg/crush-grape.svg",
         "png": "png/crush-grape.png",
-        "svgSha256": "54d970d63a8fb02039b3a2b0ba7a3f783d2d4fbd30bf06c9eb6fa08521fa169b",
-        "portableSvgSha256": "df209a28563ba89a9fdb71cdfcb180e73bb34ac8590be5c25e8d430f505b67c7",
-        "pngSha256": "c48684dfb14031b3a65ab5126d2b47e2ccdbb38ecaabd5754e17e9127c01a578",
-        "pngBytes": 146150
+        "svgSha256": "951a0a8716ad554fd469123e745125b94c9b0d08377dec8ca7eef35e379d5977",
+        "portableSvgSha256": "e58ca5448e489570ca12e2507f614ec923a2a41909045c59ec6cfcf13dc20132",
+        "pngSha256": "b1bd09c548ab2222b8c468a14fd983fc076d37c7d82e20ea8a51309eecae10fc",
+        "pngBytes": 178153
       },
-      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-squirt-vernors-crush-sunkist.mjs"
     },
     {
       "slug": "crush-orange",
-      "family": "citrus-soda-pet-bottle",
-      "packageChoice": "Representative US 20 fl oz / 591mL Crush Orange PET bottle; exact inspected package.",
+      "family": "crush-soda-can",
+      "packageChoice": "Current US 12 fl oz can of Crush Orange. The rejected icon was a 20 oz bottle; the 12 oz can is the standard single-serve package and the same package as the Good sibling diet-orange-crush (Crush Zero Sugar, redrawn as a 12 oz can in round 2), so the regular drink sits beside it as the same can.",
       "references": [
         {
           "pageUrl": "https://www.crushsoda.com/",
-          "imageUrl": "https://www.crushsoda.com/images/products/CRUSH_ORANGE_20.png",
-          "inspectedAt": "2026-11-11",
+          "imageUrl": "https://s7d1.scene7.com/is/image/kdrp/CR_Orange_12oz_Can_Wet?$Dynamic-PublicURL-PNG$&wid=1000&hei=2000",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Exact manufacturer20oz Crush Orange PET inspected: sculpted waist, lobed base, green screw cap, bright orange soda. Full wrap with orange slices and leaves, large white Crush outlined green and flavor beneath. Independent variant colors and fruit motifs preserved."
+          "observations": "Keurig Dr Pepper front render of the 12 oz can (source 481 x 960 px): orange can with a pattern of red-orange oranges, cut halves and teal leaves on vines across the top and bottom fifth; white Crush letters with a teal extrusion and a red-orange drop shadow and a thin red inline, across the upper middle; \"Orange\" in white script with a teal shadow below it, right of centre; no band, no other copy on the front."
         }
       ],
-      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "uncertainty": "Crush letters and \"Orange\" are the round-2 traces from the Zero Sugar can, placed by a fitted matrix. The fruit pattern is redrawn by hand from positions measured on the render (about 11 oranges and 13 leaves); the exact leaf shapes and vine paths are simplified. Condensation drops are left out.",
       "status": "needs-review",
       "bevId": "5a896b9b-e375-5458-87fd-a140d3c147d8",
       "name": "Crush Orange",
@@ -2833,12 +2847,12 @@
         "svg": "svg/crush-orange.svg",
         "portableSvg": "portable-svg/crush-orange.svg",
         "png": "png/crush-orange.png",
-        "svgSha256": "532b52207668954559ef861ec0a24cad48c598034499c413f40da38916730c09",
-        "portableSvgSha256": "3d5d0faf2fe1ec84d6f3281d62f7523f1f7c456bc6c9806f4156d33f97e75131",
-        "pngSha256": "b5a2dc51e8344950ce7825a3aa98c29efe91977e67d37fa7c8f29e3254c2cdd0",
-        "pngBytes": 124024
+        "svgSha256": "5e6dfe69a8ef738dafe9e72c6709d25e1a599e2e2a73854318caa0efa2b92085",
+        "portableSvgSha256": "22429264faaeccd74e4987f8855b73ac33d4ab1e6b1c3bbebab4e520d1386925",
+        "pngSha256": "9e1a9245bd9ba48b9bf3e4529b77cf6d289b436a9c8ad93d0f0369a11381f8b7",
+        "pngBytes": 161063
       },
-      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-squirt-vernors-crush-sunkist.mjs"
     },
     {
       "slug": "cutwater-spirits-margarita",
@@ -3219,17 +3233,17 @@
     {
       "slug": "diet-mountain-dew",
       "family": "mountain-dew-can",
-      "packageChoice": "US 12 fl oz / 355mL Diet Mountain Dew can, current full-name logo and illustrated landscape; representative US size for the size-unspecified catalog row.",
+      "packageChoice": "Standard US 12 fl oz aluminum can in the 2025 \"Mountain Dew\" design, silver Diet livery. Redrawn in round 4 (the earlier icon was sorted Good but used an invented blocky logo) so the four Mountain Dew cans share the real traced 2025 logo.",
       "references": [
         {
-          "pageUrl": "https://www.kroger.com/p/diet-mountain-dew-soda-cans/0001200080997",
-          "imageUrl": "https://www.kroger.com/product/images/large/front/0001200080997",
-          "inspectedAt": "2026-11-02",
+          "pageUrl": "https://www.kroger.com/p/diet-mountain-dew-soda/0001200080997",
+          "imageUrl": "https://www.kroger.com/product/images/xlarge/back/0001200080997",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Separately inspected Diet image: silver/gray can, red DIET above full green MOUNTAIN/red DEW outlined wordmark; white/green/yellow shoulder rays, snowy gray mountains and dark-green pine forest along bottom; small DIETDEW near foot and silver rims. Main face is silver, not Original green."
+          "observations": "Front-on single 12 oz can on a grey field (12-pack listing, back image). Silver body; top rays in white, light and mid greys with one dark green band and a thin yellow one; red DIET (rounded D, lowercase-style e) above the left half of the logo, slanting with it; the 2025 logo in the green-can colors; below, faceted grey mountains, a dark green pine line and a solid green band at the base with a small white DIET DEW."
         }
       ],
-      "uncertainty": "Manufacturer product pages consulted first; direct manufacturer image retrieval was unavailable (403/404). Each current retailer can photo visually inspected independently. Full-name lettering, landscape and flavor artwork are simplified original vector interpretations; condensation and tiny side-panel print simplified. Final aesthetic approval and native-device review pending.",
+      "uncertainty": "DIET is traced from the wet packshot and set at its measured size (about 40 percent of the can width) over the upper left of the logo. DIET DEW at the base is small Arial Bold standing in for the condensed type. The grey mountain facets are simplified to about six shapes.",
       "status": "needs-review",
       "bevId": "3d372168-321c-5bb6-be06-b548c208c636",
       "name": "Diet Mountain Dew",
@@ -3240,12 +3254,12 @@
         "svg": "svg/diet-mountain-dew.svg",
         "portableSvg": "portable-svg/diet-mountain-dew.svg",
         "png": "png/diet-mountain-dew.png",
-        "svgSha256": "74c8651b75ae7e303ca35875d7b76af3b931ee6965098ff48d7d915547daae4a",
-        "portableSvgSha256": "4c59b5fc2975c04bc5049c353f11c9b871cc5db2e6d81c98fae58960ef314c59",
-        "pngSha256": "31bb61d002d8369d79d3f4a3219e363b570609ff537bff2347d75b6f8168a0c4",
-        "pngBytes": 181594
+        "svgSha256": "6dd7083be19de8a83e8ca345420a74f48a348e1379c7e8002fd2c7b181bd9ce7",
+        "portableSvgSha256": "410c10af30e7b289e9b8193bc82c485594ed03c43bf6477686effc9e69928fd2",
+        "pngSha256": "26ac98fce6b648f60a98e7b42585ca6c19ea36eff25c9caf5e31fc60e7187114",
+        "pngBytes": 143484
       },
-      "sourceModule": "scripts/icons/families/mountain-dew.mjs"
+      "sourceModule": "scripts/icons/families/redraw-mountain-dew.mjs"
     },
     {
       "slug": "diet-mug-root-beer",
@@ -6789,17 +6803,24 @@
     {
       "slug": "mountain-dew",
       "family": "mountain-dew-can",
-      "packageChoice": "US 12 fl oz / 355mL Mountain Dew Original can, current full-name logo and illustrated landscape; representative US size for the size-unspecified catalog row.",
+      "packageChoice": "Standard US 12 fl oz aluminum can in the 2025 \"Mountain Dew\" design (on shelf since spring 2025), green flavor livery; same design generation as the Good diet-mountain-dew icon.",
       "references": [
         {
           "pageUrl": "https://www.kroger.com/p/mountain-dew-soda-cans/0001200080996",
-          "imageUrl": "https://www.kroger.com/product/images/large/front/0001200080996",
-          "inspectedAt": "2026-11-02",
+          "imageUrl": "https://www.kroger.com/product/images/xlarge/back/0001200080996",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Inspected retailer image: green 12oz can with new full MOUNTAIN over red DEW wordmark, slanted upward, white/yellow/dark-green outline; white/green/yellow shoulder rays, mountain scene and dark pine forest at foot, teal water detail, silver lid and foot. Uses full-name package rather than legacy MTN DEW."
+          "observations": "Front-on single 12 oz can on a green field (12-pack listing, back image). Green body; top third is a fan of green, light-green, white and yellow rays; the 2025 logo (white panel, yellow outline, dark green border, black extrusion, dark green MOUNTAIN with leaf-dotted i, red DEW, red est. 1948) slants up to the right and wraps from edge to edge, its M compressed by the curve, spanning about 16% to 77% of the can height; below it light-green mountain shapes and a dark pine tree line along the base."
+        },
+        {
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Mountain_Dew_2025_logo.svg",
+          "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/Mountain_Dew_2025_logo.svg/3840px-Mountain_Dew_2025_logo.svg.png",
+          "inspectedAt": "2026-11-16",
+          "visuallyInspected": true,
+          "observations": "Flat vector of the 2025 logo, used to trace the mark; colors #064724, #cb203c, #f5e32c, white, black extrusion."
         }
       ],
-      "uncertainty": "Manufacturer product pages consulted first; direct manufacturer image retrieval was unavailable (403/404). Each current retailer can photo visually inspected independently. Full-name lettering, landscape and flavor artwork are simplified original vector interpretations; condensation and tiny side-panel print simplified. Final aesthetic approval and native-device review pending.",
+      "uncertainty": "Condensation and the can reflections are left out. The rays and the landscape are simplified to about 30 flat shapes (two light-green peaks and two rows of pines) from measured positions; the real ridge art has more facets. The logo is the flat Commons vector wrapped on the cylinder with a 1.3x vertical stretch measured from the can; slight differences in letter proportion are possible.",
       "status": "needs-review",
       "bevId": "4d46a498-dcea-5dc5-8342-cb091ba36d15",
       "name": "Mountain Dew",
@@ -6810,27 +6831,48 @@
         "svg": "svg/mountain-dew.svg",
         "portableSvg": "portable-svg/mountain-dew.svg",
         "png": "png/mountain-dew.png",
-        "svgSha256": "5b3003c6c5d0296e7c15f489213353da172a5b136ec4cc07d31ec5a728cc85ba",
-        "portableSvgSha256": "3b0195d8a21ecb3b267b1e9c0b4cf9b84ceaf86d095843dd698c5311c8f8a817",
-        "pngSha256": "f37698260a7aacda68daf39cce67bde496e4ce9302f70ba3533e5c5e0b4b8b97",
-        "pngBytes": 175317
+        "svgSha256": "33a3d3f25ed8ff605bd7d5fd1aca306b29f9e40b23f5f0ac25e56d751bec9377",
+        "portableSvgSha256": "9f1195eb3cdd1f754889aceee38eb06c51737265b0474d4d4dc9a9bbb2d00561",
+        "pngSha256": "e2d7f61eb3532d405b526dc0dd9e08ec1a41f8698c736d020bbffd651fa3ecc5",
+        "pngBytes": 142253
       },
-      "sourceModule": "scripts/icons/families/mountain-dew.mjs"
+      "sourceModule": "scripts/icons/families/redraw-mountain-dew.mjs"
     },
     {
       "slug": "mountain-dew-baja-blast",
       "family": "mountain-dew-can",
-      "packageChoice": "US 12 fl oz / 355mL Mountain Dew Baja Blast tropical lime can, current full-name logo and illustrated landscape; representative US size for the size-unspecified catalog row.",
+      "packageChoice": "Standard US 12 fl oz aluminum can in the 2025 \"Mountain Dew\" design, Baja Blast teal livery with tropical lime art (current retail can).",
       "references": [
         {
           "pageUrl": "https://www.kroger.com/p/mountain-dew-baja-blast-soda-cans/0001200013032",
-          "imageUrl": "https://www.kroger.com/product/images/large/front/0001200013032",
-          "inspectedAt": "2026-11-02",
+          "imageUrl": "https://www.kroger.com/product/images/xlarge/back/0001200013032",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Separately inspected Baja Blast image: turquoise/teal 12oz can, green MOUNTAIN/red DEW full-name outlined wordmark, yellow/white shoulder rays, stylized white surf curl, lime slices near shoulder and bottom, yellow base strip; small italic Baja Blast and TROPICAL LIME on lower right, silver rims. Tropical lime Original, not Zero Sugar."
+          "observations": "Front-on single 12 oz can on a teal field (12-pack listing, back image). Teal rays with mint, white and two yellow bands; a wide flat-bottomed white foam cloud with lime bits and a pale teal underside at upper left; the 2025 logo with teal MOUNTAIN, yellow outline and dark teal border; at its lower right a teal swirl, small white italic Baja, large Blast shading white to yellow with a dark outline and a speed streak, TROPICAL LIME and two small yellow lines; below, white foam waves, a yellow band and a cut lime at lower left."
+        },
+        {
+          "pageUrl": "https://www.pepsico.com/innovation/case-studies/2025/meet-the-new-mountain-dew",
+          "imageUrl": "https://digitalassets.pepsico.com/transform/b0968a0d-695a-45d6-9958-13c38e6e6210/mountain-dew-baja-blast-cans?w=1920&q=85",
+          "inspectedAt": "2026-11-16",
+          "visuallyInspected": true,
+          "observations": "PepsiCo photo of two Baja Blast cans on a beach towel (second reference; its lockup shows a larger Baja, possibly an earlier print). Teal body; top rays of teal, mint, yellow and white with a white foam cloud at upper left and a small Taco Bell Original badge; the 2025 logo with teal MOUNTAIN, red DEW, yellow outline and dark teal border; Baja Blast lockup (white italic Baja with a wave swirl, yellow Blast) at the lower right of the logo, then TROPICAL LIME and two small lines; lower third: teal water with white foam lines, a yellow band and lime slices, green at the base."
+        },
+        {
+          "pageUrl": "https://www.pepsico.com/innovation/case-studies/2025/meet-the-new-mountain-dew",
+          "imageUrl": "https://digitalassets.pepsico.com/transform/09b11575-eed7-4253-a5a9-878f5fc9f026/meet-new-mountain-dew_image_456x463_559?w=1200&q=85",
+          "inspectedAt": "2026-11-16",
+          "visuallyInspected": true,
+          "observations": "Dry PepsiCo render of the four flavor 12-packs; the Baja Blast carton shows the Baja (white, dark outline) and Blast (cream to yellow, dark outline) lettering without condensation; traced from here."
+        },
+        {
+          "pageUrl": "https://www.kroger.com/p/mountain-dew-baja-blast-soda-cans/0001200013032",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0001200013032",
+          "inspectedAt": "2026-11-16",
+          "visuallyInspected": true,
+          "observations": "Retailer 12-pack shot confirming the same 2025 can design and colors."
         }
       ],
-      "uncertainty": "Manufacturer product pages consulted first; direct manufacturer image retrieval was unavailable (403/404). Each current retailer can photo visually inspected independently. Full-name lettering, landscape and flavor artwork are simplified original vector interpretations; condensation and tiny side-panel print simplified. Final aesthetic approval and native-device review pending.",
+      "uncertainty": "Baja and Blast are traced from the dry PepsiCo 12-pack render (second reference), where the lockup is the same lettering at other proportions, then scaled to the boxes measured on the can (small Baja, large Blast). TROPICAL LIME is Arial Bold fitted to the measured width. The Taco Bell badge is reduced to a dot with a bell; the two small flavor lines are hairlines.",
       "status": "needs-review",
       "bevId": "b89ae243-600d-5eca-a1a1-b46ff33b114d",
       "name": "Mountain Dew Baja Blast",
@@ -6841,27 +6883,27 @@
         "svg": "svg/mountain-dew-baja-blast.svg",
         "portableSvg": "portable-svg/mountain-dew-baja-blast.svg",
         "png": "png/mountain-dew-baja-blast.png",
-        "svgSha256": "f4d3d792ab8cad4424ff2730919a2afe659964ebbeb479a52956da8b798e4d9e",
-        "portableSvgSha256": "0f9ce9969150a0253a00f38c8eb36cf0d9ea3951f1eb1f2acda4e69550e287f9",
-        "pngSha256": "24f31b17a42037ad3caf7902cc6e7437e57b3168c8b8187c2241f082675fcd5e",
-        "pngBytes": 176628
+        "svgSha256": "10824ad8e2053b333f9c8fa74ec8477cb75ce633648ce1d65f63752ec0435d10",
+        "portableSvgSha256": "f52584b581b9b51f427b0cf87364966791854c83147d2276d5fd26d7a026b82d",
+        "pngSha256": "a7fa1a76c7cec485f0d969cd7fcf529de8e6404e22996d1fa982e917d79648e1",
+        "pngBytes": 144048
       },
-      "sourceModule": "scripts/icons/families/mountain-dew.mjs"
+      "sourceModule": "scripts/icons/families/redraw-mountain-dew.mjs"
     },
     {
       "slug": "mountain-dew-code-red",
-      "family": "soda-expansion-can",
-      "packageChoice": "Representative US 12 fl oz / 355mL Mountain Dew Code Red aluminum can; exact independently inspected package.",
+      "family": "mountain-dew-can",
+      "packageChoice": "Standard US 12 fl oz aluminum can in the 2025 \"Mountain Dew\" design, Code Red cherry livery (current retail can).",
       "references": [
         {
           "pageUrl": "https://www.kroger.com/p/mountain-dew-code-red-soda-can/0001200080998",
-          "imageUrl": "https://www.kroger.com/product/images/large/front/0001200080998",
-          "inspectedAt": "2026-11-12",
+          "imageUrl": "https://www.kroger.com/product/images/xlarge/back/0001200080998",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Exact retailer12oz current full-name package inspected: red/cherry field, cream/red/teal shoulder rays, large burgundy MOUNTAIN and red DEW outlined cream/navy, black CODE RED/CHERRY plaque lower right, red cherries and turquoise water at foot, silver rims. Manufacturer Code Red page confirms cherry but image host returned403. Retail annotations/carton excluded; not Zero Sugar."
+          "observations": "Front-on single 12 oz can on a maroon field (12-pack listing, back image). Top rays in crimson, coral, pink, white and two teals; the 2025 logo with maroon MOUNTAIN, red DEW, a red outline in place of yellow and a maroon border; CODE RED in white on a black block with a cherry drop in the O, CHERRY in white and a small red flavor line at the lower right; maroon lower third with lighter maroon ridges, a large cherry over a teal pool with white wave lines, cherries and white splashes cut by both edges."
         }
       ],
-      "uncertainty": "Catalog size unspecified; chosen package documented. Original simplified vector artwork/lettering; tiny side-panel copy and certification seals omitted. Manufacturer consulted first with documented retailer fallback where retrieval failed. Package revision date unverified. Final aesthetic approval and web-device review pending.",
+      "uncertainty": "CODE RED (with its dark outline and the cherry in the O) and CHERRY are traced from the wet packshot; small edges are slightly rough. The ridges, cherries and splashes are simplified from the wet photo. The small flavor line is reduced to hairlines.",
       "status": "needs-review",
       "bevId": "76ef1cae-bfd3-5680-83ed-9732391bb88f",
       "name": "Mountain Dew Code Red",
@@ -6872,12 +6914,12 @@
         "svg": "svg/mountain-dew-code-red.svg",
         "portableSvg": "portable-svg/mountain-dew-code-red.svg",
         "png": "png/mountain-dew-code-red.png",
-        "svgSha256": "920e3670c19223c85237476dad8182576fdcaa7cc6979a3e4d1ebb39e9b17385",
-        "portableSvgSha256": "79a6f47944618bd3dfa8843107df035b7066674065f2d5c6f63fb0a3dcfdcff4",
-        "pngSha256": "c7f54c0e8755cebdfcf024034d3a425f431b1af5f264e8f99225cf899ef8be0e",
-        "pngBytes": 159014
+        "svgSha256": "a99cb0cbe2b40a357bc28d934d73fb9cf354d9ad58236909236d789d176c536b",
+        "portableSvgSha256": "1141d34f13391cdbbeebe1b67526a2bb6a5079ab98c4049c9704630ca3bc8fa6",
+        "pngSha256": "51097a76cbb59483531b86e30ea697eec98e9af8048f3f43ff6e8bf584801880",
+        "pngBytes": 143455
       },
-      "sourceModule": "scripts/icons/families/soda-final-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-mountain-dew.mjs"
     },
     {
       "slug": "arrowhead-mountain-spring-water",
@@ -6943,18 +6985,18 @@
     },
     {
       "slug": "mug-root-beer",
-      "family": "classic-soda-can",
-      "packageChoice": "Representative US 12 fl oz / 355mL Mug Root Beer aluminum can; exact inspected package.",
+      "family": "mug-soda-can",
+      "packageChoice": "Current US 12 fl oz (355 mL) Mug Root Beer can, the same package as the Good Mug Zero Sugar (diet-mug-root-beer) icon so the two sit together.",
       "references": [
         {
           "pageUrl": "https://www.kroger.com/p/mug-root-beer-caffeine-free-soda-cans/0001200081000",
-          "imageUrl": "https://www.kroger.com/product/images/large/front/0001200081000",
-          "inspectedAt": "2026-11-11",
+          "imageUrl": "https://www.kroger.com/product/images/xlarge/front/0001200081000",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Exact retailer US12oz Mug Original can inspected: brown/tan barrel-like body with cream foamy shoulder, massive cream/gold MUG on red field, tan bulldog face in center, ROOT BEER below and yellow NO CAFFEINE footer. Dog/lettering simplified as original vector shapes; external carton excluded."
+          "observations": "Retailer packshot (1000 x 1000) of the 12-pack carton with one 12 oz can standing in front at the right, its left edge hidden by the carton. Cream-white root beer foam fills the top; a red shield with a gold keyline carries the gold MUG letters and the bulldog with his mug; a dark brown banner with gold edges reads ROOT BEER in white; below, a glass of root beer: amber-brown embossed mug panels, and a dark oval with gold crescents and NO CAFFEINE in gold. A \"160 calories\" badge and \"12 FL OZ (355 mL)\" sit at the right edge."
         }
       ],
-      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "uncertainty": "MUG letters, bulldog, ROOT BEER and the foam outline reuse the round-2 traces from the Zero Sugar can, and the shield, banner, panels and oval reuse its measured geometry; only the colours were re-sampled here, from a small, partly hidden can, so the red and browns are approximate. The calorie badge and the 12 FL OZ line at the right edge are left out (foreshortened small print). Condensation drops are left out.",
       "status": "needs-review",
       "bevId": "1e6ec950-4c34-5a76-890c-e3536bca9043",
       "name": "Mug Root Beer",
@@ -6965,12 +7007,12 @@
         "svg": "svg/mug-root-beer.svg",
         "portableSvg": "portable-svg/mug-root-beer.svg",
         "png": "png/mug-root-beer.png",
-        "svgSha256": "b7055b7356514a46750ed41cf5b7f8612d213cb24477f4c9269dba1762449b2f",
-        "portableSvgSha256": "6b2f56b34a4e695bb467b6e692c36781edc53e37337dcb6c9c35e4a25efec25d",
-        "pngSha256": "1fecfcdd69781c1a12cb07c9128de46a4a01cae1a4cd26657d516945c2a9b619",
-        "pngBytes": 117094
+        "svgSha256": "62be1d3ca944cf3378dc39542e19ec4c26c7fbaf531d4c4564daada770ce8bb8",
+        "portableSvgSha256": "b77a84b33f7a33c1bde11948c43e4c933528daab54d279fafb9e24a21b5de390",
+        "pngSha256": "7a14a3e6734c20a4a1671e018522ba136fd66b9d5a183245fe7eea0146a348aa",
+        "pngBytes": 164488
       },
-      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-mug-rc-aw.mjs"
     },
     {
       "slug": "fiji-natural-artesian-water",
@@ -8060,17 +8102,17 @@
     {
       "slug": "prime-hydration-lemon-lime",
       "family": "prime-hydration-bottle",
-      "packageChoice": "US 16.9 fl oz / 500mL PRIME LEMON LIME Hydration bottle.",
+      "packageChoice": "PRIME Hydration Lemon Lime, 16.9 fl oz (500 mL) single-serve PET bottle, current US sleeve.",
       "references": [
         {
           "pageUrl": "https://drinkprime.com/products/hydration-lemon-lime",
           "imageUrl": "https://drinkprime.com/cdn/shop/products/PrimeHydration_1serve_lemonlime_0000_1200x.png?v=1656076731",
-          "inspectedAt": "2026-11-04",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Manufacturer Lemon Lime Hydration bottle photo separately inspected:16.9floz/500mL contoured bottle, lime-green ribbed cap and opaque lime-green wrap, clear/white neck ring, black shoulder LEMON LIME, huge black sideways vertical PRIME with white perimeter, black HYDRATION DRINK and volume at foot. Hydration product, not Energy can or Zero Hydration."
+          "observations": "Manufacturer front packshot, 1200x1200, of the 16.9 fl oz (500 mL) PET bottle: tall (width:height 0.357), long sloped shoulder, four horizontal grip rings, rounded base, full shrink sleeve with a lighter center and deeper edges, ribbed cap with a flange and a clear neck with a support ring. Flavor name in a wide geometric sans at the top, a small NATURALLY FLAVORED line, the heavy PRIME wordmark stacked vertically down the front, HYDRATION DRINK and 16.9 FL OZ (500ML) at the bottom; legal text and tick marks on the left edge. Lime-green sleeve and cap; black letters with grey sheen and a pale outline; LEMON / LIME on two lines; NATURALLY FLAVORED / NO ARTIFICIAL COLORS."
         }
       ],
-      "uncertainty": "Hydration bottle identity explicitly checked against Energy/Zero Hydration; current reference artwork recorded without claiming all packaging revisions are identical. Exact flavor references separately inspected. Representative US package selected where catalog has no size. Typography, fine package copy and material/fruit details are simplified original vectors; final aesthetic approval and native-device review pending.",
+      "uncertainty": "Wordmark, flavor name, HYDRATION DRINK and the fl oz line are traces of the packshot; the NATURALLY FLAVORED line is Arial Bold squeezed with textLength; the vertical legal text and tick marks on the left edge are omitted; the grip rings are drawn as shaded lines plus the measured notches in the outline. The grey sheen in the letters is reduced to one mid-grey layer.",
       "status": "needs-review",
       "bevId": "039cb6c7-d237-58fb-a420-3372e3bbadb5",
       "name": "Prime Hydration",
@@ -8081,27 +8123,27 @@
         "svg": "svg/prime-hydration-lemon-lime.svg",
         "portableSvg": "portable-svg/prime-hydration-lemon-lime.svg",
         "png": "png/prime-hydration-lemon-lime.png",
-        "svgSha256": "5f04282da909b8757a5def011aab9c60ed5a5c45396feebb2bad0a3535191dd5",
-        "portableSvgSha256": "f91116bc77aa54a0f94a5a5a6ec264b5247ed85ccdb71da7251f42f304272fa7",
-        "pngSha256": "aad434e408909a2b15a329039b434778b7d513315fd1cbccac2a8c8842600501",
-        "pngBytes": 89300
+        "svgSha256": "ca207c16c9cc875e248b4c1f9d41029d491871bbb164f2560ca0120ceb61a038",
+        "portableSvgSha256": "3f2f0e8de29ecb9a26cc250f43210e80b82baac8ae9330c03c7a04f4269e1d2d",
+        "pngSha256": "1f79d4f0889aa00913fddb972444cfc1774f744f43322b28dbb8f1f6be10d38b",
+        "pngBytes": 108885
       },
-      "sourceModule": "scripts/icons/families/hydration-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-prime-blue-machine.mjs"
     },
     {
       "slug": "prime-hydration-blue-raspberry",
       "family": "prime-hydration-bottle",
-      "packageChoice": "US 16.9 fl oz / 500mL PRIME BLUE RASPBERRY Hydration bottle.",
+      "packageChoice": "PRIME Hydration Blue Raspberry, 16.9 fl oz (500 mL) single-serve PET bottle, current US sleeve.",
       "references": [
         {
           "pageUrl": "https://drinkprime.com/products/hydration-blue-raspberry",
           "imageUrl": "https://drinkprime.com/cdn/shop/products/PrimeHydration_1serve_bluerasberry_0000_1200x.png?v=1656076581",
-          "inspectedAt": "2026-11-04",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Manufacturer Blue Raspberry Hydration bottle individually inspected:16.9floz/500mL, cyan cap/opaque cyan wrap, white neck ring, black BLUE RASPBERRY shoulder text, oversized black vertical PRIME white outlined, black HYDRATION DRINK and volume, molded wrap-following ribs. Caffeine-free Hydration, not similarly named Energy."
+          "observations": "Manufacturer front packshot, 1200x1200, of the 16.9 fl oz (500 mL) PET bottle: tall (width:height 0.357), long sloped shoulder, four horizontal grip rings, rounded base, full shrink sleeve with a lighter center and deeper edges, ribbed cap with a flange and a clear neck with a support ring. Flavor name in a wide geometric sans at the top, a small NATURALLY FLAVORED line, the heavy PRIME wordmark stacked vertically down the front, HYDRATION DRINK and 16.9 FL OZ (500ML) at the bottom; legal text and tick marks on the left edge. Sky-blue sleeve and cap; black letters with grey sheen and a pale outline (same artwork and position as Lemon Lime); BLUE / RASPBERRY on two lines; NATURALLY FLAVORED."
         }
       ],
-      "uncertainty": "Hydration bottle identity explicitly checked against Energy/Zero Hydration; current reference artwork recorded without claiming all packaging revisions are identical. Exact flavor references separately inspected. Representative US package selected where catalog has no size. Typography, fine package copy and material/fruit details are simplified original vectors; final aesthetic approval and native-device review pending.",
+      "uncertainty": "Wordmark, flavor name, HYDRATION DRINK and the fl oz line are traces of the packshot; the NATURALLY FLAVORED line is Arial Bold squeezed with textLength; the vertical legal text and tick marks on the left edge are omitted; the grip rings are drawn as shaded lines plus the measured notches in the outline. The wordmark trace is shared with Lemon Lime (the two packshots align pixel for pixel).",
       "status": "needs-review",
       "bevId": "ebce797e-c102-5b74-b4bb-2387d035111c",
       "name": "Prime Hydration",
@@ -8112,27 +8154,27 @@
         "svg": "svg/prime-hydration-blue-raspberry.svg",
         "portableSvg": "portable-svg/prime-hydration-blue-raspberry.svg",
         "png": "png/prime-hydration-blue-raspberry.png",
-        "svgSha256": "8c2f80b3050eb0d7fdf25812833327672f5f208338184b6b56f5ce099c4d34d1",
-        "portableSvgSha256": "77683afd8f3404d1609b51ee1fa8e3f82ee7c81a81c8d45580d179c9b6fdedae",
-        "pngSha256": "a5a07477dc5726932a6a9c7a024d0e18bf99ef16a6dd65d34976c890842e3c4b",
-        "pngBytes": 94650
+        "svgSha256": "9459a9822b15c5b1e00fa74f23584b57b5e1c2d6f9a05e5ab3f916c8e43faa09",
+        "portableSvgSha256": "6861ac0ae1a3f96ca12e61a4ef3e54b226c46d1fa711e768fb5393d8248fa251",
+        "pngSha256": "0209e9d62c1db49a8e5735bff61f27fdbe3290483c29471c40858932958b5efa",
+        "pngBytes": 112151
       },
-      "sourceModule": "scripts/icons/families/hydration-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-prime-blue-machine.mjs"
     },
     {
       "slug": "prime-hydration-ice-pop",
       "family": "prime-hydration-bottle",
-      "packageChoice": "US 16.9 fl oz / 500mL PRIME ICE POP Hydration bottle, documented current summer star-art edition.",
+      "packageChoice": "PRIME Hydration Ice Pop, 16.9 fl oz (500 mL) single-serve PET bottle, standard US sleeve. The standard red, white and blue bottle replaces the summer limited edition (star art, round sticker) that the recorded product page now shows.",
       "references": [
         {
           "pageUrl": "https://drinkprime.com/products/hydration-ice-pop",
-          "imageUrl": "https://drinkprime.com/cdn/shop/files/PH_US_1serve_16.9oz_IcePopDaysofSummer_00000_1200x.png?v=1779213255",
-          "inspectedAt": "2026-11-04",
+          "imageUrl": "https://drinkprime.com/cdn/shop/products/PrimeHydration_1serve_IcePop_0000_1200x.png",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Manufacturer current Ice Pop Hydration16.9floz/500mL front image separately inspected: red cap and shoulder, white central field, cyan lower field with stars throughout; white vertical PRIME with heavy black surround and fine red/blue edge accents, white ICE POP at shoulder, black HYDRATION DRINK/volume below. Current summer star-art package deliberately selected; small anniversary emblem simplified/omitted, not replaced with another flavor."
+          "observations": "Manufacturer front packshot, 1200x1200, of the 16.9 fl oz (500 mL) PET bottle: tall (width:height 0.357), long sloped shoulder, four horizontal grip rings, rounded base, full shrink sleeve with a lighter center and deeper edges, ribbed cap with a flange and a clear neck with a support ring. Flavor name in a wide geometric sans at the top, a small NATURALLY FLAVORED line, the heavy PRIME wordmark stacked vertically down the front, HYDRATION DRINK and 16.9 FL OZ (500ML) at the bottom; legal text and tick marks on the left edge. Ice Pop differs: sleeve in three horizontal bands (red to the shoulder grip ring, white, light blue from the third ring), red cap; the PRIME letters are larger, white with a black outline and a black extrusion to the lower left; ICE POP on one line."
         }
       ],
-      "uncertainty": "Hydration bottle identity explicitly checked against Energy/Zero Hydration; current reference artwork recorded without claiming all packaging revisions are identical. Exact flavor references separately inspected. Representative US package selected where catalog has no size. Typography, fine package copy and material/fruit details are simplified original vectors; final aesthetic approval and native-device review pending.",
+      "uncertainty": "Wordmark, flavor name, HYDRATION DRINK and the fl oz line are traces of the packshot; the NATURALLY FLAVORED line is Arial Bold squeezed with textLength; the vertical legal text and tick marks on the left edge are omitted; the grip rings are drawn as shaded lines plus the measured notches in the outline. The standard-bottle image URL was found by the Shopify filename pattern of the other flavors (the product page itself was rate-limited to my client); it is the same 1200x1200 render series. Band edges drawn straight.",
       "status": "needs-review",
       "bevId": "fe265686-d491-522b-b00b-bf0f6e58bb6c",
       "name": "Prime Hydration",
@@ -8143,12 +8185,12 @@
         "svg": "svg/prime-hydration-ice-pop.svg",
         "portableSvg": "portable-svg/prime-hydration-ice-pop.svg",
         "png": "png/prime-hydration-ice-pop.png",
-        "svgSha256": "df2b397731a556e4abacd16309791eb669af1802c88286a18232685658b962d1",
-        "portableSvgSha256": "26a1cf2a993a2f3183dd853d33d52d46248200530dbe93ba422c6065e5adf669",
-        "pngSha256": "b16aea6a553804a290e6a634cea2964f08cfb14a057ca872b3ae9091e618feac",
-        "pngBytes": 96925
+        "svgSha256": "fd2288ed253744ebd0d33305cf422c44721e4e62550e196eb1e8b0b54d1dcfc3",
+        "portableSvgSha256": "0a9a38215c98f6bb1e55dd38096bb0e6cd52752f9907f1ef24a76b83905d98cb",
+        "pngSha256": "e92efb3a4eaab6e0d7af97a4ce4c89bb559b21f727e89031979d5b8e56b4767a",
+        "pngBytes": 96203
       },
-      "sourceModule": "scripts/icons/families/hydration-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-prime-blue-machine.mjs"
     },
     {
       "slug": "propel-water-berry",
@@ -8476,18 +8518,18 @@
     },
     {
       "slug": "rc-cola",
-      "family": "classic-soda-can",
-      "packageChoice": "Representative US 12 fl oz / 355mL RC Cola aluminum can; exact inspected package.",
+      "family": "rc-cola-can",
+      "packageChoice": "Current US 12 fl oz (355 mL) RC Cola can, the \"Me and My RC\" design. Same package as the Good RC Zero Sugar (diet-rc-cola) icon so the two sit together.",
       "references": [
         {
           "pageUrl": "https://www.myrccola.com/",
           "imageUrl": "https://www.myrccola.com/images/products/RC_COLA_12.png",
-          "inspectedAt": "2026-11-11",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Exact US manufacturer RC COLA12 image inspected: cyan lower body, white/silver upper curved field, blue Me and My, enormous red italic RC, curved white ROYAL CROWN COLA. Silver rims; reference label is representative older US package rather than international red/blue or new blue can."
+          "observations": "Brand-site front packshot (250 x 500) of the 12 oz can. Bright blue body; a white disc fills the upper label and wraps past both sides; \"Me and My\" in blue script over the large orange-red RC; \"ROYAL CROWN COLA • EST. 1905\" in small white capitals curving under the disc; nothing else on the front below."
         }
       ],
-      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "uncertainty": "RC and \"Me and My\" reuse the round-2 vector marks traced from the Zero Sugar can (the same marks), at the size measured on this can; the RC red is a gradient sampled from this smaller packshot. The arc line is Arial on a measured curve. No calorie or volume text is visible on this front, so none is drawn.",
       "status": "needs-review",
       "bevId": "c55098b8-6831-5b29-a7f4-8da515b70af3",
       "name": "RC Cola",
@@ -8498,12 +8540,12 @@
         "svg": "svg/rc-cola.svg",
         "portableSvg": "portable-svg/rc-cola.svg",
         "png": "png/rc-cola.png",
-        "svgSha256": "171ae9cd513ffc3f2cdf7f1a563b18665f5ea09face577854307b8fa4a521faa",
-        "portableSvgSha256": "c60bafd03684b58721dcdccbc7e55675df7aade9a46ebf0eb34d6f12f63d8a4a",
-        "pngSha256": "fb6c68e455577a1c50fe98d5d2cf5841007917aa0bf8ca48db43da978d345ccb",
-        "pngBytes": 96441
+        "svgSha256": "5219552744660f92c79abe8c4ac6d9a6d115117f6f5a930d62b54dece64bb102",
+        "portableSvgSha256": "a5592c9d2b0b8b6cf9069e56d8b94030e52387cbdfad0c226db56a62adce52c5",
+        "pngSha256": "557a5db47194965c8056dd34c3e98ba9a9407ba9727faf18202630e811a80604",
+        "pngBytes": 100213
       },
-      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-mug-rc-aw.mjs"
     },
     {
       "slug": "red-bull-original",
@@ -8848,18 +8890,18 @@
     },
     {
       "slug": "shasta-cola",
-      "family": "soda-expansion-can",
-      "packageChoice": "Representative US 12 fl oz / 355mL Shasta Cola aluminum can; exact independently inspected package.",
+      "family": "shasta-soda-can",
+      "packageChoice": "Current US 12 fl oz / 355 mL Shasta Cola can (the regular range on shastapop.com).",
       "references": [
         {
           "pageUrl": "https://www.shastapop.com/flavors/cola/",
           "imageUrl": "https://www.shastapop.com/wp-content/uploads/2024/07/IMG_Shasta_Cans_Cola.png",
-          "inspectedAt": "2026-11-12",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Exact manufacturer12oz Shasta Cola can independently inspected: red can with orange/red round dots and cream starbursts, huge white diagonal Shasta over Cola with blue outline. Silver rims. Regular flavor, not Zero Sugar; fine legal copy simplified."
+          "observations": "Front-on manufacturer render. Red can covered with a halftone grid of round dots, orange and deeper red, of varying size. Large white \"Shasta Cola\" script on two lines, slanting up to the right, with a thin blue edge on its lower right. White eight-ray sparkles (top centre, right, lower left, lower right) and a few dark-red and orange ones. Blue round Shasta seal cut by the right edge at the top. \"12 FL OZ (355mL)\" small in white at the lower right."
         }
       ],
-      "uncertainty": "Catalog size unspecified; chosen package documented. Original simplified vector artwork/lettering; tiny side-panel copy and certification seals omitted. Manufacturer consulted first with documented retailer fallback where retrieval failed. Package revision date unverified. Final aesthetic approval and web-device review pending.",
+      "uncertainty": "The script and the dot positions are traced and measured from the packshot; dots hidden behind the script are not restored. Sparkles are drawn as regular eight-ray stars. The seal lettering is left out, as on shasta-diet-cola. The ® is omitted.",
       "status": "needs-review",
       "bevId": "d3afe698-87f5-5b53-b843-02ee81906d1e",
       "name": "Shasta Cola",
@@ -8870,12 +8912,12 @@
         "svg": "svg/shasta-cola.svg",
         "portableSvg": "portable-svg/shasta-cola.svg",
         "png": "png/shasta-cola.png",
-        "svgSha256": "5cf9e99d10a58b5c09399271640a3e627579e53480680283c168a0f11ed7769b",
-        "portableSvgSha256": "25922a8a6872afdade9e4a4c2019e925544eb10c7d8a22f5317d6f8554efae25",
-        "pngSha256": "7aad5ec10f2c7f8ce5e21f2f3f65c026142e635e22e00fe5bc4120614cfc280e",
-        "pngBytes": 150030
+        "svgSha256": "624eabbe1eb985766410a6d2677b49c61395b81ff074e43ecd2ef3f13bd2a827",
+        "portableSvgSha256": "7b271144bd5bb30ea8570a0e4445263aa53c7e50e49e57482535c030a8d18eae",
+        "pngSha256": "a7a50a3fc51e7c90df503097740fac7ecdfbe5fddc171d4832316bdf3544b771",
+        "pngBytes": 176744
       },
-      "sourceModule": "scripts/icons/families/soda-final-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-shasta-sprite.mjs"
     },
     {
       "slug": "shasta-diet-cola",
@@ -8910,18 +8952,18 @@
     },
     {
       "slug": "shasta-grape",
-      "family": "soda-expansion-can",
-      "packageChoice": "Representative US 12 fl oz / 355mL Shasta Grape aluminum can; exact independently inspected package.",
+      "family": "shasta-soda-can",
+      "packageChoice": "Current US 12 fl oz / 355 mL Shasta Grape can (the regular range on shastapop.com).",
       "references": [
         {
           "pageUrl": "https://www.shastapop.com/flavors/grape/",
           "imageUrl": "https://www.shastapop.com/wp-content/uploads/2024/07/IMG_Shasta_Cans_Grape.png",
-          "inspectedAt": "2026-11-12",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Exact manufacturer12oz Shasta Grape can independently inspected: purple can with lighter/darker round dot field, large white diagonal Shasta, yellow-green Grape, small white caffeinefree and purple bunch with lime-green stems. Silver rims. Regular flavor, not Zero Sugar; fine legal copy simplified."
+          "observations": "Front-on manufacturer render. Purple can with a halftone grid of lighter and darker purple dots. Large white \"Shasta\" script with a dark purple edge, \"caffeine free\" in small white lowercase at its right, \"Grape\" in a yellow rounded sans below, and \"NATURALLY & ARTIFICIALLY / FLAVORED SODA\" in white condensed capitals. Lower left: a large bunch of crimson grapes, each with a white crescent highlight and a dark crescent shadow, a yellow-green star and a curling tendril above it. Yellow seal cut by the right edge at the top; \"12 FL OZ (355mL)\" small at the lower right."
         }
       ],
-      "uncertainty": "Catalog size unspecified; chosen package documented. Original simplified vector artwork/lettering; tiny side-panel copy and certification seals omitted. Manufacturer consulted first with documented retailer fallback where retrieval failed. Package revision date unverified. Final aesthetic approval and web-device review pending.",
+      "uncertainty": "Script, \"caffeine free\", \"Grape\", star and tendril are traced. The bunch is 15 overlapping discs placed by hand inside the bunch outline measured on the packshot (x 80-363, y 484-778 px), each with a drawn shadow crescent and white highlight crescent, so individual grapes do not sit exactly where the printed ones do. Dot colours are matched to the packshot after shading; dot radii come from per-cell coverage on a 46 px grid. The flavor line is Arial Bold squeezed to its measured width",
       "status": "needs-review",
       "bevId": "59fac707-b933-5a79-b714-5996d496c771",
       "name": "Shasta Grape",
@@ -8932,12 +8974,12 @@
         "svg": "svg/shasta-grape.svg",
         "portableSvg": "portable-svg/shasta-grape.svg",
         "png": "png/shasta-grape.png",
-        "svgSha256": "2c5179a681d5f053fc8e2d7a3f8cc8244bd930c915751e3156aec5f4244ec65a",
-        "portableSvgSha256": "e74b3f529bd3f071c827e49377522b397d3fadb63d63b07cf786ca8a48a31bb5",
-        "pngSha256": "ed3006bc49b031ed4352d571c0c7f00b86a185503531e89b116d237e5b07c054",
-        "pngBytes": 151214
+        "svgSha256": "b0f65d1bd3d0789a5c316a7db7b9ffa4693c2cdd3d9e1c03bb916f27185d5ff1",
+        "portableSvgSha256": "13fc2b372e41c6e3a7b6b86af5cfb83f0bff5c00fca262951fb99a05c5b40fcc",
+        "pngSha256": "97e62448a3a5550feaea69714f8156af4da4f596a9ccf461542951e80694d288",
+        "pngBytes": 191722
       },
-      "sourceModule": "scripts/icons/families/soda-final-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-shasta-sprite.mjs"
     },
     {
       "slug": "snapple-diet-peach-tea",
@@ -9313,18 +9355,18 @@
     },
     {
       "slug": "sprite",
-      "family": "citrus-soda-can",
-      "packageChoice": "US 12 fl oz Original lemon-lime can; current minimalist green/white package.",
+      "family": "sprite-standard-can",
+      "packageChoice": "Current US 12 fl oz / 355 mL Sprite can (the 2022 redesign: green can, oversized wordmark cropped by both sides), as shown on the Coca-Cola US product page.",
       "references": [
         {
           "pageUrl": "https://www.coca-cola.com/us/en/brands/sprite/products",
           "imageUrl": "https://www.coca-cola.com/content/dam/onexp/us/en/brands/sprite/products/en_sprite_prod_12oz-can_750x750_v1.jpg",
-          "inspectedAt": "2026-10-27",
-          "observations": "Manufacturer image visually inspected: green cylindrical standard can, silver rims, oversized italic white Sprite across upper body and small yellow LEMON-LIME with white sparkle low on label. No lemon illustration in this version.",
-          "visuallyInspected": true
+          "inspectedAt": "2026-11-16",
+          "visuallyInspected": true,
+          "observations": "Front-on manufacturer render. Bright green can (#03aa34 at the centre, deeper toward the sides). White \"Sprite\" wordmark set very large across the upper half, its S and e cropped by the left and right edges of the can. Low on the left a small silver spark and \"LEMON-LIME\" in yellow condensed italic capitals. Nothing else on the front."
         }
       ],
-      "uncertainty": "Representative US package selected because catalog has no size. Lettering and fine package details are simplified vector interpretations; final aesthetic and native review pending.",
+      "uncertainty": "The wordmark is the vector already used on the Good sprite-cherry, projected on the cylinder; its crop at each edge follows that icon, which matches this packshot to within about a letter stroke. The spark is the drawn eight-point spark of sprite-cherry, not a trace.",
       "status": "needs-review",
       "bevId": "5f6616d1-5289-570b-ac9a-323c8dcd1dba",
       "name": "Sprite",
@@ -9335,12 +9377,12 @@
         "svg": "svg/sprite.svg",
         "portableSvg": "portable-svg/sprite.svg",
         "png": "png/sprite.png",
-        "svgSha256": "c045e5a2b7d8a0cd75c7f477652195fbf75d13d5decbb527cbdc57aa0105cd84",
-        "portableSvgSha256": "d40bd315668aa929d76ec7afbb01b8d638478610c9c85a60c1c9e502bd42f235",
-        "pngSha256": "d33f08a61c9ed980e24299454f0fab7b5dffa374af0ba78b17c2b9ee8bd4d292",
-        "pngBytes": 93012
+        "svgSha256": "73ef7d4a415cbaacc59e36bd9d52372c4b67898a74a09e4fbb02c31b9778a127",
+        "portableSvgSha256": "ba048daf588a1e0bbb02c990c8f3dde2e6c3e1562408703214fae602eeb665d6",
+        "pngSha256": "55e9aa55326909f6dfadd403234ea842e0d0db6872ffc93ceb73681ec4aee01f",
+        "pngBytes": 99181
       },
-      "sourceModule": "scripts/icons/families/citrus-sodas.mjs"
+      "sourceModule": "scripts/icons/families/redraw-shasta-sprite.mjs"
     },
     {
       "slug": "sprite-cherry",
@@ -9389,18 +9431,18 @@
     },
     {
       "slug": "sprite-zero-sugar",
-      "family": "citrus-soda-can",
-      "packageChoice": "US 12 fl oz Zero Sugar lemon-lime can; green body with black wordmark.",
+      "family": "sprite-standard-can",
+      "packageChoice": "Current US 12 fl oz / 355 mL Sprite Zero Sugar can (2022 design), as shown on the Coca-Cola US product page.",
       "references": [
         {
           "pageUrl": "https://www.coca-cola.com/us/en/brands/sprite/products",
           "imageUrl": "https://www.coca-cola.com/content/dam/onexp/us/en/brands/sprite/products/en_sprite_prod_zero-sugar_12oz-can_750x750_v1.jpg",
-          "inspectedAt": "2026-10-27",
-          "observations": "Manufacturer Zero Sugar image independently inspected: same green standard can silhouette; black Sprite and ZERO SUGAR directly below; small yellow LEMON-LIME and black sparkle. Distinct from white-lettered Original.",
-          "visuallyInspected": true
+          "inspectedAt": "2026-11-16",
+          "visuallyInspected": true,
+          "observations": "Front-on manufacturer render. Same green can and the same oversized wordmark cropped by both edges, printed black. Directly beneath it \"ZERO SUGAR\" in black bold condensed italic capitals, left of centre. Low on the left a black spark and yellow \"LEMON-LIME\"."
         }
       ],
-      "uncertainty": "Representative US package selected because catalog has no size. Lettering and fine package details are simplified vector interpretations; final aesthetic and native review pending.",
+      "uncertainty": "Wordmark shared with sprite and sprite-cherry. ZERO SUGAR and LEMON-LIME are traced from the packshot as they appear on the curved can (not unwrapped).",
       "status": "needs-review",
       "bevId": "72bc7b45-f9f5-5e7e-9ee9-55f374fc778d",
       "name": "Sprite Zero Sugar",
@@ -9411,27 +9453,27 @@
         "svg": "svg/sprite-zero-sugar.svg",
         "portableSvg": "portable-svg/sprite-zero-sugar.svg",
         "png": "png/sprite-zero-sugar.png",
-        "svgSha256": "f1bed7a378b3eac9617acfef5bff6449576c570f3a1e831ebdc8697819180277",
-        "portableSvgSha256": "f9f4b0ec4680f1eb708350decfb13b2b5061e6121112209877ac0b75170ce39d",
-        "pngSha256": "f9b8de4bb0a17dfa58a86774f9146f43740a0b86c83904451a17099ed40acf4f",
-        "pngBytes": 100621
+        "svgSha256": "baca5cb254552843f47dc6107e895380bb6be592690f648231b199c5d20c0b11",
+        "portableSvgSha256": "1cb413415eded9e35fa270c7031333420c1ca8d2d5041af3488f1bd3be770c60",
+        "pngSha256": "216fa25dd5fe5dcade568e90bb6b4d2143b38ea1a1a8625fd76663b708dd2f82",
+        "pngBytes": 109911
       },
-      "sourceModule": "scripts/icons/families/citrus-sodas.mjs"
+      "sourceModule": "scripts/icons/families/redraw-shasta-sprite.mjs"
     },
     {
       "slug": "squirt",
-      "family": "classic-soda-can",
-      "packageChoice": "Representative US 12 fl oz / 355mL Squirt aluminum can; exact inspected package.",
+      "family": "squirt-soda-can",
+      "packageChoice": "Current US 12 fl oz aluminium can of regular Squirt (yellow can), the single-serve retail package and the same can as its Good sibling diet-squirt.",
       "references": [
         {
           "pageUrl": "https://www.squirtsoda.com/",
           "imageUrl": "https://www.squirtsoda.com/images/can1.png",
-          "inspectedAt": "2026-11-11",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Exact manufacturer Original Squirt12oz can inspected: bright yellow field, red diagonal script Squirt outlined pale, small green/lime grapefruit leaf/motif at upper-left, grapefruit slice low-left and green Grapefruit Soda footer. Not Ruby Red or Zero Sugar."
+          "observations": "Manufacturer front packshot, 1519 x 3000 px: yellow can, large red Squirt script with a thin white keyline rising at about 60 degrees, green and lime splash over the i, a red swash under the word carrying \"caffeine free\" and \"Thirst Quencher\" in red serif, \"Since 1938\" small at the left, pale light streaks fanning under the swash, a pale pink grapefruit slice behind the S, \"Grapefruit / Soda\" in green bold sans at the lower right."
         }
       ],
-      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "uncertainty": "The red script, swash and small red copy were traced directly from this packshot in its own projection (letters near the can edge are foreshortened as printed); the green and lime splash is the round-2 trace placed by a fitted matrix. The light streaks under the swash and the grapefruit slice are simplified to flat translucent shapes.",
       "status": "needs-review",
       "bevId": "f51a46e4-a5d0-5712-91b1-798745d51b86",
       "name": "Squirt",
@@ -9442,27 +9484,34 @@
         "svg": "svg/squirt.svg",
         "portableSvg": "portable-svg/squirt.svg",
         "png": "png/squirt.png",
-        "svgSha256": "1e8d7e165d588694bd71246d052c881178cc992e93d6a7779c1d3790418c7c60",
-        "portableSvgSha256": "e38d148ca600dc40b8ec38fc11c1ea6e05c90459f130705bdae6c529f1798a9e",
-        "pngSha256": "efb21d5246b7a7109129046301685389863f3f65a7e050cc103914d2b63b2abc",
-        "pngBytes": 115743
+        "svgSha256": "73d7b5d24909e9dc1aa0639f83bd580c96bb3c43f12079594d2cf64f8bfe871e",
+        "portableSvgSha256": "c6ca395d9fa72b26489300264f1535cc880919081366b31a386a6c677b66a1be",
+        "pngSha256": "d333f9a2883e3d52c8b8eda6bf88dd192e10b15ab86e053852bba041dde42275",
+        "pngBytes": 170507
       },
-      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-squirt-vernors-crush-sunkist.mjs"
     },
     {
       "slug": "starry-lemon-lime",
-      "family": "citrus-soda-can",
-      "packageChoice": "US 16 fl oz sleek can, PepsiCo SKU 321253; green/yellow Original lemon-lime.",
+      "family": "starry-soda-can",
+      "packageChoice": "Current US 12 fl oz standard can of regular Starry. The old record drew the 16 oz sleek can; the 12 oz can is the core single-serve package and matches Starry Zero Sugar and the other standard sodas in the set.",
       "references": [
         {
           "pageUrl": "https://www.pepsicopartners.com/pepsico/en/USD/BEVERAGES/Soft-Drinks/Starry/p/1-177PZJ-1",
           "imageUrl": "https://pepsicopartners.com/medias/300Wx300H-1-177PZJ-1.jpg?context=bWFzdGVyfHJvb3R8MjYzODV8aW1hZ2UvanBlZ3xoMzgvaGUzLzk5NzQwNzM0NTg3MTgvMzAwV3gzMDBIXzEtMTc3UFpKLTEuanBnfDAxYzVmNjcwMTRhMWIyMDAwODBkZGQ2MWVhOTNmMGI5ODMzN2ZhNzcyMjFmNGRiMjdkMGQ5NDZmOTY2MDRkZTU",
-          "inspectedAt": "2026-10-27",
-          "observations": "Manufacturer packshot visually inspected: taller sleek can, silver rim, lime-green upper body and yellow lower body; chunky black-outlined citrus silhouette behind slanted white Starry lettering, black LEMON LIME on green, small sparkle accents. Manufacturer page identifies 16oz sleek can; deliberately distinct from the 12oz Zero Sugar reference.",
-          "visuallyInspected": true
+          "inspectedAt": "2026-11-16",
+          "visuallyInspected": true,
+          "observations": "Front view (600x600) of the regular Starry can in its tall 16 oz form: bright green upper body (#86ef64 at the centre), flat yellow lower body (#f7e000), the split hidden behind the badge. Same badge as Zero Sugar: lemon, lime, outlined white Starry script, LEMON LIME, black stars and dots; yellow sparkles on the green, green sparkles on the yellow. Bottom lines CAFFEINE FREE, LEMON LIME FLAVORED SODA, WITH OTHER NATURAL FLAVORS in black on yellow. No black bands."
+        },
+        {
+          "pageUrl": "https://www.pepsicopartners.com/pepsico/en/USD/BEVERAGES/Soft-Drinks/Starry-Zero-Sugar/p/1-15HERK-1",
+          "imageUrl": "https://www.pepsicopartners.com/medias/1200Wx1200H-1-15HERK-1.jpg?context=bWFzdGVyfHJvb3R8ODQyMjF8aW1hZ2UvanBlZ3xhRFE0TDJneVl5OHhNRE01TnpNNE56RTJNVFl6TUM4eE1qQXdWM2d4TWpBd1NGOHhMVEUxU0VWU1N5MHhMbXB3Wnd8M2MyMjZjZDgwMzkzY2VlYWRkYTdkYTFhNDU1NzEyY2QyM2RiY2IzZDZmOTI3ODkwZjM3MWNlOWJhNGRiODljNw",
+          "inspectedAt": "2026-11-16",
+          "visuallyInspected": true,
+          "observations": "Used for the traced Starry badge (shared with starry-zero-sugar) and the 12 oz layout proportions: badge position and the yellow lower body from the middle of the can."
         }
       ],
-      "uncertainty": "Representative US package selected because catalog has no size. Lettering and fine package details are simplified vector interpretations; final aesthetic and native review pending.",
+      "uncertainty": "No large front shot of the regular 12 oz can was found in the lookup budget; its layout is taken from the Zero Sugar 12 oz can with the regular colours (green top, yellow bottom, black lettering) from the 16 oz packshot. The 12 oz regular may differ slightly in where the green fades to yellow and in the bottom-line spacing.",
       "status": "needs-review",
       "bevId": "d8353b51-2d10-5625-934b-5ca4d3b0374d",
       "name": "Starry",
@@ -9473,27 +9522,27 @@
         "svg": "svg/starry-lemon-lime.svg",
         "portableSvg": "portable-svg/starry-lemon-lime.svg",
         "png": "png/starry-lemon-lime.png",
-        "svgSha256": "14286b81ea034fbb3b750e70790c41f701365a63522711481e0331c6d2bdf286",
-        "portableSvgSha256": "a811d7c7dba04729c9902662a05a04f354efd2a9ebc4ce3000e0a142109ecea8",
-        "pngSha256": "04f6a453513e6b0f7a668bf72208a5ef8b445d51fd6f2396530167872ad62658",
-        "pngBytes": 108081
+        "svgSha256": "1906297614e836c3fae635b611f9c5a29b322c04bef1296d83183bb59f580797",
+        "portableSvgSha256": "5995a00c55e23b4f007a98725f5653157ee8adb4934266f49a860e4d99b5a092",
+        "pngSha256": "c50aed63c18b7ebb468c945938d8bd80a64a2cb9e3ac51b615a2401a25e42a94",
+        "pngBytes": 135581
       },
-      "sourceModule": "scripts/icons/families/citrus-sodas.mjs"
+      "sourceModule": "scripts/icons/families/redraw-starry.mjs"
     },
     {
       "slug": "starry-zero-sugar",
-      "family": "citrus-soda-can",
-      "packageChoice": "US 12 fl oz can, PepsiCo SKU 209800; black shoulders and base with green/yellow center.",
+      "family": "starry-soda-can",
+      "packageChoice": "Current US 12 fl oz standard can of Starry Zero Sugar (the 2023 launch design, still the one PepsiCo Partners and US grocers list).",
       "references": [
         {
           "pageUrl": "https://www.pepsicopartners.com/pepsico/en/USD/BEVERAGES/Soft-Drinks/Starry-Zero-Sugar/p/1-15HERK-1",
           "imageUrl": "https://www.pepsicopartners.com/medias/1200Wx1200H-1-15HERK-1.jpg?context=bWFzdGVyfHJvb3R8ODQyMjF8aW1hZ2UvanBlZ3xhRFE0TDJneVl5OHhNRE01TnpNNE56RTJNVFl6TUM4eE1qQXdWM2d4TWpBd1NGOHhMVEUxU0VWU1N5MHhMbXB3Wnd8M2MyMjZjZDgwMzkzY2VlYWRkYTdkYTFhNDU1NzEyY2QyM2RiY2IzZDZmOTI3ODkwZjM3MWNlOWJhNGRiODljNw",
-          "inspectedAt": "2026-10-27",
-          "observations": "Manufacturer packshot independently visually inspected: standard 12oz proportions, black shoulders with white ZERO SUGAR; green/yellow center, large black-outlined lemon/lime badge, white Starry script and black LEMON LIME. Black lower band with yellow small lettering; silver top/bottom.",
-          "visuallyInspected": true
+          "inspectedAt": "2026-11-16",
+          "visuallyInspected": true,
+          "observations": "Front-on 12 oz can, 1200x1200. Black top band to about 24% of the height with white bold ZERO SUGAR; green band to the middle, yellow band below, black base from 85% carrying CAFFEINE FREE (dark, on the yellow) and yellow LEMON LIME FLAVORED SODA plus a small WITH OTHER NATURAL FLAVORS. Centre badge: a yellow lemon (top right, light-green rim) and a two-tone lime (lower left) behind the white Starry script, which has a heavy black outline and drop shadow and a white four-point star in the S; dark LEMON LIME on the lime; black stars and dots on lemon and lime; yellow sparkles in the top band, green sparkles in the yellow band."
         }
       ],
-      "uncertainty": "Representative US package selected because catalog has no size. Lettering and fine package details are simplified vector interpretations; final aesthetic and native review pending.",
+      "uncertainty": "Mark traced from the photo as it appears on the can (cylinder compression at the edges of the script kept, as the eye sees it); traced at 0.165 units per pixel down versus 0.150 across, so the badge is about 10% taller than true to fit the house can height. Lemon and lime are flat on the can; a soft highlight and shadow side were added for the house style. Microcopy (nutrition, recycling) omitted; LEMON LIME is part of the traced dark layer, ZERO SUGAR is traced; the bottom lines are Arial Bold with textLength.",
       "status": "needs-review",
       "bevId": "b017deaa-4830-518c-a7a5-d1d8b1476608",
       "name": "Starry Zero Sugar",
@@ -9504,12 +9553,12 @@
         "svg": "svg/starry-zero-sugar.svg",
         "portableSvg": "portable-svg/starry-zero-sugar.svg",
         "png": "png/starry-zero-sugar.png",
-        "svgSha256": "99e2c3276d714e186c6325e568b3dde8b1eee6806ee1108efb27371388cf04c0",
-        "portableSvgSha256": "0eaef3dbb8b65d3c00d8099e5436b6980e70f6c8a56ce4b721a980d82a6fbf8a",
-        "pngSha256": "8ca5ba719e995168bb5551b17c44a4fdfd5d1d3bcaccdf49e01123297825dcfe",
-        "pngBytes": 125654
+        "svgSha256": "f40014224be023634ae4839ad36df623357a6179674f8c4d78e1c5bb9af6fceb",
+        "portableSvgSha256": "26dc4206eec011878d2117377bf1ca1e44c30092449db48fbebb5cb544168ba5",
+        "pngSha256": "2ce69ff4b5e7262b6b70804133fda8c355fe955f38e36ad0eafadde178affae7",
+        "pngBytes": 131121
       },
-      "sourceModule": "scripts/icons/families/citrus-sodas.mjs"
+      "sourceModule": "scripts/icons/families/redraw-starry.mjs"
     },
     {
       "slug": "stella-artois-lager",
@@ -9737,18 +9786,25 @@
     },
     {
       "slug": "sunkist-orange",
-      "family": "citrus-soda-pet-bottle",
-      "packageChoice": "Representative US 20 fl oz / 591mL Sunkist Orange PET bottle; exact inspected package.",
+      "family": "sunkist-soda-can",
+      "packageChoice": "Current US 12 fl oz can of Sunkist Orange. The rejected icon was a 20 oz PET bottle; the can is the single-serve package sold everywhere and the same package as the Good sibling diet-sunkist-orange (Sunkist Zero Sugar, redrawn as a 12 oz can in round 2), so the regular drink sits beside it as the same can.",
       "references": [
         {
           "pageUrl": "https://www.sunkistsoda.com/",
-          "imageUrl": "https://s7d1.scene7.com/is/image/kdrp/SK_Orange_20oz_Legacy_Wet?$Dynamic-PublicURL-PNG$&wid=500&hei=1000",
-          "inspectedAt": "2026-11-11",
+          "imageUrl": "https://s7d1.scene7.com/is/image/kdrp/SK_Orange_12oz_Can_Wet?$Dynamic-PublicURL-PNG$&wid=1000&hei=2000",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Exact manufacturer20oz Sunkist Orange PET inspected: sculpted waist, lobed base, blue screw cap, bright orange soda. Orange wrap with yellow sunburst and navy/white script Sunkist, Orange below. Independent variant colors and fruit motifs preserved."
+          "observations": "Keurig Dr Pepper front render of the 12 oz can (source 481 x 960 px, condensation on): orange can; a lighter orange sun disc with a yellow-white glow and rays at its upper left; navy Sunkist script with a white then navy keyline and a green leaf over the i, rising to the right; \"Orange\" in white with a navy outline under the k-i-s-t; an orange wheel and a half orange with two leaves at the lower right; no band and no other copy on the front."
+        },
+        {
+          "pageUrl": "https://www.sunkistsoda.com/",
+          "imageUrl": "https://s7d1.scene7.com/is/image/kdrp/SK_Orange_20oz_Legacy_Wet?$Dynamic-PublicURL-PNG$&wid=500&hei=1000",
+          "inspectedAt": "2026-11-16",
+          "visuallyInspected": true,
+          "observations": "The 20 oz bottle the rejected icon recorded; it confirms the same mark and sun art, but it is not the package drawn."
         }
       ],
-      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "uncertainty": "Script, leaf and \"Orange\" are the round-2 traces from the Zero Sugar can placed by a fitted matrix; the regular can keylines them in navy where Zero Sugar uses orange. The fruit at the lower right is redrawn by hand at the measured position and is simpler than the painted original. Condensation drops are left out.",
       "status": "needs-review",
       "bevId": "1f985ad9-58cc-57b8-ac88-628841d89898",
       "name": "Sunkist Orange",
@@ -9759,12 +9815,12 @@
         "svg": "svg/sunkist-orange.svg",
         "portableSvg": "portable-svg/sunkist-orange.svg",
         "png": "png/sunkist-orange.png",
-        "svgSha256": "6b6d86b7b52b31e726052f39d3a259a7425f6841986202ba2c0ceacac568b430",
-        "portableSvgSha256": "08babf9c2ed25c9a521f86d92353908274ffb569b74b9a5d2aca4602d10179e6",
-        "pngSha256": "d6b5d90d3e3ed3052fa0e03192699170085303b4f746922d8786433c3a053831",
-        "pngBytes": 118607
+        "svgSha256": "fc4e34b15d35b654d8b2250783c09f4552f52265017f475246472dd027d3b059",
+        "portableSvgSha256": "90bf610bfc6da893a9a2535f374e13035abfc3dcac7f44a46740e288398d6811",
+        "pngSha256": "bfac6865e127407ed6048b8b57e889ee227f26e111bfe7a809078be1f6ffe9d5",
+        "pngBytes": 183334
       },
-      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-squirt-vernors-crush-sunkist.mjs"
     },
     {
       "slug": "kitu-super-coffee-mocha",
@@ -10147,18 +10203,25 @@
     },
     {
       "slug": "vernors-ginger-ale",
-      "family": "classic-soda-can",
-      "packageChoice": "Representative US 12 fl oz / 355mL Vernors Ginger Soda aluminum can; exact inspected package.",
+      "family": "vernors-soda-can",
+      "packageChoice": "Current US 12 fl oz can of Vernors (the catalog says Ginger Ale; the can says The Original Ginger Soda), the single-serve retail package and the same can as its Good sibling diet-vernors.",
       "references": [
         {
           "pageUrl": "https://www.kroger.com/p/vernors-ginger-soda-cans/0007800018016",
-          "imageUrl": "https://www.kroger.com/product/images/large/front/0007800018016",
-          "inspectedAt": "2026-11-11",
+          "imageUrl": "https://www.kroger.com/product/images/xlarge/front/0007800018016",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Exact retailer12oz Vernors Original ginger soda can inspected: dark green body, subtle vertical texture, yellow decorative top/base bands, large diagonal cream Vernors outlined dark green, small The Original Ginger Soda below. Separate from Diet; retail image12OZ annotation excluded."
+          "observations": "Retailer image of the 12-pack with one can standing beside the carton, can about 416 px wide and nearly front on: dark green wood-plank can, gold bands with dark distressed edges and riveted look at top and bottom, the white Vernors script with a dark green extrusion and gold outline rising steeply from lower left to upper right, \"The Original / Ginger Soda\" in white bold italic serif at the right, \"12 OZ\" in white condensed bold sans below the V, registered mark after the s."
+        },
+        {
+          "pageUrl": "https://www.kroger.com/p/vernors-ginger-soda-cans/0007800018016",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0007800018016",
+          "inspectedAt": "2026-11-16",
+          "visuallyInspected": true,
+          "observations": "The 500 px version of the same image that the rejected icon recorded."
         }
       ],
-      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "uncertainty": "The wordmark is the round-2 trace from the Zero Sugar can, placed by a matrix fitted to this photo (the can is seen slightly from above, so the fit carries a little shear). \"12 OZ\" is taken from this one retailer image; I could not confirm from a second source that the printed can carries it. The wood grain and band distressing are simplified to seams, streaks and rivets; the registered mark is omitted.",
       "status": "needs-review",
       "bevId": "05dbdefa-3d2d-59bd-8827-93f2106fcb18",
       "name": "Vernors Ginger Ale",
@@ -10169,12 +10232,12 @@
         "svg": "svg/vernors-ginger-ale.svg",
         "portableSvg": "portable-svg/vernors-ginger-ale.svg",
         "png": "png/vernors-ginger-ale.png",
-        "svgSha256": "854be05168711d0d3d7b7799dc5186a5270fc2b9d8a9f5617c7e460c0366af0e",
-        "portableSvgSha256": "494357f9327b77a9b5e2255d96b0eed1884612516c6925d0bb52497e5e8cf241",
-        "pngSha256": "6112c724281e863225b063c54b7897ca352d1d5dcb41d8188fb88422e33721d3",
-        "pngBytes": 93083
+        "svgSha256": "d36af3a62f7ba6c20d6a05ec805804ae1439e06ea235ef319f11cdfa1d14c555",
+        "portableSvgSha256": "f65cf06ae355e720bd9f321d52237f4e605ae613a900f2f494e7ede7b26bbc28",
+        "pngSha256": "bae35d71643b18ea1a69a6cb4e5df2820c639b45cc07b6ceccd7440418e5854e",
+        "pngBytes": 132669
       },
-      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-squirt-vernors-crush-sunkist.mjs"
     },
     {
       "slug": "vita-coco-coconut-water-original",
