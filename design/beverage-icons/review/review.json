@@ -3551,6 +3551,35 @@
           "portableSvgSha256": "be85a1eef8d5e8755205a41cc06359281b1ed454202cf2f9111e7abd10ac7727"
         }
       ]
+    },
+    {
+      "batchId": "recoup-2026-11-16",
+      "reviewedAt": "2026-11-16",
+      "reviewer": "Codex",
+      "outcome": "All three manufacturer references and user screenshot inspected; large and 40/56/96/155 px light/dark renders reviewed. Final aesthetic approval pending. Existing 335 portable SVG and PNG hashes unchanged.",
+      "sheets": [
+        "recoup-2026-11-16.png"
+      ],
+      "assets": [
+        {
+          "bevId": "222ed33d-e959-5add-88ec-253918feacd7",
+          "slug": "recoup-lemon-lime-ginger",
+          "pngSha256": "5c7b492d6de59f3bdcbe7175ad99095b2e80532939e52885357857718492abea",
+          "portableSvgSha256": "6efcf9508763d6bcb808d921abfc2fe1813a51af657fe77ed61648541eb72eba"
+        },
+        {
+          "bevId": "24e82d8e-2a3a-54d0-97d8-d1f295992668",
+          "slug": "recoup-pineapple-passionfruit-ginger",
+          "pngSha256": "674ef0854b8e6daf5f982504f42b86df545f558a2f4628aa274e0094ba8eba0d",
+          "portableSvgSha256": "4aa7c687b94208f013325b044f084c81ee4346c44c822578447a5ce704a04c4e"
+        },
+        {
+          "bevId": "1da81e15-41c3-596e-b89e-c3d749c35bae",
+          "slug": "recoup-watermelon-blood-orange-ginger",
+          "pngSha256": "a73c6883ea64a20ccf5b9b4e0acac2188ea7bbf19783b2a922cd2b121cbcced9",
+          "portableSvgSha256": "9786c538cf89413c4ce3be7fa5a51b139f827ecf5193c678e09d178ab4eca7f5"
+        }
+      ]
     }
   ]
 }

@@ -19,8 +19,8 @@ select is(
 -- The seed loads one profile per catalog Bev. Both directions, because a
 -- missing profile and an orphaned profile are different bugs.
 select is(
-  (select count(*)::int from public.bev_flavor_profiles), 378,
-  '378 profiles loaded'
+  (select count(*)::int from public.bev_flavor_profiles), 381,
+  '381 profiles loaded'
 );
 select is(
   (select count(*)::int
