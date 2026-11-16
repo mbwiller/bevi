@@ -1,0 +1,539 @@
+% Bevi -- from a web-only Expo app to a native iOS application: a migration study.
+% Build: tectonic docs/bevi-ios-migration.tex   (or pdflatex twice)
+% Written 2026-11-14 against be/custom-bev-icons @ 31381bc (contract 3.0.0, Expo SDK 57.0.31,
+% React Native 0.86.3). Every path, count and configuration quoted was measured in the tree on
+% that date. Nothing in the repository was modified to produce this document.
+
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=1.05in,bottom=1.1in]{geometry}
+\usepackage{libertinus}
+\usepackage{inconsolata}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{parskip}
+\usepackage[most]{tcolorbox}
+\usepackage{fancyhdr}
+\usepackage{needspace}
+\usepackage{etoolbox}
+\usepackage[colorlinks=true,linkcolor=ink,urlcolor=ink]{hyperref}
+
+% ---------------------------------------------------------------- palette ---
+\definecolor{ink}{HTML}{1F3A5F}      % headings and rules
+\definecolor{accent}{HTML}{B4540A}   % the one warm accent, for warnings
+\definecolor{wash}{HTML}{F4F6F9}     % callout background
+\definecolor{edge}{HTML}{C9D4E2}     % callout border
+\definecolor{mute}{HTML}{5A6672}     % captions, metadata
+
+% ------------------------------------------------------------- typography ---
+\linespread{1.08}
+\setlength{\parskip}{0.55em}
+\setlist{itemsep=0.45em,parsep=0pt,topsep=0.35em,leftmargin=1.35em}
+\newcommand{\code}[1]{\texttt{\small #1}}
+\newcommand{\bk}{\discretionary{}{}{}}
+\tolerance=1800
+\emergencystretch=3em
+\hbadness=10000
+
+\titleformat{\section}{\color{ink}\Large\bfseries}{\color{ink}\thesection}{0.7em}{}[\vspace{0.15em}{\color{edge}\titlerule[1pt]}]
+\titlespacing*{\section}{0pt}{1.9em plus .3em}{0.9em}
+\titleformat{\subsection}{\color{ink}\large\bfseries}{\color{ink}\thesubsection}{0.6em}{}
+\titlespacing*{\subsection}{0pt}{1.5em plus .2em}{0.55em}
+
+% Inventory entries: the file on its own line, the explanation beneath it.
+\newenvironment{findings}
+  {\begin{description}[style=nextline,leftmargin=1.1em,labelindent=0pt,
+     itemsep=1.05em,parsep=0.3em,topsep=0.6em,font=\normalfont\color{ink}\bfseries]}
+  {\end{description}}
+
+\newtcolorbox{callout}[1][]{enhanced,colback=wash,colframe=edge,
+  boxrule=0.6pt,left=1.1em,right=1.1em,top=0.9em,bottom=0.9em,arc=2pt,#1}
+
+\newtcolorbox{warnbox}[1][]{enhanced,colback=white,colframe=accent,
+  boxrule=0.9pt,left=1.1em,right=1.1em,top=0.9em,bottom=0.9em,arc=2pt,#1}
+
+\widowpenalty=10000
+\clubpenalty=10000
+\pretocmd{\section}{\needspace{6\baselineskip}}{}{}
+\pretocmd{\subsection}{\needspace{4.5\baselineskip}}{}{}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[C]{\color{mute}\small\thepage}
+
+\begin{document}
+
+% ------------------------------------------------------------------ head ---
+\begin{center}
+  {\color{ink}\Huge\bfseries Bevi on iOS\par}
+  \vspace{0.7em}
+  {\large From a web-only Expo app to a native iOS application\par}
+  \vspace{0.45em}
+  {\color{mute}\large a migration study of the current codebase\par}
+  \vspace{1.6em}
+  {\color{mute}\small Bevi engineering --- Arjun's and Matt's lanes \quad\textbullet\quad 14 November 2026\par}
+  \vspace{0.3em}
+  {\color{mute}\small measured against \code{be/custom-bev-icons} @ \code{31381bc}, contract 3.0.0\par}
+\end{center}
+
+\vspace{1.4em}
+
+\begin{callout}
+\textbf{\color{ink}The short version}
+
+\begin{itemize}[leftmargin=1.2em,itemsep=0.5em,topsep=0.5em]
+  \item Bevi is \emph{already} a React Native application. \code{app/} is Expo SDK 57.0.31 on React
+  Native 0.86.3 with Expo Router, deliberately configured web-only on 2026-10-11 and shipped as a
+  single-page \code{react-native-web} build on Vercel.
+  \item Buying the Apple Developer Program therefore buys a build target that was never switched on.
+  This is not a rewrite. The work is repaying the web-only assumptions that decision accumulated.
+  \item The backend needs no change at all --- not one migration, RLS policy or Edge Function.
+  \item Two items are genuine blockers rather than work items: the \code{Blob}-typed media contract,
+  and the absence of user blocking under App Review guideline~1.2.
+  \item Realistic effort: \textbf{four to six weeks} of app-side work before a TestFlight build we
+  would be happy to show people.
+\end{itemize}
+\end{callout}
+
+\vspace{0.6em}
+
+% --------------------------------------------------------------------- 1 ---
+\section{Where we stand today}
+
+\code{app/src} holds 305 TypeScript and TSX files, 30{,}840 lines, 47 design-system components and
+103 test files. All of it is written against React Native primitives --- \code{View},
+\code{Pressable}, \code{StyleSheet}, Reanimated, \code{FlashList}, \code{expo-image} --- rather than
+DOM elements. The web build is \code{react-native-web} translating those primitives into HTML, not a
+separate web codebase.
+
+Four earlier decisions leave us unusually well placed, by design rather than luck.
+
+\subsection{The backend needs no change}
+
+Auth is username and password over synthetic emails (\code{usernameToEmail},
+\code{@users.bevi.app}). That means no OAuth redirect, no magic link and no callback URL to register
+anywhere. \code{packages/api/src/client.ts} already sets \code{detectSessionInUrl: false}, which is
+the native-correct setting. The four Edge Functions carry no origin allow-list, the 60 migrations and
+every RLS policy are origin-agnostic, and only the publishable key ever reaches a client --- exactly
+as today.
+
+\subsection{The seams we need already exist}
+
+\code{createBeviApi} takes an injected \code{AuthStorageAdapter} whose methods may return promises:
+precisely the shape AsyncStorage needs, and
+\code{@react-native-\bk async-storage/\bk async-storage} is already a dependency.
+\code{app/.gitignore} already ignores \code{ios/} and \code{android/} as ``generated by
+\code{expo prebuild}'', so there is no checked-in Xcode project to reconcile, ever.
+
+\subsection{No typography work}
+
+\code{src/theme/tokens.ts} is system-font only and is parity-tested against the design system, so
+there are no fonts to load and the visual contract crosses platforms untouched.
+
+\subsection{Three installed libraries are degraded today}
+
+\code{expo-haptics} is a no-op on web. \code{expo-glass-effect} never renders real glass.
+\code{expo-image-picker} falls back to an \code{<input type="file">}. All three are already installed
+and already wired into screens; on a device they simply become real, at no integration cost.
+
+% ------------------------------------------------------------------- 2 ---
+\section{Is this actually worth doing?}
+
+The \$99 is not the decision. The decision is four to six weeks of app-lane time and, permanently,
+accepting a third party between \code{main} and production. Here is the honest case on both sides.
+
+\subsection{What we actually gain}
+
+\textbf{Push notifications --- the biggest single item.} Bevi has none today, and nothing in TASKS.md
+plans any, because the web build effectively cannot have them: iOS delivers web push only to an
+installed Home Screen app and does so unreliably. Bevi is a social product whose loop is follows,
+feeds, comments and other people's rankings, and that loop currently has no way to reach anyone who
+is not already looking at the app. Natively this is \code{expo-notifications} plus an APNs key.
+
+\textbf{The install path.} Today the only way in is Safari, then the share sheet, then ``Add to Home
+Screen'' --- a flow most people have never used and will not discover. Growth is invite-driven, so we
+pay that conversion tax at exactly the moment an invite lands in someone's hand.
+
+\textbf{Sessions that survive.} Safari evicts script-writable storage for sites that are not
+installed, so \code{localStorage} sessions quietly disappear and people find themselves signed out
+for no reason they can see. On a device the session lives in app storage and simply persists.
+
+\textbf{Find Bev stops fighting the browser.} The reviewed plan in
+\code{docs/find-bev-in-\bk app-plan.md} is shaped end to end by WebKit's behaviour in a Home Screen
+app: one URL for the whole trip, a \code{Modal} rather than a route, and an iPhone spike (S2) that
+gates the feature. Natively those constraints evaporate, and camera, motion and location become
+ordinary libraries.
+
+\textbf{The feel we already designed for.} \code{expo-glass-effect} and \code{expo-haptics} are
+installed and inert. Native navigation gestures and transitions, the system share sheet and photo
+picker, Reanimated on the UI thread and a genuinely recycling \code{FlashList} are all things the web
+build approximates and a device simply has.
+
+\textbf{Surfaces that are closed today:} widgets, Live Activities, Shortcuts, App Clips. None are on
+the roadmap, but none are reachable from a web build either.
+
+\subsection{What it costs}
+
+\textbf{Time, and what that time is not spent on.} Four to six weeks of app-lane work is roughly the
+Map tab plus the duplicates work. That opportunity cost, not the membership fee, is the real price.
+
+\textbf{App Review becomes a release gate.} Today a merge to \code{main} is in production within
+minutes and nobody outside the two of us is involved. Natively, every release waits on review --- a
+day or two when it goes well --- and guideline 1.2 work has to land before the first submission at
+all. For a two-person team that ships several times a week, this is a genuine change in tempo.
+
+\textbf{Version skew becomes a permanent discipline, and this is the most underrated cost.} Today
+every client runs \code{main} and \code{CONTRACT\_VERSION} moves in lockstep with the backend. Once
+builds live in the App Store, old clients persist for weeks and the contract has to tolerate them.
+The contract already anticipates this --- \code{AppConfig} carries \code{minAppVersion} and
+\code{maintenance} --- but \code{createMetaApi} returns a fixed placeholder, with the comment that no
+versioning or maintenance-flag infrastructure exists yet. That infrastructure has to become real, and
+contract changes afterwards must either stay backward-compatible or be gated behind a minimum
+version. It belongs in phase 1, not ``later''.
+
+\textbf{The accessibility sweep is invisible work.} Eighty-three ARIA props that no test will catch
+and no screenshot will show. It is exactly the kind of task that gets deferred and then quietly never
+happens.
+
+\textbf{Either a dual-target tax or a lost surface.} Keeping the web build means a
+\code{Platform} branch or a file split for every native-only API, forever, and two QA passes.
+Dropping it means losing shareable profile links, the browser as a demo and bug-reproduction surface,
+and the Playwright smoke path.
+
+\textbf{Android becomes a separate decision.} Today the web build covers Android for free. A native
+iOS app does not, and an Android build is a second review process, a second store listing and a
+second device matrix --- cheap from the same Expo codebase, but not free.
+
+\textbf{Small, real overheads:} \$99 a year, a Mac with Xcode, EAS queue time or a paid tier, and the
+8.2\,MB icon question.
+
+\subsection{What does not change --- why the bet is bounded}
+
+The backend is untouched: 60 migrations, every RLS policy, the four Edge Functions, the ranking
+package, the design system, the catalog and all 103 test files carry over exactly as they are. The
+move lives inside one lane, and the web build can stay alive the entire time. That makes this
+reversible in a way a rewrite would not be --- if phase 1 goes badly, we still have the app we have
+today, deploying to Vercel on every merge.
+
+\subsection{The counter-case, stated fairly}
+
+If the next quarter is catalog work, ranking, venues and fast iteration on the web, then App Review
+is pure drag and the PWA already does nearly everything --- everything except notifications and
+reliable sensors. The cheap path is to keep shipping web, run spike S2 as planned, and revisit this
+when notifications actually block something. That is a legitimate choice, and it costs nothing today.
+
+\begin{callout}
+\textbf{\color{ink}Verdict}
+
+\begin{itemize}[leftmargin=1.2em,itemsep=0.5em,topsep=0.5em]
+  \item \textbf{Buy the membership now regardless.} \$99 is noise next to the time already going into
+  this question, and it immediately unblocks running on a real device --- which de-risks spike S2 on
+  either path.
+  \item \textbf{Treat phase 0 as a two-day spike, not a commitment.} If the app comes up on a phone
+  and the main flows behave, everything after it is grind with few unknowns. If it does not, we have
+  spent two days.
+  \item \textbf{Commit to phases 1--4 only if notifications and camera-based Find Bev are genuinely
+  on the roadmap for the next two quarters.} They are the two things the web build cannot do. If they
+  are not, stay on web and revisit without regret.
+  \item \textbf{If we go, build the \code{minAppVersion} gate in phase 1}, before the first build
+  reaches anyone outside the team.
+\end{itemize}
+\end{callout}
+
+% ------------------------------------------------------------------- 3 ---
+\section{The Apple-side work}
+
+\textbf{Enrolment.} The Apple Developer Program is \$99 per year. Enrol as an \emph{organization}
+only if the seller name must read as a company --- that path needs a D-U-N-S number and adds days.
+Individual enrolment is immediate but publishes a personal name as the seller.
+
+\textbf{Identifiers.} Register the bundle identifier (it is permanent and can never be reused), then
+create the App Store Connect record.
+
+\textbf{Configuration.} Add an \code{ios} block to \code{app/app.config.ts}, which today holds only a
+\code{web} key and the comment ``No native builds, so no \code{ios}/\code{android} blocks, bundle ids
+or EAS profiles.'' That block must carry:
+
+\begin{itemize}
+  \item \code{bundleIdentifier} and \code{buildNumber};
+  \item a \code{scheme}, for deep links;
+  \item a 1024\,px icon and an \code{expo-splash-screen} configuration;
+  \item the \code{expo-image-picker} plugin's camera and photo-library permission strings;
+  \item \code{ios.privacyManifests}, for the \code{PrivacyInfo.\bk xcprivacy} required-reason
+  declarations Apple has required since 2024;
+  \item \code{ITSAppUses\bk NonExemptEncryption: false} (we are HTTPS only).
+\end{itemize}
+
+\textbf{Building.} Either locally with \code{npx expo run:ios} (Xcode on a Mac) or on EAS Build via a
+new \code{eas.json} with development, preview and production profiles. The two
+\code{EXPO\_\bk PUBLIC\_\bk SUPABASE\_*} variables move from Vercel's project settings into those
+build profiles, where they are inlined into the IPA exactly as they are inlined into the web bundle
+today. Nothing secret ships either way.
+
+\textbf{Distribution.} TestFlight: up to 100 internal testers immediately, and 10{,}000 external
+testers once the first external build passes a review.
+
+% --------------------------------------------------------------------- 3 ---
+\section{Inventory: every web-only assumption we have to repay}
+\label{sec:inventory}
+
+Eleven non-test files branch on \code{Platform.OS}; eighteen touch browser globals. What follows is
+the complete list, grouped by theme. Each entry names the file, what it assumes, and what native
+needs instead.
+
+\subsection{Session and storage}
+
+\begin{findings}
+
+\item[\code{app/src/api/authStorage.ts}]
+\code{webAuthStorage()} wraps \code{localStorage}, with an in-memory fallback for private-mode
+Safari. Native needs an AsyncStorage (or \code{expo-secure-store}) adapter behind the same interface
+--- a small, well-isolated change, because the interface is already injected. It also needs
+\code{auth.\bk startAutoRefresh} and \code{stopAutoRefresh} driven by React Native's \code{AppState}:
+native has no tab-visibility signal, so without this a backgrounded app comes back with a stale
+token.
+
+\item[\code{features/add-bev/recents.ts}, \code{features/bug-report/draft.ts},
+\code{lib/clearLegacy\bk Storage.ts}]
+Three further readers and writers of \code{localStorage}, all of them \emph{synchronous}.
+AsyncStorage is asynchronous, so these call sites change shape rather than merely swapping their
+backend. Budget for the call-site churn, not just the adapter.
+
+\end{findings}
+
+\subsection{Media and photos}
+\label{sec:media}
+
+\begin{findings}
+
+\item[\code{shared/src/api.ts:373} and \code{packages/api/src/media.ts}]
+\code{UploadMediaInput.\bk file} is typed \code{Blob}, and that blob is handed straight to
+\code{storage.upload()}. React Native's \code{Blob} is not a real byte container, and Supabase
+Storage expects an \code{ArrayBuffer} or \code{FormData} from a device. Widening the contract is a
+\code{CONTRACT\_VERSION} bump touching both lanes, \code{FakeApi} and the conformance suite. See the
+blocker note below.
+
+\item[\code{features/create-bev/photo.ts}]
+Built on \code{URL.createObjectURL}, \code{blob:} preview URIs and a
+\code{document.createElement('canvas')} re-encode fallback. The good news:
+\code{expo-image-\bk manipulator} works natively and returns \code{file://} URIs, so the canvas path
+becomes dead code and \code{revokeIfBlob} a no-op. The thing to watch: this file carries a privacy
+guarantee --- an image that cannot be decoded is \emph{rejected} rather than uploaded untouched, so
+GPS EXIF is always stripped --- and that guarantee has to be re-proved on the native path.
+
+\end{findings}
+
+\subsection{Assets and icons}
+
+\begin{findings}
+
+\item[\code{app/src/lib/bevIcons.\bk generated.ts} --- 192 SVGs, 8.2\,MB in
+\code{app/public/bev-icons/}]
+Every value is an absolute web path (\code{'/bev-icons/x.svg?v=hash'}), and Expo's \code{public/}
+directory is a web-only feature that Metro never bundles into a native app. Two options: a generated
+\code{require()} asset map, regenerating \code{scripts/icons/\bk export-app.mjs} and adding roughly
+8\,MB to the IPA; or remote URLs served from Supabase Storage, which keeps the binary small at the
+cost of a cold-launch cache. Either way, confirm \code{expo-image}'s SVG decoding on a real device at
+56\,pt --- \code{react-native-svg} is already installed as a fallback.
+
+\end{findings}
+
+\subsection{Accessibility --- the largest invisible regression}
+
+\begin{findings}
+
+\item[83 \code{aria-*} props across 20 non-test files, most of them \code{aria-pressed}]
+\code{react-native-web} renders ARIA attributes, and several of ours are documented workarounds for
+it dropping \code{accessibilityState}. iOS ignores every one of them, silently: nothing fails, no
+test goes red, and VoiceOver simply stops announcing toggle state. Each needs its React Native
+equivalent --- \code{accessibilityState}, \code{accessibility\bk Value}, \code{accessibilityRole} ---
+verified by hand under VoiceOver. This is the single largest item in the inventory and the easiest to
+under-budget.
+
+\end{findings}
+
+\subsection{Layout, chrome and platform polish}
+
+\begin{findings}
+
+\item[\code{components/BevGlow.tsx}, \code{FeedPost.tsx}, \code{CommentsSheet.tsx},
+\code{Sheet.tsx}]
+Web-only style props: \code{filter: blur(48px)}, \code{touchAction}, \code{cursor},
+\code{overflowWrap}, and a \code{SAFE\_BOTTOM} constant computed for the browser. React Native 0.76
+and later, on the New Architecture, support \code{filter} and \code{boxShadow} natively, so most of
+this survives --- but verify prop by prop on a device. Safe-area insets come from
+\code{react-native-\bk safe-area-context} instead of CSS environment variables.
+
+\item[\code{components/BucketButton.tsx} and \code{lib/glass.ts}]
+TASKS.md records that ``no Apple developer route is needed on the web build.'' That caveat now
+expires. \code{GlassView} renders real glass on iOS 26 and later, and Reduce Transparency must be
+read through \code{AccessibilityInfo} rather than a CSS media query. This is a design decision to
+make deliberately, not a port to grind through.
+
+\item[\code{app/public/index.html} and \code{manifest.json}]
+The entire PWA shell: \code{apple-mobile-web-app-*} metas, a script that rewrites the status-bar
+style at launch, the \code{react-native-web} CSS reset, home-screen icons. All of it is replaced by
+native configuration --- and the \code{black-translucent} status-bar hack and the iOS 26 top-blur
+workarounds disappear with it. A simplification, not a loss.
+
+\item[Focus and the keyboard, four files]
+\code{features/auth/\bk focusField.ts} uses \code{document.getElementById().focus()}, which becomes a
+\code{TextInput} ref. \code{features/ranking/\bk Compare.tsx}'s \code{window} \code{keydown}
+shortcuts are simply inert on a phone. In \code{lib/useKeyboard\bk Inset.ts} and
+\code{features/search/\bk keyboardLift.ts}, the \code{window.visualViewport} and
+\code{innerHeight} compensation for iOS Safari's fixed viewport retires in favour of the native
+branch (\code{Keyboard.\bk addListener('keyboardWillShow')}) already written beside it.
+
+\end{findings}
+
+\subsection{Everything else}
+
+\begin{findings}
+
+\item[\code{app/settings/privacy.tsx}]
+\code{fetch('/privacy.md')} is a relative URL resolved against the Vercel origin. A native bundle has
+no origin, so this fails outright: bundle the Markdown as an asset, or serve it from an absolute URL.
+
+\item[\code{features/profile/\bk useShare\bk Profile.ts}]
+\code{profileUrl()} returns an empty string off the web, and \code{Share.share} is then called with
+it --- so the native branch, as written, shares nothing. It needs a canonical https base URL, plus
+Associated Domains and an \code{apple-app-\bk site-association} file on the Vercel domain if shared
+links should open the app rather than the website.
+
+\item[\code{features/create-bev/\bk useOnline.ts}]
+\code{navigator.onLine} and \code{window} online/offline events become
+\code{@react-native-\bk community/\bk netinfo} --- a new dependency, and therefore its own small PR
+under \code{app/CLAUDE.md}'s rules.
+
+\item[\code{features/bug-report/\bk context.ts}]
+\code{osFamily()} and \code{browserFamily()} parse a user-agent string, so both return
+\code{undefined} on a device and \code{platform} degrades to the bare string \code{'ios'}. Send
+\code{expo-device}'s OS version and the native build number instead --- a
+\code{BugReport\bk Environment} contract change.
+
+\item[\code{docs/find-bev-in-\bk app-plan.md} and the planned \code{MapView.web.tsx} (M-16)]
+The Map tab and the Find Bev port are designed around the Google Maps \emph{JavaScript} API and
+WebKit's sensor behaviour: one URL for the whole trip, a React Native \code{Modal} instead of a
+route, and an iPhone spike (S2) gating the entire feature. Going native dissolves risks R3 and R6 ---
+Home-Screen camera, motion and geolocation flakiness --- in favour of \code{react-native-maps},
+\code{expo-camera}, \code{expo-sensors} and \code{expo-location}. \textbf{This is the strongest
+engineering argument for the move}, and it is also why sequencing matters: it invalidates part of an
+already-reviewed plan.
+
+\item[\code{.github/workflows/app.yml} and \code{app/scripts/\bk check-bundle.mjs}]
+CI typechecks, runs \code{jest-expo}, \code{expo-doctor} and the web export, and
+\code{check-bundle.mjs} scans \code{dist/} to prove the jest-only \code{FakeApi} never ships.
+\code{jest-expo} can run an \code{ios} project beside the web one; the leak guard needs a native
+equivalent, since it only ever inspects the web \code{dist/}; and prebuild validation plus EAS
+build and submit want a place in the workflow.
+
+\end{findings}
+
+% --------------------------------------------------------------------- 4 ---
+\section{App Review and compliance}
+
+\begin{warnbox}
+\textbf{\color{accent}Blocker 1 --- user-generated content, guideline 1.2}
+
+Bevi carries comments, photos, display names and profiles. Guideline 1.2 requires a reporting
+mechanism \emph{and} a way to block abusive users. Our contract has \code{bevs.report(id, reason)}
+and nothing else: TASKS.md records comment reports as deferred, and nothing anywhere in
+\code{shared/src/api.ts} blocks a user. Expect to build block/mute plus comment reporting before
+submission --- backend and app, both lanes. This is the item most likely to cost us a rejection
+cycle, so it should be scheduled early rather than discovered at submission.
+\end{warnbox}
+
+\begin{warnbox}
+\textbf{\color{accent}Blocker 2 --- the media contract}
+
+\code{UploadMediaInput.file: Blob} cannot work from a device as written (\S\ref{sec:media}). It is a contract
+change, so it touches \code{shared/}, \code{packages/api}, the \code{FakeApi} and the conformance
+suite, and it crosses both lanes. Settle the shape before phase 1 rather than during it.
+\end{warnbox}
+
+\textbf{Alcohol.} Three alcoholic categories sit behind \code{canSeeAlcohol}. Under Apple's 2025
+rating tiers (4+, 9+, 13+, 16+, 18+), alcohol references raise the rating; our existing server-side
+gate is the right answer to give the questionnaire. It must keep holding on every new native surface
+--- notably any Find Bev result that could contain a liquor store.
+
+\textbf{Invite-gated sign-up (guideline 2.1).} App Store Connect's review notes need a working demo
+account \emph{and} a valid invite code. Without both, the reviewer meets a wall and rejects.
+
+\textbf{Already satisfied, and worth knowing.} In-app account deletion exists
+(\code{settings/delete-account}), which meets guideline 5.1.1(v). And because auth is username and
+password with no third-party social login, \textbf{Sign in with Apple is not required} --- a
+genuinely non-trivial saving. App Privacy disclosures must still cover photos, the bug reporter's
+evidence uploads (a purge script already exists) and, later, location.
+
+% --------------------------------------------------------------------- 6 ---
+\section{Three decisions to make first}
+
+Each of these changes the work in the plan below, so they are worth settling first.
+
+\begin{callout}
+\textbf{\color{ink}1. Dual target, or native-only?}
+
+Keeping the Vercel web build means every native-only API needs a \code{.web.tsx}/\code{.native.tsx}
+split or a \code{Platform} branch, permanently. Dropping it retires \code{vercel.json},
+\code{public/} and roughly a third of the inventory in \S\ref{sec:inventory} --- at the cost of shareable web links and
+the browser as a quick demo surface.
+\end{callout}
+
+\begin{callout}
+\textbf{\color{ink}2. Bev icons: bundled, or served?}
+
+8.2\,MB inside the IPA, against a CDN dependency with a cold-launch cache to warm. Both are
+defensible; the choice determines whether \code{scripts/icons/export-app.mjs} grows an asset-map mode
+or an upload step.
+\end{callout}
+
+\begin{callout}
+\textbf{\color{ink}3. Does Find Bev wait for native?}
+
+Its reviewed plan is built for WebKit, and its iPhone spike S2 is the next step on the current path.
+Going native first makes that spike largely moot and the feature materially easier to build. That
+argues for ordering the platform move \emph{before} the Map tab, not after --- but it means
+re-opening part of a plan that has already been through review.
+\end{callout}
+
+% --------------------------------------------------------------------- 5 ---
+\section{Sequence and effort}
+
+\vspace{0.4em}
+\renewcommand{\arraystretch}{1.45}
+\noindent\begin{tabular}{@{}p{0.085\textwidth}p{0.545\textwidth}p{0.25\textwidth}@{}}
+\toprule
+\textbf{Phase} & \textbf{Work} & \textbf{Rough effort} \\
+\midrule
+0 & Enrol; bundle id; the \code{ios} block in \code{app.config.ts}; \code{expo prebuild};
+    \code{expo run:ios} on a real phone. \newline
+    \textit{Done when: it launches and signs in on a device.} & 1--2 days \\
+\addlinespace[0.35em]
+1 & Session storage and \code{AppState} refresh; the media contract; the icon strategy; the privacy
+    document; NetInfo; the photo pipeline. \newline
+    \textit{Done when: every flow works on a device.} & 1--2 weeks \\
+\addlinespace[0.35em]
+2 & Accessibility sweep (the 83 ARIA props); haptics pass; real glass; sheet, status-bar and
+    safe-area polish. \newline
+    \textit{Done when: VoiceOver parity with the web build.} & 1--2 weeks \\
+\addlinespace[0.35em]
+3 & Block and comment reporting (both lanes); privacy manifest and disclosures; the rating
+    questionnaire; the demo account. \newline
+    \textit{Done when: accepted for external TestFlight.} & 1--2 weeks \\
+\addlinespace[0.35em]
+4 & CI: a native jest project, prebuild validation, EAS build and submit, a native leak guard.
+    \newline \textit{Done when: \code{main} can cut a build.} & 2--3 days \\
+\bottomrule
+\end{tabular}
+\renewcommand{\arraystretch}{1.0}
+
+\vspace{0.7em}
+{\color{mute}\small\noindent Measured on 2026-11-14 against \code{be/custom-bev-icons} @
+\code{31381bc}; nothing in the repository was changed to produce this document.\par}
+
+\end{document}
