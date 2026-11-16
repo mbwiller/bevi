@@ -79,6 +79,11 @@ export function NutritionScan({ demoBarcode, value, onChange }: {
   }, [opacity, onChange]);
   const cameraError = useCallback((text: string) => { setCamera(false); setMessage(text); }, []);
   const start = () => { setMessage(null); setReveal(false); setOpen(true); setCamera(true); };
+  // `BeviApi.nutrition` is an optional capability (contract 2.14.0). Without it
+  // there is nothing to look a barcode up with, so the entry point does not
+  // appear at all rather than failing once the person has already scanned. The
+  // nutrition-label photo upload beside it stays the route in that case.
+  if (!api.nutrition) return null;
   return (
     <View style={styles.stack}>
       <Button variant="outlined" icon="camera" onPress={start} accessibilityLabel="Scan barcode for nutrition">Scan barcode</Button>

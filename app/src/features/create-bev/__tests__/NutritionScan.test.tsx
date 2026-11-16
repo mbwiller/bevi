@@ -62,3 +62,15 @@ it('requires confirmation before attaching a scanned product to the new Bev', as
   await fireEvent.press(screen.getByLabelText('Remove scanned nutrition'));
   expect(onChange).toHaveBeenLastCalledWith(null);
 });
+
+it('hides the scanner entirely when the API has no nutrition capability', async () => {
+  const { nutrition } = api;
+  delete api.nutrition;
+  try {
+    await render(<NutritionScan value={null} onChange={jest.fn()} />);
+    expect(screen.queryByLabelText('Scan barcode for nutrition')).toBeNull();
+    expect(screen.queryByText(/Scan the barcode or upload a photo/)).toBeNull();
+  } finally {
+    api.nutrition = nutrition;
+  }
+});
