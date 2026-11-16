@@ -134,8 +134,8 @@ const reference=(pageUrl,imageUrl,observations)=>({pageUrl,imageUrl,inspectedAt:
 const COFFEE={flavor:'COFFEE',ink:'#0a5f42',gold:'#8f6a48',caramel:'#b98556',light:'#d3b39c',dark:'#553c2c',outline:'#8a5f3c',body:['#a78a76','#c6a792','#bb9b86','#a68874'],neck:'#8c715f'};
 const VANILLA={flavor:'VANILLA',ink:'#0a5f42',gold:'#98774f',caramel:'#b98556',light:'#fce7c2',dark:'#bd9572',outline:'#a87b52',body:['#d4c09d','#f1deba','#e7d1ac','#d2bd9a'],neck:'#bfa986'};
 const energyNote='Drawn from the photographed front of the can, so the wave bands follow the packshot view and not the flat label. The Siren is a simplified vectorisation of the mark on the inspected can; STARBUCKS reuses the letters vectorised from the Espresso can with wider spacing; DOUBLESHOT and ENERGY are set in Arial (bold and regular), which is close to but not the can\'s geometric sans, and are narrowed about 14% to fit the photographed width. ENERGY COFFEE BEVERAGE and 15 FL OZ (443 mL) are composed from condensed letters vectorised on the Espresso can plus constructed N, Y, C, 4 and 3. Omitted: the registered-trademark signs, the calories-per-can badge at the lower right and the side-panel copy. The small italic flavor declaration under the flavor name is kept at its real size and is not legible at tile sizes. An older design of this can (brown wordmark, round ingredient seal, single brown swoosh) is still shown by some retailers; the manufacturer portal shows the design drawn here.';
-// starbucks-doubleshot-original is deliberately not drawn here: no Starbucks product of that name was
-// found on 2026-11-15, and the question was reported for design/beverage-icons/identity-issues.json.
+// starbucks-doubleshot-original: no Starbucks product of that name exists. Since redraw round 5 (2026-11-16, the owner's
+// decision) the row is drawn as the classic 6.5 fl oz Doubleshot Espresso can, with the same helper as Espresso & Cream.
 export const records=[
   {
     slug:'starbucks-doubleshot-energy-coffee',
@@ -171,6 +171,21 @@ export const records=[
     uncertainty:'The Siren and all lettering on this can are vectorised from the inspected packshot with the cylinder distortion removed, then fitted to the photographed widths, so the wordmark is slightly narrower than on a flat label. The metallic highlights of the gold field are reduced to one soft band; the registered-trademark signs are omitted. The Siren green is drawn as the brand green used on the Energy cans, a little cleaner than the muted green of this retailer image.',
     status:'needs-review',
     svg:espressoCan('starbucks-doubleshot-espresso-cream','Starbucks Doubleshot Espresso & Cream'),
+  },
+  {
+    slug:'starbucks-doubleshot-original',
+    family:'starbucks-doubleshot-espresso-can',
+    packageChoice:'US 6.5 fl oz (192 mL) Starbucks Doubleshot Espresso can, current design: the classic Doubleshot, sold as Espresso & Cream. The catalog row "Doubleshot Original" names no separate flavor, so this record duplicates starbucks-doubleshot-espresso-cream and is drawn with the same helper and traced marks; the two icons are identical until the catalog row is merged or renamed.',
+    references:[{
+      pageUrl:'https://www.vons.com/shop/pd/starbucks-doubleshot-espresso-beverage-espresso-and-cream-6-5-fl-oz/108100772',
+      imageUrl:'https://i5.walmartimages.com/seo/Starbucks-Doubleshot-Espresso-Cream-Premium-Coffee-Drink-Ready-To-Drink-Coffee-6-5-fl-oz-Cans-12-Pack_9adbb9db-cde2-4abc-b17f-a67c7118da76_1.30a5e89e1d607db356cc4cb5eb0482ef.jpeg',
+      inspectedAt:'2026-11-16',
+      visuallyInspected:true,
+      observations:'Single-can front packshot (3000 px), opened again for this record. Stubby straight-sided 6.5 fl oz can with a grey steel lid. A metallic gold-brown field with ESPRESSO & CREAM in white capitals ends in a diagonal silver-edged sweep; below it the body fades from pale silver to dark brown. The green Siren disc overlaps the sweep. Below it, in white: STARBUCKS, DOUBLESHOT (DOUBLE light, SHOT heavy), ESPRESSO, PREMIUM ESPRESSO BEVERAGE and 6.5 FL OZ (192 mL).',
+    }],
+    uncertainty:'Identity, not drawing: Starbucks sells no product called Doubleshot Original. The classic can carries the flavor line ESPRESSO & CREAM, which this icon keeps, so it cannot be told apart from starbucks-doubleshot-espresso-cream. The drawing itself has the limits noted on that record (lettering vectorised from the packshot with the cylinder distortion removed).',
+    status:'needs-review',
+    svg:espressoCan('starbucks-doubleshot-original','Starbucks Doubleshot Espresso'),
   },
 ];
 
