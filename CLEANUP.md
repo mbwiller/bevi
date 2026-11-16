@@ -83,7 +83,7 @@ from the rest. Tracked files removed from `main`: about 17 MB of about 94 MB.
 |---|---|---|---|---|
 | P-01 | Save the uncommitted change in `../bevi-wt/icon-redraw-04`: three review notes in `design/beverage-icons/verdicts/matt.json` (`horchata-traditional`, `mexican-coca-cola`, `minute-maid-fruit-punch`). | They existed only in that worktree. Committed on `design/icon-redraw-04` as `08b43fa` and merged to `main` in #229, the PR that added this file. | Matt | DONE |
 | P-02 | Keep `VC-materials/`, `internal/` and `docs/apple-developer-account.pdf` out of reach of `git add`. | They were untracked but not ignored, in a public repository. Now listed in Matt's `.git/info/exclude`, which keeps the names out of the public `.gitignore`. `docs/bevi-cicd-pipeline.tex` is still untracked and visible: commit it or move it. | Matt | DONE |
-| P-03 | Run the audit commands of §10.4 on Arjun's machine. | Only Matt's checkout, worktrees and local branches were audited. Arjun's local branches and worktrees are unknown. | Arjun | TODO |
+| P-03 | Run the audit commands of §10.4 on Arjun's machine. | Only Matt's checkout, worktrees and local branches were audited. Run on 2026-11-16; results are §12. | Arjun | DONE |
 | P-04 | Decide RB `be/hygiene-sweep`: bring it to `main`, or drop it. | One commit by Arjun from 2026-10-24, 1,390 lines, none of it on `main`: a privileges-hardening migration (`20261025000400_hygiene.sql`), a server-side cap on `list_bucket_bevs`, eight pgTAP assertions, and `npm run graph:verify` with its RPC. Its commit message says it was never run against a database, and the migration's timestamp is older than migrations already on prod, so it needs a new one. Draft PR #228 now holds the commit; the branch is 105 commits behind `main` and conflicts with it. | Arjun | TODO |
 
 Optional, after §7: turn on "Automatically delete head branches" in the GitHub repository settings
@@ -177,6 +177,10 @@ Any branch that has had a PR stays recoverable after deletion, because GitHub ke
 
 ### 7.1 Keep: open pull requests (5)
 
+**Stale as of 2026-11-16 evening:** seven PRs are open, not five. #228 (`be/hygiene-sweep`,
+P-04) and #230 (`be/recoup-hydration`, merged since) postdate the audit. The guard script in
+§10.3 re-checks this itself, so the table below is a snapshot, not the authority.
+
 | Branch | Tip | PR | Stack |
 |---|---|---|---|
 | `be/BEV-15-icon-quality-eval` | `ae4d0d9` | #227 open | base `be/custom-bev-icons-rebased` |
@@ -266,12 +270,12 @@ branch is newer than what `main` received.
 
 | ID | Branch | Tip | Last commit | Tip author | PR | Evidence | Risk | Status |
 |---|---|---|---|---|---|---|---|---|
-| RB-70 | `be/ranking-parity` | `5183389` | 2026-10-19 | Arjun | #107 closed | PR closed unmerged. An earlier version of `20261019000200_leaderboard_parity.sql` and its test; `main` has both files in a later version. Kept by `refs/pull/107/head`. | R2 | TODO |
+| RB-70 | `be/ranking-parity` | `5183389` | 2026-10-19 | Arjun | #107 closed | PR closed unmerged. An earlier version of `20261019000200_leaderboard_parity.sql` and its test; `main` has both files in a later version. Kept by `refs/pull/107/head`. | R2 | DONE |
 | RB-71 | `chore/board-2026-10-24` | `aa12c7c` | 2026-10-24 | Matt | #124 closed | PR closed unmerged. One `TASKS.md` board edit, superseded by #122. Kept by `refs/pull/124/head`. | R2 | TODO |
 | RB-72 | `design/beverage-icon-pilot` | `29e81a0` | 2026-11-01 | Matt | #134 merged, #148 closed | Tip is closed PR #148 (batch 3), kept by `refs/pull/148/head`. Its one icon that is not on `main`, `starbucks-frappuccino-mocha.svg`, was withdrawn on purpose by #160 (cafe or bottled identity unresolved, see `identity-issues.json`). This was the branch Codex wrote icon batches on; nothing has landed on it since 2026-11-01. Confirm Codex no longer starts from it. | R2 | TODO |
-| RB-73 | `design/beverage-icons-batch-03` | `7fe42bd` | 2026-11-04 | Arjun | #164 closed | PR closed unmerged. Old bundled-icon pipeline (`app/public/bev-icons/`, removed by #199-#203). All 124 icon slugs on the branch exist on `main`. Kept by `refs/pull/164/head`. | R2 | TODO |
-| RB-74 | `design/beverage-icons-batch-05` | `02b43f7` | 2026-11-04 | Arjun | none | **No PR, so no PR ref keeps it.** Batch-03 plus one commit, same old pipeline. All 152 icon slugs on the branch exist on `main`. | R2 | TODO |
-| RB-75 | `spike/find-bev-s1` | `0b4413f` | 2026-11-14 | Arjun | none | **No PR.** Tip commit says "never merge"; the spike that shipped is #204 (`ui/find-bev-spike`). 13 file versions differ from `main`. Find Bev was dropped on 2026-11-16 (§1.1), so nothing here is wanted. | R2 | TODO |
+| RB-73 | `design/beverage-icons-batch-03` | `7fe42bd` | 2026-11-04 | Arjun | #164 closed | PR closed unmerged. Old bundled-icon pipeline (`app/public/bev-icons/`, removed by #199-#203). All 124 icon slugs on the branch exist on `main`. Kept by `refs/pull/164/head`. | R2 | DONE |
+| RB-74 | `design/beverage-icons-batch-05` | `02b43f7` | 2026-11-04 | Arjun | none | **No PR, so no PR ref keeps it.** Batch-03 plus one commit, same old pipeline. All 152 icon slugs on the branch exist on `main`. | R2 | DONE |
+| RB-75 | `spike/find-bev-s1` | `0b4413f` | 2026-11-14 | Arjun | none | **No PR.** Tip commit says "never merge"; the spike that shipped is #204 (`ui/find-bev-spike`). 13 file versions differ from `main`. Find Bev was dropped on 2026-11-16 (§1.1), so nothing here is wanted. | R2 | DONE |
 | RB-76 | `ui/primitives` | `6938476` | 2026-10-11 | Matt | #26 merged | One commit pushed after #26 merged (`6938476`, 44pt hit areas, `HitTarget.tsx`). `HitTarget.tsx` is on `main`, but this commit is not covered by a PR ref. Diff it against `main` first. | R2 | TODO |
 
 ### 7.4 R3: owner decides, see P-04 (1)
@@ -566,3 +570,154 @@ Append one line per action. Reasons for `KEPT` and `BLOCKED` go here.
 | 2026-11-16 | Claude (Matt's session) | P-02 | `VC-materials/`, `internal/`, `docs/apple-developer-account.pdf` added to Matt's `.git/info/exclude`. | local only |
 | 2026-11-16 | Matt | F-06, F-07, F-10 | Decision recorded (§1.1). F-06 `KEPT`: the Map tab returns to Google Maps. F-07 drops from R3 to R2 (Find Bev is obsolete). F-10 added. | #229 |
 | 2026-11-16 | Claude (Matt's session) | RB and LB `design/beverage-icon-pilot`, P-04 | Both unmerged branches checked. The pilot branch's one icon missing from `main` (`starbucks-frappuccino-mocha`) was withdrawn on purpose in #160, so both rows drop from R3 to R2. `be/hygiene-sweep` is real unmerged work: P-04. | #229 |
+| 2026-11-16 | Claude (Arjun's session) | P-03 | §10.4 run on Arjun's machine: 29 worktrees (about 13 GB), 61 local branches, three dirty trees, one stash. New rows in §12. | #TBD |
+| 2026-11-16 | Claude (Arjun's session) | RB-70, RB-73, RB-74, RB-75 | Deleted from `origin`. Every tip matched the audited SHA and no open PR was based on any of them. `batch-05` and `spike/find-bev-s1` had no PR ref, but an identical local branch remains on Arjun's disk, so neither deletion is final; both locals move to A-LB R2 in §12.3. | #TBD |
+| 2026-11-16 | Claude (Arjun's session) | A-01, A-02 | Two pieces of work that existed on exactly one disk are now on `origin`: `be/bayes-prior-propagation` (`884f559`, the A-14 follow-ups, 1,115 lines, uncommitted in an agent worktree since 2026-10-24) and `docs/ios-migration` (`ee6527d`, the iOS migration assessment, untracked since 2026-11-14). | §12.1 |
+| 2026-11-16 | Claude (Arjun's session) | P-04 | Verified against `main`, not yet decided. Three of the commit's four findings are still live: table privileges are unrevoked everywhere except `profiles`/`profiles_view` (`20261012000400`), `07_user_feed.test.sql` still ends at `finish()` with no `rollback;`, and `11_graph_tables.test.sql` is still `plan(57)`. The `array_length`/`cardinality` finding is moot — the cap bypass it names is already fixed on `main` (`20261019000500:296`) and the remainder is the readability trap the commit itself calls "not a hole". The privilege gap is defence in depth, not an open door: PostgREST has no TRUNCATE verb and RLS already denies the DML. **No rebase is needed.** Neither test file it touches has changed on `main` since the merge-base (`1a18ec0`), so a cherry-pick onto `main` conflicts only in `package.json` (12 lines) and two one-line board notes. | - |
+
+## 12. Arjun's machine (P-03)
+
+Audited 2026-11-16, `origin` fetched and pruned, same risk scale as §2. 29 worktrees (about
+13 GB: 7.5 GB under `/private/tmp/bevi-*`, 4 GB under the session scratchpads, 1.6 GB in
+`.claude/worktrees/`), 61 local branches, three dirty trees, one stash. A further 1 GB of loose
+logs, npm caches, review sheets and `.json` scratch sits in `/private/tmp` outside any repository.
+
+One difference from Matt's machine changes the risk: **24 of the 29 worktrees live under
+`/private/tmp`, which macOS prunes daily.** It has already run. `bevi-icons-batch-03`,
+`bevi-icons-batch-05`, `bevi-icons-publish` and one scratchpad worktree are 0 bytes with only
+their `.git/worktrees` metadata left, and `…/scratchpad/tax` is gone from disk entirely. Nothing
+whose only copy is a worktree should be left there, and §5's "a clean worktree is R1 whatever its
+branch holds" holds here only because the branches are pushed.
+
+### 12.1 Resolved during the audit
+
+| ID | What | Outcome | Status |
+|---|---|---|---|
+| A-01 | `supabase/migrations/20261025000300_bayes_prior_propagation.sql` (32 KB) + `supabase/tests/15_bayes_prior_propagation.test.sql` (19 KB), untracked in `.claude/worktrees/agent-ac98ed97f9237fc36` since 2026-10-24, in no git object on any ref, plus 13 lines of edits to `shared/src/types.ts`, `09_leaderboard_parity.test.sql`, `TASKS.md` and `NEXT-ARJUN.md`. | Committed unchanged as `884f559` on `be/bayes-prior-propagation` and pushed. Not rebased, not reviewed, never run against a database; the timestamp is below `main`'s high-water mark (`20261113000100`) and needs renumbering before any `db push`. No `CONTRACT_VERSION` change (the `shared/src` edit is a doc comment). | DONE |
+| A-02 | `docs/bevi-ios-migration.tex` + `.pdf`, untracked since 2026-11-14, on no branch. | Committed as `ee6527d` on `docs/ios-migration` and pushed, following `docs/bevi-ranking-math.{tex,pdf}`. Scanned for credentials first. PR still to open. | DONE |
+| A-03 | The main checkout was dirty: 751 untracked entries and 17 modified files, on `be/custom-bev-icons` while `main` had moved 38 commits. 461 untracked files were byte-identical to `main` and 122 more were older copies of files on `main` (including `CLAUDE.md` and `.claude/hooks/slack-inbox.sh`); 162 were `app/public/bev-icons/*.svg` from the pipeline #199–#203 removed, all 162 present in history. | Archived whole, then cleared; the 17 modified files reverted; the stash (`package-lock` churn, 47 lines) dropped. Checkout fast-forwarded to `main`. | DONE |
+| A-04 | `docs/find-bev-in-app-plan.md` (39 KB), untracked and on no branch — the plan F-07 cites. | Binned under the §1.1 decision, archived not committed. This closes F-07's "citations of a document that exists on no branch": it existed, here, and no longer does. | DONE |
+| A-05 | `beverage-ticketing-codex/` (9 files, 2026-11-02): a separate project sitting untracked in the repository root. | Moved to `~/projects/beverage-ticketing-codex`. | DONE |
+| A-06 | `scripts/icons/staging/{hydration,sparkling}-expansion.mjs` and `scripts/icons/families/mountain-dew.mjs`, untracked. | Not committed, all three superseded: `staging/sparkling-expansion.mjs` is an older copy of `families/sparkling-expansion.mjs` on `main`, `staging/hydration-expansion.mjs`'s extra `power()` recipes were redrawn as `families/redraw-powerade.mjs` on `main`, and `families/mountain-dew.mjs` is byte-identical to its copy on #221. | DONE |
+
+### 12.2 Worktrees (29)
+
+`main` checkout aside, every one is clean. Sizes are after the `/private/tmp` pruning, so a 0 B
+row is a folder the cleaner has already emptied.
+
+| ID | Path | Branch | Size | Risk | Status |
+|---|---|---|---|---|---|
+| A-WT-01 | `/Users/arjuncheema/projects/bevi` | the checkout | 2.7 GB | - | not a candidate |
+| A-WT-02 | `/private/tmp/bevi-barcode-poc` | `ui/barcode-nutrition-poc` | 830 MB | R4 | TODO |
+| A-WT-03 | `/private/tmp/bevi-icon-app` | `ui/bev-icon-app-integration` | 881 MB | R4 | TODO |
+| A-WT-04 | `/private/tmp/bevi-icon-quality-eval` | `be/BEV-15-icon-quality-eval` (#227 open) | 882 MB | R2 | TODO |
+| A-WT-05 | `/private/tmp/bevi-nutrition-contract` | `contract/barcode-nutrition` (#222 open) | 98 MB | R2 | TODO |
+| A-WT-06 | `/private/tmp/bevi-nutrition-backend` | `be/barcode-nutrition` (#223 open) | 98 MB | R2 | TODO |
+| A-WT-07 | `/private/tmp/bevi-nutrition-production` | `ui/barcode-nutrition` (#224 open) | 912 MB | R2 | TODO |
+| A-WT-08 | `…/efff4560-…/scratchpad/wt-icons` | `be/custom-bev-icons-rebased` (#221 open) | 881 MB | R2 | TODO |
+| A-WT-09 | `/private/tmp/bevi-recoup` | `be/recoup-hydration` (#230 merged) | 900 MB | R1 | TODO |
+| A-WT-10 | `/private/tmp/bevi-icons-fresca` | `ui/beverage-icons-fresca` (#195) | 884 MB | R1 | TODO |
+| A-WT-11 | `/private/tmp/bevi-icons-batch11` | `ui/beverage-icons-batch11` (#202) | 867 MB | R1 | TODO |
+| A-WT-12 | `/private/tmp/bevi-icons-batch13` | `ui/beverage-icons-batch13` (#217) | 98 MB | R1 | TODO |
+| A-WT-13 | `/private/tmp/bevi-icons-batch12` | `ui/beverage-icons-batch12` (#213) | 93 MB | R1 | TODO |
+| A-WT-14 | `/private/tmp/bevi-icons-batch09` | `ui/beverage-icons-next-20` (#189) | 21 MB | R1 | TODO |
+| A-WT-15 | `/private/tmp/bevi-icons-energy` | `ui/beverage-icons-energy-next` (#181) | 18 MB | R1 | TODO |
+| A-WT-16 | `/private/tmp/bevi-icons-release` | `ui/beverage-icons-production` (#178) | 10 MB | R1 | TODO |
+| A-WT-17 | `/private/tmp/bevi-icons-publish` | `design/beverage-icons-catalog` (#160) | 0 B | R1 | TODO |
+| A-WT-18 | `/private/tmp/bevi-icons-batch-03` | `design/beverage-icons-batch-03` (#164 closed) | 0 B | R1 | TODO |
+| A-WT-19 | `/private/tmp/bevi-icons-batch-05` | `design/beverage-icons-batch-05` (no PR) | 0 B | R1 | TODO |
+| A-WT-20 | `…/17c34adb-…/scratchpad/wt-findbev-spike` | `ui/find-bev-spike` (#204) | 862 MB | R1 | TODO |
+| A-WT-21 | `…/e11f95c4-…/scratchpad/wt-tickets` | `fix/ranking-createdat-conformance` (#216) | 937 MB | R1 | TODO |
+| A-WT-22 | `…/e11f95c4-…/scratchpad/wt-contract2` | `contract/ranking-createdat-doc` (#218) | 877 MB | R1 | TODO |
+| A-WT-23 | `…/e11f95c4-…/scratchpad/track-a` | `test/rerank-redates-ranked-at` (#220) | 98 MB | R1 | TODO |
+| A-WT-24 | `…/e11f95c4-…/scratchpad/bev13` | `bev13-local` (#215) | 94 MB | R1 | TODO |
+| A-WT-25 | `…/e11f95c4-…/scratchpad/wt-contract` | `contract/gut-check-order-docs` (#211) | 88 MB | R1 | TODO |
+| A-WT-26 | `…/76abc3b1-…/scratchpad/wt` | detached | 0 B | R1 | TODO |
+| A-WT-27 | `…/76abc3b1-…/scratchpad/tax` | `ui/taxonomy` (#127) | gone from disk | R1 | TODO |
+| A-WT-28 | `.claude/worktrees/agent-a5dcef9ce277606f6` | `be/hygiene-sweep` (#228 open, P-04) | 788 MB | R1 | TODO |
+| A-WT-29 | `.claude/worktrees/agent-ac98ed97f9237fc36` | `be/bayes-prior-propagation` | 788 MB | R1 | TODO |
+
+A-WT-02 and A-WT-03 are the only R4 rows: their branches exist on no remote and have no PR, so
+each worktree's folder is the only place that work lives. Arjun is pushing both as of
+2026-11-16; they drop to R1 the moment `git ls-remote origin <branch>` answers. A-WT-04 to
+A-WT-08 are R2 only because an open PR is being worked in them — removing the folder would not
+lose a commit. A-WT-28 and A-WT-29 are R1 as worktrees even though P-04 is undecided, because
+removing a worktree never touches its branch.
+
+Checks after this section: `git worktree list` shows the checkout plus anything kept, and
+`git worktree prune --dry-run -v` prints nothing.
+
+### 12.3 Local branches (61 besides `main`)
+
+**R1, 45 branches.** 12 are dead `worktree-agent-*` left by agent sessions, all ancestors of
+`main`. 6 more are ancestors of `main` outright. 14 are the exact head of a merged PR, and 13 are
+contained in one (`git merge-base --is-ancestor <branch> <PR head>`), which covers a tip that sits
+behind the merged head. Guard list for §10.2's script:
+
+```
+be/taste-graph d582412
+tooling/agent-slack 3f8490a
+be/embed-config-vault 2dad111
+ui/find-bev-spike 9388377
+docs/graph-db-implementation c3cffa2
+contract/gut-check-order-docs 1768290
+design/beverage-icons-catalog 76d7559
+ui/beverage-icons-production 1d5a38e
+ui/beverage-icons-fresca 40334e9
+ui/beverage-icons-next-20 d4a5cd7
+ui/beverage-icons-energy-next 8fc09cc
+ui/beverage-icons-batch11 d07a6b0
+ui/beverage-icons-batch12 51635cd
+ui/beverage-icons-batch13 220df6f
+ui/taxonomy 5173a27
+be/venues-api 5dd0f2b
+be/category-hierarchy cd19e6b
+chore/board-state-2026-10-25 5c32b60
+fix/bev-7-create-bev-fields-shift a23ec55
+fix/bev-9-gut-check-order 4b4d1fb
+fix/bev-10-bev-of-period-two-cards 0c3df90
+fix/bev-11-bucket-filter-name 65656c4
+be/recoup-hydration a8a0321
+be/embed-batch-limit 017093f
+design/beverage-icons-batch-03 7fe42bd
+be/ranking-parity 5183389
+pr175 81cff56
+bev13-local 72fc9d2
+fix/bev-13-rename-rerank 790f35a
+fix/app-jest-worker-memory-1gb c811efe
+contract/ranking-createdat-doc 04a2e8e
+test/rerank-redates-ranked-at f0202c3
+fix/ranking-createdat-conformance 431baef
+```
+
+plus `worktree-agent-{a1ace273c5d4ec4e2, a3329a9d582fe7057, a344d57a4fd63ee57, a4706de676e619f6d,
+a502aebfd5f02b09f, a5dcef9ce277606f6, a5f73c78e7a21ab39, a66a9b01d1d0bca28, aa76ab55e6e63ac1d,
+aad68c7c460a358dd, ac98ed97f9237fc36, acabb286fcfd3a30d}`, each at `921a712`, `86e09ad`, `39e5d5b`,
+`bab79ee`, `80ea8e1`, `1a18ec0` or `cdbfc81` — all on `main`. Several are checked out in §12.2
+worktrees, so do §12.2 first; `git branch -D` refuses the rest.
+
+**R2, 5 branches.**
+
+| ID | Branch | Tip | Evidence | Risk | Status |
+|---|---|---|---|---|---|
+| A-LB-01 | `be/custom-bev-icons` | `31381bc` | Never pushed. The pre-rebase version of #221: its tip commit has the same subject as `99661f1` on `be/custom-bev-icons-rebased`, and its two unique commits are pre-squash versions of #167 and #161. Matt's LB-23 is the same shape. The working tree that sat on it is archived (A-03). | R2 | TODO |
+| A-LB-02 | `be/bug-reporter` | `c2d1e02` | Four commits not contained in #167's head, each a pre-squash version of merged work (#167 bug reporter 2.11.0, #161 venues 2.10.0). | R2 | TODO |
+| A-LB-03 | `fix/app-jest-worker-memory` | `805d6ac` | Same as RB-25: one commit pushed after #210 merged, the same change merged as #214. | R2 | TODO |
+| A-LB-04 | `design/beverage-icons-batch-05` | `02b43f7` | **Now the only copy** — RB-74 was deleted from `origin` on the strength of this branch. No PR, so no PR ref. All 152 icon slugs on it exist on `main`. | R2 | TODO |
+| A-LB-05 | `spike/find-bev-s1` | `0b4413f` | **Now the only copy** — RB-75 was deleted from `origin` on the strength of this branch. No PR. Tip says "never merge"; the spike that shipped is #204, and Find Bev was dropped on 2026-11-16 (§1.1). | R2 | TODO |
+
+**Keep, 11 branches:** the six with an open PR (`be/custom-bev-icons-rebased` #221, `contract/barcode-nutrition` #222, `be/barcode-nutrition` #223, `ui/barcode-nutrition` #224, `be/BEV-15-icon-quality-eval` #227, `be/hygiene-sweep` #228), the two just pushed (`be/bayes-prior-propagation`, `docs/ios-migration`), the two Arjun is pushing (`ui/barcode-nutrition-poc`, `ui/bev-icon-app-integration`), and `chore/cleanup-p03`, which carries this section.
+
+### 12.4 Local-only files (Arjun's machine)
+
+| ID | Path | What it is | Risk | Status |
+|---|---|---|---|---|
+| A-L-01 | `design/beverage-icons/style-refs/` (11 PNGs, 408 KB) | Style references for the served-drinks and agua-fresca icons (`horchata-traditional`, `generic-margarita`, `matcha-latte-with-boba`, …). **In no git ref on any branch**, and referenced by nothing on `main`. It was masked from `git status` until 2026-11-16 by the `.gitignore` of the branch the checkout sat on, which is why no earlier session saw it. Decide whether these are generation inputs worth committing. | R3 | TODO |
+| A-L-02 | `/private/tmp/bevi-*` loose files (about 1 GB) | Not worktrees and in no repository: `bevi-nutrition-npm-cache` (314 MB), `bevi-icon-npm-cache` (237 MB), `bevi-swift-cache` (201 MB), `bevi-cloudflared{.tgz,-bin}` (57 MB), eleven review and batch folders, and about 40 logs, PR bodies and `.json` scratch files. Rebuilt or regenerated on demand. | R1 | TODO |
+| A-L-03 | The A-03 archive (34 MB) | `untracked-working-tree.tar.gz`, the 17 modified files and the stash patch, in this session's scratchpad — which is itself temporary. Move it if it should outlive the session; otherwise it goes with the scratchpad. | R2 | TODO |
+
+### 12.5 Not covered
+
+Arjun's `internal/`, `VC-materials/` or equivalents were not inventoried — §8.3 is Matt's machine
+only, and the `/private/tmp` sweep above stops at the repository's own scratch. Nothing on any
+dashboard, database or hosted service was touched.
