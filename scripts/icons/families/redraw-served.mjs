@@ -137,11 +137,11 @@ function moscowMule() {
   }
   let shards = '';
   const R2 = rng(99);
-  for (let i = 0; i < 46; i++) {
+  for (let i = 0; i < 36; i++) {
     const t = R2(), u = R2();
-    const x = 62 + t * 92, top = 104 - 40 * Math.sqrt(Math.max(0, 1 - ((x - cx) / 48) ** 2));
-    const y = r2(top + 3 + u * (104 - top + 4));
-    const s = 4 + R2() * 5, a = R2() * 6.28;
+    const x = 64 + t * 88, top = 104 - 19 * Math.sqrt(Math.max(0, 1 - ((x - cx) / 49) ** 2));
+    const y = r2(top + 3 + u * (106 - top));
+    const s = 3.5 + R2() * 4, a = R2() * 6.28;
     const pts = [0, 1.3, 2.4, 3.6, 4.9].map((k, j) => { const rr = s * (j % 2 ? .7 : 1); return `${r2(x + Math.cos(a + k) * rr)} ${r2(y + Math.sin(a + k) * rr * .8)}`; });
     const shade = R2();
     shards += `<path d="M${pts.join('L')}Z" fill="${shade > .66 ? '#ffffff' : shade > .33 ? '#eef3f6' : '#d6e0e7'}" stroke="#a9bac6" stroke-opacity=".6" stroke-width=".6"/>`;
@@ -157,20 +157,21 @@ function moscowMule() {
 <path d="M57 120H36Q30 120 30.5 127L33 186Q34 197 46 200L58 202" fill="none" stroke="${ref('brass')}" stroke-width="7.6" stroke-linejoin="round"/>
 <path d="M56 117.6H36Q28.6 118 28.6 126" fill="none" stroke="#ffe0a6" stroke-opacity=".8" stroke-width="1.4"/>
 <path d="M30.4 130 32.6 184" fill="none" stroke="#ffe0a6" stroke-opacity=".55" stroke-width="1.2"/>
-<path d="M78 72 66 16" stroke="#111" stroke-width="4" stroke-linecap="round"/><path d="M77 70 65.6 18" stroke="#666" stroke-width=".9"/>
 <path d="${mug}" fill="${ref('copper')}" stroke="#4c1a08" stroke-width="1"/>
 <g clip-path="${ref('mug')}">${dimples}<path d="${mug}" fill="${ref('copperv')}"/></g>
 <path d="M66 118C63 150 63 184 68 210" fill="none" stroke="#fff3e6" stroke-opacity=".75" stroke-width="3.4" stroke-linecap="round"/>
 <path d="M150 120C153 150 153 182 149 206" fill="none" stroke="#ffcfae" stroke-opacity=".35" stroke-width="1.8" stroke-linecap="round"/>
 <path d="M59 215Q108 236 157 215" fill="none" stroke="#3a1205" stroke-opacity=".5" stroke-width="1.2"/>
 <ellipse cx="${cx}" cy="104" rx="52" ry="9.4" fill="#3d1407"/>
-<path d="M60 104C62 78 82 62 108 61.4S154 78 156 104Q108 116 60 104Z" fill="${ref('heap')}" stroke="#a9bac6" stroke-opacity=".7" stroke-width=".8"/>
+<path d="M56 104A52 9.4 0 0 1 160 104" fill="none" stroke="#c9845c" stroke-width="2.6"/><path d="M54.6 104A53.4 10.6 0 0 1 161.4 104" fill="none" stroke="#4c1a08" stroke-width=".9"/>
+<path d="M82 98 70 42" stroke="#111" stroke-width="4" stroke-linecap="round"/><path d="M81 96 69.6 44" stroke="#666" stroke-width=".9"/>
+<path d="M58.5 104C62 92 84 85 108 85S154 92 157.5 104Q108 115 58.5 104Z" fill="${ref('heap')}" stroke="#a9bac6" stroke-opacity=".7" stroke-width=".8"/>
 ${shards}
-${wedge(80, 96, 25, -152)}
-${mint(130, 74, 1.05, 18)}${mint(127, 72, .85, 62)}${mint(124, 76, .8, -30)}
-<ellipse cx="${cx}" cy="104" rx="52" ry="9.4" fill="none" stroke="#f0ae84" stroke-width="2.6"/>
-<ellipse cx="${cx}" cy="104" rx="53.4" ry="10.6" fill="none" stroke="#4c1a08" stroke-width=".9"/>
-<path d="M57 107.5Q108 124 159 107.5" fill="none" stroke="#7a3214" stroke-width="1.2"/>`;
+${mint(130, 92, 1.05, 18)}${mint(127, 90, .85, 62)}${mint(124, 94, .8, -30)}
+<path d="M56 104A52 9.4 0 0 0 160 104" fill="none" stroke="#f0ae84" stroke-width="2.6"/>
+<path d="M54.6 104A53.4 10.6 0 0 0 161.4 104" fill="none" stroke="#4c1a08" stroke-width=".9"/>
+<path d="M57 107.5Q108 124 159 107.5" fill="none" stroke="#7a3214" stroke-width="1.2"/>
+${wedge(84, 104, 25, -152)}`;
   return wrap('generic-moscow-mule', 'Moscow Mule', body, defs);
 }
 
@@ -280,14 +281,14 @@ export const records = [
   {
     slug: 'generic-moscow-mule',
     family: 'unbranded-served-drink',
-    packageChoice: 'The copper-mug serve (owner decision): hammered barrel copper mug with a brass handle, crushed ice heaped above the rim, a lime wedge, a mint sprig and a black straw.',
+    packageChoice: 'The copper-mug serve (owner decision): hammered barrel copper mug with a brass handle, a low mound of crushed ice inside the rim, a lime wedge resting on the front lip, a mint sprig and a black straw in the ice. The photo\'s taller heap was lowered at the owner\'s request.',
     references: [{
       pageUrl: 'https://commons.wikimedia.org/wiki/File:Moscow_Mule_at_Rye%2C_San_Francisco.jpg',
       imageUrl: 'https://commons.wikimedia.org/wiki/Special:FilePath/Moscow_Mule_at_Rye%2C_San_Francisco.jpg?width=2000',
       inspectedAt: D, visuallyInspected: true,
       observations: 'Barrel-shaped hammered copper mug, slightly wider at the middle than at rim and base, rosy highlights and deep red-brown shadows; angular brass handle on the left; crushed ice heaped well above the rim; a lime wedge tucked into the ice at the front; two black straws. No mint.',
     }],
-    uncertainty: 'Mint sprig added per the owner\'s serve (the photo has none). One straw instead of two. Hammered dents are about two dozen soft, irregular spots (fixed seed) that fade toward the edges and under the highlight; their placement is not copied from the photo.',
+    uncertainty: 'Ice mound lowered to about a fifth of the mug width above the rim at the owner\'s request (the photo heaps it much higher). Mint sprig added per the owner\'s serve (the photo has none). One straw instead of two. Hammered dents are about two dozen soft, irregular spots (fixed seed) that fade toward the edges and under the highlight; their placement is not copied from the photo.',
     status: 'needs-review',
     svg: moscowMule(),
   },

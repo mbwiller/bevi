@@ -6856,7 +6856,7 @@
     {
       "slug": "generic-moscow-mule",
       "family": "unbranded-served-drink",
-      "packageChoice": "The copper-mug serve (owner decision): hammered barrel copper mug with a brass handle, crushed ice heaped above the rim, a lime wedge, a mint sprig and a black straw.",
+      "packageChoice": "The copper-mug serve (owner decision): hammered barrel copper mug with a brass handle, a low mound of crushed ice inside the rim, a lime wedge resting on the front lip, a mint sprig and a black straw in the ice. The photo's taller heap was lowered at the owner's request.",
       "references": [
         {
           "pageUrl": "https://commons.wikimedia.org/wiki/File:Moscow_Mule_at_Rye%2C_San_Francisco.jpg",
@@ -6866,7 +6866,7 @@
           "observations": "Barrel-shaped hammered copper mug, slightly wider at the middle than at rim and base, rosy highlights and deep red-brown shadows; angular brass handle on the left; crushed ice heaped well above the rim; a lime wedge tucked into the ice at the front; two black straws. No mint."
         }
       ],
-      "uncertainty": "Mint sprig added per the owner's serve (the photo has none). One straw instead of two. Hammered dents are about two dozen soft, irregular spots (fixed seed) that fade toward the edges and under the highlight; their placement is not copied from the photo.",
+      "uncertainty": "Ice mound lowered to about a fifth of the mug width above the rim at the owner's request (the photo heaps it much higher). Mint sprig added per the owner's serve (the photo has none). One straw instead of two. Hammered dents are about two dozen soft, irregular spots (fixed seed) that fade toward the edges and under the highlight; their placement is not copied from the photo.",
       "status": "needs-review",
       "bevId": "f5cde824-6dbc-5cd9-9ffd-896e760f6f38",
       "name": "Moscow Mule",
@@ -6877,10 +6877,10 @@
         "svg": "svg/generic-moscow-mule.svg",
         "portableSvg": "portable-svg/generic-moscow-mule.svg",
         "png": "png/generic-moscow-mule.png",
-        "svgSha256": "f98e27febdf958caa5ce2ffcf605f88a2c44156c439fdd01f77e550d00736517",
-        "portableSvgSha256": "a722095ab31460a330000389d1ecaf99be5a335898a3193ec1865d20d580a5c2",
-        "pngSha256": "0203e8737f6e1da220b04bd7b2d434ed77ed1c780a54c95f45edc765fc49ddf3",
-        "pngBytes": 166358
+        "svgSha256": "2a24229e85b9d45aad36afaf0be484f1d02779c02b8f5ae3cee195119d1f4540",
+        "portableSvgSha256": "4e4f0d75c807e46f767cd817ef15b8e858209922bd79efc9408fb94853d6727b",
+        "pngSha256": "0f7e97aea25a95d40b60be3c91e1fac41ba271d11f1fc1028b73705a4e9c7cba",
+        "pngBytes": 156427
       },
       "sourceModule": "scripts/icons/families/redraw-served.mjs"
     },
@@ -7036,10 +7036,10 @@
         "svg": "svg/arrowhead-mountain-spring-water.svg",
         "portableSvg": "portable-svg/arrowhead-mountain-spring-water.svg",
         "png": "png/arrowhead-mountain-spring-water.png",
-        "svgSha256": "8277af632f4eb12bd47ddb7136f3b22b969a0c2b93f93914d60ca846dcb1e836",
-        "portableSvgSha256": "699468e7dec34550bf883008d3d38343b4b360ed311e5b545c94482b2457364b",
-        "pngSha256": "94b769ca8fd7d0d4c514fdf2660f0667bf6ddfafb89b23f69f7a9954b544b535",
-        "pngBytes": 112596
+        "svgSha256": "1cbfc35dad2d578ebefc2c41b5174c1d0b6eed5aa6727f1d7870695ec772f24e",
+        "portableSvgSha256": "77d38bc00ecafc6614d699bf982a9490fe24909539816455139a9700048004b9",
+        "pngSha256": "6cd9b19fd35def4d2affd0deb3758555f3d035a08d9d94bc0fd056349754887b",
+        "pngBytes": 102958
       },
       "sourceModule": "scripts/icons/families/redraw-waters.mjs"
     },
