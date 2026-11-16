@@ -40,22 +40,6 @@ const tropicana=[
 ];
 
 
-const mottsShape='M84 39h32q-3 8 5 16l-1 16q0 12 19 30 12 11 12 28v86q-1 18-15 20H64q-14-2-15-20v-86q0-17 12-28 19-18 19-30l-1-16q8-8 5-16Z';
-function motts(d){
- const body=`<path d="M84 44h32q12 14-1 25H85q-13-11-1-25Z" fill="#eec65b" opacity=".5"/>
-${Array.from({length:12},(_,i)=>{const x=63+i*6.7;return `<path d="M${84+i*2.7} 75 ${x} 105v7" stroke="#fff7be" stroke-opacity=".55" stroke-width="1.3" fill="none"/>`;}).join('')}
-<path d="M49 117h102v100H49Z" fill="#ffe333"/>
-${text(100,133,'since 1842',3.3,'#202724','font-style="italic"')}
-${text(100,150,"MOTT'S",22,'#131a13','font-weight="900" letter-spacing="-.9" textLength="86" lengthAdjust="spacingAndGlyphs"')}
-<path d="M49 156h43v61H49Z" fill="#00a950"/>
-${text(71,171,'100%',9.5,'#fffef0','font-weight="bold"')}${text(71,181,'JUICE',9,'#fffef0','font-weight="bold"')}${text(71,197,'APPLE',6.5,'#fffef0','font-weight="bold"')}
-${apple(118,188,1.03)}
-${text(114,215,'64 FL OZ',3.3,'#343723')}
-<path d="M57 223q43 10 86 0" stroke="#ffe3a0" stroke-opacity=".55" stroke-width="2" fill="none"/>
-<ellipse cx="100" cy="228" rx="26" ry="5" fill="none" stroke="#bd872c" stroke-width=".7"/>
-<path d="M85 52q-8 10-2 20" stroke="#fff7c4" stroke-opacity=".5" stroke-width="2" fill="none"/>`;
- return finish({...d,left:56,right:145,shadow:61},mottsShape,body,cap('#dfba16','#ffde48',34));
-}
 const minuteAppleShape='M82 40h36v17q0 8 13 13 10 5 9 21l-7 50 7 73q2 19-12 21H72q-14-2-12-21l7-73-7-50q-1-16 9-21 13-5 13-13Z';
 const minutePunchShape='M85 40h30v17q1 9 10 24l17 31q2 7 0 15v45q-2 9-7 15l-2 24 8 15q0 9-9 9l-13-3q-9 8-18 0-10 8-20 0l-12 3q-10 0-10-9l8-15-2-24q-5-6-7-15v-45q-2-8 0-15l17-31q9-15 10-24Z';
 function minute(d){
@@ -78,14 +62,11 @@ ${apple(115,213,.69)}${text(100,230,'12 FL OZ',3.5,'#283c20')}`;
  }
  return finish({...d,left:punch?65:64,right:punch?136:137,shadow:53},punch?minutePunchShape:minuteAppleShape,body,cap('#242826','#414944',35,26));
 }
-const mottsData={slug:'motts-apple-juice',title:"Mott's 100% Apple Juice",color:'#ce991b',light:'#ebc54f',dark:'#a16f16'};
-const minuteData=[{slug:'minute-maid-apple-juice',title:'Minute Maid Apple Juice',color:'#d6b359',light:'#e9d491',dark:'#b1944c',punch:false},{slug:'minute-maid-fruit-punch',title:'Minute Maid Fruit Punch',color:'#c6272e',light:'#e65e5c',dark:'#9e1b2a',punch:true}];
+const minuteData=[{slug:'minute-maid-apple-juice',title:'Minute Maid Apple Juice',color:'#d6b359',light:'#e9d491',dark:'#b1944c',punch:false}];
 function record(d,family,packageChoice,pageUrl,imageUrl,observations,svg,uncertainty=''){
  return{slug:d.slug,family,packageChoice,references:[{pageUrl,imageUrl,inspectedAt:date,visuallyInspected:true,observations}],uncertainty:`${uncertainty} Each exact variant reference visually inspected; representative US package chosen because catalog does not specify size. Brand lettering, fruit art and small print simplified original vectors with pinned fonts. Final aesthetic approval and native-device review pending.`,status:'needs-review',svg};
 }
 export const records=[
  ...tropicana.map(d=>record(d,'tropicana-juice-bottle',`US 46 fl oz Tropicana ${d.title.replace('Tropicana ','')} clear PET bottle.`,`https://www.tropicana.com/products/${d.page}/`,`https://www.tropicana.com/images/products/${d.image}`,d.observations,trop(d),'Manufacturer Current No Pulp/Some Pulp/Refreshers package explicitly selected. Separate catalog Original/No Pulp conflict is not resolved by assigning duplicate artwork.')),
- record(mottsData,'motts-juice-bottle',"US 64 fl oz / 1.89L Mott's original100% Apple Juice bottle.",'https://www.motts.com/products/juice/motts-100-original-apple-juice','https://www.motts.com/images/products/sizes/motts-100-original-apple-juice_64.png','Manufacturer64oz Original Apple photo individually inspected: clear wide molded bottle, amber juice, small yellow ribbed cap, fluted shoulders, yellow upper/green lower label, large black angular MOTT’S, white100% JUICE/APPLE, red apple and green leaf; transparent molded base. Not Natural, Organic, Light or Tots.',motts(mottsData)),
  record(minuteData[0],'minute-maid-juice-bottle','US 12 fl oz / 355mL Minute Maid100% Apple Juice bottle.','https://www.coca-cola.com/us/en/brands/minute-maid/products/minute-maid-variety-juices','https://www.coca-cola.com/content/dam/onexp/us/en/brands/minute-maid/products/variety-juice/minutemaid-prod-apple-allbreakpoints.png','Manufacturer Apple image individually inspected: slim waisted PET bottle with black screw cap and clear neck, predominantly green full-body wrap, tall black Minute Maid shield with white serif lettering, pale-green100% Apple Juice, large white100% Vit C, whole red apple and apple half/leaf at foot,12floz marking. Actual juice mostly concealed by wrap.',minute(minuteData[0])),
- record(minuteData[1],'minute-maid-juice-bottle','US 20 fl oz / 591mL Minute Maid Fruit Punch contoured PET bottle.','https://www.coca-cola.com/us/en/brands/minute-maid/products/lemonades-and-fruit-drinks','https://www.coca-cola.com/content/dam/onexp/us/en/brands/minute-maid/products/lemonades/mm-lem-fruit-drinks-product-img-fruit-punch.jpg','Manufacturer Fruit Punch image individually inspected: black screw cap, clear neck/headspace, red drink in contoured bottle with tapered shoulders, blue center wrap with orange/pineapple/pear fruit art, black Minute Maid shield/white lettering, red Fruit Punch bar; dimpled waist and petaloid base.20fl oz label; not Zero Sugar or Tropical Punch.',minute(minuteData[1])),
 ];
