@@ -1,5 +1,5 @@
 import type { NutritionPreview } from '@bevi/shared';
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import { Linking, StyleSheet, Text, View, type TextStyle } from 'react-native';
 import { Button } from '@/components/Button';
 import { Wordmark } from '@/components/Wordmark';
 import { radius, spacing, type, useTheme } from '@/theme';
@@ -59,13 +59,30 @@ export function NutritionCard({ nutrition, reveal = false }: { nutrition: Nutrit
   );
 }
 
+/**
+ * The panel carries its own type scale, the way ScoreBubble's numerals do. A
+ * Nutrition Facts label is a fixed piece of typography, and the app scale tops
+ * out at `type.displayDrop` (28/34, weight 700) -- below the masthead and the
+ * calorie figure this label needs. These are literal sizes rather than
+ * arithmetic over `type.displayDrop` plus a spacing token: spacing is not a
+ * type scale, so deriving from it made the label's type move whenever a
+ * spacing value did. The sizes below are the ones that arithmetic produced, so
+ * nothing changes on screen. Weight 900 and the tight tracking belong to the
+ * label, not to the app's scale.
+ */
+const LABEL_TYPE = {
+  masthead: { fontSize: 36, lineHeight: 42, fontWeight: '900', letterSpacing: -1 },
+  calorieLabel: { fontSize: 28, lineHeight: 34, fontWeight: '900' },
+  calorieNumber: { fontSize: 40, lineHeight: 46, fontWeight: '900' },
+} as const satisfies Record<string, TextStyle>;
+
 const styles = StyleSheet.create({
   wrap: { gap: spacing.md },
   panel: { borderWidth: 2, borderRadius: radius.photo, overflow: 'hidden' },
   masthead: { paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.md },
   brandline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   body: { paddingHorizontal: spacing.md, paddingBottom: spacing.md },
-  title: { ...type.displayDrop, marginTop: spacing.sm, fontSize: type.displayDrop.fontSize + spacing.sm, lineHeight: type.displayDrop.lineHeight + spacing.sm, fontWeight: '900', letterSpacing: -1 },
+  title: { ...LABEL_TYPE.masthead, marginTop: spacing.sm },
   bold: { ...type.body, fontWeight: '700' },
   serving: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: spacing.xs, paddingVertical: spacing.sm },
   servingValue: { textAlign: 'right', flexShrink: 1 },
@@ -73,8 +90,8 @@ const styles = StyleSheet.create({
   mediumRule: { height: spacing.xs },
   amount: { ...type.caption, fontWeight: '700', paddingTop: spacing.xs },
   calories: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing.sm, paddingBottom: spacing.xs, flexWrap: 'wrap' },
-  calorieLabel: { ...type.displayDrop, fontWeight: '900' },
-  calorieNumber: { ...type.displayDrop, fontSize: type.displayDrop.fontSize + spacing.md, lineHeight: type.displayDrop.lineHeight + spacing.md, fontWeight: '900', fontVariant: ['tabular-nums'] },
+  calorieLabel: LABEL_TYPE.calorieLabel,
+  calorieNumber: { ...LABEL_TYPE.calorieNumber, fontVariant: ['tabular-nums'] },
   row: { borderTopWidth: 1, paddingVertical: spacing.xs },
   firstRow: { borderTopWidth: 0 },
   indented: { marginLeft: spacing.lg },
