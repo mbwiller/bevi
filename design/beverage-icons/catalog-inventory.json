@@ -9,15 +9,15 @@
     "sources": [
       {
         "path": "data/catalog/bevs.csv",
-        "sha256": "0fa927a72c5a6433348ea96d355428ea99be08289671c4a7f6f0c345cbab4f45"
+        "sha256": "ad976a1f1811cde180525905793d8ba3b3b0ea3c340635f7dcc56d4736fe3d36"
       },
       {
         "path": "data/catalog/flavor-profiles.csv",
-        "sha256": "81a5a1aee84cb1b35f7325724aef93fe79adff49d9214aaecbb860dbb07fb0f7"
+        "sha256": "ad9b7783b70a450a204ca6b702a724a77e03e9394bef4c019a0b3887792bb85b"
       },
       {
         "path": "design/taxonomy/bev-leaves.csv",
-        "sha256": "1592780ee5288a2a9e36180033aa956f724f1d653cda839ede9af8774fc1e502"
+        "sha256": "2c7ac0d2f2d3f3c7d595c16e248bfa9b5ed3885213d1b2d5493ac3619f114ae9"
       },
       {
         "path": "design/taxonomy/categories-tree.json",
@@ -26,26 +26,26 @@
     ]
   },
   "summary": {
-    "beverages": 378,
-    "uniqueBevIds": 378,
-    "brands": 145,
+    "beverages": 381,
+    "uniqueBevIds": 381,
+    "brands": 146,
     "starters": 43,
-    "pendingCategoryChanges": 6,
+    "pendingCategoryChanges": 0,
     "byCurrentCategory": {
       "beer": 18,
       "boba": 15,
       "coffee": 30,
       "diet_soda": 40,
       "energy": 40,
-      "juice": 30,
-      "other": 15,
-      "smoothie": 10,
-      "soda": 60,
-      "sparkling_water": 40,
+      "juice": 29,
+      "other": 13,
+      "smoothie": 11,
+      "soda": 64,
+      "sparkling_water": 39,
       "spirits_cocktails": 12,
-      "sports": 20,
+      "sports": 23,
       "tea": 25,
-      "water": 15,
+      "water": 14,
       "wine": 8
     },
     "byPlannedCategory": {
@@ -60,7 +60,7 @@
       "soda": 64,
       "sparkling_water": 39,
       "spirits_cocktails": 12,
-      "sports": 20,
+      "sports": 23,
       "tea": 25,
       "water": 14,
       "wine": 8
@@ -176,6 +176,7 @@
       "Propel": 1,
       "Pure Leaf": 4,
       "RC Cola": 2,
+      "Recoup": 3,
       "Red Bull": 4,
       "Reed's": 1,
       "Reign Total Body Fuel": 2,
@@ -213,12 +214,12 @@
       "Zevia": 8
     },
     "missingSourceFields": {
-      "imageAttribution": 378,
-      "imageLicense": 378,
-      "imageSourceUrl": 378,
-      "upc": 378
+      "imageAttribution": 381,
+      "imageLicense": 381,
+      "imageSourceUrl": 381,
+      "upc": 381
     },
-    "pendingReferenceResearch": 378
+    "pendingReferenceResearch": 381
   },
   "beverages": [
     {
@@ -4787,10 +4788,10 @@
       "name": "Perfectly Protein",
       "brand": "Bolthouse Farms",
       "flavor": "Vanilla Chai",
-      "currentCategory": "juice",
+      "currentCategory": "smoothie",
       "plannedCategory": "smoothie",
       "plannedLeaf": "protein_smoothie",
-      "categoryChangePending": true,
+      "categoryChangePending": false,
       "flavorProfile": {
         "base": "chai",
         "serve": "cold"
@@ -5319,10 +5320,10 @@
       "name": "Sparkling Water",
       "brand": "Liquid Death",
       "flavor": "Severed Lime",
-      "currentCategory": "water",
+      "currentCategory": "sparkling_water",
       "plannedCategory": "sparkling_water",
       "plannedLeaf": "citrus_sparkling_water",
-      "categoryChangePending": true,
+      "categoryChangePending": false,
       "flavorProfile": {
         "base": "citrus",
         "serve": "cold"
@@ -7067,10 +7068,10 @@
       "name": "San Pellegrino Limonata",
       "brand": "San Pellegrino",
       "flavor": "Limonata Lemon",
-      "currentCategory": "sparkling_water",
+      "currentCategory": "soda",
       "plannedCategory": "soda",
       "plannedLeaf": "citrus_soda",
-      "categoryChangePending": true,
+      "categoryChangePending": false,
       "flavorProfile": {
         "base": "citrus",
         "serve": "cold"
@@ -7105,10 +7106,10 @@
       "name": "San Pellegrino Aranciata",
       "brand": "San Pellegrino",
       "flavor": "Aranciata Orange",
-      "currentCategory": "sparkling_water",
+      "currentCategory": "soda",
       "plannedCategory": "soda",
       "plannedLeaf": "orange_soda",
-      "categoryChangePending": true,
+      "categoryChangePending": false,
       "flavorProfile": {
         "base": "orange",
         "serve": "cold"
@@ -12805,10 +12806,10 @@
       "name": "Ramune",
       "brand": "Hata Kosen",
       "flavor": "Original",
-      "currentCategory": "other",
+      "currentCategory": "soda",
       "plannedCategory": "soda",
       "plannedLeaf": "lemon_lime",
-      "categoryChangePending": true,
+      "categoryChangePending": false,
       "flavorProfile": {
         "base": "lemon-lime",
         "serve": "cold"
@@ -12843,10 +12844,10 @@
       "name": "Ramune",
       "brand": "Hata Kosen",
       "flavor": "Melon",
-      "currentCategory": "other",
+      "currentCategory": "soda",
       "plannedCategory": "soda",
       "plannedLeaf": "fruit_soda",
-      "categoryChangePending": true,
+      "categoryChangePending": false,
       "flavorProfile": {
         "base": "tropical",
         "serve": "cold"
@@ -14559,6 +14560,120 @@
       "categoryChangePending": false,
       "flavorProfile": {
         "base": "ginger",
+        "serve": "cold"
+      },
+      "isStarter": false,
+      "catalogSource": {
+        "upc": null,
+        "imageSourceUrl": null,
+        "imageLicense": null,
+        "imageAttribution": null
+      },
+      "missingSourceFields": [
+        "upc",
+        "imageSourceUrl",
+        "imageLicense",
+        "imageAttribution"
+      ],
+      "research": {
+        "status": "pending",
+        "packageFamily": null,
+        "packageSize": null,
+        "market": null,
+        "verifiedReferences": [],
+        "visualConfidence": "unverified"
+      },
+      "liveGraphStatus": "unverified",
+      "liveCatalogStatus": "unverified"
+    },
+    {
+      "bevId": "222ed33d-e959-5add-88ec-253918feacd7",
+      "slug": "recoup-lemon-lime-ginger",
+      "name": "Recoup Lemon Lime + Ginger",
+      "brand": "Recoup",
+      "flavor": "Lemon Lime + Ginger",
+      "currentCategory": "sports",
+      "plannedCategory": "sports",
+      "plannedLeaf": "sports",
+      "categoryChangePending": false,
+      "flavorProfile": {
+        "base": "lemon-lime",
+        "serve": "cold"
+      },
+      "isStarter": false,
+      "catalogSource": {
+        "upc": null,
+        "imageSourceUrl": null,
+        "imageLicense": null,
+        "imageAttribution": null
+      },
+      "missingSourceFields": [
+        "upc",
+        "imageSourceUrl",
+        "imageLicense",
+        "imageAttribution"
+      ],
+      "research": {
+        "status": "pending",
+        "packageFamily": null,
+        "packageSize": null,
+        "market": null,
+        "verifiedReferences": [],
+        "visualConfidence": "unverified"
+      },
+      "liveGraphStatus": "unverified",
+      "liveCatalogStatus": "unverified"
+    },
+    {
+      "bevId": "1da81e15-41c3-596e-b89e-c3d749c35bae",
+      "slug": "recoup-watermelon-blood-orange-ginger",
+      "name": "Recoup Watermelon Blood Orange + Ginger",
+      "brand": "Recoup",
+      "flavor": "Watermelon Blood Orange + Ginger",
+      "currentCategory": "sports",
+      "plannedCategory": "sports",
+      "plannedLeaf": "sports",
+      "categoryChangePending": false,
+      "flavorProfile": {
+        "base": "berry",
+        "serve": "cold"
+      },
+      "isStarter": false,
+      "catalogSource": {
+        "upc": null,
+        "imageSourceUrl": null,
+        "imageLicense": null,
+        "imageAttribution": null
+      },
+      "missingSourceFields": [
+        "upc",
+        "imageSourceUrl",
+        "imageLicense",
+        "imageAttribution"
+      ],
+      "research": {
+        "status": "pending",
+        "packageFamily": null,
+        "packageSize": null,
+        "market": null,
+        "verifiedReferences": [],
+        "visualConfidence": "unverified"
+      },
+      "liveGraphStatus": "unverified",
+      "liveCatalogStatus": "unverified"
+    },
+    {
+      "bevId": "24e82d8e-2a3a-54d0-97d8-d1f295992668",
+      "slug": "recoup-pineapple-passionfruit-ginger",
+      "name": "Recoup Pineapple Passionfruit + Ginger",
+      "brand": "Recoup",
+      "flavor": "Pineapple Passionfruit + Ginger",
+      "currentCategory": "sports",
+      "plannedCategory": "sports",
+      "plannedLeaf": "sports",
+      "categoryChangePending": false,
+      "flavorProfile": {
+        "base": "tropical",
         "serve": "cold"
       },
       "isStarter": false,

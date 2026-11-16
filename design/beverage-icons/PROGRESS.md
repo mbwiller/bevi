@@ -1,5 +1,14 @@
 # Beverage icon production checkpoint
 
+## Recoup hydration — 2026-11-16
+
+Added Lemon Lime + Ginger, Watermelon Blood Orange + Ginger, and Pineapple Passionfruit + Ginger: US 12 fl oz slim cans, root category `sports`. Catalog now 381 rows; icon collection 338 authored / 43 pending. Exact manufacturer can images and user screenshot inspected; original vector recipes in `scripts/icons/families/recoup.mjs`. Large and 40/56/96/155 px light/dark review: `review/recoup-2026-11-16.png`; reviewed hashes in `review/review.json`. Final aesthetic approval remains pending. All 335 existing PNG and portable SVG hashes are unchanged (three editable GT’s masters have only Node floating-point serialization differences).
+
+Live publication verified: three active canonical UUIDs, twelve search aliases, three flavor profiles, three public content-addressed SVGs. Published using `publish_bev_icons` with the existing live rows retained: inserted 3, unchanged 335, deleted 0. `search_bevs` verified for Recoup, each full flavor, and Recoup hydration; every result has an icon. Public SVG bytes verified against manifest SHA256. No app release required; app already reads backend icon paths. The append-only generated catalog migration captures the catalog addition for fresh databases.
+
+Validation: catalog validate (381; seven existing ambiguous-alias warnings), seed migration check, icon validate (338), icon publisher dry-run, scripts typecheck, scripts tests (338), local database reset and pgTAP suite (1,802) all pass. Initial full tests exposed hardcoded catalog totals, updated in the catalog/profile/taxonomy and graph fixture tests. No browser/device session verified.
+
+
 ## Redraw 01, 2026-11-15: 19 icons from the Needs work queue
 
 19 icons from batches 12 and 13 were redrawn from their real packages. Matt sorted all 19 Good in the swipe tool the same day, so the collection stands at 224 good and 111 need work (`REVIEW.md`). These 19 are reference examples for the redraws that follow.

@@ -183,8 +183,8 @@ select is(
 
 select is(
   (select count(*)::int from public.bevs where source = 'seed' and leaf_category_id is null),
-  34,
-  '34 seeded Bevs sit on an unsplit parent (water 14, sports 20)'
+  37,
+  '37 seeded Bevs sit on an unsplit parent (water 14, sports 23)'
 );
 
 -- The two unsplit roots have no leaves to point at, so their Bevs must be null

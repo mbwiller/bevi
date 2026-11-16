@@ -54,8 +54,8 @@
     ]
   },
   "summary": {
-    "catalog": 378,
-    "authored": 335,
+    "catalog": 381,
+    "authored": 338,
     "pending": 43,
     "starterAuthored": 40,
     "starterTotal": 43,
@@ -8665,6 +8665,99 @@
         "pngBytes": 100213
       },
       "sourceModule": "scripts/icons/families/redraw-mug-rc-aw.mjs"
+    },
+    {
+      "slug": "recoup-lemon-lime-ginger",
+      "family": "recoup-slim-hydration-can",
+      "packageChoice": "US 12 fl oz / 355 mL slim aluminum can; cream upper label and teal lower fruit artwork.",
+      "status": "needs-review",
+      "uncertainty": "Simplified original vector lettering and fruit illustrations; final aesthetic approval pending. User-provided screenshot and all three manufacturer can images inspected.",
+      "references": [
+        {
+          "pageUrl": "https://drinkrecoup.com/products/lemon-lime-ginger-prebiotic-sparkling-beverage",
+          "imageUrl": "https://cdn.shopify.com/s/files/1/1654/4941/files/Front-Flay-Lay-LL.jpg?v=1784732061",
+          "inspectedAt": "2026-11-16",
+          "visuallyInspected": true,
+          "observations": "User screenshot: Lemon Lime can, cream upper panel, italic teal recoup, #53b85d flavor wave, teal base, flavor-specific fruit and golden ginger; silver rims. Exact manufacturer flavor image also inspected."
+        }
+      ],
+      "bevId": "222ed33d-e959-5add-88ec-253918feacd7",
+      "name": "Recoup Lemon Lime + Ginger",
+      "brand": "Recoup",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/recoup-lemon-lime-ginger.svg",
+        "portableSvg": "portable-svg/recoup-lemon-lime-ginger.svg",
+        "png": "png/recoup-lemon-lime-ginger.png",
+        "svgSha256": "6c84b76e0c0e08af257811c3f685a83938c6e6d5efb52623d6ef0486cbd32d60",
+        "portableSvgSha256": "6efcf9508763d6bcb808d921abfc2fe1813a51af657fe77ed61648541eb72eba",
+        "pngSha256": "5c7b492d6de59f3bdcbe7175ad99095b2e80532939e52885357857718492abea",
+        "pngBytes": 119388
+      },
+      "sourceModule": "scripts/icons/families/recoup.mjs"
+    },
+    {
+      "slug": "recoup-pineapple-passionfruit-ginger",
+      "family": "recoup-slim-hydration-can",
+      "packageChoice": "US 12 fl oz / 355 mL slim aluminum can; cream upper label and teal lower fruit artwork.",
+      "status": "needs-review",
+      "uncertainty": "Simplified original vector lettering and fruit illustrations; final aesthetic approval pending. User-provided screenshot and all three manufacturer can images inspected.",
+      "references": [
+        {
+          "pageUrl": "https://drinkrecoup.com/products/pineapple-passionfruit-ginger-prebiotic-sparkling-beverage",
+          "imageUrl": "https://cdn.shopify.com/s/files/1/1654/4941/files/Front-Flay-Lay-PPF.jpg?v=1784732046",
+          "inspectedAt": "2026-11-16",
+          "visuallyInspected": true,
+          "observations": "User screenshot: Pineapple Passionfruit can, cream upper panel, italic teal recoup, #ee963e flavor wave, teal base, flavor-specific fruit and golden ginger; silver rims. Exact manufacturer flavor image also inspected."
+        }
+      ],
+      "bevId": "24e82d8e-2a3a-54d0-97d8-d1f295992668",
+      "name": "Recoup Pineapple Passionfruit + Ginger",
+      "brand": "Recoup",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/recoup-pineapple-passionfruit-ginger.svg",
+        "portableSvg": "portable-svg/recoup-pineapple-passionfruit-ginger.svg",
+        "png": "png/recoup-pineapple-passionfruit-ginger.png",
+        "svgSha256": "3440e530665ae316a9b846456906c83323f2170fa126f80bacbc054c5577a85a",
+        "portableSvgSha256": "4aa7c687b94208f013325b044f084c81ee4346c44c822578447a5ce704a04c4e",
+        "pngSha256": "674ef0854b8e6daf5f982504f42b86df545f558a2f4628aa274e0094ba8eba0d",
+        "pngBytes": 119832
+      },
+      "sourceModule": "scripts/icons/families/recoup.mjs"
+    },
+    {
+      "slug": "recoup-watermelon-blood-orange-ginger",
+      "family": "recoup-slim-hydration-can",
+      "packageChoice": "US 12 fl oz / 355 mL slim aluminum can; cream upper label and teal lower fruit artwork.",
+      "status": "needs-review",
+      "uncertainty": "Simplified original vector lettering and fruit illustrations; final aesthetic approval pending. User-provided screenshot and all three manufacturer can images inspected.",
+      "references": [
+        {
+          "pageUrl": "https://drinkrecoup.com/products/watermelon-blood-orange-ginger-prebiotic-sparkling-beverage",
+          "imageUrl": "https://cdn.shopify.com/s/files/1/1654/4941/files/Front-Flay-Lay-WBO.jpg?v=1784732006",
+          "inspectedAt": "2026-11-16",
+          "visuallyInspected": true,
+          "observations": "User screenshot: Watermelon Blood Orange can, cream upper panel, italic teal recoup, #f16d76 flavor wave, teal base, flavor-specific fruit and golden ginger; silver rims. Exact manufacturer flavor image also inspected."
+        }
+      ],
+      "bevId": "1da81e15-41c3-596e-b89e-c3d749c35bae",
+      "name": "Recoup Watermelon Blood Orange + Ginger",
+      "brand": "Recoup",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/recoup-watermelon-blood-orange-ginger.svg",
+        "portableSvg": "portable-svg/recoup-watermelon-blood-orange-ginger.svg",
+        "png": "png/recoup-watermelon-blood-orange-ginger.png",
+        "svgSha256": "f2b24682990c5a1c8fe134f084aa36282da5fadfe8324bdf74a0bb49a17fcbc1",
+        "portableSvgSha256": "9786c538cf89413c4ce3be7fa5a51b139f827ecf5193c678e09d178ab4eca7f5",
+        "pngSha256": "a73c6883ea64a20ccf5b9b4e0acac2188ea7bbf19783b2a922cd2b121cbcced9",
+        "pngBytes": 119914
+      },
+      "sourceModule": "scripts/icons/families/recoup.mjs"
     },
     {
       "slug": "red-bull-original",
