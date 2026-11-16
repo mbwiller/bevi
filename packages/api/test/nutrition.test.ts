@@ -94,3 +94,53 @@ it('retries Bev creation without nutrition if the nutrition RPC is not deployed 
   expect(rpcCalls[0]?.args).toMatchObject({ p_nutrition: nutrition });
   expect(rpcCalls[1]?.args).not.toHaveProperty('p_nutrition');
 });
+
+// bevs.ts:154 tolerates a bev_nutrition table that is not there yet, so Bev
+// detail keeps rendering if the app deploys before `supabase db push` runs.
+// It is the only thing protecting that window, so both halves are pinned here:
+// the two "no such table" codes pass, anything else still surfaces.
+describe('bevs.get before the nutrition migration is pushed', () => {
+  const id = '00000000-0000-4000-8000-00000000b002';
+  const bevRow = {
+    id, name: 'Test water', brand: null, flavor: null, category_id: 'water', photo_path: null,
+    nutrition_label_path: null, price_tier: 2, price_estimated: false, status: 'active',
+    is_starter: false, created_at: '2026-11-16T00:00:00.000Z', created_by_id: null,
+    created_by_handle: null, rating_count: 0, avg_score: null, score_stddev: null, bayes_score: null,
+  };
+  const snapshots: SnapshotCache = { get: async () => { throw new Error('not needed'); }, invalidate: () => undefined };
+
+  const clientWith = (nutritionResult: { data: unknown; error: { code: string; message: string } | null }) => {
+    const rpc = () => {
+      const promise = Promise.resolve({ data: bevRow, error: null });
+      return Object.assign(promise, { single: () => promise, maybeSingle: () => promise });
+    };
+    const from = (table: string) => {
+      const result = table === 'bev_nutrition' ? nutritionResult : { data: table === 'follows' ? [] : null, error: null };
+      const query: Record<string, unknown> = {};
+      query.select = () => query;
+      query.eq = () => query;
+      query.in = () => query;
+      query.maybeSingle = async () => result;
+      query.then = (resolve: (value: typeof result) => unknown, reject?: (reason: unknown) => unknown) => Promise.resolve(result).then(resolve, reject);
+      return query;
+    };
+    return {
+      auth: { getUser: async () => ({ data: { user: { id: 'user-1' } }, error: null }) },
+      rpc,
+      from,
+      storage: { from: () => ({ getPublicUrl: () => ({ data: { publicUrl: '' } }) }) },
+    } as unknown as SupabaseClient;
+  };
+
+  it.each(['PGRST205', '42P01'])('renders Bev detail with no nutrition when the table is absent (%s)', async (code) => {
+    const api = createBevsApi(clientWith({ data: null, error: { code, message: 'relation "bev_nutrition" does not exist' } }), snapshots);
+    const bev = await api.get(id);
+    expect(bev.id).toBe(id);
+    expect(bev.nutrition).toBeNull();
+  });
+
+  it('still surfaces a nutrition read failure that is not a missing table', async () => {
+    const api = createBevsApi(clientWith({ data: null, error: { code: '42501', message: 'permission denied for table bev_nutrition' } }), snapshots);
+    await expect(api.get(id)).rejects.toMatchObject({ code: 'unauthorized' });
+  });
+});

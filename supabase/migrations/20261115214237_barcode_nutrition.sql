@@ -22,6 +22,8 @@ as $$
 declare
   v_bev public.bevs;
   v_key text;
+  v_barcode text;
+  v_existing_id uuid;
   v_has_value boolean := false;
   v_keys text[] := array['barcode','productName','basis','sourceUrl','calories','fatGrams',
     'carbohydrateGrams','sugarGrams','proteinGrams','sodiumMg'];
@@ -59,11 +61,37 @@ begin
   if not v_has_value then
     raise exception 'BEVI_VALIDATION' using errcode = '22023', detail = 'nutrition';
   end if;
-  -- No UPC shortcut: it could return someone else's Bev. The original function
-  -- retains its ownership/asset validation, age gate, dedupe and creation quota.
+  -- `create_bev` is still called with a NULL p_upc. A non-null one makes it
+  -- RETURN an existing Bev with that barcode instead of creating one
+  -- (20261111000200), and this function would then attach the caller's scan to
+  -- a Bev it did not create. The original function retains its
+  -- ownership/asset validation, age gate, dedupe and creation quota.
   v_bev := public.create_bev(p_name, p_brand, p_flavor, p_category_id,
     p_price_tier, p_price_estimated, null, p_photo_asset_id, p_label_asset_id);
   insert into public.bev_nutrition(bev_id, nutrition) values (v_bev.id, p_nutrition);
+
+  -- Barcode dedupe is the point of scanning, so the scanned code is persisted
+  -- on the Bev rather than left only inside the snapshot. `bevs_upc_uq`
+  -- (20261009000300) is unique on (upc) where upc is not null and status <>
+  -- 'merged', so a barcode already held by a live Bev is a duplicate: report it
+  -- the way `create_bev` reports a name/brand/flavor collision, with the
+  -- existing Bev's id as the detail. Raising here rolls the whole call back,
+  -- leaving no Bev and no snapshot behind.
+  -- `updated_at` is touched but no embedding is queued: bevs_embed_after_update
+  -- (20261023000100) fires only on name, brand, flavor or category_id.
+  v_barcode := p_nutrition->>'barcode';
+  begin
+    update public.bevs set upc = v_barcode, updated_at = now()
+     where id = v_bev.id
+     returning * into v_bev;
+  exception when unique_violation then
+    select b.id into v_existing_id
+      from public.bevs b
+     where b.upc = v_barcode and b.status <> 'merged' and b.id <> v_bev.id
+     limit 1;
+    raise exception 'BEVI_DUPLICATE_BEV' using errcode = '23505',
+      detail = coalesce(v_existing_id::text, '');
+  end;
   return v_bev;
 end;
 $$;
