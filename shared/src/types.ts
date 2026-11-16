@@ -268,8 +268,13 @@ export interface Ranking {
   position: number;
   score: number;
   note: string | null;
-  /** When first ranked ("Ranked Oct 3"). */
+  /**
+   * When this ranking was last placed ("Ranked Oct 3"). A re-rank re-dates it: `rerank_bev` deletes
+   * the row and re-inserts it, which is what the Recent sort, the Bev'd row's date and Activity's
+   * post time all want. There is no record of when a Bev was first ranked.
+   */
   createdAt: string;
+  /** Last written, which includes a re-space of the bucket by someone else's placement. */
   updatedAt: string;
 }
 
