@@ -38,7 +38,9 @@ its quota, photo ownership, age gate and duplicate handling. It intentionally
 passes no UPC to the old RPC, whose UPC shortcut could return an existing Bev.
 The barcode is stored in the nutrition snapshot; this is not a product-identity
 or automatic-merge feature. Old create callers still work. Bev reads tolerate
-an older backend without the new table, but saving nutrition requires migration.
+an older backend without the new table. If the create RPC migration is missing,
+Bev creation retries without the nutrition snapshot; apply the migration before
+deploying the UI to preserve nutrition during normal use.
 
 The new table has RLS and SELECT only for authenticated viewers who can see the
 parent Bev. No direct client INSERT/UPDATE/DELETE. Snapshot validation runs before
@@ -59,12 +61,12 @@ All tests below used an isolated local Supabase project, bevi-nutrition-test,
 on ports 553xx. No production migration or catalog write was performed.
 
 - `npm run typecheck`: all workspaces and scripts passed.
-- `npm test -w app -- --maxWorkers=2 --silent`: 140 suites, 1,365 tests passed.
-- `npm test -w packages/api`: 147 unit tests passed; live tests skip without local
+- `npm test -w app -- --maxWorkers=2 --silent`: 140 suites, 1,366 tests passed.
+- `npm test -w packages/api`: 148 unit tests passed; live tests skip without local
   configuration. `nutrition.live.test.ts` was also run explicitly against the
   isolated API and passed (signup, upload, create, sign out/in, reload, validation).
 - `supabase db reset` then `supabase test db` in the isolated test project:
-  40 files, 1,816 tests passed, including the 21 nutrition/RLS/validation checks.
+  40 files, 1,818 tests passed, including the 23 nutrition/RLS/validation checks.
 - `npx expo export --platform web --clear`: passed, including an export with
   the demo flag deliberately set. `node app/scripts/check-bundle.mjs`: passed.
 - Headless Chromium against that production export: sign-in gate held; real
@@ -86,8 +88,10 @@ request, background/lock/unlock and retry, camera indicator off after leaving.
 Database coverage is not guaranteed; unknown/missing products must retain the
 upload fallback. Browser automation does not establish iPhone scan reliability.
 
-Do not merge/deploy the UI until this device check passes. The temporary Expo HTTPS hostname failed DNS verification. A Cloudflare fallback
-was then verified in Chromium: the demo opens without sign-in at
-https://seminar-dvd-cult-shirt.trycloudflare.com while the tunnel is running.
-The local demo is also available on port 8088. The tunnel is for device testing,
-not production hosting. The production build still requires sign-in.
+Do not merge/deploy the UI until this device check passes. To make the local
+no-login demo reachable from an iPhone, start the web dev server (for example,
+`npx expo start --web --port 8088`) and run a temporary HTTPS tunnel in a second
+terminal (for example, `cloudflared tunnel --url http://localhost:8088`). Open
+the HTTPS hostname printed by the tunnel while it is running. The hostname is
+ephemeral and is not production hosting. The production build still requires
+sign-in.

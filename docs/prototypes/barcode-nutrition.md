@@ -4,7 +4,7 @@
 
 Branch: `ui/barcode-nutrition-poc`. Worktree: `/tmp/bevi-barcode-poc`.
 
-Enable with `EXPO_PUBLIC_NUTRITION_SCAN_POC=1` when starting/exporting the app.
+Enable with `EXPO_PUBLIC_NUTRITION_SCAN_DEMO=1` when starting/exporting the app.
 In Add a new Bev, go to Details → Nutrition label → Scan barcode.
 Photo upload remains available. No OCR, database writes, or nutrition persistence.
 The preview stays on the Details step after the two-second reveal but is discarded
@@ -23,7 +23,7 @@ From this worktree, `npm ci`, then provide the two public Supabase configuration
 values as documented in `app/.env.example`. Run:
 
 ```
-EXPO_PUBLIC_NUTRITION_SCAN_POC=1 npm start -w app -- --web
+EXPO_PUBLIC_NUTRITION_SCAN_DEMO=1 npm start -w app -- --web
 ```
 
 For iPhone, serve an exported build on HTTPS or deploy this branch to an isolated
@@ -63,7 +63,7 @@ before integration, per repository lane rules.
   serving basis, grams-to-milligrams conversion, invalid codes and provider errors.
 - `npm test -w app -- --runInBand --silent`: scanner lifecycle, animation timing,
   cancellation and existing app regressions.
-- `EXPO_PUBLIC_NUTRITION_SCAN_POC=1 EXPO_PUBLIC_SUPABASE_URL=https://ci-placeholder.supabase.co EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_ci npx expo export --platform web --clear`
+- `EXPO_PUBLIC_NUTRITION_SCAN_DEMO=1 EXPO_PUBLIC_SUPABASE_URL=https://ci-placeholder.supabase.co EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_ci npx expo export --platform web --clear`
   from `app/`: compile with the same placeholder configuration used in CI.
   These are build-only placeholders, not working backend credentials.
 - `EXPO_PUBLIC_SUPABASE_URL=https://ci-placeholder.supabase.co node app/scripts/check-bundle.mjs`.
@@ -85,7 +85,7 @@ with `--clear` passed. Physical-device checks above remain outstanding.
 
 For a standalone demo without sign-in, also set `EXPO_PUBLIC_NUTRITION_SCAN_DEMO=1`.
 This renders only the nutrition demo instead of the authenticated app shell.
-The local prototype server has both flags enabled; open http://localhost:8087.
+Start the current web development server and use the local URL Expo prints. For iPhone camera access, expose that server over HTTPS using the tunnel steps in the current implementation guide.
 
 Visual iteration: Bevi wordmark, spring entrance, staggered nutrient rows and a
 one-shot fizz animation, with reduced-motion fallbacks. Entrance allowance is

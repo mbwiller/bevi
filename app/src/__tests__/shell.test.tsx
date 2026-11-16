@@ -10,6 +10,9 @@ import { controls } from '@/testing/fakeApi';
 jest.mock('@/features/bug-report/loadHost', () => ({
   loadReportHost: () => Promise.resolve({ default: require('@/features/bug-report/ReportHost').default }),
 }));
+jest.mock('@/features/create-bev/loadNutritionDemo', () => ({
+  loadNutritionDemo: () => Promise.resolve({ default: require('@/features/create-bev/NutritionDemo').NutritionDemo }),
+}));
 
 // The real route tree in src/app, rendered by expo-router's test harness.
 const APP_DIR = path.resolve(__dirname, '../app');
