@@ -276,6 +276,11 @@ export interface BevOfPeriod {
 export interface LeaderboardRow {
   rank: number;
   bev: BevSummary;
+  /**
+   * The board's Bayesian score, rounded to 2 decimals like every other score the API returns
+   * (SQL `numeric(4,2)`, FakeApi `round2`). The rank order is the unrounded score's, so two rows
+   * can show the same number in a different order.
+   */
   bayesScore: number;
   ratingCount: number;
   /** The caller's own score, if ranked. */

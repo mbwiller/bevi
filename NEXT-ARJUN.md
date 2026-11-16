@@ -16,6 +16,8 @@ Your queue from 2026-10-19 on, centred on Supabase and Neo4j. Matt's is in [`NEX
 
 Items 3 and 4 each unblock Matt, so do 3 first: it's smaller and P0.
 
+**A-14 follow-ups — built and in review (2026-10-25):** `be/bayes-prior-propagation` / `20261025000300_bayes_prior_propagation.sql` closes the first three — `bayes_prior(null)` in `get_feed`, `get_user_feed` and `bev_of_period_at`, per-category means materialised into a new `category_stats` written by `refresh_global_stats`, and the leaderboard's `bayes_score` narrowed to `numeric(4,2)` — with pgTAP `15_bayes_prior_propagation`; Matt's items (`compareCodePoints`, the LaTeX §11 table) are still open.
+
 ### A-16 (1), the Bev graph, in detail
 
 The decision (2026-10-19): Neo4j holds Bevs, categories, brands and flavours as nodes, joined by weighted `SIMILAR_TO` edges. Postgres stays the system of record, and the app reads a `bev_edges` mirror, so Neo4j is never on a request path. The full spec is TASKS.md A-16, steps 1–7 and 9–10.

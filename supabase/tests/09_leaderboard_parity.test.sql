@@ -165,10 +165,14 @@ select is(
   'the soda board shrinks toward the soda mean'
 );
 
+-- 7.33, not 7.3333: the A-14 follow-up in 20261025000300 narrowed the returned
+-- column to numeric(4,2), so the board now agrees with bev_stats.bayes_score,
+-- bev_of_period_at and the FakeApi's round2. The figure the table above derives
+-- is still (18 + 48)/9; only the digits the function hands back are rounded.
 select is(
   (select round(l.bayes_score, 4) from public.get_bev_leaderboard() l
     join t_bevs b on b.id = l.id where b.label = 'S1'),
-  7.3333::numeric,
+  7.33::numeric,
   'the same Bev on the overall board shrinks toward the global mean'
 );
 
