@@ -10,29 +10,6 @@ const strawberry=(x,y,s=1)=>`<g transform="translate(${x} ${y}) scale(${s})"><pa
 const gradients=(d)=>`<linearGradient id="__ID__drink"><stop stop-color="${d.dark}"/><stop offset=".24" stop-color="${d.light}"/><stop offset=".55" stop-color="${d.color}"/><stop offset="1" stop-color="${d.dark}"/></linearGradient>`;
 
 const powerShape='M82 40h36v14q0 7 10 14l16 17q3 4 3 12v43q0 8-7 11l4 12-4 14 3 17-2 15 5 12q0 15-12 16H66q-12-1-12-16l5-12-2-15 3-17-4-14 4-12q-7-3-7-11V97q0-8 3-12l16-17q10-7 10-14Z';
-function power(d){
- const zero=!!d.zero;
- const hex=Array.from({length:3},(_,row)=>[0,1,2].map(col=>{const x=67+col*32-(row%2?13:0),y=165+row*23;return `<path d="M${x-13} ${y-7}l13-7 13 7v12l-13 7-13-7Z" fill="${d.dark}" fill-opacity=".1" stroke="#e3f7ff" stroke-opacity=".28" stroke-width="1.2"/>`;}).join('')).join('');
- const label=`<path d="M53 88h94v59H53Z" fill="${zero?'#fcfcf0':d.label}"/>
-<path d="M147 99v48H96Z" fill="${zero?'#278cc1':'#131918'}"/>
-${zero?`${text(94,101,'POWERADE',10.5,'#2387b9','font-weight="bold" textLength="73" lengthAdjust="spacingAndGlyphs"')}${text(97,126,'ZERO',28,'#101616','font-weight="bold" textLength="81" lengthAdjust="spacingAndGlyphs"')}${text(79,137,'MIXED BERRY',5.7,'#167cac','font-weight="bold"')}`:`${text(98,108,'POWER',23.4,'#fffdf2','font-weight="bold" textLength="83" lengthAdjust="spacingAndGlyphs"')}${text(81,130,'ADE',23.4,'#fffdf2','font-weight="bold" textLength="48" lengthAdjust="spacingAndGlyphs"')}${text(58+Math.min(51,d.short.length*3.1)/2,140,d.short,5.6,'#fffdf2',`font-weight="bold" textLength="${Math.min(51,d.short.length*3.1)}" lengthAdjust="spacingAndGlyphs"`)}${d.tail?text(68,146,d.tail,4.3,'#fffdf2','font-weight="bold"'):''}`}
-${text(131,133,'50%',8,'#d9e4e6','font-weight="bold"')}${text(131,139,'MORE',3.5,'#d9e4e6')}${text(131,144,'ELECTROLYTES',2.8,'#d9e4e6','textLength="27" lengthAdjust="spacingAndGlyphs"')}`;
- return wrap(d.slug,d.title,`${shadow(59)}<path d="${powerShape}" fill="${ref('drink')}" stroke="${d.dark}" stroke-width=".7"/>
-<g clip-path="${ref('bottle')}"><path d="M84 43h32v10H84Z" fill="#d4eff3" opacity=".65"/>
-<path d="M86 54q-5 10-20 27" fill="none" stroke="#edfaff" stroke-opacity=".4" stroke-width="2.5"/>
-${label}${hex}
-<path d="M60 153q40 8 80 0M60 211q40 8 80 0M59 219q41 8 82 0M65 230q35 5 70 0" fill="none" stroke="#daf1f5" stroke-opacity=".3" stroke-width="1.6"/>
-${Array.from({length:22},(_,i)=>`<ellipse cx="${63+i*17%73}" cy="${68+i*31%151}" rx="${i%4?.55:.9}" ry="${i%4?.8:1.35}" fill="#fff" opacity=".22"/>`).join('')}
-${shade(powerShape)}<path d="M63 94V214" fill="none" stroke="#fff" stroke-opacity=".14" stroke-width="2"/>
-</g>${cap(zero?'#d5d8d5':'#202724',zero?'#edf0ea':'#3f4842',41)}`,
-`<clipPath id="__ID__bottle"><path d="${powerShape}"/></clipPath>${gradients(d)}`);
-}
-const powerData=[
- {slug:'powerade-mountain-berry-blast',title:'Powerade Mountain Berry Blast',short:'MOUNTAIN BERRY',tail:'BLAST',file:'powerade/Powerade-Desktop-MountainBerryBlast-750x750.jpg',color:'#218ec8',light:'#64b7df',dark:'#176caa',label:'#258cbe',observations:'Manufacturer Mountain Berry Blast exact photo inspected: black screw cap, clear neck and bright blue drink in broad molded bottle with hexagonal grip cells and lobed base. Blue upper label, large white POWER / ADE split lettering, MOUNTAIN BERRY BLAST, black lower-right diagonal50% more electrolytes panel. Representative28oz format chosen from manufacturer sizes; photo backdrops excluded.'},
- {slug:'powerade-fruit-punch',title:'Powerade Fruit Punch',short:'FRUIT PUNCH',file:'powerade/Powerade-Desktop-FruitPunch-750x750.jpg',color:'#bf244b',light:'#e25f7b',dark:'#921b3c',label:'#ca1733',observations:'Separate manufacturer Fruit Punch image inspected: black cap, translucent red/pink drink, hexagonal molded grip and lobed base, red upper label with white POWER / ADE, small FRUIT PUNCH and black diagonal electrolyte panel. Color/label individually checked; not Zero Fruit Punch.'},
- {slug:'powerade-grape',title:'Powerade Grape',short:'GRAPE',file:'powerade/Powerade-Desktop-Grape-750x750.jpg',color:'#8050a3',light:'#b592c8',dark:'#543374',label:'#6f358b',observations:'Separate manufacturer Grape image inspected: black cap, transparent purple drink in broad hex-grip PET, purple upper label with large white two-line POWER / ADE and GRAPE, black lower-right electrolyte panel. Original Grape independently checked; not Zero Grape.'},
- {slug:'powerade-zero-mixed-berry',title:'Powerade Zero Mixed Berry',short:'MIXED BERRY',zero:true,file:'powerade-zero/PoweradeZero-Desktop-MixedBerry-750x750.jpg',color:'#2698cd',light:'#72c4e4',dark:'#1472ad',label:'#fffef2',observations:'Separate manufacturer Zero Mixed Berry image inspected: pale gray/white cap, blue drink, same broad hex-grip bottle, white upper label with small blue POWERADE, oversized black ZERO, blue MIXED BERRY and blue diagonal50% electrolyte panel. White cap/label are variant defining; not the Original Mountain Berry label.'},
-];
 
 const bodyShape='M83 40h34v10q0 8 12 21l12 20-3 12 2 25-3 9 3 26-3 9 3 27-3 9 3 15q0 9-12 10H72q-12-1-12-10l3-15-3-9 3-27-3-9 3-26-3-9 2-25-3-12 12-20q12-13 12-21Z';
 function bodyarmor(d){
@@ -76,7 +53,6 @@ const primeData=[
 ];
 const record=(d,family,packageChoice,pageUrl,imageUrl,svg,uncertainty='')=>({slug:d.slug,family,packageChoice,references:[{pageUrl,imageUrl,inspectedAt:date,visuallyInspected:true,observations:d.observations}],uncertainty:`${uncertainty} Exact flavor references separately inspected. Representative US package selected where catalog has no size. Typography, fine package copy and material/fruit details are simplified original vectors; final aesthetic approval and native-device review pending.`,status:'needs-review',svg});
 export const records=[
- ...powerData.map(d=>record(d,'powerade-sports-bottle',`US 28 fl oz POWERADE ${d.title.replace('Powerade ','')} hex-grip PET bottle.`,`https://www.powerade.com/products/${d.zero?'powerade-zero':'powerade'}`,`https://www.powerade.com/content/dam/powerade/us/en/products/${d.file}`,power(d),'Manufacturer current package chosen; advertising diagonal backdrop and condensation simplified.')),
  ...bodyData.map(d=>record(d,'bodyarmor-sports-bottle',`US 16 fl oz BODYARMOR ${d.name.join(' ')} original Sports Drink bottle.`,`https://www.kroger.com/p/${d.page}/${d.upc}`,`https://www.kroger.com/product/images/large/front/${d.upc}`,bodyarmor(d),'Manufacturer exact product pages were checked first but returned JS-only shell without image links; inspected retailer front images used.')),
  ...primeData.map(d=>record(d,'prime-hydration-bottle',`US 16.9 fl oz / 500mL PRIME ${d.name.join(' ')} Hydration bottle${d.key==='ice'?', documented current summer star-art edition':''}.`,`https://drinkprime.com/products/${d.page}`,d.image,prime(d),'Hydration bottle identity explicitly checked against Energy/Zero Hydration; current reference artwork recorded without claiming all packaging revisions are identical.')),
 ];

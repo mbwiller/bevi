@@ -991,18 +991,18 @@
     },
     {
       "slug": "barefoot-cellars-cabernet-sauvignon",
-      "family": "wine-bottle-expansion",
-      "packageChoice": "Representative US 750 mL retail wine bottle; catalog omits vintage and exact closure.",
+      "family": "wine-bottle",
+      "packageChoice": "The standard US 750 mL Barefoot Cabernet Sauvignon bottle in its current label: dark Bordeaux glass, red screw-cap capsule with the gold \"Most Awarded\" medallion, red label with BAREFOOT in gold over a white panel with the footprint.",
       "references": [
         {
           "pageUrl": "https://www.walmart.com/ip/10984501",
-          "imageUrl": "https://i5.walmartimages.com/seo/Barefoot-Cellars-Cabernet-Sauvignon-Red-Wine-750ml-Bottle_bfbae5c5-68ba-4ba9-a667-79874135aed6.d156d321126c4cbe581076590b22ca3e.jpeg?odnBg=FFFFFF&odnHeight=768&odnWidth=768",
-          "inspectedAt": "2026-11-14",
+          "imageUrl": "https://i5.walmartimages.com/seo/Barefoot-Cellars-Cabernet-Sauvignon-Red-Wine-750ml-Bottle_bfbae5c5-68ba-4ba9-a667-79874135aed6.d156d321126c4cbe581076590b22ca3e.jpeg?odnBg=FFFFFF&odnHeight=2000&odnWidth=2000",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "US 750 mL bottle inspected: dark green glass, burgundy screw cap with gold seal, white label with gold Barefoot lettering, red footprint and Cabernet Sauvignon / Rich & Smooth."
+          "observations": "Front packshot (served at 1500 px). High-shouldered Bordeaux bottle in near-black glass, width 0.24 of the height. Wine-red screw cap with thread rings and a gold medallion reading \"U.S.A. COMPETITIONS / MOST AWARDED / WINE BRAND\". Red label from 0.43 to 0.84 of the height carrying BAREFOOT in gold capitals with interlocked OO, a white panel with a thin gold border holding a red footprint, \"CABERNET SAUVIGNON\" in bold dark-red capitals, \"RICH & SMOOTH\" below, and \"ALC. 13.5% BY VOL\" in gold on the red band."
         }
       ],
-      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "uncertainty": "BAREFOOT, the footprint and \"CABERNET SAUVIGNON\" are traced from the 1500 px photo; the footprint texture is reduced to two tones. The medallion ring lettering is reduced to dashed rings and \"MOST AWARDED\" is set in Times. \"RICH & SMOOTH\" and \"ALC. 13.5% BY VOL\" are Arial text. No vintage is shown on the label.",
       "status": "needs-review",
       "bevId": "8387862d-bb35-5787-a877-eb7375d1f056",
       "name": "Barefoot Cellars Cabernet Sauvignon",
@@ -1013,12 +1013,12 @@
         "svg": "svg/barefoot-cellars-cabernet-sauvignon.svg",
         "portableSvg": "portable-svg/barefoot-cellars-cabernet-sauvignon.svg",
         "png": "png/barefoot-cellars-cabernet-sauvignon.png",
-        "svgSha256": "7128882d8bee1d83afa256f0d753b366d31ad6d9c8ec85f5119cde14bad15730",
-        "portableSvgSha256": "3e1efef8825e94abed70b9c4a00e22c3a5ac242614f1bcc885565a4e580f9696",
-        "pngSha256": "be73d2d2693441170ae4dc5fe83f340a973d7555dc340ce1c504c224bcb434d9",
-        "pngBytes": 53561
+        "svgSha256": "429057b8a36d2dd43636943360d32acea1c86a9ccaa625e5c7c7054acd2e8aa3",
+        "portableSvgSha256": "96ee7c880c4470be3d94cec3da5aa8ec449e15891a1116b595ca0673db004524",
+        "pngSha256": "f4d4fb637ff3bbcc3cce3e93a65b5528de0b3137d0b607cb49dba6bbe15c2704",
+        "pngBytes": 56577
       },
-      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+      "sourceModule": "scripts/icons/families/redraw-wines.mjs"
     },
     {
       "slug": "barqs-root-beer",
@@ -1053,18 +1053,18 @@
     },
     {
       "slug": "naked-berry-blast",
-      "family": "coffee-tea-pet-bottle-expansion",
-      "packageChoice": "Representative US single-serve PET bottle; catalog omits package size.",
+      "family": "naked-smoothie-bottle",
+      "packageChoice": "Naked Berry Blast 100% juice smoothie, 15.2 fl oz single-serve PET bottle with the white \"core\" label shown by US retailers; drawn on the same measured bottle as the Machines.",
       "references": [
         {
           "pageUrl": "https://www.walmart.com/ip/Naked-Juice-Fruit-Smoothie-Berry-Blast-15-2-oz-Bottle/10801725",
           "imageUrl": "https://i5.walmartimages.com/seo/Naked-Juice-Berry-Blast-15-2-fl-oz-Bottle_2c5167df-33b7-4b76-a2ee-5eaffbca1b41_1.5f3e3e802f3cc36f02ba649b9f11250e.jpeg",
-          "inspectedAt": "2026-11-14",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "US 15.2 fl oz clear bottle of red berry smoothie; inspected blue-cap/white brush label, Naked mark, berry fruit collage and no-added-sugar callouts."
+          "observations": "Front photo of the 15.2 fl oz bottle: pink-red juice, blue cap, white wrap label; Naked banner high on the label; a crimson brush stroke behind apple (with a cut wedge), strawberry, raspberry, blackberry, banana and leaves; red BERRY BLAST in two lines; gray three-line flavor statement; red outlined 250 CALORIES PER BOTTLE; yellow-green NO SUGAR ADDED box; Non-GMO Project badge; 15.2 FL OZ (450mL)."
         }
       ],
-      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "uncertainty": "Berry Blast is no longer listed on nakedsmoothie.com (no current-design packshot found in a few lookups), so this is the white label retailers still show; it may since have moved to the 2025 design. Banner and wordmark reuse the Machine trace; the brush stroke, BERRY BLAST, 250 badge and NO SUGAR ADDED box are traced from this photo; the Non-GMO badge is reduced to a small block; flavor statement in squeezed Arial Bold.",
       "status": "needs-review",
       "bevId": "f6d6fc9c-d510-5246-85a0-1f8dcdcac3f1",
       "name": "Berry Blast",
@@ -1075,12 +1075,12 @@
         "svg": "svg/naked-berry-blast.svg",
         "portableSvg": "portable-svg/naked-berry-blast.svg",
         "png": "png/naked-berry-blast.png",
-        "svgSha256": "693449419cb52e450a4ede3967d8efeac77df5dd3304638c2c01793b72eb79e4",
-        "portableSvgSha256": "3d75def47bdd96be3ad8443262cf52c1782dd5ae3867c33791946f3d04f29be5",
-        "pngSha256": "78a9f965dbee9c6e06075b3aa83ef683b1630fb31c7cbfbff0f0d17b448900cd",
-        "pngBytes": 60528
+        "svgSha256": "ddedc2d09cfc405d8327f14f5f132659ec0ee260a3ce827714c168ebf3ab9692",
+        "portableSvgSha256": "85b8f2dcb3b3ecf06b310bbfb6c3618743383da4fd2d95e23c350077039a5280",
+        "pngSha256": "7bbb1a9de722fdbeb5deae280785348af3d81a1cf5b3b321bea406c016f5e2bf",
+        "pngBytes": 104646
       },
-      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+      "sourceModule": "scripts/icons/families/redraw-naked.mjs"
     },
     {
       "slug": "big-red",
@@ -4838,18 +4838,25 @@
     },
     {
       "slug": "bolthouse-farms-green-goodness-smoothie",
-      "family": "coffee-tea-pet-bottle-expansion",
-      "packageChoice": "Representative US single-serve PET bottle; catalog omits package size.",
+      "family": "smoothie-pet-bottle",
+      "packageChoice": "Current US retail 15.2 fl oz (450 mL) PET bottle of Green Goodness 100% juice smoothie, as shown on the brand product page (green cap, full-height green wrap label).",
       "references": [
         {
           "pageUrl": "https://www.fairwaymarket.com/product/bolthouse-farms-green-goodness-100-fruit-juice-smoothie-152-fl-oz-00071464240400",
           "imageUrl": "https://storage.googleapis.com/images-prs-prd-c7e7986.prs.prd.v8.commerce.mi9cloud.com/product-images/zoom/00071464240400_1",
-          "inspectedAt": "2026-11-14",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "US 15.2 fl oz clear PET smoothie with vivid green cap/label; Bolthouse Farms brand, fruit illustrations and Green Goodness / Superfood Greens details."
+          "observations": "1500 px render of the bottle, slightly turned. Green cap with knurled sides; clear neck; label in mid green, fruit art at the top (pear, spinach, apple slice, pink peach, kiwi half) with a white round seal BOOSTED WITH SUPERFOOD GREENS; white script Bolthouse Farms wordmark on a slant; dark green band with GREEN (lime caps) and GOODNESS (white condensed caps); tilted white strip 100% JUICE SMOOTHIE; lower third a window onto the olive smoothie with two legal lines and 450 mL (15.2 FL. OZ.)."
+        },
+        {
+          "pageUrl": "https://www.bolthouse.com/product/green-goodness/",
+          "imageUrl": "https://www.bolthouse.com/wp-content/uploads/sites/4/2016/01/071464240400_bhf_us_bev_15_pi_good_grn_front_520x720-260x360.png",
+          "inspectedAt": "2026-11-16",
+          "visuallyInspected": true,
+          "observations": "Brand product page shows the same label as the Fairway render, front on: confirms this is the brand's current design."
         }
       ],
-      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "uncertainty": "A Brookshire's retailer photo shows a different, darker Green Goodness label (FEEL GOOD NUTRITION, NO SUGAR ADDED); I drew the design on the brand's own product page. Bottle outline measured from the front-on Strawberry Banana photo (same bottle). Fruit art is simplified to about 20 vector shapes; seal arc lettering set as straight small text; the two legal lines are hairlines.",
       "status": "needs-review",
       "bevId": "3df12c22-201d-5a3c-8e73-9be64ce78c2a",
       "name": "Green Goodness",
@@ -4860,27 +4867,27 @@
         "svg": "svg/bolthouse-farms-green-goodness-smoothie.svg",
         "portableSvg": "portable-svg/bolthouse-farms-green-goodness-smoothie.svg",
         "png": "png/bolthouse-farms-green-goodness-smoothie.png",
-        "svgSha256": "2e493ce5deadb27a3bb760f527c5a751d8bb386c08c259f83f8340f5681f9cd5",
-        "portableSvgSha256": "c75005230126990abc05919f61d1ba7befcbe549790480e8ef943e3d89a1ad89",
-        "pngSha256": "d99b36bd7b3d00504bdf7c568cfa116c5415183dbb2f82d285fcfbc23766cbc8",
-        "pngBytes": 54310
+        "svgSha256": "e3a2a29debd5da715ef92cc5aa2cdbf3b149d4786921acb7656c9d8a2010737c",
+        "portableSvgSha256": "58bfd1cf97df7f610fc9ac3c04d862e75c95b4a84e3bc2d2e8434a16ce4f2095",
+        "pngSha256": "f89eba137e7e0d09d3fefc0876cf29141be448807424a02a357aa68fa784ba44",
+        "pngBytes": 125103
       },
-      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+      "sourceModule": "scripts/icons/families/redraw-bolthouse-odwalla.mjs"
     },
     {
       "slug": "naked-juice-green-machine",
       "family": "naked-smoothie-bottle",
-      "packageChoice": "US 15.2 fl oz / 450mL Naked Green Machine, current manufacturer Boosted Smoothie / Machine package.",
+      "packageChoice": "Naked Boosted Smoothie Green Machine, 15.2 fl oz single-serve PET bottle, current 2025 US label.",
       "references": [
         {
           "pageUrl": "https://www.nakedsmoothie.com/our-products/machines/green-machine",
           "imageUrl": "https://www.nakedsmoothie.com/storage/app/media/2025/products/machine-green.png",
-          "inspectedAt": "2026-11-04",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Manufacturer current 15.2oz Green Machine front bottle individually inspected: stout straight-sided clear PET with short shoulders and wide blue ribbed cap; olive-green smoothie, light-green wrap, white Naked in blue banner, BOOSTED SMOOTHIE and bold green GREEN MACHINE; kiwi, mango, apple/banana and vegetable fruit arrangement. Current label explicitly includes fiber/vitamins; tiny claims omitted."
+          "observations": "Front packshot of the 15.2 fl oz PET bottle: square shoulders with a bulge ring, straight sides, bottom ring, blue ribbed cap. Juice shows above and below a tall wrap label; dark blue torn-edge banner with the white Naked wordmark and green leaf accent; BOOSTED SMOOTHIE with the first word underlined; hand-drawn flavor capitals; swirl arrow onto a nutrient box; calories line; fruit photography lower right; circled \"no added sugar\" box; 15.2 FL OZ (450 mL). Green machine: olive-green juice, pale-to-mid green watercolor label, dark green GREEN MACHINE lettering and boxes, fruit = spinach leaf, kiwi half, mango half, broccoli, green apple slice, banana slice; 240 cals."
         }
       ],
-      "uncertainty": "Current manufacturer flavor variant is explicitly selected; catalog has no formula/vintage metadata. This does not assert nutritional equivalence with older Naked Juice labels. Current Boosted Smoothie/Machine wording retained, nutritional claims omitted. Each exact variant reference visually inspected; representative US package chosen because catalog does not specify size. Brand lettering, fruit art and small print simplified original vectors with pinned fonts. Final aesthetic approval and native-device review pending.",
+      "uncertainty": "Wordmark, banner, lettering, swirl, boxes and badge are traces of the packshot; the two-line ingredient statement and 15.2 FL OZ are Arial Bold squeezed with textLength (the real face is a condensed hand font). Fruit photography is redrawn as about 30 flat shapes in the same places.",
       "status": "needs-review",
       "bevId": "4357d69b-f30b-51d9-b779-70352a7dc7dc",
       "name": "Green Machine",
@@ -4891,12 +4898,12 @@
         "svg": "svg/naked-juice-green-machine.svg",
         "portableSvg": "portable-svg/naked-juice-green-machine.svg",
         "png": "png/naked-juice-green-machine.png",
-        "svgSha256": "4a2b4a744e8ee6203fe4f38b943237610ac116f769229b212d1916adb7aaec4b",
-        "portableSvgSha256": "350066663f9ab343b158a330dfaac1fadca45a58ec62cb539eaaf4095ba85a38",
-        "pngSha256": "238e7854477edb5fcc952c522264861fc6f8db0ed3b42864e5a6f51e80cca2ae",
-        "pngBytes": 107062
+        "svgSha256": "cb61fe651584a41a83fa3dbe4527a57fe4ce139f18cb2496db8797b8d9d133cc",
+        "portableSvgSha256": "53cea61ed5023452ed6b4f8aa01eeff179b3b34aa3f3e5efbc71630787260ddd",
+        "pngSha256": "44e065a719d6a70a40fd8c75e62b4135de8fa2a1afb5cbe3f900dd06893441eb",
+        "pngBytes": 134851
       },
-      "sourceModule": "scripts/icons/families/juice-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-naked.mjs"
     },
     {
       "slug": "gts-kombucha-gingerade",
@@ -5117,18 +5124,18 @@
     },
     {
       "slug": "health-ade-kombucha-pink-lady-apple",
-      "family": "coffee-tea-pet-bottle-expansion",
-      "packageChoice": "Representative US single-serve PET bottle; catalog omits package size.",
+      "family": "health-ade-kombucha-bottle",
+      "packageChoice": "Health-Ade Kombucha Pink Lady Apple in the 16 fl oz (1 pint) amber glass bottle with the black cap, current label (cream-to-red gradient, cartoon apple character, \"bubbly probiotic tea for a happy gut\").",
       "references": [
         {
           "pageUrl": "https://health-ade.com/products/kombucha-pink-lady-apple",
           "imageUrl": "https://storage.googleapis.com/images-lnb-prd-8936dd0.lnb.prd.v8.commerce.mi9cloud.com/product-images/zoom/00851861006126.png",
-          "inspectedAt": "2026-11-14",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "US 16 fl oz amber glass bottle with black cap; inspected cream-to-red gradient label, navy anchor mark, HEALTH·ADE and PINK LADY APPLE."
+          "observations": "Front packshot, 1500 px. Squat amber glass bottle (width/height about 0.42) with a short neck, rounded shoulder embossed FOLLOW YOUR GUT, black ribbed cap and a near-black base. Label from about 31 to 84 percent of the height with a tab rising around the anchor: cream at top fading through pink to red with red speckles. Navy anchor in a navy ring on white, navy rules either side; tall condensed navy HEALTH-ADE KOMBUCHA in two lines, PINK LADY APPLE, the arched tagline, navy rules at the bottom around 16 FL OZ (1 PINT) 473 mL. USDA Organic seal and a column of small certification marks at the right edge, a cartoon apple character at the left edge."
         }
       ],
-      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "uncertainty": "health-ade.com refused automated fetches (HTTP 429), so I could not compare against the brand page; the grocer packshot already shows the refreshed label with the apple character, which I take as current. The speckle texture is a handful of dots, the certification marks are reduced to outline shapes, the apple character is a simple red figure with two eyes, and the embossed FOLLOW YOUR GUT lettering is a faint dashed arc.",
       "status": "needs-review",
       "bevId": "4aae2aae-97de-57d8-b283-34d049111f23",
       "name": "Health-Ade Kombucha",
@@ -5139,12 +5146,12 @@
         "svg": "svg/health-ade-kombucha-pink-lady-apple.svg",
         "portableSvg": "portable-svg/health-ade-kombucha-pink-lady-apple.svg",
         "png": "png/health-ade-kombucha-pink-lady-apple.png",
-        "svgSha256": "69bd613f8a7c30a551919480bb6f15e6e8f0d2bece7c3bc2924b2a308b4611c7",
-        "portableSvgSha256": "4c59a7495362561c011e430262d03c2a296db42d731ea4224120f333196952e5",
-        "pngSha256": "ef2fae3d602160fb6eefea13455b0c0bbadfe9e02d849a7e1e317287cb3dc135",
-        "pngBytes": 60673
+        "svgSha256": "3d5e66b064ab1e4680445cfb8f3bae32c9a74989227f010a737bdf242a43dfd5",
+        "portableSvgSha256": "4948b31a7d9fa4c7448c9237bca8ae5ae9d8f9d22be8b2035eda852ca0125941",
+        "pngSha256": "034cf5664900d78de16ed09a9bbf4c8a0110cf5e32bc99a202c5d0824e4328c3",
+        "pngBytes": 134496
       },
-      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+      "sourceModule": "scripts/icons/families/redraw-bottled-teas.mjs"
     },
     {
       "slug": "heineken-original-lager",
@@ -5782,18 +5789,18 @@
     },
     {
       "slug": "josh-cellars-chardonnay",
-      "family": "wine-bottle-expansion",
-      "packageChoice": "Representative US 750 mL retail wine bottle; catalog omits vintage and exact closure.",
+      "family": "wine-bottle",
+      "packageChoice": "The standard US 750 mL Josh Cellars Chardonnay (California) bottle in its current label: sloped-shoulder Burgundy bottle in flint glass with gold wine, a gold screw cap, and the cream label with the \"Josh\" signature.",
       "references": [
         {
           "pageUrl": "https://www.binnys.com/wine/white-wines/chardonnay/josh-cellars-chardonnay-119533/",
           "imageUrl": "https://www.binnys.com/cdn-cgi/image/width%3D1000%2Cheight%3D1000%2Cfit%3Dpad%2Cbackground%3D%23fff%2Cformat%3Dauto/globalassets/catalogs/binnys/11/1195/119533/119533.jpg?v=638744415260000000",
-          "inspectedAt": "2026-11-14",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "US 750 mL bottle inspected: clear pale wine, gold screw cap, cream label with cursive Josh / Josh Cellars and red Chardonnay lettering."
+          "observations": "Front packshot. Burgundy bottle with a long sloped shoulder, width 0.27 of the height, clear glass showing pale gold wine, dark base below the label. Gold screw cap (knurled top band) over the neck to 0.2 of the height. Cream textured label from 0.61 to 0.93 of the height: \"BLENDED & BOTTLED BY / JOSEPH CARR\" small serif capitals top left, the large black \"Josh\" signature, a hairline rule with a dot, \"JOSH CELLARS\" serif capitals, and \"Chardonnay\" in red script. No vintage on the label."
         }
       ],
-      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "uncertainty": "The \"Josh\" signature and \"Chardonnay\" script are traced; the source image is soft (an upscaled retailer file), so the hairlines are slightly thickened. \"BLENDED & BOTTLED BY\", \"JOSEPH CARR\" and \"JOSH CELLARS\" are Times text. The paper texture and the embossed \"750 ml\" on the base are omitted. Larger references (Target, Wine.com, the distributor bottle shot) were either the Reserve bottle, blocked, or smaller.",
       "status": "needs-review",
       "bevId": "bfeb046e-4589-55b9-bd02-83b12f5bc59d",
       "name": "Josh Cellars Chardonnay",
@@ -5804,12 +5811,12 @@
         "svg": "svg/josh-cellars-chardonnay.svg",
         "portableSvg": "portable-svg/josh-cellars-chardonnay.svg",
         "png": "png/josh-cellars-chardonnay.png",
-        "svgSha256": "91a16e24e233dc91012b6dead462bf7aef6028ec8674c918a63b89697f4aae55",
-        "portableSvgSha256": "a503627089bc2a17246995883f2dc887c2a1c557a0f2b54325d89e03801c4c44",
-        "pngSha256": "e9bf3183cdbf02ef4ffc188ecf36c2d4ea8a829cefc8d8323b4b8abed1a5d705",
-        "pngBytes": 54067
+        "svgSha256": "27ef3f04112c725112e46b39f9c34b459ead6f5417f0d4482896569d676435b7",
+        "portableSvgSha256": "f55b5701f40c1211a23fa4916cd2ac7b0795c6ef14b694e3ca0dd59e1e092957",
+        "pngSha256": "328f62bc4c78b83f3663f0eb09ee1c8b3005c5184a3373c5c2038446b64463a7",
+        "pngBytes": 66493
       },
-      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+      "sourceModule": "scripts/icons/families/redraw-wines.mjs"
     },
     {
       "slug": "la-marca-prosecco",
@@ -6309,18 +6316,18 @@
     },
     {
       "slug": "lipton-green-tea",
-      "family": "coffee-tea-pet-bottle-expansion",
-      "packageChoice": "Representative US single-serve PET bottle; catalog omits package size.",
+      "family": "tea-pet-bottle",
+      "packageChoice": "Lipton Green Tea Citrus in the current US 16.9 fl oz (500 mL) ribbed PET bottle with the yellow cap and the green wrap label, drawn from PepsiCo's own front packshot.",
       "references": [
         {
           "pageUrl": "https://www.pepsico.com/brands/lipton",
           "imageUrl": "https://digitalassets.pepsico.com/transform/b915df37-eb7c-44e9-aece-b86139c1fdf8/lipton-rtd-green-tea-citrus",
-          "inspectedAt": "2026-11-14",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Current manufacturer PET reference: clear bottle, pale tea, yellow cap, bright green wrap label with Lipton red/yellow logo, citrus illustrations and Green Tea Citrus text."
+          "observations": "Front packshot, 1500 px. Slim ribbed PET bottle (width/height about 0.31) of pale yellow-green tea, tall yellow ribbed cap and a clear flange ring. Green wrap label over the middle third (about 39 to 77 percent of the height): Lipton roundel (yellow disc with a white inner rim, red banner with the white Lipton wordmark) centred on dark and mid green tea leaves, a lemon slice and a lime slice at the left, an orange wedge below right, a small claim block (100% daily value antioxidant vitamin C per 12 fl oz) top right; GREEN TEA in dark green spaced capitals, CITRUS in heavy white capitals and the line FLAVOR WITH OTHER NATURAL FLAVORS at the bottom left."
         }
       ],
-      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "uncertainty": "The tea leaves, lemon, limes and orange are hand-built shapes on the measured positions (five leaves with midribs, half slices with rind, pith and segment lines), not traces; the vitamin C claim block is four white hairlines on the top-right leaf. A light darkening behind the lettering helps the white CITRUS carry at small sizes. GREEN TEA stays dark green as on the packshot. Bottle ribs are shaded at the measured rib heights.",
       "status": "needs-review",
       "bevId": "f3361059-c2f8-5bc5-bc37-fe2726a79451",
       "name": "Lipton Green Tea",
@@ -6331,12 +6338,12 @@
         "svg": "svg/lipton-green-tea.svg",
         "portableSvg": "portable-svg/lipton-green-tea.svg",
         "png": "png/lipton-green-tea.png",
-        "svgSha256": "400b40efd45c200dbac5bffafd03da3d36c11f47eb1ed8b7ed21de50ec5c4421",
-        "portableSvgSha256": "1a0842944a35c160ad89e98a2e266615f8509770ae3b058b39753bd3a7cc8a11",
-        "pngSha256": "2d9596d9b9df5496a5e81ced6899c84a1a814049c3ae6f6498bd6b84425a29e0",
-        "pngBytes": 49537
+        "svgSha256": "6cf97bb6bd79dbb18742020b2555e711e882968d704a716fc495c0a1a742bc22",
+        "portableSvgSha256": "8c7d71600705acce520e6a94488b4693ef8d4650256e0338cf8fcea33f68b3e6",
+        "pngSha256": "eba8c397241d8d7aa5217374d25557cdfc1ac0d7c87300da272b721f30453e07",
+        "pngBytes": 119583
       },
-      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+      "sourceModule": "scripts/icons/families/redraw-bottled-teas.mjs"
     },
     {
       "slug": "jamba-juice-mango-a-go-go",
@@ -6472,17 +6479,17 @@
     {
       "slug": "naked-juice-mighty-mango",
       "family": "naked-smoothie-bottle",
-      "packageChoice": "US 15.2 fl oz / 450mL Naked Mighty Mango Machine, current manufacturer Boosted Smoothie / Machine package.",
+      "packageChoice": "Naked Boosted Smoothie Mighty Mango Machine, 15.2 fl oz single-serve PET bottle, current 2025 US label.",
       "references": [
         {
           "pageUrl": "https://www.nakedsmoothie.com/our-products/machines/mighty-mango-machine",
           "imageUrl": "https://www.nakedsmoothie.com/storage/app/media/2025/products/machine-mighty-mango.png",
-          "inspectedAt": "2026-11-04",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Separate manufacturer 15.2oz Mighty Mango Machine photo inspected: opaque orange smoothie, blue cap, yellow/orange wrap, white/blue Naked banner, BOOSTED SMOOTHIE; narrow orange MIGHTY MANGO above bold MACHINE, mango half/orange wedge/banana fruit art. Exact current product called Mighty Mango Machine; current name/formulation selection explicitly recorded."
+          "observations": "Front packshot of the 15.2 fl oz PET bottle: square shoulders with a bulge ring, straight sides, bottom ring, blue ribbed cap. Juice shows above and below a tall wrap label; dark blue torn-edge banner with the white Naked wordmark and green leaf accent; BOOSTED SMOOTHIE with the first word underlined; hand-drawn flavor capitals; swirl arrow onto a nutrient box; calories line; fruit photography lower right; circled \"no added sugar\" box; 15.2 FL OZ (450 mL). Mighty Mango: orange juice, yellow-orange label, red-orange MIGHTY MANGO MACHINE lettering and boxes, fruit = two banana slices, mango half, orange half; 260 cals."
         }
       ],
-      "uncertainty": "Current manufacturer flavor variant is explicitly selected; catalog has no formula/vintage metadata. This does not assert nutritional equivalence with older Naked Juice labels. Current Boosted Smoothie/Machine wording retained, nutritional claims omitted. Each exact variant reference visually inspected; representative US package chosen because catalog does not specify size. Brand lettering, fruit art and small print simplified original vectors with pinned fonts. Final aesthetic approval and native-device review pending.",
+      "uncertainty": "Same method as Green Machine: traced marks and lettering, ingredient line in squeezed Arial Bold, fruit photo redrawn as flat shapes.",
       "status": "needs-review",
       "bevId": "f5df8ed4-90b1-55fe-9d5a-1660bb1fea80",
       "name": "Mighty Mango",
@@ -6493,12 +6500,12 @@
         "svg": "svg/naked-juice-mighty-mango.svg",
         "portableSvg": "portable-svg/naked-juice-mighty-mango.svg",
         "png": "png/naked-juice-mighty-mango.png",
-        "svgSha256": "26c291dbaf68137fbe7576f033bfece46fbdbffde52056f15c91313a011c4b99",
-        "portableSvgSha256": "c7d86023ccf5013cee9c17d1593c56b84ca2b1dc3605d971cb2c89734f2acfdb",
-        "pngSha256": "dc663f9ce6c6175a8bb1229ac0b141951e712d7ac91869b80eab17561c7bbdc1",
-        "pngBytes": 105616
+        "svgSha256": "8b00a59b0100a0a65b56a160a316af381862ec60bfe74815974fc179df973dd3",
+        "portableSvgSha256": "ad4bba8d0a8bc41396616f716a6233aa668f8c5db5f2672f79bbf39fab700c3c",
+        "pngSha256": "fbff4847fb0880bfe21a611ff3c90d4883c5979202f2559644317cacf679fe6c",
+        "pngBytes": 129070
       },
-      "sourceModule": "scripts/icons/families/juice-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-naked.mjs"
     },
     {
       "slug": "miller-lite",
@@ -7929,17 +7936,17 @@
     {
       "slug": "powerade-mountain-berry-blast",
       "family": "powerade-sports-bottle",
-      "packageChoice": "US 28 fl oz POWERADE Mountain Berry Blast hex-grip PET bottle.",
+      "packageChoice": "Current US Powerade 28 fl oz single-serve PET bottle (the size shown front-on on powerade.com), in the 50% more electrolytes label.",
       "references": [
         {
           "pageUrl": "https://www.powerade.com/products/powerade",
           "imageUrl": "https://www.powerade.com/content/dam/powerade/us/en/products/powerade/Powerade-Desktop-MountainBerryBlast-750x750.jpg",
-          "inspectedAt": "2026-11-04",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Manufacturer Mountain Berry Blast exact photo inspected: black screw cap, clear neck and bright blue drink in broad molded bottle with hexagonal grip cells and lobed base. Blue upper label, large white POWER / ADE split lettering, MOUNTAIN BERRY BLAST, black lower-right diagonal50% more electrolytes panel. Representative28oz format chosen from manufacturer sizes; photo backdrops excluded."
+          "observations": "Front view of the current US 28 fl oz PET bottle: black ribbed sport cap, short clear neck, sloping shoulder, a full-width wrap label on the upper body, a narrower hex-faceted grip below and a petaloid base. The label carries the stacked rugged POWER / ADE wordmark in white at upper left, the flavor name small in white beneath it, and a black diagonal panel at lower right edged by a thin light line, holding \"50% MORE ELECTROLYTES\" in white. Mountain Berry Blast: sky-blue drink through the clear plastic, a mid-blue label, flavor set on two lines \"MOUNTAIN BERRY / BLAST\"."
         }
       ],
-      "uncertainty": "Manufacturer current package chosen; advertising diagonal backdrop and condensation simplified. Exact flavor references separately inspected. Representative US package selected where catalog has no size. Typography, fine package copy and material/fruit details are simplified original vectors; final aesthetic approval and native-device review pending.",
+      "uncertainty": "Drawn from the 750 px promotional tile (bottle about 580 px tall); the tile was the only front packshot used and its label matches the current 50% more electrolytes design. Wordmark traced once (Grape tile, left letters from the Fruit Punch tile, foreshortened left stems widened by about 1.5 px) and shared; flavor lines traced from each flavor's own tile; \"50% MORE ELECTROLYTES\" is Arial Bold with textLength, close to but not exactly the condensed label face. Grip facets simplified to three rows of soft planes; condensation, the dagger footnote mark and the backdrop are left out. The outline is measured on the left side and mirrored.",
       "status": "needs-review",
       "bevId": "e401d76f-5748-59dc-8d3f-d58535328967",
       "name": "Powerade",
@@ -7950,27 +7957,27 @@
         "svg": "svg/powerade-mountain-berry-blast.svg",
         "portableSvg": "portable-svg/powerade-mountain-berry-blast.svg",
         "png": "png/powerade-mountain-berry-blast.png",
-        "svgSha256": "13f2375269af7b9cafd3c009c498c51bb0fc24b8887322137b91a28dfccbf93d",
-        "portableSvgSha256": "a1860b370450e574470efbce9ecbcb99405a0d49687e07a264b8f8f991ce94fe",
-        "pngSha256": "4934e93e1c9f7e7f76c3db95263313010c461bf72f7df2428fe6b84315b19b26",
-        "pngBytes": 120673
+        "svgSha256": "d5879b10ba6bd034d6768884b75123dc4e34a1f6b227328568d411f083c238e1",
+        "portableSvgSha256": "67d2d50da105327d2b9ffc2ea2c1abf63430ccb87c780969f2f9826e49103114",
+        "pngSha256": "20585ba41a105f0e08b655ac7010726aee3a0527335058c31144c6ab4e8d92ec",
+        "pngBytes": 174718
       },
-      "sourceModule": "scripts/icons/families/hydration-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-powerade.mjs"
     },
     {
       "slug": "powerade-fruit-punch",
       "family": "powerade-sports-bottle",
-      "packageChoice": "US 28 fl oz POWERADE Fruit Punch hex-grip PET bottle.",
+      "packageChoice": "Current US Powerade 28 fl oz single-serve PET bottle (the size shown front-on on powerade.com), in the 50% more electrolytes label.",
       "references": [
         {
           "pageUrl": "https://www.powerade.com/products/powerade",
           "imageUrl": "https://www.powerade.com/content/dam/powerade/us/en/products/powerade/Powerade-Desktop-FruitPunch-750x750.jpg",
-          "inspectedAt": "2026-11-04",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Separate manufacturer Fruit Punch image inspected: black cap, translucent red/pink drink, hexagonal molded grip and lobed base, red upper label with white POWER / ADE, small FRUIT PUNCH and black diagonal electrolyte panel. Color/label individually checked; not Zero Fruit Punch."
+          "observations": "Front view of the current US 28 fl oz PET bottle: black ribbed sport cap, short clear neck, sloping shoulder, a full-width wrap label on the upper body, a narrower hex-faceted grip below and a petaloid base. The label carries the stacked rugged POWER / ADE wordmark in white at upper left, the flavor name small in white beneath it, and a black diagonal panel at lower right edged by a thin light line, holding \"50% MORE ELECTROLYTES\" in white. Fruit Punch: deep red drink, a bright red label, flavor line \"FRUIT PUNCH\"."
         }
       ],
-      "uncertainty": "Manufacturer current package chosen; advertising diagonal backdrop and condensation simplified. Exact flavor references separately inspected. Representative US package selected where catalog has no size. Typography, fine package copy and material/fruit details are simplified original vectors; final aesthetic approval and native-device review pending.",
+      "uncertainty": "Drawn from the 750 px promotional tile (bottle about 580 px tall); the tile was the only front packshot used and its label matches the current 50% more electrolytes design. Wordmark traced once (Grape tile, left letters from the Fruit Punch tile, foreshortened left stems widened by about 1.5 px) and shared; flavor lines traced from each flavor's own tile; \"50% MORE ELECTROLYTES\" is Arial Bold with textLength, close to but not exactly the condensed label face. Grip facets simplified to three rows of soft planes; condensation, the dagger footnote mark and the backdrop are left out. The outline is measured on the left side and mirrored.",
       "status": "needs-review",
       "bevId": "fd292048-28df-51e3-8c62-6e3aa415923a",
       "name": "Powerade",
@@ -7981,27 +7988,27 @@
         "svg": "svg/powerade-fruit-punch.svg",
         "portableSvg": "portable-svg/powerade-fruit-punch.svg",
         "png": "png/powerade-fruit-punch.png",
-        "svgSha256": "0f42b1e67df9b024577371ce2149a0f72710ebd19f56c65d310a12b978bf1f51",
-        "portableSvgSha256": "7f156ca39bdc12a65911ffc94c413d41db513b6228fcca4c718e31ab9af16241",
-        "pngSha256": "7a0deb2b908c1bfbc8652fdaeab2edc280814ffe9b2f5e27f576b83d74ea6711",
-        "pngBytes": 125387
+        "svgSha256": "9e15310f90e8ab39ee9ec519d733af3baca5e2a9d670347c3edee52472b84f89",
+        "portableSvgSha256": "2b54301a4c293732ec67c4f2f05febc0de57a40e74af3797c64ca85c425ac655",
+        "pngSha256": "d938f5977cd3a07f85f3507e688f15c1fbde90a82b273afae242ec56a325b147",
+        "pngBytes": 173440
       },
-      "sourceModule": "scripts/icons/families/hydration-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-powerade.mjs"
     },
     {
       "slug": "powerade-grape",
       "family": "powerade-sports-bottle",
-      "packageChoice": "US 28 fl oz POWERADE Grape hex-grip PET bottle.",
+      "packageChoice": "Current US Powerade 28 fl oz single-serve PET bottle (the size shown front-on on powerade.com), in the 50% more electrolytes label.",
       "references": [
         {
           "pageUrl": "https://www.powerade.com/products/powerade",
           "imageUrl": "https://www.powerade.com/content/dam/powerade/us/en/products/powerade/Powerade-Desktop-Grape-750x750.jpg",
-          "inspectedAt": "2026-11-04",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Separate manufacturer Grape image inspected: black cap, transparent purple drink in broad hex-grip PET, purple upper label with large white two-line POWER / ADE and GRAPE, black lower-right electrolyte panel. Original Grape independently checked; not Zero Grape."
+          "observations": "Front view of the current US 28 fl oz PET bottle: black ribbed sport cap, short clear neck, sloping shoulder, a full-width wrap label on the upper body, a narrower hex-faceted grip below and a petaloid base. The label carries the stacked rugged POWER / ADE wordmark in white at upper left, the flavor name small in white beneath it, and a black diagonal panel at lower right edged by a thin light line, holding \"50% MORE ELECTROLYTES\" in white. Grape: violet drink, a magenta-purple label, flavor line \"GRAPE\"."
         }
       ],
-      "uncertainty": "Manufacturer current package chosen; advertising diagonal backdrop and condensation simplified. Exact flavor references separately inspected. Representative US package selected where catalog has no size. Typography, fine package copy and material/fruit details are simplified original vectors; final aesthetic approval and native-device review pending.",
+      "uncertainty": "Drawn from the 750 px promotional tile (bottle about 580 px tall); the tile was the only front packshot used and its label matches the current 50% more electrolytes design. Wordmark traced once (Grape tile, left letters from the Fruit Punch tile, foreshortened left stems widened by about 1.5 px) and shared; flavor lines traced from each flavor's own tile; \"50% MORE ELECTROLYTES\" is Arial Bold with textLength, close to but not exactly the condensed label face. Grip facets simplified to three rows of soft planes; condensation, the dagger footnote mark and the backdrop are left out. The outline is measured on the left side and mirrored.",
       "status": "needs-review",
       "bevId": "47ee4c2e-c553-5434-b9a8-3beb511e4e44",
       "name": "Powerade",
@@ -8012,27 +8019,27 @@
         "svg": "svg/powerade-grape.svg",
         "portableSvg": "portable-svg/powerade-grape.svg",
         "png": "png/powerade-grape.png",
-        "svgSha256": "d7580a9a231f10d24e2b635d5dbc41e053ac61be52fbb179e371b095beabec57",
-        "portableSvgSha256": "e1141d1ff2078960a63b04feccc2d67429d0b46d9551ee8f69c367d13bb1288e",
-        "pngSha256": "a50c26025372d51dc8b563fbda512dc3a78e873801b4bbf2fd0cc362ed355f26",
-        "pngBytes": 125506
+        "svgSha256": "b2a5de0276e82b93dcab2b3092916da2d7775d377c1fba1886951c6a14db97c4",
+        "portableSvgSha256": "d6a2ec37e6054e1e4b25a4a5992c06ead6e1fc6d7e1219ff81b6c9abab0b869e",
+        "pngSha256": "b3a90292ec3a2f3b5eb9d420a7125cc11072b5f06b9ab71b46f2a6ce5bb0429b",
+        "pngBytes": 170691
       },
-      "sourceModule": "scripts/icons/families/hydration-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-powerade.mjs"
     },
     {
       "slug": "powerade-zero-mixed-berry",
       "family": "powerade-sports-bottle",
-      "packageChoice": "US 28 fl oz POWERADE Zero Mixed Berry hex-grip PET bottle.",
+      "packageChoice": "Current US Powerade 28 fl oz single-serve PET bottle (the size shown front-on on powerade.com), in the 50% more electrolytes label.",
       "references": [
         {
           "pageUrl": "https://www.powerade.com/products/powerade-zero",
           "imageUrl": "https://www.powerade.com/content/dam/powerade/us/en/products/powerade-zero/PoweradeZero-Desktop-MixedBerry-750x750.jpg",
-          "inspectedAt": "2026-11-04",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Separate manufacturer Zero Mixed Berry image inspected: pale gray/white cap, blue drink, same broad hex-grip bottle, white upper label with small blue POWERADE, oversized black ZERO, blue MIXED BERRY and blue diagonal50% electrolyte panel. White cap/label are variant defining; not the Original Mountain Berry label."
+          "observations": "Front view of the current US 28 fl oz Powerade Zero bottle: translucent white ribbed sport cap, light blue drink through a hex-faceted grip, a white wrap label with \"POWERADE\" small in blue, a large black \"ZERO\", \"MIXED BERRY\" small in blue, \"ZERO CALORIE SUGAR\" in black, and a bright blue diagonal panel at lower right with \"50% MORE ELECTROLYTES\" in white; a blue sliver at the label's top right."
         }
       ],
-      "uncertainty": "Manufacturer current package chosen; advertising diagonal backdrop and condensation simplified. Exact flavor references separately inspected. Representative US package selected where catalog has no size. Typography, fine package copy and material/fruit details are simplified original vectors; final aesthetic approval and native-device review pending.",
+      "uncertainty": "Drawn from the 750 px promotional tile (bottle about 580 px tall); the tile was the only front packshot used and its label matches the current 50% more electrolytes design. Wordmark traced once (Grape tile, left letters from the Fruit Punch tile, foreshortened left stems widened by about 1.5 px) and shared; flavor lines traced from each flavor's own tile; \"50% MORE ELECTROLYTES\" is Arial Bold with textLength, close to but not exactly the condensed label face. Grip facets simplified to three rows of soft planes; condensation, the dagger footnote mark and the backdrop are left out. The outline is measured on the left side and mirrored.",
       "status": "needs-review",
       "bevId": "1c53f6b0-f259-53d2-a6eb-8d0fcecd4a39",
       "name": "Powerade Zero",
@@ -8043,12 +8050,12 @@
         "svg": "svg/powerade-zero-mixed-berry.svg",
         "portableSvg": "portable-svg/powerade-zero-mixed-berry.svg",
         "png": "png/powerade-zero-mixed-berry.png",
-        "svgSha256": "370b87cc12d77249251eba80e215386b4f433ba21ae140b4e9559d2a546f0197",
-        "portableSvgSha256": "d435a23d304d9a62a7fca73fb82f95dd0c58ae39a68eb9c1ecd559be48b2dcf0",
-        "pngSha256": "3113ef9ac6db04ba83ae16e6ba63b4fe45a0b036c4c9b9c60a416aefd653458f",
-        "pngBytes": 121783
+        "svgSha256": "f4e1c4c0de45f3ad700abb84dde3c39397299b61c0bba3c39c92245f4576ffd9",
+        "portableSvgSha256": "c44cf3bd78eb4b7427e7a0ed0506c393a705853ffbb1c957bee2499a4657887b",
+        "pngSha256": "4e0a7f9d04f461d69fdfc1b3fd01935993188abbc4189c82d0de1c91fa4a94e3",
+        "pngBytes": 179438
       },
-      "sourceModule": "scripts/icons/families/hydration-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-powerade.mjs"
     },
     {
       "slug": "prime-hydration-lemon-lime",
@@ -8176,18 +8183,18 @@
     },
     {
       "slug": "naked-protein-zone",
-      "family": "coffee-tea-pet-bottle-expansion",
-      "packageChoice": "Representative US single-serve PET bottle; catalog omits package size.",
+      "family": "naked-smoothie-bottle",
+      "packageChoice": "Naked Protein Smoothie Tropical, 15.2 fl oz PET bottle, current 2025 US label: the single-serve product Target still sells under the Protein Zone listing (the old reference was the 32 fl oz Protein Zone with the retired label).",
       "references": [
         {
-          "pageUrl": "https://www.instacart.com/products/2607398-naked-protein-zone-protein-juice-smoothie-32-fl-oz",
-          "imageUrl": "https://www.instacart.com/image-server/1864x1864/www.instacart.com/assets/domains/product-image/file/large_691eaad3-b352-4075-a931-268bb427075b.png",
-          "inspectedAt": "2026-11-14",
+          "pageUrl": "https://www.nakedsmoothie.com/our-products/protein/tropical-protein",
+          "imageUrl": "https://www.nakedsmoothie.com/storage/app/media/2025/products/tropical-protein.png",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "32 fl oz clear plastic bottle with purple cap and purple fruit-forward label; tropical fruit art, Protein Zone and 16g protein callout inspected."
+          "observations": "Manufacturer front packshot, same bottle and cap as the Machines: beige juice, orange watercolor label, Naked banner; pale yellow TROPICAL and white PROTEIN with a blue plus, white SMOOTHIE with a blue swirl; orange two-line flavor statement; pale yellow box with 20g protein / good source of fiber in navy; 240 cals; orange half, coconut, peach, pineapple slice and banana slices; yellow \"no added sugar\" box with a navy ring; 15.2 FL OZ (450 mL)."
         }
       ],
-      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "uncertainty": "The catalog name Protein Zone is no longer printed: Naked renamed it Protein Smoothie Tropical (same tropical fruit set, Target listing A-13397598 keeps the protein-zone URL). Drawn as the current 15.2 oz Tropical label; if the catalog means the retired Protein Zone label this is a judgment call for Matt.",
       "status": "needs-review",
       "bevId": "5f34b74b-5d4c-59f8-9072-80196114a575",
       "name": "Protein Zone",
@@ -8198,12 +8205,12 @@
         "svg": "svg/naked-protein-zone.svg",
         "portableSvg": "portable-svg/naked-protein-zone.svg",
         "png": "png/naked-protein-zone.png",
-        "svgSha256": "182ca4892e5be1627f932a566738bf61b2472cace27e15d9f8373451832c0a2e",
-        "portableSvgSha256": "5f2ce0fcc916b210d1b3c3787cc2e6ae0549e8fda228635b38c28c7e17d51537",
-        "pngSha256": "47a286882909e5e8cf071dac7803db72c2c7d2bb6dba626fe32321058230acb8",
-        "pngBytes": 56264
+        "svgSha256": "2c0a4b4d83db0ba03bd5f58e6dfdd42ac7a69b0bdecadab4502a0788d972502a",
+        "portableSvgSha256": "46718ebf0efee72ad01a515d0a5c71dfd8aec63fdedc87a02998c018e8449618",
+        "pngSha256": "d1c7604957cf042a6375582c5e28082d36f69366c8598778d4d90160bd41472d",
+        "pngBytes": 125323
       },
-      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+      "sourceModule": "scripts/icons/families/redraw-naked.mjs"
     },
     {
       "slug": "pure-leaf-extra-sweet-tea",
@@ -8934,18 +8941,18 @@
     },
     {
       "slug": "snapple-diet-peach-tea",
-      "family": "coffee-tea-pet-bottle-expansion",
-      "packageChoice": "Representative US single-serve PET bottle; catalog omits package size.",
+      "family": "snapple-tea-bottle",
+      "packageChoice": "The catalog's Snapple Diet Peach Tea is sold today as Snapple Zero Sugar Peach Tea (same UPC 00076183003145); drawn in the current 16 fl oz recycled-plastic bottle with the white cap and the Zero Sugar label, at the scale of the Good snapple-peach-tea icon.",
       "references": [
         {
-          "pageUrl": "https://www.freshbybrookshires.com/product/snapple-peach-tea-diet-16-fluid-ounce-id-00076183003145",
-          "imageUrl": "https://images.cdn.retail.brookshires.com/detail/00076183003145_C1C1.jpeg",
-          "inspectedAt": "2026-11-14",
+          "pageUrl": "https://shoprite.com/product/snapple-zero-sugar-peach-tea-16-fl-oz-id-00076183003145",
+          "imageUrl": "https://storage.googleapis.com/images-lnb-prd-8936dd0.lnb.prd.v8.commerce.mi9cloud.com/product-images/zoom/00076183003145.png",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "US 16 fl oz clear recycled-plastic bottle with amber tea and white wrap label; diet Snapple wordmark, peach/leaf illustration, orange peach-tea line."
+          "observations": "Front packshot, 1500 px, of the current Zero Sugar label. Clear PET bottle (width/height about 0.33) with a white ribbed cap, clear neck and deep red-brown tea. Wrap label from about 30 to 88 percent of the height, white at top and bottom with a peach-orange middle. Navy arched \"Zero Sugar\" above the Snapple script wordmark in navy, set in a white lozenge with a red outline; a white pill with navy \"Peach Tea\" under it at the right. Peach with a green leaf and a yellow slice centre right, a white \"Real Tea\" seal with ring lettering at the left, a peach slice cut by the top left label edge. Bottom: orange \"Peach Tea\", two small flavour lines, navy 16 FL OZ (473 mL) and a 5 calories box."
         }
       ],
-      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "uncertainty": "The page URL is the ShopRite listing for this UPC (the page itself refused automated fetches); the image is the grocer CDN packshot keyed by the same UPC. The whole peach, leaf and cut wedge are hand-built shapes with gradients on the measured positions, not traces; the ring lettering of the Real Tea seal is a dashed hairline. The bottle is about 72 units wide, a little slimmer than the Good snapple-peach-tea sibling, because the current plastic bottle is slimmer than the glass one that icon shows.",
       "status": "needs-review",
       "bevId": "f0dc1cdd-ac0b-56bf-bd9f-82519a6df1ba",
       "name": "Snapple Diet Peach Tea",
@@ -8956,12 +8963,12 @@
         "svg": "svg/snapple-diet-peach-tea.svg",
         "portableSvg": "portable-svg/snapple-diet-peach-tea.svg",
         "png": "png/snapple-diet-peach-tea.png",
-        "svgSha256": "615bb27ce7f0d61d5352b2dfb73a11377485d9e4662f01c37ed5cf8730ba2964",
-        "portableSvgSha256": "76b5f0cf583fa1a52449e6c322123bb0a652c90997fa6f45e9bc22f5c04b6dcd",
-        "pngSha256": "6804e5c0940801297fb758f860b2378206e1c1442b77b9a79f5b0a4b2e165b40",
-        "pngBytes": 60622
+        "svgSha256": "523299cb96a2192e2b2917ebf9827d8a3088d93a660d8271287c3b5e872351ee",
+        "portableSvgSha256": "d33b2188aa7a67dc8314419e5aedba34a5f189bce25cd0cf64d7043941121b79",
+        "pngSha256": "fac3204cd6441aa97d80d13524dc04d7f63e0ad325f91b4a72a872e110361130",
+        "pngBytes": 129964
       },
-      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+      "sourceModule": "scripts/icons/families/redraw-bottled-teas.mjs"
     },
     {
       "slug": "snapple-lemon-tea",
@@ -9629,50 +9636,26 @@
       "sourceModule": "scripts/icons/families/refreshment-expansion.mjs"
     },
     {
-      "slug": "naked-juice-strawberry-banana",
-      "family": "naked-smoothie-bottle",
-      "packageChoice": "US 15.2 fl oz / 450mL Naked Strawberry Banana Machine, current manufacturer Boosted Smoothie / Machine package.",
-      "references": [
-        {
-          "pageUrl": "https://www.nakedsmoothie.com/our-products/machines/strawberry-banana-machine",
-          "imageUrl": "https://www.nakedsmoothie.com/storage/app/media/2025/products/machine-red.png",
-          "inspectedAt": "2026-11-04",
-          "visuallyInspected": true,
-          "observations": "Separate manufacturer 15.2oz Strawberry Banana Machine photo inspected: muted brownish-pink smoothie, wide blue cap, peach/pink wrap, white/blue Naked banner, BOOSTED SMOOTHIE and stacked red STRAWBERRY / BANANA / MACHINE; strawberries, banana slices and apple slice. Current Machine branding/fiber-vitamin variant is documented rather than assuming the older label/formula."
-        }
-      ],
-      "uncertainty": "Current manufacturer flavor variant is explicitly selected; catalog has no formula/vintage metadata. This does not assert nutritional equivalence with older Naked Juice labels. Current Boosted Smoothie/Machine wording retained, nutritional claims omitted. Each exact variant reference visually inspected; representative US package chosen because catalog does not specify size. Brand lettering, fruit art and small print simplified original vectors with pinned fonts. Final aesthetic approval and native-device review pending.",
-      "status": "needs-review",
-      "bevId": "a93992da-ccf6-52ad-b002-754243d1b0cd",
-      "name": "Strawberry Banana",
-      "brand": "Naked Juice",
-      "isStarter": false,
-      "styleVersion": "bevi-dimensional-v1",
-      "assets": {
-        "svg": "svg/naked-juice-strawberry-banana.svg",
-        "portableSvg": "portable-svg/naked-juice-strawberry-banana.svg",
-        "png": "png/naked-juice-strawberry-banana.png",
-        "svgSha256": "9f11faa7460497a0082d2083fe700bfcf89712b7144d63cf6b31e1ac6c3462ed",
-        "portableSvgSha256": "a2157539cb1961519f426df5540d1d33e03e4c3ae17855ef2980ca051036296f",
-        "pngSha256": "73e9b110e655afa8578af8e907751ed530d7431211de22e88ada89528823746b",
-        "pngBytes": 107474
-      },
-      "sourceModule": "scripts/icons/families/juice-expansion.mjs"
-    },
-    {
       "slug": "bolthouse-farms-strawberry-banana",
       "family": "smoothie-pet-bottle",
-      "packageChoice": "US 450mL / 15.2 fl oz Bolthouse Farms Strawberry Banana juice smoothie, pink label and red screw cap.",
+      "packageChoice": "Current US retail 15.2 fl oz (450 mL) PET bottle of Strawberry Banana 100% juice smoothie (red cap, full-height pink wrap label), the design on the brand product page.",
       "references": [
+        {
+          "pageUrl": "https://brookshires.com/product/bolthouse-farms-100-juice-smoothie-strawberry-banana-152-fluid-ounce-id-00071464270407",
+          "imageUrl": "https://images.cdn.retail.brookshires.com/zoom/00071464270407_C1C1.jpeg",
+          "inspectedAt": "2026-11-16",
+          "visuallyInspected": true,
+          "observations": "Front-on photo of the current bottle: red-pink knurled cap, clear neck, pink label with strawberries and banana pieces at the top, white NO SUGAR ADDED seal, white script Bolthouse Farms wordmark, deeper red band with STRAWBERRY BANANA in peach caps, tilted white strip 100% JUICE SMOOTHIE in red, lower window onto the brownish-pink smoothie with legal lines and 450 mL (15.2 FL. OZ.). Used for the bottle outline and the flavor lettering."
+        },
         {
           "pageUrl": "https://www.bolthouse.com/product/strawberry-banana/",
           "imageUrl": "https://www.bolthouse.com/wp-content/uploads/sites/4/2016/01/071464270407_bhf_us_bev_15_pi_blnd_sb_front_520x720.png-260x360.png",
-          "inspectedAt": "2026-11-01",
-          "observations": "Inspected manufacturer front image: narrow PET bottle with round shoulders, ribbed red/pink cap and tamper ring, pink sleeve, strawberries and banana at shoulder, white NO SUGAR ADDED circle, white two-line Bolthouse Farms script, darker pink STRAWBERRY BANANA band, angled white 100% JUICE SMOOTHIE stripe, muted strawberry smoothie at base. Bottom visibly reads 450mL / 15.2 FL OZ.",
-          "visuallyInspected": true
+          "inspectedAt": "2026-11-16",
+          "visuallyInspected": true,
+          "observations": "Brand render (260x360) of the same label; confirms colors and fruit layout."
         }
       ],
-      "uncertainty": "Representative US single-serve package selected because catalog lacks size. Manufacturer source is a small image; typography and fruit motifs are simplified while retaining observed layout. Final aesthetic and native review pending.",
+      "uncertainty": "Wordmark and strip lettering are the shared traces from the Green Goodness render (same label system); the flavor band is placed on the Green Goodness layout (the photo sits about 3 units higher). Strawberries and banana pieces are redrawn as simple shapes on their measured spots; the seal's arc microcopy is a dotted hairline.",
       "status": "needs-review",
       "bevId": "1b25e221-1411-5bd7-8475-0b82e9ba0dd3",
       "name": "Strawberry Banana",
@@ -9683,12 +9666,43 @@
         "svg": "svg/bolthouse-farms-strawberry-banana.svg",
         "portableSvg": "portable-svg/bolthouse-farms-strawberry-banana.svg",
         "png": "png/bolthouse-farms-strawberry-banana.png",
-        "svgSha256": "35cfd8d78e1221c444707701d37772821a740ecebeb82dc22d482c9660c0b328",
-        "portableSvgSha256": "d97c084eeddf7ff0a9c9210d2c136189128211ba1e77d3c5a07527bcac7acbac",
-        "pngSha256": "d3b34e0396a23634d0e0652a01344080b6bad03dfa48b1eab3152c1dce52f3a2",
-        "pngBytes": 118446
+        "svgSha256": "33dcb90caa2f939329c5ac2411a63b7931ac868ce5db50040d828a1216b73074",
+        "portableSvgSha256": "808a4f8d16852936e7d4d3c443cdd72f1afaed7c8d4f1f1ff591645f86186491",
+        "pngSha256": "87177636568e53643c75c1289ceae0bd74109e514bf79e0ae90c7eae785dc1a2",
+        "pngBytes": 135712
       },
-      "sourceModule": "scripts/icons/families/smoothie-starters.mjs"
+      "sourceModule": "scripts/icons/families/redraw-bolthouse-odwalla.mjs"
+    },
+    {
+      "slug": "naked-juice-strawberry-banana",
+      "family": "naked-smoothie-bottle",
+      "packageChoice": "Naked Boosted Smoothie Strawberry Banana Machine, 15.2 fl oz single-serve PET bottle, current 2025 US label (the product the catalog row names).",
+      "references": [
+        {
+          "pageUrl": "https://www.nakedsmoothie.com/our-products/machines/strawberry-banana-machine",
+          "imageUrl": "https://www.nakedsmoothie.com/storage/app/media/2025/products/machine-red.png",
+          "inspectedAt": "2026-11-16",
+          "visuallyInspected": true,
+          "observations": "Front packshot of the 15.2 fl oz PET bottle: square shoulders with a bulge ring, straight sides, bottom ring, blue ribbed cap. Juice shows above and below a tall wrap label; dark blue torn-edge banner with the white Naked wordmark and green leaf accent; BOOSTED SMOOTHIE with the first word underlined; hand-drawn flavor capitals; swirl arrow onto a nutrient box; calories line; fruit photography lower right; circled \"no added sugar\" box; 15.2 FL OZ (450 mL). Strawberry Banana: brick-red juice, salmon watercolor label, red STRAWBERRY BANANA MACHINE lettering in three lines and red boxes, fruit = whole strawberry, apple wedge, two banana slices, halved strawberry; 250 cals."
+        }
+      ],
+      "uncertainty": "Same method as Green Machine: traced marks and lettering, ingredient line in squeezed Arial Bold, fruit photo redrawn as flat shapes.",
+      "status": "needs-review",
+      "bevId": "a93992da-ccf6-52ad-b002-754243d1b0cd",
+      "name": "Strawberry Banana",
+      "brand": "Naked Juice",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/naked-juice-strawberry-banana.svg",
+        "portableSvg": "portable-svg/naked-juice-strawberry-banana.svg",
+        "png": "png/naked-juice-strawberry-banana.png",
+        "svgSha256": "a31b5f9bb2af811d5d0e15a215e4a7b59174246f6112c6cb9b2f2018fbfd587f",
+        "portableSvgSha256": "79486036e70b57b26e2ec407b02aa44dc212435803322fbd632117870b129974",
+        "pngSha256": "67bbd97bfbc51ea5fe2f5b128c254e00fd2f8f799b2a13f7aa139403af325850",
+        "pngBytes": 126486
+      },
+      "sourceModule": "scripts/icons/families/redraw-naked.mjs"
     },
     {
       "slug": "jamba-juice-strawberry-surf-rider",
@@ -9785,18 +9799,25 @@
     },
     {
       "slug": "odwalla-superfood-smoothie",
-      "family": "coffee-tea-pet-bottle-expansion",
-      "packageChoice": "Representative US single-serve PET bottle; catalog omits package size.",
+      "family": "odwalla-smoothie-bottle",
+      "packageChoice": "Historical, discontinued 2020: the last US retail 15.2 fl oz (450 mL) PET bottle of Odwalla Original Superfood fruit smoothie (dark green cap, clear shoulder, white-and-green label with the blue odwalla oval).",
       "references": [
+        {
+          "pageUrl": "https://www.fredmeyer.com/p/odwalla-original-superfood-100-juice-smoothie/0001405406405",
+          "imageUrl": "https://www.kroger.com/product/images/xlarge/front/0001405406405",
+          "inspectedAt": "2026-11-16",
+          "visuallyInspected": true,
+          "observations": "1000 px front-on packshot: dark green cap, clear neck, dark olive smoothie in the shoulder; label from mid-shoulder: white panel with original superfood (dark green) and fruit smoothie (green), apple, mango, peach slice, bananas and leaves, non GMO / NO added sugar box; white odwalla wordmark in a navy oval with a light blue rim; green lower panel with dark strip 100% juice smoothie, three ingredient lines, Non-GMO Project badge, 15.2 FL OZ (450 mL), 240 CALORIES PER BOTTLE box."
+        },
         {
           "pageUrl": "https://www.cokesolutions.com/products/brands/odwalla/odwalla-smoothie.html",
           "imageUrl": "https://www.cokesolutions.com/content/dam/cokesolutions/us/images/Products/Odwalla-Smoothie-Refreshers-Original-Superfood-PET.jpg",
-          "inspectedAt": "2026-11-14",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Current US 15.2 fl oz plant-based PET bottle inspected: bright green cap, green/white Original Superfood label, colorful fruit imagery and 100% juice smoothie text."
+          "observations": "Smaller Coca-Cola image of the same label (without the Non-GMO Project badge)."
         }
       ],
-      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "uncertainty": "Brand discontinued in 2020; drawn from the last label (the Kroger image includes the Non-GMO Project badge, drawn as a simplified mark). The oval is drawn from measured extents rather than traced; fruit art is simplified to vector shapes; the three ingredient lines are hairlines.",
       "status": "needs-review",
       "bevId": "d0bb1e01-dbc7-5ba4-b18d-e6ac95cf31c0",
       "name": "Superfood",
@@ -9807,12 +9828,12 @@
         "svg": "svg/odwalla-superfood-smoothie.svg",
         "portableSvg": "portable-svg/odwalla-superfood-smoothie.svg",
         "png": "png/odwalla-superfood-smoothie.png",
-        "svgSha256": "ccbe7e89a1c627c17e7b8a447856dd637713931085434704e5b22859c7417e12",
-        "portableSvgSha256": "a41a89ccac119073f04a134da6f8a771e9917e5b2d59583333921b454cd00d7a",
-        "pngSha256": "8a8bb65274804f37d8da9bb542f479c355d701b08305033d986441effcf4e9d3",
-        "pngBytes": 64568
+        "svgSha256": "c54e5bad3832ebaeb7eea29efa2d786c826795b891493a92859176aa1bd92ba2",
+        "portableSvgSha256": "23f9280eac4c12015843e13eccf214a1b437ebefb8c3aeb6e5363c02a60b944a",
+        "pngSha256": "4e219cebd1b1aa08a7391da03c58c4e3793e2c0cb318497c593e733f6b340ba5",
+        "pngBytes": 116919
       },
-      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+      "sourceModule": "scripts/icons/families/redraw-bolthouse-odwalla.mjs"
     },
     {
       "slug": "titos-handmade-vodka-soda",
@@ -10475,17 +10496,17 @@
     {
       "slug": "zevia-cherry-cola",
       "family": "zevia-standard-can",
-      "packageChoice": "Representative US 12 fl oz / 355mL zevia-cherry-cola aluminum can, exact individually inspected package.",
+      "packageChoice": "Current (2025 redesign) US 12 fl oz standard can, front view, as sold on zevia.com.",
       "references": [
         {
           "pageUrl": "https://zevia.com/products/cherry-cola",
           "imageUrl": "https://zevia.com/cdn/shop/files/2025_ZVA_US_12oz_Soda_Standard_CherryCola_Dry_WithShadow_a073e109-c42f-4807-a988-d11c674682e1.png?v=1770314383&width=1000",
-          "inspectedAt": "2026-11-10",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Exact US manufacturer CHERRY COLA can inspected: teal upper body, oversized white lowercase zevia and flavor-colored leaf accent; #b92477 to #122f79 lower field with cherry and pink crimped cap. Silver rims; tiny claims and detailed package illustration simplified."
+          "observations": "Manufacturer 2025 packshot, 12 fl oz can seen slightly from above with a cast shadow. Upper ~45% deep teal with a ring of white condensed capitals at the shoulder (…TENERS · ZERO SUGAR · ZERO FAKE COLORS, flavor-colored dots), the large white lowercase zevia wordmark whose i is dotted by a flavor-colored leaf, and SODA MADE BETTER beneath. Lower panel: a pink-to-navy panel with a dark red cherry on a stem with a navy leaf, a halved cherry with its pit at left, two pale pink bottle caps; name CHERRY COLA in white, NATURALLY FLAVORED beneath it, 12 FL. OZ. (355 mL) at lower left."
         }
       ],
-      "uncertainty": "Catalog gives no size; exact photographed US package chosen. Fine claims, fruit engravings and wordmarks are simplified original vectors. Manufacturer pages checked first; documented retailer fallback for colas. Packaging revision dates unverified. Final aesthetic approval and web-device review pending.",
+      "uncertainty": "Wordmark, leaf, shoulder ring and SODA MADE BETTER traced from the 3000 px Mountain Zevia packshot and shared by all eight; the ring text is re-curved onto the house lid ellipse. Flavor name traced from this packshot; NATURALLY FLAVORED and the size line are Arial with textLength (the real face is a condensed grotesque). The painterly, spray-textured flavor illustration is redrawn as about 15 to 30 flat and gradient shapes in the same positions and colors; spray texture, most bubbles and fine highlights are left out, and the house can is taller than the real one, so the art is stretched slightly to the panel.",
       "status": "needs-review",
       "bevId": "84485ad4-2ca7-54d6-a89e-aebb866ddf59",
       "name": "Zevia Cherry Cola",
@@ -10496,27 +10517,27 @@
         "svg": "svg/zevia-cherry-cola.svg",
         "portableSvg": "portable-svg/zevia-cherry-cola.svg",
         "png": "png/zevia-cherry-cola.png",
-        "svgSha256": "fd711b7bf76943f64cb530e286f00ee9b54db84b6fe1eb6a5398b20f81711154",
-        "portableSvgSha256": "f2596e113f5e26e1919c1d897275674b9d0d5d71af50207f9490cf79563f8d70",
-        "pngSha256": "4d0995b26054fe0b716d820c780ff4e9b610040b5b8da9df97081d2aa8b91dee",
-        "pngBytes": 167165
+        "svgSha256": "5235e8c9a7de93cf267e6f66506fc953d8501e6caf66e4fb36210bae2496bdbc",
+        "portableSvgSha256": "b6fdee8c5792756d684234e791a853728136190354bddd2253d460bf40a6a01e",
+        "pngSha256": "cac2b4fc52d19419a0065807db47b03ccd8ca4167bad204839cb0b1fb17880df",
+        "pngBytes": 158899
       },
-      "sourceModule": "scripts/icons/families/soda-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-zevia.mjs"
     },
     {
       "slug": "zevia-cola",
       "family": "zevia-standard-can",
-      "packageChoice": "Representative US 12 fl oz / 355mL zevia-cola aluminum can, exact individually inspected package.",
+      "packageChoice": "Current (2025 redesign) US 12 fl oz standard can, front view, as sold on zevia.com.",
       "references": [
         {
           "pageUrl": "https://zevia.com/products/cola",
           "imageUrl": "https://zevia.com/cdn/shop/files/2025_ZVA_US_12oz_Soda_Standard_Cola_Dry_WithShadow_33a1ce2c-84c5-4b71-a906-a1b4306d2929.png?v=1770411644&width=1000",
-          "inspectedAt": "2026-11-10",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Exact US manufacturer COLA can inspected: teal upper body, oversized white lowercase zevia and flavor-colored leaf accent; #188cba to #16387f lower field with floating crimped bottle caps. Silver rims; tiny claims and detailed package illustration simplified."
+          "observations": "Manufacturer 2025 packshot, 12 fl oz can seen slightly from above with a cast shadow. Upper ~45% deep teal with a ring of white condensed capitals at the shoulder (…TENERS · ZERO SUGAR · ZERO FAKE COLORS, flavor-colored dots), the large white lowercase zevia wordmark whose i is dotted by a flavor-colored leaf, and SODA MADE BETTER beneath. Lower panel: a cyan-to-navy panel with two pale-blue crimped bottle caps (one upper right, one tilted lower left) and three mid-blue leaves, bubbles and a sparkle; name COLA in white, NATURALLY FLAVORED beneath it, 12 FL. OZ. (355 mL) at lower left."
         }
       ],
-      "uncertainty": "Catalog gives no size; exact photographed US package chosen. Fine claims, fruit engravings and wordmarks are simplified original vectors. Manufacturer pages checked first; documented retailer fallback for colas. Packaging revision dates unverified. Final aesthetic approval and web-device review pending.",
+      "uncertainty": "Wordmark, leaf, shoulder ring and SODA MADE BETTER traced from the 3000 px Mountain Zevia packshot and shared by all eight; the ring text is re-curved onto the house lid ellipse. Flavor name traced from this packshot; NATURALLY FLAVORED and the size line are Arial with textLength (the real face is a condensed grotesque). The painterly, spray-textured flavor illustration is redrawn as about 15 to 30 flat and gradient shapes in the same positions and colors; spray texture, most bubbles and fine highlights are left out, and the house can is taller than the real one, so the art is stretched slightly to the panel.",
       "status": "needs-review",
       "bevId": "2447a1b4-0e9a-591d-bf9b-81b672f3db34",
       "name": "Zevia Cola",
@@ -10527,27 +10548,27 @@
         "svg": "svg/zevia-cola.svg",
         "portableSvg": "portable-svg/zevia-cola.svg",
         "png": "png/zevia-cola.png",
-        "svgSha256": "c38a568145039d364df2be8cbfd7a1d2541464885f60ffb2ea9fbb9ce86e40c3",
-        "portableSvgSha256": "f16149f378f7380fdd00ac94b844fa5a0cf55a994b116999567da75603098b0f",
-        "pngSha256": "9c9e464745d813c16a100a0aa1ceca0211c65dfaf18f91d7fd8cc09eec826f94",
-        "pngBytes": 165417
+        "svgSha256": "1a525b7fbe9f9d29134aed12271c852d2af77f4cb7845e9f446ff686582058e9",
+        "portableSvgSha256": "bd48bc64719428f7adeea05bb9ed4a09b41447d59384e3c5b0f900ad4c80b205",
+        "pngSha256": "63d62f182ed1de47413e24c0b4c5a67bf20c35ec1fc7a5141a23e57b15810320",
+        "pngBytes": 166288
       },
-      "sourceModule": "scripts/icons/families/soda-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-zevia.mjs"
     },
     {
       "slug": "zevia-cream-soda",
       "family": "zevia-standard-can",
-      "packageChoice": "Representative US 12 fl oz / 355mL zevia-cream-soda aluminum can, exact individually inspected package.",
+      "packageChoice": "Current (2025 redesign) US 12 fl oz standard can, front view, as sold on zevia.com.",
       "references": [
         {
           "pageUrl": "https://zevia.com/products/cream-soda",
           "imageUrl": "https://zevia.com/cdn/shop/files/2025_ZVA_US_12oz_Soda_Standard_CreamSoda_Dry_WithShadow_93147b86-6b58-46bd-9d84-da86d91aff4b.png?v=1770411642&width=1000",
-          "inspectedAt": "2026-11-10",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Exact US manufacturer CREAM SODA can inspected: teal upper body, oversized white lowercase zevia and flavor-colored leaf accent; #ebbf48 to #c88b20 lower field with foamy cream soda mug and vanilla flowers. Silver rims; tiny claims and detailed package illustration simplified."
+          "observations": "Manufacturer 2025 packshot, 12 fl oz can seen slightly from above with a cast shadow. Upper ~45% deep teal with a ring of white condensed capitals at the shoulder (…TENERS · ZERO SUGAR · ZERO FAKE COLORS, flavor-colored dots), the large white lowercase zevia wordmark whose i is dotted by a flavor-colored leaf, and SODA MADE BETTER beneath. Lower panel: a cream-to-amber panel with a tulip soda glass of amber soda under an overflowing foam head and a white vanilla flower; name CREAM SODA on two lines in amber, NATURALLY FLAVORED beneath it, 12 FL. OZ. (355 mL) at lower left."
         }
       ],
-      "uncertainty": "Catalog gives no size; exact photographed US package chosen. Fine claims, fruit engravings and wordmarks are simplified original vectors. Manufacturer pages checked first; documented retailer fallback for colas. Packaging revision dates unverified. Final aesthetic approval and web-device review pending.",
+      "uncertainty": "Wordmark, leaf, shoulder ring and SODA MADE BETTER traced from the 3000 px Mountain Zevia packshot and shared by all eight; the ring text is re-curved onto the house lid ellipse. Flavor name traced from this packshot; NATURALLY FLAVORED and the size line are Arial with textLength (the real face is a condensed grotesque). The painterly, spray-textured flavor illustration is redrawn as about 15 to 30 flat and gradient shapes in the same positions and colors; spray texture, most bubbles and fine highlights are left out, and the house can is taller than the real one, so the art is stretched slightly to the panel.",
       "status": "needs-review",
       "bevId": "2cc7df31-6b67-5136-a040-0af193d9fba6",
       "name": "Zevia Cream Soda",
@@ -10558,27 +10579,27 @@
         "svg": "svg/zevia-cream-soda.svg",
         "portableSvg": "portable-svg/zevia-cream-soda.svg",
         "png": "png/zevia-cream-soda.png",
-        "svgSha256": "812392d1ad5cf3a38226a223ac193eadaed27a0bb9ec575a7bcc7a529367f452",
-        "portableSvgSha256": "803b596e7dfa0484b001c87701922d141709d48fbdac4aec9b7813a2ea177985",
-        "pngSha256": "b79b40ec4b16b16fc621ddfce3460d92c4b0501f8574b27a6e5793ad5c724b27",
-        "pngBytes": 143741
+        "svgSha256": "6afa866b5f6c81f27a369994b9096415c967d6eba456135c65dfdd45dc0602cf",
+        "portableSvgSha256": "763a5316f001aac9d362bb87b7560c237ed4ffe183ee49d540647d8de0e68adc",
+        "pngSha256": "3229223997a61b8a2f70f5b5c2f2e8b56c25c3b9b900fbc37584c32851bd3e09",
+        "pngBytes": 146138
       },
-      "sourceModule": "scripts/icons/families/soda-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-zevia.mjs"
     },
     {
       "slug": "zevia-dr-zevia",
       "family": "zevia-standard-can",
-      "packageChoice": "Representative US 12 fl oz / 355mL zevia-dr-zevia aluminum can, exact individually inspected package.",
+      "packageChoice": "Current (2025 redesign) US 12 fl oz standard can, front view, as sold on zevia.com.",
       "references": [
         {
           "pageUrl": "https://zevia.com/products/dr-zevia",
           "imageUrl": "https://zevia.com/cdn/shop/files/2025_ZVA_US_12oz_Soda_Standard_DrZevia_Dry_WithShadow_7aaee9a3-7b59-4e8b-a5f5-3373633c5037.png?v=1770411643&width=1000",
-          "inspectedAt": "2026-11-10",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Exact US manufacturer DR. ZEVIA can inspected: teal upper body, oversized white lowercase zevia and flavor-colored leaf accent; #c42043 to #820b29 lower field with floating crimped bottle caps. Silver rims; tiny claims and detailed package illustration simplified."
+          "observations": "Manufacturer 2025 packshot, 12 fl oz can seen slightly from above with a cast shadow. Upper ~45% deep teal with a ring of white condensed capitals at the shoulder (…TENERS · ZERO SUGAR · ZERO FAKE COLORS, flavor-colored dots), the large white lowercase zevia wordmark whose i is dotted by a flavor-colored leaf, and SODA MADE BETTER beneath. Lower panel: a crimson panel with two stacked pale pink bottle caps at upper right, pink starbursts and a pink swoosh at lower left; name DR. ZEVIA in white, NATURALLY FLAVORED beneath it, 12 FL. OZ. (355 mL) at lower left."
         }
       ],
-      "uncertainty": "Catalog gives no size; exact photographed US package chosen. Fine claims, fruit engravings and wordmarks are simplified original vectors. Manufacturer pages checked first; documented retailer fallback for colas. Packaging revision dates unverified. Final aesthetic approval and web-device review pending.",
+      "uncertainty": "Wordmark, leaf, shoulder ring and SODA MADE BETTER traced from the 3000 px Mountain Zevia packshot and shared by all eight; the ring text is re-curved onto the house lid ellipse. Flavor name traced from this packshot; NATURALLY FLAVORED and the size line are Arial with textLength (the real face is a condensed grotesque). The painterly, spray-textured flavor illustration is redrawn as about 15 to 30 flat and gradient shapes in the same positions and colors; spray texture, most bubbles and fine highlights are left out, and the house can is taller than the real one, so the art is stretched slightly to the panel.",
       "status": "needs-review",
       "bevId": "624dc4ed-ad0a-5e28-a924-160a414c5c2b",
       "name": "Zevia Dr Zevia",
@@ -10589,27 +10610,27 @@
         "svg": "svg/zevia-dr-zevia.svg",
         "portableSvg": "portable-svg/zevia-dr-zevia.svg",
         "png": "png/zevia-dr-zevia.png",
-        "svgSha256": "25521d1b73ef1cd54914cd6a176cacd6d0d9c77f9056f9485b3722d4394ddb39",
-        "portableSvgSha256": "117e27948223f3994db0d71081fb260772c9c5d7cc274e66fc9b989526f00983",
-        "pngSha256": "beb72c162929422a2eb01b5834224b91888d9ecf6d0447d268fb4675bf5390c4",
-        "pngBytes": 164991
+        "svgSha256": "5a5a9187bbf9496fae46a1f3f9cbe4bd069a6ff0203f7f4f05238836140fb6c1",
+        "portableSvgSha256": "a2ffe6838e73a7324789247113ad5decc57396bf20a8395f9490efa6d90ee89f",
+        "pngSha256": "51e77c92628cfd6c8854e7de9836dcc8a854ab3b93ed28d0a823ae89ee06bf27",
+        "pngBytes": 160106
       },
-      "sourceModule": "scripts/icons/families/soda-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-zevia.mjs"
     },
     {
       "slug": "zevia-ginger-ale",
       "family": "zevia-standard-can",
-      "packageChoice": "Representative US 12 fl oz / 355mL zevia-ginger-ale aluminum can, exact individually inspected package.",
+      "packageChoice": "Current (2025 redesign) US 12 fl oz standard can, front view, as sold on zevia.com.",
       "references": [
         {
           "pageUrl": "https://zevia.com/products/ginger-ale",
           "imageUrl": "https://zevia.com/cdn/shop/files/2025_ZVA_US_12oz_Soda_Standard_GingerAle_Dry_WithShadow_8f711d62-d1f7-4a6c-85a4-b3a0ca7b7e84.png?v=1770411644&width=1000",
-          "inspectedAt": "2026-11-10",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Exact US manufacturer GINGER ALE can inspected: teal upper body, oversized white lowercase zevia and flavor-colored leaf accent; #22894d to #07582d lower field with green iced highball glass. Silver rims; tiny claims and detailed package illustration simplified."
+          "observations": "Manufacturer 2025 packshot, 12 fl oz can seen slightly from above with a cast shadow. Upper ~45% deep teal with a ring of white condensed capitals at the shoulder (…TENERS · ZERO SUGAR · ZERO FAKE COLORS, flavor-colored dots), the large white lowercase zevia wordmark whose i is dotted by a flavor-colored leaf, and SODA MADE BETTER beneath. Lower panel: a green panel with a light green wave and a tall translucent glass with ice cubes and a straw at right; name GINGER ALE in white, NATURALLY FLAVORED beneath it, 12 FL. OZ. (355 mL) at lower left."
         }
       ],
-      "uncertainty": "Catalog gives no size; exact photographed US package chosen. Fine claims, fruit engravings and wordmarks are simplified original vectors. Manufacturer pages checked first; documented retailer fallback for colas. Packaging revision dates unverified. Final aesthetic approval and web-device review pending.",
+      "uncertainty": "Wordmark, leaf, shoulder ring and SODA MADE BETTER traced from the 3000 px Mountain Zevia packshot and shared by all eight; the ring text is re-curved onto the house lid ellipse. Flavor name traced from this packshot; NATURALLY FLAVORED and the size line are Arial with textLength (the real face is a condensed grotesque). The painterly, spray-textured flavor illustration is redrawn as about 15 to 30 flat and gradient shapes in the same positions and colors; spray texture, most bubbles and fine highlights are left out, and the house can is taller than the real one, so the art is stretched slightly to the panel.",
       "status": "needs-review",
       "bevId": "7e67e4ef-caab-5b78-9e7e-be2e6c0b7799",
       "name": "Zevia Ginger Ale",
@@ -10620,27 +10641,27 @@
         "svg": "svg/zevia-ginger-ale.svg",
         "portableSvg": "portable-svg/zevia-ginger-ale.svg",
         "png": "png/zevia-ginger-ale.png",
-        "svgSha256": "fc344558dac02d983772ac8bab3ccf39765bcb5377e69c3da3ecd4c7a623d3ac",
-        "portableSvgSha256": "050bfc493e51e0c11dbf10eb3d144307a0eadf407ea74d98c9cca5afe7f8ae47",
-        "pngSha256": "9a4eee5ce67b56effe1bd8dd972c2320c82084b44525912e9a47d0b49f0a4373",
-        "pngBytes": 164214
+        "svgSha256": "8ccaf37bff528add77ffc461b0e2160c371583cb93e43a79541f00a5d3357152",
+        "portableSvgSha256": "4406694d6513b47cfed4f5f62947c086f54d8ec31708dc7bf9a6f494ea5f00e5",
+        "pngSha256": "6a414dd740581abd352df34d488473a799d0947e18d9d488b979ce4ba416b0d8",
+        "pngBytes": 144891
       },
-      "sourceModule": "scripts/icons/families/soda-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-zevia.mjs"
     },
     {
       "slug": "zevia-grape",
       "family": "zevia-standard-can",
-      "packageChoice": "Representative US 12 fl oz / 355mL zevia-grape aluminum can, exact individually inspected package.",
+      "packageChoice": "Current (2025 redesign) US 12 fl oz standard can, front view, as sold on zevia.com.",
       "references": [
         {
           "pageUrl": "https://zevia.com/products/grape-soda",
           "imageUrl": "https://zevia.com/cdn/shop/files/2025_ZVA_US_12oz_Soda_Standard_Grape_Dry_WithShadow_0d2b9515-9345-4ddd-871a-049d306157da.png?v=1770411643&width=1000",
-          "inspectedAt": "2026-11-10",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Exact US manufacturer GRAPE can inspected: teal upper body, oversized white lowercase zevia and flavor-colored leaf accent; #8355a1 to #422574 lower field with purple grape clusters. Silver rims; tiny claims and detailed package illustration simplified."
+          "observations": "Manufacturer 2025 packshot, 12 fl oz can seen slightly from above with a cast shadow. Upper ~45% deep teal with a ring of white condensed capitals at the shoulder (…TENERS · ZERO SUGAR · ZERO FAKE COLORS, flavor-colored dots), the large white lowercase zevia wordmark whose i is dotted by a flavor-colored leaf, and SODA MADE BETTER beneath. Lower panel: a lavender-to-purple panel with two grape bunches (left and upper right) and a dark leaf; name GRAPE in white, NATURALLY FLAVORED beneath it, 12 FL. OZ. (355 mL) at lower left."
         }
       ],
-      "uncertainty": "Catalog gives no size; exact photographed US package chosen. Fine claims, fruit engravings and wordmarks are simplified original vectors. Manufacturer pages checked first; documented retailer fallback for colas. Packaging revision dates unverified. Final aesthetic approval and web-device review pending.",
+      "uncertainty": "Wordmark, leaf, shoulder ring and SODA MADE BETTER traced from the 3000 px Mountain Zevia packshot and shared by all eight; the ring text is re-curved onto the house lid ellipse. Flavor name traced from this packshot; NATURALLY FLAVORED and the size line are Arial with textLength (the real face is a condensed grotesque). The painterly, spray-textured flavor illustration is redrawn as about 15 to 30 flat and gradient shapes in the same positions and colors; spray texture, most bubbles and fine highlights are left out, and the house can is taller than the real one, so the art is stretched slightly to the panel.",
       "status": "needs-review",
       "bevId": "b7c247ff-53da-5805-bb30-d8fe2d8d32fb",
       "name": "Zevia Grape",
@@ -10651,27 +10672,27 @@
         "svg": "svg/zevia-grape.svg",
         "portableSvg": "portable-svg/zevia-grape.svg",
         "png": "png/zevia-grape.png",
-        "svgSha256": "51ac865873e8828c56ec0fc061f49bdd4025841864c477729c5de3dcc7d758a2",
-        "portableSvgSha256": "e63e786c40a2b417103da7a864990452764a0ce961730275bd27fc014d897603",
-        "pngSha256": "16c97693a71a59efbd736260e1b08ae3185aec8159b0b38cc1bde85b60f1f204",
-        "pngBytes": 166739
+        "svgSha256": "e383662e72060be65135d276cfa0484ed135085aebb6e33fde68de8972625fe3",
+        "portableSvgSha256": "e3946aa098a8dcae717b4a67eebdae4491951505cbbb9683e9d4d5eaef5a866d",
+        "pngSha256": "21e5276b0662971688c65b5e043f2a769ed2d259fdc7771a02d73c73466870fb",
+        "pngBytes": 194499
       },
-      "sourceModule": "scripts/icons/families/soda-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-zevia.mjs"
     },
     {
       "slug": "zevia-mountain-twist",
-      "family": "coffee-soda-can-expansion",
-      "packageChoice": "Representative US single-serve aluminum can matching the inspected product.",
+      "family": "zevia-standard-can",
+      "packageChoice": "The catalog row says \"Mountain Twist\"; Zevia sells this lemon-lime flavor today as \"Mountain Zevia\" (zevia.com/products/mountain-zevia), so the current 12 fl oz standard can of Mountain Zevia is drawn.",
       "references": [
         {
           "pageUrl": "https://zevia.com/products/mountain-zevia",
           "imageUrl": "https://zevia.com/cdn/shop/files/2025_ZVA_US_12oz_Soda_Standard_MountainZevia_Dry_WithShadow_ea77bb41-a69f-4f60-b57d-37c8d1e4f0f2.png?v=1770340041&width=3000",
-          "inspectedAt": "2026-11-14",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Manufacturer US 12 oz can individually inspected: saturated green field, tall white Zevia wordmark, crisp natural flavor and no fake colors claims, stylized citrus/mountain lower artwork."
+          "observations": "Manufacturer 2025 packshot, 12 fl oz can seen slightly from above with a cast shadow. Upper ~45% deep teal with a ring of white condensed capitals at the shoulder (…TENERS · ZERO SUGAR · ZERO FAKE COLORS, flavor-colored dots), the large white lowercase zevia wordmark whose i is dotted by a flavor-colored leaf, and SODA MADE BETTER beneath. Lower panel: a green-to-yellow-green panel with a lime wedge at upper right, pale yellow mountain peaks at lower left and a dark green leaf; name MOUNTAIN ZEVIA on two lines in white, NATURALLY FLAVORED beneath it, 12 FL. OZ. (355 mL) at lower left."
         }
       ],
-      "uncertainty": "Package artwork is an original simplified vector interpretation; fine legal text and minor decorative marks are omitted. Final aesthetic approval and device review pending.",
+      "uncertainty": "Wordmark, leaf, shoulder ring and SODA MADE BETTER traced from the 3000 px Mountain Zevia packshot and shared by all eight; the ring text is re-curved onto the house lid ellipse. Flavor name traced from this packshot; NATURALLY FLAVORED and the size line are Arial with textLength (the real face is a condensed grotesque). The painterly, spray-textured flavor illustration is redrawn as about 15 to 30 flat and gradient shapes in the same positions and colors; spray texture, most bubbles and fine highlights are left out, and the house can is taller than the real one, so the art is stretched slightly to the panel.",
       "status": "needs-review",
       "bevId": "9a2ef1e8-693c-5c10-9628-b95450354734",
       "name": "Zevia Mountain Twist",
@@ -10682,27 +10703,27 @@
         "svg": "svg/zevia-mountain-twist.svg",
         "portableSvg": "portable-svg/zevia-mountain-twist.svg",
         "png": "png/zevia-mountain-twist.png",
-        "svgSha256": "e8bd5574bfe4ab0b724f7b84d2f09673f79a2770c2dcfd6ced7d2c9aa66d9f8c",
-        "portableSvgSha256": "be85a1eef8d5e8755205a41cc06359281b1ed454202cf2f9111e7abd10ac7727",
-        "pngSha256": "44f081e1ee6d661a43360e03b41576272d8c05e4006ccb538e5a02113a48b4cf",
-        "pngBytes": 71970
+        "svgSha256": "4d93b1126ea2859aac5be3f1dc3cecb73b7927d4a3276abc49bb8ed80d015016",
+        "portableSvgSha256": "f4085f75524f0aca71a3d8fa8c4c9ff81f762d66dfc3b53a4e98672ea086129f",
+        "pngSha256": "05f1bfe607c8953937636ab994ebe330ece5ead0cd50ef85bc2a4cf2ccc87ede",
+        "pngBytes": 154656
       },
-      "sourceModule": "scripts/icons/families/canned-coffee-refreshments-13.mjs"
+      "sourceModule": "scripts/icons/families/redraw-zevia.mjs"
     },
     {
       "slug": "zevia-orange",
       "family": "zevia-standard-can",
-      "packageChoice": "Representative US 12 fl oz / 355mL zevia-orange aluminum can, exact individually inspected package.",
+      "packageChoice": "Current (2025 redesign) US 12 fl oz standard can, front view, as sold on zevia.com.",
       "references": [
         {
           "pageUrl": "https://zevia.com/products/orange",
           "imageUrl": "https://zevia.com/cdn/shop/files/2025_ZVA_US_12oz_Soda_Standard_Orange_Dry_WithShadow_d8ef006f-042f-4a9b-b6ce-d2ce38b8de34.png?v=1770411644&width=1000",
-          "inspectedAt": "2026-11-10",
+          "inspectedAt": "2026-11-16",
           "visuallyInspected": true,
-          "observations": "Exact US manufacturer ORANGE can inspected: teal upper body, oversized white lowercase zevia and flavor-colored leaf accent; #ffba26 to #ea8316 lower field with orange wheels and orange fruit. Silver rims; tiny claims and detailed package illustration simplified."
+          "observations": "Manufacturer 2025 packshot, 12 fl oz can seen slightly from above with a cast shadow. Upper ~45% deep teal with a ring of white condensed capitals at the shoulder (…TENERS · ZERO SUGAR · ZERO FAKE COLORS, flavor-colored dots), the large white lowercase zevia wordmark whose i is dotted by a flavor-colored leaf, and SODA MADE BETTER beneath. Lower panel: a yellow-to-orange panel with a large orange wedge, a cut orange at upper right and a whole orange with a leaf at lower right; name ORANGE in red-orange, NATURALLY FLAVORED beneath it, 12 FL. OZ. (355 mL) at lower left."
         }
       ],
-      "uncertainty": "Catalog gives no size; exact photographed US package chosen. Fine claims, fruit engravings and wordmarks are simplified original vectors. Manufacturer pages checked first; documented retailer fallback for colas. Packaging revision dates unverified. Final aesthetic approval and web-device review pending.",
+      "uncertainty": "Wordmark, leaf, shoulder ring and SODA MADE BETTER traced from the 3000 px Mountain Zevia packshot and shared by all eight; the ring text is re-curved onto the house lid ellipse. Flavor name traced from this packshot; NATURALLY FLAVORED and the size line are Arial with textLength (the real face is a condensed grotesque). The painterly, spray-textured flavor illustration is redrawn as about 15 to 30 flat and gradient shapes in the same positions and colors; spray texture, most bubbles and fine highlights are left out, and the house can is taller than the real one, so the art is stretched slightly to the panel.",
       "status": "needs-review",
       "bevId": "32458d7f-48f0-5ca4-b6c3-190c3c19ec46",
       "name": "Zevia Orange",
@@ -10713,12 +10734,12 @@
         "svg": "svg/zevia-orange.svg",
         "portableSvg": "portable-svg/zevia-orange.svg",
         "png": "png/zevia-orange.png",
-        "svgSha256": "f2066debdb33732a0fab4e9883548d66a450f5bf7632f112dd2cd6f9e45677de",
-        "portableSvgSha256": "f0b8583363b6e6fcaa8fa97b053a110a1e5b82545861222b0f14db4010fc68f4",
-        "pngSha256": "ccc6df1e7c00f264fd508aec3a9d77da080ab09e61f30793ae6d1537d52df09d",
-        "pngBytes": 148498
+        "svgSha256": "1fb4ac44f609f6395174359fd23430272ef57ae76ff7a309225ab203c7c887f6",
+        "portableSvgSha256": "21195a7bff2ef461071d10b65a230c61908391b3aad0c009b0d909857a08ca48",
+        "pngSha256": "0c657ea7af74bd1449dca4b7df0d42a3cf686f1c7ff2aa85139bfdcfba933386",
+        "pngBytes": 161918
       },
-      "sourceModule": "scripts/icons/families/soda-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-zevia.mjs"
     }
   ]
 }
