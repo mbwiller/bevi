@@ -15,6 +15,7 @@
  * catalogue icon, served from `public.bev_icons`. `BevIcon.generatedIconUrl`
  * is the AI illustration made for a custom Bev. See `BevIcon`.
  */
+// 3.0.0: user-created photo-backed Bevs enqueue icon generation automatically.
 export const CONTRACT_VERSION = '3.0.0';
 
 export * from './enums';

@@ -18,6 +18,14 @@
 
 When a proposal is accepted or an open question is answered, change its label here and note the date. This file is the record; the ticket links the work.
 
+**Current implementation direction (2026-11-16).** For the first pipeline pass,
+a photo-backed user-created Bev automatically enters icon generation when it is
+created. There is no request button, credit gate, or charge in this flow. The
+worker can be held off operationally until the icon style and quality bar are
+agreed. Badges, regeneration, candidate selection, and monetization remain
+future product decisions; the credit-based exploration below is historical,
+not the current implementation requirement.
+
 ---
 
 ## 1. The idea

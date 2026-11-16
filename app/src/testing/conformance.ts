@@ -568,7 +568,7 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       if (borrowed !== null) expect(borrowed).toMatch(/^https?:\/\//);
     });
 
-    it('create with a photo makes a Bev that IS eligible, and the photo survives', async () => {
+    it('create with a photo automatically queues icon generation', async () => {
       await newUser();
       const photo = await api.media.upload({ kind: 'bev-photo', file: new Blob(['img'], { type: 'image/png' }), mimeType: 'image/png' });
       await waitForAsset(photo.assetId);
@@ -580,15 +580,7 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       // by the illustration, so it must be there whatever the icon is doing.
       expect(bev.photoUrl).toBeTruthy();
       const [icon] = await api.bevs.icons([bev.id]);
-      // Anything but 'none': the job may already have run, or may be queued.
-      expect(icon!.iconStatus).not.toBe('none');
-      if (icon!.iconStatus === 'completed') {
-        expect(icon!.generatedIconUrl).toBeTruthy();
-        // It has art of its own, so it is offered none to borrow.
-        expect(icon!.fallbackIconUrl).toBeNull();
-      } else {
-        expect(icon!.generatedIconUrl).toBeNull();
-      }
+      expect(icon!.iconStatus).toBe('pending');
     });
 
     it("icons: catalog Bevs are 'none', unknown ids are omitted, reading twice changes nothing", async () => {

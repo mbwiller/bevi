@@ -10,7 +10,8 @@
 
 import { decodePng, encodePng, type Raster } from './png.ts';
 import { decodeJpeg } from './jpeg.ts';
-import { ICON_BUCKET, iconUploadUrl } from './index.ts';
+import { ICON_BUCKET, iconUploadUrl } from './storage.ts';
+import { safeObjectPath } from './worker.ts';
 import {
   compositeShadow,
   downscale,
@@ -390,14 +391,6 @@ Deno.test('jpeg: refuses a truncated file rather than reading past the buffer', 
 // request is sent, so a raw interpolation turned a storage read into an
 // arbitrary service-role GET against the project, with the body forwarded to
 // the image provider. Verified against Deno's own Request.
-
-const SAFE_OBJECT_KEY = /^[0-9a-f-]{36}\/[A-Za-z0-9._-]{1,200}$/i;
-function safeObjectPath(key: string): string | null {
-  if (!SAFE_OBJECT_KEY.test(key)) return null;
-  const parts = key.split('/');
-  if (parts.some((part) => part === '.' || part === '..')) return null;
-  return parts.map(encodeURIComponent).join('/');
-}
 
 Deno.test('object keys: traversal is rejected, and would otherwise escape the bucket', () => {
   const uid = '00000000-0000-4000-8000-00000000fa01';

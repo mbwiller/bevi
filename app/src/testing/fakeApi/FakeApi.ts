@@ -1398,10 +1398,7 @@ export class FakeApi implements BeviApi {
             aliases: [],
             photoAssetId: photo?.id ?? null,
             labelAssetId: input.labelAssetId ?? null,
-            // THE TRIGGER, and the fake's whole model of it: a creation request
-            // that carried a photo schedules generation, and nothing else in
-            // this class ever sets `iconReadyAt`. No photo means null, which is
-            // 'none' for good -- adding one later cannot make it eligible.
+            // A new Bev with a verified photo automatically enters generation.
             iconReadyAt: photo ? new Date(this.now().getTime() + this.iconGenerationMs).toISOString() : null,
             iconStatusOverride: null,
             createdById: me.id,
