@@ -4,7 +4,9 @@
 
 Branch: `ui/barcode-nutrition-poc`. Worktree: `/tmp/bevi-barcode-poc`.
 
-Enable with `EXPO_PUBLIC_NUTRITION_SCAN_DEMO=1` when starting/exporting the app.
+Enable with `EXPO_PUBLIC_NUTRITION_SCAN_DEMO=1` when starting the web development
+server. The demo is guarded by `__DEV__`; setting this flag during export does not
+show the standalone demo in an exported build.
 In Add a new Bev, go to Details → Nutrition label → Scan barcode.
 Photo upload remains available. No OCR, database writes, or nutrition persistence.
 The preview stays on the Details step after the two-second reveal but is discarded
@@ -26,8 +28,9 @@ values as documented in `app/.env.example`. Run:
 EXPO_PUBLIC_NUTRITION_SCAN_DEMO=1 npm start -w app -- --web
 ```
 
-For iPhone, serve an exported build on HTTPS or deploy this branch to an isolated
-preview with the opt-in variable set. Do not merge or deploy to production for this test.
+For iPhone camera testing, run the web development server over HTTPS using the
+tunnel instructions in the current implementation guide. An exported build does
+not show this development-only demo. Do not merge or deploy to production for this test.
 A production data backend is still used if configured; completing the New Bev form
 creates a real Bev, so testing the scanner does not require submitting the form.
 
@@ -63,7 +66,7 @@ before integration, per repository lane rules.
   serving basis, grams-to-milligrams conversion, invalid codes and provider errors.
 - `npm test -w app -- --runInBand --silent`: scanner lifecycle, animation timing,
   cancellation and existing app regressions.
-- `EXPO_PUBLIC_NUTRITION_SCAN_DEMO=1 EXPO_PUBLIC_SUPABASE_URL=https://ci-placeholder.supabase.co EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_ci npx expo export --platform web --clear`
+- `EXPO_PUBLIC_SUPABASE_URL=https://ci-placeholder.supabase.co EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_ci npx expo export --platform web --clear`
   from `app/`: compile with the same placeholder configuration used in CI.
   These are build-only placeholders, not working backend credentials.
 - `EXPO_PUBLIC_SUPABASE_URL=https://ci-placeholder.supabase.co node app/scripts/check-bundle.mjs`.
@@ -73,8 +76,9 @@ before integration, per repository lane rules.
 
 No deployment or physical-device test has been performed. Local public Supabase
 settings were subsequently recovered from the published app and written to ignored
-`app/.env.local`. The prototype is enabled there. No linked Vercel project is present.
-The local server runs on port 8087; an HTTPS preview is still needed for iPhone camera testing.
+`app/.env.local`. The standalone demo is enabled there. No linked Vercel project is present. The
+local dev-server port is chosen by Expo and may vary; use the address Expo prints.
+An HTTPS tunnel is required for iPhone camera testing.
 
 Verification results: all 105 app suites / 773 tests passed; API had 88 passed
 and 20 live tests skipped without a configured stack. Workspace/script typechecking,
@@ -83,8 +87,9 @@ web export and bundle scan passed. Initial new tests exposed test-harness issues
 passing full run. The first cached export failed the URL-inlining guard; rebuilding
 with `--clear` passed. Physical-device checks above remain outstanding.
 
-For a standalone demo without sign-in, also set `EXPO_PUBLIC_NUTRITION_SCAN_DEMO=1`.
-This renders only the nutrition demo instead of the authenticated app shell.
+For a standalone demo without sign-in, set `EXPO_PUBLIC_NUTRITION_SCAN_DEMO=1`
+when starting the web development server. This renders the nutrition demo instead
+of the authenticated app shell.
 Start the current web development server and use the local URL Expo prints. For iPhone camera access, expose that server over HTTPS using the tunnel steps in the current implementation guide.
 
 Visual iteration: Bevi wordmark, spring entrance, staggered nutrient rows and a

@@ -81,6 +81,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
   const [creating, setCreating] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
+  const [createdWithoutNutritionId, setCreatedWithoutNutritionId] = useState<string | null>(null);
   const [existingId, setExistingId] = useState<string | null>(null);
   const existingQ = useBev(existingId ?? undefined);
 
@@ -293,7 +294,14 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
           onWaiting: () => setProcessing(true),
           signal: abort.current,
         });
-        if (!abort.current.aborted) goRank(bev.id);
+        if (!abort.current.aborted) {
+          if (nutrition && !bev.nutrition) {
+            setCreatedWithoutNutritionId(bev.id);
+            setSubmitMessage('Your Bev was added, but we couldn’t save its nutrition label. Continue without nutrition?');
+          } else {
+            goRank(bev.id);
+          }
+        }
       } catch (e) {
         if (!abort.current.aborted) onCreateError(e);
       }
@@ -337,10 +345,11 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
         checkFailed={duplicatesQ.isError}
         onRetryCheck={() => void duplicatesQ.refetch()}
         onPick={pickExisting}
-        onCreate={() => void submit()}
+        onCreate={() => createdWithoutNutritionId ? goRank(createdWithoutNutritionId) : void submit()}
         creating={creating}
         processing={processing}
         submitMessage={submitMessage}
+        continueLabel={createdWithoutNutritionId ? 'Continue without nutrition' : undefined}
         blocked={!online}
       />
     );
@@ -350,8 +359,8 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
     <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={[styles.fill, { backgroundColor: colors.surface }]}>
       <Header
         title="New Bev"
-        onBack={step > 0 || existingId ? goBack : undefined}
-        actions={[{ icon: 'x', label: 'Close', variant: 'filled', onPress: close }]}
+        onBack={!createdWithoutNutritionId && (step > 0 || existingId) ? goBack : undefined}
+        actions={createdWithoutNutritionId ? [] : [{ icon: 'x', label: 'Close', variant: 'filled', onPress: close }]}
       />
       <View style={styles.progress}>
         <View aria-hidden importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>

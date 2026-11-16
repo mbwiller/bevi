@@ -39,8 +39,9 @@ passes no UPC to the old RPC, whose UPC shortcut could return an existing Bev.
 The barcode is stored in the nutrition snapshot; this is not a product-identity
 or automatic-merge feature. Old create callers still work. Bev reads tolerate
 an older backend without the new table. If the create RPC migration is missing,
-Bev creation retries without the nutrition snapshot; apply the migration before
-deploying the UI to preserve nutrition during normal use.
+Bev creation retries without the nutrition snapshot and asks the user to acknowledge
+that omission before leaving the result. Apply the migration before deploying the UI
+to preserve nutrition during normal use.
 
 The new table has RLS and SELECT only for authenticated viewers who can see the
 parent Bev. No direct client INSERT/UPDATE/DELETE. Snapshot validation runs before
@@ -61,7 +62,7 @@ All tests below used an isolated local Supabase project, bevi-nutrition-test,
 on ports 553xx. No production migration or catalog write was performed.
 
 - `npm run typecheck`: all workspaces and scripts passed.
-- `npm test -w app -- --maxWorkers=2 --silent`: 140 suites, 1,366 tests passed.
+- `npm test -w app -- --maxWorkers=2 --silent`: 141 suites, 1,368 tests passed.
 - `npm test -w packages/api`: 148 unit tests passed; live tests skip without local
   configuration. `nutrition.live.test.ts` was also run explicitly against the
   isolated API and passed (signup, upload, create, sign out/in, reload, validation).
