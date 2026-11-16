@@ -140,10 +140,10 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
   };
   const close = () => (dirty && !existingId ? setConfirmDiscard(true) : leave());
 
-  const goRank = (bevId: string) => {
+  const goRank = (bevId: string, created = false) => {
     abort.current.aborted = true;
     // Replace, so back from the ranking flow doesn't return to the wizard.
-    router.replace({ pathname: '/rank/[bevId]', params: { bevId } });
+    router.replace({ pathname: '/rank/[bevId]', params: { bevId, ...(created ? { entry: 'created' } : {}) } });
   };
 
   const patch = (p: Partial<DetailsForm>) => {
@@ -284,7 +284,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
           onWaiting: () => setProcessing(true),
           signal: abort.current,
         });
-        if (!abort.current.aborted) goRank(bev.id);
+        if (!abort.current.aborted) goRank(bev.id, true);
       } catch (e) {
         if (!abort.current.aborted) onCreateError(e);
       }

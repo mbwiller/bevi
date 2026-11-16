@@ -81,6 +81,7 @@ export const COMPONENT_FILES: Readonly<Record<string, string>> = {
   FollowingScreen: 'app/src/app/user/[id]/following.tsx',
   FormError: 'app/src/features/auth/AuthScreen.tsx',
   FriendsRow: 'app/src/features/bev/BevStats.tsx',
+  GeneratedIconPanel: 'app/src/features/bev/GeneratedIconPanel.tsx',
   GutCheck: 'app/src/features/ranking/GutCheck.tsx',
   Header: 'app/src/components/Header.tsx',
   HeaderLeadActionProvider: 'app/src/components/HeaderActionContext.tsx',

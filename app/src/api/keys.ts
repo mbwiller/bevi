@@ -55,6 +55,7 @@ export const keys = {
   bevs: {
     all: [...root, 'bevs'] as const,
     detail: (id: string) => [...root, 'bevs', 'detail', id] as const,
+    icon: (id: string) => [...root, 'bevs', 'icon', id] as const,
     search: (q: string, categoryId?: CategoryId) => [...root, 'bevs', 'search', q, categoryId ?? null] as const,
     duplicates: (input: FindDuplicatesInput) => [...root, 'bevs', 'duplicates', input] as const,
     starterCandidates: () => [...root, 'bevs', 'starterCandidates'] as const,

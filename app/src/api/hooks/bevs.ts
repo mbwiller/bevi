@@ -16,6 +16,19 @@ export function useBev(id: string | undefined, opts: { refetchInterval?: number 
   });
 }
 
+/** A custom Bev's generated illustration; poll only while the backend reports active work. */
+export function useBevIcon(id: string | undefined) {
+  return useQuery({
+    queryKey: keys.bevs.icon(id ?? ''),
+    queryFn: async () => (await api.bevs.icons([id!])).find((icon) => icon.bevId === id) ?? null,
+    enabled: !!id,
+    refetchInterval: (query) => {
+      const status = query.state.data?.iconStatus;
+      return status === 'pending' || status === 'processing' ? 4_000 : false;
+    },
+  });
+}
+
 /**
  * First page of Bev search (25 results, age-filtered by the server). Debounce `q` in the screen;
  * keeps the previous results on screen while the next query loads.

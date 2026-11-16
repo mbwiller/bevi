@@ -33,6 +33,8 @@ export interface RankFlowProps {
    * you've already ranked opens its detail instead (§6.8: detail, with Re-rank there).
    */
   detailIfRanked?: boolean;
+  /** New Bevs go to their detail after their first ranking so creation-time status is visible. */
+  returnToDetail?: boolean;
 }
 
 const flow = () => useRankingFlow.getState();
@@ -43,7 +45,7 @@ const flow = () => useRankingFlow.getState();
  * bucket is chosen and again only to restart after a `conflict`. When the catalog's leaves load,
  * the search is anchored: like-for-like questions first (M-21, `usePlacementList`).
  */
-export function RankFlow({ bevId, rerank = false, detailIfRanked = false }: RankFlowProps) {
+export function RankFlow({ bevId, rerank = false, detailIfRanked = false, returnToDetail = false }: RankFlowProps) {
   const back = useBack();
   const router = useRouter();
   const { colors } = useTheme();
@@ -216,7 +218,8 @@ export function RankFlow({ bevId, rerank = false, detailIfRanked = false }: Rank
   const leave = () => {
     setConfirm(false);
     flow().reset();
-    back();
+    if (returnToDetail && phase === 'result') router.replace({ pathname: '/bev/[id]', params: { id: bevId } });
+    else back();
   };
   const close = () => (bucket && phase !== 'result' && !fatal ? setConfirm(true) : leave());
 

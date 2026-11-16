@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useAddWantToTry, useBev, useMe, useRemoveWantToTry, useStats } from '@/api/hooks';
+import { useAddWantToTry, useBev, useBevIcon, useMe, useRemoveWantToTry, useStats } from '@/api/hooks';
 import { Arrive, useArrival } from '@/components/Arrive';
 import { bevImageProps, brandLine } from '@/components/BevParts';
 import { BevImage } from '@/components/BevImage';
@@ -17,6 +17,7 @@ import { Pill } from '@/components/Pill';
 import { PriceTier } from '@/components/PriceTier';
 import { Skeleton } from '@/components/Skeleton';
 import { BevStats, FriendsRow } from '@/features/bev/BevStats';
+import { GeneratedIconPanel } from '@/features/bev/GeneratedIconPanel';
 import { ReportSheet } from '@/features/bev/ReportSheet';
 import { SimilarBevs } from '@/features/bev/SimilarBevs';
 import { categoryById } from '@/lib/categories';
@@ -46,6 +47,7 @@ export default function BevDetailScreen() {
   const back = useBack();
   const { id } = useLocalSearchParams<{ id: string }>();
   const query = useBev(id);
+  const iconQuery = useBevIcon(id);
   const me = useMe();
   const stats = useStats();
   const add = useAddWantToTry();
@@ -117,6 +119,8 @@ export default function BevDetailScreen() {
             </Text>
           </View>
         </View>
+
+        <GeneratedIconPanel name={bev.name} icon={iconQuery.data} />
 
         <BevStats bev={bev} myRankingCount={stats.data?.bevdCount} />
 

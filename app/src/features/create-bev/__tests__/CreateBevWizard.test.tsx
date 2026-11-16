@@ -129,7 +129,7 @@ it('walks photo → details → "Looks new" → create, uploading in the backgro
     priceTier: null,
     priceEstimated: true,
   });
-  expect(mockReplace).toHaveBeenCalledWith({ pathname: '/rank/[bevId]', params: { bevId: made.id } });
+  expect(mockReplace).toHaveBeenCalledWith({ pathname: '/rank/[bevId]', params: { bevId: made.id, entry: 'created' } });
 });
 
 it('shows "Processing photo…" and retries create while the photo is not ready', async () => {

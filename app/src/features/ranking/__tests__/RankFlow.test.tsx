@@ -54,10 +54,10 @@ async function unranked(n: number): Promise<BevSummary[]> {
   return out;
 }
 
-async function renderRank(bevId: string, detailIfRanked = false) {
+async function renderRank(bevId: string, detailIfRanked = false, returnToDetail = false) {
   await render(
     <QueryClientProvider client={client}>
-      <RankFlow bevId={bevId} detailIfRanked={detailIfRanked} />
+      <RankFlow bevId={bevId} detailIfRanked={detailIfRanked} returnToDetail={returnToDetail} />
     </QueryClientProvider>,
   );
 }
@@ -119,6 +119,17 @@ it('gut check → comparisons → note → submit with expectedBucketSize → re
   });
   expect(submit.mock.calls[0]![0].comparisons.length).toBeGreaterThan(0);
   expect(screen.getByText(new RegExp(`^#1 of ${loved.length + 1} in Loved · \\d+\\.\\d$`))).toBeTruthy();
+});
+
+it('returns a newly created Bev to its detail after its first ranking', async () => {
+  const [bev] = await unranked(1);
+  await renderRank(bev!.id, false, true);
+  await chooseBucket('Loved it');
+  await answerAllNewBetter(bev!.name);
+  await fireEvent.press(screen.getByLabelText('Save'));
+  await screen.findByText('Done');
+  await fireEvent.press(screen.getByRole('button', { name: 'Done' }));
+  await waitFor(() => expect(mockReplace).toHaveBeenCalledWith({ pathname: '/bev/[id]', params: { id: bev!.id } }));
 });
 
 it('an empty bucket skips comparisons: "First one in …"', async () => {
