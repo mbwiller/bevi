@@ -1,5 +1,5 @@
 begin;
-select plan(23);
+select plan(26);
 insert into auth.users (id,email,raw_user_meta_data,aud,role) values
  ('00000000-0000-4000-8000-0000000fb0a1','pgtapnutrition1@users.bevi.app','{"invite_code":"local-test-invite-code"}','authenticated','authenticated'),
  ('00000000-0000-4000-8000-0000000fb0a2','pgtapnutrition2@users.bevi.app','{"invite_code":"local-test-invite-code"}','authenticated','authenticated');
@@ -20,6 +20,7 @@ select lives_ok($$ select public.create_bev_with_nutrition('pgTAP Nutrition Wate
 select is((select count(*)::int from public.bev_nutrition),1,'creator sees nutrition on their pending-photo Bev');
 select is((select nutrition->>'calories' from public.bev_nutrition),'0','zero remains zero');
 select is((select nutrition->'fatGrams' from public.bev_nutrition),'null'::jsonb,'missing nutrient remains null');
+select is((select upc from public.bevs where name='pgTAP Nutrition Water'),'012345678901','the scanned barcode is persisted as the Bev UPC');
 set local request.jwt.claims='{"sub":"00000000-0000-4000-8000-0000000fb0a2","role":"authenticated"}';
 select is((select count(*)::int from public.bev_nutrition),0,'another user cannot read pending-photo nutrition');
 reset role;
@@ -41,8 +42,13 @@ select throws_ok($$ select public.create_bev_with_nutrition('Invalid link',null,
 select throws_ok($$ select public.create_bev_with_nutrition('Missing keys',null,null,'soda',2::smallint,false,null,null,current_setting('test.nutrition')::jsonb - 'basis') $$,'22023','BEVI_VALIDATION','incomplete snapshots rejected');
 select throws_ok($$ select public.create_bev_with_nutrition('Extra keys',null,null,'soda',2::smallint,false,null,null,current_setting('test.nutrition')::jsonb || '{"extra":"bad"}') $$,'22023','BEVI_VALIDATION','unrecognized fields rejected');
 select throws_ok($$ select public.create_bev_with_nutrition('Invalid asset',null,null,'soda',2::smallint,false,'someone-elses-photo',null,current_setting('test.nutrition')::jsonb) $$,'22023','BEVI_VALIDATION','original create asset ownership checks still run');
+-- Scanning a barcode a live Bev already carries is a duplicate, reported the way
+-- create_bev reports a name/brand/flavor collision rather than silently creating
+-- a second Bev for the same product. 'pgTAP Nutrition Water' holds 012345678901.
+select throws_ok($$ select public.create_bev_with_nutrition('Duplicate barcode',null,null,'soda',2::smallint,false,null,null,current_setting('test.nutrition')::jsonb) $$,'23505','BEVI_DUPLICATE_BEV','a barcode already on a live Bev is rejected as a duplicate');
 reset role;
-select is((select count(*)::int from public.bevs where name in ('Invalid negative','Invalid string','Invalid link','Missing keys','Extra keys','Invalid asset')),0,'failed submissions never leave orphan Bevs');
+select is((select count(*)::int from public.bevs where name in ('Invalid negative','Invalid string','Invalid link','Missing keys','Extra keys','Invalid asset','Duplicate barcode')),0,'failed submissions never leave orphan Bevs');
+select is((select count(*)::int from public.bev_nutrition n join public.bevs b on b.id=n.bev_id where b.name='Duplicate barcode'),0,'a rejected duplicate leaves no nutrition snapshot behind');
 -- Merging a scanned duplicate carries its snapshot to a destination with none,
 -- while retaining the destination's own snapshot when both sides have one.
 insert into public.bevs (id, name, category_id, photo_path, price_tier, status, source) values
