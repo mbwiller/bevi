@@ -60,7 +60,7 @@ on ports 553xx. No production migration or catalog write was performed.
 
 - `npm run typecheck`: all workspaces and scripts passed.
 - `npm test -w app -- --maxWorkers=2 --silent`: 140 suites, 1,365 tests passed.
-- `npm test -w packages/api`: unit suites passed; live tests skip without local
+- `npm test -w packages/api`: 147 unit tests passed; live tests skip without local
   configuration. `nutrition.live.test.ts` was also run explicitly against the
   isolated API and passed (signup, upload, create, sign out/in, reload, validation).
 - `supabase db reset` then `supabase test db` in the isolated test project:
@@ -86,7 +86,8 @@ request, background/lock/unlock and retry, camera indicator off after leaving.
 Database coverage is not guaranteed; unknown/missing products must retain the
 upload fallback. Browser automation does not establish iPhone scan reliability.
 
-Do not merge/deploy the UI until this device check passes. A temporary Expo HTTPS
-tunnel was created for the standalone demo, but its exp.direct hostname failed
-DNS resolution during verification; do not treat that link as working. The local
-demo is available on port 8088 while its development server is running.
+Do not merge/deploy the UI until this device check passes. The temporary Expo HTTPS hostname failed DNS verification. A Cloudflare fallback
+was then verified in Chromium: the demo opens without sign-in at
+https://seminar-dvd-cult-shirt.trycloudflare.com while the tunnel is running.
+The local demo is also available on port 8088. The tunnel is for device testing,
+not production hosting. The production build still requires sign-in.

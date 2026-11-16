@@ -1315,6 +1315,20 @@ export class FakeApi implements BeviApi {
           if (!CATEGORIES.some((c) => c.id === input.categoryId)) invalid('categoryId', 'Choose a category');
           if (input.priceTier === null && !input.priceEstimated) invalid('priceTier', 'Choose a price or "Not sure"');
           if (input.priceTier !== null && ![1, 2, 3, 4].includes(input.priceTier)) invalid('priceTier', 'Choose a price');
+          if (input.nutrition) {
+            const n = input.nutrition;
+            const fields = ['barcode', 'productName', 'basis', 'sourceUrl', 'calories', 'fatGrams', 'carbohydrateGrams', 'sugarGrams', 'proteinGrams', 'sodiumMg'];
+            const values = [n.calories, n.fatGrams, n.carbohydrateGrams, n.sugarGrams, n.proteinGrams, n.sodiumMg];
+            const strings = [n.barcode, n.productName, n.basis, n.sourceUrl];
+            if (Object.keys(n).some((k) => !fields.includes(k)) ||
+                strings.some((v) => typeof v !== 'string' || !v.trim() || v.length > 256) ||
+                !/^(?:\d{8}|\d{12}|\d{13})$/.test(n.barcode) ||
+                n.sourceUrl !== `https://world.openfoodfacts.org/product/${n.barcode}` ||
+                !values.some((v) => v !== null) ||
+                values.some((v) => v !== null && (typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > 1_000_000))) {
+              invalid('nutrition', 'Scan the nutrition label again');
+            }
+          }
           const photo = this.db.assets.find((a) => a.id === input.photoAssetId && a.userId === me.id && a.kind === 'bev-photo');
           if (!photo) invalid('photoAssetId', 'Upload a photo first', 'unknown_asset');
           if (this.assetUrlAndStatus(photo.id).status !== 'ready') {
