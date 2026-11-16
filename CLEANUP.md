@@ -81,7 +81,7 @@ from the rest. Tracked files removed from `main`: about 17 MB of about 94 MB.
 
 | ID | Action | Why | Owner | Status |
 |---|---|---|---|---|
-| P-01 | Save the uncommitted change in `../bevi-wt/icon-redraw-04`: three review notes in `design/beverage-icons/verdicts/matt.json` (`horchata-traditional`, `mexican-coca-cola`, `minute-maid-fruit-punch`). | They existed only in that worktree. Committed on `design/icon-redraw-04` as `08b43fa` and merged to `main` in the PR that added this file. | Matt | DONE |
+| P-01 | Save the uncommitted change in `../bevi-wt/icon-redraw-04`: three review notes in `design/beverage-icons/verdicts/matt.json` (`horchata-traditional`, `mexican-coca-cola`, `minute-maid-fruit-punch`). | They existed only in that worktree. Committed on `design/icon-redraw-04` as `08b43fa` and merged to `main` in #229, the PR that added this file. | Matt | DONE |
 | P-02 | Keep `VC-materials/`, `internal/` and `docs/apple-developer-account.pdf` out of reach of `git add`. | They were untracked but not ignored, in a public repository. Now listed in Matt's `.git/info/exclude`, which keeps the names out of the public `.gitignore`. `docs/bevi-cicd-pipeline.tex` is still untracked and visible: commit it or move it. | Matt | DONE |
 | P-03 | Run the audit commands of §10.4 on Arjun's machine. | Only Matt's checkout, worktrees and local branches were audited. Arjun's local branches and worktrees are unknown. | Arjun | TODO |
 | P-04 | Decide RB `be/hygiene-sweep`: bring it to `main`, or drop it. | One commit by Arjun from 2026-10-24, 1,390 lines, none of it on `main`: a privileges-hardening migration (`20261025000400_hygiene.sql`), a server-side cap on `list_bucket_bevs`, eight pgTAP assertions, and `npm run graph:verify` with its RPC. Its commit message says it was never run against a database, and the migration's timestamp is older than migrations already on prod, so it needs a new one. Draft PR #228 now holds the commit; the branch is 105 commits behind `main` and conflicts with it. | Arjun | TODO |
@@ -139,7 +139,7 @@ first. "On GitHub: no" means the branch was never pushed: once deleted, it is re
 | LB-08 | `design/icon-redraw-01` | `5fe363d` | 2026-11-15 | `icon-redraw-01` | no | Same commit as `tools/icon-swipe`, merged as #219. | R1 | TODO |
 | LB-09 | `design/icon-redraw-02` | `08615b2` | 2026-11-16 | `icon-redraw-02` | no | Ancestor of `design/icon-redraw-03`, merged as #225. | R1 | TODO |
 | LB-10 | `design/icon-redraw-03` | `ec46dbb` | 2026-11-16 | `icon-redraw-03` | same tip | Merged as #225 at this tip. | R1 | TODO |
-| LB-11 | `design/icon-redraw-04` | `08b43fa` | 2026-11-16 | - | no | `8495994` merged as #226. The one later commit (`08b43fa`, three review notes, P-01) is on `main` through this PR. Never pushed under this name. | R1 | TODO |
+| LB-11 | `design/icon-redraw-04` | `08b43fa` | 2026-11-16 | - | no | `8495994` merged as #226. The one later commit (`08b43fa`, three review notes, P-01) is on `main` through #229. Never pushed under this name. | R1 | TODO |
 | LB-12 | `fix-likes-test` | `ba61484` | 2026-10-14 | - | no | No PR. Every file version on the branch exists in `main`'s history. | R1 | TODO |
 | LB-13 | `round-verify` | `ca7cc46` | 2026-10-14 | - | no | No PR. Every file version exists in `main`'s history. **Delete after WT-14**, whose detached HEAD (`a9d4eb0`) is reachable only from this branch. | R1 | TODO |
 | LB-14 | `scratch/flavor-verify` | `1fbbcea` | 2026-10-14 | `agent-a00cf6927da604bc2` | no | CI probe for closed PR #77 ("DO NOT MERGE"); tip is that PR's head, kept by `refs/pull/77/head`. | R1 | TODO |
@@ -180,7 +180,7 @@ Any branch that has had a PR stays recoverable after deletion, because GitHub ke
 | Branch | Tip | PR | Stack |
 |---|---|---|---|
 | `be/BEV-15-icon-quality-eval` | `ae4d0d9` | #227 open | base `be/custom-bev-icons-rebased` |
-| `be/barcode-nutrition` | `f3564aa` | #223 open (draft) | base `contract/barcode-nutrition`; PR(s) #224 stacked on it |
+| `be/barcode-nutrition` | `fdda486` | #223 open (draft) | base `contract/barcode-nutrition`; PR(s) #224 stacked on it |
 | `be/custom-bev-icons-rebased` | `06fc0f7` | #221 open | base `main`; PR(s) #227 stacked on it |
 | `contract/barcode-nutrition` | `a280e26` | #222 open (draft) | base `main`; PR(s) #223 stacked on it |
 | `ui/barcode-nutrition` | `7004b7b` | #224 open (draft) | base `be/barcode-nutrition` |
@@ -562,7 +562,7 @@ Append one line per action. Reasons for `KEPT` and `BLOCKED` go here.
 | Date | Who | IDs | What happened | PR or commit |
 |---|---|---|---|---|
 | 2026-11-16 | Claude (Matt's session) | all | Audit written. Nothing deleted. Local `main` fast-forwarded from `380c425` to `2667150` to audit the current tree. | - |
-| 2026-11-16 | Claude (Matt's session) | P-01, WT-09, LB `design/icon-redraw-04` | The three review notes committed on `design/icon-redraw-04` (`08b43fa`) and brought to `main`. WT-09 drops from R4 to R2 (clean, but another session is using it). | this PR |
+| 2026-11-16 | Claude (Matt's session) | P-01, WT-09, LB `design/icon-redraw-04` | The three review notes committed on `design/icon-redraw-04` (`08b43fa`) and brought to `main`. WT-09 drops from R4 to R2 (clean, but another session is using it). | #229 |
 | 2026-11-16 | Claude (Matt's session) | P-02 | `VC-materials/`, `internal/`, `docs/apple-developer-account.pdf` added to Matt's `.git/info/exclude`. | local only |
-| 2026-11-16 | Matt | F-06, F-07, F-10 | Decision recorded (§1.1). F-06 `KEPT`: the Map tab returns to Google Maps. F-07 drops from R3 to R2 (Find Bev is obsolete). F-10 added. | this PR |
-| 2026-11-16 | Claude (Matt's session) | RB and LB `design/beverage-icon-pilot`, P-04 | Both unmerged branches checked. The pilot branch's one icon missing from `main` (`starbucks-frappuccino-mocha`) was withdrawn on purpose in #160, so both rows drop from R3 to R2. `be/hygiene-sweep` is real unmerged work: P-04. | this PR |
+| 2026-11-16 | Matt | F-06, F-07, F-10 | Decision recorded (§1.1). F-06 `KEPT`: the Map tab returns to Google Maps. F-07 drops from R3 to R2 (Find Bev is obsolete). F-10 added. | #229 |
+| 2026-11-16 | Claude (Matt's session) | RB and LB `design/beverage-icon-pilot`, P-04 | Both unmerged branches checked. The pilot branch's one icon missing from `main` (`starbucks-frappuccino-mocha`) was withdrawn on purpose in #160, so both rows drop from R3 to R2. `be/hygiene-sweep` is real unmerged work: P-04. | #229 |
