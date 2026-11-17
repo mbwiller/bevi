@@ -8,7 +8,7 @@
 | **Lead** | Arjun leads development: the generation pipeline, the backend, the credits |
 | **App and design** | Matt: the screens, the design system, sign-off on icon style |
 | **Source** | Matt and Arjun's working session at Princeton, 2026-11-14 (transcript in Appendix A), plus Matt's product direction given the same day |
-| **Status** | Vision and proposal. Nothing here is built. The UI/UX flow has **not** been agreed yet (section 7) |
+| **Status** | Vision, plus a decided first pass. The pipeline's pass-one shape is **Decided** (2026-11-17, Arjun): automatic, free, no credit. The rest of the flow in section 7 is still **not** agreed |
 
 **How to read this file.** Every statement carries one of three labels, in the heading or in the line:
 
@@ -18,13 +18,25 @@
 
 When a proposal is accepted or an open question is answered, change its label here and note the date. This file is the record; the ticket links the work.
 
-**Current implementation direction (2026-11-16).** For the first pipeline pass,
-a photo-backed user-created Bev automatically enters icon generation when it is
-created. There is no request button, credit gate, or charge in this flow. The
-worker can be held off operationally until the icon style and quality bar are
-agreed. Badges, regeneration, candidate selection, and monetization remain
-future product decisions; the credit-based exploration below is historical,
-not the current implementation requirement.
+**The first pass. Decided 2026-11-17 (Arjun).** The pipeline ships in the
+shape it is built in: a photo-backed user-created Bev automatically enters icon
+generation when it is created, free, with no request button, credit gate or
+charge. Three points settle with it:
+
+- **The Bev is created before the icon step.** `create_bev` inserts the Bev and
+  then enqueues one durable job in the same transaction. The Bev exists and is
+  rankable whether or not an icon ever arrives. (Answers open question 7.)
+- **The user never waits on a making screen.** Creation returns immediately and
+  the app goes straight to ranking; the icon is a background service, and its
+  state appears later on the Bev's own screen. (Answers open question 8.)
+- **The worker stays behind an operational switch** until the icon style and
+  quality bar are agreed, so merging the backend is inert in production.
+
+Everything the 2026-11-14 session decided about credits still stands as the
+product intent, but is **not** in this pass: optional creation (decision 2),
+one credit per icon (5), free regeneration and picking (6), design notes
+(7, 8), badges and discovery, and all monetization. The credit-based flow in
+sections 7 to 12 is the eventual target, not the current requirement.
 
 ---
 
@@ -513,8 +525,8 @@ Phase 1 without buying is deliberate. It produces the real numbers (cost per ico
 | 4 | Does the created icon replace the photo as the Bev's image everywhere? | Both; contract and app impact |
 | 5 | Can anyone other than the creator make or replace a Bev's icon? | Both |
 | 6 | Can the creator redo an icon later, and does it cost a credit? | Both |
-| 7 | Is the Bev created before or after the icon step? | Both, in the walkthrough |
-| 8 | Does the user wait on the making screen or move on to ranking? | Matt, with Arjun's timing numbers |
+| 7 | ~~Is the Bev created before or after the icon step?~~ | **Answered 2026-11-17: before.** `create_bev` inserts the Bev, then enqueues the job |
+| 8 | ~~Does the user wait on the making screen or move on to ranking?~~ | **Answered 2026-11-17: neither waits.** Straight to ranking; there is no making screen, and the icon arrives in the background |
 | 9 | After a merge, who is the discoverer and which icon survives? | Both |
 | 10 | Do discoveries count toward "Rank on Bevi"? Which badges exist? | Matt |
 | 11 | Pack sizes and prices. Is $4.99 for 10 the only pack? | Both, after phase 1 numbers |
