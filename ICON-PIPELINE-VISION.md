@@ -526,7 +526,7 @@ Phase 1 without buying is deliberate. It produces the real numbers (cost per ico
 | 1 | How many free credits does a new user get: 3, 4 or 5? | Both |
 | 2 | How many free regenerations per credit? Do further tries cost a credit or not exist? | Both |
 | 3 | Is the credit spent when generation starts or when the user keeps an icon? (The session said at generation; a refund on failure is proposed.) | Both |
-| 4 | ~~Does the created icon replace the photo as the Bev's image everywhere?~~ | **Answered 2026-11-17: yes**, and it renders like a catalogue icon. Needs the three app-side pieces in section 14a |
+| 4 | ~~Does the created icon replace the photo as the Bev's image everywhere?~~ | **Answered 2026-11-17: yes**, and it renders like a catalogue icon. Built; see section 14a |
 | 5 | Can anyone other than the creator make or replace a Bev's icon? | Both |
 | 6 | Can the creator redo an icon later, and does it cost a credit? | Both |
 | 7 | ~~Is the Bev created before or after the icon step?~~ | **Answered 2026-11-17: before.** `create_bev` inserts the Bev, then enqueues the job |
@@ -544,21 +544,28 @@ Phase 1 without buying is deliberate. It produces the real numbers (cost per ico
 | 19 | For catalog drinks whose icon is not drawn yet, do we hold the line on "no user creation"? | Matt |
 | 20 | When Bevi is opened beyond invited friends, what moderation is needed before icons are public? | Arjun |
 
-## 14a. What answering question 4 requires (2026-11-17)
+## 14a. How question 4 was answered in code (2026-11-17)
 
-Showing a generated icon on the post the way a catalogue icon shows is not the
-current behaviour, and none of it is in the merged or stacked code. Checked
-against `ui/bev-icon-app-fixes`:
+Showing a generated icon the way a catalogue icon shows took four changes,
+none of them a new screen and none of them SQL. All four are built:
 
-| # | What is true today | What the decision needs | Lane |
+| # | What it was | What it is now | Where |
 |---|---|---|---|
-| 1 | `bevImageProps` is `photoUrl ?? iconUrl` (`app/src/components/BevParts.tsx`), and every user-created Bev has a photo, so its generated icon never wins | For a Bev with a completed icon, the icon comes first | `app/` |
-| 2 | `bevs.icons()` is called for one Bev only, in `useBevIcon`, and consumed only by `app/src/app/bev/[id].tsx` | One batch call per list screen, as the contract already describes for `leaves()`. No backend change: the batch RPC exists | `app/` |
-| 3 | `labelBox` is in the contract but used nowhere in `app/` or `design/` | The wordmark drawn across the icon from the Bev's `brand`/`name`, or an explicit decision to ship without lettering | `app/`, `design/` |
-| 4 | `shared/src/types.ts` documents a Bev's image as photo > icon > category art | The precedence line updated once 1 to 3 land | `shared/` |
+| 1 | `bevImageProps` was `photoUrl ?? iconUrl`, and every user-created Bev has a photo, so its generated icon never won | icon > photo > category art, and `photoStatus` is dropped once the icon wins, because an icon that exists is not work in progress | `app/src/components/BevParts.tsx` |
+| 2 | `bevs.icons()` was called for one Bev, on one screen | `@bevi/api` batches `get_bev_icons` for the Bevs in every result and fills `BevSummary.iconUrl`, so no screen fetches anything | `packages/api/src/generatedIcons.ts` |
+| 3 | `labelBand` was used only inside the detail-screen panel | `BevImage` sets the wordmark across the band at every size, and omits it on a tile too small for a line of type | `app/src/components/BevImage.tsx`, `design/system` |
+| 4 | the contract said a Bev's image is photo > icon | `iconUrl` is documented as the Bev's own icon of either kind, and `iconLabelBand` carries the band | `shared/src/types.ts` |
 
-Items 1 to 3 are Matt's lane and belong in the UI/UX walkthrough. Item 4 is a
-contract documentation change that follows them, not leads them.
+Two things were deliberately NOT done. The eleven security-definer read
+functions were left alone: appending `generated_icon_path` to all of them is
+about 1,300 lines of transcribed SQL that freezes on merge, and
+`get_bev_icons` already answers for 500 ids in one call, which is what the
+contract says it is for. And `BevIcon.fallbackIconUrl` is not folded into
+`iconUrl`: a borrowed catalogue icon belongs to another drink, so a Bev whose
+own icon is still being made shows its creator's photograph instead.
+
+The panel that used to draw a finished illustration a second time is now a
+status line for its creator alone, still behind `ICON_JOB_STATE_VISIBLE`.
 
 ---
 
