@@ -96,7 +96,7 @@ export const size = {
   scoreBubbleXl: 72,
   bevImageStrip: 155,
   featuredCard: 164,
-  rowMin: 126,
+  rowMin: 94,
 } as const;
 
 /** System font only (no fontFamily). sectionCaps is always uppercase. */

@@ -9,13 +9,16 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
   AppConfig,
   Bev,
+  BevLeaf,
   BevOfPeriod,
   BevPrediction,
   BevSimilarity,
   BevSummary,
+  Borough,
   Bucket,
   BucketBev,
   Category,
+  CategoryNode,
   CategoryProgress,
   CategoryId,
   Comment,
@@ -23,6 +26,7 @@ import type {
   FeedEventKind,
   FeedItem,
   FlavorProfile,
+  FriendScore,
   LeaderboardRow,
   PeriodWinner,
   PhotoStatus,
@@ -30,8 +34,13 @@ import type {
   Profile,
   ProfileRow,
   Ranking,
+  SuggestedProfile,
   TasteProfileRow,
   UserLeaderboardRow,
+  Venue,
+  VenueDetail,
+  VenueKind,
+  VenuePin,
   WantToTryItem,
 } from '@bevi/shared';
 import { ApiError } from '@bevi/shared';
@@ -111,6 +120,59 @@ export function mapProfileRow(client: SupabaseClient, row: ProfileViewRow, isFol
   return { ...mapProfile(client, row), isFollowing };
 }
 
+/**
+ * Another user's profile as the social-context functions embed it in jsonb
+ * (20261111000100: `feed_also_bevd`'s items and `get_followed_by`'s
+ * `followed_by`). `created_at` is the profile's.
+ */
+export interface EmbeddedProfileRow {
+  user_id: string;
+  handle: string;
+  display_name: string;
+  avatar_path: string | null;
+  timezone: string;
+  onboarded: boolean;
+  created_at: string;
+}
+
+export function mapEmbeddedProfile(client: SupabaseClient, row: EmbeddedProfileRow): Profile {
+  return {
+    id: row.user_id,
+    handle: row.handle,
+    displayName: row.display_name,
+    avatarUrl: publicUrl(client, 'avatars', row.avatar_path),
+    timezone: row.timezone,
+    createdAt: row.created_at,
+    // Same rule as profiles_view (and mapComment): these are never the
+    // caller, so no birthdate and no canSeeAlcohol. The functions do not
+    // return either.
+    birthdate: null,
+    canSeeAlcohol: false,
+    onboarded: row.onboarded,
+  };
+}
+
+/** One row of `get_followed_by` (20261111000100): who the caller follows that follows `user_id`. */
+export interface FollowedByRpcRow {
+  user_id: string;
+  followed_by_count: number;
+  /** At most two, the most recent follower first. */
+  followed_by: EmbeddedProfileRow[];
+}
+
+/** `context` is undefined for someone `get_followed_by` returned no row for: nobody, so 0 and []. */
+export function mapSuggestedProfile(
+  client: SupabaseClient,
+  row: ProfileRow,
+  context: FollowedByRpcRow | undefined,
+): SuggestedProfile {
+  return {
+    ...row,
+    followedBy: (context?.followed_by ?? []).map((p) => mapEmbeddedProfile(client, p)),
+    followedByCount: context?.followed_by_count ?? 0,
+  };
+}
+
 // --------------------------------------------------------------------------
 // categories
 // --------------------------------------------------------------------------
@@ -120,6 +182,35 @@ export interface CategoryRow {
   name: string;
   sort_order: number;
   is_alcoholic: boolean;
+}
+
+/**
+ * One row of `get_category_tree()` (20261026000100). A-13.
+ *
+ * Distinct from `CategoryRow` on purpose: the tree carries `parent_id` and the
+ * root's `emoji` but no Bev count, while `categories.list()` carries the count
+ * and only ever sees roots.
+ */
+export interface CategoryNodeRow {
+  id: string;
+  name: string;
+  parent_id: string | null;
+  sort_order: number;
+  is_alcoholic: boolean;
+  emoji: string | null;
+}
+
+export function mapCategoryNode(row: CategoryNodeRow): CategoryNode {
+  return {
+    id: row.id,
+    name: row.name,
+    // A leaf's parent is always one of the 15, so the cast is the same claim
+    // the database's two-level guard makes.
+    parentId: row.parent_id === null ? null : (row.parent_id as CategoryId),
+    sortOrder: row.sort_order,
+    isAlcoholic: row.is_alcoholic,
+    emoji: row.emoji,
+  };
 }
 
 /** `bevCount` comes from `get_category_progress` (20261018000200), not the table. */
@@ -172,6 +263,11 @@ export interface BevStatsRow {
   bayes_score: number | null;
 }
 
+/** The `bev_icons(path)` embed (20261112000200): one row per Bev that has an icon. */
+export interface BevIconRow {
+  path: string;
+}
+
 export interface BevSummaryRow {
   id: string;
   name: string;
@@ -182,11 +278,32 @@ export interface BevSummaryRow {
   price_tier: number;
   price_estimated: boolean;
   bev_stats?: BevStatsRow | BevStatsRow[] | null;
+  /**
+   * The icon's object key in the `bev-icons` bucket, as the RPCs return it
+   * (`icon_path` / `bev_icon_path`, 20261112000300). Optional: a database
+   * without that migration does not return the column, and that reads as "no
+   * icon".
+   */
+  icon_path?: string | null;
+  /** The same key through a PostgREST embed, `bevs(..., bev_icons(path))`. */
+  bev_icons?: BevIconRow | BevIconRow[] | null;
 }
 
 function oneBevStats(stats: BevSummaryRow['bev_stats']): BevStatsRow | null {
   if (!stats) return null;
   return Array.isArray(stats) ? stats[0] ?? null : stats;
+}
+
+// bev_icons.bev_id is the table's primary key, so PostgREST embeds it as one
+// object or null; an array is handled anyway, as for bev_stats.
+function oneBevIcon(icon: BevSummaryRow['bev_icons']): BevIconRow | null {
+  if (!icon) return null;
+  return Array.isArray(icon) ? icon[0] ?? null : icon;
+}
+
+/** A Bev's icon path, however the row carries it; null when it has none or the server did not say. */
+function iconPathOf(row: BevSummaryRow): string | null {
+  return row.icon_path ?? oneBevIcon(row.bev_icons)?.path ?? null;
 }
 
 export function mapBevSummary(client: SupabaseClient, row: BevSummaryRow): BevSummary {
@@ -198,6 +315,7 @@ export function mapBevSummary(client: SupabaseClient, row: BevSummaryRow): BevSu
     flavor: row.flavor,
     categoryId: row.category_id as CategoryId,
     photoUrl: publicUrl(client, 'bev-photos', row.photo_path),
+    iconUrl: publicUrl(client, 'bev-icons', iconPathOf(row)),
     // Placeholder until the process-photo pipeline (milestone 1.6) exists:
     // there's no column tracking async background-removal state yet, so
     // once a Bev has a photo_path it's treated as 'ready'.
@@ -205,8 +323,10 @@ export function mapBevSummary(client: SupabaseClient, row: BevSummaryRow): BevSu
     priceTier: row.price_tier as PriceTier,
     priceEstimated: row.price_estimated,
     ratingCount: stats?.rating_count ?? 0,
-    // bev_stats.bayes_score is only populated once the leaderboard refresh
-    // job (milestone 1.7) runs; null until then is correct, not a bug.
+    // Since 20261101000300 every write path refreshes bev_stats.bayes_score,
+    // and it is null exactly when rating_count is 0 -- no Bayesian score is
+    // defined with no ratings. So null is correct here, not a stale row
+    // waiting on a job.
     bayesScore: stats?.bayes_score ?? null,
   };
 }
@@ -255,6 +375,16 @@ export interface BevSimilarityRow {
 
 export function mapBevSimilarity(row: BevSimilarityRow): BevSimilarity {
   return { bevId: row.bev_id, weight: Number(row.weight) };
+}
+
+/** `get_bev_leaves` (20261026000100). A-13. */
+export interface BevLeafRow {
+  bev_id: string;
+  leaf_category_id: string | null;
+}
+
+export function mapBevLeaf(row: BevLeafRow): BevLeaf {
+  return { bevId: row.bev_id, leafCategoryId: row.leaf_category_id };
 }
 
 /** `list_bucket_bevs` (20261019000500). */
@@ -369,6 +499,8 @@ export interface FeedRpcRow {
   bev_status: string | null;
   bev_rating_count: number | null;
   bev_bayes_score: number | null;
+  /** 20261112000300; optional for the same reason as `also_bevd`. */
+  bev_icon_path?: string | null;
   score: number | null;
   bucket: number | null;
   note: string | null;
@@ -378,13 +510,35 @@ export interface FeedRpcRow {
   comment_count: number;
   /** `get_feed` builds the first seven, oldest first, with `jsonb_build_object`. */
   comments: CommentRpcRow[];
+  /**
+   * `feed_also_bevd` (20261111000100): the caller's followees, other than the
+   * actor, who ranked this Bev. Optional because a database that has not had
+   * that migration yet does not return the column at all; see `mapFeedItem`.
+   */
+  also_bevd?: AlsoBevdRpc | null;
+}
+
+/** `count` is everyone; `items` is the three who ranked most recently, newest first. */
+export interface AlsoBevdRpc {
+  count: number;
+  items: AlsoBevdRpcItem[];
+}
+
+/** A friend's profile with their own ranking of the Bev. `score` is a numeric inside jsonb. */
+export interface AlsoBevdRpcItem extends EmbeddedProfileRow {
+  score: number | string;
+  bucket: number;
 }
 
 /**
  * `get_explore`'s row (20261019000300): get_feed's columns minus the four
- * engagement ones, which the function does not return at all (D-15).
+ * engagement ones, which the function does not return at all (D-15), and
+ * minus `also_bevd`, which only the feed functions compute.
  */
-export type ExploreRpcRow = Omit<FeedRpcRow, 'like_count' | 'liked_by_me' | 'comment_count' | 'comments'>;
+export type ExploreRpcRow = Omit<
+  FeedRpcRow,
+  'like_count' | 'liked_by_me' | 'comment_count' | 'comments' | 'also_bevd'
+>;
 
 export interface CommentRpcRow {
   id: number;
@@ -443,6 +597,7 @@ export function mapExplorePost(client: SupabaseClient, row: ExploreRpcRow, actor
       flavor: row.bev_flavor,
       categoryId: row.bev_category_id as CategoryId,
       photoUrl: publicUrl(client, 'bev-photos', row.bev_thumb_path),
+      iconUrl: publicUrl(client, 'bev-icons', row.bev_icon_path ?? null),
       photoStatus: 'ready',
       priceTier: (row.bev_price_tier ?? 1) as PriceTier,
       priceEstimated: row.bev_price_estimated ?? true,
@@ -457,13 +612,30 @@ export function mapExplorePost(client: SupabaseClient, row: ExploreRpcRow, actor
   };
 }
 
+export function mapAlsoBevdItem(client: SupabaseClient, item: AlsoBevdRpcItem): FriendScore {
+  return {
+    profile: mapEmbeddedProfile(client, item),
+    score: Number(item.score),
+    bucket: bucketFromDb(item.bucket),
+  };
+}
+
 export function mapFeedItem(client: SupabaseClient, row: FeedRpcRow, actor: Profile): FeedItem {
+  // A database without 20261111000100 returns no `also_bevd` column. That is
+  // the state between this client shipping and the migration being pushed, if
+  // they happen in that order, and the feed must keep loading through it: no
+  // column reads as "nobody", which is what the older server could tell us.
+  // Once the migration is in, the column is never null (feed_also_bevd always
+  // returns an object), so this branch is dead from then on.
+  const also = row.also_bevd ?? { count: 0, items: [] };
   return {
     ...mapExplorePost(client, row, actor),
     likeCount: row.like_count,
     likedByMe: row.liked_by_me,
     commentCount: row.comment_count,
     comments: row.comments.map((c) => mapComment(client, c)),
+    alsoBevdBy: also.items.map((item) => mapAlsoBevdItem(client, item)),
+    alsoBevdCount: also.count,
   };
 }
 
@@ -486,11 +658,21 @@ export interface BevOfPeriodRpcRow {
   bev_price_estimated: boolean;
   bev_rating_count: number;
   bev_bayes_score: number | string;
+  /** 20261112000300; absent on a database without it. */
+  bev_icon_path?: string | null;
 }
 
 function mapPeriodWinner(client: SupabaseClient, row: BevOfPeriodRpcRow): PeriodWinner {
-  // The score the winner was picked by (live, like get_bev_leaderboard), not
-  // bev_stats.bayes_score, which the 15-minute refresh may not have caught up on.
+  // The score the winner was picked by. bev_of_period_at recomputes it from
+  // the same inputs bev_stats holds (sum_score, rating_count, bayes_prior(null))
+  // rather than reading bev_stats.bayes_score, because that column is stored
+  // as numeric(4,2) and the winner has to be picked on the UNROUNDED value --
+  // two Bevs that round to the same 2 dp are separated by n_period next, not
+  // by chance. The rounding happens once, here at the RPC boundary
+  // (20261101000300). The only other difference is one accepted race, which
+  // that migration documents: a refresh_global_stats tick landing between
+  // refresh_bev_stats reading the prior and its upsert leaves that row on the
+  // previous prior until the next tick.
   const bayes = Number(row.bev_bayes_score);
   return {
     bev: mapBevSummary(client, {
@@ -500,6 +682,7 @@ function mapPeriodWinner(client: SupabaseClient, row: BevOfPeriodRpcRow): Period
       flavor: row.bev_flavor,
       category_id: row.bev_category_id,
       photo_path: row.bev_thumb_path,
+      icon_path: row.bev_icon_path,
       price_tier: row.bev_price_tier,
       price_estimated: row.bev_price_estimated,
       bev_stats: { rating_count: row.bev_rating_count, avg_score: null, score_stddev: null, bayes_score: bayes },
@@ -543,6 +726,8 @@ export interface BevLeaderboardRpcRow {
   rating_count: number;
   avg_score: number | null;
   bayes_score: number;
+  /** 20261112000300; absent on a database without it. */
+  icon_path?: string | null;
 }
 
 export function mapBevLeaderboardRow(
@@ -560,6 +745,7 @@ export function mapBevLeaderboardRow(
       flavor: row.flavor,
       categoryId: row.category_id as CategoryId,
       photoUrl: publicUrl(client, 'bev-photos', row.photo_path),
+      iconUrl: publicUrl(client, 'bev-icons', row.icon_path ?? null),
       photoStatus: 'ready',
       priceTier: row.price_tier as PriceTier,
       priceEstimated: false,
@@ -611,8 +797,153 @@ export function mapUserLeaderboardRow(client: SupabaseClient, row: UserLeaderboa
   };
 }
 
+/**
+ * One row of `get_friends_leaderboard` (20261111000100): get_user_leaderboard's
+ * columns that `mapUserLeaderboardRow` reads, with `friend_rank` -- the rank
+ * among the caller and the people they follow -- where the global board has
+ * `bevi_rank`.
+ */
+export type FriendsLeaderboardRpcRow = Omit<UserLeaderboardRpcRow, 'bevi_rank'> & { friend_rank: number };
+
+// Same shape and the same competition ranking as the global board's row; only
+// the set the rank is counted in differs.
+export function mapFriendsLeaderboardRow(client: SupabaseClient, row: FriendsLeaderboardRpcRow): UserLeaderboardRow {
+  return mapUserLeaderboardRow(client, { ...row, bevi_rank: row.friend_rank });
+}
+
 export function placeholderAppConfig(): AppConfig {
   // No versioning/maintenance-flag infra exists yet; this is a fixed
   // placeholder, not a read from the DB, until that's built.
   return { minAppVersion: '0.1.0', maintenance: false };
+}
+
+// --------------------------------------------------------------------------
+// venues (S-10 + A-08, half 2)
+// --------------------------------------------------------------------------
+
+/** One row of `venues_in_view` (20261102000400). Numerics may arrive as strings. */
+export interface VenuePinRow {
+  id: string;
+  name: string;
+  kind: string;
+  lat: number | string;
+  lng: number | string;
+  address: string | null;
+  neighborhood: string | null;
+  borough: string | null;
+  hours_osm: string | null;
+  hours_known: boolean;
+  website: string | null;
+  best_score: number | string | null;
+  predicted_score: number | string | null;
+  open_now: boolean | null;
+  bev_count: number;
+}
+
+const numOrNull = (value: number | string | null): number | null =>
+  value === null ? null : Number(value);
+
+function mapVenueFromPin(row: VenuePinRow): Venue {
+  return {
+    id: row.id,
+    name: row.name,
+    kind: row.kind as VenueKind,
+    lat: Number(row.lat),
+    lng: Number(row.lng),
+    address: row.address,
+    // Null for every venue today: OSM has no `addr:suburb` in New York, so the
+    // column is ours to fill. Not an error, and not worth a fallback string.
+    neighborhood: row.neighborhood,
+    borough: row.borough as Borough | null,
+    hoursOsm: row.hours_osm,
+    hoursKnown: row.hours_known,
+    website: row.website,
+  };
+}
+
+export function mapVenuePin(row: VenuePinRow): VenuePin {
+  return {
+    venue: mapVenueFromPin(row),
+    bestScore: numOrNull(row.best_score),
+    predictedScore: numOrNull(row.predicted_score),
+    // The RPC leaves this null whenever `hours_known` is false, so the app has
+    // one thing to test rather than two.
+    openNow: row.open_now,
+    bevCount: row.bev_count,
+  };
+}
+
+/**
+ * One row of `venue_detail` (20261102000400). The RPC returns the venue's
+ * columns repeated on every assortment row, which is the shape a single
+ * round trip can have; `mapVenueDetail` folds them back into one object.
+ */
+export interface VenueDetailRow {
+  venue_id: string;
+  name: string;
+  kind: string;
+  lat: number | string;
+  lng: number | string;
+  address: string | null;
+  neighborhood: string | null;
+  borough: string | null;
+  hours_osm: string | null;
+  hours_known: boolean;
+  website: string | null;
+  open_now: boolean | null;
+  bev_id: string;
+  bev_name: string;
+  bev_brand: string | null;
+  bev_flavor: string | null;
+  bev_category_id: string;
+  bev_photo_path: string | null;
+  bev_price_tier: number;
+  bev_price_estimated: boolean;
+  bev_rating_count: number;
+  bev_bayes_score: number | string | null;
+  /** 20261112000300; absent on a database without it. */
+  bev_icon_path?: string | null;
+}
+
+export function mapVenueDetail(client: SupabaseClient, rows: VenueDetailRow[]): VenueDetail {
+  // The RPC raises BEVI_NOT_FOUND rather than returning an empty set, so a
+  // caller that got here has at least one row.
+  const first = rows[0];
+  if (!first) throw new ApiError('not_found', 'Venue has no visible assortment');
+
+  return {
+    venue: {
+      id: first.venue_id,
+      name: first.name,
+      kind: first.kind as VenueKind,
+      lat: Number(first.lat),
+      lng: Number(first.lng),
+      address: first.address,
+      neighborhood: first.neighborhood,
+      borough: first.borough as Borough | null,
+      hoursOsm: first.hours_osm,
+      hoursKnown: first.hours_known,
+      website: first.website,
+    },
+    openNow: first.open_now,
+    bevs: rows.map((row) =>
+      mapBevSummary(client, {
+        id: row.bev_id,
+        name: row.bev_name,
+        brand: row.bev_brand,
+        flavor: row.bev_flavor,
+        category_id: row.bev_category_id,
+        photo_path: row.bev_photo_path,
+        icon_path: row.bev_icon_path,
+        price_tier: row.bev_price_tier,
+        price_estimated: row.bev_price_estimated,
+        bev_stats: {
+          rating_count: row.bev_rating_count,
+          avg_score: null,
+          score_stddev: null,
+          bayes_score: numOrNull(row.bev_bayes_score),
+        },
+      }),
+    ),
+  };
 }

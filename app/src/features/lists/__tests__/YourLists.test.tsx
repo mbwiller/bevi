@@ -1,8 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
+import { StyleSheet } from 'react-native';
 import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
 
 import { api } from '@/api/client';
+import { BEV_ROW_FOOT_OVERLAY_BOTTOM } from '@/components/BevRow';
 import { categoryById } from '@/lib/categories';
 import { controls } from '@/testing/fakeApi';
 import ListsScreen from '@/app/(tabs)/lists/index';
@@ -49,6 +51,19 @@ it("Bev'd lists the user's rankings numbered across buckets", async () => {
   expect(screen.getByLabelText(`More for ${first.bev.name}`)).toBeTruthy();
 });
 
+it("centres the Bev'd overflow button on the row's 32pt foot line, keeping its 44pt target", async () => {
+  const first = (await api.rankings.listMine()).items[0]!;
+  await start();
+  const more = await screen.findByLabelText(`More for ${first.bev.name}`);
+  const style = StyleSheet.flatten(more.props.style);
+  expect(style.position).toBe('absolute');
+  expect(style.bottom).toBe(BEV_ROW_FOOT_OVERLAY_BOTTOM);
+  expect(style.minHeight).toBe(44);
+  // Foot line centre, from the bottom of the row: 4pt padding + 1pt divider + half of 32. The button's
+  // centre (its bottom + half of 44) must be the same point.
+  expect(style.bottom + 44 / 2).toBe(4 + 1 + 32 / 2);
+});
+
 it('switches tabs through ?tab=', async () => {
   const saved = (await api.wantToTry.list()).items[0]!;
   const recs = await api.recs.getRecommendations();
@@ -59,16 +74,20 @@ it('switches tabs through ?tab=', async () => {
   expect(r.searchParams()).toEqual({ tab: 'want' });
   expect(await screen.findByLabelText(saved.bev.name)).toBeTruthy();
 
-  await fireEvent.press(screen.getByLabelText('Recommended'));
+  await fireEvent.press(screen.getByLabelText('For you'));
   expect(r.searchParams()).toEqual({ tab: 'recommended' });
   expect(await screen.findByText(new RegExp(`^Based on ${recs.basedOnCount} Bevs you've ranked`))).toBeTruthy();
-  expect(await screen.findByLabelText(recs.items[0]!.bev.name)).toBeTruthy();
+  // findAllByLabelText, not findBy: a row's label is the Bev's name, and catalog names are not
+  // unique (two GT's Kombucha flavours, two Ramune), so the top recommendation may share its name
+  // with another row on screen. The assertion is "the first recommendation rendered", not "exactly
+  // one row carries that name".
+  expect(await screen.findAllByLabelText(recs.items[0]!.bev.name)).not.toHaveLength(0);
 });
 
 it('Recommended has no sort toggle, since recommendations have one order', async () => {
   const recs = await api.recs.getRecommendations();
   await start('/lists?tab=recommended');
-  expect(await screen.findByLabelText(recs.items[0]!.bev.name)).toBeTruthy();
+  expect(await screen.findAllByLabelText(recs.items[0]!.bev.name)).not.toHaveLength(0);
   expect(screen.queryByRole('button', { name: 'Sort by Predicted' })).toBeNull();
   expect(screen.queryByText('Predicted')).toBeNull();
 });
@@ -79,7 +98,7 @@ it('shows each tab’s empty state, and Recommended locked below 3 rankings', as
   expect(await screen.findByText('Add your first Bev')).toBeTruthy();
   await fireEvent.press(screen.getByLabelText('Want to Try'));
   expect(await screen.findByText('Nothing saved yet')).toBeTruthy();
-  await fireEvent.press(screen.getByLabelText('Recommended'));
+  await fireEvent.press(screen.getByLabelText('For you'));
   expect(await screen.findByText('Rank 3 Bevs to see recommendations')).toBeTruthy();
 });
 
@@ -96,20 +115,20 @@ it('removes from Want to Try optimistically, and rolls back on error', async () 
   expect(await screen.findByLabelText(target.bev.name, undefined, { timeout: 3000 })).toBeTruthy();
 });
 
-it('opens the row actions sheet with Re-rank, Edit note and Remove', async () => {
+it('opens the row actions sheet with Bev it again, Edit note and Remove', async () => {
   const first = (await api.rankings.listMine()).items[0]!;
   await start();
   await fireEvent.press(await screen.findByLabelText(`More for ${first.bev.name}`));
-  expect(await screen.findByLabelText('Re-rank')).toBeTruthy();
+  expect(await screen.findByLabelText('Bev it again')).toBeTruthy();
   await fireEvent.press(screen.getByLabelText("Remove from Bev'd"));
   expect(await screen.findByText(`Remove ${first.bev.name}?`)).toBeTruthy();
 });
 
-it('Re-rank opens the ranking flow in re-rank mode', async () => {
+it('Bev it again opens the ranking flow in re-rank mode', async () => {
   const first = (await api.rankings.listMine()).items[0]!;
   const r = await start();
   await fireEvent.press(await screen.findByLabelText(`More for ${first.bev.name}`));
-  await fireEvent.press(await screen.findByLabelText('Re-rank'));
+  await fireEvent.press(await screen.findByLabelText('Bev it again'));
   expect(r.path()).toBe(`/rank/${first.bevId}?mode=rerank`);
 });
 
@@ -123,12 +142,45 @@ it('cycles the sort Score, Recent, Name and keeps the filters on screen', async 
   await fireEvent.press(screen.getByLabelText('Sort by Score'));
   expect(await screen.findByLabelText('Sort by Recent')).toBeTruthy();
   await waitFor(() => expect(firstRowLabel().endsWith(`. ${recent.bev.name}`)).toBe(true));
-  expect(screen.getByLabelText(/Bucket/)).toBeTruthy();
+  expect(screen.getByLabelText('Reaction')).toBeTruthy();
 
   await fireEvent.press(screen.getByLabelText('Sort by Recent'));
   expect(await screen.findByLabelText('Sort by Name')).toBeTruthy();
   await waitFor(() => expect(firstRowLabel().endsWith(`. ${byName.bev.name}`)).toBe(true));
-  expect(screen.getByLabelText(/Bucket/)).toBeTruthy();
+  expect(screen.getByLabelText('Reaction')).toBeTruthy();
+});
+
+// BEV-11: the gut-check filter was labelled "Bucket", an internal word that says nothing about what it filters.
+describe('the Reaction filter', () => {
+  it('is named Reaction on its pill and its sheet, and the pill takes the chosen reaction', async () => {
+    await start();
+    await fireEvent.press(await screen.findByRole('button', { name: 'Reaction' }));
+    expect(await screen.findByRole('header', { name: 'Reaction' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'All reactions' })).toBeTruthy();
+    expect(screen.queryByText(/bucket/i)).toBeNull();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Loved' }));
+    expect(await screen.findByRole('button', { name: 'Loved' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Reaction' })).toBeNull();
+  });
+
+  it('says "reaction", not "bucket", when the filters match nothing', async () => {
+    controls.emptyUser();
+    await start();
+    await fireEvent.press(await screen.findByRole('button', { name: 'Reaction' }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Loved' }));
+    expect(await screen.findByText('No Bevs match these filters')).toBeTruthy();
+    expect(screen.getByText('Try another reaction or category.')).toBeTruthy();
+    expect(screen.queryByText(/bucket/i)).toBeNull();
+  });
+
+  it('is the Reaction section of the Filters sheet', async () => {
+    await start();
+    await fireEvent.press(await screen.findByRole('button', { name: 'Filters' }));
+    expect(await screen.findByRole('header', { name: 'Reaction' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'All reactions' })).toBeTruthy();
+    expect(screen.queryByText(/bucket/i)).toBeNull();
+  });
 });
 
 it('formats the Recommended summary line', () => {

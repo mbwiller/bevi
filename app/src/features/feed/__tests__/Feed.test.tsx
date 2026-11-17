@@ -6,11 +6,18 @@ import type { FeedItem, PeriodWinner } from '@bevi/shared';
 
 import { api } from '@/api/client';
 import { bevOfCardLabel } from '@/components/BevOfCard';
+import { bevOfPeriodCards } from '@/features/feed/BevOfPeriod';
 import { likeLabel } from '@/components/LikeButton';
 import { keys } from '@/api/keys';
-import { formatPeriodStart, formatRelativeTime } from '@/lib/time';
+import { formatRelativeTime } from '@/lib/time';
 import { FRIEND, ME, controls, userIdFor } from '@/testing/fakeApi';
 import FeedScreen from '@/app/(tabs)/feed/index';
+
+// Each test here mounts the whole Feed route (renderRouter). That is 2 to 4 seconds on a laptop and
+// several times that on GitHub's runners, where the slowest tests ran past the 30s default from
+// jest.config.js on three CI runs on 2026-11-11. They are slow there, not stuck: the same commit
+// passes on a rerun.
+jest.setTimeout(90_000);
 
 let client: QueryClient;
 
@@ -34,6 +41,7 @@ async function start(url = '/feed') {
       'user/[id]/index': Stub,
       'profile/index': Stub,
       'add/index': Stub,
+      people: Stub,
     },
     { initialUrl: url },
   );
@@ -59,9 +67,9 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-/** The card's accessible name for a winner, as BevOfPeriod renders it. */
-function cardName(period: 'day' | 'week', w: PeriodWinner): string {
-  return bevOfCardLabel(period, w.bev.name, w.bev.bayesScore, w.isCurrent ? undefined : formatPeriodStart(w.periodStart, period));
+/** The cards' accessible names for the winners, as BevOfPeriod renders them (one card per period). */
+function cardNames(day: PeriodWinner | null, week: PeriodWinner | null): string[] {
+  return bevOfPeriodCards(day, week).map((c) => bevOfCardLabel(c.period, c.winner.bev.name, c.winner.bev.bayesScore, c.date));
 }
 
 it('renders Bev of the day and week (not Featured) above the feed posts', async () => {
@@ -74,8 +82,9 @@ it('renders Bev of the day and week (not Featured) above the feed posts', async 
   await start();
 
   const row = await screen.findByTestId('bev-of-period');
-  expect(within(row).getByLabelText(cardName('day', period.day!))).toBeTruthy();
-  expect(within(row).getByLabelText(cardName('week', period.week!))).toBeTruthy();
+  const names = cardNames(period.day, period.week);
+  expect(names.length).toBeGreaterThan(0);
+  for (const name of names) expect(within(row).getByLabelText(name)).toBeTruthy();
   expect(screen.queryByTestId('featured-carousel')).toBeNull();
   expect(screen.queryByText('Featured Bevs')).toBeNull();
 
@@ -120,7 +129,14 @@ it('following nobody: the follow empty state under YOUR FEED, the Bev of the day
   const buttons = screen.getAllByLabelText('Find people');
   expect(buttons).toHaveLength(2);
   await fireEvent.press(buttons[1]!);
-  expect(r.path()).toBe('/add?tab=people');
+  expect(r.path()).toBe('/people');
+});
+
+it("the header's Find people opens People", async () => {
+  const r = await start();
+  await screen.findByText('Your feed');
+  await fireEvent.press(screen.getByRole('button', { name: 'Find people' }));
+  expect(r.path()).toBe('/people');
 });
 
 it('saves to Want to Try optimistically, and rolls back on error', async () => {

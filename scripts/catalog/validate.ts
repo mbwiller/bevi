@@ -32,7 +32,52 @@ function main(): void {
   const categories: Category[] = loadCategories();
   const categoryById = new Map<string, Category>();
   for (const c of categories) {
+    if (categoryById.has(c.id)) {
+      errors.push(`categories.json: duplicate category id "${c.id}"`);
+    }
     categoryById.set(c.id, c);
+  }
+
+  // ---------------------------------------------------------------------------
+  // The category tree (A-13 / D-04)
+  // ---------------------------------------------------------------------------
+  // Exactly two levels, because that is what the contract, `category_is_alcoholic`
+  // and `treeSimilarity`'s Wu-Palmer depths all assume. The database enforces the
+  // same thing with `categories_depth_guard`; this catches it before a migration
+  // is ever generated.
+  for (const c of categories) {
+    if (!/^[a-z0-9]+(_[a-z0-9]+)*$/.test(c.id)) {
+      errors.push(`categories.json: id "${c.id}" must be snake_case`);
+    }
+    if (c.parentId === null) {
+      // A root carries the emoji the app draws; a leaf inherits its root's.
+      if (!c.emoji) errors.push(`categories.json: root "${c.id}" has no emoji`);
+      continue;
+    }
+    if (c.parentId === c.id) {
+      errors.push(`categories.json: "${c.id}" is its own parent`);
+      continue;
+    }
+    const parent = categoryById.get(c.parentId);
+    if (!parent) {
+      errors.push(`categories.json: "${c.id}" has unknown parent "${c.parentId}"`);
+      continue;
+    }
+    if (parent.parentId !== null) {
+      errors.push(
+        `categories.json: "${c.id}" is three levels deep (parent "${c.parentId}" is itself a leaf); the taxonomy is exactly two levels`,
+      );
+    }
+    // The age gate walks up exactly one hop, so a leaf that disagreed with its
+    // root would make `category_is_alcoholic` depend on which id it was handed.
+    if (c.isAlcoholic !== parent.isAlcoholic) {
+      errors.push(
+        `categories.json: leaf "${c.id}" has isAlcoholic=${c.isAlcoholic} but its root "${c.parentId}" has ${parent.isAlcoholic}; a leaf inherits its root's flag`,
+      );
+    }
+    if (c.emoji !== null) {
+      errors.push(`categories.json: leaf "${c.id}" has an emoji; only a root carries one`);
+    }
   }
 
   const rows = loadBevRows();
@@ -97,6 +142,37 @@ function main(): void {
     } else {
       // isAlcoholic=true categories are allowed; just don't crash on them.
       void category.isAlcoholic;
+      // A Bev's `category` is always a ROOT (A-13): `bevs.category_id` keeps
+      // meaning one of the 15, and the finer placement lives in `leaf`.
+      if (category.parentId !== null) {
+        errors.push(
+          `line ${line}: category "${row.category}" is a leaf under "${category.parentId}"; put the root in \`category\` and the leaf in \`leaf\` (slug=${row.slug})`,
+        );
+      }
+    }
+
+    // leaf: empty, or a real child of this row's category (A-13)
+    if (row.leaf.trim() !== "") {
+      const leaf = categoryById.get(row.leaf);
+      if (!leaf) {
+        errors.push(`line ${line}: unknown leaf "${row.leaf}" (slug=${row.slug})`);
+      } else if (leaf.parentId === null) {
+        errors.push(
+          `line ${line}: leaf "${row.leaf}" is a root, not a leaf (slug=${row.slug})`,
+        );
+      } else if (leaf.parentId !== row.category) {
+        errors.push(
+          `line ${line}: leaf "${row.leaf}" sits under "${leaf.parentId}", not under this row's category "${row.category}" (slug=${row.slug})`,
+        );
+      }
+    } else if (category && categories.some((c) => c.parentId === row.category)) {
+      // Not an error: a Bev may sit on a parent (D-04 section 3, the shape
+      // rule), and a user-created Bev always will until someone relabels it.
+      // But for a SEEDED Bev under a split root it means the taxonomy grew a
+      // leaf that nobody assigned, which is the one case worth surfacing.
+      warnings.push(
+        `line ${line}: no leaf, but "${row.category}" has leaves (slug=${row.slug})`,
+      );
     }
 
     // price_tier must be numeric 1-4

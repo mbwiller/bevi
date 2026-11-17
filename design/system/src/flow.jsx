@@ -41,25 +41,29 @@ export function SegmentedTabs({ tabs = [], value, onChange, variant = 'underline
 
 const TABS = [
   { id: 'feed', label: 'Feed', icon: 'newspaper' },
-  { id: 'lists', label: 'Your Lists', icon: 'list' },
-  { id: 'add', label: 'Search' },
-  { id: 'leaderboard', label: 'Leaderboard', icon: 'trophy' },
+  { id: 'lists', label: 'Lists', icon: 'list' },
+  { id: 'add', label: 'Add Bev' },
+  { id: 'map', label: 'Map', icon: 'map' },
   { id: 'profile', label: 'Profile' },
 ];
 
-/** The five-tab bar. Centre tab (Search, as Beli labels it): a 32pt `primary` circle with a white plus, inline with the others. */
+/**
+ * The five-tab bar: Feed, Lists, Add Bev, Map, Profile. Add Bev is a 46pt `primary` circle with a plus that
+ * rises 14pt above the other icons, ringed in `surface` where it crosses the bar's hairline. The current
+ * tab's icon and label turn `primary`.
+ */
 export function TabBar({ active = 'feed', user = {}, onChange, safeArea = true, className }) {
   return (
     <nav className={cx('bv', 'bv-tabbar', safeArea && 'bv-tabbar-safe', className)} aria-label="Main">
       {TABS.map((t) => (
         <button key={t.id} type="button" className={cx('bv-tabbar-item', t.id === active && 'bv-tabbar-active')} aria-current={t.id === active ? 'page' : undefined} onClick={() => onChange && onChange(t.id)}>
-          <span className="bv-tabbar-icon">
+          <span className={cx('bv-tabbar-icon', t.id === 'add' && 'bv-tabbar-icon-add')}>
             {t.id === 'add' ? (
-              <span className="bv-tabbar-add"><Icon name="plus" size={22} strokeWidth={2.25} /></span>
+              <span className="bv-tabbar-add"><Icon name="plus" size={26} strokeWidth={2.25} /></span>
             ) : t.id === 'profile' ? (
-              <Avatar name={user.name} src={user.src} size={32} ring={t.id === active} />
+              <Avatar name={user.name} src={user.src} size={32} />
             ) : (
-              <Icon name={t.icon} size={28} strokeWidth={1.5} />
+              <Icon name={t.icon} size={28} strokeWidth={t.id === active ? 2 : 1.5} />
             )}
           </span>
           <span className="tabBar bv-tabbar-label">{t.label}</span>
@@ -69,7 +73,34 @@ export function TabBar({ active = 'feed', user = {}, onChange, safeArea = true, 
   );
 }
 
-/** Search input. `filled`: grey 36pt bar (Feed). `outlined`: 48pt field (the Search tab). `onFocus` opens the Search tab's results panel. */
+/**
+ * The Map tab's art: a round minimap, dark until walked, with a lit path from you to the nearest Bev.
+ * One picture, not a live map: the ground is `tasteCard`, the streets and the lit path are `onDeep`,
+ * the route and its destination are `primary`, and you are the `fizz` dot with a heading triangle.
+ */
+export function FindBevArt({ size = 224, title = 'A round minimap: your position, a lit path and a destination', className }) {
+  const raw = React.useId ? React.useId() : 'a';
+  const clip = 'bv-findart-' + String(raw).replace(/[^a-zA-Z0-9]/g, '');
+  const path = 'M74 176 L92 96 L150 108 L164 52';
+  return (
+    <svg className={cx('bv-findart', className)} width={size} height={size} viewBox="0 0 224 224" role="img" aria-label={title}>
+      <defs><clipPath id={clip}><circle cx="112" cy="112" r="111" /></clipPath></defs>
+      <g clipPath={'url(#' + clip + ')'}>
+        <rect className="bv-findart-ground" x="0" y="0" width="224" height="224" />
+        {[34, 78, 122, 166, 210].map((v) => <path key={'v' + v} className="bv-findart-street" d={'M' + v + ' -10 L' + (v - 46) + ' 240'} />)}
+        {[20, 66, 112, 158, 204].map((v) => <path key={'h' + v} className="bv-findart-street" d={'M-10 ' + v + ' L240 ' + (v + 44)} />)}
+        <path className="bv-findart-lit" d={path} />
+        <path className="bv-findart-route" d={path} />
+        <circle className="bv-findart-dest" cx="164" cy="52" r="11" />
+        <path className="bv-findart-heading" d="M74 150 L84 168 L64 168 Z" />
+        <circle className="bv-findart-you" cx="74" cy="176" r="10" />
+      </g>
+      <circle className="bv-findart-rim" cx="112" cy="112" r="111" />
+    </svg>
+  );
+}
+
+/** Search input. `filled`: grey 36pt bar (Feed, People). `outlined`: 48pt field (Add Bev). */
 export function SearchBar({ placeholder = 'Search a Bev or a person', value, onChange, variant = 'filled', autoFocus, onClear, onFocus, className, id }) {
   const [v, setV] = React.useState(value ?? '');
   const val = value ?? v;
@@ -97,7 +128,7 @@ export function SearchBar({ placeholder = 'Search a Bev or a person', value, onC
 }
 
 /** Labelled 48pt text field for onboarding and the create wizard. */
-export function TextField({ label, value, defaultValue, placeholder, prefix, hint, error, onChange, id, type = 'text', className }) {
+export function TextField({ label, value, defaultValue, placeholder, prefix, hint, error, reserveHint = false, onChange, id, type = 'text', className }) {
   const fid = id || 'bv-field-' + (label || placeholder || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
   return (
     <div className={cx('bv', 'bv-field', error && 'bv-field-error', className)}>
@@ -106,7 +137,7 @@ export function TextField({ label, value, defaultValue, placeholder, prefix, hin
         {prefix ? <span className="bodyLarge bv-field-prefix">{prefix}</span> : null}
         <input id={fid} className="bodyLarge" type={type} value={value} defaultValue={defaultValue} placeholder={placeholder} onChange={onChange} aria-invalid={error ? true : undefined} aria-describedby={hint || error ? fid + '-msg' : undefined} />
       </div>
-      {error || hint ? <p id={fid + '-msg'} className={cx('caption', error ? 'bv-field-errmsg' : 'bv-meta')}>{error || hint}</p> : null}
+      {error || hint || reserveHint ? <p id={fid + '-msg'} className={cx('caption', error ? 'bv-field-errmsg' : 'bv-meta', reserveHint && 'bv-field-reserve')} aria-hidden={error || hint ? undefined : true}>{error || hint}</p> : null}
     </div>
   );
 }
@@ -130,39 +161,21 @@ export function PriceTierPicker({ value, estimated = false, onChange, className 
   );
 }
 
-const BUCKET_ICON = { loved: 'laugh', fine: 'meh', disliked: 'frown' };
-const WAVE = 'M0 8 Q30 1 60 8 T120 8 T180 8 T240 8 V16 H0 Z';
 /**
- * Gut-check choice: a capsule with a glossy orb in its bucket colour. Choosing it pours that colour in
- * (two-thirds full, a moving surface, a few rising bubbles). Sit it on a BevGlow.
- * `material="tint"` (default, and always on the web app): 12% bucket tint and a bucket bar.
- * `material="glass"`: liquid glass, only with the native GlassView on iOS 26+; never imitated with a blur.
+ * Gut-check choice: a `primary` ring filled to a level (loved full, fine half, disliked empty) over its label.
+ * The level carries the order, so it never leans on colour. The chosen one gets a check badge; pass `dimmed`
+ * to the other two once one is chosen.
  */
-export function BucketButton({ bucket = 'loved', selected = false, material = 'tint', onClick, className }) {
+export function BucketButton({ bucket = 'loved', selected = false, dimmed = false, onClick, className }) {
   const b = BUCKETS[bucket];
   return (
-    <button type="button" className={cx('bv', 'bv-bucket', 'bv-band-' + b.band, material === 'tint' && 'bv-bucket-tint', selected && 'bv-bucket-on', className)} onClick={onClick} aria-pressed={selected}>
-      <span className="bv-bucket-liquid" aria-hidden="true">
-        <svg className="bv-bucket-wave bv-bucket-wave-back" viewBox="0 0 240 16" preserveAspectRatio="none"><path d={WAVE} /></svg>
-        <svg className="bv-bucket-wave" viewBox="0 0 240 16" preserveAspectRatio="none"><path d={WAVE} /></svg>
-        <i className="bv-bucket-fizz" /><i className="bv-bucket-fizz" /><i className="bv-bucket-fizz" />
+    <button type="button" className={cx('bv', 'bv-bucket', 'bv-bucket-' + bucket, selected && 'bv-bucket-on', dimmed && 'bv-bucket-dim', className)} onClick={onClick} aria-pressed={selected}>
+      <span className="bv-bucket-disc" aria-hidden="true">
+        <span className="bv-bucket-well"><span className="bv-bucket-fill" /></span>
+        <span className="bv-bucket-badge"><Icon name="check" size={16} strokeWidth={3} /></span>
       </span>
-      <span className="bv-bucket-orb"><Icon name={BUCKET_ICON[bucket]} size={22} strokeWidth={2.25} /></span>
-      <span className="heading bv-bucket-label">{b.label}</span>
-      <span className="bv-bucket-check">{selected ? <Icon name="check" size={16} strokeWidth={3} /> : null}</span>
+      <span className="body bv-bucket-label">{b.label}</span>
     </button>
-  );
-}
-
-/** Soft colour field behind glass: the Bev's own colour with `primary` and `fizz`, blurred. Wraps the gut check. */
-export function BevGlow({ color, children, className, style }) {
-  return (
-    <div className={cx('bv', 'bv-glow', className)} style={Object.assign({}, style, color ? { '--glow': color } : null)}>
-      <span className="bv-glow-blob bv-glow-a" aria-hidden="true" />
-      <span className="bv-glow-blob bv-glow-b" aria-hidden="true" />
-      <span className="bv-glow-blob bv-glow-c" aria-hidden="true" />
-      <div className="bv-glow-content">{children}</div>
-    </div>
   );
 }
 

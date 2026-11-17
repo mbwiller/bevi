@@ -1,0 +1,87 @@
+<svg width="200" height="260" viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <radialGradient id="bev-generic-espresso-martini-shadow" cx="0.5" cy="0.5" r="0.5" fx="0.5" fy="0.5">
+            <stop offset="0" stop-color="#3c372d" stop-opacity="0.18"/>
+            <stop offset="1" stop-color="#3c372d" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="bev-generic-espresso-martini-foot" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#c6d4cc" stop-opacity="0.8"/>
+            <stop offset="0.4" stop-color="#fbfffb" stop-opacity="0.95"/>
+            <stop offset="1" stop-color="#a9bcb1" stop-opacity="0.8"/>
+        </linearGradient>
+        <linearGradient id="bev-generic-espresso-martini-stem" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#9fb3a7"/>
+            <stop offset="0.35" stop-color="#ffffff"/>
+            <stop offset="0.7" stop-color="#dbe6df"/>
+            <stop offset="1" stop-color="#93a99c"/>
+        </linearGradient>
+        <linearGradient id="bev-generic-espresso-martini-glass" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#ffffff" stop-opacity="0.65"/>
+            <stop offset="0.18" stop-color="#ffffff" stop-opacity="0.12"/>
+            <stop offset="0.65" stop-color="#ffffff" stop-opacity="0.02"/>
+            <stop offset="1" stop-color="#75867c" stop-opacity="0.35"/>
+        </linearGradient>
+        <linearGradient id="bev-generic-espresso-martini-coffee" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#0d0302"/>
+            <stop offset="0.15" stop-color="#2a120a"/>
+            <stop offset="0.3" stop-color="#4d2614"/>
+            <stop offset="0.5" stop-color="#2b130a"/>
+            <stop offset="1" stop-color="#0a0201"/>
+        </linearGradient>
+        <linearGradient id="bev-generic-espresso-martini-crema" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#8e623c"/>
+            <stop offset="0.18" stop-color="#c39468"/>
+            <stop offset="0.35" stop-color="#dcb88e"/>
+            <stop offset="0.7" stop-color="#c7996c"/>
+            <stop offset="1" stop-color="#86593a"/>
+        </linearGradient>
+        <linearGradient id="bev-generic-espresso-martini-cremaTop" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#c9a172"/>
+            <stop offset="0.35" stop-color="#e8cda5"/>
+            <stop offset="1" stop-color="#c79a6c"/>
+        </linearGradient>
+        <linearGradient id="bev-generic-espresso-martini-bean" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#7a4424"/>
+            <stop offset="0.5" stop-color="#4a2410"/>
+            <stop offset="1" stop-color="#2a1006"/>
+        </linearGradient>
+    </defs>
+    <path fill="url(#bev-generic-espresso-martini-shadow)" stroke="none" d="M 142 239 C 142 245.07513 123.19597 250 100 250 C 76.80404 250 58 245.07513 58 239 C 58 232.92485 76.80404 228 100 228 C 123.19597 228 142 232.92485 142 239 Z"/>
+    <path fill="url(#bev-generic-espresso-martini-foot)" stroke="#8ea398" stroke-opacity="0.8" d="M 136 229.6 C 136 231.13826 132.20715 232.61353 125.45585 233.70123 C 118.704544 234.78894 109.5478 235.40001 100 235.40001 C 90.4522 235.40001 81.295456 234.78894 74.54415 233.70123 C 67.79284 232.61353 63.999996 231.13826 64 229.6 C 63.999996 228.06175 67.79284 226.5865 74.54415 225.4988 C 81.295456 224.41107 90.4522 223.80002 100 223.80002 C 109.5478 223.80002 118.704544 224.41107 125.45585 225.4988 C 132.20715 226.5865 136 228.06175 136 229.6 Z"/>
+    <path fill="none" stroke="#ffffff" stroke-opacity="0.7" stroke-width="0.9" d="M 130 228.39998 C 130.00002 229.35477 126.83932 230.27045 121.21321 230.94559 C 115.58712 231.62071 107.9565 232 100 232 C 92.0435 232 84.41287 231.62071 78.78678 230.94559 C 73.16068 230.27045 69.999985 229.35477 70 228.39998 C 69.999985 227.44522 73.16068 226.52954 78.78678 225.8544 C 84.41287 225.17928 92.0435 224.79999 100 224.79999 C 107.9565 224.79999 115.58712 225.17928 121.21321 225.8544 C 126.83932 226.52954 130.00002 227.44522 130 228.39998 Z"/>
+    <path fill="url(#bev-generic-espresso-martini-stem)" stroke="#8ea398" stroke-opacity="0.8" stroke-width="0.8" d="M 97.6 120 L 102.4 120 L 102 226 Q 106 227.49998 106.4 228.39998 L 93.6 228.39998 Q 94 227.49998 98 226 Z"/>
+    <path fill="#000000" stroke="#ffffff" stroke-opacity="0.8" stroke-width="0.9" d="M 99 124 L 99 222"/>
+    <path fill="url(#bev-generic-espresso-martini-glass)" stroke="#8ea398" stroke-opacity="0.9" stroke-width="1.3" d="M 42 38 C 48 64 78 106 95.5 118.50001 L 104.5 118.50001 C 122 106 152 64 158 38 Z"/>
+    <path fill="url(#bev-generic-espresso-martini-coffee)" stroke="none" d="M 44.6 41 C 50.4 65 79.4 104.4 96.2 116.2 L 103.8 116.2 C 120.600006 104.4 149.6 65 155.4 41 Z"/>
+    <path fill="url(#bev-generic-espresso-martini-crema)" stroke="none" d="M 44.6 41 C 46.4 47.4 48.8 53.6 51.6 59.4 Q 100 69 148.4 59.4 C 151.2 53.6 153.6 47.4 155.4 41 Z"/>
+    <path fill="none" stroke="#5e3a1f" stroke-width="1.4" d="M 51.6 59.4 Q 100 69 148.4 59.4"/>
+    <path fill="none" stroke="#6b3c1f" stroke-opacity="0.5" d="M 55 65 Q 100 73 145 65"/>
+    <path fill="url(#bev-generic-espresso-martini-cremaTop)" stroke="none" d="M 155.4 41 C 155.4 45.639187 130.59657 49.4 100 49.4 C 69.40342 49.4 44.59999 45.639187 44.6 41 C 44.59999 36.36081 69.40342 32.6 100 32.6 C 130.59657 32.6 155.4 36.36081 155.4 41 Z"/>
+    <path fill="none" stroke="#b08156" d="M 155.4 41 C 155.4 45.639187 130.59657 49.4 100 49.4 C 69.40342 49.4 44.59999 45.639187 44.6 41 C 44.59999 36.36081 69.40342 32.6 100 32.6 C 130.59657 32.6 155.4 36.36081 155.4 41 Z"/>
+    <path fill="none" stroke="#f3e2c6" stroke-opacity="0.8" stroke-width="1.2" stroke-linecap="round" d="M 58 41.5 Q 66 44.5 74 42.9 M 120 44 Q 130 45 138 42"/>
+    <g transform="matrix(0.95105654 -0.309017 0.309017 0.95105654 87 40.6)">
+        <path fill="url(#bev-generic-espresso-martini-bean)" stroke="#1a0904" stroke-width="0.7" d="M 6.6 0 C 6.6 2.430053 3.6450794 4.4 0 4.4 C -3.6450794 4.4 -6.6 2.430053 -6.6 0 C -6.6 -2.430053 -3.6450794 -4.4 -0 -4.4 C 3.6450794 -4.4 6.6 -2.430053 6.6 -0 Z"/>
+        <path fill="none" stroke="#1a0904" stroke-width="1.2" d="M -5 0.6 C -2 -1.6 2 1.8 5 -0.6"/>
+        <g opacity="0.6">
+            <path fill="#a9724a" stroke="none" d="M -0.1999998 -2.2 C -0.1999998 -1.6477153 -1.2745165 -1.2 -2.6 -1.2 C -3.9254835 -1.2 -5 -1.6477153 -5 -2.2 C -5 -2.7522848 -3.9254835 -3.2 -2.6 -3.2 C -1.2745165 -3.2 -0.1999998 -2.7522848 -0.1999998 -2.2 Z"/>
+        </g>
+    </g>
+    <g transform="matrix(0.9781476 0.20791169 -0.20791169 0.9781476 101.49999 37.6)">
+        <path fill="url(#bev-generic-espresso-martini-bean)" stroke="#1a0904" stroke-width="0.7" d="M 6.6 0 C 6.6 2.430053 3.6450794 4.4 0 4.4 C -3.6450794 4.4 -6.6 2.430053 -6.6 0 C -6.6 -2.430053 -3.6450794 -4.4 -0 -4.4 C 3.6450794 -4.4 6.6 -2.430053 6.6 -0 Z"/>
+        <path fill="none" stroke="#1a0904" stroke-width="1.2" d="M -5 0.6 C -2 -1.6 2 1.8 5 -0.6"/>
+        <g opacity="0.6">
+            <path fill="#a9724a" stroke="none" d="M -0.1999998 -2.2 C -0.1999998 -1.6477153 -1.2745165 -1.2 -2.6 -1.2 C -3.9254835 -1.2 -5 -1.6477153 -5 -2.2 C -5 -2.7522848 -3.9254835 -3.2 -2.6 -3.2 C -1.2745165 -3.2 -0.1999998 -2.7522848 -0.1999998 -2.2 Z"/>
+        </g>
+    </g>
+    <g transform="matrix(0.9975641 -0.06975647 0.06975647 0.9975641 111.5 43.2)">
+        <path fill="url(#bev-generic-espresso-martini-bean)" stroke="#1a0904" stroke-width="0.7" d="M 6.6 0 C 6.6 2.430053 3.6450794 4.4 0 4.4 C -3.6450794 4.4 -6.6 2.430053 -6.6 0 C -6.6 -2.430053 -3.6450794 -4.4 -0 -4.4 C 3.6450794 -4.4 6.6 -2.430053 6.6 -0 Z"/>
+        <path fill="none" stroke="#1a0904" stroke-width="1.2" d="M -5 0.6 C -2 -1.6 2 1.8 5 -0.6"/>
+        <g opacity="0.6">
+            <path fill="#a9724a" stroke="none" d="M -0.1999998 -2.2 C -0.1999998 -1.6477153 -1.2745165 -1.2 -2.6 -1.2 C -3.9254835 -1.2 -5 -1.6477153 -5 -2.2 C -5 -2.7522848 -3.9254835 -3.2 -2.6 -3.2 C -1.2745165 -3.2 -0.1999998 -2.7522848 -0.1999998 -2.2 Z"/>
+        </g>
+    </g>
+    <path fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="2.4" stroke-linecap="round" d="M 48.5 47 C 54 66 70 88 86 104"/>
+    <path fill="none" stroke="#ffffff" stroke-opacity="0.3" stroke-width="1.4" stroke-linecap="round" d="M 153 48 C 148 64 136 82 120 98"/>
+    <path fill="none" stroke="#f6fbf6" stroke-width="1.8" d="M 158 38 C 158 42.970562 132.03252 47 100 47 C 67.96748 47 42 42.970562 42 38 C 42 33.029438 67.96748 29 100 29 C 132.03252 29 158 33.029438 158 38 Z"/>
+    <path fill="none" stroke="#8ea398" stroke-opacity="0.75" stroke-width="0.8" d="M 158.6 38 C 158.6 43.19148 132.36389 47.4 100 47.4 C 67.63611 47.4 41.399994 43.19148 41.4 38 C 41.4 32.808525 67.636116 28.6 100 28.6 C 132.36389 28.6 158.6 32.80852 158.6 38 Z"/>
+</svg>

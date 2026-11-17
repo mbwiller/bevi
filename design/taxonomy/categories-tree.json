@@ -1,0 +1,542 @@
+[
+  {
+    "id": "soda",
+    "name": "Soda",
+    "parentId": null,
+    "sortOrder": 1,
+    "isAlcoholic": false,
+    "emoji": "🥤"
+  },
+  {
+    "id": "diet_soda",
+    "name": "Diet Soda",
+    "parentId": null,
+    "sortOrder": 2,
+    "isAlcoholic": false,
+    "emoji": "🥤"
+  },
+  {
+    "id": "juice",
+    "name": "Juice",
+    "parentId": null,
+    "sortOrder": 3,
+    "isAlcoholic": false,
+    "emoji": "🧃"
+  },
+  {
+    "id": "water",
+    "name": "Water",
+    "parentId": null,
+    "sortOrder": 4,
+    "isAlcoholic": false,
+    "emoji": "💧"
+  },
+  {
+    "id": "sparkling_water",
+    "name": "Sparkling Water",
+    "parentId": null,
+    "sortOrder": 5,
+    "isAlcoholic": false,
+    "emoji": "✨"
+  },
+  {
+    "id": "energy",
+    "name": "Energy Drinks",
+    "parentId": null,
+    "sortOrder": 6,
+    "isAlcoholic": false,
+    "emoji": "⚡"
+  },
+  {
+    "id": "coffee",
+    "name": "Coffee",
+    "parentId": null,
+    "sortOrder": 7,
+    "isAlcoholic": false,
+    "emoji": "☕"
+  },
+  {
+    "id": "tea",
+    "name": "Tea",
+    "parentId": null,
+    "sortOrder": 8,
+    "isAlcoholic": false,
+    "emoji": "🍵"
+  },
+  {
+    "id": "boba",
+    "name": "Boba",
+    "parentId": null,
+    "sortOrder": 9,
+    "isAlcoholic": false,
+    "emoji": "🧋"
+  },
+  {
+    "id": "sports",
+    "name": "Sports Drinks",
+    "parentId": null,
+    "sortOrder": 10,
+    "isAlcoholic": false,
+    "emoji": "🏃"
+  },
+  {
+    "id": "smoothie",
+    "name": "Smoothie",
+    "parentId": null,
+    "sortOrder": 11,
+    "isAlcoholic": false,
+    "emoji": "🍓"
+  },
+  {
+    "id": "beer",
+    "name": "Beer",
+    "parentId": null,
+    "sortOrder": 12,
+    "isAlcoholic": true,
+    "emoji": "🍺"
+  },
+  {
+    "id": "wine",
+    "name": "Wine",
+    "parentId": null,
+    "sortOrder": 13,
+    "isAlcoholic": true,
+    "emoji": "🍷"
+  },
+  {
+    "id": "spirits_cocktails",
+    "name": "Spirits & Cocktails",
+    "parentId": null,
+    "sortOrder": 14,
+    "isAlcoholic": true,
+    "emoji": "🍸"
+  },
+  {
+    "id": "other",
+    "name": "Other",
+    "parentId": null,
+    "sortOrder": 15,
+    "isAlcoholic": false,
+    "emoji": "🍹"
+  },
+  {
+    "id": "cola",
+    "name": "Cola",
+    "parentId": "soda",
+    "sortOrder": 1,
+    "isAlcoholic": false
+  },
+  {
+    "id": "lemon_lime",
+    "name": "Lemon-lime soda",
+    "parentId": "soda",
+    "sortOrder": 2,
+    "isAlcoholic": false
+  },
+  {
+    "id": "citrus_soda",
+    "name": "Citrus soda",
+    "parentId": "soda",
+    "sortOrder": 3,
+    "isAlcoholic": false
+  },
+  {
+    "id": "orange_soda",
+    "name": "Orange soda",
+    "parentId": "soda",
+    "sortOrder": 4,
+    "isAlcoholic": false
+  },
+  {
+    "id": "fruit_soda",
+    "name": "Fruit soda",
+    "parentId": "soda",
+    "sortOrder": 5,
+    "isAlcoholic": false
+  },
+  {
+    "id": "root_beer",
+    "name": "Root beer",
+    "parentId": "soda",
+    "sortOrder": 6,
+    "isAlcoholic": false
+  },
+  {
+    "id": "ginger_ale",
+    "name": "Ginger ale & ginger beer",
+    "parentId": "soda",
+    "sortOrder": 7,
+    "isAlcoholic": false
+  },
+  {
+    "id": "cream_soda",
+    "name": "Cream soda",
+    "parentId": "soda",
+    "sortOrder": 8,
+    "isAlcoholic": false
+  },
+  {
+    "id": "diet_cola",
+    "name": "Diet cola",
+    "parentId": "diet_soda",
+    "sortOrder": 1,
+    "isAlcoholic": false
+  },
+  {
+    "id": "diet_lemon_lime",
+    "name": "Diet lemon-lime soda",
+    "parentId": "diet_soda",
+    "sortOrder": 2,
+    "isAlcoholic": false
+  },
+  {
+    "id": "diet_citrus_soda",
+    "name": "Diet citrus soda",
+    "parentId": "diet_soda",
+    "sortOrder": 3,
+    "isAlcoholic": false
+  },
+  {
+    "id": "diet_orange_soda",
+    "name": "Diet orange soda",
+    "parentId": "diet_soda",
+    "sortOrder": 4,
+    "isAlcoholic": false
+  },
+  {
+    "id": "diet_fruit_soda",
+    "name": "Diet fruit soda",
+    "parentId": "diet_soda",
+    "sortOrder": 5,
+    "isAlcoholic": false
+  },
+  {
+    "id": "diet_root_beer",
+    "name": "Diet root beer",
+    "parentId": "diet_soda",
+    "sortOrder": 6,
+    "isAlcoholic": false
+  },
+  {
+    "id": "diet_ginger_ale",
+    "name": "Diet ginger ale",
+    "parentId": "diet_soda",
+    "sortOrder": 7,
+    "isAlcoholic": false
+  },
+  {
+    "id": "diet_cream_soda",
+    "name": "Diet cream soda",
+    "parentId": "diet_soda",
+    "sortOrder": 8,
+    "isAlcoholic": false
+  },
+  {
+    "id": "orange_juice",
+    "name": "Orange & grapefruit juice",
+    "parentId": "juice",
+    "sortOrder": 1,
+    "isAlcoholic": false
+  },
+  {
+    "id": "apple_juice",
+    "name": "Apple juice",
+    "parentId": "juice",
+    "sortOrder": 2,
+    "isAlcoholic": false
+  },
+  {
+    "id": "grape_cranberry_juice",
+    "name": "Grape & cranberry juice",
+    "parentId": "juice",
+    "sortOrder": 3,
+    "isAlcoholic": false
+  },
+  {
+    "id": "lemonade",
+    "name": "Lemonade & limeade",
+    "parentId": "juice",
+    "sortOrder": 4,
+    "isAlcoholic": false
+  },
+  {
+    "id": "fruit_juice_blend",
+    "name": "Fruit punch & juice blends",
+    "parentId": "juice",
+    "sortOrder": 5,
+    "isAlcoholic": false
+  },
+  {
+    "id": "green_juice",
+    "name": "Green & vegetable juice",
+    "parentId": "juice",
+    "sortOrder": 6,
+    "isAlcoholic": false
+  },
+  {
+    "id": "plain_sparkling_water",
+    "name": "Plain sparkling water",
+    "parentId": "sparkling_water",
+    "sortOrder": 1,
+    "isAlcoholic": false
+  },
+  {
+    "id": "citrus_sparkling_water",
+    "name": "Citrus sparkling water",
+    "parentId": "sparkling_water",
+    "sortOrder": 2,
+    "isAlcoholic": false
+  },
+  {
+    "id": "fruit_sparkling_water",
+    "name": "Fruit sparkling water",
+    "parentId": "sparkling_water",
+    "sortOrder": 3,
+    "isAlcoholic": false
+  },
+  {
+    "id": "classic_energy",
+    "name": "Classic energy drinks",
+    "parentId": "energy",
+    "sortOrder": 1,
+    "isAlcoholic": false
+  },
+  {
+    "id": "performance_energy",
+    "name": "Zero-sugar performance energy",
+    "parentId": "energy",
+    "sortOrder": 2,
+    "isAlcoholic": false
+  },
+  {
+    "id": "energy_shot",
+    "name": "Energy shots",
+    "parentId": "energy",
+    "sortOrder": 3,
+    "isAlcoholic": false
+  },
+  {
+    "id": "brewed_coffee",
+    "name": "Brewed coffee & espresso",
+    "parentId": "coffee",
+    "sortOrder": 1,
+    "isAlcoholic": false
+  },
+  {
+    "id": "cold_brew",
+    "name": "Cold brew & iced coffee",
+    "parentId": "coffee",
+    "sortOrder": 2,
+    "isAlcoholic": false
+  },
+  {
+    "id": "latte",
+    "name": "Lattes & cappuccinos",
+    "parentId": "coffee",
+    "sortOrder": 3,
+    "isAlcoholic": false
+  },
+  {
+    "id": "flavored_latte",
+    "name": "Mochas & flavoured lattes",
+    "parentId": "coffee",
+    "sortOrder": 4,
+    "isAlcoholic": false
+  },
+  {
+    "id": "blended_coffee",
+    "name": "Frappuccinos & blended coffee",
+    "parentId": "coffee",
+    "sortOrder": 5,
+    "isAlcoholic": false
+  },
+  {
+    "id": "hot_tea",
+    "name": "Hot tea",
+    "parentId": "tea",
+    "sortOrder": 1,
+    "isAlcoholic": false
+  },
+  {
+    "id": "iced_tea",
+    "name": "Iced tea",
+    "parentId": "tea",
+    "sortOrder": 2,
+    "isAlcoholic": false
+  },
+  {
+    "id": "green_tea",
+    "name": "Green tea",
+    "parentId": "tea",
+    "sortOrder": 3,
+    "isAlcoholic": false
+  },
+  {
+    "id": "matcha",
+    "name": "Matcha",
+    "parentId": "tea",
+    "sortOrder": 4,
+    "isAlcoholic": false
+  },
+  {
+    "id": "chai",
+    "name": "Chai",
+    "parentId": "tea",
+    "sortOrder": 5,
+    "isAlcoholic": false
+  },
+  {
+    "id": "yerba_mate",
+    "name": "Yerba mate",
+    "parentId": "tea",
+    "sortOrder": 6,
+    "isAlcoholic": false
+  },
+  {
+    "id": "classic_milk_tea",
+    "name": "Classic milk tea",
+    "parentId": "boba",
+    "sortOrder": 1,
+    "isAlcoholic": false
+  },
+  {
+    "id": "flavored_milk_tea",
+    "name": "Taro & flavoured milk tea",
+    "parentId": "boba",
+    "sortOrder": 2,
+    "isAlcoholic": false
+  },
+  {
+    "id": "boba_fruit_tea",
+    "name": "Fruit tea",
+    "parentId": "boba",
+    "sortOrder": 3,
+    "isAlcoholic": false
+  },
+  {
+    "id": "fruit_smoothie",
+    "name": "Fruit smoothie",
+    "parentId": "smoothie",
+    "sortOrder": 1,
+    "isAlcoholic": false
+  },
+  {
+    "id": "green_smoothie",
+    "name": "Green smoothie",
+    "parentId": "smoothie",
+    "sortOrder": 2,
+    "isAlcoholic": false
+  },
+  {
+    "id": "protein_smoothie",
+    "name": "Protein smoothie",
+    "parentId": "smoothie",
+    "sortOrder": 3,
+    "isAlcoholic": false
+  },
+  {
+    "id": "lager",
+    "name": "Lager",
+    "parentId": "beer",
+    "sortOrder": 1,
+    "isAlcoholic": true
+  },
+  {
+    "id": "ale",
+    "name": "Ales, stouts & wheat beers",
+    "parentId": "beer",
+    "sortOrder": 2,
+    "isAlcoholic": true
+  },
+  {
+    "id": "hard_seltzer",
+    "name": "Hard seltzer",
+    "parentId": "beer",
+    "sortOrder": 3,
+    "isAlcoholic": true
+  },
+  {
+    "id": "red_wine",
+    "name": "Red wine",
+    "parentId": "wine",
+    "sortOrder": 1,
+    "isAlcoholic": true
+  },
+  {
+    "id": "white_wine",
+    "name": "White wine",
+    "parentId": "wine",
+    "sortOrder": 2,
+    "isAlcoholic": true
+  },
+  {
+    "id": "rose_wine",
+    "name": "Rosé",
+    "parentId": "wine",
+    "sortOrder": 3,
+    "isAlcoholic": true
+  },
+  {
+    "id": "sparkling_wine",
+    "name": "Sparkling wine",
+    "parentId": "wine",
+    "sortOrder": 4,
+    "isAlcoholic": true
+  },
+  {
+    "id": "vodka",
+    "name": "Vodka & vodka cocktails",
+    "parentId": "spirits_cocktails",
+    "sortOrder": 1,
+    "isAlcoholic": true
+  },
+  {
+    "id": "tequila",
+    "name": "Tequila & agave cocktails",
+    "parentId": "spirits_cocktails",
+    "sortOrder": 2,
+    "isAlcoholic": true
+  },
+  {
+    "id": "whiskey",
+    "name": "Whiskey & whiskey cocktails",
+    "parentId": "spirits_cocktails",
+    "sortOrder": 3,
+    "isAlcoholic": true
+  },
+  {
+    "id": "rum",
+    "name": "Rum & rum cocktails",
+    "parentId": "spirits_cocktails",
+    "sortOrder": 4,
+    "isAlcoholic": true
+  },
+  {
+    "id": "kombucha",
+    "name": "Kombucha",
+    "parentId": "other",
+    "sortOrder": 1,
+    "isAlcoholic": false
+  },
+  {
+    "id": "coconut_water",
+    "name": "Coconut water",
+    "parentId": "other",
+    "sortOrder": 2,
+    "isAlcoholic": false
+  },
+  {
+    "id": "aguas_frescas",
+    "name": "Horchata & aguas frescas",
+    "parentId": "other",
+    "sortOrder": 3,
+    "isAlcoholic": false
+  },
+  {
+    "id": "cultured_milk_drink",
+    "name": "Yogurt & cultured milk drinks",
+    "parentId": "other",
+    "sortOrder": 4,
+    "isAlcoholic": false
+  }
+]

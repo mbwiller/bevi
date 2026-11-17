@@ -1,0 +1,119 @@
+name: graph-neighbours
+
+# A-16 (2): the nightly rebuild of public.user_neighbors
+# (scripts/graph/build-neighbours.ts), Stage 3 of
+# docs/graph_db_implementation.md.
+#
+# NO NEO4J, for the same reason graph-edges.yml needs none: every float formula
+# is pure TypeScript in @bevi/ranking (M-28, #131), so the doc's RANKED edges,
+# HMAC pseudonyms and Cypher aggregation buy nothing at this size. They stay
+# with A-16's deferred steps 6, 8 and 9. No NEO4J_* variable is read, so a
+# paused Aura instance cannot stop taste neighbours from being rebuilt.
+#
+# A SEPARATE WORKFLOW FROM graph-edges, on purpose. The two jobs share their
+# credentials and nothing else: edges depend on the CATALOG (a new Bev changes
+# them, a new ranking does not), neighbours depend on the RANKINGS (the
+# reverse). Folding them into one workflow would mean a failed edge rebuild
+# also skipped the neighbours, and the schedules want to differ -- neighbours
+# runs after edges so a human reading the morning's two logs sees the catalog
+# settle before the people do.
+#
+# ---------------------------------------------------------------------------
+# CREDENTIALS
+# ---------------------------------------------------------------------------
+# Exactly the two graph-edges.yml uses, and both are already set (that workflow
+# has run green nightly since 2026-10-25):
+#
+#   SUPABASE_SERVICE_ROLE_KEY   repository SECRET. Bypasses RLS, which is what
+#                               lets this job call ranking_z_inputs() -- a
+#                               service-role-only RPC that returns EVERY user's
+#                               rankings, because z-scores are measured against
+#                               the global mean.
+#   SUPABASE_URL                repository VARIABLE (`vars`); a secret of the
+#                               same name is accepted as a fallback.
+#
+# A MISSING VALUE FAILS LOUDLY, as in graph-edges.yml: graph-keepalive.yml
+# reported success every day for eight days while doing nothing, because its
+# script exits 0 when its secrets are unset. There is no skip path here.
+
+on:
+  schedule:
+    # 05:20 UTC, nightly: 30 minutes after graph-edges (04:50), which is itself
+    # 30 minutes after refresh_all_user_category_stats (04:20). Neighbours do
+    # not read bev_edges, so this ordering is for the humans reading the logs,
+    # not a data dependency -- either job can run alone.
+    - cron: "20 5 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Read and score every pair, write nothing, print the report"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Two rebuilds at once would both call replace_user_neighbors; the second would
+# win and the first would have been wasted work. Never cancel in progress: it is
+# one transaction, and cancelling mid-write is the one way to get a
+# half-replaced table.
+concurrency:
+  group: graph-neighbours
+  cancel-in-progress: false
+
+jobs:
+  build-neighbours:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: credentials are present
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL || secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          missing=""
+          [ -n "$SUPABASE_URL" ] || missing="$missing SUPABASE_URL"
+          [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] || missing="$missing SUPABASE_SERVICE_ROLE_KEY"
+          if [ -n "$missing" ]; then
+            echo "::error::graph-neighbours cannot run: missing$missing."
+            echo ""
+            echo "Both are already set for graph-edges.yml, so if this fires, one was removed:"
+            echo "  gh secret set SUPABASE_SERVICE_ROLE_KEY   # the project's service-role key"
+            echo "  gh variable set SUPABASE_URL              # e.g. https://<project-ref>.supabase.co"
+            echo ""
+            echo "This step fails on purpose rather than skipping. See docs/graph.md."
+            exit 1
+          fi
+          echo "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set."
+
+      # `npm ci` is needed even though the script has no dependencies of its
+      # own: it imports @bevi/ranking, which npm workspaces expose as a symlink
+      # in node_modules.
+      - run: npm ci
+
+      # The pure half, tested without a database. Cheap, and it catches a bad
+      # @bevi/ranking bump before it reaches user_neighbors.
+      - run: npm run test:scripts
+
+      - name: build neighbours
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL || secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        # `if`, not `[ … ] && …`: a false test is a non-zero exit status, and
+        # GitHub runs these steps under `bash -e`, so the shorthand would fail
+        # the step whenever the box was left unchecked.
+        run: |
+          args=""
+          if [ "$DRY_RUN" = "true" ]; then args="$args --dry-run"; fi
+          echo "running: npm run graph:neighbours --$args"
+          npm run graph:neighbours -- $args

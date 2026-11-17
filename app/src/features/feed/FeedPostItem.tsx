@@ -1,8 +1,9 @@
-import type { FeedItem } from '@bevi/shared';
+import type { FeedItem, Profile } from '@bevi/shared';
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { FeedPost } from '@/components/FeedPost';
+import { FeedPost, POST_AVATAR } from '@/components/FeedPost';
+import { usePressFeedback, type PressFeedback } from '@/components/PressFeedback';
 import { spacing, type, useTheme } from '@/theme';
 
 export interface FeedPostItemProps {
@@ -23,13 +24,10 @@ export interface FeedPostItemProps {
   onOpenActor?: () => void;
 }
 
-/** FeedPost draws a 60pt avatar at the post's top-left padding; the actor target sits over it. */
-const AVATAR = 60;
-
 /**
- * One feed post. FeedPost has no actor handler yet (see the PR's contract/component gaps), so a
- * 60pt transparent target over the avatar opens the actor's profile. The divider is drawn here so a
- * like error sits inside the post, above it.
+ * One feed post. FeedPost has no prop for opening the actor, so a transparent target over its
+ * avatar (`POST_AVATAR`, 44pt, at the post's top-left padding) opens the actor's profile. The
+ * divider is drawn here so a like error sits inside the post, above it.
  */
 export const FeedPostItem = memo(function FeedPostItem({
   item,
@@ -43,6 +41,8 @@ export const FeedPostItem = memo(function FeedPostItem({
   onOpenActor,
 }: FeedPostItemProps) {
   const { colors } = useTheme();
+  // The actor link is transparent: while it is held, the avatar under it gives way (Press).
+  const actorPress = usePressFeedback();
   return (
     <View testID={`feed-post-${item.id}`} style={[styles.item, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
       <FeedPost
@@ -59,10 +59,13 @@ export const FeedPostItem = memo(function FeedPostItem({
         onLike={onLike}
         comments={item.comments}
         commentCount={item.commentCount}
+        alsoBevdBy={alsoBevdProfiles(item)}
+        alsoBevdCount={item.alsoBevdCount ?? 0}
         onComment={onComment}
         onRank={onRank}
         onSave={onSave}
         onOpen={onOpenBev}
+        avatarPressStyle={onOpenActor ? actorPress.style : undefined}
         divider={false}
       />
       {likeError ? (
@@ -70,20 +73,42 @@ export const FeedPostItem = memo(function FeedPostItem({
           {likeError}
         </Text>
       ) : null}
-      {onOpenActor ? (
-        <Pressable
-          onPress={onOpenActor}
-          accessibilityRole="link"
-          accessibilityLabel={you ? 'Your profile' : `${item.actor.displayName}, @${item.actor.handle}`}
-          style={styles.actor}
-        />
-      ) : null}
+      {onOpenActor ? <ActorLink label={you ? 'Your profile' : actorLabel(item.actor)} onPress={onOpenActor} press={actorPress} /> : null}
     </View>
   );
 });
 
+/**
+ * "Bev'd it too": the people FeedPost names, from the post's `alsoBevdBy` (people you follow who
+ * ranked the Bev, newest first). FeedPost draws their names and avatars, not their scores. The
+ * contract always sends the list; `?? []` keeps a post in an older shape (a mock, a fixture, a
+ * cached object from before 2.12.0) from taking the Feed down.
+ */
+const alsoBevdProfiles = (item: FeedItem) => (item.alsoBevdBy ?? []).map((f) => f.profile);
+
+/** The actor link's accessible name: "Friend A, @friend_a". */
+export const actorLabel = (actor: Pick<Profile, 'displayName' | 'handle'>) => `${actor.displayName}, @${actor.handle}`;
+
+/**
+ * The transparent target over a FeedPost's avatar that opens the actor's profile. Inside the post's
+ * wrapper View. `press` drives the avatar's Press feedback (give the same object's `style` to the
+ * FeedPost's `avatarPressStyle`).
+ */
+export function ActorLink({ label, onPress, press }: { label: string; onPress: () => void; press?: PressFeedback }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={press?.onPressIn}
+      onPressOut={press?.onPressOut}
+      accessibilityRole="link"
+      accessibilityLabel={label}
+      style={styles.actor}
+    />
+  );
+}
+
 const styles = StyleSheet.create({
   item: { borderBottomWidth: 1 },
   error: { paddingHorizontal: spacing.gutter, paddingBottom: spacing.md },
-  actor: { position: 'absolute', top: spacing.lg, left: spacing.gutter, width: AVATAR, height: AVATAR, borderRadius: AVATAR / 2 },
+  actor: { position: 'absolute', top: spacing.lg, left: spacing.gutter, width: POST_AVATAR, height: POST_AVATAR, borderRadius: POST_AVATAR / 2 },
 });

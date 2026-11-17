@@ -1,0 +1,241 @@
+// S-21 + Stage 4: `toViewerSnapshot` maps the two keys get_prediction_snapshot()
+// gained in 20261101000100 -- `edges` ([src, dst, w]) onto `snapshot.edges` and
+// `userNeighbors` ([alias, sim, common]) onto `snapshot.userNeighbours` keyed by
+// the viewer -- and sets each field only when its key is present. The SQL side
+// is covered by supabase/tests/17_snapshot_edges_neighbours.test.sql.
+//
+// A-16 (4): the same for `bevGraph` ([bev_id, community_id, pagerank, bridge],
+// 20261110000100), mapped onto `snapshot.bevGraph` keyed by Bev id. Its SQL
+// side is supabase/tests/30_bev_graph_stats.test.sql.
+import { describe, expect, it } from 'vitest';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { toViewerSnapshot } from '../src/snapshot.ts';
+
+type SnapshotJson = Parameters<typeof toViewerSnapshot>[1];
+
+const VIEWER = '00000000-0000-4000-8000-0000000b2101';
+const BEV_A = '00000000-0000-4000-8000-00000000a001';
+const BEV_B = '00000000-0000-4000-8000-00000000a002';
+
+// `publicUrl` is the only thing the mapper asks of the client.
+const client = {
+  storage: { from: () => ({ getPublicUrl: (path: string) => ({ data: { publicUrl: `https://x/${path}` } }) }) },
+} as unknown as SupabaseClient;
+
+function baseJson(): SnapshotJson {
+  return {
+    generatedAt: '2026-11-01T00:00:00Z',
+    viewer: { id: VIEWER, timezone: 'UTC', canSeeAlcohol: true, rankingCount: 1 },
+    global: { n: 2, mean: '7.0', stddev: '1.0', byCategoryMean: { soda: '7.0' } },
+    users: [
+      [VIEWER, 1, '8.0', '0'],
+      ['u2', 1, 6, 0],
+    ],
+    categoryStats: [
+      [VIEWER, 'soda', 1, '8.0', '0'],
+      ['u2', 'soda', 1, 6, 0],
+    ],
+    bevs: [
+      [BEV_A, 'Cola', 'Brand', null, 'soda', 2, false, 'a.jpg', false, 2, '7.0', '1.0', '6.9'],
+      [BEV_B, 'Lemon Soda', 'Brand', 'lemon', 'soda', 1, true, null, false, 0, null, null, null],
+    ],
+    rankings: [
+      [VIEWER, BEV_A, '8.00'],
+      ['u2', BEV_A, 6],
+    ],
+  };
+}
+
+describe('toViewerSnapshot: edges and userNeighbors', () => {
+  it('sets neither field when the keys are absent (a pre-S-21 payload)', () => {
+    const { snapshot } = toViewerSnapshot(client, baseJson());
+    expect('edges' in snapshot).toBe(false);
+    expect('userNeighbours' in snapshot).toBe(false);
+  });
+
+  it('sets neither field when the keys are null', () => {
+    const { snapshot } = toViewerSnapshot(client, { ...baseJson(), edges: null, userNeighbors: null });
+    expect('edges' in snapshot).toBe(false);
+    expect('userNeighbours' in snapshot).toBe(false);
+  });
+
+  it('maps edges: [] to an empty array (provided, none stored)', () => {
+    const { snapshot } = toViewerSnapshot(client, { ...baseJson(), edges: [] });
+    expect(snapshot.edges).toEqual([]);
+    expect('userNeighbours' in snapshot).toBe(false);
+  });
+
+  it('maps [src, dst, w] to { a, b, w } with a numeric weight', () => {
+    const { snapshot } = toViewerSnapshot(client, {
+      ...baseJson(),
+      edges: [
+        [BEV_A, BEV_B, '0.9001'],
+        [BEV_A, '00000000-0000-4000-8000-00000000a003', 0.5],
+      ],
+    });
+    expect(snapshot.edges).toEqual([
+      { a: BEV_A, b: BEV_B, w: 0.9001 },
+      { a: BEV_A, b: '00000000-0000-4000-8000-00000000a003', w: 0.5 },
+    ]);
+    expect(typeof snapshot.edges![0]!.w).toBe('number');
+  });
+
+  it('maps userNeighbors: [] to { [viewer]: [] }', () => {
+    const { snapshot } = toViewerSnapshot(client, { ...baseJson(), userNeighbors: [] });
+    expect(snapshot.userNeighbours).toEqual({ [VIEWER]: [] });
+    expect('edges' in snapshot).toBe(false);
+  });
+
+  it('maps [alias, sim, common] to { userId, sim, common } under the viewer, sim as a number', () => {
+    const { snapshot } = toViewerSnapshot(client, {
+      ...baseJson(),
+      userNeighbors: [
+        ['u2', '0.9500', 1],
+        ['u5', 0.8, 2],
+      ],
+    });
+    expect(snapshot.userNeighbours).toEqual({
+      [VIEWER]: [
+        { userId: 'u2', sim: 0.95, common: 1 },
+        { userId: 'u5', sim: 0.8, common: 2 },
+      ],
+    });
+    const rows = snapshot.userNeighbours![VIEWER]!;
+    expect(typeof rows[0]!.sim).toBe('number');
+    expect(Number.isInteger(rows[0]!.common)).toBe(true);
+  });
+
+  it('leaves users and rankings unchanged when the new keys are present', () => {
+    const plain = toViewerSnapshot(client, baseJson());
+    const extended = toViewerSnapshot(client, {
+      ...baseJson(),
+      edges: [[BEV_A, BEV_B, '0.9001']],
+      userNeighbors: [['u2', '0.9500', 1]],
+    });
+    expect(extended.snapshot.users).toEqual(plain.snapshot.users);
+    expect(extended.snapshot.rankings).toEqual(plain.snapshot.rankings);
+    expect(extended.snapshot.bevs).toEqual(plain.snapshot.bevs);
+    expect(extended.snapshot.global).toEqual(plain.snapshot.global);
+    expect(extended.viewer).toEqual(plain.viewer);
+    expect([...extended.summaries]).toEqual([...plain.summaries]);
+  });
+});
+
+describe('toViewerSnapshot: bevGraph', () => {
+  const COMMUNITY_A = 'c_0123456789abcdef';
+  const COMMUNITY_B = 'c_fedcba9876543210';
+
+  it('does not set the field when the key is absent (a payload from before 20261110000100)', () => {
+    const { snapshot } = toViewerSnapshot(client, baseJson());
+    expect('bevGraph' in snapshot).toBe(false);
+  });
+
+  it('does not set the field when the key is null', () => {
+    const { snapshot } = toViewerSnapshot(client, { ...baseJson(), bevGraph: null });
+    expect('bevGraph' in snapshot).toBe(false);
+  });
+
+  it('maps bevGraph: [] to {} (provided, and no Bev has stats yet)', () => {
+    const { snapshot } = toViewerSnapshot(client, { ...baseJson(), bevGraph: [] });
+    expect(snapshot.bevGraph).toEqual({});
+    expect('bevGraph' in snapshot).toBe(true);
+    expect('edges' in snapshot).toBe(false);
+    expect('userNeighbours' in snapshot).toBe(false);
+  });
+
+  it('maps [bev_id, community_id, pagerank, bridge] to { community, pagerank, bridge } by Bev id', () => {
+    const { snapshot } = toViewerSnapshot(client, {
+      ...baseJson(),
+      bevGraph: [
+        [BEV_A, COMMUNITY_A, 0.00432112, 0.1135],
+        [BEV_B, COMMUNITY_B, 0.0026, 0],
+      ],
+    });
+    expect(snapshot.bevGraph).toEqual({
+      [BEV_A]: { community: COMMUNITY_A, pagerank: 0.00432112, bridge: 0.1135 },
+      [BEV_B]: { community: COMMUNITY_B, pagerank: 0.0026, bridge: 0 },
+    });
+    // Exactly the three fields of BevGraphStats: nothing else rides along.
+    expect(Object.keys(snapshot.bevGraph![BEV_A]!).sort()).toEqual(['bridge', 'community', 'pagerank']);
+  });
+
+  it('converts numeric strings to numbers, and keeps the community id a string', () => {
+    const { snapshot } = toViewerSnapshot(client, {
+      ...baseJson(),
+      bevGraph: [
+        [BEV_A, COMMUNITY_A, '0.00432112', '0.1135'],
+        [BEV_B, COMMUNITY_A, '0.0026', '0'],
+      ],
+    });
+    const a = snapshot.bevGraph![BEV_A]!;
+    const b = snapshot.bevGraph![BEV_B]!;
+    expect(a).toEqual({ community: COMMUNITY_A, pagerank: 0.00432112, bridge: 0.1135 });
+    expect(b).toEqual({ community: COMMUNITY_A, pagerank: 0.0026, bridge: 0 });
+    for (const stats of [a, b]) {
+      expect(typeof stats.pagerank).toBe('number');
+      expect(typeof stats.bridge).toBe('number');
+      expect(typeof stats.community).toBe('string');
+    }
+    // Two Bevs of one community carry the same id: equality is all a client may use it for.
+    expect(a.community).toBe(b.community);
+  });
+
+  it('keeps a tuple for a Bev that is not in `bevs` (the package ignores it) and leaves every other field unchanged', () => {
+    const plain = toViewerSnapshot(client, baseJson());
+    const stray = '00000000-0000-4000-8000-00000000a009';
+    const extended = toViewerSnapshot(client, {
+      ...baseJson(),
+      bevGraph: [
+        [BEV_A, COMMUNITY_A, 0.6, 0],
+        [stray, COMMUNITY_B, 0.4, 0],
+      ],
+    });
+    expect(Object.keys(extended.snapshot.bevGraph!)).toEqual([BEV_A, stray]);
+    expect(extended.snapshot.users).toEqual(plain.snapshot.users);
+    expect(extended.snapshot.rankings).toEqual(plain.snapshot.rankings);
+    expect(extended.snapshot.bevs).toEqual(plain.snapshot.bevs);
+    expect(extended.snapshot.global).toEqual(plain.snapshot.global);
+    expect(extended.viewer).toEqual(plain.viewer);
+    expect([...extended.summaries]).toEqual([...plain.summaries]);
+  });
+
+  it('maps all three optional keys independently when all are present', () => {
+    const { snapshot } = toViewerSnapshot(client, {
+      ...baseJson(),
+      edges: [[BEV_A, BEV_B, '0.9001']],
+      userNeighbors: [['u2', '0.9500', 1]],
+      bevGraph: [[BEV_A, COMMUNITY_A, 1, 0]],
+    });
+    expect(snapshot.edges).toEqual([{ a: BEV_A, b: BEV_B, w: 0.9001 }]);
+    expect(snapshot.userNeighbours).toEqual({ [VIEWER]: [{ userId: 'u2', sim: 0.95, common: 1 }] });
+    expect(snapshot.bevGraph).toEqual({ [BEV_A]: { community: COMMUNITY_A, pagerank: 1, bridge: 0 } });
+  });
+});
+
+// Contract 2.13.0 (20261112000300): each `bevs` tuple gains a 14th element, the
+// icon path, which becomes the Bev's summary iconUrl in the bev-icons bucket.
+describe('toViewerSnapshot: the icon path on each Bev', () => {
+  const byBucket = {
+    storage: {
+      from: (bucket: string) => ({ getPublicUrl: (path: string) => ({ data: { publicUrl: `https://cdn/${bucket}/${path}` } }) }),
+    },
+  } as unknown as SupabaseClient;
+
+  it('maps a 14th element to iconUrl, and a null one to null', () => {
+    const json = baseJson();
+    json.bevs = [
+      [BEV_A, 'Cola', 'Brand', null, 'soda', 2, false, 'a.jpg', false, 2, '7.0', '1.0', '6.9', 'cola.0123456789abcdef.svg'],
+      [BEV_B, 'Lemon Soda', 'Brand', 'lemon', 'soda', 1, true, null, false, 0, null, null, null, null],
+    ];
+    const { summaries } = toViewerSnapshot(byBucket, json);
+    expect(summaries.get(BEV_A)?.iconUrl).toBe('https://cdn/bev-icons/cola.0123456789abcdef.svg');
+    expect(summaries.get(BEV_A)?.photoUrl).toBe('https://cdn/bev-photos/a.jpg');
+    expect(summaries.get(BEV_B)?.iconUrl).toBeNull();
+  });
+
+  it('maps a 13-element tuple (a payload from before 20261112000300) to a null iconUrl', () => {
+    const { summaries } = toViewerSnapshot(byBucket, baseJson());
+    expect(summaries.get(BEV_A)?.iconUrl).toBeNull();
+    expect(summaries.get(BEV_B)?.iconUrl).toBeNull();
+  });
+});

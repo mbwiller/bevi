@@ -46,6 +46,22 @@ export type ProfileRow = Profile & {
   isFollowing: boolean;
 };
 
+/**
+ * A suggested person with the social proof for the suggestion ("Followed by
+ * ana and 3 others"), from `follows.suggested`. The people behind `followedBy`
+ * are the ones the caller follows who follow this person, so neither the
+ * caller nor the suggested person is ever among them.
+ */
+export type SuggestedProfile = ProfileRow & {
+  /**
+   * At most two of them, the one who followed this person most recently
+   * first. Empty when nobody the caller follows does.
+   */
+  followedBy: Profile[];
+  /** How many there are in all, so `followedByCount - followedBy.length` is the "and N others". */
+  followedByCount: number;
+};
+
 export interface ProfileStats {
   followers: number;
   following: number;
@@ -58,7 +74,15 @@ export interface ProfileStats {
   streakAliveToday: boolean;
 }
 
-/** Category → icon is mapped client-side by the design system, so there is no icon field. */
+/**
+ * One of the 15 top-level categories. Category → icon is mapped client-side by
+ * the design system, so there is no icon field.
+ *
+ * `categories.list()` returns only these, never a leaf of the finer taxonomy
+ * (A-13/D-04) — `CategoryId` stays a closed union of 15 and the app's
+ * `Record<CategoryId, …>` maps stay exhaustive. The leaves are
+ * {@link CategoryNode}, from `categories.tree()`.
+ */
 export interface Category {
   id: CategoryId;
   name: string;
@@ -66,6 +90,48 @@ export interface Category {
   isAlcoholic: boolean;
   /** Active Bevs in the category (always age-filtered for the caller: an alcoholic category is absent, not 0). */
   bevCount: number;
+}
+
+/**
+ * One node of the two-level category taxonomy (A-13, from D-04's
+ * `design/taxonomy.md`): the 15 roots and the 60 leaves under them.
+ *
+ * `parentId` is null on a root and a root's id on a leaf. The tree is exactly
+ * two levels, so `parentId ?? id` is always the root — there is no walking to
+ * do, and the database enforces the depth.
+ *
+ * A leaf id is a plain `string`, not a `CategoryId`: the 15 are a closed union
+ * the app switches on exhaustively, while the leaves are data that D-04 expects
+ * to grow. `sortOrder` is the order among siblings (1–15 across the roots, 1–n
+ * within one root's leaves), and `emoji` belongs to the root, so it is null on
+ * every leaf — render a leaf with its root's emoji and icon.
+ */
+export interface CategoryNode {
+  /** A root is one of the 15 `CategoryId`s; a leaf is its own slug. */
+  id: string;
+  name: string;
+  /** null on a root; the root's id on a leaf. */
+  parentId: CategoryId | null;
+  sortOrder: number;
+  /** Inherited from the root, so a leaf of an alcoholic root is also true. */
+  isAlcoholic: boolean;
+  /** Only a root carries one. */
+  emoji: string | null;
+}
+
+/**
+ * A Bev's position in the finer taxonomy (`bevs.leaves()`), for M-21's
+ * category-aware placement.
+ *
+ * `leafCategoryId` is null when the Bev sits directly on its category — which
+ * is correct for the two unsplit roots (`water`, `sports`) and for a
+ * user-created Bev until something relabels it, so treat null as "no finer
+ * placement known" and fall back to `BevSummary.categoryId`. That field is
+ * unaffected by A-13: it is still one of the 15.
+ */
+export interface BevLeaf {
+  bevId: string;
+  leafCategoryId: string | null;
 }
 
 /**
@@ -101,8 +167,17 @@ export interface BevSummary {
   brand: string | null;
   flavor: string | null;
   categoryId: CategoryId;
-  /** null until a photo exists; show `BevArt` placeholder. */
+  /**
+   * The Bev's photo; null until one exists. A Bev's image is photo > icon >
+   * category art, so with none, draw `iconUrl`, and with neither, `BevArt`.
+   */
   photoUrl: string | null;
+  /**
+   * The Bev's authored icon (drawn art, not a photo), a public URL in the
+   * `bev-icons` bucket; null when it has none. Shown only when `photoUrl` is
+   * null.
+   */
+  iconUrl: string | null;
   photoStatus: PhotoStatus;
   /** Always set on reads: when the creator chose "not sure" the server estimates it. */
   priceTier: PriceTier;
@@ -110,7 +185,12 @@ export interface BevSummary {
   priceEstimated: boolean;
   /** Global number of rankings. */
   ratingCount: number;
-  /** Global Bayesian score; null below `MIN_RATERS`. */
+  /**
+   * Bayesian average with the board's prior: the global prior everywhere (it is what `bev_stats`
+   * stores), except on a category leaderboard's rows, which use the category prior. Set from the
+   * first rating (`ratingCount >= 1`) and null with none, so not gated on `MIN_RATERS`. Rounded to
+   * 2 dp everywhere.
+   */
   bayesScore: number | null;
 }
 
@@ -153,6 +233,7 @@ export interface BevPrediction {
   rankingVersion: string;
 }
 
+/** Someone the caller follows and their ranking of a Bev (`Bev.friends`, `FeedItem.alsoBevdBy`). */
 export interface FriendScore {
   profile: Profile;
   score: number;
@@ -163,6 +244,8 @@ export interface FriendScore {
 export interface Bev extends BevSummary {
   status: BevStatus;
   nutritionLabelUrl: string | null;
+  /** Absent on older API versions; null when no barcode nutrition was added. */
+  nutrition?: NutritionPreview | null;
   avgScore: number | null;
   scoreStddev: number | null;
   createdBy: { id: string; handle: string } | null;
@@ -187,8 +270,13 @@ export interface Ranking {
   position: number;
   score: number;
   note: string | null;
-  /** When first ranked ("Ranked Oct 3"). */
+  /**
+   * When this ranking was last placed ("Ranked Oct 3"). A re-rank re-dates it: `rerank_bev` deletes
+   * the row and re-inserts it, which is what the Recent sort, the Bev'd row's date and Activity's
+   * post time all want. There is no record of when a Bev was first ranked.
+   */
   createdAt: string;
+  /** Last written, which includes a re-space of the bucket by someone else's placement. */
   updatedAt: string;
 }
 
@@ -233,6 +321,16 @@ export interface FeedItem {
    * with `comments.list`.
    */
   comments: Comment[];
+  /**
+   * People the caller follows who have also ranked this post's Bev, each with
+   * their own score and bucket for it ("Also Bev'd by ana 8.4"). Never the
+   * post's actor and never the caller. At most three, the most recently
+   * ranked first; `alsoBevdCount` is how many there are in all. Empty on a
+   * Bev nobody else the caller follows has ranked.
+   */
+  alsoBevdBy: FriendScore[];
+  /** The total behind `alsoBevdBy`, so it is never less than `alsoBevdBy.length`. */
+  alsoBevdCount: number;
 }
 
 export interface Comment {
@@ -283,6 +381,12 @@ export interface LeaderboardRow {
 }
 
 export interface UserLeaderboardRow {
+  /**
+   * Competition rank by `points`: ties share a rank and the next rank skips
+   * (1, 2, 2, 4). On `leaderboard.users` it is the rank on Bevi; on
+   * `leaderboard.friends` it is the rank among the caller and the people they
+   * follow, starting again from 1.
+   */
   rank: number;
   profile: Profile;
   points: number;
@@ -320,8 +424,15 @@ export interface WantToTryItem {
  * `likeCount`, `likedByMe`, `commentCount` and `comments` rather than those
  * fields nulled, so a screen cannot render a heart or a count by accident —
  * `get_explore` does not return them either.
+ *
+ * It also leaves out `alsoBevdBy` and `alsoBevdCount` (contract 2.12.0):
+ * those are computed for the feed and a user's activity only, and
+ * `get_explore` is unchanged.
  */
-export type ExplorePost = Omit<FeedItem, 'likeCount' | 'likedByMe' | 'commentCount' | 'comments'>;
+export type ExplorePost = Omit<
+  FeedItem,
+  'likeCount' | 'likedByMe' | 'commentCount' | 'comments' | 'alsoBevdBy' | 'alsoBevdCount'
+>;
 
 /**
  * One Bev-graph edge weight, as `bevs.similarities` returns it: how similar
@@ -360,4 +471,133 @@ export interface AppConfig {
 export interface Page<T> {
   items: T[];
   nextCursor: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Venues (S-10 + A-08)
+// ---------------------------------------------------------------------------
+
+/**
+ * The five-borough bounding box, and the only copy the app should read
+ * (decision 36). THE SAME SIX FIGURES are the `venues_nyc_bounds` CHECK in
+ * `20261102000300` and the Overpass clip in `scripts/venues/import-core.ts`,
+ * so the map cannot pan to a region where a venue could not legally exist.
+ *
+ * M-16 passes this to Google Maps as
+ * `restriction: { latLngBounds: NYC_BOUNDS, strictBounds: true }`.
+ */
+export const NYC_BOUNDS = {
+  south: 40.477,
+  north: 40.918,
+  west: -74.26,
+  east: -73.7,
+} as const;
+
+/** A map viewport, in the same shape as `NYC_BOUNDS`. */
+export interface LatLngBounds {
+  south: number;
+  north: number;
+  west: number;
+  east: number;
+}
+
+export type VenueKind = 'chain' | 'craft';
+
+export type Borough = 'Manhattan' | 'Brooklyn' | 'Queens' | 'Bronx' | 'Staten Island';
+
+/**
+ * A venue: a shop, cafe or bar that carries Bevs. Imported from OpenStreetMap
+ * (ODbL, "© OpenStreetMap contributors" — M-16 shows the credit in the map's
+ * attribution control) plus our own curation.
+ */
+export interface Venue {
+  id: string;
+  name: string;
+  kind: VenueKind;
+  lat: number;
+  lng: number;
+  address: string | null;
+  /**
+   * Null for most venues today: OSM has no neighbourhood for any venue in the
+   * starting area, so this is filled by us rather than imported. Treat a null
+   * as "not known", not as an error.
+   */
+  neighborhood: string | null;
+  borough: Borough | null;
+  /**
+   * OSM's `opening_hours` string, verbatim and unparsed. Only meaningful when
+   * `hoursKnown` is true; otherwise show "Hours unknown" rather than trying to
+   * read it. Open now is best-effort by decision (A-08).
+   */
+  hoursOsm: string | null;
+  hoursKnown: boolean;
+  website: string | null;
+}
+
+/**
+ * One pin on the map. The score is of the venue's assortment, not of the
+ * venue: the best figure among the Bevs it carries.
+ *
+ * `bestScore` is the best stored Bayesian score among them, so it is the same
+ * number the leaderboard shows; `predictedScore` is the best prediction for
+ * the caller among the Bevs that have no Bayesian score yet. Both are null
+ * when neither applies, which is why the pin still exists — a venue with an
+ * assortment is worth showing even before anyone has rated what it sells.
+ *
+ * A venue with NO assortment gets no pin at all (D-13), so every `VenuePin`
+ * has at least one Bev behind it.
+ */
+export interface VenuePin {
+  venue: Venue;
+  bestScore: number | null;
+  predictedScore: number | null;
+  /**
+   * Whether the venue is open at the moment the server answered, or null when
+   * `venue.hoursKnown` is false -- exactly then: `hoursKnown` is true only when
+   * the evaluator understood the string. Best-effort (A-08).
+   */
+  openNow: boolean | null;
+  /** How many Bevs the venue is known to carry. Always at least 1. */
+  bevCount: number;
+}
+
+/** A venue with the Bevs it carries, for the detail sheet. */
+export interface VenueDetail {
+  venue: Venue;
+  openNow: boolean | null;
+  /** The assortment, best Bayesian score first, then by name. */
+  bevs: BevSummary[];
+}
+
+/**
+ * The filters `venues.inView` accepts. Every one is optional and ANDed, and an
+ * empty array is the same as leaving that filter out.
+ */
+export interface VenueFilters {
+  /** Root category ids; a venue matches when it carries a Bev in any of them. */
+  categoryIds?: CategoryId[];
+  kinds?: VenueKind[];
+  priceTiers?: PriceTier[];
+  neighborhoods?: string[];
+  /** Only venues we can evaluate as open right now (`hoursKnown`). */
+  openNow?: boolean;
+}
+
+/** Barcode nutrition snapshot, with its original serving basis and source. */
+export interface NutritionPreview {
+  barcode: string;
+  productName: string;
+  /**
+   * Stable presentation strings: `Per serving (${servingSize})` or
+   * `Per 100 g / 100 ml (as listed)`. NutritionCard parses these exact English
+   * forms, so changing them requires a versioned move to structured fields.
+   */
+  basis: string;
+  calories: number | null;
+  fatGrams: number | null;
+  carbohydrateGrams: number | null;
+  sugarGrams: number | null;
+  proteinGrams: number | null;
+  sodiumMg: number | null;
+  sourceUrl: string;
 }

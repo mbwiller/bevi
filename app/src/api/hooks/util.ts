@@ -1,6 +1,8 @@
 import type { InfiniteData, QueryClient, QueryKey } from '@tanstack/react-query';
 import type { Page } from '@bevi/shared';
 
+import { usePointsScope } from '@/features/leaderboard/pointsScope';
+
 import { keys } from '../keys';
 
 /** Shared options for every cursor-paginated `useInfiniteQuery`. */
@@ -52,9 +54,13 @@ export function filterCachedItems<T>(data: unknown, keep: (item: T) => boolean):
 const ANONYMOUS = new Set(['session', 'appConfig', 'checkHandle']);
 const isUserQuery = (q: { queryKey: QueryKey }) => !ANONYMOUS.has(String(q.queryKey[1]));
 
-/** Signed out: drop everything that belonged to the previous user. */
+/**
+ * Signed out: drop everything that belonged to the previous user, including the People screen's
+ * Friends | Everyone choice, so the next account on this tab opens on Friends.
+ */
 export function clearUserQueries(qc: QueryClient): void {
   qc.removeQueries({ predicate: isUserQuery });
+  usePointsScope.getState().reset();
 }
 
 /** Signed in (maybe as someone else): reset user data and refetch whatever is on screen. */

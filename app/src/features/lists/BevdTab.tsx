@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { flattenPages, useBucket, useCategoryProgress, useMyRankings } from '@/api/hooks';
-import { BevRow } from '@/components/BevRow';
+import { BEV_ROW_FOOT_OVERLAY_BOTTOM, BevRow } from '@/components/BevRow';
 import { CollectionSheet } from '@/components/CollectionSheet';
 import { EmptyState } from '@/components/EmptyState';
 import { FilterPill } from '@/components/FilterPill';
@@ -123,7 +123,7 @@ export function BevdTab({ categoryId, categories, onCategory, onCategoryPress }:
     <View>
       <View style={listStyles.filters}>
         <FilterPill count={(bucket ? 1 : 0) + (categoryId ? 1 : 0)} onPress={() => setSheet('filters')} />
-        <FilterPill label={bucket ? BUCKET_SHORT[bucket] : 'Bucket'} icon={null} chevron onPress={() => setSheet('bucket')} />
+        <FilterPill label={bucket ? BUCKET_SHORT[bucket] : 'Reaction'} icon={null} chevron onPress={() => setSheet('bucket')} />
         <FilterPill label={category?.label ?? 'Category'} icon={null} chevron onPress={onCategoryPress} />
       </View>
       <CategoryProgressStrip categoryId={categoryId} onPress={() => setSheet('collection')} />
@@ -140,7 +140,7 @@ export function BevdTab({ categoryId, categories, onCategory, onCategoryPress }:
       <EmptyState
         icon="list-filter"
         title="No Bevs match these filters"
-        body="Try another bucket or category."
+        body="Try another reaction or category."
         action="Clear filters"
         onAction={() => {
           setBucket(undefined);
@@ -195,6 +195,8 @@ export function BevdTab({ categoryId, categories, onCategory, onCategoryPress }:
 
 const styles = StyleSheet.create({
   stripLoading: { justifyContent: 'center', minHeight: size.target, paddingHorizontal: spacing.gutter },
-  // Sits in the BevRow's 44pt foot, where Rank / Want to Try go on other lists; the glyph lines up with the gutter.
-  more: { position: 'absolute', right: spacing.gutter - spacing.sm, bottom: spacing.xs },
+  // Centred on the BevRow's 32pt foot line, where Rank / Want to Try go on other lists, overhanging it
+  // like they do; the glyph lines up with the gutter. The row's meta ("Ranked Oct 12") is short and
+  // left-aligned, so it never runs under the button.
+  more: { position: 'absolute', right: spacing.gutter - spacing.sm, bottom: BEV_ROW_FOOT_OVERLAY_BOTTOM },
 });

@@ -53,9 +53,12 @@ import {
 } from "@bevi/ranking";
 import type { FlavorProfile } from "@bevi/ranking";
 import {
+  COP_MIN_CO_RATERS,
   KNN_CANDIDATES,
   buildTaxonomy,
   bevFeatures,
+  coRatersFromRankings,
+  treeNodeOf,
   candidatePairs,
   edgeRows,
   neighboursOf,
@@ -66,6 +69,8 @@ import {
   weighPairs,
 } from "./edges-core.ts";
 import type { BevRecord, CategoryRecord, NeighbourRecord, WeighContext, WeightedPair } from "./edges-core.ts";
+import { rankingRecords } from "./neighbours-core.ts";
+import type { RankingZRow } from "./neighbours-core.ts";
 
 // ---------------------------------------------------------------------------
 // The sanity report's thresholds (TASKS.md 1d, docs/graph.md)
@@ -218,10 +223,12 @@ interface BevRow {
   brand: string | null;
   flavor: string | null;
   category_id: string;
+  leaf_category_id: string | null;
   price_tier: number;
 }
 interface CategoryRow {
   id: string;
+  parent_id: string | null;
   is_alcoholic: boolean;
 }
 interface ProfileRow {
@@ -241,6 +248,11 @@ interface NeighbourRow {
   bev_id: string;
   neighbour_id: string;
   distance: number;
+}
+/** One row of `bev_co_rater_counts()` (20261026000300). */
+interface CoRaterRow {
+  bev_id: string;
+  rater_count: number;
 }
 
 /**
@@ -339,32 +351,43 @@ async function main(): Promise<void> {
 
   // -- step 1: read ---------------------------------------------------------
   const [categoryRows, bevRows] = await Promise.all([
-    db.select<CategoryRow>("/categories?select=id,is_alcoholic&order=id"),
-    db.select<BevRow>("/bevs?select=id,name,brand,flavor,category_id,price_tier&status=eq.active&order=id"),
+    db.select<CategoryRow>("/categories?select=id,parent_id,is_alcoholic&order=id"),
+    db.select<BevRow>(
+      "/bevs?select=id,name,brand,flavor,category_id,leaf_category_id,price_tier&status=eq.active&order=id"
+    ),
   ]);
 
+  // A-13: `bevs.category_id` is always one of the 15 ROOTS, so the alcohol
+  // lookup needs no walking -- `category_is_alcoholic()` exists for callers
+  // holding a leaf, which this job never is for the gate. A leaf's own row
+  // carries its root's flag anyway (the catalog validator enforces it), so
+  // either key would answer.
   const alcoholic = new Map(categoryRows.map((c) => [c.id, c.is_alcoholic]));
-  // `parent_id` is deliberately absent from the select: the column does not
-  // exist (A-13). `buildTaxonomy` reads `parentId`, so adding it here is the
-  // whole of this job's A-13 migration.
-  const categories: CategoryRecord[] = categoryRows.map((c) => ({ id: c.id }));
+  const categories: CategoryRecord[] = categoryRows.map((c) => ({ id: c.id, parentId: c.parent_id }));
   const bevs: BevRecord[] = bevRows.map((b) => ({
     id: b.id,
     name: b.name,
     brand: b.brand,
     flavor: b.flavor,
     categoryId: b.category_id,
+    leafCategoryId: b.leaf_category_id,
     priceTier: b.price_tier,
     isAlcoholic: alcoholic.get(b.category_id) ?? true, // fail closed, as graph-query does
   }));
   const byId = new Map(bevs.map((b) => [b.id, b]));
 
   const taxonomy = buildTaxonomy(categories);
+  // A-13: the tree term is measured at each Bev's leaf. `candidatePairs` still
+  // groups by `categoryId`, which IS D-04's "same parent subtree" arm, because
+  // `category_id` stayed the root.
+  const treeNodes = new Map(bevs.map((b) => [b.id, treeNodeOf(b)]));
+  const withLeaf = bevs.filter((b) => b.leafCategoryId !== null).length;
   console.log(`bevs: ${bevs.length} active; categories: ${categories.length}`);
   console.log(
     taxonomyIsFlat(taxonomy)
-      ? `taxonomy: FLAT (no categories.parent_id until A-13), so the tree term is the [same category] indicator: ${EDGE_WEIGHTS.tree} or 0`
-      : `taxonomy: hierarchical, ${Object.values(taxonomy).filter((p) => p !== null).length} categories with a parent`
+      ? `taxonomy: FLAT (no categories.parent_id), so the tree term is the [same category] indicator: ${EDGE_WEIGHTS.tree} or 0`
+      : `taxonomy: hierarchical, ${Object.values(taxonomy).filter((p) => p !== null).length} categories with a parent; ` +
+        `${withLeaf}/${bevs.length} Bevs weighed at a leaf, ${bevs.length - withLeaf} at their root`
   );
 
   // -- step 1 (continued): profiles, D-11 inference, embeddings -------------
@@ -437,7 +460,39 @@ async function main(): Promise<void> {
 
   // -- steps 4 and 5: weigh and keep ---------------------------------------
   const features = new Map(bevs.map((b) => [b.id, bevFeatures(b)]));
-  const ctx: WeighContext = { taxonomy, features, profiles, embeddings };
+  // -- step 1 (continued): the cop term's input (A-16 (2)) ----------------
+  // `sim_cop(b, b')` is the cosine of two Bevs' z-scores over their COMMON
+  // RATERS, clamped at 0, and 0 below 3 of them (LaTeX section 10.1).
+  // `EDGE_WEIGHTS.cop` is still 0, so this changes no weight -- it fills in
+  // `components.cop` so the number is already measured and inspectable when
+  // Matt renormalises and switches gamma on.
+  //
+  // `bev_co_rater_counts` is read first and only to decide whether to bother:
+  // below 3 rankings on a Bev the term is 0 for every pair it is in, so with
+  // today's data (#122: 27 rankings over 3 users) the usual answer is "no Bev
+  // qualifies" and the rankings read is skipped entirely.
+  const coRated = await db.rpcRows<CoRaterRow>("bev_co_rater_counts", { p_min_raters: COP_MIN_CO_RATERS });
+  let coRaters: ReadonlyMap<string, ReadonlyMap<string, number>> | undefined;
+  if (coRated.length === 0) {
+    console.log(
+      `cop: no active Bev has ${COP_MIN_CO_RATERS} or more raters, so sim_cop is 0 for every pair ` +
+        `(its weight is ${EDGE_WEIGHTS.cop} regardless). Skipping the rankings read.`
+    );
+  } else {
+    const rankingRows = await db.rpcRows<RankingZRow>("ranking_z_inputs", {});
+    // The same z-scores the taste graph uses, from the same functions, so the
+    // two jobs can never disagree about what a user's z is: computed from
+    // EVERY ranking (mu and sigma as `get_prediction_snapshot` has them), then
+    // restricted to active Bevs, so an inactive Bev is never a co-rated one.
+    coRaters = coRatersFromRankings(rankingRecords(rankingRows));
+    console.log(
+      `cop: ${coRated.length} Bev(s) with >= ${COP_MIN_CO_RATERS} raters, ${rankingRows.length} rankings read; ` +
+        `sim_cop will be non-zero only for pairs sharing ${COP_MIN_CO_RATERS}+ raters ` +
+        `(weight ${EDGE_WEIGHTS.cop}, so no stored weight changes)`
+    );
+  }
+
+  const ctx: WeighContext = { taxonomy, treeNodes, features, profiles, embeddings, coRaters };
   const weighted = weighPairs(pairs, ctx);
   const kept = selectEdges(weighted, opts.topK, opts.minWeight);
   const covered = new Set<string>();

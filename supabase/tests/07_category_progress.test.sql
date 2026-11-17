@@ -57,10 +57,14 @@ select throws_ok(
 
 set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000000d1", "role": "authenticated"}';
 
+-- `categories` holds 75 rows since A-13 (15 roots + D-04's 60 leaves), but
+-- progress is reported per ROOT: every Bev's category_id is a root, so a
+-- per-leaf row could only ever read 0, and `categories.list()` keys its age
+-- filter off these rows.
 select is(
   (select count(*)::int from public.get_category_progress()),
-  (select count(*)::int from public.categories),
-  'an adult gets one row per category, alcoholic ones included'
+  (select count(*)::int from public.categories where parent_id is null),
+  'an adult gets one row per root category, alcoholic ones included'
 );
 select is(
   (select coalesce(sum(ranked), 0)::int from public.get_category_progress()),
@@ -108,8 +112,8 @@ select is(
 );
 select is(
   (select count(*)::int from public.get_category_progress()),
-  (select count(*)::int from public.categories where not is_alcoholic),
-  'but every other category'
+  (select count(*)::int from public.categories where parent_id is null and not is_alcoholic),
+  'but every other root category'
 );
 select is(
   (select coalesce(sum(ranked), 0)::int from public.get_category_progress()),

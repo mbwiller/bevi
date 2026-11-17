@@ -3,7 +3,7 @@
 
 import { BUCKET_DB } from '../src/constants.ts';
 import { flavorTokens, normaliseBrand } from '../src/similarity.ts';
-import type { BevFeatures, BevId, Bucket, CategoryId, PriceTier, UserId } from '../src/types.ts';
+import type { BevEdge, BevFeatures, BevId, Bucket, CategoryId, PriceTier, UserId } from '../src/types.ts';
 
 export const EXPORT_FORMAT = 'bevi-eval-export';
 export const EXPORT_FORMAT_VERSION = 1;
@@ -43,6 +43,11 @@ export interface EvalDataset {
   bevs: EvalBev[];
   rankings: EvalRanking[];
   comparisons: EvalComparison[];
+  /**
+   * Optional `bev_edges` rows ({ a, b, w }, each unordered pair once) for the edges-mode arms. Absent:
+   * those arms fall back to the computed content similarity, exactly like the app (TASKS.md S-21).
+   */
+  edges?: BevEdge[];
 }
 
 /** The JSON file Arjun's export produces (see README). Buckets use the DB encoding 3/2/1. */
@@ -53,6 +58,8 @@ export interface EvalExport {
   bevs: Array<{ id: string; name: string; brand: string | null; flavor: string | null; categoryId: string; priceTier: number; isAlcoholic: boolean }>;
   rankings: Array<{ userId: string; bevId: string; bucket: number; position: number; score: number | string; rankedAt: string }>;
   comparisons: Array<{ userId: string; submissionId: string; winnerBevId: string; loserBevId: string; tie: boolean; createdAt: string }>;
+  /** Optional (same formatVersion): `bev_edges` as { a: src_bev_id, b: dst_bev_id, w: weight }. */
+  edges?: Array<{ a: string; b: string; w: number | string }>;
 }
 
 const BUCKET_FROM_DB = new Map<number, Bucket>(Object.entries(BUCKET_DB).map(([b, n]) => [n, b as Bucket]));
@@ -148,7 +155,17 @@ export function parseExport(json: unknown): EvalDataset {
       createdAt: time(o, 'createdAt', w),
     };
   });
-  return { bevs, rankings, comparisons };
+  const edges =
+    root.edges === undefined
+      ? undefined
+      : arr(root, 'edges').map((v, i): BevEdge => {
+          const w = `edges[${i}]`;
+          const o = obj(v, w);
+          const weight = num(o, 'w', w);
+          if (weight < 0 || weight > 1) fail(w, '"w" must be in [0, 1]');
+          return { a: str(o, 'a', w), b: str(o, 'b', w), w: weight };
+        });
+  return edges === undefined ? { bevs, rankings, comparisons } : { bevs, rankings, comparisons, edges };
 }
 
 /** The inverse of `parseExport` (used to write the synthetic sample file). */
@@ -160,6 +177,7 @@ export function toExport(ds: EvalDataset, exportedAt?: string): EvalExport {
     bevs: ds.bevs.map((b) => ({ ...b })),
     rankings: ds.rankings.map((r) => ({ userId: r.userId, bevId: r.bevId, bucket: BUCKET_DB[r.bucket], position: r.position, score: r.score, rankedAt: r.rankedAt })),
     comparisons: ds.comparisons.map((c) => ({ ...c })),
+    ...(ds.edges === undefined ? {} : { edges: ds.edges.map((e) => ({ ...e })) }),
   };
 }
 
@@ -183,6 +201,8 @@ export interface PreparedDataset {
   rankings: EvalRanking[];
   /** Comparisons on catalog Bevs. */
   comparisons: EvalComparison[];
+  /** Edges between two catalog Bevs, or null when the dataset has none (edges arms fall back). */
+  edges: BevEdge[] | null;
   dropped: { rankingsUnknownBev: number; rankingsDuplicate: number; comparisonsUnknownBev: number };
 }
 
@@ -206,6 +226,7 @@ export function prepareDataset(ds: EvalDataset): PreparedDataset {
     catalog,
     rankings: [...latest.values()],
     comparisons,
+    edges: ds.edges === undefined ? null : ds.edges.filter((e) => catalog.has(e.a) && catalog.has(e.b)),
     dropped: { rankingsUnknownBev: unknown, rankingsDuplicate: kept - latest.size, comparisonsUnknownBev: ds.comparisons.length - comparisons.length },
   };
 }

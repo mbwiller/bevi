@@ -14,14 +14,24 @@
     "typecheck": "npm run typecheck --workspaces --if-present && npm run typecheck:scripts",
     "typecheck:scripts": "tsc -p scripts/tsconfig.json",
     "test": "npm run test --workspaces --if-present && npm run test:scripts",
-    "test:scripts": "node --experimental-strip-types --test scripts/graph/*.test.ts",
+    "test:scripts": "node --experimental-strip-types --test scripts/*/*.test.ts",
     "catalog:validate": "node --experimental-strip-types scripts/catalog/validate.ts",
     "catalog:migration": "node --experimental-strip-types scripts/catalog/build-seed-migration.ts",
+    "vectors:pgtap": "node --experimental-strip-types scripts/vectors/build-pgtap.ts",
     "graph:schema": "node --experimental-strip-types scripts/graph/apply-schema.ts",
     "graph:keepalive": "node --experimental-strip-types scripts/graph/keepalive.ts",
     "graph:backfill-embeddings": "node --experimental-strip-types scripts/graph/backfill-embeddings.ts",
     "graph:edges": "node --experimental-strip-types scripts/graph/build-edges.ts",
-    "graph:verify": "node --experimental-strip-types scripts/graph/verify-pipeline.ts"
+    "graph:neighbours": "node --experimental-strip-types scripts/graph/build-neighbours.ts",
+    "graph:sync": "node --experimental-strip-types scripts/graph/sync.ts",
+    "venues:sync": "node --experimental-strip-types scripts/venues/import-osm.ts",
+    "venues:nta": "node --experimental-strip-types scripts/venues/build-nta.ts",
+    "bugs:purge-evidence": "node --experimental-strip-types scripts/bugs/purge-evidence.ts",
+    "icons:publish": "node --experimental-strip-types scripts/icons/publish.ts",
+    "icons:swipe": "node --experimental-strip-types scripts/icons/swipe.ts",
+    "icons:report": "node --experimental-strip-types scripts/icons/verdict-report.ts",
+    "graph:dashboard": "node --env-file-if-exists=supabase/.env --experimental-strip-types scripts/graph/dashboard.ts",
+    "graph:verify": "node --env-file-if-exists=supabase/.env --experimental-strip-types scripts/graph/verify-pipeline.ts"
   },
   "overrides": {
     "react": "19.2.3"

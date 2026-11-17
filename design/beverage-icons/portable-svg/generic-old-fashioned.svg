@@ -1,0 +1,92 @@
+<svg width="200" height="260" viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <radialGradient id="bev-generic-old-fashioned-shadow" cx="0.5" cy="0.5" r="0.5" fx="0.5" fy="0.5">
+            <stop offset="0" stop-color="#3c372d" stop-opacity="0.18"/>
+            <stop offset="1" stop-color="#3c372d" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="bev-generic-old-fashioned-glass" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#ffffff" stop-opacity="0.65"/>
+            <stop offset="0.18" stop-color="#ffffff" stop-opacity="0.12"/>
+            <stop offset="0.65" stop-color="#ffffff" stop-opacity="0.02"/>
+            <stop offset="1" stop-color="#75867c" stop-opacity="0.35"/>
+        </linearGradient>
+        <linearGradient id="bev-generic-old-fashioned-liquid" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#7d431a"/>
+            <stop offset="0.25" stop-color="#c67b23"/>
+            <stop offset="0.6" stop-color="#c67b23"/>
+            <stop offset="1" stop-color="#7d431a"/>
+        </linearGradient>
+        <linearGradient id="bev-generic-old-fashioned-ice" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#ffffff" stop-opacity="0.56"/>
+            <stop offset="0.45" stop-color="#f5f9e4" stop-opacity="0.13"/>
+            <stop offset="1" stop-color="#d4e1cf" stop-opacity="0.39"/>
+        </linearGradient>
+        <linearGradient id="bev-generic-old-fashioned-base" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#d4e1db" stop-opacity="0.6"/>
+            <stop offset="0.35" stop-color="#fcfff4" stop-opacity="0.9"/>
+            <stop offset="1" stop-color="#9cb2a6" stop-opacity="0.7"/>
+        </linearGradient>
+        <clipPath id="bev-generic-old-fashioned-cupclip">
+            <path fill="#000000" stroke="none" d="M 48 108 Q 100 92 152 108 L 147 215 Q 147 234 100 234 Q 53 234 53 215 Z"/>
+        </clipPath>
+    </defs>
+    <path fill="url(#bev-generic-old-fashioned-shadow)" stroke="none" d="M 157 239 C 157 245.07513 131.48022 250 100 250 C 68.51977 250 43 245.07513 43 239 C 43 232.92485 68.51977 228 100 228 C 131.48022 228 157 232.92485 157 239 Z"/>
+    <path fill="url(#bev-generic-old-fashioned-glass)" stroke="#afc1b4" stroke-opacity="0.75" stroke-width="0.9" d="M 48 108 Q 100 92 152 108 L 147 215 Q 147 234 100 234 Q 53 234 53 215 Z"/>
+    <path fill="url(#bev-generic-old-fashioned-liquid)" stroke="none" d="M 53 123 Q 100 112 147 123 L 143 212 Q 143 226 100 226 Q 57 226 57 212 Z"/>
+    <g opacity="0.8">
+        <path fill="#c67b23" stroke="none" d="M 148 123 C 148 127.97057 126.509674 132 100 132 C 73.49033 132 52 127.97057 52 123 C 52 118.029434 73.49033 114 100 114 C 126.509674 114 148 118.029434 148 123 Z"/>
+    </g>
+    <g clip-path="url(#bev-generic-old-fashioned-cupclip)">
+        <g transform="matrix(0.9781476 -0.20791169 0.20791169 0.9781476 58 124)">
+            <path fill="url(#bev-generic-old-fashioned-ice)" stroke="#fffdf1" stroke-opacity="0.6" stroke-width="0.8" d="M 4 0 L 34 0 C 36.20914 0 38 1.790861 38 4 L 38 34 C 38 36.20914 36.20914 38 34 38 L 4 38 C 1.790861 38 0 36.20914 0 34 L 0 4 C 0 1.790861 1.790861 0 4 0 Z"/>
+            <path fill="none" stroke="#ffffff" stroke-opacity="0.65" stroke-width="1.1" d="M 4 34 L 4 7 Q 4 4 7 4 L 32 4"/>
+            <path fill="none" stroke="#a5bcac" stroke-opacity="0.3" stroke-width="0.6" d="M 5 35 L 34 33"/>
+        </g>
+        <g transform="matrix(0.9702958 0.2419219 -0.2419219 0.9702958 104 119)">
+            <path fill="url(#bev-generic-old-fashioned-ice)" stroke="#fffdf1" stroke-opacity="0.6" stroke-width="0.8" d="M 4 0 L 31 0 C 33.20914 0 35 1.790861 35 4 L 35 35 C 35 37.20914 33.20914 39 31 39 L 4 39 C 1.790861 39 0 37.20914 0 35 L 0 4 C 0 1.790861 1.790861 0 4 0 Z"/>
+            <path fill="none" stroke="#ffffff" stroke-opacity="0.65" stroke-width="1.1" d="M 4 35 L 4 7 Q 4 4 7 4 L 29 4"/>
+            <path fill="none" stroke="#a5bcac" stroke-opacity="0.3" stroke-width="0.6" d="M 5 36 L 31 34"/>
+        </g>
+        <g transform="matrix(0.9816272 0.190809 -0.190809 0.9816272 83 165)">
+            <path fill="url(#bev-generic-old-fashioned-ice)" stroke="#fffdf1" stroke-opacity="0.6" stroke-width="0.8" d="M 4 0 L 34 0 C 36.20914 0 38 1.790861 38 4 L 38 35 C 38 37.20914 36.20914 39 34 39 L 4 39 C 1.790861 39 0 37.20914 0 35 L 0 4 C 0 1.790861 1.790861 0 4 0 Z"/>
+            <path fill="none" stroke="#ffffff" stroke-opacity="0.65" stroke-width="1.1" d="M 4 35 L 4 7 Q 4 4 7 4 L 32 4"/>
+            <path fill="none" stroke="#a5bcac" stroke-opacity="0.3" stroke-width="0.6" d="M 5 36 L 34 34"/>
+        </g>
+        <path fill="none" stroke="#f2f9e5" stroke-opacity="0.35" stroke-width="1.2" d="M 65 121 L 69.55 220"/>
+        <path fill="none" stroke="#f2f9e5" stroke-opacity="0.35" stroke-width="1.2" d="M 78 121 L 80.86 220"/>
+        <path fill="none" stroke="#f2f9e5" stroke-opacity="0.35" stroke-width="1.2" d="M 91 121 L 92.16999 220"/>
+        <path fill="none" stroke="#f2f9e5" stroke-opacity="0.35" stroke-width="1.2" d="M 109 121 L 107.83001 220"/>
+        <path fill="none" stroke="#f2f9e5" stroke-opacity="0.35" stroke-width="1.2" d="M 122 121 L 119.14001 220"/>
+        <path fill="none" stroke="#f2f9e5" stroke-opacity="0.35" stroke-width="1.2" d="M 135 121 L 130.45 220"/>
+        <path fill="none" stroke="#b9cfbe" stroke-opacity="0.4" d="M 52 140 Q 100 150 148 140 M 54 177 Q 100 186 146 177 M 56 210 Q 100 218 144 210"/>
+        <g opacity="0.42">
+            <path fill="url(#bev-generic-old-fashioned-glass)" stroke="none" d="M 48 108 Q 100 92 152 108 L 147 215 Q 147 234 100 234 Q 53 234 53 215 Z"/>
+        </g>
+    </g>
+    <path fill="none" stroke="#ffffff" stroke-opacity="0.53" stroke-width="2.3" stroke-linecap="round" d="M 55 127 L 58 208"/>
+    <path fill="none" stroke="#ffffff" stroke-opacity="0.25" stroke-width="1.3" d="M 146 129 L 142 209"/>
+    <path fill="url(#bev-generic-old-fashioned-base)" stroke="none" d="M 53 218 Q 100 234 147 218 L 146 228 Q 100 240 54 228 Z"/>
+    <path fill="none" stroke="#eaf6e8" stroke-width="1.8" d="M 152 108 C 152 113.52285 128.71881 118 100 118 C 71.2812 118 48 113.52285 48 108 C 48 102.47715 71.2812 98 100 98 C 128.71881 98 152 102.47715 152 108 Z"/>
+    <path fill="none" stroke="#c4d6c7" stroke-opacity="0.4" stroke-width="0.8" d="M 49 109 Q 100 124 151 109"/>
+    <g transform="matrix(0.9876884 -0.15643446 0.15643446 0.9876884 68 102)">
+        <path fill="url(#bev-generic-old-fashioned-ice)" stroke="#fffdf1" stroke-opacity="0.6" stroke-width="0.8" d="M 4 0 L 28 0 C 30.209139 0 32 1.790861 32 4 L 32 25 C 32 27.209139 30.209139 29 28 29 L 4 29 C 1.790861 29 0 27.209139 0 25 L 0 4 C 0 1.790861 1.790861 0 4 0 Z"/>
+        <path fill="none" stroke="#ffffff" stroke-opacity="0.65" stroke-width="1.1" d="M 4 25 L 4 7 Q 4 4 7 4 L 26 4"/>
+        <path fill="none" stroke="#a5bcac" stroke-opacity="0.3" stroke-width="0.6" d="M 5 26 L 28 24"/>
+    </g>
+    <g transform="matrix(0.9961947 -0.08715574 0.08715574 0.9961947 113 82)">
+        <path fill="#d67b16" stroke="none" d="M -30 0 C -30 16.568542 -16.568542 30 0 30 C 16.568542 30 30 16.568542 30 0 Z"/>
+        <path fill="#ffe3a2" stroke="none" d="M -28 0 C -28 15.463973 -15.463973 28 0 28 C 15.463973 28 28 15.463973 28 0 Z"/>
+        <path fill="#f6b43e" stroke="none" d="M -26 1 C -26 15.359404 -14.359404 27 0 27 C 14.359404 27 26 15.359404 26 1 Z"/>
+        <path fill="#000000" stroke="#fff0bc" stroke-width="0.7" d="M 0 0 L 22.516663 13"/>
+        <path fill="#000000" stroke="#fff0bc" stroke-width="0.7" d="M 0 0 L 13 22.516663"/>
+        <path fill="#000000" stroke="#fff0bc" stroke-width="0.7" d="M 0 0 L 0 26"/>
+        <path fill="#000000" stroke="#fff0bc" stroke-width="0.7" d="M 0 0 L -13 22.516663"/>
+        <path fill="#000000" stroke="#fff0bc" stroke-width="0.7" d="M 0 0 L -22.516663 13"/>
+    </g>
+    <path fill="#631f25" stroke="none" d="M 136 106 C 136 111.52285 131.52284 116 126 116 C 120.47715 116 116 111.52285 116 106 C 116 100.47715 120.47715 96 126 96 C 131.52284 96 136 100.47715 136 106 Z"/>
+    <g opacity="0.5">
+        <path fill="#bf6b58" stroke="none" d="M 126 102 C 126 103.104576 124.65685 104 123 104 C 121.34315 104 120 103.104576 120 102 C 120 100.895424 121.34315 100 123 100 C 124.65685 100 126 100.895424 126 102 Z"/>
+    </g>
+    <path fill="#000000" stroke="#aeb8aa" stroke-width="1.4" d="M 108 84 L 108 57"/>
+    <path fill="none" stroke="#c5cdb9" stroke-width="1.2" d="M 111 55 C 111 56.104572 109.65685 57 108 57 C 106.34315 57 105 56.104572 105 55 C 105 53.895428 106.34315 53 108 53 C 109.65685 53 111 53.895428 111 55 Z"/>
+</svg>

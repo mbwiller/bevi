@@ -46,7 +46,15 @@ function settleFollow(qc: QueryClient, userId: string) {
   void qc.invalidateQueries({ queryKey: keys.follows.all, predicate: (q) => q.queryKey[2] !== 'suggested' });
   void qc.invalidateQueries({ queryKey: keys.stats.all });
   void qc.invalidateQueries({ queryKey: keys.feed() });
+  // Explore never shows someone you follow, and an unfollowed person may join it. Stale only: it
+  // isn't refetched under the reader (the followed author's posts would jump out mid-scroll); the
+  // next fresh sequence (pull to refresh, opening Explore again) drops or adds them.
+  void qc.invalidateQueries({ queryKey: keys.explore(), refetchType: 'none' });
   void qc.invalidateQueries({ queryKey: keys.bevs.all }); // Bev detail "friends who've had it"
+  // Who is on the Friends board. Only after the server has the follow, never optimistically, so a
+  // press doesn't reorder the ranking under the reader; the People board holds its rows still after
+  // a press on one of them (`usePointsRanking`). The Everyone board doesn't depend on follows.
+  void qc.invalidateQueries({ queryKey: keys.leaderboard.friends() });
 }
 
 /** Both follow and unfollow share this key; the variable is the user id. */

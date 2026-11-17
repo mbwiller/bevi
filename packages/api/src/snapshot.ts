@@ -1,7 +1,9 @@
 // The caller's PredictionSnapshot, for @bevi/ranking's predictScore() and
 // recommend(), which run here in the client (no Edge Function at Bevi's
-// size). `get_prediction_snapshot()` (20261012000600) returns the data as one
-// jsonb value; this maps it to the snapshot type, plus a BevSummary per Bev so
+// size). `get_prediction_snapshot()` (20261012000600; `edges` and
+// `userNeighbors` since 20261101000100; `bevGraph` since 20261110000100)
+// returns the data as one jsonb value;
+// this maps it to the snapshot type, plus a BevSummary per Bev so
 // recommendation cards need no second round trip. Cached per signed-in user
 // for a few minutes and dropped on every write that changes rankings or Bevs.
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -21,7 +23,8 @@ import { publicUrl } from './mappers';
 const TTL_MS = 5 * 60 * 1000;
 
 type Num = number | string | null;
-type BevTuple = [string, string, string | null, string | null, string, number, boolean, string | null, boolean, number, Num, Num, Num];
+// The 14th element, the icon path, since 20261112000300; absent from an older payload.
+type BevTuple = [string, string, string | null, string | null, string, number, boolean, string | null, boolean, number, Num, Num, Num, (string | null)?];
 
 interface SnapshotJson {
   generatedAt: string;
@@ -31,6 +34,12 @@ interface SnapshotJson {
   categoryStats: Array<[string, string, number, Num, Num]>;
   bevs: BevTuple[];
   rankings: Array<[string, string, Num]>;
+  /** S-21 (20261101000100): [src, dst, weight] per bev_edges row touching the viewer's ranked Bevs. */
+  edges?: Array<[string, string, Num]> | null;
+  /** Stage 4 (20261101000100): the viewer's user_neighbors rows as [alias, sim, common]. */
+  userNeighbors?: Array<[string, Num, number]> | null;
+  /** A-16 (4) (20261110000100): [bev_id, community_id (the taste family), pagerank, bridge] per visible Bev with a bev_graph_stats row. */
+  bevGraph?: Array<[string, string, Num, Num]> | null;
 }
 
 export interface ViewerSnapshot {
@@ -54,7 +63,7 @@ export function toViewerSnapshot(client: SupabaseClient, json: SnapshotJson): Vi
 
   const bevs: Record<string, BevFeatures> = {};
   const summaries = new Map<string, BevSummary>();
-  for (const [id, name, brand, flavor, categoryId, priceTier, priceEstimated, photoPath, isAlcoholic, ratingCount, mean, sd, bayes] of json.bevs) {
+  for (const [id, name, brand, flavor, categoryId, priceTier, priceEstimated, photoPath, isAlcoholic, ratingCount, mean, sd, bayes, iconPath] of json.bevs) {
     bevs[id] = {
       id,
       categoryId: categoryId as CategoryId,
@@ -73,6 +82,7 @@ export function toViewerSnapshot(client: SupabaseClient, json: SnapshotJson): Vi
       flavor,
       categoryId: categoryId as CategoryId,
       photoUrl: publicUrl(client, 'bev-photos', photoPath),
+      iconUrl: publicUrl(client, 'bev-icons', iconPath ?? null),
       photoStatus: 'ready' as PhotoStatus,
       priceTier: priceTier as PriceTier,
       priceEstimated,
@@ -101,6 +111,30 @@ export function toViewerSnapshot(client: SupabaseClient, json: SnapshotJson): Vi
     users,
     rankings: json.rankings.map(([userId, bevId, score]) => ({ userId, bevId, score: num(score) })),
   };
+  // Both are optional in @bevi/ranking and read only by opt-in modes (`bevSimilarity: 'edges'`,
+  // `userSimilarity: 'stored'`). Set only when the key is present, even as []: an absent field means
+  // "not provided" (fall back), whereas [] means "provided, and there are none".
+  if (Array.isArray(json.edges)) {
+    snapshot.edges = json.edges.map(([a, b, w]) => ({ a, b, w: num(w) }));
+  }
+  if (Array.isArray(json.userNeighbors)) {
+    snapshot.userNeighbours = {
+      [viewer.id]: json.userNeighbors.map(([userId, sim, common]) => ({ userId, sim: num(sim), common })),
+    };
+  }
+  // Each Bev's place in the graph, as the nightly graph sync computed it: its taste family
+  // (`community`), its PageRank and its bridge score. Optional in @bevi/ranking and read only by
+  // opt-in modes of `recommend()`. Same rule as above: set only when the key is present, even as
+  // [] (which maps to {}: "provided, and no Bev has stats yet"), so an older payload without the
+  // key maps to a snapshot without the field. `community` is an opaque id, to be compared for
+  // equality only.
+  if (Array.isArray(json.bevGraph)) {
+    const bevGraph: NonNullable<PredictionSnapshot['bevGraph']> = {};
+    for (const [bevId, community, pagerank, bridge] of json.bevGraph) {
+      bevGraph[bevId] = { community, pagerank: num(pagerank), bridge: num(bridge) };
+    }
+    snapshot.bevGraph = bevGraph;
+  }
   return { snapshot, summaries, viewer };
 }
 

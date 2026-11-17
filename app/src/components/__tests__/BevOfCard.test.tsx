@@ -10,6 +10,7 @@ const HORCHATA: BevSummary = {
   flavor: null,
   categoryId: 'other',
   photoUrl: null,
+  iconUrl: null,
   photoStatus: 'ready',
   priceTier: 2,
   priceEstimated: true,
@@ -41,4 +42,9 @@ it('prints no price and no date for the current period', async () => {
 
 it('leaves the score out of the name when there is none', () => {
   expect(bevOfCardLabel('day', 'Horchata', null)).toBe('Bev of the day: Horchata');
+});
+
+it('keeps its label on one line, truncating', async () => {
+  await render(<BevOfCard period="week" bev={HORCHATA} score={8.9} />);
+  expect(screen.getByText('Bev of the week').props.numberOfLines).toBe(1);
 });

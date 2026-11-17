@@ -7,10 +7,11 @@
 // It only relies on what the contract promises, never on fixture data: it creates its own users
 // (unique usernames) and finds Bevs through `getStarterCandidates` (≥ 30 promised). Uses Jest globals.
 
-import { BANDS, MIN_N_USER, MIN_RATERS, normaliseBrand } from '@bevi/ranking';
+import { BANDS, MIN_N_USER, MIN_RATERS, compareCodePoints, normaliseBrand } from '@bevi/ranking';
 import {
   ApiError,
   BUCKET_ORDER,
+  NYC_BOUNDS,
   isApiError,
   type ApiErrorCode,
   type BeviApi,
@@ -37,6 +38,12 @@ export interface ConformanceOptions {
    * Check streaks (a ranking today → currentStreak 1). Default true (the FakeApi runs with it on).
    */
   checkStreaks?: boolean;
+  /**
+   * Makes the signed-in user an internal bug reporter. The contract has no way to do that (an
+   * operator runs set_profile_role), so the bugs cases that need one run only when this is given:
+   * the FakeApi passes `controls.setInternalReporter(true)`; a live run would need an operator hook.
+   */
+  makeInternalReporter?: (api: BeviApi) => void | Promise<void>;
 }
 
 const MINOR_BIRTHDATE = (now: Date) => `${now.getUTCFullYear() - 15}-01-01`;
@@ -113,11 +120,15 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       await expectCode(api.feed.getFeed(), 'unauthorized');
       await expectCode(api.feed.getBevOfPeriod(), 'unauthorized');
       await expectCode(api.feed.listUser('anyone'), 'unauthorized');
+      await expectCode(api.leaderboard.friends(), 'unauthorized');
+      await expectCode(api.follows.suggested(), 'unauthorized');
       await expectCode(api.rankings.listMine(), 'unauthorized');
       await expectCode(api.rankings.listBucketBevs('LOVED'), 'unauthorized');
       await expectCode(api.bevs.similar('anything'), 'unauthorized');
       await expectCode(api.bevs.similarities('anything', ['other']), 'unauthorized');
+      await expectCode(api.bevs.leaves(['anything']), 'unauthorized');
       await expectCode(api.categories.list(), 'unauthorized');
+      await expectCode(api.categories.tree(), 'unauthorized');
       await expectCode(api.stats.getCategoryProgress(), 'unauthorized');
       await expectCode(api.stats.getTasteProfile('anyone'), 'unauthorized');
       await expectCode(api.deleteAccount(), 'unauthorized');
@@ -307,6 +318,62 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       expect(ids).not.toContain(a.userId);
     });
 
+    it('suggested: followedBy is who the caller follows that follows them, at most two, with the total', async () => {
+      // Someone with a ranking, so there is a person to suggest even in an empty database. Who
+      // is actually suggested is the implementation's ranking of everyone, so the suite takes
+      // whoever comes first rather than expecting this user.
+      await newUser();
+      const [x] = await starterIds(1);
+      await rankAtBottom(x!);
+
+      const me = await newUser();
+      const before = await api.follows.suggested();
+      expect(before.length).toBeGreaterThan(0);
+      // The caller follows nobody yet, so nobody they follow can follow anyone.
+      for (const person of before) expect(person).toMatchObject({ followedBy: [], followedByCount: 0 });
+      const target = before[0]!;
+
+      // Three people follow the target, oldest follow first; a fourth does too, but the caller
+      // will not follow that one.
+      const connectors: Session[] = [];
+      for (let i = 0; i < 3; i++) {
+        connectors.push(await newUser());
+        await api.follows.follow(target.id);
+      }
+      const bystander = await newUser();
+      await api.follows.follow(target.id);
+
+      await signInAs(me);
+      for (const c of connectors) await api.follows.follow(c.userId);
+
+      const after = await api.follows.suggested();
+      const row = after.find((u) => u.id === target.id);
+      // Following other people does not change that the target is suggested.
+      expect(row).toBeDefined();
+      expect(row!.isFollowing).toBe(false);
+      expect(row!.followedByCount).toBe(3);
+      // At most two, the most recent follower first.
+      expect(row!.followedBy.map((p) => p.id)).toEqual([connectors[2]!.userId, connectors[1]!.userId]);
+      expect(row!.followedBy[0]).toMatchObject({ handle: connectors[2]!.handle, birthdate: null });
+
+      for (const person of after) {
+        expect(person.followedBy.length).toBeLessThanOrEqual(2);
+        expect(person.followedByCount).toBeGreaterThanOrEqual(person.followedBy.length);
+        const ids = person.followedBy.map((p) => p.id);
+        expect(ids).not.toContain(me.userId);
+        expect(ids).not.toContain(person.id);
+        expect(ids).not.toContain(bystander.userId);
+        // Everyone listed is someone the caller follows.
+        for (const id of ids) expect(connectors.map((c) => c.userId)).toContain(id);
+      }
+
+      // Unfollowing one of them takes that person out of the list and the count.
+      await api.follows.unfollow(connectors[2]!.userId);
+      const fewer = (await api.follows.suggested()).find((u) => u.id === target.id);
+      expect(fewer).toMatchObject({ followedByCount: 2 });
+      expect(fewer!.followedBy.map((p) => p.id)).toEqual([connectors[1]!.userId, connectors[0]!.userId]);
+    });
+
     it('stats for a new user are zero; getUser of an unknown id is not_found', async () => {
       await newUser();
       expect(await api.stats.getMine()).toMatchObject({
@@ -412,6 +479,21 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       for (const b of filtered.items) expect(b.categoryId).toBe(bev!.categoryId);
     });
 
+    // 20261102000200: a query is whitespace-separated tokens, each matched as a substring of the
+    // Bev's name, brand, flavor, category and aliases; punctuation stays inside a token, so "A&W" is
+    // one token, not "a" and "w" (which Mountain Dew has). The live twin is
+    // packages/api/test/catalog-and-media.live.test.ts.
+    it('search matches by any piece of a Bev\'s words: "A&W" finds the A&W Bevs and not Mountain Dew', async () => {
+      await newUser();
+      const aw = await api.bevs.search({ q: 'A&W', limit: 50 });
+      expect(aw.items.length).toBeGreaterThan(0);
+      expect(aw.items[0]!.name.startsWith('A&W')).toBe(true);
+      expect(aw.items.some((b) => b.name.startsWith('Mountain Dew'))).toBe(false);
+      const words = await api.bevs.search({ q: 'root beer', limit: 50 });
+      expect(words.items.map((b) => b.name)).toContain('A&W Root Beer');
+      expect((await api.bevs.search({ q: 'zzqx' })).items).toEqual([]);
+    });
+
     it('get returns detail; unknown id is not_found', async () => {
       await newUser();
       const [id] = await starterIds(1);
@@ -469,6 +551,28 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       await expect(api.bevs.report(id!, 'wrong_info')).resolves.toBeUndefined();
       await expectCode(api.bevs.report('no-such-bev', 'wrong_info'), 'not_found');
       await expectCode(api.bevs.report(id!, ''), 'validation');
+    });
+
+    it('report: duplicateOfId names a visible Bev; itself, an unknown id or one a minor cannot see is validation', async () => {
+      await newUser();
+      const [id, original] = await starterIds(2);
+      await expect(api.bevs.report(id!, 'duplicate', { duplicateOfId: original! })).resolves.toBeUndefined();
+      const self = await expectCode(api.bevs.report(original!, 'duplicate', { duplicateOfId: original! }), 'validation');
+      expect(self.detail).toMatchObject({ field: 'duplicateOfId' });
+      // A well-formed id that names no Bev (a real backend wants a uuid here).
+      const unknown = await expectCode(
+        api.bevs.report(original!, 'duplicate', { duplicateOfId: '00000000-0000-4000-8000-000000000000' }),
+        'validation',
+      );
+      expect(unknown.detail).toMatchObject({ field: 'duplicateOfId' });
+
+      await newUser({ birthdate: MINOR_BIRTHDATE(new Date()) });
+      const [minorsBev] = await starterIds(1);
+      const hidden = await expectCode(
+        api.bevs.report(minorsBev!, 'duplicate', { duplicateOfId: options.alcoholicBevId }),
+        'validation',
+      );
+      expect(hidden.detail).toMatchObject({ field: 'duplicateOfId' });
     });
   });
 
@@ -579,6 +683,31 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       await expectCode(api.rankings.rerankBev({ bevId: a!, bucket: 'FINE', insertIndex: 3, expectedBucketSize: 1, comparisons: [] }), 'validation');
       const [c] = (await starterIds(3)).slice(2);
       await expectCode(api.rankings.rerankBev({ bevId: c!, bucket: 'FINE', insertIndex: 0, expectedBucketSize: 2, comparisons: [] }), 'not_found');
+    });
+
+    // `Ranking.createdAt` is the time of the latest placement, not of the first one: `rerank_bev`
+    // deletes the row and re-inserts it, so `ranked_at` moves. Everything that reads the field wants
+    // that -- the Bev'd row's "Ranked Oct 3", Activity's post time, and the Recent sort, which would
+    // otherwise bury a Bev you just re-ranked. Pinned here because the two implementations disagreed:
+    // the FakeApi mutated its row in place and kept the original date, matching a stale doc comment
+    // rather than the server, and nothing in this suite looked.
+    it('rerankBev re-dates the ranking: createdAt moves to the re-rank', async () => {
+      await newUser();
+      const [a, b] = await starterIds(2);
+      await rankAtBottom(a!, 'LOVED');
+      await rankAtBottom(b!, 'FINE');
+      const first = (await api.rankings.listMine()).items.find((r) => r.bevId === a!)!;
+
+      // The clock has to move for the comparison to mean anything.
+      await new Promise((r) => setTimeout(r, 1100));
+      const moved = await api.rankings.rerankBev({ bevId: a!, bucket: 'FINE', insertIndex: 1, expectedBucketSize: 1, comparisons: [{ winnerBevId: b!, loserBevId: a!, tie: true }] });
+
+      expect(Date.parse(moved.ranking.createdAt)).toBeGreaterThan(Date.parse(first.createdAt));
+      const after = (await api.rankings.listMine()).items.find((r) => r.bevId === a!)!;
+      expect(after.createdAt).toBe(moved.ranking.createdAt);
+      // And so the Recent sort puts it first, which is the behaviour that actually depends on this.
+      const recent = await api.rankings.listMine({ sort: 'recent' });
+      expect(recent.items[0]!.bevId).toBe(a!);
     });
 
     it('updateNote sets and clears a note; not_found when unranked; validation when too long', async () => {
@@ -772,6 +901,130 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       expect(rows.some((r) => r.profile.id === me.userId)).toBe(true);
     });
 
+    it('leaderboard.friends: the caller and the people they follow, ranked among themselves, paged', async () => {
+      const top = await newUser();
+      const [x, y] = await starterIds(2);
+      await rankAtBottom(x!);
+      await rankAtBottom(y!);
+      const idle = await newUser();
+      const stranger = await newUser();
+      await rankAtBottom(x!);
+      await rankAtBottom(y!);
+
+      const me = await newUser();
+      // No rankings and nobody followed: nobody to rank, the caller included (Unranked, as on `users`).
+      expect(await api.leaderboard.friends()).toEqual({ items: [], nextCursor: null });
+
+      await rankAtBottom(x!);
+      // Following nobody: the caller alone, at rank 1 whatever their rank on Bevi is.
+      const alone = await api.leaderboard.friends();
+      expect(alone.items.map((r) => [r.profile.id, r.rank])).toEqual([[me.userId, 1]]);
+      expect(alone.nextCursor).toBeNull();
+
+      await api.follows.follow(top.userId);
+      await api.follows.follow(idle.userId);
+      const board = await api.leaderboard.friends();
+      // `top` has ranked two Bevs to the caller's one, so more points. `idle` is followed but
+      // Unranked, and `stranger` is ranked but not followed: neither has a row.
+      expect(board.items.map((r) => r.profile.id)).toEqual([top.userId, me.userId]);
+      expect(board.items.map((r) => r.rank)).toEqual([1, 2]);
+      expect(board.items.map((r) => r.profile.id)).not.toContain(stranger.userId);
+      expect(board.items.map((r) => r.bevsRanked)).toEqual([2, 1]);
+      expect(board.items[0]!.points).toBeGreaterThan(board.items[1]!.points);
+      for (const row of board.items) {
+        // Exactly the points the global board ranks by, and a rank that can only be as good or better.
+        const stats = await api.stats.getUser(row.profile.id);
+        expect(row.points).toBe(stats.rankPoints);
+        expect(stats.rankOnBevi).not.toBeNull();
+        expect(row.rank).toBeLessThanOrEqual(stats.rankOnBevi!);
+        // Another user's birthdate is never on the board.
+        if (row.profile.id !== me.userId) expect(row.profile.birthdate).toBeNull();
+      }
+
+      const first = await api.leaderboard.friends({ limit: 1 });
+      expect(first.items.map((r) => [r.profile.id, r.rank])).toEqual([[top.userId, 1]]);
+      expect(first.nextCursor).not.toBeNull();
+      const second = await api.leaderboard.friends({ limit: 1, cursor: first.nextCursor! });
+      // The rank is the one in the whole set, not the position on the page.
+      expect(second.items.map((r) => [r.profile.id, r.rank])).toEqual([[me.userId, 2]]);
+
+      // Two followed people on the same points share a rank, and the caller comes after both.
+      await api.follows.follow(stranger.userId);
+      const tied = await api.leaderboard.friends();
+      expect(tied.items.map((r) => r.rank)).toEqual([1, 1, 3]);
+      expect(new Set(tied.items.slice(0, 2).map((r) => r.profile.id))).toEqual(new Set([top.userId, stranger.userId]));
+      expect(tied.items[2]!.profile.id).toBe(me.userId);
+    });
+
+    it('feed: alsoBevdBy is followed users who also ranked the Bev, never the actor or the caller', async () => {
+      const author = await newUser();
+      const [x, y] = await starterIds(2);
+      await rankAtBottom(x!);
+      await rankAtBottom(y!);
+      // Four friends rank the same Bev one after another, so friends[3] ranked it most recently.
+      const friends: Session[] = [];
+      for (let i = 0; i < 4; i++) {
+        friends.push(await newUser());
+        await rankAtBottom(x!, 'FINE');
+      }
+      const stranger = await newUser();
+      await rankAtBottom(x!);
+
+      const me = await newUser();
+      await rankAtBottom(x!);
+      await api.follows.follow(author.userId);
+      for (const f of friends) await api.follows.follow(f.userId);
+
+      const feed = (await api.feed.getFeed({ limit: 50 })).items;
+      const newestThree = [friends[3]!.userId, friends[2]!.userId, friends[1]!.userId];
+
+      // The author's post: all four friends count, the three most recent are listed, newest first.
+      const post = feed.find((i) => i.actor.id === author.userId && i.bev.id === x)!;
+      expect(post.alsoBevdCount).toBe(4);
+      expect(post.alsoBevdBy.map((f) => f.profile.id)).toEqual(newestThree);
+      // Each with their own ranking of it, not the actor's.
+      for (const f of post.alsoBevdBy) {
+        expect(f.bucket).toBe('FINE');
+        expect(typeof f.score).toBe('number');
+        expect(f.profile.birthdate).toBeNull();
+      }
+      expect(post).toMatchObject({ bucket: 'LOVED', actor: { id: author.userId } });
+
+      // A friend's post of the same Bev: that friend is the actor, so is out, and the author is in.
+      const friendPost = feed.find((i) => i.actor.id === friends[0]!.userId)!;
+      expect(friendPost.alsoBevdCount).toBe(4);
+      expect(friendPost.alsoBevdBy.map((f) => f.profile.id)).toEqual(newestThree);
+
+      // The caller's own post: everyone they follow who ranked it, and never the caller.
+      const mine = feed.find((i) => i.actor.id === me.userId)!;
+      expect(mine.alsoBevdCount).toBe(5);
+      expect(mine.alsoBevdBy.map((f) => f.profile.id)).toEqual(newestThree);
+
+      // Nobody else ranked the second Bev.
+      expect(feed.find((i) => i.bev.id === y)).toMatchObject({ alsoBevdBy: [], alsoBevdCount: 0 });
+
+      for (const item of feed) {
+        const ids = item.alsoBevdBy.map((f) => f.profile.id);
+        expect(ids.length).toBeLessThanOrEqual(3);
+        expect(item.alsoBevdCount).toBeGreaterThanOrEqual(ids.length);
+        expect(ids).not.toContain(item.actor.id);
+        expect(ids).not.toContain(me.userId);
+        // Ranked it, but the caller does not follow them.
+        expect(ids).not.toContain(stranger.userId);
+      }
+
+      // A user's activity carries the same values for the same posts.
+      const activity = (await api.feed.listUser(author.userId)).items;
+      expect(activity.find((i) => i.bev.id === x)).toMatchObject({ alsoBevdCount: 4, alsoBevdBy: post.alsoBevdBy });
+      expect(activity.find((i) => i.bev.id === y)).toMatchObject({ alsoBevdBy: [], alsoBevdCount: 0 });
+
+      // It follows the caller's follows: unfollow the most recent one and the next takes the place.
+      await api.follows.unfollow(friends[3]!.userId);
+      const again = (await api.feed.getFeed({ limit: 50 })).items.find((i) => i.actor.id === author.userId && i.bev.id === x)!;
+      expect(again.alsoBevdCount).toBe(3);
+      expect(again.alsoBevdBy.map((f) => f.profile.id)).toEqual([friends[2]!.userId, friends[1]!.userId, friends[0]!.userId]);
+    });
+
     it('recommendations are empty below MIN_N_USER rankings, then exclude ranked Bevs', async () => {
       await newUser();
       const ids = await starterIds(MIN_N_USER + 1);
@@ -834,6 +1087,89 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       expect(e.detail).toMatchObject({ field: 'otherIds' });
     });
 
+    // A-13. What the contract promises about the taxonomy, and nothing about which leaves exist:
+    // D-04's 60 are data, so an implementation with a flatter catalog still has to pass.
+    it('categories.tree: two levels, roots match list(), a leaf inherits its root, root-then-leaf order', async () => {
+      await newUser();
+      const roots = await api.categories.list();
+      const nodes = await api.categories.tree();
+
+      const byId = new Map(nodes.map((n) => [n.id, n]));
+      // Every root `list()` shows is in the tree, with the same name and flag.
+      for (const root of roots) {
+        const node = byId.get(root.id);
+        expect(node).toBeDefined();
+        expect(node!.parentId).toBeNull();
+        expect(node!.name).toBe(root.name);
+        expect(node!.isAlcoholic).toBe(root.isAlcoholic);
+      }
+      expect(nodes.filter((n) => n.parentId === null).length).toBe(roots.length);
+
+      for (const node of nodes) {
+        if (node.parentId === null) {
+          // Only a root carries the emoji the app draws.
+          expect(typeof node.emoji === 'string' || node.emoji === null).toBe(true);
+          continue;
+        }
+        const parent = byId.get(node.parentId);
+        // Exactly two levels: a leaf's parent is present and is itself a root.
+        expect(parent).toBeDefined();
+        expect(parent!.parentId).toBeNull();
+        // The age gate walks one hop, so the flags must agree.
+        expect(node.isAlcoholic).toBe(parent!.isAlcoholic);
+        expect(node.emoji).toBeNull();
+      }
+
+      // Root-then-leaf: a leaf never precedes its own root, so one pass builds the tree.
+      const seenRoots = new Set<string>();
+      for (const node of nodes) {
+        if (node.parentId === null) seenRoots.add(node.id);
+        else expect(seenRoots.has(node.parentId)).toBe(true);
+      }
+    });
+
+    it('bevs.leaves: one row per visible id, leaf under the Bev own category or null', async () => {
+      await newUser();
+      const ids = await starterIds(6);
+      const nodes = await api.categories.tree();
+      const parentOf = new Map(nodes.map((n) => [n.id, n.parentId]));
+
+      expect(await api.bevs.leaves([])).toEqual([]);
+
+      // Duplicates are de-duplicated rather than echoed back, as in `similarities`.
+      const rows = await api.bevs.leaves([...ids, ...ids]);
+      expect(rows.length).toBe(ids.length);
+      const summaries = new Map((await api.bevs.getStarterCandidates()).map((b) => [b.id, b]));
+      const seen = new Set<string>();
+      for (const row of rows) {
+        expect(ids).toContain(row.bevId);
+        expect(seen.has(row.bevId)).toBe(false);
+        seen.add(row.bevId);
+        if (row.leafCategoryId === null) continue;
+        // A leaf, never a root, and a child of the Bev's OWN category -- the invariant that lets
+        // `categoryId` keep meaning one of the 15.
+        const parent = parentOf.get(row.leafCategoryId);
+        expect(parent).toBeDefined();
+        expect(parent).not.toBeNull();
+        const summary = summaries.get(row.bevId);
+        if (summary) expect(parent).toBe(summary.categoryId);
+      }
+
+      // An id nothing matches is absent, not an error -- unlike a null leaf, which is a row.
+      expect(await api.bevs.leaves(['no-such-bev'])).toEqual([]);
+      const tooMany = await expectCode(
+        api.bevs.leaves(Array.from({ length: 501 }, (_, i) => `no-such-bev-${i}`)),
+        'validation',
+      );
+      expect(tooMany.detail).toMatchObject({ field: 'bevIds' });
+
+      // A Bev a minor may not see has no leaf to report, as it has no neighbours.
+      await newUser({ birthdate: MINOR_BIRTHDATE(new Date()) });
+      expect(await api.bevs.leaves([options.alcoholicBevId])).toEqual([]);
+      const minorTree = await api.categories.tree();
+      expect(minorTree.some((n) => n.isAlcoholic)).toBe(false);
+    });
+
     it('bevs.similar: at most n BevSummary rows, never the Bev itself, age-filtered', async () => {
       await newUser();
       const [anchor] = await starterIds(1);
@@ -877,6 +1213,259 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
         expect(row.brandKey).toBe(normaliseBrand(bev.brand));
       }
       expect(await api.rankings.listBucketBevs('DISLIKED')).toEqual([]);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // venues (S-10 + A-08)
+  // -------------------------------------------------------------------------
+  // Written against the CONTRACT only, which here means it must pass with no
+  // venues at all: prod has none until the import is run, and the FakeApi
+  // seeds four. So nothing below asserts a count, a name or a neighbourhood --
+  // only the invariants every implementation promises.
+  describe('venues', () => {
+    const MANHATTAN = { south: 40.74, north: 40.8, west: -74.0, east: -73.93 };
+
+    it('venues.inView: pins inside the viewport, each with an assortment behind it', async () => {
+      await newUser();
+      const pins = await api.venues.inView({ bounds: MANHATTAN, zoom: 14 });
+      for (const pin of pins) {
+        // D-13: no assortment, no pin.
+        expect(pin.bevCount).toBeGreaterThanOrEqual(1);
+        expect(pin.venue.lat).toBeGreaterThanOrEqual(MANHATTAN.south);
+        expect(pin.venue.lat).toBeLessThanOrEqual(MANHATTAN.north);
+        expect(pin.venue.lng).toBeGreaterThanOrEqual(MANHATTAN.west);
+        expect(pin.venue.lng).toBeLessThanOrEqual(MANHATTAN.east);
+        // `openNow` is null exactly when the hours are not ones we can read.
+        if (!pin.venue.hoursKnown) expect(pin.openNow).toBeNull();
+        if (pin.bestScore !== null) expect(pin.bestScore).toBeGreaterThanOrEqual(0);
+      }
+    });
+
+    it('venues.inView: the bounds are clamped to New York, not rejected', async () => {
+      await newUser();
+      // A viewport dragged into the Atlantic is empty, not an error.
+      const away = await api.venues.inView({
+        bounds: { south: 40.5, north: 40.6, west: -73.75, east: -73.71 },
+        zoom: 14,
+      });
+      expect(Array.isArray(away)).toBe(true);
+      // One that spills past the coast returns what is inside it.
+      const spilling = await api.venues.inView({
+        bounds: { south: 39, north: 42, west: -76, east: -72 },
+        zoom: 11,
+      });
+      for (const pin of spilling) {
+        expect(pin.venue.lat).toBeGreaterThanOrEqual(NYC_BOUNDS.south);
+        expect(pin.venue.lat).toBeLessThanOrEqual(NYC_BOUNDS.north);
+        expect(pin.venue.lng).toBeGreaterThanOrEqual(NYC_BOUNDS.west);
+        expect(pin.venue.lng).toBeLessThanOrEqual(NYC_BOUNDS.east);
+      }
+    });
+
+    it('venues.inView: the zoom cap thins the map rather than reordering it', async () => {
+      await newUser();
+      const wide = { south: NYC_BOUNDS.south, north: NYC_BOUNDS.north, west: NYC_BOUNDS.west, east: NYC_BOUNDS.east };
+      const far = await api.venues.inView({ bounds: wide, zoom: 11 });
+      const near = await api.venues.inView({ bounds: wide, zoom: 15 });
+      expect(far.length).toBeLessThanOrEqual(60);
+      expect(near.length).toBeLessThanOrEqual(300);
+      expect(far.length).toBeLessThanOrEqual(near.length);
+      // Zooming out keeps a prefix of the same order, so a pin never jumps in.
+      expect(near.slice(0, far.length).map((p) => p.venue.id)).toEqual(far.map((p) => p.venue.id));
+    });
+
+    it('venues.inView: filters narrow the result and never widen it', async () => {
+      await newUser();
+      const all = await api.venues.inView({ bounds: MANHATTAN, zoom: 15 });
+      const ids = new Set(all.map((p) => p.venue.id));
+
+      const craft = await api.venues.inView({ bounds: MANHATTAN, zoom: 15, filters: { kinds: ['craft'] } });
+      for (const pin of craft) {
+        expect(pin.venue.kind).toBe('craft');
+        expect(ids.has(pin.venue.id)).toBe(true);
+      }
+
+      const open = await api.venues.inView({ bounds: MANHATTAN, zoom: 15, filters: { openNow: true } });
+      for (const pin of open) {
+        expect(pin.openNow).toBe(true);
+        expect(pin.venue.hoursKnown).toBe(true);
+      }
+    });
+
+    it('venues.get: the venue and its assortment, and not_found for anything else', async () => {
+      await newUser();
+      const pins = await api.venues.inView({ bounds: MANHATTAN, zoom: 15 });
+      const first = pins[0];
+      if (first) {
+        const detail = await api.venues.get(first.venue.id);
+        expect(detail.venue.id).toBe(first.venue.id);
+        expect(detail.bevs.length).toBe(first.bevCount);
+        // Best Bayesian score first; nulls last.
+        const scores = detail.bevs.map((b) => b.bayesScore);
+        const ranked = scores.filter((x): x is number => x !== null);
+        expect(ranked).toEqual([...ranked].sort((a, b) => b - a));
+        expect(scores.indexOf(null) === -1 || scores.indexOf(null) >= ranked.length).toBe(true);
+      }
+      await expectCode(api.venues.get('00000000-0000-4000-8000-00000000dead'), 'not_found');
+    });
+
+    it('venues.neighborhoods: a vocabulary every option of which returns pins', async () => {
+      await newUser();
+      const names = await api.venues.neighborhoods();
+      expect(Array.isArray(names)).toBe(true);
+      // Sorted and distinct.
+      expect(names).toEqual([...new Set(names)]);
+      expect(names).toEqual([...names].sort(compareCodePoints));
+      // An empty list is the designed state today (OSM has no neighbourhood
+      // for any real venue), so this loop may not run -- but when it does,
+      // every option must select something.
+      for (const name of names) {
+        const pins = await api.venues.inView({
+          bounds: { south: NYC_BOUNDS.south, north: NYC_BOUNDS.north, west: NYC_BOUNDS.west, east: NYC_BOUNDS.east },
+          zoom: 15,
+          filters: { neighborhoods: [name] },
+        });
+        expect(pins.length).toBeGreaterThan(0);
+        for (const pin of pins) expect(pin.venue.neighborhood).toBe(name);
+      }
+    });
+
+    it('venues: every method needs a session', async () => {
+      await api.signOut();
+      await expectCode(api.venues.inView({ bounds: MANHATTAN, zoom: 14 }), 'unauthorized');
+      await expectCode(api.venues.get('00000000-0000-4000-8000-00000000dead'), 'unauthorized');
+      await expectCode(api.venues.neighborhoods(), 'unauthorized');
+    });
+  });
+
+  describe('bugs (the internal reporter)', () => {
+    const input = {
+      kind: 'bug',
+      severity: 'bad',
+      title: 'Ratings vanish after a refresh',
+      idempotencyKey: '4f1d6c0a-4f4c-4f0e-9e0b-9a4a8f2b7c11',
+    } as const;
+
+    it('an ordinary account cannot report: canReport is false and every call is unauthorized', async () => {
+      // Only an operator can make an account internal (set_profile_role), which
+      // the contract has no way to do, so the conformance suite can only pin
+      // the refusal. The FakeApi's own suite covers the internal path through
+      // controls.setInternalReporter().
+      await newUser();
+      expect(await api.bugs.canReport()).toBe(false);
+      await expectCode(api.bugs.report(input), 'unauthorized');
+      await expectCode(api.bugs.listMine(), 'unauthorized');
+      await expectCode(api.bugs.markVerified('BEV-1'), 'unauthorized');
+      await expectCode(api.bugs.place('BEV-1', null), 'unauthorized');
+      await expectCode(api.bugs.place('BEV-1', 'BEV-2'), 'unauthorized');
+    });
+
+    it('signed out, canReport answers false rather than throwing, and the rest is unauthorized', async () => {
+      await api.signOut();
+      expect(await api.bugs.canReport()).toBe(false);
+      await expectCode(api.bugs.report(input), 'unauthorized');
+      await expectCode(api.bugs.listMine(), 'unauthorized');
+      await expectCode(api.bugs.markVerified('BEV-1'), 'unauthorized');
+      await expectCode(api.bugs.place('BEV-1', null), 'unauthorized');
+    });
+
+    const makeInternal = options.makeInternalReporter;
+    const internalIt = makeInternal ? it : it.skip;
+
+    const hex = (n: number) => Array.from({ length: n }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+    /** A fresh idempotency key: a v4-shaped UUID. */
+    const newKey = () => `${hex(8)}-${hex(4)}-4${hex(3)}-8${hex(3)}-${hex(12)}`;
+
+    /** A fresh internal reporter, and a filer that returns the ticket identifier. */
+    async function newReporter() {
+      await newUser();
+      await makeInternal!(api);
+      return async (title: string, severity: 'blocker' | 'bad' | 'annoying' | 'polish' = 'bad') =>
+        (await api.bugs.report({ ...input, title, severity, idempotencyKey: newKey() })).ticketId;
+    }
+
+    const ranks = async () => Object.fromEntries((await api.bugs.listMine()).map((r) => [r.ticketId, r.rank]));
+
+    internalIt('listMine carries a rank for open tickets, and a new ticket goes to the top', async () => {
+      const file = await newReporter();
+      const a = await file('first');
+      const b = await file('second');
+      const c = await file('third');
+      expect(await ranks()).toEqual({ [c]: 1, [b]: 2, [a]: 3 });
+    });
+
+    internalIt('place puts a ticket at the top or directly below another, returning the new ranks', async () => {
+      const file = await newReporter();
+      const a = await file('first');
+      const b = await file('second');
+      const c = await file('third');
+
+      const top = await api.bugs.place(a, null);
+      expect(Object.fromEntries(top.map((r) => [r.ticketId, r.rank]))).toEqual({ [a]: 1, [c]: 2, [b]: 3 });
+      // Three open tickets: the top slot is High, the middle Medium, the bottom Low.
+      expect(top.find((r) => r.ticketId === a)?.priority).toBe(2);
+
+      const below = await api.bugs.place(a, b);
+      expect(Object.fromEntries(below.map((r) => [r.ticketId, r.rank]))).toEqual({ [c]: 1, [b]: 2, [a]: 3 });
+      expect(below.find((r) => r.ticketId === a)?.priority).toBe(4);
+      expect(await ranks()).toEqual({ [c]: 1, [b]: 2, [a]: 3 });
+
+      const middle = await api.bugs.place(c, b);
+      expect(Object.fromEntries(middle.map((r) => [r.ticketId, r.rank]))).toEqual({ [b]: 1, [c]: 2, [a]: 3 });
+      expect(middle.find((r) => r.ticketId === c)?.priority).toBe(3);
+    });
+
+    internalIt('place never downgrades an Urgent ticket', async () => {
+      const file = await newReporter();
+      const urgent = await file('blocker', 'blocker');
+      const other = await file('other', 'polish');
+      const placed = await api.bugs.place(urgent, other);
+      const row = placed.find((r) => r.ticketId === urgent);
+      expect(row?.rank).toBe(2);
+      expect(row?.priority).toBe(1);
+    });
+
+    internalIt('place refuses a bad identifier, a ticket after itself, and a ticket that is not an open one of yours', async () => {
+      const file = await newReporter();
+      const a = await file('first');
+      const b = await file('second');
+      expect((await expectCode(api.bugs.place('drop table', null), 'validation')).detail).toMatchObject({ field: 'ticketId' });
+      expect((await expectCode(api.bugs.place(a, 'nope'), 'validation')).detail).toMatchObject({ field: 'afterTicketId' });
+      expect((await expectCode(api.bugs.place(a, a), 'validation')).detail).toMatchObject({ field: 'afterTicketId' });
+      expect((await expectCode(api.bugs.place('BEV-999999', null), 'not_found')).detail).toMatchObject({ reason: 'not_found' });
+      await expectCode(api.bugs.place(a, 'BEV-999999'), 'not_found');
+
+      // A verified ticket is closed: it has no rank, and placing it (or after it) is a conflict,
+      // not a not_found: it is still the caller's.
+      await api.bugs.markVerified(b);
+      expect(await ranks()).toEqual({ [a]: 1, [b]: null });
+      expect((await expectCode(api.bugs.place(b, null), 'conflict')).detail).toEqual({ reason: 'not_open' });
+      expect((await expectCode(api.bugs.place(a, b), 'conflict')).detail).toEqual({ reason: 'not_open' });
+    });
+
+    internalIt("another reporter's ticket cannot be placed", async () => {
+      const file = await newReporter();
+      const theirs = await file('theirs');
+      const mine = await newReporter();
+      const own = await mine('mine');
+      await expectCode(api.bugs.place(theirs, null), 'not_found');
+      await expectCode(api.bugs.place(own, theirs), 'not_found');
+    });
+
+    internalIt('report keeps the first six pointed-at components and accepts a thirty-step recording', async () => {
+      await newReporter();
+      const targets = Array.from({ length: 8 }, (_, i) => ({ component: `C${i}` }));
+      const reproductionSteps = Array.from({ length: 30 }, (_, i) => `Step ${i + 1}`);
+      const result = await api.bugs.report({
+        ...input,
+        idempotencyKey: newKey(),
+        targets,
+        reproductionSteps,
+        stepsSource: 'recorded',
+      });
+      expect(result.status).toBe('created');
+      expect(result.ticketId).toMatch(/^[A-Z][A-Z0-9]*-\d+$/);
     });
   });
 }

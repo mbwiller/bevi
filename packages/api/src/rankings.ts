@@ -45,7 +45,7 @@ interface OffsetCursor {
 }
 
 async function fetchRankedBevs(client: SupabaseClient, userId: string, bucket?: Bucket): Promise<RankedBev[]> {
-  let query = client.from('rankings').select('*, bevs(*, bev_stats(*))').eq('user_id', userId);
+  let query = client.from('rankings').select('*, bevs(*, bev_stats(*), bev_icons(path))').eq('user_id', userId);
   if (bucket) query = query.eq('bucket', bucketToDb(bucket));
   const { data, error } = await query;
   if (error) throw mapError(error);

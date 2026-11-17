@@ -1,77 +1,88 @@
 # Next up: Matt
 
-Your queue from 2026-10-19 on. Arjun's is in [`NEXT-ARJUN.md`](NEXT-ARJUN.md). The live status of every task is the board at the top of [`TASKS.md`](TASKS.md). Update your row there in the same PR whenever you start or finish something.
+Your queue, updated 2026-11-01. Arjun's is in [`NEXT-ARJUN.md`](NEXT-ARJUN.md). The live status of every task is the board at the top of [`TASKS.md`](TASKS.md). Update your row there in the same PR whenever you start or finish something.
 
 **Your lane:** `app/`, `packages/ranking/`, `design/`. Branches are `ui/*` and `rank/*`.
 
-## Start now: nothing blocks these
+## Where it stands (2026-11-01)
 
-| Order | Task | What "done" means | Unblocks |
-|---|---|---|---|
-| 1 | **M-19 · Taste Profile screen** | Profile › Taste Profile shows your average score per category as bars, high to low ("Coffee 8.1 · 9 ranked"), with a one-line read-out ("You prefer coffee and boba over soda"). Categories with no rankings are hidden. It works on anyone's profile, and the server already drops alcoholic categories for under-21s. Design-system component first. Data: `stats.getTasteProfile(userId)`, live since #101 | — |
-| 2 | **D-04 · The finer category list** (high effort) | `design/taxonomy.md`: two levels, today's 15 categories as parents, leaves where it matters (coffee, tea, boba, soda, beer, cocktails first), lined up with the flavour-profile `base` words. **Also assign every one of the 378 catalog Bevs to a leaf**, as a slug → leaf table Arjun can load. Without that, the tree is only a list. Arjun reviews | **Arjun's A-13**, then your M-21 |
-| 3 | **M-22 · Maths review** | Check the paper (`docs/bevi-ranking-math.tex`), `@bevi/ranking` and the SQL against each other (use the `ranking-math` agent and the golden vectors). Include Arjun's #107 (`bayes_prior`, the leaderboard order). Output a list of corrections split by lane: paper and package fixes are yours, SQL fixes go to Arjun | Any A-14 follow-ups for Arjun |
+**Done through 2026-10-31:** M-19 (#125), M-27 (b) (#126), D-04 (#127), M-22 (#128), M-04 (#129), M-28 (#131), the `DEVELOPMENT-MATT.md` refresh (#136), M-27 (a) + the M-22 package follow-ups (#137, 1.4.0), M-21's package half (#138, 1.5.0), the icon pilot (#134), M-29 (#143), the Expo patch bump (#142, S-18) and the Stage 4 package half (#144, 1.6.0); Arjun's A-13 (#132), A-16 (2) (#133) and the embed guard (#135).
 
-M-19 and D-04 can run in parallel. D-04 should not slip, because it's the one item in your lane that blocks Arjun.
+**2026-11-01, from your side with your OK (Arjun's lane, his review after the fact):** the P1 items that blocked you were built and merged: **#146** (`categories_depth_guard` follow-up), **#147** (S-21 + Stage 4: the snapshot RPC carries `edges` and `userNeighbors`, `packages/api` maps them), **#149** (A-14 write path: `ranking_events`, Prop. 2.5 check) and **#150** (A-14 read/stats path: fresh `bayes_score`, `bayes_prior` everywhere, `category_stats`, 2-dp live figures, `20_vectors.test.sql`). The paper's implementation notes were brought up to date in the same wave. P2 opened and closed the same evening: **#151** (S-13 + A-12 duplicates, contract 2.9.0) and **#152** (M-20 on top of it) are merged. Codex's icon batch 3 is **#148**.
 
-## Then: these wait on Arjun
+**Later on 2026-11-01:** #140 (M-21's app half) is merged after a click-through on prod from your account via Claude in Chrome; **#156** fixed search ("A&W" returned nothing; every typed token now matches anywhere in the Bev's words, word-prefix matches first, trigram only as the typo fallback). Arjun's #155 landed too.
 
-| Task | Waits on (Arjun) | What you build |
+| PR / branch | What | State |
 |---|---|---|
-| **M-04 · Explore screen** | **S-04 + A-04** (the Explore backend) | An Explore segment on the Feed. Posts are **read-only** (D-15): reuse the plain post a stranger's Activity already renders, with no heart, counts or comments; tapping opens the Bev. A Follow button on the author. Paginates, with an empty state |
-| **M-27 · Use the Bev graph** | **A-16 (1) + S-14 part 2** (the Bev graph and its contract) | (a) Layer 1's content-similarity term reads `bev_edges` weights, behind a flag. Bump `RANKING_VERSION`, regenerate the vectors and add a row to the paper's §11. Compare against the M-26 baseline before switching it on. (b) A "Bevs like this" row on Bev detail from `bevs.similar()` |
-| **M-21 · Category-aware placement** | **A-13** (after your D-04) and **A-16 (1)** | The two-phase binary search from LaTeX §10.1. Same `PlacementResult`, so `submit_ranking` is untouched |
-| **M-28 · Taste formulas** | A-16 (1) merged | Pure TypeScript in `packages/ranking/src/graph.ts`: `tasteVector`, `attributeSimilarity`, `blendUserSimilarity`, plus the Pearson fix in `layer2.ts`. **Blocks Arjun's A-16 (2)** |
+| **#148** · `design/beverage-icon-pilot` | Icon batch 3: 19 new icons (49 total, 40 of 43 starters) exported into the app; three starter identities recorded as unresolved; `app.yml` also watches the icon manifest | **CI green.** **Your visual sign-off** (checklist in the PR), then merge; afterwards `git checkout design/beverage-icon-pilot && git reset --hard origin/main` in `~/Desktop/bevi` while Codex is idle, so batch 4 starts from `main` |
+
+**Prod migrations (yours to push, from `../bevi-wt/db-push`):**
+- [x] `20261026000100`, `0200`, `0300` and `20261031000100` confirmed on prod 2026-10-31.
+- [x] **All five confirmed on prod 2026-11-01**: `20261101000100` (#147), `20261101000200` (#149), `20261101000300` (#150), `20261101000400` (#146), `20261101000500` (#151). `npx supabase migration list` shows local and remote identical for all 52, and the post-push checks pass: 0 rows in `bev_stats` with `rating_count = 0 and bayes_score is not null`, 32 rows in `ranking_events`, 10 in `category_stats`. Both prod bugs (streaks, stale `bayes_score`) are closed.
+- [ ] **Two to push:** `20261102000100` (#155) and `20261102000200` (#156), together, in that order. Then type "A&" in Search on prod.
+- [ ] **The bug reporter, `20261109000300` (#167), after it merges.** From `../bevi-wt/db-push`: `npx supabase db push`; check `claim_bug_report`, `finish_bug_report`, `forget_bug_evidence` and `set_profile_role` exist and `bug-evidence` is private. Then `npx supabase secrets set LINEAR_API_KEY=… LINEAR_TEAM_ID=…` (typed by you, never pasted in a chat), `npx supabase functions deploy bug-report`, and in Studio `select public.set_profile_role('<your handle>', 'tester');` and the same for Arjun (`'admin'` if moderation powers are wanted too). Then the first real report from the phone: Linear shows `BEV-1` in Triage, and `select * from public.bug_reports order by id desc limit 1;` shows `state = 'created'`. That report is the first live call `linear.ts` has ever made; cancel it in Linear afterwards.
+
+## Next: in this order
+
+| Task | Waits on | What "done" means |
+|---|---|---|
+| **Bug reporter redesign: `ui/bev-8-report-drop`** (BEV-8, contract 2.13.0; replaces the planned PR 2 and PR 3) | Your OK to merge; Arjun's review of `supabase/functions/bug-report`, `packages/api` and `shared/` | A round report button on every signed-in screen opens a one-field note: **Select element** (tap a component; the ticket gets its name, source file, props, tokens and a marked picture), **Capture screen**, **Record steps** (explicit start and stop), **Add photos** (several, three pictures in all), a type dropdown, send in the background, and **Filed reports** with the "Which is worse?" ranking stored in Linear as `sortOrder` plus a priority. No migration. **After the merge:** `npx supabase functions deploy bug-report` (the app works against the old function, but tickets keep the old template and ranking stays off until it is deployed); then one real report from the phone with a selection and recorded steps, check the ticket's Pointed at section in Linear, place it, and confirm the order and priority changed there. That is the first time the new template and the `place` route meet the real Linear API |
+| **Bug reporter, PR 4: `chore/ticketing-ops`** | #167 merged | `.claude/commands/ticket.md` (`/ticket BEV-n` loads `docs/ticket-prompt.md` with the lane rules); a monthly `bugs-purge-evidence.yml` running `npm run bugs:purge-evidence` with `--dry-run` first; the Linear setup checklist tracked in `docs/ticketing-system.md`; Claude Code `/mcp` → `linear` authorised on both machines |
+| **Icon batch 3, #148** | Your visual sign-off | Merge it, then reset `design/beverage-icon-pilot` onto `main`. Batch 4 onwards: Codex on that branch; commit the batch under `design/beverage-icons/` (merging to `main` publishes it through `icons-sync`), your sign-off, merge, reset |
+| ~~**The five migrations**~~ | — | **Done:** all five are on prod, confirmed 2026-11-01 (above) |
+| **Duplicates, live** | — (`20261101000500` is on prod) | A "Duplicate of another Bev" report now carries `duplicateOfId` (#151, #152). To resolve one: Studio → `select * from pending_duplicate_reports;` → paste its `merge_sql` (`select public.merge_bev('<duplicate>', '<original>');`). Arjun's next migration makes `submit_ranking` and `add_want_to_try` follow a merge too, so a stale client can no longer write to the merged row |
+| **Switch-on plan: edges mode and stored neighbours** | Data only: `20261101000100` is on prod and the RPC returns both keys, but prod `user_neighbors` holds just **4 rows** at the 3-co-rater gate, so stored mode has almost nothing to read | Re-tune `CONF1_MASS` (edges mode drops mean conf1 from 0.585 to 0.400 in #137's synthetic eval) and review Layer 2's support under stored mode (#144's synthetic eval: every Δ CI includes 0). Then `recs.ts`/`bevs.ts` pass the options; the app itself does not change |
+| **Expo patches** | — | Routine (S-18): when the app workflow's advisory step warns, `npx expo install --fix` from `app/` in a small `ui/*` PR (#142 was the last; the step was quiet on 2026-11-01) |
+| **List glitch after a removal** | — | Small `ui/*` fix: after "Remove from Bev'd", the All list briefly showed a Disliked Bev between #5 and #6 until the next refetch (seen 2026-11-01). Check the optimistic update's ordering in the lists hook |
 
 ## Later: P2, after P0 and P1
 
 | Task | Waits on (Arjun) | Note |
 |---|---|---|
 | **M-16 · The map** | **S-10 + A-08**, plus the Maps key | Centred on the Upper East Side with Roosevelt Island in frame. Pins are venues with a curated assortment. No Find Bev button and no "your score" pins (those were removed) |
-| **M-20 · "Duplicate of…"** | **S-13 + A-12** | In the report sheet: when "Duplicate of another Bev" is picked, search for the original and send `duplicateOfId` |
+| **M-32 to M-34 · Navigation redesign** (2026-11-11, D-16) | — | M-16's venue map is parked. Tabs are Feed · Lists · Add Bev · Map · Profile; the Map tab opens Bev Maps. See the board in `TASKS.md` |
+| **`index.html` design pass** | — | Planned, not scoped |
 
 ## What you owe Arjun, and what he owes you
 
 | You hand Arjun | So he can |
 |---|---|
-| D-04's tree **plus the 378-Bev leaf assignment** | Build A-13 (the hierarchy in Postgres and Neo4j) |
-| M-22's SQL corrections, if any | Fix them as A-14 follow-ups |
-| M-28's taste formulas | Build A-16 (2), the taste graph |
+| ~~M-22's SQL corrections~~, ~~#137's vector targets~~, ~~the S-21 + Stage 4 RPC contract~~ | All built from your side on 2026-11-01 (#149, #150, #147). What he owes back is a read of those PRs. Their follow-ups are now queued in his lane: the `authenticated` EXECUTE still on `refresh_bev_stats` and the merged-Bev writes go in one migration (`20261102000100`, with a `resolve_bev_id` helper — it changes what `get_bev`, `submit_ranking`, `rerank_bev` and `add_want_to_try` accept), and the untested `respaceBucket`/`rankUsers` vectors go in a chore PR with the S-07 live-test flake |
 | A review of every FakeApi / conformance hunk in his PRs (they live in your lane) | Merge his combined PRs |
-| Advance warning of any `@bevi/ranking` formula or constant change | Re-run the graph sync; his edge weights come from `edgeWeight()` |
+| Advance warning of any `@bevi/ranking` formula or constant change (1.4.0, 1.5.0 and 1.6.0 all merged on 2026-10-31; `edgeWeight` unchanged, so the nightly run only re-stamps) | Re-run the graph sync; his edge weights come from `edgeWeight()` |
 
 | Arjun hands you | So you can |
 |---|---|
-| S-04 + A-04 (Explore backend), on prod | Build M-04 |
-| A-16 (1) + S-14 part 2 (Bev graph, `bev_edges`, `similar`/`similarities`), on prod | Build M-27, then M-21 |
-| A-13 (`Category.parentId`) | Build M-21 |
-| The M-26 export file (privately, outside the repo) | Get real baseline numbers before switching on M-27 |
-| S-10 + A-08 and the Maps key; S-13 + A-12 | Build M-16; build M-20 |
+| ~~A-13 (#132), on prod~~ | Done |
+| ~~S-21 + Stage 4~~ (#147, from your side; `20261101000100` pushed and confirmed on prod 2026-11-01) | Switch on edges mode and stored neighbours (both options exist in the package) — data is the only thing left |
+| An M-26 re-export once there are more users (privately, outside the repo) | Judge switching on edges mode and Pearson |
+| S-10 + A-08 and the Maps key | Build M-16 (S-13 + A-12 is #151, from your side) |
+| A heads-up before any migration that changes what an existing function returns | Keep the app and the FakeApi in step |
 
 ## The shared map (identical in both plans)
 
 ```
 Matt                                   Arjun
-M-19 Taste Profile ──── ready
-D-04 taxonomy + 378 assignments ─────▶ A-13 hierarchy ─────────────┐
-M-22 maths review ───(SQL fixes)─────▶ A-14 follow-ups (#107 first) │
-                                       M-26 export ──(file)──▶ Matt │
-M-04 Explore UI ◀──────────────────── S-04 + A-04 Explore backend   │
-M-27 graph in recs ◀───────────────── A-16 (1) Bev graph + S-14 (2) │
-M-21 placement ◀────────────────────── A-16 (1) + A-13 ◀────────────┘
-M-28 taste formulas ─────────────────▶ A-16 (2) taste graph
+D-04 taxonomy + 378 assignments ─────▶ A-13 hierarchy (#132) ─────────┐
+M-22 maths review ──(SQL fixes)──────▶ A-14 follow-ups (open)         │
+#137 M-22 vectors ──(targets)────────▶ A-14 follow-ups                │
+M-27 (b) Bevs like this ◀───────────── A-16 (1) Bev graph + S-14 (2)  │
+M-21 placement (#138, app #140) ◀───── A-16 (1) + A-13 ◀──────────────┘
+M-28 taste formulas ──(#131)─────────▶ A-16 (2) taste graph (#133)
+M-27 (a) edges mode on (#137) ◀─────── S-21 edges in the snapshot (#147)
+Stored neighbours on (#144) ◀──────── Stage 4 (same RPC change, #147)
 M-16 map UI ◀───────────────────────── S-10 + A-08 venues (P2)
-M-20 duplicate step ◀───────────────── S-13 + A-12 duplicates (P2)
+M-20 duplicate step (#152) ◀────────── S-13 + A-12 duplicates (#151)
 ```
 
 ## Files we both touch: where conflicts happen
 
 | Surface | Who edits it | Rule |
 |---|---|---|
-| `shared/src/` (the contract) and `CONTRACT_VERSION` | Mostly Arjun's combined PRs | One combined PR per feature (contract + migration + `packages/api` + FakeApi). Bump the minor version, currently `2.4.0`. Whoever merges second rebases and takes the next number |
+| `shared/src/` (the contract) and `CONTRACT_VERSION` | Mostly Arjun's combined PRs | One combined PR per feature (contract + migration + `packages/api` + FakeApi). Bump the minor version, currently `2.10.0` (S-10 + A-08, #161). Whoever merges second rebases and takes the next number |
 | `app/src/testing/fakeApi/*`, `conformance.ts` | Arjun (in his combined PRs) and you | Every new API method needs a FakeApi version, or the app's typecheck fails. Arjun writes it and you review it. Expect rebase conflicts if your branch edits the FakeApi too |
 | `packages/ranking/` | You | Arjun's sync job and Edge Function import it. Any formula or constant change, or `RANKING_VERSION` bump, changes his edge weights: tell him first |
-| `supabase/migrations/` | Arjun | Timestamped and append-only. Whatever calls a new database function merges **only after its migration is on prod**. Push migrations in timestamp order |
+| `supabase/migrations/` | Arjun | Timestamped and append-only; the next timestamps go after `20261102000200`. Two branches once both took `20261026000100`, so check `ls supabase/migrations` and the open PRs before picking one; when several PRs are open at once, pre-assign the timestamps (today's five were `20261101000100`–`000500`) and give each a disjoint set of functions to `create or replace`, since two migrations re-creating the same function silently revert each other. Whatever calls a new database function merges **only after its migration is on prod**. Push migrations in timestamp order |
 | `TASKS.md` and `NEXT-*.md` | Both | Small PRs; rebase if they collide. The board at the top is the source of truth |
 | `design/system/` | You | Two design branches always conflict in the generated bundle: rebase, then `npm run build`. Publish to the artifact after the merge |
 | `.github/workflows/` | You (`app.yml`), Arjun (`graph-sync.yml`, `backend.yml`) | Don't edit the other's workflow without a heads-up |

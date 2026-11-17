@@ -1,0 +1,146 @@
+{
+  "assortments": {
+    "cooler": {
+      "slugs": [
+        "coca-cola-classic", "diet-coke", "coke-zero-sugar", "sprite",
+        "pepsi", "diet-pepsi", "pepsi-zero-sugar",
+        "dr-pepper", "diet-dr-pepper", "mountain-dew", "fanta-orange", "canada-dry-ginger-ale",
+        "poland-spring-natural-spring-water", "dasani-purified-water", "aquafina-purified-water",
+        "smartwater-vapor-distilled", "fiji-natural-artesian-water", "evian-natural-spring-water",
+        "essentia-ionized-alkaline-water", "core-hydration-nutrient-enhanced-water",
+        "perrier-original", "san-pellegrino-original",
+        "gatorade-lemon-lime", "gatorade-fruit-punch", "gatorade-cool-blue", "gatorade-orange", "gatorade-glacier-freeze",
+        "powerade-mountain-berry-blast", "bodyarmor-fruit-punch", "bodyarmor-strawberry-banana",
+        "red-bull-original", "red-bull-sugarfree", "monster-energy-original", "monster-energy-zero-ultra",
+        "celsius-sparkling-orange",
+        "snapple-lemon-tea", "snapple-peach-tea", "arizona-green-tea",
+        "pure-leaf-sweet-tea", "pure-leaf-unsweetened", "gold-peak-sweet-tea",
+        "starbucks-frappuccino-mocha", "starbucks-frappuccino-vanilla", "starbucks-frappuccino-coffee",
+        "starbucks-doubleshot-espresso-cream",
+        "tropicana-orange-juice-original", "simply-orange", "simply-lemonade",
+        "naked-juice-green-machine", "naked-juice-mighty-mango",
+        "vita-coco-coconut-water-original"
+      ]
+    },
+    "supermarket": {
+      "brands": [
+        "Tropicana", "Simply", "Minute Maid", "Ocean Spray",
+        "Snapple", "Arizona", "Pure Leaf", "Gold Peak", "Lipton",
+        "LaCroix", "bubly", "Polar Seltzer", "Canada Dry"
+      ],
+      "slugs": [
+        "cherry-coke", "sprite-zero-sugar", "seven-up", "diet-seven-up",
+        "dunkin-bottled-iced-coffee-original", "starbucks-frappuccino-caramel"
+      ]
+    },
+    "natural-grocer": {
+      "brands": [
+        "Spindrift", "Topo Chico", "LaCroix", "Perrier", "San Pellegrino", "Waterloo",
+        "Olipop", "Poppi", "Zevia",
+        "GT's Living Foods", "Health-Ade", "Suja", "Vita Coco", "Harmless Harvest", "Guayaki",
+        "Liquid Death", "Essentia", "Evian", "Mountain Valley Spring Water",
+        "Califia Farms", "Rise Brewing Co.", "Chameleon Cold Brew"
+      ]
+    }
+  },
+  "chains": [
+    {
+      "id": "duane-reade",
+      "name": "Duane Reade",
+      "osm_brands": ["Duane Reade"],
+      "assortment": { "include": ["cooler"] }
+    },
+    {
+      "id": "walgreens",
+      "name": "Walgreens",
+      "osm_brands": ["Walgreens"],
+      "assortment": { "include": ["cooler"] }
+    },
+    {
+      "id": "cvs",
+      "name": "CVS Pharmacy",
+      "osm_brands": ["CVS Pharmacy", "CVS"],
+      "assortment": { "include": ["cooler"] }
+    },
+    {
+      "id": "7-eleven",
+      "name": "7-Eleven",
+      "osm_brands": ["7-Eleven"],
+      "assortment": { "include": ["cooler"] }
+    },
+    {
+      "id": "circle-k",
+      "name": "Circle K",
+      "osm_brands": ["Circle K"],
+      "assortment": { "include": ["cooler"] }
+    },
+    {
+      "id": "morton-williams",
+      "name": "Morton Williams",
+      "osm_brands": ["Morton Williams"],
+      "assortment": { "include": ["cooler", "supermarket"] }
+    },
+    {
+      "id": "gristedes",
+      "name": "Gristedes",
+      "osm_brands": ["Gristedes"],
+      "assortment": { "include": ["cooler", "supermarket"] }
+    },
+    {
+      "id": "dagostino",
+      "name": "D'Agostino",
+      "osm_brands": ["D'Agostino"],
+      "assortment": { "include": ["cooler", "supermarket"] }
+    },
+    {
+      "id": "key-food",
+      "name": "Key Food",
+      "osm_brands": ["Key Food"],
+      "assortment": { "include": ["cooler", "supermarket"] }
+    },
+    {
+      "id": "foodtown",
+      "name": "Foodtown",
+      "osm_brands": ["Foodtown"],
+      "assortment": { "include": ["cooler", "supermarket"] }
+    },
+    {
+      "id": "c-town",
+      "name": "C-Town",
+      "osm_brands": ["C-Town Supermarkets", "C-Town"],
+      "assortment": { "include": ["cooler", "supermarket"] }
+    },
+    {
+      "id": "food-universe",
+      "name": "Food Universe",
+      "osm_brands": ["Food Universe", "Food Universe Marketplace"],
+      "assortment": { "include": ["cooler", "supermarket"] }
+    },
+    {
+      "id": "whole-foods",
+      "name": "Whole Foods Market",
+      "osm_brands": ["Whole Foods Market", "Whole Foods"],
+      "assortment": { "include": ["natural-grocer"] }
+    },
+    {
+      "id": "starbucks",
+      "name": "Starbucks",
+      "osm_brands": ["Starbucks"],
+      "assortment": {
+        "slugs": ["starbucks-frappuccino-mocha", "starbucks-frappuccino-caramel", "starbucks-frappuccino-coffee"]
+      }
+    },
+    {
+      "id": "dunkin",
+      "name": "Dunkin'",
+      "osm_brands": ["Dunkin'", "Dunkin' Donuts", "Dunkin"],
+      "assortment": { "brands": ["Dunkin'"] }
+    },
+    {
+      "id": "gong-cha",
+      "name": "Gong Cha",
+      "osm_brands": ["Gong Cha"],
+      "assortment": { "brands": ["Gong Cha"] }
+    }
+  ]
+}

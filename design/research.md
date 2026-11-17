@@ -43,8 +43,8 @@ The vendored skill loads for any RN work. Follow it, except:
 4. **4pt grid, 16pt gutter, 44pt header.**
 5. **System font only.** Fredoka is never loaded in the app. The wordmark is the outlined SVG.
 6. **No colour-only meaning.** A score always shows its number and a bucket its label. Score colour comes from the 7 / 4 bands via `@bevi/ranking`, never from hard-coded thresholds.
-7. **No elevation.** Separate with 1pt `border`. Controls are outlined in `borderStrong`. The only exception is the glass `BucketButton` over a `BevGlow`, and only on iOS 26+.
-8. **Motion:** Reanimated, transform and opacity only (plus the pour's height). Durations `fast` / `base` / `springy`. Under Reduce Motion, use cross-fades and stop shimmers. Under Reduce Transparency, glass becomes the tint material.
+7. **No elevation.** Separate with 1pt `border`. Controls are outlined in `borderStrong`.
+8. **Motion:** Reanimated, transform and opacity only. Durations `fast` / `base` / `springy`. Under Reduce Motion, use cross-fades and stop shimmers.
 9. **Lists:** FlashList v2 for anything that can exceed 20 rows. Images through `expo-image` with `recyclingKey`. `Pressable`, never `Touchable*`.
 10. **Icons:** `lucide-react-native` only, with the design system's names and sizes (28 / 24 / 16). One icon per category from the shared map. No emoji in the UI.
 11. **Dynamic Type:** `maxFontSizeMultiplier` 1.3 on dense rows. Body text scales freely.

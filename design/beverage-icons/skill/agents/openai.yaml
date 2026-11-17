@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bevi Beverage Icons"
+  short_description: "Create researched beverage icons in Bevi's style"
+  default_prompt: "Use $bevi-beverage-icons to create the next 24 beverage icons, prioritizing remaining starters and related brand families, and validate their app exports."

@@ -31,7 +31,13 @@ export function effectiveUserStats(user: Stats, global: Stats): MeanStd {
   return effectiveGlobalStats(global);
 }
 
-/** Per-category stats for display ("Your Soda average"), falling back to the user's effective overall stats. */
+/**
+ * Per-category stats for display ("Your Soda average"), falling back to the user's effective
+ * overall stats below MIN_N_CAT rankings. Not on the prediction path (Layer 1 uses affinity
+ * against the OVERALL stats), and nothing in app/, packages/api or SQL calls it today: the Taste
+ * Profile shows raw means (paper §10.2). Kept (M-22 decision) as the display helper, as the eval
+ * harness's `user-category-mean` baseline, and because `user-stats.vectors.json` pins it.
+ */
 export function effectiveCategoryStats(category: Stats, userEffective: MeanStd): MeanStd {
   if (category.n >= MIN_N_CAT) return { mean: category.mean, stddev: Math.max(category.stddev, SIGMA_FLOOR) };
   return userEffective;

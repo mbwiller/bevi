@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAddWantToTry, useBev, useMe, useRemoveWantToTry, useStats } from '@/api/hooks';
+import { Arrive, useArrival } from '@/components/Arrive';
 import { bevImageProps, brandLine } from '@/components/BevParts';
 import { BevImage } from '@/components/BevImage';
 import { EmptyState } from '@/components/EmptyState';
@@ -17,6 +18,7 @@ import { PriceTier } from '@/components/PriceTier';
 import { Skeleton } from '@/components/Skeleton';
 import { BevStats, FriendsRow } from '@/features/bev/BevStats';
 import { ReportSheet } from '@/features/bev/ReportSheet';
+import { SimilarBevs } from '@/features/bev/SimilarBevs';
 import { categoryById } from '@/lib/categories';
 import { useBack } from '@/lib/useBack';
 import { radius, size, spacing, type, useTheme } from '@/theme';
@@ -49,6 +51,8 @@ export default function BevDetailScreen() {
   const add = useAddWantToTry();
   const remove = useRemoveWantToTry();
   const [reporting, setReporting] = useState(false);
+  // Arrive: what replaces the skeleton rises in once (not on a refetch, nor for a Bev already cached).
+  const arrival = useArrival(query.isPending);
 
   const bev = query.data;
   const cat = bev ? categoryById(bev.categoryId) : undefined;
@@ -82,6 +86,7 @@ export default function BevDetailScreen() {
     body = <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
   } else {
     const brand = brandLine(bev);
+    // Only a real photo opens the viewer; an authored icon (bevImageProps' fallback) is art, not a photo.
     const photo = bev.photoUrl;
     const ranked = !!bev.myRanking;
     const image = <BevImage size={HERO} {...bevImageProps(bev)} />;
@@ -129,7 +134,7 @@ export default function BevDetailScreen() {
             variant="filled"
             icon={ranked ? 'arrow-up-down' : 'circle-plus'}
             style={styles.button}
-            accessibilityLabel={ranked ? `Re-rank ${bev.name}` : `Rank ${bev.name}`}
+            accessibilityLabel={ranked ? `Bev ${bev.name} again` : `Rank ${bev.name}`}
             onPress={() =>
               router.push({
                 pathname: '/rank/[bevId]',
@@ -137,7 +142,7 @@ export default function BevDetailScreen() {
               })
             }
           >
-            {ranked ? 'Re-rank' : 'Rank it'}
+            {ranked ? 'Bev it again' : 'Rank it'}
           </Pill>
           {ranked ? null : (
             <Pill
@@ -164,6 +169,8 @@ export default function BevDetailScreen() {
           </Pill>
         ) : null}
 
+        <SimilarBevs bevId={bev.id} />
+
         {bev.createdBy ? (
           <Text style={[type.caption, styles.center, styles.footer, { color: colors.textSecondary }]}>
             {`Added by @${bev.createdBy.handle}`}
@@ -178,7 +185,9 @@ export default function BevDetailScreen() {
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.screen, { backgroundColor: colors.surface }]}>
       {header}
-      <ScrollView contentContainerStyle={styles.scroll}>{body}</ScrollView>
+      <ScrollView contentContainerStyle={styles.scroll}>
+        {query.isPending ? body : <Arrive progress={arrival}>{body}</Arrive>}
+      </ScrollView>
     </SafeAreaView>
   );
 }

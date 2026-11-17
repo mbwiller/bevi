@@ -3,7 +3,7 @@ import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { radius, useTheme } from '@/theme';
 
 export interface ProgressDotsProps {
-  /** One dot per possible comparison (`maxComparisons(n)` from @bevi/ranking). */
+  /** One dot per possible comparison: the placement's `maxSteps`, which is `maxComparisons(n)` for a plain search and the larger anchored bound with tiers (@bevi/ranking). */
   total: number;
   /** 0-based index of the comparison on screen. It can finish early: binary search often needs fewer. */
   current: number;

@@ -124,6 +124,8 @@ describe('bevs.similar', () => {
         categoryId: 'soda',
         // thumb wins over the full photo, as everywhere else a card is mapped
         photoUrl: 'https://x/thumb.jpg',
+        // no icon_path column (a database before 20261112000300): no icon
+        iconUrl: null,
         photoStatus: 'ready',
         priceTier: 1,
         priceEstimated: true,

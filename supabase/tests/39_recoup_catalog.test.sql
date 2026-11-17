@@ -1,0 +1,11 @@
+begin;
+select plan(7);
+select is((select count(*)::int from public.bevs where brand = 'Recoup' and status = 'active'), 3, 'three active Recoup hydration flavors');
+select is((select count(*)::int from public.bevs where brand = 'Recoup' and category_id = 'sports'), 3, 'Recoup belongs to sports hydration');
+select is((select count(*)::int from public.search_bevs('recoup')), 3, 'brand search finds all three flavors');
+select is((select count(*)::int from public.search_bevs('recoup lemon lime')), 1, 'lemon lime search finds one flavor');
+select is((select count(*)::int from public.search_bevs('recoup watermelon blood orange')), 1, 'watermelon blood orange search finds one flavor');
+select is((select count(*)::int from public.search_bevs('recoup pineapple passionfruit')), 1, 'pineapple passionfruit search finds one flavor');
+select is((select count(*)::int from public.search_bevs('recoup hydration')), 3, 'hydration alias finds all three');
+select * from finish();
+rollback;

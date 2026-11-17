@@ -40,7 +40,7 @@ export function PeopleScreen({ userId, title, query, which }: PeopleScreenProps)
             title: "You're not following anyone yet",
             body: 'Follow friends to see their Bevs.',
             action: 'Find people',
-            onAction: () => router.push({ pathname: '/add', params: { tab: 'people' } }),
+            onAction: () => router.push('/people'),
           }
         : { icon: 'user-plus', title: `${first} isn't following anyone yet` };
 

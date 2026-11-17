@@ -1,8 +1,9 @@
 import { StyleSheet, View, type DimensionValue, type StyleProp, type ViewStyle } from 'react-native';
 
-import { radius, size, spacing, useTheme } from '@/theme';
+import { radius, size, spacing, type, useTheme } from '@/theme';
 
 import { Shimmer } from './BevImage';
+import { BEV_ROW_FOOT_LINE } from './BevRow';
 
 export interface SkeletonProps {
   /** row: a BevRow. post: a FeedPost. text, block and circle: plain shapes sized by `width`/`height`. */
@@ -43,13 +44,21 @@ export function Skeleton({ variant = 'text', width, height, lines = 1, style }: 
   if (variant === 'row') {
     return (
       <View style={[styles.row, { borderBottomColor: colors.border }, style]} {...busy}>
-        <View style={styles.lines}>
-          <Bone width="58%" height={TITLE} />
-          <Bone width="34%" height={LINE} />
-          <Bone width="46%" height={LINE} />
-          <Bone width="28%" height={LINE} style={styles.metaGap} />
+        <View style={styles.rowTop}>
+          <View style={styles.rowText} testID="skeleton-row-text">
+            <View style={styles.rowTitle} testID="skeleton-row-title">
+              <Bone width="58%" height={TITLE} />
+            </View>
+            <View style={styles.rowLine} testID="skeleton-row-line">
+              <Bone width="40%" height={LINE} />
+            </View>
+          </View>
+          <Bone width={CIRCLE} height={CIRCLE} round style={styles.rowScore} />
         </View>
-        <Bone width={CIRCLE} height={CIRCLE} round />
+        <View style={styles.rowFoot} testID="skeleton-row-foot">
+          <Bone width="28%" height={LINE} />
+          <Bone width={size.icon} height={size.icon} round />
+        </View>
       </View>
     );
   }
@@ -89,16 +98,21 @@ const styles = StyleSheet.create({
   round: { borderRadius: radius.pill, flexShrink: 0 },
   photo: { borderRadius: radius.photo },
   lines: { flex: 1, minWidth: 0, gap: spacing.sm },
-  // `.bv-skel-row`: the meta line sits 18pt below the brand line, as in a BevRow.
-  metaGap: { marginTop: 18 },
+  // A compact BevRow: name line, category line, then the 32pt foot; the bubble sits top right.
   row: {
-    flexDirection: 'row',
-    gap: spacing.md,
     minHeight: size.rowMin,
-    paddingVertical: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
     paddingHorizontal: spacing.gutter,
     borderBottomWidth: 1,
   },
+  rowTop: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  // No gap, unlike `lines`: the two slots are exactly the real row's 25pt name and 20pt category lines.
+  rowText: { flex: 1, minWidth: 0 },
+  rowTitle: { height: type.screenTitle.lineHeight, justifyContent: 'center' },
+  rowLine: { height: type.body.lineHeight, justifyContent: 'center' },
+  rowScore: { marginTop: 2, marginRight: spacing.xs },
+  rowFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: BEV_ROW_FOOT_LINE },
   post: { gap: spacing.lg, paddingVertical: spacing.lg, paddingHorizontal: spacing.gutter },
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxl },
 });

@@ -3,8 +3,10 @@
 // Supabase; the app never imports `@supabase/supabase-js` and never sees
 // the client this creates.
 import type { BeviApi } from '@bevi/shared';
+import { createNutritionApi } from './nutrition';
 import { createAuthApi } from './auth';
 import { createBevsApi } from './bevs';
+import { createBugsApi } from './bugs';
 import { createCategoriesApi } from './categories';
 import { type BeviApiConfig, createSupabaseClientFor } from './client';
 import { createCommentsApi } from './comments';
@@ -16,6 +18,7 @@ import { createMetaApi } from './meta';
 import { createProfileApi } from './profile';
 import { createRankingsApi } from './rankings';
 import { createRecsApi } from './recs';
+import { createVenuesApi } from './venues';
 import { createSnapshotCache } from './snapshot';
 import { createStatsApi } from './stats';
 import { createWantToTryApi } from './wantToTry';
@@ -37,6 +40,7 @@ export function createBeviApi(config: BeviApiConfig): BeviApi {
 
   return {
     ...auth,
+    nutrition: createNutritionApi(),
     profile: {
       ...profile,
       async setBirthDate(date) {
@@ -61,6 +65,8 @@ export function createBeviApi(config: BeviApiConfig): BeviApi {
     comments: createCommentsApi(client),
     leaderboard: createLeaderboardApi(client),
     recs: createRecsApi(client, snapshots),
+    venues: createVenuesApi(client),
+    bugs: createBugsApi(client),
     meta: createMetaApi(),
   };
 }

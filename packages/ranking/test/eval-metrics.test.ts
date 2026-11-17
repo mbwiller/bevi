@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { averageRanks, ndcgAtK, pairCredit, pairedBootstrap, quantile, spearman } from '../eval/metrics.ts';
-import { cosineSimilarity } from '../src/index.ts';
-import { pearsonSimilarity } from '../eval/similarity-arms.ts';
+import { cosineSimilarity, pearsonCorrelation } from '../src/index.ts';
 
 describe('pairwise concordance credit', () => {
   it('1 / 0.5 / 0', () => {
@@ -91,8 +90,8 @@ describe('cosine vs Pearson over the common subset (the layer2.ts re-centring is
     const u = [0.5, 1.5];
     const v = [1.5, 0.5];
     expect(cosineSimilarity(u, v)).toBeCloseTo(0.6, 12);
-    expect(pearsonSimilarity(u, v)).toBeCloseTo(-1, 12);
-    expect(pearsonSimilarity([1, 2, 3], [2, 4, 6])).toBeCloseTo(1, 12);
-    expect(pearsonSimilarity([1, 1, 1], [2, 4, 6])).toBe(0);
+    expect(pearsonCorrelation(u, v)).toBeCloseTo(-1, 12);
+    expect(pearsonCorrelation([1, 2, 3], [2, 4, 6])).toBeCloseTo(1, 12);
+    expect(pearsonCorrelation([1, 1, 1], [2, 4, 6])).toBe(0);
   });
 });

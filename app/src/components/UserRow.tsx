@@ -1,11 +1,14 @@
 import type { Profile } from '@bevi/shared';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { MAX_FONT_SCALE_DENSE, radius, size, spacing, type, useTheme } from '@/theme';
 
 import { Avatar } from './Avatar';
 import { HitTarget, PRESSED } from './HitTarget';
 import { Icon } from './Icon';
+import { FeedbackPressable } from './PressFeedback';
+import { usePop } from './usePop';
 
 export type UserRowUser = Pick<Profile, 'displayName' | 'handle' | 'avatarUrl'>;
 
@@ -17,6 +20,8 @@ export interface UserRowProps {
   meta?: string;
   /** Current streak in days; shows a flame. */
   streak?: number;
+  /** A third line with a `users` icon: "Followed by Sam and Arjun". One line, truncated. */
+  context?: string;
   /** Shows the Follow / Following pill (never on your own row). */
   following?: boolean;
   /** Your own row: "(you)" and a `primaryTint` highlight. */
@@ -28,19 +33,23 @@ export interface UserRowProps {
 }
 
 const DENSE = { maxFontSizeMultiplier: MAX_FONT_SCALE_DENSE } as const;
-/** bundle.css `.bv-userrow { min-height: 64px }` and `.bv-userrow-rank { width: 28px }`. */
+/** bundle.css `.bv-userrow { min-height: 64px }` and `.bv-userrow-rank { width: 28px }`; 72 with a context line. */
 const ROW_MIN = 64;
+const ROW_MIN_CONTEXT = 72;
+const CONTEXT_ICON = 14;
 const RANK_W = 28;
 
 /** Person row for People search, followers and the user leaderboard. */
-export function UserRow({ user, rank, meta, streak, following, self = false, onFollow, onPress, divider = true, style }: UserRowProps) {
+export function UserRow({ user, rank, meta, streak, context, following, self = false, onFollow, onPress, divider = true, style }: UserRowProps) {
   const { colors } = useTheme();
   const secondary = { color: colors.textSecondary };
   return (
     <View
+      testID="user-row"
       style={[
         styles.row,
         { backgroundColor: self ? colors.primaryTint : colors.surface, borderBottomColor: colors.border },
+        context ? styles.rowContext : null,
         divider && styles.divider,
         style,
       ]}
@@ -50,10 +59,10 @@ export function UserRow({ user, rank, meta, streak, following, self = false, onF
           {rank}
         </Text>
       ) : null}
-      <Pressable
+      <FeedbackPressable
         onPress={onPress}
         accessibilityRole="button"
-        accessibilityLabel={`${user.displayName}${self ? ' (you)' : ''}, @${user.handle}${meta ? `, ${meta}` : ''}${streak ? `, ${streak} day streak` : ''}`}
+        accessibilityLabel={`${user.displayName}${self ? ' (you)' : ''}, @${user.handle}${meta ? `, ${meta}` : ''}${streak ? `, ${streak} day streak` : ''}${context ? `, ${context}` : ''}`}
         style={styles.main}
       >
         <Avatar name={user.displayName} src={user.avatarUrl ?? undefined} size={44} />
@@ -62,52 +71,80 @@ export function UserRow({ user, rank, meta, streak, following, self = false, onF
             {user.displayName}
             {self ? ' (you)' : ''}
           </Text>
+          {/* The handle and meta truncate; the streak after them never shrinks or wraps, so on a narrow row
+              the flame and its number stay on this line, whole, and the text before them takes the ellipsis. */}
           <View style={styles.metaLine}>
-            <Text {...DENSE} style={[type.body, styles.shrink, secondary]} numberOfLines={1}>
+            <Text {...DENSE} style={[type.body, styles.shrink, secondary]} numberOfLines={1} testID="user-row-meta">
               @{user.handle}
               {meta ? ` · ${meta}` : ''}
-              {streak ? ' · ' : ''}
             </Text>
             {streak ? (
-              <>
+              <View style={styles.streak} testID="user-row-streak">
+                <Text {...DENSE} style={[type.body, styles.dot, secondary]} numberOfLines={1}>
+                  ·
+                </Text>
                 <Icon name="flame" size={14} strokeWidth={2.25} color={colors.primary} />
-                <Text {...DENSE} style={[type.body, secondary]}>{` ${streak}`}</Text>
-              </>
+                <Text {...DENSE} style={[type.body, styles.streakDays, secondary]} numberOfLines={1}>
+                  {streak}
+                </Text>
+              </View>
             ) : null}
           </View>
+          {context ? (
+            <View style={styles.metaLine}>
+              <Icon name="users" size={CONTEXT_ICON} strokeWidth={2} color={colors.textSecondary} />
+              <Text {...DENSE} style={[type.caption, styles.shrink, styles.contextText, secondary]} numberOfLines={1}>
+                {context}
+              </Text>
+            </View>
+          ) : null}
         </View>
-      </Pressable>
+      </FeedbackPressable>
       {following != null && !self ? <FollowPill following={following} name={user.displayName} onPress={onFollow} /> : null}
     </View>
   );
 }
 
-/** Pill's look (filled Follow, outlined Following) with `aria-pressed` reporting the follow state. */
-function FollowPill({ following, name, onPress }: { following: boolean; name: string; onPress?: () => void }) {
+/**
+ * Pill's look (filled Follow, outlined Following) with `aria-pressed` reporting the follow state.
+ * Also the author's Follow pill on an Explore FeedPost. A press pops it like the heart (Change);
+ * new data alone never does.
+ */
+export function FollowPill({ following, name, onPress }: { following: boolean; name: string; onPress?: () => void }) {
   const { colors } = useTheme();
+  const pop = usePop();
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`Follow ${name}`}
-      {...({ 'aria-pressed': following } as object)}
-      style={({ pressed }) => [
-        styles.pill,
-        following
-          ? { backgroundColor: colors.surface, borderColor: colors.borderStrong, borderWidth: 1 }
-          : { backgroundColor: colors.primary },
-        pressed && PRESSED,
-      ]}
-    >
-      <HitTarget height={size.pill} borderWidth={following ? 1 : 0} />
-      <Text
-        {...DENSE}
-        style={[type.body, following ? styles.pillOutlined : styles.pillFilled, { color: following ? colors.text : colors.onPrimary }]}
-        numberOfLines={1}
+    <Animated.View style={pop.style} testID="follow-pop">
+      <Pressable
+        onPress={
+          onPress
+            ? () => {
+                pop.pop();
+                onPress();
+              }
+            : undefined
+        }
+        accessibilityRole="button"
+        accessibilityLabel={`Follow ${name}`}
+        {...({ 'aria-pressed': following } as object)}
+        style={({ pressed }) => [
+          styles.pill,
+          following
+            ? { backgroundColor: colors.surface, borderColor: colors.borderStrong, borderWidth: 1 }
+            : { backgroundColor: colors.primary },
+          pressed && PRESSED,
+        ]}
       >
-        {following ? 'Following' : 'Follow'}
-      </Text>
-    </Pressable>
+        <HitTarget height={size.pill} borderWidth={following ? 1 : 0} />
+        <Text
+          {...DENSE}
+          style={[type.body, following ? styles.pillOutlined : styles.pillFilled, { color: following ? colors.text : colors.onPrimary }]}
+          numberOfLines={1}
+        >
+          {following ? 'Following' : 'Follow'}
+        </Text>
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -120,12 +157,18 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.gutter,
   },
+  rowContext: { minHeight: ROW_MIN_CONTEXT },
   divider: { borderBottomWidth: 1 },
   rank: { width: RANK_W, textAlign: 'center', fontVariant: ['tabular-nums'] },
   main: { flex: 1, minWidth: 0, minHeight: size.target, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   text: { flex: 1, minWidth: 0 },
   metaLine: { flexDirection: 'row', alignItems: 'center' },
   shrink: { flexShrink: 1, minWidth: 0 },
+  // Spaces would collapse at the ends of a nowrap line, so the gaps around the dot and the number are margins.
+  streak: { flexDirection: 'row', alignItems: 'center', flexShrink: 0 },
+  dot: { marginHorizontal: spacing.xs },
+  streakDays: { marginLeft: spacing.xs },
+  contextText: { marginLeft: spacing.xs },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,4 +1,4 @@
-import { maxComparisons } from '@bevi/ranking';
+import { maxAnchoredComparisons, maxComparisons, placementPhase } from '@bevi/ranking';
 
 import { nextCandidates, selectDone, selectPrompt, useRankingFlow } from '../rankingFlow';
 
@@ -87,4 +87,57 @@ it('names the two possible next incumbents for prefetching', () => {
   expect(nextCandidates(flow().placement)).toEqual(['b', 'f']);
   flow().tie();
   expect(nextCandidates(flow().placement)).toEqual([]);
+});
+
+describe('anchored placement (tiers from loadPlacementList)', () => {
+  // 'c' and 'f' share the new Bev's leaf (tier 1); 'a' only its root (tier 2).
+  const TIERS = [2, null, 1, null, null, 1, null];
+
+  it('asks the anchors first, then the gap, and reports a plain-shaped result', () => {
+    flow().start('new', 'LOVED', LIST, 'new', TIERS);
+    expect(placementPhase(flow().placement!)).toBe('ANCHORS');
+    // Two anchors (positions 2 and 5): the first question is the later one, 'f'.
+    expect(selectPrompt(flow())).toEqual({ comparedBevId: 'f', step: 1, maxSteps: maxAnchoredComparisons(7, [2, 5]) });
+    flow().answer('NEW_BETTER');
+    expect(selectPrompt(flow())!.comparedBevId).toBe('c');
+    flow().answer('EXISTING_BETTER');
+    // Between the anchors: the gap 'd', 'e'.
+    expect(placementPhase(flow().placement!)).toBe('GAP');
+    expect(['d', 'e']).toContain(selectPrompt(flow())!.comparedBevId);
+    while (!selectDone(flow())) flow().answer('NEW_BETTER');
+    expect(flow().result()).toMatchObject({ insertIndex: 3, expectedBucketSize: 7 });
+  });
+
+  it('undo crosses back from the gap into the anchors', () => {
+    flow().start('new', 'LOVED', LIST, 'new', TIERS);
+    flow().answer('NEW_BETTER');
+    flow().answer('EXISTING_BETTER');
+    expect(placementPhase(flow().placement!)).toBe('GAP');
+    flow().undo();
+    expect(placementPhase(flow().placement!)).toBe('ANCHORS');
+    expect(selectPrompt(flow())!.comparedBevId).toBe('c');
+  });
+
+  it('tiers that do not line up with the list fall back to the plain search', () => {
+    flow().start('new', 'LOVED', LIST, 'new', [1, 1]);
+    expect(placementPhase(flow().placement!)).toBe('PLAIN');
+    expect(selectPrompt(flow())).toEqual({ comparedBevId: 'd', step: 1, maxSteps: maxComparisons(7) });
+  });
+
+  it('restart re-anchors on the fresh list and its tiers', () => {
+    flow().start('new', 'LOVED', LIST, 'new', TIERS);
+    flow().answer('NEW_BETTER');
+    flow().restart(['a', 'b', 'c'], undefined, [null, 1, null]);
+    expect(flow().placement).toMatchObject({ list: ['a', 'b', 'c'], history: [] });
+    expect(selectPrompt(flow())!.comparedBevId).toBe('b');
+    flow().restart(['a', 'b', 'c']);
+    expect(placementPhase(flow().placement!)).toBe('PLAIN');
+  });
+
+  it('a re-rank ignores the Bev\'s own tier: the anchors are the others', () => {
+    // 'c' is being moved; its own tier 1 must not make it (or anything else) an anchor.
+    flow().start('c', 'LOVED', LIST, 'rerank', [null, 2, 1, null, 2, null, null]);
+    expect(flow().placement!.list).toEqual(['a', 'b', 'd', 'e', 'f', 'g']);
+    expect(flow().placement!.anchored!.positions).toEqual([1, 3]);
+  });
 });

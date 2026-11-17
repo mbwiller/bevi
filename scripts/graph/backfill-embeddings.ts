@@ -191,7 +191,7 @@ if (!embedToken) {
   fail(
     "EMBED_WEBHOOK_SECRET is required: it is the bearer token the embed function checks. " +
       "Set the same value here, in `supabase secrets set EMBED_WEBHOOK_SECRET=...` and in the " +
-      "database setting bevi.embed_webhook_token.",
+      "Vault secret embed_webhook_token (docs/graph.md).",
   );
 }
 
@@ -271,8 +271,8 @@ for (const [index, batch] of batches.entries()) {
   if (!result.ok && (result.status === 401 || result.status === 403)) {
     fail(
       `${result.status} from embed. EMBED_WEBHOOK_SECRET here does not match the function's ` +
-        "secret (`supabase secrets list`) -- and the trigger's own copy lives in the database " +
-        "setting bevi.embed_webhook_token. All three must be the same value.",
+        "secret (`supabase secrets list`) -- and the trigger's own copy lives in the Vault " +
+        "secret embed_webhook_token. All three must be the same value.",
     );
   }
   if (!result.ok) {

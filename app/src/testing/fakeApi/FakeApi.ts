@@ -30,6 +30,7 @@ import {
   localDayKey,
   normaliseBrand,
   populationStats,
+  compareCodePoints,
   predictScore,
   rankPoints,
   rankUsers,
@@ -45,6 +46,9 @@ import {
 } from '@bevi/ranking';
 import {
   ApiError,
+  NYC_BOUNDS,
+  hoursKnown,
+  openAt,
   HANDLE_PATTERN,
   RESERVED_HANDLES,
   type ApiErrorCode,
@@ -54,6 +58,10 @@ import {
   type BevOfPeriod,
   type BevPrediction,
   type BevsApi,
+  type BugReportResult,
+  type BugReportSummary,
+  type BugsApi,
+  type BevLeaf,
   type BevSimilarity,
   type BevSummary,
   type Bucket,
@@ -69,6 +77,7 @@ import {
   type FeedApi,
   type FeedItem,
   type FollowsApi,
+  type FriendScore,
   type LeaderboardApi,
   type MediaApi,
   type MetaApi,
@@ -89,10 +98,14 @@ import {
   type SignInInput,
   type SignUpInput,
   type StatsApi,
+  type SuggestedProfile,
   type TasteProfileRow,
   type SubmitRankingInput,
   type SubmitRankingResult,
   type UpdateMeInput,
+  type Venue,
+  type VenuePin,
+  type VenuesApi,
   type WantToTryApi,
 } from '@bevi/shared';
 
@@ -107,11 +120,22 @@ import {
   type FakeFeedEvent,
   type FakeRanking,
   type FakeUser,
+  type FakeVenue,
   type StorageLike,
 } from './db';
+import { CATALOG_CATEGORY_NODES, type CatalogCategoryNode } from './catalog';
 import { ALCOHOLIC, CATEGORIES, buildFixtures, isAdult } from './fixtures';
 import { buildEdgeMirror, type EdgeMirror } from './graph';
 import { FAKE_INVITE_CODE } from './people';
+
+/**
+ * Code-point string order, the tie-break every id order in the SQL uses
+ * (`collate "C"`; M-22, `compareCodePoints` in @bevi/ranking). Every id these
+ * comparisons see is a uuid or a snake_case slug, so plain `<` on ASCII agrees
+ * with it -- this exists so the fake's ordering reads as the same rule rather
+ * than as an accident of the data.
+ */
+const cmp = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 
 /** Password rule: at least this many characters (`validation`, field 'password'). */
 export const FAKE_MIN_PASSWORD_LENGTH = 8;
@@ -121,6 +145,39 @@ const DISPLAY_NAME_MAX = 50;
 const REPORT_REASON_MAX = 500;
 const UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
 const UPLOAD_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+/** Narrower than UPLOAD_MIME_TYPES, matching the `bug-evidence` bucket (packages/api/src/bugs.ts). */
+const BUG_EVIDENCE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const BUG_KINDS: readonly string[] = ['bug', 'fix', 'idea', 'design'];
+const BUG_SEVERITIES: readonly string[] = ['blocker', 'bad', 'annoying', 'polish'];
+/** Linear's priority as the function sets it from the severity (supabase/functions/bug-report/issue.ts). */
+const BUG_PRIORITY: Record<BugReportSummary['severity'], number> = { blocker: 1, bad: 2, annoying: 3, polish: 4 };
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const BUG_TICKET_RE = /^[A-Z][A-Z0-9]*-\d{1,9}$/;
+/** The states a ticket is ranked in (supabase/functions/bug-report/rank.ts `OPEN_STATES`). */
+const BUG_OPEN_STATES: readonly BugReportSummary['state'][] = ['triage', 'todo', 'in_progress'];
+const BUG_STATE_LABELS: Record<BugReportSummary['state'], string | null> = {
+  triage: 'Triage',
+  todo: 'Todo',
+  in_progress: 'In Progress',
+  in_review: 'In Review',
+  done: 'Done',
+  canceled: 'Canceled',
+  unknown: null,
+};
+
+/**
+ * The priority a rank implies, as the function computes it (rank.ts `priorityForRank`): the top
+ * quarter High (2), the middle half Medium (3), the rest Low (4), measured at the middle of the
+ * slot; an Urgent (1) ticket stays Urgent.
+ */
+function bugPriorityForRank(index: number, count: number, current: number | null): number {
+  if (current === 1) return 1;
+  const f = (index + 0.5) / Math.max(count, 1);
+  if (f <= 0.25) return 2;
+  if (f <= 0.75) return 3;
+  return 4;
+}
+
 /** Default time the fake's "background removal" takes before a bev photo is 'ready'. */
 const PHOTO_PROCESSING_MS = 3000;
 
@@ -149,9 +206,27 @@ function invalid(field: string, message: string, reason?: string): never {
 }
 
 const round2 = (x: number) => Math.round(x * 100) / 100;
+
+/**
+ * Mirrors `public.venue_pin_cap`: 60 pins at zoom 11 up to 300 at zoom 15, flat outside. A
+ * fractional zoom is floored (packages/api floors it before the integer RPC parameter), and a
+ * non-finite one is 11, which is what the RPC makes of the null packages/api sends for it.
+ */
+const venuePinCap = (zoom: number): number => {
+  const z = Number.isFinite(zoom) ? Math.floor(zoom) : 11;
+  return 60 + (Math.min(Math.max(z, 11), 15) - 11) * 60;
+};
+
+/** An empty filter array is no filter (contract 2.10.0), as in `venues_in_view` and packages/api. */
+const activeFilter = <T>(values: readonly T[] | undefined): readonly T[] | null =>
+  values !== undefined && values.length > 0 ? values : null;
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
 const norm = (s: string | null | undefined) => (s ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
-const tokens = (s: string) => norm(s).split(/[^a-z0-9]+/).filter(Boolean);
+// Whitespace only, punctuation kept inside a token: "a&w" is one token, "barq's" is one. Splitting on
+// [^a-z0-9]+ (as this did until 20261102000200) made "a&w" the tokens "a" and "w", substrings of
+// almost every name. search_bevs/find_similar_bevs split the same way (20261102000200); the SQL side
+// also unaccents, which `norm` does not.
+const tokens = (s: string) => norm(s).split(' ').filter(Boolean);
 
 function paginate<T>(items: readonly T[], page: PageParams | undefined, defaultLimit: number): Page<T> {
   const limit = clamp(Math.floor(page?.limit ?? defaultLimit), 1, 100);
@@ -168,6 +243,9 @@ function paginate<T>(items: readonly T[], page: PageParams | undefined, defaultL
 /** `comments.add` refuses longer bodies (contract); `get_feed` carries this many comments per post. */
 const COMMENT_MAX = 280;
 const FEED_INLINE_COMMENTS = 7;
+/** Contract 2.12.0: how many people `FeedItem.alsoBevdBy` and `SuggestedProfile.followedBy` list (20261111000100). */
+const ALSO_BEVD_MAX = 3;
+const FOLLOWED_BY_MAX = 2;
 /** Bev of the day / week is "strictly New York City" (get_bev_of_period, 20261018000100). */
 const BEV_OF_PERIOD_ZONE = 'America/New_York';
 /** D-01: below this many users Explore widens from two hops to everyone (get_explore, 20261019000300). */
@@ -226,6 +304,21 @@ export class FakeApi implements BeviApi {
   private agg: Aggregates | null = null;
   /** ./graph.ts's mirror, keyed on the Bev table it was built from (see `edges()`). */
   private edgeCache: { source: FakeBev[]; size: number; mirror: EdgeMirror } | null = null;
+  /**
+   * Whether the signed-in user is an internal reporter (`profiles.role` in ('admin','tester')).
+   * Off by default, so a suite that doesn't opt in sees what an ordinary account sees. Not
+   * persisted: it is a property of the account on the server, not of the fake's data.
+   */
+  private internalReporter = false;
+  /** The fake's `bug_reports` ledger, keyed by idempotency key per user, with the summary My reports shows. */
+  private bugLedger = new Map<string, { userId: string; result: BugReportResult; summary: BugReportSummary }>();
+  /**
+   * Each user's manual order of their tickets, top first: the fake's stand-in for Linear's
+   * `sortOrder`. A new ticket goes to the top, as Linear puts a new issue. Ranks count only the
+   * open ones (BUG_OPEN_STATES).
+   */
+  private bugOrder = new Map<string, string[]>();
+  private nextTicket = 100;
 
   constructor(options: FakeApiOptions = {}) {
     this.storage = options.storage ?? null;
@@ -262,6 +355,10 @@ export class FakeApi implements BeviApi {
     clearDb(this.storage);
     this.db = buildFixtures(this.clock());
     this.failures = [];
+    this.internalReporter = false;
+    this.bugLedger.clear();
+    this.bugOrder.clear();
+    this.nextTicket = 100;
     this.commit();
     this.emit();
   }
@@ -278,6 +375,40 @@ export class FakeApi implements BeviApi {
     me.birthdate = null;
     this.db.dirty = true;
     this.commit();
+  }
+
+  /** Make (or stop making) the signed-in user an internal bug reporter. */
+  setInternalReporter(internal: boolean): void {
+    this.internalReporter = internal;
+  }
+
+  /**
+   * Move one of the fake's tickets to a workflow state, as triage or an agent would in Linear
+   * (e.g. 'in_review', so My reports offers Verified on device; or 'done', so it leaves the ranks).
+   */
+  setBugTicketState(ticketId: string, state: BugReportSummary['state']): void {
+    const entry = [...this.bugLedger.values()].find((e) => e.summary.ticketId === ticketId);
+    if (!entry) throw new Error(`setBugTicketState: no ticket ${ticketId}`);
+    entry.summary = { ...entry.summary, state, stateLabel: BUG_STATE_LABELS[state], updatedAt: this.now().toISOString() };
+  }
+
+  /** The user's tickets with their ranks, newest first (what `bugs.listMine` answers). */
+  private bugSummaries(userId: string): BugReportSummary[] {
+    const ranks = new Map(this.openBugOrder(userId).map((id, i) => [id, i + 1]));
+    return [...this.bugLedger.values()]
+      .filter((entry) => entry.userId === userId)
+      .map((entry) => ({ ...entry.summary, rank: ranks.get(entry.summary.ticketId) ?? null }))
+      .reverse();
+  }
+
+  /** The user's open tickets in their manual order, top first. */
+  private openBugOrder(userId: string): string[] {
+    const open = new Set(
+      [...this.bugLedger.values()]
+        .filter((e) => e.userId === userId && BUG_OPEN_STATES.includes(e.summary.state))
+        .map((e) => e.summary.ticketId),
+    );
+    return (this.bugOrder.get(userId) ?? []).filter((id) => open.has(id));
   }
 
   /** Sign in as any fixture user without a password. */
@@ -360,6 +491,38 @@ export class FakeApi implements BeviApi {
 
   private user(id: string): FakeUser {
     return this.db.users.find((u) => u.id === id) ?? fail('not_found', 'No such user');
+  }
+
+  private venueRows(): FakeVenue[] {
+    return this.db.venues ?? [];
+  }
+
+  /** The Bevs a venue carries that this viewer may see (the age gate). */
+  private venueAssortment(venueId: string, viewer: FakeUser): FakeBev[] {
+    return (this.db.venueBevs ?? [])
+      .filter((vb) => vb.venueId === venueId)
+      .flatMap((vb) => {
+        const b = this.db.bevs.find((x) => x.id === vb.bevId);
+        return b && this.visible(b, viewer) ? [b] : [];
+      });
+  }
+
+  private toVenue(v: FakeVenue): Venue {
+    return {
+      id: v.id,
+      name: v.name,
+      kind: v.kind,
+      lat: v.lat,
+      lng: v.lng,
+      address: v.address,
+      neighborhood: v.neighborhood,
+      borough: v.borough,
+      hoursOsm: v.hoursOsm,
+      // What the evaluator understood, not just the column, as the RPCs report
+      // it: so `hoursKnown` is true exactly when `openNow` is not null.
+      hoursKnown: v.hoursKnown && hoursKnown(v.hoursOsm),
+      website: v.website,
+    };
   }
 
   private bev(id: string): FakeBev {
@@ -536,6 +699,9 @@ export class FakeApi implements BeviApi {
       flavor: b.flavor,
       categoryId: b.categoryId,
       photoUrl: photo.url,
+      // The real API serves an icon from the `bev-icons` bucket. The fake catalog has no icon rows,
+      // so none: bevImageProps then falls back to the category art.
+      iconUrl: null,
       photoStatus: photo.status,
       priceTier: b.priceTier,
       priceEstimated: b.priceEstimated,
@@ -624,9 +790,13 @@ export class FakeApi implements BeviApi {
   // Stats
   // -------------------------------------------------------------------------
 
-  /** "Rank on Bevi": @bevi/ranking's rankUsers (which drops Unranked users) in display order. */
-  private userBoard() {
-    const inputs = this.db.users.map((u) => ({
+  /**
+   * "Rank on Bevi": @bevi/ranking's rankUsers (which drops Unranked users) in display order.
+   * Given a subset of the users, the same board among just them: the same points and the same
+   * order, with the ranks counted within the subset (`leaderboard.friends`).
+   */
+  private userBoard(users: readonly FakeUser[] = this.db.users) {
+    const inputs = users.map((u) => ({
       u,
       streak: this.streakOf(u),
       bevsRanked: this.db.rankings.filter((r) => r.userId === u.id).length,
@@ -1001,9 +1171,29 @@ export class FakeApi implements BeviApi {
           .filter((u) => u.id !== me.id && !this.isFollowing(me.id, u.id))
           .sort((a, z) => count(z.id) - count(a.id) || a.handle.localeCompare(z.handle))
           .slice(0, 10)
-          .map((u) => this.toRow(u, me));
+          .map((u): SuggestedProfile => ({ ...this.toRow(u, me), ...this.followedBy(u, me) }));
       }),
   };
+
+  /**
+   * get_followed_by: the people `me` follows who follow `u`. All of them are counted; the first
+   * FOLLOWED_BY_MAX are listed, the one who followed `u` most recently first.
+   *
+   * Two follows written in the same millisecond tie on `createdAt`, which happens here (two
+   * calls of one test easily land in one millisecond) and in practice never in Postgres. The
+   * fake breaks that tie by which was written later, the nearer reading of "most recently"; the
+   * SQL breaks it by id, only to keep its order total.
+   */
+  private followedBy(u: FakeUser, me: FakeUser): Pick<SuggestedProfile, 'followedBy' | 'followedByCount'> {
+    const mutual = this.db.follows
+      .map((f, written) => ({ f, written }))
+      .filter(({ f }) => f.followeeId === u.id && this.isFollowing(me.id, f.followerId))
+      .sort((a, z) => z.f.createdAt.localeCompare(a.f.createdAt) || z.written - a.written);
+    return {
+      followedBy: mutual.slice(0, FOLLOWED_BY_MAX).map(({ f }) => this.toProfile(this.user(f.followerId), me)),
+      followedByCount: mutual.length,
+    };
+  }
 
   categories: CategoriesApi = {
     list: () =>
@@ -1014,6 +1204,28 @@ export class FakeApi implements BeviApi {
         return CATEGORIES.filter((c) => adult || !c.isAlcoholic)
           .map(({ id, name, sortOrder, isAlcoholic }) => ({ id, name, sortOrder, isAlcoholic, bevCount: totals.get(id) ?? 0 }))
           .sort((a, z) => a.sortOrder - z.sortOrder);
+      }),
+
+    // get_category_tree (20261026000100): the 75 nodes, age-gated by the ROOT's
+    // flag so a leaf of `beer` is hidden with `beer` itself, ordered
+    // root-then-leaf in sibling order.
+    tree: () =>
+      this.call('categories.tree', () => {
+        const me = this.requireUser();
+        const adult = this.canSeeAlcohol(me);
+        const rootOf = (c: CatalogCategoryNode) => c.parentId ?? c.id;
+        const byId = new Map(CATALOG_CATEGORY_NODES.map((c) => [c.id, c]));
+        const sortOrderOf = (id: string) => byId.get(id)?.sortOrder ?? 0;
+        return CATALOG_CATEGORY_NODES.filter((c) => adult || !c.isAlcoholic)
+          .map(({ id, name, parentId, sortOrder, isAlcoholic, emoji }) => ({ id, name, parentId, sortOrder, isAlcoholic, emoji }))
+          .sort(
+            (a, z) =>
+              sortOrderOf(rootOf(a)) - sortOrderOf(rootOf(z)) ||
+              cmp(rootOf(a), rootOf(z)) ||
+              Number(a.parentId !== null) - Number(z.parentId !== null) ||
+              a.sortOrder - z.sortOrder ||
+              cmp(a.id, z.id),
+          );
       }),
   };
 
@@ -1070,11 +1282,20 @@ export class FakeApi implements BeviApi {
             const inter = [...want].filter((t) => have.has(t)).length;
             const jaccard = inter / (want.size + have.size - inter);
             const nameHit = norm(b.name).includes(norm(input.name)) ? 0.3 : 0;
-            const catHit = input.categoryId && input.categoryId === b.categoryId ? 0.1 : 0;
-            return { b, s: jaccard + nameHit + catHit };
+            const sameCat = input.categoryId !== undefined && input.categoryId === b.categoryId;
+            const catHit = sameCat ? 0.1 : 0;
+            // As find_similar_bevs orders (20261112000100): every token present first, then the
+            // chosen category, then the score. The category reorders; it never excludes a Bev.
+            return { b, s: jaccard + nameHit + catHit, tokHit: inter === want.size, sameCat };
           })
           .filter((x) => x.s >= 0.3)
-          .sort((a, z) => z.s - a.s || a.b.name.localeCompare(z.b.name))
+          .sort(
+            (a, z) =>
+              Number(z.tokHit) - Number(a.tokHit) ||
+              Number(z.sameCat) - Number(a.sameCat) ||
+              z.s - a.s ||
+              a.b.name.localeCompare(z.b.name),
+          )
           .slice(0, 5)
           .map((x) => this.toSummary(x.b));
       }),
@@ -1116,6 +1337,10 @@ export class FakeApi implements BeviApi {
             brand,
             flavor,
             categoryId: input.categoryId,
+            // The wizard offers only the 15 roots, so a user-created Bev has no
+            // leaf until something relabels it -- exactly what `create_bev`
+            // leaves `leaf_category_id` as.
+            leafCategoryId: null,
             priceTier: input.priceTier ?? this.estimateTier(input.categoryId),
             priceEstimated: input.priceTier === null ? true : input.priceEstimated,
             isStarter: false,
@@ -1132,7 +1357,10 @@ export class FakeApi implements BeviApi {
         true,
       ),
 
-    report: (id: string, reason: string) =>
+    // report_bev (20261101000500): `duplicateOfId` must name another Bev the caller can see. The
+    // fake has no hidden or merged Bevs, so "can see" is "exists, and not alcoholic for a minor";
+    // unknown, self and age-gated are one error, as on the server.
+    report: (id: string, reason: string, opts?: { duplicateOfId?: string }) =>
       this.call(
         'bevs.report',
         () => {
@@ -1140,7 +1368,14 @@ export class FakeApi implements BeviApi {
           this.bev(id);
           const r = (reason ?? '').trim();
           if (!r || r.length > REPORT_REASON_MAX) invalid('reason', 'Choose a reason', 'unknown_reason');
-          this.db.reports.push({ bevId: id, userId: me.id, reason: r, createdAt: this.nowIso() });
+          const duplicateOfId = opts?.duplicateOfId ?? null;
+          if (duplicateOfId !== null) {
+            const original = this.db.bevs.find((b) => b.id === duplicateOfId);
+            if (duplicateOfId === id || !original || !this.visible(original, me)) {
+              invalid('duplicateOfId', 'Choose the Bev this one duplicates');
+            }
+          }
+          this.db.reports.push({ bevId: id, userId: me.id, reason: r, duplicateOfId, createdAt: this.nowIso() });
         },
         true,
       ),
@@ -1176,6 +1411,22 @@ export class FakeApi implements BeviApi {
           if (weight !== null) out.push({ bevId: id, weight });
         }
         return out;
+      }),
+
+    // get_bev_leaves (20261026000100): each visible Bev's leaf. Unlike
+    // `similarities`, a visible Bev with NO leaf is still returned, with null --
+    // "no finer placement" has to be distinguishable from "you may not see it".
+    leaves: (bevIds: readonly string[]) =>
+      this.call('bevs.leaves', () => {
+        const me = this.requireUser();
+        if (bevIds.length > SIMILARITIES_MAX_IDS) invalid('bevIds', 'Too many Bevs to look up at once');
+        const out: BevLeaf[] = [];
+        for (const id of new Set(bevIds)) {
+          const bev = this.db.bevs.find((b) => b.id === id);
+          if (!bev || !this.visible(bev, me)) continue;
+          out.push({ bevId: bev.id, leafCategoryId: bev.leafCategoryId });
+        }
+        return out.sort((a, z) => cmp(a.bevId, z.bevId));
       }),
 
     // get_similar_bevs: the heaviest neighbours, both stored orientations merged, age-filtered.
@@ -1349,6 +1600,10 @@ export class FakeApi implements BeviApi {
           const next = insertIntoBucket(target, row.bevId, input.insertIndex);
           this.writeBucket(me.id, input.bucket, next);
           const at = this.nowIso();
+          // `rerank_bev` deletes the row and re-inserts it, so the server's `ranked_at` -- the contract's
+          // `createdAt` -- becomes the re-rank's time. Mutating in place here is fine, but the date has to
+          // move with it, or the Recent sort and "Ranked Oct 3" behave one way in tests and another on prod.
+          row.createdAt = at;
           row.updatedAt = at;
           if (note !== undefined) row.note = note;
           this.logPlacement(me, row.id, row.bevId, input.comparisons, at);
@@ -1433,6 +1688,27 @@ export class FakeApi implements BeviApi {
     return new Set([me.id, ...this.db.follows.filter((f) => f.followerId === me.id).map((f) => f.followeeId)]);
   }
 
+  /**
+   * feed_also_bevd: the people `me` follows, other than the post's actor (and never `me`), who
+   * have ranked the Bev. All of them are counted; the first ALSO_BEVD_MAX are listed with their
+   * own score and bucket, the most recently ranked first. A tie on the timestamp goes to the
+   * ranking written later (its id's sequence number), for the reason `followedBy` gives.
+   */
+  private alsoBevd(me: FakeUser, actorId: string, bevId: string): Pick<FeedItem, 'alsoBevdBy' | 'alsoBevdCount'> {
+    const written = (r: FakeRanking) => Number(r.id.split('-')[1]);
+    const friends = this.db.rankings
+      .filter(
+        (r) => r.bevId === bevId && r.userId !== actorId && r.userId !== me.id && this.isFollowing(me.id, r.userId),
+      )
+      .sort((a, z) => z.createdAt.localeCompare(a.createdAt) || written(z) - written(a));
+    return {
+      alsoBevdBy: friends.slice(0, ALSO_BEVD_MAX).map(
+        (r): FriendScore => ({ profile: this.toProfile(this.user(r.userId), me), score: r.score, bucket: r.bucket }),
+      ),
+      alsoBevdCount: friends.length,
+    };
+  }
+
   /** get_feed's rows for these actors, newest first, age-gated like the SQL. */
   private feedItems(me: FakeUser, actors: Set<string>): FeedItem[] {
     const saved = new Set(this.db.wantToTry.filter((w) => w.userId === me.id).map((w) => w.bevId));
@@ -1463,6 +1739,9 @@ export class FakeApi implements BeviApi {
         commentCount: this.liveComments(e.id).length,
         // The first seven, oldest first, as get_feed returns them.
         comments: this.liveComments(e.id).slice(0, FEED_INLINE_COMMENTS).map((c) => this.toComment(c, me)),
+        // Relative to the caller, whoever's page this is. The Bev is visible to `me` (checked
+        // above), which is the only age gate the SQL applies to it too.
+        ...this.alsoBevd(me, e.actorId, bev.id),
       });
     }
     return items;
@@ -1732,6 +2011,22 @@ export class FakeApi implements BeviApi {
         }));
         return paginate(rows, page, 50);
       }),
+
+    // get_friends_leaderboard: the caller and the people they follow, on the same board. Someone
+    // with no rankings is Unranked there too, the caller included.
+    friends: (page?: PageParams) =>
+      this.call('leaderboard.friends', () => {
+        const me = this.requireUser();
+        const members = this.db.users.filter((u) => u.id === me.id || this.isFollowing(me.id, u.id));
+        const rows = this.userBoard(members).map((r) => ({
+          rank: r.rank,
+          profile: this.toProfile(r.u, me),
+          points: r.points,
+          bevsRanked: r.bevsRanked,
+          currentStreak: r.streak.current,
+        }));
+        return paginate(rows, page, 50);
+      }),
   };
 
   recs: RecsApi = {
@@ -1762,6 +2057,251 @@ export class FakeApi implements BeviApi {
       this.call('recs.refresh', () => {
         this.requireUser();
       }),
+  };
+
+  /**
+   * A-08 half 2. The three venue tables have RLS on with no policy in the real
+   * backend, so `venues_in_view` / `venue_detail` / `venue_neighborhoods` are
+   * the whole surface there -- and the age gate lives in them. These mirror
+   * that: the gate is on the ASSORTMENT, so a venue whose every Bev is
+   * alcoholic has nothing to show a minor and therefore no pin.
+   */
+  venues: VenuesApi = {
+    inView: ({ bounds, zoom, filters }) =>
+      this.call('venues.inView', () => {
+        const me = this.requireUser();
+        // Clamped to the city, not rejected: a map gesture routinely drags the
+        // viewport past the coast, and the answer there is "what is inside".
+        const south = Math.max(bounds.south, NYC_BOUNDS.south);
+        const north = Math.min(bounds.north, NYC_BOUNDS.north);
+        const west = Math.max(bounds.west, NYC_BOUNDS.west);
+        const east = Math.min(bounds.east, NYC_BOUNDS.east);
+        if (south >= north || west >= east) return [];
+
+        const kinds = activeFilter(filters?.kinds);
+        const neighborhoods = activeFilter(filters?.neighborhoods);
+        const categoryIds = activeFilter(filters?.categoryIds);
+        const priceTiers = activeFilter(filters?.priceTiers);
+
+        const pins = this.venueRows()
+          .filter((v) => !v.hidden)
+          .filter((v) => v.lat >= south && v.lat <= north && v.lng >= west && v.lng <= east)
+          .filter((v) => !kinds || kinds.includes(v.kind))
+          .filter((v) => !neighborhoods || (v.neighborhood !== null && neighborhoods.includes(v.neighborhood)))
+          .flatMap((v) => {
+            const assortment = this.venueAssortment(v.id, me).filter(
+              (b) =>
+                (!categoryIds || categoryIds.includes(b.categoryId)) &&
+                (!priceTiers || priceTiers.includes(b.priceTier)),
+            );
+            // D-13: no assortment, no pin.
+            if (assortment.length === 0) return [];
+
+            const scores = assortment.map((b) => this.bayes(b.id));
+            const best = scores.filter((x): x is number => x !== null);
+            // A prediction only fills the gap for a Bev with no Bayesian score
+            // yet; it is not a second opinion on one that has it.
+            const predictions = assortment
+              .filter((b) => this.bayes(b.id) === null)
+              .map((b) => this.predictionFor(b, me, false)?.score ?? null)
+              .filter((x): x is number => x !== null);
+
+            const pin: VenuePin = {
+              venue: this.toVenue(v),
+              bestScore: best.length > 0 ? Math.max(...best) : null,
+              predictedScore: predictions.length > 0 ? round2(Math.max(...predictions)) : null,
+              openNow: v.hoursKnown ? openAt(v.hoursOsm, this.now()) : null,
+              bevCount: assortment.length,
+            };
+            return [pin];
+          })
+          .filter((pin) => !filters?.openNow || pin.openNow === true)
+          // The cap keeps the best venues, with a deterministic tail.
+          .sort(
+            (a, b) =>
+              (b.bestScore ?? -1) - (a.bestScore ?? -1) ||
+              (b.predictedScore ?? -1) - (a.predictedScore ?? -1) ||
+              b.bevCount - a.bevCount ||
+              compareCodePoints(a.venue.name, b.venue.name) ||
+              compareCodePoints(a.venue.id, b.venue.id),
+          );
+
+        return pins.slice(0, venuePinCap(zoom));
+      }),
+
+    get: (venueId) =>
+      this.call('venues.get', () => {
+        const me = this.requireUser();
+        const v = this.venueRows().find((x) => x.id === venueId && !x.hidden);
+        if (!v) fail('not_found', 'No such venue');
+        const assortment = this.venueAssortment(v.id, me);
+        // A venue whose whole assortment this caller may not see is not_found,
+        // not an empty sheet: there was no pin to have tapped.
+        if (assortment.length === 0) fail('not_found', 'No such venue');
+
+        return {
+          venue: this.toVenue(v),
+          openNow: v.hoursKnown ? openAt(v.hoursOsm, this.now()) : null,
+          bevs: assortment
+            .slice()
+            .sort(
+              (a, b) =>
+                (this.bayes(b.id) ?? -1) - (this.bayes(a.id) ?? -1) ||
+                compareCodePoints(a.name, b.name) ||
+                compareCodePoints(a.id, b.id),
+            )
+            .map((b) => this.toSummary(b)),
+        };
+      }),
+
+    neighborhoods: () =>
+      this.call('venues.neighborhoods', () => {
+        const me = this.requireUser();
+        // Only neighbourhoods with a PINNED venue, so the filter can never
+        // offer an option that returns nothing.
+        const names = new Set<string>();
+        for (const v of this.venueRows()) {
+          if (v.hidden || v.neighborhood === null) continue;
+          if (this.venueAssortment(v.id, me).length > 0) names.add(v.neighborhood);
+        }
+        return [...names].sort(compareCodePoints);
+      }),
+  };
+
+  // -------------------------------------------------------------------------
+  // Bugs (the internal reporter). Linear is mocked out entirely: the fake
+  // mints `BEV-<n>` the way Linear mints an identifier, keeps the same
+  // idempotency promise, and holds each ticket's state so the UI's success,
+  // duplicate, validation, failure and My reports states are all reachable
+  // without a tracker.
+  // -------------------------------------------------------------------------
+
+  bugs: BugsApi = {
+    canReport: () =>
+      this.call('bugs.canReport', () => (this.sessionUser() ? this.internalReporter : false)),
+
+    report: (input) =>
+      this.call(
+        'bugs.report',
+        () => {
+          const me = this.requireUser();
+          if (!this.internalReporter) fail('unauthorized', 'This account cannot file internal bug reports');
+          if (!input.title?.trim()) invalid('title', 'Say what went wrong');
+          if (!BUG_KINDS.includes(input.kind)) invalid('kind', 'Say what kind of report this is');
+          if (!BUG_SEVERITIES.includes(input.severity)) invalid('severity', 'Say how bad it is');
+          if (!UUID_RE.test(input.idempotencyKey ?? '')) invalid('idempotencyKey', 'Missing submission key');
+          const evidence = input.evidence ?? [];
+          if (evidence.length > 3) invalid('evidence', 'Attach at most 3 screenshots');
+          // More than six pointed-at components is not an error: packages/api sends the first six
+          // and the function keeps the first six, so the fake (which stores none) has nothing to do.
+          for (const item of evidence) {
+            if (!BUG_EVIDENCE_MIME_TYPES.includes(item.mimeType)) invalid('evidence', 'Attach a JPEG, PNG or WebP image');
+            if (typeof item.file?.size === 'number' && item.file.size > UPLOAD_MAX_BYTES) {
+              invalid('evidence', 'That screenshot is too large');
+            }
+          }
+
+          const key = `${me.id}:${input.idempotencyKey}`;
+          const seen = this.bugLedger.get(key);
+          if (seen) return { ...seen.result, status: 'duplicate' as const };
+
+          const ticketId = `BEV-${this.nextTicket++}`;
+          const result: BugReportResult = {
+            ticketId,
+            ticketUrl: `https://linear.app/bevi-fake/issue/${ticketId}`,
+            status: 'created',
+          };
+          const at = this.now().toISOString();
+          const summary: BugReportSummary = {
+            ticketId,
+            ticketUrl: result.ticketUrl,
+            title: input.title.trim(),
+            kind: input.kind,
+            severity: input.severity,
+            createdAt: at,
+            state: 'triage',
+            stateLabel: 'Triage',
+            priority: BUG_PRIORITY[input.severity],
+            updatedAt: at,
+            rank: null,
+          };
+          this.bugLedger.set(key, { userId: me.id, result, summary });
+          this.bugOrder.set(me.id, [ticketId, ...(this.bugOrder.get(me.id) ?? [])]);
+          return result;
+        },
+        // Not a `db` write: the ledger is the fake's own, and a bug report
+        // changes nothing a screen reads.
+        false,
+      ),
+
+    listMine: () =>
+      this.call('bugs.listMine', () => {
+        const me = this.requireUser();
+        if (!this.internalReporter) fail('unauthorized', 'This account cannot file internal bug reports');
+        return this.bugSummaries(me.id);
+      }),
+
+    markVerified: (ticketId) =>
+      this.call(
+        'bugs.markVerified',
+        () => {
+          const me = this.requireUser();
+          if (!this.internalReporter) fail('unauthorized', 'This account cannot file internal bug reports');
+          if (!BUG_TICKET_RE.test(ticketId?.trim() ?? '')) invalid('ticketId', 'That is not a ticket identifier');
+          const entry = [...this.bugLedger.values()].find((e) => e.userId === me.id && e.summary.ticketId === ticketId.trim());
+          if (!entry) fail('not_found', "That ticket isn't one of yours");
+          entry.summary = { ...entry.summary, state: 'done', stateLabel: 'Done', updatedAt: this.now().toISOString(), rank: null };
+          return { ...entry.summary };
+        },
+        false,
+      ),
+
+    place: (ticketId, afterTicketId) =>
+      this.call(
+        'bugs.place',
+        () => {
+          const me = this.requireUser();
+          // Validation before the role check, as packages/api/src/bugs.ts and the function order them.
+          const id = ticketId?.trim() ?? '';
+          if (!BUG_TICKET_RE.test(id)) invalid('ticketId', 'That is not a ticket identifier');
+          const after = afterTicketId === null || afterTicketId === undefined ? null : afterTicketId.trim();
+          if (after !== null && !BUG_TICKET_RE.test(after)) invalid('afterTicketId', 'That is not a ticket identifier');
+          if (after === id) invalid('afterTicketId', 'A ticket cannot be placed after itself');
+          if (!this.internalReporter) fail('unauthorized', 'This account cannot file internal bug reports');
+
+          // Both must be the caller's own tickets (else not_found, which says nothing about anyone
+          // else's), and both open (else conflict with reason 'not_open'), as the function checks.
+          const mine = new Set(
+            [...this.bugLedger.values()].filter((e) => e.userId === me.id).map((e) => e.summary.ticketId),
+          );
+          if (!mine.has(id) || (after !== null && !mine.has(after))) {
+            fail('not_found', "That report isn't one of yours", { reason: 'not_found' });
+          }
+          const open = this.openBugOrder(me.id);
+          if (!open.includes(id) || (after !== null && !open.includes(after))) {
+            fail('conflict', "That report isn't open any more", { reason: 'not_open' });
+          }
+
+          const others = open.filter((t) => t !== id);
+          const index = after === null ? 0 : others.indexOf(after) + 1;
+          const entry = [...this.bugLedger.values()].find((e) => e.userId === me.id && e.summary.ticketId === id)!;
+          entry.summary = {
+            ...entry.summary,
+            priority: bugPriorityForRank(index, open.length, entry.summary.priority),
+            updatedAt: this.now().toISOString(),
+          };
+
+          // Rewrite the full order: the moving ticket goes directly below `after` (or above every
+          // open ticket); closed ones keep their slots, since they carry no rank.
+          const full = (this.bugOrder.get(me.id) ?? []).filter((t) => t !== id);
+          const anchor = after === null ? (others[0] ?? null) : after;
+          const at = anchor === null ? 0 : full.indexOf(anchor) + (after === null ? 0 : 1);
+          full.splice(at, 0, id);
+          this.bugOrder.set(me.id, full);
+          return this.bugSummaries(me.id);
+        },
+        false,
+      ),
   };
 
   meta: MetaApi = {

@@ -25,6 +25,9 @@ export const ICONS = {
   wine: 'wine', martini: 'martini', globe: 'globe',
   // The Search tab's map area (M-15 placeholder until the live map, M-16).
   map: 'map',
+  // The map's chrome (M-16): a chain's glyph on its callout, the Map segment and a venue's address,
+  // the locate button, and the inline map's "open the full map".
+  store: 'store', 'map-pin': 'map-pin', navigation: 'navigation', 'maximize-2': 'maximize-2',
 };
 
 const parseIcon = (svg) => {

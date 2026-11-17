@@ -3,6 +3,7 @@ import { MIN_N_USER, RANKING_VERSION, predictScore } from '@bevi/ranking';
 import {
   ApiError,
   type Bev,
+  type BevLeaf,
   type BevPrediction,
   type BevsApi,
   type BevSimilarity,
@@ -16,9 +17,11 @@ import {
 import {
   bucketFromDb,
   mapBev,
+  mapBevLeaf,
   mapBevSimilarity,
   mapBevSummary,
   mapProfile,
+  type BevLeafRow,
   type BevRow,
   type BevSimilarityRow,
   type BevSummaryRow,
@@ -49,6 +52,8 @@ interface SearchBevRpcRow {
   rating_count: number;
   avg_score: number | null;
   bayes_score: number | null;
+  /** 20261112000300; absent on a database without it. */
+  icon_path?: string | null;
 }
 
 function mapSearchRow(client: SupabaseClient, row: SearchBevRpcRow): BevSummary {
@@ -70,6 +75,8 @@ interface FindSimilarRpcRow {
   price_estimated: boolean;
   rating_count: number;
   bayes_score: number | null;
+  /** 20261113000100; absent on a database without it, where it maps to a null iconUrl. */
+  icon_path?: string | null;
 }
 
 interface GetBevRpcRow {
@@ -91,6 +98,8 @@ interface GetBevRpcRow {
   avg_score: number | null;
   score_stddev: number | null;
   bayes_score: number | null;
+  /** 20261112000300; absent on a database without it. */
+  icon_path?: string | null;
 }
 
 export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache): BevsApi {
@@ -116,26 +125,33 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
     if (error) throw mapError(error);
     if (!data) throw new ApiError('not_found', `No Bev ${id}`);
     const row = data as GetBevRpcRow;
+    // get_bev follows a merge (20261101000500): asked for a Bev that was merged
+    // into another, it returns the surviving Bev. Everything below is about the
+    // Bev actually returned, so it keys off `row.id`, not the id asked for.
+    const bevId = row.id;
     // Started now, alongside the reads below; only used if the caller hasn't
     // ranked this Bev. Never rejects (predictionFor catches).
-    const prediction = predictionFor(uid, id);
+    const prediction = predictionFor(uid, bevId);
 
     // Read straight from the table rather than widening get_bev: the profile
     // has a select policy for authenticated, and changing an RPC's `returns
     // table` means dropping and recreating it.
-    const [rankingRes, wantRes, followeeIds, profileRes] = await Promise.all([
-      client.from('rankings').select('bucket, position, score, note').eq('user_id', uid).eq('bev_id', id).maybeSingle(),
-      client.from('want_to_try').select('user_id').eq('user_id', uid).eq('bev_id', id).maybeSingle(),
+    const [rankingRes, wantRes, followeeIds, profileRes, nutritionRes] = await Promise.all([
+      client.from('rankings').select('bucket, position, score, note').eq('user_id', uid).eq('bev_id', bevId).maybeSingle(),
+      client.from('want_to_try').select('user_id').eq('user_id', uid).eq('bev_id', bevId).maybeSingle(),
       fetchFollowIds(client, 'follows', 'follower_id', uid),
       client
         .from('bev_flavor_profiles')
         .select('base, carbonated, caffeine, sweetness, dairy, alcohol, serve, source')
-        .eq('bev_id', id)
+        .eq('bev_id', bevId)
         .maybeSingle(),
+      client.from('bev_nutrition').select('nutrition').eq('bev_id', bevId).maybeSingle(),
     ]);
     if (rankingRes.error) throw mapError(rankingRes.error);
     if (wantRes.error) throw mapError(wantRes.error);
     if (profileRes.error) throw mapError(profileRes.error);
+    // A migration-first rollout is required for writes. Older stacks still render Bev detail.
+    if (nutritionRes.error && !['PGRST205', '42P01'].includes(nutritionRes.error.code)) throw mapError(nutritionRes.error);
 
     let myRanking: MyRankingRow | null = null;
     if (rankingRes.data) {
@@ -154,7 +170,7 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
       const { data: friendRankings, error: frError } = await client
         .from('rankings')
         .select('user_id, score, bucket')
-        .eq('bev_id', id)
+        .eq('bev_id', bevId)
         .in('user_id', followeeIds);
       if (frError) throw mapError(frError);
       const rows = (friendRankings ?? []) as Array<{ user_id: string; score: number; bucket: number }>;
@@ -182,6 +198,7 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
       flavor: row.flavor,
       category_id: row.category_id,
       photo_path: row.photo_path,
+      icon_path: row.icon_path,
       price_tier: row.price_tier,
       price_estimated: row.price_estimated,
       bev_stats: {
@@ -196,13 +213,13 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
       created_by: row.created_by_id && row.created_by_handle ? { id: row.created_by_id, handle: row.created_by_handle } : null,
       is_starter: row.is_starter,
     };
-    return mapBev(client, bevRow, {
+    return { ...mapBev(client, bevRow, {
       myRanking,
       inWantToTry: wantRes.data !== null,
       friends,
       flavorProfile: profileRes.data as FlavorProfileRow | null,
       prediction: myRanking ? null : await prediction,
-    });
+    }), nutrition: (nutritionRes.data?.nutrition as import('@bevi/shared').NutritionPreview | undefined) ?? null };
   }
 
   // The contract's `Bev.prediction`: null when the caller ranked the Bev or has
@@ -238,6 +255,7 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
         flavor: row.flavor,
         category_id: row.category_id,
         photo_path: row.thumb_path,
+        icon_path: row.icon_path,
         price_tier: row.price_tier,
         price_estimated: row.price_estimated,
         bev_stats: { rating_count: row.rating_count, avg_score: null, score_stddev: null, bayes_score: row.bayes_score },
@@ -247,27 +265,43 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
 
   async function create(input: CreateBevInput): Promise<Bev> {
     await requireUserId(client);
-    const { data, error } = await client
-      .rpc('create_bev', {
-        p_name: input.name,
-        p_brand: input.brand ?? null,
-        p_flavor: input.flavor ?? null,
-        p_category_id: input.categoryId,
-        p_price_tier: input.priceTier,
-        p_price_estimated: input.priceEstimated,
-        p_photo_asset_id: input.photoAssetId,
-        p_label_asset_id: input.labelAssetId ?? null,
-      })
-      .single();
+    const args = {
+      p_name: input.name,
+      p_brand: input.brand ?? null,
+      p_flavor: input.flavor ?? null,
+      p_category_id: input.categoryId,
+      p_price_tier: input.priceTier,
+      p_price_estimated: input.priceEstimated,
+      p_photo_asset_id: input.photoAssetId,
+      p_label_asset_id: input.labelAssetId ?? null,
+    };
+    const rpcName = input.nutrition ? 'create_bev_with_nutrition' : 'create_bev';
+    let result = await client.rpc(rpcName, {
+      ...args,
+      ...(input.nutrition ? { p_nutrition: input.nutrition } : {}),
+    }).single();
+    // The migration is applied manually after the backend deploy. If it is not
+    // there yet, preserve Bev creation and omit only the optional snapshot.
+    if (input.nutrition && result.error?.code === 'PGRST202') {
+      result = await client.rpc('create_bev', args).single();
+    }
+    const { data, error } = result;
     if (error) throw mapError(error);
     snapshots.invalidate();
     const created = data as { id: string };
     return get(created.id);
   }
 
-  async function report(id: string, reason: string): Promise<void> {
+  async function report(id: string, reason: string, opts?: { duplicateOfId?: string }): Promise<void> {
     await requireUserId(client);
-    const { error } = await client.rpc('report_bev', { p_bev_id: id, p_reason: reason });
+    // report_bev (20261101000500) raises BEVI_VALIDATION with detail
+    // 'duplicateOfId' for a self-reference or a Bev the caller cannot see, which
+    // mapError turns into 'validation' with `detail.field = 'duplicateOfId'`.
+    const { error } = await client.rpc('report_bev', {
+      p_bev_id: id,
+      p_reason: reason,
+      p_duplicate_of: opts?.duplicateOfId ?? null,
+    });
     if (error) throw mapError(error);
   }
 
@@ -275,7 +309,7 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
     await requireUserId(client);
     // `bevs_select` RLS already age-filters; `is_starter` Bevs are
     // seeded active, so no extra filtering needed here.
-    const { data, error } = await client.from('bevs').select('*, bev_stats(*)').eq('is_starter', true).eq('status', 'active');
+    const { data, error } = await client.from('bevs').select('*, bev_stats(*), bev_icons(path)').eq('is_starter', true).eq('status', 'active');
     if (error) throw mapError(error);
     return (data ?? []).map((row) => mapBevSummary(client, row as unknown as BevSummaryRow));
   }
@@ -315,5 +349,18 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
     return ((data ?? []) as SearchBevRpcRow[]).map((row) => mapSearchRow(client, row));
   }
 
-  return { search, get, findLikelyDuplicates, create, report, getStarterCandidates, similarities, similar };
+  // A-13: the same bulk shape as `similarities`, for the same reason -- M-21's
+  // placement asks about a whole bucket at once. The leaf is the only piece of
+  // the hierarchy that reaches the client per Bev; the structure comes from
+  // `categories.tree()`.
+  async function leaves(bevIds: readonly string[]): Promise<BevLeaf[]> {
+    await requireUserId(client);
+    // No ids means no rows: skip the round trip, as `similarities` does.
+    if (bevIds.length === 0) return [];
+    const { data, error } = await client.rpc('get_bev_leaves', { p_bev_ids: [...bevIds] });
+    if (error) throw mapError(error);
+    return ((data ?? []) as BevLeafRow[]).map(mapBevLeaf);
+  }
+
+  return { search, get, findLikelyDuplicates, create, report, getStarterCandidates, similarities, similar, leaves };
 }

@@ -24,9 +24,22 @@ export function isLeaderboardEligible(n: number): boolean {
   return n >= MIN_RATERS;
 }
 
-/** Code-point string order (SQL: `collate "C"`), so JS and Postgres sort names identically. */
-function compareCodePoints(a: string, b: string): number {
-  return a < b ? -1 : a > b ? 1 : 0;
+/**
+ * Unicode code-point string order (SQL: `collate "C"` on UTF-8, i.e. byte order), so JS and
+ * Postgres sort names identically. JS `<` compares UTF-16 code units, which puts every astral
+ * character (a surrogate pair, 0xD800–0xDFFF) before U+E000–U+FFFF: "😀" (U+1F600) < "�" in
+ * JS but not under C. This walks both strings a code point at a time instead; a lone surrogate
+ * counts as its own code unit. Returns −1, 0 or 1. (Fixed in 1.3.0; it used `<` before.)
+ */
+export function compareCodePoints(a: string, b: string): number {
+  let i = 0;
+  while (i < a.length && i < b.length) {
+    const ca = a.codePointAt(i) as number;
+    const cb = b.codePointAt(i) as number;
+    if (ca !== cb) return ca < cb ? -1 : 1;
+    i += ca > 0xffff ? 2 : 1; // equal code points span the same units in both strings
+  }
+  return i < a.length ? 1 : i < b.length ? -1 : 0;
 }
 
 /**

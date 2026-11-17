@@ -165,10 +165,13 @@ select is(
   'the soda board shrinks toward the soda mean'
 );
 
+-- (18 + 48)/9 = 7.3333..., which the board returns rounded to 2 dp since
+-- 20261101000300 (A-14 3.5). The order assertions below still rest on the
+-- exact figure, which is what get_bev_leaderboard orders by.
 select is(
-  (select round(l.bayes_score, 4) from public.get_bev_leaderboard() l
+  (select l.bayes_score from public.get_bev_leaderboard() l
     join t_bevs b on b.id = l.id where b.label = 'S1'),
-  7.3333::numeric,
+  7.33::numeric,
   'the same Bev on the overall board shrinks toward the global mean'
 );
 
@@ -180,7 +183,7 @@ select is(
   (select array_agg(b.label order by l.ord)
      from public.get_bev_leaderboard('soda') with ordinality
           as l(id, name, brand, flavor, category_id, photo_path, thumb_path,
-               price_tier, rating_count, avg_score, bayes_score, ord)
+               price_tier, rating_count, avg_score, bayes_score, icon_path, ord)
      join t_bevs b on b.id = l.id),
   array['S1', 'S4', 'S5', 'S6', 'S2', 'S3'],
   'the soda board orders by rating_count desc, then name in code-point order'
@@ -190,7 +193,7 @@ select is(
   (select array_agg(b.label order by l.ord)
      from public.get_bev_leaderboard() with ordinality
           as l(id, name, brand, flavor, category_id, photo_path, thumb_path,
-               price_tier, rating_count, avg_score, bayes_score, ord)
+               price_tier, rating_count, avg_score, bayes_score, icon_path, ord)
      join t_bevs b on b.id = l.id),
   array['S1', 'S4', 'S5', 'S6', 'S2', 'S3', 'P1', 'P2', 'P3', 'W1', 'W2'],
   'the overall board orders by bayes desc, then rating_count desc, then name'
@@ -215,7 +218,7 @@ select is(
   (select array_agg(b.label order by l.ord)
      from public.get_bev_leaderboard('energy') with ordinality
           as l(id, name, brand, flavor, category_id, photo_path, thumb_path,
-               price_tier, rating_count, avg_score, bayes_score, ord)
+               price_tier, rating_count, avg_score, bayes_score, icon_path, ord)
      join t_bevs b on b.id = l.id),
   array['P1', 'P2', 'P3'],
   'a name tie breaks in code-point order, and an identical name breaks on id asc'

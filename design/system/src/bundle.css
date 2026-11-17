@@ -143,14 +143,18 @@
 .bv-tabs-accent-primary .bv-tabs-bar { background: var(--primary); }
 .bv-tabs-accent-primary .bv-tab-active { color: var(--primary); }
 
-/* TabBar */
-.bv-tabbar { display: flex; align-items: flex-start; border-top: 1px solid var(--border); background: var(--surface); padding: 6px var(--space-xs) 0; }
+/* TabBar. It paints above the screen content (position + z-index) so the raised Add Bev circle is never clipped.
+   The circle's ring is a 4px `surface` spread with no blur: it only separates the circle from the bar's hairline. */
+.bv-tabbar { position: relative; z-index: 1; display: flex; align-items: flex-start; border-top: 1px solid var(--border); background: var(--surface); padding: 6px var(--space-xs) 0; }
 .bv-tabbar-safe { padding-bottom: 34px; }
 .bv-tabbar-item { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; gap: 3px; min-height: var(--size-target); color: var(--text); }
 .bv-tabbar-icon { display: flex; align-items: center; justify-content: center; height: 32px; }
-.bv-tabbar-add { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: var(--radius-pill); background: var(--primary); color: var(--onPrimary); }
+.bv-tabbar-icon-add { align-items: flex-end; }
+.bv-tabbar-add { display: flex; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: var(--radius-pill); background: var(--primary); color: var(--onPrimary);
+  box-shadow: 0 0 0 4px var(--surface); }
+.bv-tabbar-active { color: var(--primary); }
 .bv-tabbar-active .bv-tabbar-label { font-weight: 700; }
-.bv-tabbar-active .bv-avatar { border: 1.5px solid var(--text); }
+.bv-tabbar-active .bv-avatar { box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px var(--primary); }
 
 /* SearchBar */
 .bv-search { display: flex; align-items: center; gap: var(--space-sm); color: var(--textSecondary); cursor: text; }
@@ -172,6 +176,8 @@
 .bv-field-prefix { color: var(--textSecondary); margin-right: 2px; }
 .bv-field-error .bv-field-box { border-color: var(--scoreLow); }
 .bv-field-errmsg { color: var(--scoreLow); }
+/* reserveHint: one caption line stays open under the box, so a hint that comes and goes moves nothing below it. */
+.bv-field-reserve { min-height: 18px; }
 
 /* PriceTierPicker */
 .bv-tierpick { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-md); }
@@ -180,20 +186,27 @@
 .bv-tierpick-cell + .bv-tierpick-cell { border-left: 1px solid var(--border); }
 .bv-tierpick-on { background: var(--primary); color: var(--onPrimary); }
 
-/* BevRow */
-.bv-bevrow { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "main score" "foot foot";
-  min-height: var(--size-row-min); padding: var(--space-md) var(--space-gutter) var(--space-xs); background: var(--surface); }
-.bv-bevrow-main { grid-area: main; display: flex; align-items: flex-start; gap: var(--space-md); min-width: 0; text-align: left; }
+/* BevRow, about 94pt: [56pt image] [text column] [ScoreBubble]. The foot sits under the category line, from the text
+   column's left edge to the row's right edge; its line is 32pt and the 44pt action targets overlap it by 6pt each way. */
+.bv-bevrow { position: relative; display: flex; align-items: flex-start; gap: var(--space-md); min-height: var(--size-row-min);
+  padding: var(--space-md) var(--space-gutter) var(--space-xs); background: var(--surface); }
+.bv-bevrow-img { display: inline-flex; flex: none; }
+.bv-bevrow-body { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.bv-bevrow-top { display: flex; align-items: flex-start; }
+.bv-bevrow-main { display: flex; flex: 1; min-width: 0; text-align: left; }
 .bv-bevrow-text { display: flex; flex-direction: column; min-width: 0; }
 .bv-bevrow-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bv-bevrow-line { display: flex; align-items: center; gap: var(--space-xs); color: var(--text); white-space: nowrap; overflow: hidden; }
 .bv-bevrow-line-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.bv-bevrow-score { grid-area: score; padding: 2px 4px 0 var(--space-md); }
-.bv-bevrow-foot { grid-area: foot; display: flex; align-items: center; justify-content: space-between; min-height: var(--size-target); margin-top: var(--space-md); }
+.bv-bevrow-score { flex: none; padding: 2px 4px 0 var(--space-md); }
+.bv-bevrow-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); min-height: 32px; }
+.bv-bevrow-meta { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bv-bevrow-foot .bv-actions { flex: none; margin-top: -6px; margin-bottom: -6px; }
 .bv-actions { display: flex; align-items: center; margin-right: -8px; }
 .bv-catmark { color: var(--text); }
 
-/* FeedPost */
+/* FeedPost: Avatar 44 and the sentence, then the Bev's picture beside the note (or the ranker's photo strip with the
+   note under it), the "Bev'd it too" line, and a foot with the social actions on the left and the Bev's on the right. */
 .bv-post { position: relative; padding: var(--space-lg) var(--space-gutter) var(--space-xs); background: var(--surface); touch-action: manipulation; }
 .bv-post-media { position: relative; }
 /* The double-tap burst: over the photo strip, or the post's centre when there is none. Grows on the springy curve, holds, fades. */
@@ -201,17 +214,32 @@
   animation: bv-like-burst 800ms cubic-bezier(.2,.8,.2,1); }
 @keyframes bv-like-burst { 0% { transform: scale(.4); opacity: 0; } 20% { transform: scale(1.1); opacity: 1; } 32% { transform: scale(1); } 70% { opacity: 1; } 100% { transform: scale(1); opacity: 0; } }
 @keyframes bv-like-fade { 0% { opacity: 0; } 25% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; } }
-.bv-post-head { display: flex; align-items: flex-start; gap: var(--space-xxl); }
-.bv-post-head-text { flex: 1; min-width: 0; padding-top: var(--space-xs); }
+.bv-post-head { display: flex; align-items: flex-start; gap: var(--space-md); }
+.bv-post-head-text { flex: 1; min-width: 0; }
+.bv-post-line { font-weight: 400; }
 .bv-post-verb { font-weight: 400; }
-.bv-post-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; margin-top: var(--space-xs); }
-.bv-post-score { margin-top: var(--space-xs); }
-.bv-post-strip { display: flex; gap: var(--space-sm); margin: var(--space-lg) calc(-1 * var(--space-gutter)) 0; padding: 0 var(--space-gutter); overflow-x: auto; scrollbar-width: none; }
+.bv-post-meta { display: flex; align-items: center; gap: var(--space-xs); margin-top: 2px; }
+.bv-post-meta-text { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bv-post-score { flex: none; }
+.bv-post-body { display: flex; align-items: stretch; gap: var(--space-md); margin-top: var(--space-md); }
+.bv-post-side { display: flex; flex-direction: column; gap: var(--space-sm); flex: 1; min-width: 0; padding: 2px 0; }
+.bv-post-strip { display: flex; gap: var(--space-sm); margin: var(--space-md) calc(-1 * var(--space-gutter)) 0; padding: 0 var(--space-gutter); overflow-x: auto; scrollbar-width: none; }
 .bv-post-strip::-webkit-scrollbar { display: none; }
-.bv-post-tile { flex: none; border-radius: var(--radius-photo); }
-.bv-post-note { margin-top: var(--space-lg); }
+.bv-post-tile { display: inline-flex; flex: none; border-radius: var(--radius-photo); }
+.bv-post-note { margin-top: var(--space-md); overflow-wrap: anywhere; }
+.bv-post-bevi { margin-top: var(--space-xs); }
+/* Beside the picture the Bevi score rests on the tile's bottom edge, with or without a note above it. */
+.bv-post-side .bv-post-note { margin-top: 0; }
+.bv-post-side .bv-post-bevi { margin-top: auto; }
 .bv-seemore { color: var(--textSecondary); }
-.bv-post-foot { display: flex; align-items: center; justify-content: space-between; min-height: var(--size-target); margin-top: var(--space-sm); }
+.bv-post-also { display: flex; align-items: center; gap: var(--space-sm); margin-top: var(--space-md); }
+.bv-post-also .bv-avatar-stack > * + * { margin-left: -6px; }
+.bv-post-also-text { min-width: 0; }
+.bv-post-also-text b { color: var(--text); }
+.bv-post-foot { display: flex; align-items: center; justify-content: space-between; min-height: var(--size-target); margin-top: var(--space-xs); }
+/* The heart carries 8px of side padding inside its target: pull the group back so the heart sits on the gutter. */
+.bv-post-social { display: flex; align-items: center; margin-left: calc(-1 * var(--space-sm)); }
+.bv-post-social > .bv-pop-box:first-child { margin: 0 var(--space-xs) 0 var(--space-sm); }
 .bv-post-comments { display: flex; flex-direction: column; gap: var(--space-xs); margin: var(--space-xs) 0 var(--space-sm); padding: 0; list-style: none; }
 .bv-post-comment { display: flex; align-items: flex-start; gap: var(--space-sm); margin: 0; }
 .bv-post-comment-text { flex: 1; min-width: 0; margin: 0; padding-top: 2px; overflow-wrap: anywhere; }
@@ -249,6 +277,18 @@
 .bv-progress-chev { flex: none; color: var(--textSecondary); }
 .bv-progress-track { display: block; height: 4px; overflow: hidden; border-radius: var(--radius-pill); background: var(--input); }
 .bv-progress-fill { display: block; height: 100%; border-radius: var(--radius-pill); background: var(--primary); }
+.bv-progress-fill-scoreHigh { background: var(--scoreHigh); }
+.bv-progress-fill-scoreMid { background: var(--scoreMid); }
+.bv-progress-fill-scoreLow { background: var(--scoreLow); }
+.bv-taste { display: flex; flex-direction: column; gap: var(--space-sm); padding: var(--space-md) var(--space-gutter); background: var(--surface); }
+.bv-taste-readout { margin: 0 0 var(--space-xs); color: var(--text); }
+.bv-taste-list { display: flex; flex-direction: column; gap: var(--space-sm); }
+.bv-taste-bar { display: flex; flex-direction: column; justify-content: center; gap: var(--space-xs); width: 100%; min-height: var(--size-target); padding: var(--space-xs) 0; }
+.bv-taste-top { display: flex; align-items: center; gap: var(--space-sm); }
+.bv-taste-label { display: flex; flex: 1; min-width: 0; align-items: center; gap: var(--space-sm); color: var(--text); }
+.bv-taste-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bv-taste-value { flex: none; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--textSecondary); }
+.bv-taste-score { color: var(--band); }
 .bv-collection-sum { padding: 0 var(--space-gutter) var(--space-md); text-align: center; font-variant-numeric: tabular-nums; }
 .bv-collection-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); }
 .bv-collection-row { display: flex; align-items: center; gap: var(--space-lg); width: 100%; min-height: 64px; padding: var(--space-sm) var(--space-gutter);
@@ -271,69 +311,31 @@
 
 /* UserRow */
 .bv-userrow { display: flex; align-items: center; gap: var(--space-md); min-height: 64px; padding: var(--space-sm) var(--space-gutter); background: var(--surface); }
+.bv-userrow-tall { min-height: 72px; }
 .bv-userrow-self { background: var(--primaryTint); }
 .bv-userrow-rank { width: 28px; flex: none; text-align: center; font-variant-numeric: tabular-nums; }
 .bv-userrow-main { flex: 1; display: flex; align-items: center; gap: var(--space-md); min-width: 0; text-align: left; }
 .bv-userrow-text { display: flex; flex-direction: column; min-width: 0; }
 .bv-userrow-name, .bv-userrow-text .bv-meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bv-userrow-context { display: flex; align-items: center; gap: var(--space-xs); min-width: 0; color: var(--textSecondary); }
+.bv-userrow-context-text { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bv-flame { display: inline-block; vertical-align: -2px; color: var(--primary); }
 
-/* BucketButton: liquid glass (material="glass", native GlassView on iOS 26+ only; the default is the tint material below) */
-.bv-bucket { position: relative; isolation: isolate; display: flex; align-items: center; gap: var(--space-md); width: 100%; height: 64px; padding: 0 var(--space-md) 0 var(--space-sm);
-  overflow: hidden; border-radius: var(--radius-pill); color: var(--text); text-align: left;
-  background: var(--glassFill); -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
-  box-shadow: inset 0 1px 0 var(--glassHighlight), inset 0 0 0 1px var(--glassStroke), inset 0 -12px 20px -16px var(--glassHighlight), var(--elevation-glass);
-  transition: transform 150ms ease, box-shadow 250ms ease; }
-.bv-bucket::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; border-radius: inherit;
-  background: linear-gradient(180deg, var(--glassHighlight) 0%, transparent 48%); opacity: .5; }
-.bv-bucket:active { transform: scale(.98); }
-.bv-bucket > :not(.bv-bucket-liquid) { position: relative; z-index: 2; }
-.bv-bucket-on { box-shadow: inset 0 1px 0 var(--glassHighlight), inset 0 0 0 1.5px color-mix(in srgb, var(--band) 70%, transparent), var(--elevation-glass); }
-/* The liquid is the bucket colour mixed into `surface`: pale in light, deep in dark, so `text` always reads on it. */
-.bv-bucket-liquid { position: absolute; left: 0; right: 0; bottom: 0; z-index: 0; height: 0; opacity: 0; background: color-mix(in srgb, color-mix(in srgb, var(--band) 45%, var(--surface)) 70%, transparent);
-  transition: height 450ms cubic-bezier(.3, 1.25, .5, 1), opacity 150ms ease; }
-/* 66% puts the meniscus just above the label's cap height, never across it. */
-.bv-bucket-on .bv-bucket-liquid { height: 66%; opacity: 1; }
-.bv-bucket-wave { position: absolute; left: 0; bottom: calc(100% - 1px); width: 200%; height: 12px; fill: color-mix(in srgb, color-mix(in srgb, var(--band) 45%, var(--surface)) 70%, transparent); animation: bv-wave 5s linear infinite; }
-.bv-bucket-wave-back { bottom: calc(100% + 1px); fill: color-mix(in srgb, var(--glassHighlight) 70%, transparent); animation-duration: 7s; animation-direction: reverse; }
-@keyframes bv-wave { to { transform: translateX(-50%); } }
-.bv-bucket-fizz { position: absolute; bottom: 6px; width: 5px; height: 5px; border-radius: var(--radius-pill); background: var(--glassHighlight); opacity: 0; }
-.bv-bucket-fizz:nth-child(3) { left: 58%; } .bv-bucket-fizz:nth-child(4) { left: 71%; width: 4px; height: 4px; } .bv-bucket-fizz:nth-child(5) { left: 84%; width: 6px; height: 6px; }
-.bv-bucket-on .bv-bucket-fizz { animation: bv-rise 2.6s ease-in infinite; }
-.bv-bucket-on .bv-bucket-fizz:nth-child(4) { animation-delay: .9s; } .bv-bucket-on .bv-bucket-fizz:nth-child(5) { animation-delay: 1.7s; }
-@keyframes bv-rise { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: .9; } 100% { transform: translateY(-28px); opacity: 0; } }
-.bv-bucket-orb { display: flex; flex: none; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: var(--radius-pill); color: var(--onScore);
-  background: radial-gradient(circle at 32% 26%, color-mix(in srgb, var(--band) 40%, var(--glassHighlight)) 0%, var(--band) 56%, color-mix(in srgb, var(--band) 78%, black) 100%);
-  box-shadow: inset 0 1px 1px var(--glassHighlight), inset 0 -3px 6px color-mix(in srgb, var(--band) 60%, black), 0 3px 10px color-mix(in srgb, var(--band) 35%, transparent); }
-.bv-bucket-label { flex: 1; min-width: 0; }
-.bv-bucket-check { display: flex; flex: none; align-items: center; justify-content: center; width: 26px; height: 26px; margin-right: var(--space-xs); border-radius: var(--radius-pill);
-  box-shadow: inset 0 0 0 1.5px var(--borderStrong); color: var(--onScore); transition: background-color 150ms ease; }
-.bv-bucket-on .bv-bucket-check { background: var(--band); box-shadow: none; }
-/* Tint material: the default, and always the web app's (also Android, iOS before 26, Reduce Transparency).
-   Same orb, label, check and pour; a 12% bucket tint and a 4px bucket bar instead of glass. */
-.bv-bucket-tint { border-radius: var(--radius-card); padding-left: 14px; background: color-mix(in srgb, var(--band) 12%, var(--surface));
-  -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; }
-.bv-bucket-tint::before { inset: 0 auto 0 0; width: 4px; border-radius: 0; background: var(--band); opacity: 1; }
-.bv-bucket-tint.bv-bucket-on { box-shadow: inset 0 0 0 2px var(--band); }
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .bv-bucket { border-radius: var(--radius-card); padding-left: 14px; background: color-mix(in srgb, var(--band) 12%, var(--surface)); box-shadow: none; }
-  .bv-bucket::before { inset: 0 auto 0 0; width: 4px; border-radius: 0; background: var(--band); opacity: 1; }
-  .bv-bucket.bv-bucket-on { box-shadow: inset 0 0 0 2px var(--band); }
-}
-@media (prefers-reduced-transparency: reduce) {
-  .bv-bucket { border-radius: var(--radius-card); padding-left: 14px; background: color-mix(in srgb, var(--band) 12%, var(--surface)); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; }
-  .bv-bucket::before { inset: 0 auto 0 0; width: 4px; border-radius: 0; background: var(--band); opacity: 1; }
-  .bv-bucket.bv-bucket-on { box-shadow: inset 0 0 0 2px var(--band); }
-  .bv-glow-blob { display: none; }
-}
-
-/* BevGlow */
-.bv-glow { position: relative; isolation: isolate; overflow: hidden; background: var(--surface); }
-.bv-glow-blob { position: absolute; z-index: 0; aspect-ratio: 1; border-radius: var(--radius-pill); filter: blur(48px); opacity: .55; pointer-events: none; }
-.bv-glow-a { width: 78%; left: 11%; top: 2%; background: var(--glow, var(--primary)); }
-.bv-glow-b { width: 58%; right: -18%; top: 46%; background: var(--fizz); opacity: .4; }
-.bv-glow-c { width: 64%; left: -20%; bottom: -6%; background: var(--primary); opacity: .35; }
-.bv-glow-content { position: relative; z-index: 1; }
+/* BucketButton: a `primary` ring filled to a level (loved full, fine half, disliked empty) over its label */
+.bv-bucket { display: flex; flex: 1; min-width: 0; flex-direction: column; align-items: center; gap: var(--space-md); padding: var(--space-xs) 0; color: var(--text); text-align: center; transition: color 150ms ease; }
+.bv-bucket-disc { position: relative; box-sizing: border-box; width: 76px; height: 76px; padding: 4px; border: 2.5px solid var(--primary); border-radius: var(--radius-pill); transition: transform 150ms ease, opacity 150ms ease; }
+.bv-bucket:active .bv-bucket-disc { transform: scale(.94); }
+.bv-bucket-well { position: relative; display: block; width: 100%; height: 100%; overflow: hidden; border-radius: var(--radius-pill); }
+.bv-bucket-fill { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: var(--primary); }
+.bv-bucket-loved .bv-bucket-fill { height: 100%; }
+.bv-bucket-fine .bv-bucket-fill { height: 50%; }
+/* The check badge: `text` on a 3px `surface` gap, so it reads over the ring and over a full disc. */
+.bv-bucket-badge { position: absolute; top: -6px; right: -6px; display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: var(--radius-pill);
+  background: var(--text); color: var(--surface); box-shadow: 0 0 0 3px var(--surface); opacity: 0; transform: scale(.6); transition: opacity 150ms ease, transform 150ms ease; }
+.bv-bucket-on .bv-bucket-badge { opacity: 1; transform: none; }
+.bv-bucket-label { font-weight: 600; }
+.bv-bucket-dim { color: var(--textSecondary); }
+.bv-bucket-dim .bv-bucket-disc { opacity: .35; }
 
 /* CompareCard, ProgressDots */
 .bv-compare { position: relative; display: flex; align-items: center; gap: var(--space-lg); width: 100%; padding: var(--space-lg); border: 1px solid var(--border);
@@ -359,8 +361,9 @@
 .bv-skel-circle { border-radius: var(--radius-pill); flex: none; }
 .bv-skel-lines { display: flex; flex-direction: column; gap: var(--space-sm); flex: 1; min-width: 0; }
 .bv-skel-row { display: flex; gap: var(--space-md); min-height: var(--size-row-min); padding: var(--space-md) var(--space-gutter); border-bottom: 1px solid var(--border); }
-.bv-skel-post { display: flex; flex-direction: column; gap: var(--space-lg); padding: var(--space-lg) var(--space-gutter); }
-.bv-skel-head { display: flex; align-items: center; gap: var(--space-xxl); }
+.bv-skel-post { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-lg) var(--space-gutter); }
+.bv-skel-head { display: flex; align-items: center; gap: var(--space-md); }
+.bv-skel-body { display: flex; align-items: flex-start; gap: var(--space-md); }
 
 /* Sheet */
 .bv-sheet-wrap { position: absolute; inset: 0; z-index: 10; display: flex; flex-direction: column; justify-content: flex-end; }
@@ -387,12 +390,106 @@
 .bv-composer-error { margin: var(--space-xs) var(--space-gutter) 0; }
 @keyframes bv-sheet-in { from { transform: translateY(24px); opacity: .6; } to { transform: none; opacity: 1; } }
 
+/* FindBevArt: the Map tab's round minimap. The ground and the lit path are the fixed-dark pair, so it reads the same in both themes. */
+.bv-findart { display: block; flex: none; }
+.bv-findart-ground { fill: var(--tasteCard); }
+.bv-findart-street { fill: none; stroke: var(--onDeep); stroke-width: 3; opacity: .12; }
+.bv-findart-lit { fill: none; stroke: color-mix(in srgb, var(--onDeep) 90%, var(--primary)); stroke-width: 44; stroke-linecap: round; stroke-linejoin: round; }
+.bv-findart-route { fill: none; stroke: var(--primary); stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+.bv-findart-dest { fill: var(--primary); stroke: var(--onDeep); stroke-width: 4; }
+.bv-findart-heading { fill: var(--fizz); }
+.bv-findart-you { fill: var(--fizz); stroke: var(--onDeep); stroke-width: 4; }
+.bv-findart-rim { fill: none; stroke: var(--border); stroke-width: 1; }
+
+/* Motion (README, Motion): Press, Arrive, Change and Move. Transform and opacity only.
+   Press: every tappable row, card and icon gives way a little under the finger. Pills and Buttons keep their own
+   `:active` dim above; BucketButton and CompareCard keep theirs. */
+.bv-press, .bv-bevrow-main, .bv-bevrow-img, .bv-post-tile, .bv-plrow, button.bv-statcard, .bv-iconbtn, .bv-like, .bv-bevof, .bv-featured,
+.bv-userrow-main, .bv-tabbar-item, button.bv-progress, .bv-scope, .bv-link, .bv-sort-btn, .bv-sort-search {
+  transition: transform 150ms ease, opacity 150ms ease; }
+.bv-press:active, .bv-bevrow-main:active, .bv-bevrow-img:active, .bv-post-tile:active, .bv-plrow:active, button.bv-statcard:active, .bv-iconbtn:active, .bv-like:active,
+.bv-bevof:active, .bv-featured:active, .bv-userrow-main:active, .bv-tabbar-item:active, button.bv-progress:active, .bv-scope:active, .bv-link:active,
+.bv-sort-btn:active, .bv-sort-search:active { transform: scale(.98); opacity: .7; }
+/* Arrive: content that replaces a Skeleton rises 6px and fades in. */
+.bv-arrive { animation: bv-arrive 250ms ease both; }
+@keyframes bv-arrive { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+/* Change: Follow / Following and the Want to Try bookmark pop like the heart when toggled. */
+.bv-pop-box { display: inline-flex; }
+.bv-pop { animation: bv-pop 250ms cubic-bezier(.2,.8,.2,1); }
+@keyframes bv-pop { 0% { transform: scale(1); } 45% { transform: scale(1.22); } 100% { transform: scale(1); } }
+/* Move: a tab's content cross-fades in, a pushed screen slides in from the right, a full-screen modal rises. */
+.bv-move-fade { animation: bv-fade 150ms ease both; }
+.bv-move-push { animation: bv-push 250ms cubic-bezier(.2,.8,.2,1) both; }
+.bv-move-rise { animation: bv-rise 250ms cubic-bezier(.2,.8,.2,1) both; }
+@keyframes bv-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes bv-push { from { opacity: 0; transform: translateX(22%); } to { opacity: 1; transform: none; } }
+@keyframes bv-rise { from { opacity: 0; transform: translateY(8%); } to { opacity: 1; transform: none; } }
+
+/* Map (M-16). The one place Bevi floats: callouts and controls over the map sit on elevation-floating. */
+.bv-callout { position: relative; display: inline-flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  min-width: var(--size-target); min-height: var(--size-target); transform-origin: 50% 100%; transition: transform 150ms ease-out; }
+.bv-callout-body { position: relative; display: inline-flex; align-items: center; gap: var(--space-xs); padding: var(--space-xs) var(--space-md) var(--space-xs) var(--space-xs);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-pill); box-shadow: var(--elevation-floating); }
+.bv-callout-glyph { display: inline-flex; flex: none; align-items: center; justify-content: center; width: var(--size-icon); height: var(--size-icon);
+  border-radius: var(--radius-pill); background: var(--primary); color: var(--onPrimary); }
+.bv-callout-predicted .bv-callout-glyph { outline: 2px dotted var(--textSecondary); outline-offset: 1px; }
+.bv-callout-num { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); white-space: nowrap; }
+.bv-callout-empty .bv-callout-num { color: var(--textSecondary); }
+.bv-callout-tail { width: 0; height: 0; margin-top: -1px; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 6px solid var(--surface); }
+.bv-callout-badge { position: absolute; top: -6px; right: -6px; }
+.bv-callout-selected { z-index: 1; transform: translateY(-4px) scale(1.15); }
+.bv-callout-selected .bv-callout-body { border-color: var(--primary); }
+
+.bv-mapfilters { display: flex; gap: 10px; padding: 7px var(--space-gutter); overflow-x: auto; scrollbar-width: none; }
+.bv-mapfilters::-webkit-scrollbar { display: none; }
+
+.bv-mapctl { position: absolute; inset: 0; pointer-events: none; }
+.bv-mapctl button, .bv-mapctl [role="toolbar"] { pointer-events: auto; }
+.bv-mapctl-top { position: absolute; top: 0; left: 0; right: 0; display: flex; flex-direction: column; padding-top: var(--space-sm); }
+.bv-mapctl-bar { display: flex; align-items: center; justify-content: space-between; padding: 0 var(--space-gutter); }
+.bv-mapctl-spacer { width: var(--size-target); }
+/* Clear of Google's logo (bottom left), its terms strip (bottom right) and the OpenStreetMap credit. */
+.bv-mapctl-corner { position: absolute; right: var(--space-gutter); bottom: 36px; display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-md); }
+.bv-mapbtn { display: inline-flex; align-items: center; justify-content: center; width: var(--size-target); height: var(--size-target); border-radius: var(--radius-pill);
+  background: var(--surface); color: var(--text); border: 1px solid var(--border); box-shadow: var(--elevation-floating); }
+.bv-mapbtn-active { color: var(--primary); }
+.bv-mapseg { position: relative; display: inline-flex; padding: 2px; border: 1px solid var(--primary); border-radius: var(--radius-pill); background: var(--surface); box-shadow: var(--elevation-floating); }
+.bv-mapseg-opt { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 88px; height: 34px; padding: 0 var(--space-lg);
+  border-radius: var(--radius-pill); color: var(--primary); font-size: 17px; line-height: 22px; font-weight: 600; }
+.bv-mapseg-opt::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: var(--size-target); transform: translateY(-50%); }
+.bv-mapseg-on { background: var(--primary); color: var(--onPrimary); }
+.bv-viewlist { display: inline-flex; align-items: center; gap: var(--space-sm); height: var(--size-target); padding: 0 var(--space-xl); border-radius: var(--radius-pill);
+  background: var(--primary); color: var(--onPrimary); box-shadow: var(--elevation-floating); white-space: nowrap; }
+
+.bv-venuerow { display: flex; align-items: center; gap: var(--space-md); width: 100%; min-height: 88px; padding: var(--space-md) var(--space-gutter); text-align: left; }
+.bv-venuerow-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.bv-venuerow-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.bv-venuesheet { display: flex; flex-direction: column; min-height: 0; padding-top: var(--space-sm); border-top: 1px solid var(--border);
+  border-radius: var(--radius-card) var(--radius-card) 0 0; background: var(--surface); }
+.bv-venuesheet .bv-sheet-handle { margin-bottom: var(--space-xs); }
+.bv-venuesheet-scroll { flex: 1; min-height: 0; overflow: auto; }
+.bv-venuesheet-head { display: flex; flex-direction: column; gap: 2px; padding: 0 var(--space-gutter) var(--space-sm); }
+.bv-venuesheet-title { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-sm); }
+.bv-venuesheet-title h2 { padding-top: 10px; }
+.bv-venuesheet-title .bv-iconbtn { margin-right: -6px; }
+.bv-venuesheet-title-end { justify-content: flex-end; padding: 0 var(--space-gutter); }
+.bv-venuesheet-line { display: flex; align-items: center; gap: var(--space-sm); }
+.bv-venuesheet-web { display: inline-flex; align-items: center; align-self: flex-start; font-weight: 600; text-decoration: none; }
+.bv-venuesheet-osm { padding: var(--space-md) var(--space-gutter) var(--space-lg); }
+
 @media (prefers-reduced-motion: reduce) {
   .bv-skel::after, .bv-bevimg-processing::after, .bv-bevimg-loading::after { animation: none; }
   .bv-tabs-bar, .bv-compare, .bv-dot { transition: none; }
   .bv-sheet { animation: none; }
-  .bv-bucket-wave, .bv-bucket-on .bv-bucket-fizz { animation: none; }
-  .bv-bucket-liquid { transition: none; }
+  .bv-bucket, .bv-bucket-disc, .bv-bucket-badge { transition: none; }
   .bv-like-pop { animation: none; }
   .bv-like-burst { animation-name: bv-like-fade; }
+  .bv-callout { transition: none; }
+  /* Press keeps its dim and drops the scale; Arrive, push and rise become fades; the pop is skipped. */
+  .bv-press:active, .bv-bevrow-main:active, .bv-bevrow-img:active, .bv-post-tile:active, .bv-plrow:active, button.bv-statcard:active, .bv-iconbtn:active, .bv-like:active,
+  .bv-bevof:active, .bv-featured:active, .bv-userrow-main:active, .bv-tabbar-item:active, button.bv-progress:active, .bv-scope:active, .bv-link:active,
+  .bv-sort-btn:active, .bv-sort-search:active { transform: none; }
+  .bv-arrive, .bv-move-push, .bv-move-rise { animation-name: bv-fade; }
+  .bv-pop { animation: none; }
 }

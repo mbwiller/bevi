@@ -15,8 +15,8 @@ test("queryApiUrl strips an Aura Bolt scheme that contains a digit", () => {
   // Regression: a `[a-z+]+` scheme class does not match `neo4j+s`, so the host
   // survived as `neo4j+s:` and every call failed with `fetch failed`.
   assert.equal(
-    queryApiUrl("neo4j+s://3f06998c.databases.neo4j.io", "3f06998c"),
-    "https://3f06998c.databases.neo4j.io/db/3f06998c/query/v2"
+    queryApiUrl("neo4j+s://0a1b2c3d.databases.neo4j.io", "0a1b2c3d"),
+    "https://0a1b2c3d.databases.neo4j.io/db/0a1b2c3d/query/v2"
   );
 });
 

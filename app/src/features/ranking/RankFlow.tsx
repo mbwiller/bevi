@@ -6,9 +6,7 @@ import { StyleSheet, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useBev, useBucket, useMe, useRerankBev, useSubmitRanking } from '@/api/hooks';
-import { bevArtForCategory } from '@/components/BevArt';
-import { BevGlow } from '@/components/BevGlow';
+import { useBev, useMe, usePlacementList, useRerankBev, useSubmitRanking } from '@/api/hooks';
 import { ErrorState } from '@/components/ErrorState';
 import { Header } from '@/components/Header';
 import { Skeleton } from '@/components/Skeleton';
@@ -32,7 +30,7 @@ export interface RankFlowProps {
   rerank?: boolean;
   /**
    * `?entry=search`: opened by tapping a search result before its ranked state was known. A Bev
-   * you've already ranked opens its detail instead (§6.8: detail, with Re-rank there).
+   * you've already ranked opens its detail instead (§6.8: detail, with Bev it again there).
    */
   detailIfRanked?: boolean;
 }
@@ -42,7 +40,8 @@ const flow = () => useRankingFlow.getState();
 /**
  * The ranking flow (DEVELOPMENT-MATT §6.9): gut check → comparisons → note → result. Placement runs
  * locally in the `rankingFlow` store (`@bevi/ranking`); the bucket list is fetched once when the
- * bucket is chosen and again only to restart after a `conflict`.
+ * bucket is chosen and again only to restart after a `conflict`. When the catalog's leaves load,
+ * the search is anchored: like-for-like questions first (M-21, `usePlacementList`).
  */
 export function RankFlow({ bevId, rerank = false, detailIfRanked = false }: RankFlowProps) {
   const back = useBack();
@@ -71,7 +70,8 @@ export function RankFlow({ bevId, rerank = false, detailIfRanked = false }: Rank
   const [fatal, setFatal] = useState<unknown>(null);
   const [outcome, setOutcome] = useState<SubmitRankingResult | null>(null);
   const [confirm, setConfirm] = useState(false);
-  const bucketQ = useBucket(bucket ?? undefined);
+  // The list to search, with its anchoring tiers when the catalog has them (M-21; never blocks).
+  const bucketQ = usePlacementList(bucket ?? undefined, bevQ.data);
   const mode: RankingMode = rerank || !!bevQ.data?.myRanking ? 'rerank' : 'new';
 
   const toDetail = detailIfRanked && !rerank && !!bevQ.data?.myRanking;
@@ -107,7 +107,7 @@ export function RankFlow({ bevId, rerank = false, detailIfRanked = false }: Rank
   useEffect(() => {
     if (phase !== 'loading' || !bucket || !bevQ.data) return;
     if (!bucketQ.data || !bucketQ.isFetchedAfterMount || bucketQ.isFetching) return;
-    flow().start(bevId, bucket, bucketQ.data, mode);
+    flow().start(bevId, bucket, bucketQ.data.orderedIds, mode, bucketQ.data.tiers);
     setPhase(selectDone(flow()) ? 'note' : 'compare');
   }, [phase, bucket, bevId, bevQ.data, bucketQ.data, bucketQ.isFetchedAfterMount, bucketQ.isFetching, mode]);
 
@@ -152,7 +152,7 @@ export function RankFlow({ bevId, rerank = false, detailIfRanked = false }: Rank
       setSaveError(fresh.error ?? new ApiError('unknown', 'Could not reload the list'));
       return;
     }
-    flow().restart(fresh.data, nextMode);
+    flow().restart(fresh.data.orderedIds, nextMode, fresh.data.tiers);
     setNotice(message);
     setPhase(selectDone(flow()) ? 'note' : 'compare');
   };
@@ -251,7 +251,6 @@ export function RankFlow({ bevId, rerank = false, detailIfRanked = false }: Rank
         </Screen>
       ) : (
         <View style={[styles.fill, { backgroundColor: colors.surface }]}>
-          <BevGlow color={bevArtForCategory(bev.categoryId).color} style={StyleSheet.absoluteFill} />
           <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.fill}>
             <GutCheck bev={bev} chosen={bucket} onChoose={choose} onClose={close} />
           </SafeAreaView>

@@ -1,11 +1,10 @@
 // Cold start (§8.12): which Bevs a new user ranks during onboarding. Runs in the app only
 // (seam interpretation 1, §12); the server never calls it.
 
+import { compareCodePoints as cmp } from './bayesian.ts';
 import { STARTER_CORE, STARTER_K, STARTER_MAX_PER_CATEGORY, STARTER_MIN_CATEGORIES } from './constants.ts';
 import { createPrng, randomInt } from './prng.ts';
 import type { BevId, CategoryId, StarterCandidate, StarterOptions } from './types.ts';
-
-const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
 /**
  * Picks `k` (10) starter Bevs: a `core` (6) of the most-rated starters, the same for everyone,

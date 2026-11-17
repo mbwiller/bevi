@@ -1,7 +1,8 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Bucket, SubmitRankingInput } from '@bevi/shared';
+import type { Bev, Bucket, SubmitRankingInput } from '@bevi/shared';
 
 import { api } from '../client';
+import { loadPlacementList } from '../placementList';
 import { keys, type MyRankingsParams } from '../keys';
 import { cursorPaging, invalidateAfterRankingChange } from './util';
 
@@ -39,7 +40,21 @@ export function useBucket(bucket: Bucket | undefined) {
 }
 
 /**
- * On `conflict` (the bucket changed elsewhere) the screen refetches `useBucket` and restarts
+ * What the ranking flow searches for `bev` in `bucket`: the ordered ids plus, when the catalog's
+ * leaves are available, a tier per id for anchored placement (M-21). Fetched fresh like
+ * `useBucket`; it fails only when the list itself can't be read (`loadPlacementList`).
+ */
+export function usePlacementList(bucket: Bucket | undefined, bev: Pick<Bev, 'id' | 'categoryId'> | undefined) {
+  return useQuery({
+    queryKey: keys.rankings.placement(bucket, bev?.id),
+    queryFn: () => loadPlacementList(api, bucket!, bev!),
+    enabled: !!bucket && !!bev,
+    staleTime: 0,
+  });
+}
+
+/**
+ * On `conflict` (the bucket changed elsewhere) the screen refetches `usePlacementList` and restarts
  * placement; the bucket query is invalidated here either way.
  */
 export function useSubmitRanking() {

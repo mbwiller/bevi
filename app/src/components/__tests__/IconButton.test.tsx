@@ -24,3 +24,15 @@ it('shows a badge', async () => {
   await render(<IconButton icon="menu" label="Menu" badge={4} />);
   expect(screen.getByText('4')).toBeTruthy();
 });
+
+it('Press: the whole 44pt target gives way, and a disabled button stays still and silent', async () => {
+  const onPress = jest.fn();
+  const { rerender } = await render(<IconButton icon="settings" label="Settings" onPress={onPress} />);
+  const style = StyleSheet.flatten(screen.getByRole('button', { name: 'Settings' }).props.style);
+  expect(style).toMatchObject({ minHeight: size.target, opacity: 1, transform: [] });
+  await fireEvent.press(screen.getByRole('button', { name: 'Settings' }));
+  expect(onPress).toHaveBeenCalledTimes(1);
+  await rerender(<IconButton icon="settings" label="Settings" onPress={onPress} disabled />);
+  await fireEvent.press(screen.getByRole('button', { name: 'Settings' }));
+  expect(onPress).toHaveBeenCalledTimes(1);
+});

@@ -13,6 +13,7 @@ npm run eval -w packages/ranking -- <export.json>          # text report
 npm run eval -w packages/ranking -- <export.json> --json   # the EvalReport as JSON
 npm run eval -w packages/ranking -- --synthetic            # harness check, NOT an accuracy result
 npm run eval -w packages/ranking -- --write-sample out.json   # a synthetic file in the export format
+npm run eval -w packages/ranking -- --lists                # list report of recommend()'s options, synthetic only
 ```
 
 Options: `--split loo|temporal`, `--no-respace`, `--quantile 0.8`, `--bootstrap 1000`,
@@ -29,7 +30,8 @@ One JSON object. Pseudonymise users; keep the file outside the repo.
   "format": "bevi-eval-export", "formatVersion": 1, "exportedAt": "2026-10-18T00:00:00Z",
   "bevs":        [{ "id", "name", "brand", "flavor", "categoryId", "priceTier", "isAlcoholic" }],
   "rankings":    [{ "userId", "bevId", "bucket": 3|2|1, "position", "score", "rankedAt" }],
-  "comparisons": [{ "userId", "submissionId", "winnerBevId", "loserBevId", "tie", "createdAt" }]
+  "comparisons": [{ "userId", "submissionId", "winnerBevId", "loserBevId", "tie", "createdAt" }],
+  "edges":       [{ "a", "b", "w" }]   // optional: bev_edges as src_bev_id, dst_bev_id, weight
 }
 ```
 
@@ -37,7 +39,11 @@ One JSON object. Pseudonymise users; keep the file outside the repo.
 string; timestamps are ISO 8601, truncated to the hour by the export; `submissionId` is an opaque
 salted hash (used only for grouping). Rows on Bevs missing from `bevs` are dropped and counted. A
 duplicated (user, Bev) ranking keeps the latest. `brand`/`flavor`/`name` are normalised by
-`normaliseBrand` / `flavorTokens`, as `packages/api/src/snapshot.ts` does.
+`normaliseBrand` / `flavorTokens`, as `packages/api/src/snapshot.ts` does. `edges` is optional
+(same `formatVersion`): each unordered pair once, `w` in [0, 1] (number or numeric string); edges
+touching a Bev missing from `bevs` are dropped. Without it, the `-edges` arms fall back to the
+computed content similarity and equal their twins. `export.sql` does not emit it yet; adding
+`select src_bev_id as a, dst_bev_id as b, weight as w from bev_edges` is all it takes.
 
 To produce the file, use the query shipped as `eval/export.sql`. Run it as a database role that
 bypasses RLS (e.g. `postgres`). Pass the salt with `-v`, not `\set`, so it stays out of psql
@@ -93,11 +99,61 @@ shows how many draws were valid, e.g. `(812/1000 draws)`, and the JSON carries i
 
 Arms: `global-mean`, `user-mean` (constant μ*_u), `category-mean`, `user-category-mean`,
 `bayes-bev`, `item-mean-z` (`globalScore`), `l1-affinity`, `l1-content`, `layer1`, `layer2`,
-`engine` (`predictScore`), and `engine-pearson`. That last arm is **experimental**: the engine with
-Pearson over the common subset in place of `cosineSimilarity`, to measure the re-centring issue
-in `layer2.ts` without changing it. `makeEngine(cosineSimilarity)` reproduces `predictScore()`
-exactly. The report also prints cosine-vs-Pearson disagreement over every user pair, and the
-median number of co-raters per item pair (§8.9).
+`layer2-pearson`, `engine` (`predictScore`), `engine-pearson`, the `-edges` arms and the `-stored`
+arms. The two `-pearson` arms are **experimental**: they call the real `layer2` / `predictScore` with `{ userSimilarity: 'pearson' }`
+(M-28, `RANKING_VERSION` 1.3.0), which swaps §8.9's cosine for Pearson over the common subset
+(`pearsonSimilarity` in `src/graph.ts`) and changes nothing else. Production still runs the
+default, `'cosine'`. The report also prints cosine-vs-Pearson disagreement over every user pair,
+and the median number of co-raters per item pair (§8.9).
+
+The three `-edges` arms (`l1-content-edges`, `layer1-edges`, `engine-edges`) are **experimental**
+too: they call the real `layer1` / `predictScore` with `{ bevSimilarity: 'edges' }` (M-27 (a),
+`RANKING_VERSION` 1.4.0), which replaces the content term's computed similarity by the stored edge
+weight w, with 0 for a pair without an edge. Edge weights read no rankings (γ = 0), so attaching
+the same edges to every fold leaks nothing. `--synthetic` builds stand-in edges with
+`syntheticEdges` (`edgeWeight` with emb = profile = 0, so only same-category pairs clear 0.3);
+they exercise the plumbing and say nothing about the real graph.
+
+The two `-stored` arms (`layer2-stored`, `engine-stored`) are **experimental** as well: they call
+the real `layer2` / `predictScore` with `{ userSimilarity: 'stored' }` (graph Stage 4,
+`RANKING_VERSION` 1.6.0), which weights only the user's stored taste neighbours, each by
+sim_B · min(1, n_v / 15), and gives everyone else 0. Unlike edges, neighbours are computed from
+rankings, so they must never come from the full data or from a dump of `user_neighbors`: the
+harness rebuilds them in **every fold from that fold's training rows** (`syntheticNeighbours`,
+which mirrors `scripts/graph/neighbours-core.ts` with the package's exports; `folds.ts` leak 6),
+and only when a stored arm is in the run, since it scores every user pair per fold. A snapshot
+carries no flavour bases, so in the harness brand is the only bridging attribute and the attribute
+term understates the real graph's. A user with no neighbour above the 0.1 floor falls back to the
+cosine, exactly as in the app.
+
+## List report (`--lists`, synthetic only): a harness check, NOT an accuracy result
+
+The arms above score single predictions. `recommend()`'s two 1.8.0 options (`diversity` and
+`exploration`, both `'community'` or the default, LaTeX §7) change *lists*, so `eval/lists.ts`
+scores lists, on `syntheticSnapshot()` only, behind the same banner as `--synthetic` plus one more
+line: list metrics describe what an option does to a list, never whether anyone would prefer it.
+
+It builds the snapshot's `bevGraph` the way the graph sync builds the real one, with the package's
+own functions: taste families = `louvainCommunities(attributeProjection(Bevs, memberships))`, one
+`note:<token>` membership per entry of each Bev's `flavorTokens` (a snapshot carries no flavour
+base); `pagerank` = `pageRank` over the similarity graph (`syntheticEdges`); `bridge` =
+`participationCoefficient(similarity graph, families)`; family ids from `communityHubs` over the
+projection. Then, for every user with at least 3 rankings and `--days` seeds each (default 7), it
+runs `recommend()` with n = 20 under `{}`, `{ diversity: 'community' }` and `{ diversity:
+'community', exploration: 'community' }` and reports, as means over the lists:
+
+- **families@10**: distinct taste families in the top 10;
+- **ILD@10**: intra-list diversity, 1 − the mean pairwise `contentSimilarity` over the top 10;
+- **mean z@10**: the mean un-jittered predicted ẑ of the top 10, the price paid for diversity;
+- **uncharted**: the share of all exploration picks (whole list) in a family where the user has
+  ranked nothing.
+
+It also prints the families (count, sizes, modularity, category purity), the share of similarity
+edges that cross families, and how many users have ranked in every family (for them
+`exploration: 'community'` has no uncharted family and uses the category pool). Synthetic Bevs
+have 8 flavour tokens, so there are only a handful of families, and most synthetic users touch all
+of them: the numbers exercise the plumbing and show each metric moving, nothing more. Options:
+`--users N --bevs N --seed s --days N`, and `--json` for the `ListReport`.
 
 ## Caveats
 

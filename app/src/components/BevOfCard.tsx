@@ -11,7 +11,10 @@ import { ScoreBubble } from './ScoreBubble';
 export type BevOfPeriodKind = 'day' | 'week';
 
 /** Written in sentence case; `sectionCaps` renders it uppercase. */
-export const BEV_OF_LABEL: Record<BevOfPeriodKind, string> = { day: 'Bev of the day', week: 'Bev of the week' };
+export const BEV_OF_LABEL: Record<BevOfPeriodKind, string> = {
+  day: 'Bev of the day',
+  week: 'Bev of the week',
+};
 
 export interface BevOfCardProps {
   period?: BevOfPeriodKind;

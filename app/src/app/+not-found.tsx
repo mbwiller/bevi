@@ -5,7 +5,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '@/components/EmptyState';
 import { useTheme } from '@/theme';
 
-/** Any URL that matches no route. Home is `/`, which the session gate sends to the right place. */
+/**
+ * Any URL that matches no route. Home is `/`, which the session gate sends to the right place.
+ * An internal reporter has the bug reporter's drop here as on every screen (the root layout).
+ */
 export default function NotFoundScreen() {
   const { colors } = useTheme();
   const router = useRouter();

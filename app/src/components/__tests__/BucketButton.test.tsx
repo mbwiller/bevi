@@ -1,14 +1,13 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
-import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { fireEvent, render, screen, within } from '@testing-library/react-native';
+import { StyleSheet, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 
-import { radius, size } from '@/theme';
+import { colors, size } from '@/theme';
 
 import { BucketButton } from '../BucketButton';
 
-const flat = (el: { props: Record<string, unknown> }): ViewStyle => {
-  const s = el.props.style;
-  return StyleSheet.flatten((typeof s === 'function' ? s({ pressed: false }) : s) as StyleProp<ViewStyle>);
-};
+const flat = (el: { props: Record<string, unknown> }) => StyleSheet.flatten(el.props.style as StyleProp<ViewStyle & TextStyle>);
+const button = (name: string) => screen.getByRole('button', { name });
+const part = (name: string, testID: string) => within(button(name)).getByTestId(testID, { includeHiddenElements: true });
 
 it('labels each bucket with the fixed copy and fires onPress', async () => {
   const onPress = jest.fn();
@@ -19,37 +18,64 @@ it('labels each bucket with the fixed copy and fires onPress', async () => {
       <BucketButton bucket="DISLIKED" />
     </>,
   );
-  await fireEvent.press(screen.getByRole('button', { name: 'Loved it' }));
+  await fireEvent.press(button('Loved it'));
   expect(onPress).toHaveBeenCalledTimes(1);
-  expect(screen.getByText('It was fine')).toBeTruthy();
-  expect(screen.getByText("Didn't like it")).toBeTruthy();
+  expect(screen.getByText('It was okay')).toBeTruthy();
+  expect(screen.getByText('Not for me')).toBeTruthy();
 });
 
-it('reports selection with aria-pressed and is at least 44pt tall', async () => {
+it('fills the ring to a level per bucket, so the order never depends on colour', async () => {
+  await render(
+    <>
+      <BucketButton bucket="LOVED" />
+      <BucketButton bucket="FINE" />
+      <BucketButton bucket="DISLIKED" />
+    </>,
+  );
+  expect(flat(part('Loved it', 'bucket-fill')).height).toBe('100%');
+  expect(flat(part('It was okay', 'bucket-fill')).height).toBe('50%');
+  expect(flat(part('Not for me', 'bucket-fill')).height).toBe('0%');
+});
+
+it('draws every bucket in primary alone: no score colours, no shadow', async () => {
+  await render(
+    <>
+      <BucketButton bucket="LOVED" />
+      <BucketButton bucket="FINE" />
+      <BucketButton bucket="DISLIKED" />
+    </>,
+  );
+  for (const name of ['Loved it', 'It was okay', 'Not for me']) {
+    const disc = flat(part(name, 'bucket-disc'));
+    expect(disc.borderColor).toBe(colors.light.primary);
+    expect(disc.boxShadow).toBeUndefined();
+    expect(flat(part(name, 'bucket-fill')).backgroundColor).toBe(colors.light.primary);
+  }
+});
+
+it('reports selection with aria-pressed, shows the check badge only when chosen, and clears 44pt', async () => {
   await render(
     <>
       <BucketButton bucket="LOVED" selected />
-      <BucketButton bucket="FINE" />
+      <BucketButton bucket="FINE" dimmed />
     </>,
   );
-  const loved = screen.getByRole('button', { name: 'Loved it' });
-  expect(loved.props['aria-pressed']).toBe(true);
-  expect(screen.getByRole('button', { name: 'It was fine' }).props['aria-pressed']).toBe(false);
-  expect(flat(loved).height).toBeGreaterThanOrEqual(size.target);
+  expect(button('Loved it').props['aria-pressed']).toBe(true);
+  expect(button('It was okay').props['aria-pressed']).toBe(false);
+  expect(flat(part('Loved it', 'bucket-badge')).opacity).toBe(1);
+  expect(flat(part('It was okay', 'bucket-badge')).opacity).toBe(0);
+  expect(Number(flat(part('Loved it', 'bucket-disc')).height)).toBeGreaterThanOrEqual(size.target);
 });
 
-it('is always the tint material, with no backdrop-filter', async () => {
-  await render(<BucketButton bucket="LOVED" />);
-  const style = flat(screen.getByRole('button', { name: 'Loved it' })) as Record<string, unknown>;
-  expect(style.borderRadius).toBe(radius.card);
-  expect(style.backdropFilter).toBeUndefined();
-  expect(style.WebkitBackdropFilter).toBeUndefined();
-  expect(style.boxShadow).toBeUndefined();
-});
-
-it('rings the selected button in its bucket colour', async () => {
-  await render(<BucketButton bucket="DISLIKED" selected />);
-  const style = flat(screen.getByRole('button', { name: "Didn't like it" }));
-  expect(style.borderRadius).toBe(radius.card);
-  expect(String(style.boxShadow)).toContain('inset 0 0 0 2px');
+it('fades the ring and greys the label when another bucket is chosen', async () => {
+  await render(
+    <>
+      <BucketButton bucket="LOVED" selected />
+      <BucketButton bucket="DISLIKED" dimmed />
+    </>,
+  );
+  expect(flat(part('Not for me', 'bucket-disc')).opacity).toBeLessThan(1);
+  expect(flat(screen.getByText('Not for me')).color).toBe(colors.light.textSecondary);
+  expect(flat(part('Loved it', 'bucket-disc')).opacity).toBeUndefined();
+  expect(flat(screen.getByText('Loved it')).color).toBe(colors.light.text);
 });

@@ -4,23 +4,27 @@
 // Each method lists the `ApiError.code` values (./errors) it can throw beyond
 // `network` / `unknown`, which any method can throw. Every method other than
 // `signUp`, `signIn`, `getSession`, `onAuthChange`, `profile.checkHandle` and
-// `meta.getAppConfig` throws 'unauthorized' when signed out.
+// `meta.getAppConfig` and read-only `nutrition.lookupBarcode` throw 'unauthorized' when signed out.
 
 import type { Bucket, CategoryId, PriceTier } from './enums';
 import type {
+  NutritionPreview,
   AppConfig,
   Bev,
+  BevLeaf,
   BevOfPeriod,
   BevSimilarity,
   BevSummary,
   BucketBev,
   Category,
+  CategoryNode,
   CategoryProgress,
   Comment,
   Comparison,
   ExplorePost,
   FeaturedBev,
   FeedItem,
+  LatLngBounds,
   LeaderboardRow,
   Page,
   Profile,
@@ -30,8 +34,12 @@ import type {
   Ranking,
   RecommendationsResult,
   Session,
+  SuggestedProfile,
   TasteProfileRow,
   UserLeaderboardRow,
+  VenueDetail,
+  VenueFilters,
+  VenuePin,
   WantToTryItem,
 } from './types';
 
@@ -181,13 +189,33 @@ export interface FollowsApi {
   /** @throws 'unauthorized', 'not_found'. */
   listFollowing(id: string, page?: PageParams): Promise<Page<ProfileRow>>;
 
-  /** Users with the most rankings the caller doesn't follow. @throws 'unauthorized'. */
-  suggested(): Promise<ProfileRow[]>;
+  /**
+   * Users with the most rankings the caller doesn't follow. Each row carries
+   * who among the people the caller follows already follows that user
+   * (`followedBy`, at most two, and `followedByCount`, the total).
+   * @throws 'unauthorized'.
+   */
+  suggested(): Promise<SuggestedProfile[]>;
 }
 
 export interface CategoriesApi {
-  /** Already age-filtered for the caller. @throws 'unauthorized'. */
+  /**
+   * The 15 top-level categories with their Bev counts, already age-filtered for
+   * the caller. Never returns a leaf of the finer taxonomy — use `tree()` for
+   * that. @throws 'unauthorized'.
+   */
   list(): Promise<Category[]>;
+
+  /**
+   * The whole two-level taxonomy (A-13/D-04): the 15 roots and the 60 leaves,
+   * age-filtered by the root's `isAlcoholic`, ordered root-then-leaf in sibling
+   * order so one pass builds the tree. No Bev counts — `list()` has those.
+   *
+   * The result is catalog structure: it changes only when a migration changes
+   * it, so cache it for the session rather than per screen.
+   * @throws 'unauthorized'.
+   */
+  tree(): Promise<CategoryNode[]>;
 }
 
 export interface CreateBevInput {
@@ -202,12 +230,19 @@ export interface CreateBevInput {
   photoAssetId: string;
   /** From `media.upload({ kind: 'label' })`. */
   labelAssetId?: string;
+  /** User-confirmed barcode result; saved atomically with this new Bev. */
+  nutrition?: NutritionPreview;
 }
 
 export interface FindDuplicatesInput {
   name: string;
   brand?: string;
   flavor?: string;
+  /**
+   * The category the creator picked. A ranking preference, never a filter: matches in this
+   * category sort first, and a matching Bev in any other category is still returned, so a
+   * miscategorised new Bev still finds its duplicate.
+   */
   categoryId?: CategoryId;
 }
 
@@ -215,10 +250,19 @@ export interface BevsApi {
   /** Age-filtered server-side. @throws 'unauthorized'. */
   search(params: { q: string; categoryId?: CategoryId; limit?: number; cursor?: string }): Promise<Page<BevSummary>>;
 
-  /** @throws 'unauthorized', 'not_found', 'age_restricted'. */
+  /**
+   * A Bev that was merged into another (a duplicate, resolved by hand) resolves to
+   * the surviving Bev: the returned `id` is then the survivor's, not `id`, which is
+   * how a caller can tell it followed a merge (an old link or a cached id).
+   * @throws 'unauthorized', 'not_found', 'age_restricted' (judged on the Bev returned).
+   */
   get(id: string): Promise<Bev>;
 
-  /** Up to 5 likely matches. @throws 'unauthorized'. */
+  /**
+   * Up to 5 likely matches across every category (age-filtered server-side). `categoryId`
+   * ranks same-category matches first and never excludes another category.
+   * @throws 'unauthorized'.
+   */
   findLikelyDuplicates(input: FindDuplicatesInput): Promise<BevSummary[]>;
 
   /**
@@ -233,8 +277,17 @@ export interface BevsApi {
    */
   create(input: CreateBevInput): Promise<Bev>;
 
-  /** @throws 'unauthorized', 'not_found', 'validation' (unknown reason), 'rate_limited'. */
-  report(id: string, reason: string): Promise<void>;
+  /**
+   * Reports a Bev for moderation. `opts.duplicateOfId` names the Bev this one
+   * duplicates: meant for `reason = 'duplicate'`, accepted with any reason, and
+   * optional even then (an operator reads the reports and merges by hand; a
+   * duplicate report without it is still a valid report).
+   * @throws 'unauthorized'; 'not_found' (no Bev `id`); 'validation' — an unknown
+   *   reason, or `detail.field = 'duplicateOfId'` when it equals `id` or names a Bev
+   *   the caller cannot see (unknown, not active, or alcoholic for a caller under
+   *   21 — one error for all three, so it reveals nothing); 'rate_limited'.
+   */
+  report(id: string, reason: string, opts?: { duplicateOfId?: string }): Promise<void>;
 
   /**
    * Age-filtered `isStarter` Bevs, at least 30, each with `ratingCount`. The app
@@ -276,6 +329,25 @@ export interface BevsApi {
    * @throws 'unauthorized'.
    */
   similar(bevId: string, n?: number): Promise<BevSummary[]>;
+
+  /**
+   * Each Bev's leaf in the finer taxonomy (A-13/D-04), for M-21's two-phase
+   * placement: phase 1 narrows to the Bevs sharing a leaf, phase 2 searches
+   * within.
+   *
+   * Same bulk shape and the same caveats as `similarities`, deliberately — call
+   * it once per bucket, not once per Bev. `leafCategoryId` is **null** when a
+   * Bev sits directly on its category, which is correct for the two unsplit
+   * roots (`water`, `sports`) and for every user-created Bev until something
+   * relabels it; fall back to `BevSummary.categoryId`, still one of the 15.
+   *
+   * Ids the caller may not see (age-gated, or not `active`) are **omitted**, so
+   * a short result is normal. A visible Bev with no leaf is present with
+   * `leafCategoryId: null`, which is how "no finer placement" differs from "not
+   * visible". Order is by `bevId`; at most 500 ids.
+   * @throws 'unauthorized', 'validation' (`detail.field = 'bevIds'`, over 500).
+   */
+  leaves(bevIds: readonly string[]): Promise<BevLeaf[]>;
 }
 
 export interface UploadMediaInput {
@@ -410,7 +482,8 @@ export interface FeedApi {
 
   /**
    * One user's RANKING posts, newest first, in the same shape as `getFeed`
-   * (likes, and the first seven comments inline). Only posts the caller may
+   * (likes, the first seven comments inline, and `alsoBevdBy`, which is
+   * always relative to the caller, not to `userId`). Only posts the caller may
    * see: their own and followed users'; empty for anyone else, whose Activity
    * uses `rankings.listUser`.
    * @throws 'unauthorized'; 'not_found' — no such user.
@@ -485,6 +558,24 @@ export interface LeaderboardApi {
 
   /** @throws 'unauthorized'. */
   users(page?: PageParams): Promise<Page<UserLeaderboardRow>>;
+
+  /**
+   * The same board among friends: the caller plus the people the caller
+   * follows, ranked among themselves by exactly the `points` `users()` ranks
+   * by. `rank` is the competition rank within that set, from 1, and the rows
+   * come in the global board's order (points, then Bevs ranked, then the
+   * older account, then id), so a tie is broken the same way on both boards.
+   *
+   * As on `users()`, someone with no rankings is Unranked and has no row —
+   * that includes the caller, so the page is empty until the caller or
+   * someone they follow has ranked a Bev. With no follows it is the caller
+   * alone, at rank 1.
+   *
+   * Paged by `nextCursor`; `rank` is the rank in the whole set, not the
+   * position on the page.
+   * @throws 'unauthorized'.
+   */
+  friends(page?: PageParams): Promise<Page<UserLeaderboardRow>>;
 }
 
 export interface RecsApi {
@@ -495,12 +586,318 @@ export interface RecsApi {
   refresh(): Promise<void>;
 }
 
+export interface VenuesApi {
+  /**
+   * The pins inside a viewport (S-10, trimmed). Venues with no assortment are
+   * never returned (D-13), so every pin has at least one Bev behind it.
+   *
+   * `zoom` caps how many come back -- about 60 at zoom 11 up to 300 at zoom 15
+   * -- because a city-wide view would otherwise return everything. The cap is
+   * applied after the filters and keeps the highest-scoring venues, so zooming
+   * out thins the map rather than changing which end of it you see. A
+   * fractional zoom (Google's vector maps report e.g. 12.5) is floored.
+   *
+   * Every filter is optional, and an EMPTY array is the same as leaving it
+   * out (no filter), not "match nothing": a multi-select with nothing ticked
+   * means "any".
+   *
+   * `bounds` is clamped to `NYC_BOUNDS` server-side, so a viewport that spills
+   * past the city returns only what is inside it. @throws 'unauthorized'.
+   */
+  inView(params: { bounds: LatLngBounds; zoom: number; filters?: VenueFilters }): Promise<VenuePin[]>;
+
+  /**
+   * One venue and its assortment. A hidden venue, an unknown id, an id that is
+   * not a venue id at all, and a venue whose whole assortment the caller may
+   * not see are all the same 'not_found'. @throws 'unauthorized', 'not_found'.
+   */
+  get(venueId: string): Promise<VenueDetail>;
+
+  /**
+   * The distinct neighbourhoods that have at least one pinned venue, for the
+   * "Neighborhood" filter (decision 36 turns the city filter into it).
+   *
+   * EXPECT THIS TO BE EMPTY for now. OSM has no neighbourhood for any venue in
+   * the starting area -- `addr:suburb` is unused in New York -- so the column
+   * is ours to fill and nothing has filled it yet. An empty list means "no
+   * vocabulary yet", so hide the filter rather than showing it with no
+   * options. @throws 'unauthorized'.
+   */
+  neighborhoods(): Promise<string[]>;
+}
+
 export interface MetaApi {
   /** Callable signed out. */
   getAppConfig(): Promise<AppConfig>;
 }
 
+// ---------------------------------------------------------------------------
+// Bugs: the internal bug reporter (docs/bug-workflow.md). Internal-only —
+// every method is refused for an ordinary account, server-side, whatever the
+// client chooses to show. Linear owns the issue: nothing here writes its
+// labels or comments after create, and the app never holds a tracker
+// credential. There are two writes after create, both to the caller's own
+// tickets: `markVerified`, which moves a ticket the reporter has checked on
+// the device to Done, and `place`, which puts a ticket in the reporter's
+// ranked list (Linear's manual order, and the priority that position implies).
+// ---------------------------------------------------------------------------
+
+/** What the reporter says it is. The server files each kind under a Linear label of the same name. */
+export type BugReportKind = 'bug' | 'fix' | 'idea' | 'design';
+
+/**
+ * How bad the reporter says it is: blocker = cannot use the app or data is
+ * wrong; bad = a core flow is broken; annoying = works with a workaround;
+ * polish = cosmetic. The server maps it to Linear priority 1–4 at create time.
+ */
+export type BugReportSeverity = 'blocker' | 'bad' | 'annoying' | 'polish';
+
+/** Safe, allow-listed context about the build, the device and the screen. The reporter can see it before sending. */
+export interface BugReportEnvironment {
+  /** The route the reporter was on, e.g. '/bev/[id]'. Never a URL with a query string. */
+  route?: string;
+  /** The feature area, for the tracker's component label. */
+  component?: string;
+  platform?: string;
+  osVersion?: string;
+  appVersion?: string;
+  /** The deploy's git SHA (short), as the build inlined it. */
+  build?: string;
+  /** 'production' | 'preview' | 'development', as the build knows itself. */
+  stage?: string;
+  /** The colour scheme the app rendered in. */
+  theme?: 'light' | 'dark';
+  /** `navigator.onLine` when the form opened. */
+  online?: boolean;
+  /** e.g. '390x844'. */
+  viewport?: string;
+  /** ISO-8601. */
+  occurredAt?: string;
+  reproducibility?: 'always' | 'intermittent' | 'unknown';
+  /** The concrete path the reporter was on, e.g. '/bev/8f3a…'. Never a query string or a fragment. */
+  path?: string;
+  /** 'home screen' when the app runs as an installed web app, 'browser' in a tab. */
+  display?: 'home screen' | 'browser';
+  /** `window.devicePixelRatio`. */
+  pixelRatio?: number;
+  /** The safe-area insets in CSS px as 'top,right,bottom,left', e.g. '59,0,34,0'. */
+  safeArea?: string;
+  /** Whether the device asks for reduced motion. */
+  reducedMotion?: boolean;
+}
+
+/**
+ * A component the reporter pointed at, as the app read it off the screen at
+ * that moment: which component, where its source is, what it showed and how
+ * it was drawn. Collected only for internal reporters; the server caps and
+ * redacts every string and drops anything this shape does not name.
+ */
+export interface BugReportTarget {
+  /** The component's name as the app's source writes it, e.g. 'TabBar'. */
+  component: string;
+  /** Its ancestry, outermost first and ending with `component`, e.g. ['FeedScreen', 'TabBar']. At most 8. */
+  path?: string[];
+  /** The repo-relative source file, when the app's component manifest knows it. */
+  file?: string;
+  /** Its accessible label, e.g. 'Add Bev'. */
+  label?: string;
+  /** Its ARIA role, e.g. 'button'. */
+  role?: string;
+  /** Its visible text, trimmed. At most 160 characters. */
+  text?: string;
+  /** Its props that are strings, numbers or booleans. At most 12. */
+  props?: Record<string, string | number | boolean>;
+  /** Where it sat in the viewport, in CSS px. */
+  rect?: { x: number; y: number; width: number; height: number };
+  /**
+   * How it was drawn, as design-token names where one matches and the raw
+   * value where none does, e.g. { backgroundColor: 'colors.primary',
+   * borderRadius: '13px (no token)' }. At most 12.
+   */
+  styles?: Record<string, string>;
+  /** The route pattern of the screen it was on. */
+  route?: string;
+  /** Which entry of `evidence` shows it (0-based). */
+  evidenceIndex?: number;
+  /** The number drawn on it in that screenshot (1-based). */
+  mark?: number;
+}
+
+/**
+ * One entry of the trail the app keeps in memory: a navigation (the route
+ * pattern, never ids or a query string), a failed API call (the method
+ * name, the error code, the status, the duration), a tap (the component and
+ * its label) or an uncaught error (its message). Never arguments, never
+ * responses, never anything a user typed. The server keeps the most recent
+ * 40 and redacts every string.
+ */
+export interface BugBreadcrumb {
+  /** ISO-8601. */
+  at: string;
+  kind: 'nav' | 'api' | 'tap' | 'error';
+  /** `tap`: what was tapped, e.g. 'TabBar › Add Bev'. */
+  target?: string;
+  /** `error`: the error's message. */
+  message?: string;
+  /** `nav`: the route pattern, e.g. '/bev/[id]'. */
+  route?: string;
+  /** `api`: the BeviApi method, e.g. 'rankings.submit'. */
+  method?: string;
+  /** `api`: the ApiError code. */
+  code?: string;
+  /** `api`: the HTTP status when known. */
+  status?: number;
+  /** `api`: how long the call took. */
+  ms?: number;
+}
+
+export interface BugReportInput {
+  kind: BugReportKind;
+  severity: BugReportSeverity;
+  /** The observable symptom; becomes the ticket title. Required. */
+  title: string;
+  /** What happened. */
+  description?: string;
+  reproductionSteps?: string[];
+  /**
+   * Who wrote `reproductionSteps`: the reporter ('typed', the default) or the
+   * app, from the taps and screens it recorded ('recorded'). The ticket says
+   * which, so nobody reads a recorded trail as a person's account.
+   */
+  stepsSource?: 'typed' | 'recorded';
+  expected?: string;
+  actual?: string;
+  environment?: BugReportEnvironment;
+  breadcrumbs?: BugBreadcrumb[];
+  /** The components the reporter pointed at, in the order they were marked. At most 6. */
+  targets?: BugReportTarget[];
+  /**
+   * The screenshots, at most 3, uploaded to private storage as part of this
+   * call and never before it — nothing leaves the device until the reporter
+   * submits. `caption` says what one shows, e.g. 'Feed, with 1 marked'.
+   */
+  evidence?: { file: Blob; mimeType: string; caption?: string }[];
+  /**
+   * A UUID the client generates once per draft and reuses on every retry of
+   * that draft. The same key never creates a second ticket.
+   */
+  idempotencyKey: string;
+}
+
+export interface BugReportResult {
+  /** The tracker's own identifier, e.g. 'BEV-104'. Never invented client-side. */
+  ticketId: string;
+  ticketUrl: string;
+  /** 'duplicate' = this idempotency key had already produced that ticket. */
+  status: 'created' | 'duplicate';
+}
+
+/**
+ * Where a ticket is in the workflow (docs/bug-workflow.md), derived from
+ * Linear's state type; 'unknown' when the tracker could not be asked.
+ */
+export type BugTicketState = 'triage' | 'todo' | 'in_progress' | 'in_review' | 'done' | 'canceled' | 'unknown';
+
+/** One of the caller's own tickets, as My reports lists it. */
+export interface BugReportSummary {
+  ticketId: string;
+  ticketUrl: string;
+  /** The title as filed. */
+  title: string;
+  kind: BugReportKind;
+  severity: BugReportSeverity;
+  /** ISO-8601, when it was filed. */
+  createdAt: string;
+  state: BugTicketState;
+  /** Linear's own state name, e.g. 'In Review'; null when `state` is 'unknown'. */
+  stateLabel: string | null;
+  /** Linear's priority 0–4; null when unknown. */
+  priority: number | null;
+  /** ISO-8601, Linear's last change; null when unknown. */
+  updatedAt: string | null;
+  /**
+   * Where this ticket sits among the caller's own open tickets (triage, todo
+   * and in progress), 1 being the one that bothers them most. It is Linear's
+   * manual order read back, so it follows a drag in Linear too. Null for a
+   * ticket that is in review, closed or unknown, and when the tracker could
+   * not be asked.
+   */
+  rank: number | null;
+}
+
+export interface BugsApi {
+  /**
+   * Whether this account may file internal bug reports. Drives whether the
+   * Report a bug entry point is shown; it is not the access check, which runs
+   * server-side on every call. Never throws 'unauthorized' for a signed-in
+   * ordinary user — it answers false.
+   */
+  canReport(): Promise<boolean>;
+
+  /**
+   * Files one report: uploads the evidence (if any), then creates the tracker
+   * issue server-side and returns the identifier the tracker assigned.
+   *
+   * @throws 'unauthorized' — signed out, or not an internal reporter;
+   *   'validation' — missing title (`detail.field = 'title'`), unknown kind or
+   *   severity (`'kind'`, `'severity'`), unsupported, oversized or too many
+   *   attachments (`'evidence'`), malformed key (`'idempotencyKey'`);
+   *   'conflict' — a submission for this key is already in flight;
+   *   'rate_limited'; 'unknown' — the tracker is unreachable or unconfigured
+   *   (the draft is still intact and the same key may be retried).
+   */
+  report(input: BugReportInput): Promise<BugReportResult>;
+
+  /**
+   * The caller's own filed tickets, newest first, with their live tracker
+   * state. When the tracker cannot be asked the rows still come back with
+   * `state: 'unknown'`, so the list never disappears with the tracker.
+   *
+   * @throws 'unauthorized' — signed out, or not an internal reporter;
+   *   'unknown' — the ledger could not be read.
+   */
+  listMine(): Promise<BugReportSummary[]>;
+
+  /**
+   * Moves one of the caller's own tickets to Done, once they have checked the
+   * fix on the device where they saw the bug (the one state change the
+   * workflow reserves for a human). Returns the ticket as the tracker now
+   * reports it.
+   *
+   * @throws 'unauthorized' — signed out, or not an internal reporter;
+   *   'not_found' — not one of the caller's tickets; 'validation' — not a
+   *   ticket identifier; 'unknown' — the tracker refused or is unconfigured.
+   */
+  markVerified(ticketId: string): Promise<BugReportSummary>;
+
+  /**
+   * Places one of the caller's own open tickets in their ranked list:
+   * directly below `afterTicketId` (another of their open tickets), or at the
+   * top when it is null. The server writes the position to the tracker as its
+   * manual order and sets the priority from where the ticket landed (the top
+   * quarter High, the middle half Medium, the rest Low; a ticket already
+   * Urgent stays Urgent). Returns the caller's tickets as `listMine` does,
+   * with the new ranks.
+   *
+   * @throws 'unauthorized' — signed out, or not an internal reporter;
+   *   'not_found' — either ticket is not one of the caller's;
+   *   'conflict' — one of them is the caller's but is no longer open
+   *   (`detail.reason = 'not_open'`): refetch the list;
+   *   'validation' — not a ticket identifier, or a ticket placed after itself;
+   *   'unknown' — the tracker refused, is unconfigured, or the server
+   *   predates ranking.
+   */
+  place(ticketId: string, afterTicketId: string | null): Promise<BugReportSummary[]>;
+}
+
+export interface NutritionApi {
+  /** UPC-A, EAN-8 or EAN-13. null means no usable nutrition data. */
+  lookupBarcode(barcode: string, signal?: AbortSignal): Promise<NutritionPreview | null>;
+}
+
 export interface BeviApi extends AuthApi {
+  /** Optional capability for compatibility with older API implementations. */
+  nutrition?: NutritionApi;
   profile: ProfileApi;
   stats: StatsApi;
   follows: FollowsApi;
@@ -513,5 +910,7 @@ export interface BeviApi extends AuthApi {
   comments: CommentsApi;
   leaderboard: LeaderboardApi;
   recs: RecsApi;
+  venues: VenuesApi;
   meta: MetaApi;
+  bugs: BugsApi;
 }

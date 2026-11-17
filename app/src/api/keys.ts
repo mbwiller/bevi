@@ -2,7 +2,7 @@
 // hierarchical so a prefix invalidates a whole family: `keys.rankings.all` covers listMine,
 // listUser and listBucket; `keys.bevs.all` covers detail, search, duplicates and starters.
 
-import type { Bucket, CategoryId, FindDuplicatesInput, RankingSort } from '@bevi/shared';
+import type { Bucket, CategoryId, FindDuplicatesInput, LatLngBounds, RankingSort, VenueFilters } from '@bevi/shared';
 
 const root = ['bevi'] as const;
 
@@ -20,6 +20,10 @@ export const keys = {
   session: () => [...root, 'session'] as const,
   appConfig: () => [...root, 'appConfig'] as const,
   checkHandle: (handle: string) => [...root, 'checkHandle', handle] as const,
+  /** `bugs.canReport()`: whether this account may file internal bug reports. */
+  canReportBug: () => [...root, 'canReportBug'] as const,
+  /** `bugs.listMine()`: the caller's own tickets with their live tracker state. */
+  myBugReports: () => [...root, 'myBugReports'] as const,
 
   me: () => [...root, 'me'] as const,
 
@@ -35,6 +39,8 @@ export const keys = {
     user: (id: string) => [...root, 'stats', 'user', id] as const,
     /** Under `stats.all`, so `invalidateAfterRankingChange` refreshes it. */
     categoryProgress: () => [...root, 'stats', 'categoryProgress'] as const,
+    /** `stats.getTasteProfile(userId)`; also under `stats.all`. */
+    tasteProfile: (userId: string) => [...root, 'stats', 'tasteProfile', userId] as const,
   },
 
   follows: {
@@ -52,6 +58,7 @@ export const keys = {
     search: (q: string, categoryId?: CategoryId) => [...root, 'bevs', 'search', q, categoryId ?? null] as const,
     duplicates: (input: FindDuplicatesInput) => [...root, 'bevs', 'duplicates', input] as const,
     starterCandidates: () => [...root, 'bevs', 'starterCandidates'] as const,
+    similar: (bevId: string, n: number) => [...root, 'bevs', 'similar', bevId, n] as const,
   },
 
   rankings: {
@@ -59,6 +66,9 @@ export const keys = {
     mine: (params: MyRankingsParams = {}) => [...root, 'rankings', 'mine', params] as const,
     user: (id: string) => [...root, 'rankings', 'user', id] as const,
     bucket: (bucket: Bucket | undefined) => [...root, 'rankings', 'bucket', bucket ?? null] as const,
+    /** The ranking flow's list for one Bev (`loadPlacementList`): the bucket plus its tiers. */
+    placement: (bucket: Bucket | undefined, bevId: string | undefined) =>
+      [...root, 'rankings', 'placement', bucket ?? null, bevId ?? null] as const,
   },
 
   wantToTry: () => [...root, 'wantToTry'] as const,
@@ -70,6 +80,11 @@ export const keys = {
   commentsAll: [...root, 'comments'] as const,
   /** A post's thread (`comments.list`, newest-first pages). */
   comments: (eventId: string) => [...root, 'comments', eventId] as const,
+  /**
+   * `feed.getExplore` (M-04). Not under `feed()`: an ExplorePost is not a FeedItem (no likes or
+   * comments to patch), and a follow marks it stale rather than refetching it under the reader.
+   */
+  explore: () => [...root, 'explore'] as const,
   /** `feed.getBevOfPeriod` (M-05). */
   bevOfPeriod: () => [...root, 'bevOfPeriod'] as const,
 
@@ -77,6 +92,22 @@ export const keys = {
     all: [...root, 'leaderboard'] as const,
     bevs: (categoryId?: CategoryId) => [...root, 'leaderboard', 'bevs', categoryId ?? null] as const,
     users: () => [...root, 'leaderboard', 'users'] as const,
+    /** `leaderboard.friends`: you and the people you follow. A follow or unfollow invalidates it (`settleFollow`). */
+    friends: () => [...root, 'leaderboard', 'friends'] as const,
+  },
+
+  venues: {
+    all: [...root, 'venues'] as const,
+    /**
+     * `venues.inView` for one viewport. Pass `inViewParams` output (rounded bounds, floored zoom,
+     * canonical filters), never raw map numbers, so a 1px pan reuses the cached pins.
+     */
+    inView: (p: { bounds: LatLngBounds; zoom: number; filters: VenueFilters }) =>
+      [...root, 'venues', 'inView', p.bounds.south, p.bounds.west, p.bounds.north, p.bounds.east, p.zoom, p.filters] as const,
+    /** `venues.get`: one venue and the Bevs it carries (the VenueSheet). */
+    detail: (venueId: string) => [...root, 'venues', 'detail', venueId] as const,
+    /** `venues.neighborhoods`: the Neighborhood filter's vocabulary. */
+    neighborhoods: () => [...root, 'venues', 'neighborhoods'] as const,
   },
 
   recommendations: (limit?: number) => [...root, 'recommendations', limit ?? null] as const,

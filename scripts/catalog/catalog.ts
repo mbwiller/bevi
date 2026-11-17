@@ -15,12 +15,25 @@ export const CATEGORIES_PATH = join(CATALOG_DIR, "categories.json");
 export const BEVS_CSV_PATH = join(CATALOG_DIR, "bevs.csv");
 export const FLAVOR_PROFILES_CSV_PATH = join(CATALOG_DIR, "flavor-profiles.csv");
 
+/**
+ * One row of data/catalog/categories.json: the 15 roots and, since A-13, the 60
+ * leaves under them (D-04, `design/taxonomy/`).
+ *
+ * `parentId` is null on a root and a root's id on a leaf; the tree is exactly
+ * two levels deep, which `validate.ts` enforces and the database enforces with
+ * `categories_depth_guard`.
+ *
+ * `sortOrder` is the order among SIBLINGS, not a global rank: 1..15 across the
+ * roots and 1..8 within each root's leaves. `emoji` is a root's, so it is null
+ * on every leaf -- the app draws a leaf with its root's emoji and icon.
+ */
 export interface Category {
   id: string;
   name: string;
+  parentId: string | null;
   sortOrder: number;
   isAlcoholic: boolean;
-  emoji: string;
+  emoji: string | null;
 }
 
 export interface BevRow {
@@ -28,6 +41,7 @@ export interface BevRow {
   name: string;
   brand: string;
   flavor: string;
+  /** The ROOT category, one of the 15. Never a leaf; this is what `bevs.category_id` stores. */
   category: string;
   price_tier: string;
   price_estimated: string;
@@ -38,6 +52,15 @@ export interface BevRow {
   image_license: string;
   image_attribution: string;
   notes: string;
+  /**
+   * A-13: the Bev's leaf under `category`, or EMPTY when it sits directly on the
+   * parent -- which is the right state for the two unsplit roots (`water`,
+   * `sports`) and for anything not yet relabelled. Empty means "no finer
+   * placement known", never "same as the category", so `leaf_category_id` is
+   * null rather than a copy of `category_id` and nothing has to special-case a
+   * leaf that is its own parent.
+   */
+  leaf: string;
   __line: number;
 }
 
@@ -56,6 +79,7 @@ const EXPECTED_HEADER = [
   "image_license",
   "image_attribution",
   "notes",
+  "leaf",
 ];
 
 export function parseCsv(raw: string): BevRow[] {
@@ -105,6 +129,7 @@ export function parseCsv(raw: string): BevRow[] {
       image_license: cols[11],
       image_attribution: cols[12],
       notes: cols[13],
+      leaf: cols[14],
       __line: lineNo,
     });
   }

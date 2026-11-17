@@ -1,39 +1,19 @@
 /**
- * The Search tab's results panel (TASKS.md M-15, §1c "Inline vs full screen"). Pure, so the
- * transitions are tested without rendering.
+ * What the Add Bev screen's results list shows for the bar's text. Pure, so the rules are tested
+ * without rendering.
  *
- *   map      the panel is down: the map area takes gestures
- *   recents  the bar has focus and is empty: Recents and suggestions
+ *   idle     the bar is empty (or blank): Recents and "Popular on Bevi"
  *   results  the bar has text: grouped Bevs and People
  *
- * Focusing or typing opens the panel; clearing the bar goes back to recents (the panel stays up);
- * Cancel drops the text and slides the panel away, leaving the map where it was.
+ * A query starting with "@" is a handle, so it searches people only: its Bev query is empty.
  */
-export interface PanelState {
-  open: boolean;
-  q: string;
+export type SearchMode = 'idle' | 'results';
+
+export function searchMode(q: string): SearchMode {
+  return q.trim().length === 0 ? 'idle' : 'results';
 }
 
-export type PanelMode = 'map' | 'recents' | 'results';
-
-export type PanelAction = { type: 'focus' } | { type: 'type'; q: string } | { type: 'clear' } | { type: 'cancel' };
-
-export const initialPanel: PanelState = { open: false, q: '' };
-
-export function panelReducer(state: PanelState, action: PanelAction): PanelState {
-  switch (action.type) {
-    case 'focus':
-      return state.open ? state : { ...state, open: true };
-    case 'type':
-      return { open: true, q: action.q };
-    case 'clear':
-      return { ...state, q: '' };
-    case 'cancel':
-      return initialPanel;
-  }
-}
-
-export function panelMode(state: PanelState): PanelMode {
-  if (!state.open) return 'map';
-  return state.q.trim().length === 0 ? 'recents' : 'results';
+/** The text the Bev search runs on: none for an "@handle". */
+export function bevQueryFor(query: string): string {
+  return query.startsWith('@') ? '' : query;
 }

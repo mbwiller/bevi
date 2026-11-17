@@ -1,7 +1,7 @@
 // Test controls for the FakeApi. Suites import `controls` from '@/testing/fakeApi'. After a control
 // changes data, invalidate TanStack Query (`queryClient.invalidateQueries()`) to refetch.
 
-import type { ApiErrorCode } from '@bevi/shared';
+import type { ApiErrorCode, BugTicketState } from '@bevi/shared';
 
 import { getFakeApi } from './instance';
 import type { Latency } from './FakeApi';
@@ -17,6 +17,18 @@ export interface FakeControls {
   emptyUser(): void;
   /** Sign in as a fixture user without a password, e.g. ME.handle, FRIEND.handle, MINOR.handle (under 21). */
   signInAs(handle: string): void;
+  /**
+   * Make the signed-in user an internal bug reporter (`profiles.role` 'admin' or 'tester'), which
+   * is what `bugs.canReport()` answers and what `bugs.report()` requires. Off after
+   * `resetToFixtures()`.
+   */
+  setInternalReporter(internal: boolean): void;
+  /**
+   * Move one of the fake's bug tickets to a workflow state, as triage would in Linear: 'in_review'
+   * makes My reports offer Verified on device; anything but triage/todo/in_progress takes it out
+   * of the ranked list (`rank: null`).
+   */
+  setBugTicketState(ticketId: string, state: BugTicketState): void;
 }
 
 export const controls: FakeControls = {
@@ -25,4 +37,6 @@ export const controls: FakeControls = {
   resetToFixtures: () => getFakeApi().resetToFixtures(),
   emptyUser: () => getFakeApi().emptyUser(),
   signInAs: (handle) => getFakeApi().signInAs(handle),
+  setInternalReporter: (internal) => getFakeApi().setInternalReporter(internal),
+  setBugTicketState: (ticketId, state) => getFakeApi().setBugTicketState(ticketId, state),
 };

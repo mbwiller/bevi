@@ -1,10 +1,10 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, within } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { size } from '@/theme';
+import { colors, size } from '@/theme';
 
-import { TabBar, type TabBarProps } from '../TabBar';
+import { TabBar, type TabBarProps, type TabId } from '../TabBar';
 
 const METRICS = { frame: { x: 0, y: 0, width: 393, height: 852 }, insets: { top: 0, left: 0, right: 0, bottom: 34 } };
 const renderBar = (props: TabBarProps) =>
@@ -14,24 +14,57 @@ const renderBar = (props: TabBarProps) =>
     </SafeAreaProvider>,
   );
 
-const LABELS = ['Feed', 'Your Lists', 'Search', 'Leaderboard', 'Profile'];
+const TABS: [TabId, string][] = [
+  ['feed', 'Feed'],
+  ['lists', 'Lists'],
+  ['add', 'Add Bev'],
+  ['map', 'Map'],
+  ['profile', 'Profile'],
+];
+const light = colors.light;
+const tab = (name: string) => screen.getByRole('button', { name });
+const label = (name: string) => StyleSheet.flatten(within(tab(name)).getByText(name, { includeHiddenElements: true }).props.style);
 
-it('renders the five labelled tabs with 44pt targets and reports presses', async () => {
+it('renders Feed, Lists, Add Bev, Map and Profile, left to right, with 44pt targets, and reports presses', async () => {
   const onChange = jest.fn();
   await renderBar({ onChange, user: { name: 'Matt Willer' } });
-  for (const name of LABELS) {
-    const tab = screen.getByRole('button', { name });
-    expect(StyleSheet.flatten(tab.props.style).minHeight).toBe(size.target);
+  expect(screen.getAllByRole('button').map((b) => b.props.accessibilityLabel)).toEqual(TABS.map(([, l]) => l));
+  for (const [id, name] of TABS) {
+    expect(StyleSheet.flatten(tab(name).props.style).minHeight).toBe(size.target);
+    await fireEvent.press(tab(name));
+    expect(onChange).toHaveBeenLastCalledWith(id);
   }
-  await fireEvent.press(screen.getByRole('button', { name: 'Leaderboard' }));
-  expect(onChange).toHaveBeenCalledWith('leaderboard');
+  expect(screen.queryByRole('button', { name: 'Leaderboard' })).toBeNull();
   expect(screen.getByText('MW')).toBeTruthy();
 });
 
-it('marks only the active tab as the current page', async () => {
-  await renderBar({ active: 'lists', user: { name: 'Matt Willer' } });
-  expect(screen.getByRole('button', { name: 'Your Lists' }).props['aria-current']).toBe('page');
-  expect(screen.getByRole('button', { name: 'Feed' }).props['aria-current']).toBeUndefined();
+it('marks only the active tab as the current page, in primary and bold', async () => {
+  await renderBar({ active: 'map', user: { name: 'Matt Willer' } });
+  expect(tab('Map').props['aria-current']).toBe('page');
+  expect(tab('Map').props.accessibilityState).toEqual({ selected: true });
+  expect(tab('Feed').props['aria-current']).toBeUndefined();
+  expect(label('Map')).toMatchObject({ color: light.primary, fontWeight: '700' });
+  expect(label('Feed').color).toBe(light.text);
+  expect(label('Feed').fontWeight).not.toBe('700');
+});
+
+it('Add Bev is a raised 46pt primary circle with a 4pt surface ring', async () => {
+  await renderBar({ active: 'feed' });
+  const circle = StyleSheet.flatten(screen.getByTestId('tab-add-circle').props.style);
+  expect(circle).toMatchObject({ width: 46, height: 46, backgroundColor: light.primary, boxShadow: `0 0 0 4px ${light.surface}` });
+});
+
+it('rings the active Profile avatar in primary, past a surface gap', async () => {
+  const avatar = () => StyleSheet.flatten(screen.getByLabelText('Matt Willer').props.style);
+  await renderBar({ active: 'feed', user: { name: 'Matt Willer' } });
+  expect(avatar().boxShadow).toBeUndefined();
+  await renderBar({ active: 'profile', user: { name: 'Matt Willer' } });
+  expect(avatar().boxShadow).toBe(`0 0 0 2px ${light.surface}, 0 0 0 3.5px ${light.primary}`);
+});
+
+it('paints above the screens, so the raised circle is never covered', async () => {
+  await renderBar({});
+  expect(StyleSheet.flatten(screen.getByLabelText('Main').props.style).zIndex).toBeGreaterThan(0);
 });
 
 it('pads by the bottom inset only with safeArea', async () => {

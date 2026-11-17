@@ -1,5 +1,7 @@
 # ScreenBevDetail
 
-Bev detail (no reference): BevImage 155, name, brand, category and PriceTier; two stat cards (Bevi score with "5k ratings" under it, "You'd rate it" predicted); friends who've had it; Rank it and Want to Try Pills.
+Bev detail (no reference): BevImage 155, name, brand, category and PriceTier; two stat cards (Bevi score with "5k ratings" under it, "You'd rate it" predicted); friends who've had it; Rank it and Want to Try Pills; "Bevs like this"; "Added by". The preview shows two phones: the top of the screen, then the same screen scrolled to the new row (the Header stays put).
 
 - Not enough rankings: the second bubble is `locked` with "Rank 3 Bevs to see your prediction".
+- **Bevs like this** (M-27): a `SectionHeader` ("Bevs like this", no action) under Rank it, Want to Try and the nutrition label, then up to 5 `BevRow`s, most similar first, from `bevs.similar(bevId, 5)`. Each row has its image (`showImage`; the `BevArt` placeholder where there is no photo), no Rank or Want to Try buttons (`actions={false}`: the row only opens a Bev, and its own detail has both), the Bayesian score in the bubble and the rating count as the meta line, the same as search results. The bubble is `locked` while the Bev has fewer than `MIN_RATERS` rankings. No number: this is a set, not a ranking. Tapping a row opens that Bev's detail (pushed, so Back returns here).
+- **Hidden entirely** when there are no neighbours, while it loads, and if the request fails: no header, no empty state, no error. It is secondary content, so it never makes the page jump or shout. The current Bev is never in its own list, and under-21 viewers never see an alcoholic neighbour.

@@ -15,15 +15,17 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Bevi" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <!-- iOS reads the status-bar style at launch. black-translucent always draws white symbols, so it is only safe in
-         dark mode (the page's own dark background shows under it); light stays `default`. An appearance flip while the
-         app is open catches up on the next launch. -->
+    <!-- The home-screen app's status bar is opaque: `default` (white, dark symbols) in light mode, `black` (white symbols)
+         in dark mode. Not black-translucent: on iOS 26 a home-screen install made with it lays the page out one status bar
+         (62pt on a 402x874 iPhone) short of the screen bottom and leaves an empty band under the tab bar that no CSS can
+         reach (measured on Matt's iPhone, 2026-11-09). An opaque bar puts the page below the status bar, down to the real
+         bottom edge. iOS may keep the style it saw when the icon was added, so an older install keeps its old style. -->
     <script id="status-bar-style">
       (function () {
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
           document
             .querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')
-            .setAttribute('content', 'black-translucent');
+            .setAttribute('content', 'black');
         }
       })();
     </script>
@@ -56,6 +58,91 @@
         height: 100%;
         flex: 1;
       }
+      /* iOS 26+ blurs the top of a home-screen web app (a Liquid Glass edge effect) unless a painted, full-width fixed box
+         touches the top edge; then it draws a hard edge instead. Measured on Matt's iPhone with the opaque status bar: the
+         blur is gone. `surface`, light then dark, so it matches the page. Home-screen app in portrait only (landscape hides
+         the status bar). Its 12px is EDGE_STRIP in src/components/StatusBarClearance.tsx, which keeps content out from under it. */
+      #edge-strip {
+        display: none;
+      }
+      /* -webkit-touch-callout: iOS Safari only, so Android and desktop installed apps never get the strip. */
+      @supports (-webkit-touch-callout: none) {
+        @media (display-mode: standalone) and (orientation: portrait) {
+          #edge-strip {
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: max(12px, env(safe-area-inset-top));
+            background-color: #ffffff;
+            z-index: 1;
+            pointer-events: none;
+          }
+        }
+        @media (display-mode: standalone) and (orientation: portrait) and (prefers-color-scheme: dark) {
+          #edge-strip {
+            background-color: #121214;
+          }
+        }
+      }
+      /* Wider and taller than any phone (a laptop, a tablet): the app is one phone-width column in the middle of the
+         window, never stretched edge to edge, on `input` (light then dark), the quiet fill around it. No phone matches:
+         the largest is 440pt wide in portrait and 440pt tall in landscape. The numbers are COLUMN_MAX_WIDTH in
+         src/lib/column.ts, which code that sizes by the window's width reads instead of the window.
+         #root holds every screen, the tab bar, the stack's full-screen modals and the splash.
+         A react-native-web Modal (every Sheet) is portalled into a bare <div>, no id and no class, appended to <body>
+         outside #root, and draws its layers with position: fixed. Giving that portal the column's box and a transform
+         makes it the containing block of those fixed layers, so a sheet and its scrim fill the column, not the window.
+         The transform also makes it a stacking context, so it takes the Modal's own z-index (9999) to stay above
+         #root's positioned layers. A closed Sheet keeps an empty portal, which must not catch clicks: pointer-events
+         is none on the portal and auto on what it holds, at zero specificity (:where) so react-native-web's own
+         pointer-events classes still win.
+         #edge-strip only shows in an iOS home-screen install in portrait, which an iPad also is: there it keeps to the
+         column too, so its opaque surface doesn't band across the margins. This block comes after the strip's own rules,
+         so its left, right and margin win; it never shows the strip anywhere it is hidden. */
+      @media (min-width: 481px) and (min-height: 481px) {
+        html,
+        body {
+          background-color: #ededed;
+        }
+        #root {
+          width: 100%;
+          max-width: 480px;
+          margin: 0 auto;
+          background-color: #ffffff;
+        }
+        body > div:not([id]):not([class]) {
+          position: fixed;
+          top: 0;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          max-width: 480px;
+          margin: 0 auto;
+          transform: translateZ(0);
+          z-index: 9999;
+          pointer-events: none;
+        }
+        :where(body > div:not([id]):not([class])) > * {
+          pointer-events: auto;
+        }
+        #edge-strip {
+          left: 0;
+          right: 0;
+          max-width: 480px;
+          margin: 0 auto;
+        }
+      }
+      @media (min-width: 481px) and (min-height: 481px) and (prefers-color-scheme: dark) {
+        html,
+        body {
+          background-color: #232326;
+        }
+        #root {
+          background-color: #121214;
+        }
+      }
       /* No browser focus ring on text boxes: TextField and SearchBar draw their own on the box around
          the input. outline-width: 0 alone isn't enough, Safari still draws its blue `auto` ring. */
       input:focus,
@@ -67,6 +154,7 @@
 
   <body>
     <noscript>You need to enable JavaScript to run Bevi.</noscript>
+    <div id="edge-strip" aria-hidden="true"></div>
     <div id="root"></div>
   </body>
 </html>

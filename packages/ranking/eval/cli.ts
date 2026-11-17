@@ -13,9 +13,13 @@
 //   --bootstrap N           bootstrap resamples (default 1000)
 //   --seed s                bootstrap / synthetic seed (default "bevi-eval")
 //   --json                  print the EvalReport as JSON instead of the text report
+//   --lists                 list-level report of recommend()'s diversity / exploration options on
+//                           syntheticSnapshot() (NOT an accuracy result; --users, --bevs, --seed,
+//                           --days N seeds per user, default 7; --json for the ListReport)
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { parseExport, toExport, type EvalDataset } from './dataset.ts';
+import { formatListReport, listReport } from './lists.ts';
 import { formatReport } from './report.ts';
 import { evaluate, type SplitId } from './run.ts';
 import { syntheticDataset } from './synthetic.ts';
@@ -26,10 +30,24 @@ const value = (name: string): string | undefined => {
   const i = args.indexOf(name);
   return i >= 0 ? args[i + 1] : undefined;
 };
-const VALUED = new Set(['--users', '--bevs', '--write-sample', '--split', '--quantile', '--bootstrap', '--seed']);
+const VALUED = new Set(['--users', '--bevs', '--write-sample', '--split', '--quantile', '--bootstrap', '--seed', '--days']);
 const positional = args.filter((a, i) => !a.startsWith('--') && !VALUED.has(args[i - 1] ?? ''));
 
 const seed = value('--seed') ?? 'bevi-eval';
+if (flag('--lists')) {
+  if (positional.length > 0) {
+    console.error('--lists runs on syntheticSnapshot() only; it takes no export file (see eval/README.md)');
+    process.exit(2);
+  }
+  const report = listReport({
+    seed,
+    users: Number(value('--users') ?? 40),
+    bevs: Number(value('--bevs') ?? 80),
+    days: Number(value('--days') ?? 7),
+  });
+  console.log(flag('--json') ? JSON.stringify({ synthetic: true, ...report }, null, 2) : formatListReport(report));
+  process.exit(0);
+}
 const synthetic = flag('--synthetic') || flag('--write-sample');
 if (!synthetic && positional.length !== 1) {
   console.error('usage: npm run eval -w packages/ranking -- <export.json> | --synthetic   (see eval/README.md)');

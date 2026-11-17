@@ -1,8 +1,9 @@
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { BevImage } from '@/components/BevImage';
 import { Button } from '@/components/Button';
 import { Icon } from '@/components/Icon';
+import { useColumnWidth } from '@/lib/column';
 import { size, spacing, type, useTheme } from '@/theme';
 
 import { PHOTO_HINT, UNREADABLE_IMAGE, UPLOAD_FAILED, UPLOADING_PHOTO } from './copy';
@@ -43,7 +44,8 @@ export interface PhotoStepProps {
 /** Step 1: take or choose a photo of the Bev, preview it, retake. */
 export function PhotoStep({ slot, onPick, error }: PhotoStepProps) {
   const { colors } = useTheme();
-  const { width } = useWindowDimensions();
+  // The column's width, not the window's: on a laptop the screen is the centred column (lib/column.ts).
+  const width = useColumnWidth();
   const preview = Math.min(width - spacing.gutter * 2, size.bevImageStrip * 2);
   const has = !!slot.photo;
   return (

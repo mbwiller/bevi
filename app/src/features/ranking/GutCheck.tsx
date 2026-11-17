@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { BevArt, bevArtForCategory } from '@/components/BevArt';
-import { brandLine } from '@/components/BevParts';
+import { bevImageProps, brandLine } from '@/components/BevParts';
 import { BucketButton } from '@/components/BucketButton';
 import { Icon } from '@/components/Icon';
 import { IconButton } from '@/components/IconButton';
@@ -19,19 +19,23 @@ export interface GutCheckProps {
   onClose: () => void;
 }
 
-// ScreenGutCheck geometry: the cutout floats at 200pt; buckets 14pt apart; 36pt above the question.
+// ScreenGutCheck geometry: the cutout floats at 200pt; 36pt above the question.
 const ART = 200;
-const BUCKET_GAP = 14;
 const QUESTION_TOP = 36;
+// The row reads worst to best, so the rings fill up from the left and "Loved it" is on the right (BEV-9).
+// Lists and filters keep `BUCKET_ORDER` (best first).
+const GUT_CHECK_ORDER: readonly Bucket[] = [...BUCKET_ORDER].reverse();
 
 /**
- * Ranking flow step 1 (design system ScreenGutCheck): the Bev floating on its own BevGlow (the
- * route draws the glow behind this), "How was it?" and the three BucketButtons.
+ * Ranking flow step 1 (design system ScreenGutCheck): the Bev floating on plain `surface`, a centred
+ * "How was it?" and the three BucketButtons in a row, worst to best.
  */
 export function GutCheck({ bev, chosen, onChoose, onClose }: GutCheckProps) {
   const { colors } = useTheme();
   const cat = categoryById(bev.categoryId);
   const brand = brandLine(bev);
+  // Photo > icon > category art; an icon floats exactly as a photo does.
+  const { src } = bevImageProps(bev);
   return (
     <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.top}>
@@ -39,9 +43,9 @@ export function GutCheck({ bev, chosen, onChoose, onClose }: GutCheckProps) {
       </View>
       <View style={styles.hero}>
         <View style={styles.art} accessible accessibilityRole="image" accessibilityLabel={bev.name}>
-          {bev.photoUrl ? (
+          {src ? (
             <Image
-              source={{ uri: bev.photoUrl }}
+              source={{ uri: src }}
               style={styles.fill}
               contentFit="contain"
               cachePolicy="memory-disk"
@@ -66,8 +70,14 @@ export function GutCheck({ bev, chosen, onChoose, onClose }: GutCheckProps) {
       </View>
       <Text style={[type.displayDrop, styles.question, { color: colors.text }]}>How was it?</Text>
       <View style={styles.buckets}>
-        {BUCKET_ORDER.map((b) => (
-          <BucketButton key={b} bucket={b} selected={chosen === b} onPress={() => onChoose(b)} />
+        {GUT_CHECK_ORDER.map((b) => (
+          <BucketButton
+            key={b}
+            bucket={b}
+            selected={chosen === b}
+            dimmed={chosen !== null && chosen !== b}
+            onPress={() => onChoose(b)}
+          />
         ))}
       </View>
       <Text style={[type.caption, styles.hint, { color: colors.textSecondary }]}>
@@ -85,7 +95,7 @@ const styles = StyleSheet.create({
   fill: { width: '100%', height: '100%' },
   name: { marginTop: spacing.md, textAlign: 'center' },
   cat: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: 2 },
-  question: { marginTop: QUESTION_TOP, marginBottom: spacing.lg, marginHorizontal: spacing.gutter },
-  buckets: { gap: BUCKET_GAP, paddingHorizontal: spacing.gutter },
+  question: { marginTop: QUESTION_TOP, marginBottom: spacing.xl, marginHorizontal: spacing.gutter, textAlign: 'center' },
+  buckets: { flexDirection: 'row', gap: spacing.xs, paddingHorizontal: spacing.gutter },
   hint: { marginTop: spacing.xl, marginHorizontal: spacing.gutter, textAlign: 'center' },
 });

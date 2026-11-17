@@ -32,8 +32,8 @@ export function scoreBand(score) {
 }
 export const BUCKETS = {
   loved: { label: 'Loved it', band: 'high' },
-  fine: { label: 'It was fine', band: 'mid' },
-  disliked: { label: "Didn't like it", band: 'low' },
+  fine: { label: 'It was okay', band: 'mid' },
+  disliked: { label: 'Not for me', band: 'low' },
 };
 export const formatScore = (s) => (Math.round(s * 10) / 10).toFixed(1);
 export const formatCount = (n) => (n >= 1000 ? Math.round(n / 1000) + 'k' : String(n));

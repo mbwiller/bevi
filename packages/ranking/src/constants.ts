@@ -1,7 +1,7 @@
-import type { Bucket } from './types.ts';
+import type { Bucket, TasteAttributeKind } from './types.ts';
 
 /** Bumped with any formula or constant change; equals the `version` field of every vectors file. */
-export const RANKING_VERSION = '1.2.0';
+export const RANKING_VERSION = '1.8.0';
 
 /**
  * Score band per bucket as integer [lo, hi] edges on the 0–10 scale (Beli-style 7 / 4, decided 2026-10-09).
@@ -24,10 +24,27 @@ export const BUCKET_DB: Readonly<Record<Bucket, number>> = { LOVED: 3, FINE: 2, 
 export const SIGMA_FLOOR = 1.0;
 /** Below this many rankings a user's z-scores use the global stats. */
 export const MIN_N_USER = 3;
-/** Below this many rankings in a category, per-category stats fall back to the user's overall stats. */
+/**
+ * Below this many rankings in a category, per-category stats fall back to the user's overall stats
+ * (`effectiveCategoryStats`). No formula on the prediction path reads it and neither do the app,
+ * packages/api or SQL (the Taste Profile shows raw category means). It stays, with
+ * `effectiveCategoryStats`, as the display helper for "Your Soda average" and because the eval
+ * harness's `user-category-mean` baseline and `user-stats.vectors.json` use it (M-22 decision).
+ */
 export const MIN_N_CAT = 3;
 /** Only when there are zero rankings in the whole system. */
 export const GLOBAL_FALLBACK: Readonly<{ mean: number; stddev: number }> = { mean: 5.0, stddev: 2.5 };
+
+// ---------------------------------------------------------------- anchored placement (LaTeX §10.1, M-21)
+
+/**
+ * The tiers `placementTiers` assigns a bucket Bev relative to the new one (smaller = more similar;
+ * null = no tier). sameLeaf: both leaves known and equal. sameRoot: the same root category, which
+ * includes a Bev of unknown kind (leaf null) against a leaf under that root, and two Bevs of unknown
+ * kind under one root. edge: a different root but a stored `bev_edges` row with w ≥ EDGE_MIN_WEIGHT.
+ * The anchors are the members of the smallest tier present, so what matters is the set, not the number.
+ */
+export const PLACEMENT_TIER: Readonly<{ sameLeaf: 1; sameRoot: 2; edge: 3 }> = { sameLeaf: 1, sameRoot: 2, edge: 3 };
 
 /** Shrinkage for category affinity: Σz / (n + K_AFF). */
 export const K_AFF = 2;
@@ -53,7 +70,11 @@ export const SIM_WEIGHTS: Readonly<{ category: number; brand: number; flavor: nu
   flavor: 0.2,
   tier: 0.1,
 };
-/** Pairs with sim below this are dropped (contribute nothing to content or its mass). */
+/**
+ * Pairs with sim below this are dropped (contribute nothing to content or its mass). Applies to the
+ * stored edge weight w too in `bevSimilarity: 'edges'` mode, where it is a no-op while
+ * EDGE_MIN_WEIGHT (0.3) is above it, and a guard if the edge job's floor is ever lowered.
+ */
 export const SIM_MIN = 0.1;
 /** Largest |tier − tier'| (tiers 1–4). */
 export const PRICE_TIER_SPAN = 3;
@@ -101,6 +122,25 @@ export const EPSILON = 0.15;
 export const JITTER_SD = 0.15;
 /** Default recommendation list length. */
 export const RECOMMEND_N = 20;
+/**
+ * Community diversity (`diversity: 'community'`, 1.8.0): the penalty, in z-units, that `recommend`
+ * subtracts from a normal candidate's jittered ẑ for each normal pick ALREADY chosen from its taste
+ * family (the `community` of `snapshot.bevGraph`). So a second pick from one family must beat the
+ * best alternative by 0.2 z, a third by 0.4 z, and so on: the list interleaves taste families
+ * without burying a much stronger candidate. The same order of magnitude as JITTER_SD. Unvalidated
+ * on real data: the option ships off.
+ */
+export const DIVERSITY_PENALTY = 0.2;
+/**
+ * Community exploration (`exploration: 'community'`, 1.8.0): a candidate in a taste family the user
+ * has not ranked anything in is drawn with weight exp(g_b)·(1 + EXPLORE_BRIDGE_WEIGHT·bridge_b),
+ * bridge_b the participation coefficient in [0, 1) from `snapshot.bevGraph` (the share of its
+ * similarity weight that reaches other families). Dimensionless (a multiplier per unit of bridge):
+ * at 1 a bridge is up to twice as likely as an interior Bev with the same g_b, because a bridge is
+ * the gentlest way into a family the user has not tried. Unvalidated on real data: the
+ * option ships off.
+ */
+export const EXPLORE_BRIDGE_WEIGHT = 1;
 
 // ---------------------------------------------------------------- starter set (§8.12)
 
@@ -160,6 +200,66 @@ export const PROFILE_WEIGHTS: Readonly<{
 /** Largest |Δcaffeine| or |Δsweetness| (levels 0–3). */
 export const PROFILE_LEVEL_SPAN = 3;
 
+// ---------------------------------------------------------------- taste neighbourhoods (graph.ts)
+// docs/graph_db_implementation.md §2 approach B, §5 and Stage 3 (TASKS.md M-28); "line N" below is
+// that file's line. The Pearson term reuses CF_MIN_COMMON (2) and CF_SIGNIFICANCE (5) above: the
+// doc's "α = 0 below 2 common items" and its min(1, |common| / 5) are §8.9's two numbers, and
+// sharing them keeps Layer 2's in-snapshot Pearson and the nightly job's identical.
+
+/** Shrinkage of a taste-vector entry: t_u[a] = Σz / (n_{u,a} + TASTE_K). The doc's K_T = 2 (line 255). */
+export const TASTE_K = 2;
+/** Attributes covering fewer catalog Bevs than this are left out of every taste vector (line 269). */
+export const TASTE_MIN_ATTR_BEVS = 2;
+/** α, the Pearson weight of the blend when |common| ≥ CF_MIN_COMMON; α = 0 below that (line 264). */
+export const TASTE_ALPHA = 0.5;
+/** An attribute is shared by two users when both |t| are at least this (line 274). */
+export const TASTE_SHARED_MIN = 0.2;
+/** The attribute term counts only for pairs sharing at least this many bridging attributes (line 274). */
+export const TASTE_MIN_SHARED_ATTRS = 2;
+/**
+ * The attribute kinds that bridge two users. The doc's candidate query (line 393) matches
+ * `a:Flavor OR a:Brand`; categories stay in the taste vector but are too coarse to bridge on
+ * their own (15 of them, so most users share one).
+ */
+export const TASTE_BRIDGE_KINDS: readonly TasteAttributeKind[] = ['brand', 'flavor'];
+/** Neighbours below this similarity are not kept (line 274's "similarity floor"). */
+export const TASTE_SIM_FLOOR = 0.1;
+/** Neighbours kept per user in `user_neighbors` (line 275). Layer 2 still uses the top CF_K of them per Bev. */
+export const TASTE_NEIGHBOUR_K = 25;
+/**
+ * N₀ of the reliability weight min(1, n_v / N₀) (line 419). The doc leaves it open; 15 is chosen to
+ * equal LAMBDA_USER_N, the history at which Layer 2 is trusted fully for the user themself, so a
+ * neighbour earns full weight at the same point. A user fresh from onboarding (10 starter Bevs)
+ * counts 2/3 and one at MIN_N_USER = 3 counts 1/5. Tune it with the eval harness, like the others.
+ */
+export const NEIGHBOUR_RELIABILITY_N = 15;
+
+// ---------------------------------------------------------------- graph signals (network.ts, LaTeX §10.9)
+// Centrality, communities and bridges of the Bev similarity graph, computed by the nightly graph
+// sync (whose stored `community` is the taste family: Louvain over `attributeProjection`, which has
+// no constant). No prediction reads them; since 1.8.0 `recommend()` can read the families and
+// bridges, behind two options that ship off (DIVERSITY_PENALTY and EXPLORE_BRIDGE_WEIGHT above).
+
+/** PageRank damping d: the walk follows an edge with probability d and teleports with 1 − d (the usual 0.85). */
+export const PAGERANK_DAMPING = 0.85;
+/** PageRank stops once the L1 change of one iteration, Σ|p′ − p|, is below this. */
+export const PAGERANK_TOLERANCE = 1e-10;
+/**
+ * PageRank stops after this many iterations whatever the change: a safety rail only. The L1 change of
+ * step k is at most 2·d^k (the map contracts by d), so at d = 0.85 it is below the 1e-10 tolerance
+ * once k > 146 on any graph, bipartite included; 200 leaves margin, so at the defaults the tolerance,
+ * not the cap, ends the iteration.
+ */
+export const PAGERANK_MAX_ITERATIONS = 200;
+/** Modularity resolution γ: 1 is Newman–Girvan modularity; above 1 favours smaller communities, below 1 larger ones. */
+export const LOUVAIN_RESOLUTION = 1;
+/**
+ * A Louvain candidate community replaces the best so far only if its modularity gain beats it by more
+ * than this, so float noise between equal gains never decides a move: a tie keeps the node where it
+ * is, else goes to the earlier candidate. Every move therefore raises modularity by more than ε.
+ */
+export const LOUVAIN_TIE_EPSILON = 1e-12;
+
 /** Everything a SQL twin or the vectors need, in one object. */
 export const RANKING_CONSTANTS = {
   version: RANKING_VERSION,
@@ -170,6 +270,7 @@ export const RANKING_CONSTANTS = {
   minNUser: MIN_N_USER,
   minNCat: MIN_N_CAT,
   globalFallback: GLOBAL_FALLBACK,
+  placementTier: PLACEMENT_TIER,
   kAff: K_AFF,
   bayesC: BAYES_C,
   bayesCategoryPriorMin: BAYES_CATEGORY_PRIOR_MIN,
@@ -194,4 +295,20 @@ export const RANKING_CONSTANTS = {
   edgeMinWeight: EDGE_MIN_WEIGHT,
   profileWeights: PROFILE_WEIGHTS,
   profileLevelSpan: PROFILE_LEVEL_SPAN,
+  tasteK: TASTE_K,
+  tasteMinAttrBevs: TASTE_MIN_ATTR_BEVS,
+  tasteAlpha: TASTE_ALPHA,
+  tasteSharedMin: TASTE_SHARED_MIN,
+  tasteMinSharedAttrs: TASTE_MIN_SHARED_ATTRS,
+  tasteBridgeKinds: TASTE_BRIDGE_KINDS,
+  tasteSimFloor: TASTE_SIM_FLOOR,
+  tasteNeighbourK: TASTE_NEIGHBOUR_K,
+  neighbourReliabilityN: NEIGHBOUR_RELIABILITY_N,
+  pagerankDamping: PAGERANK_DAMPING,
+  pagerankTolerance: PAGERANK_TOLERANCE,
+  pagerankMaxIterations: PAGERANK_MAX_ITERATIONS,
+  louvainResolution: LOUVAIN_RESOLUTION,
+  louvainTieEpsilon: LOUVAIN_TIE_EPSILON,
+  diversityPenalty: DIVERSITY_PENALTY,
+  exploreBridgeWeight: EXPLORE_BRIDGE_WEIGHT,
 } as const;

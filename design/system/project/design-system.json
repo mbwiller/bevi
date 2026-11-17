@@ -467,8 +467,8 @@
   },
   "lastChange": {
     "by": "Matt Willer",
-    "at": "2026-10-19T17:46:14Z",
-    "via": "Claude Code (re-sync from mbwiller/bevi main @ b51ebf5)",
-    "note": "M-06 follow-ups, M-12 (one secondary line, no price on rows), M-08 ProgressStrip/ProgressBar/CollectionSheet, M-15 Search tab (ScreenSearch, ScreenSearchResults replace ScreenAddBev; map icon), M-05 BevOfCard replaces Featured on the Feed."
+    "at": "2026-11-11T21:32:23Z",
+    "via": "Claude Code (re-sync from mbwiller/bevi main @ 3dc2222)",
+    "note": "FeedPost guidance (#190): a plain post with no handlers has no action row; Explore's Follow pill gives it one again."
   }
 }
