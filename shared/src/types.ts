@@ -139,10 +139,16 @@ export interface BevLeaf {
  * A Bev's generated icon (`bevs.icons()`), the illustrated Bevi-style asset for
  * a custom Bev someone created with a photograph.
  *
- * It is NOT on `BevSummary`, deliberately: a summary arrives from about a dozen
- * RPCs and only some could carry it, so a field there would be null for
- * reasons that have nothing to do with whether the icon exists. One batch call
- * per screen answers for a whole list instead, exactly as `leaves()` does.
+ * No RPC returning a `BevSummary` carries any of this: a summary arrives from
+ * about a dozen of them and only some could, so a column there would be null
+ * for reasons that have nothing to do with whether the icon exists. This one
+ * batch call answers for a whole list instead, exactly as `leaves()` does, and
+ * `@bevi/api` uses it to fill `BevSummary.iconUrl` for every list it returns,
+ * so a caller that only wants to DRAW the icon needs nothing from here.
+ *
+ * Call it directly for what a URL cannot say: whether a generation is pending,
+ * processing or failed, which of the two kinds of icon the Bev ended up with,
+ * and the catalogue icon it may borrow until its own arrives.
  *
  * `generatedIconUrl` is set only when `iconStatus` is `'completed'`. An id the caller
  * cannot see is OMITTED from the result, so a short result is normal; a Bev
@@ -242,16 +248,43 @@ export interface BevSummary {
   flavor: string | null;
   categoryId: CategoryId;
   /**
-   * The Bev's photo; null until one exists. A Bev's image is photo > icon >
-   * category art, so with none, draw `iconUrl`, and with neither, `BevArt`.
+   * The Bev's photo; null until one exists. A Bev's image is icon > photo >
+   * category art, so with no `iconUrl`, draw this, and with neither, `BevArt`.
+   *
+   * The icon comes first because an icon is what a Bev looks like on Bevi. A
+   * seeded Bev has no photo at all, so this only decides the image for a Bev
+   * someone created from a photograph, and there the generated icon is the
+   * point: the photograph is what made it.
    */
   photoUrl: string | null;
   /**
-   * The Bev's authored icon (drawn art, not a photo), a public URL in the
-   * `bev-icons` bucket; null when it has none. Shown only when `photoUrl` is
-   * null.
+   * The Bev's own icon (drawn art, not a photo), or null when it has none:
+   *
+   * - the **generated** illustration when the Bev has one, a raster PNG in the
+   *   public `bev-generated-icons` bucket, made from its creator's photograph;
+   * - otherwise the **authored** catalogue icon, an SVG in `bev-icons`
+   *   published from `design/beverage-icons/manifest.json`.
+   *
+   * Which kind it is does not change how it is drawn, which is the point: a
+   * created icon takes the same slot as a catalogue one, everywhere. When it
+   * matters, `bevs.icons()` still answers with the two apart, plus the
+   * generation's status.
+   *
+   * A catalogue icon this Bev merely *borrows* (`BevIcon.fallbackIconUrl`) is
+   * NOT folded in here: a Bev whose icon is still being made shows its
+   * creator's photograph, not another drink's art.
    */
   iconUrl: string | null;
+  /**
+   * Where the drink's label sits on `iconUrl`, normalised 0-1, so the caller
+   * can draw the wordmark across it from this Bev's own `brand` / `name`.
+   *
+   * Set only for a generated icon that has a label band; null for an authored
+   * catalogue icon, whose lettering is already drawn into the SVG, and null
+   * for a drink with no label band at all (a cafe latte, a homemade smoothie).
+   * See `BevIcon.labelBand` for why the lettering is not in the image.
+   */
+  iconLabelBand: BevIconLabelBand | null;
   photoStatus: PhotoStatus;
   /** Always set on reads: when the creator chose "not sure" the server estimates it. */
   priceTier: PriceTier;

@@ -12,6 +12,7 @@ import { type BeviApiConfig, createSupabaseClientFor } from './client';
 import { createCommentsApi } from './comments';
 import { createFeedApi } from './feed';
 import { createFollowsApi } from './follows';
+import { withGeneratedIcons } from './generatedIcons';
 import { createLeaderboardApi } from './leaderboard';
 import { createMediaApi } from './media';
 import { createMetaApi } from './meta';
@@ -38,7 +39,10 @@ export function createBeviApi(config: BeviApiConfig): BeviApi {
   });
   const profile = createProfileApi(client);
 
-  return {
+  // Every method that answers with a Bev has its `iconUrl` filled with the
+  // Bev's own generated icon first, so a created icon draws exactly where an
+  // authored one does. See generatedIcons.ts for why it wraps the whole API.
+  return withGeneratedIcons(client, {
     ...auth,
     nutrition: createNutritionApi(),
     profile: {
@@ -68,7 +72,7 @@ export function createBeviApi(config: BeviApiConfig): BeviApi {
     venues: createVenuesApi(client),
     bugs: createBugsApi(client),
     meta: createMetaApi(),
-  };
+  });
 }
 
 export { ApiError, isApiError } from '@bevi/shared';

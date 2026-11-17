@@ -83,6 +83,7 @@ export function toViewerSnapshot(client: SupabaseClient, json: SnapshotJson): Vi
       categoryId: categoryId as CategoryId,
       photoUrl: publicUrl(client, 'bev-photos', photoPath),
       iconUrl: publicUrl(client, 'bev-icons', iconPath ?? null),
+      iconLabelBand: null,
       photoStatus: 'ready' as PhotoStatus,
       priceTier: priceTier as PriceTier,
       priceEstimated,

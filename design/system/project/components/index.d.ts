@@ -48,6 +48,14 @@ export interface BevImageProps {
   status?: 'ready' | 'processing' | 'loading';
   /** What the `processing` shimmer is waiting for, in the accessible name. Defaults to "photo processing". */
   processingLabel?: string;
+  /**
+   * Where the label sits on a generated icon, normalised 0-1 against the artwork inside the
+   * tile's 8% padding (`BevSummary.iconLabelBand`). `wordmark` is set across it, in white when
+   * `dark`; a tile too small for one line of type shows the illustration alone.
+   */
+  labelBand?: { x: number; y: number; width: number; height: number; dark: boolean } | null;
+  /** The text to set across `labelBand`, normally the Bev's brand or its name. */
+  wordmark?: string;
   className?: string;
 }
 export declare function BevImage(props: BevImageProps): React.ReactElement;

@@ -319,6 +319,9 @@ export function mapBevSummary(client: SupabaseClient, row: BevSummaryRow): BevSu
     categoryId: row.category_id as CategoryId,
     photoUrl: publicUrl(client, 'bev-photos', row.photo_path),
     iconUrl: publicUrl(client, 'bev-icons', iconPathOf(row)),
+    // Filled in by applyGeneratedIcons() when the Bev has a generated icon of
+    // its own; no RPC returning a summary carries the band.
+    iconLabelBand: null,
     // Placeholder until the process-photo pipeline (milestone 1.6) exists:
     // there's no column tracking async background-removal state yet, so
     // once a Bev has a photo_path it's treated as 'ready'.
@@ -637,6 +640,7 @@ export function mapExplorePost(client: SupabaseClient, row: ExploreRpcRow, actor
       categoryId: row.bev_category_id as CategoryId,
       photoUrl: publicUrl(client, 'bev-photos', row.bev_thumb_path),
       iconUrl: publicUrl(client, 'bev-icons', row.bev_icon_path ?? null),
+      iconLabelBand: null,
       photoStatus: 'ready',
       priceTier: (row.bev_price_tier ?? 1) as PriceTier,
       priceEstimated: row.bev_price_estimated ?? true,
@@ -785,6 +789,7 @@ export function mapBevLeaderboardRow(
       categoryId: row.category_id as CategoryId,
       photoUrl: publicUrl(client, 'bev-photos', row.photo_path),
       iconUrl: publicUrl(client, 'bev-icons', row.icon_path ?? null),
+      iconLabelBand: null,
       photoStatus: 'ready',
       priceTier: row.price_tier as PriceTier,
       priceEstimated: false,

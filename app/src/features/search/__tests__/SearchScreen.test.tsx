@@ -107,6 +107,7 @@ const LAGER: LeaderboardRow = {
     categoryId: 'beer',
     photoUrl: null,
     iconUrl: null,
+    iconLabelBand: null,
     photoStatus: 'ready',
     priceTier: 1,
     priceEstimated: false,

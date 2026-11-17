@@ -132,7 +132,9 @@ it('keeps queued generation state off the screen while generation is disabled', 
   expect(screen.queryByTestId('generated-icon-panel')).toBeNull();
 });
 
-it('shows a finished illustration under the photo', async () => {
+// Contract 3.0.0: a finished illustration IS the Bev's image, so this screen says nothing
+// about it -- no panel, no second tile, and the wordmark set across the hero from the brand.
+it('makes a finished illustration the Bev image, with no panel about it', async () => {
   const bev = await api.bevs.create({
     name: 'Finished icon test',
     brand: 'Test Co',
@@ -142,9 +144,12 @@ it('shows a finished illustration under the photo', async () => {
   });
   controls.setIconStatus(bev.id, 'completed');
   await open(bev.id);
-  expect(await screen.findByText('Your illustration is ready')).toBeTruthy();
-  // The Bev's own image stays the hero; the illustration is a panel under it.
-  expect(screen.getByRole('header', { name: 'Finished icon test' })).toBeTruthy();
+  expect(await screen.findByRole('header', { name: 'Finished icon test' })).toBeTruthy();
+  expect(screen.queryByTestId('generated-icon-panel')).toBeNull();
+  expect(screen.queryByText(/your illustration/i)).toBeNull();
+  // The hero is 155px, big enough to letter: the brand is set across the band, which is the
+  // second "Test Co" on the screen -- the first is the brand line under the name.
+  expect(screen.getAllByText('Test Co')).toHaveLength(2);
 });
 
 it('does not show private generation progress to another viewer', async () => {
