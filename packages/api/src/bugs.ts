@@ -17,8 +17,8 @@ import { mapError } from './errors';
 //      from an internal reporter, so an ordinary account cannot even stage a
 //      file.
 //   2. the `bug-report` Edge Function is invoked with the caller's JWT. It
-//      redacts, claims the idempotency slot, talks to Linear, and answers with
-//      the identifier Linear assigned.
+//      redacts, claims the idempotency slot, files the ticket on the board
+//      (the tracker), and answers with the identifier the board assigned.
 // `listMine()`, `markVerified()` and `place()` are the function's other routes
 // (`bug-report/status`, `bug-report/verify`, `bug-report/place`), gated the
 // same way server-side.
@@ -26,7 +26,7 @@ import { mapError } from './errors';
 // The tracker credential lives in the function's environment. Nothing in this
 // file, and nothing the app bundles, can reach it. The evidence objects are
 // never given a public URL: the function reads them with the service role and
-// hands the bytes to Linear. An object uploaded by a submission that then
+// hands the bytes to the board. An object uploaded by a submission that then
 // fails before the function runs is the retention sweep's to remove
 // (scripts/bugs/purge-evidence.ts): the bucket has no delete policy for the
 // client, on purpose.
@@ -39,7 +39,7 @@ const PLACE_ROUTE = 'bug-report/place';
 
 // Matches the bucket's `allowed_mime_types`. Narrower than media.upload's list
 // on purpose: `preparePhoto` in the app re-encodes everything to JPEG, and a
-// HEIC that reached Linear unconverted would be unviewable in the browser.
+// HEIC that reached the board unconverted would be unviewable in the browser.
 const EXT_BY_MIME_TYPE: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
@@ -68,7 +68,12 @@ async function requireUserId(client: SupabaseClient): Promise<string> {
   return data.user.id;
 }
 
-/** The function's error codes, mapped to the contract's. */
+/**
+ * The function's error codes, mapped to the contract's. A tracker failure
+ * always arrives as `tracker_error` (its `code`, e.g. `board_unreachable`, is
+ * for the log, not the app), and a code not listed here falls back to the
+ * HTTP status and then to 'unknown'.
+ */
 const ERROR_CODES: Record<string, { code: ConstructorParameters<typeof ApiError>[0]; message: string }> = {
   unauthorized: { code: 'unauthorized', message: 'Sign in again to report a bug' },
   not_internal: { code: 'unauthorized', message: 'This account cannot file internal bug reports' },

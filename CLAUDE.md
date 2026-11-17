@@ -40,5 +40,5 @@ automatically. Example:
 
 ```
 contract 2.12.0: Bev gained `iconKey` (shared/src/types.ts). app/ should
-read it in bevImageProps instead of deriving from name. PR #171, BEV-42.
+read it in bevImageProps instead of deriving from name. PR #171, T-42.
 ```

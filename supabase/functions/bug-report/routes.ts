@@ -1,7 +1,7 @@
 // Routing and the place route's body, kept out of index.ts so test.ts can
 // import them: index.ts calls `Deno.serve` when it loads. Pure.
 
-import { issueNumber } from "./linear.ts";
+import { ticketNumber } from "./ticket.ts";
 
 export type Route = "report" | "status" | "verify" | "place";
 
@@ -29,10 +29,10 @@ export type PlaceRequest = { ticketId: string; afterTicketId: string | null } | 
  */
 export function parsePlace(raw: Record<string, unknown>): PlaceRequest {
   const ticketId = typeof raw.ticketId === "string" ? raw.ticketId.trim() : "";
-  if (!ticketId || issueNumber(ticketId) === null) return { field: "ticketId" };
+  if (!ticketId || ticketNumber(ticketId) === null) return { field: "ticketId" };
   if (raw.afterTicketId === null || raw.afterTicketId === undefined) return { ticketId, afterTicketId: null };
   const afterTicketId = typeof raw.afterTicketId === "string" ? raw.afterTicketId.trim() : "";
-  if (!afterTicketId || issueNumber(afterTicketId) === null) return { field: "afterTicketId" };
+  if (!afterTicketId || ticketNumber(afterTicketId) === null) return { field: "afterTicketId" };
   if (afterTicketId === ticketId) return { field: "afterTicketId" };
   return { ticketId, afterTicketId };
 }

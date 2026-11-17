@@ -27,7 +27,7 @@ export function useCanReportBug({ enabled = true }: { enabled?: boolean } = {}) 
 
 /**
  * Files one report. Filed reports is refetched so the new ticket shows up there;
- * nothing else in the app reads Linear.
+ * nothing else in the app reads the tracker.
  */
 export function useReportBug() {
   const client = useQueryClient();
@@ -39,7 +39,7 @@ export function useReportBug() {
 
 /**
  * The caller's own tickets with their live tracker state (Filed reports). Fresh
- * for 30 seconds, so flipping between screens does not hit Linear each time;
+ * for 30 seconds, so flipping between screens does not ask the board each time;
  * the function caches its answer for a minute behind this anyway.
  */
 export function useMyBugReports(enabled = true) {

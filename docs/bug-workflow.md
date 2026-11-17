@@ -9,9 +9,8 @@ Supabase project) is the system of record: a report filed here becomes a
 ticket there, named `T-<number>`. This repository holds the reporter, the
 secure endpoint behind it and the agent instructions, not a second issue
 database. Setup, secrets and operational notes are in
-[`ticketing-system.md`](./ticketing-system.md), which also covers Linear, the
-tracker before the board and still the fallback when the board is not
-configured.
+[`ticketing-system.md`](./ticketing-system.md), which also records that Linear
+was the tracker until 2026-11-17.
 
 ---
 
@@ -37,7 +36,7 @@ In the note:
 
 | Control | What it does |
 |---|---|
-| **Type** | A small dropdown: Bug, Fix suggestion, Idea or Design nit. It starts on the type your sentence suggests and stays there until you pick one. Becomes the Linear label of the same name and the ticket's `Type` line. |
+| **Type** | A small dropdown: Bug, Fix suggestion, Idea or Design nit. It starts on the type your sentence suggests and stays there until you pick one. Becomes the ticket's type on the board and its `Type` line. |
 | **Select element** | The note steps aside and the next tap on the app **selects** what you tapped instead of pressing it (scrolling still works; Cancel or Escape backs out). The note then shows the component, its source file and a picture of the screen with it outlined and numbered, with **Wider** and **Narrower** to move up and down the component tree. Up to six selections. |
 | **Capture screen** | A picture of the screen behind the note; the note is never in it. Each press adds one. |
 | **Record steps** | Nothing is recorded unless you press this. The note closes, the report button becomes **Stop** with a live count, and every screen you open and every tap becomes a step (at most 30). Stop puts the steps in the note, where you can record again or remove them. Taps inside the reporter are never steps, and nothing you type is. |
@@ -71,8 +70,8 @@ is ever in that trail.
 
 Press **Send**. Nothing leaves the device before that press. The note closes
 at once and the report files in the background, so you can carry on and write
-the next one; a small "Filed BEV-104" appears when Linear has confirmed it,
-with the real identifier. The ticket lands in **Triage**.
+the next one; a small "Filed T-104" appears when the board has confirmed it,
+with the real identifier. The ticket lands in **New**.
 
 If it fails, a red dot appears on the button and pressing it brings the note
 back with everything in it and a **Try again**. The retry reuses the same
@@ -83,10 +82,10 @@ There is no "How bad is it?" any more. Every report is filed at Medium, and
 **where you rank it** sets the priority: "Place it" on the filed message, or
 **Filed reports** (the list icon in the note, or Settings → Internal → Filed
 reports), asks "Which is worse?" against your other open reports, using the
-same placement the app uses to rank a Bev. The answer is written to Linear as
-the issue's manual order, and the priority follows from the position: the top
+same placement the app uses to rank a Bev. The answer is written to the board as
+the ticket's place in its order, and the priority follows from the position: the top
 quarter of your open reports High, the middle half Medium, the rest Low. A
-ticket someone marked Urgent in Linear stays Urgent. Ranking needs the
+ticket someone marked Urgent on the board stays Urgent. Ranking needs the
 `bug-report` function from this change to be deployed; against an older one
 the app says so and the report is filed all the same.
 
@@ -176,25 +175,18 @@ New ──▶ Ready ──▶ In progress ──▶ In review ──▶ Done
 | **Done** | A human confirmed the original report no longer reproduces. | `done` |
 | **Closed without a fix** | A duplicate, dismissed, or made into an idea. Not a synonym for fixed. | `canceled` |
 
-The contract's names are Linear's, from when Linear was the tracker; the
-function translates, so the app needed no change to move to the board.
+The contract's names (`BugTicketState`) are from when Linear was the tracker;
+the function translates them to the board's stages.
 
 ## Where the ranking lives
 
-**On the board** there is one order for every open ticket, shared by both
-founders. "Place it" tells the board which of your own tickets the new one
-comes after (or, for the top of your list, which one it now comes before), and
-the board fits it into the shared order; the position in your own list still
-sets the priority (top quarter High, middle half Normal, the rest Low). The
-board rewrites its order itself, so there is no gap to run out of. What follows
-describes the same thing against Linear, the fallback tracker.
-
-After filing, the app asks "which is worse?" and places the new ticket in the
-reporter's own ranked list of open tickets (Triage, Todo, In Progress). There
-is no table for this in the database. The position is written to Linear as the
-issue's manual order (`sortOrder`, lower first) through
-`POST /bug-report/place` (`bugs.place`), and the priority is set from where the
-ticket landed:
+There is one order for every open ticket on the board, shared by both
+founders. After filing, the app asks "which is worse?" and "Place it" tells the
+board which of your own tickets the new one comes after (or, for the top of
+your list, which one it now comes before), through `POST /bug-report/place`
+(`bugs.place`). The board fits it into the shared order; it rewrites its order
+itself, so there is no gap to run out of. There is no table for this in the
+database. The position in your own list of open tickets also sets the priority:
 
 | Position among the reporter's open tickets | Priority written |
 |---|---|
@@ -205,15 +197,13 @@ ticket landed:
 
 The position is measured at the middle of the ticket's slot, so a reporter
 with one open ticket gets Medium, and with two, High then Medium. Filed reports
-reads the rank back from Linear's `sortOrder`, so dragging the issue in a
-manually ordered Linear view changes the rank the app shows. A ticket in
-review, done, canceled or of unknown state has no rank and cannot be placed.
+reads the rank back from the board, so reordering tickets on the board changes
+the rank the app shows. A ticket in review, done, closed or of unknown state has
+no rank and cannot be placed.
 
-The server reads the reporter's tickets fresh from Linear for every
-placement, writes the midpoint between the two neighbours, and only when they
-are too close to split rewrites the reporter's other open tickets to whole
-steps first. None of this has run against the real Linear API yet; see the
-honest list in [`ticketing-system.md`](./ticketing-system.md#tests-and-what-they-do-and-do-not-cover).
+The server reads the reporter's tickets fresh from the board for every
+placement. None of this has run from the deployed function yet; see the honest
+list in [`ticketing-system.md`](./ticketing-system.md#tests-and-what-they-do-and-do-not-cover).
 
 ## Becoming an internal reporter
 
@@ -226,6 +216,6 @@ honest list in [`ticketing-system.md`](./ticketing-system.md#tests-and-what-they
 
 They go into a **private** Supabase bucket (`bug-evidence`), which has no public
 URL and no read policy at all. The Edge Function reads each object with the
-service role, uploads it to Linear so the ticket carries its own copy, and
+service role, sends it to the board so the ticket carries its own copy, and
 deletes the staged objects if the issue is never created. Whatever survives that
 is swept by `npm run bugs:purge-evidence` (90 days by default).

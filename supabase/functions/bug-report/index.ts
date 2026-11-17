@@ -4,23 +4,23 @@
 // the caller's user JWT:
 //   POST .../bug-report          file a report: validate and redact, claim an
 //                                idempotency slot in `public.bug_reports`,
-//                                create the Linear issue, answer with the
-//                                identifier Linear assigned.
+//                                file the ticket on the board, answer with the
+//                                identifier the board assigned (`T-19`).
 //   GET  .../bug-report/status   the caller's own tickets with their live
-//                                Linear state, for My reports.
+//                                state on the board, for My reports.
 //   POST .../bug-report/verify   move one of the caller's tickets to Done,
 //                                once they have checked the fix on the device.
 //   POST .../bug-report/place    put one of the caller's open tickets in their
-//                                ranked list: Linear's manual order
-//                                (`sortOrder`) and the priority the position
-//                                implies (rank.ts). Never run against the
-//                                real Linear API yet.
+//                                ranked list: its place in the board's one
+//                                shared order and the priority the position
+//                                implies (rank.ts).
 //
-// THE TRACKER is the founders' board when BOARD_INTAKE_URL and
-// BOARD_INTAKE_TOKEN are set (board.ts), and Linear otherwise (linear.ts);
-// TICKET_TRACKER=linear keeps Linear even with the board's secrets set. The
-// four routes, the ledger, the redaction and the contract are the same for
-// both: only where the ticket is created, read and changed differs.
+// THE TRACKER is the founders' board (board.ts), reached with two secrets,
+// BOARD_INTAKE_URL and BOARD_INTAKE_TOKEN. Without them, or with values that
+// cannot be used, no ticket is filed, read or changed, and every route says
+// that no tracker is configured. A ticket filed before 2026-11-17 is named in
+// the ledger by an earlier name like `BEV-7`; the board answers to that name
+// too, so ledger identifiers go to the board unchanged.
 //
 // ---------------------------------------------------------------------------
 // AUTHORISATION. `verify_jwt = true` in config.toml is the outer gate, and on
@@ -37,9 +37,10 @@
 // The app calls this function from the browser, so cors.ts answers the
 // preflight and every response carries Access-Control-Allow-Origin.
 //
-// The Linear API key is read from the environment and never leaves this
-// function. The app never sees it, and no response or log line here contains
-// it, the service-role key, or the reporter's evidence.
+// The board's token is read from the environment and never leaves this
+// function except to the configured board. The app never sees it, and no
+// response or log line here contains it, the service-role key, or the
+// reporter's evidence.
 // ---------------------------------------------------------------------------
 //
 // Deno conventions follow graph-query and embed: no remote imports (deno.json
@@ -48,15 +49,7 @@
 // file without resolving a module off the network.
 
 import { isPreflight, preflight, withCors } from "./cors.ts";
-import {
-  buildDescription,
-  type EvidenceItem,
-  type Kind,
-  parseReport,
-  PRIORITY_BY_SEVERITY,
-  type Severity,
-  ValidationError,
-} from "./issue.ts";
+import { type Kind, parseReport, type Severity, ValidationError } from "./issue.ts";
 import {
   addPicture,
   type BoardConfig,
@@ -75,42 +68,16 @@ import {
   verifyBoardTicket,
 } from "./board.ts";
 import { finishBugReport, ledgerQuery } from "./ledger.ts";
-import {
-  createIssue,
-  fetchIssueStatuses,
-  fetchKindLabels,
-  findDoneStateId,
-  findIssueId,
-  findTriageStateId,
-  type IssueStatus,
-  issueNumber,
-  labelIdForKind,
-  LinearError,
-  type LinearConfig,
-  placeIssue,
-  readLinearConfig,
-  updateIssueState,
-  uploadFile,
-} from "./linear.ts";
-import {
-  isOpen,
-  MAX_RESPACE_WRITES,
-  type Ordered,
-  positionFor,
-  priorityForRank,
-  ranksOf,
-  respaced,
-  sortedByRank,
-  withMoved,
-} from "./rank.ts";
+import { isOpen, type Ordered, positionFor, priorityForRank, ranksOf, sortedByRank } from "./rank.ts";
 import { methodFor, parsePlace, routeOf } from "./routes.ts";
+import { ticketNumber, type TicketStatus } from "./ticket.ts";
 
 /** Bigger than any screenshot-free report; the evidence itself never comes through this body. */
 const MAX_BODY_BYTES = 128 * 1024;
 const EVIDENCE_BUCKET = "bug-evidence";
 /** Matches the bucket's `file_size_limit` in 20261109000300_bug_reports.sql. */
 const MAX_EVIDENCE_BYTES = 10 * 1024 * 1024;
-/** How long one user's Linear answer is reused by the status route. */
+/** How long one user's answer from the board is reused by the status route. */
 const STATUS_CACHE_MS = 60_000;
 /** My reports shows the newest this many tickets. */
 const STATUS_LIMIT = 50;
@@ -237,15 +204,15 @@ interface Summary {
   kind: Kind;
   severity: Severity;
   createdAt: string;
-  state: IssueStatus["state"];
+  state: TicketStatus["state"];
   stateLabel: string | null;
   priority: number | null;
   updatedAt: string | null;
-  /** 1-based among the caller's open tickets by Linear's manual order; null otherwise. */
+  /** 1-based among the caller's open tickets by the board's shared order; null otherwise. */
   rank: number | null;
 }
 
-/** The reporter's handle, for the issue's Reporter line. Falls back to the id's prefix. */
+/** The reporter's handle, which the board shows as who filed or verified the ticket. Falls back to the id's prefix. */
 async function reporterHandle(env: Env, jwt: string, userId: string): Promise<string> {
   try {
     const response = await select(env, jwt, `profiles?id=eq.${encodeURIComponent(userId)}&select=handle`);
@@ -300,52 +267,8 @@ async function finish(
   await finishBugReport(fetch, env, id, state, extra);
 }
 
-// ---------------------------------------------------------------------------
-// Resolved once per cold start: each is a round trip we do not need per call.
-// ---------------------------------------------------------------------------
-
-let triageStateId: string | null | undefined;
-let doneStateId: string | null | undefined;
-let labelsByName: Record<string, string> | null | undefined;
-
-async function triageState(config: LinearConfig): Promise<string | null> {
-  if (triageStateId !== undefined) return triageStateId;
-  try {
-    triageStateId = await findTriageStateId(config, fetch);
-  } catch {
-    // A team without a reachable states list still gets its issue, in the
-    // team's default state. Linear's own Triage view is the safety net.
-    triageStateId = null;
-  }
-  return triageStateId;
-}
-
-async function doneState(config: LinearConfig): Promise<string | null> {
-  if (doneStateId !== undefined) return doneStateId;
-  try {
-    doneStateId = await findDoneStateId(config, fetch);
-  } catch {
-    doneStateId = undefined;
-    return null;
-  }
-  return doneStateId;
-}
-
-async function kindLabel(config: LinearConfig, kind: Kind, fingerprint: string): Promise<string | null> {
-  if (labelsByName === undefined && !config.labelIdByKind?.[kind]) {
-    try {
-      labelsByName = await fetchKindLabels(config, fetch);
-    } catch {
-      labelsByName = null;
-    }
-  }
-  const id = labelIdForKind(kind, config, labelsByName ?? null);
-  if (!id) console.warn(`bug-report: no Linear label for kind=${kind} key=${fingerprint}; filed without it`);
-  return id;
-}
-
-/** The status route's per-user cache of Linear's answer. */
-const statusCache = new Map<string, { at: number; statuses: IssueStatus[] }>();
+/** The status route's per-user cache of the board's answer. */
+const statusCache = new Map<string, { at: number; statuses: TicketStatus[] }>();
 
 // ---------------------------------------------------------------------------
 // Shared request plumbing
@@ -407,15 +330,15 @@ async function ledgerRows(c: Caller, ticketId?: string): Promise<LedgerRow[] | R
   }
 }
 
-/** The caller's open tickets that Linear gave a manual order, as rank.ts takes them. */
-function openOrdered(statuses: IssueStatus[]): Ordered[] {
+/** The caller's open tickets that have a place in the board's order, as rank.ts takes them. */
+function openOrdered(statuses: TicketStatus[]): Ordered[] {
   return statuses
     .filter((s) => isOpen(s.state) && s.sortOrder !== null)
     .map((s) => ({ identifier: s.identifier, sortOrder: s.sortOrder as number }));
 }
 
 /** Every ledger row as the contract's summary, ranked among the ones that are open. */
-function summariseAll(rows: LedgerRow[], statuses: IssueStatus[]): Summary[] {
+function summariseAll(rows: LedgerRow[], statuses: TicketStatus[]): Summary[] {
   const mine = new Set(rows.map((r) => r.ticket_identifier).filter(Boolean));
   const byIdentifier = new Map(statuses.filter((s) => mine.has(s.identifier)).map((s) => [s.identifier, s]));
   const ranks = ranksOf(openOrdered([...byIdentifier.values()]));
@@ -425,10 +348,10 @@ function summariseAll(rows: LedgerRow[], statuses: IssueStatus[]): Summary[] {
   });
 }
 
-function summarise(row: LedgerRow, status: (IssueStatus & { url?: string }) | undefined, rank: number | null = null): Summary {
+function summarise(row: LedgerRow, status: (TicketStatus & { url?: string }) | undefined, rank: number | null = null): Summary {
   return {
     ticketId: row.ticket_identifier ?? "",
-    // The board says where a ticket lives now, which for one filed while Linear was the tracker is no longer the ledger's URL.
+    // The board says where a ticket lives now, which for one filed before 2026-11-17 under an earlier name is no longer the ledger's URL.
     ticketUrl: status?.url || row.ticket_url || "",
     title: row.title,
     kind: row.kind,
@@ -443,30 +366,27 @@ function summarise(row: LedgerRow, status: (IssueStatus & { url?: string }) | un
 }
 
 // ---------------------------------------------------------------------------
-// Which tracker
+// The board's configuration
 // ---------------------------------------------------------------------------
-
-type Tracker = { board: BoardConfig } | { linear: LinearConfig };
 
 let warnedAboutBoard = false;
 
-/** The board when it is configured, else Linear, else null. */
-function tracker(): Tracker | null {
+/** The board's configuration, or null when its two secrets are missing or unusable. */
+function boardConfig(): BoardConfig | null {
   const env = (key: string) => Deno.env.get(key);
   const board = readBoardConfig(env);
-  if (board) return { board };
+  if (board) return board;
   if (!warnedAboutBoard && boardMisconfigured(env)) {
-    // Once per cold start, and never the values: a mistyped token must not send reports to Linear without a trace.
+    // Once per cold start, and never the values: a mistyped token must not stop reports without a trace.
     warnedAboutBoard = true;
-    console.error("bug-report: BOARD_INTAKE_URL/BOARD_INTAKE_TOKEN are set but unusable (an https address and a bvb_ token are needed); the board is not being used");
+    console.error("bug-report: BOARD_INTAKE_URL/BOARD_INTAKE_TOKEN are set but unusable (an https address and a bvb_ token are needed); no ticket can be filed until they are fixed");
   }
-  const linear = readLinearConfig(env);
-  return linear ? { linear } : null;
+  return null;
 }
 
-/** A short, loggable code for whatever a tracker call threw. */
+/** A short, loggable code for whatever a board call threw. */
 function trackerCode(e: unknown): string {
-  return e instanceof LinearError || e instanceof BoardError ? e.code : "tracker_error";
+  return e instanceof BoardError ? e.code : "tracker_error";
 }
 
 // ---------------------------------------------------------------------------
@@ -590,72 +510,14 @@ async function handleReport(req: Request, c: Caller): Promise<Response> {
     return json({ error: "in_progress" }, 409);
   }
 
-  const t = tracker();
-  if (!t) {
+  const board = boardConfig();
+  if (!board) {
     await finish(c.env, claim.id, "failed", { errorCode: "tracker_not_configured" });
     await deleteEvidence(c.env, staged);
-    console.error(`bug-report: no tracker configured (BOARD_INTAKE_URL/BOARD_INTAKE_TOKEN, or LINEAR_API_KEY/LINEAR_TEAM_ID) key=${fingerprint}`);
+    console.error(`bug-report: no tracker configured (BOARD_INTAKE_URL/BOARD_INTAKE_TOKEN) key=${fingerprint}`);
     return json({ error: "tracker_not_configured" }, 503);
   }
-  if ("board" in t) return await reportToBoard(c, t.board, report, claim, staged, fingerprint);
-  const linear = t.linear;
-
-  // Evidence first: the issue body embeds the asset URLs, and a screenshot
-  // that cannot be uploaded must not cost the reporter their ticket. A caption
-  // follows its path, not its index: a re-armed claim can hold an earlier
-  // attempt's paths.
-  const captionByPath = new Map(report.evidencePaths.map((p, i) => [p, report.evidenceCaptions[i] ?? ""]));
-  const evidence: EvidenceItem[] = [];
-  for (const [i, path] of staged.entries()) {
-    const file = await readEvidence(c.env, path);
-    if (!file) {
-      evidence.push({ kind: "failed", reason: "the stored object could not be read" });
-      continue;
-    }
-    try {
-      const assetUrl = await uploadFile(linear, fetch, {
-        bytes: file.bytes,
-        contentType: file.contentType,
-        filename: `bug-${report.idempotencyKey}-${i + 1}.${path.split(".").pop()}`,
-      });
-      const caption = captionByPath.get(path);
-      evidence.push(caption ? { kind: "embedded", assetUrl, caption } : { kind: "embedded", assetUrl });
-    } catch (e) {
-      const code = e instanceof LinearError ? e.code : "upload_failed";
-      console.error(`bug-report: evidence upload failed key=${fingerprint} index=${i} code=${code}`);
-      evidence.push({ kind: "failed", reason: code });
-    }
-  }
-
-  const handle = await reporterHandle(c.env, c.jwt, c.userId);
-  const description = buildDescription(report, handle, evidence);
-  const labelId = await kindLabel(linear, report.kind, fingerprint);
-
-  try {
-    const issue = await createIssue(linear, fetch, {
-      title: report.title,
-      description,
-      stateId: await triageState(linear),
-      priority: PRIORITY_BY_SEVERITY[report.severity],
-      labelIds: labelId ? [labelId] : undefined,
-    });
-    await finish(c.env, claim.id, "created", { identifier: issue.identifier, url: issue.url });
-    statusCache.delete(c.userId);
-    console.log(
-      `bug-report: created key=${fingerprint} ticket=${issue.identifier} kind=${report.kind} severity=${report.severity} evidence=${
-        evidence.filter((e) => e.kind === "embedded").length
-      }/${staged.length} targets=${report.targets.length} steps=${report.stepsSource}`,
-    );
-    return json({ ticketId: issue.identifier, ticketUrl: issue.url, status: "created" }, 201);
-  } catch (e) {
-    const code = e instanceof LinearError ? e.code : "linear_error";
-    await finish(c.env, claim.id, "failed", { errorCode: code });
-    // The issue does not exist, so the evidence has nothing to belong to.
-    await deleteEvidence(c.env, staged);
-    console.error(`bug-report: create failed key=${fingerprint} code=${code}`);
-    const status = code === "linear_rate_limited" ? 429 : 502;
-    return json({ error: "tracker_error", code }, status);
-  }
+  return await reportToBoard(c, board, report, claim, staged, fingerprint);
 }
 
 // ---------------------------------------------------------------------------
@@ -664,25 +526,19 @@ async function handleReport(req: Request, c: Caller): Promise<Response> {
 
 async function statusesFor(
   c: Caller,
-  t: Tracker,
+  board: BoardConfig,
   rows: LedgerRow[],
   { fresh = false }: { fresh?: boolean } = {},
-): Promise<{ statuses: IssueStatus[]; error?: string }> {
+): Promise<{ statuses: TicketStatus[]; error?: string }> {
   const cached = fresh ? undefined : statusCache.get(c.userId);
   if (cached && Date.now() - cached.at < STATUS_CACHE_MS) return { statuses: cached.statuses };
   try {
-    // The board is asked by name, so a ticket filed while Linear was the tracker is found under its Linear identifier.
-    const statuses = "board" in t
-      ? await fetchBoardStatuses(t.board, fetch, rows.map((r) => r.ticket_identifier ?? "").filter(Boolean))
-      : await fetchIssueStatuses(
-        t.linear,
-        fetch,
-        rows.map((r) => (r.ticket_identifier ? issueNumber(r.ticket_identifier) : null)).filter((n): n is number => n !== null),
-      );
+    // The board is asked by the ledger's names, so a ticket filed before 2026-11-17 is found under its earlier name.
+    const statuses = await fetchBoardStatuses(board, fetch, rows.map((r) => r.ticket_identifier ?? "").filter(Boolean));
     statusCache.set(c.userId, { at: Date.now(), statuses });
     return { statuses };
   } catch (e) {
-    const code = e instanceof LinearError || e instanceof BoardError ? e.code : "linear_error";
+    const code = trackerCode(e);
     console.error(`bug-report: status lookup failed code=${code}`);
     return { statuses: [], error: code };
   }
@@ -696,12 +552,12 @@ async function handleStatus(c: Caller): Promise<Response> {
   const rows = await ledgerRows(c);
   if (rows instanceof Response) return rows;
 
-  const t = tracker();
-  if (!t) {
-    return json({ reports: rows.map((r) => summarise(r, undefined)), trackerError: "linear_not_configured" }, 200);
+  const board = boardConfig();
+  if (!board) {
+    return json({ reports: rows.map((r) => summarise(r, undefined)), trackerError: "tracker_not_configured" }, 200);
   }
 
-  const { statuses, error } = await statusesFor(c, t, rows);
+  const { statuses, error } = await statusesFor(c, board, rows);
   const reports = summariseAll(rows, statuses);
   return json(error ? { reports, trackerError: error } : { reports }, 200);
 }
@@ -714,7 +570,7 @@ async function handleVerify(req: Request, c: Caller): Promise<Response> {
   const raw = await readBody(req);
   if (raw instanceof Response) return raw;
   const ticketId = typeof raw.ticketId === "string" ? raw.ticketId.trim() : "";
-  if (!ticketId || issueNumber(ticketId) === null) return json({ error: "validation", field: "ticketId" }, 400);
+  if (!ticketId || ticketNumber(ticketId) === null) return json({ error: "validation", field: "ticketId" }, 400);
 
   const internal = await isInternal(c);
   if (internal instanceof Response) return internal;
@@ -728,38 +584,17 @@ async function handleVerify(req: Request, c: Caller): Promise<Response> {
   const row = rows[0];
   if (!row) return json({ error: "not_found" }, 404);
 
-  const t = tracker();
-  if (!t) return json({ error: "tracker_not_configured" }, 503);
-  if ("board" in t) {
-    try {
-      const status = await verifyBoardTicket(t.board, fetch, ticketId, await reporterHandle(c.env, c.jwt, c.userId));
-      statusCache.delete(c.userId);
-      console.log(`bug-report: verified ticket=${ticketId} tracker=board`);
-      return json({ report: summarise(row, status) }, 200);
-    } catch (e) {
-      const code = trackerCode(e);
-      console.error(`bug-report: verify failed ticket=${ticketId} tracker=board code=${code}`);
-      return json({ error: "tracker_error", code }, 502);
-    }
-  }
-  const linear = t.linear;
-  // A ticket the board named is not a Linear issue, whatever its number: after a switch back to Linear it is closed on the board, not here.
-  if (/^T-\d+$/i.test(ticketId)) return json({ error: "not_found" }, 404);
-
-  const stateId = await doneState(linear);
-  if (!stateId) return json({ error: "tracker_error", code: "no_done_state" }, 502);
-
+  const board = boardConfig();
+  if (!board) return json({ error: "tracker_not_configured" }, 503);
   try {
-    const issueId = await findIssueId(linear, fetch, ticketId);
-    if (!issueId) return json({ error: "not_found" }, 404);
-    const status = await updateIssueState(linear, fetch, issueId, stateId);
+    const status = await verifyBoardTicket(board, fetch, ticketId, await reporterHandle(c.env, c.jwt, c.userId));
     statusCache.delete(c.userId);
-    console.log(`bug-report: verified ticket=${ticketId}`);
+    console.log(`bug-report: verified ticket=${ticketId} tracker=board`);
     return json({ report: summarise(row, status) }, 200);
   } catch (e) {
-    const code = e instanceof LinearError ? e.code : "linear_error";
-    console.error(`bug-report: verify failed ticket=${ticketId} code=${code}`);
-    return json({ error: "tracker_error", code }, code === "linear_rate_limited" ? 429 : 502);
+    const code = trackerCode(e);
+    console.error(`bug-report: verify failed ticket=${ticketId} tracker=board code=${code}`);
+    return json({ error: "tracker_error", code }, 502);
   }
 }
 
@@ -774,7 +609,7 @@ async function handleVerify(req: Request, c: Caller): Promise<Response> {
  *
  * `reason: "not_open"` is added only once both tickets have passed the
  * ledger check, i.e. both are the caller's own: it says one of them is in
- * review, closed, of unknown state or has no manual order in Linear, and
+ * review, closed, of unknown state or has no place in the board's order, and
  * reveals nothing about anyone else's tickets.
  */
 function placeNotFound(reason?: "not_open"): Response {
@@ -782,9 +617,9 @@ function placeNotFound(reason?: "not_open"): Response {
 }
 
 function trackerFailure(e: unknown, ticketId: string): Response {
-  const code = e instanceof LinearError || e instanceof BoardError ? e.code : "linear_error";
+  const code = trackerCode(e);
   console.error(`bug-report: place failed ticket=${ticketId} code=${code}`);
-  return json({ error: "tracker_error", code }, code === "linear_rate_limited" ? 429 : 502);
+  return json({ error: "tracker_error", code }, 502);
 }
 
 async function handlePlace(req: Request, c: Caller): Promise<Response> {
@@ -805,16 +640,14 @@ async function handlePlace(req: Request, c: Caller): Promise<Response> {
   const mine = new Set(rows.map((r) => r.ticket_identifier).filter(Boolean));
   if (!mine.has(ticketId) || (afterTicketId !== null && !mine.has(afterTicketId))) return placeNotFound();
 
-  const t = tracker();
-  if (!t) return json({ error: "tracker_not_configured" }, 503);
+  const board = boardConfig();
+  if (!board) return json({ error: "tracker_not_configured" }, 503);
 
   // Fresh, never the cache: a placement computed against a minute-old order
   // could land a ticket somewhere the reporter did not put it.
-  const numbers = rows.map((r) => (r.ticket_identifier ? issueNumber(r.ticket_identifier) : null)).filter((n): n is number => n !== null);
-  let statuses: IssueStatus[];
+  let statuses: TicketStatus[];
   try {
-    statuses = ("board" in t ? await fetchBoardStatuses(t.board, fetch, [...mine] as string[]) : await fetchIssueStatuses(t.linear, fetch, numbers))
-      .filter((s) => mine.has(s.identifier));
+    statuses = (await fetchBoardStatuses(board, fetch, [...mine] as string[])).filter((s) => mine.has(s.identifier));
   } catch (e) {
     return trackerFailure(e, ticketId);
   }
@@ -827,60 +660,26 @@ async function handlePlace(req: Request, c: Caller): Promise<Response> {
   const position = positionFor(order, ticketId, afterTicketId);
   const priority = priorityForRank(position.index, order.length, movingStatus.priority);
 
-  if ("board" in t) {
-    // The board keeps one order for everyone and rewrites it itself: say only
-    // which of the caller's tickets this one follows, or, for the top of
-    // their list, which one it now comes before. With no other open ticket of
-    // theirs there is nothing to be placed against, and nothing is moved.
-    const top = order.find((o) => o.identifier !== ticketId)?.identifier ?? null;
-    try {
-      if (afterTicketId !== null || top !== null) {
-        await placeBoardTicket(t.board, fetch, ticketId, afterTicketId !== null ? { after: afterTicketId, priority: priorityWord(priority) } : { before: top, priority: priorityWord(priority) });
-      }
-      console.log(`bug-report: placed ticket=${ticketId} tracker=board index=${position.index} priority=${priority}`);
-    } catch (e) {
-      // The board refuses a ticket that stopped being open between the read and the write.
-      if (e instanceof BoardError && e.code === "board_refused") return placeNotFound("not_open");
-      return trackerFailure(e, ticketId);
-    } finally {
-      statusCache.delete(c.userId);
-    }
-    const { statuses: after, error } = await statusesFor(c, t, rows, { fresh: true });
-    const reports = summariseAll(rows, after);
-    return json(error ? { reports, trackerError: error } : { reports }, 200);
-  }
-  const linear = t.linear;
-
+  // The board keeps one order for everyone and rewrites it itself: say only
+  // which of the caller's tickets this one follows, or, for the top of their
+  // list, which one it now comes before. With no other open ticket of theirs
+  // there is nothing to be placed against, and nothing is moved.
+  const top = order.find((o) => o.identifier !== ticketId)?.identifier ?? null;
   try {
-    let sortOrder = position.sortOrder;
-    let rewritten = 0;
-    if (position.respace) {
-      const plan = respaced(withMoved(order, { identifier: ticketId, sortOrder }, position.index), position.index);
-      const before = new Map(order.map((o) => [o.identifier, o.sortOrder]));
-      const changed = plan.others.filter((o) => before.get(o.identifier) !== o.sortOrder).slice(0, MAX_RESPACE_WRITES);
-      // Sequential, and before the moving ticket. Not atomic: if one write
-      // fails part-way, the tickets already rewritten and the ones not yet
-      // rewritten can interleave, and the moving ticket keeps its old place.
-      // The client gets the tracker error and the reporter can place again,
-      // which respaces again from whatever Linear then holds.
-      for (const o of changed) {
-        const written = await placeIssue(linear, fetch, o.identifier, { sortOrder: o.sortOrder });
-        if (!written) return placeNotFound();
-        rewritten++;
-      }
-      sortOrder = plan.moving.sortOrder;
+    if (afterTicketId !== null || top !== null) {
+      await placeBoardTicket(board, fetch, ticketId, afterTicketId !== null ? { after: afterTicketId, priority: priorityWord(priority) } : { before: top, priority: priorityWord(priority) });
     }
-    const placed = await placeIssue(linear, fetch, ticketId, { sortOrder, priority });
-    if (!placed) return placeNotFound();
-    console.log(`bug-report: placed ticket=${ticketId} index=${position.index} priority=${priority} respaced=${rewritten}`);
+    console.log(`bug-report: placed ticket=${ticketId} tracker=board index=${position.index} priority=${priority}`);
   } catch (e) {
+    // The board refuses a ticket that stopped being open between the read and the write.
+    if (e instanceof BoardError && e.code === "board_refused") return placeNotFound("not_open");
     return trackerFailure(e, ticketId);
   } finally {
     statusCache.delete(c.userId);
   }
 
-  // Read back, as the status route would: Linear may have adjusted positions.
-  const { statuses: after, error } = await statusesFor(c, t, rows, { fresh: true });
+  // Read back, as the status route would.
+  const { statuses: after, error } = await statusesFor(c, board, rows, { fresh: true });
   const reports = summariseAll(rows, after);
   return json(error ? { reports, trackerError: error } : { reports }, 200);
 }

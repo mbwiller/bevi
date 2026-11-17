@@ -2,16 +2,15 @@
 //   deno test --allow-net --allow-env supabase/functions/bug-report/
 //
 // Everything here is pure: these files import ./redact.ts, ./issue.ts,
-// ./linear.ts, ./board.ts, ./ledger.ts, ./rank.ts, ./routes.ts and ./cors.ts, never
-// ./index.ts, so nothing starts a server
-// and no request leaves the process. The Linear client is driven through its injected
-// `fetch`, which is how its error mapping, its two-step upload, its status
-// lookup and its one write can be asserted without an API key.
+// ./board.ts, ./ticket.ts, ./ledger.ts, ./rank.ts, ./routes.ts and ./cors.ts,
+// never ./index.ts, so nothing starts a server and no request leaves the
+// process. The board client is driven through its injected `fetch`, which is
+// how its error mapping, its pictures, its status lookup and its writes can be
+// asserted without a token.
 //
-// What is NOT covered here, and is listed honestly in docs/ticketing-system.md:
-// the live round trip to Linear, and the Postgres half (claim_bug_report,
-// finish_bug_report, set_profile_role, the storage policy), which is pgTAP's
-// job in supabase/tests/28_bug_reports.test.sql.
+// What is NOT covered here: the live round trip to the board, and the
+// Postgres half (claim_bug_report, finish_bug_report, set_profile_role, the
+// storage policy), which is pgTAP's job in supabase/tests/28_bug_reports.test.sql.
 
 import { assert, assertEquals, assertRejects, assertStringIncludes } from "jsr:@std/assert@1";
 
@@ -31,17 +30,9 @@ import {
   REDACTED,
   TARGET_LIMITS,
 } from "./redact.ts";
-import { breadcrumbLine, buildDescription, parseReport, pointedAt, PRIORITY_BY_SEVERITY, ValidationError } from "./issue.ts";
-import {
-  isOpen,
-  OPEN_STATES,
-  positionFor,
-  priorityForRank,
-  rankOrder,
-  ranksOf,
-  respaced,
-  withMoved,
-} from "./rank.ts";
+import { breadcrumbLine, parseReport, pointedAt, ValidationError } from "./issue.ts";
+import { isOpen, OPEN_STATES, positionFor, priorityForRank, rankOrder, ranksOf } from "./rank.ts";
+import { ticketNumber } from "./ticket.ts";
 import { methodFor, parsePlace, routeOf } from "./routes.ts";
 import { finishBugReport, ledgerQuery } from "./ledger.ts";
 import { CORS_HEADERS, isPreflight, preflight, withCors } from "./cors.ts";
@@ -62,25 +53,6 @@ import {
   toBase64,
   verifyBoardTicket,
 } from "./board.ts";
-import {
-  authorizationHeader,
-  createIssue,
-  fetchIssueStatuses,
-  fetchKindLabels,
-  findDoneStateId,
-  findIssueId,
-  findTriageStateId,
-  issueNumber,
-  labelIdForKind,
-  LinearError,
-  mapStateType,
-  placeIssue,
-  readLinearConfig,
-  updateIssueState,
-  uploadFile,
-  type LinearConfig,
-} from "./linear.ts";
-
 const KEY = "4f1d6c0a-4f4c-4f0e-9e0b-9a4a8f2b7c11";
 
 // Token-shaped fixtures are assembled at runtime, so this file never contains
@@ -91,8 +63,8 @@ const FAKE = {
   bearer: (token: string) => ["Bear", "er "].join("") + token,
   jwt: ["eyJhbGciOiJIUzI1NiJ9", "eyJzdWIiOiIxMjM0NTY3ODkwIn0", "dBjftJeZ4CVPmB92K27uhbUJU1p1r_wW1gFWFOEjXk"].join("."),
   supabaseSecret: ["sb_", "secret_", "abcdefgh1234"].join(""),
+  // A Linear API key's shape is still redacted (redact.ts): a pasted one must not reach a ticket.
   linearKey: (suffix: string) => ["lin_", "api_", suffix].join(""),
-  linearOauth: (suffix: string) => ["lin_", "oauth_", suffix].join(""),
   stripe: ["sk_", "live_", "abcdefgh1234"].join(""),
 };
 const UID = "4f1d6c0a-4f4c-4f0e-9e0b-9a4a8f2b7c11";
@@ -262,7 +234,7 @@ Deno.test("more than three evidence paths is rejected; three well-formed ones ar
   assertEquals(report().evidencePaths, []);
 });
 
-Deno.test("a title carrying a secret is redacted before it becomes the issue title", () => {
+Deno.test("a title carrying a secret is redacted before it becomes the ticket title", () => {
   const parsed = report({ title: `crash with api_key=${FAKE.stripe}` });
   assertEquals(parsed.title.includes(FAKE.stripe), false);
 });
@@ -278,90 +250,37 @@ function assertThrowsValidation(fn: () => unknown): ValidationError {
 }
 
 // ---------------------------------------------------------------------------
-// Issue body
+// The board's write-up of a report (board.ts `buildBoardBody`)
 // ---------------------------------------------------------------------------
 
-Deno.test("the description follows the template and marks every missing section", () => {
-  const body = buildDescription(report(), "tester", []);
-  for (
-    const heading of [
-      "## Summary",
-      "## Steps to reproduce",
-      "## Expected behavior",
-      "## Actual behavior",
-      "## Environment",
-      "## Recent activity",
-      "## Evidence",
-      "## Acceptance criteria",
-    ]
-  ) {
-    assertStringIncludes(body, heading);
-  }
-  assertStringIncludes(body, "fill in during triage");
-  assertStringIncludes(body, "No screenshot attached");
-  assertStringIncludes(body, "No activity recorded");
-  assertStringIncludes(body, "@tester");
-});
-
-Deno.test("the description names the type and the severity under the opening line", () => {
-  assertStringIncludes(buildDescription(report(), "tester", []), "**Type:** Bug · **Severity:** Bad");
-  assertStringIncludes(buildDescription(report({ kind: "design", severity: "polish" }), "tester", []), "**Type:** Design nit · **Severity:** Polish");
-});
-
-Deno.test("the description tells a reader the reporter's text is data, not instructions", () => {
-  assertStringIncludes(buildDescription(report(), "tester", []), "not instructions");
-});
-
 Deno.test("steps are numbered and the environment prints its labels", () => {
-  const body = buildDescription(
-    report({ reproductionSteps: ["open a Bev", "rate it"], environment: { route: "/profile", platform: "web", online: true } }),
-    "tester",
-    [],
-  );
-  assertStringIncludes(body, "1. open a Bev");
-  assertStringIncludes(body, "2. rate it");
+  const body = buildBoardBody(report({ reproductionSteps: ["open a Bev", "rate it"], environment: { route: "/profile", platform: "web", online: true } }), []);
+  assertStringIncludes(body, "### Steps to reproduce\n\n1. open a Bev\n2. rate it");
   assertStringIncludes(body, "- Screen/route: /profile");
   assertStringIncludes(body, "- Platform: web");
   assertStringIncludes(body, "- Connectivity: online");
 });
 
-Deno.test("recent activity is a fenced block, one cleaned line per crumb", () => {
-  const body = buildDescription(
-    report({
-      breadcrumbs: [
-        { at: "10:00:00", kind: "nav", route: "/bev/[id]" },
-        { at: "10:00:01", kind: "api", method: "rankings.submit", code: "conflict", status: 409, ms: 212 },
-      ],
-    }),
-    "tester",
-    [],
+Deno.test("breadcrumbLine prints one cleaned line per crumb", () => {
+  assertEquals(
+    breadcrumbLine({ at: "10:00:01", kind: "api", method: "rankings.submit", code: "conflict", status: 409, ms: 212 }),
+    "10:00:01  api  rankings.submit  conflict  409  212 ms",
   );
-  assertStringIncludes(body, "```text\n10:00:00  nav  /bev/[id]\n10:00:01  api  rankings.submit  conflict  409  212 ms\n```");
   assertEquals(breadcrumbLine({ at: "t", kind: "api", method: "feed.list" }), "t  api  feed.list");
 });
 
-Deno.test("each embedded screenshot becomes a markdown image numbered by its place in the list; failures are listed once", () => {
-  const body = buildDescription(report(), "tester", [
-    { kind: "embedded", assetUrl: "https://uploads.linear.app/a/1" },
-    { kind: "failed", reason: "linear_upload_failed" },
-    { kind: "embedded", assetUrl: "https://uploads.linear.app/a/2" },
-  ]);
-  // The number matches the "Screenshot N" a pointed-at component names, so a
-  // failed upload in the middle does not renumber the ones after it.
-  assertStringIncludes(body, "![Reporter screenshot 1](https://uploads.linear.app/a/1)");
-  assertStringIncludes(body, "![Reporter screenshot 3](https://uploads.linear.app/a/2)");
-  assertStringIncludes(body, "A screenshot was attached but could not be uploaded to Linear (linear_upload_failed)");
-});
-
-Deno.test("severity maps onto Linear's priority scale, blocker first", () => {
-  assertEquals(PRIORITY_BY_SEVERITY, { blocker: 1, bad: 2, annoying: 3, polish: 4 });
-});
-
 // ---------------------------------------------------------------------------
-// Linear client
+// ticket.ts: the identifier test the verify and place routes share
 // ---------------------------------------------------------------------------
 
-const CONFIG: LinearConfig = { apiKey: FAKE.linearKey("test"), teamId: "team-1" };
+Deno.test("ticketNumber reads the number out of a board name or an earlier name, and nothing else", () => {
+  assertEquals(ticketNumber("T-19"), 19);
+  assertEquals(ticketNumber("BEV-104"), 104);
+  assertEquals(ticketNumber(" T-19 "), 19);
+  assertEquals(ticketNumber(" bev-104 "), null);
+  assertEquals(ticketNumber("104"), null);
+  assertEquals(ticketNumber("BEV-"), null);
+});
 
 function stubFetch(handler: (url: string, init?: RequestInit) => Response) {
   const calls: { url: string; init?: RequestInit }[] = [];
@@ -371,275 +290,6 @@ function stubFetch(handler: (url: string, init?: RequestInit) => Response) {
   };
   return { impl, calls };
 }
-
-function gql(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
-}
-
-function sentVariables(call: { init?: RequestInit } | undefined): Record<string, unknown> {
-  return (JSON.parse(String(call?.init?.body)) as { variables: Record<string, unknown> }).variables;
-}
-
-Deno.test("a personal API key is sent raw and an OAuth token as a Bearer", () => {
-  assertEquals(authorizationHeader(FAKE.linearKey("abc")), FAKE.linearKey("abc"));
-  assertEquals(authorizationHeader(FAKE.linearOauth("abc")), FAKE.bearer(FAKE.linearOauth("abc")));
-});
-
-Deno.test("createIssue returns the identifier Linear assigned, never one of ours, and sets priority and labels", async () => {
-  const { impl, calls } = stubFetch(() =>
-    gql({ data: { issueCreate: { success: true, issue: { id: "i1", identifier: "BEV-207", url: "https://linear.app/x/issue/BEV-207" } } } })
-  );
-  const issue = await createIssue({ ...CONFIG, labelIds: ["from-app"] }, impl, {
-    title: "t",
-    description: "d",
-    stateId: "state-triage",
-    priority: 2,
-    labelIds: ["label-bug", "from-app"],
-  });
-  assertEquals(issue.identifier, "BEV-207");
-  const input = sentVariables(calls[0]).input as Record<string, unknown>;
-  assertEquals(input.teamId, "team-1");
-  assertEquals(input.stateId, "state-triage");
-  assertEquals(input.priority, 2);
-  assertEquals(input.labelIds, ["from-app", "label-bug"]);
-});
-
-Deno.test("createIssue leaves priority and labels out when none are given", async () => {
-  const { impl, calls } = stubFetch(() =>
-    gql({ data: { issueCreate: { success: true, issue: { id: "i1", identifier: "BEV-1", url: "https://linear.app/x/issue/BEV-1" } } } })
-  );
-  await createIssue(CONFIG, impl, { title: "t", description: "d", stateId: null });
-  const input = sentVariables(calls[0]).input as Record<string, unknown>;
-  assertEquals("priority" in input, false);
-  assertEquals("labelIds" in input, false);
-  assertEquals("stateId" in input, false);
-});
-
-Deno.test("createIssue refuses a response that does not confirm the issue", async () => {
-  const { impl } = stubFetch(() => gql({ data: { issueCreate: { success: false, issue: null } } }));
-  const e = await assertRejects(() => createIssue(CONFIG, impl, { title: "t", description: "d", stateId: null }), LinearError);
-  assertEquals(e.code, "linear_create_failed");
-});
-
-Deno.test("a 401 from Linear is reported as an auth failure, not as a created ticket", async () => {
-  const { impl } = stubFetch(() => new Response("nope", { status: 401 }));
-  const e = await assertRejects(() => createIssue(CONFIG, impl, { title: "t", description: "d", stateId: null }), LinearError);
-  assertEquals(e.code, "linear_unauthorized");
-});
-
-Deno.test("a GraphQL error payload is surfaced as an error, not ignored", async () => {
-  const { impl } = stubFetch(() => gql({ errors: [{ message: "Entity not found" }] }));
-  const e = await assertRejects(() => createIssue(CONFIG, impl, { title: "t", description: "d", stateId: null }), LinearError);
-  assertEquals(e.code, "linear_error");
-});
-
-Deno.test("uploadFile asks for a pre-signed URL and PUTs with the headers Linear returned", async () => {
-  const { impl, calls } = stubFetch((url) => {
-    if (url.includes("api.linear.app")) {
-      return gql({
-        data: {
-          fileUpload: {
-            success: true,
-            uploadFile: {
-              uploadUrl: "https://uploads.example/put",
-              assetUrl: "https://uploads.linear.app/a/b.png",
-              headers: [{ key: "x-amz-acl", value: "private" }],
-            },
-          },
-        },
-      });
-    }
-    return new Response(null, { status: 200 });
-  });
-
-  const assetUrl = await uploadFile(CONFIG, impl, {
-    bytes: new Uint8Array([1, 2, 3]),
-    contentType: "image/png",
-    filename: "bug.png",
-  });
-  assertEquals(assetUrl, "https://uploads.linear.app/a/b.png");
-  const put = calls[1];
-  assertEquals(put?.url, "https://uploads.example/put");
-  assertEquals(put?.init?.method, "PUT");
-  assertEquals((put?.init?.headers as Record<string, string>)["x-amz-acl"], "private");
-});
-
-Deno.test("a refused upload is an error the caller can fall back from", async () => {
-  const { impl } = stubFetch(() => gql({ data: { fileUpload: { success: false, uploadFile: null } } }));
-  const e = await assertRejects(
-    () => uploadFile(CONFIG, impl, { bytes: new Uint8Array([1]), contentType: "image/png", filename: "b.png" }),
-    LinearError,
-  );
-  assertEquals(e.code, "linear_upload_refused");
-});
-
-Deno.test("findTriageStateId prefers the configured id, then the triage type, then the name", async () => {
-  const { impl, calls } = stubFetch(() => gql({ data: { team: { states: { nodes: [] } } } }));
-  assertEquals(await findTriageStateId({ ...CONFIG, triageStateId: "preset" }, impl), "preset");
-  assertEquals(calls.length, 0);
-
-  const byType = stubFetch(() =>
-    gql({ data: { team: { states: { nodes: [{ id: "s1", name: "Backlog", type: "backlog" }, { id: "s2", name: "Triage", type: "triage" }] } } } })
-  );
-  assertEquals(await findTriageStateId(CONFIG, byType.impl), "s2");
-
-  const byName = stubFetch(() => gql({ data: { team: { states: { nodes: [{ id: "s3", name: "triage", type: "unstarted" }] } } } }));
-  assertEquals(await findTriageStateId(CONFIG, byName.impl), "s3");
-
-  const none = stubFetch(() => gql({ data: { team: { states: { nodes: [{ id: "s4", name: "Todo", type: "unstarted" }] } } } }));
-  assertEquals(await findTriageStateId(CONFIG, none.impl), null);
-});
-
-Deno.test("findDoneStateId prefers the configured id, then the completed state named Done, then any completed state", async () => {
-  assertEquals(await findDoneStateId({ ...CONFIG, doneStateId: "preset" }, stubFetch(() => gql({})).impl), "preset");
-  const named = stubFetch(() =>
-    gql({
-      data: {
-        team: {
-          states: {
-            nodes: [{ id: "c1", name: "Shipped", type: "completed" }, { id: "c2", name: "Done", type: "completed" }, { id: "x", name: "Canceled", type: "canceled" }],
-          },
-        },
-      },
-    })
-  );
-  assertEquals(await findDoneStateId(CONFIG, named.impl), "c2");
-  const first = stubFetch(() => gql({ data: { team: { states: { nodes: [{ id: "c1", name: "Shipped", type: "completed" }] } } } }));
-  assertEquals(await findDoneStateId(CONFIG, first.impl), "c1");
-  const none = stubFetch(() => gql({ data: { team: { states: { nodes: [{ id: "x", name: "Canceled", type: "canceled" }] } } } }));
-  assertEquals(await findDoneStateId(CONFIG, none.impl), null);
-});
-
-Deno.test("labels are resolved by name across the workspace, with the environment override winning", async () => {
-  const { impl, calls } = stubFetch(() =>
-    gql({
-      data: {
-        issueLabels: {
-          nodes: [
-            // Linear's default Bug label is workspace-wide: `team` is null.
-            { id: "l-bug-ws", name: "Bug", team: null },
-            { id: "l-fix", name: "Fix Suggestion", team: { id: "team-1" } },
-            // Another team's Idea label is not ours.
-            { id: "l-idea-other", name: "Idea", team: { id: "team-2" } },
-          ],
-        },
-      },
-    })
-  );
-  const labels = await fetchKindLabels(CONFIG, impl);
-  const variables = sentVariables(calls[0]);
-  assertEquals(variables.names, ["Bug", "Fix suggestion", "Idea", "Design nit"]);
-  assertEquals(labelIdForKind("bug", CONFIG, labels), "l-bug-ws");
-  assertEquals(labelIdForKind("fix", CONFIG, labels), "l-fix");
-  assertEquals(labelIdForKind("idea", CONFIG, labels), null);
-  assertEquals(labelIdForKind("idea", { ...CONFIG, labelIdByKind: { idea: "l-idea" } }, labels), "l-idea");
-  assertEquals(labelIdForKind("design", CONFIG, null), null);
-});
-
-Deno.test("a team-scoped label wins over a workspace label of the same name, whichever order Linear lists them", async () => {
-  const teamFirst = stubFetch(() =>
-    gql({ data: { issueLabels: { nodes: [{ id: "l-bug-team", name: "Bug", team: { id: "team-1" } }, { id: "l-bug-ws", name: "Bug", team: null }] } } })
-  );
-  assertEquals((await fetchKindLabels(CONFIG, teamFirst.impl)).bug, "l-bug-team");
-  const workspaceFirst = stubFetch(() =>
-    gql({ data: { issueLabels: { nodes: [{ id: "l-bug-ws", name: "Bug", team: null }, { id: "l-bug-team", name: "Bug", team: { id: "team-1" } }] } } })
-  );
-  assertEquals((await fetchKindLabels(CONFIG, workspaceFirst.impl)).bug, "l-bug-team");
-});
-
-Deno.test("Linear's state types map onto the contract's states, with the name deciding review", () => {
-  assertEquals(mapStateType("triage", "Triage"), "triage");
-  assertEquals(mapStateType("backlog", "Backlog"), "todo");
-  assertEquals(mapStateType("unstarted", "Todo"), "todo");
-  assertEquals(mapStateType("started", "In Progress"), "in_progress");
-  assertEquals(mapStateType("started", "In Review"), "in_review");
-  assertEquals(mapStateType("completed", "Done"), "done");
-  assertEquals(mapStateType("canceled", "Canceled"), "canceled");
-  assertEquals(mapStateType("something-new", "x"), "unknown");
-  assertEquals(mapStateType(undefined, undefined), "unknown");
-});
-
-Deno.test("issueNumber reads the number out of an identifier and nothing else", () => {
-  assertEquals(issueNumber("BEV-104"), 104);
-  assertEquals(issueNumber(" bev-104 "), null);
-  assertEquals(issueNumber("104"), null);
-  assertEquals(issueNumber("BEV-"), null);
-});
-
-Deno.test("fetchIssueStatuses filters by team and number and maps every node", async () => {
-  const { impl, calls } = stubFetch(() =>
-    gql({
-      data: {
-        issues: {
-          nodes: [
-            { identifier: "BEV-1", state: { name: "In Review", type: "started" }, priority: 2, updatedAt: "2026-11-09T10:00:00.000Z", sortOrder: -12.5 },
-            { identifier: "BEV-2", state: null, priority: null, updatedAt: null },
-          ],
-        },
-      },
-    })
-  );
-  const statuses = await fetchIssueStatuses(CONFIG, impl, [1, 2]);
-  const variables = sentVariables(calls[0]);
-  assertEquals(variables.teamId, "team-1");
-  assertEquals(variables.numbers, [1, 2]);
-  assertEquals(statuses[0], {
-    identifier: "BEV-1",
-    state: "in_review",
-    stateLabel: "In Review",
-    priority: 2,
-    updatedAt: "2026-11-09T10:00:00.000Z",
-    sortOrder: -12.5,
-  });
-  assertEquals(statuses[1], { identifier: "BEV-2", state: "unknown", stateLabel: null, priority: null, updatedAt: null, sortOrder: null });
-  assertEquals(await fetchIssueStatuses(CONFIG, impl, []), []);
-  assertEquals(calls.length, 1);
-});
-
-Deno.test("verify looks the issue up by identifier and moves it; an unconfirmed update is an error", async () => {
-  const { impl, calls } = stubFetch((_url, init) => {
-    const body = String(init?.body);
-    if (body.includes("IssueId")) return gql({ data: { issue: { id: "uuid-1" } } });
-    return gql({
-      data: {
-        issueUpdate: {
-          success: true,
-          issue: { identifier: "BEV-9", state: { name: "Done", type: "completed" }, priority: 3, updatedAt: "2026-11-09T11:00:00.000Z" },
-        },
-      },
-    });
-  });
-  assertEquals(await findIssueId(CONFIG, impl, "BEV-9"), "uuid-1");
-  const status = await updateIssueState(CONFIG, impl, "uuid-1", "state-done");
-  assertEquals(status.state, "done");
-  assertEquals(sentVariables(calls[1]), { id: "uuid-1", input: { stateId: "state-done" } });
-
-  const missing = stubFetch(() => gql({ data: { issue: null } }));
-  assertEquals(await findIssueId(CONFIG, missing.impl, "BEV-404"), null);
-
-  const refused = stubFetch(() => gql({ data: { issueUpdate: { success: false, issue: null } } }));
-  const e = await assertRejects(() => updateIssueState(CONFIG, refused.impl, "uuid-1", "state-done"), LinearError);
-  assertEquals(e.code, "linear_update_failed");
-});
-
-Deno.test("readLinearConfig needs both the key and the team, splits the label list and reads the per-kind labels", () => {
-  assertEquals(readLinearConfig(() => undefined), null);
-  assertEquals(readLinearConfig((k) => (k === "LINEAR_API_KEY" ? FAKE.linearKey("x") : undefined)), null);
-  const config = readLinearConfig((k) =>
-    ({
-      LINEAR_API_KEY: FAKE.linearKey("x"),
-      LINEAR_TEAM_ID: "team-1",
-      LINEAR_LABEL_IDS: " a , b ,, c ",
-      LINEAR_LABEL_BUG: "l-bug",
-      LINEAR_DONE_STATE_ID: "s-done",
-    })[k]
-  );
-  assertEquals(config?.labelIds, ["a", "b", "c"]);
-  assertEquals(config?.labelIdByKind, { bug: "l-bug" });
-  assertEquals(config?.doneStateId, "s-done");
-  const plain = readLinearConfig((k) => ({ LINEAR_API_KEY: FAKE.linearKey("x"), LINEAR_TEAM_ID: "team-1" })[k]);
-  assertEquals(plain?.labelIdByKind, undefined);
-});
 
 // ---------------------------------------------------------------------------
 // The ledger: the caller's rows only, and the write that must not be lost
@@ -691,7 +341,7 @@ Deno.test("finishBugReport treats an unreachable database like a failed write", 
     return Promise.reject(new Error("connection reset"));
   };
   const logged: string[] = [];
-  assertEquals(await finishBugReport(impl, LEDGER_ENV, 7, "failed", { errorCode: "linear_error" }, (l) => logged.push(l)), false);
+  assertEquals(await finishBugReport(impl, LEDGER_ENV, 7, "failed", { errorCode: "tracker_error" }, (l) => logged.push(l)), false);
   assertEquals(attempts, 2);
   assertStringIncludes(logged[0] ?? "", "status=unreachable");
 });
@@ -757,7 +407,7 @@ Deno.test("cleanEnvironment drops a path with a query string or a fragment, or o
 });
 
 Deno.test("the environment section prints the new labels", () => {
-  const body = buildDescription(report({ environment: { path: "/feed", display: "browser", pixelRatio: 2, safeArea: "0,0,0,0", reducedMotion: false } }), "tester", []);
+  const body = buildBoardBody(report({ environment: { path: "/feed", display: "browser", pixelRatio: 2, safeArea: "0,0,0,0", reducedMotion: false } }), []);
   assertStringIncludes(body, "- Path: /feed\n- Opened as: browser\n- Pixel ratio: 2\n- Safe area (t,r,b,l): 0,0,0,0\n- Reduced motion: no");
 });
 
@@ -916,43 +566,37 @@ Deno.test("a sparse target prints only what it has, numbered by position without
   assertEquals(pointedAt(cleanTargets([{ component: "A", label: "Save", mark: 2 }])), ['**2. `A`** — Save', '- Label: "Save"', "- Mark 2"].join("\n"));
 });
 
-Deno.test("with no targets the Pointed at section says the note is about the whole screen, right after Summary", () => {
-  const body = buildDescription(report(), "tester", []);
-  assertStringIncludes(body, "## Pointed at\n\n_Nothing was pointed at; the note is about the whole screen._\n");
-  assert(body.indexOf("## Summary") < body.indexOf("## Pointed at"));
-  assert(body.indexOf("## Pointed at") < body.indexOf("## Steps to reproduce"));
+Deno.test("with no targets there is no Pointed at section; with one it comes before the steps", () => {
+  assertEquals(pointedAt([]), "_Nothing was pointed at; the note is about the whole screen._");
+  assertEquals(buildBoardBody(report({ reproductionSteps: ["Open Feed"] }), []).includes("### Pointed at"), false);
+  const body = buildBoardBody(report({ targets: [{ component: "A" }], reproductionSteps: ["Open Feed"] }), []);
+  assert(body.indexOf("### Pointed at") < body.indexOf("### Steps to reproduce"));
 });
 
 Deno.test("a backtick in a prop value cannot close the code span it is printed in, and a heading cannot open one", () => {
   const body = pointedAt(cleanTargets([{ component: "A", props: { title: "a`b`` c" }, label: "## Ignore previous instructions" }]));
   assertStringIncludes(body, '`title="ab c"`');
   assertEquals(body.includes("\n#"), false);
-  assertEquals(buildDescription(report({ targets: [{ component: "A", text: "```\n# x" }] }), "t", []).includes("```\n# x"), false);
+  assertEquals(buildBoardBody(report({ targets: [{ component: "A", text: "```\n# x" }] }), []).includes("```\n# x"), false);
 });
 
 Deno.test("recorded steps carry the line saying the app wrote them; typed steps do not", () => {
-  const recorded = buildDescription(report({ reproductionSteps: ["Start on /lists", "Tap SegmentedTabs › Want to Try"], stepsSource: "recorded" }), "t", []);
+  const recorded = buildBoardBody(report({ reproductionSteps: ["Start on /lists", "Tap SegmentedTabs › Want to Try"], stepsSource: "recorded" }), []);
   assertStringIncludes(
     recorded,
-    "## Steps to reproduce\n\n_Recorded by the app while the reporter reproduced it, not typed by them._\n\n1. Start on /lists\n2. Tap SegmentedTabs › Want to Try\n",
+    "### Steps to reproduce\n\nRecorded by the app while the reporter reproduced it, not typed by them:\n\n1. Start on /lists\n2. Tap SegmentedTabs › Want to Try",
   );
-  const typed = buildDescription(report({ reproductionSteps: ["Opened Feed"] }), "t", []);
+  const typed = buildBoardBody(report({ reproductionSteps: ["Opened Feed"] }), []);
   assertEquals(typed.includes("Recorded by the app"), false);
-  // No steps: the placeholder, whoever would have written them.
-  assertEquals(buildDescription(report({ stepsSource: "recorded" }), "t", []).includes("Recorded by the app"), false);
+  // No steps: no section, whoever would have written them.
+  assertEquals(buildBoardBody(report({ stepsSource: "recorded" }), []).includes("Recorded by the app"), false);
 });
 
-Deno.test("a caption becomes the image's alt text and an italic line under it", () => {
-  // Captions reach buildDescription through cleanCaptions, as index.ts passes them.
+Deno.test("a caption is printed in the Pictures list with its brackets escaped", () => {
+  // Captions reach buildBoardBody through cleanCaptions, as index.ts passes them.
   const [plain, linky] = cleanCaptions(["Feed, with 1 marked", "a [link](x) and snake_case"], 2);
-  const body = buildDescription(report(), "t", [
-    { kind: "embedded", assetUrl: "https://uploads.linear.app/a/1", caption: plain },
-    { kind: "embedded", assetUrl: "https://uploads.linear.app/a/2", caption: linky },
-    { kind: "embedded", assetUrl: "https://uploads.linear.app/a/3" },
-  ]);
-  assertStringIncludes(body, "![Feed, with 1 marked](https://uploads.linear.app/a/1)\n_Feed, with 1 marked_");
-  assertStringIncludes(body, "![a \\[link\\](x) and snake_case](https://uploads.linear.app/a/2)\n_a \\[link\\](x) and snake\\_case_");
-  assertStringIncludes(body, "![Reporter screenshot 3](https://uploads.linear.app/a/3)");
+  const body = buildBoardBody(report(), [{ kind: "sent", caption: plain! }, { kind: "sent", caption: linky! }, { kind: "sent", caption: "" }]);
+  assertStringIncludes(body, "### Pictures\n\n1. Feed, with 1 marked\n2. a \\[link\\](x) and snake_case\n3. Screenshot");
 });
 
 // ---------------------------------------------------------------------------
@@ -964,7 +608,7 @@ Deno.test("open means triage, todo or in progress, and nothing else", () => {
   for (const state of ["in_review", "done", "canceled", "unknown"] as const) assertEquals(isOpen(state), false);
 });
 
-Deno.test("rankOrder sorts by sortOrder, ties by the issue number", () => {
+Deno.test("rankOrder sorts by sortOrder, ties by the ticket number, earlier names included", () => {
   assertEquals(
     rankOrder([
       { identifier: "BEV-12", sortOrder: 0 },
@@ -978,56 +622,40 @@ Deno.test("rankOrder sorts by sortOrder, ties by the issue number", () => {
 });
 
 const LIST = [
-  { identifier: "BEV-1", sortOrder: 10 },
-  { identifier: "BEV-2", sortOrder: 20 },
-  { identifier: "BEV-3", sortOrder: 30 },
+  { identifier: "T-1", sortOrder: 10 },
+  { identifier: "T-2", sortOrder: 20 },
+  { identifier: "T-3", sortOrder: 30 },
 ];
 
-Deno.test("positionFor: the top is one less than the first", () => {
-  assertEquals(positionFor(LIST, "BEV-3", null), { index: 0, sortOrder: 9, respace: false });
-  // A ticket not yet in the list goes the same way.
-  assertEquals(positionFor(LIST, "BEV-4", null), { index: 0, sortOrder: 9, respace: false });
+Deno.test("positionFor: the top is index 0, whether or not the ticket is already in the list", () => {
+  assertEquals(positionFor(LIST, "T-3", null), { index: 0 });
+  assertEquals(positionFor(LIST, "T-4", null), { index: 0 });
+  assertEquals(positionFor([], "T-7", null), { index: 0 });
 });
 
-Deno.test("positionFor: the bottom is one more than the last", () => {
-  assertEquals(positionFor(LIST, "BEV-1", "BEV-3"), { index: 2, sortOrder: 31, respace: false });
-  assertEquals(positionFor(LIST, "BEV-4", "BEV-3"), { index: 3, sortOrder: 31, respace: false });
+Deno.test("positionFor: directly below `after`, counted without the moving ticket", () => {
+  assertEquals(positionFor(LIST, "T-1", "T-3"), { index: 2 });
+  assertEquals(positionFor(LIST, "T-4", "T-3"), { index: 3 });
+  assertEquals(positionFor(LIST, "T-3", "T-1"), { index: 1 });
+  assertEquals(positionFor(LIST, "T-1", "T-2"), { index: 1 });
 });
 
-Deno.test("positionFor: between two neighbours is the midpoint", () => {
-  assertEquals(positionFor(LIST, "BEV-3", "BEV-1"), { index: 1, sortOrder: 15, respace: false });
-  assertEquals(positionFor(LIST, "BEV-1", "BEV-2"), { index: 1, sortOrder: 25, respace: false });
+Deno.test("positionFor: an `after` that is not in the list is refused", () => {
+  let thrown: unknown = null;
+  try {
+    positionFor(LIST, "T-1", "T-99");
+  } catch (e) {
+    thrown = e;
+  }
+  assert(thrown instanceof RangeError);
 });
 
-Deno.test("positionFor: alone, a ticket keeps its value", () => {
-  assertEquals(positionFor([{ identifier: "BEV-7", sortOrder: -3.25 }], "BEV-7", null), { index: 0, sortOrder: -3.25, respace: false });
-  assertEquals(positionFor([], "BEV-7", null), { index: 0, sortOrder: 0, respace: false });
-});
-
-Deno.test("positionFor: neighbours closer than 1e-6 ask for a respace", () => {
-  const tight = [{ identifier: "BEV-1", sortOrder: 1 }, { identifier: "BEV-2", sortOrder: 1 + 5e-7 }, { identifier: "BEV-3", sortOrder: 4 }];
-  assertEquals(positionFor(tight, "BEV-3", "BEV-1").respace, true);
-  assertEquals(positionFor(tight, "BEV-1", "BEV-2").respace, false);
-  // Equal values (Linear's default for issues never dragged) cannot be split at all.
-  const flat = [{ identifier: "BEV-1", sortOrder: 0 }, { identifier: "BEV-2", sortOrder: 0 }, { identifier: "BEV-3", sortOrder: 0 }];
-  assertEquals(positionFor(flat, "BEV-3", "BEV-1"), { index: 1, sortOrder: 0, respace: true });
-});
-
-Deno.test("respaced steps by 1 from the smallest existing value, with the mover at its new index", () => {
-  const flat = [{ identifier: "BEV-1", sortOrder: -2 }, { identifier: "BEV-2", sortOrder: -2 }, { identifier: "BEV-3", sortOrder: -2 }];
-  const pos = positionFor(flat, "BEV-3", "BEV-1");
-  const plan = respaced(withMoved(flat, { identifier: "BEV-3", sortOrder: pos.sortOrder }, pos.index), pos.index);
-  assertEquals(plan.others, [{ identifier: "BEV-1", sortOrder: -2 }, { identifier: "BEV-2", sortOrder: 0 }]);
-  assertEquals(plan.moving, { identifier: "BEV-3", sortOrder: -1 });
-  assertEquals(withMoved(LIST, { identifier: "BEV-3", sortOrder: 0 }, 0).map((o) => o.identifier), ["BEV-3", "BEV-1", "BEV-2"]);
-});
-
-Deno.test("priorityForRank bands the list into High, Medium and Low by the middle of the slot", () => {
-  // Four tickets: 0.125 High, 0.375 and 0.625 Medium, 0.875 Low.
+Deno.test("priorityForRank bands the list into High, Normal and Low by the middle of the slot", () => {
+  // Four tickets: 0.125 High, 0.375 and 0.625 Normal, 0.875 Low.
   assertEquals([0, 1, 2, 3].map((i) => priorityForRank(i, 4, 3)), [2, 3, 3, 4]);
-  // Alone: 0.5, Medium.
+  // Alone: 0.5, Normal.
   assertEquals(priorityForRank(0, 1, 4), 3);
-  // Two: 0.25 High, 0.75 Medium (both edges inclusive).
+  // Two: 0.25 High, 0.75 Normal (both edges inclusive).
   assertEquals([0, 1].map((i) => priorityForRank(i, 2, null)), [2, 3]);
   // Eight: the top two High, the bottom two Low.
   assertEquals(Array.from({ length: 8 }, (_, i) => priorityForRank(i, 8, 0)), [2, 2, 3, 3, 3, 3, 4, 4]);
@@ -1053,6 +681,7 @@ Deno.test("routeOf knows the place route, whichever prefix the gateway used", ()
 });
 
 Deno.test("parsePlace validates both identifiers and refuses a ticket placed after itself", () => {
+  assertEquals(parsePlace({ ticketId: " T-19 ", afterTicketId: "BEV-7" }), { ticketId: "T-19", afterTicketId: "BEV-7" });
   assertEquals(parsePlace({ ticketId: " BEV-4 ", afterTicketId: "BEV-2" }), { ticketId: "BEV-4", afterTicketId: "BEV-2" });
   assertEquals(parsePlace({ ticketId: "BEV-4", afterTicketId: null }), { ticketId: "BEV-4", afterTicketId: null });
   assertEquals(parsePlace({ ticketId: "BEV-4" }), { ticketId: "BEV-4", afterTicketId: null });
@@ -1061,63 +690,6 @@ Deno.test("parsePlace validates both identifiers and refuses a ticket placed aft
   assertEquals(parsePlace({ ticketId: "BEV-4", afterTicketId: "nope" }), { field: "afterTicketId" });
   assertEquals(parsePlace({ ticketId: "BEV-4", afterTicketId: 2 }), { field: "afterTicketId" });
   assertEquals(parsePlace({ ticketId: "BEV-4", afterTicketId: "BEV-4" }), { field: "afterTicketId" });
-});
-
-// ---------------------------------------------------------------------------
-// placeIssue and the status query
-// ---------------------------------------------------------------------------
-
-Deno.test("the status query selects sortOrder", async () => {
-  const { impl, calls } = stubFetch(() => gql({ data: { issues: { nodes: [] } } }));
-  await fetchIssueStatuses(CONFIG, impl, [1]);
-  const query = (JSON.parse(String(calls[0]?.init?.body)) as { query: string }).query;
-  assertStringIncludes(query, "priority updatedAt sortOrder");
-});
-
-Deno.test("placeIssue looks the issue up by identifier and writes sortOrder and priority in one issueUpdate", async () => {
-  const { impl, calls } = stubFetch((_url, init) => {
-    const body = String(init?.body);
-    if (body.includes("IssueId")) return gql({ data: { issue: { id: "uuid-4" } } });
-    return gql({
-      data: {
-        issueUpdate: {
-          success: true,
-          issue: { identifier: "BEV-4", state: { name: "Todo", type: "unstarted" }, priority: 2, updatedAt: "2026-11-13T10:00:00.000Z", sortOrder: 9 },
-        },
-      },
-    });
-  });
-  const status = await placeIssue(CONFIG, impl, "BEV-4", { sortOrder: 9, priority: 2 });
-  assertEquals(status, { identifier: "BEV-4", state: "todo", stateLabel: "Todo", priority: 2, updatedAt: "2026-11-13T10:00:00.000Z", sortOrder: 9 });
-  assertEquals(calls.length, 2);
-  assertEquals(sentVariables(calls[0]), { id: "BEV-4" });
-  assertEquals(sentVariables(calls[1]), { id: "uuid-4", input: { sortOrder: 9, priority: 2 } });
-  const mutation = (JSON.parse(String(calls[1]?.init?.body)) as { query: string }).query;
-  assertStringIncludes(mutation, "issueUpdate(id: $id, input: $input)");
-  assertEquals(calls[1]?.url, "https://api.linear.app/graphql");
-  assertEquals((calls[1]?.init?.headers as Record<string, string>).Authorization, CONFIG.apiKey);
-});
-
-Deno.test("a respacing write sends sortOrder alone; a missing issue is null; a refused one is linear_update_failed", async () => {
-  const { impl, calls } = stubFetch((_url, init) =>
-    String(init?.body).includes("IssueId")
-      ? gql({ data: { issue: { id: "uuid-5" } } })
-      : gql({ data: { issueUpdate: { success: true, issue: { identifier: "BEV-5", state: null, priority: 3, updatedAt: null, sortOrder: 2 } } } })
-  );
-  await placeIssue(CONFIG, impl, "BEV-5", { sortOrder: 2 });
-  assertEquals(sentVariables(calls[1]), { id: "uuid-5", input: { sortOrder: 2 } });
-
-  const missing = stubFetch(() => gql({ data: { issue: null } }));
-  assertEquals(await placeIssue(CONFIG, missing.impl, "BEV-404", { sortOrder: 1, priority: 3 }), null);
-  assertEquals(missing.calls.length, 1);
-
-  const refused = stubFetch((_url, init) =>
-    String(init?.body).includes("IssueId") ? gql({ data: { issue: { id: "uuid-5" } } }) : gql({ data: { issueUpdate: { success: false, issue: null } } })
-  );
-  assertEquals((await assertRejects(() => placeIssue(CONFIG, refused.impl, "BEV-5", { sortOrder: 1 }), LinearError)).code, "linear_update_failed");
-
-  const limited = stubFetch(() => new Response("slow down", { status: 429 }));
-  assertEquals((await assertRejects(() => placeIssue(CONFIG, limited.impl, "BEV-5", { sortOrder: 1 }), LinearError)).code, "linear_rate_limited");
 });
 
 // ---------------------------------------------------------------------------
@@ -1163,7 +735,7 @@ Deno.test("escapeLinks defuses links, images, angle brackets and a trailing back
   assertEquals(escapeLinks("Save (draft)"), "Save (draft)");
 });
 
-Deno.test("a caption, label, text or role cannot become a live link or a remote image in the issue", () => {
+Deno.test("a caption, label, text or role cannot become a live link or a remote image on the ticket", () => {
   const link = "[click](https://evil.example)";
   const image = "![](https://x/p.png)";
   const [t] = cleanTargets([{ component: "A", label: link, text: image, role: "<b>button</b>" }]);
@@ -1171,35 +743,34 @@ Deno.test("a caption, label, text or role cannot become a live link or a remote 
   assertEquals(t?.text, "\\!\\[\\](https://x/p.png)");
   assertEquals(t?.role, "\\<b\\>button\\</b\\>");
   const parsed = report({ targets: [{ component: "A", label: link, text: image }], evidencePaths: [`${UID}/a.jpg`, `${UID}/b.jpg`], evidenceCaptions: [link, image] });
-  const body = buildDescription(parsed, "t", [
-    { kind: "embedded", assetUrl: "https://uploads.linear.app/a/1", caption: parsed.evidenceCaptions[0] },
-    { kind: "embedded", assetUrl: "https://uploads.linear.app/a/2", caption: parsed.evidenceCaptions[1] },
+  const body = buildBoardBody(parsed, [
+    { kind: "sent", caption: parsed.evidenceCaptions[0]! },
+    { kind: "sent", caption: parsed.evidenceCaptions[1]! },
   ]);
-  // The only images and links left are the ones the template itself wrote.
-  assertEquals([...body.matchAll(/(?<!\\)!\[/g)].length, 2);
+  // The write-up holds no image and no link at all: every one the reporter wrote is escaped.
+  assertEquals([...body.matchAll(/(?<!\\)!\[/g)].length, 0);
   assertEquals(body.includes("](https://evil.example)") && !body.includes("\\](https://evil.example)"), false);
   assertEquals(/(?<!\\)\[click/.test(body), false);
-  assertStringIncludes(body, "![\\[click\\](https://evil.example)](https://uploads.linear.app/a/1)");
+  assertStringIncludes(body, "1. \\[click\\](https://evil.example)");
 });
 
-Deno.test("a caption ending in a backslash cannot break the image line", () => {
+Deno.test("a caption ending in a backslash cannot escape what follows it", () => {
   const [caption] = cleanCaptions(["Feed\\\\"], 1);
   assertEquals(caption, "Feed");
-  const body = buildDescription(report(), "t", [{ kind: "embedded", assetUrl: "https://uploads.linear.app/a/1", caption }]);
-  assertStringIncludes(body, "![Feed](https://uploads.linear.app/a/1)\n_Feed_");
+  assertStringIncludes(buildBoardBody(report(), [{ kind: "sent", caption: caption! }]), "### Pictures\n\n1. Feed");
 });
 
-Deno.test("tap targets and error messages are only ever printed inside the Recent activity fence", () => {
-  const body = buildDescription(
+Deno.test("tap targets and error messages are only ever printed inside the Recent activity code spans", () => {
+  const body = buildBoardBody(
     report({ breadcrumbs: [{ at: "t1", kind: "tap", target: "[click](https://evil.example)" }, { at: "t2", kind: "error", message: "![](https://x/p.png)" }] }),
-    "t",
     [],
   );
-  const fence = body.slice(body.indexOf("```text"), body.indexOf("```", body.indexOf("```text") + 7) + 3);
-  assertStringIncludes(fence, "t1  tap  [click](https://evil.example)");
-  assertStringIncludes(fence, "t2  error  ![](https://x/p.png)");
-  assertEquals(body.replace(fence, "").includes("evil.example"), false);
-  assertEquals(body.replace(fence, "").includes("x/p.png"), false);
+  const activity = body.slice(body.indexOf("### Recent activity"));
+  assertStringIncludes(activity, "- `t1  tap  [click](https://evil.example)`");
+  assertStringIncludes(activity, "- `t2  error  ![](https://x/p.png)`");
+  const rest = body.slice(0, body.indexOf("### Recent activity"));
+  assertEquals(rest.includes("evil.example"), false);
+  assertEquals(rest.includes("x/p.png"), false);
 });
 
 Deno.test("a path carrying an opaque token segment, or starting with //, is dropped; a UUID segment is kept", () => {
@@ -1239,7 +810,7 @@ const boardTicket = (fields: Record<string, unknown> = {}) => ({
 });
 const answer = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
-Deno.test("board: configured only by an https origin (or this machine) and a well-formed token, and TICKET_TRACKER=linear turns it off", () => {
+Deno.test("board: configured only by an https origin (or this machine) and a well-formed token", () => {
   const env = (values: Record<string, string>) => (key: string) => values[key];
   assertEquals(readBoardConfig(env({ BOARD_INTAKE_URL: " https://board.example/// ", BOARD_INTAKE_TOKEN: ` ${BOARD_TOKEN} ` })), BOARD);
   assertEquals(readBoardConfig(env({ BOARD_INTAKE_URL: "https://board.example/some/page?x=1", BOARD_INTAKE_TOKEN: BOARD_TOKEN }))?.url, "https://board.example");
@@ -1252,11 +823,27 @@ Deno.test("board: configured only by an https origin (or this machine) and a wel
     // A token is never sent in the clear to another machine.
     { BOARD_INTAKE_URL: "http://board.example", BOARD_INTAKE_TOKEN: BOARD_TOKEN },
     { BOARD_INTAKE_URL: "not a url", BOARD_INTAKE_TOKEN: BOARD_TOKEN },
-    { BOARD_INTAKE_URL: "https://board.example", BOARD_INTAKE_TOKEN: BOARD_TOKEN, TICKET_TRACKER: " Linear " },
   ]) assertEquals(readBoardConfig(env(values as Record<string, string>)), null, JSON.stringify(Object.keys(values)));
-  // Secrets that are there but cannot be used are told apart from secrets that are not there, so the fallback is never silent.
-  assertEquals([{}, { BOARD_INTAKE_URL: "https://board.example", BOARD_INTAKE_TOKEN: BOARD_TOKEN }, { BOARD_INTAKE_TOKEN: "bvb_short", TICKET_TRACKER: "linear" }].map((v) => boardMisconfigured(env(v as Record<string, string>))), [false, false, false]);
+  // Secrets that are there but cannot be used are told apart from secrets that are not there, so the failure is never silent.
+  assertEquals([{}, { BOARD_INTAKE_URL: "https://board.example", BOARD_INTAKE_TOKEN: BOARD_TOKEN }].map((v) => boardMisconfigured(env(v as Record<string, string>))), [false, false]);
   assertEquals([{ BOARD_INTAKE_URL: "https://board.example" }, { BOARD_INTAKE_URL: "https://board.example", BOARD_INTAKE_TOKEN: `${BOARD_TOKEN}x` }, { BOARD_INTAKE_URL: "http://board.example", BOARD_INTAKE_TOKEN: BOARD_TOKEN }].map((v) => boardMisconfigured(env(v as Record<string, string>))), [true, true, true]);
+});
+
+Deno.test("board: the board's two secrets are the only tracker variables read; Linear's and TICKET_TRACKER are ignored", () => {
+  const spy = (values: Record<string, string>) => {
+    const read: string[] = [];
+    return { read, env: (key: string) => (read.push(key), values[key]) };
+  };
+  // With only the old Linear variables set there is no tracker: the routes answer "not configured", and nothing is misconfigured.
+  const linearOnly = { LINEAR_API_KEY: FAKE.linearKey("0123456789abcdef"), LINEAR_TEAM_ID: "team-1", TICKET_TRACKER: "linear" };
+  const off = spy(linearOnly);
+  assertEquals(readBoardConfig(off.env), null);
+  assertEquals(boardMisconfigured(off.env), false);
+  // TICKET_TRACKER=linear no longer turns the board off.
+  const on = spy({ ...linearOnly, BOARD_INTAKE_URL: "https://board.example", BOARD_INTAKE_TOKEN: BOARD_TOKEN });
+  assertEquals(readBoardConfig(on.env), BOARD);
+  assertEquals(boardMisconfigured(on.env), false);
+  assertEquals([...new Set([...off.read, ...on.read])].sort(), ["BOARD_INTAKE_TOKEN", "BOARD_INTAKE_URL"]);
 });
 
 Deno.test("board: a report is filed with its key, and the reference and URL come from the board", async () => {
@@ -1310,10 +897,10 @@ Deno.test("board: a picture goes as base64 with its number and caption, and one 
   assertEquals([e.code, tooBig.calls.length], ["board_too_large", 0]);
 });
 
-Deno.test("board: statuses are read by name and come back in the contract's words, old Linear names included", async () => {
+Deno.test("board: statuses are read by name and come back in the contract's words, earlier names included", async () => {
   const board = fakeBoard(answer({ tickets: [
     boardTicket({ state: "ready", stateLabel: "Ready", priority: "High", rank: 2048 }),
-    // Filed while Linear was the tracker: asked for as BEV-7, which is what the caller's ledger holds.
+    // Filed before 2026-11-17: asked for as BEV-7, its earlier name, which is what the caller's ledger holds.
     boardTicket({ ref: "T-7", asked: "BEV-7", legacyRef: "BEV-7", url: "https://board.example/?open=T-7", state: "in_review", stateLabel: "In review", priority: "Low", rank: null }),
     boardTicket({ ref: "T-20", asked: "T-20", state: "canceled", stateLabel: "Now an idea (BEV-31)", priority: "Normal", rank: 4096 }),
   ] }));

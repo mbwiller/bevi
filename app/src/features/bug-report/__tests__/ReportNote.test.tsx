@@ -188,7 +188,7 @@ describe('the note', () => {
     expect(screen.queryByTestId('report-note')).toBeNull();
     expect(useReport.getState().outbox.map((o) => o.status)).toEqual(['sending']);
     expect(useReport.getState().draft).toBeNull();
-    expect(await screen.findByText(/^Filed BEV-\d+$/)).toBeTruthy();
+    expect(await screen.findByText(/^Filed T-\d+$/)).toBeTruthy();
     expect(useReport.getState().outbox.map((o) => o.status)).toEqual(['sent']);
     expect(useReport.getState().unplaced).toHaveLength(1);
   });
@@ -206,7 +206,7 @@ describe('the note', () => {
     expect(screen.getByLabelText("What's going on?").props.value).toBe('Ratings vanish after a refresh');
     expect(screen.getByText("You're offline. Your note is kept.")).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
-    await screen.findByText(/^Filed BEV-\d+$/);
+    await screen.findByText(/^Filed T-\d+$/);
     expect(report).toHaveBeenCalledTimes(2);
     expect(report.mock.calls[1]![0].idempotencyKey).toBe(report.mock.calls[0]![0].idempotencyKey);
   });
