@@ -43,7 +43,13 @@ export interface BevArtProps {
 }
 export declare function BevArt(props: BevArtProps): React.ReactElement;
 
-export interface BevImageProps { src?: string; art?: BevArtProps; alt?: string; size?: 40 | 56 | 96 | 155 | number; status?: 'ready' | 'processing' | 'loading'; className?: string }
+export interface BevImageProps {
+  src?: string; art?: BevArtProps; alt?: string; size?: 40 | 56 | 96 | 155 | number;
+  status?: 'ready' | 'processing' | 'loading';
+  /** What the `processing` shimmer is waiting for, in the accessible name. Defaults to "photo processing". */
+  processingLabel?: string;
+  className?: string;
+}
 export declare function BevImage(props: BevImageProps): React.ReactElement;
 
 export interface ScoreBubbleProps {
