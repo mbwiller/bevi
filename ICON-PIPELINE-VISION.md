@@ -31,6 +31,10 @@ charge. Three points settle with it:
   state appears later on the Bev's own screen. (Answers open question 8.)
 - **The worker stays behind an operational switch** until the icon style and
   quality bar are agreed, so merging the backend is inert in production.
+- **A generated icon is the Bev's image, exactly like a catalogue icon.**
+  (Decided 2026-11-17; answers open question 4.) It shows on the post, in rows
+  and in lists the way an authored icon does, with no separate treatment. For a
+  Bev that has one, the icon comes before the creator's photograph.
 
 Everything the 2026-11-14 session decided about credits still stands as the
 product intent, but is **not** in this pass: optional creation (decision 2),
@@ -522,7 +526,7 @@ Phase 1 without buying is deliberate. It produces the real numbers (cost per ico
 | 1 | How many free credits does a new user get: 3, 4 or 5? | Both |
 | 2 | How many free regenerations per credit? Do further tries cost a credit or not exist? | Both |
 | 3 | Is the credit spent when generation starts or when the user keeps an icon? (The session said at generation; a refund on failure is proposed.) | Both |
-| 4 | Does the created icon replace the photo as the Bev's image everywhere? | Both; contract and app impact |
+| 4 | ~~Does the created icon replace the photo as the Bev's image everywhere?~~ | **Answered 2026-11-17: yes**, and it renders like a catalogue icon. Needs the three app-side pieces in section 14a |
 | 5 | Can anyone other than the creator make or replace a Bev's icon? | Both |
 | 6 | Can the creator redo an icon later, and does it cost a credit? | Both |
 | 7 | ~~Is the Bev created before or after the icon step?~~ | **Answered 2026-11-17: before.** `create_bev` inserts the Bev, then enqueues the job |
@@ -539,6 +543,24 @@ Phase 1 without buying is deliberate. It produces the real numbers (cost per ico
 | 18 | What is the feature called? | Both |
 | 19 | For catalog drinks whose icon is not drawn yet, do we hold the line on "no user creation"? | Matt |
 | 20 | When Bevi is opened beyond invited friends, what moderation is needed before icons are public? | Arjun |
+
+## 14a. What answering question 4 requires (2026-11-17)
+
+Showing a generated icon on the post the way a catalogue icon shows is not the
+current behaviour, and none of it is in the merged or stacked code. Checked
+against `ui/bev-icon-app-fixes`:
+
+| # | What is true today | What the decision needs | Lane |
+|---|---|---|---|
+| 1 | `bevImageProps` is `photoUrl ?? iconUrl` (`app/src/components/BevParts.tsx`), and every user-created Bev has a photo, so its generated icon never wins | For a Bev with a completed icon, the icon comes first | `app/` |
+| 2 | `bevs.icons()` is called for one Bev only, in `useBevIcon`, and consumed only by `app/src/app/bev/[id].tsx` | One batch call per list screen, as the contract already describes for `leaves()`. No backend change: the batch RPC exists | `app/` |
+| 3 | `labelBox` is in the contract but used nowhere in `app/` or `design/` | The wordmark drawn across the icon from the Bev's `brand`/`name`, or an explicit decision to ship without lettering | `app/`, `design/` |
+| 4 | `shared/src/types.ts` documents a Bev's image as photo > icon > category art | The precedence line updated once 1 to 3 land | `shared/` |
+
+Items 1 to 3 are Matt's lane and belong in the UI/UX walkthrough. Item 4 is a
+contract documentation change that follows them, not leads them.
+
+---
 
 ## 18. Pitch materials
 
