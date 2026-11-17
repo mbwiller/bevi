@@ -18,7 +18,7 @@ import { Pill } from '@/components/Pill';
 import { PriceTier } from '@/components/PriceTier';
 import { Skeleton } from '@/components/Skeleton';
 import { BevStats, FriendsRow } from '@/features/bev/BevStats';
-import { GeneratedIconPanel } from '@/features/bev/GeneratedIconPanel';
+import { GeneratedIconPanel, showGeneratedIcon } from '@/features/bev/GeneratedIconPanel';
 import { ReportSheet } from '@/features/bev/ReportSheet';
 import { SimilarBevs } from '@/features/bev/SimilarBevs';
 import { categoryById } from '@/lib/categories';
@@ -48,7 +48,6 @@ export default function BevDetailScreen() {
   const back = useBack();
   const { id } = useLocalSearchParams<{ id: string }>();
   const query = useBev(id);
-  const iconQuery = useBevIcon(id);
   const me = useMe();
   const stats = useStats();
   const add = useAddWantToTry();
@@ -59,11 +58,14 @@ export default function BevDetailScreen() {
 
   const bev = query.data;
   const cat = bev ? categoryById(bev.categoryId) : undefined;
-  const isBevOwner = !!bev && bev.createdBy?.id === me.data?.id;
-  const iconStatus = iconQuery.data?.iconStatus;
-  const showGeneratedIconPanel =
-    (!!iconQuery.data?.generatedIconUrl && iconStatus === 'completed') ||
-    (isBevOwner && (iconStatus === 'pending' || iconStatus === 'processing' || iconStatus === 'failed'));
+  // Both ids have to be there: `undefined === undefined` would make every viewer the
+  // owner of every catalog Bev while `me` is still loading.
+  const isBevOwner = !!bev?.createdBy && !!me.data && bev.createdBy.id === me.data.id;
+  // Only a Bev someone created can have a generated icon, so a catalog Bev spends no
+  // lookup on one. A failure here leaves the panel out: an illustration is decoration,
+  // and the screen already has the photo.
+  const iconQuery = useBevIcon(id, { enabled: !!bev?.createdBy });
+  const showGeneratedIconPanel = showGeneratedIcon(iconQuery.data, isBevOwner);
   // The server already refuses these (`age_restricted`); this covers a cached Bev after the profile changes.
   const hidden = !!cat?.isAlcoholic && me.data?.canSeeAlcohol === false;
   const code = isApiError(query.error) ? query.error.code : undefined;
@@ -130,7 +132,7 @@ export default function BevDetailScreen() {
           <GeneratedIconPanel name={bev.name} brand={bev.brand} icon={iconQuery.data} isOwner={isBevOwner} />
         ) : null}
 
-        <View style={showGeneratedIconPanel && styles.statsAfterIcon}>
+        <View style={showGeneratedIconPanel ? styles.statsAfterIcon : undefined}>
           <BevStats bev={bev} myRankingCount={stats.data?.bevdCount} />
         </View>
 

@@ -20,27 +20,43 @@ export function useBev(id: string | undefined, opts: { refetchInterval?: number 
 export const BEV_ICON_POLL_INTERVAL_MS = 4_000;
 export const BEV_ICON_POLL_WINDOW_MS = 60_000;
 
-/** Keep waiting work fresh for one minute; the next visit/focus will retry after that. */
-export function bevIconRefetchInterval(status: IconStatus | undefined, elapsedMs: number): number | false {
-  const active = status === 'pending' || status === 'processing';
-  return active && elapsedMs < BEV_ICON_POLL_WINDOW_MS ? BEV_ICON_POLL_INTERVAL_MS : false;
+/**
+ * Keep unsettled work fresh for one minute; the next visit/focus will retry after that.
+ *
+ * `errored` counts as unsettled. A lookup that failed has no `iconStatus` at all, so
+ * keying only on the status would stop the clock on exactly the case that needs another
+ * try -- the screen would hold an empty answer until it was opened again.
+ */
+export function bevIconRefetchInterval(
+  state: { status: IconStatus | undefined; errored?: boolean },
+  elapsedMs: number,
+): number | false {
+  const waiting = !!state.errored || state.status === 'pending' || state.status === 'processing';
+  return waiting && elapsedMs < BEV_ICON_POLL_WINDOW_MS ? BEV_ICON_POLL_INTERVAL_MS : false;
 }
 
-/** A custom Bev's generated illustration; poll active work for at most one minute. */
-export function useBevIcon(id: string | undefined) {
+/**
+ * A custom Bev's generated illustration; polls unsettled work for at most one minute.
+ *
+ * `enabled` is the caller's: only a user-created Bev can have one, so the Bev detail
+ * screen waits for `createdBy` rather than spending this lookup on every catalog Bev.
+ */
+export function useBevIcon(id: string | undefined, opts: { enabled?: boolean } = {}) {
   const pollingStartedAt = useRef<number | null>(null);
   return useQuery({
     queryKey: keys.bevs.icon(id ?? ''),
     queryFn: async () => (await api.bevs.icons([id!])).find((icon) => icon.bevId === id) ?? null,
-    enabled: !!id,
+    enabled: !!id && (opts.enabled ?? true),
     refetchInterval: (query) => {
-      const status = query.state.data?.iconStatus;
-      if (status !== 'pending' && status !== 'processing') {
+      const state = { status: query.state.data?.iconStatus, errored: query.state.status === 'error' };
+      // The clock survives the deadline so a re-evaluation cannot restart the window;
+      // only settling clears it, and a remount gets a fresh ref either way.
+      if (bevIconRefetchInterval(state, 0) === false) {
         pollingStartedAt.current = null;
         return false;
       }
       pollingStartedAt.current ??= Date.now();
-      return bevIconRefetchInterval(status, Date.now() - pollingStartedAt.current);
+      return bevIconRefetchInterval(state, Date.now() - pollingStartedAt.current);
     },
   });
 }

@@ -7,6 +7,7 @@ import { api } from '@/api/client';
 import { controls } from '@/testing/fakeApi';
 import BevDetailScreen from '@/app/bev/[id]';
 
+import { ICON_JOB_STATE_VISIBLE } from '../GeneratedIconPanel';
 import { imageUrlFromParam } from '../imageUrl';
 
 let client: QueryClient;
@@ -114,7 +115,9 @@ it('an alcoholic Bev is "Not available" to an under-21 user', async () => {
   expect(await screen.findByText('Not available')).toBeTruthy();
 });
 
-it('shows generation progress to the Bev creator', async () => {
+// `ICON_JOB_STATE_VISIBLE` is off until the worker is enabled, so a queued job -- which
+// is every photo-backed Bev while generation is disabled -- tells its creator nothing.
+it('keeps queued generation state off the screen while generation is disabled', async () => {
   const bev = await api.bevs.create({
     name: 'Private icon state test',
     brand: 'Test Co',
@@ -124,7 +127,24 @@ it('shows generation progress to the Bev creator', async () => {
   });
   controls.setIconStatus(bev.id, 'pending');
   await open(bev.id);
-  expect(await screen.findByText('Creating your illustration')).toBeTruthy();
+  expect(await screen.findByRole('header', { name: 'Private icon state test' })).toBeTruthy();
+  expect(ICON_JOB_STATE_VISIBLE).toBe(false);
+  expect(screen.queryByTestId('generated-icon-panel')).toBeNull();
+});
+
+it('shows a finished illustration under the photo', async () => {
+  const bev = await api.bevs.create({
+    name: 'Finished icon test',
+    brand: 'Test Co',
+    categoryId: 'soda',
+    priceTier: 2,
+    priceEstimated: false,
+  });
+  controls.setIconStatus(bev.id, 'completed');
+  await open(bev.id);
+  expect(await screen.findByText('Your illustration is ready')).toBeTruthy();
+  // The Bev's own image stays the hero; the illustration is a panel under it.
+  expect(screen.getByRole('header', { name: 'Finished icon test' })).toBeTruthy();
 });
 
 it('does not show private generation progress to another viewer', async () => {
