@@ -9,6 +9,9 @@
  *
  * What is under test is the JUDGEMENT, not the plumbing: `parseStatus` narrows
  * the RPC's jsonb and `evaluateStatus` turns one snapshot into eight verdicts.
+ * The RPC reports facts (a secret's length, a trigger's `tgenabled`) and every
+ * verdict is decided here, which is why "a replica-only trigger is not
+ * configured" is a unit test and not a comment in a migration.
  * Those two functions are where a success-shaped failure would hide -- a check
  * that silently passes because a key was renamed, or a FAIL that never reaches
  * the exit code -- and they are the half a database cannot be borrowed to
@@ -24,6 +27,7 @@ import { RANKING_VERSION } from "@bevi/ranking";
 import {
   REQUIRED_SECRETS,
   REQUIRED_TRIGGERS,
+  TRIGGER_FIRING_STATES,
   evaluateStatus,
   formatTable,
   parseStatus,
@@ -42,8 +46,8 @@ function healthyPayload(): Record<string, unknown> {
     embeddings: { active_bevs: 383, embedded: 383, missing: 0 },
     edges: { total: 4669, misoriented: 0, versions: [RANKING_VERSION] },
     triggers: [
-      { name: "bevs_embed_after_insert", present: true, enabled: true },
-      { name: "bevs_embed_after_update", present: true, enabled: true },
+      { name: "bevs_embed_after_insert", present: true, state: "O" },
+      { name: "bevs_embed_after_update", present: true, state: "O" },
     ],
   };
 }
@@ -90,7 +94,11 @@ test("parseStatus throws rather than letting a renamed or null field read as und
     ["vault not an array", (p) => void (p.vault = {})],
     ["vault_available missing", (p) => void delete p.vault_available],
     ["triggers missing", (p) => void delete p.triggers],
-    ["a trigger row without a name", (p) => void (p.triggers = [{ present: true, enabled: true }])],
+    ["a trigger row without a name", (p) => void (p.triggers = [{ present: true, state: "O" }])],
+    [
+      "a trigger whose state is not a string or null",
+      (p) => void (p.triggers = [{ name: "bevs_embed_after_insert", present: true, state: 79 }]),
+    ],
   ];
   for (const [label, spoil] of cases) {
     const payload = healthyPayload();
@@ -255,13 +263,71 @@ test("a misoriented row fails the orientation check", () => {
 test("a missing trigger and a disabled trigger are different failures", () => {
   const status = healthy();
   status.triggers = [
-    { name: "bevs_embed_after_insert", present: false, enabled: false },
-    { name: "bevs_embed_after_update", present: true, enabled: false },
+    { name: "bevs_embed_after_insert", present: false, state: null },
+    { name: "bevs_embed_after_update", present: true, state: "D" },
   ];
   const results = evaluateStatus(status, RANKING_VERSION);
   assert.match(find(results, "bevs_embed_after_insert").detail, /does not exist/);
   assert.match(find(results, "bevs_embed_after_update").detail, /DISABLED/);
   assert.equal(failedNames(results).length, 2);
+});
+
+test("a REPLICA-ONLY trigger fails: it is enabled, and no app write reaches it", () => {
+  // The regression test for the first draft of graph_pipeline_status(), which
+  // returned `enabled` as `tgenabled <> 'D'` and so handed out a PASS here.
+  // `alter table ... enable replica trigger` leaves tgenabled = 'R': the
+  // trigger fires only for a session in `session_replication_role =
+  // 'replica'`, which no app write, definer RPC or Studio insert ever is. A
+  // diagnostic that calls that configured is the failure it exists to catch.
+  const status = healthy();
+  status.triggers = [
+    { name: "bevs_embed_after_insert", present: true, state: "R" },
+    { name: "bevs_embed_after_update", present: true, state: "O" },
+  ];
+  const results = evaluateStatus(status, RANKING_VERSION);
+  const check = find(results, "bevs_embed_after_insert");
+  assert.equal(check.pass, false);
+  assert.match(check.detail, /REPLICA-ONLY/);
+  assert.ok(find(results, "bevs_embed_after_update").pass);
+  assert.deepEqual(failedNames(results), ["trigger: bevs_embed_after_insert"]);
+});
+
+test("an ALWAYS trigger passes: 'A' fires in origin mode too", () => {
+  const status = healthy();
+  status.triggers = [
+    { name: "bevs_embed_after_insert", present: true, state: "A" },
+    { name: "bevs_embed_after_update", present: true, state: "A" },
+  ];
+  const results = evaluateStatus(status, RANKING_VERSION);
+  assert.deepEqual(failedNames(results), []);
+  assert.deepEqual([...TRIGGER_FIRING_STATES].sort(), ["A", "O"]);
+});
+
+test("an unknown tgenabled is a failure that quotes what it found", () => {
+  // Postgres has four values today. A fifth, or a renamed column read as a
+  // stray letter, must not pass just because it is not 'D'.
+  const status = healthy();
+  status.triggers = [
+    { name: "bevs_embed_after_insert", present: true, state: "X" },
+    { name: "bevs_embed_after_update", present: true, state: "O" },
+  ];
+  const results = evaluateStatus(status, RANKING_VERSION);
+  const check = find(results, "bevs_embed_after_insert");
+  assert.equal(check.pass, false);
+  assert.match(check.detail, /"X"/);
+});
+
+test("present with a null state is treated as absent, not as enabled", () => {
+  // Belt and braces on the RPC's own shape: `present` and `state` come from
+  // the same left join, so they cannot disagree, but a hand-written payload or
+  // a future column rename could make them, and the safe reading is "missing".
+  const status = healthy();
+  status.triggers = [
+    { name: "bevs_embed_after_insert", present: true, state: null },
+    { name: "bevs_embed_after_update", present: true, state: "O" },
+  ];
+  const results = evaluateStatus(status, RANKING_VERSION);
+  assert.match(find(results, "bevs_embed_after_insert").detail, /does not exist/);
 });
 
 test("every check is independent: a wholly unconfigured project fails seven of eight", () => {
@@ -299,8 +365,8 @@ test("and a populated-but-wrong project can fail the other seven", () => {
       embeddings: { activeBevs: 383, embedded: 1, missing: 382 },
       edges: { total: 12, misoriented: 12, versions: ["0.9.0"] },
       triggers: [
-        { name: "bevs_embed_after_insert", present: true, enabled: false },
-        { name: "bevs_embed_after_update", present: false, enabled: false },
+        { name: "bevs_embed_after_insert", present: true, state: "R" },
+        { name: "bevs_embed_after_update", present: false, state: null },
       ],
     },
     RANKING_VERSION

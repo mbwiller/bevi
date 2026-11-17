@@ -31,11 +31,13 @@
 -- src_bev_id and the other with anchor as dst_bev_id: every lookup below has
 -- to find both.
 begin;
--- Section 9 and the four CHECK assertions in section 1 are the hygiene sweep
--- (20261025000400): the `weight` and `components` CHECKs, a non-active ANCHOR
--- for get_bev_similarities, the two `on delete cascade` paths from `bevs`, and
--- list_bucket_bevs' new row cap. 57 -> 65.
-select plan(65);
+-- Sections 9 and 10 and the four CHECK assertions in section 1 are the hygiene
+-- sweep (20261116235414): the `weight` and `components` CHECKs, a non-active
+-- ANCHOR for get_bev_similarities, the two `on delete cascade` paths from
+-- `bevs`, that `list_bucket_bevs` does NOT truncate the caller's bucket, and
+-- what `graph_pipeline_status()` reports for a trigger's `tgenabled`.
+-- 57 -> 68.
+select plan(68);
 
 -- ---------------------------------------------------------------------------
 -- People
@@ -777,12 +779,21 @@ select is(
   'and to its bev_embeddings row'
 );
 
--- The row cap added by 20261025000400. `list_bucket_bevs` returned the
--- caller's whole bucket, however large; it now stops at 500, ordered by
--- `position`, so a heavy user gets their 500 best rather than an unbounded
--- result. ed003's only other ranking is in bucket 3, so bucket 1 is this
--- fixture and nothing else, and 505 rows in means the answer is the cap rather
--- than the bucket.
+-- `list_bucket_bevs` MUST NOT TRUNCATE, and this is the regression test for
+-- the 500-row cap that an earlier draft of 20261116235414 put on it.
+--
+-- The length of this list is the client's `expectedBucketSize`: the app reads
+-- the bucket here (app/src/api/placementList.ts -> RankFlow.tsx), counts the
+-- rows, and sends the count to `submit_ranking`, which compares it with
+-- `count(*)` over the real bucket and raises BEVI_STALE_BUCKET on a mismatch
+-- (20261102000100). A server-side `limit` therefore does not bound a list, it
+-- breaks every submission from a bucket bigger than the limit -- and the
+-- `rankings.listBucket` fallback reads the table directly with no limit, so
+-- the primary path would have failed where the degraded one worked.
+--
+-- 505 rows is past any plausible cap and past the 500 that cap used. ed003's
+-- only other ranking is in bucket 3, so bucket 1 is this fixture and nothing
+-- else.
 insert into public.bevs (name, category_id, price_tier, status, source, photo_path)
 select 'pgTAP Edge Cap ' || lpad(g::text, 4, '0'), 'soda', 2, 'active', 'user',
        'pgtap/edge-cap-' || g || '.jpg'
@@ -799,9 +810,53 @@ set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000ed003", 
 
 select is(
   (select count(*)::int from public.list_bucket_bevs(1::smallint)),
-  500,
-  'list_bucket_bevs stops at 500 rows server-side, though the caller has 505 in the bucket'
+  505,
+  'list_bucket_bevs returns the whole bucket: 505 rows in, 505 rows out, no server-side cap'
 );
+select is(
+  (select count(*)::int from public.list_bucket_bevs(1::smallint)),
+  (select count(*)::int from public.rankings
+    where user_id = '00000000-0000-4000-8000-0000000ed003' and bucket = 1::smallint),
+  'and its length equals the count submit_ranking checks expectedBucketSize against'
+);
+
+-- ---------------------------------------------------------------------------
+-- 10. graph_pipeline_status(): tgenabled is reported, not judged
+-- ---------------------------------------------------------------------------
+-- The diagnostic behind `npm run graph:verify` (20261116235414). It returns
+-- `pg_trigger.tgenabled` for each embed trigger and lets
+-- `evaluateStatus()` (scripts/graph/verify-pipeline.ts) decide PASS/FAIL,
+-- because only 'O' (origin) and 'A' (always) fire for an ordinary write: 'R'
+-- fires ONLY for a session in `session_replication_role = 'replica'`, and the
+-- first draft of the RPC returned `tgenabled <> 'D'` as a boolean `enabled`,
+-- which reports a replica-only trigger -- one that no app write will ever
+-- reach -- as configured. That is the failure mode this whole diagnostic
+-- exists to catch, so it is asserted here rather than reasoned about.
+--
+-- Service-role-only, so these run as the owner. The `alter table` is undone
+-- explicitly as well as by the rollback below.
+
+reset role;
+
+select is(
+  (select string_agg(format('%s/%s/%s', t ->> 'name', t ->> 'present', coalesce(t ->> 'state', 'null')),
+                     ' ' order by t ->> 'name')
+     from jsonb_array_elements(public.graph_pipeline_status() -> 'triggers') t),
+  'bevs_embed_after_insert/true/O bevs_embed_after_update/true/O',
+  'both embed triggers are reported present with tgenabled O, the state an app write fires'
+);
+
+alter table public.bevs enable replica trigger bevs_embed_after_insert;
+
+select is(
+  (select t ->> 'state'
+     from jsonb_array_elements(public.graph_pipeline_status() -> 'triggers') t
+    where t ->> 'name' = 'bevs_embed_after_insert'),
+  'R',
+  'a replica-only trigger is reported as R -- the old boolean called this enabled'
+);
+
+alter table public.bevs enable trigger bevs_embed_after_insert;
 
 reset role;
 select * from finish();

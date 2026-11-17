@@ -27,7 +27,7 @@
  *
  * READ-ONLY, POSTGRES ONLY. No Neo4j, no Edge Function invocation, no writes.
  * It makes exactly one call: `public.graph_pipeline_status()`, the service-role
- * diagnostic added in 20261025000400. Two of the four facts are not reachable
+ * diagnostic added in 20261116235414. Two of the four facts are not reachable
  * over PostgREST at any privilege level -- `vault.decrypted_secrets` is
  * readable by its owner only and `pg_trigger` is not in an exposed schema --
  * so a `security definer` owned by `postgres` is the only way to see them, and
@@ -70,7 +70,13 @@ export interface VaultSecretStatus {
 export interface TriggerStatus {
   name: string;
   present: boolean;
-  enabled: boolean;
+  /**
+   * `pg_trigger.tgenabled` verbatim, or null when the trigger does not exist.
+   * The RPC reports it rather than a boolean on purpose: only 'O' and 'A' fire
+   * for a normal app write, and a diagnostic that called 'R' "enabled" would
+   * hand out a PASS for a pipeline that never runs. See TRIGGER_FIRING_STATES.
+   */
+  state: string | null;
 }
 
 export interface PipelineStatus {
@@ -86,6 +92,32 @@ export const REQUIRED_SECRETS = ["embed_function_url", "embed_webhook_token"] as
 
 /** The two triggers on `public.bevs` that queue an embedding (20261023000100). */
 export const REQUIRED_TRIGGERS = ["bevs_embed_after_insert", "bevs_embed_after_update"] as const;
+
+/**
+ * The `pg_trigger.tgenabled` values under which a trigger fires for an ordinary
+ * write: 'O' (origin, the default `session_replication_role`) and 'A' (always).
+ *
+ * The two that are NOT here are the point. 'D' is disabled, and 'R' fires ONLY
+ * for a session that has set `session_replication_role = 'replica'` -- a
+ * logical-replication apply worker, or `pg_restore --single-transaction
+ * --disable-triggers`. An insert from the app, from a definer RPC or from
+ * Studio arrives in 'origin', so a trigger left at 'R' never sees it, and
+ * `alter table ... enable replica trigger` is one typo away from
+ * `alter table ... enable always trigger`.
+ */
+export const TRIGGER_FIRING_STATES: ReadonlySet<string> = new Set(["O", "A"]);
+
+/** Human-readable `tgenabled`, for a FAIL line that says what to fix. */
+function describeTriggerState(state: string): string {
+  switch (state) {
+    case "D":
+      return "DISABLED (tgenabled 'D')";
+    case "R":
+      return "REPLICA-ONLY (tgenabled 'R'): it fires only for a session in replica mode";
+    default:
+      return `tgenabled ${JSON.stringify(state)}, which is not a firing state`;
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Parsing
@@ -154,10 +186,13 @@ export function parseStatus(payload: unknown): PipelineStatus {
   const triggers = rawTriggers.map((entry, i) => {
     const row = asRecord(entry, `triggers[${i}]`);
     if (typeof row.name !== "string") throw new Error(`graph_pipeline_status: triggers[${i}].name is not a string`);
+    if (row.state !== null && typeof row.state !== "string") {
+      throw new Error(`graph_pipeline_status: triggers[${i}].state is not a string or null (got ${JSON.stringify(row.state)})`);
+    }
     return {
       name: row.name,
       present: asBool(row.present, `triggers[${i}].present`),
-      enabled: asBool(row.enabled, `triggers[${i}].enabled`),
+      state: row.state,
     };
   });
 
@@ -308,18 +343,24 @@ export function evaluateStatus(status: PipelineStatus, expectedVersion: string):
         }
   );
 
-  // 7-8. The two triggers exist AND are enabled. `alter table ... disable
-  //      trigger` leaves the trigger in place, so "it exists" is not the
-  //      question.
+  // 7-8. The two triggers exist AND fire for an app write. `alter table ...
+  //      disable trigger` leaves the trigger in place, so "it exists" is not
+  //      the question -- and neither is "it is not disabled": a replica-only
+  //      trigger is enabled, is reported by every `\d+ bevs`, and still never
+  //      runs for an insert. TRIGGER_FIRING_STATES is the whole test.
   for (const name of REQUIRED_TRIGGERS) {
     const check = `trigger: ${name}`;
     const row = status.triggers.find((t) => t.name === name);
-    if (row === undefined || !row.present) {
+    if (row === undefined || !row.present || row.state === null) {
       results.push({ name: check, pass: false, detail: "does not exist on public.bevs" });
-    } else if (!row.enabled) {
-      results.push({ name: check, pass: false, detail: "exists but is DISABLED, so no write reaches it" });
+    } else if (!TRIGGER_FIRING_STATES.has(row.state)) {
+      results.push({
+        name: check,
+        pass: false,
+        detail: `exists but is ${describeTriggerState(row.state)}, so no app write reaches it`,
+      });
     } else {
-      results.push({ name: check, pass: true, detail: "exists and is enabled" });
+      results.push({ name: check, pass: true, detail: `exists and fires on an app write (tgenabled '${row.state}')` });
     }
   }
 
@@ -374,7 +415,7 @@ async function callStatus(url: string, key: string): Promise<unknown> {
     // The key travels in a header, not the URL, so the path is safe to print.
     throw new Error(
       `${response.status} ${response.statusText} on /rpc/graph_pipeline_status\n  ${text.slice(0, 600)}\n` +
-        `  If this is a 404, migration 20261025000400 has not been pushed to this project.`
+        `  If this is a 404, migration 20261116235414 has not been pushed to this project.`
     );
   }
   return text === "" ? null : (JSON.parse(text) as unknown);

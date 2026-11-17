@@ -1,5 +1,6 @@
--- A hygiene sweep: six findings from the reviews of #115, #117 and #118, plus
--- one new diagnostic. Three of the six are SQL and live here.
+-- A hygiene sweep: findings from the reviews of #115, #117 and #118, plus one
+-- new diagnostic. Two of the findings are SQL and live here, with the
+-- diagnostic's RPC; the rest of the sweep is pgTAP and one script.
 --
 -- Nothing here changes a happy path. Taken in order:
 --
@@ -7,12 +8,10 @@
 --      That is CORRECT (see the long comment on it) but it is the same idiom
 --      that WAS a real hole in `get_bev_similarities`, so it is rewritten with
 --      `cardinality()` to stop the next reader having to re-derive why one is
---      safe and the other was not.
---   2. `list_bucket_bevs` gains a server-side row cap. The row set is the
---      caller's own rankings, so an unbounded result only ever hurts the
---      caller -- but it grows forever and every other list in this schema is
---      bounded.
---   3. Supabase's default privileges (`alter default privileges in schema
+--      safe and the other was not. The body reproduced here is
+--      20261101000300's, `bayes_score` and all -- see the note on the
+--      function.
+--   2. Supabase's default privileges (`alter default privileges in schema
 --      public grant all on tables to anon, authenticated, service_role`) leave
 --      `anon` and `authenticated` holding INSERT/UPDATE/DELETE/TRUNCATE on
 --      every table in `public`. RLS denies the DML -- there is no permissive
@@ -20,16 +19,32 @@
 --      RLS**. `truncate public.bevs` from a signed-in user's publishable key is
 --      a privilege check and nothing else, and it passes today. This migration
 --      is the revoke that should have accompanied 20261011000100.
---   4. `public.graph_pipeline_status()`, a service-role-only diagnostic that
+--   3. `public.graph_pipeline_status()`, a service-role-only diagnostic that
 --      `npm run graph:verify` (scripts/graph/verify-pipeline.ts) reads. It
 --      exists because three separate silent failures in this project were
 --      success-shaped, and the facts needed to tell "configured" from
 --      "assumed" -- Vault secret presence, trigger state -- are not reachable
 --      over PostgREST at all.
 --
--- 20261019000500 (list_bucket_bevs) and 20261011000200 (refresh_bev_stats) are
--- on `main` and therefore frozen; both functions are reproduced in full here
--- because a migration is append-only.
+-- NOT HERE, AND DELIBERATELY. The sixth finding was that `list_bucket_bevs`
+-- bounds nothing, and the first draft of this migration capped it at 500. A
+-- `limit` on that function is not a safe fix, because the LENGTH OF THAT LIST
+-- IS THE CLIENT'S `expectedBucketSize`: the app reads the bucket through
+-- `rankings.listBucketBevs` (app/src/api/placementList.ts), counts the rows,
+-- and sends the count to `submit_ranking`, which compares it with `count(*)`
+-- over the real bucket and raises BEVI_STALE_BUCKET on a mismatch
+-- (20261102000100). Truncating at 500 therefore breaks every submission from
+-- a 501-Bev bucket, permanently and with no way out for the user -- and since
+-- the `rankings.listBucket` fallback reads the table directly and is itself
+-- unbounded, the cap would have made the primary path fail where the degraded
+-- one still worked. A bound needs the true count returned alongside the rows,
+-- which is a contract change and its own ticket. Section 9 of
+-- 11_graph_tables.test.sql now asserts the opposite of a cap: 505 rows in the
+-- bucket, 505 rows out.
+--
+-- 20261011000200 and 20261101000300 (refresh_bev_stats) are on `main` and
+-- therefore frozen; the function is reproduced in full here because a
+-- migration is append-only.
 
 set search_path = public, extensions;
 
@@ -58,13 +73,29 @@ set search_path = public, extensions;
 -- in one schema, one of which has a CVE-shaped history. One spelling from here
 -- on, and the reason is in the code rather than in a PR thread.
 --
--- Body otherwise byte-for-byte 20261011000200:114-155.
+-- WHICH BODY IS REPRODUCED, AND WHY IT IS NOT 20261011000200'S. This file was
+-- first written on 2026-10-24 against 20261011000200, whose upsert has no
+-- `bayes_score` column. 20261101000300 (stats_parity 3.2) then taught
+-- `refresh_bev_stats` to write `bayes_score` itself, so that a ranking leaves
+-- the column where the next `refresh_global_stats` tick would put it. This
+-- migration sorts ABOVE that one, so a `create or replace` carrying the older
+-- body would silently take the Bayesian write back out of every submission --
+-- not a conflict, not an error, just a column that stops being maintained.
+-- What follows is therefore 20261101000300's body verbatim, including the
+-- `v_m` prior and the `::numeric(4,2)` cast whose exactness is argued there,
+-- with the guard as the single changed line.
+--
+-- (The same trap applies to anyone else retiming a `create or replace`: diff
+-- against the LATEST definition on `main`, not the one the finding was written
+-- against.)
 create or replace function public.refresh_bev_stats(p_bev_ids uuid[])
 returns void
 language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  v_m numeric;
 begin
   -- cardinality() counts ELEMENTS; array_length(arr, 1) counts the first
   -- dimension. They agree on this test, but only this test -- see the header.
@@ -72,13 +103,20 @@ begin
     return;
   end if;
 
-  insert into public.bev_stats (bev_id, rating_count, sum_score, avg_score, score_stddev, last_ranked_at, updated_at)
+  -- Once per call, not per row: bayes_prior is stable, not immutable.
+  v_m := public.bayes_prior(null);
+
+  insert into public.bev_stats (bev_id, rating_count, sum_score, avg_score, score_stddev, bayes_score, last_ranked_at, updated_at)
   select
     ids.bev_id,
     coalesce(agg.rating_count, 0),
     coalesce(agg.sum_score, 0),
     agg.avg_score,
     agg.score_stddev,
+    case
+      when coalesce(agg.rating_count, 0) = 0 then null
+      else public.bayes_score(agg.sum_score, agg.rating_count::integer, v_m, 3)::numeric(4,2)
+    end,
     agg.last_ranked_at,
     now()
   from (select distinct bev_id from unnest(p_bev_ids) as u(bev_id)) as ids
@@ -99,116 +137,25 @@ begin
     sum_score      = excluded.sum_score,
     avg_score      = excluded.avg_score,
     score_stddev   = excluded.score_stddev,
+    bayes_score    = excluded.bayes_score,
     last_ranked_at = excluded.last_ranked_at,
     updated_at     = excluded.updated_at;
 end;
 $$;
 
--- `create or replace function` preserves the existing ACL, so the revoke from
--- 20261011000200:401-409 still stands. Restated verbatim -- `from public, anon`
--- and NOT `authenticated` -- for the same reason 20261025000100 restates its
--- grants: an append-only migration that replaces a function should leave its
--- final privileges readable in one place, and restating them as they ARE rather
--- than as they arguably should be keeps this a no-op.
---
--- (Noted while writing this and deliberately NOT changed here: 20261011000200
--- never granted `refresh_bev_stats` to `authenticated`, but it never revoked it
--- either, and Supabase's default privileges lay down a direct EXECUTE grant to
--- `anon`, `authenticated` and `service_role` on every new function in this
--- schema -- so `authenticated` can still call it. It is a definer that only
--- recomputes `bev_stats` from `rankings`, so it cannot corrupt anything, but a
--- caller can hand it an arbitrarily long `uuid[]`. That is a function-grant
--- audit across all 90 definers in this schema, not a line in a sweep about
--- table privileges, and it deserves its own PR and its own pgTAP.)
+-- `create or replace function` preserves the existing ACL, so the revokes this
+-- function has collected still stand. Restated here, all three roles, for the
+-- same reason 20261025000100 restates its grants: an append-only migration that
+-- replaces a function should leave its final privileges readable in one place.
+-- `authenticated` is in the list because 20261102000100 revoked it -- the
+-- October draft of this file argued that the direct EXECUTE grant Supabase's
+-- default privileges lay down was a separate audit, and that audit has since
+-- happened for this function. Restating what IS true keeps this a no-op.
 alter function public.refresh_bev_stats(uuid[]) owner to postgres;
-revoke execute on function public.refresh_bev_stats(uuid[]) from public, anon;
+revoke execute on function public.refresh_bev_stats(uuid[]) from public, anon, authenticated;
 
 -- ===========================================================================
--- 2. list_bucket_bevs: a server-side row cap
--- ===========================================================================
--- Every other list the contract exposes is bounded: `rankings.listRanked`,
--- `feed.list`, `comments.list` and the rest clamp through `clampLimit`
--- (MAX_LIMIT = 50, packages/api/src/paging.ts), `get_similar_bevs` clamps
--- p_limit to 50, and `get_bev_similarities` rejects more than 500 ids. This
--- function bounded nothing.
---
--- It is the mildest instance of the family: the rows are the CALLER'S OWN
--- rankings in one bucket, so the only person a huge answer costs is the person
--- who ranked that many Bevs, and `max_rows = 1000` in supabase/config.toml
--- already truncates the REST response (it applies to a stored procedure as
--- well as a table). But the set grows without limit, it is read on the
--- comparison path (M-21 anchors a comparison from it), and relying on a
--- PostgREST setting means the bound disappears the moment anything calls this
--- from SQL. 500 is the cap, matching `get_bev_similarities`: a bucket is a few
--- hundred Bevs at most.
---
--- A TRUNCATING `limit`, not a `raise`. `get_bev_similarities` rejects an
--- oversized argument because the caller chose it and a bad value is a caller
--- bug. Here nobody chose anything -- the size is however many Bevs the user
--- has ranked -- so erroring would break the comparison flow for a heavy user
--- and leave them no way out. Truncating keeps the 500 MOST RELEVANT rows,
--- because the order is `position` (best first) and always has been.
---
--- The age gate, the `status = 'active'` filter and the `brand_key` expression
--- are reproduced unchanged from 20261019000500:468-506, comments included:
--- they are each load-bearing (the parity with `rankings.listBucket` is
--- asserted in 11_graph_tables.test.sql) and this migration is not the place to
--- revisit any of them.
-create or replace function public.list_bucket_bevs(p_bucket smallint)
-returns table (
-  id          uuid,
-  category_id text,
-  brand_key   text
-)
-language plpgsql
-stable
-security definer
-set search_path = public, extensions
-as $$
-#variable_conflict use_column
-declare
-  v_uid uuid := auth.uid();
-  -- Same number as get_bev_similarities' cap, for the same reason: a bucket is
-  -- a few hundred Bevs at most. See the header for why this truncates.
-  v_max constant int := 500;
-begin
-  if v_uid is null then
-    raise exception 'BEVI_UNAUTHORIZED' using errcode = '42501';
-  end if;
-
-  return query
-    select b.id,
-           b.category_id,
-           -- Collapse BEFORE trimming. btrim(text) strips spaces only, while
-           -- normaliseBrand()'s JS .trim() strips all whitespace, so
-           -- `lower(btrim(E'\tDr Pepper'))` keeps the tab, the collapse turns
-           -- it into a leading space, and SQL reads ' dr pepper' where
-           -- TypeScript reads 'dr pepper'. Collapsing first also means a
-           -- whitespace-only brand reaches btrim as ' ' and nullif catches it.
-           nullif(btrim(regexp_replace(lower(b.brand), '\s+', ' ', 'g')), '') as brand_key
-      from public.rankings r
-      join public.bevs b on b.id = r.bev_id
-      join public.categories c on c.id = b.category_id
-     where r.user_id = v_uid
-       and r.bucket = p_bucket
-       and b.status = 'active'
-       and (not c.is_alcoholic or public.viewer_is_adult())
-     order by r.position
-     limit v_max;
-end;
-$$;
-
-comment on function public.list_bucket_bevs(smallint) is
-  'S-14: the caller''s own ranked Bevs in one bucket as (id, category_id, brand_key), best first, at most 500 rows. Same row set as rankings.listBucket; brand_key matches normaliseBrand() in @bevi/ranking.';
-
--- Verbatim from 20261019000500:521-535, for the reason given on
--- refresh_bev_stats above: restated as they are, so this stays a no-op.
-alter function public.list_bucket_bevs(smallint) owner to postgres;
-revoke execute on function public.list_bucket_bevs(smallint) from public, anon;
-grant execute on function public.list_bucket_bevs(smallint) to authenticated;
-
--- ===========================================================================
--- 3. Table privileges: revoke the DML Supabase's default privileges granted
+-- 2. Table privileges: revoke the DML Supabase's default privileges granted
 -- ===========================================================================
 -- THE HOLE. Supabase ships
 --
@@ -268,10 +215,36 @@ grant execute on function public.list_bucket_bevs(smallint) to authenticated;
 -- A NOTE FOR THE NEXT MIGRATION THAT CREATES A TABLE: the default privileges
 -- are still in place, so a new table arrives with the same grants. Revoke them
 -- in the migration that creates it.
+--
+-- THAT NOTE IS NOT HYPOTHETICAL. This file was written on 2026-10-24 and is
+-- being merged three weeks later, and `public` gained nine tables in between.
+-- Seven of them -- `bev_graph_stats`, `bug_reports`, `category_stats`,
+-- `chains`, `user_neighbors`, `venue_bevs`, `venues` -- arrived holding
+-- INSERT/UPDATE/DELETE/**TRUNCATE** for `anon` and `authenticated`, exactly as
+-- predicted, and are included below: `bug_reports` in 2a, where its
+-- reporter-or-admin SELECT policy puts it, and the other six in 2c, which
+-- explains why they lose less than 2b's tables do. Membership was checked
+-- against a `supabase db reset` -- `information_schema.role_table_grants` and
+-- `pg_policies`, table by table -- and not read off the migration text. The
+-- two exceptions:
+--
+--   * `bev_icons` (20261112000200:139-141) did the right thing on its own --
+--     `revoke all ... from public, anon, authenticated` then `grant select to
+--     authenticated` -- and is left alone because it is already correct, as is
+--     `bev_nutrition` (#223, merged while this rebase was in flight), which
+--     copied it. That is the pattern a new table should follow.
+--   * `ranking_events` (20261101000200:178-179) revoked
+--     insert/update/delete/truncate/references/trigger and deliberately kept
+--     SELECT for both roles. The TRUNCATE hole is already closed there, and
+--     taking its remaining SELECT away is that migration author's call, not a
+--     drive-by in this one. RLS with no policy means both roles read zero rows
+--     today either way.
 
--- 3a. Content tables with NO write policy for `authenticated` at all. Writes
+-- 2a. Content tables with NO write policy for `authenticated` at all. Writes
 --     go through a definer RPC (or the service role), reads through a `select`
---     policy, and `anon` has no business in either.
+--     policy, and `anon` has no business in either. `bug_reports` joined this
+--     group on 2026-11-09 (20261109000300): a reporter-or-admin SELECT policy,
+--     and every write through `submit_bug_report`.
 revoke insert, update, delete, truncate on
   public.categories,
   public.bevs,
@@ -290,7 +263,8 @@ revoke insert, update, delete, truncate on
   public.post_likes,
   public.post_comments,
   public.bev_embeddings,
-  public.bev_edges
+  public.bev_edges,
+  public.bug_reports
 from anon, authenticated;
 
 revoke select on
@@ -311,21 +285,71 @@ revoke select on
   public.post_likes,
   public.post_comments,
   public.bev_embeddings,
-  public.bev_edges
+  public.bev_edges,
+  public.bug_reports
 from anon;
 
--- 3b. RLS on, and NO POLICY AT ALL -- so neither role may read a row either,
+-- 2b. RLS on, and NO POLICY AT ALL -- so neither role may read a row either,
 --     and the privilege should say so. `app_secrets` holds the invite code and
 --     is read only by `check_invite_code()`; `recommendation_jobs` and
 --     `user_actions` are machinery (`assert_rate()` writes the latter). All
---     three are reached exclusively from definers owned by `postgres`.
+--     three are reached exclusively from definers owned by `postgres`, and no
+--     test in supabase/tests/ exercises a client read or write of any of them.
 revoke all on
   public.app_secrets,
   public.recommendation_jobs,
   public.user_actions
 from anon, authenticated;
 
--- 3c. The four tables that DO have a permissive write policy for
+-- 2c. The other six tables with RLS on and no policy, added between this
+--     file being written (2026-10-24) and merged: `category_stats` and
+--     `bev_graph_stats` are aggregates the cron and
+--     `replace_bev_graph_stats()` maintain, `user_neighbors` is the taste
+--     graph's neighbour cache, and `venues`, `venue_bevs` and `chains` are
+--     read through `venues_in_view()` and written by `import_venues()`. No
+--     client code touches any of them directly -- every `.from('<table>')` in
+--     packages/api/src and app/src names only bevs, categories, rankings,
+--     profiles, profiles_view, follows, want_to_try, user_stats and
+--     bev_flavor_profiles.
+--
+--     THEY GET LESS THAN 2b DOES, ON PURPOSE. `anon` loses everything, as in
+--     2b. From `authenticated` only TRUNCATE is taken, because TRUNCATE is
+--     the only one of the four verbs that RLS does not already deny, and the
+--     other three are ASSERTED AS RLS BEHAVIOUR by tests written after this
+--     file was: 16_taste_graph, 19_stats_parity, 26_venues and
+--     30_bev_graph_stats assert that a signed-in client reads zero rows, that
+--     an INSERT raises 42501, and -- with `lives_ok` -- that an UPDATE or a
+--     DELETE of every row RAISES NOTHING because it matches nothing. Revoking
+--     the privilege turns those two no-ops into errors, which is a behaviour
+--     change those files would have to be rewritten for, and rewriting them
+--     would cost the thing they are actually testing: a privilege error no
+--     longer proves the table has no policy.
+--
+--     So the hole is closed and the defence-in-depth is not taken here. It is
+--     worth a ticket of its own -- revoke INSERT/UPDATE/DELETE from
+--     `authenticated` on these six AND update those four files to assert the
+--     privilege error alongside an owner-side check that the policy set is
+--     still empty -- and it is not worth doing inside a sweep, in another
+--     author's tests, three weeks after the sweep was reviewed.
+revoke all on
+  public.category_stats,
+  public.bev_graph_stats,
+  public.user_neighbors,
+  public.venues,
+  public.venue_bevs,
+  public.chains
+from anon;
+
+revoke truncate on
+  public.category_stats,
+  public.bev_graph_stats,
+  public.user_neighbors,
+  public.venues,
+  public.venue_bevs,
+  public.chains
+from authenticated;
+
+-- 2d. The four tables that DO have a permissive write policy for
 --     `authenticated`. Revoking the privilege a policy depends on would turn
 --     that policy into dead code and break a working path, so each of these
 --     keeps exactly the verbs a policy backs and loses the rest. TRUNCATE is
@@ -357,7 +381,7 @@ revoke insert, update, delete, select
                                 on public.featured_bevs from anon;
 
 -- ===========================================================================
--- 4. graph_pipeline_status(): the facts `npm run graph:verify` asserts
+-- 3. graph_pipeline_status(): the facts `npm run graph:verify` asserts
 -- ===========================================================================
 -- Every silent failure in this project so far has been SUCCESS-SHAPED:
 --
@@ -438,13 +462,24 @@ begin
     into v_edges, v_misoriented, v_versions
     from public.bev_edges x;
 
-  -- tgenabled: 'O' origin (the normal enabled state), 'D' disabled, 'R'/'A'
-  -- replica-only. Anything other than 'D' fires on a local write, which is
-  -- what "enabled" means here.
+  -- `state` is `pg_trigger.tgenabled` as it stands, reported and not judged:
+  -- 'O' fires in the default session_replication_role ('origin'), 'A' fires
+  -- always, 'R' fires ONLY when the session is in 'replica' mode, and 'D' never
+  -- fires. An app write arrives in 'origin', so 'O' and 'A' reach the trigger
+  -- and 'R' and 'D' do not.
+  --
+  -- The first draft of this function returned a boolean `enabled` computed as
+  -- `tgenabled <> 'D'`, which calls a replica-only trigger enabled and hands
+  -- `graph:verify` a PASS for a pipeline that never fires on an insert -- the
+  -- exact "configured was assumed" failure this diagnostic exists to catch,
+  -- rebuilt inside the diagnostic. The verdict now lives in
+  -- `evaluateStatus()` (scripts/graph/verify-pipeline.ts), with every other
+  -- verdict and its unit tests, and this function reports the fact. That is
+  -- also why the Vault branch returns a length rather than a boolean.
   select coalesce(jsonb_agg(jsonb_build_object(
            'name',    want.name,
            'present', t.tgname is not null,
-           'enabled', coalesce(t.tgenabled, 'D') <> 'D'
+           'state',   t.tgenabled
          ) order by want.name), '[]'::jsonb)
     into v_triggers
     from (values ('bevs_embed_after_insert'), ('bevs_embed_after_update')) as want(name)
@@ -468,7 +503,7 @@ end;
 $$;
 
 comment on function public.graph_pipeline_status() is
-  'A-16: read-only diagnostic for npm run graph:verify. Reports Vault secret presence (name and length only, never a value), bev_embeddings coverage of active Bevs, bev_edges count/orientation/versions, and the state of the two bevs_embed_after_* triggers. Service role only.';
+  'A-16: read-only diagnostic for npm run graph:verify. Reports Vault secret presence (name and length only, never a value), bev_embeddings coverage of active Bevs, bev_edges count/orientation/versions, and pg_trigger.tgenabled for the two bevs_embed_after_* triggers. Reports facts; verify-pipeline.ts decides PASS/FAIL. Service role only.';
 
 -- Service role only. This is an operator's tool and it reports on the embed
 -- webhook's configuration, so `anon` and `authenticated` have no business
