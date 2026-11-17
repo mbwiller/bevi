@@ -4,14 +4,80 @@ How the internal bug reporter is wired, what has to be configured outside this
 repository, and what is still unverified. The workflow it serves is in
 [`bug-workflow.md`](./bug-workflow.md).
 
-> **Status.** Live since 2026-11-09: the Linear workspace, the `BEV` team, the
-> labels, the secrets and the function are configured, and tickets filed from
-> the app land in Triage (BEV-5 onward). What has **not** run against the real
-> Linear API is everything the 2.13.0 contract added: the "Pointed at" section,
-> recorded steps, and the `place` route that writes `sortOrder` and priority.
-> Those reach production only when the `bug-report` function is redeployed;
-> until then the app files with the older template and says ranking is not
-> available yet.
+> **Status.** The tracker is the founders' board once `BOARD_INTAKE_URL` and
+> `BOARD_INTAKE_TOKEN` are set on this project and the `bug-report` function is
+> redeployed; until then, and whenever those are unset, it is Linear, live
+> since 2026-11-09 (tickets BEV-5 onward). The board client has run against a
+> board on a developer's machine, end to end; it has **not** yet run from the
+> deployed function. See [The tracker: the founders' board](#the-tracker-the-founders-board).
+
+## The tracker: the founders' board
+
+Linear did the job, and the founders' own board does it better for two people
+and their agents: tickets sit beside the cards they came from, an agent picks
+one up with the same tools it uses for a card, and "which is worse" is the
+board's own order. So the board (`bevi-founders-board`: its own repository,
+its own Supabase project) is the tracker, and this repository still holds
+exactly three things: a way to file from a phone, a secure server-side path to
+the tracker, and the instructions an agent needs to work from a ticket number.
+
+What changed here is one module. `supabase/functions/bug-report/board.ts`
+talks to the board's intake endpoint (`<board>/api/intake/…`) where
+`linear.ts` talks to Linear, and `index.ts` picks the board when it is
+configured. The four routes, the ledger, the idempotency key, the private
+evidence bucket, the redaction and the contract are untouched: the app, 
+`packages/api` and `shared/` did not change, and a ticket's name is whatever
+the tracker returns (`T-19` from the board, `BEV-104` from Linear).
+
+| | Board | Linear |
+|---|---|---|
+| Chosen when | `BOARD_INTAKE_URL` and `BOARD_INTAKE_TOKEN` are set, and `TICKET_TRACKER` is not `linear` | otherwise, with `LINEAR_API_KEY` and `LINEAR_TEAM_ID` |
+| A ticket is | `T-<n>`, opened at `<board>/?open=T-<n>` | `BEV-<n>` |
+| Pictures | sent to the board as base64, three megabytes each at most, kept in its database | uploaded to Linear's storage |
+| Order | the board's one shared order; the function says after or before which of the caller's tickets | `sortOrder`, respaced from here |
+| Reporter's kind | the ticket's type on the board | a Linear label |
+
+**Setting it up.** On the board, **Connect a CLI → The Bevi app**: each founder
+saves their Bevi handle, and one makes the app's token. The board then shows
+the two commands to run here:
+
+```bash
+npx supabase secrets set BOARD_INTAKE_URL=https://<the board> BOARD_INTAKE_TOKEN=<shown once on the board>
+npx supabase functions deploy bug-report
+```
+
+The token is of a kind that can file tickets, read back where they stand, close
+one and order them, and nothing else. It lives only in the board's screen for a
+moment and in this project's secrets: never in a file, a log line or a response.
+`readBoardConfig` refuses an address that is not `https` (or this machine), so
+the token is never sent in the clear.
+
+If the two secrets are set but cannot be used (a token of the wrong shape, an
+address that is not `https`), the function does not use the board and says so
+once per cold start in its log, without the values; it never falls back to
+Linear without a trace.
+
+**Going back.** `npx supabase secrets set TICKET_TRACKER=linear` (no redeploy)
+sends new reports to Linear again; unsetting it returns to the board. Tickets
+already on the board stay there, and are closed there: while Linear is the
+tracker, Filed reports shows a `T-<n>` ticket as unknown and "Verified on
+device" answers not found for it.
+
+**Tickets filed while Linear was the tracker** were carried over by the board's
+`scripts/import-linear.ts` with their numbers: `BEV-7` is `T-7` there and still
+answers to `BEV-7`, which is the name this project's ledger holds, so Filed
+reports keeps listing them with their state on the board.
+
+**What a failure looks like.** The function logs `tracker=board code=…` and
+answers `tracker_error` with the same short code: `board_unauthorized` (the
+token was revoked or mistyped), `board_not_set_up` (the board's database step
+has not been run), `board_unreachable`, `board_refused` (a rule of the board,
+such as its sixty-an-hour limit), `board_invalid`, `board_too_large`,
+`board_error`. None carries anything the reporter typed.
+
+The rest of this page was written for Linear and still describes the fallback
+exactly; where it says "Linear" for something both trackers do (the ledger, the
+redaction, the gate in Postgres), it holds for the board too.
 
 ## Why Linear, and not a dashboard in this repo
 
@@ -48,7 +114,8 @@ supabase/functions/bug-report/    POST  /bug-report         validate → redact 
          │   redact.ts  credential/PII stripping, input caps, the environment, breadcrumb and target allow-lists
          │   issue.ts   kind and severity, the issue title and the template body
          │   rank.ts    the ranked list: order, the position to write, respacing, the priority bands
-         │   linear.ts  the GraphQL client (fileUpload, issueCreate, states, labels, issues, issueUpdate)
+         │   board.ts   the founders' board as the tracker: ticket, file, status, verify, place; the write-up the board shows
+         │   linear.ts  the fallback tracker: the GraphQL client (fileUpload, issueCreate, states, labels, issues, issueUpdate)
          │   cors.ts    the preflight answer and the allow headers every response carries
          ▼
 Linear                            the issue, its identifier, its lifecycle

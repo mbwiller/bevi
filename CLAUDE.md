@@ -28,14 +28,14 @@ something the other lane must know about, and only then:
   what the app must regenerate or adopt);
 - a migration, RPC or RLS change that alters what `BeviApi` returns;
 - a design-system or component prop change the backend must serve;
-- taking or finishing a Linear ticket that touches both lanes;
+- taking or finishing a board ticket or card that touches both lanes;
 - a question for the other lane that blocks you.
 
 Not for progress updates, test results, or anything inside one lane.
 
 **Shape.** One message, at most five lines, plain text, no markdown headers:
 what changed, where (`path` or contract version), what the other lane needs
-to do, and the Linear ticket or PR if there is one. The branch is prefixed
+to do, and the ticket or card number or the PR if there is one. The branch is prefixed
 automatically. Example:
 
 ```
