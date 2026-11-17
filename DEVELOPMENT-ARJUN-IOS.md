@@ -13,7 +13,7 @@ not renumber anything in `TASKS.md`.
 ## 0. The one thing that actually changes
 
 Today the app and the backend ship together. A merge to `main` deploys both, so
-`CONTRACT_VERSION` (3.0.0) is a build-time fact: there is exactly one client and
+`CONTRACT_VERSION` (2.14.0 on `main`) is a build-time fact: there is exactly one client and
 it is always the newest one. Every rule in `DEVELOPMENT-ARJUN.md` that says
 "append-only" or "bump the contract" assumes that.
 
@@ -169,7 +169,8 @@ This is the real work and the one that is easy to skip until it bites.
   2. *then* matrix it over the previous two contract versions.
   Contract tags do not exist (`git tag` has only
   `archive/hygiene-sweep-pre-rebase` and `pre-rebase-3.0.0`), so create them
-  retroactively for 2.x and 3.0.0.
+  retroactively for the versions that will still be in the field — 2.14.0 and
+  back. Note 3.0.0 lives on the unmerged #221, not on `main`.
 - **Deprecation ledger:** a short table at the end of `DEVELOPMENT-ARJUN.md`:
   what is deprecated, which contract version stopped using it, the earliest
   `minAppVersion` that lets us delete it.
@@ -335,6 +336,10 @@ reject rather than ask.
   `test-double-isolation.test.ts` is a typecheck-time guard, not a bundle guard.
   Add the same scan over `npx expo export --platform ios` (or the EAS bundle) in
   `ios.yml`.
+- **Pin the toolchain in `ios.yml`.** The EAS build image decides the Xcode
+  version, and it has to match what the Expo SDK on `main` expects. `main` is
+  on SDK 57 while SDK 58 is now npm `latest`, so the image is pinned to what 57
+  wants and moves in the same PR as Matt's SDK upgrade (IM-1), never on its own.
 - **Which backend does a TestFlight build talk to?** A real decision (IS-2):
   `bevi-dev` means we can break things, `bevi-prod` means the build we test is
   the build we ship. Recommendation: `preview` → dev, `production` → prod, with

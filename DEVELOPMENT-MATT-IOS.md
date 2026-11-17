@@ -80,8 +80,9 @@ simulator.
   in `plugins`.
 - `infoPlist` usage strings, each shown verbatim to the user and a rejection
   risk if vague:
-  - `NSCameraUsageDescription` — "Bevi uses the camera to photograph a drink
-    you're adding."
+  - `NSCameraUsageDescription` — one string covers both uses, so it has to
+    name both: "Bevi uses the camera to photograph a drink you're adding and to
+    scan a barcode."
   - `NSPhotoLibraryUsageDescription` — for `launchImageLibraryAsync`.
   - `NSLocationWhenInUseUsageDescription` — the map's locate button only; say it
     is never stored, because it is not.
@@ -106,6 +107,14 @@ simulator.
   `npx expo config --type introspect` after a prebuild, and raise it only
   through `expo-build-properties`.
 - `scheme: 'bevi'` for deep links (IM-8).
+- **Name the toolchain, and do not change two things at once.** `main` is on
+  Expo SDK 57; SDK 58 is now npm `latest`. Do the first native build on **57**
+  and take SDK 58 as its own PR afterwards, so a native failure is never
+  ambiguous between "the port" and "the upgrade". Matt's Mac has Xcode 27.2, and
+  SDK 57's changelog has a "Staying on SDK 57 with Xcode 27" opt-in (scene
+  support) that nobody here has tested — try it early, because if it does not
+  hold, the SDK 58 upgrade stops being optional and moves ahead of G1. The EAS
+  build image in `ios.yml` is pinned to match whichever SDK is current (IA-9).
 - Keep `web` exactly as it is if IS-1 keeps the web app.
 
 New files and dependencies:
@@ -210,7 +219,7 @@ IM-7 replaces. **Land IM-4 before IM-7 starts**, or let IM-7 take the deletion.
 
 ---
 
-### IM-5 — Photos, for real
+### IM-5 — Photos and the barcode scan, for real
 
 Blocked on **IA-4** (the contract widening `UploadMediaInput.file`).
 
@@ -235,7 +244,25 @@ bug waiting in this project.
 - **Permission denial** is a real state now, not a browser dialog: a user who
   taps "Don't Allow" needs copy and `Linking.openSettings()`.
 
-**Check:** take a photo on a device, add a Bev, confirm the image appears at the right size — and that the stored object is not 0 bytes.
+**The barcode scan is the other half of this milestone, and it is a full
+rewrite rather than a port.** `src/features/create-bev/BarcodeCamera.tsx` is
+`getUserMedia` plus ZXing: it opens a `MediaStream`, draws frames and decodes
+them in JavaScript. None of that exists on native.
+
+- Replace it with `expo-camera`, which does barcode scanning on-device through
+  AVFoundation — faster and more reliable than ZXing on frames, and it removes
+  the ZXing dependency from the native bundle. New dependency, own PR (§4).
+- `barcodeReader.ts` is worth reading before deciding what to keep: whatever in
+  it is pure UPC handling stays, and only the frame-grabbing goes.
+- The scanned UPC then flows exactly as it does today — into `bevs.upc` after
+  creation, never passed through to `create_bev`.
+- `__tests__/BarcodeCamera.test.tsx` mocks `getUserMedia`, so it belongs to the
+  web project once IM-11 splits them, and the native path needs its own test.
+- This is the path that shipped in #224 and whose **iPhone camera scan was never
+  tested** — on web it was behind iOS Safari's HTTPS requirement. A native build
+  is the first time it can actually be verified.
+
+**Check:** take a photo on a device, add a Bev, confirm the image appears at the right size — and that the stored object is not 0 bytes. Scan a real can's barcode and confirm the UPC lands on the Bev.
 
 ---
 
@@ -473,9 +500,9 @@ Same list as Arjun's doc, from the app side:
   touches nothing else.
 - **New dependencies get their own small PR, before the plugin entry that needs
   them:** `expo-updates`, `expo-location`, `expo-dev-client` (if we want the dev
-  client rather than a plain debug build), `@react-native-community/netinfo`,
-  the map library, `@sentry/react-native`, possibly `expo-secure-store` and
-  `expo-build-properties`. One lockfile at the root, `npx expo install` from
+  client rather than a plain debug build), `expo-camera` (IM-5's barcode scan),
+  `@react-native-community/netinfo`, the map library, `@sentry/react-native`,
+  possibly `expo-secure-store` and `expo-build-properties`. One lockfile at the root, `npx expo install` from
   `app/`, never `npm install` inside `app/` without `-w`.
 - **`shared/src/` only through `contract/*`**, one `CONTRACT_VERSION` bump in
   flight at a time, and post to `#agents` before merging a bump. Arjun's order
