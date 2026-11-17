@@ -54,6 +54,7 @@ export interface FakeBev {
   iconReadyAt: string | null;
   /** Forced by `controls.setIconStatus`, so a suite can render any state (incl. 'failed'). */
   iconStatusOverride: IconStatus | null;
+  nutrition?: import('@bevi/shared').NutritionPreview;
   createdById: string | null;
   createdAt: string;
 }

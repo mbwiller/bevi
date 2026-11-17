@@ -22,6 +22,8 @@ export interface DuplicatesStepProps {
   processing: boolean;
   /** A failed submit (offline, upload failed, still processing…): Retry keeps the form. */
   submitMessage: string | null;
+  /** A successful create that needs the person to acknowledge a degraded optional feature. */
+  continueLabel?: string;
   /** Offline: submit is blocked (the banner says why). */
   blocked: boolean;
 }
@@ -37,6 +39,7 @@ export function DuplicatesStep({
   creating,
   processing,
   submitMessage,
+  continueLabel,
   blocked,
 }: DuplicatesStepProps) {
   const { colors } = useTheme();
@@ -85,8 +88,8 @@ export function DuplicatesStep({
             <Text style={[type.body, styles.flex, { color: colors.text }]}>{submitMessage}</Text>
           </View>
         ) : null}
-        <Button variant={some ? 'outlined' : 'primary'} size="lg" block loading={creating} disabled={blocked || loading} onPress={onCreate}>
-          {submitMessage && !creating ? 'Retry' : some ? 'No, mine is different' : 'Add and rank it'}
+        <Button variant={some ? 'outlined' : 'primary'} size="lg" block loading={creating} disabled={!continueLabel && (blocked || loading)} onPress={onCreate}>
+          {continueLabel ?? (submitMessage && !creating ? 'Retry' : some ? 'No, mine is different' : 'Add and rank it')}
         </Button>
       </View>
     </View>

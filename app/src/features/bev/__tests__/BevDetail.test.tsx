@@ -58,14 +58,14 @@ beforeEach(() => {
 
 afterEach(() => client.clear());
 
-it('a ranked Bev shows your score, its place in the bucket, and Re-rank', async () => {
+it('a ranked Bev shows your score, its place in the bucket, and Bev it again', async () => {
   const ranked = (await api.rankings.listMine()).items[0]!;
   const r = await open(ranked.bevId);
   expect(await screen.findByRole('header', { name: ranked.bev.name })).toBeTruthy();
   expect(screen.getByText('Your score')).toBeTruthy();
   expect(screen.getByText(`#${ranked.position + 1} in Loved`)).toBeTruthy();
   expect(screen.getByText('Bevi score')).toBeTruthy();
-  await fireEvent.press(screen.getByLabelText(`Re-rank ${ranked.bev.name}`));
+  await fireEvent.press(screen.getByLabelText(`Bev ${ranked.bev.name} again`));
   expect(r.path()).toBe(`/rank/${ranked.bevId}?mode=rerank`);
 });
 
@@ -161,4 +161,21 @@ describe('imageUrlFromParam', () => {
     expect(imageUrlFromParam(undefined)).toBeNull();
     expect(imageUrlFromParam('javascript:alert(1)')).toBeNull();
   });
+});
+
+it('shows persisted barcode nutrition on the Bev page', async () => {
+  const ranked = (await api.rankings.listMine()).items[0]!;
+  const bev = await api.bevs.get(ranked.bevId);
+  const nutrition = {
+    barcode: '012345678901', productName: 'Scanned product', basis: 'Per serving (355 ml)',
+    calories: 0, fatGrams: null, carbohydrateGrams: 0, sugarGrams: 0, proteinGrams: null,
+    sodiumMg: 4, sourceUrl: 'https://world.openfoodfacts.org/product/012345678901',
+  };
+  const get = jest.spyOn(api.bevs, 'get').mockResolvedValue({ ...bev, nutrition });
+  try {
+    await open(bev.id);
+    expect(await screen.findByText('Nutrition Facts')).toBeTruthy();
+    expect(screen.getByLabelText('0 calories')).toBeTruthy();
+    expect(screen.getByText('Scanned product')).toBeTruthy();
+  } finally { get.mockRestore(); }
 });

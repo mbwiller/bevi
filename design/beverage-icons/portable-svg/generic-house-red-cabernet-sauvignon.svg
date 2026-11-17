@@ -4,13 +4,59 @@
             <stop offset="0" stop-color="#3c372d" stop-opacity="0.18"/>
             <stop offset="1" stop-color="#3c372d" stop-opacity="0"/>
         </radialGradient>
+        <linearGradient id="bev-generic-house-red-cabernet-sauvignon-foot" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#c6d4cc" stop-opacity="0.8"/>
+            <stop offset="0.4" stop-color="#fbfffb" stop-opacity="0.95"/>
+            <stop offset="1" stop-color="#a9bcb1" stop-opacity="0.8"/>
+        </linearGradient>
+        <linearGradient id="bev-generic-house-red-cabernet-sauvignon-stem" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#9fb3a7"/>
+            <stop offset="0.35" stop-color="#ffffff"/>
+            <stop offset="0.7" stop-color="#dbe6df"/>
+            <stop offset="1" stop-color="#93a99c"/>
+        </linearGradient>
+        <linearGradient id="bev-generic-house-red-cabernet-sauvignon-glass" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#ffffff" stop-opacity="0.65"/>
+            <stop offset="0.18" stop-color="#ffffff" stop-opacity="0.12"/>
+            <stop offset="0.65" stop-color="#ffffff" stop-opacity="0.02"/>
+            <stop offset="1" stop-color="#75867c" stop-opacity="0.35"/>
+        </linearGradient>
+        <linearGradient id="bev-generic-house-red-cabernet-sauvignon-wine" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#2c040b"/>
+            <stop offset="0.12" stop-color="#5e0b19"/>
+            <stop offset="0.3" stop-color="#8d1a2c"/>
+            <stop offset="0.55" stop-color="#6d0f1f"/>
+            <stop offset="0.85" stop-color="#45060f"/>
+            <stop offset="1" stop-color="#26030a"/>
+        </linearGradient>
+        <linearGradient id="bev-generic-house-red-cabernet-sauvignon-winev" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#000000" stop-opacity="0"/>
+            <stop offset="0.45" stop-color="#12010a" stop-opacity="0.05"/>
+            <stop offset="1" stop-color="#12010a" stop-opacity="0.55"/>
+        </linearGradient>
     </defs>
-    <path fill="url(#bev-generic-house-red-cabernet-sauvignon-shadow)" stroke="none" d="M 142 239 C 142 245.07513 123.19597 250 100 250 C 76.80404 250 58 245.07513 58 239 C 58 232.92485 76.80404 228 100 228 C 123.19597 228 142 232.92485 142 239 Z"/>
-    <path fill="#dcebe5" fill-opacity="0.24" stroke="#bbcbc4" stroke-width="2" d="M 53 54 Q 100 39 147 54 L 139 112 Q 135 136 112 149 L 112 210 Q 112 219 128 222 L 72 222 Q 88 219 88 210 L 88 149 Q 65 136 61 112 Z"/>
-    <path fill="#6e1428" stroke="none" d="M 61 89 Q 100 101 139 89 L 135 112 Q 131 135 100 146 Q 69 135 65 112 Z"/>
-    <path fill="#7d2033" stroke="none" d="M 139 90 C 139 93.866 121.539116 97 100 97 C 78.46089 97 61 93.866 61 90 C 61 86.134 78.46089 83 100 83 C 121.539116 83 139 86.134 139 90 Z"/>
-    <path fill="none" stroke="#ffffff" stroke-opacity="0.58" stroke-width="2.4" d="M 66 61 Q 62 99 74 126 M 134 61 Q 138 99 126 126"/>
-    <path fill="#e4eee8" fill-opacity="0.28" stroke="#c2d0c9" stroke-width="1.4" d="M 100 149 L 100 211 Q 100 220 116 223 L 84 223 Q 100 220 100 211 L 100 149 Z"/>
-    <path fill="#d7e3dc" fill-opacity="0.45" stroke="#bbc9c2" stroke-width="1.4" d="M 126 223 C 126 225.48528 114.359406 227.49998 100 227.49998 C 85.640594 227.49998 74 225.48528 74 223 C 74 220.51474 85.640594 218.5 100 218.5 C 114.359406 218.5 126 220.51474 126 223 Z"/>
-    <path fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="1.5" d="M 58 86 Q 100 98 142 86"/>
+    <path fill="url(#bev-generic-house-red-cabernet-sauvignon-shadow)" stroke="none" d="M 140 239 C 140 245.07513 122.0914 250 100 250 C 77.90861 250 60 245.07513 60 239 C 60 232.92485 77.90861 228 100 228 C 122.0914 228 140 232.92485 140 239 Z"/>
+    <path fill="none" stroke="#c6d4cc" d="M 68.5 229.5 Q 100 221.5 131.5 229.5"/>
+    <path fill="url(#bev-generic-house-red-cabernet-sauvignon-foot)" stroke="#8ea398" stroke-opacity="0.8" d="M 132 229.6 C 132.00002 231.08522 128.6286 232.5096 122.62743 233.55981 C 116.62627 234.61002 108.48693 235.20003 100 235.20003 C 91.51307 235.20003 83.37373 234.61002 77.372574 233.55981 C 71.37141 232.5096 67.99999 231.08522 68 229.6 C 67.99999 228.1148 71.37141 226.69041 77.372574 225.6402 C 83.37373 224.58998 91.51307 224 100 224 C 108.48693 224 116.62627 224.58998 122.62743 225.6402 C 128.6286 226.69041 132.00002 228.1148 132 229.6 Z"/>
+    <path fill="none" stroke="#ffffff" stroke-opacity="0.7" stroke-width="0.9" d="M 127 228.39998 C 127.000015 229.35477 124.15538 230.27045 119.091896 230.94559 C 114.02842 231.62071 107.16085 232 100 232 C 92.83915 232 85.97158 231.62071 80.908104 230.94559 C 75.84462 230.27045 72.999985 229.35477 73 228.39998 C 72.999985 227.44522 75.84462 226.52954 80.908104 225.8544 C 85.97158 225.17928 92.83915 224.79999 100 224.79999 C 107.16085 224.79999 114.02842 225.17928 119.091896 225.8544 C 124.15538 226.52954 127.000015 227.44522 127 228.39998 Z"/>
+    <path fill="url(#bev-generic-house-red-cabernet-sauvignon-stem)" stroke="#8ea398" stroke-opacity="0.8" stroke-width="0.8" d="M 97.6 128 L 102.4 128 L 102 226 Q 106 227.49998 106.4 228.39998 L 93.6 228.39998 Q 94 227.49998 98 226 Z"/>
+    <path fill="url(#bev-generic-house-red-cabernet-sauvignon-stem)" stroke="#8ea398" stroke-opacity="0.8" stroke-width="0.8" d="M 95.2 124.600006 L 104.8 124.600006 L 104 130 L 96 130 Z"/>
+    <path fill="#000000" stroke="#ffffff" stroke-opacity="0.8" stroke-width="0.9" d="M 99 133 L 99 222"/>
+    <path fill="url(#bev-generic-house-red-cabernet-sauvignon-glass)" stroke="#8ea398" stroke-opacity="0.9" stroke-width="1.3" d="M 66 20 C 63 38 61.4 58 61.6 76 C 61.8 98 68 114 80 120.600006 C 86 123.8 92 125 96 125 L 104 125 C 108 125 114 123.8 120 120.600006 C 132 114 138.2 98 138.4 76 C 138.6 58 137 38 134 20 Z"/>
+    <path fill="url(#bev-generic-house-red-cabernet-sauvignon-wine)" stroke="none" d="M 62.8 74 C 63 96 69 112 80.6 118.6 C 86.4 121.80001 92 123.2 96 123.399994 L 104 123.399994 C 108 123.2 113.6 121.80001 119.399994 118.6 C 131 112 137 96 137.2 74 Z"/>
+    <path fill="url(#bev-generic-house-red-cabernet-sauvignon-winev)" stroke="none" d="M 62.8 74 C 63 96 69 112 80.6 118.6 C 86.4 121.80001 92 123.2 96 123.399994 L 104 123.399994 C 108 123.2 113.6 121.80001 119.399994 118.6 C 131 112 137 96 137.2 74 Z"/>
+    <path fill="#5a0816" stroke="none" d="M 137.2 74 C 137.20001 77.203255 120.54499 79.8 100 79.8 C 90.13394 79.8 80.671974 79.188934 73.69562 78.10122 C 66.71927 77.01351 62.799995 75.53825 62.8 74 C 62.799995 72.46175 66.71927 70.98649 73.69562 69.89878 C 80.671974 68.811066 90.13394 68.2 100 68.2 C 120.54499 68.2 137.20001 70.796745 137.2 74 Z"/>
+    <path fill="none" stroke="#b33a4c" stroke-width="1.6" d="M 137.2 74 C 137.20001 77.203255 120.54499 79.8 100 79.8 C 90.13394 79.8 80.671974 79.188934 73.69562 78.10122 C 66.71927 77.01351 62.799995 75.53825 62.8 74 C 62.799995 72.46175 66.71927 70.98649 73.69562 69.89878 C 80.671974 68.811066 90.13394 68.2 100 68.2 C 120.54499 68.2 137.20001 70.796745 137.2 74 Z"/>
+    <g opacity="0.8">
+        <path fill="none" stroke="#7d1426" stroke-width="1.2" d="M 66 73.4 Q 100 66.4 134 73.4"/>
+    </g>
+    <path fill="none" stroke="#c45a6b" stroke-opacity="0.55" stroke-width="2" stroke-linecap="round" d="M 68 100 Q 73 113 83 118.6"/>
+    <path fill="none" stroke="#ffffff" stroke-opacity="0.75" stroke-width="3" stroke-linecap="round" d="M 68.4 30 C 66.4 50 65.8 66 66.2 80"/>
+    <path fill="none" stroke="#ffffff" stroke-opacity="0.45" stroke-width="2" stroke-linecap="round" d="M 67.4 88 C 68 98 70.6 106 75 112"/>
+    <path fill="none" stroke="#ffffff" stroke-opacity="0.4" stroke-width="1.6" stroke-linecap="round" d="M 131.4 32 C 133.4 48 134 60 134 72"/>
+    <g opacity="0.55">
+        <path fill="#ffffff" stroke="none" d="M 82.2 40 C 82.2 43.037563 81.21503 45.499996 80 45.5 C 78.78497 45.499996 77.8 43.037563 77.8 40 C 77.8 36.962437 78.78497 34.500004 80 34.5 C 81.21503 34.500004 82.2 36.962437 82.2 40 Z"/>
+    </g>
+    <path fill="none" stroke="#f6fbf6" stroke-width="1.8" d="M 134 20 C 134 22.982338 118.77768 25.4 100 25.4 C 81.22232 25.4 66 22.982338 66 20 C 66 17.017662 81.22232 14.6 100 14.6 C 118.77768 14.6 134 17.017662 134 20 Z"/>
+    <path fill="none" stroke="#8ea398" stroke-opacity="0.75" stroke-width="0.8" d="M 134.5 20 C 134.5 23.20325 119.053825 25.8 100 25.8 C 80.946175 25.8 65.5 23.20325 65.5 20 C 65.5 16.79675 80.946175 14.2 100 14.2 C 119.053825 14.2 134.5 16.79675 134.5 20 Z"/>
 </svg>
