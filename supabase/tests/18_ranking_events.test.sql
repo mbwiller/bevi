@@ -3,7 +3,8 @@
 --
 -- In order: (1) the table's shape, RLS and the internal functions' grants;
 -- (2) the RPCs: submit_ranking and rerank_bev each write exactly one event,
--- remove_ranking writes and deletes nothing, and the comparison log is checked
+-- remove_ranking writes and deletes nothing, a re-rank re-dates `ranked_at` and
+-- gives the row a new id, and the comparison log is checked
 -- against the index (valid calls pass; a malformed triple or a broken index
 -- rule raises BEVI_VALIDATION, a compared Bev outside the bucket raises
 -- BEVI_STALE_BUCKET; either way nothing changes); (3) the two `streakFromTimestamps` vectors written as
@@ -35,7 +36,7 @@
 --   a1402  the re-ranked-day scenario (section 3)
 --   a1403  the removed-day scenario (section 3)
 begin;
-select plan(58);
+select plan(61);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -272,6 +273,29 @@ select is(
   'the rejected re-ranks changed nothing: b1 still at position 0, still 3 events'
 );
 
+-- `rerank_bev` deletes the row and re-inserts it, so `ranked_at` takes its
+-- `default now()` and becomes the re-rank's time -- which is what the contract
+-- calls `Ranking.createdAt`, what listMine's Recent sort orders by, and what
+-- bev_of_period counts a re-rank on the day of. Only the doc comment ever said
+-- so; nothing executed it, and section 3 below hand-inserts the rows a re-rank
+-- leaves rather than letting the RPC produce them.
+--
+-- `now()` is the transaction's start time and never advances inside it, so the
+-- move is only visible if the row starts out older: b1 is backdated two days.
+-- Nothing else reads a1401's `ranked_at` -- the streak comes from
+-- ranking_events (A-14 3.1), and pg_temp.rows_current is only asked about
+-- a1402 and a1403.
+update public.rankings
+   set ranked_at = pg_temp.local_noon(2, 'America/Los_Angeles')
+ where user_id = '00000000-0000-4000-8000-0000000a1401'
+   and bev_id = (select id from t_bevs where label = 'b1');
+
+create temporary table t_rerank_old on commit drop as
+select r.id, r.ranked_at
+  from public.rankings r
+ where r.user_id = '00000000-0000-4000-8000-0000000a1401'
+   and r.bev_id = (select id from t_bevs where label = 'b1');
+
 set local role authenticated;
 set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000a1401", "role": "authenticated"}';
 
@@ -289,6 +313,29 @@ select is(
       and e.bev_id = (select id from t_bevs where label = 'b1')),
   array['submit', 'rerank'],
   'rerank_bev writes one rerank event, and the original submit event stays'
+);
+
+select is(
+  (select r.ranked_at from public.rankings r
+    where r.user_id = '00000000-0000-4000-8000-0000000a1401'
+      and r.bev_id = (select id from t_bevs where label = 'b1')),
+  now(),
+  'rerank_bev re-dates the row: ranked_at is the re-rank''s time, not the first ranking''s'
+);
+
+select ok(
+  (select r.ranked_at > o.ranked_at from public.rankings r, t_rerank_old o
+    where r.user_id = '00000000-0000-4000-8000-0000000a1401'
+      and r.bev_id = (select id from t_bevs where label = 'b1')),
+  'and it really moved: later than the backdated original, two days before'
+);
+
+select isnt(
+  (select r.id from public.rankings r
+    where r.user_id = '00000000-0000-4000-8000-0000000a1401'
+      and r.bev_id = (select id from t_bevs where label = 'b1')),
+  (select o.id from t_rerank_old o),
+  'the row is a new one: a re-rank changes `Ranking.id`, it does not update in place'
 );
 
 set local role authenticated;
@@ -324,7 +371,9 @@ select is(
 -- ---------------------------------------------------------------------------
 -- streakFromTimestamps "events: the 9th's only ranking is re-ranked on the
 -- 11th": submit b1 two days ago, submit b2 yesterday, re-rank b1 today. The
--- rows a re-rank leaves: b1 ranked_at today, b2 yesterday.
+-- rows a re-rank leaves: b1 ranked_at today, b2 yesterday -- the re-dating
+-- section 2 proves on the real RPC, hand-inserted here so the three days are
+-- fixed.
 insert into public.ranking_events (user_id, bev_id, kind, created_at)
 values ('00000000-0000-4000-8000-0000000a1402', (select id from t_bevs where label = 'b1'), 'submit',
         pg_temp.local_noon(2, 'America/Los_Angeles')),

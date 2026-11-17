@@ -10,6 +10,9 @@ import { controls } from '@/testing/fakeApi';
 jest.mock('@/features/bug-report/loadHost', () => ({
   loadReportHost: () => Promise.resolve({ default: require('@/features/bug-report/ReportHost').default }),
 }));
+jest.mock('@/features/create-bev/loadNutritionDemo', () => ({
+  loadNutritionDemo: () => Promise.resolve({ default: require('@/features/create-bev/NutritionDemo').NutritionDemo }),
+}));
 
 // The real route tree in src/app, rendered by expo-router's test harness.
 const APP_DIR = path.resolve(__dirname, '../app');
@@ -273,5 +276,22 @@ describe('tab bar', () => {
     await renderRouter(APP_DIR, { initialUrl: '/profile' });
     expect(await screen.findByText('Test User')).toBeTruthy();
     expect(screen.getByText('TU')).toBeTruthy();
+  });
+});
+
+
+describe('standalone nutrition demo', () => {
+  it('opens the scanner while signed out when explicitly enabled', async () => {
+    const previous = process.env.EXPO_PUBLIC_NUTRITION_SCAN_DEMO;
+    process.env.EXPO_PUBLIC_NUTRITION_SCAN_DEMO = '1';
+    try {
+      await start('signedOut');
+      expect(await screen.findByText('Scan a Bev')).toBeTruthy();
+      expect(screen.getByLabelText('Scan barcode for nutrition')).toBeTruthy();
+      expect(screen.queryByText('Sign in')).toBeNull();
+    } finally {
+      if (previous === undefined) delete process.env.EXPO_PUBLIC_NUTRITION_SCAN_DEMO;
+      else process.env.EXPO_PUBLIC_NUTRITION_SCAN_DEMO = previous;
+    }
   });
 });

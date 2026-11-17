@@ -3,6 +3,7 @@
 // Supabase; the app never imports `@supabase/supabase-js` and never sees
 // the client this creates.
 import type { BeviApi } from '@bevi/shared';
+import { createNutritionApi } from './nutrition';
 import { createAuthApi } from './auth';
 import { createBevsApi } from './bevs';
 import { createBugsApi } from './bugs';
@@ -39,6 +40,7 @@ export function createBeviApi(config: BeviApiConfig): BeviApi {
 
   return {
     ...auth,
+    nutrition: createNutritionApi(),
     profile: {
       ...profile,
       async setBirthDate(date) {

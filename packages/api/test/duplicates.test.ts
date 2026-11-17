@@ -132,7 +132,7 @@ describe('bevs.get after a merge', () => {
     expect(log.rpc).toEqual([{ fn: 'get_bev', args: { p_bev_id: BEV } }]);
     expect(bev.id).toBe(ORIGINAL);
     const bevIdReads = log.eqs.filter((e) => e.column === 'bev_id');
-    expect(bevIdReads.map((e) => e.table).sort()).toEqual(['bev_flavor_profiles', 'rankings', 'want_to_try']);
+    expect(bevIdReads.map((e) => e.table).sort()).toEqual(['bev_flavor_profiles', 'bev_nutrition', 'rankings', 'want_to_try']);
     expect(bevIdReads.every((e) => e.value === ORIGINAL)).toBe(true);
   });
 });

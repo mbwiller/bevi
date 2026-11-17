@@ -19,7 +19,7 @@ export const NOTE_MAX = 140;
 type Mode = 'menu' | 'note' | 'remove';
 
 /**
- * A Bev'd row's actions (§6.5, §6.19): Re-rank (opens the ranking flow in re-rank mode), Edit note
+ * A Bev'd row's actions (§6.5, §6.19): Bev it again (opens the ranking flow in re-rank mode), Edit note
  * (140 characters) and Remove (with a confirm that explains the bucket's other scores shift).
  */
 export function RankingActionsSheet({ ranked, onClose }: { ranked: RankedBev | null; onClose: () => void }) {
@@ -48,7 +48,7 @@ export function RankingActionsSheet({ ranked, onClose }: { ranked: RankedBev | n
       {ranked && mode === 'menu' ? (
         <>
           <SheetOption
-            label="Re-rank"
+            label="Bev it again"
             icon="arrow-up-down"
             onPress={() => {
               onClose();

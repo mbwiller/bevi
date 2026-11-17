@@ -4,10 +4,11 @@
 // Each method lists the `ApiError.code` values (./errors) it can throw beyond
 // `network` / `unknown`, which any method can throw. Every method other than
 // `signUp`, `signIn`, `getSession`, `onAuthChange`, `profile.checkHandle` and
-// `meta.getAppConfig` throws 'unauthorized' when signed out.
+// `meta.getAppConfig` and read-only `nutrition.lookupBarcode` throw 'unauthorized' when signed out.
 
 import type { Bucket, CategoryId, PriceTier } from './enums';
 import type {
+  NutritionPreview,
   AppConfig,
   Bev,
   BevIcon,
@@ -244,6 +245,8 @@ export interface CreateBevInput {
   photoAssetId?: string;
   /** From `media.upload({ kind: 'label' })`. */
   labelAssetId?: string;
+  /** User-confirmed barcode result; saved atomically with this new Bev. */
+  nutrition?: NutritionPreview;
 }
 
 export interface FindDuplicatesInput {
@@ -921,7 +924,14 @@ export interface BugsApi {
   place(ticketId: string, afterTicketId: string | null): Promise<BugReportSummary[]>;
 }
 
+export interface NutritionApi {
+  /** UPC-A, EAN-8 or EAN-13. null means no usable nutrition data. */
+  lookupBarcode(barcode: string, signal?: AbortSignal): Promise<NutritionPreview | null>;
+}
+
 export interface BeviApi extends AuthApi {
+  /** Optional capability for compatibility with older API implementations. */
+  nutrition?: NutritionApi;
   profile: ProfileApi;
   stats: StatsApi;
   follows: FollowsApi;

@@ -301,6 +301,7 @@ interface UserStreak extends StreakResult {
 }
 
 export class FakeApi implements BeviApi {
+  nutrition: NonNullable<BeviApi['nutrition']> = { lookupBarcode: async () => null };
   private db: FakeDb;
   private readonly storage: StorageLike | null;
   private readonly clock: () => Date;
@@ -795,6 +796,7 @@ export class FakeApi implements BeviApi {
       ...this.toSummary(b),
       status: 'active',
       nutritionLabelUrl: label.url,
+      nutrition: b.nutrition ? { ...b.nutrition } : null,
       avgScore: s ? round2(s.mean) : null,
       scoreStddev: s ? round2(s.stddev) : null,
       createdBy: creator ? { id: creator.id, handle: creator.handle } : null,
@@ -1357,6 +1359,20 @@ export class FakeApi implements BeviApi {
           if (!CATEGORIES.some((c) => c.id === input.categoryId)) invalid('categoryId', 'Choose a category');
           if (input.priceTier === null && !input.priceEstimated) invalid('priceTier', 'Choose a price or "Not sure"');
           if (input.priceTier !== null && ![1, 2, 3, 4].includes(input.priceTier)) invalid('priceTier', 'Choose a price');
+          if (input.nutrition) {
+            const n = input.nutrition;
+            const fields = ['barcode', 'productName', 'basis', 'sourceUrl', 'calories', 'fatGrams', 'carbohydrateGrams', 'sugarGrams', 'proteinGrams', 'sodiumMg'];
+            const values = [n.calories, n.fatGrams, n.carbohydrateGrams, n.sugarGrams, n.proteinGrams, n.sodiumMg];
+            const strings = [n.barcode, n.productName, n.basis, n.sourceUrl];
+            if (Object.keys(n).some((k) => !fields.includes(k)) ||
+                strings.some((v) => typeof v !== 'string' || !v.trim() || v.length > 256) ||
+                !/^(?:\d{8}|\d{12}|\d{13})$/.test(n.barcode) ||
+                n.sourceUrl !== `https://world.openfoodfacts.org/product/${n.barcode}` ||
+                !values.some((v) => v !== null) ||
+                values.some((v) => v !== null && (typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > 1_000_000))) {
+              invalid('nutrition', 'Scan the nutrition label again');
+            }
+          }
           // The photo is optional (contract 3.0.0). When it is absent the Bev is
           // still created and is INELIGIBLE for icon generation; when it is
           // present it must be a real, finished upload of the caller's, exactly
@@ -1404,6 +1420,7 @@ export class FakeApi implements BeviApi {
             // 'none' for good -- adding one later cannot make it eligible.
             iconReadyAt: photo ? new Date(this.now().getTime() + this.iconGenerationMs).toISOString() : null,
             iconStatusOverride: null,
+            ...(input.nutrition ? { nutrition: { ...input.nutrition } } : {}),
             createdById: me.id,
             createdAt: this.nowIso(),
           };
