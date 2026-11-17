@@ -469,6 +469,10 @@ it('tells the person when the migration fallback creates the Bev without nutriti
   const callsBeforeContinue = createSpy.mock.calls.length;
   expect(screen.getByRole('button', { name: 'Continue without nutrition' })).toBeEnabled();
   await fireEvent.press(screen.getByRole('button', { name: 'Continue without nutrition' }));
-  expect(mockReplace).toHaveBeenCalledWith({ pathname: '/rank/[bevId]', params: { bevId: created.id } });
+  // Still a Bev that was just created, so it carries `entry: 'created'` like any other.
+  expect(mockReplace).toHaveBeenCalledWith({
+    pathname: '/rank/[bevId]',
+    params: { bevId: created.id, entry: 'created' },
+  });
   expect(createSpy).toHaveBeenCalledTimes(callsBeforeContinue);
 });
