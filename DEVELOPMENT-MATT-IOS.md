@@ -483,7 +483,7 @@ Same list as Arjun's doc, from the app side:
 | IS-2 | Which backend does TestFlight hit? | `eas.json` profiles and env vars | `preview` → dev, `production` → prod |
 | IS-3 | Demo account age / alcohol visibility | The age-rating answers and what review sees | Over 21, alcohol visible, 17+ |
 | IS-4 | Crash reporting | Whether a device crash is visible at all. I wire the SDK, the config plugin and dSYM upload | Yes, `@sentry/react-native` |
-| IS-5 | Bundle id | Unchangeable once registered | `com.bevi.app` |
+| ~~IS-5~~ | Bundle id | **Decided 2026-11-17: `app.bevi.ios`** — the exact string for `ios.bundleIdentifier` in `app.config.ts`, team prefix `9NA45GL4CJ` | settled |
 | IS-6 | `react-native-maps` (Google) or `expo-maps` (Apple Maps option) | IM-7's whole implementation, whether IA-7's key exists, and the iOS deployment target | Spike at IM-7 |
 | IS-7 | Report-content + block-user for v1? | IM-13 exists or does not | Ship it; it is the difference between one review round and three |
 

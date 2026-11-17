@@ -71,9 +71,11 @@ Matt cannot produce a build at all until this exists.
   individual vs organization **before** enrolling: an organization needs a
   D-U-N-S number and weeks of lead time, an individual shows a personal legal
   name as the seller. For a two-person friends app, individual.
-- Bundle identifier, registered once and never changed: `com.bevi.app`
-  (settle in IS-5; it is baked into signing, universal links and the App Store
-  record, and renaming it later means a new app).
+- Bundle identifier, registered once and never changed: **`app.bevi.ios`**,
+  registered 2026-11-17 as an explicit App ID under team prefix `9NA45GL4CJ`,
+  with no capabilities enabled (EAS adds what the entitlements need). It is
+  baked into signing, universal links and the App Store record, so it is fixed
+  from here.
 - App Store Connect app record: name, primary language, category
   (Food & Drink), bundle id.
 - **Register our devices.** `eas device:create` for each iPhone we test on, so
@@ -404,7 +406,7 @@ Say these out loud so neither of us quietly assumes the other is doing them:
 | IS-2 | Which backend does TestFlight hit? | Shapes `eas.json`, EAS secrets and `ios.yml` | `preview` → `bevi-dev`, `production` → `bevi-prod` |
 | IS-3 | The demo account's age, and whether alcohol is visible to review | Changes the age-rating questionnaire answers and what the reviewer sees | Over 21, alcohol visible, rated 17+ |
 | IS-4 | Crash reporting on device | Today the only error channels are the internal bug reporter (web-only, IM-10) and Vercel logs, which do not exist for a binary. We would be blind | Add one (`@sentry/react-native`): my account and `SENTRY_AUTH_TOKEN`, Matt wires the SDK and the config plugin, and dSYM/source-map upload is part of it or the reports are useless |
-| IS-5 | Bundle id | Unchangeable once registered | `com.bevi.app` |
+| ~~IS-5~~ | Bundle id | — | **Decided 2026-11-17: `app.bevi.ios`** (explicit App ID, team prefix `9NA45GL4CJ`). Must match `ios.bundleIdentifier` exactly |
 | IS-6 | `react-native-maps` (Google) or `expo-maps` (Apple Maps option) | Decides whether IA-7 exists at all, and raises the iOS deployment target | Spike at IM-7; do not pre-commit |
 | IS-7 | Do we ship report-content + block-user for v1? | Guideline 1.2 for a social app. Yes = contract + RPCs + RLS (me) and a report/block sheet (IM-13). No = the argument is invite-only, follows-only visibility and no public discovery, written into the review notes — and expect to be asked anyway | Ship it. It is small, and it is the difference between one review round and three |
 
