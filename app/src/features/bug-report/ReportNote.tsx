@@ -1,7 +1,7 @@
 import { isApiError, type BugReportEnvironment, type BugReportKind } from '@bevi/shared';
 import { Image } from 'expo-image';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type TextStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -30,6 +30,7 @@ import {
   type Mark,
   type ShotEntry,
 } from './model';
+import { extrasRoom, FIELD_BORDER, FIELD_MIN_HEIGHT, FIELD_MIN_LINES, FIELD_PAD, fieldHeight, fieldMinHeight, isTight, noteRoom } from './noteLayout';
 import { pickPhotos } from './photos';
 import { REPORT_UI, useLayer } from './ReportLayer';
 import { kindOf } from './send';
@@ -57,21 +58,24 @@ import {
 
 /** The server's own cap on the description. */
 export const NOTE_MAX = 4000;
-const LINE = type.bodyLarge.lineHeight;
-const MIN_LINES = 2;
-const MAX_LINES = 5;
-const FIELD_PAD = spacing.md;
 const THUMB_W = 56;
 const THUMB_H = 84;
 const RISE = 24;
 const KINDS: readonly BugReportKind[] = ['bug', 'fix', 'idea', 'design'];
+/** Web only: a drag that reaches the end of the field's text stops there instead of moving the page behind the keyboard. */
+const FIELD_SCROLL = (Platform.OS === 'web' ? { overscrollBehavior: 'contain' } : {}) as TextStyle;
 
 /**
  * The note: a panel along the bottom of the column. No scrim and not modal: the app above it stays
  * usable. Top to bottom: the type and the panel's own controls, the four ways to attach something
  * (select an element, capture the screen, record steps, add photos), what is attached, the text,
- * and Send, which stays on screen under a long note. It lifts with the keyboard and scrolls inside
- * past 60% of the window.
+ * what is sent with it, and Send, which stays on screen under a long note.
+ *
+ * Its size (noteLayout.ts): up to 60% of the screen, or all the room above the keyboard while one
+ * is up, when it also drops the home-indicator padding and the "sent with it" line. The text field
+ * is not inside the scroller: it grows with its text, is the first thing to give way when the note
+ * reaches its cap, never below three lines, and scrolls inside itself from there. The pictures and
+ * steps above it have a scroller of their own with a cap, so they can't push the field out of view.
  */
 export function ReportNote({ onSend }: { onSend: () => void }) {
   const draft = useReport((s) => s.draft);
@@ -114,6 +118,21 @@ function NotePanel({ draft, onSend }: { draft: Draft; onSend: () => void }) {
 
   const kind = useMemo(() => kindOf(draft, safeTrailSnapshot()), [draft]);
 
+  // What the tester can see. On the web the layer's height is the visual viewport's, which the
+  // keyboard has already been taken out of (react-native-web); a native window keeps its height.
+  // `typing` is "a keyboard is up", whichever field it is for: the room is as scarce either way.
+  const typing = lift > 0;
+  const visible = Platform.OS === 'web' ? layer.height : layer.height - lift;
+  const room = noteRoom(visible, lift, insets.top);
+  // A phone on its side with the keyboard up: the attach row goes, so the field and Send fit.
+  const bare = typing && isTight(room);
+  // Whether anything goes above the field: with nothing there, its scroller isn't drawn at all.
+  const extras =
+    !!draft.error ||
+    !!notice ||
+    draft.shots.length + draft.photos.length + draft.marks.length + draft.steps.length > 0 ||
+    pictureNotices(draft).length > 0;
+
   return (
     <Animated.View
       {...REPORT_UI}
@@ -128,11 +147,12 @@ function NotePanel({ draft, onSend }: { draft: Draft; onSend: () => void }) {
         styles.panel,
         {
           bottom: lift,
-          maxHeight: Math.round(layer.height * 0.6),
+          maxHeight: room,
           backgroundColor: colors.surface,
           borderColor: colors.border,
           boxShadow: elevation.floating,
-          paddingBottom: insets.bottom + spacing.md,
+          // The keyboard covers the home indicator, so its inset is not paid twice.
+          paddingBottom: (typing ? 0 : insets.bottom) + spacing.md,
         },
         rise,
       ]}
@@ -161,28 +181,39 @@ function NotePanel({ draft, onSend }: { draft: Draft; onSend: () => void }) {
           <IconButton icon="x" label="Discard" size={24} onPress={() => setConfirmDiscard(true)} />
         </View>
       )}
-      <View onLayout={(e) => setActionsAt((a) => ({ ...a, wrap: e.nativeEvent.layout.y }))}>
-        <Actions
-          draft={draft}
-          photos={photos}
-          photosOpen={menu === 'photos'}
-          photosTrigger={photosTrigger}
-          onPhotos={() => setMenu((m) => (m === 'photos' ? null : 'photos'))}
-          onRowLayout={(top, height) => setActionsAt((a) => ({ ...a, top, height }))}
-        />
-      </View>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
-        <Failure error={draft.error} />
-        {notice ? (
-          <Text style={[type.caption, { color: colors.textSecondary }]} accessibilityLiveRegion="polite">
-            {notice}
-          </Text>
-        ) : null}
-        <Pictures draft={draft} />
-        <Steps draft={draft} />
-        <NoteField draft={draft} autoFocus={focusNote} />
-        <Attached draft={draft} />
-      </ScrollView>
+      {bare ? null : (
+        <View onLayout={(e) => setActionsAt((a) => ({ ...a, wrap: e.nativeEvent.layout.y }))}>
+          <Actions
+            draft={draft}
+            photos={photos}
+            photosOpen={menu === 'photos'}
+            photosTrigger={photosTrigger}
+            onPhotos={() => setMenu((m) => (m === 'photos' ? null : 'photos'))}
+            onRowLayout={(top, height) => setActionsAt((a) => ({ ...a, top, height }))}
+          />
+        </View>
+      )}
+      {extras ? (
+        <ScrollView
+          testID="report-note-extras"
+          style={[styles.scroll, { maxHeight: extrasRoom(room, lift) }]}
+          contentContainerStyle={styles.body}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Failure error={draft.error} />
+          {notice ? (
+            <Text style={[type.caption, { color: colors.textSecondary }]} accessibilityLiveRegion="polite">
+              {notice}
+            </Text>
+          ) : null}
+          <Pictures draft={draft} />
+          <Steps draft={draft} />
+        </ScrollView>
+      ) : null}
+      {/* Outside the scroller: the field is the one thing here that scrolls its own text. */}
+      <NoteField draft={draft} autoFocus={focusNote} room={room} />
+      {/* While typing, its line goes to the field; it is back when the keyboard is down. */}
+      {typing ? null : <Attached draft={draft} />}
       {/* Outside the scroller, so Send is on screen however much the note holds. */}
       <View style={styles.footer}>
         <Button variant="primary" block disabled={!draft.text.trim()} onPress={onSend}>
@@ -205,7 +236,7 @@ function NotePanel({ draft, onSend }: { draft: Draft; onSend: () => void }) {
           }))}
         />
       ) : null}
-      {menu === 'photos' ? (
+      {menu === 'photos' && !bare ? (
         <NoteMenu
           label="Add photos"
           position={photosMenuPosition(actionsAt, panelH)}
@@ -702,10 +733,12 @@ function Steps({ draft }: { draft: Draft }) {
   );
 }
 
-function NoteField({ draft, autoFocus }: { draft: Draft; autoFocus: boolean }) {
+function NoteField({ draft, autoFocus, room }: { draft: Draft; autoFocus: boolean; room: number }) {
   const { colors, elevation } = useTheme();
+  const { width } = useLayer();
   const [focused, setFocused] = useState(false);
-  const [height, setHeight] = useState(LINE * MIN_LINES);
+  // The text's own height; the field is this tall until the note's cap squeezes it (styles.field).
+  const [content, setContent] = useState(0);
   const input = useRef<TextInput>(null);
   const placeholder = draft.marks.length > 0 ? 'What about it?' : "What's going on?";
 
@@ -717,18 +750,26 @@ function NoteField({ draft, autoFocus }: { draft: Draft; autoFocus: boolean }) {
   }, [autoFocus]);
 
   // On the web the field's own content-size events over-report (an empty field read about five
-  // lines), so the height is measured off the textarea itself: shrunk to its two rows, then its
-  // scroll height read. (The input is the DOM textarea there.) Native keeps onContentSizeChange.
+  // lines), so the height is measured off the textarea itself: shrunk to nothing, then its scroll
+  // height read. (The input is the DOM textarea there.) Native keeps onContentSizeChange.
   useLayoutEffect(() => {
     if (Platform.OS !== 'web') return;
     const el = input.current as unknown as HTMLTextAreaElement | null;
     if (!el || typeof el.scrollHeight !== 'number' || !el.style) return;
-    const previous = el.style.height;
+    const previous = { height: el.style.height, minHeight: el.style.minHeight };
+    const scrolled = el.scrollTop;
+    el.style.minHeight = '0px';
     el.style.height = '0px';
-    const content = el.scrollHeight - FIELD_PAD * 2;
-    el.style.height = previous;
-    if (content > 0) setHeight(content);
-  }, [draft.text]);
+    const text = el.scrollHeight - FIELD_PAD * 2;
+    el.style.height = previous.height;
+    el.style.minHeight = previous.minHeight;
+    // Writing at the end, the last line keeps the field's padding under it (a browser follows the
+    // caret only to the line itself, flush against the border). Anywhere else the text stays put.
+    const atEnd = document.activeElement === el && el.selectionEnd === el.value.length;
+    el.scrollTop = atEnd ? el.scrollHeight : scrolled;
+    if (text > 0) setContent(text);
+    // The width too: the same text wraps to another height when the screen turns.
+  }, [draft.text, width]);
 
   return (
     <TextInput
@@ -743,13 +784,15 @@ function NoteField({ draft, autoFocus }: { draft: Draft; autoFocus: boolean }) {
       submitBehavior="newline"
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
-      onContentSizeChange={Platform.OS === 'web' ? undefined : (e) => setHeight(e.nativeEvent.contentSize.height)}
-      {...(Platform.OS === 'web' ? ({ rows: MIN_LINES } as object) : null)}
+      onContentSizeChange={Platform.OS === 'web' ? undefined : (e) => setContent(e.nativeEvent.contentSize.height)}
+      {...(Platform.OS === 'web' ? ({ rows: FIELD_MIN_LINES } as object) : null)}
       style={[
         type.bodyLarge,
         styles.field,
+        FIELD_SCROLL,
         {
-          height: Math.min(LINE * MAX_LINES, Math.max(LINE * MIN_LINES, height)) + FIELD_PAD * 2,
+          height: fieldHeight(content, room),
+          minHeight: fieldMinHeight(room),
           color: colors.text,
           backgroundColor: colors.surface,
           borderColor: focused ? colors.primary : colors.borderStrong,
@@ -767,7 +810,7 @@ function Attached({ draft }: { draft: Draft }) {
   const rows = useMemo(() => contextRows(draft.environment), [draft.environment]);
   const summary = attachedSummary(draft);
   return (
-    <View style={[styles.attached, { borderColor: colors.border }]}>
+    <View style={[styles.attached, { borderColor: colors.border }]} testID="report-note-attached">
       <Pressable
         onPress={() => setOpen((v) => !v)}
         accessibilityRole="button"
@@ -781,7 +824,7 @@ function Attached({ draft }: { draft: Draft }) {
         <Icon name={open ? 'chevron-down' : 'chevron-right'} size={16} strokeWidth={2} color={colors.textSecondary} />
       </Pressable>
       {open ? (
-        <View style={styles.attachedBody}>
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.attachedBody}>
           {rows.map((row) => (
             <View key={row.label} style={styles.row}>
               <Text style={[type.caption, { color: colors.textSecondary }]} maxFontSizeMultiplier={MAX_FONT_SCALE_DENSE}>
@@ -793,7 +836,7 @@ function Attached({ draft }: { draft: Draft }) {
             </View>
           ))}
           <Text style={[type.caption, { color: colors.textSecondary }]}>Only what you see here is sent. Nothing you typed elsewhere.</Text>
-        </View>
+        </ScrollView>
       ) : null}
     </View>
   );
@@ -899,16 +942,30 @@ const styles = StyleSheet.create({
   levels: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
   stepsBlock: { gap: spacing.xs },
   stepsTitle: { fontWeight: '600' },
+  // The first thing to shrink when the note reaches its cap, and far ahead of the scrollers beside
+  // it (1000 to their 1): they give way only once the field is down to its three lines.
   field: {
     alignSelf: 'stretch',
+    flexShrink: 1000,
+    minHeight: FIELD_MIN_HEIGHT,
+    marginHorizontal: spacing.gutter,
+    marginTop: spacing.sm,
     paddingHorizontal: spacing.lg,
     paddingVertical: FIELD_PAD,
-    borderWidth: 1,
+    borderWidth: FIELD_BORDER,
     borderRadius: radius.input,
     textAlignVertical: 'top',
     outlineWidth: 0,
   },
-  attached: { borderTopWidth: 1, paddingTop: spacing.xs },
+  // Its open list scrolls and shrinks, after the field and before the pictures; the line itself never does.
+  attached: {
+    flexShrink: 4,
+    minHeight: size.target + spacing.xs + 1,
+    marginHorizontal: spacing.gutter,
+    marginTop: spacing.md,
+    borderTopWidth: 1,
+    paddingTop: spacing.xs,
+  },
   attachedHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: size.target },
   attachedBody: { gap: spacing.sm, paddingBottom: spacing.sm },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.lg },

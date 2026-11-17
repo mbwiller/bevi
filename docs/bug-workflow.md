@@ -32,6 +32,14 @@ There is one note at a time. Setting it aside keeps it while you move around
 the app, look at the thing again, and come back; its text survives a reload
 (for a day, in `localStorage`), its pictures do not.
 
+The note is as tall as it needs to be, up to 60% of the screen (480pt on a short one). While the
+keyboard is up it may use all the room above the keyboard instead, and it drops
+the "sent with it" line and the report button so the text field has that room
+(the chevron sets the note aside meanwhile). The text field starts at three
+lines, grows as you type, and scrolls inside itself once the note is as tall as
+it can be. Pictures and steps sit above it in an area that scrolls on its own,
+so they never push the field out of view.
+
 In the note:
 
 | Control | What it does |
