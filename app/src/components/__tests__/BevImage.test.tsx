@@ -21,3 +21,9 @@ it('shimmers while processing and loading', async () => {
   await render(<BevImage status="loading" alt="Sprite" />);
   expect(screen.getByLabelText('Sprite, loading')).toBeTruthy();
 });
+
+it('lets an illustration tile describe its own processing state', async () => {
+  await render(<BevImage alt="Horchata illustration" status="processing" processingLabel="illustration generation" size={96} />);
+  expect(screen.getByLabelText('Horchata illustration (illustration generation)')).toBeTruthy();
+  expect(screen.getByTestId('shimmer')).toBeTruthy();
+});

@@ -33,6 +33,8 @@ export interface BevImageProps {
   size?: 40 | 56 | 96 | 155 | number;
   /** processing: the photo under a shimmer while background removal runs. loading: the skeleton. */
   status?: 'ready' | 'processing' | 'loading';
+  /** Override the processing label for non-photo work that uses the same tile treatment. */
+  processingLabel?: string;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -60,14 +62,14 @@ export function Shimmer() {
 }
 
 /** Square Bev tile: the cutout centred with 8% padding on a soft tint of `input`, rounded by `radius.photo`. */
-export function BevImage({ src, art, alt = '', size = 56, status = 'ready', style }: BevImageProps) {
+export function BevImage({ src, art, alt = '', size = 56, status = 'ready', processingLabel = 'photo processing', style }: BevImageProps) {
   const { colors } = useTheme();
   const glowId = `bevimg-glow-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const r = size <= 40 ? RADIUS_SMALL : size <= 56 ? radius.input : radius.photo;
   const pad = Math.round(size * 0.08);
   const loading = status === 'loading';
   const processing = status === 'processing';
-  const label = loading ? `${alt ? `${alt}, ` : ''}loading` : alt + (processing ? ' (photo processing)' : '');
+  const label = loading ? `${alt ? `${alt}, ` : ''}loading` : alt + (processing ? ` (${processingLabel})` : '');
   return (
     <View
       style={[styles.tile, { width: size, height: size, borderRadius: r, padding: pad, backgroundColor: colors.input }, style]}

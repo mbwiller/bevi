@@ -1,5 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { CategoryId, CreateBevInput, FindDuplicatesInput, UploadMediaInput } from '@bevi/shared';
+import { useRef } from 'react';
+import type { CategoryId, CreateBevInput, FindDuplicatesInput, IconStatus, UploadMediaInput } from '@bevi/shared';
 
 import { api } from '../client';
 import { keys } from '../keys';
@@ -16,15 +17,30 @@ export function useBev(id: string | undefined, opts: { refetchInterval?: number 
   });
 }
 
-/** A custom Bev's generated illustration; poll only while the backend reports active work. */
+export const BEV_ICON_POLL_INTERVAL_MS = 4_000;
+export const BEV_ICON_POLL_WINDOW_MS = 60_000;
+
+/** Keep waiting work fresh for one minute; the next visit/focus will retry after that. */
+export function bevIconRefetchInterval(status: IconStatus | undefined, elapsedMs: number): number | false {
+  const active = status === 'pending' || status === 'processing';
+  return active && elapsedMs < BEV_ICON_POLL_WINDOW_MS ? BEV_ICON_POLL_INTERVAL_MS : false;
+}
+
+/** A custom Bev's generated illustration; poll active work for at most one minute. */
 export function useBevIcon(id: string | undefined) {
+  const pollingStartedAt = useRef<number | null>(null);
   return useQuery({
     queryKey: keys.bevs.icon(id ?? ''),
     queryFn: async () => (await api.bevs.icons([id!])).find((icon) => icon.bevId === id) ?? null,
     enabled: !!id,
     refetchInterval: (query) => {
       const status = query.state.data?.iconStatus;
-      return status === 'pending' || status === 'processing' ? 4_000 : false;
+      if (status !== 'pending' && status !== 'processing') {
+        pollingStartedAt.current = null;
+        return false;
+      }
+      pollingStartedAt.current ??= Date.now();
+      return bevIconRefetchInterval(status, Date.now() - pollingStartedAt.current);
     },
   });
 }

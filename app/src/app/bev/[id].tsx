@@ -58,6 +58,11 @@ export default function BevDetailScreen() {
 
   const bev = query.data;
   const cat = bev ? categoryById(bev.categoryId) : undefined;
+  const isBevOwner = !!bev && bev.createdBy?.id === me.data?.id;
+  const iconStatus = iconQuery.data?.iconStatus;
+  const showGeneratedIconPanel =
+    (!!iconQuery.data?.generatedIconUrl && iconStatus === 'completed') ||
+    (isBevOwner && (iconStatus === 'pending' || iconStatus === 'processing' || iconStatus === 'failed'));
   // The server already refuses these (`age_restricted`); this covers a cached Bev after the profile changes.
   const hidden = !!cat?.isAlcoholic && me.data?.canSeeAlcohol === false;
   const code = isApiError(query.error) ? query.error.code : undefined;
@@ -94,7 +99,7 @@ export default function BevDetailScreen() {
     const image = <BevImage size={HERO} {...bevImageProps(bev)} />;
     body = (
       <>
-        <View style={styles.hero}>
+        <View style={[styles.hero, showGeneratedIconPanel && styles.heroBeforeIcon]}>
           {photo ? (
             <Pressable
               accessibilityRole="imagebutton"
@@ -120,9 +125,13 @@ export default function BevDetailScreen() {
           </View>
         </View>
 
-        <GeneratedIconPanel name={bev.name} icon={iconQuery.data} />
+        {showGeneratedIconPanel ? (
+          <GeneratedIconPanel name={bev.name} brand={bev.brand} icon={iconQuery.data} isOwner={isBevOwner} />
+        ) : null}
 
-        <BevStats bev={bev} myRankingCount={stats.data?.bevdCount} />
+        <View style={showGeneratedIconPanel && styles.statsAfterIcon}>
+          <BevStats bev={bev} myRankingCount={stats.data?.bevdCount} />
+        </View>
 
         {bev.myRanking?.note ? (
           <View style={[styles.note, { borderColor: colors.border }]}>
@@ -200,6 +209,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   scroll: { paddingBottom: spacing.xxl },
   hero: { alignItems: 'center', gap: spacing.xs, paddingTop: spacing.xs, paddingBottom: spacing.lg, paddingHorizontal: spacing.gutter },
+  heroBeforeIcon: { paddingBottom: 0 },
+  statsAfterIcon: { marginTop: spacing.lg },
   name: { marginTop: spacing.md },
   center: { textAlign: 'center' },
   catLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: 2 },

@@ -114,6 +114,34 @@ it('an alcoholic Bev is "Not available" to an under-21 user', async () => {
   expect(await screen.findByText('Not available')).toBeTruthy();
 });
 
+it('shows generation progress to the Bev creator', async () => {
+  const bev = await api.bevs.create({
+    name: 'Private icon state test',
+    brand: 'Test Co',
+    categoryId: 'soda',
+    priceTier: 2,
+    priceEstimated: false,
+  });
+  controls.setIconStatus(bev.id, 'pending');
+  await open(bev.id);
+  expect(await screen.findByText('Creating your illustration')).toBeTruthy();
+});
+
+it('does not show private generation progress to another viewer', async () => {
+  const bev = await api.bevs.create({
+    name: 'Private icon state test for friend',
+    brand: 'Test Co',
+    categoryId: 'soda',
+    priceTier: 2,
+    priceEstimated: false,
+  });
+  controls.setIconStatus(bev.id, 'pending');
+  controls.signInAs('friend_a');
+  await open(bev.id);
+  expect(await screen.findByRole('header', { name: 'Private icon state test for friend' })).toBeTruthy();
+  expect(screen.queryByTestId('generated-icon-panel')).toBeNull();
+});
+
 it('opens the report sheet from the overflow', async () => {
   const ranked = (await api.rankings.listMine()).items[0]!;
   await open(ranked.bevId);
