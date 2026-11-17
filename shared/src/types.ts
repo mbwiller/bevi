@@ -318,6 +318,8 @@ export interface FriendScore {
 export interface Bev extends BevSummary {
   status: BevStatus;
   nutritionLabelUrl: string | null;
+  /** Absent on older API versions; null when no barcode nutrition was added. */
+  nutrition?: NutritionPreview | null;
   avgScore: number | null;
   scoreStddev: number | null;
   createdBy: { id: string; handle: string } | null;
@@ -653,4 +655,23 @@ export interface VenueFilters {
   neighborhoods?: string[];
   /** Only venues we can evaluate as open right now (`hoursKnown`). */
   openNow?: boolean;
+}
+
+/** Barcode nutrition snapshot, with its original serving basis and source. */
+export interface NutritionPreview {
+  barcode: string;
+  productName: string;
+  /**
+   * Stable presentation strings: `Per serving (${servingSize})` or
+   * `Per 100 g / 100 ml (as listed)`. NutritionCard parses these exact English
+   * forms, so changing them requires a versioned move to structured fields.
+   */
+  basis: string;
+  calories: number | null;
+  fatGrams: number | null;
+  carbohydrateGrams: number | null;
+  sugarGrams: number | null;
+  proteinGrams: number | null;
+  sodiumMg: number | null;
+  sourceUrl: string;
 }

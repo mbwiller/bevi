@@ -11,41 +11,6 @@ function can(slug,title,label,{slim=false,color='#f6f5ee',defs=''}={}) {
 
 const evidence=[
   {
-    "slug": "zevia-cream-soda",
-    "pageUrl": "https://zevia.com/products/cream-soda",
-    "imageUrl": "https://zevia.com/cdn/shop/files/2025_ZVA_US_12oz_Soda_Standard_CreamSoda_Dry_WithShadow_93147b86-6b58-46bd-9d84-da86d91aff4b.png?v=1770411642&width=1000"
-  },
-  {
-    "slug": "zevia-dr-zevia",
-    "pageUrl": "https://zevia.com/products/dr-zevia",
-    "imageUrl": "https://zevia.com/cdn/shop/files/2025_ZVA_US_12oz_Soda_Standard_DrZevia_Dry_WithShadow_7aaee9a3-7b59-4e8b-a5f5-3373633c5037.png?v=1770411643&width=1000"
-  },
-  {
-    "slug": "zevia-ginger-ale",
-    "pageUrl": "https://zevia.com/products/ginger-ale",
-    "imageUrl": "https://zevia.com/cdn/shop/files/2025_ZVA_US_12oz_Soda_Standard_GingerAle_Dry_WithShadow_8f711d62-d1f7-4a6c-85a4-b3a0ca7b7e84.png?v=1770411644&width=1000"
-  },
-  {
-    "slug": "zevia-cherry-cola",
-    "pageUrl": "https://zevia.com/products/cherry-cola",
-    "imageUrl": "https://zevia.com/cdn/shop/files/2025_ZVA_US_12oz_Soda_Standard_CherryCola_Dry_WithShadow_a073e109-c42f-4807-a988-d11c674682e1.png?v=1770314383&width=1000"
-  },
-  {
-    "slug": "zevia-grape",
-    "pageUrl": "https://zevia.com/products/grape-soda",
-    "imageUrl": "https://zevia.com/cdn/shop/files/2025_ZVA_US_12oz_Soda_Standard_Grape_Dry_WithShadow_0d2b9515-9345-4ddd-871a-049d306157da.png?v=1770411643&width=1000"
-  },
-  {
-    "slug": "zevia-orange",
-    "pageUrl": "https://zevia.com/products/orange",
-    "imageUrl": "https://zevia.com/cdn/shop/files/2025_ZVA_US_12oz_Soda_Standard_Orange_Dry_WithShadow_d8ef006f-042f-4a9b-b6ce-d2ce38b8de34.png?v=1770411644&width=1000"
-  },
-  {
-    "slug": "zevia-cola",
-    "pageUrl": "https://zevia.com/products/cola",
-    "imageUrl": "https://zevia.com/cdn/shop/files/2025_ZVA_US_12oz_Soda_Standard_Cola_Dry_WithShadow_33a1ce2c-84c5-4b71-a906-a1b4306d2929.png?v=1770411644&width=1000"
-  },
-  {
     "slug": "poppi-cola",
     "pageUrl": "https://www.drinkpoppi.com/products/classic-cola",
     "imageUrl": "https://assets.decovostatic.com/static-images/poppi/poppi/pdp/live/classic-cola-01.webp"
@@ -121,26 +86,6 @@ const grape=(x,y,s=1,c='#8138a1')=>`<g transform="translate(${x} ${y}) scale(${s
 const flower=(x,y,s=1)=>`<g transform="translate(${x} ${y}) scale(${s})">${Array.from({length:5},(_,i)=>`<ellipse cy="-7" rx="4" ry="8" transform="rotate(${i*72})" fill="#fff5d3"/>`).join('')}<circle r="3" fill="#e8c348"/></g>`;
 const stars=(c)=>Array.from({length:10},(_,i)=>{const x=60+i*23%82,y=140+i*31%77;return `<path d="M${x-3} ${y}h6m-3-3v6" stroke="${c}" stroke-width=".7" opacity=".65"/>`}).join('');
 function capArt(x,y,s,c,angle=0){return `<g transform="translate(${x} ${y}) rotate(${angle}) scale(${s})"><path d="${Array.from({length:40},(_,i)=>{const a=i*Math.PI/20,r=i%2?21:24;return `${i?'L':'M'}${Math.cos(a)*r} ${Math.sin(a)*r*.48}`}).join('')}Z" fill="${c}" stroke="#f3c9d7" stroke-width="1"/><ellipse rx="19" ry="8.2" cy="-2" fill="${c}" stroke="#fff" stroke-opacity=".65" stroke-width="1"/><path d="M-12-4q9-5 19-1" fill="none" stroke="#fff" stroke-width="1.4" opacity=".65"/></g>`;}
-const zeviaSpecs=[
- ['cream-soda','CREAM SODA','#ebbf48','#c88b20','#f6de80','cream'],
- ['dr-zevia','DR. ZEVIA','#c42043','#820b29','#ee7390','caps'],
- ['ginger-ale','GINGER ALE','#22894d','#07582d','#73cd74','glass'],
- ['cherry-cola','CHERRY COLA','#b92477','#122f79','#e982ad','cherry'],
- ['grape','GRAPE','#8355a1','#422574','#bb93d2','grape'],
- ['orange','ORANGE','#ffba26','#ea8316','#f7dc55','orange'],
- ['cola','COLA','#188cba','#16387f','#84d4df','caps'],
-];
-function zevia(d){const[f,name,c,dark,light,kind]=d,slug='zevia-'+f;let art='';
- if(kind==='caps')art=`${capArt(117,157,1.45,light,-24)}${capArt(81,199,1.0,light,25)}<path d="M121 189q-30 17 2 37" fill="none" stroke="${c}" stroke-width="6" opacity=".7"/>`;
- if(kind==='cherry')art=`${cherry(114,165,1.1,'#aa0b41')}${capArt(110,203,1,light,-25)}${capArt(64,174,.65,light,70)}${leaf(131,146,.7,'#263c86')}`;
- if(kind==='grape')art=`${grape(118,164,1.1,'#6f3d96')}${grape(66,209,.65,'#74429a')}`;
- if(kind==='orange')art=`${wheel(122,160,24,'#e99821','#ed6b21')}${wheel(80,192,25,'#f4ab25','#e7821a')}<circle cx="129" cy="225" r="20" fill="#e99b26"/>${leaf(137,209,.7,'#bc6222')}`;
- if(kind==='glass')art=`<path d="M103 143q17-6 34 0l-5 73q-13 7-25 0Z" fill="#b7e7aa" fill-opacity=".23" stroke="#b1e996" stroke-width="1.3"/><ellipse cx="120" cy="143" rx="17" ry="4" fill="#70c453" stroke="#b8e49c" stroke-width="1"/><path d="M112 154l-2 51m8-49-1 54m9-58-2 54" fill="none" stroke="#d2f4bd" stroke-opacity=".55" stroke-width="1.7"/>${[151,169,187].map((y,i)=>`<rect x="${108+i%2*8}" y="${y}" width="12" height="13" rx="2" fill="#e7f5d4" opacity=".35" transform="rotate(${i*14-10} 120 ${y})"/>`).join('')}`;
- if(kind==='cream')art=`<path d="M112 154q11-5 22 0l-3 63q-10 6-19 0Z" fill="#bf8b2e" stroke="#f6d784" stroke-width="1.3"/><path d="M133 164q15-5 13 12t-14 13" fill="none" stroke="#f4dca1" stroke-width="4"/><ellipse cx="123" cy="151" rx="15" ry="9" fill="#fff5d5"/><circle cx="122" cy="143" r="11" fill="#fff6da"/>${flower(83,204,1.4)}${flower(65,183,.7)}`;
- const defs=`<linearGradient id="__ID__flavor" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${light}"/><stop offset=".4" stop-color="${c}"/><stop offset="1" stop-color="${dark}"/></linearGradient>`;
- const label=`<path d="M51 116h98v122H51Z" fill="${ref('flavor')}"/>${stars(light)}${art}${text(100,60,'ZERO SUGAR',5.9,'#fff7e9','font-weight="bold" letter-spacing=".7"')}${text(100,103,'zevia',43,'#fffdf4','font-weight="900" letter-spacing="-2.1" textLength="83" lengthAdjust="spacingAndGlyphs"')}${text(81,112,'SODA MADE BETTER',4.4,'#fffdf4','font-weight="bold" textLength="45" lengthAdjust="spacingAndGlyphs"')}<path d="M126 72q-2-8 5-9h4q1 10-9 9" fill="${c}"/>${text(78,130,name,6.6,'#fff9e7','font-weight="bold" textLength="40" lengthAdjust="spacingAndGlyphs"')}${text(77,138,'NATURALLY FLAVORED',3.2,'#fff9e7','font-weight="bold"')}${text(76,222,'12 FL OZ (355 mL)',3.8,'#fff9e7')}`;
- return {slug,svg:can(slug,'Zevia '+name,label,{color:'#006b60',defs}),family:'zevia-standard-can',observations:`Exact US manufacturer ${name} can inspected: teal upper body, oversized white lowercase zevia and flavor-colored leaf accent; ${c} to ${dark} lower field with ${kind==='caps'?'floating crimped bottle caps':kind==='cherry'?'cherry and pink crimped cap':kind==='grape'?'purple grape clusters':kind==='orange'?'orange wheels and orange fruit':kind==='glass'?'green iced highball glass':'foamy cream soda mug and vanilla flowers'}. Silver rims; tiny claims and detailed package illustration simplified.`};
-}
 const poppiSpecs=[['cola','Classic Cola','#fa192a','#ffafb3','seal'],['doc-pop','Doc Pop','#ce54ca','#8f1649','cherry'],['orange','Orange','#ff8a09','#ffdf38','orange'],['strawberry-lemon','Strawberry Lemon','#f332a2','#f4ec19','strawberry']];
 function poppi(d){const[f,name,c,accent,kind]=d,slug='poppi-'+f;
  let art=kind==='seal'?`<circle cx="117" cy="140" r="26" fill="${accent}"/><circle cx="111" cy="199" r="18" fill="${accent}"/>${[[-1,0],[29,3],[13,24]].map(([x,y])=>`<path d="m${100+x} ${125+y} 3 3-3 3" stroke="${c}" stroke-width="1.2" fill="none"/>`).join('')}`:kind==='cherry'?`${cherry(117,145,1.3,accent)}${cherry(124,207,.9,accent)}`:kind==='orange'?wheel(124,151,30,accent,'#ffb313'):`<ellipse cx="120" cy="160" rx="24" ry="48" fill="${accent}" transform="rotate(-14 120 160)"/>${[[112,130],[126,141],[114,154],[127,168],[114,182]].map(([x,y])=>`<path d="M${x-3} ${y-3}q6-4 6 3t-6 3Z" fill="${c}"/>`).join('')}`;
@@ -179,7 +124,7 @@ function colaVariant(slug){
  }
  return {slug,svg,family:'cola-standard-can',observations:coke?'Exact retailer US 12oz Cherry Coke can inspected: magenta shoulder and Cherry header, red main body, large white Coca-Cola script wrapping around upper body. Photo has a large CHERRY retail annotation near base; omitted because it is an image annotation, not reliably package printing. Earlier documented retail revision selected; current manufacturer flavor page could not be retrieved.':'Exact retailer US 12oz Wild Cherry Pepsi can beside carton inspected: blue body, current red/white/blue roundel with bold black PEPSI, glossy red cherries on navy stems at shoulder and lower right, red WILD CHERRY at foot. Manufacturer product page establishes flavor; manufacturer image download failed, so exact retailer image used.'};
 }
-const drawings=[...zeviaSpecs.map(zevia),...poppiSpecs.map(poppi),...oliSpecs.map(olipop),...fantaSpecs.map(fanta),colaVariant('pepsi-wild-cherry'),colaVariant('cherry-coke')];
+const drawings=[...poppiSpecs.map(poppi),...oliSpecs.map(olipop),...fantaSpecs.map(fanta),colaVariant('pepsi-wild-cherry'),colaVariant('cherry-coke')];
 export const records=drawings.map(d=>{
  const source=evidence.find(r=>r.slug===d.slug);
  if(!source)throw Error('Missing exact product reference '+d.slug);

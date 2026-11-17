@@ -7,7 +7,7 @@ select plan(11);
 -- `category_id` may point at, and 60 leaves under them.
 select is((select count(*)::int from public.categories where parent_id is null), 15, '15 root categories');
 select is((select count(*)::int from public.categories), 75, '75 categories in all, roots plus D-04 leaves');
-select is((select count(*)::int from public.bevs where source = 'seed' and status = 'active'), 378, '378 active seed Bevs');
+select is((select count(*)::int from public.bevs where source = 'seed' and status = 'active'), 381, '381 active seed Bevs');
 select ok(
   (select count(*) from public.bevs b join public.categories c on c.id = b.category_id
     where b.source = 'seed' and b.is_starter and not c.is_alcoholic) >= 30,

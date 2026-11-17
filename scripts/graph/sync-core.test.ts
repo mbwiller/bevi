@@ -14,6 +14,7 @@
  */
 
 import assert from "node:assert/strict";
+import { loadBevRows } from "../catalog/catalog.ts";
 import { test } from "node:test";
 
 import { RANKING_VERSION, flavorTokens, zScoresFromRankings } from "@bevi/ranking";
@@ -270,15 +271,16 @@ test("counts are the lengths of the arrays they describe, on the full fixture to
 test("the fixture is the whole catalog plus its three extra Bevs", () => {
   const source = buildFixtureSource();
   const p = fixturePlan();
-  // 378 catalog Bevs + 2 active user-created; the hidden one is not mirrored.
-  assert.equal(source.bevs.length, 381);
-  assert.equal(p.counts.nodes.Bev, 380);
+  // Catalog Bevs + 2 active user-created; the hidden one is not mirrored.
+  const catalogCount = loadBevRows().length;
+  assert.equal(source.bevs.length, catalogCount + 3);
+  assert.equal(p.counts.nodes.Bev, catalogCount + 2);
   assert.equal(p.counts.nodes.Category, 75);
   assert.equal(p.counts.relationships.CHILD_OF, 60);
   assert.equal(p.nodes.categories.filter((c) => c.depth === 1).length, 15);
-  assert.equal(p.counts.bevsWithProfile, 378);
-  assert.equal(p.counts.bevsWithEmbedding, 378);
-  assert.equal(p.counts.relationships.TASTES_OF, 378);
+  assert.equal(p.counts.bevsWithProfile, catalogCount);
+  assert.equal(p.counts.bevsWithEmbedding, catalogCount);
+  assert.equal(p.counts.relationships.TASTES_OF, catalogCount);
   assert.ok(p.counts.relationships.SIMILAR_TO > 1000, `only ${p.counts.relationships.SIMILAR_TO} edges`);
   // Six users in the source; one ranks only the hidden Bev.
   assert.equal(p.counts.nodes.User, 5);

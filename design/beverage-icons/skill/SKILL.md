@@ -20,11 +20,21 @@ node --experimental-strip-types scripts/icons/build.mjs
 node scripts/icons/validate.mjs
 python3 scripts/icons/review.py
 npm run icons:publish -- --dry-run
+npm run icons:report
 ```
 
-Use the Python environment containing Pillow for review.py. Visually inspect the new artwork and small-size sheets; record the exact reviewed hashes in `design/beverage-icons/review/review.json`. Keep final aesthetic approval as `needs-review` unless actually granted. Merging the batch to `main` publishes it to the backend through `icons-sync`; the dry run above checks hashes and SVG safety locally. Nothing is copied into `app/`. Update the production checkpoint and report new icons, unresolved identities, validation, and remaining coverage. Database reconciliation and database mutations require their own task scope.
+Use the Python environment containing Pillow for review.py. Visually inspect the new artwork and small-size sheets; record the exact reviewed hashes in `design/beverage-icons/review/review.json`. Keep final aesthetic approval as `needs-review` unless actually granted; it is granted only by a person sorting the icon Good in `npm run icons:swipe` (see [The quality bar](#the-quality-bar)). `icons:report` refreshes `design/beverage-icons/REVIEW.md` so the new icons appear in it as not yet sorted. Merging the batch to `main` publishes it to the backend through `icons-sync`; the dry run above checks hashes and SVG safety locally. Nothing is copied into `app/`. Update the production checkpoint and report new icons, unresolved identities, validation, and remaining coverage. Database reconciliation and database mutations require their own task scope.
 
 Work in the Bevi repository containing `data/catalog/bevs.csv`. Read `design/beverage-icons/PLAN.md` for the inventory/reconciliation workflow and inspect `design/beverage-icons/style-reference/index.html` plus relevant original SVGs. The root `index.html` is the user's preferred artwork; the app's existing flat `BevArt` is not the style master. Preserve the root prototype unless the user asks to edit it.
+
+## The quality bar
+
+`design/beverage-icons/REVIEW.md` records a person's verdict on every icon, Good or Needs work. It sets the bar for the next icon. Read it before drawing.
+
+- Hold every icon to the same standard. Batch size and the number of drinks left in `coverage.json` do not lower it: a batch is as large as can be drawn to this standard, and no larger.
+- The icons listed as Good are the reference examples. For each drink, open the Good examples of the same package type and match their finish: the real package shape, the brand's own mark and label layout, and recognition at 40 and 56 px.
+- The icons listed as Needs work are the redraw queue. They are not precedents: never start a new drink from their recipe. When the task includes rework, fix them in the recipe module the report names. Changed art sends an icon back to the reviewers on its own.
+- Approval comes from a person, in the swipe tool. Never write to `design/beverage-icons/verdicts/`, and never describe an icon as approved because it passed `validate.mjs` or your own review.
 
 ## Identity and references
 

@@ -44,6 +44,13 @@ export function isAdult(birthdate: string | null, now: Date): boolean {
   return birthdate != null && ageOn(birthdate, now) >= 21;
 }
 
+/**
+ * How many rows of data/catalog/bevs.csv, from the top, the fixture users rank from. Rows appended
+ * after these are in the fake catalog like any other Bev (search, detail, recommendations) but no
+ * fixture user has ranked them, so adding drinks to the catalog does not change the fixtures.
+ */
+const FIXTURE_POOL_ROWS = 378;
+
 export function buildFixtures(now: Date = new Date()): FakeDb {
   const t = now.getTime();
   const catalogCreated = iso(t - 120 * DAY);
@@ -84,7 +91,9 @@ export function buildFixtures(now: Date = new Date()): FakeDb {
     const rand = createPrng(`bevi-fixtures-v1:${u.handle}`);
     const adult = isAdult(u.birthdate, now);
     // Shuffle the visible catalog (Fisher-Yates with the seeded PRNG) and take the first N.
-    const pool = bevs.filter((bev) => adult || !ALCOHOLIC.has(bev.categoryId)).map((bev) => bev.id);
+    // Only the rows the fixtures were built on take part (FIXTURE_POOL_ROWS): the shuffle depends on
+    // the pool's length, so a row appended to bevs.csv would otherwise re-deal every user's rankings.
+    const pool = bevs.slice(0, FIXTURE_POOL_ROWS).filter((bev) => adult || !ALCOHOLIC.has(bev.categoryId)).map((bev) => bev.id);
     for (let i = pool.length - 1; i > 0; i--) {
       const j = randomInt(rand, i + 1);
       [pool[i], pool[j]] = [pool[j] as string, pool[i] as string];
