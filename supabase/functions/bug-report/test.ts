@@ -48,6 +48,7 @@ import { CORS_HEADERS, isPreflight, preflight, withCors } from "./cors.ts";
 import {
   addPicture,
   type BoardConfig,
+  boardMisconfigured,
   BoardError,
   buildBoardBody,
   fetchBoardStatuses,
@@ -1224,6 +1225,8 @@ function fakeBoard(...answers: (Response | Error)[]) {
   const calls: { url: string; method: string; authorization: string | null; body: any }[] = [];
   const fetchImpl = (input: string, init?: RequestInit) => {
     const headers = new Headers(init?.headers);
+    // Every request refuses redirects, so the token cannot follow one to another host.
+    assertEquals(init?.redirect, "error");
     calls.push({ url: input, method: init?.method ?? "GET", authorization: headers.get("Authorization"), body: init?.body ? JSON.parse(String(init.body)) : undefined });
     const next = answers.shift() ?? new Response("{}", { status: 500 });
     return next instanceof Error ? Promise.reject(next) : Promise.resolve(next);
@@ -1251,6 +1254,9 @@ Deno.test("board: configured only by an https origin (or this machine) and a wel
     { BOARD_INTAKE_URL: "not a url", BOARD_INTAKE_TOKEN: BOARD_TOKEN },
     { BOARD_INTAKE_URL: "https://board.example", BOARD_INTAKE_TOKEN: BOARD_TOKEN, TICKET_TRACKER: " Linear " },
   ]) assertEquals(readBoardConfig(env(values as Record<string, string>)), null, JSON.stringify(Object.keys(values)));
+  // Secrets that are there but cannot be used are told apart from secrets that are not there, so the fallback is never silent.
+  assertEquals([{}, { BOARD_INTAKE_URL: "https://board.example", BOARD_INTAKE_TOKEN: BOARD_TOKEN }, { BOARD_INTAKE_TOKEN: "bvb_short", TICKET_TRACKER: "linear" }].map((v) => boardMisconfigured(env(v as Record<string, string>))), [false, false, false]);
+  assertEquals([{ BOARD_INTAKE_URL: "https://board.example" }, { BOARD_INTAKE_URL: "https://board.example", BOARD_INTAKE_TOKEN: `${BOARD_TOKEN}x` }, { BOARD_INTAKE_URL: "http://board.example", BOARD_INTAKE_TOKEN: BOARD_TOKEN }].map((v) => boardMisconfigured(env(v as Record<string, string>))), [true, true, true]);
 });
 
 Deno.test("board: a report is filed with its key, and the reference and URL come from the board", async () => {
@@ -1318,6 +1324,9 @@ Deno.test("board: statuses are read by name and come back in the contract's word
     ["BEV-7", "T-7", "in_review", "In review", 4, null, "https://board.example/?open=T-7"],
     ["T-20", "T-20", "canceled", "Now an idea (BEV-31)", 3, 4096, "https://board.example/?open=T-19"],
   ]);
+  // An address that is not on the configured board is never passed on to the app.
+  const forged = fakeBoard(answer({ tickets: [boardTicket({ url: "javascript:alert(1)" }), boardTicket({ ref: "T-20", asked: "T-20", url: "https://elsewhere.example/?open=T-20" })] }));
+  assertEquals((await fetchBoardStatuses(BOARD, forged.fetchImpl, ["T-19", "T-20"])).map((s) => s.url), ["", ""]);
   // Nothing to ask about means no request at all.
   const idle = fakeBoard();
   assertEquals([await fetchBoardStatuses(BOARD, idle.fetchImpl, ["", "nope"]), idle.calls.length], [[], 0]);

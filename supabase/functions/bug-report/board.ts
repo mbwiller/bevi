@@ -78,6 +78,17 @@ export function readBoardConfig(env: (key: string) => string | undefined): Board
   return { url: url.origin, token };
 }
 
+/**
+ * True when someone set the board's secrets and they cannot be used: a token
+ * of the wrong shape, an address that is not https. The function then files
+ * with Linear or not at all, and says so in its log instead of doing it quietly.
+ */
+export function boardMisconfigured(env: (key: string) => string | undefined): boolean {
+  if ((env("TICKET_TRACKER") ?? "").trim().toLowerCase() === "linear") return false;
+  const either = !!(env("BOARD_INTAKE_URL") ?? "").trim() || !!(env("BOARD_INTAKE_TOKEN") ?? "").trim();
+  return either && readBoardConfig(env) === null;
+}
+
 interface BoardTicket {
   ref: string;
   asked: string;
@@ -100,6 +111,8 @@ async function call<T>(config: BoardConfig, fetchImpl: FetchLike, action: string
         ? { Authorization: `Bearer ${config.token}` }
         : { Authorization: `Bearer ${config.token}`, "Content-Type": "application/json" },
       body: body === undefined ? undefined : JSON.stringify(body),
+      // The token goes to the configured board and nowhere a redirect points.
+      redirect: "error",
     });
   } catch {
     throw new BoardError("board_unreachable", "Could not reach the board");
@@ -169,7 +182,7 @@ export interface BoardStatus extends IssueStatus {
  * ledger holds: a ticket filed while Linear was the tracker keeps answering to
  * its Linear identifier once the board has taken it over.
  */
-function toStatus(ticket: BoardTicket): BoardStatus {
+function toStatus(config: BoardConfig, ticket: BoardTicket): BoardStatus {
   return {
     identifier: (ticket.asked || ticket.ref).toUpperCase(),
     state: mapBoardState(ticket.state),
@@ -178,7 +191,8 @@ function toStatus(ticket: BoardTicket): BoardStatus {
     updatedAt: typeof ticket.updatedAt === "string" ? ticket.updatedAt : null,
     sortOrder: typeof ticket.rank === "number" && Number.isFinite(ticket.rank) ? ticket.rank : null,
     ref: ticket.ref,
-    url: ticket.url,
+    // Only an address on the configured board is passed on to the app; anything else is dropped for the ledger's own.
+    url: typeof ticket.url === "string" && ticket.url.startsWith(`${config.url}/`) ? ticket.url : "",
   };
 }
 
@@ -241,14 +255,14 @@ export async function fetchBoardStatuses(config: BoardConfig, fetchImpl: FetchLi
   const refs = [...new Set(identifiers.map((i) => i.trim().toUpperCase()).filter((i) => REF_RE.test(i)))].slice(0, 100);
   if (!refs.length) return [];
   const data = await call<{ tickets?: BoardTicket[] }>(config, fetchImpl, "status", { refs });
-  return (data.tickets ?? []).map(toStatus);
+  return (data.tickets ?? []).map((ticket) => toStatus(config, ticket));
 }
 
 /** The reporter checked the fix on the device: the ticket is Done. */
 export async function verifyBoardTicket(config: BoardConfig, fetchImpl: FetchLike, identifier: string, handle: string): Promise<BoardStatus> {
   const data = await call<{ ticket: BoardTicket }>(config, fetchImpl, "verify", { ref: identifier.trim().toUpperCase(), handle });
   if (!data?.ticket) throw new BoardError("board_error", "The board did not confirm the change");
-  return toStatus({ ...data.ticket, asked: identifier });
+  return toStatus(config, { ...data.ticket, asked: identifier });
 }
 
 /**

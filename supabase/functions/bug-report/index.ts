@@ -60,6 +60,7 @@ import {
 import {
   addPicture,
   type BoardConfig,
+  boardMisconfigured,
   BoardError,
   buildBoardBody,
   fetchBoardStatuses,
@@ -428,7 +429,7 @@ function summarise(row: LedgerRow, status: (IssueStatus & { url?: string }) | un
   return {
     ticketId: row.ticket_identifier ?? "",
     // The board says where a ticket lives now, which for one filed while Linear was the tracker is no longer the ledger's URL.
-    ticketUrl: status?.url ?? row.ticket_url ?? "",
+    ticketUrl: status?.url || row.ticket_url || "",
     title: row.title,
     kind: row.kind,
     severity: row.severity,
@@ -447,11 +448,18 @@ function summarise(row: LedgerRow, status: (IssueStatus & { url?: string }) | un
 
 type Tracker = { board: BoardConfig } | { linear: LinearConfig };
 
+let warnedAboutBoard = false;
+
 /** The board when it is configured, else Linear, else null. */
 function tracker(): Tracker | null {
   const env = (key: string) => Deno.env.get(key);
   const board = readBoardConfig(env);
   if (board) return { board };
+  if (!warnedAboutBoard && boardMisconfigured(env)) {
+    // Once per cold start, and never the values: a mistyped token must not send reports to Linear without a trace.
+    warnedAboutBoard = true;
+    console.error("bug-report: BOARD_INTAKE_URL/BOARD_INTAKE_TOKEN are set but unusable (an https address and a bvb_ token are needed); the board is not being used");
+  }
   const linear = readLinearConfig(env);
   return linear ? { linear } : null;
 }
@@ -483,7 +491,8 @@ async function reportToBoard(
   const notes: PictureNote[] = [];
   const pictures: { n: number; bytes: Uint8Array; contentType: string; caption: string }[] = [];
   for (const [i, path] of staged.entries()) {
-    const file = i < MAX_PICTURES ? await readEvidence(c.env, path) : null;
+    // A read that throws costs that picture, not the report: nothing has been filed yet and the claim must be finished either way.
+    const file = i < MAX_PICTURES ? await readEvidence(c.env, path).catch(() => null) : null;
     if (!file) {
       notes.push({ kind: "left_out", reason: i < MAX_PICTURES ? "the stored object could not be read" : "more pictures than a ticket holds" });
     } else if (file.bytes.byteLength > MAX_PICTURE_BYTES) {
@@ -734,6 +743,8 @@ async function handleVerify(req: Request, c: Caller): Promise<Response> {
     }
   }
   const linear = t.linear;
+  // A ticket the board named is not a Linear issue, whatever its number: after a switch back to Linear it is closed on the board, not here.
+  if (/^T-\d+$/i.test(ticketId)) return json({ error: "not_found" }, 404);
 
   const stateId = await doneState(linear);
   if (!stateId) return json({ error: "tracker_error", code: "no_done_state" }, 502);

@@ -52,9 +52,16 @@ moment and in this project's secrets: never in a file, a log line or a response.
 `readBoardConfig` refuses an address that is not `https` (or this machine), so
 the token is never sent in the clear.
 
+If the two secrets are set but cannot be used (a token of the wrong shape, an
+address that is not `https`), the function does not use the board and says so
+once per cold start in its log, without the values; it never falls back to
+Linear without a trace.
+
 **Going back.** `npx supabase secrets set TICKET_TRACKER=linear` (no redeploy)
 sends new reports to Linear again; unsetting it returns to the board. Tickets
-already on the board stay there.
+already on the board stay there, and are closed there: while Linear is the
+tracker, Filed reports shows a `T-<n>` ticket as unknown and "Verified on
+device" answers not found for it.
 
 **Tickets filed while Linear was the tracker** were carried over by the board's
 `scripts/import-linear.ts` with their numbers: `BEV-7` is `T-7` there and still
