@@ -115,9 +115,14 @@ describe('the same Bev won the day and the week', () => {
     return same;
   }
 
-  it('the fixture as it is: its day and week winners are one Bev, and the row is still two cards', async () => {
-    const { day, week } = await fixtureWinners();
-    expect(week!.bev.id).toBe(day!.bev.id);
+  // `sameBev()` with no overrides, rather than the raw fixture: this used to assert that the
+  // fixture's own two winners happened to be one Bev, which is a property of the day the suite
+  // runs on. `buildFixtures(now = new Date())` builds from the real clock and this suite pins
+  // no date, so it passed until 2026-11-17 and then failed on main for everyone. What it is
+  // actually for -- a winner carried over from an earlier period, so the cards print their
+  // `periodStart` -- is kept, and is the part the `isCurrent: true` test below does not cover.
+  it('the fixture winners as they come, made one Bev: the row is still two cards', async () => {
+    const { day, week } = await sameBev();
     await start();
     const row = await screen.findByTestId('bev-of-period');
     expect(within(row).getAllByRole('button')).toHaveLength(2);
