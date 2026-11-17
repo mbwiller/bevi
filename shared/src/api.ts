@@ -634,21 +634,22 @@ export interface MetaApi {
 // ---------------------------------------------------------------------------
 // Bugs: the internal bug reporter (docs/bug-workflow.md). Internal-only —
 // every method is refused for an ordinary account, server-side, whatever the
-// client chooses to show. Linear owns the issue: nothing here writes its
-// labels or comments after create, and the app never holds a tracker
-// credential. There are two writes after create, both to the caller's own
+// client chooses to show. The tracker (the founders' board) owns the ticket:
+// nothing here edits it after create beyond the two writes below, and the app
+// never holds a tracker credential. Both writes are to the caller's own
 // tickets: `markVerified`, which moves a ticket the reporter has checked on
 // the device to Done, and `place`, which puts a ticket in the reporter's
-// ranked list (Linear's manual order, and the priority that position implies).
+// ranked list (the board's shared order, and the priority that position
+// implies).
 // ---------------------------------------------------------------------------
 
-/** What the reporter says it is. The server files each kind under a Linear label of the same name. */
+/** What the reporter says it is. The server files each kind as the ticket's type on the board. */
 export type BugReportKind = 'bug' | 'fix' | 'idea' | 'design';
 
 /**
  * How bad the reporter says it is: blocker = cannot use the app or data is
  * wrong; bad = a core flow is broken; annoying = works with a workaround;
- * polish = cosmetic. The server maps it to Linear priority 1–4 at create time.
+ * polish = cosmetic. The server records it with the report in its ledger.
  */
 export type BugReportSeverity = 'blocker' | 'bad' | 'annoying' | 'polish';
 
@@ -656,7 +657,7 @@ export type BugReportSeverity = 'blocker' | 'bad' | 'annoying' | 'polish';
 export interface BugReportEnvironment {
   /** The route the reporter was on, e.g. '/bev/[id]'. Never a URL with a query string. */
   route?: string;
-  /** The feature area, for the tracker's component label. */
+  /** The feature area, which the ticket names as where in the app the report is about. */
   component?: string;
   platform?: string;
   osVersion?: string;
@@ -785,7 +786,7 @@ export interface BugReportInput {
 }
 
 export interface BugReportResult {
-  /** The tracker's own identifier, e.g. 'BEV-104'. Never invented client-side. */
+  /** The tracker's own identifier, e.g. 'T-19' (tickets filed before 2026-11-17 keep names like 'BEV-7'). Never invented client-side. */
   ticketId: string;
   ticketUrl: string;
   /** 'duplicate' = this idempotency key had already produced that ticket. */
@@ -793,8 +794,9 @@ export interface BugReportResult {
 }
 
 /**
- * Where a ticket is in the workflow (docs/bug-workflow.md), derived from
- * Linear's state type; 'unknown' when the tracker could not be asked.
+ * Where a ticket is in the workflow (docs/bug-workflow.md), mapped from the
+ * board's stage (New is 'triage', Ready is 'todo'); 'unknown' when the
+ * tracker could not be asked.
  */
 export type BugTicketState = 'triage' | 'todo' | 'in_progress' | 'in_review' | 'done' | 'canceled' | 'unknown';
 
@@ -809,16 +811,16 @@ export interface BugReportSummary {
   /** ISO-8601, when it was filed. */
   createdAt: string;
   state: BugTicketState;
-  /** Linear's own state name, e.g. 'In Review'; null when `state` is 'unknown'. */
+  /** The tracker's own name for the stage, e.g. 'In review'; null when `state` is 'unknown'. */
   stateLabel: string | null;
-  /** Linear's priority 0–4; null when unknown. */
+  /** The tracker's priority on the 0–4 scale (2 High, 3 Normal, 4 Low on the board); null when unknown. */
   priority: number | null;
-  /** ISO-8601, Linear's last change; null when unknown. */
+  /** ISO-8601, the tracker's last change; null when unknown. */
   updatedAt: string | null;
   /**
    * Where this ticket sits among the caller's own open tickets (triage, todo
-   * and in progress), 1 being the one that bothers them most. It is Linear's
-   * manual order read back, so it follows a drag in Linear too. Null for a
+   * and in progress), 1 being the one that bothers them most. It is the
+   * board's shared order read back, so it follows a drag on the board too. Null for a
    * ticket that is in review, closed or unknown, and when the tracker could
    * not be asked.
    */
@@ -836,7 +838,7 @@ export interface BugsApi {
 
   /**
    * Files one report: uploads the evidence (if any), then creates the tracker
-   * issue server-side and returns the identifier the tracker assigned.
+   * ticket server-side and returns the identifier the tracker assigned.
    *
    * @throws 'unauthorized' — signed out, or not an internal reporter;
    *   'validation' — missing title (`detail.field = 'title'`), unknown kind or

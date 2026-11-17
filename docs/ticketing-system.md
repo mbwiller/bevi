@@ -4,94 +4,56 @@ How the internal bug reporter is wired, what has to be configured outside this
 repository, and what is still unverified. The workflow it serves is in
 [`bug-workflow.md`](./bug-workflow.md).
 
-> **Status.** The tracker is the founders' board once `BOARD_INTAKE_URL` and
-> `BOARD_INTAKE_TOKEN` are set on this project and the `bug-report` function is
-> redeployed; until then, and whenever those are unset, it is Linear, live
-> since 2026-11-09 (tickets BEV-5 onward). The board client has run against a
-> board on a developer's machine, end to end; it has **not** yet run from the
-> deployed function. See [The tracker: the founders' board](#the-tracker-the-founders-board).
+> **Status.** The tracker is the founders' board, an in-house private tracker,
+> since 2026-11-17. It is the only tracker: there is no fallback. The board
+> client has run against a board on a developer's machine, end to end; it has
+> **not** yet run from the deployed function.
 
 ## The tracker: the founders' board
 
-Linear did the job, and the founders' own board does it better for two people
-and their agents: tickets sit beside the cards they came from, an agent picks
-one up with the same tools it uses for a card, and "which is worse" is the
-board's own order. So the board (`bevi-founders-board`: its own repository,
-its own Supabase project) is the tracker, and this repository still holds
-exactly three things: a way to file from a phone, a secure server-side path to
-the tracker, and the instructions an agent needs to work from a ticket number.
-
-What changed here is one module. `supabase/functions/bug-report/board.ts`
-talks to the board's intake endpoint (`<board>/api/intake/…`) where
-`linear.ts` talks to Linear, and `index.ts` picks the board when it is
-configured. The four routes, the ledger, the idempotency key, the private
-evidence bucket, the redaction and the contract are untouched: the app, 
-`packages/api` and `shared/` did not change, and a ticket's name is whatever
-the tracker returns (`T-19` from the board, `BEV-104` from Linear).
-
-| | Board | Linear |
-|---|---|---|
-| Chosen when | `BOARD_INTAKE_URL` and `BOARD_INTAKE_TOKEN` are set, and `TICKET_TRACKER` is not `linear` | otherwise, with `LINEAR_API_KEY` and `LINEAR_TEAM_ID` |
-| A ticket is | `T-<n>`, opened at `<board>/?open=T-<n>` | `BEV-<n>` |
-| Pictures | sent to the board as base64, three megabytes each at most, kept in its database | uploaded to Linear's storage |
-| Order | the board's one shared order; the function says after or before which of the caller's tickets | `sortOrder`, respaced from here |
-| Reporter's kind | the ticket's type on the board | a Linear label |
-
-**Setting it up.** On the board, **Connect a CLI → The Bevi app**: each founder
-saves their Bevi handle, and one makes the app's token. The board then shows
-the two commands to run here:
-
-```bash
-npx supabase secrets set BOARD_INTAKE_URL=https://<the board> BOARD_INTAKE_TOKEN=<shown once on the board>
-npx supabase functions deploy bug-report
-```
-
-The token is of a kind that can file tickets, read back where they stand, close
-one and order them, and nothing else. It lives only in the board's screen for a
-moment and in this project's secrets: never in a file, a log line or a response.
-`readBoardConfig` refuses an address that is not `https` (or this machine), so
-the token is never sent in the clear.
-
-If the two secrets are set but cannot be used (a token of the wrong shape, an
-address that is not `https`), the function does not use the board and says so
-once per cold start in its log, without the values; it never falls back to
-Linear without a trace.
-
-**Going back.** `npx supabase secrets set TICKET_TRACKER=linear` (no redeploy)
-sends new reports to Linear again; unsetting it returns to the board. Tickets
-already on the board stay there, and are closed there: while Linear is the
-tracker, Filed reports shows a `T-<n>` ticket as unknown and "Verified on
-device" answers not found for it.
-
-**Tickets filed while Linear was the tracker** were carried over by the board's
-`scripts/import-linear.ts` with their numbers: `BEV-7` is `T-7` there and still
-answers to `BEV-7`, which is the name this project's ledger holds, so Filed
-reports keeps listing them with their state on the board.
-
-**What a failure looks like.** The function logs `tracker=board code=…` and
-answers `tracker_error` with the same short code: `board_unauthorized` (the
-token was revoked or mistyped), `board_not_set_up` (the board's database step
-has not been run), `board_unreachable`, `board_refused` (a rule of the board,
-such as its sixty-an-hour limit), `board_invalid`, `board_too_large`,
-`board_error`. None carries anything the reporter typed.
-
-The rest of this page was written for Linear and still describes the fallback
-exactly; where it says "Linear" for something both trackers do (the ledger, the
-redaction, the gate in Postgres), it holds for the board too.
-
-## Why Linear, and not a dashboard in this repo
-
-Linear owns issue identity, status, priority and discussion. Building a second
-issue database here would mean two places that disagree about whether something
-is fixed, plus a triage UI, a search, a permissions model and an audit trail —
-all of which Linear already has, and none of which is this product.
-
-So this repository holds exactly three things: a way to file from a phone, a
-secure server-side path to Linear (with a read-back of the caller's own
+The founders' board (its own repository, its own Supabase project) holds the
+tickets next to the cards they came from. An agent picks a ticket up with the
+same tools it uses for a card, and "which is worse" is the board's own order.
+This repository holds exactly three things: a way to file from a phone, a
+secure server-side path to the board (with a read-back of the caller's own
 tickets and two writes: "verified on the device", and the reporter's own
 ranking of their open tickets), and the instructions an agent needs to work
-from a ticket ID. The "engineering dashboard" is Linear's
-own views (below).
+from a ticket number. The "engineering dashboard" is the board.
+
+`supabase/functions/bug-report/board.ts` talks to the board's intake endpoint
+(`<board>/api/intake/…`). A ticket's name is whatever the board returns: `T-19`
+was the first real one, and it opens at `<board>/?open=T-<n>`. A ticket moves
+through New, Ready, In progress, In review and Done, and can also be closed
+without a fix (a duplicate, dismissed, or turned into an idea). The ticket's
+order is the board's one shared order; pictures are sent as base64, three
+megabytes each at most, and kept in the board's database.
+
+The token is of a kind that can file tickets, read back where they stand, close
+one and order them, and nothing else. Setup is under
+[What has to be configured outside this repository](#what-has-to-be-configured-outside-this-repository).
+
+**What a failure looks like.** The function logs `tracker=board code=…` and
+answers `tracker_not_configured` (503: the two secrets are missing or
+unusable) or `tracker_error` (502), the second with a short `code` behind it:
+`board_unauthorized` (the token was revoked or mistyped), `board_not_set_up`
+(the board's database step has not been run), `board_unreachable`,
+`board_refused` (a rule of the board, such as its sixty-an-hour limit),
+`board_invalid`, `board_too_large`, `board_error`. None carries anything the
+reporter typed.
+
+## History
+
+Linear was the tracker from 2026-11-09 until 2026-11-17, and is gone. Its
+eleven live tickets were carried over to the board on 2026-11-17. Ten kept
+their numbers (`BEV-7` is `T-7`; they fall between `T-5` and `T-18`), and
+`BEV-19`, filed that morning, became `T-20`. Linear's sample issues, the test
+issues, and two that the board already held as a card and a to-do were not
+carried over. The board still answers to the old `BEV-<n>` name for the eleven,
+which is the name this project's ledger holds, so Filed reports keeps listing
+them with their state. A `BEV-<n>` in a branch name or PR title from before 2026-11-17 means one
+of those Linear issues. Since 2026-11-17, `BEV-<n>` is also what the board calls
+its cards (they were `FB-<n>`, which still works). Filing a report by Slack went
+through Linear and no longer exists; there is no Slack-to-board path yet.
 
 ## The pieces
 
@@ -105,7 +67,7 @@ app/src/app/_layout.tsx           mounts it, lazily, for an internal reporter on
 packages/api/src/bugs.ts          uploads up to 3 screenshots to a PRIVATE bucket,
          │                        then invokes the function with the user's JWT
          ▼
-supabase/functions/bug-report/    POST  /bug-report         validate → redact → claim → Linear → record
+supabase/functions/bug-report/    POST  /bug-report         validate → redact → claim → board → record
          │                        GET   /bug-report/status  the caller's tickets with live state and rank
          │                        POST  /bug-report/verify  one ticket to Done
          │                        POST  /bug-report/place   one open ticket to a place in the caller's ranked list
@@ -115,10 +77,8 @@ supabase/functions/bug-report/    POST  /bug-report         validate → redact 
          │   issue.ts   kind and severity, the issue title and the template body
          │   rank.ts    the ranked list: order, the position to write, respacing, the priority bands
          │   board.ts   the founders' board as the tracker: ticket, file, status, verify, place; the write-up the board shows
-         │   linear.ts  the fallback tracker: the GraphQL client (fileUpload, issueCreate, states, labels, issues, issueUpdate)
-         │   cors.ts    the preflight answer and the allow headers every response carries
          ▼
-Linear                            the issue, its identifier, its lifecycle
+the founders' board               the ticket, its name (`T-<n>`), its lifecycle
 ```
 
 The database half is one migration,
@@ -129,7 +89,7 @@ The database half is one migration,
 | `profiles.role` now allows `tester` | A non-admin internal role. |
 | `is_internal_reporter()` | `role in ('admin','tester')`. |
 | `can_report_bugs()` | What the client asks to decide whether to show the entry points, and what the status and verify routes check. |
-| `bug_reports` | The submission ledger: one row per idempotency key with the kind, severity and title as filed, the evidence paths (at most 3) and the identifier Linear returned. **Not** a mirror of Linear's mutable state. |
+| `bug_reports` | The submission ledger: one row per idempotency key with the kind, severity and title as filed, the evidence paths (at most 3) and the identifier the tracker returned. **Not** a mirror of the board's mutable state. |
 | `claim_bug_report(key, kind, severity, title, paths)` | Called **as the caller**. Authorises, rate-limits (20/hour), validates, and claims the idempotency slot. This is the real access check. |
 | `finish_bug_report()` | Called **as the service role**, and revoked from `authenticated`: a client can never write a ticket identifier. |
 | `forget_bug_evidence(paths)` | Bookkeeping for the retention sweep; removes only the paths it is handed. |
@@ -148,15 +108,15 @@ The database half is one migration,
   `verify_jwt = true` on the function is only an outer gate — the publishable
   key ships in every copy of the app, so it proves nothing about *who* is
   calling.
-- **The tracker credential never leaves the server.** `LINEAR_API_KEY` is read
-  from the Edge Function's environment. It is not in the client bundle, not in
-  a response, and not in any log line this code writes.
+- **The tracker credential never leaves the server.** `BOARD_INTAKE_TOKEN` is
+  read from the Edge Function's environment. It is not in the client bundle,
+  not in a response, and not in any log line this code writes.
 - **Evidence is private.** The bucket has no public flag and no read policy.
-  The function reads each object with the service role, hands the bytes to
-  Linear's own `fileUpload`, and deletes the staged objects if the issue is
-  never created. No signed URL is ever minted for the app.
+  The function reads each object with the service role, sends the bytes to the
+  board with the ticket, and deletes the staged objects if the ticket is never
+  created. No signed URL is ever minted for the app.
 - **Redaction runs server-side, on everything.** `redact.ts` strips bearer
-  tokens, JWTs, Supabase/Linear/GitHub/Stripe/Slack/AWS key shapes, email
+  tokens, JWTs, Supabase/GitHub/Stripe/Slack/AWS key shapes, email
   addresses, URLs carrying a credential, and invisible/bidi characters — from
   the reporter's own typing, the automatic context, every breadcrumb, every
   pointed-at component and every screenshot caption, because pasting an error
@@ -207,10 +167,10 @@ The database half is one migration,
   ticket on the ledger is tried twice and, if it still fails, logged with its
   status code (never the body): a row left `pending` after a created issue is
   the one way a later retry could file a duplicate, so that log line is loud.
-- **No phantom tickets.** The identifier and URL come from Linear's response.
-  If the provider does not confirm the issue, the client raises instead of
+- **No phantom tickets.** The identifier and URL come from the board's response.
+  If the tracker does not confirm the ticket, the client raises instead of
   showing an ID. The same for Filed reports: a row the ledger does not hold is
-  never shown, and a row Linear cannot describe is shown as "unknown".
+  never shown, and a row the board cannot describe is shown as "unknown".
 - **The place route's not-found says which kind it is, to the owner only.**
   A ticket that is not in the caller's ledger answers
   `{ "error": "not_found", "route": "place" }`, whoever owns it. Only once
@@ -220,16 +180,14 @@ The database half is one migration,
   which the client turns into a `conflict`. Neither reveals anything about
   another reporter's tickets.
 - **Two writes after create, both to the caller's own tickets.**
-  `markVerified` moves a ticket to Done, and `place` writes one open ticket's
-  `sortOrder` (Linear's manual order) and the priority its new position
-  implies: the top quarter of the caller's open tickets High, the middle half
-  Medium, the rest Low, and an Urgent ticket stays Urgent. Both act only on a
-  ticket the caller's own ledger holds; `place` also requires both tickets to
-  be open (Triage, Todo or In Progress) as Linear reports them at that moment,
-  read fresh rather than from the status cache. When the two neighbours are
-  too close to split (less than 1e-6 apart), `place` first rewrites the
-  `sortOrder` of the caller's other open tickets, one at a time (at most 50),
-  then the moving one. Nothing else in the app changes a ticket.
+  `markVerified` closes a ticket as Done, and `place` writes one open ticket's
+  place in the board's order and the priority its new position implies: the top
+  quarter of the caller's open tickets High, the middle half Medium, the rest
+  Low, and an Urgent ticket stays Urgent. Both act only on a ticket the
+  caller's own ledger holds; `place` also requires both tickets to be open (not
+  in review and not closed) as the board reports them at that moment, read
+  fresh rather than from the status cache. Nothing else in the app changes a
+  ticket.
 - **The browser is a first-class caller.** This is the first function the app
   invokes directly, so `cors.ts` answers the `OPTIONS` preflight before any
   auth check (the browser sends it without a JWT) and every response carries
@@ -243,59 +201,34 @@ The database half is one migration,
   source, and a placement's line the new index, the priority and how many
   tickets were respaced. Never a title, a body or a target's contents.
 
-## What has to be configured outside this repository
+### 1. The board
 
-### 1. Linear
-
-1. Create (or pick) a team whose issue prefix is `BEV`, so identifiers read
-   `BEV-104`. Turn **Triage** on for it.
-2. Make sure the four labels the reporter's **Type** maps to exist, spelled
-   exactly: `Bug`, `Fix suggestion`, `Idea`, `Design nit`. Workspace-level or
-   team-level both work (Linear's default `Bug` is workspace-wide; the function
-   asks `issueLabels` by name and prefers the team's own when both exist); a
-   missing one is logged and the ticket is filed without it. Component labels (`Ratings`, `Profiles`, `Search`,
-   `Discovery`, `Collections`, `Venues`, `Authentication`, `Navigation`,
-   `Backend/API`, `Performance`, `Other`) are triage's to add.
-3. Create a personal API key (Settings → API → Personal API keys), or an OAuth
-   application if you would rather not tie it to one person. Both work: the
-   client sends `lin_api_…` raw and `lin_oauth_…` as a Bearer token.
-4. Find the team's UUID. The simplest way is one query against the API:
-
-   ```bash
-   curl -s https://api.linear.app/graphql \
-     -H "Authorization: $LINEAR_API_KEY" -H 'Content-Type: application/json' \
-     -d '{"query":"{ teams { nodes { id key name } } }"}'
-   ```
-
-5. Connect the GitHub integration (Settings → Integrations → GitHub) to this
-   repository, so a branch or PR naming `BEV-104` links itself to the issue.
-   Leave the "close on merge" automation **off**: a merged PR is not a verified
-   fix, and the workflow depends on that distinction.
-6. Check the plan's issue cap before anyone beyond the two of you gets the
-   `tester` role: the free plan limits active issues, which is fine for two
-   people and worth knowing about before friends start filing.
+On the board, **Connect a CLI → The Bevi app**: each founder saves their Bevi
+handle, and one makes the app's token. The board shows the token once. The
+token is of a kind that can file tickets, read back where they stand, close one
+and order them, and nothing else.
 
 ### 2. Supabase secrets
 
+Set two secrets on the **app's** Supabase project, then deploy the function.
+Always pass `--project-ref` for the app's project explicitly. The board has its
+own Supabase project in the same organisation, and a command without the ref
+can land on the wrong one (this happened once).
+
 ```bash
-supabase secrets set \
-  LINEAR_API_KEY=... \
-  LINEAR_TEAM_ID=...
-# optional
-supabase secrets set LINEAR_PROJECT_ID=... LINEAR_LABEL_IDS=id1,id2 \
-  LINEAR_TRIAGE_STATE_ID=... LINEAR_DONE_STATE_ID=... \
-  LINEAR_LABEL_BUG=... LINEAR_LABEL_FIX=... LINEAR_LABEL_IDEA=... LINEAR_LABEL_DESIGN=...
+npx supabase secrets set --project-ref <the app's project ref> \
+  BOARD_INTAKE_URL=https://<the board> BOARD_INTAKE_TOKEN=<shown once on the board>
+npx supabase functions deploy bug-report --project-ref <the app's project ref>
 ```
 
 | Variable | Required | What it does |
 |---|---|---|
-| `LINEAR_API_KEY` | yes | The credential. Server-only. |
-| `LINEAR_TEAM_ID` | yes | Which team the issue is created in, and whose issues the status route reads. |
-| `LINEAR_PROJECT_ID` | no | Puts new issues in a project. |
-| `LINEAR_LABEL_IDS` | no | Comma-separated labels on every submission, e.g. one "from the app" label. |
-| `LINEAR_LABEL_BUG`, `LINEAR_LABEL_FIX`, `LINEAR_LABEL_IDEA`, `LINEAR_LABEL_DESIGN` | no | The label id for each Type. Without them the function finds the label by name. |
-| `LINEAR_TRIAGE_STATE_ID` | no | Skips the per-cold-start lookup of the team's Triage state. |
-| `LINEAR_DONE_STATE_ID` | no | Skips the lookup of the team's Done state, which `markVerified` moves a ticket to. |
+| `BOARD_INTAKE_URL` | yes | The board's address. `readBoardConfig` refuses one that is not `https` (or this machine), so the token is never sent in the clear. |
+| `BOARD_INTAKE_TOKEN` | yes | The app's token. Server-only: it lives in the board's screen for a moment and in this project's secrets, never in a file, a log line or a response. |
+
+If either is missing or unusable, filing fails with `tracker_not_configured`;
+nothing is rerouted. The function says so once per cold start in its log,
+without the values.
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are
 injected into Edge Functions automatically; do not set them by hand.
@@ -305,28 +238,22 @@ Locally, the same values go in `supabase/.env` (gitignored).
 ### 3. Deploy
 
 ```bash
-supabase db push                           # 20261109000300_bug_reports.sql
-supabase functions deploy bug-report       # the function
+supabase db push --project-ref <the app's project ref>   # 20261109000300_bug_reports.sql
+supabase functions deploy bug-report --project-ref <the app's project ref>
 ```
 
-Note that `supabase secrets set` is separate from deploying — deploying the
+Note that `supabase secrets set` is separate from deploying: deploying the
 function does not carry the secrets with it.
+
 
 ### 4. The MCP connection, for coding agents
 
-`.mcp.json` in the repository root declares Linear's official remote MCP server
-for Claude Code (`/mcp` in a session, pick `linear`, authorise in the browser).
-Codex configures it per machine:
-
-```bash
-codex mcp add linear --url https://mcp.linear.app/mcp
-codex mcp login linear
-```
-
-Both require an **interactive browser authorisation** the first time. Until
-that authorisation has actually been completed on the machine in question, an
-agent cannot read a ticket — and should say so rather than guessing at its
-contents.
+Agents pick a ticket up through the `bevi-board` MCP server, set up from the
+board's **Connect a CLI** screen (in Claude Code, `/bevi:work T-104`). Until
+that connection has actually been made on the machine in question, an agent
+cannot read a ticket, and should say so rather than guessing at its contents.
+The ticket workflow itself is in [`AGENTS.md`](../AGENTS.md) and
+[`ticket-prompt.md`](./ticket-prompt.md).
 
 ### Granting the tester role
 
@@ -346,42 +273,25 @@ select public.set_profile_role('their_handle', 'tester');
 so no signed-in user can call it for themselves. There is no UI for this, on
 purpose: it is a rare, deliberate act.
 
-## The Linear views to configure
-
-These replace the dashboard mockup. Create them as saved views in the team's
-sidebar, in this order:
-
-| View | Filter | Sort |
-|---|---|---|
-| **All issues** | none | Updated, newest first |
-| **Triage** | state = Triage | Created, oldest first (the queue) |
-| **Active** | state in Todo, In Progress, In Review | Priority, then updated |
-| **Bugs** | label = Bug | Priority, then updated |
-| **Completed** | state = Done | Completed, newest first |
-
-Keep the list rows to identifier, title, label, priority, state and age —
-Linear's default row, which is already that. Resist adding charts until
-there is enough history for one to mean anything.
-
-## How the form's fields reach Linear
+## How the form's fields reach the board
 
 | In the form | On the ticket |
 |---|---|
-| **What is it?** Bug / Fix suggestion / Idea / Design nit | The label of the same name, and a `**Type:**` line under the opening quote |
-| **How bad is it?** Blocker / Bad / Annoying / Polish | Priority 1 / 2 / 3 / 4 (Urgent / High / Medium / Low), and a `**Severity:**` line |
+| **What is it?** Bug / Fix suggestion / Idea / Design nit | The ticket's type on the board, and a `**Type:**` line under the opening quote |
+| **How bad is it?** Blocker / Bad / Annoying / Polish | The ticket's priority, and a `**Severity:**` line |
 | What went wrong? | The title |
 | Describe the problem, steps, expected, actual | Their sections |
 | Automatically included | The Environment section |
 | The components pointed at (up to 6) | The **Pointed at** section, directly after Summary: one numbered block per component (its mark, else its position) with the source file, ancestry, role and label, text, props, how it was drawn, where it sat on screen, and which screenshot and mark show it. Only lines with data are printed; with none, the section says the note is about the whole screen. |
 | Steps from a recording (**Record steps** … stop; `stepsSource: 'recorded'`, up to 30) | The same numbered list, under the line `_Recorded by the app while the reporter reproduced it, not typed by them._` |
 | The app's recent activity trail | The Recent activity section, a fenced block of one line per entry: `nav`, `api`, `error` (the message), and `tap` (what was tapped, only during a recording) |
-| Screenshots (up to 3), each with an optional caption | Images in the Evidence section, each uploaded to Linear's own storage and numbered by its place in the list (the number a pointed-at component's "Screenshot N" refers to). A caption becomes the image's alt text and an italic line under it. |
-| The "which is worse?" placement after filing | The issue's `sortOrder` (Linear's manual order) and its priority, by the bands above; Filed reports reads the rank back from `sortOrder`, so a drag in Linear moves it there too |
+| Screenshots (up to 3), each with an optional caption | Pictures on the ticket, sent to the board as base64 (three megabytes each at most) and numbered by their place in the list (the number a pointed-at component's "Screenshot N" refers to). A caption becomes the picture's alt text and an italic line under it. |
+| The "which is worse?" placement after filing | The ticket's place in the board's one shared order (the function says after or before which of the caller's tickets) and its priority, by the bands above; Filed reports reads the rank back from the board, so a reorder on the board moves it there too |
 
-Triage may change the priority or the label with the board in view; Linear's
-values are the truth from then on, and Filed reports shows Linear's state. A
-later placement from the app does set the priority again from the new
-position, except on an Urgent ticket.
+A founder may change the priority or the type on the board; the board's values
+are the truth from then on, and Filed reports shows the board's state. A later
+placement from the app does set the priority again from the new position,
+except on an Urgent ticket.
 
 ## Retention
 
@@ -402,28 +312,20 @@ pretend otherwise.
 
 | Suite | Covers |
 |---|---|
-| `supabase/functions/bug-report/test.ts` (Deno, 93 tests) | Redaction; the environment allow-list (including the dropped query-string, `//` and opaque-segment paths with a UUID segment kept, and the typed pixel ratio and reduced-motion values), the 30-step cap, the breadcrumb allow-list (tap and error entries, the 40 cap) and the target allow-list (bad component names, `..` in a file, the 12-entry prop cap, props and styles with sensitive keys dropped, a `key=value` pair redaction catches dropped, ordinary props kept, range checks, the 6-target cap), captions, and link/image escaping in labels, text, roles and captions (including a trailing backslash); kind/severity and path validation; the issue template (type and severity line, the exact Pointed at markdown for a full target, a sparse one and none, backticks that cannot close a code span, the recorded-steps line, recent activity, numbered and captioned evidence); every function in `rank.ts` (top, bottom, middle, alone, respacing, the bands, Urgent kept); `routeOf` and the place route's body; the priority mapping, label resolution, state mapping, the Linear client's error mapping, two-step upload, the status query (which selects `sortOrder`), the verify write and `placeIssue`'s request; the reporter-scoped ledger query and the retried ledger write — all against an injected `fetch`. The place route's handler itself (`handlePlace` in `index.ts`) is not exercised: index.ts starts a server when imported. |
+| `supabase/functions/bug-report/test.ts` (Deno) | Redaction; the environment allow-list (including the dropped query-string, `//` and opaque-segment paths with a UUID segment kept, and the typed pixel ratio and reduced-motion values), the 30-step cap, the breadcrumb allow-list (tap and error entries, the 40 cap) and the target allow-list (bad component names, `..` in a file, the 12-entry prop cap, props and styles with sensitive keys dropped, a `key=value` pair redaction catches dropped, ordinary props kept, range checks, the 6-target cap), captions, and link/image escaping in labels, text, roles and captions (including a trailing backslash); kind/severity and path validation; the ticket's write-up as the board receives it (the type line, the exact Pointed at markdown for a full target, a sparse one and none, backticks that cannot close a code span, the recorded-steps line, recent activity, the note on each picture); every function in `rank.ts` (top, bottom, middle, alone, the bands, Urgent kept); `routeOf` and the place route's body; the priority mapping, the board client's error mapping, that no Linear setting is read any more, the file, status, verify and place requests; the reporter-scoped ledger query and the retried ledger write — all against an injected `fetch`. The place route's handler itself (`handlePlace` in `index.ts`) is not exercised: index.ts starts a server when imported. |
 | `supabase/tests/28_bug_reports.test.sql` (pgTAP, 65 assertions) | The `tester` role and `set_profile_role` (the trigger still refuses a plain update, even from the owner; `authenticated` cannot call it; the bypass flag is reset), the grants (notably that `authenticated` cannot call `finish_bug_report`), the RLS shape, the private bucket and its policy, the authorisation refusal, kind/severity/title/path validation (an over-long title included), the idempotency ledger's cases (in-flight, stale-pending re-arm keeping staged evidence, failed re-arm taking the retry's list), cross-reporter reads returning nothing, the 20-an-hour rate limit, and `forget_bug_evidence`. |
 | `packages/api/test/bugs.test.ts` (vitest, 33 cases) | That nothing is uploaded or invoked before the input validates, that every screenshot goes to the private bucket in order and the function gets only paths (and one caption per path), that targets (the first six) and the steps source are sent, and a thirty-step recording as it is, that no credential is in the request body, the error-code mapping, `listMine` over the status route (including `rank`), `markVerified` over the verify route, `place` over the place route (validation, its own not-found, its `not_open` as a conflict, a bare 404 from a server that predates ranking, tracker failures), and the refusal of a response with no confirmed ticket. |
 | `app/src/testing/conformance.ts` against the FakeApi (jest) | The bugs refusals for an ordinary and a signed-out account, and, with an internal reporter, `rank` on `listMine` (a new ticket at the top), `place` to the top and below another ticket with the new ranks and priorities, Urgent kept, and its validation, not-found (another reporter's ticket, an unknown one) and conflict (`reason: 'not_open'`, a closed ticket of the caller's) cases; and that `report` accepts more than six targets (the first six are kept) and a thirty-step recording. |
 | `app/src/features/bug-report/__tests__/` (jest) | The report button's gating (hidden for an ordinary account, shown on tab and full-screen routes, never captures on press, filled while a note exists); the note: the type dropdown, Select element through select mode to a marked picture with the component and its source file, Capture screen, the Add photos menu and the three-picture limit, Record steps to Stop and the steps sent as recorded, send in the background, a failed send restored with the same key, set aside and discard; the pure model and the report it builds (targets, captions, `evidenceIndex`); picking a component from fibers with an allowlist of props and no typed text; select mode swallowing taps but not scrolls; the trail and explicit step recording; the inferred type; the context allow-list; the draft's persistence, its owner and the wipe on sign-out; Filed reports and the rank sheet against the FakeApi's `place`; and that the generated component manifest is current. |
 
-**Not covered, honestly:** the live round trip to Linear. No test in this
-repository has ever called `api.linear.app`, because no credential exists here
-to call it with. `linear.ts` is written against Linear's documented GraphQL
-API and its shapes are asserted against recorded-looking responses, which is
-not the same as having seen the real one. In particular, **the `place` route,
-the `sortOrder` read and write, the rank on the status route, and everything
-else added for the pointed-at components and the ranked list have never run
-against the real Linear API.** What they rely on is Linear's published SDK
-schema: `Issue.sortOrder: Float!` (lower first; a value between two
-neighbours places an issue between them; Linear may adjust positions to avoid
-collisions), `IssueUpdateInput.sortOrder` and `IssueUpdateInput.priority`.
-That a new issue lands at the top of the manual order, and how Linear's own
-collision adjustment interacts with the midpoints written here, are
-assumptions until someone has watched it. The first real submission is a manual
-test, and it should be treated as one — see the end-to-end checklist in
-[`bug-workflow.md`](./bug-workflow.md).
+**Not covered, honestly:** the live round trip from the deployed function to
+the founders' board. The board client has run against a board on a developer's
+machine, end to end, and its shapes are asserted against an injected `fetch`;
+that is not the same as having watched the deployed function file a ticket.
+The `place` route, the rank read on the status route and the ordering of a new
+ticket on the board's shared order are only as verified as that. The first real
+submission from the deployed function is a manual test, and it should be treated
+as one: see the end-to-end checklist in [`bug-workflow.md`](./bug-workflow.md).
 
 ## Deliberate omissions
 
@@ -433,8 +335,8 @@ test, and it should be treated as one — see the end-to-end checklist in
   characters; never a stack or arguments). Captured `console.error` output is
   the easiest way to leak user content into a ticket, and nothing has needed
   it yet.
-- **No duplicate detection, aging metrics or auto-triage.** Linear has search;
-  the rest is premature before there is history to measure.
+- **No duplicate detection, aging metrics or auto-triage.** The board has
+  search; the rest is premature before there is history to measure.
 - **No error-monitoring correlation.** There is no Sentry (or equivalent) in
   this repository to correlate with. When there is, the correlation ID belongs
   in the environment allow-list in `redact.ts` and `context.ts`.

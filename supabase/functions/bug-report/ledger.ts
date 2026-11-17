@@ -1,7 +1,7 @@
 // The ledger half of the bug-report function that is worth testing on its
-// own: the PostgREST query the status and verify routes read with, and the
-// service-role write that records a ticket. Pure apart from the injected
-// `fetch`, so test.ts can drive both without a server.
+// own: the PostgREST query the status, verify and place routes read with, and
+// the service-role write that records the ticket the board filed. Pure apart
+// from the injected `fetch`, so test.ts can drive both without a server.
 
 /** Where the function's log lines go; injected so a test can stay quiet. */
 export type Logger = (line: string) => void;
@@ -38,9 +38,11 @@ export interface FinishOutcome {
  * Records the outcome against the ledger row as the service role, trying
  * twice. Returns whether the write was confirmed.
  *
- * This write matters more than it looks: once `createIssue` has succeeded, a
- * row left `pending` goes stale after two minutes and the next retry of the
- * same draft re-claims it and creates a SECOND Linear ticket. So a non-2xx
+ * This write matters more than it looks: once the board has filed the ticket,
+ * a row left `pending` goes stale after two minutes and the next retry of the
+ * same draft re-claims it and files again. The board answers a repeat of the
+ * same idempotency key with the same ticket, but the ledger is still the
+ * record the routes read, and it must not be left behind. So a non-2xx
  * answer is retried once and, if it still fails, logged with its status code
  * (never the body, which can quote the request) while the created ticket is
  * still returned to the reporter -- the ticket exists, and a loud log line is

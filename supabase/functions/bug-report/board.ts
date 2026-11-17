@@ -1,6 +1,7 @@
-// The board half of the bug-report function: the founders' board
-// (bevi-founders-board) as the tracker, in place of Linear. A small client
-// over plain `fetch`, like linear.ts, with no SDK dependency.
+// The tracker half of the bug-report function: the founders' board
+// (bevi-founders-board), where every report becomes a ticket. A small client
+// over plain `fetch`, with no SDK dependency (supabase/functions keeps an
+// empty import map so `deno check` resolves nothing off the network).
 //
 // Every operation is one request to the board's intake endpoint,
 // `<BOARD_INTAKE_URL>/api/intake/<action>`, carrying the app's token
@@ -19,7 +20,12 @@
 //
 // The board calls a ticket's first two stages New and Ready; the contract's
 // `BugTicketState` calls them `triage` and `todo`. The mapping is here, so the
-// app and shared/ need no change to move from one tracker to the other.
+// app and shared/ keep the contract's words.
+//
+// A ticket filed before 2026-11-17 has a ledger identifier like `BEV-7`: the
+// board keeps that as an earlier name of the ticket (now `T-<n>`) and answers
+// to it, so identifiers from the ledger are passed on unchanged, whatever
+// their prefix.
 //
 // The token never leaves this function: it is read from the environment, sent
 // only to the configured board, and never logged or returned.
@@ -31,7 +37,7 @@ import {
   pointedAt,
 } from "./issue.ts";
 import { ENVIRONMENT_KEYS, ENVIRONMENT_LABELS } from "./redact.ts";
-import type { FetchLike, IssueStatus, TicketState } from "./linear.ts";
+import type { FetchLike, TicketState, TicketStatus } from "./ticket.ts";
 
 export interface BoardConfig {
   /** The board's origin, without a trailing slash. */
@@ -57,12 +63,10 @@ export class BoardError extends Error {
 const TOKEN_RE = /^bvb_[A-Za-z0-9_-]{43}$/;
 
 /**
- * The board to file with, or null when it is not configured (the function then
- * falls back to Linear). `TICKET_TRACKER=linear` keeps Linear even with the
- * board's secrets set, which is the way back if the board misbehaves.
+ * The board to file with, or null when it is not configured. Without it no
+ * report can be filed and the routes answer that no tracker is configured.
  */
 export function readBoardConfig(env: (key: string) => string | undefined): BoardConfig | null {
-  if ((env("TICKET_TRACKER") ?? "").trim().toLowerCase() === "linear") return null;
   const raw = (env("BOARD_INTAKE_URL") ?? "").trim().replace(/\/+$/, "");
   const token = (env("BOARD_INTAKE_TOKEN") ?? "").trim();
   if (!raw || !TOKEN_RE.test(token)) return null;
@@ -81,10 +85,9 @@ export function readBoardConfig(env: (key: string) => string | undefined): Board
 /**
  * True when someone set the board's secrets and they cannot be used: a token
  * of the wrong shape, an address that is not https. The function then files
- * with Linear or not at all, and says so in its log instead of doing it quietly.
+ * nothing, and says so in its log instead of failing quietly.
  */
 export function boardMisconfigured(env: (key: string) => string | undefined): boolean {
-  if ((env("TICKET_TRACKER") ?? "").trim().toLowerCase() === "linear") return false;
   const either = !!(env("BOARD_INTAKE_URL") ?? "").trim() || !!(env("BOARD_INTAKE_TOKEN") ?? "").trim();
   return either && readBoardConfig(env) === null;
 }
@@ -171,16 +174,16 @@ export function priorityWord(priority: number): "High" | "Normal" | "Low" {
 }
 
 /** A status as the rest of the function reads it, plus where the ticket lives on the board. */
-export interface BoardStatus extends IssueStatus {
-  /** What the board calls it now: `T-7` for a ticket that was `BEV-7` in Linear. */
+export interface BoardStatus extends TicketStatus {
+  /** What the board calls it now: `T-7` for a ticket filed before 2026-11-17 as `BEV-7`. */
   ref: string;
   url: string;
 }
 
 /**
  * `identifier` is the name that was asked for, which is the name the caller's
- * ledger holds: a ticket filed while Linear was the tracker keeps answering to
- * its Linear identifier once the board has taken it over.
+ * ledger holds: a ticket filed before 2026-11-17 keeps answering to its
+ * earlier name (`BEV-7`) as well as to the board's own (`T-7`).
  */
 function toStatus(config: BoardConfig, ticket: BoardTicket): BoardStatus {
   return {

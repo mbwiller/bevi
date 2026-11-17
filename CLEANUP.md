@@ -355,7 +355,7 @@ These came up as possible candidates and are in use. Listed so nobody audits the
 | `supabase/functions/graph-query/` | Deployed, with no caller in `app/` or `packages/api/` yet. `docs/graph.md` documents it as the graph's read path; recommendations are off pending data. |
 | `supabase/functions/*/test.ts` | Run by `deno test`, not by an import. |
 | `scripts/graph/dashboard/*.mjs`, `scripts/icons/swipe/app.mjs` | Browser modules served by `dashboard.ts` and `swipe.ts`. |
-| `TASKS.md` (167 KB), `NEXT-ARJUN.md`, `NEXT-MATT.md`, `DEVELOPMENT-*.md`, `vision.md` | `TASKS.md` is cited by 59 files (task IDs in code comments and workflows). Linear has owned tickets since 2026-11-09, so archiving the board is a separate job with its own plan. |
+| `TASKS.md` (167 KB), `NEXT-ARJUN.md`, `NEXT-MATT.md`, `DEVELOPMENT-*.md`, `vision.md` | `TASKS.md` is cited by 59 files (task IDs in code comments and workflows). Tickets lived in Linear from 2026-11-09 and moved to the founders' board on 2026-11-17 (Linear is removed), so archiving the board is a separate job with its own plan. |
 | `ICON-PIPELINE-VISION.md` | Nothing links to it, but it is the live BEV-15 plan. |
 | `.claude/skills/` (43 files, the vendored `react-native-skills`) | Vendored at a pinned commit, and more relevant once the app goes native. |
 | `.agents/skills/bevi-beverage-icons` | Symlink that gives Codex the icon skill. |
@@ -384,7 +384,7 @@ These came up as possible candidates and are in use. Listed so nobody audits the
 ### 8.6 Not covered by this audit
 
 - Database objects on prod (unused RPCs, tables, policies), storage buckets, and anything in the
-  Supabase, Vercel, Neo4j, Google Cloud or Linear dashboards, including secrets and env vars.
+  Supabase, Vercel, Neo4j, Google Cloud dashboards, including secrets and env vars.
 - Arjun's machine (P-03).
 - `npx knip` was blocked by the session's permission rules, so the import graph above stands in for
   it. Running `npx knip` once by hand is a cheap second opinion on §8.1 and §8.2.

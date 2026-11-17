@@ -17,7 +17,7 @@ ticket.
 3. `DEVELOPMENT-ARJUN.md` (backend) or `DEVELOPMENT-MATT.md` (app) for the
    section covering what you are touching.
 4. `docs/` for the subsystem: `docs/graph.md` (the Bev graph),
-   `docs/ticketing-system.md` (bug reporting and the tracker),
+   `docs/ticketing-system.md` (bug reporting and the founders' board),
    `docs/bug-workflow.md` (how a bug moves from a phone to a verified fix).
 
 ## The shape of this repository
@@ -53,8 +53,9 @@ separate private repository), which owns their identity, status, order and
 discussion (`docs/ticketing-system.md`). A ticket filed from the app is
 `T-<number>`; a card, for an idea or bigger work, is `BEV-<number>` (once
 `FB-<number>`). A `BEV-<number>` in a commit or branch from before 2026-11-17
-is a Linear issue, the tracker before the board, and is now the ticket
-`T-<number>`. Given only a ticket or card number:
+is a Linear issue, the tracker before the board. The live ones are now the
+ticket of the same number, `T-<number>`, except `BEV-19`, which is `T-20`
+(`docs/ticketing-system.md`, History). Given only a ticket or card number:
 
 1. Pick it up with `start_card` on the `bevi-board` MCP server, and read all of
    what comes back: the report or notes, the checklist, the activity log, and
@@ -97,7 +98,7 @@ A ready-to-paste prompt for a fresh session is in `docs/ticket-prompt.md`.
   third-party API tokens in any file. `supabase/.env` is gitignored and is
   where local secrets go. The app only ever sees the publishable key.
 - **Never claim an external system is configured** unless you have verified it.
-  "I set up the Linear integration" is only true if you watched it work.
+  "I set up the board intake" is only true if you watched it work.
 - **Migrations merged to `main` are frozen.** Fix a bad one with a new one.
 - **Report what actually happened.** If a test failed, say so and paste the
   decisive line. If you skipped a step, say which. A green summary over a red

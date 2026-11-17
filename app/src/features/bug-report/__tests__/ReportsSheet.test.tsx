@@ -80,7 +80,7 @@ describe('Filed reports', () => {
       expect.stringMatching(/^Number 3, Ticket B, /),
     ]);
     expect(screen.getByText('#1')).toBeTruthy();
-    expect(screen.getByText(new RegExp(`^${a} · Triage · `))).toBeTruthy();
+    expect(screen.getByText(new RegExp(`^${a} · New · `))).toBeTruthy();
     expect(screen.getByText('In review')).toBeTruthy();
     expect(screen.getByRole('button', { name: `Verified on device: ${d}` })).toBeTruthy();
     expect(screen.queryByText('Ticket E')).toBeNull();

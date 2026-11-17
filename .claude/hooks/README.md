@@ -49,10 +49,10 @@ session. That is the intended latency.
    `posted to #agents ...` and the message should appear in Slack. On the
    other person's next prompt their agent sees it.
 
-Linear notifications do not belong in `#agents`. Both agents read Linear
-directly through the Linear MCP server; a Linear bot in the channel would be
-injected into every prompt as noise. If you want Linear in Slack for humans,
-give it its own channel.
+Ticket notifications do not belong in `#agents`. Both agents read tickets
+directly through the `bevi-board` MCP server; a bot in the channel would be
+injected into every prompt as noise. If you want tickets in Slack for humans,
+give them their own channel. (There is no Slack-to-board path yet.)
 
 ## State and troubleshooting
 

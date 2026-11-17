@@ -74,7 +74,7 @@ function functionError(status: number, body: unknown): unknown {
   };
 }
 
-const CREATED = { ticketId: 'BEV-207', ticketUrl: 'https://linear.app/bevi/issue/BEV-207', status: 'created' };
+const CREATED = { ticketId: 'T-207', ticketUrl: 'https://board.example/?open=T-207', status: 'created' };
 const BASE = { kind: 'bug', severity: 'bad', title: 'x', idempotencyKey: KEY } as const;
 const jpeg = (size = 1000) => ({ file: { size } as unknown as Blob, mimeType: 'image/jpeg' });
 
@@ -160,7 +160,7 @@ describe('bugs.report submission', () => {
       breadcrumbs: [{ at: '2026-11-09T10:00:00Z', kind: 'nav', route: '/bev/[id]' }],
       idempotencyKey: KEY,
     });
-    expect(result).toEqual({ ticketId: 'BEV-207', ticketUrl: 'https://linear.app/bevi/issue/BEV-207', status: 'created' });
+    expect(result).toEqual({ ticketId: 'T-207', ticketUrl: 'https://board.example/?open=T-207', status: 'created' });
     const body = calls.invokes[0]?.init?.body;
     expect(calls.invokes[0]?.name).toBe('bug-report');
     expect(body?.title).toBe('Ratings disappear after refresh');
@@ -297,8 +297,8 @@ describe('bugs.report submission', () => {
 });
 
 const SUMMARY = {
-  ticketId: 'BEV-207',
-  ticketUrl: 'https://linear.app/bevi/issue/BEV-207',
+  ticketId: 'T-207',
+  ticketUrl: 'https://board.example/?open=T-207',
   title: 'Ratings disappear after refresh',
   kind: 'bug',
   severity: 'bad',
@@ -322,11 +322,19 @@ describe('bugs.listMine', () => {
   it('drops a row the tracker did not confirm and keeps unknown states as unknown', async () => {
     const rows = await createBugsApi(
       fakeClient(newCalls(), {
-        invokeData: { reports: [{ ...SUMMARY, state: 'teleported' }, { title: 'no identifier' }], trackerError: 'linear_unreachable' },
+        invokeData: { reports: [{ ...SUMMARY, state: 'teleported' }, { title: 'no identifier' }], trackerError: 'board_unreachable' },
       }),
     ).listMine();
     expect(rows.length).toBe(1);
     expect(rows[0]?.state).toBe('unknown');
+  });
+
+  it('still lists the ledger rows when the function says no tracker is configured', async () => {
+    const unknown = { ...SUMMARY, state: 'unknown', stateLabel: null, priority: null, updatedAt: null };
+    const rows = await createBugsApi(
+      fakeClient(newCalls(), { invokeData: { reports: [unknown], trackerError: 'tracker_not_configured' } }),
+    ).listMine();
+    expect(rows).toEqual([unknown]);
   });
 
   it('carries a positive integer rank and turns anything else into null', async () => {
@@ -358,9 +366,9 @@ describe('bugs.markVerified', () => {
   it('posts the identifier to the verify route and returns the refreshed summary', async () => {
     const calls = newCalls();
     const done = { ...SUMMARY, state: 'done', stateLabel: 'Done' };
-    const result = await createBugsApi(fakeClient(calls, { invokeData: { report: done } })).markVerified(' BEV-207 ');
+    const result = await createBugsApi(fakeClient(calls, { invokeData: { report: done } })).markVerified(' T-207 ');
     expect(calls.invokes[0]?.name).toBe('bug-report/verify');
-    expect(calls.invokes[0]?.init?.body).toEqual({ ticketId: 'BEV-207' });
+    expect(calls.invokes[0]?.init?.body).toEqual({ ticketId: 'T-207' });
     expect(result).toEqual(done);
   });
 
@@ -444,11 +452,14 @@ describe('bugs.place', () => {
 
   it('maps a tracker failure and a validation answer like the other routes', async () => {
     await expect(
-      createBugsApi(fakeClient(newCalls(), { invokeError: functionError(502, { error: 'tracker_error', code: 'linear_error' }) })).place('BEV-7', null),
+      createBugsApi(fakeClient(newCalls(), { invokeError: functionError(502, { error: 'tracker_error', code: 'board_unreachable' }) })).place('BEV-7', null),
     ).rejects.toMatchObject({ code: 'unknown' });
     await expect(
-      createBugsApi(fakeClient(newCalls(), { invokeError: functionError(429, { error: 'tracker_error', code: 'linear_rate_limited' }) })).place('BEV-7', null),
+      createBugsApi(fakeClient(newCalls(), { invokeError: functionError(502, { error: 'tracker_error', code: 'tracker_error' }) })).place('BEV-7', null),
     ).rejects.toMatchObject({ code: 'unknown' });
+    await expect(
+      createBugsApi(fakeClient(newCalls(), { invokeError: functionError(503, { error: 'tracker_not_configured' }) })).place('T-19', null),
+    ).rejects.toMatchObject({ code: 'unknown', message: 'The issue tracker is not configured yet' });
     await expect(
       createBugsApi(fakeClient(newCalls(), { invokeError: functionError(400, { error: 'validation', field: 'afterTicketId' }) })).place('BEV-7', 'BEV-2'),
     ).rejects.toMatchObject({ code: 'validation', detail: { field: 'afterTicketId' } });
