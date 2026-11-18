@@ -1,6 +1,6 @@
 # app/ — the Bevi Expo app (Matt's lane)
 
-Read before any change here: this file, `DEVELOPMENT-MATT.md` §3–§7 and the section for your screen in §6, and the design system (below). The `ui-screen` agent builds one screen or component per branch; run `integrator-app` before opening a PR.
+Read before any change here: this file, `DEVELOPMENT-MATT.md` §3–§7 and the section for your screen in §6, `DEVELOPMENT-MATT-IOS.md` for anything native, and the design system (below). The `ui-screen` agent builds one screen or component per branch; run `integrator-app` before opening a PR.
 
 ## Sources of truth, in order
 
@@ -27,7 +27,9 @@ Read before any change here: this file, `DEVELOPMENT-MATT.md` §3–§7 and the 
 
 One lockfile, at the root. Add packages with `npx expo install <pkg>` from `app/` (picks SDK-compatible versions and writes the root lockfile) or `npm install <pkg> -w app` from the root for non-native packages. Never run `npm install` inside `app/` without `-w`, and never commit `app/package-lock.json`. The core stack (Expo Router, TanStack Query, Zustand, FlashList, expo-image, Reanimated, Lucide, SVG, AsyncStorage, glass effect, haptics) is already installed so parallel branches don't collide on the lockfile; anything else gets its own small PR.
 
-Expo SDK 57 (latest stable on 2026-10-10; 58 is canary). Routes live in `src/app/` (Expo Router picks it up; no config). Web only (decided 2026-10-11): no native builds, so `ios/` and `android/` are never generated (still ignored).
+Expo SDK 57. Routes live in `src/app/` (Expo Router picks it up; no config). The app is an iOS app and, for now, still the web build (the web-only decision of 2026-10-11 was reversed on 2026-11-17; `DEVELOPMENT-MATT-IOS.md`). The native project is generated, never committed: `expo prebuild` writes `ios/` from `app.config.ts` (ignored). **One owner at a time for `app.config.ts` and `eas.json`**; a new native dependency gets its own small PR before the `plugins` entry that needs it.
+
+**A file that only one platform can run is split, not guarded:** `Thing.ts` is the native file and `Thing.web.ts` the web one (Metro picks by platform; jest resolves as iOS, so it runs the native file). Web is kept working until it is archived, so a change to shared code must hold on both.
 
 ## Commands (from the repo root)
 
@@ -36,9 +38,12 @@ npm run typecheck -w app     # tsc
 npm test -w app              # jest-expo: token parity, components, lib
 npm start -w app             # Expo dev server (web is the target; Expo Go is not)
 npx expo-doctor              # from app/: SDK version and config checks
+npx expo run:ios             # from app/: build and run the development app in the iOS simulator (needs Xcode and CocoaPods)
 npm start -w app -- --web    # the same app in a browser (react-native-web)
 ```
 
-Bevi ships only as a web app (decided 2026-10-11): `npx expo export --platform web` (from `app/`) builds a single-page app into `app/dist/`. Vercel deploys it with `app/vercel.json` (project root directory `app`), whose build runs `scripts/check-env.mjs` (fails without the two `EXPO_PUBLIC_SUPABASE_*` vars, or with a secret key), the export, then `scripts/check-bundle.mjs`. Set both vars in the Vercel project. Every merge to `main` deploys to production (`bevi-gamma.vercel.app`) through Vercel's Git integration; other branches never deploy (`git.deploymentEnabled`: `main` on, `**` off). A manual `vercel deploy --prod` from the repo root still works. `public/` holds the HTML shell, `manifest.json` and the home-screen icons, so it can be added to the iPhone home screen. No EAS, App Store, TestFlight or Android.
+**Web:** `npx expo export --platform web` (from `app/`) builds a single-page app into `app/dist/`. Vercel deploys it with `app/vercel.json` (project root directory `app`), whose build runs `scripts/check-env.mjs` (fails without the two `EXPO_PUBLIC_SUPABASE_*` vars, or with a secret key), the export, then `scripts/check-bundle.mjs`. Set both vars in the Vercel project. Every merge to `main` deploys to production (`bevi-gamma.vercel.app`) through Vercel's Git integration; other branches never deploy (`git.deploymentEnabled`: `main` on, `**` off). A manual `vercel deploy --prod` from the repo root still works. `public/` holds the HTML shell, `manifest.json` and the home-screen icons, so it can be added to the iPhone home screen.
 
-Native-only APIs need a web path or get dropped: `expo-glass-effect` → a translucent fallback; `expo-haptics` → no-op on web; session → `localStorage`; camera → `expo-image-picker` (file input with camera capture on web). Check each library on web as its component is built.
+**iOS:** `eas.json` has four build profiles: `development` (simulator, development client), `development-device` (a registered iPhone), `preview` (TestFlight, the dev backend) and `production` (TestFlight and the store, the prod backend). Each reads `EXPO_PUBLIC_*` from the EAS environment of the same kind; a local `expo run:ios` reads `app/.env.local`. No Android.
+
+While web is kept, native-only APIs need a web path: `expo-glass-effect` → a translucent fallback; `expo-haptics` → no-op on web; session → `localStorage`; camera → `expo-image-picker` (file input with camera capture on web). Check each library on web as its component is built.
