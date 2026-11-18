@@ -67,3 +67,12 @@ const COPY: Record<ApiErrorCode, ErrorCopy> = {
 export function errorCopy(error: unknown): ErrorCopy {
   return isApiError(error) ? (COPY[error.code] ?? COPY.unknown) : COPY.unknown;
 }
+
+/**
+ * The line for an action or save that failed (a delete, a sign-out, a report). ErrorState's offline
+ * message promises to show the screen again when the connection is back, which a save that failed
+ * offline never does: nothing is held or sent later, the person taps again.
+ */
+export function actionErrorMessage(error: unknown): string {
+  return isApiError(error) && error.code === 'network' ? 'Check your connection and try again.' : errorCopy(error).message;
+}

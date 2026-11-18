@@ -1,6 +1,6 @@
 import { ApiError } from '@bevi/shared';
 import NetInfo, { type NetInfoChangeHandler, type NetInfoState } from '@react-native-community/netinfo';
-import { focusManager, onlineManager, QueryObserver } from '@tanstack/react-query';
+import { focusManager, MutationObserver, onlineManager, QueryObserver } from '@tanstack/react-query';
 import { AppState, type AppStateStatus } from 'react-native';
 
 import { createQueryClient } from '../queryClient';
@@ -127,6 +127,27 @@ it('a read started with no connection waits, then runs when it is back', async (
   expect(queryFn).toHaveBeenCalledTimes(1);
 
   stop();
+  client.clear();
+  client.unmount();
+});
+
+it('a save started with no connection runs at once and fails, it does not wait to be sent later', async () => {
+  const client = mountedClient();
+  emit(false);
+  const offline = new ApiError('network', 'offline');
+  const mutationFn = jest.fn<Promise<string>, []>().mockRejectedValue(offline);
+  const observer = new MutationObserver(client, { mutationFn });
+
+  await expect(observer.mutate()).rejects.toBe(offline);
+  expect(mutationFn).toHaveBeenCalledTimes(1);
+  expect(observer.getCurrentResult().isPaused).toBe(false);
+  expect(observer.getCurrentResult().status).toBe('error');
+
+  // Not held for the reconnect either: nothing runs it a second time.
+  emit(true);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  expect(mutationFn).toHaveBeenCalledTimes(1);
+
   client.clear();
   client.unmount();
 });
