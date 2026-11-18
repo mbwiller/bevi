@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { BugReportInput, BugReportSummary } from '@bevi/shared';
 
+import { REPORTER_SUPPORTED } from '@/features/bug-report/supported';
+
 import { api } from '../client';
 import { keys } from '../keys';
 
@@ -13,11 +15,14 @@ import { keys } from '../keys';
  * Cached for the session: an account's internal role does not change while the
  * app is open. `enabled: false` (the root layout before sign-in finishes) asks
  * nothing and leaves `data` undefined.
+ *
+ * Off the web there is no reporter (features/bug-report/supported.ts): the answer
+ * is false for every account and the server is not asked.
  */
 export function useCanReportBug({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: keys.canReportBug(),
-    queryFn: () => api.bugs.canReport(),
+    queryFn: () => (REPORTER_SUPPORTED ? api.bugs.canReport() : false),
     enabled,
     staleTime: Infinity,
     // The gate answers false rather than throwing, so a retry buys nothing.
