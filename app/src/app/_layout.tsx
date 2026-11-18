@@ -51,7 +51,7 @@ export default function RootLayout() {
         <StatusBarClearance>
           <QueryClientProvider client={queryClient}>
             <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-            {/* "You're offline" above everything below it, the launch Splash and the modals included. */}
+            {/* "You're offline" above everything below it, the launch Splash included (not iOS full-screen modals). */}
             <OfflineNoticeHost>
               {__DEV__ && process.env.EXPO_PUBLIC_NUTRITION_SCAN_DEMO === '1'
                 ? <Suspense fallback={null}><NutritionDemo /></Suspense>

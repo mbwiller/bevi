@@ -16,6 +16,10 @@ export const OFFLINE_NOTICE = "You're offline";
  * "You're offline", across the top of the app while the phone has no connection (`useOnline`: only
  * a definite "no connection" counts). It clears the status bar itself, so it sits in the layout
  * rather than over a screen's header, back button or sticky action.
+ *
+ * Not seen on a full-screen modal on iOS (the ranking flow, New Bev, the photo viewer): UIKit
+ * presents those over the whole window. A save made there fails at once with its own offline
+ * message, and New Bev keeps its own banner.
  */
 export function OfflineNotice() {
   const { colors } = useTheme();

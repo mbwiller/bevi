@@ -9,8 +9,9 @@ export const UPLOADING_PHOTO = 'Uploading photo…';
 export const UPLOAD_FAILED = "Your photo didn't upload. Your details are kept.";
 export const UNREADABLE_IMAGE = "Bevi can't read that image. Try a JPEG or PNG.";
 export const STILL_PROCESSING = 'Your photo is still processing. Try again in a moment.';
-// "You're offline" is the app-wide notice above every screen (src/components/OfflineNotice.tsx); this line says what it means here.
-export const OFFLINE_BANNER = "Your details are kept; add the Bev when you're back online.";
+// Says "You're offline" itself: the wizard is a full-screen modal, which on iOS is presented over the
+// whole window and so covers the app-wide notice (src/components/OfflineNotice.tsx).
+export const OFFLINE_BANNER = "You're offline. Your details are kept; add the Bev when you're back online.";
 
 export const FIELD_REQUIRED = {
   photo: 'Add a photo of the Bev.',

@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBev, useCategories, useCreateBev, useLikelyDuplicates, useMe } from '@/api/hooks';
 import { Button } from '@/components/Button';
 import { Header } from '@/components/Header';
+import { Icon } from '@/components/Icon';
 import { ProgressDots } from '@/components/ProgressDots';
 import { useDebouncedValue } from '@/features/add-bev/useDebouncedValue';
 import { formErrorMessage } from '@/features/auth/formError';
@@ -369,6 +370,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
       </View>
       {!online ? (
         <View style={[styles.banner, { borderColor: colors.border }]} role="status" accessibilityLiveRegion="polite">
+          <Icon name="wifi-off" size={18} strokeWidth={2} color={colors.textSecondary} />
           <Text style={[type.body, styles.flex, { color: colors.text }]}>{OFFLINE_BANNER}</Text>
         </View>
       ) : null}
