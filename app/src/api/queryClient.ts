@@ -1,12 +1,18 @@
 import { QueryClient } from '@tanstack/react-query';
 import { isApiError } from '@bevi/shared';
 
+import { connectQueryLifecycle } from './queryLifecycle';
+
 /**
  * Sensible defaults for the app's QueryClient (the root layout owns the instance): only `network`
  * errors are retried (an `unauthorized`, `not_found` or `validation` won't fix itself), reads stay
  * fresh for 30s, and mutations never retry (submitRanking is not idempotent).
+ *
+ * It also connects React Query to the phone's connection and to the app coming to the foreground
+ * (queryLifecycle.ts), which a browser provides by itself.
  */
 export function createQueryClient(): QueryClient {
+  connectQueryLifecycle();
   return new QueryClient({
     defaultOptions: {
       queries: {

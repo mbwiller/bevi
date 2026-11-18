@@ -1,7 +1,9 @@
 import NetInfo, { type NetInfoChangeHandler, type NetInfoState } from '@react-native-community/netinfo';
 import { act, renderHook } from '@testing-library/react-native';
 
-import { isOnline, useOnline } from '../useOnline';
+import { isOnline } from '@/lib/connection';
+
+import { useOnline } from '../useOnline';
 
 // Jest resolves as iOS, so this is the native hook (NetInfo, mocked in jest.setup.js); the web one
 // is useOnline.web.ts.
