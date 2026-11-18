@@ -2,7 +2,7 @@ import { MIN_RATERS } from '@bevi/ranking';
 import type { LeaderboardRow } from '@bevi/shared';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, configure, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { Keyboard } from 'react-native';
+import { Dimensions, Keyboard, StyleSheet, View, type KeyboardEvent } from 'react-native';
 
 import { api } from '@/api/client';
 import { keys } from '@/api/keys';
@@ -657,5 +657,50 @@ describe('people rows', () => {
     await fireEvent.press(pill);
     await waitFor(() => expect(client.isMutating()).toBe(0));
     expect(screen.getByLabelText(`Follow ${first.displayName}`).props['aria-pressed']).toBe(false);
+  });
+});
+
+describe('the keyboard (native)', () => {
+  // Jest resolves as iOS: the inset comes from the Keyboard module's keyboardWillShow event (the
+  // keyboard's end height) and the layout height from useWindowDimensions, not window.innerHeight
+  // and visualViewport as on the web (keyboardLift.ts).
+  function captureKeyboard() {
+    const listeners = new Map<string, (e: KeyboardEvent) => void>();
+    jest.spyOn(Keyboard, 'addListener').mockImplementation(((event: string, l: (e: KeyboardEvent) => void) => {
+      listeners.set(event, l);
+      return { remove: () => void listeners.delete(event) };
+    }) as unknown as typeof Keyboard.addListener);
+    return listeners;
+  }
+  const footMargin = () => {
+    let node: ReturnType<typeof screen.getByRole> | null = screen.getByRole('button', { name: ADD_NEW });
+    while (node && StyleSheet.flatten(node.props.style)?.marginBottom === undefined) node = node.parent;
+    return StyleSheet.flatten(node!.props.style).marginBottom;
+  };
+
+  it('raises the foot by the part of the keyboard below the panel, from the window height and the keyboard height', async () => {
+    const window = Dimensions.get('window').height;
+    // The panel ends 83pt above the bottom of the window (the tab bar).
+    const panelBottom = window - 83;
+    jest.spyOn(View.prototype, 'measureInWindow').mockImplementation(function (cb) {
+      cb(0, 100, 390, panelBottom - 100);
+    });
+    const keyboard = captureKeyboard();
+    await renderSearch();
+    await screen.findByText(POPULAR_TITLE);
+    expect(keyboard.has('keyboardWillShow')).toBe(true);
+    expect(footMargin()).toBe(0);
+
+    const kb = 336;
+    await act(async () =>
+      keyboard.get('keyboardWillShow')!({
+        endCoordinates: { height: kb, screenY: window - kb, screenX: 0, width: 390 },
+      } as KeyboardEvent),
+    );
+    // The keyboard's top is window - 336; the foot sits at window - 83, so it rises 253pt.
+    expect(footMargin()).toBe(kb - 83);
+
+    await act(async () => keyboard.get('keyboardWillHide')!({} as KeyboardEvent));
+    expect(footMargin()).toBe(0);
   });
 });
