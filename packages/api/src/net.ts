@@ -24,6 +24,12 @@
  * rather than convinced the app is broken. It is also comfortably below
  * NSURLSession's own 60 s default, which means our `ApiError('network')` is
  * what surfaces, not an opaque platform error a minute later.
+ *
+ * This budget covers PostgREST and auth round trips only. Anything that moves
+ * bytes or waits on a third party gets its own, longer budget below: an object
+ * upload (`UPLOAD_TIMEOUT_MS`) and an Edge Function call
+ * (`FUNCTION_TIMEOUT_MS`). `deadlineMsFor` is where a URL is sorted into one
+ * of the three.
  */
 export const REQUEST_TIMEOUT_MS = 15_000;
 
@@ -38,8 +44,42 @@ export const REQUEST_TIMEOUT_MS = 15_000;
  */
 export const UPLOAD_TIMEOUT_MS = 120_000;
 
-/** The Storage REST path prefix; object uploads and downloads both sit under it. */
+/**
+ * Deadline for an Edge Function call (`/functions/v1/...`).
+ *
+ * An Edge Function is not a round trip: it is however long the work inside it
+ * takes, and one of ours is deliberately slow. `bugs.report()` invokes
+ * `bug-report`, which downloads every evidence object it was given with the
+ * service role (`supabase/functions/bug-report/index.ts`, `readEvidence`) and
+ * re-uploads each one to the founders' board before it answers -- up to
+ * `MAX_EVIDENCE` (3) objects of `MAX_EVIDENCE_BYTES` (10 MB) each, sequentially,
+ * plus a third-party API we do not control. 15 s would turn a slow board into
+ * `ApiError('network')` *after* the ticket had already been filed, which is a
+ * misleading error, not a safe one. These calls were unbounded before this
+ * module existed and the bug reporter has been live on the web since #234, so
+ * a short budget here is a regression in shipped code, not a new guard.
+ *
+ * 150 s is Supabase's own wall-clock ceiling for an Edge Function invocation.
+ * Matching it means the platform's limit is what ends a genuinely stuck
+ * function -- our deadline only catches the case the platform cannot, a
+ * connection that dies with the request in flight -- while never cutting off a
+ * function that was still going to answer.
+ */
+export const FUNCTION_TIMEOUT_MS = 150_000;
+
+/** The Storage REST path prefix; every object route sits under it. */
 const STORAGE_OBJECT_PATH = '/storage/v1/object';
+
+/** The Edge Functions path prefix (`/functions/v1/<name>`). */
+const FUNCTIONS_PATH = '/functions/v1';
+
+// Routes under `/storage/v1/object/<here>` that are a round trip rather than
+// bytes on the wire, so they belong on `REQUEST_TIMEOUT_MS`: `list/<bucket>`,
+// `sign/...` and `upload/sign/...` (minting a signed URL), `info/...`, `move`
+// and `copy`, plus the `public/` and `authenticated/` download prefixes. A
+// hung storage *list* spinning for two minutes was the bug here; everything
+// else under `/object/` is addressed as `<bucket>/<path>`.
+const STORAGE_ROUND_TRIP_ROUTES = new Set(['list', 'sign', 'info', 'move', 'copy', 'public', 'authenticated']);
 
 function urlOf(input: unknown): string {
   if (typeof input === 'string') return input;
@@ -51,8 +91,36 @@ function urlOf(input: unknown): string {
   return typeof url === 'string' ? url : String(input);
 }
 
-export function deadlineMsFor(input: unknown): number {
-  return urlOf(input).includes(STORAGE_OBJECT_PATH) ? UPLOAD_TIMEOUT_MS : REQUEST_TIMEOUT_MS;
+function methodOf(input: unknown, init?: { method?: string } | null): string {
+  const method = init?.method ?? (input as { method?: unknown } | null)?.method;
+  return typeof method === 'string' ? method.toUpperCase() : 'GET';
+}
+
+/**
+ * Whether a storage URL is an object *upload* -- bytes going up, the only
+ * storage call that can legitimately run for minutes.
+ *
+ * `POST <bucket>/<path>` is an upload, `PUT` is an update or an upload to a
+ * signed URL, and `x-upsert` rides on the POST. A read, a delete and the
+ * round-trip routes above are all ordinary requests, so they keep the 15 s
+ * budget: before this check, a hung `POST /object/list/<bucket>` sat there for
+ * two minutes.
+ */
+function isObjectUpload(url: string, method: string): boolean {
+  if (method !== 'POST' && method !== 'PUT') return false;
+  const rest = url.slice(url.indexOf(STORAGE_OBJECT_PATH) + STORAGE_OBJECT_PATH.length + 1);
+  const route = rest.split(/[/?#]/)[0];
+  // `upload/sign/<bucket>/<path>`: the PUT carries the bytes, the POST only
+  // mints the URL.
+  if (route === 'upload') return method === 'PUT';
+  return !STORAGE_ROUND_TRIP_ROUTES.has(route);
+}
+
+export function deadlineMsFor(input: unknown, init?: { method?: string } | null): number {
+  const url = urlOf(input);
+  if (url.includes(FUNCTIONS_PATH)) return FUNCTION_TIMEOUT_MS;
+  if (url.includes(STORAGE_OBJECT_PATH) && isObjectUpload(url, methodOf(input, init))) return UPLOAD_TIMEOUT_MS;
+  return REQUEST_TIMEOUT_MS;
 }
 
 // The error a blown deadline throws. It has to come back as
@@ -75,12 +143,29 @@ function timeoutError(ms: number): TypeError {
 }
 
 /**
+ * What a caller that had already aborted gets back.
+ *
+ * `signal.reason` is what a real `fetch` rejects with on an aborted signal (a
+ * `DOMException` named 'AbortError' in Node and the browser). Hermes's
+ * `AbortController` may not set it, and `DOMException` is not guaranteed there
+ * either, so fall back to a plainly named `Error` rather than construct one.
+ */
+function callerAbortError(signal: AbortSignal): unknown {
+  const reason = (signal as { reason?: unknown }).reason;
+  if (reason !== undefined) return reason;
+  const error = new Error('Aborted');
+  error.name = 'AbortError';
+  return error;
+}
+
+/**
  * Wraps a fetch so every request carries an `AbortController` deadline.
  *
  * The caller's own `signal` (supabase-js's `.abortSignal()`, the app's cancel
  * on unmount) still works: an abort from either side aborts the request, and
  * only a deadline abort is rewritten into the network error -- a caller
- * cancelling on purpose keeps seeing its own abort.
+ * cancelling on purpose keeps seeing its own abort. A caller whose signal is
+ * already aborted gets that abort without a request being made at all.
  *
  * The deadline covers the request up to the response headers, not the reading
  * of the body. Every response this package reads is small JSON or a storage
@@ -89,9 +174,14 @@ function timeoutError(ms: number): TypeError {
  */
 export function withDeadline(baseFetch: typeof fetch): typeof fetch {
   return async (input, init) => {
-    const ms = deadlineMsFor(input);
-    const controller = new AbortController();
     const caller = init?.signal ?? undefined;
+    // A caller that has already cancelled gets no request at all: the base
+    // fetch would only reject on the aborted signal, so skipping it saves the
+    // round trip and the timer both.
+    if (caller?.aborted) throw callerAbortError(caller);
+
+    const ms = deadlineMsFor(input, init);
+    const controller = new AbortController();
     const onCallerAbort = () => controller.abort();
     let timedOut = false;
 
@@ -100,10 +190,7 @@ export function withDeadline(baseFetch: typeof fetch): typeof fetch {
       controller.abort();
     }, ms);
 
-    if (caller) {
-      if (caller.aborted) controller.abort();
-      else caller.addEventListener('abort', onCallerAbort, { once: true });
-    }
+    caller?.addEventListener('abort', onCallerAbort, { once: true });
 
     try {
       return await baseFetch(input, { ...init, signal: controller.signal });

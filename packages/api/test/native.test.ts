@@ -4,7 +4,7 @@ import type { ApiError } from '@bevi/shared';
 import { requireUserId } from '../src/currentUser.ts';
 import { createProfileApi } from '../src/profile.ts';
 import { mapError } from '../src/errors.ts';
-import { REQUEST_TIMEOUT_MS, UPLOAD_TIMEOUT_MS, deadlineMsFor, withDeadline } from '../src/net.ts';
+import { FUNCTION_TIMEOUT_MS, REQUEST_TIMEOUT_MS, UPLOAD_TIMEOUT_MS, deadlineMsFor, withDeadline } from '../src/net.ts';
 import { isAutoRefreshRunning, registerAutoRefreshTarget } from '../src/session.ts';
 import * as api from '../src/index.ts';
 
@@ -15,6 +15,8 @@ import * as api from '../src/index.ts';
 
 const RPC_URL = 'https://project.supabase.co/rest/v1/rpc/get_feed';
 const UPLOAD_URL = 'https://project.supabase.co/storage/v1/object/bev-photos/u/1.jpg';
+const LIST_URL = 'https://project.supabase.co/storage/v1/object/list/bev-photos';
+const FUNCTION_URL = 'https://project.supabase.co/functions/v1/bug-report';
 
 /**
  * A fetch that never answers; it only settles when its signal aborts -- which
@@ -33,11 +35,53 @@ describe('request deadlines', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it('picks the upload deadline only for storage objects', () => {
+  it('picks the upload deadline only for an object upload, not every storage call', () => {
     expect(deadlineMsFor(RPC_URL)).toBe(REQUEST_TIMEOUT_MS);
-    expect(deadlineMsFor(UPLOAD_URL)).toBe(UPLOAD_TIMEOUT_MS);
+    expect(deadlineMsFor(UPLOAD_URL, { method: 'POST' })).toBe(UPLOAD_TIMEOUT_MS);
+    // `update()`, and an upload to a signed URL, both PUT.
+    expect(deadlineMsFor(UPLOAD_URL, { method: 'PUT' })).toBe(UPLOAD_TIMEOUT_MS);
     // A `Request`-like input, which is what supabase-js may pass.
-    expect(deadlineMsFor({ url: UPLOAD_URL })).toBe(UPLOAD_TIMEOUT_MS);
+    expect(deadlineMsFor({ url: UPLOAD_URL, method: 'POST' })).toBe(UPLOAD_TIMEOUT_MS);
+
+    // A read, a delete and a list are round trips: two minutes of spinning on
+    // a hung storage *list* was the bug.
+    expect(deadlineMsFor(UPLOAD_URL)).toBe(REQUEST_TIMEOUT_MS);
+    expect(deadlineMsFor(UPLOAD_URL, { method: 'DELETE' })).toBe(REQUEST_TIMEOUT_MS);
+    expect(deadlineMsFor(LIST_URL, { method: 'POST' })).toBe(REQUEST_TIMEOUT_MS);
+    expect(deadlineMsFor(`${UPLOAD_URL.replace('/object/', '/object/info/')}`, { method: 'GET' })).toBe(REQUEST_TIMEOUT_MS);
+    expect(deadlineMsFor('https://project.supabase.co/storage/v1/object/move', { method: 'POST' })).toBe(REQUEST_TIMEOUT_MS);
+    expect(deadlineMsFor('https://project.supabase.co/storage/v1/object/copy', { method: 'POST' })).toBe(REQUEST_TIMEOUT_MS);
+    // Signed URLs: the POST mints one (a round trip), the PUT carries bytes.
+    expect(deadlineMsFor('https://project.supabase.co/storage/v1/object/sign/bev-photos/u/1.jpg', { method: 'POST' })).toBe(
+      REQUEST_TIMEOUT_MS,
+    );
+    expect(deadlineMsFor('https://project.supabase.co/storage/v1/object/upload/sign/bev-photos/u/1.jpg', { method: 'POST' })).toBe(
+      REQUEST_TIMEOUT_MS,
+    );
+    expect(deadlineMsFor('https://project.supabase.co/storage/v1/object/upload/sign/bev-photos/u/1.jpg?token=x', { method: 'PUT' })).toBe(
+      UPLOAD_TIMEOUT_MS,
+    );
+  });
+
+  // An Edge Function is not a round trip. `bug-report` downloads up to three
+  // 10 MB evidence objects and re-uploads them to the founders' board before it
+  // answers, and that call has been live on the web since #234 -- a 15 s
+  // deadline would report `ApiError('network')` for a ticket that was filed.
+  it('gives an Edge Function call its own, long budget', () => {
+    expect(deadlineMsFor(FUNCTION_URL)).toBe(FUNCTION_TIMEOUT_MS);
+    expect(deadlineMsFor(FUNCTION_URL, { method: 'POST' })).toBe(FUNCTION_TIMEOUT_MS);
+    // The reporter's other routes are sub-paths of the same function.
+    expect(deadlineMsFor(`${FUNCTION_URL}/status`, { method: 'GET' })).toBe(FUNCTION_TIMEOUT_MS);
+    expect(FUNCTION_TIMEOUT_MS).toBeGreaterThan(REQUEST_TIMEOUT_MS);
+  });
+
+  it('does not cut an Edge Function off at the ordinary deadline', async () => {
+    const failure = withDeadline(hangingFetch())(FUNCTION_URL, { method: 'POST' }).catch((e: unknown) => e);
+    await vi.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS + 1);
+    expect(await Promise.race([failure, Promise.resolve('pending')])).toBe('pending');
+
+    await vi.advanceTimersByTimeAsync(FUNCTION_TIMEOUT_MS - REQUEST_TIMEOUT_MS);
+    expect((await failure) as Error).toBeInstanceOf(TypeError);
   });
 
   it('leaves a request alone until its deadline', async () => {
@@ -68,7 +112,7 @@ describe('request deadlines', () => {
   });
 
   it('gives an upload the longer deadline', async () => {
-    const failure = withDeadline(hangingFetch())(UPLOAD_URL).catch((e: unknown) => e);
+    const failure = withDeadline(hangingFetch())(UPLOAD_URL, { method: 'POST' }).catch((e: unknown) => e);
     await vi.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS + 1);
     expect(await Promise.race([failure, Promise.resolve('pending')])).toBe('pending');
 
@@ -99,7 +143,11 @@ describe('request deadlines', () => {
     controller.abort();
     const base = vi.fn(hangingFetch());
     const failure = withDeadline(base as unknown as typeof fetch)(RPC_URL, { signal: controller.signal }).catch((e: unknown) => e);
+
     expect(((await failure) as Error).name).toBe('AbortError');
+    // The point of the case: no request is made, and no timer is left behind.
+    expect(base).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
   });
 });
 
