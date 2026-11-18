@@ -29,7 +29,8 @@ function state(isConnected: boolean | null, isInternetReachable: boolean | null)
 it('counts only a definite "no" as offline', () => {
   expect(isOnline(state(true, true))).toBe(true);
   expect(isOnline(state(false, false))).toBe(false);
-  expect(isOnline(state(true, false))).toBe(false);
+  // Connected, but NetInfo's own probe (a Google URL) failed: still online, the API may be reachable.
+  expect(isOnline(state(true, false))).toBe(true);
   expect(isOnline(state(false, null))).toBe(false);
   // Not known yet: online, so a slow first probe never flashes the offline banner.
   expect(isOnline(state(null, null))).toBe(true);
@@ -47,7 +48,14 @@ it('starts online, then follows the listener', async () => {
   await act(async () => listener!(state(true, null)));
   expect(result.current).toBe(true);
 
+  await act(async () => listener!(state(false, null)));
+  expect(result.current).toBe(false);
+
+  // Connected with a failed reachability probe is online.
   await act(async () => listener!(state(true, false)));
+  expect(result.current).toBe(true);
+
+  await act(async () => listener!(state(false, false)));
   expect(result.current).toBe(false);
 
   await act(async () => listener!(state(null, null)));
