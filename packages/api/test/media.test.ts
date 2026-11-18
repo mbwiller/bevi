@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createMediaApi } from '../src/media.ts';
 
@@ -207,5 +207,86 @@ describe('media.upload payload shapes', () => {
 
     expect(result.status).toBe('ready');
     expect(calls.upload).toBe(true);
+  });
+});
+
+// The 0-byte trap IA-4 exists to close, and the one thing the type system
+// cannot catch: a React Native Blob IS a Blob and carries a plausible `.size`,
+// so it satisfies the widened union, passes `uploadByteLength()` and the size
+// limit, and then uploads nothing behind a 200. `toUploadBody()` refuses it,
+// detecting RN by `navigator.product`/`HermesInternal` -- NOT by a missing
+// `document`, which is also missing here in Node and would reject the real,
+// byte-backed Blobs the tests above (and the web build) rely on.
+describe('media.upload React Native Blob guard', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('uploads a real Blob in a runtime that is not React Native', async () => {
+    // Node has no `document` either, which is exactly why `document` is not
+    // the test: this upload must succeed.
+    expect((globalThis as { document?: unknown }).document).toBeUndefined();
+    const calls: { rpc?: boolean; upload?: boolean; body?: unknown } = {};
+    const blob = new Blob([new Uint8Array(32).fill(3)], { type: 'image/jpeg' });
+
+    const result = await createMediaApi(fakeClient(calls)).upload({ kind: 'bev-photo', file: blob, mimeType: 'image/jpeg' });
+
+    expect(result.status).toBe('ready');
+    expect(calls.body).toBe(blob);
+  });
+
+  it('rejects a Blob under React Native instead of uploading 0 bytes', async () => {
+    vi.stubGlobal('navigator', { product: 'ReactNative' });
+    const calls: { rpc?: boolean; upload?: boolean; body?: unknown } = {};
+    // What `await fetch(uri).then((r) => r.blob())` hands back for a picked
+    // photo on a device: a Blob with a believable size and no readable bytes.
+    const rnBlob = new Blob([new Uint8Array(4096)], { type: 'image/jpeg' });
+
+    await expect(
+      createMediaApi(fakeClient(calls)).upload({ kind: 'bev-photo', file: rnBlob, mimeType: 'image/jpeg' })
+    ).rejects.toMatchObject({ code: 'validation', detail: { field: 'file' } });
+    expect(calls.upload).toBeUndefined();
+    // An unusable payload should cost the caller no upload quota either.
+    expect(calls.rpc).toBeUndefined();
+  });
+
+  it('rejects a Blob under Hermes with no navigator marker', async () => {
+    vi.stubGlobal('navigator', undefined);
+    vi.stubGlobal('HermesInternal', {});
+    const calls: { rpc?: boolean; upload?: boolean; body?: unknown } = {};
+
+    await expect(
+      createMediaApi(fakeClient(calls)).upload({
+        kind: 'avatar',
+        file: new Blob([new Uint8Array(16)], { type: 'image/png' }),
+        mimeType: 'image/png',
+      })
+    ).rejects.toMatchObject({ code: 'validation', detail: { field: 'file' } });
+    expect(calls.upload).toBeUndefined();
+  });
+
+  it('names the payload at fault in the error message', async () => {
+    vi.stubGlobal('navigator', { product: 'ReactNative' });
+
+    await expect(
+      createMediaApi(fakeClient({})).upload({
+        kind: 'bev-photo',
+        file: new Blob([new Uint8Array(8)], { type: 'image/jpeg' }),
+        mimeType: 'image/jpeg',
+      })
+    ).rejects.toThrow(/Blob/);
+  });
+
+  it('still uploads bytes under React Native -- the native path', async () => {
+    vi.stubGlobal('navigator', { product: 'ReactNative' });
+    for (const file of [new Uint8Array(64).fill(5), new Uint8Array(64).fill(5).buffer] as const) {
+      const calls: { rpc?: boolean; upload?: boolean; body?: unknown } = {};
+
+      const result = await createMediaApi(fakeClient(calls)).upload({ kind: 'bev-photo', file, mimeType: 'image/jpeg' });
+
+      expect(result.status).toBe('ready');
+      expect(calls.body).toBeInstanceOf(ArrayBuffer);
+      expect((calls.body as ArrayBuffer).byteLength).toBe(64);
+    }
   });
 });
