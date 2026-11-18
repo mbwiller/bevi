@@ -1,5 +1,5 @@
-// The Map tab. Everyone gets FindBevScreen; an internal reporter also gets a way into the Find Bev
-// camera test (features/find-bev/spike, temporary: docs/find-bev-in-app-plan.md, Phase 0).
-import { MapTabWithSpike } from '@/features/find-bev/spike/MapTabWithSpike';
+// The Map tab. The map of where you and your friends Bev'd is being built (the 2026-11-16 decision);
+// until it exists the tab says so.
+import { MapInProgressScreen } from '@/features/map/MapInProgressScreen';
 
-export default MapTabWithSpike;
+export default MapInProgressScreen;

@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 
 import { radius, spacing, type, useTheme } from '@/theme';
+
+import { registerField } from './fieldFocus';
 
 export interface TextFieldProps {
   label?: string;
@@ -32,7 +34,10 @@ export interface TextFieldProps {
   reserveHint?: boolean;
   /** The HTML input type it stands for: `password` hides the text, `email`/`tel`/`url`/`numeric` pick the keyboard. */
   type?: 'text' | 'password' | 'email' | 'tel' | 'url' | 'numeric' | 'search';
-  /** The input's DOM id on web. */
+  /**
+   * The input's DOM id on web. With an id, the field also registers in `fieldFocus` while mounted,
+   * so `focusField(id)` can move focus to it on native.
+   */
   id?: string;
   /** The new text (the design system passes the input's change event; React Native passes the string). */
   onChange?: (v: string) => void;
@@ -86,6 +91,7 @@ export function TextField({
   const input = useRef<TextInput>(null);
   const auto = `bv-field-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const fid = id ?? auto;
+  useEffect(() => (id ? registerField(id, () => input.current?.focus()) : undefined), [id]);
   const message = error || hint;
   const plain = kind === 'password' || kind === 'email' || kind === 'url';
   return (
@@ -132,6 +138,9 @@ export function TextField({
           spellCheck={plain ? false : undefined}
           autoFocus={autoFocus}
           enterKeyHint={enterKeyHint}
+          // iOS: a "next" field keeps the keyboard up while its onSubmit moves focus, rather than
+          // closing it and opening it again. react-native-web ignores this prop.
+          submitBehavior={enterKeyHint === 'next' ? 'submit' : undefined}
           maxLength={maxLength}
           editable={editable}
           onFocus={() => setFocused(true)}
