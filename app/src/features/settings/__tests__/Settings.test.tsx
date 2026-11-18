@@ -95,16 +95,15 @@ it('account shows the username and birthdate read-only and saves the display nam
   expect((await api.profile.getMe()).displayName).toBe('New Name');
 });
 
-it('privacy renders the markdown note', async () => {
-  const md = '# Privacy\n\n**Draft.** Intro.\n\n## What we store\n\n- One\n- Two';
-  const fetchMock = jest.fn(async () => ({ ok: true, status: 200, text: async () => md }));
+it('privacy renders the bundled note, with no network request', async () => {
+  const fetchMock = jest.fn();
   const saved = global.fetch;
   global.fetch = fetchMock as unknown as typeof fetch;
   try {
     await open('/settings/privacy');
     expect(await screen.findByText('What we store')).toBeTruthy();
-    expect(screen.getByText('Two')).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledWith('/privacy.md');
+    expect(screen.getByText('Ask the person who invited you to Bevi.')).toBeTruthy();
+    expect(fetchMock).not.toHaveBeenCalled();
   } finally {
     global.fetch = saved;
   }
