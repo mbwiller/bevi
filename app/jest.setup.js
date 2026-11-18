@@ -12,3 +12,9 @@ jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock
 // The app talks to Supabase through `@bevi/api` (src/api/client.ts). Suites run against the
 // in-memory FakeApi instead: every importer of the client gets src/testing/fakeApi/client.ts.
 jest.mock('./src/api/client', () => require('./src/testing/fakeApi/client'));
+
+// The internal bug reporter is web only (src/features/bug-report/supported.ts), and jest resolves
+// modules as iOS, where it is off. Its suites are web suites: until they have a web jest project of
+// their own (DEVELOPMENT-MATT-IOS.md, IM-11) they run here with the reporter on. What the native app
+// does is covered by src/features/bug-report/__tests__/nativeOff.test.tsx, which undoes this mock.
+jest.mock('./src/features/bug-report/supported', () => ({ REPORTER_SUPPORTED: true }));
