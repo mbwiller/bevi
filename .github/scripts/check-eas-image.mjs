@@ -2,7 +2,7 @@
 // IA-9: the EAS build image for every profile named on the command line must be
 // PINNED, not floating.
 //
-//   node .github/scripts/check-eas-image.mjs production preview development
+//   node .github/scripts/check-eas-image.mjs production
 //
 // WHY. The build image decides the Xcode version, and Xcode has to match what
 // the Expo SDK on `main` expects (DEVELOPMENT-ARJUN-IOS.md, IA-9). `main` is on
@@ -11,14 +11,19 @@
 // named `latest` (or `default`) silently changes the toolchain under us: the
 // same commit builds on one Xcode in the morning and another in the afternoon,
 // and the first anyone hears of it is a build failure or, worse, a binary that
-// behaves differently from the one that was tested.
+// behaves differently from the one that was tested. app.config.ts's
+// expo-build-properties comment is already written against a particular one
+// ("harmless on EAS's Xcode 26 image, required on a Mac with Xcode 27"), which
+// is exactly the kind of assumption a floating image invalidates overnight.
 //
 // WHAT THIS CAN AND CANNOT CHECK. `app/eas.json` is the app lane's file
 // (app/CLAUDE.md), and the image is a value in it, so CI cannot set it -- only
 // insist on it. This check therefore enforces the enforceable half: that the
 // profile names an image explicitly and that the name carries a version. WHICH
 // image is SDK 57's is a fact about SDK 57 that belongs in eas.json next to the
-// profile, with IM-1 as the thing that moves it.
+// profile, with IM-1 as the thing that moves it. As of #244 no profile in
+// eas.json sets `ios.image`, so this check fails until one does -- deliberately:
+// an unpinned toolchain is the thing IA-9 asks CI to refuse.
 //
 // It reads eas.json itself rather than asking `eas config`, so it needs no
 // EXPO_TOKEN and runs in the job that has no secrets -- a floating image fails

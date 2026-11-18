@@ -30,6 +30,12 @@
  * response body, both of which are the server's words, not ours.
  */
 
+// This script imports nothing, and without an import or an export neither tsc
+// nor Node's own module detection treats the file as ESM -- which makes the
+// top-level `await fetch` below a syntax error in both (TS1375). The other
+// scripts in scripts/ are modules by accident, through their imports.
+export {};
+
 const url = process.env.SUPABASE_URL;
 const key = process.env.SUPABASE_PUBLISHABLE_KEY;
 const label = process.env.SUPABASE_PROJECT_LABEL || "the Supabase project";
