@@ -2961,17 +2961,24 @@
     {
       "slug": "diet-seven-up",
       "family": "diet-soda-can",
-      "packageChoice": "Representative US 12 fl oz / 355mL 7UP Zero Sugar can, the current package corresponding to the catalog’s legacy Diet 7UP entry; exact retailer package inspected.",
+      "packageChoice": "US 12 fl oz (355 mL) 7UP Zero Sugar can in the current design. Diet 7UP is no longer sold in the US; 7UP Zero Sugar is the current product in its place, so it stands for the catalog's legacy Diet 7Up entry. It is the same can generation as the seven-up icon: black body, the same large white 7UP with the red dot running up the can, ZERO SUGAR in white beside the top of the mark, and green LIME LEMON, 0-calorie box and 12 FL OZ (355 mL).",
       "references": [
         {
-          "pageUrl": "https://www.fredmeyer.com/p/diet-7up/0007800001181",
-          "imageUrl": "https://www.kroger.com/product/images/large/front/0007800001181",
-          "inspectedAt": "2026-11-13",
+          "pageUrl": "https://www.kroger.com/p/7up-zero-sugar-lemon-lime-caffeine-free-soda-cans/0007800001181",
+          "imageUrl": "https://www.kroger.com/product/images/xlarge/back/0007800001181",
+          "inspectedAt": "2026-11-18",
           "visuallyInspected": true,
-          "observations": "Exact current US 12oz can inspected: near-black body, very large diagonal white 7UP wordmark with red dot, vertical green LIME LEMON lettering, stacked white ZERO SUGAR at right, green 12 FL OZ footer and silver rims. Retail composite also contains a multipack and lime/lemon garnish; those are not part of the can and were omitted."
+          "observations": "Dry front-on render of one 12 oz can: near-black body (~#090e12), the white 7UP and red dot in exactly the same place and size as on the regular 7UP render, ® above the P, ZERO / SUGAR in white two lines reading upward to the right of the P, green (~#028c26) condensed LIME LEMON up the left, a green rounded 0 CALORIES PER CAN box and 12 FL OZ (355 mL) in green at the bottom, flavor lines wrapping off the right edge."
+        },
+        {
+          "pageUrl": "https://www.kroger.com/p/7up-zero-sugar-lemon-lime-caffeine-free-soda-cans/0007800001181",
+          "imageUrl": "https://www.kroger.com/product/images/xlarge/front/0007800001181",
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "12-pack and single can; confirms the product name 7UP ZERO SUGAR and the black can with green and white lettering."
         }
       ],
-      "uncertainty": "The catalog uses the name Diet 7Up; current US manufacturer naming and package use 7UP Zero Sugar. The source retains the catalog UUID and documents the current corresponding zero-sugar package. This icon does not claim that historical Diet 7UP packaging looked the same. Original vector interpretation; package revision may vary by region. Final aesthetic approval and web-device review pending.",
+      "uncertainty": "The 7UP mark and dot are the paths traced for seven-up, reused because the two renders align exactly. The ZERO SUGAR lines are traced from the render, the curved can edge compresses them slightly as on the real can. The flavor lines and CAFFEINE FREE wrapping off the right edge are left out. The catalog says Diet 7Up; the can drawn says 7UP Zero Sugar.",
       "status": "needs-review",
       "bevId": "bec8b166-60c1-5a37-a3c2-698146bef1d4",
       "name": "Diet 7Up",
@@ -2982,12 +2989,12 @@
         "svg": "svg/diet-seven-up.svg",
         "portableSvg": "portable-svg/diet-seven-up.svg",
         "png": "png/diet-seven-up.png",
-        "svgSha256": "1bf6e08cdaeca487f365358a1c29722b7c3d96958ce94edfb1aa7c4a5fa298a2",
-        "portableSvgSha256": "cadb977d05c11fba6df93de18928865249bd51e4b658b4f02b3063c671eabfa1",
-        "pngSha256": "d8fd1a9ab6ec121e1a03956971e305590454c7ea095149caead2e02aa7cdec92",
-        "pngBytes": 94273
+        "svgSha256": "cad0c1d56e389512a274775965c8ebbdc51980fae52cab907f1e5fe7b7345997",
+        "portableSvgSha256": "c9129b49d4f35d08f539720db84c610c9caf4006b4566658ae99dc6fcdd21ed2",
+        "pngSha256": "2493f225c72ed0225fb6c9ebf9df1516c0c719f2fb5212251e70a37808cda7be",
+        "pngBytes": 116481
       },
-      "sourceModule": "scripts/icons/families/diet-seven-up.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-cans-a.mjs"
     },
     {
       "slug": "diet-barqs-root-beer",
