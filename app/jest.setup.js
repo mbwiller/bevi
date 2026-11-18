@@ -18,3 +18,8 @@ jest.mock('./src/api/client', () => require('./src/testing/fakeApi/client'));
 // their own (DEVELOPMENT-MATT-IOS.md, IM-11) they run here with the reporter on. What the native app
 // does is covered by src/features/bug-report/__tests__/nativeOff.test.tsx, which undoes this mock.
 jest.mock('./src/features/bug-report/supported', () => ({ REPORTER_SUPPORTED: true }));
+
+// NetInfo is a native module. The library's own mock reports a connected cellular network and a
+// listener that never fires, so every suite that renders the create-Bev wizard sees it online
+// (src/features/create-bev/useOnline.ts; its own test drives the listener).
+jest.mock('@react-native-community/netinfo', () => require('@react-native-community/netinfo/jest/netinfo-mock.js'));
