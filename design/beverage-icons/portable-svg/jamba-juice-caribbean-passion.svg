@@ -4,11 +4,6 @@
             <stop offset="0" stop-color="#3c372d" stop-opacity="0.18"/>
             <stop offset="1" stop-color="#3c372d" stop-opacity="0"/>
         </radialGradient>
-        <linearGradient id="bev-jamba-juice-caribbean-passion-straw" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stop-color="#ffcd4c"/>
-            <stop offset="0.3" stop-color="#ffad14"/>
-            <stop offset="1" stop-color="#ed790b"/>
-        </linearGradient>
         <linearGradient id="bev-jamba-juice-caribbean-passion-smoothie" x1="0" y1="0" x2="1" y2="0">
             <stop offset="0" stop-color="#d46e4b"/>
             <stop offset="0.22" stop-color="#ffb491"/>
@@ -27,16 +22,16 @@
             <stop offset="0.6" stop-color="#ed8a65"/>
             <stop offset="1" stop-color="#d46e4b"/>
         </linearGradient>
+        <linearGradient id="bev-jamba-juice-caribbean-passion-straw" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#ffcd4c"/>
+            <stop offset="0.3" stop-color="#ffad14"/>
+            <stop offset="1" stop-color="#ed790b"/>
+        </linearGradient>
         <clipPath id="bev-jamba-juice-caribbean-passion-cupclip">
             <path fill="#000000" stroke="none" d="M 49 78 Q 100 89 151 78 L 135 217 Q 134 231 100 233 Q 66 235 65 217 Z"/>
         </clipPath>
     </defs>
     <path fill="url(#bev-jamba-juice-caribbean-passion-shadow)" stroke="none" d="M 156 239 C 156 245.07513 130.92795 250 100 250 C 69.07205 250 44 245.07513 44 239 C 44 232.92485 69.07205 228 100 228 C 130.92795 228 156 232.92485 156 239 Z"/>
-    <path fill="url(#bev-jamba-juice-caribbean-passion-straw)" stroke="none" d="M 113 82 L 129 24 Q 130 21 134 22 Q 138 23 137 27 L 120 86 Z"/>
-    <path fill="#000000" stroke="#ffd77a" stroke-width="1.4" d="M 130 25 L 115 81"/>
-    <g transform="matrix(0.9702958 0.2419219 -0.2419219 0.9702958 9.756794 -31.46271)">
-        <path fill="#ffbb52" stroke="none" d="M 136.5 24 C 136.5 24.828426 134.933 25.500002 133 25.500002 C 131.067 25.500002 129.5 24.828426 129.5 24 C 129.5 23.171574 131.067 22.499998 133 22.499998 C 134.933 22.499998 136.5 23.171574 136.5 24 Z"/>
-    </g>
     <path fill="url(#bev-jamba-juice-caribbean-passion-smoothie)" stroke="#d46e4b" stroke-width="0.6" d="M 49 78 Q 100 89 151 78 L 135 217 Q 134 231 100 233 Q 66 235 65 217 Z"/>
     <g clip-path="url(#bev-jamba-juice-caribbean-passion-cupclip)">
         <g opacity="0.35">
@@ -237,5 +232,12 @@
     <path fill="url(#bev-jamba-juice-caribbean-passion-smoothietop)" stroke="none" d="M 53 77 Q 66 75 77 69 Q 85 66 92 70 Q 103 74 107 64 Q 116 53 123 69 Q 130 77 148 77 Q 100 92 53 77 Z"/>
     <path fill="none" stroke="#ffb491" stroke-width="1.8" stroke-linecap="round" d="M 57 77 Q 72 75 80 76 M 93 77 Q 102 72 110 74 M 119 76 L 132 78"/>
     <path fill="none" stroke="#fffdf2" stroke-opacity="0.63" stroke-width="1.4" d="M 151 78 C 151 82.970566 128.16652 87 100 87 C 71.83348 87 49 82.970566 49 78 C 49 73.029434 71.83348 69 100 69 C 128.16652 69 151 73.029434 151 78 Z"/>
+    <path fill="url(#bev-jamba-juice-caribbean-passion-straw)" stroke="none" d="M 113 82 L 129 24 Q 130 21 134 22 Q 138 23 137 27 L 120 86 Z"/>
+    <path fill="#000000" stroke="#ffd77a" stroke-width="1.4" d="M 130 25 L 115 81"/>
+    <g transform="matrix(0.9702958 0.2419219 -0.2419219 0.9702958 9.756794 -31.46271)">
+        <path fill="#ffbb52" stroke="none" d="M 136.5 24 C 136.5 24.828426 134.933 25.500002 133 25.500002 C 131.067 25.500002 129.5 24.828426 129.5 24 C 129.5 23.171574 131.067 22.499998 133 22.499998 C 134.933 22.499998 136.5 23.171574 136.5 24 Z"/>
+    </g>
+    <path fill="url(#bev-jamba-juice-caribbean-passion-smoothietop)" stroke="none" d="M 105.49999 83.6 Q 106.50001 75.5 111.5 72.8 Q 116 69.4 120.4 72.4 Q 124.600006 75 126 80.6 Q 124.600006 84.6 116 84.9 Q 109 85.1 105.49999 83.6 Z"/>
+    <path fill="none" stroke="#ffb491" stroke-width="1.6" stroke-linecap="round" d="M 109.49999 75.6 Q 114.1 71.6 119.1 74"/>
     <path fill="none" stroke="#ffb491" stroke-opacity="0.65" stroke-width="1.6" d="M 66 219 Q 100 233 134 219"/>
 </svg>

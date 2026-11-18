@@ -4,66 +4,175 @@
             <stop offset="0" stop-color="#3c372d" stop-opacity="0.18"/>
             <stop offset="1" stop-color="#3c372d" stop-opacity="0"/>
         </radialGradient>
-        <linearGradient id="bev-agua-fresca-jamaica-glass" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stop-color="#ffffff" stop-opacity="0.65"/>
-            <stop offset="0.18" stop-color="#ffffff" stop-opacity="0.12"/>
-            <stop offset="0.65" stop-color="#ffffff" stop-opacity="0.02"/>
-            <stop offset="1" stop-color="#75867c" stop-opacity="0.35"/>
+        <linearGradient id="bev-agua-fresca-jamaica-tglass" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#9fb5ad" stop-opacity="0.6"/>
+            <stop offset="0.18" stop-color="#e3eee9" stop-opacity="0.28"/>
+            <stop offset="0.5" stop-color="#ffffff" stop-opacity="0.1"/>
+            <stop offset="0.82" stop-color="#e3eee9" stop-opacity="0.28"/>
+            <stop offset="1" stop-color="#9fb5ad" stop-opacity="0.6"/>
         </linearGradient>
-        <linearGradient id="bev-agua-fresca-jamaica-liquid" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stop-color="#501c30"/>
-            <stop offset="0.25" stop-color="#8d253f"/>
-            <stop offset="0.6" stop-color="#8d253f"/>
-            <stop offset="1" stop-color="#501c30"/>
+        <linearGradient id="bev-agua-fresca-jamaica-liq" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#b3233a"/>
+            <stop offset="0.1" stop-color="#8a1426"/>
+            <stop offset="0.3" stop-color="#690d1e"/>
+            <stop offset="0.62" stop-color="#5a0a1a"/>
+            <stop offset="0.88" stop-color="#7a1022"/>
+            <stop offset="1" stop-color="#a21f34"/>
         </linearGradient>
-        <linearGradient id="bev-agua-fresca-jamaica-ice" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#ffffff" stop-opacity="0.56"/>
-            <stop offset="0.45" stop-color="#f5f9e4" stop-opacity="0.13"/>
-            <stop offset="1" stop-color="#d4e1cf" stop-opacity="0.39"/>
+        <linearGradient id="bev-agua-fresca-jamaica-liqv" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#d8364c" stop-opacity="0.6"/>
+            <stop offset="0.2" stop-color="#b8233a" stop-opacity="0.2"/>
+            <stop offset="0.45" stop-color="#3a0610" stop-opacity="0"/>
+            <stop offset="1" stop-color="#2e0309" stop-opacity="0.22"/>
         </linearGradient>
-        <linearGradient id="bev-agua-fresca-jamaica-base" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stop-color="#d4e1db" stop-opacity="0.6"/>
-            <stop offset="0.35" stop-color="#fcfff4" stop-opacity="0.9"/>
-            <stop offset="1" stop-color="#9cb2a6" stop-opacity="0.7"/>
+        <linearGradient id="bev-agua-fresca-jamaica-surf" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#c4324a"/>
+            <stop offset="0.5" stop-color="#981a30"/>
+            <stop offset="1" stop-color="#64091c"/>
         </linearGradient>
-        <clipPath id="bev-agua-fresca-jamaica-cupclip">
-            <path fill="#000000" stroke="none" d="M 59 71 Q 100 59 141 71 L 137 215 Q 137 234 100 234 Q 63 234 63 215 Z"/>
+        <clipPath id="bev-agua-fresca-jamaica-liqclip">
+            <path fill="#000000" stroke="none" d="M 55.91 62 C 55.91 56.300423 75.649765 51.68 100 51.68 C 124.350235 51.68 144.09 56.300423 144.09 62 L 130.86 219 C 130.86 221.48528 117.04351 223.5 100 223.5 C 82.95649 223.5 69.14 221.48528 69.14 219 Z"/>
+        </clipPath>
+        <clipPath id="bev-agua-fresca-jamaica-mouth">
+            <path fill="#000000" stroke="none" d="M 145.6 56 C 145.6 62.18559 125.18418 67.2 100 67.2 C 74.81582 67.2 54.40001 62.18559 54.4 56 C 54.4 49.81441 74.81581 44.8 100 44.8 C 125.18418 44.8 145.6 49.81441 145.6 56 Z"/>
         </clipPath>
     </defs>
-    <path fill="url(#bev-agua-fresca-jamaica-shadow)" stroke="none" d="M 146 239 C 146 245.07513 125.405106 250 100 250 C 74.5949 250 54 245.07513 54 239 C 54 232.92485 74.5949 228 100 228 C 125.405106 228 146 232.92485 146 239 Z"/>
-    <path fill="url(#bev-agua-fresca-jamaica-glass)" stroke="#afc1b4" stroke-opacity="0.75" stroke-width="0.9" d="M 59 71 Q 100 59 141 71 L 137 215 Q 137 234 100 234 Q 63 234 63 215 Z"/>
-    <path fill="url(#bev-agua-fresca-jamaica-liquid)" stroke="none" d="M 63 86 Q 100 76 137 86 L 133 213 Q 133 226 100 226 Q 67 226 67 213 Z"/>
-    <g opacity="0.8">
-        <path fill="#8d253f" stroke="none" d="M 137 86 C 137 90.970566 120.43453 95 100 95 C 79.56547 95 63 90.970566 63 86 C 63 81.029434 79.56547 77 100 77 C 120.43453 77 137 81.029434 137 86 Z"/>
+    <path fill="url(#bev-agua-fresca-jamaica-shadow)" stroke="none" d="M 145 239 C 145 245.07513 124.85282 250 100 250 C 75.14719 250 55 245.07513 55 239 C 55 232.92485 75.14719 228 100 228 C 124.85282 228 145 232.92485 145 239 Z"/>
+    <path fill="url(#bev-agua-fresca-jamaica-tglass)" stroke="#8ea398" stroke-opacity="0.9" stroke-width="1.2" d="M 53 56 C 53 49.37258 74.04262 44 100 44 C 125.95739 44 147 49.37258 147 56 L 132.42 229 C 132.42 231.76143 117.90507 234 100 234 C 82.09493 234 67.58 231.76143 67.58 229 Z"/>
+    <path fill="url(#bev-agua-fresca-jamaica-liq)" stroke="none" d="M 55.91 62 C 55.91 56.300423 75.649765 51.68 100 51.68 C 124.350235 51.68 144.09 56.300423 144.09 62 L 130.86 219 C 130.86 221.48528 117.04351 223.5 100 223.5 C 82.95649 223.5 69.14 221.48528 69.14 219 Z"/>
+    <path fill="url(#bev-agua-fresca-jamaica-liqv)" stroke="none" d="M 55.91 62 C 55.91 56.300423 75.649765 51.68 100 51.68 C 124.350235 51.68 144.09 56.300423 144.09 62 L 130.86 219 C 130.86 221.48528 117.04351 223.5 100 223.5 C 82.95649 223.5 69.14 221.48528 69.14 219 Z"/>
+    <g clip-path="url(#bev-agua-fresca-jamaica-liqclip)">
+        <g opacity="0.6">
+            <path fill="#cc2c40" stroke="none" d="M 146.09 78 C 146.09 86.836555 125.4548 94 100 94 C 74.5452 94 53.91 86.836555 53.91 78 C 53.91 69.163445 74.5452 62 100 62 C 125.4548 62 146.09 69.163445 146.09 78 Z"/>
+        </g>
+        <g transform="matrix(0.9848078 -0.17364818 0.17364818 0.9848078 72 82)">
+            <g opacity="0.8">
+                <path fill="#ec8e9c" stroke="#ffc8d0" stroke-opacity="0.5" stroke-width="0.9" d="M -11.5 -13 L 11.5 -13 C 13.432997 -13 15 -11.432997 15 -9.5 L 15 9.5 C 15 11.432997 13.432997 13 11.5 13 L -11.5 13 C -13.432997 13 -15 11.432997 -15 9.5 L -15 -9.5 C -15 -11.432997 -13.432997 -13 -11.5 -13 Z"/>
+            </g>
+            <g opacity="0.64">
+                <path fill="#ffe0e5" stroke="none" d="M -14 -11 Q -14 -12 -12 -12 L 12 -12 Q 14 -12 14 -11 L 11 -7 L -11 -7 Z"/>
+            </g>
+            <path fill="#000000" stroke="#000000" stroke-opacity="0.12" stroke-width="1.6" d="M 13.5 -9 L 13.5 10"/>
+            <path fill="none" stroke="#ffffff" stroke-opacity="0.38" stroke-width="0.9" d="M -12.5 9 L -12.5 -9 Q -12.5 -10.5 -11 -10.5 L 10 -10.5"/>
+        </g>
+        <g transform="matrix(0.99026805 0.1391731 -0.1391731 0.99026805 106 80)">
+            <g opacity="0.8">
+                <path fill="#ec8e9c" stroke="#ffc8d0" stroke-opacity="0.5" stroke-width="0.9" d="M -12.5 -14 L 12.5 -14 C 14.432997 -14 16 -12.432997 16 -10.5 L 16 10.5 C 16 12.432997 14.432997 14 12.5 14 L -12.5 14 C -14.432997 14 -16 12.432997 -16 10.5 L -16 -10.5 C -16 -12.432997 -14.432997 -14 -12.5 -14 Z"/>
+            </g>
+            <g opacity="0.64">
+                <path fill="#ffe0e5" stroke="none" d="M -15 -12 Q -15 -13 -13 -13 L 13 -13 Q 15 -13 15 -12 L 12 -8 L -12 -8 Z"/>
+            </g>
+            <path fill="#000000" stroke="#000000" stroke-opacity="0.12" stroke-width="1.6" d="M 14.5 -10 L 14.5 11"/>
+            <path fill="none" stroke="#ffffff" stroke-opacity="0.38" stroke-width="0.9" d="M -13.5 10 L -13.5 -10 Q -13.5 -11.5 -12 -11.5 L 11 -11.5"/>
+        </g>
+        <g transform="matrix(0.9945219 -0.10452846 0.10452846 0.9945219 136 86)">
+            <g opacity="0.72">
+                <path fill="#ec8e9c" stroke="#ffc8d0" stroke-opacity="0.5" stroke-width="0.9" d="M -7.5 -13 L 7.5 -13 C 9.432997 -13 11 -11.432997 11 -9.5 L 11 9.5 C 11 11.432997 9.432997 13 7.5 13 L -7.5 13 C -9.432997 13 -11 11.432997 -11 9.5 L -11 -9.5 C -11 -11.432997 -9.432997 -13 -7.5 -13 Z"/>
+            </g>
+            <g opacity="0.58">
+                <path fill="#ffe0e5" stroke="none" d="M -10 -11 Q -10 -12 -8 -12 L 8 -12 Q 10 -12 10 -11 L 7 -7 L -7 -7 Z"/>
+            </g>
+            <path fill="#000000" stroke="#000000" stroke-opacity="0.12" stroke-width="1.6" d="M 9.5 -9 L 9.5 10"/>
+            <path fill="none" stroke="#ffffff" stroke-opacity="0.38" stroke-width="0.9" d="M -8.5 9 L -8.5 -9 Q -8.5 -10.5 -7 -10.5 L 6 -10.5"/>
+        </g>
+        <g transform="matrix(0.9702958 0.2419219 -0.2419219 0.9702958 88 110)">
+            <g opacity="0.6">
+                <path fill="#ec8e9c" stroke="#ffc8d0" stroke-opacity="0.5" stroke-width="0.9" d="M -10.5 -13 L 10.5 -13 C 12.432997 -13 14 -11.432997 14 -9.5 L 14 9.5 C 14 11.432997 12.432997 13 10.5 13 L -10.5 13 C -12.432997 13 -14 11.432997 -14 9.5 L -14 -9.5 C -14 -11.432997 -12.432997 -13 -10.5 -13 Z"/>
+            </g>
+            <g opacity="0.48">
+                <path fill="#ffe0e5" stroke="none" d="M -13 -11 Q -13 -12 -11 -12 L 11 -12 Q 13 -12 13 -11 L 10 -7 L -10 -7 Z"/>
+            </g>
+            <path fill="#000000" stroke="#000000" stroke-opacity="0.12" stroke-width="1.6" d="M 12.5 -9 L 12.5 10"/>
+            <path fill="none" stroke="#ffffff" stroke-opacity="0.38" stroke-width="0.9" d="M -11.5 9 L -11.5 -9 Q -11.5 -10.5 -10 -10.5 L 9 -10.5"/>
+        </g>
+        <g transform="matrix(0.9781476 -0.20791169 0.20791169 0.9781476 119 114)">
+            <g opacity="0.52">
+                <path fill="#ec8e9c" stroke="#ffc8d0" stroke-opacity="0.5" stroke-width="0.9" d="M -9.5 -12.5 L 9.5 -12.5 C 11.432997 -12.5 13 -10.932997 13 -9 L 13 9 C 13 10.932997 11.432997 12.5 9.5 12.5 L -9.5 12.5 C -11.432997 12.5 -13 10.932997 -13 9 L -13 -9 C -13 -10.932997 -11.432997 -12.5 -9.5 -12.5 Z"/>
+            </g>
+            <g opacity="0.42">
+                <path fill="#ffe0e5" stroke="none" d="M -12 -10.5 Q -12 -11.5 -10 -11.5 L 10 -11.5 Q 12 -11.5 12 -10.5 L 9 -6.5 L -9 -6.5 Z"/>
+            </g>
+            <path fill="#000000" stroke="#000000" stroke-opacity="0.12" stroke-width="1.6" d="M 11.5 -8.5 L 11.5 9.5"/>
+            <path fill="none" stroke="#ffffff" stroke-opacity="0.38" stroke-width="0.9" d="M -10.5 8.5 L -10.5 -8.5 Q -10.5 -10 -9 -10 L 8 -10"/>
+        </g>
+        <g transform="matrix(0.9945219 0.10452846 -0.10452846 0.9945219 72 137)">
+            <g opacity="0.34">
+                <path fill="#ec8e9c" stroke="#ffc8d0" stroke-opacity="0.5" stroke-width="0.9" d="M -7.5 -11 L 7.5 -11 C 9.432997 -11 11 -9.432997 11 -7.5 L 11 7.5 C 11 9.432997 9.432997 11 7.5 11 L -7.5 11 C -9.432997 11 -11 9.432997 -11 7.5 L -11 -7.5 C -11 -9.432997 -9.432997 -11 -7.5 -11 Z"/>
+            </g>
+            <g opacity="0.27">
+                <path fill="#ffe0e5" stroke="none" d="M -10 -9 Q -10 -10 -8 -10 L 8 -10 Q 10 -10 10 -9 L 7 -5 L -7 -5 Z"/>
+            </g>
+            <path fill="#000000" stroke="#000000" stroke-opacity="0.12" stroke-width="1.6" d="M 9.5 -7 L 9.5 8"/>
+            <path fill="none" stroke="#ffffff" stroke-opacity="0.38" stroke-width="0.9" d="M -8.5 7 L -8.5 -7 Q -8.5 -8.5 -7 -8.5 L 6 -8.5"/>
+        </g>
+        <g transform="matrix(0.99026805 -0.1391731 0.1391731 0.99026805 104 141)">
+            <g opacity="0.26">
+                <path fill="#ec8e9c" stroke="#ffc8d0" stroke-opacity="0.5" stroke-width="0.9" d="M -7.5 -11 L 7.5 -11 C 9.432997 -11 11 -9.432997 11 -7.5 L 11 7.5 C 11 9.432997 9.432997 11 7.5 11 L -7.5 11 C -9.432997 11 -11 9.432997 -11 7.5 L -11 -7.5 C -11 -9.432997 -9.432997 -11 -7.5 -11 Z"/>
+            </g>
+            <g opacity="0.2">
+                <path fill="#ffe0e5" stroke="none" d="M -10 -9 Q -10 -10 -8 -10 L 8 -10 Q 10 -10 10 -9 L 7 -5 L -7 -5 Z"/>
+            </g>
+            <path fill="#000000" stroke="#000000" stroke-opacity="0.12" stroke-width="1.6" d="M 9.5 -7 L 9.5 8"/>
+            <path fill="none" stroke="#ffffff" stroke-opacity="0.38" stroke-width="0.9" d="M -8.5 7 L -8.5 -7 Q -8.5 -8.5 -7 -8.5 L 6 -8.5"/>
+        </g>
+        <path fill="none" stroke="#d0405c" stroke-opacity="0.35" stroke-width="3" d="M 71.14 196 Q 100 206 128.86 196"/>
     </g>
-    <g clip-path="url(#bev-agua-fresca-jamaica-cupclip)">
-        <g transform="matrix(0.99026805 -0.1391731 0.1391731 0.99026805 69 94)">
-            <path fill="url(#bev-agua-fresca-jamaica-ice)" stroke="#fffdf1" stroke-opacity="0.6" stroke-width="0.8" d="M 4 0 L 25 0 C 27.209139 0 29 1.790861 29 4 L 29 26 C 29 28.209139 27.209139 30 25 30 L 4 30 C 1.790861 30 0 28.209139 0 26 L 0 4 C 0 1.790861 1.790861 0 4 0 Z"/>
-            <path fill="none" stroke="#ffffff" stroke-opacity="0.65" stroke-width="1.1" d="M 4 26 L 4 7 Q 4 4 7 4 L 23 4"/>
-            <path fill="none" stroke="#a5bcac" stroke-opacity="0.3" stroke-width="0.6" d="M 5 27 L 25 25"/>
+    <g opacity="0.5">
+        <path fill="#8a1a35" stroke="none" d="M 68.23 222.5 C 68.23 224.98528 82.45391 227 100 227 C 117.54609 227 131.77 224.98528 131.77 222.5 L 131.42 228.50002 C 131.42 231.04051 117.35278 233.1 100 233.1 C 82.64722 233.1 68.58 231.04051 68.58 228.50002 Z"/>
+    </g>
+    <path fill="url(#bev-agua-fresca-jamaica-tglass)" stroke="none" d="M 68.23 222.5 C 68.23 224.98528 82.45391 227 100 227 C 117.54609 227 131.77 224.98528 131.77 222.5 L 131.42 228.50002 C 131.42 231.04051 117.35278 233.1 100 233.1 C 82.64722 233.1 68.58 231.04051 68.58 228.50002 Z"/>
+    <path fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="1.2" d="M 70.03 225.5 Q 100 231.5 129.97 225.5"/>
+    <path fill="none" stroke="#ffffff" stroke-opacity="0.6" stroke-width="2.6" stroke-linecap="round" d="M 58.680004 70 L 71.24 215"/>
+    <path fill="none" stroke="#ffffff" stroke-opacity="0.25" stroke-width="1.4" stroke-linecap="round" d="M 63.18 78 L 69.84 149"/>
+    <path fill="none" stroke="#ffffff" stroke-opacity="0.28" stroke-width="1.4" stroke-linecap="round" d="M 141.65 72 L 129.26 213"/>
+    <path fill="url(#bev-agua-fresca-jamaica-surf)" stroke="none" d="M 144.09 62 C 144.09 67.69958 124.350235 72.32 100 72.32 C 75.649765 72.32 55.91 67.69958 55.91 62 C 55.91 56.300423 75.649765 51.68 100 51.68 C 124.350235 51.68 144.09 56.300423 144.09 62 Z"/>
+    <path fill="none" stroke="#f6fbf6" stroke-width="2.2" d="M 147 56 C 147 62.62742 125.95739 68 100 68 C 74.04262 68 53 62.62742 53 56 C 53 49.37258 74.04262 44 100 44 C 125.95739 44 147 49.37258 147 56 Z"/>
+    <path fill="none" stroke="#8ea398" stroke-opacity="0.8" stroke-width="0.8" d="M 147.7 56 C 147.7 62.958786 126.34398 68.6 100 68.6 C 73.65602 68.6 52.300003 62.958786 52.300003 56 C 52.300003 49.041214 73.65602 43.4 100 43.4 C 126.34398 43.4 147.7 49.041214 147.7 56 Z"/>
+    <path fill="none" stroke="#8ea398" stroke-opacity="0.45" stroke-width="0.8" d="M 54.5 57.2 C 54.5 63.496048 74.87104 68.6 100 68.6 C 125.12896 68.6 145.5 63.496048 145.5 57.2"/>
+    <g clip-path="url(#bev-agua-fresca-jamaica-mouth)">
+        <g transform="matrix(0.99026805 -0.1391731 0.1391731 0.99026805 86 59.5)">
+            <path fill="#f2a6b2" stroke="#b23a4c" stroke-opacity="0.7" stroke-width="0.7" d="M -15 0 L -15 -4 Q -15 -6 -13 -6 L 13 -6 Q 15 -6 15 -4 L 15 0 Z"/>
+            <path fill="#d46c7e" stroke="#b23a4c" stroke-opacity="0.6" stroke-width="0.6" d="M 15 0 L 15 -6 L 21 -14 L 21 -8 Z"/>
+            <path fill="#fff0f2" stroke="#ffffff" stroke-opacity="0.85" stroke-width="0.8" d="M -15 -6 L -9 -14 L 21 -14 L 15 -6 Z"/>
+            <path fill="none" stroke="#ffffff" stroke-opacity="0.9" stroke-width="1.1" stroke-linecap="round" d="M -13.4 -1.5 L -13.4 -4 Q -13.4 -4.6 -12 -4.6 L 12 -4.6"/>
+            <path fill="#000000" stroke="#ffffff" stroke-opacity="0.55" stroke-width="0.9" stroke-linecap="round" d="M -12 -9.6 L 13 -9.6"/>
+            <g opacity="0.7">
+                <path fill="#9a1a30" stroke="none" d="M -15.4 0.3 L -15.4 -1.92 Q 0 0.28 15.4 -1.92 L 18 -5 L 18 0.3 Z"/>
+            </g>
+            <path fill="none" stroke="#ffffff" stroke-opacity="0.45" stroke-width="0.7" d="M -15 -1.92 Q 0 0.28 15 -1.92"/>
         </g>
-        <g transform="matrix(0.9781476 0.20791169 -0.20791169 0.9781476 104 91)">
-            <path fill="url(#bev-agua-fresca-jamaica-ice)" stroke="#fffdf1" stroke-opacity="0.6" stroke-width="0.8" d="M 4 0 L 21 0 C 23.209139 0 25 1.790861 25 4 L 25 26 C 25 28.209139 23.209139 30 21 30 L 4 30 C 1.790861 30 0 28.209139 0 26 L 0 4 C 0 1.790861 1.790861 0 4 0 Z"/>
-            <path fill="none" stroke="#ffffff" stroke-opacity="0.65" stroke-width="1.1" d="M 4 26 L 4 7 Q 4 4 7 4 L 19 4"/>
-            <path fill="none" stroke="#a5bcac" stroke-opacity="0.3" stroke-width="0.6" d="M 5 27 L 21 25"/>
+        <g transform="matrix(0.9876884 0.15643446 -0.15643446 0.9876884 118 59)">
+            <path fill="#f2a6b2" stroke="#b23a4c" stroke-opacity="0.7" stroke-width="0.7" d="M -14 0 L -14 -4 Q -14 -6 -12 -6 L 12 -6 Q 14 -6 14 -4 L 14 0 Z"/>
+            <path fill="#d46c7e" stroke="#b23a4c" stroke-opacity="0.6" stroke-width="0.6" d="M 14 0 L 14 -6 L 20 -14 L 20 -8 Z"/>
+            <path fill="#fff0f2" stroke="#ffffff" stroke-opacity="0.85" stroke-width="0.8" d="M -14 -6 L -8 -14 L 20 -14 L 14 -6 Z"/>
+            <path fill="none" stroke="#ffffff" stroke-opacity="0.9" stroke-width="1.1" stroke-linecap="round" d="M -12.4 -1.5 L -12.4 -4 Q -12.4 -4.6 -11 -4.6 L 11 -4.6"/>
+            <path fill="#000000" stroke="#ffffff" stroke-opacity="0.55" stroke-width="0.9" stroke-linecap="round" d="M -11 -9.6 L 12 -9.6"/>
+            <g opacity="0.7">
+                <path fill="#9a1a30" stroke="none" d="M -14.4 0.3 L -14.4 -1.92 Q 0 0.28 14.4 -1.92 L 17 -5 L 17 0.3 Z"/>
+            </g>
+            <path fill="none" stroke="#ffffff" stroke-opacity="0.45" stroke-width="0.7" d="M -14 -1.92 Q 0 0.28 14 -1.92"/>
         </g>
-        <g transform="matrix(0.99026805 0.1391731 -0.1391731 0.99026805 83 134)">
-            <path fill="url(#bev-agua-fresca-jamaica-ice)" stroke="#fffdf1" stroke-opacity="0.6" stroke-width="0.8" d="M 4 0 L 27 0 C 29.209139 0 31 1.790861 31 4 L 31 30 C 31 32.20914 29.209139 34 27 34 L 4 34 C 1.790861 34 0 32.20914 0 30 L 0 4 C 0 1.790861 1.790861 0 4 0 Z"/>
-            <path fill="none" stroke="#ffffff" stroke-opacity="0.65" stroke-width="1.1" d="M 4 30 L 4 7 Q 4 4 7 4 L 25 4"/>
-            <path fill="none" stroke="#a5bcac" stroke-opacity="0.3" stroke-width="0.6" d="M 5 31 L 27 29"/>
+        <g transform="matrix(0.9961947 0.08715574 -0.08715574 0.9961947 76 64.5)">
+            <path fill="#f2a6b2" stroke="#b23a4c" stroke-opacity="0.7" stroke-width="0.7" d="M -13 0 L -13 -6 Q -13 -8 -11 -8 L 11 -8 Q 13 -8 13 -6 L 13 0 Z"/>
+            <path fill="#d46c7e" stroke="#b23a4c" stroke-opacity="0.6" stroke-width="0.6" d="M 13 0 L 13 -8 L 18 -16 L 18 -8 Z"/>
+            <path fill="#fff0f2" stroke="#ffffff" stroke-opacity="0.85" stroke-width="0.8" d="M -13 -8 L -8 -16 L 18 -16 L 13 -8 Z"/>
+            <path fill="none" stroke="#ffffff" stroke-opacity="0.9" stroke-width="1.1" stroke-linecap="round" d="M -11.4 -1.5 L -11.4 -6 Q -11.4 -6.6 -10 -6.6 L 10 -6.6"/>
+            <path fill="#000000" stroke="#ffffff" stroke-opacity="0.55" stroke-width="0.9" stroke-linecap="round" d="M -10 -11.6 L 11 -11.6"/>
+            <g opacity="0.7">
+                <path fill="#9a1a30" stroke="none" d="M -13.4 0.3 L -13.4 -2.56 Q 0 -0.36 13.4 -2.56 L 15.5 -5 L 15.5 0.3 Z"/>
+            </g>
+            <path fill="none" stroke="#ffffff" stroke-opacity="0.45" stroke-width="0.7" d="M -13 -2.56 Q 0 -0.36 13 -2.56"/>
         </g>
-        <g transform="matrix(0.9848078 -0.17364818 0.17364818 0.9848078 107 171)">
-            <path fill="url(#bev-agua-fresca-jamaica-ice)" stroke="#fffdf1" stroke-opacity="0.6" stroke-width="0.8" d="M 4 0 L 19 0 C 21.209139 0 23 1.790861 23 4 L 23 24 C 23 26.209139 21.209139 28 19 28 L 4 28 C 1.790861 28 0 26.209139 0 24 L 0 4 C 0 1.790861 1.790861 0 4 0 Z"/>
-            <path fill="none" stroke="#ffffff" stroke-opacity="0.65" stroke-width="1.1" d="M 4 24 L 4 7 Q 4 4 7 4 L 17 4"/>
-            <path fill="none" stroke="#a5bcac" stroke-opacity="0.3" stroke-width="0.6" d="M 5 25 L 19 23"/>
-        </g>
-        <g opacity="0.42">
-            <path fill="url(#bev-agua-fresca-jamaica-glass)" stroke="none" d="M 59 71 Q 100 59 141 71 L 137 215 Q 137 234 100 234 Q 63 234 63 215 Z"/>
+        <g transform="matrix(0.9975641 -0.06975647 0.06975647 0.9975641 107 65.5)">
+            <path fill="#f2a6b2" stroke="#b23a4c" stroke-opacity="0.7" stroke-width="0.7" d="M -15 0 L -15 -7 Q -15 -9 -13 -9 L 13 -9 Q 15 -9 15 -7 L 15 0 Z"/>
+            <path fill="#d46c7e" stroke="#b23a4c" stroke-opacity="0.6" stroke-width="0.6" d="M 15 0 L 15 -9 L 21 -17 L 21 -8 Z"/>
+            <path fill="#fff0f2" stroke="#ffffff" stroke-opacity="0.85" stroke-width="0.8" d="M -15 -9 L -9 -17 L 21 -17 L 15 -9 Z"/>
+            <path fill="none" stroke="#ffffff" stroke-opacity="0.9" stroke-width="1.1" stroke-linecap="round" d="M -13.4 -1.5 L -13.4 -7 Q -13.4 -7.6 -12 -7.6 L 12 -7.6"/>
+            <path fill="#000000" stroke="#ffffff" stroke-opacity="0.55" stroke-width="0.9" stroke-linecap="round" d="M -12 -12.6 L 13 -12.6"/>
+            <g opacity="0.7">
+                <path fill="#9a1a30" stroke="none" d="M -15.4 0.3 L -15.4 -2.88 Q 0 -0.68 15.4 -2.88 L 18 -5 L 18 0.3 Z"/>
+            </g>
+            <path fill="none" stroke="#ffffff" stroke-opacity="0.45" stroke-width="0.7" d="M -15 -2.88 Q 0 -0.68 15 -2.88"/>
         </g>
     </g>
-    <path fill="none" stroke="#ffffff" stroke-opacity="0.53" stroke-width="2.3" stroke-linecap="round" d="M 66 90 L 69 208"/>
-    <path fill="none" stroke="#ffffff" stroke-opacity="0.25" stroke-width="1.3" d="M 135 92 L 131 209"/>
-    <path fill="url(#bev-agua-fresca-jamaica-base)" stroke="none" d="M 64 218 Q 100 234 136 218 L 135 228 Q 100 240 65 228 Z"/>
-    <path fill="none" stroke="#163e8c" stroke-width="4" d="M 141 71 C 141 76.52285 122.643684 81 100 81 C 77.35632 81 59 76.52285 59 71 C 59 65.47715 77.35632 61 100 61 C 122.643684 61 141 65.47715 141 71 Z"/>
-    <path fill="none" stroke="#c4d6c7" stroke-opacity="0.4" stroke-width="0.8" d="M 60 72 Q 100 87 140 72"/>
 </svg>

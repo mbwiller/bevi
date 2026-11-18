@@ -179,17 +179,24 @@
     {
       "slug": "seven-up",
       "family": "soda-expansion-can",
-      "packageChoice": "Representative US 12 fl oz / 355mL 7UP Original aluminum can; exact independently inspected package.",
+      "packageChoice": "US 12 fl oz (355 mL) 7UP can in the current (2023-on) US design: bright green can, very large white 7UP running bottom to top with the red dot, LIME LEMON in black up the left side, 140-calorie box and 12 FL OZ (355 mL) at the bottom.",
       "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/7up-lemon-lime-caffeine-free-soda-cans/0007800001180",
+          "imageUrl": "https://www.kroger.com/product/images/xlarge/back/0007800001180",
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "Dry front-on render of one 12 oz can beside a flat 7UP logo: green body (~#079432 with a lighter left-centre sheen), white 7UP with a red dot about a third of the can wide sitting where the 7 meets the U, black condensed LIME LEMON reading upward on the left, a rounded 140 CALORIES PER CAN box and 12 FL OZ (355 mL) at the bottom, LIME LEMON FLAVORED SODA lines and CAFFEINE FREE wrapping off the right edge."
+        },
         {
           "pageUrl": "https://www.kroger.com/p/7up-lemon-lime-soda/0007800000038",
           "imageUrl": "https://www.kroger.com/product/images/large/front/0007800000038",
-          "inspectedAt": "2026-11-12",
+          "inspectedAt": "2026-11-18",
           "visuallyInspected": true,
-          "observations": "Exact retailer 6-pack12oz can individually inspected: bright green body, tall slanted/near-vertical white7UP with red dot, black vertical LIME LEMON at left, black small footer, silver rims. Current US Original7UP lime-forward revision; manufacturer now calls Original flavor lime lemon, while catalog generically says Lemon-Lime. Not Cherry or Zero Sugar."
+          "observations": "Six mini cans in the same current design; confirms the layout and colours of the 12 oz render."
         }
       ],
-      "uncertainty": "Catalog size unspecified; chosen package documented. Original simplified vector artwork/lettering; tiny side-panel copy and certification seals omitted. Manufacturer consulted first with documented retailer fallback where retrieval failed. Package revision date unverified. Final aesthetic approval and web-device review pending. Current Original US packaging chosen; older lemon-lime graphics and historical formula equivalence are not asserted to represent this newer lime-forward revision.",
+      "uncertainty": "The mark, dot and black lettering are traced from the render as seen on the curved can (not unwrapped), so the strokes nearest the right edge are slightly compressed as on the real can. The LIME LEMON FLAVORED SODA lines and CAFFEINE FREE that wrap off the right edge are left out. The flat Wikimedia \"7Up logo (2024)\" is the lowercase international mark, not the US can mark, so it was not used.",
       "status": "needs-review",
       "bevId": "5ed1a9b6-46ac-5249-9bd6-2c0712bf631b",
       "name": "7Up",
@@ -200,12 +207,12 @@
         "svg": "svg/seven-up.svg",
         "portableSvg": "portable-svg/seven-up.svg",
         "png": "png/seven-up.png",
-        "svgSha256": "23bb0a7267c2b12690df526d86d71357da68d06ca6142a022356c992dd460cad",
-        "portableSvgSha256": "bc21fe0c59931dc2ee6ba1b42099d67d042787756472a533ef9efed38fa330c1",
-        "pngSha256": "d1fe41d3f5347294cc36819a53aa4efc58b973129e3fbfb81e7c3aff41043070",
-        "pngBytes": 103084
+        "svgSha256": "9d5375eecc7928b5c2634a523e8c377080fa6da19dbbbdf685979b1cf048c971",
+        "portableSvgSha256": "8bf1e013bbdf9d7e87fb695b37999c11819d5b0992b4ab7e48e1311f3e2303ad",
+        "pngSha256": "1571af072eb117066e13611a4ba4f1e4ac6434571fd144fe1f5fca6dec7ad777",
+        "pngBytes": 101647
       },
-      "sourceModule": "scripts/icons/families/soda-final-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-cans-a.mjs"
     },
     {
       "slug": "aw-cream-soda",
@@ -317,17 +324,24 @@
     {
       "slug": "agua-fresca-jamaica",
       "family": "unbranded-served-drink",
-      "packageChoice": "Unbranded iced hibiscus agua fresca in cobalt-rimmed clear tumbler.",
+      "packageChoice": "The common serve of agua de jamaica: a clear, slightly tapered tumbler with a thick base, filled to just under the rim with deep ruby hibiscus water over large ice cubes. No garnish (neither reference shows one). Plain clear glass: the cobalt rim of blown Mexican glassware in the first photo is left out.",
       "references": [
+        {
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Agua_de_Jamaica.jpg",
+          "imageUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Agua_de_Jamaica.jpg?width=1000",
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "Plain clear tumbler, wider at the rim than at the thick base (bottom about 0.65 of the rim width, height about 1.8 rim widths), with a rolled lip; very dark purple-red hibiscus water with light glowing ruby at the edges and the base. No ice, no garnish."
+        },
         {
           "pageUrl": "https://www.mexicoinmykitchen.com/agua-de-jamaica/",
           "imageUrl": "https://www.mexicoinmykitchen.com/wp-content/uploads/2023/07/Jamaica-Agua-Fresca-2.jpg",
-          "inspectedAt": "2026-11-04",
+          "inspectedAt": "2026-11-18",
           "visuallyInspected": true,
-          "observations": "Recipe author photograph independently inspected: deep burgundy hibiscus drink in clear tall tumbler with thick cobalt-blue rim, large ice cubes pink-stained by liquid. No fruit garnish or branding in glass."
+          "observations": "Recipe photo: cobalt-rimmed blown tumblers of near-black ruby hibiscus water (#b82940 where light passes just under the ice, near black below) packed with large ice cubes stained pink (#e9899e) at the surface. No garnish. Used for the ice and the liquid colors."
         }
       ],
-      "uncertainty": "Generic catalog identity uses one documented representative serving. Glass engraving and fine texture simplified as original vectors; no brand, product claims or background is included. Variations in recipes/garnishes are not separate catalog identities here. Final aesthetic approval and native-device review pending.",
+      "uncertainty": "Glass shape from the first photo, ice and colors from the second; the liquid is drawn lighter at the edges than the near-black photos so it reads as ruby at 40 px. Ice is shown as five cubes at the surface and five through the liquid.",
       "status": "needs-review",
       "bevId": "1bde6c49-9c9a-5070-bc73-a3073146d885",
       "name": "Agua Fresca de Jamaica",
@@ -338,27 +352,34 @@
         "svg": "svg/agua-fresca-jamaica.svg",
         "portableSvg": "portable-svg/agua-fresca-jamaica.svg",
         "png": "png/agua-fresca-jamaica.png",
-        "svgSha256": "98232e1535e8f1319e1aa6271d6e1664365a8455e78b3e1e0ff0ac6537c2af5a",
-        "portableSvgSha256": "828d992d759250d309e212f50508ed9b395dbb620b95a58212b442bff5c16fdd",
-        "pngSha256": "4edddd3ffb7ab327f745f4501db92a3f9562e6e408b289ffd86578caa9e2a47b",
-        "pngBytes": 125779
+        "svgSha256": "bc96eb2bd98534a7ca316cffb9e557b654685a993feccb2296095901642a832a",
+        "portableSvgSha256": "c743863a0919851797e9919c5b5d413038969ba4a363304f21618e8e151abdbd",
+        "pngSha256": "8a82ab6b446da505862b5ce85ef158e8a69369311b5cc499ae6ee87fa4dc8a7d",
+        "pngBytes": 141229
       },
-      "sourceModule": "scripts/icons/families/served-drinks.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-served.mjs"
     },
     {
       "slug": "agua-fresca-tamarindo",
       "family": "unbranded-served-drink",
-      "packageChoice": "Unbranded iced tamarind agua fresca in documented cobalt-rimmed tumbler.",
+      "packageChoice": "The common serve of agua de tamarindo: the same clear tapered tumbler as the jamaica, with cloudy translucent amber-brown tamarind water over large ice, darker sediment at the bottom. No garnish. The cobalt rim of the reference glass is left out.",
       "references": [
         {
           "pageUrl": "https://www.mexicoinmykitchen.com/agua-de-tamarindo/",
           "imageUrl": "https://www.mexicoinmykitchen.com/wp-content/uploads/2023/03/Tamarind-agua.png",
-          "inspectedAt": "2026-11-04",
+          "inspectedAt": "2026-11-18",
           "visuallyInspected": true,
-          "observations": "Recipe author photograph independently inspected: opaque/cloudy warm brown tamarind drink in a clear tumbler with thick cobalt-blue rim, large clear ice at top; tamarind pods outside the glass are excluded from icon."
+          "observations": "Cobalt-rimmed tumbler of cloudy amber-brown tamarind water (#974818 mid, #5f2102 at the bottom, milky #a49380 just under the ice) with large clear-white ice cubes crowding the surface and visible through the liquid. Tamarind pods around it, no garnish in the glass."
+        },
+        {
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Agua_de_Jamaica.jpg",
+          "imageUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Agua_de_Jamaica.jpg?width=1000",
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "Plain clear tapered tumbler with a thick base, used for the glass shape shared with the jamaica icon."
         }
       ],
-      "uncertainty": "Generic catalog identity uses one documented representative serving. Glass engraving and fine texture simplified as original vectors; no brand, product claims or background is included. Variations in recipes/garnishes are not separate catalog identities here. Final aesthetic approval and native-device review pending.",
+      "uncertainty": "Glass shape borrowed from a plain agua fresca tumbler, since the tamarindo photo shows a cobalt-rimmed one. Sediment drawn as two darker bands and a few specks; real sediment varies.",
       "status": "needs-review",
       "bevId": "4d6383a4-25c9-5a4c-ba08-ade9c05a6f11",
       "name": "Agua Fresca de Tamarindo",
@@ -369,27 +390,27 @@
         "svg": "svg/agua-fresca-tamarindo.svg",
         "portableSvg": "portable-svg/agua-fresca-tamarindo.svg",
         "png": "png/agua-fresca-tamarindo.png",
-        "svgSha256": "b34f7442d05bbda494f3321e53cebb4d41e0039bd7418db767ba441b07358120",
-        "portableSvgSha256": "1c01314174a5398337f4083e2f6ab8a8883950b06fe299462cb99717da81fdb7",
-        "pngSha256": "13cc237cd2a1349cede691fd6721f5da86c242f7894f05badbd9c0cf16e7e71a",
-        "pngBytes": 127935
+        "svgSha256": "cb9a8bd5defe23ba2706d97a3c799bb30a035b70792d3ff341994189b5dce8c7",
+        "portableSvgSha256": "393484299e5e055a58f606f3b1cb9cb2ee64fa29e616f43c85c8c2c2a0f63dae",
+        "pngSha256": "2f469dffeb82fa440a5d2f5f2c33ee85bd03baefcda60ea794cbe1bf9751674a",
+        "pngBytes": 162708
       },
-      "sourceModule": "scripts/icons/families/served-drinks.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-served.mjs"
     },
     {
       "slug": "aha-lime-watermelon",
       "family": "refreshment-expansion",
-      "packageChoice": "US12fl oz/355mL AHA Lime + Watermelon aluminum can.",
+      "packageChoice": "US 12 fl oz / 355 mL AHA Lime + Watermelon can, current design: lime-green upper block with the white AHA mark, pink-red lower block with a lime half-wheel and a lime half-wheel seen edge-on, watermelon wedges at the upper left.",
       "references": [
         {
           "pageUrl": "https://www.coca-cola.com/us/en/brands/aha",
           "imageUrl": "https://www.coca-cola.com/content/dam/onexp/us/en/brands/aha/AHA-Desktop-LimeWatermelon-750x750.png",
-          "inspectedAt": "2026-11-12",
+          "inspectedAt": "2026-11-18",
           "visuallyInspected": true,
-          "observations": "Exact manufacturer image inspected: green upper half and vivid red/pink lower half, large white uppercase AHA, white SPARKLING WATER at color boundary, diagonal lime wheels and small watermelon wedge at upper-left, vertical flavor words low-left, silver metal rims. Background green/red photo blocks excluded."
+          "observations": "Front-on 12 oz can render. Lime-green upper block (about 40 percent of the label) carrying a large white geometric AHA whose A counters are slots and whose letters have round notches at the foot; the H has a dot between its legs. Upper-left: two watermelon wedges (green rind, red flesh, light seeds) cropped by the can edge. \"NO SWEETENERS o NO SODIUM\" in small white italic above. Red lower block: \"SPARKLING WATER\" in white spaced caps, \"LIME + WATERMELON\" in white running up the left with two green lines \"NATURALLY FLAVORED + OTHER NATURAL FLAVORS\", a large lime half-wheel (dark rind, dotted peel, pale pith, four segments) with its cut edge on a diagonal, and a second half-wheel seen edge-on at the right edge, small white bubbles."
         }
       ],
-      "uncertainty": "Catalog does not specify size; representative US package individually inspected. Original simplified lettering and package illustrations; tiny filler/legal copy and certification symbols omitted.  Final aesthetic approval and web-device review pending.",
+      "uncertainty": "AHA, SPARKLING WATER, LIME + WATERMELON, bubbles and the watermelon flesh/rind are traced from the packshot; the lime pieces are hand-built geometry at measured positions (segment count, membrane angles and peel dots approximated). The two green lines and the NO SWEETENERS / NO SODIUM line are Arial Bold set to the measured length. Label is stretched vertically by about 14 percent to the house can proportion.",
       "status": "needs-review",
       "bevId": "cd58181d-8189-5faf-a8c8-ecf19aa22390",
       "name": "AHA Lime + Watermelon",
@@ -400,12 +421,12 @@
         "svg": "svg/aha-lime-watermelon.svg",
         "portableSvg": "portable-svg/aha-lime-watermelon.svg",
         "png": "png/aha-lime-watermelon.png",
-        "svgSha256": "3abdb0ab0bbb47240ad4757d0c5e51d3fda2c5549a92c19e9f01c6ed83b7be1b",
-        "portableSvgSha256": "42034f91f473bd65b83a4a135afa5483761c7572a636f89fc087bfce568aea8b",
-        "pngSha256": "79469692e743c7638a5eac725ae7471b2a6120a6b264a1c919d4884158927c70",
-        "pngBytes": 118120
+        "svgSha256": "8804ced255bbf5242b08a6d029544f7ff3785817f4233c71bab441a33d077107",
+        "portableSvgSha256": "e606c26744e97947c2d3e8966418743d910fdb589ab16a6961e02f1ec0977573",
+        "pngSha256": "8dcbb8c8ed2507ea15874003d04b3abfb798daa8cfc8b21764e1de6bdd4db4de",
+        "pngBytes": 150424
       },
-      "sourceModule": "scripts/icons/families/refreshment-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-cans-b.mjs"
     },
     {
       "slug": "alani-nu-breezeberry",
@@ -594,68 +615,6 @@
       "sourceModule": "scripts/icons/families/juice-batch.mjs"
     },
     {
-      "slug": "minute-maid-apple-juice",
-      "family": "minute-maid-juice-bottle",
-      "packageChoice": "US 12 fl oz / 355mL Minute Maid100% Apple Juice bottle.",
-      "references": [
-        {
-          "pageUrl": "https://www.coca-cola.com/us/en/brands/minute-maid/products/minute-maid-variety-juices",
-          "imageUrl": "https://www.coca-cola.com/content/dam/onexp/us/en/brands/minute-maid/products/variety-juice/minutemaid-prod-apple-allbreakpoints.png",
-          "inspectedAt": "2026-11-04",
-          "visuallyInspected": true,
-          "observations": "Manufacturer Apple image individually inspected: slim waisted PET bottle with black screw cap and clear neck, predominantly green full-body wrap, tall black Minute Maid shield with white serif lettering, pale-green100% Apple Juice, large white100% Vit C, whole red apple and apple half/leaf at foot,12floz marking. Actual juice mostly concealed by wrap."
-        }
-      ],
-      "uncertainty": " Each exact variant reference visually inspected; representative US package chosen because catalog does not specify size. Brand lettering, fruit art and small print simplified original vectors with pinned fonts. Final aesthetic approval and native-device review pending.",
-      "status": "needs-review",
-      "bevId": "6aed7049-e35a-5d43-9bdc-efa577b7aa82",
-      "name": "Apple Juice",
-      "brand": "Minute Maid",
-      "isStarter": false,
-      "styleVersion": "bevi-dimensional-v1",
-      "assets": {
-        "svg": "svg/minute-maid-apple-juice.svg",
-        "portableSvg": "portable-svg/minute-maid-apple-juice.svg",
-        "png": "png/minute-maid-apple-juice.png",
-        "svgSha256": "3a8886301c52e06c61cdd9e032ccbca8cd1a7ef79857626f2c63659e61a6ac8f",
-        "portableSvgSha256": "eae32dd9db873aebeaf87d1aa125b331bb2cc92fbe5f2edf5d42a5a1606a1268",
-        "pngSha256": "691010d2a3f4abba82609aa82d2ed041e6ef6a5c67cb7bd11de89fa01f5f078f",
-        "pngBytes": 95128
-      },
-      "sourceModule": "scripts/icons/families/juice-expansion.mjs"
-    },
-    {
-      "slug": "juicy-juice-apple",
-      "family": "researched-juice-expansion",
-      "packageChoice": "US 64 fl oz /1.89L Juicy Juice100% Apple Juice PET bottle.",
-      "references": [
-        {
-          "pageUrl": "https://juicyjuice.com/products/apple/",
-          "imageUrl": "https://juicyjuice.com/wp-content/uploads/2025/03/apple-64-oz.png",
-          "inspectedAt": "2026-11-12",
-          "visuallyInspected": true,
-          "observations": "Exact manufacturer64oz front photo inspected: short white ribbed cap, broad sloping molded shoulder, large clear golden apple juice region, mostly white label with stacked dark-green Juicy Juice, green100%JUICE banner, illustrated green orchard hills/trees, red apple and cut apple, white APPLE on lime-green lower field. Not organic, reduced sugar or flavored blend."
-        }
-      ],
-      "uncertainty": "Catalog does not specify size; representative US package selected. Product lettering and fruit graphics are simplified original vectors; small legal/nutrition copy omitted.  Final aesthetic approval and web-device review pending.",
-      "status": "needs-review",
-      "bevId": "78376c87-91e5-5267-a665-d1ed8f0cf293",
-      "name": "Apple Juice",
-      "brand": "Juicy Juice",
-      "isStarter": false,
-      "styleVersion": "bevi-dimensional-v1",
-      "assets": {
-        "svg": "svg/juicy-juice-apple.svg",
-        "portableSvg": "portable-svg/juicy-juice-apple.svg",
-        "png": "png/juicy-juice-apple.png",
-        "svgSha256": "5efc316d701b4e1eb9df5a0774291a39929cea15d1126758912eb5645c656fec",
-        "portableSvgSha256": "4418d641b09d32f973cc384bb9650fbc27dbf75984167c618ffccfa366defdbc",
-        "pngSha256": "2be3c2d12016e3a38eda87cb57f5d87b454a0d298b7b4c6b3f977037010782ac",
-        "pngBytes": 128829
-      },
-      "sourceModule": "scripts/icons/families/juice-final-expansion.mjs"
-    },
-    {
       "slug": "motts-apple-juice",
       "family": "motts-juice-bottle",
       "packageChoice": "Mott's 100% Original Apple Juice in the current US 64 fl oz PET bottle (the catalog row's 64 oz size), drawn from the Kroger front render.",
@@ -692,6 +651,75 @@
         "pngBytes": 142597
       },
       "sourceModule": "scripts/icons/families/redraw-juice-b.mjs"
+    },
+    {
+      "slug": "juicy-juice-apple",
+      "family": "researched-juice-expansion",
+      "packageChoice": "Juicy Juice 100% Apple Juice, US 64 fl oz (1.89 L) PET bottle with the current (\"new look\") label, the catalog package. Outline measured at 40 heights on the Kroger front packshot: rounded cap, short neck, broad rounded shoulder (widest about 40% down), a waist with grip flutes, straight label panel and a petaloid base.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/p/0088949700824",
+          "imageUrl": "https://www.kroger.com/product/images/xlarge/front/0088949700824",
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "Front packshot (440x1000) of the current US 64 fl oz bottle: white ribbed cap over a clear tamper ring, short neck, broad rounded shoulder with corner bevels, a waist with three tapered grip flutes on each side panel, straight label panel, petaloid base; pale amber juice. Label: dark green Juicy Juice wordmark on white, green \"100% JUICE\" band, green NO SUGAR ADDED / NO ARTIFICIAL SWEETENERS flag, a 100% Vitamin C seal, a striped balloon, a NEW LOOK sticker; below, a flat landscape (hills, trees, lake, canoe) with a large red apple with a leaf and a cut apple, \"APPLE\" and \"64 FL OZ (2 QT) (1.89L)\" in white."
+        },
+        {
+          "pageUrl": "https://juicyjuice.com/products/apple/",
+          "imageUrl": "https://juicyjuice.com/wp-content/uploads/2025/03/apple-64-oz.png",
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "Brand-site render (354x842) of the same bottle and label design; used to confirm the label is the current one and the bottle outline (it agrees with the Kroger front within a few percent)."
+        }
+      ],
+      "uncertainty": "The NEW LOOK sticker is left out (promo). The landscape is traced from the flat label art by color and simplified; the plane, canoe and cyclist are dropped and tree fruit kept only as dots. The big apple and the cut apple are traced silhouettes shaded by hand (no speckles). Small lines (flag claims, APPLE, ingredients line, 64 FL OZ) are Arial. The shoulder bevels, grip flutes and base feet are drawn from the photo but simplified.",
+      "status": "needs-review",
+      "bevId": "78376c87-91e5-5267-a665-d1ed8f0cf293",
+      "name": "Apple Juice",
+      "brand": "Juicy Juice",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/juicy-juice-apple.svg",
+        "portableSvg": "portable-svg/juicy-juice-apple.svg",
+        "png": "png/juicy-juice-apple.png",
+        "svgSha256": "785215279ff3956ef296d3fa72b13e5b8fa0832f51b610b3fea6fe914d668f3b",
+        "portableSvgSha256": "e33de1a302ab924bc0734d408818bcdb3efad883779566a161717bab14ced2e3",
+        "pngSha256": "39c38380b6fbbb28362b4aae15e5a05805e312e30e59ad5a901593c38ff33de8",
+        "pngBytes": 157167
+      },
+      "sourceModule": "scripts/icons/families/redraw-r6-juice.mjs"
+    },
+    {
+      "slug": "minute-maid-apple-juice",
+      "family": "minute-maid-juice-bottle",
+      "packageChoice": "Minute Maid 100% Apple Juice, US 12 fl oz (355 mL) contour PET bottle with a full green sleeve, the catalog package, as shown on coca-cola.com. Outline measured at 40 heights: black cap, clear neck ring, rounded shoulder, waist, wider base.",
+      "references": [
+        {
+          "pageUrl": "https://www.coca-cola.com/us/en/brands/minute-maid/products/minute-maid-variety-juices",
+          "imageUrl": "https://www.coca-cola.com/content/dam/onexp/us/en/brands/minute-maid/products/variety-juice/minutemaid-prod-apple-allbreakpoints.png",
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "12 fl oz contour bottle, 727 px tall: black ribbed cap, clear neck ring and neck, a rounded shoulder, a waist about a fifth narrower than the shoulder, widening to the base; a full green sleeve. A black banner with a wavy top runs down the front, carrying the white Minute Maid wordmark, \"100% / Apple Juice\" in pale green, \"From Concentrate With Vitamin C\" small, and a large white \"100% Vit C\"; its foot is hidden behind a cut half apple (cream flesh, two seeds) and a whole red apple with dark leaves. 170 calories box and \"12 FL OZ (355 mL)\" at the bottom; nutrition and barcode strips at the side edges."
+        }
+      ],
+      "uncertainty": "The Minute Maid wordmark was retraced from this packshot rather than reused from the 20 oz lemonade lockup, whose line spacing differs on this bottle; it was traced at about 105 px wide, so its serifs are soft. The banner is redrawn from measured edges. \"From Concentrate With Vitamin C\" and the small print are Arial. The fruit is redrawn by hand in three tones; the sleeve speckle is left out. The side strips (nutrition panel, barcode, a dark sliver on the right) are reduced to hairlines.",
+      "status": "needs-review",
+      "bevId": "6aed7049-e35a-5d43-9bdc-efa577b7aa82",
+      "name": "Apple Juice",
+      "brand": "Minute Maid",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/minute-maid-apple-juice.svg",
+        "portableSvg": "portable-svg/minute-maid-apple-juice.svg",
+        "png": "png/minute-maid-apple-juice.png",
+        "svgSha256": "5176530880b0a673c4a71f84752ec7af422e2902ce46085aef5799b31948725c",
+        "portableSvgSha256": "e29eb253a7b27b9b46fa48e65de1dc367194d2204e08d02b11e51bca196cf5f1",
+        "pngSha256": "6cdf64ee2a20abf8fee06e2bc32c2973e1df8fd33e4f41c0158701502da347d4",
+        "pngBytes": 119186
+      },
+      "sourceModule": "scripts/icons/families/redraw-r6-juice.mjs"
     },
     {
       "slug": "arizona-diet-green-tea",
@@ -1106,17 +1134,17 @@
     {
       "slug": "big-red",
       "family": "classic-soda-can",
-      "packageChoice": "Representative US 12 fl oz / 355mL Big Red aluminum can; exact inspected package.",
+      "packageChoice": "US 12 fl oz (355 mL) Big Red can, current design: red can with bubbles, a dark-red splash behind a large slanted white BIG RED with navy outline and blue extrusion, the navy SO SWEET / SO SMOOTH EST. 1937 badge, and 12 OZ below.",
       "references": [
         {
           "pageUrl": "https://www.kroger.com/p/big-red-soda/0007181703329",
-          "imageUrl": "https://www.kroger.com/product/images/large/front/0007181703329",
-          "inspectedAt": "2026-11-11",
+          "imageUrl": "https://www.kroger.com/product/images/xlarge/front/0007181703329",
+          "inspectedAt": "2026-11-18",
           "visuallyInspected": true,
-          "observations": "Exact retailer US12oz Big Red regular can inspected beside carton: red body with tiny gold/red bubbles, stacked italic white BIG RED with navy shadow outline, small round since1937 seal lower-right. External12OZ retail annotation omitted; not Big Red Zero."
+          "observations": "Dry render of a 12-pack with one front-on can (about 415 px wide): red body darker at the edges, light bubbles in the top third and around 12 OZ, a dark-red splash with cream drips behind the mark, BIG RED in white slanted letters rising to the right with a navy outline and blue 3D extrusion down-left, lavender shading on the letter bottoms, ® after RED, a navy badge with a cream centre (EST. 1937 in red) lower right, white 12 OZ with a dark-red outline near the bottom."
         }
       ],
-      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "uncertainty": "The dark-red splash burst behind the mark is reduced to a soft darker glow (its cream drips are traced); bubbles are circles fitted to the render at low opacity, densest in the top third, a few around 12 OZ. The lockup is drawn at the size measured on the render (about 73 % of the can width, 46 % of its height). The mark is traced as seen on the curve, vertically stretched about 4 % to the house can proportion. The badge ring text (SO SWEET / SO SMOOTH) and EST. 1937 are traced but are legible only at full size.",
       "status": "needs-review",
       "bevId": "690b9cb5-235f-5882-b66c-171e62743aef",
       "name": "Big Red",
@@ -1127,12 +1155,12 @@
         "svg": "svg/big-red.svg",
         "portableSvg": "portable-svg/big-red.svg",
         "png": "png/big-red.png",
-        "svgSha256": "94a1dc2f7f2f7ff16c5833a2bd2d7dd71676f6e6c96cb45569a14a3e2cb40283",
-        "portableSvgSha256": "e21a543285405d98873664eeda92a98c8f7af30de74e06d498f48181899e574c",
-        "pngSha256": "d147a8fa59e57071597f6a4a7fd9958840885006a1de9b919e4e851c2f41d8b4",
-        "pngBytes": 105117
+        "svgSha256": "a40116e5a20d1f196b97ed6c187b7ed5da945930318e0d90075518316449998a",
+        "portableSvgSha256": "453d4345936628af78d0493913d1f242bcf6fd675b142d22edef5fd57bbc9a41",
+        "pngSha256": "a3001e6587969e9031119cecc047bac5bff78d78ee0f965f0c6057e8f6ccbfa8",
+        "pngBytes": 161238
       },
-      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-cans-a.mjs"
     },
     {
       "slug": "naked-juice-blue-machine",
@@ -1671,17 +1699,17 @@
     {
       "slug": "c4-energy-frozen-bombsicle",
       "family": "c4-energy-can",
-      "packageChoice": "Representative US 16 fl oz / 473mL C4 Frozen Bombsicle aluminum can, exact inspected package.",
+      "packageChoice": "US 16 fl oz / 473 mL C4 Performance Energy Frozen Bombsicle can, current \"new look\" design (the promo sticker on the packshot is left out): yellow can, giant C4 running up the can, red, white and blue ice-pop art down the left, icy blue top band.",
       "references": [
         {
           "pageUrl": "https://cellucor.com/products/c4-performance-energy-frozen-bombsicle",
           "imageUrl": "https://cellucor.com/cdn/shop/files/C4BEV_3114_Digital_FrozenBomb_Wave0_Performance_BasicPDPs-Hero-Grey-Sticker.png?v=1775067428&width=1000",
-          "inspectedAt": "2026-11-11",
+          "inspectedAt": "2026-11-18",
           "visuallyInspected": true,
-          "observations": "Exact manufacturer current Performance Energy16oz Frozen Bombsicle can inspected: yellow main body, oversized vertical black C4, blue vertical PERFORMANCE ENERGY, blue flavor shoulder strip, red/blue/white fractured ice graphics down left, black ZERO SUGAR footer. Promotional NEW LOOK NEW FORMULA label outside can excluded. Manufacturer states redesigned package; documented selected revision, not old yellow/black formula."
+          "observations": "Front-on 16 oz can render with a \"NEW LOOK, NEW FORMULA\" sticker at the upper right. Yellow body. Icy blue top band with red streaks and a frosted lower edge, \"FROZEN BOMBSICLE\" in white condensed italic with a dark blue outline and \"NATURALLY AND ARTIFICIALLY FLAVORED\" beneath. Black \"200MG CAFFEINE\" pill with a bomb icon. A very large glossy black C4 with a silver outline runs up the middle of the can, reading bottom to top (turned 90 degrees, italic face). \"PERFORMANCE ENERGY\" in blue italic runs up the right side. Down the left: a red, white and blue rocket ice pop, shattered ice shards and red/white/blue shaved ice with a blue band. \"ZERO SUGAR\", \"ENERGY DRINK\" and \"16 fl oz (473 mL)\" in black at the foot."
         }
       ],
-      "uncertainty": "Catalog has no package size. Exact photographed package selected; label art, wordmarks, tiny claims and fine illustrations simplified as original vectors.  Final aesthetic approval and web-device review pending.",
+      "uncertainty": "No flat public vector of the C4 mark was found (one search, nothing on Wikimedia Commons), so the mark is traced from the packshot with mild cylinder correction; its rotation and lean are as traced. The ice pop and shards are simplified hand-built shapes at measured positions. The crushed ice is about 55 hand-placed angular chunks (light face plus one shaded facet) in white, pale blue, red, pink and blue clusters following the packshot zones, larger toward the yellow and finer toward the can edge; individual chunks do not match the real art one to one. 200MG CAFFEINE, ENERGY DRINK and the volume line are Arial set to the measured length; the bomb icon is reduced to a black ball and spark.",
       "status": "needs-review",
       "bevId": "ca3f14fc-f6d4-5080-8310-304e7838a38d",
       "name": "C4 Energy Frozen Bombsicle",
@@ -1692,12 +1720,12 @@
         "svg": "svg/c4-energy-frozen-bombsicle.svg",
         "portableSvg": "portable-svg/c4-energy-frozen-bombsicle.svg",
         "png": "png/c4-energy-frozen-bombsicle.png",
-        "svgSha256": "3c1bf859be0f487b13aa7d67b5c020519f29bccf8bb966f5e802e5f7bfd24038",
-        "portableSvgSha256": "f91554b6749755305080738d15c3bb89013c8b4aa89f92c47cef7e1391b03c2a",
-        "pngSha256": "3ca2d4fdbece4d0e8bbd8f3d859af455035faa65e922886cc92afefe0bef3e9b",
-        "pngBytes": 137894
+        "svgSha256": "244113c504103d8d832526fd7ddb5294022a390e62d162916670dd97cf14306d",
+        "portableSvgSha256": "26011bcea12d78d6f6070c05f67ff0f1a17360756d99f62f5c009bc611ad3b96",
+        "pngSha256": "a28ac80ed3bab3a2432892e9e8dfd82106a03d2b34ec1fbbdda7880412aa7327",
+        "pngBytes": 182553
       },
-      "sourceModule": "scripts/icons/families/energy-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-cans-b.mjs"
     },
     {
       "slug": "calpico-original",
@@ -1840,17 +1868,17 @@
     {
       "slug": "jamba-juice-caribbean-passion",
       "family": "jamba-served-smoothie",
-      "packageChoice": "US café Caribbean Passion in the actual clear Jamba serving cup shown by manufacturer; representative standard serving, volume not inferred from photo.",
+      "packageChoice": "US Jamba Caribbean Passion in the clear tapered Jamba serving cup with the white swirl mark and an orange straw, as on the manufacturer thumbnail; the cup, mark and colors are the family recipe unchanged, only the straw now stands in front of the rim in the smoothie.",
       "references": [
         {
           "pageUrl": "https://www.jamba.com/menu/smoothies/caribbean-passion",
           "imageUrl": "https://ctfassets.gotofoods.com/zqt8tllj2cy0/6Ajsy506KWvmcvBHTjThtU/3db41a612787b20ec1a810cf9f51c60a/JAM-caribbean-passion-thumbnail-544x544.png",
-          "inspectedAt": "2026-11-04",
+          "inspectedAt": "2026-11-18",
           "visuallyInspected": true,
-          "observations": "Exact manufacturer product thumbnail independently visually inspected: Deeper warm coral/orange-pink smoothie with red flecks and raised scoop ridge at center, orange straw, clear tapered cup and white descending swirl logo. Individually inspected, distinct from paler Strawberry Surf Rider. No fruit garnish or lid."
+          "observations": "Deeper warm coral/orange-pink smoothie with red flecks and raised scoop ridge at center, orange straw, clear tapered cup and white descending swirl logo. Individually inspected, distinct from paler Strawberry Surf Rider. No fruit garnish or lid. The straw rises out of the smoothie mound inside the rim."
         }
       ],
-      "uncertainty": "Serving size and venue-specific container variations are not specified by catalog. Fine lettering, texture and package illustrations simplified as original vectors. Final aesthetic approval and native-device review pending.",
+      "uncertainty": "Small fix only: cup outline, size, logo and colors are copied from the jamba() recipe shared with Orange Dream Machine and Strawberry Surf Rider; serving size and venue variations are not specified by the catalog.",
       "status": "needs-review",
       "bevId": "26ac0b47-3c1f-5c73-a193-2d1a2ae52bc6",
       "name": "Caribbean Passion",
@@ -1861,12 +1889,12 @@
         "svg": "svg/jamba-juice-caribbean-passion.svg",
         "portableSvg": "portable-svg/jamba-juice-caribbean-passion.svg",
         "png": "png/jamba-juice-caribbean-passion.png",
-        "svgSha256": "17dfce30bf412d24c717cd231924d9f36c187d70c0036a25a4ed3d748f377dfa",
-        "portableSvgSha256": "10ab23fb9eacea3b1733fb49736e7682f5fc172807e715d00d5cad34b25bc25d",
-        "pngSha256": "740d5faddf661ee5c235e293416a65e36422e7b537f1f6bdb8b3c1fb60e73908",
-        "pngBytes": 124441
+        "svgSha256": "c00a2f39fc07777ba51f0a14670e3752cdf7a7cb89a8e166f996c6a18329d1ac",
+        "portableSvgSha256": "c25a8fbb93a34cffcaf81e31fec6e1cb8b47d8baff27e4ee3b5470ac42a684fe",
+        "pngSha256": "4c951daf9ee170a788e54a9f09959d7f9f2265548fad4555d73b427b39c6da52",
+        "pngBytes": 126044
       },
-      "sourceModule": "scripts/icons/families/starter-smoothies.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-served.mjs"
     },
     {
       "slug": "celsius-arctic-vibe",
@@ -5364,24 +5392,17 @@
     {
       "slug": "horchata-traditional",
       "family": "unbranded-served-drink",
-      "packageChoice": "The common taqueria serve: horchata over ice in a tall, slightly tapered tumbler with a cinnamon stick standing in it and ground cinnamon dusted on top (owner decision). No brand.",
+      "packageChoice": "The common taqueria serve (owner decision): horchata over ice in a tall, slightly tapered clear tumbler with a cinnamon stick standing in it, drawn in front of the rim, and ground cinnamon dusted over the drink and the ice. No brand.",
       "references": [
         {
           "pageUrl": "https://commons.wikimedia.org/wiki/File:Horchata_%2824414538074%29.jpg",
           "imageUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Horchata_%2824414538074%29.jpg?width=2000",
-          "inspectedAt": "2026-11-16",
+          "inspectedAt": "2026-11-18",
           "visuallyInspected": true,
-          "observations": "Tall tapered tumbler, wider at the rim, filled almost to the top with milky warm off-white horchata over large ice cubes that show as tan translucent blocks near the surface; a straw; no cinnamon."
-        },
-        {
-          "pageUrl": "https://commons.wikimedia.org/wiki/File:Horchata_%2850943998568%29.jpg",
-          "imageUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Horchata_%2850943998568%29.jpg?width=2000",
-          "inspectedAt": "2026-11-16",
-          "visuallyInspected": true,
-          "observations": "Seen from above: slightly tapered blown-glass tumbler with a green rim, ice cubes breaking the surface, ground cinnamon dusted over the ice and the drink."
+          "observations": "Tapered tumbler, wider at the rim, filled almost to the top with milky warm off-white horchata over large ice cubes that show as tan translucent blocks near the surface; a striped straw. No cinnamon stick in this photo."
         }
       ],
-      "uncertainty": "The cinnamon stick comes from the owner's serve, not from these two photos. Glass is drawn clear (the green blown-glass rim of the second photo is left out). One cube breaks the surface under the dusting; the other ice is drawn only in the upper half, where it shows through the milky drink in the photo. Side profile measured from a high-angle photo, corrected to the house side view.",
+      "uncertainty": "The cinnamon stick and the dusting follow the owner's serve, not the photo (which has a straw). Glass drawn plain clear. Ice drawn as four cubes at the surface and four faint ones through the milk.",
       "status": "needs-review",
       "bevId": "cff63ba5-9e5c-5272-ac40-58715b1102c0",
       "name": "Horchata",
@@ -5392,12 +5413,12 @@
         "svg": "svg/horchata-traditional.svg",
         "portableSvg": "portable-svg/horchata-traditional.svg",
         "png": "png/horchata-traditional.png",
-        "svgSha256": "a4a6ff0b845050ae3d835620477063f133a2adfb057a73855d949f884e5b7496",
-        "portableSvgSha256": "fccb3edfb9d48fae902e988e55e5ccedc9d3c95ee7223d7aca76024e25ab4b3d",
-        "pngSha256": "a0087b8e9f718955bf204ff7e284ee6bcf8a9a8e562e9e9678274ffd02f6bea0",
-        "pngBytes": 150567
+        "svgSha256": "d3fe9f05f770b4ff30b079ec5a0c477d5b5870232b7b2ba4395c1b215b072398",
+        "portableSvgSha256": "42245834ef79b842d175ae1dbc33c7c29ff17f304040ef7dd3df8e4abb323adf",
+        "pngSha256": "f716b9dca8770587913746029227eb979ffd476b742d491f54d0deb9cf6fae46",
+        "pngBytes": 163042
       },
-      "sourceModule": "scripts/icons/families/redraw-served.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-served.mjs"
     },
     {
       "slug": "generic-house-red-cabernet-sauvignon",
@@ -5471,17 +5492,24 @@
     {
       "slug": "essentia-ionized-alkaline-water",
       "family": "water-expansion",
-      "packageChoice": "1 liter US PET bottle",
+      "packageChoice": "US 1 liter essentia bottle as sold now: tall straight-walled clear PET cylinder with a short domed shoulder, short neck, black ribbed cap, and the narrow front panel (red \"9.5pH OR HIGHER\" bar over a black panel with the vertical white \"essentia\", \"#1 ionized alkaline water\" and the red-and-white E+ mark).",
       "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/-/0065722700033",
+          "imageUrl": "https://www.kroger.com/product/images/xlarge/front/0065722700033",
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "1000 px retail image with the bottle 958 px tall at the left. Cap 7% of height, black and ribbed; flange ring; neck; dome shoulder from 12.5% to 25%; then a straight cylinder (half-width 0.142 H, no waist) to 92.5% and a rounded petaloid base. Front panel is 54% of the bottle width, centered: red bar 31.2-34.4% of height with white \"9.5pH OR HIGHER\", black panel 35.2-85.9% with vertical white \"essentia\" and \"#1 ionized alkaline water\", a white rule at 74.6%, then the E+ mark (three red bars and a white plus)."
+        },
         {
           "pageUrl": "https://essentiawater.com/water/",
           "imageUrl": "https://essentiawater.com/wp-content/uploads/2025/01/1l-l.png",
-          "inspectedAt": "2026-11-04",
+          "inspectedAt": "2026-11-18",
           "visuallyInspected": true,
-          "observations": "Black closure, broad angled shoulders; vertical white essentia on black, red pH bar and red-white cross."
+          "observations": "Manufacturer 280x883 render of the same 1 L bottle; outline proportions agree with the retail image within 1-2%."
         }
       ],
-      "uncertainty": null,
+      "uncertainty": "The panel is drawn at its measured width (about 54% of the bottle) rather than the wider panel of the old icon. The side panels (red pH-quality tag, nutrition text) wrap out of view and are left out. \"9.5pH OR HIGHER\" is traced from about 10 px lettering, so its small words are approximate; \"UNTIL OPENED\" below it is omitted. The packshot shows no waist; the old brief lead expected one, the measured outline is a straight cylinder.",
       "status": "needs-review",
       "bevId": "90d4a90c-84bd-5a49-baa0-38067b1b9411",
       "name": "Ionized Alkaline Water",
@@ -5492,12 +5520,12 @@
         "svg": "svg/essentia-ionized-alkaline-water.svg",
         "portableSvg": "portable-svg/essentia-ionized-alkaline-water.svg",
         "png": "png/essentia-ionized-alkaline-water.png",
-        "svgSha256": "9bd5cea478a71c5c8331636b9da13ee0b64752c6bdfbbd5bc9f716ff6f829249",
-        "portableSvgSha256": "e6917064150d045ad58437edaeed49588b4ce2f8fc57c50caac0c60e5fccd01b",
-        "pngSha256": "117d47c7d679f001a896f2c6e02f4f34ae0918859e8f267b1de2140a770ea956",
-        "pngBytes": 39222
+        "svgSha256": "339a13cacb283d760a28ae828da2f7ad45c0b71300a6405ec1f7ba5f97d772be",
+        "portableSvgSha256": "97a7f4f47a841b83bd5194e4cea74b5298264941a0ca8c8d59299b955fac9013",
+        "pngSha256": "8b8f6e7d3ee1bdfe5688e80547c89f764e4c949d3515d9e51a52ad71bb73bdc4",
+        "pngBytes": 66595
       },
-      "sourceModule": "scripts/icons/families/water-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-waters-b.mjs"
     },
     {
       "slug": "illy-issimo-cappuccino",
@@ -5533,17 +5561,24 @@
     {
       "slug": "ito-en-matcha-green-tea",
       "family": "tea-expansion",
-      "packageChoice": "US 16.9 fl oz / 500mL ITO EN Oi Ocha Cold Brew Matcha Green Tea unsweetened PET bottle.",
+      "packageChoice": "US 16.9 fl oz / 500 mL ITO EN Oi Ocha Cold Brew Matcha Green Tea unsweetened PET bottle (the current Cold Brew design on itoen.com), front on.",
       "references": [
         {
           "pageUrl": "https://itoen.com/products/cold-brew-matcha-green-tea",
           "imageUrl": "https://itoen.com/cdn/shop/files/OiOchaColdBrewNew_1.png?v=1757621864&width=1200",
-          "inspectedAt": "2026-11-04",
+          "inspectedAt": "2026-11-18",
           "visuallyInspected": true,
-          "observations": "Separate manufacturer Matcha bottle inspected: bright lime-green cap and neck, green shoulder bearing ITO EN logo; pale yellow/cream body with thin lime and pink horizontal lines, dark-green Japanese Oi Ocha lettering/red seal, English Oi Ocha, large blue Cold Brew, green MATCHA GREEN TEA and Unsweetened. Molded lower rib details."
+          "observations": "Front-on 500 mL PET bottle with a lime-green ridged cap, clear support ring, full sleeve: yellow-green at the shoulder fading to pale cream with thin pastel horizontal stripes, green tint at the base, molded rings low on the body. ITO EN leaf and wordmark on the green shoulder, calligraphy お〜いお茶 in dark green, red 抹茶入り seal, \"Oi Ocha\" serif, \"Cold Brew\" in cyan, \"MATCHA GREEN TEA\" condensed, \"Unsweetened\", \"16.9 fl oz (1.06 pt) 500 mL\", a dark green \"0 calories\" badge at the right edge."
+        },
+        {
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:ITO_EN_logo.svg",
+          "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/0/03/ITO_EN_logo.svg",
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "Flat vector of the ITO EN corporate logo: four-lobed green leaf mark beside 伊藤園. Only the leaf mark was traced (rendered at 1920 px), fitted to the leaf position on the bottle."
         }
       ],
-      "uncertainty": "Representative US package size chosen for size-unspecified catalog row. Exact reference inspected; brand lettering, fruit graphics and tiny legal copy simplified as original vectors. Catalog names no sub-brand/size; explicitly selected manufacturer ready-to-drink Oi Ocha Cold Brew Matcha Green Tea version. Japanese mark simplified as deterministic brush geometry; tiny seal characters omitted. Final aesthetic approval and native-device review pending.",
+      "uncertainty": "This bottle has a steeper shoulder than the regular Oi Ocha bottle, so each icon has its own measured outline. The pastel stripes are sampled from one column of the packshot and run straight across. The \"0 calories\" badge is reduced to a dark green tile at the right edge without its lettering. The sleeve covers the whole body, so no tea shows below it; only the cap, ring and neck differ from the label.",
       "status": "needs-review",
       "bevId": "0bedfd48-3c66-5e2d-ad29-4f3f9590f58f",
       "name": "Ito En Matcha Green Tea",
@@ -5554,27 +5589,34 @@
         "svg": "svg/ito-en-matcha-green-tea.svg",
         "portableSvg": "portable-svg/ito-en-matcha-green-tea.svg",
         "png": "png/ito-en-matcha-green-tea.png",
-        "svgSha256": "0c769fc53aa175efbba408345b841e0e107efb6dc4cc6484d0656debec71ff87",
-        "portableSvgSha256": "5ec84848f11043aee2440a0eb2cdf1a02d0c1e2ea8185ce866c3ce2339dc5e6b",
-        "pngSha256": "2b98910fcc713a54aab5d862d8ce8105c85df28e73ceb2459586161cbee4a42c",
-        "pngBytes": 96723
+        "svgSha256": "40752a9eeecd280a65b03afc72ae535d949fc4b2baa7aaa7e7fac468b4d63489",
+        "portableSvgSha256": "90f7a261867967f713cfdd9deb0e74bfdef487a1f711ebab6515d22871898102",
+        "pngSha256": "cabb5dbfcc342cdb0c9b2cb0de58f34f40c2c52db7e15c21c7fcd514d41fc021",
+        "pngBytes": 128052
       },
-      "sourceModule": "scripts/icons/families/tea-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-tea-carton.mjs"
     },
     {
       "slug": "ito-en-oi-ocha-green-tea",
       "family": "tea-expansion",
-      "packageChoice": "US 16.9 fl oz / 500mL ITO EN Oi Ocha Unsweetened Green Tea PET bottle with white cap.",
+      "packageChoice": "US 16.9 fl oz / 500 mL ITO EN Oi Ocha Unsweetened Green Tea PET bottle with white cap, current itoen.com packshot, front on.",
       "references": [
         {
           "pageUrl": "https://itoen.com/products/unsweetened-green-tea",
           "imageUrl": "https://itoen.com/cdn/shop/products/Oi-Ocha-Green-1.jpg?v=1643216018&width=1200",
-          "inspectedAt": "2026-11-04",
+          "inspectedAt": "2026-11-18",
           "visuallyInspected": true,
-          "observations": "Manufacturer bottle inspected: white screw cap, amber-green tea at clear neck; tapered shoulders, green sleeve with fine vertical bamboo-like striations and green shoulder ITO EN clover logo; large dark-green vertical Japanese Oi Ocha lettering, small red seal, English Oi Ocha / Unsweetened Green Tea; molded upper/lower ribs."
+          "observations": "Front-on 500 mL PET bottle: ridged white cap, clear neck and shoulder showing amber tea, green full-body shrink sleeve from the shoulder to the base (darker band under the logo, darker green base band), molded rings on the lower third. ITO EN leaf mark and italic wordmark at the top, brush calligraphy お〜いお茶 in dark green, red 緑茶 seal at the left of 茶, \"Oi Ocha\" in italic serif, \"Unsweetened Green Tea\", grey \"5 calories per bottle\" badges at both sides, \"16.9 fl oz (1.06 pt) 500mL\" at the bottom."
+        },
+        {
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:ITO_EN_logo.svg",
+          "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/0/03/ITO_EN_logo.svg",
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "Flat vector of the ITO EN corporate logo: four-lobed green leaf mark beside 伊藤園. Only the leaf mark was traced (rendered at 1920 px), fitted to the leaf position on the bottle."
         }
       ],
-      "uncertainty": "Representative US package size chosen for size-unspecified catalog row. Exact reference inspected; brand lettering, fruit graphics and tiny legal copy simplified as original vectors. Japanese wordmark is simplified deterministic brush geometry. Tiny seal characters, nutrition badges and microcopy omitted. Final aesthetic approval and native-device review pending.",
+      "uncertainty": "Outline from per-row widths of the packshot (mirrored), so the cap, support ring, shoulder, sleeve bulge and the rib wiggle of the lower third are measured; the rib lines on the sleeve are evenly spaced approximations. The sleeve's fine vertical texture and the faint wrapped calligraphy at the far right edge are left out. The red seal is a red tile with its white characters traced from the packshot; the sleeve streaks are evenly spaced hairlines. The \"5 calories\" badges are reduced to grey tiles with the numeral. The ITO EN wordmark is traced from the sharper Cold Brew packshot and shifted to this bottle's logo position; the volume line is traced separately at a finer setting from a curved part of the sleeve.",
       "status": "needs-review",
       "bevId": "68f358af-dac8-5d66-a105-d8edb7632080",
       "name": "Ito En Oi Ocha Green Tea",
@@ -5585,12 +5627,12 @@
         "svg": "svg/ito-en-oi-ocha-green-tea.svg",
         "portableSvg": "portable-svg/ito-en-oi-ocha-green-tea.svg",
         "png": "png/ito-en-oi-ocha-green-tea.png",
-        "svgSha256": "02c7ebb1a3f949f31cceaf827bd314ba79df3db82c60ea559cdd17fb05793342",
-        "portableSvgSha256": "153bfca18f2b4d5e07db94d8de4f9720aecd34dfe13a8a7535a8ebab5f2581d0",
-        "pngSha256": "58b71822a48bb26fe2d5a7646b44a8006d8a1031f4f4e072cf322352e6861b52",
-        "pngBytes": 72034
+        "svgSha256": "0946496c207e4d347d9f2ec444031adc79da72796c58a637de884648730cdfbd",
+        "portableSvgSha256": "2331d9c6a552074e313dd5c62b3ddd9b0d7d67ab1485e10a18ff9f2167305190",
+        "pngSha256": "f44ffb5cd50731eeb4598cf444bbfe533249af0fecddae92f0a0eff37e68011a",
+        "pngBytes": 84393
       },
-      "sourceModule": "scripts/icons/families/tea-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-tea-carton.mjs"
     },
     {
       "slug": "jack-daniels-and-coke",
@@ -5626,17 +5668,24 @@
     {
       "slug": "jarritos-fruit-punch",
       "family": "jarritos-glass-bottle",
-      "packageChoice": "Manufacturer-documented Fruit Punch long-neck glass bottle, silver crown closure; exact volume not confidently established from photograph.",
+      "packageChoice": "Current US Jarritos 12.5 fl oz (370 mL) clear glass bottle, sealed with the silver crown cap, front on; one shared outline for all eight flavors.",
       "references": [
         {
           "pageUrl": "https://jarritos.com/flavor/fruitpunch/",
           "imageUrl": "https://jarritos.com/wp-content/uploads/2025/01/Jarritos-Fruit-Punch-3.jpg",
-          "inspectedAt": "2026-11-02",
+          "inspectedAt": "2026-11-18",
           "visuallyInspected": true,
-          "observations": "Manufacturer Fruit Punch bottle in ice independently inspected: clear long-neck bottle with silver crown cap and vivid deep-red soda; green/orange three-jug mark, orange/white green-lettered JARRITOS banner, distinct Fruit Punch line and Natural Flavor Soda below. Red liquid differs from lighter coral Guava. Tiny volume text obscured by ice/perspective; exact volume unverified."
+          "observations": "Bottle lying diagonally in crushed ice: clear glass, silver crown, deep red soda (sampled #c3171b), standard jug logo and plaque with \"Fruit Punch\" and \"Natural Flavor Soda\"."
+        },
+        {
+          "pageUrl": "https://jarritos.com/flavor/tamarind/",
+          "imageUrl": "https://jarritos.com/wp-content/uploads/2025/03/Jarritos-Tamarind.jpg",
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "Straight-on Jarritos 370 mL bottle used to measure the outline: crown 116-150 px, neck 97 px wide widening to 110 px by the fill line, shoulder from 346 px to 566 px, body 225 px wide down to 920 px, base rounded to 985 px (height to width 3.86). Embossed JARRITOS sits at 525-560 px, label plaque at 690-775 px."
         }
       ],
-      "uncertainty": "Each exact flavor photo inspected separately. Manufacturer lifestyle photographs, lighting and condensation limit exact color/volume precision; selected appearance and closure are documented per variant. Shared geometry extends the Mandarin pilot, while tint, liquid and flavor lettering follow each reference. Fine molded lettering, tiny legal text and jug details simplified; final aesthetic approval and native-device review pending.",
+      "uncertainty": "Outline measured on one straight-on shot (Tamarind) and applied to all flavors; the molded shoulder ripples are reduced to six soft strokes and the embossed JARRITOS is Arial Bold at very low contrast, not the molded letterforms. Condensation left out. The label is the earlier praised label scaled by .74, which matches the logo height on the Tamarind shot (jug top to plaque bottom about 43 units); the plaque comes out wider than the real one, so the label is not reduced further; \"370 mL\" and \"MADE IN MEXICO\" are omitted. Liquid colour sampled from a tilted lifestyle photo, so lighting shifts it slightly.",
       "status": "needs-review",
       "bevId": "dcfeeccb-259a-5c9c-b295-a9ea379374e0",
       "name": "Jarritos Fruit Punch",
@@ -5647,27 +5696,34 @@
         "svg": "svg/jarritos-fruit-punch.svg",
         "portableSvg": "portable-svg/jarritos-fruit-punch.svg",
         "png": "png/jarritos-fruit-punch.png",
-        "svgSha256": "96edb7192cd5fd9bbfbc8b4931bbce38d3c0ecf8c909c83607f4a2f7113c5d17",
-        "portableSvgSha256": "c334e849b0d40084cc3918b59d1eccd508173c84c808ea184fafc3690b4e7ea2",
-        "pngSha256": "ea016c16c05b783cda91348e0228c6eb2bb64c44e8a37fb26e69aead5a2a6ac7",
-        "pngBytes": 104498
+        "svgSha256": "a90338ac28cd8a436cb4cddabccbec697859083674f619402c584a68da8d5fd4",
+        "portableSvgSha256": "25bff0dc47dbaf82edacc537ae77b700eb19fba78204a1450518dcb188c72ec3",
+        "pngSha256": "e6a3753190c20ff243ec94000cc2e9f52ffb2d62ad50ffeab88fc24ac133f706",
+        "pngBytes": 97812
       },
-      "sourceModule": "scripts/icons/families/jarritos-variants.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-jarritos.mjs"
     },
     {
       "slug": "jarritos-grapefruit",
       "family": "jarritos-glass-bottle",
-      "packageChoice": "Manufacturer-documented Grapefruit long-neck glass bottle, silver crown closure; exact volume not confidently established from photograph.",
+      "packageChoice": "Current US Jarritos 12.5 fl oz (370 mL) clear (green-tinted for this flavor) glass bottle, sealed with the silver crown cap, front on; one shared outline for all eight flavors.",
       "references": [
         {
           "pageUrl": "https://jarritos.com/flavor/grapefruit/",
           "imageUrl": "https://jarritos.com/wp-content/uploads/2025/01/Jarritos-Grapefruit-8.jpg",
-          "inspectedAt": "2026-11-02",
+          "inspectedAt": "2026-11-18",
           "visuallyInspected": true,
-          "observations": "Manufacturer Grapefruit close-up independently inspected: green-tinted long-neck glass including empty neck, silver crown cap, pale translucent soda with overall green appearance through glass, embossed shoulder lettering; green/orange jug mark, orange/white banner with green JARRITOS, white Grapefruit flavor and Natural Flavor Soda. Green appearance follows this photo; glass tint is represented separately from liquid. Volume text appears 12.5 FL OZ / 370mL but perspective limits certainty."
+          "observations": "Bottle lying diagonally on oranges: the whole bottle reads green, neck included (headspace sampled #676c18 over orange, body #3d7a0b), so green-tinted glass; silver crown, standard label with \"Grapefruit\"."
+        },
+        {
+          "pageUrl": "https://jarritos.com/flavor/tamarind/",
+          "imageUrl": "https://jarritos.com/wp-content/uploads/2025/03/Jarritos-Tamarind.jpg",
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "Straight-on Jarritos 370 mL bottle used to measure the outline: crown 116-150 px, neck 97 px wide widening to 110 px by the fill line, shoulder from 346 px to 566 px, body 225 px wide down to 920 px, base rounded to 985 px (height to width 3.86). Embossed JARRITOS sits at 525-560 px, label plaque at 690-775 px."
         }
       ],
-      "uncertainty": "Each exact flavor photo inspected separately. Manufacturer lifestyle photographs, lighting and condensation limit exact color/volume precision; selected appearance and closure are documented per variant. Shared geometry extends the Mandarin pilot, while tint, liquid and flavor lettering follow each reference. Fine molded lettering, tiny legal text and jug details simplified; final aesthetic approval and native-device review pending.",
+      "uncertainty": "Outline measured on one straight-on shot (Tamarind) and applied to all flavors; the molded shoulder ripples are reduced to six soft strokes and the embossed JARRITOS is Arial Bold at very low contrast, not the molded letterforms. Condensation left out. The label is the earlier praised label scaled by .74, which matches the logo height on the Tamarind shot (jug top to plaque bottom about 43 units); the plaque comes out wider than the real one, so the label is not reduced further; \"370 mL\" and \"MADE IN MEXICO\" are omitted. Liquid colour sampled from a tilted lifestyle photo, so lighting shifts it slightly.",
       "status": "needs-review",
       "bevId": "1e078af1-0f32-5886-82d7-e71958922abd",
       "name": "Jarritos Grapefruit",
@@ -5678,27 +5734,34 @@
         "svg": "svg/jarritos-grapefruit.svg",
         "portableSvg": "portable-svg/jarritos-grapefruit.svg",
         "png": "png/jarritos-grapefruit.png",
-        "svgSha256": "6508912eacb29098b9ff5d01b2c3b24f4511fb6e6d0c05eca5e50bc72677be97",
-        "portableSvgSha256": "791e98f267e30638715274c2dc7981d28fa67ef957c299ec594c6a2f86d7cddf",
-        "pngSha256": "8bc72e08ae0240308f9715b31f859b7177b06b1fec8781ca7f912cd16624d754",
-        "pngBytes": 95656
+        "svgSha256": "408660af1bc4a68da67bc8b0beef10cdc589dcacfdd1042fdb7980bc7d8bef54",
+        "portableSvgSha256": "56db381788736354fad56e021919ccaa268aa5ffe26bc6ab5d679874d922d9e7",
+        "pngSha256": "4f3a3f264e96816598a35b5908d2b49360d22d8efbc87227ff901efb851b8f5a",
+        "pngBytes": 99024
       },
-      "sourceModule": "scripts/icons/families/jarritos-variants.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-jarritos.mjs"
     },
     {
       "slug": "jarritos-guava",
       "family": "jarritos-glass-bottle",
-      "packageChoice": "Manufacturer-documented Guava long-neck glass bottle, open serving as photographed; 370mL marking observed.",
+      "packageChoice": "Current US Jarritos 12.5 fl oz (370 mL) clear glass bottle, sealed with the silver crown cap, front on; one shared outline for all eight flavors.",
       "references": [
         {
           "pageUrl": "https://jarritos.com/flavor/guava/",
           "imageUrl": "https://jarritos.com/wp-content/uploads/2024/03/Jarritos-Guava-1.jpg",
-          "inspectedAt": "2026-11-02",
+          "inspectedAt": "2026-11-18",
           "visuallyInspected": true,
-          "observations": "Manufacturer Guava photo independently inspected: open clear long-neck glass bottle, coral-pink slightly cloudy soda, visible empty neck and molded JARRITOS shoulder lettering; green/orange three-jug mark, white/orange banner with green JARRITOS, green-edged white Guava flavor line and Natural Flavor Soda. Side print reads 12.5 FL OZ / 370mL. Closure is intentionally open as photographed."
+          "observations": "Hand holding the bottle up among magnolia blossoms, tilted: clear glass, coral-pink opaque soda (sampled #ed8b80 to #f99183), standard label with \"Guava\"."
+        },
+        {
+          "pageUrl": "https://jarritos.com/flavor/tamarind/",
+          "imageUrl": "https://jarritos.com/wp-content/uploads/2025/03/Jarritos-Tamarind.jpg",
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "Straight-on Jarritos 370 mL bottle used to measure the outline: crown 116-150 px, neck 97 px wide widening to 110 px by the fill line, shoulder from 346 px to 566 px, body 225 px wide down to 920 px, base rounded to 985 px (height to width 3.86). Embossed JARRITOS sits at 525-560 px, label plaque at 690-775 px."
         }
       ],
-      "uncertainty": "Each exact flavor photo inspected separately. Manufacturer lifestyle photographs, lighting and condensation limit exact color/volume precision; selected appearance and closure are documented per variant. Shared geometry extends the Mandarin pilot, while tint, liquid and flavor lettering follow each reference. Fine molded lettering, tiny legal text and jug details simplified; final aesthetic approval and native-device review pending.",
+      "uncertainty": "Outline measured on one straight-on shot (Tamarind) and applied to all flavors; the molded shoulder ripples are reduced to six soft strokes and the embossed JARRITOS is Arial Bold at very low contrast, not the molded letterforms. Condensation left out. The label is the earlier praised label scaled by .74, which matches the logo height on the Tamarind shot (jug top to plaque bottom about 43 units); the plaque comes out wider than the real one, so the label is not reduced further; \"370 mL\" and \"MADE IN MEXICO\" are omitted. Liquid colour sampled from a tilted lifestyle photo, so lighting shifts it slightly.",
       "status": "needs-review",
       "bevId": "4df2d5ec-9f14-51e2-bf4b-2136e75da53d",
       "name": "Jarritos Guava",
@@ -5709,27 +5772,34 @@
         "svg": "svg/jarritos-guava.svg",
         "portableSvg": "portable-svg/jarritos-guava.svg",
         "png": "png/jarritos-guava.png",
-        "svgSha256": "93c38787744e0af5826c607e9fd3b4a948322fd924302f71c3705e71282dc68f",
-        "portableSvgSha256": "6eb3e81f99943e336067c5b4f61f840ca32026075e4b1ac3558549055ae298f2",
-        "pngSha256": "450e763561ec731110f1c91848a9f45527330b325e54a5fc717f0bf39fd5d956",
-        "pngBytes": 105027
+        "svgSha256": "9efe0cedbec3f439f8f2058364fb46ae076cd27828c7a6e0f1ff6bcffb57e5e5",
+        "portableSvgSha256": "cfd0b3601fe8499f6df261506936315cbc61fada7773651e1031c38036a09e66",
+        "pngSha256": "31a5c93e69081c871cdb919e973e6300d0839686d8e6d61bbb000f21f3fe2946",
+        "pngBytes": 92915
       },
-      "sourceModule": "scripts/icons/families/jarritos-variants.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-jarritos.mjs"
     },
     {
       "slug": "jarritos-lime",
       "family": "jarritos-glass-bottle",
-      "packageChoice": "Manufacturer-documented Lime long-neck glass bottle, silver crown closure; exact volume not confidently established from photograph.",
+      "packageChoice": "Current US Jarritos 12.5 fl oz (370 mL) clear glass bottle, sealed with the silver crown cap, front on; one shared outline for all eight flavors.",
       "references": [
         {
           "pageUrl": "https://jarritos.com/flavor/lime/",
           "imageUrl": "https://jarritos.com/wp-content/uploads/2024/01/Jarritos-Lime-7.jpg",
-          "inspectedAt": "2026-11-02",
+          "inspectedAt": "2026-11-18",
           "visuallyInspected": true,
-          "observations": "Manufacturer Lime photo individually inspected: clear long-neck glass bottle, silver crown cap, vivid chartreuse/lime-yellow soda, green three-jug mark with orange lower portions, orange/white banner with green JARRITOS, white Lime lettering with dark-green edge, Natural Flavor Soda underneath. Empty upper neck is clear; liquid is bright green-yellow. Photo volume is not legible."
+          "observations": "Near straight-on bottle among limes on pink: clear glass, silver crown, chartreuse soda (sampled #cedc01 to #e6de4a), embossed JARRITOS on the shoulder, standard label with \"Lime\". Confirms the outline measured on the Tamarind shot."
+        },
+        {
+          "pageUrl": "https://jarritos.com/flavor/tamarind/",
+          "imageUrl": "https://jarritos.com/wp-content/uploads/2025/03/Jarritos-Tamarind.jpg",
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "Straight-on Jarritos 370 mL bottle used to measure the outline: crown 116-150 px, neck 97 px wide widening to 110 px by the fill line, shoulder from 346 px to 566 px, body 225 px wide down to 920 px, base rounded to 985 px (height to width 3.86). Embossed JARRITOS sits at 525-560 px, label plaque at 690-775 px."
         }
       ],
-      "uncertainty": "Each exact flavor photo inspected separately. Manufacturer lifestyle photographs, lighting and condensation limit exact color/volume precision; selected appearance and closure are documented per variant. Shared geometry extends the Mandarin pilot, while tint, liquid and flavor lettering follow each reference. Fine molded lettering, tiny legal text and jug details simplified; final aesthetic approval and native-device review pending.",
+      "uncertainty": "Outline measured on one straight-on shot (Tamarind) and applied to all flavors; the molded shoulder ripples are reduced to six soft strokes and the embossed JARRITOS is Arial Bold at very low contrast, not the molded letterforms. Condensation left out. The label is the earlier praised label scaled by .74, which matches the logo height on the Tamarind shot (jug top to plaque bottom about 43 units); the plaque comes out wider than the real one, so the label is not reduced further; \"370 mL\" and \"MADE IN MEXICO\" are omitted. Liquid colour sampled from a tilted lifestyle photo, so lighting shifts it slightly.",
       "status": "needs-review",
       "bevId": "ea8e50b3-d9ae-5144-b7bb-a54f67d51e5a",
       "name": "Jarritos Lime",
@@ -5740,27 +5810,34 @@
         "svg": "svg/jarritos-lime.svg",
         "portableSvg": "portable-svg/jarritos-lime.svg",
         "png": "png/jarritos-lime.png",
-        "svgSha256": "d49fe4d0c7c375bc92cda32e2ca45f78511316e035d46949671b082607c5dc7a",
-        "portableSvgSha256": "e2812338b09c5d0588cab986becf070bb470498dd808883fba0302924171e120",
-        "pngSha256": "e4bf62864a2c3093736e28d31d79a61c25b1d62403858fcaade7623e94ad9216",
-        "pngBytes": 102330
+        "svgSha256": "8d983afeda3a98fab41240a4225b86019d819818cffd0b374d95f507f5106b4b",
+        "portableSvgSha256": "512e5024cea675a4bb85a05cd7a5277eef22e239060e5371005c4d1c42d901a2",
+        "pngSha256": "5d3c8e0d3e21c716c39f3e94006513ae34a6f36905cd6f4431672978273518d9",
+        "pngBytes": 95012
       },
-      "sourceModule": "scripts/icons/families/jarritos-variants.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-jarritos.mjs"
     },
     {
       "slug": "jarritos-mandarin",
-      "family": "glass-soda-bottle",
-      "packageChoice": "Clear glass Mandarin soda bottle, open serving as pictured by manufacturer.",
+      "family": "jarritos-glass-bottle",
+      "packageChoice": "Current US Jarritos 12.5 fl oz (370 mL) clear glass bottle, sealed with the silver crown cap, front on; one shared outline for all eight flavors.",
       "references": [
         {
           "pageUrl": "https://jarritos.com/flavor/mandarin/",
           "imageUrl": "https://jarritos.com/wp-content/uploads/2025/04/Jarritos-Mandarin-8.jpg",
-          "inspectedAt": "2026-10-26",
-          "observations": "Inspected official lifestyle photo: clear long-neck bottle, bright orange soda, green three-jug mark, cream/green wordmark label, Mandarin below; bottle shown open.",
-          "visuallyInspected": true
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "Outdoor table scene: a clear Jarritos glass bottle, silver crown cap, deep orange soda (sampled #fb9e01) under the green jug-and-fruit logo, orange-and-white JARRITOS plaque and \"Mandarin\" in light type below."
+        },
+        {
+          "pageUrl": "https://jarritos.com/flavor/tamarind/",
+          "imageUrl": "https://jarritos.com/wp-content/uploads/2025/03/Jarritos-Tamarind.jpg",
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "Straight-on Jarritos 370 mL bottle used to measure the outline: crown 116-150 px, neck 97 px wide widening to 110 px by the fill line, shoulder from 346 px to 566 px, body 225 px wide down to 920 px, base rounded to 985 px (height to width 3.86). Embossed JARRITOS sits at 525-560 px, label plaque at 690-775 px."
         }
       ],
-      "uncertainty": "Reference shows an open bottle; cap and exact volume are intentionally unspecified. Product mark simplified; review pending.",
+      "uncertainty": "Outline measured on one straight-on shot (Tamarind) and applied to all flavors; the molded shoulder ripples are reduced to six soft strokes and the embossed JARRITOS is Arial Bold at very low contrast, not the molded letterforms. Condensation left out. The label is the earlier praised label scaled by .74, which matches the logo height on the Tamarind shot (jug top to plaque bottom about 43 units); the plaque comes out wider than the real one, so the label is not reduced further; \"370 mL\" and \"MADE IN MEXICO\" are omitted. Liquid colour sampled from a tilted lifestyle photo, so lighting shifts it slightly.",
       "status": "needs-review",
       "bevId": "543cb630-7d40-5372-85c4-96575336952d",
       "name": "Jarritos Mandarin",
@@ -5771,27 +5848,34 @@
         "svg": "svg/jarritos-mandarin.svg",
         "portableSvg": "portable-svg/jarritos-mandarin.svg",
         "png": "png/jarritos-mandarin.png",
-        "svgSha256": "f190bac281f61bac242c6b773b83fb9ccb3af97e58552cbf2cb88373290f31e9",
-        "portableSvgSha256": "bf3d9088cf2614e94a65c123962df072c4090a97917ebd3f996c0d4d181c19ce",
-        "pngSha256": "e5015d443431f92ff0f3005edc2a1dbc2da7292777e892c3a0e25d4576ca7f38",
-        "pngBytes": 82217
+        "svgSha256": "196c6e9a90330f3c2fdcbf78c03d40ee5087ab53426ac62a037c1ca6b2ca9998",
+        "portableSvgSha256": "ed90e16321000e5abcf5d3c813811621a50d978f122beaef9bdce2581b44b3a1",
+        "pngSha256": "4e2db914ce2fa68a0f530655c39abf9ab6eed7a5e4497fa75603faf0dde1f2bf",
+        "pngBytes": 97648
       },
-      "sourceModule": "scripts/icons/families/pilot.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-jarritos.mjs"
     },
     {
       "slug": "jarritos-pineapple",
       "family": "jarritos-glass-bottle",
-      "packageChoice": "Manufacturer-documented Pineapple long-neck glass bottle, silver crown closure; exact volume not confidently established from photograph.",
+      "packageChoice": "Current US Jarritos 12.5 fl oz (370 mL) clear glass bottle, sealed with the silver crown cap, front on; one shared outline for all eight flavors.",
       "references": [
         {
           "pageUrl": "https://jarritos.com/flavor/pineapple/",
           "imageUrl": "https://jarritos.com/wp-content/uploads/2025/01/Jarritos-Pineapple-4.jpg",
-          "inspectedAt": "2026-11-02",
+          "inspectedAt": "2026-11-18",
           "visuallyInspected": true,
-          "observations": "Manufacturer Pineapple photo independently inspected: silver-capped clear bottle with long clear headspace and intense yellow soda, green/orange three-jug logo, green JARRITOS in white/orange banner, white Pineapple flavor line and Natural Flavor Soda. Green pineapple leaves in the photo are external styling, not label artwork. Exact bottle volume is not legible."
+          "observations": "Straight-on bottle behind a pineapple on pink: clear glass, silver crown, clear headspace in the neck, sunflower-yellow soda (sampled #f9d407), standard label with \"Pineapple\"."
+        },
+        {
+          "pageUrl": "https://jarritos.com/flavor/tamarind/",
+          "imageUrl": "https://jarritos.com/wp-content/uploads/2025/03/Jarritos-Tamarind.jpg",
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "Straight-on Jarritos 370 mL bottle used to measure the outline: crown 116-150 px, neck 97 px wide widening to 110 px by the fill line, shoulder from 346 px to 566 px, body 225 px wide down to 920 px, base rounded to 985 px (height to width 3.86). Embossed JARRITOS sits at 525-560 px, label plaque at 690-775 px."
         }
       ],
-      "uncertainty": "Each exact flavor photo inspected separately. Manufacturer lifestyle photographs, lighting and condensation limit exact color/volume precision; selected appearance and closure are documented per variant. Shared geometry extends the Mandarin pilot, while tint, liquid and flavor lettering follow each reference. Fine molded lettering, tiny legal text and jug details simplified; final aesthetic approval and native-device review pending.",
+      "uncertainty": "Outline measured on one straight-on shot (Tamarind) and applied to all flavors; the molded shoulder ripples are reduced to six soft strokes and the embossed JARRITOS is Arial Bold at very low contrast, not the molded letterforms. Condensation left out. The label is the earlier praised label scaled by .74, which matches the logo height on the Tamarind shot (jug top to plaque bottom about 43 units); the plaque comes out wider than the real one, so the label is not reduced further; \"370 mL\" and \"MADE IN MEXICO\" are omitted. Liquid colour sampled from a tilted lifestyle photo, so lighting shifts it slightly.",
       "status": "needs-review",
       "bevId": "f91bbda1-714b-50b1-a417-5fa949aba640",
       "name": "Jarritos Pineapple",
@@ -5802,27 +5886,27 @@
         "svg": "svg/jarritos-pineapple.svg",
         "portableSvg": "portable-svg/jarritos-pineapple.svg",
         "png": "png/jarritos-pineapple.png",
-        "svgSha256": "6fb2d8a93084625a71849676b00e05824d158d78570971dda56ca8ff2e13d9c7",
-        "portableSvgSha256": "220a1f70ab8f69044463bb73e7c7c7bda626ccceeb016c9c1909531292871f6b",
-        "pngSha256": "fc564718bfaba7816462370bdd85684ad9882f3657571db5f198f90f7598662a",
-        "pngBytes": 101101
+        "svgSha256": "7f3b803c4ca9a5acef9cda642ac172bbf44970007fd18944368ac7c70578bb1c",
+        "portableSvgSha256": "f776f4f0a9911ce87945d37a251569112b0c1cce1df88b4b6f311a1b379f0abd",
+        "pngSha256": "039bf097ef83cb56a9fa18af2397f2fb8da3f608a9a859073e7303b0392c7eaa",
+        "pngBytes": 94053
       },
-      "sourceModule": "scripts/icons/families/jarritos-variants.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-jarritos.mjs"
     },
     {
       "slug": "jarritos-tamarind",
       "family": "jarritos-glass-bottle",
-      "packageChoice": "Manufacturer-documented Tamarind long-neck glass bottle, silver crown closure; 370mL marking observed.",
+      "packageChoice": "Current US Jarritos 12.5 fl oz (370 mL) clear glass bottle, sealed with the silver crown cap, front on; one shared outline for all eight flavors.",
       "references": [
         {
           "pageUrl": "https://jarritos.com/flavor/tamarind/",
           "imageUrl": "https://jarritos.com/wp-content/uploads/2025/03/Jarritos-Tamarind.jpg",
-          "inspectedAt": "2026-11-02",
+          "inspectedAt": "2026-11-18",
           "visuallyInspected": true,
-          "observations": "Manufacturer Tamarind photo independently inspected: clear long-neck bottle, silver crown cap, amber/light-brown soda with visible headspace, embossed JARRITOS shoulder, green/orange jug mark and green-lettered white/orange banner, white Tamarind with green edge, Natural Flavor Soda and 370mL print. Amber material follows exact photo rather than generic orange coloring."
+          "observations": "Straight-on product shot on an orange ground: clear glass, silver crown with crimped skirt, neck finish bead, long nearly straight neck, soft shoulder with molded ripples and an embossed JARRITOS band, cylindrical body, rounded base; amber soda (sampled #ca732b edge, #f59c37 centre); jug logo, plaque, \"Tamarind\", \"Natural Flavor Soda\", \"370 mL\", \"MADE IN MEXICO Since 1950\"."
         }
       ],
-      "uncertainty": "Each exact flavor photo inspected separately. Manufacturer lifestyle photographs, lighting and condensation limit exact color/volume precision; selected appearance and closure are documented per variant. Shared geometry extends the Mandarin pilot, while tint, liquid and flavor lettering follow each reference. Fine molded lettering, tiny legal text and jug details simplified; final aesthetic approval and native-device review pending.",
+      "uncertainty": "Outline measured on one straight-on shot (Tamarind) and applied to all flavors; the molded shoulder ripples are reduced to six soft strokes and the embossed JARRITOS is Arial Bold at very low contrast, not the molded letterforms. Condensation left out. The label is the earlier praised label scaled by .74, which matches the logo height on the Tamarind shot (jug top to plaque bottom about 43 units); the plaque comes out wider than the real one, so the label is not reduced further; \"370 mL\" and \"MADE IN MEXICO\" are omitted. ",
       "status": "needs-review",
       "bevId": "ec810a73-d556-5b3f-8ab1-bfa5f77beb66",
       "name": "Jarritos Tamarind",
@@ -5833,27 +5917,34 @@
         "svg": "svg/jarritos-tamarind.svg",
         "portableSvg": "portable-svg/jarritos-tamarind.svg",
         "png": "png/jarritos-tamarind.png",
-        "svgSha256": "817dfff81cb5b0a0fc3918250288f3bad29e89e321d41ea9147e3757ed43057b",
-        "portableSvgSha256": "196fefdf9af399eb595a7e22f1bbb70d3423dceb5241e24838377c890e604c14",
-        "pngSha256": "7983d1ad250fbe55cea2f6c08a4de6e1ed70ce3f51ba523ebfbf476cc2192b49",
-        "pngBytes": 104210
+        "svgSha256": "7b9398b4c37a6657a256a1d633b0dd59a3734829b6e23234fc64c061899af825",
+        "portableSvgSha256": "dd1e31fc2db5c7a4e5b98bbf46d47efeb518b37990f2b4613c1b9af609d98c48",
+        "pngSha256": "7dc2caaf4fd2f784e8314548aa65dc7a7f415a9f40567de559bb0d35f7d0323f",
+        "pngBytes": 102214
       },
-      "sourceModule": "scripts/icons/families/jarritos-variants.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-jarritos.mjs"
     },
     {
       "slug": "jarritos-watermelon",
       "family": "jarritos-glass-bottle",
-      "packageChoice": "Manufacturer-documented Watermelon long-neck glass bottle, open serving as photographed; exact volume not confidently established from photograph.",
+      "packageChoice": "Current US Jarritos 12.5 fl oz (370 mL) clear glass bottle, sealed with the silver crown cap, front on; one shared outline for all eight flavors.",
       "references": [
         {
           "pageUrl": "https://jarritos.com/flavor/watermelon/",
           "imageUrl": "https://jarritos.com/wp-content/uploads/2025/04/Jarritos-Watermelon.jpg",
-          "inspectedAt": "2026-11-02",
+          "inspectedAt": "2026-11-18",
           "visuallyInspected": true,
-          "observations": "Manufacturer Watermelon photo independently inspected: open clear long-neck bottle, bright red/coral soda, clear headspace, molded JARRITOS shoulder lettering; green/orange jug mark and white/orange wordmark banner, readable Watermelon and Natural Flavor Soda below. Distinct from deeper-red Fruit Punch and pink Guava. Bottle shown open; exact volume not legible."
+          "observations": "Hand holding the bottle at an angle outdoors: clear glass, bright red-coral soda (sampled #e13b36, #dc3131), standard label with \"Watermelon\"."
+        },
+        {
+          "pageUrl": "https://jarritos.com/flavor/tamarind/",
+          "imageUrl": "https://jarritos.com/wp-content/uploads/2025/03/Jarritos-Tamarind.jpg",
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "Straight-on Jarritos 370 mL bottle used to measure the outline: crown 116-150 px, neck 97 px wide widening to 110 px by the fill line, shoulder from 346 px to 566 px, body 225 px wide down to 920 px, base rounded to 985 px (height to width 3.86). Embossed JARRITOS sits at 525-560 px, label plaque at 690-775 px."
         }
       ],
-      "uncertainty": "Each exact flavor photo inspected separately. Manufacturer lifestyle photographs, lighting and condensation limit exact color/volume precision; selected appearance and closure are documented per variant. Shared geometry extends the Mandarin pilot, while tint, liquid and flavor lettering follow each reference. Fine molded lettering, tiny legal text and jug details simplified; final aesthetic approval and native-device review pending.",
+      "uncertainty": "Outline measured on one straight-on shot (Tamarind) and applied to all flavors; the molded shoulder ripples are reduced to six soft strokes and the embossed JARRITOS is Arial Bold at very low contrast, not the molded letterforms. Condensation left out. The label is the earlier praised label scaled by .74, which matches the logo height on the Tamarind shot (jug top to plaque bottom about 43 units); the plaque comes out wider than the real one, so the label is not reduced further; \"370 mL\" and \"MADE IN MEXICO\" are omitted. Liquid colour sampled from a tilted lifestyle photo, so lighting shifts it slightly.",
       "status": "needs-review",
       "bevId": "255b342b-5db5-58e5-b08c-0f06ec6e2694",
       "name": "Jarritos Watermelon",
@@ -5864,12 +5955,12 @@
         "svg": "svg/jarritos-watermelon.svg",
         "portableSvg": "portable-svg/jarritos-watermelon.svg",
         "png": "png/jarritos-watermelon.png",
-        "svgSha256": "102f6d42db45ffcfa37a213aa5161c5c0bacc47cbe2b01464cb1b1fed18c60c5",
-        "portableSvgSha256": "061898e49e34d6c9872109d9981f7336ebbc27b4b2fbd0fe3020f5194bc90814",
-        "pngSha256": "5df649358ce83017f6ed5f4fd6c67a4945f86a2cd9307962c819ce45d85d0e74",
-        "pngBytes": 106692
+        "svgSha256": "85423ec616a81cd5ed768a6c0abee01e90e636d26dacc6950ff2a1ad42459ef2",
+        "portableSvgSha256": "19a3ecfebc25b61f26d7b8b2f6821614a8f510ce9ab2e5e052ec356247f35eb2",
+        "pngSha256": "028feb23ec88e35bfcf45de7a785d26d5b2e1b2342299eac494b30f3135b1681",
+        "pngBytes": 105929
       },
-      "sourceModule": "scripts/icons/families/jarritos-variants.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-jarritos.mjs"
     },
     {
       "slug": "josh-cellars-chardonnay",
@@ -7137,81 +7228,26 @@
       "sourceModule": "scripts/icons/families/pilot.mjs"
     },
     {
-      "slug": "evian-natural-spring-water",
-      "family": "water-expansion",
-      "packageChoice": "500 mL US PET bottle",
-      "references": [
-        {
-          "pageUrl": "https://www.evian.com/en_us/natural-spring-water/bottled-water/500ml/",
-          "imageUrl": "https://www.evian.com/en_us/wp-content/uploads/2020/03/evian-water-500-ml-bottle-everyday.webp",
-          "inspectedAt": "2026-11-04",
-          "visuallyInspected": true,
-          "observations": "Blue ribbed cap; molded angular Alps shoulder; white pink-topped label, red vertical evian."
-        }
-      ],
-      "uncertainty": null,
-      "status": "needs-review",
-      "bevId": "cd08bca0-25be-573b-94dd-d0a918a71f04",
-      "name": "Natural Spring Water",
-      "brand": "Evian",
-      "isStarter": false,
-      "styleVersion": "bevi-dimensional-v1",
-      "assets": {
-        "svg": "svg/evian-natural-spring-water.svg",
-        "portableSvg": "portable-svg/evian-natural-spring-water.svg",
-        "png": "png/evian-natural-spring-water.png",
-        "svgSha256": "7fdc7ff3ab24d13ea045318aa1a82e3cea9c3488a8506d43cab6b0994f4cf02f",
-        "portableSvgSha256": "b6c18bea558e4eedf6a5172694eb61dafb0c1be33d5cac702b5514ff8e87028b",
-        "pngSha256": "7967cc35fb8e617862cbf5fa586108260e9dce453c037c42ecae639d67144043",
-        "pngBytes": 54585
-      },
-      "sourceModule": "scripts/icons/families/water-expansion.mjs"
-    },
-    {
-      "slug": "poland-spring-natural-spring-water",
-      "family": "water-expansion",
-      "packageChoice": "20 fl oz / 591 mL US PET bottle",
-      "references": [
-        {
-          "pageUrl": "https://www.polandspring.com/",
-          "imageUrl": "https://a-us.storyblok.com/f/1021132/853x2508/ef18cd86c2/ps_20oz_revised_05_2025-1.png",
-          "inspectedAt": "2026-11-04",
-          "visuallyInspected": true,
-          "observations": "White cap and broad clear shoulder, green label, dark trees, white Poland Spring lettering in white oval."
-        }
-      ],
-      "uncertainty": null,
-      "status": "needs-review",
-      "bevId": "74f25504-8c79-55c1-a101-c8b8e9b5ba1c",
-      "name": "Natural Spring Water",
-      "brand": "Poland Spring",
-      "isStarter": false,
-      "styleVersion": "bevi-dimensional-v1",
-      "assets": {
-        "svg": "svg/poland-spring-natural-spring-water.svg",
-        "portableSvg": "portable-svg/poland-spring-natural-spring-water.svg",
-        "png": "png/poland-spring-natural-spring-water.png",
-        "svgSha256": "82d6f4ecca9e33ea54e860b0b1e43e47a856d0d03c0ad10846715fe988535a5e",
-        "portableSvgSha256": "e3dd7a5f75607bc65cced6e7b5dc1f893063726480e7fb85fbfd5bdcb8de7036",
-        "pngSha256": "ea425355081244bca74ed4113a32c559fa4f1c75f4805343a71b8a44bcf59492",
-        "pngBytes": 65743
-      },
-      "sourceModule": "scripts/icons/families/water-expansion.mjs"
-    },
-    {
       "slug": "deer-park-natural-spring-water",
       "family": "water-expansion",
-      "packageChoice": "16.9 fl oz US PET bottle",
+      "packageChoice": "The current US Deer Park 100% Natural Spring Water 16.9 fl oz (500 mL) PET bottle, the single bottle shown beside the 6-pack on Kroger: arched shoulder panels, navy sunset label with the elk, chevron waist and scalloped grip rings.",
       "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/deer-park-natural-spring-bottled-water/0008265750061",
+          "imageUrl": "https://www.kroger.com/product/images/xlarge/front/0008265750061",
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "Front shot of the 6-pack with one loose 16.9 fl oz bottle, about 540 px tall: white ribbed cap, neck ring, five pointed arch panels on the shoulder, label from 33% to 50% of the height with a navy top and bottom band, blue sky fading to a dusky rose horizon, yellow sunset glow and an elk silhouette at the right, the DEER PARK serif mark in white with antlers and EST. 1873 above, 16.9 FL OZ (500 mL) at the left and 100% NATURAL SPRING WATER at the right; below the label an inverted V and four or five scalloped grip rings, petaloid base."
+        },
         {
           "pageUrl": "https://www.deerparkwater.com/products/spring-water/",
           "imageUrl": "https://a-us.storyblok.com/f/1021132/0x0/8a962778ad/deer-park-spring-16-9-fl-oz-bottled-water-carousel.png",
-          "inspectedAt": "2026-11-04",
+          "inspectedAt": "2026-11-18",
           "visuallyInspected": true,
-          "observations": "White cap, blue upper label with white two-line DEER PARK and gold deer, deeply ribbed clear lower bottle."
+          "observations": "Brand carousel render of the same bottle at 300x500: confirms the silhouette, the label art and the molded grip."
         }
       ],
-      "uncertainty": null,
+      "uncertainty": "Outline measured on a 540 px retail photo (right half mirrored; the left side is hidden by the pack). The mark with antlers, the elk and the field are traced from that photo. The five shoulder panels, the inverted V and five ribs (at heights measured from the dark bands on the packshot, with the small steps of the silhouette in the profile) are soft bands clipped inside the outline; panel count and shape are read from a small photo. The side text blocks are reduced to hairlines and the label ends darken into the curve.",
       "status": "needs-review",
       "bevId": "6738dca5-961a-526d-9a6c-894c9fbbbb10",
       "name": "Natural Spring Water",
@@ -7222,12 +7258,81 @@
         "svg": "svg/deer-park-natural-spring-water.svg",
         "portableSvg": "portable-svg/deer-park-natural-spring-water.svg",
         "png": "png/deer-park-natural-spring-water.png",
-        "svgSha256": "9caa0d342452de1ad4840d105628fe18924671cc9f71b9db5483f75d54f98254",
-        "portableSvgSha256": "45e367c6b007aabcc68f3e8e4c7df945e5b2f7f3b2f4d372228bdbd62da91800",
-        "pngSha256": "2b22e3208dbc72bb83ac9a6b2d78f8048c79a532fc2d31591b65babdf904a341",
-        "pngBytes": 72043
+        "svgSha256": "061e495202173111ac18eb91de8d96b91a73ec35171bdc1f3b3a1ef3c5155e67",
+        "portableSvgSha256": "a9a4944c8f9e75a899c44f33bcfac9db7c965f6da9eb518b3dc94cbbd52ad5f8",
+        "pngSha256": "9a91e1f2b1322a8ebafc1b38b8f69754117d831c475e366d3c46ff51648d42d8",
+        "pngBytes": 121247
       },
-      "sourceModule": "scripts/icons/families/water-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-waters-a.mjs"
+    },
+    {
+      "slug": "poland-spring-natural-spring-water",
+      "family": "water-expansion",
+      "packageChoice": "The current US Poland Spring 20 fl oz (591 mL) PET bottle with the 2025 green forest wrap label, from the brand render.",
+      "references": [
+        {
+          "pageUrl": "https://www.polandspring.com/",
+          "imageUrl": "https://a-us.storyblok.com/f/1021132/853x2508/ef18cd86c2/ps_20oz_revised_05_2025-1.png",
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "Front render, 853x2508: low clear ribbed cap and neck ring, long conical shoulder with tapering vertical flutes, label from 36.5% to 59% of the height: dark green with lighter pine forest along the top and a light green swoosh lower right, the slanted white Poland Spring script inside a white oval ring, EST. 1845, SPRING WATER, 20 FL OZ (591 mL), the green MADEBETTER badge lower left and a vertical recycled-plastic panel at the right edge; below the label a groove, vertical panels, a ring and a petaloid base."
+        }
+      ],
+      "uncertainty": "Deer Park is a different mold (arched shoulder, scalloped grip), so no shared bottle helper. The forest, swoosh, badge and all white lettering are traced from the render; the recycled-plastic panel text is reduced to dashed hairlines. Body flutes and panels are placed at measured heights but their exact count is approximate.",
+      "status": "needs-review",
+      "bevId": "74f25504-8c79-55c1-a101-c8b8e9b5ba1c",
+      "name": "Natural Spring Water",
+      "brand": "Poland Spring",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/poland-spring-natural-spring-water.svg",
+        "portableSvg": "portable-svg/poland-spring-natural-spring-water.svg",
+        "png": "png/poland-spring-natural-spring-water.png",
+        "svgSha256": "60fdb107d965b3e68f1fbb795473e385ad9f6ab6e69a71d6ac6937f21848a8d2",
+        "portableSvgSha256": "119efc02302083b6ebccd6a6957386e32f0f916c59d59f7c74af84a71fb3506b",
+        "pngSha256": "e4fa7b8eb609e6f0a6890d096c7c922d6dbb141de46e07b8ae152cac7b34a976",
+        "pngBytes": 116266
+      },
+      "sourceModule": "scripts/icons/families/redraw-r6-waters-a.mjs"
+    },
+    {
+      "slug": "evian-natural-spring-water",
+      "family": "water-expansion",
+      "packageChoice": "The current US evian 500 mL (16.9 fl oz) PET bottle with the blue sport-style screw cap, molded Alps on the shoulder and the pink-topped white label, from the Kroger single-bottle image.",
+      "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/evian-natural-spring-water-bottles/0007929800019",
+          "imageUrl": "https://www.kroger.com/product/images/xlarge/back/0007929800019",
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "Single 500 mL bottle front on, about 1000 px tall: tall blue ribbed cap (#3e85c7) over a darker collar, short neck, bell-shaped shoulder with a molded mountain ridge relief at 27-33% of the height, label from 40% to 82%: pink band at the top with three grey peaks, the vertical red evian wordmark, MADE BY THE FRENCH ALPS in pink beside it, NATURAL ELECTROLYTES and 7.2pH BALANCE in grey at the right, NATURAL SPRING WATER and 500mL (16.9 FL OZ) at the bottom; smooth lower body with one molded line and a small domed punt in the base."
+        },
+        {
+          "pageUrl": "https://www.evian.com/en_us/natural-spring-water/bottled-water/500ml/",
+          "imageUrl": "https://www.evian.com/en_us/wp-content/uploads/2020/03/evian-water-500-ml-bottle-everyday.webp",
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "Brand image of the same bottle at 206x701; too small to trace, used only to confirm the shape and cap."
+        }
+      ],
+      "uncertainty": "The evian wordmark and the mountain glyph are traced from the photo (no flat vector looked up). The small vertical and bottom lines are Arial with textLength, matching the plain sans on the label. The shoulder relief is a ridge line measured at 12 points and drawn as a light lip with a groove, a simplification of the faceted molding.",
+      "status": "needs-review",
+      "bevId": "cd08bca0-25be-573b-94dd-d0a918a71f04",
+      "name": "Natural Spring Water",
+      "brand": "Evian",
+      "isStarter": false,
+      "styleVersion": "bevi-dimensional-v1",
+      "assets": {
+        "svg": "svg/evian-natural-spring-water.svg",
+        "portableSvg": "portable-svg/evian-natural-spring-water.svg",
+        "png": "png/evian-natural-spring-water.png",
+        "svgSha256": "214def60fbde227e49d11f2f23ec2fc6afcbb8e1ab2c60f61d0e7c6e49995494",
+        "portableSvgSha256": "bb810930baaf34d081a85b88abdc61726d067929ab43e1a91db93e67cb1a377a",
+        "pngSha256": "1703ca0af742c7fae58ed82000244cab4f45a0d1b1e03f74c13d439b7d215da5",
+        "pngBytes": 81061
+      },
+      "sourceModule": "scripts/icons/families/redraw-r6-waters-a.mjs"
     },
     {
       "slug": "rise-brewing-nitro-cold-brew-oat-latte",
@@ -7332,17 +7437,24 @@
     {
       "slug": "core-hydration-nutrient-enhanced-water",
       "family": "refreshment-expansion",
-      "packageChoice": "US20fl oz/591mL CORE Hydration Original contoured PET bottle with large blue cup-cap.",
+      "packageChoice": "US 20 fl oz (591 mL) CORE Hydration bottle as sold now: contoured clear PET (rounded shoulder, waist at mid-height, fuller lower body, petaloid base) under the large translucent blue cup-cap, with the full-wrap frosted label, green \"100% RECYCLED PLASTIC\" band, vertical \"core\" with the blue ring \"o\", vertical HYDRATION and \"20 OZ\".",
       "references": [
+        {
+          "pageUrl": "https://www.kroger.com/search?query=core%20hydration%2020%20oz",
+          "imageUrl": "https://www.kroger.com/product/images/xlarge/front/0085300400402",
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "1000 px front packshot. Bottle (cap included) 933 px tall; cap is 18.6% of the height, translucent cyan-blue with the spout and a stepped collar visible inside; clear collar, then a green band (21-26% height) with white \"100% RECYCLED PLASTIC\" and a leaf disc. Body half-width 0.153 H at the shoulder, 0.140 H at the waist (50-55%), 0.157 H at 75%, then a rounded base. Black lowercase \"core\" runs bottom to top along the axis, the \"o\" is five concentric rings (navy, blue, cyan, pale blue, grey-white); \"HYDRATION\" in blue runs alongside; navy condensed \"20 OZ\" near the base."
+        },
         {
           "pageUrl": "https://hydratewithcore.com/products/core-hydration/",
           "imageUrl": "https://hydratewithcore.com/wp-content/uploads/2021/01/core-hydration-water-20oz-bottle-rpet.png",
-          "inspectedAt": "2026-11-12",
+          "inspectedAt": "2026-11-18",
           "visuallyInspected": true,
-          "observations": "Exact manufacturer20oz rPET bottle independently inspected: very broad translucent cyan cup-cap, hourglass white/clear bottle with green recycled-plastic shoulder strip, huge black vertical core lettering with blue concentric-ring O, blue vertical HYDRATION at right, small blue footer. Original unflavored CORE water, not Hydration+ functional flavored variants."
+          "observations": "Manufacturer 379x853 render of the same bottle and mark; its lower label reads \"perfectly balanced pH* purified water\" where the retail packshot reads \"20 OZ\". Used to confirm the outline and cap proportions."
         }
       ],
-      "uncertainty": "Catalog does not specify size; representative US package individually inspected. Original simplified lettering and package illustrations; tiny filler/legal copy and certification symbols omitted. Catalog historical Nutrient Enhanced naming retained as Original CORE water; current manufacturer Original package explicitly chosen, no flavored Hydration+ substitution. Final aesthetic approval and web-device review pending.",
+      "uncertainty": "Two current label texts exist near the base: the retail packshot shows \"20 OZ\", the brand site \"perfectly balanced pH purified water\"; drew the retail one. Wordmark, HYDRATION, band lettering and \"20 OZ\" traced from the 1000 px packshot at its front curvature (the ring o is fitted ellipses, slightly narrower than tall as on the photo). Spout inside the cap simplified to two translucent tiers. Petaloid base inferred from the rounded bottom; it is barely visible on the packshot.",
       "status": "needs-review",
       "bevId": "d5355adb-957f-58c9-9cd5-5db9c455b3b8",
       "name": "Nutrient Enhanced Water",
@@ -7353,12 +7465,12 @@
         "svg": "svg/core-hydration-nutrient-enhanced-water.svg",
         "portableSvg": "portable-svg/core-hydration-nutrient-enhanced-water.svg",
         "png": "png/core-hydration-nutrient-enhanced-water.png",
-        "svgSha256": "091274e02d8f0c42369921d1b32559dd9adc3c42f5f2c0929162dd252346910d",
-        "portableSvgSha256": "cab12ab5a1594ffe12a09efaf76169a326ec22662f6aa85d9cf46124877f7fdc",
-        "pngSha256": "70169e82b88d01254bd7223a5864609ecdf7db2446aeb551bfb4f88482143f93",
-        "pngBytes": 99261
+        "svgSha256": "a41ddd2e8c9cac47b8031cf640e02ba69818518bfae154928a9f91a8de9cbadf",
+        "portableSvgSha256": "9fad6def0bf81e2eef7f09bce324e6d2ee053a280c08756d9127eaaa73293c17",
+        "pngSha256": "3f5fa5ce9221ebf4450ea0ba5e9fce7a8c758c0e46b4813320845e20ba428304",
+        "pngBytes": 106576
       },
-      "sourceModule": "scripts/icons/families/refreshment-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-waters-b.mjs"
     },
     {
       "slug": "generic-old-fashioned",
@@ -7539,12 +7651,12 @@
         "svg": "svg/jamba-juice-orange-dream-machine.svg",
         "portableSvg": "portable-svg/jamba-juice-orange-dream-machine.svg",
         "png": "png/jamba-juice-orange-dream-machine.png",
-        "svgSha256": "1e738a25f0498d4c6348c6c420e6d93b724aec0e8497a7a855e425daa6fc79bd",
-        "portableSvgSha256": "ffd49bb97101b54e97919e961c91241bd7273ab9061cb5a419bd26fb75564d03",
-        "pngSha256": "7c4a47cd3423e24c3132ebdcc00df0321e615d68331aa34d426873953d382f9d",
-        "pngBytes": 120161
+        "svgSha256": "cd3abf1ab306d9d02879bea8033ea51fa1d24024bf87ff761aabee65517b799a",
+        "portableSvgSha256": "b4846deeb8fd56e2c94c27b0f218e2d0a4188a9269261bfee0d054963de68e87",
+        "pngSha256": "e519dafa8009d0908ac6b917d3e94acc442d719c2c795098b14dd4286df892cb",
+        "pngBytes": 121251
       },
-      "sourceModule": "scripts/icons/families/starter-smoothies.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-served.mjs"
     },
     {
       "slug": "simply-orange",
@@ -8300,17 +8412,24 @@
     {
       "slug": "propel-water-berry",
       "family": "refreshment-expansion",
-      "packageChoice": "US16.9fl oz/500mL Propel Berry flat-cap PET bottle.",
+      "packageChoice": "US 16.9 fl oz (500 mL) Propel Berry bottle as sold now: clear PET with a domed shoulder, a label band on the upper body (grey \"GATORADE ELECTROLYTES\" strip, blue band with the propel wordmark and its orange bolt \"o\", magenta BERRY strip), a sculpted grip waist with swept creases, embossed \"propel\" on the lower panel and a petaloid base, under a frosted ribbed flat cap.",
       "references": [
         {
           "pageUrl": "https://www.kroger.com/p/propel-berry-electrolyte-water-beverage/0005200000169",
-          "imageUrl": "https://www.kroger.com/product/images/large/front/0005200000169",
-          "inspectedAt": "2026-11-12",
+          "imageUrl": "https://www.kroger.com/product/images/xlarge/left/0005200000169",
+          "inspectedAt": "2026-11-18",
           "visuallyInspected": true,
-          "observations": "Exact retailer bottle inspected following manufacturer403 download: white flat screw cap, clear colorless drink, broadly rounded shoulder and strongly pinched waist, blue upperwrap with white italic propel/orangeaccent, narrow magenta repeatedBERRY band, clear sculpted lowerbody with diagonalembossedridges and raisedpropel. Retail pinkBerry and16.9oz sidepanel excluded."
+          "observations": "1000 px plain front packshot (the \"left\" view; the \"front\" view carries a Berry/16.9 oz banner). Bottle 957 px tall: cap 7% of height, tamper band, flange, short neck, dome shoulder to 25%, upper body half-width 0.152 H, an inward step at 52%, grip waist 0.125 H at 67-70%, lower body 0.150 H, five-foot base. Label 29.7-46% of height: grey strip with \"GATORADE ELECTROLYTES\", blue band #0b10a0 with white italic \"propel\" (orange bolt through the o) and \"FITNESS WATER\", a white hairline, magenta #c72d9f strip with white \"BERRY\" repeated. Swept and bolt-shaped creases on the grip, embossed \"propel\" on the lower panel."
+        },
+        {
+          "pageUrl": "https://www.kroger.com/p/propel-berry-electrolyte-water-beverage/0005200000169",
+          "imageUrl": "https://www.kroger.com/product/images/large/front/0005200000169",
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "500 px retailer tile of the same bottle with a Berry / 16.9 oz banner; confirms the label layout."
         }
       ],
-      "uncertainty": "Catalog does not specify size; representative US package individually inspected. Original simplified lettering and package illustrations; tiny filler/legal copy and certification symbols omitted. Manufacturer https://www.propelwater.com/products/electrolyte-hydration/water/berry/flat-cap-16.9oz confirms exact variant; image retrieved from retailer fallback. Final aesthetic approval and web-device review pending.",
+      "uncertainty": "The grip creases on the packshot are not mirror images (a swept crease on the left, a bolt-shaped crease on the right); they are drawn mirrored, one of each per side, to keep the bottle symmetric. The wordmark was retraced from the 1000 px packshot in the same white, blue and orange look as the old icon (Matt praised its label). The grey strip lettering and the line under the magenta strip are reduced to small trace and hairlines.",
       "status": "needs-review",
       "bevId": "a82bcd1a-15f2-53bf-bfd1-35b87afdef9f",
       "name": "Propel Water",
@@ -8321,12 +8440,12 @@
         "svg": "svg/propel-water-berry.svg",
         "portableSvg": "portable-svg/propel-water-berry.svg",
         "png": "png/propel-water-berry.png",
-        "svgSha256": "53029490c98eba13543826c69713d3c24cfcbc64829f24ad99d2c1acbe2d1738",
-        "portableSvgSha256": "e117d14b548cd09b8e610cdeb63942dc2d2ad55b7d6fe4c80633671018bc0843",
-        "pngSha256": "5438282e6c59b7241181bd5d2586930d061353ddd28b9ada63e8d8a76999a984",
-        "pngBytes": 89874
+        "svgSha256": "8fc420281f255966e14b0b5b293ea93aae667953f16c55a2c61a5171b8e9b9f5",
+        "portableSvgSha256": "9b3ec710d90361955f93c0f14bb2a6a224cfce4cdb38b32b1ff23980005ed0ac",
+        "pngSha256": "f75c8a0247e411735388d8fae6410592bf4cd404ba7c7e9be48f4562040e0de7",
+        "pngBytes": 99477
       },
-      "sourceModule": "scripts/icons/families/refreshment-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-waters-b.mjs"
     },
     {
       "slug": "naked-protein-zone",
@@ -9782,17 +9901,24 @@
     {
       "slug": "stella-artois-lager",
       "family": "beer-glass-bottle",
-      "packageChoice": "Representative US 11.2 fl oz / 330mL Stella Artois glass bottle; exact independently inspected package.",
+      "packageChoice": "US 11.2 fl oz (330 mL) Stella Artois green glass long-neck, the bottle of the US 6-pack, front on: slim tapering neck under a white foil neck label, short shoulder with STELLA ✶ ARTOIS molded in the glass, slightly tapered body with a flared heel, white body label with the red and gold cartouche.",
       "references": [
         {
           "pageUrl": "https://www.kroger.com/p/stella-artois-premium-beer/0078615000001",
-          "imageUrl": "https://www.kroger.com/product/images/large/front/0078615000001",
-          "inspectedAt": "2026-11-12",
+          "imageUrl": "https://www.kroger.com/product/images/xlarge/front/0078615000001",
+          "inspectedAt": "2026-11-18",
           "visuallyInspected": true,
-          "observations": "Exact retailer6-pack11.2oz Stella Artois bottle inspected: light green glass, white paper/foil neck extending to cap with vertical redSTELLAARTOIS, scalloped cream body label with ornate gold/green scrolls, red central shield and white two-line serif STELLA ARTOIS, small red star/crest above. Manufacturer landing page supplied no usable product art; retailer fallback. Carton/FIFA retail details excluded."
+          "observations": "Front-on 6-pack shot with one bottle standing free at the left (861 px tall). Measured: neck 0.123 H wide under the crown widening to 0.142 H at 0.3 H, shoulder from 0.31 to 0.41 H, body 0.254 H at 0.44 H tapering to 0.228 H at 0.85 H, then a flared heel 0.256 H at 0.91 H. Gold crown; white neck foil to 0.28 H ending in a broad tab, red vertical STELLA ✶ ARTOIS reading upward with grey side lines; STELLA ✶ ARTOIS molded at the shoulder; white body label from 0.47 to 0.74 H, arched top, with the horn, ANNO 1366 banner and red cartouche between gold scrolls, \"600 YEARS / OF BREWING HERITAGE\" in gold below."
+        },
+        {
+          "pageUrl": "https://en.wikipedia.org/wiki/File:Stella_Artois_logo.svg",
+          "imageUrl": "https://upload.wikimedia.org/wikipedia/en/3/37/Stella_Artois_logo.svg",
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "Flat vector of the cartouche: horn and ANNO ✶ 1366 banner above, white STELLA ARTOIS on red #c1242f, gold #d6b46f scrolls, near-black outlines. Rendered at 1920 px and traced in three color layers; the \"Belgium\" script below it was left out (not on the US bottle)."
         }
       ],
-      "uncertainty": "Catalog size unspecified; documented representative US package. Original simplified vector interpretation of brand lettering, heraldry and fine illustration; tiny legal copy and marketing seals omitted. Manufacturer consulted first; exact retailer fallback where manufacturer artwork unavailable.  Final aesthetic approval and web-device review pending.",
+      "uncertainty": "The logo is traced from the flat vector and fitted 56 units wide and stretched 10% vertically to match its proportions on the curved bottle, where the scrolls are foreshortened. The grey side text of the neck foil is reduced to dashed hairlines, and the 600 YEARS lines are Arial. The molded shoulder lettering reuses the traced neck lettering, compressed. The flared heel is measured on a single photo taken slightly from above.",
       "status": "needs-review",
       "bevId": "41e04a34-8406-54c1-a563-a2f2bb7e07dd",
       "name": "Stella Artois Lager",
@@ -9803,27 +9929,34 @@
         "svg": "svg/stella-artois-lager.svg",
         "portableSvg": "portable-svg/stella-artois-lager.svg",
         "png": "png/stella-artois-lager.png",
-        "svgSha256": "a9c42666764b55574976297cb50beb5a31f38a4b7d079c76c744c6fa9f52e3a0",
-        "portableSvgSha256": "eaa1713b8a47abe48daa9abefa7e5e9b1e5d5c4eccfb21445fe1ce65a5c15055",
-        "pngSha256": "747935f07561c5b01508fed8e660dec6d5086ccfae795b1a510dc190eeef8e56",
-        "pngBytes": 86793
+        "svgSha256": "cf1d674c675275ae410b377f8b3a6cd46bdcf9a6c0891adcdcfde1a6572f275f",
+        "portableSvgSha256": "f68a9d1179489db9d48aca7e0a815290eb9ed563f9da7ca69ff547b0050dd70d",
+        "pngSha256": "4d217d44253307e17e66a8946aae961cd031db827e566b1ef2d2a14989549fc1",
+        "pngBytes": 94245
       },
-      "sourceModule": "scripts/icons/families/beer-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-glass.mjs"
     },
     {
       "slug": "stewarts-orange-n-cream",
       "family": "stewarts-glass-bottle",
-      "packageChoice": "Representative US 12 fl oz / 355mL Stewart’s Orange ’n Cream glass bottle; exact inspected package.",
+      "packageChoice": "US 12 fl oz (355 mL) Stewart's Orange 'n Cream, clear glass long-neck with a gold crown, the current Fountain Classics label, front on. Same bottle helper and size as the other Stewart's icon.",
       "references": [
         {
           "pageUrl": "https://www.drinkstewarts.com/",
-          "imageUrl": "https://www.kdpproductfacts.com/smedia/kdpproductfacts.com/www/product_images/medium/STEWARTS_ORANGE_NCREAM_12.png",
-          "inspectedAt": "2026-11-11",
+          "imageUrl": "https://www.kroger.com/product/images/xlarge/front/0009879400027",
+          "inspectedAt": "2026-11-18",
           "visuallyInspected": true,
-          "observations": "Exact manufacturer12oz Stewart’s Orange ’n Cream glass bottle inspected: long slim neck and modest curved shoulder, clear amber-orange soda, green crown cap/1924 diamond, embossed Stewart’s glass shoulder, white flavor above green lozenge/script label, Fountain Classics, orange creamsicle illustration below. Original non-diet variant; label engraving/filler simplified."
+          "observations": "Front-on single 12 oz Orange 'n Cream bottle, 987 px tall: gold crown to 0.04 H, finish bead at 0.06 to 0.09 H, neck 0.124 H widening to 0.175 H at 0.32 H, rounded shoulder to the 0.305 H body by 0.45 H, rounded heel. Clear glass, liquid line at 0.155 H. White \"SINCE 1924\" diamond outline on the neck at 0.23 H. Applied label: green diamond with black border and white inner line, white Stewart's script outlined in black, ORIGINAL above, \"Fountain Classics\" green ribbon, orange ice-cream bar with cream top behind \"Orange 'n Cream\" in white with black outline. Mark, 1924 and flavor name traced from this photo."
+        },
+        {
+          "pageUrl": "https://www.drinkstewarts.com/",
+          "imageUrl": "https://www.kroger.com/product/images/xlarge/front/0009879400019",
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "4-pack of the same bottles; the free-standing bottle shows the same front label with \"12 OZ\" in white below the flavor name instead of the real-sugar seal of the single, which is the layout used for both Stewart's icons."
         }
       ],
-      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "uncertainty": "The current label differs from the one the old icon followed (flavor name now sits below the mark, over the ice-cream bar), so the label follows the current packshots rather than the old layout. The \"Stewart's\" lettering molded at the shoulder is not visible on the current packshots and is left out. The diamond's hidden lower point is completed as geometry. The ice-cream bar is redrawn by hand at its measured size (about 8.6 by 18 units, tilted 20 degrees) in three tones: orange shell, cream top, pale stick. \"12 OZ\" is Arial Bold.",
       "status": "needs-review",
       "bevId": "6ebf7a55-1ec0-5d36-831c-cd44ee05784a",
       "name": "Stewart's Orange N' Cream",
@@ -9834,27 +9967,34 @@
         "svg": "svg/stewarts-orange-n-cream.svg",
         "portableSvg": "portable-svg/stewarts-orange-n-cream.svg",
         "png": "png/stewarts-orange-n-cream.png",
-        "svgSha256": "2cd21a0dac3d3d326893fc26455f794d534d12ada5aa0b2253b47aa7f10afc92",
-        "portableSvgSha256": "53757226ffd11e7a633b1b0bb4c0c18f680bb6d8ff09748cab463b9a9b3030a8",
-        "pngSha256": "fe1109cdacf36d77c42cb78ba2cdd77d7cfedbf3bfc5dafb429e8cc612797376",
-        "pngBytes": 105629
+        "svgSha256": "613a4c60f17aa23f1fbc4d81f38a508ea25a83ea385ae0a5fdecc0f290d802c6",
+        "portableSvgSha256": "fc913d0b0334b9afa085ef9bcc6619a23f8cdbc9b5e7e93dc61f161da24b57ac",
+        "pngSha256": "77f40c620560d41a58c7c56a2b46c7bbd0d4b19aa620b543dce7a2347d617226",
+        "pngBytes": 93202
       },
-      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-glass.mjs"
     },
     {
       "slug": "stewarts-root-beer",
       "family": "stewarts-glass-bottle",
-      "packageChoice": "Representative US 12 fl oz / 355mL Stewart’s Root Beer glass bottle; exact inspected package.",
+      "packageChoice": "US 12 fl oz (355 mL) Stewart's Root Beer, amber glass long-neck with a gold crown, the current Fountain Classics label, front on. Same bottle helper and size as the other Stewart's icon.",
       "references": [
         {
           "pageUrl": "https://www.drinkstewarts.com/",
-          "imageUrl": "https://www.kdpproductfacts.com/smedia/kdpproductfacts.com/www/product_images/medium/STEWARTS_ROOT_BEER_SODA_12.png",
-          "inspectedAt": "2026-11-11",
+          "imageUrl": "https://www.kroger.com/product/images/xlarge/front/0009879400018",
+          "inspectedAt": "2026-11-18",
           "visuallyInspected": true,
-          "observations": "Exact manufacturer12oz Stewart’s Root Beer glass bottle inspected: long slim neck and modest curved shoulder, very dark brown soda, orange crown cap/1924 diamond, embossed Stewart’s glass shoulder, white flavor above orange lozenge/script label, Fountain Classics, tilted foamy root-beer mug below. Original non-diet variant; label engraving/filler simplified."
+          "observations": "4-pack of 12 oz Root Beer bottles with one bottle standing free at the right: same long-neck as Orange 'n Cream, amber glass, gold crown, dark liquid to the neck, white SINCE 1924 diamond. Label: orange diamond with dark border and pale inner line, white Stewart's script, \"Fountain Classics\" ribbon, wooden root beer mug with foam behind white \"Root Beer\", \"12 OZ\" below. \"Root Beer\" traced from this photo."
+        },
+        {
+          "pageUrl": "https://www.drinkstewarts.com/",
+          "imageUrl": "https://www.kroger.com/product/images/xlarge/front/0009879400027",
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "The Orange 'n Cream single, used for the shared bottle outline, the Stewart's mark trace and the SINCE 1924 trace (same bottle and mark on both flavors)."
         }
       ],
-      "uncertainty": "Catalog has no size. Package and flavor individually checked; original simplified vector lettering/illustrations and fine legal copy omitted. Manufacturer first, documented retailer fallback where needed; revision dates unverified.  Final aesthetic approval and web-device review pending.",
+      "uncertainty": "The current label differs from the one the old icon followed (flavor name now sits below the mark, over the mug), so the label follows the current packshots rather than the old layout. The \"Stewart's\" lettering molded at the shoulder is not visible on the current packshots and is left out. The diamond's hidden lower point is completed as geometry. The wooden mug is redrawn by hand at its measured place and size (x 92 to 111, y 170 to 192) from a 4-pack photo where it is about 100 px tall; the Stewart's mark is the one traced from the Orange 'n Cream single, recolored. \"12 OZ\" is Arial Bold.",
       "status": "needs-review",
       "bevId": "cdd7fd40-ea34-5988-bded-19801a4b64a0",
       "name": "Stewart's Root Beer",
@@ -9865,12 +10005,12 @@
         "svg": "svg/stewarts-root-beer.svg",
         "portableSvg": "portable-svg/stewarts-root-beer.svg",
         "png": "png/stewarts-root-beer.png",
-        "svgSha256": "2d81dff273d4d5cfa064c73a971b439a5ab7548a4fa2e305b617a451a646c73b",
-        "portableSvgSha256": "f9ba6faf1d8ca9f95ec36b4cc10111bdb6123bcf6705e05b6403f3ae104b5fe5",
-        "pngSha256": "c8f63b671cf5fcb138605600d9223763795c70071d1fa61f8251ce722f1f03bc",
-        "pngBytes": 99449
+        "svgSha256": "69a8bbd6a968d319fbb2f6c0a0737a7c6d5fec58e0d74a336a0b7fb3905410b9",
+        "portableSvgSha256": "ba81519029434f72678c8f075aee33e4028fe26ee2e9746dc61d6ddd0203c654",
+        "pngSha256": "92c51de87001d03ce5c73dfd88b56566749ee2c12f89115ac72174f29fac8eee",
+        "pngBytes": 93030
       },
-      "sourceModule": "scripts/icons/families/classic-soda-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-glass.mjs"
     },
     {
       "slug": "just-water-still",
@@ -9996,12 +10136,12 @@
         "svg": "svg/jamba-juice-strawberry-surf-rider.svg",
         "portableSvg": "portable-svg/jamba-juice-strawberry-surf-rider.svg",
         "png": "png/jamba-juice-strawberry-surf-rider.png",
-        "svgSha256": "5dbb2814e6bbed6f1b2a15e600b197809febe5633a5372b2ea0a78b069386283",
-        "portableSvgSha256": "66800fe9602d2182a7c6a265539013dd065a91b884be1ebb0ae2366d4ee4a9df",
-        "pngSha256": "35070bc25e733c668acc50733e0ccff36161ef4ef01d2159a7087644ae77d94d",
-        "pngBytes": 120137
+        "svgSha256": "a6f4eb73126694d2ab3e287b942ca81b44b26288a3b9ac5eaefa889a82d3c703",
+        "portableSvgSha256": "26a8f2a1c5267ee1e5e1857e1ab8e36e5db2b171a779ecf30834a2de6d447fc8",
+        "pngSha256": "e4bfd916224943bab12edf4bcd32377b1fa8f5935f9a4da9b54e05d35a62a0cb",
+        "pngBytes": 121188
       },
-      "sourceModule": "scripts/icons/families/starter-smoothies.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-served.mjs"
     },
     {
       "slug": "sunkist-orange",
@@ -10368,17 +10508,24 @@
     {
       "slug": "smartwater-vapor-distilled",
       "family": "water-expansion",
-      "packageChoice": "US vapor-distilled PET bottle, representative manufacturer bottle; size not legible",
+      "packageChoice": "The current US smartwater vapor distilled 20 fl oz (591 mL) PET bottle: tall smooth slim bottle, white cap, clear label with the blue drop and the vertical smartwater wordmark.",
       "references": [
+        {
+          "pageUrl": "https://www.kroger.com/p/smartwater-vapor-distilled-water-bottle/0078616220043",
+          "imageUrl": "https://www.kroger.com/product/images/xlarge/front/0078616220043",
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "Plain front shot of the 20 oz bottle, about 1000 px tall: white tall cap, neck ring, smooth domed shoulder to 30% of the height, straight slim body (width 27% of height), small petaloid base. The label is clear: a large navy-blue drop (#2d3b7c) wraps round the left side from 42% to 77%, smart reads bottom to top in white with sm on the drop and art on the clear film, water in white beside it and a small GLACEAU at the top left of the wordmark."
+        },
         {
           "pageUrl": "https://www.coca-cola.com/us/en/brands/smartwater/products",
           "imageUrl": "https://www.coca-cola.com/content/dam/onexp/us/en/brands/smartwater/july25/smartwater_bottle_and_can.png",
-          "inspectedAt": "2026-11-04",
+          "inspectedAt": "2026-11-18",
           "visuallyInspected": true,
-          "observations": "White cap, long straight clear bottle, rounded shoulders, blue droplet and white vertical smart water mark."
+          "observations": "Promotional render of the 1 L bottle beside a can on a blue backdrop; confirms the same label layout, not used for measurement."
         }
       ],
-      "uncertainty": "Catalog does not specify package size; manufacturer photograph selected without asserting an unreadable capacity.",
+      "uncertainty": "The old icon showed a solid blue label; the current bottle has a clear label with a blue drop, so that is drawn. The drop and the whole wordmark (including GLACEAU) are traced from the Kroger photo, where the letters on the clear film are only slightly lighter than the bottle; edges of art and water may be a little soft.",
       "status": "needs-review",
       "bevId": "b64e5d9e-1f7c-5c90-850a-6c16bff5ea34",
       "name": "Vapor Distilled Water",
@@ -10389,12 +10536,12 @@
         "svg": "svg/smartwater-vapor-distilled.svg",
         "portableSvg": "portable-svg/smartwater-vapor-distilled.svg",
         "png": "png/smartwater-vapor-distilled.png",
-        "svgSha256": "5328c6ba39f456b77b9b85993294605ecec191791102488091d632e0288c7fce",
-        "portableSvgSha256": "26c5a7aa4d30ab3f470b6603dad44c71e7da3b72151ea938fbd2d909c2a12f2d",
-        "pngSha256": "5935f115828f270d559bb2614209d705e5ed9e980a3c8fe0a5b2e7f367facbf2",
-        "pngBytes": 41932
+        "svgSha256": "42d8369e8a9fe4d9accc1deb825dceb274a009f399ae7ab288d7d6ab45f2bab0",
+        "portableSvgSha256": "49563bd9f30122e4480fa21261a9b1eb31a80eeca877449842930b25ffa241ec",
+        "pngSha256": "d582a6ade761c1069f352f32525d06e3ac2d26a82eab10830ae0c39e47dccda8",
+        "pngBytes": 80559
       },
-      "sourceModule": "scripts/icons/families/water-expansion.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-waters-a.mjs"
     },
     {
       "slug": "v8-original-vegetable-juice",
@@ -10475,17 +10622,17 @@
     {
       "slug": "vita-coco-coconut-water-original",
       "family": "coconut-water-carton",
-      "packageChoice": "US 1 L / 33.8 fl oz Original carton, blue screw cap.",
+      "packageChoice": "US 1 L / 33.8 fl oz Vita Coco Original Tetra Prisma carton with blue screw cap, current vitacoco.com packshot, drawn front on with a narrow side face in perspective like the other Good cartons.",
       "references": [
         {
           "pageUrl": "https://vitacoco.com/products/coconut-water",
           "imageUrl": "https://vitacoco.com/cdn/shop/files/VC_Original_1L_PDP_01.jpg?v=1756996747&width=1500",
-          "inspectedAt": "2026-10-26",
-          "observations": "Inspected manufacturer Original 1L image: tall pale-blue carton, dark-blue screw cap and folded top, dark-blue VITA COCO lettering with green coconut O shapes, palm tree and green coconut near bottom.",
-          "visuallyInspected": true
+          "inspectedAt": "2026-11-18",
+          "visuallyInspected": true,
+          "observations": "Front of the 1 L carton: sky-blue gradient face, dark blue folded top with a blue ridged screw cap, palm with green fronds and a brown trunk down the right side, NUTRIENTS & ELECTROLYTES top left, VITA COCO lockup in royal blue with a white keyline and green coconut halves as the O letters, script \"Coconut\", WATER, THE ORIGINAL, 33.8 FL OZ (1.05 QT) 1L at left, split green coconut with white meat and two yellow-striped straws at the bottom, blue water with a white wave at left, green leaves and NOT FROM CONCENTRATE along the base. Condensation drops all over."
         }
       ],
-      "uncertainty": "Representative US packaging; small lettering and illustrations simplified. Final design and native-app review pending.",
+      "uncertainty": "Lockup and green art traced from a colour-clustered packshot, mapped onto a front face that spans the printed panel, so every letter sits inside the face and the label art is clipped to it. The condensation is left out; the coconut meat, straws, centre and trunk are built from measured positions. The side face content (blue with a green base) is not visible in the packshot and is inferred from the wrap of the front art. Small text (NUTRIENTS & ELECTROLYTES, volume, NOT FROM CONCENTRATE) is Arial Bold.",
       "status": "needs-review",
       "bevId": "9080bc3d-7cb6-573e-b97e-6626e3115f02",
       "name": "Vita Coco Coconut Water",
@@ -10496,12 +10643,12 @@
         "svg": "svg/vita-coco-coconut-water-original.svg",
         "portableSvg": "portable-svg/vita-coco-coconut-water-original.svg",
         "png": "png/vita-coco-coconut-water-original.png",
-        "svgSha256": "f75b83279d408616123d39a160149d6c7a9c51484432ee6a37c3d7e122a7c0a6",
-        "portableSvgSha256": "7a37db6615b69cba0e861fb2f5a77e6eb6b7109311cae9c8ebdd4bfc152dbe18",
-        "pngSha256": "d41946d92c79f43db5b0a1b379b74379575954a76b1b5b512f410129c4c36404",
-        "pngBytes": 71617
+        "svgSha256": "5b1a0fb5be672d0fffeb9a1c1a834f04bd95c8121e3602a9bb0623c53bbcac85",
+        "portableSvgSha256": "85344932a7e63bc7eb47727954f001d6ce0bb050a4d80c3bb3c2f0da312882de",
+        "pngSha256": "e0e35ab3f6f881ba5f302d277013f71278d11134c6b2a68eba27168932758eb1",
+        "pngBytes": 128357
       },
-      "sourceModule": "scripts/icons/families/bottles-carton.mjs"
+      "sourceModule": "scripts/icons/families/redraw-r6-tea-carton.mjs"
     },
     {
       "slug": "waterloo-black-cherry",
