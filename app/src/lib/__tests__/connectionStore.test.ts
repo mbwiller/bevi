@@ -1,4 +1,5 @@
 import NetInfo, { type NetInfoChangeHandler, type NetInfoState } from '@react-native-community/netinfo';
+import { AppState, type AppStateStatus } from 'react-native';
 
 import {
   connectionOnline,
@@ -17,6 +18,8 @@ let netInfo: NetInfoChangeHandler | undefined;
 let unsubscribeNetInfo: jest.Mock;
 let stop: (() => void) | undefined;
 let seen: boolean[];
+let appState: ((status: AppStateStatus) => void) | undefined;
+let removeAppState: jest.Mock;
 
 const emit = (isConnected: boolean | null) => netInfo!({ isConnected, isInternetReachable: null } as NetInfoState);
 
@@ -39,6 +42,12 @@ beforeEach(() => {
     netInfo = l;
     return unsubscribeNetInfo;
   });
+  appState = undefined;
+  removeAppState = jest.fn();
+  jest.spyOn(AppState, 'addEventListener').mockImplementation((_type, l) => {
+    appState = l as (status: AppStateStatus) => void;
+    return { remove: removeAppState } as unknown as ReturnType<typeof AppState.addEventListener>;
+  });
 });
 
 afterEach(() => {
@@ -46,6 +55,7 @@ afterEach(() => {
   stop = undefined;
   setConnectionProbe(null);
   addEventListener.mockReset().mockReturnValue(jest.fn());
+  jest.restoreAllMocks();
   jest.useRealTimers();
 });
 
@@ -139,6 +149,54 @@ it('stops asking once NetInfo says online, and ignores an answer that was alread
   await advance(PROBE_OFFLINE_MS * 10);
   expect(probe).toHaveBeenCalledTimes(2);
   expect(connectionOnline()).toBe(true);
+});
+
+it('a repeated "no connection" from NetInfo does not undo what the backend answered', async () => {
+  const probe = jest.fn<Promise<boolean>, []>().mockResolvedValue(true);
+  watch(probe);
+  emit(false);
+  await advance(PROBE_OFFLINE_MS);
+  expect(connectionOnline()).toBe(true);
+
+  // Wi-Fi to cellular while NetInfo is stuck: another "no connection", which is no news.
+  emit(false);
+  expect(connectionOnline()).toBe(true);
+  expect(seen).toEqual([false, true]);
+  // The slower check carries on from where it was.
+  await advance(PROBE_ONLINE_MS);
+  expect(probe).toHaveBeenCalledTimes(2);
+});
+
+it('asks at once when the app comes back to the front while offline', async () => {
+  const probe = jest.fn<Promise<boolean>, []>().mockResolvedValue(true);
+  watch(probe);
+  emit(false);
+  appState?.('background');
+  appState?.('active');
+  await advance(0);
+  expect(probe).toHaveBeenCalledTimes(1);
+  expect(connectionOnline()).toBe(true);
+
+  // Online by NetInfo's word: coming to the front asks nothing.
+  emit(true);
+  appState?.('active');
+  await advance(PROBE_OFFLINE_MS * 4);
+  expect(probe).toHaveBeenCalledTimes(1);
+});
+
+it('a subscriber that leaves while a probe is on its way gets nothing from it', async () => {
+  let answer: (value: boolean) => void = () => {};
+  const probe = jest.fn<Promise<boolean>, []>().mockImplementation(() => new Promise<boolean>((resolve) => (answer = resolve)));
+  watch(probe);
+  emit(false);
+  await advance(PROBE_OFFLINE_MS);
+  stop?.();
+  stop = undefined;
+  answer(true);
+  await advance(PROBE_ONLINE_MS * 2);
+  expect(seen).toEqual([false]);
+  expect(probe).toHaveBeenCalledTimes(1);
+  expect(removeAppState).toHaveBeenCalledTimes(1);
 });
 
 it('one NetInfo listener for every subscriber, removed with the last one', () => {

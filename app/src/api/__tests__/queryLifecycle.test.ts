@@ -13,7 +13,9 @@ const addEventListener = NetInfo.addEventListener as jest.MockedFunction<typeof 
 
 let connection: NetInfoChangeHandler | undefined;
 let unsubscribe: jest.Mock;
-let appState: ((status: AppStateStatus) => void) | undefined;
+/** Every AppState listener: React Query's focus one, and the connection store's own (src/lib/connectionStore.ts). */
+let appStateListeners: ((status: AppStateStatus) => void)[];
+const appState = (status: AppStateStatus) => appStateListeners.forEach((l) => l(status));
 let removeAppState: jest.Mock;
 
 function emit(isConnected: boolean | null): void {
@@ -27,10 +29,10 @@ beforeEach(() => {
     connection = l;
     return unsubscribe;
   });
-  appState = undefined;
+  appStateListeners = [];
   removeAppState = jest.fn();
   jest.spyOn(AppState, 'addEventListener').mockImplementation((_type, l) => {
-    appState = l as (status: AppStateStatus) => void;
+    appStateListeners.push(l as (status: AppStateStatus) => void);
     return { remove: removeAppState } as unknown as ReturnType<typeof AppState.addEventListener>;
   });
 });
@@ -58,11 +60,11 @@ it('follows the connection: only "no connection" is offline', () => {
 
 it('is in focus only while the app is active', () => {
   connectQueryLifecycle();
-  appState?.('background');
+  appState('background');
   expect(focusManager.isFocused()).toBe(false);
-  appState?.('inactive');
+  appState('inactive');
   expect(focusManager.isFocused()).toBe(false);
-  appState?.('active');
+  appState('active');
   expect(focusManager.isFocused()).toBe(true);
 });
 
@@ -70,13 +72,14 @@ it('replaces the listeners of an earlier call', () => {
   connectQueryLifecycle();
   connectQueryLifecycle();
   expect(unsubscribe).toHaveBeenCalledTimes(1);
-  expect(removeAppState).toHaveBeenCalledTimes(1);
+  // Two AppState listeners went with the first call: the focus one, and the connection store's.
+  expect(removeAppState).toHaveBeenCalledTimes(2);
 });
 
 it('createQueryClient connects it', () => {
   createQueryClient();
   expect(connection).toBeDefined();
-  expect(appState).toBeDefined();
+  expect(appStateListeners.length).toBeGreaterThan(0);
 });
 
 // QueryClientProvider mounts the client, and only a mounted client listens to the two managers.

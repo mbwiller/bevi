@@ -1,4 +1,5 @@
 import NetInfo from '@react-native-community/netinfo';
+import { AppState } from 'react-native';
 
 import { isOnline } from './connection';
 
@@ -50,6 +51,7 @@ let online = true;
 /** What NetInfo last said. */
 let reported = true;
 let stopNetInfo: (() => void) | null = null;
+let stopAppState: (() => void) | null = null;
 let timer: ReturnType<typeof setTimeout> | null = null;
 /** Bumped whenever NetInfo speaks or the store stops, so a probe already in flight is ignored. */
 let generation = 0;
@@ -84,17 +86,32 @@ function scheduleProbe(ms: number): void {
 
 function start(): void {
   stopNetInfo = NetInfo.addEventListener((state) => {
+    const next = isOnline(state);
+    // Still "no connection" (a change of network type, say): no news. What the backend last
+    // answered stands, and the asking carries on, so the notice does not flash back.
+    if (!next && !reported) return;
     generation += 1;
-    reported = isOnline(state);
+    reported = next;
     set(reported);
     if (reported) clearTimer();
     else scheduleProbe(PROBE_OFFLINE_MS);
   });
+  // Back in front while offline: ask now. A phone that changed network in the background got no
+  // callback, and timers do not run while iOS has the app suspended.
+  const subscription = AppState.addEventListener('change', (status) => {
+    if (status === 'active' && !reported) {
+      generation += 1;
+      scheduleProbe(0);
+    }
+  });
+  stopAppState = () => subscription.remove();
 }
 
 function stop(): void {
   stopNetInfo?.();
   stopNetInfo = null;
+  stopAppState?.();
+  stopAppState = null;
   clearTimer();
   generation += 1;
   online = true;
