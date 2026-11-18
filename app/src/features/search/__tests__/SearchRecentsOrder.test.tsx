@@ -13,18 +13,21 @@ import { POPULAR_TITLE } from '../SearchPanel';
 // AsyncStorage after Popular's header is already showing, and FlashList's test tree keeps cells in
 // arrival order, so this file renders the list's data in order instead (as BevList.test.tsx does).
 
+let mockLastProps: Record<string, any> = {};
+
 jest.mock('@shopify/flash-list', () => {
   const { forwardRef, Fragment, createElement } = jest.requireActual('react');
   return {
-    FlashList: forwardRef((props: any, _ref: unknown) =>
-      createElement(
+    FlashList: forwardRef((props: any, _ref: unknown) => {
+      mockLastProps = props;
+      return createElement(
         Fragment,
         null,
         props.data.map((item: unknown, index: number) =>
           createElement(Fragment, { key: props.keyExtractor(item, index) }, props.renderItem({ item, index })),
         ),
-      ),
-    ),
+      );
+    }),
   };
 });
 
@@ -57,6 +60,9 @@ it('shows Recents above Popular on Bevi once they have been read', async () => {
   await screen.findByText('Recents');
   await screen.findByText(POPULAR_TITLE);
   expect(headings()).toEqual(['Recents', POPULAR_TITLE]);
+  // The order in the data is not enough on a phone: with this on, the real FlashList keeps Popular
+  // where it was and puts the late Recents rows above the top edge, where nobody sees them.
+  expect(mockLastProps.maintainVisibleContentPosition).toEqual({ disabled: true });
   await waitFor(() => expect(client.isFetching()).toBe(0));
   client.clear();
 });
