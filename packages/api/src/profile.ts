@@ -51,6 +51,12 @@ export function createProfileApi(client: SupabaseClient): ProfileApi {
         try {
           // Throws RangeError for an unknown IANA zone; Intl.supportedValuesOf
           // needs Node 18+ / a modern browser, both already required elsewhere.
+          // Hermes (IA-5): `Intl` on iOS is backed by Apple's own ICU rather
+          // than a bundled one, so this check is only as strict as the
+          // platform's zone table. If a zone Apple accepts and Postgres does
+          // not ever slips through, the write still fails server-side with a
+          // mapped error -- this is a nicer message, not the authority. No
+          // fallback added: `Intl.DateTimeFormat` itself exists on Hermes.
           new Intl.DateTimeFormat('en-US', { timeZone: patch.timezone });
         } catch {
           throw new ApiError('validation', `Unknown timezone: ${patch.timezone}`, { field: 'timezone' });
