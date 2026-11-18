@@ -1468,11 +1468,16 @@ export class FakeApi implements BeviApi {
         () => {
           const me = this.requireUser();
           if (!UPLOAD_MIME_TYPES.includes(input.mimeType)) invalid('mimeType', 'Use a JPEG, PNG, WebP or HEIC image');
-          if (typeof input.file?.size === 'number' && input.file.size > UPLOAD_MAX_BYTES) invalid('file', 'That image is too large');
+          // Contract 2.15.0 widened `file` to Blob | ArrayBuffer | Uint8Array (a React Native Blob
+          // uploads 0 bytes), so the size guard reads whichever measure the payload carries.
+          const fileBytes = input.file instanceof ArrayBuffer || ArrayBuffer.isView(input.file) ? input.file.byteLength : input.file?.size;
+          if (typeof fileBytes === 'number' && fileBytes > UPLOAD_MAX_BYTES) invalid('file', 'That image is too large');
           const id = this.nextId('asset');
           let url = `fake-asset://${id}`;
           try {
-            if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') url = URL.createObjectURL(input.file);
+            // Only a real Blob has an object URL; bytes keep the placeholder.
+            if (typeof Blob !== 'undefined' && input.file instanceof Blob && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function')
+              url = URL.createObjectURL(input.file);
           } catch {
             // Not a real Blob (tests) or no object URLs: keep the placeholder.
           }
