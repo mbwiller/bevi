@@ -24,8 +24,6 @@ module.exports = {
   // CI creeps further than a laptop does because it has fewer cores, so each worker takes more files.
   workerIdleMemoryLimit: '1GB',
   moduleNameMapper: {
-    // SPIKE S1: CSS modules (the Find Bev camera view) resolve to a class-name echo.
-    '\\.module\\.css$': '<rootDir>/jest.cssModule.js',
     // Its "react-native" exports are untranspiled ESM (.mjs); the CommonJS build is the same icons.
     '^lucide-react-native$': '<rootDir>/../node_modules/lucide-react-native/dist/cjs/lucide-react-native.js',
     '^lucide-react-native/icons/(.*)$': '<rootDir>/../node_modules/lucide-react-native/dist/cjs/icons/$1.js',

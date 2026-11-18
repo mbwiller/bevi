@@ -12,7 +12,7 @@ Bevi is a small app for a group of friends to rank drinks. This note says what i
 
 ## Where it lives
 
-Everything is stored in our Supabase database and file storage. Your sign-in session is kept in this browser's local storage.
+Everything is stored in our Supabase database and file storage. Your sign-in session is kept on your device.
 
 ## Who can see it
 

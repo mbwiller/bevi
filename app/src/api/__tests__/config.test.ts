@@ -1,6 +1,7 @@
 import { isApiError } from '@bevi/shared';
 
-import { webAuthStorage } from '../authStorage';
+// Explicit .web: jest resolves modules as iOS, so '../authStorage' would be the native Keychain adapter.
+import { createAuthStorage as webAuthStorage } from '../authStorage.web';
 import { readApiConfig, unconfiguredApi } from '../config';
 
 const URL_OK = 'https://abcdefghijklmnop.supabase.co';

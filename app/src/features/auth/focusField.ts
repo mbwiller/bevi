@@ -1,10 +1,10 @@
-import { Platform } from 'react-native';
+import { focusRegisteredField } from '@/components/fieldFocus';
 
 /**
- * Moves focus to the field whose TextField `id` is `id` (Enter in one field → the next). The app is
- * web only, so this goes through the DOM id TextField puts on its input; elsewhere it's a no-op.
+ * Moves focus to the field whose TextField `id` is `id` (return in one field → the next). The
+ * native file: it goes through TextField's focus registry (src/components/fieldFocus.ts). The web
+ * one, focusField.web.ts, uses the DOM id.
  */
 export function focusField(id: string): void {
-  if (Platform.OS !== 'web' || typeof document === 'undefined') return;
-  document.getElementById(id)?.focus();
+  focusRegisteredField(id);
 }
