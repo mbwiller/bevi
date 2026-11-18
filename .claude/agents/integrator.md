@@ -92,6 +92,44 @@ schema-only migrations as allowed to defer RLS and mark N/A rather than
 FAIL — but say explicitly that this is a temporary pass, not a permanent
 exemption.
 
+**(g) No destructive change while a shipped client can still read it.**
+The policy is `DEVELOPMENT-ARJUN.md` §14 and the short form is in
+`supabase/CLAUDE.md`: the backend serves the current contract major and the
+two previous minors, so anything inside that window must keep working. Grep
+the migrations added in this PR for `drop column`, `alter column ... type`,
+`set not null`, `drop constraint`, a `check` that is narrower than the one it
+replaces, `rename column`, `rename to`, `alter type ... rename value`, `drop
+type`, `drop table`, `drop function`. Each hit is a FAIL unless **both**: the
+thing has a row in `DEVELOPMENT-ARJUN.md` §15, and that row's "safe to delete
+when" is already satisfied (say which `app_config` values you checked it
+against, or that you could not reach one — do not assume). Dropping something
+this same PR added is fine. Purely additive migrations PASS. If no
+`app_config` table exists yet (pre-IA-2) and no binary has shipped, mark N/A
+and say so — that is a temporary pass, not an exemption.
+
+**(h) A live RPC's return shape and parameter list never change in place.**
+For every `create or replace function public.<x>` in the diff, check whether
+`<x>` already exists on `main` (`git show main:supabase/migrations/...`, or
+grep the merged migrations). If it does, diff its `returns` clause, its
+`returns table (...)` column list and its parameter list against main's.
+Changing only the body: PASS. Adding a column at the end of a `returns
+table`, or adding a parameter **with a default**: PASS. Removing, renaming or
+retyping a returned column, changing a scalar return type, or dropping,
+renaming or reordering a parameter: FAIL — an installed binary still calls
+the old signature and reads the old columns. The fix is a new
+`<x>_v2` with the old function left in place (§14, "RPC versioning"), never
+an edit to `<x>`. A function only ever created in this PR is new: PASS.
+
+**(i) Every deprecation gets a ledger row.**
+If this PR stops using something older clients still call — `packages/api` no
+longer selects a column or calls an RPC, a `_v2` RPC appears beside an
+existing one, a contract field is no longer read — then
+`DEVELOPMENT-ARJUN.md` §15 must gain a row in the same PR: the thing, where
+it lives, the last contract version that used it, and the earliest
+`min_contract_version` / `min_app_version` that allows deleting it. No row:
+FAIL, with the row you would have written. A PR that removes a thing must
+delete its row in the same diff.
+
 ## Output
 
 End with a short summary: total checks run, how many PASS/FAIL/N/A, and a

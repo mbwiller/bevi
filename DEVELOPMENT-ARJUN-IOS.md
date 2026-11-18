@@ -177,7 +177,95 @@ This is the real work and the one that is easy to skip until it bites.
   what is deprecated, which contract version stopped using it, the earliest
   `minAppVersion` that lets us delete it.
 
-**Check:** the live conformance run goes green against `bevi-dev`, then against the two older tags; a deliberate breaking change to an RPC turns the matrix red.
+**Landed** (`chore/ia-3-contract-compat`): the policy as `DEVELOPMENT-ARJUN.md`
+§14, with the mid-task short form in `supabase/CLAUDE.md`; the ledger as §15;
+the enforcement as checks (g)–(i) in `.claude/agents/integrator.md`. The tags
+below exist locally and are **not pushed**. The matrix is still the proposal
+below and nothing is built.
+
+#### Retroactive contract tags (created locally, not pushed)
+
+Every `CONTRACT_VERSION` that has ever been on `main`, read off the git history
+of `shared/src/index.ts`. Scheme: `contract/<version>`, annotated, on the
+commit that introduced that version.
+
+| Tag | Commit | Date | Introduced by |
+|---|---|---|---|
+| `contract/2.14.0` | `70d7b5b` | 2026-11-16 | optional barcode nutrition snapshots (#222) |
+| `contract/2.13.0` | `af4ab37` | 2026-11-12 | every Bev read returns `iconUrl` from `bev_icons` (#200) |
+| `contract/2.12.0` | `262983e` | 2026-11-11 | social context: friends ranking, Bev'd it too, followed by (#184) |
+| `contract/2.11.0` | `cb1ffb9` | 2026-11-09 | the internal bug reporter (#167) |
+| `contract/2.10.0` | `e0c1f7a` | 2026-11-02 | S-10 + A-08: the venues contract and read path (#161) |
+| `contract/2.9.0` | `2979595` | 2026-11-01 | S-13 + A-12: duplicates, `duplicateOfId`, `merge_bev` (#151) |
+| `contract/2.8.0` | `5440010` | 2026-10-31 | A-13: the category hierarchy (#132) |
+| `contract/2.7.0` | `68eb163` | 2026-10-20 | A-16 + S-14: `bev_edges` and `bev_embeddings` (#115) |
+| `contract/2.6.0` | `c26ec45` | 2026-10-20 | S-04 + A-04: the Explore backend (#113) |
+| `contract/2.5.0` | `1ec7c27` | 2026-10-20 | profile photos: storage policy, `set_avatar` (#110) |
+| `contract/2.4.0` | `baa1e96` | 2026-10-19 | S-12 + A-11: Taste Profile data (#101) |
+| `contract/2.3.0` | `84eaf2c` | 2026-10-19 | S-20: `feed.listUser` (#97) |
+| `contract/2.2.0` | `3e7fbe2` | 2026-10-19 | S-07 + A-06: category progress (#93) |
+| `contract/2.1.0` | `56f2e8d` | 2026-10-18 | S-05 + A-05: Bev of the day and Bev of the week (#96) |
+| `contract/2.0.0` | `8cbc10d` | 2026-10-14 | S-01: feed carries rankings only (#65) |
+| `contract/1.0.0` | `e4e8b2e` | 2026-10-11 | contract v1: username auth, string buckets, ranking writes (#25) |
+
+All sixteen are ancestors of `origin/main`. Two deliberate absences: 3.0.0,
+which lives on the unmerged #221 and not on `main` (`pre-rebase-3.0.0` already
+marks that line of work), and the `contract/v0` scaffold (`0b7de7f`, #2), which
+declared no `CONTRACT_VERSION` at all. From here, a tag is cut by the PR that
+bumps the version, and a release tag per build (IA-9) is a separate scheme.
+
+#### Where the conformance suite has to live (IS-8)
+
+A proposal, because the decision crosses the lane line.
+
+What is true today, checked rather than remembered:
+`app/src/testing/conformance.ts` is 1471 lines, exports `runConformance`, and
+imports only `@bevi/shared` and `@bevi/ranking`. It uses the shared test
+globals (`describe` / `it` / `expect` / `beforeAll`) and **no `jest.*` API
+anywhere** — the file does not contain the string `jest` outside its header
+prose. Its only runner is the nine-line
+`app/src/testing/fakeApi/__tests__/conformance.test.ts`, under jest-expo.
+`packages/api` runs vitest 5 with no `globals` setting, so its tests import
+`describe`/`it`/`expect` from `vitest`. The suite is therefore already close to
+runner-agnostic; what actually blocks the matrix is ownership and module
+boundaries, not Jest.
+
+What a matrix entry even is, which decides the rest: "today's backend still
+satisfies what contract 2.13 promised" means running the suite **as it stood at
+that tag**, through that tag's `packages/api`, against today's `bevi-dev` —
+i.e. `git worktree add` at `contract/2.13.0`, `npm ci`, run. Two consequences.
+First, whatever we decide, the tag's own tree has to be able to run the suite
+outside jest-expo, so the matrix can only cover versions tagged *after* this
+decision lands; the retroactive tags above are markers and a free
+`git diff contract/2.13.0..contract/2.14.0 -- shared/src`, not matrix inputs.
+Second, a live run needs an invite code, an alcoholic Bev id, and an operator
+hook for `makeInternalReporter` (`set_profile_role` has no contract path), so
+either the bugs cases are skipped live or `packages/api/test` grows a
+service-role helper.
+
+| Option | What it costs |
+|---|---|
+| **A. Move it into `shared/`** | Contract and suite travel in one tag, and both lanes already approve `shared/`. But `shared/` is dependency-free and has no `test` script today; it would gain a runner and a dependency on `@bevi/ranking` (Matt's package, zero-dep by its own rule). Worse, every edit to a 1471-line test file becomes a `contract/*` PR needing both owners and queueing behind §4's one-bump-at-a-time rule. Conformance churns; contract bumps are rationed. |
+| **B. Extract `packages/conformance`** | A new workspace (`package.json`, `tsconfig.json`, a root `workspaces` entry, a CI line) and a verbatim file move. `@bevi/conformance` depends on `@bevi/shared` + `@bevi/ranking`, devDepends on vitest with `globals: true`; `app`'s existing test becomes a nine-line import, `packages/api` gets `test/conformance.live.test.ts`. Only the suite moves — the FakeApi stays in `app/src/testing/`, so `check-bundle.mjs` and `test-double-isolation.test.ts` keep covering exactly what they cover now. Needs one ownership answer: jointly owned like `shared/`, but on ordinary PRs. |
+| **C. Make it runner-agnostic in place** | Almost no diff — `packages/api` sets `globals: true` and imports across the workspace. The cost is structural: a backend package importing `app/src/testing/**`, the one tree the repo works to keep isolated, and a workspace dependency from `packages/api` on `app`, which inverts the direction everything else runs in. It also leaves the file that gates my releases in Matt's lane, where I may not edit it. |
+
+**Recommendation: B**, in three steps that each stand alone.
+
+1. `packages/conformance`: move `runConformance` verbatim, vitest `globals: true`
+   the only runner assumption. `app`'s FakeApi test becomes an import — Matt's
+   one-line change, and jest-expo must stay green, since that run is the suite's
+   only current coverage. Half a day, most of it the lane agreement.
+2. `packages/api/test/conformance.live.test.ts` against `bevi-dev`, skipping
+   like the other `*.live` files when no stack is configured. Half a day, plus
+   whatever the operator hook turns into.
+3. The matrix: a workflow that checks out the last two `contract/*` tags into
+   worktrees and runs each tree's suite against `bevi-dev`. A workflow file
+   once 1 and 2 exist.
+
+A is the fallback if we would rather not add a workspace. C should be refused:
+it buys a week and costs the lane boundary.
+
+**Check:** the policy, the ledger and the integrator checks are readable in the three files above, and a deliberately destructive migration makes the integrator FAIL. The matrix half is checked when it exists: the live conformance run goes green against `bevi-dev`, then against the two older tags; a deliberate breaking change to an RPC turns the matrix red.
 
 ---
 
@@ -409,6 +497,7 @@ Say these out loud so neither of us quietly assumes the other is doing them:
 | ~~IS-5~~ | Bundle id | — | **Decided 2026-11-17: `app.bevi.ios`** (explicit App ID, team prefix `9NA45GL4CJ`). Must match `ios.bundleIdentifier` exactly |
 | IS-6 | `react-native-maps` (Google) or `expo-maps` (Apple Maps option) | Decides whether IA-7 exists at all, and raises the iOS deployment target | Spike at IM-7; do not pre-commit |
 | IS-7 | Do we ship report-content + block-user for v1? | Guideline 1.2 for a social app. Yes = contract + RPCs + RLS (me) and a report/block sheet (IM-13). No = the argument is invite-only, follows-only visibility and no public discovery, written into the review notes — and expect to be asked anyway | Ship it. It is small, and it is the difference between one review round and three |
+| IS-8 | Where the conformance suite lives, so a compat matrix can run it | IA-3's matrix cannot exist while the suite's only runner is jest-expo inside `app/`, and `app/` is Matt's lane | Extract `packages/conformance` (option B in IA-3): the suite moves verbatim, `app`'s FakeApi test becomes an import, `packages/api` gets a live run |
 
 ## 4. Not colliding with Matt
 
