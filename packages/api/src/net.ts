@@ -109,7 +109,8 @@ function methodOf(input: unknown, init?: { method?: string } | null): string {
 function isObjectUpload(url: string, method: string): boolean {
   if (method !== 'POST' && method !== 'PUT') return false;
   const rest = url.slice(url.indexOf(STORAGE_OBJECT_PATH) + STORAGE_OBJECT_PATH.length + 1);
-  const route = rest.split(/[/?#]/)[0];
+  // `?? ''` because the app's tsconfig has noUncheckedIndexedAccess, which types `[0]` as optional.
+  const route = rest.split(/[/?#]/)[0] ?? '';
   // `upload/sign/<bucket>/<path>`: the PUT carries the bytes, the POST only
   // mints the URL.
   if (route === 'upload') return method === 'PUT';
