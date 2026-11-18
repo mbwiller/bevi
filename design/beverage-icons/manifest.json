@@ -7247,7 +7247,7 @@
           "observations": "Brand carousel render of the same bottle at 300x500: confirms the silhouette, the label art and the molded grip."
         }
       ],
-      "uncertainty": "Outline measured on a 540 px retail photo (right half mirrored; the left side is hidden by the pack). The mark, elk, field and the two side text blocks are traced from that photo, so the small side text is only legible as texture. Shoulder arches, chevron and grip rings are drawn as groove/highlight pairs at measured heights; their count and spacing are approximate.",
+      "uncertainty": "Outline measured on a 540 px retail photo (right half mirrored; the left side is hidden by the pack). The mark with antlers, the elk and the field are traced from that photo. The five shoulder panels, the inverted V and five ribs (at heights measured from the dark bands on the packshot, with the small steps of the silhouette in the profile) are soft bands clipped inside the outline; panel count and shape are read from a small photo. The side text blocks are reduced to hairlines and the label ends darken into the curve.",
       "status": "needs-review",
       "bevId": "6738dca5-961a-526d-9a6c-894c9fbbbb10",
       "name": "Natural Spring Water",
@@ -7258,10 +7258,10 @@
         "svg": "svg/deer-park-natural-spring-water.svg",
         "portableSvg": "portable-svg/deer-park-natural-spring-water.svg",
         "png": "png/deer-park-natural-spring-water.png",
-        "svgSha256": "b66bc71758f28555ee3e9f9d4abd3179765a2001c414de6faddc0efec35a608e",
-        "portableSvgSha256": "73f57b1c35664da10a958a2e444f7641e76dc47147ecfcc9f1b73327202fa63c",
-        "pngSha256": "29c619b71574bada0b8c81ac570b5ab1613c3d4faac64036561857b9312f6709",
-        "pngBytes": 121719
+        "svgSha256": "061e495202173111ac18eb91de8d96b91a73ec35171bdc1f3b3a1ef3c5155e67",
+        "portableSvgSha256": "a9a4944c8f9e75a899c44f33bcfac9db7c965f6da9eb518b3dc94cbbd52ad5f8",
+        "pngSha256": "9a91e1f2b1322a8ebafc1b38b8f69754117d831c475e366d3c46ff51648d42d8",
+        "pngBytes": 121247
       },
       "sourceModule": "scripts/icons/families/redraw-r6-waters-a.mjs"
     },
