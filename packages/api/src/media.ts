@@ -1,14 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ApiError, type MediaApi, type UploadMediaInput, type UploadMediaResult } from '@bevi/shared';
 import { mapError } from './errors';
+import { requireUserId } from './currentUser';
 import { publicUrl } from './mappers';
 import { toUploadBody, uploadByteLength } from './uploads';
-
-async function requireUserId(client: SupabaseClient): Promise<string> {
-  const { data, error } = await client.auth.getUser();
-  if (error || !data.user) throw new ApiError('unauthorized', 'Not signed in');
-  return data.user.id;
-}
 
 // Interim simplification (no `process-photo` Edge Function / background-
 // removal pipeline yet -- that's milestone 1.6, a separate ticket):

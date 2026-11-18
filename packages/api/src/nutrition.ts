@@ -2,6 +2,10 @@ import { ApiError, type NutritionApi, type NutritionPreview } from '@bevi/shared
 
 const FIELDS = 'product_name,serving_size,nutriments';
 const NUTRIENTS = ['energy-kcal', 'fat', 'carbohydrates', 'sugars', 'proteins', 'sodium'];
+// This is the one call that does not go through the supabase client, so
+// `net.ts`'s deadline does not cover it; it keeps its own, slightly shorter
+// one -- Open Food Facts is a third party and a slow lookup has a cheap
+// fallback (upload a label photo).
 const TIMEOUT_MS = 12000;
 const number = (value: unknown): number | null =>
   typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1_000_000 ? value : null;

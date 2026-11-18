@@ -1,13 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { MIN_N_USER, RANKING_VERSION, RECOMMEND_N, localDayKey, recommend } from '@bevi/ranking';
-import { ApiError, type Recommendation, type RecommendationsResult, type RecsApi } from '@bevi/shared';
+import type { Recommendation, RecommendationsResult, RecsApi } from '@bevi/shared';
+import { requireUserId } from './currentUser';
 import type { SnapshotCache } from './snapshot';
-
-async function requireUserId(client: SupabaseClient): Promise<string> {
-  const { data, error } = await client.auth.getUser();
-  if (error || !data.user) throw new ApiError('unauthorized', 'Not signed in');
-  return data.user.id;
-}
 
 const round2 = (x: number) => Math.round(x * 100) / 100;
 
