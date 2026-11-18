@@ -1,5 +1,5 @@
-/** 2.14.0 adds barcode nutrition lookup and optional nutrition on new Bevs. */
-export const CONTRACT_VERSION = '2.14.0';
+/** 2.15.0 lets `media.upload` take raw bytes (`ArrayBuffer`/`Uint8Array`), not only a `Blob`. */
+export const CONTRACT_VERSION = '2.15.0';
 
 export * from './enums';
 export * from './errors';

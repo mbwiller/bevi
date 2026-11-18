@@ -7,6 +7,7 @@ import {
   type BugsApi,
 } from '@bevi/shared';
 import { mapError } from './errors';
+import { uploadByteLength } from './uploads';
 
 // The internal bug reporter's client half (docs/bug-workflow.md).
 //
@@ -207,7 +208,11 @@ export function createBugsApi(client: SupabaseClient): BugsApi {
       for (const item of evidence) {
         const ext = EXT_BY_MIME_TYPE[item.mimeType];
         if (!ext) throw new ApiError('validation', 'Attach a JPEG, PNG or WebP image', { field: 'evidence' });
-        if (typeof item.file?.size === 'number' && item.file.size > MAX_EVIDENCE_BYTES) {
+        // `uploadByteLength` reads `.size` or `.byteLength`, whichever the
+        // payload has, and 0 when it has neither -- same tolerance as the
+        // `typeof ... === 'number'` guard it replaces, now that media uploads
+        // may be raw bytes (uploads.ts).
+        if (uploadByteLength(item.file) > MAX_EVIDENCE_BYTES) {
           throw new ApiError('validation', 'That screenshot is too large', { field: 'evidence' });
         }
         planned.push({ file: item.file, mimeType: item.mimeType, ext, caption: typeof item.caption === 'string' ? item.caption : '' });

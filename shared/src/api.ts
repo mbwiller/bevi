@@ -353,8 +353,16 @@ export interface BevsApi {
 export interface UploadMediaInput {
   /** 'avatar' is the caller's profile photo, applied with `profile.updateMe({ avatarAssetId })`. */
   kind: 'bev-photo' | 'label' | 'avatar';
-  /** A web `File` or `Blob` (from the image picker / camera input). */
-  file: Blob;
+  /**
+   * The bytes to upload.
+   *
+   * On the web this is a `File`/`Blob` from the image picker or camera input.
+   * On React Native, pass `ArrayBuffer` or `Uint8Array`: RN's `Blob` is a
+   * different object with no byte backing supabase-js Storage can read, and
+   * uploading one commonly stores a 0-byte object **without raising an
+   * error** — the photo simply comes back blank.
+   */
+  file: Blob | ArrayBuffer | Uint8Array;
   mimeType: string;
 }
 
