@@ -1,14 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { ApiError, type Page, type PageParams, type Profile, type WantToTryApi, type WantToTryItem } from '@bevi/shared';
+import type { Page, PageParams, Profile, WantToTryApi, WantToTryItem } from '@bevi/shared';
 import { mapError } from './errors';
+import { requireUserId } from './currentUser';
 import { mapBevSummary, mapProfile, type BevSummaryRow, type ProfileViewRow } from './mappers';
 import { clampLimit, decodeCursor, toPage } from './paging';
-
-async function requireUserId(client: SupabaseClient): Promise<string> {
-  const { data, error } = await client.auth.getUser();
-  if (error || !data.user) throw new ApiError('unauthorized', 'Not signed in');
-  return data.user.id;
-}
 
 interface OffsetCursor {
   offset: number;

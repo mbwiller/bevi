@@ -1,4 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { ApiError } from '@bevi/shared';
+import { requireUserId } from '../src/currentUser.ts';
+import { createProfileApi } from '../src/profile.ts';
 import { mapError } from '../src/errors.ts';
 import { REQUEST_TIMEOUT_MS, UPLOAD_TIMEOUT_MS, deadlineMsFor, withDeadline } from '../src/net.ts';
 import { isAutoRefreshRunning, registerAutoRefreshTarget } from '../src/session.ts';
@@ -96,6 +100,58 @@ describe('request deadlines', () => {
     const base = vi.fn(hangingFetch());
     const failure = withDeadline(base as unknown as typeof fetch)(RPC_URL, { signal: controller.signal }).catch((e: unknown) => e);
     expect(((await failure) as Error).name).toBe('AbortError');
+  });
+});
+
+// Reported from an iOS simulator run with Wi-Fi off: every screen but the
+// cached Feed said "You're signed out", and because the app reads
+// `'unauthorized'` from `profile.getMe()` as a real sign-out, an offline launch
+// landed on the sign-in screen. `requireUserId` calls `auth.getUser()`, which
+// is a network call, and turned every failure into `'unauthorized'`.
+describe('requireUserId when the radio is off', () => {
+  function clientWhoseGetUserFails(error: unknown): SupabaseClient {
+    return { auth: { getUser: async () => ({ data: { user: null }, error }) } } as unknown as SupabaseClient;
+  }
+
+  async function codeFrom(error: unknown): Promise<string> {
+    try {
+      await requireUserId(clientWhoseGetUserFails(error));
+    } catch (e) {
+      return (e as ApiError).code;
+    }
+    throw new Error('requireUserId resolved; it was meant to throw');
+  }
+
+  it('returns the id when there is a session', async () => {
+    const client = { auth: { getUser: async () => ({ data: { user: { id: 'user-1' } }, error: null }) } } as unknown as SupabaseClient;
+    await expect(requireUserId(client)).resolves.toBe('user-1');
+  });
+
+  it('is network, not unauthorized, when the call never completed', async () => {
+    // A blown `REQUEST_TIMEOUT_MS` deadline, straight from `net.ts`.
+    expect(await codeFrom(new TypeError(`Network request timed out after ${REQUEST_TIMEOUT_MS} ms`))).toBe('network');
+    // auth-js's own retryable shape for an unreachable host: status 0.
+    expect(await codeFrom({ name: 'AuthRetryableFetchError', message: 'Request aborted', status: 0 })).toBe('network');
+    expect(await codeFrom(new TypeError('Failed to fetch'))).toBe('network');
+  });
+
+  it('keeps unauthorized for a real sign-out', async () => {
+    // No error and no user: a genuinely missing session.
+    const empty = { auth: { getUser: async () => ({ data: { user: null }, error: null }) } } as unknown as SupabaseClient;
+    await expect(requireUserId(empty)).rejects.toMatchObject({ code: 'unauthorized' });
+
+    // A real 401/403, and an auth error this package does not recognise: the
+    // gate stays closed rather than reporting a network problem.
+    expect(await codeFrom({ name: 'AuthApiError', message: 'invalid claim: missing sub claim', status: 401, code: 'bad_jwt' })).toBe(
+      'unauthorized',
+    );
+    expect(await codeFrom({ name: 'AuthApiError', message: 'User not allowed', status: 403 })).toBe('unauthorized');
+    expect(await codeFrom({ name: 'AuthError', message: 'something new', status: 500 })).toBe('unauthorized');
+  });
+
+  it('reaches the app as network through profile.getMe(), which is what decides a sign-out', async () => {
+    const offline = clientWhoseGetUserFails(new TypeError('Network request timed out after 15000 ms'));
+    await expect(createProfileApi(offline).getMe()).rejects.toMatchObject({ code: 'network' });
   });
 });
 

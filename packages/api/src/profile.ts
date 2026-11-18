@@ -1,14 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ApiError, type CheckHandleResult, type Page, type Profile, type ProfileApi, type ProfileRow, type UpdateMeInput } from '@bevi/shared';
 import { mapError } from './errors';
+import { requireUserId } from './currentUser';
 import { mapProfile, mapProfileRow, type ProfileViewRow } from './mappers';
 import { clampLimit, decodeCursor, toPage } from './paging';
-
-async function requireUserId(client: SupabaseClient): Promise<string> {
-  const { data, error } = await client.auth.getUser();
-  if (error || !data.user) throw new ApiError('unauthorized', 'Not signed in');
-  return data.user.id;
-}
 
 async function fetchProfileView(client: SupabaseClient, id: string): Promise<ProfileViewRow> {
   const { data, error } = await client.from('profiles_view').select('*').eq('id', id).maybeSingle();
