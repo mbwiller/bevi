@@ -23,3 +23,9 @@ jest.mock('./src/features/bug-report/supported', () => ({ REPORTER_SUPPORTED: tr
 // listener that never fires, so every suite that renders the create-Bev wizard sees it online
 // (src/features/create-bev/useOnline.ts; its own test drives the listener).
 jest.mock('@react-native-community/netinfo', () => require('@react-native-community/netinfo/jest/netinfo-mock.js'));
+
+// AsyncStorage is a native module; the library's own mock keeps items in memory for the test file.
+// Recents (src/features/add-bev/recents.ts) keep their list in it on native.
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);
