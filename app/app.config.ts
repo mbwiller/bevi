@@ -5,7 +5,7 @@ import type { ExpoConfig } from 'expo/config';
 // committed: `expo prebuild` generates ios/ from this file, locally or on EAS (eas.json).
 //
 // One owner at a time for this file and eas.json. Values that come from an account (bundle id,
-// EAS project id) are Arjun's to hand over; nothing here is a secret.
+// Expo owner, EAS project id) are Arjun's to hand over; nothing here is a secret.
 
 // Shown word for word in iOS's permission dialogs, and read by App Review: say what and why.
 const CAMERA_PERMISSION = "Bevi uses the camera to photograph a drink you're adding and to scan a barcode.";
@@ -21,6 +21,10 @@ const SPLASH_WORDMARK_WIDTH = 123;
 const config: ExpoConfig = {
   name: 'Bevi',
   slug: 'bevi',
+  // The Expo organisation that owns the EAS project (@bevi/bevi). With `extra.eas.projectId` below
+  // it is what every `eas` command reads to find the project; neither is a secret. They are written
+  // by hand because `eas project:init` cannot edit a config that is code.
+  owner: 'bevi',
   version: '0.1.0',
   orientation: 'portrait',
   userInterfaceStyle: 'automatic',
@@ -82,6 +86,7 @@ const config: ExpoConfig = {
     ['expo-build-properties', { ios: { enableSceneSupport: true } }],
   ],
   experiments: { typedRoutes: true },
+  extra: { eas: { projectId: '3797aad9-3485-4856-8e46-b6656a7716f1' } },
 };
 
 export default config;
