@@ -1,0 +1,218 @@
+name: ios
+
+# IA-9. The iOS release path: a guard job that runs on every dispatch and tag,
+# and an EAS build (optionally followed by a submit) that only runs if the
+# guard passed.
+#
+# NOT A PR CHECK, on purpose. There is no `pull_request` trigger here at all:
+# an EAS build costs real build minutes and needs EXPO_TOKEN, so it runs when
+# someone asks for it or when a release tag is pushed, and never from a fork.
+# app.yml stays the PR check for app/ and keeps its web export exactly as it is.
+#
+# WHAT A HUMAN MUST CREATE BEFORE THIS CAN RUN (none of it exists yet):
+#   * `app/eas.json` with the profiles `development`, `preview` and
+#     `production`, each pinning `ios.image` -- the app lane's file.
+#   * A GitHub Environment named `ios` holding
+#       EXPO_TOKEN             an Expo access token for the `bevi` account
+#       ASC_API_KEY_P8_BASE64  the App Store Connect API key (.p8), base64
+#       ASC_KEY_ID             its key id
+#       ASC_ISSUER_ID          the issuer id
+#     Only the submit step needs the three ASC values; a build needs EXPO_TOKEN
+#     alone. Put required reviewers on the environment if you want a human in
+#     front of every upload.
+# The EAS project (@bevi/bevi, 3797aad9-3485-4856-8e46-b6656a7716f1), the Apple
+# team (9NA45GL4CJ) and the bundle id (app.bevi.ios) are already registered;
+# `extra.eas.projectId` and `ios.bundleIdentifier` live in app.config.ts, which
+# is the app lane's.
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: EAS build profile
+        type: choice
+        options:
+          - development
+          - preview
+          - production
+        default: preview
+      submit:
+        description: Also submit the finished build to App Store Connect
+        type: boolean
+        default: false
+  push:
+    tags:
+      # Release tags only (IA-9's version policy: tag the repo per release so
+      # IA-3's matrix has something to test against).
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  # One iOS build at a time per ref. Never cancel in progress: a cancelled EAS
+  # build has already consumed its minutes, and a half-uploaded submit is worse
+  # than a slow queue.
+  group: ios-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # A release tag BUILDS; it does not upload. Flip this to "true" only when
+  # someone is ready for `git push --tags` to put a binary in front of App
+  # Store Connect unattended -- and read IA-9's version policy first, because
+  # `buildNumber` must increase on every upload or the upload is rejected.
+  SUBMIT_ON_TAG: "false"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. The guards. No secrets, no environment, no build minutes.
+  # ---------------------------------------------------------------------------
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Scheduled and dispatched runs in a fork would have no secrets anyway, and
+    # a tag pushed in a fork runs under the fork's name. This stops even the
+    # free minutes.
+    if: github.repository == 'mbwiller/bevi'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Typed routes live in app/.expo/types (gitignored) and are only written
+      # by the Expo CLI; without them tsc can't catch a bad href. Same step
+      # app.yml runs, for the same reason.
+      - name: generate route types
+        working-directory: app
+        run: npx expo customize tsconfig.json
+
+      # A tag build is the last place a type error is cheap to find: after this
+      # the next feedback is a failed EAS build twenty minutes later, or a
+      # binary.
+      - run: npm run typecheck -w app
+
+      # The build image decides the Xcode version and must match what Expo SDK
+      # 57 expects, so it is pinned in app/eas.json rather than left to float.
+      # The script says what that buys and why CI can only insist on it: eas.json
+      # is the app lane's file. It runs here, in the job with no secrets, so a
+      # floating image fails before a build minute is spent.
+      - name: the EAS build image is pinned
+        run: node .github/scripts/check-eas-image.mjs development preview production
+
+      # THE NATIVE BUNDLE SAFETY SCAN (IA-9).
+      #
+      # app/scripts/check-bundle.mjs is what keeps app/src/testing/** -- the
+      # FakeApi, the fixture people, `tester-pass-1`, `test-invite`, the old
+      # mock's plaintext passwords -- out of a shipped bundle. Until this job it
+      # ran only over the WEB export (app/vercel.json and app.yml), so nothing
+      # stood between a test double and the App Store.
+      #
+      # The script is unchanged and is invoked, not edited: app/ is the other
+      # lane's directory. Two things make that work.
+      #   * `--output-dir` is left at its default, `app/dist`, which is the
+      #     directory the script already scans.
+      #   * `--no-bytecode`. A native export is Hermes bytecode by default, one
+      #     `.hbc` file, which the script's text-file filter skips -- it would
+      #     scan the handful of files copied from app/public and report nothing
+      #     about the bundle. Exporting plain JS is what makes the forbidden
+      #     strings findable. It costs nothing here: this export exists to be
+      #     read, not to be shipped.
+      #
+      # WHAT THIS DOES AND DOES NOT PROVE. It proves that this commit's module
+      # graph, through the same metro.config.js EAS will use, contains no
+      # test-only string. It does NOT inspect the artifact EAS produces: the env
+      # values below are placeholders (the real ones come from the EAS
+      # environment, as they do on Vercel), and the shipped bundle is bytecode.
+      # The scan is about what the source tree pulls in, which is the thing that
+      # can leak a FakeApi.
+      - name: native export and bundle scan
+        working-directory: app
+        env:
+          CI: "1"
+          EXPO_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+          EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci
+        run: npx expo export --platform ios --no-bytecode --clear && node scripts/check-bundle.mjs
+
+  # ---------------------------------------------------------------------------
+  # 2. The build. Needs the `ios` environment's secrets.
+  # ---------------------------------------------------------------------------
+  build:
+    needs: guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    if: github.repository == 'mbwiller/bevi'
+    # Every secret this workflow touches lives in this environment and nowhere
+    # else, so a run that never reaches this job never has access to one.
+    environment: ios
+    env:
+      # A dispatch chooses its profile; a tag is a release, so it is production.
+      PROFILE: ${{ github.event_name == 'workflow_dispatch' && inputs.profile || 'production' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: generate route types
+        working-directory: app
+        run: npx expo customize tsconfig.json
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          packager: npm
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      # `--wait` so the job's result is the build's result rather than "the
+      # build was queued". The EXPO_PUBLIC_* values are NOT set here: EAS reads
+      # them from the `development` / `preview` / `production` EAS environments,
+      # which already carry EXPO_PUBLIC_SUPABASE_URL and
+      # EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY. Which backend each profile points
+      # at is IS-2.
+      - name: eas build
+        working-directory: app
+        run: eas build --platform ios --profile "$PROFILE" --non-interactive --wait
+
+      # App Store Connect API key. It arrives base64 so a PEM survives a GitHub
+      # secret intact, and it is written with umask 077 to the runner's temp
+      # directory, which is outside the checkout -- nothing can commit it and
+      # the cleanup step below removes it even when the submit fails.
+      #
+      # UNVERIFIED: these three variable names are what eas-cli documents for a
+      # non-interactive ASC API key submit. Nobody has run this. Confirm them
+      # against the eas-cli version the step above installs before the first
+      # real submit, and expect app/eas.json's `submit.production.ios` to need a
+      # matching entry.
+      - name: write the App Store Connect API key
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.submit) || (github.event_name == 'push' && env.SUBMIT_ON_TAG == 'true') }}
+        env:
+          ASC_API_KEY_P8_BASE64: ${{ secrets.ASC_API_KEY_P8_BASE64 }}
+        run: |
+          umask 077
+          printf '%s' "$ASC_API_KEY_P8_BASE64" | base64 -d > "$RUNNER_TEMP/asc-api-key.p8"
+
+      - name: eas submit
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.submit) || (github.event_name == 'push' && env.SUBMIT_ON_TAG == 'true') }}
+        working-directory: app
+        env:
+          EXPO_ASC_API_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
+          EXPO_ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          EXPO_ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: eas submit --platform ios --profile "$PROFILE" --latest --non-interactive
+
+      - name: remove the App Store Connect API key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/asc-api-key.p8"
