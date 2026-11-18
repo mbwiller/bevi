@@ -41,12 +41,40 @@ export interface AutoRefreshTarget {
 // replaces the target: the newest client is the one a foreground nudge should
 // refresh.
 let target: AutoRefreshTarget | undefined;
-let running = false;
+
+// Intent and reality are tracked apart on purpose.
+//
+//   * `wanted` is what the app asked for: it is what makes a repeated
+//     `AppState` 'active' a no-op, and what `isAutoRefreshRunning()` reports.
+//   * `started` is whether auth-js may have a live interval. It is set before
+//     the `startAutoRefresh()` await and only cleared by a stop, because
+//     auth-js installs its interval and *then* does async work that can
+//     reject: a rejection leaves intent false while the ticker is alive.
+//
+// Collapsing the two (the single `running` flag this replaces) stranded the
+// ticker `stopAutoRefresh()` exists to stop -- after a failed start, every
+// later background nudge returned early and the interval ran for the life of
+// the process.
+let wanted = false;
+let started = false;
 
 /** Called by `createBeviApi()`. Not exported from the package's entry point. */
 export function registerAutoRefreshTarget(next: AutoRefreshTarget | undefined): void {
+  const previous = target;
+  const wasStarted = started;
   target = next;
-  running = false;
+  wanted = false;
+  started = false;
+  // A second `createBeviApi()` -- a test, Fast Refresh, a sign-out/sign-in that
+  // rebuilds the api -- must not leave the old client's refresh interval
+  // ticking for the life of the process. Nothing can nudge it any more, so
+  // stopping it here is the only chance. Fire and forget: registration is
+  // synchronous and a failed stop has nothing to recover.
+  if (previous && previous !== next && wasStarted) {
+    void Promise.resolve()
+      .then(() => previous.stopAutoRefresh())
+      .catch(() => {});
+  }
 }
 
 /**
@@ -58,20 +86,33 @@ export function registerAutoRefreshTarget(next: AutoRefreshTarget | undefined): 
  * tick is not fatal -- the next request still refreshes on demand.
  */
 export async function startAutoRefresh(): Promise<void> {
-  if (!target || running) return;
-  running = true;
+  if (!target || wanted) return;
+  wanted = true;
+  // Before the await: auth-js may install its interval and then reject.
+  started = true;
   try {
     await target.startAutoRefresh();
   } catch {
-    // Leave `running` false so a later foreground nudge can try again.
-    running = false;
+    // Leave intent false so a later foreground nudge can try again. `started`
+    // stays true -- the ticker may well be live, and the next stop has to be
+    // allowed to reach it.
+    wanted = false;
   }
 }
 
-/** Stop proactive token refresh -- call when the app goes to the background. */
+/**
+ * Stop proactive token refresh -- call when the app goes to the background.
+ *
+ * This attempts the stop whenever a start has been attempted since the last
+ * one, not only when the last start succeeded. auth-js's `_stopAutoRefresh` is
+ * idempotent (it clears the interval handle and nulls it), so a stop with
+ * nothing to stop costs nothing, while skipping one can leave the interval
+ * running forever.
+ */
 export async function stopAutoRefresh(): Promise<void> {
-  if (!target || !running) return;
-  running = false;
+  if (!target || !started) return;
+  wanted = false;
+  started = false;
   try {
     await target.stopAutoRefresh();
   } catch {
@@ -82,5 +123,5 @@ export async function stopAutoRefresh(): Promise<void> {
 
 /** Whether a start is currently in effect. Exposed for tests and debugging. */
 export function isAutoRefreshRunning(): boolean {
-  return running;
+  return wanted;
 }

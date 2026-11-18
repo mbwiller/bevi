@@ -256,6 +256,58 @@ describe('auto-refresh control', () => {
     expect(isAutoRefreshRunning()).toBe(true);
   });
 
+  // A second `createBeviApi()` (a test, Fast Refresh, a sign-out/sign-in that
+  // rebuilds the api) used to abandon the previous client's auth-js interval,
+  // which then ticked for the life of the process with nothing able to reach
+  // it.
+  it('stops the previous target when a new api replaces it', async () => {
+    await api.startAutoRefresh();
+    expect(target.startAutoRefresh).toHaveBeenCalledTimes(1);
+
+    const next = { startAutoRefresh: vi.fn().mockResolvedValue(undefined), stopAutoRefresh: vi.fn().mockResolvedValue(undefined) };
+    registerAutoRefreshTarget(next);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(target.stopAutoRefresh).toHaveBeenCalledTimes(1);
+    expect(isAutoRefreshRunning()).toBe(false);
+
+    // The new target is the one a foreground nudge now drives.
+    await api.startAutoRefresh();
+    expect(next.startAutoRefresh).toHaveBeenCalledTimes(1);
+    expect(target.startAutoRefresh).toHaveBeenCalledTimes(1);
+    registerAutoRefreshTarget(undefined);
+  });
+
+  it('does not stop a target that was never started, or re-register the same one', async () => {
+    registerAutoRefreshTarget(target);
+    expect(target.stopAutoRefresh).not.toHaveBeenCalled();
+
+    await api.startAutoRefresh();
+    registerAutoRefreshTarget(target);
+    await Promise.resolve();
+    // Same target: nothing was abandoned, so nothing is stopped behind the
+    // app's back.
+    expect(target.stopAutoRefresh).not.toHaveBeenCalled();
+  });
+
+  // auth-js installs its interval and then does async work that can reject. A
+  // single `running` flag read that rejection as "never started" and every
+  // later stop returned early, stranding the very ticker `stopAutoRefresh()`
+  // exists to stop.
+  it('still stops the ticker after a start that rejected', async () => {
+    target.startAutoRefresh.mockRejectedValueOnce(new Error('no session'));
+    await api.startAutoRefresh();
+    expect(isAutoRefreshRunning()).toBe(false);
+
+    await api.stopAutoRefresh();
+    expect(target.stopAutoRefresh).toHaveBeenCalledTimes(1);
+
+    // And the stop is not repeated once it has been made.
+    await api.stopAutoRefresh();
+    expect(target.stopAutoRefresh).toHaveBeenCalledTimes(1);
+  });
+
   it('is wired to the client createBeviApi builds', async () => {
     const store = new Map<string, string>();
     api.createBeviApi({
