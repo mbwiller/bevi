@@ -1,15 +1,13 @@
-import NetInfo from '@react-native-community/netinfo';
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 
-import { isOnline } from '@/lib/connection';
+import { connectionOnline, subscribeConnection } from './connectionStore';
 
 /**
- * The connection, live, from `@react-native-community/netinfo` (the native file; the web one,
- * useOnline.web.ts, reads `navigator.onLine` and follows the online and offline events). Starts online and follows NetInfo's listener, which
- * reports the current state soon after subscribing and then every change.
+ * The connection, live (the native file; the web one, useOnline.web.ts, reads `navigator.onLine`
+ * and follows the online and offline events). It reads the app's one connection store
+ * (connectionStore.ts): NetInfo, corrected by asking the backend while NetInfo says offline. Starts
+ * online.
  */
 export function useOnline(): boolean {
-  const [online, setOnline] = useState(true);
-  useEffect(() => NetInfo.addEventListener((state) => setOnline(isOnline(state))), []);
-  return online;
+  return useSyncExternalStore(subscribeConnection, connectionOnline, connectionOnline);
 }
