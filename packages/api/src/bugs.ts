@@ -7,6 +7,7 @@ import {
   type BugsApi,
 } from '@bevi/shared';
 import { mapError } from './errors';
+import { requireUserId } from './currentUser';
 
 // The internal bug reporter's client half (docs/bug-workflow.md).
 //
@@ -60,12 +61,6 @@ function randomId(): string {
   const g = globalThis as unknown as { crypto?: { randomUUID?: () => string } };
   if (typeof g.crypto?.randomUUID === 'function') return g.crypto.randomUUID();
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-async function requireUserId(client: SupabaseClient): Promise<string> {
-  const { data, error } = await client.auth.getUser();
-  if (error || !data.user) throw new ApiError('unauthorized', 'Not signed in');
-  return data.user.id;
 }
 
 /**

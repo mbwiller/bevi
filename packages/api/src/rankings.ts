@@ -12,6 +12,7 @@ import {
   type SubmitRankingResult,
 } from '@bevi/shared';
 import { mapError } from './errors';
+import { requireUserId } from './currentUser';
 import {
   bucketToDb,
   mapBevSummary,
@@ -23,12 +24,6 @@ import {
 } from './mappers';
 import { clampLimit, decodeCursor, toPage } from './paging';
 import type { SnapshotCache } from './snapshot';
-
-async function requireUserId(client: SupabaseClient): Promise<string> {
-  const { data, error } = await client.auth.getUser();
-  if (error || !data.user) throw new ApiError('unauthorized', 'Not signed in');
-  return data.user.id;
-}
 
 interface RankingWithBevRow extends RankingRow {
   bevs: (BevSummaryRow & { category_id: string }) | Array<BevSummaryRow & { category_id: string }>;
