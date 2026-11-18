@@ -3,7 +3,8 @@
  * layout viewport's height minus the part the keyboard hides (`useKeyboardInset`). On the web that
  * height must be `window.innerHeight`, which iOS Safari keeps fixed while the keyboard is open.
  * react-native-web's `useWindowDimensions().height` is the visual viewport there, already shrunk by
- * the keyboard, so subtracting the inset from it would count the keyboard twice.
+ * the keyboard, so subtracting the inset from it would count the keyboard twice. On iOS the window
+ * height does not change with the keyboard, so `useWindowDimensions().height` is the right one there.
  */
 export function keyboardTop(layoutHeight: number, inset: number): number {
   return layoutHeight - inset;
