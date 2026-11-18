@@ -1,6 +1,7 @@
 import path from 'path';
 
 import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
+import { TextInput } from 'react-native';
 
 import { api } from '@/api/client';
 import { controls } from '@/testing/fakeApi';
@@ -55,6 +56,29 @@ describe('sign in', () => {
     await fireEvent(screen.getByLabelText('Username'), 'submitEditing', { nativeEvent: { text: 'tester' } });
     expect(spy).not.toHaveBeenCalled();
     expect(screen.queryByText('Enter your password')).toBeNull();
+  });
+
+  it('return in the username field focuses the password field (native focusField)', async () => {
+    // Jest resolves as iOS, so this runs focusField.ts and TextField's focus registry, not the DOM.
+    // The mocked TextInput's focus() is one jest.fn on its prototype; each call's `this` says which.
+    const focus = jest.spyOn(TextInput.prototype, 'focus');
+    await open();
+    focus.mockClear();
+    await fireEvent(screen.getByLabelText('Username'), 'submitEditing', { nativeEvent: { text: 'tester' } });
+    const focused = focus.mock.contexts.map((c) => (c as TextInput).props.accessibilityLabel);
+    expect(focused).toEqual(['Password']);
+  });
+
+  it('the keyboard says next on the username field and go on the password field', async () => {
+    await open();
+    const username = screen.getByLabelText('Username');
+    const password = screen.getByLabelText('Password');
+    expect(username.props.enterKeyHint).toBe('next');
+    // Keeps the keyboard up while focus moves on, instead of closing it and opening it again.
+    expect(username.props.submitBehavior).toBe('submit');
+    expect(password.props.enterKeyHint).toBe('go');
+    // The last field submits and closes the keyboard (the default).
+    expect(password.props.submitBehavior).toBeUndefined();
   });
 
   it('Enter in the password field submits', async () => {
