@@ -130,6 +130,19 @@ it lives, the last contract version that used it, and the earliest
 FAIL, with the row you would have written. A PR that removes a thing must
 delete its row in the same diff.
 
+**(j) A breaking change names the floor it raises.**
+`app_config.min_app_version` and `min_contract_version` are seeded `'0.0.0'`,
+so the version gate does nothing until someone raises it. If this PR makes a
+contract version unservable — a `_v2` RPC, a contract major bump, or a
+removal under `DEVELOPMENT-ARJUN.md` §14 step 5 — the PR body must say which
+`min_contract_version` / `min_app_version` the hosted `app_config` row has to
+reach and when. Raising it is an operator action against the hosted project,
+so you cannot verify it happened; verify that the PR says what must happen,
+and FAIL if it does not. Also FAIL a PR that raises a floor past a build
+already shipped, or before the app's "update required" screen (IM-9) exists —
+that is a locked-out user with no recourse, which is worse than a stale
+client.
+
 ## Output
 
 End with a short summary: total checks run, how many PASS/FAIL/N/A, and a

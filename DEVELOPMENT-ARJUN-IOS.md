@@ -179,9 +179,18 @@ This is the real work and the one that is easy to skip until it bites.
 
 **Landed** (`chore/ia-3-contract-compat`): the policy as `DEVELOPMENT-ARJUN.md`
 §14, with the mid-task short form in `supabase/CLAUDE.md`; the ledger as §15;
-the enforcement as checks (g)–(i) in `.claude/agents/integrator.md`. The tags
+the enforcement as checks (g)–(j) in `.claude/agents/integrator.md`. The tags
 below exist locally and are **not pushed**. The matrix is still the proposal
 below and nothing is built.
+
+The policy also pins down the hazard IA-2 creates: `min_app_version` and
+`min_contract_version` are seeded `'0.0.0'` (#240), so the gate is decorative
+until a release raises it. Raising `min_contract_version` is a mandatory line
+in the breaking-bump checklist — a 3.0.0 backend with the floor at `0.0.0`
+answers a 2.12 binary with shapes it cannot parse — and raising it before
+IM-9's screen exists, or past a build the store is already serving, locks
+those users out with no recourse. §14 has both directions and the order they
+go in.
 
 #### Retroactive contract tags (created locally, not pushed)
 

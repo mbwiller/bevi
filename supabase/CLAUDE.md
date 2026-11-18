@@ -26,6 +26,15 @@ carries the whole burden (`DEVELOPMENT-ARJUN-IOS.md` §IA-3, and
   (`N`, `N-1`, `N-2`). Anything older is cut off deliberately, by raising
   `min_app_version` / `min_contract_version` in `app_config` (IA-2) so the
   app shows "update required" — never by letting its calls start failing.
+- **The gate is decorative until you raise it.** `app_config`'s
+  `min_app_version` and `min_contract_version` are seeded `'0.0.0'` (IA-2,
+  #240) — below everything, deliberately. A breaking bump that does not
+  raise `min_contract_version` in the same release gates nobody; it just
+  serves old binaries shapes they cannot parse. Raising it is a mandatory
+  line in the breaking-bump checklist (`DEVELOPMENT-ARJUN.md` §14), done on
+  the hosted row and then read back. The other direction is worse: never
+  raise either floor past a build the store is already serving, and never
+  before IM-9's "update required" screen can tell the user why.
 - **Append-only gains a second rule: no destructive change while a shipped
   client still reads the thing.** Dropping a column, renaming a column,
   narrowing a check constraint, removing an enum value, and changing an
@@ -33,7 +42,7 @@ carries the whole burden (`DEVELOPMENT-ARJUN-IOS.md` §IA-3, and
   ship a client that reads it → wait out `minAppVersion` → then remove, in a
   later migration. The ledger in `DEVELOPMENT-ARJUN.md` §15 records which
   release makes the removal legal; a destructive migration without a ledger
-  row is a review failure (`.claude/agents/integrator.md`, checks g–i).
+  row is a review failure (`.claude/agents/integrator.md`, checks g–j).
 - **Never change a live RPC's columns in place.** When a return shape must
   change incompatibly, add `rpc_name_v2` and keep `rpc_name` answering the
   old shape until the old clients are gated out; then retire `rpc_name`

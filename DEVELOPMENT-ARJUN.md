@@ -1328,6 +1328,19 @@ Written for the store binary (`DEVELOPMENT-ARJUN-IOS.md` §IA-3). While the web 
 - A contract version only leaves the window by a deliberate bump of `min_contract_version`. Never by a migration that quietly stops answering it.
 - `min_app_version` is never raised past a build the App Store will still serve every device we support (IA-9). A gate an old iPhone cannot clear bricks it forever.
 
+**The floor is decorative until someone raises it.** `app_config.min_app_version` and `min_contract_version` are both seeded `'0.0.0'` (the IA-2 migration, #240) — below every build and every contract that has ever existed, on purpose, so nothing is gated on day one. So the gate does nothing by default, and it fails in both directions:
+
+- **Too low is a silent break.** A 3.0.0 backend with the floor still at `0.0.0` cheerfully answers a 2.12 binary with shapes it cannot parse, and the user gets crashes and empty screens instead of "update required". Raising `min_contract_version` is therefore a **mandatory line in the breaking-bump checklist**, not a follow-up ticket: the release that makes a contract version unservable is the release that raises the floor past it.
+- **Too high locks people out with no recourse.** Never raise either floor past a build the store is already serving (IA-9's staged rollout), and never raise it at all before IM-9's "update required" screen exists to show the user why — a gate with no screen behind it is a dead app and no explanation. The blocking screen always offers a way to reach us.
+
+The order, end to end, for a change that cannot be made additively:
+
+1. Add the new thing; the old one keeps working (the four steps below).
+2. Ship a client that reads the new thing, and record that build's version in §15's row.
+3. Confirm IM-9's screen is live and the store is serving the new build to every device we support.
+4. **Raise `min_contract_version` on the hosted project** (and `min_app_version` if a native build is required), then `select` the row back and check it. Never from memory, never only in dev.
+5. Only then remove the old thing, and delete the §15 row in the same PR.
+
 **Destructive changes are two-release operations.** While a client inside the window still reads a thing, you may not remove it. "The thing" is anything that client touches: a column `packages/api` selects, an RPC it calls, an enum value it parses, a constraint it relies on being loose.
 
 | Change | Safe in one release? |
@@ -1350,7 +1363,7 @@ Every "No" is the same four steps:
 
 **RPC versioning.** Never change a live RPC's columns in place. `create or replace function` on a function an installed binary calls is for the body only; the signature and the return shape are frozen for as long as that binary is inside the window. When a shape must change incompatibly, add `rpc_name_v2`, grant it the same way, point `packages/api` at it in the contract PR, and leave `rpc_name` answering the old shape. `rpc_name` is then an ordinary §15 row and dies on the schedule above. Do not stack versions: if `_v3` is wanted before `_v1` is gone, the window is doing its job and `_v1` should be gated out first.
 
-**What enforces it.** `.claude/agents/integrator.md` checks (g) no destructive migration without a ledger row that `app_config` already satisfies, (h) no in-place change to an existing RPC's return shape or parameter list, (i) every deprecation carries a §15 row. Run it before opening the PR, as always. The compatibility test matrix that would catch the rest mechanically is still a proposal — `DEVELOPMENT-ARJUN-IOS.md` §IA-3, "Where the conformance suite has to live".
+**What enforces it.** `.claude/agents/integrator.md` checks (g) no destructive migration without a ledger row that `app_config` already satisfies, (h) no in-place change to an existing RPC's return shape or parameter list, (i) every deprecation carries a §15 row, (j) a breaking change names the floor it raises. Run it before opening the PR, as always. The compatibility test matrix that would catch the rest mechanically is still a proposal — `DEVELOPMENT-ARJUN-IOS.md` §IA-3, "Where the conformance suite has to live".
 
 ---
 
