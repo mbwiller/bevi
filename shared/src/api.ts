@@ -350,19 +350,24 @@ export interface BevsApi {
   leaves(bevIds: readonly string[]): Promise<BevLeaf[]>;
 }
 
+/**
+ * What an upload's bytes may be (contract 2.15.0; it was `Blob` alone before).
+ *
+ * On the web this is a `File`/`Blob` from the image picker or camera input.
+ * On React Native, pass `ArrayBuffer` or `Uint8Array`: RN's `Blob` is a
+ * different object with no byte backing supabase-js Storage can read, and
+ * uploading one commonly stores a 0-byte object **without raising an
+ * error** — the photo simply comes back blank. An implementation running off
+ * the web therefore rejects a `Blob` with `'validation'` rather than
+ * uploading nothing.
+ */
+export type UploadPayload = Blob | ArrayBuffer | Uint8Array;
+
 export interface UploadMediaInput {
   /** 'avatar' is the caller's profile photo, applied with `profile.updateMe({ avatarAssetId })`. */
   kind: 'bev-photo' | 'label' | 'avatar';
-  /**
-   * The bytes to upload.
-   *
-   * On the web this is a `File`/`Blob` from the image picker or camera input.
-   * On React Native, pass `ArrayBuffer` or `Uint8Array`: RN's `Blob` is a
-   * different object with no byte backing supabase-js Storage can read, and
-   * uploading one commonly stores a 0-byte object **without raising an
-   * error** — the photo simply comes back blank.
-   */
-  file: Blob | ArrayBuffer | Uint8Array;
+  /** The bytes to upload. See `UploadPayload` for what each platform sends. */
+  file: UploadPayload;
   mimeType: string;
 }
 
@@ -784,6 +789,11 @@ export interface BugReportInput {
    * The screenshots, at most 3, uploaded to private storage as part of this
    * call and never before it — nothing leaves the device until the reporter
    * submits. `caption` says what one shows, e.g. 'Feed, with 1 marked'.
+   *
+   * Deliberately still `Blob`, not `UploadPayload`: the bug reporter is a
+   * web-only surface until it is ported to native (IM-10). Widening it is
+   * that port's job — it needs a contract decision of its own, and the
+   * implementation must normalise the bytes the way `media.upload` does.
    */
   evidence?: { file: Blob; mimeType: string; caption?: string }[];
   /**
