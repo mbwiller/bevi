@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { ApiError, type Category, type CategoriesApi, type CategoryNode } from '@bevi/shared';
+import type { Category, CategoriesApi, CategoryNode } from '@bevi/shared';
 import { mapError } from './errors';
+import { requireUserId } from './currentUser';
 import {
   mapCategory,
   mapCategoryNode,
@@ -12,8 +13,7 @@ import {
 export function createCategoriesApi(client: SupabaseClient): CategoriesApi {
   return {
     async list(): Promise<Category[]> {
-      const { data: userData, error: userError } = await client.auth.getUser();
-      if (userError || !userData.user) throw new ApiError('unauthorized', 'Not signed in');
+      await requireUserId(client);
 
       const [{ data: rows, error }, { data: progress, error: progressError }] = await Promise.all([
         client.from('categories').select('*').order('sort_order'),
@@ -43,8 +43,7 @@ export function createCategoriesApi(client: SupabaseClient): CategoriesApi {
     // category `get_category_progress()` does not return, and that RPC returns
     // only roots (20261026000100 section 6).
     async tree(): Promise<CategoryNode[]> {
-      const { data: userData, error: userError } = await client.auth.getUser();
-      if (userError || !userData.user) throw new ApiError('unauthorized', 'Not signed in');
+      await requireUserId(client);
 
       // An RPC, not a table read: the age gate belongs to the server (a leaf of
       // an alcoholic root has to be hidden too, which is a join `categories_select`

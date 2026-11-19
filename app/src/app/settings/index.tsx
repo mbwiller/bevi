@@ -4,7 +4,7 @@ import { StyleSheet, Text } from 'react-native';
 
 import { useCanReportBug, useSignOut } from '@/api/hooks';
 import { requestReport } from '@/features/bug-report/commands';
-import { errorCopy } from '@/lib/errorCopy';
+import { actionErrorMessage } from '@/lib/errorCopy';
 import { SettingsRow, SettingsScreen, SettingsSection } from '@/features/settings/SettingsRow';
 import { useSession } from '@/state/session';
 import { spacing, type, useTheme } from '@/theme';
@@ -47,7 +47,7 @@ export default function SettingsIndexScreen() {
       </SettingsSection>
       {signOut.isError ? (
         <Text style={[type.body, styles.note, { color: colors.scoreLow }]} accessibilityLiveRegion="polite" role="alert">
-          {`Couldn't sign out. ${errorCopy(signOut.error).message}`}
+          {`Couldn't sign out. ${actionErrorMessage(signOut.error)}`}
         </Text>
       ) : null}
       {version ? <Text style={[type.caption, styles.note, { color: colors.textSecondary }]}>{`Bevi ${version}`}</Text> : null}

@@ -1,78 +1,88 @@
-import type { BevSummary } from '@bevi/shared';
-import { useCallback, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-/** A Bev opened from search, as the Recents row shows it (name, brand) and links to it (id). */
-export type RecentBev = Pick<BevSummary, 'id' | 'name' | 'brand'>;
+import { parseRecents, recentsKey, withoutRecent, withRecent, type RecentBev } from './recentsList';
 
-/** One list per account, so people sharing a browser don't see each other's recents. */
-const keyFor = (userId: string) => `bevi.add.recents:${userId}`;
-/** Recents kept on this device. */
-export const RECENTS_MAX = 8;
+// The native file: Recents in AsyncStorage, which only answers asynchronously. The web one,
+// recents.web.ts, keeps the same list in localStorage and reads it synchronously.
 
-interface StorageLike {
-  getItem(key: string): string | null;
-  setItem(key: string, value: string): void;
-}
+export { RECENTS_MAX, type RecentBev } from './recentsList';
 
-/** `localStorage` when it exists and works (web), else null. Never throws. */
-function storage(): StorageLike | null {
+/** A user's stored recents, newest first. Empty when nothing is stored, storage fails, or it holds junk. */
+export async function loadRecents(userId: string): Promise<RecentBev[]> {
   try {
-    return (globalThis as { localStorage?: StorageLike }).localStorage ?? null;
-  } catch {
-    return null;
-  }
-}
-
-function isRecent(v: unknown): v is RecentBev {
-  const r = v as RecentBev;
-  return !!r && typeof r.id === 'string' && typeof r.name === 'string' && (r.brand === null || typeof r.brand === 'string');
-}
-
-/** A user's recents, newest first. Empty with no user, or when storage is missing, blocked or holds junk. */
-export function readRecents(userId: string | undefined): RecentBev[] {
-  if (!userId) return [];
-  try {
-    const raw = storage()?.getItem(keyFor(userId));
-    const parsed: unknown = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed.filter(isRecent).slice(0, RECENTS_MAX) : [];
+    return parseRecents(await AsyncStorage.getItem(recentsKey(userId)));
   } catch {
     return [];
   }
 }
 
-function write(userId: string | undefined, list: RecentBev[]): void {
-  if (!userId) return;
+async function save(userId: string, list: RecentBev[]): Promise<void> {
   try {
-    storage()?.setItem(keyFor(userId), JSON.stringify(list));
+    await AsyncStorage.setItem(recentsKey(userId), JSON.stringify(list));
   } catch {
-    // Private mode or full storage: recents are a convenience, so drop the write.
+    // Full or failing storage: recents are a convenience, so drop the write.
   }
 }
 
 /**
+ * Every read and read-modify-write of Recents runs one after another, across all the hooks that are
+ * mounted (the Search panel and the map's venue panel both keep Recents): each edit starts from what
+ * is stored, so one panel never overwrites what another just added.
+ */
+let queue: Promise<unknown> = Promise.resolve();
+function serial<T>(task: () => Promise<T>): Promise<T> {
+  const run = queue.then(task, task);
+  queue = run.catch(() => undefined);
+  return run;
+}
+
+const NONE: RecentBev[] = [];
+
+/**
  * Recent Bevs for the Search panel's idle state, per account on this device: remember on open, forget with
- * the row's ✕. Nothing is kept until the signed-in user is known.
+ * the row's ✕. Nothing is kept until the signed-in user is known. The list starts empty and fills when the
+ * stored one has been read; writes are fire-and-forget and never throw. The list in state is tagged with
+ * its account, and any other account's list reads as empty, so switching accounts never shows the
+ * previous one's Recents, not even for a frame.
  */
 export function useRecents(userId: string | undefined) {
-  const [state, setState] = useState(() => ({ userId, list: readRecents(userId) }));
-  // Re-read when the account changes (or becomes known).
-  const recents = state.userId === userId ? state.list : readRecents(userId);
-  if (state.userId !== userId) setState({ userId, list: recents });
-  const remember = useCallback(
-    (bev: RecentBev) => {
-      const next = [{ id: bev.id, name: bev.name, brand: bev.brand }, ...readRecents(userId).filter((r) => r.id !== bev.id)].slice(0, RECENTS_MAX);
-      write(userId, next);
-      setState({ userId, list: userId ? next : [] });
+  const [state, setState] = useState<{ userId: string | undefined; list: RecentBev[] }>(() => ({ userId, list: NONE }));
+  const recents = state.userId === userId ? state.list : NONE;
+  if (state.userId !== userId) setState({ userId, list: NONE });
+
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  /** Shows `list` as `uid`'s Recents, unless the hook has moved on to another account (or unmounted). */
+  const show = useCallback((uid: string, list: RecentBev[]) => {
+    if (mounted.current) setState((s) => (s.userId === uid ? { userId: uid, list } : s));
+  }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+    void serial(() => loadRecents(userId)).then((list) => show(userId, list));
+  }, [userId, show]);
+
+  const edit = useCallback(
+    (change: (list: RecentBev[]) => RecentBev[]) => {
+      if (!userId) return;
+      // At once on screen, then from what is stored once the write has been made.
+      setState((s) => (s.userId === userId ? { userId, list: change(s.list) } : s));
+      void serial(async () => {
+        const next = change(await loadRecents(userId));
+        await save(userId, next);
+        return next;
+      }).then((next) => show(userId, next));
     },
-    [userId],
+    [userId, show],
   );
-  const forget = useCallback(
-    (id: string) => {
-      const next = readRecents(userId).filter((r) => r.id !== id);
-      write(userId, next);
-      setState({ userId, list: next });
-    },
-    [userId],
-  );
+  const remember = useCallback((bev: RecentBev) => edit((list) => withRecent(list, bev)), [edit]);
+  const forget = useCallback((id: string) => edit((list) => withoutRecent(list, id)), [edit]);
   return { recents, remember, forget };
 }

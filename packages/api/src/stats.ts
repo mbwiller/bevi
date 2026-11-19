@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ApiError, type CategoryProgress, type ProfileStats, type StatsApi, type TasteProfileRow } from '@bevi/shared';
 import { mapError } from './errors';
+import { requireUserId } from './currentUser';
 import { mapCategoryProgress, mapTasteProfileRow, type CategoryProgressRow, type TasteProfileRpcRow } from './mappers';
 
 interface ProfileStatsRow {
@@ -13,12 +14,6 @@ interface ProfileStatsRow {
   current_streak: number;
   longest_streak: number;
   streak_alive_today: boolean;
-}
-
-async function requireUserId(client: SupabaseClient): Promise<string> {
-  const { data, error } = await client.auth.getUser();
-  if (error || !data.user) throw new ApiError('unauthorized', 'Not signed in');
-  return data.user.id;
 }
 
 // One RPC (20261012000500): counts, the live "rank on Bevi" and points (the

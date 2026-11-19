@@ -15,6 +15,48 @@ here, these rules apply before anything in a more general prompt.
 - New migration files use the CLI's timestamped naming
   (`supabase migration new <name>` → `YYYYMMDDHHMMSS_<name>.sql`).
 
+## Compatibility with clients you cannot redeploy
+
+Once Bevi ships as a binary, a build approved in January is still calling
+these RPCs in June. The backend is the only half that can move, so it
+carries the whole burden (`DEVELOPMENT-ARJUN-IOS.md` §IA-3, and
+`DEVELOPMENT-ARJUN.md` §14 for the long form).
+
+- **Support window: the current contract major and the two previous minors**
+  (`N`, `N-1`, `N-2`). Anything older is cut off deliberately, by raising
+  `min_app_version` / `min_contract_version` in `app_config` (IA-2) so the
+  app shows "update required" — never by letting its calls start failing.
+- **The gate is decorative until you raise it.** `app_config`'s
+  `min_app_version` and `min_contract_version` are seeded `'0.0.0'` (IA-2,
+  #240) — below everything, deliberately. A breaking bump that does not
+  raise `min_contract_version` in the same release gates nobody; it just
+  serves old binaries shapes they cannot parse. Raising it is a mandatory
+  line in the breaking-bump checklist (`DEVELOPMENT-ARJUN.md` §14), done on
+  the hosted row and then read back. The other direction is worse: never
+  raise either floor past a build the store is already serving, and never
+  before IM-9's "update required" screen can tell the user why.
+- **Append-only gains a second rule: no destructive change while a shipped
+  client still reads the thing.** Dropping a column, renaming a column,
+  narrowing a check constraint, removing an enum value, and changing an
+  RPC's return shape are **two-release operations**: add the new thing →
+  ship a client that reads it → wait out `minAppVersion` → then remove, in a
+  later migration. The ledger in `DEVELOPMENT-ARJUN.md` §15 records which
+  release makes the removal legal; a destructive migration without a ledger
+  row is a review failure (`.claude/agents/integrator.md`, checks g–j).
+- **Never change a live RPC's columns in place.** When a return shape must
+  change incompatibly, add `rpc_name_v2` and keep `rpc_name` answering the
+  old shape until the old clients are gated out; then retire `rpc_name`
+  through the same two-release dance. Same for parameters: a new one needs a
+  default, because an old client calls with the old argument list.
+- **Additive in one release, and fine:** a nullable column, a new enum
+  value, a new table, a new RPC, a new column at the end of a `returns
+  table (...)`, a wider check constraint. `packages/api` names the columns
+  it reads, so an extra one never breaks an old client — keep it that way.
+- Edge Functions, `pg_cron` jobs and `scripts/` deploy with the backend, so
+  none of this applies to them. It applies to everything an installed app
+  binary can reach: tables it selects from, RPCs it calls, enum values it
+  parses, storage paths it builds.
+
 ## RLS: enable it once the schema is stable; not required for day-0 scaffolding
 
 - Before assuming RLS "hasn't landed yet," check `migrations/` for any

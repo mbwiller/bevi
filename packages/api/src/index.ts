@@ -3,6 +3,7 @@
 // Supabase; the app never imports `@supabase/supabase-js` and never sees
 // the client this creates.
 import type { BeviApi } from '@bevi/shared';
+import { createNutritionApi } from './nutrition';
 import { createAuthApi } from './auth';
 import { createBevsApi } from './bevs';
 import { createBugsApi } from './bugs';
@@ -18,14 +19,23 @@ import { createProfileApi } from './profile';
 import { createRankingsApi } from './rankings';
 import { createRecsApi } from './recs';
 import { createVenuesApi } from './venues';
+import { registerAutoRefreshTarget } from './session';
 import { createSnapshotCache } from './snapshot';
 import { createStatsApi } from './stats';
 import { createWantToTryApi } from './wantToTry';
 
 export type { AuthStorageAdapter, BeviApiConfig } from './client';
 
+// The only part of the supabase client the app can reach, and not the client
+// itself: the app's `AppState` listener (IM-3) calls these two on
+// foreground/background. `session.ts` says why the seam exists.
+export { startAutoRefresh, stopAutoRefresh } from './session';
+
 export function createBeviApi(config: BeviApiConfig): BeviApi {
   const client = createSupabaseClientFor(config);
+  // Hands this client's refresh ticker to `startAutoRefresh`/`stopAutoRefresh`
+  // without handing out the client.
+  registerAutoRefreshTarget(client.auth);
   const auth = createAuthApi(client);
   // The caller's PredictionSnapshot for recommendations and predicted scores.
   // Dropped on ranking and Bev writes (rankings.ts, bevs.ts), on any change of
@@ -39,6 +49,7 @@ export function createBeviApi(config: BeviApiConfig): BeviApi {
 
   return {
     ...auth,
+    nutrition: createNutritionApi(),
     profile: {
       ...profile,
       async setBirthDate(date) {

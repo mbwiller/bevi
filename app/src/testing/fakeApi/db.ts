@@ -34,6 +34,7 @@ export interface FakeBev {
   /** Asset ids from `media.upload`; null for seeded Bevs (the UI falls back to BevArt). */
   photoAssetId: string | null;
   labelAssetId: string | null;
+  nutrition?: import('@bevi/shared').NutritionPreview;
   createdById: string | null;
   createdAt: string;
 }
