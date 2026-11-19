@@ -54,16 +54,23 @@ const ROW_TOLERANCE = 0.012;
 const MAX_AMOUNT = 1_000_000;
 const MAX_BASIS = 220;
 
-/** Levenshtein over two short words. */
+/**
+ * Levenshtein over two short words. Two rolling rows rather than a matrix:
+ * under `noUncheckedIndexedAccess` every cell of a matrix reads as
+ * `number | undefined`, and a wall of non-null assertions would hide a real
+ * out-of-range mistake among the noise.
+ */
 function distance(a: string, b: string): number {
-  const d: number[][] = Array.from({ length: a.length + 1 }, (_, i) =>
-    Array.from({ length: b.length + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0)));
+  let previous = Array.from({ length: b.length + 1 }, (_, j) => j);
   for (let i = 1; i <= a.length; i++) {
+    const current = [i];
     for (let j = 1; j <= b.length; j++) {
-      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      const substitute = (previous[j - 1] ?? 0) + (a[i - 1] === b[j - 1] ? 0 : 1);
+      current.push(Math.min((current[j - 1] ?? 0) + 1, (previous[j] ?? 0) + 1, substitute));
     }
+    previous = current;
   }
-  return d[a.length][b.length];
+  return previous[b.length] ?? 0;
 }
 
 /** How many substitutions to forgive in a word: more for longer ones, none for tiny ones. */
@@ -75,7 +82,8 @@ const words = (text: string): string[] =>
 /** Does `candidate` begin with `phrase`, allowing OCR's character slips? */
 function startsWithPhrase(candidate: string[], phrase: string[]): boolean {
   if (candidate.length < phrase.length) return false;
-  return phrase.every((word, i) => distance(candidate[i], word) <= tolerance(word));
+  // The length guard above puts every `i` in range.
+  return phrase.every((word, i) => distance(candidate[i] ?? '', word) <= tolerance(word));
 }
 
 /**
@@ -98,7 +106,7 @@ function amountAfter(text: string, nameWords: number): { value: number; unit: st
   if (/^(?:<|less than)/i.test(rest)) return null;
   const amount = /^([0-9]+(?:[.,][0-9]+)?)\s*(mg|mcg|g|kcal)?\b/i.exec(rest);
   if (!amount) return null;
-  const value = Number(amount[1].replace(',', '.'));
+  const value = Number((amount[1] ?? '').replace(',', '.'));
   if (!Number.isFinite(value) || value < 0 || value > MAX_AMOUNT) return null;
   return { value, unit: (amount[2] ?? '').toLowerCase() };
 }
@@ -159,7 +167,7 @@ function caloriesFrom(lines: RecognisedLine[]): number | null {
     .filter((c): c is { x: number; amount: { value: number; unit: string } } => c.amount !== null)
     .sort((a, b) => a.x - b.x);
 
-  return sameRow.length ? sameRow[0].amount.value : null;
+  return sameRow[0]?.amount.value ?? null;
 }
 
 /** Whatever follows the "serving size" words on a line, the phrase removed. */
@@ -170,8 +178,11 @@ function afterServingPhrase(text: string): string {
     found.push({ word: m[0].toLowerCase(), end: m.index + m[0].length });
   }
   for (let i = 0; i + 1 < found.length; i++) {
-    if (distance(found[i].word, 'serving') <= 2 && distance(found[i + 1].word, 'size') <= 1) {
-      return text.slice(found[i + 1].end).replace(/^[\s:.-]+/, '').trim();
+    const name = found[i];
+    const next = found[i + 1];
+    if (!name || !next) continue;
+    if (distance(name.word, 'serving') <= 2 && distance(next.word, 'size') <= 1) {
+      return text.slice(next.end).replace(/^[\s:.-]+/, '').trim();
     }
   }
   return '';
@@ -180,7 +191,7 @@ function afterServingPhrase(text: string): string {
 const looksLikeServingSize = (text: string): boolean => {
   const w = words(text);
   return w.some((word, i) =>
-    distance(word, 'serving') <= 2 && i + 1 < w.length && distance(w[i + 1], 'size') <= 1);
+    distance(word, 'serving') <= 2 && i + 1 < w.length && distance(w[i + 1] ?? '', 'size') <= 1);
 };
 
 /**
