@@ -60,7 +60,7 @@ async function seedPlaces() {
   const [a, b] = (await api.rankings.listMine()).items;
   await api.rankings.setVenue(a!.bev.id, first!.id);
   await api.rankings.setVenue(b!.bev.id, second!.id);
-  return { first: first!, second: second!, mine: [a!, b!], theirs };
+  return { first: first!, second: second!, mine: [a!, b!] as const, theirs };
 }
 
 async function renderScreen() {
