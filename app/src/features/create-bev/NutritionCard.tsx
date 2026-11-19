@@ -2,12 +2,14 @@ import type { NutritionPreview } from '@bevi/shared';
 import { Linking, StyleSheet, Text, View, type TextStyle } from 'react-native';
 import { Button } from '@/components/Button';
 import { Wordmark } from '@/components/Wordmark';
+import { LABEL_READ_NOTE } from './copy';
 import { radius, spacing, type, useTheme } from '@/theme';
 
 const amount = (value: number | null, unit = '') => value === null ? 'Not listed' : `${Number(value.toFixed(2))}${unit}`;
 
 export function NutritionCard({ nutrition, reveal = false }: { nutrition: NutritionPreview; reveal?: boolean }) {
   const { colors } = useTheme();
+  const fromLabel = nutrition.source === 'label-ocr';
   const serving = nutrition.basis.startsWith('Per serving (') ? nutrition.basis.slice('Per serving ('.length, -1) : null;
   const rows = [
     { name: 'Total Fat', value: nutrition.fatGrams, unit: 'g' },
@@ -23,7 +25,7 @@ export function NutritionCard({ nutrition, reveal = false }: { nutrition: Nutrit
         <View style={[styles.masthead, { backgroundColor: colors.primary }]}>
           <View style={styles.brandline}>
             <Wordmark height={22} tone="mono" color={colors.onPrimary} />
-            <Text style={[type.caption, { color: colors.onPrimary }]}>{reveal ? 'Captured' : 'Barcode match'}</Text>
+            <Text style={[type.caption, { color: colors.onPrimary }]}>{reveal ? 'Captured' : fromLabel ? 'Read from your label' : 'Barcode match'}</Text>
           </View>
           <Text style={[styles.title, { color: colors.onPrimary }]} accessibilityRole="header">Nutrition Facts</Text>
         </View>
@@ -52,9 +54,9 @@ export function NutritionCard({ nutrition, reveal = false }: { nutrition: Nutrit
         </View>
       </View>
       <View style={styles.credit}>
-        <Text style={[type.caption, styles.creditText, { color: colors.textSecondary }]}>Check against your package. Daily Values and other label details may not be available.</Text>
+        <Text style={[type.caption, styles.creditText, { color: colors.textSecondary }]}>{fromLabel ? LABEL_READ_NOTE : 'Check against your package. Daily Values and other label details may not be available.'}</Text>
       </View>
-      {nutrition.sourceUrl ? <Button variant="ghost" onPress={() => void Linking.openURL(nutrition.sourceUrl!)} accessibilityLabel="View product on Open Food Facts">Open Food Facts · ODbL</Button> : null}
+      {!fromLabel && nutrition.sourceUrl ? <Button variant="ghost" onPress={() => void Linking.openURL(nutrition.sourceUrl!)} accessibilityLabel="View product on Open Food Facts">Open Food Facts · ODbL</Button> : null}
     </View>
   );
 }

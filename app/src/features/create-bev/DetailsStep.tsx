@@ -141,7 +141,7 @@ export function DetailsStep({ form, errors, onChange, onOpenCategories, label, o
       </View>
       <View style={styles.field}>
         <Text style={[type.caption, styles.label, { color: colors.textSecondary }]}>Nutrition label (optional)</Text>
-        <NutritionScan value={nutrition} onChange={onNutritionChange} />
+        <NutritionScan value={nutrition} onChange={onNutritionChange} label={label} onPickLabel={onPickLabel} />
         {errors.nutrition ? <Text role="alert" style={[type.caption, { color: colors.scoreLow }]}>{errors.nutrition}</Text> : null}
         <View style={styles.labelRow}>
           <BevImage size={size.scoreBubbleLg} src={label.photo?.uri} alt={hasLabel ? 'Nutrition label photo' : 'No label photo'} />

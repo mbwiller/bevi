@@ -52,6 +52,7 @@ import {
   HANDLE_PATTERN,
   RESERVED_HANDLES,
   type ApiErrorCode,
+  type NutritionPreview,
   type AuthApi,
   type Bev,
   type BeviApi,
@@ -293,8 +294,36 @@ interface UserStreak extends StreakResult {
   aliveToday: boolean;
 }
 
+/** The snapshot `nutrition.scanLabel` returns until a suite sets another with `setLabelReading`. */
+const DEFAULT_LABEL_READING: NutritionPreview = {
+  barcode: null,
+  productName: 'Mountain Dew',
+  basis: 'Per serving (12 fl oz (355 mL))',
+  calories: 170,
+  fatGrams: 0,
+  carbohydrateGrams: 46,
+  sugarGrams: 46,
+  proteinGrams: null,
+  sodiumMg: 60,
+  sourceUrl: null,
+  source: 'label-ocr',
+};
+
 export class FakeApi implements BeviApi {
-  nutrition: NonNullable<BeviApi['nutrition']> = { lookupBarcode: async () => null, scanLabel: async () => null };
+  /** What `nutrition.scanLabel` reads out of any valid label photo; `null` is "no panel found". */
+  private labelReading: NutritionPreview | null = { ...DEFAULT_LABEL_READING };
+  nutrition: NonNullable<BeviApi['nutrition']> = {
+    lookupBarcode: async () => null,
+    // The reader itself is not faked, but the contract around it is: a signed-in caller, a label
+    // asset they own (`validation` on `labelAssetId` otherwise), then `labelReading`.
+    scanLabel: (labelAssetId) =>
+      this.call('nutrition.scanLabel', () => {
+        const me = this.requireUser();
+        const asset = this.db.assets.find((a) => a.id === labelAssetId && a.userId === me.id && a.kind === 'label');
+        if (!asset) invalid('labelAssetId', 'Upload the label again', 'unknown_asset');
+        return this.labelReading ? { ...this.labelReading } : null;
+      }),
+  };
   private db: FakeDb;
   private readonly storage: StorageLike | null;
   private readonly clock: () => Date;
@@ -346,6 +375,11 @@ export class FakeApi implements BeviApi {
     this.failures.push({ code, method });
   }
 
+  /** What the label reader returns for any valid label photo (`null`: no panel found). */
+  setLabelReading(reading: NutritionPreview | null): void {
+    this.labelReading = reading ? { ...reading } : null;
+  }
+
   setLatency(latency: Latency): void {
     this.latency = FakeApi.toRange(latency);
   }
@@ -355,6 +389,7 @@ export class FakeApi implements BeviApi {
     clearDb(this.storage);
     this.db = buildFixtures(this.clock());
     this.failures = [];
+    this.labelReading = { ...DEFAULT_LABEL_READING };
     this.internalReporter = false;
     this.bugLedger.clear();
     this.bugOrder.clear();
@@ -1318,11 +1353,17 @@ export class FakeApi implements BeviApi {
             const n = input.nutrition;
             const fields = ['barcode', 'productName', 'basis', 'sourceUrl', 'calories', 'fatGrams', 'carbohydrateGrams', 'sugarGrams', 'proteinGrams', 'sodiumMg', 'source'];
             const values = [n.calories, n.fatGrams, n.carbohydrateGrams, n.sugarGrams, n.proteinGrams, n.sodiumMg];
-            const strings = [n.barcode, n.productName, n.basis, n.sourceUrl];
+            // The server's rules: an absent source is a barcode snapshot; a label read has no barcode or
+            // source URL and must come with the label photo it was read from.
+            const source = n.source ?? 'openfoodfacts';
+            const provenance =
+              source === 'openfoodfacts'
+                ? typeof n.barcode === 'string' && /^(?:\d{8}|\d{12}|\d{13})$/.test(n.barcode) &&
+                  n.sourceUrl === `https://world.openfoodfacts.org/product/${n.barcode}`
+                : source === 'label-ocr' && n.barcode === null && n.sourceUrl === null && input.labelAssetId !== undefined;
             if (Object.keys(n).some((k) => !fields.includes(k)) ||
-                strings.some((v) => typeof v !== 'string' || !v.trim() || v.length > 256) ||
-                typeof n.barcode !== 'string' || !/^(?:\d{8}|\d{12}|\d{13})$/.test(n.barcode) ||
-                n.sourceUrl !== `https://world.openfoodfacts.org/product/${n.barcode}` ||
+                [n.productName, n.basis].some((v) => typeof v !== 'string' || !v.trim() || v.length > 256) ||
+                !provenance ||
                 !values.some((v) => v !== null) ||
                 values.some((v) => v !== null && (typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > 1_000_000))) {
               invalid('nutrition', 'Scan the nutrition label again');
@@ -1362,7 +1403,7 @@ export class FakeApi implements BeviApi {
             aliases: [],
             photoAssetId: photo.id,
             labelAssetId: input.labelAssetId ?? null,
-            ...(input.nutrition ? { nutrition: { ...input.nutrition } } : {}),
+            ...(input.nutrition ? { nutrition: { ...input.nutrition, source: input.nutrition.source ?? 'openfoodfacts' } } : {}),
             createdById: me.id,
             createdAt: this.nowIso(),
           };
