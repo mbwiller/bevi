@@ -117,7 +117,7 @@ describe('the note and the keyboard (T-21)', () => {
     // Nothing attached: no scroller at all above the field.
     expect(screen.queryByTestId('report-note-extras')).toBeNull();
 
-    await act(async () => void addPhotos([{ uri: 'blob:photo-1', blob: new Blob(['p']), mimeType: 'image/jpeg', width: 10, height: 10 }]));
+    await act(async () => void addPhotos([{ uri: 'blob:photo-1', file: new Blob(['p']), mimeType: 'image/jpeg', width: 10, height: 10 }]));
     const extras = screen.getByTestId('report-note-extras');
     expect(within(extras).getByLabelText('Photo 1')).toBeTruthy();
     expect(within(extras).queryByLabelText("What's going on?")).toBeNull();

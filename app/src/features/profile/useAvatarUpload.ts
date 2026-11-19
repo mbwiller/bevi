@@ -66,7 +66,7 @@ export function useAvatarUpload() {
       started = true;
       setBusy(true);
       photo = await preparePhoto(picked, AVATAR_MAX_EDGE);
-      const { assetId } = await uploadAsync({ kind: 'avatar', file: photo.blob, mimeType: photo.mimeType });
+      const { assetId } = await uploadAsync({ kind: 'avatar', file: photo.file, mimeType: photo.mimeType });
       const profile = await updateAsync({ avatarAssetId: assetId });
       if (mounted.current) syncSession(profile);
     } catch (e) {

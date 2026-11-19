@@ -13,13 +13,20 @@ export interface PhotoUploadState {
   /** Set once the upload succeeded. */
   asset: UploadMediaResult | null;
   error: unknown;
+  /**
+   * Why the picker didn't open, if it didn't: `CameraPermissionError` when the camera was refused
+   * (native), else whatever it threw. The slot's photo is left as it was; the next choose or clear
+   * resets it.
+   */
+  pickError: unknown;
 }
 
-const EMPTY: PhotoUploadState = { phase: 'empty', photo: null, asset: null, error: null };
+const EMPTY: PhotoUploadState = { phase: 'empty', photo: null, asset: null, error: null, pickError: null };
 
 /**
  * One photo slot of the wizard (the Bev photo or the nutrition label): pick → resize → upload in
- * the background as soon as it is chosen. Cancelling the picker leaves the slot as it was.
+ * the background as soon as it is chosen. Cancelling the picker leaves the slot as it was; a picker
+ * that can't open (the camera refused) leaves it too and sets `pickError`.
  * `ensureUploaded()` is what submit awaits: it waits for preparation, then returns the finished
  * asset id, the in-flight upload, or a fresh retry after a failure.
  *
@@ -54,15 +61,15 @@ export function usePhotoUpload(kind: UploadMediaInput['kind']) {
 
   const send = useCallback(
     (photo: PreparedPhoto, gen: number): Promise<string> => {
-      set({ phase: 'uploading', photo, asset: null, error: null });
+      set({ phase: 'uploading', photo, asset: null, error: null, pickError: null });
       const p = uploadRef
-        .current({ kind, file: photo.blob, mimeType: photo.mimeType })
+        .current({ kind, file: photo.file, mimeType: photo.mimeType })
         .then((asset) => {
-          if (gen === generation.current) set({ phase: 'uploaded', photo, asset, error: null });
+          if (gen === generation.current) set({ phase: 'uploaded', photo, asset, error: null, pickError: stateRef.current.pickError });
           return asset.assetId;
         })
         .catch((error: unknown) => {
-          if (gen === generation.current) set({ phase: 'failed', photo, asset: null, error });
+          if (gen === generation.current) set({ phase: 'failed', photo, asset: null, error, pickError: stateRef.current.pickError });
           throw error;
         })
         .finally(() => {
@@ -75,20 +82,30 @@ export function usePhotoUpload(kind: UploadMediaInput['kind']) {
     [kind, set],
   );
 
-  /** Opens the picker. Resolves false when the person cancelled (nothing changes). */
+  /**
+   * Opens the picker. Resolves false when the person cancelled or the picker couldn't open (nothing
+   * changes but `pickError`). Never rejects.
+   */
   const choose = useCallback(
     async (source: PhotoSource): Promise<boolean> => {
-      const picked = await pickImage(source);
+      if (stateRef.current.pickError) set({ ...stateRef.current, pickError: null });
+      let picked: Awaited<ReturnType<typeof pickImage>>;
+      try {
+        picked = await pickImage(source);
+      } catch (pickError) {
+        set({ ...stateRef.current, pickError });
+        return false;
+      }
       if (!picked) return false;
       const gen = ++generation.current;
       inflight.current = null;
-      set({ phase: 'preparing', photo: null, asset: null, error: null });
+      set({ phase: 'preparing', photo: null, asset: null, error: null, pickError: null });
       const prep = (async () => {
         let photo: PreparedPhoto;
         try {
           photo = await preparePhoto(picked);
         } catch (error) {
-          if (gen === generation.current) set({ phase: 'failed', photo: null, asset: null, error });
+          if (gen === generation.current) set({ phase: 'failed', photo: null, asset: null, error, pickError: null });
           return;
         }
         if (gen !== generation.current || !mounted.current) {
@@ -114,7 +131,7 @@ export function usePhotoUpload(kind: UploadMediaInput['kind']) {
   /** The server lost the asset (`unknown_asset`): forget it so the next submit uploads again. */
   const invalidate = useCallback(() => {
     const { photo } = stateRef.current;
-    if (photo) set({ phase: 'failed', photo, asset: null, error: null });
+    if (photo) set({ phase: 'failed', photo, asset: null, error: null, pickError: null });
   }, [set]);
 
   const clear = useCallback(() => {

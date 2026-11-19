@@ -39,7 +39,10 @@ export function buildInput(draft: Draft, trail: readonly BugBreadcrumb[]): BugRe
   }
   for (const photo of draft.photos) {
     if (evidence.length >= EVIDENCE_MAX) break;
-    evidence.push({ file: photo.blob, mimeType: photo.mimeType, caption: PHOTO_CAPTION });
+    // Evidence is a Blob (the reporter is web only, where every prepared photo is one); a photo
+    // prepared as bytes (native) has no place in it and is left out.
+    if (typeof Blob === 'undefined' || !(photo.file instanceof Blob)) continue;
+    evidence.push({ file: photo.file, mimeType: photo.mimeType, caption: PHOTO_CAPTION });
   }
 
   const targets: BugReportTarget[] = draft.marks.slice(0, MARKS_MAX).flatMap((m) => {
