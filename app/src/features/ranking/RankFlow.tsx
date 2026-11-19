@@ -6,10 +6,12 @@ import { StyleSheet, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useBev, useMe, usePlacementList, useRerankBev, useSubmitRanking } from '@/api/hooks';
+import { useBev, useMe, useMyVenue, usePlacementList, useRerankBev, useSubmitRanking } from '@/api/hooks';
 import { ErrorState } from '@/components/ErrorState';
 import { Header } from '@/components/Header';
 import { Skeleton } from '@/components/Skeleton';
+import { PlacePicker } from '@/features/places/PlacePicker';
+import { useNearbySuggestion } from '@/features/places/useNearbySuggestion';
 import { categoryById } from '@/lib/categories';
 import { useBack } from '@/lib/useBack';
 import { nextCandidates, selectDone, selectPrompt, useRankingFlow, type RankingMode } from '@/state/rankingFlow';
@@ -58,6 +60,7 @@ export function RankFlow({ bevId, rerank = false, detailIfRanked = false, return
   const placement = useRankingFlow((s) => s.placement);
   const orderedIds = useRankingFlow((s) => s.orderedIds);
   const note = useRankingFlow((s) => s.note);
+  const pickedVenue = useRankingFlow((s) => s.venue);
   const prompt = useMemo(() => selectPrompt({ placement }), [placement]);
   const upcoming = useMemo(() => nextCandidates(placement), [placement]);
   // Prefetch both Bevs the next question could show, so the swap doesn't wait on the network.
@@ -75,6 +78,13 @@ export function RankFlow({ bevId, rerank = false, detailIfRanked = false, return
   // The list to search, with its anchoring tiers when the catalog has them (M-21; never blocks).
   const bucketQ = usePlacementList(bucket ?? undefined, bevQ.data);
   const mode: RankingMode = rerank || !!bevQ.data?.myRanking ? 'rerank' : 'new';
+
+  // Where it was had (BEV-22). A re-rank shows the place the Bev already has, which it keeps unless
+  // the user changes or removes it here; `pickedVenue` is undefined until they do.
+  const [picking, setPicking] = useState(false);
+  const keptVenue = useMyVenue(bevId, mode === 'rerank');
+  const venue = pickedVenue !== undefined ? pickedVenue : mode === 'rerank' ? (keptVenue.data ?? null) : null;
+  const venueSuggestion = useNearbySuggestion(phase === 'note' && venue === null && pickedVenue === undefined);
 
   const toDetail = detailIfRanked && !rerank && !!bevQ.data?.myRanking;
   useEffect(() => {
@@ -131,7 +141,7 @@ export function RankFlow({ bevId, rerank = false, detailIfRanked = false, return
   const answerNew = useCallback(() => flow().answer('NEW_BETTER'), []);
   const answerExisting = useCallback(() => flow().answer('EXISTING_BETTER'), []);
   const tie = useCallback(() => flow().tie(), []);
-  /** Pops one comparison; with none left, back to the gut check (the note is kept). */
+  /** Pops one comparison; with none left, back to the gut check (the note and the place are kept). */
   const undo = useCallback(() => {
     const p = flow().placement;
     if (p && p.history.length > 0) {
@@ -139,9 +149,11 @@ export function RankFlow({ bevId, rerank = false, detailIfRanked = false, return
       setPhase('compare');
       return;
     }
-    const kept = flow().note;
+    const { note: kept, venue: keptPlace } = flow();
     flow().reset();
     flow().setNote(kept);
+    // Only a place the user chose: `undefined` has to stay "untouched".
+    if (keptPlace !== undefined) flow().setVenue(keptPlace);
     setNotice(null);
     setPhase('gut');
   }, []);
@@ -192,7 +204,7 @@ export function RankFlow({ bevId, rerank = false, detailIfRanked = false, return
   const save = async (withNote: boolean) => {
     const r = flow().result();
     if (!r) return;
-    const { mode: m, note: n } = flow();
+    const { mode: m, note: n, venue: v } = flow();
     const text = n.trim();
     const input: SubmitRankingInput = {
       bevId: r.bevId,
@@ -202,6 +214,9 @@ export function RankFlow({ bevId, rerank = false, detailIfRanked = false, return
       comparisons: r.comparisons,
       // A new ranking sends a note only when there is one; a re-rank sends it to replace (or clear) the old one.
       ...(withNote && (text || m === 'rerank') ? { note: text } : {}),
+      // Untouched (undefined), nothing is sent: a new ranking has no place and a re-rank keeps its
+      // own. Skip skips the note only, so a place that was chosen is saved either way.
+      ...(v === undefined ? {} : m === 'rerank' ? { venueId: v?.id ?? null } : v ? { venueId: v.id } : {}),
     };
     setSaveError(null);
     setNoteError(undefined);
@@ -307,6 +322,10 @@ export function RankFlow({ bevId, rerank = false, detailIfRanked = false, return
           error={saveError}
           noteError={noteError}
           notice={notice}
+          venue={venue}
+          venueSuggestion={venueSuggestion}
+          onPickVenue={() => setPicking(true)}
+          onAcceptVenue={venueSuggestion ? () => flow().setVenue(venueSuggestion.venue) : undefined}
         />
       </Screen>
     );
@@ -322,6 +341,19 @@ export function RankFlow({ bevId, rerank = false, detailIfRanked = false, return
     <>
       {content}
       <DiscardSheet open={confirm} onDiscard={discard} onKeep={() => setConfirm(false)} onClosed={discardClosed} />
+      <PlacePicker
+        open={picking && phase === 'note'}
+        onClose={() => setPicking(false)}
+        selected={venue}
+        onSelect={(v) => {
+          flow().setVenue(v);
+          setPicking(false);
+        }}
+        onRemove={() => {
+          flow().setVenue(null);
+          setPicking(false);
+        }}
+      />
     </>
   );
 }

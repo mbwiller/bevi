@@ -2,7 +2,7 @@
 // hierarchical so a prefix invalidates a whole family: `keys.rankings.all` covers listMine,
 // listUser and listBucket; `keys.bevs.all` covers detail, search, duplicates and starters.
 
-import type { Bucket, CategoryId, FindDuplicatesInput, LatLngBounds, RankingSort, VenueFilters } from '@bevi/shared';
+import type { BevdScope, Bucket, CategoryId, FindDuplicatesInput, LatLng, LatLngBounds, RankingSort, VenueFilters } from '@bevi/shared';
 
 const root = ['bevi'] as const;
 
@@ -76,6 +76,10 @@ export const keys = {
     /** The ranking flow's list for one Bev (`loadPlacementList`): the bucket plus its tiers. */
     placement: (bucket: Bucket | undefined, bevId: string | undefined) =>
       [...root, 'rankings', 'placement', bucket ?? null, bevId ?? null] as const,
+    /** `rankings.getVenue`: where the caller had one Bev (the re-rank flow). */
+    venue: (bevId: string) => [...root, 'rankings', 'venue', bevId] as const,
+    /** `rankings.locationSummary`: how much of the Bev'd list has a place (the Map tab's nudge). */
+    locationSummary: () => [...root, 'rankings', 'locationSummary'] as const,
   },
 
   wantToTry: () => [...root, 'wantToTry'] as const,
@@ -115,6 +119,20 @@ export const keys = {
     detail: (venueId: string) => [...root, 'venues', 'detail', venueId] as const,
     /** `venues.neighborhoods`: the Neighborhood filter's vocabulary. */
     neighborhoods: () => [...root, 'venues', 'neighborhoods'] as const,
+    /**
+     * `venues.search` (the place picker). Pass `searchPosition` output, never a raw fix, so standing
+     * still does not ask again every time the GPS wobbles.
+     */
+    search: (query: string, near: LatLng | null) => [...root, 'venues', 'search', query, near?.lat ?? null, near?.lng ?? null] as const,
+    /** `venues.searchMore`: the outside directory, asked only when the user reaches for it. */
+    searchMore: (query: string, near: LatLng | null) =>
+      [...root, 'venues', 'searchMore', query, near?.lat ?? null, near?.lng ?? null] as const,
+    /** Everything about where Bevs were had: the map's pins and what is behind each. */
+    bevd: [...root, 'venues', 'bevd'] as const,
+    /** `venues.bevdMap` for one scope. */
+    bevdMap: (scope: BevdScope) => [...root, 'venues', 'bevd', 'map', scope] as const,
+    /** `venues.bevdAt`: what was had at one venue. */
+    bevdAt: (venueId: string, scope: BevdScope) => [...root, 'venues', 'bevd', 'at', venueId, scope] as const,
   },
 
   recommendations: (limit?: number) => [...root, 'recommendations', limit ?? null] as const,

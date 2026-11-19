@@ -3,11 +3,13 @@ import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { useRemoveRanking, useUpdateNote } from '@/api/hooks';
+import { useRemoveRanking, useSetVenue, useUpdateNote } from '@/api/hooks';
 import { Announce } from '@/components/Announce';
 import { Button } from '@/components/Button';
 import { Sheet } from '@/components/Sheet';
 import { TextField } from '@/components/TextField';
+import { ADD_LOCATION, CHANGE_LOCATION, PICKER_TITLE, shortPlaceName } from '@/features/places/copy';
+import { PlacePickerBody } from '@/features/places/PlacePicker';
 import { actionErrorMessage } from '@/lib/errorCopy';
 import { spacing, type, useTheme } from '@/theme';
 
@@ -17,11 +19,12 @@ import { SheetOption } from './SheetOption';
 /** `rankings.updateNote` accepts up to 140 characters (contract `SubmitRankingInput.note`). */
 export const NOTE_MAX = 140;
 
-type Mode = 'menu' | 'note' | 'remove';
+type Mode = 'menu' | 'note' | 'place' | 'remove';
 
 /**
  * A Bev'd row's actions (§6.5, §6.19): Bev it again (opens the ranking flow in re-rank mode), Edit note
- * (140 characters) and Remove (with a confirm that explains the bucket's other scores shift).
+ * (140 characters), Add or Change location (the place picker, in this sheet at its tall snap; BEV-22)
+ * and Remove (with a confirm that explains the bucket's other scores shift).
  */
 export function RankingActionsSheet({ ranked, onClose }: { ranked: RankedBev | null; onClose: () => void }) {
   const { colors } = useTheme();
@@ -33,6 +36,7 @@ export function RankingActionsSheet({ ranked, onClose }: { ranked: RankedBev | n
   // The ranking flow opens once this sheet has finished closing, not in the same tick: a screen
   // pushed under a Modal that is still presented leaves iOS with a stuck or blank screen.
   const rankNext = useRef<string | null>(null);
+  const setVenue = useSetVenue();
 
   const bevId = ranked?.bevId;
   useEffect(() => {
@@ -41,16 +45,18 @@ export function RankingActionsSheet({ ranked, onClose }: { ranked: RankedBev | n
     setNote(ranked?.note ?? '');
     updateNote.reset();
     remove.reset();
+    setVenue.reset();
   }, [bevId]);
 
   const name = ranked?.bev.name ?? '';
 
-  const title = mode === 'note' ? 'Edit note' : mode === 'remove' ? `Remove ${name}?` : name;
+  const title = mode === 'note' ? 'Edit note' : mode === 'place' ? PICKER_TITLE : mode === 'remove' ? `Remove ${name}?` : name;
 
   return (
     <Sheet
       open={!!ranked}
       title={title}
+      snap={mode === 'place' ? 90 : 40}
       onClose={onClose}
       onClosed={() => {
         const bevId = rankNext.current;
@@ -69,6 +75,12 @@ export function RankingActionsSheet({ ranked, onClose }: { ranked: RankedBev | n
             }}
           />
           <SheetOption label={ranked.note ? 'Edit note' : 'Add a note'} icon="file-text" onPress={() => setMode('note')} />
+          <SheetOption
+            label={ranked.venue ? CHANGE_LOCATION : ADD_LOCATION}
+            icon="map-pin"
+            detail={ranked.venue ? shortPlaceName(ranked.venue.name) : undefined}
+            onPress={() => setMode('place')}
+          />
           <SheetOption label="Remove from Bev'd" icon="x" destructive onPress={() => setMode('remove')} />
         </>
       ) : null}
@@ -101,6 +113,17 @@ export function RankingActionsSheet({ ranked, onClose }: { ranked: RankedBev | n
             </Button>
           </View>
         </View>
+      ) : null}
+
+      {ranked && mode === 'place' ? (
+        <PlacePickerBody
+          active
+          selected={ranked.venue}
+          saving={setVenue.isPending}
+          error={setVenue.error}
+          onSelect={(venue) => setVenue.mutate({ bevId: ranked.bevId, venueId: venue.id }, { onSuccess: onClose })}
+          onRemove={() => setVenue.mutate({ bevId: ranked.bevId, venueId: null }, { onSuccess: onClose })}
+        />
       ) : null}
 
       {ranked && mode === 'remove' ? (

@@ -22,6 +22,7 @@ import { useBack } from '@/lib/useBack';
 import { categoryById } from '@/lib/categories';
 import { usePullToRefresh } from '@/lib/usePullToRefresh';
 import { spacing, type, useTheme } from '@/theme';
+import { openPlace } from '@/features/places/openPlace';
 
 import { tasteReadout } from './tasteReadout';
 
@@ -117,6 +118,9 @@ export function ActivityList({ profile, self, following = false, header, tab, on
             bucket={item.bucket}
             note={item.note}
             time={item.createdAt}
+            place={item.venue?.name}
+            // The map has this person's pins when they are the viewer; for anyone else it may not.
+            onPlace={self ? openPlace(router, item.venue) : undefined}
             onOpen={() => router.push({ pathname: '/bev/[id]', params: { id: item.bev.id } })}
           />
         )}
