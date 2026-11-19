@@ -61,7 +61,9 @@ export function usePhotoUpload(kind: UploadMediaInput['kind']) {
 
   const send = useCallback(
     (photo: PreparedPhoto, gen: number): Promise<string> => {
-      set({ phase: 'uploading', photo, asset: null, error: null, pickError: null });
+      // `pickError` is carried, not cleared: a camera refused while this photo was still being
+      // prepared would otherwise lose its line the moment the upload starts.
+      set({ phase: 'uploading', photo, asset: null, error: null, pickError: stateRef.current.pickError });
       const p = uploadRef
         .current({ kind, file: photo.file, mimeType: photo.mimeType })
         .then((asset) => {

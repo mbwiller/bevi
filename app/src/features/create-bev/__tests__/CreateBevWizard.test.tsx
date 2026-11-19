@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { configure, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, configure, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Linking, StyleSheet } from 'react-native';
 import type { BevSummary } from '@bevi/shared';
 
@@ -250,6 +250,29 @@ it('a refused camera on Retake keeps the photo already chosen', async () => {
   expect(screen.getByRole('button', { name: 'Retake' })).toBeTruthy();
   await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
   expect(screen.getByText('Step 2 of 3')).toBeTruthy();
+});
+
+it('a camera refused while a chosen photo is still being prepared keeps its line once the upload starts', async () => {
+  let finish: () => void = () => undefined;
+  mockPrepare.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = () => resolve({ uri: 'blob:prepared-slow', file: JPEG_BYTES, mimeType: 'image/jpeg', width: 1200, height: 1600 });
+      }),
+  );
+  const upload = jest.spyOn(api.media, 'upload');
+  await renderWizard();
+  await fireEvent.press(screen.getByRole('button', { name: 'Choose photo' }));
+  await waitFor(() => expect(mockPrepare).toHaveBeenCalledTimes(1));
+
+  mockPick.mockRejectedValueOnce(new CameraPermissionError(false));
+  await fireEvent.press(screen.getByRole('button', { name: 'Take photo' }));
+  await screen.findByText(/Turn it on in Settings/);
+
+  await act(async () => finish());
+  await waitFor(() => expect(upload).toHaveBeenCalledWith(expect.objectContaining({ kind: 'bev-photo', file: JPEG_BYTES })));
+  await screen.findByRole('button', { name: 'Retake' });
+  expect(screen.getByText(/Turn it on in Settings/)).toBeTruthy();
 });
 
 it('a picker that fails to open says so instead of throwing', async () => {
