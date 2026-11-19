@@ -2458,21 +2458,32 @@ export class FakeApi implements BeviApi {
           const note = (input.note ?? '').replace(/^[ \t\n\r]+|[ \t\n\r]+$/g, '') || null;
           if (note && Array.from(note).length > REPORT_NOTE_MAX) invalid('note', `A note is at most ${REPORT_NOTE_MAX} characters`);
 
-          // Visible to the caller, or by someone the caller blocked (one direction: so Block then
-          // Report works, and a blocked person cannot probe the blocker's content).
+          // Anything the caller can be shown (20261119100000), or by someone the caller blocked (one
+          // direction: so Block then Report works, and a blocked person cannot probe the blocker's
+          // content -- every "shown" rule below is false across a block either way).
           const iBlocked = (userId: string) => this.blockRows.some((b) => b.blockerId === me.id && b.blockedId === userId);
-          const seen = (eventId: string, authorId: string) => {
-            if (iBlocked(authorId)) return;
-            this.visibleFeedEvent(eventId, me);
+          const feedShows = (eventId: string) => {
+            try {
+              this.visibleFeedEvent(eventId, me);
+              return true;
+            } catch (e) {
+              if (e instanceof ApiError && e.code === 'not_found') return false;
+              throw e;
+            }
           };
           let subject: string;
           if (input.kind === 'post') {
             const e = this.db.feed.find((x) => x.id === input.id) ?? fail('not_found', 'No such post');
-            seen(e.id, e.actorId);
+            // The feed's rule (feed, a profile's posts), or Explore's: the same rows getExplore
+            // returns. Neither has a recency bound in the fake, matching the SQL's choice.
+            const shown = feedShows(e.id) || this.explorePosts(me).some((p) => p.id === e.id);
+            if (!iBlocked(e.actorId) && !shown) fail('not_found', 'No such post');
             subject = e.actorId;
           } else if (input.kind === 'comment') {
             const c = (this.db.comments ?? []).find((x) => x.id === input.id && !x.deleted) ?? fail('not_found', 'No such comment');
-            seen(c.feedEventId, c.userId);
+            // Comments are never in Explore (D-15): a visible post, and an author not across a block.
+            const shown = feedShows(c.feedEventId) && !this.blockedBetween(me.id, c.userId);
+            if (!iBlocked(c.userId) && !shown) fail('not_found', 'No such comment');
             subject = c.userId;
           } else if (input.kind === 'profile') {
             subject = this.user(input.id).id;

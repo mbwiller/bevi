@@ -968,13 +968,15 @@ export interface ReportsApi {
    * Idempotent per (caller, content): reporting the same thing again returns
    * the first report's id and changes nothing, whatever the new reason or note.
    *
-   * A post or comment must be one the caller can see by the feed's rule (their
-   * own or a followed user's, age-gated), or be by someone the caller has
-   * blocked, so Block then Report works. Explore posts are follower-only here
-   * as they are for likes and comments (D-15): reporting one throws
-   * 'not_found' unless the caller has blocked its author.
-   * @throws 'unauthorized'; 'not_found' — no such content, or the caller
-   *   cannot see it; 'validation' — reporting your own content or profile, an
+   * Anything the caller can be shown is reportable: a post from the feed, a
+   * profile or Explore (`ExplorePost.id`), a comment from a thread, a profile.
+   * Content by someone the caller has blocked stays reportable, so Block then
+   * Report works. A comment on an Explore post is not, since Explore never
+   * shows comments (D-15).
+   * @throws 'unauthorized'; 'not_found' — no such content, or content the
+   *   caller cannot be shown (including any by someone who has blocked the
+   *   caller, which reads exactly like content that does not exist);
+   *   'validation' — reporting your own content or profile, an
    *   unknown reason (`detail.field = 'reason'`), or a note over
    *   `REPORT_NOTE_MAX` (`'note'`); 'rate_limited'.
    */

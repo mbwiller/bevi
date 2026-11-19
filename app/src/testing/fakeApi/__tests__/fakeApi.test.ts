@@ -803,4 +803,33 @@ describe('blocks and reports', () => {
     api.signInAs(FRIEND.handle);
     await expect(api.reports.report({ kind: 'post', id: myPost.id, reason: 'spam' })).rejects.toMatchObject({ code: 'not_found' });
   });
+
+  it("a stranger's Explore post is reportable, until its author blocks the caller", async () => {
+    const { api, me } = await setup();
+    const explore = (await api.feed.getExplore({ limit: 100 })).items;
+    const first = explore[0]!;
+    const other = explore.find((p) => p.actor.id !== first.actor.id)!;
+    expect(first).toBeDefined();
+    expect(other).toBeDefined();
+    // A stranger's post: the feed's rule alone would say not_found.
+    await expect(api.comments.list(first.id)).rejects.toMatchObject({ code: 'not_found' });
+    await expect(api.reports.report({ kind: 'post', id: first.id, reason: 'spam' })).resolves.toEqual({ reportId: expect.any(String) });
+
+    // The author of another Explore post blocks the caller: it reads as missing, Explore or not.
+    api.signInAs(other.actor.handle);
+    await api.blocks.block(me.userId);
+    api.signInAs(ME.handle);
+    expect((await api.feed.getExplore({ limit: 100 })).items.some((p) => p.id === other.id)).toBe(false);
+    await expect(api.reports.report({ kind: 'post', id: other.id, reason: 'spam' })).rejects.toMatchObject({ code: 'not_found' });
+  });
+
+  it('a comment by someone who blocked the caller is not reportable, though its post is visible', async () => {
+    const { api, me, friendPost } = await setup();
+    api.signInAs('friend_b');
+    const comment = await api.comments.add(friendPost.id, 'friend_b on friend_a');
+    await api.blocks.block(me.userId);
+    api.signInAs(ME.handle);
+    await expect(api.comments.list(friendPost.id)).resolves.toMatchObject({ items: expect.not.arrayContaining([expect.objectContaining({ id: comment.id })]) });
+    await expect(api.reports.report({ kind: 'comment', id: comment.id, reason: 'spam' })).rejects.toMatchObject({ code: 'not_found' });
+  });
 });
