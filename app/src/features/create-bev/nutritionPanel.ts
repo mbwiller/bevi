@@ -6,7 +6,7 @@
  * the phone.
  *
  * Written against the real output of eight label photos taken through this app
- * (`__tests__/visionFixtures.json`), not against an idea of what OCR looks
+ * (`__fixtures__/visionFixtures.ts`), not against an idea of what OCR looks
  * like. Four things those photos taught, each of which shapes the code below:
  *
  *   1. Vision keeps a nutrient and its amount on ONE line -- "Sodium 140mg",

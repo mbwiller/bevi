@@ -1,5 +1,5 @@
 import { parseNutritionPanel, type RecognisedLine } from '../nutritionPanel';
-import { VISION_FIXTURES } from './visionFixtures';
+import { VISION_FIXTURES } from '../__fixtures__/visionFixtures';
 
 const line = (text: string, over: Partial<RecognisedLine> = {}): RecognisedLine =>
   ({ text, confidence: 1, x: 0.02, y: 0.5, ...over });

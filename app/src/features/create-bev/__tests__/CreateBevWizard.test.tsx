@@ -10,7 +10,7 @@ import { type } from '@/theme';
 
 import { CreateBevWizard, DUPLICATES_DEBOUNCE_MS } from '../CreateBevWizard';
 import { recogniseText } from '../textRecognition';
-import { VISION_FIXTURES } from './visionFixtures';
+import { VISION_FIXTURES } from '../__fixtures__/visionFixtures';
 import { pickImage, preparePhoto, UnsupportedImageError } from '../photo';
 
 const mockReplace = jest.fn();

@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import type { NutritionPreview } from '@bevi/shared';
 import { api } from '@/api/client';
 import { NutritionScan } from '../NutritionScan';
-import { VISION_FIXTURES } from './visionFixtures';
+import { VISION_FIXTURES } from '../__fixtures__/visionFixtures';
 import { recogniseText } from '../textRecognition';
 import type { PhotoUpload } from '../usePhotoUpload';
 

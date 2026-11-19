@@ -1,5 +1,0 @@
-# `app/.gitignore` ignores `ios/` unanchored, for the native project `expo prebuild`
-# generates at `app/ios/`. That pattern also swallows this local module every time, Swift
-# source and podspec with it, so the module is committed but cannot build. Re-include it
-# here, at the deepest level, which is what wins.
-!ios/
