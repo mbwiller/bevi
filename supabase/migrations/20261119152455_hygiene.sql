@@ -229,8 +229,9 @@ revoke execute on function public.refresh_bev_stats(uuid[]) from public, anon, a
 -- in the migration that creates it.
 --
 -- THAT NOTE IS NOT HYPOTHETICAL. This file was written on 2026-10-24 and is
--- being merged over three weeks later, and `public` gained ten tables in
--- between -- nine before this file's review and `app_config` after it.
+-- being merged over three weeks later, and `public` gained twelve tables in
+-- between -- nine before this file's review, then `app_config`, `user_blocks`
+-- and `content_reports` after it.
 -- Seven of them -- `bev_graph_stats`, `bug_reports`, `category_stats`,
 -- `chains`, `user_neighbors`, `venue_bevs`, `venues` -- arrived holding
 -- INSERT/UPDATE/DELETE/**TRUNCATE** for `anon` and `authenticated`, exactly as
@@ -249,7 +250,12 @@ revoke execute on function public.refresh_bev_stats(uuid[]) from public, anon, a
 --   * `app_config` (20261118210313), which landed on `main` after the nine
 --     above and after this file's own review, is the note working as intended:
 --     it revokes and re-grants on its own line, so it needs nothing from here
---     and gets nothing. `ping` (20261118214500) creates no table at all. This
+--     and gets nothing. `ping` (20261118214500) creates no table at all.
+--     `user_blocks` and `content_reports` (20261118220000) are the note being
+--     missed again and are swept in 2e above -- which is the answer to anyone
+--     reading this section and wondering whether a one-off sweep was worth it:
+--     in the three weeks this file waited, eleven new tables needed the
+--     revoke and exactly one migration remembered to write it. This
 --     migration is timestamped above both of them deliberately -- see the
 --     header on why a `hygiene.sql` that sorts below anything already applied
 --     on prod is a migration `supabase db push` refuses to run.
@@ -265,6 +271,10 @@ revoke execute on function public.refresh_bev_stats(uuid[]) from public, anon, a
 --     policy, and `anon` has no business in either. `bug_reports` joined this
 --     group on 2026-11-09 (20261109000300): a reporter-or-admin SELECT policy,
 --     and every write through `submit_bug_report`.
+--
+--     `user_blocks` and `content_reports` (20261118220000, IS-7) are this
+--     shape too, but they are swept in 2e rather than here -- see the reason
+--     there.
 revoke insert, update, delete, truncate on
   public.categories,
   public.bevs,
@@ -399,6 +409,66 @@ revoke insert, delete, select   on public.follows, public.want_to_try from anon;
 revoke truncate                 on public.featured_bevs from anon, authenticated;
 revoke insert, update, delete, select
                                 on public.featured_bevs from anon;
+
+-- 2e. `user_blocks` and `content_reports` (20261118220000, IS-7), which landed
+--     on `main` on 2026-11-18 while this file was in review. They are 2a's
+--     shape -- a SELECT policy, no write policy, every write through
+--     `block_user`, `unblock_user`, `report_content` or
+--     `resolve_content_report`, all `security definer` owned by `postgres` --
+--     and they arrived holding INSERT/UPDATE/DELETE/**TRUNCATE** for both
+--     client roles.
+--
+--     THE TRUNCATE HERE WAS THE WORST INSTANCE OF THIS FINDING IN THE SCHEMA.
+--     `user_blocks` IS the abuse-safety feature (App Store Guideline 1.2).
+--     `user_blocks_select` is deliberately narrow so a blocked person cannot
+--     discover the block, and `private.is_blocked()` reads the table from the
+--     RLS policies on `profiles`, `follows`, `rankings`, `feed_events`,
+--     `post_comments` and `post_likes`. TRUNCATE needs none of that: it is not
+--     subject to RLS, so one request from any signed-in session would unblock
+--     every abuser from every victim at once, silently, and every blocked
+--     account would simply reappear in the feed. `content_reports` is the
+--     operator queue for the same feature.
+--
+--     SO WHY DOES `authenticated` LOSE ONLY TRUNCATE HERE, AND NOT THE DML AS
+--     IN 2a? For 2c's reason, and this is the case that proves the rule was
+--     worth writing down. `41_blocks_and_reports.test.sql` asserts the DML as
+--     RLS BEHAVIOUR, and twice it does so with a BARE statement whose whole
+--     point is that it does not raise:
+--
+--       line 718  update public.content_reports set status = 'dismissed' ...
+--                 then: the status is still 'open'
+--       line 732  delete from public.user_blocks where blocker_id = ...
+--                 then: the row count is still 1
+--
+--     "A reporter's direct UPDATE moves nothing" and "no direct delete from
+--     user_blocks" are true statements about RLS, and they are the right
+--     things to assert -- a privilege error would no longer prove that the
+--     table has no write policy. Revoking UPDATE and DELETE turns both of
+--     those lines into a 42501 that aborts the transaction and takes the
+--     remaining 25 assertions of that file with it. Verified, not guessed: the
+--     first draft of this section put the pair in 2a and `supabase test db`
+--     failed with `permission denied for table content_reports`, 94 of 119.
+--
+--     RLS already denies all three verbs (that file asserts it, and a direct
+--     INSERT raises 42501 either way), so the only verb with anything left to
+--     take is the only one RLS cannot deny. The hole is closed; the
+--     defence-in-depth waits for the ticket 2c already describes, which now
+--     covers eight tables rather than six and should rewrite those two lines
+--     to assert the privilege error beside an owner-side check that the write
+--     policy set is still empty.
+--
+--     `anon` loses everything, as everywhere else: no policy on either table
+--     names it, so it reads zero rows regardless, and no test exercises it
+--     against these tables.
+revoke all on
+  public.user_blocks,
+  public.content_reports
+from anon;
+
+revoke truncate on
+  public.user_blocks,
+  public.content_reports
+from authenticated;
 
 -- ===========================================================================
 -- 3. graph_pipeline_status(): the facts `npm run graph:verify` asserts
