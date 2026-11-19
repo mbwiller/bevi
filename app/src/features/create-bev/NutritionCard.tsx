@@ -54,7 +54,7 @@ export function NutritionCard({ nutrition, reveal = false }: { nutrition: Nutrit
       <View style={styles.credit}>
         <Text style={[type.caption, styles.creditText, { color: colors.textSecondary }]}>Check against your package. Daily Values and other label details may not be available.</Text>
       </View>
-      <Button variant="ghost" onPress={() => void Linking.openURL(nutrition.sourceUrl)} accessibilityLabel="View product on Open Food Facts">Open Food Facts · ODbL</Button>
+      {nutrition.sourceUrl ? <Button variant="ghost" onPress={() => void Linking.openURL(nutrition.sourceUrl!)} accessibilityLabel="View product on Open Food Facts">Open Food Facts · ODbL</Button> : null}
     </View>
   );
 }

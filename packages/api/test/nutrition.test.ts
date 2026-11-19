@@ -49,7 +49,7 @@ it('retries Bev creation without nutrition if the nutrition RPC is not deployed 
   const nutrition = {
     barcode: '012345678901', productName: 'Test water', basis: 'Per serving (355 ml)',
     calories: 0, fatGrams: null, carbohydrateGrams: 0, sugarGrams: 0, proteinGrams: null,
-    sodiumMg: 4, sourceUrl: 'https://world.openfoodfacts.org/product/012345678901',
+    sodiumMg: 4, sourceUrl: 'https://world.openfoodfacts.org/product/012345678901', source: 'openfoodfacts' as const,
   };
   const id = '00000000-0000-4000-8000-00000000b001';
   const rpcCalls: Array<{ name: string; args: unknown }> = [];

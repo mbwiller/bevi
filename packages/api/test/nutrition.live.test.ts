@@ -21,7 +21,7 @@ describe.skipIf(!url || !publishableKey || AGAINST_SHARED_PROJECT)('nutrition pe
     const nutrition: NutritionPreview = {
       barcode: '012345678901', productName: 'Test water', basis: 'Per serving (355 ml)',
       calories: 0, fatGrams: null, carbohydrateGrams: 0, sugarGrams: 0, proteinGrams: null,
-      sodiumMg: 4, sourceUrl: 'https://world.openfoodfacts.org/product/012345678901',
+      sodiumMg: 4, sourceUrl: 'https://world.openfoodfacts.org/product/012345678901', source: 'openfoodfacts',
     };
     try {
       const photo = await api.media.upload({ kind: 'bev-photo', file: new Blob([PNG], { type: 'image/png' }), mimeType: 'image/png' });

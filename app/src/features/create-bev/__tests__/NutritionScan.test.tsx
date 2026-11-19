@@ -8,11 +8,11 @@ jest.mock('@/components/Sheet', () => ({ Sheet: ({ open, children }: { open: boo
 const preview: NutritionPreview = {
   barcode: '012345678901', productName: 'Test water', basis: 'Per serving (355 ml)',
   calories: 0, fatGrams: null, carbohydrateGrams: 0, sugarGrams: 0, proteinGrams: null,
-  sodiumMg: 4, sourceUrl: 'https://world.openfoodfacts.org/product/012345678901',
+  sodiumMg: 4, sourceUrl: 'https://world.openfoodfacts.org/product/012345678901', source: 'openfoodfacts',
 };
 async function enterBarcode() {
   await fireEvent.press(screen.getByLabelText('Scan barcode for nutrition'));
-  await fireEvent.changeText(screen.getByLabelText('Or enter barcode digits'), preview.barcode);
+  await fireEvent.changeText(screen.getByLabelText('Or enter barcode digits'), preview.barcode!);
   await fireEvent.press(screen.getByLabelText('Look up entered barcode'));
 }
 afterEach(() => { jest.restoreAllMocks(); jest.useRealTimers(); });

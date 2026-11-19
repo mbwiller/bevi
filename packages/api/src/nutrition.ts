@@ -29,6 +29,7 @@ export function parseNutrition(barcode: string, data: unknown): NutritionPreview
     calories: get('energy-kcal'), fatGrams: get('fat'), carbohydrateGrams: get('carbohydrates'),
     sugarGrams: get('sugars'), proteinGrams: get('proteins'), sodiumMg: sodium === null ? null : number(sodium * 1000),
     sourceUrl: `https://world.openfoodfacts.org/product/${barcode}`,
+    source: 'openfoodfacts',
   };
   return [result.calories, result.fatGrams, result.carbohydrateGrams, result.sugarGrams, result.proteinGrams, result.sodiumMg]
     .some((v) => v !== null) ? result : null;
@@ -36,6 +37,14 @@ export function parseNutrition(barcode: string, data: unknown): NutritionPreview
 
 export function createNutritionApi(): NutritionApi {
   return {
+    // Declared by contract 2.16.0 and implemented against the `nutrition-ocr`
+    // Edge Function in the backend half of BEV-13. Until that lands this is
+    // the documented 'unknown' case -- "the server predates this capability"
+    // -- rather than a silent null, which the app would read as "no nutrition
+    // on this label" and show the person the wrong reason.
+    async scanLabel() {
+      throw new ApiError('unknown', 'Reading a nutrition label is not available yet.');
+    },
     async lookupBarcode(barcode, signal) {
       if (!/^(?:\d{8}|\d{12}|\d{13})$/.test(barcode)) throw new ApiError('validation', 'Enter an 8, 12 or 13 digit barcode.');
       const abort = new AbortController();

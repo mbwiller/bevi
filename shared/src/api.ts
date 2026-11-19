@@ -913,6 +913,26 @@ export interface BugsApi {
 export interface NutritionApi {
   /** UPC-A, EAN-8 or EAN-13. null means no usable nutrition data. */
   lookupBarcode(barcode: string, signal?: AbortSignal): Promise<NutritionPreview | null>;
+
+  /**
+   * Read the nutrition panel out of a label photo the caller has already
+   * uploaded, for the drinks no barcode database has. `labelAssetId` is the
+   * `assetId` of a `kind: 'label'` upload belonging to the caller.
+   *
+   * The result is a draft for the person to check against their package, never
+   * something to store unseen: it comes back with `source: 'label-ocr'`,
+   * `barcode: null` and `sourceUrl: null`, and `productName` may be a
+   * placeholder when the panel alone does not name the drink. null means no
+   * nutrition panel could be read from the photo.
+   *
+   * @throws 'unauthorized' — signed out;
+   *   'validation' — not an asset the caller owns, or an image the reader
+   *   cannot use (`detail.field = 'labelAssetId'`);
+   *   'rate_limited' — too many reads; the message says so;
+   *   'network' — the reader was unreachable or timed out;
+   *   'unknown' — the server predates this capability.
+   */
+  scanLabel(labelAssetId: string, signal?: AbortSignal): Promise<NutritionPreview | null>;
 }
 
 export interface BeviApi extends AuthApi {

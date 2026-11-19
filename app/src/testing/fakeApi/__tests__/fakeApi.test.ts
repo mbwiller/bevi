@@ -713,7 +713,7 @@ it('rejects invalid scanned nutrition before creating a Bev, matching the live c
     photoAssetId: 'unused', nutrition: {
       barcode: '012345678901', productName: 'Test water', basis: 'Per serving (355 ml)',
       calories: -1, fatGrams: null, carbohydrateGrams: 0, sugarGrams: 0, proteinGrams: null,
-      sodiumMg: 4, sourceUrl: 'https://world.openfoodfacts.org/product/012345678901',
+      sodiumMg: 4, sourceUrl: 'https://world.openfoodfacts.org/product/012345678901', source: 'openfoodfacts',
     },
   })).rejects.toMatchObject({ code: 'validation', detail: { field: 'nutrition' } });
   expect((await api.bevs.search({ q: 'Invalid nutrition snapshot' })).items).toHaveLength(0);

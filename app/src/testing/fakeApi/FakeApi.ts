@@ -294,7 +294,7 @@ interface UserStreak extends StreakResult {
 }
 
 export class FakeApi implements BeviApi {
-  nutrition: NonNullable<BeviApi['nutrition']> = { lookupBarcode: async () => null };
+  nutrition: NonNullable<BeviApi['nutrition']> = { lookupBarcode: async () => null, scanLabel: async () => null };
   private db: FakeDb;
   private readonly storage: StorageLike | null;
   private readonly clock: () => Date;
@@ -1316,12 +1316,12 @@ export class FakeApi implements BeviApi {
           if (input.priceTier !== null && ![1, 2, 3, 4].includes(input.priceTier)) invalid('priceTier', 'Choose a price');
           if (input.nutrition) {
             const n = input.nutrition;
-            const fields = ['barcode', 'productName', 'basis', 'sourceUrl', 'calories', 'fatGrams', 'carbohydrateGrams', 'sugarGrams', 'proteinGrams', 'sodiumMg'];
+            const fields = ['barcode', 'productName', 'basis', 'sourceUrl', 'calories', 'fatGrams', 'carbohydrateGrams', 'sugarGrams', 'proteinGrams', 'sodiumMg', 'source'];
             const values = [n.calories, n.fatGrams, n.carbohydrateGrams, n.sugarGrams, n.proteinGrams, n.sodiumMg];
             const strings = [n.barcode, n.productName, n.basis, n.sourceUrl];
             if (Object.keys(n).some((k) => !fields.includes(k)) ||
                 strings.some((v) => typeof v !== 'string' || !v.trim() || v.length > 256) ||
-                !/^(?:\d{8}|\d{12}|\d{13})$/.test(n.barcode) ||
+                typeof n.barcode !== 'string' || !/^(?:\d{8}|\d{12}|\d{13})$/.test(n.barcode) ||
                 n.sourceUrl !== `https://world.openfoodfacts.org/product/${n.barcode}` ||
                 !values.some((v) => v !== null) ||
                 values.some((v) => v !== null && (typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > 1_000_000))) {
