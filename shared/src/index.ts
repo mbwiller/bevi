@@ -31,6 +31,7 @@
  * (`BugReportInput.evidence[].file`) stays web-only until the reporter is
  * ported.
  */
+// 3.0.0: user-created photo-backed Bevs enqueue icon generation automatically.
 export const CONTRACT_VERSION = '3.0.0';
 
 export * from './enums';

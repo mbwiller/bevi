@@ -228,19 +228,9 @@ export interface CreateBevInput {
   priceTier: PriceTier | null;
   priceEstimated: boolean;
   /**
-   * From `media.upload({ kind: 'bev-photo' })`. **Optional**, and the one input
-   * that decides whether an AI icon is generated for this Bev.
-   *
-   * With a photo: the Bev is created `active` and the backend schedules exactly
-   * one icon-generation job, so `bevs.icons([id])` reports `'pending'` and the
-   * illustration appears within a minute or two.
-   *
-   * Without one: the Bev is still created and is immediately usable, but it is
-   * `'pending_photo'` and therefore **visible to its creator alone** until a
-   * photo exists, its `iconStatus` is `'none'` for good, and no generation
-   * request is ever made. Nothing the caller can do afterwards -- adding a
-   * photo by an edit, posting a photo with a ranking -- makes it eligible; only
-   * creation is.
+   * Optional verified creation photo. With a photo the Bev is active and eligible
+   * for automatic icon generation. Without one it is pending_photo, creator-only,
+   * and ineligible. Later edits/ranking photos do not establish eligibility.
    */
   photoAssetId?: string;
   /** From `media.upload({ kind: 'label' })`. */
@@ -382,6 +372,7 @@ export interface BevsApi {
    * @throws 'unauthorized', 'validation' (`detail.field = 'bevIds'`, over 500).
    */
   icons(bevIds: readonly string[]): Promise<BevIcon[]>;
+
 }
 
 /**
