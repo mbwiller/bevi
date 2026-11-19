@@ -40,9 +40,9 @@ describe.skipIf(!url || !publishableKey || AGAINST_SHARED_PROJECT)('nutrition pe
   // accepts a snapshot with no barcode, and `bevs.get` reads it back with its
   // `source` intact rather than defaulting it the way an older row is.
   //
-  // `nutrition.scanLabel` itself is not exercised here: it needs the
-  // `nutrition-ocr` function deployed with its model credential, and what it
-  // reads out of a photo is not a fixture. Its mapping has unit tests.
+  // Reading the panel itself is not exercised here and never will be: it
+  // happens on the device, against the camera roll, and `packages/api` only
+  // ever sees the snapshot the person confirmed.
   it('creates a Bev from a label read and reads the snapshot back', async () => {
     const authStorage = storage();
     const api = createBeviApi({ url: url!, publishableKey: publishableKey!, authStorage });

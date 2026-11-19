@@ -1,14 +1,15 @@
 -- Nutrition read from a photo of the label, for the products a barcode lookup
 -- cannot answer (contract 2.16.0: NutritionPreview.source, and a nullable
--- `barcode`/`sourceUrl`). Three things:
+-- `barcode`/`sourceUrl`). The reading itself happens ON THE DEVICE, in the
+-- app, using the platform's own text recogniser: there is no service to call,
+-- no credential, and nothing for this migration to authorise or meter. Two
+-- things:
 --
 --   1. bev_nutrition.source accepts 'label-ocr' as well as 'openfoodfacts'.
 --      Widening a check constraint is safe in one release
 --      (DEVELOPMENT-ARJUN.md section 14's table), so no v2 table and no
 --      ledger row for this part.
---   2. claim_label_ocr(): the gate the `nutrition-ocr` Edge Function calls AS
---      THE CALLER before it spends money at a third-party model.
---   3. create_bev_with_nutrition_v2(): create_bev_with_nutrition plus the
+--   2. create_bev_with_nutrition_v2(): create_bev_with_nutrition plus the
 --      `source` key and the label-ocr branch of the validation. v1 keeps
 --      answering old clients untouched (section 14, "RPC versioning"); its
 --      migration (20261115214237) is frozen.
@@ -29,72 +30,7 @@ alter table public.bev_nutrition
     check (source in ('openfoodfacts', 'label-ocr'));
 
 -- =====================================================================
--- 2. claim_label_ocr(p_asset_id): called by the Edge Function AS THE CALLER
---
--- The function runs with the caller's JWT precisely so this check happens
--- as the user: it authorises the read (the object must be one the caller
--- uploaded into their own folder of `nutrition-labels`) and rate-limits it.
--- Every accepted call costs real money at a third-party vision model, so
--- the two limits are the point of the function rather than decoration: 10
--- an hour is well past a human photographing a label, and 30 a day caps a
--- runaway client loop at something we can absorb. Both are enforced per
--- window on their own action key -- see the note at the calls. assert_rate() is
--- security-definer and only callable from inside another SQL/plpgsql
--- function, which is the other reason this wrapper exists (the same reason
--- assert_upload_rate() exists, 20261011000900).
---
--- It returns the storage path so the Edge Function uses the value this
--- function validated rather than the one it was handed.
--- =====================================================================
-
-create or replace function public.claim_label_ocr(p_asset_id text)
-returns text
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_uid uuid := auth.uid();
-begin
-  if v_uid is null then
-    raise exception 'BEVI_UNAUTHORIZED' using errcode = '42501';
-  end if;
-
-  -- The asset id is the storage path media.upload returned: it must exist,
-  -- in the nutrition-labels bucket, under the caller's own folder -- the
-  -- same shape the bucket's insert policy enforces (20261011000900).
-  if p_asset_id is null or not exists (
-    select 1 from storage.objects o
-     where o.bucket_id = 'nutrition-labels'
-       and o.name = p_asset_id
-       and (storage.foldername(o.name))[1] = v_uid::text
-  ) then
-    raise exception 'BEVI_VALIDATION' using errcode = '22023', detail = 'labelAssetId';
-  end if;
-
-  -- One action key per window, which is NOT how the older RPCs do it, and
-  -- deliberately. assert_rate() counts the rows for its action inside its
-  -- window and then inserts one of its own, so two calls sharing a key each
-  -- count the other's rows: 'label_ocr' twice would insert two rows per
-  -- accepted read and trip the hourly check on the 6th, giving 5 an hour
-  -- where this says 10. Separate keys make each window mean what it says.
-  -- (`create_bev` shares one key across its two windows and so has half the
-  -- limit it reads as; that is its own to fix, not this migration's.)
-  perform public.assert_rate('label_ocr_hour', 10, interval '1 hour');
-  perform public.assert_rate('label_ocr_day', 30, interval '1 day');
-
-  return p_asset_id;
-end $$;
-
--- `anon` and `authenticated` are named as well as PUBLIC because Supabase's
--- default privileges grant EXECUTE on every new function in `public` to
--- anon, authenticated and service_role directly, which a revoke from PUBLIC
--- does not touch (the note at the foot of 20261115214237).
-revoke execute on function public.claim_label_ocr(text) from public, anon, authenticated;
-grant execute on function public.claim_label_ocr(text) to authenticated;
-
--- =====================================================================
--- 3. create_bev_with_nutrition_v2(): the same call, with a source
+-- 2. create_bev_with_nutrition_v2(): the same call, with a source
 --
 -- Identical parameter list, security and grants to v1. What changed:
 --

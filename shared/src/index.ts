@@ -4,10 +4,10 @@
  * 2.16.0, over 2.15.0: nutrition snapshots no longer have to come from a
  * barcode. `NutritionPreview` gains `source` (`NutritionSource`:
  * `'openfoodfacts' | 'label-ocr'`), and `barcode` and `sourceUrl` widen to
- * `string | null`, which a label read leaves null. `NutritionApi` gains
- * `scanLabel(labelAssetId)`, which reads the panel out of a photo the caller
- * uploaded. Barcode lookup, its stored snapshots and the two `basis` strings
- * are unchanged.
+ * `string | null`, which a label read leaves null. `BeviApi` is otherwise
+ * unchanged: a label is read on the device, by the app, so there is no new
+ * API method and no new service. Barcode lookup, its stored snapshots and the
+ * two `basis` strings are unchanged.
  *
  * A minor rather than a major, deliberately, on three grounds. Nothing reads
  * `barcode` at runtime -- it is stored and traced, never rendered -- so the

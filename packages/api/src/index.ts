@@ -49,7 +49,7 @@ export function createBeviApi(config: BeviApiConfig): BeviApi {
 
   return {
     ...auth,
-    nutrition: createNutritionApi(client),
+    nutrition: createNutritionApi(),
     profile: {
       ...profile,
       async setBirthDate(date) {

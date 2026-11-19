@@ -1,8 +1,8 @@
 -- Nutrition read off a label photo (20261119153337): the widened
--- bev_nutrition.source constraint, claim_label_ocr() and
+-- bev_nutrition.source constraint and
 -- create_bev_with_nutrition_v2(). v1's own behaviour stays in 37.
 begin;
-select plan(26);
+select plan(17);
 insert into auth.users (id,email,raw_user_meta_data,aud,role) values
  ('00000000-0000-4000-8000-0000000fc0a1','pgtapocr1@users.bevi.app','{"invite_code":"local-test-invite-code"}','authenticated','authenticated'),
  ('00000000-0000-4000-8000-0000000fc0a2','pgtapocr2@users.bevi.app','{"invite_code":"local-test-invite-code"}','authenticated','authenticated');
@@ -25,8 +25,6 @@ set local test.nosource = '{"barcode":"012345678905","productName":"pgTAP OCR Wa
 -- ---------------------------------------------------------------------------
 -- Grants
 -- ---------------------------------------------------------------------------
-select ok(has_function_privilege('authenticated','public.claim_label_ocr(text)','execute'),'authenticated callers may claim a label read');
-select ok(not has_function_privilege('anon','public.claim_label_ocr(text)','execute'),'anonymous callers may not claim a label read');
 select ok(has_function_privilege('authenticated','public.create_bev_with_nutrition_v2(text,text,text,text,smallint,boolean,text,text,jsonb)','execute'),'authenticated callers can create with a sourced snapshot');
 select ok(not has_function_privilege('anon','public.create_bev_with_nutrition_v2(text,text,text,text,smallint,boolean,text,text,jsonb)','execute'),'anonymous callers cannot create with a sourced snapshot');
 
@@ -40,24 +38,6 @@ insert into public.bevs (id, name, category_id, photo_path, price_tier, status, 
 select lives_ok($$ insert into public.bev_nutrition (bev_id, nutrition, source) values ('00000000-0000-4000-8000-0000000fc101', current_setting('test.ocr')::jsonb, 'label-ocr') $$,'bev_nutrition.source accepts label-ocr');
 select lives_ok($$ insert into public.bev_nutrition (bev_id, nutrition, source) values ('00000000-0000-4000-8000-0000000fc102', current_setting('test.nosource')::jsonb, 'openfoodfacts') $$,'bev_nutrition.source still accepts openfoodfacts');
 select throws_ok($$ insert into public.bev_nutrition (bev_id, nutrition, source) values ('00000000-0000-4000-8000-0000000fc103', current_setting('test.ocr')::jsonb, 'guesswork') $$,'23514',null,'bev_nutrition.source accepts no other reading');
-
--- ---------------------------------------------------------------------------
--- claim_label_ocr
--- ---------------------------------------------------------------------------
-select throws_ok($$ select public.claim_label_ocr('00000000-0000-4000-8000-0000000fc0a1/label.jpg') $$,'42501','BEVI_UNAUTHORIZED','no auth uid cannot claim a label read');
-set local role authenticated;
-set local request.jwt.claims='{"sub":"00000000-0000-4000-8000-0000000fc0a1","role":"authenticated"}';
-select throws_ok($$ select public.claim_label_ocr(null) $$,'22023','BEVI_VALIDATION','a missing asset id is rejected');
-select throws_ok($$ select public.claim_label_ocr('00000000-0000-4000-8000-0000000fc0a2/theirs.jpg') $$,'22023','BEVI_VALIDATION','another user''s label photo is rejected');
-select throws_ok($$ select public.claim_label_ocr('00000000-0000-4000-8000-0000000fc0a1/missing.jpg') $$,'22023','BEVI_VALIDATION','a path with no object behind it is rejected');
-select is(public.claim_label_ocr('00000000-0000-4000-8000-0000000fc0a1/label.jpg'),'00000000-0000-4000-8000-0000000fc0a1/label.jpg','the owner claims their own label photo and gets the path back');
--- Every accepted claim costs money at a third-party model, so the ceiling is
--- the point of the function. Asserted at the exact boundary, not as "a loop
--- gets stopped somewhere": each window has its own action key so that 10 an
--- hour means ten, and a shared key would silently make it five. The claim on
--- the line above was the first of the ten.
-select lives_ok($$ do $block$ begin for i in 1..9 loop perform public.claim_label_ocr('00000000-0000-4000-8000-0000000fc0a1/label.jpg'); end loop; end $block$ $$,'ten label reads in the hour are allowed');
-select throws_ok($$ select public.claim_label_ocr('00000000-0000-4000-8000-0000000fc0a1/label.jpg') $$,'P0001','BEVI_RATE_LIMITED','the eleventh label read in the hour is refused');
 
 -- ---------------------------------------------------------------------------
 -- create_bev_with_nutrition_v2
