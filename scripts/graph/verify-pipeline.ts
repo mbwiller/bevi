@@ -27,7 +27,7 @@
  *
  * READ-ONLY, POSTGRES ONLY. No Neo4j, no Edge Function invocation, no writes.
  * It makes exactly one call: `public.graph_pipeline_status()`, the service-role
- * diagnostic added in 20261116235414. Two of the four facts are not reachable
+ * diagnostic added in 20261119152455. Two of the four facts are not reachable
  * over PostgREST at any privilege level -- `vault.decrypted_secrets` is
  * readable by its owner only and `pg_trigger` is not in an exposed schema --
  * so a `security definer` owned by `postgres` is the only way to see them, and
@@ -415,7 +415,7 @@ async function callStatus(url: string, key: string): Promise<unknown> {
     // The key travels in a header, not the URL, so the path is safe to print.
     throw new Error(
       `${response.status} ${response.statusText} on /rpc/graph_pipeline_status\n  ${text.slice(0, 600)}\n` +
-        `  If this is a 404, migration 20261116235414 has not been pushed to this project.`
+        `  If this is a 404, migration 20261119152455 has not been pushed to this project.`
     );
   }
   return text === "" ? null : (JSON.parse(text) as unknown);

@@ -84,7 +84,7 @@ from the rest. Tracked files removed from `main`: about 17 MB of about 94 MB.
 | P-01 | Save the uncommitted change in `../bevi-wt/icon-redraw-04`: three review notes in `design/beverage-icons/verdicts/matt.json` (`horchata-traditional`, `mexican-coca-cola`, `minute-maid-fruit-punch`). | They existed only in that worktree. Committed on `design/icon-redraw-04` as `08b43fa` and merged to `main` in #229, the PR that added this file. | Matt | DONE |
 | P-02 | Keep `VC-materials/`, `internal/` and `docs/apple-developer-account.pdf` out of reach of `git add`. | They were untracked but not ignored, in a public repository. Now listed in Matt's `.git/info/exclude`, which keeps the names out of the public `.gitignore`. `docs/bevi-cicd-pipeline.tex` is still untracked and visible: commit it or move it. | Matt | DONE |
 | P-03 | Run the audit commands of §10.4 on Arjun's machine. | Only Matt's checkout, worktrees and local branches were audited. Arjun's local branches and worktrees are unknown. | Arjun | TODO |
-| P-04 | Decide RB `be/hygiene-sweep`: bring it to `main`, or drop it. | One commit by Arjun from 2026-10-24, 1,390 lines, none of it on `main`: a privileges-hardening migration (`20261025000400_hygiene.sql`), a server-side cap on `list_bucket_bevs`, eight pgTAP assertions, and `npm run graph:verify` with its RPC. Its commit message says it was never run against a database, and the migration's timestamp is older than migrations already on prod, so it needs a new one. Draft PR #228 now holds the commit; the branch is 105 commits behind `main` and conflicts with it. | Arjun | TODO |
+| P-04 | Decide RB `be/hygiene-sweep`: bring it to `main`, or drop it. | **Brought to `main`** in #228. Arjun's 2026-10-24 commit (`03577f1`) is still the first commit on the branch -- `main` was merged, never rebased, so the sha survives. The migration was retimestamped twice to stay above what is already on prod and is now `20261119152455_hygiene.sql`; the `list_bucket_bevs` cap was dropped rather than retuned (its length *is* the client's `expectedBucketSize`, so a cap breaks every submission from a 501-Bev bucket); `graph_pipeline_status()` reports `tgenabled` instead of a boolean that called a replica-only trigger enabled; and the three-week gap's new tables were swept. Verified on a local stack: `supabase db reset` clean, `supabase test db` 43 files / 1899 assertions, `npm test` green, `npm run graph:verify` fails honestly and exits 1. **Not yet `db push`ed to prod.** | Arjun | DONE |
 
 Optional, after §7: turn on "Automatically delete head branches" in the GitHub repository settings
 (it is off, which is how the branches in §7.2 accumulated). GitHub retargets any open PR
@@ -278,7 +278,7 @@ branch is newer than what `main` received.
 
 | ID | Branch | Tip | Last commit | Tip author | PR | Evidence | Risk | Status |
 |---|---|---|---|---|---|---|---|---|
-| RB-77 | `be/hygiene-sweep` | `03577f1` | 2026-10-24 | Arjun | #228 open | **1,390 unmerged lines, none on `main`**: `supabase/migrations/20261025000400_hygiene.sql`, `scripts/graph/verify-pipeline.ts` and its test, extra pgTAP. Draft PR #228 was opened on 2026-11-16 to hold the commit, so `refs/pull/228/head` keeps it. Do not delete the branch while that PR is open. See P-04. | R3 | TODO |
+| RB-77 | `be/hygiene-sweep` | `03577f1` | 2026-10-24 | Arjun | #228 merged | **Merged to `main`.** Nothing unmerged remains: the hygiene migration, `scripts/graph/verify-pipeline.ts` and its tests, and the extra pgTAP are all on `main`. `03577f1` is preserved as the branch's first commit. Safe to delete the branch now that #228 is closed. See P-04. | R3 | DONE |
 
 ## 8. Files
 
@@ -393,13 +393,13 @@ These came up as possible candidates and are in use. Listed so nobody audits the
 
 ## 9. Suggested order
 
-1. **§4**: P-01 and P-02 are done. P-03 and P-04 are Arjun's and block only his rows.
+1. **§4**: P-01, P-02 and P-04 are done. P-03 is Arjun's and blocks only his rows.
 2. **§5 worktrees**, R1 rows, then WT-05, then WT-09 when it is no longer in use. Frees about 7 GB.
 3. **§6 local branches**: 6.1 with the guard script, then a glance at 6.2.
 4. **§7 remote branches**: 7.2 with the guard script, then 7.3.
 5. **§8.2, F-05 and F-07**: one small PR per lane, proven by typecheck and tests.
 6. **F-01 to F-04, F-08, F-09**: one docs-only PR after Matt and Arjun agree.
-7. **Still open**: P-04 (RB `be/hygiene-sweep`), F-10 with the new map, L-01, L-02.
+7. **Still open**: F-10 with the new map, L-01, L-02. (P-04 closed: `be/hygiene-sweep` merged in #228.)
 
 Steps 1 to 4 touch no file on `main` and need no PR.
 
@@ -567,3 +567,4 @@ Append one line per action. Reasons for `KEPT` and `BLOCKED` go here.
 | 2026-11-16 | Matt | F-06, F-07, F-10 | Decision recorded (§1.1). F-06 `KEPT`: the Map tab returns to Google Maps. F-07 drops from R3 to R2 (Find Bev is obsolete). F-10 added. | #229 |
 | 2026-11-16 | Claude (Matt's session) | RB and LB `design/beverage-icon-pilot`, P-04 | Both unmerged branches checked. The pilot branch's one icon missing from `main` (`starbucks-frappuccino-mocha`) was withdrawn on purpose in #160, so both rows drop from R3 to R2. `be/hygiene-sweep` is real unmerged work: P-04. | #229 |
 | 2026-11-18 | Claude (Matt's session) | F-07, F-10 | Deleted `app/src/features/find-bev/` (the spike and the Find Bev screen), `app/jest.cssModule.js` and the `.module.css` mapper in `app/jest.config.js`. The Map tab now shows an in-progress page (`app/src/features/map/MapInProgressScreen.tsx`) until the new map exists. Matt's go-ahead 2026-11-18; `gen:components`, typecheck and the app tests run. | `ui/bev-27-im-2-first-boot` |
+| 2026-11-19 | Claude (Arjun's session) | P-04, RB-77 | #228 reviewed on a local stack and merged. Re-verified the premise (a new `public` table still inherits TRUNCATE for `anon`/`authenticated`) and the fix (0 TRUNCATE grants left; `truncate public.bevs` as `authenticated` now 42501). Found and fixed one regression the 11-16 review could not have seen: `20261116235414` sorted below `app_config` and `ping`, which merged on 11-18, so `supabase db push` refused it with `DbPushMissingRemoteError` -- retimestamped to `20261119152455`. | #228 |

@@ -45,6 +45,18 @@
 -- 20261011000200 and 20261101000300 (refresh_bev_stats) are on `main` and
 -- therefore frozen; the function is reproduced in full here because a
 -- migration is append-only.
+--
+-- ON THIS FILE'S TIMESTAMP. It was written as 20261025000400 and has been
+-- retimestamped twice, because `supabase db push` REFUSES a migration that
+-- sorts below the last version in the remote history table -- it stops with
+-- `DbPushMissingRemoteError` and names the file, and only `--include-all`
+-- overrides it. The October number sorted below 23 migrations already on
+-- prod; 20261116235414, chosen during the 2026-11-16 review, then sorted
+-- below `app_config` (20261118210313) and `ping` (20261118214500) as soon as
+-- those merged. So the rule is not "a timestamp near when it was written" but
+-- "a timestamp above everything already pushed" -- re-check it on the day this
+-- merges, not the day it was reviewed. Nothing here depends on running before
+-- or after those two migrations; see the note in section 2.
 
 set search_path = public, extensions;
 
@@ -217,7 +229,8 @@ revoke execute on function public.refresh_bev_stats(uuid[]) from public, anon, a
 -- in the migration that creates it.
 --
 -- THAT NOTE IS NOT HYPOTHETICAL. This file was written on 2026-10-24 and is
--- being merged three weeks later, and `public` gained nine tables in between.
+-- being merged over three weeks later, and `public` gained ten tables in
+-- between -- nine before this file's review and `app_config` after it.
 -- Seven of them -- `bev_graph_stats`, `bug_reports`, `category_stats`,
 -- `chains`, `user_neighbors`, `venue_bevs`, `venues` -- arrived holding
 -- INSERT/UPDATE/DELETE/**TRUNCATE** for `anon` and `authenticated`, exactly as
@@ -226,13 +239,20 @@ revoke execute on function public.refresh_bev_stats(uuid[]) from public, anon, a
 -- explains why they lose less than 2b's tables do. Membership was checked
 -- against a `supabase db reset` -- `information_schema.role_table_grants` and
 -- `pg_policies`, table by table -- and not read off the migration text. The
--- two exceptions:
+-- exceptions:
 --
 --   * `bev_icons` (20261112000200:139-141) did the right thing on its own --
 --     `revoke all ... from public, anon, authenticated` then `grant select to
 --     authenticated` -- and is left alone because it is already correct, as is
 --     `bev_nutrition` (#223, merged while this rebase was in flight), which
 --     copied it. That is the pattern a new table should follow.
+--   * `app_config` (20261118210313), which landed on `main` after the nine
+--     above and after this file's own review, is the note working as intended:
+--     it revokes and re-grants on its own line, so it needs nothing from here
+--     and gets nothing. `ping` (20261118214500) creates no table at all. This
+--     migration is timestamped above both of them deliberately -- see the
+--     header on why a `hygiene.sql` that sorts below anything already applied
+--     on prod is a migration `supabase db push` refuses to run.
 --   * `ranking_events` (20261101000200:178-179) revoked
 --     insert/update/delete/truncate/references/trigger and deliberately kept
 --     SELECT for both roles. The TRUNCATE hole is already closed there, and

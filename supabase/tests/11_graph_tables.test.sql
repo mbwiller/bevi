@@ -32,7 +32,7 @@
 -- to find both.
 begin;
 -- Sections 9 and 10 and the four CHECK assertions in section 1 are the hygiene
--- sweep (20261116235414): the `weight` and `components` CHECKs, a non-active
+-- sweep (20261119152455): the `weight` and `components` CHECKs, a non-active
 -- ANCHOR for get_bev_similarities, the two `on delete cascade` paths from
 -- `bevs`, that `list_bucket_bevs` does NOT truncate the caller's bucket, and
 -- what `graph_pipeline_status()` reports for a trigger's `tgenabled`.
@@ -780,7 +780,7 @@ select is(
 );
 
 -- `list_bucket_bevs` MUST NOT TRUNCATE, and this is the regression test for
--- the 500-row cap that an earlier draft of 20261116235414 put on it.
+-- the 500-row cap that an earlier draft of 20261119152455 put on it.
 --
 -- The length of this list is the client's `expectedBucketSize`: the app reads
 -- the bucket here (app/src/api/placementList.ts -> RankFlow.tsx), counts the
@@ -823,7 +823,7 @@ select is(
 -- ---------------------------------------------------------------------------
 -- 10. graph_pipeline_status(): tgenabled is reported, not judged
 -- ---------------------------------------------------------------------------
--- The diagnostic behind `npm run graph:verify` (20261116235414). It returns
+-- The diagnostic behind `npm run graph:verify` (20261119152455). It returns
 -- `pg_trigger.tgenabled` for each embed trigger and lets
 -- `evaluateStatus()` (scripts/graph/verify-pipeline.ts) decide PASS/FAIL,
 -- because only 'O' (origin) and 'A' (always) fire for an ordinary write: 'R'
