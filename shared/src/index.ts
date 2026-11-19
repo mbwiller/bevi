@@ -1,16 +1,18 @@
 /**
  * Bumped on any breaking change to the types or `BeviApi` below.
  *
- * 2.15.0, over 2.14.0's barcode nutrition lookup: `UploadMediaInput.file`
- * widened from `Blob` to `UploadPayload` (`Blob | ArrayBuffer | Uint8Array`),
- * so `media.upload` takes raw bytes. Purely additive for callers, hence a
- * minor. Off the web an implementation must reject a `Blob` with
- * `'validation'` instead of uploading it: React Native's `Blob` holds a native
- * handle, not bytes, and Storage silently writes a 0-byte object. Bug report
- * evidence (`BugReportInput.evidence[].file`) is deliberately unchanged and
- * stays web-only until the reporter is ported.
+ * 2.16.0, over 2.15.0's byte uploads: blocking and content reporting (IS-7,
+ * App Store Guideline 1.2). `BeviApi` gains `blocks` (`block`, `unblock`, and
+ * `list` returning `Page<BlockedUser>`) and `reports` (`report`, about a post,
+ * a comment or a profile, with a `ReportReason` and an optional note), plus
+ * `ReportContentKind`, `ReportReason`, `REPORT_REASONS` and `REPORT_NOTE_MAX`.
+ * Purely additive for callers, hence a minor: no existing type or method
+ * changes shape. A block does change what existing reads return (the two
+ * people drop out of each other's feeds, comments and lists, and read each
+ * other as 'not_found'), but through codes every older client already
+ * handles. Nothing lets a caller learn who has blocked them.
  */
-export const CONTRACT_VERSION = '2.15.0';
+export const CONTRACT_VERSION = '2.16.0';
 
 export * from './enums';
 export * from './errors';

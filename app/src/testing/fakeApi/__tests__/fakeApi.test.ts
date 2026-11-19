@@ -17,7 +17,7 @@ import { isApiError, type Bucket, type Session } from '@bevi/shared';
 
 import { CATALOG_BEVS } from '../catalog';
 import { STORAGE_KEY, type StorageLike } from '../db';
-import { buildFixtures } from '../fixtures';
+import { buildFixtures, userIdFor } from '../fixtures';
 import { FakeApi } from '../FakeApi';
 import { ALCOHOLIC_BEV_ID, FAKE_INVITE_CODE, FRIEND, ME } from '../people';
 
@@ -717,4 +717,90 @@ it('rejects invalid scanned nutrition before creating a Bev, matching the live c
     },
   })).rejects.toMatchObject({ code: 'validation', detail: { field: 'nutrition' } });
   expect((await api.bevs.search({ q: 'Invalid nutrition snapshot' })).items).toHaveLength(0);
+});
+
+// IS-7: block_user / list_blocked_users / report_content, and the filtering a block causes.
+describe('blocks and reports', () => {
+  const friendId = userIdFor(FRIEND.handle);
+
+  async function setup() {
+    const api = make();
+    const me = await signInMe(api);
+    const feed = (await api.feed.getFeed({ limit: 100 })).items;
+    const friendPost = feed.find((i) => i.actor.id === friendId)!;
+    const myPost = feed.find((i) => i.actor.id === me.userId)!;
+    expect(friendPost).toBeDefined();
+    expect(myPost).toBeDefined();
+    return { api, me, friendPost, myPost };
+  }
+
+  it('a block is mutual in effect: each reads the other as not_found, and the follows go both ways', async () => {
+    const { api, me, friendPost } = await setup();
+    await api.blocks.block(friendId);
+    await api.blocks.block(friendId); // idempotent
+
+    await expect(api.profile.getUser(friendId)).rejects.toMatchObject({ code: 'not_found' });
+    await expect(api.feed.listUser(friendId)).rejects.toMatchObject({ code: 'not_found' });
+    await expect(api.follows.follow(friendId)).rejects.toMatchObject({ code: 'not_found' });
+    await expect(api.comments.list(friendPost.id)).rejects.toMatchObject({ code: 'not_found' });
+    expect((await api.feed.getFeed({ limit: 100 })).items.some((i) => i.actor.id === friendId)).toBe(false);
+    expect((await api.profile.searchUsers({ q: FRIEND.handle })).items).toEqual([]);
+    expect((await api.follows.listFollowing(me.userId, { limit: 50 })).items.some((p) => p.id === friendId)).toBe(false);
+
+    // The other side sees the same wall, and nothing tells them they were blocked.
+    api.signInAs(FRIEND.handle);
+    await expect(api.profile.getUser(me.userId)).rejects.toMatchObject({ code: 'not_found' });
+    expect((await api.follows.listFollowing(friendId, { limit: 50 })).items.some((p) => p.id === me.userId)).toBe(false);
+    expect((await api.blocks.list()).items).toEqual([]);
+  });
+
+  it("list shows only the caller's own blocks; unblock does not restore the follows", async () => {
+    const { api, me } = await setup();
+    await api.blocks.block(friendId);
+    expect((await api.blocks.list()).items).toEqual([
+      expect.objectContaining({ id: friendId, handle: FRIEND.handle, birthdate: null, canSeeAlcohol: false, blockedAt: expect.any(String) }),
+    ]);
+
+    await api.blocks.unblock(friendId);
+    await api.blocks.unblock(friendId); // idempotent
+    expect((await api.blocks.list()).items).toEqual([]);
+    expect((await api.profile.getUser(friendId)).isFollowing).toBe(false);
+    expect((await api.follows.listFollowing(me.userId, { limit: 50 })).items.some((p) => p.id === friendId)).toBe(false);
+  });
+
+  it('refuses a self-block as validation and an unknown user as not_found', async () => {
+    const { api, me } = await setup();
+    await expect(api.blocks.block(me.userId)).rejects.toMatchObject({ code: 'validation' });
+    await expect(api.blocks.block('no-such-user')).rejects.toMatchObject({ code: 'not_found' });
+  });
+
+  it('report is idempotent per content and validates as report_content does', async () => {
+    const { api, me, friendPost } = await setup();
+    const first = await api.reports.report({ kind: 'post', id: friendPost.id, reason: 'spam' });
+    const again = await api.reports.report({ kind: 'post', id: friendPost.id, reason: 'hate', note: 'different' });
+    expect(again).toEqual(first);
+    const profile = await api.reports.report({ kind: 'profile', id: friendId, reason: 'harassment' });
+    expect(profile.reportId).not.toBe(first.reportId);
+
+    await expect(api.reports.report({ kind: 'profile', id: me.userId, reason: 'spam' })).rejects.toMatchObject({ code: 'validation' });
+    await expect(api.reports.report({ kind: 'post', id: friendPost.id, reason: 'nope' as never })).rejects.toMatchObject({
+      code: 'validation',
+      detail: { field: 'reason' },
+    });
+    await expect(
+      api.reports.report({ kind: 'profile', id: friendId, reason: 'spam', note: 'x'.repeat(501) }),
+    ).rejects.toMatchObject({ code: 'validation', detail: { field: 'note' } });
+    await expect(api.reports.report({ kind: 'post', id: 'no-such-post', reason: 'spam' })).rejects.toMatchObject({ code: 'not_found' });
+  });
+
+  it('Block then Report works for the blocker, and the blocked person cannot report back', async () => {
+    const { api, friendPost, myPost } = await setup();
+    await api.blocks.block(friendId);
+    await expect(api.reports.report({ kind: 'post', id: friendPost.id, reason: 'harassment' })).resolves.toEqual({
+      reportId: expect.any(String),
+    });
+
+    api.signInAs(FRIEND.handle);
+    await expect(api.reports.report({ kind: 'post', id: myPost.id, reason: 'spam' })).rejects.toMatchObject({ code: 'not_found' });
+  });
 });

@@ -62,6 +62,15 @@ export type SuggestedProfile = ProfileRow & {
   followedByCount: number;
 };
 
+/**
+ * Someone the caller has blocked, from `blocks.list` (IS-7). Never the caller,
+ * so `birthdate` is null and `canSeeAlcohol` false, as for any other person.
+ */
+export type BlockedUser = Profile & {
+  /** When the caller blocked them. */
+  blockedAt: string;
+};
+
 export interface ProfileStats {
   followers: number;
   following: number;

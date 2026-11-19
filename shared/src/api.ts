@@ -6,7 +6,7 @@
 // `signUp`, `signIn`, `getSession`, `onAuthChange`, `profile.checkHandle` and
 // `meta.getAppConfig` and read-only `nutrition.lookupBarcode` throw 'unauthorized' when signed out.
 
-import type { Bucket, CategoryId, PriceTier } from './enums';
+import type { Bucket, CategoryId, PriceTier, ReportContentKind, ReportReason } from './enums';
 import type {
   NutritionPreview,
   AppConfig,
@@ -15,6 +15,7 @@ import type {
   BevOfPeriod,
   BevSimilarity,
   BevSummary,
+  BlockedUser,
   BucketBev,
   Category,
   CategoryNode,
@@ -910,6 +911,76 @@ export interface BugsApi {
   place(ticketId: string, afterTicketId: string | null): Promise<BugReportSummary[]>;
 }
 
+export interface BlocksApi {
+  /**
+   * The caller blocks this person (IS-7, App Store Guideline 1.2). The intent
+   * is one-directional -- they are never told, and their own block list does
+   * not change -- but the effect is mutual: from then on neither sees the
+   * other's profile, posts, comments, rankings or follow edges, and each gets
+   * 'not_found' for the other (`profile.getUser`, `feed.listUser`,
+   * `follows.follow`, ...). Blocking also removes the follow edges between the
+   * two, both ways; unblocking does not restore them.
+   *
+   * Idempotent: blocking someone already blocked resolves without error.
+   * @throws 'unauthorized'; 'not_found' — no such user; 'validation' —
+   *   blocking yourself; 'rate_limited'.
+   */
+  block(userId: string): Promise<void>;
+
+  /**
+   * Lifts the caller's own block. Idempotent: unblocking someone who was never
+   * blocked resolves without error. A block someone else made against the
+   * caller can neither be lifted nor detected from here.
+   * @throws 'unauthorized'.
+   */
+  unblock(userId: string): Promise<void>;
+
+  /**
+   * The people the caller has blocked, most recently blocked first: the
+   * Blocked accounts screen. Only the caller's own blocks: there is
+   * deliberately no way to ask who has blocked the caller, or whether a given
+   * person has.
+   * @throws 'unauthorized'.
+   */
+  list(page?: PageParams): Promise<Page<BlockedUser>>;
+}
+
+export interface ReportContentInput {
+  kind: ReportContentKind;
+  /** `FeedItem.id` / `ExplorePost.id` for 'post', `Comment.id` for 'comment', `Profile.id` for 'profile'. */
+  id: string;
+  reason: ReportReason;
+  /** The reporter's own words, at most `REPORT_NOTE_MAX` characters after trimming. Blank means none. */
+  note?: string;
+}
+
+export interface ReportContentResult {
+  /** The report's id: the existing one when the caller had already reported this content. */
+  reportId: string;
+}
+
+export interface ReportsApi {
+  /**
+   * Files a report about one post, comment or person for the operators to
+   * review (IS-7, App Store Guideline 1.2). It does not hide, block or notify
+   * anything; offer `blocks.block` beside it for that.
+   *
+   * Idempotent per (caller, content): reporting the same thing again returns
+   * the first report's id and changes nothing, whatever the new reason or note.
+   *
+   * A post or comment must be one the caller can see by the feed's rule (their
+   * own or a followed user's, age-gated), or be by someone the caller has
+   * blocked, so Block then Report works. Explore posts are follower-only here
+   * as they are for likes and comments (D-15): reporting one throws
+   * 'not_found' unless the caller has blocked its author.
+   * @throws 'unauthorized'; 'not_found' — no such content, or the caller
+   *   cannot see it; 'validation' — reporting your own content or profile, an
+   *   unknown reason (`detail.field = 'reason'`), or a note over
+   *   `REPORT_NOTE_MAX` (`'note'`); 'rate_limited'.
+   */
+  report(input: ReportContentInput): Promise<ReportContentResult>;
+}
+
 export interface NutritionApi {
   /** UPC-A, EAN-8 or EAN-13. null means no usable nutrition data. */
   lookupBarcode(barcode: string, signal?: AbortSignal): Promise<NutritionPreview | null>;
@@ -933,4 +1004,6 @@ export interface BeviApi extends AuthApi {
   venues: VenuesApi;
   meta: MetaApi;
   bugs: BugsApi;
+  blocks: BlocksApi;
+  reports: ReportsApi;
 }
