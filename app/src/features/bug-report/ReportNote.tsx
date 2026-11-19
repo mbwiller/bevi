@@ -11,7 +11,7 @@ import { Icon, type IconName } from '@/components/Icon';
 import { IconButton } from '@/components/IconButton';
 import { Pill } from '@/components/Pill';
 import { Skeleton } from '@/components/Skeleton';
-import { errorCopy } from '@/lib/errorCopy';
+import { actionErrorMessage, errorCopy } from '@/lib/errorCopy';
 import { useKeyboardInset } from '@/lib/useKeyboardInset';
 import { MAX_FONT_SCALE_DENSE, motion, radius, size, spacing, type, useTheme } from '@/theme';
 
@@ -551,7 +551,7 @@ function Failure({ error }: { error: unknown }) {
   return (
     <View role="alert" accessibilityLiveRegion="assertive" style={styles.failure}>
       <Text style={[type.heading, { color: colors.scoreLow }]}>{`${copy.title}. Your note is kept.`}</Text>
-      <Text style={[type.body, { color: colors.textSecondary }]}>{specific ? `${specific}.` : copy.message}</Text>
+      <Text style={[type.body, { color: colors.textSecondary }]}>{specific ? `${specific}.` : actionErrorMessage(error)}</Text>
     </View>
   );
 }

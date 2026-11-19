@@ -13,6 +13,7 @@ import { useDebouncedValue } from '@/features/add-bev/useDebouncedValue';
 import { formErrorMessage } from '@/features/auth/formError';
 import { categoryById, visibleCategories } from '@/lib/categories';
 import { useBack } from '@/lib/useBack';
+import { useOnline } from '@/lib/useOnline';
 import { radius, spacing, type, useTheme } from '@/theme';
 
 import {
@@ -34,7 +35,6 @@ import { DuplicatesStep, ExistingBev } from './DuplicatesStep';
 import { PhotoStep } from './PhotoStep';
 import { isUnsupportedImage, type PhotoSource } from './photo';
 import { CategorySheet, DiscardBevSheet } from './Sheets';
-import { useOnline } from './useOnline';
 import { usePhotoUpload } from './usePhotoUpload';
 
 /** Duplicate lookups wait this long after the last keystroke. */
