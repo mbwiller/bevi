@@ -20,6 +20,7 @@ import {
   mapBevLeaf,
   mapBevSimilarity,
   mapBevSummary,
+  mapNutrition,
   mapProfile,
   type BevLeafRow,
   type BevRow,
@@ -208,13 +209,16 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
       created_by: row.created_by_id && row.created_by_handle ? { id: row.created_by_id, handle: row.created_by_handle } : null,
       is_starter: row.is_starter,
     };
+    // `mapNutrition` is what tolerates a snapshot stored before contract
+    // 2.16.0 added `source` (mappers.ts); the missing-table check above is
+    // what tolerates a backend with no `bev_nutrition` at all.
     return { ...mapBev(client, bevRow, {
       myRanking,
       inWantToTry: wantRes.data !== null,
       friends,
       flavorProfile: profileRes.data as FlavorProfileRow | null,
       prediction: myRanking ? null : await prediction,
-    }), nutrition: (nutritionRes.data?.nutrition as import('@bevi/shared').NutritionPreview | undefined) ?? null };
+    }), nutrition: mapNutrition(nutritionRes.data?.nutrition) };
   }
 
   // The contract's `Bev.prediction`: null when the caller ranked the Bev or has
@@ -270,15 +274,28 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
       p_photo_asset_id: input.photoAssetId,
       p_label_asset_id: input.labelAssetId ?? null,
     };
-    const rpcName = input.nutrition ? 'create_bev_with_nutrition' : 'create_bev';
-    let result = await client.rpc(rpcName, {
-      ...args,
-      ...(input.nutrition ? { p_nutrition: input.nutrition } : {}),
-    }).single();
-    // The migration is applied manually after the backend deploy. If it is not
-    // there yet, preserve Bev creation and omit only the optional snapshot.
-    if (input.nutrition && result.error?.code === 'PGRST202') {
-      result = await client.rpc('create_bev', args).single();
+    // Both nutrition migrations are applied by hand after the backend deploy,
+    // so `create` steps down one rung at a time on PGRST202 ("no such
+    // function") rather than assuming either is there:
+    //
+    //   create_bev_with_nutrition_v2  -- takes both sources.
+    //   -> create_bev_with_nutrition  -- an `openfoodfacts` snapshot only. v1
+    //      requires a barcode, so handing it a `label-ocr` snapshot would not
+    //      degrade, it would fail the whole creation.
+    //   -> create_bev                 -- the Bev without its snapshot. The app
+    //      already copes with this by telling the person the nutrition was not
+    //      saved, which is why dropping it beats failing the creation.
+    const callRpc = (name: string) =>
+      client.rpc(name, name === 'create_bev' ? args : { ...args, p_nutrition: input.nutrition }).single();
+    const fallbacks = !input.nutrition
+      ? []
+      : (input.nutrition.source ?? 'openfoodfacts') === 'openfoodfacts'
+        ? ['create_bev_with_nutrition', 'create_bev']
+        : ['create_bev'];
+    let result = await callRpc(input.nutrition ? 'create_bev_with_nutrition_v2' : 'create_bev');
+    for (const name of fallbacks) {
+      if (result.error?.code !== 'PGRST202') break;
+      result = await callRpc(name);
     }
     const { data, error } = result;
     if (error) throw mapError(error);
