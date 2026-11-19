@@ -15,6 +15,7 @@ import { SortToggle } from '@/components/SortToggle';
 import { categoryById, type CategoryInfo } from '@/lib/categories';
 import { formatShortDate } from '@/lib/time';
 import { size, spacing } from '@/theme';
+import { shortPlaceName } from '@/features/places/copy';
 
 import { BevList, listStyles } from './BevList';
 import { BUCKET_SHORT } from './copy';
@@ -103,7 +104,7 @@ export function BevdTab({ categoryId, categories, onCategory, onCategoryPress }:
             number={number}
             score={item.score}
             bucket={item.bucket}
-            meta={`Ranked ${formatShortDate(item.createdAt)}`}
+            meta={rankedLine(item)}
             actions={false}
             onPress={() => router.push({ pathname: '/bev/[id]', params: { id: item.bevId } })}
           />
@@ -193,10 +194,19 @@ export function BevdTab({ categoryId, categories, onCategory, onCategoryPress }:
   );
 }
 
+/** A place name in the row's meta is cut to this, so the line stays clear of the More button on a 320pt screen. */
+const PLACE_IN_META = 16;
+
+/** "Ranked Oct 12", and where it was had when the row says: "Ranked Oct 12 · Duane Reade". */
+export function rankedLine(item: Pick<RankedBev, 'createdAt' | 'venue'>): string {
+  const ranked = `Ranked ${formatShortDate(item.createdAt)}`;
+  return item.venue ? `${ranked} · ${shortPlaceName(item.venue.name, PLACE_IN_META)}` : ranked;
+}
+
 const styles = StyleSheet.create({
   stripLoading: { justifyContent: 'center', minHeight: size.target, paddingHorizontal: spacing.gutter },
   // Centred on the BevRow's 32pt foot line, where Rank / Want to Try go on other lists, overhanging it
-  // like they do; the glyph lines up with the gutter. The row's meta ("Ranked Oct 12") is short and
-  // left-aligned, so it never runs under the button.
+  // like they do; the glyph lines up with the gutter. The row's meta ("Ranked Oct 12", plus a place
+  // name cut to `PLACE_IN_META` characters) is short and left-aligned, so it never runs under the button.
   more: { position: 'absolute', right: spacing.gutter - spacing.sm, bottom: BEV_ROW_FOOT_OVERLAY_BOTTOM },
 });

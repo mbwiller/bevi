@@ -84,3 +84,15 @@ it('a failed save stays in the picker and says so', async () => {
   expect(onClose).not.toHaveBeenCalled();
   expect((await firstRanked()).venue).toBeNull();
 });
+
+describe("rankedLine (the Bev'd row's meta)", () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { rankedLine } = require('../BevdTab') as typeof import('../BevdTab');
+  const createdAt = '2026-10-12T15:00:00Z';
+  const venue = { name: 'The Café at Cornell Tech' } as RankedBev['venue'];
+
+  it('is the date alone with no place, and names the place, cut short, with one', () => {
+    expect(rankedLine({ createdAt, venue: null })).toMatch(/^Ranked \w+ \d+$/);
+    expect(rankedLine({ createdAt, venue })).toMatch(/^Ranked \w+ \d+ · The Café at Cor…$/);
+  });
+});

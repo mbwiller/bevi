@@ -8,22 +8,10 @@
 // THE POSITION IS USED TO ORDER ONE ANSWER. It goes to `venues.search` as the `near` of that
 // request and is kept nowhere: not in a store, not in storage, not on the server.
 
-import type { LatLng } from '@bevi/shared';
+import type { PositionPermission, PositionResult } from './positionTypes';
 
-export type PositionResult =
-  | { kind: 'ok'; position: LatLng }
-  /** The user, or the browser's settings, said no. */
-  | { kind: 'denied' }
-  /** No provider on this platform, no fix, or no answer in time. */
-  | { kind: 'unavailable' };
-
-/** Whether asking would show a prompt: only a 'granted' answer is silent. */
-export type PositionPermission = 'granted' | 'prompt' | 'denied' | 'unknown';
-
-/** How long to wait for a fix before searching by name alone. */
-export const POSITION_TIMEOUT_MS = 8_000;
-/** A fix this recent is reused: opening the picker twice in a shop asks the GPS once. */
-export const POSITION_MAX_AGE_MS = 60_000;
+export { POSITION_MAX_AGE_MS, POSITION_TIMEOUT_MS } from './positionTypes';
+export type { PositionPermission, PositionResult } from './positionTypes';
 
 export async function positionPermission(): Promise<PositionPermission> {
   return 'unknown';

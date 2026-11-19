@@ -1,11 +1,11 @@
 // The browser's Geolocation behind the place picker (BEV-22). See position.ts for what the position
 // is used for and where it does not go.
 
-import type { PositionPermission, PositionResult } from './position';
-import { POSITION_MAX_AGE_MS, POSITION_TIMEOUT_MS } from './position';
+// From positionTypes, never from './position': on the web that path is this file.
+import { POSITION_MAX_AGE_MS, POSITION_TIMEOUT_MS, type PositionPermission, type PositionResult } from './positionTypes';
 
-export { POSITION_MAX_AGE_MS, POSITION_TIMEOUT_MS } from './position';
-export type { PositionPermission, PositionResult } from './position';
+export { POSITION_MAX_AGE_MS, POSITION_TIMEOUT_MS } from './positionTypes';
+export type { PositionPermission, PositionResult } from './positionTypes';
 
 /** The browser's Geolocation, if it has one (an insecure origin has none). */
 function geolocation(): Geolocation | undefined {
