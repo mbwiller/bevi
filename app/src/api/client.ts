@@ -13,6 +13,7 @@ import type { BeviApi } from '@bevi/shared';
 import { createAuthStorage } from './authStorage';
 import { readApiConfig, unconfiguredApi, type ApiConfig } from './config';
 import { observed } from './observe';
+import { connectSessionRefresh } from './sessionRefresh';
 
 /** Read literally so Expo inlines the values at build time. */
 export const apiConfig: ApiConfig = readApiConfig(
@@ -26,6 +27,7 @@ export const api: BeviApi = apiConfig.ok
   ? observed(createBeviApi({ url: apiConfig.url, publishableKey: apiConfig.publishableKey, authStorage: createAuthStorage() }))
   : unconfiguredApi(apiConfig.problem);
 
-// Not here yet: on native, supabase-js should refresh the token only while the app is active, so a
-// session left backgrounded overnight refreshes on resume. That is an AppState listener here, calling
-// the refresh control @bevi/api has not exported yet (DEVELOPMENT-ARJUN-IOS.md, IA-5).
+// On native the token is refreshed only while the app is in front, and at once when it comes back
+// (sessionRefresh.ts; the web file does nothing). After `createBeviApi`, which is what gives the
+// refresh a client to act on.
+if (apiConfig.ok) connectSessionRefresh();
