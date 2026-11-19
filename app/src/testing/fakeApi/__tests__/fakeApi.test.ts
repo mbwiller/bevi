@@ -738,17 +738,9 @@ describe('label-read nutrition', () => {
   const clock = { now: new Date('2026-10-11T12:00:00Z') };
   const field = (f: string) => ({ code: 'validation', detail: { field: f } });
 
-  it('scanLabel reads an uploaded label, honours setLabelReading, and rejects a photo that is not the caller\'s label', async () => {
+  it('has no server-side label reader: the nutrition capability is the barcode lookup only', () => {
     const api = new FakeApi({ storage: null, latency: 0, now: () => clock.now });
-    await signInMe(api);
-    const labelId = await upload(api, 'label');
-    expect(await api.nutrition.scanLabel(labelId)).toEqual(reading);
-    api.setLabelReading(null);
-    expect(await api.nutrition.scanLabel(labelId)).toBeNull();
-    await expect(api.nutrition.scanLabel(await upload(api, 'bev-photo'))).rejects.toMatchObject(field('labelAssetId'));
-    await expect(api.nutrition.scanLabel('nope')).rejects.toMatchObject(field('labelAssetId'));
-    api.failNext('rate_limited', 'nutrition.scanLabel');
-    await expect(api.nutrition.scanLabel(labelId)).rejects.toMatchObject({ code: 'rate_limited' });
+    expect(Object.keys(api.nutrition)).toEqual(['lookupBarcode']);
   });
 
   it('stores a label read with its source, and a barcode snapshot defaults to openfoodfacts', async () => {

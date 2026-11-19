@@ -29,3 +29,7 @@ jest.mock('@react-native-community/netinfo', () => require('@react-native-commun
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
+
+// The on-device text recogniser is a native (iOS Vision) module with no JS fallback under jest. Any suite
+// that reaches it gets this stand-in; suites that care mock `create-bev/textRecognition` or this path themselves.
+jest.mock('./modules/bevi-text-recognition', () => ({ recogniseText: jest.fn().mockResolvedValue([]) }));

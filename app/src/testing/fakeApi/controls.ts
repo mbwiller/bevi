@@ -1,7 +1,7 @@
 // Test controls for the FakeApi. Suites import `controls` from '@/testing/fakeApi'. After a control
 // changes data, invalidate TanStack Query (`queryClient.invalidateQueries()`) to refetch.
 
-import type { ApiErrorCode, BugTicketState, NutritionPreview } from '@bevi/shared';
+import type { ApiErrorCode, BugTicketState } from '@bevi/shared';
 
 import { getFakeApi } from './instance';
 import type { Latency } from './FakeApi';
@@ -29,11 +29,6 @@ export interface FakeControls {
    * of the ranked list (`rank: null`).
    */
   setBugTicketState(ticketId: string, state: BugTicketState): void;
-  /**
-   * What `api.nutrition.scanLabel` returns for a valid label photo: a `label-ocr` snapshot, or `null`
-   * for "no panel found". Defaults to a Mountain Dew label; reset by `resetToFixtures()`.
-   */
-  setLabelReading(reading: NutritionPreview | null): void;
 }
 
 export const controls: FakeControls = {
@@ -44,5 +39,4 @@ export const controls: FakeControls = {
   signInAs: (handle) => getFakeApi().signInAs(handle),
   setInternalReporter: (internal) => getFakeApi().setInternalReporter(internal),
   setBugTicketState: (ticketId, state) => getFakeApi().setBugTicketState(ticketId, state),
-  setLabelReading: (reading) => getFakeApi().setLabelReading(reading),
 };

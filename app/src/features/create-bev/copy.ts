@@ -41,11 +41,8 @@ export const LABEL_READ_CONFIRM = 'These values were read from your photo. Check
 export const LABEL_PLACEHOLDER_NAME = 'Scanned label';
 export const LABEL_READ_BUTTON = 'Read nutrition from this photo';
 export const LABEL_READING = 'Reading the label…';
-export const LABEL_NONE_FOUND = 'No nutrition panel found in that photo. Take another with the whole Nutrition Facts panel in view and sharp, or continue without nutrition.';
-export const LABEL_REJECTED = "The reader couldn't use that photo. Take it again in good light, flat and sharp, with the whole Nutrition Facts panel in view.";
-export const LABEL_UNAVAILABLE = "Reading a label from a photo isn't available yet. Scan the barcode, or continue without nutrition.";
-export const LABEL_OFFLINE = "You're offline. Check your connection, then read the label again.";
-export const LABEL_FAILED = "Couldn't read that label. Try again in a moment.";
+export const LABEL_NONE_FOUND = "Couldn't find a Nutrition Facts panel in that photo. Take another with the whole panel in view, flat and sharp, or continue without nutrition.";
+export const LABEL_UNUSABLE_IMAGE = "Couldn't read that photo. Take it again in good light, or choose a different one.";
 export const NUTRITION_SAVE_FAILED = 'Nutrition could not be saved. Scan the barcode or read the label again, or continue without it.';
 
 /** A label read that could not name the drink is called this; the name already typed in the draft is better. */

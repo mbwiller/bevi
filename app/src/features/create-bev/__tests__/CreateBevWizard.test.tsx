@@ -9,6 +9,8 @@ import { categoryById } from '@/lib/categories';
 import { type } from '@/theme';
 
 import { CreateBevWizard, DUPLICATES_DEBOUNCE_MS } from '../CreateBevWizard';
+import { recogniseText } from '../textRecognition';
+import { VISION_FIXTURES } from './visionFixtures';
 import { pickImage, preparePhoto, UnsupportedImageError } from '../photo';
 
 const mockReplace = jest.fn();
@@ -20,6 +22,7 @@ jest.mock('expo-router', () => ({
 
 // The picker and the canvas resize are browser-only; the wizard sees what they would return.
 jest.mock('../BarcodeCamera', () => ({ BarcodeCamera: () => null }));
+jest.mock('../textRecognition', () => ({ TEXT_RECOGNITION_AVAILABLE: true, recogniseText: jest.fn() }));
 
 jest.mock('../photo', () => ({
   ...jest.requireActual('../photo'),
@@ -436,14 +439,8 @@ it('keeps confirmed barcode nutrition across steps and persists it with the new 
   expect((await api.bevs.get(made.id)).nutrition).toEqual(nutrition);
 });
 
-it('reads a label photo, keeps the typed name over the placeholder, and persists it as a label read', async () => {
-  const reading = {
-    barcode: null, productName: 'Scanned label', basis: 'Per serving (12 fl oz (355 mL))',
-    calories: 170, fatGrams: 0, carbohydrateGrams: 46, sugarGrams: 46, proteinGrams: null,
-    sodiumMg: 60, sourceUrl: null, source: 'label-ocr' as const,
-  };
-  controls.setLabelReading(reading);
-  const scan = jest.spyOn(api.nutrition!, 'scanLabel');
+it('reads a label photo on the device, keeps the typed name over the placeholder, and persists it as a label read', async () => {
+  jest.mocked(recogniseText).mockResolvedValue(VISION_FIXTURES['bai-kula-watermelon']!);
   const create = jest.spyOn(api.bevs, 'create');
   await renderWizard();
   await addPhoto();
@@ -452,7 +449,7 @@ it('reads a label photo, keeps the typed name over the placeholder, and persists
   // Add the label photo, then read it from the details step.
   await fireEvent.press(screen.getByLabelText('Add label photo'));
   await fireEvent.press(await screen.findByLabelText('Read nutrition from the label photo'));
-  await waitFor(() => expect(scan).toHaveBeenCalledWith(expect.any(String), expect.any(AbortSignal)));
+  await waitFor(() => expect(recogniseText).toHaveBeenCalledWith(expect.any(String)));
   // Nothing is attached until the person confirms.
   expect(await screen.findByText(/read from your photo\. Check them against the package/)).toBeTruthy();
   await fireEvent.press(await screen.findByLabelText('Use this nutrition label', {}, { timeout: 8000 }));
@@ -462,9 +459,9 @@ it('reads a label photo, keeps the typed name over the placeholder, and persists
   await waitFor(() => expect(mockReplace).toHaveBeenCalled(), READY_TIMEOUT);
   const sent = create.mock.calls.at(-1)![0];
   expect(sent.labelAssetId).toEqual(expect.any(String));
-  expect(sent.nutrition).toEqual({ ...reading, productName: 'Qzx Glimmer Citrus Soda' });
+  expect(sent.nutrition).toMatchObject({ source: 'label-ocr', barcode: null, sourceUrl: null, productName: 'Qzx Glimmer Citrus Soda' });
   const made = await create.mock.results.at(-1)!.value;
-  expect((await api.bevs.get(made.id)).nutrition).toEqual({ ...reading, productName: 'Qzx Glimmer Citrus Soda' });
+  expect((await api.bevs.get(made.id)).nutrition).toEqual(sent.nutrition);
 });
 
 it('tells the person when the migration fallback creates the Bev without nutrition and requires acknowledgment', async () => {

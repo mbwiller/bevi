@@ -7,48 +7,42 @@ import { Button } from '@/components/Button';
 import { Sheet } from '@/components/Sheet';
 import { TextField } from '@/components/TextField';
 import { motion, spacing, type, useTheme } from '@/theme';
-import { useOnline } from '@/lib/useOnline';
 import { BarcodeCamera } from './BarcodeCamera';
 import {
-  LABEL_FAILED, LABEL_NONE_FOUND, LABEL_OFFLINE, LABEL_READ_BUTTON, LABEL_READ_CONFIRM, LABEL_READING,
-  LABEL_REJECTED, LABEL_UNAVAILABLE, UNREADABLE_IMAGE, UPLOAD_FAILED,
+  LABEL_NONE_FOUND, LABEL_PLACEHOLDER_NAME, LABEL_READ_BUTTON, LABEL_READ_CONFIRM, LABEL_READING,
+  LABEL_UNUSABLE_IMAGE, NAME_MAX_LENGTH,
 } from './copy';
 import { NutritionCard } from './NutritionCard';
+import { parseNutritionPanel } from './nutritionPanel';
 import { PhotoStatusLine } from './PhotoStep';
 import type { PhotoSource } from './photo';
+import { recogniseText, TEXT_RECOGNITION_AVAILABLE } from './textRecognition';
 import type { PhotoUpload } from './usePhotoUpload';
 
 const HOLD_MS = 2000;
 
-/** Why a label read failed, in words that say what to do next. `null` from the reader is handled by the caller. */
-function labelFailureMessage(error: unknown): string {
-  if (!isApiError(error)) return LABEL_FAILED;
-  switch (error.code) {
-    case 'network': return LABEL_OFFLINE;
-    case 'rate_limited': return error.message;
-    case 'validation': return LABEL_REJECTED;
-    // The backend predates the reader: say so rather than look broken.
-    case 'unknown': return LABEL_UNAVAILABLE;
-    default: return LABEL_FAILED;
-  }
-}
-
 /**
  * Read a barcode, or a photo of the label, reveal nutrition, then require confirmation before
- * adding it to the draft. `label` (the wizard's label photo slot) turns on the photo route.
+ * adding it to the draft. `label` (the wizard's label photo slot) turns on the photo route, where
+ * the platform's text recogniser reads the local photo on the device (nothing is sent anywhere);
+ * where there is no recogniser (web) the route is not offered.
  */
-export function NutritionScan({ demoBarcode, value, onChange, label, onPickLabel }: {
+export function NutritionScan({ demoBarcode, value, onChange, label, onPickLabel, draftName }: {
   demoBarcode?: string;
   value?: NutritionPreview | null;
   onChange?: (nutrition: NutritionPreview | null) => void;
   label?: PhotoUpload;
   onPickLabel?: (source: PhotoSource) => void;
+  /** The name typed so far; a label read is filed under it (the panel does not carry the drink's name). */
+  draftName?: string;
 } = {}) {
   const { colors } = useTheme();
-  const online = useOnline();
   const [mode, setMode] = useState<'barcode' | 'label'>('barcode');
   const labelRef = useRef(label);
   labelRef.current = label;
+  const nameRef = useRef(draftName);
+  nameRef.current = draftName;
+  const canRead = TEXT_RECOGNITION_AVAILABLE && !!label;
   const photoUri = label?.photo?.uri ?? null;
   // The photo a label read came from: a different or removed photo makes it stale.
   const readUri = useRef<string | null>(value?.source === 'label-ocr' ? photoUri : null);
@@ -122,8 +116,8 @@ export function NutritionScan({ demoBarcode, value, onChange, label, onPickLabel
     }
   }, [present]);
   const readLabel = useCallback(async () => {
-    const slot = labelRef.current;
-    if (request.current || !slot) return;
+    const uri = labelRef.current?.photo?.uri;
+    if (request.current || !uri) return;
     setMode('label');
     setOpen(true);
     setCamera(false);
@@ -133,24 +127,23 @@ export function NutritionScan({ demoBarcode, value, onChange, label, onPickLabel
     const controller = new AbortController();
     request.current = controller;
     try {
-      if (!api.nutrition) throw new Error('Nutrition reading unavailable');
-      let assetId: string;
-      try {
-        assetId = await slot.ensureUploaded();
-      } catch (error) {
-        if (!controller.signal.aborted) setMessage(!isApiError(error) ? UNREADABLE_IMAGE : error.code === 'network' ? LABEL_OFFLINE : UPLOAD_FAILED);
+      // The local photo, not the upload: the read never waits on the network.
+      const lines = await recogniseText(uri);
+      if (controller.signal.aborted) return;
+      const panel = parseNutritionPanel(lines);
+      if (!panel) {
+        setMessage(LABEL_NONE_FOUND);
         return;
       }
-      if (controller.signal.aborted) return;
-      const result = await api.nutrition.scanLabel(assetId, controller.signal);
-      if (controller.signal.aborted) return;
-      if (!result) setMessage(LABEL_NONE_FOUND);
-      else present(result);
-    } catch (error) {
-      if (controller.signal.aborted) return;
-      // The server lost the photo: the next read uploads it again.
-      if (isApiError(error) && error.code === 'validation' && (error.detail as { field?: string } | undefined)?.field === 'labelAssetId') slot.invalidate();
-      setMessage(labelFailureMessage(error));
+      present({
+        ...panel,
+        productName: nameRef.current?.trim().slice(0, NAME_MAX_LENGTH) || LABEL_PLACEHOLDER_NAME,
+        barcode: null,
+        sourceUrl: null,
+        source: 'label-ocr',
+      });
+    } catch {
+      if (!controller.signal.aborted) setMessage(LABEL_UNUSABLE_IMAGE);
     } finally {
       if (request.current === controller) { request.current = null; setBusy(false); }
     }
@@ -165,12 +158,11 @@ export function NutritionScan({ demoBarcode, value, onChange, label, onPickLabel
   return (
     <View style={styles.stack}>
       <Button variant="outlined" icon="camera" onPress={start} accessibilityLabel="Scan barcode for nutrition">Scan barcode</Button>
-      {onChange && label?.photo ? (
-        <Button variant="outlined" icon="file-text" onPress={() => void readLabel()} disabled={!online || busy} accessibilityLabel="Read nutrition from the label photo">{LABEL_READ_BUTTON}</Button>
+      {onChange && canRead && label?.photo ? (
+        <Button variant="outlined" icon="file-text" onPress={() => void readLabel()} disabled={busy} accessibilityLabel="Read nutrition from the label photo">{LABEL_READ_BUTTON}</Button>
       ) : null}
-      {onChange && label?.photo && !online ? <Text style={[type.caption, { color: colors.textSecondary }]}>{LABEL_OFFLINE}</Text> : null}
       {demoBarcode ? <Button variant="primary" onPress={() => { setOpen(true); setReveal(false); void lookup(demoBarcode); }} accessibilityLabel="Try sample nutrition reveal">Try a sample</Button> : null}
-      <Text style={[type.caption, { color: colors.textSecondary }]}>{onChange ? (label ? 'Scan the barcode, or add a photo of the label and read it.' : 'Scan the barcode or upload a photo of the label.') : 'Try barcode scanning. This demo does not save nutrition.'}</Text>
+      <Text style={[type.caption, { color: colors.textSecondary }]}>{onChange ? (canRead ? 'Scan the barcode, or add a photo of the label and read it.' : 'Scan the barcode or upload a photo of the label.') : 'Try barcode scanning. This demo does not save nutrition.'}</Text>
       {nutrition ? (
         <View style={styles.stack}>
           <NutritionCard nutrition={nutrition} />
@@ -197,7 +189,7 @@ export function NutritionScan({ demoBarcode, value, onChange, label, onPickLabel
               {!camera && !busy ? <Button onPress={() => { setMessage(null); setCamera(true); }} accessibilityLabel="Retry barcode camera">Scan barcode</Button> : null}
               <TextField label="Or enter barcode digits" type="numeric" value={barcode} onChange={(value) => setBarcode(value.replace(/\D/g, ''))} maxLength={13} editable={!busy} />
               <Button variant="outlined" onPress={() => void lookup(barcode)} loading={busy} disabled={busy || !/^(?:\d{8}|\d{12}|\d{13})$/.test(barcode)} accessibilityLabel="Look up entered barcode">Look up barcode</Button>
-              {label && onPickLabel ? (
+              {canRead && onPickLabel && label ? (
                 <View style={styles.stack}>
                   <Text style={[type.body, { color: colors.text }]}>No barcode, or no result? Read it from a photo of the label. Keep the whole Nutrition Facts panel in view and sharp.</Text>
                   <View style={styles.row}>
@@ -206,9 +198,8 @@ export function NutritionScan({ demoBarcode, value, onChange, label, onPickLabel
                   </View>
                   <PhotoStatusLine slot={label} />
                   {label.photo ? (
-                    <Button onPress={() => void readLabel()} loading={busy && mode === 'label'} disabled={!online || busy} accessibilityLabel="Read nutrition from the label photo">{LABEL_READ_BUTTON}</Button>
+                    <Button onPress={() => void readLabel()} loading={busy && mode === 'label'} disabled={busy} accessibilityLabel="Read nutrition from the label photo">{LABEL_READ_BUTTON}</Button>
                   ) : null}
-                  {!online ? <Text style={[type.caption, { color: colors.textSecondary }]}>{LABEL_OFFLINE}</Text> : null}
                 </View>
               ) : null}
             </>
