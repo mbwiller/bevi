@@ -87,3 +87,19 @@ it('asks nothing when nobody is signed in, or when the profile is already loaded
   await connection(true, ready);
   expect(getMe).toHaveBeenCalledTimes(1);
 });
+
+it('after a real sign-out, the connection returning asks nothing', async () => {
+  controls.signInAs('tester');
+  const hook = await launch();
+  await waitFor(() => expect(useSession.getState().status).toBe('ready'));
+  await act(async () => {
+    await api.signOut();
+  });
+  await waitFor(() => expect(useSession.getState().status).toBe('signedOut'));
+
+  const getMe = jest.spyOn(api.profile, 'getMe');
+  await connection(false, hook);
+  await connection(true, hook);
+  expect(getMe).not.toHaveBeenCalled();
+  expect(useSession.getState().status).toBe('signedOut');
+});
