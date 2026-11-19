@@ -4,7 +4,7 @@
 // Two jobs, and they are not the same job:
 //   * `redact()` removes what must never leave the device inside a ticket --
 //     tokens, keys, cookies, emails, anything shaped like a credential. It runs
-//     on every string that reaches Linear, including the ones the reporter
+//     on every string that reaches the board, including the ones the reporter
 //     typed, because a tester pasting an error message is exactly how a token
 //     ends up in a ticket.
 //   * `neutralise()` stops ticket text from being read as markdown structure,

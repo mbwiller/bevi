@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { clampLimit, decodeCursor, DEFAULT_LIMIT, encodeCursor, MAX_LIMIT, toPage } from '../src/paging.ts';
 
 describe('clampLimit', () => {
@@ -25,6 +25,27 @@ describe('cursor round trip', () => {
     expect(decodeCursor(undefined)).toBeUndefined();
     expect(decodeCursor(null)).toBeUndefined();
     expect(decodeCursor('not-valid-base64url-json')).toBeUndefined();
+  });
+
+  // IA-5: a runtime without `atob`/`btoa` (a Hermes build with no engine
+  // base64) must still page, and must produce the same cursors as one with
+  // them -- a cursor encoded by the web build is decoded by the app.
+  it('round trips without atob/btoa, byte for byte the same', () => {
+    const value = { offset: 40, note: 'ümlaut 🎉', id: 'a-b_c' };
+    const withGlobals = encodeCursor(value);
+    try {
+      vi.stubGlobal('atob', undefined);
+      vi.stubGlobal('btoa', undefined);
+      expect(encodeCursor(value)).toBe(withGlobals);
+      expect(decodeCursor(withGlobals)).toEqual(value);
+      expect(decodeCursor('not-valid-base64url-json')).toBeUndefined();
+      // Every tail length, since the padding branches differ.
+      for (const note of ['a', 'ab', 'abc', 'abcd']) {
+        expect(decodeCursor(encodeCursor({ note }))).toEqual({ note });
+      }
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 

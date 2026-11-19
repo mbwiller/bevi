@@ -35,12 +35,7 @@ import {
 import { fetchFollowIds } from './follows';
 import type { SnapshotCache } from './snapshot';
 import { mapError } from './errors';
-
-async function requireUserId(client: SupabaseClient): Promise<string> {
-  const { data, error } = await client.auth.getUser();
-  if (error || !data.user) throw new ApiError('unauthorized', 'Not signed in');
-  return data.user.id;
-}
+import { requireUserId } from './currentUser';
 
 interface SearchBevRpcRow {
   id: string;

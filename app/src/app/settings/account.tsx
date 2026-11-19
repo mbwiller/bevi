@@ -6,7 +6,7 @@ import { Button } from '@/components/Button';
 import { ErrorState } from '@/components/ErrorState';
 import { Skeleton } from '@/components/Skeleton';
 import { TextField } from '@/components/TextField';
-import { errorCopy } from '@/lib/errorCopy';
+import { actionErrorMessage } from '@/lib/errorCopy';
 import { HANDLE_READ_ONLY_HINT } from '@/features/profile/EditProfileSheet';
 import { useSaveDisplayName } from '@/features/profile/useSaveDisplayName';
 import { SettingsScreen, SettingsSection } from '@/features/settings/SettingsRow';
@@ -120,7 +120,7 @@ export default function AccountScreen() {
           ) : null}
           {tz.isError ? (
             <Text style={[type.caption, { color: colors.scoreLow }]} role="alert">
-              {`Couldn't change the timezone. ${errorCopy(tz.error).message}`}
+              {`Couldn't change the timezone. ${actionErrorMessage(tz.error)}`}
             </Text>
           ) : null}
         </View>

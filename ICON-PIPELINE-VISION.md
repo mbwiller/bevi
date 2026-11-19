@@ -4,7 +4,7 @@
 
 | | |
 |---|---|
-| **Ticket** | [BEV-15](https://linear.app/bevi-ticketing/issue/BEV-15/custom-bev-icon-creation-user-made-icons-icon-credits-and-discovery) (umbrella) |
+| **Ticket** | A card on the founders' board (umbrella). It was Linear's `BEV-15` until 2026-11-17 and was not carried over as a ticket, because the card already covers it. |
 | **Lead** | Arjun leads development: the generation pipeline, the backend, the credits |
 | **App and design** | Matt: the screens, the design system, sign-off on icon style |
 | **Source** | Matt and Arjun's working session at Princeton, 2026-11-14 (transcript in Appendix A), plus Matt's product direction given the same day |

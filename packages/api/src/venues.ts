@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ApiError, type VenueDetail, type VenuePin, type VenuesApi } from '@bevi/shared';
 import { mapError } from './errors';
+import { requireUserId } from './currentUser';
 import { mapVenueDetail, mapVenuePin, type VenueDetailRow, type VenuePinRow } from './mappers';
 
 // `venue_detail` takes a `uuid`, so anything else would come back as a raw
@@ -22,8 +23,7 @@ const nonEmpty = <T>(values: readonly T[] | undefined): readonly T[] | null =>
 export function createVenuesApi(client: SupabaseClient): VenuesApi {
   return {
     async inView({ bounds, zoom, filters }): Promise<VenuePin[]> {
-      const { data: userData, error: userError } = await client.auth.getUser();
-      if (userError || !userData.user) throw new ApiError('unauthorized', 'Not signed in');
+      await requireUserId(client);
 
       // The bounds go as jsonb and are CLAMPED to NYC_BOUNDS server-side, so a
       // viewport dragged past the coast returns what is inside rather than an
@@ -46,8 +46,7 @@ export function createVenuesApi(client: SupabaseClient): VenuesApi {
     },
 
     async get(venueId: string): Promise<VenueDetail> {
-      const { data: userData, error: userError } = await client.auth.getUser();
-      if (userError || !userData.user) throw new ApiError('unauthorized', 'Not signed in');
+      await requireUserId(client);
 
       // The same error `mapError` makes of the RPC's BEVI_NOT_FOUND.
       if (!UUID_RE.test(venueId)) throw new ApiError('not_found', 'BEVI_NOT_FOUND');
@@ -61,8 +60,7 @@ export function createVenuesApi(client: SupabaseClient): VenuesApi {
     },
 
     async neighborhoods(): Promise<string[]> {
-      const { data: userData, error: userError } = await client.auth.getUser();
-      if (userError || !userData.user) throw new ApiError('unauthorized', 'Not signed in');
+      await requireUserId(client);
 
       const { data, error } = await client.rpc('venue_neighborhoods');
       if (error) throw mapError(error);
