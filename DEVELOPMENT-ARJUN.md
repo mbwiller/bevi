@@ -1374,6 +1374,7 @@ Everything the backend still carries only for clients that have not been gated o
 | Thing | Where | Last contract version that used it | Safe to delete when | Note |
 |---|---|---|---|---|
 | _(worked example, not real)_ `get_bev` | `supabase/migrations/<ts>_bev_reads.sql` | 2.17.0 | `min_contract_version >= 2.18.0` **and** `min_app_version >= 1.4.0` | Superseded by `get_bev_v2`, which returns `nutrition` as columns instead of nested json. Drop the function and this row in the same PR. |
+| `create_bev_with_nutrition` | `supabase/migrations/20261115214237_barcode_nutrition.sql` | 2.15.0 | `min_contract_version >= 2.16.0` | Superseded by `create_bev_with_nutrition_v2` (`20261119153337_nutrition_label_ocr.sql`, BEV-13), which takes the snapshot's `source` and accepts a label reading. v1 only ever accepts an Open Food Facts snapshot, so a 2.16.0 client calls v2 for both kinds and nothing new calls v1. No `min_app_version` line: no native build has shipped either function. Drop the function and this row in the same PR. |
 
 Nothing on `main` qualifies yet, and that is a fact about the world rather than an oversight: the app and the backend still deploy together, so there has never been a client that a migration could not move with it. The worked example stays until the first real row replaces it.
 
