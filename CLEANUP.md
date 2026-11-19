@@ -84,7 +84,7 @@ from the rest. Tracked files removed from `main`: about 17 MB of about 94 MB.
 | P-01 | Save the uncommitted change in `../bevi-wt/icon-redraw-04`: three review notes in `design/beverage-icons/verdicts/matt.json` (`horchata-traditional`, `mexican-coca-cola`, `minute-maid-fruit-punch`). | They existed only in that worktree. Committed on `design/icon-redraw-04` as `08b43fa` and merged to `main` in #229, the PR that added this file. | Matt | DONE |
 | P-02 | Keep `VC-materials/`, `internal/` and `docs/apple-developer-account.pdf` out of reach of `git add`. | They were untracked but not ignored, in a public repository. Now listed in Matt's `.git/info/exclude`, which keeps the names out of the public `.gitignore`. `docs/bevi-cicd-pipeline.tex` is still untracked and visible: commit it or move it. | Matt | DONE |
 | P-03 | Run the audit commands of §10.4 on Arjun's machine. | Only Matt's checkout, worktrees and local branches were audited. Arjun's local branches and worktrees are unknown. | Arjun | TODO |
-| P-04 | Decide RB `be/hygiene-sweep`: bring it to `main`, or drop it. | One commit by Arjun from 2026-10-24, 1,390 lines, none of it on `main`: a privileges-hardening migration (`20261025000400_hygiene.sql`), a server-side cap on `list_bucket_bevs`, eight pgTAP assertions, and `npm run graph:verify` with its RPC. Its commit message says it was never run against a database, and the migration's timestamp is older than migrations already on prod, so it needs a new one. Draft PR #228 now holds the commit; the branch is 105 commits behind `main` and conflicts with it. | Arjun | TODO |
+| P-04 | Decide RB `be/hygiene-sweep`: bring it to `main`, or drop it. | **Brought to `main`** in #228. Arjun's 2026-10-24 commit (`03577f1`) is still the first commit on the branch -- `main` was merged, never rebased, so the sha survives. The migration was retimestamped twice to stay above what is already on prod and is now `20261119152455_hygiene.sql`; the `list_bucket_bevs` cap was dropped rather than retuned (its length *is* the client's `expectedBucketSize`, so a cap breaks every submission from a 501-Bev bucket); `graph_pipeline_status()` reports `tgenabled` instead of a boolean that called a replica-only trigger enabled; and the three-week gap's new tables were swept. Verified on a local stack: `supabase db reset` clean, `supabase test db` 43 files / 1899 assertions, `npm test` green, `npm run graph:verify` fails honestly and exits 1. **Not yet `db push`ed to prod.** | Arjun | DONE |
 
 Optional, after §7: turn on "Automatically delete head branches" in the GitHub repository settings
 (it is off, which is how the branches in §7.2 accumulated). GitHub retargets any open PR
@@ -278,7 +278,7 @@ branch is newer than what `main` received.
 
 | ID | Branch | Tip | Last commit | Tip author | PR | Evidence | Risk | Status |
 |---|---|---|---|---|---|---|---|---|
-| RB-77 | `be/hygiene-sweep` | `03577f1` | 2026-10-24 | Arjun | #228 open | **1,390 unmerged lines, none on `main`**: `supabase/migrations/20261025000400_hygiene.sql`, `scripts/graph/verify-pipeline.ts` and its test, extra pgTAP. Draft PR #228 was opened on 2026-11-16 to hold the commit, so `refs/pull/228/head` keeps it. Do not delete the branch while that PR is open. See P-04. | R3 | TODO |
+| RB-77 | `be/hygiene-sweep` | `03577f1` | 2026-10-24 | Arjun | #228 merged | **Merged to `main`.** Nothing unmerged remains: the hygiene migration, `scripts/graph/verify-pipeline.ts` and its tests, and the extra pgTAP are all on `main`. `03577f1` is preserved as the branch's first commit. Safe to delete the branch now that #228 is closed. See P-04. | R3 | DONE |
 
 ## 8. Files
 
@@ -302,10 +302,10 @@ reachable but obsolete.
 | F-04 | `bevi-ui-inspiration/` (17 files, 6.7 MB) | 12 screenshots of the Beli app, 3 map images, a screens spec. No code reads it. Mentioned in `DEVELOPMENT-ARJUN.md`, `DEVELOPMENT-MATT.md`, `TASKS.md`. Screenshots of a third-party app in a public repository. | Reword the mentions, or keep `beli-screens-spec.md` alone. No checks. | Matt | R2 | TODO |
 | F-05 | `app/src/components/FeaturedCard.tsx` and `app/src/components/__tests__/FeaturedCard.test.tsx` | A design-system component that no screen uses; only its own test imports it. | `npm run gen:components -w app`, then `npm run typecheck && npm test -w app`. | Matt | R2 | TODO |
 | F-06 | The Google venue map: `app/src/features/map/` (15 source files, 5 tests), `app/src/components/{MapControls,MapFilterRow,VenueRow,VenueSheet}.tsx`, `app/src/components/__tests__/MapChrome.test.tsx`, `app/src/features/search/mapFilters.ts`, `app/src/lib/glass.ts`, `app/src/lib/venue.ts`. About 3,700 lines. | No route imports any of it today; it is reachable only from its own tests. **Decision 2026-11-16 (§1.1): keep.** The Map tab goes back to Google Maps, and this is the code to build from. With it stay `@googlemaps/js-api-loader`, `@types/google.maps`, `"google.maps"` in `app/tsconfig.json` and `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY`. | Nothing to delete. When the map is remounted, reword the three "kept for the Bev Maps integration" header comments (`app/src/api/hooks/venues.ts:1`, `app/src/features/map/MapView.tsx:1`, `app/src/features/search/mapFilters.ts:1`) and the "Search tab" note at `app/scripts/check-env.mjs:42`. For iOS: the Google Maps JavaScript API runs only in a browser, so the native build needs a native map view; the pure helpers (`filters.ts`, `reconcile.ts`, `lib/venue.ts`) carry over. | Matt | R3 | KEPT |
-| F-07 | The Find Bev camera spike: `app/src/features/find-bev/spike/` (11 files, about 970 lines), `app/jest.cssModule.js`, and the `\.module\.css$` line in `app/jest.config.js`. | **Obsolete since the 2026-11-16 decision (§1.1)**: Find Bev is dropped, so the iPhone test it waited on (S2) no longer matters. The live Map route still imports it (`app/src/app/(tabs)/map/index.tsx` exports `MapTabWithSpike`), so it ships to production today, shown to internal reporters only. | Point the route at `FindBevScreen` (one line, until F-10), delete, then `npm run gen:components -w app`, `npm run typecheck && npm test -w app`. This also removes every citation of `docs/find-bev-in-app-plan.md`, a document that exists on no branch. | Arjun (author), Matt (lane) | R2 | TODO |
+| F-07 | The Find Bev camera spike: `app/src/features/find-bev/spike/` (11 files, about 970 lines), `app/jest.cssModule.js`, and the `\.module\.css$` line in `app/jest.config.js`. | **Obsolete since the 2026-11-16 decision (§1.1)**: Find Bev is dropped, so the iPhone test it waited on (S2) no longer matters. The live Map route still imports it (`app/src/app/(tabs)/map/index.tsx` exports `MapTabWithSpike`), so it ships to production today, shown to internal reporters only. | Point the route at `FindBevScreen` (one line, until F-10), delete, then `npm run gen:components -w app`, `npm run typecheck && npm test -w app`. This also removes every citation of `docs/find-bev-in-app-plan.md`, a document that exists on no branch. | Arjun (author), Matt (lane) | R2 | DONE |
 | F-08 | `design/beverage-icons/review/batch-*.png` (47 files) and `review/large-*.png` (16 files), 10.4 MB | Per-batch contact sheets from 2026-11-02 to 2026-11-14. `scripts/icons/review.py` rebuilds only `overview-NN.png` and `sizes-NN.png`, so these are a historical record that no script reads or regenerates. Named in `review/review.json` (66 times), `PROGRESS.md` (8), `README.md` (8). | Update those three files. `node scripts/icons/validate.mjs` must still pass. | Matt + Arjun | R2 | TODO |
 | F-09 | `design/beverage-icons/graph-inspection.json` | One-off output of `scripts/icons/inspect-graph.ts`. Only `design/beverage-icons/PLAN.md` mentions it. | Reword the mention. No checks. | Arjun | R2 | TODO |
-| F-10 | The Find Bev screen: `app/src/features/find-bev/FindBevScreen.tsx`, `FindArt.tsx`, `links.ts`, `__tests__/FindBevScreen.test.tsx`. | The Map tab's current content: an explainer that opens `bev-maps.vercel.app`. Obsolete since the 2026-11-16 decision (§1.1), but **it is the only screen the Map tab has** until the new map exists. | Delete in the PR that mounts the new map on the tab, not before. Then `npm run gen:components -w app`, `npm run typecheck && npm test -w app`. | Matt | R3 | TODO |
+| F-10 | The Find Bev screen: `app/src/features/find-bev/FindBevScreen.tsx`, `FindArt.tsx`, `links.ts`, `__tests__/FindBevScreen.test.tsx`. | The Map tab's current content: an explainer that opens `bev-maps.vercel.app`. Obsolete since the 2026-11-16 decision (§1.1), but **it is the only screen the Map tab has** until the new map exists. | Delete in the PR that mounts the new map on the tab, not before. Then `npm run gen:components -w app`, `npm run typecheck && npm test -w app`. | Matt | R3 | DONE |
 
 ### 8.2 Dead exports inside live files
 
@@ -355,7 +355,7 @@ These came up as possible candidates and are in use. Listed so nobody audits the
 | `supabase/functions/graph-query/` | Deployed, with no caller in `app/` or `packages/api/` yet. `docs/graph.md` documents it as the graph's read path; recommendations are off pending data. |
 | `supabase/functions/*/test.ts` | Run by `deno test`, not by an import. |
 | `scripts/graph/dashboard/*.mjs`, `scripts/icons/swipe/app.mjs` | Browser modules served by `dashboard.ts` and `swipe.ts`. |
-| `TASKS.md` (167 KB), `NEXT-ARJUN.md`, `NEXT-MATT.md`, `DEVELOPMENT-*.md`, `vision.md` | `TASKS.md` is cited by 59 files (task IDs in code comments and workflows). Linear has owned tickets since 2026-11-09, so archiving the board is a separate job with its own plan. |
+| `TASKS.md` (167 KB), `NEXT-ARJUN.md`, `NEXT-MATT.md`, `DEVELOPMENT-*.md`, `vision.md` | `TASKS.md` is cited by 59 files (task IDs in code comments and workflows). Tickets lived in Linear from 2026-11-09 and moved to the founders' board on 2026-11-17 (Linear is removed), so archiving the board is a separate job with its own plan. |
 | `ICON-PIPELINE-VISION.md` | Nothing links to it, but it is the live BEV-15 plan. |
 | `.claude/skills/` (43 files, the vendored `react-native-skills`) | Vendored at a pinned commit, and more relevant once the app goes native. |
 | `.agents/skills/bevi-beverage-icons` | Symlink that gives Codex the icon skill. |
@@ -384,7 +384,7 @@ These came up as possible candidates and are in use. Listed so nobody audits the
 ### 8.6 Not covered by this audit
 
 - Database objects on prod (unused RPCs, tables, policies), storage buckets, and anything in the
-  Supabase, Vercel, Neo4j, Google Cloud or Linear dashboards, including secrets and env vars.
+  Supabase, Vercel, Neo4j, Google Cloud dashboards, including secrets and env vars.
 - Arjun's machine (P-03).
 - `npx knip` was blocked by the session's permission rules, so the import graph above stands in for
   it. Running `npx knip` once by hand is a cheap second opinion on §8.1 and §8.2.
@@ -393,13 +393,13 @@ These came up as possible candidates and are in use. Listed so nobody audits the
 
 ## 9. Suggested order
 
-1. **§4**: P-01 and P-02 are done. P-03 and P-04 are Arjun's and block only his rows.
+1. **§4**: P-01, P-02 and P-04 are done. P-03 is Arjun's and blocks only his rows.
 2. **§5 worktrees**, R1 rows, then WT-05, then WT-09 when it is no longer in use. Frees about 7 GB.
 3. **§6 local branches**: 6.1 with the guard script, then a glance at 6.2.
 4. **§7 remote branches**: 7.2 with the guard script, then 7.3.
 5. **§8.2, F-05 and F-07**: one small PR per lane, proven by typecheck and tests.
 6. **F-01 to F-04, F-08, F-09**: one docs-only PR after Matt and Arjun agree.
-7. **Still open**: P-04 (RB `be/hygiene-sweep`), F-10 with the new map, L-01, L-02.
+7. **Still open**: F-10 with the new map, L-01, L-02. (P-04 closed: `be/hygiene-sweep` merged in #228.)
 
 Steps 1 to 4 touch no file on `main` and need no PR.
 
@@ -566,3 +566,5 @@ Append one line per action. Reasons for `KEPT` and `BLOCKED` go here.
 | 2026-11-16 | Claude (Matt's session) | P-02 | `VC-materials/`, `internal/`, `docs/apple-developer-account.pdf` added to Matt's `.git/info/exclude`. | local only |
 | 2026-11-16 | Matt | F-06, F-07, F-10 | Decision recorded (§1.1). F-06 `KEPT`: the Map tab returns to Google Maps. F-07 drops from R3 to R2 (Find Bev is obsolete). F-10 added. | #229 |
 | 2026-11-16 | Claude (Matt's session) | RB and LB `design/beverage-icon-pilot`, P-04 | Both unmerged branches checked. The pilot branch's one icon missing from `main` (`starbucks-frappuccino-mocha`) was withdrawn on purpose in #160, so both rows drop from R3 to R2. `be/hygiene-sweep` is real unmerged work: P-04. | #229 |
+| 2026-11-18 | Claude (Matt's session) | F-07, F-10 | Deleted `app/src/features/find-bev/` (the spike and the Find Bev screen), `app/jest.cssModule.js` and the `.module.css` mapper in `app/jest.config.js`. The Map tab now shows an in-progress page (`app/src/features/map/MapInProgressScreen.tsx`) until the new map exists. Matt's go-ahead 2026-11-18; `gen:components`, typecheck and the app tests run. | `ui/bev-27-im-2-first-boot` |
+| 2026-11-19 | Claude (Arjun's session) | P-04, RB-77 | #228 reviewed on a local stack and merged. Re-verified the premise (a new `public` table still inherits TRUNCATE for `anon`/`authenticated`) and the fix (0 TRUNCATE grants left; `truncate public.bevs` as `authenticated` now 42501). Found and fixed two regressions the 11-16 review could not have seen. (1) `20261116235414` sorted below `app_config` and `ping`, which merged on 11-18, so `supabase db push` refused it with `DbPushMissingRemoteError` -- retimestamped to `20261119152455`. (2) IS-7 (#254) merged `user_blocks` and `content_reports` mid-review, both holding TRUNCATE for `anon`/`authenticated`; on `user_blocks` one request would have unblocked every abuser from every victim, since TRUNCATE is not subject to RLS. Swept in a new section 2e (TRUNCATE only from `authenticated`, everything from `anon`, because `41_blocks_and_reports.test.sql` asserts the DML as RLS no-ops with bare statements). Added `supabase/tests/42_table_privileges.test.sql`: the revoke as a schema-wide invariant rather than a table list, so the next table that forgets it fails on the day it lands. | #228 |

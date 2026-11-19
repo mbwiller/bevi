@@ -5,6 +5,7 @@ import Animated, { ZoomIn, useReducedMotion } from 'react-native-reanimated';
 
 import { Button } from '@/components/Button';
 import { ErrorState } from '@/components/ErrorState';
+import { actionErrorMessage } from '@/lib/errorCopy';
 import { IconButton } from '@/components/IconButton';
 import { ScoreBubble } from '@/components/ScoreBubble';
 import { TextField } from '@/components/TextField';
@@ -98,7 +99,7 @@ export function NoteStep({
           onSubmit={saving ? undefined : onSave}
           autoFocus
         />
-        {error ? <ErrorState error={error} onRetry={onSave} style={styles.error} /> : null}
+        {error ? <ErrorState error={error} message={actionErrorMessage(error)} onRetry={onSave} style={styles.error} /> : null}
         <Button variant="primary" block loading={saving} onPress={onSave}>
           Save
         </Button>

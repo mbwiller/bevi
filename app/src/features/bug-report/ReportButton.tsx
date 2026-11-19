@@ -4,6 +4,7 @@ import Svg, { Path } from 'react-native-svg';
 
 import { PRESSED } from '@/components/HitTarget';
 import { Icon } from '@/components/Icon';
+import { useKeyboardInset } from '@/lib/useKeyboardInset';
 import { MAX_FONT_SCALE_DENSE, radius, size, spacing, type, useTheme } from '@/theme';
 
 import { MAX_STEPS } from './limits';
@@ -17,6 +18,10 @@ import { hasFailed, pressReportButton, useReport } from './store';
  * control, with a count of the steps beside it. Its triangle is an outline until a note exists
  * and filled for as long as one does, open or set aside. It never moves and never animates: its
  * pressed state is the app's ordinary instant dim, and its badges are static.
+ *
+ * While the note is open with the keyboard up it isn't drawn: the note may then reach the top of
+ * the screen, which leaves no place above it, and it used to land on the text being typed (T-21).
+ * The note's own chevron sets it aside meanwhile.
  */
 
 /** The round button's size: the 44pt target itself. */
@@ -43,8 +48,10 @@ export function ReportButton({ toPlace }: { toPlace: number }) {
   const failed = useReport(hasFailed);
   const selecting = useReport((s) => s.selecting);
   const recording = useReport((s) => s.recording);
+  const keyboard = useKeyboardInset();
 
   if (selecting) return null;
+  if (panelHeight > 0 && keyboard > 0) return null;
   const bottom = Math.min(buttonBottom(insets.bottom, panelHeight), Math.max(0, layer.height - insets.top - BUTTON_SIZE));
 
   if (recording) {

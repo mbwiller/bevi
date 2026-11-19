@@ -113,7 +113,7 @@ describe('Edit profile › photo', () => {
     const sheet = await openEditSheet();
     controls.failNext('network', 'media.upload');
     await fireEvent.press(within(sheet).getByLabelText('Add a photo'));
-    expect(await within(sheet).findByText("You're offline. We'll show this again as soon as you're back online.")).toBeTruthy();
+    expect(await within(sheet).findByText("You're offline. Check your connection and try again.")).toBeTruthy();
     expect((await api.profile.getMe()).avatarUrl).toBeNull();
     expect(within(sheet).getByLabelText('Add a photo')).toBeTruthy();
     expect(within(sheet).queryByLabelText('Uploading your photo')).toBeNull();

@@ -152,14 +152,14 @@ const UPLOAD_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'
 const BUG_EVIDENCE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const BUG_KINDS: readonly string[] = ['bug', 'fix', 'idea', 'design'];
 const BUG_SEVERITIES: readonly string[] = ['blocker', 'bad', 'annoying', 'polish'];
-/** Linear's priority as the function sets it from the severity (supabase/functions/bug-report/issue.ts). */
+/** The priority a new fake ticket starts with, from the severity: the fake's own choice, so suites can tell severities apart. */
 const BUG_PRIORITY: Record<BugReportSummary['severity'], number> = { blocker: 1, bad: 2, annoying: 3, polish: 4 };
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const BUG_TICKET_RE = /^[A-Z][A-Z0-9]*-\d{1,9}$/;
 /** The states a ticket is ranked in (supabase/functions/bug-report/rank.ts `OPEN_STATES`). */
 const BUG_OPEN_STATES: readonly BugReportSummary['state'][] = ['triage', 'todo', 'in_progress'];
 const BUG_STATE_LABELS: Record<BugReportSummary['state'], string | null> = {
-  triage: 'Triage',
+  triage: 'New',
   todo: 'Todo',
   in_progress: 'In Progress',
   in_review: 'In Review',
@@ -322,9 +322,8 @@ export class FakeApi implements BeviApi {
   /** The fake's `bug_reports` ledger, keyed by idempotency key per user, with the summary My reports shows. */
   private bugLedger = new Map<string, { userId: string; result: BugReportResult; summary: BugReportSummary }>();
   /**
-   * Each user's manual order of their tickets, top first: the fake's stand-in for Linear's
-   * `sortOrder`. A new ticket goes to the top, as Linear puts a new issue. Ranks count only the
-   * open ones (BUG_OPEN_STATES).
+   * Each user's manual order of their tickets, top first: the fake's stand-in for the board's
+   * shared order. A new ticket goes to the top. Ranks count only the open ones (BUG_OPEN_STATES).
    */
   private bugOrder = new Map<string, string[]>();
   private nextTicket = 100;
@@ -393,7 +392,7 @@ export class FakeApi implements BeviApi {
   }
 
   /**
-   * Move one of the fake's tickets to a workflow state, as triage or an agent would in Linear
+   * Move one of the fake's tickets to a workflow state, as a founder or an agent would on the board
    * (e.g. 'in_review', so My reports offers Verified on device; or 'done', so it leaves the ranks).
    */
   setBugTicketState(ticketId: string, state: BugReportSummary['state']): void {
@@ -1501,7 +1500,7 @@ export class FakeApi implements BeviApi {
       }),
 
     // Copied from `leaves` on purpose, down to the cap and the omit-what-you-
-    // cannot-see rule -- `get_bev_icons` (20261114000200) is copied from
+    // cannot-see rule -- `get_bev_icons` (20261119185801) is copied from
     // `get_bev_leaves` for the same reason. READ-ONLY: drawing a screen must
     // never schedule generation, so nothing here touches `iconReadyAt`.
     icons: (bevIds: readonly string[]) =>
@@ -1566,11 +1565,16 @@ export class FakeApi implements BeviApi {
         () => {
           const me = this.requireUser();
           if (!UPLOAD_MIME_TYPES.includes(input.mimeType)) invalid('mimeType', 'Use a JPEG, PNG, WebP or HEIC image');
-          if (typeof input.file?.size === 'number' && input.file.size > UPLOAD_MAX_BYTES) invalid('file', 'That image is too large');
+          // Contract 2.15.0 widened `file` to Blob | ArrayBuffer | Uint8Array (a React Native Blob
+          // uploads 0 bytes), so the size guard reads whichever measure the payload carries.
+          const fileBytes = input.file instanceof ArrayBuffer || ArrayBuffer.isView(input.file) ? input.file.byteLength : input.file?.size;
+          if (typeof fileBytes === 'number' && fileBytes > UPLOAD_MAX_BYTES) invalid('file', 'That image is too large');
           const id = this.nextId('asset');
           let url = `fake-asset://${id}`;
           try {
-            if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') url = URL.createObjectURL(input.file);
+            // Only a real Blob has an object URL; bytes keep the placeholder.
+            if (typeof Blob !== 'undefined' && input.file instanceof Blob && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function')
+              url = URL.createObjectURL(input.file);
           } catch {
             // Not a real Blob (tests) or no object URLs: keep the placeholder.
           }
@@ -2283,8 +2287,8 @@ export class FakeApi implements BeviApi {
   };
 
   // -------------------------------------------------------------------------
-  // Bugs (the internal reporter). Linear is mocked out entirely: the fake
-  // mints `BEV-<n>` the way Linear mints an identifier, keeps the same
+  // Bugs (the internal reporter). The board is mocked out entirely: the fake
+  // mints `T-<n>` the way the board names a ticket, keeps the same
   // idempotency promise, and holds each ticket's state so the UI's success,
   // duplicate, validation, failure and My reports states are all reachable
   // without a tracker.
@@ -2319,10 +2323,10 @@ export class FakeApi implements BeviApi {
           const seen = this.bugLedger.get(key);
           if (seen) return { ...seen.result, status: 'duplicate' as const };
 
-          const ticketId = `BEV-${this.nextTicket++}`;
+          const ticketId = `T-${this.nextTicket++}`;
           const result: BugReportResult = {
             ticketId,
-            ticketUrl: `https://linear.app/bevi-fake/issue/${ticketId}`,
+            ticketUrl: `https://board.example/?open=${ticketId}`,
             status: 'created',
           };
           const at = this.now().toISOString();
@@ -2334,7 +2338,7 @@ export class FakeApi implements BeviApi {
             severity: input.severity,
             createdAt: at,
             state: 'triage',
-            stateLabel: 'Triage',
+            stateLabel: 'New',
             priority: BUG_PRIORITY[input.severity],
             updatedAt: at,
             rank: null,

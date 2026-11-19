@@ -7,7 +7,7 @@ import { useMyBugReports, usePlaceBug } from '@/api/hooks';
 import { Button } from '@/components/Button';
 import { Sheet } from '@/components/Sheet';
 import { Skeleton } from '@/components/Skeleton';
-import { errorCopy } from '@/lib/errorCopy';
+import { actionErrorMessage, errorCopy } from '@/lib/errorCopy';
 import { formatRelativeTime } from '@/lib/time';
 import { MAX_FONT_SCALE_DENSE, radius, size, spacing, type, useTheme } from '@/theme';
 
@@ -158,7 +158,7 @@ function Placement({ ticketId }: { ticketId: string }) {
       ) : place.isError ? (
         <View role="alert" accessibilityLiveRegion="polite" style={styles.notice}>
           <Text style={[type.heading, { color: colors.scoreLow }]}>{errorCopy(place.error).title}</Text>
-          <Text style={[type.body, { color: colors.textSecondary }]}>{errorCopy(place.error).message}</Text>
+          <Text style={[type.body, { color: colors.textSecondary }]}>{actionErrorMessage(place.error)}</Text>
           <Button
             onPress={() => {
               place.reset();

@@ -391,7 +391,7 @@ export function mapBevLeaf(row: BevLeafRow): BevLeaf {
 }
 
 /**
- * `get_bev_icons` (20261114000200). NOT `BevIconRow`, which 2.13.0 uses for a
+ * `get_bev_icons` (20261119185801). NOT `BevIconRow`, which 2.13.0 uses for a
  * `public.bev_icons` row -- the authored catalogue icon. This is the
  * generated-icon read.
  */

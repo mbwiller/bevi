@@ -24,41 +24,6 @@ const mint = (x, y, s = 1, a = 0) => `<g transform="translate(${x} ${y}) rotate(
 const MINT_DEFS = lg('mint', [[0, '#3f7428'], [.4, '#8db649'], [1, '#2b5a24']]);
 const EDGE = 'stroke="#8ea398" stroke-opacity=".9" stroke-width="1.3"';
 
-// ---- 1. Horchata: tall glass over ice, cinnamon stick, cinnamon dusting
-function horchata() {
-  const glass = 'M57 62Q100 51 143 62L136.5 216Q136.5 234 100 234T63.5 216Z';
-  const liquid = 'M59.6 76Q100 67 140.4 76L134.6 212Q134.6 225 100 225T65.4 212Z';
-  const R = rng(4242);
-  let dust = '';
-  for (let i = 0; i < 120; i++) {
-    const t = R() * Math.PI * 2, rr = Math.sqrt(R());
-    const x = r2(100 + Math.cos(t) * rr * 36), y = r2(77 + Math.sin(t) * rr * 7);
-    dust += `<circle cx="${x}" cy="${y}" r="${r2(.6 + R() * 1)}" fill="${R() > .5 ? '#9a5f2e' : '#b77a43'}" opacity="${r2(.55 + R() * .4)}"/>`;
-  }
-  const cube = (x, y, a, w, h) => `<g transform="translate(${x} ${y}) rotate(${a})"><path d="M0 4Q0 0 4 0H${w - 4}Q${w} 0 ${w} 4V${h - 4}Q${w} ${h} ${w - 4} ${h}H4Q0 ${h} 0 ${h - 4}Z" fill="#c3a37a" opacity=".38"/><path d="M2 2 7 -4H${w + 3}L${w - 2} 2Z" fill="#fbf4e6" opacity=".85" stroke="#fff" stroke-width=".7"/><path d="M${w - 2} 2 ${w + 3} -4V${h - 7}L${w - 1} ${h - 1}Z" fill="#a8885f" opacity=".5"/><path d="M0 4Q0 0 4 0H${w - 4}Q${w} 0 ${w} 4V${h - 4}Q${w} ${h} ${w - 4} ${h}H4Q0 ${h} 0 ${h - 4}Z" fill="none" stroke="#fffaf0" stroke-opacity=".7" stroke-width="1"/><path d="M3.5 ${h - 5}V6" stroke="#fff" stroke-opacity=".8" stroke-width="1.2" stroke-linecap="round"/></g>`;
-  const defs = lg('milk', [[0, '#b99c74'], [.1, '#d9c6a6'], [.26, '#f3e9d6'], [.36, '#fcf8ef'], [.46, '#efe3cd'], [.75, '#dfcdae'], [.92, '#c9b08a'], [1, '#b39670']])
-    + lg('milkv', [[0, '#fff', .25], [.15, '#fff', 0], [.6, '#b89a72', 0], [1, '#9a7b52', .5]], 'x1="0" y1="0" x2="0" y2="1"')
-    + lg('stick', [[0, '#5b2a0f'], [.35, '#a8622e'], [.55, '#c98a52'], [1, '#6a3315']])
-    + `<clipPath id="__ID__hglass"><path d="${glass}"/></clipPath>`;
-  const stick = `<g transform="rotate(14 120 80)"><path d="M114.5 80V16h11v64Z" fill="${ref('stick')}" stroke="#4a2209" stroke-width=".7"/>
-<path d="M117 22V78M121.5 20V79" stroke="#5a2a0e" stroke-opacity=".5" stroke-width=".7"/><path d="M116 34h3M120 47h3.5M116.5 60h3" stroke="#e0a56a" stroke-opacity=".6" stroke-width=".7"/>
-<ellipse cx="120" cy="16" rx="5.5" ry="2.6" fill="#7c3e18" stroke="#4a2209" stroke-width=".6"/><path d="M116.3 16.2q3.7-2.6 7.2-.3-2.8 1.5-4.2.2" fill="none" stroke="#d39a63" stroke-width=".8"/></g>`;
-  const body = `${shadow(46)}<path d="${glass}" fill="${ref('glass')}" ${EDGE}/>
-<path d="${liquid}" fill="${ref('milk')}"/><path d="${liquid}" fill="${ref('milkv')}"/>
-<g clip-path="${ref('hglass')}">${cube(66, 92, -16, 26, 25)}${cube(103, 90, 9, 24, 26)}${cube(78, 124, 23, 25, 24)}${cube(109, 140, -7, 21, 23)}
-<path d="M64 212Q100 222 136 212" fill="none" stroke="#b49a76" stroke-opacity=".5" stroke-width="1"/></g>
-${stick}
-<ellipse cx="100" cy="76.5" rx="40.4" ry="8.6" fill="#efe3cc"/><ellipse cx="100" cy="77.5" rx="38" ry="6.8" fill="#e3d1b2"/>
-<path d="M66 74.5l14-4.5 12 4-14 5Z" fill="#f4ead8" stroke="#fff" stroke-opacity=".8" stroke-width=".8"/><path d="M95 74.6l16-4.6 14 3.6-15 5Z" fill="#f8f0e1" stroke="#fff" stroke-opacity=".9" stroke-width=".8"/><path d="M110 79l15-5.4v4.2l-14 5.2Z" fill="#cdb18b" stroke="#fff" stroke-opacity=".6" stroke-width=".6"/><path d="M95 74.6l15 4.4v4.2l-14.4-4Z" fill="#dcc6a2"/>
-${dust}
-<path d="M118.6 76.2q4 2.6 9 .6" fill="none" stroke="#e8dcc3" stroke-width="2.2"/>
-<path d="M62.5 82 67.5 207" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="2.6" stroke-linecap="round"/>
-<path d="M136.5 84 132.5 207" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="1.4"/>
-<path d="M63.6 217q36.4 15 72.8 0l-.8 9q-35.6 12-71.2 0Z" fill="#dfeae4" opacity=".75"/>
-<ellipse cx="100" cy="62" rx="43" ry="10.5" fill="none" stroke="#f6fbf6" stroke-width="2"/><ellipse cx="100" cy="62" rx="43.6" ry="11" fill="none" stroke="#8ea398" stroke-opacity=".75" stroke-width=".8"/>
-<path d="M58 63q42 15 84 0" fill="none" stroke="#8ea398" stroke-opacity=".5" stroke-width=".8"/>`;
-  return wrap('horchata-traditional', 'Horchata', body, defs);
-}
 
 // ---- 2. House red: Bordeaux glass, restaurant pour to the widest point
 function wineGlass() {
@@ -231,25 +196,6 @@ ${wedge(50, 95, 19, -128)}`;
 
 const D = '2026-11-16';
 export const records = [
-  {
-    slug: 'horchata-traditional',
-    family: 'unbranded-served-drink',
-    packageChoice: 'The common taqueria serve: horchata over ice in a tall, slightly tapered tumbler with a cinnamon stick standing in it and ground cinnamon dusted on top (owner decision). No brand.',
-    references: [{
-      pageUrl: 'https://commons.wikimedia.org/wiki/File:Horchata_%2824414538074%29.jpg',
-      imageUrl: 'https://commons.wikimedia.org/wiki/Special:FilePath/Horchata_%2824414538074%29.jpg?width=2000',
-      inspectedAt: D, visuallyInspected: true,
-      observations: 'Tall tapered tumbler, wider at the rim, filled almost to the top with milky warm off-white horchata over large ice cubes that show as tan translucent blocks near the surface; a straw; no cinnamon.',
-    }, {
-      pageUrl: 'https://commons.wikimedia.org/wiki/File:Horchata_%2850943998568%29.jpg',
-      imageUrl: 'https://commons.wikimedia.org/wiki/Special:FilePath/Horchata_%2850943998568%29.jpg?width=2000',
-      inspectedAt: D, visuallyInspected: true,
-      observations: 'Seen from above: slightly tapered blown-glass tumbler with a green rim, ice cubes breaking the surface, ground cinnamon dusted over the ice and the drink.',
-    }],
-    uncertainty: 'The cinnamon stick comes from the owner\'s serve, not from these two photos. Glass is drawn clear (the green blown-glass rim of the second photo is left out). One cube breaks the surface under the dusting; the other ice is drawn only in the upper half, where it shows through the milky drink in the photo. Side profile measured from a high-angle photo, corrected to the house side view.',
-    status: 'needs-review',
-    svg: horchata(),
-  },
   {
     slug: 'generic-house-red-cabernet-sauvignon',
     family: 'generic-served-wine-glass',
