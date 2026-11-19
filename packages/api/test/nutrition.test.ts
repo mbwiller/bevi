@@ -8,7 +8,6 @@ import { mapNutrition } from '../src/mappers';
 import type { SnapshotCache } from '../src/snapshot';
 
 /** `lookupBarcode` never touches the client; `scanLabel`'s own tests build a real stub. */
-const noClient = {} as unknown as SupabaseClient;
 
 afterEach(() => vi.unstubAllGlobals());
 describe('barcode nutrition', () => {
@@ -25,16 +24,16 @@ describe('barcode nutrition', () => {
   });
   it('rejects invalid barcodes without sending a request', async () => {
     const fetch = vi.fn(); vi.stubGlobal('fetch', fetch);
-    await expect(createNutritionApi(noClient).lookupBarcode('https://example.com')).rejects.toMatchObject({ code: 'validation' });
+    await expect(createNutritionApi().lookupBarcode('https://example.com')).rejects.toMatchObject({ code: 'validation' });
     expect(fetch).not.toHaveBeenCalled();
   });
   it('returns null for a product not found', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 404 }));
-    expect(await createNutritionApi(noClient).lookupBarcode('012345678901')).toBeNull();
+    expect(await createNutritionApi().lookupBarcode('012345678901')).toBeNull();
   });
   it('reports provider errors separately from missing products', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 429, ok: false }));
-    await expect(createNutritionApi(noClient).lookupBarcode('012345678901')).rejects.toMatchObject({ code: 'rate_limited' });
+    await expect(createNutritionApi().lookupBarcode('012345678901')).rejects.toMatchObject({ code: 'rate_limited' });
   });
 });
 
