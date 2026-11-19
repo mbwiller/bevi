@@ -11,6 +11,7 @@ import type {
   NutritionPreview,
   AppConfig,
   Bev,
+  BevIcon,
   BevLeaf,
   BevOfPeriod,
   BevSimilarity,
@@ -226,8 +227,12 @@ export interface CreateBevInput {
   /** null with `priceEstimated: true` = "Not sure, estimate it" (server fills the tier). */
   priceTier: PriceTier | null;
   priceEstimated: boolean;
-  /** From `media.upload({ kind: 'bev-photo' })`. */
-  photoAssetId: string;
+  /**
+   * Optional verified creation photo. With a photo the Bev is active and eligible
+   * for automatic icon generation. Without one it is pending_photo, creator-only,
+   * and ineligible. Later edits/ranking photos do not establish eligibility.
+   */
+  photoAssetId?: string;
   /** From `media.upload({ kind: 'label' })`. */
   labelAssetId?: string;
   /** User-confirmed barcode result; saved atomically with this new Bev. */
@@ -348,6 +353,26 @@ export interface BevsApi {
    * @throws 'unauthorized', 'validation' (`detail.field = 'bevIds'`, over 500).
    */
   leaves(bevIds: readonly string[]): Promise<BevLeaf[]>;
+
+  /**
+   * The generated icon of each of a caller-supplied set of Bevs: the same bulk
+   * shape as `leaves`, for the same reason -- a feed page, a search result list
+   * or the profile collection gains one call, not one per Bev.
+   *
+   * Ids the caller may not see are **omitted**, so a short result is normal.
+   * A Bev with no generated icon is present with `iconUrl: null` and an
+   * `iconStatus` that says why: `'none'` for one that was never eligible (a
+   * catalog Bev, or a custom Bev created with no photo), `'pending'` or
+   * `'processing'` while the pipeline runs, `'failed'` when it gave up. Order
+   * is by `bevId`; at most 500 ids.
+   *
+   * READ-ONLY. Calling this -- on a feed, a profile or a Bev screen -- never
+   * schedules a generation job and never reaches the image-generation
+   * provider.
+   * @throws 'unauthorized', 'validation' (`detail.field = 'bevIds'`, over 500).
+   */
+  icons(bevIds: readonly string[]): Promise<BevIcon[]>;
+
 }
 
 /**

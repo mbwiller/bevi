@@ -56,6 +56,40 @@ it('remembers (newest first, no repeats, capped) and forgets, on screen at once 
   expect(result.current.recents[0]!.id).toBe('b-19');
 });
 
+it('keeps newer edits visible while older writes finish', async () => {
+  await seed('u1', [bev(1)]);
+  const { result } = await renderHook(() => useRecents('u1'));
+  await waitFor(() => expect(result.current.recents).toEqual([bev(1)]));
+
+  let releaseFirst!: () => void;
+  let releaseSecond!: () => void;
+  const first = new Promise<void>((resolve) => { releaseFirst = resolve; });
+  const second = new Promise<void>((resolve) => { releaseSecond = resolve; });
+  setItem
+    .mockImplementationOnce(async (key: string, value: string) => {
+      await first;
+      await realSetItem(key, value);
+    })
+    .mockImplementationOnce(async (key: string, value: string) => {
+      await second;
+      await realSetItem(key, value);
+    });
+
+  try {
+    await act(async () => result.current.remember(bev(2)));
+    await act(async () => result.current.forget(bev(1).id));
+
+    await act(async () => releaseFirst());
+    expect(result.current.recents).toEqual([bev(2)]);
+  } finally {
+    await act(async () => {
+      releaseFirst();
+      releaseSecond();
+    });
+  }
+  expect(await loadRecents('u1')).toEqual([bev(2)]);
+});
+
 it("switching accounts never shows the previous account's list, not even for a frame", async () => {
   await seed('u1', [bev(1)]);
   await seed('u2', [bev(2)]);

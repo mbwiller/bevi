@@ -1,26 +1,27 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, Share } from 'react-native';
 
-/** How long "Link copied" stays up. */
+import { profileUrl, shareProfileLink } from './profileLink';
+
+/** How long a notice ("Link copied", or what went wrong) stays up. */
 const NOTICE_MS = 3000;
 
-/** The web address of a profile: this site's origin + `/user/<id>`. Empty off the web. */
-export function profileUrl(userId: string): string {
-  if (Platform.OS !== 'web' || typeof window === 'undefined') return '';
-  return `${window.location.origin}/user/${encodeURIComponent(userId)}`;
-}
-
 /**
- * Share profile (§6.13): copies the profile's URL to the clipboard on the web and returns a short
- * confirmation ("Link copied") for a polite live region, or what went wrong. Off the web it falls
- * back to the system share sheet. The link opens the profile for anyone signed in to Bevi.
+ * Share profile (§6.13): hands over the profile's link and returns a short line for a polite live
+ * region when there is one to show. On iOS the link opens the system share sheet; on the web it is
+ * copied to the clipboard and the line is "Link copied" (profileLink.ts and profileLink.web.ts).
+ * The link opens the profile for anyone signed in to Bevi.
  */
 export function useShareProfile(userId: string | undefined) {
   const [notice, setNotice] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mounted = useRef(true);
 
-  useEffect(() => () => {
-    if (timer.current) clearTimeout(timer.current);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      if (timer.current) clearTimeout(timer.current);
+    };
   }, []);
 
   const show = useCallback((text: string) => {
@@ -31,21 +32,9 @@ export function useShareProfile(userId: string | undefined) {
 
   const share = useCallback(async () => {
     if (!userId) return;
-    const url = profileUrl(userId);
-    if (Platform.OS === 'web') {
-      try {
-        await navigator.clipboard.writeText(url);
-        show('Link copied');
-      } catch {
-        show(`Couldn't copy the link. It's ${url}`);
-      }
-      return;
-    }
-    try {
-      await Share.share({ message: url });
-    } catch {
-      show("Couldn't open sharing. Try again.");
-    }
+    const text = await shareProfileLink(profileUrl(userId));
+    // The share sheet can stay open long after the person has left the screen.
+    if (text && mounted.current) show(text);
   }, [userId, show]);
 
   return { share, notice };
