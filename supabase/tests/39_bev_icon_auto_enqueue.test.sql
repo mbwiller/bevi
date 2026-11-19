@@ -18,5 +18,38 @@ select is((select b.icon_status from public.bevs b where b.name='Automatic icon 
 create temp table claimed as select * from public.claim_bev_icon_jobs_v2(1);
 select is((select count(*)::integer from claimed),1,'worker can claim the automatically queued Bev');
 select is((select source_photo_path from claimed),'00000000-0000-4000-8000-0000000fd0a1/source.jpg','worker receives that original photo path');
+
+-- AND FOR NOTHING ELSE. The requirement is a negative as much as a positive:
+-- a job exists for a brand-new Bev created WITH a photograph, and for no other
+-- event. `enqueue_bev_icon_job` is called only by `create_bev` today, so both
+-- cases below hold by construction -- which is exactly why they are asserted
+-- rather than assumed. They are the two an `AFTER UPDATE` trigger on
+-- `public.bevs` would get wrong, and that is the shape anyone wiring up
+-- "generate an icon when a photo appears" would reach for next.
+--
+-- As the owner: `authenticated` has only `bevs_select` on that table, so a
+-- client-side edit matches no row, raises nothing, and would assert nothing.
+select lives_ok(
+  $q$ update public.bevs set name = 'Automatic icon photo renamed', updated_at = now()
+       where name = 'Automatic icon photo' $q$,
+  'renaming a Bev succeeds');
+select is((select count(*)::integer from public.bevs where name = 'Automatic icon photo renamed'),
+          1,'and the rename actually landed, so the count below is about an edit that happened');
+select is((select count(*)::integer from public.bev_icon_jobs j
+             join public.bevs b on b.id = j.bev_id where b.brand = 'pgTAP auto'),
+          1,'a rename queues no further job: an edit is not a creation');
+
+select lives_ok(
+  $q$ update public.bevs
+         set photo_path = 'fd0a1/added-later.jpg', thumb_path = 'fd0a1/added-later.jpg',
+             status = 'active', updated_at = now()
+       where name = 'Automatic icon no photo' $q$,
+  'a photo can be added to an existing Bev afterwards');
+select is((select count(*)::integer from public.bev_icon_jobs j
+             join public.bevs b on b.id = j.bev_id where b.name = 'Automatic icon no photo'),
+          0,'a photo added after creation queues nothing: only the creation workflow is eligible');
+select is((select icon_status from public.bevs where name = 'Automatic icon no photo'),
+          'none','and that Bev stays ''none'' rather than becoming pending');
+
 select * from finish();
 rollback;
