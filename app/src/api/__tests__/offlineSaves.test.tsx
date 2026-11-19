@@ -48,9 +48,12 @@ it('submitRanking offline rejects with the network error and settles, even with 
       .mutateAsync({ bevId: 'b', bucket: 'LOVED', insertIndex: 0, expectedBucketSize: 0, comparisons: [] })
       .catch((e: unknown) => (rejected = e));
   });
-  await waitFor(() => expect(result.current.isPending).toBe(false), { timeout: 1000 });
+  // Wait for the error itself: the hook renders a moment after the promise settles, and before the
+  // save starts `isPending` is false as well, so waiting on that could pass on a render that has
+  // not caught up.
+  await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 1000 });
   expect(rejected).toBe(offline);
-  expect(result.current.isError).toBe(true);
+  expect(result.current.isPending).toBe(false);
 
   stop();
   client.clear();
