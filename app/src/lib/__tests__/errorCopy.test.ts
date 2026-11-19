@@ -1,6 +1,6 @@
 import { ApiError, type ApiErrorCode } from '@bevi/shared';
 
-import { errorCopy } from '../errorCopy';
+import { actionErrorMessage, errorCopy } from '../errorCopy';
 
 const CODES: ApiErrorCode[] = ['unauthorized', 'not_found', 'conflict', 'validation', 'rate_limited', 'age_restricted', 'network', 'unknown'];
 
@@ -35,4 +35,9 @@ it('treats anything else as unknown', () => {
   expect(errorCopy('nope')).toEqual(unknown);
   expect(errorCopy(undefined)).toEqual(unknown);
   expect(unknown.title).toBe("Couldn't load this");
+});
+
+it('actionErrorMessage does not promise to show a failed save again', () => {
+  expect(actionErrorMessage(new ApiError('network', 'x'))).toBe('Check your connection and try again.');
+  expect(actionErrorMessage(new ApiError('rate_limited', 'x'))).toBe(errorCopy(new ApiError('rate_limited', 'x')).message);
 });

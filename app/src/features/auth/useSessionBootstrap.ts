@@ -3,6 +3,7 @@ import { isApiError, type Session } from '@bevi/shared';
 
 import { api } from '@/api/client';
 import { useAuthListener } from '@/api/hooks';
+import { useOnline } from '@/lib/useOnline';
 import { useSession } from '@/state/session';
 
 export interface SessionBootstrap {
@@ -28,7 +29,8 @@ const RETRY_MAX_MS = 30_000;
  *
  * A `getMe` result is dropped when a newer auth event arrived or the client changed the session
  * meanwhile (`epoch`: completeOnboarding, signOut). After the first check, a failing `getMe` keeps
- * the current screen and retries quietly instead of replacing the app with an error.
+ * the current screen and retries quietly instead of replacing the app with an error. When the
+ * connection returns and the app is signed out while the auth client holds a session, it checks again.
  */
 export function useSessionBootstrap(): SessionBootstrap {
   const [error, setError] = useState<unknown>(null);
@@ -78,6 +80,17 @@ export function useSessionBootstrap(): SessionBootstrap {
     }
     load(session);
   });
+
+  // The connection came back. A check made while offline got no answer: it left the launch error
+  // up, or the app signed out although the auth client still holds a session. Ask again, so the
+  // app recovers by itself instead of waiting for Retry or a restart.
+  const online = useOnline();
+  const wasOnline = useRef(online);
+  useEffect(() => {
+    const cameBack = online && !wasOnline.current;
+    wasOnline.current = online;
+    if (cameBack && current.current && useSession.getState().status === 'signedOut') load(current.current);
+  }, [online, load]);
 
   const retry = useCallback(() => load(current.current), [load]);
   return { error, retry };

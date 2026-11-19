@@ -7,7 +7,7 @@ import { useRemoveRanking, useUpdateNote } from '@/api/hooks';
 import { Button } from '@/components/Button';
 import { Sheet } from '@/components/Sheet';
 import { TextField } from '@/components/TextField';
-import { errorCopy } from '@/lib/errorCopy';
+import { actionErrorMessage } from '@/lib/errorCopy';
 import { spacing, type, useTheme } from '@/theme';
 
 import { BUCKET_SHORT } from './copy';
@@ -69,7 +69,7 @@ export function RankingActionsSheet({ ranked, onClose }: { ranked: RankedBev | n
             placeholder="What stood out?"
             maxLength={NOTE_MAX}
             hint={`${note.length}/${NOTE_MAX}`}
-            error={updateNote.error ? errorCopy(updateNote.error).message : undefined}
+            error={updateNote.error ? actionErrorMessage(updateNote.error) : undefined}
             autoFocus
           />
           <View style={styles.buttons}>
@@ -97,7 +97,7 @@ export function RankingActionsSheet({ ranked, onClose }: { ranked: RankedBev | n
           </Text>
           {remove.error ? (
             <Text style={[type.body, { color: colors.scoreLow }]} accessibilityRole="alert">
-              {errorCopy(remove.error).message}
+              {actionErrorMessage(remove.error)}
             </Text>
           ) : null}
           <View style={styles.buttons}>

@@ -14,7 +14,7 @@ import { SearchBar } from '@/components/SearchBar';
 import { Sheet } from '@/components/Sheet';
 import { Skeleton } from '@/components/Skeleton';
 import { SheetOption } from '@/features/lists/SheetOption';
-import { errorCopy } from '@/lib/errorCopy';
+import { actionErrorMessage } from '@/lib/errorCopy';
 import { MAX_FONT_SCALE_DENSE, size, spacing, type, useTheme } from '@/theme';
 
 /**
@@ -80,7 +80,7 @@ export function ReportSheet({ bevId, name, open, onClose }: { bevId: string; nam
   const failure = report.error
     ? isDuplicateOfError(report.error)
       ? 'Pick a different Bev to report this one as a duplicate of.'
-      : errorCopy(report.error).message
+      : actionErrorMessage(report.error)
     : null;
 
   return (

@@ -41,6 +41,12 @@ native path and everything under `app/src/testing/`), `packages/ranking/`,
 Arjun's: `supabase/`, `packages/api/`, `data/catalog/`, `scripts/`, every secret
 and hosted account, `.github/workflows/`.
 
+One correction to that, found on 2026-11-18: the repository is `mbwiller/bevi`
+and Arjun has push but **not admin**, so he cannot create a GitHub environment
+or set any repository secret — both 403. "Every secret" is therefore not
+achievable as written: either Matt grants admin, or every CI secret is a
+request to Matt. Unsettled.
+
 In practice for this project: Arjun hands me **values** (bundle id, EAS project
 id, Apple team id, registered device UDIDs, the iOS Maps key, the Sentry DSN)
 and I commit them to `app.config.ts` / `eas.json`. I never add a migration or
@@ -210,12 +216,11 @@ with an in-memory fallback for Safari private mode. On Hermes there is no
 | `src/lib/glass.ts` | `matchMedia` for reduced transparency | `AccessibilityInfo.isReduceTransparencyEnabled` + `useColorScheme` |
 | `src/features/ranking/Compare.tsx:61` | keyboard shortcuts | correctly web-only already; leave it |
 | `src/lib/column.ts` | 480pt centred column on wide windows | no change. Drop the "still right on iPad" reasoning: with `supportsTablet: false` there is no iPad build, only iPhone compatibility mode (and if we ever want iPad, that is a decision that also changes IM-12's screenshot set) |
-| `src/features/find-bev/` incl. `spike/overlay.module.css`, `SpikeOverlay.web.tsx` | CSS modules, which do not exist natively | **delete the feature** — Find Bev was dropped on 2026-11-16 |
+| ~~`src/features/find-bev/`~~ | CSS modules, which do not exist natively | **Done in IM-2/IM-4** (#245, #248): the feature is deleted, `jest.config.js`'s `.module.css` mapper with it |
 
-The Find Bev deletion also rewrites `src/app/(tabs)/map/index.tsx`, whose whole
-body is `MapTabWithSpike`, to render `MapView` directly — and that is the file
-IM-7 replaces. **Land IM-4 before IM-7 starts**, or let IM-7 take the deletion.
-`jest.config.js`'s `.module.css` mapper goes away with it.
+That deletion also rewrote `src/app/(tabs)/map/index.tsx`, whose whole body was
+`MapTabWithSpike`. IM-7 replaces that file again when the native map lands, so
+it is a one-owner file until then.
 
 ---
 
@@ -410,7 +415,8 @@ The premise here is the opposite of what it looks like. `jest-expo` inherits
 exactly why `MapView.tsx`'s comment says "this is what jest renders: the
 placeholder". So **the suite already runs as iOS, and the uncovered branch is
 web.** Only two suites flip the platform, for one test each and restored in a
-`finally` (`MapChrome.test.tsx:124`, `FindBevScreen.test.tsx:44`, via
+`finally` (`MapChrome.test.tsx:124` — `FindBevScreen.test.tsx` went with the
+Find Bev deletion, via
 `Object.defineProperty`; `StatusBarClearance.test.tsx:60` assigns directly).
 
 - Add a **web** jest project, which needs the jsdom-flavoured `jest-expo/web`
@@ -479,13 +485,13 @@ Same list as Arjun's doc, from the app side:
 
 | # | Decision | What it changes for me | Default |
 |---|---|---|---|
-| IS-1 | Does the web app stay? | `.ios.tsx` splits (keep) vs replacements and a big deletion (drop). Dropping also removes `react-native-web`, `html2canvas-pro`, `@googlemaps/js-api-loader` and most of IM-4 — but kills the bug reporter, the policy URLs and the AASA host | Keep web |
-| IS-2 | Which backend does TestFlight hit? | `eas.json` profiles and env vars | `preview` → dev, `production` → prod |
+| ~~IS-1~~ | Does the web app stay? | — | **Decided 2026-11-18: web stays for now.** So every native path is a `.ios.tsx` split, and the policy/support URLs and the AASA host stay free |
+| IS-2 | Which backend does TestFlight hit? | `eas.json` profiles and env vars | **Open, and the stated default is impossible.** There is one hosted Supabase project, not a dev/prod pair, and the org is at the free plan's two-project limit — so all three EAS environments point at the live database and a TestFlight tester writes to real data. Fine while it is the two of us; not fine for anyone else. The real fix costs money |
 | IS-3 | Demo account age / alcohol visibility | The age-rating answers and what review sees | Over 21, alcohol visible, 17+ |
 | IS-4 | Crash reporting | Whether a device crash is visible at all. I wire the SDK, the config plugin and dSYM upload | Yes, `@sentry/react-native` |
 | ~~IS-5~~ | Bundle id | **Decided 2026-11-17: `app.bevi.ios`** — the exact string for `ios.bundleIdentifier` in `app.config.ts`, team prefix `9NA45GL4CJ` | settled |
-| IS-6 | `react-native-maps` (Google) or `expo-maps` (Apple Maps option) | IM-7's whole implementation, whether IA-7's key exists, and the iOS deployment target | Spike at IM-7 |
-| IS-7 | Report-content + block-user for v1? | IM-13 exists or does not | Ship it; it is the difference between one review round and three |
+| ~~IS-6~~ | `react-native-maps` or `expo-maps` | — | **Deferred 2026-11-18:** the Map tab is an "In progress" page in v1, so IM-7 shrinks to that and IA-7 (the iOS Maps key) is parked. Decide when the real map is built |
+| ~~IS-7~~ | Report-content + block-user for v1? | — | **Decided 2026-11-18: ships in v1.** Database half is PR #254 (8 RLS policies, 1 view, 12 functions now filter per viewer); the contract and `packages/api` half follow, then IM-13 |
 
 ## 4. Not colliding with Arjun
 
