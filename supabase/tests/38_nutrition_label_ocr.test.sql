@@ -41,7 +41,12 @@ select throws_ok($$ insert into public.bev_nutrition (bev_id, nutrition, source)
 
 -- ---------------------------------------------------------------------------
 -- create_bev_with_nutrition_v2
+--
+-- From here on the tests run as a signed-in caller: the RPC refuses outright
+-- without an auth.uid().
 -- ---------------------------------------------------------------------------
+set local role authenticated;
+set local request.jwt.claims='{"sub":"00000000-0000-4000-8000-0000000fc0a1","role":"authenticated"}';
 select lives_ok($$ select public.create_bev_with_nutrition_v2('pgTAP OCR Dew','pgTAP OCR',null,'soda',2::smallint,false,null,'00000000-0000-4000-8000-0000000fc0a1/label.jpg',current_setting('test.ocr')::jsonb) $$,'a label reading creates a Bev and its snapshot');
 select throws_ok($$ select public.create_bev_with_nutrition_v2('pgTAP OCR Barcode',null,null,'soda',2::smallint,false,null,'00000000-0000-4000-8000-0000000fc0a1/label.jpg',current_setting('test.ocr')::jsonb || '{"barcode":"012345678905"}') $$,'22023','BEVI_VALIDATION','a label reading carrying a barcode is rejected');
 select throws_ok($$ select public.create_bev_with_nutrition_v2('pgTAP OCR Link',null,null,'soda',2::smallint,false,null,'00000000-0000-4000-8000-0000000fc0a1/label.jpg',current_setting('test.ocr')::jsonb || '{"sourceUrl":"https://world.openfoodfacts.org/product/012345678905"}') $$,'22023','BEVI_VALIDATION','a label reading carrying a source URL is rejected');
