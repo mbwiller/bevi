@@ -26,6 +26,8 @@ import {
   STEP_TITLES,
   STILL_PROCESSING,
   UNREADABLE_IMAGE,
+  NUTRITION_SAVE_FAILED,
+  nutritionWithDraftName,
   UPLOAD_FAILED,
 } from './copy';
 import { suggestCategory } from './categoryHint';
@@ -231,7 +233,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
         const field = (e.detail as ValidationErrorDetail | undefined)?.field;
         if (field === 'nutrition') {
           setNutrition(null);
-          setErrors({ nutrition: 'Nutrition could not be saved. Scan the barcode again or continue without it.' });
+          setErrors({ nutrition: NUTRITION_SAVE_FAILED });
           setStep(1);
           return;
         }
@@ -287,7 +289,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
         priceEstimated: form.priceEstimated,
         photoAssetId,
         ...(labelAssetId ? { labelAssetId } : {}),
-        ...(nutrition ? { nutrition } : {}),
+        ...(nutrition ? { nutrition: nutritionWithDraftName(nutrition, form.name) } : {}),
       };
       try {
         const bev = await createWhenReady(createBev.mutateAsync, input, {

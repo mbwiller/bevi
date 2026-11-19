@@ -34,3 +34,23 @@ export const PHOTO_REUPLOAD = 'Add the photo again.';
  * `validation` on `name`, whose message the field then shows.
  */
 export const NAME_MAX_LENGTH = 80;
+
+// Nutrition read from a photo of the label (BEV-13). A draft transcription, never a verified one.
+export const LABEL_READ_NOTE = 'Read from your photo, so a number may be wrong. Check every value against the package.';
+export const LABEL_READ_CONFIRM = 'These values were read from your photo. Check them against the package before you use them.';
+export const LABEL_PLACEHOLDER_NAME = 'Scanned label';
+export const LABEL_READ_BUTTON = 'Read nutrition from this photo';
+export const LABEL_READING = 'Reading the label…';
+export const LABEL_NONE_FOUND = 'No nutrition panel found in that photo. Take another with the whole Nutrition Facts panel in view and sharp, or continue without nutrition.';
+export const LABEL_REJECTED = "The reader couldn't use that photo. Take it again in good light, flat and sharp, with the whole Nutrition Facts panel in view.";
+export const LABEL_UNAVAILABLE = "Reading a label from a photo isn't available yet. Scan the barcode, or continue without nutrition.";
+export const LABEL_OFFLINE = "You're offline. Check your connection, then read the label again.";
+export const LABEL_FAILED = "Couldn't read that label. Try again in a moment.";
+export const NUTRITION_SAVE_FAILED = 'Nutrition could not be saved. Scan the barcode or read the label again, or continue without it.';
+
+/** A label read that could not name the drink is called this; the name already typed in the draft is better. */
+export function nutritionWithDraftName<T extends { productName: string; source: string }>(nutrition: T, draftName: string): T {
+  const name = draftName.trim();
+  if (nutrition.source !== 'label-ocr' || nutrition.productName !== LABEL_PLACEHOLDER_NAME || !name) return nutrition;
+  return { ...nutrition, productName: name.slice(0, NAME_MAX_LENGTH) };
+}
