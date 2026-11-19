@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    // The suite calls only the shared test globals (describe / it / expect / beforeAll), no
+    // runner-specific API; vitest's global types stand in for whichever runner imports it.
+    // node: Blob, setTimeout and AbortSignal, as packages/api has them.
+    "types": ["node", "vitest/globals"]
+  },
+  "include": ["src"]
+}
