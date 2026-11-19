@@ -272,7 +272,7 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
       p_price_estimated: input.priceEstimated,
       // Optional now. `null` is what makes the Bev 'pending_photo' and
       // INELIGIBLE for icon generation -- create_bev schedules a job only
-      // when this is a real asset it can verify (20261114000100).
+      // when this is a real asset it can verify (20261119185800).
       p_photo_asset_id: input.photoAssetId ?? null,
       p_label_asset_id: input.labelAssetId ?? null,
     };

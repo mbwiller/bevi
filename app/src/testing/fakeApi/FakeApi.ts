@@ -1503,7 +1503,7 @@ export class FakeApi implements BeviApi {
       }),
 
     // Copied from `leaves` on purpose, down to the cap and the omit-what-you-
-    // cannot-see rule -- `get_bev_icons` (20261114000200) is copied from
+    // cannot-see rule -- `get_bev_icons` (20261119185801) is copied from
     // `get_bev_leaves` for the same reason. READ-ONLY: drawing a screen must
     // never schedule generation, so nothing here touches `iconReadyAt`.
     icons: (bevIds: readonly string[]) =>

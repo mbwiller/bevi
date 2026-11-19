@@ -2,7 +2,7 @@
 // Bevi icon, asynchronously, for a Bev that was created WITH a photo.
 //
 // It never decides eligibility. `create_bev` already did that, inside the
-// transaction that created the Bev (20261114000100), and the only work this
+// transaction that created the Bev (20261119185800), and the only work this
 // function can see is what `claim_bev_icon_jobs()` hands it. A Bev with no job
 // row is a Bev this function cannot touch.
 //

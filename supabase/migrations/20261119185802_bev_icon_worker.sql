@@ -1,6 +1,6 @@
 -- Custom Bevs, part 3: everything the worker needs that lives in the database.
 --
--- 20261114000100 built the ledger and the trigger; 20261114000200 the read
+-- 20261119185800 built the ledger and the trigger; 20261119185801 the read
 -- path. This adds the four things the `generate-bev-icon` Edge Function needs
 -- around it:
 --
@@ -246,7 +246,7 @@ select cron.schedule(
 -- asymmetry is the bug: `generated_icon_path` and `icon_label_band` stayed on
 -- the row nothing renders, so merging a custom Bev that had art into one that
 -- did not LOST that art permanently. Permanently, because a generation job is
--- only ever created by `create_bev` (20261114000100) -- there is no path that
+-- only ever created by `create_bev` (20261119185800) -- there is no path that
 -- regenerates an icon for an existing Bev, by design.
 --
 -- Same trigger shape and the same WHEN clause as main's, so the two fire

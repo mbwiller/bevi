@@ -185,7 +185,7 @@ language sql immutable set search_path = public as $$ select interval '5 minutes
 -- A backstop on WALL-CLOCK age, independent of attempt_count.
 --
 -- `attempt_count` alone is not enough, because `release_bev_icon_job`
--- (20261114000300) deliberately DECREMENTS it: a job released for a reason
+-- (20261119185802) deliberately DECREMENTS it: a job released for a reason
 -- that is nobody's fault -- the daily provider allocation is spent, or the
 -- worker has no provider credentials at all -- must not burn an attempt. But
 -- that means a job can be claimed and released forever, oscillating 0<->1,

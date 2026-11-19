@@ -1,6 +1,6 @@
 -- Custom Bevs, part 2: the read path for generated icons.
 --
--- 20261114000100 put `generated_icon_path` and `icon_status` on `bevs`. This
+-- 20261119185800 put `generated_icon_path` and `icon_status` on `bevs`. This
 -- adds the one function that gets them to a client.
 --
 -- ---------------------------------------------------------------------------
