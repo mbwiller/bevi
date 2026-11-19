@@ -32,7 +32,8 @@
     "icons:swipe": "node --experimental-strip-types scripts/icons/swipe.ts",
     "icons:report": "node --experimental-strip-types scripts/icons/verdict-report.ts",
     "graph:dashboard": "node --env-file-if-exists=supabase/.env --experimental-strip-types scripts/graph/dashboard.ts",
-    "graph:verify": "node --env-file-if-exists=supabase/.env --experimental-strip-types scripts/graph/verify-pipeline.ts"
+    "graph:verify": "node --env-file-if-exists=supabase/.env --experimental-strip-types scripts/graph/verify-pipeline.ts",
+    "demo:seed": "node --env-file-if-exists=supabase/.env --experimental-strip-types scripts/demo/seed.ts"
   },
   "overrides": {
     "react": "19.2.3"
