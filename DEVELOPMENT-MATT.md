@@ -263,7 +263,9 @@ Acceptance for a catalog image: PNG with alpha, product fills 70–90% of the lo
 
 The reference material in the repo is `bevi-ui-inspiration/beli-screens-spec.md` (the written spec: 12 screen descriptions, Part 2 tokens, Part 3 data model). Don't move or rename it. The screenshots it was written from are no longer in the repository (CLEANUP.md F-04); the spec is the record. `design/` holds what you produce from them: `design/specs/<screen>.md`, `design/brand/`, `design/photo-style.md`.
 
-File-to-spec mapping (the spec numbers screens 01–12; the files are in a different order):
+File-to-spec mapping, kept as the index of what each spec screen was written from (the spec
+numbers screens 01–12; the captures were in a different order). The `File` column names the
+original capture, which is no longer in the repository -- read it as provenance, not as a path:
 
 | Spec screen | File | Bevi screen |
 |---|---|---|
