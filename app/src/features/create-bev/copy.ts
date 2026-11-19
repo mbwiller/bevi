@@ -41,6 +41,7 @@ export const LABEL_READ_CONFIRM = 'These values were read from your photo. Check
 export const LABEL_PLACEHOLDER_NAME = 'Scanned label';
 export const LABEL_READ_BUTTON = 'Read nutrition from this photo';
 export const LABEL_READING = 'Reading the label…';
+export const LABEL_SHEET_HINT = 'Reading the Nutrition Facts panel from your photo. It works best when the whole panel is in the frame, flat on, and sharp enough to read.';
 export const LABEL_NONE_FOUND = "Couldn't find a Nutrition Facts panel in that photo. Take another with the whole panel in view, flat and sharp, or continue without nutrition.";
 export const LABEL_UNUSABLE_IMAGE = "Couldn't read that photo. Take it again in good light, or choose a different one.";
 export const NUTRITION_SAVE_FAILED = 'Nutrition could not be saved. Scan the barcode or read the label again, or continue without it.';

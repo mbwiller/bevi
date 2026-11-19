@@ -7,9 +7,12 @@
  * `app/src/features/create-bev/textRecognition.web.ts` instead.
  */
 import type { RecognisedTextLine } from './src/BeviTextRecognition.types';
-import { beviTextRecognition } from './src/BeviTextRecognitionModule';
+import { beviTextRecognition, beviTextRecognitionAvailable } from './src/BeviTextRecognitionModule';
 
 export type { RecognisedTextLine };
+
+/** Whether the native half is in this binary. See the note on the probe itself. */
+export const AVAILABLE: boolean = beviTextRecognitionAvailable();
 
 /**
  * Reads the text in a local image on the device. `uri` is a local image URI as

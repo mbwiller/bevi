@@ -77,6 +77,10 @@ describe('bevs.create', () => {
     is_starter: false, created_at: '2026-11-16T00:00:00.000Z', created_by_id: null,
     created_by_handle: null, rating_count: 0, avg_score: null, score_stddev: null, bayes_score: null,
   };
+  /** The only keys `create_bev_with_nutrition` (v1) accepts. `source` is not one. */
+  const V1_KEYS = ['barcode', 'productName', 'basis', 'sourceUrl', 'calories', 'fatGrams',
+    'carbohydrateGrams', 'sugarGrams', 'proteinGrams', 'sodiumMg'];
+
   const snapshots: SnapshotCache = { get: async () => { throw new Error('not needed'); }, invalidate: () => undefined };
 
   /**
@@ -94,7 +98,12 @@ describe('bevs.create', () => {
       let result: { data: unknown; error: { code: string; message: string } | null };
       if (name === 'get_bev') result = { data: bevRow, error: null };
       else if (missing.includes(name)) result = { data: null, error: { code: 'PGRST202', message: 'function not found' } };
-      else {
+      else if (name === 'create_bev_with_nutrition' && args.p_nutrition
+               && Object.keys(args.p_nutrition as object).some((k) => !V1_KEYS.includes(k))) {
+        // v1's own guard (20261115214237): any key outside its ten raises
+        // BEVI_VALIDATION, which is NOT PGRST202, so the ladder stops here.
+        result = { data: null, error: { code: '22023', message: 'BEVI_VALIDATION' } };
+      } else {
         stored = args.p_nutrition ?? null;
         result = { data: { id }, error: null };
       }
@@ -142,7 +151,11 @@ describe('bevs.create', () => {
   it('falls back to v1 for an Open Food Facts snapshot when v2 is not deployed yet', async () => {
     const { created, names, calls } = await create(OFF_SNAPSHOT, ['create_bev_with_nutrition_v2']);
     expect(names).toEqual(['create_bev_with_nutrition_v2', 'create_bev_with_nutrition', 'get_bev']);
-    expect(calls[1]?.args).toMatchObject({ p_nutrition: OFF_SNAPSHOT });
+    // Without `source`: v1 predates it and rejects any key outside its ten,
+    // which would stop the ladder and fail the creation outright.
+    expect(calls[1]?.args.p_nutrition).not.toHaveProperty('source');
+    const { source: _dropped, ...withoutSource } = OFF_SNAPSHOT;
+    expect(calls[1]?.args).toMatchObject({ p_nutrition: withoutSource });
     expect(created.nutrition).toEqual(OFF_SNAPSHOT);
   });
 
@@ -198,6 +211,10 @@ describe('bevs.get before the nutrition migration is pushed', () => {
     is_starter: false, created_at: '2026-11-16T00:00:00.000Z', created_by_id: null,
     created_by_handle: null, rating_count: 0, avg_score: null, score_stddev: null, bayes_score: null,
   };
+  /** The only keys `create_bev_with_nutrition` (v1) accepts. `source` is not one. */
+  const V1_KEYS = ['barcode', 'productName', 'basis', 'sourceUrl', 'calories', 'fatGrams',
+    'carbohydrateGrams', 'sugarGrams', 'proteinGrams', 'sodiumMg'];
+
   const snapshots: SnapshotCache = { get: async () => { throw new Error('not needed'); }, invalidate: () => undefined };
 
   const clientWith = (nutritionResult: { data: unknown; error: { code: string; message: string } | null }) => {
@@ -269,10 +286,6 @@ describe('mapNutrition', () => {
     expect(mapNutrition(null)).toBeNull();
     expect(mapNutrition(undefined)).toBeNull();
   });
-
-  it('takes the fallback source the caller passes instead', () => {
-    expect(mapNutrition(stored, 'label-ocr')).toMatchObject({ source: 'label-ocr' });
-  });
 });
 
 it('reads an older stored snapshot back off bevs.get as an Open Food Facts one', async () => {
@@ -307,6 +320,10 @@ it('reads an older stored snapshot back off bevs.get as an Open Food Facts one',
     from,
     storage: { from: () => ({ getPublicUrl: () => ({ data: { publicUrl: '' } }) }) },
   } as unknown as SupabaseClient;
+  /** The only keys `create_bev_with_nutrition` (v1) accepts. `source` is not one. */
+  const V1_KEYS = ['barcode', 'productName', 'basis', 'sourceUrl', 'calories', 'fatGrams',
+    'carbohydrateGrams', 'sugarGrams', 'proteinGrams', 'sodiumMg'];
+
   const snapshots: SnapshotCache = { get: async () => { throw new Error('not needed'); }, invalidate: () => undefined };
 
   const bev = await createBevsApi(client, snapshots).get(id);

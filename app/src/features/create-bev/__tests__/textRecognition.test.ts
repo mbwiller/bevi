@@ -11,7 +11,9 @@ import type { RecognisedLine } from '../nutritionPanel';
 import { recogniseText, TEXT_RECOGNITION_AVAILABLE } from '../textRecognition';
 import * as web from '../textRecognition.web';
 
-jest.mock('../../../../modules/bevi-text-recognition', () => ({ recogniseText: jest.fn() }));
+// AVAILABLE is now what the module reports about THIS binary, not a constant,
+// so the stand-in has to answer it too.
+jest.mock('../../../../modules/bevi-text-recognition', () => ({ AVAILABLE: true, recogniseText: jest.fn() }));
 
 const mockRecognise = jest.mocked(recogniseOnDevice);
 

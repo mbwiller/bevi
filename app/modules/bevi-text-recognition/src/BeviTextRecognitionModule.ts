@@ -1,4 +1,4 @@
-import { NativeModule, requireNativeModule } from 'expo';
+import { NativeModule, requireNativeModule, requireOptionalNativeModule } from 'expo';
 
 import type { RecognisedTextLine } from './BeviTextRecognition.types';
 
@@ -23,4 +23,17 @@ declare class BeviTextRecognitionModule extends NativeModule<{}> {
  */
 export function beviTextRecognition(): BeviTextRecognitionModule {
   return requireNativeModule<BeviTextRecognitionModule>('BeviTextRecognition');
+}
+
+/**
+ * Whether the native half is in THIS binary -- which is not the same question as whether the
+ * device has Vision. Vision ships with iOS; this module ships with the build. An app installed
+ * before it existed (a tester's dev client, a TestFlight build already out) has the Swift
+ * missing, and asserting availability there offers a button that cannot work and then blames the
+ * person's photo for it.
+ *
+ * `requireOptionalNativeModule` answers null instead of throwing, which is the only way to ask.
+ */
+export function beviTextRecognitionAvailable(): boolean {
+  return requireOptionalNativeModule('BeviTextRecognition') !== null;
 }

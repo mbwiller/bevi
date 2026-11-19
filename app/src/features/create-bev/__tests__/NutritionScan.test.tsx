@@ -97,7 +97,9 @@ function labelSlot(overrides: Partial<PhotoUpload> = {}, uri = 'file:///label-1.
   } as unknown as PhotoUpload;
 }
 const READ = 'Read nutrition from the label photo';
-const readButton = () => screen.getAllByLabelText(READ)[0]!;
+/** The one in the sheet, offered after a failed read, has its own name. */
+const READ_AGAIN = 'Read the label photo again';
+const readButton = () => screen.getByLabelText(READ);
 
 it('reads the local photo, never the upload, and reveals with the same fade before asking for confirmation', async () => {
   jest.useFakeTimers();
@@ -176,7 +178,7 @@ describe.each<[string, () => Promise<unknown>, RegExp]>([
     expect(await screen.findByText(copy)).toBeTruthy();
     expect(screen.queryByText('Nutrition Facts')).toBeNull();
     expect(onChange).not.toHaveBeenCalled();
-    expect(screen.getAllByLabelText(READ).at(-1)).toBeEnabled();
+    expect(screen.getByLabelText(READ_AGAIN)).toBeEnabled();
   });
 });
 

@@ -395,7 +395,7 @@ export function mapNutrition(
     ...snapshot,
     barcode: snapshot.barcode ?? null,
     sourceUrl: snapshot.sourceUrl ?? null,
-    source: snapshot.source ?? fallbackSource,
+    source: snapshot.source ?? 'openfoodfacts',
   };
 }
 

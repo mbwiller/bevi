@@ -2,8 +2,6 @@
 module.exports = {
   preset: 'jest-expo',
   roots: ['<rootDir>/src'],
-  // Data a test imports, not a test: it sits in __tests__/ next to its consumer.
-  testPathIgnorePatterns: ['/node_modules/'],
   setupFiles: ['<rootDir>/jest.setup.js'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup-after-env.js'],
   // Tests that render the whole route tree (renderRouter) load every route on their first render,

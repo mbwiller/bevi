@@ -291,8 +291,18 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
     //   -> create_bev                 -- the Bev without its snapshot. The app
     //      already copes with this by telling the person the nutrition was not
     //      saved, which is why dropping it beats failing the creation.
+    // v1 predates `source` and rejects any key outside its own ten
+    // (20261115214237), so the rung that exists to degrade gracefully would
+    // instead raise BEVI_VALIDATION -- not PGRST202, so the ladder would stop
+    // and the whole creation would fail. Hand v1 the snapshot it understands.
+    const v1Snapshot = input.nutrition && (({ source: _unused, ...rest }) => rest)(input.nutrition);
     const callRpc = (name: string) =>
-      client.rpc(name, name === 'create_bev' ? args : { ...args, p_nutrition: input.nutrition }).single();
+      client.rpc(
+        name,
+        name === 'create_bev'
+          ? args
+          : { ...args, p_nutrition: name === 'create_bev_with_nutrition' ? v1Snapshot : input.nutrition },
+      ).single();
     const fallbacks = !input.nutrition
       ? []
       : (input.nutrition.source ?? 'openfoodfacts') === 'openfoodfacts'

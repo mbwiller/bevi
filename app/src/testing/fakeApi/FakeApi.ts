@@ -1371,7 +1371,13 @@ export class FakeApi implements BeviApi {
               source === 'openfoodfacts'
                 ? typeof n.barcode === 'string' && /^(?:\d{8}|\d{12}|\d{13})$/.test(n.barcode) &&
                   n.sourceUrl === `https://world.openfoodfacts.org/product/${n.barcode}`
-                : source === 'label-ocr' && n.barcode === null && n.sourceUrl === null && input.labelAssetId !== undefined;
+                : source === 'label-ocr' && n.barcode === null && n.sourceUrl === null;
+            // Raised against the field, as the server raises it (detail =
+            // 'labelAssetId'), because the wizard re-uploads the photo for that
+            // field and clears the whole snapshot for 'nutrition'.
+            if (source === 'label-ocr' && input.labelAssetId === undefined) {
+              invalid('labelAssetId', 'Add the label photo this reading came from');
+            }
             if (Object.keys(n).some((k) => !fields.includes(k)) ||
                 [n.productName, n.basis].some((v) => typeof v !== 'string' || !v.trim() || v.length > 256) ||
                 !provenance ||

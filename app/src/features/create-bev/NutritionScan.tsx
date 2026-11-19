@@ -10,6 +10,7 @@ import { motion, spacing, type, useTheme } from '@/theme';
 import { BarcodeCamera } from './BarcodeCamera';
 import {
   LABEL_NONE_FOUND, LABEL_PLACEHOLDER_NAME, LABEL_READ_BUTTON, LABEL_READ_CONFIRM, LABEL_READING,
+  LABEL_SHEET_HINT,
   LABEL_UNUSABLE_IMAGE, NAME_MAX_LENGTH,
 } from './copy';
 import { NutritionCard } from './NutritionCard';
@@ -182,13 +183,21 @@ export function NutritionScan({ demoBarcode, value, onChange, label, onPickLabel
             <Animated.View style={animation} accessibilityLiveRegion="polite"><NutritionCard nutrition={nutrition} reveal /></Animated.View>
           ) : (
             <>
-              <Text style={[type.body, { color: colors.text }]}>Point your camera at the barcode. Keep the whole barcode in view. Move back a little until the bars look sharp.</Text>
-              {camera ? <BarcodeCamera onBarcode={(code) => void lookup(code)} onError={cameraError} /> : null}
+              <Text style={[type.body, { color: colors.text }]}>
+                {mode === 'label'
+                  ? LABEL_SHEET_HINT
+                  : 'Point your camera at the barcode. Keep the whole barcode in view. Move back a little until the bars look sharp.'}
+              </Text>
+              {mode === 'barcode' && camera ? <BarcodeCamera onBarcode={(code) => void lookup(code)} onError={cameraError} /> : null}
               {busy ? <Text role="status" style={[type.body, { color: colors.textSecondary }]}>{mode === 'label' ? LABEL_READING : 'Looking up nutrition…'}</Text> : null}
               {message ? <Text role="alert" style={[type.body, { color: colors.textSecondary }]}>{message}</Text> : null}
-              {!camera && !busy ? <Button onPress={() => { setMessage(null); setCamera(true); }} accessibilityLabel="Retry barcode camera">Scan barcode</Button> : null}
-              <TextField label="Or enter barcode digits" type="numeric" value={barcode} onChange={(value) => setBarcode(value.replace(/\D/g, ''))} maxLength={13} editable={!busy} />
-              <Button variant="outlined" onPress={() => void lookup(barcode)} loading={busy} disabled={busy || !/^(?:\d{8}|\d{12}|\d{13})$/.test(barcode)} accessibilityLabel="Look up entered barcode">Look up barcode</Button>
+              {mode === 'barcode' && !camera && !busy ? <Button onPress={() => { setMessage(null); setCamera(true); }} accessibilityLabel="Retry barcode camera">Scan barcode</Button> : null}
+              {mode === 'barcode' ? (
+                <>
+                  <TextField label="Or enter barcode digits" type="numeric" value={barcode} onChange={(value) => setBarcode(value.replace(/\D/g, ''))} maxLength={13} editable={!busy} />
+                  <Button variant="outlined" onPress={() => void lookup(barcode)} loading={busy} disabled={busy || !/^(?:\d{8}|\d{12}|\d{13})$/.test(barcode)} accessibilityLabel="Look up entered barcode">Look up barcode</Button>
+                </>
+              ) : null}
               {canRead && onPickLabel && label ? (
                 <View style={styles.stack}>
                   <Text style={[type.body, { color: colors.text }]}>No barcode, or no result? Read it from a photo of the label. Keep the whole Nutrition Facts panel in view and sharp.</Text>
@@ -198,7 +207,7 @@ export function NutritionScan({ demoBarcode, value, onChange, label, onPickLabel
                   </View>
                   <PhotoStatusLine slot={label} />
                   {label.photo ? (
-                    <Button onPress={() => void readLabel()} loading={busy && mode === 'label'} disabled={busy} accessibilityLabel="Read nutrition from the label photo">{LABEL_READ_BUTTON}</Button>
+                    <Button onPress={() => void readLabel()} loading={busy && mode === 'label'} disabled={busy} accessibilityLabel="Read the label photo again">{LABEL_READ_BUTTON}</Button>
                   ) : null}
                 </View>
               ) : null}

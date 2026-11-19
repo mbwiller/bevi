@@ -6,12 +6,16 @@
  * phone, offline, free, with no third-party OCR and no network call. `nutritionPanel.ts` turns
  * the lines it returns into a panel.
  */
-import { recogniseText as recogniseOnDevice } from '../../../modules/bevi-text-recognition';
+import { AVAILABLE, recogniseText as recogniseOnDevice } from '../../../modules/bevi-text-recognition';
 
 import type { RecognisedLine } from './nutritionPanel';
 
-/** Vision is always there on iOS: it is part of the system, not a download. */
-export const TEXT_RECOGNITION_AVAILABLE: boolean = true;
+/**
+ * Whether this binary can read a label. Vision is always on the device, but the module that
+ * reaches it ships with the build, so an app installed before it existed cannot -- and must be
+ * offered no button rather than a failure it would blame on the photo.
+ */
+export const TEXT_RECOGNITION_AVAILABLE: boolean = AVAILABLE;
 
 /**
  * The lines of text in the image at `uri` (a local `file://` URI from `expo-image-picker`).

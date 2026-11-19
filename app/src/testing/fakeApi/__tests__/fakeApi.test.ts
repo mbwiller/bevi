@@ -764,7 +764,10 @@ describe('label-read nutrition', () => {
     const create = (nutrition: object, withLabel = true) =>
       api.bevs.create({ ...base, name: 'Rules drink', photoAssetId, ...(withLabel ? { labelAssetId } : {}), nutrition: nutrition as never });
     // label-ocr: no label photo, a barcode, or a source URL are each refused.
-    await expect(create(reading, false)).rejects.toMatchObject(field('nutrition'));
+    // A missing label photo names `labelAssetId`, as the server does, because
+    // the wizard re-uploads for that field and clears the snapshot for
+    // `nutrition` -- different recoveries, so the fake must pick the same one.
+    await expect(create(reading, false)).rejects.toMatchObject(field('labelAssetId'));
     await expect(create({ ...reading, barcode: '012345678901' })).rejects.toMatchObject(field('nutrition'));
     await expect(create({ ...reading, sourceUrl: 'https://world.openfoodfacts.org/product/012345678901' })).rejects.toMatchObject(field('nutrition'));
     // openfoodfacts (explicit or absent): still needs a digits barcode and its exact URL.
