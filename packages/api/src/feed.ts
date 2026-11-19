@@ -11,6 +11,7 @@ import {
   type Profile,
 } from '@bevi/shared';
 import { mapError } from './errors';
+import { requireUserId } from './currentUser';
 import {
   mapBevOfPeriod,
   mapBevSummary,
@@ -24,12 +25,6 @@ import {
   type ProfileViewRow,
 } from './mappers';
 import { clampLimit, decodeCursor, encodeCursor } from './paging';
-
-async function requireUserId(client: SupabaseClient): Promise<string> {
-  const { data, error } = await client.auth.getUser();
-  if (error || !data.user) throw new ApiError('unauthorized', 'Not signed in');
-  return data.user.id;
-}
 
 interface FeedCursor {
   beforeId: number;

@@ -1,11 +1,12 @@
 import type { ComponentType } from 'react';
 
 /**
- * The reporter's code, fetched on demand: the root layout mounts it only for a signed-in internal
- * reporter, so no other account downloads it. A chunk that fails to load (offline, a stale deploy)
- * yields nothing rather than an error that would take the app down with it. Its own module so a
- * test can swap the dynamic import (jest can't run one) for a plain require.
+ * The reporter is built on the DOM (it redraws the page to a canvas and hit-tests real elements),
+ * so the native app has none: this file is what iOS bundles, and it never imports the reporter.
+ * The web build resolves loadHost.web.ts instead. `REPORTER_SUPPORTED` (supported.ts) keeps every
+ * way in closed off the web, so this component is never mounted; it exists so the root layout has
+ * one import on both platforms.
  */
 export function loadReportHost(): Promise<{ default: ComponentType }> {
-  return import('./ReportHost').catch(() => ({ default: () => null }));
+  return Promise.resolve({ default: () => null });
 }

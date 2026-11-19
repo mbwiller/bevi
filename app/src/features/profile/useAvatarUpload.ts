@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useUpdateMe, useUploadMedia } from '@/api/hooks';
 import { AVATAR_MAX_EDGE, isUnsupportedImage, pickImage, preparePhoto, revokeIfBlob, type PreparedPhoto } from '@/features/create-bev/photo';
-import { errorCopy } from '@/lib/errorCopy';
+import { formErrorMessage } from '@/features/auth/formError';
 import { useSession } from '@/state/session';
 
 const UNSUPPORTED = "That image can't be used. Try a JPEG or PNG.";
@@ -12,8 +12,7 @@ const REJECTED = "Couldn't upload your photo. Try another one.";
 function avatarError(e: unknown): string {
   if (isUnsupportedImage(e)) return UNSUPPORTED;
   if (isApiError(e) && e.code === 'validation') return REJECTED;
-  const copy = errorCopy(e);
-  return `${copy.title}. ${copy.message}`;
+  return formErrorMessage(e);
 }
 
 /**

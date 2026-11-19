@@ -24,7 +24,7 @@ export interface FakeControls {
    */
   setInternalReporter(internal: boolean): void;
   /**
-   * Move one of the fake's bug tickets to a workflow state, as triage would in Linear: 'in_review'
+   * Move one of the fake's bug tickets to a workflow state, as a founder would on the board: 'in_review'
    * makes My reports offer Verified on device; anything but triage/todo/in_progress takes it out
    * of the ranked list (`rank: null`).
    */

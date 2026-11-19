@@ -23,7 +23,7 @@ export function keyboardInsetFrom(innerHeight: number, vv: VisualViewportLike): 
 /**
  * The keyboard's height over the bottom of the screen while it is open, else 0, for content pinned
  * to the bottom (a composer) to pad itself above it. Web: from `visualViewport` resize and scroll
- * events. Native (unused while the app is web-only): the Keyboard module's show and hide events.
+ * events. Native: the Keyboard module's show and hide events (the keyboard's end height).
  */
 export function useKeyboardInset(enabled = true): number {
   const [inset, setInset] = useState(0);

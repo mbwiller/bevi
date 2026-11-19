@@ -1,13 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ApiError, type MediaApi, type UploadMediaInput, type UploadMediaResult } from '@bevi/shared';
 import { mapError } from './errors';
+import { requireUserId } from './currentUser';
 import { publicUrl } from './mappers';
-
-async function requireUserId(client: SupabaseClient): Promise<string> {
-  const { data, error } = await client.auth.getUser();
-  if (error || !data.user) throw new ApiError('unauthorized', 'Not signed in');
-  return data.user.id;
-}
+import { toUploadBody, uploadByteLength } from './uploads';
 
 // Interim simplification (no `process-photo` Edge Function / background-
 // removal pipeline yet -- that's milestone 1.6, a separate ticket):
@@ -59,9 +55,18 @@ export function createMediaApi(client: SupabaseClient): MediaApi {
       if (!ext) {
         throw new ApiError('validation', `Unsupported mimeType: ${input.mimeType}`, { field: 'mimeType' });
       }
-      if (input.file.size > MAX_UPLOAD_BYTES) {
+      // `.size` only exists on a Blob; bytes carry `.byteLength` (uploads.ts).
+      if (uploadByteLength(input.file) > MAX_UPLOAD_BYTES) {
         throw new ApiError('validation', `File exceeds the ${MAX_UPLOAD_BYTES} byte limit`, { field: 'file' });
       }
+
+      // A Blob goes through as-is (the web path); raw bytes are normalised to
+      // an ArrayBuffer, the shape supabase-js Storage uploads correctly off
+      // the browser. Off the web a Blob throws 'validation' here -- see
+      // uploads.ts for why React Native cannot send one. Done before the
+      // rate-limit RPC below so an unusable payload costs the caller no quota,
+      // same as the two validation checks above.
+      const body = toUploadBody(input.file);
 
       // `assert_rate()` is security-definer SQL, only callable from
       // inside another SQL/plpgsql function -- the Storage API has no
@@ -74,7 +79,7 @@ export function createMediaApi(client: SupabaseClient): MediaApi {
       const bucket = BUCKET_BY_KIND[input.kind];
       const path = `${uid}/${randomId()}.${ext}`;
 
-      const { error: uploadError } = await client.storage.from(bucket).upload(path, input.file, { contentType: input.mimeType });
+      const { error: uploadError } = await client.storage.from(bucket).upload(path, body, { contentType: input.mimeType });
       if (uploadError) throw mapError(uploadError);
 
       return {

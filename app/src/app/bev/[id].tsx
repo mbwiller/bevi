@@ -1,3 +1,4 @@
+import { NutritionCard } from '@/features/create-bev/NutritionCard';
 import { isApiError } from '@bevi/shared';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -158,6 +159,7 @@ export default function BevDetailScreen() {
           )}
         </View>
 
+        {bev.nutrition ? <View style={styles.nutrition}><NutritionCard nutrition={bev.nutrition} /></View> : null}
         {bev.nutritionLabelUrl ? (
           <Pill
             icon="file-text"
@@ -212,6 +214,7 @@ const styles = StyleSheet.create({
   buttons: { flexDirection: 'row', gap: spacing.md, paddingHorizontal: spacing.gutter },
   buttonsGap: { marginTop: spacing.xl },
   button: { flex: 1, justifyContent: 'center', minHeight: size.target },
+  nutrition: { paddingHorizontal: spacing.gutter, paddingTop: spacing.xl },
   label: { alignSelf: 'center', marginTop: spacing.xl },
   footer: { paddingHorizontal: spacing.gutter, paddingTop: spacing.xxl },
 });
