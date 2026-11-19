@@ -2,7 +2,7 @@
 
 > This is the barcode route. A drink Open Food Facts has never heard of has its
 > panel read off a photo instead, on the device, with no service and no
-> credential: `docs/nutrition-label-ocr.md` (BEV-13, contract 2.16.0), which is
+> credential: `docs/nutrition-label-ocr.md` (BEV-13, contract 3.1.0), which is
 > why `NutritionPreview` now carries a `source` and why `barcode` and
 > `sourceUrl` can be null.
 

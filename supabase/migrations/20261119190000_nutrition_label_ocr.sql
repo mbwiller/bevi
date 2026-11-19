@@ -1,5 +1,5 @@
 -- Nutrition read from a photo of the label, for the products a barcode lookup
--- cannot answer (contract 2.16.0: NutritionPreview.source, and a nullable
+-- cannot answer (contract 3.1.0: NutritionPreview.source, and a nullable
 -- `barcode`/`sourceUrl`). The reading itself happens ON THE DEVICE, in the
 -- app, using the platform's own text recogniser: there is no service to call,
 -- no credential, and nothing for this migration to authorise or meter. Two

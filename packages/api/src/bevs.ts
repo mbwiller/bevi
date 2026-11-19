@@ -3,6 +3,7 @@ import { MIN_N_USER, RANKING_VERSION, predictScore } from '@bevi/ranking';
 import {
   ApiError,
   type Bev,
+  type BevIcon,
   type BevLeaf,
   type BevPrediction,
   type BevsApi,
@@ -17,11 +18,13 @@ import {
 import {
   bucketFromDb,
   mapBev,
+  mapBevIcon,
   mapBevLeaf,
   mapBevSimilarity,
   mapBevSummary,
   mapNutrition,
   mapProfile,
+  type GeneratedBevIconRow,
   type BevLeafRow,
   type BevRow,
   type BevSimilarityRow,
@@ -210,7 +213,7 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
       is_starter: row.is_starter,
     };
     // `mapNutrition` is what tolerates a snapshot stored before contract
-    // 2.16.0 added `source` (mappers.ts); the missing-table check above is
+    // 3.1.0 added `source` (mappers.ts); the missing-table check above is
     // what tolerates a backend with no `bev_nutrition` at all.
     return { ...mapBev(client, bevRow, {
       myRanking,
@@ -271,7 +274,10 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
       p_category_id: input.categoryId,
       p_price_tier: input.priceTier,
       p_price_estimated: input.priceEstimated,
-      p_photo_asset_id: input.photoAssetId,
+      // Optional now. `null` is what makes the Bev 'pending_photo' and
+      // INELIGIBLE for icon generation -- create_bev schedules a job only
+      // when this is a real asset it can verify (20261119185800).
+      p_photo_asset_id: input.photoAssetId ?? null,
       p_label_asset_id: input.labelAssetId ?? null,
     };
     // Both nutrition migrations are applied by hand after the backend deploy,
@@ -374,5 +380,17 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
     return ((data ?? []) as BevLeafRow[]).map(mapBevLeaf);
   }
 
-  return { search, get, findLikelyDuplicates, create, report, getStarterCandidates, similarities, similar, leaves };
+  // The same bulk shape as `leaves`, and for the same reason: a feed page or
+  // the profile collection asks about every Bev on screen in one call. Nothing
+  // here writes, so drawing a screen can never start a generation job.
+  async function icons(bevIds: readonly string[]): Promise<BevIcon[]> {
+    await requireUserId(client);
+    // No ids means no rows: skip the round trip, as `leaves` and `similarities` do.
+    if (bevIds.length === 0) return [];
+    const { data, error } = await client.rpc('get_bev_icons', { p_bev_ids: [...bevIds] });
+    if (error) throw mapError(error);
+    return ((data ?? []) as GeneratedBevIconRow[]).map((row) => mapBevIcon(client, row));
+  }
+
+  return { search, get, findLikelyDuplicates, create, report, getStarterCandidates, similarities, similar, leaves, icons };
 }

@@ -21,13 +21,13 @@ Function that called a hosted vision model, which meant an API key, a cost per
 scan, a network round trip, and users' photographs going to a third party. The
 platform turned out to already ship the thing we needed, so that whole half was
 deleted: no `nutrition-ocr` function, no `claim_label_ocr`, no rate limit (there
-is no spending to meter), and no `NutritionApi.scanLabel`. Contract 2.16.0 keeps
+is no spending to meter), and no `NutritionApi.scanLabel`. Contract 3.1.0 keeps
 only what the snapshot itself needs — `source`, and a nullable
 `barcode`/`sourceUrl`.
 
 | Piece | Where |
 |---|---|
-| Contract 2.16.0 | `shared/src/`: `NutritionPreview.source` (`'openfoodfacts' \| 'label-ocr'`), nullable `barcode`/`sourceUrl`. No new API method. |
+| Contract 3.1.0 | `shared/src/`: `NutritionPreview.source` (`'openfoodfacts' \| 'label-ocr'`), nullable `barcode`/`sourceUrl`. No new API method. |
 | Text recognition | `app/src/features/create-bev/textRecognition.ts` → a local Expo module over `VNRecognizeTextRequest`. `textRecognition.web.ts` reports unavailable. |
 | The parser | `app/src/features/create-bev/nutritionPanel.ts` |
 | Persistence | `public.create_bev_with_nutrition_v2(...)`, `bev_nutrition.source` widened |

@@ -237,13 +237,13 @@ describe('bevs.get before the nutrition migration is pushed', () => {
 });
 
 // --------------------------------------------------------------------------
-// Reading back a snapshot written before contract 2.16.0 added `source`.
+// Reading back a snapshot written before contract 3.1.0 added `source`.
 // Those rows are stored jsonb and nothing rewrites them, so the mapping
 // boundary is the only place that can make them legal `NutritionPreview`s.
 // --------------------------------------------------------------------------
 
 describe('mapNutrition', () => {
-  // Exactly the jsonb a Bev created before 2.16.0 holds: an Open Food Facts
+  // Exactly the jsonb a Bev created before 3.1.0 holds: an Open Food Facts
   // match, with no `source` key at all.
   const stored = {
     barcode: '012345678901', productName: 'Test water', basis: 'Per serving (355 ml)',

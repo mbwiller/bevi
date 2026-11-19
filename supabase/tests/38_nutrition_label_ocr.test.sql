@@ -1,4 +1,4 @@
--- Nutrition read off a label photo (20261119153337): the widened
+-- Nutrition read off a label photo (20261119190000): the widened
 -- bev_nutrition.source constraint and
 -- create_bev_with_nutrition_v2(). v1's own behaviour stays in 37.
 begin;
@@ -19,7 +19,7 @@ insert into storage.objects (bucket_id, name, owner_id) values
 
 -- A label read: no barcode, no third-party page, sodium in milligrams.
 set local test.ocr = '{"barcode":null,"productName":"pgTAP OCR Dew","basis":"Per serving (12 fl oz (355 mL))","calories":170,"fatGrams":0,"carbohydrateGrams":46,"sugarGrams":46,"proteinGrams":null,"sodiumMg":60,"sourceUrl":null,"source":"label-ocr"}';
--- What a client built before 2.16.0 sends: no `source` key at all.
+-- What a client built before 3.1.0 sends: no `source` key at all.
 set local test.nosource = '{"barcode":"012345678905","productName":"pgTAP OCR Water","basis":"Per serving (355 ml)","sourceUrl":"https://world.openfoodfacts.org/product/012345678905","calories":0,"fatGrams":null,"carbohydrateGrams":0,"sugarGrams":0,"proteinGrams":null,"sodiumMg":4}';
 
 -- ---------------------------------------------------------------------------

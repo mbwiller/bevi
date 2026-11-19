@@ -10,6 +10,7 @@ import type {
   FlavorBase,
   FlavorProfileSource,
   FlavorServe,
+  IconStatus,
   PhotoStatus,
   PriceTier,
 } from './enums';
@@ -132,6 +133,79 @@ export interface CategoryNode {
 export interface BevLeaf {
   bevId: string;
   leafCategoryId: string | null;
+}
+
+/**
+ * A Bev's generated icon (`bevs.icons()`), the illustrated Bevi-style asset for
+ * a custom Bev someone created with a photograph.
+ *
+ * It is NOT on `BevSummary`, deliberately: a summary arrives from about a dozen
+ * RPCs and only some could carry it, so a field there would be null for
+ * reasons that have nothing to do with whether the icon exists. One batch call
+ * per screen answers for a whole list instead, exactly as `leaves()` does.
+ *
+ * `generatedIconUrl` is set only when `iconStatus` is `'completed'`. An id the caller
+ * cannot see is OMITTED from the result, so a short result is normal; a Bev
+ * that exists with no icon comes back with `'none'` (never eligible) or
+ * `'pending'`/`'processing'`/`'failed'`. In every case but `'completed'` the
+ * caller draws the authored catalog icon, then the category art.
+ *
+ * Fetching this never starts a generation job.
+ */
+export interface BevIcon {
+  bevId: string;
+  /**
+   * The AI illustration generated for a custom Bev, or null unless
+   * `iconStatus` is 'completed'.
+   *
+   * NOT `BevSummary.iconUrl`, which is a different thing that arrived in
+   * 2.13.0: that one is the AUTHORED catalogue icon, an SVG published from
+   * `design/beverage-icons/manifest.json` into `public.bev_icons`. This is a
+   * raster PNG matted from a user's photograph, in `bev-generated-icons`. A
+   * Bev can have either, both or neither, so they are separate fields in
+   * separate buckets and the names say which is which.
+   */
+  generatedIconUrl: string | null;
+  iconStatus: IconStatus;
+  /**
+   * The one authored catalogue icon this Bev may borrow, or null — so a custom
+   * drink with no generated icon of its own shows a real Bevi illustration
+   * instead of a generic category silhouette.
+   *
+   * Null when `generatedIconUrl` is set (it needs none), and null when nothing
+   * in the Bev's category is drawn yet. The second case is normal and not an
+   * error: fall through to the category art.
+   *
+   * The SERVER chooses it, having joined `public.bev_icons` so that an undrawn
+   * candidate is never offered. Earlier drafts of this same unreleased field
+   * were `fallbackBevIds`, a ranked list of ids the client walked against a
+   * bundled map of which Bevs were drawn; #201 retired that map, so the
+   * database answers it instead. Nothing shipped the list shape.
+   */
+  fallbackIconUrl: string | null;
+  /**
+   * Where the drink's label sits on `generatedIconUrl`, normalised 0-1, so the app can
+   * draw the wordmark across it from the Bev's own `brand` / `name`.
+   *
+   * The lettering is deliberately NOT part of the generated image: the image
+   * model rejects a recognisable brand mark outright, so asking for one fails
+   * the whole generation. Drawing it here is also crisper -- vector type at
+   * every size, and omittable at icon sizes where it would only be a smudge.
+   *
+   * Null when the drink has no label band at all (a cafe latte, a homemade
+   * smoothie), which is the correct answer for those: draw no wordmark.
+   */
+  labelBand: BevIconLabelBand | null;
+}
+
+/** All normalised 0-1 against the icon, so they survive any resize. */
+export interface BevIconLabelBand {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  /** True when the band is dark enough that white type reads on it. */
+  dark: boolean;
 }
 
 /**
@@ -625,7 +699,7 @@ export interface NutritionPreview {
   sourceUrl: string | null;
   /**
    * How to read the two fields above, and what to credit on screen. Snapshots
-   * stored before contract 2.16.0 have no `source` of their own and are mapped
+   * stored before contract 3.1.0 have no `source` of their own and are mapped
    * to `openfoodfacts`, which is what they all are.
    */
   source: NutritionSource;
