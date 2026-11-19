@@ -16,9 +16,11 @@
 --
 --   public.user_blocks                 table: A blocked B
 --   public.content_reports             table: A reported a post / comment / profile
---   public.is_blocked(uuid)            is there a block, EITHER WAY, between
---                                      the caller and this user?
---   public.blocked_user_ids()          set form of the same question
+--   schema private                     not exposed by PostgREST (config.toml
+--                                      [api].schemas is public, graphql_public)
+--   private.is_blocked(uuid)           is there a block, EITHER WAY, between
+--                                      the caller and this user? Policies and
+--                                      functions only -- never an endpoint
 --   public.block_user(uuid)            RPC
 --   public.unblock_user(uuid)          RPC
 --   public.list_blocked_users(int,int) RPC -- the "Blocked accounts" screen
@@ -33,7 +35,7 @@
 -- The INTENT is one-directional (A decided; B is never told, and B's own block
 -- list does not grow), but the EFFECT has to be mutual, or blocking an abuser
 -- just makes you invisible to yourself while they keep reading you. So every
--- read predicate in part 2 asks `is_blocked()`, which looks in both
+-- read predicate in part 2 asks `private.is_blocked()`, which looks in both
 -- directions. That is why the table is a plain ordered pair rather than an
 -- unordered one: the list screen must show exactly the people the caller
 -- chose, and `(least, greatest)` would lose that.
@@ -96,7 +98,7 @@ create policy user_blocks_select on public.user_blocks
   for select to authenticated using (blocker_id = auth.uid());
 
 comment on table public.user_blocks is
-  'IS-7: blocker_id has blocked blocked_id. One-directional in intent, mutual in effect -- see public.is_blocked().';
+  'IS-7: blocker_id has blocked blocked_id. One-directional in intent, mutual in effect -- see private.is_blocked().';
 
 -- ============================================================================
 -- 2. content_reports
@@ -117,11 +119,19 @@ comment on table public.user_blocks is
 -- a legal archive. If retention is ever needed it wants its own append-only
 -- ledger, not a loosened FK here.
 --
+-- reporter_id is the opposite: NULLABLE with `on delete set null`. A victim
+-- who reports someone and then leaves Bevi must not take the complaint with
+-- them, or the person they reported is never reviewed. The orphaned row has
+-- no reporter, so content_reports_select's own-row branch matches nobody and
+-- only an admin (or the service role) still reads it. The partial unique
+-- indexes below do not collide on a null reporter (NULLs are distinct), so
+-- two departed reporters' complaints about one post both survive.
+--
 -- STATUS is the operator's, and only the service role may move it.
 
 create table public.content_reports (
   id               bigint generated always as identity primary key,
-  reporter_id      uuid   not null references public.profiles(id) on delete cascade,
+  reporter_id      uuid   references public.profiles(id) on delete set null,
   content_type     text   not null check (content_type in ('post', 'comment', 'profile')),
   feed_event_id    bigint references public.feed_events(id) on delete cascade,
   comment_id       bigint references public.post_comments(id) on delete cascade,
@@ -174,7 +184,7 @@ comment on table public.content_reports is
   'IS-7 (App Store Guideline 1.2): one row per (reporter, reported post/comment/profile). Status is the operator''s; only the service role may move it.';
 
 -- ============================================================================
--- 3. is_blocked / blocked_user_ids -- the one definition of "hidden by a block"
+-- 3. private.is_blocked -- the one definition of "hidden by a block"
 -- ============================================================================
 -- EITHER DIRECTION. `is_blocked(x)` is "the caller and x cannot see each
 -- other", not "the caller blocked x". A block A made must hide A from B as
@@ -191,12 +201,32 @@ comment on table public.content_reports is
 -- shows the caller's own side, and the other direction would silently stop
 -- working. Definer reads both sides and is the only way this is correct.
 --
--- EXECUTE for `authenticated` is required, not optional: a function used in a
--- policy expression runs as the querying role. It discloses nothing new -- the
--- caller already knows who they blocked, and a block they are on the receiving
--- end of is indistinguishable from the other person having no content.
+-- WHY A `private` SCHEMA. Because the answer is two-way, the function itself
+-- is an oracle: called directly, `is_blocked(x)` tells a blocked person
+-- "x blocked you", the one fact user_blocks_select exists to withhold. In
+-- `public` it would be an endpoint (`/rest/v1/rpc/is_blocked`), since
+-- PostgREST exposes every function there that the caller may execute.
+-- Revoking EXECUTE is not an option: a function called from an RLS policy
+-- runs with the QUERYING role's privileges, so every policy using it would
+-- fail for `authenticated`. So it lives in `private`, which is not in
+-- config.toml's [api].schemas (public, graphql_public): `authenticated` gets
+-- USAGE on the schema and EXECUTE on the function, enough for a policy or
+-- profiles_view to call it, and there is no HTTP route that reaches it.
+-- Nothing is granted to anon: every policy that calls it is `to
+-- authenticated`, and every other caller is a security-definer function
+-- owned by postgres. service_role gets the same grants as authenticated so an
+-- operator query through profiles_view does not fail on a permission check.
+--
+-- A set-returning companion (`blocked_user_ids()`) existed in an earlier draft
+-- of this PR and was removed: nothing called it, and in `public` it listed
+-- everyone who had blocked the caller. A definer function that needs the set
+-- reads user_blocks directly.
 
-create or replace function public.is_blocked(p_user_id uuid) returns boolean
+create schema if not exists private;
+revoke all on schema private from public;
+grant usage on schema private to authenticated, service_role;
+
+create or replace function private.is_blocked(p_user_id uuid) returns boolean
 language sql
 stable
 security definer
@@ -211,32 +241,12 @@ as $$
      );
 $$;
 
-alter function public.is_blocked(uuid) owner to postgres;
-revoke execute on function public.is_blocked(uuid) from public, anon;
-grant execute on function public.is_blocked(uuid) to authenticated;
+alter function private.is_blocked(uuid) owner to postgres;
+revoke execute on function private.is_blocked(uuid) from public, anon;
+grant execute on function private.is_blocked(uuid) to authenticated, service_role;
 
-comment on function public.is_blocked(uuid) is
-  'IS-7: true when a block exists between auth.uid() and p_user_id in EITHER direction. The one definition of "hidden by a block"; used by every read path and by several RLS policies.';
-
--- The set form, for a filter that wants an anti-join rather than a per-row
--- probe (get_explore's candidate set). Same answer, both directions.
-create or replace function public.blocked_user_ids() returns setof uuid
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select ub.blocked_id from public.user_blocks ub where ub.blocker_id = auth.uid()
-  union
-  select ub.blocker_id from public.user_blocks ub where ub.blocked_id = auth.uid();
-$$;
-
-alter function public.blocked_user_ids() owner to postgres;
-revoke execute on function public.blocked_user_ids() from public, anon;
-grant execute on function public.blocked_user_ids() to authenticated;
-
-comment on function public.blocked_user_ids() is
-  'IS-7: every user id hidden from the caller by a block, in either direction. The set form of is_blocked().';
+comment on function private.is_blocked(uuid) is
+  'IS-7: true when a block exists between auth.uid() and p_user_id in EITHER direction. The one definition of "hidden by a block"; used by every read path and by several RLS policies. In schema private so PostgREST never exposes it: called directly it would tell a blocked user who blocked them.';
 
 -- ============================================================================
 -- 4. block_user
@@ -411,6 +421,10 @@ comment on function public.list_blocked_users(int, int) is
 -- person who made it. The second half matters because the sheet offers Block
 -- and Report side by side (IM-13) and a user who blocks first must still be
 -- able to report: after the block, feed_event_visible() correctly says no.
+-- The exception is ONE-directional -- the caller made the block -- and not
+-- private.is_blocked(), which is two-way: otherwise the BLOCKED person could
+-- file reports against the blocker's posts, and success versus
+-- BEVI_NOT_FOUND would tell them they had been blocked.
 --
 -- Reporting your own content is BEVI_VALIDATION (and the CHECK says so again).
 -- Rate-limited at 30 a day: a real person reports a handful; a script does not.
@@ -465,7 +479,9 @@ begin
     if v_subject is null then
       raise exception 'BEVI_NOT_FOUND' using errcode = 'P0002';
     end if;
-    if not public.feed_event_visible(p_feed_event_id) and not public.is_blocked(v_subject) then
+    if not public.feed_event_visible(p_feed_event_id)
+       and not exists (select 1 from public.user_blocks ub
+                        where ub.blocker_id = v_uid and ub.blocked_id = v_subject) then
       raise exception 'BEVI_NOT_FOUND' using errcode = 'P0002';
     end if;
 
@@ -477,7 +493,9 @@ begin
     if v_subject is null then
       raise exception 'BEVI_NOT_FOUND' using errcode = 'P0002';
     end if;
-    if not public.feed_event_visible(v_event) and not public.is_blocked(v_subject) then
+    if not public.feed_event_visible(v_event)
+       and not exists (select 1 from public.user_blocks ub
+                        where ub.blocker_id = v_uid and ub.blocked_id = v_subject) then
       raise exception 'BEVI_NOT_FOUND' using errcode = 'P0002';
     end if;
 
@@ -546,7 +564,7 @@ security definer
 set search_path = public, extensions
 as $$
 begin
-  if p_status not in ('open', 'reviewing', 'actioned', 'dismissed') then
+  if p_status is null or p_status not in ('open', 'reviewing', 'actioned', 'dismissed') then
     raise exception 'BEVI_VALIDATION' using errcode = '22023', detail = 'status';
   end if;
 

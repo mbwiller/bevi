@@ -3,15 +3,17 @@
 -- Part 1 (20261118220000) added `user_blocks`, `content_reports` and the RPCs
 -- that write them, and changed no read path at all. This file is the half App
 -- Store Review Guideline 1.2 calls "filtering": every place a signed-in user
--- can reach another user's content now asks `public.is_blocked()` -- which is
+-- can reach another user's content now asks `private.is_blocked()` -- which is
 -- true when EITHER of them blocked the other -- and drops the row.
 --
--- WHAT THIS FILE CHANGES. Eight RLS policies, one view and twelve functions:
+-- WHAT THIS FILE CHANGES. Seven RLS policies re-created and one dropped, one
+-- view and twelve functions:
 --
 --   RLS      profiles_select           a blocked person's profile row
 --   RLS      follows_select            follow edges either side of a block
---   RLS      follows_insert            no new edge across a block (the direct
---                                      write path that bypasses follow_user)
+--   RLS      follows_insert            DROPPED: the direct write path that
+--                                      bypassed follow_user's block guard,
+--                                      rate limit and counter recount
 --   RLS      rankings_select           their rankings AND ranking notes
 --   RLS      user_stats_select         their counters (and the suggestion pool)
 --   RLS      feed_events_select        their posts
@@ -58,10 +60,13 @@
 --     disagree between viewers. `get_bev.created_by_handle` is the one place
 --     a blocked person's handle can still surface, as the catalog attribution
 --     of a Bev everybody can see. Noted, not filtered.
---   * `streaks_select` and `user_category_stats_select`: numbers with no
---     handle, no avatar and no text attached, reachable only with a user id
---     the caller got from somewhere already filtered. `get_taste_profile`,
---     the RPC that reads user_category_stats for a NAMED user, is guarded.
+--   * `streaks_select`: numbers with no handle, no avatar and no text
+--     attached, reachable only with a user id the caller got from somewhere
+--     already filtered.
+--   * `user_category_stats_select`: already own-row (`user_id = auth.uid()`,
+--     20261019000100), so it cannot show anyone else's row at all.
+--     `get_taste_profile`, the definer RPC that reads it for a NAMED user, is
+--     guarded.
 --   * `bev_reports`, `bug_reports`, `comparisons`, `want_to_try`,
 --     `user_bev_predictions`: own-row or admin-only already.
 --   * The ranking maths. A blocked person's rankings still count towards a
@@ -96,7 +101,7 @@ set search_path = public, extensions;
 -- view runs with its owner's rights and never consults a policy.
 drop policy if exists profiles_select on public.profiles;
 create policy profiles_select on public.profiles
-  for select to authenticated using (not public.is_blocked(profiles.id));
+  for select to authenticated using (not private.is_blocked(profiles.id));
 
 -- follows: was `using (true)` -- "the follow graph is not private". It stays
 -- public except across a block, in either direction and at either end, so a
@@ -106,7 +111,7 @@ create policy profiles_select on public.profiles
 drop policy if exists follows_select on public.follows;
 create policy follows_select on public.follows
   for select to authenticated using (
-    not public.is_blocked(follows.follower_id) and not public.is_blocked(follows.followee_id)
+    not private.is_blocked(follows.follower_id) and not private.is_blocked(follows.followee_id)
   );
 
 -- rankings: the age gate, plus the block. `rankings.note` is free text a user
@@ -116,7 +121,7 @@ create policy follows_select on public.follows
 drop policy if exists rankings_select on public.rankings;
 create policy rankings_select on public.rankings
   for select to authenticated using (
-    not public.is_blocked(rankings.user_id)
+    not private.is_blocked(rankings.user_id)
     and exists (
       select 1 from public.bevs b
       join public.categories c on c.id = b.category_id
@@ -131,13 +136,13 @@ create policy rankings_select on public.rankings
 -- the ten suggestion slots and merely render blank.
 drop policy if exists user_stats_select on public.user_stats;
 create policy user_stats_select on public.user_stats
-  for select to authenticated using (not public.is_blocked(user_stats.user_id));
+  for select to authenticated using (not private.is_blocked(user_stats.user_id));
 
 -- feed_events: actor-or-followee, and never across a block.
 drop policy if exists feed_events_select on public.feed_events;
 create policy feed_events_select on public.feed_events
   for select to authenticated using (
-    not public.is_blocked(feed_events.actor_id)
+    not private.is_blocked(feed_events.actor_id)
     and (
       actor_id = auth.uid()
       or exists (select 1 from public.follows f where f.follower_id = auth.uid() and f.followee_id = feed_events.actor_id)
@@ -152,7 +157,7 @@ drop policy if exists post_comments_select on public.post_comments;
 create policy post_comments_select on public.post_comments
   for select to authenticated using (
     deleted_at is null
-    and not public.is_blocked(post_comments.user_id)
+    and not private.is_blocked(post_comments.user_id)
     and (user_id = auth.uid() or public.feed_event_visible(feed_event_id))
   );
 
@@ -161,7 +166,7 @@ create policy post_comments_select on public.post_comments
 drop policy if exists post_likes_select on public.post_likes;
 create policy post_likes_select on public.post_likes
   for select to authenticated using (
-    not public.is_blocked(post_likes.user_id)
+    not private.is_blocked(post_likes.user_id)
     and (user_id = auth.uid() or public.feed_event_visible(feed_event_id))
   );
 
@@ -199,7 +204,7 @@ select
     else false
   end as can_see_alcohol
 from public.profiles
-where not public.is_blocked(id);
+where not private.is_blocked(id);
 
 -- The grants 20261012000400 left: a drop is not involved, but restating them
 -- costs nothing and makes this file self-describing.
@@ -230,7 +235,7 @@ as $$
       left join public.bevs b on b.id = e.bev_id
       left join public.categories c on c.id = b.category_id
      where e.id = p_event_id
-       and not public.is_blocked(e.actor_id)
+       and not private.is_blocked(e.actor_id)
        and (e.actor_id = auth.uid()
             or e.actor_id in (select followee_id from public.follows where follower_id = auth.uid()))
        and (b.id is null or not c.is_alcoholic or public.viewer_is_adult())
@@ -246,9 +251,9 @@ comment on function public.feed_event_visible(bigint) is
 -- get_feed, get_user_feed and get_explore are 20261112000300's definitions
 -- (sections 4 and 5, the newest) VERBATIM, with only these additions:
 --
---   get_feed       WHERE  + `and not public.is_blocked(e.actor_id)`
---                  inline comments  + `and not public.is_blocked(cm.user_id)`
---                  comment_count    + `and not public.is_blocked(pc.user_id)`
+--   get_feed       WHERE  + `and not private.is_blocked(e.actor_id)`
+--                  inline comments  + `and not private.is_blocked(cm.user_id)`
+--                  comment_count    + `and not private.is_blocked(pc.user_id)`
 --   get_user_feed  a BEVI_NOT_FOUND guard beside the existing one, so a
 --                  blocked person's profile feed is indistinguishable from a
 --                  user who does not exist; the same two comment filters.
@@ -340,7 +345,7 @@ as $$
          -- IS-7: agrees with the inline `comments` below, which is filtered.
          (select count(*) from public.post_comments pc
            where pc.feed_event_id = e.id and pc.deleted_at is null
-             and not public.is_blocked(pc.user_id))::integer,
+             and not private.is_blocked(pc.user_id))::integer,
          coalesce(ic.items, '[]'::jsonb),
          -- 2.12.0: the one added column. See feed_also_bevd above.
          public.feed_also_bevd(e.bev_id, e.actor_id),
@@ -376,18 +381,19 @@ as $$
            where cm.feed_event_id = e.id and cm.deleted_at is null
              -- IS-7: a blocked person's comment on a post the caller can
              -- otherwise see. The post's own visibility says nothing about it.
-             and not public.is_blocked(cm.user_id)
+             and not private.is_blocked(cm.user_id)
            order by cm.id
            limit 7
         ) t
     ) ic on true
    cross join prior bp
    where e.kind in ('ranked', 'reranked')
-     -- IS-7, and load-bearing rather than belt-and-braces: `follows` has a
-     -- direct INSERT policy (20261011000100), so a client can create a follow
-     -- edge through PostgREST without going near follow_user. Section 5 closes
-     -- that policy too, but this feed must be right on its own.
-     and not public.is_blocked(e.actor_id)
+     -- IS-7, and load-bearing rather than belt-and-braces: until section 5h
+     -- dropped it, `follows` had a direct INSERT policy (20261011000100) that
+     -- let a client create a follow edge through PostgREST without going near
+     -- follow_user, and an edge can also predate the block. This feed must be
+     -- right on its own, whatever the follow graph holds.
+     and not private.is_blocked(e.actor_id)
      and (e.actor_id = auth.uid()
           or e.actor_id in (select followee_id from public.follows where follower_id = auth.uid()))
      and (b.id is null or not c.is_alcoholic or public.viewer_is_adult())
@@ -459,7 +465,7 @@ begin
   -- nothing about whether they were blocked or whether the account exists, and
   -- the app needs no new error code to handle it. Returning an empty page
   -- instead would leave a profile screen with a working header and no posts.
-  if public.is_blocked(p_user_id) then
+  if private.is_blocked(p_user_id) then
     raise exception 'BEVI_NOT_FOUND' using errcode = 'P0002';
   end if;
 
@@ -487,7 +493,7 @@ begin
            -- IS-7, as get_feed.
            (select count(*) from public.post_comments pc
              where pc.feed_event_id = e.id and pc.deleted_at is null
-               and not public.is_blocked(pc.user_id))::integer,
+               and not private.is_blocked(pc.user_id))::integer,
            coalesce(ic.items, '[]'::jsonb),
            -- 2.12.0: the one added column. See feed_also_bevd above.
            public.feed_also_bevd(e.bev_id, e.actor_id),
@@ -522,7 +528,7 @@ begin
               join public.profiles cp on cp.id = cm.user_id
              where cm.feed_event_id = e.id and cm.deleted_at is null
                -- IS-7, as get_feed.
-               and not public.is_blocked(cm.user_id)
+               and not private.is_blocked(cm.user_id)
              order by cm.id
              limit 7
           ) t
@@ -625,7 +631,7 @@ begin
          -- IS-7: a blocked person is not a BRIDGE either. Without this, the
          -- people they follow would still be recommended to the caller as
          -- "two hops away", which is discovery flowing through the wall.
-         and not public.is_blocked(f.followee_id)
+         and not private.is_blocked(f.followee_id)
       union
       select f.followee_id, h.depth + 1
         from hops h
@@ -650,7 +656,7 @@ begin
          -- `candidates`, so it covers D-01's "the instance is small, show
          -- everyone" fallback, where the two-hop walk above is bypassed
          -- entirely and every profile is a candidate.
-         and not public.is_blocked(c.user_id)
+         and not private.is_blocked(c.user_id)
          and not exists (
            select 1 from public.follows f
             where f.follower_id = v_uid and f.followee_id = c.user_id
@@ -801,7 +807,7 @@ begin
        -- IS-7, the same conjunct the inline comments in get_feed get: this
        -- pages the full thread, so a blocked person's comment must be absent
        -- here too or "View all N comments" would reintroduce it.
-       and not public.is_blocked(cm.user_id)
+       and not private.is_blocked(cm.user_id)
        and (p_before_id is null or cm.id < p_before_id)
      order by cm.id desc
      limit least(greatest(coalesce(p_limit, 20), 1), 50);
@@ -854,7 +860,7 @@ as $$
          -- not be a followee at all; stated here because `follows` has a
          -- direct INSERT policy and because this function is documented as
          -- being right on its own.
-         and not public.is_blocked(f.followee_id)
+         and not private.is_blocked(f.followee_id)
          and (not c.is_alcoholic or public.viewer_is_adult())
     ) t;
 $$;
@@ -931,7 +937,7 @@ begin
                -- and nothing reaches this function's input list that
                -- profiles_view and user_stats_select have not already
                -- filtered.
-               and not public.is_blocked(theirs.follower_id)
+               and not private.is_blocked(theirs.follower_id)
           ) m
      ) fb
      order by want.asked_id;
@@ -978,7 +984,7 @@ begin
        where f.follower_id = v_uid
          -- IS-7: a blocked person is not a friend. block_user already removed
          -- the edge; `follows` has a direct INSERT policy, so say it here.
-         and not public.is_blocked(f.followee_id)
+         and not private.is_blocked(f.followee_id)
     ),
     board as (
       select rp.user_id      as member_id,
@@ -1057,7 +1063,7 @@ as $$
   -- caller who has blocked the person at rank 3 sees 1, 2, 4 rather than a
   -- board that silently disagrees with everyone else's. The friends board is
   -- where ranks are recounted within a set, and it says so.
-  where not public.is_blocked(rp.user_id)
+  where not private.is_blocked(rp.user_id)
   -- Display order breaks points ties the same way rank.ts's rankUsers does.
   order by rp.points desc, rp.bevs_ranked desc, p.created_at asc, p.id asc
   limit p_limit;
@@ -1096,7 +1102,7 @@ begin
   -- IS-7: a blocked person's profile is "not found", the same answer
   -- get_user_feed now gives, so the whole profile screen fails as one rather
   -- than rendering a header with an empty feed under it.
-  if public.is_blocked(p_user_id) then
+  if private.is_blocked(p_user_id) then
     raise exception 'BEVI_NOT_FOUND' using errcode = 'P0002';
   end if;
 
@@ -1148,10 +1154,10 @@ begin
   if not found then
     raise exception 'BEVI_NOT_FOUND' using errcode = 'P0002';
   end if;
-  -- IS-7, as get_profile_stats. user_category_stats itself is left on
-  -- `using (true)`: it is numbers with no handle or text attached, and this
-  -- is the one RPC that reads it for a named user.
-  if public.is_blocked(p_user_id) then
+  -- IS-7, as get_profile_stats. user_category_stats_select is already
+  -- own-row (`user_id = auth.uid()`, 20261019000100), so this definer RPC is
+  -- the one path that reads it for a named user, and the guard belongs here.
+  if private.is_blocked(p_user_id) then
     raise exception 'BEVI_NOT_FOUND' using errcode = 'P0002';
   end if;
 
@@ -1190,7 +1196,7 @@ begin
   -- IS-7: you cannot follow across a block, in either direction, and the
   -- answer does not say which. BEVI_NOT_FOUND matches what every read path
   -- now says about that person.
-  if public.is_blocked(p_user_id) then
+  if private.is_blocked(p_user_id) then
     raise exception 'BEVI_NOT_FOUND' using errcode = 'P0002';
   end if;
 
@@ -1211,19 +1217,20 @@ begin
 end;
 $$;
 
--- follows_insert (20261011000100) is one of the few direct write policies in
--- this schema -- "a user's own small tables may reasonably get own-row
--- policies" (supabase/CLAUDE.md) -- which means a client can create a follow
--- edge through PostgREST without calling follow_user at all, and so without
--- the guard above. Close it with the same predicate. `not is_blocked` rather
--- than naming a direction: neither party may follow the other.
+-- follows_insert (20261011000100, `with check (follower_id = auth.uid())`) was
+-- one of the few direct write policies in this schema, which meant a client
+-- could create a follow edge through PostgREST without calling follow_user at
+-- all -- skipping the block guard above, the 100-a-day rate limit, and the
+-- follower/following recount, so the counters drift. Adding `not is_blocked`
+-- to it would close only the first of those three. It is DROPPED instead:
+-- follow_user is the one way in. packages/api already only ever calls the
+-- RPC (follows.ts, `client.rpc('follow_user', ...)`); its direct reads of
+-- `follows` are selects, so no client loses a path it uses. Removing a write
+-- policy no client exercises changes no shape a shipped binary parses.
 --
 -- follows_delete is left alone: unfollowing across a block is harmless and
 -- block_user does exactly that on the caller's behalf.
 drop policy if exists follows_insert on public.follows;
-create policy follows_insert on public.follows
-  for insert to authenticated
-  with check (follower_id = auth.uid() and not public.is_blocked(followee_id));
 
 -- ============================================================================
 -- 6. What is NOT here
@@ -1232,7 +1239,8 @@ create policy follows_insert on public.follows
 -- reasoning is in this file's header; this is the index.
 --
 --   like_count on get_feed / get_user_feed  -- aggregate, no identity (D-15)
---   streaks_select, user_category_stats_select -- numbers, no identity
+--   streaks_select -- numbers, no identity
+--   user_category_stats_select -- own-row already (20261019000100)
 --   bevs, bev_stats, bev_aliases, categories, featured_bevs -- shared catalog
 --   search_bevs, find_similar_bevs, get_bev, get_bev_leaderboard,
 --     get_featured, get_bev_of_period, get_similar_bevs, list_bucket_bevs,

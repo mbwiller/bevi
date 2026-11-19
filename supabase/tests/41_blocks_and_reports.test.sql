@@ -31,7 +31,7 @@
 -- unfollow can explain it, and the direct PostgREST reads, which no RPC
 -- touches) and the rest are belt-and-braces by design.
 begin;
-select plan(100);
+select plan(119);
 
 -- ---------------------------------------------------------------------------
 -- Users, follows, Bevs
@@ -116,8 +116,53 @@ select ok(
   'resolve_content_report is executable by service_role'
 );
 select ok(
-  has_function_privilege('authenticated', 'public.is_blocked(uuid)', 'EXECUTE'),
-  'is_blocked is executable by authenticated -- it is used in RLS policies, which run as the caller'
+  has_function_privilege('authenticated', 'private.is_blocked(uuid)', 'EXECUTE')
+    and has_schema_privilege('authenticated', 'private', 'USAGE'),
+  'private.is_blocked is executable by authenticated -- it is used in RLS policies, which run as the caller'
+);
+select ok(
+  not has_function_privilege('anon', 'private.is_blocked(uuid)', 'EXECUTE')
+    and not has_schema_privilege('anon', 'private', 'USAGE'),
+  'anon can neither reach schema private nor execute private.is_blocked'
+);
+-- The oracle checks. PostgREST exposes `public` (config.toml [api].schemas is
+-- public, graphql_public), so a function there is an endpoint. Neither helper
+-- may be one: each would tell a blocked user who blocked them.
+select is(
+  to_regprocedure('public.is_blocked(uuid)'),
+  NULL,
+  'is_blocked is not in schema public, so /rest/v1/rpc/is_blocked does not exist'
+);
+select is(
+  (select count(*)::int from pg_proc where proname = 'blocked_user_ids'),
+  0,
+  'blocked_user_ids() no longer exists in any schema'
+);
+select is(
+  (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'private'
+      and p.proname <> 'is_blocked'),
+  0,
+  'schema private holds is_blocked and nothing else (a new helper there must be reviewed here)'
+);
+-- Every client-callable function in public that reads user_blocks directly.
+-- Each one has been checked to answer only about blocks the CALLER made
+-- (block_user / unblock_user / list_blocked_users / report_content's
+-- exception); a new one must be checked the same way and added here.
+select is(
+  (select array_agg(p.proname::text order by p.proname)
+     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.prosrc ilike '%user_blocks%'
+      and has_function_privilege('authenticated', p.oid, 'EXECUTE')),
+  array['block_user', 'list_blocked_users', 'report_content', 'unblock_user'],
+  'the only client-callable public functions that read user_blocks are the four one-directional RPCs'
+);
+select is(
+  (select count(*)::int from pg_policies
+    where schemaname = 'public' and tablename = 'follows' and cmd in ('INSERT', 'ALL')),
+  0,
+  'follows has no INSERT policy: follow_user (rate limit, block guard, counter recount) is the only way in'
 );
 
 -- ---------------------------------------------------------------------------
@@ -485,6 +530,18 @@ select is(
   0,
   'vil cannot see that they were blocked: user_blocks shows only the blocks you made'
 );
+-- The RPC routes a blocked user would try, as PostgREST would resolve them
+-- (schema public). Neither exists, so neither can answer "who blocked me?".
+select throws_ok(
+  $$ select public.is_blocked('00000000-0000-4000-8000-000000004001'::uuid) $$,
+  '42883', NULL,
+  'vil cannot ask public.is_blocked(me): no such function in the exposed schema'
+);
+select throws_ok(
+  $$ select * from public.blocked_user_ids() $$,
+  '42883', NULL,
+  'vil cannot call public.blocked_user_ids(): it was removed'
+);
 select is(
   (select count(*)::int from public.list_blocked_users(50)),
   0,
@@ -507,6 +564,15 @@ select is(
   (select count(*)::int from public.get_feed(50) f where f.actor_id = '00000000-0000-4000-8000-000000004002'),
   2,
   'pal still sees vil''s posts -- a block between two other people is not global moderation'
+);
+-- No block is involved here at all: the direct write path is closed for
+-- everyone, not just across a block, so the rate limit and the counters
+-- cannot be skipped.
+select throws_ok(
+  $$ insert into public.follows (follower_id, followee_id)
+     values ('00000000-0000-4000-8000-000000004004', '00000000-0000-4000-8000-000000004003') $$,
+  '42501', NULL,
+  'a direct insert into follows is refused even with no block involved: follow_user is the only way in'
 );
 
 -- me's own list, and lifting a block.
@@ -611,6 +677,29 @@ select throws_ok(
   'report_content: an over-long note is rejected'
 );
 
+-- The block exception is ONE-directional: only the side that MADE the block
+-- may report content it can no longer see. Otherwise the blocked side could
+-- report the blocker, and success versus not-found would say "you were
+-- blocked". Both directions, both blocks.
+select throws_ok(
+  $$ select public.report_content('spam', p_feed_event_id => (select id from t_posts where label = 'opp')) $$,
+  'P0002', 'BEVI_NOT_FOUND',
+  'report_content: me, whom opp blocked, cannot report opp''s post -- the same not-found as a missing post'
+);
+set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-000000004002", "role": "authenticated"}';
+select throws_ok(
+  $$ select public.report_content('spam', p_feed_event_id => (select id from t_posts where label = 'me')) $$,
+  'P0002', 'BEVI_NOT_FOUND',
+  'report_content: vil, whom me blocked, cannot report me''s post'
+);
+set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-000000004003", "role": "authenticated"}';
+select lives_ok(
+  $$ insert into t_reports values ('opp_on_me', public.report_content(
+       'harassment', p_feed_event_id => (select id from t_posts where label = 'me'))) $$,
+  'report_content: opp, who blocked me, can still report me''s post'
+);
+set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-000000004001", "role": "authenticated"}';
+
 -- A reporter reads their own reports and nobody else's; nobody writes directly.
 select is(
   (select count(*)::int from public.content_reports),
@@ -683,6 +772,11 @@ select throws_ok(
   'resolve_content_report rejects a status outside the set'
 );
 select throws_ok(
+  $$ select public.resolve_content_report((select id from t_reports where label = 'post'), NULL) $$,
+  '22023', 'BEVI_VALIDATION',
+  'resolve_content_report rejects a null status as BEVI_VALIDATION, not a raw 23502'
+);
+select throws_ok(
   $$ select public.resolve_content_report(9999999, 'dismissed') $$,
   'P0002', 'BEVI_NOT_FOUND',
   'resolve_content_report on a report that does not exist is not found'
@@ -724,11 +818,13 @@ select is(
   'and the reports filed about it'
 );
 
--- The reporter's side of the same cascade.
+-- The reporter's side is NOT a cascade: a report outlives the person who
+-- filed it, or a victim who reports and then leaves erases the complaint.
 set local role authenticated;
 set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-000000004003", "role": "authenticated"}';
 select lives_ok(
-  $$ select public.report_content('spam', p_user_id => '00000000-0000-4000-8000-000000004004'::uuid) $$,
+  $$ insert into t_reports values ('opp_on_pal', public.report_content(
+       'spam', p_user_id => '00000000-0000-4000-8000-000000004004'::uuid)) $$,
   'opp files a report about pal'
 );
 select lives_ok(
@@ -741,13 +837,58 @@ select is(
   (select count(*)::int from public.content_reports
     where reporter_id = '00000000-0000-4000-8000-000000004003'),
   0,
-  'deleting an account removes the reports it filed'
+  'deleting an account leaves no report attributed to it'
+);
+select is(
+  (select array_agg(cr.reported_user_id::text order by cr.reported_user_id::text)
+     from public.content_reports cr
+    where cr.id in (select id from t_reports where label in ('opp_on_me', 'opp_on_pal'))
+      and cr.reporter_id is null
+      and cr.status = 'open'),
+  array['00000000-0000-4000-8000-000000004001', '00000000-0000-4000-8000-000000004004'],
+  'but both reports opp filed survive, open, with a null reporter, so me and pal can still be reviewed'
 );
 select is(
   (select count(*)::int from public.user_blocks
     where blocker_id = '00000000-0000-4000-8000-000000004003'),
   0,
-  'and the blocks it made'
+  'and the blocks it made are gone'
+);
+
+-- An orphaned report is the queue's, not anybody's: no client session reads
+-- it through the own-row branch of content_reports_select.
+set local role authenticated;
+set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-000000004004", "role": "authenticated"}';
+select is(
+  (select count(*)::int from public.content_reports),
+  0,
+  'pal, the subject of an orphaned report, cannot read it'
+);
+
+-- A second departed reporter on the same target: the partial unique index
+-- must not collide on two null reporters.
+set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-000000004001", "role": "authenticated"}';
+select lives_ok(
+  $$ select public.report_content('spam', p_user_id => '00000000-0000-4000-8000-000000004004'::uuid) $$,
+  'me also reports pal''s profile'
+);
+select lives_ok(
+  $$ select public.delete_my_account() $$,
+  'me deletes their account'
+);
+reset role;
+select is(
+  (select count(*)::int from public.content_reports
+    where reported_user_id = '00000000-0000-4000-8000-000000004004'
+      and content_type = 'profile' and reporter_id is null),
+  2,
+  'two profile reports about pal from two deleted accounts coexist: null reporters do not collide'
+);
+select is(
+  (select count(*)::int from public.content_reports
+    where reported_user_id = '00000000-0000-4000-8000-000000004001'),
+  0,
+  'and the report ABOUT me went with my account, as reports about a deleted account do'
 );
 
 select * from finish();
