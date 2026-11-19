@@ -5,13 +5,16 @@ import { lazy, Suspense, useEffect, useRef, useState, type ComponentProps } from
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+
 import { apiConfig } from '@/api/client';
 import { useCanReportBug } from '@/api/hooks';
 import { createQueryClient } from '@/api/queryClient';
+import { OfflineNoticeHost } from '@/components/OfflineNotice';
 import { StackScene } from '@/components/ScreenMotion';
 import { StatusBarClearance } from '@/components/StatusBarClearance';
 import { clearReportCommand, useReportCommands } from '@/features/bug-report/commands';
 import { loadReportHost } from '@/features/bug-report/loadHost';
+import { loadNutritionDemo } from '@/features/create-bev/loadNutritionDemo';
 import { ConfigError, Splash } from '@/features/auth/Splash';
 import { useSessionBootstrap } from '@/features/auth/useSessionBootstrap';
 import { clearLegacyStorage } from '@/lib/clearLegacyStorage';
@@ -23,6 +26,7 @@ clearLegacyStorage();
 
 // The internal bug reporter (docs/bug-workflow.md): its own chunk, fetched only for an internal reporter.
 const ReportHost = lazy(loadReportHost);
+const NutritionDemo = lazy(loadNutritionDemo);
 
 // Root layout. One agent at a time owns this file and (tabs)/_layout.tsx (app/CLAUDE.md).
 //
@@ -47,7 +51,12 @@ export default function RootLayout() {
         <StatusBarClearance>
           <QueryClientProvider client={queryClient}>
             <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-            {apiConfig.ok ? <SessionGate /> : <ConfigError problem={apiConfig.problem} />}
+            {/* "You're offline" above everything below it, the launch Splash included (not iOS full-screen modals). */}
+            <OfflineNoticeHost>
+              {__DEV__ && process.env.EXPO_PUBLIC_NUTRITION_SCAN_DEMO === '1'
+                ? <Suspense fallback={null}><NutritionDemo /></Suspense>
+                : apiConfig.ok ? <SessionGate /> : <ConfigError problem={apiConfig.problem} />}
+            </OfflineNoticeHost>
           </QueryClientProvider>
         </StatusBarClearance>
       </SafeAreaProvider>

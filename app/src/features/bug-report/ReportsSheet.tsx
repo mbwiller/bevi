@@ -11,7 +11,7 @@ import { Icon } from '@/components/Icon';
 import { IconButton } from '@/components/IconButton';
 import { Sheet } from '@/components/Sheet';
 import { Skeleton } from '@/components/Skeleton';
-import { errorCopy } from '@/lib/errorCopy';
+import { actionErrorMessage, errorCopy } from '@/lib/errorCopy';
 import { MAX_FONT_SCALE_DENSE, radius, size, spacing, type, useTheme } from '@/theme';
 
 import { byRank, isOpen, ticketMeta } from './labels';
@@ -192,7 +192,7 @@ function VerifyButton({ ticketId }: { ticketId: string }) {
   if (verify.isError) {
     return (
       <View style={styles.verify} role="alert" accessibilityLiveRegion="polite">
-        <Text style={[type.caption, styles.grow, { color: colors.scoreLow }]}>{`Couldn't mark it verified. ${errorCopy(verify.error).message}`}</Text>
+        <Text style={[type.caption, styles.grow, { color: colors.scoreLow }]}>{`Couldn't mark it verified. ${actionErrorMessage(verify.error)}`}</Text>
         <Button onPress={() => verify.mutate(ticketId)} accessibilityLabel={`Try again: verify ${ticketId}`}>
           Try again
         </Button>

@@ -6,8 +6,8 @@
  *   npm run bugs:purge-evidence -- --dry-run       # list what would go, delete nothing
  *
  * WHY THIS EXISTS. A bug screenshot is a picture of whatever was on a tester's
- * screen. The ticket in Linear carries its own copy of anything worth keeping
- * (the function uploads the image to Linear and embeds it), so the copy in the
+ * screen. The ticket on the board carries its own copy of anything worth keeping
+ * (the function sends the image to the board with the ticket), so the copy in the
  * private `bug-evidence` bucket is only ever a staging artefact. Keeping it
  * forever would mean holding a growing pile of screenshots that nothing reads.
  * This is the sweep that ends them.

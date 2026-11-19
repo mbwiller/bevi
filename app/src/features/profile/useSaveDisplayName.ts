@@ -2,14 +2,13 @@ import { isApiError, type Profile } from '@bevi/shared';
 import { useCallback, useState } from 'react';
 
 import { useUpdateMe } from '@/api/hooks';
-import { errorCopy } from '@/lib/errorCopy';
+import { formErrorMessage } from '@/features/auth/formError';
 import { useSession } from '@/state/session';
 
 /** Field-level copy for a display name the server or the form rejects. */
 function nameError(e: unknown): string {
   if (isApiError(e) && e.code === 'validation') return "That name can't be used. Try a shorter one.";
-  const copy = errorCopy(e);
-  return `${copy.title}. ${copy.message}`;
+  return formErrorMessage(e);
 }
 
 /**

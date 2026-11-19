@@ -134,3 +134,20 @@ describe('imageUrlFromParam', () => {
     expect(imageUrlFromParam('javascript:alert(1)')).toBeNull();
   });
 });
+
+it('shows persisted barcode nutrition on the Bev page', async () => {
+  const ranked = (await api.rankings.listMine()).items[0]!;
+  const bev = await api.bevs.get(ranked.bevId);
+  const nutrition = {
+    barcode: '012345678901', productName: 'Scanned product', basis: 'Per serving (355 ml)',
+    calories: 0, fatGrams: null, carbohydrateGrams: 0, sugarGrams: 0, proteinGrams: null,
+    sodiumMg: 4, sourceUrl: 'https://world.openfoodfacts.org/product/012345678901',
+  };
+  const get = jest.spyOn(api.bevs, 'get').mockResolvedValue({ ...bev, nutrition });
+  try {
+    await open(bev.id);
+    expect(await screen.findByText('Nutrition Facts')).toBeTruthy();
+    expect(screen.getByLabelText('0 calories')).toBeTruthy();
+    expect(screen.getByText('Scanned product')).toBeTruthy();
+  } finally { get.mockRestore(); }
+});

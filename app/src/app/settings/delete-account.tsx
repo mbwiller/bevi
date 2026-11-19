@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useDeleteAccount } from '@/api/hooks';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
-import { errorCopy } from '@/lib/errorCopy';
+import { actionErrorMessage } from '@/lib/errorCopy';
 import { SettingsScreen } from '@/features/settings/SettingsRow';
 import { useSession } from '@/state/session';
 import { spacing, type, useTheme } from '@/theme';
@@ -58,7 +58,7 @@ export default function DeleteAccountScreen() {
         />
         {del.isError ? (
           <Text style={[type.body, { color: colors.scoreLow }]} role="alert" accessibilityLiveRegion="polite">
-            {`Couldn't delete your account. ${errorCopy(del.error).message}`}
+            {`Couldn't delete your account. ${actionErrorMessage(del.error)}`}
           </Text>
         ) : null}
         <Button variant="primary" block disabled={!confirmed} loading={del.isPending} onPress={onDelete}>

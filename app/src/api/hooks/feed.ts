@@ -115,9 +115,9 @@ function setLiked(qc: QueryClient, id: string, liked: boolean): void {
 /**
  * Like or unlike a post, optimistically: the heart and count change in every FeedItem cache the
  * moment it's tapped. `like` / `unlike` are idempotent and run one at a time in tap order (the
- * mutation `scope`), so rapid taps leave the server in the state of the last tap. Offline, the query
- * client pauses them (networkMode 'online') with the optimistic state on screen, and they run in
- * order on reconnect.
+ * mutation `scope`), so rapid taps leave the server in the state of the last tap. Offline, nothing
+ * is held for later (mutations run with networkMode 'always', src/api/queryClient.ts): the tap fails
+ * at once with 'network' and the heart goes back.
  *
  * Only the latest tap on a post settles it, by writing back the state the server last confirmed:
  * on success that is the tap's own state (re-applied over any refetch that landed meanwhile); when

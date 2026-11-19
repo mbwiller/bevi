@@ -1,4 +1,4 @@
-import type { CategoryId, PriceTier } from '@bevi/shared';
+import type { CategoryId, PriceTier, NutritionPreview } from '@bevi/shared';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BevImage } from '@/components/BevImage';
@@ -10,6 +10,7 @@ import { TextField } from '@/components/TextField';
 import { categoryById, type CategoryInfo } from '@/lib/categories';
 import { radius, size, spacing, type, useTheme } from '@/theme';
 
+import { NutritionScan } from './NutritionScan';
 import { categoryHintText, NAME_MAX_LENGTH, categoryUseLabel, categoryUseText } from './copy';
 import { PhotoStatusLine } from './PhotoStep';
 import type { PhotoSource } from './photo';
@@ -24,7 +25,7 @@ export interface DetailsForm {
   priceEstimated: boolean;
 }
 
-export type FieldErrors = Partial<Record<'photo' | 'name' | 'brand' | 'flavor' | 'categoryId' | 'priceTier' | 'label', string>>;
+export type FieldErrors = Partial<Record<'photo' | 'name' | 'brand' | 'flavor' | 'categoryId' | 'priceTier' | 'label' | 'nutrition', string>>;
 
 export interface DetailsStepProps {
   form: DetailsForm;
@@ -32,6 +33,8 @@ export interface DetailsStepProps {
   onChange: (patch: Partial<DetailsForm>) => void;
   onOpenCategories: () => void;
   label: PhotoUpload;
+  nutrition: NutritionPreview | null;
+  onNutritionChange: (value: NutritionPreview | null) => void;
   onPickLabel: (source: PhotoSource) => void;
   /** "2 Bevs like this are already on Bevi" while typing. */
   similarCount: number;
@@ -75,7 +78,7 @@ function CategoryField({ value, error, onPress }: { value: CategoryId | null; er
 }
 
 /** Step 2: name, brand, flavor, category, price, and an optional nutrition label photo. */
-export function DetailsStep({ form, errors, onChange, onOpenCategories, label, onPickLabel, similarCount, categoryHint = null, onUseCategory }: DetailsStepProps) {
+export function DetailsStep({ form, errors, onChange, onOpenCategories, label, onPickLabel, nutrition, onNutritionChange, similarCount, categoryHint = null, onUseCategory }: DetailsStepProps) {
   const { colors } = useTheme();
   const hasLabel = !!label.photo;
   return (
@@ -138,6 +141,8 @@ export function DetailsStep({ form, errors, onChange, onOpenCategories, label, o
       </View>
       <View style={styles.field}>
         <Text style={[type.caption, styles.label, { color: colors.textSecondary }]}>Nutrition label (optional)</Text>
+        <NutritionScan value={nutrition} onChange={onNutritionChange} />
+        {errors.nutrition ? <Text role="alert" style={[type.caption, { color: colors.scoreLow }]}>{errors.nutrition}</Text> : null}
         <View style={styles.labelRow}>
           <BevImage size={size.scoreBubbleLg} src={label.photo?.uri} alt={hasLabel ? 'Nutrition label photo' : 'No label photo'} />
           <View style={styles.labelActions}>

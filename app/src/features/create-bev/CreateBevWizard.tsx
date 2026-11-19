@@ -1,4 +1,4 @@
-import { isApiError, type BevSummary, type CreateBevInput, type FindDuplicatesInput, type ValidationErrorDetail } from '@bevi/shared';
+import { isApiError, type NutritionPreview, type BevSummary, type CreateBevInput, type FindDuplicatesInput, type ValidationErrorDetail } from '@bevi/shared';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -13,6 +13,7 @@ import { useDebouncedValue } from '@/features/add-bev/useDebouncedValue';
 import { formErrorMessage } from '@/features/auth/formError';
 import { categoryById, visibleCategories } from '@/lib/categories';
 import { useBack } from '@/lib/useBack';
+import { useOnline } from '@/lib/useOnline';
 import { radius, spacing, type, useTheme } from '@/theme';
 
 import {
@@ -34,7 +35,6 @@ import { DuplicatesStep, ExistingBev } from './DuplicatesStep';
 import { PhotoStep } from './PhotoStep';
 import { isUnsupportedImage, type PhotoSource } from './photo';
 import { CategorySheet, DiscardBevSheet } from './Sheets';
-import { useOnline } from './useOnline';
 import { usePhotoUpload } from './usePhotoUpload';
 
 /** Duplicate lookups wait this long after the last keystroke. */
@@ -64,6 +64,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
   const createBev = useCreateBev();
   const photo = usePhotoUpload('bev-photo');
   const label = usePhotoUpload('label');
+  const [nutrition, setNutrition] = useState<NutritionPreview | null>(null);
 
   const [step, setStep] = useState<Step>(0);
   const [form, setForm] = useState<DetailsForm>({
@@ -80,6 +81,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
   const [creating, setCreating] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
+  const [createdWithoutNutritionId, setCreatedWithoutNutritionId] = useState<string | null>(null);
   const [existingId, setExistingId] = useState<string | null>(null);
   const existingQ = useBev(existingId ?? undefined);
 
@@ -124,6 +126,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
   }, [duplicatesQ.data, form.categoryId, categories]);
 
   const dirty =
+    !!nutrition ||
     !!photo.photo ||
     !!label.photo ||
     !!form.name.trim() ||
@@ -226,6 +229,12 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
       }
       case 'validation': {
         const field = (e.detail as ValidationErrorDetail | undefined)?.field;
+        if (field === 'nutrition') {
+          setNutrition(null);
+          setErrors({ nutrition: 'Nutrition could not be saved. Scan the barcode again or continue without it.' });
+          setStep(1);
+          return;
+        }
         if (field && DETAIL_FIELDS.has(field)) {
           setErrors({ [field]: e.message });
           return setStep(1);
@@ -278,13 +287,21 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
         priceEstimated: form.priceEstimated,
         photoAssetId,
         ...(labelAssetId ? { labelAssetId } : {}),
+        ...(nutrition ? { nutrition } : {}),
       };
       try {
         const bev = await createWhenReady(createBev.mutateAsync, input, {
           onWaiting: () => setProcessing(true),
           signal: abort.current,
         });
-        if (!abort.current.aborted) goRank(bev.id);
+        if (!abort.current.aborted) {
+          if (nutrition && !bev.nutrition) {
+            setCreatedWithoutNutritionId(bev.id);
+            setSubmitMessage('Your Bev was added, but we couldn’t save its nutrition label. Continue without nutrition?');
+          } else {
+            goRank(bev.id);
+          }
+        }
       } catch (e) {
         if (!abort.current.aborted) onCreateError(e);
       }
@@ -312,6 +329,8 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
         onChange={patch}
         onOpenCategories={() => setCategoryOpen(true)}
         label={label}
+        nutrition={nutrition}
+        onNutritionChange={(value) => { setNutrition(value); setErrors((e) => ({ ...e, nutrition: undefined })); }}
         onPickLabel={(s) => void pickLabel(s)}
         similarCount={duplicatesQ.data?.length ?? 0}
         categoryHint={categoryHint}
@@ -326,10 +345,11 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
         checkFailed={duplicatesQ.isError}
         onRetryCheck={() => void duplicatesQ.refetch()}
         onPick={pickExisting}
-        onCreate={() => void submit()}
+        onCreate={() => createdWithoutNutritionId ? goRank(createdWithoutNutritionId) : void submit()}
         creating={creating}
         processing={processing}
         submitMessage={submitMessage}
+        continueLabel={createdWithoutNutritionId ? 'Continue without nutrition' : undefined}
         blocked={!online}
       />
     );
@@ -339,8 +359,8 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
     <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={[styles.fill, { backgroundColor: colors.surface }]}>
       <Header
         title="New Bev"
-        onBack={step > 0 || existingId ? goBack : undefined}
-        actions={[{ icon: 'x', label: 'Close', variant: 'filled', onPress: close }]}
+        onBack={!createdWithoutNutritionId && (step > 0 || existingId) ? goBack : undefined}
+        actions={createdWithoutNutritionId ? [] : [{ icon: 'x', label: 'Close', variant: 'filled', onPress: close }]}
       />
       <View style={styles.progress}>
         <View aria-hidden importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>

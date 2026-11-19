@@ -6,7 +6,9 @@ import {
   type BugReportSummary,
   type BugsApi,
 } from '@bevi/shared';
+import { requireUserId } from './currentUser';
 import { mapError } from './errors';
+import { uploadByteLength } from './uploads';
 
 // The internal bug reporter's client half (docs/bug-workflow.md).
 //
@@ -17,8 +19,8 @@ import { mapError } from './errors';
 //      from an internal reporter, so an ordinary account cannot even stage a
 //      file.
 //   2. the `bug-report` Edge Function is invoked with the caller's JWT. It
-//      redacts, claims the idempotency slot, talks to Linear, and answers with
-//      the identifier Linear assigned.
+//      redacts, claims the idempotency slot, files the ticket on the board
+//      (the tracker), and answers with the identifier the board assigned.
 // `listMine()`, `markVerified()` and `place()` are the function's other routes
 // (`bug-report/status`, `bug-report/verify`, `bug-report/place`), gated the
 // same way server-side.
@@ -26,7 +28,7 @@ import { mapError } from './errors';
 // The tracker credential lives in the function's environment. Nothing in this
 // file, and nothing the app bundles, can reach it. The evidence objects are
 // never given a public URL: the function reads them with the service role and
-// hands the bytes to Linear. An object uploaded by a submission that then
+// hands the bytes to the board. An object uploaded by a submission that then
 // fails before the function runs is the retention sweep's to remove
 // (scripts/bugs/purge-evidence.ts): the bucket has no delete policy for the
 // client, on purpose.
@@ -39,7 +41,7 @@ const PLACE_ROUTE = 'bug-report/place';
 
 // Matches the bucket's `allowed_mime_types`. Narrower than media.upload's list
 // on purpose: `preparePhoto` in the app re-encodes everything to JPEG, and a
-// HEIC that reached Linear unconverted would be unviewable in the browser.
+// HEIC that reached the board unconverted would be unviewable in the browser.
 const EXT_BY_MIME_TYPE: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
@@ -62,13 +64,12 @@ function randomId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-async function requireUserId(client: SupabaseClient): Promise<string> {
-  const { data, error } = await client.auth.getUser();
-  if (error || !data.user) throw new ApiError('unauthorized', 'Not signed in');
-  return data.user.id;
-}
-
-/** The function's error codes, mapped to the contract's. */
+/**
+ * The function's error codes, mapped to the contract's. A tracker failure
+ * always arrives as `tracker_error` (its `code`, e.g. `board_unreachable`, is
+ * for the log, not the app), and a code not listed here falls back to the
+ * HTTP status and then to 'unknown'.
+ */
 const ERROR_CODES: Record<string, { code: ConstructorParameters<typeof ApiError>[0]; message: string }> = {
   unauthorized: { code: 'unauthorized', message: 'Sign in again to report a bug' },
   not_internal: { code: 'unauthorized', message: 'This account cannot file internal bug reports' },
@@ -202,7 +203,11 @@ export function createBugsApi(client: SupabaseClient): BugsApi {
       for (const item of evidence) {
         const ext = EXT_BY_MIME_TYPE[item.mimeType];
         if (!ext) throw new ApiError('validation', 'Attach a JPEG, PNG or WebP image', { field: 'evidence' });
-        if (typeof item.file?.size === 'number' && item.file.size > MAX_EVIDENCE_BYTES) {
+        // `uploadByteLength` reads `.size` or `.byteLength`, whichever the
+        // payload has, and 0 when it has neither -- same tolerance as the
+        // `typeof ... === 'number'` guard it replaces, now that media uploads
+        // may be raw bytes (uploads.ts).
+        if (uploadByteLength(item.file) > MAX_EVIDENCE_BYTES) {
           throw new ApiError('validation', 'That screenshot is too large', { field: 'evidence' });
         }
         planned.push({ file: item.file, mimeType: item.mimeType, ext, caption: typeof item.caption === 'string' ? item.caption : '' });
@@ -211,6 +216,18 @@ export function createBugsApi(client: SupabaseClient): BugsApi {
       const evidencePaths: string[] = [];
       for (const item of planned) {
         const path = `${uid}/${randomId()}.${item.ext}`;
+        // WEB-ONLY until the bug reporter is ported to native (IM-10).
+        //
+        // Unlike `media.upload`, this hands the payload to Storage with no
+        // `toUploadBody()`, and `BugReportInput.evidence[].file` is still
+        // typed `Blob` -- so a React Native Blob would store 0 bytes here with
+        // no error, exactly the trap `media.ts` now refuses. That is safe only
+        // because nothing off the web calls this yet.
+        //
+        // When the reporter is ported: widen the evidence payload to
+        // `UploadPayload` in the contract (its own bump), measure with
+        // `uploadByteLength()` as the check above already does, and pass
+        // `toUploadBody(item.file)` here so the RN guard applies.
         const { error } = await client.storage
           .from(EVIDENCE_BUCKET)
           .upload(path, item.file, { contentType: item.mimeType });

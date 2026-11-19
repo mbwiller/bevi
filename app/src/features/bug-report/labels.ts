@@ -10,7 +10,7 @@ export const KIND_LABEL: Record<BugReportKind, string> = {
   design: 'Design nit',
 };
 
-/** Linear's priority in its own words. 0 is "No priority". */
+/** The contract's 0–4 priority in words (the board uses High, Normal and Low). 0 is "No priority". */
 export function priorityLabel(priority: number | null | undefined): string | null {
   switch (priority) {
     case 1:
@@ -44,7 +44,7 @@ export function openInRankOrder(rows: readonly BugReportSummary[] | undefined): 
   return (rows ?? []).filter(isOpen).sort(byRank);
 }
 
-/** 'BEV-14 · Triage · 2 days ago'; the state reads "Status unavailable" when the tracker couldn't say. */
+/** 'T-14 · New · 2 days ago'; the state reads "Status unavailable" when the tracker couldn't say. */
 export function ticketMeta(row: BugReportSummary, now: Date = new Date()): string {
   const state = row.state === 'unknown' || !row.stateLabel ? 'Status unavailable' : row.stateLabel;
   return [row.ticketId, state, formatRelativeTime(row.createdAt, now)].filter(Boolean).join(' · ');

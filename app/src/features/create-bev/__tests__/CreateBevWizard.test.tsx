@@ -19,6 +19,8 @@ jest.mock('expo-router', () => ({
 }));
 
 // The picker and the canvas resize are browser-only; the wizard sees what they would return.
+jest.mock('../BarcodeCamera', () => ({ BarcodeCamera: () => null }));
+
 jest.mock('../photo', () => ({
   ...jest.requireActual('../photo'),
   pickImage: jest.fn(),
@@ -404,4 +406,69 @@ it('shows no category hint when the chosen category already matches the likely m
   await fillDetails({ name: 'Red Bull', category: 'Energy' });
   await screen.findByText(/already on Bevi/);
   expect(screen.queryByText(/Most Bevs like this are/)).toBeNull();
+});
+
+it('keeps confirmed barcode nutrition across steps and persists it with the new Bev', async () => {
+  const nutrition = {
+    barcode: '012345678901', productName: 'Test water', basis: 'Per serving (355 ml)',
+    calories: 0, fatGrams: null, carbohydrateGrams: 0, sugarGrams: 0, proteinGrams: null,
+    sodiumMg: 4, sourceUrl: 'https://world.openfoodfacts.org/product/012345678901',
+  };
+  jest.spyOn(api.nutrition!, 'lookupBarcode').mockResolvedValue(nutrition);
+  const create = jest.spyOn(api.bevs, 'create');
+  await renderWizard();
+  await addPhoto();
+  await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+  await fillDetails({ name: 'Qzx Glimmer LabDrink', brand: 'Nowhere Co', category: 'Water' });
+  await fireEvent.press(screen.getByLabelText('Scan barcode for nutrition'));
+  await fireEvent.changeText(screen.getByLabelText('Or enter barcode digits'), nutrition.barcode);
+  await fireEvent.press(screen.getByLabelText('Look up entered barcode'));
+  await fireEvent.press(await screen.findByLabelText('Use this nutrition label'));
+  await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+  await screen.findByText('Looks new');
+  await fireEvent.press(screen.getByLabelText('Back'));
+  expect(screen.getByText('Nutrition added to this Bev.')).toBeTruthy();
+  await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+  await fireEvent.press(await screen.findByRole('button', { name: 'Add and rank it' }));
+  await waitFor(() => expect(mockReplace).toHaveBeenCalled(), READY_TIMEOUT);
+  expect(create.mock.calls.at(-1)![0].nutrition).toEqual(nutrition);
+  const made = await create.mock.results.at(-1)!.value;
+  expect((await api.bevs.get(made.id)).nutrition).toEqual(nutrition);
+});
+
+it('tells the person when the migration fallback creates the Bev without nutrition and requires acknowledgment', async () => {
+  const nutrition = {
+    barcode: '012345678901', productName: 'Test water', basis: 'Per serving (355 ml)',
+    calories: 0, fatGrams: null, carbohydrateGrams: 0, sugarGrams: 0, proteinGrams: null,
+    sodiumMg: 4, sourceUrl: 'https://world.openfoodfacts.org/product/012345678901',
+  };
+  jest.spyOn(api.nutrition!, 'lookupBarcode').mockResolvedValue(nutrition);
+  const create = api.bevs.create.bind(api.bevs);
+  const createSpy = jest.spyOn(api.bevs, 'create').mockImplementation(async (input) => {
+    const { nutrition: _dropped, ...withoutNutrition } = input;
+    return create(withoutNutrition);
+  });
+  await renderWizard();
+  await addPhoto();
+  await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+  await fillDetails({ name: 'Qzx Glimmer Manual Fallback', brand: 'Nowhere Co', category: 'Water' });
+  await fireEvent.press(screen.getByLabelText('Scan barcode for nutrition'));
+  await fireEvent.changeText(screen.getByLabelText('Or enter barcode digits'), nutrition.barcode);
+  await fireEvent.press(screen.getByLabelText('Look up entered barcode'));
+  await fireEvent.press(await screen.findByLabelText('Use this nutrition label'));
+  await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Add and rank it' })).toBeEnabled(), READY_TIMEOUT);
+  await fireEvent.press(screen.getByRole('button', { name: 'Add and rank it' }));
+
+  await waitFor(() => expect(createSpy).toHaveBeenCalled(), READY_TIMEOUT);
+  expect(createSpy.mock.calls.at(-1)![0].nutrition).toEqual(nutrition);
+  expect(await screen.findByText(/Your Bev was added, but we couldn’t save its nutrition label\. Continue without nutrition\?/, {}, READY_TIMEOUT)).toBeTruthy();
+  expect(mockReplace).not.toHaveBeenCalled();
+  const created = await createSpy.mock.results.at(-1)!.value;
+  expect(created.nutrition).toBeNull();
+  const callsBeforeContinue = createSpy.mock.calls.length;
+  expect(screen.getByRole('button', { name: 'Continue without nutrition' })).toBeEnabled();
+  await fireEvent.press(screen.getByRole('button', { name: 'Continue without nutrition' }));
+  expect(mockReplace).toHaveBeenCalledWith({ pathname: '/rank/[bevId]', params: { bevId: created.id } });
+  expect(createSpy).toHaveBeenCalledTimes(callsBeforeContinue);
 });
