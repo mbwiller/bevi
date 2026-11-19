@@ -1,5 +1,5 @@
 -- Custom Bevs, part 1: the generated-icon job ledger
--- (20261114000100_bev_icon_jobs.sql).
+-- (20261119185800_bev_icon_jobs.sql).
 --
 -- The feature's one non-negotiable requirement is a negative: an
 -- image-generation job exists for a brand-new Bev created WITH an uploaded
@@ -35,7 +35,7 @@
 -- short a1..f4, d1..d6, ff01..ff14 and ffff. fa0 collides with none.
 
 begin;
-select plan(93);
+select plan(94);
 
 insert into auth.users (id, email, raw_user_meta_data, aud, role)
 values ('00000000-0000-4000-8000-0000000fa0a1', 'pgtapicon1@users.bevi.app',
@@ -356,13 +356,27 @@ set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000fa0a1", 
 -- --- Editing an existing Bev: never an eligible event. --------------------
 -- A rename is the case the embedding trigger DOES care about and the icon
 -- pipeline must not, so it is worth asserting rather than assuming.
-
+--
+-- AS THE OWNER, for the same reason the photo edit below is: `authenticated`
+-- has no update policy on bevs at all -- only `bevs_select` -- so an edit is
+-- an RPC's job, not a client's. This block used to run as `authenticated`,
+-- where the rename matched no row and raised nothing: `lives_ok` passed, and
+-- so did the job count after it, without a rename ever having happened. The
+-- hygiene sweep (20261119152455) then revoked the leftover UPDATE privilege
+-- that had been letting it through the privilege check, and the same line
+-- became a 42501. Running as the owner is what the assertion always meant,
+-- and the `is` below pins the rename down so it cannot go quiet again.
+reset role;
 select lives_ok(
   $$ update public.bevs set name = 'pgTAP Icon Latte Deluxe', updated_at = now()
       where name = 'pgTAP Icon Latte' $$,
   'editing a Bev succeeds'
 );
-reset role;
+select is(
+  (select count(*)::int from public.bevs where name = 'pgTAP Icon Latte Deluxe'),
+  1,
+  'and the rename actually landed, so the job count below is about an edit that happened'
+);
 select is(
   (select count(*)::int from public.bev_icon_jobs j
      join public.bevs b on b.id = j.bev_id where b.brand = 'pgTAP Icon'),
@@ -625,7 +639,7 @@ select is(
 -- ---------------------------------------------------------------------------
 -- I. get_bev_icons: the read path, and the art it offers to borrow
 -- ---------------------------------------------------------------------------
--- 20261114000200. Read-only by construction, which section J re-checks by
+-- 20261119185801. Read-only by construction, which section J re-checks by
 -- counting jobs afterwards. The borrowed icon is what keeps a collection of
 -- custom drinks from being a wall of identical category silhouettes.
 --
@@ -779,7 +793,7 @@ select is(
 );
 
 -- ---------------------------------------------------------------------------
--- K. 20261114000300: the worker's half
+-- K. 20261119185802: the worker's half
 -- ---------------------------------------------------------------------------
 -- release_bev_icon_job, pending_bev_icon_failures, drain_bev_icon_jobs and the
 -- style bucket had no coverage at all, which was the wrong gap to leave: this
