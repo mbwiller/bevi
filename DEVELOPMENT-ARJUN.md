@@ -3,7 +3,7 @@
 > Your lane: the Supabase project and everything server-side. Postgres schema, RLS, SQL functions/RPCs, Edge Functions, cron, storage, auth config, the `packages/api` client the app talks through, and the seed catalog with its image pipeline.
 > Matt owns the app, the ranking math, and design. You meet in `shared/` through `contract/*` PRs.
 
-Written 2026-10-09 from `vision.md` (source of truth), `CONVERSATION.md` (raw founding chat), the agreed work-split brief, and the Bev Maps conventions you already use. Facts about Supabase and vendors were checked against current docs on 2026-10-09; where I could not confirm something I say so.
+Written 2026-10-09 from `vision.md` (source of truth), the founding session that produced it, the agreed work-split brief, and the Bev Maps conventions you already use. Facts about Supabase and vendors were checked against current docs on 2026-10-09; where I could not confirm something I say so.
 
 **Decided 2026-10-11 (Matt + Arjun): Bevi is a web app only.** The Expo app is built for the web (`expo export --platform web`), hosted on Vercel and added to the iPhone home screen; the backend stays Supabase. No native builds, EAS, App Store/TestFlight, Android, or Expo Go/dev client as a target. Sign-in is username + password gated by a shared invite code; no OAuth, no third-party services, no emails. Sections below are updated where this changed the plan.
 
@@ -1008,7 +1008,7 @@ Honest position: manufacturer packshots are copyrighted; using them as catalog i
 
 Every seed image keeps `image_source_url`, `image_license`, `image_attribution`, so any one can be swapped on request. Never scrape Google Images; never use Amazon listing photos.
 
-**Style standard (Matt reviews the contact sheet against the Beli screenshots and UI spec in `bevi-ui-inspiration/`, where Matt's reference material now lives):** transparent background; subject fills ~85% of the height; square canvas 1024×1024 with the product centered and bottom-aligned; no shadows; WebP with alpha (PNG fallback only if an edge halo is visible). Thumbs 256×256 same framing.
+**Style standard (Matt reviews the contact sheet against the UI spec in `bevi-ui-inspiration/beli-screens-spec.md`):** transparent background; subject fills ~85% of the height; square canvas 1024×1024 with the product centered and bottom-aligned; no shadows; WebP with alpha (PNG fallback only if an edge halo is visible). Thumbs 256×256 same framing.
 
 ### 7.4 Background-removal pipeline (user uploads and seeds)
 
@@ -1183,7 +1183,7 @@ Branches: Matt uses `ui/*` (app) and `rank/*` (ranking package); Arjun uses `be/
 | Matt | Search, lists, leaderboard, want-to-try methods | Arjun | Nov 6 | Mock API |
 | Matt | Feed, follows, featured | Arjun | Nov 20 | Mock API |
 | Matt | Recommendations/predicted score served from cache | Arjun | Dec 4 | Mock returns fixture predictions |
-| Matt | Catalog image contact sheet to review against `bevi-ui-inspiration/` | Arjun | Oct 23 | — |
+| Matt | Catalog image contact sheet to review against `bevi-ui-inspiration/beli-screens-spec.md` | Arjun | Oct 23 | — |
 | Arjun | Per-screen data needs | Matt | Oct 13 | Draft schema from vision.md (this doc) |
 | Arjun | Per-screen additions to the `BeviApi` surface | Matt | Oct 16 | Build from §6.1 |
 | Arjun | `scoreFromPosition`, stats (`stddev_pop`, z-score) and `bayesAverage` vectors | Matt | Oct 23 | Agreed formulas implemented from §5.2/§5.10, unverified by CI |
