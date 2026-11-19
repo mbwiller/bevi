@@ -37,7 +37,8 @@ alter table public.bev_nutrition
 -- Every accepted call costs real money at a third-party vision model, so
 -- the two limits are the point of the function rather than decoration: 10
 -- an hour is well past a human photographing a label, and 30 a day caps a
--- runaway client loop at something we can absorb. assert_rate() is
+-- runaway client loop at something we can absorb. Both are enforced per
+-- window on their own action key -- see the note at the calls. assert_rate() is
 -- security-definer and only callable from inside another SQL/plpgsql
 -- function, which is the other reason this wrapper exists (the same reason
 -- assert_upload_rate() exists, 20261011000900).
@@ -71,8 +72,16 @@ begin
     raise exception 'BEVI_VALIDATION' using errcode = '22023', detail = 'labelAssetId';
   end if;
 
-  perform public.assert_rate('label_ocr', 10, interval '1 hour');
-  perform public.assert_rate('label_ocr', 30, interval '1 day');
+  -- One action key per window, which is NOT how the older RPCs do it, and
+  -- deliberately. assert_rate() counts the rows for its action inside its
+  -- window and then inserts one of its own, so two calls sharing a key each
+  -- count the other's rows: 'label_ocr' twice would insert two rows per
+  -- accepted read and trip the hourly check on the 6th, giving 5 an hour
+  -- where this says 10. Separate keys make each window mean what it says.
+  -- (`create_bev` shares one key across its two windows and so has half the
+  -- limit it reads as; that is its own to fix, not this migration's.)
+  perform public.assert_rate('label_ocr_hour', 10, interval '1 hour');
+  perform public.assert_rate('label_ocr_day', 30, interval '1 day');
 
   return p_asset_id;
 end $$;

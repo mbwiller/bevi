@@ -2,7 +2,7 @@
 -- bev_nutrition.source constraint, claim_label_ocr() and
 -- create_bev_with_nutrition_v2(). v1's own behaviour stays in 37.
 begin;
-select plan(25);
+select plan(26);
 insert into auth.users (id,email,raw_user_meta_data,aud,role) values
  ('00000000-0000-4000-8000-0000000fc0a1','pgtapocr1@users.bevi.app','{"invite_code":"local-test-invite-code"}','authenticated','authenticated'),
  ('00000000-0000-4000-8000-0000000fc0a2','pgtapocr2@users.bevi.app','{"invite_code":"local-test-invite-code"}','authenticated','authenticated');
@@ -52,11 +52,12 @@ select throws_ok($$ select public.claim_label_ocr('00000000-0000-4000-8000-00000
 select throws_ok($$ select public.claim_label_ocr('00000000-0000-4000-8000-0000000fc0a1/missing.jpg') $$,'22023','BEVI_VALIDATION','a path with no object behind it is rejected');
 select is(public.claim_label_ocr('00000000-0000-4000-8000-0000000fc0a1/label.jpg'),'00000000-0000-4000-8000-0000000fc0a1/label.jpg','the owner claims their own label photo and gets the path back');
 -- Every accepted claim costs money at a third-party model, so the ceiling is
--- the point of the function: a loop cannot keep reading. Counted as a loop
--- rather than at an exact call number because assert_rate() writes one row per
--- call and claim_label_ocr() calls it twice (as create_bev does), so the
--- hourly cap bites earlier than the bare number suggests.
-select throws_ok($$ do $block$ begin for i in 1..20 loop perform public.claim_label_ocr('00000000-0000-4000-8000-0000000fc0a1/label.jpg'); end loop; end $block$ $$,'P0001','BEVI_RATE_LIMITED','a runaway caller is rate limited within the hour');
+-- the point of the function. Asserted at the exact boundary, not as "a loop
+-- gets stopped somewhere": each window has its own action key so that 10 an
+-- hour means ten, and a shared key would silently make it five. The claim on
+-- the line above was the first of the ten.
+select lives_ok($$ do $block$ begin for i in 1..9 loop perform public.claim_label_ocr('00000000-0000-4000-8000-0000000fc0a1/label.jpg'); end loop; end $block$ $$,'ten label reads in the hour are allowed');
+select throws_ok($$ select public.claim_label_ocr('00000000-0000-4000-8000-0000000fc0a1/label.jpg') $$,'P0001','BEVI_RATE_LIMITED','the eleventh label read in the hour is refused');
 
 -- ---------------------------------------------------------------------------
 -- create_bev_with_nutrition_v2
