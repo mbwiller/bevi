@@ -11,6 +11,7 @@ import type {
   NutritionPreview,
   AppConfig,
   Bev,
+  BevIcon,
   BevLeaf,
   BevOfPeriod,
   BevSimilarity,
@@ -226,8 +227,22 @@ export interface CreateBevInput {
   /** null with `priceEstimated: true` = "Not sure, estimate it" (server fills the tier). */
   priceTier: PriceTier | null;
   priceEstimated: boolean;
-  /** From `media.upload({ kind: 'bev-photo' })`. */
-  photoAssetId: string;
+  /**
+   * From `media.upload({ kind: 'bev-photo' })`. **Optional**, and the one input
+   * that decides whether an AI icon is generated for this Bev.
+   *
+   * With a photo: the Bev is created `active` and the backend schedules exactly
+   * one icon-generation job, so `bevs.icons([id])` reports `'pending'` and the
+   * illustration appears within a minute or two.
+   *
+   * Without one: the Bev is still created and is immediately usable, but it is
+   * `'pending_photo'` and therefore **visible to its creator alone** until a
+   * photo exists, its `iconStatus` is `'none'` for good, and no generation
+   * request is ever made. Nothing the caller can do afterwards -- adding a
+   * photo by an edit, posting a photo with a ranking -- makes it eligible; only
+   * creation is.
+   */
+  photoAssetId?: string;
   /** From `media.upload({ kind: 'label' })`. */
   labelAssetId?: string;
   /** User-confirmed barcode result; saved atomically with this new Bev. */
@@ -348,6 +363,25 @@ export interface BevsApi {
    * @throws 'unauthorized', 'validation' (`detail.field = 'bevIds'`, over 500).
    */
   leaves(bevIds: readonly string[]): Promise<BevLeaf[]>;
+
+  /**
+   * The generated icon of each of a caller-supplied set of Bevs: the same bulk
+   * shape as `leaves`, for the same reason -- a feed page, a search result list
+   * or the profile collection gains one call, not one per Bev.
+   *
+   * Ids the caller may not see are **omitted**, so a short result is normal.
+   * A Bev with no generated icon is present with `iconUrl: null` and an
+   * `iconStatus` that says why: `'none'` for one that was never eligible (a
+   * catalog Bev, or a custom Bev created with no photo), `'pending'` or
+   * `'processing'` while the pipeline runs, `'failed'` when it gave up. Order
+   * is by `bevId`; at most 500 ids.
+   *
+   * READ-ONLY. Calling this -- on a feed, a profile or a Bev screen -- never
+   * schedules a generation job and never reaches the image-generation
+   * provider.
+   * @throws 'unauthorized', 'validation' (`detail.field = 'bevIds'`, over 500).
+   */
+  icons(bevIds: readonly string[]): Promise<BevIcon[]>;
 }
 
 /**
