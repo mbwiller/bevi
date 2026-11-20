@@ -141,9 +141,14 @@ select is(
 select is(
   (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'private'
-      and p.proname <> 'is_blocked'),
+      -- BEV-22 (20261119193000, 20261119193100): three helpers of the venue
+      -- and place functions. None reads user_blocks, none is granted to a
+      -- client role (43_bev_locations.test.sql asserts that), and the one
+      -- that returns rows about people, `put_bev_location`, writes only the
+      -- row of the user id its definer caller passes.
+      and p.proname not in ('is_blocked', 'distance_m', 'venue_json', 'put_bev_location')),
   0,
-  'schema private holds is_blocked and nothing else (a new helper there must be reviewed here)'
+  'schema private holds is_blocked and the three reviewed BEV-22 helpers, nothing else (a new helper there must be reviewed here)'
 );
 -- Every client-callable function in public that reads user_blocks directly.
 -- Each one has been checked to answer only about blocks the CALLER made

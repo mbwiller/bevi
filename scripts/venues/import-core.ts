@@ -57,10 +57,52 @@ export interface OsmElement {
   tags?: Record<string, string>;
 }
 
+/**
+ * What kind of place a venue is, for the glyph on a pin and a picker row
+ * (`venues.place_type`, 20261119193000). OSM never yields "restaurant" here
+ * (it is not an imported tag); the Places fallback does.
+ */
+export type PlaceType = "cafe" | "store" | "bar" | "liquor" | "restaurant" | "other";
+
+/**
+ * The place type OSM's tags say. `amenity` first, as it is the more specific
+ * of the two when both are present. A Dunkin' is `amenity=fast_food` and reads
+ * as a cafe, which is what it is to someone getting a drink; a pharmacy or a
+ * chemist is imported only as a chain branch that sells Bevs, so it is a store.
+ */
+export function placeTypeOf(tags: Record<string, string>): PlaceType {
+  switch (tags.amenity) {
+    case "cafe":
+    case "juice_bar":
+    case "fast_food":
+      return "cafe";
+    case "bar":
+    case "pub":
+      return "bar";
+    case "pharmacy":
+      return "store";
+  }
+  switch (tags.shop) {
+    case "coffee":
+    case "tea":
+      return "cafe";
+    case "alcohol":
+      return "liquor";
+    case "convenience":
+    case "supermarket":
+    case "beverages":
+    case "deli":
+    case "chemist":
+      return "store";
+  }
+  return "other";
+}
+
 export interface VenueRow {
   osm_id: string;
   name: string;
   kind: "chain" | "craft";
+  place_type: PlaceType;
   /**
    * The `chains.id` this venue is a branch of, or null. Set exactly when
    * `kind` is "chain" (the `venues_chain_is_chain_kind` CHECK of
@@ -336,6 +378,7 @@ export function parseElements(
       osm_id: osmId,
       name,
       kind: chainId === null ? "craft" : "chain",
+      place_type: placeTypeOf(tags),
       chain_id: chainId,
       lat,
       lng,
@@ -368,6 +411,7 @@ const CSV_COLUMNS = [
   "hours_osm",
   "hours_known",
   "website",
+  "place_type",
 ] as const;
 
 const csvCell = (value: unknown): string => {
