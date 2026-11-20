@@ -1,3 +1,16 @@
+// React Native's jest preset defines `performance.now` as `jest.fn(Date.now)`, and a jest.fn keeps
+// every call it receives (arguments, result, context, order) until it is cleared, which nothing does
+// within a test file. React's development build reads that clock four times per component per render
+// for its profiler timers: 1.5 to 2.6 million calls in ONE Feed test, each kept at over 100 bytes,
+// so that suite's heap grew by about 200MB per test and its 16 tests reached Node's 4GB ceiling
+// (BEV-27; the numbers are in jest.config.js). This is the same clock without the recording: the
+// `Date.now` the preset captured, so the values are unchanged, including under fake timers.
+// `src/__tests__/jestSetup.test.ts` fails if the recording comes back.
+if (jest.isMockFunction(global.performance?.now)) {
+  const dateNow = Date.now;
+  global.performance.now = () => dateNow();
+}
+
 // Reanimated 4 and its worklets runtime need native modules; their packaged mocks run animations
 // synchronously in Jest. The Reanimated mock lacks useReducedMotion, so it reports "motion allowed".
 // It is added to `react-native-reanimated/mock` itself because expo-router's testing-library
