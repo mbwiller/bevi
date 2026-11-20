@@ -93,9 +93,12 @@ describe('the trail on iOS', () => {
     expect(trailSnapshot()).toEqual([]);
   });
 
-  it('has no step recording: starting one throws (the engine says so), and stopping gives nothing', () => {
-    expect(() => startStepRecording('/feed')).toThrow();
+  it('keeps no steps unless a recording was started, and a recording starts on the screen it was given', () => {
+    recordNav('/feed');
     expect(stopStepRecording()).toEqual([]);
+    startStepRecording('/feed?tab=explore');
+    recordNav('/lists');
+    expect(stopStepRecording()).toEqual(['Start on /feed', 'Open /lists']);
   });
 
   it('turns a route into a pattern and spots a recent failure, as the web does', () => {

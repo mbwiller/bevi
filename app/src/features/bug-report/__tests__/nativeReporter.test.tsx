@@ -9,6 +9,7 @@ import { useSession } from '@/state/session';
 import { controls } from '@/testing/fakeApi';
 
 import { loadReportHost } from '../loadHost';
+import { setMeasureForTests } from '../pickNative';
 import { CAPABILITIES } from '../capabilities';
 import { REPORTER_SUPPORTED } from '../supported';
 import { useLayerHidden } from '../layerHidden';
@@ -46,7 +47,33 @@ jest.mock('expo-file-system', () => ({
 }));
 
 /** What was on screen at the moment of the shutter. */
-let atShutter: { note: boolean; layerHidden: boolean }[];
+let atShutter: { note: boolean; layerHidden: boolean; marks: boolean }[];
+
+/**
+ * A row of the app as React keeps it, for a touch to land on: a labelled, pressable view that a
+ * `BevRow` drew on the Feed's screen (pickNative.test.ts has the shape in full). jest's own fibers
+ * are not React Native's, so the touched view is handed over by hand.
+ */
+function rowUnderTheFinger(): object {
+  const named = (name: string) => Object.defineProperty(() => null, 'name', { value: name });
+  const view = { type: 'RCTView', memoizedProps: { accessibilityLabel: 'Coca-Cola', accessibilityRole: 'button', onClick: () => {} }, stateNode: { node: {} } } as Record<string, unknown>;
+  const row = { type: named('BevRow'), memoizedProps: { rank: 3 }, stateNode: null, child: view } as Record<string, unknown>;
+  const screenView = { type: 'RCTView', memoizedProps: {}, stateNode: { node: {} }, child: row } as Record<string, unknown>;
+  const feed = { type: named('FeedScreen'), memoizedProps: {}, stateNode: null, child: screenView } as Record<string, unknown>;
+  const root = { type: null, child: feed } as Record<string, unknown>;
+  root.stateNode = { current: root };
+  view.return = row;
+  row.return = screenView;
+  screenView.return = feed;
+  feed.return = root;
+  setMeasureForTests((element) => (element === view.stateNode ? { x: 0, y: 300, width: 402, height: 64 } : { x: 0, y: 0, width: 402, height: 874 }));
+  // What a touch event names as its target: the view, holding its fiber.
+  return { __internalInstanceHandle: view };
+}
+
+type TouchHandlers = Record<string, ((event: unknown) => unknown) | undefined>;
+const touchRoot = (): TouchHandlers => screen.getByTestId('report-touch-root').props as TouchHandlers;
+const touchAt = (target: object) => ({ target, nativeEvent: { pageX: 120, pageY: 330, touches: [{}] } });
 
 function memory(): StorageLike {
   const map = new Map<string, string>();
@@ -94,20 +121,25 @@ beforeEach(() => {
   atShutter = [];
   shoot.mockReset();
   shoot.mockImplementation(async () => {
-    atShutter.push({ note: screen.queryByTestId('report-note') !== null, layerHidden: useLayerHidden.getState().hidden });
+    atShutter.push({
+      note: screen.queryByTestId('report-note') !== null,
+      layerHidden: useLayerHidden.getState().hidden,
+      marks: screen.queryByTestId('report-capture-marks') !== null,
+    });
     return '/var/mobile/tmp/ReactNative/ReactNative-snapshot-image-1.jpg';
   });
 });
 
 afterEach(() => {
+  setMeasureForTests(null);
   controls.resetToFixtures();
   jest.restoreAllMocks();
 });
 
-describe('the reporter is on for iOS, in its stage 1 shape', () => {
-  it('is supported on iOS, with a screenshot and a note and nothing that is the DOM', () => {
+describe('the reporter is on for iOS', () => {
+  it('is supported on iOS and does what the web one does, with a screenshot first and no sheets over a full-screen flow', () => {
     expect(REPORTER_SUPPORTED).toBe(true);
-    expect(CAPABILITIES).toMatchObject({ select: false, steps: false, shotFirst: true, sheetsOverFullScreen: false });
+    expect(CAPABILITIES).toMatchObject({ select: true, steps: true, shotFirst: true, sheetsOverFullScreen: false });
   });
 });
 
@@ -168,7 +200,7 @@ describe('reporting from the app', () => {
     expect(await screen.findByTestId('report-note')).toBeTruthy();
 
     // At the shutter the note was not up, and the reporter's own layer was hidden.
-    expect(atShutter).toEqual([{ note: false, layerHidden: true }]);
+    expect(atShutter).toEqual([{ note: false, layerHidden: true, marks: false }]);
     // And it is back, with the picture in the note.
     expect(useLayerHidden.getState().hidden).toBe(false);
     expect(useReport.getState().draft?.shots[0]?.shot?.file).toBeInstanceOf(Uint8Array);
@@ -200,15 +232,90 @@ describe('reporting from the app', () => {
     expect(screen.getByLabelText("What's going on?")).toBeTruthy();
   });
 
-  it('offers the note, a screenshot and photos; no Select element and no Record steps', async () => {
+  it('offers the note and the four ways to attach something, as the web does', async () => {
     await start('/feed');
     await fireEvent.press(await reportButton());
     await screen.findByTestId('report-note');
     expect(screen.getByLabelText("What's going on?")).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Select element' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Capture screen' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Record steps' })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Add photos/ })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Select element/ })).toBeNull();
-    expect(screen.queryByRole('button', { name: /Record steps/ })).toBeNull();
+  });
+
+  it('Select element: a tap on the app selects what it landed on instead of pressing it, and the picture shows it outlined', async () => {
+    const report = jest.spyOn(api.bugs, 'report');
+    await start('/feed');
+    // Nothing is listening for touches until select mode is on.
+    expect(touchRoot().onStartShouldSetResponderCapture).toBeUndefined();
+    await fireEvent.press(await reportButton());
+    await screen.findByTestId('report-note');
+    await fireEvent.press(screen.getByRole('button', { name: 'Select element' }));
+
+    // The note steps aside and the app's root takes the next touch.
+    expect(screen.queryByTestId('report-note')).toBeNull();
+    expect(await screen.findByText('Tap what you mean')).toBeTruthy();
+    const target = rowUnderTheFinger();
+    await act(async () => {
+      // Taking the touch is what keeps the row from being pressed.
+      expect(touchRoot().onStartShouldSetResponderCapture!(touchAt(target))).toBe(true);
+      touchRoot().onResponderRelease!(touchAt(target));
+    });
+
+    // The note is back with the component and its source file, and select mode is over.
+    expect(await screen.findByTestId('report-note')).toBeTruthy();
+    expect(screen.getByText('BevRow · app/src/components/BevRow.tsx')).toBeTruthy();
+    // Wider and Narrower step through the components above it, as on the web.
+    expect(screen.getByRole('button', { name: 'Wider, mark 1' })).toBeTruthy();
+    expect(touchRoot().onStartShouldSetResponderCapture).toBeUndefined();
+
+    // A second picture was taken, with the reporter hidden and the selection's outline drawn in its place.
+    await waitFor(() => expect(atShutter).toHaveLength(2));
+    expect(atShutter[1]).toEqual({ note: false, layerHidden: true, marks: true });
+    expect(screen.queryByTestId('report-capture-marks')).toBeNull();
+
+    await fireEvent.changeText(screen.getByLabelText('What about it?'), 'The rank badge is cut off');
+    await fireEvent.press(screen.getByRole('button', { name: 'Send' }));
+    await waitFor(() => expect(report).toHaveBeenCalledTimes(1));
+    const input = report.mock.calls[0]![0];
+    expect(input.targets).toHaveLength(1);
+    expect(input.targets![0]).toMatchObject({
+      component: 'BevRow',
+      file: 'app/src/components/BevRow.tsx',
+      label: 'Coca-Cola',
+      rect: { x: 0, y: 300, width: 402, height: 64 },
+      mark: 1,
+    });
+    expect(input.evidence).toHaveLength(2);
+    report.mockRestore();
+  });
+
+  it('Record steps: the screens opened and the things tapped become the steps, and the app still gets every tap', async () => {
+    const report = jest.spyOn(api.bugs, 'report');
+    await start('/feed');
+    await fireEvent.press(await reportButton());
+    await screen.findByTestId('report-note');
+    await fireEvent.press(screen.getByRole('button', { name: 'Record steps' }));
+
+    expect(await screen.findByRole('button', { name: 'Stop recording steps' })).toBeTruthy();
+    // It only watches: the touch is never taken from the app.
+    expect(touchRoot().onStartShouldSetResponderCapture).toBeUndefined();
+    const target = rowUnderTheFinger();
+    await act(async () => {
+      touchRoot().onTouchStartCapture!(touchAt(target));
+      touchRoot().onTouchEndCapture!(touchAt(target));
+    });
+    expect(await screen.findByText('Recording · 2 steps')).toBeTruthy();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Stop recording steps' }));
+    expect(await screen.findByText('2. Tap BevRow · Coca-Cola')).toBeTruthy();
+    expect(touchRoot().onTouchStartCapture).toBeUndefined();
+
+    await fireEvent.changeText(screen.getByLabelText("What's going on?"), 'The row does nothing when tapped');
+    await fireEvent.press(screen.getByRole('button', { name: 'Send' }));
+    await waitFor(() => expect(report).toHaveBeenCalledTimes(1));
+    expect(report.mock.calls[0]![0]).toMatchObject({ reproductionSteps: ['Start on /feed', 'Tap BevRow · Coca-Cola'], stepsSource: 'recorded' });
+    report.mockRestore();
   });
 
   it('sends the note with the screenshot as bytes and what the app sends by itself, and says it was filed', async () => {

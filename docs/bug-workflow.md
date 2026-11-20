@@ -21,7 +21,7 @@ The reporter is **internal only**. You see it when your `profiles.role` is
 the reporter's code, and the server refuses a submission from anyone else even
 if they call the endpoint directly.
 
-The way in is the **report button** (the web app's; the iPhone app's is described under "Reporting from the iOS app (stage 1)" below): a round button with a warning triangle at
+The way in is the **report button** (the web app's; what differs in the iPhone app is under "Reporting from the iOS app" below): a round button with a warning triangle at
 the bottom right of every signed-in screen, the full-screen flows included
 (ranking, creating a Bev, the photo viewer). Press it and a note opens along
 the bottom of the screen; the app above it stays usable. Press it again and the
@@ -97,14 +97,19 @@ ticket someone marked Urgent on the board stays Urgent. Ranking needs the
 `bug-report` function from this change to be deployed; against an older one
 the app says so and the report is filed all the same.
 
-### Reporting from the iOS app (stage 1)
+### Reporting from the iOS app
 
-The iOS app has the same reporter in a smaller shape: **a report button, a real
-screenshot of the screen and the one-field note.** Everything from the note on
-is the web's own code: the same note, Send, "Filed T-104", Try again, Filed
-reports and the ranking. The same rule decides who gets it: the entry points
-appear, and the reporter's code runs, only when `bugs.canReport()` says yes for
-the signed-in account. An ordinary account never runs any of it.
+The iOS app has the same reporter: the report button, the note with its four
+actions (**Select element, Capture screen, Record steps, Add photos**), Send,
+"Filed T-104", Try again, Filed reports and the ranking. The note and
+everything after it is the web's own code. The same rule decides who gets it:
+the entry points appear, and the reporter's code runs, only when
+`bugs.canReport()` says yes for the signed-in account. An ordinary account
+never runs any of it.
+
+Two things are done differently because there is no web page to read: the
+picture is a real screenshot, taken before the note opens, and a tap is heard
+by one View around the app's screens, not on the page.
 
 What happens when you press the report button:
 
@@ -137,12 +142,27 @@ server keeps only the keys the contract names and redacts every string, so the
 update, the runtime and the contract version ride inside `build`: the contract
 has no fields of their own for them.
 
-What stage 1 does **not** do:
+**Select element** works as on the web. The note steps aside, a banner says
+"Tap what you mean", and the next tap on the app selects what it landed on
+instead of pressing it: the component's name and source file, its label, text
+and props, how it was drawn (as token names) and where it sat, with **Wider**
+and **Narrower** to move up and down the component tree. The outline shows as
+soon as the finger lands; lifting it in the same place selects. The picture is
+taken again with the selection outlined and numbered in it. Two differences
+from the web. **The app does not scroll while you are selecting** (iOS holds a
+list still while something above it has the touch): scroll to the thing first,
+then press Select element; Cancel gives the app back. And a tap on a text field
+still gives it the cursor for a moment (iOS does that itself), so the keyboard
+is put away again. Its contents are never read.
 
-- **No Select element and no Record steps.** The note does not draw them; a
-  report carries no component and no steps, and says nothing about either.
-  They are stage 2 (a registry of measured, named targets, and route changes
-  plus touches).
+**Record steps** works as on the web. Nothing is recorded unless you press it.
+The note closes, the report button becomes **Stop** with a count, and every
+screen you open and everything you tap becomes a step ("Tap TabBar › Lists",
+"Open /lists"), at most 30. The app gets every tap as usual. Taps on the
+reporter itself are never steps, and nothing you type is.
+
+What the iOS reporter does **not** do:
+
 - **Filed reports and the ranking sheet do not open over a full-screen flow**
   (ranking, New Bev, the photo viewer). The report button and the note do: they
   are drawn in a layer attached to the window itself, above UIKit's presented

@@ -80,7 +80,7 @@ device**: there is no Xcode on the machine it was built on.
 | IM-7 map | v1 scope done: an "In progress" page | `main` | The real map, after v1 |
 | IM-8 sharing + links | Share link fixed. The web host serves the app-site-association file (#279). The app's half is draft #281, held | `main`; #279 | #281 needs the Associated Domains capability on the App ID first, and a decision on the host |
 | IM-9 version gate | Done in code, reading the real row (#275, #280) | integration | The App Store id and a support address (`src/lib/appStore.ts`); the maintenance flip on a phone |
-| IM-10 bug reporter | Stage 1 on native done in code: button, window screenshot, note (#285, contract 3.3.0) | integration | Device checks; stage 2 (select element, record steps) |
+| IM-10 bug reporter | Both stages done in code: button, window screenshot, note (#285, contract 3.3.0); the note could not open on build 4 and was fixed (#293, BEV-35); Select element and Record steps (BEV-35, 2026-11-20) | `main`; stage 2 on its branch | Phone checks: the keyboard, a text field in select mode |
 | IM-11 tests | Layer 1 grew with each piece. Layer 4 exists: `docs/ios-device-checklist.md`. The Feed suite's memory failure is fixed at its cause (#287) | integration | Layer 2 (a web jest project) and layer 3 (simulator flows): not started |
 | IM-12 store assets | Drafted as text: `docs/app-store-submission.md` | docs branch | Screenshots, the founders' read of every line, the forms |
 | IM-13 report + block | Done in code, both halves (#261 contract 3.1.0, #277; #290 fixed report from a comment, which could not open on iPhone) | integration | Device checks, the comment path first. Who reads the reports, and a published contact |
@@ -627,9 +627,10 @@ branch.
 
 ### IM-10 — The bug reporter
 
-**Status: part 1 (off on native) is done in #245. Part 2 stage 1 is built on
-`ui/bev-27-im-10-native-reporter` (2026-11-19), not merged and unproven on a
-phone; stage 2 is not started.**
+**Status: part 1 (off on native) is done in #245. Part 2 stage 1 is on `main`
+(#285, fixed by #293). Stage 2, Select element and Record steps, is built
+(2026-11-20, BEV-35) and was run in the iOS simulator; nothing of either stage
+has been checked on a phone by hand yet.**
 
 `src/features/bug-report/` is ~6,500 lines built *on* the DOM: `html2canvas-pro`
 redraws the page to a canvas, `pick.ts` / `pickMode.ts` / `trail.ts` hit-test
@@ -766,6 +767,36 @@ simulator); the overlay passes a tap beside the note to the app; scrolling the
 app under the layer; VoiceOver reaches the app around the note; the note over
 the ranking flow and New Bev; a relaunch restores the text; what the `build`
 line reads on a TestFlight build and on an OTA update.
+
+##### Stage 2, as built (2026-11-20)
+
+Select element and Record steps, so the iOS reporter does what the web's does.
+JavaScript only: no native dependency, no contract change, nothing in
+`supabase/` (the function already accepts targets and recorded steps).
+
+| Piece | How |
+|---|---|
+| Hearing a tap | `ReportTouchRoot.tsx`: one View the root layout puts around the Stack, for every account, with no handlers unless the reporter asks (`touchRoot.ts`, as small as `commands.ts`). Touches reach it from anything below it in React's tree, a full-screen modal and a Sheet included. The reporter's own layer and sheets are beside it, so they are never heard. The web file draws nothing |
+| Select mode | `pickMode.ts`: the View takes the touch in the capture phase (`onStartShouldSetResponderCapture`), so no Pressable is pressed. The outline shows when the finger lands; lifting within 10pt selects. **Nothing scrolls meanwhile**: on iOS a scroll view stays still while a view above it is the JS responder (`RCTScrollViewComponentView`, `_shouldDisableScrollInteraction`), seen in the simulator, so the tester scrolls first and selects then. A text field still takes focus (UIKit does that), so the keyboard is dismissed on a selection |
+| Which component | No hit-testing: the touch event's `target` is the view UIKit chose, and it holds its fiber (`__internalInstanceHandle`). `pickNative.ts` reads host fibers: label, role and style from props, text from the string fibers under a `Text`, the box from `nativeFabricUIManager.getBoundingClientRect`. Never a field's value |
+| The levels | `pickCore.ts`: the walk up the fiber tree, the levels, titles, props and token names, moved out of `pick.ts` unchanged and given a `PickHost` to read elements through. `pick.ts` is now only the DOM half. Same titles on both platforms, so the same steps and the same ticket |
+| The outline in the picture | A window screenshot has no canvas to draw on. While the reporter's layer is hidden for the shutter it shows the numbered outlines instead (`layerHidden.ts` carries the marks, `ReportLayer.tsx` draws `CaptureMarks`), and they are photographed with the app |
+| Record steps | `trail.ts`: 'Start on', 'Open <route>' from the navigations it already heard, 'Tap <title>' from the touch root, which only watches (`onTouchStartCapture`, `onTouchEndCapture`), so the app gets every tap. Not a step: a scroll, a tap that cannot be named, a tap while select mode is on |
+| Tests | `pickNative.test.ts` (hand-built fiber trees and a table of boxes), `ReportTouchRoot.test.tsx` (events emptied when the handler returns), `nativeEngine.test.ts`, and two whole-app cases in `nativeReporter.test.tsx`. The web suites did not change and pass against the moved code |
+
+Run in the iOS simulator (development build, iPhone 17): selecting a feed
+card gave 'BevImage · High Noon Vodka Soda' with its file, pressed nothing,
+and the second picture had the outline and its number; selecting 'Loved it'
+in the full-screen ranking flow gave 'BucketButton · Loved it' and ranked
+nothing; a recording across three tabs gave 'Tap TabBar › Lists',
+'Open /lists', 'Tap BevdTab › BevList', 'Tap TabBar › Profile',
+'Open /profile'.
+
+A tap inside a Sheet (a `Modal`) during a recording is heard too: 'Tap Sheet ›
+Close'.
+
+Not checked anywhere: a text field in select mode, a release build (the names survive there only if
+`metro.minify.js` keeps them, which the bundle check asserts for the export).
 
 Sequencing: after G2 and before the second TestFlight wave (friends). For the
 first wave, the two of us, Apple's own crash reports plus TestFlight's built-in
