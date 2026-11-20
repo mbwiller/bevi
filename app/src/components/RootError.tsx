@@ -21,9 +21,9 @@ import { Pill } from './Pill';
  * "Try again" is the router's `retry`: it clears the error and mounts the root layout afresh, with
  * a new query client, on the route the person was on. If the screen throws again, this shows again.
  *
- * The error goes to crash reporting once (lib/crashReporting.ts; nothing on the web, nothing
- * without a DSN). Caught here it is no longer an uncaught error, so nothing else would report it.
- * The person is never shown the error itself: no message, no code, no stack.
+ * The error goes to `captureError` once (lib/crashReporting.ts). Caught here it is no longer an
+ * uncaught error, so nothing else would ever see it. The person is never shown the error itself:
+ * no message, no code, no stack.
  */
 export function RootError({ error, retry }: ErrorBoundaryProps) {
   const { colors } = useTheme();
