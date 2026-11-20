@@ -11,10 +11,10 @@ export interface BevdCanvasProps {
 }
 
 /**
- * The Map tab's surface off the web: the places as a list. The native map needs a map library,
- * which is a native dependency and so its own change (DEVELOPMENT-MATT-IOS.md); until it lands,
- * everything the map would show is here, and a row opens the same sheet a pin does.
- * BevdCanvas.web.tsx is the live Google map. This is also the file jest renders.
+ * The Map tab's surface: the places as a list. The native map needs a map library, which is a
+ * native dependency and so its own change (DEVELOPMENT-MATT-IOS.md); until it lands, everything
+ * the map would show is here, and a row opens the same sheet a pin does. The web build keeps
+ * this list.
  */
 export function BevdCanvas({ pins, selectedId, onSelect }: BevdCanvasProps) {
   return <BevdPlaceList pins={pins} selectedId={selectedId} onSelect={onSelect} />;

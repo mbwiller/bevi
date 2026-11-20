@@ -1,4 +1,4 @@
-// Where a Bev was had (BEV-22, contract 2.16.0): the place picker's searches, the write that tags a
+// Where a Bev was had (BEV-22, contract 3.4.0): the place picker's searches, the write that tags a
 // ranked Bev, and the Map tab's reads.
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { BevdScope, LatLng } from '@bevi/shared';
@@ -87,6 +87,22 @@ export function useMyVenue(bevId: string | undefined, enabled = true) {
 /** How much of the caller's Bev'd list has a place: the Map tab's "add where you had them" line. */
 export function useLocationSummary() {
   return useQuery({ queryKey: keys.rankings.locationSummary(), queryFn: () => api.rankings.locationSummary() });
+}
+
+/** How many recently used places the picker shows above what is nearby. */
+export const RECENT_PLACES = 3;
+
+/**
+ * The places the caller set on a Bev most recently (`venues.recent`), for the top of the picker:
+ * tagging a second Bev at the same shop is then two taps. Fetched while the picker is open.
+ */
+export function useRecentVenues(enabled = true) {
+  return useQuery({
+    queryKey: keys.venues.recent(RECENT_PLACES),
+    queryFn: () => api.venues.recent({ limit: RECENT_PLACES }),
+    enabled,
+    staleTime: BEVD_STALE_MS,
+  });
 }
 
 /** The Map tab's pins (`venues.bevdMap`). The pins of the previous scope stay while the next load. */

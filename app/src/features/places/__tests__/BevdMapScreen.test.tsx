@@ -1,6 +1,5 @@
-// The Map tab against the FakeApi (BEV-22). jest resolves BevdCanvas.tsx, the list, so this covers
-// everything but Google: the scopes, the nudge, the sheet a place opens, the empty states and
-// arriving from a post's place line. BevdCanvas.web.test.tsx covers the map itself.
+// The Map tab against the FakeApi (BEV-22), drawn as the list of places: You and Friends, the
+// nudge, the sheet a place opens, the empty states and arriving from a post's place line.
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { configure, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
@@ -14,7 +13,7 @@ import { MAP_EMPTY_ACTION, MAP_EMPTY_FRIENDS, MAP_EMPTY_TITLE } from '../copy';
 
 const mockPush = jest.fn();
 const mockSetParams = jest.fn();
-let mockParams: { venue?: string } = {};
+let mockParams: { venue?: string; scope?: string } = {};
 const mockRouter = { push: mockPush, setParams: mockSetParams, back: jest.fn(), replace: jest.fn(), canGoBack: () => true };
 jest.mock('expo-router', () => ({
   useRouter: () => mockRouter,
@@ -81,27 +80,30 @@ it('with no places yet it says so, counts the Bevs that have none, and leads to 
   expect(mockPush).toHaveBeenCalledWith('/lists');
 });
 
-it('lists a place per venue with how many Bevs were had there and how many are yours', async () => {
+it('has two views, You and Friends, and opens on You: a place per venue with how many Bevs you had there', async () => {
   const { first, second } = await seedPlaces();
   await renderScreen();
 
-  const shared = await screen.findByRole('button', { name: new RegExp(`^${first.name}, 2 Bevs · 1 yours`) });
-  expect(shared).toBeTruthy();
-  expect(screen.getByRole('button', { name: new RegExp(`^${second.name}, 1 Bev`) })).toBeTruthy();
+  expect(screen.getByText('You')).toBeTruthy();
+  expect(screen.getByText('Friends')).toBeTruthy();
+  expect(screen.queryByText('Everyone')).toBeNull();
+  // The friend's Bev at the first place is not counted here.
+  expect(await screen.findByRole('button', { name: new RegExp(`^${first.name}, 1 Bev ·`) })).toBeTruthy();
+  expect(screen.getByRole('button', { name: new RegExp(`^${second.name}, 1 Bev ·`) })).toBeTruthy();
 });
 
-it('You shows only your places, Friends only theirs, and each empty scope says its own thing', async () => {
+it('Friends shows only the places of people you follow, and You brings yours back', async () => {
   const { first, second } = await seedPlaces();
   await renderScreen();
   await screen.findByRole('button', { name: new RegExp(`^${second.name}`) });
 
   await fireEvent.press(screen.getByText('Friends'));
   await waitFor(() => expect(screen.queryByRole('button', { name: new RegExp(`^${second.name}`) })).toBeNull());
-  expect(screen.getByRole('button', { name: new RegExp(`^${first.name}, 1 Bev`) })).toBeTruthy();
+  expect(screen.getByRole('button', { name: new RegExp(`^${first.name}, 1 Bev ·`) })).toBeTruthy();
 
   await fireEvent.press(screen.getByText('You'));
-  expect(await screen.findByRole('button', { name: new RegExp(`^${second.name}, 1 Bev`) })).toBeTruthy();
-  expect(screen.getByRole('button', { name: new RegExp(`^${first.name}, 1 Bev`) })).toBeTruthy();
+  expect(await screen.findByRole('button', { name: new RegExp(`^${second.name}, 1 Bev ·`) })).toBeTruthy();
+  expect(screen.getByRole('button', { name: new RegExp(`^${first.name}, 1 Bev ·`) })).toBeTruthy();
 });
 
 it('Friends with nothing to show does not send you to your own list', async () => {
@@ -121,14 +123,26 @@ it('a place opens what was had there: whose, which Bev, and the Bev opens from i
   await renderScreen();
   await fireEvent.press(await screen.findByRole('button', { name: new RegExp(`^${first.name}`) }));
 
+  // You: only what you had there.
   const sheet = await screen.findByTestId('sheet');
   expect(await within(sheet).findByText(mine[0].bev.name)).toBeTruthy();
-  expect(within(sheet).getByText(theirs.bev.name)).toBeTruthy();
   expect(within(sheet).getByText(/^You · /)).toBeTruthy();
-  expect(within(sheet).getByText(/^Friend · /)).toBeTruthy();
+  expect(within(sheet).queryByText(theirs.bev.name)).toBeNull();
 
   await fireEvent.press(within(sheet).getByText(mine[0].bev.name));
   expect(mockPush).toHaveBeenCalledWith({ pathname: '/bev/[id]', params: { id: mine[0].bev.id } });
+});
+
+it('under Friends a place opens what the people you follow had there', async () => {
+  const { first, mine, theirs } = await seedPlaces();
+  await renderScreen();
+  await fireEvent.press(await screen.findByText('Friends'));
+  await fireEvent.press(await screen.findByRole('button', { name: new RegExp(`^${first.name}, 1 Bev ·`) }));
+
+  const sheet = await screen.findByTestId('sheet');
+  expect(await within(sheet).findByText(theirs.bev.name)).toBeTruthy();
+  expect(within(sheet).getByText(/^Friend · /)).toBeTruthy();
+  expect(within(sheet).queryByText(mine[0].bev.name)).toBeNull();
 });
 
 it('arriving from a post (?venue=) opens on that place and forgets the param', async () => {
@@ -138,7 +152,17 @@ it('arriving from a post (?venue=) opens on that place and forgets the param', a
 
   const sheet = await screen.findByTestId('sheet');
   expect(await within(sheet).findByText(mine[1].bev.name)).toBeTruthy();
-  expect(mockSetParams).toHaveBeenCalledWith({ venue: undefined });
+  expect(mockSetParams).toHaveBeenCalledWith({ venue: undefined, scope: undefined });
+});
+
+it("arriving from a friend's post (?venue=&scope=friends) opens Friends on that place", async () => {
+  const { first, theirs } = await seedPlaces();
+  mockParams = { venue: first.id, scope: 'friends' };
+  await renderScreen();
+
+  const sheet = await screen.findByTestId('sheet');
+  expect(await within(sheet).findByText(theirs.bev.name)).toBeTruthy();
+  expect(mockSetParams).toHaveBeenCalledWith({ venue: undefined, scope: undefined });
 });
 
 it('the nudge goes once every Bev has a place', async () => {

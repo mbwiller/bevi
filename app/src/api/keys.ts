@@ -129,6 +129,8 @@ export const keys = {
       [...root, 'venues', 'searchMore', query, near?.lat ?? null, near?.lng ?? null] as const,
     /** Everything about where Bevs were had: the map's pins and what is behind each. */
     bevd: [...root, 'venues', 'bevd'] as const,
+    /** `venues.recent`: the picker's recently used places. Under `bevd`, so a changed place refreshes it. */
+    recent: (limit: number) => [...root, 'venues', 'bevd', 'recent', limit] as const,
     /** `venues.bevdMap` for one scope. */
     bevdMap: (scope: BevdScope) => [...root, 'venues', 'bevd', 'map', scope] as const,
     /** `venues.bevdAt`: what was had at one venue. */

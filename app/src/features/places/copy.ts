@@ -8,6 +8,7 @@ export const CHANGE_LOCATION = 'Change location';
 export const REMOVE_LOCATION = 'Remove location';
 export const PICKER_TITLE = 'Where did you get it?';
 export const PICKER_PLACEHOLDER = 'Search a shop, cafe or bar';
+export const RECENT = 'Recent';
 export const NEARBY = 'Nearby';
 export const RESULTS = 'Places';
 export const MORE_PLACES = 'More places';
@@ -67,7 +68,6 @@ export const MAP_EMPTY_TITLE = 'No places yet';
 export const MAP_EMPTY_BODY = "Add where you got a Bev and it shows up here, next to your friends'.";
 export const MAP_EMPTY_FRIENDS = "The people you follow haven't added a place yet.";
 export const MAP_EMPTY_ACTION = "Go to Bev'd";
-export const MAP_UNAVAILABLE_NOTE = "The map can't load right now, so here are the places as a list.";
 export const PLACE_GONE = "Nothing to show here any more.";
 
 export const bevCount = (n: number): string => `${n} ${n === 1 ? 'Bev' : 'Bevs'}`;

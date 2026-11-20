@@ -2,7 +2,7 @@ import { isApiError, type ExternalPlace, type Venue } from '@bevi/shared';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { useAddPlace, useSearchMorePlaces, useVenueSearch } from '@/api/hooks';
+import { useAddPlace, useRecentVenues, useSearchMorePlaces, useVenueSearch } from '@/api/hooks';
 import { SearchBar } from '@/components/SearchBar';
 import { Sheet } from '@/components/Sheet';
 import { Skeleton } from '@/components/Skeleton';
@@ -22,6 +22,7 @@ import {
   PICKER_HINT,
   PICKER_PLACEHOLDER,
   PICKER_TITLE,
+  RECENT,
   REMOVE_LOCATION,
   RESULTS,
   distanceLabel,
@@ -48,8 +49,9 @@ export interface PlacePickerBodyProps {
 /**
  * The place picker's content (BEV-22): a search field over Bevi's own venues, nearest first.
  *
- * With nothing typed it lists what is nearby, so the shop you are standing in is one tap away. With a
- * query it matches names, and offers one more row, "Search more places", which asks an outside
+ * With nothing typed it lists the places you used last, then what is nearby, so the shop you are
+ * standing in, or the one you are tagging a run of Bevs at, is one tap away. With a query it
+ * matches names, and offers one more row, "Search more places", which asks an outside
  * directory for a place Bevi does not have and makes a venue of the one you pick. That second search
  * is never automatic: it costs money per call and is rate limited, so it runs on a tap.
  *
@@ -82,7 +84,11 @@ export function PlacePickerBody({ active, selected = null, onSelect, onRemove, s
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
-  const results = search.data ?? [];
+  // The places used last lead the empty picker, and are not repeated under Nearby.
+  const recent = useRecentVenues(active);
+  const recents = query ? [] : (recent.data ?? []);
+  const recentIds = new Set(recents.map((v) => v.id));
+  const results = (search.data ?? []).filter((m) => !recentIds.has(m.venue.id));
   const waiting = active && (search.isLoading || (!query && !settled));
   const armed = moreFor === query && query.length > 0;
 
@@ -124,6 +130,23 @@ export function PlacePickerBody({ active, selected = null, onSelect, onRemove, s
 
       {selected && onRemove ? <SheetOption label={REMOVE_LOCATION} icon="x" destructive onPress={saving ? undefined : onRemove} /> : null}
 
+      {recents.length > 0 ? (
+        <>
+          <SheetSection title={RECENT} />
+          {recents.map((venue) => (
+            <PlaceRow
+              key={venue.id}
+              name={venue.name}
+              subtitle={placeSubtitle(venue)}
+              kind={venue.kind}
+              selected={selected?.id === venue.id}
+              busy={saving}
+              onPress={() => onSelect(venue)}
+            />
+          ))}
+        </>
+      ) : null}
+
       {waiting ? (
         <View style={styles.loading} testID="place-picker-loading">
           <Skeleton width="60%" height={18} />
@@ -149,7 +172,7 @@ export function PlacePickerBody({ active, selected = null, onSelect, onRemove, s
         </>
       ) : null}
 
-      {!waiting && results.length === 0 ? (
+      {!waiting && results.length === 0 && recents.length === 0 ? (
         <Text style={[type.body, styles.note, { color: colors.textSecondary }]}>
           {query ? NO_MATCH : position.kind === 'denied' ? LOCATION_OFF : PICKER_HINT}
         </Text>

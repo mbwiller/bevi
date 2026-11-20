@@ -67,6 +67,36 @@ it('with a position and nothing typed it lists what is nearby, nearest first, ea
   expect(screen.queryByText(/Hidden/)).toBeNull();
 });
 
+it('the places you used last lead the list, newest first, and are not repeated under Nearby', async () => {
+  const [near, next, third] = (await api.venues.search({ query: '', near: HERE, limit: 3 })).map((m) => m.venue);
+  const [a, b] = (await api.rankings.listMine()).items;
+  await api.rankings.setVenue(a!.bev.id, third!.id);
+  await api.rankings.setVenue(b!.bev.id, near!.id);
+  const { onSelect } = await renderPicker();
+
+  expect(await screen.findByText('Recent')).toBeTruthy();
+  await screen.findByText('Nearby');
+  const names = screen.getAllByRole('button').map((r) => String(r.props.accessibilityLabel).split(',')[0]);
+  // Recent: the one set last first. Then Nearby, without those two.
+  expect(names.slice(0, 3)).toEqual([near!.name, third!.name, next!.name]);
+  expect(names.filter((n) => n === near!.name)).toHaveLength(1);
+
+  await fireEvent.press(screen.getAllByRole('button')[1]!);
+  expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ id: third!.id }));
+});
+
+it('typing hides the recent places: a search is only its matches', async () => {
+  const [near] = (await api.venues.search({ query: '', near: HERE, limit: 1 })).map((m) => m.venue);
+  const [a] = (await api.rankings.listMine()).items;
+  await api.rankings.setVenue(a!.bev.id, near!.id);
+  await renderPicker();
+  expect(await screen.findByText('Recent')).toBeTruthy();
+
+  await type(near!.name);
+  await waitFor(() => expect(screen.queryByText('Recent')).toBeNull());
+  expect(await screen.findByText('Places')).toBeTruthy();
+});
+
 it('tapping a place selects it', async () => {
   const [first] = await api.venues.search({ query: '', near: HERE, limit: 1 });
   const { onSelect } = await renderPicker();

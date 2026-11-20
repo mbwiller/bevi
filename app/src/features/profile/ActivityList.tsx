@@ -120,7 +120,7 @@ export function ActivityList({ profile, self, following = false, header, tab, on
             time={item.createdAt}
             place={item.venue?.name}
             // The map has this person's pins when they are the viewer; for anyone else it may not.
-            onPlace={self ? openPlace(router, item.venue) : undefined}
+            onPlace={self ? openPlace(router, item.venue, 'mine') : undefined}
             onOpen={() => router.push({ pathname: '/bev/[id]', params: { id: item.bev.id } })}
           />
         )}

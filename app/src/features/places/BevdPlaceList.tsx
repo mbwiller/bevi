@@ -17,8 +17,7 @@ export interface BevdPlaceListProps {
 
 /**
  * The places Bevs were had, as rows, most recent first (the order `venues.bevdMap` gives). It is the
- * Map tab wherever there is no live map: the native app until it has a map library, and the web
- * when Google's cannot load.
+ * Map tab wherever there is no live map: the native app until it has a map library, and the web.
  */
 export function BevdPlaceList({ pins, selectedId = null, onSelect, note }: BevdPlaceListProps) {
   const { colors } = useTheme();

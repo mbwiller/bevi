@@ -1,4 +1,3 @@
-import type { BevdScope } from '@bevi/shared';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -17,18 +16,19 @@ import { size, spacing, type, useTheme } from '@/theme';
 import { BevdCanvas } from './BevdCanvas';
 import { BevdPlaceSheet } from './BevdPlaceSheet';
 import { MAP_EMPTY_ACTION, MAP_EMPTY_BODY, MAP_EMPTY_FRIENDS, MAP_EMPTY_TITLE, MAP_TITLE, backfillLine } from './copy';
+import type { MapScope } from './openPlace';
 
 const SCOPES = [
-  { id: 'all', label: 'Everyone' },
   { id: 'mine', label: 'You' },
   { id: 'friends', label: 'Friends' },
-] as const satisfies readonly { id: BevdScope; label: string }[];
+] as const satisfies readonly { id: MapScope; label: string }[];
 
-const parseScope = (id: string): BevdScope => (id === 'mine' || id === 'friends' ? id : 'all');
+const parseScope = (id: string | undefined): MapScope => (id === 'friends' ? 'friends' : 'mine');
 
 /**
- * The Map tab (BEV-22): where you and the people you follow had your Bevs. One pin per place; a pin
- * opens what was had there. `?venue=<id>` (a post's place line) opens on that place.
+ * The Map tab (BEV-22): where you had your Bevs, and under Friends where the people you follow had
+ * theirs. One pin per place; a pin opens what was had there. `?venue=<id>&scope=<mine|friends>` (a
+ * post's place line) opens on that place in that view.
  *
  * The map is only as full as the list is tagged, so while some of the viewer's Bevs have no place
  * a line under the tabs says how many and leads to Bev'd, where each row can be given one.
@@ -36,21 +36,22 @@ const parseScope = (id: string): BevdScope => (id === 'mine' || id === 'friends'
 export function BevdMapScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-  const params = useLocalSearchParams<{ venue?: string }>();
-  const [scope, setScope] = useState<BevdScope>('all');
+  const params = useLocalSearchParams<{ venue?: string; scope?: string }>();
+  const [scope, setScope] = useState<MapScope>('mine');
   const [selected, setSelected] = useState<string | null>(null);
   const pins = useBevdMap(scope);
   const summary = useLocationSummary();
 
-  // A place line was tapped: open on that venue, in the widest scope so it is there, and drop the
-  // param so tapping the same place again later still arrives as a change.
+  // A place line was tapped: open on that venue, in the view the post's author is in, and drop the
+  // params so tapping the same place again later still arrives as a change.
   const wanted = typeof params.venue === 'string' ? params.venue : '';
+  const wantedScope = parseScope(typeof params.scope === 'string' ? params.scope : undefined);
   useEffect(() => {
     if (!wanted) return;
-    setScope('all');
+    setScope(wantedScope);
     setSelected(wanted);
-    router.setParams({ venue: undefined });
-  }, [wanted, router]);
+    router.setParams({ venue: undefined, scope: undefined });
+  }, [wanted, wantedScope, router]);
 
   const data = useMemo(() => pins.data ?? [], [pins.data]);
   const seed = data.find((p) => p.venue.id === selected) ?? null;

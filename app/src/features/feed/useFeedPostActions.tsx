@@ -92,7 +92,7 @@ export function useFeedPostActions({ linkActors = true }: { linkActors?: boolean
           onComment={() => openComments(item.id)}
           onOpenBev={() => router.push({ pathname: '/bev/[id]', params: { id: item.bev.id } })}
           onMore={() => openSafety({ kind: 'post', id: item.id, author: item.actor })}
-          onOpenPlace={openPlace(router, item.venue)}
+          onOpenPlace={openPlace(router, item.venue, you ? 'mine' : 'friends')}
           onOpenActor={
             linkActors
               ? () => (you ? router.push('/profile') : router.push({ pathname: '/user/[id]', params: { id: item.actor.id } }))
