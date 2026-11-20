@@ -54,6 +54,21 @@ export type PriceTier = 1 | 2 | 3 | 4;
 export type PhotoStatus = 'processing' | 'ready';
 
 /**
+ * A Bev's generated-icon state (`bevs.icon_status`, 20261119185800).
+ *
+ * `'none'` is the one that matters: it means the Bev was never ELIGIBLE for
+ * generation -- a seeded catalog row, or a custom Bev created without a
+ * photograph -- as opposed to one that is waiting. Draw the fallback and stop
+ * polling. `'pending'` and `'processing'` are real waits, `'completed'` means
+ * `iconUrl` is set, and `'failed'` means the pipeline gave up: the Bev and its
+ * own photograph are unaffected, and the fallback applies.
+ *
+ * Generation is initiated only by creating a brand-new Bev with an uploaded
+ * photo. Reading this value never starts a job.
+ */
+export type IconStatus = 'none' | 'pending' | 'processing' | 'completed' | 'failed';
+
+/**
  * Kinds of feed post the app renders. `packages/api` maps DB `feed_events.kind`:
  * 'ranked' | 'reranked' → 'RANKING'. Saving a Bev is not a feed post, so the
  * feed carries rankings only.

@@ -110,7 +110,7 @@ beforeEach(() => {
   photoCount = 0;
   mockPrepare.mockImplementation(async () => {
     photoCount += 1;
-    return { uri: `blob:photo-${photoCount}`, blob: new Blob(['p']), mimeType: 'image/jpeg', width: 10, height: 10 };
+    return { uri: `blob:photo-${photoCount}`, file: new Blob(['p']), mimeType: 'image/jpeg', width: 10, height: 10 };
   });
 });
 

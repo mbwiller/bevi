@@ -14,6 +14,12 @@ import { resetReport, setReportStorage, useReport } from '../store';
 // The real route tree and root layout, so the button is checked where the app mounts it.
 const APP_DIR = path.resolve(__dirname, '../../../app');
 
+// Mounting the whole app is the slowest thing a test here does: about 2 s a test on a laptop and
+// around five times that on the CI runner, where the slowest one ran past the default 30 s more
+// than once with nothing wrong (it passed on a re-run each time). Sixty gives a busy runner room
+// without letting a real hang sit for long.
+jest.setTimeout(60_000);
+
 // jest can't run a dynamic import(); the layout's lazy loader gets the module directly.
 jest.mock('@/features/bug-report/loadHost', () => ({
   loadReportHost: () => Promise.resolve({ default: require('@/features/bug-report/ReportHost').default }),
@@ -175,13 +181,15 @@ describe('Settings, Internal, and the old link', () => {
   it('for an ordinary account /report-bug asks for nothing and a stray request is dropped, never kept for the next tester', async () => {
     controls.setInternalReporter(false);
     const path = await start('ready', '/report-bug');
+    // The route leaves only once `bugs.canReport()` has answered, so from here the answer is in and
+    // whatever the route was going to ask for, it has asked.
     await waitFor(() => expect(path()).toBe('/feed'));
-    await settled();
     expect(useReportCommands.getState().pending).toBeNull();
 
+    // The root layout drops a request in the same pass it is made, before `act` returns.
     await act(async () => requestReport('note'));
-    await settled();
     expect(useReportCommands.getState().pending).toBeNull();
+    await settled();
     expect(screen.queryByTestId('report-note')).toBeNull();
   });
 });
