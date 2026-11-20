@@ -1,6 +1,6 @@
 import type { Comment, Profile } from '@bevi/shared';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
-import { useContext, useEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Platform, Pressable, StyleSheet, Text, TextInput, View, type TextStyle } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
@@ -63,6 +63,12 @@ export interface CommentsSheetProps {
   hasEarlier?: boolean;
   loadingEarlier?: boolean;
   onLoadEarlier?: () => void;
+  /**
+   * A sheet that opens over this one (the More menu's Report / Block). Rendered inside this sheet's
+   * Modal, not beside it: on iOS a Modal presents from the nearest view controller, and a second
+   * Modal presented from the screen that is already presenting this one is refused.
+   */
+  children?: ReactNode;
 }
 
 /** A web-only CSS property: a long unbroken word wraps instead of widening the sheet. */
@@ -102,6 +108,7 @@ export function CommentsSheet({
   hasEarlier = false,
   loadingEarlier = false,
   onLoadEarlier,
+  children,
 }: CommentsSheetProps) {
   const { colors, elevation } = useTheme();
   const [draft, setDraft] = useState('');
@@ -337,6 +344,7 @@ export function CommentsSheet({
           </Text>
         ) : null}
       </View>
+      {children}
     </Sheet>
   );
 }

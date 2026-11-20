@@ -265,7 +265,9 @@ export interface PostComment { id?: string; author: Person; body: string; time?:
 export interface CommentsSheetProps { open?: boolean; comments?: PostComment[]; me?: Person; onClose?: () => void; onPost?: (body: string) => void; onDelete?: (id: string) => void;
   /** Opens the More menu of someone else's comment (Report comment, Block account): an ellipsis at the end of the row, named "More actions, comment by @handle". Never on your own comments, which end in Delete. Without it no row has one. */
   onMore?: (comment: PostComment) => void;
-  error?: string; className?: string }
+  error?: string;
+  /** A sheet that opens over this one (the More menu): rendered inside this sheet, not beside it, so that on a phone it presents from this sheet's own modal. */
+  children?: React.ReactNode; className?: string }
 export declare function CommentsSheet(props: CommentsSheetProps): React.ReactElement | null;
 
 /** One category's progress: the contract's `CategoryProgress`, as `stats.getCategoryProgress()` returns it. */

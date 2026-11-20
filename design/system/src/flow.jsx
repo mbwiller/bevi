@@ -235,7 +235,7 @@ export const COMMENT_MAX = 280;
  * Each comment: Avatar 32, bold handle, the text, a relative time; your own add a Delete. The composer
  * ("Add a comment…" and a `primary` Post) stays pinned to the bottom.
  */
-export function CommentsSheet({ open = true, comments = [], me, onClose, onPost, onDelete, onMore, error, className }) {
+export function CommentsSheet({ open = true, comments = [], me, onClose, onPost, onDelete, onMore, error, children, className }) {
   const [draft, setDraft] = React.useState('');
   const body = draft.trim();
   const left = COMMENT_MAX - draft.length;
@@ -266,6 +266,7 @@ export function CommentsSheet({ open = true, comments = [], me, onClose, onPost,
         <button type="submit" className="body bv-composer-post" disabled={!body || left < 0}>Post</button>
       </form>
       {error ? <p className="caption bv-field-errmsg bv-composer-error" role="alert">{error}</p> : null}
+      {children}
     </Sheet>
   );
 }

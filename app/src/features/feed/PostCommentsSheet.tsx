@@ -93,28 +93,29 @@ export function PostCommentsSheet({ eventId, onClose, onGone }: PostCommentsShee
   };
 
   return (
-    <>
-      <CommentsSheet
-        open={!!eventId}
-        comments={comments}
-        me={me.data}
-        onClose={onClose}
-        onPost={post}
-        onDelete={(id) => void del(id)}
-        onMore={(c) => safety.open({ kind: 'comment', id: c.id, author: c.author })}
-        error={error}
-        posting={add.isPending}
-        deleting={deleting}
-        loading={thread.isPending && !!shownId}
-        loadError={thread.isError && !thread.data && !isGone(thread.error) ? thread.error : undefined}
-        onRetry={() => void thread.refetch()}
-        hasEarlier={thread.hasNextPage}
-        loadingEarlier={thread.isFetchingNextPage}
-        onLoadEarlier={() => {
-          if (thread.hasNextPage && !thread.isFetchingNextPage) void thread.fetchNextPage();
-        }}
-      />
+    <CommentsSheet
+      open={!!eventId}
+      comments={comments}
+      me={me.data}
+      onClose={onClose}
+      onPost={post}
+      onDelete={(id) => void del(id)}
+      onMore={(c) => safety.open({ kind: 'comment', id: c.id, author: c.author })}
+      error={error}
+      posting={add.isPending}
+      deleting={deleting}
+      loading={thread.isPending && !!shownId}
+      loadError={thread.isError && !thread.data && !isGone(thread.error) ? thread.error : undefined}
+      onRetry={() => void thread.refetch()}
+      hasEarlier={thread.hasNextPage}
+      loadingEarlier={thread.isFetchingNextPage}
+      onLoadEarlier={() => {
+        if (thread.hasNextPage && !thread.isFetchingNextPage) void thread.fetchNextPage();
+      }}
+    >
+      {/* Inside the comments sheet's Modal, not beside it: on iOS a second Modal presented from the
+          screen that already presents the first is refused, and a nested one presents from the first. */}
       <SafetyFlow target={safety.target} onClose={safety.close} />
-    </>
+    </CommentsSheet>
   );
 }
