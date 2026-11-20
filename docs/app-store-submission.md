@@ -212,6 +212,20 @@ the app uses.
 
 ## 9. Release mechanics
 
+Two things to watch on the first upload from this branch:
+
+- **A missing-purpose-string mail (ITMS-90683).** The binary now links
+  `expo-camera`, and the config deliberately has no microphone string because
+  the app never records sound. If App Store Connect answers the upload asking
+  for `NSMicrophoneUsageDescription`, the fix is one option in
+  `app/app.config.ts` (`microphonePermission` on the `expo-camera` plugin, as a
+  sentence instead of `false`) and a new build. Nobody has seen the answer
+  yet.
+- **Remove builds 0.1.0 (2) and (3) from TestFlight** once the new build is on
+  both phones. They are contract 2.15.0 and never read `app_config`, so
+  neither maintenance nor "update required" can reach them.
+
+
 - A release build is cut from a commit on `main` whose checks are green, and
   that commit is tagged `v<version>-<build>` so the repository can answer
   "which commit is on my phone".
