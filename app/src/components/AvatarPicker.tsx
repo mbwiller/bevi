@@ -22,6 +22,9 @@ export interface AvatarPickerProps {
 
 /** bundle.css `.bv-avatarpicker-busy .bv-spinner`: 24px. */
 const SPINNER = 24;
+/** `size="small"` draws 20pt on iOS and on the web; a numeric size is Android-only, so scale to `SPINNER`. */
+const SPINNER_SMALL = 20;
+const SPINNER_SCALE = { transform: [{ scale: SPINNER / SPINNER_SMALL }] };
 /** bundle.css `.bv-avatarpicker-change:disabled`: opacity .5. */
 const DISABLED_OPACITY = 0.5;
 
@@ -45,7 +48,7 @@ export function AvatarPicker({ name, src, busy = false, error, onChange, onRemov
             accessibilityLabel="Uploading your photo"
             aria-busy
           >
-            <ActivityIndicator size={SPINNER} color={colors.onDeep} />
+            <ActivityIndicator size="small" color={colors.onDeep} style={SPINNER_SCALE} />
           </View>
         ) : null}
       </View>

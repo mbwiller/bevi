@@ -4,6 +4,7 @@ import { useRef, type ComponentProps } from 'react';
 import { TabScene, type TabHistory } from '@/components/ScreenMotion';
 import { TabBar, type TabId } from '@/components/TabBar';
 import { useSession } from '@/state/session';
+import { useTheme } from '@/theme';
 
 // The 5 tabs, plus People (/people), which keeps the bar but is not a tab. One agent at a time owns
 // this file and the root _layout.tsx (app/CLAUDE.md).
@@ -58,6 +59,7 @@ function AppTabBar({ state, navigation }: TabBarRenderProps) {
 type ScreenLayout = NonNullable<ComponentProps<typeof Tabs>['screenLayout']>;
 
 export default function TabsLayout() {
+  const { colors } = useTheme();
   // Move: switching tabs fades the new one in; People slides in like a pushed screen (TabScene).
   const history = useRef<TabHistory['current']>(null);
   const screenLayout: ScreenLayout = ({ route, navigation, children }) => {
@@ -76,7 +78,9 @@ export default function TabsLayout() {
   return (
     <Tabs
       backBehavior="history"
-      screenOptions={{ headerShown: false }}
+      // sceneStyle: the navigator's own scene colour is React Navigation's light theme (no ThemeProvider
+      // is mounted), which a fading tab shows through in dark mode.
+      screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: colors.surface } }}
       screenLayout={screenLayout}
       tabBar={(props) => <AppTabBar {...props} />}
     >
