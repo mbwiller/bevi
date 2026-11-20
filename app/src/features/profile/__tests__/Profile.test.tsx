@@ -178,7 +178,9 @@ describe('own profile', () => {
     expect(await within(sheet).findByText('Enter a name.')).toBeTruthy();
     await fireEvent.changeText(name, 'Tester Renamed');
     await fireEvent.press(within(sheet).getByLabelText('Save'));
-    await waitFor(async () => expect((await api.profile.getMe()).displayName).toBe('Tester Renamed'));
+    // Not `waitFor(async () => ...)`: it can leave one of its fake-clock acts open into the next test's act.
+    await waitFor(() => expect(client.isMutating() + client.isFetching()).toBe(0));
+    expect((await api.profile.getMe()).displayName).toBe('Tester Renamed');
     expect(await screen.findByText('Tester Renamed')).toBeTruthy();
   });
 });

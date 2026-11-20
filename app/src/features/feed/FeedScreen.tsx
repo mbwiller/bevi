@@ -15,6 +15,7 @@ import { Header } from '@/components/Header';
 import { SearchBar } from '@/components/SearchBar';
 import { SegmentedTabs } from '@/components/SegmentedTabs';
 import { Skeleton } from '@/components/Skeleton';
+import { usePullToRefresh } from '@/lib/usePullToRefresh';
 import { spacing, type, useTheme } from '@/theme';
 
 import { BevOfPeriod } from './BevOfPeriod';
@@ -184,17 +185,12 @@ export function FeedScreen() {
       if (xq.hasNextPage && !xq.isFetching && !xq.isFetchNextPageError) void xq.fetchNextPage();
     } else if (feed.hasNextPage && !feed.isFetchingNextPage) void feed.fetchNextPage();
   };
-  const refreshing = exploring
-    ? xq.isRefetching && !xq.isFetchingNextPage && !xq.isPending
-    : feed.isRefetching && !feed.isFetchingNextPage && !feed.isPending;
-  const onRefresh = () => {
-    if (exploring) void restartExplore(qc);
-    else {
-      void feed.refetch();
-      void stats.refetch();
-    }
-    void qc.invalidateQueries({ queryKey: keys.bevOfPeriod() });
-  };
+  const { refreshing, onRefresh } = usePullToRefresh(() =>
+    Promise.all([
+      exploring ? restartExplore(qc) : Promise.all([feed.refetch(), stats.refetch()]),
+      qc.invalidateQueries({ queryKey: keys.bevOfPeriod() }),
+    ]),
+  );
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.screen, { backgroundColor: colors.surface }]}>

@@ -82,10 +82,7 @@ export default function UserProfileScreen() {
         listRef={listRef}
         tab={tab}
         onTab={(t) => router.setParams({ tab: t })}
-        onRefresh={() => {
-          void user.refetch();
-          void stats.refetch();
-        }}
+        onRefresh={() => Promise.all([user.refetch(), stats.refetch()])}
         header={
           <View>
             <ProfileHero

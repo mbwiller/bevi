@@ -12,6 +12,7 @@ import { ErrorState } from '@/components/ErrorState';
 import { Header } from '@/components/Header';
 import { Skeleton } from '@/components/Skeleton';
 import { useBack } from '@/lib/useBack';
+import { usePullToRefresh } from '@/lib/usePullToRefresh';
 import { MAX_FONT_SCALE_DENSE, size, spacing, type, useTheme } from '@/theme';
 
 import { unblockMessage } from './copy';
@@ -32,6 +33,7 @@ export function BlockedAccounts() {
   const back = useBack();
   const query = useBlockedUsers();
   const unblock = useUnblock();
+  const { refreshing, onRefresh } = usePullToRefresh(query.refetch);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<ReadonlySet<string>>(new Set());
   const rows = useMemo(() => flattenPages(query.data), [query.data]);
@@ -94,8 +96,8 @@ export function BlockedAccounts() {
           if (query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage();
         }}
         onEndReachedThreshold={0.5}
-        refreshing={query.isRefetching && !query.isFetchingNextPage && !query.isPending}
-        onRefresh={() => void query.refetch()}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
       />
     </SafeAreaView>
   );

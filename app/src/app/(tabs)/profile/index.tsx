@@ -72,10 +72,7 @@ export default function ProfileScreen() {
         tab={tab}
         onTab={(t) => router.setParams({ tab: t })}
         onEmptyAction={() => router.push({ pathname: '/add', params: { focus: '1' } })}
-        onRefresh={() => {
-          void me.refetch();
-          void stats.refetch();
-        }}
+        onRefresh={() => Promise.all([me.refetch(), stats.refetch()])}
         header={
           <View>
             <ProfileHero

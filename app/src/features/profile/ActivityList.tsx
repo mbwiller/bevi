@@ -19,6 +19,7 @@ import { useFeedPostActions } from '@/features/feed/useFeedPostActions';
 import { SafetyFlow } from '@/features/safety/SafetyFlow';
 import { useBack } from '@/lib/useBack';
 import { categoryById } from '@/lib/categories';
+import { usePullToRefresh } from '@/lib/usePullToRefresh';
 import { spacing, type, useTheme } from '@/theme';
 
 import { tasteReadout } from './tasteReadout';
@@ -89,6 +90,7 @@ export function ActivityList({ profile, self, following = false, header, tab, on
   );
   const readout = useMemo(() => tasteReadout(tasteRows, self ? undefined : first), [tasteRows, self, first]);
   const shown = tab === 'taste' ? tasteQuery : query;
+  const { refreshing, onRefresh: pull } = usePullToRefresh(() => Promise.all([shown.refetch(), onRefresh?.()]));
   const { renderItem: renderPost, commentsFor, closeComments, postGone, notice, safety } = useFeedPostActions({ linkActors: false });
   // Blocking the person whose Activity this is leaves their profile: it now reads as not found.
   const back = useBack();
@@ -197,11 +199,8 @@ export function ActivityList({ profile, self, following = false, header, tab, on
           if (tab === 'activity' && query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage();
         }}
         onEndReachedThreshold={0.5}
-        refreshing={shown.isRefetching && !query.isFetchingNextPage}
-        onRefresh={() => {
-          void shown.refetch();
-          onRefresh?.();
-        }}
+        refreshing={refreshing}
+        onRefresh={pull}
       />
       <PostCommentsSheet eventId={commentsFor} onClose={closeComments} onGone={postGone} />
       <SafetyFlow {...safety} onBlocked={back} />

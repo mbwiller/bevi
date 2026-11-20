@@ -793,8 +793,9 @@ describe('Friends | Everyone', () => {
 
       await fireEvent.press(button());
       await waitFor(() => expect(button().props['aria-pressed']).toBe(false));
-      await waitFor(async () => expect((await api.profile.getUser(target.id)).isFollowing).toBe(false));
+      // Not `waitFor(async () => ...)`: it can leave one of its fake-clock acts open into the next act.
       await settled();
+      expect((await api.profile.getUser(target.id)).isFollowing).toBe(false);
       // The server's Friends board no longer has them; the screen holds still.
       const after = asShown(await friendsBoard());
       expect(after).not.toContain(`2 ${target.handle}`);
