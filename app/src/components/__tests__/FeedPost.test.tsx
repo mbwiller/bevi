@@ -619,3 +619,27 @@ describe('the plain post and the Follow pill (Explore)', () => {
     expect(flat(screen.getByTestId('post-social').props.style).marginLeft).toBe(-8);
   });
 });
+
+describe('the place line (BEV-22)', () => {
+  it('shows where the Bev was had under the meta line, as text when there is nowhere to go', async () => {
+    await render(<FeedPost actor={ARJUN} bev={BEV} score={8.2} time={FIVE_HOURS_AGO()} place="Duane Reade" />);
+    const line = screen.getByTestId('post-place');
+    expect(within(line).getByText('Duane Reade')).toBeTruthy();
+    expect(line.props.accessibilityLabel).toBe('At Duane Reade');
+    expect(screen.queryByRole('button', { name: /Show on the map/ })).toBeNull();
+  });
+
+  it('opens the place when it can, with a 44pt target around the line', async () => {
+    const onPlace = jest.fn();
+    await render(<FeedPost actor={ARJUN} bev={BEV} score={8.2} place="Duane Reade" onPlace={onPlace} />);
+    const line = screen.getByRole('button', { name: 'At Duane Reade. Show on the map' });
+    expect(within(line).getByTestId('hit-target')).toBeTruthy();
+    await fireEvent.press(line);
+    expect(onPlace).toHaveBeenCalledTimes(1);
+  });
+
+  it('draws nothing with no place', async () => {
+    await render(<FeedPost actor={ARJUN} bev={BEV} score={8.2} place={null} onPlace={jest.fn()} />);
+    expect(screen.queryByTestId('post-place')).toBeNull();
+  });
+});

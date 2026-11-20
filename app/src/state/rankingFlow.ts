@@ -11,7 +11,7 @@ import {
   type PlacementState,
   type PlacementTier,
 } from '@bevi/ranking';
-import type { Bucket } from '@bevi/shared';
+import type { Bucket, Venue } from '@bevi/shared';
 import { create } from 'zustand';
 
 /** 'new' calls `submitRanking`; 'rerank' moves an existing ranking with `rerankBev`. */
@@ -27,6 +27,12 @@ export interface RankingFlowState {
   /** The bucket list as fetched, best first (it may still contain the Bev on a re-rank). */
   orderedIds: readonly string[];
   note: string;
+  /**
+   * Where the Bev was had, as chosen in this flow (BEV-22). `undefined` until the user touches it,
+   * which is not the same as `null`: untouched, a new ranking saves no place and a re-rank keeps
+   * the one it has; `null` on a re-rank removes it.
+   */
+  venue: Venue | null | undefined;
 
   /**
    * Begin placing `bevId` into `bucket`. An empty list is done at once (insert at 0). Keeps the note.
@@ -40,6 +46,7 @@ export interface RankingFlowState {
   tie: () => void;
   undo: () => void;
   setNote: (note: string) => void;
+  setVenue: (venue: Venue | null) => void;
   /** What `submitRanking` / `rerankBev` sends (minus the note), or null until placement is done. */
   result: () => PlacementResult | null;
   reset: () => void;
@@ -54,7 +61,13 @@ function begin(bevId: string, bucket: Bucket, orderedIds: readonly string[], tie
   return startPlacement({ bevId, bucket, orderedBevIds: orderedIds, ...(fits ? { tiers } : {}) });
 }
 
-const INITIAL = { mode: 'new' as RankingMode, placement: null, orderedIds: [] as readonly string[], note: '' };
+const INITIAL = {
+  mode: 'new' as RankingMode,
+  placement: null,
+  orderedIds: [] as readonly string[],
+  note: '',
+  venue: undefined as Venue | null | undefined,
+};
 
 /**
  * The ranking flow (the app's second Zustand store, DEVELOPMENT-MATT §3). A thin holder for the
@@ -83,6 +96,7 @@ export const useRankingFlow = create<RankingFlowState>()((set, get) => ({
     if (placement) set({ placement: undoPlacement(placement) });
   },
   setNote: (note) => set({ note: note.slice(0, NOTE_MAX) }),
+  setVenue: (venue) => set({ venue }),
   result: () => {
     const { placement } = get();
     return placement && isDone(placement) ? placementResult(placement) : null;

@@ -25,6 +25,8 @@ export interface FeedPostItemProps {
   onOpenActor?: () => void;
   /** Opens the post's More menu (Report post, Block account). Omitted on the viewer's own post. */
   onMore?: () => void;
+  /** Opens where the Bev was had (the Map tab). The place line shows without it, as text. */
+  onOpenPlace?: () => void;
 }
 
 /**
@@ -43,6 +45,7 @@ export const FeedPostItem = memo(function FeedPostItem({
   onOpenBev,
   onOpenActor,
   onMore,
+  onOpenPlace,
 }: FeedPostItemProps) {
   const { colors } = useTheme();
   // The actor link is transparent: while it is held, the avatar under it gives way (Press).
@@ -57,6 +60,8 @@ export const FeedPostItem = memo(function FeedPostItem({
         bucket={item.bucket}
         note={item.note}
         time={item.createdAt}
+        place={item.venue?.name}
+        onPlace={onOpenPlace}
         saved={item.inMyWantToTry}
         liked={item.likedByMe}
         likeCount={item.likeCount}
