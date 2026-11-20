@@ -111,6 +111,9 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       const config = await api.meta.getAppConfig();
       expect(typeof config.minAppVersion).toBe('string');
       expect(typeof config.maintenance).toBe('boolean');
+      // Shapes only: against a real backend the row is whatever an operator last set.
+      expect(config.minContractVersion).toMatch(/^\d+\.\d+\.\d+$/);
+      expect(config.maintenanceMessage === null || typeof config.maintenanceMessage === 'string').toBe(true);
     });
 
     it('getSession is null signed out, and other reads throw unauthorized', async () => {
