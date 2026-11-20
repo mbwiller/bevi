@@ -9,7 +9,14 @@
 import * as Location from 'expo-location';
 import { Linking } from 'react-native';
 
-import { POSITION_MAX_AGE_MS, POSITION_TIMEOUT_MS, type PositionPermission, type PositionResult } from './positionTypes';
+import {
+  POSITION_FALLBACK_AGE_MS,
+  POSITION_MAX_AGE_MS,
+  POSITION_QUICK_MS,
+  POSITION_TIMEOUT_MS,
+  type PositionPermission,
+  type PositionResult,
+} from './positionTypes';
 
 export { POSITION_MAX_AGE_MS, POSITION_TIMEOUT_MS } from './positionTypes';
 export type { PositionPermission, PositionResult } from './positionTypes';
@@ -34,7 +41,11 @@ const fix = (at: Location.LocationObject): PositionResult => ({
 
 /**
  * One fix, or why not. Never rejects. Shows the system prompt the first time, and the wait for a
- * fix (`POSITION_TIMEOUT_MS`) starts only once that prompt has been answered.
+ * fix starts only once that prompt has been answered.
+ *
+ * A fix from the last minute is used as it is. Otherwise a new one is asked for, and if it is slow
+ * an older one (up to `POSITION_FALLBACK_AGE_MS`) stands in rather than nothing: a phone indoors,
+ * or one that has not moved, may not produce a new fix at all.
  */
 export async function currentPosition(): Promise<PositionResult> {
   try {
@@ -43,22 +54,26 @@ export async function currentPosition(): Promise<PositionResult> {
     if (status !== 'granted') return { kind: 'denied' };
 
     // Opening the picker twice in a shop asks the GPS once.
-    const last = await Location.getLastKnownPositionAsync({ maxAge: POSITION_MAX_AGE_MS });
-    if (last) return fix(last);
+    const recent = await Location.getLastKnownPositionAsync({ maxAge: POSITION_MAX_AGE_MS });
+    if (recent) return fix(recent);
+    const older = await Location.getLastKnownPositionAsync({ maxAge: POSITION_FALLBACK_AGE_MS });
 
     let timer: ReturnType<typeof setTimeout> | undefined;
     const gaveUp = new Promise<null>((resolve) => {
-      timer = setTimeout(() => resolve(null), POSITION_TIMEOUT_MS);
+      timer = setTimeout(() => resolve(null), older ? POSITION_QUICK_MS : POSITION_TIMEOUT_MS);
     });
     try {
       // A shop is a building, so the precise fix is worth the wait.
       const at = await Promise.race([Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }), gaveUp]);
-      return at ? fix(at) : { kind: 'unavailable' };
+      return at ? fix(at) : older ? fix(older) : { kind: 'unavailable' };
+    } catch {
+      // No new fix to be had; the older one is still better than none.
+      return older ? fix(older) : { kind: 'unavailable' };
     } finally {
       clearTimeout(timer);
     }
   } catch {
-    // Location Services off for the whole phone, or no fix to be had.
+    // Location Services off for the whole phone, or the permission could not be read.
     return { kind: 'unavailable' };
   }
 }

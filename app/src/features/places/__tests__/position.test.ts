@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import * as Location from 'expo-location';
 
 import { currentPosition, positionPermission, POSITION_TIMEOUT_MS } from '../position';
+import { POSITION_FALLBACK_AGE_MS, POSITION_MAX_AGE_MS, POSITION_QUICK_MS } from '../positionTypes';
 import { currentPosition as webPosition } from '../position.web';
 
 jest.mock('expo-location', () => ({
@@ -78,6 +79,37 @@ describe('the iPhone provider', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  describe('with a fix from a few minutes ago in hand', () => {
+    const older = at(40.7616, -73.9497);
+    beforeEach(() => {
+      // Nothing from the last minute; something from the last five.
+      last.mockImplementation(async (options) => ((options?.maxAge ?? 0) > POSITION_MAX_AGE_MS ? older : null));
+    });
+
+    it('a new fix that comes quickly wins', async () => {
+      now.mockResolvedValue(at(40.77, -73.95));
+      await expect(currentPosition()).resolves.toEqual({ kind: 'ok', position: { lat: 40.77, lng: -73.95 } });
+      expect(last).toHaveBeenLastCalledWith({ maxAge: POSITION_FALLBACK_AGE_MS });
+    });
+
+    it('a slow one is given a short wait, then the older fix stands in', async () => {
+      jest.useFakeTimers();
+      try {
+        now.mockReturnValue(new Promise(() => {}));
+        const pending = currentPosition();
+        await jest.advanceTimersByTimeAsync(POSITION_QUICK_MS + 10);
+        await expect(pending).resolves.toEqual({ kind: 'ok', position: { lat: 40.7616, lng: -73.9497 } });
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('as it does when no new fix can be had at all', async () => {
+      now.mockRejectedValue(new Error('kCLErrorLocationUnknown'));
+      await expect(currentPosition()).resolves.toEqual({ kind: 'ok', position: { lat: 40.7616, lng: -73.9497 } });
+    });
   });
 });
 
