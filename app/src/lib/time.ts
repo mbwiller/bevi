@@ -1,3 +1,5 @@
+import { parseTimestamp } from '@bevi/ranking';
+
 // Relative times in the design system's voice: "Just now", "5 minutes ago", "5 hours ago", a weekday
 // within the last week ("Wednesday"), then a short date ("Oct 3", or "Oct 3, 2025" in another year).
 
@@ -13,7 +15,7 @@ const plural = (n: number, unit: string) => `${n} ${unit}${n === 1 ? '' : 's'} a
 
 /** "Oct 3", with the year when it isn't `now`'s year. Local time. */
 export function formatShortDate(iso: string, now: Date = new Date()): string {
-  const d = new Date(iso);
+  const d = new Date(parseTimestamp(iso));
   if (Number.isNaN(d.getTime())) return '';
   const base = `${MONTHS[d.getMonth()]} ${d.getDate()}`;
   return d.getFullYear() === now.getFullYear() ? base : `${base}, ${d.getFullYear()}`;
@@ -35,7 +37,7 @@ export function formatPeriodStart(periodStart: string, period: 'day' | 'week', n
 
 /** How long ago an ISO timestamp was, as a FeedPost prints it. Future times (clock skew) read "Just now". */
 export function formatRelativeTime(iso: string, now: Date = new Date()): string {
-  const t = new Date(iso).getTime();
+  const t = parseTimestamp(iso);
   if (Number.isNaN(t)) return '';
   const diff = now.getTime() - t;
   if (diff < MINUTE) return 'Just now';
