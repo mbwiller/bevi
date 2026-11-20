@@ -6,7 +6,7 @@
  * `SubmitRankingInput.venueId`, `rankings.setVenue`, `rankings.getVenue` and
  * `rankings.locationSummary`, and six `venues` methods: `search`,
  * `searchMore`, `addPlace`, `recent`, `bevdMap`, `bevdAt`. A venue may now be
- * anywhere on the Earth, so `NYC_BOUNDS` describes the imported venues and the parked
+ * anywhere on the Earth, and says what kind of place it is (`placeType`), so `NYC_BOUNDS` describes the imported venues and the parked
  * venue map, not every `Venue`. NOT a reason to raise `min_contract_version`:
  * a client built against 3.3.0 never reads the new fields and calls none of
  * the new methods.

@@ -19,6 +19,7 @@ import { requireUserId } from './currentUser';
 import {
   mapProfile,
   mapVenue,
+  placeTypeFromDb,
   mapVenueDetail,
   mapVenuePin,
   type ProfileViewRow,
@@ -94,6 +95,7 @@ function toExternalPlace(raw: unknown): ExternalPlace | null {
   return {
     placeId: r.placeId,
     name: r.name,
+    placeType: placeTypeFromDb(typeof r.placeType === 'string' ? r.placeType : null),
     address: typeof r.address === 'string' && r.address ? r.address : null,
     lat,
     lng,

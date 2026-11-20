@@ -7,6 +7,7 @@ import type {
   FeedEventKind,
   IconStatus,
   PriceTier,
+  PlaceType,
   VenueKind,
 } from '@bevi/shared';
 
@@ -149,6 +150,8 @@ export interface FakeVenue {
   id: string;
   name: string;
   kind: VenueKind;
+  /** `venues.place_type`; a fixture that leaves it out is 'other', as an untyped row is. */
+  placeType?: PlaceType;
   lat: number;
   lng: number;
   address: string | null;
@@ -187,6 +190,7 @@ export interface FakeBevLocation {
 export interface FakeExternalPlace {
   placeId: string;
   name: string;
+  placeType: PlaceType;
   address: string | null;
   lat: number;
   lng: number;

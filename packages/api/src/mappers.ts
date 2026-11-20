@@ -43,11 +43,12 @@ import type {
   UserLeaderboardRow,
   Venue,
   VenueDetail,
+  PlaceType,
   VenueKind,
   VenuePin,
   WantToTryItem,
 } from '@bevi/shared';
-import { ApiError } from '@bevi/shared';
+import { ApiError, PLACE_TYPES } from '@bevi/shared';
 
 export function bucketToDb(bucket: Bucket): 1 | 2 | 3 {
   switch (bucket) {
@@ -952,13 +953,22 @@ const numOrNull = (value: number | string | null): number | null =>
 export type VenueJsonRow = Pick<
   VenuePinRow,
   'id' | 'name' | 'kind' | 'lat' | 'lng' | 'address' | 'neighborhood' | 'borough' | 'hours_osm' | 'hours_known' | 'website'
->;
+> & {
+  /** `venues.place_type`. Absent on a `venues_in_view` row, which predates the column. */
+  place_type?: string | null;
+};
+
+/** A stored place type as the contract's, or 'other' for one this client does not know (or none). */
+export function placeTypeFromDb(value: string | null | undefined): PlaceType {
+  return (PLACE_TYPES as readonly string[]).includes(value ?? '') ? (value as PlaceType) : 'other';
+}
 
 export function mapVenue(row: VenueJsonRow): Venue {
   return {
     id: row.id,
     name: row.name,
     kind: row.kind as VenueKind,
+    placeType: placeTypeFromDb(row.place_type),
     lat: Number(row.lat),
     lng: Number(row.lng),
     address: row.address,
@@ -1027,6 +1037,8 @@ export function mapVenueDetail(client: SupabaseClient, rows: VenueDetailRow[]): 
       id: first.venue_id,
       name: first.name,
       kind: first.kind as VenueKind,
+      // `venue_detail` predates place types.
+      placeType: 'other',
       lat: Number(first.lat),
       lng: Number(first.lng),
       address: first.address,

@@ -660,6 +660,15 @@ export interface LatLngBounds {
 
 export type VenueKind = 'chain' | 'craft';
 
+/**
+ * What kind of place a venue is (contract 3.4.0), for the glyph on a map pin
+ * and a picker row: a cafe, a store (convenience, grocery, pharmacy, deli), a
+ * bar, a liquor shop, a restaurant, or 'other' when nothing has said. `kind`
+ * cannot stand in for it: a Starbucks and a Duane Reade are both chains.
+ */
+export type PlaceType = 'cafe' | 'store' | 'bar' | 'liquor' | 'restaurant' | 'other';
+export const PLACE_TYPES: readonly PlaceType[] = ['cafe', 'store', 'bar', 'liquor', 'restaurant', 'other'];
+
 export type Borough = 'Manhattan' | 'Brooklyn' | 'Queens' | 'Bronx' | 'Staten Island';
 
 /**
@@ -671,6 +680,11 @@ export interface Venue {
   id: string;
   name: string;
   kind: VenueKind;
+  /**
+   * Contract 3.4.0. 'other' for a venue nothing has typed yet, and on the
+   * parked venue map's reads (`inView`, `get`), which predate it.
+   */
+  placeType: PlaceType;
   lat: number;
   lng: number;
   address: string | null;
@@ -765,6 +779,8 @@ export interface VenueMatch {
 export interface ExternalPlace {
   placeId: string;
   name: string;
+  /** What the outside directory says the place is, as it will be saved by `addPlace`. */
+  placeType: PlaceType;
   address: string | null;
   lat: number;
   lng: number;

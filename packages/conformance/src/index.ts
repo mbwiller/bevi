@@ -12,6 +12,7 @@ import {
   ApiError,
   BUCKET_ORDER,
   NYC_BOUNDS,
+  PLACE_TYPES,
   isApiError,
   type ApiErrorCode,
   type BeviApi,
@@ -1413,6 +1414,8 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
 
       const near = await api.venues.search({ query: '', near: UPPER_EAST_SIDE, limit: 5 });
       expect(near.length).toBeLessThanOrEqual(5);
+      // Every venue says what kind of place it is, 'other' when nothing has said.
+      for (const m of near) expect(PLACE_TYPES).toContain(m.venue.placeType);
       const distances = near.map((m) => m.distanceMeters);
       for (const d of distances) expect(typeof d).toBe('number');
       expect(distances).toEqual([...distances].sort((a, b) => a! - b!));

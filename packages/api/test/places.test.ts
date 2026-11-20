@@ -18,6 +18,7 @@ const venueJson = {
   id: VENUE_ID,
   name: 'The Café at Cornell Tech',
   kind: 'craft',
+  place_type: 'cafe',
   lat: '40.7557',
   lng: '-73.9560',
   address: '2 West Loop Road',
@@ -259,7 +260,8 @@ describe('venues.searchMore and addPlace', () => {
           invoke: {
             data: {
               places: [
-                { placeId: 'ChIJ1', name: 'Bread & Butter', address: '579 Main St', lat: 40.76, lng: -73.95, distanceMeters: 120 },
+                { placeId: 'ChIJ1', name: 'Bread & Butter', placeType: 'store', address: '579 Main St', lat: 40.76, lng: -73.95, distanceMeters: 120 },
+                { placeId: 'ChIJ3', name: 'Somewhere New', placeType: 'spaceport', address: null, lat: 40.77, lng: -73.96, distanceMeters: null },
                 { placeId: 'ChIJ2', name: 'No position' },
                 { name: 'No id', lat: 1, lng: 1 },
               ],
@@ -272,14 +274,16 @@ describe('venues.searchMore and addPlace', () => {
     const places = await api.searchMore({ query: 'bread', near: { lat: 40.76, lng: -73.95 } });
     expect(calls.invoke).toEqual([['places', { action: 'search', query: 'bread', lat: 40.76, lng: -73.95 }]]);
     expect(places).toEqual([
-      { placeId: 'ChIJ1', name: 'Bread & Butter', address: '579 Main St', lat: 40.76, lng: -73.95, distanceMeters: 120 },
+      { placeId: 'ChIJ1', name: 'Bread & Butter', placeType: 'store', address: '579 Main St', lat: 40.76, lng: -73.95, distanceMeters: 120 },
+      // A type this client does not know reads as 'other', not as a failure.
+      { placeId: 'ChIJ3', name: 'Somewhere New', placeType: 'other', address: null, lat: 40.77, lng: -73.96, distanceMeters: null },
     ]);
   });
 
-  it('addPlace returns the venue the function made', async () => {
+  it('addPlace returns the venue the function made, with what kind of place it is', async () => {
     const calls: Calls = { rpc: [], invoke: [], from: [] };
     const api = createVenuesApi(fakeClient({ invoke: { data: { venue: venueJson } } }, calls));
-    await expect(api.addPlace('ChIJ1')).resolves.toMatchObject({ id: VENUE_ID });
+    await expect(api.addPlace('ChIJ1')).resolves.toMatchObject({ id: VENUE_ID, placeType: 'cafe' });
     expect(calls.invoke).toEqual([['places', { action: 'add', placeId: 'ChIJ1' }]]);
   });
 
