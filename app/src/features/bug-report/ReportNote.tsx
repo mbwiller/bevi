@@ -15,6 +15,7 @@ import { actionErrorMessage, errorCopy } from '@/lib/errorCopy';
 import { useKeyboardInset } from '@/lib/useKeyboardInset';
 import { MAX_FONT_SCALE_DENSE, motion, radius, size, spacing, type, useTheme } from '@/theme';
 
+import { CAPABILITIES } from './capabilities';
 import { contextRows } from './context';
 import { safeTrailSnapshot } from './engine';
 import { KIND_LABEL } from './labels';
@@ -436,7 +437,7 @@ function usePhotoPicker(draft: Draft) {
 
 type PhotoPicker = ReturnType<typeof usePhotoPicker>;
 
-/** The four ways to attach something to the note. */
+/** The ways to attach something to the note: four on the web; on iOS Capture screen and Add photos (capabilities.ts). */
 function Actions({
   draft,
   photos,
@@ -460,14 +461,17 @@ function Actions({
   return (
     <View style={styles.actionsWrap}>
       <View style={styles.actions} onLayout={(e) => onRowLayout(e.nativeEvent.layout.y, e.nativeEvent.layout.height)}>
-        <Action
-          glyph="select"
-          icon="search"
-          label="Select element"
-          a11y={atMarkLimit ? 'Select element, 6 marks is the limit' : 'Select element'}
-          disabled={atMarkLimit}
-          onPress={startSelecting}
-        />
+        {/* Select element and Record steps are the web's until stage 2 of the iOS reporter (capabilities.ts). */}
+        {CAPABILITIES.select ? (
+          <Action
+            glyph="select"
+            icon="search"
+            label="Select element"
+            a11y={atMarkLimit ? 'Select element, 6 marks is the limit' : 'Select element'}
+            disabled={atMarkLimit}
+            onPress={startSelecting}
+          />
+        ) : null}
         <Action
           icon="camera"
           label="Capture screen"
@@ -475,7 +479,7 @@ function Actions({
           disabled={!room}
           onPress={captureWholeScreen}
         />
-        <Action glyph="record" icon="navigation" label="Record steps" a11y="Record steps" onPress={startRecording} />
+        {CAPABILITIES.steps ? <Action glyph="record" icon="navigation" label="Record steps" a11y="Record steps" onPress={startRecording} /> : null}
         {/* Opens a menu, so it stays pressable at the limit: the menu says why its rows are off. */}
         <Action
           ref={photosTrigger}

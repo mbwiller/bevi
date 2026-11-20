@@ -36,7 +36,7 @@ function level(component: string, title: string): PickLevel {
 }
 
 function shot(uri: string): Shot {
-  return { blob: new Blob([uri]), mimeType: 'image/jpeg', uri, width: 390, height: 844 };
+  return { file: new Blob([uri]), mimeType: 'image/jpeg', uri, width: 390, height: 844 };
 }
 
 function twoScreens(): Draft {
@@ -93,12 +93,13 @@ describe('buildInput', () => {
     expect(input.evidence?.[2]?.caption).toBe('Photo from the library');
   });
 
-  it('evidence is only ever a Blob: a photo prepared as bytes (native) is left out', () => {
+  it('evidence is an UploadPayload (contract 3.3.0): a photo prepared as bytes on native is sent as those bytes', () => {
     const d = twoScreens();
-    d.photos = [{ uri: 'file:///photo.jpg', file: new Uint8Array([0xff, 0xd8]), mimeType: 'image/jpeg', width: 1, height: 1 }];
+    const bytes = new Uint8Array([0xff, 0xd8]);
+    d.photos = [{ uri: 'file:///photo.jpg', file: bytes, mimeType: 'image/jpeg', width: 1, height: 1 }];
     const input = buildInput(d, TRAIL);
-    expect(input.evidence).toHaveLength(2);
-    expect(input.evidence?.every((e) => e.file instanceof Blob)).toBe(true);
+    expect(input.evidence).toHaveLength(3);
+    expect(input.evidence?.[2]).toEqual({ file: bytes, mimeType: 'image/jpeg', caption: 'Photo from the library' });
   });
 
   it('a mark without a picture has no evidenceIndex', () => {

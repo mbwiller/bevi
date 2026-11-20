@@ -26,7 +26,7 @@ jest.mock('@/features/bug-report/loadHost', () => ({
 }));
 // The engine is another task's; here it answers as its contract says.
 jest.mock('@/features/bug-report/capture', () => ({
-  captureScreen: jest.fn(async () => ({ blob: new Blob(['jpeg']), mimeType: 'image/jpeg', uri: 'blob:shot', width: 390, height: 844 })),
+  captureScreen: jest.fn(async () => ({ file: new Blob(['jpeg']), mimeType: 'image/jpeg', uri: 'blob:shot', width: 390, height: 844 })),
   releaseShot: jest.fn(),
 }));
 jest.mock('@/features/bug-report/pick', () => ({ pickAt: jest.fn(() => []) }));
