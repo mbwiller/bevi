@@ -1,6 +1,6 @@
 import { REPORT_NOTE_MAX, REPORT_REASONS, type Profile, type ReportContentKind, type ReportReason } from '@bevi/shared';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useBlock, useReport } from '@/api/hooks';
 import { Button } from '@/components/Button';
@@ -128,7 +128,9 @@ function ReportStep({ target, onSent }: { target: SafetyTarget; onSent: () => vo
   const [note, setNote] = useState('');
   const [focused, setFocused] = useState(false);
   const [failure, setFailure] = useState<Failure | null>(null);
-  const keyboard = useKeyboardInset(true);
+  // Web only: iOS Safari doesn't resize the page, so the form pads itself up. On native the Sheet
+  // raises its whole panel above the keyboard, so counting it here too would count it twice.
+  const keyboard = useKeyboardInset(Platform.OS === 'web');
   const left = REPORT_NOTE_MAX - noteLength(note);
   const canSend = !!reason && left >= 0 && !report.isPending;
 

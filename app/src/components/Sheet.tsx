@@ -4,6 +4,7 @@ import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, w
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { COLUMN_MAX_WIDTH, isWideViewport } from '@/lib/column';
+import { useKeyboardInset } from '@/lib/useKeyboardInset';
 import { motion, radius, spacing, type, useTheme } from '@/theme';
 
 export interface SheetProps {
@@ -29,10 +30,15 @@ const RISE = 24;
 const FROM_OPACITY = 0.6;
 const EASE = Easing.bezier(0.2, 0.8, 0.2, 1);
 
-/** Clears the iPhone home indicator in the home-screen web app; react-native-web passes calc() through. */
-const SAFE_BOTTOM = (Platform.OS === 'web'
-  ? { paddingBottom: `calc(${spacing.xxl}px + env(safe-area-inset-bottom))` }
-  : { paddingBottom: spacing.xxl }) as ViewStyle;
+/**
+ * The panel's bottom padding. Web: clears the iPhone home indicator in the home-screen web app
+ * (react-native-web passes calc() through). Native: `xxl` plus the bottom safe-area inset, which is
+ * 0 while the keyboard is up (it covers the home indicator, and the panel then sits on the keyboard).
+ */
+export function sheetBottomPadding(bottomInset: number, keyboard: number): ViewStyle {
+  if (Platform.OS === 'web') return { paddingBottom: `calc(${spacing.xxl}px + env(safe-area-inset-bottom))` } as unknown as ViewStyle;
+  return { paddingBottom: spacing.xxl + (keyboard > 0 ? 0 : bottomInset) };
+}
 
 /**
  * Bottom sheet over a `scrim`, at 40% or 90% of the window. Built on React Native's Modal (a portal on
@@ -49,10 +55,16 @@ export function Sheet({ open = false, title, snap = 40, onClose, children, scrol
   const windowHeight = win.height;
   const wide = isWideViewport(win);
   // A 90% sheet would reach into the status bar (and its blur band, see StatusBarClearance): stop below the top inset.
-  const safeTop = useContext(SafeAreaInsetsContext)?.top ?? 0;
-  const height = Math.min((windowHeight * snap) / 100, windowHeight - safeTop);
-  const reduced = useReducedMotion();
   const [mounted, setMounted] = useState(open);
+  const insets = useContext(SafeAreaInsetsContext);
+  const safeTop = insets?.top ?? 0;
+  // Native: the keyboard doesn't resize the window, so the panel rides up by its height and a tall
+  // one shrinks to stay below the status bar; any sheet with a field stays above it. Counted here
+  // once: a sheet's own content must not lift itself too. The web has its own handling (CommentsSheet
+  // and SafetyFlow read `visualViewport` themselves), so it is left as it was.
+  const keyboard = useKeyboardInset(Platform.OS !== 'web' && mounted);
+  const height = Math.min((windowHeight * snap) / 100, windowHeight - safeTop - keyboard);
+  const reduced = useReducedMotion();
   const progress = useSharedValue(open ? 1 : 0);
   const panel = useRef<View>(null);
 
@@ -91,7 +103,13 @@ export function Sheet({ open = false, title, snap = 40, onClose, children, scrol
       // react-native-web renders the Modal's own wrapper as role="dialog"; name it too.
       {...({ 'aria-label': title } as object)}
     >
-      <View style={[styles.wrap, wide && styles.column]} testID="sheet-frame">
+      <View
+        style={[styles.wrap, wide && styles.column]}
+        testID="sheet-frame"
+        // iOS: the Modal is presented over the screen, not instead of it, so VoiceOver could still reach
+        // the page behind. On the frame (not the panel) so the scrim's Close stays reachable.
+        {...(Platform.OS === 'web' ? {} : { accessibilityViewIsModal: true })}
+      >
         <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: colors.scrim }, scrimStyle]}>
           <Pressable
             style={StyleSheet.absoluteFill}
@@ -109,8 +127,9 @@ export function Sheet({ open = false, title, snap = 40, onClose, children, scrol
           testID="sheet"
           style={[
             styles.sheet,
-            SAFE_BOTTOM,
+            sheetBottomPadding(insets?.bottom ?? 0, keyboard),
             { height, backgroundColor: colors.surface },
+            keyboard > 0 && { marginBottom: keyboard },
             sheetStyle,
           ]}
         >
@@ -120,7 +139,14 @@ export function Sheet({ open = false, title, snap = 40, onClose, children, scrol
               {title}
             </Text>
           ) : null}
-          {scroll ? <ScrollView style={styles.body}>{children}</ScrollView> : <View style={styles.body}>{children}</View>}
+          {scroll ? (
+            // "handled": with the keyboard up a tap on a row or button works at once, rather than the first tap only dismissing it.
+            <ScrollView style={styles.body} keyboardShouldPersistTaps="handled">
+              {children}
+            </ScrollView>
+          ) : (
+            <View style={styles.body}>{children}</View>
+          )}
         </Animated.View>
       </View>
     </Modal>

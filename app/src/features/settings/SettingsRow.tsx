@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Header } from '@/components/Header';
 import { Icon } from '@/components/Icon';
+import { FORM_SCROLL } from '@/lib/formScroll';
 import { useBack } from '@/lib/useBack';
 import { size, spacing, type, useTheme } from '@/theme';
 
@@ -67,7 +68,7 @@ export function SettingsScreen({ title, children }: { title: string; children: R
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.screen, { backgroundColor: colors.surface }]}>
       <Header title={title} onBack={back} />
-      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.body} {...FORM_SCROLL}>
         {children}
       </ScrollView>
     </SafeAreaView>

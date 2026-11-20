@@ -79,9 +79,10 @@ const WRAP = (Platform.OS === 'web' ? { overflowWrap: 'anywhere' } : {}) as Text
  * draft stays.
  *
  * The keyboard: iOS Safari doesn't resize the page for it, so the sheet's bottom (a fixed-position
- * Modal) would sit behind the keyboard. `useKeyboardInset` reads how much of the screen the keyboard
- * hides from `visualViewport` and the composer pads itself up by that, less the sheet's own bottom
- * padding, so it rides just above the keyboard while the list above it shrinks.
+ * Modal) would sit behind the keyboard. On the web `useKeyboardInset` reads how much of the screen the
+ * keyboard hides from `visualViewport` and the composer pads itself up by that, less the sheet's own
+ * bottom padding, so it rides just above the keyboard while the list above it shrinks. On native the
+ * Sheet raises its own panel (and shrinks it) by the keyboard, so the composer needs nothing.
  */
 export function CommentsSheet({
   open = false,
@@ -119,9 +120,12 @@ export function CommentsSheet({
       refocus.current = null;
     }
   }, [confirming]);
-  const keyboard = useKeyboardInset(open);
+  // Web only: there the Sheet can't see the keyboard (iOS Safari pans the visual viewport), so the
+  // composer lifts itself. On native the Sheet raises its whole panel above the keyboard, so the
+  // keyboard is counted there once and the composer adds nothing.
+  const keyboard = useKeyboardInset(open && Platform.OS === 'web');
   const safeBottom = useContext(SafeAreaInsetsContext)?.bottom ?? 0;
-  // The Sheet already pads its bottom by `xxl` + the home-indicator inset, which the keyboard covers.
+  // The web Sheet already pads its bottom by `xxl` + the home-indicator inset, which the keyboard covers.
   const lift = keyboard > 0 ? Math.max(0, keyboard - spacing.xxl - safeBottom + spacing.sm) : 0;
 
   // Each opening starts with an empty composer and no pending confirm (the sheet is reused across posts).

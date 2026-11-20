@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Wordmark } from '@/components/Wordmark';
+import { FORM_SCROLL } from '@/lib/formScroll';
 import { spacing, type, useTheme } from '@/theme';
 
 const WORDMARK_HEIGHT = 48;
@@ -14,7 +15,7 @@ export function AuthScreen({ children }: { children: ReactNode }) {
   const { colors } = useTheme();
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.surface }]}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.scroll} {...FORM_SCROLL}>
         <View style={styles.column}>
           <View style={styles.brand}>
             <Wordmark height={WORDMARK_HEIGHT} />
