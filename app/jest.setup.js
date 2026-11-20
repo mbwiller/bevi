@@ -29,3 +29,15 @@ jest.mock('@react-native-community/netinfo', () => require('@react-native-commun
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
+
+// Crash reporting (src/lib/crashReporting.ts) imports the Sentry SDK, which is a native module and
+// a large one, and the root layout and the query client both import crash reporting: without this
+// every suite that mounts the app would load it. No suite has a DSN, so none of these is ever
+// called unless a suite sets one (src/lib/__tests__/crashReporting.test.ts). Only what the app
+// uses is here; a new call needs a new line, and that suite checks each name against the real SDK.
+jest.mock('@sentry/react-native', () => ({
+  init: jest.fn(),
+  wrap: jest.fn((Component) => Component),
+  captureException: jest.fn(),
+  nativeCrash: jest.fn(),
+}));
