@@ -1,3 +1,16 @@
+// React Native's jest preset defines `performance.now` as `jest.fn(Date.now)`, and a jest.fn keeps
+// every call it receives (arguments, result, context, order) until it is cleared, which nothing does
+// within a test file. React's development build reads that clock four times per component per render
+// for its profiler timers: 1.5 to 2.6 million calls in ONE Feed test, each kept at over 100 bytes,
+// so that suite's heap grew by about 200MB per test and its 16 tests reached Node's 4GB ceiling
+// (BEV-27; the numbers are in jest.config.js). This is the same clock without the recording: the
+// `Date.now` the preset captured, so the values are unchanged, including under fake timers.
+// `src/__tests__/jestSetup.test.ts` fails if the recording comes back.
+if (jest.isMockFunction(global.performance?.now)) {
+  const dateNow = Date.now;
+  global.performance.now = () => dateNow();
+}
+
 // Reanimated 4 and its worklets runtime need native modules; their packaged mocks run animations
 // synchronously in Jest. The Reanimated mock lacks useReducedMotion, so it reports "motion allowed".
 // It is added to `react-native-reanimated/mock` itself because expo-router's testing-library
@@ -13,11 +26,14 @@ jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock
 // in-memory FakeApi instead: every importer of the client gets src/testing/fakeApi/client.ts.
 jest.mock('./src/api/client', () => require('./src/testing/fakeApi/client'));
 
-// The internal bug reporter is web only (src/features/bug-report/supported.ts), and jest resolves
-// modules as iOS, where it is off. Its suites are web suites: until they have a web jest project of
-// their own (DEVELOPMENT-MATT-IOS.md, IM-11) they run here with the reporter on. What the native app
-// does is covered by src/features/bug-report/__tests__/nativeOff.test.tsx, which undoes this mock.
+// The internal bug reporter exists on the web and, as stage 1, on iOS (src/features/bug-report/
+// supported.ts, capabilities.ts), and jest resolves modules as iOS. The reporter's long-standing
+// suites are web suites: until they have a web jest project of their own (DEVELOPMENT-MATT-IOS.md,
+// IM-11) they run here with the web's capabilities (select, steps, a note that opens at once, sheets
+// everywhere). What the iOS reporter does is covered by src/features/bug-report/__tests__/native*.test.*,
+// which undo these two mocks.
 jest.mock('./src/features/bug-report/supported', () => ({ REPORTER_SUPPORTED: true }));
+jest.mock('./src/features/bug-report/capabilities', () => require('./src/features/bug-report/capabilities.web'));
 
 // NetInfo is a native module. The library's own mock reports a connected cellular network and a
 // listener that never fires, so every suite that renders the create-Bev wizard sees it online

@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 import { pickAt } from '../pick';
-import { isPickModeOn, startPickMode, type PickModeHandlers } from '../pickMode';
+import { isPickModeOn, startPickMode, type PickModeHandlers } from '../pickMode.web';
 import { REPORT_UI_ATTR, type PickLevel } from '../types';
 
 // Picking is tested on its own (pick.test.ts); here it answers what the test says it should.

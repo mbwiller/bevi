@@ -16,8 +16,8 @@ import { keys } from '../keys';
  * app is open. `enabled: false` (the root layout before sign-in finishes) asks
  * nothing and leaves `data` undefined.
  *
- * Off the web there is no reporter (features/bug-report/supported.ts): the answer
- * is false for every account and the server is not asked.
+ * Where there is no reporter (features/bug-report/supported.ts: anywhere but the web and
+ * iOS) the answer is false for every account and the server is not asked.
  */
 export function useCanReportBug({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery({

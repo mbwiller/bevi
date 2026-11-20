@@ -21,6 +21,7 @@ import { useSessionBootstrap } from '@/features/auth/useSessionBootstrap';
 import { clearLegacyStorage } from '@/lib/clearLegacyStorage';
 import { useSession } from '@/state/session';
 import { useTheme } from '@/theme';
+import { RootError } from '@/components/RootError';
 
 // The old in-browser mock's data (fake users, plain-text passwords) may still sit in localStorage.
 clearLegacyStorage();
@@ -63,6 +64,15 @@ export default function RootLayout() {
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
+}
+
+/**
+ * A screen that throws while it renders shows this instead of closing the app. Expo Router wraps
+ * the root layout in a boundary when the layout's file exports `ErrorBoundary`, and renders this in
+ * the layout's place, outside every provider above (components/RootError.tsx).
+ */
+export function ErrorBoundary(props: ComponentProps<typeof RootError>) {
+  return <RootError {...props} />;
 }
 
 type ScreenLayout = NonNullable<ComponentProps<typeof Stack>['screenLayout']>;

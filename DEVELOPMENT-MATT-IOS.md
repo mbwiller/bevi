@@ -51,7 +51,7 @@ there is a new build.
 
 | Milestone | State | Merged | What is left |
 |---|---|---|---|
-| IM-1 build config | Done except three deferred items | #243, #244, #250, #257 | `expo-updates`; the SDK 58 upgrade; Sentry's plugin (IS-4); what App Store Connect said about the privacy manifest |
+| IM-1 build config | Done except three deferred items | #243, #244, #250, #257 | `expo-updates`; the SDK 58 upgrade; ~~Sentry's plugin (IS-4)~~ (dropped 2026-11-19); what App Store Connect said about the privacy manifest |
 | IM-2 first boot | **G1 reached 2026-11-19**, on TestFlight 0.1.0 (3) | #245 | Nothing for the gate. Which commit build 3 came from is not recorded |
 | IM-3 session | Done in code | #246, #247, #266 | A true force-quit, the overnight check and the reinstall check on a phone, on a build that has #266 |
 | IM-4 web assumptions | Done | #248, #251, #255 | Device checks |
@@ -60,7 +60,7 @@ there is a new build.
 | IM-7 map | v1 scope done: an "In progress" page | #245 | The real map, after v1 (IS-6 deferred) |
 | IM-8 sharing + links | The share link is fixed. Links into the app: not started | #267 | Universal links (associated domains, the AASA file) |
 | IM-9 version gate | Built on a local branch, in review. The real read still waits on IA-2 | — | Review and merge; the two contract fields; the App Store id and a support address |
-| IM-10 bug reporter | Off on native: done. **Native port: wanted, not started** | #245 | The port (IM-10 part 2); the note in `docs/bug-workflow.md` |
+| IM-10 bug reporter | Part 1 (off on native): done. **Part 2 stage 1 (button, window screenshot, one-field note): built on `ui/bev-27-im-10-native-reporter`, not merged, unproven on a phone.** Stage 2 (select, record steps): not started | #245 | The device checks under IM-10; merge; stage 2 |
 | IM-11 tests | The suite runs as iOS already; a full iOS suite is not started | #258 | A web jest project, simulator flows, a device checklist; #270 (a second flaky test) is open |
 | IM-12 store assets | Not started | — | All of it |
 | IM-13 report + block | Blocked on the contract half (#261, open, conflicts with `main`). Database half is merged (#254, #262) | — | The sheets and the filtered lists |
@@ -109,7 +109,7 @@ blocking: builds run from Arjun's machine for now (§0.1), so the environment
 is only needed the day a build should come from CI.
 
 In practice for this project: Arjun hands me **values** (bundle id, EAS project
-id, Apple team id, registered device UDIDs, the iOS Maps key, the Sentry DSN)
+id, Apple team id, registered device UDIDs, the iOS Maps key)
 and I commit them to `app.config.ts` / `eas.json`. I never add a migration or
 touch `packages/api`; a missing field is a request to Arjun, not a client-side
 workaround. `shared/src/` only moves through `contract/*` PRs, one
@@ -201,14 +201,14 @@ Left:
 - **`app/.env.example` says** "development and preview hold the dev backend's
   values, production the prod backend's". There is no dev backend (IS-2).
   Correct the comment when IS-2 is settled.
-- Sentry's config plugin (IS-4), when its dependency PR lands.
+- ~~Sentry's config plugin (IS-4)~~: dropped with Sentry on 2026-11-19, nothing to add.
 
 **Order still matters: dependency PR first, then the plugin entry.** A `plugins`
 entry for a package that is not installed fails config resolution and
 `expo-doctor`. And every new native dependency means the development build has
 to be rebuilt (§6), so batch them where it is honest to: `expo-camera`,
-`expo-application` (IM-9, on its branch), `expo-updates`,
-`@sentry/react-native` and `react-native-view-shot` are all still to come.
+`expo-application` (IM-9, on its branch), `expo-updates` and
+`react-native-view-shot` are all still to come.
 `expo-file-system` (#268) was the exception that needed no rebuild: `expo`
 already depends on it, so it was in the binary before the app imported it.
 
@@ -231,10 +231,11 @@ development build on a registered device that this section planned.
 
 What it took, which was less than expected:
 
-- **The bug reporter is closed on native** by `REPORTER_SUPPORTED`
-  (`features/bug-report/supported.ts`): the host loader has a native file that
-  renders nothing (`loadHost.ts`, with `loadHost.web.ts` beside it) and
-  `canReport` is never asked (`api/hooks/bugs.ts`). `bugs.canReport()` itself
+- **The bug reporter was closed on native** by `REPORTER_SUPPORTED`
+  (`features/bug-report/supported.ts`) when G1 was reached; stage 1 of IM-10
+  part 2 turns it on for iOS (`REPORTER_SUPPORTED` is now `web` or `ios`, and
+  `loadHost.ts` is one file for both). Until that merges, `canReport` is never
+  asked on native (`api/hooks/bugs.ts`). `bugs.canReport()` itself
   is Arjun's and did not change. The iOS bundle went from 7.0 MB to 6.3 MB with
   `html2canvas` gone from it.
 - **The Map tab is `MapInProgressScreen`**, on both builds.
@@ -295,9 +296,9 @@ Landed:
 
 Left:
 
-- `features/bug-report/draft.ts` and `store.ts` still assume browser storage.
-  Moot while the reporter is off on native; they move with the port (IM-10
-  part 2).
+- `features/bug-report/draft.ts` and `store.ts` assumed browser storage; stage 1
+  of IM-10 part 2 gives them `draftStorage.ts` (AsyncStorage) beside
+  `draftStorage.web.ts`.
 - Three checks only a phone can give, on a build that contains #266: still
   signed in after a force-quit (swipe the app away in the app switcher), after
   a night in the background, and signed out after delete + reinstall. Jest
@@ -601,8 +602,9 @@ branch.
 
 ### IM-10 — The bug reporter
 
-**Status: part 1 (off on native) is done in #245. Part 2 (the native port) was
-asked for on 2026-11-18 and is not started.**
+**Status: part 1 (off on native) is done in #245. Part 2 stage 1 is built on
+`ui/bev-27-im-10-native-reporter` (2026-11-19), not merged and unproven on a
+phone; stage 2 is not started.**
 
 `src/features/bug-report/` is ~6,500 lines built *on* the DOM: `html2canvas-pro`
 redraws the page to a canvas, `pick.ts` / `pickMode.ts` / `trail.ts` hit-test
@@ -610,23 +612,64 @@ real elements, the layer is a portal appended to `<body>`, components are tagged
 `data-report-ui`, and the whole `metro.minify.js` + `scripts/check-bundle.mjs`
 component-name contract exists to serve it.
 
-#### Part 1 — off on native (done)
+#### Part 1 — off on native (done; superseded for iOS by stage 1 below)
 
-`REPORTER_SUPPORTED` closes it (IM-2). Consequences, still true until part 2:
+`REPORTER_SUPPORTED` closed it (IM-2). Consequences, which stage 1 changes as
+noted:
 
 - The web app keeps the reporter, so `metro.minify.js` and `check-bundle.mjs`
   stay exactly as they are.
 - `check-bundle.mjs` is also what keeps `src/testing/**` out of a shipped
   bundle. Arjun's `ios.yml` now runs the same scan over a native export (#253).
-- With no reporter and no Vercel logs, **a crash on a device is invisible.**
-  That is **IS-4**, crash reporting before TestFlight, and it is not started:
-  Arjun owns the account and the build secret; I wire the SDK, its config
-  plugin, and the dSYM/source-map upload — without which the reports are
-  unsymbolicated and useless.
-- **Still owed:** a paragraph in `docs/bug-workflow.md` saying that the iOS
-  build has no reporter yet and what a tester on a phone does instead (the web
-  app, or TestFlight's own screenshot feedback once there is a TestFlight
-  build). The page does not mention native today.
+- With no reporter and no Vercel logs, **a crash on a device is invisible**
+  to us, apart from what Apple collects. That is **IS-4**: Sentry was dropped
+  on 2026-11-19 and the in-house reporter that replaces it is not built. The
+  next section says what exists meanwhile.
+- **Done with stage 1:** `docs/bug-workflow.md` has a section on reporting from
+  the iOS app, including what it does not do and that TestFlight's own
+  screenshot feedback remains for accounts that are not internal reporters.
+
+#### IS-4 — crash reporting (Sentry dropped; a seam and a boundary, no reporter)
+
+**Decided 2026-11-19: no Sentry.** `@sentry/react-native` was wired on a
+branch, merged into the integration branch, and taken out again the same day
+in favour of an in-house crash reporter. **That reporter is not built**, and
+what it will be is being decided elsewhere, not here. Nothing in the app
+depends on Sentry now: no package, no config plugin, no environment value, no
+build secret.
+
+What that leaves **today**:
+
+- **A native crash is visible only through Apple.** The crash reports Apple
+  collects itself: TestFlight's crash feedback, App Store Connect, and Xcode's
+  Organizer. Nothing of ours records one.
+- **A JavaScript error the app catches is not recorded anywhere.** It
+  reaches the seam below and stops there, because nothing is listening.
+
+What is in the app, and stays whatever the reporter turns out to be:
+
+- **A root error boundary.** The root layout exports `ErrorBoundary`
+  (`src/components/RootError.tsx`), so a screen that throws while it renders
+  shows "Something went wrong" with Try again in place of the whole app,
+  instead of closing it. It renders outside every provider the layout sets
+  up, so it uses none.
+- **One seam, `captureError(error, context?)`** in
+  `src/lib/crashReporting.ts`, called from two places: the boundary, once per
+  error, and the query client (`src/api/queryClient.ts`) for a read or a save
+  React Query gave up on. A reporter plugs in with `setCrashSink(fn)`. **No
+  sink is registered**, so today `captureError` returns at its first line.
+- **The rules a sink cannot get around**, because they are applied before it
+  is called: an error the app expects is never handed over (every `ApiError`
+  code but `unknown`: `isExpectedError`); the sink gets a plain `CrashReport`
+  (name, message, stack, where it was caught), never the error object and
+  never an `ApiError`'s `detail`; headers, tokens and the query string of
+  every URL are removed first (`src/lib/crashScrub.ts`); and of a query's key
+  only the family is passed, never an id or what someone typed.
+
+Not there, and not to be assumed: anything that catches an uncaught error
+outside React (a rejected promise nobody awaited, an error in a timer), any
+record of a native crash, any upload of symbols or source maps, and any way to
+trigger a test crash from the app.
 
 #### Part 2 — the native port (wanted)
 
@@ -650,9 +693,40 @@ Two stages, so testers get something early:
    is most of the value and none of the hard part.
 2. **Select element and Record steps**, once stage 1 is in testers' hands.
 
+##### Stage 1, as built (2026-11-19)
+
+Branch `ui/bev-27-im-10-native-reporter`. Contract 3.3.0 (the one commit that
+touches `shared/` and `packages/api`): `BugReportInput.evidence[].file` is an
+`UploadPayload`, `bugs.report` runs `toUploadBody` on each file before staging
+anything (an RN `Blob` is refused with `'validation'`). Nothing in
+`supabase/` changed: the `bug-report` function only ever sees uploaded objects
+and accepts a native report as built (no element, no steps; `stepsSource`
+defaults to `'typed'`, `targets` and `reproductionSteps` to empty).
+
+| Piece | How |
+|---|---|
+| On/off | `REPORTER_SUPPORTED` is `web` or `ios`. `canReport()` is asked once the session is ready, as on the web; an ordinary account never mounts the reporter (`loadHost.ts`, one lazy `import()`). Metro puts it in the one bundle, so it is not evaluated rather than not downloaded |
+| What each platform can do | `capabilities.ts` (iOS: no select, no steps, a screenshot first, no sheets over a full-screen flow) and `capabilities.web.ts` |
+| Capture | `capture.ts`: `react-native-view-shot` `captureScreen`, JPEG q0.85, long side at most 1,600 px, bytes read with `expo-file-system`, a `Uint8Array`. `capture.web.ts` is the old `html2canvas-pro` file, unchanged |
+| Capture timing | `layerHidden.ts`: the reporter's layer hides itself (opacity 0), says so from an effect, two frames pass, then the shutter; it shows again right after. A new note opens only after the picture (`store.openBlankNote`); a failed picture still opens the note, with a line saying so |
+| The layer | `ReportLayer.tsx`: `FullWindowOverlay` from `react-native-screens`, a container added to the key window above any presented full-screen modal, passing touches outside its children to the app; not an accessibility modal. The note, the button and the toast are in it. `ReportLayer.web.tsx` is the old portal |
+| The sheets | Filed reports and the rank sheet are the app's `Sheet` (a `Modal`), drawn beside the layer, and **closed over a full-screen flow** (`sheetsOverFullScreen: false`, `FULL_SCREEN_ROUTES`) with a line in the note. Unproven whether a second `Modal` over a presented screen would work; the guard can go if a phone says it does |
+| Select / steps | `pickMode.ts` and `trail.ts` (iOS) have none: `startPickMode` and `startStepRecording` throw, which the engine answers as "not available"; the note does not draw the two actions. `pick.ts`, `pickMode.web.ts`, `trail.web.ts` and `componentFiles.generated.ts` are not in the iOS bundle |
+| What is sent | `context.ts` (iOS) and `context.web.ts`; `contextCommon.ts` is shared. The environment allow-list has no field for a device model, an update or a runtime, so they ride in `platform` and `build` (see `docs/bug-workflow.md`). A new field would be a contract and server change |
+| Drafts | `draftStorage.ts` (AsyncStorage read into memory once, written through in order; the host waits for it before restoring) and `draftStorage.web.ts` (`localStorage`). Only text, type, marks' details and the key are stored, never a picture |
+| Tests | `nativeReporter.test.tsx` (the whole app as iOS), `nativeStore.test.ts`, `capture.test.ts`, `layerHidden.test.tsx`, `context.test.ts`, `trail.test.ts`, `draftStorage.test.ts`, `nativeEngine.test.ts`. The older reporter suites stay web suites: `jest.setup.js` gives them `supported: true` and the web's capabilities, and three were renamed `*.web.test.ts` because they test `.web` files |
+
+Device checks only a phone can give (none has been run): the screenshot really
+excludes the button and the note and includes a modal; the overlay passes a tap
+beside the note to the app; scrolling the app under the layer; the keyboard and
+the note's position inside the overlay; VoiceOver reaches the app around the
+note; the note over the ranking flow, New Bev and the photo viewer; Filed
+reports over a full-screen flow (the guard); a relaunch restores the text; what
+the `build` line reads on a TestFlight build and on an OTA update.
+
 Sequencing: after G2 and before the second TestFlight wave (friends). For the
-first wave, the two of us, Sentry plus TestFlight's built-in feedback is
-enough, and the reporter must not delay G1–G3. If it should ship in the first
+first wave, the two of us, Apple's own crash reports plus TestFlight's built-in
+feedback have to be enough (IS-4), and the reporter must not delay G1–G3. If it should ship in the first
 store build rather than after, say so and it moves ahead of IM-12.
 
 ---
@@ -847,7 +921,7 @@ Same list as Arjun's doc, from the app side:
 | ~~IS-1~~ | Does the web app stay? | — | **Decided 2026-11-18: web stays for now**, and once iOS works the repository goes private and the web build is archived. So native code is written to let web be removed cleanly (§1's split rule), and until then the policy/support URLs and the AASA host stay free |
 | IS-2 | Which backend does TestFlight hit? | `eas.json` profiles, env vars, and whether simulator flows may touch a backend at all (IM-11) | **Open, and the stated default is impossible.** There is one hosted Supabase project, not a dev/prod pair, and the org is at the free plan's two-project limit — so all three EAS environments point at the live database and a TestFlight tester writes to real data. Fine while it is the two of us; not fine for anyone else. The real fix costs money |
 | IS-3 | Demo account age / alcohol visibility | The age-rating answers and what review sees | Over 21, alcohol visible, and whichever top tier the questionnaire gives (IM-12) |
-| IS-4 | Crash reporting | Whether a device crash is visible at all. I wire the SDK, the config plugin and dSYM upload | Yes, `@sentry/react-native`. **Not started on either side**; needed before G3 |
+| IS-4 | Crash reporting | Whether a device crash is visible at all | ~~Yes, `@sentry/react-native`~~ **Decided 2026-11-19: not Sentry.** It was wired and removed the same day in favour of an in-house reporter, which is **not built**. Today: a root error boundary and a `captureError` seam with scrubbing and no sink (IM-10, "IS-4 — crash reporting"); native crashes are visible only through Apple's own reports. Whether G3 waits for the reporter is open |
 | ~~IS-5~~ | Bundle id | **Decided 2026-11-17: `app.bevi.ios`** — the exact string for `ios.bundleIdentifier` in `app.config.ts`, team prefix `9NA45GL4CJ` | settled |
 | ~~IS-6~~ | `react-native-maps` or `expo-maps` | — | **Deferred 2026-11-18:** the Map tab is an "In progress" page in v1, so IM-7 shrinks to that and IA-7 (the iOS Maps key) is parked. Decide when the real map is built |
 | ~~IS-7~~ | Report-content + block-user for v1? | — | **Decided 2026-11-18: ships in v1.** Database half merged (#254, #262); the contract and `packages/api` half is #261, open and waiting for a rebase onto 3.0.0; then IM-13 |
@@ -876,7 +950,7 @@ over the App Store id and a support address for IM-9's screen.
   them.** Installed so far: `expo-build-properties`, `expo-dev-client`,
   `expo-secure-store`, `@react-native-community/netinfo`, `expo-file-system`
   (#268). Still to come: `expo-application` (IM-9, on its branch),
-  `expo-camera` (IM-5), `expo-updates`, `@sentry/react-native` (IS-4),
+  `expo-camera` (IM-5), `expo-updates`,
   `react-native-view-shot` (IM-10 part 2), and after v1 `expo-location` and the
   map library. One lockfile at the root, `npx expo install` from `app/`, never
   `npm install` inside `app/` without `-w`. **After a pull that changes the
@@ -913,7 +987,7 @@ needs a new build:      photo, share, camera-refused and session checks (IM-3, I
 needs a phone:          IM-5 barcode · IM-6 ─────────────────── G2: every core flow works
 
 IM-9 (needs IA-2's contract half) ──┐
-IS-4 Sentry · expo-updates ─────────┤
+IS-4 (in-house) · expo-updates ─────┤
 IM-11 layers 2–4 ───────────────────┴──────────────────────── G3: internal TestFlight
 
 IM-13 (needs IS-7's contract) · IM-10 part 2 stage 1 ──────── second wave: friends

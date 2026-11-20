@@ -2424,7 +2424,9 @@ export class FakeApi implements BeviApi {
           // and the function keeps the first six, so the fake (which stores none) has nothing to do.
           for (const item of evidence) {
             if (!BUG_EVIDENCE_MIME_TYPES.includes(item.mimeType)) invalid('evidence', 'Attach a JPEG, PNG or WebP image');
-            if (typeof item.file?.size === 'number' && item.file.size > UPLOAD_MAX_BYTES) {
+            // Contract 3.3.0: evidence is an UploadPayload, measured like media.upload's file.
+            const fileBytes = item.file instanceof ArrayBuffer || ArrayBuffer.isView(item.file) ? item.file.byteLength : item.file?.size;
+            if (typeof fileBytes === 'number' && fileBytes > UPLOAD_MAX_BYTES) {
               invalid('evidence', 'That screenshot is too large');
             }
           }

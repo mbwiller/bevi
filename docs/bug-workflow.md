@@ -21,7 +21,7 @@ The reporter is **internal only**. You see it when your `profiles.role` is
 the reporter's code, and the server refuses a submission from anyone else even
 if they call the endpoint directly.
 
-The way in is the **report button**: a round button with a warning triangle at
+The way in is the **report button** (the web app's; the iPhone app's is described under "Reporting from the iOS app (stage 1)" below): a round button with a warning triangle at
 the bottom right of every signed-in screen, the full-screen flows included
 (ranking, creating a Bev, the photo viewer). Press it and a note opens along
 the bottom of the screen; the app above it stays usable. Press it again and the
@@ -96,6 +96,70 @@ quarter of your open reports High, the middle half Medium, the rest Low. A
 ticket someone marked Urgent on the board stays Urgent. Ranking needs the
 `bug-report` function from this change to be deployed; against an older one
 the app says so and the report is filed all the same.
+
+### Reporting from the iOS app (stage 1)
+
+The iOS app has the same reporter in a smaller shape: **a report button, a real
+screenshot of the screen and the one-field note.** Everything from the note on
+is the web's own code: the same note, Send, "Filed T-104", Try again, Filed
+reports and the ranking. The same rule decides who gets it: the entry points
+appear, and the reporter's code runs, only when `bugs.canReport()` says yes for
+the signed-in account. An ordinary account never runs any of it.
+
+What happens when you press the report button:
+
+1. The reporter hides itself and the app takes a **screenshot of the window**
+   (what UIKit actually drew, a ranking screen or a sheet included, not a
+   redraw), so the report shows what you saw and not the reporter. The keyboard
+   is never in it. It is a JPEG, at most 1,600 pixels on its long side.
+2. The note opens with that picture already attached. **Capture screen** and
+   **Add photos** add up to two more; three is the limit, as on the web.
+3. You type the one sentence and press Send. The picture is uploaded as bytes
+   in that call and not before (never a `Blob`: a React Native `Blob` uploads as
+   an empty file, which is why contract 3.3.0 lets evidence be bytes).
+
+**Settings → Internal → Report a bug** does the same from Settings, so the
+picture is of Settings. A link to `/report-bug` opens a note with no picture:
+the screen it was opened from is about to go.
+
+What the app sends by itself, in the contract's own fields (the "Sent with it"
+line shows them before you send): the screen (`route`, the Expo Router pattern
+such as `/bev/[id]`, and `path`, the concrete path; a path with a
+percent-encoded or long opaque part is left out, because the photo viewer's
+route holds an image address), the device (`platform`: `ios · iPhone 15 Pro`),
+`osVersion` (`iOS 18.2`), `appVersion` (`0.1.0 (3)`: version and build number),
+`build` (one line: the short git SHA when the build was given one, the OTA
+update id's first eight characters and the runtime version when there is an
+update, and the contract version), the theme, whether you were online, the
+window size, pixel ratio and safe area, and the time. It also keeps the trail of
+screens opened, API calls that failed and uncaught errors, as the web does. The
+server keeps only the keys the contract names and redacts every string, so the
+update, the runtime and the contract version ride inside `build`: the contract
+has no fields of their own for them.
+
+What stage 1 does **not** do:
+
+- **No Select element and no Record steps.** The note does not draw them; a
+  report carries no component and no steps, and says nothing about either.
+  They are stage 2 (a registry of measured, named targets, and route changes
+  plus touches).
+- **Filed reports and the ranking sheet do not open over a full-screen flow**
+  (ranking, New Bev, the photo viewer). The report button and the note do: they
+  are drawn in a layer attached to the window itself, above UIKit's presented
+  screens. The two sheets are React Native modals, and a second modal over a
+  presented screen is not something to count on, so there the note says
+  "Filed reports open from the app's other screens, not from here." and the
+  toast leaves out "Place it". Close the flow and open them from anywhere else.
+- **The note's text survives a relaunch; its pictures do not.** The draft is
+  kept in AsyncStorage for a day, as it is in `localStorage` on the web: the
+  text, the type and the key it files under. The screenshot is held in memory
+  (its thumbnail is a temporary file) until the note is sent or discarded and is
+  never written to storage, so a restored note says "Screenshots weren't kept."
+- **No Android.** The reporter exists on the web and on iOS only.
+
+Anyone who is not an internal reporter still has TestFlight's own screenshot
+feedback for a build installed from TestFlight (take a screenshot, then tap Share
+Beta Feedback); that goes to App Store Connect, not to the board.
 
 ## 2. Say what it is, on the board
 
