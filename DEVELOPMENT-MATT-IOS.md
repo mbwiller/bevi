@@ -51,7 +51,10 @@ understate the sweep rather than bound it.
 
 **On a phone:** TestFlight build 0.1.0 (3), cut from `e1f0b1f` on the
 `production` profile on 2026-11-19. It opens, signs in and shows the feed
-(G1). It predates everything below.
+(G1). It predates everything below. Its client code is contract 2.15.0 and it
+never reads `app_config`, so the update and maintenance gate cannot reach it
+(`DEVELOPMENT-ARJUN.md` §15): remove it from TestFlight once a newer build is
+on both phones.
 
 **On `main`:** #243 to #271. Nothing since #271.
 

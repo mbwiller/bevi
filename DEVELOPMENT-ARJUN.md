@@ -1375,6 +1375,9 @@ Everything the backend still carries only for clients that have not been gated o
 |---|---|---|---|---|
 | _(worked example, not real)_ `get_bev` | `supabase/migrations/<ts>_bev_reads.sql` | 2.17.0 | `min_contract_version >= 2.18.0` **and** `min_app_version >= 1.4.0` | Superseded by `get_bev_v2`, which returns `nutrition` as columns instead of nested json. Drop the function and this row in the same PR. |
 
-Nothing on `main` qualifies yet, and that is a fact about the world rather than an oversight: the app and the backend still deploy together, so there has never been a client that a migration could not move with it. The worked example stays until the first real row replaces it.
+No row yet, but the reason changed on 2026-11-19: **there is now a client a migration cannot move.** TestFlight builds 0.1.0 (2) and (3) were cut from `e1f0b1f`, whose client code is contract **2.15.0**, and they stay installable until TestFlight expires them 90 days after upload (2027-02-17). Two things follow.
 
-Two near-term changes deliberately produce no row: IA-2 deletes `placeholderAppConfig()`, which is internal to `packages/api` and reaches no shipped client, and IA-4 widens `UploadMediaInput.file`, which is additive. The first real row comes from the first change that cannot be made additively once a TestFlight build exists.
+- **Those builds cannot be gated.** At `e1f0b1f`, `meta.getAppConfig()` still returned the hardcoded placeholder: the builds never call `get_app_config`, so no value of `min_app_version`, `min_contract_version` or `maintenance` reaches them. The first build that reads the row is the first one cut after contract 3.2.0 (#275). Until builds 2 and 3 have expired or been removed from TestFlight, every shape contract 2.15.0 reads is live, whatever the support window in §14 says, and raising a floor does nothing for them.
+- **The first real row** comes from the first change that cannot be made additively. The worked example stays until then.
+
+Two near-term changes deliberately produce no row: IA-2 deletes `placeholderAppConfig()`, which is internal to `packages/api` and reaches no shipped client, and IA-4 widens `UploadMediaInput.file`, which is additive. 
