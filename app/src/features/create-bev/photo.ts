@@ -39,12 +39,18 @@ export async function pickImage(source: PhotoSource): Promise<ImagePicker.ImageP
 
 type Rendered = Awaited<ReturnType<ImageManipulator.ImageManipulatorContext['renderAsync']>>;
 
-/** Decodes `source`, resized to fit `maxEdge` when its size is known. */
+/**
+ * Decodes `source`, resized to fit `maxEdge` when its size is known. Only the longer edge is given
+ * to the manipulator, which derives the other from the decoded image: the picker's width and height
+ * can be the unrotated ones (a portrait HEIC), and passing both would squash the photo.
+ */
 async function render(source: string | Rendered, width: number, height: number, maxEdge: number): Promise<Rendered> {
   const context = ImageManipulator.ImageManipulator.manipulate(source);
   try {
     const target = fitWithin(width, height, maxEdge);
-    if (width > 0 && height > 0 && (target.width !== width || target.height !== height)) context.resize(target);
+    if (width > 0 && height > 0 && (target.width !== width || target.height !== height)) {
+      context.resize(width >= height ? { width: target.width } : { height: target.height });
+    }
     return await context.renderAsync();
   } finally {
     context.release();
@@ -58,12 +64,12 @@ async function render(source: string | Rendered, width: number, height: number, 
  * `UnsupportedImageError`, never uploaded untouched. The returned `uri` (a cache file) is the preview.
  */
 export async function preparePhoto(asset: ImagePicker.ImagePickerAsset, maxEdge = PHOTO_MAX_EDGE): Promise<PreparedPhoto> {
-  const known = asset.width > 0 && asset.height > 0;
   let image: Rendered | null = null;
   try {
     image = await render(asset.uri, asset.width, asset.height, maxEdge);
-    if (!known) {
-      // The picker didn't say how big it is: the decoded image does, so fit that.
+    {
+      // The picker's size is a hint (absent, or unrotated): the decoded image's is the truth. If it
+      // still doesn't fit, shrink it by its own longer edge.
       const target = fitWithin(image.width, image.height, maxEdge);
       if (target.width !== image.width || target.height !== image.height) {
         const full = image;
