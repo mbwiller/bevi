@@ -16,6 +16,7 @@ import { FeedPost } from '../FeedPost';
 import { usePressFeedback } from '../PressFeedback';
 import { TabBar, type TabId } from '../TabBar';
 import { FollowPill, UserRow } from '../UserRow';
+import { followPill } from '@/testing/followPill';
 
 // Where Press and Change are applied. The helpers' own suites cover what they animate; here each
 // place is checked to carry them, to keep its press firing once, and to pop only on its own press.
@@ -119,11 +120,11 @@ describe('Change', () => {
   it('FollowPill pops on its own press, once, and not when it re-renders with the new state', async () => {
     const onPress = jest.fn();
     const { rerender } = await render(<FollowPill following={false} name="Arjun Cheema" onPress={onPress} />);
-    await fireEvent.press(screen.getByRole('button', { name: 'Follow Arjun Cheema' }));
+    await fireEvent.press(screen.getByRole('button', { name: followPill('Arjun Cheema') }));
     expect(onPress).toHaveBeenCalledTimes(1);
     expect(withSequence).toHaveBeenCalledTimes(1);
     await rerender(<FollowPill following name="Arjun Cheema" onPress={onPress} />);
-    expect(screen.getByRole('button', { name: 'Follow Arjun Cheema' }).props['aria-pressed']).toBe(true);
+    expect(screen.getByRole('button', { name: followPill('Arjun Cheema') }).props['aria-pressed']).toBe(true);
     expect(withSequence).toHaveBeenCalledTimes(1);
   });
 
@@ -162,12 +163,12 @@ describe('Change', () => {
     });
     const wrap = (el: ReactElement) => <QueryClientProvider client={client}>{el}</QueryClientProvider>;
     await render(wrap(<FollowButton userId="nobody" name="Friend A" following={false} style={{ flex: 1 }} />));
-    const button = screen.getByRole('button', { name: 'Follow Friend A' });
+    const button = screen.getByRole('button', { name: followPill('Friend A') });
     expect(styleOf(button)).toMatchObject({ flex: 1, height: 36 });
     await fireEvent(button, 'pressIn');
-    expect(styleOf(screen.getByRole('button', { name: 'Follow Friend A' })).filter).toBe('brightness(0.94)');
+    expect(styleOf(screen.getByRole('button', { name: followPill('Friend A') })).filter).toBe('brightness(0.94)');
     await fireEvent(button, 'pressOut');
-    expect(styleOf(screen.getByRole('button', { name: 'Follow Friend A' })).filter).toBeUndefined();
+    expect(styleOf(screen.getByRole('button', { name: followPill('Friend A') })).filter).toBeUndefined();
     await fireEvent.press(button);
     expect(withSequence).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(client.isMutating()).toBe(0));

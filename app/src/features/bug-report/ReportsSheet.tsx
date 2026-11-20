@@ -11,7 +11,8 @@ import { Icon } from '@/components/Icon';
 import { IconButton } from '@/components/IconButton';
 import { Sheet } from '@/components/Sheet';
 import { Skeleton } from '@/components/Skeleton';
-import { errorCopy } from '@/lib/errorCopy';
+import { actionErrorMessage, errorCopy } from '@/lib/errorCopy';
+import { openLink } from '@/lib/openLink';
 import { MAX_FONT_SCALE_DENSE, radius, size, spacing, type, useTheme } from '@/theme';
 
 import { byRank, isOpen, ticketMeta } from './labels';
@@ -158,7 +159,7 @@ function TicketRow({ row, placeable = false, children }: { row: BugReportSummary
     <View style={[styles.ticket, { borderBottomColor: colors.border }]}>
       <View style={styles.ticketTop}>
         <Pressable
-          onPress={() => void Linking.openURL(row.ticketUrl)}
+          onPress={() => openLink(() => Linking.openURL(row.ticketUrl))}
           accessibilityRole="link"
           accessibilityLabel={`${row.rank ? `Number ${row.rank}, ` : ''}${row.title}, ${ticketMeta(row)}`}
           style={({ pressed }) => [styles.ticketMain, pressed && { opacity: 0.7 }]}
@@ -192,7 +193,7 @@ function VerifyButton({ ticketId }: { ticketId: string }) {
   if (verify.isError) {
     return (
       <View style={styles.verify} role="alert" accessibilityLiveRegion="polite">
-        <Text style={[type.caption, styles.grow, { color: colors.scoreLow }]}>{`Couldn't mark it verified. ${errorCopy(verify.error).message}`}</Text>
+        <Text style={[type.caption, styles.grow, { color: colors.scoreLow }]}>{`Couldn't mark it verified. ${actionErrorMessage(verify.error)}`}</Text>
         <Button onPress={() => verify.mutate(ticketId)} accessibilityLabel={`Try again: verify ${ticketId}`}>
           Try again
         </Button>

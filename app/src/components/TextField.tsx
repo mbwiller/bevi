@@ -1,5 +1,7 @@
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import {
+  InputAccessoryView,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -10,7 +12,11 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import { radius, spacing, type, useTheme } from '@/theme';
+import { radius, size, spacing, type, useTheme } from '@/theme';
+
+import { useAnnounce } from '@/lib/useAnnounce';
+
+import { registerField } from './fieldFocus';
 
 export interface TextFieldProps {
   label?: string;
@@ -32,7 +38,10 @@ export interface TextFieldProps {
   reserveHint?: boolean;
   /** The HTML input type it stands for: `password` hides the text, `email`/`tel`/`url`/`numeric` pick the keyboard. */
   type?: 'text' | 'password' | 'email' | 'tel' | 'url' | 'numeric' | 'search';
-  /** The input's DOM id on web. */
+  /**
+   * The input's DOM id on web. With an id, the field also registers in `fieldFocus` while mounted,
+   * so `focusField(id)` can move focus to it on native.
+   */
   id?: string;
   /** The new text (the design system passes the input's change event; React Native passes the string). */
   onChange?: (v: string) => void;
@@ -49,6 +58,8 @@ export interface TextFieldProps {
 }
 
 const BOX = 48;
+/** iOS's number and phone pads have no return key, so these kinds get a "Done" bar above the keyboard. */
+const PAD_KINDS: ReadonlyArray<NonNullable<TextFieldProps['type']>> = ['numeric', 'tel'];
 const INPUT_MODE: Record<NonNullable<TextFieldProps['type']>, TextInputProps['inputMode']> = {
   text: 'text',
   password: 'text',
@@ -86,8 +97,14 @@ export function TextField({
   const input = useRef<TextInput>(null);
   const auto = `bv-field-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const fid = id ?? auto;
+  useEffect(() => (id ? registerField(id, () => input.current?.focus()) : undefined), [id]);
+  const accessoryId = Platform.OS === 'ios' && PAD_KINDS.includes(kind) ? `${fid}-done` : undefined;
   const message = error || hint;
-  const plain = kind === 'password' || kind === 'email' || kind === 'url';
+  // iOS ignores accessibilityLiveRegion: say a new error aloud (a hint is not announced, only read with the field).
+  useAnnounce(error);
+  // Text the system must not "fix": passwords, emails, urls, and anything told not to capitalise
+  // (handles, invite codes), since iOS autocorrect and spellcheck would rewrite a handle or a code.
+  const plain = kind === 'password' || kind === 'email' || kind === 'url' || autoCapitalize === 'none';
   return (
     <View style={[styles.field, style]}>
       {label ? (
@@ -132,13 +149,31 @@ export function TextField({
           spellCheck={plain ? false : undefined}
           autoFocus={autoFocus}
           enterKeyHint={enterKeyHint}
+          // iOS: a "next" field keeps the keyboard up while its onSubmit moves focus, rather than
+          // closing it and opening it again. react-native-web ignores this prop.
+          submitBehavior={enterKeyHint === 'next' ? 'submit' : undefined}
           maxLength={maxLength}
           editable={editable}
+          inputAccessoryViewID={accessoryId}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           style={[styles.input, { color: colors.text }]}
         />
       </Pressable>
+      {accessoryId ? (
+        <InputAccessoryView nativeID={accessoryId}>
+          <View style={[styles.accessory, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+            <Pressable
+              onPress={() => input.current?.blur()}
+              accessibilityRole="button"
+              accessibilityLabel="Done"
+              style={styles.done}
+            >
+              <Text style={[type.body, styles.doneText, { color: colors.primary }]}>Done</Text>
+            </Pressable>
+          </View>
+        </InputAccessoryView>
+      ) : null}
       {message || reserveHint ? (
         // With `reserveHint` this one Text stays mounted, empty or not, so its line never opens or closes.
         <Text
@@ -167,6 +202,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.input,
   },
   prefix: { marginRight: 2 },
+  accessory: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: spacing.gutter, borderTopWidth: 1 },
+  done: { minHeight: size.target, minWidth: size.target, alignItems: 'center', justifyContent: 'center' },
+  doneText: { fontWeight: '600' },
   // bundle.css `.bv-field-reserve`: one caption line, held open while there is no message.
   reserved: { minHeight: type.caption.lineHeight },
   // 17pt (bodyLarge) also keeps iOS Safari from zooming the page on focus (it zooms below 16px).

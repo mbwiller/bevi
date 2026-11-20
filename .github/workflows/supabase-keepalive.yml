@@ -1,0 +1,74 @@
+name: supabase-keepalive
+
+# IA-9. A free Supabase project is paused after a week with no API activity and
+# never resumes itself (DEVELOPMENT-ARJUN.md §2.3, first row). Today that
+# strands the friends who know to text us; with a store binary it is a one-star
+# review from someone we cannot reach. This calls `public.ping()`
+# (supabase/migrations/20261118214500_ping.sql) once a day so the week never
+# runs out.
+#
+# It has to be an HTTP request from OUTSIDE. The reported pause trigger is "no
+# API activity" and it is not confirmed that pg_cron activity inside the
+# database counts (§2.3), so a pg_cron job would be exactly the thing that
+# might not work.
+#
+# THE KEY IS THE PUBLISHABLE ONE -- the same key the app ships with. `ping()`
+# returns `now()` and reads nothing; the script refuses a secret/service-role
+# key outright.
+#
+# ADDING A SECOND PROJECT is three lines in the matrix below plus two more
+# repository secrets. There is one hosted app project today; when bevi-dev
+# joins, nothing else in this file changes.
+#
+# Needs the SUPABASE_PROD_URL and SUPABASE_PROD_PUBLISHABLE_KEY repository
+# secrets. Without them the script logs a warning and exits 0, so the schedule
+# stays green until someone adds them -- the bargain graph-keepalive.yml makes.
+#
+# This is a bridge, not a policy: the honest fix for prod before submission is
+# the Pro plan ($25/mo), which never pauses and buys daily backups (§2.3).
+
+on:
+  schedule:
+    - cron: "41 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-keepalive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # A fork has none of these secrets and would only burn its own minutes
+    # warning about it.
+    if: github.repository == 'mbwiller/bevi'
+    strategy:
+      # One project being unreachable must not stop the others being pinged.
+      fail-fast: false
+      matrix:
+        # One entry per hosted app project. `url_secret` and `key_secret` are
+        # the NAMES of repository secrets, looked up below; no value appears
+        # here.
+        project:
+          - label: bevi-prod
+            url_secret: SUPABASE_PROD_URL
+            key_secret: SUPABASE_PROD_PUBLISHABLE_KEY
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # No `npm ci`: the script has no dependencies.
+      - run: npm run supabase:keepalive
+        env:
+          SUPABASE_PROJECT_LABEL: ${{ matrix.project.label }}
+          SUPABASE_URL: ${{ secrets[matrix.project.url_secret] }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets[matrix.project.key_secret] }}

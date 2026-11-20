@@ -1,10 +1,11 @@
+import { parseTimestamp } from '@bevi/ranking';
 import type { ProfileStats } from '@bevi/shared';
 
 import { formatCount } from '@/lib/format';
 
 /** "Member since Oct 2026". */
 export function memberSince(createdAt: string): string {
-  const d = new Date(createdAt);
+  const d = new Date(parseTimestamp(createdAt));
   if (Number.isNaN(d.getTime())) return '';
   return `Member since ${d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`;
 }

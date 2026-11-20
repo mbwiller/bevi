@@ -30,9 +30,9 @@ preparation for a controlled rollout, not authorization to enable generation.
 The root cause of the reference deployment blocker was a mismatch between
 `export-style-refs.mjs`, which uploads `index.json` as `application/json`, and
 the original bucket migration, which allowed only PNG/JPEG. The fix is the
-append-only `20261115214136_bev_style_reference_index.sql`; earlier migrations
+append-only `20261119192919_bev_style_reference_index.sql`; earlier migrations
 are unchanged. The bucket remains private with the existing one MiB object cap.
-`20261116143626_bev_icon_auto_enqueue.sql` restores automatic first-pass
+`20261119192921_bev_icon_auto_enqueue.sql` restores automatic first-pass
 behavior: each new photo-backed Bev queues one job. It leaves older incomplete
 jobs terminal so enabling the worker does not unexpectedly backfill a backlog.
 

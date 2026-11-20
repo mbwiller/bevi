@@ -36,7 +36,7 @@ function level(component: string, title: string): PickLevel {
 }
 
 function shot(uri: string): Shot {
-  return { blob: new Blob([uri]), mimeType: 'image/jpeg', uri, width: 390, height: 844 };
+  return { file: new Blob([uri]), mimeType: 'image/jpeg', uri, width: 390, height: 844 };
 }
 
 function twoScreens(): Draft {
@@ -51,7 +51,7 @@ function twoScreens(): Draft {
     { id: 's1', kind: 'marked', shot: shot('blob:feed'), route: '/feed', visit: 1, seq: 1, pending: false },
     { id: 's2', kind: 'marked', shot: shot('blob:lists'), route: '/lists', visit: 2, seq: 2, pending: false },
   ];
-  d.photos = [{ uri: 'blob:photo', blob: new Blob(['p']), mimeType: 'image/jpeg', width: 1, height: 1 }];
+  d.photos = [{ uri: 'blob:photo', file: new Blob(['p']), mimeType: 'image/jpeg', width: 1, height: 1 }];
   d.steps = ['Start on /feed', 'Tap TabBar › Add Bev', 'Open /lists'];
   return d;
 }
@@ -87,10 +87,19 @@ describe('buildInput', () => {
 
   it('never sends more than 3 pictures: captures first, then photos', () => {
     const d = twoScreens();
-    d.photos = [...d.photos, { uri: 'blob:photo-2', blob: new Blob(['q']), mimeType: 'image/jpeg', width: 1, height: 1 }];
+    d.photos = [...d.photos, { uri: 'blob:photo-2', file: new Blob(['q']), mimeType: 'image/jpeg', width: 1, height: 1 }];
     const input = buildInput(d, TRAIL);
     expect(input.evidence).toHaveLength(3);
     expect(input.evidence?.[2]?.caption).toBe('Photo from the library');
+  });
+
+  it('evidence is an UploadPayload (contract 3.3.0): a photo prepared as bytes on native is sent as those bytes', () => {
+    const d = twoScreens();
+    const bytes = new Uint8Array([0xff, 0xd8]);
+    d.photos = [{ uri: 'file:///photo.jpg', file: bytes, mimeType: 'image/jpeg', width: 1, height: 1 }];
+    const input = buildInput(d, TRAIL);
+    expect(input.evidence).toHaveLength(3);
+    expect(input.evidence?.[2]).toEqual({ file: bytes, mimeType: 'image/jpeg', caption: 'Photo from the library' });
   });
 
   it('a mark without a picture has no evidenceIndex', () => {

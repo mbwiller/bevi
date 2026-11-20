@@ -1,11 +1,11 @@
 # Bevi — Tasks from the 2026-10-14 session
 
-Source: `CONVERSATION-2.md` (raw transcript). This file turns that conversation into tasks, split by lane. The maths asked for in topic 6 lives in `docs/bevi-ranking-math.tex` (compiled: `docs/bevi-ranking-math.pdf`).
+Source: the second planning session, 2026-10-14. This file turns that conversation into tasks, split by lane. The maths asked for in topic 6 lives in `docs/bevi-ranking-math.tex` (compiled: `docs/bevi-ranking-math.pdf`).
 
 **Revision 2 (2026-10-14, later the same day, Matt with Claude).** Two additions that were not in the transcript, decided after research:
 
 - **The Bev graph moves to a graph database.** Bevs, categories, brands and flavour profiles become nodes in **Neo4j AuraDB Free** with similarity-weighted edges (Pepsi next to Coke); Supabase stays the system of record for the Bev row, users and rankings; a nightly job keeps the two in step and writes the edges back to Postgres for the hot path. §1b, §1d, A-15..A-17, M-24.
-- **The map lives in the Search tab.** The centre tab becomes **Search**: the Bev search bar on top, a live NYC map underneath that you can pan in place or open full screen, search results sliding over the map. The map copies Beli's map UI (three reference screenshots in `bevi-ui-inspiration/beli-map-images/`), is **strictly constrained to New York City**, runs on **Google Maps JS** with the Bev Maps key, draws venues imported from **OpenStreetMap** plus our own curation. §1b, §1c, M-15, M-16, A-08. *(The Find Bev button and "Where did you have it?" were removed on 2026-10-19.)*
+- **The map lives in the Search tab.** The centre tab becomes **Search**: the Bev search bar on top, a live NYC map underneath that you can pan in place or open full screen, search results sliding over the map. The map copies Beli's map UI (described in `bevi-ui-inspiration/beli-screens-spec.md` §1c), is **strictly constrained to New York City**, runs on **Google Maps JS** with the Bev Maps key, draws venues imported from **OpenStreetMap** plus our own curation. §1b, §1c, M-15, M-16, A-08. *(The Find Bev button and "Where did you have it?" were removed on 2026-10-19.)*
 
 **Revision 3 (2026-11-11, Matt with Claude, from the 2026-11-10 conversation with Arjun).** The second bullet above is reversed (D-16): the map leaves the Search tab, the centre tab is renamed **Add Bev**, Your Lists and the Bevs leaderboard merge into **Lists**, finding people and the points ranking move to a **People** screen, and "the map" from here on means the **Bev Maps** integration, which starts as a Find Bev launcher on a new **Map** tab. The venue map built in M-16 is parked in the repo, out of the app. Tasks: M-32 to M-34, S-22 + A-18.
 
@@ -21,7 +21,7 @@ Source: `CONVERSATION-2.md` (raw transcript). This file turns that conversation 
 
 | PR | What | Reviewer | What merging it unblocks |
 |---|---|---|---|
-| **`be/bug-reporter`** (#167) | **The internal bug reporter, Linear-first, contract 2.11.0** (plan: the Bevi ticketing system doc, 2026-11-09). Arjun's branch rebased onto `main`; `20261109000300`: `tester` role, `bug_reports` ledger (kind, severity, title, up to 3 evidence paths), `claim_bug_report` as the caller, `finish_bug_report` service-role only, private `bug-evidence` bucket, `set_profile_role` (the operator path the trigger otherwise blocks); the `bug-report` function with report, status and verify routes; `BugsApi.report/listMine/markVerified`; the form's Type and Severity controls; FakeApi + conformance; docs | **Matt** (`integrator` + `integrator-app` from his side; CI's `db` job is the first run of pgTAP 28 and the Deno tests); Arjun's review after the fact | Filing bugs from the phone once Matt pushes the migration, sets `LINEAR_*`, deploys the function and grants the roles; then `ui/bug-report-form` (auto-capture, breadcrumbs, strict fields), `ui/bug-reports-list` (My reports), `chore/ticketing-ops` (`/ticket`, evidence purge workflow) |
+| **`be/bug-reporter`** (#167) | **The internal bug reporter, Linear-first (now the founders' board), contract 2.11.0** (plan: the Bevi ticketing system doc, 2026-11-09). Arjun's branch rebased onto `main`; `20261109000300`: `tester` role, `bug_reports` ledger (kind, severity, title, up to 3 evidence paths), `claim_bug_report` as the caller, `finish_bug_report` service-role only, private `bug-evidence` bucket, `set_profile_role` (the operator path the trigger otherwise blocks); the `bug-report` function with report, status and verify routes; `BugsApi.report/listMine/markVerified`; the form's Type and Severity controls; FakeApi + conformance; docs | **Matt** (`integrator` + `integrator-app` from his side; CI's `db` job is the first run of pgTAP 28 and the Deno tests); Arjun's review after the fact | Filing bugs from the phone once Matt pushes the migration, sets the tracker secrets (`LINEAR_*` then, `BOARD_INTAKE_*` now), deploys the function and grants the roles; then `ui/bug-report-form` (auto-capture, breadcrumbs, strict fields), `ui/bug-reports-list` (My reports), `chore/ticketing-ops` (`/ticket`, evidence purge workflow) |
 | **#148** | Icon batch 3, `design/beverage-icon-pilot`: 19 new icons (49 total, 40 of 43 starters) exported into the app; `app.yml` also watches the icon manifest | **Matt: visual sign-off** (checklist in the PR), then merge and reset the pilot branch onto `main` | 49 icons in the app |
 
 **Prod migrations:**
@@ -286,7 +286,7 @@ These are the statements both of us agreed to. Everything in the task board belo
 
 ### 1c. The Beli map, screenshot by screenshot, and the Bevi mapping
 
-Reference images: `bevi-ui-inspiration/beli-map-images/` (README there describes each).
+Reference images: described in `bevi-ui-inspiration/beli-screens-spec.md`; the Beli captures themselves are no longer in the repository (CLEANUP.md F-04).
 
 | Beli element (images 01–03) | Bevi equivalent on the Search tab |
 |---|---|
@@ -642,7 +642,7 @@ Done: `docs/bevi-ranking-math.tex` (S-15). It covers, with definitions, proposit
 - Pins: `AdvancedMarkerElement` with our own DOM: the teardrop (your score, band colour) and the white callout (category icon in a grape circle + score, dotted ring for predicted), ↗ and bookmark badges, 44pt targets, selected pin raised. No clustering (Beli doesn't); the viewport query (S-10) caps results by zoom.
 - Chrome, exactly §1c: `List | Map` control with the people button, the filter row (`Filters N`, `Neighborhood ▾`, `Category ▾`, `$, $$ ▾`, `Open now`, `Retailer ▾`), blue dot + locate button, `View List` pill, and the venue sheet. Design-system components for all of it first (`MapPin`, `MapCallout`, `MapFilterRow`, `VenueSheet`).
 - Data: `venues.inView({ bounds, zoom, filters })` → pins; `venues.get(id)` → sheet.
-- Reference: `bevi-ui-inspiration/beli-map-images/`.
+- Reference: `bevi-ui-inspiration/beli-screens-spec.md` §1c.
 - Needs: S-10 (trimmed), A-08, M-15 (done).
 - DoD: Beli screenshots side by side with Bevi screenshots at the same three zooms; 60fps panning on an iPhone 12 Safari; map never created more than once per session (assert in a test on the loader wrapper); bounds cannot be escaped.
 
@@ -912,3 +912,4 @@ Lessons from week 1 (Matt's lane, with sub-agents):
 - **A fresh worktree needs `npm ci` at its root.**
 - **Only one agent at a time may edit `app/src/app/_layout.tsx` or `(tabs)/_layout.tsx`.** None of M-06/M-09/M-11 touched them. M-15 will.
 - **Since #58 a merge to `main` is a production deploy.** Do the device and visual checks before merging, or on a `vercel deploy` preview.
+- **Hygiene sweep (`be/hygiene-sweep`, `20261119152455`):** the reviewer findings from #115/#117/#118 — `cardinality()` for `array_length(arr, 1)`, `revoke insert/update/delete/**truncate**` from `anon`/`authenticated` on every `public` table (TRUNCATE is not subject to RLS, so it passed), the missing `rollback;` in `07_user_feed.test.sql`, and new pgTAP assertions in `11_graph_tables.test.sql` — plus `npm run graph:verify` (`scripts/graph/verify-pipeline.ts`), which asserts the Vault secrets, embedding coverage, `bev_edges` version/orientation and the two embed triggers, and exits non-zero, because every silent failure here so far has been success-shaped.

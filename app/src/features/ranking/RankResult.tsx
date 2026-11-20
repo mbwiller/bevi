@@ -2,6 +2,7 @@ import type { SubmitRankingResult } from '@bevi/shared';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { ZoomIn, useReducedMotion } from 'react-native-reanimated';
 
+import { useAnnounce } from '@/lib/useAnnounce';
 import { Button } from '@/components/Button';
 import { ScoreBubble } from '@/components/ScoreBubble';
 import { motion, spacing, type, useTheme } from '@/theme';
@@ -17,6 +18,7 @@ export function RankResult({ bevName, result, onDone }: { bevName: string; resul
   const reduced = useReducedMotion();
   const { ranking, bucketSize } = result;
   const line = rankLine(ranking.position, bucketSize, ranking.bucket, ranking.score);
+  useAnnounce(line);
   return (
     <View style={styles.wrap}>
       <View style={styles.center}>

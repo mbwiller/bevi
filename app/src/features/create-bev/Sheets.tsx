@@ -33,10 +33,21 @@ export function CategorySheet({
 }
 
 /** Closing with something entered asks first. */
-export function DiscardBevSheet({ open, onDiscard, onKeep }: { open: boolean; onDiscard: () => void; onKeep: () => void }) {
+export function DiscardBevSheet({
+  open,
+  onDiscard,
+  onKeep,
+  onClosed,
+}: {
+  open: boolean;
+  onDiscard: () => void;
+  onKeep: () => void;
+  /** After the sheet has really gone (Sheet's `onClosed`): the moment it is safe to leave the screen. */
+  onClosed?: () => void;
+}) {
   const { colors } = useTheme();
   return (
-    <Sheet open={open} title="Discard this Bev?" onClose={onKeep}>
+    <Sheet open={open} title="Discard this Bev?" onClose={onKeep} onClosed={onClosed}>
       <View style={styles.body}>
         <Text style={[type.body, styles.text, { color: colors.textSecondary }]}>The photo and details you added won&apos;t be saved.</Text>
         <Button variant="primary" block onPress={onDiscard}>

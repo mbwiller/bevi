@@ -284,7 +284,8 @@ select is(
   'the stale-pending re-arm keeps the staged evidence when the retry sends none'
 );
 
--- The Edge Function's service-role half records the outcome.
+-- The Edge Function's service-role half records the outcome. The identifier
+-- and URL below are fixtures from when Linear was the tracker; any text works.
 reset role;
 select public.finish_bug_report(
   (select id from public.bug_reports where idempotency_key = '11111111-2222-4333-8444-555555555555'),

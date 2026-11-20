@@ -13,6 +13,7 @@ import { categoryById } from '@/lib/categories';
 import { ALCOHOLIC_BEV_ID, ME, MINOR, controls } from '@/testing/fakeApi';
 import FeedScreen from '@/app/(tabs)/feed/index';
 import { EXPLORE_EMPTY_BODY, EXPLORE_EMPTY_TITLE } from '@/features/feed/FeedScreen';
+import { followPill } from '@/testing/followPill';
 
 let client: QueryClient;
 
@@ -123,7 +124,7 @@ describe('posts', () => {
     expect(within(card).queryByLabelText(`Rank ${top!.bev.name}`)).toBeNull();
     expect(within(card).queryByLabelText(/to Want to Try$/)).toBeNull();
     expect(within(card).queryByTestId('feed-post-comments')).toBeNull();
-    const follow = within(card).getByRole('button', { name: `Follow ${top!.actor.displayName}` });
+    const follow = within(card).getByRole('button', { name: followPill(top!.actor.displayName) });
     expect(follow.props['aria-pressed']).toBe(false);
 
     // A double-tap likes nothing.
@@ -242,10 +243,10 @@ describe('follow', () => {
     await start();
     const card = await screen.findByTestId(`explore-post-${top!.id}`);
 
-    await fireEvent.press(within(card).getByRole('button', { name: `Follow ${author.displayName}` }));
+    await fireEvent.press(within(card).getByRole('button', { name: followPill(author.displayName) }));
     expect(follow).toHaveBeenCalledWith(author.id);
     await waitFor(() =>
-      expect(within(postCard(top!)).getByRole('button', { name: `Follow ${author.displayName}` }).props['aria-pressed']).toBe(true),
+      expect(within(postCard(top!)).getByRole('button', { name: followPill(author.displayName) }).props['aria-pressed']).toBe(true),
     );
     expect(within(postCard(top!)).getByText('Following')).toBeTruthy();
     // The followed author's posts stay put until Explore starts over.
@@ -263,7 +264,7 @@ describe('follow', () => {
     await waitFor(() => expect(screen.queryByTestId(`explore-post-${top!.id}`)).toBeNull());
     await settled();
     expect(explorePages().flatMap((p) => p.items).some((p) => p.actor.id === author.id)).toBe(false);
-    expect(screen.queryAllByRole('button', { name: `Follow ${author.displayName}` })).toHaveLength(0);
+    expect(screen.queryAllByRole('button', { name: followPill(author.displayName) })).toHaveLength(0);
   });
 
   it('a failed follow goes back to Follow', async () => {
@@ -273,8 +274,8 @@ describe('follow', () => {
     const card = await screen.findByTestId(`explore-post-${top!.id}`);
     controls.setLatency(200);
     controls.failNext('network', 'follows.follow');
-    await fireEvent.press(within(card).getByRole('button', { name: `Follow ${author.displayName}` }));
-    const pill = () => within(postCard(top!)).getByRole('button', { name: `Follow ${author.displayName}` });
+    await fireEvent.press(within(card).getByRole('button', { name: followPill(author.displayName) }));
+    const pill = () => within(postCard(top!)).getByRole('button', { name: followPill(author.displayName) });
     await waitFor(() => expect(pill().props['aria-pressed']).toBe(true), { timeout: 150 });
     await waitFor(() => expect(pill().props['aria-pressed']).toBe(false), { timeout: 3000 });
     expect(within(postCard(top!)).getByText('Follow')).toBeTruthy();
@@ -286,7 +287,7 @@ describe('follow', () => {
     const author = top!.actor;
     await start();
     await screen.findByTestId(`explore-post-${top!.id}`);
-    const pill = () => within(postCard(top!)).getByRole('button', { name: `Follow ${author.displayName}` });
+    const pill = () => within(postCard(top!)).getByRole('button', { name: followPill(author.displayName) });
     await fireEvent.press(pill());
     await waitFor(() => expect(pill().props['aria-pressed']).toBe(true));
     await fireEvent.press(pill());

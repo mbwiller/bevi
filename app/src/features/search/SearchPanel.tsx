@@ -182,6 +182,10 @@ export function SearchPanel({ q, query }: SearchPanelProps) {
   if (items.length) {
     body = (
       <FlashList
+        // Off, as in BevList: left on (FlashList's default) it holds the rows on screen in place when
+        // rows are added above them. On iOS Recents arrive from storage after Popular is showing, and
+        // a Bev just opened goes to the top of Recents, so both landed above the top edge, out of sight.
+        maintainVisibleContentPosition={{ disabled: true }}
         data={items}
         renderItem={renderItem}
         keyExtractor={(i) => i.key}

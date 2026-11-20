@@ -29,6 +29,8 @@ export function SheetOption({ label, icon, selected, destructive, detail, onPres
       accessibilityRole="button"
       accessibilityLabel={label}
       {...(selected === undefined ? null : ({ 'aria-pressed': selected } as object))}
+      // React Native maps no `aria-pressed` on iOS; VoiceOver reads the chosen row from here.
+      accessibilityState={selected === undefined ? undefined : { selected }}
       onPress={onPress}
       style={({ pressed }) => [styles.row, { borderBottomColor: colors.border }, pressed && PRESSED]}
     >

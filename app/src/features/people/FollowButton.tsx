@@ -4,6 +4,7 @@ import { StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
 import { useFollow, useUnfollow } from '@/api/hooks';
 import { HitTarget, PRESSED } from '@/components/HitTarget';
 import { AnimatedPressable } from '@/components/PressFeedback';
+import { UNFOLLOW_HINT, followLabel } from '@/components/UserRow';
 import { usePop } from '@/components/usePop';
 import { radius, size, spacing, type, useTheme } from '@/theme';
 
@@ -57,7 +58,8 @@ export function FollowButton({ userId, name, following, style }: FollowButtonPro
         toggle(userId, following);
       }}
       accessibilityRole="button"
-      accessibilityLabel={`Follow ${name}`}
+      accessibilityLabel={followLabel(following, name)}
+      accessibilityHint={following ? UNFOLLOW_HINT : undefined}
       accessibilityState={{ selected: following }}
       {...({ 'aria-pressed': following } as object)}
       style={[

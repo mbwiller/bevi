@@ -1,3 +1,4 @@
+import { isApiError } from '@bevi/shared';
 import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,6 +8,7 @@ import { Header } from '@/components/Header';
 import { useBack } from '@/lib/useBack';
 import { useTheme } from '@/theme';
 
+import { PersonNotFound } from './PersonNotFound';
 import { PeopleList, type PeopleListProps, type PeopleQuery } from './PeopleList';
 
 export interface PeopleScreenProps {
@@ -25,6 +27,8 @@ export function PeopleScreen({ userId, title, query, which }: PeopleScreenProps)
   const me = useMe();
   const self = !!me.data && me.data.id === userId;
   const owner = useUser(self || !me.data ? undefined : userId);
+  // Their list answers 'not_found' once they are deleted or blocked: say so, not an error or a spinner.
+  const gone = (isApiError(query.error) && query.error.code === 'not_found') || (isApiError(owner.error) && owner.error.code === 'not_found');
   const first = owner.data ? owner.data.displayName.split(' ')[0] || `@${owner.data.handle}` : 'They';
 
   const empty: PeopleListProps['empty'] =
@@ -48,7 +52,7 @@ export function PeopleScreen({ userId, title, query, which }: PeopleScreenProps)
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.screen, { backgroundColor: colors.surface }]}>
       <Header title={title} onBack={back} />
       <View style={styles.body}>
-        <PeopleList query={query} meId={me.data?.id} empty={empty} searchable />
+        {gone ? <PersonNotFound onBack={back} /> : <PeopleList query={query} meId={me.data?.id} empty={empty} searchable />}
       </View>
     </SafeAreaView>
   );

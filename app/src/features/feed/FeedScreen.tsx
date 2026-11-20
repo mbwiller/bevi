@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { flattenPages, restartExplore, useFeed, useStats } from '@/api/hooks';
 import { keys } from '@/api/keys';
+import { Announce } from '@/components/Announce';
 import { Arrive, useArrival } from '@/components/Arrive';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
@@ -15,9 +16,11 @@ import { Header } from '@/components/Header';
 import { SearchBar } from '@/components/SearchBar';
 import { SegmentedTabs } from '@/components/SegmentedTabs';
 import { Skeleton } from '@/components/Skeleton';
+import { usePullToRefresh } from '@/lib/usePullToRefresh';
 import { spacing, type, useTheme } from '@/theme';
 
 import { BevOfPeriod } from './BevOfPeriod';
+import { SafetyFlow } from '../safety/SafetyFlow';
 import { PostCommentsSheet } from './PostCommentsSheet';
 import { POST_GONE, useFeedPostActions } from './useFeedPostActions';
 import { useExplorePosts } from './useExplorePosts';
@@ -71,7 +74,7 @@ export function FeedScreen() {
   const exploring = segment === 'explore';
   const stats = useStats();
   const feed = useFeed();
-  const { renderItem: renderPost, commentsFor, closeComments, postGone, notice } = useFeedPostActions();
+  const { renderItem: renderPost, commentsFor, closeComments, postGone, notice, safety: postSafety } = useFeedPostActions();
   const explore = useExplorePosts(exploring);
   const { renderItem: renderExplore } = explore;
   const qc = useQueryClient();
@@ -183,21 +186,17 @@ export function FeedScreen() {
       if (xq.hasNextPage && !xq.isFetching && !xq.isFetchNextPageError) void xq.fetchNextPage();
     } else if (feed.hasNextPage && !feed.isFetchingNextPage) void feed.fetchNextPage();
   };
-  const refreshing = exploring
-    ? xq.isRefetching && !xq.isFetchingNextPage && !xq.isPending
-    : feed.isRefetching && !feed.isFetchingNextPage && !feed.isPending;
-  const onRefresh = () => {
-    if (exploring) void restartExplore(qc);
-    else {
-      void feed.refetch();
-      void stats.refetch();
-    }
-    void qc.invalidateQueries({ queryKey: keys.bevOfPeriod() });
-  };
+  const { refreshing, onRefresh } = usePullToRefresh(() =>
+    Promise.all([
+      exploring ? restartExplore(qc) : Promise.all([feed.refetch(), stats.refetch()]),
+      qc.invalidateQueries({ queryKey: keys.bevOfPeriod() }),
+    ]),
+  );
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.screen, { backgroundColor: colors.surface }]}>
       <Header wordmark actions={[{ icon: 'user-plus', label: 'Find people', onPress: findPeople }]} />
+      <Announce text={notice} />
       {notice ? (
         <Text style={[type.body, styles.notice, { color: colors.textSecondary }]} role="alert" accessibilityLiveRegion="polite">
           {notice}
@@ -218,6 +217,8 @@ export function FeedScreen() {
         onRefresh={onRefresh}
       />
       <PostCommentsSheet eventId={commentsFor} onClose={closeComments} onGone={postGone} />
+      <SafetyFlow {...postSafety} />
+      <SafetyFlow {...explore.safety} />
     </SafeAreaView>
   );
 }

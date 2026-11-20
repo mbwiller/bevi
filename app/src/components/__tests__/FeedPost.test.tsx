@@ -2,6 +2,7 @@ import type { BevSummary, Comment, Profile } from '@bevi/shared';
 import { fireEvent, render, screen, within } from '@testing-library/react-native';
 
 import { DOUBLE_TAP_MS, FeedPost, POST_AVATAR, POST_PICTURE } from '../FeedPost';
+import { followPill } from '@/testing/followPill';
 
 const BEV: BevSummary = {
   id: 'b2',
@@ -599,7 +600,7 @@ describe('the plain post and the Follow pill (Explore)', () => {
   it("onFollow draws the author's Follow pill first on the left; following turns it to Following", async () => {
     const onFollow = jest.fn();
     const { rerender } = await render(<FeedPost actor={ARJUN} bev={BEV} score={9.5} onFollow={onFollow} />);
-    const pill = within(screen.getByTestId('post-social')).getByRole('button', { name: 'Follow Arjun Cheema' });
+    const pill = within(screen.getByTestId('post-social')).getByRole('button', { name: followPill('Arjun Cheema') });
     expect(pill.props['aria-pressed']).toBe(false);
     expect(within(pill).getByText('Follow')).toBeTruthy();
     // A leading pill has no side padding, so the group isn't pulled back past the gutter.
@@ -608,7 +609,7 @@ describe('the plain post and the Follow pill (Explore)', () => {
     expect(onFollow).toHaveBeenCalledTimes(1);
 
     await rerender(<FeedPost actor={ARJUN} bev={BEV} score={9.5} following onFollow={onFollow} />);
-    const following = screen.getByRole('button', { name: 'Follow Arjun Cheema' });
+    const following = screen.getByRole('button', { name: followPill('Arjun Cheema') });
     expect(following.props['aria-pressed']).toBe(true);
     expect(within(following).getByText('Following')).toBeTruthy();
   });

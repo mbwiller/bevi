@@ -6,7 +6,7 @@
 // `signUp`, `signIn`, `getSession`, `onAuthChange`, `profile.checkHandle` and
 // `meta.getAppConfig` and read-only `nutrition.lookupBarcode` throw 'unauthorized' when signed out.
 
-import type { Bucket, CategoryId, PriceTier } from './enums';
+import type { Bucket, CategoryId, PriceTier, ReportContentKind, ReportReason } from './enums';
 import type {
   NutritionPreview,
   AppConfig,
@@ -16,6 +16,7 @@ import type {
   BevOfPeriod,
   BevSimilarity,
   BevSummary,
+  BlockedUser,
   BucketBev,
   Category,
   CategoryNode,
@@ -375,11 +376,24 @@ export interface BevsApi {
 
 }
 
+/**
+ * What an upload's bytes may be (contract 2.15.0; it was `Blob` alone before).
+ *
+ * On the web this is a `File`/`Blob` from the image picker or camera input.
+ * On React Native, pass `ArrayBuffer` or `Uint8Array`: RN's `Blob` is a
+ * different object with no byte backing supabase-js Storage can read, and
+ * uploading one commonly stores a 0-byte object **without raising an
+ * error** — the photo simply comes back blank. An implementation running off
+ * the web therefore rejects a `Blob` with `'validation'` rather than
+ * uploading nothing.
+ */
+export type UploadPayload = Blob | ArrayBuffer | Uint8Array;
+
 export interface UploadMediaInput {
   /** 'avatar' is the caller's profile photo, applied with `profile.updateMe({ avatarAssetId })`. */
   kind: 'bev-photo' | 'label' | 'avatar';
-  /** A web `File` or `Blob` (from the image picker / camera input). */
-  file: Blob;
+  /** The bytes to upload. See `UploadPayload` for what each platform sends. */
+  file: UploadPayload;
   mimeType: string;
 }
 
@@ -652,28 +666,33 @@ export interface VenuesApi {
 }
 
 export interface MetaApi {
-  /** Callable signed out. */
+  /**
+   * The version gate and the maintenance flag (`AppConfig`). Callable signed
+   * out: a client has to be able to read the gate before it can sign in.
+   * Only a successful read may block the app; on any error, leave it open.
+   */
   getAppConfig(): Promise<AppConfig>;
 }
 
 // ---------------------------------------------------------------------------
 // Bugs: the internal bug reporter (docs/bug-workflow.md). Internal-only —
 // every method is refused for an ordinary account, server-side, whatever the
-// client chooses to show. Linear owns the issue: nothing here writes its
-// labels or comments after create, and the app never holds a tracker
-// credential. There are two writes after create, both to the caller's own
+// client chooses to show. The tracker (the founders' board) owns the ticket:
+// nothing here edits it after create beyond the two writes below, and the app
+// never holds a tracker credential. Both writes are to the caller's own
 // tickets: `markVerified`, which moves a ticket the reporter has checked on
 // the device to Done, and `place`, which puts a ticket in the reporter's
-// ranked list (Linear's manual order, and the priority that position implies).
+// ranked list (the board's shared order, and the priority that position
+// implies).
 // ---------------------------------------------------------------------------
 
-/** What the reporter says it is. The server files each kind under a Linear label of the same name. */
+/** What the reporter says it is. The server files each kind as the ticket's type on the board. */
 export type BugReportKind = 'bug' | 'fix' | 'idea' | 'design';
 
 /**
  * How bad the reporter says it is: blocker = cannot use the app or data is
  * wrong; bad = a core flow is broken; annoying = works with a workaround;
- * polish = cosmetic. The server maps it to Linear priority 1–4 at create time.
+ * polish = cosmetic. The server records it with the report in its ledger.
  */
 export type BugReportSeverity = 'blocker' | 'bad' | 'annoying' | 'polish';
 
@@ -681,7 +700,7 @@ export type BugReportSeverity = 'blocker' | 'bad' | 'annoying' | 'polish';
 export interface BugReportEnvironment {
   /** The route the reporter was on, e.g. '/bev/[id]'. Never a URL with a query string. */
   route?: string;
-  /** The feature area, for the tracker's component label. */
+  /** The feature area, which the ticket names as where in the app the report is about. */
   component?: string;
   platform?: string;
   osVersion?: string;
@@ -800,8 +819,13 @@ export interface BugReportInput {
    * The screenshots, at most 3, uploaded to private storage as part of this
    * call and never before it — nothing leaves the device until the reporter
    * submits. `caption` says what one shows, e.g. 'Feed, with 1 marked'.
+   *
+   * `file` is an `UploadPayload` (contract 3.3.0; it was `Blob` alone before),
+   * the same union `media.upload` takes: a `Blob` on the web, bytes
+   * (`Uint8Array` or `ArrayBuffer`) on React Native, where a `Blob` is
+   * refused with `'validation'` rather than stored as an empty file.
    */
-  evidence?: { file: Blob; mimeType: string; caption?: string }[];
+  evidence?: { file: UploadPayload; mimeType: string; caption?: string }[];
   /**
    * A UUID the client generates once per draft and reuses on every retry of
    * that draft. The same key never creates a second ticket.
@@ -810,7 +834,7 @@ export interface BugReportInput {
 }
 
 export interface BugReportResult {
-  /** The tracker's own identifier, e.g. 'BEV-104'. Never invented client-side. */
+  /** The tracker's own identifier, e.g. 'T-19' (tickets filed before 2026-11-17 keep names like 'BEV-7'). Never invented client-side. */
   ticketId: string;
   ticketUrl: string;
   /** 'duplicate' = this idempotency key had already produced that ticket. */
@@ -818,8 +842,9 @@ export interface BugReportResult {
 }
 
 /**
- * Where a ticket is in the workflow (docs/bug-workflow.md), derived from
- * Linear's state type; 'unknown' when the tracker could not be asked.
+ * Where a ticket is in the workflow (docs/bug-workflow.md), mapped from the
+ * board's stage (New is 'triage', Ready is 'todo'); 'unknown' when the
+ * tracker could not be asked.
  */
 export type BugTicketState = 'triage' | 'todo' | 'in_progress' | 'in_review' | 'done' | 'canceled' | 'unknown';
 
@@ -834,16 +859,16 @@ export interface BugReportSummary {
   /** ISO-8601, when it was filed. */
   createdAt: string;
   state: BugTicketState;
-  /** Linear's own state name, e.g. 'In Review'; null when `state` is 'unknown'. */
+  /** The tracker's own name for the stage, e.g. 'In review'; null when `state` is 'unknown'. */
   stateLabel: string | null;
-  /** Linear's priority 0–4; null when unknown. */
+  /** The tracker's priority on the 0–4 scale (2 High, 3 Normal, 4 Low on the board); null when unknown. */
   priority: number | null;
-  /** ISO-8601, Linear's last change; null when unknown. */
+  /** ISO-8601, the tracker's last change; null when unknown. */
   updatedAt: string | null;
   /**
    * Where this ticket sits among the caller's own open tickets (triage, todo
-   * and in progress), 1 being the one that bothers them most. It is Linear's
-   * manual order read back, so it follows a drag in Linear too. Null for a
+   * and in progress), 1 being the one that bothers them most. It is the
+   * board's shared order read back, so it follows a drag on the board too. Null for a
    * ticket that is in review, closed or unknown, and when the tracker could
    * not be asked.
    */
@@ -861,7 +886,7 @@ export interface BugsApi {
 
   /**
    * Files one report: uploads the evidence (if any), then creates the tracker
-   * issue server-side and returns the identifier the tracker assigned.
+   * ticket server-side and returns the identifier the tracker assigned.
    *
    * @throws 'unauthorized' — signed out, or not an internal reporter;
    *   'validation' — missing title (`detail.field = 'title'`), unknown kind or
@@ -915,6 +940,78 @@ export interface BugsApi {
   place(ticketId: string, afterTicketId: string | null): Promise<BugReportSummary[]>;
 }
 
+export interface BlocksApi {
+  /**
+   * The caller blocks this person (IS-7, App Store Guideline 1.2). The intent
+   * is one-directional -- they are never told, and their own block list does
+   * not change -- but the effect is mutual: from then on neither sees the
+   * other's profile, posts, comments, rankings or follow edges, and each gets
+   * 'not_found' for the other (`profile.getUser`, `feed.listUser`,
+   * `follows.follow`, ...). Blocking also removes the follow edges between the
+   * two, both ways; unblocking does not restore them.
+   *
+   * Idempotent: blocking someone already blocked resolves without error.
+   * @throws 'unauthorized'; 'not_found' — no such user; 'validation' —
+   *   blocking yourself; 'rate_limited'.
+   */
+  block(userId: string): Promise<void>;
+
+  /**
+   * Lifts the caller's own block. Idempotent: unblocking someone who was never
+   * blocked resolves without error. A block someone else made against the
+   * caller can neither be lifted nor detected from here.
+   * @throws 'unauthorized'.
+   */
+  unblock(userId: string): Promise<void>;
+
+  /**
+   * The people the caller has blocked, most recently blocked first: the
+   * Blocked accounts screen. Only the caller's own blocks: there is
+   * deliberately no way to ask who has blocked the caller, or whether a given
+   * person has.
+   * @throws 'unauthorized'.
+   */
+  list(page?: PageParams): Promise<Page<BlockedUser>>;
+}
+
+export interface ReportContentInput {
+  kind: ReportContentKind;
+  /** `FeedItem.id` / `ExplorePost.id` for 'post', `Comment.id` for 'comment', `Profile.id` for 'profile'. */
+  id: string;
+  reason: ReportReason;
+  /** The reporter's own words, at most `REPORT_NOTE_MAX` characters after trimming. Blank means none. */
+  note?: string;
+}
+
+export interface ReportContentResult {
+  /** The report's id: the existing one when the caller had already reported this content. */
+  reportId: string;
+}
+
+export interface ReportsApi {
+  /**
+   * Files a report about one post, comment or person for the operators to
+   * review (IS-7, App Store Guideline 1.2). It does not hide, block or notify
+   * anything; offer `blocks.block` beside it for that.
+   *
+   * Idempotent per (caller, content): reporting the same thing again returns
+   * the first report's id and changes nothing, whatever the new reason or note.
+   *
+   * Anything the caller can be shown is reportable: a post from the feed, a
+   * profile or Explore (`ExplorePost.id`), a comment from a thread, a profile.
+   * Content by someone the caller has blocked stays reportable, so Block then
+   * Report works. A comment on an Explore post is not, since Explore never
+   * shows comments (D-15).
+   * @throws 'unauthorized'; 'not_found' — no such content, or content the
+   *   caller cannot be shown (including any by someone who has blocked the
+   *   caller, which reads exactly like content that does not exist);
+   *   'validation' — reporting your own content or profile, an
+   *   unknown reason (`detail.field = 'reason'`), or a note over
+   *   `REPORT_NOTE_MAX` (`'note'`); 'rate_limited'.
+   */
+  report(input: ReportContentInput): Promise<ReportContentResult>;
+}
+
 export interface NutritionApi {
   /** UPC-A, EAN-8 or EAN-13. null means no usable nutrition data. */
   lookupBarcode(barcode: string, signal?: AbortSignal): Promise<NutritionPreview | null>;
@@ -938,4 +1035,6 @@ export interface BeviApi extends AuthApi {
   venues: VenuesApi;
   meta: MetaApi;
   bugs: BugsApi;
+  blocks: BlocksApi;
+  reports: ReportsApi;
 }

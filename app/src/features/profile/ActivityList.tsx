@@ -6,6 +6,7 @@ import { useCallback, useMemo, type ReactElement, type RefObject } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { FOLLOW_MUTATION, flattenPages, useMe, useTasteProfile, useUserFeed, useUserRankings } from '@/api/hooks';
+import { Announce } from '@/components/Announce';
 import { Arrive, useArrival } from '@/components/Arrive';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
@@ -16,7 +17,10 @@ import { TasteProfile } from '@/components/TasteProfile';
 import { FeedPostItem } from '@/features/feed/FeedPostItem';
 import { PostCommentsSheet } from '@/features/feed/PostCommentsSheet';
 import { useFeedPostActions } from '@/features/feed/useFeedPostActions';
+import { SafetyFlow } from '@/features/safety/SafetyFlow';
+import { useBack } from '@/lib/useBack';
 import { categoryById } from '@/lib/categories';
+import { usePullToRefresh } from '@/lib/usePullToRefresh';
 import { spacing, type, useTheme } from '@/theme';
 
 import { tasteReadout } from './tasteReadout';
@@ -50,6 +54,8 @@ export interface ActivityListProps {
   onEmptyAction?: () => void;
   /** Pull to refresh: refetch the header's queries too. The rankings refetch here. */
   onRefresh?: () => unknown;
+  /** Extra space under the last row, for a pushed screen (no tab bar) to clear the home indicator. */
+  bottomInset?: number;
   /** For `scrollToIndex({ index: 0 })`: brings the first post up under the screen header. */
   listRef?: RefObject<FlashListRef<ActivityRow> | null>;
 }
@@ -60,7 +66,7 @@ export interface ActivityListProps {
  * (`rankings.listUser`) as plain FeedPosts; infinite scroll. Taste Profile shows `stats.getTasteProfile`:
  * the preference read-out over a TasteBar per category.
  */
-export function ActivityList({ profile, self, following = false, header, tab, onTab, onEmptyAction, onRefresh, listRef }: ActivityListProps) {
+export function ActivityList({ profile, self, following = false, header, tab, onTab, onEmptyAction, onRefresh, bottomInset = 0, listRef }: ActivityListProps) {
   const { colors } = useTheme();
   const router = useRouter();
   // Posts for you and people you follow (feed.listUser returns nothing for anyone else); follow or
@@ -87,7 +93,10 @@ export function ActivityList({ profile, self, following = false, header, tab, on
   );
   const readout = useMemo(() => tasteReadout(tasteRows, self ? undefined : first), [tasteRows, self, first]);
   const shown = tab === 'taste' ? tasteQuery : query;
-  const { renderItem: renderPost, commentsFor, closeComments, postGone, notice } = useFeedPostActions({ linkActors: false });
+  const { refreshing, onRefresh: pull } = usePullToRefresh(() => Promise.all([shown.refetch(), onRefresh?.()]));
+  const { renderItem: renderPost, commentsFor, closeComments, postGone, notice, safety } = useFeedPostActions({ linkActors: false });
+  // Blocking the person whose Activity this is leaves their profile: it now reads as not found.
+  const back = useBack();
   // Arrive: what replaces each tab's skeleton rises in once; later pages and rows scrolled into view
   // hold still. Pending counts only while that tab shows its skeleton (the taste query is disabled,
   // so pending, whenever its tab is closed).
@@ -176,6 +185,7 @@ export function ActivityList({ profile, self, following = false, header, tab, on
 
   return (
     <View style={styles.fill}>
+      <Announce text={notice} />
       {notice ? (
         <Text style={[type.body, styles.notice, { color: colors.textSecondary }]} role="alert" accessibilityLiveRegion="polite">
           {notice}
@@ -188,18 +198,16 @@ export function ActivityList({ profile, self, following = false, header, tab, on
         keyExtractor={(r) => r.id}
         ListHeaderComponent={listHeader}
         ListEmptyComponent={<>{empty}</>}
-        ListFooterComponent={tab === 'activity' && query.isFetchingNextPage ? <Skeleton variant="post" /> : <View style={styles.foot} />}
+        ListFooterComponent={tab === 'activity' && query.isFetchingNextPage ? <Skeleton variant="post" /> : <View testID="activity-foot" style={[styles.foot, { height: spacing.xxl + bottomInset }]} />}
         onEndReached={() => {
           if (tab === 'activity' && query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage();
         }}
         onEndReachedThreshold={0.5}
-        refreshing={shown.isRefetching && !query.isFetchingNextPage}
-        onRefresh={() => {
-          void shown.refetch();
-          onRefresh?.();
-        }}
+        refreshing={refreshing}
+        onRefresh={pull}
       />
       <PostCommentsSheet eventId={commentsFor} onClose={closeComments} onGone={postGone} />
+      <SafetyFlow {...safety} onBlocked={back} />
     </View>
   );
 }

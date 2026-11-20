@@ -20,6 +20,8 @@ const FORBIDDEN = [
   'tester-pass-1',
   'test-invite',
   'Featured test Bev',
+  // packages/conformance (@bevi/conformance): the BeviApi conformance suite's default password
+  'conformance-pass-1',
   // the old in-browser mock's people and secrets
   'Demo Drinker',
   'demo1234',
