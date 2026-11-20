@@ -1,4 +1,4 @@
-import { isApiError, type NutritionPreview, type BevSummary, type CreateBevInput, type FindDuplicatesInput, type ValidationErrorDetail } from '@bevi/shared';
+import { isApiError, type BarcodeProduct, type CategoryId, type NutritionPreview, type BevSummary, type CreateBevInput, type FindDuplicatesInput, type ValidationErrorDetail } from '@bevi/shared';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -12,6 +12,7 @@ import { ProgressDots } from '@/components/ProgressDots';
 import { useDebouncedValue } from '@/features/add-bev/useDebouncedValue';
 import { formErrorMessage } from '@/features/auth/formError';
 import { categoryById, visibleCategories } from '@/lib/categories';
+import { announce } from '@/lib/useAnnounce';
 import { useBack } from '@/lib/useBack';
 import { useOnline } from '@/lib/useOnline';
 import { radius, spacing, type, useTheme } from '@/theme';
@@ -22,6 +23,9 @@ import {
   LABEL_REUPLOAD,
   OFFLINE_BANNER,
   PHOTO_REUPLOAD,
+  SCAN_CONFIRM_NUTRITION,
+  scanFilledText,
+  type ScanField,
   STEP_COUNT,
   STEP_TITLES,
   STILL_PROCESSING,
@@ -41,6 +45,17 @@ import { usePhotoUpload } from './usePhotoUpload';
 export const DUPLICATES_DEBOUNCE_MS = 400;
 
 type Step = 0 | 1 | 2;
+
+/**
+ * What a scan does to one field. `found` (what the product lists) goes in when the field is empty or
+ * still holds what the last scan `wrote`. When the product lists nothing, the last scan's value is
+ * cleared: it describes another product. Anything the person typed is left alone (`undefined`).
+ */
+function scanValue<T>(current: T, empty: boolean, wrote: T | undefined, found: T | null, blank: T): T | undefined {
+  const fromLastScan = !empty && wrote !== undefined && current === wrote;
+  if (found !== null) return empty || fromLastScan ? found : undefined;
+  return fromLastScan ? blank : undefined;
+}
 
 const DETAIL_FIELDS = new Set(['name', 'brand', 'flavor', 'categoryId', 'priceTier']);
 
@@ -65,6 +80,12 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
   const photo = usePhotoUpload('bev-photo');
   const label = usePhotoUpload('label');
   const [nutrition, setNutrition] = useState<NutritionPreview | null>(null);
+  // The label the last scan found, confirmed (then it is `nutrition` too) or still waiting.
+  const [scanned, setScanned] = useState<NutritionPreview | null>(null);
+  const [scanNotice, setScanNotice] = useState<string | null>(null);
+  // What the last scan wrote into the form. A field still holding it was not typed, so the next scan
+  // replaces it: scanning the wrong can and then the right one must not mix the two products.
+  const scanWrote = useRef<Partial<Pick<DetailsForm, ScanField>>>({});
 
   const [step, setStep] = useState<Step>(0);
   const [form, setForm] = useState<DetailsForm>({
@@ -127,6 +148,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
 
   const dirty =
     !!nutrition ||
+    !!scanned ||
     !!photo.photo ||
     !!label.photo ||
     !!form.name.trim() ||
@@ -171,6 +193,34 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
       return next;
     });
     setSubmitMessage(null);
+  };
+
+  // A scan fills in what is still empty or what the last scan put there, and never replaces what was
+  // typed. The name carried over from search counts as empty: it is what the person searched for,
+  // not what they called the Bev. A category the person can't see (alcohol, under age) is not offered.
+  const fillFromProduct = (product: BarcodeProduct) => {
+    const wrote = scanWrote.current;
+    const category = product.categoryId && categories.some((c) => c.id === product.categoryId) ? product.categoryId : null;
+    const name = scanValue(form.name, !form.name.trim() || form.name === initialName, wrote.name, product.name, '');
+    const brand = scanValue(form.brand, !form.brand.trim(), wrote.brand, product.brand, '');
+    const categoryId = scanValue<CategoryId | null>(form.categoryId, !form.categoryId, wrote.categoryId, category, null);
+    const change: Partial<Pick<DetailsForm, ScanField>> = {
+      ...(name !== undefined ? { name } : {}),
+      ...(brand !== undefined ? { brand } : {}),
+      ...(categoryId !== undefined ? { categoryId } : {}),
+    };
+    if (Object.keys(change).length > 0) patch(change);
+    // Only what this scan put in; a field it cleared is the person's to fill again.
+    const filled: Partial<Pick<DetailsForm, ScanField>> = {
+      ...(name ? { name } : {}),
+      ...(brand ? { brand } : {}),
+      ...(categoryId ? { categoryId } : {}),
+    };
+    scanWrote.current = filled;
+    const text = scanFilledText(Object.keys(filled) as ScanField[], !!product.nutrition);
+    setScanNotice(text);
+    // Once per scan, not whenever the line under the button changes (iOS; the web has its live region).
+    announce(product.nutrition ? `${text} ${SCAN_CONFIRM_NUTRITION}` : text);
   };
 
   const pickPhoto = async (source: PhotoSource) => {
@@ -244,6 +294,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
         const field = (e.detail as ValidationErrorDetail | undefined)?.field;
         if (field === 'nutrition') {
           setNutrition(null);
+          setScanned(null);
           setErrors({ nutrition: 'Nutrition could not be saved. Scan the barcode again or continue without it.' });
           setStep(1);
           return;
@@ -344,6 +395,10 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
         label={label}
         nutrition={nutrition}
         onNutritionChange={(value) => { setNutrition(value); setErrors((e) => ({ ...e, nutrition: undefined })); }}
+        scanned={scanned}
+        onScannedChange={setScanned}
+        onProduct={fillFromProduct}
+        scanNotice={scanNotice}
         onPickLabel={(s) => void pickLabel(s)}
         similarCount={duplicatesQ.data?.length ?? 0}
         categoryHint={categoryHint}

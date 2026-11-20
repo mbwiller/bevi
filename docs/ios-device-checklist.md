@@ -71,10 +71,16 @@ do on it except where marked **use a test account**.
 - [ ] Scan a product with an EAN-13 that does not start with 0 (an imported
       drink), and an EAN-8 if you can find one: the digits are unchanged.
 - [ ] Hold the camera on a barcode for several seconds: still one lookup.
+- [ ] After the scan: the name, brand and category are filled in and the line
+      under Scan barcode says which. With VoiceOver on, that line is read out
+      once.
+- [ ] In a new Bev, type a brand, then scan: the brand you typed is still
+      there. Scan a second, different drink: the name and category change to
+      the second one's.
 - [ ] Close the sheet: the green camera dot in the status bar goes out.
 - [ ] With the camera refused: the refused line and Open Settings, and typing
       the barcode by hand still works.
-- [ ] Create the Bev: the barcode is on it afterwards.
+- [ ] Press Use this label and create the Bev: the barcode is on it afterwards.
 
 ## 5. Core flows (gate G2)
 

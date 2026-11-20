@@ -9,6 +9,15 @@ import { AccessibilityInfo } from 'react-native';
  * its `role` and `aria-live` attributes are real live regions there, and announcing too would say
  * each message twice.
  */
+/**
+ * Says `text` once, now: for something that happened (a scan filled in the form) rather than text
+ * that is on screen. The hook above speaks when its text changes, which is wrong for that: the same
+ * result twice would be silent, and a screen coming back would repeat an old one.
+ */
+export function announce(text: string): void {
+  AccessibilityInfo.announceForAccessibility(text);
+}
+
 export function useAnnounce(text: string | null | undefined): void {
   useEffect(() => {
     if (text) AccessibilityInfo.announceForAccessibility(text);
