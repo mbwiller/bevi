@@ -5,6 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { flattenPages, useBlockedUsers, useUnblock } from '@/api/hooks';
+import { Announce } from '@/components/Announce';
 import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/Button';
 import { EmptyState } from '@/components/EmptyState';
@@ -79,6 +80,7 @@ export function BlockedAccounts() {
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.screen, { backgroundColor: colors.surface }]}>
       <Header title={BLOCKED_TITLE} onBack={back} />
+      <Announce text={error} />
       {error ? (
         <Text style={[type.body, styles.notice, { color: colors.scoreLow }]} role="alert" accessibilityLiveRegion="polite">
           {error}

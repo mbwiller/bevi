@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { flattenPages, restartExplore, useFeed, useStats } from '@/api/hooks';
 import { keys } from '@/api/keys';
+import { Announce } from '@/components/Announce';
 import { Arrive, useArrival } from '@/components/Arrive';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
@@ -195,6 +196,7 @@ export function FeedScreen() {
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.screen, { backgroundColor: colors.surface }]}>
       <Header wordmark actions={[{ icon: 'user-plus', label: 'Find people', onPress: findPeople }]} />
+      <Announce text={notice} />
       {notice ? (
         <Text style={[type.body, styles.notice, { color: colors.textSecondary }]} role="alert" accessibilityLiveRegion="polite">
           {notice}

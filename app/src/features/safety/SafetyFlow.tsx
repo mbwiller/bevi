@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useBlock, useReport } from '@/api/hooks';
+import { Announce } from '@/components/Announce';
 import { Button } from '@/components/Button';
 import { Icon } from '@/components/Icon';
 import { Sheet } from '@/components/Sheet';
@@ -195,6 +196,7 @@ function ReportStep({ target, onSent }: { target: SafetyTarget; onSent: () => vo
           {left}
         </Text>
       ) : null}
+      <Announce text={failure?.message} />
       {failure ? (
         <Text style={[type.body, { color: colors.scoreLow }]} role="alert" accessibilityLiveRegion="polite">
           {failure.message}
@@ -236,6 +238,7 @@ function BlockStep({ target, onBack, onClose, onBlocked }: { target: SafetyTarge
   return (
     <View style={styles.pad}>
       <Text style={[type.bodyLarge, { color: colors.text }]}>{blockBody(handle)}</Text>
+      <Announce text={failure?.message} />
       {failure ? (
         <Text style={[type.body, { color: colors.scoreLow }]} role="alert" accessibilityLiveRegion="polite">
           {failure.message}

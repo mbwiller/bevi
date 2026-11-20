@@ -4,6 +4,7 @@ import { useContext, useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, TextInput, View, type TextStyle } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
+import { Announce } from './Announce';
 import { formatRelativeTime } from '@/lib/time';
 import { useKeyboardInset } from '@/lib/useKeyboardInset';
 import { radius, size, spacing, type, useTheme } from '@/theme';
@@ -329,6 +330,7 @@ export function CommentsSheet({
             <Text style={[type.body, styles.strong, { color: canPost ? colors.primary : colors.textSecondary }]}>Post</Text>
           </Pressable>
         </View>
+        <Announce text={error} />
         {error ? (
           <Text style={[type.caption, styles.error, { color: colors.scoreLow }]} role="alert" accessibilityLiveRegion="polite">
             {error}

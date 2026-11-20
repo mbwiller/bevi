@@ -1,5 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import {
+  InputAccessoryView,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -10,7 +12,9 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import { radius, spacing, type, useTheme } from '@/theme';
+import { radius, size, spacing, type, useTheme } from '@/theme';
+
+import { useAnnounce } from '@/lib/useAnnounce';
 
 import { registerField } from './fieldFocus';
 
@@ -54,6 +58,8 @@ export interface TextFieldProps {
 }
 
 const BOX = 48;
+/** iOS's number and phone pads have no return key, so these kinds get a "Done" bar above the keyboard. */
+const PAD_KINDS: ReadonlyArray<NonNullable<TextFieldProps['type']>> = ['numeric', 'tel'];
 const INPUT_MODE: Record<NonNullable<TextFieldProps['type']>, TextInputProps['inputMode']> = {
   text: 'text',
   password: 'text',
@@ -92,8 +98,13 @@ export function TextField({
   const auto = `bv-field-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const fid = id ?? auto;
   useEffect(() => (id ? registerField(id, () => input.current?.focus()) : undefined), [id]);
+  const accessoryId = Platform.OS === 'ios' && PAD_KINDS.includes(kind) ? `${fid}-done` : undefined;
   const message = error || hint;
-  const plain = kind === 'password' || kind === 'email' || kind === 'url';
+  // iOS ignores accessibilityLiveRegion: say a new error aloud (a hint is not announced, only read with the field).
+  useAnnounce(error);
+  // Text the system must not "fix": passwords, emails, urls, and anything told not to capitalise
+  // (handles, invite codes), since iOS autocorrect and spellcheck would rewrite a handle or a code.
+  const plain = kind === 'password' || kind === 'email' || kind === 'url' || autoCapitalize === 'none';
   return (
     <View style={[styles.field, style]}>
       {label ? (
@@ -143,11 +154,26 @@ export function TextField({
           submitBehavior={enterKeyHint === 'next' ? 'submit' : undefined}
           maxLength={maxLength}
           editable={editable}
+          inputAccessoryViewID={accessoryId}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           style={[styles.input, { color: colors.text }]}
         />
       </Pressable>
+      {accessoryId ? (
+        <InputAccessoryView nativeID={accessoryId}>
+          <View style={[styles.accessory, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+            <Pressable
+              onPress={() => input.current?.blur()}
+              accessibilityRole="button"
+              accessibilityLabel="Done"
+              style={styles.done}
+            >
+              <Text style={[type.body, styles.doneText, { color: colors.primary }]}>Done</Text>
+            </Pressable>
+          </View>
+        </InputAccessoryView>
+      ) : null}
       {message || reserveHint ? (
         // With `reserveHint` this one Text stays mounted, empty or not, so its line never opens or closes.
         <Text
@@ -176,6 +202,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.input,
   },
   prefix: { marginRight: 2 },
+  accessory: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: spacing.gutter, borderTopWidth: 1 },
+  done: { minHeight: size.target, minWidth: size.target, alignItems: 'center', justifyContent: 'center' },
+  doneText: { fontWeight: '600' },
   // bundle.css `.bv-field-reserve`: one caption line, held open while there is no message.
   reserved: { minHeight: type.caption.lineHeight },
   // 17pt (bodyLarge) also keeps iOS Safari from zooming the page on focus (it zooms below 16px).

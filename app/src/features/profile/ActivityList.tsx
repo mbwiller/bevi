@@ -6,6 +6,7 @@ import { useCallback, useMemo, type ReactElement, type RefObject } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { FOLLOW_MUTATION, flattenPages, useMe, useTasteProfile, useUserFeed, useUserRankings } from '@/api/hooks';
+import { Announce } from '@/components/Announce';
 import { Arrive, useArrival } from '@/components/Arrive';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
@@ -182,6 +183,7 @@ export function ActivityList({ profile, self, following = false, header, tab, on
 
   return (
     <View style={styles.fill}>
+      <Announce text={notice} />
       {notice ? (
         <Text style={[type.body, styles.notice, { color: colors.textSecondary }]} role="alert" accessibilityLiveRegion="polite">
           {notice}

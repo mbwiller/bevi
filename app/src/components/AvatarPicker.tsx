@@ -1,5 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
+import { Announce } from './Announce';
 import { radius, spacing, type, useTheme } from '@/theme';
 
 import { Avatar } from './Avatar';
@@ -76,6 +77,7 @@ export function AvatarPicker({ name, src, busy = false, error, onChange, onRemov
           </Pressable>
         ) : null}
       </View>
+      <Announce text={error} />
       {error ? (
         <Text style={[type.caption, styles.error, { color: colors.scoreLow }]} role="alert">
           {error}
