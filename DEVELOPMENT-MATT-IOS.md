@@ -654,6 +654,23 @@ bundle):
 - The config plugin is in `app.config.ts` behind `SENTRY_ORG` and
   `SENTRY_PROJECT`; while either is null the build has no upload step.
 
+- **Debug IDs, on native only** (`metro.config.js`). A native bundle starts
+  with Sentry's debug-ID snippet, so a report names the exact bundle that ran
+  and Sentry matches it to that bundle's source map, not to whatever shares
+  its release and build number. Sentry's own Metro config
+  (`getSentryExpoConfig`) is not used: it writes the snippet and a release
+  constant into every chunk of the **web** build too. With the native-only
+  wrapper the web export is byte for byte what it was.
+
+**After every `eas update`, upload that update's source maps**, or its errors
+arrive unreadable: an update is a new bundle with a new debug ID, and nothing
+uploads its map for you (a build's upload step only covers the bundle inside
+the binary). From `app/`, with `SENTRY_AUTH_TOKEN` set, right after the
+update: `npx sentry-expo-upload-sourcemaps dist` (`dist/` is where `eas
+update` exports the bundles and their maps; the script takes the org and the
+project from the plugin entry in `app.config.ts`). Not needed until the first
+update after the DSN exists; needed for every one after that.
+
 **What a founder still has to provide**, all three, in this order:
 
 1. **The org and project slugs** → the two constants `SENTRY_ORG` and
@@ -694,16 +711,6 @@ to the person. Check the first real event for an IP address either way.
 
 **Known gaps, on purpose:**
 
-- **Debug IDs are not wired, so an OTA update's errors may not symbolicate.**
-  A binary's reports match by release and build number. An `eas update` ships
-  a new bundle under the same release and build, so its frames are read
-  against the binary's source map. Sentry's own Metro config
-  (`getSentryExpoConfig`) fixes that but writes a Sentry prelude into every
-  chunk of the **web** build too, so `metro.config.js` is untouched. A
-  native-only version of its debug-ID plugin leaves the web export
-  byte-identical and was tested on this branch; it is a six-line change to
-  `metro.config.js` for whoever owns it next, plus
-  `npx sentry-expo-upload-sourcemaps dist` after each `eas update`.
 - A native crash is written by the native layer and never passes through the
   JavaScript scrubbing. The one thing it records by itself that could hold a
   signed URL, its own log of network requests, is switched off
