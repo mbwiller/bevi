@@ -10,6 +10,8 @@ import type { ExpoConfig } from 'expo/config';
 // Shown word for word in iOS's permission dialogs, and read by App Review: say what and why.
 const CAMERA_PERMISSION = "Bevi uses the camera to photograph a drink you're adding and to scan a barcode.";
 const PHOTOS_PERMISSION = "Bevi uses your photo library so you can choose a photo for a drink you're adding.";
+// Asked only when someone taps Add location. The position orders one search and is never stored.
+const LOCATION_PERMISSION = 'Bevi uses your location to list the shops, cafes and bars nearest you when you add where you got a drink.';
 
 // `surface` from src/theme/tokens.ts, light then dark: the launch screen hands over to the in-app
 // Splash (features/auth/Splash.tsx), which draws the same wordmark on the same colour.
@@ -94,6 +96,21 @@ const config: ExpoConfig = {
     // The barcode scan (features/create-bev/BarcodeCamera.tsx). The same camera string, stated
     // here too so neither plugin's default can replace it, and no microphone: nothing records.
     ['expo-camera', { cameraPermission: CAMERA_PERMISSION, microphonePermission: false, recordAudioAndroid: false }],
+    // The place picker's nearest-first (features/places/position.ts): while the app is in use, and
+    // nothing else. The app never asks for "always", but expo-location links the call that would,
+    // and App Store Connect checks the binary for a purpose string to match: that string is the
+    // same sentence, so nothing reads as a claim to background use. No older "always" key and no
+    // motion string: nothing here uses either.
+    [
+      'expo-location',
+      {
+        locationWhenInUsePermission: LOCATION_PERMISSION,
+        locationAlwaysAndWhenInUsePermission: LOCATION_PERMISSION,
+        locationAlwaysPermission: false,
+        motionUsagePermission: false,
+        isIosBackgroundLocationEnabled: false,
+      },
+    ],
     // The iOS 27 SDK (Xcode 27) only launches apps on the UIKit scene life cycle, which SDK 57 adopts
     // only when asked. Harmless on EAS's Xcode 26 image, required on a Mac with Xcode 27. SDK 58
     // does this by default: drop the option in the upgrade PR.
