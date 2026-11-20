@@ -138,7 +138,7 @@ export function PlacePickerBody({ active, selected = null, onSelect, onRemove, s
               key={venue.id}
               name={venue.name}
               subtitle={placeSubtitle(venue)}
-              kind={venue.kind}
+              placeType={venue.placeType}
               selected={selected?.id === venue.id}
               busy={saving}
               onPress={() => onSelect(venue)}
@@ -163,7 +163,7 @@ export function PlacePickerBody({ active, selected = null, onSelect, onRemove, s
               key={venue.id}
               name={venue.name}
               subtitle={placeSubtitle(venue, distanceMeters)}
-              kind={venue.kind}
+              placeType={venue.placeType}
               selected={selected?.id === venue.id}
               busy={saving}
               onPress={() => onSelect(venue)}
@@ -204,6 +204,7 @@ export function PlacePickerBody({ active, selected = null, onSelect, onRemove, s
             <PlaceRow
               key={place.placeId}
               name={place.name}
+              placeType={place.placeType}
               subtitle={[place.address, distanceLabel(place.distanceMeters)].filter(Boolean).join(' · ')}
               busy={saving || adding !== null}
               onPress={() => add(place)}

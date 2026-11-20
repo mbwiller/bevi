@@ -34,7 +34,7 @@ export function BevdPlaceList({ pins, selectedId = null, onSelect, note }: BevdP
         <PlaceRow
           name={item.venue.name}
           subtitle={pinSubtitle(item)}
-          kind={item.venue.kind}
+          placeType={item.venue.placeType}
           selected={item.venue.id === selectedId}
           onPress={() => onSelect(item.venue.id)}
         />

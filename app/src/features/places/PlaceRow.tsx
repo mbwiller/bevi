@@ -1,24 +1,24 @@
-import type { VenueKind } from '@bevi/shared';
+import type { PlaceType } from '@bevi/shared';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PRESSED } from '@/components/HitTarget';
-import { Icon, type IconName } from '@/components/Icon';
+import { Icon } from '@/components/Icon';
 import { MAX_FONT_SCALE_DENSE, radius, spacing, type, useTheme } from '@/theme';
+
+import { placeIcon } from './placeIcon';
 
 /** A place row is two lines of text: taller than a Sheet's 48pt option, and above the 44pt target. */
 const ROW = 60;
 /** The disc behind the glyph, as the EmptyState's is to its icon, at row scale. */
 const DISC = 36;
 
-/** A chain reads as a shop front, anything else as a cup: the map pins' two glyphs. */
-const KIND_ICON: Record<VenueKind, IconName> = { chain: 'store', craft: 'coffee' };
 
 export interface PlaceRowProps {
   name: string;
   /** "425 Main Street · 150 ft"; an empty string draws one line. */
   subtitle?: string;
-  /** Omitted for a place that is not a venue yet (a "more places" result). */
-  kind?: VenueKind;
+  /** What kind of place it is, for the glyph (`placeIcon`); a plain pin without one. */
+  placeType?: PlaceType | null;
   /** A `primary` check: the place this Bev has now. */
   selected?: boolean;
   /** The row is being saved: it dims and takes no press. */
@@ -27,7 +27,7 @@ export interface PlaceRowProps {
 }
 
 /** One place in the picker and in the Map tab's list: glyph, name, where it is and how far. */
-export function PlaceRow({ name, subtitle, kind, selected = false, busy = false, onPress }: PlaceRowProps) {
+export function PlaceRow({ name, subtitle, placeType, selected = false, busy = false, onPress }: PlaceRowProps) {
   const { colors } = useTheme();
   return (
     <Pressable
@@ -39,7 +39,7 @@ export function PlaceRow({ name, subtitle, kind, selected = false, busy = false,
       style={({ pressed }) => [styles.row, { borderBottomColor: colors.border }, pressed && PRESSED, busy && styles.busy]}
     >
       <View style={[styles.disc, { backgroundColor: colors.input }]}>
-        <Icon name={kind ? KIND_ICON[kind] : 'map-pin'} size={20} strokeWidth={2} color={colors.textSecondary} />
+        <Icon name={placeIcon(placeType)} size={20} strokeWidth={2} color={colors.textSecondary} />
       </View>
       <View style={styles.text}>
         <Text style={[type.heading, { color: colors.text }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE_DENSE}>

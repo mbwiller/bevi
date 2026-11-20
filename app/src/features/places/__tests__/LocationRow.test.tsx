@@ -8,6 +8,7 @@ const VENUE: Venue = {
   id: 'v1',
   name: 'Duane Reade',
   kind: 'chain',
+  placeType: 'store',
   lat: 40.7616,
   lng: -73.9497,
   address: '425 Main Street',
