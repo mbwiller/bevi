@@ -19,8 +19,13 @@ import { loadNutritionDemo } from '@/features/create-bev/loadNutritionDemo';
 import { ConfigError, Splash } from '@/features/auth/Splash';
 import { useSessionBootstrap } from '@/features/auth/useSessionBootstrap';
 import { clearLegacyStorage } from '@/lib/clearLegacyStorage';
+import { initCrashReporting, wrapRoot } from '@/lib/crashReporting';
 import { useSession } from '@/state/session';
 import { useTheme } from '@/theme';
+import { RootError } from '@/components/RootError';
+
+// Crash reporting (IS-4), before anything renders. Does nothing without a DSN, and nothing on the web.
+initCrashReporting();
 
 // The old in-browser mock's data (fake users, plain-text passwords) may still sit in localStorage.
 clearLegacyStorage();
@@ -42,7 +47,7 @@ const NutritionDemo = lazy(loadNutritionDemo);
 // setSession, or signOut). Until the first check settles the layout shows the Splash (wordmark)
 // instead of the Stack, so a signed-in user never sees sign in flash and a deep link survives the
 // check. A build without a usable Supabase config shows ConfigError instead of the app.
-export default function RootLayout() {
+function RootLayout() {
   const { scheme } = useTheme();
   const [queryClient] = useState(createQueryClient);
   return (
@@ -63,6 +68,18 @@ export default function RootLayout() {
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
+}
+
+// Wrapped by the crash reporter on a build that has one; the same component everywhere else.
+export default wrapRoot(RootLayout);
+
+/**
+ * A screen that throws while it renders shows this instead of closing the app. Expo Router wraps
+ * the root layout in a boundary when the layout's file exports `ErrorBoundary`, and renders this in
+ * the layout's place, outside every provider above (components/RootError.tsx).
+ */
+export function ErrorBoundary(props: ComponentProps<typeof RootError>) {
+  return <RootError {...props} />;
 }
 
 type ScreenLayout = NonNullable<ComponentProps<typeof Stack>['screenLayout']>;

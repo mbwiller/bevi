@@ -1,5 +1,7 @@
-import { QueryClient } from '@tanstack/react-query';
+import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
 import { isApiError } from '@bevi/shared';
+
+import { captureError } from '@/lib/crashReporting';
 
 import { connectQueryLifecycle } from './queryLifecycle';
 
@@ -15,10 +17,20 @@ import { connectQueryLifecycle } from './queryLifecycle';
  *
  * It also connects React Query to the phone's connection and to the app coming to the foreground
  * (queryLifecycle.ts), which a browser provides by itself.
+ *
+ * A read or a save that fails for good (after its retries) is handed to crash reporting, which
+ * keeps only the unexpected ones: an `ApiError` the contract gives a meaning to (offline, signed
+ * out, not found …) is what the screen already explains and is never reported (lib/crashScrub.ts,
+ * `isExpectedError`). Of a query's key only the family is sent (`users`, `rankings`): the rest of a
+ * key holds ids and what a person typed into a search. On the web this does nothing.
  */
 export function createQueryClient(): QueryClient {
   connectQueryLifecycle();
   return new QueryClient({
+    queryCache: new QueryCache({
+      onError: (error, query) => captureError(error, { source: 'query', extra: { read: String(query.queryKey[1] ?? '') } }),
+    }),
+    mutationCache: new MutationCache({ onError: (error) => captureError(error, { source: 'mutation' }) }),
     defaultOptions: {
       queries: {
         staleTime: 30_000,

@@ -33,3 +33,15 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 // expo-application reads the installed binary's version (src/features/app-gate/installedVersion.ts).
 // Suites that care mock `@/features/app-gate/installedVersion` or this module themselves.
 jest.mock('expo-application', () => ({ nativeApplicationVersion: '1.0.0', nativeBuildVersion: '1' }));
+
+// Crash reporting (src/lib/crashReporting.ts) imports the Sentry SDK, which is a native module and
+// a large one, and the root layout and the query client both import crash reporting: without this
+// every suite that mounts the app would load it. No suite has a DSN, so none of these is ever
+// called unless a suite sets one (src/lib/__tests__/crashReporting.test.ts). Only what the app
+// uses is here; a new call needs a new line, and that suite checks each name against the real SDK.
+jest.mock('@sentry/react-native', () => ({
+  init: jest.fn(),
+  wrap: jest.fn((Component) => Component),
+  captureException: jest.fn(),
+  nativeCrash: jest.fn(),
+}));

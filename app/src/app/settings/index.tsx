@@ -6,6 +6,7 @@ import { useCanReportBug, useSignOut } from '@/api/hooks';
 import { requestReport } from '@/features/bug-report/commands';
 import { actionErrorMessage } from '@/lib/errorCopy';
 import { SettingsRow, SettingsScreen, SettingsSection } from '@/features/settings/SettingsRow';
+import { VersionLine } from '@/features/settings/VersionLine';
 import { useSession } from '@/state/session';
 import { spacing, type, useTheme } from '@/theme';
 
@@ -51,7 +52,7 @@ export default function SettingsIndexScreen() {
           {`Couldn't sign out. ${actionErrorMessage(signOut.error)}`}
         </Text>
       ) : null}
-      {version ? <Text style={[type.caption, styles.note, { color: colors.textSecondary }]}>{`Bevi ${version}`}</Text> : null}
+      {version ? <VersionLine version={version} /> : null}
     </SettingsScreen>
   );
 }

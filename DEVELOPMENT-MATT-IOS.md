@@ -619,14 +619,110 @@ component-name contract exists to serve it.
 - `check-bundle.mjs` is also what keeps `src/testing/**` out of a shipped
   bundle. Arjun's `ios.yml` now runs the same scan over a native export (#253).
 - With no reporter and no Vercel logs, **a crash on a device is invisible.**
-  That is **IS-4**, crash reporting before TestFlight, and it is not started:
-  Arjun owns the account and the build secret; I wire the SDK, its config
-  plugin, and the dSYM/source-map upload — without which the reports are
-  unsymbolicated and useless.
+  That is **IS-4**, crash reporting before TestFlight. The app's half is wired
+  and switched off until three values exist: the next section.
 - **Still owed:** a paragraph in `docs/bug-workflow.md` saying that the iOS
   build has no reporter yet and what a tester on a phone does instead (the web
   app, or TestFlight's own screenshot feedback once there is a TestFlight
   build). The page does not mention native today.
+
+#### IS-4 — crash reporting (wired, waiting for an account)
+
+**Wired, and inert.** No Sentry account exists yet, so nothing is sent from any
+build, and nothing below has run on a phone.
+
+What is in the app (`src/lib/crashReporting.ts`; the web build resolves
+`crashReporting.web.ts`, which does nothing, so the SDK is not in the web
+bundle):
+
+- `initCrashReporting()` runs at module scope in the root layout and the root
+  component is wrapped (`wrapRoot`). With no `EXPO_PUBLIC_SENTRY_DSN` in the
+  build the SDK is not even loaded. A development build stays off with one.
+- Sent once it is on: native crashes, uncaught JavaScript errors and unhandled
+  promise rejections (the SDK catches these itself), and a read or a save that
+  React Query gave up on (`src/api/queryClient.ts`), unless it is an error the
+  app expects: every `ApiError` code but `unknown` is dropped
+  (`isExpectedError`, `src/lib/crashScrub.ts`).
+- A screen that throws while it renders no longer closes the app: the root
+  layout exports `ErrorBoundary` (`src/components/RootError.tsx`), which shows
+  "Something went wrong" with Try again in place of the whole app and reports
+  the error once. It renders outside every provider the layout sets up, so it
+  uses none.
+- Not sent: who the person is (`sendDefaultPii` off, `setUser` never called;
+  the SDK's own random per-install id is the only label), performance traces,
+  session replay, profiles, screenshots. Headers, tokens and the query string
+  of every URL are scrubbed from breadcrumbs and events (`crashScrub.ts`).
+  **Never add `tracesSampleRate: 0` or a replay sample rate of `0`:** the SDK
+  reads the presence of the number, not its value, and switches the feature on.
+- `release` and `dist` are the SDK's defaults (bundle id, version, build
+  number), the same ones the build's upload files the symbols under.
+- The config plugin is in `app.config.ts` behind `SENTRY_ORG` and
+  `SENTRY_PROJECT`; while either is null the build has no upload step.
+
+- **Debug IDs, on native only** (`metro.config.js`). A native bundle starts
+  with Sentry's debug-ID snippet, so a report names the exact bundle that ran
+  and Sentry matches it to that bundle's source map, not to whatever shares
+  its release and build number. Sentry's own Metro config
+  (`getSentryExpoConfig`) is not used: it writes the snippet and a release
+  constant into every chunk of the **web** build too. With the native-only
+  wrapper the web export is byte for byte what it was.
+
+**After every `eas update`, upload that update's source maps**, or its errors
+arrive unreadable: an update is a new bundle with a new debug ID, and nothing
+uploads its map for you (a build's upload step only covers the bundle inside
+the binary). From `app/`, with `SENTRY_AUTH_TOKEN` set, right after the
+update: `npx sentry-expo-upload-sourcemaps dist` (`dist/` is where `eas
+update` exports the bundles and their maps; the script takes the org and the
+project from the plugin entry in `app.config.ts`). Not needed until the first
+update after the DSN exists; needed for every one after that.
+
+**What a founder still has to provide**, all three, in this order:
+
+1. **The org and project slugs** → the two constants `SENTRY_ORG` and
+   `SENTRY_PROJECT` in `app/app.config.ts`. Not secrets. This changes the
+   native project, so the runtime version changes with it: a new build, not an
+   OTA update.
+2. **`SENTRY_AUTH_TOKEN`** → an EAS secret in the `preview` and `production`
+   environments (an organisation auth token, made in Sentry's settings). A
+   secret: never in the repository, never `EXPO_PUBLIC_`. Without it a build
+   with the plugin **fails** at the upload step (`sentry-xcode.sh` exits
+   non-zero); with it the build uploads the dSYMs and the source map.
+3. **The DSN** → `EXPO_PUBLIC_SENTRY_DSN` in the same two EAS environments, and
+   beside it `EXPO_PUBLIC_SENTRY_ENVIRONMENT` set to the environment's own name
+   (`preview`, `production`). Public by design. **Not on Vercel:** the web
+   build has no crash reporting. Not in `development`, where it is off anyway.
+
+In the Sentry project itself, turn on "Prevent Storing of IP Addresses"
+(Security & Privacy): the app sends none, but a server can keep the address a
+report arrived from, and the App Privacy answers say crash data is not linked
+to the person. Check the first real event for an IP address either way.
+
+**The end-to-end proof**, on a TestFlight build made after all three:
+
+1. Settings → scroll to the foot → **press and hold "Bevi 0.1.0"**. (VoiceOver:
+   the line is a button with the action "Test crash reporting".) On a build
+   without a DSN, and on the web, the line is plain text and nothing happens:
+   that is the first thing the test tells you.
+2. **Send a test error.** Within a minute or two Sentry should show "Bevi crash
+   reporting test: JavaScript error" with a stack that points into
+   `src/lib/crashReporting.ts` and `src/features/settings/VersionLine.tsx`,
+   not `main.jsbundle:1:234567`. Readable frames prove the source map upload.
+3. Press and hold again → **Crash Bevi now**. The app closes. **Open it
+   again**: a crash is written to disk as the app dies and sent on the next
+   launch. Sentry should show a native crash whose frames have function names,
+   not addresses. That proves the dSYM upload.
+4. On both events check what is absent: no username, no IP address, no
+   `Authorization` header, and no `?` in any URL under Breadcrumbs.
+
+**Known gaps, on purpose:**
+
+- A native crash is written by the native layer and never passes through the
+  JavaScript scrubbing. The one thing it records by itself that could hold a
+  signed URL, its own log of network requests, is switched off
+  (`enableNetworkBreadcrumbs: false`), which only a real crash report can
+  confirm.
+- An error thrown while the app's modules are still loading, before
+  `initCrashReporting()` runs, is not caught: the SDK starts from JavaScript.
 
 #### Part 2 — the native port (wanted)
 
@@ -847,7 +943,7 @@ Same list as Arjun's doc, from the app side:
 | ~~IS-1~~ | Does the web app stay? | — | **Decided 2026-11-18: web stays for now**, and once iOS works the repository goes private and the web build is archived. So native code is written to let web be removed cleanly (§1's split rule), and until then the policy/support URLs and the AASA host stay free |
 | IS-2 | Which backend does TestFlight hit? | `eas.json` profiles, env vars, and whether simulator flows may touch a backend at all (IM-11) | **Open, and the stated default is impossible.** There is one hosted Supabase project, not a dev/prod pair, and the org is at the free plan's two-project limit — so all three EAS environments point at the live database and a TestFlight tester writes to real data. Fine while it is the two of us; not fine for anyone else. The real fix costs money |
 | IS-3 | Demo account age / alcohol visibility | The age-rating answers and what review sees | Over 21, alcohol visible, and whichever top tier the questionnaire gives (IM-12) |
-| IS-4 | Crash reporting | Whether a device crash is visible at all. I wire the SDK, the config plugin and dSYM upload | Yes, `@sentry/react-native`. **Not started on either side**; needed before G3 |
+| IS-4 | Crash reporting | Whether a device crash is visible at all. I wire the SDK, the config plugin and dSYM upload | Yes, `@sentry/react-native`. **App half wired and inert (IM-10, "IS-4 — crash reporting"); the account, the DSN, the two slugs and the auth token are not there yet.** Needed before G3 |
 | ~~IS-5~~ | Bundle id | **Decided 2026-11-17: `app.bevi.ios`** — the exact string for `ios.bundleIdentifier` in `app.config.ts`, team prefix `9NA45GL4CJ` | settled |
 | ~~IS-6~~ | `react-native-maps` or `expo-maps` | — | **Deferred 2026-11-18:** the Map tab is an "In progress" page in v1, so IM-7 shrinks to that and IA-7 (the iOS Maps key) is parked. Decide when the real map is built |
 | ~~IS-7~~ | Report-content + block-user for v1? | — | **Decided 2026-11-18: ships in v1.** Database half merged (#254, #262); the contract and `packages/api` half is #261, open and waiting for a rebase onto 3.0.0; then IM-13 |
