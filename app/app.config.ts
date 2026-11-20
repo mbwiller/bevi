@@ -60,6 +60,12 @@ const config: ExpoConfig = {
     buildNumber: '1',
     // iPhone only. An iPad runs it in iPhone compatibility mode.
     supportsTablet: false,
+    // https:// links to a profile or a Bev open the app (applinks), and passwords saved for the web
+    // app are offered in it (webcredentials). The host is WEB_ORIGIN's (src/lib/webOrigin.ts) and
+    // serves the matching file at /.well-known/apple-app-site-association (public/.well-known/).
+    // This adds an entitlement: the Associated Domains capability must be on the App ID first, or
+    // the build fails at signing.
+    associatedDomains: ['applinks:bevi-gamma.vercel.app', 'webcredentials:bevi-gamma.vercel.app'],
     // Expo SDK 57's own floor, stated so that it is a decision: it is the oldest iOS a friend can
     // install on, and `minAppVersion` may never be raised above a version this target can run.
     deploymentTarget: '16.4',
