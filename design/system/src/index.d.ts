@@ -256,7 +256,9 @@ export declare function ErrorState(props: ErrorStateProps): React.ReactElement;
 export interface SkeletonProps { variant?: 'text' | 'block' | 'circle' | 'row' | 'post'; width?: number | string; height?: number; lines?: number; className?: string }
 export declare function Skeleton(props: SkeletonProps): React.ReactElement;
 
-export interface SheetProps { open?: boolean; title?: string; snap?: 40 | 90; onClose?: () => void; children?: React.ReactNode; className?: string }
+export interface SheetProps { open?: boolean; title?: string; snap?: 40 | 90; onClose?: () => void;
+  /** The sheet has finished closing (after its exit animation and, on a phone, once the modal is really gone). Navigate or open another modal from here, never in the same tick as `onClose`. */
+  onClosed?: () => void; children?: React.ReactNode; className?: string }
 export declare function Sheet(props: SheetProps): React.ReactElement | null;
 
 /** One comment as the post and the sheet draw it. `time` is relative ("2 hours ago"); `mine` adds Delete in the sheet. */

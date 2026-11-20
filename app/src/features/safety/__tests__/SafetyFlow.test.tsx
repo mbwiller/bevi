@@ -1,9 +1,11 @@
 import { REPORT_NOTE_MAX, REPORT_REASONS, type FeedItem } from '@bevi/shared';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { useState } from 'react';
 
 import { api } from '@/api/client';
 import { FRIEND, controls, userIdFor } from '@/testing/fakeApi';
+import { grabModalDismiss } from '@/testing/modalDismiss';
 
 import { REPORT_REASON_LABELS } from '../copy';
 import { SafetyFlow, type SafetyTarget } from '../SafetyFlow';
@@ -26,6 +28,26 @@ function Harness({ t }: { t: SafetyTarget | null }) {
     </QueryClientProvider>
   );
 }
+
+/** Closes for real when asked (the screens do), so the Sheet runs its exit and reports it has closed. */
+function Controlled() {
+  const [t, setT] = useState<SafetyTarget | null>(target);
+  return (
+    <QueryClientProvider client={client}>
+      <SafetyFlow
+        target={t}
+        onClose={() => {
+          onClose();
+          setT(null);
+        }}
+        onBlocked={onBlocked}
+      />
+    </QueryClientProvider>
+  );
+}
+
+/** Waits for the sheet to leave the tree: its Modal is hidden and, on iOS, awaiting UIKit's onDismiss. */
+const sheetGone = () => waitFor(() => expect(screen.queryByTestId('sheet')).toBeNull());
 
 beforeEach(async () => {
   client = new QueryClient({
@@ -178,12 +200,19 @@ describe('block', () => {
     expect((await api.blocks.list()).items).toHaveLength(0);
   });
 
-  it('Block blocks them, closes the sheet and tells the screen', async () => {
-    await render(<Harness t={target} />);
+  it('Block blocks them, closes the sheet and tells the screen only once the sheet has finished closing', async () => {
+    await render(<Controlled />);
+    const dismiss = grabModalDismiss();
     await press(`Block @${FRIEND.handle}`);
     await press(`Block @${FRIEND.handle}`);
-    await waitFor(() => expect(onBlocked).toHaveBeenCalledWith(target));
-    expect(onClose).toHaveBeenCalled();
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    // Closing, not closed: popping the screen now would pop it under a Modal that is still presented.
+    expect(onBlocked).not.toHaveBeenCalled();
+    await sheetGone();
+    expect(onBlocked).not.toHaveBeenCalled();
+    await act(() => dismiss());
+    expect(onBlocked).toHaveBeenCalledTimes(1);
+    expect(onBlocked).toHaveBeenCalledWith(target);
     expect((await api.blocks.list()).items.map((b) => b.id)).toEqual([post.actor.id]);
   });
 
@@ -201,13 +230,18 @@ describe('block', () => {
   });
 
   it('after reporting, "Block this account too" leads to the same confirmation', async () => {
-    await toReportForm();
+    await render(<Controlled />);
+    const dismiss = grabModalDismiss();
+    await press('Report post');
     await fireEvent.press(screen.getByRole('radio', { name: 'Spam or scam' }));
     await press('Send report');
     await screen.findByText('Thanks, we got your report');
     await press(`Block this account too, @${FRIEND.handle}`);
     expect(screen.getByText(/won't see your posts or profile/)).toBeTruthy();
     await press(`Block @${FRIEND.handle}`);
-    await waitFor(() => expect(onBlocked).toHaveBeenCalled());
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    await sheetGone();
+    await act(() => dismiss());
+    expect(onBlocked).toHaveBeenCalledTimes(1);
   });
 });

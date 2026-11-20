@@ -310,7 +310,10 @@ export function CollectionSheet({ open = true, rows = [], onClose, onSelect, cla
 }
 
 /** Bottom sheet with a handle; snaps to 40% or 90% of its container. Fills the nearest positioned ancestor. */
-export function Sheet({ open = true, title, snap = 40, onClose, children, className }) {
+export function Sheet({ open = true, title, snap = 40, onClose, onClosed, children, className }) {
+  // `onClosed`: once the sheet is gone (here, as soon as `open` turns false).
+  const wasOpen = React.useRef(open);
+  React.useEffect(() => { if (wasOpen.current && !open && onClosed) onClosed(); wasOpen.current = open; }, [open, onClosed]);
   if (!open) return null;
   return (
     <div className={cx('bv', 'bv-sheet-wrap', className)}>
