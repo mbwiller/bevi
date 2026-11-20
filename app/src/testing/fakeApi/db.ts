@@ -173,6 +173,25 @@ export interface FakeVenueBev {
   source: 'menu' | 'chain';
 }
 
+/** BEV-22: where a user had a Bev, mirroring `public.bev_locations` (one per user and Bev). */
+export interface FakeBevLocation {
+  userId: string;
+  bevId: string;
+  venueId: string;
+}
+
+/**
+ * BEV-22: a place `venues.searchMore` can find and `venues.addPlace` can turn into a venue. It
+ * stands in for the outside directory the real backend asks, so it is fixture data, not state.
+ */
+export interface FakeExternalPlace {
+  placeId: string;
+  name: string;
+  address: string | null;
+  lat: number;
+  lng: number;
+}
+
 export interface FakeDb {
   schema: number;
   users: FakeUser[];
@@ -193,6 +212,10 @@ export interface FakeDb {
   venues?: FakeVenue[];
   /** Optional, as `venues`. */
   venueBevs?: FakeVenueBev[];
+  /** Optional so a db stored before places existed still loads. */
+  bevLocations?: FakeBevLocation[];
+  /** Optional, as `bevLocations`. */
+  externalPlaces?: FakeExternalPlace[];
   /** The signed-in user, persisted like a real session. */
   sessionUserId: string | null;
   /** Monotonic id counter. */

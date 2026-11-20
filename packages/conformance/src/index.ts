@@ -1393,6 +1393,185 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
     });
   });
 
+  // -------------------------------------------------------------------------
+  // where a Bev was had (BEV-22, contract 3.4.0)
+  // -------------------------------------------------------------------------
+  // As the venues section: it must pass with no venues at all. Everything that
+  // needs one first asks `venues.search` for the nearest, and stops at the
+  // invariants when there is none. The FakeApi seeds venues, so it runs it all.
+  describe('where a Bev was had', () => {
+    const UPPER_EAST_SIDE = { lat: 40.7736, lng: -73.9566 };
+
+    /** Up to `n` venues near the Upper East Side, or fewer when the implementation has fewer. */
+    async function someVenues(n: number) {
+      return (await api.venues.search({ query: '', near: UPPER_EAST_SIDE, limit: n })).map((m) => m.venue);
+    }
+
+    it('venues.search: nearest first with a position, nothing without a query or a position', async () => {
+      await newUser();
+      expect(await api.venues.search({ query: '' })).toEqual([]);
+
+      const near = await api.venues.search({ query: '', near: UPPER_EAST_SIDE, limit: 5 });
+      expect(near.length).toBeLessThanOrEqual(5);
+      const distances = near.map((m) => m.distanceMeters);
+      for (const d of distances) expect(typeof d).toBe('number');
+      expect(distances).toEqual([...distances].sort((a, b) => a! - b!));
+
+      const first = near[0];
+      if (first) {
+        // A venue is found by its own name, with or without a position.
+        const byName = await api.venues.search({ query: first.venue.name });
+        expect(byName.map((m) => m.venue.id)).toContain(first.venue.id);
+        for (const m of byName) expect(m.distanceMeters).toBeNull();
+        const nearby = await api.venues.search({ query: first.venue.name, near: UPPER_EAST_SIDE, limit: 50 });
+        expect(nearby.map((m) => m.venue.id)).toContain(first.venue.id);
+      }
+
+      await expectCode(api.venues.search({ query: 'x'.repeat(81) }), 'validation');
+    });
+
+    it('a ranking saved with a venue shows it on the Bev\'d row and on the post; setVenue replaces and removes it', async () => {
+      await newUser();
+      const [a, b] = await starterIds(2);
+      const [first, second] = await someVenues(2);
+      await rankAtBottom(a!);
+
+      // Nobody has said where yet.
+      expect((await api.rankings.listMine()).items.map((r) => r.venue)).toEqual([null]);
+      expect((await api.feed.getFeed()).items.map((i) => i.venue)).toEqual([null]);
+      expect(await api.rankings.locationSummary()).toEqual({ rankedCount: 1, locatedCount: 0 });
+      expect(await api.rankings.setVenue(a!, null)).toBeNull();
+
+      await expectCode(api.rankings.setVenue(b!, first?.id ?? '00000000-0000-4000-8000-00000000dead'), 'not_found');
+      await expectCode(api.rankings.setVenue(a!, '00000000-0000-4000-8000-00000000dead'), 'not_found');
+      if (!first) return;
+
+      // Saved with the ranking, in one call.
+      await api.rankings.submitRanking({
+        bevId: b!,
+        bucket: 'FINE',
+        insertIndex: 0,
+        expectedBucketSize: 0,
+        comparisons: [],
+        venueId: first.id,
+      });
+      const venueOf = async (bevId: string) =>
+        (await api.rankings.listMine()).items.find((r) => r.bev.id === bevId)?.venue?.id ?? null;
+      expect(await venueOf(b!)).toBe(first.id);
+      expect((await api.feed.getFeed()).items.find((i) => i.bev.id === b)?.venue).toMatchObject({ id: first.id, name: first.name });
+      expect(await api.rankings.locationSummary()).toEqual({ rankedCount: 2, locatedCount: 1 });
+
+      // Added afterwards, then replaced, then removed.
+      expect(await api.rankings.getVenue(a!)).toBeNull();
+      expect((await api.rankings.setVenue(a!, first.id))?.id).toBe(first.id);
+      expect(await venueOf(a!)).toBe(first.id);
+      expect((await api.rankings.getVenue(a!))?.id).toBe(first.id);
+      if (second) {
+        expect((await api.rankings.setVenue(a!, second.id))?.id).toBe(second.id);
+        expect(await venueOf(a!)).toBe(second.id);
+      }
+      expect(await api.rankings.setVenue(a!, null)).toBeNull();
+      expect(await venueOf(a!)).toBeNull();
+    });
+
+    it('a venue that does not exist fails the whole submit', async () => {
+      await newUser();
+      const [a] = await starterIds(1);
+      await expectCode(
+        api.rankings.submitRanking({
+          bevId: a!,
+          bucket: 'LOVED',
+          insertIndex: 0,
+          expectedBucketSize: 0,
+          comparisons: [],
+          venueId: '00000000-0000-4000-8000-00000000dead',
+        }),
+        'not_found',
+      );
+      expect((await api.rankings.listMine()).items).toEqual([]);
+    });
+
+    it('a re-rank keeps the place unless it names another or null; removing the ranking drops it', async () => {
+      await newUser();
+      const [a] = await starterIds(1);
+      const [first, second] = await someVenues(2);
+      if (!first) return;
+      const rerank = (venueId?: string | null) =>
+        api.rankings.rerankBev({ bevId: a!, bucket: 'FINE', insertIndex: 0, expectedBucketSize: 0, comparisons: [], venueId });
+      const venueId = async () => (await api.rankings.listMine()).items[0]?.venue?.id ?? null;
+
+      await api.rankings.submitRanking({ bevId: a!, bucket: 'LOVED', insertIndex: 0, expectedBucketSize: 0, comparisons: [], venueId: first.id });
+      await rerank();
+      expect(await venueId()).toBe(first.id);
+      if (second) {
+        await rerank(second.id);
+        expect(await venueId()).toBe(second.id);
+      }
+      await rerank(null);
+      expect(await venueId()).toBeNull();
+
+      await api.rankings.setVenue(a!, first.id);
+      await api.rankings.removeRanking(a!);
+      expect(await api.venues.bevdMap({ scope: 'mine' })).toEqual([]);
+      // Ranked again, it starts with no place: the old one went with the old ranking.
+      await rankAtBottom(a!);
+      expect(await venueId()).toBeNull();
+    });
+
+    it('venues.bevdMap and bevdAt: mine, the people I follow, and both', async () => {
+      const friend = await newUser();
+      const [a, b] = await starterIds(2);
+      const [here] = await someVenues(1);
+      if (!here) {
+        expect(await api.venues.bevdMap()).toEqual([]);
+        await expectCode(api.venues.bevdAt('00000000-0000-4000-8000-00000000dead'), 'not_found');
+        return;
+      }
+      await api.rankings.submitRanking({ bevId: a!, bucket: 'LOVED', insertIndex: 0, expectedBucketSize: 0, comparisons: [], venueId: here.id });
+
+      const me = await newUser();
+      await api.rankings.submitRanking({ bevId: b!, bucket: 'LOVED', insertIndex: 0, expectedBucketSize: 0, comparisons: [], venueId: here.id });
+
+      // A stranger's place is not on my map.
+      expect(await api.venues.bevdMap({ scope: 'friends' })).toEqual([]);
+      expect(await api.venues.bevdMap()).toEqual([expect.objectContaining({ bevCount: 1, mineCount: 1 })]);
+      await expectCode(api.venues.bevdAt(here.id, { scope: 'friends' }), 'not_found');
+
+      await api.follows.follow(friend.userId);
+      expect(await api.venues.bevdMap({ scope: 'mine' })).toEqual([expect.objectContaining({ bevCount: 1, mineCount: 1 })]);
+      expect(await api.venues.bevdMap({ scope: 'friends' })).toEqual([expect.objectContaining({ bevCount: 1, mineCount: 0 })]);
+      const [pin] = await api.venues.bevdMap();
+      expect(pin).toMatchObject({ venue: { id: here.id }, bevCount: 2, mineCount: 1 });
+
+      const at = await api.venues.bevdAt(here.id);
+      expect(at.venue.id).toBe(here.id);
+      expect(at.items.map((i) => [i.user.id, i.ranking.bev.id, i.ranking.venue?.id]).sort()).toEqual(
+        [
+          [friend.userId, a, here.id],
+          [me.userId, b, here.id],
+        ].sort(),
+      );
+      expect((await api.venues.bevdAt(here.id, { scope: 'mine' })).items.map((i) => i.user.id)).toEqual([me.userId]);
+      expect((await api.venues.bevdAt(here.id, { scope: 'friends' })).items.map((i) => i.user.id)).toEqual([friend.userId]);
+
+      // A followed user's post carries their place, on my feed and on their page.
+      expect((await api.feed.getFeed()).items.find((i) => i.actor.id === friend.userId)?.venue?.id).toBe(here.id);
+      expect((await api.rankings.listUser(friend.userId)).items[0]?.venue?.id).toBe(here.id);
+    });
+
+    it('where a Bev was had: every method needs a session', async () => {
+      await api.signOut();
+      await expectCode(api.venues.search({ query: 'duane' }), 'unauthorized');
+      await expectCode(api.venues.searchMore({ query: 'duane' }), 'unauthorized');
+      await expectCode(api.venues.addPlace('anything'), 'unauthorized');
+      await expectCode(api.venues.bevdMap(), 'unauthorized');
+      await expectCode(api.venues.bevdAt('00000000-0000-4000-8000-00000000dead'), 'unauthorized');
+      await expectCode(api.rankings.setVenue('00000000-0000-4000-8000-00000000dead', null), 'unauthorized');
+      await expectCode(api.rankings.locationSummary(), 'unauthorized');
+      await expectCode(api.rankings.getVenue('00000000-0000-4000-8000-00000000dead'), 'unauthorized');
+    });
+  });
+
   describe('bugs (the internal reporter)', () => {
     const input = {
       kind: 'bug',

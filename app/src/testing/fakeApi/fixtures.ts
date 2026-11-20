@@ -294,6 +294,13 @@ export function buildFixtures(now: Date = new Date()): FakeDb {
     reports: [],
     venues,
     venueBevs,
+    bevLocations: [],
+    // BEV-22: what `venues.searchMore` can find. One a block from the seeded venues and one in
+    // Dublin, because a place outside New York is the case the fallback exists for.
+    externalPlaces: [
+      { placeId: 'ext-bread-butter', name: 'Bread & Butter Market', address: '1482 2nd Avenue', lat: 40.7722, lng: -73.9524 },
+      { placeId: 'ext-long-hall', name: 'The Long Hall', address: "51 South Great George's Street, Dublin", lat: 53.3419, lng: -6.2643 },
+    ],
     sessionUserId: null,
     seq,
     dirty: false,
