@@ -29,3 +29,7 @@ jest.mock('@react-native-community/netinfo', () => require('@react-native-commun
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
+
+// expo-application reads the installed binary's version (src/features/app-gate/installedVersion.ts).
+// Suites that care mock `@/features/app-gate/installedVersion` or this module themselves.
+jest.mock('expo-application', () => ({ nativeApplicationVersion: '1.0.0', nativeBuildVersion: '1' }));

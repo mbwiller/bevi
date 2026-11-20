@@ -14,6 +14,7 @@ import { StackScene } from '@/components/ScreenMotion';
 import { StatusBarClearance } from '@/components/StatusBarClearance';
 import { clearReportCommand, useReportCommands } from '@/features/bug-report/commands';
 import { loadReportHost } from '@/features/bug-report/loadHost';
+import { AppGate } from '@/features/app-gate/AppGate';
 import { loadNutritionDemo } from '@/features/create-bev/loadNutritionDemo';
 import { ConfigError, Splash } from '@/features/auth/Splash';
 import { useSessionBootstrap } from '@/features/auth/useSessionBootstrap';
@@ -55,7 +56,7 @@ export default function RootLayout() {
             <OfflineNoticeHost>
               {__DEV__ && process.env.EXPO_PUBLIC_NUTRITION_SCAN_DEMO === '1'
                 ? <Suspense fallback={null}><NutritionDemo /></Suspense>
-                : apiConfig.ok ? <SessionGate /> : <ConfigError problem={apiConfig.problem} />}
+                : apiConfig.ok ? <AppGate><SessionGate /></AppGate> : <ConfigError problem={apiConfig.problem} />}
             </OfflineNoticeHost>
           </QueryClientProvider>
         </StatusBarClearance>
