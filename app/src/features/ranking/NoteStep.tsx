@@ -6,6 +6,7 @@ import Animated, { ZoomIn, useReducedMotion } from 'react-native-reanimated';
 import { Button } from '@/components/Button';
 import { ErrorState } from '@/components/ErrorState';
 import { actionErrorMessage } from '@/lib/errorCopy';
+import { FORM_SCROLL } from '@/lib/formScroll';
 import { IconButton } from '@/components/IconButton';
 import { ScoreBubble } from '@/components/ScoreBubble';
 import { TextField } from '@/components/TextField';
@@ -63,7 +64,7 @@ export function NoteStep({
   const reduced = useReducedMotion();
   const firstInBucket = bucketSize === 1;
   return (
-    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <ScrollView contentContainerStyle={styles.content} {...FORM_SCROLL}>
       <View style={styles.top}>
         {onUndo ? (
           <Button variant="ghost" size="md" icon="undo-2" onPress={onUndo}>

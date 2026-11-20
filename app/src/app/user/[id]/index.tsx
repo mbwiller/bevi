@@ -1,11 +1,12 @@
 import { isApiError } from '@bevi/shared';
 import type { FlashListRef } from '@shopify/flash-list';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useRef } from 'react';
+import { useContext, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaInsetsContext, SafeAreaView } from 'react-native-safe-area-context';
 
 import { useMe, useStats, useUser } from '@/api/hooks';
+import { Announce } from '@/components/Announce';
 import { Button } from '@/components/Button';
 import { ErrorState } from '@/components/ErrorState';
 import { Header } from '@/components/Header';
@@ -38,6 +39,8 @@ export default function UserProfileScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const back = useBack();
+  // A pushed screen has no tab bar: the list's end clears the home indicator itself.
+  const bottomInset = useContext(SafeAreaInsetsContext)?.bottom ?? 0;
   const { id, tab: tabParam } = useLocalSearchParams<{ id: string; tab?: string }>();
   const tab = parseProfileTab(tabParam);
   const me = useMe();
@@ -82,10 +85,8 @@ export default function UserProfileScreen() {
         listRef={listRef}
         tab={tab}
         onTab={(t) => router.setParams({ tab: t })}
-        onRefresh={() => {
-          void user.refetch();
-          void stats.refetch();
-        }}
+        onRefresh={() => Promise.all([user.refetch(), stats.refetch()])}
+        bottomInset={bottomInset}
         header={
           <View>
             <ProfileHero
@@ -110,6 +111,7 @@ export default function UserProfileScreen() {
                 Share profile
               </Button>
             </ProfileButtonRow>
+            <Announce text={notice} />
             {notice ? (
               <Text style={[type.body, styles.notice, { color: colors.textSecondary }]} accessibilityLiveRegion="polite" role="status">
                 {notice}

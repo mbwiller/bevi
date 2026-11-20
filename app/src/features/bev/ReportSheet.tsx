@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useBevSearch, useReportBev } from '@/api/hooks';
+import { Announce } from '@/components/Announce';
 import { BevImage } from '@/components/BevImage';
 import { bevImageProps, brandLine } from '@/components/BevParts';
 import { Button } from '@/components/Button';
@@ -108,6 +109,7 @@ export function ReportSheet({ bevId, name, open, onClose }: { bevId: string; nam
             }}
           />
           <View style={styles.pad}>
+            <Announce text={failure} />
             {failure ? (
               <Text style={[type.body, { color: colors.scoreLow }]} accessibilityRole="alert">
                 {failure}
@@ -137,6 +139,7 @@ export function ReportSheet({ bevId, name, open, onClose }: { bevId: string; nam
             <SheetOption key={r.id} label={r.label} selected={reason === r.id} onPress={() => setReason(r.id)} />
           ))}
           <View style={styles.pad}>
+            <Announce text={failure} />
             {failure ? (
               <Text style={[type.body, { color: colors.scoreLow }]} accessibilityRole="alert">
                 {failure}

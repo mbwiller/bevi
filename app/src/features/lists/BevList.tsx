@@ -5,6 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { Arrive, useArrival } from '@/components/Arrive';
 import { ErrorState } from '@/components/ErrorState';
 import { Skeleton } from '@/components/Skeleton';
+import { usePullToRefresh } from '@/lib/usePullToRefresh';
 import { spacing } from '@/theme';
 
 /** Rows of skeleton in the BevRow shape: the list's loading state. */
@@ -64,6 +65,7 @@ export function BevList<T>({ data, query, renderItem, keyExtractor, header, empt
     lastKey.current = resetScrollKey;
     listRef.current?.scrollToOffset({ offset: 0, animated: false });
   }, [resetScrollKey]);
+  const { refreshing, onRefresh } = usePullToRefresh(query.refetch);
   const body = query.isPending ? (
     <SkeletonRows />
   ) : (
@@ -85,8 +87,8 @@ export function BevList<T>({ data, query, renderItem, keyExtractor, header, empt
         if (query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage?.();
       }}
       onEndReachedThreshold={0.5}
-      refreshing={!!query.isRefetching && !query.isFetchingNextPage && !query.isPending}
-      onRefresh={() => void query.refetch()}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
     />
   );
 }

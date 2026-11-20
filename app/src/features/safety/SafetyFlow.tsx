@@ -1,8 +1,9 @@
 import { REPORT_NOTE_MAX, REPORT_REASONS, type Profile, type ReportContentKind, type ReportReason } from '@bevi/shared';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useBlock, useReport } from '@/api/hooks';
+import { Announce } from '@/components/Announce';
 import { Button } from '@/components/Button';
 import { Icon } from '@/components/Icon';
 import { Sheet } from '@/components/Sheet';
@@ -128,7 +129,9 @@ function ReportStep({ target, onSent }: { target: SafetyTarget; onSent: () => vo
   const [note, setNote] = useState('');
   const [focused, setFocused] = useState(false);
   const [failure, setFailure] = useState<Failure | null>(null);
-  const keyboard = useKeyboardInset(true);
+  // Web only: iOS Safari doesn't resize the page, so the form pads itself up. On native the Sheet
+  // raises its whole panel above the keyboard, so counting it here too would count it twice.
+  const keyboard = useKeyboardInset(Platform.OS === 'web');
   const left = REPORT_NOTE_MAX - noteLength(note);
   const canSend = !!reason && left >= 0 && !report.isPending;
 
@@ -193,6 +196,7 @@ function ReportStep({ target, onSent }: { target: SafetyTarget; onSent: () => vo
           {left}
         </Text>
       ) : null}
+      <Announce text={failure?.message} />
       {failure ? (
         <Text style={[type.body, { color: colors.scoreLow }]} role="alert" accessibilityLiveRegion="polite">
           {failure.message}
@@ -234,6 +238,7 @@ function BlockStep({ target, onBack, onClose, onBlocked }: { target: SafetyTarge
   return (
     <View style={styles.pad}>
       <Text style={[type.bodyLarge, { color: colors.text }]}>{blockBody(handle)}</Text>
+      <Announce text={failure?.message} />
       {failure ? (
         <Text style={[type.body, { color: colors.scoreLow }]} role="alert" accessibilityLiveRegion="polite">
           {failure.message}

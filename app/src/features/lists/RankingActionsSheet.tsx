@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { useRemoveRanking, useUpdateNote } from '@/api/hooks';
+import { Announce } from '@/components/Announce';
 import { Button } from '@/components/Button';
 import { Sheet } from '@/components/Sheet';
 import { TextField } from '@/components/TextField';
@@ -95,6 +96,7 @@ export function RankingActionsSheet({ ranked, onClose }: { ranked: RankedBev | n
           <Text style={[type.bodyLarge, { color: colors.text }]}>
             {`It leaves your Bev'd list, and the other Bevs in ${BUCKET_SHORT[ranked.bucket]} shift to fill the gap.`}
           </Text>
+          <Announce text={remove.error ? actionErrorMessage(remove.error) : null} />
           {remove.error ? (
             <Text style={[type.body, { color: colors.scoreLow }]} accessibilityRole="alert">
               {actionErrorMessage(remove.error)}

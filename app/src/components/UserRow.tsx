@@ -105,6 +105,13 @@ export function UserRow({ user, rank, meta, streak, context, following, self = f
   );
 }
 
+/** The Follow pill's accessible name says the state: "Follow Friend A", or "Following Friend A" once you do. */
+export function followLabel(following: boolean, name: string): string {
+  return following ? `Following ${name}` : `Follow ${name}`;
+}
+/** What activating the pill does while it reads "Following". */
+export const UNFOLLOW_HINT = 'Double tap to unfollow';
+
 /**
  * Pill's look (filled Follow, outlined Following) with `aria-pressed` reporting the follow state.
  * Also the author's Follow pill on an Explore FeedPost. A press pops it like the heart (Change);
@@ -125,7 +132,9 @@ export function FollowPill({ following, name, onPress }: { following: boolean; n
             : undefined
         }
         accessibilityRole="button"
-        accessibilityLabel={`Follow ${name}`}
+        accessibilityLabel={followLabel(following, name)}
+        accessibilityHint={following ? UNFOLLOW_HINT : undefined}
+        accessibilityState={{ selected: following }}
         {...({ 'aria-pressed': following } as object)}
         style={({ pressed }) => [
           styles.pill,

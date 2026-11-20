@@ -374,7 +374,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
           <Text style={[type.body, styles.flex, { color: colors.text }]}>{OFFLINE_BANNER}</Text>
         </View>
       ) : null}
-      <ScrollView style={styles.fill} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView style={styles.fill} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         {step < 2 && !existingId ? (
           <Text style={[type.displayDrop, styles.heading, { color: colors.text }]} accessibilityRole="header">
             {STEP_TITLES[step]}

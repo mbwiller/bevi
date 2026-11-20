@@ -1,6 +1,6 @@
 import NetInfo, { type NetInfoChangeHandler, type NetInfoState } from '@react-native-community/netinfo';
 import { act, render, screen } from '@testing-library/react-native';
-import { StyleSheet, Text } from 'react-native';
+import { AccessibilityInfo, StyleSheet, Text } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { OfflineNoticeHost } from '../OfflineNotice';
@@ -55,4 +55,18 @@ it('does not show it while the connection is not known yet', async () => {
   await renderHost();
   await emit(null);
   expect(screen.queryByText("You're offline")).toBeNull();
+});
+
+it('says "You\'re offline" aloud when the strip appears (iOS ignores its live region), once', async () => {
+  const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility').mockImplementation(() => {});
+  await renderHost();
+  // The connection state outlives a test (it is module state): start from a definite "online".
+  await emit(true);
+  expect(screen.queryByText("You're offline")).toBeNull();
+  announce.mockClear();
+  await emit(false);
+  await emit(false);
+  expect(announce).toHaveBeenCalledTimes(1);
+  expect(announce).toHaveBeenCalledWith("You're offline");
+  announce.mockRestore();
 });

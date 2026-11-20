@@ -41,6 +41,8 @@ export function Pill({ variant = 'outlined', icon, iconRight, active = false, ch
       accessibilityRole="button"
       accessibilityLabel={label}
       aria-disabled={!!disabled}
+      // React Native maps no `aria-pressed` on iOS; an outlined (toggle) Pill reports `selected` for VoiceOver.
+      accessibilityState={filled ? undefined : { selected: active }}
       // aria-pressed marks the outlined toggle; RN's types lack it but react-native-web renders it.
       {...(filled ? null : ({ 'aria-pressed': active } as object))}
       style={({ pressed }) => [

@@ -4,6 +4,7 @@ import { StyleSheet, Text } from 'react-native';
 
 import { useCanReportBug, useSignOut } from '@/api/hooks';
 import { requestReport } from '@/features/bug-report/commands';
+import { Announce } from '@/components/Announce';
 import { actionErrorMessage } from '@/lib/errorCopy';
 import { SettingsRow, SettingsScreen, SettingsSection } from '@/features/settings/SettingsRow';
 import { useSession } from '@/state/session';
@@ -46,6 +47,7 @@ export default function SettingsIndexScreen() {
         <SettingsRow label="Sign out" chevron={false} busy={signOut.isPending} onPress={onSignOut} />
         <SettingsRow label="Delete account" onPress={() => router.push('/settings/delete-account')} />
       </SettingsSection>
+      <Announce text={signOut.isError ? `Couldn't sign out. ${actionErrorMessage(signOut.error)}` : null} />
       {signOut.isError ? (
         <Text style={[type.body, styles.note, { color: colors.scoreLow }]} accessibilityLiveRegion="polite" role="alert">
           {`Couldn't sign out. ${actionErrorMessage(signOut.error)}`}

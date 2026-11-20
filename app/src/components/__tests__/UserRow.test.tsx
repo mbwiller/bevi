@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { StyleSheet, type ViewStyle } from 'react-native';
 
 import { UserRow } from '../UserRow';
+import { followPill } from '@/testing/followPill';
 
 const ARJUN = { displayName: 'Arjun Cheema', handle: 'acheema5', avatarUrl: null };
 
@@ -62,13 +63,13 @@ describe('meta line on a narrow row', () => {
 it('toggles Follow / Following with aria-pressed', async () => {
   const onFollow = jest.fn();
   const { rerender } = await render(<UserRow user={ARJUN} following={false} onFollow={onFollow} />);
-  const follow = screen.getByRole('button', { name: 'Follow Arjun Cheema' });
+  const follow = screen.getByRole('button', { name: followPill('Arjun Cheema') });
   expect(follow.props['aria-pressed']).toBe(false);
   expect(screen.getByText('Follow')).toBeTruthy();
   await fireEvent.press(follow);
   expect(onFollow).toHaveBeenCalledTimes(1);
   await rerender(<UserRow user={ARJUN} following onFollow={onFollow} />);
-  expect(screen.getByRole('button', { name: 'Follow Arjun Cheema' }).props['aria-pressed']).toBe(true);
+  expect(screen.getByRole('button', { name: followPill('Arjun Cheema') }).props['aria-pressed']).toBe(true);
   expect(screen.getByText('Following')).toBeTruthy();
 });
 
