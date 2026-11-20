@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FOLLOW_MUTATION, flattenPages, useExplore, useFollow, useMe, useUnfollow } from '@/api/hooks';
 import { categoryById } from '@/lib/categories';
 
+import { useSafetyTarget } from '../safety/useSafetyTarget';
 import { ExplorePostItem } from './ExplorePostItem';
 
 /**
@@ -48,6 +49,8 @@ function useExploreFollows(sequence: unknown) {
  */
 export function useExplorePosts(enabled: boolean) {
   const router = useRouter();
+  const safety = useSafetyTarget();
+  const { open: openSafety } = safety;
   const query = useExplore({ enabled });
   const canSeeAlcohol = useMe().data?.canSeeAlcohol ?? false;
   const posts = useMemo(
@@ -67,11 +70,12 @@ export function useExplorePosts(enabled: boolean) {
           onFollow={() => toggle(item.actor.id, following)}
           onOpenBev={() => router.push({ pathname: '/bev/[id]', params: { id: item.bev.id } })}
           onOpenActor={() => router.push({ pathname: '/user/[id]', params: { id: item.actor.id } })}
+          onMore={() => openSafety({ kind: 'post', id: item.id, author: item.actor })}
         />
       );
     },
-    [followed, toggle, router],
+    [followed, toggle, router, openSafety],
   );
 
-  return { query, posts, renderItem };
+  return { query, posts, renderItem, safety: { target: safety.target, onClose: safety.close } };
 }

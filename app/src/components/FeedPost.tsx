@@ -22,6 +22,7 @@ import { BevActions, bevImageProps } from './BevParts';
 import { BevImage } from './BevImage';
 import { CommentButton } from './CommentButton';
 import { Icon } from './Icon';
+import { IconButton } from './IconButton';
 import { LikeButton } from './LikeButton';
 import { FeedbackPressable, type PressFeedback } from './PressFeedback';
 import { ScoreBubble } from './ScoreBubble';
@@ -83,6 +84,13 @@ export interface FeedPostProps {
   onRank?: () => void;
   onSave?: () => void;
   onOpen?: () => void;
+  /**
+   * Opens the post's More menu (Report post, Block account): an ellipsis after the score bubble.
+   * Omitted on the viewer's own post, which has nothing to report.
+   */
+  onMore?: () => void;
+  /** The More button's accessible name; say whose post it is ("More actions, post by @friend_a"). */
+  moreLabel?: string;
   /**
    * The press feedback of a target laid over the avatar from outside (FeedPostItem's actor link):
    * the avatar gives way while that target is held.
@@ -199,6 +207,8 @@ export function FeedPost({
   onRank,
   onSave,
   onOpen,
+  onMore,
+  moreLabel = 'More actions',
   avatarPressStyle,
   divider = true,
   style,
@@ -310,6 +320,7 @@ export function FeedPost({
           </View>
         </View>
         {score != null || scoreVariant ? <ScoreBubble score={score} variant={scoreVariant} bucket={bucket ?? undefined} /> : null}
+        {onMore ? <IconButton icon="ellipsis" label={moreLabel} onPress={onMore} style={styles.more} /> : null}
       </View>
 
       {media === 'picture' ? (
@@ -486,6 +497,8 @@ const styles = StyleSheet.create({
   divider: { borderBottomWidth: 1 },
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   headText: { flex: 1, minWidth: 0 },
+  // The 44pt button hangs into the gutter so its glyph lines up with the edge, as the header's actions do.
+  more: { marginRight: -spacing.sm, marginLeft: -spacing.xs },
   // The sentence: the verb regular, the names bold.
   regular: { fontWeight: '400' },
   bold: { fontWeight: '700' },

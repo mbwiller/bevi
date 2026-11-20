@@ -16,6 +16,8 @@ import { TasteProfile } from '@/components/TasteProfile';
 import { FeedPostItem } from '@/features/feed/FeedPostItem';
 import { PostCommentsSheet } from '@/features/feed/PostCommentsSheet';
 import { useFeedPostActions } from '@/features/feed/useFeedPostActions';
+import { SafetyFlow } from '@/features/safety/SafetyFlow';
+import { useBack } from '@/lib/useBack';
 import { categoryById } from '@/lib/categories';
 import { spacing, type, useTheme } from '@/theme';
 
@@ -87,7 +89,9 @@ export function ActivityList({ profile, self, following = false, header, tab, on
   );
   const readout = useMemo(() => tasteReadout(tasteRows, self ? undefined : first), [tasteRows, self, first]);
   const shown = tab === 'taste' ? tasteQuery : query;
-  const { renderItem: renderPost, commentsFor, closeComments, postGone, notice } = useFeedPostActions({ linkActors: false });
+  const { renderItem: renderPost, commentsFor, closeComments, postGone, notice, safety } = useFeedPostActions({ linkActors: false });
+  // Blocking the person whose Activity this is leaves their profile: it now reads as not found.
+  const back = useBack();
   // Arrive: what replaces each tab's skeleton rises in once; later pages and rows scrolled into view
   // hold still. Pending counts only while that tab shows its skeleton (the taste query is disabled,
   // so pending, whenever its tab is closed).
@@ -200,6 +204,7 @@ export function ActivityList({ profile, self, following = false, header, tab, on
         }}
       />
       <PostCommentsSheet eventId={commentsFor} onClose={closeComments} onGone={postGone} />
+      <SafetyFlow {...safety} onBlocked={back} />
     </View>
   );
 }
