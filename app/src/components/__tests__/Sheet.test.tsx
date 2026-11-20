@@ -1,6 +1,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { useState } from 'react';
-import { Text } from 'react-native';
+import { Platform, Text } from 'react-native';
+
+import { grabModalDismiss } from '@/testing/modalDismiss';
 
 import { Button } from '../Button';
 import { Sheet } from '../Sheet';
@@ -134,5 +136,65 @@ describe('on a wide viewport', () => {
     expect(frame().maxWidth).toBeUndefined();
     expect(frame().alignSelf).toBeUndefined();
     expect(frame().width).toBeUndefined();
+  });
+});
+
+describe('onClosed', () => {
+  function Closing({ onClosed }: { onClosed: () => void }) {
+    const [open, setOpen] = useState(true);
+    return (
+      <Sheet open={open} title="Done?" onClose={() => setOpen(false)} onClosed={onClosed}>
+        <Text>Body</Text>
+      </Sheet>
+    );
+  }
+  const closeIt = () => fireEvent.press(screen.getByTestId('sheet-scrim', { includeHiddenElements: true }));
+
+  it('iOS: waits for the Modal to report it is dismissed, not just for the exit animation', async () => {
+    const onClosed = jest.fn();
+    await render(<Closing onClosed={onClosed} />);
+    const dismiss = grabModalDismiss();
+    await closeIt();
+    expect(onClosed).not.toHaveBeenCalled();
+    await settle();
+    expect(screen.queryByText('Body')).toBeNull();
+    expect(onClosed).not.toHaveBeenCalled();
+    await act(() => dismiss());
+    expect(onClosed).toHaveBeenCalledTimes(1);
+    // Once per close, however often it is told.
+    await act(() => dismiss());
+    await act(() => jest.advanceTimersByTime(5000));
+    expect(onClosed).toHaveBeenCalledTimes(1);
+  });
+
+  it('iOS: still fires if the Modal never reports it, so nothing waiting on it is stranded', async () => {
+    const onClosed = jest.fn();
+    await render(<Closing onClosed={onClosed} />);
+    await closeIt();
+    await settle();
+    expect(onClosed).not.toHaveBeenCalled();
+    await act(() => jest.advanceTimersByTime(1000));
+    expect(onClosed).toHaveBeenCalledTimes(1);
+  });
+
+  it('web (no onDismiss there): fires as soon as the Sheet has unmounted its Modal', async () => {
+    jest.replaceProperty(Platform, 'OS', 'web');
+    const onClosed = jest.fn();
+    await render(<Closing onClosed={onClosed} />);
+    await closeIt();
+    expect(onClosed).not.toHaveBeenCalled();
+    await settle();
+    expect(screen.queryByText('Body')).toBeNull();
+    expect(onClosed).toHaveBeenCalledTimes(1);
+    jest.restoreAllMocks();
+  });
+
+  it('does not fire for a sheet that was never opened', async () => {
+    jest.replaceProperty(Platform, 'OS', 'web');
+    const onClosed = jest.fn();
+    await render(<Sheet open={false} onClosed={onClosed} />);
+    await settle();
+    expect(onClosed).not.toHaveBeenCalled();
+    jest.restoreAllMocks();
   });
 });

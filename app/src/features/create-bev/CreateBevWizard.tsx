@@ -141,6 +141,19 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
     setConfirmDiscard(false);
     back();
   };
+  // Discard closes its sheet first and leaves once that sheet is gone: popping the screen under a
+  // Modal that is still presented leaves iOS with a stuck or blank screen (as in RankFlow).
+  const discarding = useRef(false);
+  const discard = () => {
+    discarding.current = true;
+    abort.current.aborted = true;
+    setConfirmDiscard(false);
+  };
+  const discardClosed = () => {
+    if (!discarding.current) return;
+    discarding.current = false;
+    leave();
+  };
   const close = () => (dirty && !existingId ? setConfirmDiscard(true) : leave());
 
   const goRank = (bevId: string) => {
@@ -406,7 +419,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
         }}
         onClose={() => setCategoryOpen(false)}
       />
-      <DiscardBevSheet open={confirmDiscard} onDiscard={leave} onKeep={() => setConfirmDiscard(false)} />
+      <DiscardBevSheet open={confirmDiscard} onDiscard={discard} onKeep={() => setConfirmDiscard(false)} onClosed={discardClosed} />
     </SafeAreaView>
   );
 }

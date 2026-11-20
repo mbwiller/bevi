@@ -1065,3 +1065,53 @@ The discipline that follows: merging stays cheap, releasing becomes deliberate.
 A release is a tag on a commit whose checks are green, built once, tested as
 that build, and promoted; it is not rebuilt from a later commit because
 something small changed.
+
+### Publishing an over-the-air update safely
+
+`app.config.ts` sets `runtimeVersion: { policy: 'fingerprint' }`, so the runtime
+version is a hash of everything that can change the native project, and an
+`eas update` reaches only installed binaries whose hash equals it. A hash that
+moves for a reason that has nothing to do with native code does not fail
+loudly: the update publishes, and no phone receives it.
+
+`app/fingerprint.config.js` keeps the hash to what matters. It leaves out the
+browser-data packages that `app.config.ts`'s transpile pulls in (`caniuse-lite`,
+`browserslist`, `electron-to-chromium`, `baseline-browser-mapping`,
+`node-releases`), `eas.json`, `.gitignore` and the `scripts` in `package.json`,
+and nothing else. Dependencies' native code, `app.config.ts`, plugins, the
+assets they use and patches all still move it. Add to the file only after
+checking the input cannot reach the native project; the way to see what the
+hash is made of is, from `app/`:
+
+```
+npx expo-updates fingerprint:generate --platform ios   # prints every source and the hash
+```
+
+To publish:
+
+1. Check out **the commit the build was cut from** (the `v*` tag, or the commit
+   written down for the TestFlight build) and add the JS fix on top of it, not
+   on a later `main`: a later `main` may carry a new native dependency that the
+   installed binary does not have.
+2. `npm ci` from the repo root, so `node_modules` is what the lockfile says and
+   not whatever the last session left.
+3. `eas build:view <build id>` shows the build's runtime version. Run
+   `eas update --channel <channel> --message "..."` (`preview` or `production`,
+   as in `eas.json`) from `app/`; it prints the runtime version it published
+   under. **The two must be equal.** If they are not, stop: something that
+   reaches the native project differs from the build, and publishing anyway
+   reaches nobody. Find the difference (the commit, `npm ci`, a changed
+   dependency, `fingerprint:generate` on each side) rather than editing the
+   config until they match.
+4. Never assume an update landed. Open the app on a phone that has that build,
+   close it and open it again (an update downloads at launch and applies at the
+   next one), and confirm the change is there, or look at the update's
+   "devices that have received it" count in the Expo dashboard.
+
+Two limits to know. `eas-cli` computes the runtime version with its own bundled
+copy of `@expo/fingerprint`, which reads `fingerprint.config.js` the same way
+but is not the copy in `node_modules`; the comparison in step 3 is the check
+that counts, not the local command. And a build made before this file existed
+has the old, wider hash: updates for it have to be published from a tree where
+that hash is reproduced, so after this file merges, cut the next TestFlight
+build from the new commit before relying on updates.

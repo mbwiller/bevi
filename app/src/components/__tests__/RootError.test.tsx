@@ -11,6 +11,16 @@ import { RootError } from '../RootError';
 // QueryClientProvider, no SafeAreaProvider and no gesture root around it.
 jest.mock('@/lib/crashReporting', () => ({ captureError: jest.fn() }));
 
+
+type Json = { props?: Record<string, unknown>; children?: unknown } | string | null;
+/** The first node in the rendered tree that has a `contentContainerStyle`: the ScrollView. */
+function findScroll(node: Json | Json[]): Record<string, unknown> | undefined {
+  if (!node || typeof node === 'string') return undefined;
+  if (Array.isArray(node)) return node.map(findScroll).find(Boolean);
+  if (node.props?.contentContainerStyle !== undefined) return node.props;
+  return findScroll(node.children as Json[] | null);
+}
+
 const capture = captureError as jest.MockedFunction<typeof captureError>;
 const retry = jest.fn(() => Promise.resolve());
 
@@ -26,6 +36,14 @@ it('says what happened and what to do, with no provider around it', async () => 
   expect(JSON.stringify(screen.toJSON())).toContain('"accessibilityRole":"alert"');
   expect(screen.getByText('Something went wrong')).toBeTruthy();
   expect(screen.getByText('Try again. If it keeps happening, close Bevi and open it again.')).toBeTruthy();
+});
+
+it('scrolls, centred, so the message is not clipped at the largest text size, still with no provider', async () => {
+  await render(<RootError error={new Error('boom')} retry={retry} />);
+  const scroll = findScroll(screen.toJSON() as Json);
+  expect(scroll).toBeDefined();
+  expect(StyleSheet.flatten(scroll!.contentContainerStyle as object)).toMatchObject({ flexGrow: 1, justifyContent: 'center' });
+  expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy();
 });
 
 it('never shows the error itself', async () => {

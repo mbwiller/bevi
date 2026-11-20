@@ -229,12 +229,15 @@ const R = {
 - The content that replaces it arrives: it rises 6pt and fades in over \`base\` (a plain fade under Reduce Motion).`,
   Sheet: `Bottom sheet with a handle, over a \`scrim\`; snaps to 40% or 90% of the screen.
 
-- Provide: \`title\`, \`snap\`, \`onClose\`, children (option rows 48pt with 1pt dividers, a check in \`primary\` on the chosen one).
+- Provide: \`title\`, \`snap\`, \`onClose\`, optional \`onClosed\`, children (option rows 48pt with 1pt dividers, a check in \`primary\` on the chosen one).
 - Uses: list scope, filters, re-rank, category picker, report a Bev, settings.
+- \`onClosed\` fires once the sheet has finished closing, after its exit animation and, on a phone, once the modal is really gone. Anything that follows a close (leaving the screen, opening a screen or another modal) waits for it: doing it in the same tick as \`onClose\` pops or pushes a screen under a modal that is still presented.
+- A sheet that opens over another goes inside it (the second modal presents from the first); never beside it.
 - It fills its nearest positioned ancestor: render it inside the screen container.`,
   CommentsSheet: `The post's comments, Instagram-clean, in a 90% Sheet titled "Comments".
 
-- Provide: \`comments\` (each \`author\`, \`body\`, \`time\`, \`mine\`), \`me\` (the composer's avatar), \`onPost\`, \`onDelete\`, \`onClose\`, optional \`onMore\` and \`error\`.
+- Provide: \`comments\` (each \`author\`, \`body\`, \`time\`, \`mine\`), \`me\` (the composer's avatar), \`onPost\`, \`onDelete\`, \`onClose\`, optional \`onMore\`, \`error\` and children.
+- **A sheet over this one.** Pass the More menu's sheet as children, so it sits inside the CommentsSheet and not beside it. On a phone every Sheet is a modal that presents from the nearest screen, and a second one beside the first is refused; one inside it presents from the first. Anything else that opens over a Sheet follows the same rule.
 - Order: oldest at the top, newest just above the composer, like a chat, and the same order as the post's inline comments. \`comments.list\` returns newest first, so the app reverses each page and loads older ones as you scroll up.
 - A comment: Avatar 32, the bold handle and a relative time in \`textSecondary\` ("2 hours ago"), then the text in \`body\`, wrapped. Your own comments end in a "Delete" text button (44pt target, \`textSecondary\`, removed after a confirm in the app). No likes on comments.
 - **More actions.** With \`onMore\`, a comment that is not yours ends in an ellipsis IconButton (\`ellipsis\`, 24pt glyph, 44pt target) named "More actions, comment by @handle", which opens its menu (Report comment, Block account). Your own comments keep Delete and never show it. Without \`onMore\` no row has one.

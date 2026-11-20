@@ -1,12 +1,13 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
 import { StyleSheet } from 'react-native';
-import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
+import { act, fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
 
 import { api } from '@/api/client';
 import { BEV_ROW_FOOT_OVERLAY_BOTTOM } from '@/components/BevRow';
 import { categoryById } from '@/lib/categories';
 import { controls } from '@/testing/fakeApi';
+import { grabModalDismiss } from '@/testing/modalDismiss';
 import ListsScreen from '@/app/(tabs)/lists/index';
 
 import { basedOnLine } from '../RecommendedTab';
@@ -124,11 +125,18 @@ it('opens the row actions sheet with Bev it again, Edit note and Remove', async 
   expect(await screen.findByText(`Remove ${first.bev.name}?`)).toBeTruthy();
 });
 
-it('Bev it again opens the ranking flow in re-rank mode', async () => {
+it('Bev it again opens the ranking flow in re-rank mode, once the sheet has finished closing', async () => {
   const first = (await api.rankings.listMine()).items[0]!;
   const r = await start();
   await fireEvent.press(await screen.findByLabelText(`More for ${first.bev.name}`));
-  await fireEvent.press(await screen.findByLabelText('Bev it again'));
+  await screen.findByLabelText('Bev it again');
+  const dismiss = grabModalDismiss();
+  await fireEvent.press(screen.getByLabelText('Bev it again'));
+  // Closing, not closed: pushing a screen now would push it under a Modal that is still presented.
+  expect(r.path()).toBe('/lists');
+  await waitFor(() => expect(screen.queryByTestId('sheet')).toBeNull());
+  expect(r.path()).toBe('/lists');
+  await act(() => dismiss());
   expect(r.path()).toBe(`/rank/${first.bevId}?mode=rerank`);
 });
 

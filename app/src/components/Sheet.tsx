@@ -15,6 +15,13 @@ export interface SheetProps {
   snap?: 40 | 90;
   /** Scrim press, Escape (web) or the system back gesture. */
   onClose?: () => void;
+  /**
+   * The sheet has finished closing: its exit animation is done and, on iOS, the Modal is really gone
+   * (its `onDismiss`). Navigate or open another modal from here, never in the same tick as the close:
+   * popping a screen under a Modal that is still presented leaves iOS with a stuck or blank screen.
+   * Fires once per close, not for a sheet that was never opened.
+   */
+  onClosed?: () => void;
   /** Option rows: 48pt, 1pt dividers, a `primary` check on the chosen one. */
   children?: ReactNode;
   /**
@@ -29,6 +36,9 @@ const HANDLE = { width: 36, height: 5 };
 const RISE = 24;
 const FROM_OPACITY = 0.6;
 const EASE = Easing.bezier(0.2, 0.8, 0.2, 1);
+// iOS reports the end of a dismissal through the Modal's `onDismiss`; if it never does (UIKit refused
+// or dropped it), `onClosed` still fires after this long so whatever waits on it is not stranded.
+const DISMISS_FALLBACK_MS = 1000;
 
 /**
  * The panel's bottom padding. Web: clears the iPhone home indicator in the home-screen web app
@@ -49,7 +59,7 @@ export function sheetBottomPadding(bottomInset: number, keyboard: number): ViewS
  * The Modal's portal is a child of `<body>`, outside `#root`, so `public/index.html` also narrows the
  * portal itself; this keeps the sheet in the column even if that CSS doesn't match.
  */
-export function Sheet({ open = false, title, snap = 40, onClose, children, scroll = true }: SheetProps) {
+export function Sheet({ open = false, title, snap = 40, onClose, onClosed, children, scroll = true }: SheetProps) {
   const { colors } = useTheme();
   const win = useWindowDimensions();
   const windowHeight = win.height;
@@ -67,6 +77,31 @@ export function Sheet({ open = false, title, snap = 40, onClose, children, scrol
   const reduced = useReducedMotion();
   const progress = useSharedValue(open ? 1 : 0);
   const panel = useRef<View>(null);
+
+  // `onClosed`: armed while mounted, fired once when the close is complete. No `onDismiss` exists on
+  // the web (react-native-web) or Android, so there it fires as soon as the Sheet unmounts its Modal.
+  const closedRef = useRef(onClosed);
+  closedRef.current = onClosed;
+  const awaitingClose = useRef(false);
+  const stillMounted = useRef(mounted);
+  stillMounted.current = mounted;
+  const fireClosed = () => {
+    if (!awaitingClose.current || stillMounted.current) return;
+    awaitingClose.current = false;
+    closedRef.current?.();
+  };
+  useEffect(() => {
+    if (mounted) {
+      awaitingClose.current = true;
+      return;
+    }
+    if (Platform.OS !== 'ios') {
+      fireClosed();
+      return;
+    }
+    const t = setTimeout(fireClosed, DISMISS_FALLBACK_MS);
+    return () => clearTimeout(t);
+  }, [mounted]);
 
   useEffect(() => {
     if (open) {
@@ -100,6 +135,7 @@ export function Sheet({ open = false, title, snap = 40, onClose, children, scrol
       animationType="none"
       onRequestClose={onClose}
       onShow={focusPanel}
+      onDismiss={fireClosed}
       // react-native-web renders the Modal's own wrapper as role="dialog"; name it too.
       {...({ 'aria-label': title } as object)}
     >

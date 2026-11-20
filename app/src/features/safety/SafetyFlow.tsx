@@ -1,5 +1,5 @@
 import { REPORT_NOTE_MAX, REPORT_REASONS, type Profile, type ReportContentKind, type ReportReason } from '@bevi/shared';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useBlock, useReport } from '@/api/hooks';
@@ -43,7 +43,11 @@ export interface SafetyFlowProps {
   /** What the person opened More on; null closes the sheet. */
   target: SafetyTarget | null;
   onClose: () => void;
-  /** The account was blocked (the sheet has closed): a profile leaves itself, since it now reads as not found. */
+  /**
+   * The account was blocked and the sheet has finished closing (`Sheet`'s `onClosed`, not the same
+   * tick as `onClose`): a profile leaves itself, since it now reads as not found. Popping the screen
+   * under a Modal that is still presented would leave iOS with a stuck or blank screen.
+   */
   onBlocked?: (target: SafetyTarget) => void;
 }
 
@@ -76,11 +80,25 @@ export function SafetyFlow({ target, onClose, onBlocked }: SafetyFlowProps) {
     setStep('menu');
   }
   const open = !!target;
+  // A block is reported once the sheet is gone, not while it is still presented.
+  const blocked = useRef<SafetyTarget | null>(null);
   const title =
     step === 'menu' ? MORE_ACTIONS : step === 'block' && shown ? blockTitle(shown.author.handle) : step === 'sent' ? 'Report sent' : shown ? REPORT_ACTION[shown.kind] : MORE_ACTIONS;
   return (
-    <Sheet open={open} title={title} snap={step === 'menu' ? 40 : 90} onClose={onClose}>
-      {shown ? <FlowBody key={run} target={shown} step={step} setStep={setStep} onClose={onClose} onBlocked={onBlocked} /> : null}
+    <Sheet
+      open={open}
+      title={title}
+      snap={step === 'menu' ? 40 : 90}
+      onClose={onClose}
+      onClosed={() => {
+        const t = blocked.current;
+        blocked.current = null;
+        if (t) onBlocked?.(t);
+      }}
+    >
+      {shown ? (
+        <FlowBody key={run} target={shown} step={step} setStep={setStep} onClose={onClose} onBlocked={(t) => (blocked.current = t)} />
+      ) : null}
     </Sheet>
   );
 }
@@ -119,10 +137,10 @@ function FlowBody({ target, step, setStep, onClose, onBlocked }: BodyProps) {
       </View>
     );
   }
-  return <ReportStep target={target} onSent={() => setStep('sent')} />;
+  return <ReportStep target={target} onSent={() => setStep('sent')} onClose={onClose} />;
 }
 
-function ReportStep({ target, onSent }: { target: SafetyTarget; onSent: () => void }) {
+function ReportStep({ target, onSent, onClose }: { target: SafetyTarget; onSent: () => void; onClose: () => void }) {
   const { colors, elevation } = useTheme();
   const report = useReport();
   const [reason, setReason] = useState<ReportReason | null>(null);
@@ -140,6 +158,9 @@ function ReportStep({ target, onSent }: { target: SafetyTarget; onSent: () => vo
       <View style={styles.pad}>
         <Text style={[type.heading, { color: colors.text }]}>{GONE_TITLE}</Text>
         <Text style={[type.bodyLarge, { color: colors.textSecondary }]}>{GONE_BODY}</Text>
+        <Button variant="primary" block onPress={onClose}>
+          Done
+        </Button>
       </View>
     );
   }
