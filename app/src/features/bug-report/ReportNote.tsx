@@ -183,7 +183,15 @@ function NotePanel({ draft, onSend }: { draft: Draft; onSend: () => void }) {
         </View>
       )}
       {bare ? null : (
-        <View onLayout={(e) => setActionsAt((a) => ({ ...a, wrap: e.nativeEvent.layout.y }))}>
+        <View
+          onLayout={(e) => {
+            // Read now, not inside the updater: React runs an updater later, at the next render, and
+            // by then React Native has released the event (`nativeEvent` is null there, and reading
+            // it threw the whole note away on the iPhone: BEV-35).
+            const wrap = e.nativeEvent.layout.y;
+            setActionsAt((a) => ({ ...a, wrap }));
+          }}
+        >
           <Actions
             draft={draft}
             photos={photos}

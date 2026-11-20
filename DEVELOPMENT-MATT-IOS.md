@@ -741,13 +741,31 @@ defaults to `'typed'`, `targets` and `reproductionSteps` to empty).
 | Drafts | `draftStorage.ts` (AsyncStorage read into memory once, written through in order; the host waits for it before restoring) and `draftStorage.web.ts` (`localStorage`). Only text, type, marks' details and the key are stored, never a picture |
 | Tests | `nativeReporter.test.tsx` (the whole app as iOS), `nativeStore.test.ts`, `capture.test.ts`, `layerHidden.test.tsx`, `context.test.ts`, `trail.test.ts`, `draftStorage.test.ts`, `nativeEngine.test.ts`. The older reporter suites stay web suites: `jest.setup.js` gives them `supported: true` and the web's capabilities, and three were renamed `*.web.test.ts` because they test `.web` files |
 
-Device checks only a phone can give (none has been run): the screenshot really
-excludes the button and the note and includes a modal; the overlay passes a tap
-beside the note to the app; scrolling the app under the layer; the keyboard and
-the note's position inside the overlay; VoiceOver reaches the app around the
-note; the note over the ranking flow, New Bev and the photo viewer; Filed
-reports over a full-screen flow (the guard); a relaunch restores the text; what
-the `build` line reads on a TestFlight build and on an OTA update.
+**Build 0.1.0 (4) shipped this with the note unable to open (BEV-35, fixed
+2026-11-19).** Pressing the report button showed the error screen. One
+`onLayout` in `ReportNote.tsx` read `e.nativeEvent` inside a state updater.
+React runs an updater at the next render, and React Native has emptied the
+event by then, so the read threw as the note first laid out. Nothing caught it
+before a phone did: jest never lays anything out, so no `onLayout` runs there,
+and react-native-web does not empty its events. `nativeReporter.test.tsx` now
+hands the note's layout events over the way a phone does. The rule: read what
+a handler needs from the event before the handler returns, never in a state
+updater, a timer or a promise.
+
+Run in the iOS simulator on 2026-11-19 (a development build, iPhone 17, on the
+real backend), with that fix: the note opens from the Feed with a picture of
+the Feed, and the reporter is not in the picture; the type menu and Add photos'
+menu open; typing enables Send; the button and the note show over the photo
+viewer, with a picture of the viewer; Filed reports stays shut there with its
+line, and opens from the Feed with the real tickets from the deployed function.
+
+Still only a phone can give: the keyboard and the note's position inside the
+overlay (the simulator showed no on-screen keyboard); a note sent from the
+iPhone app arriving on the board with its picture (nothing was sent from the
+simulator); the overlay passes a tap beside the note to the app; scrolling the
+app under the layer; VoiceOver reaches the app around the note; the note over
+the ranking flow and New Bev; a relaunch restores the text; what the `build`
+line reads on a TestFlight build and on an OTA update.
 
 Sequencing: after G2 and before the second TestFlight wave (friends). For the
 first wave, the two of us, Apple's own crash reports plus TestFlight's built-in
