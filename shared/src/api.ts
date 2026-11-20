@@ -8,11 +8,14 @@
 
 import type { Bucket, CategoryId, PriceTier, ReportContentKind, ReportReason } from './enums';
 import type {
-  NutritionPreview,
   AppConfig,
   Bev,
+  BevdAtVenue,
+  BevdPin,
+  BevdScope,
   BevIcon,
   BevLeaf,
+  BevLocationSummary,
   BevOfPeriod,
   BevSimilarity,
   BevSummary,
@@ -24,10 +27,13 @@ import type {
   Comment,
   Comparison,
   ExplorePost,
+  ExternalPlace,
   FeaturedBev,
   FeedItem,
+  LatLng,
   LatLngBounds,
   LeaderboardRow,
+  NutritionPreview,
   Page,
   Profile,
   ProfileRow,
@@ -39,8 +45,10 @@ import type {
   SuggestedProfile,
   TasteProfileRow,
   UserLeaderboardRow,
+  Venue,
   VenueDetail,
   VenueFilters,
+  VenueMatch,
   VenuePin,
   WantToTryItem,
 } from './types';
@@ -425,6 +433,16 @@ export interface SubmitRankingInput {
   comparisons: Comparison[];
   /** Up to 140 chars. */
   note?: string;
+  /**
+   * Where the Bev was had (contract 3.4.0): a `Venue` id from `venues.search`
+   * or `venues.addPlace`. Saved with the ranking in one write, so a failure
+   * here fails the whole submit.
+   *
+   * Left out, `submitRanking` saves no place and `rerankBev` KEEPS the one the
+   * Bev already has. `null` on `rerankBev` removes it; on `submitRanking` it
+   * is the same as leaving it out.
+   */
+  venueId?: string | null;
 }
 
 export interface SubmitRankingResult {
@@ -495,8 +513,30 @@ export interface RankingsApi {
   /** @throws 'unauthorized', 'not_found' — not ranked; 'validation' — too long. */
   updateNote(bevId: string, note: string): Promise<void>;
 
-  /** Other scores in that bucket shift. @throws 'unauthorized', 'not_found'. */
+  /**
+   * Other scores in that bucket shift, and the Bev's place (`setVenue`) goes
+   * with it. @throws 'unauthorized', 'not_found'.
+   */
   removeRanking(bevId: string): Promise<void>;
+
+  /**
+   * Sets, replaces or (`null`) removes where the caller had a Bev they have
+   * already ranked (contract 3.4.0). Returns the venue, or null when removed.
+   * No feed post is written: the posts about that Bev simply show the place.
+   * @throws 'unauthorized'; 'not_found' — the caller has not ranked this Bev,
+   *   or there is no such venue.
+   */
+  setVenue(bevId: string, venueId: string | null): Promise<Venue | null>;
+
+  /**
+   * Where the caller had one Bev, or null: they did not say, or have not
+   * ranked it. For the re-rank flow, which shows the place it will keep.
+   * @throws 'unauthorized'.
+   */
+  getVenue(bevId: string): Promise<Venue | null>;
+
+  /** How many of the caller's rankings have a place. @throws 'unauthorized'. */
+  locationSummary(): Promise<BevLocationSummary>;
 }
 
 export interface WantToTryApi {
@@ -663,6 +703,58 @@ export interface VenuesApi {
    * options. @throws 'unauthorized'.
    */
   neighborhoods(): Promise<string[]>;
+
+  /**
+   * The place picker (contract 3.4.0). Every venue Bevi has is searchable,
+   * with or without an assortment, so this is wider than `inView`.
+   *
+   * With an empty `query` it answers "what is near me": the venues nearest
+   * `near`, and an empty list when there is no `near` either. With a query it
+   * matches names (accents and case folded; also the address and the
+   * neighbourhood for a second word, as in "starbucks main"), best match
+   * first and, within equally good matches, the nearest first.
+   *
+   * `near` is used to order this one answer and is not stored. `limit` is 20
+   * by default and at most 50.
+   * @throws 'unauthorized'; 'validation' — a query over 80 characters, or a
+   *   position that is not on the Earth.
+   */
+  search(params: { query: string; near?: LatLng | null; limit?: number }): Promise<VenueMatch[]>;
+
+  /**
+   * Places Bevi does not have, from an outside directory: the fallback when
+   * `search` misses, and the way a place outside New York gets in. Results
+   * are not venues until one is passed to `addPlace`.
+   * @throws 'unauthorized'; 'validation' — an empty query, or over 80
+   *   characters; 'rate_limited'; 'unknown' — the directory is not configured
+   *   or did not answer.
+   */
+  searchMore(params: { query: string; near?: LatLng | null }): Promise<ExternalPlace[]>;
+
+  /**
+   * Makes a venue of an `ExternalPlace` and returns it; a place Bevi already
+   * has under that id, or under the same name at the same spot, comes back as
+   * the existing venue.
+   * @throws 'unauthorized'; 'not_found' — no such place; 'rate_limited';
+   *   'unknown' — as `searchMore`.
+   */
+  addPlace(placeId: string): Promise<Venue>;
+
+  /**
+   * The map of where Bevs were had: one pin per venue where someone in
+   * `scope` (default 'all') had a Bev the caller may see. Not a viewport
+   * query: the whole answer comes back, most recent first, capped at 1000.
+   * @throws 'unauthorized'.
+   */
+  bevdMap(params?: { scope?: BevdScope }): Promise<BevdPin[]>;
+
+  /**
+   * What was had at one venue, by the people in `scope` (default 'all'), the
+   * most recent first. 'not_found' for an unknown or hidden venue, and for
+   * one where nothing in scope is visible to the caller: there was no pin.
+   * @throws 'unauthorized', 'not_found'.
+   */
+  bevdAt(venueId: string, params?: { scope?: BevdScope }): Promise<BevdAtVenue>;
 }
 
 export interface MetaApi {

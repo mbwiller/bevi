@@ -396,8 +396,14 @@ export interface Ranking {
   updatedAt: string;
 }
 
-/** A ranking with the Bev it ranks: Bev'd list rows and profile Activity posts. */
-export type RankedBev = Ranking & { bev: BevSummary };
+/**
+ * A ranking with the Bev it ranks: Bev'd list rows and profile Activity posts.
+ *
+ * `venue` (contract 3.4.0) is where the user had it, or null when they did
+ * not say. It belongs to the user's ranking of the Bev rather than to this
+ * row, so it survives a re-rank untouched.
+ */
+export type RankedBev = Ranking & { bev: BevSummary; venue: Venue | null };
 
 /**
  * One answer from the placement flow, structurally identical to
@@ -447,6 +453,13 @@ export interface FeedItem {
   alsoBevdBy: FriendScore[];
   /** The total behind `alsoBevdBy`, so it is never less than `alsoBevdBy.length`. */
   alsoBevdCount: number;
+  /**
+   * Where the actor had this Bev (contract 3.4.0), or null when they did not
+   * say. Anyone who may see the post may see this, so an `ExplorePost` has it
+   * too. It is the place on the actor's ranking today, not a snapshot from
+   * when the post was written: changing it changes every post about that Bev.
+   */
+  venue: Venue | null;
 }
 
 export interface Comment {
@@ -725,6 +738,74 @@ export interface VenueFilters {
   neighborhoods?: string[];
   /** Only venues we can evaluate as open right now (`hoursKnown`). */
   openNow?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Where a Bev was had (contract 3.4.0)
+// ---------------------------------------------------------------------------
+
+/** A position on the Earth, in degrees. */
+export interface LatLng {
+  lat: number;
+  lng: number;
+}
+
+/** One result of `venues.search`. */
+export interface VenueMatch {
+  venue: Venue;
+  /** From the `near` position that was given, rounded to a metre; null when none was. */
+  distanceMeters: number | null;
+}
+
+/**
+ * A place Bevi does not have yet, as `venues.searchMore` finds it. It is not a
+ * `Venue` and has no Bevi id: pass `placeId` to `venues.addPlace` to make it
+ * one. Show it, do not keep it.
+ */
+export interface ExternalPlace {
+  placeId: string;
+  name: string;
+  address: string | null;
+  lat: number;
+  lng: number;
+  distanceMeters: number | null;
+}
+
+/**
+ * Whose Bevs a map read covers: the caller's, those of the people the caller
+ * follows, or both.
+ */
+export type BevdScope = 'mine' | 'friends' | 'all';
+
+/** One pin on the map of where Bevs were had: a venue and how much happened there. */
+export interface BevdPin {
+  venue: Venue;
+  /** Rankings in scope with this venue. Always at least 1. Two people's Coke is two. */
+  bevCount: number;
+  /** How many of those are the caller's own, so `bevCount - mineCount` is the friends'. */
+  mineCount: number;
+  /** When the most recent of them was ranked. */
+  latestAt: string;
+}
+
+/** One ranking behind a pin: who had what there. */
+export interface BevdHere {
+  user: Profile;
+  ranking: RankedBev;
+}
+
+/** Everything in scope that was had at one venue, the most recent first. */
+export interface BevdAtVenue {
+  venue: Venue;
+  /** Never empty. */
+  items: BevdHere[];
+}
+
+/** How much of the caller's Bev'd list says where. */
+export interface BevLocationSummary {
+  rankedCount: number;
+  /** Never more than `rankedCount`. */
+  locatedCount: number;
 }
 
 /** Barcode nutrition snapshot, with its original serving basis and source. */

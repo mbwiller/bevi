@@ -633,7 +633,13 @@ export function mapComment(client: SupabaseClient, row: CommentRpcRow): Comment 
  * The part of a post every surface shares: get_explore returns exactly this,
  * and get_feed returns it plus the four engagement fields (D-15).
  */
-export function mapExplorePost(client: SupabaseClient, row: ExploreRpcRow, actor: Profile): ExplorePost {
+export function mapExplorePost(
+  client: SupabaseClient,
+  row: ExploreRpcRow,
+  actor: Profile,
+  /** Where the actor had it (`loadVenuesForPairs`); the RPC row does not carry it. */
+  venue: Venue | null = null,
+): ExplorePost {
   if (!row.bev_id || !row.bev_name || !row.bev_category_id) {
     throw new ApiError('unknown', `feed row ${row.id} is missing its Bev (actor_id=${row.actor_id})`);
   }
@@ -665,6 +671,7 @@ export function mapExplorePost(client: SupabaseClient, row: ExploreRpcRow, actor
     note: row.note,
     createdAt: row.created_at,
     inMyWantToTry: row.in_my_want_to_try,
+    venue,
   };
 }
 
@@ -676,7 +683,12 @@ export function mapAlsoBevdItem(client: SupabaseClient, item: AlsoBevdRpcItem): 
   };
 }
 
-export function mapFeedItem(client: SupabaseClient, row: FeedRpcRow, actor: Profile): FeedItem {
+export function mapFeedItem(
+  client: SupabaseClient,
+  row: FeedRpcRow,
+  actor: Profile,
+  venue: Venue | null = null,
+): FeedItem {
   // A database without 20261111000100 returns no `also_bevd` column. That is
   // the state between this client shipping and the migration being pushed, if
   // they happen in that order, and the feed must keep loading through it: no
@@ -685,7 +697,7 @@ export function mapFeedItem(client: SupabaseClient, row: FeedRpcRow, actor: Prof
   // returns an object), so this branch is dead from then on.
   const also = row.also_bevd ?? { count: 0, items: [] };
   return {
-    ...mapExplorePost(client, row, actor),
+    ...mapExplorePost(client, row, actor, venue),
     likeCount: row.like_count,
     likedByMe: row.liked_by_me,
     commentCount: row.comment_count,
@@ -932,7 +944,17 @@ export interface VenuePinRow {
 const numOrNull = (value: number | string | null): number | null =>
   value === null ? null : Number(value);
 
-function mapVenueFromPin(row: VenuePinRow): Venue {
+/**
+ * A venue as `private.venue_json` builds it (20261119193000), which is also the
+ * venue columns of a `venues_in_view` row: every BEV-22 read returns one of
+ * these under a `venue` key.
+ */
+export type VenueJsonRow = Pick<
+  VenuePinRow,
+  'id' | 'name' | 'kind' | 'lat' | 'lng' | 'address' | 'neighborhood' | 'borough' | 'hours_osm' | 'hours_known' | 'website'
+>;
+
+export function mapVenue(row: VenueJsonRow): Venue {
   return {
     id: row.id,
     name: row.name,
@@ -952,7 +974,7 @@ function mapVenueFromPin(row: VenuePinRow): Venue {
 
 export function mapVenuePin(row: VenuePinRow): VenuePin {
   return {
-    venue: mapVenueFromPin(row),
+    venue: mapVenue(row),
     bestScore: numOrNull(row.best_score),
     predictedScore: numOrNull(row.predicted_score),
     // The RPC leaves this null whenever `hours_known` is false, so the app has

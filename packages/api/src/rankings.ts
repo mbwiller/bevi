@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   ApiError,
   type Bucket,
+  type BevLocationSummary,
   type BucketBev,
   type CategoryId,
   type Page,
@@ -10,6 +11,7 @@ import {
   type RankingsApi,
   type SubmitRankingInput,
   type SubmitRankingResult,
+  type Venue,
 } from '@bevi/shared';
 import { mapError } from './errors';
 import { requireUserId } from './currentUser';
@@ -18,21 +20,27 @@ import {
   mapBevSummary,
   mapBucketBev,
   mapRanking,
+  mapVenue,
   type BevSummaryRow,
   type BucketBevRow,
   type RankingRow,
+  type VenueJsonRow,
 } from './mappers';
 import { clampLimit, decodeCursor, toPage } from './paging';
+import { loadUserVenues, loadVenuesForPairs, venueKey } from './places';
 import type { SnapshotCache } from './snapshot';
 
-interface RankingWithBevRow extends RankingRow {
+export interface RankingWithBevRow extends RankingRow {
   bevs: (BevSummaryRow & { category_id: string }) | Array<BevSummaryRow & { category_id: string }>;
 }
 
-function mapRankedBev(client: SupabaseClient, row: RankingWithBevRow): RankedBev {
+/** The embed every RankedBev read selects: the ranking, its Bev, the Bev's stats and icon. */
+export const RANKED_BEV_SELECT = '*, bevs(*, bev_stats(*), bev_icons(path))';
+
+export function mapRankedBev(client: SupabaseClient, row: RankingWithBevRow, venue: Venue | null): RankedBev {
   const bevRow = Array.isArray(row.bevs) ? row.bevs[0] : row.bevs;
   if (!bevRow) throw new ApiError('unknown', `Ranking ${row.id} has no Bev`);
-  return { ...mapRanking(row), bev: mapBevSummary(client, bevRow) };
+  return { ...mapRanking(row), bev: mapBevSummary(client, bevRow), venue };
 }
 
 interface OffsetCursor {
@@ -40,11 +48,13 @@ interface OffsetCursor {
 }
 
 async function fetchRankedBevs(client: SupabaseClient, userId: string, bucket?: Bucket): Promise<RankedBev[]> {
-  let query = client.from('rankings').select('*, bevs(*, bev_stats(*), bev_icons(path))').eq('user_id', userId);
+  let query = client.from('rankings').select(RANKED_BEV_SELECT).eq('user_id', userId);
   if (bucket) query = query.eq('bucket', bucketToDb(bucket));
-  const { data, error } = await query;
+  // The places are a second read (places.ts): `bev_locations` has no client
+  // policy, so they cannot be embedded in the select above.
+  const [{ data, error }, venues] = await Promise.all([query, loadUserVenues(client, userId)]);
   if (error) throw mapError(error);
-  return (data as RankingWithBevRow[]).map((row) => mapRankedBev(client, row));
+  return (data as RankingWithBevRow[]).map((row) => mapRankedBev(client, row, venues.get(row.bev_id) ?? null));
 }
 
 export function createRankingsApi(client: SupabaseClient, snapshots: SnapshotCache): RankingsApi {
@@ -110,16 +120,22 @@ export function createRankingsApi(client: SupabaseClient, snapshots: SnapshotCac
 
     async submitRanking(input: SubmitRankingInput): Promise<SubmitRankingResult> {
       await requireUserId(client);
-      const { data, error } = await client
-        .rpc('submit_ranking', {
-          p_bev_id: input.bevId,
-          p_bucket: bucketToDb(input.bucket),
-          p_insert_index: input.insertIndex,
-          p_expected_bucket_size: input.expectedBucketSize,
-          p_comparisons: input.comparisons,
-          p_note: input.note ?? null,
-        })
-        .single();
+      const args = {
+        p_bev_id: input.bevId,
+        p_bucket: bucketToDb(input.bucket),
+        p_insert_index: input.insertIndex,
+        p_expected_bucket_size: input.expectedBucketSize,
+        p_comparisons: input.comparisons,
+        p_note: input.note ?? null,
+      };
+      // With a place, the wrapper that saves both in one transaction
+      // (20261119193100). Without one, the function every older client calls,
+      // so a ranking with no place does not depend on that migration.
+      const { data, error } = await (
+        input.venueId
+          ? client.rpc('submit_ranking_with_location', { ...args, p_venue_id: input.venueId })
+          : client.rpc('submit_ranking', args)
+      ).single();
       if (error) throw mapError(error);
       snapshots.invalidate();
       const row = data as { ranking: RankingRow; bucket_size: number };
@@ -128,16 +144,21 @@ export function createRankingsApi(client: SupabaseClient, snapshots: SnapshotCac
 
     async rerankBev(input: SubmitRankingInput): Promise<SubmitRankingResult> {
       await requireUserId(client);
-      const { data, error } = await client
-        .rpc('rerank_bev', {
-          p_bev_id: input.bevId,
-          p_bucket: bucketToDb(input.bucket),
-          p_insert_index: input.insertIndex,
-          p_expected_bucket_size: input.expectedBucketSize,
-          p_comparisons: input.comparisons,
-          p_note: input.note ?? null,
-        })
-        .single();
+      const args = {
+        p_bev_id: input.bevId,
+        p_bucket: bucketToDb(input.bucket),
+        p_insert_index: input.insertIndex,
+        p_expected_bucket_size: input.expectedBucketSize,
+        p_comparisons: input.comparisons,
+        p_note: input.note ?? null,
+      };
+      // `venueId` left out keeps the place, which plain rerank_bev does by not
+      // touching it. Given, a string replaces it and null removes it.
+      const { data, error } = await (
+        input.venueId === undefined
+          ? client.rpc('rerank_bev', args)
+          : client.rpc('rerank_bev_with_location', { ...args, p_venue_id: input.venueId })
+      ).single();
       if (error) throw mapError(error);
       snapshots.invalidate();
       const row = data as { ranking: RankingRow; bucket_size: number };
@@ -155,6 +176,27 @@ export function createRankingsApi(client: SupabaseClient, snapshots: SnapshotCac
       const { error } = await client.rpc('remove_ranking', { p_bev_id: bevId });
       if (error) throw mapError(error);
       snapshots.invalidate();
+    },
+
+    async setVenue(bevId: string, venueId: string | null): Promise<Venue | null> {
+      await requireUserId(client);
+      const { data, error } = await client.rpc('set_bev_location', { p_bev_id: bevId, p_venue_id: venueId });
+      if (error) throw mapError(error);
+      return data ? mapVenue(data as VenueJsonRow) : null;
+    },
+
+    async getVenue(bevId: string): Promise<Venue | null> {
+      const uid = await requireUserId(client);
+      const venues = await loadVenuesForPairs(client, [{ userId: uid, bevId }]);
+      return venues.get(venueKey(uid, bevId)) ?? null;
+    },
+
+    async locationSummary(): Promise<BevLocationSummary> {
+      await requireUserId(client);
+      const { data, error } = await client.rpc('bev_location_summary').single();
+      if (error) throw mapError(error);
+      const row = data as { ranked_count: number; located_count: number };
+      return { rankedCount: row.ranked_count, locatedCount: row.located_count };
     },
   };
 }
