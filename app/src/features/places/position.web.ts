@@ -48,3 +48,6 @@ export function currentPosition(geo: Geolocation | undefined = geolocation()): P
     );
   });
 }
+
+/** A browser's location setting is not somewhere a page can send you. */
+export const openPositionSettings: (() => void) | null = null;
