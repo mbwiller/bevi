@@ -165,7 +165,7 @@ one, not built). What can be checked today:
       send it, and check it arrives in App Store Connect > TestFlight >
       Crashes.
 
-## 11. The bug reporter, for an internal account (IM-10, stage 1)
+## 11. The bug reporter, for an internal account (IM-10)
 
 Needs a build that links `react-native-view-shot`.
 
@@ -184,6 +184,16 @@ Needs a build that links `react-native-view-shot`.
       picture is not, and the note says so.
 - [ ] Send it: the ticket arrives on the board with its picture, the route,
       the app version and build, and the device.
+- [ ] Select element: the note steps aside, a tap on the app selects what it
+      landed on and presses nothing; the note comes back with the component
+      and its source file, and the new picture has the outline and its number.
+      Try it on a tab, on a row in a list, and inside the ranking flow.
+- [ ] In select mode the app does not scroll (expected on iOS: scroll first,
+      then select) and a drag selects nothing. Tap a text field: it is selected
+      and the keyboard goes away again.
+- [ ] Record steps: the button becomes Stop with a count; open two screens and
+      tap a few things, one of them inside a sheet; Stop shows them as steps,
+      and every tap did what it normally does.
 
 ## 12. Accessibility
 

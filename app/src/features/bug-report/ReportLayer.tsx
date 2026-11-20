@@ -1,9 +1,13 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { FullWindowOverlay } from 'react-native-screens';
+
+import { fade } from '@/lib/color';
+import { radius, type, useTheme } from '@/theme';
 
 import { layerIsHidden, registerLayer, useLayerHidden } from './layerHidden';
 import { LayerContext, REPORT_UI, useLayer, type LayerGeometry } from './layerContext';
+import type { CaptureMark } from './types';
 
 export { REPORT_UI, useLayer, type LayerGeometry };
 
@@ -25,7 +29,8 @@ export { REPORT_UI, useLayer, type LayerGeometry };
  * note is not modal, and VoiceOver must still reach the app around it.
  *
  * It hides itself for a window screenshot (layerHidden.ts), so the report shows what the tester
- * saw and not the reporter.
+ * saw and not the reporter. While it is hidden it draws the numbered outlines of what was selected
+ * (`CaptureMarks`), beside the hidden layer and not inside it, so the screenshot has them.
  */
 export function ReportLayer({ children }: { children: ReactNode }) {
   const layer = <InlineLayer>{children}</InlineLayer>;
@@ -37,6 +42,7 @@ function InlineLayer({ children }: { children: ReactNode }) {
   const win = useWindowDimensions();
   const [size, setSize] = useState({ width: win.width, height: win.height });
   const hidden = useLayerHidden((s) => s.hidden);
+  const marks = useLayerHidden((s) => s.marks);
 
   useEffect(() => registerLayer(), []);
   // Said once the hidden layer has been rendered, which is what a screenshot waits for.
@@ -45,24 +51,99 @@ function InlineLayer({ children }: { children: ReactNode }) {
   }, [hidden]);
 
   return (
-    <View
-      style={[StyleSheet.absoluteFill, hidden && styles.hidden]}
-      pointerEvents={hidden ? 'none' : 'box-none'}
-      accessibilityElementsHidden={hidden}
-      importantForAccessibility={hidden ? 'no-hide-descendants' : 'auto'}
-      onLayout={(e) => {
-        const { width, height } = e.nativeEvent.layout;
-        if (width && height) setSize({ width, height });
-      }}
-      {...REPORT_UI}
-    >
-      <LayerContext.Provider value={{ origin: () => ({ x: 0, y: 0 }), width: size.width, height: size.height }}>
-        {children}
-      </LayerContext.Provider>
+    <>
+      {hidden && marks.length > 0 ? <CaptureMarks marks={marks} width={size.width} height={size.height} /> : null}
+      <View
+        style={[StyleSheet.absoluteFill, hidden && styles.hidden]}
+        pointerEvents={hidden ? 'none' : 'box-none'}
+        accessibilityElementsHidden={hidden}
+        importantForAccessibility={hidden ? 'no-hide-descendants' : 'auto'}
+        onLayout={(e) => {
+          const { width, height } = e.nativeEvent.layout;
+          if (width && height) setSize({ width, height });
+        }}
+        {...REPORT_UI}
+      >
+        <LayerContext.Provider value={{ origin: () => ({ x: 0, y: 0 }), width: size.width, height: size.height }}>
+          {children}
+        </LayerContext.Provider>
+      </View>
+    </>
+  );
+}
+
+
+/** The badge's radius: a number in a circle on the outline's top-left corner. */
+const BADGE = 11;
+const OUTLINE = 2;
+
+/**
+ * What was selected, as the ticket's picture shows it: each mark a tinted box with a `primary`
+ * outline (and a `surface` line around it, so it reads on any background) and its number in a
+ * badge on the top-left corner, pulled inside the screen when the corner is at its edge. The same
+ * drawing the web puts on its canvas (capture.web.ts). It never takes a touch.
+ */
+function CaptureMarks({ marks, width, height }: { marks: readonly CaptureMark[]; width: number; height: number }) {
+  const { colors } = useTheme();
+  const inside = (value: number, max: number): number => Math.max(BADGE, Math.min(value, Math.max(BADGE, max - BADGE)));
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none" testID="report-capture-marks">
+      {marks.map((mark) => (
+        <View key={mark.n} style={StyleSheet.absoluteFill}>
+          <View
+            style={[
+              styles.mark,
+              {
+                left: mark.box.x - 1,
+                top: mark.box.y - 1,
+                width: mark.box.width + 2,
+                height: mark.box.height + 2,
+                borderWidth: OUTLINE + 2,
+                borderColor: colors.surface,
+              },
+            ]}
+          />
+          <View
+            style={[
+              styles.mark,
+              {
+                left: mark.box.x,
+                top: mark.box.y,
+                width: mark.box.width,
+                height: mark.box.height,
+                borderWidth: OUTLINE,
+                borderColor: colors.primary,
+                backgroundColor: fade(colors.primary, 0.08),
+              },
+            ]}
+          />
+          <View
+            style={[
+              styles.badge,
+              { left: inside(mark.box.x, width) - BADGE, top: inside(mark.box.y, height) - BADGE, backgroundColor: colors.primary, borderColor: colors.surface },
+            ]}
+          >
+            <Text style={[type.caption, styles.badgeText, { color: colors.onPrimary }]} allowFontScaling={false}>
+              {mark.n}
+            </Text>
+          </View>
+        </View>
+      ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   hidden: { opacity: 0 },
+  mark: { position: 'absolute', borderRadius: radius.input },
+  badge: {
+    position: 'absolute',
+    width: BADGE * 2,
+    height: BADGE * 2,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: { fontWeight: '700' },
 });
