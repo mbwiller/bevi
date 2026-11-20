@@ -179,7 +179,12 @@ export interface FeedPostProps {
   /** Shows the author's Follow pill (UserRow's) at the start of the action row, where the heart sits on a feed post. Explore only. */
   onFollow?: () => void;
   /** Without `onRank` / `onSave` the post has no Rank it / Want to Try action. */
-  onRank?: () => void; onSave?: () => void; onOpen?: () => void; divider?: boolean; className?: string;
+  onRank?: () => void; onSave?: () => void; onOpen?: () => void;
+  /** Opens the post's More menu (Report post, Block account): an ellipsis IconButton after the ScoreBubble. Pass it on other people's posts only; without it there is no control. */
+  onMore?: () => void;
+  /** The More control's accessible name; say whose post it is ("More actions, post by @friend_a"). Defaults to "More actions". */
+  moreLabel?: string;
+  divider?: boolean; className?: string;
 }
 export declare function FeedPost(props: FeedPostProps): React.ReactElement;
 
@@ -251,13 +256,20 @@ export declare function ErrorState(props: ErrorStateProps): React.ReactElement;
 export interface SkeletonProps { variant?: 'text' | 'block' | 'circle' | 'row' | 'post'; width?: number | string; height?: number; lines?: number; className?: string }
 export declare function Skeleton(props: SkeletonProps): React.ReactElement;
 
-export interface SheetProps { open?: boolean; title?: string; snap?: 40 | 90; onClose?: () => void; children?: React.ReactNode; className?: string }
+export interface SheetProps { open?: boolean; title?: string; snap?: 40 | 90; onClose?: () => void;
+  /** The sheet has finished closing (after its exit animation and, on a phone, once the modal is really gone). Navigate or open another modal from here, never in the same tick as `onClose`. */
+  onClosed?: () => void; children?: React.ReactNode; className?: string }
 export declare function Sheet(props: SheetProps): React.ReactElement | null;
 
 /** One comment as the post and the sheet draw it. `time` is relative ("2 hours ago"); `mine` adds Delete in the sheet. */
 export interface PostComment { id?: string; author: Person; body: string; time?: string; mine?: boolean }
 /** The post's comments in a 90% Sheet, oldest at the top, newest above the composer; empty state "No comments yet"; composer "Add a comment…" + Post, 280-character limit (the count shows from 20 left). */
-export interface CommentsSheetProps { open?: boolean; comments?: PostComment[]; me?: Person; onClose?: () => void; onPost?: (body: string) => void; onDelete?: (id: string) => void; error?: string; className?: string }
+export interface CommentsSheetProps { open?: boolean; comments?: PostComment[]; me?: Person; onClose?: () => void; onPost?: (body: string) => void; onDelete?: (id: string) => void;
+  /** Opens the More menu of someone else's comment (Report comment, Block account): an ellipsis at the end of the row, named "More actions, comment by @handle". Never on your own comments, which end in Delete. Without it no row has one. */
+  onMore?: (comment: PostComment) => void;
+  error?: string;
+  /** A sheet that opens over this one (the More menu): rendered inside this sheet, not beside it, so that on a phone it presents from this sheet's own modal. */
+  children?: React.ReactNode; className?: string }
 export declare function CommentsSheet(props: CommentsSheetProps): React.ReactElement | null;
 
 /** One category's progress: the contract's `CategoryProgress`, as `stats.getCategoryProgress()` returns it. */

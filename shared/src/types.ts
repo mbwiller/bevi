@@ -63,6 +63,15 @@ export type SuggestedProfile = ProfileRow & {
   followedByCount: number;
 };
 
+/**
+ * Someone the caller has blocked, from `blocks.list` (IS-7). Never the caller,
+ * so `birthdate` is null and `canSeeAlcohol` false, as for any other person.
+ */
+export type BlockedUser = Profile & {
+  /** When the caller blocked them. */
+  blockedAt: string;
+};
+
 export interface ProfileStats {
   followers: number;
   following: number;
@@ -537,9 +546,37 @@ export interface BucketBev {
   brandKey: string | null;
 }
 
+/**
+ * The backend's version gate and maintenance flag, as `meta.getAppConfig`
+ * returns it: the single `app_config` row (IA-2), which only an operator can
+ * write. It is how the backend tells a binary it cannot redeploy "update" or
+ * "we are down on purpose", so it is readable signed out.
+ *
+ * Both versions are plain `x.y.z` semver strings (three non-negative integers,
+ * no prefix, no pre-release tag). Compare them part by part as numbers, never
+ * as strings: '0.10.0' is above '0.9.0'. A floor of '0.0.0' gates nobody, and
+ * is what both are seeded with.
+ */
 export interface AppConfig {
+  /**
+   * The lowest app version still allowed to use this backend, `x.y.z`. Compare
+   * it with the INSTALLED binary's version; a build below it must update.
+   */
   minAppVersion: string;
+  /**
+   * The lowest `CONTRACT_VERSION` the backend still serves, `x.y.z`. Compare it
+   * with the `CONTRACT_VERSION` the client was built against; a client below
+   * it would be handed responses it cannot parse, so it must update too.
+   */
+  minContractVersion: string;
+  /** Planned downtime: true means show the maintenance screen instead of the app. */
   maintenance: boolean;
+  /**
+   * What to show while `maintenance` is true: one sentence, at most 280
+   * characters, e.g. "Back by 9pm ET." Null when there is none, and the client
+   * uses its own wording. Carries no meaning while `maintenance` is false.
+   */
+  maintenanceMessage: string | null;
 }
 
 export interface Page<T> {

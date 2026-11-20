@@ -45,10 +45,10 @@ Two new seams need a word, because iOS is the first time they matter:
 
 | Thing | Owner | Why it is not obvious |
 |---|---|---|
-| `app/app.config.ts`, `eas.json` | Matt | It is app config, in Matt's lane, but the values inside it (bundle id, Maps key, EAS project, Sentry DSN) come from accounts I own. I hand over values; Matt commits them. |
-| Signing credentials, App Store Connect API key, `EXPO_TOKEN`, `SENTRY_AUTH_TOKEN` | Me | Same class as `SUPABASE_ACCESS_TOKEN` (§2.4 of the main doc): a secret in a GitHub Environment, never in the repo. |
+| `app/app.config.ts`, `eas.json` | Matt | It is app config, in Matt's lane, but the values inside it (bundle id, Maps key, EAS project) come from accounts I own. I hand over values; Matt commits them. |
+| Signing credentials, App Store Connect API key, `EXPO_TOKEN` | Me | Same class as `SUPABASE_ACCESS_TOKEN` (§2.4 of the main doc): a secret in a GitHub Environment, never in the repo. |
 | `.github/workflows/ios.yml` | Me, `chore/*` PR, Matt approves | Same as `app.yml` today. Includes the CI steps for suites Matt writes in `app/`. |
-| Crash reporting | Me (account, build secret), Matt (SDK wiring) | New: see IS-4. |
+| Crash reporting | Not assigned | See IS-4: Sentry was dropped on 2026-11-19 for an in-house reporter that is not built, so there is no account and no build secret to own yet. |
 
 `AuthStorageAdapter` is **not** a contract type — it is defined at
 `packages/api/src/client.ts:4` and re-exported from `@bevi/api`. Changing it is
@@ -89,9 +89,8 @@ Matt cannot produce a build at all until this exists.
 - Signing: let EAS manage the distribution certificate and provisioning
   profile. Do not hand-manage certificates; there is no second developer to
   recover them from.
-- `SENTRY_AUTH_TOKEN` (IS-4) belongs in the same environment and must be
-  readable by the EAS build, or the crash reports arrive unsymbolicated and
-  tell us nothing.
+- ~~`SENTRY_AUTH_TOKEN` (IS-4)~~ Not needed: Sentry was dropped on 2026-11-19
+  (IS-4), so there is no Sentry project to create and no token to store.
 
 **Hands Matt:** bundle id, EAS project id, Apple team id, registered device UDIDs.
 **Check:** `eas whoami` works in CI; the app record is visible in App Store Connect; `eas device:list` shows both our phones.
@@ -130,10 +129,33 @@ Deliver:
    `CONTRACT_VERSION` bump: minor (additive). **One bump in flight at a time**
    — IA-4 is the other one, and §5 says which goes first.
 6. `app/src/testing/fakeApi/FakeApi.ts:2405` and
-   `app/src/testing/conformance.ts:110` need the new fields or `npm test -w app`
-   goes red. Both live under `app/`, so both are Matt's: either Matt takes them
+   `packages/conformance/src/index.ts:110` need the new fields or `npm test -w app`
+   goes red. The FakeApi lives under `app/`, so it is Matt's: either Matt takes them
    the same hour or we land the contract PR with the change pre-agreed in the
    `#agents` thread.
+
+**Landed, half 1** (#240): items 1–3. The table, `get_app_config()` and the
+RLS are on the hosted database since 2026-11-19.
+
+**Landed, half 2** (`contract/bev-27-ia-2-app-config`, contract **3.2.0**):
+items 4–6, so the list above the "Deliver" heading describes the tree before
+this, not now. `packages/api/src/meta.ts` calls `get_app_config()` through the
+package's client, with no session check (the RPC is granted to `anon`), and
+`mapAppConfig` in `mappers.ts` turns the row into `AppConfig { minAppVersion,
+minContractVersion, maintenance, maintenanceMessage }`; `placeholderAppConfig`
+is gone. `maintenanceMessage` is `string | null` rather than optional, so the
+field is always present. `ios_min_build` and `updated_at` are in the row and
+deliberately not in the contract. A failed read, or a table with no row, is
+thrown as an `ApiError` and never papered over with a default, because IM-9's
+gate fails open on an error. The FakeApi serves both fields and takes
+`controls.setAppConfig(partial)`; the conformance case checks their shapes.
+
+**The gate is still decorative.** Both floors are `'0.0.0'` on the hosted row,
+so every build passes; what changed is that the app now reads the row instead
+of a constant. Raising a floor is the operator step in `DEVELOPMENT-ARJUN.md`
+§14, and it waits for IM-9's screen. Not verified against a live database from
+this branch: `packages/api/test/meta.live.test.ts` is the check, and it skips
+without a stack.
 
 **Unblocks:** IM-9 (the "Update required" screen).
 **Check:** at IA-2 time, a `select` against the dev project plus the FakeApi test — the user-visible check belongs to IM-9, because IM-9 is the screen. Once IM-9 lands: flip `maintenance` in the dev project and the app shows the maintenance screen within 5 minutes (the hook's `staleTime`), then recovers when it is flipped back.
@@ -161,7 +183,7 @@ This is the real work and the one that is easy to skip until it bites.
 - **A compat test job — but stand the runner up first.** There is no
   conformance run in `packages/api` today: its vitest suite is
   `packages/api/test/*.test.ts` plus the `*.live` files. The suite lives at
-  `app/src/testing/conformance.ts` and the only thing that executes it is
+  `packages/conformance/src/index.ts` and the only thing that executes it is
   `app/src/testing/fakeApi/__tests__/conformance.test.ts`, against the FakeApi,
   under jest-expo (its header says "Uses Jest globals"). So:
   1. build a `packages/api` live test that calls
@@ -492,8 +514,9 @@ Say these out loud so neither of us quietly assumes the other is doing them:
   bites when you offer one). `DEVELOPMENT-MATT.md:1092` already marks the old
   G1 task obsolete and it stays obsolete.
 - **App Tracking Transparency.** Not needed — no IDFA, no ad or attribution
-  SDK, and Sentry is not tracking. It must *stay* that way, because the App
-  Privacy answers (IM-12) will say "not used for tracking".
+  SDK, and no third-party crash-reporting SDK either (IS-4). It must *stay*
+  that way, because the App Privacy answers (IM-12) will say "not used for
+  tracking".
 
 ## 3. Open decisions (need both of us)
 
@@ -502,7 +525,7 @@ Say these out loud so neither of us quietly assumes the other is doing them:
 | IS-1 | Does the web app stay? | Decides whether every native path is a `.ios.tsx` split or a replacement, and whether the privacy/support URLs are free | Keep web. It hosts the policy URLs, keeps instant deploys, and keeps the bug reporter alive |
 | IS-2 | Which backend does TestFlight hit? | Shapes `eas.json`, EAS secrets and `ios.yml` | `preview` → `bevi-dev`, `production` → `bevi-prod` |
 | IS-3 | The demo account's age, and whether alcohol is visible to review | Changes the age-rating questionnaire answers and what the reviewer sees | Over 21, alcohol visible, rated 17+ |
-| IS-4 | Crash reporting on device | Today the only error channels are the internal bug reporter (web-only, IM-10) and Vercel logs, which do not exist for a binary. We would be blind | Add one (`@sentry/react-native`): my account and `SENTRY_AUTH_TOKEN`, Matt wires the SDK and the config plugin, and dSYM/source-map upload is part of it or the reports are useless |
+| IS-4 | Crash reporting on device | Today the only error channels are the internal bug reporter (web-only, IM-10) and Vercel logs, which do not exist for a binary. We would be blind | ~~Add one (`@sentry/react-native`): my account and `SENTRY_AUTH_TOKEN`, Matt wires the SDK and the config plugin~~ **Decided 2026-11-19: not Sentry.** An in-house reporter instead, **not built**. Until it is, a native crash is visible only through Apple's own crash reports (TestFlight, App Store Connect, Xcode Organizer); the app has a root error boundary and a `captureError` seam with nothing listening (`DEVELOPMENT-MATT-IOS.md`, IM-10, "IS-4 — crash reporting") |
 | ~~IS-5~~ | Bundle id | — | **Decided 2026-11-17: `app.bevi.ios`** (explicit App ID, team prefix `9NA45GL4CJ`). Must match `ios.bundleIdentifier` exactly |
 | IS-6 | `react-native-maps` (Google) or `expo-maps` (Apple Maps option) | Decides whether IA-7 exists at all, and raises the iOS deployment target | Spike at IM-7; do not pre-commit |
 | IS-7 | Do we ship report-content + block-user for v1? | Guideline 1.2 for a social app. Yes = contract + RPCs + RLS (me) and a report/block sheet (IM-13). No = the argument is invite-only, follows-only visibility and no public discovery, written into the review notes — and expect to be asked anyway | Ship it. It is small, and it is the difference between one review round and three |

@@ -6,6 +6,8 @@ import { flattenPages, useAddComment, useComments, useMe, useRemoveComment } fro
 import { keys } from '@/api/keys';
 import { CommentsSheet } from '@/components/CommentsSheet';
 
+import { SafetyFlow } from '../safety/SafetyFlow';
+import { useSafetyTarget } from '../safety/useSafetyTarget';
 import { commentErrorMessage } from './commentError';
 
 export interface PostCommentsSheetProps {
@@ -36,6 +38,8 @@ export function PostCommentsSheet({ eventId, onClose, onGone }: PostCommentsShee
   const remove = useRemoveComment();
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string[]>([]);
+  // Someone else's comment whose More menu is open. Its sheet opens over this one, never in the root layout.
+  const safety = useSafetyTarget();
 
   // Each opening starts without the last one's error.
   useEffect(() => {
@@ -96,6 +100,7 @@ export function PostCommentsSheet({ eventId, onClose, onGone }: PostCommentsShee
       onClose={onClose}
       onPost={post}
       onDelete={(id) => void del(id)}
+      onMore={(c) => safety.open({ kind: 'comment', id: c.id, author: c.author })}
       error={error}
       posting={add.isPending}
       deleting={deleting}
@@ -107,6 +112,10 @@ export function PostCommentsSheet({ eventId, onClose, onGone }: PostCommentsShee
       onLoadEarlier={() => {
         if (thread.hasNextPage && !thread.isFetchingNextPage) void thread.fetchNextPage();
       }}
-    />
+    >
+      {/* Inside the comments sheet's Modal, not beside it: on iOS a second Modal presented from the
+          screen that already presents the first is refused, and a nested one presents from the first. */}
+      <SafetyFlow target={safety.target} onClose={safety.close} />
+    </CommentsSheet>
   );
 }

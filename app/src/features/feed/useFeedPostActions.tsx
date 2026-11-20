@@ -8,6 +8,7 @@ import { keys } from '@/api/keys';
 import { categoryById } from '@/lib/categories';
 
 import { FeedPostItem } from './FeedPostItem';
+import { useSafetyTarget } from '../safety/useSafetyTarget';
 import { likeErrorMessage } from './likeError';
 
 /** What the feed says when a post's comments turn out to be on a post that's gone. */
@@ -45,6 +46,10 @@ export function useFeedPostActions({ linkActors = true }: { linkActors?: boolean
     },
     [toggleLike],
   );
+
+  // The post whose More menu is open (Report post, Block account); the screen renders its SafetyFlow.
+  const safety = useSafetyTarget();
+  const { open: openSafety } = safety;
 
   // The post whose comments are open, and the notice when one turned out to be gone.
   const [commentsFor, setCommentsFor] = useState<string | null>(null);
@@ -85,6 +90,7 @@ export function useFeedPostActions({ linkActors = true }: { linkActors?: boolean
           likeError={likeErrors[item.id] ?? null}
           onComment={() => openComments(item.id)}
           onOpenBev={() => router.push({ pathname: '/bev/[id]', params: { id: item.bev.id } })}
+          onMore={() => openSafety({ kind: 'post', id: item.id, author: item.actor })}
           onOpenActor={
             linkActors
               ? () => (you ? router.push('/profile') : router.push({ pathname: '/user/[id]', params: { id: item.actor.id } }))
@@ -93,8 +99,8 @@ export function useFeedPostActions({ linkActors = true }: { linkActors?: boolean
         />
       );
     },
-    [add, remove, like, likeErrors, openComments, router, meId, canSeeAlcohol, linkActors],
+    [add, remove, like, likeErrors, openComments, router, meId, canSeeAlcohol, linkActors, openSafety],
   );
 
-  return { renderItem, commentsFor, closeComments, postGone, notice };
+  return { renderItem, commentsFor, closeComments, postGone, notice, safety: { target: safety.target, onClose: safety.close } };
 }

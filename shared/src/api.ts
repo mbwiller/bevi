@@ -6,7 +6,7 @@
 // `signUp`, `signIn`, `getSession`, `onAuthChange`, `profile.checkHandle` and
 // `meta.getAppConfig` and read-only `nutrition.lookupBarcode` throw 'unauthorized' when signed out.
 
-import type { Bucket, CategoryId, PriceTier } from './enums';
+import type { Bucket, CategoryId, PriceTier, ReportContentKind, ReportReason } from './enums';
 import type {
   NutritionPreview,
   AppConfig,
@@ -16,6 +16,7 @@ import type {
   BevOfPeriod,
   BevSimilarity,
   BevSummary,
+  BlockedUser,
   BucketBev,
   Category,
   CategoryNode,
@@ -665,7 +666,11 @@ export interface VenuesApi {
 }
 
 export interface MetaApi {
-  /** Callable signed out. */
+  /**
+   * The version gate and the maintenance flag (`AppConfig`). Callable signed
+   * out: a client has to be able to read the gate before it can sign in.
+   * Only a successful read may block the app; on any error, leave it open.
+   */
   getAppConfig(): Promise<AppConfig>;
 }
 
@@ -815,12 +820,12 @@ export interface BugReportInput {
    * call and never before it — nothing leaves the device until the reporter
    * submits. `caption` says what one shows, e.g. 'Feed, with 1 marked'.
    *
-   * Deliberately still `Blob`, not `UploadPayload`: the bug reporter is a
-   * web-only surface until it is ported to native (IM-10). Widening it is
-   * that port's job — it needs a contract decision of its own, and the
-   * implementation must normalise the bytes the way `media.upload` does.
+   * `file` is an `UploadPayload` (contract 3.3.0; it was `Blob` alone before),
+   * the same union `media.upload` takes: a `Blob` on the web, bytes
+   * (`Uint8Array` or `ArrayBuffer`) on React Native, where a `Blob` is
+   * refused with `'validation'` rather than stored as an empty file.
    */
-  evidence?: { file: Blob; mimeType: string; caption?: string }[];
+  evidence?: { file: UploadPayload; mimeType: string; caption?: string }[];
   /**
    * A UUID the client generates once per draft and reuses on every retry of
    * that draft. The same key never creates a second ticket.
@@ -935,6 +940,78 @@ export interface BugsApi {
   place(ticketId: string, afterTicketId: string | null): Promise<BugReportSummary[]>;
 }
 
+export interface BlocksApi {
+  /**
+   * The caller blocks this person (IS-7, App Store Guideline 1.2). The intent
+   * is one-directional -- they are never told, and their own block list does
+   * not change -- but the effect is mutual: from then on neither sees the
+   * other's profile, posts, comments, rankings or follow edges, and each gets
+   * 'not_found' for the other (`profile.getUser`, `feed.listUser`,
+   * `follows.follow`, ...). Blocking also removes the follow edges between the
+   * two, both ways; unblocking does not restore them.
+   *
+   * Idempotent: blocking someone already blocked resolves without error.
+   * @throws 'unauthorized'; 'not_found' — no such user; 'validation' —
+   *   blocking yourself; 'rate_limited'.
+   */
+  block(userId: string): Promise<void>;
+
+  /**
+   * Lifts the caller's own block. Idempotent: unblocking someone who was never
+   * blocked resolves without error. A block someone else made against the
+   * caller can neither be lifted nor detected from here.
+   * @throws 'unauthorized'.
+   */
+  unblock(userId: string): Promise<void>;
+
+  /**
+   * The people the caller has blocked, most recently blocked first: the
+   * Blocked accounts screen. Only the caller's own blocks: there is
+   * deliberately no way to ask who has blocked the caller, or whether a given
+   * person has.
+   * @throws 'unauthorized'.
+   */
+  list(page?: PageParams): Promise<Page<BlockedUser>>;
+}
+
+export interface ReportContentInput {
+  kind: ReportContentKind;
+  /** `FeedItem.id` / `ExplorePost.id` for 'post', `Comment.id` for 'comment', `Profile.id` for 'profile'. */
+  id: string;
+  reason: ReportReason;
+  /** The reporter's own words, at most `REPORT_NOTE_MAX` characters after trimming. Blank means none. */
+  note?: string;
+}
+
+export interface ReportContentResult {
+  /** The report's id: the existing one when the caller had already reported this content. */
+  reportId: string;
+}
+
+export interface ReportsApi {
+  /**
+   * Files a report about one post, comment or person for the operators to
+   * review (IS-7, App Store Guideline 1.2). It does not hide, block or notify
+   * anything; offer `blocks.block` beside it for that.
+   *
+   * Idempotent per (caller, content): reporting the same thing again returns
+   * the first report's id and changes nothing, whatever the new reason or note.
+   *
+   * Anything the caller can be shown is reportable: a post from the feed, a
+   * profile or Explore (`ExplorePost.id`), a comment from a thread, a profile.
+   * Content by someone the caller has blocked stays reportable, so Block then
+   * Report works. A comment on an Explore post is not, since Explore never
+   * shows comments (D-15).
+   * @throws 'unauthorized'; 'not_found' — no such content, or content the
+   *   caller cannot be shown (including any by someone who has blocked the
+   *   caller, which reads exactly like content that does not exist);
+   *   'validation' — reporting your own content or profile, an
+   *   unknown reason (`detail.field = 'reason'`), or a note over
+   *   `REPORT_NOTE_MAX` (`'note'`); 'rate_limited'.
+   */
+  report(input: ReportContentInput): Promise<ReportContentResult>;
+}
+
 export interface NutritionApi {
   /** UPC-A, EAN-8 or EAN-13. null means no usable nutrition data. */
   lookupBarcode(barcode: string, signal?: AbortSignal): Promise<NutritionPreview | null>;
@@ -958,4 +1035,6 @@ export interface BeviApi extends AuthApi {
   venues: VenuesApi;
   meta: MetaApi;
   bugs: BugsApi;
+  blocks: BlocksApi;
+  reports: ReportsApi;
 }

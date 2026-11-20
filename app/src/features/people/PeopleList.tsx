@@ -12,6 +12,7 @@ import type { IconName } from '@/components/Icon';
 import { SearchBar } from '@/components/SearchBar';
 import { Skeleton } from '@/components/Skeleton';
 import { UserRow } from '@/components/UserRow';
+import { usePullToRefresh } from '@/lib/usePullToRefresh';
 import { size, spacing, useTheme } from '@/theme';
 
 import { useFollowToggle } from './FollowButton';
@@ -90,6 +91,7 @@ export function PeopleList({ query, meId, empty, searchable = false, header }: P
     [meId, router, toggle],
   );
 
+  const { refreshing, onRefresh } = usePullToRefresh(query.refetch);
   const listHeader =
     header || (searchable && all.length > 0) ? (
       <View>
@@ -124,8 +126,8 @@ export function PeopleList({ query, meId, empty, searchable = false, header }: P
         if (query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage?.();
       }}
       onEndReachedThreshold={0.5}
-      refreshing={!!query.isRefetching && !query.isFetchingNextPage && !query.isPending}
-      onRefresh={() => void query.refetch()}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
       keyboardShouldPersistTaps="handled"
     />
   );

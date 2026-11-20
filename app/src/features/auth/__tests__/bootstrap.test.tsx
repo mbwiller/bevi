@@ -72,6 +72,22 @@ describe('session bootstrap (FakeApi)', () => {
     expect(path()).toBe('/feed');
   });
 
+  // BEV-27: opened offline, more than an hour after last use. The session is still stored, but its
+  // access token has expired and the refresh got no answer, so `getSession` rejects with `network`.
+  it('offline on launch, the session not known: the splash shows the error with Retry, never sign in, then recovers', async () => {
+    controls.signInAs('tester');
+    controls.failNext('network', 'getSession');
+    const path = await launch();
+    const retry = await screen.findByText('Retry');
+    expect(screen.queryByLabelText('Username')).toBeNull();
+    expect(path()).not.toBe('/sign-in');
+    expect(useSession.getState().checked).toBe(false);
+    await fireEvent.press(retry);
+    await screen.findAllByText('Your feed');
+    expect(path()).toBe('/feed');
+    expect(useSession.getState().profile?.handle).toBe('tester');
+  });
+
   it('after the first check, a failing getMe keeps the current screen and retries quietly', async () => {
     controls.signInAs('tester');
     const path = await launch('/settings');

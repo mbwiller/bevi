@@ -7,6 +7,7 @@
 // local date; the server derives day keys itself and only needs the vectors.
 
 import { STREAK_PERIOD } from './constants.ts';
+import { parseTimestamp } from './timestamp.ts';
 import type { StreakPeriod, StreakResult } from './types.ts';
 
 const DAY_KEY = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -99,7 +100,7 @@ export function localDayKey(isoTimestamp: string, timeZone: string): string {
   if (!ZONED_TIMESTAMP.test(isoTimestamp)) {
     throw new RangeError(`timestamp "${isoTimestamp}" must be ISO 8601 with Z or an explicit UTC offset`);
   }
-  const ms = Date.parse(isoTimestamp);
+  const ms = parseTimestamp(isoTimestamp);
   if (Number.isNaN(ms)) throw new RangeError(`invalid timestamp "${isoTimestamp}"`);
   let f = formatters.get(timeZone);
   if (!f) {
@@ -108,6 +109,10 @@ export function localDayKey(isoTimestamp: string, timeZone: string): string {
   }
   const parts = f.formatToParts(ms);
   const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  // An engine whose Intl returns no usable parts must fail loudly here, not print "0NaN-NaN-NaN".
+  if (!Number.isInteger(get('year')) || !Number.isInteger(get('month')) || !Number.isInteger(get('day'))) {
+    throw new RangeError(`could not read the local date of "${isoTimestamp}" in ${timeZone}`);
+  }
   return `${pad(get('year'), 4)}-${pad(get('month'), 2)}-${pad(get('day'), 2)}`;
 }
 

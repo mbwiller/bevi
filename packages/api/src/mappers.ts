@@ -16,6 +16,7 @@ import type {
   BevPrediction,
   BevSimilarity,
   BevSummary,
+  BlockedUser,
   Borough,
   Bucket,
   BucketBev,
@@ -153,6 +154,18 @@ export function mapEmbeddedProfile(client: SupabaseClient, row: EmbeddedProfileR
     canSeeAlcohol: false,
     onboarded: row.onboarded,
   };
+}
+
+/**
+ * One row of `list_blocked_users` (IS-7, 20261118220000): the profile columns
+ * the social-context functions return, plus when the caller blocked them.
+ */
+export interface BlockedUserRpcRow extends EmbeddedProfileRow {
+  blocked_at: string;
+}
+
+export function mapBlockedUser(client: SupabaseClient, row: BlockedUserRpcRow): BlockedUser {
+  return { ...mapEmbeddedProfile(client, row), blockedAt: row.blocked_at };
 }
 
 /** One row of `get_followed_by` (20261111000100): who the caller follows that follows `user_id`. */
@@ -850,10 +863,42 @@ export function mapFriendsLeaderboardRow(client: SupabaseClient, row: FriendsLea
   return mapUserLeaderboardRow(client, { ...row, bevi_rank: row.friend_rank });
 }
 
-export function placeholderAppConfig(): AppConfig {
-  // No versioning/maintenance-flag infra exists yet; this is a fixed
-  // placeholder, not a read from the DB, until that's built.
-  return { minAppVersion: '0.1.0', maintenance: false };
+/**
+ * What `meta.getAppConfig` reads of `get_app_config()`'s row, the `app_config`
+ * singleton (20261118210313). The row also carries `id`, `ios_min_build` and
+ * `updated_at`; the contract exposes none of them, so they are not named here.
+ */
+export interface AppConfigRow {
+  min_app_version: string;
+  min_contract_version: string;
+  maintenance: boolean;
+  maintenance_message: string | null;
+}
+
+/**
+ * Throws instead of filling a gap. `get_app_config()` returns a single
+ * composite, so an `app_config` table with no row should come back as a row
+ * of nulls rather than as nothing (Postgres's rule for a null composite in
+ * FROM; not checked against a live stack, and a JSON null is refused the same
+ * way). A missing floor must not become an invented '0.0.0': the app treats
+ * an error here as "gate open", which is the honest reading of "the backend
+ * did not say".
+ */
+export function mapAppConfig(row: AppConfigRow | null | undefined): AppConfig {
+  if (
+    !row ||
+    typeof row.min_app_version !== 'string' ||
+    typeof row.min_contract_version !== 'string' ||
+    typeof row.maintenance !== 'boolean'
+  ) {
+    throw new ApiError('unknown', 'get_app_config returned no row');
+  }
+  return {
+    minAppVersion: row.min_app_version,
+    minContractVersion: row.min_contract_version,
+    maintenance: row.maintenance,
+    maintenanceMessage: row.maintenance_message ?? null,
+  };
 }
 
 // --------------------------------------------------------------------------

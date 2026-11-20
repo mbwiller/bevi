@@ -16,6 +16,7 @@ import { focusField } from '@/features/auth/focusField';
 import { errorField, formErrorMessage } from '@/features/auth/formError';
 import { useAvatarUpload } from '@/features/profile/useAvatarUpload';
 import { birthdateProblem, deviceTimezone, isUnder21, maskBirthdate } from '@/features/onboarding/birthdate';
+import { FORM_SCROLL } from '@/lib/formScroll';
 import { spacing, type, useTheme } from '@/theme';
 
 const NAME_MAX = 50;
@@ -89,7 +90,7 @@ function ProfileForm({ me }: { me: Profile }) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+    <ScrollView contentContainerStyle={styles.body} {...FORM_SCROLL}>
       <View style={styles.column}>
         <AvatarPicker
           name={name || me.handle}

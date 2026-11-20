@@ -4,13 +4,14 @@ import { StyleSheet, Text } from 'react-native';
 
 import { useCanReportBug, useSignOut } from '@/api/hooks';
 import { requestReport } from '@/features/bug-report/commands';
+import { Announce } from '@/components/Announce';
 import { actionErrorMessage } from '@/lib/errorCopy';
 import { SettingsRow, SettingsScreen, SettingsSection } from '@/features/settings/SettingsRow';
 import { useSession } from '@/state/session';
 import { spacing, type, useTheme } from '@/theme';
 
 /**
- * Settings (§6.18): Account, Privacy, Sign out, Delete account, plus Report a bug and Filed reports
+ * Settings (§6.18): Account, Privacy, Blocked accounts, Sign out, Delete account, plus Report a bug and Filed reports
  * for internal reporters (docs/bug-workflow.md). Signing out clears the session;
  * the root gate then lands on sign in.
  */
@@ -32,6 +33,7 @@ export default function SettingsIndexScreen() {
       <SettingsSection title="Your account">
         <SettingsRow label="Account" onPress={() => router.push('/settings/account')} />
         <SettingsRow label="Privacy" onPress={() => router.push('/settings/privacy')} />
+        <SettingsRow label="Blocked accounts" onPress={() => router.push('/settings/blocked')} />
       </SettingsSection>
       {/* Internal only, and only a second way in: the report button on every screen is the main
           one. These open the note (with no capture) and the reports sheet. */}
@@ -45,6 +47,7 @@ export default function SettingsIndexScreen() {
         <SettingsRow label="Sign out" chevron={false} busy={signOut.isPending} onPress={onSignOut} />
         <SettingsRow label="Delete account" onPress={() => router.push('/settings/delete-account')} />
       </SettingsSection>
+      <Announce text={signOut.isError ? `Couldn't sign out. ${actionErrorMessage(signOut.error)}` : null} />
       {signOut.isError ? (
         <Text style={[type.body, styles.note, { color: colors.scoreLow }]} accessibilityLiveRegion="polite" role="alert">
           {`Couldn't sign out. ${actionErrorMessage(signOut.error)}`}

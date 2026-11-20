@@ -1,16 +1,17 @@
 import { isApiError } from '@bevi/shared';
 import type { FlashListRef } from '@shopify/flash-list';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useRef } from 'react';
+import { useContext, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaInsetsContext, SafeAreaView } from 'react-native-safe-area-context';
 
 import { useMe, useStats, useUser } from '@/api/hooks';
+import { Announce } from '@/components/Announce';
 import { Button } from '@/components/Button';
-import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { Header } from '@/components/Header';
 import { useBack } from '@/lib/useBack';
+import { PersonNotFound } from '@/features/people/PersonNotFound';
 import { FollowButton } from '@/features/people/FollowButton';
 import { ActivityList, parseProfileTab, type ActivityRow } from '@/features/profile/ActivityList';
 import {
@@ -20,6 +21,8 @@ import {
   ProfileSkeleton,
   ProfileStatCards,
 } from '@/features/profile/ProfileParts';
+import { SafetyFlow } from '@/features/safety/SafetyFlow';
+import { useSafetyTarget } from '@/features/safety/useSafetyTarget';
 import { useShareProfile } from '@/features/profile/useShareProfile';
 import { spacing, type, useTheme } from '@/theme';
 
@@ -29,13 +32,15 @@ import { spacing, type, useTheme } from '@/theme';
  * count is a button that does what the old Bev'd row did: it shows their rankings, switching to the
  * Activity tab or, when already there, scrolling to the first ranking (their Bev'd list is that Activity;
  * `/lists` is only yours). With no rankings and the Activity tab already showing it has nothing to do,
- * so it is plain text. No list rows (Recommended is private, Want to Try has no read) and no
+ * so it is plain text. The header's More opens Report profile and Block account (blocking leaves the screen). No list rows (Recommended is private, Want to Try has no read) and no
  * Settings. Your own id redirects to the Profile tab.
  */
 export default function UserProfileScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const back = useBack();
+  // A pushed screen has no tab bar: the list's end clears the home indicator itself.
+  const bottomInset = useContext(SafeAreaInsetsContext)?.bottom ?? 0;
   const { id, tab: tabParam } = useLocalSearchParams<{ id: string; tab?: string }>();
   const tab = parseProfileTab(tabParam);
   const me = useMe();
@@ -44,6 +49,7 @@ export default function UserProfileScreen() {
   const stats = useStats(isMe ? undefined : id);
   const { share, notice } = useShareProfile(id);
   const listRef = useRef<FlashListRef<ActivityRow> | null>(null);
+  const safety = useSafetyTarget();
 
   if (isMe) return <Redirect href="/profile" />;
 
@@ -51,15 +57,7 @@ export default function UserProfileScreen() {
 
   let body;
   if (notFound) {
-    body = (
-      <EmptyState
-        icon="user"
-        title="This person isn't on Bevi anymore"
-        body="Their account may have been deleted."
-        action="Go back"
-        onAction={back}
-      />
-    );
+    body = <PersonNotFound onBack={back} />;
   } else if (user.isPending || stats.isPending) {
     body = <ProfileSkeleton />;
   } else if (user.isError || stats.isError) {
@@ -87,10 +85,8 @@ export default function UserProfileScreen() {
         listRef={listRef}
         tab={tab}
         onTab={(t) => router.setParams({ tab: t })}
-        onRefresh={() => {
-          void user.refetch();
-          void stats.refetch();
-        }}
+        onRefresh={() => Promise.all([user.refetch(), stats.refetch()])}
+        bottomInset={bottomInset}
         header={
           <View>
             <ProfileHero
@@ -115,6 +111,7 @@ export default function UserProfileScreen() {
                 Share profile
               </Button>
             </ProfileButtonRow>
+            <Announce text={notice} />
             {notice ? (
               <Text style={[type.body, styles.notice, { color: colors.textSecondary }]} accessibilityLiveRegion="polite" role="status">
                 {notice}
@@ -129,8 +126,19 @@ export default function UserProfileScreen() {
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.screen, { backgroundColor: colors.surface }]}>
-      <Header title={user.data?.displayName ?? ''} onBack={back} />
+      <Header
+        title={user.data?.displayName ?? ''}
+        onBack={back}
+        // Report profile and Block account. Not on a profile that reads as not found (nothing left to act on).
+        actions={
+          user.data && !notFound
+            ? [{ icon: 'ellipsis', label: 'More actions', onPress: () => safety.open({ kind: 'profile', id: user.data.id, author: user.data }) }]
+            : []
+        }
+      />
       <View style={styles.body}>{body}</View>
+      {/* Blocking leaves the profile: it now reads as not found. */}
+      <SafetyFlow target={safety.target} onClose={safety.close} onBlocked={back} />
     </SafeAreaView>
   );
 }

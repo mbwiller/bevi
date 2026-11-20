@@ -39,7 +39,7 @@ const picked = (over: Partial<ImagePickerAsset> = {}): ImagePickerAsset =>
   ({ uri: 'file:///cache/ImagePicker/original.heic', width: 4000, height: 3000, mimeType: 'image/heic', ...over }) as ImagePickerAsset;
 
 /** A manipulator context whose render saves to `out`. */
-function context(out = { uri: 'file:///cache/ImageManipulator/out.jpg', width: 1600, height: 1200 }, rendered = { width: 4000, height: 3000 }) {
+function context(out = { uri: 'file:///cache/ImageManipulator/out.jpg', width: 1600, height: 1200 }, rendered = { width: out.width, height: out.height }) {
   const saveAsync = jest.fn(async () => out);
   const imageRelease = jest.fn();
   const ctx = { resize: jest.fn(), release: jest.fn(), renderAsync: jest.fn(async () => ({ ...rendered, saveAsync, release: imageRelease })) };
@@ -63,7 +63,7 @@ describe('preparePhoto (native)', () => {
     mockManipulate.mockReturnValue(ctx);
     const photo = await preparePhoto(picked());
     expect(mockManipulate).toHaveBeenCalledWith('file:///cache/ImagePicker/original.heic');
-    expect(ctx.resize).toHaveBeenCalledWith({ width: 1600, height: 1200 });
+    expect(ctx.resize).toHaveBeenCalledWith({ width: 1600 });
     expect(saveAsync).toHaveBeenCalledWith({ compress: 0.85, format: 'jpeg' });
     // The bytes are read from the file the manipulator saved.
     expect(mockFileUris).toEqual(['file:///cache/ImageManipulator/out.jpg']);
@@ -82,7 +82,7 @@ describe('preparePhoto (native)', () => {
     const { ctx } = context({ uri: 'file:///out.jpg', width: 512, height: 384 });
     mockManipulate.mockReturnValue(ctx);
     await preparePhoto(picked(), AVATAR_MAX_EDGE);
-    expect(ctx.resize).toHaveBeenCalledWith({ width: 512, height: 384 });
+    expect(ctx.resize).toHaveBeenCalledWith({ width: 512 });
   });
 
   it('re-encodes even when no resize is needed (that is what drops EXIF/GPS)', async () => {
@@ -100,10 +100,31 @@ describe('preparePhoto (native)', () => {
     mockManipulate.mockReturnValueOnce(first.ctx).mockReturnValueOnce(second.ctx);
     const photo = await preparePhoto(picked({ width: 0, height: 0 }));
     expect(first.ctx.resize).not.toHaveBeenCalled();
-    expect(second.ctx.resize).toHaveBeenCalledWith({ width: 1600, height: 800 });
+    expect(second.ctx.resize).toHaveBeenCalledWith({ width: 1600 });
     expect(first.imageRelease).toHaveBeenCalled();
     expect(first.saveAsync).not.toHaveBeenCalled();
     expect(photo).toMatchObject({ width: 1600, height: 800 });
+  });
+
+  it('resizes a portrait by its height only, so the manipulator keeps the aspect ratio', async () => {
+    const { ctx } = context({ uri: 'file:///out.jpg', width: 1200, height: 1600 });
+    mockManipulate.mockReturnValue(ctx);
+    await preparePhoto(picked({ width: 3000, height: 4000 }));
+    expect(ctx.resize).toHaveBeenCalledTimes(1);
+    expect(ctx.resize).toHaveBeenCalledWith({ height: 1600 });
+  });
+
+  it('shrinks again by the decoded longer edge when the picker reported unrotated dimensions', async () => {
+    // A portrait HEIC: the picker says 4032x3024 (landscape), the decoded image is 3024x4032.
+    // Resizing by the picker's width leaves the decoded image 1600x2133: still over the limit.
+    const first = context(undefined, { width: 1600, height: 2133 });
+    const second = context({ uri: 'file:///out.jpg', width: 1200, height: 1600 }, { width: 1200, height: 1600 });
+    mockManipulate.mockReturnValueOnce(first.ctx).mockReturnValueOnce(second.ctx);
+    const photo = await preparePhoto(picked({ width: 4032, height: 3024 }));
+    expect(first.ctx.resize).toHaveBeenCalledWith({ width: 1600 });
+    expect(second.ctx.resize).toHaveBeenCalledWith({ height: 1600 });
+    expect(first.saveAsync).not.toHaveBeenCalled();
+    expect(photo).toMatchObject({ width: 1200, height: 1600 });
   });
 
   it("rejects an image the decoder can't handle, never uploading the original", async () => {

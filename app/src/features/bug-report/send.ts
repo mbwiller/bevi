@@ -35,13 +35,11 @@ export function buildInput(draft: Draft, trail: readonly BugBreadcrumb[]): BugRe
     if (evidence.length >= EVIDENCE_MAX) break;
     // A mark points at its visit's marked picture, wherever that sits among the pictures.
     if (entry.kind === 'marked') indexOfVisit.set(entry.visit, evidence.length);
-    evidence.push({ file: entry.shot!.blob, mimeType: entry.shot!.mimeType, caption: shotCaption(draft, entry) });
+    evidence.push({ file: entry.shot!.file, mimeType: entry.shot!.mimeType, caption: shotCaption(draft, entry) });
   }
   for (const photo of draft.photos) {
     if (evidence.length >= EVIDENCE_MAX) break;
-    // Evidence is a Blob (the reporter is web only, where every prepared photo is one); a photo
-    // prepared as bytes (native) has no place in it and is left out.
-    if (typeof Blob === 'undefined' || !(photo.file instanceof Blob)) continue;
+    // A photo's file is whatever its platform prepared: a Blob on the web, bytes on native.
     evidence.push({ file: photo.file, mimeType: photo.mimeType, caption: PHOTO_CAPTION });
   }
 

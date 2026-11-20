@@ -18,6 +18,9 @@ const SURFACE_DARK = '#121214';
 // The in-app Splash draws the wordmark 56pt high; at its 1908:867 shape that is 123pt wide.
 const SPLASH_WORDMARK_WIDTH = 123;
 
+// The EAS project (@bevi/bevi). Not a secret: it is in every build's manifest.
+const EAS_PROJECT_ID = '3797aad9-3485-4856-8e46-b6656a7716f1';
+
 const config: ExpoConfig = {
   name: 'Bevi',
   slug: 'bevi',
@@ -30,6 +33,14 @@ const config: ExpoConfig = {
   userInterfaceStyle: 'automatic',
   // bevi:// links, and the scheme the development build opens with.
   scheme: 'bevi',
+  // Over-the-air JavaScript updates (expo-updates, published with `eas update` to the channel a
+  // build profile names in eas.json). An update is only ever offered to binaries with the same
+  // runtime version, and `fingerprint` derives that from the native project itself (dependencies,
+  // plugins, this file's native settings): a JS update can never reach a binary that lacks a native
+  // module it needs, and nobody has to remember to bump anything. Checked at launch, applied on the
+  // next one. The store guidelines allow this for fixes, not for changing what the app does.
+  runtimeVersion: { policy: 'fingerprint' },
+  updates: { url: `https://u.expo.dev/${EAS_PROJECT_ID}` },
   // 1024x1024, square corners, no alpha (design/brand/app-icon-1024.png): iOS rounds it itself.
   icon: './assets/icon.png',
   ios: {
@@ -80,13 +91,16 @@ const config: ExpoConfig = {
     ],
     // No microphone string: the app takes photos, never video.
     ['expo-image-picker', { cameraPermission: CAMERA_PERMISSION, photosPermission: PHOTOS_PERMISSION, microphonePermission: false }],
+    // The barcode scan (features/create-bev/BarcodeCamera.tsx). The same camera string, stated
+    // here too so neither plugin's default can replace it, and no microphone: nothing records.
+    ['expo-camera', { cameraPermission: CAMERA_PERMISSION, microphonePermission: false, recordAudioAndroid: false }],
     // The iOS 27 SDK (Xcode 27) only launches apps on the UIKit scene life cycle, which SDK 57 adopts
     // only when asked. Harmless on EAS's Xcode 26 image, required on a Mac with Xcode 27. SDK 58
     // does this by default: drop the option in the upgrade PR.
     ['expo-build-properties', { ios: { enableSceneSupport: true } }],
   ],
   experiments: { typedRoutes: true },
-  extra: { eas: { projectId: '3797aad9-3485-4856-8e46-b6656a7716f1' } },
+  extra: { eas: { projectId: EAS_PROJECT_ID } },
 };
 
 export default config;
