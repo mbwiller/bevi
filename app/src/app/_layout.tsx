@@ -103,7 +103,11 @@ function SessionGate() {
     <>
       {/* The one View the bug reporter hears taps through on iOS (nothing on the web); it has no handlers unless the reporter asks. */}
       <ReportTouchRoot>
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.surface } }} screenLayout={screenLayout}>
+        {/* fullScreenGestureEnabled: on iOS a pushed screen goes back with a swipe right from anywhere on it, not only the left edge. */}
+        <Stack
+          screenOptions={{ headerShown: false, fullScreenGestureEnabled: true, contentStyle: { backgroundColor: colors.surface } }}
+          screenLayout={screenLayout}
+        >
           <Stack.Screen name="index" />
 
           <Stack.Protected guard={status === 'signedOut'}>
@@ -121,7 +125,8 @@ function SessionGate() {
             <Stack.Screen name="search" />
             <Stack.Screen name="leaderboard" />
             <Stack.Screen name="bev/[id]" />
-            <Stack.Screen name="user/[id]/index" />
+            {/* Not from anywhere here: on iOS 25 and older it could take a post's sideways photo swipe; the edge swipe stays. */}
+            <Stack.Screen name="user/[id]/index" options={{ fullScreenGestureEnabled: false }} />
             <Stack.Screen name="user/[id]/followers" />
             <Stack.Screen name="user/[id]/following" />
             <Stack.Screen name="rank/[bevId]" options={{ presentation: 'fullScreenModal' }} />

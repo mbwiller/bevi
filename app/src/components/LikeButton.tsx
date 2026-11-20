@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'rea
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 
 import { formatCount } from '@/lib/format';
+import { lightHaptic } from '@/lib/haptics';
 import { MAX_FONT_SCALE_DENSE, motion, size, spacing, type, useTheme } from '@/theme';
 
 import { TARGET_MIN } from './HitTarget';
@@ -43,6 +44,7 @@ export function LikeButton({ liked = false, count = 0, onPress, style }: LikeBut
         withTiming(1, { duration: motion.fast / 2 }),
       );
     }
+    if (!liked) lightHaptic();
     onPress?.();
   };
 
