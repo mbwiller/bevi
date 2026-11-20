@@ -5,16 +5,18 @@ import { requireUserId } from './currentUser';
 import type { SnapshotCache } from './snapshot';
 
 /**
- * The viewer's local day, for the seed. Only the day's shuffle depends on it, so an unreadable
- * timestamp or timezone (an engine's date parser, an unknown zone) falls back to the UTC date
- * rather than failing the whole list.
+ * The day the seed is for. Only the day's shuffle depends on it, so an unreadable timestamp or
+ * timezone (an engine's date parser, an unknown zone) falls back rather than failing the whole
+ * list. In order: the viewer's local day at `generatedAt`; else the UTC date of `generatedAt`;
+ * else, when `generatedAt` itself cannot be read, today's UTC date. Never a constant, which
+ * would give that person the same shuffle every day.
  */
 export function seedDay(generatedAt: string, timeZone: string): string {
   try {
     return localDayKey(generatedAt, timeZone);
   } catch {
     const ms = parseTimestamp(generatedAt);
-    return new Date(Number.isNaN(ms) ? 0 : ms).toISOString().slice(0, 10);
+    return new Date(Number.isNaN(ms) ? Date.now() : ms).toISOString().slice(0, 10);
   }
 }
 
