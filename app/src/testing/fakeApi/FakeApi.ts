@@ -58,6 +58,11 @@ import {
   type AuthApi,
   type Bev,
   type BeviApi,
+  type BevdAtVenue,
+  type BevdHere,
+  type BevdPin,
+  type BevdScope,
+  type BevLocationSummary,
   type BlockedUser,
   type BlocksApi,
   type BevOfPeriod,
@@ -115,7 +120,10 @@ import {
   type SubmitRankingInput,
   type SubmitRankingResult,
   type UpdateMeInput,
+  type ExternalPlace,
+  type LatLng,
   type Venue,
+  type VenueMatch,
   type VenuePin,
   type VenuesApi,
   type WantToTryApi,
@@ -133,6 +141,7 @@ import {
   type FakeFeedEvent,
   type FakeRanking,
   type FakeUser,
+  type FakeBevLocation,
   type FakeVenue,
   type StorageLike,
 } from './db';
@@ -247,6 +256,47 @@ const venuePinCap = (zoom: number): number => {
   const z = Number.isFinite(zoom) ? Math.floor(zoom) : 11;
   return 60 + (Math.min(Math.max(z, 11), 15) - 11) * 60;
 };
+
+/** Metres between two positions: the haversine formula `private.distance_m` uses (20261119193000). */
+const distanceMeters = (a: LatLng, b: LatLng): number => {
+  const rad = (deg: number) => (deg * Math.PI) / 180;
+  const h =
+    Math.sin(rad(b.lat - a.lat) / 2) ** 2 +
+    Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lng - a.lng) / 2) ** 2;
+  return 6371008.8 * 2 * Math.asin(Math.min(1, Math.sqrt(h)));
+};
+
+/** `lower(unaccent(...))` with runs of whitespace collapsed, as `venues_search` normalises both sides. */
+const foldPlace = (text: string): string =>
+  text
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+
+/** pg_trgm's `similarity`: shared trigrams over all trigrams, each word padded with two spaces before and one after. */
+const trigramSimilarity = (a: string, b: string): number => {
+  const grams = (text: string): Set<string> => {
+    const out = new Set<string>();
+    for (const word of text.split(/[^a-z0-9]+/).filter(Boolean)) {
+      const padded = `  ${word} `;
+      for (let i = 0; i + 3 <= padded.length; i += 1) out.add(padded.slice(i, i + 3));
+    }
+    return out;
+  };
+  const x = grams(a);
+  const y = grams(b);
+  if (x.size === 0 || y.size === 0) return 0;
+  let shared = 0;
+  for (const g of x) if (y.has(g)) shared += 1;
+  return shared / (x.size + y.size - shared);
+};
+
+/** `venues_search`'s third tier: a name at least this similar to the query (20261119193000). */
+const PLACE_SIMILARITY_MIN = 0.35;
+
+const BEVD_SCOPES: readonly BevdScope[] = ['mine', 'friends', 'all'];
 
 /** An empty filter array is no filter (contract 2.10.0), as in `venues_in_view` and packages/api. */
 const activeFilter = <T>(values: readonly T[] | undefined): readonly T[] | null =>
@@ -603,6 +653,7 @@ export class FakeApi implements BeviApi {
       id: v.id,
       name: v.name,
       kind: v.kind,
+      placeType: v.placeType ?? 'other',
       lat: v.lat,
       lng: v.lng,
       address: v.address,
@@ -614,6 +665,47 @@ export class FakeApi implements BeviApi {
       hoursKnown: v.hoursKnown && hoursKnown(v.hoursOsm),
       website: v.website,
     };
+  }
+
+  private locationRows(): FakeBevLocation[] {
+    return (this.db.bevLocations ??= []);
+  }
+
+  /** An active venue by id, or not_found: a hidden venue and an unknown one are the same answer. */
+  private activeVenue(venueId: string): FakeVenue {
+    return this.venueRows().find((v) => v.id === venueId && !v.hidden) ?? fail('not_found', 'No such venue');
+  }
+
+  /** Where `userId` had `bevId`, or null: nobody said, or the venue has since been hidden. */
+  private venueOf(userId: string, bevId: string): Venue | null {
+    const row = this.locationRows().find((l) => l.userId === userId && l.bevId === bevId);
+    const venue = row ? this.venueRows().find((v) => v.id === row.venueId && !v.hidden) : undefined;
+    return venue ? this.toVenue(venue) : null;
+  }
+
+  /** `private.put_bev_location`: set, replace or (null) clear. The caller has checked the ranking exists. */
+  private putLocation(userId: string, bevId: string, venueId: string | null): Venue | null {
+    const venue = venueId === null ? null : this.activeVenue(venueId);
+    this.db.bevLocations = this.locationRows().filter((l) => !(l.userId === userId && l.bevId === bevId));
+    if (!venue) return null;
+    this.db.bevLocations.push({ userId, bevId, venueId: venue.id });
+    return this.toVenue(venue);
+  }
+
+  /**
+   * `private.visible_bev_locations`, narrowed to a scope: the rankings with a place that `me` may
+   * see, by `me` ('mine'), by the people `me` follows ('friends'), or both.
+   */
+  private scopedLocations(me: FakeUser, scope: BevdScope): { ranking: FakeRanking; venue: FakeVenue }[] {
+    return this.locationRows().flatMap((l) => {
+      const mine = l.userId === me.id;
+      const inScope = mine ? scope !== 'friends' : scope !== 'mine' && this.isFollowing(me.id, l.userId);
+      if (!inScope) return [];
+      const ranking = this.rankingOf(l.userId, l.bevId);
+      const venue = this.venueRows().find((v) => v.id === l.venueId && !v.hidden);
+      const bev = this.db.bevs.find((b) => b.id === l.bevId);
+      return ranking && venue && bev && this.visible(bev, me) ? [{ ranking, venue }] : [];
+    });
   }
 
   private bev(id: string): FakeBev {
@@ -860,7 +952,7 @@ export class FakeApi implements BeviApi {
   }
 
   private toRanked(r: FakeRanking): RankedBev {
-    return { ...this.toRanking(r), bev: this.toSummary(this.bev(r.bevId)) };
+    return { ...this.toRanking(r), bev: this.toSummary(this.bev(r.bevId)), venue: this.venueOf(r.userId, r.bevId) };
   }
 
   /** Positions and scores for a whole bucket via @bevi/ranking's respaceBucket. */
@@ -968,6 +1060,7 @@ export class FakeApi implements BeviApi {
   private wipeUserData(userId: string): void {
     const db = this.db;
     db.rankings = db.rankings.filter((r) => r.userId !== userId);
+    db.bevLocations = (db.bevLocations ?? []).filter((l) => l.userId !== userId);
     db.comparisons = db.comparisons.filter((c) => c.userId !== userId);
     db.follows = db.follows.filter((f) => f.followerId !== userId && f.followeeId !== userId);
     this.blockRows = this.blockRows.filter((b) => b.blockerId !== userId && b.blockedId !== userId);
@@ -1793,6 +1886,9 @@ export class FakeApi implements BeviApi {
           if (ids.length !== input.expectedBucketSize) {
             fail('conflict', 'Your list changed', { reason: 'bucket_changed', bucketSize: ids.length });
           }
+          // submit_ranking_with_location saves both or neither, so the venue is checked before
+          // anything is written.
+          if (input.venueId) this.activeVenue(input.venueId);
           const next = insertIntoBucket(ids, bev.id, input.insertIndex);
           const at = this.nowIso();
           const row: FakeRanking = {
@@ -1809,6 +1905,7 @@ export class FakeApi implements BeviApi {
           this.db.rankings.push(row);
           this.writeBucket(me.id, input.bucket, next);
           this.db.wantToTry = this.db.wantToTry.filter((w) => !(w.userId === me.id && w.bevId === bev.id));
+          if (input.venueId) this.putLocation(me.id, bev.id, input.venueId);
           this.logPlacement(me, row.id, bev.id, input.comparisons, at);
           return { ranking: this.toRanking(row), bucketSize: next.length };
         },
@@ -1826,6 +1923,7 @@ export class FakeApi implements BeviApi {
           if (target.length !== input.expectedBucketSize) {
             fail('conflict', 'Your list changed', { reason: 'bucket_changed', bucketSize: target.length });
           }
+          if (input.venueId) this.activeVenue(input.venueId);
           const from = row.bucket;
           if (from !== input.bucket) this.writeBucket(me.id, from, this.bucketIds(me.id, from).filter((id) => id !== row.bevId));
           const next = insertIntoBucket(target, row.bevId, input.insertIndex);
@@ -1837,6 +1935,9 @@ export class FakeApi implements BeviApi {
           row.createdAt = at;
           row.updatedAt = at;
           if (note !== undefined) row.note = note;
+          // Left out, the place is kept (it is keyed by user and Bev, not by this row); a venue
+          // replaces it and null removes it.
+          if (input.venueId !== undefined) this.putLocation(me.id, row.bevId, input.venueId);
           this.logPlacement(me, row.id, row.bevId, input.comparisons, at);
           return { ranking: this.toRanking(row), bucketSize: next.length };
         },
@@ -1865,9 +1966,36 @@ export class FakeApi implements BeviApi {
           const row = this.rankingOf(me.id, bevId) ?? fail('not_found', "You haven't ranked this Bev");
           this.db.rankings = this.db.rankings.filter((r) => r !== row);
           this.writeBucket(me.id, row.bucket, this.bucketIds(me.id, row.bucket));
+          // The place goes with the ranking (bev_locations_follow_ranking_delete).
+          this.putLocation(me.id, row.bevId, null);
         },
         true,
       ),
+
+    setVenue: (bevId: string, venueId: string | null) =>
+      this.call(
+        'rankings.setVenue',
+        (): Venue | null => {
+          const me = this.requireUser();
+          const row = this.rankingOf(me.id, bevId) ?? fail('not_found', "You haven't ranked this Bev");
+          return this.putLocation(me.id, row.bevId, venueId);
+        },
+        true,
+      ),
+
+    getVenue: (bevId: string) =>
+      this.call('rankings.getVenue', (): Venue | null => {
+        const me = this.requireUser();
+        return this.rankingOf(me.id, bevId) ? this.venueOf(me.id, bevId) : null;
+      }),
+
+    locationSummary: () =>
+      this.call('rankings.locationSummary', (): BevLocationSummary => {
+        const me = this.requireUser();
+        const mine = this.db.rankings.filter((r) => r.userId === me.id);
+        const located = new Set(this.locationRows().filter((l) => l.userId === me.id).map((l) => l.bevId));
+        return { rankedCount: mine.length, locatedCount: mine.filter((r) => located.has(r.bevId)).length };
+      }),
   };
 
   // -------------------------------------------------------------------------
@@ -1973,6 +2101,7 @@ export class FakeApi implements BeviApi {
         // Relative to the caller, whoever's page this is. The Bev is visible to `me` (checked
         // above), which is the only age gate the SQL applies to it too.
         ...this.alsoBevd(me, e.actorId, bev.id),
+        venue: this.venueOf(e.actorId, bev.id),
       });
     }
     return items;
@@ -2029,6 +2158,7 @@ export class FakeApi implements BeviApi {
           note: r.note,
           createdAt: e.createdAt,
           inMyWantToTry: saved.has(bev.id),
+          venue: this.venueOf(e.actorId, bev.id),
         },
       });
     }
@@ -2400,6 +2530,140 @@ export class FakeApi implements BeviApi {
           if (this.venueAssortment(v.id, me).length > 0) names.add(v.neighborhood);
         }
         return [...names].sort(compareCodePoints);
+      }),
+
+    // BEV-22. As `venues_search`: no query answers "what is near", a query matches names in three
+    // tiers (it starts a word of the name; every word is in the name, address or neighbourhood;
+    // the name is merely similar), the nearest first within the first two.
+    search: ({ query, near, limit }) =>
+      this.call('venues.search', (): VenueMatch[] => {
+        this.requireUser();
+        if ((query ?? '').length > 80) invalid('query', 'Search for something shorter');
+        const pos = near && Number.isFinite(near.lat) && Number.isFinite(near.lng) ? near : null;
+        if (pos && (Math.abs(pos.lat) > 90 || Math.abs(pos.lng) > 180)) invalid('position', 'Not a position');
+        const cap = Math.min(Math.max(limit ?? 20, 1), 50);
+        const q = foldPlace(query ?? '');
+        const tokens = q.split(' ');
+
+        const rows = this.venueRows()
+          .filter((v) => !v.hidden)
+          .flatMap((v) => {
+            const d = pos ? distanceMeters(pos, v) : null;
+            if (!q) return pos ? [{ v, d, tier: 0, sim: 0 }] : [];
+            const name = foldPlace(v.name);
+            const hay = foldPlace(`${v.name} ${v.address ?? ''} ${v.neighborhood ?? ''}`);
+            const sim = trigramSimilarity(name, q);
+            const tier = ` ${name}`.includes(` ${q}`) ? 0 : tokens.every((t) => hay.includes(t)) ? 1 : 2;
+            return tier < 2 || sim >= PLACE_SIMILARITY_MIN ? [{ v, d, tier, sim }] : [];
+          })
+          .sort(
+            (a, z) =>
+              a.tier - z.tier ||
+              (a.tier === 2 ? z.sim - a.sim : 0) ||
+              (a.d ?? Infinity) - (z.d ?? Infinity) ||
+              z.sim - a.sim ||
+              compareCodePoints(a.v.name, z.v.name) ||
+              compareCodePoints(a.v.id, z.v.id),
+          );
+        return rows.slice(0, cap).map(({ v, d }) => ({ venue: this.toVenue(v), distanceMeters: d === null ? null : Math.round(d) }));
+      }),
+
+    // The outside directory is `db.externalPlaces`: a name match, the nearest first.
+    searchMore: ({ query, near }) =>
+      this.call('venues.searchMore', (): ExternalPlace[] => {
+        this.requireUser();
+        const q = foldPlace(query ?? '');
+        if (!q) invalid('query', 'Type a place to search for');
+        if (q.length > 80) invalid('query', 'Search for something shorter');
+        const pos = near && Number.isFinite(near.lat) && Number.isFinite(near.lng) ? near : null;
+        return (this.db.externalPlaces ?? [])
+          .filter((p) => foldPlace(`${p.name} ${p.address ?? ''}`).includes(q))
+          .map((p) => ({ ...p, distanceMeters: pos ? Math.round(distanceMeters(pos, p)) : null }))
+          .sort((a, z) => (a.distanceMeters ?? Infinity) - (z.distanceMeters ?? Infinity) || compareCodePoints(a.name, z.name));
+      }),
+
+    // As `upsert_google_venue`: the venue already made from this place, else one of the same name
+    // within 75 m, else a new one.
+    addPlace: (placeId: string) =>
+      this.call(
+        'venues.addPlace',
+        (): Venue => {
+          this.requireUser();
+          const place = (this.db.externalPlaces ?? []).find((p) => p.placeId === placeId) ?? fail('not_found', 'No such place');
+          const venues = (this.db.venues ??= []);
+          const id = `venue-ext-${place.placeId}`;
+          const existing =
+            venues.find((v) => v.id === id) ??
+            venues.find((v) => foldPlace(v.name) === foldPlace(place.name) && distanceMeters(v, place) <= 75);
+          if (existing) return existing.hidden ? fail('not_found', 'No such place') : this.toVenue(existing);
+          const made: FakeVenue = {
+            id,
+            name: place.name,
+            kind: 'craft',
+            placeType: place.placeType,
+            lat: place.lat,
+            lng: place.lng,
+            address: place.address,
+            neighborhood: null,
+            borough: null,
+            hoursOsm: null,
+            hoursKnown: false,
+            website: null,
+          };
+          venues.push(made);
+          return this.toVenue(made);
+        },
+        true,
+      ),
+
+    // As `recent_bev_venues`: the caller's own places by when each was set, newest first, each once.
+    // `putLocation` appends, so the rows are already in the order they were set.
+    recent: (params) =>
+      this.call('venues.recent', (): Venue[] => {
+        const me = this.requireUser();
+        const limit = Math.min(Math.max(Math.trunc(params?.limit ?? 5), 1), 20);
+        const seen = new Set<string>();
+        const out: Venue[] = [];
+        for (const row of [...this.locationRows()].reverse()) {
+          if (row.userId !== me.id || seen.has(row.venueId)) continue;
+          seen.add(row.venueId);
+          const venue = this.venueRows().find((v) => v.id === row.venueId && !v.hidden);
+          if (venue) out.push(this.toVenue(venue));
+        }
+        return out.slice(0, limit);
+      }),
+
+    // As `bevd_map`: one pin per venue, the most recent first.
+    bevdMap: (params) =>
+      this.call('venues.bevdMap', (): BevdPin[] => {
+        const me = this.requireUser();
+        const scope = params?.scope ?? 'all';
+        if (!BEVD_SCOPES.includes(scope)) invalid('scope', 'Unknown scope');
+        const pins = new Map<string, BevdPin>();
+        for (const { ranking, venue } of this.scopedLocations(me, scope)) {
+          const pin = pins.get(venue.id) ?? { venue: this.toVenue(venue), bevCount: 0, mineCount: 0, latestAt: ranking.createdAt };
+          pin.bevCount += 1;
+          if (ranking.userId === me.id) pin.mineCount += 1;
+          if (ranking.createdAt > pin.latestAt) pin.latestAt = ranking.createdAt;
+          pins.set(venue.id, pin);
+        }
+        return [...pins.values()].sort((a, z) => z.latestAt.localeCompare(a.latestAt) || compareCodePoints(a.venue.id, z.venue.id));
+      }),
+
+    // As `bevd_at_venue` plus packages/api's join: who had what there, the most recent first.
+    bevdAt: (venueId, params) =>
+      this.call('venues.bevdAt', (): BevdAtVenue => {
+        const me = this.requireUser();
+        const scope = params?.scope ?? 'all';
+        if (!BEVD_SCOPES.includes(scope)) invalid('scope', 'Unknown scope');
+        const venue = this.activeVenue(venueId);
+        const items = this.scopedLocations(me, scope)
+          .filter((x) => x.venue.id === venue.id)
+          .sort((a, z) => z.ranking.createdAt.localeCompare(a.ranking.createdAt) || compareCodePoints(a.ranking.id, z.ranking.id))
+          .map(({ ranking }): BevdHere => ({ user: this.toProfile(this.user(ranking.userId), me), ranking: this.toRanked(ranking) }));
+        // Nothing in scope: there was no pin to have tapped.
+        if (items.length === 0) fail('not_found', 'Nothing was had at this venue');
+        return { venue: this.toVenue(venue), items };
       }),
   };
 
