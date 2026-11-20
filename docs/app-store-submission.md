@@ -229,7 +229,11 @@ Two things to watch on the first upload from this branch:
 - A release build is cut from a commit on `main` whose checks are green, and
   that commit is tagged `v<version>-<build>` so the repository can answer
   "which commit is on my phone".
-- `eas build --platform ios --profile production`, then `eas submit`.
+- `eas build --platform ios --profile production`, then
+  `eas submit --platform ios --profile production --id <build id> --non-interactive`.
+  The submit profile in `app/eas.json` names the App Store Connect app and EAS
+  holds the submission key, so the submit needs no Apple sign-in. Run `eas`
+  under Node 22: a newer Node computes a different runtime version.
   `ios.yml` does the same on a dispatch once the `ios` GitHub Environment and
   its secrets exist; until then builds come from Arjun's machine.
 - Release the first version manually (not automatically on approval), with
