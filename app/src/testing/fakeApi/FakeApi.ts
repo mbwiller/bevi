@@ -54,6 +54,7 @@ import {
   REPORT_REASONS,
   RESERVED_HANDLES,
   type ApiErrorCode,
+  type AppConfig,
   type AuthApi,
   type Bev,
   type BeviApi,
@@ -197,6 +198,20 @@ const ICON_GENERATION_MS = 4000;
 
 /** Writes that only change the session; they leave seeded fixtures "clean" (see FakeDb.dirty). */
 const SESSION_ONLY_METHODS = new Set(['signIn', 'signOut']);
+/**
+ * The fake's `app_config` row until `controls.setAppConfig` edits it: no maintenance, and floors
+ * the app is not below. `minAppVersion` is what the fake has always answered (the app's own
+ * version); `minContractVersion` and the message are the server's seed (IA-2: '0.0.0', none).
+ */
+const DEFAULT_APP_CONFIG: AppConfig = {
+  minAppVersion: '0.1.0',
+  minContractVersion: '0.0.0',
+  maintenance: false,
+  maintenanceMessage: null,
+};
+/** `app_config`'s CHECKs on the two floors, and on the message's length. */
+const APP_CONFIG_VERSION_RE = /^[0-9]+\.[0-9]+\.[0-9]+$/;
+const MAINTENANCE_MESSAGE_MAX = 280;
 
 export type Latency = number | readonly [min: number, max: number];
 
@@ -353,6 +368,12 @@ export class FakeApi implements BeviApi {
     createdAt: string;
   }[] = [];
   private nextContentReport = 1;
+  /**
+   * IA-2: the single `app_config` row `meta.getAppConfig` answers with. Not in FakeDb and not
+   * persisted: it is the backend's, written by an operator, not part of anyone's data. Suites set
+   * it with `controls.setAppConfig`; `resetToFixtures` puts the default back.
+   */
+  private appConfig: AppConfig = { ...DEFAULT_APP_CONFIG };
 
   constructor(options: FakeApiOptions = {}) {
     this.storage = options.storage ?? null;
@@ -397,6 +418,7 @@ export class FakeApi implements BeviApi {
     this.blockRows = [];
     this.contentReports = [];
     this.nextContentReport = 1;
+    this.appConfig = { ...DEFAULT_APP_CONFIG };
     this.commit();
     this.emit();
   }
@@ -413,6 +435,23 @@ export class FakeApi implements BeviApi {
     me.birthdate = null;
     this.db.dirty = true;
     this.commit();
+  }
+
+  /**
+   * Edit the fake's `app_config` row, as an operator would the real one: the fields given replace
+   * the current ones, the rest stay. Refuses what the table's CHECKs refuse, so a suite cannot
+   * render a config the server could never send.
+   */
+  setAppConfig(config: Partial<AppConfig>): void {
+    const next = { ...this.appConfig, ...config };
+    for (const key of ['minAppVersion', 'minContractVersion'] as const) {
+      if (!APP_CONFIG_VERSION_RE.test(next[key])) throw new Error(`setAppConfig: ${key} must be x.y.z, got '${next[key]}'`);
+    }
+    const message = next.maintenanceMessage;
+    if (message !== null && (message.length < 1 || message.length > MAINTENANCE_MESSAGE_MAX)) {
+      throw new Error(`setAppConfig: maintenanceMessage must be null or 1 to ${MAINTENANCE_MESSAGE_MAX} characters`);
+    }
+    this.appConfig = next;
   }
 
   /** Make (or stop making) the signed-in user an internal bug reporter. */
@@ -2610,6 +2649,7 @@ export class FakeApi implements BeviApi {
   };
 
   meta: MetaApi = {
-    getAppConfig: () => this.call('meta.getAppConfig', () => ({ minAppVersion: '0.1.0', maintenance: false })),
+    // Signed out too, like the server's: no session check.
+    getAppConfig: () => this.call('meta.getAppConfig', () => this.appConfig),
   };
 }

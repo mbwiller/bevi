@@ -80,7 +80,7 @@ export function createBeviApi(config: BeviApiConfig): BeviApi {
     bugs: createBugsApi(client),
     blocks: createBlocksApi(client),
     reports: createReportsApi(client),
-    meta: createMetaApi(),
+    meta: createMetaApi(client),
   };
 }
 

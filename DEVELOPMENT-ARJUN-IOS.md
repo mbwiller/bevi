@@ -135,6 +135,29 @@ Deliver:
    the same hour or we land the contract PR with the change pre-agreed in the
    `#agents` thread.
 
+**Landed, half 1** (#240): items 1–3. The table, `get_app_config()` and the
+RLS are on the hosted database since 2026-11-19.
+
+**Landed, half 2** (`contract/bev-27-ia-2-app-config`, contract **3.2.0**):
+items 4–6, so the list above the "Deliver" heading describes the tree before
+this, not now. `packages/api/src/meta.ts` calls `get_app_config()` through the
+package's client, with no session check (the RPC is granted to `anon`), and
+`mapAppConfig` in `mappers.ts` turns the row into `AppConfig { minAppVersion,
+minContractVersion, maintenance, maintenanceMessage }`; `placeholderAppConfig`
+is gone. `maintenanceMessage` is `string | null` rather than optional, so the
+field is always present. `ios_min_build` and `updated_at` are in the row and
+deliberately not in the contract. A failed read, or a table with no row, is
+thrown as an `ApiError` and never papered over with a default, because IM-9's
+gate fails open on an error. The FakeApi serves both fields and takes
+`controls.setAppConfig(partial)`; the conformance case checks their shapes.
+
+**The gate is still decorative.** Both floors are `'0.0.0'` on the hosted row,
+so every build passes; what changed is that the app now reads the row instead
+of a constant. Raising a floor is the operator step in `DEVELOPMENT-ARJUN.md`
+§14, and it waits for IM-9's screen. Not verified against a live database from
+this branch: `packages/api/test/meta.live.test.ts` is the check, and it skips
+without a stack.
+
 **Unblocks:** IM-9 (the "Update required" screen).
 **Check:** at IA-2 time, a `select` against the dev project plus the FakeApi test — the user-visible check belongs to IM-9, because IM-9 is the screen. Once IM-9 lands: flip `maintenance` in the dev project and the app shows the maintenance screen within 5 minutes (the hook's `staleTime`), then recovers when it is flipped back.
 

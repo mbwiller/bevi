@@ -16,9 +16,11 @@ import {
 import { isApiError, type Bucket, type Session } from '@bevi/shared';
 
 import { CATALOG_BEVS } from '../catalog';
+import { controls } from '../controls';
 import { STORAGE_KEY, type StorageLike } from '../db';
 import { buildFixtures, userIdFor } from '../fixtures';
 import { FakeApi } from '../FakeApi';
+import { getFakeApi } from '../instance';
 import { ALCOHOLIC_BEV_ID, FAKE_INVITE_CODE, FRIEND, ME } from '../people';
 
 const memoryStorage = (): StorageLike & { data: Map<string, string> } => {
@@ -221,6 +223,65 @@ describe('dev controls', () => {
       .submitRanking({ bevId: 'pepsi', bucket: 'LOVED', insertIndex: 0, expectedBucketSize: 0, comparisons: [] })
       .catch((e: unknown) => e);
     expect(isApiError(err) && err.code).toBe('conflict');
+  });
+
+  it('getAppConfig answers the default config signed out, with both IA-2 fields', async () => {
+    const api = make();
+    expect(await api.getSession()).toBeNull();
+    expect(await api.meta.getAppConfig()).toEqual({
+      minAppVersion: '0.1.0',
+      minContractVersion: '0.0.0',
+      maintenance: false,
+      maintenanceMessage: null,
+    });
+  });
+
+  it('setAppConfig replaces only the fields given, and resetToFixtures puts the default back', async () => {
+    const api = make();
+    const initial = await api.meta.getAppConfig();
+
+    api.setAppConfig({ maintenance: true, maintenanceMessage: 'Back by 9pm ET.' });
+    expect(await api.meta.getAppConfig()).toEqual({ ...initial, maintenance: true, maintenanceMessage: 'Back by 9pm ET.' });
+
+    api.setAppConfig({ minAppVersion: '9.0.0', minContractVersion: '3.2.0' });
+    expect(await api.meta.getAppConfig()).toEqual({
+      minAppVersion: '9.0.0',
+      minContractVersion: '3.2.0',
+      maintenance: true,
+      maintenanceMessage: 'Back by 9pm ET.',
+    });
+
+    api.resetToFixtures();
+    expect(await api.meta.getAppConfig()).toEqual(initial);
+  });
+
+  it('setAppConfig refuses what the app_config table refuses, and leaves the config as it was', async () => {
+    const api = make();
+    const initial = await api.meta.getAppConfig();
+    expect(() => api.setAppConfig({ minAppVersion: '1.2' })).toThrow('minAppVersion must be x.y.z');
+    expect(() => api.setAppConfig({ minContractVersion: 'v3.2.0' })).toThrow('minContractVersion must be x.y.z');
+    expect(() => api.setAppConfig({ maintenanceMessage: '' })).toThrow('maintenanceMessage');
+    expect(() => api.setAppConfig({ maintenanceMessage: 'x'.repeat(281) })).toThrow('maintenanceMessage');
+    expect(await api.meta.getAppConfig()).toEqual(initial);
+  });
+
+  it("failNext accepts 'meta.getAppConfig', failing that read once and nothing else", async () => {
+    const api = make();
+    api.failNext('network', 'meta.getAppConfig');
+    await expect(api.profile.checkHandle('someone_new')).resolves.toEqual({ available: true });
+    await expect(api.meta.getAppConfig()).rejects.toMatchObject({ code: 'network' });
+    await expect(api.meta.getAppConfig()).resolves.toMatchObject({ maintenance: false });
+  });
+
+  it("controls.setAppConfig drives the suites' shared FakeApi", async () => {
+    controls.setLatency(0);
+    controls.resetToFixtures();
+    controls.setAppConfig({ maintenance: true });
+    expect((await getFakeApi().meta.getAppConfig()).maintenance).toBe(true);
+    controls.failNext('unknown', 'meta.getAppConfig');
+    await expect(getFakeApi().meta.getAppConfig()).rejects.toMatchObject({ code: 'unknown' });
+    controls.resetToFixtures();
+    expect((await getFakeApi().meta.getAppConfig()).maintenance).toBe(false);
   });
 
   it('setLatency delays calls', async () => {

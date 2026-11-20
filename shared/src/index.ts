@@ -1,6 +1,22 @@
 /**
  * Bumped on any breaking change to the types or `BeviApi` below.
  *
+ * 3.2.0, over 3.1.0's blocks and reports: the version gate reads its real row
+ * (IA-2). `AppConfig` gains `minContractVersion` (the lowest `CONTRACT_VERSION`
+ * the backend still serves, beside `minAppVersion`) and `maintenanceMessage`
+ * (what to show while `maintenance` is true, or null). Purely additive for
+ * callers, hence a minor: `minAppVersion` and `maintenance` keep their names
+ * and types, `meta.getAppConfig` keeps its signature and stays callable signed
+ * out, and a client built against 3.1.0 never reads the two new fields. What
+ * does change is where the values come from: `packages/api` returned a fixed
+ * `{ minAppVersion: '0.1.0', maintenance: false }` until now, and reads
+ * `app_config` through `get_app_config()` from here on.
+ *
+ * NOT a reason to raise `min_contract_version` either: nothing an installed
+ * binary is served changed shape. Both floors are still seeded `'0.0.0'`, so
+ * the gate is open until an operator raises one on purpose
+ * (`DEVELOPMENT-ARJUN.md` §14).
+ *
  * 3.1.0, over 3.0.0's custom Bevs and generated icons: blocking and content
  * reporting (IS-7, App Store Guideline 1.2). `BeviApi` gains `blocks` (`block`,
  * `unblock`, and `list` returning `Page<BlockedUser>`) and `reports` (`report`,
@@ -44,7 +60,8 @@
  */
 // 3.0.0: user-created photo-backed Bevs enqueue icon generation automatically.
 // 3.1.0: blocks and content reports (IS-7), additive.
-export const CONTRACT_VERSION = '3.1.0';
+// 3.2.0: AppConfig gains minContractVersion and maintenanceMessage (IA-2), additive.
+export const CONTRACT_VERSION = '3.2.0';
 
 export * from './enums';
 export * from './errors';
