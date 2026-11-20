@@ -302,6 +302,21 @@ describe('venues.searchMore and addPlace', () => {
   });
 });
 
+describe('venues.recent', () => {
+  it('asks for five by default, passes a limit through, and maps each venue', async () => {
+    const calls: Calls = { rpc: [], invoke: [], from: [] };
+    const api = createVenuesApi(
+      fakeClient({ rpc: { recent_bev_venues: { data: [{ venue: venueJson, used_at: '2026-11-19T12:00:00Z' }] } } }, calls),
+    );
+    expect(await api.recent()).toEqual([expect.objectContaining({ id: VENUE_ID })]);
+    await api.recent({ limit: 2 });
+    expect(calls.rpc).toEqual([
+      ['recent_bev_venues', { p_limit: 5 }],
+      ['recent_bev_venues', { p_limit: 2 }],
+    ]);
+  });
+});
+
 describe('venues.bevdMap and bevdAt', () => {
   it('bevdMap defaults to everyone in scope and maps the counts', async () => {
     const calls: Calls = { rpc: [], invoke: [], from: [] };

@@ -741,6 +741,15 @@ export interface VenuesApi {
   addPlace(placeId: string): Promise<Venue>;
 
   /**
+   * The venues the caller set on a Bev most recently, newest first, each once:
+   * the picker's "Recent" rows. Ordered by when the place was set, not by when
+   * the Bev was ranked, so tagging an old Bev brings its place to the top.
+   * `limit` is 5 by default and at most 20.
+   * @throws 'unauthorized'.
+   */
+  recent(params?: { limit?: number }): Promise<Venue[]>;
+
+  /**
    * The map of where Bevs were had: one pin per venue where someone in
    * `scope` (default 'all') had a Bev the caller may see. Not a viewport
    * query: the whole answer comes back, most recent first, capped at 1000.

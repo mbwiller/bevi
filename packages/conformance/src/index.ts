@@ -1559,11 +1559,38 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       expect((await api.rankings.listUser(friend.userId)).items[0]?.venue?.id).toBe(here.id);
     });
 
+    it('venues.recent: the places I set last, newest first, each once', async () => {
+      await newUser();
+      const [a, b] = await starterIds(2);
+      const [first, second] = await someVenues(2);
+      expect(await api.venues.recent()).toEqual([]);
+      if (!first || !second) return;
+      await rankAtBottom(a!);
+      await rankAtBottom(b!);
+
+      await api.rankings.setVenue(a!, first.id);
+      await api.rankings.setVenue(b!, second.id);
+      const recentIds = async (limit?: number) => (await api.venues.recent(limit ? { limit } : undefined)).map((v) => v.id);
+      expect(await recentIds()).toEqual([second.id, first.id]);
+
+      // Moving the second Bev to the first place leaves one place in use, listed once.
+      await api.rankings.setVenue(b!, first.id);
+      expect(await recentIds()).toEqual([first.id]);
+
+      await api.rankings.setVenue(b!, second.id);
+      expect(await recentIds(1)).toEqual([second.id]);
+
+      // Removing the place takes it off the list.
+      await api.rankings.setVenue(b!, null);
+      expect(await recentIds()).toEqual([first.id]);
+    });
+
     it('where a Bev was had: every method needs a session', async () => {
       await api.signOut();
       await expectCode(api.venues.search({ query: 'duane' }), 'unauthorized');
       await expectCode(api.venues.searchMore({ query: 'duane' }), 'unauthorized');
       await expectCode(api.venues.addPlace('anything'), 'unauthorized');
+      await expectCode(api.venues.recent(), 'unauthorized');
       await expectCode(api.venues.bevdMap(), 'unauthorized');
       await expectCode(api.venues.bevdAt('00000000-0000-4000-8000-00000000dead'), 'unauthorized');
       await expectCode(api.rankings.setVenue('00000000-0000-4000-8000-00000000dead', null), 'unauthorized');

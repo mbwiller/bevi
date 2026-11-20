@@ -2614,6 +2614,23 @@ export class FakeApi implements BeviApi {
         true,
       ),
 
+    // As `recent_bev_venues`: the caller's own places by when each was set, newest first, each once.
+    // `putLocation` appends, so the rows are already in the order they were set.
+    recent: (params) =>
+      this.call('venues.recent', (): Venue[] => {
+        const me = this.requireUser();
+        const limit = Math.min(Math.max(Math.trunc(params?.limit ?? 5), 1), 20);
+        const seen = new Set<string>();
+        const out: Venue[] = [];
+        for (const row of [...this.locationRows()].reverse()) {
+          if (row.userId !== me.id || seen.has(row.venueId)) continue;
+          seen.add(row.venueId);
+          const venue = this.venueRows().find((v) => v.id === row.venueId && !v.hidden);
+          if (venue) out.push(this.toVenue(venue));
+        }
+        return out.slice(0, limit);
+      }),
+
     // As `bevd_map`: one pin per venue, the most recent first.
     bevdMap: (params) =>
       this.call('venues.bevdMap', (): BevdPin[] => {

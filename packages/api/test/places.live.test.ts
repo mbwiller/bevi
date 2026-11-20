@@ -129,6 +129,8 @@ describe.skipIf(!url || !publishableKey || !serviceKey)('where a Bev was had, ag
       expect((await api.rankings.listMine()).items[0]?.venue?.id).toBe(nearId);
       await rerank(farId);
       expect((await api.rankings.listMine()).items[0]?.venue?.id).toBe(farId);
+      // The picker's recents: only the place the Bev has now.
+      expect((await api.venues.recent()).map((v) => v.id)).toEqual([farId]);
       await rerank(null);
       expect((await api.rankings.listMine()).items[0]?.venue).toBeNull();
 
@@ -136,6 +138,7 @@ describe.skipIf(!url || !publishableKey || !serviceKey)('where a Bev was had, ag
       expect((await api.rankings.setVenue(a!.id, farId))?.id).toBe(farId);
       await api.rankings.removeRanking(a!.id);
       expect(await api.venues.bevdMap({ scope: 'mine' })).toEqual([]);
+      expect(await api.venues.recent()).toEqual([]);
       await expect(api.rankings.setVenue(a!.id, farId)).rejects.toMatchObject({ code: 'not_found' });
     } finally {
       await api.deleteAccount();

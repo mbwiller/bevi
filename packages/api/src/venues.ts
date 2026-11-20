@@ -206,6 +206,13 @@ export function createVenuesApi(client: SupabaseClient): VenuesApi {
       return mapVenue(data.venue);
     },
 
+    async recent(params): Promise<Venue[]> {
+      await requireUserId(client);
+      const { data, error } = await client.rpc('recent_bev_venues', { p_limit: params?.limit ?? 5 });
+      if (error) throw mapError(error);
+      return ((data ?? []) as Array<{ venue: VenueJsonRow; used_at: string }>).map((row) => mapVenue(row.venue));
+    },
+
     async bevdMap(params): Promise<BevdPin[]> {
       await requireUserId(client);
       const { data, error } = await client.rpc('bevd_map', { p_scope: params?.scope ?? ('all' satisfies BevdScope) });
