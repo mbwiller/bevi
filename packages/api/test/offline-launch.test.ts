@@ -91,6 +91,31 @@ const refreshGranted: Fetch = () =>
     new Response(JSON.stringify(storedSession(3600, 'refresh-2')), { status: 200, headers: { 'content-type': 'application/json' } }),
   );
 
+/** The auth server reachable but not answering: a 503 from the gateway, which auth-js retries like no connection at all. */
+const serviceUnavailable: Fetch = () =>
+  Promise.resolve(
+    new Response(JSON.stringify({ code: 503, msg: 'Service Unavailable' }), { status: 503, headers: { 'content-type': 'application/json' } }),
+  );
+
+/** The auth server answering the refresh `afterMs` late: a connection that is slow, not down. */
+const refreshGrantedAfter =
+  (afterMs: number): Fetch =>
+  (_input, init) =>
+    new Promise((resolve, reject) => {
+      const timer = setTimeout(
+        () => resolve(new Response(JSON.stringify(storedSession(3600, 'refresh-2')), { status: 200, headers: { 'content-type': 'application/json' } })),
+        afterMs,
+      );
+      init?.signal?.addEventListener(
+        'abort',
+        () => {
+          clearTimeout(timer);
+          reject(new DOMException('Aborted', 'AbortError'));
+        },
+        { once: true },
+      );
+    });
+
 interface Settled {
   state: 'pending' | 'resolved' | 'rejected';
   value?: unknown;
@@ -176,11 +201,14 @@ describe('launching offline with an expired access token', () => {
     const app = launch(offline);
     const check = track(app.api.getSession());
 
-    await vi.advanceTimersByTimeAsync(SESSION_CHECK_TIMEOUT_MS - 1);
-    expect(check.state).toBe('pending');
-    await vi.advanceTimersByTimeAsync(1);
+    // No later than the bound is the promise. How long before it is auth-js's
+    // business: today its retries outlast the bound, so the answer comes at
+    // the bound exactly, and a version that gives up sooner may answer sooner.
+    await vi.advanceTimersByTimeAsync(SESSION_CHECK_TIMEOUT_MS);
+    // Rejected, so never resolved to null, which would have meant signed out.
     expect(check.state).toBe('rejected');
     expect((check.value as ApiError).code).toBe('network');
+    expect(app.heard).not.toContain(null);
     // Sooner than one hung request takes to time out, let alone auth-js's retries.
     expect(SESSION_CHECK_TIMEOUT_MS).toBeLessThan(REQUEST_TIMEOUT_MS);
   });
@@ -204,14 +232,19 @@ describe('launching offline with an expired access token', () => {
     expect(app.storedRefreshToken()).toBe('refresh-1');
   });
 
-  it('a later check is network too, at once, while the connection is still down', async () => {
+  it('a later check asks the server again and is network within the same deadline, while the connection is still down', async () => {
     const app = launch(reactNativeOffline);
     track(app.api.getSession());
     await vi.advanceTimersByTimeAsync(PAST_EVERY_RETRY_MS);
+    const sentAtLaunch = app.refreshes.length;
 
-    // The app's Retry.
+    // The app's Retry. It is not answered from auth-js's memory of the failure
+    // (`forgetRefreshFailure`), so a new series of refreshes starts and the
+    // check waits on it like the first one did: today, the whole bound again,
+    // not an answer at once.
     const again = track(app.api.getSession());
-    await until(() => again.state !== 'pending', SESSION_CHECK_TIMEOUT_MS);
+    await vi.advanceTimersByTimeAsync(SESSION_CHECK_TIMEOUT_MS);
+    expect(app.refreshes.length).toBeGreaterThan(sentAtLaunch);
     expect(again.state).toBe('rejected');
     expect((again.value as ApiError).code).toBe('network');
     expect(app.heard).toEqual([]);
@@ -274,6 +307,45 @@ describe('when the connection comes back after an offline launch', () => {
     // The check itself may answer null or throw, but never "you are offline".
     expect((again.value as ApiError | null)?.code).not.toBe('network');
     await expect(app.api.getSession()).resolves.toBeNull();
+  });
+});
+
+describe('launching with an auth server that does not answer the refresh in time', () => {
+  it('a 503: getSession() is network within the session-check deadline, the stored session is kept, nobody is told they are signed out', async () => {
+    const app = launch(serviceUnavailable);
+    const check = track(app.api.getSession());
+
+    await vi.advanceTimersByTimeAsync(SESSION_CHECK_TIMEOUT_MS);
+    expect(check.state).toBe('rejected');
+    expect((check.value as ApiError).code).toBe('network');
+
+    await vi.advanceTimersByTimeAsync(PAST_EVERY_RETRY_MS);
+    expect(app.heard).toEqual([]);
+    expect(app.removed).toEqual([]);
+    expect(app.storedRefreshToken()).toBe('refresh-1');
+  });
+
+  it('a refresh that succeeds after 8 s: network at the deadline, then the session arrives through onAuthChange', async () => {
+    const answersAfterMs = 8_000;
+    // Later than the session check waits, sooner than the request is given up on.
+    expect(answersAfterMs).toBeGreaterThan(SESSION_CHECK_TIMEOUT_MS);
+    expect(answersAfterMs).toBeLessThan(REQUEST_TIMEOUT_MS);
+    const app = launch(refreshGrantedAfter(answersAfterMs));
+    const check = track(app.api.getSession());
+
+    await vi.advanceTimersByTimeAsync(SESSION_CHECK_TIMEOUT_MS);
+    expect(check.state).toBe('rejected');
+    expect((check.value as ApiError).code).toBe('network');
+    expect(app.heard).toEqual([]);
+
+    // The refresh was not cancelled when the check gave up on it.
+    await vi.advanceTimersByTimeAsync(answersAfterMs - SESSION_CHECK_TIMEOUT_MS);
+    // auth-js says it more than once (TOKEN_REFRESHED, then the INITIAL_SESSION
+    // it owed the listener); what matters is that every time it is the session.
+    expect(app.heard.length).toBeGreaterThan(0);
+    for (const session of app.heard) expect(session).toEqual(TESTER);
+    expect(app.refreshes).toHaveLength(1);
+    expect(app.storedRefreshToken()).toBe('refresh-2');
   });
 });
 
