@@ -31,7 +31,7 @@
 -- `select` policy would have to restate the block and the age gate, and
 -- `venues` (which a place is a pointer into) has no client read at all.
 --
--- ADDITIVE: one table, its two triggers, a view and eight RPCs, all new. `submit_ranking` and
+-- ADDITIVE: one table, its two triggers, a view and nine RPCs, all new. `submit_ranking` and
 -- `rerank_bev` are CALLED by two wrappers rather than re-created, so a shipped
 -- client that knows nothing of places calls exactly the functions it always
 -- did.
@@ -563,3 +563,50 @@ $$;
 alter function public.bev_location_summary() owner to postgres;
 revoke execute on function public.bev_location_summary() from public, anon;
 grant execute on function public.bev_location_summary() to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- 11. recent_bev_venues(p_limit) -> the places the caller used last
+-- ---------------------------------------------------------------------------
+-- The picker's "Recent" rows, so tagging a second Bev at the same shop is two
+-- taps. Ordered by when the place was SET (`updated_at`), not by when the Bev
+-- was ranked: someone going back through last month's Bevs is using that shop
+-- now, and `bevd_map('mine')`, which orders by `ranked_at`, would bury it
+-- under every place with a newer ranking.
+--
+-- The caller's own rows only, so no block or age rule applies; a venue hidden
+-- by hand drops out, as it does everywhere else. 5 by default, at most 20.
+create or replace function public.recent_bev_venues(p_limit integer default 5)
+returns table (venue jsonb, used_at timestamptz)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    raise exception 'BEVI_UNAUTHORIZED' using errcode = '42501';
+  end if;
+
+  return query
+  with used as (
+    select l.venue_id, max(l.updated_at) as used_at
+      from public.bev_locations l
+     where l.user_id = v_uid
+     group by l.venue_id
+  )
+  select private.venue_json(v), u.used_at
+    from used u
+    join public.venues v on v.id = u.venue_id and v.status = 'active'
+   order by u.used_at desc, v.id asc
+   limit least(greatest(coalesce(p_limit, 5), 1), 20);
+end;
+$$;
+
+alter function public.recent_bev_venues(integer) owner to postgres;
+revoke execute on function public.recent_bev_venues(integer) from public, anon;
+grant execute on function public.recent_bev_venues(integer) to authenticated;
+
+comment on function public.recent_bev_venues(integer) is
+  'BEV-22: the venues the caller set on a Bev most recently, newest first, for the place picker. Ordered by bev_locations.updated_at, not by the ranking''s date.';

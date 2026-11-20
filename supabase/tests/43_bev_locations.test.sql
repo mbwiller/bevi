@@ -28,7 +28,7 @@
 -- commits. `set constraints all immediate` fires what is pending, which is
 -- how section 4 sees what a real transaction's end would do.
 begin;
-select plan(86);
+select plan(89);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -128,8 +128,9 @@ select ok(
   and has_function_privilege('authenticated', 'public.get_user_bev_locations(uuid)', 'EXECUTE')
   and has_function_privilege('authenticated', 'public.bevd_map(text)', 'EXECUTE')
   and has_function_privilege('authenticated', 'public.bevd_at_venue(uuid, text)', 'EXECUTE')
-  and has_function_privilege('authenticated', 'public.bev_location_summary()', 'EXECUTE'),
-  'the nine client functions are granted to authenticated'
+  and has_function_privilege('authenticated', 'public.bev_location_summary()', 'EXECUTE')
+  and has_function_privilege('authenticated', 'public.recent_bev_venues(integer)', 'EXECUTE'),
+  'the ten client functions are granted to authenticated'
 );
 
 select ok(
@@ -543,6 +544,28 @@ select results_eq(
   $$ select ranked_count, located_count from public.bev_location_summary() $$,
   $$ values (2, 2) $$,
   'bev_location_summary counts the caller''s rankings and how many have a place'
+);
+
+-- recent_bev_venues: by when the place was set. Every row here was written in this one
+-- transaction, so `now()` gave them all the same instant; move one forward to order them.
+reset role;
+update public.bev_locations set updated_at = now() + interval '1 minute'
+ where user_id = '00000000-0000-4000-8000-0000000b2201'
+   and venue_id = '00000000-0000-4000-8000-0000000b2212';
+set local role authenticated;
+
+select results_eq(
+  $$ select venue ->> 'name' from public.recent_bev_venues() $$,
+  $$ values ('Zq Duane Reade'), ('Zq Café Duane') $$,
+  'recent_bev_venues: the caller''s own places, the one set last first, and nobody else''s'
+);
+select is(
+  (select count(*)::integer from public.recent_bev_venues(1)), 1,
+  'and no more than asked for'
+);
+select ok(
+  not has_function_privilege('anon', 'public.recent_bev_venues(integer)', 'EXECUTE'),
+  'recent_bev_venues is not granted to anon'
 );
 
 -- The age gate: kid follows ana, whose bar Bev is alcoholic.
