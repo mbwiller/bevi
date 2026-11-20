@@ -8,7 +8,7 @@
 | **Lead** | Arjun leads development: the generation pipeline, the backend, the credits |
 | **App and design** | Matt: the screens, the design system, sign-off on icon style |
 | **Source** | Matt and Arjun's working session at Princeton, 2026-11-14 (transcript in Appendix A), plus Matt's product direction given the same day |
-| **Status** | Vision and proposal. Nothing here is built. The UI/UX flow has **not** been agreed yet (section 7) |
+| **Status** | Vision, plus a decided first pass. The pipeline's pass-one shape is **Decided** (2026-11-17, Arjun): automatic, free, no credit. The rest of the flow in section 7 is still **not** agreed |
 
 **How to read this file.** Every statement carries one of three labels, in the heading or in the line:
 
@@ -18,13 +18,29 @@
 
 When a proposal is accepted or an open question is answered, change its label here and note the date. This file is the record; the ticket links the work.
 
-**Current implementation direction (2026-11-16).** For the first pipeline pass,
-a photo-backed user-created Bev automatically enters icon generation when it is
-created. There is no request button, credit gate, or charge in this flow. The
-worker can be held off operationally until the icon style and quality bar are
-agreed. Badges, regeneration, candidate selection, and monetization remain
-future product decisions; the credit-based exploration below is historical,
-not the current implementation requirement.
+**The first pass. Decided 2026-11-17 (Arjun).** The pipeline ships in the
+shape it is built in: a photo-backed user-created Bev automatically enters icon
+generation when it is created, free, with no request button, credit gate or
+charge. Three points settle with it:
+
+- **The Bev is created before the icon step.** `create_bev` inserts the Bev and
+  then enqueues one durable job in the same transaction. The Bev exists and is
+  rankable whether or not an icon ever arrives. (Answers open question 7.)
+- **The user never waits on a making screen.** Creation returns immediately and
+  the app goes straight to ranking; the icon is a background service, and its
+  state appears later on the Bev's own screen. (Answers open question 8.)
+- **The worker stays behind an operational switch** until the icon style and
+  quality bar are agreed, so merging the backend is inert in production.
+- **A generated icon is the Bev's image, exactly like a catalogue icon.**
+  (Decided 2026-11-17; answers open question 4.) It shows on the post, in rows
+  and in lists the way an authored icon does, with no separate treatment. For a
+  Bev that has one, the icon comes before the creator's photograph.
+
+Everything the 2026-11-14 session decided about credits still stands as the
+product intent, but is **not** in this pass: optional creation (decision 2),
+one credit per icon (5), free regeneration and picking (6), design notes
+(7, 8), badges and discovery, and all monetization. The credit-based flow in
+sections 7 to 12 is the eventual target, not the current requirement.
 
 ---
 
@@ -510,11 +526,11 @@ Phase 1 without buying is deliberate. It produces the real numbers (cost per ico
 | 1 | How many free credits does a new user get: 3, 4 or 5? | Both |
 | 2 | How many free regenerations per credit? Do further tries cost a credit or not exist? | Both |
 | 3 | Is the credit spent when generation starts or when the user keeps an icon? (The session said at generation; a refund on failure is proposed.) | Both |
-| 4 | Does the created icon replace the photo as the Bev's image everywhere? | Both; contract and app impact |
+| 4 | ~~Does the created icon replace the photo as the Bev's image everywhere?~~ | **Answered 2026-11-17: yes**, and it renders like a catalogue icon. Built; see section 14a |
 | 5 | Can anyone other than the creator make or replace a Bev's icon? | Both |
 | 6 | Can the creator redo an icon later, and does it cost a credit? | Both |
-| 7 | Is the Bev created before or after the icon step? | Both, in the walkthrough |
-| 8 | Does the user wait on the making screen or move on to ranking? | Matt, with Arjun's timing numbers |
+| 7 | ~~Is the Bev created before or after the icon step?~~ | **Answered 2026-11-17: before.** `create_bev` inserts the Bev, then enqueues the job |
+| 8 | ~~Does the user wait on the making screen or move on to ranking?~~ | **Answered 2026-11-17: neither waits.** Straight to ranking; there is no making screen, and the icon arrives in the background |
 | 9 | After a merge, who is the discoverer and which icon survives? | Both |
 | 10 | Do discoveries count toward "Rank on Bevi"? Which badges exist? | Matt |
 | 11 | Pack sizes and prices. Is $4.99 for 10 the only pack? | Both, after phase 1 numbers |
@@ -527,6 +543,31 @@ Phase 1 without buying is deliberate. It produces the real numbers (cost per ico
 | 18 | What is the feature called? | Both |
 | 19 | For catalog drinks whose icon is not drawn yet, do we hold the line on "no user creation"? | Matt |
 | 20 | When Bevi is opened beyond invited friends, what moderation is needed before icons are public? | Arjun |
+
+## 14a. How question 4 was answered in code (2026-11-17)
+
+Showing a generated icon the way a catalogue icon shows took four changes,
+none of them a new screen and none of them SQL. All four are built:
+
+| # | What it was | What it is now | Where |
+|---|---|---|---|
+| 1 | `bevImageProps` was `photoUrl ?? iconUrl`, and every user-created Bev has a photo, so its generated icon never won | icon > photo > category art, and `photoStatus` is dropped once the icon wins, because an icon that exists is not work in progress | `app/src/components/BevParts.tsx` |
+| 2 | `bevs.icons()` was called for one Bev, on one screen | `@bevi/api` batches `get_bev_icons` for the Bevs in every result and fills `BevSummary.iconUrl`, so no screen fetches anything | `packages/api/src/generatedIcons.ts` |
+| 3 | `labelBand` was used only inside the detail-screen panel | `BevImage` sets the wordmark across the band at every size, and omits it on a tile too small for a line of type | `app/src/components/BevImage.tsx`, `design/system` |
+| 4 | the contract said a Bev's image is photo > icon | `iconUrl` is documented as the Bev's own icon of either kind, and `iconLabelBand` carries the band | `shared/src/types.ts` |
+
+Two things were deliberately NOT done. The eleven security-definer read
+functions were left alone: appending `generated_icon_path` to all of them is
+about 1,300 lines of transcribed SQL that freezes on merge, and
+`get_bev_icons` already answers for 500 ids in one call, which is what the
+contract says it is for. And `BevIcon.fallbackIconUrl` is not folded into
+`iconUrl`: a borrowed catalogue icon belongs to another drink, so a Bev whose
+own icon is still being made shows its creator's photograph instead.
+
+The panel that used to draw a finished illustration a second time is now a
+status line for its creator alone, still behind `ICON_JOB_STATE_VISIBLE`.
+
+---
 
 ## 18. Pitch materials
 

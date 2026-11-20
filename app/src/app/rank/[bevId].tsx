@@ -8,5 +8,13 @@ import { RankFlow } from '@/features/ranking/RankFlow';
  */
 export default function RankScreen() {
   const { bevId, mode, entry } = useLocalSearchParams<{ bevId: string; mode?: string; entry?: string }>();
-  return <RankFlow key={bevId} bevId={bevId} rerank={mode === 'rerank'} detailIfRanked={entry === 'search'} />;
+  return (
+    <RankFlow
+      key={bevId}
+      bevId={bevId}
+      rerank={mode === 'rerank'}
+      detailIfRanked={entry === 'search'}
+      returnToDetail={entry === 'created'}
+    />
+  );
 }

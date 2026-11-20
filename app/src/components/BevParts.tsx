@@ -15,19 +15,34 @@ import { usePop } from './usePop';
 // Pieces BevRow, FeedPost and CompareCard share.
 
 /**
- * A Bev's BevImage props, photo > icon > category art: its cutout when it has one, else its authored
- * icon (`iconUrl`, served from the `bev-icons` bucket), else its category's BevArt; shimmer while
- * processing. The one place this precedence lives: screens that draw a Bev's image use this rather
- * than reading `photoUrl` or `iconUrl`. `??` also covers a BevSummary cached before contract 2.13.0,
- * whose `iconUrl` is undefined.
+ * A Bev's BevImage props, icon > photo > category art: its icon when it has one -- the generated
+ * illustration or the authored catalogue art, whichever `iconUrl` carries -- else its photo cutout,
+ * else its category's BevArt; shimmer while processing. The one place this precedence lives: screens
+ * that draw a Bev's image use this rather than reading `photoUrl` or `iconUrl`. `??` also covers a
+ * BevSummary cached before contract 2.13.0, whose `iconUrl` is undefined.
+ *
+ * The icon comes first because an icon is what a Bev looks like on Bevi. A seeded Bev has no photo,
+ * so this only decides between the two for a Bev someone created from a photograph, and there the
+ * generated icon is the whole point. Until one exists `iconUrl` is null and the photo still shows,
+ * which is also what a failed generation leaves behind.
+ *
+ * `photoStatus` describes the PHOTO, so it is dropped once the icon wins: the shimmer belongs to
+ * background removal, and an icon that exists is finished work.
  */
-export function bevImageProps(bev: BevSummary): Pick<BevImageProps, 'src' | 'art' | 'alt' | 'status'> {
-  const src = bev.photoUrl ?? bev.iconUrl ?? undefined;
+export function bevImageProps(
+  bev: BevSummary,
+): Pick<BevImageProps, 'src' | 'art' | 'alt' | 'status' | 'labelBand' | 'wordmark'> {
+  const icon = bev.iconUrl ?? undefined;
+  const src = icon ?? bev.photoUrl ?? undefined;
   return {
     src,
     art: src ? undefined : bevArtForCategory(bev.categoryId),
     alt: bev.name,
-    status: bev.photoStatus,
+    status: icon ? 'ready' : bev.photoStatus,
+    // Only a generated icon has a band to letter; `iconLabelBand` is null for authored art, whose
+    // lettering is drawn into the SVG already.
+    labelBand: icon ? bev.iconLabelBand : null,
+    wordmark: bev.brand?.trim() || bev.name,
   };
 }
 

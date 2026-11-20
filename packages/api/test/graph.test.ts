@@ -126,6 +126,7 @@ describe('bevs.similar', () => {
         photoUrl: 'https://x/thumb.jpg',
         // no icon_path column (a database before 20261112000300): no icon
         iconUrl: null,
+        iconLabelBand: null,
         photoStatus: 'ready',
         priceTier: 1,
         priceEstimated: true,

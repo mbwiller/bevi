@@ -14,6 +14,7 @@ const BEV: BevSummary = {
   categoryId: 'diet_soda',
   photoUrl: null,
   iconUrl: null,
+  iconLabelBand: null,
   photoStatus: 'ready',
   priceTier: 2,
   priceEstimated: true,
