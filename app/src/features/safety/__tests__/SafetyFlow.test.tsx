@@ -144,6 +144,10 @@ describe('report', () => {
     await press('Send report');
     expect(await screen.findByText('No longer available')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Send report' })).toBeNull();
+    // A way out, as the block step's gone state has.
+    expect(onClose).not.toHaveBeenCalled();
+    await press('Done');
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('a post that is really gone reads as no longer available', async () => {

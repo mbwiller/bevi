@@ -119,10 +119,10 @@ function FlowBody({ target, step, setStep, onClose, onBlocked }: BodyProps) {
       </View>
     );
   }
-  return <ReportStep target={target} onSent={() => setStep('sent')} />;
+  return <ReportStep target={target} onSent={() => setStep('sent')} onClose={onClose} />;
 }
 
-function ReportStep({ target, onSent }: { target: SafetyTarget; onSent: () => void }) {
+function ReportStep({ target, onSent, onClose }: { target: SafetyTarget; onSent: () => void; onClose: () => void }) {
   const { colors, elevation } = useTheme();
   const report = useReport();
   const [reason, setReason] = useState<ReportReason | null>(null);
@@ -140,6 +140,9 @@ function ReportStep({ target, onSent }: { target: SafetyTarget; onSent: () => vo
       <View style={styles.pad}>
         <Text style={[type.heading, { color: colors.text }]}>{GONE_TITLE}</Text>
         <Text style={[type.bodyLarge, { color: colors.textSecondary }]}>{GONE_BODY}</Text>
+        <Button variant="primary" block onPress={onClose}>
+          Done
+        </Button>
       </View>
     );
   }
