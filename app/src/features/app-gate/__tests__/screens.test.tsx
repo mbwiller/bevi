@@ -1,11 +1,33 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import { Linking } from 'react-native';
+import { Linking, StyleSheet } from 'react-native';
 
 import { MAINTENANCE_DEFAULT_BODY, MaintenanceNotice } from '../MaintenanceNotice';
 import { UPDATE_BODY_NO_STORE, UPDATE_BODY_WITH_STORE, UpdateRequired } from '../UpdateRequired';
 import { APP_STORE_ID, SUPPORT_EMAIL, appStoreUrl } from '@/lib/appStore';
 
+/** The one ScrollView on screen centres its content when short and scrolls when the text outgrows the window. */
+type Json = { props?: Record<string, unknown>; children?: unknown } | string | null;
+/** The first node in the rendered tree that has a `contentContainerStyle`: the ScrollView. */
+function findScroll(node: Json | Json[]): Record<string, unknown> | undefined {
+  if (!node || typeof node === 'string') return undefined;
+  if (Array.isArray(node)) return node.map(findScroll).find(Boolean);
+  if (node.props?.contentContainerStyle !== undefined) return node.props;
+  return findScroll(node.children as Json[] | null);
+}
+const expectScrollsCentred = () => {
+  const scroll = findScroll(screen.toJSON() as Json);
+  expect(scroll).toBeDefined();
+  expect(StyleSheet.flatten(scroll!.contentContainerStyle as object)).toMatchObject({ flexGrow: 1, justifyContent: 'center' });
+};
+
 describe('MaintenanceNotice', () => {
+  it('scrolls, so a long message at the largest text size is not clipped, and keeps its control', async () => {
+    await render(<MaintenanceNotice message={'A long message about the maintenance. '.repeat(40)} onRetry={() => undefined} />);
+    expectScrollsCentred();
+    expect(screen.getByText(/A long message/)).toBeTruthy();
+    expect(screen.getByLabelText('Try again')).toBeTruthy();
+  });
+
   it('shows the founders message when there is one', async () => {
     await render(<MaintenanceNotice message="Back at 6pm." onRetry={() => undefined} />);
     expect(screen.getByText("We'll be right back")).toBeTruthy();
@@ -42,6 +64,15 @@ describe('UpdateRequired', () => {
     open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
   });
   afterEach(() => jest.restoreAllMocks());
+
+  it('scrolls, centred, with its controls and the version line', async () => {
+    await render(<UpdateRequired version="1.2.3" build="45" appStoreId="123" supportEmail="a@b.co" />);
+    expectScrollsCentred();
+    expect(screen.getByText('Update Bevi')).toBeTruthy();
+    expect(screen.getByLabelText('Update Bevi in the App Store')).toBeTruthy();
+    expect(screen.getByLabelText('Contact us at a@b.co')).toBeTruthy();
+    expect(screen.getByText('Version 1.2.3 build 45')).toBeTruthy();
+  });
 
   it('the shipped constants are null until the founders supply them', () => {
     expect(APP_STORE_ID).toBeNull();

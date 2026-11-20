@@ -5,6 +5,7 @@ import type { BevSummary } from '@bevi/shared';
 
 import { api } from '@/api/client';
 import { controls } from '@/testing/fakeApi';
+import { grabModalDismiss } from '@/testing/modalDismiss';
 import { categoryById } from '@/lib/categories';
 import { type } from '@/theme';
 
@@ -295,7 +296,14 @@ it('closing with something entered asks before discarding; with nothing entered 
   await fireEvent.press(screen.getByRole('button', { name: 'Keep editing' }));
   expect(mockBack).toHaveBeenCalledTimes(1);
   await fireEvent.press(screen.getAllByLabelText('Close')[0]!);
-  await fireEvent.press(await screen.findByRole('button', { name: 'Discard' }));
+  const discard = await screen.findByRole('button', { name: 'Discard' });
+  const dismiss = grabModalDismiss();
+  await fireEvent.press(discard);
+  // Closing, not closed: leaving now would pop the screen under a Modal that is still presented.
+  expect(mockBack).toHaveBeenCalledTimes(1);
+  await waitFor(() => expect(screen.queryByText('Discard this Bev?')).toBeNull());
+  expect(mockBack).toHaveBeenCalledTimes(1);
+  await act(() => dismiss());
   expect(mockBack).toHaveBeenCalledTimes(2);
 });
 

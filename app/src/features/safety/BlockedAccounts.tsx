@@ -5,6 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { flattenPages, useBlockedUsers, useUnblock } from '@/api/hooks';
+import { Announce } from '@/components/Announce';
 import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/Button';
 import { EmptyState } from '@/components/EmptyState';
@@ -12,6 +13,7 @@ import { ErrorState } from '@/components/ErrorState';
 import { Header } from '@/components/Header';
 import { Skeleton } from '@/components/Skeleton';
 import { useBack } from '@/lib/useBack';
+import { usePullToRefresh } from '@/lib/usePullToRefresh';
 import { MAX_FONT_SCALE_DENSE, size, spacing, type, useTheme } from '@/theme';
 
 import { unblockMessage } from './copy';
@@ -32,6 +34,7 @@ export function BlockedAccounts() {
   const back = useBack();
   const query = useBlockedUsers();
   const unblock = useUnblock();
+  const { refreshing, onRefresh } = usePullToRefresh(query.refetch);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<ReadonlySet<string>>(new Set());
   const rows = useMemo(() => flattenPages(query.data), [query.data]);
@@ -77,6 +80,7 @@ export function BlockedAccounts() {
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.screen, { backgroundColor: colors.surface }]}>
       <Header title={BLOCKED_TITLE} onBack={back} />
+      <Announce text={error} />
       {error ? (
         <Text style={[type.body, styles.notice, { color: colors.scoreLow }]} role="alert" accessibilityLiveRegion="polite">
           {error}
@@ -94,8 +98,8 @@ export function BlockedAccounts() {
           if (query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage();
         }}
         onEndReachedThreshold={0.5}
-        refreshing={query.isRefetching && !query.isFetchingNextPage && !query.isPending}
-        onRefresh={() => void query.refetch()}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
       />
     </SafeAreaView>
   );

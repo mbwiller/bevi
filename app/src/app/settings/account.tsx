@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { useMe, useUpdateMe } from '@/api/hooks';
+import { Announce } from '@/components/Announce';
 import { Button } from '@/components/Button';
 import { ErrorState } from '@/components/ErrorState';
 import { Skeleton } from '@/components/Skeleton';
@@ -118,6 +119,7 @@ export default function AccountScreen() {
               {`Use ${device}`}
             </Button>
           ) : null}
+          <Announce text={tz.isError ? `Couldn't change the timezone. ${actionErrorMessage(tz.error)}` : null} />
           {tz.isError ? (
             <Text style={[type.caption, { color: colors.scoreLow }]} role="alert">
               {`Couldn't change the timezone. ${actionErrorMessage(tz.error)}`}

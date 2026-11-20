@@ -158,6 +158,24 @@ describe('comments', () => {
     expect(sheet.getByRole('button', { name: 'Delete your comment: my own comment' })).toBeTruthy();
   });
 
+  it("presents the More menu from inside the comments sheet's Modal, not beside it", async () => {
+    // On iOS a Modal presents from the nearest view controller. Beside the comments sheet, the More
+    // menu would present from the controller already presenting it and UIKit would refuse (nothing
+    // shows, and every later tap is dead). Nested inside, it presents from the comments sheet's own.
+    // Jest renders Modals inline, so only the tree shows it; a device proves the presentation.
+    const { post, commenter } = await postWithComments();
+    await openThread(post);
+    await fireEvent.press(topSheet().getByRole('button', { name: `More actions, comment by @${commenter.handle}` }));
+    const report = await screen.findByRole('button', { name: 'Report comment' });
+    const frames = screen.getAllByTestId('sheet-frame');
+    expect(frames).toHaveLength(2);
+    const [comments, safety] = frames;
+    expect(within(comments!).getByRole('button', { name: 'Report comment' })).toBe(report);
+    expect(within(safety!).getByRole('button', { name: 'Report comment' })).toBe(report);
+    expect(within(comments!).getByTestId('comment-composer')).toBeTruthy();
+    expect(within(safety!).queryByTestId('comment-composer')).toBeNull();
+  });
+
   it('Report comment reports that comment', async () => {
     const { post, commenter } = await postWithComments();
     const thread = await api.comments.list(post.id, { limit: 20 });

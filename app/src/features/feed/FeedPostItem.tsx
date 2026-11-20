@@ -2,6 +2,7 @@ import type { FeedItem, Profile } from '@bevi/shared';
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { Announce } from '@/components/Announce';
 import { FeedPost, POST_AVATAR } from '@/components/FeedPost';
 import { usePressFeedback, type PressFeedback } from '@/components/PressFeedback';
 import { spacing, type, useTheme } from '@/theme';
@@ -73,6 +74,7 @@ export const FeedPostItem = memo(function FeedPostItem({
         avatarPressStyle={onOpenActor ? actorPress.style : undefined}
         divider={false}
       />
+      <Announce text={likeError} />
       {likeError ? (
         <Text style={[type.body, styles.error, { color: colors.scoreLow }]} accessibilityLiveRegion="polite" role="alert">
           {likeError}

@@ -1,8 +1,9 @@
 import { REPORT_NOTE_MAX, REPORT_REASONS, type Profile, type ReportContentKind, type ReportReason } from '@bevi/shared';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useBlock, useReport } from '@/api/hooks';
+import { Announce } from '@/components/Announce';
 import { Button } from '@/components/Button';
 import { Icon } from '@/components/Icon';
 import { Sheet } from '@/components/Sheet';
@@ -42,7 +43,11 @@ export interface SafetyFlowProps {
   /** What the person opened More on; null closes the sheet. */
   target: SafetyTarget | null;
   onClose: () => void;
-  /** The account was blocked (the sheet has closed): a profile leaves itself, since it now reads as not found. */
+  /**
+   * The account was blocked and the sheet has finished closing (`Sheet`'s `onClosed`, not the same
+   * tick as `onClose`): a profile leaves itself, since it now reads as not found. Popping the screen
+   * under a Modal that is still presented would leave iOS with a stuck or blank screen.
+   */
   onBlocked?: (target: SafetyTarget) => void;
 }
 
@@ -75,11 +80,25 @@ export function SafetyFlow({ target, onClose, onBlocked }: SafetyFlowProps) {
     setStep('menu');
   }
   const open = !!target;
+  // A block is reported once the sheet is gone, not while it is still presented.
+  const blocked = useRef<SafetyTarget | null>(null);
   const title =
     step === 'menu' ? MORE_ACTIONS : step === 'block' && shown ? blockTitle(shown.author.handle) : step === 'sent' ? 'Report sent' : shown ? REPORT_ACTION[shown.kind] : MORE_ACTIONS;
   return (
-    <Sheet open={open} title={title} snap={step === 'menu' ? 40 : 90} onClose={onClose}>
-      {shown ? <FlowBody key={run} target={shown} step={step} setStep={setStep} onClose={onClose} onBlocked={onBlocked} /> : null}
+    <Sheet
+      open={open}
+      title={title}
+      snap={step === 'menu' ? 40 : 90}
+      onClose={onClose}
+      onClosed={() => {
+        const t = blocked.current;
+        blocked.current = null;
+        if (t) onBlocked?.(t);
+      }}
+    >
+      {shown ? (
+        <FlowBody key={run} target={shown} step={step} setStep={setStep} onClose={onClose} onBlocked={(t) => (blocked.current = t)} />
+      ) : null}
     </Sheet>
   );
 }
@@ -118,17 +137,19 @@ function FlowBody({ target, step, setStep, onClose, onBlocked }: BodyProps) {
       </View>
     );
   }
-  return <ReportStep target={target} onSent={() => setStep('sent')} />;
+  return <ReportStep target={target} onSent={() => setStep('sent')} onClose={onClose} />;
 }
 
-function ReportStep({ target, onSent }: { target: SafetyTarget; onSent: () => void }) {
+function ReportStep({ target, onSent, onClose }: { target: SafetyTarget; onSent: () => void; onClose: () => void }) {
   const { colors, elevation } = useTheme();
   const report = useReport();
   const [reason, setReason] = useState<ReportReason | null>(null);
   const [note, setNote] = useState('');
   const [focused, setFocused] = useState(false);
   const [failure, setFailure] = useState<Failure | null>(null);
-  const keyboard = useKeyboardInset(true);
+  // Web only: iOS Safari doesn't resize the page, so the form pads itself up. On native the Sheet
+  // raises its whole panel above the keyboard, so counting it here too would count it twice.
+  const keyboard = useKeyboardInset(Platform.OS === 'web');
   const left = REPORT_NOTE_MAX - noteLength(note);
   const canSend = !!reason && left >= 0 && !report.isPending;
 
@@ -137,6 +158,9 @@ function ReportStep({ target, onSent }: { target: SafetyTarget; onSent: () => vo
       <View style={styles.pad}>
         <Text style={[type.heading, { color: colors.text }]}>{GONE_TITLE}</Text>
         <Text style={[type.bodyLarge, { color: colors.textSecondary }]}>{GONE_BODY}</Text>
+        <Button variant="primary" block onPress={onClose}>
+          Done
+        </Button>
       </View>
     );
   }
@@ -193,6 +217,7 @@ function ReportStep({ target, onSent }: { target: SafetyTarget; onSent: () => vo
           {left}
         </Text>
       ) : null}
+      <Announce text={failure?.message} />
       {failure ? (
         <Text style={[type.body, { color: colors.scoreLow }]} role="alert" accessibilityLiveRegion="polite">
           {failure.message}
@@ -234,6 +259,7 @@ function BlockStep({ target, onBack, onClose, onBlocked }: { target: SafetyTarge
   return (
     <View style={styles.pad}>
       <Text style={[type.bodyLarge, { color: colors.text }]}>{blockBody(handle)}</Text>
+      <Announce text={failure?.message} />
       {failure ? (
         <Text style={[type.body, { color: colors.scoreLow }]} role="alert" accessibilityLiveRegion="polite">
           {failure.message}

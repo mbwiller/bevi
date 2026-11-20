@@ -49,6 +49,8 @@ export function useKeyboardInset(enabled = true): number {
       setInset(e.endCoordinates.height),
     );
     const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setInset(0));
+    // Already up when this mounts (a sheet opened over a focused field): no event will announce it.
+    if (Keyboard.isVisible()) setInset(Keyboard.metrics()?.height ?? 0);
     return () => {
       show.remove();
       hide.remove();

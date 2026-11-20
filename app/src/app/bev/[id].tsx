@@ -1,9 +1,9 @@
 import { NutritionCard } from '@/features/create-bev/NutritionCard';
 import { isApiError } from '@bevi/shared';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaInsetsContext, SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAddWantToTry, useBev, useMe, useRemoveWantToTry, useStats } from '@/api/hooks';
 import { Arrive, useArrival } from '@/components/Arrive';
@@ -43,6 +43,8 @@ function DetailSkeleton() {
 /** Bev detail (§6.11): hero, Bevi score and your score or prediction, friends, Rank it and Want to Try. */
 export default function BevDetailScreen() {
   const { colors } = useTheme();
+  // A pushed screen has no tab bar: its scroll end clears the home indicator itself.
+  const bottomInset = useContext(SafeAreaInsetsContext)?.bottom ?? 0;
   const router = useRouter();
   const back = useBack();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -187,7 +189,7 @@ export default function BevDetailScreen() {
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.screen, { backgroundColor: colors.surface }]}>
       {header}
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: spacing.xxl + bottomInset }]}>
         {query.isPending ? body : <Arrive progress={arrival}>{body}</Arrive>}
       </ScrollView>
     </SafeAreaView>

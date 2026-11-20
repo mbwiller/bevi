@@ -14,6 +14,7 @@ export const COMPONENT_FILES: Readonly<Record<string, string>> = {
   ActivityList: 'app/src/features/profile/ActivityList.tsx',
   ActorLink: 'app/src/features/feed/FeedPostItem.tsx',
   AddBevTab: 'app/src/app/(tabs)/add/index.tsx',
+  Announce: 'app/src/components/Announce.tsx',
   AppGate: 'app/src/features/app-gate/AppGate.tsx',
   AppTabBar: 'app/src/app/(tabs)/_layout.tsx',
   Arrive: 'app/src/components/Arrive.tsx',

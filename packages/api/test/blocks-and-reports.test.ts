@@ -38,6 +38,9 @@ function fakeClient(log: RpcCall[], answer: (call: RpcCall) => Answer = () => ({
   } as unknown as SupabaseClient;
 }
 
+/** A profile id as the database has it. `block_user`, `unblock_user` and `report_content` type it `uuid`. */
+const USER_1 = '00000000-0000-4000-8000-000000000001';
+
 /** A PostgrestError as a security-definer RPC raises it. */
 const pgError = (message: string, code: string, details: string | null = null) => ({ message, code, details, hint: null });
 
@@ -68,13 +71,25 @@ describe('blocks', () => {
   it('block and unblock call their RPCs with the user id', async () => {
     const log: RpcCall[] = [];
     const api = createBlocksApi(fakeClient(log));
-    await api.block('user-1');
-    await api.unblock('user-1');
+    await api.block(USER_1);
+    await api.unblock(USER_1);
     expect(log).toEqual([
-      { fn: 'block_user', args: { p_user_id: 'user-1' } },
-      { fn: 'unblock_user', args: { p_user_id: 'user-1' } },
+      { fn: 'block_user', args: { p_user_id: USER_1 } },
+      { fn: 'unblock_user', args: { p_user_id: USER_1 } },
     ]);
   });
+
+  // Postgres would answer either with 22P02, which `mapError` reads as `unknown`.
+  it.each(['user-1', '', '00000000-0000-4000-8000-00000000000', "' or 1=1 --"])(
+    'an id that cannot be a profile (%j): block is not_found and unblock resolves, without calling an RPC',
+    async (id) => {
+      const log: RpcCall[] = [];
+      const api = createBlocksApi(fakeClient(log));
+      expect((await rejection(api.block(id))).code).toBe('not_found');
+      await expect(api.unblock(id)).resolves.toBeUndefined();
+      expect(log).toEqual([]);
+    },
+  );
 
   it.each([
     ['BEVI_VALIDATION', '22023', 'cannot block self', 'validation'],
@@ -83,7 +98,7 @@ describe('blocks', () => {
     ['BEVI_UNAUTHORIZED', '42501', null, 'unauthorized'],
   ] as const)('block maps %s to %s', async (name, sqlstate, details, code) => {
     const api = createBlocksApi(fakeClient([], () => ({ data: null, error: pgError(name, sqlstate, details) })));
-    expect((await rejection(api.block('user-1'))).code).toBe(code);
+    expect((await rejection(api.block(USER_1))).code).toBe(code);
   });
 
   it('is unauthorized signed out, without calling the RPC', async () => {
@@ -142,7 +157,7 @@ describe('reports', () => {
   it.each([
     [{ kind: 'post', id: '42', reason: 'spam' }, { p_reason: 'spam', p_feed_event_id: 42, p_note: null }],
     [{ kind: 'comment', id: '7', reason: 'harassment', note: 'rude' }, { p_reason: 'harassment', p_comment_id: 7, p_note: 'rude' }],
-    [{ kind: 'profile', id: 'user-1', reason: 'other' }, { p_reason: 'other', p_user_id: 'user-1', p_note: null }],
+    [{ kind: 'profile', id: USER_1, reason: 'other' }, { p_reason: 'other', p_user_id: USER_1, p_note: null }],
   ] as [ReportContentInput, Record<string, unknown>][])('sends exactly one target for %o', async (input, args) => {
     const log: RpcCall[] = [];
     const api = createReportsApi(fakeClient(log, () => ({ data: 31, error: null })));
@@ -156,6 +171,23 @@ describe('reports', () => {
     expect((await rejection(api.report({ kind: 'post', id: 'abc', reason: 'spam' }))).code).toBe('not_found');
     expect((await rejection(api.report({ kind: 'comment', id: '', reason: 'spam' }))).code).toBe('not_found');
     expect(log).toEqual([]);
+  });
+
+  it('a profile id that cannot be a row is not_found, without calling the RPC', async () => {
+    const log: RpcCall[] = [];
+    const api = createReportsApi(fakeClient(log));
+    // Postgres would answer each with 22P02, which `mapError` reads as `unknown`.
+    for (const id of ['user-1', '', '42', '00000000-0000-4000-8000-00000000000']) {
+      expect((await rejection(api.report({ kind: 'profile', id, reason: 'spam' }))).code).toBe('not_found');
+    }
+    expect(log).toEqual([]);
+  });
+
+  it.each([null, undefined])('an RPC that answers %s is unknown, never a report id', async (data) => {
+    const api = createReportsApi(fakeClient([], () => ({ data, error: null })));
+    const e = await rejection(api.report({ kind: 'post', id: '1', reason: 'spam' }));
+    expect(e.code).toBe('unknown');
+    expect(e.message).toBe('report_content returned no id');
   });
 
   it.each([

@@ -256,7 +256,9 @@ export declare function ErrorState(props: ErrorStateProps): React.ReactElement;
 export interface SkeletonProps { variant?: 'text' | 'block' | 'circle' | 'row' | 'post'; width?: number | string; height?: number; lines?: number; className?: string }
 export declare function Skeleton(props: SkeletonProps): React.ReactElement;
 
-export interface SheetProps { open?: boolean; title?: string; snap?: 40 | 90; onClose?: () => void; children?: React.ReactNode; className?: string }
+export interface SheetProps { open?: boolean; title?: string; snap?: 40 | 90; onClose?: () => void;
+  /** The sheet has finished closing (after its exit animation and, on a phone, once the modal is really gone). Navigate or open another modal from here, never in the same tick as `onClose`. */
+  onClosed?: () => void; children?: React.ReactNode; className?: string }
 export declare function Sheet(props: SheetProps): React.ReactElement | null;
 
 /** One comment as the post and the sheet draw it. `time` is relative ("2 hours ago"); `mine` adds Delete in the sheet. */
@@ -265,7 +267,9 @@ export interface PostComment { id?: string; author: Person; body: string; time?:
 export interface CommentsSheetProps { open?: boolean; comments?: PostComment[]; me?: Person; onClose?: () => void; onPost?: (body: string) => void; onDelete?: (id: string) => void;
   /** Opens the More menu of someone else's comment (Report comment, Block account): an ellipsis at the end of the row, named "More actions, comment by @handle". Never on your own comments, which end in Delete. Without it no row has one. */
   onMore?: (comment: PostComment) => void;
-  error?: string; className?: string }
+  error?: string;
+  /** A sheet that opens over this one (the More menu): rendered inside this sheet, not beside it, so that on a phone it presents from this sheet's own modal. */
+  children?: React.ReactNode; className?: string }
 export declare function CommentsSheet(props: CommentsSheetProps): React.ReactElement | null;
 
 /** One category's progress: the contract's `CategoryProgress`, as `stats.getCategoryProgress()` returns it. */

@@ -42,7 +42,9 @@ export function mapCachedItems<T>(data: unknown, fn: (item: T) => T): unknown {
   return data;
 }
 
+/** The `mapCachedItems` shapes, dropping the items `keep` refuses. */
 export function filterCachedItems<T>(data: unknown, keep: (item: T) => boolean): unknown {
+  if (Array.isArray(data)) return data.filter(keep);
   if (data && typeof data === 'object') {
     const d = data as { items?: T[]; pages?: Page<T>[] };
     if (Array.isArray(d.pages)) return { ...d, pages: d.pages.map((p) => ({ ...p, items: p.items.filter(keep) })) };

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import { StyleSheet } from 'react-native';
+import { AccessibilityInfo, StyleSheet } from 'react-native';
 
 import { type } from '@/theme';
 
@@ -30,6 +30,60 @@ it('hides password text and skips autocapitalisation', async () => {
   expect(input.props.secureTextEntry).toBe(true);
   expect(input.props.autoCapitalize).toBe('none');
   expect(input.props.autoComplete).toBe('current-password');
+});
+
+describe('autocorrect', () => {
+  it('is off for a field told not to capitalise (a handle, an invite code)', async () => {
+    await render(<TextField label="Username" autoCapitalize="none" autoComplete="username" />);
+    const input = screen.getByLabelText('Username');
+    expect(input.props.autoCorrect).toBe(false);
+    expect(input.props.spellCheck).toBe(false);
+    expect(input.props.autoCapitalize).toBe('none');
+  });
+
+  it('is off for password, email and url fields, and left to the system for plain text', async () => {
+    await render(
+      <>
+        <TextField label="Password" type="password" />
+        <TextField label="Email" type="email" />
+        <TextField label="Link" type="url" />
+        <TextField label="Name" autoCapitalize="words" />
+      </>,
+    );
+    for (const label of ['Password', 'Email', 'Link']) expect(screen.getByLabelText(label).props.autoCorrect).toBe(false);
+    expect(screen.getByLabelText('Name').props.autoCorrect).toBeUndefined();
+    expect(screen.getByLabelText('Name').props.spellCheck).toBeUndefined();
+  });
+});
+
+describe('Done bar on the number pad (iOS: no return key)', () => {
+  it('hangs a labelled 44pt Done above the keyboard for numeric and tel fields, and not for text', async () => {
+    await render(
+      <>
+        <TextField label="Birthdate" type="numeric" id="bd" />
+        <TextField label="Phone" type="tel" id="ph" />
+        <TextField label="Name" id="nm" />
+      </>,
+    );
+    expect(screen.getByLabelText('Birthdate').props.inputAccessoryViewID).toBe('bd-done');
+    expect(screen.getByLabelText('Phone').props.inputAccessoryViewID).toBe('ph-done');
+    expect(screen.getByLabelText('Name').props.inputAccessoryViewID).toBeUndefined();
+    expect(screen.getAllByRole('button', { name: 'Done', includeHiddenElements: true })).toHaveLength(2);
+  });
+});
+
+describe('error announcement (iOS ignores the live region)', () => {
+  const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility').mockImplementation(() => {});
+  beforeEach(() => announce.mockClear());
+
+  it('says a new error aloud once, not a hint, and not again on re-render', async () => {
+    const { rerender } = await render(<TextField label="Handle" hint="Lowercase." />);
+    expect(announce).not.toHaveBeenCalled();
+    await rerender(<TextField label="Handle" hint="Lowercase." error="That handle is taken." />);
+    await rerender(<TextField label="Handle" hint="Lowercase." error="That handle is taken." />);
+    expect(announce).toHaveBeenCalledTimes(1);
+    expect(announce).toHaveBeenCalledWith('That handle is taken.');
+  });
 });
 
 describe('reserveHint (BEV-7)', () => {

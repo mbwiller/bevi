@@ -12,6 +12,7 @@ import { IconButton } from '@/components/IconButton';
 import { Sheet } from '@/components/Sheet';
 import { Skeleton } from '@/components/Skeleton';
 import { actionErrorMessage, errorCopy } from '@/lib/errorCopy';
+import { openLink } from '@/lib/openLink';
 import { MAX_FONT_SCALE_DENSE, radius, size, spacing, type, useTheme } from '@/theme';
 
 import { byRank, isOpen, ticketMeta } from './labels';
@@ -158,7 +159,7 @@ function TicketRow({ row, placeable = false, children }: { row: BugReportSummary
     <View style={[styles.ticket, { borderBottomColor: colors.border }]}>
       <View style={styles.ticketTop}>
         <Pressable
-          onPress={() => void Linking.openURL(row.ticketUrl)}
+          onPress={() => openLink(() => Linking.openURL(row.ticketUrl))}
           accessibilityRole="link"
           accessibilityLabel={`${row.rank ? `Number ${row.rank}, ` : ''}${row.title}, ${ticketMeta(row)}`}
           style={({ pressed }) => [styles.ticketMain, pressed && { opacity: 0.7 }]}

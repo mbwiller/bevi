@@ -4,6 +4,7 @@ import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { useContext } from 'react';
 
 import { MAX_FONT_SCALE_DENSE, spacing, type, useTheme } from '@/theme';
+import { useAnnounce } from '@/lib/useAnnounce';
 import { useOnline } from '@/lib/useOnline';
 
 import { Icon } from './Icon';
@@ -24,6 +25,8 @@ export const OFFLINE_NOTICE = "You're offline";
 export function OfflineNotice() {
   const { colors } = useTheme();
   const top = useContext(SafeAreaInsetsContext)?.top ?? 0;
+  // The strip mounts only while offline; iOS ignores its live region, so say it aloud as it appears.
+  useAnnounce(OFFLINE_NOTICE);
   return (
     <View
       testID="offline-notice"

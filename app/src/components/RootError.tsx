@@ -1,6 +1,6 @@
 import type { ErrorBoundaryProps } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 
 import { captureError } from '@/lib/crashReporting';
 import { useTheme } from '@/theme';
@@ -35,7 +35,8 @@ export function RootError({ error, retry }: ErrorBoundaryProps) {
     captureError(error, { source: 'render' });
   }, [error]);
   return (
-    <View style={[styles.screen, { backgroundColor: colors.surface }]}>
+    // A ScrollView, so a large text size can't clip the message; it needs no provider.
+    <ScrollView style={[styles.screen, { backgroundColor: colors.surface }]} contentContainerStyle={styles.center}>
       <StateMessage
         icon="triangle-alert"
         title="Something went wrong"
@@ -46,11 +47,12 @@ export function RootError({ error, retry }: ErrorBoundaryProps) {
           Try again
         </Pill>
       </StateMessage>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  screen: { flex: 1 },
+  center: { flexGrow: 1, alignItems: 'center', justifyContent: 'center' },
   action: { alignSelf: 'center' },
 });
