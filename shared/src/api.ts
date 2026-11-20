@@ -434,7 +434,7 @@ export interface SubmitRankingInput {
   /** Up to 140 chars. */
   note?: string;
   /**
-   * Where the Bev was had (contract 3.4.0): a `Venue` id from `venues.search`
+   * Where the Bev was had (contract 3.5.0): a `Venue` id from `venues.search`
    * or `venues.addPlace`. Saved with the ranking in one write, so a failure
    * here fails the whole submit.
    *
@@ -521,7 +521,7 @@ export interface RankingsApi {
 
   /**
    * Sets, replaces or (`null`) removes where the caller had a Bev they have
-   * already ranked (contract 3.4.0). Returns the venue, or null when removed.
+   * already ranked (contract 3.5.0). Returns the venue, or null when removed.
    * No feed post is written: the posts about that Bev simply show the place.
    * @throws 'unauthorized'; 'not_found' — the caller has not ranked this Bev,
    *   or there is no such venue.
@@ -705,7 +705,7 @@ export interface VenuesApi {
   neighborhoods(): Promise<string[]>;
 
   /**
-   * The place picker (contract 3.4.0). Every venue Bevi has is searchable,
+   * The place picker (contract 3.5.0). Every venue Bevi has is searchable,
    * with or without an assortment, so this is wider than `inView`.
    *
    * With an empty `query` it answers "what is near me": the venues nearest

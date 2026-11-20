@@ -399,7 +399,7 @@ export interface Ranking {
 /**
  * A ranking with the Bev it ranks: Bev'd list rows and profile Activity posts.
  *
- * `venue` (contract 3.4.0) is where the user had it, or null when they did
+ * `venue` (contract 3.5.0) is where the user had it, or null when they did
  * not say. It belongs to the user's ranking of the Bev rather than to this
  * row, so it survives a re-rank untouched.
  */
@@ -454,7 +454,7 @@ export interface FeedItem {
   /** The total behind `alsoBevdBy`, so it is never less than `alsoBevdBy.length`. */
   alsoBevdCount: number;
   /**
-   * Where the actor had this Bev (contract 3.4.0), or null when they did not
+   * Where the actor had this Bev (contract 3.5.0), or null when they did not
    * say. Anyone who may see the post may see this, so an `ExplorePost` has it
    * too. It is the place on the actor's ranking today, not a snapshot from
    * when the post was written: changing it changes every post about that Bev.
@@ -661,7 +661,7 @@ export interface LatLngBounds {
 export type VenueKind = 'chain' | 'craft';
 
 /**
- * What kind of place a venue is (contract 3.4.0), for the glyph on a map pin
+ * What kind of place a venue is (contract 3.5.0), for the glyph on a map pin
  * and a picker row: a cafe, a store (convenience, grocery, pharmacy, deli), a
  * bar, a liquor shop, a restaurant, or 'other' when nothing has said. `kind`
  * cannot stand in for it: a Starbucks and a Duane Reade are both chains.
@@ -681,7 +681,7 @@ export interface Venue {
   name: string;
   kind: VenueKind;
   /**
-   * Contract 3.4.0. 'other' for a venue nothing has typed yet, and on the
+   * Contract 3.5.0. 'other' for a venue nothing has typed yet, and on the
    * parked venue map's reads (`inView`, `get`), which predate it.
    */
   placeType: PlaceType;
@@ -755,7 +755,7 @@ export interface VenueFilters {
 }
 
 // ---------------------------------------------------------------------------
-// Where a Bev was had (contract 3.4.0)
+// Where a Bev was had (contract 3.5.0)
 // ---------------------------------------------------------------------------
 
 /** A position on the Earth, in degrees. */

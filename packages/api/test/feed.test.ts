@@ -126,7 +126,7 @@ describe('feed.getExplore', () => {
 
     expect(page.items.map((i) => i.id)).toEqual(['9', '7']);
     expect(page.items[0]).toMatchObject({ type: 'RANKING', actor: { id: ACTOR }, score: 8.2, bucket: 'LOVED' });
-    // D-15: an ExplorePost carries no engagement at all. `venue` (3.4.0) is
+    // D-15: an ExplorePost carries no engagement at all. `venue` (3.5.0) is
     // where the Bev was had, which is part of the post, not engagement with it.
     expect(Object.keys(page.items[0]!).sort()).toEqual(
       ['actor', 'bev', 'bucket', 'createdAt', 'id', 'inMyWantToTry', 'note', 'score', 'type', 'venue'].sort(),

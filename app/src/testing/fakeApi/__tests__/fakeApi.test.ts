@@ -635,7 +635,7 @@ describe('feed.getExplore (S-04 + A-04)', () => {
     expect(explore.items.some((i) => i.actor.id === hop3.userId)).toBe(false); // three hops is too far
 
     // D-15: a read-only post, so no heart, no counts and no comments can be rendered. `venue`
-    // (3.4.0) is where the Bev was had: part of the post, not engagement with it.
+    // (3.5.0) is where the Bev was had: part of the post, not engagement with it.
     expect(Object.keys(explore.items[0]!).sort()).toEqual(
       ['actor', 'bev', 'bucket', 'createdAt', 'id', 'inMyWantToTry', 'note', 'score', 'type', 'venue'].sort(),
     );

@@ -1395,7 +1395,7 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
   });
 
   // -------------------------------------------------------------------------
-  // where a Bev was had (BEV-22, contract 3.4.0)
+  // where a Bev was had (BEV-22, contract 3.5.0)
   // -------------------------------------------------------------------------
   // As the venues section: it must pass with no venues at all. Everything that
   // needs one first asks `venues.search` for the nearest, and stops at the

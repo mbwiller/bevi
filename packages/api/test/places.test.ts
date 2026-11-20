@@ -1,4 +1,4 @@
-// BEV-22 (contract 3.4.0): what `rankings` and `venues` send for a place, and
+// BEV-22 (contract 3.5.0): what `rankings` and `venues` send for a place, and
 // how the answers are shaped. The SQL is covered by
 // supabase/tests/43_bev_locations.test.sql; this pins which function a call
 // reaches, because the choice between `submit_ranking` and its wrapper is made

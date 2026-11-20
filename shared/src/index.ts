@@ -1,13 +1,16 @@
 /**
  * Bumped on any breaking change to the types or `BeviApi` below.
  *
- * 3.4.0, over 3.3.0's native bug reporter: where a Bev was had (BEV-22).
+ * 3.5.0, queued behind 3.4.0 (the barcode product lookup, #295): where a
+ * Bev was had (BEV-22). Numbered for that order; if this lands first, it
+ * takes 3.4.0 and #295 moves up.
  * Additive: `RankedBev.venue` and `FeedItem.venue` (so `ExplorePost` too),
  * `SubmitRankingInput.venueId`, `rankings.setVenue`, `rankings.getVenue` and
  * `rankings.locationSummary`, and six `venues` methods: `search`,
- * `searchMore`, `addPlace`, `recent`, `bevdMap`, `bevdAt`. A venue may now be
- * anywhere on the Earth, and says what kind of place it is (`placeType`), so `NYC_BOUNDS` describes the imported venues and the parked
- * venue map, not every `Venue`. NOT a reason to raise `min_contract_version`:
+ * `searchMore`, `addPlace`, `recent`, `bevdMap`, `bevdAt`. A venue says what
+ * kind of place it is (`placeType`), and may now be anywhere on the Earth, so
+ * `NYC_BOUNDS` describes the imported venues and the parked venue map, not
+ * every `Venue`. NOT a reason to raise `min_contract_version`:
  * a client built against 3.3.0 never reads the new fields and calls none of
  * the new methods.
  *
@@ -82,8 +85,8 @@
 // 3.1.0: blocks and content reports (IS-7), additive.
 // 3.2.0: AppConfig gains minContractVersion and maintenanceMessage (IA-2), additive.
 // 3.3.0: BugReportInput.evidence[].file is an UploadPayload (the native bug reporter, IM-10), additive.
-// 3.4.0: where a Bev was had: a place on a ranking and a post, the place picker, the map (BEV-22), additive.
-export const CONTRACT_VERSION = '3.4.0';
+// 3.5.0: where a Bev was had: a place on a ranking and a post, the place picker, the map (BEV-22), additive.
+export const CONTRACT_VERSION = '3.5.0';
 
 export * from './enums';
 export * from './errors';

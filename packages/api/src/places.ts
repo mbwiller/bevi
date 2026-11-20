@@ -1,4 +1,4 @@
-// Where a Bev was had (BEV-22, contract 3.4.0): the reads that put a venue on
+// Where a Bev was had (BEV-22, contract 3.5.0): the reads that put a venue on
 // a post or a Bev'd row.
 //
 // The feed RPCs do not return a venue. They are called by app binaries that
