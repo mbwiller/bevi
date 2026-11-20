@@ -2,7 +2,8 @@ import { isApiError } from '@bevi/shared';
 
 /**
  * What crash reporting (crashReporting.ts) may never send, and which errors it does not send at all.
- * Pure functions with no SDK import, so the rules can be tested as data.
+ * Pure functions that depend on no reporter, so the rules can be tested as data and hold for
+ * whichever reporter is used.
  *
  * Two things can carry a credential out of the app: a header (`Authorization`, `apikey`, a cookie)
  * and a URL (a signed photo URL has its signature in the query string; an auth redirect has tokens
@@ -20,7 +21,7 @@ export const REDACTED = '[redacted]';
 
 /** Header, parameter and field names whose value is a credential, whatever it looks like. */
 const SECRET_KEY = /authorization|cookie|token|api[-_]?key|passw(or)?d|secret|signature|credential/i;
-/** Keys that hold a URL's query string or fragment by themselves (the native layer's `http.query`). */
+/** Keys that hold a URL's query string or fragment by themselves (a request log's `http.query`). */
 const QUERY_KEY = /^(http\.)?(query|query_string|fragment|search|hash)$/i;
 /** Keys whose value is one URL, absolute or not. */
 const URL_KEY = /^(url|uri|href|to|from|http\.url|referrer)$/i;
@@ -52,7 +53,7 @@ const MAX_DEPTH = 8;
 
 /**
  * A copy of any value with the rules above applied to every string and every key in it. Never
- * changes its argument: the SDK hands over objects the app may still hold.
+ * changes its argument: a caller hands over objects the app may still hold.
  */
 export function scrubValue(value: unknown, key?: string, depth = 0): unknown {
   if (typeof value === 'string') return key !== undefined && URL_KEY.test(key) ? scrubText(stripQuery(value)) : scrubText(value);
@@ -80,7 +81,11 @@ interface BreadcrumbLike {
   data?: Record<string, unknown>;
 }
 
-/** `beforeBreadcrumb`: the same breadcrumb with its message and data scrubbed. */
+/**
+ * One entry in the trail of what happened before an error (a request, a console line): the same
+ * breadcrumb with its message and data scrubbed. Nothing in the app keeps such a trail today; this
+ * and `scrubEvent` are here, tested, for the reporter that does.
+ */
 export function scrubBreadcrumb<T extends BreadcrumbLike>(breadcrumb: T): T {
   const next: BreadcrumbLike = { ...breadcrumb };
   if (typeof breadcrumb.message === 'string') next.message = scrubText(breadcrumb.message);
@@ -100,9 +105,9 @@ interface EventLike {
 }
 
 /**
- * `beforeSend`: the same event with its message, exception messages, breadcrumbs, request, extra,
- * contexts and tags scrubbed. Breadcrumbs are scrubbed again here because the native layer adds its
- * own to an event after `beforeBreadcrumb` has run, and those never passed through it.
+ * A whole report in the usual event shape: the same event with its message, exception messages,
+ * breadcrumbs, request, extra, contexts and tags scrubbed. Breadcrumbs are scrubbed again here
+ * because an event can be handed breadcrumbs that never passed through `scrubBreadcrumb`.
  */
 export function scrubEvent<T extends EventLike>(event: T): T {
   const next: EventLike = { ...event };

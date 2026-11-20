@@ -18,12 +18,8 @@ jest.mock('@/features/bug-report/loadHost', () => ({
 jest.mock('@/features/create-bev/loadNutritionDemo', () => ({
   loadNutritionDemo: () => Promise.resolve({ default: require('@/features/create-bev/NutritionDemo').NutritionDemo }),
 }));
-// Everything crash reporting does in the layout stays real (it is off: no suite has a DSN). Only
-// what the boundary hands it is watched.
-jest.mock('@/lib/crashReporting', () => ({
-  ...jest.requireActual<typeof import('@/lib/crashReporting')>('@/lib/crashReporting'),
-  captureError: jest.fn(),
-}));
+// What the boundary and the query client hand to crash reporting is watched, not sent anywhere.
+jest.mock('@/lib/crashReporting', () => ({ captureError: jest.fn() }));
 
 const APP_DIR = path.resolve(__dirname, '../app');
 const capture = captureError as jest.MockedFunction<typeof captureError>;

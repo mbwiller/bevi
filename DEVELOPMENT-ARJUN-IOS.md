@@ -45,10 +45,10 @@ Two new seams need a word, because iOS is the first time they matter:
 
 | Thing | Owner | Why it is not obvious |
 |---|---|---|
-| `app/app.config.ts`, `eas.json` | Matt | It is app config, in Matt's lane, but the values inside it (bundle id, Maps key, EAS project, Sentry DSN) come from accounts I own. I hand over values; Matt commits them. |
-| Signing credentials, App Store Connect API key, `EXPO_TOKEN`, `SENTRY_AUTH_TOKEN` | Me | Same class as `SUPABASE_ACCESS_TOKEN` (§2.4 of the main doc): a secret in a GitHub Environment, never in the repo. |
+| `app/app.config.ts`, `eas.json` | Matt | It is app config, in Matt's lane, but the values inside it (bundle id, Maps key, EAS project) come from accounts I own. I hand over values; Matt commits them. |
+| Signing credentials, App Store Connect API key, `EXPO_TOKEN` | Me | Same class as `SUPABASE_ACCESS_TOKEN` (§2.4 of the main doc): a secret in a GitHub Environment, never in the repo. |
 | `.github/workflows/ios.yml` | Me, `chore/*` PR, Matt approves | Same as `app.yml` today. Includes the CI steps for suites Matt writes in `app/`. |
-| Crash reporting | Me (account, build secret), Matt (SDK wiring) | New: see IS-4. |
+| Crash reporting | Not assigned | See IS-4: Sentry was dropped on 2026-11-19 for an in-house reporter that is not built, so there is no account and no build secret to own yet. |
 
 `AuthStorageAdapter` is **not** a contract type — it is defined at
 `packages/api/src/client.ts:4` and re-exported from `@bevi/api`. Changing it is
@@ -89,9 +89,8 @@ Matt cannot produce a build at all until this exists.
 - Signing: let EAS manage the distribution certificate and provisioning
   profile. Do not hand-manage certificates; there is no second developer to
   recover them from.
-- `SENTRY_AUTH_TOKEN` (IS-4) belongs in the same environment and must be
-  readable by the EAS build, or the crash reports arrive unsymbolicated and
-  tell us nothing.
+- ~~`SENTRY_AUTH_TOKEN` (IS-4)~~ Not needed: Sentry was dropped on 2026-11-19
+  (IS-4), so there is no Sentry project to create and no token to store.
 
 **Hands Matt:** bundle id, EAS project id, Apple team id, registered device UDIDs.
 **Check:** `eas whoami` works in CI; the app record is visible in App Store Connect; `eas device:list` shows both our phones.
@@ -515,8 +514,9 @@ Say these out loud so neither of us quietly assumes the other is doing them:
   bites when you offer one). `DEVELOPMENT-MATT.md:1092` already marks the old
   G1 task obsolete and it stays obsolete.
 - **App Tracking Transparency.** Not needed — no IDFA, no ad or attribution
-  SDK, and Sentry is not tracking. It must *stay* that way, because the App
-  Privacy answers (IM-12) will say "not used for tracking".
+  SDK, and no third-party crash-reporting SDK either (IS-4). It must *stay*
+  that way, because the App Privacy answers (IM-12) will say "not used for
+  tracking".
 
 ## 3. Open decisions (need both of us)
 
@@ -525,7 +525,7 @@ Say these out loud so neither of us quietly assumes the other is doing them:
 | IS-1 | Does the web app stay? | Decides whether every native path is a `.ios.tsx` split or a replacement, and whether the privacy/support URLs are free | Keep web. It hosts the policy URLs, keeps instant deploys, and keeps the bug reporter alive |
 | IS-2 | Which backend does TestFlight hit? | Shapes `eas.json`, EAS secrets and `ios.yml` | `preview` → `bevi-dev`, `production` → `bevi-prod` |
 | IS-3 | The demo account's age, and whether alcohol is visible to review | Changes the age-rating questionnaire answers and what the reviewer sees | Over 21, alcohol visible, rated 17+ |
-| IS-4 | Crash reporting on device | Today the only error channels are the internal bug reporter (web-only, IM-10) and Vercel logs, which do not exist for a binary. We would be blind | Add one (`@sentry/react-native`): my account and `SENTRY_AUTH_TOKEN`, Matt wires the SDK and the config plugin, and dSYM/source-map upload is part of it or the reports are useless |
+| IS-4 | Crash reporting on device | Today the only error channels are the internal bug reporter (web-only, IM-10) and Vercel logs, which do not exist for a binary. We would be blind | ~~Add one (`@sentry/react-native`): my account and `SENTRY_AUTH_TOKEN`, Matt wires the SDK and the config plugin~~ **Decided 2026-11-19: not Sentry.** An in-house reporter instead, **not built**. Until it is, a native crash is visible only through Apple's own crash reports (TestFlight, App Store Connect, Xcode Organizer); the app has a root error boundary and a `captureError` seam with nothing listening (`DEVELOPMENT-MATT-IOS.md`, IM-10, "IS-4 — crash reporting") |
 | ~~IS-5~~ | Bundle id | — | **Decided 2026-11-17: `app.bevi.ios`** (explicit App ID, team prefix `9NA45GL4CJ`). Must match `ios.bundleIdentifier` exactly |
 | IS-6 | `react-native-maps` (Google) or `expo-maps` (Apple Maps option) | Decides whether IA-7 exists at all, and raises the iOS deployment target | Spike at IM-7; do not pre-commit |
 | IS-7 | Do we ship report-content + block-user for v1? | Guideline 1.2 for a social app. Yes = contract + RPCs + RLS (me) and a report/block sheet (IM-13). No = the argument is invite-only, follows-only visibility and no public discovery, written into the review notes — and expect to be asked anyway | Ship it. It is small, and it is the difference between one review round and three |

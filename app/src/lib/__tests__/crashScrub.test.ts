@@ -67,7 +67,7 @@ describe('scrubValue', () => {
   });
 
   it("drops a key that holds a URL's query string or fragment by itself", () => {
-    // What the native layer records for a request: the URL without its query, and the query beside it.
+    // How a request log can record a request: the URL without its query, and the query beside it.
     expect(scrubValue({ url: 'https://ref.supabase.co/a.jpg', 'http.query': `token=${JWT}`, 'http.fragment': 'x', method: 'GET' })).toEqual({
       url: 'https://ref.supabase.co/a.jpg',
       method: 'GET',
@@ -144,7 +144,7 @@ describe('scrubEvent', () => {
       exception: { values: [{ type: 'Error', value: `Request failed: ${SIGNED_URL}`, stacktrace: { frames } }] },
       breadcrumbs: [
         { type: 'http', data: { url: SIGNED_URL } },
-        // Added by the native layer after `beforeBreadcrumb`: it never went through it.
+        // One that never went through `scrubBreadcrumb`, with the query beside the URL.
         { type: 'http', data: { url: 'https://ref.supabase.co/a.jpg', 'http.query': `token=${JWT}` } },
       ],
       request: { url: SIGNED_URL, headers: { Authorization: `Bearer ${JWT}`, apikey: KEY }, query_string: `token=${JWT}` },

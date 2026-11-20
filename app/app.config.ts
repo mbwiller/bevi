@@ -21,15 +21,6 @@ const SPLASH_WORDMARK_WIDTH = 123;
 // The EAS project (@bevi/bevi). Not a secret: it is in every build's manifest.
 const EAS_PROJECT_ID = '3797aad9-3485-4856-8e46-b6656a7716f1';
 
-// Crash reporting (IS-4). The Sentry organisation and project slugs, which are not secrets: the
-// plugin only joins the build once both are set, because its build phase uploads debug symbols and
-// fails without a project to send them to. The upload also needs SENTRY_AUTH_TOKEN, which is a
-// secret and lives in the EAS environment, never here. They are constants, not environment
-// variables, on purpose: anything that changes the native project changes the runtime version
-// below, so it has to read the same on a laptop and on EAS.
-const SENTRY_ORG: string | null = null;
-const SENTRY_PROJECT: string | null = null;
-
 const config: ExpoConfig = {
   name: 'Bevi',
   slug: 'bevi',
@@ -107,9 +98,6 @@ const config: ExpoConfig = {
     // only when asked. Harmless on EAS's Xcode 26 image, required on a Mac with Xcode 27. SDK 58
     // does this by default: drop the option in the upgrade PR.
     ['expo-build-properties', { ios: { enableSceneSupport: true } }],
-    ...(SENTRY_ORG && SENTRY_PROJECT
-      ? [['@sentry/react-native/expo', { organization: SENTRY_ORG, project: SENTRY_PROJECT }] as [string, Record<string, string>]]
-      : []),
   ],
   experiments: { typedRoutes: true },
   extra: { eas: { projectId: EAS_PROJECT_ID } },

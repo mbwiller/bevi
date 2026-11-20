@@ -18,11 +18,11 @@ import { connectQueryLifecycle } from './queryLifecycle';
  * It also connects React Query to the phone's connection and to the app coming to the foreground
  * (queryLifecycle.ts), which a browser provides by itself.
  *
- * A read or a save that fails for good (after its retries) is handed to crash reporting, which
- * keeps only the unexpected ones: an `ApiError` the contract gives a meaning to (offline, signed
- * out, not found …) is what the screen already explains and is never reported (lib/crashScrub.ts,
- * `isExpectedError`). Of a query's key only the family is sent (`users`, `rankings`): the rest of a
- * key holds ids and what a person typed into a search. On the web this does nothing.
+ * A read or a save that fails for good (after its retries) is handed to `captureError`
+ * (lib/crashReporting.ts), which keeps only the unexpected ones: an `ApiError` the contract gives a
+ * meaning to (offline, signed out, not found …) is what the screen already explains and is never
+ * reported (lib/crashScrub.ts, `isExpectedError`). Of a query's key only the family is passed
+ * (`users`, `rankings`): the rest of a key holds ids and what a person typed into a search.
  */
 export function createQueryClient(): QueryClient {
   connectQueryLifecycle();
