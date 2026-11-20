@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { StateMessage } from '@/components/EmptyState';
@@ -31,7 +31,8 @@ export function MaintenanceNotice({ message, onRetry, checking = false }: Mainte
       aria-modal
       style={[styles.overlay, { backgroundColor: colors.surface }]}
     >
-      <View style={styles.center}>
+      {/* Scrolls: a long message at the largest text size must not clip. */}
+      <ScrollView contentContainerStyle={styles.center}>
         <StateMessage icon="triangle-alert" title={MAINTENANCE_TITLE} body={message?.trim() || MAINTENANCE_DEFAULT_BODY} alert>
           <Pill
             variant="outlined"
@@ -44,13 +45,13 @@ export function MaintenanceNotice({ message, onRetry, checking = false }: Mainte
             {checking ? 'Checking…' : 'Try again'}
           </Pill>
         </StateMessage>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, elevation: 1000 },
-  center: { flex: 1, justifyContent: 'center', padding: spacing.gutter },
+  center: { flexGrow: 1, justifyContent: 'center', padding: spacing.gutter },
   action: { alignSelf: 'center' },
 });

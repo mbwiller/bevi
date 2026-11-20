@@ -1,4 +1,4 @@
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { StateMessage } from '@/components/EmptyState';
@@ -34,7 +34,8 @@ export function UpdateRequired({ version, build, appStoreId = APP_STORE_ID, supp
   const detail = [version ? `Version ${version}` : null, build ? `build ${build}` : null].filter(Boolean).join(' ');
   return (
     <SafeAreaView testID="update-required" style={[styles.screen, { backgroundColor: colors.surface }]}>
-      <View style={styles.center}>
+      {/* Scrolls: the message at the largest text size must not clip; the version line stays pinned below. */}
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.center}>
         <Wordmark height={WORDMARK_HEIGHT} />
         <StateMessage icon="triangle-alert" title={UPDATE_TITLE} body={appStoreId ? UPDATE_BODY_WITH_STORE : UPDATE_BODY_NO_STORE}>
           {appStoreId ? (
@@ -53,7 +54,7 @@ export function UpdateRequired({ version, build, appStoreId = APP_STORE_ID, supp
             </Pill>
           ) : null}
         </StateMessage>
-      </View>
+      </ScrollView>
       {detail ? (
         <Text style={[type.caption, styles.detail, { color: colors.textSecondary }]} maxFontSizeMultiplier={MAX_FONT_SCALE_DENSE}>
           {detail}
@@ -65,7 +66,8 @@ export function UpdateRequired({ version, build, appStoreId = APP_STORE_ID, supp
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.gutter, gap: spacing.xxl },
+  scroll: { flex: 1 },
+  center: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.gutter, gap: spacing.xxl },
   action: { alignSelf: 'center' },
   detail: { textAlign: 'center', paddingBottom: spacing.lg },
 });
