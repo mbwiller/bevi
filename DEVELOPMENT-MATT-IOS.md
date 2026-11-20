@@ -62,9 +62,11 @@ on both phones.
 the iOS work, each piece its own PR, summed in draft PR #276. It is one branch
 because the pieces depend on each other and the session that built them could
 not merge to `main`. Merge #276 with a merge commit, not a squash, so the PRs
-inside it are recorded as merged. The whole app suite passes on it (187
-suites, 1,765 tests), as do `packages/api` and `packages/ranking`, typecheck,
-and the web and iOS exports with the bundle check. **None of it has run on a
+inside it are recorded as merged. The whole app suite passes on it (194
+suites, 1,804 tests), as do `packages/api` and `packages/ranking`, typecheck,
+and the web and iOS exports with the bundle check. It was reviewed by the two
+integrator agents and their code findings are fixed (#289, #290); what they
+left for the founders is in #276's description. **None of it has run on a
 device**: there is no Xcode on the machine it was built on.
 
 | Milestone | State | Where | What is left |
@@ -74,14 +76,14 @@ device**: there is no Xcode on the machine it was built on.
 | IM-3 session | Done in code, including an offline launch with an expired token (#283) | `main`; #283 | The phone checks: force-quit, overnight, reinstall, offline launch |
 | IM-4 web assumptions | Done | `main`; #278 | Device checks |
 | IM-5 photos + barcode | Done in code. The scanner is `expo-camera` on native (#273) | `main`; #273, #278 | Every photo and scan check on a phone |
-| IM-6 native polish | The part that can be decided by reading the code is done: double screen animation, dark tab flash, timestamps, keyboard avoidance, sheets, list refresh jumps, VoiceOver announcements and states (#278, #288) | integration | Everything that needs eyes on a device: haptics and glass (still unused), Dynamic Type, the VoiceOver sweep |
+| IM-6 native polish | The part that can be decided by reading the code is done: double screen animation, dark tab flash, timestamps, keyboard avoidance, sheets, list refresh jumps, VoiceOver announcements and states, navigation that waits for a sheet to close (#278, #288, #290) | integration | Everything that needs eyes on a device: haptics and glass (still unused), Dynamic Type, the VoiceOver sweep |
 | IM-7 map | v1 scope done: an "In progress" page | `main` | The real map, after v1 |
 | IM-8 sharing + links | Share link fixed. The web host serves the app-site-association file (#279). The app's half is draft #281, held | `main`; #279 | #281 needs the Associated Domains capability on the App ID first, and a decision on the host |
 | IM-9 version gate | Done in code, reading the real row (#275, #280) | integration | The App Store id and a support address (`src/lib/appStore.ts`); the maintenance flip on a phone |
 | IM-10 bug reporter | Stage 1 on native done in code: button, window screenshot, note (#285, contract 3.3.0) | integration | Device checks; stage 2 (select element, record steps) |
 | IM-11 tests | Layer 1 grew with each piece. Layer 4 exists: `docs/ios-device-checklist.md`. The Feed suite's memory failure is fixed at its cause (#287) | integration | Layer 2 (a web jest project) and layer 3 (simulator flows): not started |
 | IM-12 store assets | Drafted as text: `docs/app-store-submission.md` | docs branch | Screenshots, the founders' read of every line, the forms |
-| IM-13 report + block | Done in code, both halves (#261 contract 3.1.0, #277) | integration | Device checks. Who reads the reports, and a published contact |
+| IM-13 report + block | Done in code, both halves (#261 contract 3.1.0, #277; #290 fixed report from a comment, which could not open on iPhone) | integration | Device checks, the comment path first. Who reads the reports, and a published contact |
 | IM-14 test-run interface | Not started | | After layer 3 exists |
 | IS-4 crash reporting | Sentry was added and removed the same night (#284, #286): the decision is an in-house reporter, **not built**. A root error boundary and a `captureError` seam with nothing behind it remain | integration | The reporter. Until then native crashes show only in Apple's reports |
 
@@ -100,8 +102,9 @@ Things to know before picking up the next branch:
   GitHub Environment exists, so `ios.yml` cannot build yet. Tag the commit a
   build is cut from.
 - **Over-the-air updates are configured** (#274): `runtimeVersion` is the
-  native project's fingerprint, and `preview` and `production` builds name
-  their channel. No update has been published; the first build from this
+  native project's fingerprint, narrowed by `app/fingerprint.config.js` (#290)
+  to inputs that can change the binary, and `preview` and `production` builds
+  name their channel. No update has been published; the first build from this
   branch is the first that can receive one.
 - **A test that mounts the app no longer exhausts the heap** (#287). React
   Native's jest preset made `performance.now` a recording mock, which kept a

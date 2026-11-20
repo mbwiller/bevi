@@ -119,8 +119,10 @@ do on it except where marked **use a test account**.
 - [ ] As A, on B's post: More actions > Report post. Pick a reason, add a
       note, send. The confirmation shows.
 - [ ] The note field with the keyboard up: the field and Send are visible.
-- [ ] From a comment by B: More actions opens over the comments sheet, and
-      closing it returns to the comments.
+- [ ] **First, because it was broken once:** open a post's comments, tap More
+      actions on a comment by B. The menu appears over the comments sheet,
+      Report comment and Block account both work, and closing it returns to
+      the comments. Repeat from the Activity list on B's profile.
 - [ ] As A, block B from B's profile: the confirmation says what blocking
       does; afterwards you are taken back, and B is gone from A's feed,
       search, followers and following.
