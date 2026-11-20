@@ -666,7 +666,11 @@ export interface VenuesApi {
 }
 
 export interface MetaApi {
-  /** Callable signed out. */
+  /**
+   * The version gate and the maintenance flag (`AppConfig`). Callable signed
+   * out: a client has to be able to read the gate before it can sign in.
+   * Only a successful read may block the app; on any error, leave it open.
+   */
   getAppConfig(): Promise<AppConfig>;
 }
 
