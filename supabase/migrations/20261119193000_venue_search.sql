@@ -18,7 +18,7 @@
 --
 -- EVERYTHING HERE IS ADDITIVE (supabase/CLAUDE.md, "Compatibility with
 -- clients you cannot redeploy"): two CHECKs get wider, two nullable columns
--- and three functions are new, and no existing function, column or return
+-- and a handful of functions are new, and no existing function, column or return
 -- shape changes. `venues_in_view` still clamps its viewport to the city, so
 -- the parked venue map answers exactly as before.
 --
@@ -360,3 +360,61 @@ grant execute on function public.upsert_google_venue(text, text, double precisio
 
 comment on function public.upsert_google_venue(text, text, double precision, double precision, text, text) is
   'BEV-22: the places Edge Function''s one write. Returns the existing venue for a place id, or a same-named venue within 75 m, else inserts a source=''google'' row. service_role only.';
+
+-- ---------------------------------------------------------------------------
+-- 6. assert_places_rate(): the Places fallback's meter
+-- ---------------------------------------------------------------------------
+-- Every call of the `places` Edge Function is a billed request to Google, so
+-- the function calls this FIRST, as the caller (the pattern of
+-- `assert_bug_report_rate`, 20261109000300): it is the function's proof that
+-- the JWT belongs to a signed-in user, and its rate limit, in one round trip.
+--
+-- 60 an hour. The fallback is something a person reaches for when our own
+-- search missed, a handful of times in a session; a client stuck in a loop is
+-- what this stops.
+create or replace function public.assert_places_rate() returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'BEVI_UNAUTHORIZED' using errcode = '42501';
+  end if;
+  perform public.assert_rate('places', 60, interval '1 hour');
+end;
+$$;
+
+alter function public.assert_places_rate() owner to postgres;
+revoke execute on function public.assert_places_rate() from public, anon;
+grant execute on function public.assert_places_rate() to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- 7. google_venues_due(p_older_than, p_limit) -> place ids to refresh
+-- ---------------------------------------------------------------------------
+-- The name and position of a google venue are a copy of Google's, and the
+-- copy has to be renewed. The `places` function's refresh action asks this
+-- for the rows whose copy is older than `p_older_than`, oldest first, and
+-- passes each back through `upsert_google_venue`, which re-dates it.
+create or replace function public.google_venues_due(
+  p_older_than interval default interval '25 days',
+  p_limit      integer default 50
+)
+returns table (google_place_id text)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select v.google_place_id
+    from public.venues v
+   where v.source = 'google'
+     and v.status = 'active'
+     and (v.google_refreshed_at is null or v.google_refreshed_at < now() - p_older_than)
+   order by v.google_refreshed_at asc nulls first, v.id asc
+   limit least(greatest(coalesce(p_limit, 50), 1), 200);
+$$;
+
+alter function public.google_venues_due(interval, integer) owner to postgres;
+revoke execute on function public.google_venues_due(interval, integer) from public, anon, authenticated;
+grant execute on function public.google_venues_due(interval, integer) to service_role;

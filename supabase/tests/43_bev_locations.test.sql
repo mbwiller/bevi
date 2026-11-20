@@ -8,7 +8,8 @@
 -- the two triggers that keep a place in step with its ranking -- a re-rank
 -- keeps it, a removal drops it, a merge moves it, an account deletion takes
 -- it; (5) the reads and who may see what -- the block, the age gate, the
--- follow scope of the map; (6) `upsert_google_venue`.
+-- follow scope of the map; (6) `upsert_google_venue`; (7) the Places
+-- fallback's rate limit and the list of google venues due a refresh.
 --
 -- Fixture uuid prefix: ...0000000b22NN (people 01-06, venues 11-16).
 -- Checked against the list in 27_venues_read.test.sql's header and the files
@@ -27,7 +28,7 @@
 -- commits. `set constraints all immediate` fires what is pending, which is
 -- how section 4 sees what a real transaction's end would do.
 begin;
-select plan(81);
+select plan(86);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -649,6 +650,41 @@ select throws_ok(
   $$ select public.upsert_google_venue('', 'x', 53.34, -6.26, null, null) $$,
   '22023', 'BEVI_VALIDATION', 'an empty place id: validation'
 );
+
+-- ---------------------------------------------------------------------------
+-- 7. The Places fallback's meter, and the refresh list
+-- ---------------------------------------------------------------------------
+select ok(
+  has_function_privilege('authenticated', 'public.assert_places_rate()', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.assert_places_rate()', 'EXECUTE')
+  and not has_function_privilege('authenticated', 'public.google_venues_due(interval, integer)', 'EXECUTE')
+  and has_function_privilege('service_role', 'public.google_venues_due(interval, integer)', 'EXECUTE'),
+  'a signed-in user may be metered; only the service role reads the refresh list'
+);
+
+update public.venues set google_refreshed_at = now() - interval '40 days' where google_place_id = 'ChIJ-pgtap-bev22-3';
+
+select results_eq(
+  $$ select google_place_id from public.google_venues_due() where google_place_id like 'ChIJ-pgtap-bev22-%' $$,
+  $$ values ('ChIJ-pgtap-bev22-3') $$,
+  'google_venues_due lists the google venues whose copy is older than 25 days, and no other'
+);
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000b2201", "role": "authenticated"}';
+select lives_ok($$ select public.assert_places_rate() $$, 'a signed-in user passes the meter');
+
+reset role;
+insert into public.user_actions (user_id, action)
+select '00000000-0000-4000-8000-0000000b2201', 'places' from generate_series(1, 59);
+set local role authenticated;
+
+select throws_ok($$ select public.assert_places_rate() $$,
+  'P0001', 'BEVI_RATE_LIMITED', 'the sixty-first call in an hour is rate limited');
+
+set local request.jwt.claims = '{"role": "authenticated"}';
+select throws_ok($$ select public.assert_places_rate() $$,
+  '42501', 'BEVI_UNAUTHORIZED', 'and a JWT with no user is refused before it is metered');
 
 select * from finish();
 rollback;
