@@ -5,7 +5,7 @@ import { StyleSheet } from 'react-native';
 import { captureError } from '@/lib/crashReporting';
 import { colors, size } from '@/theme';
 
-import { RootError } from '../RootError';
+import { errorDetails, RootError } from '../RootError';
 
 // Rendered bare, as Expo Router renders it: in place of the root layout, so with no
 // QueryClientProvider, no SafeAreaProvider and no gesture root around it.
@@ -46,13 +46,46 @@ it('scrolls, centred, so the message is not clipped at the largest text size, st
   expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy();
 });
 
-it('never shows the error itself', async () => {
+it('does not show the error itself until asked', async () => {
   const error = Object.assign(new TypeError("Cannot read properties of undefined (reading 'map')"), { code: 'E_RENDER' });
   await render(<RootError error={error} retry={retry} />);
   const shown = JSON.stringify(screen.toJSON());
   expect(shown).not.toContain('Cannot read');
   expect(shown).not.toContain('TypeError');
   expect(shown).not.toContain('E_RENDER');
+  expect(screen.queryByTestId('root-error-details')).toBeNull();
+});
+
+it('"Show details" shows the error\'s name, message and the top of its stack, and hides them again', async () => {
+  const error = new TypeError("Cannot read properties of undefined (reading 'map')");
+  error.stack = ["TypeError: Cannot read properties of undefined (reading 'map')", '    at NotePanel (index.js:1:2)', '    at ReportNote (index.js:3:4)'].join('\n');
+  await render(<RootError error={error} retry={retry} />);
+  await fireEvent.press(screen.getByRole('button', { name: 'Show details' }));
+  const details = screen.getByTestId('root-error-details');
+  expect(details.props.selectable).toBe(true);
+  expect(details).toHaveTextContent(/^TypeError: Cannot read properties of undefined \(reading 'map'\)/);
+  expect(details).toHaveTextContent(/at NotePanel/);
+  expect(retry).not.toHaveBeenCalled();
+  await fireEvent.press(screen.getByRole('button', { name: 'Hide details' }));
+  expect(screen.queryByTestId('root-error-details')).toBeNull();
+});
+
+describe('errorDetails', () => {
+  it('keeps the message once and at most eight lines of stack', () => {
+    const error = new Error('boom');
+    error.stack = ['Error: boom', ...Array.from({ length: 20 }, (_, i) => `    at f${i} (a.js:${i}:1)`)].join('\n');
+    const lines = errorDetails(error).split('\n');
+    expect(lines[0]).toBe('Error: boom');
+    expect(lines).toHaveLength(9);
+    expect(lines[8]).toBe('at f7 (a.js:7:1)');
+  });
+
+  it('scrubs anything shaped like a credential, and copes with a thrown non-error', () => {
+    const bearer = ['Bearer', 'abc.def.ghi-123456'].join(' ');
+    expect(errorDetails(new Error(`request failed with ${bearer}`))).not.toContain('abc.def.ghi-123456');
+    expect(errorDetails('just a string')).toBe('Error: just a string');
+    expect(errorDetails(null)).toBe('Error: null');
+  });
 });
 
 it('"Try again" is a labelled button with a 44pt target, and calls retry once', async () => {
@@ -60,7 +93,8 @@ it('"Try again" is a labelled button with a 44pt target, and calls retry once', 
   const button = screen.getByRole('button', { name: 'Try again' });
   expect(button.props.accessibilityLabel).toBe('Try again');
   const visual = StyleSheet.flatten(button.props.style).height as number;
-  const target = StyleSheet.flatten(screen.getByTestId('hit-target').props.style);
+  // Two pills now (Try again, Show details): the first target is Try again's.
+  const target = StyleSheet.flatten(screen.getAllByTestId('hit-target')[0]!.props.style);
   expect(target.position).toBe('absolute');
   // The pill is outlined: its 1pt border sits inside its height, and the target reaches past both edges.
   expect(visual - 2 - (target.top as number) - (target.bottom as number)).toBeGreaterThanOrEqual(size.target);
