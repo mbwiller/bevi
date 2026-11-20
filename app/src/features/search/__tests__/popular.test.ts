@@ -14,6 +14,7 @@ function row(id: string, categoryId: string): LeaderboardRow {
       categoryId: categoryId as CategoryId,
       photoUrl: null,
       iconUrl: null,
+      iconLabelBand: null,
       photoStatus: 'ready',
       priceTier: 1,
       priceEstimated: false,

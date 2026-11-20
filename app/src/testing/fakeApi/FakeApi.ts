@@ -818,6 +818,11 @@ export class FakeApi implements BeviApi {
 
   private toSummary(b: FakeBev): BevSummary {
     const photo = this.assetUrlAndStatus(b.photoAssetId);
+    // What `generatedIcons.ts` does to every summary the real API returns: a
+    // COMPLETED generated icon takes the icon slot, and carries the band the
+    // caller letters across it. Pending, failed and 'none' leave it empty, so
+    // the Bev goes on showing its creator's photograph until the icon exists.
+    const icon = this.iconFor(b);
     return {
       id: b.id,
       name: b.name,
@@ -825,9 +830,11 @@ export class FakeApi implements BeviApi {
       flavor: b.flavor,
       categoryId: b.categoryId,
       photoUrl: photo.url,
-      // The real API serves an icon from the `bev-icons` bucket. The fake catalog has no icon rows,
-      // so none: bevImageProps then falls back to the category art.
-      iconUrl: null,
+      // The fake catalog has no AUTHORED icon rows (see `fallbackIconUrlFor`),
+      // so this is the generated icon or nothing, and bevImageProps falls back
+      // to the photograph and then the category art.
+      iconUrl: icon.url,
+      iconLabelBand: icon.url ? { x: 0.33, y: 0.29, width: 0.34, height: 0.25, dark: true } : null,
       photoStatus: photo.status,
       priceTier: b.priceTier,
       priceEstimated: b.priceEstimated,

@@ -98,7 +98,9 @@ export default function BevDetailScreen() {
     body = <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
   } else {
     const brand = brandLine(bev);
-    // Only a real photo opens the viewer; an authored icon (bevImageProps' fallback) is art, not a photo.
+    // Only a real photo opens the viewer, and the hero may now be the Bev's icon rather than the
+    // photo (`bevImageProps` puts the icon first): tapping it still shows the photograph it was
+    // made from, and a Bev with no photo is not pressable at all.
     const photo = bev.photoUrl;
     const ranked = !!bev.myRanking;
     const image = <BevImage size={HERO} {...bevImageProps(bev)} />;
@@ -131,7 +133,7 @@ export default function BevDetailScreen() {
         </View>
 
         {showGeneratedIconPanel ? (
-          <GeneratedIconPanel name={bev.name} brand={bev.brand} icon={iconQuery.data} isOwner={isBevOwner} />
+          <GeneratedIconPanel icon={iconQuery.data} isOwner={isBevOwner} />
         ) : null}
 
         <View style={showGeneratedIconPanel ? styles.statsAfterIcon : undefined}>
