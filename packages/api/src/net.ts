@@ -67,6 +67,26 @@ export const UPLOAD_TIMEOUT_MS = 120_000;
  */
 export const FUNCTION_TIMEOUT_MS = 150_000;
 
+/**
+ * How long `getSession()` (`auth.ts`) waits for an answer before it reports
+ * `ApiError('network')`.
+ *
+ * Not a request deadline: `getSession()` reads storage, and makes a request
+ * only when the stored access token has expired and must be refreshed. That
+ * refresh is auth-js's, and auth-js retries a failed one with backoff for up
+ * to 30 s before anything waiting on it hears back -- each attempt bounded by
+ * `REQUEST_TIMEOUT_MS`, the series by nothing this package controls. Opened
+ * with no connection an hour or more after it was last used, the app sat on
+ * its splash for 25-30 s (BEV-27).
+ *
+ * A healthy refresh is one round trip, 100-600 ms, 2-3 s on a cold cellular
+ * connection (see `REQUEST_TIMEOUT_MS`). 5 s is past that and still short
+ * enough to wait on a splash. Being wrong is cheap in the one direction it can
+ * be wrong: the refresh is not cancelled, so one that lands late still reaches
+ * the app, as an `onAuthChange` event carrying the session.
+ */
+export const SESSION_CHECK_TIMEOUT_MS = 5_000;
+
 /** The Storage REST path prefix; every object route sits under it. */
 const STORAGE_OBJECT_PATH = '/storage/v1/object';
 
