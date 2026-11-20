@@ -6,6 +6,7 @@ import type { BeviApi } from '@bevi/shared';
 import { createNutritionApi } from './nutrition';
 import { createAuthApi } from './auth';
 import { createBevsApi } from './bevs';
+import { createBlocksApi } from './blocks';
 import { createBugsApi } from './bugs';
 import { createCategoriesApi } from './categories';
 import { type BeviApiConfig, createSupabaseClientFor } from './client';
@@ -18,6 +19,7 @@ import { createMetaApi } from './meta';
 import { createProfileApi } from './profile';
 import { createRankingsApi } from './rankings';
 import { createRecsApi } from './recs';
+import { createReportsApi } from './reports';
 import { createVenuesApi } from './venues';
 import { registerAutoRefreshTarget } from './session';
 import { createSnapshotCache } from './snapshot';
@@ -76,6 +78,8 @@ export function createBeviApi(config: BeviApiConfig): BeviApi {
     recs: createRecsApi(client, snapshots),
     venues: createVenuesApi(client),
     bugs: createBugsApi(client),
+    blocks: createBlocksApi(client),
+    reports: createReportsApi(client),
     meta: createMetaApi(),
   };
 }

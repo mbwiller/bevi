@@ -16,6 +16,7 @@ import type {
   BevPrediction,
   BevSimilarity,
   BevSummary,
+  BlockedUser,
   Borough,
   Bucket,
   BucketBev,
@@ -153,6 +154,18 @@ export function mapEmbeddedProfile(client: SupabaseClient, row: EmbeddedProfileR
     canSeeAlcohol: false,
     onboarded: row.onboarded,
   };
+}
+
+/**
+ * One row of `list_blocked_users` (IS-7, 20261118220000): the profile columns
+ * the social-context functions return, plus when the caller blocked them.
+ */
+export interface BlockedUserRpcRow extends EmbeddedProfileRow {
+  blocked_at: string;
+}
+
+export function mapBlockedUser(client: SupabaseClient, row: BlockedUserRpcRow): BlockedUser {
+  return { ...mapEmbeddedProfile(client, row), blockedAt: row.blocked_at };
 }
 
 /** One row of `get_followed_by` (20261111000100): who the caller follows that follows `user_id`. */

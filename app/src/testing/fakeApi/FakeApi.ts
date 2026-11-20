@@ -50,11 +50,15 @@ import {
   hoursKnown,
   openAt,
   HANDLE_PATTERN,
+  REPORT_NOTE_MAX,
+  REPORT_REASONS,
   RESERVED_HANDLES,
   type ApiErrorCode,
   type AuthApi,
   type Bev,
   type BeviApi,
+  type BlockedUser,
+  type BlocksApi,
   type BevOfPeriod,
   type BevPrediction,
   type BevsApi,
@@ -96,6 +100,11 @@ import {
   type RankingsApi,
   type Recommendation,
   type RecsApi,
+  type ReportContentInput,
+  type ReportContentKind,
+  type ReportContentResult,
+  type ReportReason,
+  type ReportsApi,
   type Session,
   type SignInInput,
   type SignUpInput,
@@ -327,6 +336,23 @@ export class FakeApi implements BeviApi {
    */
   private bugOrder = new Map<string, string[]>();
   private nextTicket = 100;
+  /**
+   * IS-7: `user_blocks` and `content_reports`. Kept beside the bug ledger rather than in FakeDb,
+   * so they are in memory only (a reload of a persisted dev db starts with none) and FakeDb's
+   * schema does not move. `resetToFixtures` and account deletion clear them.
+   */
+  private blockRows: { blockerId: string; blockedId: string; createdAt: string }[] = [];
+  private contentReports: {
+    id: string;
+    reporterId: string;
+    kind: ReportContentKind;
+    targetId: string;
+    reportedUserId: string;
+    reason: ReportReason;
+    note: string | null;
+    createdAt: string;
+  }[] = [];
+  private nextContentReport = 1;
 
   constructor(options: FakeApiOptions = {}) {
     this.storage = options.storage ?? null;
@@ -368,6 +394,9 @@ export class FakeApi implements BeviApi {
     this.bugLedger.clear();
     this.bugOrder.clear();
     this.nextTicket = 100;
+    this.blockRows = [];
+    this.contentReports = [];
+    this.nextContentReport = 1;
     this.commit();
     this.emit();
   }
@@ -500,6 +529,20 @@ export class FakeApi implements BeviApi {
 
   private user(id: string): FakeUser {
     return this.db.users.find((u) => u.id === id) ?? fail('not_found', 'No such user');
+  }
+
+  /**
+   * private.is_blocked: a block between these two people in EITHER direction. The one rule for
+   * "hidden by a block"; never exposed, since it would tell a blocked person who blocked them.
+   */
+  private blockedBetween(a: string, b: string): boolean {
+    return this.blockRows.some((x) => (x.blockerId === a && x.blockedId === b) || (x.blockerId === b && x.blockedId === a));
+  }
+
+  /** `user(id)`, but 'not_found' across a block too, as every read of a named person now says. */
+  private visibleUser(id: string, viewer: FakeUser): FakeUser {
+    const u = this.user(id);
+    return this.blockedBetween(viewer.id, u.id) ? fail('not_found', 'No such user') : u;
   }
 
   private venueRows(): FakeVenue[] {
@@ -881,6 +924,7 @@ export class FakeApi implements BeviApi {
     db.rankings = db.rankings.filter((r) => r.userId !== userId);
     db.comparisons = db.comparisons.filter((c) => c.userId !== userId);
     db.follows = db.follows.filter((f) => f.followerId !== userId && f.followeeId !== userId);
+    this.blockRows = this.blockRows.filter((b) => b.blockerId !== userId && b.blockedId !== userId);
     db.wantToTry = db.wantToTry
       .filter((w) => w.userId !== userId)
       .map((w) => (w.viaUserId === userId ? { ...w, viaUserId: null } : w));
@@ -898,13 +942,19 @@ export class FakeApi implements BeviApi {
       !!e &&
       !!bev &&
       (e.actorId === viewer.id || this.db.follows.some((f) => f.followerId === viewer.id && f.followeeId === e.actorId)) &&
+      !this.blockedBetween(viewer.id, e.actorId) &&
       this.visible(bev, viewer);
     return sees ? e! : fail('not_found', 'No such post');
   }
 
-  /** A post's comments that aren't deleted, oldest first. */
-  private liveComments(eventId: string): FakeComment[] {
-    return (this.db.comments ?? []).filter((c) => c.feedEventId === eventId && !c.deleted).sort((a, z) => commentSeq(a) - commentSeq(z));
+  /**
+   * A post's comments that aren't deleted, oldest first. With a viewer, also without the
+   * comments of anyone on the other side of a block from them (post_comments_select, IS-7).
+   */
+  private liveComments(eventId: string, viewer?: FakeUser): FakeComment[] {
+    return (this.db.comments ?? [])
+      .filter((c) => c.feedEventId === eventId && !c.deleted && !(viewer && this.blockedBetween(viewer.id, c.userId)))
+      .sort((a, z) => commentSeq(a) - commentSeq(z));
   }
 
   private toComment(c: FakeComment, viewer: FakeUser): Comment {
@@ -992,6 +1042,11 @@ export class FakeApi implements BeviApi {
       () => {
         const me = this.requireUser();
         this.wipeUserData(me.id);
+        // content_reports: a report about the account goes with it; one the account filed stays,
+        // reporterless (reporter_id `on delete set null`), so the person it named is still reviewed.
+        this.contentReports = this.contentReports
+          .filter((r) => r.reportedUserId !== me.id)
+          .map((r) => (r.reporterId === me.id ? { ...r, reporterId: '' } : r));
         this.db.assets = this.db.assets.filter((a) => a.userId !== me.id);
         for (const b of this.db.bevs) if (b.createdById === me.id) b.createdById = null;
         this.db.users = this.db.users.filter((u) => u.id !== me.id);
@@ -1084,7 +1139,7 @@ export class FakeApi implements BeviApi {
     getUser: (id: string) =>
       this.call('profile.getUser', () => {
         const me = this.requireUser();
-        return this.toRow(this.user(id), me);
+        return this.toRow(this.visibleUser(id, me), me);
       }),
 
     searchUsers: (params) =>
@@ -1092,7 +1147,12 @@ export class FakeApi implements BeviApi {
         const me = this.requireUser();
         const q = norm(params.q).replace(/^@/, '');
         const rows = this.db.users
-          .filter((u) => u.id !== me.id && (!q || u.handle.includes(q) || norm(u.displayName).includes(q)))
+          .filter(
+            (u) =>
+              u.id !== me.id &&
+              !this.blockedBetween(me.id, u.id) &&
+              (!q || u.handle.includes(q) || norm(u.displayName).includes(q)),
+          )
           .sort((a, z) => Number(z.handle.startsWith(q)) - Number(a.handle.startsWith(q)) || a.handle.localeCompare(z.handle))
           .map((u) => this.toRow(u, me));
         return paginate(rows, params, 25);
@@ -1103,12 +1163,15 @@ export class FakeApi implements BeviApi {
     getMine: () => this.call('stats.getMine', () => this.statsFor(this.requireUser())),
     getUser: (id: string) =>
       this.call('stats.getUser', () => {
-        this.requireUser();
-        return this.statsFor(this.user(id));
+        const me = this.requireUser();
+        return this.statsFor(this.visibleUser(id, me));
       }),
     getCategoryProgress: () => this.call('stats.getCategoryProgress', () => this.categoryProgress(this.requireUser())),
     getTasteProfile: (userId: string) =>
-      this.call('stats.getTasteProfile', () => this.tasteProfile(this.requireUser(), this.user(userId))),
+      this.call('stats.getTasteProfile', () => {
+        const me = this.requireUser();
+        return this.tasteProfile(me, this.visibleUser(userId, me));
+      }),
   };
 
   /**
@@ -1170,6 +1233,8 @@ export class FakeApi implements BeviApi {
           const me = this.requireUser();
           this.user(id);
           if (id === me.id) invalid('id', "You can't follow yourself");
+          // follow_user (IS-7): refused across a block either way, as "no such user".
+          this.visibleUser(id, me);
           if (!this.isFollowing(me.id, id)) this.db.follows.push({ followerId: me.id, followeeId: id, createdAt: this.nowIso() });
         },
         true,
@@ -1190,8 +1255,9 @@ export class FakeApi implements BeviApi {
       this.call('follows.listFollowers', () => {
         const me = this.requireUser();
         this.user(id);
+        // follows_select (IS-7): no edge with someone across a block from the caller at either end.
         const rows = this.db.follows
-          .filter((f) => f.followeeId === id)
+          .filter((f) => f.followeeId === id && !this.blockedBetween(me.id, f.followerId) && !this.blockedBetween(me.id, f.followeeId))
           .sort((a, z) => z.createdAt.localeCompare(a.createdAt))
           .map((f) => this.toRow(this.user(f.followerId), me));
         return paginate(rows, page, 50);
@@ -1202,7 +1268,7 @@ export class FakeApi implements BeviApi {
         const me = this.requireUser();
         this.user(id);
         const rows = this.db.follows
-          .filter((f) => f.followerId === id)
+          .filter((f) => f.followerId === id && !this.blockedBetween(me.id, f.followerId) && !this.blockedBetween(me.id, f.followeeId))
           .sort((a, z) => z.createdAt.localeCompare(a.createdAt))
           .map((f) => this.toRow(this.user(f.followeeId), me));
         return paginate(rows, page, 50);
@@ -1213,7 +1279,7 @@ export class FakeApi implements BeviApi {
         const me = this.requireUser();
         const count = (id: string) => this.db.rankings.filter((r) => r.userId === id).length;
         return this.db.users
-          .filter((u) => u.id !== me.id && !this.isFollowing(me.id, u.id))
+          .filter((u) => u.id !== me.id && !this.isFollowing(me.id, u.id) && !this.blockedBetween(me.id, u.id))
           .sort((a, z) => count(z.id) - count(a.id) || a.handle.localeCompare(z.handle))
           .slice(0, 10)
           .map((u): SuggestedProfile => ({ ...this.toRow(u, me), ...this.followedBy(u, me) }));
@@ -1635,8 +1701,9 @@ export class FakeApi implements BeviApi {
       this.call('rankings.listUser', () => {
         const me = this.requireUser();
         this.user(id);
+        // rankings_select (IS-7): someone across a block has no visible rankings, so an empty list.
         const rows = this.db.rankings
-          .filter((r) => r.userId === id && this.visible(this.bev(r.bevId), me))
+          .filter((r) => r.userId === id && !this.blockedBetween(me.id, id) && this.visible(this.bev(r.bevId), me))
           .sort((a, z) => z.updatedAt.localeCompare(a.updatedAt) || z.id.localeCompare(a.id))
           .map((r) => this.toRanked(r));
         return paginate(rows, page, 20);
@@ -1838,7 +1905,7 @@ export class FakeApi implements BeviApi {
     for (const e of events) {
       const actor = this.db.users.find((u) => u.id === e.actorId);
       const bev = this.db.bevs.find((b) => b.id === e.bevId);
-      if (!actor || !bev || !this.visible(bev, me)) continue;
+      if (!actor || !bev || !this.visible(bev, me) || this.blockedBetween(me.id, actor.id)) continue;
       // The feed carries rankings only (contract 2.0.0): a save is never a post.
       const r = e.type === 'RANKING' ? this.rankingOf(e.actorId, e.bevId) : undefined;
       if (!r) continue; // ranking since removed
@@ -1854,9 +1921,9 @@ export class FakeApi implements BeviApi {
         inMyWantToTry: saved.has(bev.id),
         likeCount: likes.filter((l) => l.feedEventId === e.id).length,
         likedByMe: likes.some((l) => l.feedEventId === e.id && l.userId === me.id),
-        commentCount: this.liveComments(e.id).length,
+        commentCount: this.liveComments(e.id, me).length,
         // The first seven, oldest first, as get_feed returns them.
-        comments: this.liveComments(e.id).slice(0, FEED_INLINE_COMMENTS).map((c) => this.toComment(c, me)),
+        comments: this.liveComments(e.id, me).slice(0, FEED_INLINE_COMMENTS).map((c) => this.toComment(c, me)),
         // Relative to the caller, whoever's page this is. The Bev is visible to `me` (checked
         // above), which is the only age gate the SQL applies to it too.
         ...this.alsoBevd(me, e.actorId, bev.id),
@@ -1878,7 +1945,7 @@ export class FakeApi implements BeviApi {
     for (const id of direct) for (const id2 of following(id)) twoHops.add(id2);
     const candidates =
       this.db.users.length < EXPLORE_GLOBAL_FALLBACK_USERS ? this.db.users.map((u) => u.id) : [...twoHops];
-    return new Set(candidates.filter((id) => id !== me.id && !direct.has(id)));
+    return new Set(candidates.filter((id) => id !== me.id && !direct.has(id) && !this.blockedBetween(me.id, id)));
   }
 
   /**
@@ -1934,7 +2001,7 @@ export class FakeApi implements BeviApi {
     listUser: (userId: string, page?: PageParams) =>
       this.call('feed.listUser', () => {
         const me = this.requireUser();
-        this.user(userId);
+        this.visibleUser(userId, me);
         // feed_event_visible: only the caller's own and followed users' posts; anyone else's page is empty.
         const actors = this.feedActors(me).has(userId) ? new Set([userId]) : new Set<string>();
         return paginate(this.feedItems(me, actors), page, 20);
@@ -2044,7 +2111,7 @@ export class FakeApi implements BeviApi {
           if (!m) invalid('cursor', 'Malformed cursor');
           before = Number(m[1]);
         }
-        const rows = this.liveComments(eventId)
+        const rows = this.liveComments(eventId, me)
           .reverse()
           .filter((c) => commentSeq(c) < before)
           .slice(0, limit);
@@ -2120,7 +2187,11 @@ export class FakeApi implements BeviApi {
     users: (page?: PageParams) =>
       this.call('leaderboard.users', () => {
         const me = this.requireUser();
-        const rows = this.userBoard().map((r) => ({
+        // get_user_leaderboard (IS-7): rows across a block drop out, and the others keep their global
+        // rank rather than being renumbered.
+        const rows = this.userBoard()
+          .filter((r) => !this.blockedBetween(me.id, r.u.id))
+          .map((r) => ({
           rank: r.rank,
           profile: this.toProfile(r.u, me),
           points: r.points,
@@ -2419,6 +2490,122 @@ export class FakeApi implements BeviApi {
           return this.bugSummaries(me.id);
         },
         false,
+      ),
+  };
+
+  // -------------------------------------------------------------------------
+  // Blocks and content reports (IS-7), as block_user / unblock_user / list_blocked_users /
+  // report_content do them (20261118220000). No rate limits, as elsewhere in the fake.
+  // -------------------------------------------------------------------------
+
+  blocks: BlocksApi = {
+    block: (userId: string) =>
+      this.call(
+        'blocks.block',
+        () => {
+          const me = this.requireUser();
+          if (userId === me.id) invalid('cannot block self', "You can't block yourself");
+          this.user(userId);
+          if (!this.blockRows.some((b) => b.blockerId === me.id && b.blockedId === userId)) {
+            this.blockRows.push({ blockerId: me.id, blockedId: userId, createdAt: this.nowIso() });
+          }
+          // Both follow edges go, and unblocking never brings them back.
+          this.db.follows = this.db.follows.filter(
+            (f) => !(f.followerId === me.id && f.followeeId === userId) && !(f.followerId === userId && f.followeeId === me.id),
+          );
+        },
+        true,
+      ),
+
+    unblock: (userId: string) =>
+      this.call(
+        'blocks.unblock',
+        () => {
+          const me = this.requireUser();
+          // Only the caller's own block; a block made against them is untouched (and unseen).
+          this.blockRows = this.blockRows.filter((b) => !(b.blockerId === me.id && b.blockedId === userId));
+        },
+        true,
+      ),
+
+    list: (page?: PageParams) =>
+      this.call('blocks.list', () => {
+        const me = this.requireUser();
+        // One direction only: the people the caller blocked, newest first, then by id.
+        const rows = this.blockRows
+          .map((b, written) => ({ b, written }))
+          .filter(({ b }) => b.blockerId === me.id)
+          .sort((a, z) => z.b.createdAt.localeCompare(a.b.createdAt) || z.written - a.written)
+          .flatMap(({ b }): BlockedUser[] => {
+            const u = this.db.users.find((x) => x.id === b.blockedId);
+            return u ? [{ ...this.toProfile(u, me), birthdate: null, canSeeAlcohol: false, blockedAt: b.createdAt }] : [];
+          });
+        return paginate(rows, page, 50);
+      }),
+  };
+
+  reports: ReportsApi = {
+    report: (input: ReportContentInput) =>
+      this.call(
+        'reports.report',
+        (): ReportContentResult => {
+          const me = this.requireUser();
+          if (!REPORT_REASONS.includes(input.reason)) invalid('reason', 'Unknown reason');
+          // btrim(note, E' \t\n\r'); blank is no note; at most REPORT_NOTE_MAX code points.
+          const note = (input.note ?? '').replace(/^[ \t\n\r]+|[ \t\n\r]+$/g, '') || null;
+          if (note && Array.from(note).length > REPORT_NOTE_MAX) invalid('note', `A note is at most ${REPORT_NOTE_MAX} characters`);
+
+          // Anything the caller can be shown (20261119100000), or by someone the caller blocked (one
+          // direction: so Block then Report works, and a blocked person cannot probe the blocker's
+          // content -- every "shown" rule below is false across a block either way).
+          const iBlocked = (userId: string) => this.blockRows.some((b) => b.blockerId === me.id && b.blockedId === userId);
+          const feedShows = (eventId: string) => {
+            try {
+              this.visibleFeedEvent(eventId, me);
+              return true;
+            } catch (e) {
+              if (e instanceof ApiError && e.code === 'not_found') return false;
+              throw e;
+            }
+          };
+          let subject: string;
+          if (input.kind === 'post') {
+            const e = this.db.feed.find((x) => x.id === input.id) ?? fail('not_found', 'No such post');
+            // The feed's rule (feed, a profile's posts), or Explore's: the same rows getExplore
+            // returns. Neither has a recency bound in the fake, matching the SQL's choice.
+            const shown = feedShows(e.id) || this.explorePosts(me).some((p) => p.id === e.id);
+            if (!iBlocked(e.actorId) && !shown) fail('not_found', 'No such post');
+            subject = e.actorId;
+          } else if (input.kind === 'comment') {
+            const c = (this.db.comments ?? []).find((x) => x.id === input.id && !x.deleted) ?? fail('not_found', 'No such comment');
+            // Comments are never in Explore (D-15): a visible post, and an author not across a block.
+            const shown = feedShows(c.feedEventId) && !this.blockedBetween(me.id, c.userId);
+            if (!iBlocked(c.userId) && !shown) fail('not_found', 'No such comment');
+            subject = c.userId;
+          } else if (input.kind === 'profile') {
+            subject = this.user(input.id).id;
+          } else {
+            invalid('target', 'Unknown report kind');
+          }
+          if (subject === me.id) invalid('cannot report own content', "You can't report yourself");
+
+          // One report per (reporter, content): a repeat answers with the first one's id.
+          const existing = this.contentReports.find((r) => r.reporterId === me.id && r.kind === input.kind && r.targetId === input.id);
+          if (existing) return { reportId: existing.id };
+          const id = String(this.nextContentReport++);
+          this.contentReports.push({
+            id,
+            reporterId: me.id,
+            kind: input.kind,
+            targetId: input.id,
+            reportedUserId: subject,
+            reason: input.reason,
+            note,
+            createdAt: this.nowIso(),
+          });
+          return { reportId: id };
+        },
+        true,
       ),
   };
 

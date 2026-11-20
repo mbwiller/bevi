@@ -1,6 +1,17 @@
 /**
  * Bumped on any breaking change to the types or `BeviApi` below.
  *
+ * 3.1.0, over 3.0.0's custom Bevs and generated icons: blocking and content
+ * reporting (IS-7, App Store Guideline 1.2). `BeviApi` gains `blocks` (`block`,
+ * `unblock`, and `list` returning `Page<BlockedUser>`) and `reports` (`report`,
+ * about a post, a comment or a profile, with a `ReportReason` and an optional
+ * note), plus `ReportContentKind`, `ReportReason`, `REPORT_REASONS` and
+ * `REPORT_NOTE_MAX`. Purely additive for callers, hence a minor: no existing
+ * type or method changes shape. A block does change what existing reads return
+ * (the two people drop out of each other's feeds, comments and lists, and read
+ * each other as 'not_found'), but through codes every older client already
+ * handles. Nothing lets a caller learn who has blocked them.
+ *
  * 3.0.0, over 2.15.0's raw-byte uploads: `CreateBevInput.photoAssetId` became
  * OPTIONAL. That is a widening for anything CONSTRUCTING the input, but a
  * breaking change for anything READING it -- every `BeviApi` implementation
@@ -32,7 +43,8 @@
  * ported.
  */
 // 3.0.0: user-created photo-backed Bevs enqueue icon generation automatically.
-export const CONTRACT_VERSION = '3.0.0';
+// 3.1.0: blocks and content reports (IS-7), additive.
+export const CONTRACT_VERSION = '3.1.0';
 
 export * from './enums';
 export * from './errors';
