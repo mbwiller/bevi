@@ -233,6 +233,7 @@ export const COMPONENT_FILES: Readonly<Record<string, string>> = {
   VenueRow: 'app/src/components/VenueRow.tsx',
   VenueSheet: 'app/src/components/VenueSheet.tsx',
   VerifyButton: 'app/src/features/bug-report/ReportsSheet.tsx',
+  VersionLine: 'app/src/features/settings/VersionLine.web.tsx',
   WantToTryTab: 'app/src/features/lists/WantToTryTab.tsx',
   WebLayer: 'app/src/features/bug-report/ReportLayer.tsx',
   Wordmark: 'app/src/components/Wordmark.tsx',
