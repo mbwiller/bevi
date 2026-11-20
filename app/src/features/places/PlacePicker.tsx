@@ -19,6 +19,7 @@ import {
   MORE_PLACES,
   NEARBY,
   NO_MATCH,
+  OPEN_SETTINGS,
   PICKER_HINT,
   PICKER_PLACEHOLDER,
   PICKER_TITLE,
@@ -30,6 +31,7 @@ import {
   searchMoreLabel,
 } from './copy';
 import { PlaceRow } from './PlaceRow';
+import { openPositionSettings } from './position';
 import { usePosition } from './usePosition';
 
 export interface PlacePickerBodyProps {
@@ -181,6 +183,11 @@ export function PlacePickerBody({ active, selected = null, onSelect, onRemove, s
 
       {!waiting && !query && results.length > 0 && position.kind === 'denied' ? (
         <Text style={[type.body, styles.note, { color: colors.textSecondary }]}>{LOCATION_OFF}</Text>
+      ) : null}
+
+      {/* After a refusal iOS never asks again: the way back is the app's page in Settings. */}
+      {!waiting && !query && position.kind === 'denied' && openPositionSettings ? (
+        <SheetOption label={OPEN_SETTINGS} icon="settings" onPress={openPositionSettings} />
       ) : null}
 
       {query && !waiting && !armed ? (

@@ -18,3 +18,10 @@ export type PositionPermission = 'granted' | 'prompt' | 'denied' | 'unknown';
 export const POSITION_TIMEOUT_MS = 8_000;
 /** A fix this recent is reused: opening the picker twice in a shop asks the GPS once. */
 export const POSITION_MAX_AGE_MS = 60_000;
+/**
+ * A fix this old still stands in when a new one is slow: indoors the GPS can take longer than
+ * anyone waits, and five minutes ago is usually the same shop. With one in hand a new fix is
+ * given only `POSITION_QUICK_MS` to beat it.
+ */
+export const POSITION_FALLBACK_AGE_MS = 5 * 60_000;
+export const POSITION_QUICK_MS = 3_000;
