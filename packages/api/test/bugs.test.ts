@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createBugsApi } from '../src/bugs.ts';
 
@@ -15,7 +15,7 @@ const KEY = '4f1d6c0a-4f4c-4f0e-9e0b-9a4a8f2b7c11';
 
 interface Calls {
   rpc?: string;
-  uploads: { bucket: string; path: string }[];
+  uploads: { bucket: string; path: string; body?: unknown }[];
   invokes: { name: string; init: { body?: Record<string, unknown>; method?: string } | undefined }[];
 }
 
@@ -48,9 +48,9 @@ function fakeClient(calls: Calls = newCalls(), options: Options = {}): SupabaseC
     },
     storage: {
       from: (bucket: string) => ({
-        upload: (path: string) => {
+        upload: (path: string, body?: unknown) => {
           const index = calls.uploads.length;
-          calls.uploads.push({ bucket, path });
+          calls.uploads.push({ bucket, path, body });
           const fails = options.uploadError && (options.uploadErrorAt === undefined || options.uploadErrorAt === index);
           return Promise.resolve({ data: { path }, error: fails ? options.uploadError : null });
         },
@@ -463,5 +463,58 @@ describe('bugs.place', () => {
     await expect(
       createBugsApi(fakeClient(newCalls(), { invokeError: functionError(400, { error: 'validation', field: 'afterTicketId' }) })).place('BEV-7', 'BEV-2'),
     ).rejects.toMatchObject({ code: 'validation', detail: { field: 'afterTicketId' } });
+  });
+});
+
+// Contract 3.3.0: evidence is an `UploadPayload`, as `media.upload`'s file is. The native bug
+// reporter reads its screenshot into bytes; a React Native Blob would store an empty object.
+describe('bugs.report evidence as bytes (contract 3.3.0)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('uploads a Uint8Array as an ArrayBuffer holding exactly its own bytes, not its backing store', async () => {
+    const calls = newCalls();
+    const backing = new Uint8Array([9, 9, 1, 2, 3, 9, 9]);
+    const view = backing.subarray(2, 5);
+    await createBugsApi(fakeClient(calls, { invokeData: CREATED })).report({
+      ...BASE,
+      evidence: [{ file: view, mimeType: 'image/jpeg', caption: 'Feed, whole screen' }],
+    });
+    const body = calls.uploads[0]?.body as ArrayBuffer;
+    expect(body).toBeInstanceOf(ArrayBuffer);
+    expect([...new Uint8Array(body)]).toEqual([1, 2, 3]);
+    expect(calls.invokes[0]?.init?.body?.evidenceCaptions).toEqual(['Feed, whole screen']);
+  });
+
+  it('uploads an ArrayBuffer as it is', async () => {
+    const calls = newCalls();
+    const bytes = new Uint8Array([4, 5, 6]).buffer;
+    await createBugsApi(fakeClient(calls, { invokeData: CREATED })).report({ ...BASE, evidence: [{ file: bytes, mimeType: 'image/png' }] });
+    expect(calls.uploads[0]?.body).toBe(bytes);
+    expect(calls.uploads[0]?.path).toMatch(/\.png$/);
+  });
+
+  it('measures bytes against the 10 MB limit', async () => {
+    const calls = newCalls();
+    await expect(
+      createBugsApi(fakeClient(calls)).report({ ...BASE, evidence: [{ file: new Uint8Array(10 * 1024 * 1024 + 1), mimeType: 'image/jpeg' }] }),
+    ).rejects.toMatchObject({ code: 'validation', detail: { field: 'evidence' } });
+    expect(calls.uploads).toEqual([]);
+  });
+
+  it('refuses a Blob under React Native before staging anything, even behind good bytes', async () => {
+    vi.stubGlobal('navigator', { product: 'ReactNative' });
+    const calls = newCalls();
+    const nativeBlob = new Blob(['x'], { type: 'image/jpeg' });
+    await expect(
+      createBugsApi(fakeClient(calls)).report({
+        ...BASE,
+        evidence: [
+          { file: new Uint8Array([1, 2, 3]), mimeType: 'image/jpeg' },
+          { file: nativeBlob, mimeType: 'image/jpeg' },
+        ],
+      }),
+    ).rejects.toMatchObject({ code: 'validation', detail: { field: 'file' } });
+    expect(calls.uploads).toEqual([]);
+    expect(calls.invokes).toEqual([]);
   });
 });
