@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { waitFor } from '@testing-library/react-native';
 import { Platform } from 'react-native';
-import { ApiError, type BugReportInput } from '@bevi/shared';
+import { ApiError, CONTRACT_VERSION, type BugReportInput } from '@bevi/shared';
 
 import { captureScreen, releaseShot } from '../capture';
 import { DRAFT_KEY } from '../draft';
@@ -187,7 +187,7 @@ describe('what a native report carries', () => {
       platform: expect.stringMatching(/^ios/),
       osVersion: expect.stringMatching(/^iOS /),
       appVersion: expect.any(String),
-      build: expect.stringContaining('contract 3.3.0'),
+      build: expect.stringContaining(`contract ${CONTRACT_VERSION}`),
       stage: expect.any(String),
       occurredAt: expect.any(String),
     });
