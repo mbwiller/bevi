@@ -97,6 +97,12 @@ it('typing hides the recent places: a search is only its matches', async () => {
   expect(await screen.findByText('Places')).toBeTruthy();
 });
 
+it('opens with the keyboard down, so the nearby places are in view', async () => {
+  await renderPicker();
+  await screen.findByText('Nearby');
+  expect(screen.getByPlaceholderText(PICKER_PLACEHOLDER).props.autoFocus).toBeFalsy();
+});
+
 it('tapping a place selects it', async () => {
   const [first] = await api.venues.search({ query: '', near: HERE, limit: 1 });
   const { onSelect } = await renderPicker();

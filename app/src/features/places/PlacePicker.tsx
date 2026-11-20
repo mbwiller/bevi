@@ -118,7 +118,8 @@ export function PlacePickerBody({ active, selected = null, onSelect, onRemove, s
             setText(v);
             setMoreFor(null);
           }}
-          autoFocus
+          // No autoFocus: the keyboard would cover all but a few of the Recent and Nearby rows,
+          // which are how most places are picked. A tap on the field raises it.
         />
       </View>
 

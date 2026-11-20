@@ -1,4 +1,4 @@
-// Where a Bev was had (BEV-22, contract 3.4.0): the place picker's searches, the write that tags a
+// Where a Bev was had (BEV-22, contract 3.5.0): the place picker's searches, the write that tags a
 // ranked Bev, and the Map tab's reads.
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { BevdScope, LatLng } from '@bevi/shared';
