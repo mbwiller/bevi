@@ -4,5 +4,11 @@
   "buildCommand": "node scripts/check-env.mjs && EXPO_PUBLIC_BUILD_SHA=\"${EXPO_PUBLIC_BUILD_SHA:-$VERCEL_GIT_COMMIT_SHA}\" npx expo export --platform web --clear && node scripts/check-bundle.mjs",
   "outputDirectory": "dist",
   "rewrites": [{ "source": "/(.*)", "destination": "/" }],
+  "headers": [
+    {
+      "source": "/.well-known/apple-app-site-association",
+      "headers": [{ "key": "Content-Type", "value": "application/json" }]
+    }
+  ],
   "git": { "deploymentEnabled": { "main": true, "**": false } }
 }

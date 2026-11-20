@@ -17,7 +17,7 @@ import type { PickLevel } from '../types';
 
 // The engine is another task's; here it answers as its contract says.
 jest.mock('../capture', () => ({
-  captureScreen: jest.fn(async () => ({ blob: new Blob(['jpeg']), mimeType: 'image/jpeg', uri: 'blob:shot', width: 390, height: 844 })),
+  captureScreen: jest.fn(async () => ({ file: new Blob(['jpeg']), mimeType: 'image/jpeg', uri: 'blob:shot', width: 390, height: 844 })),
   releaseShot: jest.fn(),
 }));
 jest.mock('../pick', () => ({ pickAt: jest.fn(() => []) }));

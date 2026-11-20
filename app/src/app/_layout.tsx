@@ -14,12 +14,14 @@ import { StackScene } from '@/components/ScreenMotion';
 import { StatusBarClearance } from '@/components/StatusBarClearance';
 import { clearReportCommand, useReportCommands } from '@/features/bug-report/commands';
 import { loadReportHost } from '@/features/bug-report/loadHost';
+import { AppGate } from '@/features/app-gate/AppGate';
 import { loadNutritionDemo } from '@/features/create-bev/loadNutritionDemo';
 import { ConfigError, Splash } from '@/features/auth/Splash';
 import { useSessionBootstrap } from '@/features/auth/useSessionBootstrap';
 import { clearLegacyStorage } from '@/lib/clearLegacyStorage';
 import { useSession } from '@/state/session';
 import { useTheme } from '@/theme';
+import { RootError } from '@/components/RootError';
 
 // The old in-browser mock's data (fake users, plain-text passwords) may still sit in localStorage.
 clearLegacyStorage();
@@ -55,13 +57,22 @@ export default function RootLayout() {
             <OfflineNoticeHost>
               {__DEV__ && process.env.EXPO_PUBLIC_NUTRITION_SCAN_DEMO === '1'
                 ? <Suspense fallback={null}><NutritionDemo /></Suspense>
-                : apiConfig.ok ? <SessionGate /> : <ConfigError problem={apiConfig.problem} />}
+                : apiConfig.ok ? <AppGate><SessionGate /></AppGate> : <ConfigError problem={apiConfig.problem} />}
             </OfflineNoticeHost>
           </QueryClientProvider>
         </StatusBarClearance>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
+}
+
+/**
+ * A screen that throws while it renders shows this instead of closing the app. Expo Router wraps
+ * the root layout in a boundary when the layout's file exports `ErrorBoundary`, and renders this in
+ * the layout's place, outside every provider above (components/RootError.tsx).
+ */
+export function ErrorBoundary(props: ComponentProps<typeof RootError>) {
+  return <RootError {...props} />;
 }
 
 type ScreenLayout = NonNullable<ComponentProps<typeof Stack>['screenLayout']>;

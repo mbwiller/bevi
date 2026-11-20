@@ -1,6 +1,17 @@
 /**
  * Bumped on any breaking change to the types or `BeviApi` below.
  *
+ * 3.3.0, over 3.2.0's version gate: the native bug reporter (IM-10 part 2).
+ * `BugReportInput.evidence[].file` widens from `Blob` to `UploadPayload`, the
+ * union `media.upload` has taken since 2.15.0. Purely additive for callers,
+ * hence a minor: every `Blob` a caller passes today is still accepted, and
+ * nothing a client is served changed. On React Native a caller passes bytes,
+ * and an implementation off the web refuses a `Blob` with `'validation'`
+ * before anything is staged (the same guard as `media.upload`). The
+ * `bug-report` Edge Function and the `bug-evidence` bucket are untouched: they
+ * only ever see the uploaded object. NOT a reason to raise
+ * `min_contract_version`.
+ *
  * 3.2.0, over 3.1.0's blocks and reports: the version gate reads its real row
  * (IA-2). `AppConfig` gains `minContractVersion` (the lowest `CONTRACT_VERSION`
  * the backend still serves, beside `minAppVersion`) and `maintenanceMessage`
@@ -55,13 +66,13 @@
  * reject a `Blob` with `'validation'` instead of uploading it -- React
  * Native's `Blob` holds a native handle, not bytes, and Storage silently
  * writes a 0-byte object. Bug report evidence
- * (`BugReportInput.evidence[].file`) stays web-only until the reporter is
- * ported.
+ * (`BugReportInput.evidence[].file`) followed in 3.3.0.
  */
 // 3.0.0: user-created photo-backed Bevs enqueue icon generation automatically.
 // 3.1.0: blocks and content reports (IS-7), additive.
 // 3.2.0: AppConfig gains minContractVersion and maintenanceMessage (IA-2), additive.
-export const CONTRACT_VERSION = '3.2.0';
+// 3.3.0: BugReportInput.evidence[].file is an UploadPayload (the native bug reporter, IM-10), additive.
+export const CONTRACT_VERSION = '3.3.0';
 
 export * from './enums';
 export * from './errors';
