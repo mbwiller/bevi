@@ -3,23 +3,31 @@ import { StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { useReducedMotion } from 'react-native-reanimated';
 
-import { MAX_FONT_SCALE_DENSE, radius, type, useTheme } from '@/theme';
+import { Icon } from '@/components/Icon';
+import { MAX_FONT_SCALE_DENSE, radius, useTheme } from '@/theme';
 
 import type { BevdCanvasProps } from './bevdCanvasTypes';
 import { pinSubtitle } from './copy';
 import { pinText, pinsKey, regionFor } from './mapCamera';
+import { placeIcon } from './placeIcon';
 
 export type { BevdCanvasProps } from './bevdCanvasTypes';
 
 /** The disc, and the selected one. No token names a map pin. */
-const PIN = 34;
-const PIN_SELECTED = 42;
+const PIN = 36;
+const PIN_SELECTED = 44;
+/** The count on a place with more than one Bev: a small disc on the pin's shoulder. */
+const BADGE = 18;
+/** Room around the disc for the badge to sit in, so it is not clipped by the marker's own bounds. */
+const BADGE_OVERHANG = 6;
 /** How long the camera takes to move to a new set of places. */
 const CAMERA_MS = 350;
 
 /**
  * The Map tab's surface on the iPhone (BEV-22): Apple's map with one pin per place. A pin is a disc
- * with the number of Bevs had there, and opens what was had there; a tap on the map closes it.
+ * with the glyph for the kind of place (a cup for a cafe, a can for a shop), carries the number of
+ * Bevs had there when that is more than one, and opens what was had there; a tap on the map
+ * closes it.
  *
  * The camera fits the pins it is given, and refits when that set changes (You to Friends), not when
  * the same places are refetched or one is selected, so the map stays where the person left it.
@@ -68,7 +76,7 @@ export function BevdCanvas({ pins, selectedId, onSelect, onClear }: BevdCanvasPr
           <Marker
             // The look is part of the key: a marker is a snapshot (tracksViewChanges off), so a
             // changed disc is a new marker.
-            key={`${pin.venue.id}:${pin.bevCount}:${mine}:${selected}:${scheme}`}
+            key={`${pin.venue.id}:${pin.venue.placeType}:${pin.bevCount}:${mine}:${selected}:${scheme}`}
             coordinate={{ latitude: pin.venue.lat, longitude: pin.venue.lng }}
             anchor={{ x: 0.5, y: 0.5 }}
             tracksViewChanges={false}
@@ -80,25 +88,43 @@ export function BevdCanvas({ pins, selectedId, onSelect, onClear }: BevdCanvasPr
             accessibilityState={{ selected }}
           >
             {/* Filled when some are yours; a ring when they are all friends'. Never colour alone:
-                the label says which, and the number is the same either way. */}
-            <View
-              style={[
-                styles.pin,
-                {
-                  width: d,
-                  height: d,
-                  backgroundColor: mine ? colors.primary : colors.surface,
-                  borderColor: mine ? colors.surface : colors.primary,
-                },
-              ]}
-            >
-              <Text
-                style={[type.heading, styles.count, { color: mine ? colors.onPrimary : colors.primary }]}
-                maxFontSizeMultiplier={MAX_FONT_SCALE_DENSE}
-                numberOfLines={1}
+                the label says which. */}
+            <View style={{ width: d + BADGE_OVERHANG * 2, height: d + BADGE_OVERHANG * 2 }}>
+              <View
+                style={[
+                  styles.pin,
+                  {
+                    width: d,
+                    height: d,
+                    backgroundColor: mine ? colors.primary : colors.surface,
+                    borderColor: mine ? colors.surface : colors.primary,
+                  },
+                ]}
               >
-                {pinText(pin)}
-              </Text>
+                <Icon
+                  name={placeIcon(pin.venue.placeType)}
+                  size={selected ? 24 : 20}
+                  strokeWidth={2}
+                  color={mine ? colors.onPrimary : colors.primary}
+                />
+              </View>
+              {pin.bevCount > 1 ? (
+                // The disc's colours the other way round, so the count reads on either kind of pin.
+                <View
+                  style={[
+                    styles.badge,
+                    { backgroundColor: mine ? colors.surface : colors.primary, borderColor: mine ? colors.primary : colors.surface },
+                  ]}
+                >
+                  <Text
+                    style={[styles.count, { color: mine ? colors.primary : colors.onPrimary }]}
+                    maxFontSizeMultiplier={MAX_FONT_SCALE_DENSE}
+                    numberOfLines={1}
+                  >
+                    {pinText(pin)}
+                  </Text>
+                </View>
+              ) : null}
             </View>
           </Marker>
         );
@@ -109,6 +135,27 @@ export function BevdCanvas({ pins, selectedId, onSelect, onClear }: BevdCanvasPr
 
 const styles = StyleSheet.create({
   map: { flex: 1 },
-  pin: { borderRadius: radius.pill, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-  count: { fontVariant: ['tabular-nums'] },
+  pin: {
+    position: 'absolute',
+    left: BADGE_OVERHANG,
+    top: BADGE_OVERHANG,
+    borderRadius: radius.pill,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badge: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    minWidth: BADGE,
+    height: BADGE,
+    paddingHorizontal: 3,
+    borderRadius: radius.pill,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Smaller than any named style: it has to fit the badge.
+  count: { fontSize: 11, lineHeight: 13, fontWeight: '700', fontVariant: ['tabular-nums'] },
 });
