@@ -18,6 +18,7 @@ import { Skeleton } from '@/components/Skeleton';
 import { spacing, type, useTheme } from '@/theme';
 
 import { BevOfPeriod } from './BevOfPeriod';
+import { SafetyFlow } from '../safety/SafetyFlow';
 import { PostCommentsSheet } from './PostCommentsSheet';
 import { POST_GONE, useFeedPostActions } from './useFeedPostActions';
 import { useExplorePosts } from './useExplorePosts';
@@ -71,7 +72,7 @@ export function FeedScreen() {
   const exploring = segment === 'explore';
   const stats = useStats();
   const feed = useFeed();
-  const { renderItem: renderPost, commentsFor, closeComments, postGone, notice } = useFeedPostActions();
+  const { renderItem: renderPost, commentsFor, closeComments, postGone, notice, safety: postSafety } = useFeedPostActions();
   const explore = useExplorePosts(exploring);
   const { renderItem: renderExplore } = explore;
   const qc = useQueryClient();
@@ -218,6 +219,8 @@ export function FeedScreen() {
         onRefresh={onRefresh}
       />
       <PostCommentsSheet eventId={commentsFor} onClose={closeComments} onGone={postGone} />
+      <SafetyFlow {...postSafety} />
+      <SafetyFlow {...explore.safety} />
     </SafeAreaView>
   );
 }

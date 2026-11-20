@@ -11,6 +11,7 @@ import { radius, size, spacing, type, useTheme } from '@/theme';
 import { Avatar } from './Avatar';
 import { EmptyState } from './EmptyState';
 import { ErrorState } from './ErrorState';
+import { IconButton } from './IconButton';
 import { TARGET_MIN } from './HitTarget';
 import { Skeleton } from './Skeleton';
 import { Sheet } from './Sheet';
@@ -41,6 +42,11 @@ export interface CommentsSheetProps {
   onPost?: (body: string) => Promise<boolean> | boolean | void;
   /** Deletes one of your comments, after an in-sheet confirm. */
   onDelete?: (id: string) => void;
+  /**
+   * Opens the More menu of someone else's comment (Report comment, Block account): an ellipsis at
+   * the end of the row. Never on your own comments, which end in Delete. Without it no row has one.
+   */
+  onMore?: (comment: Comment) => void;
   /** Why the last post or delete failed, in a `scoreLow` caption under the composer. */
   error?: string | null;
   /** A post is in flight: Post is disabled. */
@@ -84,6 +90,7 @@ export function CommentsSheet({
   onClose,
   onPost,
   onDelete,
+  onMore,
   error,
   posting = false,
   deleting = [],
@@ -218,6 +225,9 @@ export function CommentsSheet({
             <Text style={[type.body, { color: colors.textSecondary }]}>Delete</Text>
           </Pressable>
         ) : null}
+        {!mine && onMore ? (
+          <IconButton icon="ellipsis" size={size.icon - spacing.xs} label={`More actions, comment by @${item.author.handle}`} onPress={() => onMore(item)} style={styles.more} />
+        ) : null}
       </View>
     );
   };
@@ -256,7 +266,7 @@ export function CommentsSheet({
         data={comments}
         renderItem={renderComment}
         keyExtractor={(c) => c.id}
-        extraData={`${confirming ?? ''}|${deleting.join(',')}|${me?.id ?? ''}`}
+        extraData={`${confirming ?? ''}|${deleting.join(',')}|${me?.id ?? ''}|${onMore ? 'more' : ''}`}
         ListHeaderComponent={earlier}
         // The first layout is when the end is known; later remounts (earlier comments) stay at the top.
         onLoad={listKey === 0 ? () => list.current?.scrollToEnd({ animated: false }) : undefined}
@@ -335,6 +345,8 @@ const styles = StyleSheet.create({
   bold: { fontWeight: '700' },
   strong: { fontWeight: '600' },
   textButton: { ...TARGET_MIN, paddingHorizontal: spacing.xs },
+  // Hangs into the row's end so the glyph lines up with the gutter; the row's own vertical padding makes room.
+  more: { marginRight: -spacing.sm, marginVertical: -spacing.sm },
   confirm: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', columnGap: spacing.sm },
   confirmText: { marginRight: spacing.xs },
   earlier: { minHeight: size.target, alignItems: 'center', justifyContent: 'center' },

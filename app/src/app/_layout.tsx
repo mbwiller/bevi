@@ -115,6 +115,7 @@ function SessionGate() {
           <Stack.Screen name="settings/index" />
           <Stack.Screen name="settings/account" />
           <Stack.Screen name="settings/privacy" />
+          <Stack.Screen name="settings/blocked" />
           <Stack.Screen name="settings/delete-account" />
           <Stack.Screen name="image/[url]" options={{ presentation: 'fullScreenModal' }} />
           <Stack.Screen name="report-bug" options={{ presentation: 'fullScreenModal' }} />

@@ -22,6 +22,8 @@ export interface FeedPostItemProps {
   onOpenBev: () => void;
   /** Omitted on the actor's own profile, where the avatar has nowhere to go. */
   onOpenActor?: () => void;
+  /** Opens the post's More menu (Report post, Block account). Omitted on the viewer's own post. */
+  onMore?: () => void;
 }
 
 /**
@@ -39,6 +41,7 @@ export const FeedPostItem = memo(function FeedPostItem({
   onComment,
   onOpenBev,
   onOpenActor,
+  onMore,
 }: FeedPostItemProps) {
   const { colors } = useTheme();
   // The actor link is transparent: while it is held, the avatar under it gives way (Press).
@@ -65,6 +68,8 @@ export const FeedPostItem = memo(function FeedPostItem({
         onRank={onRank}
         onSave={onSave}
         onOpen={onOpenBev}
+        onMore={you ? undefined : onMore}
+        moreLabel={`More actions, post by @${item.actor.handle}`}
         avatarPressStyle={onOpenActor ? actorPress.style : undefined}
         divider={false}
       />
