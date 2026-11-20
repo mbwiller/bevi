@@ -21,7 +21,7 @@ export const COMPONENT_FILES: Readonly<Record<string, string>> = {
   Avatar: 'app/src/components/Avatar.tsx',
   AvatarPicker: 'app/src/components/AvatarPicker.tsx',
   AvatarStack: 'app/src/components/AvatarStack.tsx',
-  BarcodeCamera: 'app/src/features/create-bev/BarcodeCamera.tsx',
+  BarcodeCamera: 'app/src/features/create-bev/BarcodeCamera.web.tsx',
   BelowOfflineNotice: 'app/src/components/BelowOfflineNotice.web.tsx',
   BevActions: 'app/src/components/BevParts.tsx',
   BevArt: 'app/src/components/BevArt.tsx',

@@ -1,3 +1,4 @@
+/** Web only: ZXing decoding of video frames, used by BarcodeCamera.web.tsx and never imported on native (what is shared lives in barcodeCommon.ts). */
 /** Loaded only when a scanner is opened, keeping decoding work out of the normal form path. */
 export async function loadBarcodeReader() {
   const [{ BrowserMultiFormatReader }, { BarcodeFormat, DecodeHintType }] = await Promise.all([
