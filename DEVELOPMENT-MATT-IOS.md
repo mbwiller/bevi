@@ -10,9 +10,17 @@ was reversed. Arjun's half is `DEVELOPMENT-ARJUN-IOS.md`. Milestones here are
 `IM-n`, Arjun's are `IA-n`, shared ones `IS-n`; a new namespace, nothing in
 `TASKS.md` is renumbered.
 
-**Status last brought up to date: 2026-11-19, evening, against `main` at
-`6ee7300` (#269).** §0.1 is the one-page answer to "where are we"; each
-milestone below carries its own Status line.
+**Status last brought up to date: 2026-11-19, night, against the branch
+`integration/bev-27-ios` (draft PR #276 into `main`).** §0.1 is the one-page
+answer to "where are we"; each milestone below carries its own Status line,
+and where a Status line and §0.1 disagree, §0.1 is the newer.
+
+**One agent, both lanes, since 2026-11-19 evening.** The founders decided that
+a single session runs the remaining iOS work across `app/` and the backend,
+because two lanes had made the work too granular. The lane rules in §1 and §4
+still describe who reviews what; they no longer describe who types. The
+single-owner files (`app.config.ts`, `eas.json`, the two `_layout.tsx`) are
+that session's while it runs.
 
 ## 0. The good news first
 
@@ -39,54 +47,71 @@ Do not go by the `Platform.OS` count: the two worst couplings (the Privacy
 screen and `useOnline`) contained no `Platform.OS` at all, so the guards
 understate the sweep rather than bound it.
 
-### 0.1 Where it stands (2026-11-19)
+### 0.1 Where it stands (2026-11-19, night)
 
-Three days of work, fourteen PRs of mine merged (#243–#248, #250, #251, #257,
-#258, #266–#269) and ten of Arjun's for iOS (#240–#242, #252–#256, #259,
-#262). **The app runs on a real iPhone: TestFlight build 0.1.0 (3), built and
-uploaded from Arjun's machine on 2026-11-19, opens on my phone, is signed in on
-the real backend and shows the feed. G1 is reached.** That build predates
-everything merged on 2026-11-19 (#266–#269), so none of it is on a phone until
-there is a new build.
+**On a phone:** TestFlight build 0.1.0 (3), cut from `e1f0b1f` on the
+`production` profile on 2026-11-19. It opens, signs in and shows the feed
+(G1). It predates everything below. Its client code is contract 2.15.0 and it
+never reads `app_config`, so the update and maintenance gate cannot reach it
+(`DEVELOPMENT-ARJUN.md` §15): remove it from TestFlight once a newer build is
+on both phones.
 
-| Milestone | State | Merged | What is left |
+**On `main`:** #243 to #271. Nothing since #271.
+
+**On `integration/bev-27-ios`, not on `main` and not on a phone:** the rest of
+the iOS work, each piece its own PR, summed in draft PR #276. It is one branch
+because the pieces depend on each other and the session that built them could
+not merge to `main`. Merge #276 with a merge commit, not a squash, so the PRs
+inside it are recorded as merged. The whole app suite passes on it (194
+suites, 1,804 tests), as do `packages/api` and `packages/ranking`, typecheck,
+and the web and iOS exports with the bundle check. It was reviewed by the two
+integrator agents and their code findings are fixed (#289, #290); what they
+left for the founders is in #276's description. **None of it has run on a
+device**: there is no Xcode on the machine it was built on.
+
+| Milestone | State | Where | What is left |
 |---|---|---|---|
-| IM-1 build config | Done except three deferred items | #243, #244, #250, #257 | `expo-updates`; the SDK 58 upgrade; ~~Sentry's plugin (IS-4)~~ (dropped 2026-11-19); what App Store Connect said about the privacy manifest |
-| IM-2 first boot | **G1 reached 2026-11-19**, on TestFlight 0.1.0 (3) | #245 | Nothing for the gate. Which commit build 3 came from is not recorded |
-| IM-3 session | Done in code | #246, #247, #266 | A true force-quit, the overnight check and the reinstall check on a phone, on a build that has #266 |
-| IM-4 web assumptions | Done | #248, #251, #255 | Device checks |
-| IM-5 photos + barcode | **Photos: merged, unproven on a phone. Barcode: not started** | #268, #269 | The barcode scan on `expo-camera`; the photo checks on a phone |
-| IM-6 native polish | Not started | — | All of it, on a device |
-| IM-7 map | v1 scope done: an "In progress" page | #245 | The real map, after v1 (IS-6 deferred) |
-| IM-8 sharing + links | The share link is fixed. Links into the app: not started | #267 | Universal links (associated domains, the AASA file) |
-| IM-9 version gate | Built on a local branch, in review. The real read still waits on IA-2 | — | Review and merge; the two contract fields; the App Store id and a support address |
-| IM-10 bug reporter | Part 1 (off on native): done. **Part 2 stage 1 (button, window screenshot, one-field note): built on `ui/bev-27-im-10-native-reporter`, not merged, unproven on a phone.** Stage 2 (select, record steps): not started | #245 | The device checks under IM-10; merge; stage 2 |
-| IM-11 tests | The suite runs as iOS already; a full iOS suite is not started | #258 | A web jest project, simulator flows, a device checklist; #270 (a second flaky test) is open |
-| IM-12 store assets | Not started | — | All of it |
-| IM-13 report + block | Blocked on the contract half (#261, open, conflicts with `main`). Database half is merged (#254, #262) | — | The sheets and the filtered lists |
-| IM-14 test-run interface | New 2026-11-18, not started | — | All of it, after IM-11's simulator flows exist |
+| IM-1 build config | Done | `main`; #272, #274 on integration | The next EAS build is the first to compile `expo-application`, `expo-camera`, `expo-updates` and `react-native-view-shot`. The SDK 58 upgrade. What App Store Connect said about the privacy manifest |
+| IM-2 first boot | **G1 reached** on build 3 | `main` | Nothing |
+| IM-3 session | Done in code, including an offline launch with an expired token (#283) | `main`; #283 | The phone checks: force-quit, overnight, reinstall, offline launch |
+| IM-4 web assumptions | Done | `main`; #278 | Device checks |
+| IM-5 photos + barcode | Done in code. The scanner is `expo-camera` on native (#273) | `main`; #273, #278 | Every photo and scan check on a phone |
+| IM-6 native polish | The part that can be decided by reading the code is done: double screen animation, dark tab flash, timestamps, keyboard avoidance, sheets, list refresh jumps, VoiceOver announcements and states, navigation that waits for a sheet to close (#278, #288, #290) | integration | Everything that needs eyes on a device: haptics and glass (still unused), Dynamic Type, the VoiceOver sweep |
+| IM-7 map | v1 scope done: an "In progress" page | `main` | The real map, after v1 |
+| IM-8 sharing + links | Share link fixed. The web host serves the app-site-association file (#279). The app's half is draft #281, held | `main`; #279 | #281 needs the Associated Domains capability on the App ID first, and a decision on the host |
+| IM-9 version gate | Done in code, reading the real row (#275, #280) | integration | The App Store id and a support address (`src/lib/appStore.ts`); the maintenance flip on a phone |
+| IM-10 bug reporter | Stage 1 on native done in code: button, window screenshot, note (#285, contract 3.3.0) | integration | Device checks; stage 2 (select element, record steps) |
+| IM-11 tests | Layer 1 grew with each piece. Layer 4 exists: `docs/ios-device-checklist.md`. The Feed suite's memory failure is fixed at its cause (#287) | integration | Layer 2 (a web jest project) and layer 3 (simulator flows): not started |
+| IM-12 store assets | Drafted as text: `docs/app-store-submission.md` | docs branch | Screenshots, the founders' read of every line, the forms |
+| IM-13 report + block | Done in code, both halves (#261 contract 3.1.0, #277; #290 fixed report from a comment, which could not open on iPhone) | integration | Device checks, the comment path first. Who reads the reports, and a published contact |
+| IM-14 test-run interface | Not started | | After layer 3 exists |
+| IS-4 crash reporting | Sentry was added and removed the same night (#284, #286): the decision is an in-house reporter, **not built**. A root error boundary and a `captureError` seam with nothing behind it remain | integration | The reporter. Until then native crashes show only in Apple's reports |
 
-Three things to know before picking up the next branch:
+Things to know before picking up the next branch:
 
-- **Builds come from Arjun's machine, by hand.** Build 3 was made and uploaded
-  there; no `ios` GitHub Environment exists, `ios.yml` (#253) has never run and
-  there is no `v*` tag, so nothing in the repository says which commit a build
-  came from. My Expo login (`mbwiller`) is not in the `bevi` org yet, so
-  `eas build:list` is refused from my Mac. Ask for a build when a merge needs
-  a phone, and ask which commit it was cut from.
-- **`main` is green** at `6ee7300`. One known flake: a test in
-  `src/features/bug-report/__tests__/ReportButton.test.tsx` ran past its 30 s
-  limit on `9bec3a9` and passed on a re-run. #270 (test only) makes it wait on
-  what it asserts and gives that suite 60 s. A red `app` check on that suite
-  alone is a re-run, not a regression, until #270 is in.
-- **The contract numbers have collided.** `CONTRACT_VERSION` is 3.0.0 on
-  `main` since #221 (custom Bevs and generated icons). #261 (IS-7, block and
-  report) and two branches that exist only on Arjun's machine (BEV-13,
-  nutrition labels read on the device; BEV-22, locations on posts) were each
-  numbered 2.16.0. They have to be renumbered and queued one at a time on his
-  side: #261 first, because IM-13 waits on it, then IA-2's fields for IM-9.
-  Also on `main` but not on the hosted database: the six icon migrations of
-  #221 and #227 (`20261119185800` to `20261119192921`). Nothing in the app
+- **The contract is 3.3.0 on the integration branch**, 3.0.0 on `main`:
+  3.1.0 blocks and reports (#261), 3.2.0 the app-config fields (#275), 3.3.0
+  bug-report evidence as bytes (#285). All additive; the backend did not
+  change. BEV-13 (`feat/bev-13-ondevice-ocr`, pushed, still numbered 2.16.0)
+  and BEV-22 (local) are not in it. BEV-22 is out of v1. BEV-13 is not a
+  launch gate, and its Swift module has never been compiled: fold it in only
+  after one good build of this branch, so a compile failure there cannot cost
+  the build that carries everything else.
+- **Builds come from Arjun's machine, by hand**, and are recorded in
+  `#agents`: builds 2 and 3 are both `e1f0b1f`, `production` profile. No `ios`
+  GitHub Environment exists, so `ios.yml` cannot build yet. Tag the commit a
+  build is cut from.
+- **Over-the-air updates are configured** (#274): `runtimeVersion` is the
+  native project's fingerprint, narrowed by `app/fingerprint.config.js` (#290)
+  to inputs that can change the binary, and `preview` and `production` builds
+  name their channel. No update has been published; the first build from this
+  branch is the first that can receive one.
+- **A test that mounts the app no longer exhausts the heap** (#287). React
+  Native's jest preset made `performance.now` a recording mock, which kept a
+  record of millions of calls per Feed test. If a suite's heap climbs again,
+  `app/jest.config.js` says how to measure it.
+- **Also on `main` but not on the hosted database:** the six icon migrations
+  of #221 and #227 (`20261119185800` to `20261119192921`). Nothing in the app
   calls them yet.
 
 ## 1. Lane, unchanged

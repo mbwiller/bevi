@@ -1106,7 +1106,7 @@ Integrator agent (`.claude/agents/integrator.md`, `chore/*` PR with Matt): same 
 ### 8.2 Observability
 
 - Free plan keeps logs 1 day. For anything you want to see later: Edge Functions log a single JSON line per invocation (`{fn, user_id, ms, ok, err}`) and the `recommend`/`process-photo` functions write outcome rows (`photo_jobs.error`, `recommendation_jobs.attempts`) so failures are in the DB, not the logs.
-- Sentry's Deno SDK in the two Edge Functions is cheap (free tier) and worth it from Phase 2; optional in Phase 1.
+- ~~Sentry's Deno SDK in the two Edge Functions~~ Not planned: on 2026-11-19 Sentry was dropped for the app in favour of building error reporting in house (`DEVELOPMENT-ARJUN-IOS.md`, IS-4), and the same holds here. Edge Function errors are read from the Supabase logs until that exists.
 - Weekly 5-minute check: `cron.job_run_details` failures, `recommendation_jobs` with `attempts >= 3`, `photo_jobs` errors, `bev_reports` open, dashboard → Reports for egress.
 - Dashboard Advisors (Security / Performance) after every schema change: they catch missing RLS and missing FK indexes.
 
@@ -1239,7 +1239,7 @@ Tags: model/effort for the Claude Code sub-agent per vision §10. "DoD" = defini
 | 2.3 | Streaks (`touch_streak`, hourly reset) and user rank cron with vectors | Vectors pass; timezone edge cases tested (23:59 PT) | Sonnet, medium |
 | 2.4 | `recommend` Edge Function: bundle step, snapshot builder, queue + cron, cache table, `getRecommendations`, `predictedScore` in `get_bev` | For seeded users, Recommended list populates within 1 minute of ranking; CPU < 2 s per invocation (log it) | Opus, high for snapshot/CPU-budget design; Sonnet, medium to implement |
 | 2.5 | Moderation: `report_bev`, `moderation_queue`, admin RPCs (`merge_bevs`, `hide_bev`) | Merge test with a user who ranked both | Sonnet, medium |
-| 2.6 | Sentry in Edge Functions; weekly ops checklist | Errors visible | Haiku, low |
+| 2.6 | ~~Sentry in Edge Functions~~ (dropped 2026-11-19, see IS-4); weekly ops checklist | Errors visible | Haiku, low |
 | 2.7 | Code review / bug hunt before Phase 2 ships | | Sonnet, high |
 
 ### Phase 3 — Smarter and bigger (2027 Q1)
@@ -1375,6 +1375,9 @@ Everything the backend still carries only for clients that have not been gated o
 |---|---|---|---|---|
 | _(worked example, not real)_ `get_bev` | `supabase/migrations/<ts>_bev_reads.sql` | 2.17.0 | `min_contract_version >= 2.18.0` **and** `min_app_version >= 1.4.0` | Superseded by `get_bev_v2`, which returns `nutrition` as columns instead of nested json. Drop the function and this row in the same PR. |
 
-Nothing on `main` qualifies yet, and that is a fact about the world rather than an oversight: the app and the backend still deploy together, so there has never been a client that a migration could not move with it. The worked example stays until the first real row replaces it.
+No row yet, but the reason changed on 2026-11-19: **there is now a client a migration cannot move.** TestFlight builds 0.1.0 (2) and (3) were cut from `e1f0b1f`, whose client code is contract **2.15.0**, and they stay installable until TestFlight expires them 90 days after upload (2027-02-17). Two things follow.
 
-Two near-term changes deliberately produce no row: IA-2 deletes `placeholderAppConfig()`, which is internal to `packages/api` and reaches no shipped client, and IA-4 widens `UploadMediaInput.file`, which is additive. The first real row comes from the first change that cannot be made additively once a TestFlight build exists.
+- **Those builds cannot be gated.** At `e1f0b1f`, `meta.getAppConfig()` still returned the hardcoded placeholder: the builds never call `get_app_config`, so no value of `min_app_version`, `min_contract_version` or `maintenance` reaches them. The first build that reads the row is the first one cut after contract 3.2.0 (#275). Until builds 2 and 3 have expired or been removed from TestFlight, every shape contract 2.15.0 reads is live, whatever the support window in §14 says, and raising a floor does nothing for them.
+- **The first real row** comes from the first change that cannot be made additively. The worked example stays until then.
+
+Two near-term changes deliberately produce no row: IA-2 deletes `placeholderAppConfig()`, which is internal to `packages/api` and reaches no shipped client, and IA-4 widens `UploadMediaInput.file`, which is additive. 
