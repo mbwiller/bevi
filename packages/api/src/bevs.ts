@@ -35,12 +35,7 @@ import {
 import { fetchFollowIds } from './follows';
 import type { SnapshotCache } from './snapshot';
 import { mapError } from './errors';
-
-async function requireUserId(client: SupabaseClient): Promise<string> {
-  const { data, error } = await client.auth.getUser();
-  if (error || !data.user) throw new ApiError('unauthorized', 'Not signed in');
-  return data.user.id;
-}
+import { requireUserId } from './currentUser';
 
 interface SearchBevRpcRow {
   id: string;
@@ -275,7 +270,9 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
       p_category_id: input.categoryId,
       p_price_tier: input.priceTier,
       p_price_estimated: input.priceEstimated,
-      // Optional. A verified photo queues icon generation automatically.
+      // Optional now. `null` is what makes the Bev 'pending_photo' and
+      // INELIGIBLE for icon generation -- create_bev schedules a job only
+      // when this is a real asset it can verify (20261119185800).
       p_photo_asset_id: input.photoAssetId ?? null,
       p_label_asset_id: input.labelAssetId ?? null,
     };

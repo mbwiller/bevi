@@ -1,18 +1,20 @@
 import { MIN_RATERS } from '@bevi/ranking';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { LeaderboardRow } from '@bevi/shared';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, configure, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { Keyboard } from 'react-native';
+import { Dimensions, Keyboard, StyleSheet, View, type KeyboardEvent } from 'react-native';
 
 import { api } from '@/api/client';
 import { keys } from '@/api/keys';
 import AddBevTab from '@/app/(tabs)/add/index';
-import { readRecents } from '@/features/add-bev/recents';
+import { loadRecents } from '@/features/add-bev/recents';
 import { controls } from '@/testing/fakeApi';
 
 import { POPULAR_COUNT } from '../popular';
 import { ADD_NEW, POPULAR_TITLE } from '../SearchPanel';
 import { CANCEL_SETTLE_MS, SEARCH_PLACEHOLDER, SEARCH_TITLE } from '../SearchScreen';
+import { followPill } from '@/testing/followPill';
 
 const mockPush = jest.fn();
 const mockSetParams = jest.fn();
@@ -37,7 +39,8 @@ jest.mock('expo-router', () => ({
 configure({ asyncUtilTimeout: 5000 });
 let client: QueryClient;
 
-beforeEach(() => {
+beforeEach(async () => {
+  await AsyncStorage.clear();
   controls.setLatency(0);
   controls.resetToFixtures();
   controls.signInAs('tester');
@@ -74,18 +77,12 @@ const headings = () =>
 /** The Bev names the list offers to rank, in order. */
 const rankable = () => screen.queryAllByLabelText(/^Rank /).map((b) => (b.props.accessibilityLabel as string).replace(/^Rank /, ''));
 
-/** A localStorage for the test, optionally holding Recents for the test user; returns a restore function. */
-function withStorage(recents: { id: string; name: string; brand: string | null }[] = []) {
-  const store = new Map<string, string>(recents.length ? [[`bevi.add.recents:user-tester`, JSON.stringify(recents)]] : []);
-  const g = globalThis as { localStorage?: unknown };
-  const saved = g.localStorage;
-  g.localStorage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) };
-  return {
-    store,
-    restore: () => {
-      g.localStorage = saved;
-    },
-  };
+/**
+ * Recents for the test user, in AsyncStorage: jest resolves as iOS, so the screen runs the native
+ * recents.ts (recents.web.ts, on localStorage, has its own test in add-bev/__tests__).
+ */
+async function withRecents(recents: { id: string; name: string; brand: string | null }[]) {
+  await AsyncStorage.setItem('bevi.add.recents:user-tester', JSON.stringify(recents));
 }
 
 /** Puts `row` at the top of the all-categories board the screen reads. */
@@ -322,19 +319,18 @@ describe('the screen', () => {
 
 describe('idle', () => {
   it('Recents, then "Popular on Bevi"; no "Suggested for you"', async () => {
-    const { restore } = withStorage([{ id: 'b-1', name: 'Topo Chico', brand: 'Topo Chico' }]);
-    try {
-      // Recents are keyed by your id: with it known up front they're in the list before Popular
-      // arrives (FlashList's cells otherwise sit in arrival order in the test tree, not on screen).
-      client.setQueryData(keys.me(), await api.profile.getMe());
-      await renderSearch();
-      await screen.findByText(POPULAR_TITLE);
-      expect(headings()).toEqual(['Recents', POPULAR_TITLE]);
-      expect(screen.queryByText('Suggested for you')).toBeNull();
-      expect(screen.queryAllByLabelText(/^Follow /)).toHaveLength(0);
-    } finally {
-      restore();
-    }
+    await withRecents([{ id: 'b-1', name: 'Topo Chico', brand: 'Topo Chico' }]);
+    // Recents are keyed by your id, so it is known up front here. On native they are read from
+    // AsyncStorage after the first render, so here FlashList's test tree (which keeps cells in
+    // arrival order, not screen order) has them after Popular's header; the order on screen is
+    // checked in SearchRecentsOrder.test.tsx.
+    client.setQueryData(keys.me(), await api.profile.getMe());
+    await renderSearch();
+    await screen.findByText(POPULAR_TITLE);
+    await screen.findByText('Recents');
+    expect([...headings()].sort()).toEqual([POPULAR_TITLE, 'Recents'].sort());
+    expect(screen.queryByText('Suggested for you')).toBeNull();
+    expect(screen.queryAllByLabelText(/^Follow /)).toHaveLength(0);
   });
 
   it('clearing the bar goes back to "Popular on Bevi"', async () => {
@@ -402,18 +398,13 @@ describe('Popular on Bevi', () => {
   });
 
   it('Rank it ranks the Bev and remembers it in Recents', async () => {
-    const { restore } = withStorage();
-    try {
-      await renderSearch();
-      await waitFor(() => expect(rankable().length).toBeGreaterThan(0));
-      const name = rankable()[0]!;
-      const id = (await api.leaderboard.bevs()).items.find((r) => r.bev.name === name)!.bev.id;
-      await fireEvent.press(screen.getByLabelText(`Rank ${name}`));
-      expect(mockPush).toHaveBeenLastCalledWith({ pathname: '/rank/[bevId]', params: { bevId: id } });
-      expect(readRecents('user-tester')[0]?.name).toBe(name);
-    } finally {
-      restore();
-    }
+    await renderSearch();
+    await waitFor(() => expect(rankable().length).toBeGreaterThan(0));
+    const name = rankable()[0]!;
+    const id = (await api.leaderboard.bevs()).items.find((r) => r.bev.name === name)!.bev.id;
+    await fireEvent.press(screen.getByLabelText(`Rank ${name}`));
+    expect(mockPush).toHaveBeenLastCalledWith({ pathname: '/rank/[bevId]', params: { bevId: id } });
+    await waitFor(async () => expect((await loadRecents('user-tester'))[0]?.name).toBe(name));
   });
 
   it('holds its place with Skeleton rows while it loads', async () => {
@@ -606,27 +597,22 @@ describe('Bev rows', () => {
     await waitFor(() => expect(remove).toHaveBeenCalledWith(add.mock.calls[0]![0]));
   });
 
-  it('remembers opened Bevs as Recents (in localStorage) and forgets them', async () => {
-    const { store, restore } = withStorage();
-    try {
-      await renderSearch();
-      await type('coke');
-      const [rank] = await screen.findAllByLabelText(/^Rank /);
-      const name = rank!.props.accessibilityLabel.replace(/^Rank /, '');
-      await fireEvent.press(screen.getByRole('button', { name }));
-      expect(readRecents('user-tester')[0]?.name).toBe(name);
-      // Another account on this browser has its own (empty) list; the key predates the Add Bev tab.
-      expect(readRecents('user-friend_a')).toEqual([]);
-      expect([...store.keys()]).toEqual(['bevi.add.recents:user-tester']);
+  it('remembers opened Bevs as Recents (in AsyncStorage) and forgets them', async () => {
+    await renderSearch();
+    await type('coke');
+    const [rank] = await screen.findAllByLabelText(/^Rank /);
+    const name = rank!.props.accessibilityLabel.replace(/^Rank /, '');
+    await fireEvent.press(screen.getByRole('button', { name }));
+    await waitFor(async () => expect((await loadRecents('user-tester'))[0]?.name).toBe(name));
+    // Another account on this device has its own (empty) list; the key predates the Add Bev tab.
+    expect(await loadRecents('user-friend_a')).toEqual([]);
+    expect(await AsyncStorage.getAllKeys()).toEqual(['bevi.add.recents:user-tester']);
 
-      await fireEvent.press(screen.getByLabelText('Clear search'));
-      expect(await screen.findByText('Recents')).toBeTruthy();
-      await fireEvent.press(screen.getByLabelText(`Forget ${name}`));
-      expect(screen.queryByText('Recents')).toBeNull();
-      expect(readRecents('user-tester')).toEqual([]);
-    } finally {
-      restore();
-    }
+    await fireEvent.press(screen.getByLabelText('Clear search'));
+    expect(await screen.findByText('Recents')).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText(`Forget ${name}`));
+    expect(screen.queryByText('Recents')).toBeNull();
+    await waitFor(async () => expect(await loadRecents('user-tester')).toEqual([]));
   });
 });
 
@@ -636,26 +622,71 @@ describe('people rows', () => {
     expect(first.isFollowing).toBe(false);
     await renderSearch();
     await type(`@${first.handle}`);
-    const pill = await screen.findByLabelText(`Follow ${first.displayName}`);
+    const pill = await screen.findByLabelText(followPill(first.displayName));
     expect(pill.props['aria-pressed']).toBe(false);
 
     controls.setLatency(1000);
     await fireEvent.press(pill);
     // Flips while the server is still answering.
-    await waitFor(() => expect(screen.getByLabelText(`Follow ${first.displayName}`).props['aria-pressed']).toBe(true));
+    await waitFor(() => expect(screen.getByLabelText(followPill(first.displayName)).props['aria-pressed']).toBe(true));
     expect(client.isMutating()).toBe(1);
     await waitFor(async () => expect((await api.profile.getUser(first.id)).isFollowing).toBe(true));
-    expect(screen.getByLabelText(`Follow ${first.displayName}`).props['aria-pressed']).toBe(true);
+    expect(screen.getByLabelText(followPill(first.displayName)).props['aria-pressed']).toBe(true);
   });
 
   it('rolls a failed follow back', async () => {
     const first = (await api.follows.suggested())[0]!;
     await renderSearch();
     await type(`@${first.handle}`);
-    const pill = await screen.findByLabelText(`Follow ${first.displayName}`);
+    const pill = await screen.findByLabelText(followPill(first.displayName));
     controls.failNext('network', 'follows.follow');
     await fireEvent.press(pill);
     await waitFor(() => expect(client.isMutating()).toBe(0));
-    expect(screen.getByLabelText(`Follow ${first.displayName}`).props['aria-pressed']).toBe(false);
+    expect(screen.getByLabelText(followPill(first.displayName)).props['aria-pressed']).toBe(false);
+  });
+});
+
+describe('the keyboard (native)', () => {
+  // Jest resolves as iOS: the inset comes from the Keyboard module's keyboardWillShow event (the
+  // keyboard's end height) and the layout height from useWindowDimensions, not window.innerHeight
+  // and visualViewport as on the web (keyboardLift.ts).
+  function captureKeyboard() {
+    const listeners = new Map<string, (e: KeyboardEvent) => void>();
+    jest.spyOn(Keyboard, 'addListener').mockImplementation(((event: string, l: (e: KeyboardEvent) => void) => {
+      listeners.set(event, l);
+      return { remove: () => void listeners.delete(event) };
+    }) as unknown as typeof Keyboard.addListener);
+    return listeners;
+  }
+  const footMargin = () => {
+    let node: ReturnType<typeof screen.getByRole> | null = screen.getByRole('button', { name: ADD_NEW });
+    while (node && StyleSheet.flatten(node.props.style)?.marginBottom === undefined) node = node.parent;
+    return StyleSheet.flatten(node!.props.style).marginBottom;
+  };
+
+  it('raises the foot by the part of the keyboard below the panel, from the window height and the keyboard height', async () => {
+    const window = Dimensions.get('window').height;
+    // The panel ends 83pt above the bottom of the window (the tab bar).
+    const panelBottom = window - 83;
+    jest.spyOn(View.prototype, 'measureInWindow').mockImplementation(function (cb) {
+      cb(0, 100, 390, panelBottom - 100);
+    });
+    const keyboard = captureKeyboard();
+    await renderSearch();
+    await screen.findByText(POPULAR_TITLE);
+    expect(keyboard.has('keyboardWillShow')).toBe(true);
+    expect(footMargin()).toBe(0);
+
+    const kb = 336;
+    await act(async () =>
+      keyboard.get('keyboardWillShow')!({
+        endCoordinates: { height: kb, screenY: window - kb, screenX: 0, width: 390 },
+      } as KeyboardEvent),
+    );
+    // The keyboard's top is window - 336; the foot sits at window - 83, so it rises 253pt.
+    expect(footMargin()).toBe(kb - 83);
+
+    await act(async () => keyboard.get('keyboardWillHide')!({} as KeyboardEvent));
+    expect(footMargin()).toBe(0);
   });
 });

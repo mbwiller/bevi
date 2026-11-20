@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef } from 'react';
-import type { Session, SignInInput, SignUpInput } from '@bevi/shared';
+import { useCallback, useEffect, useRef } from 'react';
+import { isApiError, type Session, type SignInInput, type SignUpInput } from '@bevi/shared';
 
 import { api } from '../client';
 import { keys } from '../keys';
@@ -25,37 +25,58 @@ export function useSessionQuery() {
  *     if (!session) return useSession.getState().signOut();
  *     api.profile.getMe().then((p) => useSession.getState().setSession(p, p.onboarded));
  *   });
+ *
+ * `getSession` can also get no answer. Opened offline with a stored session whose access token has
+ * expired, it rejects with `network` (packages/api/src/auth.ts): the session is still there, it
+ * just could not be checked. That is not a sign-out, so `onChange` is not called with null for it;
+ * `onUnknown` is called with the error instead. The function this returns asks `getSession` again
+ * (Retry, the connection returning) and reports the answer the same way. An auth event heard while
+ * an answer is on its way is the newer of the two, and the answer is dropped.
  */
-export function useAuthListener(onChange: (session: Session | null) => void): void {
+export function useAuthListener(onChange: (session: Session | null) => void, onUnknown?: (error: unknown) => void): () => void {
   const qc = useQueryClient();
   const cb = useRef(onChange);
+  const unknown = useRef(onUnknown);
+  const ask = useRef<() => void>(() => {});
   useEffect(() => {
     cb.current = onChange;
+    unknown.current = onUnknown;
   });
   useEffect(() => {
     let active = true;
-    let heardEvent = false;
+    let heard = 0;
+    let asked = 0;
     const unsubscribe = api.onAuthChange((session) => {
-      heardEvent = true;
+      heard += 1;
       qc.setQueryData(keys.session(), session);
       if (!session) clearUserQueries(qc);
       cb.current(session);
     });
-    api.getSession().then(
-      (session) => {
-        if (!active || heardEvent) return;
-        qc.setQueryData(keys.session(), session);
-        cb.current(session);
-      },
-      () => {
-        if (active && !heardEvent) cb.current(null);
-      },
-    );
+    ask.current = () => {
+      const mine = ++asked;
+      const heardBefore = heard;
+      const stale = () => !active || heard !== heardBefore || mine !== asked;
+      api.getSession().then(
+        (session) => {
+          if (stale()) return;
+          qc.setQueryData(keys.session(), session);
+          cb.current(session);
+        },
+        (e: unknown) => {
+          if (stale()) return;
+          if (isApiError(e) && e.code === 'network') unknown.current?.(e);
+          else cb.current(null);
+        },
+      );
+    };
+    ask.current();
     return () => {
       active = false;
+      ask.current = () => {};
       unsubscribe();
     };
   }, [qc]);
+  return useCallback(() => ask.current(), []);
 }
 
 export function useSignIn() {

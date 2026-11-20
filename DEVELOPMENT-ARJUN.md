@@ -3,7 +3,7 @@
 > Your lane: the Supabase project and everything server-side. Postgres schema, RLS, SQL functions/RPCs, Edge Functions, cron, storage, auth config, the `packages/api` client the app talks through, and the seed catalog with its image pipeline.
 > Matt owns the app, the ranking math, and design. You meet in `shared/` through `contract/*` PRs.
 
-Written 2026-10-09 from `vision.md` (source of truth), `CONVERSATION.md` (raw founding chat), the agreed work-split brief, and the Bev Maps conventions you already use. Facts about Supabase and vendors were checked against current docs on 2026-10-09; where I could not confirm something I say so.
+Written 2026-10-09 from `vision.md` (source of truth), the founding session that produced it, the agreed work-split brief, and the Bev Maps conventions you already use. Facts about Supabase and vendors were checked against current docs on 2026-10-09; where I could not confirm something I say so.
 
 **Decided 2026-10-11 (Matt + Arjun): Bevi is a web app only.** The Expo app is built for the web (`expo export --platform web`), hosted on Vercel and added to the iPhone home screen; the backend stays Supabase. No native builds, EAS, App Store/TestFlight, Android, or Expo Go/dev client as a target. Sign-in is username + password gated by a shared invite code; no OAuth, no third-party services, no emails. Sections below are updated where this changed the plan.
 
@@ -22,6 +22,8 @@ Written 2026-10-09 from `vision.md` (source of truth), `CONVERSATION.md` (raw fo
 11. [First week checklist](#11-first-week-checklist)
 12. [Deliberately not doing](#12-deliberately-not-doing)
 13. [Open questions and proposed vision.md changes](#13-open-questions-and-proposed-visionmd-changes)
+14. [Backward compatibility (clients you cannot redeploy)](#14-backward-compatibility-clients-you-cannot-redeploy)
+15. [Deprecation ledger](#15-deprecation-ledger)
 
 ---
 
@@ -1006,7 +1008,7 @@ Honest position: manufacturer packshots are copyrighted; using them as catalog i
 
 Every seed image keeps `image_source_url`, `image_license`, `image_attribution`, so any one can be swapped on request. Never scrape Google Images; never use Amazon listing photos.
 
-**Style standard (Matt reviews the contact sheet against the Beli screenshots and UI spec in `bevi-ui-inspiration/`, where Matt's reference material now lives):** transparent background; subject fills ~85% of the height; square canvas 1024×1024 with the product centered and bottom-aligned; no shadows; WebP with alpha (PNG fallback only if an edge halo is visible). Thumbs 256×256 same framing.
+**Style standard (Matt reviews the contact sheet against the UI spec in `bevi-ui-inspiration/beli-screens-spec.md`):** transparent background; subject fills ~85% of the height; square canvas 1024×1024 with the product centered and bottom-aligned; no shadows; WebP with alpha (PNG fallback only if an edge halo is visible). Thumbs 256×256 same framing.
 
 ### 7.4 Background-removal pipeline (user uploads and seeds)
 
@@ -1104,7 +1106,7 @@ Integrator agent (`.claude/agents/integrator.md`, `chore/*` PR with Matt): same 
 ### 8.2 Observability
 
 - Free plan keeps logs 1 day. For anything you want to see later: Edge Functions log a single JSON line per invocation (`{fn, user_id, ms, ok, err}`) and the `recommend`/`process-photo` functions write outcome rows (`photo_jobs.error`, `recommendation_jobs.attempts`) so failures are in the DB, not the logs.
-- Sentry's Deno SDK in the two Edge Functions is cheap (free tier) and worth it from Phase 2; optional in Phase 1.
+- ~~Sentry's Deno SDK in the two Edge Functions~~ Not planned: on 2026-11-19 Sentry was dropped for the app in favour of building error reporting in house (`DEVELOPMENT-ARJUN-IOS.md`, IS-4), and the same holds here. Edge Function errors are read from the Supabase logs until that exists.
 - Weekly 5-minute check: `cron.job_run_details` failures, `recommendation_jobs` with `attempts >= 3`, `photo_jobs` errors, `bev_reports` open, dashboard → Reports for egress.
 - Dashboard Advisors (Security / Performance) after every schema change: they catch missing RLS and missing FK indexes.
 
@@ -1181,7 +1183,7 @@ Branches: Matt uses `ui/*` (app) and `rank/*` (ranking package); Arjun uses `be/
 | Matt | Search, lists, leaderboard, want-to-try methods | Arjun | Nov 6 | Mock API |
 | Matt | Feed, follows, featured | Arjun | Nov 20 | Mock API |
 | Matt | Recommendations/predicted score served from cache | Arjun | Dec 4 | Mock returns fixture predictions |
-| Matt | Catalog image contact sheet to review against `bevi-ui-inspiration/` | Arjun | Oct 23 | — |
+| Matt | Catalog image contact sheet to review against `bevi-ui-inspiration/beli-screens-spec.md` | Arjun | Oct 23 | — |
 | Arjun | Per-screen data needs | Matt | Oct 13 | Draft schema from vision.md (this doc) |
 | Arjun | Per-screen additions to the `BeviApi` surface | Matt | Oct 16 | Build from §6.1 |
 | Arjun | `scoreFromPosition`, stats (`stddev_pop`, z-score) and `bayesAverage` vectors | Matt | Oct 23 | Agreed formulas implemented from §5.2/§5.10, unverified by CI |
@@ -1237,7 +1239,7 @@ Tags: model/effort for the Claude Code sub-agent per vision §10. "DoD" = defini
 | 2.3 | Streaks (`touch_streak`, hourly reset) and user rank cron with vectors | Vectors pass; timezone edge cases tested (23:59 PT) | Sonnet, medium |
 | 2.4 | `recommend` Edge Function: bundle step, snapshot builder, queue + cron, cache table, `getRecommendations`, `predictedScore` in `get_bev` | For seeded users, Recommended list populates within 1 minute of ranking; CPU < 2 s per invocation (log it) | Opus, high for snapshot/CPU-budget design; Sonnet, medium to implement |
 | 2.5 | Moderation: `report_bev`, `moderation_queue`, admin RPCs (`merge_bevs`, `hide_bev`) | Merge test with a user who ranked both | Sonnet, medium |
-| 2.6 | Sentry in Edge Functions; weekly ops checklist | Errors visible | Haiku, low |
+| 2.6 | ~~Sentry in Edge Functions~~ (dropped 2026-11-19, see IS-4); weekly ops checklist | Errors visible | Haiku, low |
 | 2.7 | Code review / bug hunt before Phase 2 ships | | Sonnet, high |
 
 ### Phase 3 — Smarter and bigger (2027 Q1)
@@ -1314,3 +1316,68 @@ Open questions for you to resolve during Phase 0 (facts I could not verify):
 - `storage.objects` owner column name on the project's storage version (`owner` vs `owner_id`).
 - Whether `@imagemagick/magick-wasm` encoding of a 1024 px WebP fits in the 2 s CPU budget; measure on the first run and fall back to Replicate-side resizing.
 - Whether `supabase config push` covers the auth settings we set ("Confirm email" off, rate limits); otherwise document the dashboard clicks in `supabase/README.md`.
+
+---
+
+## 14. Backward compatibility (clients you cannot redeploy)
+
+Written for the store binary (`DEVELOPMENT-ARJUN-IOS.md` §IA-3). While the web app was the only client, "both halves deploy together" made every rule here unnecessary; a build sitting on someone's phone makes it the main rule of the lane. `supabase/CLAUDE.md` carries the short version to read mid-task; this is the reasoning and the mechanics.
+
+**The support window.** The backend serves the current contract major and the two previous minors — `N`, `N-1`, `N-2`. On 2.14.0 that is 2.14, 2.13 and 2.12. Anything older is cut off deliberately, not silently: `app_config`'s `min_app_version` / `min_contract_version` (IA-2) is raised, `useAppConfig()` sees it, and the app shows "update required". Two rules follow:
+
+- A contract version only leaves the window by a deliberate bump of `min_contract_version`. Never by a migration that quietly stops answering it.
+- `min_app_version` is never raised past a build the App Store will still serve every device we support (IA-9). A gate an old iPhone cannot clear bricks it forever.
+
+**The floor is decorative until someone raises it.** `app_config.min_app_version` and `min_contract_version` are both seeded `'0.0.0'` (the IA-2 migration, #240) — below every build and every contract that has ever existed, on purpose, so nothing is gated on day one. So the gate does nothing by default, and it fails in both directions:
+
+- **Too low is a silent break.** A 3.0.0 backend with the floor still at `0.0.0` cheerfully answers a 2.12 binary with shapes it cannot parse, and the user gets crashes and empty screens instead of "update required". Raising `min_contract_version` is therefore a **mandatory line in the breaking-bump checklist**, not a follow-up ticket: the release that makes a contract version unservable is the release that raises the floor past it.
+- **Too high locks people out with no recourse.** Never raise either floor past a build the store is already serving (IA-9's staged rollout), and never raise it at all before IM-9's "update required" screen exists to show the user why — a gate with no screen behind it is a dead app and no explanation. The blocking screen always offers a way to reach us.
+
+The order, end to end, for a change that cannot be made additively:
+
+1. Add the new thing; the old one keeps working (the four steps below).
+2. Ship a client that reads the new thing, and record that build's version in §15's row.
+3. Confirm IM-9's screen is live and the store is serving the new build to every device we support.
+4. **Raise `min_contract_version` on the hosted project** (and `min_app_version` if a native build is required), then `select` the row back and check it. Never from memory, never only in dev.
+5. Only then remove the old thing, and delete the §15 row in the same PR.
+
+**Destructive changes are two-release operations.** While a client inside the window still reads a thing, you may not remove it. "The thing" is anything that client touches: a column `packages/api` selects, an RPC it calls, an enum value it parses, a constraint it relies on being loose.
+
+| Change | Safe in one release? |
+|---|---|
+| Add a nullable column, a table, an enum value, an RPC | Yes |
+| Add a column at the end of a `returns table (...)` | Yes — `packages/api` reads columns by name, never `select *` |
+| Widen a check constraint, drop a `not null` | Yes |
+| Add an RPC parameter **with a default** | Yes — an old client calls with the old argument list |
+| Drop or rename a column | No |
+| Remove an enum value, narrow a check, add a `not null` | No |
+| Change an RPC's return columns (remove, rename, retype) | No |
+| Drop or rename an RPC parameter | No |
+
+Every "No" is the same four steps:
+
+1. **Add** the new column / value / `rpc_name_v2` in a migration. The old one keeps working, untouched.
+2. **Ship** a contract version and a `packages/api` that read the new one, and add a row to §15 recording what is now unused and from which contract version.
+3. **Wait.** The old thing lives until `min_contract_version` has passed the last version that read it and `min_app_version` has passed the last build that shipped it — i.e. until §15's "safe to delete when" is true of what is actually in `app_config`, checked against the hosted row, not from memory.
+4. **Remove** it in a new migration (append-only: a new file, never an edit to the old one) and delete the §15 row in the same PR.
+
+**RPC versioning.** Never change a live RPC's columns in place. `create or replace function` on a function an installed binary calls is for the body only; the signature and the return shape are frozen for as long as that binary is inside the window. When a shape must change incompatibly, add `rpc_name_v2`, grant it the same way, point `packages/api` at it in the contract PR, and leave `rpc_name` answering the old shape. `rpc_name` is then an ordinary §15 row and dies on the schedule above. Do not stack versions: if `_v3` is wanted before `_v1` is gone, the window is doing its job and `_v1` should be gated out first.
+
+**What enforces it.** `.claude/agents/integrator.md` checks (g) no destructive migration without a ledger row that `app_config` already satisfies, (h) no in-place change to an existing RPC's return shape or parameter list, (i) every deprecation carries a §15 row, (j) a breaking change names the floor it raises. Run it before opening the PR, as always. The compatibility test matrix that would catch the rest mechanically is still a proposal — `DEVELOPMENT-ARJUN-IOS.md` §IA-3, "Where the conformance suite has to live".
+
+---
+
+## 15. Deprecation ledger
+
+Everything the backend still carries only for clients that have not been gated out yet. A row is added by the PR that stops using the thing (§14, step 2) and deleted by the PR that drops it (§14, step 4). "Safe to delete when" is an `app_config` state, not a date.
+
+| Thing | Where | Last contract version that used it | Safe to delete when | Note |
+|---|---|---|---|---|
+| _(worked example, not real)_ `get_bev` | `supabase/migrations/<ts>_bev_reads.sql` | 2.17.0 | `min_contract_version >= 2.18.0` **and** `min_app_version >= 1.4.0` | Superseded by `get_bev_v2`, which returns `nutrition` as columns instead of nested json. Drop the function and this row in the same PR. |
+
+No row yet, but the reason changed on 2026-11-19: **there is now a client a migration cannot move.** TestFlight builds 0.1.0 (2) and (3) were cut from `e1f0b1f`, whose client code is contract **2.15.0**, and they stay installable until TestFlight expires them 90 days after upload (2027-02-17). Two things follow.
+
+- **Those builds cannot be gated.** At `e1f0b1f`, `meta.getAppConfig()` still returned the hardcoded placeholder: the builds never call `get_app_config`, so no value of `min_app_version`, `min_contract_version` or `maintenance` reaches them. The first build that reads the row is the first one cut after contract 3.2.0 (#275). Until builds 2 and 3 have expired or been removed from TestFlight, every shape contract 2.15.0 reads is live, whatever the support window in §14 says, and raising a floor does nothing for them.
+- **The first real row** comes from the first change that cannot be made additively. The worked example stays until then.
+
+Two near-term changes deliberately produce no row: IA-2 deletes `placeholderAppConfig()`, which is internal to `packages/api` and reaches no shipped client, and IA-4 widens `UploadMediaInput.file`, which is additive. 

@@ -1,7 +1,7 @@
 // Test controls for the FakeApi. Suites import `controls` from '@/testing/fakeApi'. After a control
 // changes data, invalidate TanStack Query (`queryClient.invalidateQueries()`) to refetch.
 
-import type { ApiErrorCode, BugTicketState, IconStatus } from '@bevi/shared';
+import type { ApiErrorCode, AppConfig, BugTicketState, IconStatus } from '@bevi/shared';
 
 import { getFakeApi } from './instance';
 import type { Latency } from './FakeApi';
@@ -24,7 +24,7 @@ export interface FakeControls {
    */
   setInternalReporter(internal: boolean): void;
   /**
-   * Move one of the fake's bug tickets to a workflow state, as triage would in Linear: 'in_review'
+   * Move one of the fake's bug tickets to a workflow state, as a founder would on the board: 'in_review'
    * makes My reports offer Verified on device; anything but triage/todo/in_progress takes it out
    * of the ranked list (`rank: null`).
    */
@@ -37,6 +37,14 @@ export interface FakeControls {
    * no job in the fake, only the state a screen would see.
    */
   setIconStatus(bevId: string, status: IconStatus | null): void;
+  /**
+   * Edit what `meta.getAppConfig` answers, as an operator would the `app_config` row: the fields
+   * given replace the current ones, e.g. `{ maintenance: true, maintenanceMessage: 'Back by 9pm ET.' }`
+   * or `{ minAppVersion: '9.0.0' }`. Versions must be `x.y.z`. Back to the default (`maintenance`
+   * false, no message, `minAppVersion` '0.1.0', `minContractVersion` '0.0.0') after
+   * `resetToFixtures()`. To make the read fail instead, `failNext(code, 'meta.getAppConfig')`.
+   */
+  setAppConfig(config: Partial<AppConfig>): void;
 }
 
 export const controls: FakeControls = {
@@ -48,4 +56,5 @@ export const controls: FakeControls = {
   setInternalReporter: (internal) => getFakeApi().setInternalReporter(internal),
   setBugTicketState: (ticketId, state) => getFakeApi().setBugTicketState(ticketId, state),
   setIconStatus: (bevId, status) => getFakeApi().setIconStatus(bevId, status),
+  setAppConfig: (config) => getFakeApi().setAppConfig(config),
 };

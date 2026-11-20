@@ -17,6 +17,7 @@ import { isPointsRankingItem, usePointsRanking, type PointsRankingItem } from '@
 import { usePointsScope } from '@/features/leaderboard/pointsScope';
 import { ScopePills } from '@/features/leaderboard/ScopePills';
 import { useBack } from '@/lib/useBack';
+import { usePullToRefresh } from '@/lib/usePullToRefresh';
 import { spacing, useTheme } from '@/theme';
 
 import { followedByContext } from './copy';
@@ -186,17 +187,10 @@ export function FindPeopleScreen() {
   ) : (
     ranking.footer
   );
-  const refreshing = searching
-    ? people.isRefetching && !people.isFetchingNextPage && !people.isPending
-    : ranking.refreshing || (suggested.isRefetching && !suggested.isPending);
-  const onRefresh = () => {
-    if (searching) {
-      void refetchPeople();
-      return;
-    }
-    void refetchSuggested();
-    ranking.refresh();
-  };
+  const { refreshing, onRefresh } = usePullToRefresh(() => {
+    if (searching) return refetchPeople();
+    return Promise.all([refetchSuggested(), ranking.refresh()]);
+  });
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.screen, { backgroundColor: colors.surface }]}>

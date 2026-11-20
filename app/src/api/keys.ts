@@ -50,6 +50,12 @@ export const keys = {
     suggested: () => [...root, 'follows', 'suggested'] as const,
   },
 
+  /** `blocks.list`: the people the caller has blocked (Settings > Blocked accounts). */
+  blocks: {
+    all: [...root, 'blocks'] as const,
+    list: () => [...root, 'blocks', 'list'] as const,
+  },
+
   categories: () => [...root, 'categories'] as const,
 
   bevs: {

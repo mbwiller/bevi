@@ -10,6 +10,7 @@ import { POST_GONE } from '@/features/feed/useFeedPostActions';
 import { FRIEND, ME, controls, userIdFor } from '@/testing/fakeApi';
 import ProfileScreen from '@/app/(tabs)/profile/index';
 import UserProfileScreen from '@/app/user/[id]/index';
+import { followPill } from '@/testing/followPill';
 
 let client: QueryClient;
 
@@ -103,14 +104,14 @@ describe('Profile › Activity', () => {
   it('following a stranger switches Activity to posts without a reload; unfollowing switches back', async () => {
     const name = 'Friend E';
     await open(`/user/${strangerId}`);
-    const follow = await screen.findByLabelText(`Follow ${name}`);
+    const follow = await screen.findByLabelText(followPill(name));
     await waitFor(() => expect(screen.queryAllByLabelText(/^(Like|Unlike)/)).toHaveLength(0));
 
     await fireEvent.press(follow);
     await waitFor(() => expect(screen.queryAllByLabelText(/^(Like|Unlike)/).length).toBeGreaterThan(0));
     expect(screen.getAllByTestId(/^feed-post-(?!strip)/).length).toBeGreaterThan(0);
 
-    await fireEvent.press(screen.getByLabelText(`Follow ${name}`));
+    await fireEvent.press(screen.getByLabelText(followPill(name)));
     await waitFor(() => expect(screen.queryAllByLabelText(/^(Like|Unlike)/)).toHaveLength(0));
   });
 
@@ -177,7 +178,7 @@ describe('Profile › Activity', () => {
 
   it('following a stranger never flashes the empty state while the follow is in flight', async () => {
     await open(`/user/${strangerId}`);
-    const follow = await screen.findByLabelText('Follow Friend E');
+    const follow = await screen.findByLabelText(followPill('Friend E'));
     await screen.findAllByText(/./);
     controls.setLatency(300);
     await fireEvent.press(follow);

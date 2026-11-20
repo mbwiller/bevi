@@ -1,15 +1,16 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { configure, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { StyleSheet } from 'react-native';
+import { act, configure, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { Linking, StyleSheet } from 'react-native';
 import type { BevSummary } from '@bevi/shared';
 
 import { api } from '@/api/client';
 import { controls } from '@/testing/fakeApi';
+import { grabModalDismiss } from '@/testing/modalDismiss';
 import { categoryById } from '@/lib/categories';
 import { type } from '@/theme';
 
 import { CreateBevWizard, DUPLICATES_DEBOUNCE_MS } from '../CreateBevWizard';
-import { pickImage, preparePhoto, UnsupportedImageError } from '../photo';
+import { CameraPermissionError, pickImage, preparePhoto, UnsupportedImageError } from '../photo';
 
 const mockReplace = jest.fn();
 const mockBack = jest.fn();
@@ -18,7 +19,8 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({}),
 }));
 
-// The picker and the canvas resize are browser-only; the wizard sees what they would return.
+// The picker and the resize are native modules; the wizard sees what they would return: the native
+// pipeline's JPEG bytes (photo.ts), never a Blob.
 jest.mock('../BarcodeCamera', () => ({ BarcodeCamera: () => null }));
 
 jest.mock('../photo', () => ({
@@ -35,6 +37,8 @@ jest.setTimeout(30000);
 const READY_TIMEOUT = { timeout: 12000 };
 let client: QueryClient;
 
+/** What the native pipeline uploads: the re-encoded JPEG's bytes. */
+const JPEG_BYTES = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
 const asset = { uri: 'blob:photo', width: 3000, height: 4000, mimeType: 'image/jpeg' } as Awaited<ReturnType<typeof pickImage>>;
 
 beforeEach(() => {
@@ -46,7 +50,7 @@ beforeEach(() => {
   let n = 0;
   mockPrepare.mockImplementation(async () => ({
     uri: `blob:prepared-${++n}`,
-    blob: new Blob(['jpeg'], { type: 'image/jpeg' }),
+    file: JPEG_BYTES,
     mimeType: 'image/jpeg',
     width: 1200,
     height: 1600,
@@ -105,7 +109,9 @@ it('walks photo → details → "Looks new" → create, uploading in the backgro
   await addPhoto();
   expect(mockPick).toHaveBeenCalledWith('camera');
   // Uploaded as soon as it was chosen, before the details.
-  await waitFor(() => expect(upload).toHaveBeenCalledWith(expect.objectContaining({ kind: 'bev-photo', mimeType: 'image/jpeg' })));
+  await waitFor(() => expect(upload).toHaveBeenCalledWith({ kind: 'bev-photo', file: JPEG_BYTES, mimeType: 'image/jpeg' }));
+  // Bytes, never a Blob: a React Native Blob uploads as an empty object.
+  expect(upload.mock.calls[0]![0].file).not.toBeInstanceOf(Blob);
 
   await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
   expect(screen.getByText('Step 2 of 3')).toBeTruthy();
@@ -215,6 +221,70 @@ it('cancelling the picker stays on the photo step with nothing chosen', async ()
   expect(mockPrepare).not.toHaveBeenCalled();
 });
 
+it('a refused camera says how to turn it on, Open Settings opens Settings, and the photo step is unchanged', async () => {
+  mockPick.mockRejectedValueOnce(new CameraPermissionError(false));
+  const openSettings = jest.spyOn(Linking, 'openSettings').mockResolvedValue(undefined);
+  const upload = jest.spyOn(api.media, 'upload');
+  await renderWizard();
+  await fireEvent.press(screen.getByRole('button', { name: 'Take photo' }));
+  await screen.findByText('Bevi needs the camera to take a photo. Turn it on in Settings, or choose a photo.');
+  expect(mockPrepare).not.toHaveBeenCalled();
+  expect(upload).not.toHaveBeenCalled();
+  expect(screen.getByText('Step 1 of 3')).toBeTruthy();
+
+  await fireEvent.press(screen.getByRole('button', { name: 'Open Settings to allow the camera' }));
+  expect(openSettings).toHaveBeenCalledTimes(1);
+
+  // Choosing from the library instead clears the line and carries on as usual.
+  await fireEvent.press(screen.getByRole('button', { name: 'Choose photo' }));
+  await screen.findByRole('button', { name: 'Retake' });
+  expect(screen.queryByText(/Turn it on in Settings/)).toBeNull();
+  await waitFor(() => expect(upload).toHaveBeenCalledWith(expect.objectContaining({ kind: 'bev-photo', file: JPEG_BYTES })));
+});
+
+it('a refused camera on Retake keeps the photo already chosen', async () => {
+  await renderWizard();
+  await addPhoto();
+  mockPick.mockRejectedValueOnce(new CameraPermissionError(false));
+  await fireEvent.press(screen.getByRole('button', { name: 'Retake' }));
+  await screen.findByRole('button', { name: 'Open Settings to allow the camera' });
+  expect(screen.getByRole('button', { name: 'Retake' })).toBeTruthy();
+  await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+  expect(screen.getByText('Step 2 of 3')).toBeTruthy();
+});
+
+it('a camera refused while a chosen photo is still being prepared keeps its line once the upload starts', async () => {
+  let finish: () => void = () => undefined;
+  mockPrepare.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = () => resolve({ uri: 'blob:prepared-slow', file: JPEG_BYTES, mimeType: 'image/jpeg', width: 1200, height: 1600 });
+      }),
+  );
+  const upload = jest.spyOn(api.media, 'upload');
+  await renderWizard();
+  await fireEvent.press(screen.getByRole('button', { name: 'Choose photo' }));
+  await waitFor(() => expect(mockPrepare).toHaveBeenCalledTimes(1));
+
+  mockPick.mockRejectedValueOnce(new CameraPermissionError(false));
+  await fireEvent.press(screen.getByRole('button', { name: 'Take photo' }));
+  await screen.findByText(/Turn it on in Settings/);
+
+  await act(async () => finish());
+  await waitFor(() => expect(upload).toHaveBeenCalledWith(expect.objectContaining({ kind: 'bev-photo', file: JPEG_BYTES })));
+  await screen.findByRole('button', { name: 'Retake' });
+  expect(screen.getByText(/Turn it on in Settings/)).toBeTruthy();
+});
+
+it('a picker that fails to open says so instead of throwing', async () => {
+  mockPick.mockRejectedValueOnce(new Error('picker unavailable'));
+  await renderWizard();
+  await fireEvent.press(screen.getByRole('button', { name: 'Choose photo' }));
+  await screen.findByText("Bevi couldn't open that. Try again.");
+  expect(screen.queryByRole('button', { name: 'Open Settings to allow the camera' })).toBeNull();
+  expect(mockPrepare).not.toHaveBeenCalled();
+});
+
 it('closing with something entered asks before discarding; with nothing entered it just closes', async () => {
   await renderWizard();
   await fireEvent.press(screen.getAllByLabelText('Close')[0]!);
@@ -226,7 +296,14 @@ it('closing with something entered asks before discarding; with nothing entered 
   await fireEvent.press(screen.getByRole('button', { name: 'Keep editing' }));
   expect(mockBack).toHaveBeenCalledTimes(1);
   await fireEvent.press(screen.getAllByLabelText('Close')[0]!);
-  await fireEvent.press(await screen.findByRole('button', { name: 'Discard' }));
+  const discard = await screen.findByRole('button', { name: 'Discard' });
+  const dismiss = grabModalDismiss();
+  await fireEvent.press(discard);
+  // Closing, not closed: leaving now would pop the screen under a Modal that is still presented.
+  expect(mockBack).toHaveBeenCalledTimes(1);
+  await waitFor(() => expect(screen.queryByText('Discard this Bev?')).toBeNull());
+  expect(mockBack).toHaveBeenCalledTimes(1);
+  await act(() => dismiss());
   expect(mockBack).toHaveBeenCalledTimes(2);
 });
 
@@ -258,7 +335,7 @@ it('Next waits while the photo is being prepared', async () => {
   mockPrepare.mockImplementationOnce(
     () =>
       new Promise((resolve) => {
-        finish = () => resolve({ uri: 'blob:slow', blob: new Blob(['jpeg'], { type: 'image/jpeg' }), mimeType: 'image/jpeg', width: 10, height: 10 });
+        finish = () => resolve({ uri: 'blob:slow', file: JPEG_BYTES, mimeType: 'image/jpeg', width: 10, height: 10 });
       }),
   );
   await renderWizard();

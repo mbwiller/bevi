@@ -9,16 +9,20 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { apiConfig } from '@/api/client';
 import { useCanReportBug } from '@/api/hooks';
 import { createQueryClient } from '@/api/queryClient';
+import { OfflineNoticeHost } from '@/components/OfflineNotice';
 import { StackScene } from '@/components/ScreenMotion';
 import { StatusBarClearance } from '@/components/StatusBarClearance';
 import { clearReportCommand, useReportCommands } from '@/features/bug-report/commands';
 import { loadReportHost } from '@/features/bug-report/loadHost';
+import { ReportTouchRoot } from '@/features/bug-report/ReportTouchRoot';
+import { AppGate } from '@/features/app-gate/AppGate';
 import { loadNutritionDemo } from '@/features/create-bev/loadNutritionDemo';
 import { ConfigError, Splash } from '@/features/auth/Splash';
 import { useSessionBootstrap } from '@/features/auth/useSessionBootstrap';
 import { clearLegacyStorage } from '@/lib/clearLegacyStorage';
 import { useSession } from '@/state/session';
 import { useTheme } from '@/theme';
+import { RootError } from '@/components/RootError';
 
 // The old in-browser mock's data (fake users, plain-text passwords) may still sit in localStorage.
 clearLegacyStorage();
@@ -50,14 +54,26 @@ export default function RootLayout() {
         <StatusBarClearance>
           <QueryClientProvider client={queryClient}>
             <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-            {__DEV__ && process.env.EXPO_PUBLIC_NUTRITION_SCAN_DEMO === '1'
-              ? <Suspense fallback={null}><NutritionDemo /></Suspense>
-              : apiConfig.ok ? <SessionGate /> : <ConfigError problem={apiConfig.problem} />}
+            {/* "You're offline" above everything below it, the launch Splash included (not iOS full-screen modals). */}
+            <OfflineNoticeHost>
+              {__DEV__ && process.env.EXPO_PUBLIC_NUTRITION_SCAN_DEMO === '1'
+                ? <Suspense fallback={null}><NutritionDemo /></Suspense>
+                : apiConfig.ok ? <AppGate><SessionGate /></AppGate> : <ConfigError problem={apiConfig.problem} />}
+            </OfflineNoticeHost>
           </QueryClientProvider>
         </StatusBarClearance>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
+}
+
+/**
+ * A screen that throws while it renders shows this instead of closing the app. Expo Router wraps
+ * the root layout in a boundary when the layout's file exports `ErrorBoundary`, and renders this in
+ * the layout's place, outside every provider above (components/RootError.tsx).
+ */
+export function ErrorBoundary(props: ComponentProps<typeof RootError>) {
+  return <RootError {...props} />;
 }
 
 type ScreenLayout = NonNullable<ComponentProps<typeof Stack>['screenLayout']>;
@@ -85,37 +101,41 @@ function SessionGate() {
   if (!checked) return <Splash error={error || undefined} onRetry={retry} />;
   return (
     <>
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.surface } }} screenLayout={screenLayout}>
-        <Stack.Screen name="index" />
+      {/* The one View the bug reporter hears taps through on iOS (nothing on the web); it has no handlers unless the reporter asks. */}
+      <ReportTouchRoot>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.surface } }} screenLayout={screenLayout}>
+          <Stack.Screen name="index" />
 
-        <Stack.Protected guard={status === 'signedOut'}>
-          <Stack.Screen name="(auth)/sign-in" />
-          <Stack.Screen name="(auth)/sign-up" />
-        </Stack.Protected>
+          <Stack.Protected guard={status === 'signedOut'}>
+            <Stack.Screen name="(auth)/sign-in" />
+            <Stack.Screen name="(auth)/sign-up" />
+          </Stack.Protected>
 
-        <Stack.Protected guard={status === 'onboarding'}>
-          <Stack.Screen name="onboarding/profile" />
-          <Stack.Screen name="onboarding/starter" />
-        </Stack.Protected>
+          <Stack.Protected guard={status === 'onboarding'}>
+            <Stack.Screen name="onboarding/profile" />
+            <Stack.Screen name="onboarding/starter" />
+          </Stack.Protected>
 
-        <Stack.Protected guard={status === 'ready'}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="search" />
-          <Stack.Screen name="leaderboard" />
-          <Stack.Screen name="bev/[id]" />
-          <Stack.Screen name="user/[id]/index" />
-          <Stack.Screen name="user/[id]/followers" />
-          <Stack.Screen name="user/[id]/following" />
-          <Stack.Screen name="rank/[bevId]" options={{ presentation: 'fullScreenModal' }} />
-          <Stack.Screen name="add/new" options={{ presentation: 'fullScreenModal' }} />
-          <Stack.Screen name="settings/index" />
-          <Stack.Screen name="settings/account" />
-          <Stack.Screen name="settings/privacy" />
-          <Stack.Screen name="settings/delete-account" />
-          <Stack.Screen name="image/[url]" options={{ presentation: 'fullScreenModal' }} />
-          <Stack.Screen name="report-bug" options={{ presentation: 'fullScreenModal' }} />
-        </Stack.Protected>
-      </Stack>
+          <Stack.Protected guard={status === 'ready'}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="search" />
+            <Stack.Screen name="leaderboard" />
+            <Stack.Screen name="bev/[id]" />
+            <Stack.Screen name="user/[id]/index" />
+            <Stack.Screen name="user/[id]/followers" />
+            <Stack.Screen name="user/[id]/following" />
+            <Stack.Screen name="rank/[bevId]" options={{ presentation: 'fullScreenModal' }} />
+            <Stack.Screen name="add/new" options={{ presentation: 'fullScreenModal' }} />
+            <Stack.Screen name="settings/index" />
+            <Stack.Screen name="settings/account" />
+            <Stack.Screen name="settings/privacy" />
+            <Stack.Screen name="settings/blocked" />
+            <Stack.Screen name="settings/delete-account" />
+            <Stack.Screen name="image/[url]" options={{ presentation: 'fullScreenModal' }} />
+            <Stack.Screen name="report-bug" options={{ presentation: 'fullScreenModal' }} />
+          </Stack.Protected>
+        </Stack>
+      </ReportTouchRoot>
       {/* A sibling of the Stack, so it coming and going never remounts a screen. */}
       <Reporter ready={status === 'ready'} />
     </>

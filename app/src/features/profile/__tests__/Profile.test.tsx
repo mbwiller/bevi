@@ -7,6 +7,7 @@ import { controls } from '@/testing/fakeApi';
 import ProfileScreen from '@/app/(tabs)/profile/index';
 import UserProfileScreen from '@/app/user/[id]/index';
 import { streakCardValue } from '@/features/profile/copy';
+import { followPill } from '@/testing/followPill';
 
 let client: QueryClient;
 
@@ -178,7 +179,9 @@ describe('own profile', () => {
     expect(await within(sheet).findByText('Enter a name.')).toBeTruthy();
     await fireEvent.changeText(name, 'Tester Renamed');
     await fireEvent.press(within(sheet).getByLabelText('Save'));
-    await waitFor(async () => expect((await api.profile.getMe()).displayName).toBe('Tester Renamed'));
+    // Not `waitFor(async () => ...)`: it can leave one of its fake-clock acts open into the next test's act.
+    await waitFor(() => expect(client.isMutating() + client.isFetching()).toBe(0));
+    expect((await api.profile.getMe()).displayName).toBe('Tester Renamed');
     expect(await screen.findByText('Tester Renamed')).toBeTruthy();
   });
 });
@@ -194,20 +197,20 @@ describe("another user's profile", () => {
     if (j.isFollowing) await api.follows.unfollow(j.id);
     const before = (await api.stats.getUser(j.id)).followers;
     await open(`/user/${j.id}`);
-    const button = await screen.findByLabelText(`Follow ${j.displayName}`);
+    const button = await screen.findByLabelText(followPill(j.displayName));
     expect(button.props['aria-pressed']).toBe(false);
     expect(screen.getByLabelText(`${before} Followers`)).toBeTruthy();
 
     controls.setLatency(800);
     await fireEvent.press(button);
     // Optimistic: flipped well before the 800ms call resolves.
-    await waitFor(() => expect(screen.getByLabelText(`Follow ${j.displayName}`).props['aria-pressed']).toBe(true), { timeout: 400 });
+    await waitFor(() => expect(screen.getByLabelText(followPill(j.displayName)).props['aria-pressed']).toBe(true), { timeout: 400 });
     expect(screen.getByLabelText(`${before + 1} Followers`)).toBeTruthy();
     controls.setLatency(0);
     await waitFor(async () => expect((await api.profile.getUser(j.id)).isFollowing).toBe(true));
 
-    await fireEvent.press(screen.getByLabelText(`Follow ${j.displayName}`));
-    await waitFor(() => expect(screen.getByLabelText(`Follow ${j.displayName}`).props['aria-pressed']).toBe(false));
+    await fireEvent.press(screen.getByLabelText(followPill(j.displayName)));
+    await waitFor(() => expect(screen.getByLabelText(followPill(j.displayName)).props['aria-pressed']).toBe(false));
     await waitFor(async () => expect((await api.profile.getUser(j.id)).isFollowing).toBe(false));
   });
 
@@ -215,10 +218,10 @@ describe("another user's profile", () => {
     const j = await jules();
     if (j.isFollowing) await api.follows.unfollow(j.id);
     await open(`/user/${j.id}`);
-    const button = await screen.findByLabelText(`Follow ${j.displayName}`);
+    const button = await screen.findByLabelText(followPill(j.displayName));
     controls.failNext('network', 'follows.follow');
     await fireEvent.press(button);
-    await waitFor(() => expect(screen.getByLabelText(`Follow ${j.displayName}`).props['aria-pressed']).toBe(false));
+    await waitFor(() => expect(screen.getByLabelText(followPill(j.displayName)).props['aria-pressed']).toBe(false));
   });
 
   it('shows Bev\'d · Followers · Following and no list rows', async () => {

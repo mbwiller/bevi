@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useMe, useStats } from '@/api/hooks';
+import { Announce } from '@/components/Announce';
 import { Button } from '@/components/Button';
 import { ErrorState } from '@/components/ErrorState';
 import { Header } from '@/components/Header';
@@ -72,10 +73,7 @@ export default function ProfileScreen() {
         tab={tab}
         onTab={(t) => router.setParams({ tab: t })}
         onEmptyAction={() => router.push({ pathname: '/add', params: { focus: '1' } })}
-        onRefresh={() => {
-          void me.refetch();
-          void stats.refetch();
-        }}
+        onRefresh={() => Promise.all([me.refetch(), stats.refetch()])}
         header={
           <View>
             <ProfileHero
@@ -93,6 +91,7 @@ export default function ProfileScreen() {
                 Share profile
               </Button>
             </ProfileButtonRow>
+            <Announce text={notice} />
             {notice ? (
               <Text style={[type.body, styles.notice, { color: colors.textSecondary }]} accessibilityLiveRegion="polite" role="status">
                 {notice}

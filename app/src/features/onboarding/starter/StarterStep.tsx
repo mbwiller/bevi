@@ -9,6 +9,7 @@ import { BevImage } from '@/components/BevImage';
 import { bevImageProps, brandLine } from '@/components/BevParts';
 import { Button } from '@/components/Button';
 import { ErrorState } from '@/components/ErrorState';
+import { actionErrorMessage } from '@/lib/errorCopy';
 import { IconButton } from '@/components/IconButton';
 import { ScoreBubble } from '@/components/ScoreBubble';
 import { Skeleton } from '@/components/Skeleton';
@@ -225,7 +226,7 @@ export function StarterStep({ bev: summary, index, total, ranked, canFinish, onF
       <Screen>
         <TopBar onClose={saveError ? backToAsk : undefined} />
         {saveError ? (
-          <ErrorState error={saveError} title={STARTER_COPY.saveFailed} onRetry={() => void save()} />
+          <ErrorState error={saveError} message={actionErrorMessage(saveError)} title={STARTER_COPY.saveFailed} onRetry={() => void save()} />
         ) : (
           <View style={styles.center} accessibilityLabel="Saving" aria-busy>
             <Skeleton variant="circle" width={56} height={56} />

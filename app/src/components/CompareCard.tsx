@@ -40,6 +40,8 @@ export function CompareCard({ bev, rankLabel, isNew = false, selected = false, o
       accessibilityRole="button"
       accessibilityLabel={bev.name + (isNew ? ', candidate' : rankLabel ? `, currently ${rankLabel}` : '')}
       {...({ 'aria-pressed': selected } as object)}
+      // React Native maps no `aria-pressed` on iOS; VoiceOver reads the state from here.
+      accessibilityState={{ selected }}
       style={style}
     >
       <Animated.View

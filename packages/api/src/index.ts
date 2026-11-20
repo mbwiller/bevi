@@ -6,6 +6,7 @@ import type { BeviApi } from '@bevi/shared';
 import { createNutritionApi } from './nutrition';
 import { createAuthApi } from './auth';
 import { createBevsApi } from './bevs';
+import { createBlocksApi } from './blocks';
 import { createBugsApi } from './bugs';
 import { createCategoriesApi } from './categories';
 import { type BeviApiConfig, createSupabaseClientFor } from './client';
@@ -18,15 +19,25 @@ import { createMetaApi } from './meta';
 import { createProfileApi } from './profile';
 import { createRankingsApi } from './rankings';
 import { createRecsApi } from './recs';
+import { createReportsApi } from './reports';
 import { createVenuesApi } from './venues';
+import { registerAutoRefreshTarget } from './session';
 import { createSnapshotCache } from './snapshot';
 import { createStatsApi } from './stats';
 import { createWantToTryApi } from './wantToTry';
 
 export type { AuthStorageAdapter, BeviApiConfig } from './client';
 
+// The only part of the supabase client the app can reach, and not the client
+// itself: the app's `AppState` listener (IM-3) calls these two on
+// foreground/background. `session.ts` says why the seam exists.
+export { startAutoRefresh, stopAutoRefresh } from './session';
+
 export function createBeviApi(config: BeviApiConfig): BeviApi {
   const client = createSupabaseClientFor(config);
+  // Hands this client's refresh ticker to `startAutoRefresh`/`stopAutoRefresh`
+  // without handing out the client.
+  registerAutoRefreshTarget(client.auth);
   const auth = createAuthApi(client);
   // The caller's PredictionSnapshot for recommendations and predicted scores.
   // Dropped on ranking and Bev writes (rankings.ts, bevs.ts), on any change of
@@ -67,7 +78,9 @@ export function createBeviApi(config: BeviApiConfig): BeviApi {
     recs: createRecsApi(client, snapshots),
     venues: createVenuesApi(client),
     bugs: createBugsApi(client),
-    meta: createMetaApi(),
+    blocks: createBlocksApi(client),
+    reports: createReportsApi(client),
+    meta: createMetaApi(client),
   };
 }
 

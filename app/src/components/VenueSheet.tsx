@@ -3,6 +3,7 @@ import { FlashList } from '@shopify/flash-list';
 import { useCallback, type ReactElement, type ReactNode } from 'react';
 import { Linking, Platform, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
+import { openLink } from '@/lib/openLink';
 import { openLabel, venueMeta, websiteLink } from '@/lib/venue';
 import { MAX_FONT_SCALE_DENSE, radius, size, spacing, type, useTheme } from '@/theme';
 
@@ -136,7 +137,7 @@ export function VenueSheet({
                     // tab and the browser's own link affordances work; elsewhere the OS opens it.
                     {...(Platform.OS === 'web'
                       ? ({ href: site.href, hrefAttrs: { target: '_blank', rel: 'noopener noreferrer' } } as object)
-                      : { onPress: () => void Linking.openURL(site.href) })}
+                      : { onPress: () => openLink(() => Linking.openURL(site.href)) })}
                     accessibilityRole="link"
                     accessibilityLabel={`Website, ${site.label}`}
                     style={styles.link}

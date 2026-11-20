@@ -1,4 +1,4 @@
-<!-- @dsCard group="Feed" height=1640 width=393 subtitle="Double-tap a post to like it" -->
+<!-- @dsCard group="Feed" height=2000 width=393 subtitle="Double-tap a post to like it" -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -66,7 +66,10 @@
       photos: [{ art: BEVS.coldBrew.art }, { art: BEVS.matcha.art }, { art: BEVS.horchata.art }] }, ACTIONS)),
     h('p', { className: 'pv-label pv-mat' }, "Explore: the plain post (no heart, counts or comments) with the author's Follow pill"),
     h(B.FeedPost, { actor: FRIENDS[2], bev: BEVS.matcha, score: 8.2, time: '2 days ago', note: 'oat milk, half sweet. the only one I order now',
-      following: cOn, onFollow: function () { setC(!cOn); } }));
+      following: cOn, onFollow: function () { setC(!cOn); } }),
+    h('p', { className: 'pv-label pv-mat' }, "More actions: onMore adds an ellipsis after the score on other people's posts"),
+    h(B.FeedPost, Object.assign({ actor: FRIENDS[0], bev: BEVS.brownSugar, score: 7.8, time: 'Wednesday', likeCount: 11, note: 'too sweet for me, but the boba is perfect',
+      onMore: NOOP, moreLabel: 'More actions, post by @' + FRIENDS[0].handle }, ACTIONS)));
 }));
 </script>
 </body>

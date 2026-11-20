@@ -1,151 +1,113 @@
-import type { BugReportEnvironment } from '@bevi/shared';
+import { CONTRACT_VERSION, type BugReportEnvironment } from '@bevi/shared';
+import * as Application from 'expo-application';
 import Constants from 'expo-constants';
-import { Dimensions, Platform } from 'react-native';
+import * as Updates from 'expo-updates';
+import { Dimensions, PixelRatio, Platform } from 'react-native';
+
+import { connectionOnline } from '@/lib/connectionStore';
+
+import { buildOf, routeOf, safeAreaOf, safePathOf, stageOf, type ContextSources } from './contextCommon';
+
+export * from './contextCommon';
 
 /**
- * The context the reporter sends without typing it (docs/bug-workflow.md).
+ * The context the reporter sends without typing it, on iOS (docs/bug-workflow.md; context.web.ts is
+ * the web file). The same rules: internal reporters only, an ALLOW-LIST of the keys of
+ * `BugReportEnvironment` and nothing more, which the server enforces again.
  *
- * Internal reporters only: the reporter is never loaded for anyone else, and the server refuses a
- * report from anyone else. Within that, this is an ALLOW-LIST, the keys of `BugReportEnvironment`
- * and nothing more, and the server enforces the same list again: it drops any key the contract
- * does not name and redacts every string.
- *
- * What is collected describes the build, the device and the screen: the route pattern and the
- * concrete path, the platform and OS family, the app version and build, the theme, connectivity,
- * the viewport, pixel ratio and safe area, whether the app runs from the home screen, and whether
- * reduced motion is on.
- *
- * Three things are still never collected, however internal the reporter:
- *   * the raw URL with its query string. `window.location` would carry query strings and, on an
- *     auth callback, a token; the path is cut at the first `?` or `#`.
- *   * a token of any kind: no header capture, no storage dump, no session.
- *   * the full user-agent string, which is a fingerprint. The platform and the OS family are what
- *     a reproduction attempt needs.
+ * What an iPhone build can say, in the contract's own fields (the contract has none for a device
+ * model, an update or a runtime, and the server drops any key it does not name):
+ *   * `route` and `path`: the Expo Router pattern ('/bev/[id]') and the concrete path. Never the
+ *     query string, and no path with a percent-encoded or long opaque segment (`safePathOf`): the
+ *     photo viewer's route carries an encoded image address.
+ *   * `platform`: 'ios · iPhone 15 Pro', the device model; `osVersion`: 'iOS 18.2'.
+ *   * `appVersion`: the installed binary's version and build number, '0.1.0 (3)'.
+ *   * `build`: what is running on top of that binary, as one line: the short git SHA when
+ *     `EXPO_PUBLIC_BUILD_SHA` was set, the OTA update id (first eight characters) and the runtime
+ *     version when `expo-updates` has them (it has neither in development), and the contract
+ *     version the app was built against.
+ *   * `stage`, `theme`, `online`, `viewport`, `pixelRatio`, `safeArea`, `occurredAt`.
+ * Never collected: a token, a header, a storage dump, the device name (it is usually the owner's
+ * name), or any identifier of the device or the person.
  */
 
-/** The OS family, from the user-agent, with no version or device identifier. */
-export function osFamily(userAgent: string | undefined): string | undefined {
-  if (!userAgent) return undefined;
-  const ua = userAgent.toLowerCase();
-  if (/iphone|ipad|ipod/.test(ua)) return 'iOS';
-  if (/android/.test(ua)) return 'Android';
-  if (/mac os x|macintosh/.test(ua)) return 'macOS';
-  if (/windows/.test(ua)) return 'Windows';
-  if (/cros/.test(ua)) return 'ChromeOS';
-  if (/linux/.test(ua)) return 'Linux';
-  return undefined;
-}
-
-/** The browser family, same rule: a name, never a version string or a build id. */
-export function browserFamily(userAgent: string | undefined): string | undefined {
-  if (!userAgent) return undefined;
-  const ua = userAgent.toLowerCase();
-  // Order matters: every Chromium UA also claims Safari, and Edge claims both.
-  if (/edg\//.test(ua)) return 'Edge';
-  if (/firefox|fxios/.test(ua)) return 'Firefox';
-  if (/crios|chrome/.test(ua)) return 'Chrome';
-  if (/safari/.test(ua)) return 'Safari';
-  return undefined;
-}
-
-/**
- * Which build this is. Expo inlines `NODE_ENV`; the Vercel deploy sets nothing
- * else the client can read, so a dev server is 'development' and anything
- * exported is 'production'. Honest about what it knows: it never claims
- * 'staging' when nothing told it so.
- */
-export function stageOf(nodeEnv: string | undefined): string {
-  return nodeEnv === 'production' ? 'production' : 'development';
-}
-
-/** A route or a path with any query string and fragment cut off. */
-export function routeOf(pathname: string | undefined): string | undefined {
-  if (!pathname) return undefined;
-  const clean = pathname.split('?')[0]?.split('#')[0];
-  return clean || undefined;
-}
-
-/** The deploy's short git SHA, from what the build inlined; undefined for a build that was given none. */
-export function buildOf(sha: string | undefined): string | undefined {
-  const clean = (sha ?? '').trim();
-  return /^[0-9a-f]{7,40}$/i.test(clean) ? clean.slice(0, 7).toLowerCase() : undefined;
-}
-
-/** 'top,right,bottom,left' in whole CSS px, as the contract writes the safe area. */
-export function safeAreaOf(insets: Partial<Record<'top' | 'right' | 'bottom' | 'left', number>> | undefined): string | undefined {
-  if (!insets) return undefined;
-  const sides = [insets.top, insets.right, insets.bottom, insets.left];
-  if (!sides.every((side): side is number => typeof side === 'number' && Number.isFinite(side))) return undefined;
-  return sides.map((side) => Math.round(side)).join(',');
-}
-
-export interface ContextSources {
-  /** The concrete path on show, e.g. '/bev/8f3a…'. Sent as `path`, cut at the first `?` or `#`. */
-  pathname?: string;
-  /** The route pattern on show, e.g. '/bev/[id]'. Sent as `route`; without it `route` is the path. */
-  routePattern?: string;
-  userAgent?: string;
-  /** Injected so a test can pin it. */
-  now?: Date;
-  window?: { width: number; height: number };
-  /** The colour scheme the app is rendering in (`useTheme().scheme`). */
-  theme?: 'light' | 'dark';
-  /** The safe-area insets (`useSafeAreaInsets()`). */
-  insets?: { top: number; right: number; bottom: number; left: number };
-}
-
-/** One labelled line of the "Automatically included" preview. */
-export interface ContextRow {
-  label: string;
-  value: string;
-}
-
-type Browser = {
-  navigator?: { userAgent?: string; onLine?: boolean; standalone?: boolean };
-  matchMedia?: (query: string) => { matches: boolean };
-  devicePixelRatio?: number;
-};
-
-/** The browser's globals, or an empty object where there are none. */
-function browser(): Browser {
-  return typeof window === 'undefined' ? {} : (window as unknown as Browser);
-}
-
-function mediaMatches(query: string): boolean | undefined {
+/** Reads one thing defensively: a missing native module or an empty value is "nothing", never a throw. */
+function read<T>(get: () => T | null | undefined): T | undefined {
   try {
-    const { matchMedia } = browser();
-    return typeof matchMedia === 'function' ? matchMedia.call(window, query).matches === true : undefined;
+    return get() ?? undefined;
   } catch {
     return undefined;
   }
 }
 
+/** The device model: the human-readable name when expo-constants has one, else Apple's identifier. */
+export function deviceModel(): string | undefined {
+  const ios = read(() => (Constants.platform as { ios?: { model?: string | null; platform?: string } } | undefined)?.ios);
+  const model = ios?.model?.trim() || ios?.platform?.trim();
+  return model || undefined;
+}
+
+/** 'ios · iPhone 15 Pro', or 'ios' when the model is not known. */
+export function platformLine(model: string | undefined): string {
+  return model ? `${Platform.OS} · ${model}` : Platform.OS;
+}
+
+/** 'iOS 18.2', or nothing when the system does not say. */
+export function osVersionLine(version: unknown): string | undefined {
+  if (typeof version === 'string' && version) return `iOS ${version}`;
+  if (typeof version === 'number') return `iOS ${version}`;
+  return undefined;
+}
+
+/** '0.1.0 (3)', '0.1.0' without a build number, undefined with neither. */
+export function appVersionLine(version: string | undefined, build: string | undefined): string | undefined {
+  if (!version) return undefined;
+  return build ? `${version} (${build})` : version;
+}
+
+/** The one line the `build` field carries on iOS: SHA, update, runtime, contract, whichever exist. */
+export function buildLine(parts: { sha?: string; updateId?: string; runtimeVersion?: string; contract?: string }): string | undefined {
+  const out = [
+    parts.sha,
+    parts.updateId ? `update ${parts.updateId.slice(0, 8)}` : undefined,
+    parts.runtimeVersion ? `runtime ${parts.runtimeVersion}` : undefined,
+    parts.contract ? `contract ${parts.contract}` : undefined,
+  ].filter((part): part is string => !!part);
+  return out.length ? out.join(' · ') : undefined;
+}
+
+function windowSize(): { width: number; height: number } | undefined {
+  const { width, height } = Dimensions.get('window');
+  if (!width || !height) return undefined;
+  return { width: Math.round(width), height: Math.round(height) };
+}
+
 /** Builds the environment block. Every field is best effort; nothing is invented. */
 export function collectContext(sources: ContextSources = {}): BugReportEnvironment {
-  const { navigator: nav, devicePixelRatio } = browser();
-  const userAgent = sources.userAgent ?? nav?.userAgent;
-  const size = sources.window ?? safeWindowSize();
-  const os = osFamily(userAgent);
-  const browserName = browserFamily(userAgent);
-  const path = routeOf(sources.pathname);
-  const standalone = mediaMatches('(display-mode: standalone)');
+  const size = sources.window ?? read(windowSize);
+  const version = read(() => Application.nativeApplicationVersion) ?? read(() => Constants.expoConfig?.version);
+  const build = read(() => Application.nativeBuildVersion);
+  const scale = read(() => PixelRatio.get());
 
   const environment: BugReportEnvironment = {
-    route: routeOf(sources.routePattern) ?? path,
-    path,
-    platform: browserName ? `${Platform.OS} / ${browserName}` : Platform.OS,
-    osVersion: os,
-    appVersion: Constants.expoConfig?.version,
-    // Read literally so Expo inlines it; the Vercel build sets it from the commit (vercel.json).
-    build: buildOf(process.env.EXPO_PUBLIC_BUILD_SHA),
+    route: routeOf(sources.routePattern) ?? safePathOf(sources.pathname),
+    path: safePathOf(sources.pathname),
+    platform: platformLine(deviceModel()),
+    osVersion: Platform.OS === 'ios' ? osVersionLine(Platform.Version) : undefined,
+    appVersion: appVersionLine(version, build),
+    // Read literally so Expo inlines it; an EAS build sets it from the commit when it is given one.
+    build: buildLine({
+      sha: buildOf(process.env.EXPO_PUBLIC_BUILD_SHA),
+      updateId: read(() => Updates.updateId),
+      runtimeVersion: read(() => Updates.runtimeVersion),
+      contract: CONTRACT_VERSION,
+    }),
     stage: stageOf(process.env.NODE_ENV),
     theme: sources.theme === 'light' || sources.theme === 'dark' ? sources.theme : undefined,
-    online: typeof nav?.onLine === 'boolean' ? nav.onLine : undefined,
-    display: standalone === undefined && nav?.standalone === undefined ? undefined : standalone || nav?.standalone === true ? 'home screen' : 'browser',
+    online: read(() => connectionOnline()),
     viewport: size ? `${size.width}x${size.height}` : undefined,
-    pixelRatio: typeof devicePixelRatio === 'number' && devicePixelRatio > 0 ? Math.round(devicePixelRatio * 100) / 100 : undefined,
+    pixelRatio: typeof scale === 'number' && scale > 0 ? Math.round(scale * 100) / 100 : undefined,
     safeArea: safeAreaOf(sources.insets),
-    reducedMotion: mediaMatches('(prefers-reduced-motion: reduce)'),
     occurredAt: (sources.now ?? new Date()).toISOString(),
     reproducibility: 'unknown',
   };
@@ -155,70 +117,4 @@ export function collectContext(sources: ContextSources = {}): BugReportEnvironme
     if (environment[key] === undefined || environment[key] === '') delete environment[key];
   }
   return environment;
-}
-
-function safeWindowSize(): { width: number; height: number } | undefined {
-  try {
-    const { width, height } = Dimensions.get('window');
-    if (!width || !height) return undefined;
-    return { width: Math.round(width), height: Math.round(height) };
-  } catch {
-    return undefined;
-  }
-}
-
-const LABELS: Record<keyof BugReportEnvironment, string> = {
-  route: 'Screen',
-  path: 'Path',
-  component: 'Area',
-  platform: 'Platform',
-  osVersion: 'Device OS',
-  display: 'Opened from',
-  appVersion: 'App version',
-  build: 'Build',
-  stage: 'Environment',
-  theme: 'Theme',
-  online: 'Connectivity',
-  viewport: 'Screen size',
-  pixelRatio: 'Pixel ratio',
-  safeArea: 'Safe area',
-  reducedMotion: 'Reduced motion',
-  occurredAt: 'Time',
-  reproducibility: 'Reproducibility',
-};
-
-/** The preview's order: where, on what, which build, how it was set up, when. */
-const ORDER: readonly (keyof BugReportEnvironment)[] = [
-  'route',
-  'path',
-  'component',
-  'platform',
-  'osVersion',
-  'display',
-  'appVersion',
-  'build',
-  'stage',
-  'theme',
-  'online',
-  'viewport',
-  'pixelRatio',
-  'safeArea',
-  'reducedMotion',
-  'occurredAt',
-  'reproducibility',
-];
-
-/** The two booleans read as words in the preview, as they do in the ticket. */
-function rowValue(environment: BugReportEnvironment, key: keyof BugReportEnvironment): string {
-  if (key === 'online') return environment.online ? 'Online' : 'Offline';
-  if (key === 'reducedMotion') return environment.reducedMotion ? 'On' : 'Off';
-  return String(environment[key]);
-}
-
-/** The preview rows, in a fixed order, so the reporter sees exactly what will be sent. */
-export function contextRows(environment: BugReportEnvironment): ContextRow[] {
-  return ORDER.filter((key) => environment[key] !== undefined && environment[key] !== '').map((key) => ({
-    label: LABELS[key],
-    value: rowValue(environment, key),
-  }));
 }

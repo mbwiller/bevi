@@ -7,7 +7,8 @@ import { controls } from '@/testing/fakeApi';
 import ProfileScreen from '@/app/(tabs)/profile/index';
 import { pickImage, preparePhoto } from '@/features/create-bev/photo';
 
-// The picker and the canvas resize are browser-only; the flow sees what they would return.
+// The picker and the manipulator are native modules; the flow sees what they would return: the
+// native pipeline's JPEG bytes (photo.ts), never a Blob.
 jest.mock('@/features/create-bev/photo', () => ({
   ...jest.requireActual('@/features/create-bev/photo'),
   pickImage: jest.fn(),
@@ -16,7 +17,8 @@ jest.mock('@/features/create-bev/photo', () => ({
 const mockPick = pickImage as jest.MockedFunction<typeof pickImage>;
 const mockPrepare = preparePhoto as jest.MockedFunction<typeof preparePhoto>;
 
-const asset = { uri: 'blob:picked', width: 3000, height: 3000, mimeType: 'image/jpeg' } as NonNullable<Awaited<ReturnType<typeof pickImage>>>;
+const JPEG_BYTES = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
+const asset = { uri: 'file:///cache/picked.jpg', width: 3000, height: 3000, mimeType: 'image/jpeg' } as NonNullable<Awaited<ReturnType<typeof pickImage>>>;
 
 let client: QueryClient;
 
@@ -72,8 +74,8 @@ beforeEach(() => {
   controls.signInAs('tester');
   mockPick.mockReset().mockResolvedValue(asset);
   mockPrepare.mockReset().mockResolvedValue({
-    uri: 'blob:avatar',
-    blob: new Blob(['x'], { type: 'image/jpeg' }),
+    uri: 'file:///cache/avatar.jpg',
+    file: JPEG_BYTES,
     mimeType: 'image/jpeg',
     width: 512,
     height: 512,
@@ -87,6 +89,7 @@ afterEach(async () => {
 
 describe('Edit profile › photo', () => {
   it('adds a photo as soon as it uploads, then removes it', async () => {
+    const upload = jest.spyOn(api.media, 'upload');
     const sheet = await openEditSheet();
     const me = await api.profile.getMe();
     expect(me.avatarUrl).toBeNull();
@@ -99,6 +102,10 @@ describe('Edit profile › photo', () => {
     expect(await within(sheet).findByLabelText('Change photo')).toBeTruthy();
     expect((await api.profile.getMe()).avatarUrl).toBeTruthy();
     expect(mockPrepare).toHaveBeenCalledWith(asset, 512);
+    // The library only (it needs no permission), and the upload carries the bytes.
+    expect(mockPick).toHaveBeenCalledWith('library');
+    expect(upload).toHaveBeenCalledWith({ kind: 'avatar', file: JPEG_BYTES, mimeType: 'image/jpeg' });
+    expect(upload.mock.calls[0]![0].file).not.toBeInstanceOf(Blob);
     await waitFor(() => expect(within(sheet).queryByLabelText('Uploading your photo')).toBeNull());
     // The sheet's avatar shows the photo, not initials.
     expect(within(within(sheet).getByLabelText(me.displayName)).queryByText(/\w/)).toBeNull();
@@ -107,13 +114,14 @@ describe('Edit profile › photo', () => {
     expect(await within(sheet).findByLabelText('Add a photo')).toBeTruthy();
     expect((await api.profile.getMe()).avatarUrl).toBeNull();
     expect(within(within(sheet).getByLabelText(me.displayName)).queryByText(/\w/)).toBeTruthy();
+    upload.mockRestore();
   });
 
   it('a failed upload shows an error and leaves the photo as it was', async () => {
     const sheet = await openEditSheet();
     controls.failNext('network', 'media.upload');
     await fireEvent.press(within(sheet).getByLabelText('Add a photo'));
-    expect(await within(sheet).findByText("You're offline. We'll show this again as soon as you're back online.")).toBeTruthy();
+    expect(await within(sheet).findByText("You're offline. Check your connection and try again.")).toBeTruthy();
     expect((await api.profile.getMe()).avatarUrl).toBeNull();
     expect(within(sheet).getByLabelText('Add a photo')).toBeTruthy();
     expect(within(sheet).queryByLabelText('Uploading your photo')).toBeNull();

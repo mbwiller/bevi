@@ -1,6 +1,6 @@
 # Bevi — Development plan: Matt (UI + ranking/recommendation logic)
 
-Written 2026-10-09 from `vision.md` (source of truth), `CONVERSATION.md` (raw founding chat) and the agreed work-split brief. Arjun's counterpart is `DEVELOPMENT-ARJUN.md`; the two documents share the ownership table and the five seams word for word. Where this doc goes beyond vision.md it says so, and §18 lists everything that should be folded back into vision.md.
+Written 2026-10-09 from `vision.md` (source of truth), the founding session that produced it and the agreed work-split brief. Arjun's counterpart is `DEVELOPMENT-ARJUN.md`; the two documents share the ownership table and the five seams word for word. Where this doc goes beyond vision.md it says so, and §18 lists everything that should be folded back into vision.md.
 
 **Decided 2026-10-11 (Matt + Arjun): Bevi is a web app only.** The Expo app is built for the web (`expo export --platform web`), hosted on Vercel and added to the iPhone home screen; the backend stays Supabase. No native builds, EAS, App Store/TestFlight, Android, or Expo Go/dev client as a target. Under 20 users (friends), so sign-in is username + password gated by a shared invite code; no OAuth, no third-party services, no emails. Sections below are updated where this changed the plan.
 
@@ -261,9 +261,11 @@ Acceptance for a catalog image: PNG with alpha, product fills 70–90% of the lo
 
 ## 5. From Beli screenshots to per-screen specs
 
-The reference material is in the repo now and stays where it is: `bevi-ui-inspiration/beli-screens-spec.md` (the written spec: 12 screen descriptions, Part 2 tokens, Part 3 data model) and `bevi-ui-inspiration/beli-ui-images/IMG_1107.PNG … IMG_1118.PNG` (iPhone, 1179×2556 px, scale 3). Don't move or rename them. `design/` holds what you produce from them: `design/specs/<screen>.md`, `design/brand/`, `design/photo-style.md`.
+The reference material in the repo is `bevi-ui-inspiration/beli-screens-spec.md` (the written spec: 12 screen descriptions, Part 2 tokens, Part 3 data model). Don't move or rename it. The screenshots it was written from are no longer in the repository (CLEANUP.md F-04); the spec is the record. `design/` holds what you produce from them: `design/specs/<screen>.md`, `design/brand/`, `design/photo-style.md`.
 
-File-to-spec mapping (the spec numbers screens 01–12; the files are in a different order):
+File-to-spec mapping, kept as the index of what each spec screen was written from (the spec
+numbers screens 01–12; the captures were in a different order). The `File` column names the
+original capture, which is no longer in the repository -- read it as provenance, not as a path:
 
 | Spec screen | File | Bevi screen |
 |---|---|---|
@@ -1043,7 +1045,7 @@ Tags follow vision §10: model / effort. Each row is one Claude Code sub-agent d
 | 0.1 | Workspace scaffold (`chore/scaffold`, joint): root `package.json` workspaces, tsconfig base, vitest, CI skeleton; your parts: `app/` (create-expo-app, router root), `packages/ranking/` skeleton | `npm install && npm run typecheck && npm test` green on an empty repo | Opus / High (architecture) for the layout decision, Haiku / Low for the boilerplate |
 | 0.2 | UI skills research (§2) | `design/research.md`, skills installed, CLAUDE.md references | Sonnet / Medium |
 | 0.3 | `app/CLAUDE.md`, `packages/ranking/CLAUDE.md`, `.claude/agents/ui-screen.md`, `ranking-math.md`, integrator adapted | Agents launch on the right model by default; integrator checks `shared/api.ts` + vectors | Haiku / Medium (docs), you review |
-| 0.4 | Per-screen specs from `bevi-ui-inspiration/` (§5): Feed, Lists (×3), Search, Profile, Activity post, Taste Profile | `design/specs/*.md` with pt measurements, component mapping and a "Bevi differences" list; you have reviewed each against its image | Sonnet / Medium (one agent per screen, worktrees) |
+| 0.4 | Per-screen specs from `bevi-ui-inspiration/beli-screens-spec.md` (§5): Feed, Lists (×3), Search, Profile, Activity post, Taste Profile | `design/specs/*.md` with pt measurements, component mapping and a "Bevi differences" list; you have reviewed each against its image | Sonnet / Medium (one agent per screen, worktrees) |
 | 0.5 | Tokens + `Wordmark` candidates + `photo-style.md` | `tokens.ts`, two SVG wordmark directions, chosen one committed, brand colour hex recorded | Sonnet / Medium–High |
 | 0.6 | §13 → `contract/v0` review | PR approved by both | you + Sonnet / Medium for the fixtures generator |
 | 0.7 | `packages/ranking`: placement + score + stats + bayesian with tests, vectors v1.0.0 | Property tests pass; `vectors-fresh` CI job exists | Opus / High (design + review), Haiku / Low–Medium (tests, generator) |
@@ -1096,7 +1098,7 @@ Tags follow vision §10: model / effort. Each row is one Claude Code sub-agent d
 ## 16. First-week checklist (ordered)
 
 1. [ ] Agree package names and the scaffold with Arjun; open `chore/scaffold` together (0.1).
-2. [ ] Per-screen specs from `bevi-ui-inspiration/` into `design/specs/` (0.4); Profile and Feed first, since they gate 1.2 and 1.10.
+2. [ ] Per-screen specs from `bevi-ui-inspiration/beli-screens-spec.md` into `design/specs/` (0.4); Profile and Feed first, since they gate 1.2 and 1.10.
 3. [ ] Write §13 into the `contract/v0` PR description / `shared/README-v0-needs.md`; send to Arjun by 2026-10-13 (0.6). Confirm the 15 category ids, lowercase error codes, `expectedBucketSize`, `rerankBev`, `setBirthDate`, `getStarterCandidates` and the username/password auth surface (`signUp`, `signIn`, decided 2026-10-11) are in it.
 4. [ ] Research spike (0.2): install `frontend-design` + `react-native-skills`, write `design/research.md`.
 5. [ ] `app/CLAUDE.md`, `packages/ranking/CLAUDE.md` (with the bundle constraints from §9), agent definitions (0.3).

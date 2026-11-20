@@ -221,6 +221,18 @@ export function RankFlow({ bevId, rerank = false, detailIfRanked = false, return
     if (returnToDetail && phase === 'result') router.replace({ pathname: '/bev/[id]', params: { id: bevId } });
     else back();
   };
+  // Discard closes its sheet first and leaves once that sheet is gone: popping the screen under a
+  // Modal that is still presented leaves iOS with a stuck or blank screen.
+  const discarding = useRef(false);
+  const discard = () => {
+    discarding.current = true;
+    setConfirm(false);
+  };
+  const discardClosed = () => {
+    if (!discarding.current) return;
+    discarding.current = false;
+    leave();
+  };
   const close = () => (bucket && phase !== 'result' && !fatal ? setConfirm(true) : leave());
 
   const bev = bevQ.data;
@@ -309,7 +321,7 @@ export function RankFlow({ bevId, rerank = false, detailIfRanked = false, return
   return (
     <>
       {content}
-      <DiscardSheet open={confirm} onDiscard={leave} onKeep={() => setConfirm(false)} />
+      <DiscardSheet open={confirm} onDiscard={discard} onKeep={() => setConfirm(false)} onClosed={discardClosed} />
     </>
   );
 }

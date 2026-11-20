@@ -13,6 +13,7 @@ import { useDebouncedValue } from '@/features/add-bev/useDebouncedValue';
 import { formErrorMessage } from '@/features/auth/formError';
 import { categoryById, visibleCategories } from '@/lib/categories';
 import { useBack } from '@/lib/useBack';
+import { useOnline } from '@/lib/useOnline';
 import { radius, spacing, type, useTheme } from '@/theme';
 
 import {
@@ -34,7 +35,6 @@ import { DuplicatesStep, ExistingBev } from './DuplicatesStep';
 import { PhotoStep } from './PhotoStep';
 import { isUnsupportedImage, type PhotoSource } from './photo';
 import { CategorySheet, DiscardBevSheet } from './Sheets';
-import { useOnline } from './useOnline';
 import { usePhotoUpload } from './usePhotoUpload';
 
 /** Duplicate lookups wait this long after the last keystroke. */
@@ -140,6 +140,19 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
     abort.current.aborted = true;
     setConfirmDiscard(false);
     back();
+  };
+  // Discard closes its sheet first and leaves once that sheet is gone: popping the screen under a
+  // Modal that is still presented leaves iOS with a stuck or blank screen (as in RankFlow).
+  const discarding = useRef(false);
+  const discard = () => {
+    discarding.current = true;
+    abort.current.aborted = true;
+    setConfirmDiscard(false);
+  };
+  const discardClosed = () => {
+    if (!discarding.current) return;
+    discarding.current = false;
+    leave();
   };
   const close = () => (dirty && !existingId ? setConfirmDiscard(true) : leave());
 
@@ -374,7 +387,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
           <Text style={[type.body, styles.flex, { color: colors.text }]}>{OFFLINE_BANNER}</Text>
         </View>
       ) : null}
-      <ScrollView style={styles.fill} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView style={styles.fill} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         {step < 2 && !existingId ? (
           <Text style={[type.displayDrop, styles.heading, { color: colors.text }]} accessibilityRole="header">
             {STEP_TITLES[step]}
@@ -406,7 +419,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
         }}
         onClose={() => setCategoryOpen(false)}
       />
-      <DiscardBevSheet open={confirmDiscard} onDiscard={leave} onKeep={() => setConfirmDiscard(false)} />
+      <DiscardBevSheet open={confirmDiscard} onDiscard={discard} onKeep={() => setConfirmDiscard(false)} onClosed={discardClosed} />
     </SafeAreaView>
   );
 }

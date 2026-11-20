@@ -115,9 +115,9 @@ function setLiked(qc: QueryClient, id: string, liked: boolean): void {
 /**
  * Like or unlike a post, optimistically: the heart and count change in every FeedItem cache the
  * moment it's tapped. `like` / `unlike` are idempotent and run one at a time in tap order (the
- * mutation `scope`), so rapid taps leave the server in the state of the last tap. Offline, the query
- * client pauses them (networkMode 'online') with the optimistic state on screen, and they run in
- * order on reconnect.
+ * mutation `scope`), so rapid taps leave the server in the state of the last tap. Offline, nothing
+ * is held for later (mutations run with networkMode 'always', src/api/queryClient.ts): the tap fails
+ * at once with 'network' and the heart goes back.
  *
  * Only the latest tap on a post settles it, by writing back the state the server last confirmed:
  * on success that is the tap's own state (re-applied over any refetch that landed meanwhile); when
@@ -206,7 +206,24 @@ export function useLeaderboardFriends({ enabled = true }: { enabled?: boolean } 
   });
 }
 
-/** Minimum version and maintenance flag (callable signed out). */
+/** How often the app config is read again while the app is in front, normally and during maintenance. */
+export const APP_CONFIG_POLL_MS = 5 * 60_000;
+export const APP_CONFIG_MAINTENANCE_POLL_MS = 60_000;
+
+/**
+ * Minimum version and maintenance flag (callable signed out). The version gate (IM-9) reads it.
+ *
+ * `retry: false`: the poll below is the retry, so a backend outage costs one request per interval,
+ * never a burst of backed-off retries. The gate fails open on a failed read. The interval is slow
+ * normally (a flipped flag shows within five minutes without a relaunch), a minute while the
+ * maintenance screen is up, and React Query pauses it while the app is in the background or offline.
+ */
 export function useAppConfig() {
-  return useQuery({ queryKey: keys.appConfig(), queryFn: () => api.meta.getAppConfig(), staleTime: 5 * 60_000 });
+  return useQuery({
+    queryKey: keys.appConfig(),
+    queryFn: () => api.meta.getAppConfig(),
+    staleTime: 5 * 60_000,
+    retry: false,
+    refetchInterval: (query) => (query.state.data?.maintenance ? APP_CONFIG_MAINTENANCE_POLL_MS : APP_CONFIG_POLL_MS),
+  });
 }

@@ -1,215 +1,157 @@
-import { browserFamily, buildOf, collectContext, contextRows, osFamily, routeOf, safeAreaOf, stageOf } from '../context';
+import { CONTRACT_VERSION } from '@bevi/shared';
+import * as Application from 'expo-application';
+import Constants from 'expo-constants';
+import * as Updates from 'expo-updates';
+import { Dimensions, PixelRatio, Platform } from 'react-native';
 
-const IPHONE_SAFARI =
-  'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1';
-const ANDROID_CHROME =
-  'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36';
+import { connectionOnline } from '@/lib/connectionStore';
 
-describe('the automatically included context', () => {
-  it('names the OS family without a version or a device identifier', () => {
-    expect(osFamily(IPHONE_SAFARI)).toBe('iOS');
-    expect(osFamily(ANDROID_CHROME)).toBe('Android');
-    expect(osFamily(undefined)).toBeUndefined();
-    // The iPhone's UA carries "iPhone OS 18_1" and "iPhone"; neither survives.
-    expect(osFamily(IPHONE_SAFARI)).not.toMatch(/18/);
-  });
+import { appVersionLine, buildLine, collectContext, contextRows, deviceModel, platformLine, safePathOf } from '../context';
 
-  it('names the browser family, resolving the UAs that claim to be Safari', () => {
-    expect(browserFamily(IPHONE_SAFARI)).toBe('Safari');
-    expect(browserFamily(ANDROID_CHROME)).toBe('Chrome');
-    expect(browserFamily('Mozilla/5.0 (Windows NT 10.0) Chrome/130 Safari/537.36 Edg/130.0.0.0')).toBe('Edge');
-  });
+// The iOS file (jest resolves '../context' as iOS). The web file is context.web.test.ts.
 
-  it('only claims production for a production build, never invents staging', () => {
-    expect(stageOf('production')).toBe('production');
-    expect(stageOf('development')).toBe('development');
-    expect(stageOf(undefined)).toBe('development');
-  });
+jest.mock('expo-application', () => ({ nativeApplicationVersion: '0.1.0', nativeBuildVersion: '3' }));
+jest.mock('expo-updates', () => ({ updateId: null, runtimeVersion: null, channel: null }));
+jest.mock('@/lib/connectionStore', () => ({ connectionOnline: jest.fn(() => true) }));
 
-  it('cuts the query string and the fragment off a route or a path', () => {
-    expect(routeOf('/bev/[id]')).toBe('/bev/[id]');
-    expect(routeOf('/callback?access_token=secret')).toBe('/callback');
-    expect(routeOf('/profile#access_token=secret')).toBe('/profile');
-    expect(routeOf(undefined)).toBeUndefined();
-  });
+const app = Application as { nativeApplicationVersion: string | null; nativeBuildVersion: string | null };
+const updates = Updates as unknown as { updateId: string | null; runtimeVersion: string | null };
+const constants = Constants as unknown as { platform?: { ios?: { model: string | null; platform: string } } };
 
-  it('shortens the build SHA to 7 characters, and claims no build it was not given', () => {
-    expect(buildOf('E3114870c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6')).toBe('e311487');
-    expect(buildOf('d007727')).toBe('d007727');
-    expect(buildOf(' d007727a\n')).toBe('d007727');
-    expect(buildOf('')).toBeUndefined();
-    expect(buildOf(undefined)).toBeUndefined();
-    expect(buildOf('abc')).toBeUndefined();
-    // Something that is not a SHA is never passed off as one.
-    expect(buildOf('sb_secret_abcdef')).toBeUndefined();
-  });
+const NOW = new Date('2026-11-19T10:30:00.000Z');
+const INSETS = { top: 59, right: 0, bottom: 34, left: 0 };
 
-  it('writes the safe area as top,right,bottom,left in whole px', () => {
-    expect(safeAreaOf({ top: 59, right: 0, bottom: 34, left: 0 })).toBe('59,0,34,0');
-    expect(safeAreaOf({ top: 58.6, right: 0.2, bottom: 33.5, left: 0 })).toBe('59,0,34,0');
-    expect(safeAreaOf(undefined)).toBeUndefined();
-    expect(safeAreaOf({ top: 1, right: 2, bottom: Number.NaN, left: 4 })).toBeUndefined();
-    expect(safeAreaOf({ top: 1 })).toBeUndefined();
-  });
+beforeEach(() => {
+  app.nativeApplicationVersion = '0.1.0';
+  app.nativeBuildVersion = '3';
+  updates.updateId = null;
+  updates.runtimeVersion = null;
+  constants.platform = { ios: { model: 'iPhone 15 Pro', platform: 'iPhone16,1' } };
+  jest.spyOn(Dimensions, 'get').mockReturnValue({ width: 393, height: 852, scale: 3, fontScale: 1 });
+  jest.spyOn(PixelRatio, 'get').mockReturnValue(3);
+  jest.spyOn(Platform, 'Version', 'get').mockReturnValue('18.2');
+  (connectionOnline as jest.Mock).mockReturnValue(true);
+  delete process.env.EXPO_PUBLIC_BUILD_SHA;
+});
 
-  describe('collectContext', () => {
-    const globals = window as unknown as Record<string, unknown>;
-    const saved: Record<string, PropertyDescriptor | undefined> = {};
-    const savedSha = process.env.EXPO_PUBLIC_BUILD_SHA;
+afterEach(() => jest.restoreAllMocks());
 
-    /** Stands in for the browser: jest runs this suite without one. */
-    function browser(overrides: { onLine?: boolean; standalone?: boolean; media?: string[]; devicePixelRatio?: number }): void {
-      const media = overrides.media ?? [];
-      const set = (key: string, value: unknown): void => {
-        if (!(key in saved)) saved[key] = Object.getOwnPropertyDescriptor(globals, key);
-        Object.defineProperty(globals, key, { value, configurable: true, writable: true });
-      };
-      set('navigator', { userAgent: IPHONE_SAFARI, onLine: overrides.onLine, standalone: overrides.standalone });
-      set('matchMedia', (query: string) => ({ matches: media.includes(query) }));
-      set('devicePixelRatio', overrides.devicePixelRatio);
-    }
-
-    afterEach(() => {
-      for (const key of Object.keys(saved)) {
-        const descriptor = saved[key];
-        if (descriptor) Object.defineProperty(globals, key, descriptor);
-        else delete globals[key];
-        delete saved[key];
-      }
-      if (savedSha === undefined) delete process.env.EXPO_PUBLIC_BUILD_SHA;
-      else process.env.EXPO_PUBLIC_BUILD_SHA = savedSha;
-    });
-
-    it('fills every key the contract names from the browser and what the app passes in', () => {
-      browser({ onLine: true, standalone: true, media: ['(display-mode: standalone)', '(prefers-reduced-motion: reduce)'], devicePixelRatio: 3 });
-      process.env.EXPO_PUBLIC_BUILD_SHA = 'e3114870c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6';
-      const environment = collectContext({
-        pathname: '/bev/8f3a2b1c?from=feed#reviews',
-        routePattern: '/bev/[id]',
-        now: new Date('2026-11-02T12:00:00.000Z'),
-        window: { width: 402, height: 874 },
-        theme: 'dark',
-        insets: { top: 59, right: 0, bottom: 34, left: 0 },
-      });
-      expect(environment).toEqual({
-        route: '/bev/[id]',
-        path: '/bev/8f3a2b1c',
-        platform: expect.stringContaining('Safari'),
-        osVersion: 'iOS',
-        build: 'e311487',
-        stage: expect.any(String),
-        theme: 'dark',
-        online: true,
-        display: 'home screen',
-        viewport: '402x874',
-        pixelRatio: 3,
-        safeArea: '59,0,34,0',
-        reducedMotion: true,
-        occurredAt: '2026-11-02T12:00:00.000Z',
-        reproducibility: 'unknown',
-      });
-      // The query string, the fragment and the user-agent string are never carried.
-      const sent = JSON.stringify(environment);
-      expect(sent).not.toContain('from=feed');
-      expect(sent).not.toContain('reviews');
-      expect(sent).not.toContain('AppleWebKit');
-    });
-
-    it('keeps a false: offline, in a browser tab, motion allowed', () => {
-      browser({ onLine: false, media: [], devicePixelRatio: 2.625 });
-      const environment = collectContext({ pathname: '/feed', routePattern: '/feed' });
-      expect(environment).toMatchObject({ online: false, display: 'browser', reducedMotion: false, pixelRatio: 2.63 });
-      expect(contextRows(environment)).toEqual(
-        expect.arrayContaining([
-          { label: 'Connectivity', value: 'Offline' },
-          { label: 'Opened from', value: 'browser' },
-          { label: 'Reduced motion', value: 'Off' },
-          { label: 'Pixel ratio', value: '2.63' },
-        ]),
-      );
-    });
-
-    it('knows the home-screen app from iOS\'s own flag when the media query says nothing', () => {
-      browser({ standalone: true, media: [] });
-      expect(collectContext().display).toBe('home screen');
-    });
-
-    it('uses the path as the route when it was given no pattern', () => {
-      const environment = collectContext({ pathname: '/lists?tab=want' });
-      expect(environment.route).toBe('/lists');
-      expect(environment.path).toBe('/lists');
-    });
-
-    it('collects only the allow-listed keys, and leaves out what it cannot determine', () => {
-      delete process.env.EXPO_PUBLIC_BUILD_SHA;
-      const environment = collectContext({
-        pathname: '/bev/[id]',
-        userAgent: IPHONE_SAFARI,
-        now: new Date('2026-11-02T12:00:00.000Z'),
-        window: { width: 390, height: 844 },
-      });
-      // No browser here: nothing about connectivity, display, pixel ratio or motion is guessed.
-      // `appVersion` comes from the Expo config, which jest does not load.
-      expect(Object.keys(environment).sort()).toEqual(
-        ['occurredAt', 'osVersion', 'path', 'platform', 'reproducibility', 'route', 'stage', 'viewport'].sort(),
-      );
-      expect(JSON.stringify(environment)).not.toContain('AppleWebKit');
-
-      const bare = collectContext({ userAgent: 'something unrecognised', window: { width: 0, height: 0 }, theme: 'sepia' as 'light' });
-      expect(bare.route).toBeUndefined();
-      expect(bare.path).toBeUndefined();
-      expect(bare.osVersion).toBeUndefined();
-      expect(bare).not.toHaveProperty('build');
-      expect(bare).not.toHaveProperty('theme');
-      expect(bare).not.toHaveProperty('safeArea');
-    });
-  });
-
-  it('previews one labelled row per captured value, in a fixed order', () => {
-    const rows = contextRows({ route: '/feed', platform: 'web', occurredAt: '2026-11-02T12:00:00.000Z' });
-    expect(rows.map((r) => r.label)).toEqual(['Screen', 'Platform', 'Time']);
-    expect(rows[0]).toEqual({ label: 'Screen', value: '/feed' });
-
-    const all = contextRows({
-      reproducibility: 'unknown',
-      occurredAt: '2026-11-02T12:00:00.000Z',
-      reducedMotion: true,
-      safeArea: '59,0,34,0',
-      pixelRatio: 3,
-      viewport: '402x874',
-      online: true,
-      theme: 'dark',
-      stage: 'production',
-      build: 'e311487',
-      appVersion: '0.1.0',
-      display: 'home screen',
-      osVersion: 'iOS',
-      platform: 'web / Safari',
-      component: 'Feed',
-      path: '/bev/8f3a',
+describe('what an iPhone build sends by itself', () => {
+  it('names the screen, the device, the OS, the app, the build, the theme, the connection and the time', () => {
+    process.env.EXPO_PUBLIC_BUILD_SHA = 'E3114870c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6';
+    updates.updateId = '1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d';
+    updates.runtimeVersion = '0.1.0';
+    const env = collectContext({ pathname: '/bev/8f3a1c2d-4e5f-4a6b-8c7d-9e0f1a2b3c4d', routePattern: '/bev/[id]', theme: 'dark', insets: INSETS, now: NOW });
+    expect(env).toEqual({
       route: '/bev/[id]',
+      path: '/bev/8f3a1c2d-4e5f-4a6b-8c7d-9e0f1a2b3c4d',
+      platform: 'ios · iPhone 15 Pro',
+      osVersion: 'iOS 18.2',
+      appVersion: '0.1.0 (3)',
+      build: `e311487 · update 1a2b3c4d · runtime 0.1.0 · contract ${CONTRACT_VERSION}`,
+      stage: 'development',
+      theme: 'dark',
+      online: true,
+      viewport: '393x852',
+      pixelRatio: 3,
+      safeArea: '59,0,34,0',
+      occurredAt: '2026-11-19T10:30:00.000Z',
+      reproducibility: 'unknown',
     });
-    expect(all.map((r) => r.label)).toEqual([
-      'Screen',
-      'Path',
-      'Area',
-      'Platform',
-      'Device OS',
-      'Opened from',
-      'App version',
-      'Build',
-      'Environment',
-      'Theme',
-      'Connectivity',
-      'Screen size',
-      'Pixel ratio',
-      'Safe area',
-      'Reduced motion',
-      'Time',
-      'Reproducibility',
-    ]);
-    expect(all.find((r) => r.label === 'Connectivity')!.value).toBe('Online');
-    expect(all.find((r) => r.label === 'Reduced motion')!.value).toBe('On');
-    expect(all.find((r) => r.label === 'Safe area')!.value).toBe('59,0,34,0');
+  });
+
+  it('is an allow-list: only keys the contract names, and every value short enough for the server (120 characters)', () => {
+    updates.updateId = '1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d';
+    updates.runtimeVersion = '0.1.0';
+    process.env.EXPO_PUBLIC_BUILD_SHA = 'e311487';
+    const env = collectContext({ pathname: '/feed', routePattern: '/feed', now: NOW });
+    const allowed = ['route', 'component', 'platform', 'osVersion', 'appVersion', 'build', 'stage', 'theme', 'online', 'viewport', 'occurredAt', 'reproducibility', 'path', 'display', 'pixelRatio', 'safeArea', 'reducedMotion'];
+    for (const [key, value] of Object.entries(env)) {
+      expect(allowed).toContain(key);
+      if (typeof value === 'string') expect(value.length).toBeLessThanOrEqual(120);
+    }
+  });
+
+  it("reads expo-updates defensively: in development it has no update and no runtime, and the build is just the contract", () => {
+    const env = collectContext({ now: NOW });
+    expect(env.build).toBe(`contract ${CONTRACT_VERSION}`);
+  });
+
+  it('a throwing native module costs a field, never the report', () => {
+    Object.defineProperty(updates, 'updateId', { configurable: true, get: () => { throw new Error('ExpoUpdates is not available'); } });
+    try {
+      const env = collectContext({ now: NOW });
+      expect(env.build).toBe(`contract ${CONTRACT_VERSION}`);
+      expect(env.platform).toBe('ios · iPhone 15 Pro');
+    } finally {
+      Object.defineProperty(updates, 'updateId', { configurable: true, writable: true, value: null });
+    }
+  });
+
+  it('falls back to Apple\'s identifier when expo-constants has no model name, and to plain "ios" with neither', () => {
+    constants.platform = { ios: { model: null, platform: 'iPhone16,1' } };
+    expect(collectContext({ now: NOW }).platform).toBe('ios · iPhone16,1');
+    constants.platform = undefined;
+    expect(collectContext({ now: NOW }).platform).toBe('ios');
+    expect(deviceModel()).toBeUndefined();
+  });
+
+  it('says offline when the connection store does', () => {
+    (connectionOnline as jest.Mock).mockReturnValue(false);
+    expect(collectContext({ now: NOW }).online).toBe(false);
+  });
+
+  it('never carries a query string, a fragment, the device name or an identifier of the device', () => {
+    const env = collectContext({ pathname: '/settings?token=abc#frag', routePattern: '/settings?token=abc', now: NOW });
+    expect(JSON.stringify(env)).not.toMatch(/token|frag|\?|#/);
+    expect(Object.keys(env)).not.toContain('deviceName');
+  });
+
+  it('the preview lists what will be sent', () => {
+    const rows = contextRows(collectContext({ pathname: '/feed', routePattern: '/feed', now: NOW }));
+    expect(rows.find((r) => r.label === 'Device OS')?.value).toBe('iOS 18.2');
+    expect(rows.find((r) => r.label === 'App version')?.value).toBe('0.1.0 (3)');
+    expect(rows.find((r) => r.label === 'Connectivity')?.value).toBe('Online');
+  });
+});
+
+describe('the pieces', () => {
+  it('writes the app version with its build number when there is one', () => {
+    expect(appVersionLine('0.1.0', '3')).toBe('0.1.0 (3)');
+    expect(appVersionLine('0.1.0', undefined)).toBe('0.1.0');
+    expect(appVersionLine(undefined, '3')).toBeUndefined();
+  });
+
+  it('writes the build as one line of whatever exists', () => {
+    expect(buildLine({})).toBeUndefined();
+    expect(buildLine({ sha: 'abc1234', contract: '3.3.0' })).toBe('abc1234 · contract 3.3.0');
+    expect(buildLine({ updateId: '1a2b3c4d-5e6f', runtimeVersion: '1.0.0' })).toBe('update 1a2b3c4d · runtime 1.0.0');
+  });
+
+  it('writes the platform with the model', () => {
+    expect(platformLine('iPhone 15 Pro')).toBe('ios · iPhone 15 Pro');
+    expect(platformLine(undefined)).toBe('ios');
+  });
+});
+
+describe('the concrete path', () => {
+  it('keeps an ordinary path and a path with a Bev id', () => {
+    expect(safePathOf('/feed')).toBe('/feed');
+    expect(safePathOf('/bev/8f3a1c2d-4e5f-4a6b-8c7d-9e0f1a2b3c4d')).toBe('/bev/8f3a1c2d-4e5f-4a6b-8c7d-9e0f1a2b3c4d');
+  });
+
+  it('drops a path with a percent-encoded segment: the photo viewer holds an encoded image address, which may be signed', () => {
+    expect(safePathOf('/image/https%3A%2F%2Fexample.supabase.co%2Fstorage%2Fv1%2Fobject%2Fsign%2Fx.jpg')).toBeUndefined();
+  });
+
+  it('drops a path with a long opaque segment, as the server does', () => {
+    expect(safePathOf('/reset/9f8a7c6b5d4e3f2a1b0c9d8e')).toBeUndefined();
+  });
+
+  it('cuts a query string and a fragment, and refuses anything that is not an absolute path', () => {
+    expect(safePathOf('/search?q=cola')).toBe('/search');
+    expect(safePathOf('//evil.example/x')).toBeUndefined();
+    expect(safePathOf('feed')).toBeUndefined();
+    expect(safePathOf(undefined)).toBeUndefined();
   });
 });

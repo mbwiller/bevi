@@ -11,6 +11,7 @@ on:
       - "shared/src/**"
       - "packages/ranking/src/**"
       - "packages/api/src/**"
+      - "packages/conformance/**"
       - "data/catalog/**"
       - "package-lock.json"
       - ".github/workflows/app.yml"
@@ -22,6 +23,7 @@ on:
       - "shared/src/**"
       - "packages/ranking/src/**"
       - "packages/api/src/**"
+      - "packages/conformance/**"
       - "data/catalog/**"
       - "package-lock.json"
       - ".github/workflows/app.yml"
@@ -46,6 +48,9 @@ jobs:
         run: npx expo customize tsconfig.json
 
       - run: npm run typecheck -w app
+
+      # The BeviApi conformance suite the FakeApi test below runs (jointly owned, IS-8).
+      - run: npm run typecheck -w packages/conformance
 
       - run: npm test -w app
 

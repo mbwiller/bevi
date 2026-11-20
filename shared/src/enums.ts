@@ -54,7 +54,7 @@ export type PriceTier = 1 | 2 | 3 | 4;
 export type PhotoStatus = 'processing' | 'ready';
 
 /**
- * A Bev's generated-icon state (`bevs.icon_status`, 20261114000100).
+ * A Bev's generated-icon state (`bevs.icon_status`, 20261119185800).
  *
  * `'none'` is the one that matters: it means the Bev was never ELIGIBLE for
  * generation -- a seeded catalog row, or a custom Bev created without a
@@ -86,3 +86,28 @@ export const HANDLE_PATTERN = /^[a-z0-9_]{3,20}$/;
 
 /** Handles the server rejects even when the pattern matches. */
 export const RESERVED_HANDLES: readonly string[] = ['admin', 'bevi', 'support', 'null'];
+
+/**
+ * What a content report is about (IS-7), mirrored from the check on
+ * `content_reports.content_type`: a feed post (`FeedItem.id` / `ExplorePost.id`),
+ * a comment (`Comment.id`) or a person (`Profile.id`). A Bev in the catalog is
+ * not one of them: that is `bevs.report`.
+ */
+export type ReportContentKind = 'post' | 'comment' | 'profile';
+
+/**
+ * Why something is reported (IS-7), mirrored from the check on
+ * `content_reports.reason` and `report_content`'s own validation; keep the
+ * three in sync by hand, as with `HANDLE_PATTERN`.
+ */
+export type ReportReason =
+  | 'spam' | 'harassment' | 'hate' | 'violence' | 'sexual'
+  | 'self_harm' | 'illegal' | 'misinformation' | 'other';
+
+/** Every `ReportReason`, in the order a report sheet offers them (`other` last). */
+export const REPORT_REASONS: readonly ReportReason[] = [
+  'spam', 'harassment', 'hate', 'violence', 'sexual', 'self_harm', 'illegal', 'misinformation', 'other',
+];
+
+/** The longest `note` a content report takes, in characters after trimming (`content_reports.note`). */
+export const REPORT_NOTE_MAX = 500;

@@ -1,13 +1,14 @@
 import { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
+import { useKeyboardInset } from '@/lib/useKeyboardInset';
 import { MAX_FONT_SCALE_DENSE, radius, size, spacing, type, useTheme } from '@/theme';
 
 import { BUTTON_SIZE, buttonBottom } from './ReportButton';
-import { REPORT_UI } from './ReportLayer';
-import { hideToast, openRank, useReport } from './store';
+import { REPORT_UI, useLayer } from './ReportLayer';
+import { hideToast, openRank, sheetsAvailable, useReport } from './store';
 
 const TOAST_MS = 4000;
 
@@ -18,8 +19,12 @@ const TOAST_MS = 4000;
 export function ReportToast({ canPlace }: { canPlace: (ticketId: string) => boolean }) {
   const { colors, elevation } = useTheme();
   const insets = useSafeAreaInsets();
+  const layer = useLayer();
+  const keyboard = useKeyboardInset();
   const toast = useReport((s) => s.toast);
   const panelHeight = useReport((s) => (s.panel === 'open' && s.draft ? s.panelHeight : 0));
+  // Over a full-screen flow the rank sheet can't open (capabilities.ts), so the toast just says it was filed.
+  const sheets = useReport(sheetsAvailable);
 
   useEffect(() => {
     if (!toast) return;
@@ -28,8 +33,12 @@ export function ReportToast({ canPlace }: { canPlace: (ticketId: string) => bool
   }, [toast]);
 
   if (!toast) return null;
-  const bottom = buttonBottom(insets.bottom, panelHeight) + BUTTON_SIZE + spacing.sm;
-  const place = toast.duplicate ? false : canPlace(toast.ticketId);
+  // A note open over the keyboard may reach the top of the screen: the toast then stays on screen,
+  // over the note's top edge, instead of above it and out of sight. (On the web the layer's height
+  // already has the keyboard taken out, and `bottom` is measured from under the keyboard.)
+  const screen = Platform.OS === 'web' ? layer.height + keyboard : layer.height;
+  const bottom = toastBottom(buttonBottom(insets.bottom, panelHeight) + BUTTON_SIZE + spacing.sm, screen, insets.top);
+  const place = toast.duplicate || !sheets ? false : canPlace(toast.ticketId);
   return (
     <View
       {...REPORT_UI}
@@ -51,6 +60,11 @@ export function ReportToast({ canPlace }: { canPlace: (ticketId: string) => bool
       ) : null}
     </View>
   );
+}
+
+/** Where the toast's bottom goes: where it was asked to, or as high as leaves all of it on a `screen` tall. */
+export function toastBottom(wanted: number, screen: number, topInset: number): number {
+  return Math.min(wanted, Math.max(0, screen - topInset - size.target - spacing.sm));
 }
 
 const styles = StyleSheet.create({

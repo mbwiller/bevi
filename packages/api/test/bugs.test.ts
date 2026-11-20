@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createBugsApi } from '../src/bugs.ts';
 
@@ -15,7 +15,7 @@ const KEY = '4f1d6c0a-4f4c-4f0e-9e0b-9a4a8f2b7c11';
 
 interface Calls {
   rpc?: string;
-  uploads: { bucket: string; path: string }[];
+  uploads: { bucket: string; path: string; body?: unknown }[];
   invokes: { name: string; init: { body?: Record<string, unknown>; method?: string } | undefined }[];
 }
 
@@ -48,9 +48,9 @@ function fakeClient(calls: Calls = newCalls(), options: Options = {}): SupabaseC
     },
     storage: {
       from: (bucket: string) => ({
-        upload: (path: string) => {
+        upload: (path: string, body?: unknown) => {
           const index = calls.uploads.length;
-          calls.uploads.push({ bucket, path });
+          calls.uploads.push({ bucket, path, body });
           const fails = options.uploadError && (options.uploadErrorAt === undefined || options.uploadErrorAt === index);
           return Promise.resolve({ data: { path }, error: fails ? options.uploadError : null });
         },
@@ -74,7 +74,7 @@ function functionError(status: number, body: unknown): unknown {
   };
 }
 
-const CREATED = { ticketId: 'BEV-207', ticketUrl: 'https://linear.app/bevi/issue/BEV-207', status: 'created' };
+const CREATED = { ticketId: 'T-207', ticketUrl: 'https://board.example/?open=T-207', status: 'created' };
 const BASE = { kind: 'bug', severity: 'bad', title: 'x', idempotencyKey: KEY } as const;
 const jpeg = (size = 1000) => ({ file: { size } as unknown as Blob, mimeType: 'image/jpeg' });
 
@@ -160,7 +160,7 @@ describe('bugs.report submission', () => {
       breadcrumbs: [{ at: '2026-11-09T10:00:00Z', kind: 'nav', route: '/bev/[id]' }],
       idempotencyKey: KEY,
     });
-    expect(result).toEqual({ ticketId: 'BEV-207', ticketUrl: 'https://linear.app/bevi/issue/BEV-207', status: 'created' });
+    expect(result).toEqual({ ticketId: 'T-207', ticketUrl: 'https://board.example/?open=T-207', status: 'created' });
     const body = calls.invokes[0]?.init?.body;
     expect(calls.invokes[0]?.name).toBe('bug-report');
     expect(body?.title).toBe('Ratings disappear after refresh');
@@ -297,8 +297,8 @@ describe('bugs.report submission', () => {
 });
 
 const SUMMARY = {
-  ticketId: 'BEV-207',
-  ticketUrl: 'https://linear.app/bevi/issue/BEV-207',
+  ticketId: 'T-207',
+  ticketUrl: 'https://board.example/?open=T-207',
   title: 'Ratings disappear after refresh',
   kind: 'bug',
   severity: 'bad',
@@ -322,11 +322,19 @@ describe('bugs.listMine', () => {
   it('drops a row the tracker did not confirm and keeps unknown states as unknown', async () => {
     const rows = await createBugsApi(
       fakeClient(newCalls(), {
-        invokeData: { reports: [{ ...SUMMARY, state: 'teleported' }, { title: 'no identifier' }], trackerError: 'linear_unreachable' },
+        invokeData: { reports: [{ ...SUMMARY, state: 'teleported' }, { title: 'no identifier' }], trackerError: 'board_unreachable' },
       }),
     ).listMine();
     expect(rows.length).toBe(1);
     expect(rows[0]?.state).toBe('unknown');
+  });
+
+  it('still lists the ledger rows when the function says no tracker is configured', async () => {
+    const unknown = { ...SUMMARY, state: 'unknown', stateLabel: null, priority: null, updatedAt: null };
+    const rows = await createBugsApi(
+      fakeClient(newCalls(), { invokeData: { reports: [unknown], trackerError: 'tracker_not_configured' } }),
+    ).listMine();
+    expect(rows).toEqual([unknown]);
   });
 
   it('carries a positive integer rank and turns anything else into null', async () => {
@@ -358,9 +366,9 @@ describe('bugs.markVerified', () => {
   it('posts the identifier to the verify route and returns the refreshed summary', async () => {
     const calls = newCalls();
     const done = { ...SUMMARY, state: 'done', stateLabel: 'Done' };
-    const result = await createBugsApi(fakeClient(calls, { invokeData: { report: done } })).markVerified(' BEV-207 ');
+    const result = await createBugsApi(fakeClient(calls, { invokeData: { report: done } })).markVerified(' T-207 ');
     expect(calls.invokes[0]?.name).toBe('bug-report/verify');
-    expect(calls.invokes[0]?.init?.body).toEqual({ ticketId: 'BEV-207' });
+    expect(calls.invokes[0]?.init?.body).toEqual({ ticketId: 'T-207' });
     expect(result).toEqual(done);
   });
 
@@ -444,13 +452,74 @@ describe('bugs.place', () => {
 
   it('maps a tracker failure and a validation answer like the other routes', async () => {
     await expect(
-      createBugsApi(fakeClient(newCalls(), { invokeError: functionError(502, { error: 'tracker_error', code: 'linear_error' }) })).place('BEV-7', null),
+      createBugsApi(fakeClient(newCalls(), { invokeError: functionError(502, { error: 'tracker_error', code: 'board_unreachable' }) })).place('BEV-7', null),
     ).rejects.toMatchObject({ code: 'unknown' });
     await expect(
-      createBugsApi(fakeClient(newCalls(), { invokeError: functionError(429, { error: 'tracker_error', code: 'linear_rate_limited' }) })).place('BEV-7', null),
+      createBugsApi(fakeClient(newCalls(), { invokeError: functionError(502, { error: 'tracker_error', code: 'tracker_error' }) })).place('BEV-7', null),
     ).rejects.toMatchObject({ code: 'unknown' });
+    await expect(
+      createBugsApi(fakeClient(newCalls(), { invokeError: functionError(503, { error: 'tracker_not_configured' }) })).place('T-19', null),
+    ).rejects.toMatchObject({ code: 'unknown', message: 'The issue tracker is not configured yet' });
     await expect(
       createBugsApi(fakeClient(newCalls(), { invokeError: functionError(400, { error: 'validation', field: 'afterTicketId' }) })).place('BEV-7', 'BEV-2'),
     ).rejects.toMatchObject({ code: 'validation', detail: { field: 'afterTicketId' } });
+  });
+});
+
+// Contract 3.3.0: evidence is an `UploadPayload`, as `media.upload`'s file is. The native bug
+// reporter reads its screenshot into bytes; a React Native Blob would store an empty object.
+describe('bugs.report evidence as bytes (contract 3.3.0)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('uploads a Uint8Array as an ArrayBuffer holding exactly its own bytes, not its backing store', async () => {
+    const calls = newCalls();
+    const backing = new Uint8Array([9, 9, 1, 2, 3, 9, 9]);
+    const view = backing.subarray(2, 5);
+    await createBugsApi(fakeClient(calls, { invokeData: CREATED })).report({
+      ...BASE,
+      evidence: [{ file: view, mimeType: 'image/jpeg', caption: 'Feed, whole screen' }],
+    });
+    const body = calls.uploads[0]?.body as ArrayBuffer;
+    expect(body).toBeInstanceOf(ArrayBuffer);
+    expect([...new Uint8Array(body)]).toEqual([1, 2, 3]);
+    expect(calls.invokes[0]?.init?.body?.evidenceCaptions).toEqual(['Feed, whole screen']);
+  });
+
+  it('uploads an ArrayBuffer as it is', async () => {
+    const calls = newCalls();
+    const bytes = new Uint8Array([4, 5, 6]).buffer;
+    await createBugsApi(fakeClient(calls, { invokeData: CREATED })).report({ ...BASE, evidence: [{ file: bytes, mimeType: 'image/png' }] });
+    expect(calls.uploads[0]?.body).toBe(bytes);
+    expect(calls.uploads[0]?.path).toMatch(/\.png$/);
+  });
+
+  it('measures bytes against the 10 MB limit', async () => {
+    const calls = newCalls();
+    await expect(
+      createBugsApi(fakeClient(calls)).report({ ...BASE, evidence: [{ file: new Uint8Array(10 * 1024 * 1024 + 1), mimeType: 'image/jpeg' }] }),
+    ).rejects.toMatchObject({ code: 'validation', detail: { field: 'evidence' } });
+    expect(calls.uploads).toEqual([]);
+  });
+
+  it('refuses a Blob under React Native before staging anything, even behind good bytes', async () => {
+    vi.stubGlobal('navigator', { product: 'ReactNative' });
+    const calls = newCalls();
+    const nativeBlob = new Blob(['x'], { type: 'image/jpeg' });
+    await expect(
+      createBugsApi(fakeClient(calls)).report({
+        ...BASE,
+        evidence: [
+          { file: new Uint8Array([1, 2, 3]), mimeType: 'image/jpeg' },
+          { file: nativeBlob, mimeType: 'image/jpeg' },
+        ],
+      }),
+    ).rejects.toMatchObject({
+      code: 'validation',
+      // The contract's field for an attachment `bugs.report` refuses, not `media.upload`'s 'file'.
+      detail: { field: 'evidence' },
+      message: expect.stringContaining('cannot upload a Blob'),
+    });
+    expect(calls.uploads).toEqual([]);
+    expect(calls.invokes).toEqual([]);
   });
 });

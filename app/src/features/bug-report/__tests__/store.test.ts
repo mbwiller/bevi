@@ -61,11 +61,11 @@ function level(name: string, y = 100): PickLevel {
 let shotCount = 0;
 function shot(): Shot {
   shotCount += 1;
-  return { blob: new Blob(['jpeg']), mimeType: 'image/jpeg', uri: `blob:shot-${shotCount}`, width: 390, height: 844 };
+  return { file: new Blob(['jpeg']), mimeType: 'image/jpeg', uri: `blob:shot-${shotCount}`, width: 390, height: 844 };
 }
 
 function photo(n: number): PreparedPhoto {
-  return { uri: `blob:photo-${n}`, blob: new Blob(['p']), mimeType: 'image/jpeg', width: 10, height: 10 };
+  return { uri: `blob:photo-${n}`, file: new Blob(['p']), mimeType: 'image/jpeg', width: 10, height: 10 };
 }
 
 function memory(): StorageLike & { map: Map<string, string> } {

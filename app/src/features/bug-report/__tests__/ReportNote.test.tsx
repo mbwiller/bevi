@@ -17,7 +17,7 @@ import type { PickLevel } from '../types';
 
 // The engine is another task's; here it answers as its contract says.
 jest.mock('../capture', () => ({
-  captureScreen: jest.fn(async () => ({ blob: new Blob(['jpeg']), mimeType: 'image/jpeg', uri: 'blob:shot', width: 390, height: 844 })),
+  captureScreen: jest.fn(async () => ({ file: new Blob(['jpeg']), mimeType: 'image/jpeg', uri: 'blob:shot', width: 390, height: 844 })),
   releaseShot: jest.fn(),
 }));
 jest.mock('../pick', () => ({ pickAt: jest.fn(() => []) }));
@@ -110,7 +110,7 @@ beforeEach(() => {
   photoCount = 0;
   mockPrepare.mockImplementation(async () => {
     photoCount += 1;
-    return { uri: `blob:photo-${photoCount}`, blob: new Blob(['p']), mimeType: 'image/jpeg', width: 10, height: 10 };
+    return { uri: `blob:photo-${photoCount}`, file: new Blob(['p']), mimeType: 'image/jpeg', width: 10, height: 10 };
   });
 });
 
@@ -188,7 +188,7 @@ describe('the note', () => {
     expect(screen.queryByTestId('report-note')).toBeNull();
     expect(useReport.getState().outbox.map((o) => o.status)).toEqual(['sending']);
     expect(useReport.getState().draft).toBeNull();
-    expect(await screen.findByText(/^Filed BEV-\d+$/)).toBeTruthy();
+    expect(await screen.findByText(/^Filed T-\d+$/)).toBeTruthy();
     expect(useReport.getState().outbox.map((o) => o.status)).toEqual(['sent']);
     expect(useReport.getState().unplaced).toHaveLength(1);
   });
@@ -206,7 +206,7 @@ describe('the note', () => {
     expect(screen.getByLabelText("What's going on?").props.value).toBe('Ratings vanish after a refresh');
     expect(screen.getByText("You're offline. Your note is kept.")).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
-    await screen.findByText(/^Filed BEV-\d+$/);
+    await screen.findByText(/^Filed T-\d+$/);
     expect(report).toHaveBeenCalledTimes(2);
     expect(report.mock.calls[1]![0].idempotencyKey).toBe(report.mock.calls[0]![0].idempotencyKey);
   });

@@ -1,12 +1,23 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { MIN_N_USER, RANKING_VERSION, RECOMMEND_N, localDayKey, recommend } from '@bevi/ranking';
-import { ApiError, type Recommendation, type RecommendationsResult, type RecsApi } from '@bevi/shared';
+import { MIN_N_USER, RANKING_VERSION, RECOMMEND_N, localDayKey, parseTimestamp, recommend } from '@bevi/ranking';
+import type { Recommendation, RecommendationsResult, RecsApi } from '@bevi/shared';
+import { requireUserId } from './currentUser';
 import type { SnapshotCache } from './snapshot';
 
-async function requireUserId(client: SupabaseClient): Promise<string> {
-  const { data, error } = await client.auth.getUser();
-  if (error || !data.user) throw new ApiError('unauthorized', 'Not signed in');
-  return data.user.id;
+/**
+ * The day the seed is for. Only the day's shuffle depends on it, so an unreadable timestamp or
+ * timezone (an engine's date parser, an unknown zone) falls back rather than failing the whole
+ * list. In order: the viewer's local day at `generatedAt`; else the UTC date of `generatedAt`;
+ * else, when `generatedAt` itself cannot be read, today's UTC date. Never a constant, which
+ * would give that person the same shuffle every day.
+ */
+export function seedDay(generatedAt: string, timeZone: string): string {
+  try {
+    return localDayKey(generatedAt, timeZone);
+  } catch {
+    const ms = parseTimestamp(generatedAt);
+    return new Date(Number.isNaN(ms) ? Date.now() : ms).toISOString().slice(0, 10);
+  }
 }
 
 const round2 = (x: number) => Math.round(x * 100) / 100;
@@ -24,7 +35,7 @@ export function createRecsApi(client: SupabaseClient, snapshots: SnapshotCache):
       const base = { generatedAt, basedOnCount: viewer.rankingCount, rankingVersion: RANKING_VERSION };
       if (viewer.rankingCount < MIN_N_USER) return { ...base, items: [] };
       const limit = Math.min(50, Math.max(1, Math.floor(params.limit ?? RECOMMEND_N)));
-      const seed = `${uid}:${localDayKey(generatedAt, viewer.timezone)}`;
+      const seed = `${uid}:${seedDay(generatedAt, viewer.timezone)}`;
       const items: Recommendation[] = recommend(snapshot, uid, { n: limit, seed }).flatMap((r) => {
         const bev = summaries.get(r.bevId);
         if (!bev) return [];

@@ -1,0 +1,1525 @@
+// A conformance suite for any `BeviApi` implementation: every method's happy path and the error
+// codes its contract doc comment documents (shared/src/api.ts). The FakeApi runs it in
+// src/testing/fakeApi/__tests__/conformance.test.ts; packages/api can run the same suite against a real backend:
+//
+//   runConformance(() => createBeviApi({ ... }), { inviteCode: process.env.INVITE_CODE!, alcoholicBevId: '...' });
+//
+// It only relies on what the contract promises, never on fixture data: it creates its own users
+// (unique usernames) and finds Bevs through `getStarterCandidates` (≥ 30 promised). Uses Jest globals.
+
+import { BANDS, MIN_N_USER, MIN_RATERS, compareCodePoints, normaliseBrand } from '@bevi/ranking';
+import {
+  ApiError,
+  BUCKET_ORDER,
+  NYC_BOUNDS,
+  isApiError,
+  type ApiErrorCode,
+  type BeviApi,
+  type Bucket,
+  type ExplorePost,
+  type Session,
+} from '@bevi/shared';
+
+export interface ConformanceOptions {
+  /** The shared invite code the implementation accepts. */
+  inviteCode: string;
+  /** Id of a Bev in an alcoholic category (for `age_restricted`). */
+  alcoholicBevId: string;
+  /** Unique usernames matching HANDLE_PATTERN. Default: 'c' + timestamp/counter. */
+  makeUsername?: () => string;
+  /** A password the implementation accepts. Default 'conformance-pass-1'. */
+  password?: string;
+  /**
+   * Resolves once an uploaded bev photo is ready (`bevs.create` rejects a processing one with
+   * 'validation'). Default: no wait (the implementation under test finishes processing instantly).
+   */
+  waitForAsset?: (assetId: string) => Promise<void>;
+  /**
+   * Check streaks (a ranking today → currentStreak 1). Default true (the FakeApi runs with it on).
+   */
+  checkStreaks?: boolean;
+  /**
+   * Makes the signed-in user an internal bug reporter. The contract has no way to do that (an
+   * operator runs set_profile_role), so the bugs cases that need one run only when this is given:
+   * the FakeApi passes `controls.setInternalReporter(true)`; a live run would need an operator hook.
+   */
+  makeInternalReporter?: (api: BeviApi) => void | Promise<void>;
+}
+
+const MINOR_BIRTHDATE = (now: Date) => `${now.getUTCFullYear() - 15}-01-01`;
+const ADULT_BIRTHDATE = '1990-05-05';
+
+async function expectCode(p: Promise<unknown>, code: ApiErrorCode): Promise<ApiError> {
+  try {
+    await p;
+  } catch (e) {
+    expect(isApiError(e)).toBe(true);
+    expect((e as ApiError).code).toBe(code);
+    return e as ApiError;
+  }
+  throw new Error(`expected ApiError '${code}', but the call resolved`);
+}
+
+export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, options: ConformanceOptions): void {
+  let counter = 0;
+  const makeUsername =
+    options.makeUsername ?? (() => `c${Date.now().toString(36).slice(-8)}${(counter++).toString(36)}`.slice(0, 20));
+  const password = options.password ?? 'conformance-pass-1';
+  const waitForAsset = options.waitForAsset ?? (async () => undefined);
+  const checkStreaks = options.checkStreaks ?? true;
+
+  let api: BeviApi;
+  beforeEach(async () => {
+    api = await makeApi();
+  });
+
+  /** Signs up a fresh user (and signs in as them). */
+  async function newUser(opts: { birthdate?: string | null } = {}): Promise<Session & { password: string }> {
+    const username = makeUsername();
+    const session = await api.signUp({ username, password, inviteCode: options.inviteCode });
+    const birthdate = opts.birthdate === undefined ? ADULT_BIRTHDATE : opts.birthdate;
+    if (birthdate) await api.profile.setBirthDate(birthdate);
+    return { ...session, password };
+  }
+
+  async function signInAs(user: Session & { password: string }) {
+    await api.signOut();
+    await api.signIn({ username: user.handle, password: user.password });
+  }
+
+  async function starterIds(n: number): Promise<string[]> {
+    const candidates = await api.bevs.getStarterCandidates();
+    expect(candidates.length).toBeGreaterThanOrEqual(n);
+    return candidates.slice(0, n).map((b) => b.id);
+  }
+
+  /** Ranks `bevId` at the bottom of `bucket`. */
+  async function rankAtBottom(bevId: string, bucket: Bucket = 'LOVED', note?: string) {
+    const ids = await api.rankings.listBucket(bucket);
+    return api.rankings.submitRanking({
+      bevId,
+      bucket,
+      insertIndex: ids.length,
+      expectedBucketSize: ids.length,
+      comparisons: ids.length ? [{ winnerBevId: ids[ids.length - 1]!, loserBevId: bevId, tie: false }] : [],
+      note,
+    });
+  }
+
+  describe('meta and signed-out access', () => {
+    it('getAppConfig works signed out', async () => {
+      const config = await api.meta.getAppConfig();
+      expect(typeof config.minAppVersion).toBe('string');
+      expect(typeof config.maintenance).toBe('boolean');
+      // Shapes only: against a real backend the row is whatever an operator last set.
+      expect(config.minContractVersion).toMatch(/^\d+\.\d+\.\d+$/);
+      expect(config.maintenanceMessage === null || typeof config.maintenanceMessage === 'string').toBe(true);
+    });
+
+    it('getSession is null signed out, and other reads throw unauthorized', async () => {
+      await api.signOut();
+      expect(await api.getSession()).toBeNull();
+      await expectCode(api.profile.getMe(), 'unauthorized');
+      await expectCode(api.feed.getFeed(), 'unauthorized');
+      await expectCode(api.feed.getBevOfPeriod(), 'unauthorized');
+      await expectCode(api.feed.listUser('anyone'), 'unauthorized');
+      await expectCode(api.leaderboard.friends(), 'unauthorized');
+      await expectCode(api.follows.suggested(), 'unauthorized');
+      await expectCode(api.rankings.listMine(), 'unauthorized');
+      await expectCode(api.rankings.listBucketBevs('LOVED'), 'unauthorized');
+      await expectCode(api.bevs.similar('anything'), 'unauthorized');
+      await expectCode(api.bevs.similarities('anything', ['other']), 'unauthorized');
+      await expectCode(api.bevs.leaves(['anything']), 'unauthorized');
+      await expectCode(api.categories.list(), 'unauthorized');
+      await expectCode(api.categories.tree(), 'unauthorized');
+      await expectCode(api.stats.getCategoryProgress(), 'unauthorized');
+      await expectCode(api.stats.getTasteProfile('anyone'), 'unauthorized');
+      await expectCode(api.deleteAccount(), 'unauthorized');
+    });
+
+    it('checkHandle works signed out: invalid, reserved, taken, available', async () => {
+      const user = await newUser();
+      await api.signOut();
+      expect(await api.profile.checkHandle('No Caps!')).toEqual({ available: false, reason: 'invalid' });
+      expect(await api.profile.checkHandle('ab')).toMatchObject({ available: false, reason: 'invalid' });
+      expect(await api.profile.checkHandle('admin')).toEqual({ available: false, reason: 'reserved' });
+      expect(await api.profile.checkHandle(user.handle)).toEqual({ available: false, reason: 'taken' });
+      expect(await api.profile.checkHandle(makeUsername())).toEqual({ available: true });
+    });
+  });
+
+  describe('auth', () => {
+    it('signUp creates the profile (handle = username) and signs in', async () => {
+      const username = makeUsername();
+      const session = await api.signUp({ username, password, inviteCode: options.inviteCode });
+      expect(session.handle).toBe(username);
+      expect(await api.getSession()).toEqual(session);
+      const me = await api.profile.getMe();
+      expect(me).toMatchObject({ id: session.userId, handle: username, birthdate: null, canSeeAlcohol: false, onboarded: false });
+    });
+
+    it('signUp rejects a wrong invite code with validation (field inviteCode)', async () => {
+      const e = await expectCode(api.signUp({ username: makeUsername(), password, inviteCode: 'nope' }), 'validation');
+      expect(e.detail).toMatchObject({ field: 'inviteCode' });
+    });
+
+    it('signUp rejects malformed and reserved usernames and weak passwords with validation', async () => {
+      const bad = await expectCode(api.signUp({ username: 'Bad Name', password, inviteCode: options.inviteCode }), 'validation');
+      expect(bad.detail).toMatchObject({ field: 'username' });
+      const reserved = await expectCode(api.signUp({ username: 'admin', password, inviteCode: options.inviteCode }), 'validation');
+      expect(reserved.detail).toMatchObject({ field: 'username' });
+      const weak = await expectCode(api.signUp({ username: makeUsername(), password: '1', inviteCode: options.inviteCode }), 'validation');
+      expect(weak.detail).toMatchObject({ field: 'password' });
+    });
+
+    it('signUp with a taken username is a conflict', async () => {
+      const user = await newUser();
+      await api.signOut();
+      await expectCode(api.signUp({ username: user.handle, password, inviteCode: options.inviteCode }), 'conflict');
+    });
+
+    it('signIn: wrong password or unknown user is unauthorized; right credentials sign in', async () => {
+      const user = await newUser();
+      await api.signOut();
+      await expectCode(api.signIn({ username: user.handle, password: 'wrong-password' }), 'unauthorized');
+      await expectCode(api.signIn({ username: makeUsername(), password }), 'unauthorized');
+      const session = await api.signIn({ username: user.handle, password });
+      expect(session).toEqual({ userId: user.userId, handle: user.handle });
+    });
+
+    it('onAuthChange fires on sign-in and sign-out, and unsubscribes', async () => {
+      const user = await newUser();
+      await api.signOut();
+      const events: (Session | null)[] = [];
+      const unsubscribe = api.onAuthChange((s) => events.push(s));
+      await api.signIn({ username: user.handle, password });
+      await api.signOut();
+      unsubscribe();
+      await api.signIn({ username: user.handle, password });
+      expect(events).toEqual([{ userId: user.userId, handle: user.handle }, null]);
+    });
+
+    it('deleteAccount removes the user, signs out and fires onAuthChange(null)', async () => {
+      const user = await newUser();
+      const events: (Session | null)[] = [];
+      const unsubscribe = api.onAuthChange((s) => events.push(s));
+      await api.deleteAccount();
+      unsubscribe();
+      expect(events).toEqual([null]);
+      expect(await api.getSession()).toBeNull();
+      await expectCode(api.signIn({ username: user.handle, password }), 'unauthorized');
+      const other = await newUser();
+      await expectCode(api.profile.getUser(user.userId), 'not_found');
+      expect(other.userId).not.toBe(user.userId);
+    });
+  });
+
+  describe('profile', () => {
+    it('updateMe patches display name, timezone, onboarded and handle', async () => {
+      await newUser();
+      const handle = makeUsername();
+      const me = await api.profile.updateMe({ displayName: '  Pat Doe ', timezone: 'America/Chicago', onboarded: true, handle });
+      expect(me).toMatchObject({ displayName: 'Pat Doe', timezone: 'America/Chicago', onboarded: true, handle });
+      expect((await api.getSession())?.handle).toBe(handle);
+    });
+
+    it('updateMe: validation for empty name, unknown timezone, malformed handle; conflict for a taken handle', async () => {
+      const first = await newUser();
+      await newUser();
+      expect((await expectCode(api.profile.updateMe({ displayName: '  ' }), 'validation')).detail).toMatchObject({ field: 'displayName' });
+      expect((await expectCode(api.profile.updateMe({ timezone: 'Mars/Olympus' }), 'validation')).detail).toMatchObject({ field: 'timezone' });
+      expect((await expectCode(api.profile.updateMe({ handle: 'Nope!' }), 'validation')).detail).toMatchObject({ field: 'handle' });
+      await expectCode(api.profile.updateMe({ handle: first.handle }), 'conflict');
+    });
+
+    it('updateMe sets the profile photo from an avatar upload and clears it with null; any other asset is validation', async () => {
+      await newUser();
+      const file = new Blob(['img'], { type: 'image/jpeg' });
+      const up = await api.media.upload({ kind: 'avatar', file, mimeType: 'image/jpeg' });
+      expect(up.status).toBe('ready');
+      const me = await api.profile.updateMe({ avatarAssetId: up.assetId });
+      expect(typeof me.avatarUrl).toBe('string');
+      expect((await api.profile.getMe()).avatarUrl).toBe(me.avatarUrl);
+
+      const unknown = await expectCode(api.profile.updateMe({ avatarAssetId: 'no-such-asset' }), 'validation');
+      expect(unknown.detail).toMatchObject({ field: 'avatarAssetId', reason: 'unknown_asset' });
+      const photo = await api.media.upload({ kind: 'bev-photo', file, mimeType: 'image/jpeg' });
+      await waitForAsset(photo.assetId);
+      await expectCode(api.profile.updateMe({ avatarAssetId: photo.assetId }), 'validation');
+      expect((await api.profile.getMe()).avatarUrl).toBe(me.avatarUrl);
+
+      expect((await api.profile.updateMe({ avatarAssetId: null })).avatarUrl).toBeNull();
+    });
+
+    it('setBirthDate sets canSeeAlcohol once; a second call is validation', async () => {
+      await newUser({ birthdate: null });
+      const me = await api.profile.setBirthDate(ADULT_BIRTHDATE);
+      expect(me).toMatchObject({ birthdate: ADULT_BIRTHDATE, canSeeAlcohol: true });
+      await expectCode(api.profile.setBirthDate('1991-01-01'), 'validation');
+    });
+
+    it('setBirthDate: under 21 is allowed; malformed and future dates are validation', async () => {
+      await newUser({ birthdate: null });
+      await expectCode(api.profile.setBirthDate('1990-13-45'), 'validation');
+      await expectCode(api.profile.setBirthDate('05/05/1990'), 'validation');
+      await expectCode(api.profile.setBirthDate(`${new Date().getUTCFullYear() + 1}-01-01`), 'validation');
+      const me = await api.profile.setBirthDate(MINOR_BIRTHDATE(new Date()));
+      expect(me.canSeeAlcohol).toBe(false);
+    });
+
+    it('getUser returns a row (other users hide birthdate); unknown id is not_found', async () => {
+      const a = await newUser();
+      await newUser();
+      const row = await api.profile.getUser(a.userId);
+      expect(row).toMatchObject({ id: a.userId, handle: a.handle, isFollowing: false, birthdate: null });
+      await expectCode(api.profile.getUser('no-such-user'), 'not_found');
+    });
+
+    it('searchUsers matches by handle (with or without @)', async () => {
+      const a = await newUser();
+      await newUser();
+      const page = await api.profile.searchUsers({ q: `@${a.handle}` });
+      expect(page.items.map((u) => u.id)).toContain(a.userId);
+      expect(page).toHaveProperty('nextCursor');
+    });
+  });
+
+  describe('follows and stats', () => {
+    it('follow is idempotent; unfollow is idempotent; lists and isFollowing agree', async () => {
+      const a = await newUser();
+      const b = await newUser();
+      await api.follows.follow(a.userId);
+      await api.follows.follow(a.userId);
+      expect((await api.profile.getUser(a.userId)).isFollowing).toBe(true);
+      const following = await api.follows.listFollowing(b.userId);
+      expect(following.items.filter((u) => u.id === a.userId)).toHaveLength(1);
+      const followers = await api.follows.listFollowers(a.userId);
+      expect(followers.items.map((u) => u.id)).toEqual([b.userId]);
+      expect((await api.stats.getUser(a.userId)).followers).toBe(1);
+      expect((await api.stats.getMine()).following).toBe(1);
+      await api.follows.unfollow(a.userId);
+      await api.follows.unfollow(a.userId);
+      expect((await api.profile.getUser(a.userId)).isFollowing).toBe(false);
+      expect((await api.follows.listFollowers(a.userId)).items).toEqual([]);
+    });
+
+    it('follow: yourself is validation, unknown user is not_found', async () => {
+      const me = await newUser();
+      await expectCode(api.follows.follow(me.userId), 'validation');
+      await expectCode(api.follows.follow('no-such-user'), 'not_found');
+      await expectCode(api.follows.unfollow('no-such-user'), 'not_found');
+      await expectCode(api.follows.listFollowers('no-such-user'), 'not_found');
+      await expectCode(api.follows.listFollowing('no-such-user'), 'not_found');
+    });
+
+    it('suggested excludes yourself and people you follow', async () => {
+      const a = await newUser();
+      const me = await newUser();
+      await api.follows.follow(a.userId);
+      const ids = (await api.follows.suggested()).map((u) => u.id);
+      expect(ids).not.toContain(me.userId);
+      expect(ids).not.toContain(a.userId);
+    });
+
+    it('suggested: followedBy is who the caller follows that follows them, at most two, with the total', async () => {
+      // Someone with a ranking, so there is a person to suggest even in an empty database. Who
+      // is actually suggested is the implementation's ranking of everyone, so the suite takes
+      // whoever comes first rather than expecting this user.
+      await newUser();
+      const [x] = await starterIds(1);
+      await rankAtBottom(x!);
+
+      const me = await newUser();
+      const before = await api.follows.suggested();
+      expect(before.length).toBeGreaterThan(0);
+      // The caller follows nobody yet, so nobody they follow can follow anyone.
+      for (const person of before) expect(person).toMatchObject({ followedBy: [], followedByCount: 0 });
+      const target = before[0]!;
+
+      // Three people follow the target, oldest follow first; a fourth does too, but the caller
+      // will not follow that one.
+      const connectors: Session[] = [];
+      for (let i = 0; i < 3; i++) {
+        connectors.push(await newUser());
+        await api.follows.follow(target.id);
+      }
+      const bystander = await newUser();
+      await api.follows.follow(target.id);
+
+      await signInAs(me);
+      for (const c of connectors) await api.follows.follow(c.userId);
+
+      const after = await api.follows.suggested();
+      const row = after.find((u) => u.id === target.id);
+      // Following other people does not change that the target is suggested.
+      expect(row).toBeDefined();
+      expect(row!.isFollowing).toBe(false);
+      expect(row!.followedByCount).toBe(3);
+      // At most two, the most recent follower first.
+      expect(row!.followedBy.map((p) => p.id)).toEqual([connectors[2]!.userId, connectors[1]!.userId]);
+      expect(row!.followedBy[0]).toMatchObject({ handle: connectors[2]!.handle, birthdate: null });
+
+      for (const person of after) {
+        expect(person.followedBy.length).toBeLessThanOrEqual(2);
+        expect(person.followedByCount).toBeGreaterThanOrEqual(person.followedBy.length);
+        const ids = person.followedBy.map((p) => p.id);
+        expect(ids).not.toContain(me.userId);
+        expect(ids).not.toContain(person.id);
+        expect(ids).not.toContain(bystander.userId);
+        // Everyone listed is someone the caller follows.
+        for (const id of ids) expect(connectors.map((c) => c.userId)).toContain(id);
+      }
+
+      // Unfollowing one of them takes that person out of the list and the count.
+      await api.follows.unfollow(connectors[2]!.userId);
+      const fewer = (await api.follows.suggested()).find((u) => u.id === target.id);
+      expect(fewer).toMatchObject({ followedByCount: 2 });
+      expect(fewer!.followedBy.map((p) => p.id)).toEqual([connectors[1]!.userId, connectors[0]!.userId]);
+    });
+
+    it('stats for a new user are zero; getUser of an unknown id is not_found', async () => {
+      await newUser();
+      expect(await api.stats.getMine()).toMatchObject({
+        followers: 0, following: 0, bevdCount: 0, wantToTryCount: 0, rankOnBevi: null, currentStreak: 0,
+      });
+      await expectCode(api.stats.getUser('no-such-user'), 'not_found');
+    });
+
+    it('ranking today counts as Bev\'d, puts you on the board and starts a streak', async () => {
+      await newUser();
+      const [id] = await starterIds(1);
+      await rankAtBottom(id!);
+      const stats = await api.stats.getMine();
+      expect(stats.bevdCount).toBe(1);
+      if (checkStreaks) expect(stats).toMatchObject({ currentStreak: 1, streakAliveToday: true });
+      expect(stats.rankOnBevi).not.toBeNull();
+      expect(stats.rankPoints).toBeGreaterThan(0);
+    });
+  });
+
+  describe('categories and age gating', () => {
+    it('categories hide alcoholic ones until 21+', async () => {
+      await newUser({ birthdate: MINOR_BIRTHDATE(new Date()) });
+      const minor = await api.categories.list();
+      expect(minor.length).toBeGreaterThan(0);
+      expect(minor.some((c) => c.isAlcoholic)).toBe(false);
+      await newUser({ birthdate: ADULT_BIRTHDATE });
+      expect((await api.categories.list()).some((c) => c.isAlcoholic)).toBe(true);
+    });
+
+    it('category progress (S-07): one row per visible category, the same totals as bevCount, own rankings only', async () => {
+      await newUser({ birthdate: MINOR_BIRTHDATE(new Date()) });
+      const minorCats = await api.categories.list();
+      const minor = await api.stats.getCategoryProgress();
+      expect(minor.map((p) => p.categoryId)).toEqual(minorCats.map((c) => c.id));
+      expect(minor.every((p) => p.ranked === 0)).toBe(true);
+      for (const c of minorCats) expect(c.bevCount).toBe(minor.find((p) => p.categoryId === c.id)!.total);
+
+      const [first] = await api.bevs.getStarterCandidates();
+      await api.rankings.submitRanking({ bevId: first!.id, bucket: 'LOVED', insertIndex: 0, expectedBucketSize: 0, comparisons: [] });
+      const after = await api.stats.getCategoryProgress();
+      expect(after.find((p) => p.categoryId === first!.categoryId)).toMatchObject({ ranked: 1 });
+      expect(after.reduce((sum, p) => sum + p.ranked, 0)).toBe(1);
+      expect(after.every((p) => p.ranked <= p.total)).toBe(true);
+
+      await newUser({ birthdate: ADULT_BIRTHDATE });
+      const adult = await api.stats.getCategoryProgress();
+      expect(adult.reduce((sum, p) => sum + p.ranked, 0)).toBe(0);
+      expect(adult.length).toBeGreaterThan(minor.length);
+    });
+
+    it('taste profile (S-12): ranked categories only, highest mean first, any user, unknown user not_found', async () => {
+      const owner = await newUser({ birthdate: ADULT_BIRTHDATE });
+      expect(await api.stats.getTasteProfile(owner.userId)).toEqual([]);
+      const starters = await api.bevs.getStarterCandidates();
+      await api.rankings.submitRanking({ bevId: starters[0]!.id, bucket: 'LOVED', insertIndex: 0, expectedBucketSize: 0, comparisons: [] });
+      const mine = await api.stats.getTasteProfile(owner.userId);
+      expect(mine).toEqual([expect.objectContaining({ categoryId: starters[0]!.categoryId, rankingCount: 1 })]);
+      expect(mine[0]!.mean).toBeGreaterThanOrEqual(7);
+
+      await newUser({ birthdate: MINOR_BIRTHDATE(new Date()) });
+      expect(await api.stats.getTasteProfile(owner.userId)).toEqual(mine);
+      await expectCode(api.stats.getTasteProfile('00000000-0000-4000-8000-00000000ffff'), 'not_found');
+    });
+
+    it('an alcoholic Bev is age_restricted for minors (get, rank, save) and visible to adults', async () => {
+      await newUser({ birthdate: MINOR_BIRTHDATE(new Date()) });
+      await expectCode(api.bevs.get(options.alcoholicBevId), 'age_restricted');
+      await expectCode(api.wantToTry.add(options.alcoholicBevId), 'age_restricted');
+      await expectCode(
+        api.rankings.submitRanking({ bevId: options.alcoholicBevId, bucket: 'FINE', insertIndex: 0, expectedBucketSize: 0, comparisons: [] }),
+        'age_restricted',
+      );
+      const starters = await api.bevs.getStarterCandidates();
+      expect(starters.map((b) => b.id)).not.toContain(options.alcoholicBevId);
+      const minorCats = new Set((await api.categories.list()).map((c) => c.id));
+      for (const f of await api.feed.getFeatured()) expect(minorCats.has(f.bev.categoryId)).toBe(true);
+
+      await newUser({ birthdate: ADULT_BIRTHDATE });
+      expect((await api.bevs.get(options.alcoholicBevId)).id).toBe(options.alcoholicBevId);
+    });
+
+    it('a user without a birthdate cannot see alcohol', async () => {
+      await newUser({ birthdate: null });
+      await expectCode(api.bevs.get(options.alcoholicBevId), 'age_restricted');
+    });
+  });
+
+  describe('bevs', () => {
+    it('getStarterCandidates returns ≥ 30 Bevs with ratingCount', async () => {
+      await newUser({ birthdate: MINOR_BIRTHDATE(new Date()) });
+      const candidates = await api.bevs.getStarterCandidates();
+      expect(candidates.length).toBeGreaterThanOrEqual(30);
+      for (const b of candidates) expect(typeof b.ratingCount).toBe('number');
+    });
+
+    it('search finds a Bev by name and filters by category', async () => {
+      await newUser();
+      const [bev] = await api.bevs.getStarterCandidates();
+      const page = await api.bevs.search({ q: bev!.name, limit: 10 });
+      expect(page.items.map((b) => b.id)).toContain(bev!.id);
+      const filtered = await api.bevs.search({ q: bev!.name, categoryId: bev!.categoryId });
+      for (const b of filtered.items) expect(b.categoryId).toBe(bev!.categoryId);
+    });
+
+    // 20261102000200: a query is whitespace-separated tokens, each matched as a substring of the
+    // Bev's name, brand, flavor, category and aliases; punctuation stays inside a token, so "A&W" is
+    // one token, not "a" and "w" (which Mountain Dew has). The live twin is
+    // packages/api/test/catalog-and-media.live.test.ts.
+    it('search matches by any piece of a Bev\'s words: "A&W" finds the A&W Bevs and not Mountain Dew', async () => {
+      await newUser();
+      const aw = await api.bevs.search({ q: 'A&W', limit: 50 });
+      expect(aw.items.length).toBeGreaterThan(0);
+      expect(aw.items[0]!.name.startsWith('A&W')).toBe(true);
+      expect(aw.items.some((b) => b.name.startsWith('Mountain Dew'))).toBe(false);
+      const words = await api.bevs.search({ q: 'root beer', limit: 50 });
+      expect(words.items.map((b) => b.name)).toContain('A&W Root Beer');
+      expect((await api.bevs.search({ q: 'zzqx' })).items).toEqual([]);
+    });
+
+    it('get returns detail; unknown id is not_found', async () => {
+      await newUser();
+      const [id] = await starterIds(1);
+      const bev = await api.bevs.get(id!);
+      expect(bev).toMatchObject({ id, myRanking: null, inWantToTry: false, prediction: null });
+      expect(Array.isArray(bev.friends)).toBe(true);
+      await expectCode(api.bevs.get('no-such-bev'), 'not_found');
+    });
+
+    it('findLikelyDuplicates returns at most 5 likely matches', async () => {
+      await newUser();
+      const [bev] = await api.bevs.getStarterCandidates();
+      const dups = await api.bevs.findLikelyDuplicates({ name: bev!.name, brand: bev!.brand ?? undefined });
+      expect(dups.length).toBeLessThanOrEqual(5);
+      expect(dups.map((b) => b.id)).toContain(bev!.id);
+    });
+
+    it('media.upload accepts images and rejects other types with validation', async () => {
+      await newUser();
+      const file = new Blob(['img'], { type: 'image/jpeg' });
+      const up = await api.media.upload({ kind: 'bev-photo', file, mimeType: 'image/jpeg' });
+      expect(typeof up.assetId).toBe('string');
+      expect(typeof up.url).toBe('string');
+      expect(['processing', 'ready']).toContain(up.status);
+      await expectCode(api.media.upload({ kind: 'label', file, mimeType: 'application/pdf' }), 'validation');
+    });
+
+    it('create makes a Bev (estimating "not sure" prices); an exact duplicate is a conflict with existingBevId', async () => {
+      const me = await newUser();
+      const file = new Blob(['img'], { type: 'image/png' });
+      const photo = await api.media.upload({ kind: 'bev-photo', file, mimeType: 'image/png' });
+      await waitForAsset(photo.assetId);
+      const name = `Conformance Fizz ${makeUsername()}`;
+      const input = { name, brand: 'Test Co', flavor: 'Yuzu', categoryId: 'soda' as const, priceTier: null, priceEstimated: true, photoAssetId: photo.assetId };
+      const bev = await api.bevs.create(input);
+      expect(bev).toMatchObject({ name, brand: 'Test Co', flavor: 'Yuzu', categoryId: 'soda', priceEstimated: true, createdBy: { id: me.userId } });
+      expect([1, 2, 3, 4]).toContain(bev.priceTier);
+      const e = await expectCode(api.bevs.create({ ...input, name: name.toUpperCase(), brand: 'test co' }), 'conflict');
+      expect(e.detail).toMatchObject({ existingBevId: bev.id });
+    });
+
+    it('create: unknown asset is validation; alcoholic category for a minor is age_restricted', async () => {
+      await newUser({ birthdate: MINOR_BIRTHDATE(new Date()) });
+      const base = { name: `Thing ${makeUsername()}`, categoryId: 'soda' as const, priceTier: 2 as const, priceEstimated: false };
+      const e = await expectCode(api.bevs.create({ ...base, photoAssetId: 'no-such-asset' }), 'validation');
+      expect(e.detail).toMatchObject({ field: 'photoAssetId' });
+      const photo = await api.media.upload({ kind: 'bev-photo', file: new Blob(['x']), mimeType: 'image/jpeg' });
+      await waitForAsset(photo.assetId);
+      await expectCode(api.bevs.create({ ...base, categoryId: 'beer', photoAssetId: photo.assetId }), 'age_restricted');
+    });
+
+    // The AI-icon feature's one non-negotiable requirement, at the contract
+    // level: generation is initiated by creating a brand-new Bev WITH a
+    // photograph, and by nothing else. `iconStatus` is how a caller tells
+    // "never eligible" ('none') from "waiting", so these two cases are the
+    // whole eligibility rule as the app can observe it.
+    it('create without a photo makes a Bev that is never eligible for an icon', async () => {
+      const me = await newUser();
+      const name = `Conformance Homemade ${makeUsername()}`;
+      const bev = await api.bevs.create({
+        name, categoryId: 'smoothie' as const, priceTier: 2 as const, priceEstimated: false,
+      });
+      expect(bev).toMatchObject({ name, createdBy: { id: me.userId } });
+      const [icon] = await api.bevs.icons([bev.id]);
+      expect(icon).toMatchObject({ bevId: bev.id, generatedIconUrl: null, iconStatus: 'none' });
+      // With no icon of its own it may be offered catalog art to borrow. Null
+      // is a legitimate answer -- it means nothing in this category is drawn
+      // yet -- so assert the type, and that anything non-null is a usable URL
+      // rather than a bare object path.
+      const borrowed = icon!.fallbackIconUrl;
+      expect(borrowed === null || typeof borrowed === 'string').toBe(true);
+      if (borrowed !== null) expect(borrowed).toMatch(/^https?:\/\//);
+    });
+
+    it('create with a photo automatically queues icon generation', async () => {
+      await newUser();
+      const photo = await api.media.upload({ kind: 'bev-photo', file: new Blob(['img'], { type: 'image/png' }), mimeType: 'image/png' });
+      await waitForAsset(photo.assetId);
+      const bev = await api.bevs.create({
+        name: `Conformance Espresso Martini ${makeUsername()}`, categoryId: 'coffee' as const,
+        priceTier: 3 as const, priceEstimated: false, photoAssetId: photo.assetId,
+      });
+      // The user's own photograph is the post's content and is never replaced
+      // by the illustration, so it must be there whatever the icon is doing.
+      expect(bev.photoUrl).toBeTruthy();
+      const [icon] = await api.bevs.icons([bev.id]);
+      expect(icon!.iconStatus).toBe('pending');
+    });
+
+    it("icons: catalog Bevs are 'none', unknown ids are omitted, reading twice changes nothing", async () => {
+      await newUser();
+      const ids = await starterIds(2);
+      const first = await api.bevs.icons([...ids, 'no-such-bev']);
+      // An id the caller cannot see contributes no row rather than an error.
+      expect(first.map((i) => i.bevId).sort()).toEqual([...ids].sort());
+      for (const icon of first) expect(icon).toMatchObject({ generatedIconUrl: null, iconStatus: 'none' });
+      // Read-only: drawing a screen must never schedule generation.
+      const second = await api.bevs.icons(ids);
+      expect(second).toEqual(first.filter((i) => ids.includes(i.bevId)));
+      expect(await api.bevs.icons([])).toEqual([]);
+    });
+
+    it('report: works for a real Bev, not_found for an unknown one, validation for an empty reason', async () => {
+      await newUser();
+      const [id] = await starterIds(1);
+      await expect(api.bevs.report(id!, 'wrong_info')).resolves.toBeUndefined();
+      await expectCode(api.bevs.report('no-such-bev', 'wrong_info'), 'not_found');
+      await expectCode(api.bevs.report(id!, ''), 'validation');
+    });
+
+    it('report: duplicateOfId names a visible Bev; itself, an unknown id or one a minor cannot see is validation', async () => {
+      await newUser();
+      const [id, original] = await starterIds(2);
+      await expect(api.bevs.report(id!, 'duplicate', { duplicateOfId: original! })).resolves.toBeUndefined();
+      const self = await expectCode(api.bevs.report(original!, 'duplicate', { duplicateOfId: original! }), 'validation');
+      expect(self.detail).toMatchObject({ field: 'duplicateOfId' });
+      // A well-formed id that names no Bev (a real backend wants a uuid here).
+      const unknown = await expectCode(
+        api.bevs.report(original!, 'duplicate', { duplicateOfId: '00000000-0000-4000-8000-000000000000' }),
+        'validation',
+      );
+      expect(unknown.detail).toMatchObject({ field: 'duplicateOfId' });
+
+      await newUser({ birthdate: MINOR_BIRTHDATE(new Date()) });
+      const [minorsBev] = await starterIds(1);
+      const hidden = await expectCode(
+        api.bevs.report(minorsBev!, 'duplicate', { duplicateOfId: options.alcoholicBevId }),
+        'validation',
+      );
+      expect(hidden.detail).toMatchObject({ field: 'duplicateOfId' });
+    });
+  });
+
+  describe('rankings', () => {
+    it('submitRanking into an empty bucket, then above it: positions and re-spaced scores', async () => {
+      const me = await newUser();
+      const [a, b] = await starterIds(2);
+      const first = await api.rankings.submitRanking({ bevId: a!, bucket: 'LOVED', insertIndex: 0, expectedBucketSize: 0, comparisons: [] });
+      expect(first.bucketSize).toBe(1);
+      expect(first.ranking).toMatchObject({ userId: me.userId, bevId: a, bucket: 'LOVED', position: 0, note: null });
+      expect(first.ranking.score).toBeGreaterThanOrEqual(BANDS.LOVED[0]);
+      const second = await api.rankings.submitRanking({
+        bevId: b!, bucket: 'LOVED', insertIndex: 0, expectedBucketSize: 1,
+        comparisons: [{ winnerBevId: b!, loserBevId: a!, tie: false }], note: 'Better ice cold',
+      });
+      expect(second.bucketSize).toBe(2);
+      expect(second.ranking).toMatchObject({ position: 0, note: 'Better ice cold' });
+      expect(await api.rankings.listBucket('LOVED')).toEqual([b, a]);
+      const list = await api.rankings.listMine();
+      expect(list.items.map((r) => r.bevId)).toEqual([b, a]);
+      expect(list.items[0]!.score).toBeGreaterThan(list.items[1]!.score);
+      expect(list.items[0]!.bev.id).toBe(b);
+      const detail = await api.bevs.get(a!);
+      expect(detail.myRanking).toMatchObject({ bucket: 'LOVED', position: 1, bucketSize: 2 });
+      expect(detail.prediction).toBeNull();
+    });
+
+    it('submitRanking: wrong expectedBucketSize or an already-ranked Bev is a conflict', async () => {
+      await newUser();
+      const [a, b] = await starterIds(2);
+      await rankAtBottom(a!, 'FINE');
+      await expectCode(api.rankings.submitRanking({ bevId: b!, bucket: 'FINE', insertIndex: 0, expectedBucketSize: 0, comparisons: [] }), 'conflict');
+      await expectCode(api.rankings.submitRanking({ bevId: a!, bucket: 'FINE', insertIndex: 0, expectedBucketSize: 0, comparisons: [] }), 'conflict');
+    });
+
+    it('submitRanking: insertIndex out of range or a note over 140 chars is validation; unknown Bev is not_found', async () => {
+      await newUser();
+      const [a] = await starterIds(1);
+      await expectCode(api.rankings.submitRanking({ bevId: a!, bucket: 'LOVED', insertIndex: 1, expectedBucketSize: 0, comparisons: [] }), 'validation');
+      await expectCode(api.rankings.submitRanking({ bevId: a!, bucket: 'LOVED', insertIndex: -1, expectedBucketSize: 0, comparisons: [] }), 'validation');
+      await expectCode(
+        api.rankings.submitRanking({ bevId: a!, bucket: 'LOVED', insertIndex: 0, expectedBucketSize: 0, comparisons: [], note: 'x'.repeat(141) }),
+        'validation',
+      );
+      await expectCode(api.rankings.submitRanking({ bevId: 'no-such-bev', bucket: 'LOVED', insertIndex: 0, expectedBucketSize: 0, comparisons: [] }), 'not_found');
+      expect(await api.rankings.listBucket('LOVED')).toEqual([]);
+    });
+
+    it('submitRanking removes the Bev from Want to Try and posts a feed item', async () => {
+      const me = await newUser();
+      const [a] = await starterIds(1);
+      await api.wantToTry.add(a!);
+      await rankAtBottom(a!, 'DISLIKED', 'Way too sweet');
+      expect((await api.wantToTry.list()).items).toEqual([]);
+      const feed = await api.feed.getFeed();
+      const post = feed.items.find((i) => i.type === 'RANKING' && i.bev.id === a);
+      expect(post).toMatchObject({ actor: { id: me.userId }, bucket: 'DISLIKED', note: 'Way too sweet' });
+      expect(post!.score).toBeLessThan(BANDS.DISLIKED[1]);
+    });
+
+    it('listMine filters by bucket and category and sorts', async () => {
+      await newUser();
+      const ids = await starterIds(3);
+      await rankAtBottom(ids[0]!, 'LOVED');
+      await rankAtBottom(ids[1]!, 'DISLIKED');
+      await rankAtBottom(ids[2]!, 'FINE');
+      const all = await api.rankings.listMine();
+      expect(all.items.map((r) => r.bucket)).toEqual(BUCKET_ORDER);
+      expect((await api.rankings.listMine({ bucket: 'FINE' })).items.map((r) => r.bevId)).toEqual([ids[2]]);
+      const cat = all.items[0]!.bev.categoryId;
+      for (const r of (await api.rankings.listMine({ categoryId: cat })).items) expect(r.bev.categoryId).toBe(cat);
+      const recent = await api.rankings.listMine({ sort: 'recent' });
+      expect(recent.items).toHaveLength(3);
+      const byName = (await api.rankings.listMine({ sort: 'name' })).items.map((r) => r.bev.name);
+      expect(byName).toEqual([...byName].sort((x, y) => x.localeCompare(y)));
+      const paged = await api.rankings.listMine({ page: { limit: 2 } });
+      expect(paged.items).toHaveLength(2);
+      expect(paged.nextCursor).not.toBeNull();
+      const rest = await api.rankings.listMine({ page: { limit: 2, cursor: paged.nextCursor! } });
+      expect(rest.items.map((r) => r.bevId)).toEqual([all.items[2]!.bevId]);
+      expect(rest.nextCursor).toBeNull();
+    });
+
+    it('listUser shows another user\'s rankings; unknown user is not_found', async () => {
+      const a = await newUser();
+      const [x] = await starterIds(1);
+      await rankAtBottom(x!);
+      await newUser();
+      const page = await api.rankings.listUser(a.userId);
+      expect(page.items.map((r) => r.bevId)).toEqual([x]);
+      await expectCode(api.rankings.listUser('no-such-user'), 'not_found');
+    });
+
+    it('rerankBev moves a ranking across buckets and keeps the note; errors per contract', async () => {
+      await newUser();
+      const [a, b] = await starterIds(2);
+      await rankAtBottom(a!, 'LOVED', 'keep me');
+      await rankAtBottom(b!, 'FINE');
+      const moved = await api.rankings.rerankBev({ bevId: a!, bucket: 'FINE', insertIndex: 1, expectedBucketSize: 1, comparisons: [{ winnerBevId: b!, loserBevId: a!, tie: true }] });
+      expect(moved.ranking).toMatchObject({ bucket: 'FINE', position: 1, note: 'keep me' });
+      expect(moved.bucketSize).toBe(2);
+      expect(await api.rankings.listBucket('LOVED')).toEqual([]);
+      expect(await api.rankings.listBucket('FINE')).toEqual([b, a]);
+      // Within the same bucket, expectedBucketSize excludes the Bev itself.
+      const top = await api.rankings.rerankBev({ bevId: a!, bucket: 'FINE', insertIndex: 0, expectedBucketSize: 1, comparisons: [], note: 'new note' });
+      expect(top.ranking).toMatchObject({ position: 0, note: 'new note' });
+      await expectCode(api.rankings.rerankBev({ bevId: a!, bucket: 'FINE', insertIndex: 0, expectedBucketSize: 2, comparisons: [] }), 'conflict');
+      await expectCode(api.rankings.rerankBev({ bevId: a!, bucket: 'FINE', insertIndex: 3, expectedBucketSize: 1, comparisons: [] }), 'validation');
+      const [c] = (await starterIds(3)).slice(2);
+      await expectCode(api.rankings.rerankBev({ bevId: c!, bucket: 'FINE', insertIndex: 0, expectedBucketSize: 2, comparisons: [] }), 'not_found');
+    });
+
+    // `Ranking.createdAt` is the time of the latest placement, not of the first one: `rerank_bev`
+    // deletes the row and re-inserts it, so `ranked_at` moves. Everything that reads the field wants
+    // that -- the Bev'd row's "Ranked Oct 3", Activity's post time, and the Recent sort, which would
+    // otherwise bury a Bev you just re-ranked. Pinned here because the two implementations disagreed:
+    // the FakeApi mutated its row in place and kept the original date, matching a stale doc comment
+    // rather than the server, and nothing in this suite looked.
+    it('rerankBev re-dates the ranking: createdAt moves to the re-rank', async () => {
+      await newUser();
+      const [a, b] = await starterIds(2);
+      await rankAtBottom(a!, 'LOVED');
+      await rankAtBottom(b!, 'FINE');
+      const first = (await api.rankings.listMine()).items.find((r) => r.bevId === a!)!;
+
+      // The clock has to move for the comparison to mean anything.
+      await new Promise((r) => setTimeout(r, 1100));
+      const moved = await api.rankings.rerankBev({ bevId: a!, bucket: 'FINE', insertIndex: 1, expectedBucketSize: 1, comparisons: [{ winnerBevId: b!, loserBevId: a!, tie: true }] });
+
+      expect(Date.parse(moved.ranking.createdAt)).toBeGreaterThan(Date.parse(first.createdAt));
+      const after = (await api.rankings.listMine()).items.find((r) => r.bevId === a!)!;
+      expect(after.createdAt).toBe(moved.ranking.createdAt);
+      // And so the Recent sort puts it first, which is the behaviour that actually depends on this.
+      const recent = await api.rankings.listMine({ sort: 'recent' });
+      expect(recent.items[0]!.bevId).toBe(a!);
+    });
+
+    it('updateNote sets and clears a note; not_found when unranked; validation when too long', async () => {
+      await newUser();
+      const [a, b] = await starterIds(2);
+      await rankAtBottom(a!);
+      await api.rankings.updateNote(a!, 'Tastes like flat Sprite');
+      expect((await api.bevs.get(a!)).myRanking?.note).toBe('Tastes like flat Sprite');
+      await api.rankings.updateNote(a!, '');
+      expect((await api.bevs.get(a!)).myRanking?.note).toBeNull();
+      await expectCode(api.rankings.updateNote(b!, 'hi'), 'not_found');
+      await expectCode(api.rankings.updateNote(a!, 'x'.repeat(141)), 'validation');
+    });
+
+    it('removeRanking re-spaces the bucket; not_found when unranked', async () => {
+      await newUser();
+      const [a, b, c] = await starterIds(3);
+      await rankAtBottom(a!);
+      await rankAtBottom(b!);
+      await rankAtBottom(c!);
+      const before = (await api.rankings.listMine()).items;
+      await api.rankings.removeRanking(a!);
+      const after = (await api.rankings.listMine()).items;
+      expect(after.map((r) => [r.bevId, r.position])).toEqual([[b, 0], [c, 1]]);
+      expect(after[0]!.score).not.toBe(before[1]!.score);
+      await expectCode(api.rankings.removeRanking(a!), 'not_found');
+    });
+  });
+
+  describe('want to try', () => {
+    it('add is idempotent and posts no feed item; remove is idempotent', async () => {
+      const a = await newUser();
+      const viewer = await newUser();
+      const [x] = await starterIds(1);
+      await api.wantToTry.add(x!, a.userId);
+      await api.wantToTry.add(x!, a.userId);
+      const list = await api.wantToTry.list();
+      expect(list.items).toHaveLength(1);
+      expect(list.items[0]).toMatchObject({ bev: { id: x }, via: { id: a.userId } });
+      expect((await api.bevs.get(x!)).inWantToTry).toBe(true);
+      // A save is never a feed post; the bookmark (inMyWantToTry) is the only signal.
+      expect((await api.feed.getFeed()).items.filter((i) => i.bev.id === x && i.actor.id === viewer.userId)).toEqual([]);
+      expect((await api.stats.getMine()).wantToTryCount).toBe(1);
+      await api.wantToTry.remove(x!);
+      await api.wantToTry.remove(x!);
+      expect((await api.wantToTry.list()).items).toEqual([]);
+    });
+
+    it('add: unknown Bev is not_found', async () => {
+      await newUser();
+      await expectCode(api.wantToTry.add('no-such-bev'), 'not_found');
+    });
+  });
+
+  describe('feed, leaderboard, recommendations', () => {
+    it('the feed shows followed users\' rankings, newest first', async () => {
+      const a = await newUser();
+      const [x, y] = await starterIds(2);
+      await rankAtBottom(x!);
+      await rankAtBottom(y!);
+      await newUser();
+      expect((await api.feed.getFeed()).items.some((i) => i.actor.id === a.userId)).toBe(false);
+      await api.follows.follow(a.userId);
+      const items = (await api.feed.getFeed()).items.filter((i) => i.actor.id === a.userId);
+      expect(items.map((i) => i.bev.id)).toEqual([y, x]);
+      expect(items[0]).toMatchObject({ type: 'RANKING', bucket: 'LOVED', inMyWantToTry: false });
+    });
+
+    it('feed.listUser: own and followed posts newest first, paged; a stranger\'s page is empty', async () => {
+      const a = await newUser();
+      const [x, y] = await starterIds(2);
+      await rankAtBottom(x!);
+      await rankAtBottom(y!);
+      const own = await api.feed.listUser(a.userId);
+      expect(own.items.map((i) => i.bev.id)).toEqual([y, x]);
+      expect(own.items.every((i) => i.type === 'RANKING' && i.actor.id === a.userId)).toBe(true);
+
+      await newUser();
+      expect((await api.feed.listUser(a.userId)).items).toEqual([]);
+      await api.follows.follow(a.userId);
+      const first = await api.feed.listUser(a.userId, { limit: 1 });
+      expect(first.items.map((i) => i.bev.id)).toEqual([y]);
+      expect(first.nextCursor).not.toBeNull();
+      const second = await api.feed.listUser(a.userId, { limit: 1, cursor: first.nextCursor! });
+      expect(second.items.map((i) => i.bev.id)).toEqual([x]);
+      await expectCode(api.feed.listUser('00000000-0000-4000-8000-00000000ffff'), 'not_found');
+    });
+
+    it('feed.getExplore: strangers only, popularity order, and no like or comment fields', async () => {
+      // viewer -> middle -> author, so the author is two follows away and never in the feed. The
+      // suite cannot know whether Bevi is over D-01's 20-user threshold here, so this asserts only
+      // what holds either way: a two-hop author is in scope under both the two-hop rule and the
+      // global fallback, while the caller and the caller's followees are out under both.
+      const author = await newUser();
+      const [x, y] = await starterIds(2);
+      await rankAtBottom(x!);
+      await rankAtBottom(y!);
+
+      const middle = await newUser();
+      await api.follows.follow(author.userId);
+      const [z] = await starterIds(1);
+      await rankAtBottom(z!);
+      const authored = (await api.feed.listUser(author.userId)).items;
+      // One like on the older of the two posts: with both only seconds old, the decay factor is
+      // the same for each, so the liked one must come out on top of the newer one.
+      await api.feed.like(authored.find((i) => i.bev.id === x)!.id);
+
+      const viewer = await newUser();
+      await rankAtBottom(x!);
+      await api.follows.follow(middle.userId);
+
+      const seen: ExplorePost[] = [];
+      for (let page = await api.feed.getExplore({ limit: 50 }); ; ) {
+        seen.push(...page.items);
+        if (!page.nextCursor || seen.length >= 200) break;
+        page = await api.feed.getExplore({ limit: 50, cursor: page.nextCursor });
+      }
+
+      expect(seen.some((i) => i.actor.id === viewer.userId)).toBe(false);
+      expect(seen.some((i) => i.actor.id === middle.userId)).toBe(false);
+      expect(seen.filter((i) => i.actor.id === author.userId).map((i) => i.bev.id)).toEqual([x, y]);
+      expect(new Set(seen.map((i) => i.id)).size).toBe(seen.length);
+
+      const post = seen.find((i) => i.actor.id === author.userId)!;
+      expect(post).toMatchObject({ type: 'RANKING', bucket: 'LOVED' });
+      for (const field of ['likeCount', 'likedByMe', 'commentCount', 'comments']) {
+        expect(post).not.toHaveProperty(field);
+      }
+      // D-15: Explore does not open the post up to engagement either.
+      await expectCode(api.feed.like(post.id), 'not_found');
+    });
+
+    it('getFeatured returns well-formed items', async () => {
+      await newUser();
+      for (const f of await api.feed.getFeatured()) {
+        expect(typeof f.bev.id).toBe('string');
+        expect(typeof f.heroImageUrl).toBe('string');
+        expect(typeof f.startsAt).toBe('string');
+      }
+    });
+
+    it('getBevOfPeriod: a ranking now makes both periods current; a minor never gets an alcoholic winner', async () => {
+      await newUser({ birthdate: ADULT_BIRTHDATE });
+      await api.rankings.submitRanking({ bevId: options.alcoholicBevId, bucket: 'LOVED', insertIndex: 0, expectedBucketSize: 0, comparisons: [] });
+      const { day, week } = await api.feed.getBevOfPeriod();
+      expect(day).toMatchObject({ isCurrent: true });
+      expect(day!.periodStart).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(day!.rankingsInPeriod).toBeGreaterThanOrEqual(1);
+      expect(typeof day!.bev.bayesScore).toBe('number');
+      expect(week).toMatchObject({ isCurrent: true });
+      expect(week!.periodStart <= day!.periodStart).toBe(true);
+
+      await newUser({ birthdate: MINOR_BIRTHDATE(new Date()) });
+      const minorCats = new Set((await api.categories.list()).map((c) => c.id));
+      const minor = await api.feed.getBevOfPeriod();
+      for (const w of [minor.day, minor.week]) if (w) expect(minorCats.has(w.bev.categoryId)).toBe(true);
+    });
+
+    it('leaderboard.bevs: Bayesian order, ≥ MIN_RATERS ratings, myScore when ranked', async () => {
+      await newUser();
+      const [x] = await starterIds(1);
+      for (let i = 0; i < MIN_RATERS; i++) {
+        if (i > 0) await newUser();
+        await rankAtBottom(x!);
+      }
+      const page = await api.leaderboard.bevs({ page: { limit: 100 } });
+      page.items.forEach((row, i) => {
+        expect(row.ratingCount).toBeGreaterThanOrEqual(MIN_RATERS);
+        if (i > 0) expect(row.rank).toBeGreaterThan(page.items[i - 1]!.rank);
+        if (i > 0) expect(row.bayesScore).toBeLessThanOrEqual(page.items[i - 1]!.bayesScore);
+      });
+      const cat = (await api.bevs.get(x!)).categoryId;
+      const byCat = await api.leaderboard.bevs({ categoryId: cat, page: { limit: 100 } });
+      for (const row of byCat.items) expect(row.bev.categoryId).toBe(cat);
+      const mine = byCat.items.find((r) => r.bev.id === x);
+      if (mine) expect(mine.myScore).not.toBeNull();
+    });
+
+    it('leaderboard.users: ranked users with points, in rank order', async () => {
+      const me = await newUser();
+      const [x] = await starterIds(1);
+      await rankAtBottom(x!);
+      const rows: { rank: number; profile: { id: string } }[] = [];
+      let cursor: string | undefined;
+      do {
+        const page = await api.leaderboard.users({ cursor, limit: 100 });
+        rows.push(...page.items);
+        cursor = page.nextCursor ?? undefined;
+      } while (cursor);
+      rows.forEach((r, i) => i > 0 && expect(r.rank).toBeGreaterThanOrEqual(rows[i - 1]!.rank));
+      expect(rows.some((r) => r.profile.id === me.userId)).toBe(true);
+    });
+
+    it('leaderboard.friends: the caller and the people they follow, ranked among themselves, paged', async () => {
+      const top = await newUser();
+      const [x, y] = await starterIds(2);
+      await rankAtBottom(x!);
+      await rankAtBottom(y!);
+      const idle = await newUser();
+      const stranger = await newUser();
+      await rankAtBottom(x!);
+      await rankAtBottom(y!);
+
+      const me = await newUser();
+      // No rankings and nobody followed: nobody to rank, the caller included (Unranked, as on `users`).
+      expect(await api.leaderboard.friends()).toEqual({ items: [], nextCursor: null });
+
+      await rankAtBottom(x!);
+      // Following nobody: the caller alone, at rank 1 whatever their rank on Bevi is.
+      const alone = await api.leaderboard.friends();
+      expect(alone.items.map((r) => [r.profile.id, r.rank])).toEqual([[me.userId, 1]]);
+      expect(alone.nextCursor).toBeNull();
+
+      await api.follows.follow(top.userId);
+      await api.follows.follow(idle.userId);
+      const board = await api.leaderboard.friends();
+      // `top` has ranked two Bevs to the caller's one, so more points. `idle` is followed but
+      // Unranked, and `stranger` is ranked but not followed: neither has a row.
+      expect(board.items.map((r) => r.profile.id)).toEqual([top.userId, me.userId]);
+      expect(board.items.map((r) => r.rank)).toEqual([1, 2]);
+      expect(board.items.map((r) => r.profile.id)).not.toContain(stranger.userId);
+      expect(board.items.map((r) => r.bevsRanked)).toEqual([2, 1]);
+      expect(board.items[0]!.points).toBeGreaterThan(board.items[1]!.points);
+      for (const row of board.items) {
+        // Exactly the points the global board ranks by, and a rank that can only be as good or better.
+        const stats = await api.stats.getUser(row.profile.id);
+        expect(row.points).toBe(stats.rankPoints);
+        expect(stats.rankOnBevi).not.toBeNull();
+        expect(row.rank).toBeLessThanOrEqual(stats.rankOnBevi!);
+        // Another user's birthdate is never on the board.
+        if (row.profile.id !== me.userId) expect(row.profile.birthdate).toBeNull();
+      }
+
+      const first = await api.leaderboard.friends({ limit: 1 });
+      expect(first.items.map((r) => [r.profile.id, r.rank])).toEqual([[top.userId, 1]]);
+      expect(first.nextCursor).not.toBeNull();
+      const second = await api.leaderboard.friends({ limit: 1, cursor: first.nextCursor! });
+      // The rank is the one in the whole set, not the position on the page.
+      expect(second.items.map((r) => [r.profile.id, r.rank])).toEqual([[me.userId, 2]]);
+
+      // Two followed people on the same points share a rank, and the caller comes after both.
+      await api.follows.follow(stranger.userId);
+      const tied = await api.leaderboard.friends();
+      expect(tied.items.map((r) => r.rank)).toEqual([1, 1, 3]);
+      expect(new Set(tied.items.slice(0, 2).map((r) => r.profile.id))).toEqual(new Set([top.userId, stranger.userId]));
+      expect(tied.items[2]!.profile.id).toBe(me.userId);
+    });
+
+    it('feed: alsoBevdBy is followed users who also ranked the Bev, never the actor or the caller', async () => {
+      const author = await newUser();
+      const [x, y] = await starterIds(2);
+      await rankAtBottom(x!);
+      await rankAtBottom(y!);
+      // Four friends rank the same Bev one after another, so friends[3] ranked it most recently.
+      const friends: Session[] = [];
+      for (let i = 0; i < 4; i++) {
+        friends.push(await newUser());
+        await rankAtBottom(x!, 'FINE');
+      }
+      const stranger = await newUser();
+      await rankAtBottom(x!);
+
+      const me = await newUser();
+      await rankAtBottom(x!);
+      await api.follows.follow(author.userId);
+      for (const f of friends) await api.follows.follow(f.userId);
+
+      const feed = (await api.feed.getFeed({ limit: 50 })).items;
+      const newestThree = [friends[3]!.userId, friends[2]!.userId, friends[1]!.userId];
+
+      // The author's post: all four friends count, the three most recent are listed, newest first.
+      const post = feed.find((i) => i.actor.id === author.userId && i.bev.id === x)!;
+      expect(post.alsoBevdCount).toBe(4);
+      expect(post.alsoBevdBy.map((f) => f.profile.id)).toEqual(newestThree);
+      // Each with their own ranking of it, not the actor's.
+      for (const f of post.alsoBevdBy) {
+        expect(f.bucket).toBe('FINE');
+        expect(typeof f.score).toBe('number');
+        expect(f.profile.birthdate).toBeNull();
+      }
+      expect(post).toMatchObject({ bucket: 'LOVED', actor: { id: author.userId } });
+
+      // A friend's post of the same Bev: that friend is the actor, so is out, and the author is in.
+      const friendPost = feed.find((i) => i.actor.id === friends[0]!.userId)!;
+      expect(friendPost.alsoBevdCount).toBe(4);
+      expect(friendPost.alsoBevdBy.map((f) => f.profile.id)).toEqual(newestThree);
+
+      // The caller's own post: everyone they follow who ranked it, and never the caller.
+      const mine = feed.find((i) => i.actor.id === me.userId)!;
+      expect(mine.alsoBevdCount).toBe(5);
+      expect(mine.alsoBevdBy.map((f) => f.profile.id)).toEqual(newestThree);
+
+      // Nobody else ranked the second Bev.
+      expect(feed.find((i) => i.bev.id === y)).toMatchObject({ alsoBevdBy: [], alsoBevdCount: 0 });
+
+      for (const item of feed) {
+        const ids = item.alsoBevdBy.map((f) => f.profile.id);
+        expect(ids.length).toBeLessThanOrEqual(3);
+        expect(item.alsoBevdCount).toBeGreaterThanOrEqual(ids.length);
+        expect(ids).not.toContain(item.actor.id);
+        expect(ids).not.toContain(me.userId);
+        // Ranked it, but the caller does not follow them.
+        expect(ids).not.toContain(stranger.userId);
+      }
+
+      // A user's activity carries the same values for the same posts.
+      const activity = (await api.feed.listUser(author.userId)).items;
+      expect(activity.find((i) => i.bev.id === x)).toMatchObject({ alsoBevdCount: 4, alsoBevdBy: post.alsoBevdBy });
+      expect(activity.find((i) => i.bev.id === y)).toMatchObject({ alsoBevdBy: [], alsoBevdCount: 0 });
+
+      // It follows the caller's follows: unfollow the most recent one and the next takes the place.
+      await api.follows.unfollow(friends[3]!.userId);
+      const again = (await api.feed.getFeed({ limit: 50 })).items.find((i) => i.actor.id === author.userId && i.bev.id === x)!;
+      expect(again.alsoBevdCount).toBe(3);
+      expect(again.alsoBevdBy.map((f) => f.profile.id)).toEqual([friends[2]!.userId, friends[1]!.userId, friends[0]!.userId]);
+    });
+
+    it('recommendations are empty below MIN_N_USER rankings, then exclude ranked Bevs', async () => {
+      await newUser();
+      const ids = await starterIds(MIN_N_USER + 1);
+      const rankedIds = ids.slice(0, MIN_N_USER);
+      for (const [i, id] of rankedIds.entries()) {
+        if (i === MIN_N_USER - 1) {
+          const empty = await api.recs.getRecommendations();
+          expect(empty.items).toEqual([]);
+          expect(empty.basedOnCount).toBe(MIN_N_USER - 1);
+        }
+        await rankAtBottom(id, BUCKET_ORDER[i % BUCKET_ORDER.length]);
+      }
+      await api.recs.refresh();
+      const recs = await api.recs.getRecommendations({ limit: 10 });
+      expect(recs.basedOnCount).toBe(MIN_N_USER);
+      expect(typeof recs.rankingVersion).toBe('string');
+      expect(recs.items.length).toBeLessThanOrEqual(10);
+      for (const r of recs.items) {
+        expect(rankedIds).not.toContain(r.bev.id);
+        expect(r.predictedScore).toBeGreaterThanOrEqual(0);
+        expect(r.predictedScore).toBeLessThanOrEqual(10);
+        expect(r.confidence).toBeGreaterThanOrEqual(0);
+        expect(r.confidence).toBeLessThanOrEqual(1);
+      }
+      const p = (await api.bevs.get(ids[MIN_N_USER]!)).prediction;
+      if (p) expect(typeof p.rankingVersion).toBe('string');
+    });
+  });
+
+  // S-14 part 2. Everything here is contract-only on purpose: `bev_edges` is EMPTY until the graph
+  // sync job lands, and sparse afterwards (only pairs above EDGE_MIN_WEIGHT that made one of the two
+  // Bevs' top-EDGE_TOP_K cut are stored), so a conformance suite may not assert that any particular
+  // pair has a weight. What it can assert is that an empty or partial answer is well-formed, that
+  // `listBucketBevs` is `listBucket` plus two columns, and that the documented errors fire.
+  describe('the Bev graph', () => {
+    it('bevs.similarities: a subset of the ids asked about, weights in [0, 1], never the anchor', async () => {
+      await newUser();
+      const ids = await starterIds(6);
+      const [anchor, ...others] = ids as [string, ...string[]];
+
+      expect(await api.bevs.similarities(anchor, [])).toEqual([]);
+
+      // Duplicates and the anchor itself are in the input on purpose: both have to be handled
+      // rather than echoed back.
+      const rows = await api.bevs.similarities(anchor, [...others, ...others, anchor]);
+      const seen = new Set<string>();
+      for (const row of rows) {
+        expect(others).toContain(row.bevId);
+        expect(seen.has(row.bevId)).toBe(false);
+        seen.add(row.bevId);
+        expect(row.weight).toBeGreaterThanOrEqual(0);
+        expect(row.weight).toBeLessThanOrEqual(1);
+      }
+      // An id nothing matches is simply absent, not an error.
+      expect(await api.bevs.similarities(anchor, ['no-such-bev'])).toEqual([]);
+      const e = await expectCode(
+        api.bevs.similarities(anchor, Array.from({ length: 501 }, (_, i) => `no-such-bev-${i}`)),
+        'validation',
+      );
+      expect(e.detail).toMatchObject({ field: 'otherIds' });
+    });
+
+    // A-13. What the contract promises about the taxonomy, and nothing about which leaves exist:
+    // D-04's 60 are data, so an implementation with a flatter catalog still has to pass.
+    it('categories.tree: two levels, roots match list(), a leaf inherits its root, root-then-leaf order', async () => {
+      await newUser();
+      const roots = await api.categories.list();
+      const nodes = await api.categories.tree();
+
+      const byId = new Map(nodes.map((n) => [n.id, n]));
+      // Every root `list()` shows is in the tree, with the same name and flag.
+      for (const root of roots) {
+        const node = byId.get(root.id);
+        expect(node).toBeDefined();
+        expect(node!.parentId).toBeNull();
+        expect(node!.name).toBe(root.name);
+        expect(node!.isAlcoholic).toBe(root.isAlcoholic);
+      }
+      expect(nodes.filter((n) => n.parentId === null).length).toBe(roots.length);
+
+      for (const node of nodes) {
+        if (node.parentId === null) {
+          // Only a root carries the emoji the app draws.
+          expect(typeof node.emoji === 'string' || node.emoji === null).toBe(true);
+          continue;
+        }
+        const parent = byId.get(node.parentId);
+        // Exactly two levels: a leaf's parent is present and is itself a root.
+        expect(parent).toBeDefined();
+        expect(parent!.parentId).toBeNull();
+        // The age gate walks one hop, so the flags must agree.
+        expect(node.isAlcoholic).toBe(parent!.isAlcoholic);
+        expect(node.emoji).toBeNull();
+      }
+
+      // Root-then-leaf: a leaf never precedes its own root, so one pass builds the tree.
+      const seenRoots = new Set<string>();
+      for (const node of nodes) {
+        if (node.parentId === null) seenRoots.add(node.id);
+        else expect(seenRoots.has(node.parentId)).toBe(true);
+      }
+    });
+
+    it('bevs.leaves: one row per visible id, leaf under the Bev own category or null', async () => {
+      await newUser();
+      const ids = await starterIds(6);
+      const nodes = await api.categories.tree();
+      const parentOf = new Map(nodes.map((n) => [n.id, n.parentId]));
+
+      expect(await api.bevs.leaves([])).toEqual([]);
+
+      // Duplicates are de-duplicated rather than echoed back, as in `similarities`.
+      const rows = await api.bevs.leaves([...ids, ...ids]);
+      expect(rows.length).toBe(ids.length);
+      const summaries = new Map((await api.bevs.getStarterCandidates()).map((b) => [b.id, b]));
+      const seen = new Set<string>();
+      for (const row of rows) {
+        expect(ids).toContain(row.bevId);
+        expect(seen.has(row.bevId)).toBe(false);
+        seen.add(row.bevId);
+        if (row.leafCategoryId === null) continue;
+        // A leaf, never a root, and a child of the Bev's OWN category -- the invariant that lets
+        // `categoryId` keep meaning one of the 15.
+        const parent = parentOf.get(row.leafCategoryId);
+        expect(parent).toBeDefined();
+        expect(parent).not.toBeNull();
+        const summary = summaries.get(row.bevId);
+        if (summary) expect(parent).toBe(summary.categoryId);
+      }
+
+      // An id nothing matches is absent, not an error -- unlike a null leaf, which is a row.
+      expect(await api.bevs.leaves(['no-such-bev'])).toEqual([]);
+      const tooMany = await expectCode(
+        api.bevs.leaves(Array.from({ length: 501 }, (_, i) => `no-such-bev-${i}`)),
+        'validation',
+      );
+      expect(tooMany.detail).toMatchObject({ field: 'bevIds' });
+
+      // A Bev a minor may not see has no leaf to report, as it has no neighbours.
+      await newUser({ birthdate: MINOR_BIRTHDATE(new Date()) });
+      expect(await api.bevs.leaves([options.alcoholicBevId])).toEqual([]);
+      const minorTree = await api.categories.tree();
+      expect(minorTree.some((n) => n.isAlcoholic)).toBe(false);
+    });
+
+    it('bevs.similar: at most n BevSummary rows, never the Bev itself, age-filtered', async () => {
+      await newUser();
+      const [anchor] = await starterIds(1);
+
+      const all = await api.bevs.similar(anchor!);
+      expect(all.length).toBeLessThanOrEqual(10);
+      const two = await api.bevs.similar(anchor!, 2);
+      expect(two.length).toBeLessThanOrEqual(2);
+      for (const bev of [...all, ...two]) {
+        expect(bev.id).not.toBe(anchor);
+        expect(typeof bev.name).toBe('string');
+        expect([1, 2, 3, 4]).toContain(bev.priceTier);
+        expect(bev.ratingCount).toBeGreaterThanOrEqual(0);
+      }
+      // An absurd n is clamped server-side rather than refused.
+      expect((await api.bevs.similar(anchor!, 10_000)).length).toBeLessThanOrEqual(50);
+
+      // A Bev a minor may not see offers them no neighbours and no weights, either way round.
+      await newUser({ birthdate: MINOR_BIRTHDATE(new Date()) });
+      expect(await api.bevs.similar(options.alcoholicBevId)).toEqual([]);
+      expect(await api.bevs.similarities(options.alcoholicBevId, [anchor!])).toEqual([]);
+      expect(await api.bevs.similarities(anchor!, [options.alcoholicBevId])).toEqual([]);
+    });
+
+    it('rankings.listBucketBevs: listBucket plus the category and the normalised brand key', async () => {
+      await newUser();
+      expect(await api.rankings.listBucketBevs('LOVED')).toEqual([]);
+
+      const [a, b] = await starterIds(2);
+      await rankAtBottom(a!, 'LOVED');
+      await rankAtBottom(b!, 'LOVED');
+
+      const ids = await api.rankings.listBucket('LOVED');
+      const rows = await api.rankings.listBucketBevs('LOVED');
+      expect(rows.map((r) => r.id)).toEqual(ids);
+      for (const row of rows) {
+        const bev = await api.bevs.get(row.id);
+        expect(row.categoryId).toBe(bev.categoryId);
+        // The one formula the row carries: @bevi/ranking's normaliseBrand, which the SQL
+        // reproduces with lower/btrim/collapse.
+        expect(row.brandKey).toBe(normaliseBrand(bev.brand));
+      }
+      expect(await api.rankings.listBucketBevs('DISLIKED')).toEqual([]);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // venues (S-10 + A-08)
+  // -------------------------------------------------------------------------
+  // Written against the CONTRACT only, which here means it must pass with no
+  // venues at all: prod has none until the import is run, and the FakeApi
+  // seeds four. So nothing below asserts a count, a name or a neighbourhood --
+  // only the invariants every implementation promises.
+  describe('venues', () => {
+    const MANHATTAN = { south: 40.74, north: 40.8, west: -74.0, east: -73.93 };
+
+    it('venues.inView: pins inside the viewport, each with an assortment behind it', async () => {
+      await newUser();
+      const pins = await api.venues.inView({ bounds: MANHATTAN, zoom: 14 });
+      for (const pin of pins) {
+        // D-13: no assortment, no pin.
+        expect(pin.bevCount).toBeGreaterThanOrEqual(1);
+        expect(pin.venue.lat).toBeGreaterThanOrEqual(MANHATTAN.south);
+        expect(pin.venue.lat).toBeLessThanOrEqual(MANHATTAN.north);
+        expect(pin.venue.lng).toBeGreaterThanOrEqual(MANHATTAN.west);
+        expect(pin.venue.lng).toBeLessThanOrEqual(MANHATTAN.east);
+        // `openNow` is null exactly when the hours are not ones we can read.
+        if (!pin.venue.hoursKnown) expect(pin.openNow).toBeNull();
+        if (pin.bestScore !== null) expect(pin.bestScore).toBeGreaterThanOrEqual(0);
+      }
+    });
+
+    it('venues.inView: the bounds are clamped to New York, not rejected', async () => {
+      await newUser();
+      // A viewport dragged into the Atlantic is empty, not an error.
+      const away = await api.venues.inView({
+        bounds: { south: 40.5, north: 40.6, west: -73.75, east: -73.71 },
+        zoom: 14,
+      });
+      expect(Array.isArray(away)).toBe(true);
+      // One that spills past the coast returns what is inside it.
+      const spilling = await api.venues.inView({
+        bounds: { south: 39, north: 42, west: -76, east: -72 },
+        zoom: 11,
+      });
+      for (const pin of spilling) {
+        expect(pin.venue.lat).toBeGreaterThanOrEqual(NYC_BOUNDS.south);
+        expect(pin.venue.lat).toBeLessThanOrEqual(NYC_BOUNDS.north);
+        expect(pin.venue.lng).toBeGreaterThanOrEqual(NYC_BOUNDS.west);
+        expect(pin.venue.lng).toBeLessThanOrEqual(NYC_BOUNDS.east);
+      }
+    });
+
+    it('venues.inView: the zoom cap thins the map rather than reordering it', async () => {
+      await newUser();
+      const wide = { south: NYC_BOUNDS.south, north: NYC_BOUNDS.north, west: NYC_BOUNDS.west, east: NYC_BOUNDS.east };
+      const far = await api.venues.inView({ bounds: wide, zoom: 11 });
+      const near = await api.venues.inView({ bounds: wide, zoom: 15 });
+      expect(far.length).toBeLessThanOrEqual(60);
+      expect(near.length).toBeLessThanOrEqual(300);
+      expect(far.length).toBeLessThanOrEqual(near.length);
+      // Zooming out keeps a prefix of the same order, so a pin never jumps in.
+      expect(near.slice(0, far.length).map((p) => p.venue.id)).toEqual(far.map((p) => p.venue.id));
+    });
+
+    it('venues.inView: filters narrow the result and never widen it', async () => {
+      await newUser();
+      const all = await api.venues.inView({ bounds: MANHATTAN, zoom: 15 });
+      const ids = new Set(all.map((p) => p.venue.id));
+
+      const craft = await api.venues.inView({ bounds: MANHATTAN, zoom: 15, filters: { kinds: ['craft'] } });
+      for (const pin of craft) {
+        expect(pin.venue.kind).toBe('craft');
+        expect(ids.has(pin.venue.id)).toBe(true);
+      }
+
+      const open = await api.venues.inView({ bounds: MANHATTAN, zoom: 15, filters: { openNow: true } });
+      for (const pin of open) {
+        expect(pin.openNow).toBe(true);
+        expect(pin.venue.hoursKnown).toBe(true);
+      }
+    });
+
+    it('venues.get: the venue and its assortment, and not_found for anything else', async () => {
+      await newUser();
+      const pins = await api.venues.inView({ bounds: MANHATTAN, zoom: 15 });
+      const first = pins[0];
+      if (first) {
+        const detail = await api.venues.get(first.venue.id);
+        expect(detail.venue.id).toBe(first.venue.id);
+        expect(detail.bevs.length).toBe(first.bevCount);
+        // Best Bayesian score first; nulls last.
+        const scores = detail.bevs.map((b) => b.bayesScore);
+        const ranked = scores.filter((x): x is number => x !== null);
+        expect(ranked).toEqual([...ranked].sort((a, b) => b - a));
+        expect(scores.indexOf(null) === -1 || scores.indexOf(null) >= ranked.length).toBe(true);
+      }
+      await expectCode(api.venues.get('00000000-0000-4000-8000-00000000dead'), 'not_found');
+    });
+
+    it('venues.neighborhoods: a vocabulary every option of which returns pins', async () => {
+      await newUser();
+      const names = await api.venues.neighborhoods();
+      expect(Array.isArray(names)).toBe(true);
+      // Sorted and distinct.
+      expect(names).toEqual([...new Set(names)]);
+      expect(names).toEqual([...names].sort(compareCodePoints));
+      // An empty list is the designed state today (OSM has no neighbourhood
+      // for any real venue), so this loop may not run -- but when it does,
+      // every option must select something.
+      for (const name of names) {
+        const pins = await api.venues.inView({
+          bounds: { south: NYC_BOUNDS.south, north: NYC_BOUNDS.north, west: NYC_BOUNDS.west, east: NYC_BOUNDS.east },
+          zoom: 15,
+          filters: { neighborhoods: [name] },
+        });
+        expect(pins.length).toBeGreaterThan(0);
+        for (const pin of pins) expect(pin.venue.neighborhood).toBe(name);
+      }
+    });
+
+    it('venues: every method needs a session', async () => {
+      await api.signOut();
+      await expectCode(api.venues.inView({ bounds: MANHATTAN, zoom: 14 }), 'unauthorized');
+      await expectCode(api.venues.get('00000000-0000-4000-8000-00000000dead'), 'unauthorized');
+      await expectCode(api.venues.neighborhoods(), 'unauthorized');
+    });
+  });
+
+  describe('bugs (the internal reporter)', () => {
+    const input = {
+      kind: 'bug',
+      severity: 'bad',
+      title: 'Ratings vanish after a refresh',
+      idempotencyKey: '4f1d6c0a-4f4c-4f0e-9e0b-9a4a8f2b7c11',
+    } as const;
+
+    it('an ordinary account cannot report: canReport is false and every call is unauthorized', async () => {
+      // Only an operator can make an account internal (set_profile_role), which
+      // the contract has no way to do, so the conformance suite can only pin
+      // the refusal. The FakeApi's own suite covers the internal path through
+      // controls.setInternalReporter().
+      await newUser();
+      expect(await api.bugs.canReport()).toBe(false);
+      await expectCode(api.bugs.report(input), 'unauthorized');
+      await expectCode(api.bugs.listMine(), 'unauthorized');
+      await expectCode(api.bugs.markVerified('BEV-1'), 'unauthorized');
+      await expectCode(api.bugs.place('BEV-1', null), 'unauthorized');
+      await expectCode(api.bugs.place('BEV-1', 'BEV-2'), 'unauthorized');
+    });
+
+    it('signed out, canReport answers false rather than throwing, and the rest is unauthorized', async () => {
+      await api.signOut();
+      expect(await api.bugs.canReport()).toBe(false);
+      await expectCode(api.bugs.report(input), 'unauthorized');
+      await expectCode(api.bugs.listMine(), 'unauthorized');
+      await expectCode(api.bugs.markVerified('BEV-1'), 'unauthorized');
+      await expectCode(api.bugs.place('BEV-1', null), 'unauthorized');
+    });
+
+    const makeInternal = options.makeInternalReporter;
+    const internalIt = makeInternal ? it : it.skip;
+
+    const hex = (n: number) => Array.from({ length: n }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+    /** A fresh idempotency key: a v4-shaped UUID. */
+    const newKey = () => `${hex(8)}-${hex(4)}-4${hex(3)}-8${hex(3)}-${hex(12)}`;
+
+    /** A fresh internal reporter, and a filer that returns the ticket identifier. */
+    async function newReporter() {
+      await newUser();
+      await makeInternal!(api);
+      return async (title: string, severity: 'blocker' | 'bad' | 'annoying' | 'polish' = 'bad') =>
+        (await api.bugs.report({ ...input, title, severity, idempotencyKey: newKey() })).ticketId;
+    }
+
+    const ranks = async () => Object.fromEntries((await api.bugs.listMine()).map((r) => [r.ticketId, r.rank]));
+
+    internalIt('listMine carries a rank for open tickets, and a new ticket goes to the top', async () => {
+      const file = await newReporter();
+      const a = await file('first');
+      const b = await file('second');
+      const c = await file('third');
+      expect(await ranks()).toEqual({ [c]: 1, [b]: 2, [a]: 3 });
+    });
+
+    internalIt('place puts a ticket at the top or directly below another, returning the new ranks', async () => {
+      const file = await newReporter();
+      const a = await file('first');
+      const b = await file('second');
+      const c = await file('third');
+
+      const top = await api.bugs.place(a, null);
+      expect(Object.fromEntries(top.map((r) => [r.ticketId, r.rank]))).toEqual({ [a]: 1, [c]: 2, [b]: 3 });
+      // Three open tickets: the top slot is High, the middle Medium, the bottom Low.
+      expect(top.find((r) => r.ticketId === a)?.priority).toBe(2);
+
+      const below = await api.bugs.place(a, b);
+      expect(Object.fromEntries(below.map((r) => [r.ticketId, r.rank]))).toEqual({ [c]: 1, [b]: 2, [a]: 3 });
+      expect(below.find((r) => r.ticketId === a)?.priority).toBe(4);
+      expect(await ranks()).toEqual({ [c]: 1, [b]: 2, [a]: 3 });
+
+      const middle = await api.bugs.place(c, b);
+      expect(Object.fromEntries(middle.map((r) => [r.ticketId, r.rank]))).toEqual({ [b]: 1, [c]: 2, [a]: 3 });
+      expect(middle.find((r) => r.ticketId === c)?.priority).toBe(3);
+    });
+
+    internalIt('place never downgrades an Urgent ticket', async () => {
+      const file = await newReporter();
+      const urgent = await file('blocker', 'blocker');
+      const other = await file('other', 'polish');
+      const placed = await api.bugs.place(urgent, other);
+      const row = placed.find((r) => r.ticketId === urgent);
+      expect(row?.rank).toBe(2);
+      expect(row?.priority).toBe(1);
+    });
+
+    internalIt('place refuses a bad identifier, a ticket after itself, and a ticket that is not an open one of yours', async () => {
+      const file = await newReporter();
+      const a = await file('first');
+      const b = await file('second');
+      expect((await expectCode(api.bugs.place('drop table', null), 'validation')).detail).toMatchObject({ field: 'ticketId' });
+      expect((await expectCode(api.bugs.place(a, 'nope'), 'validation')).detail).toMatchObject({ field: 'afterTicketId' });
+      expect((await expectCode(api.bugs.place(a, a), 'validation')).detail).toMatchObject({ field: 'afterTicketId' });
+      expect((await expectCode(api.bugs.place('BEV-999999', null), 'not_found')).detail).toMatchObject({ reason: 'not_found' });
+      await expectCode(api.bugs.place(a, 'BEV-999999'), 'not_found');
+
+      // A verified ticket is closed: it has no rank, and placing it (or after it) is a conflict,
+      // not a not_found: it is still the caller's.
+      await api.bugs.markVerified(b);
+      expect(await ranks()).toEqual({ [a]: 1, [b]: null });
+      expect((await expectCode(api.bugs.place(b, null), 'conflict')).detail).toEqual({ reason: 'not_open' });
+      expect((await expectCode(api.bugs.place(a, b), 'conflict')).detail).toEqual({ reason: 'not_open' });
+    });
+
+    internalIt("another reporter's ticket cannot be placed", async () => {
+      const file = await newReporter();
+      const theirs = await file('theirs');
+      const mine = await newReporter();
+      const own = await mine('mine');
+      await expectCode(api.bugs.place(theirs, null), 'not_found');
+      await expectCode(api.bugs.place(own, theirs), 'not_found');
+    });
+
+    internalIt('report keeps the first six pointed-at components and accepts a thirty-step recording', async () => {
+      await newReporter();
+      const targets = Array.from({ length: 8 }, (_, i) => ({ component: `C${i}` }));
+      const reproductionSteps = Array.from({ length: 30 }, (_, i) => `Step ${i + 1}`);
+      const result = await api.bugs.report({
+        ...input,
+        idempotencyKey: newKey(),
+        targets,
+        reproductionSteps,
+        stepsSource: 'recorded',
+      });
+      expect(result.status).toBe('created');
+      expect(result.ticketId).toMatch(/^[A-Z][A-Z0-9]*-\d+$/);
+    });
+  });
+}
