@@ -130,8 +130,8 @@ Deliver:
    `CONTRACT_VERSION` bump: minor (additive). **One bump in flight at a time**
    — IA-4 is the other one, and §5 says which goes first.
 6. `app/src/testing/fakeApi/FakeApi.ts:2405` and
-   `app/src/testing/conformance.ts:110` need the new fields or `npm test -w app`
-   goes red. Both live under `app/`, so both are Matt's: either Matt takes them
+   `packages/conformance/src/index.ts:110` need the new fields or `npm test -w app`
+   goes red. The FakeApi lives under `app/`, so it is Matt's: either Matt takes them
    the same hour or we land the contract PR with the change pre-agreed in the
    `#agents` thread.
 
@@ -161,7 +161,7 @@ This is the real work and the one that is easy to skip until it bites.
 - **A compat test job — but stand the runner up first.** There is no
   conformance run in `packages/api` today: its vitest suite is
   `packages/api/test/*.test.ts` plus the `*.live` files. The suite lives at
-  `app/src/testing/conformance.ts` and the only thing that executes it is
+  `packages/conformance/src/index.ts` and the only thing that executes it is
   `app/src/testing/fakeApi/__tests__/conformance.test.ts`, against the FakeApi,
   under jest-expo (its header says "Uses Jest globals"). So:
   1. build a `packages/api` live test that calls
