@@ -325,7 +325,7 @@ interface UserStreak extends StreakResult {
 }
 
 export class FakeApi implements BeviApi {
-  nutrition: NonNullable<BeviApi['nutrition']> = { lookupBarcode: async () => null };
+  nutrition: NonNullable<BeviApi['nutrition']> = { lookupBarcode: async () => null, lookupProduct: async () => null };
   private db: FakeDb;
   private readonly storage: StorageLike | null;
   private readonly clock: () => Date;

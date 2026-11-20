@@ -1,6 +1,16 @@
 /**
  * Bumped on any breaking change to the types or `BeviApi` below.
  *
+ * 3.4.0, over 3.3.0's native bug reporter: a barcode scan fills in a new Bev.
+ * `NutritionApi` gains `lookupProduct`, returning a `BarcodeProduct`: the name,
+ * brand and Bevi category the provider lists for a barcode, with the
+ * `NutritionPreview` `lookupBarcode` already returned. Purely additive for
+ * callers, hence a minor: `lookupBarcode`, `NutritionPreview` and
+ * `CreateBevInput` keep their shapes, and nothing a client is served changed.
+ * The app's wizard copies the product into its form fields; what is created
+ * still goes through `bevs.create` unchanged, so there is no migration and no
+ * new RPC. NOT a reason to raise `min_contract_version`.
+ *
  * 3.3.0, over 3.2.0's version gate: the native bug reporter (IM-10 part 2).
  * `BugReportInput.evidence[].file` widens from `Blob` to `UploadPayload`, the
  * union `media.upload` has taken since 2.15.0. Purely additive for callers,
@@ -72,7 +82,8 @@
 // 3.1.0: blocks and content reports (IS-7), additive.
 // 3.2.0: AppConfig gains minContractVersion and maintenanceMessage (IA-2), additive.
 // 3.3.0: BugReportInput.evidence[].file is an UploadPayload (the native bug reporter, IM-10), additive.
-export const CONTRACT_VERSION = '3.3.0';
+// 3.4.0: nutrition.lookupProduct and BarcodeProduct (a barcode scan fills in a new Bev), additive.
+export const CONTRACT_VERSION = '3.4.0';
 
 export * from './enums';
 export * from './errors';

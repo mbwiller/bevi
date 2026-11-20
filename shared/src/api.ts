@@ -4,12 +4,13 @@
 // Each method lists the `ApiError.code` values (./errors) it can throw beyond
 // `network` / `unknown`, which any method can throw. Every method other than
 // `signUp`, `signIn`, `getSession`, `onAuthChange`, `profile.checkHandle` and
-// `meta.getAppConfig` and read-only `nutrition.lookupBarcode` throw 'unauthorized' when signed out.
+// `meta.getAppConfig` and the read-only `nutrition` lookups throw 'unauthorized' when signed out.
 
 import type { Bucket, CategoryId, PriceTier, ReportContentKind, ReportReason } from './enums';
 import type {
   NutritionPreview,
   AppConfig,
+  BarcodeProduct,
   Bev,
   BevIcon,
   BevLeaf,
@@ -1015,6 +1016,15 @@ export interface ReportsApi {
 export interface NutritionApi {
   /** UPC-A, EAN-8 or EAN-13. null means no usable nutrition data. */
   lookupBarcode(barcode: string, signal?: AbortSignal): Promise<NutritionPreview | null>;
+  /**
+   * The product behind a barcode (UPC-A, EAN-8 or EAN-13): its name, brand and
+   * category for filling in a new Bev, with the same nutrition `lookupBarcode`
+   * returns, in one request. null means the provider has no such product, or
+   * lists nothing usable about it. It does not say whether a Bev with this
+   * barcode already exists: `bevs.create` still answers that with 'conflict'.
+   * @throws 'validation' (not a retail barcode), 'rate_limited'.
+   */
+  lookupProduct(barcode: string, signal?: AbortSignal): Promise<BarcodeProduct | null>;
 }
 
 export interface BeviApi extends AuthApi {
