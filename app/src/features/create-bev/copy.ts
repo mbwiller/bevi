@@ -11,6 +11,7 @@ export const UNREADABLE_IMAGE = "Bevi can't read that image. Try a JPEG or PNG."
 export const CAMERA_DENIED = 'Bevi needs the camera to take a photo. Turn it on in Settings, or choose a photo.';
 export const OPEN_SETTINGS = 'Open Settings';
 export const OPEN_SETTINGS_LABEL = 'Open Settings to allow the camera';
+export const BARCODE_CAMERA_DENIED = 'Bevi needs the camera to scan a barcode. Turn it on in Settings, or enter the barcode below.';
 export const PICKER_FAILED = "Bevi couldn't open that. Try again.";
 export const STILL_PROCESSING = 'Your photo is still processing. Try again in a moment.';
 // Says "You're offline" itself: the wizard is a full-screen modal, which on iOS is presented over the
