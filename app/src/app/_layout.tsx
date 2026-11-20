@@ -21,6 +21,7 @@ import { clearLegacyStorage } from '@/lib/clearLegacyStorage';
 import { initCrashReporting, wrapRoot } from '@/lib/crashReporting';
 import { useSession } from '@/state/session';
 import { useTheme } from '@/theme';
+import { RootError } from '@/components/RootError';
 
 // Crash reporting (IS-4), before anything renders. Does nothing without a DSN, and nothing on the web.
 initCrashReporting();
@@ -70,6 +71,15 @@ function RootLayout() {
 
 // Wrapped by the crash reporter on a build that has one; the same component everywhere else.
 export default wrapRoot(RootLayout);
+
+/**
+ * A screen that throws while it renders shows this instead of closing the app. Expo Router wraps
+ * the root layout in a boundary when the layout's file exports `ErrorBoundary`, and renders this in
+ * the layout's place, outside every provider above (components/RootError.tsx).
+ */
+export function ErrorBoundary(props: ComponentProps<typeof RootError>) {
+  return <RootError {...props} />;
+}
 
 type ScreenLayout = NonNullable<ComponentProps<typeof Stack>['screenLayout']>;
 

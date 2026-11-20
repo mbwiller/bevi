@@ -643,6 +643,11 @@ bundle):
   React Query gave up on (`src/api/queryClient.ts`), unless it is an error the
   app expects: every `ApiError` code but `unknown` is dropped
   (`isExpectedError`, `src/lib/crashScrub.ts`).
+- A screen that throws while it renders no longer closes the app: the root
+  layout exports `ErrorBoundary` (`src/components/RootError.tsx`), which shows
+  "Something went wrong" with Try again in place of the whole app and reports
+  the error once. It renders outside every provider the layout sets up, so it
+  uses none.
 - Not sent: who the person is (`sendDefaultPii` off, `setUser` never called;
   the SDK's own random per-install id is the only label), performance traces,
   session replay, profiles, screenshots. Headers, tokens and the query string
@@ -718,8 +723,6 @@ to the person. Check the first real event for an IP address either way.
   confirm.
 - An error thrown while the app's modules are still loading, before
   `initCrashReporting()` runs, is not caught: the SDK starts from JavaScript.
-- No error boundary is added. A render error is uncaught, so it is reported,
-  and then the app closes as it does today.
 
 #### Part 2 — the native port (wanted)
 
