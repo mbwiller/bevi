@@ -4,6 +4,8 @@ import { dirname, join, relative, resolve, sep } from 'node:path';
 // The in-memory FakeApi and its fixture people are test-only. No production file (anything outside
 // src/testing/, __tests__/ and *.test.*) may import src/testing/**, so none of it can reach the app
 // bundle. Catches static, side-effect and dynamic imports, require() and jest.mock().
+// The same holds for test-only workspace packages: @bevi/conformance (the BeviApi conformance
+// suite, packages/conformance) is imported only by tests.
 
 const SRC = resolve(__dirname, '../..');
 const TESTING_DIR = resolve(SRC, 'testing');
@@ -26,6 +28,9 @@ function target(file: string, spec: string): string | null {
   return null;
 }
 
+const TEST_ONLY_PACKAGES = ['@bevi/conformance'];
+const isTestOnlyPackage = (spec: string) => TEST_ONLY_PACKAGES.some((pkg) => spec === pkg || spec.startsWith(pkg + '/'));
+
 const insideTesting = (p: string) => p === TESTING_DIR || p.startsWith(TESTING_DIR + sep);
 const isTestFile = (p: string) => p.split(sep).includes('__tests__') || /\.test\.[cm]?[jt]sx?$/.test(p);
 
@@ -33,6 +38,7 @@ function testingImports(file: string, text: string): string[] {
   return [...text.matchAll(SPECIFIER)]
     .map((m) => m[2]!)
     .filter((spec) => {
+      if (isTestOnlyPackage(spec)) return true;
       const t = target(file, spec);
       return t !== null && insideTesting(t);
     });
@@ -54,8 +60,12 @@ it('recognises every kind of import', () => {
     "const m = require('@/testing/fakeApi');",
     "jest.mock('@/testing/fakeApi/FakeApi', () => ({}));",
     "export * from '../testing/fakeApi';",
+    "import { runConformance } from '@bevi/conformance';",
+    "const c = require('@bevi/conformance/src/index.ts');",
   ];
   for (const line of kinds) expect(testingImports(file, line)).toHaveLength(1);
   expect(testingImports(file, "import { api } from '@/api/client';")).toEqual([]);
   expect(testingImports(file, "import data from './testingData';")).toEqual([]);
+  expect(testingImports(file, "import { CONTRACT_VERSION } from '@bevi/shared';")).toEqual([]);
+  expect(testingImports(file, "import x from '@bevi/conformance-like';")).toEqual([]);
 });

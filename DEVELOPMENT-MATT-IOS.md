@@ -594,7 +594,7 @@ branch.
   see IA-9 on never raising `minAppVersion` above what every supported iOS can
   install.
 - `app/src/testing/fakeApi/FakeApi.ts:2329` and
-  `app/src/testing/conformance.ts:110` need the new `AppConfig` fields the hour
+  `packages/conformance/src/index.ts:110` need the new `AppConfig` fields the hour
   Arjun's contract PR lands, or `npm test -w app` goes red.
 
 ---

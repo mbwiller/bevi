@@ -1,4 +1,4 @@
-import { runConformance } from '../../conformance';
+import { runConformance } from '@bevi/conformance';
 import { FakeApi } from '../FakeApi';
 import { ALCOHOLIC_BEV_ID, FAKE_INVITE_CODE } from '../people';
 

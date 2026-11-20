@@ -5,6 +5,7 @@
     "app",
     "packages/ranking",
     "packages/api",
+    "packages/conformance",
     "shared"
   ],
   "engines": {
