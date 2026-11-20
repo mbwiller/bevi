@@ -11,7 +11,7 @@
 
 import { assert, assertEquals } from "jsr:@std/assert@1";
 
-import { coarse, distanceMeters, handle, readPosition, searchRequest, toExternalPlace, type Deps, type Env } from "./core.ts";
+import { coarse, distanceMeters, handle, placeTypeOf, readPosition, searchRequest, toExternalPlace, type Deps, type Env } from "./core.ts";
 
 const ENV: Env = {
   url: "https://project.supabase.co",
@@ -26,6 +26,8 @@ const GOOGLE_PLACE = {
   displayName: { text: "Bread & Butter Market" },
   formattedAddress: "579 Main St, New York, NY 10044, USA",
   location: { latitude: 40.7617, longitude: -73.9497 },
+  primaryType: "grocery_store",
+  types: ["grocery_store", "food_store", "store"],
 };
 
 interface Call {
@@ -100,10 +102,24 @@ Deno.test("distanceMeters: a ten-thousandth of a degree of latitude is about ele
   assert(d > 10.5 && d < 11.5, `got ${d}`);
 });
 
+Deno.test("placeTypeOf: Google's type becomes ours, the primary one first, and an unknown one is other", () => {
+  assertEquals(placeTypeOf({ primaryType: "coffee_shop" }), "cafe");
+  assertEquals(placeTypeOf({ primaryType: "pub" }), "bar");
+  assertEquals(placeTypeOf({ primaryType: "liquor_store" }), "liquor");
+  assertEquals(placeTypeOf({ primaryType: "drugstore" }), "store");
+  assertEquals(placeTypeOf({ primaryType: "italian_restaurant" }), "restaurant");
+  // The primary type wins over the list; the list answers when the primary says nothing we know.
+  assertEquals(placeTypeOf({ primaryType: "bar", types: ["restaurant", "bar"] }), "bar");
+  assertEquals(placeTypeOf({ primaryType: "establishment", types: ["point_of_interest", "cafe"] }), "cafe");
+  assertEquals(placeTypeOf({ primaryType: "stadium", types: ["stadium", "point_of_interest"] }), "other");
+  assertEquals(placeTypeOf({}), "other");
+});
+
 Deno.test("toExternalPlace: the contract's shape, and null without an id, a name or a position", () => {
   assertEquals(toExternalPlace(GOOGLE_PLACE, null), {
     placeId: PLACE_ID,
     name: "Bread & Butter Market",
+    placeType: "store",
     address: "579 Main St, New York, NY 10044, USA",
     lat: 40.7617,
     lng: -73.9497,
@@ -160,7 +176,7 @@ Deno.test("search: metered as the caller first, then Google with a field mask an
   assertEquals(calls[1].headers["x-goog-api-key"], "google-key");
   assertEquals(
     calls[1].headers["x-goog-fieldmask"],
-    "places.id,places.displayName,places.formattedAddress,places.location",
+    "places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.types",
   );
   assertEquals(calls[1].body, {
     textQuery: "bread",
@@ -229,7 +245,7 @@ Deno.test("add: reads the place from Google, then writes it as the service role"
 
   assertEquals(res.status, 200);
   assertEquals(await res.json(), { venue });
-  assertEquals(calls[1].headers["x-goog-fieldmask"], "id,displayName,formattedAddress,location");
+  assertEquals(calls[1].headers["x-goog-fieldmask"], "id,displayName,formattedAddress,location,primaryType,types");
   assertEquals(calls[2].headers.authorization, "Bearer service-role-key");
   assertEquals(calls[2].body, {
     p_place_id: PLACE_ID,
@@ -237,6 +253,7 @@ Deno.test("add: reads the place from Google, then writes it as the service role"
     p_lat: 40.7617,
     p_lng: -73.9497,
     p_address: "579 Main St, New York, NY 10044, USA",
+    p_place_type: "store",
   });
 });
 

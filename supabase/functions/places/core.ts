@@ -55,8 +55,13 @@ export const CORS_HEADERS: Readonly<Record<string, string>> = {
 };
 
 const GOOGLE = "https://places.googleapis.com/v1";
-/** The fields of a result we show or keep. All in the Pro SKU; nothing from Enterprise. */
-const FIELDS = ["id", "displayName", "formattedAddress", "location"] as const;
+/**
+ * The fields of a result we show or keep. The first four are in the Pro SKU, nothing from
+ * Enterprise. `primaryType` and `types` (the place's glyph) were added on the understanding that
+ * they bill the same way: check Google's field table before the key goes live, and drop them here
+ * if they do not, which only costs a new venue its glyph.
+ */
+const FIELDS = ["id", "displayName", "formattedAddress", "location", "primaryType", "types"] as const;
 const MAX_QUERY = 80;
 const MAX_RESULTS = 8;
 /** How far from the caller a result may be before the bias stops preferring it, in metres. */
@@ -64,9 +69,65 @@ const BIAS_RADIUS_M = 5000;
 /** Place ids are opaque; this is only "looks like one", to keep junk out of a URL path. */
 const PLACE_ID_RE = /^[A-Za-z0-9_-]{10,300}$/;
 
+/** What kind of place a venue is (`venues.place_type`): the glyph on a pin and a picker row. */
+export type PlaceType = "cafe" | "store" | "bar" | "liquor" | "restaurant" | "other";
+
+const GOOGLE_TYPES: Readonly<Record<string, PlaceType>> = {
+  cafe: "cafe",
+  coffee_shop: "cafe",
+  tea_house: "cafe",
+  juice_shop: "cafe",
+  bakery: "cafe",
+  donut_shop: "cafe",
+  bagel_shop: "cafe",
+  bar: "bar",
+  pub: "bar",
+  wine_bar: "bar",
+  night_club: "bar",
+  bar_and_grill: "bar",
+  liquor_store: "liquor",
+  convenience_store: "store",
+  supermarket: "store",
+  grocery_store: "store",
+  food_store: "store",
+  market: "store",
+  drugstore: "store",
+  pharmacy: "store",
+  gas_station: "store",
+  department_store: "store",
+  discount_store: "store",
+  warehouse_store: "store",
+  restaurant: "restaurant",
+  meal_takeaway: "restaurant",
+  meal_delivery: "restaurant",
+  food_court: "restaurant",
+  deli: "restaurant",
+  diner: "restaurant",
+  sandwich_shop: "restaurant",
+};
+
+const typeOf = (google: string | undefined): PlaceType =>
+  !google ? "other" : (GOOGLE_TYPES[google] ?? (google.endsWith("_restaurant") ? "restaurant" : "other"));
+
+/**
+ * Our place type for a Google place: its primary type when we know it, else the first of its other
+ * types that we do. A type Google adds later is "other" until it is listed here, which only costs
+ * the venue a plainer glyph.
+ */
+export function placeTypeOf(place: { primaryType?: string; types?: readonly string[] }): PlaceType {
+  const primary = typeOf(place.primaryType);
+  if (primary !== "other") return primary;
+  for (const t of place.types ?? []) {
+    const known = typeOf(t);
+    if (known !== "other") return known;
+  }
+  return "other";
+}
+
 export interface ExternalPlace {
   placeId: string;
   name: string;
+  placeType: PlaceType;
   address: string | null;
   lat: number;
   lng: number;
@@ -78,6 +139,8 @@ interface GooglePlace {
   displayName?: { text?: string };
   formattedAddress?: string;
   location?: { latitude?: number; longitude?: number };
+  primaryType?: string;
+  types?: string[];
 }
 
 function json(body: unknown, status: number): Response {
@@ -119,6 +182,7 @@ export function toExternalPlace(place: GooglePlace, near: { lat: number; lng: nu
   return {
     placeId: place.id,
     name,
+    placeType: placeTypeOf(place),
     address: place.formattedAddress?.trim() || null,
     lat,
     lng,
@@ -207,6 +271,7 @@ async function upsert(deps: Deps, env: Env, place: ExternalPlace): Promise<unkno
       p_lat: place.lat,
       p_lng: place.lng,
       p_address: place.address,
+      p_place_type: place.placeType,
     });
   } catch {
     return "error";
