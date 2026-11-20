@@ -134,10 +134,14 @@ it('a place opens what was had there: whose, which Bev, and the Bev opens from i
 });
 
 it('under Friends a place opens what the people you follow had there', async () => {
-  const { first, mine, theirs } = await seedPlaces();
+  const { first, second, mine, theirs } = await seedPlaces();
   await renderScreen();
-  await fireEvent.press(await screen.findByText('Friends'));
-  await fireEvent.press(await screen.findByRole('button', { name: new RegExp(`^${first.name}, 1 Bev ·`) }));
+  await screen.findByRole('button', { name: new RegExp(`^${second.name}`) });
+  await fireEvent.press(screen.getByText('Friends'));
+  // Wait for the Friends places themselves: until they load, You's stay up, and the first place is
+  // in both.
+  await waitFor(() => expect(screen.queryByRole('button', { name: new RegExp(`^${second.name}`) })).toBeNull());
+  await fireEvent.press(screen.getByRole('button', { name: new RegExp(`^${first.name}, 1 Bev ·`) }));
 
   const sheet = await screen.findByTestId('sheet');
   expect(await within(sheet).findByText(theirs.bev.name)).toBeTruthy();
