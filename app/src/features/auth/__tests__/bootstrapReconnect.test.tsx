@@ -103,3 +103,86 @@ it('after a real sign-out, the connection returning asks nothing', async () => {
   expect(getMe).not.toHaveBeenCalled();
   expect(useSession.getState().status).toBe('signedOut');
 });
+
+// BEV-27: the launch check could not find out whether anyone is signed in. The session is still
+// stored, but its access token has expired and the refresh got no answer, so `getSession` rejects
+// with `network`. That is "not known", and must never be read as a sign-out.
+describe('a session check that got no answer', () => {
+  /** Launches with a stored session whose check fails `times` times, and waits for the launch error. */
+  async function launchUnknown(times = 1) {
+    controls.signInAs('tester');
+    for (let i = 0; i < times; i++) controls.failNext('network', 'getSession');
+    mockOnline = false;
+    const hook = await launch();
+    await waitFor(() => expect(hook.result.current.error).toBeTruthy());
+    return hook;
+  }
+
+  it('is the launch error, not a sign-out', async () => {
+    const getMe = jest.spyOn(api.profile, 'getMe');
+    const hook = await launchUnknown();
+    expect(hook.result.current.error).toMatchObject({ code: 'network' });
+    // Unchecked: the root layout is still showing the splash, with this error and Retry.
+    expect(useSession.getState().checked).toBe(false);
+    expect(getMe).not.toHaveBeenCalled();
+  });
+
+  it('Retry asks again, and signs in', async () => {
+    const hook = await launchUnknown();
+    await act(async () => hook.result.current.retry());
+    await waitFor(() => expect(useSession.getState().status).toBe('ready'));
+    expect(hook.result.current.error).toBeNull();
+  });
+
+  it('asks again by itself when the connection returns', async () => {
+    const hook = await launchUnknown();
+    await connection(true, hook);
+    await waitFor(() => expect(useSession.getState().status).toBe('ready'));
+    expect(hook.result.current.error).toBeNull();
+  });
+
+  it('still no answer when asked again: the error comes back, and nobody is signed out', async () => {
+    const hook = await launchUnknown(2);
+    const getSession = jest.spyOn(api, 'getSession');
+    await act(async () => hook.result.current.retry());
+    await waitFor(() => expect(getSession).toHaveBeenCalledTimes(1));
+    await expect(getSession.mock.results[0]!.value).rejects.toMatchObject({ code: 'network' });
+    await waitFor(() => expect(hook.result.current.error).toBeTruthy());
+    expect(useSession.getState().checked).toBe(false);
+
+    // The third answer is the session.
+    await act(async () => hook.result.current.retry());
+    await waitFor(() => expect(useSession.getState().status).toBe('ready'));
+  });
+
+  it('a session heard later (the token refreshed by itself) ends the error without Retry', async () => {
+    const hook = await launchUnknown();
+    await act(async () => controls.signInAs('tester')); // an auth event carrying the session
+    await waitFor(() => expect(useSession.getState().status).toBe('ready'));
+    expect(hook.result.current.error).toBeNull();
+  });
+
+  it('a sign-out heard later (the server refused the session) lands on sign in', async () => {
+    const hook = await launchUnknown();
+    await act(async () => {
+      await api.signOut();
+    });
+    await waitFor(() => expect(useSession.getState().checked).toBe(true));
+    expect(useSession.getState().status).toBe('signedOut');
+    expect(hook.result.current.error).toBeNull();
+
+    // And the connection returning asks nothing: there is no longer anything unknown.
+    const getSession = jest.spyOn(api, 'getSession');
+    await connection(true, hook);
+    expect(getSession).not.toHaveBeenCalled();
+  });
+});
+
+it('a session check that fails for any other reason still lands on sign in', async () => {
+  controls.signInAs('tester');
+  controls.failNext('unknown', 'getSession');
+  const hook = await launch();
+  await waitFor(() => expect(useSession.getState().checked).toBe(true));
+  expect(useSession.getState().status).toBe('signedOut');
+  expect(hook.result.current.error).toBeNull();
+});
