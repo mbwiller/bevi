@@ -14,6 +14,7 @@ import { FAKE_INVITE_CODE, ME, controls, userIdFor } from '@/testing/fakeApi';
 
 import { followedByContext } from '../copy';
 import { PEOPLE_PLACEHOLDER, SUGGESTED_PREVIEW, SUGGESTED_TITLE } from '../FindPeopleScreen';
+import { followPill } from '@/testing/followPill';
 
 let client: QueryClient;
 
@@ -197,7 +198,7 @@ describe('following', () => {
     expect(target).toBeTruthy();
     await start();
     await screen.findByText('Ranked by points');
-    const pills = () => screen.getAllByLabelText(`Follow ${target.displayName}`);
+    const pills = () => screen.getAllByLabelText(followPill(target.displayName));
     await waitFor(() => expect(pills().length).toBe(2));
     expect(pills().map((p) => p.props['aria-pressed'])).toEqual([false, false]);
 
@@ -213,8 +214,8 @@ describe('following', () => {
     const me = await api.profile.getMe();
     const target = (await api.follows.suggested()).filter((r) => r.id !== me.id)[0]!;
     await start();
-    const pills = () => screen.getAllByLabelText(`Follow ${target.displayName}`);
-    await screen.findAllByLabelText(`Follow ${target.displayName}`);
+    const pills = () => screen.getAllByLabelText(followPill(target.displayName));
+    await screen.findAllByLabelText(followPill(target.displayName));
     controls.setLatency(200);
     controls.failNext('network', 'follows.follow');
     await fireEvent.press(pills()[0]!);
@@ -241,7 +242,7 @@ describe('search', () => {
 
     const result = found[0]!;
     expect(await screen.findByLabelText(rowLabel(result))).toBeTruthy();
-    expect(screen.getByLabelText(`Follow ${result.displayName}`)).toBeTruthy();
+    expect(screen.getByLabelText(followPill(result.displayName))).toBeTruthy();
     expect(screen.queryByText('Ranked by points')).toBeNull();
     expect(screen.queryByTestId('pinned-self')).toBeNull();
 
@@ -287,11 +288,11 @@ describe('search', () => {
     await start();
     await screen.findByText('Ranked by points');
     await type(target.handle);
-    const pill = await screen.findByLabelText(`Follow ${target.displayName}`);
+    const pill = await screen.findByLabelText(followPill(target.displayName));
     expect(pill.props['aria-pressed']).toBe(false);
     controls.setLatency(400);
     await fireEvent.press(pill);
-    await waitFor(() => expect(screen.getByLabelText(`Follow ${target.displayName}`).props['aria-pressed']).toBe(true));
+    await waitFor(() => expect(screen.getByLabelText(followPill(target.displayName)).props['aria-pressed']).toBe(true));
     expect(client.isMutating()).toBe(1);
   });
 
@@ -326,8 +327,8 @@ describe('ranking (Everyone)', () => {
     const own = await screen.findAllByLabelText(boardLabel(mine, true));
     expect(own.length).toBeGreaterThan(0);
     const other = people.find((p) => p.profile.id !== me.id)!;
-    expect(screen.getAllByLabelText(`Follow ${other.profile.displayName}`).length).toBeGreaterThan(0);
-    expect(screen.queryByLabelText(`Follow ${me.displayName}`)).toBeNull();
+    expect(screen.getAllByLabelText(followPill(other.profile.displayName)).length).toBeGreaterThan(0);
+    expect(screen.queryByLabelText(followPill(me.displayName))).toBeNull();
   });
 
   it("doesn't flash the pinned own row before the list reports what's on screen", async () => {
@@ -737,7 +738,7 @@ describe('Friends | Everyone', () => {
       const before = asShown(await friendsBoard());
       await start();
       await waitFor(() => expect(boardOnScreen()).toEqual(before));
-      const follow = () => screen.getAllByLabelText(`Follow ${target.displayName}`);
+      const follow = () => screen.getAllByLabelText(followPill(target.displayName));
       expect(follow()).toHaveLength(1); // not on the Friends board yet
 
       controls.setLatency(300);
@@ -769,7 +770,7 @@ describe('Friends | Everyone', () => {
 
       const target = everyone.find((r) => r.profile.handle === 'friend_e')!;
       // The suggestion's pill comes first in the list, the ranking row's after it.
-      const onBoard = screen.getAllByLabelText(`Follow ${target.profile.displayName}`).at(-1)!;
+      const onBoard = screen.getAllByLabelText(followPill(target.profile.displayName)).at(-1)!;
       await fireEvent.press(onBoard);
       await waitFor(async () => expect((await api.profile.getUser(target.profile.id)).isFollowing).toBe(true));
       await settled();
@@ -788,7 +789,7 @@ describe('Friends | Everyone', () => {
       const before = asShown(friends);
       await start();
       await waitFor(() => expect(boardOnScreen()).toEqual(before));
-      const button = () => screen.getByLabelText(`Follow ${target.displayName}`);
+      const button = () => screen.getByLabelText(followPill(target.displayName));
       expect(button().props['aria-pressed']).toBe(true);
 
       await fireEvent.press(button());
@@ -831,7 +832,7 @@ describe('Friends paging while rows are held', () => {
     // The list asks for page two by itself (no layout in Jest); it is still on its way.
     await waitFor(() => expect(spy).toHaveBeenCalledWith(expect.objectContaining({ cursor: 'f2' })));
 
-    const button = () => screen.getByLabelText(`Follow ${target.displayName}`);
+    const button = () => screen.getByLabelText(followPill(target.displayName));
     await fireEvent.press(button());
     await waitFor(() => expect(button().props['aria-pressed']).toBe(false));
     await waitFor(async () => expect((await api.profile.getUser(target.id)).isFollowing).toBe(false));
