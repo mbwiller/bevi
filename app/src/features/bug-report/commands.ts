@@ -9,8 +9,12 @@ import { create } from 'zustand';
  * waits here until it mounts and takes it, and the root layout clears it for anyone else.
  */
 
-/** 'note': open the note (a new one when there is none, with no capture). 'reports': the reports sheet. */
-export type ReportCommand = 'note' | 'reports';
+/**
+ * 'note': open the note (a new one when there is none; on iOS with a screenshot of the screen it was
+ * asked from). 'note-bare': the same without that screenshot, for a request made from a screen that
+ * is about to go (the /report-bug link). 'reports': the reports sheet.
+ */
+export type ReportCommand = 'note' | 'note-bare' | 'reports';
 
 export const useReportCommands = create<{ pending: ReportCommand | null }>(() => ({ pending: null }));
 
