@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 
+import type { CaptureMark } from './types';
+
 /**
  * Lets a screenshot be taken of the app without the reporter in it (iOS). The window screenshot
  * (`captureScreen`, capture.ts) photographs everything in the key window, and the reporter's layer
@@ -8,9 +10,13 @@ import { create } from 'zustand';
  *
  * `hideReporterLayer` resolves once the layer has said it is drawn hidden and two frames have
  * passed (the hidden state has to reach the screen before the shutter, not only the React tree).
+ *
+ * The same moment is how a selection gets into the picture. The web draws its numbered outlines on
+ * a canvas; a window screenshot has no canvas, so while the reporter is hidden the layer shows the
+ * outlines (`marks`) instead, and the shutter photographs them with the app.
  */
 
-export const useLayerHidden = create<{ hidden: boolean }>(() => ({ hidden: false }));
+export const useLayerHidden = create<{ hidden: boolean; marks: readonly CaptureMark[] }>(() => ({ hidden: false, marks: [] }));
 
 /** How long to wait for the layer to say it is hidden, so a layer that went away never stalls a capture. */
 const ACK_TIMEOUT_MS = 500;
@@ -52,8 +58,10 @@ function frames(count: number): Promise<void> {
 /**
  * Hides the reporter's layer and resolves with the function that shows it again (safe to call
  * twice). With no layer mounted it does nothing, so a capture with nothing to hide is not delayed.
+ * `marks` are drawn in the reporter's place for as long as it is hidden; of two captures that
+ * overlap, the first one's marks are the ones shown.
  */
-export async function hideReporterLayer(): Promise<() => void> {
+export async function hideReporterLayer(marks: readonly CaptureMark[] = []): Promise<() => void> {
   if (mounted === 0) return () => {};
   holds += 1;
   let released = false;
@@ -66,14 +74,14 @@ export async function hideReporterLayer(): Promise<() => void> {
     if (holds === 0) {
       ready = null;
       committed = null;
-      useLayerHidden.setState({ hidden: false });
+      useLayerHidden.setState({ hidden: false, marks: [] });
     }
   };
   if (!ready) {
     ready = new Promise<void>((resolve) => {
       committed = resolve;
     });
-    useLayerHidden.setState({ hidden: true });
+    useLayerHidden.setState({ hidden: true, marks });
   }
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<void>((resolve) => {

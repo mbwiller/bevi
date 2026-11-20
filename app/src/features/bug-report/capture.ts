@@ -21,7 +21,9 @@ import type { CaptureMark, Shot } from './types';
  * create-Bev photo does): never a `Blob`, because a React Native Blob uploads as an empty file
  * (`UploadPayload`). The temporary file stays as the note's thumbnail until `releaseShot`.
  *
- * Select element's outlines (`marks`) belong to stage 2 and are ignored here.
+ * Select element's numbered outlines (`marks`) are not drawn on the picture afterwards, as the web
+ * draws them on its canvas: the reporter's layer shows them while it is hidden for the shutter, so
+ * they are photographed with the app (layerHidden.ts, ReportLayer.tsx).
  */
 
 const DEFAULT_TIMEOUT_MS = 4000;
@@ -40,8 +42,8 @@ function sizeInPoints(): { width?: number; height?: number; pixelWidth?: number;
   return { width: w, height: h, pixelWidth: Math.round(w * scale), pixelHeight: Math.round(h * scale) };
 }
 
-async function take(): Promise<Shot | null> {
-  const show = await hideReporterLayer();
+async function take(marks: readonly CaptureMark[]): Promise<Shot | null> {
+  const show = await hideReporterLayer(marks);
   let tmp: string;
   const size = sizeInPoints();
   try {
@@ -86,7 +88,7 @@ function releaseTmp(tmp: string): void {
  * Takes the picture. Resolves null when it cannot (the library is missing, the window can't be
  * drawn, the file can't be read, or `timeoutMs` passes; default 4000). Never rejects.
  */
-export function captureScreen(_marks: CaptureMark[], opts?: { timeoutMs?: number }): Promise<Shot | null> {
+export function captureScreen(marks: CaptureMark[], opts?: { timeoutMs?: number }): Promise<Shot | null> {
   const timeoutMs = typeof opts?.timeoutMs === 'number' && opts.timeoutMs > 0 ? opts.timeoutMs : DEFAULT_TIMEOUT_MS;
   return new Promise<Shot | null>((resolve) => {
     let settled = false;
@@ -95,7 +97,7 @@ export function captureScreen(_marks: CaptureMark[], opts?: { timeoutMs?: number
       settled = true;
       resolve(null);
     }, timeoutMs);
-    take().then(
+    take(Array.isArray(marks) ? marks : []).then(
       (shot) => {
         clearTimeout(timer);
         if (settled) {

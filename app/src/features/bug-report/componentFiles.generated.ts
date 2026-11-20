@@ -180,6 +180,7 @@ export const COMPONENT_FILES: Readonly<Record<string, string>> = {
   ReportSheet: 'app/src/features/bev/ReportSheet.tsx',
   ReportStep: 'app/src/features/safety/SafetyFlow.tsx',
   ReportToast: 'app/src/features/bug-report/ReportToast.tsx',
+  ReportTouchRoot: 'app/src/features/bug-report/ReportTouchRoot.web.tsx',
   Reporter: 'app/src/app/_layout.tsx',
   ReportsBody: 'app/src/features/bug-report/ReportsSheet.tsx',
   ReportsSheet: 'app/src/features/bug-report/ReportsSheet.tsx',
