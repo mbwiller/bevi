@@ -48,3 +48,18 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 // expo-application reads the installed binary's version (src/features/app-gate/installedVersion.ts).
 // Suites that care mock `@/features/app-gate/installedVersion` or this module themselves.
 jest.mock('expo-application', () => ({ nativeApplicationVersion: '1.0.0', nativeBuildVersion: '1' }));
+
+// react-native-maps is a native view (src/features/places/BevdCanvas.tsx). Under jest the map is a
+// View and a marker a Pressable carrying the marker's own props, so a suite presses a pin by its
+// accessible name, as it would a row.
+jest.mock('react-native-maps', () => {
+  const React = require('react');
+  const { Pressable, View } = require('react-native');
+  const MapView = React.forwardRef(({ children, onPress: _onPress, ...props }, ref) => {
+    React.useImperativeHandle(ref, () => ({ animateToRegion: () => {} }));
+    return React.createElement(View, props, children);
+  });
+  MapView.displayName = 'MapView';
+  const Marker = ({ children, coordinate: _coordinate, ...props }) => React.createElement(Pressable, props, children);
+  return { __esModule: true, default: MapView, Marker };
+});

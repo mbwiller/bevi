@@ -35,7 +35,7 @@ export const COMPONENT_FILES: Readonly<Record<string, string>> = {
   BevOfPeriod: 'app/src/features/feed/BevOfPeriod.tsx',
   BevRow: 'app/src/components/BevRow.tsx',
   BevStats: 'app/src/features/bev/BevStats.tsx',
-  BevdCanvas: 'app/src/features/places/BevdCanvas.tsx',
+  BevdCanvas: 'app/src/features/places/BevdCanvas.web.tsx',
   BevdMapScreen: 'app/src/features/places/BevdMapScreen.tsx',
   BevdPlaceList: 'app/src/features/places/BevdPlaceList.tsx',
   BevdPlaceSheet: 'app/src/features/places/BevdPlaceSheet.tsx',

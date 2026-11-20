@@ -4,13 +4,14 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { configure, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { Linking } from 'react-native';
 import type { Venue } from '@bevi/shared';
 
 import { api } from '@/api/client';
 import { SEARCH_DEBOUNCE_MS } from '@/features/add-bev/useDebouncedValue';
 import { controls } from '@/testing/fakeApi';
 
-import { LOCATION_OFF, MORE_LIMITED, NO_MATCH, PICKER_HINT, PICKER_PLACEHOLDER, REMOVE_LOCATION, searchMoreLabel } from '../copy';
+import { LOCATION_OFF, MORE_LIMITED, NO_MATCH, OPEN_SETTINGS, PICKER_HINT, PICKER_PLACEHOLDER, REMOVE_LOCATION, searchMoreLabel } from '../copy';
 import { PlacePickerBody } from '../PlacePicker';
 import type { PositionPermission, PositionResult } from '../position';
 
@@ -173,6 +174,25 @@ it('with location denied it explains, and still searches by name', async () => {
   const row = await screen.findByRole('button', { name: new RegExp(`^${match!.venue.name}`) });
   // No position, so no distance on the row.
   expect(row.props.accessibilityLabel).not.toMatch(/ ft| mi/);
+});
+
+it('with location denied it offers the way back, which is the app\'s page in iOS Settings', async () => {
+  const openSettings = jest.spyOn(Linking, 'openSettings').mockResolvedValue();
+  mockPosition = { kind: 'denied' };
+  await renderPicker();
+
+  await fireEvent.press(await screen.findByRole('button', { name: OPEN_SETTINGS }));
+  expect(openSettings).toHaveBeenCalledTimes(1);
+
+  // Not while searching by name, where the position does not matter.
+  await type('yorkville');
+  await waitFor(() => expect(screen.queryByRole('button', { name: OPEN_SETTINGS })).toBeNull());
+});
+
+it('with location allowed there is nothing to turn on', async () => {
+  await renderPicker();
+  await screen.findByText('Nearby');
+  expect(screen.queryByRole('button', { name: OPEN_SETTINGS })).toBeNull();
 });
 
 it('with no position to be had it asks for a name', async () => {
