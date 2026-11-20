@@ -221,6 +221,7 @@
 .bv-post-meta { display: flex; align-items: center; gap: var(--space-xs); margin-top: 2px; }
 .bv-post-meta-text { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bv-post-score { flex: none; }
+.bv-post-more { margin-right: -8px; margin-left: -4px; }
 .bv-post-body { display: flex; align-items: stretch; gap: var(--space-md); margin-top: var(--space-md); }
 .bv-post-side { display: flex; flex-direction: column; gap: var(--space-sm); flex: 1; min-width: 0; padding: 2px 0; }
 .bv-post-strip { display: flex; gap: var(--space-sm); margin: var(--space-md) calc(-1 * var(--space-gutter)) 0; padding: 0 var(--space-gutter); overflow-x: auto; scrollbar-width: none; }
@@ -379,6 +380,7 @@
 .bv-comment-text { flex: 1; min-width: 0; }
 .bv-comment-text p { margin: 0; }
 .bv-comment-body { overflow-wrap: anywhere; }
+.bv-comment-more { margin: -8px -8px -8px 0; }
 .bv-comment-delete { flex: none; min-width: var(--size-target); min-height: var(--size-target); color: var(--textSecondary); }
 .bv-comments .bv-empty { flex: 1; justify-content: center; }
 .bv-composer { flex: none; display: flex; align-items: center; gap: var(--space-md); padding: var(--space-sm) var(--space-gutter) 0; border-top: 1px solid var(--border); }

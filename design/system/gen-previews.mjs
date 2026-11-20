@@ -318,7 +318,7 @@ h('div', { className: 'pv-narrow', style: { display: 'flex', flexDirection: 'col
   h(B.TabBar, { active: 'profile', user: ME }))`];
 
 // ---------- Feed ----------
-P.FeedPost = [{ group: 'Feed', height: 1640, width: 393, subtitle: 'Double-tap a post to like it' }, '.pv-mat { margin: 0; padding: 20px 16px 0; }', `
+P.FeedPost = [{ group: 'Feed', height: 2000, width: 393, subtitle: 'Double-tap a post to like it' }, '.pv-mat { margin: 0; padding: 20px 16px 0; }', `
 h(function Demo() {
   var a = React.useState(false), aOn = a[0], setA = a[1];
   var b = React.useState(true), bOn = b[0], setB = b[1];
@@ -344,7 +344,10 @@ h(function Demo() {
       photos: [{ art: BEVS.coldBrew.art }, { art: BEVS.matcha.art }, { art: BEVS.horchata.art }] }, ACTIONS)),
     h('p', { className: 'pv-label pv-mat' }, "Explore: the plain post (no heart, counts or comments) with the author's Follow pill"),
     h(B.FeedPost, { actor: FRIENDS[2], bev: BEVS.matcha, score: 8.2, time: '2 days ago', note: 'oat milk, half sweet. the only one I order now',
-      following: cOn, onFollow: function () { setC(!cOn); } }));
+      following: cOn, onFollow: function () { setC(!cOn); } }),
+    h('p', { className: 'pv-label pv-mat' }, "More actions: onMore adds an ellipsis after the score on other people's posts"),
+    h(B.FeedPost, Object.assign({ actor: FRIENDS[0], bev: BEVS.brownSugar, score: 7.8, time: 'Wednesday', likeCount: 11, note: 'too sweet for me, but the boba is perfect',
+      onMore: NOOP, moreLabel: 'More actions, post by @' + FRIENDS[0].handle }, ACTIONS)));
 })`];
 
 // ---------- Ranking ----------
@@ -382,7 +385,7 @@ h(B.ErrorState, { icon: 'wifi-off', title: "You're offline", message: "We'll sho
 P.Skeleton = [{ group: 'Feedback', height: 330, width: 393 }, '', `
 h('div', { className: 'pv-narrow' }, h(B.Skeleton, { variant: 'row' }), h(B.Skeleton, { variant: 'post' }))`];
 
-P.CommentsSheet = [{ group: 'Feed', height: 1470, width: 393, subtitle: 'Your own comments can be deleted' }, `.pv-frame { height: 440px; margin: 10px auto; } .cap { margin: 14px 16px 0; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--textSecondary); }`, `
+P.CommentsSheet = [{ group: 'Feed', height: 1970, width: 393, subtitle: 'Your own comments can be deleted' }, `.pv-frame { height: 440px; margin: 10px auto; } .cap { margin: 14px 16px 0; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--textSecondary); }`, `
 h(function Demo() {
   var few = [
     { id: 'a', author: FRIENDS[1], body: 'ok this is going on my list', time: '4 hours ago' },
@@ -402,6 +405,8 @@ h(function Demo() {
     h('div', { className: 'pv-frame' }, h(B.CommentsSheet, { me: ME })),
     h('p', { className: 'cap' }, 'A few, one of them yours'),
     h('div', { className: 'pv-frame' }, h(B.CommentsSheet, { me: ME, comments: few })),
+    h('p', { className: 'cap' }, "More actions on other people's comments (onMore), Delete on yours"),
+    h('div', { className: 'pv-frame' }, h(B.CommentsSheet, { me: ME, comments: few, onMore: function () {} })),
     h('p', { className: 'cap' }, 'A long thread, posting failed'),
     h('div', { className: 'pv-frame', style: { height: 500 } }, h(B.CommentsSheet, { me: ME, comments: long, error: "Couldn't post your comment. Check your connection and try again." })));
 })`];
