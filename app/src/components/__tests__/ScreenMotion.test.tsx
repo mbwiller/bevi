@@ -3,7 +3,9 @@ import { Dimensions, Text, type ScaledSize } from 'react-native';
 
 import { motion } from '@/theme';
 
-import { PUSH_SHIFT, RISE_SHIFT, StackScene, TabScene, type TabHistory } from '../ScreenMotion';
+// The web file: its entrance animations are what this suite covers. The native file is tested at the end.
+import { StackScene as NativeStackScene } from '../ScreenMotion';
+import { PUSH_SHIFT, RISE_SHIFT, StackScene, TabScene, type TabHistory } from '../ScreenMotion.web';
 
 let mockReduced = false;
 const mockWorklets: (() => Record<string, unknown>)[] = [];
@@ -189,5 +191,18 @@ describe('TabScene', () => {
     await rerender(<Tabs current="lists" mounted={['feed', 'lists']} history={history} />);
     await rerender(<Tabs current="lists" mounted={['feed', 'lists']} history={history} />);
     expect(played()).toEqual([motion.fast]);
+  });
+});
+
+describe('StackScene on iOS', () => {
+  it('is a passthrough: no wrapper, no animation (the native stack already transitions)', async () => {
+    await render(
+      <NativeStackScene variant="push" enter>
+        <Text>Bev</Text>
+      </NativeStackScene>,
+    );
+    expect(screen.getByText('Bev')).toBeTruthy();
+    expect(screen.queryByTestId('screen-move')).toBeNull();
+    expect(withTiming).not.toHaveBeenCalled();
   });
 });
