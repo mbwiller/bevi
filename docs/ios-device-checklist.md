@@ -152,24 +152,36 @@ Supabase dashboard.
       the second launch, and Settings still shows the same build number.
 - [ ] A build with a different native project does not receive that update.
 
-## 10. Crash reporting (gate G3), once the Sentry project exists
+## 10. Errors and crashes
 
-- [ ] Settings, press and hold the version line at the foot: "Test crash
-      reporting" offers a test error and a crash.
-- [ ] Send a test error: it appears in Sentry within a minute, with readable
-      file names and lines.
-- [ ] Crash Bevi now, reopen the app: the crash appears in Sentry with a
-      symbolicated native stack.
-- [ ] The event has no username, no email and no IP address, and its
-      breadcrumbs show URLs without query strings.
+There is no crash reporter of our own yet (Sentry was dropped for an in-house
+one, not built). What can be checked today:
 
-## 11. The bug reporter, for an internal account
+- [ ] If a screen ever shows "Something went wrong", Try again brings the app
+      back without a relaunch. File what you were doing.
+- [ ] After any crash, TestFlight offers to send feedback on the next launch:
+      send it, and check it arrives in App Store Connect > TestFlight >
+      Crashes.
+
+## 11. The bug reporter, for an internal account (IM-10, stage 1)
+
+Needs a build that links `react-native-view-shot`.
 
 - [ ] The report button shows on every signed-in screen; an ordinary account
       never sees it.
-- [ ] A report carries a screenshot of what you were looking at (not of the
-      note), your text, and the build.
-- [ ] The ticket arrives on the board with its picture.
+- [ ] Press it: the note opens with a picture of the screen you were on. The
+      picture does not include the button or the note, and does include an
+      open sheet or modal.
+- [ ] With the note open, tap and scroll the app beside it: touches pass
+      through.
+- [ ] Inside the ranking flow, New Bev and the photo viewer: the button is
+      there and a report can be sent. Filed reports is expected not to open
+      from these; note whether that limit matters.
+- [ ] The keyboard does not cover the note's text field.
+- [ ] Set the note aside, force-quit, reopen: the text is restored; the
+      picture is not, and the note says so.
+- [ ] Send it: the ticket arrives on the board with its picture, the route,
+      the app version and build, and the device.
 
 ## 12. Accessibility
 

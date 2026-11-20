@@ -20,7 +20,7 @@ repository can do it.
 | 1 | A new TestFlight build from the commit that contains this work | Arjun (EAS) | Build 0.1.0 (3) is from `e1f0b1f` and predates photos, the scanner, the gate, report and block |
 | 2 | Walk `docs/ios-device-checklist.md` on that build | Either | G2. Jest mocks every native module, so nothing below is proven until a phone says so |
 | 3 | A support address, and the App Store id | Either | The "Update required" screen, Settings and the listing all need a way to reach us (Guideline 1.2 asks for published contact). Both are `null` in `app/src/lib/appStore.ts` |
-| 4 | A Sentry project: DSN, organisation and project slugs, auth token | Arjun | G3 says crash reports arrive symbolicated. The SDK is wired and inert until these exist (§7) |
+| 4 | Decide what G3's crash check means now | Both | Sentry was dropped on 2026-11-19 for an in-house reporter, which is not built. Until it is, native crashes show only in Apple's own reports (TestFlight, App Store Connect, Xcode Organizer) and a JS error shows the "Something went wrong" screen and is recorded nowhere (§7) |
 | 5 | Who reads `content_reports`, and how fast | Both | Guideline 1.2 expects reports to be acted on, in practice within 24 hours. Today a report is a row nobody is told about (§6) |
 | 6 | Screenshots | Matt (needs a simulator or a phone) | §3 |
 | 7 | The privacy policy's two stale lines | Both | §5: "no analytics" once crash reporting is on, and "ask the person who invited you" as the only contact |
@@ -117,19 +117,15 @@ adding one changes these answers and needs a review.
 | User content: photos or videos | Yes | Photos of a drink or a nutrition label, a profile photo | Yes | App functionality |
 | User content: other user content | Yes | Rankings, notes, comments, lists, follows, reports you file | Yes | App functionality |
 | Sensitive info / other data | Check the form's wording | Birth date, used only to decide whether alcohol is shown | Yes | App functionality |
-| Diagnostics: crash data | Only once crash reporting is switched on (§7) | Stack traces and device model, with no account attached | No | App functionality |
+| Diagnostics: crash data | No, today. The app sends no crash data of its own; Apple's crash reports are Apple's, shared by the person in iOS settings. This becomes Yes the day the in-house reporter ships | | | |
 | Location | No | The binary has no location permission. Uploaded photos are re-encoded, which strips their GPS data: **verify on a phone before claiming it** (device checklist) | | |
 | Contacts, browsing history, search history, purchases, financial, health, usage data, advertising data | No | | | |
 
-Two lines of `app/public/privacy.md` need a decision before submission:
-
-- "No ads, no tracking, no analytics." stays true for ads and tracking. Crash
-  reports are diagnostics; once the DSN is set the policy should say so, for
-  example: "If the app crashes, it sends a crash report (what went wrong and
-  your phone model) to help us fix it. The report is not tied to your
-  account."
-- "Questions: ask the person who invited you to Bevi." is not a published
-  contact. Replace it with the support address.
+One line of `app/public/privacy.md` needs a decision before submission:
+"Questions: ask the person who invited you to Bevi." is not a published
+contact. Replace it with the support address. ("No ads, no tracking, no
+analytics" is true as built. It needs a sentence about crash reports the day
+the in-house reporter ships, and not before.)
 
 After editing `privacy.md`, run `node scripts/gen-privacy-text.mjs` from
 `app/`: the in-app Privacy screen renders a bundled copy, and a test fails
@@ -158,20 +154,22 @@ What it does not have yet, and review asks about:
 - **Terms that forbid objectionable content.** There is no terms-of-use text
   in the app. A short one shown at sign-up is the usual answer.
 
-## 7. Crash reporting, when the account exists
+## 7. Crash reporting
 
-1. Create the Sentry project (React Native). Note the DSN and the organisation
-   and project slugs.
-2. Put the DSN in the EAS `preview` and `production` environments as
-   `EXPO_PUBLIC_SENTRY_DSN`. It is public by design. Do not set it on Vercel:
-   the web build stays out.
-3. Fill in `SENTRY_ORG` and `SENTRY_PROJECT` in `app/app.config.ts`. This
-   switches on the build phase that uploads debug symbols, and it changes the
-   native project, so the next build has a new runtime version.
-4. Put `SENTRY_AUTH_TOKEN` in EAS as a secret. Without it the upload fails and
-   so does the build.
-5. Build, install, trigger the test crash (see `DEVELOPMENT-MATT-IOS.md`,
-   IS-4), and look for readable stack frames in Sentry.
+Sentry was considered and dropped on 2026-11-19: the reporter will be built in
+house, after the launch blockers. What the binary has today:
+
+- A root error boundary: a screen that throws while rendering shows "Something
+  went wrong" with Try again instead of closing the app.
+- A `captureError` seam (`app/src/lib/crashReporting.ts`) with scrubbing, and
+  the rule that expected API errors are never reported. Nothing is registered
+  behind it, so nothing is sent anywhere.
+- Native crashes are visible only through Apple: TestFlight's crash feedback,
+  App Store Connect, and Xcode's Organizer on a Mac signed in to the team.
+
+So gate G3's "crash reports arrive symbolicated" cannot be met as written. It
+either waits for the in-house reporter or is restated as "a crash on a
+TestFlight build shows in App Store Connect".
 
 ## 8. Review notes (draft)
 
