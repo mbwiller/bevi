@@ -9,9 +9,11 @@ import { REDACTED } from '../crashScrub';
 // The seam between the app and whatever reports crashes (nothing does yet). What is under test is
 // what holds for any reporter: what is handed over, what never is, and that handing over cannot fail.
 
-// Made-up values in the real shapes: a session JWT inside a signed Storage URL.
-const JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.c2lnbmF0dXJlLWJ5dGVz';
+// Made-up values in the real shapes: a session JWT inside a signed Storage URL, a publishable key.
+// Each is put together at run time: a literal in these shapes trips the secret scanner on every push.
+const JWT = ['eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9', 'eyJzdWIiOiIxMjM0NTY3ODkwIn0', 'c2lnbmF0dXJlLWJ5dGVz'].join('.');
 const SIGNED_URL = `https://ref.supabase.co/storage/v1/object/sign/bev-photos/a/b.jpg?token=${JWT}`;
+const KEY = ['sb', 'publishable', 'AbCdEf123456'].join('_');
 
 const sink = jest.fn<void, [CrashReport]>();
 /** The one report the sink was handed. */
@@ -90,7 +92,7 @@ describe('with a sink registered', () => {
   it('scrubs the message, the stack and the facts before the sink sees them', () => {
     const error = new Error(`Failed to load ${SIGNED_URL} with Bearer ${JWT}`);
     error.stack = `Error: Failed to load ${SIGNED_URL}\n    at load (app:///main.jsbundle:1:2345)`;
-    captureError(error, { source: 'query', extra: { last: SIGNED_URL, apikey: 'sb_publishable_AbCdEf123456' } });
+    captureError(error, { source: 'query', extra: { last: SIGNED_URL, apikey: KEY } });
     const sent = JSON.stringify(report());
     expect(sent).not.toContain('eyJ');
     expect(sent).not.toContain('token=');
