@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react';
+import { useContext, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaInsetsContext, SafeAreaView } from 'react-native-safe-area-context';
 
 import { Header } from '@/components/Header';
 import { Icon } from '@/components/Icon';
@@ -65,10 +65,12 @@ export function SettingsSection({ title, children }: { title?: string; children:
 export function SettingsScreen({ title, children }: { title: string; children: ReactNode }) {
   const { colors } = useTheme();
   const back = useBack();
+  // A pushed screen has no tab bar: its scroll end clears the home indicator itself.
+  const bottomInset = useContext(SafeAreaInsetsContext)?.bottom ?? 0;
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.screen, { backgroundColor: colors.surface }]}>
       <Header title={title} onBack={back} />
-      <ScrollView contentContainerStyle={styles.body} {...FORM_SCROLL}>
+      <ScrollView contentContainerStyle={[styles.body, { paddingBottom: spacing.xxl + bottomInset }]} {...FORM_SCROLL}>
         {children}
       </ScrollView>
     </SafeAreaView>

@@ -54,6 +54,8 @@ export interface ActivityListProps {
   onEmptyAction?: () => void;
   /** Pull to refresh: refetch the header's queries too. The rankings refetch here. */
   onRefresh?: () => unknown;
+  /** Extra space under the last row, for a pushed screen (no tab bar) to clear the home indicator. */
+  bottomInset?: number;
   /** For `scrollToIndex({ index: 0 })`: brings the first post up under the screen header. */
   listRef?: RefObject<FlashListRef<ActivityRow> | null>;
 }
@@ -64,7 +66,7 @@ export interface ActivityListProps {
  * (`rankings.listUser`) as plain FeedPosts; infinite scroll. Taste Profile shows `stats.getTasteProfile`:
  * the preference read-out over a TasteBar per category.
  */
-export function ActivityList({ profile, self, following = false, header, tab, onTab, onEmptyAction, onRefresh, listRef }: ActivityListProps) {
+export function ActivityList({ profile, self, following = false, header, tab, onTab, onEmptyAction, onRefresh, bottomInset = 0, listRef }: ActivityListProps) {
   const { colors } = useTheme();
   const router = useRouter();
   // Posts for you and people you follow (feed.listUser returns nothing for anyone else); follow or
@@ -196,7 +198,7 @@ export function ActivityList({ profile, self, following = false, header, tab, on
         keyExtractor={(r) => r.id}
         ListHeaderComponent={listHeader}
         ListEmptyComponent={<>{empty}</>}
-        ListFooterComponent={tab === 'activity' && query.isFetchingNextPage ? <Skeleton variant="post" /> : <View style={styles.foot} />}
+        ListFooterComponent={tab === 'activity' && query.isFetchingNextPage ? <Skeleton variant="post" /> : <View testID="activity-foot" style={[styles.foot, { height: spacing.xxl + bottomInset }]} />}
         onEndReached={() => {
           if (tab === 'activity' && query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage();
         }}
