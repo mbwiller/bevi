@@ -513,7 +513,12 @@ describe('bugs.report evidence as bytes (contract 3.3.0)', () => {
           { file: nativeBlob, mimeType: 'image/jpeg' },
         ],
       }),
-    ).rejects.toMatchObject({ code: 'validation', detail: { field: 'file' } });
+    ).rejects.toMatchObject({
+      code: 'validation',
+      // The contract's field for an attachment `bugs.report` refuses, not `media.upload`'s 'file'.
+      detail: { field: 'evidence' },
+      message: expect.stringContaining('cannot upload a Blob'),
+    });
     expect(calls.uploads).toEqual([]);
     expect(calls.invokes).toEqual([]);
   });

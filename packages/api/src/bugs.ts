@@ -211,7 +211,16 @@ export function createBugsApi(client: SupabaseClient): BugsApi {
         // Normalised here, with the rest of the checks, so a React Native `Blob`
         // (which would store 0 bytes with no error) is refused before the first
         // object is staged, like a bad third file is.
-        planned.push({ body: toUploadBody(item.file), mimeType: item.mimeType, ext, caption: typeof item.caption === 'string' ? item.caption : '' });
+        let body: Blob | ArrayBuffer;
+        try {
+          body = toUploadBody(item.file);
+        } catch (e) {
+          // `toUploadBody` names the field `media.upload` takes, 'file'. Here
+          // the contract's field for every attachment error is 'evidence'.
+          if (e instanceof ApiError && e.code === 'validation') throw new ApiError('validation', e.message, { field: 'evidence' });
+          throw e;
+        }
+        planned.push({ body, mimeType: item.mimeType, ext, caption: typeof item.caption === 'string' ? item.caption : '' });
       }
 
       const evidencePaths: string[] = [];
