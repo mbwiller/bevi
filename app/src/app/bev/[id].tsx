@@ -5,7 +5,7 @@ import { useContext, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext, SafeAreaView } from 'react-native-safe-area-context';
 
-import { useAddWantToTry, useBev, useMe, useRemoveWantToTry, useStats } from '@/api/hooks';
+import { useAddWantToTry, useBev, useBevIcon, useMe, useRemoveWantToTry, useStats } from '@/api/hooks';
 import { Arrive, useArrival } from '@/components/Arrive';
 import { bevImageProps, brandLine } from '@/components/BevParts';
 import { BevImage } from '@/components/BevImage';
@@ -18,6 +18,7 @@ import { Pill } from '@/components/Pill';
 import { PriceTier } from '@/components/PriceTier';
 import { Skeleton } from '@/components/Skeleton';
 import { BevStats, FriendsRow } from '@/features/bev/BevStats';
+import { GeneratedIconPanel, showGeneratedIcon } from '@/features/bev/GeneratedIconPanel';
 import { ReportSheet } from '@/features/bev/ReportSheet';
 import { SimilarBevs } from '@/features/bev/SimilarBevs';
 import { categoryById } from '@/lib/categories';
@@ -59,6 +60,14 @@ export default function BevDetailScreen() {
 
   const bev = query.data;
   const cat = bev ? categoryById(bev.categoryId) : undefined;
+  // Both ids have to be there: `undefined === undefined` would make every viewer the
+  // owner of every catalog Bev while `me` is still loading.
+  const isBevOwner = !!bev?.createdBy && !!me.data && bev.createdBy.id === me.data.id;
+  // Only a Bev someone created can have a generated icon, so a catalog Bev spends no
+  // lookup on one. A failure here leaves the panel out: an illustration is decoration,
+  // and the screen already has the photo.
+  const iconQuery = useBevIcon(id, { enabled: !!bev?.createdBy });
+  const showGeneratedIconPanel = showGeneratedIcon(iconQuery.data, isBevOwner);
   // The server already refuses these (`age_restricted`); this covers a cached Bev after the profile changes.
   const hidden = !!cat?.isAlcoholic && me.data?.canSeeAlcohol === false;
   const code = isApiError(query.error) ? query.error.code : undefined;
@@ -89,13 +98,15 @@ export default function BevDetailScreen() {
     body = <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
   } else {
     const brand = brandLine(bev);
-    // Only a real photo opens the viewer; an authored icon (bevImageProps' fallback) is art, not a photo.
+    // Only a real photo opens the viewer, and the hero may now be the Bev's icon rather than the
+    // photo (`bevImageProps` puts the icon first): tapping it still shows the photograph it was
+    // made from, and a Bev with no photo is not pressable at all.
     const photo = bev.photoUrl;
     const ranked = !!bev.myRanking;
     const image = <BevImage size={HERO} {...bevImageProps(bev)} />;
     body = (
       <>
-        <View style={styles.hero}>
+        <View style={[styles.hero, showGeneratedIconPanel && styles.heroBeforeIcon]}>
           {photo ? (
             <Pressable
               accessibilityRole="imagebutton"
@@ -121,7 +132,13 @@ export default function BevDetailScreen() {
           </View>
         </View>
 
-        <BevStats bev={bev} myRankingCount={stats.data?.bevdCount} />
+        {showGeneratedIconPanel ? (
+          <GeneratedIconPanel icon={iconQuery.data} isOwner={isBevOwner} />
+        ) : null}
+
+        <View style={showGeneratedIconPanel ? styles.statsAfterIcon : undefined}>
+          <BevStats bev={bev} myRankingCount={stats.data?.bevdCount} />
+        </View>
 
         {bev.myRanking?.note ? (
           <View style={[styles.note, { borderColor: colors.border }]}>
@@ -200,6 +217,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   scroll: { paddingBottom: spacing.xxl },
   hero: { alignItems: 'center', gap: spacing.xs, paddingTop: spacing.xs, paddingBottom: spacing.lg, paddingHorizontal: spacing.gutter },
+  heroBeforeIcon: { paddingBottom: 0 },
+  statsAfterIcon: { marginTop: spacing.lg },
   name: { marginTop: spacing.md },
   center: { textAlign: 'center' },
   catLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: 2 },

@@ -1,5 +1,6 @@
 import { act, render, screen } from '@testing-library/react-native';
 import { Dimensions, Text, type ScaledSize } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { motion } from '@/theme';
 
@@ -204,5 +205,33 @@ describe('StackScene on iOS', () => {
     expect(screen.getByText('Bev')).toBeTruthy();
     expect(screen.queryByTestId('screen-move')).toBeNull();
     expect(withTiming).not.toHaveBeenCalled();
+    expect(providers(screen.toJSON() as Json)).toBe(0);
+  });
+
+  it('a full-screen modal gets a safe-area provider of its own, and still no animation', async () => {
+    // UIKit presents the modal outside the app's root view, so the screen's native SafeAreaView
+    // finds no provider above it and keeps the zero insets it read while the modal was rising.
+    // Under the app's own provider, as in the app: the modal's provider starts from the app's
+    // insets, so the screen is drawn at once and not held back for a measurement.
+    const metrics = { frame: { x: 0, y: 0, width: 393, height: 852 }, insets: { top: 59, right: 0, bottom: 34, left: 0 } };
+    await render(
+      <SafeAreaProvider initialMetrics={metrics}>
+        <NativeStackScene variant="rise" enter>
+          <Text>New Bev</Text>
+        </NativeStackScene>
+      </SafeAreaProvider>,
+    );
+    expect(screen.getByText('New Bev')).toBeTruthy();
+    expect(providers(screen.toJSON() as Json)).toBe(2);
+    expect(screen.queryByTestId('screen-move')).toBeNull();
+    expect(withTiming).not.toHaveBeenCalled();
   });
 });
+
+type Json = { type?: string; children?: unknown } | string | null;
+/** How many safe-area provider views are in the rendered tree. */
+function providers(node: Json | Json[]): number {
+  if (!node || typeof node === 'string') return 0;
+  if (Array.isArray(node)) return node.reduce((n: number, child) => n + providers(child), 0);
+  return (node.type === 'RNCSafeAreaProvider' ? 1 : 0) + providers(node.children as Json[] | null);
+}

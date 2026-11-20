@@ -7,6 +7,7 @@ import { api } from '@/api/client';
 import { controls } from '@/testing/fakeApi';
 import BevDetailScreen from '@/app/bev/[id]';
 
+import { ICON_JOB_STATE_VISIBLE } from '../GeneratedIconPanel';
 import { imageUrlFromParam } from '../imageUrl';
 
 let client: QueryClient;
@@ -112,6 +113,58 @@ it('an alcoholic Bev is "Not available" to an under-21 user', async () => {
   controls.signInAs('minor_user');
   await open(beer.id);
   expect(await screen.findByText('Not available')).toBeTruthy();
+});
+
+// `ICON_JOB_STATE_VISIBLE` is off until the worker is enabled, so a queued job -- which
+// is every photo-backed Bev while generation is disabled -- tells its creator nothing.
+it('keeps queued generation state off the screen while generation is disabled', async () => {
+  const bev = await api.bevs.create({
+    name: 'Private icon state test',
+    brand: 'Test Co',
+    categoryId: 'soda',
+    priceTier: 2,
+    priceEstimated: false,
+  });
+  controls.setIconStatus(bev.id, 'pending');
+  await open(bev.id);
+  expect(await screen.findByRole('header', { name: 'Private icon state test' })).toBeTruthy();
+  expect(ICON_JOB_STATE_VISIBLE).toBe(false);
+  expect(screen.queryByTestId('generated-icon-panel')).toBeNull();
+});
+
+// Contract 3.0.0: a finished illustration IS the Bev's image, so this screen says nothing
+// about it -- no panel, no second tile, and the wordmark set across the hero from the brand.
+it('makes a finished illustration the Bev image, with no panel about it', async () => {
+  const bev = await api.bevs.create({
+    name: 'Finished icon test',
+    brand: 'Test Co',
+    categoryId: 'soda',
+    priceTier: 2,
+    priceEstimated: false,
+  });
+  controls.setIconStatus(bev.id, 'completed');
+  await open(bev.id);
+  expect(await screen.findByRole('header', { name: 'Finished icon test' })).toBeTruthy();
+  expect(screen.queryByTestId('generated-icon-panel')).toBeNull();
+  expect(screen.queryByText(/your illustration/i)).toBeNull();
+  // The hero is 155px, big enough to letter: the brand is set across the band, which is the
+  // second "Test Co" on the screen -- the first is the brand line under the name.
+  expect(screen.getAllByText('Test Co')).toHaveLength(2);
+});
+
+it('does not show private generation progress to another viewer', async () => {
+  const bev = await api.bevs.create({
+    name: 'Private icon state test for friend',
+    brand: 'Test Co',
+    categoryId: 'soda',
+    priceTier: 2,
+    priceEstimated: false,
+  });
+  controls.setIconStatus(bev.id, 'pending');
+  controls.signInAs('friend_a');
+  await open(bev.id);
+  expect(await screen.findByRole('header', { name: 'Private icon state test for friend' })).toBeTruthy();
+  expect(screen.queryByTestId('generated-icon-panel')).toBeNull();
 });
 
 it('opens the report sheet from the overflow', async () => {

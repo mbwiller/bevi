@@ -178,10 +178,10 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
   };
   const close = () => (dirty && !existingId ? setConfirmDiscard(true) : leave());
 
-  const goRank = (bevId: string) => {
+  const goRank = (bevId: string, created = false) => {
     abort.current.aborted = true;
     // Replace, so back from the ranking flow doesn't return to the wizard.
-    router.replace({ pathname: '/rank/[bevId]', params: { bevId } });
+    router.replace({ pathname: '/rank/[bevId]', params: { bevId, ...(created ? { entry: 'created' } : {}) } });
   };
 
   const patch = (p: Partial<DetailsForm>) => {
@@ -363,7 +363,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
             setCreatedWithoutNutritionId(bev.id);
             setSubmitMessage('Your Bev was added, but we couldn’t save its nutrition label. Continue without nutrition?');
           } else {
-            goRank(bev.id);
+            goRank(bev.id, true);
           }
         }
       } catch (e) {
@@ -413,7 +413,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
         checkFailed={duplicatesQ.isError}
         onRetryCheck={() => void duplicatesQ.refetch()}
         onPick={pickExisting}
-        onCreate={() => createdWithoutNutritionId ? goRank(createdWithoutNutritionId) : void submit()}
+        onCreate={() => createdWithoutNutritionId ? goRank(createdWithoutNutritionId, true) : void submit()}
         creating={creating}
         processing={processing}
         submitMessage={submitMessage}
