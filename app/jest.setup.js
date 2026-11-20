@@ -13,11 +13,14 @@ jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock
 // in-memory FakeApi instead: every importer of the client gets src/testing/fakeApi/client.ts.
 jest.mock('./src/api/client', () => require('./src/testing/fakeApi/client'));
 
-// The internal bug reporter is web only (src/features/bug-report/supported.ts), and jest resolves
-// modules as iOS, where it is off. Its suites are web suites: until they have a web jest project of
-// their own (DEVELOPMENT-MATT-IOS.md, IM-11) they run here with the reporter on. What the native app
-// does is covered by src/features/bug-report/__tests__/nativeOff.test.tsx, which undoes this mock.
+// The internal bug reporter exists on the web and, as stage 1, on iOS (src/features/bug-report/
+// supported.ts, capabilities.ts), and jest resolves modules as iOS. The reporter's long-standing
+// suites are web suites: until they have a web jest project of their own (DEVELOPMENT-MATT-IOS.md,
+// IM-11) they run here with the web's capabilities (select, steps, a note that opens at once, sheets
+// everywhere). What the iOS reporter does is covered by src/features/bug-report/__tests__/native*.test.*,
+// which undo these two mocks.
 jest.mock('./src/features/bug-report/supported', () => ({ REPORTER_SUPPORTED: true }));
+jest.mock('./src/features/bug-report/capabilities', () => require('./src/features/bug-report/capabilities.web'));
 
 // NetInfo is a native module. The library's own mock reports a connected cellular network and a
 // listener that never fires, so every suite that renders the create-Bev wizard sees it online

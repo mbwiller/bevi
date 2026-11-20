@@ -820,12 +820,12 @@ export interface BugReportInput {
    * call and never before it — nothing leaves the device until the reporter
    * submits. `caption` says what one shows, e.g. 'Feed, with 1 marked'.
    *
-   * Deliberately still `Blob`, not `UploadPayload`: the bug reporter is a
-   * web-only surface until it is ported to native (IM-10). Widening it is
-   * that port's job — it needs a contract decision of its own, and the
-   * implementation must normalise the bytes the way `media.upload` does.
+   * `file` is an `UploadPayload` (contract 3.3.0; it was `Blob` alone before),
+   * the same union `media.upload` takes: a `Blob` on the web, bytes
+   * (`Uint8Array` or `ArrayBuffer`) on React Native, where a `Blob` is
+   * refused with `'validation'` rather than stored as an empty file.
    */
-  evidence?: { file: Blob; mimeType: string; caption?: string }[];
+  evidence?: { file: UploadPayload; mimeType: string; caption?: string }[];
   /**
    * A UUID the client generates once per draft and reuses on every retry of
    * that draft. The same key never creates a second ticket.

@@ -16,7 +16,8 @@ export default function ReportBugScreen() {
   const { data: canReport, status } = useCanReportBug();
   useEffect(() => {
     if (status === 'pending') return;
-    if (canReport === true) requestReport('note');
+    // Bare: this screen is about to go, so a screenshot of it would show nothing of the app.
+    if (canReport === true) requestReport('note-bare');
     if (router.canGoBack()) router.back();
     else router.replace('/feed');
   }, [router, canReport, status]);

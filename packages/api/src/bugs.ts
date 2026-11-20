@@ -8,7 +8,7 @@ import {
 } from '@bevi/shared';
 import { requireUserId } from './currentUser';
 import { mapError } from './errors';
-import { uploadByteLength } from './uploads';
+import { toUploadBody, uploadByteLength } from './uploads';
 
 // The internal bug reporter's client half (docs/bug-workflow.md).
 //
@@ -199,38 +199,27 @@ export function createBugsApi(client: SupabaseClient): BugsApi {
       if (evidence.length > MAX_EVIDENCE) {
         throw new ApiError('validation', `Attach at most ${MAX_EVIDENCE} screenshots`, { field: 'evidence' });
       }
-      const planned: { file: Blob; mimeType: string; ext: string; caption: string }[] = [];
+      const planned: { body: Blob | ArrayBuffer; mimeType: string; ext: string; caption: string }[] = [];
       for (const item of evidence) {
         const ext = EXT_BY_MIME_TYPE[item.mimeType];
         if (!ext) throw new ApiError('validation', 'Attach a JPEG, PNG or WebP image', { field: 'evidence' });
         // `uploadByteLength` reads `.size` or `.byteLength`, whichever the
-        // payload has, and 0 when it has neither -- same tolerance as the
-        // `typeof ... === 'number'` guard it replaces, now that media uploads
-        // may be raw bytes (uploads.ts).
+        // payload has, and 0 when it has neither (uploads.ts).
         if (uploadByteLength(item.file) > MAX_EVIDENCE_BYTES) {
           throw new ApiError('validation', 'That screenshot is too large', { field: 'evidence' });
         }
-        planned.push({ file: item.file, mimeType: item.mimeType, ext, caption: typeof item.caption === 'string' ? item.caption : '' });
+        // Normalised here, with the rest of the checks, so a React Native `Blob`
+        // (which would store 0 bytes with no error) is refused before the first
+        // object is staged, like a bad third file is.
+        planned.push({ body: toUploadBody(item.file), mimeType: item.mimeType, ext, caption: typeof item.caption === 'string' ? item.caption : '' });
       }
 
       const evidencePaths: string[] = [];
       for (const item of planned) {
         const path = `${uid}/${randomId()}.${item.ext}`;
-        // WEB-ONLY until the bug reporter is ported to native (IM-10).
-        //
-        // Unlike `media.upload`, this hands the payload to Storage with no
-        // `toUploadBody()`, and `BugReportInput.evidence[].file` is still
-        // typed `Blob` -- so a React Native Blob would store 0 bytes here with
-        // no error, exactly the trap `media.ts` now refuses. That is safe only
-        // because nothing off the web calls this yet.
-        //
-        // When the reporter is ported: widen the evidence payload to
-        // `UploadPayload` in the contract (its own bump), measure with
-        // `uploadByteLength()` as the check above already does, and pass
-        // `toUploadBody(item.file)` here so the RN guard applies.
         const { error } = await client.storage
           .from(EVIDENCE_BUCKET)
-          .upload(path, item.file, { contentType: item.mimeType });
+          .upload(path, item.body, { contentType: item.mimeType });
         if (error) throw mapError(error);
         evidencePaths.push(path);
       }

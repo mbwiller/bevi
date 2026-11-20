@@ -97,7 +97,6 @@ export const COMPONENT_FILES: Readonly<Record<string, string>> = {
   ImageScreen: 'app/src/app/image/[url].tsx',
   Index: 'app/src/app/index.tsx',
   Inline: 'app/src/features/settings/Markdown.tsx',
-  InlineLayer: 'app/src/features/bug-report/ReportLayer.tsx',
   LeaderboardRedirect: 'app/src/app/leaderboard.tsx',
   LikeBurst: 'app/src/components/FeedPost.tsx',
   LikeButton: 'app/src/components/LikeButton.tsx',
@@ -175,7 +174,7 @@ export const COMPONENT_FILES: Readonly<Record<string, string>> = {
   ReportBugScreen: 'app/src/app/report-bug.tsx',
   ReportButton: 'app/src/features/bug-report/ReportButton.tsx',
   ReportHost: 'app/src/features/bug-report/ReportHost.tsx',
-  ReportLayer: 'app/src/features/bug-report/ReportLayer.tsx',
+  ReportLayer: 'app/src/features/bug-report/ReportLayer.web.tsx',
   ReportNote: 'app/src/features/bug-report/ReportNote.tsx',
   ReportSheet: 'app/src/features/bev/ReportSheet.tsx',
   ReportStep: 'app/src/features/safety/SafetyFlow.tsx',
@@ -248,7 +247,7 @@ export const COMPONENT_FILES: Readonly<Record<string, string>> = {
   VenueSheet: 'app/src/components/VenueSheet.tsx',
   VerifyButton: 'app/src/features/bug-report/ReportsSheet.tsx',
   WantToTryTab: 'app/src/features/lists/WantToTryTab.tsx',
-  WebLayer: 'app/src/features/bug-report/ReportLayer.tsx',
+  WebLayer: 'app/src/features/bug-report/ReportLayer.web.tsx',
   Wordmark: 'app/src/components/Wordmark.tsx',
 };
 
