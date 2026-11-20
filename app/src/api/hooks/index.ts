@@ -11,4 +11,5 @@ export * from './feed';
 export * from './comments';
 export * from './venues';
 export * from './bugs';
+export * from './safety';
 export { flattenPages } from './util';
