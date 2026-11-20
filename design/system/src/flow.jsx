@@ -235,7 +235,7 @@ export const COMMENT_MAX = 280;
  * Each comment: Avatar 32, bold handle, the text, a relative time; your own add a Delete. The composer
  * ("Add a comment…" and a `primary` Post) stays pinned to the bottom.
  */
-export function CommentsSheet({ open = true, comments = [], me, onClose, onPost, onDelete, error, className }) {
+export function CommentsSheet({ open = true, comments = [], me, onClose, onPost, onDelete, onMore, error, className }) {
   const [draft, setDraft] = React.useState('');
   const body = draft.trim();
   const left = COMMENT_MAX - draft.length;
@@ -252,6 +252,7 @@ export function CommentsSheet({ open = true, comments = [], me, onClose, onPost,
                 <p className="body bv-comment-body">{c.body}</p>
               </div>
               {c.mine ? <button type="button" className="body bv-comment-delete" onClick={() => onDelete && onDelete(c.id)} aria-label={'Delete your comment: ' + c.body}>Delete</button> : null}
+              {!c.mine && onMore ? <IconButton icon="ellipsis" size={24} label={'More actions, comment by @' + (c.author && c.author.handle)} onClick={() => onMore(c)} className="bv-comment-more" /> : null}
             </li>
           ))}
         </ul>

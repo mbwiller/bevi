@@ -137,7 +137,7 @@ function AlsoBevd({ people, count }) {
  * scrolls and the note follows. Double-tap anywhere outside the picture likes it (never unlikes); the
  * heart in the action row is the way to unlike.
  */
-export function FeedPost({ actor = {}, you = false, bev, score, scoreVariant, note, time, saved = false, liked = false, likeCount = 0, comments = [], commentCount = 0, photos, alsoBevdBy = [], alsoBevdCount, following = false, onFollow, onRank, onSave, onLike, onComment, onOpen, divider = true, className }) {
+export function FeedPost({ actor = {}, you = false, bev, score, scoreVariant, note, time, saved = false, liked = false, likeCount = 0, comments = [], commentCount = 0, photos, alsoBevdBy = [], alsoBevdCount, following = false, onFollow, onRank, onSave, onLike, onComment, onOpen, onMore, moreLabel = 'More actions', divider = true, className }) {
   const [open, setOpen] = React.useState(false);
   const [burst, setBurst] = React.useState(0);
   const cat = categoryById(bev.category);
@@ -182,6 +182,7 @@ export function FeedPost({ actor = {}, you = false, bev, score, scoreVariant, no
           </p>
         </div>
         {score != null || scoreVariant ? <ScoreBubble score={score} variant={scoreVariant} className="bv-post-score" /> : null}
+        {onMore ? <IconButton icon="ellipsis" label={moreLabel} onClick={onMore} className="bv-post-more" /> : null}
       </div>
       {side ? (
         <div className="bv-post-media bv-post-body">
