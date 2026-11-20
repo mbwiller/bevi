@@ -65,7 +65,7 @@ function shot(): Shot {
 }
 
 function photo(n: number): PreparedPhoto {
-  return { uri: `blob:photo-${n}`, blob: new Blob(['p']), mimeType: 'image/jpeg', width: 10, height: 10 };
+  return { uri: `blob:photo-${n}`, file: new Blob(['p']), mimeType: 'image/jpeg', width: 10, height: 10 };
 }
 
 function memory(): StorageLike & { map: Map<string, string> } {

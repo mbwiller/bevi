@@ -51,6 +51,7 @@ export function useRecents(userId: string | undefined) {
   const recents = state.userId === userId ? state.list : NONE;
   if (state.userId !== userId) setState({ userId, list: NONE });
 
+  const latestOperation = useRef(0);
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
@@ -59,26 +60,30 @@ export function useRecents(userId: string | undefined) {
     };
   }, []);
 
-  /** Shows `list` as `uid`'s Recents, unless the hook has moved on to another account (or unmounted). */
-  const show = useCallback((uid: string, list: RecentBev[]) => {
-    if (mounted.current) setState((s) => (s.userId === uid ? { userId: uid, list } : s));
+  const show = useCallback((uid: string, operation: number, list: RecentBev[]) => {
+    // An older read or write can finish after a newer edit is already visible.
+    if (mounted.current && operation === latestOperation.current) {
+      setState((s) => (s.userId === uid ? { userId: uid, list } : s));
+    }
   }, []);
 
   useEffect(() => {
+    const operation = ++latestOperation.current;
     if (!userId) return;
-    void serial(() => loadRecents(userId)).then((list) => show(userId, list));
+    void serial(() => loadRecents(userId)).then((list) => show(userId, operation, list));
   }, [userId, show]);
 
   const edit = useCallback(
     (change: (list: RecentBev[]) => RecentBev[]) => {
       if (!userId) return;
+      const operation = ++latestOperation.current;
       // At once on screen, then from what is stored once the write has been made.
       setState((s) => (s.userId === userId ? { userId, list: change(s.list) } : s));
       void serial(async () => {
         const next = change(await loadRecents(userId));
         await save(userId, next);
         return next;
-      }).then((next) => show(userId, next));
+      }).then((next) => show(userId, operation, next));
     },
     [userId, show],
   );

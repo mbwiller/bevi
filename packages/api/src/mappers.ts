@@ -9,6 +9,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
   AppConfig,
   Bev,
+  BevIcon,
+  BevIconLabelBand,
   BevLeaf,
   BevOfPeriod,
   BevPrediction,
@@ -28,6 +30,7 @@ import type {
   FeedItem,
   FlavorProfile,
   FriendScore,
+  IconStatus,
   LeaderboardRow,
   PeriodWinner,
   PhotoStatus,
@@ -398,6 +401,42 @@ export interface BevLeafRow {
 
 export function mapBevLeaf(row: BevLeafRow): BevLeaf {
   return { bevId: row.bev_id, leafCategoryId: row.leaf_category_id };
+}
+
+/**
+ * `get_bev_icons` (20261119185801). NOT `BevIconRow`, which 2.13.0 uses for a
+ * `public.bev_icons` row -- the authored catalogue icon. This is the
+ * generated-icon read.
+ */
+export interface GeneratedBevIconRow {
+  bev_id: string;
+  generated_icon_path: string | null;
+  icon_status: string;
+  /** An object key in the `bev-icons` bucket -- the AUTHORED icon being borrowed. */
+  fallback_icon_path: string | null;
+  icon_label_band: BevIconLabelBand | null;
+}
+
+/**
+ * A row of `get_bev_icons`. The path only becomes a URL when the job actually
+ * completed: a half-written path on a 'processing' row would render as a broken
+ * image, and `finish_bev_icon_job` is the only writer of either column, so the
+ * two cannot legitimately disagree -- this just refuses to trust them if they
+ * ever do.
+ */
+export function mapBevIcon(client: SupabaseClient, row: GeneratedBevIconRow): BevIcon {
+  const status = row.icon_status as IconStatus;
+  return {
+    bevId: row.bev_id,
+    generatedIconUrl:
+      status === 'completed' ? publicUrl(client, 'bev-generated-icons', row.generated_icon_path) : null,
+    iconStatus: status,
+    // The authored bucket, not `bev-generated-icons`: what is borrowed is a
+    // published catalogue SVG belonging to some other Bev.
+    fallbackIconUrl: publicUrl(client, 'bev-icons', row.fallback_icon_path),
+    // Only meaningful with art to draw it on.
+    labelBand: status === 'completed' ? row.icon_label_band ?? null : null,
+  };
 }
 
 /** `list_bucket_bevs` (20261019000500). */

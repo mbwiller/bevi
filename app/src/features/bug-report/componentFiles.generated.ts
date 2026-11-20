@@ -134,6 +134,7 @@ export const COMPONENT_FILES: Readonly<Record<string, string>> = {
   PeopleSkeleton: 'app/src/features/people/PeopleList.tsx',
   PhotoStatusLine: 'app/src/features/create-bev/PhotoStep.tsx',
   PhotoStep: 'app/src/features/create-bev/PhotoStep.tsx',
+  PickErrorLine: 'app/src/features/create-bev/PhotoStep.tsx',
   PickRow: 'app/src/features/bev/ReportSheet.tsx',
   Pictures: 'app/src/features/bug-report/ReportNote.tsx',
   Pill: 'app/src/components/Pill.tsx',
