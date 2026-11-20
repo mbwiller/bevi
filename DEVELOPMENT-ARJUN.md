@@ -1106,7 +1106,7 @@ Integrator agent (`.claude/agents/integrator.md`, `chore/*` PR with Matt): same 
 ### 8.2 Observability
 
 - Free plan keeps logs 1 day. For anything you want to see later: Edge Functions log a single JSON line per invocation (`{fn, user_id, ms, ok, err}`) and the `recommend`/`process-photo` functions write outcome rows (`photo_jobs.error`, `recommendation_jobs.attempts`) so failures are in the DB, not the logs.
-- Sentry's Deno SDK in the two Edge Functions is cheap (free tier) and worth it from Phase 2; optional in Phase 1.
+- ~~Sentry's Deno SDK in the two Edge Functions~~ Not planned: on 2026-11-19 Sentry was dropped for the app in favour of building error reporting in house (`DEVELOPMENT-ARJUN-IOS.md`, IS-4), and the same holds here. Edge Function errors are read from the Supabase logs until that exists.
 - Weekly 5-minute check: `cron.job_run_details` failures, `recommendation_jobs` with `attempts >= 3`, `photo_jobs` errors, `bev_reports` open, dashboard → Reports for egress.
 - Dashboard Advisors (Security / Performance) after every schema change: they catch missing RLS and missing FK indexes.
 
@@ -1239,7 +1239,7 @@ Tags: model/effort for the Claude Code sub-agent per vision §10. "DoD" = defini
 | 2.3 | Streaks (`touch_streak`, hourly reset) and user rank cron with vectors | Vectors pass; timezone edge cases tested (23:59 PT) | Sonnet, medium |
 | 2.4 | `recommend` Edge Function: bundle step, snapshot builder, queue + cron, cache table, `getRecommendations`, `predictedScore` in `get_bev` | For seeded users, Recommended list populates within 1 minute of ranking; CPU < 2 s per invocation (log it) | Opus, high for snapshot/CPU-budget design; Sonnet, medium to implement |
 | 2.5 | Moderation: `report_bev`, `moderation_queue`, admin RPCs (`merge_bevs`, `hide_bev`) | Merge test with a user who ranked both | Sonnet, medium |
-| 2.6 | Sentry in Edge Functions; weekly ops checklist | Errors visible | Haiku, low |
+| 2.6 | ~~Sentry in Edge Functions~~ (dropped 2026-11-19, see IS-4); weekly ops checklist | Errors visible | Haiku, low |
 | 2.7 | Code review / bug hunt before Phase 2 ships | | Sonnet, high |
 
 ### Phase 3 — Smarter and bigger (2027 Q1)
