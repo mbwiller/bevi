@@ -16,6 +16,13 @@
 --      the OSM import only, and a third `source`, 'google', records a place
 --      found through the Places fallback (the `places` Edge Function).
 --
+--   3. SAY WHAT KIND OF PLACE IT IS. A pin on the map of where Bevs were had
+--      is a glyph: a cup for a cafe, a can for a shop, a glass for a bar.
+--      `kind` cannot say that (it is 'chain' or 'craft': a Starbucks and a
+--      Duane Reade are both chains, a wine shop and a cafe both craft), so
+--      `place_type` does, filled by the import from OSM's tags and by the
+--      Places fallback from Google's type.
+--
 -- EVERYTHING HERE IS ADDITIVE (supabase/CLAUDE.md, "Compatibility with
 -- clients you cannot redeploy"): two CHECKs get wider, two nullable columns
 -- and a handful of functions are new, and no existing function, column or return
@@ -52,11 +59,20 @@ alter table public.venues
   add column google_place_id     text check (char_length(google_place_id) between 1 and 300),
   add column google_refreshed_at timestamptz,
   add constraint venues_google_id_matches_source
-    check ((source = 'google') = (google_place_id is not null));
+    check ((source = 'google') = (google_place_id is not null)),
+  -- What kind of place it is, for the glyph on a pin and a picker row. 'other'
+  -- until something says: every row that exists today, until the next
+  -- `venues:sync` fills it from OSM's tags.
+  add column place_type text not null default 'other'
+    constraint venues_place_type_check
+    check (place_type in ('cafe', 'store', 'bar', 'liquor', 'restaurant', 'other'));
 
 -- Total, for the reason `venues_osm_id_uq` is: `on conflict (google_place_id)`
 -- cannot infer a partial index, and NULLs are distinct in a unique btree.
 create unique index venues_google_place_id_uq on public.venues (google_place_id);
+
+comment on column public.venues.place_type is
+  'BEV-22: cafe, store (convenience, grocery, pharmacy, deli), bar, liquor (a shop that sells alcohol), restaurant or other. Set by import_venues from OSM tags and by upsert_google_venue from Google''s type; never by a client.';
 
 comment on column public.venues.google_place_id is
   'BEV-22: set exactly when source = ''google''. The row was created by upsert_google_venue from a Places result a user picked.';
@@ -106,6 +122,7 @@ as $$
     'id', v.id,
     'name', v.name,
     'kind', v.kind,
+    'place_type', v.place_type,
     'lat', v.lat,
     'lng', v.lng,
     'address', v.address,
@@ -280,7 +297,8 @@ create or replace function public.upsert_google_venue(
   p_lat      double precision,
   p_lng      double precision,
   p_address  text default null,
-  p_website  text default null
+  p_website  text default null,
+  p_place_type text default null
 )
 returns jsonb
 language plpgsql
@@ -291,6 +309,10 @@ declare
   v_row   public.venues;
   v_name  text := btrim(coalesce(p_name, ''));
   v_chain text;
+  -- A type this table does not know is no type: the caller is a function of
+  -- ours, but Google's vocabulary is not.
+  v_type  text := case when p_place_type in ('cafe', 'store', 'bar', 'liquor', 'restaurant', 'other')
+                       then p_place_type end;
 begin
   if coalesce(p_place_id, '') = '' or char_length(p_place_id) > 300 then
     raise exception 'BEVI_VALIDATION' using errcode = '22023', detail = 'place_id';
@@ -312,6 +334,7 @@ begin
          lng = p_lng,
          address = coalesce(left(p_address, 200), v.address),
          website = coalesce(left(p_website, 300), v.website),
+         place_type = coalesce(v_type, v.place_type),
          google_refreshed_at = now(),
          updated_at = now()
    where v.google_place_id = p_place_id
@@ -326,6 +349,14 @@ begin
        and private.distance_m(p_lat, p_lng, v.lat, v.lng) <= 75
      order by private.distance_m(p_lat, p_lng, v.lat, v.lng) asc, v.id asc
      limit 1;
+
+    -- Google may say what kind of place it is where nothing has yet; it never
+    -- overrules a type the import or a person gave.
+    if v_row.id is not null and v_row.place_type = 'other' and v_type is not null and v_type <> 'other' then
+      update public.venues v set place_type = v_type, updated_at = now()
+       where v.id = v_row.id
+      returning v.* into v_row;
+    end if;
   end if;
 
   if v_row.id is null then
@@ -337,10 +368,10 @@ begin
      limit 1;
 
     insert into public.venues
-      (name, kind, lat, lng, address, website, source, google_place_id, google_refreshed_at, chain_id)
+      (name, kind, lat, lng, address, website, source, google_place_id, google_refreshed_at, chain_id, place_type)
     values
       (v_name, case when v_chain is null then 'craft' else 'chain' end, p_lat, p_lng,
-       left(p_address, 200), left(p_website, 300), 'google', p_place_id, now(), v_chain)
+       left(p_address, 200), left(p_website, 300), 'google', p_place_id, now(), v_chain, coalesce(v_type, 'other'))
     returning * into v_row;
   end if;
 
@@ -352,13 +383,13 @@ begin
 end;
 $$;
 
-alter function public.upsert_google_venue(text, text, double precision, double precision, text, text) owner to postgres;
-revoke execute on function public.upsert_google_venue(text, text, double precision, double precision, text, text)
+alter function public.upsert_google_venue(text, text, double precision, double precision, text, text, text) owner to postgres;
+revoke execute on function public.upsert_google_venue(text, text, double precision, double precision, text, text, text)
   from public, anon, authenticated;
-grant execute on function public.upsert_google_venue(text, text, double precision, double precision, text, text)
+grant execute on function public.upsert_google_venue(text, text, double precision, double precision, text, text, text)
   to service_role;
 
-comment on function public.upsert_google_venue(text, text, double precision, double precision, text, text) is
+comment on function public.upsert_google_venue(text, text, double precision, double precision, text, text, text) is
   'BEV-22: the places Edge Function''s one write. Returns the existing venue for a place id, or a same-named venue within 75 m, else inserts a source=''google'' row. service_role only.';
 
 -- ---------------------------------------------------------------------------
@@ -418,3 +449,91 @@ $$;
 alter function public.google_venues_due(interval, integer) owner to postgres;
 revoke execute on function public.google_venues_due(interval, integer) from public, anon, authenticated;
 grant execute on function public.google_venues_due(interval, integer) to service_role;
+
+-- ---------------------------------------------------------------------------
+-- 8. import_venues(p_rows jsonb) -> integer, now writing place_type
+-- ---------------------------------------------------------------------------
+-- Identical to 20261109000200's, plus `place_type`. Read that header and
+-- 20261102000300's for the rules. The addition follows the rule every
+-- nullable OSM column already has, "OSM may improve a value, never erase
+-- one": a row whose payload names a known type takes it; a payload with no
+-- type, an unknown one, or 'other' leaves the type the venue has. So a caller
+-- that predates the column behaves exactly as before, and a place a person
+-- typed by hand is not sent back to 'other' by a sync that knows less.
+create or replace function public.import_venues(p_rows jsonb)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_count integer;
+begin
+  if p_rows is null or jsonb_typeof(p_rows) <> 'array' then
+    raise exception 'BEVI_VALIDATION' using errcode = '22023', detail = 'p_rows must be a jsonb array';
+  end if;
+
+  if jsonb_array_length(p_rows) = 0 then
+    return 0;
+  end if;
+
+  if exists (
+    select 1 from jsonb_array_elements(p_rows) r
+     where coalesce(r ->> 'osm_id', '') = ''
+  ) then
+    raise exception 'BEVI_VALIDATION' using errcode = '22023', detail = 'every row needs an osm_id';
+  end if;
+
+  with incoming as (
+    select
+      r ->> 'osm_id'                        as osm_id,
+      r ->> 'name'                          as name,
+      r ->> 'kind'                          as kind,
+      (select c.id from public.chains c where c.id = r ->> 'chain_id') as chain_id,
+      (r ->> 'lat')::double precision       as lat,
+      (r ->> 'lng')::double precision       as lng,
+      r ->> 'address'                       as address,
+      r ->> 'neighborhood'                  as neighborhood,
+      r ->> 'borough'                       as borough,
+      r ->> 'hours_osm'                     as hours_osm,
+      coalesce((r ->> 'hours_known')::boolean, false) as hours_known,
+      r ->> 'website'                       as website,
+      case when r ->> 'place_type' in ('cafe', 'store', 'bar', 'liquor', 'restaurant')
+           then r ->> 'place_type' else 'other' end as place_type
+    from jsonb_array_elements(p_rows) r
+  ),
+  upserted as (
+    insert into public.venues as v
+      (osm_id, name, kind, chain_id, lat, lng, address, neighborhood, borough,
+       hours_osm, hours_known, website, source, place_type)
+    select i.osm_id, i.name,
+           case when i.chain_id is not null then 'chain' else coalesce(nullif(i.kind, ''), 'craft') end,
+           i.chain_id,
+           i.lat, i.lng, i.address, i.neighborhood, i.borough,
+           i.hours_osm, i.hours_known, i.website, 'osm', i.place_type
+      from incoming i
+    on conflict (osm_id) do update set
+      name         = excluded.name,
+      kind         = excluded.kind,
+      chain_id     = excluded.chain_id,
+      lat          = excluded.lat,
+      lng          = excluded.lng,
+      -- OSM may improve a value, never erase one.
+      address      = coalesce(excluded.address, v.address),
+      neighborhood = coalesce(excluded.neighborhood, v.neighborhood),
+      borough      = coalesce(excluded.borough, v.borough),
+      website      = coalesce(excluded.website, v.website),
+      hours_osm    = coalesce(excluded.hours_osm, v.hours_osm),
+      hours_known  = case
+                       when excluded.hours_osm is not null then excluded.hours_known
+                       else v.hours_known
+                     end,
+      place_type   = case when excluded.place_type = 'other' then v.place_type else excluded.place_type end,
+      updated_at   = now()
+    returning 1
+  )
+  select count(*)::integer into v_count from upserted;
+
+  return v_count;
+end;
+$$;

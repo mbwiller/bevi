@@ -28,7 +28,7 @@
 -- commits. `set constraints all immediate` fires what is pending, which is
 -- how section 4 sees what a real transaction's end would do.
 begin;
-select plan(89);
+select plan(97);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -142,8 +142,8 @@ select ok(
 );
 
 select ok(
-  not has_function_privilege('authenticated', 'public.upsert_google_venue(text, text, double precision, double precision, text, text)', 'EXECUTE')
-  and has_function_privilege('service_role', 'public.upsert_google_venue(text, text, double precision, double precision, text, text)', 'EXECUTE')
+  not has_function_privilege('authenticated', 'public.upsert_google_venue(text, text, double precision, double precision, text, text, text)', 'EXECUTE')
+  and has_function_privilege('service_role', 'public.upsert_google_venue(text, text, double precision, double precision, text, text, text)', 'EXECUTE')
   and not has_function_privilege('authenticated', 'private.put_bev_location(uuid, uuid, uuid)', 'EXECUTE')
   and not has_function_privilege('authenticated', 'private.venue_json(public.venues)', 'EXECUTE')
   and not has_table_privilege('authenticated', 'private.visible_bev_locations', 'SELECT'),
@@ -672,6 +672,42 @@ select throws_ok(
 select throws_ok(
   $$ select public.upsert_google_venue('', 'x', 53.34, -6.26, null, null) $$,
   '22023', 'BEVI_VALIDATION', 'an empty place id: validation'
+);
+
+-- place_type: what kind of place it is, for the glyph on a pin.
+select is(
+  (select public.upsert_google_venue('ChIJ-pgtap-bev22-5', 'Zq Wine Bar', 53.3800, -6.2600, null, null, 'bar') ->> 'place_type'),
+  'bar', 'a new place keeps the type it is given'
+);
+select is(
+  (select public.upsert_google_venue('ChIJ-pgtap-bev22-5', 'Zq Wine Bar', 53.3800, -6.2600, null, null) ->> 'place_type'),
+  'bar', 'and a later call that names none leaves it'
+);
+select is(
+  (select public.upsert_google_venue('ChIJ-pgtap-bev22-6', 'Zq Spaceport', 53.3900, -6.2600, null, null, 'spaceport') ->> 'place_type'),
+  'other', 'a type this table does not know is other'
+);
+select is(
+  (select public.upsert_google_venue('ChIJ-pgtap-bev22-2', 'ZQ Cafe Duane', 53.3401, -6.2601, null, null, 'cafe') ->> 'place_type'),
+  'cafe', 'a venue we already had with no type gains one'
+);
+
+-- The import: OSM may say what a place is, and never takes a type away.
+select is(
+  public.import_venues('[{"osm_id": "node/990000220001", "name": "Zq Wines", "lat": 40.75, "lng": -73.96, "place_type": "liquor"}]'::jsonb),
+  1, 'import_venues takes a row with a place type'
+);
+select is(
+  (select place_type from public.venues where osm_id = 'node/990000220001'),
+  'liquor', 'and stores it'
+);
+select is(
+  public.import_venues('[{"osm_id": "node/990000220001", "name": "Zq Wines", "lat": 40.75, "lng": -73.96}]'::jsonb),
+  1, 'a caller that sends no type still imports'
+);
+select is(
+  (select place_type from public.venues where osm_id = 'node/990000220001'),
+  'liquor', 'and leaves the type on file'
 );
 
 -- ---------------------------------------------------------------------------
