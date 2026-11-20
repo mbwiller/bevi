@@ -132,6 +132,8 @@ export const COMPONENT_FILES: Readonly<Record<string, string>> = {
   NutritionCard: 'app/src/features/create-bev/NutritionCard.tsx',
   NutritionDemo: 'app/src/features/create-bev/NutritionDemo.tsx',
   NutritionScan: 'app/src/features/create-bev/NutritionScan.tsx',
+  NutritionScanResult: 'app/src/features/create-bev/NutritionScan.tsx',
+  NutritionScanSheet: 'app/src/features/create-bev/NutritionScan.tsx',
   OfflineNotice: 'app/src/components/OfflineNotice.tsx',
   OfflineNoticeHost: 'app/src/components/OfflineNotice.tsx',
   OnboardingProfileScreen: 'app/src/app/onboarding/profile.tsx',
