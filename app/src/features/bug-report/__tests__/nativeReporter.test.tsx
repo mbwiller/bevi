@@ -71,6 +71,15 @@ async function settled() {
 
 const reportButton = () => screen.findByRole('button', { name: 'Report' });
 
+type LayoutHandler = (event: { nativeEvent: { layout: { x: number; y: number; width: number; height: number } } | null }) => void;
+type Host = { props: Record<string, unknown>; children: (Host | string)[] };
+
+/** Every `onLayout` under `node`, the outermost first. */
+function layoutHandlers(node: Host): LayoutHandler[] {
+  const own = typeof node.props.onLayout === 'function' ? [node.props.onLayout as LayoutHandler] : [];
+  return [...own, ...node.children.flatMap((child) => (typeof child === 'string' ? [] : layoutHandlers(child)))];
+}
+
 beforeEach(() => {
   jest.spyOn(Platform, 'Version', 'get').mockReturnValue('18.2');
   controls.setLatency(0);
@@ -164,6 +173,31 @@ describe('reporting from the app', () => {
     expect(useLayerHidden.getState().hidden).toBe(false);
     expect(useReport.getState().draft?.shots[0]?.shot?.file).toBeInstanceOf(Uint8Array);
     expect(screen.getByLabelText('Report note')).toBeTruthy();
+  });
+
+  // jest lays nothing out, so no `onLayout` ever runs here by itself. On the phone the note's first
+  // layout hands every handler its event in one batch, and React Native empties each event when its
+  // handler returns. A handler that leaves the reading to a state updater reads nothing, because
+  // React runs the updater at the next render: that threw, and the error screen replaced the app
+  // the moment the report button was pressed (BEV-35). The events are handed over here as the
+  // phone hands them.
+  it('survives its first layout on the phone: no handler reads a layout event after it has returned', async () => {
+    await start('/feed');
+    await fireEvent.press(await reportButton());
+    const handlers = layoutHandlers((await screen.findByTestId('report-note')) as unknown as Host);
+    // The panel itself, its header, and the two around the attach row (the one that threw).
+    expect(handlers.length).toBeGreaterThanOrEqual(4);
+
+    await act(async () => {
+      handlers.forEach((onLayout, i) => {
+        const event: Parameters<LayoutHandler>[0] = { nativeEvent: { layout: { x: 0, y: 44 * i, width: 390, height: 64 } } };
+        onLayout(event);
+        event.nativeEvent = null;
+      });
+    });
+
+    expect(screen.getByTestId('report-note')).toBeTruthy();
+    expect(screen.getByLabelText("What's going on?")).toBeTruthy();
   });
 
   it('offers the note, a screenshot and photos; no Select element and no Record steps', async () => {
