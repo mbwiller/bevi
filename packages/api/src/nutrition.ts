@@ -65,6 +65,18 @@ const CATEGORY_RULES: ReadonlyArray<readonly [CategoryId, readonly string[]]> = 
   ['juice', ['en:juices-and-nectars', 'en:fruit-juices', 'en:lemonades']],
 ];
 
+/**
+ * A tag that says the product is alcohol. The ancestor `en:alcoholic-beverages`
+ * is usually there but not always, so the guard below also reads the tag's own
+ * words: `en:hard-teas`, `en:alcoholic-energy-drinks`, `en:ciders`. It errs
+ * towards saying yes (an American apple cider is not alcohol): the cost of a
+ * wrong yes is a category the person picks by hand, the cost of a wrong no is
+ * alcohol filed as a soft drink.
+ */
+const ALCOHOL_TAG = /(^|[:-])(alcoholic|hard)-|(^|[:-])(ciders?|meads?|sakes?|alcopops?)$/;
+const NOT_ALCOHOL_TAG = /non-alcoholic|alcohol-free/;
+const saysAlcohol = (tag: unknown): boolean => typeof tag === 'string' && ALCOHOL_TAG.test(tag) && !NOT_ALCOHOL_TAG.test(tag);
+
 /** The Bevi category a product's OFF tags name, or null: an unmapped product is left for the person to file. */
 function categoryFor(tags: unknown, name: string | null): CategoryId | null {
   if (!Array.isArray(tags)) return null;
@@ -74,7 +86,7 @@ function categoryFor(tags: unknown, name: string | null): CategoryId | null {
   // Bevi category to map to. Falling through would file it as the soft drink
   // it is also tagged as, in front of people who cannot see alcohol.
   const alcoholic = match === 'beer' || match === 'wine' || match === 'spirits_cocktails';
-  if (has('en:alcoholic-beverages') && !alcoholic) return null;
+  if (tags.some(saysAlcohol) && !alcoholic) return null;
   if (match === 'soda' && has('en:diet-beverages')) return 'diet_soda';
   // Many sparkling waters are only tagged `en:waters`; the name says which.
   if (match === 'water' && name && /sparkling|seltzer|carbonated/i.test(name) && !/non[- ]?carbonated/i.test(name)) return 'sparkling_water';
@@ -88,9 +100,13 @@ function categoryFor(tags: unknown, name: string | null): CategoryId | null {
  * spelling ("LaCroix", "GT's") and is kept. Letters are Unicode letters: a
  * product database is not all ASCII ("ÉVIAN").
  */
+const INVISIBLE = /[\u061C\u200B\u200C\u200E\u200F\u202A-\u202E\u2060-\u2064\u2066-\u2069\uFEFF]/g;
+
 function text(value: unknown): string | null {
   if (typeof value !== 'string') return null;
-  const clean = value.replace(/[\p{Cc}\s]+/gu, ' ').trim();
+  // Format characters first (zero-width, direction overrides): invisible in a form field, and a
+  // direction override reorders the text around it. U+200D stays, an emoji sequence needs it.
+  const clean = value.replace(INVISIBLE, '').replace(/[\p{Cc}\s]+/gu, ' ').trim();
   if (!clean) return null;
   const shouted = clean === clean.toUpperCase() && clean !== clean.toLowerCase() && (clean.match(/\p{L}/gu)?.length ?? 0) > 3;
   // A word starts after anything that is not a letter, a digit or an apostrophe ("GT'S" is one word, "7UP" too).

@@ -96,6 +96,20 @@ describe('barcode product, for filling in a new Bev', () => {
       .toMatchObject({ name: 'Hard Iced Tea', categoryId: null });
     expect(product({ product_name: 'Dry Cider', categories_tags: tags('en:alcoholic-beverages', 'en:ciders') })).toMatchObject({ categoryId: null });
   });
+  it('reads alcohol from the tag itself when the alcoholic-beverages ancestor is missing', () => {
+    expect(product({ product_name: 'Hard Iced Tea', categories_tags: tags('en:hard-teas', 'en:iced-teas') })).toMatchObject({ categoryId: null });
+    expect(product({ product_name: 'Spiked Energy', categories_tags: tags('en:alcoholic-energy-drinks', 'en:energy-drinks') }))
+      .toMatchObject({ categoryId: null });
+    expect(product({ product_name: 'Dry Cider', categories_tags: tags('en:ciders', 'en:fruit-juices') })).toMatchObject({ categoryId: null });
+    // Without the ancestor an alcoholic category still maps, and a soft drink's own "non-alcoholic" tag is not alcohol.
+    expect(product({ product_name: 'Hard Seltzer', categories_tags: tags('en:hard-seltzers') })).toMatchObject({ categoryId: 'beer' });
+    expect(product({ product_name: 'Cola', categories_tags: tags('en:non-alcoholic-beverages', 'en:sodas') })).toMatchObject({ categoryId: 'soda' });
+    expect(product({ product_name: 'Iced Tea', categories_tags: tags('en:alcohol-free-drinks', 'en:iced-teas') })).toMatchObject({ categoryId: 'tea' });
+  });
+  it('drops zero-width and direction-override characters, and a name that is only those is no name', () => {
+    expect(product({ product_name: 'Co\u200Bla\u202E Zero', brands: '\u200B' })).toMatchObject({ name: 'Cola Zero', brand: null });
+    expect(product({ product_name: '\u200B\u2060', brands: 'Acme' })).toMatchObject({ name: null, brand: 'Acme' });
+  });
   it('puts a shouted name or brand in title case and keeps the provider\'s own mixed case', () => {
     expect(product({ product_name: 'ORIGINAL  ROCKSTAR ENERGY DRINK', brands: 'GATORADE' })).toMatchObject({ name: 'Original Rockstar Energy Drink', brand: 'Gatorade' });
     expect(product({ product_name: "GT'S SYNERGY (RAW)", brands: 'La Croix, LaCroix' })).toMatchObject({ name: "Gt's Synergy (Raw)", brand: 'La Croix' });
