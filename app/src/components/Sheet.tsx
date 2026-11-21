@@ -153,7 +153,8 @@ export function Sheet({ open = false, title, snap = 40, onClose, onClosed, child
   const canDismiss = !!onClose;
   const grab = Gesture.Pan()
     .withTestId('sheet-grab')
-    .enabled(canDismiss)
+    // Not while it is closing: a second drag would move the panel that is leaving and close it twice.
+    .enabled(canDismiss && open)
     .activeOffsetY([-DRAG_SLOP, DRAG_SLOP])
     .onStart((e) => {
       grabFrom.value = e.translationY - drag.value;

@@ -125,8 +125,9 @@ function SessionGate() {
             <Stack.Screen name="search" />
             <Stack.Screen name="leaderboard" />
             <Stack.Screen name="bev/[id]" />
-            {/* Not from anywhere here: on iOS 25 and older it could take a post's sideways photo swipe; the edge swipe stays. */}
-            <Stack.Screen name="user/[id]/index" options={{ fullScreenGestureEnabled: false }} />
+            {/* Left to the system here: before iOS 26 that is the edge swipe only, so it cannot take a post's sideways photo swipe;
+                from iOS 26 it is the system's own swipe from anywhere, which waits for a sideways scroller. */}
+            <Stack.Screen name="user/[id]/index" options={{ fullScreenGestureEnabled: undefined }} />
             <Stack.Screen name="user/[id]/followers" />
             <Stack.Screen name="user/[id]/following" />
             <Stack.Screen name="rank/[bevId]" options={{ presentation: 'fullScreenModal' }} />

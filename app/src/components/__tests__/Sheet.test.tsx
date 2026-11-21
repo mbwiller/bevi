@@ -272,6 +272,21 @@ describe('dragging the top down', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it('cannot be dragged again while it is closing', async () => {
+    const onClose = jest.fn();
+    const sheet = (open: boolean) => (
+      <Sheet open={open} title="Comments" onClose={onClose}>
+        <Text>Body</Text>
+      </Sheet>
+    );
+    const view = await render(sheet(true));
+    await view.rerender(sheet(false));
+    // Still mounted for its exit: the grab area is there, and no longer takes a drag.
+    expect(screen.getByText('Body')).toBeTruthy();
+    await act(() => drag(400));
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it('stays on screen when the parent keeps it open', async () => {
     await render(
       <Sheet open title="Comments" onClose={() => {}}>
