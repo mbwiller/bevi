@@ -9,6 +9,7 @@ import {
   type Page,
   type PageParams,
   type Profile,
+  type Venue,
 } from '@bevi/shared';
 import { mapError } from './errors';
 import { requireUserId } from './currentUser';
@@ -25,6 +26,7 @@ import {
   type ProfileViewRow,
 } from './mappers';
 import { clampLimit, decodeCursor, encodeCursor } from './paging';
+import { loadVenuesForPairs, venueKey } from './places';
 
 interface FeedCursor {
   beforeId: number;
@@ -81,10 +83,22 @@ function actorOf(actorById: Map<string, Profile>, rpc: string, row: { id: number
   return actor;
 }
 
+/** Where each row's actor had its Bev, in one round trip (BEV-22; places.ts). */
+function loadVenues(client: SupabaseClient, rows: { actor_id: string; bev_id: string | null }[]): Promise<Map<string, Venue>> {
+  return loadVenuesForPairs(
+    client,
+    rows.flatMap((r) => (r.bev_id ? [{ userId: r.actor_id, bevId: r.bev_id }] : [])),
+  );
+}
+
+function venueOf(venues: Map<string, Venue>, row: { actor_id: string; bev_id: string | null }): Venue | null {
+  return (row.bev_id ? venues.get(venueKey(row.actor_id, row.bev_id)) : undefined) ?? null;
+}
+
 /** get_feed and get_user_feed rows (same columns) → a page of FeedItems, actors joined from profiles_view. */
 async function toFeedPage(client: SupabaseClient, rpc: string, rows: FeedRpcRow[], limit: number): Promise<Page<FeedItem>> {
-  const actorById = await loadActors(client, rows);
-  const items = rows.map((row) => mapFeedItem(client, row, actorOf(actorById, rpc, row)));
+  const [actorById, venues] = await Promise.all([loadActors(client, rows), loadVenues(client, rows)]);
+  const items = rows.map((row) => mapFeedItem(client, row, actorOf(actorById, rpc, row), venueOf(venues, row)));
 
   const last = rows[rows.length - 1];
   const nextCursor = rows.length === limit && last ? encodeCursor({ beforeId: last.id } satisfies FeedCursor) : null;
@@ -138,8 +152,10 @@ export function createFeedApi(client: SupabaseClient): FeedApi {
       if (error) throw mapError(error);
 
       const rows = (data ?? []) as ExploreRpcRow[];
-      const actorById = await loadActors(client, rows);
-      const items = rows.map((row) => mapExplorePost(client, row, actorOf(actorById, 'get_explore', row)));
+      const [actorById, venues] = await Promise.all([loadActors(client, rows), loadVenues(client, rows)]);
+      const items = rows.map((row) =>
+        mapExplorePost(client, row, actorOf(actorById, 'get_explore', row), venueOf(venues, row)),
+      );
       const nextCursor =
         rows.length === limit ? encodeCursor({ before, offset: offset + rows.length } satisfies ExploreCursor) : null;
       return { items, nextCursor };

@@ -20,6 +20,7 @@ function pin(id: string, over: Partial<VenuePin> = {}, venue: Partial<VenuePin['
       id,
       name: `Venue ${id}`,
       kind: 'craft',
+      placeType: 'other',
       lat: 40.7762,
       lng: -73.9495,
       address: null,

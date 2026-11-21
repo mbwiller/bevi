@@ -634,9 +634,10 @@ describe('feed.getExplore (S-04 + A-04)', () => {
     expect(explore.items.some((i) => i.actor.id === middle.userId)).toBe(false); // never a followee
     expect(explore.items.some((i) => i.actor.id === hop3.userId)).toBe(false); // three hops is too far
 
-    // D-15: a read-only post, so no heart, no counts and no comments can be rendered.
+    // D-15: a read-only post, so no heart, no counts and no comments can be rendered. `venue`
+    // (3.5.0) is where the Bev was had: part of the post, not engagement with it.
     expect(Object.keys(explore.items[0]!).sort()).toEqual(
-      ['actor', 'bev', 'bucket', 'createdAt', 'id', 'inMyWantToTry', 'note', 'score', 'type'].sort(),
+      ['actor', 'bev', 'bucket', 'createdAt', 'id', 'inMyWantToTry', 'note', 'score', 'type', 'venue'].sort(),
     );
   });
 
@@ -892,5 +893,40 @@ describe('blocks and reports', () => {
     api.signInAs(ME.handle);
     await expect(api.comments.list(friendPost.id)).resolves.toMatchObject({ items: expect.not.arrayContaining([expect.objectContaining({ id: comment.id })]) });
     await expect(api.reports.report({ kind: 'comment', id: comment.id, reason: 'spam' })).rejects.toMatchObject({ code: 'not_found' });
+  });
+});
+
+// BEV-22: the two `venues` methods the conformance suite cannot exercise, because what an outside
+// directory holds is not something a contract can promise. Here it is the fixtures' two places.
+describe('venues.searchMore and addPlace (BEV-22)', () => {
+  const NEAR = { lat: 40.7736, lng: -73.9566 };
+
+  it('searchMore finds a place Bevi does not have, with its distance from the caller', async () => {
+    const api = make();
+    await api.signIn({ username: ME.handle, password: ME.password });
+
+    expect(await api.venues.search({ query: 'bread butter' })).toEqual([]);
+    const places = await api.venues.searchMore({ query: 'bread', near: NEAR });
+    expect(places).toEqual([expect.objectContaining({ placeId: 'ext-bread-butter', name: 'Bread & Butter Market' })]);
+    expect(places[0]!.distanceMeters).toBeGreaterThan(0);
+    expect((await api.venues.searchMore({ query: 'long hall' }))[0]).toMatchObject({ placeId: 'ext-long-hall', distanceMeters: null });
+
+    await expect(api.venues.searchMore({ query: '  ' })).rejects.toMatchObject({ code: 'validation' });
+  });
+
+  it('addPlace makes a venue of it once, which search then finds and a Bev can be tagged with', async () => {
+    const api = make();
+    await api.signIn({ username: ME.handle, password: ME.password });
+
+    const venue = await api.venues.addPlace('ext-long-hall');
+    expect(venue).toMatchObject({ name: 'The Long Hall', lat: 53.3419, neighborhood: null });
+    expect((await api.venues.addPlace('ext-long-hall')).id).toBe(venue.id);
+    expect((await api.venues.search({ query: 'long hall' })).map((m) => m.venue.id)).toEqual([venue.id]);
+
+    const mine = (await api.rankings.listMine()).items[0]!;
+    await api.rankings.setVenue(mine.bev.id, venue.id);
+    expect((await api.venues.bevdMap({ scope: 'mine' })).map((p) => p.venue.name)).toContain('The Long Hall');
+
+    await expect(api.venues.addPlace('ext-nowhere')).rejects.toMatchObject({ code: 'not_found' });
   });
 });
