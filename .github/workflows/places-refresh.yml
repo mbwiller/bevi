@@ -1,0 +1,57 @@
+name: places-refresh
+
+# BEV-22. A venue found through the Places fallback (`source = 'google'`) keeps
+# Google's place id for good, but its name and position are a copy that has to
+# be renewed. Once a week this calls the `places` Edge Function's `refresh`
+# action, which re-reads every google venue whose copy is older than 25 days
+# (`google_venues_due`) and writes it back through `upsert_google_venue`. Fifty
+# venues a run, so a backlog clears over a few weeks rather than in one bill.
+#
+# The function accepts `refresh` from the service role key only.
+#
+# Needs SUPABASE_URL (a variable or a secret) and SUPABASE_SERVICE_ROLE_KEY,
+# the pair venues-sync.yml writes with. Without them it logs a warning and
+# exits 0, the bargain supabase-keepalive.yml makes, so the schedule stays
+# green on a repository that has not set them.
+
+on:
+  schedule:
+    - cron: "17 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: places-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # A fork has none of these secrets.
+    if: github.repository == 'mbwiller/bevi'
+    steps:
+      - name: refresh google venues
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL || secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::warning::places-refresh skipped: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not set."
+            exit 0
+          fi
+          status=$(curl -sS -m 300 -o "${RUNNER_TEMP}/refresh.json" -w "%{http_code}" \
+            -X POST "${SUPABASE_URL%/}/functions/v1/places" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{"action":"refresh"}')
+          echo "places refresh answered ${status}: $(cat "${RUNNER_TEMP}/refresh.json")"
+          # 503 not_configured is a project with no Google key yet, which is a
+          # state, not a failure of this job.
+          if [ "$status" = "503" ]; then
+            echo "::warning::places-refresh: the function is not configured (no GOOGLE_PLACES_API_KEY)."
+            exit 0
+          fi
+          [ "$status" = "200" ]
