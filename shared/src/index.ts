@@ -1,9 +1,7 @@
 /**
  * Bumped on any breaking change to the types or `BeviApi` below.
  *
- * 3.5.0, queued behind 3.4.0 (the barcode product lookup, #295): where a
- * Bev was had (BEV-22). Numbered for that order; if this lands first, it
- * takes 3.4.0 and #295 moves up.
+ * 3.5.0, over 3.4.0's barcode product lookup: where a Bev was had (BEV-22).
  * Additive: `RankedBev.venue` and `FeedItem.venue` (so `ExplorePost` too),
  * `SubmitRankingInput.venueId`, `rankings.setVenue`, `rankings.getVenue` and
  * `rankings.locationSummary`, and six `venues` methods: `search`,
@@ -13,6 +11,16 @@
  * every `Venue`. NOT a reason to raise `min_contract_version`:
  * a client built against 3.3.0 never reads the new fields and calls none of
  * the new methods.
+ *
+ * 3.4.0, over 3.3.0's native bug reporter: a barcode scan fills in a new Bev.
+ * `NutritionApi` gains `lookupProduct`, returning a `BarcodeProduct`: the name,
+ * brand and Bevi category the provider lists for a barcode, with the
+ * `NutritionPreview` `lookupBarcode` already returned. Purely additive for
+ * callers, hence a minor: `lookupBarcode`, `NutritionPreview` and
+ * `CreateBevInput` keep their shapes, and nothing a client is served changed.
+ * The app's wizard copies the product into its form fields; what is created
+ * still goes through `bevs.create` unchanged, so there is no migration and no
+ * new RPC. NOT a reason to raise `min_contract_version`.
  *
  * 3.3.0, over 3.2.0's version gate: the native bug reporter (IM-10 part 2).
  * `BugReportInput.evidence[].file` widens from `Blob` to `UploadPayload`, the
@@ -85,6 +93,7 @@
 // 3.1.0: blocks and content reports (IS-7), additive.
 // 3.2.0: AppConfig gains minContractVersion and maintenanceMessage (IA-2), additive.
 // 3.3.0: BugReportInput.evidence[].file is an UploadPayload (the native bug reporter, IM-10), additive.
+// 3.4.0: nutrition.lookupProduct and BarcodeProduct (a barcode scan fills in a new Bev), additive.
 // 3.5.0: where a Bev was had: a place on a ranking and a post, the place picker, the map (BEV-22), additive.
 export const CONTRACT_VERSION = '3.5.0';
 
