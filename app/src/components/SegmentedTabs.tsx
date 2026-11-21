@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 
+import { selectionHaptic } from '@/lib/haptics';
 import { motion, size, spacing, type, useTheme } from '@/theme';
 
 import { Icon, type IconName } from './Icon';
@@ -60,6 +61,7 @@ export function SegmentedTabs({ tabs, value, onChange, variant = 'underline-text
   }));
 
   const pick = (id: string) => {
+    if (id !== active) selectionHaptic();
     setOwn(id);
     onChange?.(id);
   };

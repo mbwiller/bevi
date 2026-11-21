@@ -198,3 +198,103 @@ describe('onClosed', () => {
     jest.restoreAllMocks();
   });
 });
+
+describe('dragging the top down', () => {
+  const { fireGestureHandler, getByGestureTestId } = require('react-native-gesture-handler/jest-utils');
+  const { State } = require('react-native-gesture-handler');
+  // The pan takes hold once the finger has moved past the slop (6pt), as on a device.
+  const drag = (translationY: number, velocityY = 0) =>
+    fireGestureHandler(getByGestureTestId('sheet-grab'), [
+      { state: State.BEGAN, translationY: 0 },
+      { state: State.ACTIVE, translationY: 6, velocityY },
+      { state: State.ACTIVE, translationY, velocityY },
+      { state: State.END, translationY, velocityY },
+    ]);
+
+  it('closes the sheet past a quarter of its height', async () => {
+    const onClose = jest.fn();
+    await render(
+      <Sheet open title="Comments" onClose={onClose}>
+        <Text>Body</Text>
+      </Sheet>,
+    );
+    await act(() => drag(400));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes on a quick flick, however short', async () => {
+    const onClose = jest.fn();
+    await render(
+      <Sheet open title="Comments" onClose={onClose}>
+        <Text>Body</Text>
+      </Sheet>,
+    );
+    await act(() => drag(30, 1500));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('springs back after a short, slow drag', async () => {
+    const onClose = jest.fn();
+    await render(
+      <Sheet open title="Comments" onClose={onClose}>
+        <Text>Body</Text>
+      </Sheet>,
+    );
+    await act(() => drag(30));
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('stays open when a long drag ends in a flick back up', async () => {
+    const onClose = jest.fn();
+    await render(
+      <Sheet open title="Comments" onClose={onClose}>
+        <Text>Body</Text>
+      </Sheet>,
+    );
+    await act(() => drag(400, -1500));
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('never closes on a cancelled drag', async () => {
+    const onClose = jest.fn();
+    await render(
+      <Sheet open title="Comments" onClose={onClose}>
+        <Text>Body</Text>
+      </Sheet>,
+    );
+    await act(() =>
+      fireGestureHandler(getByGestureTestId('sheet-grab'), [
+        { state: State.BEGAN, translationY: 0 },
+        { state: State.ACTIVE, translationY: 400 },
+        { state: State.CANCELLED, translationY: 400 },
+      ]),
+    );
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('cannot be dragged again while it is closing', async () => {
+    const onClose = jest.fn();
+    const sheet = (open: boolean) => (
+      <Sheet open={open} title="Comments" onClose={onClose}>
+        <Text>Body</Text>
+      </Sheet>
+    );
+    const view = await render(sheet(true));
+    await view.rerender(sheet(false));
+    // Still mounted for its exit: the grab area is there, and no longer takes a drag.
+    expect(screen.getByText('Body')).toBeTruthy();
+    await act(() => drag(400));
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('stays on screen when the parent keeps it open', async () => {
+    await render(
+      <Sheet open title="Comments" onClose={() => {}}>
+        <Text>Body</Text>
+      </Sheet>,
+    );
+    await act(() => drag(400));
+    await settle();
+    expect(screen.getByText('Body')).toBeTruthy();
+  });
+});
