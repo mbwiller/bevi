@@ -21,6 +21,42 @@ stay null and render as “Not listed”; normalized sodium grams become mg. Dai
 Values and nutrients absent from the provider are not invented. The stored data
 is a user-confirmed database match, not a verified transcription of the package.
 
+## The scan fills in the details (contract 3.4.0)
+
+Scan barcode sits at the top of Details and one scan does both jobs: it fills in
+the name, the brand and the category from the same Open Food Facts product, and
+shows the nutrition label as before. `nutrition.lookupProduct` returns a
+`BarcodeProduct` (name, brand, category, nutrition) from one request;
+`lookupBarcode` is unchanged.
+
+- **A scan fills in what is empty and never replaces what was typed.** The name
+  carried over from search counts as empty, and so does anything the previous
+  scan put there: scanning the wrong can and then the right one replaces the
+  first one's details (and clears a field the second product does not list)
+  instead of mixing two products. The line under the button says which fields
+  were filled, so the person checks them.
+- **Nutrition is still attached only by “Use this label”.** The label waits in
+  the nutrition section, below the fields, and the line under the button says so
+  until it is confirmed or removed. The wizard keeps the waiting label, so it is
+  still there after the duplicate check and back. A product that lists no nutrition still fills
+  in the details; the sheet closes and the line says no nutrition is listed.
+- **Flavor and price are not filled in.** Open Food Facts has neither.
+- **The category comes from the product's own category tags**
+  (`CATEGORY_RULES` in `packages/api/src/nutrition.ts`), following the catalog's
+  conventions (hard seltzer under beer, kombucha under other, lemonade under
+  juice). No tag that maps means no category: the person picks it. Alcohol that
+  is not beer, wine or spirits maps to nothing, and the wizard never fills in a
+  category the viewer cannot see.
+- **Names are as the provider lists them**, apart from collapsing whitespace,
+  cutting to 80 characters and putting an all-capitals string in title case.
+  Open Food Facts is user-contributed: a name can be generic (“Energy Drink”,
+  with the brand in its own field) or in another language.
+- **Nothing new is stored.** The fields go through `bevs.create` like typed
+  ones, so there is no migration. The barcode still reaches `bevs.upc` only with
+  a confirmed label, and a Bev that already holds it is still found at create
+  (`conflict`), not at scan time: `lookup_bev_by_upc` (DEVELOPMENT-ARJUN §13) is
+  not built.
+
 ## Implementation and rollout
 
 Merge in order (three separate reviews):
