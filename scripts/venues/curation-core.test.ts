@@ -213,7 +213,7 @@ test("a wrong header is fatal: every column would be misread", () => {
 // ---------------------------------------------------------------------------
 
 const venue = (osm_id: string, chain_id: string | null): VenueRow => ({
-  osm_id, name: osm_id, kind: chain_id ? "chain" : "craft", chain_id, lat: 40.77, lng: -73.95,
+  osm_id, name: osm_id, kind: chain_id ? "chain" : "craft", place_type: "store", chain_id, lat: 40.77, lng: -73.95,
   address: null, neighborhood: null, borough: null, hours_osm: null, hours_known: false, website: null, source: "osm",
 });
 
