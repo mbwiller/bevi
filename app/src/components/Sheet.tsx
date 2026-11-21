@@ -1,6 +1,7 @@
 import { useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, type ViewStyle } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import Animated, { Easing, runOnJS, useAnimatedStyle, useReducedMotion, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { COLUMN_MAX_WIDTH, isWideViewport } from '@/lib/column';
@@ -31,11 +32,16 @@ export interface SheetProps {
   scroll?: boolean;
 }
 
-// From bundle.css: the handle bar, and the sheet's entrance (`bv-sheet-in`: 24pt rise, from 60% opacity).
+// From bundle.css: the handle bar and the sheet's easing.
 const HANDLE = { width: 36, height: 5 };
-const RISE = 24;
-const FROM_OPACITY = 0.6;
 const EASE = Easing.bezier(0.2, 0.8, 0.2, 1);
+/** A drag past this share of the sheet's height, or a flick down faster than FLICK (pt/s), closes it. */
+const DISMISS_SHARE = 0.25;
+const FLICK = 800;
+/** A drag only starts once the finger has moved this far down, so a tap on the title stays a tap. */
+const DRAG_SLOP = 6;
+/** Dragged up, the sheet follows the finger at this rate: it gives a little, it doesn't lift off. */
+const RUBBER = 0.15;
 // iOS reports the end of a dismissal through the Modal's `onDismiss`; if it never does (UIKit refused
 // or dropped it), `onClosed` still fires after this long so whatever waits on it is not stranded.
 const DISMISS_FALLBACK_MS = 1000;
@@ -52,8 +58,12 @@ export function sheetBottomPadding(bottomInset: number, keyboard: number): ViewS
 
 /**
  * Bottom sheet over a `scrim`, at 40% or 90% of the window. Built on React Native's Modal (a portal on
- * the web, with its own Escape handling and focus trap) and Reanimated. The handle is a visual cue
- * only: there are no drag gestures, so close with the scrim, Escape or a row inside.
+ * the web, with its own Escape handling and focus trap), Reanimated and Gesture Handler. It slides up
+ * from the bottom edge and back down. The top of the panel (the handle and the title) is a grab
+ * area: drag it down and the sheet follows the finger, the scrim fading with it; let go past a
+ * quarter of its height, or flick it, and it closes (`onClose`), otherwise it springs back. It also
+ * closes with the scrim, Escape or a row inside. Only the top grabs: on the web a gesture claims its
+ * view's touches (`touch-action: none`), which would stop the body from scrolling.
  *
  * On a wide viewport the scrim and the panel stay inside the app's centred column (`lib/column.ts`).
  * The Modal's portal is a child of `<body>`, outside `#root`, so `public/index.html` also narrows the
@@ -76,7 +86,13 @@ export function Sheet({ open = false, title, snap = 40, onClose, onClosed, child
   const height = Math.min((windowHeight * snap) / 100, windowHeight - safeTop - keyboard);
   const reduced = useReducedMotion();
   const progress = useSharedValue(open ? 1 : 0);
+  // How far the panel is dragged below its resting place (negative: pulled up, rubber-banded).
+  const drag = useSharedValue(0);
+  // The finger's travel when the drag took hold, so the panel moves from there without a jump.
+  const grabFrom = useSharedValue(0);
   const panel = useRef<View>(null);
+  const openRef = useRef(open);
+  openRef.current = open;
 
   // `onClosed`: armed while mounted, fired once when the close is complete. No `onDismiss` exists on
   // the web (react-native-web) or Android, so there it fires as soon as the Sheet unmounts its Modal.
@@ -106,6 +122,7 @@ export function Sheet({ open = false, title, snap = 40, onClose, onClosed, child
   useEffect(() => {
     if (open) {
       setMounted(true);
+      drag.value = 0;
       progress.value = reduced ? 1 : withTiming(1, { duration: motion.base, easing: EASE });
       return;
     }
@@ -114,16 +131,54 @@ export function Sheet({ open = false, title, snap = 40, onClose, onClosed, child
       setMounted(false);
       return;
     }
-    progress.value = withTiming(0, { duration: motion.fast });
-    const t = setTimeout(() => setMounted(false), motion.fast);
+    // Closing from a drag carries on from where the finger let go: the drag is folded into the
+    // progress (which also stops a spring back still running), so the panel never lurches up first.
+    if (drag.value !== 0) {
+      progress.value = Math.min(1, Math.max(0, 1 - drag.value / height));
+      drag.value = 0;
+    }
+    progress.value = withTiming(0, { duration: motion.base, easing: EASE });
+    const t = setTimeout(() => setMounted(false), motion.base);
     return () => clearTimeout(t);
-  }, [open, reduced, progress]);
+  }, [open, reduced, progress, drag]);
 
-  const scrimStyle = useAnimatedStyle(() => ({ opacity: progress.value }));
-  const sheetStyle = useAnimatedStyle(() => ({
-    opacity: FROM_OPACITY + (1 - FROM_OPACITY) * progress.value,
-    transform: [{ translateY: (1 - progress.value) * RISE }],
+  // Called when a drag is let go far enough. A parent that keeps the sheet open (it ignored
+  // onClose) gets it back in place rather than left hanging where the finger let go.
+  const dismiss = () => {
+    onClose?.();
+    setTimeout(() => {
+      if (openRef.current) drag.value = withSpring(0, motion.springy);
+    }, 0);
+  };
+  const canDismiss = !!onClose;
+  const grab = Gesture.Pan()
+    .withTestId('sheet-grab')
+    // Not while it is closing: a second drag would move the panel that is leaving and close it twice.
+    .enabled(canDismiss && open)
+    .activeOffsetY([-DRAG_SLOP, DRAG_SLOP])
+    .onStart((e) => {
+      grabFrom.value = e.translationY - drag.value;
+    })
+    .onUpdate((e) => {
+      const t = e.translationY - grabFrom.value;
+      drag.value = t > 0 ? t : t * RUBBER;
+    })
+    // A flick down closes; so does a drag past the share, unless it ends in a flick back up (the
+    // user changed their mind). A cancelled pan (`success` false) never closes.
+    .onEnd((e, success) => {
+      const far = drag.value > height * DISMISS_SHARE && e.velocityY > -FLICK;
+      if (success && (e.velocityY > FLICK || far)) runOnJS(dismiss)();
+      else drag.value = withSpring(0, motion.springy);
+    });
+
+  const scrimStyle = useAnimatedStyle(() => ({
+    opacity: progress.value * (1 - Math.min(1, Math.max(0, drag.value) / height)),
   }));
+  const sheetStyle = useAnimatedStyle(() => {
+    const y = (1 - progress.value) * height + drag.value;
+    // No transform at rest (see PressFeedback's NO_TRANSFORM).
+    return { opacity: reduced ? progress.value : 1, transform: y === 0 ? [] : [{ translateY: y }] };
+  });
 
   // Move focus into the sheet once it is on screen, so keyboard and screen-reader users start there.
   const focusPanel = () => (panel.current as unknown as { focus?: () => void } | null)?.focus?.();
@@ -139,65 +194,74 @@ export function Sheet({ open = false, title, snap = 40, onClose, onClosed, child
       // react-native-web renders the Modal's own wrapper as role="dialog"; name it too.
       {...({ 'aria-label': title } as object)}
     >
-      <View
-        style={[styles.wrap, wide && styles.column]}
-        testID="sheet-frame"
-        // iOS: the Modal is presented over the screen, not instead of it, so VoiceOver could still reach
-        // the page behind. On the frame (not the panel) so the scrim's Close stays reachable.
-        {...(Platform.OS === 'web' ? {} : { accessibilityViewIsModal: true })}
-      >
-        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: colors.scrim }, scrimStyle]}>
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={onClose}
-            accessibilityRole="button"
-            accessibilityLabel="Close"
-            focusable={false}
-            testID="sheet-scrim"
-          />
-        </Animated.View>
-        <Animated.View
-          ref={panel}
-          // The Modal wrapper above is the dialog (role, aria-modal, name); the panel only takes focus.
-          tabIndex={-1}
-          testID="sheet"
-          style={[
-            styles.sheet,
-            sheetBottomPadding(insets?.bottom ?? 0, keyboard),
-            { height, backgroundColor: colors.surface },
-            keyboard > 0 && { marginBottom: keyboard },
-            sheetStyle,
-          ]}
+      {/* iOS presents a Modal outside the app's root view, so gestures inside it need a root of their own. */}
+      <GestureHandlerRootView style={styles.root}>
+        <View
+          style={[styles.wrap, wide && styles.column]}
+          testID="sheet-frame"
+          // iOS: the Modal is presented over the screen, not instead of it, so VoiceOver could still reach
+          // the page behind. On the frame (not the panel) so the scrim's Close stays reachable.
+          {...(Platform.OS === 'web' ? {} : { accessibilityViewIsModal: true })}
         >
-          <View style={[styles.handle, { backgroundColor: colors.borderStrong }]} aria-hidden />
-          {title ? (
-            <Text style={[styles.title, { color: colors.text }]} accessibilityRole="header">
-              {title}
-            </Text>
-          ) : null}
-          {scroll ? (
-            // "handled": with the keyboard up a tap on a row or button works at once, rather than the first tap only dismissing it.
-            <ScrollView style={styles.body} keyboardShouldPersistTaps="handled">
-              {children}
-            </ScrollView>
-          ) : (
-            <View style={styles.body}>{children}</View>
-          )}
-        </Animated.View>
-      </View>
+          <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: colors.scrim }, scrimStyle]}>
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+              focusable={false}
+              testID="sheet-scrim"
+            />
+          </Animated.View>
+          <Animated.View
+            ref={panel}
+            // The Modal wrapper above is the dialog (role, aria-modal, name); the panel only takes focus.
+            tabIndex={-1}
+            testID="sheet"
+            style={[
+              styles.sheet,
+              sheetBottomPadding(insets?.bottom ?? 0, keyboard),
+              { height, backgroundColor: colors.surface },
+              keyboard > 0 && { marginBottom: keyboard },
+              sheetStyle,
+            ]}
+          >
+            <GestureDetector gesture={grab}>
+              <View testID="sheet-grab" style={styles.grab}>
+                <View style={[styles.handle, { backgroundColor: colors.borderStrong }]} aria-hidden />
+                {title ? (
+                  <Text style={[styles.title, { color: colors.text }]} accessibilityRole="header">
+                    {title}
+                  </Text>
+                ) : null}
+              </View>
+            </GestureDetector>
+            {scroll ? (
+              // "handled": with the keyboard up a tap on a row or button works at once, rather than the first tap only dismissing it.
+              <ScrollView style={styles.body} keyboardShouldPersistTaps="handled">
+                {children}
+              </ScrollView>
+            ) : (
+              <View style={styles.body}>{children}</View>
+            )}
+          </Animated.View>
+        </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
   wrap: { flex: 1, justifyContent: 'flex-end' },
   column: { width: '100%', maxWidth: COLUMN_MAX_WIDTH, alignSelf: 'center' },
   sheet: {
-    paddingTop: spacing.sm,
     paddingHorizontal: spacing.gutter,
     borderTopLeftRadius: radius.card,
     borderTopRightRadius: radius.card,
   },
+  // The panel's top padding lives in the grab area, so the whole strip above the body can be dragged.
+  grab: { paddingTop: spacing.sm, marginHorizontal: -spacing.gutter, paddingHorizontal: spacing.gutter },
   handle: { alignSelf: 'center', ...HANDLE, marginBottom: spacing.md, borderRadius: radius.pill },
   title: { ...type.heading, textAlign: 'center', marginBottom: spacing.sm },
   body: { flex: 1, marginHorizontal: -spacing.gutter },
