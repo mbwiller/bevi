@@ -2,7 +2,7 @@ import { storedScore } from '@bevi/ranking';
 import { ApiError, isApiError, type Bucket, type SubmitRankingInput, type SubmitRankingResult, type ValidationErrorDetail } from '@bevi/shared';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Keyboard, StyleSheet, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -324,7 +324,12 @@ export function RankFlow({ bevId, rerank = false, detailIfRanked = false, return
           notice={notice}
           venue={venue}
           venueSuggestion={venueSuggestion}
-          onPickVenue={() => setPicking(true)}
+          onPickVenue={() => {
+            // The note field takes focus on this step. Left up, its keyboard would sit over the
+            // picker's Recent and Nearby rows and keep typing into the note behind the sheet.
+            Keyboard.dismiss();
+            setPicking(true);
+          }}
           onAcceptVenue={venueSuggestion ? () => flow().setVenue(venueSuggestion.venue) : undefined}
         />
       </Screen>

@@ -1,5 +1,6 @@
 import { isApiError, type BevdPin, type BevdScope } from '@bevi/shared';
 import { useRouter } from 'expo-router';
+import { useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { useBevdAt, useMe } from '@/api/hooks';
@@ -37,9 +38,22 @@ export function BevdPlaceSheet({ venueId, scope, seed = null, onClose }: BevdPla
   const venue = at.data?.venue ?? (seed && seed.venue.id === venueId ? seed.venue : null);
   const detail = venue ? placeDetail(venue) : null;
   const gone = isApiError(at.error) && at.error.code === 'not_found';
+  // The Bev a row asked to open. It opens once the sheet has gone (`onClosed`), never in the tick
+  // that closes it: navigating under a Modal iOS is still dismissing can leave a blank screen.
+  const openNext = useRef<string | null>(null);
 
   return (
-    <Sheet open={!!venueId} title={venue?.name ?? ''} snap={40} onClose={onClose}>
+    <Sheet
+      open={!!venueId}
+      title={venue?.name ?? ''}
+      snap={40}
+      onClose={onClose}
+      onClosed={() => {
+        const id = openNext.current;
+        openNext.current = null;
+        if (id) router.push({ pathname: '/bev/[id]', params: { id } });
+      }}
+    >
       {detail ? (
         <Text style={[type.body, styles.detail, { color: colors.textSecondary }]} numberOfLines={2}>
           {detail}
@@ -68,8 +82,8 @@ export function BevdPlaceSheet({ venueId, scope, seed = null, onClose }: BevdPla
             bucket={mine ? ranking.bucket : undefined}
             meta={`${mine ? 'You' : shortName(user)} · ${formatShortDate(ranking.createdAt)}`}
             onPress={() => {
+              openNext.current = ranking.bev.id;
               onClose();
-              router.push({ pathname: '/bev/[id]', params: { id: ranking.bev.id } });
             }}
           />
         );

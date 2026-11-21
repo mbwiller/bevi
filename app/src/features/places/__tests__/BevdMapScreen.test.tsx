@@ -129,8 +129,11 @@ it('a place opens what was had there: whose, which Bev, and the Bev opens from i
   expect(within(sheet).getByText(/^You · /)).toBeTruthy();
   expect(within(sheet).queryByText(theirs.bev.name)).toBeNull();
 
+  // The Bev opens once the sheet has closed, not in the same tick: iOS is still dismissing the Modal then.
+  const opened = { pathname: '/bev/[id]', params: { id: mine[0].bev.id } };
   await fireEvent.press(within(sheet).getByText(mine[0].bev.name));
-  expect(mockPush).toHaveBeenCalledWith({ pathname: '/bev/[id]', params: { id: mine[0].bev.id } });
+  expect(mockPush).not.toHaveBeenCalledWith(opened);
+  await waitFor(() => expect(mockPush).toHaveBeenCalledWith(opened), { timeout: 3000 });
 });
 
 it('under Friends a place opens what the people you follow had there', async () => {
