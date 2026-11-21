@@ -34,6 +34,9 @@ export const ExplorePostItem = memo(function ExplorePostItem({ item, following, 
         bucket={item.bucket}
         note={item.note}
         time={item.createdAt}
+        // Text, not a link: the map draws the viewer and the people they follow, and an Explore
+        // author is neither, so there would be no pin to open.
+        place={item.venue?.name}
         following={following}
         onFollow={onFollow}
         onOpen={onOpenBev}

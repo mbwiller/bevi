@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAddWantToTry, useMe, useRemoveWantToTry, useToggleLike, type LikeVars } from '@/api/hooks';
 import { keys } from '@/api/keys';
 import { categoryById } from '@/lib/categories';
+import { openPlace } from '@/features/places/openPlace';
 
 import { FeedPostItem } from './FeedPostItem';
 import { useSafetyTarget } from '../safety/useSafetyTarget';
@@ -91,6 +92,7 @@ export function useFeedPostActions({ linkActors = true }: { linkActors?: boolean
           onComment={() => openComments(item.id)}
           onOpenBev={() => router.push({ pathname: '/bev/[id]', params: { id: item.bev.id } })}
           onMore={() => openSafety({ kind: 'post', id: item.id, author: item.actor })}
+          onOpenPlace={openPlace(router, item.venue, you ? 'mine' : 'friends')}
           onOpenActor={
             linkActors
               ? () => (you ? router.push('/profile') : router.push({ pathname: '/user/[id]', params: { id: item.actor.id } }))
