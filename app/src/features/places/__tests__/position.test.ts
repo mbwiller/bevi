@@ -1,12 +1,116 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import * as Location from 'expo-location';
+
 import { currentPosition, positionPermission, POSITION_TIMEOUT_MS } from '../position';
+import { POSITION_FALLBACK_AGE_MS, POSITION_MAX_AGE_MS, POSITION_QUICK_MS } from '../positionTypes';
 import { currentPosition as webPosition } from '../position.web';
 
-it('off the web there is no provider yet: no position, and no claim about permission', async () => {
-  await expect(currentPosition()).resolves.toEqual({ kind: 'unavailable' });
-  await expect(positionPermission()).resolves.toBe('unknown');
+jest.mock('expo-location', () => ({
+  Accuracy: { High: 4 },
+  getForegroundPermissionsAsync: jest.fn(),
+  requestForegroundPermissionsAsync: jest.fn(),
+  getLastKnownPositionAsync: jest.fn(),
+  getCurrentPositionAsync: jest.fn(),
+}));
+
+describe('the iPhone provider', () => {
+  const has = jest.mocked(Location.getForegroundPermissionsAsync);
+  const ask = jest.mocked(Location.requestForegroundPermissionsAsync);
+  const last = jest.mocked(Location.getLastKnownPositionAsync);
+  const now = jest.mocked(Location.getCurrentPositionAsync);
+  const status = (value: string) => ({ status: value }) as Location.LocationPermissionResponse;
+  const at = (latitude: number, longitude: number) => ({ coords: { latitude, longitude } }) as Location.LocationObject;
+
+  beforeEach(() => {
+    jest.resetAllMocks();
+    has.mockResolvedValue(status('granted'));
+    last.mockResolvedValue(null);
+  });
+
+  it('says what asking would do without asking: prompt until answered, denied after a refusal', async () => {
+    has.mockResolvedValueOnce(status('undetermined')).mockResolvedValueOnce(status('denied')).mockResolvedValueOnce(status('granted'));
+    await expect(positionPermission()).resolves.toBe('prompt');
+    await expect(positionPermission()).resolves.toBe('denied');
+    await expect(positionPermission()).resolves.toBe('granted');
+    expect(ask).not.toHaveBeenCalled();
+
+    has.mockRejectedValueOnce(new Error('no module'));
+    await expect(positionPermission()).resolves.toBe('unknown');
+  });
+
+  it('asks the first time, and a refusal is denied with no fix requested', async () => {
+    has.mockResolvedValue(status('undetermined'));
+    ask.mockResolvedValue(status('denied'));
+    await expect(currentPosition()).resolves.toEqual({ kind: 'denied' });
+    expect(ask).toHaveBeenCalledTimes(1);
+    expect(now).not.toHaveBeenCalled();
+  });
+
+  it('never asks again once refused', async () => {
+    has.mockResolvedValue(status('denied'));
+    await expect(currentPosition()).resolves.toEqual({ kind: 'denied' });
+    expect(ask).not.toHaveBeenCalled();
+  });
+
+  it('allowed: a fix is a position, and a recent one is reused without waking the GPS', async () => {
+    now.mockResolvedValue(at(40.7616, -73.9497));
+    await expect(currentPosition()).resolves.toEqual({ kind: 'ok', position: { lat: 40.7616, lng: -73.9497 } });
+
+    last.mockResolvedValue(at(40.77, -73.95));
+    now.mockClear();
+    await expect(currentPosition()).resolves.toEqual({ kind: 'ok', position: { lat: 40.77, lng: -73.95 } });
+    expect(now).not.toHaveBeenCalled();
+  });
+
+  it('no fix to be had, or Location Services off, is unavailable', async () => {
+    now.mockRejectedValue(new Error('Location services are disabled'));
+    await expect(currentPosition()).resolves.toEqual({ kind: 'unavailable' });
+  });
+
+  it('a fix that never comes is given up on at the timeout', async () => {
+    jest.useFakeTimers();
+    try {
+      now.mockReturnValue(new Promise(() => {}));
+      const pending = currentPosition();
+      await jest.advanceTimersByTimeAsync(POSITION_TIMEOUT_MS + 10);
+      await expect(pending).resolves.toEqual({ kind: 'unavailable' });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  describe('with a fix from a few minutes ago in hand', () => {
+    const older = at(40.7616, -73.9497);
+    beforeEach(() => {
+      // Nothing from the last minute; something from the last five.
+      last.mockImplementation(async (options) => ((options?.maxAge ?? 0) > POSITION_MAX_AGE_MS ? older : null));
+    });
+
+    it('a new fix that comes quickly wins', async () => {
+      now.mockResolvedValue(at(40.77, -73.95));
+      await expect(currentPosition()).resolves.toEqual({ kind: 'ok', position: { lat: 40.77, lng: -73.95 } });
+      expect(last).toHaveBeenLastCalledWith({ maxAge: POSITION_FALLBACK_AGE_MS });
+    });
+
+    it('a slow one is given a short wait, then the older fix stands in', async () => {
+      jest.useFakeTimers();
+      try {
+        now.mockReturnValue(new Promise(() => {}));
+        const pending = currentPosition();
+        await jest.advanceTimersByTimeAsync(POSITION_QUICK_MS + 10);
+        await expect(pending).resolves.toEqual({ kind: 'ok', position: { lat: 40.7616, lng: -73.9497 } });
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('as it does when no new fix can be had at all', async () => {
+      now.mockRejectedValue(new Error('kCLErrorLocationUnknown'));
+      await expect(currentPosition()).resolves.toEqual({ kind: 'ok', position: { lat: 40.7616, lng: -73.9497 } });
+    });
+  });
 });
 
 describe('the browser provider', () => {

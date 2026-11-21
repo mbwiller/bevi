@@ -15,6 +15,7 @@ export const MORE_PLACES = 'More places';
 export const NO_MATCH = 'No places match';
 export const PICKER_HINT = 'Search for the shop, cafe or bar where you got it.';
 export const LOCATION_OFF = "Location is off for Bevi, so places aren't sorted by distance.";
+export const OPEN_SETTINGS = 'Turn on location in Settings';
 export const MORE_FAILED = "Couldn't search more places right now.";
 export const MORE_LIMITED = 'Too many searches. Try again in a little while.';
 export const MORE_EMPTY = 'Nothing else found.';
