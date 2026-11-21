@@ -102,52 +102,57 @@ select ok(
 -- ---------------------------------------------------------------------------
 -- The same six figures are in shared/NYC_BOUNDS (half 2) and in the Overpass
 -- clip. If this section is edited, those move too.
+--
+-- BEV-22 (20261119193000): the box binds IMPORTED venues only, so every row
+-- below is `source = 'osm'` with an osm_id. A venue added by hand or found
+-- through the Places fallback may be anywhere on the Earth, which
+-- 43_bev_locations.test.sql asserts.
 
 select throws_ok(
-  $$ insert into public.venues (name, kind, lat, lng, source)
-     values ('pgTAP Too South', 'craft', 40.476, -73.95, 'manual') $$,
+  $$ insert into public.venues (name, kind, osm_id, lat, lng, source)
+     values ('pgTAP Too South', 'craft', 'node/990001', 40.476, -73.95, 'osm') $$,
   '23514',
   null,
   'a latitude below 40.477 is rejected (south of the city)'
 );
 
 select throws_ok(
-  $$ insert into public.venues (name, kind, lat, lng, source)
-     values ('pgTAP Too North', 'craft', 40.919, -73.95, 'manual') $$,
+  $$ insert into public.venues (name, kind, osm_id, lat, lng, source)
+     values ('pgTAP Too North', 'craft', 'node/990002', 40.919, -73.95, 'osm') $$,
   '23514',
   null,
   'and above 40.918 (north of it)'
 );
 
 select throws_ok(
-  $$ insert into public.venues (name, kind, lat, lng, source)
-     values ('pgTAP Too West', 'craft', 40.75, -74.261, 'manual') $$,
+  $$ insert into public.venues (name, kind, osm_id, lat, lng, source)
+     values ('pgTAP Too West', 'craft', 'node/990003', 40.75, -74.261, 'osm') $$,
   '23514',
   null,
   'a longitude below -74.260 is rejected (west, into New Jersey)'
 );
 
 select throws_ok(
-  $$ insert into public.venues (name, kind, lat, lng, source)
-     values ('pgTAP Too East', 'craft', 40.75, -73.699, 'manual') $$,
+  $$ insert into public.venues (name, kind, osm_id, lat, lng, source)
+     values ('pgTAP Too East', 'craft', 'node/990004', 40.75, -73.699, 'osm') $$,
   '23514',
   null,
   'and above -73.700 (east, into Nassau)'
 );
 
 select lives_ok(
-  $$ insert into public.venues (name, kind, lat, lng, source)
-     values ('pgTAP On The Corner', 'craft', 40.477, -74.260, 'manual') $$,
+  $$ insert into public.venues (name, kind, osm_id, lat, lng, source)
+     values ('pgTAP On The Corner', 'craft', 'node/990005', 40.477, -74.260, 'osm') $$,
   'the corner of the box itself is inside it: the CHECK is inclusive'
 );
 
 -- A venue cannot be moved out of the city either, not just inserted outside.
 select throws_ok(
   $$ update public.venues set lat = 41.0
-      where id = '00000000-0000-4000-8000-0000000a0801' $$,
+      where id = '00000000-0000-4000-8000-0000000a0803' $$,
   '23514',
   null,
-  'the bounds hold on UPDATE too, so a venue cannot be dragged out of the city'
+  'the bounds hold on UPDATE too, so an imported venue cannot be dragged out of the city'
 );
 
 -- ---------------------------------------------------------------------------
@@ -324,9 +329,10 @@ select is(
 
 select is(
   (select count(*)::int from public.venues v
-    where v.geo <@ box(point(-74.2600, 40.4770), point(-73.7000, 40.9180))),
-  (select count(*)::int from public.venues),
-  'the whole-city box contains every venue, which is what the CHECK guarantees'
+    where v.source = 'osm'
+      and v.geo <@ box(point(-74.2600, 40.4770), point(-73.7000, 40.9180))),
+  (select count(*)::int from public.venues v where v.source = 'osm'),
+  'the whole-city box contains every imported venue, which is what the CHECK guarantees'
 );
 
 -- ---------------------------------------------------------------------------

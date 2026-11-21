@@ -41,6 +41,7 @@ import {
   openAt,
   overpassEndpoints,
   overpassQuery,
+  placeTypeOf,
   parseElements,
   parseHours,
   pointInPolygon,
@@ -123,6 +124,7 @@ test("a named, located, in-bounds venue becomes a row", () => {
     osm_id: "node/1",
     name: "A Cafe",
     kind: "craft",
+    place_type: "cafe",
     chain_id: null,
     lat: 40.7736,
     lng: -73.9566,
@@ -134,6 +136,28 @@ test("a named, located, in-bounds venue becomes a row", () => {
     website: null,
     source: "osm",
   });
+});
+
+test("placeTypeOf: every imported tag has a type, and an unknown one is other", () => {
+  const of = (tags: Record<string, string>) => placeTypeOf(tags);
+  assert.equal(of({ amenity: "cafe" }), "cafe");
+  assert.equal(of({ amenity: "juice_bar" }), "cafe");
+  // Dunkin' is mapped as fast food, and is a cafe to someone getting a drink.
+  assert.equal(of({ amenity: "fast_food" }), "cafe");
+  assert.equal(of({ shop: "coffee" }), "cafe");
+  assert.equal(of({ shop: "tea" }), "cafe");
+  assert.equal(of({ amenity: "bar" }), "bar");
+  assert.equal(of({ amenity: "pub" }), "bar");
+  assert.equal(of({ shop: "alcohol" }), "liquor");
+  for (const shop of ["convenience", "supermarket", "beverages", "deli", "chemist"]) assert.equal(of({ shop }), "store", shop);
+  assert.equal(of({ amenity: "pharmacy" }), "store");
+  // The amenity is the more specific tag when a place carries both.
+  assert.equal(of({ amenity: "cafe", shop: "convenience" }), "cafe");
+  assert.equal(of({ amenity: "library" }), "other");
+  assert.equal(of({}), "other");
+  // Every tag the query asks for is covered, so a new one cannot be added without a type.
+  for (const amenity of [...AMENITIES, ...CHAIN_ONLY_AMENITIES]) assert.notEqual(of({ amenity }), "other", amenity);
+  for (const shop of [...SHOPS, ...CHAIN_ONLY_SHOPS]) assert.notEqual(of({ shop }), "other", shop);
 });
 
 test("a nameless venue is dropped and counted: a pin needs a name", () => {
@@ -381,13 +405,13 @@ test("the CSV quotes commas, quotes and newlines", () => {
   );
   const csv = toCsv(rows);
   const [header, row] = csv.split("\n");
-  assert.equal(header, "osm_id,name,kind,chain_id,lat,lng,address,neighborhood,borough,hours_osm,hours_known,website");
+  assert.equal(header, "osm_id,name,kind,chain_id,lat,lng,address,neighborhood,borough,hours_osm,hours_known,website,place_type");
   assert.ok(row?.includes('"Joe, ""The"" Roaster"'), row);
   assert.ok(csv.endsWith("\n"), "ends with a newline");
 });
 
 test("an empty import is an empty CSV with a header, not an error", () => {
-  assert.equal(toCsv([]), "osm_id,name,kind,chain_id,lat,lng,address,neighborhood,borough,hours_osm,hours_known,website\n");
+  assert.equal(toCsv([]), "osm_id,name,kind,chain_id,lat,lng,address,neighborhood,borough,hours_osm,hours_known,website,place_type\n");
 });
 
 test("the report accounts for every element, kept or dropped", () => {
