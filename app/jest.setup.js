@@ -22,6 +22,10 @@ jest.mock('react-native-reanimated/mock', () => ({
 }));
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
 
+// Gesture Handler's native module (Sheet's drag, SwipeTabs): its own setup mocks it, so a
+// GestureDetector renders its child and gestures never fire on their own.
+require('react-native-gesture-handler/jestSetup');
+
 // The app talks to Supabase through `@bevi/api` (src/api/client.ts). Suites run against the
 // in-memory FakeApi instead: every importer of the client gets src/testing/fakeApi/client.ts.
 jest.mock('./src/api/client', () => require('./src/testing/fakeApi/client'));

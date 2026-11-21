@@ -8,6 +8,7 @@ import { useMe } from '@/api/hooks';
 import { Header } from '@/components/Header';
 import { ListScopeDropdown } from '@/components/ListScopeDropdown';
 import { SegmentedTabs } from '@/components/SegmentedTabs';
+import { SwipeTabs } from '@/components/SwipeTabs';
 import { BevdTab } from '@/features/lists/BevdTab';
 import { CategorySheet } from '@/features/lists/ListSheets';
 import { RecommendedTab } from '@/features/lists/RecommendedTab';
@@ -17,6 +18,8 @@ import { visibleCategories } from '@/lib/categories';
 import { spacing, useTheme } from '@/theme';
 
 export type ListsTab = 'bevd' | 'want' | 'recommended' | 'top';
+
+const TAB_IDS = ['bevd', 'want', 'recommended', 'top'] as const satisfies readonly ListsTab[];
 
 const TABS = [
   { id: 'bevd', label: "Bev'd" },
@@ -31,7 +34,8 @@ function parseTab(v: string | string[] | undefined): ListsTab {
 
 /**
  * Lists (§6.5–§6.7, §6.12): Bev'd, Want to Try, For you (Recommended for you) and Top (the Bevs
- * leaderboard), all scoped by one category dropdown. `?tab=` picks the tab.
+ * leaderboard), all scoped by one category dropdown. `?tab=` picks the tab; a swipe across the body
+ * moves to the next or previous one.
  */
 export default function ListsScreen() {
   const { colors } = useTheme();
@@ -58,12 +62,12 @@ export default function ListsScreen() {
         <ListScopeDropdown label={scopeLabel} onPress={() => setScopeOpen(true)} />
       </View>
       <SegmentedTabs tabs={[...TABS]} value={tab} onChange={(id) => router.setParams({ tab: id })} />
-      <View style={styles.body}>
+      <SwipeTabs tabs={TAB_IDS} value={tab} onChange={(id) => router.setParams({ tab: id })}>
         {tab === 'bevd' ? <BevdTab {...tabProps} /> : null}
         {tab === 'want' ? <WantToTryTab {...tabProps} /> : null}
         {tab === 'recommended' ? <RecommendedTab {...tabProps} /> : null}
         {tab === 'top' && !waitingForAge ? <TopTab categoryId={categoryId} /> : null}
-      </View>
+      </SwipeTabs>
       <CategorySheet
         open={scopeOpen}
         categories={categories}
@@ -78,5 +82,4 @@ export default function ListsScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   scope: { paddingHorizontal: spacing.gutter },
-  body: { flex: 1 },
 });
