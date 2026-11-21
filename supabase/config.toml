@@ -318,6 +318,16 @@ verify_jwt = false
 enabled = true
 verify_jwt = true
 
+# places (BEV-22): the place picker's fallback. Asks Google's Places API for a
+# place our own venues table does not have, and turns the one a user picks
+# into a venue. verify_jwt is the outer gate only: the function calls
+# `assert_places_rate()` as the caller, which refuses a token with no user and
+# is the rate limit. Needs the GOOGLE_PLACES_API_KEY secret; without it every
+# call answers 503 and the app's own venue search carries on.
+[functions.places]
+enabled = true
+verify_jwt = true
+
 [analytics]
 enabled = true
 port = 54327
