@@ -745,3 +745,30 @@ export interface NutritionPreview {
   sodiumMg: number | null;
   sourceUrl: string;
 }
+
+/**
+ * What a barcode lookup knows about the product, for filling in a new Bev's
+ * details (contract 3.4.0). Every field but `barcode` is null when the provider
+ * does not list it: a null is never replaced with a guess, and the person
+ * checks and can change whatever was filled in before creating the Bev. Flavor
+ * and price are not here because the provider has neither.
+ */
+export interface BarcodeProduct {
+  barcode: string;
+  /**
+   * The product's name as the provider lists it, tidied to fit a Bev: whitespace
+   * collapsed, cut to a Bev name's length, all capitals put in title case.
+   */
+  name: string | null;
+  /** The first brand the provider lists, tidied the same way. */
+  brand: string | null;
+  /**
+   * The Bevi category the provider's own categories map to. It can be an
+   * alcoholic one, whoever asks: the lookup is callable signed out and does not
+   * know the viewer, so a caller must not offer a category the viewer cannot
+   * see (`bevs.create` refuses it with 'age_restricted' either way).
+   */
+  categoryId: CategoryId | null;
+  /** null when the product has no usable nutrition data. */
+  nutrition: NutritionPreview | null;
+}
