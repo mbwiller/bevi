@@ -228,6 +228,7 @@ export const COMPONENT_FILES: Readonly<Record<string, string>> = {
   StateMessage: 'app/src/components/EmptyState.tsx',
   StatusBarClearance: 'app/src/components/StatusBarClearance.tsx',
   Steps: 'app/src/features/bug-report/ReportNote.tsx',
+  SwipeTabs: 'app/src/components/SwipeTabs.tsx',
   TabBar: 'app/src/components/TabBar.tsx',
   TabIcon: 'app/src/components/TabBar.tsx',
   TabScene: 'app/src/components/MoveScene.tsx',
