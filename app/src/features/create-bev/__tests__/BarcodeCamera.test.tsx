@@ -40,17 +40,16 @@ async function scanTwice(code: Scan) {
 
 describe('normalizeBarcode', () => {
   it('drops the leading 0 iOS adds when it reports a UPC-A as EAN-13', () => {
-    expect(normalizeBarcode('ean13', '0012345678905')).toBe('012345678905');
-    expect(normalizeBarcode('upc_a', '0012345678905')).toBe('012345678905');
+    expect(normalizeBarcode('0012345678905')).toBe('012345678905');
   });
   it('keeps a real EAN-13, an EAN-8 and a 12-digit UPC-A as they are', () => {
-    expect(normalizeBarcode('ean13', '5000112637922')).toBe('5000112637922');
-    expect(normalizeBarcode('ean8', '96385074')).toBe('96385074');
-    expect(normalizeBarcode('upc_a', '012345678905')).toBe('012345678905');
+    expect(normalizeBarcode('5000112637922')).toBe('5000112637922');
+    expect(normalizeBarcode('96385074')).toBe('96385074');
+    expect(normalizeBarcode('012345678905')).toBe('012345678905');
   });
   it('ignores anything that is not a retail barcode', () => {
-    expect(normalizeBarcode('qr', 'https://example.com')).toBeNull();
-    expect(normalizeBarcode('ean13', '12345')).toBeNull();
+    expect(normalizeBarcode('https://example.com')).toBeNull();
+    expect(normalizeBarcode('12345')).toBeNull();
   });
 });
 
@@ -68,6 +67,13 @@ describe('BarcodeCamera (native)', () => {
     expect(onBarcode).toHaveBeenCalledWith('012345678905');
     expect(cameraProps.onBarcodeScanned).toBeUndefined();
     expect(cameraProps.active).toBe(false);
+  });
+
+  it("trims iOS's leading 0 whatever the scanner names the symbology", async () => {
+    const onBarcode = jest.fn();
+    await render(<BarcodeCamera onBarcode={onBarcode} onError={jest.fn()} />);
+    await scanTwice({ type: 'org.gs1.EAN-13', data: '0012345678905' });
+    expect(onBarcode).toHaveBeenCalledWith('012345678905');
   });
 
   it('keeps looking past a code that is not a retail barcode', async () => {

@@ -57,7 +57,7 @@ export function BarcodeCamera({ onBarcode, onError }: { onBarcode: (code: string
   }
   const scanned = useCallback((result: BarcodeScanningResult) => {
     if (done.current || !mounted.current) return;
-    const code = normalizeBarcode(result.type, result.data);
+    const code = normalizeBarcode(result.data);
     if (!code) return;
     done.current = true;
     setScanning(false);

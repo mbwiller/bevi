@@ -74,8 +74,8 @@ describe('UpdateRequired', () => {
     expect(screen.getByText('Version 1.2.3 build 45')).toBeTruthy();
   });
 
-  it('the shipped constants are null until the founders supply them', () => {
-    expect(APP_STORE_ID).toBeNull();
+  it('ships the App Store id; the support address stays null until the founders supply it', () => {
+    expect(APP_STORE_ID).toBe('6836079118');
     expect(SUPPORT_EMAIL).toBeNull();
   });
 
@@ -89,9 +89,11 @@ describe('UpdateRequired', () => {
     expect(screen.getByText('Version 1.2.3 build 45')).toBeTruthy();
   });
 
-  it('the shipped defaults (both null) behave the same', async () => {
+  it('the shipped defaults: Update opens the App Store page, no contact line', async () => {
     await render(<UpdateRequired />);
-    expect(screen.getByText(UPDATE_BODY_NO_STORE)).toBeTruthy();
+    expect(screen.getByText(UPDATE_BODY_WITH_STORE)).toBeTruthy();
+    expect(screen.getByLabelText('Update Bevi in the App Store')).toBeTruthy();
+    expect(screen.queryByText(/Contact us/)).toBeNull();
     expect(screen.queryByText(/Version/)).toBeNull();
   });
 

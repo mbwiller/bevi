@@ -13,14 +13,15 @@ export function isRetailBarcode(code: string): boolean {
 
 /**
  * The string a scan hands to `onBarcode`. ZXing reports a UPC-A as its 12 digits. AVFoundation
- * (iOS) reports many UPC-A codes as EAN-13 with a leading 0, so a 13-digit EAN-13 or UPC-A that
- * starts with 0 is that code and drops the 0 to match the web. Anything else, or a value that is
- * not a retail barcode, is `null`: the scanner ignores it and keeps looking.
+ * (iOS) reports many UPC-A codes as EAN-13 with a leading 0, so any 13-digit code that starts with 0
+ * is that UPC-A and drops the 0 to match the web. The scanner's type name is not consulted: iOS can
+ * name the same symbology `ean13` or `org.gs1.EAN-13`, and only an EAN-13 has 13 digits. Anything
+ * else, or a value that is not a retail barcode, is `null`: the scanner ignores it and keeps looking.
  */
-export function normalizeBarcode(type: string, data: string): string | null {
+export function normalizeBarcode(data: string): string | null {
   const code = data.trim();
   if (!isRetailBarcode(code)) return null;
-  if ((type === 'ean13' || type === 'upc_a') && code.length === 13 && code.startsWith('0')) return code.slice(1);
+  if (code.length === 13 && code.startsWith('0')) return code.slice(1);
   return code;
 }
 
