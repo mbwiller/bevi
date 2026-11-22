@@ -1170,7 +1170,7 @@ To publish:
 2. `npm ci` from the repo root, so `node_modules` is what the lockfile says and
    not whatever the last session left.
 3. `eas build:view <build id>` shows the build's runtime version. Run
-   `eas update --channel <channel> --message "..."` (`preview` or `production`,
+   `eas update --channel <channel> --environment <channel> --message "..."` (`preview` or `production`,
    as in `eas.json`) from `app/`; it prints the runtime version it published
    under. **The two must be equal.** If they are not, stop: something that
    reaches the native project differs from the build, and publishing anyway

@@ -17,8 +17,9 @@ do on it except where marked **use a test account**.
 ## 0. Before you start
 
 - [ ] Settings shows the version and build you expect.
-- [ ] iOS Settings > Bevi lists Camera and nothing unexpected (no Location, no
-      Microphone, no Tracking).
+- [ ] iOS Settings > Bevi lists Camera and Location (While Using, once asked)
+      and nothing unexpected (no Microphone, no Tracking, no Always for
+      Location).
 
 ## 1. Launch and session (IM-2, IM-3)
 
@@ -129,6 +130,11 @@ do on it except where marked **use a test account**.
       actions on a comment by B. The menu appears over the comments sheet,
       Report comment and Block account both work, and closing it returns to
       the comments. Repeat from the Activity list on B's profile.
+- [ ] Inside the comments of B's own post, block B from one of B's comments:
+      the menu, the confirmation and the comments sheet all close, and you
+      land back on a feed without B. Nothing is left on screen.
+- [ ] From the Activity list on B's profile, block B: the nested sheets close
+      in order and you are taken back, not left on a blank profile.
 - [ ] As A, block B from B's profile: the confirmation says what blocking
       does; afterwards you are taken back, and B is gone from A's feed,
       search, followers and following.
@@ -155,7 +161,7 @@ Supabase dashboard.
 
 ## 9. Over-the-air updates
 
-- [ ] After `eas update --channel production` with a visible change (a word in
+- [ ] After `eas update --channel production --environment production` with a visible change (a word in
       Settings): open the app, close it, open it again. The change is there on
       the second launch, and Settings still shows the same build number.
 - [ ] A build with a different native project does not receive that update.
@@ -220,4 +226,22 @@ Needs a build that links `react-native-view-shot`.
       For you list all show (dates under Hermes).
 - [ ] Three or four catalog Bev icons with a lot of label text look the same
       as on the web.
-- [ ] The Map tab shows the "In progress" page.
+
+## 14. Location (BEV-22)
+
+**Fresh install**, so the permission has never been asked.
+
+- [ ] Open the Map tab and New Bev: no location prompt yet.
+- [ ] Add location (on a Bev'd row, or the last step of Add Bev): the iOS
+      prompt appears once with Bevi's sentence, and offers no Always.
+- [ ] Allow: Nearby lists the closest places first, with distances.
+- [ ] Type a name: matches come back by name, nearest first among equals.
+- [ ] Search more places (needs the `places` function and its key deployed):
+      a place Bevi lacks appears, and picking it saves it on the post.
+- [ ] Tag a second Bev: the place you just used is first under Recent.
+- [ ] Change a Bev's place, then remove it, from its Bev'd row.
+- [ ] A tagged post shows the place in Feed and on your profile's Activity.
+- [ ] Map tab: a pin per place, You and Friends switch the pins, a tapped pin
+      lists the Bevs had there. Switch light and dark: the map keeps its zoom.
+- [ ] iOS Settings > Bevi > Location > Never, reopen Add location: no prompt,
+      a line with Open Settings, and search by name still works.
