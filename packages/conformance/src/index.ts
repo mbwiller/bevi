@@ -13,6 +13,7 @@ import {
   BUCKET_ORDER,
   NYC_BOUNDS,
   PLACE_TYPES,
+  REPORT_NOTE_MAX,
   isApiError,
   type ApiErrorCode,
   type BeviApi,
@@ -1599,6 +1600,77 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       await expectCode(api.rankings.setVenue('00000000-0000-4000-8000-00000000dead', null), 'unauthorized');
       await expectCode(api.rankings.locationSummary(), 'unauthorized');
       await expectCode(api.rankings.getVenue('00000000-0000-4000-8000-00000000dead'), 'unauthorized');
+    });
+  });
+
+  describe('blocks and reports', () => {
+    const NO_SUCH_USER = '00000000-0000-4000-8000-00000000b10c';
+
+    it('block is idempotent, lists newest first, and unblock is idempotent', async () => {
+      const a = await newUser();
+      const b = await newUser();
+      await newUser();
+      await api.blocks.block(a.userId);
+      await api.blocks.block(b.userId);
+      await api.blocks.block(b.userId);
+      expect((await api.blocks.list()).items.map((u) => u.id)).toEqual([b.userId, a.userId]);
+      await api.blocks.unblock(b.userId);
+      await api.blocks.unblock(b.userId);
+      await api.blocks.unblock(NO_SUCH_USER);
+      expect((await api.blocks.list()).items.map((u) => u.id)).toEqual([a.userId]);
+    });
+
+    it('block: yourself is validation, an unknown user is not_found', async () => {
+      const me = await newUser();
+      await expectCode(api.blocks.block(me.userId), 'validation');
+      await expectCode(api.blocks.block(NO_SUCH_USER), 'not_found');
+    });
+
+    it('a block hides each from the other, drops follows both ways, and unblocking does not restore them', async () => {
+      const a = await newUser();
+      const b = await newUser();
+      await api.follows.follow(a.userId);
+      await signInAs(a);
+      await api.follows.follow(b.userId);
+      await api.blocks.block(b.userId);
+      await expectCode(api.profile.getUser(b.userId), 'not_found');
+      await expectCode(api.follows.follow(b.userId), 'not_found');
+      await signInAs(b);
+      await expectCode(api.profile.getUser(a.userId), 'not_found');
+      expect((await api.blocks.list()).items).toEqual([]);
+      await signInAs(a);
+      await api.blocks.unblock(b.userId);
+      expect((await api.profile.getUser(b.userId)).isFollowing).toBe(false);
+      expect((await api.follows.listFollowers(a.userId)).items).toEqual([]);
+    });
+
+    it('report: a profile is reportable once; a second report returns the same id', async () => {
+      const a = await newUser();
+      await newUser();
+      const first = await api.reports.report({ kind: 'profile', id: a.userId, reason: 'spam' });
+      const again = await api.reports.report({ kind: 'profile', id: a.userId, reason: 'other', note: 'changed my mind' });
+      expect(again.reportId).toBe(first.reportId);
+    });
+
+    it('report: your own profile, an unknown reason and a long note are validation; an unknown id is not_found', async () => {
+      const a = await newUser();
+      const me = await newUser();
+      await expectCode(api.reports.report({ kind: 'profile', id: me.userId, reason: 'spam' }), 'validation');
+      const reason = await expectCode(api.reports.report({ kind: 'profile', id: a.userId, reason: 'nope' as never }), 'validation');
+      expect(reason.detail).toMatchObject({ field: 'reason' });
+      const note = await expectCode(
+        api.reports.report({ kind: 'profile', id: a.userId, reason: 'other', note: 'x'.repeat(REPORT_NOTE_MAX + 1) }),
+        'validation',
+      );
+      expect(note.detail).toMatchObject({ field: 'note' });
+      await expectCode(api.reports.report({ kind: 'profile', id: NO_SUCH_USER, reason: 'spam' }), 'not_found');
+    });
+
+    it('report: someone you blocked stays reportable, so Block then Report works', async () => {
+      const a = await newUser();
+      await newUser();
+      await api.blocks.block(a.userId);
+      await expect(api.reports.report({ kind: 'profile', id: a.userId, reason: 'harassment' })).resolves.toHaveProperty('reportId');
     });
   });
 

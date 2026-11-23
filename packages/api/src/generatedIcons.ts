@@ -5,7 +5,7 @@
 // (`get_feed`, `get_explore`, `search_bevs`, `get_bev_leaderboard`, ...), and
 // none of them returns `bevs.generated_icon_path`: appending a column to all
 // of them means re-creating eleven security-definer functions, and they freeze
-// the moment they merge. `get_bev_icons` (20261114000200) already answers for
+// the moment they merge. `get_bev_icons` (20261119185801) already answers for
 // up to 500 ids in one call, which is what it was built for -- the contract
 // says so in `BevIcon` -- so one batch call per API call fills the field
 // instead, and the SQL is left alone.
@@ -86,7 +86,7 @@ function chunk<T>(items: readonly T[]): T[][] {
  *
  * Fails soft, by design: a failure here costs a nicer picture, never the
  * screen. An anonymous caller (the RPC raises `BEVI_UNAUTHORIZED`), a database
- * without 20261114000200, a transient error -- in each case the summaries keep
+ * without 20261119185801, a transient error -- in each case the summaries keep
  * the authored icon or the photograph, which is what they showed before this
  * file existed. Nothing is applied unless every chunk answered.
  */

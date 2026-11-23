@@ -113,7 +113,7 @@ describe('filling a summary with the Bev\'s generated icon', () => {
     expect(rows[2].iconUrl).toBeNull();
   });
 
-  // get_bev_icons rejects more than 500 ids as the caller's bug (20261114000200).
+  // get_bev_icons rejects more than 500 ids as the caller's bug (20261119185801).
   it('splits a long list into calls the RPC accepts', async () => {
     const { client, rpc } = fakeClient([]);
     await applyGeneratedIcons(client, Array.from({ length: 501 }, (_, i) => summary(`bev-${i}`)));
@@ -128,7 +128,7 @@ describe('filling a summary with the Bev\'s generated icon', () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
-  // An anonymous caller, or a database without 20261114000200: the screen still
+  // An anonymous caller, or a database without 20261119185801: the screen still
   // draws, with the photograph it drew before this existed.
   it('fails soft, leaving every summary as the RPC gave it', async () => {
     const { client } = fakeClient({ error: { message: 'BEVI_UNAUTHORIZED', code: '42501' } });
