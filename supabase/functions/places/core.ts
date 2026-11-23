@@ -68,6 +68,11 @@ const MAX_RESULTS = 8;
 const BIAS_RADIUS_M = 5000;
 /** Place ids are opaque; this is only "looks like one", to keep junk out of a URL path. */
 const PLACE_ID_RE = /^[A-Za-z0-9_-]{10,300}$/;
+/**
+ * How long a call to Google may take, body included, before it counts as Google failing. A
+ * timeout lands in the same catch as a network error: `upstream` to a caller, `failed` in refresh.
+ */
+const GOOGLE_TIMEOUT_MS = 8_000;
 
 /** What kind of place a venue is (`venues.place_type`): the glyph on a pin and a picker row. */
 export type PlaceType = "cafe" | "store" | "bar" | "liquor" | "restaurant" | "other";
@@ -154,6 +159,18 @@ const fail = (status: number, error: string, message?: string): Response =>
   json(message ? { error, message } : { error }, status);
 
 const finite = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
+
+const isObject = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
+
+/** Constant-time comparison, so a wrong token leaks nothing by how long it took (as in embed). */
+function tokensMatch(presented: string, expected: string): boolean {
+  const a = new TextEncoder().encode(presented);
+  const b = new TextEncoder().encode(expected);
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+  return diff === 0;
+}
 
 /** A position on the Earth, or null: half a position, or one off the planet, is no position. */
 export function readPosition(lat: unknown, lng: unknown): { lat: number; lng: number } | null {
@@ -247,15 +264,18 @@ async function details(deps: Deps, key: string, placeId: string): Promise<Google
   try {
     res = await deps.fetch(`${GOOGLE}/places/${encodeURIComponent(placeId)}`, {
       headers: { "X-Goog-Api-Key": key, "X-Goog-FieldMask": FIELDS.join(",") },
+      signal: AbortSignal.timeout(GOOGLE_TIMEOUT_MS),
     });
   } catch {
     return "error";
   }
-  // Google answers an id it does not know with 404, and a malformed one with 400.
-  if (res.status === 404 || res.status === 400) return "missing";
+  // Google answers an id it does not know with 404. A 400 is not "missing": the id has already
+  // passed PLACE_ID_RE, and 400 is also how Google answers a bad or restricted key.
+  if (res.status === 404) return "missing";
   if (!res.ok) return "error";
   try {
-    return (await res.json()) as GooglePlace;
+    const place: unknown = await res.json();
+    return isObject(place) ? (place as GooglePlace) : "error";
   } catch {
     return "error";
   }
@@ -276,7 +296,13 @@ async function upsert(deps: Deps, env: Env, place: ExternalPlace): Promise<unkno
   } catch {
     return "error";
   }
-  if (res.ok) return await res.json();
+  if (res.ok) {
+    try {
+      return await res.json();
+    } catch {
+      return "error";
+    }
+  }
   try {
     const body = (await res.json()) as { code?: string; message?: string };
     if (body.code === "P0002" || (body.message ?? "").includes("BEVI_NOT_FOUND")) return "hidden";
@@ -301,20 +327,24 @@ async function search(deps: Deps, env: Env, key: string, body: Record<string, un
         "X-Goog-FieldMask": FIELDS.map((f) => `places.${f}`).join(","),
       },
       body: JSON.stringify(searchRequest(query, near)),
+      signal: AbortSignal.timeout(GOOGLE_TIMEOUT_MS),
     });
   } catch {
     return fail(502, "upstream");
   }
   if (!res.ok) return fail(502, "upstream");
 
-  let found: { places?: GooglePlace[] };
+  let found: unknown;
   try {
-    found = (await res.json()) as { places?: GooglePlace[] };
+    found = await res.json();
   } catch {
     return fail(502, "upstream");
   }
-  const places = (found.places ?? []).flatMap((p) => {
-    const place = toExternalPlace(p, near);
+  // Google leaves `places` out when nothing matched; a body that is not an object is not an answer.
+  if (!isObject(found)) return fail(502, "upstream");
+  const listed: unknown[] = Array.isArray(found.places) ? found.places : [];
+  const places = listed.flatMap((p) => {
+    const place = isObject(p) ? toExternalPlace(p as GooglePlace, near) : null;
     return place ? [place] : [];
   });
   return json({ places }, 200);
@@ -338,11 +368,13 @@ async function add(deps: Deps, env: Env, key: string, body: Record<string, unkno
 }
 
 async function refresh(deps: Deps, env: Env, key: string): Promise<Response> {
-  let due: Array<{ google_place_id: string }>;
+  let due: unknown[];
   try {
     const res = await rpc(deps, env, env.serviceRoleKey, "google_venues_due", {});
     if (!res.ok) return fail(503, "unavailable");
-    due = (await res.json()) as Array<{ google_place_id: string }>;
+    const rows: unknown = await res.json();
+    if (!Array.isArray(rows)) return fail(503, "unavailable");
+    due = rows;
   } catch {
     return fail(503, "unavailable");
   }
@@ -351,15 +383,24 @@ async function refresh(deps: Deps, env: Env, key: string): Promise<Response> {
   let failed = 0;
   // One at a time: at most fifty a run, and no reason to hurry a batch job.
   for (const row of due) {
-    const found = await details(deps, key, row.google_place_id);
+    const placeId = isObject(row) && typeof row.google_place_id === "string" ? row.google_place_id : "";
+    if (!placeId) {
+      failed += 1;
+      continue;
+    }
+    // "error" also covers a Google call that timed out: that venue fails and the loop goes on.
+    const found = await details(deps, key, placeId);
     const place = typeof found === "string" ? null : toExternalPlace(found, null);
     // A place Google no longer has keeps its row and its date: the next run
     // tries again, and the venue stays where its Bevs are.
-    const saved = place ? await upsert(deps, env, { ...place, placeId: row.google_place_id }) : "error";
+    const saved = place ? await upsert(deps, env, { ...place, placeId }) : "error";
+    // "hidden" (a venue hidden by hand since `google_venues_due` listed it) counts as refreshed:
+    // nothing failed, it stays hidden, and as a hidden venue it is no longer due.
     if (saved === "error") failed += 1;
     else refreshed += 1;
   }
-  return json({ refreshed, failed }, 200);
+  // Every venue failing is a broken run (a bad key, Google down), not a quiet week: say so.
+  return json({ refreshed, failed }, failed > 0 && refreshed === 0 ? 502 : 200);
 }
 
 export async function handle(req: Request, deps: Deps): Promise<Response> {
@@ -382,7 +423,7 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
 
   if (action === "refresh") {
     // The service role key itself, compared whole: a user's JWT never refreshes.
-    if (!token || token !== env.serviceRoleKey) return fail(403, "forbidden");
+    if (!token || !tokensMatch(token, env.serviceRoleKey)) return fail(403, "forbidden");
     if (!env.googleKey) return fail(503, "not_configured");
     return await refresh(deps, env, env.googleKey);
   }

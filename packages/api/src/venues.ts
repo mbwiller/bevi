@@ -72,7 +72,8 @@ async function mapPlacesError(error: unknown): Promise<ApiError> {
       return new ApiError('validation', message ?? 'Check the search and try again');
     }
     if (response.status === 401 || response.status === 403) return new ApiError('unauthorized', message ?? 'Sign in to search places');
-    if (body?.error === 'not_found' || response.status === 404) return new ApiError('not_found', message ?? 'No such place');
+    // Only the function's own `not_found`: a bare 404 is the gateway saying the function is not deployed.
+    if (body?.error === 'not_found') return new ApiError('not_found', message ?? 'No such place');
     if (body?.error === 'rate_limited' || response.status === 429) {
       return new ApiError('rate_limited', message ?? 'Too many place searches, try again in a minute');
     }
