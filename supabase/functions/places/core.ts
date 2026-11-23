@@ -26,6 +26,18 @@
 // CALLER: it raises for a token with no user, and it is the rate limit (60 an
 // hour), since every call here is a billed request.
 //
+// `refresh` is decided the same way, by the database: its two RPCs,
+// `google_venues_due` and `upsert_google_venue`, are executable by
+// `service_role` only (20261119193000), and refresh calls them AS THE CALLER,
+// `google_venues_due` first and before anything reaches Google. PostgREST
+// verifies the token itself and refuses any other role, and that refusal is
+// this function's 403. It is not a comparison with SUPABASE_SERVICE_ROLE_KEY:
+// two valid service-role credentials of one project need not be the same
+// string (a re-issued JWT, a secret key against the legacy JWT, a short-lived
+// JWT the gateway minted for a key), and the first run of the weekly job was
+// refused by such a comparison. Nor does it rest on verify_jwt: deployed with
+// --no-verify-jwt, PostgREST still checks the token itself.
+//
 // WHAT GOOGLE IS TOLD ABOUT THE CALLER: the query, and a position rounded to
 // about a hundred metres as a bias. Nothing that identifies them, and the
 // position is not stored by us (20261119193000).
@@ -162,16 +174,6 @@ const finite = (value: unknown): value is number => typeof value === "number" &&
 
 const isObject = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
 
-/** Constant-time comparison, so a wrong token leaks nothing by how long it took (as in embed). */
-function tokensMatch(presented: string, expected: string): boolean {
-  const a = new TextEncoder().encode(presented);
-  const b = new TextEncoder().encode(expected);
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
-  return diff === 0;
-}
-
 /** A position on the Earth, or null: half a position, or one off the planet, is no position. */
 export function readPosition(lat: unknown, lng: unknown): { lat: number; lng: number } | null {
   if (!finite(lat) || !finite(lng)) return null;
@@ -224,12 +226,44 @@ function bearer(req: Request): string {
 }
 
 /** A Postgres function through PostgREST, as whoever `token` is. */
-async function rpc(deps: Deps, env: Env, token: string, name: string, args: unknown): Promise<Response> {
+async function rpc(
+  deps: Deps,
+  env: Env,
+  token: string,
+  name: string,
+  args: unknown,
+  apikey: string = env.anonKey,
+): Promise<Response> {
   return await deps.fetch(`${env.url}/rest/v1/rpc/${name}`, {
     method: "POST",
-    headers: { apikey: env.anonKey, Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    headers: { apikey, Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify(args ?? {}),
   });
+}
+
+/**
+ * The `apikey` header for a caller's own token forwarded to PostgREST. A JWT (a user's, or a
+ * service-role one, legacy or minted by the gateway) goes with the publishable key, as the meter
+ * sends a user's: the gateway wants a project key in `apikey`, and PostgREST takes the role from
+ * the JWT in `Authorization`. An opaque Supabase key (`sb_...`) is not a JWT and the gateway only
+ * reads one from `apikey`, so it goes in both headers, the form scripts/ use with the service key.
+ * Either way PostgREST, not this function, decides what the token may do.
+ */
+const apikeyFor = (env: Env, token: string): string => (token.startsWith("sb_") ? token : env.anonKey);
+
+/**
+ * Whether a failed PostgREST call was a refusal of the caller rather than a fault: 401 (no valid
+ * token, or `42501` for the anon role), 403 (`42501` for any other role without EXECUTE), or the
+ * `42501` code itself, whatever status carried it.
+ */
+async function refusedCaller(res: Response): Promise<boolean> {
+  if (res.status === 401 || res.status === 403) return true;
+  try {
+    const body = (await res.json()) as { code?: string };
+    return body.code === "42501";
+  } catch {
+    return false;
+  }
 }
 
 /** `assert_places_rate()` as the caller: null when they may go on, else the response to send. */
@@ -281,18 +315,27 @@ async function details(deps: Deps, key: string, placeId: string): Promise<Google
   }
 }
 
-/** `upsert_google_venue` as the service role: the venue JSON, "hidden" for BEVI_NOT_FOUND, or "error". */
-async function upsert(deps: Deps, env: Env, place: ExternalPlace): Promise<unknown | "hidden" | "error"> {
+/**
+ * `upsert_google_venue` as `token` (service-role only): the venue JSON, "hidden" for
+ * BEVI_NOT_FOUND, or "error". `add` passes the function's own service role key, refresh its caller's.
+ */
+async function upsert(
+  deps: Deps,
+  env: Env,
+  place: ExternalPlace,
+  token: string,
+  apikey: string = env.anonKey,
+): Promise<unknown | "hidden" | "error"> {
   let res: Response;
   try {
-    res = await rpc(deps, env, env.serviceRoleKey, "upsert_google_venue", {
+    res = await rpc(deps, env, token, "upsert_google_venue", {
       p_place_id: place.placeId,
       p_name: place.name,
       p_lat: place.lat,
       p_lng: place.lng,
       p_address: place.address,
       p_place_type: place.placeType,
-    });
+    }, apikey);
   } catch {
     return "error";
   }
@@ -361,23 +404,30 @@ async function add(deps: Deps, env: Env, key: string, body: Record<string, unkno
   // A place with no name or no position cannot be a pin.
   if (!place) return fail(404, "not_found");
 
-  const venue = await upsert(deps, env, place);
+  const venue = await upsert(deps, env, place, env.serviceRoleKey);
   if (venue === "hidden") return fail(404, "not_found");
   if (venue === "error") return fail(503, "unavailable");
   return json({ venue }, 200);
 }
 
-async function refresh(deps: Deps, env: Env, key: string): Promise<Response> {
+/** Refresh as the caller, whose `token` the database must accept as the service role. */
+async function refresh(deps: Deps, env: Env, token: string): Promise<Response> {
+  const apikey = apikeyFor(env, token);
   let due: unknown[];
   try {
-    const res = await rpc(deps, env, env.serviceRoleKey, "google_venues_due", {});
-    if (!res.ok) return fail(503, "unavailable");
+    // The authorisation: only a service-role caller may execute this, so a refusal here is a 403
+    // and nothing below (Google included) runs. Any other failure is the database's, a 503.
+    const res = await rpc(deps, env, token, "google_venues_due", {}, apikey);
+    if (!res.ok) return (await refusedCaller(res)) ? fail(403, "forbidden") : fail(503, "unavailable");
     const rows: unknown = await res.json();
     if (!Array.isArray(rows)) return fail(503, "unavailable");
     due = rows;
   } catch {
     return fail(503, "unavailable");
   }
+  // After the authorisation, as for search and add: a caller who may not refresh learns nothing.
+  const key = env.googleKey;
+  if (!key) return fail(503, "not_configured");
 
   let refreshed = 0;
   let failed = 0;
@@ -393,7 +443,7 @@ async function refresh(deps: Deps, env: Env, key: string): Promise<Response> {
     const place = typeof found === "string" ? null : toExternalPlace(found, null);
     // A place Google no longer has keeps its row and its date: the next run
     // tries again, and the venue stays where its Bevs are.
-    const saved = place ? await upsert(deps, env, { ...place, placeId }) : "error";
+    const saved = place ? await upsert(deps, env, { ...place, placeId }, token, apikey) : "error";
     // "hidden" (a venue hidden by hand since `google_venues_due` listed it) counts as refreshed:
     // nothing failed, it stays hidden, and as a hidden venue it is no longer due.
     if (saved === "error") failed += 1;
@@ -422,10 +472,9 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
   const token = bearer(req);
 
   if (action === "refresh") {
-    // The service role key itself, compared whole: a user's JWT never refreshes.
-    if (!token || !tokensMatch(token, env.serviceRoleKey)) return fail(403, "forbidden");
-    if (!env.googleKey) return fail(503, "not_configured");
-    return await refresh(deps, env, env.googleKey);
+    // No token is refused here; any other is the database's to accept or refuse (see the header).
+    if (!token) return fail(403, "forbidden");
+    return await refresh(deps, env, token);
   }
 
   if (action !== "search" && action !== "add") return fail(400, "validation", "action");

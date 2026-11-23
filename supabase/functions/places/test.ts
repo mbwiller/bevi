@@ -76,6 +76,11 @@ const deps = (routes: Record<string, Route>, calls: Call[] = [], env: Env | null
 
 const METER_OK: Record<string, Route> = { "rpc/assert_places_rate": () => new Response(null, { status: 204 }) };
 
+/** PostgREST's answer to a signed-in user calling a function granted to service_role only. */
+const REFUSED_AS_USER: Record<string, Route> = {
+  "rpc/google_venues_due": () => ok({ code: "42501", message: "permission denied for function google_venues_due" }, 403),
+};
+
 /** What `fetch` rejects with when an `AbortSignal.timeout` fires. The fake never waits, so it throws this itself. */
 const timedOut: Route = () => {
   throw new DOMException("Signal timed out.", "TimeoutError");
@@ -267,6 +272,7 @@ Deno.test("add: reads the place from Google, then writes it as the service role"
   assertEquals(calls[1].headers["x-goog-fieldmask"], "id,displayName,formattedAddress,location,primaryType,types");
   assert(calls[1].signal instanceof AbortSignal);
   assertEquals(calls[2].headers.authorization, "Bearer service-role-key");
+  assertEquals(calls[2].headers.apikey, "anon-key");
   assertEquals(calls[2].body, {
     p_place_id: PLACE_ID,
     p_name: "Bread & Butter Market",
@@ -301,8 +307,8 @@ Deno.test("add: a malformed id is 400; an unknown place, and a venue hidden by h
 
 Deno.test("refresh: the service role key only, and it is not metered", async () => {
   const asUser: Call[] = [];
-  assertEquals((await handle(post({ action: "refresh" }), deps({}, asUser))).status, 403);
-  assertEquals(asUser.length, 0);
+  assertEquals((await handle(post({ action: "refresh" }), deps(REFUSED_AS_USER, asUser))).status, 403);
+  assertEquals(asUser.map((c) => c.url.replace(/^https:\/\/[^/]+/, "")), ["/rest/v1/rpc/google_venues_due"]);
 
   const calls: Call[] = [];
   const res = await handle(
@@ -384,12 +390,113 @@ Deno.test("add: a body from Google or PostgREST that is not JSON is a failure wi
   );
 });
 
-Deno.test("refresh: a token that is not the service role key is refused, whatever its length", async () => {
-  for (const token of ["service-role-kez", "service-role-key-and-more", "s"]) {
-    const calls: Call[] = [];
-    await assertFailure(await handle(post({ action: "refresh" }, token), deps({}, calls)), 403, "forbidden");
-    assertEquals(calls.length, 0);
+Deno.test("refresh: a token the database refuses is 403 forbidden, and Google is never called", async () => {
+  const refusals: Route[] = [
+    // A user's JWT: the role has no EXECUTE on google_venues_due.
+    REFUSED_AS_USER["rpc/google_venues_due"],
+    // The anon role (the publishable key as the bearer): the same code, as a 401.
+    () => ok({ code: "42501", message: "permission denied for function google_venues_due" }, 401),
+    // A token PostgREST cannot verify at all.
+    () => ok({ code: "PGRST301", message: "JWSError JWSInvalidSignature" }, 401),
+    // The gateway refusing the key, with no PostgREST body.
+    () => new Response("Invalid API key", { status: 401 }),
+  ];
+  for (const [i, refusal] of refusals.entries()) {
+    for (const token of ["service-role-kez", "service-role-key-and-more", "s"]) {
+      const calls: Call[] = [];
+      const routes = { "rpc/google_venues_due": refusal, "/v1/places/": () => ok(GOOGLE_PLACE) };
+      await assertFailure(await handle(post({ action: "refresh" }, token), deps(routes, calls)), 403, "forbidden");
+      assertEquals(calls.length, 1, `refusal ${i}, token ${token}`);
+      assertEquals(calls[0].headers.authorization, `Bearer ${token}`);
+    }
   }
+});
+
+Deno.test("refresh: no token is 403 forbidden before anything is called", async () => {
+  const calls: Call[] = [];
+  await assertFailure(await handle(post({ action: "refresh" }, ""), deps({}, calls)), 403, "forbidden");
+  assertEquals(calls.length, 0);
+});
+
+Deno.test("refresh: a service-role token other than the function's own key, accepted by the database, refreshes", async () => {
+  const calls: Call[] = [];
+  const res = await handle(
+    post({ action: "refresh" }, "another-service-role-jwt"),
+    deps(
+      {
+        "rpc/google_venues_due": () => ok([{ google_place_id: PLACE_ID }]),
+        [`/v1/places/${PLACE_ID}`]: () => ok(GOOGLE_PLACE),
+        "rpc/upsert_google_venue": () => ok({ id: "v" }),
+      },
+      calls,
+    ),
+  );
+  assertEquals(res.status, 200);
+  assertEquals(await res.json(), { refreshed: 1, failed: 0 });
+  assertEquals(calls.map((c) => c.url.replace(/^https:\/\/[^/]+/, "")), [
+    "/rest/v1/rpc/google_venues_due",
+    `/v1/places/${PLACE_ID}`,
+    "/rest/v1/rpc/upsert_google_venue",
+  ]);
+  // Both database calls are the caller's, never the function's own service role key.
+  for (const c of [calls[0], calls[2]]) {
+    assertEquals(c.headers.authorization, "Bearer another-service-role-jwt");
+    assertEquals(c.headers.apikey, "anon-key");
+  }
+  assertEquals(calls[1].headers["x-goog-api-key"], "google-key");
+});
+
+Deno.test("refresh: an opaque Supabase key as the bearer is also sent as the apikey", async () => {
+  // Assembled at runtime so the file never holds a key-shaped literal (as in bug-report's tests).
+  const opaque = ["sb_", "secret_", "fake"].join("");
+  const calls: Call[] = [];
+  const res = await handle(
+    post({ action: "refresh" }, opaque),
+    deps(
+      {
+        "rpc/google_venues_due": () => ok([{ google_place_id: PLACE_ID }]),
+        [`/v1/places/${PLACE_ID}`]: () => ok(GOOGLE_PLACE),
+        "rpc/upsert_google_venue": () => ok({ id: "v" }),
+      },
+      calls,
+    ),
+  );
+  assertEquals(res.status, 200);
+  for (const c of calls.filter((c) => c.url.includes("/rest/v1/"))) {
+    assertEquals(c.headers.authorization, `Bearer ${opaque}`);
+    assertEquals(c.headers.apikey, opaque);
+  }
+});
+
+Deno.test("refresh: a database failure that is not a refusal is 503 unavailable, and Google is never called", async () => {
+  const faults: Route[] = [
+    () => ok({ code: "XX000", message: "internal error" }, 500),
+    // The function missing from the schema cache (the migration not applied) is a fault, not a refusal.
+    () => ok({ code: "PGRST202", message: "Could not find the function" }, 404),
+    () => new Response("<html>bad gateway</html>", { status: 502 }),
+    () => {
+      throw new TypeError("network");
+    },
+  ];
+  for (const [i, fault] of faults.entries()) {
+    const calls: Call[] = [];
+    const routes = { "rpc/google_venues_due": fault, "/v1/places/": () => ok(GOOGLE_PLACE) };
+    await assertFailure(await handle(post({ action: "refresh" }, "service-role-key"), deps(routes, calls)), 503, "unavailable");
+    assertEquals(calls.length, 1, `fault ${i}`);
+  }
+});
+
+Deno.test("refresh: no Google key is 503 not_configured, but only after the database accepts the caller", async () => {
+  const noKey = { ...ENV, googleKey: null };
+  const accepted: Call[] = [];
+  await assertFailure(
+    await handle(post({ action: "refresh" }, "service-role-key"), deps({ "rpc/google_venues_due": () => ok([{ google_place_id: PLACE_ID }]) }, accepted, noKey)),
+    503,
+    "not_configured",
+  );
+  assertEquals(accepted.length, 1);
+
+  await assertFailure(await handle(post({ action: "refresh" }), deps(REFUSED_AS_USER, [], noKey)), 403, "forbidden");
 });
 
 Deno.test("refresh: every venue failing is 502 with the counts, so the weekly job goes red", async () => {
