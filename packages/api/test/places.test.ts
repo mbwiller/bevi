@@ -296,6 +296,9 @@ describe('venues.searchMore and addPlace', () => {
   it.each([
     [429, { error: 'rate_limited' }, 'rate_limited'],
     [404, { error: 'not_found' }, 'not_found'],
+    // The gateway's answer when the function is not deployed: no `error` field, so not "no such place".
+    [404, { code: 'NOT_FOUND', message: 'Requested function was not found' }, 'unknown'],
+    [502, { error: 'upstream' }, 'unknown'],
     [400, { error: 'validation', message: 'query' }, 'validation'],
     [503, { error: 'not_configured' }, 'unknown'],
   ] as const)('a %i from the function is %s', async (status, body, code) => {

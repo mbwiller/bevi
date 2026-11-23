@@ -35,6 +35,7 @@ interface Call {
   method: string;
   headers: Record<string, string>;
   body: unknown;
+  signal: AbortSignal | null;
 }
 
 type Route = (call: Call) => Response | Promise<Response>;
@@ -51,6 +52,7 @@ function fakeFetch(routes: Record<string, Route>, calls: Call[] = []): typeof fe
       method: init?.method ?? "GET",
       headers: Object.fromEntries(new Headers(init?.headers).entries()),
       body: typeof init?.body === "string" ? JSON.parse(init.body) : undefined,
+      signal: init?.signal ?? null,
     };
     calls.push(call);
     for (const [key, route] of Object.entries(routes)) {
@@ -73,6 +75,21 @@ const deps = (routes: Record<string, Route>, calls: Call[] = [], env: Env | null
 });
 
 const METER_OK: Record<string, Route> = { "rpc/assert_places_rate": () => new Response(null, { status: 204 }) };
+
+/** What `fetch` rejects with when an `AbortSignal.timeout` fires. The fake never waits, so it throws this itself. */
+const timedOut: Route = () => {
+  throw new DOMException("Signal timed out.", "TimeoutError");
+};
+
+/** A 200 whose body is not JSON, as a captive portal or a misrouted proxy would send. */
+const notJson: Route = () => new Response("<html>oops</html>", { status: 200, headers: { "Content-Type": "text/html" } });
+
+/** The response is the function's own error, with the CORS headers a browser needs to read it. */
+async function assertFailure(res: Response, status: number, error: string): Promise<void> {
+  assertEquals(res.status, status);
+  assertEquals(res.headers.get("Access-Control-Allow-Origin"), "*");
+  assertEquals(await res.json(), { error });
+}
 
 Deno.test("readPosition: two finite numbers on the Earth, or nothing", () => {
   assertEquals(readPosition(40.76, -73.95), { lat: 40.76, lng: -73.95 });
@@ -174,6 +191,8 @@ Deno.test("search: metered as the caller first, then Google with a field mask an
   // The meter runs as the caller, not as the service role.
   assertEquals(calls[0].headers.authorization, "Bearer user-jwt");
   assertEquals(calls[1].headers["x-goog-api-key"], "google-key");
+  // Every call to Google carries a timeout.
+  assert(calls[1].signal instanceof AbortSignal);
   assertEquals(
     calls[1].headers["x-goog-fieldmask"],
     "places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.types",
@@ -246,6 +265,7 @@ Deno.test("add: reads the place from Google, then writes it as the service role"
   assertEquals(res.status, 200);
   assertEquals(await res.json(), { venue });
   assertEquals(calls[1].headers["x-goog-fieldmask"], "id,displayName,formattedAddress,location,primaryType,types");
+  assert(calls[1].signal instanceof AbortSignal);
   assertEquals(calls[2].headers.authorization, "Bearer service-role-key");
   assertEquals(calls[2].body, {
     p_place_id: PLACE_ID,
@@ -304,4 +324,120 @@ Deno.test("refresh: the service role key only, and it is not metered", async () 
   const writes = calls.filter((c) => c.url.includes("upsert_google_venue"));
   assertEquals(writes.length, 1);
   assertEquals((writes[0].body as { p_name: string }).p_name, "Bread & Butter");
+});
+
+Deno.test("search: a Google call that times out is 502 upstream, with the CORS headers", async () => {
+  const res = await handle(post({ action: "search", query: "x" }), deps({ ...METER_OK, "places:searchText": timedOut }));
+  await assertFailure(res, 502, "upstream");
+});
+
+Deno.test("search: a 200 from Google that is not JSON, or not an object, is 502 upstream", async () => {
+  await assertFailure(
+    await handle(post({ action: "search", query: "x" }), deps({ ...METER_OK, "places:searchText": notJson })),
+    502,
+    "upstream",
+  );
+  await assertFailure(
+    await handle(post({ action: "search", query: "x" }), deps({ ...METER_OK, "places:searchText": () => ok(null) })),
+    502,
+    "upstream",
+  );
+  // No `places` is Google's way of saying nothing matched, and junk in the list is dropped.
+  const empty = await handle(
+    post({ action: "search", query: "x" }),
+    deps({ ...METER_OK, "places:searchText": () => ok({ places: [null, 7, GOOGLE_PLACE] }) }),
+  );
+  assertEquals(empty.status, 200);
+  assertEquals((await empty.json()).places.length, 1);
+  const none = await handle(post({ action: "search", query: "x" }), deps({ ...METER_OK, "places:searchText": () => ok({}) }));
+  assertEquals(await none.json(), { places: [] });
+});
+
+Deno.test("add: a Google call that times out is 502 upstream, with the CORS headers", async () => {
+  const calls: Call[] = [];
+  const res = await handle(post({ action: "add", placeId: PLACE_ID }), deps({ ...METER_OK, "/v1/places/": timedOut }, calls));
+  await assertFailure(res, 502, "upstream");
+  assert(!calls.some((c) => c.url.includes("upsert_google_venue")));
+});
+
+Deno.test("add: a Google 400 is a fault (a bad key answers 400), not a missing place", async () => {
+  const res = await handle(
+    post({ action: "add", placeId: PLACE_ID }),
+    deps({ ...METER_OK, "/v1/places/": () => ok({ error: { code: 400, status: "INVALID_ARGUMENT" } }, 400) }),
+  );
+  await assertFailure(res, 502, "upstream");
+});
+
+Deno.test("add: a body from Google or PostgREST that is not JSON is a failure with CORS, not a crash", async () => {
+  await assertFailure(
+    await handle(post({ action: "add", placeId: PLACE_ID }), deps({ ...METER_OK, "/v1/places/": notJson })),
+    502,
+    "upstream",
+  );
+  await assertFailure(
+    await handle(
+      post({ action: "add", placeId: PLACE_ID }),
+      deps({ ...METER_OK, "/v1/places/": () => ok(GOOGLE_PLACE), "rpc/upsert_google_venue": notJson }),
+    ),
+    503,
+    "unavailable",
+  );
+});
+
+Deno.test("refresh: a token that is not the service role key is refused, whatever its length", async () => {
+  for (const token of ["service-role-kez", "service-role-key-and-more", "s"]) {
+    const calls: Call[] = [];
+    await assertFailure(await handle(post({ action: "refresh" }, token), deps({}, calls)), 403, "forbidden");
+    assertEquals(calls.length, 0);
+  }
+});
+
+Deno.test("refresh: every venue failing is 502 with the counts, so the weekly job goes red", async () => {
+  const res = await handle(
+    post({ action: "refresh" }, "service-role-key"),
+    deps({
+      "rpc/google_venues_due": () => ok([{ google_place_id: PLACE_ID }, { google_place_id: "ChIJgone_gone_gone" }]),
+      // A bad key: Google answers every id with 400.
+      "/v1/places/": () => ok({ error: { code: 400 } }, 400),
+    }),
+  );
+  assertEquals(res.status, 502);
+  assertEquals(res.headers.get("Access-Control-Allow-Origin"), "*");
+  assertEquals(await res.json(), { refreshed: 0, failed: 2 });
+});
+
+Deno.test("refresh: a venue that times out fails, the loop goes on, and a part success is 200", async () => {
+  const calls: Call[] = [];
+  const res = await handle(
+    post({ action: "refresh" }, "service-role-key"),
+    deps(
+      {
+        "rpc/google_venues_due": () => ok([{ google_place_id: "ChIJslow_slow_slow" }, { google_place_id: PLACE_ID }]),
+        "/v1/places/ChIJslow_slow_slow": timedOut,
+        [`/v1/places/${PLACE_ID}`]: () => ok(GOOGLE_PLACE),
+        "rpc/upsert_google_venue": () => ok({ id: "v" }),
+      },
+      calls,
+    ),
+  );
+  assertEquals(res.status, 200);
+  assertEquals(await res.json(), { refreshed: 1, failed: 1 });
+  assert(calls.filter((c) => c.url.includes("/v1/places/")).every((c) => c.signal instanceof AbortSignal));
+});
+
+Deno.test("refresh: nothing due is a quiet 200, and a due list that is not a list is 503", async () => {
+  const quiet = await handle(post({ action: "refresh" }, "service-role-key"), deps({ "rpc/google_venues_due": () => ok([]) }));
+  assertEquals(quiet.status, 200);
+  assertEquals(await quiet.json(), { refreshed: 0, failed: 0 });
+
+  await assertFailure(
+    await handle(post({ action: "refresh" }, "service-role-key"), deps({ "rpc/google_venues_due": notJson })),
+    503,
+    "unavailable",
+  );
+  await assertFailure(
+    await handle(post({ action: "refresh" }, "service-role-key"), deps({ "rpc/google_venues_due": () => ok({ rows: [] }) })),
+    503,
+    "unavailable",
+  );
 });

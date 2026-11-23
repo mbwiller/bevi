@@ -49,9 +49,14 @@ jobs:
             -d '{"action":"refresh"}')
           echo "places refresh answered ${status}: $(cat "${RUNNER_TEMP}/refresh.json")"
           # 503 not_configured is a project with no Google key yet, which is a
-          # state, not a failure of this job.
-          if [ "$status" = "503" ]; then
+          # state, not a failure of this job. A 503 for anything else (the
+          # function's `unavailable`, when the database call fails) is a
+          # failure, as is the 502 for a run in which every venue failed.
+          if [ "$status" = "503" ] && grep -q '"not_configured"' "${RUNNER_TEMP}/refresh.json"; then
             echo "::warning::places-refresh: the function is not configured (no GOOGLE_PLACES_API_KEY)."
             exit 0
           fi
-          [ "$status" = "200" ]
+          if [ "$status" != "200" ]; then
+            echo "::error::places-refresh failed with ${status}: $(cat "${RUNNER_TEMP}/refresh.json")"
+            exit 1
+          fi
