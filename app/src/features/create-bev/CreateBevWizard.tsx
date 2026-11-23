@@ -197,10 +197,13 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
 
   // A scan fills in what is still empty or what the last scan put there, and never replaces what was
   // typed. The name carried over from search counts as empty: it is what the person searched for,
-  // not what they called the Bev. A category the person can't see (alcohol, under age) is not offered.
-  const fillFromProduct = (product: BarcodeProduct) => {
+  // not what they called the Bev. A product in a category the person can't see (alcohol, under age)
+  // fills nothing at all and is refused (`false`): the scan shows it as a barcode Bevi doesn't know.
+  // What an earlier scan wrote stays, and stays that scan's to replace.
+  const fillFromProduct = (product: BarcodeProduct): boolean => {
+    if (product.categoryId && !categories.some((c) => c.id === product.categoryId)) return false;
     const wrote = scanWrote.current;
-    const category = product.categoryId && categories.some((c) => c.id === product.categoryId) ? product.categoryId : null;
+    const category = product.categoryId;
     const name = scanValue(form.name, !form.name.trim() || form.name === initialName, wrote.name, product.name, '');
     const brand = scanValue(form.brand, !form.brand.trim(), wrote.brand, product.brand, '');
     const categoryId = scanValue<CategoryId | null>(form.categoryId, !form.categoryId, wrote.categoryId, category, null);
@@ -221,6 +224,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
     setScanNotice(text);
     // Once per scan, not whenever the line under the button changes (iOS; the web has its live region).
     announce(product.nutrition ? `${text} ${SCAN_CONFIRM_NUTRITION}` : text);
+    return true;
   };
 
   const pickPhoto = async (source: PhotoSource) => {

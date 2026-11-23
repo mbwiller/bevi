@@ -20,8 +20,10 @@ export interface NutritionScanProps {
   /**
    * The lookup found the product behind the barcode, with or without nutrition: the wizard fills in
    * the new Bev's details from it. Without this the scan is about nutrition alone (the demo).
+   * Returning `false` refuses the product (a category the viewer can't see): the scan then shows
+   * what a barcode Bevi doesn't know shows, and its label is not offered.
    */
-  onProduct?: (product: BarcodeProduct) => void;
+  onProduct?: (product: BarcodeProduct) => boolean | void;
   /**
    * The label the last scan found, confirmed or not, when the caller keeps it (with `onScanned`).
    * The wizard does: its Details step unmounts on the way to step 3, and a label still waiting for
@@ -86,10 +88,10 @@ export function useNutritionScan({ value, onChange, onProduct, scanned, onScanne
       if (!api.nutrition) throw new Error('Nutrition lookup unavailable');
       const product = await api.nutrition.lookupProduct(code, controller.signal);
       if (controller.signal.aborted) return;
-      if (!product) {
+      // `onProduct` runs once, here: `false` means the caller refused the product.
+      if (!product || onProduct?.(product) === false) {
         setMessage(onProduct ? SCAN_NOT_FOUND : SCAN_NO_NUTRITION);
       } else if (product.nutrition) {
-        onProduct?.(product);
         setNutrition(product.nutrition);
         onChange?.(null);
         opacity.value = 0;
@@ -97,7 +99,6 @@ export function useNutritionScan({ value, onChange, onProduct, scanned, onScanne
       } else if (onProduct) {
         // A product with no nutrition listed still fills in the details, and a label scanned
         // earlier belongs to another barcode. There is nothing to reveal, so the sheet just closes.
-        onProduct(product);
         setNutrition(null);
         onChange?.(null);
         close();

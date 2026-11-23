@@ -39,7 +39,7 @@ export interface DetailsStepProps {
   scanned: NutritionPreview | null;
   onScannedChange: (value: NutritionPreview | null) => void;
   /** A barcode scan found the product: the wizard fills in the fields above from it. */
-  onProduct: (product: BarcodeProduct) => void;
+  onProduct: (product: BarcodeProduct) => boolean | void;
   /** What the last scan filled in, in place of the hint under Scan barcode. */
   scanNotice?: string | null;
   onPickLabel: (source: PhotoSource) => void;
