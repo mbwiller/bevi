@@ -118,7 +118,7 @@ adding one changes these answers and needs a review.
 | User content: other user content | Yes | Rankings, notes, comments, lists, follows, reports you file, the place tagged on a ranking | Yes | App functionality |
 | Sensitive info / other data | Check the form's wording | Birth date, used only to decide whether alcohol is shown | Yes | App functionality |
 | Diagnostics: crash data | No, today. The app sends no crash data of its own; Apple's crash reports are Apple's, shared by the person in iOS settings. This becomes Yes the day the in-house reporter ships | | | |
-| Location: coarse | **Founders to decide** (recommended: Yes) | Since BEV-22 the binary asks for When In Use location. The phone's position is sent with each place search and not stored; the Search more places fallback passes Google a position rounded to 3 decimals. Apple counts data a third party may keep, so the safe answer is Coarse location, not linked, App functionality | No | App functionality |
+| Location: coarse | Yes (Matt, 2026-11-23) | Since BEV-22 the binary asks for When In Use location. The phone's position is sent with each place search and not stored; the Search more places fallback passes Google a position rounded to 3 decimals. Apple counts data a third party may keep, so the safe answer is Coarse location, not linked, App functionality | No | App functionality |
 | Location: precise | No | No position is stored. The place a person tags is a venue they chose, stored with the ranking: answer it under User content. Uploaded photos are re-encoded, which strips their GPS data: **verify on a phone before claiming it** (device checklist) | | |
 | Contacts, browsing history, search history, purchases, financial, health, usage data, advertising data | No | | | |
 
