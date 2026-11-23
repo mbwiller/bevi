@@ -716,7 +716,10 @@ select is(
 select ok(
   has_function_privilege('authenticated', 'public.assert_places_rate()', 'EXECUTE')
   and not has_function_privilege('anon', 'public.assert_places_rate()', 'EXECUTE')
+  -- The places function's `refresh` is authorised by this grant alone (it calls the list as its
+  -- caller), so neither client role may ever hold it.
   and not has_function_privilege('authenticated', 'public.google_venues_due(interval, integer)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.google_venues_due(interval, integer)', 'EXECUTE')
   and has_function_privilege('service_role', 'public.google_venues_due(interval, integer)', 'EXECUTE'),
   'a signed-in user may be metered; only the service role reads the refresh list'
 );
