@@ -125,6 +125,25 @@ it('a failed Unblock brings the row back and says to check the connection', asyn
   expect((await api.blocks.list()).items).toHaveLength(1);
 });
 
+it('two Unblocks in flight: the first failing still brings its row back, not stuck on Working', async () => {
+  const b = (await api.profile.searchUsers({ q: 'friend_b' })).items.find((u) => u.handle === 'friend_b')!;
+  await api.blocks.block(friendId());
+  await api.blocks.block(b.id);
+  await open('/settings/blocked');
+  const rowA = await screen.findByTestId(`blocked-row-${friendId()}`);
+  const rowB = await screen.findByTestId(`blocked-row-${b.id}`);
+  controls.setLatency(150);
+  controls.failNext('network', 'blocks.unblock');
+  await fireEvent.press(within(rowA).getByRole('button', { name: /^Unblock/ }));
+  await fireEvent.press(within(rowB).getByRole('button', { name: /^Unblock/ }));
+  expect(await screen.findByText("Couldn't unblock this account. Check your connection and try again.")).toBeTruthy();
+  await waitFor(() => expect(screen.queryByTestId(`blocked-row-${b.id}`)).toBeNull());
+  const back = await screen.findByTestId(`blocked-row-${friendId()}`);
+  await waitFor(() => expect(within(back).queryByText('Working…')).toBeNull());
+  controls.setLatency(0);
+  expect((await api.blocks.list()).items.map((u) => u.id)).toEqual([friendId()]);
+});
+
 it('error: ErrorState with Retry, and Retry loads the list', async () => {
   await api.blocks.block(friendId());
   controls.failNext('unknown', 'blocks.list');

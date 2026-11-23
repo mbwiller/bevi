@@ -39,22 +39,24 @@ export function BlockedAccounts() {
   const [busy, setBusy] = useState<ReadonlySet<string>>(new Set());
   const rows = useMemo(() => flattenPages(query.data), [query.data]);
 
-  const { mutate } = unblock;
+  // mutateAsync, not mutate's per-call callbacks: those fire only for the latest call, so unblocking
+  // A then B with A failing would leave A spinning and its error unsaid.
+  const { mutateAsync } = unblock;
   const onUnblock = useCallback(
     (id: string) => {
       setError(null);
       setBusy((b) => new Set(b).add(id));
-      mutate(id, {
-        onError: (e) => setError(unblockMessage(e)),
-        onSettled: () =>
+      mutateAsync(id)
+        .catch((e: unknown) => setError(unblockMessage(e)))
+        .finally(() =>
           setBusy((b) => {
             const next = new Set(b);
             next.delete(id);
             return next;
           }),
-      });
+        );
     },
-    [mutate],
+    [mutateAsync],
   );
 
   const renderItem = useCallback(
