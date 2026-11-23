@@ -703,14 +703,69 @@ describe('a barcode scan fills in the details', () => {
     expect(screen.getByRole('button', { name: 'Category, Beer' })).toBeTruthy();
   });
 
-  it('does not put a Bev in a category the person cannot see', async () => {
-    controls.signInAs('minor_user');
-    jest.spyOn(api.nutrition!, 'lookupProduct').mockResolvedValue(found({ name: 'Qzx Lager', categoryId: 'beer' }));
-    await toDetails();
-    await scan();
-    expect(await screen.findByText(/^Filled in the name and brand from the barcode\. Check them before you continue\./)).toBeTruthy();
-    expect(field('Name')).toBe('Qzx Lager');
-    expect(screen.getByRole('button', { name: 'Choose a category' })).toBeTruthy();
+  describe('a product in a category the person cannot see', () => {
+    const BEER_LABEL: NutritionPreview = { ...LABEL, barcode: '055555555555', productName: 'Qzx Lager', calories: 110, sourceUrl: 'https://world.openfoodfacts.org/product/055555555555' };
+    const lager = () => found({ barcode: BEER_LABEL.barcode, name: 'Qzx Lager', brand: 'Qzx Brewing', categoryId: 'beer', nutrition: BEER_LABEL });
+    const NOT_FOUND = "Bevi doesn't know that barcode. Try another, or close this and enter the details yourself.";
+
+    it('fills in nothing and reads as a barcode Bevi does not know', async () => {
+      controls.signInAs('minor_user');
+      jest.spyOn(api.nutrition!, 'lookupProduct').mockResolvedValue(lager());
+      const said = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
+      said.mockClear();
+      await toDetails();
+      await scan();
+      expect(await screen.findByText(NOT_FOUND)).toBeTruthy();
+      expect(field('Name')).toBe('');
+      expect(field('Brand or shop (optional)')).toBe('');
+      expect(screen.getByRole('button', { name: 'Choose a category' })).toBeTruthy();
+      expect(screen.getByText(HINT)).toBeTruthy();
+      expect(screen.queryByText(/from the barcode/)).toBeNull();
+      expect(screen.queryByText('Nutrition Facts')).toBeNull();
+      expect(screen.queryByLabelText('Use this nutrition label')).toBeNull();
+      expect(said.mock.calls.filter(([text]) => /from the barcode/.test(text))).toEqual([]);
+    });
+
+    it('leaves what an earlier scan of a soft drink filled in as it was', async () => {
+      controls.signInAs('minor_user');
+      const lookup = jest.spyOn(api.nutrition!, 'lookupProduct').mockResolvedValue(found());
+      const said = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
+      await toDetails();
+      await scan();
+      await fireEvent.press(await screen.findByLabelText('Use this nutrition label'));
+      await fireEvent.press(screen.getByLabelText('Close barcode scanner'));
+      said.mockClear();
+
+      lookup.mockResolvedValue(lager());
+      await scan();
+      expect(await screen.findByText(NOT_FOUND)).toBeTruthy();
+      expect(field('Name')).toBe('Qzx Scanned Seltzer');
+      expect(field('Brand or shop (optional)')).toBe('Nowhere Co');
+      expect(screen.getByRole('button', { name: 'Category, Sparkling water' })).toBeTruthy();
+      expect(screen.queryByLabelText('Use this nutrition label')).toBeNull();
+      expect(said.mock.calls.filter(([text]) => /from the barcode/.test(text))).toEqual([]);
+      await fireEvent.press(screen.getByLabelText('Close barcode scanner'));
+
+      // The seltzer's label is still the one attached, and the seltzer is what gets created.
+      const create = jest.spyOn(api.bevs, 'create');
+      await fireEvent.press(screen.getByText('Not sure, estimate it'));
+      await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+      await screen.findByText('Looks new');
+      await fireEvent.press(screen.getByRole('button', { name: 'Add and rank it' }));
+      await waitFor(() => expect(mockReplace).toHaveBeenCalled(), READY_TIMEOUT);
+      expect(create.mock.calls.at(-1)![0]).toMatchObject({ name: 'Qzx Scanned Seltzer', brand: 'Nowhere Co', categoryId: 'sparkling_water', nutrition: LABEL });
+    });
+
+    it('still fills in name and brand when the product has no category', async () => {
+      controls.signInAs('minor_user');
+      jest.spyOn(api.nutrition!, 'lookupProduct').mockResolvedValue(found({ name: 'Qzx Mystery', categoryId: null }));
+      await toDetails();
+      await scan();
+      expect(await screen.findByText(/^Filled in the name and brand from the barcode\. Check them before you continue\./)).toBeTruthy();
+      expect(field('Name')).toBe('Qzx Mystery');
+      expect(field('Brand or shop (optional)')).toBe('Nowhere Co');
+      expect(screen.getByRole('button', { name: 'Choose a category' })).toBeTruthy();
+    });
   });
 
   it('fills in a product that lists no nutrition, closes the scanner, and drops a label scanned before it', async () => {

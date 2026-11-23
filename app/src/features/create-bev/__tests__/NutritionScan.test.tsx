@@ -90,6 +90,20 @@ it('hands the wizard the product it found, and nothing when the lookup was close
   expect(onProduct).toHaveBeenCalledTimes(1);
 });
 
+it('shows a product the wizard refuses as a barcode Bevi does not know, and offers no label', async () => {
+  jest.spyOn(api.nutrition!, 'lookupProduct').mockResolvedValue(product);
+  const onProduct = jest.fn(() => false);
+  const onChange = jest.fn();
+  await render(<NutritionScan value={null} onChange={onChange} onProduct={onProduct} />);
+  await enterBarcode();
+  expect(onProduct).toHaveBeenCalledTimes(1);
+  expect(screen.getByText("Bevi doesn't know that barcode. Try another, or close this and enter the details yourself.")).toBeTruthy();
+  expect(screen.getByLabelText('Close barcode scanner')).toBeTruthy();
+  expect(screen.queryByText('Nutrition Facts')).toBeNull();
+  expect(screen.queryByLabelText('Use this nutrition label')).toBeNull();
+  expect(onChange).not.toHaveBeenCalled();
+});
+
 it('hides the scanner entirely when the API has no nutrition capability', async () => {
   const { nutrition } = api;
   delete api.nutrition;
