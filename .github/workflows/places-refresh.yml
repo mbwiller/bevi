@@ -7,7 +7,10 @@ name: places-refresh
 # (`google_venues_due`) and writes it back through `upsert_google_venue`. Fifty
 # venues a run, so a backlog clears over a few weeks rather than in one bill.
 #
-# The function accepts `refresh` from the service role key only.
+# The function accepts `refresh` only from a caller the database accepts as
+# the service role: it calls `google_venues_due` (granted to service_role
+# only) with this key and answers 403 when PostgREST refuses it. The key need
+# not be the same string as the one the platform injects into the function.
 #
 # Needs SUPABASE_URL (a variable or a secret) and SUPABASE_SERVICE_ROLE_KEY,
 # the pair venues-sync.yml writes with. Without them it logs a warning and
