@@ -1,15 +1,15 @@
 /**
- * Two values the "update required" screen (src/features/app-gate/UpdateRequired.tsx) needs. A null
- * is a value the repo does not have yet: nothing here is guessed, and the screen is written to work
- * without either.
+ * Two values the "update required" screen (src/features/app-gate/UpdateRequired.tsx) needs and the
+ * repo does not have yet. They are null on purpose: nothing here is guessed, and the screen is
+ * written to work without either.
  */
 
 /**
  * Bevi's App Store id, digits only ("1234567890"). From App Store Connect > the app > App
- * Information > General Information > Apple ID; the same number is `ascAppId` in eas.json. Null: the
- * Update button is absent and the screen tells the person to update from TestFlight or the App Store.
+ * Information > General Information > Apple ID. Null: the Update button is absent and the screen
+ * tells the person to update from TestFlight or the App Store.
  */
-export const APP_STORE_ID: string | null = '6836079118';
+export const APP_STORE_ID: string | null = null;
 
 /**
  * The address a person stuck on the update screen can write to. From the founders: the support
