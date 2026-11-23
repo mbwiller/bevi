@@ -12,6 +12,10 @@ const CAMERA_PERMISSION = "Bevi uses the camera to photograph a drink you're add
 const PHOTOS_PERMISSION = "Bevi uses your photo library so you can choose a photo for a drink you're adding.";
 // Asked only when someone taps Add location. The position orders one search and is never stored.
 const LOCATION_PERMISSION = 'Bevi uses your location to list the shops, cafes and bars nearest you when you add where you got a drink.';
+// Never shown: the app does not ask for motion data. expo-location links the motion-activity API
+// all the same, and App Store Connect refuses a binary that links it without this key (ITMS-90683,
+// which is what build 0.1.0 (7) got). So it says what is true, for whoever reads the Info.plist.
+const MOTION_PERMISSION = "Bevi doesn't use motion data. A location library it includes can read it, and iOS requires this note.";
 
 // `surface` from src/theme/tokens.ts, light then dark: the launch screen hands over to the in-app
 // Splash (features/auth/Splash.tsx), which draws the same wordmark on the same colour.
@@ -99,15 +103,16 @@ const config: ExpoConfig = {
     // The place picker's nearest-first (features/places/position.ts): while the app is in use, and
     // nothing else. The app never asks for "always", but expo-location links the call that would,
     // and App Store Connect checks the binary for a purpose string to match: that string is the
-    // same sentence, so nothing reads as a claim to background use. No older "always" key and no
-    // motion string: nothing here uses either.
+    // same sentence, so nothing reads as a claim to background use. No older "always" key: nothing
+    // here uses it. The motion string is required for the same reason as the "always" one (the
+    // library links the motion-activity API), and setting it to `false` got an upload refused.
     [
       'expo-location',
       {
         locationWhenInUsePermission: LOCATION_PERMISSION,
         locationAlwaysAndWhenInUsePermission: LOCATION_PERMISSION,
         locationAlwaysPermission: false,
-        motionUsagePermission: false,
+        motionUsagePermission: MOTION_PERMISSION,
         isIosBackgroundLocationEnabled: false,
       },
     ],

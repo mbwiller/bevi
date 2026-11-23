@@ -220,8 +220,15 @@ Two things to watch on the first upload from this branch:
   the app never records sound. If App Store Connect answers the upload asking
   for `NSMicrophoneUsageDescription`, the fix is one option in
   `app/app.config.ts` (`microphonePermission` on the `expo-camera` plugin, as a
-  sentence instead of `false`) and a new build. Nobody has seen the answer
-  yet.
+  sentence instead of `false`) and a new build. Builds 4 to 6 were accepted
+  without it, so the microphone string is not needed.
+- **The same error did arrive for motion.** Build 0.1.0 (7), the first with
+  `expo-location`, was refused for a missing `NSMotionUsageDescription`: the
+  library links the motion-activity API, and the plugin had been told to leave
+  the string out. It is set now, and the app still never asks for motion data.
+  A refused upload is easy to miss: EAS reports the submission as successful,
+  the build never appears under its version, and the reason is only under
+  TestFlight > Builds > iOS > **Build Uploads**, where the row says Failed.
 - **Remove builds 0.1.0 (2) and (3) from TestFlight** once the new build is on
   both phones. They are contract 2.15.0 and never read `app_config`, so
   neither maintenance nor "update required" can reach them.
