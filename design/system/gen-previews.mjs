@@ -385,7 +385,7 @@ h(B.ErrorState, { icon: 'wifi-off', title: "You're offline", message: "We'll sho
 P.Skeleton = [{ group: 'Feedback', height: 330, width: 393 }, '', `
 h('div', { className: 'pv-narrow' }, h(B.Skeleton, { variant: 'row' }), h(B.Skeleton, { variant: 'post' }))`];
 
-P.CommentsSheet = [{ group: 'Feed', height: 1970, width: 393, subtitle: 'Your own comments can be deleted' }, `.pv-frame { height: 440px; margin: 10px auto; } .cap { margin: 14px 16px 0; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--textSecondary); }`, `
+P.CommentsSheet = [{ group: 'Feed', height: 2830, width: 393, subtitle: 'Opens at 60%, expands to the whole screen. Your own comments can be deleted' }, `.pv-frame { height: 640px; margin: 10px auto; } .cap { margin: 14px 16px 0; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--textSecondary); }`, `
 h(function Demo() {
   var few = [
     { id: 'a', author: FRIENDS[1], body: 'ok this is going on my list', time: '4 hours ago' },
@@ -408,7 +408,7 @@ h(function Demo() {
     h('p', { className: 'cap' }, "More actions on other people's comments (onMore), Delete on yours"),
     h('div', { className: 'pv-frame' }, h(B.CommentsSheet, { me: ME, comments: few, onMore: function () {} })),
     h('p', { className: 'cap' }, 'A long thread, posting failed'),
-    h('div', { className: 'pv-frame', style: { height: 500 } }, h(B.CommentsSheet, { me: ME, comments: long, error: "Couldn't post your comment. Check your connection and try again." })));
+    h('div', { className: 'pv-frame', style: { height: 760 } }, h(B.CommentsSheet, { me: ME, comments: long, error: "Couldn't post your comment. Check your connection and try again." })));
 })`];
 
 P.Sheet = [{ group: 'Feedback', height: 460, width: 393 }, `.pv-frame { height: 440px; margin: 10px auto; } .opt { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; min-height: 48px; border-bottom: 1px solid var(--border); font-size: 17px; }`, `

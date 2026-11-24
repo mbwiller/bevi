@@ -270,14 +270,16 @@ export declare function ErrorState(props: ErrorStateProps): React.ReactElement;
 export interface SkeletonProps { variant?: 'text' | 'block' | 'circle' | 'row' | 'post'; width?: number | string; height?: number; lines?: number; className?: string }
 export declare function Skeleton(props: SkeletonProps): React.ReactElement;
 
-export interface SheetProps { open?: boolean; title?: string; snap?: 40 | 90; onClose?: () => void;
+export interface SheetProps { open?: boolean; title?: string; snap?: 40 | 60 | 90;
+  /** The sheet opens at `snap` and its top drags up to the whole screen, where it rests too; from there it comes back down to `snap` or closes, by how the finger let go. For a sheet people stay in (CommentsSheet). */
+  expand?: boolean; onClose?: () => void;
   /** The sheet has finished closing (after its exit animation and, on a phone, once the modal is really gone). Navigate or open another modal from here, never in the same tick as `onClose`. */
   onClosed?: () => void; children?: React.ReactNode; className?: string }
 export declare function Sheet(props: SheetProps): React.ReactElement | null;
 
 /** One comment as the post and the sheet draw it. `time` is relative ("2 hours ago"); `mine` adds Delete in the sheet. */
 export interface PostComment { id?: string; author: Person; body: string; time?: string; mine?: boolean }
-/** The post's comments in a 90% Sheet, oldest at the top, newest above the composer; empty state "No comments yet"; composer "Add a comment…" + Post, 280-character limit (the count shows from 20 left). */
+/** The post's comments in a Sheet that opens at 60% and expands to the whole screen, oldest at the top, newest above the composer; empty state "No comments yet"; composer "Add a comment…" + Post pinned to the bottom of the screen at either height, 280-character limit (the count shows from 20 left). */
 export interface CommentsSheetProps { open?: boolean; comments?: PostComment[]; me?: Person; onClose?: () => void; onPost?: (body: string) => void; onDelete?: (id: string) => void;
   /** Opens the More menu of someone else's comment (Report comment, Block account): an ellipsis at the end of the row, named "More actions, comment by @handle". Never on your own comments, which end in Delete. Without it no row has one. */
   onMore?: (comment: PostComment) => void;

@@ -1,4 +1,4 @@
-<!-- @dsCard group="Feed" height=1970 width=393 subtitle="Your own comments can be deleted" -->
+<!-- @dsCard group="Feed" height=2830 width=393 subtitle="Opens at 60%, expands to the whole screen. Your own comments can be deleted" -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -12,7 +12,7 @@
   .pv-label { font-size: 12px; line-height: 16px; color: var(--textSecondary); }
   .pv-narrow { max-width: 393px; }
   .pv-frame { position: relative; width: 393px; max-width: 100%; overflow: hidden; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
-.pv-frame { height: 440px; margin: 10px auto; } .cap { margin: 14px 16px 0; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--textSecondary); }</style>
+.pv-frame { height: 640px; margin: 10px auto; } .cap { margin: 14px 16px 0; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--textSecondary); }</style>
 </head>
 <body>
 <div id="root"></div>
@@ -63,7 +63,7 @@
     h('p', { className: 'cap' }, "More actions on other people's comments (onMore), Delete on yours"),
     h('div', { className: 'pv-frame' }, h(B.CommentsSheet, { me: ME, comments: few, onMore: function () {} })),
     h('p', { className: 'cap' }, 'A long thread, posting failed'),
-    h('div', { className: 'pv-frame', style: { height: 500 } }, h(B.CommentsSheet, { me: ME, comments: long, error: "Couldn't post your comment. Check your connection and try again." })));
+    h('div', { className: 'pv-frame', style: { height: 760 } }, h(B.CommentsSheet, { me: ME, comments: long, error: "Couldn't post your comment. Check your connection and try again." })));
 }));
 </script>
 </body>

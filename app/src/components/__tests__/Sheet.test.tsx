@@ -211,7 +211,7 @@ describe('dragging the top down', () => {
       { state: State.END, translationY, velocityY },
     ]);
 
-  it('closes the sheet past a quarter of its height', async () => {
+  it('closes the sheet once let go far enough down, however slowly', async () => {
     const onClose = jest.fn();
     await render(
       <Sheet open title="Comments" onClose={onClose}>
@@ -230,6 +230,35 @@ describe('dragging the top down', () => {
       </Sheet>,
     );
     await act(() => drag(30, 1500));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('goes back when let go, slowly, less than a third of the way down', async () => {
+    const { Dimensions } = require('react-native');
+    const sheetHeight = Dimensions.get('window').height * 0.4;
+    const onClose = jest.fn();
+    await render(
+      <Sheet open title="Comments" onClose={onClose}>
+        <Text>Body</Text>
+      </Sheet>,
+    );
+    await act(() => drag(sheetHeight * 0.3));
+    expect(onClose).not.toHaveBeenCalled();
+    await act(() => drag(sheetHeight * 0.4));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('judges a release by where it was heading: the same short drag closes at a walking pace', async () => {
+    const onClose = jest.fn();
+    await render(
+      <Sheet open title="Comments" onClose={onClose}>
+        <Text>Body</Text>
+      </Sheet>,
+    );
+    // 30pt down and still: back. 30pt down at 400pt/s would have coasted another 200pt: closed.
+    await act(() => drag(30, 0));
+    expect(onClose).not.toHaveBeenCalled();
+    await act(() => drag(30, 400));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -253,6 +282,42 @@ describe('dragging the top down', () => {
     );
     await act(() => drag(400, -1500));
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('asks to close once, and comes back if the parent keeps it open', async () => {
+    // A parent that ignores onClose: the sheet has already left for the bottom edge, so it is
+    // brought back rather than left off the screen, still open, with nothing to drag.
+    const onClose = jest.fn();
+    await render(
+      <Sheet open title="Comments" onClose={onClose}>
+        <Text>Body</Text>
+      </Sheet>,
+    );
+    await act(() => drag(400, 1500));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    await act(() => jest.advanceTimersByTime(1000));
+    expect(screen.getByText('Body')).toBeTruthy();
+    // And it can be flung again.
+    await act(() => drag(400, 1500));
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
+  it('a parent that closes a moment later still gets the flung exit, not a second one', async () => {
+    const onClose = jest.fn();
+    const sheet = (open: boolean) => (
+      <Sheet open={open} title="Comments" onClose={onClose}>
+        <Text>Body</Text>
+      </Sheet>
+    );
+    const view = await render(sheet(true));
+    await act(() => drag(400, 1500));
+    // The parent answers after a few frames (a navigation, a mutation), inside the grace period.
+    await act(() => jest.advanceTimersByTime(100));
+    await view.rerender(sheet(false));
+    expect(screen.getByText('Body')).toBeTruthy();
+    await settle();
+    expect(screen.queryByText('Body')).toBeNull();
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('never closes on a cancelled drag', async () => {
