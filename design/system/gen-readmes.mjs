@@ -227,14 +227,18 @@ const R = {
 - Provide: \`variant\` (row, post, text, block, circle), and sizes for the plain shapes. The shimmer stops under reduced motion.
 - \`row\` is the 94pt BevRow and \`post\` the FeedPost (an Avatar 44, then a 112pt tile beside two lines).
 - The content that replaces it arrives: it rises 6pt and fades in over \`base\` (a plain fade under Reduce Motion).`,
-  Sheet: `Bottom sheet with a handle, over a \`scrim\`; snaps to 40% or 90% of the screen.
+  Sheet: `Bottom sheet with a handle, over a \`scrim\`; snaps to 40%, 60% or 90% of the screen.
 
-- Provide: \`title\`, \`snap\`, \`onClose\`, optional \`onClosed\`, children (option rows 48pt with 1pt dividers, a check in \`primary\` on the chosen one).
+- Provide: \`title\`, \`snap\`, \`onClose\`, optional \`onClosed\` and \`expand\`, children (option rows 48pt with 1pt dividers, a check in \`primary\` on the chosen one).
+- **Dragging it.** The handle and the title are the grab area: the sheet follows the finger, and the scrim fades as it goes down. Letting go is judged by where the release was heading, not by where the finger lifted: a list flicked at that speed would coast so far, and the sheet goes to the resting place nearest to that point, closing once it is heading more than about a third of the way to the bottom edge. So a quick flick closes it however short, and a small slow drag goes back. It carries on at the finger's own speed and settles without a wobble; pulled above its top it only gives a little.
+- **\`expand\`** gives it a second resting height, the whole screen below the status bar. It opens at \`snap\`; its top drags up to the whole screen and back; from the whole screen a quick swipe down closes it outright and a slower one stops at \`snap\`. It takes the whole screen by itself while the keyboard is up. What is pinned to its bottom (a composer) stays on the bottom edge of the screen at either height and all the way between them. For a sheet people stay in: the CommentsSheet. Option sheets do not expand.
 - Uses: list scope, filters, re-rank, category picker, report a Bev, settings.
 - \`onClosed\` fires once the sheet has finished closing, after its exit animation and, on a phone, once the modal is really gone. Anything that follows a close (leaving the screen, opening a screen or another modal) waits for it: doing it in the same tick as \`onClose\` pops or pushes a screen under a modal that is still presented.
 - A sheet that opens over another goes inside it (the second modal presents from the first); never beside it.
 - It fills its nearest positioned ancestor: render it inside the screen container.`,
-  CommentsSheet: `The post's comments, Instagram-clean, in a 90% Sheet titled "Comments".
+  CommentsSheet: `The post's comments, Instagram-clean, in a Sheet titled "Comments" that opens at 60% of the screen, a little above the middle, and expands to the whole screen (Sheet's \`expand\`).
+
+- **Getting in and out.** It opens at 60% with the post still in view above it. Drag its top up for the whole screen; swipe down to close. On a phone the thread moves the sheet too: a drag down while it shows its first comment, and a drag up while the sheet is at 60%. The composer stays on the bottom edge of the screen throughout, and the sheet takes the whole screen while the keyboard is up.
 
 - Provide: \`comments\` (each \`author\`, \`body\`, \`time\`, \`mine\`), \`me\` (the composer's avatar), \`onPost\`, \`onDelete\`, \`onClose\`, optional \`onMore\`, \`error\` and children.
 - **A sheet over this one.** Pass the More menu's sheet as children, so it sits inside the CommentsSheet and not beside it. On a phone every Sheet is a modal that presents from the nearest screen, and a second one beside the first is refused; one inside it presents from the first. Anything else that opens over a Sheet follows the same rule.

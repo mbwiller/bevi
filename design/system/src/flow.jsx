@@ -231,7 +231,8 @@ export function ErrorState({ title = "Couldn't load this", message = 'Check your
 export const COMMENT_MAX = 280;
 
 /**
- * The post's comments in a 90% Sheet: oldest at the top and newest just above the composer, like a chat.
+ * The post's comments in a Sheet that opens at 60% and expands to the whole screen: oldest at the top and
+ * newest just above the composer, like a chat.
  * Each comment: Avatar 32, bold handle, the text, a relative time; your own add a Delete. The composer
  * ("Add a comment…" and a `primary` Post) stays pinned to the bottom.
  */
@@ -241,7 +242,7 @@ export function CommentsSheet({ open = true, comments = [], me, onClose, onPost,
   const left = COMMENT_MAX - draft.length;
   const post = () => { if (!body || left < 0) return; if (onPost) onPost(body); setDraft(''); };
   return (
-    <Sheet open={open} title="Comments" snap={90} onClose={onClose} className={cx('bv-comments', className)}>
+    <Sheet open={open} title="Comments" snap={60} expand onClose={onClose} className={cx('bv-comments', className)}>
       {comments.length ? (
         <ul className="bv-comment-list">
           {comments.map((c, i) => (
@@ -309,14 +310,17 @@ export function CollectionSheet({ open = true, rows = [], onClose, onSelect, cla
   );
 }
 
-/** Bottom sheet with a handle; snaps to 40% or 90% of its container. Fills the nearest positioned ancestor. */
-export function Sheet({ open = true, title, snap = 40, onClose, onClosed, children, className }) {
+/**
+ * Bottom sheet with a handle; snaps to 40%, 60% or 90% of its container. Fills the nearest positioned ancestor.
+ * `expand`: in the app its top also drags up to the whole screen and back (README); here it is drawn at `snap`.
+ */
+export function Sheet({ open = true, title, snap = 40, expand, onClose, onClosed, children, className }) {
   // `onClosed`: once the sheet is gone (here, as soon as `open` turns false).
   const wasOpen = React.useRef(open);
   React.useEffect(() => { if (wasOpen.current && !open && onClosed) onClosed(); wasOpen.current = open; }, [open, onClosed]);
   if (!open) return null;
   return (
-    <div className={cx('bv', 'bv-sheet-wrap', className)}>
+    <div className={cx('bv', 'bv-sheet-wrap', className)} data-expand={expand ? '' : undefined}>
       <div className="bv-sheet-scrim" onClick={onClose} aria-hidden="true" />
       <div className="bv-sheet" role="dialog" aria-modal="true" aria-label={title} style={{ height: snap + '%' }}>
         <span className="bv-sheet-handle" aria-hidden="true" />
