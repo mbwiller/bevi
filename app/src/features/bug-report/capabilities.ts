@@ -26,5 +26,5 @@ export const CAPABILITIES: Capabilities = {
   sheetsOverFullScreen: false,
 };
 
-/** The route groups the root Stack presents as full-screen modals (`presentation: 'fullScreenModal'`, app/_layout.tsx). */
+/** The route groups the root Stack presents as modals over the whole window (`fullScreenModal`, or `transparentModal` for the image viewer; app/_layout.tsx). */
 export const FULL_SCREEN_ROUTES: readonly string[] = ['rank', 'add', 'image', 'report-bug'];

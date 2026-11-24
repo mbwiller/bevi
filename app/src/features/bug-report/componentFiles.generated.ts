@@ -101,6 +101,7 @@ export const COMPONENT_FILES: Readonly<Record<string, string>> = {
   Icon: 'app/src/components/Icon.tsx',
   IconButton: 'app/src/components/IconButton.tsx',
   ImageScreen: 'app/src/app/image/[url].tsx',
+  ImageViewer: 'app/src/features/bev/ImageViewer.tsx',
   Index: 'app/src/app/index.tsx',
   Inline: 'app/src/features/settings/Markdown.tsx',
   LeaderboardRedirect: 'app/src/app/leaderboard.tsx',
