@@ -219,6 +219,7 @@ export const COMPONENT_FILES: Readonly<Record<string, string>> = {
   SettingsSection: 'app/src/features/settings/SettingsRow.tsx',
   Sheet: 'app/src/components/Sheet.tsx',
   SheetOption: 'app/src/features/lists/SheetOption.tsx',
+  SheetScrollView: 'app/src/components/Sheet.tsx',
   SheetSection: 'app/src/features/lists/SheetOption.tsx',
   Shimmer: 'app/src/components/BevImage.tsx',
   ShotThumb: 'app/src/features/bug-report/ReportNote.tsx',

@@ -1,7 +1,8 @@
 import type { Comment, Profile } from '@bevi/shared';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Platform, Pressable, StyleSheet, Text, TextInput, View, type TextStyle } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, TextInput, View, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent, type TextStyle } from 'react-native';
+import { useSharedValue } from 'react-native-reanimated';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { Announce } from './Announce';
@@ -15,7 +16,7 @@ import { ErrorState } from './ErrorState';
 import { IconButton } from './IconButton';
 import { TARGET_MIN } from './HitTarget';
 import { Skeleton } from './Skeleton';
-import { Sheet } from './Sheet';
+import { Sheet, SheetScrollView } from './Sheet';
 
 /** Comments longer than this are refused (the contract's `comments.add` limit). */
 export const COMMENT_MAX = 280;
@@ -74,22 +75,31 @@ export interface CommentsSheetProps {
 /** A web-only CSS property: a long unbroken word wraps instead of widening the sheet. */
 const WRAP = (Platform.OS === 'web' ? { overflowWrap: 'anywhere' } : {}) as TextStyle;
 
+/** Within this far of the last comment, the thread counts as showing its end (pt). */
+const NEAR_END = 24;
+
 /**
- * The post's comments in a 90% Sheet titled "Comments", Instagram-clean: the thread reads oldest at
- * the top and newest just above the composer, like a chat. Each comment: Avatar 32, the bold handle
- * and a relative time in `textSecondary`, then the text; your own end in "Delete" (44pt,
- * `textSecondary`), which asks again inside the row, never in a browser dialog. No likes on comments.
+ * The post's comments in a Sheet titled "Comments", Instagram-clean. It opens at 60% of the screen,
+ * a little above the middle; its top drags up to the whole screen and back, and from either height
+ * a swipe down closes it (Sheet's `expand`). On a phone the thread moves the sheet too: a drag down
+ * while it shows its first comment, and a drag up while the sheet is at 60%.
  *
- * The composer is pinned to the bottom: your Avatar 32, a pill "Add a comment…" and Post in `primary`
- * (`textSecondary` and disabled while empty or over 280 characters). The remaining count shows beside
- * Post from 20 left and turns `scoreLow` below zero. Failures land in a caption under it, and the
- * draft stays.
+ * The thread reads oldest at the top and newest just above the composer, like a chat. Each comment:
+ * Avatar 32, the bold handle and a relative time in `textSecondary`, then the text; your own end in
+ * "Delete" (44pt, `textSecondary`), which asks again inside the row, never in a browser dialog. No
+ * likes on comments.
  *
- * The keyboard: iOS Safari doesn't resize the page for it, so the sheet's bottom (a fixed-position
- * Modal) would sit behind the keyboard. On the web `useKeyboardInset` reads how much of the screen the
- * keyboard hides from `visualViewport` and the composer pads itself up by that, less the sheet's own
- * bottom padding, so it rides just above the keyboard while the list above it shrinks. On native the
- * Sheet raises its own panel (and shrinks it) by the keyboard, so the composer needs nothing.
+ * The composer is the Sheet's footer, on the bottom edge of the screen at either height: your
+ * Avatar 32, a pill "Add a comment…" and Post in `primary` (`textSecondary` and disabled while empty
+ * or over 280 characters). The remaining count shows beside Post from 20 left and turns `scoreLow`
+ * below zero. Failures land in a caption under it, and the draft stays.
+ *
+ * The keyboard: the sheet takes the whole screen while it is up. iOS Safari doesn't resize the page
+ * for it, so the sheet's bottom (a fixed-position Modal) would sit behind the keyboard. On the web
+ * `useKeyboardInset` reads how much of the screen the keyboard hides from `visualViewport` and the
+ * composer pads itself up by that, less the sheet's own bottom padding, so it rides just above the
+ * keyboard while the list above it shrinks. On native the Sheet raises its own panel (and shrinks
+ * it) by the keyboard, so the composer needs nothing.
  */
 export function CommentsSheet({
   open = false,
@@ -158,6 +168,34 @@ export function CommentsSheet({
     setPrevFirstId(firstId);
     if (prevFirstId && comments.findIndex((c) => c.id === prevFirstId) > 0) setListKey((k) => k + 1);
   }
+
+  // How far the thread is scrolled, for the Sheet: at its top, a drag down on it moves the sheet.
+  const scrollTop = useSharedValue(0);
+  // Whether the thread shows its end, and how tall its window was: the sheet's two heights give the
+  // thread two, and a thread read at its end stays at its end when the height changes.
+  const atEnd = useRef(true);
+  const threadHeight = useRef(0);
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+    scrollTop.value = contentOffset.y;
+    atEnd.current = contentSize.height - contentOffset.y - layoutMeasurement.height < NEAR_END;
+  };
+  const onThreadLayout = (e: LayoutChangeEvent) => {
+    const h = e.nativeEvent.layout.height;
+    const was = threadHeight.current;
+    threadHeight.current = h;
+    // Taller: the new room opened below the last comment, so glide down to it. Shorter: the end went
+    // under the composer, unseen, so be there at once.
+    if (was && h !== was && atEnd.current) list.current?.scrollToEnd({ animated: h > was });
+  };
+  // Nothing is scrolled until a thread says so: each opening, and a thread with no list (empty, loading, failed).
+  const listed = !loading && !loadError && comments.length > 0;
+  useEffect(() => {
+    if (open && listed) return;
+    scrollTop.value = 0;
+    atEnd.current = true;
+    threadHeight.current = 0;
+  }, [open, listed, scrollTop]);
 
   // Keep the newest comment in view: on first load and whenever one is added at the bottom (not when
   // earlier ones load above).
@@ -271,7 +309,7 @@ export function CommentsSheet({
   ) : loadError ? (
     <ErrorState error={loadError} onRetry={onRetry} style={styles.fill} />
   ) : comments.length ? (
-    <View style={styles.fill}>
+    <View style={styles.fill} onLayout={onThreadLayout}>
       <FlashList
         key={listKey}
         ref={list}
@@ -282,6 +320,10 @@ export function CommentsSheet({
         ListHeaderComponent={earlier}
         // The first layout is when the end is known; later remounts (earlier comments) stay at the top.
         onLoad={listKey === 0 ? () => list.current?.scrollToEnd({ animated: false }) : undefined}
+        // Its scroll waits for the sheet to say whose touch it is (Sheet's `scrollTop`).
+        renderScrollComponent={SheetScrollView}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.listContent}
       />
@@ -290,60 +332,63 @@ export function CommentsSheet({
     <EmptyState icon="message-circle" title="No comments yet" body="Start the conversation." style={styles.empty} />
   );
 
-  return (
-    <Sheet open={open} title="Comments" snap={90} onClose={onClose} scroll={false}>
-      {thread}
-      <View style={{ paddingBottom: lift }} testID="comment-composer">
-        <View style={[styles.composer, { borderTopColor: colors.border }]}>
-          {me ? <Avatar name={me.displayName} src={me.avatarUrl ?? undefined} size={32} /> : null}
-          <TextInput
-            value={draft}
-            onChangeText={setDraft}
-            onSubmitEditing={() => void post()}
-            placeholder="Add a comment…"
-            placeholderTextColor={colors.textSecondary}
-            accessibilityLabel="Add a comment"
-            aria-invalid={left < 0 ? true : undefined}
-            enterKeyHint="send"
-            submitBehavior="submit"
-            // react-native-web still reads blurOnSubmit (not submitBehavior): keep the keyboard up after Return posts.
-            {...({ blurOnSubmit: false } as object)}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            style={[
-              type.bodyLarge,
-              styles.input,
-              { color: colors.text, backgroundColor: colors.surface, borderColor: focused ? colors.primary : colors.borderStrong },
-              focused && { boxShadow: elevation.focusRing },
-            ]}
-          />
-          {left <= COMMENT_COUNTDOWN ? (
-            <Text
-              style={[type.caption, styles.count, { color: left < 0 ? colors.scoreLow : colors.textSecondary }]}
-              accessibilityLabel={left < 0 ? `${characters(-left)} over` : `${characters(left)} left`}
-              accessibilityLiveRegion="polite"
-            >
-              {left}
-            </Text>
-          ) : null}
-          <Pressable
-            onPress={() => void post()}
-            disabled={!canPost}
-            accessibilityRole="button"
-            accessibilityLabel="Post"
-            accessibilityState={{ disabled: !canPost }}
-            style={styles.post}
+  const composer = (
+    <View style={{ paddingBottom: lift }} testID="comment-composer">
+      <View style={[styles.composer, { borderTopColor: colors.border }]}>
+        {me ? <Avatar name={me.displayName} src={me.avatarUrl ?? undefined} size={32} /> : null}
+        <TextInput
+          value={draft}
+          onChangeText={setDraft}
+          onSubmitEditing={() => void post()}
+          placeholder="Add a comment…"
+          placeholderTextColor={colors.textSecondary}
+          accessibilityLabel="Add a comment"
+          aria-invalid={left < 0 ? true : undefined}
+          enterKeyHint="send"
+          submitBehavior="submit"
+          // react-native-web still reads blurOnSubmit (not submitBehavior): keep the keyboard up after Return posts.
+          {...({ blurOnSubmit: false } as object)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          style={[
+            type.bodyLarge,
+            styles.input,
+            { color: colors.text, backgroundColor: colors.surface, borderColor: focused ? colors.primary : colors.borderStrong },
+            focused && { boxShadow: elevation.focusRing },
+          ]}
+        />
+        {left <= COMMENT_COUNTDOWN ? (
+          <Text
+            style={[type.caption, styles.count, { color: left < 0 ? colors.scoreLow : colors.textSecondary }]}
+            accessibilityLabel={left < 0 ? `${characters(-left)} over` : `${characters(left)} left`}
+            accessibilityLiveRegion="polite"
           >
-            <Text style={[type.body, styles.strong, { color: canPost ? colors.primary : colors.textSecondary }]}>Post</Text>
-          </Pressable>
-        </View>
-        <Announce text={error} />
-        {error ? (
-          <Text style={[type.caption, styles.error, { color: colors.scoreLow }]} role="alert" accessibilityLiveRegion="polite">
-            {error}
+            {left}
           </Text>
         ) : null}
+        <Pressable
+          onPress={() => void post()}
+          disabled={!canPost}
+          accessibilityRole="button"
+          accessibilityLabel="Post"
+          accessibilityState={{ disabled: !canPost }}
+          style={styles.post}
+        >
+          <Text style={[type.body, styles.strong, { color: canPost ? colors.primary : colors.textSecondary }]}>Post</Text>
+        </Pressable>
       </View>
+      <Announce text={error} />
+      {error ? (
+        <Text style={[type.caption, styles.error, { color: colors.scoreLow }]} role="alert" accessibilityLiveRegion="polite">
+          {error}
+        </Text>
+      ) : null}
+    </View>
+  );
+
+  return (
+    <Sheet open={open} title="Comments" snap={60} expand onClose={onClose} scroll={false} footer={composer} scrollTop={scrollTop}>
+      {thread}
       {children}
     </Sheet>
   );
