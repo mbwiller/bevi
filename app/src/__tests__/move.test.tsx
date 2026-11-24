@@ -70,8 +70,8 @@ it('a pushed screen slides in, a full-screen modal rises, and going back mounts 
   await waitFor(() => expect(pathname()).toBe('/bev/abc'));
   expect(mockStackMounts.slice(before)).toEqual([{ variant: 'push', enter: true }]);
 
-  await act(async () => router.push('/image/x'));
-  await waitFor(() => expect(pathname()).toBe('/image/x'));
+  await act(async () => router.push('/rank/abc'));
+  await waitFor(() => expect(pathname()).toBe('/rank/abc'));
   expect(mockStackMounts.slice(before)).toEqual([
     { variant: 'push', enter: true },
     { variant: 'rise', enter: true },
@@ -84,6 +84,20 @@ it('a pushed screen slides in, a full-screen modal rises, and going back mounts 
   await waitFor(() => expect(pathname()).toBe('/feed'));
   expect(mockStackMounts.slice(before)).toHaveLength(2);
   expect(mockTabs['feed/index']!.active).toBe(true);
+});
+
+// T-26: the image viewer is a transparent modal over the page it opens from. It gets the modal's
+// scene (UIKit presents it like one) but no entrance from it: the viewer grows out of the picture itself.
+it('the image viewer gets the modal scene and draws its own entrance', async () => {
+  const pathname = await start('/feed');
+  await screen.findByLabelText('Find people');
+  await act(async () => router.push('/bev/abc'));
+  await waitFor(() => expect(pathname()).toBe('/bev/abc'));
+  const before = mockStackMounts.length;
+
+  await act(async () => router.push('/image/x'));
+  await waitFor(() => expect(pathname()).toBe('/image/x'));
+  expect(mockStackMounts.slice(before)).toEqual([{ variant: 'rise', enter: false }]);
 });
 
 it('switching tabs makes the new tab the active scene; People is the pushed kind', async () => {

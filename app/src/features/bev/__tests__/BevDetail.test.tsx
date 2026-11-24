@@ -167,6 +167,24 @@ it('does not show private generation progress to another viewer', async () => {
   expect(screen.queryByTestId('generated-icon-panel')).toBeNull();
 });
 
+// T-26: the hero was a Pressable with the Pills' brightness dim. On iOS that dim is a pale layer over
+// the Pressable's whole square box, so around the rounded tile it showed as four light corners on a
+// dark page while the finger was down.
+it('the photo opens the viewer, and the press never uses the brightness dim', async () => {
+  const { StyleSheet } = require('react-native');
+  const ranked = (await api.rankings.listMine()).items[0]!;
+  const get = api.bevs.get.bind(api.bevs);
+  const spy = jest.spyOn(api.bevs, 'get').mockImplementation(async (id) => ({ ...(await get(id)), photoUrl: 'https://example.test/p.jpg' }));
+  const r = await open(ranked.bevId);
+  const hero = await screen.findByRole('imagebutton', { name: `View photo of ${ranked.bev.name}` });
+  await fireEvent(hero, 'pressIn');
+  expect(StyleSheet.flatten(hero.props.style).filter).toBeUndefined();
+  await fireEvent(hero, 'pressOut');
+  await fireEvent.press(hero);
+  expect(r.path()).toBe('/image/https://example.test/p.jpg');
+  spy.mockRestore();
+});
+
 it('opens the report sheet from the overflow', async () => {
   const ranked = (await api.rankings.listMine()).items[0]!;
   await open(ranked.bevId);

@@ -89,14 +89,19 @@ function SessionGate() {
   useEffect(() => {
     stackUp.current = checked;
   }, [checked]);
-  const screenLayout: ScreenLayout = ({ route, navigation, options, children }) => (
-    <StackScene
-      variant={options.presentation === 'fullScreenModal' ? 'rise' : 'push'}
-      enter={stackUp.current && navigation.getState().routes.findIndex((r: { key: string }) => r.key === route.key) > 0}
-    >
-      {children}
-    </StackScene>
-  );
+  // A transparent modal (the image viewer) is presented by UIKit like a full-screen one, so it gets the
+  // same scene; it draws its own entrance over the page, so the scene plays none.
+  const screenLayout: ScreenLayout = ({ route, navigation, options, children }) => {
+    const transparent = options.presentation === 'transparentModal';
+    return (
+      <StackScene
+        variant={transparent || options.presentation === 'fullScreenModal' ? 'rise' : 'push'}
+        enter={!transparent && stackUp.current && navigation.getState().routes.findIndex((r: { key: string }) => r.key === route.key) > 0}
+      >
+        {children}
+      </StackScene>
+    );
+  };
   // Only the launch check can show the splash (and its error); once the Stack is up it stays up.
   if (!checked) return <Splash error={error || undefined} onRetry={retry} />;
   return (
@@ -137,7 +142,11 @@ function SessionGate() {
             <Stack.Screen name="settings/privacy" />
             <Stack.Screen name="settings/blocked" />
             <Stack.Screen name="settings/delete-account" />
-            <Stack.Screen name="image/[url]" options={{ presentation: 'fullScreenModal' }} />
+            {/* Over the page it opens from, which stays drawn behind it; the viewer moves itself (features/bev/ImageViewer.tsx). */}
+            <Stack.Screen
+              name="image/[url]"
+              options={{ presentation: 'transparentModal', animation: 'none', contentStyle: { backgroundColor: 'transparent' } }}
+            />
             <Stack.Screen name="report-bug" options={{ presentation: 'fullScreenModal' }} />
           </Stack.Protected>
         </Stack>

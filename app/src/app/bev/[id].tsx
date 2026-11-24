@@ -1,8 +1,8 @@
 import { NutritionCard } from '@/features/create-bev/NutritionCard';
 import { isApiError } from '@bevi/shared';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useContext, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useContext, useRef, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext, SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAddWantToTry, useBev, useBevIcon, useMe, useRemoveWantToTry, useStats } from '@/api/hooks';
@@ -12,13 +12,14 @@ import { BevImage } from '@/components/BevImage';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { Header } from '@/components/Header';
-import { PRESSED } from '@/components/HitTarget';
 import { Icon } from '@/components/Icon';
 import { Pill } from '@/components/Pill';
+import { FeedbackPressable } from '@/components/PressFeedback';
 import { PriceTier } from '@/components/PriceTier';
 import { Skeleton } from '@/components/Skeleton';
 import { BevStats, FriendsRow } from '@/features/bev/BevStats';
 import { GeneratedIconPanel, showGeneratedIcon } from '@/features/bev/GeneratedIconPanel';
+import { openingFrom } from '@/features/bev/imageOrigin';
 import { ReportSheet } from '@/features/bev/ReportSheet';
 import { SimilarBevs } from '@/features/bev/SimilarBevs';
 import { categoryById } from '@/lib/categories';
@@ -55,6 +56,8 @@ export default function BevDetailScreen() {
   const add = useAddWantToTry();
   const remove = useRemoveWantToTry();
   const [reporting, setReporting] = useState(false);
+  // The hero tile, so the image viewer can grow out of it (imageOrigin.ts).
+  const heroTile = useRef<View>(null);
   // Arrive: what replaces the skeleton rises in once (not on a refetch, nor for a Bev already cached).
   const arrival = useArrival(query.isPending);
 
@@ -108,14 +111,21 @@ export default function BevDetailScreen() {
       <>
         <View style={[styles.hero, showGeneratedIconPanel && styles.heroBeforeIcon]}>
           {photo ? (
-            <Pressable
+            // Press, not the Pills' brightness dim: on iOS that dim is a pale layer over the Pressable's
+            // whole box, and around a rounded tile it showed as four light corners on a dark page (T-26).
+            <FeedbackPressable
               accessibilityRole="imagebutton"
               accessibilityLabel={`View photo of ${bev.name}`}
-              onPress={() => router.push({ pathname: '/image/[url]', params: { url: photo } })}
-              style={({ pressed }) => pressed && PRESSED}
+              onPress={() => {
+                // The viewer grows out of the tile and goes back into it.
+                openingFrom(heroTile.current);
+                router.push({ pathname: '/image/[url]', params: { url: photo } });
+              }}
             >
-              {image}
-            </Pressable>
+              <View ref={heroTile} collapsable={false}>
+                {image}
+              </View>
+            </FeedbackPressable>
           ) : (
             image
           )}
