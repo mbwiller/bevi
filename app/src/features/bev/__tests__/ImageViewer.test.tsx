@@ -102,3 +102,79 @@ describe('the frame a picture opens from', () => {
     expect(takeImageOrigin()).toBeNull();
   });
 });
+
+describe('zooming, and tapping off the picture', () => {
+  // The body is laid out 400×800, so the picture's box is that inside its padding.
+  const layOut = () => fireEvent(screen.getByTestId('image-viewer-body'), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 400, height: 800 } } });
+  // A 400×400 photo, fitted to that box: a square band across its middle.
+  const load = () => fireEvent(screen.getByLabelText('Full-screen image'), 'load', { nativeEvent: { source: { width: 400, height: 400 } } });
+  const tapAt = (id: string, x: number, y: number) =>
+    act(() =>
+      fireGestureHandler(getByGestureTestId(id), [
+        { state: State.BEGAN, x, y },
+        { state: State.ACTIVE, x, y },
+        { state: State.END, x, y },
+      ]),
+    );
+  const pinch = (scale: number) =>
+    act(() =>
+      fireGestureHandler(getByGestureTestId('image-viewer-pinch'), [
+        { state: State.BEGAN, scale: 1, focalX: 200, focalY: 400 },
+        { state: State.ACTIVE, scale: 1, focalX: 200, focalY: 400 },
+        { state: State.ACTIVE, scale, focalX: 200, focalY: 400 },
+        { state: State.END, scale, focalX: 200, focalY: 400 },
+      ]),
+    );
+
+  it('closes on a tap above or below the picture', async () => {
+    const onClose = jest.fn();
+    await render(<ImageViewer url={URL} onClose={onClose} />);
+    await layOut();
+    await load();
+    await tapAt('image-viewer-tap', 200, 60);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('stays on a tap on the picture itself', async () => {
+    const onClose = jest.fn();
+    await render(<ImageViewer url={URL} onClose={onClose} />);
+    await layOut();
+    await load();
+    await tapAt('image-viewer-tap', 200, 400);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('pinched in, the picture covers more of the screen, so a tap there no longer closes it', async () => {
+    const onClose = jest.fn();
+    await render(<ImageViewer url={URL} onClose={onClose} />);
+    await layOut();
+    await load();
+    await pinch(3);
+    await tapAt('image-viewer-tap', 200, 60);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('zoomed, a drag down moves the picture instead of closing the viewer; fitted again, it closes', async () => {
+    const onClose = jest.fn();
+    await render(<ImageViewer url={URL} onClose={onClose} />);
+    await layOut();
+    await load();
+    await pinch(2);
+    await swipe(HEIGHT * 0.5, 2000);
+    expect(onClose).not.toHaveBeenCalled();
+    // A double tap fits it again.
+    await tapAt('image-viewer-double-tap', 200, 400);
+    await swipe(HEIGHT * 0.5, 2000);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('pinched out past fitted, it settles back to fitted', async () => {
+    const onClose = jest.fn();
+    await render(<ImageViewer url={URL} onClose={onClose} />);
+    await layOut();
+    await load();
+    await pinch(0.5);
+    await tapAt('image-viewer-tap', 200, 60);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
