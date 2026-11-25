@@ -46,6 +46,11 @@ export interface PlacePickerBodyProps {
   saving?: boolean;
   /** The caller's save failed; shown above the list. */
   error?: unknown;
+  /**
+   * Changing it clears the search, as closing the picker does, without asking for the position
+   * again: the Map tab's sheet moves to the next Bev this way and keeps its Nearby list.
+   */
+  resetKey?: string;
 }
 
 /**
@@ -59,7 +64,15 @@ export interface PlacePickerBodyProps {
  *
  * Without a position (denied, unavailable, or not provided on this platform) it works by name alone.
  */
-export function PlacePickerBody({ active, selected = null, onSelect, onRemove, saving = false, error }: PlacePickerBodyProps) {
+export function PlacePickerBody({
+  active,
+  selected = null,
+  onSelect,
+  onRemove,
+  saving = false,
+  error,
+  resetKey,
+}: PlacePickerBodyProps) {
   const { colors } = useTheme();
   const [text, setText] = useState('');
   const query = useDebouncedValue(text).trim();
@@ -77,14 +90,15 @@ export function PlacePickerBody({ active, selected = null, onSelect, onRemove, s
   const [adding, setAdding] = useState<string | null>(null);
 
   useEffect(() => {
-    if (active) return;
+    if (active && resetKey === undefined) return;
     setText('');
     setMoreFor(null);
     setAdding(null);
     addPlace.reset();
-    // Deliberately on `active` only: closing the picker forgets the search.
+    // Deliberately on `active` and `resetKey` only: closing the picker, or moving it on to the
+    // next Bev, forgets the search.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active]);
+  }, [active, resetKey]);
 
   // The places used last lead the empty picker, and are not repeated under Nearby.
   const recent = useRecentVenues(active);

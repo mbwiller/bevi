@@ -156,6 +156,7 @@ export const COMPONENT_FILES: Readonly<Record<string, string>> = {
   PickRow: 'app/src/features/bev/ReportSheet.tsx',
   Pictures: 'app/src/features/bug-report/ReportNote.tsx',
   Pill: 'app/src/components/Pill.tsx',
+  PlaceBevsSheet: 'app/src/features/places/PlaceBevsSheet.tsx',
   PlacePicker: 'app/src/features/places/PlacePicker.tsx',
   PlacePickerBody: 'app/src/features/places/PlacePicker.tsx',
   PlaceRow: 'app/src/features/places/PlaceRow.tsx',
