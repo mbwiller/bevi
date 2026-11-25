@@ -564,9 +564,10 @@ async function handleStatus(c: Caller): Promise<Response> {
   if (internal instanceof Response) return internal;
   if (!internal) return json({ error: "not_internal" }, 403);
   // Asked once per request and not cached with the board's answer: it is one
-  // cheap database call, and a role change should show on the next read.
-  const ranks = await canRank(c);
-  if (ranks instanceof Response) return ranks;
+  // cheap database call, and a role change should show on the next read. If
+  // the answer cannot be had (a database without the function yet, say), the
+  // list is still served, without ranks: only the place route must fail closed.
+  const ranks = (await canRank(c)) === true;
 
   const rows = await ledgerRows(c);
   if (rows instanceof Response) return rows;
