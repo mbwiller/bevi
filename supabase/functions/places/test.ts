@@ -272,7 +272,8 @@ Deno.test("add: reads the place from Google, then writes it as the service role"
   assertEquals(calls[1].headers["x-goog-fieldmask"], "id,displayName,formattedAddress,location,primaryType,types");
   assert(calls[1].signal instanceof AbortSignal);
   assertEquals(calls[2].headers.authorization, "Bearer service-role-key");
-  assertEquals(calls[2].headers.apikey, "anon-key");
+  // The service key in both headers, as every other function of ours sends its own.
+  assertEquals(calls[2].headers.apikey, "service-role-key");
   assertEquals(calls[2].body, {
     p_place_id: PLACE_ID,
     p_name: "Bread & Butter Market",
@@ -281,6 +282,65 @@ Deno.test("add: reads the place from Google, then writes it as the service role"
     p_address: "579 Main St, New York, NY 10044, USA",
     p_place_type: "store",
   });
+});
+
+Deno.test("add: an opaque secret key the platform injects goes in both headers of the write", async () => {
+  const calls: Call[] = [];
+  const opaque = "sb_secret_injected";
+  const res = await handle(
+    post({ action: "add", placeId: PLACE_ID }),
+    deps(
+      {
+        ...METER_OK,
+        [`/v1/places/${PLACE_ID}`]: () => ok(GOOGLE_PLACE),
+        "rpc/upsert_google_venue": () => ok({ id: "v" }),
+      },
+      calls,
+      { ...ENV, serviceRoleKey: opaque },
+    ),
+  );
+  assertEquals(res.status, 200);
+  const write = calls.find((c) => c.url.includes("upsert_google_venue"))!;
+  assertEquals(write.headers.authorization, `Bearer ${opaque}`);
+  assertEquals(write.headers.apikey, opaque);
+  // The caller's own token still meters the call, with the publishable key beside it.
+  assertEquals(calls[0].headers.authorization, "Bearer user-jwt");
+  assertEquals(calls[0].headers.apikey, "anon-key");
+});
+
+Deno.test("add: a failed step is logged with its status and code, and never a key", async () => {
+  const logged: string[] = [];
+  const original = console.error;
+  console.error = (...args: unknown[]) => void logged.push(args.map(String).join(" "));
+  try {
+    const refused = await handle(
+      post({ action: "add", placeId: PLACE_ID }),
+      deps({
+        ...METER_OK,
+        "/v1/places/": () => ok(GOOGLE_PLACE),
+        "rpc/upsert_google_venue": () => ok({ code: "PGRST301", message: "JWT could not be decoded" }, 401),
+      }),
+    );
+    await assertFailure(refused, 503, "unavailable");
+
+    const denied = await handle(
+      post({ action: "add", placeId: PLACE_ID }),
+      deps({
+        ...METER_OK,
+        "/v1/places/": () => ok({ error: { status: "PERMISSION_DENIED", message: "key google-key is restricted" } }, 403),
+      }),
+    );
+    await assertFailure(denied, 502, "upstream");
+  } finally {
+    console.error = original;
+  }
+  assertEquals(logged, [
+    "places: upsert_google_venue failed status=401 code=PGRST301",
+    "places: google details failed status=403 reason=PERMISSION_DENIED",
+  ]);
+  for (const line of logged) {
+    assert(!line.includes("service-role-key") && !line.includes("google-key") && !line.includes("anon-key"));
+  }
 });
 
 Deno.test("add: a malformed id is 400; an unknown place, and a venue hidden by hand, are 404", async () => {
