@@ -292,6 +292,22 @@ async function meter(deps: Deps, env: Env, jwt: string): Promise<Response | null
   return fail(503, "unavailable");
 }
 
+/**
+ * A short, log-safe token: letters, digits, `_`, `.` and `-`, at most 64 of them. What the logs
+ * below record is a status and a code, never a message, a body or anything from the request.
+ */
+const safeToken = (value: string): string => value.replace(/[^A-Za-z0-9_.-]/g, "").slice(0, 64) || "none";
+
+/** Google's own error status (`PERMISSION_DENIED`, `INVALID_ARGUMENT`...), for a log line. */
+async function googleReason(res: Response): Promise<string> {
+  try {
+    const body = (await res.json()) as { error?: { status?: unknown } };
+    return safeToken(typeof body.error?.status === "string" ? body.error.status : "");
+  } catch {
+    return "none";
+  }
+}
+
 /** Place Details for one id: the place, "missing" when Google has no such id, or "error". */
 async function details(deps: Deps, key: string, placeId: string): Promise<GooglePlace | "missing" | "error"> {
   let res: Response;
@@ -301,12 +317,16 @@ async function details(deps: Deps, key: string, placeId: string): Promise<Google
       signal: AbortSignal.timeout(GOOGLE_TIMEOUT_MS),
     });
   } catch {
+    console.error("places: google details unreachable or timed out");
     return "error";
   }
   // Google answers an id it does not know with 404. A 400 is not "missing": the id has already
   // passed PLACE_ID_RE, and 400 is also how Google answers a bad or restricted key.
   if (res.status === 404) return "missing";
-  if (!res.ok) return "error";
+  if (!res.ok) {
+    console.error(`places: google details failed status=${res.status} reason=${await googleReason(res)}`);
+    return "error";
+  }
   try {
     const place: unknown = await res.json();
     return isObject(place) ? (place as GooglePlace) : "error";
@@ -337,6 +357,7 @@ async function upsert(
       p_place_type: place.placeType,
     }, apikey);
   } catch {
+    console.error("places: upsert_google_venue unreachable");
     return "error";
   }
   if (res.ok) {
@@ -346,12 +367,15 @@ async function upsert(
       return "error";
     }
   }
+  let code = "";
   try {
     const body = (await res.json()) as { code?: string; message?: string };
     if (body.code === "P0002" || (body.message ?? "").includes("BEVI_NOT_FOUND")) return "hidden";
+    code = typeof body.code === "string" ? body.code : "";
   } catch {
     // Falls through.
   }
+  console.error(`places: upsert_google_venue failed status=${res.status} code=${safeToken(code)}`);
   return "error";
 }
 
@@ -373,9 +397,13 @@ async function search(deps: Deps, env: Env, key: string, body: Record<string, un
       signal: AbortSignal.timeout(GOOGLE_TIMEOUT_MS),
     });
   } catch {
+    console.error("places: google search unreachable or timed out");
     return fail(502, "upstream");
   }
-  if (!res.ok) return fail(502, "upstream");
+  if (!res.ok) {
+    console.error(`places: google search failed status=${res.status} reason=${await googleReason(res)}`);
+    return fail(502, "upstream");
+  }
 
   let found: unknown;
   try {
@@ -404,7 +432,10 @@ async function add(deps: Deps, env: Env, key: string, body: Record<string, unkno
   // A place with no name or no position cannot be a pin.
   if (!place) return fail(404, "not_found");
 
-  const venue = await upsert(deps, env, place, env.serviceRoleKey);
+  // The function's own key goes in BOTH headers, as bug-report and embed send theirs. With the
+  // publishable key in `apikey`, the gateway reads `Authorization` as a JWT, and an opaque secret
+  // key (`sb_secret_...`, which the platform may inject) is not one, so the write was refused.
+  const venue = await upsert(deps, env, place, env.serviceRoleKey, env.serviceRoleKey);
   if (venue === "hidden") return fail(404, "not_found");
   if (venue === "error") return fail(503, "unavailable");
   return json({ venue }, 200);
