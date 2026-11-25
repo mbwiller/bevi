@@ -18,11 +18,17 @@ export interface FakeControls {
   /** Sign in as a fixture user without a password, e.g. ME.handle, FRIEND.handle, MINOR.handle (under 21). */
   signInAs(handle: string): void;
   /**
-   * Make the signed-in user an internal bug reporter (`profiles.role` 'admin' or 'tester'), which
-   * is what `bugs.canReport()` answers and what `bugs.report()` requires. Off after
-   * `resetToFixtures()`.
+   * Make the signed-in user an internal bug reporter who is a founder (`profiles.role` 'admin'):
+   * `bugs.canReport()` and `bugs.canRank()` both answer true, and `bugs.report()` and
+   * `bugs.place()` are allowed. Off after `resetToFixtures()`.
    */
   setInternalReporter(internal: boolean): void;
+  /**
+   * Make the signed-in user a tester (`profiles.role` 'tester'): an internal reporter who may not
+   * rank. `bugs.canRank()` answers false, `bugs.place()` throws 'unauthorized', and every
+   * `listMine` rank is null. `setInternalReporter(false)` or `resetToFixtures()` undoes it.
+   */
+  setTesterReporter(): void;
   /**
    * Move one of the fake's bug tickets to a workflow state, as a founder would on the board: 'in_review'
    * makes My reports offer Verified on device; anything but triage/todo/in_progress takes it out
@@ -54,6 +60,7 @@ export const controls: FakeControls = {
   emptyUser: () => getFakeApi().emptyUser(),
   signInAs: (handle) => getFakeApi().signInAs(handle),
   setInternalReporter: (internal) => getFakeApi().setInternalReporter(internal),
+  setTesterReporter: () => getFakeApi().setTesterReporter(),
   setBugTicketState: (ticketId, state) => getFakeApi().setBugTicketState(ticketId, state),
   setIconStatus: (bevId, status) => getFakeApi().setIconStatus(bevId, status),
   setAppConfig: (config) => getFakeApi().setAppConfig(config),

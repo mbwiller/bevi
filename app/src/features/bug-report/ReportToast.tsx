@@ -14,7 +14,8 @@ const TOAST_MS = 4000;
 
 /**
  * "Filed BEV-14", for about four seconds, just above the floating button. "Place it" starts ranking the ticket
- * when there is at least one other open ticket to compare it with.
+ * when there is at least one other open ticket to compare it with, and only for an account that may
+ * rank: the host's `canPlace` answers false for a tester (ReportHost, `bugs.canRank()`).
  */
 export function ReportToast({ canPlace }: { canPlace: (ticketId: string) => boolean }) {
   const { colors, elevation } = useTheme();

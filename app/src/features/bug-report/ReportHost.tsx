@@ -2,7 +2,7 @@ import { usePathname, useSegments } from 'expo-router';
 import { useCallback, useEffect, useMemo } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useMyBugReports, useReportBug } from '@/api/hooks';
+import { useCanRankBug, useMyBugReports, useReportBug } from '@/api/hooks';
 import { useSession } from '@/state/session';
 import { useTheme } from '@/theme';
 
@@ -41,8 +41,12 @@ import {
  * which gets its own picture), files notes through the `bugs.report` mutation, and draws the
  * floating button, select mode's banner and highlight, the note and the toast on a layer above
  * everything (ReportLayer), and the two sheets beside it. While steps are recorded only the button
- * (as Stop) shows. On iOS there is no select mode and no recording, a new note opens with a
- * screenshot already taken, and the sheets stay closed over a full-screen flow (capabilities.ts).
+ * (as Stop) shows. On iOS a new note opens with a screenshot already taken, and the sheets stay
+ * closed over a full-screen flow (capabilities.ts).
+ *
+ * Ranking ("which is worse?", Place) is offered only to an account that may rank (`bugs.canRank()`,
+ * a founder). For a tester, and until the answer is in, nothing counts as waiting to be placed:
+ * no count on the button and no "Place it" on the toast.
  */
 export default function ReportHost() {
   const segments = useSegments();
@@ -96,13 +100,14 @@ export default function ReportHost() {
   const unplaced = useReport((s) => s.unplaced);
   const needsList = useReport((s) => s.unplaced.length > 0 || s.toast !== null || s.sheet !== null);
   const mine = useMyBugReports(needsList);
+  const canRank = useCanRankBug().data === true;
   const openIds = useMemo(() => new Set((mine.data ?? []).filter(isOpen).map((r) => r.ticketId)), [mine.data]);
   // Until the list answers, every unplaced ticket counts; afterwards only the ones still open.
-  const toPlace = mine.data ? unplaced.filter((id) => openIds.has(id)).length : unplaced.length;
+  const toPlace = !canRank ? 0 : mine.data ? unplaced.filter((id) => openIds.has(id)).length : unplaced.length;
   useEffect(() => {
     if (mine.data) pruneUnplaced(openIds, new Set(mine.data.map((r) => r.ticketId)));
   }, [mine.data, openIds]);
-  const canPlace = useCallback((ticketId: string) => [...openIds].some((id) => id !== ticketId), [openIds]);
+  const canPlace = useCallback((ticketId: string) => canRank && [...openIds].some((id) => id !== ticketId), [canRank, openIds]);
 
   const recording = useReport((s) => s.recording !== null);
   const selecting = useReport((s) => s.selecting);

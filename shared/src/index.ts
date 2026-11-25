@@ -1,6 +1,14 @@
 /**
  * Bumped on any breaking change to the types or `BeviApi` below.
  *
+ * 3.6.0, over 3.5.0's places: testers report bugs without ranking them.
+ * Additive: `bugs.canRank()`, true for a founder (an admin) only. For an
+ * account that may not rank, `place` throws 'unauthorized' and every
+ * `BugReportSummary.rank` is null. `markVerified` now throws 'conflict' for
+ * a ticket that is not in review, for every caller. NOT a reason to raise
+ * `min_contract_version`: an older client never calls `canRank`, still
+ * files and lists, and reads a refused placement or verify as a failure.
+ *
  * 3.5.0, over 3.4.0's barcode product lookup: where a Bev was had (BEV-22).
  * Additive: `RankedBev.venue` and `FeedItem.venue` (so `ExplorePost` too),
  * `SubmitRankingInput.venueId`, `rankings.setVenue`, `rankings.getVenue` and
@@ -95,7 +103,8 @@
 // 3.3.0: BugReportInput.evidence[].file is an UploadPayload (the native bug reporter, IM-10), additive.
 // 3.4.0: nutrition.lookupProduct and BarcodeProduct (a barcode scan fills in a new Bev), additive.
 // 3.5.0: where a Bev was had: a place on a ranking and a post, the place picker, the map (BEV-22), additive.
-export const CONTRACT_VERSION = '3.5.0';
+// 3.6.0: bugs.canRank; testers cannot place and see no ranks; markVerified only from In review, additive.
+export const CONTRACT_VERSION = '3.6.0';
 
 export * from './enums';
 export * from './errors';

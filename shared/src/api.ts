@@ -783,9 +783,10 @@ export interface MetaApi {
 // nothing here edits it after create beyond the two writes below, and the app
 // never holds a tracker credential. Both writes are to the caller's own
 // tickets: `markVerified`, which moves a ticket the reporter has checked on
-// the device to Done, and `place`, which puts a ticket in the reporter's
-// ranked list (the board's shared order, and the priority that position
-// implies).
+// the device to Done (only once it is in review), and `place`, which puts a
+// ticket in the reporter's ranked list (the board's shared order, and the
+// priority that position implies). Ranking is a founder's act: an internal
+// reporter who is a tester files and confirms but does not rank (`canRank`).
 // ---------------------------------------------------------------------------
 
 /** What the reporter says it is. The server files each kind as the ticket's type on the board. */
@@ -972,7 +973,8 @@ export interface BugReportSummary {
    * and in progress), 1 being the one that bothers them most. It is the
    * board's shared order read back, so it follows a drag on the board too. Null for a
    * ticket that is in review, closed or unknown, and when the tracker could
-   * not be asked.
+   * not be asked. Null on every ticket for an account that may not rank
+   * (`canRank()` is false): the board's shared order is not theirs to see.
    */
   rank: number | null;
 }
@@ -985,6 +987,16 @@ export interface BugsApi {
    * ordinary user — it answers false.
    */
   canReport(): Promise<boolean>;
+
+  /**
+   * Whether this account may rank its tickets against each other: a
+   * founder's act, since it sets the ticket's priority and its place in the
+   * board's one shared order. Drives whether Place is shown; it is not the
+   * access check, which runs server-side on every `place`. Never throws
+   * 'unauthorized' for a signed-in account that may not rank — it answers
+   * false.
+   */
+  canRank(): Promise<boolean>;
 
   /**
    * Files one report: uploads the evidence (if any), then creates the tracker
@@ -1016,9 +1028,15 @@ export interface BugsApi {
    * workflow reserves for a human). Returns the ticket as the tracker now
    * reports it.
    *
+   * Only a ticket that is in review can be verified, for every caller: before
+   * then there is no fix to have checked.
+   *
    * @throws 'unauthorized' — signed out, or not an internal reporter;
-   *   'not_found' — not one of the caller's tickets; 'validation' — not a
-   *   ticket identifier; 'unknown' — the tracker refused or is unconfigured.
+   *   'not_found' — not one of the caller's tickets; 'conflict' — one of the
+   *   caller's tickets, but not in review (`detail.reason = 'not_in_review'`):
+   *   refetch the list; 'validation' —
+   *   not a ticket identifier; 'unknown' — the tracker refused, could not be
+   *   asked, or is unconfigured.
    */
   markVerified(ticketId: string): Promise<BugReportSummary>;
 
@@ -1031,7 +1049,8 @@ export interface BugsApi {
    * Urgent stays Urgent). Returns the caller's tickets as `listMine` does,
    * with the new ranks.
    *
-   * @throws 'unauthorized' — signed out, or not an internal reporter;
+   * @throws 'unauthorized' — signed out, not an internal reporter, or an
+   *   internal reporter who may not rank (`canRank()` is false);
    *   'not_found' — either ticket is not one of the caller's;
    *   'conflict' — one of them is the caller's but is no longer open
    *   (`detail.reason = 'not_open'`): refetch the list;

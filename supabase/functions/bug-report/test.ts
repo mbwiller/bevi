@@ -31,8 +31,8 @@ import {
   TARGET_LIMITS,
 } from "./redact.ts";
 import { breadcrumbLine, parseReport, pointedAt, ValidationError } from "./issue.ts";
-import { isOpen, OPEN_STATES, positionFor, priorityForRank, rankOrder, ranksOf } from "./rank.ts";
-import { ticketNumber } from "./ticket.ts";
+import { isOpen, OPEN_STATES, positionFor, priorityForRank, rankOrder, ranksOf, withoutRanks } from "./rank.ts";
+import { isAwaitingCheck, stateOf, ticketNumber, type TicketStatus } from "./ticket.ts";
 import { methodFor, parsePlace, routeOf } from "./routes.ts";
 import { finishBugReport, ledgerQuery } from "./ledger.ts";
 import { CORS_HEADERS, isPreflight, preflight, withCors } from "./cors.ts";
@@ -959,4 +959,48 @@ Deno.test("board: the write-up carries what the app captured as headings and lis
   assertEquals(placeOf(filed), "Ratings · ScoreBubble");
   assertEquals(placeOf(report({ environment: { route: "/lists" } })), "/lists");
   assertEquals(placeOf(report()), "");
+});
+
+// ---------------------------------------------------------------------------
+// Testers: no ranks, and verify only from In review
+// ---------------------------------------------------------------------------
+
+Deno.test("withoutRanks takes every rank out and leaves the rest of each report as it was", () => {
+  const reports = [
+    { ticketId: "T-3", rank: 1, state: "todo" },
+    { ticketId: "T-2", rank: null, state: "in_review" },
+    { ticketId: "T-1", rank: 2, state: "triage" },
+  ];
+  assertEquals(withoutRanks(reports), [
+    { ticketId: "T-3", rank: null, state: "todo" },
+    { ticketId: "T-2", rank: null, state: "in_review" },
+    { ticketId: "T-1", rank: null, state: "triage" },
+  ]);
+  // The input is not changed under the caller.
+  assertEquals(reports[0].rank, 1);
+  assertEquals(withoutRanks([]), []);
+});
+
+Deno.test("isAwaitingCheck: only a ticket In review can be verified from the app", () => {
+  assertEquals(isAwaitingCheck("in_review"), true);
+  for (const state of ["triage", "todo", "in_progress", "done", "canceled", "unknown"] as const) {
+    assertEquals(isAwaitingCheck(state), false, state);
+  }
+});
+
+Deno.test("stateOf finds the asked-for ticket case-blind, and is unknown when the board did not describe it", () => {
+  const status = (identifier: string, state: TicketStatus["state"]): TicketStatus => ({
+    identifier,
+    state,
+    stateLabel: null,
+    priority: null,
+    updatedAt: null,
+    sortOrder: null,
+  });
+  const statuses = [status("T-19", "in_review"), status("BEV-7", "todo")];
+  assertEquals(stateOf(statuses, "T-19"), "in_review");
+  assertEquals(stateOf(statuses, " t-19 "), "in_review");
+  assertEquals(stateOf(statuses, "BEV-7"), "todo");
+  assertEquals(stateOf(statuses, "T-20"), "unknown");
+  assertEquals(stateOf([], "T-19"), "unknown");
 });

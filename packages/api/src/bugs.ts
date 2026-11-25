@@ -23,7 +23,8 @@ import { toUploadBody, uploadByteLength } from './uploads';
 //      (the tracker), and answers with the identifier the board assigned.
 // `listMine()`, `markVerified()` and `place()` are the function's other routes
 // (`bug-report/status`, `bug-report/verify`, `bug-report/place`), gated the
-// same way server-side.
+// same way server-side. `place()` is gated once more: only an account
+// `can_rank_bugs()` admits (a founder) may rank, which `canRank()` asks.
 //
 // The tracker credential lives in the function's environment. Nothing in this
 // file, and nothing the app bundles, can reach it. The evidence objects are
@@ -95,6 +96,9 @@ interface FunctionErrorBody {
   route?: string;
   /** The place route's `not_open`: the ticket is the caller's, but no longer open. */
   reason?: string;
+  // The verify route answers 409 `not_in_review` for a ticket that is not in
+  // review, and the place route 403 `not_allowed` (with `route: 'place'`) for
+  // an account that may not rank.
 }
 
 interface FunctionErrorResponse {
@@ -174,6 +178,14 @@ export function createBugsApi(client: SupabaseClient): BugsApi {
       // Signed out, or the function is not there: not a reporter. This gate
       // only decides whether to show an entry point, so it never throws for a
       // signed-in ordinary user.
+      if (error) return false;
+      return data === true;
+    },
+
+    async canRank(): Promise<boolean> {
+      const { data, error } = await client.rpc('can_rank_bugs');
+      // As canReport: it only decides whether Place is shown, so a signed-out
+      // caller, a tester, or a database without the function is simply false.
       if (error) return false;
       return data === true;
     },
@@ -273,7 +285,15 @@ export function createBugsApi(client: SupabaseClient): BugsApi {
       const id = ticketId?.trim() ?? '';
       if (!TICKET_RE.test(id)) throw new ApiError('validation', 'That is not a ticket identifier', { field: 'ticketId' });
       const { data, error } = await client.functions.invoke<{ report?: unknown }>(VERIFY_ROUTE, { body: { ticketId: id } });
-      if (error) throw await mapFunctionError(error);
+      if (error) {
+        const read = await readFunctionError(error);
+        // The ticket is the caller's but the board does not have it in review:
+        // there is nothing to verify yet, or it is already closed.
+        if (read?.status === 409 && read.body?.error === 'not_in_review') {
+          throw new ApiError('conflict', "That report isn't waiting for your check", { reason: 'not_in_review' });
+        }
+        throw await mapFunctionError(error, read);
+      }
       const summary = toSummary(data?.report);
       if (!summary) throw new ApiError('unknown', "The issue tracker didn't confirm the change");
       return summary;
@@ -303,6 +323,10 @@ export function createBugsApi(client: SupabaseClient): BugsApi {
           throw new ApiError('conflict', "That report isn't open any more", { reason: 'not_open' });
         }
         if (read?.status === 404) throw new ApiError('not_found', "That report isn't one of yours", { reason: 'not_found' });
+        // Ranking is a founder's act; a tester may file and confirm, not rank.
+        if (read?.status === 403 && read.body?.error === 'not_allowed') {
+          throw new ApiError('unauthorized', 'This account cannot rank reports', { reason: 'not_allowed' });
+        }
         throw await mapFunctionError(error, read);
       }
       return toSummaries(data?.reports);

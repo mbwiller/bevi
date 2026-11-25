@@ -16,9 +16,9 @@ tickets next to the cards they came from. An agent picks a ticket up with the
 same tools it uses for a card, and "which is worse" is the board's own order.
 This repository holds exactly three things: a way to file from a phone, a
 secure server-side path to the board (with a read-back of the caller's own
-tickets and two writes: "verified on the device", and the reporter's own
-ranking of their open tickets), and the instructions an agent needs to work
-from a ticket number. The "engineering dashboard" is the board.
+tickets and two writes: "verified on the device", for a ticket in review, and
+a founder's ranking of their own open tickets), and the instructions an agent
+needs to work from a ticket number. The "engineering dashboard" is the board.
 
 `supabase/functions/bug-report/board.ts` talks to the board's intake endpoint
 (`<board>/api/intake/…`). A ticket's name is whatever the board returns: `T-19`
@@ -68,9 +68,9 @@ packages/api/src/bugs.ts          uploads up to 3 screenshots to a PRIVATE bucke
          │                        then invokes the function with the user's JWT
          ▼
 supabase/functions/bug-report/    POST  /bug-report         validate → redact → claim → board → record
-         │                        GET   /bug-report/status  the caller's tickets with live state and rank
-         │                        POST  /bug-report/verify  one ticket to Done
-         │                        POST  /bug-report/place   one open ticket to a place in the caller's ranked list
+         │                        GET   /bug-report/status  the caller's tickets with live state (and rank, for a founder)
+         │                        POST  /bug-report/verify  one ticket in review to Done
+         │                        POST  /bug-report/place   one open ticket to a place in the caller's ranked list (founders only)
          │   index.ts   the request flow and the four routes
          │   routes.ts  routing and the place route's body (pure, so the tests can import it)
          │   redact.ts  credential/PII stripping, input caps, the environment, breadcrumb and target allow-lists
@@ -82,13 +82,15 @@ the founders' board               the ticket, its name (`T-<n>`), its lifecycle
 ```
 
 The database half is one migration,
-`supabase/migrations/20261109000300_bug_reports.sql`:
+`supabase/migrations/20261109000300_bug_reports.sql`, and one function added
+later in `20261125000100_can_rank_bugs.sql`:
 
 | Object | What it is for |
 |---|---|
 | `profiles.role` now allows `tester` | A non-admin internal role. |
 | `is_internal_reporter()` | `role in ('admin','tester')`. |
-| `can_report_bugs()` | What the client asks to decide whether to show the entry points, and what the status and verify routes check. |
+| `can_report_bugs()` | What the client asks to decide whether to show the entry points, and what the status, verify and place routes check. |
+| `can_rank_bugs()` | `is_admin()`: whether the caller may rank their tickets. The place route refuses anyone else (403 `not_allowed`), the status route leaves every rank out for them, and the client asks it to decide whether to offer Place. A tester can report but not rank. |
 | `bug_reports` | The submission ledger: one row per idempotency key with the kind, severity and title as filed, the evidence paths (at most 3) and the identifier the tracker returned. **Not** a mirror of the board's mutable state. |
 | `claim_bug_report(key, kind, severity, title, paths)` | Called **as the caller**. Authorises, rate-limits (20/hour), validates, and claims the idempotency slot. This is the real access check. |
 | `finish_bug_report()` | Called **as the service role**, and revoked from `authenticated`: a client can never write a ticket identifier. |
@@ -101,7 +103,8 @@ The database half is one migration,
 - **Authorisation is in Postgres, not in the client.** Hiding the button is
   cosmetic. `claim_bug_report()` raises `BEVI_UNAUTHORIZED` for anyone whose
   role is not `admin` or `tester`, and it runs on every submission; the status,
-  verify and place routes call `can_report_bugs()` the same way, and read the
+  verify and place routes call `can_report_bugs()` the same way, the place and
+  status routes also call `can_rank_bugs()` (admins only), and all of them read the
   ledger **as the caller** with an explicit `reporter_id` filter as well: the
   select policy also admits an admin, and an admin's own tickets are still the
   only ones Filed reports lists, `verify` moves or `place` ranks.
@@ -180,14 +183,20 @@ The database half is one migration,
   which the client turns into a `conflict`. Neither reveals anything about
   another reporter's tickets.
 - **Two writes after create, both to the caller's own tickets.**
-  `markVerified` closes a ticket as Done, and `place` writes one open ticket's
-  place in the board's order and the priority its new position implies: the top
-  quarter of the caller's open tickets High, the middle half Medium, the rest
-  Low, and an Urgent ticket stays Urgent. Both act only on a ticket the
-  caller's own ledger holds; `place` also requires both tickets to be open (not
-  in review and not closed) as the board reports them at that moment, read
-  fresh rather than from the status cache. Nothing else in the app changes a
-  ticket.
+  `markVerified` closes a ticket as Done, and only a ticket the board has In
+  review at that moment, read fresh rather than from the status cache; anything
+  else answers 409 `not_in_review`, which the client turns into a `conflict`.
+  That holds for every caller, a founder included. `place` writes one open
+  ticket's place in the board's order and the priority its new position
+  implies: the top quarter of the caller's open tickets High, the middle half
+  Medium, the rest Low, and an Urgent ticket stays Urgent. Because that is the
+  founders' one shared order, `place` is for a founder only: `can_rank_bugs()`
+  must be true, or the route answers 403 `{ "error": "not_allowed", "route": "place" }`
+  (an `unauthorized` in the client), and the status route answers every rank as
+  null for that caller. Both writes act only on a ticket the caller's own ledger
+  holds; `place` also requires both tickets to be open (not in review and not
+  closed) as the board reports them at that moment, read fresh. Nothing else in
+  the app changes a ticket.
 - **The browser is a first-class caller.** This is the first function the app
   invokes directly, so `cors.ts` answers the `OPTIONS` preflight before any
   auth check (the browser sends it without a JWT) and every response carries
@@ -255,30 +264,57 @@ cannot read a ticket, and should say so rather than guessing at its contents.
 The ticket workflow itself is in [`AGENTS.md`](../AGENTS.md) and
 [`ticket-prompt.md`](./ticket-prompt.md).
 
-### Granting the tester role
+### Testers
+
+A tester is someone outside the two founders whom a founder has explicitly
+made one, one handle at a time. The founders themselves are `admin`.
 
 Only an admin can change `profiles.role` from a client, and the
 `protect_profile_columns` trigger raises `BEVI_UNAUTHORIZED` for anyone else.
 Studio's SQL editor has no `auth.uid()`, so a plain `update` there can never
 pass that trigger either — which is why the migration ships an operator
 function. From the SQL editor (which runs as the owner), or with the
-service-role key:
+service-role key, to grant the role and to take it away again:
 
 ```sql
-select public.set_profile_role('their_handle', 'tester');
+select public.set_profile_role('their_handle', 'tester');   -- grant
+select public.set_profile_role('their_handle', 'user');     -- revoke
 ```
 
-`'admin'` also makes someone an internal reporter and adds moderation powers;
-`'user'` takes the access away. The function is revoked from `authenticated`,
-so no signed-in user can call it for themselves. There is no UI for this, on
+`'admin'` makes someone a founder: an internal reporter who also ranks, with
+moderation powers. The function is revoked from `authenticated`, so no
+signed-in user can call it for themselves. There is no UI for this, on
 purpose: it is a rare, deliberate act.
+
+The app reads the role once per session (`bugs.canReport()` and
+`bugs.canRank()` are cached until the app is relaunched), so after a grant or
+a revoke the tester closes the app fully and opens it again.
+
+A tester can:
+
+- file reports with the full reporter (Select element, Capture screen, Record
+  steps, Add photos);
+- see their own tickets and where each one is, in **Filed reports**, newest
+  first;
+- confirm a fix with **Verified on device**, once the ticket is In review.
+
+A tester cannot:
+
+- rank tickets: there is no "which is worse?", no Place and no rank number,
+  and the place route refuses them (`can_rank_bugs()` is false), because
+  ranking sets priority and place on the founders' shared order;
+- open the board: they have no board login, so Filed reports shows the ticket
+  id as plain text rather than a link;
+- see anyone else's tickets: every route reads only the caller's own ledger
+  rows;
+- moderate anything: that is `admin` only.
 
 ## How the form's fields reach the board
 
 | In the form | On the ticket |
 |---|---|
 | **What is it?** Bug / Fix suggestion / Idea / Design nit | The ticket's type on the board, and a `**Type:**` line under the opening quote |
-| **How bad is it?** Blocker / Bad / Annoying / Polish | The ticket's priority, and a `**Severity:**` line |
+| (no question) | The note never asks how bad it is: the app files every report with severity `annoying`, which only the ledger records. The board is sent no severity, neither as a priority nor as a line; the priority comes from a founder's ranking (below) or from the board. |
 | What went wrong? | The title |
 | Describe the problem, steps, expected, actual | Their sections |
 | Automatically included | The Environment section |
@@ -286,7 +322,7 @@ purpose: it is a rare, deliberate act.
 | Steps from a recording (**Record steps** … stop; `stepsSource: 'recorded'`, up to 30) | The same numbered list, under the line `_Recorded by the app while the reporter reproduced it, not typed by them._` |
 | The app's recent activity trail | The Recent activity section, a fenced block of one line per entry: `nav`, `api`, `error` (the message), and `tap` (what was tapped, only during a recording) |
 | Screenshots (up to 3), each with an optional caption | Pictures on the ticket, sent to the board as base64 (three megabytes each at most) and numbered by their place in the list (the number a pointed-at component's "Screenshot N" refers to). A caption becomes the picture's alt text and an italic line under it. |
-| The "which is worse?" placement after filing | The ticket's place in the board's one shared order (the function says after or before which of the caller's tickets) and its priority, by the bands above; Filed reports reads the rank back from the board, so a reorder on the board moves it there too |
+| The "which is worse?" placement after filing (a founder only) | The ticket's place in the board's one shared order (the function says after or before which of the caller's tickets) and its priority, by the bands above; Filed reports reads the rank back from the board, so a reorder on the board moves it there too |
 
 A founder may change the priority or the type on the board; the board's values
 are the truth from then on, and Filed reports shows the board's state. A later
@@ -312,18 +348,21 @@ pretend otherwise.
 
 | Suite | Covers |
 |---|---|
-| `supabase/functions/bug-report/test.ts` (Deno) | Redaction; the environment allow-list (including the dropped query-string, `//` and opaque-segment paths with a UUID segment kept, and the typed pixel ratio and reduced-motion values), the 30-step cap, the breadcrumb allow-list (tap and error entries, the 40 cap) and the target allow-list (bad component names, `..` in a file, the 12-entry prop cap, props and styles with sensitive keys dropped, a `key=value` pair redaction catches dropped, ordinary props kept, range checks, the 6-target cap), captions, and link/image escaping in labels, text, roles and captions (including a trailing backslash); kind/severity and path validation; the ticket's write-up as the board receives it (the type line, the exact Pointed at markdown for a full target, a sparse one and none, backticks that cannot close a code span, the recorded-steps line, recent activity, the note on each picture); every function in `rank.ts` (top, bottom, middle, alone, the bands, Urgent kept); `routeOf` and the place route's body; the priority mapping, the board client's error mapping, that no Linear setting is read any more, the file, status, verify and place requests; the reporter-scoped ledger query and the retried ledger write — all against an injected `fetch`. The place route's handler itself (`handlePlace` in `index.ts`) is not exercised: index.ts starts a server when imported. |
+| `supabase/functions/bug-report/test.ts` (Deno) | Redaction; the environment allow-list (including the dropped query-string, `//` and opaque-segment paths with a UUID segment kept, and the typed pixel ratio and reduced-motion values), the 30-step cap, the breadcrumb allow-list (tap and error entries, the 40 cap) and the target allow-list (bad component names, `..` in a file, the 12-entry prop cap, props and styles with sensitive keys dropped, a `key=value` pair redaction catches dropped, ordinary props kept, range checks, the 6-target cap), captions, and link/image escaping in labels, text, roles and captions (including a trailing backslash); kind/severity and path validation; the ticket's write-up as the board receives it (the type line, the exact Pointed at markdown for a full target, a sparse one and none, backticks that cannot close a code span, the recorded-steps line, recent activity, the note on each picture); every function in `rank.ts` (top, bottom, middle, alone, the bands, Urgent kept); `routeOf` and the place route's body; the priority mapping, the board client's error mapping, that no Linear setting is read any more, the file, status, verify and place requests; the reporter-scoped ledger query and the retried ledger write — all against an injected `fetch`; `withoutRanks` (every rank taken out for a caller who may not rank), `isAwaitingCheck` (only In review can be verified) and `stateOf`. The route handlers themselves (`handlePlace`, `handleVerify`, `handleStatus` in `index.ts`), and so the `can_rank_bugs` call and the `not_allowed` and `not_in_review` answers, are not exercised: index.ts starts a server when imported. |
 | `supabase/tests/28_bug_reports.test.sql` (pgTAP, 65 assertions) | The `tester` role and `set_profile_role` (the trigger still refuses a plain update, even from the owner; `authenticated` cannot call it; the bypass flag is reset), the grants (notably that `authenticated` cannot call `finish_bug_report`), the RLS shape, the private bucket and its policy, the authorisation refusal, kind/severity/title/path validation (an over-long title included), the idempotency ledger's cases (in-flight, stale-pending re-arm keeping staged evidence, failed re-arm taking the retry's list), cross-reporter reads returning nothing, the 20-an-hour rate limit, and `forget_bug_evidence`. |
-| `packages/api/test/bugs.test.ts` (vitest, 33 cases) | That nothing is uploaded or invoked before the input validates, that every screenshot goes to the private bucket in order and the function gets only paths (and one caption per path), that targets (the first six) and the steps source are sent, and a thirty-step recording as it is, that no credential is in the request body, the error-code mapping, `listMine` over the status route (including `rank`), `markVerified` over the verify route, `place` over the place route (validation, its own not-found, its `not_open` as a conflict, a bare 404 from a server that predates ranking, tracker failures), and the refusal of a response with no confirmed ticket. |
-| `packages/conformance/src/index.ts` against the FakeApi (jest) | The bugs refusals for an ordinary and a signed-out account, and, with an internal reporter, `rank` on `listMine` (a new ticket at the top), `place` to the top and below another ticket with the new ranks and priorities, Urgent kept, and its validation, not-found (another reporter's ticket, an unknown one) and conflict (`reason: 'not_open'`, a closed ticket of the caller's) cases; and that `report` accepts more than six targets (the first six are kept) and a thirty-step recording. |
-| `app/src/features/bug-report/__tests__/` (jest) | The report button's gating (hidden for an ordinary account, shown on tab and full-screen routes, never captures on press, filled while a note exists); the note: the type dropdown, Select element through select mode to a marked picture with the component and its source file, Capture screen, the Add photos menu and the three-picture limit, Record steps to Stop and the steps sent as recorded, send in the background, a failed send restored with the same key, set aside and discard; the pure model and the report it builds (targets, captions, `evidenceIndex`); picking a component from fibers with an allowlist of props and no typed text; select mode swallowing taps but not scrolls; the trail and explicit step recording; the inferred type; the context allow-list; the draft's persistence, its owner and the wipe on sign-out; Filed reports and the rank sheet against the FakeApi's `place`; and that the generated component manifest is current. |
+| `supabase/tests/45_can_rank_bugs.test.sql` (pgTAP, 12 assertions) | `can_rank_bugs()`: security definer, stable, owned by postgres, its search_path pinned; `authenticated` may call it, `anon` and PUBLIC may not; false for an ordinary user and for a tester (who can still report), true for an admin. |
+| `packages/api/test/bugs.test.ts` (vitest) | That nothing is uploaded or invoked before the input validates, that every screenshot goes to the private bucket in order and the function gets only paths (and one caption per path), that targets (the first six) and the steps source are sent, and a thirty-step recording as it is, that no credential is in the request body, the error-code mapping, `listMine` over the status route (including `rank`), `markVerified` over the verify route (its `not_in_review` as a conflict), `canRank` over `can_rank_bugs` (false on any error), `place` over the place route (validation, its own not-found, its `not_open` as a conflict, its `not_allowed` as unauthorized, a bare 404 from a server that predates ranking, tracker failures), and the refusal of a response with no confirmed ticket. |
+| `packages/conformance/src/index.ts` against the FakeApi (jest) | The bugs refusals for an ordinary and a signed-out account (`canRank` false for both); a tester's `canReport` true and `canRank` false, `place` refused and every rank null; `markVerified` outside In review a conflict, for a founder and a tester, and a ticket in review closed; and, with an internal reporter who is a founder, `rank` on `listMine` (a new ticket at the top), `place` to the top and below another ticket with the new ranks and priorities, Urgent kept, and its validation, not-found (another reporter's ticket, an unknown one) and conflict (`reason: 'not_open'`, a closed ticket of the caller's) cases; and that `report` accepts more than six targets (the first six are kept) and a thirty-step recording. |
+| `app/src/features/bug-report/__tests__/` (jest) | The report button's gating (hidden for an ordinary account, shown on tab and full-screen routes, never captures on press, filled while a note exists); the note: the type dropdown, Select element through select mode to a marked picture with the component and its source file, Capture screen, the Add photos menu and the three-picture limit, Record steps to Stop and the steps sent as recorded, send in the background, a failed send restored with the same key, set aside and discard; the pure model and the report it builds (targets, captions, `evidenceIndex`); picking a component from fibers with an allowlist of props and no typed text; select mode swallowing taps but not scrolls; the trail and explicit step recording; the inferred type; the context allow-list; the draft's persistence, its owner and the wipe on sign-out; Filed reports and the rank sheet against the FakeApi's `place`; for a tester, Filed reports newest first with no rank, no Place and no link to the board, and no "Place it" or count to place after filing; a Verified on device that meets a ticket no longer in review showing its failure and the refetched list; and that the generated component manifest is current. |
 
 **Not covered, honestly:** the live round trip from the deployed function to
 the founders' board. The board client has run against a board on a developer's
 machine, end to end, and its shapes are asserted against an injected `fetch`;
 that is not the same as having watched the deployed function file a ticket.
 The `place` route, the rank read on the status route and the ordering of a new
-ticket on the board's shared order are only as verified as that. The first real
+ticket on the board's shared order are only as verified as that, and so are the
+tester refusals and the In-review check on `verify`, which no test drives
+through the handlers themselves. The first real
 submission from the deployed function is a manual test, and it should be treated
 as one: see the end-to-end checklist in [`bug-workflow.md`](./bug-workflow.md).
 
