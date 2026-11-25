@@ -8,8 +8,9 @@ import { currentLevel, EVIDENCE_MAX, MARKS_MAX, markTarget, PHOTO_CAPTION, shotC
  * engine's `titleFor` / `inferKind` are plain functions of their arguments. The steps are the ones
  * the tester recorded on purpose (Record steps), never inferred from the trail.
  *
- * The severity is always 'annoying': the reporter is never asked how bad it is. Where the ticket
- * lands in the tester's ranked list (RankSheet) sets its priority afterwards.
+ * The severity is always 'annoying': the reporter is never asked how bad it is. Where a founder
+ * places the ticket in their ranked list (RankSheet) sets its priority afterwards; a tester does
+ * not rank.
  */
 
 /** The kind the note will be filed as: the pinned one, else what its words and context suggest. */

@@ -18,6 +18,7 @@ import {
   type ApiErrorCode,
   type BeviApi,
   type Bucket,
+  type BugTicketState,
   type ExplorePost,
   type Session,
 } from '@bevi/shared';
@@ -46,6 +47,19 @@ export interface ConformanceOptions {
    * the FakeApi passes `controls.setInternalReporter(true)`; a live run would need an operator hook.
    */
   makeInternalReporter?: (api: BeviApi) => void | Promise<void>;
+  /**
+   * Makes the signed-in user a tester: an internal reporter who may not rank (`profiles.role`
+   * 'tester'). The tester cases run only when this is given; the FakeApi passes
+   * `controls.setTesterReporter()`.
+   */
+  makeTesterReporter?: (api: BeviApi) => void | Promise<void>;
+  /**
+   * Moves one of the signed-in user's bug tickets to a workflow state, as a founder or an agent
+   * would on the board (the contract cannot: only `markVerified` changes a state, and only from
+   * In review). The cases that verify a ticket run only when this is given; the FakeApi passes
+   * `controls.setBugTicketState()`.
+   */
+  setBugTicketState?: (api: BeviApi, ticketId: string, state: BugTicketState) => void | Promise<void>;
 }
 
 const MINOR_BIRTHDATE = (now: Date) => `${now.getUTCFullYear() - 15}-01-01`;
@@ -1722,6 +1736,65 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
 
     const ranks = async () => Object.fromEntries((await api.bugs.listMine()).map((r) => [r.ticketId, r.rank]));
 
+    const makeTester = options.makeTesterReporter;
+    const testerIt = makeTester ? it : it.skip;
+    const setState = options.setBugTicketState;
+    const verifyIt = makeInternal && setState ? it : it.skip;
+
+    internalIt('a founder may rank: canReport and canRank are both true', async () => {
+      await newReporter();
+      expect(await api.bugs.canReport()).toBe(true);
+      expect(await api.bugs.canRank()).toBe(true);
+    });
+
+    it('an ordinary account and a signed-out caller cannot rank: canRank answers false', async () => {
+      await newUser();
+      expect(await api.bugs.canRank()).toBe(false);
+      await api.signOut();
+      expect(await api.bugs.canRank()).toBe(false);
+    });
+
+    testerIt('a tester reports but does not rank: canRank is false, place is refused, every rank is null', async () => {
+      await newUser();
+      await makeTester!(api);
+      expect(await api.bugs.canReport()).toBe(true);
+      expect(await api.bugs.canRank()).toBe(false);
+      const a = (await api.bugs.report({ ...input, title: 'first', idempotencyKey: newKey() })).ticketId;
+      const b = (await api.bugs.report({ ...input, title: 'second', idempotencyKey: newKey() })).ticketId;
+      expect(await ranks()).toEqual({ [b]: null, [a]: null });
+      await expectCode(api.bugs.place(a, null), 'unauthorized');
+      await expectCode(api.bugs.place(a, b), 'unauthorized');
+      // Nothing moved: still listed newest first, still without ranks.
+      expect((await api.bugs.listMine()).map((r) => r.ticketId)).toEqual([b, a]);
+      expect(await ranks()).toEqual({ [b]: null, [a]: null });
+    });
+
+    internalIt('markVerified refuses a ticket that is not in review with a conflict', async () => {
+      const file = await newReporter();
+      const a = await file('not fixed yet');
+      expect((await expectCode(api.bugs.markVerified(a), 'conflict')).detail).toEqual({ reason: 'not_in_review' });
+      expect((await api.bugs.listMine()).find((r) => r.ticketId === a)?.state).toBe('triage');
+    });
+
+    verifyIt('markVerified closes a ticket in review, and a closed one is then a conflict', async () => {
+      const file = await newReporter();
+      const a = await file('fixed');
+      await setState!(api, a, 'in_review');
+      const done = await api.bugs.markVerified(a);
+      expect(done.state).toBe('done');
+      expect((await expectCode(api.bugs.markVerified(a), 'conflict')).detail).toEqual({ reason: 'not_in_review' });
+    });
+
+    const testerVerifyIt = makeTester && setState ? it : it.skip;
+    testerVerifyIt('a tester closes their own ticket once it is in review, and not before', async () => {
+      await newUser();
+      await makeTester!(api);
+      const a = (await api.bugs.report({ ...input, title: 'mine', idempotencyKey: newKey() })).ticketId;
+      await expectCode(api.bugs.markVerified(a), 'conflict');
+      await setState!(api, a, 'in_review');
+      expect((await api.bugs.markVerified(a)).state).toBe('done');
+    });
+
     internalIt('listMine carries a rank for open tickets, and a new ticket goes to the top', async () => {
       const file = await newReporter();
       const a = await file('first');
@@ -1761,7 +1834,7 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       expect(row?.priority).toBe(1);
     });
 
-    internalIt('place refuses a bad identifier, a ticket after itself, and a ticket that is not an open one of yours', async () => {
+    verifyIt('place refuses a bad identifier, a ticket after itself, and a ticket that is not an open one of yours', async () => {
       const file = await newReporter();
       const a = await file('first');
       const b = await file('second');
@@ -1772,7 +1845,8 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       await expectCode(api.bugs.place(a, 'BEV-999999'), 'not_found');
 
       // A verified ticket is closed: it has no rank, and placing it (or after it) is a conflict,
-      // not a not_found: it is still the caller's.
+      // not a not_found: it is still the caller's. Only a ticket in review can be verified.
+      await setState!(api, b, 'in_review');
       await api.bugs.markVerified(b);
       expect(await ranks()).toEqual({ [a]: 1, [b]: null });
       expect((await expectCode(api.bugs.place(b, null), 'conflict')).detail).toEqual({ reason: 'not_open' });

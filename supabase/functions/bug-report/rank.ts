@@ -76,3 +76,13 @@ export function priorityForRank(index: number, count: number, current: number | 
 export function ranksOf(items: readonly Ordered[]): Map<string, number> {
   return new Map(rankOrder(items).map((id, i) => [id, i + 1]));
 }
+
+/**
+ * The same reports with every rank taken out, for a caller who may not rank
+ * (`can_rank_bugs()` is false: a tester). Ranking is a founder's act on the
+ * board's shared order, so the place a ticket holds in it is not theirs to see
+ * or act on; the rest of each report is unchanged.
+ */
+export function withoutRanks<T extends { rank: number | null }>(reports: readonly T[]): T[] {
+  return reports.map((r) => ({ ...r, rank: null }));
+}

@@ -393,6 +393,12 @@ export class FakeApi implements BeviApi {
    * persisted: it is a property of the account on the server, not of the fake's data.
    */
   private internalReporter = false;
+  /**
+   * Whether that reporter may also rank their tickets (`can_rank_bugs()`: an admin, a founder).
+   * `setInternalReporter(true)` makes a founder (both true); `setTesterReporter()` a tester, who
+   * reports but does not rank. Never true without `internalReporter`.
+   */
+  private bugRanker = false;
   /** The fake's `bug_reports` ledger, keyed by idempotency key per user, with the summary My reports shows. */
   private bugLedger = new Map<string, { userId: string; result: BugReportResult; summary: BugReportSummary }>();
   /**
@@ -462,6 +468,7 @@ export class FakeApi implements BeviApi {
     this.db = buildFixtures(this.clock());
     this.failures = [];
     this.internalReporter = false;
+    this.bugRanker = false;
     this.bugLedger.clear();
     this.bugOrder.clear();
     this.nextTicket = 100;
@@ -504,9 +511,16 @@ export class FakeApi implements BeviApi {
     this.appConfig = next;
   }
 
-  /** Make (or stop making) the signed-in user an internal bug reporter. */
+  /** Make (or stop making) the signed-in user an internal bug reporter who is a founder: they report and rank. */
   setInternalReporter(internal: boolean): void {
     this.internalReporter = internal;
+    this.bugRanker = internal;
+  }
+
+  /** Make the signed-in user a tester: an internal reporter who may not rank (`profiles.role` 'tester'). */
+  setTesterReporter(): void {
+    this.internalReporter = true;
+    this.bugRanker = false;
   }
 
   /**
@@ -519,9 +533,12 @@ export class FakeApi implements BeviApi {
     entry.summary = { ...entry.summary, state, stateLabel: BUG_STATE_LABELS[state], updatedAt: this.now().toISOString() };
   }
 
-  /** The user's tickets with their ranks, newest first (what `bugs.listMine` answers). */
+  /**
+   * The user's tickets with their ranks, newest first (what `bugs.listMine` answers). For a
+   * reporter who may not rank (a tester) every rank is null, as the status route answers.
+   */
   private bugSummaries(userId: string): BugReportSummary[] {
-    const ranks = new Map(this.openBugOrder(userId).map((id, i) => [id, i + 1]));
+    const ranks = new Map(this.bugRanker ? this.openBugOrder(userId).map((id, i) => [id, i + 1]) : []);
     return [...this.bugLedger.values()]
       .filter((entry) => entry.userId === userId)
       .map((entry) => ({ ...entry.summary, rank: ranks.get(entry.summary.ticketId) ?? null }))
@@ -2679,6 +2696,9 @@ export class FakeApi implements BeviApi {
     canReport: () =>
       this.call('bugs.canReport', () => (this.sessionUser() ? this.internalReporter : false)),
 
+    canRank: () =>
+      this.call('bugs.canRank', () => (this.sessionUser() ? this.internalReporter && this.bugRanker : false)),
+
     report: (input) =>
       this.call(
         'bugs.report',
@@ -2751,6 +2771,10 @@ export class FakeApi implements BeviApi {
           if (!BUG_TICKET_RE.test(ticketId?.trim() ?? '')) invalid('ticketId', 'That is not a ticket identifier');
           const entry = [...this.bugLedger.values()].find((e) => e.userId === me.id && e.summary.ticketId === ticketId.trim());
           if (!entry) fail('not_found', "That ticket isn't one of yours");
+          // Only a ticket in review can be verified, for every caller, as the verify route checks.
+          if (entry.summary.state !== 'in_review') {
+            fail('conflict', "That report isn't waiting for your check", { reason: 'not_in_review' });
+          }
           entry.summary = { ...entry.summary, state: 'done', stateLabel: 'Done', updatedAt: this.now().toISOString(), rank: null };
           return { ...entry.summary };
         },
@@ -2769,6 +2793,8 @@ export class FakeApi implements BeviApi {
           if (after !== null && !BUG_TICKET_RE.test(after)) invalid('afterTicketId', 'That is not a ticket identifier');
           if (after === id) invalid('afterTicketId', 'A ticket cannot be placed after itself');
           if (!this.internalReporter) fail('unauthorized', 'This account cannot file internal bug reports');
+          // Ranking is a founder's act: a tester is refused, as the place route's not_allowed is.
+          if (!this.bugRanker) fail('unauthorized', 'This account cannot rank reports', { reason: 'not_allowed' });
 
           // Both must be the caller's own tickets (else not_found, which says nothing about anyone
           // else's), and both open (else conflict with reason 'not_open'), as the function checks.

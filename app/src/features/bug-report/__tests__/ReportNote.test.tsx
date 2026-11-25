@@ -518,3 +518,32 @@ describe('the host going away (sign-out, the reporter role taken away)', () => {
     expect(screen.getByTestId('report-button').props.accessibilityLabel).not.toBe('Stop recording steps');
   });
 });
+
+describe('ranking after filing, founder and tester', () => {
+  async function sendOne(text: string) {
+    // One open ticket already, so a new one has something to be compared with.
+    await api.bugs.report({ kind: 'bug', severity: 'annoying', title: 'Earlier', idempotencyKey: '5a1d6c0a-4f4c-4f0e-9e0b-9a4a8f2b7c11' });
+    await openNote();
+    await fireEvent.changeText(screen.getByLabelText("What's going on?"), text);
+    await fireEvent.press(screen.getByRole('button', { name: 'Send' }));
+    return await screen.findByText(/^Filed T-\d+$/);
+  }
+
+  it('a founder gets "Place it" on the toast and a count to place on the button', async () => {
+    await sendOne('The feed is blank');
+    expect(await screen.findByRole('button', { name: /^Place T-\d+$/ })).toBeTruthy();
+    await waitFor(() => expect(String(button().props.accessibilityValue?.text ?? '')).toContain('1 to place'));
+  });
+
+  it('a tester gets no "Place it" and no count to place: ranking is not theirs', async () => {
+    controls.setTesterReporter();
+    await sendOne('The feed is blank');
+    // Let canRank and the list answer before asserting an absence.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(screen.queryByRole('button', { name: /^Place T-\d+$/ })).toBeNull();
+    expect(screen.queryByText('Place it')).toBeNull();
+    expect(String(button().props.accessibilityValue?.text ?? '')).not.toContain('to place');
+  });
+});

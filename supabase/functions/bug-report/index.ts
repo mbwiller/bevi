@@ -7,13 +7,16 @@
 //                                file the ticket on the board, answer with the
 //                                identifier the board assigned (`T-19`).
 //   GET  .../bug-report/status   the caller's own tickets with their live
-//                                state on the board, for My reports.
+//                                state on the board, for My reports (with
+//                                ranks only for a caller who may rank).
 //   POST .../bug-report/verify   move one of the caller's tickets to Done,
-//                                once they have checked the fix on the device.
+//                                once they have checked the fix on the device;
+//                                only a ticket the board has In review.
 //   POST .../bug-report/place    put one of the caller's open tickets in their
 //                                ranked list: its place in the board's one
 //                                shared order and the priority the position
-//                                implies (rank.ts).
+//                                implies (rank.ts). A founder's act: only for a
+//                                caller `can_rank_bugs()` admits.
 //
 // THE TRACKER is the founders' board (board.ts), reached with two secrets,
 // BOARD_INTAKE_URL and BOARD_INTAKE_TOKEN. Without them, or with values that
@@ -29,8 +32,10 @@
 // ships in every copy of the app. So the real check is a database one: the
 // report route calls `claim_bug_report()` AS THE CALLER, and the status,
 // verify and place routes call `can_report_bugs()` AS THE CALLER; both answer
-// from `profiles.role` under auth.uid(). The ledger is read AS THE CALLER too and
-// filtered to the caller's reporter_id (the select policy also admits an
+// from `profiles.role` under auth.uid(). Ranking is narrower: the place route
+// also calls `can_rank_bugs()` (admins only) and refuses a tester, and the
+// status route asks it to decide whether ranks are in the answer at all. The
+// ledger is read AS THE CALLER too and filtered to the caller's reporter_id (the select policy also admits an
 // admin, and these routes are own-rows-only for admins as well). Hiding the
 // Report a bug button in the client is cosmetic; this is the gate.
 //
@@ -68,9 +73,9 @@ import {
   verifyBoardTicket,
 } from "./board.ts";
 import { finishBugReport, ledgerQuery } from "./ledger.ts";
-import { isOpen, type Ordered, positionFor, priorityForRank, ranksOf, sortedByRank } from "./rank.ts";
+import { isOpen, type Ordered, positionFor, priorityForRank, ranksOf, sortedByRank, withoutRanks } from "./rank.ts";
 import { methodFor, parsePlace, routeOf } from "./routes.ts";
-import { ticketNumber, type TicketStatus } from "./ticket.ts";
+import { isAwaitingCheck, stateOf, ticketNumber, type TicketStatus } from "./ticket.ts";
 
 /** Bigger than any screenshot-free report; the evidence itself never comes through this body. */
 const MAX_BODY_BYTES = 128 * 1024;
@@ -291,15 +296,25 @@ function caller(req: Request): Caller | Response {
   return { env, jwt, userId };
 }
 
-/** `can_report_bugs()` as the caller: the gate for the two routes that do not claim a slot. */
-async function isInternal(c: Caller): Promise<boolean | Response> {
+/** A no-argument boolean gate, called as the caller. */
+async function gate(c: Caller, name: "can_report_bugs" | "can_rank_bugs"): Promise<boolean | Response> {
   try {
-    const response = await rpc(c.env, c.jwt, "can_report_bugs", {});
+    const response = await rpc(c.env, c.jwt, name, {});
     if (!response.ok) return json({ error: "database_error" }, 502);
     return (await response.json()) === true;
   } catch {
     return json({ error: "database_unreachable" }, 503);
   }
+}
+
+/** `can_report_bugs()` as the caller: the gate for the routes that do not claim a slot. */
+async function isInternal(c: Caller): Promise<boolean | Response> {
+  return await gate(c, "can_report_bugs");
+}
+
+/** `can_rank_bugs()` as the caller: whether they may rank (admins only; a tester may not). */
+async function canRank(c: Caller): Promise<boolean | Response> {
+  return await gate(c, "can_rank_bugs");
 }
 
 async function readBody(req: Request): Promise<Record<string, unknown> | Response> {
@@ -548,6 +563,10 @@ async function handleStatus(c: Caller): Promise<Response> {
   const internal = await isInternal(c);
   if (internal instanceof Response) return internal;
   if (!internal) return json({ error: "not_internal" }, 403);
+  // Asked once per request and not cached with the board's answer: it is one
+  // cheap database call, and a role change should show on the next read.
+  const ranks = await canRank(c);
+  if (ranks instanceof Response) return ranks;
 
   const rows = await ledgerRows(c);
   if (rows instanceof Response) return rows;
@@ -558,7 +577,9 @@ async function handleStatus(c: Caller): Promise<Response> {
   }
 
   const { statuses, error } = await statusesFor(c, board, rows);
-  const reports = summariseAll(rows, statuses);
+  const all = summariseAll(rows, statuses);
+  // A caller who may not rank (a tester) is not shown the board's shared order.
+  const reports = ranks ? all : withoutRanks(all);
   return json(error ? { reports, trackerError: error } : { reports }, 200);
 }
 
@@ -586,6 +607,24 @@ async function handleVerify(req: Request, c: Caller): Promise<Response> {
 
   const board = boardConfig();
   if (!board) return json({ error: "tracker_not_configured" }, 503);
+
+  // Only a ticket In review can be closed from here, whoever asks: before then
+  // there is no fix to have checked, and after it the ticket is already closed.
+  // Read fresh, never from the status cache, as the place route reads: a
+  // ticket sent back to Ready a moment ago must not be closed on a stale copy.
+  const ledgerId = row.ticket_identifier ?? ticketId;
+  try {
+    const statuses = await fetchBoardStatuses(board, fetch, [ledgerId]);
+    if (!isAwaitingCheck(stateOf(statuses, ledgerId))) {
+      console.log(`bug-report: verify refused ticket=${ticketId} tracker=board code=not_in_review`);
+      return json({ error: "not_in_review" }, 409);
+    }
+  } catch (e) {
+    const code = trackerCode(e);
+    console.error(`bug-report: verify failed ticket=${ticketId} tracker=board code=${code}`);
+    return json({ error: "tracker_error", code }, 502);
+  }
+
   try {
     const status = await verifyBoardTicket(board, fetch, ticketId, await reporterHandle(c.env, c.jwt, c.userId));
     statusCache.delete(c.userId);
@@ -632,6 +671,15 @@ async function handlePlace(req: Request, c: Caller): Promise<Response> {
   const internal = await isInternal(c);
   if (internal instanceof Response) return internal;
   if (!internal) return json({ error: "not_internal" }, 403);
+  // Ranking writes the board's one shared order and the priority it implies,
+  // which is a founder's act: a tester files and confirms, but does not rank.
+  // `route` says it is this route's refusal, as placeNotFound's does.
+  const ranks = await canRank(c);
+  if (ranks instanceof Response) return ranks;
+  if (!ranks) {
+    console.log(`bug-report: place refused ticket=${ticketId} code=not_allowed`);
+    return json({ error: "not_allowed", route: "place" }, 403);
+  }
 
   // The caller's rows only (RLS plus the reporter filter), so another
   // reporter's identifier is simply not in this list.

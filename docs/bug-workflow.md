@@ -17,9 +17,12 @@ was the tracker until 2026-11-17.
 ## 1. Report it, from the phone
 
 The reporter is **internal only**. You see it when your `profiles.role` is
-`admin` or `tester`; everyone else never sees an entry point, never downloads
+`admin` (the two founders) or `tester` (someone a founder granted it to, one
+handle at a time); everyone else never sees an entry point, never downloads
 the reporter's code, and the server refuses a submission from anyone else even
-if they call the endpoint directly.
+if they call the endpoint directly. A tester files with the same reporter as a
+founder, but does not rank tickets and is not offered the link to the board
+(see [Becoming an internal reporter](#becoming-an-internal-reporter)).
 
 The way in is the **report button** (the web app's; what differs in the iPhone app is under "Reporting from the iOS app" below): a round button with a warning triangle at
 the bottom right of every signed-in screen, the full-screen flows included
@@ -87,10 +90,12 @@ submission key, so one note can only ever become one ticket, however many
 times you press it.
 
 There is no "How bad is it?" any more. Every report is filed at Medium, and
-**where you rank it** sets the priority: "Place it" on the filed message, or
-**Filed reports** (the list icon in the note, or Settings → Internal → Filed
-reports), asks "Which is worse?" against your other open reports, using the
-same placement the app uses to rank a Bev. The answer is written to the board as
+for a founder **where you rank it** sets the priority: "Place it" on the filed
+message, or **Filed reports** (the list icon in the note, or Settings →
+Internal → Filed reports), asks "Which is worse?" against your other open
+reports, using the same placement the app uses to rank a Bev. A tester is not
+asked: ranking writes the founders' shared order, so the app offers it to a
+founder only and the server refuses it from anyone else. The answer is written to the board as
 the ticket's place in its order, and the priority follows from the position: the top
 quarter of your open reports High, the middle half Medium, the rest Low. A
 ticket someone marked Urgent on the board stays Urgent. Ranking needs the
@@ -226,12 +231,15 @@ It may not move it to **Done**, and the board refuses if it tries: see below.
 code, and re-run the original report on the device and environment it came
 from.
 
-Only then, **Done**. The reporter can do that from the phone: **Settings →
-Internal → Filed reports** lists your own tickets with their live state on the
-board, and a ticket in review carries a **Verified on device** action that
-moves it to Done through the function (`bugs.markVerified`, one of the two
-writes the app ever makes to a ticket, and only to a ticket your own ledger
-holds; the other is the ranking below). The board works just as well: the
+Only then, **Done**. Whoever filed it, founder or tester, can do that from the
+phone: **Settings → Internal → Filed reports** lists your own tickets with
+their live state on the board, and a ticket in review carries a **Verified on
+device** action that moves it to Done through the function (`bugs.markVerified`,
+one of the two writes the app ever makes to a ticket, and only to a ticket your
+own ledger holds; the other is the ranking below). The function asks the board
+first and closes the ticket only if it is still In review; if it has moved (sent
+back to Ready, say), the app says it couldn't mark it verified and reloads the
+list. The board works just as well: the
 ticket waits under **Waiting on your check** on Now, for whoever filed it, with
 "Works on my phone, close it" and "Still broken", which sends it back to Ready.
 
@@ -273,8 +281,9 @@ the function translates them to the board's stages.
 ## Where the ranking lives
 
 There is one order for every open ticket on the board, shared by both
-founders. After filing, the app asks "which is worse?" and "Place it" tells the
-board which of your own tickets the new one comes after (or, for the top of
+founders, and only a founder ranks into it from the app (`bugs.canRank()`, which
+is `can_rank_bugs()` on the server, true for `admin` only). After filing, the
+app asks a founder "which is worse?" and "Place it" tells the board which of your own tickets the new one comes after (or, for the top of
 your list, which one it now comes before), through `POST /bug-report/place`
 (`bugs.place`). The board fits it into the shared order; it rewrites its order
 itself, so there is no gap to run out of. There is no table for this in the
@@ -299,10 +308,13 @@ list in [`ticketing-system.md`](./ticketing-system.md#tests-and-what-they-do-and
 
 ## Becoming an internal reporter
 
-`profiles.role` has to be `admin` or `tester`. An operator grants it with
-`select public.set_profile_role('<handle>', 'tester');` in Studio — the plain
-`update` cannot pass the profile trigger there — see
-[`ticketing-system.md`](./ticketing-system.md#granting-the-tester-role).
+`profiles.role` has to be `admin` or `tester`. A founder grants `tester` with
+`select public.set_profile_role('<handle>', 'tester');` in Studio (the plain
+`update` cannot pass the profile trigger there) and takes it away with
+`'user'`; the tester then relaunches the app, which reads the role once per
+session. A tester files, sees their own tickets and confirms a fix once it is
+In review; they do not rank, do not get the board link, and see no one else's
+tickets. See [`ticketing-system.md`](./ticketing-system.md#testers).
 
 ## What happens to the screenshots
 

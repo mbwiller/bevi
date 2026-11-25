@@ -89,6 +89,19 @@ describe('bugs.canReport', () => {
   });
 });
 
+describe('bugs.canRank', () => {
+  it('asks can_rank_bugs, and answers false rather than throwing for a tester or on any error', async () => {
+    const calls = newCalls();
+    expect(await createBugsApi(fakeClient(calls, { rpcData: false })).canRank()).toBe(false);
+    expect(calls.rpc).toBe('can_rank_bugs');
+
+    expect(await createBugsApi(fakeClient(newCalls(), { rpcData: true })).canRank()).toBe(true);
+    expect(await createBugsApi(fakeClient(newCalls(), { rpcError: { message: 'permission denied' } })).canRank()).toBe(false);
+    // Only a literal true admits: a database that answers something else is not a yes.
+    expect(await createBugsApi(fakeClient(newCalls(), { rpcData: 'true' })).canRank()).toBe(false);
+  });
+});
+
 describe('bugs.report validation', () => {
   it('rejects an empty title before uploading anything or invoking the function', async () => {
     const calls = newCalls();
@@ -387,6 +400,20 @@ describe('bugs.markVerified', () => {
     ).rejects.toMatchObject({ code: 'not_found' });
     await expect(createBugsApi(fakeClient(newCalls(), { invokeData: {} })).markVerified('BEV-1')).rejects.toMatchObject({ code: 'unknown' });
   });
+
+  it("maps the verify route's not_in_review to conflict, and leaves other 409s and tracker failures as they were", async () => {
+    const e = await createBugsApi(fakeClient(newCalls(), { invokeError: functionError(409, { error: 'not_in_review' }) }))
+      .markVerified('T-207')
+      .catch((x: unknown) => x);
+    expect(e).toMatchObject({ code: 'conflict', message: "That report isn't waiting for your check", detail: { reason: 'not_in_review' } });
+
+    await expect(
+      createBugsApi(fakeClient(newCalls(), { invokeError: functionError(502, { error: 'tracker_error', code: 'board_unreachable' }) })).markVerified('T-207'),
+    ).rejects.toMatchObject({ code: 'unknown' });
+    await expect(
+      createBugsApi(fakeClient(newCalls(), { invokeError: functionError(403, { error: 'not_internal' }) })).markVerified('T-207'),
+    ).rejects.toMatchObject({ code: 'unauthorized' });
+  });
 });
 
 describe('bugs.place', () => {
@@ -424,6 +451,13 @@ describe('bugs.place', () => {
     await expect(
       createBugsApi(fakeClient(newCalls(), { invokeError: functionError(403, { error: 'not_internal' }) })).place('BEV-7', null),
     ).rejects.toMatchObject({ code: 'unauthorized' });
+  });
+
+  it("maps the place route's not_allowed, for an account that may not rank, to unauthorized", async () => {
+    const e = await createBugsApi(fakeClient(newCalls(), { invokeError: functionError(403, { error: 'not_allowed', route: 'place' }) }))
+      .place('BEV-7', null)
+      .catch((x: unknown) => x);
+    expect(e).toMatchObject({ code: 'unauthorized', message: 'This account cannot rank reports', detail: { reason: 'not_allowed' } });
   });
 
   it("maps the place route's own not-found to not_found", async () => {

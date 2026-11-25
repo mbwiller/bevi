@@ -19,10 +19,10 @@ import { closeSheet, finishRanking, useReport } from './store';
 const PLACED_MS = 1200;
 
 /**
- * Which is worse? Places a filed ticket in the tester's own ranked list (worst first) with the
+ * Which is worse? Places a filed ticket in the reporter's own ranked list (worst first) with the
  * app's own pairwise comparison: `@bevi/ranking`'s placement state machine, exactly as ranking a
- * Bev uses it. Never asked for at send time; the tester comes here from the toast, the reports
- * sheet's banner or a row's Place.
+ * Bev uses it. Never asked for at send time; a founder comes here from the toast, the reports
+ * sheet's banner or a row's Place, none of which a tester is offered (`bugs.canRank()`).
  *
  * Mapping the machine onto a worst-first list: the machine's list is "best first" and "better"
  * means higher in it, so here "better" means worse (nearer the top). Pressing the new report as

@@ -52,7 +52,7 @@ import type { PickLevel, Shot } from './types';
 /**
  * The reporter's state, module-level so it survives every navigation: the note being written, select
  * mode and its live highlight, a step recording, the outbox of notes being filed, and the tickets
- * still to be placed in the tester's ranked list. It belongs to one signed-in account: leaving the
+ * still to be placed in the reporter's ranked list (offered only to a founder: ReportHost). It belongs to one signed-in account: leaving the
  * signed-in state wipes it, and storage is never restored for another handle. The transitions on the note are the pure functions of
  * model.ts; this file runs them and does the capturing, through the guarded engine (engine.ts).
  *
