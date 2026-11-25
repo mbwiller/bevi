@@ -9,7 +9,7 @@ import { controls } from '@/testing/fakeApi';
 import { FRIEND, ME } from '@/testing/fakeApi/people';
 
 import { BevdMapScreen } from '../BevdMapScreen';
-import { MAP_EMPTY_ACTION, MAP_EMPTY_FRIENDS, MAP_EMPTY_TITLE } from '../copy';
+import { ADD_LOCATIONS, ADD_THEM, MAP_EMPTY_ACTION, MAP_EMPTY_FRIENDS, MAP_EMPTY_TITLE } from '../copy';
 
 const mockPush = jest.fn();
 const mockSetParams = jest.fn();
@@ -70,14 +70,34 @@ async function renderScreen() {
   );
 }
 
-it('with no places yet it says so, counts the Bevs that have none, and leads to Bev\'d', async () => {
+it('with no places yet it says so, counts the Bevs that have none, and adds them without leaving the map', async () => {
   await renderScreen();
   expect(await screen.findByText(MAP_EMPTY_TITLE)).toBeTruthy();
   const ranked = (await api.rankings.listMine()).items.length;
   expect(await screen.findByText(`${ranked} of your Bevs have no location yet.`)).toBeTruthy();
 
-  await fireEvent.press(screen.getByRole('button', { name: MAP_EMPTY_ACTION }));
+  await fireEvent.press(screen.getByRole('button', { name: ADD_LOCATIONS }));
+  expect(await screen.findByText(`1 of ${ranked}`)).toBeTruthy();
+  expect(mockPush).not.toHaveBeenCalled();
+});
+
+it('with nothing Bev\'d yet the empty map still leads to Bev\'d', async () => {
+  for (const r of (await api.rankings.listMine({ page: { limit: 50 } })).items) await api.rankings.removeRanking(r.bevId);
+  await renderScreen();
+  await fireEvent.press(await screen.findByRole('button', { name: MAP_EMPTY_ACTION }));
   expect(mockPush).toHaveBeenCalledWith('/lists');
+});
+
+it('"Add them" on the line under the tabs opens the one-at-a-time sheet over the map', async () => {
+  await seedPlaces();
+  const ranked = (await api.rankings.listMine()).items.length;
+  await renderScreen();
+  const nudge = await screen.findByTestId('bevd-map-nudge');
+  expect(within(nudge).getByText(ADD_THEM)).toBeTruthy();
+
+  await fireEvent.press(nudge);
+  expect(await screen.findByText(`1 of ${ranked - 2}`)).toBeTruthy();
+  expect(mockPush).not.toHaveBeenCalled();
 });
 
 it('has two views, You and Friends, and opens on You: a place per venue with how many Bevs you had there', async () => {

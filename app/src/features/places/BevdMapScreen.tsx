@@ -15,8 +15,18 @@ import { size, spacing, type, useTheme } from '@/theme';
 
 import { BevdCanvas } from './BevdCanvas';
 import { BevdPlaceSheet } from './BevdPlaceSheet';
-import { MAP_EMPTY_ACTION, MAP_EMPTY_BODY, MAP_EMPTY_FRIENDS, MAP_EMPTY_TITLE, MAP_TITLE, backfillLine } from './copy';
+import {
+  ADD_LOCATIONS,
+  ADD_THEM,
+  MAP_EMPTY_ACTION,
+  MAP_EMPTY_BODY,
+  MAP_EMPTY_FRIENDS,
+  MAP_EMPTY_TITLE,
+  MAP_TITLE,
+  backfillLine,
+} from './copy';
 import type { MapScope } from './openPlace';
+import { PlaceBevsSheet } from './PlaceBevsSheet';
 
 const SCOPES = [
   { id: 'mine', label: 'You' },
@@ -31,7 +41,8 @@ const parseScope = (id: string | undefined): MapScope => (id === 'friends' ? 'fr
  * post's place line) opens on that place in that view.
  *
  * The map is only as full as the list is tagged, so while some of the viewer's Bevs have no place
- * a line under the tabs says how many and leads to Bev'd, where each row can be given one.
+ * a line under the tabs says how many, and "Add them" opens a sheet over the map that goes through
+ * them one at a time (`PlaceBevsSheet`).
  */
 export function BevdMapScreen() {
   const { colors } = useTheme();
@@ -39,6 +50,7 @@ export function BevdMapScreen() {
   const params = useLocalSearchParams<{ venue?: string; scope?: string }>();
   const [scope, setScope] = useState<MapScope>('mine');
   const [selected, setSelected] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
   const pins = useBevdMap(scope);
   const summary = useLocationSummary();
 
@@ -57,6 +69,10 @@ export function BevdMapScreen() {
   const seed = data.find((p) => p.venue.id === selected) ?? null;
   const nudge = backfillLine(summary.data);
   const toBevd = () => router.push('/lists');
+  const addThem = () => {
+    setSelected(null);
+    setAdding(true);
+  };
 
   let body;
   if (pins.isPending) {
@@ -74,7 +90,13 @@ export function BevdMapScreen() {
         {scope === 'friends' ? (
           <EmptyState icon="map-pin" title={MAP_EMPTY_TITLE} body={MAP_EMPTY_FRIENDS} />
         ) : (
-          <EmptyState icon="map-pin" title={MAP_EMPTY_TITLE} body={MAP_EMPTY_BODY} action={MAP_EMPTY_ACTION} onAction={toBevd} />
+          <EmptyState
+            icon="map-pin"
+            title={MAP_EMPTY_TITLE}
+            body={MAP_EMPTY_BODY}
+            action={nudge ? ADD_LOCATIONS : MAP_EMPTY_ACTION}
+            onAction={nudge ? addThem : toBevd}
+          />
         )}
       </View>
     );
@@ -97,8 +119,8 @@ export function BevdMapScreen() {
       {nudge ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`${nudge} Add them in Bev'd`}
-          onPress={toBevd}
+          accessibilityLabel={`${nudge} ${ADD_THEM}`}
+          onPress={addThem}
           style={({ pressed }) => [styles.nudge, { backgroundColor: colors.primaryTint }, pressed && PRESSED]}
           testID="bevd-map-nudge"
         >
@@ -106,11 +128,12 @@ export function BevdMapScreen() {
           <Text style={[type.body, styles.nudgeText, { color: colors.text }]} numberOfLines={2}>
             {nudge}
           </Text>
-          <Text style={[type.body, styles.nudgeAction, { color: colors.primary }]}>Add them</Text>
+          <Text style={[type.body, styles.nudgeAction, { color: colors.primary }]}>{ADD_THEM}</Text>
         </Pressable>
       ) : null}
       <View style={styles.body}>{body}</View>
       <BevdPlaceSheet venueId={selected} scope={scope} seed={seed} onClose={() => setSelected(null)} />
+      <PlaceBevsSheet open={adding} onClose={() => setAdding(false)} />
     </SafeAreaView>
   );
 }

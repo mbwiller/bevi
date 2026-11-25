@@ -84,6 +84,31 @@ export function backfillLine(summary: { rankedCount: number; locatedCount: numbe
   return missing === 1 ? '1 of your Bevs has no location yet.' : `${missing} of your Bevs have no location yet.`;
 }
 
+// ---------------------------------------------------------------------------
+// Adding places from the Map tab: one Bev at a time
+// ---------------------------------------------------------------------------
+
+export const ADD_THEM = 'Add them';
+export const ADD_LOCATIONS = 'Add locations';
+export const SKIP = 'Skip';
+export const DONE = 'Done';
+export const BACKFILL_LOADING = 'Finding your Bevs…';
+export const BACKFILL_NONE = 'Every Bev you have has a place.';
+
+/** "3 of 24": where the sheet is in the Bevs it is walking through. */
+export const backfillProgress = (index: number, total: number): string => `${index + 1} of ${total}`;
+
+/** Read out after a save: "Diet Coke is at Duane Reade." */
+export const placedAnnouncement = (bev: string, place: string): string => `${bev} is at ${place}.`;
+
+/** The closing line: what was placed and what was left for later. */
+export function backfillSummary(placed: number, skipped: number): string {
+  const p = placed === 1 ? '1 Bev' : `${placed} Bevs`;
+  const s = skipped === 1 ? '1 skipped' : `${skipped} skipped`;
+  if (placed === 0) return skipped > 0 ? `Nothing added this time, ${s}.` : 'Nothing added this time.';
+  return skipped > 0 ? `Added a place to ${p}, ${s}.` : `Added a place to ${p}.`;
+}
+
 /** What a pin's row says under the name: "3 Bevs · 425 Main Street", with "1 yours" when shared. */
 export function pinSubtitle(pin: {
   bevCount: number;

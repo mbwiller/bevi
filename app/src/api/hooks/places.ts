@@ -1,7 +1,7 @@
 // Where a Bev was had (BEV-22, contract 3.5.0): the place picker's searches, the write that tags a
 // ranked Bev, and the Map tab's reads.
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { BevdScope, LatLng } from '@bevi/shared';
+import type { BevdScope, LatLng, RankedBev } from '@bevi/shared';
 
 import { api } from '../client';
 import { keys } from '../keys';
@@ -87,6 +87,34 @@ export function useMyVenue(bevId: string | undefined, enabled = true) {
 /** How much of the caller's Bev'd list has a place: the Map tab's "add where you had them" line. */
 export function useLocationSummary() {
   return useQuery({ queryKey: keys.rankings.locationSummary(), queryFn: () => api.rankings.locationSummary() });
+}
+
+/** Pages of 50 (the API's cap), so this reads up to 1,000 Bevs before it stops. */
+const UNPLACED_PAGES = 20;
+const UNPLACED_PAGE_SIZE = 50;
+
+/**
+ * The caller's Bevs that have no place yet, newest first: the queue the Map tab's "Add them" sheet
+ * walks through. The contract has no filter for this, so it reads the Bev'd list a page at a time and
+ * keeps the rows whose `venue` is null. Fetched only while the sheet is open, and fresh each time.
+ */
+export function useUnplacedRankings(enabled = true) {
+  return useQuery({
+    queryKey: keys.rankings.unplaced(),
+    queryFn: async (): Promise<RankedBev[]> => {
+      const out: RankedBev[] = [];
+      let cursor: string | undefined;
+      for (let i = 0; i < UNPLACED_PAGES; i++) {
+        const page = await api.rankings.listMine({ sort: 'recent', page: { cursor, limit: UNPLACED_PAGE_SIZE } });
+        out.push(...page.items.filter((r) => !r.venue));
+        if (!page.nextCursor) break;
+        cursor = page.nextCursor;
+      }
+      return out;
+    },
+    enabled,
+    staleTime: 0,
+  });
 }
 
 /** How many recently used places the picker shows above what is nearby. */

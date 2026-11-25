@@ -80,6 +80,8 @@ export const keys = {
     venue: (bevId: string) => [...root, 'rankings', 'venue', bevId] as const,
     /** `rankings.locationSummary`: how much of the Bev'd list has a place (the Map tab's nudge). */
     locationSummary: () => [...root, 'rankings', 'locationSummary'] as const,
+    /** The caller's Bevs with no place, newest first: what the Map tab's "Add them" walks through. */
+    unplaced: () => [...root, 'rankings', 'unplaced'] as const,
   },
 
   wantToTry: () => [...root, 'wantToTry'] as const,
