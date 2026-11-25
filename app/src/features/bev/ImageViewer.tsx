@@ -197,7 +197,8 @@ export function ImageViewer({ url, onClose }: ImageViewerProps) {
       zoomY.value = zoomStart.value.y + e.translationY;
     })
     .onEnd(() => {
-      if (closing.value || zoom.value <= MIN_ZOOM) return;
+      // Always settled, even if the zoom reached fitted mid-drag (a double tap still running), so it never rests off-centre.
+      if (closing.value) return;
       zoomTo(zoom.value, zoomX.value, zoomY.value);
     });
 
@@ -222,7 +223,9 @@ export function ImageViewer({ url, onClose }: ImageViewerProps) {
     .maxDistance(TAP_SLOP)
     .onEnd((e) => {
       const { cx, cy } = fromCentre(e.x, e.y);
-      if (!isOnImage(cx, cy, fittedSize(box.value, natural.value), zoom.value, zoomX.value, zoomY.value)) close(0, 0);
+      // Zoomed, the picture is clipped to its box: the padding around it is off it.
+      const inBox = Math.abs(cx) <= box.value.width / 2 && Math.abs(cy) <= box.value.height / 2;
+      if (!inBox || !isOnImage(cx, cy, fittedSize(box.value, natural.value), zoom.value, zoomX.value, zoomY.value)) close(0, 0);
     });
 
   const pan = Gesture.Pan()
@@ -308,7 +311,7 @@ export function ImageViewer({ url, onClose }: ImageViewerProps) {
           </Animated.View>
           <GestureDetector gesture={gesture}>
             <View ref={body} style={styles.body} collapsable={false} onLayout={onLayout} testID="image-viewer-body">
-              <Animated.View style={[styles.fill, pictureStyle]} testID="image-viewer-picture">
+              <Animated.View style={[styles.picture, pictureStyle]} testID="image-viewer-picture">
                 {url && !failed ? (
                   <Animated.View style={[styles.fill, zoomStyle]}>
                     <Image
@@ -339,6 +342,8 @@ export function ImageViewer({ url, onClose }: ImageViewerProps) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  // Zoomed, the picture stays inside its box, so it never covers Close.
+  picture: { flex: 1, overflow: 'hidden' },
   // The page shows through while the picture is dragged, so the header has no band of its own.
   header: { backgroundColor: 'transparent' },
   body: { flex: 1, justifyContent: 'center', padding: spacing.gutter },

@@ -168,6 +168,16 @@ describe('zooming, and tapping off the picture', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it('zoomed, a tap in the margin around the picture still closes it (the picture is clipped to its box)', async () => {
+    const onClose = jest.fn();
+    await render(<ImageViewer url={URL} onClose={onClose} />);
+    await layOut();
+    await load();
+    await pinch(4);
+    await tapAt('image-viewer-tap', 4, 4);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('pinched out past fitted, it settles back to fitted', async () => {
     const onClose = jest.fn();
     await render(<ImageViewer url={URL} onClose={onClose} />);
