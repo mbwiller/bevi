@@ -122,6 +122,7 @@ function SessionGate() {
 
           <Stack.Protected guard={status === 'onboarding'}>
             <Stack.Screen name="onboarding/profile" />
+            <Stack.Screen name="onboarding/picks" />
             <Stack.Screen name="onboarding/starter" />
           </Stack.Protected>
 

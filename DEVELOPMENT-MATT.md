@@ -163,7 +163,8 @@ src/app/
     sign-in.tsx  sign-up.tsx
   onboarding/
     profile.tsx                    name, birthdate (age gate), timezone captured silently (handle = username from sign-up)
-    starter.tsx                    starter-set ranking
+    picks.tsx                      your go-tos: up to 3 drink categories, favourite first (§6.2a)
+    starter.tsx                    starter-set ranking, led by the go-tos
   (tabs)/
     _layout.tsx                    5 tabs: feed | lists | add = Search (center: filled circle with +, inline, not raised) | leaderboard | profile
     feed/index.tsx
@@ -193,7 +194,8 @@ Tab order and the centre Search slot follow vision §6 ("replaces Beli's search 
   - Session persists in `localStorage` through the `authStorage` adapter.
 - Session gate in the root layout: `signedOut → (auth)`; `signedIn && !profile.onboarded → onboarding`; else tabs. The gate reads one query, `api.profile.getMe()`.
 - Onboarding step 1 collects: display name, birthdate (set once via `api.profile.setBirthDate`, §6.17), and silently `Intl.DateTimeFormat().resolvedOptions().timeZone`.
-- Onboarding step 2 is the starter ranking (§6.3). Minimum 3 ranked to continue; "I haven't had this" skips an item.
+- Onboarding step 2 is the go-tos step (§6.2a): up to 3 drink categories, favourite first, saved with `profile.setCategoryPicks`. No skip; at least one pick.
+- Onboarding step 3 is the starter ranking (§6.3), led by those picks. Minimum 3 ranked to continue; "I haven't had this" skips an item.
 
 ### The mock API and when to swap
 
@@ -312,12 +314,20 @@ Common to every screen unless noted: loading = skeleton of the final layout; err
 - Contents: display name (prefilled from the username), birthdate (date picker) with the line "Set once. Used only to show 21+ categories. Can't be changed later without contacting us."; `Avatar 100` preview with initials.
 - Data: `profile.updateMe({ displayName, timezone })`, `profile.setBirthDate(date)` (one call, one time; the server rejects a second call, only an admin can change it, Arjun's rule).
 - States: birthdate missing blocks Continue; under-21 is allowed and just sets `profile.canSeeAlcohol = false`.
+- Continue goes to the go-tos step (§6.2a).
+
+### 6.2a Onboarding: your go-tos (`onboarding/picks.tsx`)
+
+- Purpose: a few taps between the profile and the starter ranking that tell the starter set what to lead with (DELIVERABLE-44). Contents: Header "Your go-tos" with Back to the profile step; "What are your go-tos?" in `displayDrop`; "Pick up to 3 kinds of Bev, favorite first. We'll start you with a few of each."; a three-column grid of `PickTile`s (design system), one per category the user can see in catalog order without Other (`visibleCategories(canSeeAlcohol)`: 14 for 21+, 11 otherwise; the birthdate set on §6.2 already decides it), each showing the art of that category's most-rated starter Bev (`ratingCount`, then name, then id; through `bevImageProps`). Under the grid, held in view while it scrolls, a helper line, the error line and Continue. The column stops at the profile step's width on a wide window.
+- Data: `profile.getCategoryPicks()` pre-fills the grid, in order (a saved category not offered now drops out); `bevs.getStarterCandidates()` only for the art, the same query §6.3 needs, and it never blocks: while it loads, if it fails, or for a category with no starter, the tile shows the category's own art. Continue calls `profile.setCategoryPicks(categoryIds)` (favourite first), skipped when the picks equal the saved ones, then pushes `/onboarding/starter`.
+- States: loading = a skeleton grid; the profile or the saved picks fail to load → `ErrorState` with Retry; nothing picked → Continue off, "Tap your number 1 first."; one or two → "Pick up to 2 more, or continue." / "Pick 1 more, or continue."; three → the other tiles dimmed, "That's your 3. Tap one to swap it out."; a failed save → the line under the helper (`FormError`, `formErrorMessage`), picks kept, Continue tries again. There is no skip.
+- Interactions: tapping an unpicked tile gives it the next number (the badge pops, the selection haptic ticks; nothing on the web); tapping a picked one drops it and the later picks move up one; with three picked a dimmed tile takes no tap. The tap order is the ranking. A screen reader hears "Coffee, your number 1 pick" (selected) and, on a dimmed tile, "Wine. You've picked 3 already" (dimmed); the full state is announced.
 
 ### 6.3 Onboarding: starter ranking (`onboarding/starter.tsx`)
 
 - Purpose: cold-start baseline (vision §5). Contents: progress "3 of 10", `BevImage 155`, name, "Have you had this?" → Yes / No; Yes opens the ranking flow (§6.9) inline; No skips.
-- Data: `bevs.getStarterCandidates()` returns at least 30 age-filtered `isStarter` Bevs, each with `ratingCount`; the app runs `selectStarterSet(candidates, { seed: userId })` from `@bevi/ranking` to pick 10 (§8.12): 3 most-rated core Bevs shared by everyone, then seeded wildcards; once onboarding asks for the user's go-to categories it passes them as `picks` (favourite first), and they get up to 5 of the 10 (2, 2, 1). Then `rankings.submitRanking` per item and `profile.updateMe({ onboarded: true })`. Starter rankings are not posts: the server writes no feed item while `onboarded` is false (they still count in the list, stats and streak).
-- States: first Bev (empty bucket, no comparisons: "Placed. Keep going."), finished summary ("You ranked 6 Bevs. Your top: Coke 8.3"), fewer than 3 ranked → "Rank at least 3 so we can learn your taste", candidates call fails → Retry (onboarding can't be skipped past this without ≥ 3).
+- Data: `bevs.getStarterCandidates()` returns at least 30 age-filtered `isStarter` Bevs, each with `ratingCount`; the app runs `selectStarterSet(candidates, { seed: userId, picks })` from `@bevi/ranking` to pick 10 (§8.12): 3 most-rated core Bevs shared by everyone, then the user's go-to categories from §6.2a (`profile.getCategoryPicks()`, favourite first), which get up to 5 of the 10 (2, 2, 1) and lead the set, then seeded wildcards. The picks go to every round, "Show me more" included, and round 0 is not chosen until they have loaded (`[]` means none: 3 core + 7 wildcards). Then `rankings.submitRanking` per item and `profile.updateMe({ onboarded: true })`. Starter rankings are not posts: the server writes no feed item while `onboarded` is false (they still count in the list, stats and streak).
+- States: intro ("We'll show you 10 Bevs, starting with your go-tos…", or "…10 popular Bevs…" with no picks), first Bev (empty bucket, no comparisons: "Placed. Keep going."), finished summary ("You ranked 6 Bevs. Your top: Coke 8.3"), fewer than 3 ranked → "Rank at least 3 so we can learn your taste", candidates or go-tos call fails → Retry (onboarding can't be skipped past this without ≥ 3).
 - Interactions: skip-all link after ≥ 3 ranked. The set is deterministic for the user, so leaving and coming back shows the same 10.
 
 ### 6.4 Feed tab (ref 01, 12)

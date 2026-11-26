@@ -63,14 +63,17 @@ describe('onboarding: profile', () => {
     expect(screen.queryByText(/under 21/)).toBeNull();
   });
 
-  it('saves the name with the device timezone, sets the birthdate once, then opens the starter step', async () => {
+  it('saves the name with the device timezone, sets the birthdate once, then opens the go-tos step', async () => {
     const updateMe = jest.spyOn(api.profile, 'updateMe');
     const setBirthDate = jest.spyOn(api.profile, 'setBirthDate');
     const path = await open('/onboarding/profile');
     await fireEvent.changeText(await screen.findByLabelText('Display name'), 'Dee Mo');
     await fireEvent.changeText(screen.getByLabelText('Birthdate'), '19900512');
     await fireEvent.press(continueButton());
-    await waitFor(() => expect(path()).toBe('/onboarding/starter'));
+    await waitFor(() => expect(path()).toBe('/onboarding/picks'));
+    expect(await screen.findByRole('header', { name: 'What are your go-tos?' })).toBeTruthy();
+    // The birthdate set a moment ago already decides the tiles: 21+, so the alcoholic three are there.
+    expect(await screen.findByRole('button', { name: 'Wine' })).toBeTruthy();
     expect(updateMe).toHaveBeenCalledWith({
       displayName: 'Dee Mo',
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,

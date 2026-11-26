@@ -17,11 +17,14 @@ export function starterSeed(userId: string, round: number): string {
 /**
  * One round of the starter set: `selectStarterSet` from @bevi/ranking over the candidates not shown
  * in an earlier round, seeded by the user id, alcoholic categories excluded when the user can't
- * see alcohol. The server already filters by age; the exclusion is the client-side mirror.
+ * see alcohol, and led by the user's go-to categories (`picks`, favorite first, from
+ * `profile.getCategoryPicks`; `[]` for none) on every round. The server already filters by age;
+ * the exclusion is the client-side mirror.
  */
 export function selectStarterRound(
   candidates: readonly BevSummary[],
   me: Pick<Profile, 'id' | 'canSeeAlcohol'>,
+  picks: readonly CategoryId[],
   round: number,
   seen: ReadonlySet<string> = new Set(),
 ): string[] {
@@ -29,7 +32,13 @@ export function selectStarterRound(
   return selectStarterSet(pool, {
     seed: starterSeed(me.id, round),
     excludeCategoryIds: me.canSeeAlcohol ? undefined : [...ALCOHOLIC_CATEGORY_IDS],
+    picks,
   });
+}
+
+/** The picks `selectStarterSet` will honour: those the user can see (it drops an excluded one too). */
+export function visiblePicks(picks: readonly CategoryId[], me: Pick<Profile, 'canSeeAlcohol'>): readonly CategoryId[] {
+  return me.canSeeAlcohol ? picks : picks.filter((p) => !ALCOHOLIC_CATEGORY_IDS.includes(p));
 }
 
 /** Whether another round could show anything new. */
