@@ -1244,15 +1244,20 @@ export interface NotificationsApi {
    * only, never a re-rank, and never for the likes or comments that person
    * receives; it goes to the phone only and adds nothing to `list`. It is
    * sent only while `posts` is on and the caller is not paused
-   * (`getSettings`). Idempotent both ways; turning off never fails for a
-   * person who exists or not.
+   * (`getSettings`). Idempotent both ways; turning off never fails (it is
+   * not rate-limited), whether the person exists or not.
+   *
+   * Turning on for anyone the caller does not follow is 'validation'
+   * (`detail.field` 'not following'), whoever they are: someone who does not
+   * exist, the caller themselves, and someone across a block (a block removes
+   * the follow) all read the same, so the answer never reveals a block.
    *
    * A backend older than 3.8.0 cannot save it, and this THROWS rather than
    * pretend it did.
-   * @throws 'unauthorized'; 'not_found' — turning on for someone who does not
-   *   exist or is across a block; 'validation' — turning on for someone the
-   *   caller does not follow (including themselves); 'rate_limited';
-   *   'unknown' — an older backend.
+   * @throws 'unauthorized'; 'validation' — turning on for someone the caller
+   *   does not follow; 'rate_limited' — turning on, too often; 'not_found' —
+   *   only for a follow standing beside a block, which no client path
+   *   creates; 'unknown' — an older backend.
    */
   setPostNotification(userId: string, on: boolean): Promise<void>;
 

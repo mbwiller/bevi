@@ -3398,9 +3398,11 @@ export class FakeApi implements BeviApi {
             this.dropPostSubscription(me.id, userId);
             return;
           }
-          // Not there and across a block are the same not_found, as follow_user answers them.
-          this.visibleUser(userId, me);
+          // No follow edge is always "not following": someone missing, yourself, and someone across
+          // a block (a block removes the follow) read the same, so the answer reveals no block.
           if (!this.isFollowing(me.id, userId)) invalid('not following', 'You can only choose people you follow');
+          // Only a follow standing beside a block is left, which no API path creates.
+          this.visibleUser(userId, me);
           if (!this.postSubscriptions.some((s) => s.subscriberId === me.id && s.targetId === userId)) {
             this.postSubscriptions.push({ subscriberId: me.id, targetId: userId });
           }

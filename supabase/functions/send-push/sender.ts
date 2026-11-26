@@ -148,45 +148,63 @@ export function routeFor(row: Pick<ClaimedPush, 'kind' | 'actor_id' | 'feed_even
  * other row is a push of its own. Tokens that are not Expo push tokens are
  * dropped (the table's check makes that unreachable; this keeps a bad row from
  * reaching Expo at all).
+ *
+ * A row that cannot be worded (a value of the wrong type, whatever throws)
+ * never takes its batch down: it, or its like group, lands in `failedIds`, to
+ * be finished with an error, and every other row is planned as usual.
  */
-export function planPushes(rows: readonly ClaimedPush[]): PlannedPush[] {
+export function planBatch(rows: readonly ClaimedPush[]): { plans: PlannedPush[]; failedIds: number[] } {
   const plans: { first: number; plan: PlannedPush }[] = [];
+  const failedIds: number[] = [];
   const likeGroups = new Map<string, ClaimedPush[]>();
   for (const row of rows) {
-    if (row.kind === 'like' && row.feed_event_id !== null) {
-      const key = `${row.recipient_id}:${row.feed_event_id}`;
-      const group = likeGroups.get(key);
-      if (group) group.push(row);
-      else likeGroups.set(key, [row]);
-      continue;
+    try {
+      if (row.kind === 'like' && row.feed_event_id !== null) {
+        const key = `${row.recipient_id}:${row.feed_event_id}`;
+        const group = likeGroups.get(key);
+        if (group) group.push(row);
+        else likeGroups.set(key, [row]);
+        continue;
+      }
+      plans.push({
+        first: row.id,
+        plan: { outboxIds: [row.id], tokens: validTokens(row.tokens), body: sentence(row), badge: badgeOf(row), url: routeFor(row) },
+      });
+    } catch {
+      if (typeof row?.id === 'number') failedIds.push(row.id);
     }
-    plans.push({
-      first: row.id,
-      plan: { outboxIds: [row.id], tokens: validTokens(row.tokens), body: sentence(row), badge: badgeOf(row), url: routeFor(row) },
-    });
   }
   for (const group of likeGroups.values()) {
-    const newestFirst = [...group].sort((x, y) => y.id - x.id);
-    const handles: string[] = [];
-    const seen = new Set<string>();
-    for (const row of newestFirst) {
-      if (seen.has(row.actor_id)) continue;
-      seen.add(row.actor_id);
-      handles.push(handleOf(row));
+    try {
+      const newestFirst = [...group].sort((x, y) => y.id - x.id);
+      const handles: string[] = [];
+      const seen = new Set<string>();
+      for (const row of newestFirst) {
+        if (seen.has(row.actor_id)) continue;
+        seen.add(row.actor_id);
+        handles.push(handleOf(row));
+      }
+      const head = newestFirst[0]!;
+      plans.push({
+        first: Math.min(...group.map((r) => r.id)),
+        plan: {
+          outboxIds: group.map((r) => r.id).sort((x, y) => x - y),
+          tokens: validTokens(head.tokens),
+          body: likeSentence(handles, bevDisplayName(head)),
+          badge: Math.max(...group.map(badgeOf)),
+          url: routeFor(head),
+        },
+      });
+    } catch {
+      failedIds.push(...group.map((r) => r.id));
     }
-    const head = newestFirst[0]!;
-    plans.push({
-      first: Math.min(...group.map((r) => r.id)),
-      plan: {
-        outboxIds: group.map((r) => r.id).sort((x, y) => x - y),
-        tokens: validTokens(head.tokens),
-        body: likeSentence(handles, bevDisplayName(head)),
-        badge: Math.max(...group.map(badgeOf)),
-        url: routeFor(head),
-      },
-    });
   }
-  return plans.sort((x, y) => x.first - y.first).map((p) => p.plan);
+  return { plans: plans.sort((x, y) => x.first - y.first).map((p) => p.plan), failedIds };
+}
+
+/** `planBatch`'s pushes alone. */
+export function planPushes(rows: readonly ClaimedPush[]): PlannedPush[] {
+  return planBatch(rows).plans;
 }
 
 function validTokens(tokens: readonly string[] | null): string[] {
@@ -368,9 +386,15 @@ export function createSender(deps: SenderDependencies): (req: Request) => Promis
     const supabaseUrl = deps.env('SUPABASE_URL');
     const serviceKey = deps.env('SUPABASE_SERVICE_ROLE_KEY');
     const webhookSecret = deps.env('PUSH_WEBHOOK_SECRET') || undefined;
-    if (!supabaseUrl || !serviceKey || !webhookSecret) return json({ error: 'not_configured' }, 503);
+    // 401 before anything about the configuration: a caller without the
+    // secret learns nothing. With no secret configured at all there is nothing
+    // to match, so a call that carries a bearer is told so (503); one with no
+    // bearer is still just unauthorized.
     const presented = bearer(req);
-    if (!presented || !(await tokensMatch(presented, webhookSecret))) return json({ error: 'unauthorized' }, 401);
+    if (!presented) return json({ error: 'unauthorized' }, 401);
+    if (!webhookSecret) return json({ error: 'not_configured' }, 503);
+    if (!(await tokensMatch(presented, webhookSecret))) return json({ error: 'unauthorized' }, 401);
+    if (!supabaseUrl || !serviceKey) return json({ error: 'not_configured' }, 503);
     // Deployed and configured is not enabled: only the literal `true` sends.
     if (deps.env('PUSH_SENDING_ENABLED') !== 'true') return json({ disabled: true }, 200);
 
@@ -436,7 +460,13 @@ export function createSender(deps: SenderDependencies): (req: Request) => Promis
       const retry = new Map<string, number[]>();
       const tickets: { ticket_id: string; token: string }[] = [];
       const dead = new Set<string>();
-      const plans = planPushes(rows);
+      const { plans, failedIds } = planBatch(rows);
+      // A row that could not be worded is failed on its own; the lease counted
+      // the attempt, so after five claims it is finished as 'skipped: attempts'.
+      if (failedIds.length > 0) {
+        log({ fn: 'send-push', event: 'plan_failed', rows: failedIds.length });
+        retry.set('plan_failed', [...failedIds]);
+      }
       // A push left with no device to send to has nothing to retry.
       for (const plan of plans) if (plan.tokens.length === 0) sentIds.push(...plan.outboxIds);
 

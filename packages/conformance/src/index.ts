@@ -1830,12 +1830,16 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       expect(await api.notifications.getSettings()).toEqual({ paused: false, follows: true, likes: true, comments: true, posts: false });
     });
 
-    it('post notifications: only for someone you follow; unknown is not_found; idempotent both ways', async () => {
+    it('post notifications: only for someone you follow (an unknown or blocked id reads the same); idempotent both ways', async () => {
       const a = await newUser();
+      const blocked = await newUser();
       const b = await newUser();
-      await expectCode(api.notifications.setPostNotification(a.userId, true), 'validation');
-      await expectCode(api.notifications.setPostNotification(b.userId, true), 'validation');
-      await expectCode(api.notifications.setPostNotification(NO_SUCH_USER, true), 'not_found');
+      await api.follows.follow(blocked.userId);
+      await api.blocks.block(blocked.userId);
+      for (const id of [a.userId, b.userId, NO_SUCH_USER, blocked.userId]) {
+        const e = await expectCode(api.notifications.setPostNotification(id, true), 'validation');
+        expect(e.detail).toMatchObject({ field: 'not following' });
+      }
       await api.notifications.setPostNotification(NO_SUCH_USER, false);
       await api.follows.follow(a.userId);
       await api.notifications.setPostNotification(a.userId, true);

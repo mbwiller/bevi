@@ -178,9 +178,9 @@ export function createNotificationsApi(client: SupabaseClient): NotificationsApi
     async setPostNotification(userId: string, on: boolean): Promise<void> {
       await requireUserId(client);
       if (!UUID_RE.test(userId)) {
-        // Nobody has such an id: turning on is the RPC's BEVI_NOT_FOUND, and
-        // turning off someone who never was on resolves.
-        if (on) throw new ApiError('not_found', 'No such user');
+        // Nobody has such an id, so nobody the caller follows: turning on is
+        // the RPC's BEVI_VALIDATION 'not following', and turning off resolves.
+        if (on) throw new ApiError('validation', 'You can only choose people you follow', { field: 'not following' });
         return;
       }
       // No PGRST202 tolerance, as updateSettings.

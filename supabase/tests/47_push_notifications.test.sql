@@ -36,7 +36,7 @@
 -- test needs (a stale lease, an expired push, an old ticket) are written by
 -- hand as postgres.
 begin;
-select plan(102);
+select plan(105);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -168,7 +168,6 @@ insert into t_fns (kind, sig) values
   ('internal', 'public.blocked_between(uuid, uuid)'),
   ('internal', 'public.user_is_adult(uuid)'),
   ('internal', 'public.visible_notifications_for(uuid)'),
-  ('internal', 'public.unread_notification_count_for(uuid)'),
   ('internal', 'public.notification_settings_of(uuid)'),
   ('internal', 'public.push_poke(text)'),
   ('internal', 'public.drain_push_outbox()'),
@@ -183,8 +182,8 @@ select is(
     where p.prosecdef
       and pg_get_userbyid(p.proowner) = 'postgres'
       and exists (select 1 from unnest(p.proconfig) c(setting) where c.setting like 'search_path=%')),
-  23,
-  'all 23 new functions are security definer, owned by postgres, with a pinned search_path'
+  22,
+  'all 22 new functions are security definer, owned by postgres, with a pinned search_path'
 );
 select is(
   (select coalesce(string_agg(f.sig, ', ' order by f.sig), '') from t_fns f
@@ -359,19 +358,21 @@ select throws_ok(
   '22023', 'BEVI_VALIDATION',
   'nor can b subscribe to b'
 );
+-- No follow edge is always "not following", so the answer never tells a
+-- blocked or missing person from one who exists.
 select throws_ok(
   $$ select public.set_post_notification('00000000-0000-4000-8000-0000000047ff'::uuid, true) $$,
-  'P0002', 'BEVI_NOT_FOUND',
-  'a profile that does not exist is not found'
+  '22023', 'BEVI_VALIDATION',
+  'a profile that does not exist is the same not following'
 );
 select throws_ok(
   $$ select public.set_post_notification('00000000-0000-4000-8000-000000004707'::uuid, true) $$,
-  'P0002', 'BEVI_NOT_FOUND',
-  'x, who blocked b, is the same not found'
+  '22023', 'BEVI_VALIDATION',
+  'so is x, who blocked b (the block took the follow)'
 );
 select throws_ok(
   $$ select public.set_post_notification('00000000-0000-4000-8000-000000004708'::uuid, true) $$,
-  'P0002', 'BEVI_NOT_FOUND',
+  '22023', 'BEVI_VALIDATION',
   'and so is y, whom b blocked'
 );
 select lives_ok(
@@ -509,6 +510,11 @@ select is(
           g(user_id, handle, display_name, avatar_path, timezone, onboarded, created_at, subscribed, n)),
   array['pgtappush01', 'pgtappush05'],
   'someone across a block is not listed, even while the follow row exists'
+);
+select throws_ok(
+  $$ select public.set_post_notification('00000000-0000-4000-8000-000000004703'::uuid, true) $$,
+  'P0002', 'BEVI_NOT_FOUND',
+  'a follow row beside a block (no client path makes one) is the one case left not found'
 );
 reset role;
 delete from public.user_blocks
@@ -843,9 +849,10 @@ select is(
 select is(
   (select array_agg(b.label || '=' || coalesce(o.last_error, 'null') order by b.label collate "C")
      from t_ob b join public.push_outbox o on o.id = b.id
-    where b.label not in ('comment_ok', 'follow_ok', 'like_c', 'like_d', 'post_b', 'attempts5')
+    where b.label not in ('comment_ok', 'follow_ok', 'like_c', 'like_d', 'post_b')
       and o.sent_at is not null),
   array['age_gate=skipped: age gate',
+        'attempts5=skipped: attempts',
         'blocked_by_actor=skipped: blocked',
         'blocked_by_recipient=skipped: blocked',
         'deleted_comment=skipped: not true',
@@ -858,15 +865,15 @@ select is(
   'every other one is finished in the same statement, with its reason'
 );
 select ok(
-  (select bool_and(o.claimed_at is not null and o.sent_at is null)
+  (select bool_and(o.claimed_at is not null and o.sent_at is null and o.attempts = 1)
      from t_ob b join public.push_outbox o on o.id = b.id
     where b.label in ('comment_ok', 'follow_ok', 'like_c', 'like_d', 'post_b')),
-  'the five are leased, not finished'
+  'the five are leased, not finished, and the lease counted their first attempt'
 );
 select ok(
-  (select o.sent_at is null and o.claimed_at is null and o.attempts = 5
+  (select o.sent_at is not null and o.attempts = 5
      from public.push_outbox o where o.id = (select id from t_ob where label = 'attempts5')),
-  'a push out of attempts is left alone'
+  'a push already claimed five times is finished, never claimed a sixth time'
 );
 select ok(
   (select c.kind = 'follow' and c.recipient_id = '00000000-0000-4000-8000-000000004701'
@@ -948,7 +955,7 @@ select ok(
   (select bool_and(o.sent_at is null and o.claimed_at is null and o.attempts = 1 and o.last_error = 'expo 503')
      from public.push_outbox o
     where o.id in (select id from t_ob where label in ('like_c', 'like_d'))),
-  'the failed ones are unsent, unleased, one attempt used, with the error'
+  'the failed ones are unsent, unleased, with the error; finishing does not count another attempt'
 );
 -- comment_ok's lease is six minutes old: its sender is gone.
 update public.push_outbox set claimed_at = now() - interval '6 minutes'
@@ -961,9 +968,38 @@ select is(
 );
 reset role;
 select ok(
-  (select o.sent_at is null and o.claimed_at is null and o.attempts = 5
-     from public.push_outbox o where o.id = (select id from t_ob where label = 'attempts5')),
-  'and still leaves the push out of attempts alone'
+  (select bool_and(o.attempts = 2)
+     from public.push_outbox o
+    where o.id in (select id from t_ob where label in ('comment_ok', 'like_c', 'like_d'))),
+  'each re-claim counted one more attempt'
+);
+
+-- A sender that dies after Expo took the message never reports back. post_b
+-- was claimed once and never finished: let its lease run out, again and again.
+create temporary table t_reclaims (n int primary key, returned boolean, att int) on commit drop;
+do $$
+declare
+  v_id  bigint := (select id from t_ob where label = 'post_b');
+  v_ret boolean;
+  v_att int;
+begin
+  for i in 1..5 loop
+    update public.push_outbox set claimed_at = now() - interval '6 minutes' where id = v_id;
+    v_ret := exists (select 1 from public.claim_push_batch(100) c where c.id = v_id);
+    select o.attempts into v_att from public.push_outbox o where o.id = v_id;
+    insert into t_reclaims values (i, v_ret, v_att);
+  end loop;
+end;
+$$;
+select is(
+  (select array_agg(r.returned::text || '/' || r.att order by r.n) from t_reclaims r),
+  array['true/2', 'true/3', 'true/4', 'true/5', 'false/5'],
+  'an unfinished push is re-claimed after each expired lease, one attempt each, and after the fifth claim never again'
+);
+select ok(
+  (select o.sent_at is not null and o.last_error = 'skipped: attempts'
+     from public.push_outbox o where o.id = (select id from t_ob where label = 'post_b')),
+  'and it is finished as skipped: attempts, not left unsent'
 );
 
 -- ---------------------------------------------------------------------------
@@ -1016,9 +1052,9 @@ select is(
 -- ---------------------------------------------------------------------------
 
 with ins as (
-  insert into public.push_outbox (recipient_id, actor_id, kind, sent_at)
+  insert into public.push_outbox (recipient_id, actor_id, kind, created_at, sent_at)
   values ('00000000-0000-4000-8000-000000004701', '00000000-0000-4000-8000-000000004702', 'follow',
-          now() - interval '8 days')
+          now() - interval '8 days', now() - interval '8 days')
   returning id
 )
 insert into t_ob (label, id) select 'old_sent', ins.id from ins;
