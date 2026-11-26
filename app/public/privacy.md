@@ -10,10 +10,11 @@ Bevi is a small app for a group of friends to rank drinks. This note says what i
 - Your rankings, notes, Want to Try list, who you follow, and the comparisons you make while ranking.
 - Photos you add of a Bev or a nutrition label.
 - Where you got a drink, when you add one: the shop, cafe or bar you pick is saved with that ranking.
+- If you turn on notifications: a push token for your phone, so we can send them to it, and your choices about which ones you want. The token is removed when you sign out.
 
 ## Where it lives
 
-Everything is stored in our Supabase database and file storage. Your sign-in session is kept on your device.
+Everything is stored in our Supabase database and file storage. Your sign-in session is kept on your device. Notifications are delivered through Expo's push service and Apple's, which receive the push token and the text of each notification.
 
 ## Who can see it
 

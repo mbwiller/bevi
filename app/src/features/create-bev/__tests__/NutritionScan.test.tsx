@@ -13,7 +13,7 @@ jest.mock('../textRecognition', () => ({
   recogniseText: jest.fn(),
 }));
 jest.mock('@/components/Sheet', () => ({ Sheet: ({ open, children }: { open: boolean; children: React.ReactNode }) => open ? children : null }));
-const preview: NutritionPreview = {
+const preview: NutritionPreview & { barcode: string } = {
   barcode: '012345678901', productName: 'Test water', basis: 'Per serving (355 ml)',
   calories: 0, fatGrams: null, carbohydrateGrams: 0, sugarGrams: 0, proteinGrams: null,
   sodiumMg: 4, sourceUrl: 'https://world.openfoodfacts.org/product/012345678901', source: 'openfoodfacts',
