@@ -120,9 +120,18 @@ const config: ExpoConfig = {
     // only when asked. Harmless on EAS's Xcode 26 image, required on a Mac with Xcode 27. SDK 58
     // does this by default: drop the option in the upgrade PR.
     ['expo-build-properties', { ios: { enableSceneSupport: true } }],
+    // Push notifications (features/notifications/push/push.ts). The plugin adds the push
+    // entitlement (aps-environment). The App ID must have the Push Notifications capability and
+    // EAS a push key before a build with this entry can be signed and deliver anything, so this
+    // entry merges only after that Apple step (T-31). No background remote notifications: the
+    // app only shows what arrives, it never wakes to fetch.
+    ['expo-notifications', { enableBackgroundRemoteNotifications: false }],
   ],
   experiments: { typedRoutes: true },
-  extra: { eas: { projectId: EAS_PROJECT_ID } },
+  // `push: true` turns on everything behind pushAvailable() (features/notifications/push/
+  // availability.ts): Settings > Notifications, the ask, token registration. It goes with the
+  // plugin entry above and never without it: a build that lacks the entitlement cannot register.
+  extra: { eas: { projectId: EAS_PROJECT_ID }, push: true },
 };
 
 export default config;
