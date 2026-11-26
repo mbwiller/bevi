@@ -74,6 +74,16 @@
 .bv-avatarpicker-change:disabled, .bv-avatarpicker-remove:disabled { opacity: .5; }
 .bv-avatarpicker-error { margin: 0; text-align: center; }
 
+/* PhotoCropper: the whole screen. The stage is a full-width square; the circle is inset by the gutter. */
+.bv-cropper { display: flex; flex-direction: column; height: 100%; background: var(--surface); }
+.bv-cropper-title { margin: 0; padding: var(--space-lg) var(--space-gutter); text-align: center; }
+.bv-cropper-stage { position: relative; width: 100%; aspect-ratio: 1; overflow: hidden; background: var(--input); touch-action: none; cursor: grab; user-select: none; }
+.bv-cropper-stage:active { cursor: grabbing; }
+.bv-cropper-photo { position: absolute; left: 50%; top: 50%; max-width: none; pointer-events: none; }
+.bv-cropper-mask { position: absolute; inset: var(--space-gutter); border-radius: var(--radius-pill); box-shadow: 0 0 0 2px var(--onDeep), 0 0 0 999px var(--photoScrim); pointer-events: none; }
+.bv-cropper-hint { margin: 0; padding: var(--space-md) var(--space-gutter) 0; text-align: center; }
+.bv-cropper-actions { display: flex; flex-direction: column; gap: var(--space-sm); margin-top: auto; padding: var(--space-lg) var(--space-gutter); }
+
 /* Pill, FilterPill */
 .bv-pill { position: relative; display: inline-flex; flex: none; align-items: center; gap: 6px; height: var(--size-pill); padding: 0 var(--space-lg);
   border-radius: var(--radius-pill); font-size: 15px; line-height: 20px; font-weight: 500; white-space: nowrap; }

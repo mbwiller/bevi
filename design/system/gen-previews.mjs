@@ -173,6 +173,13 @@ h('div', { className: 'pv', style: { alignItems: 'flex-start', gap: 40 } },
   L('uploading', h(B.AvatarPicker, { name: ME.name, src: PHOTO, busy: true, onRemove: function () {} })),
   L('failed', h(B.AvatarPicker, { name: ME.name, error: "Couldn't upload your photo. Try another one." })))`];
 
+P.PhotoCropper = [{ group: 'People', height: 700, width: 393, subtitle: 'After picking a profile photo. Drag it; the wheel zooms' }, `.pv-frame { height: 680px; margin: 10px auto; }`, `
+(function () {
+  // A stand-in landscape photo, 1600 x 1200, with something off-centre to frame.
+  var WIDE = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 120"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F2B263"/><stop offset="1" stop-color="#8E44AD"/></linearGradient></defs><rect width="160" height="120" fill="url(#g)"/><circle cx="62" cy="50" r="20" fill="#FFF4E0"/><ellipse cx="62" cy="108" rx="34" ry="26" fill="#FFF4E0"/><circle cx="128" cy="30" r="9" fill="#FFF4E0" opacity=".5"/></svg>');
+  return h('div', { className: 'pv-frame' }, h(B.PhotoCropper, { src: WIDE, width: 1600, height: 1200, onDone: function () {}, onCancel: function () {} }));
+})()`];
+
 P.AvatarStack = [{ group: 'People', height: 96 }, '', `
 h('div', { className: 'pv', style: { gap: 40 } },
   L('Friends who have had it', h(B.AvatarStack, { people: FRIENDS })),

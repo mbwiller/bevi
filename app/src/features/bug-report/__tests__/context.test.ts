@@ -144,6 +144,10 @@ describe('the concrete path', () => {
     expect(safePathOf('/image/https%3A%2F%2Fexample.supabase.co%2Fstorage%2Fv1%2Fobject%2Fsign%2Fx.jpg')).toBeUndefined();
   });
 
+  it('still drops the round photo viewer\'s path (T-29): the shape param changes nothing', () => {
+    expect(safePathOf('/image/https%3A%2F%2Fexample.supabase.co%2Fstorage%2Fv1%2Fobject%2Fsign%2Fx.jpg?shape=circle')).toBeUndefined();
+  });
+
   it('drops a path with a long opaque segment, as the server does', () => {
     expect(safePathOf('/reset/9f8a7c6b5d4e3f2a1b0c9d8e')).toBeUndefined();
   });

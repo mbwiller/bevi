@@ -8,6 +8,7 @@ import { Sheet } from '@/components/Sheet';
 import { TextField } from '@/components/TextField';
 import { spacing } from '@/theme';
 
+import { AvatarCropStep } from './AvatarCropStep';
 import { useAvatarUpload } from './useAvatarUpload';
 import { useSaveDisplayName } from './useSaveDisplayName';
 
@@ -22,7 +23,8 @@ export const HANDLE_READ_ONLY_HINT = "Your username is how you sign in, so it ca
 
 /**
  * Edit profile (§6.19): profile photo, display name, with a live initials preview, and the handle
- * read-only. A chosen or removed photo is saved as soon as it uploads (no Save step); Save is for the name.
+ * read-only. A chosen photo is framed in the "Move and scale" step, then saved as soon as it uploads, and a
+ * removed one at once (no Save step); Save is for the name.
  * `updateMe` accepts a handle, but the handle is also the sign-in username, so changing it here
  * would change how the person signs in; that stays an admin change for now.
  */
@@ -39,6 +41,12 @@ export function EditProfileSheet({ open, profile, onClose }: EditProfileSheetPro
       avatar.clearError();
     }
   }, [open, profile.displayName, clearError, avatar.clearError]);
+
+  // A crop step left open when the sheet goes is a Cancel.
+  const cancelCrop = avatar.crop.cancel;
+  useEffect(() => {
+    if (!open) cancelCrop();
+  }, [open, cancelCrop]);
 
   const submit = async () => {
     if ((await save(name)) !== null) onClose();
@@ -78,6 +86,8 @@ export function EditProfileSheet({ open, profile, onClose }: EditProfileSheetPro
           Cancel
         </Button>
       </View>
+      {/* A child of the sheet, so on iOS it presents over the sheet's own Modal. */}
+      <AvatarCropStep crop={avatar.crop} />
     </Sheet>
   );
 }

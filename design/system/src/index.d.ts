@@ -93,6 +93,23 @@ export interface AvatarPickerProps {
 }
 export declare function AvatarPicker(props: AvatarPickerProps): React.ReactElement;
 
+/** The square of a photo framed in the PhotoCropper, in the photo's own pixels (`x`, `y`: its top-left corner). */
+export interface PhotoCrop { x: number; y: number; size: number }
+export interface PhotoCropperProps {
+  /** The picked photo, upright. */
+  src: string;
+  /** Its size in pixels: the crop is worked out from it. */
+  width: number; height: number;
+  /** "Use photo": the square the circle showed. */
+  onDone?: (crop: PhotoCrop) => void;
+  /** "Cancel": nothing is uploaded and the photo stays as it was. */
+  onCancel?: () => void;
+  className?: string;
+}
+/** How far past "just fills the circle" a photo can be zoomed. */
+export declare const CROP_MAX_ZOOM: 4;
+export declare function PhotoCropper(props: PhotoCropperProps): React.ReactElement;
+
 export interface PillProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'filled' | 'outlined'; icon?: string; iconRight?: string;
   /** Outlined only: selected state in `primaryTint`. */
@@ -408,7 +425,7 @@ declare global {
   interface Window {
     Bevi: {
       Wordmark: typeof Wordmark; Icon: typeof Icon; BevArt: typeof BevArt; BevImage: typeof BevImage; ScoreBubble: typeof ScoreBubble;
-      PriceTier: typeof PriceTier; Avatar: typeof Avatar; AvatarStack: typeof AvatarStack; Pill: typeof Pill; Button: typeof Button;
+      PriceTier: typeof PriceTier; Avatar: typeof Avatar; AvatarStack: typeof AvatarStack; PhotoCropper: typeof PhotoCropper; Pill: typeof Pill; Button: typeof Button;
       IconButton: typeof IconButton; LikeButton: typeof LikeButton; CommentButton: typeof CommentButton; FilterPill: typeof FilterPill; SortToggle: typeof SortToggle; SearchBar: typeof SearchBar;
       TextField: typeof TextField; PriceTierPicker: typeof PriceTierPicker; Header: typeof Header; SectionHeader: typeof SectionHeader;
       ListScopeDropdown: typeof ListScopeDropdown; SegmentedTabs: typeof SegmentedTabs; TabBar: typeof TabBar; BevRow: typeof BevRow;
