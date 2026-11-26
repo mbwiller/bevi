@@ -168,7 +168,7 @@ Design decisions you should defend in review:
 4. **Categories are text slugs** (`'soda'`, `'diet_soda'`) so `shared/` enums and the DB agree without a lookup.
 5. **Buckets are `smallint` 1/2/3** in the DB (`1` = DISLIKED, `2` = FINE, `3` = LOVED) so `ORDER BY bucket DESC, position` yields the user's full list best-first. The domain type in `shared/` is `'LOVED' | 'FINE' | 'DISLIKED'`; `packages/api/src/mappers.ts` converts both ways. `insertIndex` 0 = best in the bucket (confirmed with Matt).
 6. **Merged duplicates are kept, not deleted.** `bevs.status = 'merged'` + `merged_into` + a row in `bev_aliases`, so old links and searches still resolve.
-7. **Every Bev-creating or ranking RPC writes a `feed_events` row.** The feed is a query over events, not over rankings, so re-ranks and want-to-try saves can appear without special-casing.
+7. **Every Bev-creating or ranking RPC writes a `feed_events` row.** The feed is a query over events, not over rankings, so re-ranks and want-to-try saves can appear without special-casing. Exception: `submit_ranking` writes none while the caller's `profiles.onboarded` is false, so the starter rankings are never posts (`20261128000100`).
 
 ### 3.1 Extensions
 
@@ -749,6 +749,8 @@ begin
   return v_row;
 end $$;
 ```
+
+Since `20261128000100` the `feed_events` insert runs only when the caller's `profiles.onboarded` is true: rankings made on the starter screen keep everything else (ranking, comparisons, stats, `ranking_events`, streak) but are not posts.
 
 Why this is race-safe: the advisory lock serialises all ranking writes for one user inside one transaction; the deferred unique constraint lets the shift happen in one statement; `bev_stats` refresh is idempotent (recomputed from `rankings`, not incremented); the whole thing is one transaction, so a failure anywhere leaves nothing half-applied. Two different users ranking the same Bev at once only contend on the `bev_stats` row, which is a plain upsert.
 

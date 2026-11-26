@@ -422,6 +422,81 @@ describe('@bevi/ranking-backed predictions, recommendations, streaks and points'
   });
 });
 
+describe('rankings made before onboarding ends (DELIVERABLE-44)', () => {
+  const rankFirst = (api: FakeApi, bevId: string, bucket: Bucket) =>
+    api.rankings.submitRanking({ bevId, bucket, insertIndex: 0, expectedBucketSize: 0, comparisons: [] });
+
+  it('are saved, counted and kept in the streak, but post nothing, even to a follower', async () => {
+    const api = make();
+    const fan = await api.signUp({ username: 'starterfan', password: 'password1', inviteCode: FAKE_INVITE_CODE });
+    const me = await api.signUp({ username: 'starter', password: 'password1', inviteCode: FAKE_INVITE_CODE });
+    expect((await api.profile.getMe()).onboarded).toBe(false);
+    const [a, b] = (await api.bevs.getStarterCandidates()).map((x) => x.id);
+    await rankFirst(api, a!, 'LOVED');
+    await rankFirst(api, b!, 'FINE');
+
+    expect((await api.rankings.listMine()).items.map((r) => r.bevId).sort()).toEqual([a, b].sort());
+    expect(await api.stats.getMine()).toMatchObject({ bevdCount: 2, currentStreak: 1, streakAliveToday: true });
+    expect((await api.feed.getFeed()).items.filter((i) => i.actor.id === me.userId)).toEqual([]);
+    expect((await api.feed.listUser(me.userId)).items).toEqual([]);
+
+    // Removed again, the day still counts, as the server's ranking_events keep it.
+    await api.rankings.removeRanking(b!);
+    expect(await api.stats.getMine()).toMatchObject({ bevdCount: 1, currentStreak: 1, streakAliveToday: true });
+
+    await api.signOut();
+    await api.signIn({ username: 'starterfan', password: 'password1' });
+    expect(fan.userId).not.toBe(me.userId);
+    await api.follows.follow(me.userId);
+    expect((await api.feed.getFeed()).items.filter((i) => i.actor.id === me.userId)).toEqual([]);
+    expect((await api.feed.listUser(me.userId)).items).toEqual([]);
+    expect((await api.rankings.listUser(me.userId)).items.map((r) => r.bevId)).toEqual([a]);
+  });
+
+  it('queue no post push for a subscriber until the profile is onboarded', async () => {
+    const api = make();
+    const fan = await api.signUp({ username: 'pushfan', password: 'password1', inviteCode: FAKE_INVITE_CODE });
+    const me = await api.signUp({ username: 'pushstarter', password: 'password1', inviteCode: FAKE_INVITE_CODE });
+    await api.signOut();
+    await api.signIn({ username: 'pushfan', password: 'password1' });
+    await api.follows.follow(me.userId);
+    await api.notifications.updateSettings({ paused: false, follows: true, likes: true, comments: true, posts: true });
+    await api.notifications.setPostNotification(me.userId, true);
+    await api.signOut();
+
+    await api.signIn({ username: 'pushstarter', password: 'password1' });
+    const [a, b] = (await api.bevs.getStarterCandidates()).map((x) => x.id);
+    await rankFirst(api, a!, 'LOVED');
+    expect(api.pendingPushes(fan.userId)).toEqual([]);
+
+    await api.profile.updateMe({ onboarded: true });
+    await rankFirst(api, b!, 'FINE');
+    const post = (await api.feed.listUser(me.userId)).items[0]!;
+    expect(api.pendingPushes(fan.userId)).toEqual([{ kind: 'post', actorHandle: 'pushstarter', postId: post.id }]);
+  });
+
+  it('once the profile is onboarded, the next ranking posts; an onboarded fixture user posts as before', async () => {
+    const api = make();
+    const me = await api.signUp({ username: 'graduate', password: 'password1', inviteCode: FAKE_INVITE_CODE });
+    const [a, b] = (await api.bevs.getStarterCandidates()).map((x) => x.id);
+    await rankFirst(api, a!, 'LOVED');
+    await api.profile.updateMe({ onboarded: true });
+    await rankFirst(api, b!, 'FINE');
+    expect((await api.feed.listUser(me.userId)).items.map((i) => i.bev.id)).toEqual([b]);
+
+    await api.signOut();
+    await signInMe(api);
+    expect((await api.profile.getMe()).onboarded).toBe(true);
+    const mine = new Set((await Promise.all(BUCKET_ORDER.map((bucket) => api.rankings.listBucket(bucket)))).flat());
+    const fresh = (await api.bevs.getStarterCandidates()).map((x) => x.id).find((id) => !mine.has(id))!;
+    const fine = await api.rankings.listBucket('FINE');
+    const comparisons = fine.length ? [{ winnerBevId: fine[fine.length - 1]!, loserBevId: fresh, tie: false }] : [];
+    await api.rankings.submitRanking({ bevId: fresh, bucket: 'FINE', insertIndex: fine.length, expectedBucketSize: fine.length, comparisons });
+    const post = (await api.feed.getFeed()).items.find((i) => i.bev.id === fresh && i.actor.handle === ME.handle);
+    expect(post).toMatchObject({ type: 'RANKING', bucket: 'FINE' });
+  });
+});
+
 describe('likes (S-02)', () => {
   it('like and unlike are idempotent and show on the feed item; an unknown post is not_found', async () => {
     const api = make();
@@ -593,7 +668,12 @@ describe('feed.listUser (S-20)', () => {
 
 describe('feed.getExplore (S-04 + A-04)', () => {
   const PW = 'explore-pass-1';
-  const join = (api: FakeApi, username: string) => api.signUp({ username, password: PW, inviteCode: FAKE_INVITE_CODE });
+  /** Signs up and finishes onboarding: a ranking made before that is not a post (DELIVERABLE-44). */
+  const join = async (api: FakeApi, username: string) => {
+    const session = await api.signUp({ username, password: PW, inviteCode: FAKE_INVITE_CODE });
+    await api.profile.updateMe({ onboarded: true });
+    return session;
+  };
   /** Two non-alcoholic Bevs: a fresh signup has no birthdate, so search already hides alcohol. */
   const twoBevs = async (api: FakeApi) => (await api.bevs.search({ q: '', limit: 2 })).items.map((b) => b.id);
   const rankFirstIn = (api: FakeApi, bevId: string, bucket: Bucket) =>

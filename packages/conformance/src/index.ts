@@ -90,12 +90,17 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
     api = await makeApi();
   });
 
-  /** Signs up a fresh user (and signs in as them). */
-  async function newUser(opts: { birthdate?: string | null } = {}): Promise<Session & { password: string }> {
+  /**
+   * Signs up a fresh user (and signs in as them). Onboarded unless `onboarded: false`, because a
+   * ranking made before onboarding ends is not a post (`submitRanking`), and most cases here rank
+   * and then read the feed as a user past the starter screen would.
+   */
+  async function newUser(opts: { birthdate?: string | null; onboarded?: boolean } = {}): Promise<Session & { password: string }> {
     const username = makeUsername();
     const session = await api.signUp({ username, password, inviteCode: options.inviteCode });
     const birthdate = opts.birthdate === undefined ? ADULT_BIRTHDATE : opts.birthdate;
     if (birthdate) await api.profile.setBirthDate(birthdate);
+    if (opts.onboarded ?? true) await api.profile.updateMe({ onboarded: true });
     return { ...session, password };
   }
 
@@ -746,6 +751,29 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       const post = feed.items.find((i) => i.type === 'RANKING' && i.bev.id === a);
       expect(post).toMatchObject({ actor: { id: me.userId }, bucket: 'DISLIKED', note: 'Way too sweet' });
       expect(post!.score).toBeLessThan(BANDS.DISLIKED[1]);
+    });
+
+    it('submitRanking before onboarding ends saves the ranking and the streak but posts nothing; after it, a ranking posts', async () => {
+      const fan = await newUser();
+      const me = await newUser({ onboarded: false });
+      const [a, b, c] = await starterIds(3);
+      await rankAtBottom(a!, 'LOVED');
+      await rankAtBottom(b!, 'FINE');
+      expect((await api.rankings.listMine()).items.map((r) => r.bevId).sort()).toEqual([a, b].sort());
+      const stats = await api.stats.getMine();
+      expect(stats.bevdCount).toBe(2);
+      if (checkStreaks) expect(stats).toMatchObject({ currentStreak: 1, streakAliveToday: true });
+      expect((await api.feed.getFeed()).items.filter((i) => i.actor.id === me.userId)).toEqual([]);
+      expect((await api.feed.listUser(me.userId)).items).toEqual([]);
+
+      await api.profile.updateMe({ onboarded: true });
+      await rankAtBottom(c!, 'LOVED');
+      expect((await api.feed.listUser(me.userId)).items.map((i) => i.bev.id)).toEqual([c]);
+
+      await signInAs(fan);
+      await api.follows.follow(me.userId);
+      expect((await api.feed.getFeed()).items.filter((i) => i.actor.id === me.userId).map((i) => i.bev.id)).toEqual([c]);
+      expect((await api.rankings.listUser(me.userId)).items).toHaveLength(3);
     });
 
     it('listMine filters by bucket and category and sorts', async () => {
