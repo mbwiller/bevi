@@ -1,5 +1,5 @@
 -- =====================================================================
--- 20261126000100 · starter rankings stay off the feed (DELIVERABLE-44)
+-- 20261128000100 · starter rankings stay off the feed (DELIVERABLE-44)
 -- =====================================================================
 -- A new account ranks about ten "starter" Bevs on the onboarding screen
 -- (app/src/features/onboarding/starter/) before it reaches the feed. Each of

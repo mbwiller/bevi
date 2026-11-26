@@ -1,4 +1,4 @@
--- DELIVERABLE-44 (20261126000100): a ranking made before onboarding ends is
+-- DELIVERABLE-44 (20261128000100): a ranking made before onboarding ends is
 -- not a post.
 --
 -- In order: (1) submit_ranking keeps its shape, owner and grants; (2) a user

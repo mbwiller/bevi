@@ -57,7 +57,7 @@
   h('div', { className: 'status' }, '9:41', h('span', { className: 'status-r' }, h('span', { className: 'batt' }, h('i')))),
   h('div', { className: 'scroll' }, 
   h(F, null,
-    h(B.Header, { wordmark: true, actions: [{ icon: 'user-plus', label: 'Find people' }] }),
+    h(B.Header, { wordmark: true, actions: [{ icon: 'bell', label: 'Notifications, 3 unread', badge: 3 }, { icon: 'user-plus', label: 'Find people' }] }),
     h('div', { className: 'gutter', style: { padding: '4px 16px 8px' } }, h(B.SearchBar, { placeholder: 'Search a Bev or a person', id: 'feed-q' })),
     h('div', { className: 'bv-bevof-pair' },
       h(B.BevOfCard, { period: 'day', bev: BEVS.horchata, score: 8.9 }),

@@ -84,7 +84,13 @@ describe('the bug reporter, for an internal reporter', () => {
     await start('ready', '/feed');
     expect(await screen.findByRole('button', { name: 'Report' })).toBeTruthy();
     const header = screen.getByLabelText('Find people').parent!;
-    expect(within(header).getAllByRole('button').map((b) => b.props.accessibilityLabel)).toEqual(['Find people']);
+    // The bell, then Find people (T-31). The fixture inbox has three unread rows, so the bell says so.
+    await waitFor(() =>
+      expect(within(header).getAllByRole('button').map((b) => b.props.accessibilityLabel)).toEqual([
+        'Notifications, 3 unread',
+        'Find people',
+      ]),
+    );
     expect(screen.queryByLabelText('Report a bug')).toBeNull();
   });
 
@@ -241,6 +247,48 @@ describe('tab bar', () => {
     expect(screen.getByLabelText('Lists').props.accessibilityState).toEqual({ selected: true });
     await fireEvent.press(screen.getByLabelText('Feed'));
     expect(path()).toBe('/feed');
+  });
+
+  it("Feed's bell opens Notifications, which keeps the bar with Feed marked", async () => {
+    signInFake();
+    const path = await start('ready', '/feed');
+    await fireEvent.press(await screen.findByRole('button', { name: 'Notifications, 3 unread' }));
+    expect(await screen.findByRole('heading', { name: 'Notifications' })).toBeTruthy();
+    expect(path()).toBe('/notifications');
+    expectFeedMarkedOnFiveTabs();
+  });
+
+  it('/notifications keeps the bar, with Feed marked and still five tabs (design system ScreenNotifications)', async () => {
+    signInFake();
+    const path = await start('ready', '/notifications');
+    expect(await screen.findByRole('heading', { name: 'Notifications' })).toBeTruthy();
+    expect(path()).toBe('/notifications');
+    expectFeedMarkedOnFiveTabs();
+  });
+
+  it("Notifications' back returns to the Feed, whose bell has no count now", async () => {
+    signInFake();
+    const path = await start('ready', '/feed');
+    await fireEvent.press(await screen.findByRole('button', { name: 'Notifications, 3 unread' }));
+    await screen.findByRole('heading', { name: 'Notifications' });
+    // Opened and read: the rows are in, and marking them read has reached the server.
+    await screen.findByLabelText('Unread. friend_e started following you, 10 minutes ago');
+    await waitFor(async () => expect(await api.notifications.unreadCount()).toBe(0));
+    await fireEvent.press(screen.getByRole('button', { name: 'Back' }));
+    await waitFor(() => expect(path()).toBe('/feed'));
+    expect(screen.queryByRole('heading', { name: 'Notifications' })).toBeNull();
+    expect(await screen.findByRole('button', { name: 'Notifications' })).toBeTruthy();
+  });
+
+  it.each([
+    ['signedOut', '/sign-in', 'Create account'],
+    ['onboarding', '/onboarding/profile', 'Your profile'],
+  ] as const)('/notifications and /post are out of reach when %s', async (status, pathname, text) => {
+    for (const url of ['/notifications', '/post/abc']) {
+      const path = await start(status, url);
+      expect((await screen.findAllByText(text)).length).toBeGreaterThan(0);
+      expect(path()).toBe(pathname);
+    }
   });
 
   it.each([

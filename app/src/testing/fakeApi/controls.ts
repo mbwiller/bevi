@@ -5,6 +5,7 @@ import type { ApiErrorCode, AppConfig, BugTicketState, IconStatus } from '@bevi/
 
 import { getFakeApi } from './instance';
 import type { Latency } from './FakeApi';
+import type { FakePendingPush } from './FakeApi';
 
 export interface FakeControls {
   /** The next call (to `method`, e.g. 'rankings.submitRanking', or to any method) rejects with `code`. */
@@ -51,6 +52,26 @@ export interface FakeControls {
    * `resetToFixtures()`. To make the read fail instead, `failNext(code, 'meta.getAppConfig')`.
    */
   setAppConfig(config: Partial<AppConfig>): void;
+  /**
+   * Empty every inbox, ME's fixture notifications included, so `notifications.list` answers an
+   * empty page and `unreadCount` 0 until something new happens. ME's fixtures (an unread pair of
+   * likes from friend_a and friend_b on ME's newest post, an unread comment from friend_a, an unread
+   * follow from friend_e whom ME does not follow back, and three read ones over a week old) come
+   * back with `resetToFixtures()`.
+   */
+  clearNotifications(): void;
+  /**
+   * T-31 Release 2: the pushes the server would send this user now (kind, actor handle, post id),
+   * oldest first. The fake sends nothing; this applies claim_push_batch's rules to what was queued:
+   * pause and the four kind switches (`notifications.updateSettings`), post subscriptions
+   * (`setPostNotification`; a post push for a NEW ranking only, never a re-rank), blocks either
+   * way, the age gate, and that it is still true (an unlike, a deleted comment or an unfollow
+   * drops it). Unlike the server it does not require a registered device; `pushTokens` lists them.
+   * Empty after `resetToFixtures()`.
+   */
+  pendingPushes(userId: string): FakePendingPush[];
+  /** T-31 Release 2: the Expo push tokens `notifications.registerPushToken` holds for this user, newest first. */
+  pushTokens(userId: string): string[];
 }
 
 export const controls: FakeControls = {
@@ -64,4 +85,7 @@ export const controls: FakeControls = {
   setBugTicketState: (ticketId, state) => getFakeApi().setBugTicketState(ticketId, state),
   setIconStatus: (bevId, status) => getFakeApi().setIconStatus(bevId, status),
   setAppConfig: (config) => getFakeApi().setAppConfig(config),
+  clearNotifications: () => getFakeApi().clearNotifications(),
+  pendingPushes: (userId) => getFakeApi().pendingPushes(userId),
+  pushTokens: (userId) => getFakeApi().pushTokens(userId),
 };
