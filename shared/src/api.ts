@@ -35,8 +35,10 @@ import type {
   LatLngBounds,
   LeaderboardRow,
   Notification,
+  NotificationSettings,
   NutritionPreview,
   Page,
+  PostNotificationPerson,
   Profile,
   ProfileRow,
   ProfileStats,
@@ -1192,6 +1194,90 @@ export interface NotificationsApi {
    * @throws 'unauthorized'; 'validation' — `upToId` is not a notification id.
    */
   markRead(upToId?: string): Promise<void>;
+
+  /**
+   * The caller's push settings (T-31 Release 2, contract 3.8.0). A push is
+   * sent only when `paused` is false AND that kind's switch is on: `follows`,
+   * `likes` and `comments` for the three inbox kinds, `posts` for "someone I
+   * chose posted a Bev" (see `setPostNotification`). Someone who never saved
+   * settings gets the defaults: not paused; `follows`, `likes` and `comments`
+   * on; `posts` off. Reading never saves anything.
+   *
+   * A backend older than 3.8.0 has no settings: it answers the defaults.
+   * @throws 'unauthorized'.
+   */
+  getSettings(): Promise<NotificationSettings>;
+
+  /**
+   * Saves all five switches at once and answers them as stored. The backend
+   * keeps exactly what it is given: what one switch does to another (turning
+   * on `posts` when the first person is chosen, say) is the app's rule, not
+   * the server's. Pausing never changes the four kind switches, so un-pausing
+   * restores exactly what was on.
+   *
+   * A backend older than 3.8.0 cannot save them, and this THROWS rather than
+   * pretend it did.
+   * @throws 'unauthorized'; 'validation' — a switch that is not a boolean
+   *   (`detail.field` names it); 'unknown' — an older backend.
+   */
+  updateSettings(settings: NotificationSettings): Promise<NotificationSettings>;
+
+  /**
+   * The people the caller follows, for choosing whose posts to be pushed
+   * about: never anyone across a block in either direction. Those already
+   * chosen (`subscribed`) come first, then by handle. `q` filters by a
+   * case-insensitive substring of the handle or the display name (a leading
+   * '@' is ignored; at most 80 characters). Paged by `nextCursor`.
+   *
+   * Every row is someone the caller follows, so `isFollowing` is always true.
+   *
+   * A backend older than 3.8.0 answers an empty page.
+   * @throws 'unauthorized'; 'validation' — `q` is over 80 characters.
+   */
+  listPostNotificationPeople(params?: PageParams & { q?: string }): Promise<Page<PostNotificationPerson>>;
+
+  /**
+   * Turns "push me when this person posts a Bev" on or off. Only for someone
+   * the caller follows; the choice is removed when the caller stops following
+   * them (an unfollow, or a block either way, which removes the follow), and
+   * a re-follow starts with it off. A post push is sent for a NEW ranking
+   * only, never a re-rank, and never for the likes or comments that person
+   * receives; it goes to the phone only and adds nothing to `list`. It is
+   * sent only while `posts` is on and the caller is not paused
+   * (`getSettings`). Idempotent both ways; turning off never fails for a
+   * person who exists or not.
+   *
+   * A backend older than 3.8.0 cannot save it, and this THROWS rather than
+   * pretend it did.
+   * @throws 'unauthorized'; 'not_found' — turning on for someone who does not
+   *   exist or is across a block; 'validation' — turning on for someone the
+   *   caller does not follow (including themselves); 'rate_limited';
+   *   'unknown' — an older backend.
+   */
+  setPostNotification(userId: string, on: boolean): Promise<void>;
+
+  /**
+   * Records this device's Expo push token (`ExponentPushToken[...]` or
+   * `ExpoPushToken[...]`, at most 200 characters) for the caller, so pushes
+   * reach it. Call it after every sign-in and at launch: a token another
+   * account registered moves to the caller (one device, one signed-in
+   * account), and the server keeps each user's 10 most recently seen devices.
+   * A device Expo reports as no longer registered is forgotten by the server.
+   *
+   * Resolves without doing anything on a backend older than 3.8.0.
+   * @throws 'unauthorized'; 'validation' — not an Expo push token; 'rate_limited'.
+   */
+  registerPushToken(token: string): Promise<void>;
+
+  /**
+   * Forgets this device's token, so it receives no more pushes for the
+   * caller: call it BEFORE signing out (it needs the session). Only the
+   * caller's own token is removed; anything else, or a token already gone, is
+   * a no-op. Idempotent. Resolves without doing anything on a backend older
+   * than 3.8.0.
+   * @throws 'unauthorized'.
+   */
+  unregisterPushToken(token: string): Promise<void>;
 }
 
 export interface NutritionApi {

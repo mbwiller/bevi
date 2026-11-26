@@ -1055,3 +1055,132 @@ describe('notifications (T-31)', () => {
     await expect(api.feed.getPost('feed-does-not-exist')).rejects.toMatchObject({ code: 'not_found' });
   });
 });
+
+// T-31 Release 2. The conformance suite covers settings, post subscriptions and tokens on fresh
+// accounts; these pin what only the fake has: `pendingPushes` (the server's claim rules, applied to
+// what was queued), `pushTokens`, and the re-rank cascade the fake has to do by hand.
+describe('push notifications (T-31 Release 2)', () => {
+  const id = (handle: string) => userIdFor(handle);
+
+  /** A starter Bev `handle` has not ranked, ranked by them at the bottom of LOVED. */
+  async function rankSomethingNew(api: FakeApi) {
+    const mine = new Set((await api.rankings.listMine({ page: { limit: 100 } })).items.map((r) => r.bev.id));
+    const bev = (await api.bevs.getStarterCandidates()).find((b) => !mine.has(b.id))!;
+    const ids = await api.rankings.listBucket('LOVED');
+    await api.rankings.submitRanking({ bevId: bev.id, bucket: 'LOVED', insertIndex: ids.length, expectedBucketSize: ids.length, comparisons: [] });
+    return bev.id;
+  }
+
+  it('pendingPushes: the settings, the subscription and "new rankings only" decide what would be pushed', async () => {
+    const api = make();
+    const me = await signInMe(api);
+    const myPost = (await api.feed.listUser(me.userId, { limit: 3 })).items[2]!;
+    await api.notifications.setPostNotification(id(FRIEND.handle), true);
+
+    api.signInAs(FRIEND.handle);
+    await api.feed.like(myPost.id);
+    const bevId = await rankSomethingNew(api);
+    const post = (await api.feed.listUser(id(FRIEND.handle), { limit: 1 })).items[0]!;
+    api.signInAs(ME.handle);
+
+    // posts is off by default: the like only.
+    expect(api.pendingPushes(me.userId)).toEqual([{ kind: 'like', actorHandle: FRIEND.handle, postId: myPost.id }]);
+    const on = { paused: false, follows: true, likes: true, comments: true, posts: true };
+    await api.notifications.updateSettings(on);
+    expect(api.pendingPushes(me.userId)).toEqual([
+      { kind: 'like', actorHandle: FRIEND.handle, postId: myPost.id },
+      { kind: 'post', actorHandle: FRIEND.handle, postId: post.id },
+    ]);
+    // Paused: nothing. Un-paused with likes off: the post only.
+    await api.notifications.updateSettings({ ...on, paused: true });
+    expect(api.pendingPushes(me.userId)).toEqual([]);
+    await api.notifications.updateSettings({ ...on, likes: false });
+    expect(api.pendingPushes(me.userId)).toEqual([{ kind: 'post', actorHandle: FRIEND.handle, postId: post.id }]);
+
+    // A re-rank queues nothing, and its old post (gone on the server) takes its push with it.
+    api.signInAs(FRIEND.handle);
+    const ids = (await api.rankings.listBucket('LOVED')).filter((x) => x !== bevId);
+    await api.rankings.rerankBev({ bevId, bucket: 'LOVED', insertIndex: 0, expectedBucketSize: ids.length, comparisons: [] });
+    api.signInAs(ME.handle);
+    expect(api.pendingPushes(me.userId)).toEqual([]);
+  });
+
+  it('pendingPushes: an unlike, an unfollow of the person chosen, and a block each drop a push', async () => {
+    const api = make();
+    const me = await signInMe(api);
+    await api.notifications.updateSettings({ paused: false, follows: true, likes: true, comments: true, posts: true });
+    await api.notifications.setPostNotification(id(FRIEND.handle), true);
+    const myPost = (await api.feed.listUser(me.userId, { limit: 3 })).items[2]!;
+
+    api.signInAs(FRIEND.handle);
+    await api.feed.like(myPost.id);
+    await api.feed.unlike(myPost.id);
+    await rankSomethingNew(api);
+    api.signInAs(ME.handle);
+    expect(api.pendingPushes(me.userId).map((p) => p.kind)).toEqual(['post']);
+
+    await api.follows.unfollow(id(FRIEND.handle));
+    expect(api.pendingPushes(me.userId)).toEqual([]);
+    expect((await api.notifications.listPostNotificationPeople({ q: FRIEND.handle })).items).toEqual([]);
+    await api.follows.follow(id(FRIEND.handle));
+    expect((await api.notifications.listPostNotificationPeople({ q: FRIEND.handle })).items).toMatchObject([
+      { id: id(FRIEND.handle), subscribed: false, isFollowing: true },
+    ]);
+
+    // friend_b comments on ME's post; ME blocks friend_b: the push goes, and so does friend_b.
+    api.signInAs('friend_b');
+    await api.comments.add(myPost.id, 'from friend b');
+    api.signInAs(ME.handle);
+    expect(api.pendingPushes(me.userId)).toEqual([{ kind: 'comment', actorHandle: 'friend_b', postId: myPost.id }]);
+    await api.blocks.block(id('friend_b'));
+    expect(api.pendingPushes(me.userId)).toEqual([]);
+    expect((await api.notifications.listPostNotificationPeople({ q: 'friend_b' })).items).toEqual([]);
+  });
+
+  it("re-ranking a post drops the notifications about it, as the server's cascade does", async () => {
+    const api = make();
+    const me = await signInMe(api);
+    const [newest] = (await api.feed.listUser(me.userId, { limit: 1 })).items;
+    expect(await api.notifications.unreadCount()).toBe(3);
+    const bucket = newest!.bucket;
+    const ids = (await api.rankings.listBucket(bucket)).filter((x) => x !== newest!.bev.id);
+    await api.rankings.rerankBev({ bevId: newest!.bev.id, bucket, insertIndex: 0, expectedBucketSize: ids.length, comparisons: [] });
+    // The pair of likes on that post is gone; the comment and the follow are not.
+    expect((await api.notifications.list()).items.some((n) => n.postId === newest!.id)).toBe(false);
+    expect(await api.notifications.unreadCount()).toBe(2);
+  });
+
+  it('device tokens: one device, one account; ten per user; only your own can be unregistered', async () => {
+    const api = make();
+    const me = await signInMe(api);
+    const t = (n: number) => `ExponentPushToken[fake-${n}]`;
+    await api.notifications.registerPushToken(t(1));
+    expect(api.pushTokens(me.userId)).toEqual([t(1)]);
+    await expect(api.notifications.registerPushToken('nope')).rejects.toMatchObject({ code: 'validation', detail: { field: 'token' } });
+
+    api.signInAs(FRIEND.handle);
+    await api.notifications.registerPushToken(t(1));
+    expect(api.pushTokens(me.userId)).toEqual([]);
+    expect(api.pushTokens(id(FRIEND.handle))).toEqual([t(1)]);
+    for (let n = 2; n <= 11; n++) await api.notifications.registerPushToken(t(n));
+    expect(api.pushTokens(id(FRIEND.handle))).toEqual([11, 10, 9, 8, 7, 6, 5, 4, 3, 2].map(t));
+
+    api.signInAs(ME.handle);
+    await api.notifications.unregisterPushToken(t(11));
+    expect(api.pushTokens(id(FRIEND.handle))).toHaveLength(10);
+
+    api.resetToFixtures();
+    expect(api.pushTokens(id(FRIEND.handle))).toEqual([]);
+  });
+
+  it('controls reach the same state, and failNext reaches the new methods', async () => {
+    const api = make();
+    const me = await signInMe(api);
+    expect(controls.pendingPushes).toBeDefined();
+    expect(controls.pushTokens).toBeDefined();
+    api.failNext('network', 'notifications.getSettings');
+    await expect(api.notifications.getSettings()).rejects.toMatchObject({ code: 'network' });
+    expect(await api.notifications.getSettings()).toEqual({ paused: false, follows: true, likes: true, comments: true, posts: false });
+    expect(api.pendingPushes(me.userId)).toEqual([]);
+  });
+});

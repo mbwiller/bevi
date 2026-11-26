@@ -34,8 +34,10 @@ import type {
   LeaderboardRow,
   Notification,
   NotificationKind,
+  NotificationSettings,
   PeriodWinner,
   PhotoStatus,
+  PostNotificationPerson,
   PriceTier,
   Profile,
   ProfileRow,
@@ -255,6 +257,39 @@ export function mapNotification(client: SupabaseClient, row: NotificationRpcRow)
     comment:
       row.comment_id !== null && row.comment_body !== null ? { id: String(row.comment_id), body: row.comment_body } : null,
   };
+}
+
+// --------------------------------------------------------------------------
+// Push settings and post subscriptions (T-31 Release 2, 20261127000100)
+// --------------------------------------------------------------------------
+
+/** The one row of `get_notification_settings` / `update_notification_settings`. */
+export interface NotificationSettingsRpcRow {
+  paused: boolean;
+  follows: boolean;
+  likes: boolean;
+  comments: boolean;
+  posts: boolean;
+}
+
+export function mapNotificationSettings(row: NotificationSettingsRpcRow): NotificationSettings {
+  return {
+    paused: row.paused === true,
+    follows: row.follows === true,
+    likes: row.likes === true,
+    comments: row.comments === true,
+    posts: row.posts === true,
+  };
+}
+
+/** One row of `get_post_notification_people`: the embedded profile, plus whether a post push is on. */
+export interface PostNotificationPersonRpcRow extends EmbeddedProfileRow {
+  subscribed: boolean;
+}
+
+/** Every row is someone the caller follows, so `isFollowing` is true by construction. */
+export function mapPostNotificationPerson(client: SupabaseClient, row: PostNotificationPersonRpcRow): PostNotificationPerson {
+  return { ...mapEmbeddedProfile(client, row), isFollowing: true, subscribed: row.subscribed === true };
 }
 
 /** One row of `get_followed_by` (20261111000100): who the caller follows that follows `user_id`. */
