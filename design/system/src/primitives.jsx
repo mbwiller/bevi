@@ -64,6 +64,80 @@ export function AvatarPicker({ name = '', src, busy = false, error, onChange, on
   );
 }
 
+/** How far past "just fills the circle" a photo can be zoomed. */
+export const CROP_MAX_ZOOM = 4;
+
+/**
+ * The step between picking a profile photo and uploading it: the whole screen, "Move and scale" over
+ * the photo with a circle cut out of a `photoScrim`, then "Use photo" and "Cancel". The photo always
+ * fills the circle: drag to move it, pinch (here, the wheel) to zoom up to `CROP_MAX_ZOOM`, double-tap for 2 times and back.
+ * `onDone` gets the framed square in the photo's own pixels.
+ */
+export function PhotoCropper({ src, width = 1, height = 1, onDone, onCancel, className }) {
+  const stage = React.useRef(null);
+  const grab = React.useRef(null);
+  const [side, setSide] = React.useState(0);
+  const [view, setView] = React.useState({ zoom: 1, x: 0, y: 0 });
+  React.useLayoutEffect(() => {
+    const measure = () => { if (stage.current) setSide(stage.current.getBoundingClientRect().width); };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, []);
+  // The circle is inset from the stage by the gutter (16).
+  const d = Math.max(0, side - 32);
+  const base = d / Math.min(width, height);
+  const clamp = (v) => {
+    const zoom = Math.min(CROP_MAX_ZOOM, Math.max(1, v.zoom));
+    const maxX = Math.max(0, (width * base * zoom - d) / 2);
+    const maxY = Math.max(0, (height * base * zoom - d) / 2);
+    return { zoom, x: Math.min(maxX, Math.max(-maxX, v.x)), y: Math.min(maxY, Math.max(-maxY, v.y)) };
+  };
+  const down = (e) => { grab.current = { px: e.clientX, py: e.clientY, x: view.x, y: view.y }; e.currentTarget.setPointerCapture(e.pointerId); };
+  const move = (e) => { const g = grab.current; if (g) setView((v) => clamp({ zoom: v.zoom, x: g.x + e.clientX - g.px, y: g.y + e.clientY - g.py })); };
+  const up = () => { grab.current = null; };
+  const wheel = (e) => {
+    const closer = e.deltaY < 0;
+    setView((v) => {
+      const zoom = Math.min(CROP_MAX_ZOOM, Math.max(1, v.zoom * (closer ? 1.1 : 1 / 1.1)));
+      // The point under the circle's centre stays put.
+      return clamp({ zoom, x: (v.x * zoom) / v.zoom, y: (v.y * zoom) / v.zoom });
+    });
+  };
+  // A double tap: in to 2 times, or back to the start.
+  const twice = () => setView((v) => (v.zoom > 1 ? { zoom: 1, x: 0, y: 0 } : clamp({ zoom: 2, x: v.x * 2, y: v.y * 2 })));
+  const done = () => {
+    if (!onDone || !d) return;
+    const size = Math.min(width, height) / view.zoom;
+    const x = width / 2 - view.x / (base * view.zoom) - size / 2;
+    const y = height / 2 - view.y / (base * view.zoom) - size / 2;
+    const whole = Math.max(1, Math.min(Math.round(size), width, height));
+    onDone({ x: Math.min(width - whole, Math.max(0, Math.round(x))), y: Math.min(height - whole, Math.max(0, Math.round(y))), size: whole });
+  };
+  return (
+    <div className={cx('bv', 'bv-cropper', className)} role="dialog" aria-modal="true" aria-label="Move and scale">
+      <p className="heading bv-cropper-title">Move and scale</p>
+      <div ref={stage} className="bv-cropper-stage" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onWheel={wheel} onDoubleClick={twice}>
+        {d ? (
+          <img
+            src={src}
+            alt=""
+            draggable={false}
+            className="bv-cropper-photo"
+            style={{ width: width * base, height: height * base, transform: `translate(-50%, -50%) translate(${view.x}px, ${view.y}px) scale(${view.zoom})` }}
+          />
+        ) : null}
+        <span className="bv-cropper-mask" aria-hidden="true" />
+      </div>
+      <p className="caption bv-meta bv-cropper-hint">Drag to move. Pinch to zoom.</p>
+      <div className="bv-cropper-actions">
+        <Button variant="primary" block onClick={done}>Use photo</Button>
+        <Button variant="ghost" block onClick={onCancel}>Cancel</Button>
+      </div>
+    </div>
+  );
+}
+
 /** Overlapping Avatars ("Friends who've had it"), with a +N chip past `max`. */
 export function AvatarStack({ people = [], size = 32, max = 4, className }) {
   const shown = people.slice(0, max);
@@ -218,14 +292,15 @@ export function SaveButton({ saved = false, onClick, className }) {
 
 /**
  * The Follow / Following pill of a person row and an Explore post: filled `primary` "Follow", outlined
- * "Following". A press pops it like the heart (transform only).
+ * "Following". A press pops it like the heart (transform only). `text` replaces "Follow" where the row
+ * says more ("Follow back" on a new-follower notification).
  */
-export function FollowPill({ following = false, onClick, label }) {
+export function FollowPill({ following = false, onClick, label, text = 'Follow' }) {
   const [pop, setPop] = React.useState(0);
   return (
     <span key={pop} className={cx('bv-pop-box', pop > 0 && 'bv-pop')}>
       <Pill variant={following ? 'outlined' : 'filled'} aria-pressed={following} aria-label={label} onClick={() => { setPop((n) => n + 1); if (onClick) onClick(); }}>
-        {following ? 'Following' : 'Follow'}
+        {following ? 'Following' : text}
       </Pill>
     </span>
   );

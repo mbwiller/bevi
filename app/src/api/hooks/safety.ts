@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
-import type { BlockedUser, Comment, ExplorePost, FeedItem, ProfileRow, ReportContentInput, ReportContentResult } from '@bevi/shared';
+import type { BlockedUser, Comment, ExplorePost, FeedItem, Notification, ProfileRow, ReportContentInput, ReportContentResult } from '@bevi/shared';
 
 import { api } from '../client';
 import { keys } from '../keys';
@@ -38,6 +38,7 @@ const personKeys = (userId: string) => [
  *   cursor belongs to one sequence, so it isn't refetched under the reader.
  * - Threads lose their comments; People lists (search, followers, following, suggestions) lose the
  *   row.
+ * - Notifications they are in leave the inbox, and the inbox and the bell's count refetch.
  * - Their profile, stats, rankings, Activity and follower lists go (the server now answers
  *   'not_found'); the rest of stats, the Friends board and the leaderboards, Bev detail ("friends
  *   who've had it") and recommendations refetch, since the follows between you are gone.
@@ -53,6 +54,11 @@ export function applyBlock(qc: QueryClient, userId: string): void {
   for (const prefix of [keys.users.all, keys.follows.all]) {
     qc.setQueriesData({ queryKey: prefix }, (data: unknown) => filterCachedItems<ProfileRow>(data, (r) => r.id !== userId));
   }
+  // The inbox (T-31): every row they are in goes now; the refetch below brings back a row of likes
+  // that others are in too, without them.
+  qc.setQueryData(keys.notifications.list(), (data: unknown) =>
+    filterCachedItems<Notification>(data, (n) => !n.actors.some((a) => a.id === userId)),
+  );
 
   for (const queryKey of personKeys(userId)) {
     qc.removeQueries({ queryKey, type: 'inactive' });
@@ -69,6 +75,7 @@ export function applyBlock(qc: QueryClient, userId: string): void {
   void qc.invalidateQueries({ queryKey: keys.bevOfPeriod() });
   void qc.invalidateQueries({ queryKey: keys.recommendationsAll });
   void qc.invalidateQueries({ queryKey: keys.blocks.all });
+  void qc.invalidateQueries({ queryKey: keys.notifications.all });
 }
 
 /**
@@ -116,6 +123,8 @@ export function useUnblock() {
       void qc.invalidateQueries({ queryKey: keys.leaderboard.all });
       void qc.invalidateQueries({ queryKey: keys.stats.all });
       void qc.invalidateQueries({ queryKey: keys.bevs.all });
+      // Whatever of theirs is still true comes back to the inbox (T-31).
+      void qc.invalidateQueries({ queryKey: keys.notifications.all });
     },
   });
 }
