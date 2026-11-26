@@ -1,6 +1,14 @@
 /**
  * Bumped on any breaking change to the types or `BeviApi` below.
  *
+ * 3.7.0, over 3.6.0's tester reporting: go-to categories (DELIVERABLE-44).
+ * Additive: `profile.getCategoryPicks()` and `profile.setCategoryPicks()`,
+ * up to `MAX_CATEGORY_PICKS` top-level categories picked in onboarding,
+ * favourite first, private to their owner. Backed by the new
+ * `user_category_picks` table and `set_category_picks` RPC. NOT a reason to
+ * raise `min_contract_version`: no existing type or method changed, and an
+ * older client calls neither method.
+ *
  * 3.6.0, over 3.5.0's places: testers report bugs without ranking them.
  * Additive: `bugs.canRank()`, true for a founder (an admin) only. For an
  * account that may not rank, `place` throws 'unauthorized' and every
@@ -104,7 +112,8 @@
 // 3.4.0: nutrition.lookupProduct and BarcodeProduct (a barcode scan fills in a new Bev), additive.
 // 3.5.0: where a Bev was had: a place on a ranking and a post, the place picker, the map (BEV-22), additive.
 // 3.6.0: bugs.canRank; testers cannot place and see no ranks; markVerified only from In review, additive.
-export const CONTRACT_VERSION = '3.6.0';
+// 3.7.0: profile.getCategoryPicks / setCategoryPicks, the go-to categories picked in onboarding (DELIVERABLE-44), additive.
+export const CONTRACT_VERSION = '3.7.0';
 
 export * from './enums';
 export * from './errors';

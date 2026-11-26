@@ -233,6 +233,12 @@ export interface FakeDb {
   bevLocations?: FakeBevLocation[];
   /** Optional, as `bevLocations`. */
   externalPlaces?: FakeExternalPlace[];
+  /**
+   * DELIVERABLE-44: each user's go-to categories, favourite first, mirroring
+   * `public.user_category_picks` (one row per rank). Keyed by user id. Optional so a db stored
+   * before picks existed still loads, with nobody's picks set.
+   */
+  categoryPicks?: Record<string, CategoryId[]>;
   /** The signed-in user, persisted like a real session. */
   sessionUserId: string | null;
   /** Monotonic id counter. */

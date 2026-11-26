@@ -28,6 +28,8 @@ export const keys = {
   myBugReports: () => [...root, 'myBugReports'] as const,
 
   me: () => [...root, 'me'] as const,
+  /** `profile.getCategoryPicks()`: the caller's go-to categories from onboarding, favourite first. */
+  categoryPicks: () => [...root, 'categoryPicks'] as const,
 
   users: {
     all: [...root, 'users'] as const,

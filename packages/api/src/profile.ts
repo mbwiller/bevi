@@ -1,5 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { ApiError, type CheckHandleResult, type Page, type Profile, type ProfileApi, type ProfileRow, type UpdateMeInput } from '@bevi/shared';
+import {
+  ApiError,
+  type CategoryId,
+  type CheckHandleResult,
+  type Page,
+  type Profile,
+  type ProfileApi,
+  type ProfileRow,
+  type UpdateMeInput,
+} from '@bevi/shared';
 import { mapError } from './errors';
 import { requireUserId } from './currentUser';
 import { mapProfile, mapProfileRow, type ProfileViewRow } from './mappers';
@@ -26,6 +35,19 @@ async function isFollowing(client: SupabaseClient, selfId: string, targetId: str
 
 interface SearchOffsetCursor {
   offset: number;
+}
+
+// DELIVERABLE-44: one row of `user_category_picks` (20261126000200), and of what
+// `set_category_picks` returns -- the same two columns, so one mapper serves both.
+interface CategoryPickRow {
+  category_id: string;
+  rank: number;
+}
+
+// Favourite first. The RPC and the select both order by rank already; sorting
+// here as well means neither has to be trusted to have kept it through PostgREST.
+function mapCategoryPicks(rows: CategoryPickRow[] | null): CategoryId[] {
+  return [...(rows ?? [])].sort((a, b) => a.rank - b.rank).map((row) => row.category_id as CategoryId);
 }
 
 export function createProfileApi(client: SupabaseClient): ProfileApi {
@@ -136,6 +158,30 @@ export function createProfileApi(client: SupabaseClient): ProfileApi {
         page.map(async (row) => mapProfileRow(client, row, await isFollowing(client, uid, row.id)))
       );
       return toPage(rows, limit, () => ({ offset: offset + limit }) satisfies SearchOffsetCursor);
+    },
+
+    async getCategoryPicks(): Promise<CategoryId[]> {
+      const uid = await requireUserId(client);
+      // Straight from the table, as want_to_try is read: user_category_picks_select
+      // shows a caller their own rows and nobody else's, and the `user_id` filter
+      // says so again rather than leaning on the policy alone.
+      const { data, error } = await client
+        .from('user_category_picks')
+        .select('category_id, rank')
+        .eq('user_id', uid)
+        .order('rank', { ascending: true });
+      if (error) throw mapError(error);
+      return mapCategoryPicks(data as CategoryPickRow[] | null);
+    },
+
+    async setCategoryPicks(categoryIds: CategoryId[]): Promise<CategoryId[]> {
+      await requireUserId(client);
+      // Every rule (how many, top-level, no repeats, the age gate) is the RPC's:
+      // BEVI_VALIDATION carries detail 'categoryIds', which mapError turns into
+      // `{ field: 'categoryIds' }`, and BEVI_AGE_RESTRICTED maps to 'age_restricted'.
+      const { data, error } = await client.rpc('set_category_picks', { p_category_ids: categoryIds });
+      if (error) throw mapError(error);
+      return mapCategoryPicks(data as CategoryPickRow[] | null);
     },
   };
 }
