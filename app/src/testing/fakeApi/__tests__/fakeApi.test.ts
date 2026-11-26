@@ -98,8 +98,21 @@ describe('fixtures through the API', () => {
     expect((await api.categories.list()).some((c) => c.isAlcoholic)).toBe(false);
     expect((await api.feed.getFeatured()).map((f) => f.bev.id)).not.toContain(ALCOHOLIC_BEV_ID);
     expect((await api.bevs.search({ q: '', limit: 100 })).items.map((b) => b.id)).not.toContain(ALCOHOLIC_BEV_ID);
-    expect((await api.bevs.getStarterCandidates()).length).toBeGreaterThanOrEqual(30);
+    const minorStarters = await api.bevs.getStarterCandidates();
+    expect(minorStarters.length).toBeGreaterThanOrEqual(30);
+    expect(minorStarters.filter((b) => ['beer', 'wine', 'spirits_cocktails'].includes(b.categoryId))).toEqual([]);
     await expect(api.bevs.get(ALCOHOLIC_BEV_ID)).rejects.toMatchObject({ code: 'age_restricted' });
+  });
+
+  it('an adult is offered at least four starters in each category onboarding draws from, alcoholic ones included', async () => {
+    const api = make();
+    await signInMe(api);
+    expect((await api.profile.getMe()).canSeeAlcohol).toBe(true);
+    const perCategory = new Map<string, number>();
+    for (const b of await api.bevs.getStarterCandidates()) perCategory.set(b.categoryId, (perCategory.get(b.categoryId) ?? 0) + 1);
+    for (const id of ['beer', 'wine', 'spirits_cocktails', 'coffee', 'tea', 'juice', 'sports', 'water', 'boba', 'smoothie']) {
+      expect(perCategory.get(id) ?? 0).toBeGreaterThanOrEqual(4);
+    }
   });
 
   it('bevs.create rejects a photo that is still processing (validation), then accepts it once ready', async () => {
