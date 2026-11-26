@@ -50,6 +50,7 @@ import {
   hoursKnown,
   openAt,
   HANDLE_PATTERN,
+  MAX_CATEGORY_PICKS,
   REPORT_NOTE_MAX,
   REPORT_REASONS,
   RESERVED_HANDLES,
@@ -1053,12 +1054,14 @@ export class FakeApi implements BeviApi {
   /**
    * @bevi/ranking's computeStreak over the local days (profile timezone, `localDayKey`) on which
    * the user ranked: each ranking's createdAt plus every RANKING feed event (written on submit and
-   * re-rank, kept on removal), so re-ranks count and removals don't break a streak (§8.14).
+   * re-rank, kept on removal) and every submission made before onboarding (which posts no feed
+   * event), so re-ranks count and removals don't break a streak (§8.14).
    */
   private streakOf(u: FakeUser): UserStreak {
     const stamps = [
       ...this.db.rankings.filter((r) => r.userId === u.id).map((r) => r.createdAt),
       ...this.db.feed.filter((e) => e.actorId === u.id && e.type === 'RANKING').map((e) => e.createdAt),
+      ...(this.db.unpostedRankings ?? []).filter((e) => e.userId === u.id).map((e) => e.createdAt),
     ];
     const keys = [...new Set(stamps.map((at) => localDayKey(at, u.timezone)))];
     const todayKey = localDayKey(this.nowIso(), u.timezone);
@@ -1315,9 +1318,12 @@ export class FakeApi implements BeviApi {
       .filter((w) => w.userId !== userId)
       .map((w) => (w.viaUserId === userId ? { ...w, viaUserId: null } : w));
     db.feed = db.feed.filter((e) => e.actorId !== userId);
+    db.unpostedRankings = (db.unpostedRankings ?? []).filter((e) => e.userId !== userId);
     const events = new Set(db.feed.map((e) => e.id));
     db.likes = (db.likes ?? []).filter((l) => l.userId !== userId && events.has(l.feedEventId));
     db.comments = (db.comments ?? []).filter((c) => c.userId !== userId && events.has(c.feedEventId));
+    // user_category_picks cascades from profiles; and a first-run user (emptyUser) has none yet.
+    if (db.categoryPicks) delete db.categoryPicks[userId];
   }
 
   /** The feed event `id` if `viewer` can see it (own or a followee's post, Bev age-visible), else not_found. */
@@ -1625,6 +1631,37 @@ export class FakeApi implements BeviApi {
           .map((u) => this.toRow(u, me));
         return paginate(rows, params, 25);
       }),
+
+    // DELIVERABLE-44: `user_category_picks` is read through an own-rows policy, so only the
+    // caller's own ever comes back.
+    getCategoryPicks: () =>
+      this.call('profile.getCategoryPicks', (): CategoryId[] => {
+        // Outside the `?.[]`, which would skip the session check while nobody has picks yet.
+        const me = this.requireUser();
+        return [...(this.db.categoryPicks?.[me.id] ?? [])];
+      }),
+
+    // `set_category_picks`' rules, in its order: every validation failure is the one field, and
+    // only a list that passes them all is age-checked. Nothing is saved when it throws.
+    setCategoryPicks: (categoryIds: CategoryId[]) =>
+      this.call(
+        'profile.setCategoryPicks',
+        (): CategoryId[] => {
+          const me = this.requireUser();
+          const bad = (message: string) => invalid('categoryIds', message);
+          if (!Array.isArray(categoryIds)) bad('Choose up to three categories');
+          if (categoryIds.length > MAX_CATEGORY_PICKS) bad(`Choose up to ${MAX_CATEGORY_PICKS} categories`);
+          if (categoryIds.some((id) => id === null || id === undefined)) bad('Choose a category');
+          if (new Set(categoryIds).size !== categoryIds.length) bad('Choose each category once');
+          // CATEGORIES is the 15 roots: an unknown id and a leaf both fail here.
+          if (!categoryIds.every((id) => CATEGORIES.some((c) => c.id === id))) bad('Choose a category');
+          if (categoryIds.some((id) => ALCOHOLIC.has(id)) && !this.canSeeAlcohol(me)) fail('age_restricted', 'Not available');
+          const picks = [...categoryIds];
+          this.db.categoryPicks = { ...this.db.categoryPicks, [me.id]: picks };
+          return [...picks];
+        },
+        true,
+      ),
   };
 
   stats: StatsApi = {
@@ -2143,9 +2180,18 @@ export class FakeApi implements BeviApi {
     return note || null;
   }
 
-  private logPlacement(me: FakeUser, rankingId: string, bevId: string, comparisons: readonly Comparison[], at: string): string {
+  /**
+   * `post` false is a submission made before onboarding ended: `submit_ranking` writes no feed
+   * event for it (DELIVERABLE-44), so it is kept in `unpostedRankings` for the streak instead and
+   * there is no event id to return. A re-rank always posts, as `rerank_bev` does.
+   */
+  private logPlacement(me: FakeUser, rankingId: string, bevId: string, comparisons: readonly Comparison[], at: string, post = true): string | null {
     for (const c of comparisons) {
       this.db.comparisons.push({ rankingId, userId: me.id, winnerBevId: c.winnerBevId, loserBevId: c.loserBevId, tie: !!c.tie, createdAt: at });
+    }
+    if (!post) {
+      (this.db.unpostedRankings ??= []).push({ userId: me.id, bevId, createdAt: at });
+      return null;
     }
     const id = this.nextId('feed');
     this.db.feed.push({ id, type: 'RANKING', actorId: me.id, bevId, createdAt: at });
@@ -2241,12 +2287,15 @@ export class FakeApi implements BeviApi {
           this.writeBucket(me.id, input.bucket, next);
           this.db.wantToTry = this.db.wantToTry.filter((w) => !(w.userId === me.id && w.bevId === bev.id));
           if (input.venueId) this.putLocation(me.id, bev.id, input.venueId);
-          const eventId = this.logPlacement(me, row.id, bev.id, input.comparisons, at);
+          const eventId = this.logPlacement(me, row.id, bev.id, input.comparisons, at, me.onboarded);
           // enqueue_push_on_post (T-31 Release 2): a NEW ranking ('ranked', never a re-rank) queues
-          // a post push for everyone who asked for this person's posts.
-          for (const s of this.postSubscriptions) {
-            if (s.targetId === me.id && s.subscriberId !== me.id) {
-              this.pushOutbox.push({ kind: 'post', recipientId: s.subscriberId, actorId: me.id, feedEventId: eventId, commentId: null });
+          // a post push for everyone who asked for this person's posts. The trigger is on the feed
+          // event, so a starter ranking, which has none, pushes nothing.
+          if (eventId !== null) {
+            for (const s of this.postSubscriptions) {
+              if (s.targetId === me.id && s.subscriberId !== me.id) {
+                this.pushOutbox.push({ kind: 'post', recipientId: s.subscriberId, actorId: me.id, feedEventId: eventId, commentId: null });
+              }
             }
           }
           return { ranking: this.toRanking(row), bucketSize: next.length };

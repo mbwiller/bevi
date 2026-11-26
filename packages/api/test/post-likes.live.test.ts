@@ -29,6 +29,8 @@ describe.skipIf(!url || !publishableKey)('post likes, against a live local stack
       inviteCode: TEST_INVITE_CODE,
     });
     await api.profile.setBirthDate('1990-01-01');
+    // Onboarded first: a ranking made before onboarding ends is not a post (20261128000100).
+    await api.profile.updateMe({ onboarded: true });
 
     try {
       // A seeded catalog Bev (20261012000300), so the test leaves nothing behind.

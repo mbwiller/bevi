@@ -28,6 +28,8 @@ export const keys = {
   myBugReports: () => [...root, 'myBugReports'] as const,
 
   me: () => [...root, 'me'] as const,
+  /** `profile.getCategoryPicks()`: the caller's go-to categories from onboarding, favourite first. */
+  categoryPicks: () => [...root, 'categoryPicks'] as const,
 
   users: {
     all: [...root, 'users'] as const,
@@ -151,6 +153,13 @@ export const keys = {
     all: [...root, 'notifications'] as const,
     list: () => [...root, 'notifications', 'list'] as const,
     unreadCount: () => [...root, 'notifications', 'unreadCount'] as const,
+    /** T-31 Release 2: the push settings (`notifications.getSettings`). */
+    settings: () => [...root, 'notifications', 'settings'] as const,
+    /** Post notifications' people (`notifications.listPostNotificationPeople`), per search. */
+    postPeopleAll: [...root, 'notifications', 'postPeople'] as const,
+    postPeople: (q: string) => [...root, 'notifications', 'postPeople', q] as const,
+    /** How many people are chosen, for Settings' "Choose people" row. */
+    chosenCount: () => [...root, 'notifications', 'chosenCount'] as const,
   },
 
   recommendations: (limit?: number) => [...root, 'recommendations', limit ?? null] as const,

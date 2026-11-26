@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Profile, Session, UpdateMeInput } from '@bevi/shared';
+import type { CategoryId, Profile, Session, UpdateMeInput } from '@bevi/shared';
 
 import { api } from '../client';
 import { keys } from '../keys';
@@ -100,6 +100,22 @@ export function useSetBirthDate() {
       // Server-filtered by age too: the feed (and every Activity under it) and Explore.
       void qc.invalidateQueries({ queryKey: keys.feed() });
       void qc.invalidateQueries({ queryKey: keys.explore() });
+    },
+  });
+}
+
+/** The caller's go-to categories (onboarding's quick step), favourite first; `[]` until set. */
+export function useCategoryPicks(opts: QueryOpts = {}) {
+  return useQuery({ queryKey: keys.categoryPicks(), queryFn: () => api.profile.getCategoryPicks(), enabled: opts.enabled });
+}
+
+/** Replaces the go-to categories (0 to `MAX_CATEGORY_PICKS`, favourite first); the saved list becomes the cache. */
+export function useSetCategoryPicks() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (categoryIds: CategoryId[]) => api.profile.setCategoryPicks(categoryIds),
+    onSuccess: (picks) => {
+      qc.setQueryData(keys.categoryPicks(), picks);
     },
   });
 }

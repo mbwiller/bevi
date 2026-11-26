@@ -316,7 +316,7 @@ Common to every screen unless noted: loading = skeleton of the final layout; err
 ### 6.3 Onboarding: starter ranking (`onboarding/starter.tsx`)
 
 - Purpose: cold-start baseline (vision §5). Contents: progress "3 of 10", `BevImage 155`, name, "Have you had this?" → Yes / No; Yes opens the ranking flow (§6.9) inline; No skips.
-- Data: `bevs.getStarterCandidates()` returns at least 30 age-filtered `isStarter` Bevs, each with `ratingCount`; the app runs `selectStarterSet(candidates, { seed: userId })` from `@bevi/ranking` to pick 10 (§8.12). Then `rankings.submitRanking` per item and `profile.updateMe({ onboarded: true })`.
+- Data: `bevs.getStarterCandidates()` returns at least 30 age-filtered `isStarter` Bevs, each with `ratingCount`; the app runs `selectStarterSet(candidates, { seed: userId })` from `@bevi/ranking` to pick 10 (§8.12): 3 most-rated core Bevs shared by everyone, then seeded wildcards; once onboarding asks for the user's go-to categories it passes them as `picks` (favourite first), and they get up to 5 of the 10 (2, 2, 1). Then `rankings.submitRanking` per item and `profile.updateMe({ onboarded: true })`. Starter rankings are not posts: the server writes no feed item while `onboarded` is false (they still count in the list, stats and streak).
 - States: first Bev (empty bucket, no comparisons: "Placed. Keep going."), finished summary ("You ranked 6 Bevs. Your top: Coke 8.3"), fewer than 3 ranked → "Rank at least 3 so we can learn your taste", candidates call fails → Retry (onboarding can't be skipped past this without ≥ 3).
 - Interactions: skip-all link after ≥ 3 ranked. The set is deterministic for the user, so leaving and coming back shows the same 10.
 
@@ -369,7 +369,7 @@ The centre tab, labelled **Search** since M-15 ([#104](https://github.com/mbwill
 - Step 1 Gut check: `BevImage 155`, name, brand, a centred "How was it?" and three `BucketButton`s in a row, worst to best: Not for me / It was okay / Loved it, each a `primary` ring filled to a level (empty, half, full) over its label, so the rings fill up towards the right.
 - Step 2 Compare: two stacked cards (new Bev on top, incumbent below; each `BevImage 96` left, name 20pt bold, brand 15pt), prompt "Which was better?", tap a card; secondary row: "Too close to call" (outlined `Pill`) and Undo (text); progress dots = `maxComparisons(n)`; card swap animates 250ms; prefetch both possible next candidates after each answer.
 - Step 3 Note: optional 140-char note ("Tastes like flat Sprite"), Skip.
-- Step 4 Result: `ScoreBubble 56` animates in, "#4 of 31 in Loved · 8.9", Done. Every ranking is a feed item; no separate share step.
+- Step 4 Result: `ScoreBubble 56` animates in, "#4 of 31 in Loved · 8.9", Done. Every ranking is a feed item (except the starter rankings, §6.3); no separate share step.
 - Data: `rankings.listMine({ bucket })` once at start (ordered ids; `expectedBucketSize = ids.length`), then `@bevi/ranking` runs locally; finish → `rankings.submitRanking({ bevId, bucket, insertIndex, expectedBucketSize, comparisons, note })` → `{ ranking, bucketSize }`. Every comparison is sent, as `{ winnerBevId, loserBevId, tie }`. `insertIndex` 0 = best.
 - Re-rank: the same screen entered with `mode: 'rerank'`; the existing Bev is removed from the list before placement, the bucket can change, and the call is `rankings.rerankBev({ bevId, bucket, insertIndex, expectedBucketSize, comparisons, note? })`.
 - States: empty bucket → straight to Step 3 ("First one in Loved"); submit returns `conflict` (the bucket changed on the server since the list was fetched, e.g. from another device) → toast "Your list changed, let's redo this one", refetch, restart placement; `validation` (index out of range: a client bug) → log and restart; `network` → keep the local result and Retry; closing mid-flow asks to discard.
@@ -671,7 +671,7 @@ Layer 1 recommendation list (Phase 2, before Layer 2 exists): all untried, visib
 
 ### 8.9 Layer 2: collaborative filtering
 
-Pick **user-user** at ~20 users. Reasoning: 20 users → 190 user pairs, each pair shares the 6 fixed starter Bevs plus whatever overlaps, so similarities are computable from day one. Item-item needs co-raters per *item pair*; with ~300 Bevs and 20 users almost every item pair has 0–1 co-raters. Switch to item-item when `users ≥ 200` or when the median number of co-raters per item pair among rated items reaches 3 (the eval script prints both numbers). Matrix factorisation only after that (vision §5 "later").
+Pick **user-user** at ~20 users. Reasoning: 20 users → 190 user pairs, each pair shares the 3 core starter Bevs (§8.12; users with the same go-to categories also share those picks' top-ups) plus whatever overlaps, so similarities are computable from day one. The weight is lower than it was with a core of 6: two users who share only the 3 core Bevs get `sim' = 0.6·sim` (significance weighting needs 5 in common for full weight), and reach it with 2 more shared Bevs, from the same picks or later overlap. Item-item needs co-raters per *item pair*; with ~300 Bevs and 20 users almost every item pair has 0–1 co-raters. Switch to item-item when `users ≥ 200` or when the median number of co-raters per item pair among rated items reaches 3 (the eval script prints both numbers). Matrix factorisation only after that (vision §5 "later").
 
 ```
 common(u, v) = items ranked by both
@@ -706,12 +706,16 @@ The conversation's "a beverage near another one in a group plus some air" = nois
 Catalog Bevs carry `isStarter: boolean` (Arjun sets ~20: Coke, Diet Coke, Sprite, LaCroix, Red Bull, Gatorade, Pepsi, Dr Pepper, Mountain Dew, Monster, Celsius, Arizona Iced Tea, Minute Maid OJ, Topo Chico, Poland Spring, Starbucks bottled Frappuccino, Snapple, Yerba Mate, Fanta, Canada Dry; adjust to the seeded catalog).
 
 ```
-selectStarterSet(candidates, { k = 10, core = 6, maxPerCategory = 2, seed, excludeCategoryIds })
+selectStarterSet(candidates, { k = 10, core = 3, maxPerCategory = 2, seed, excludeCategoryIds, picks })
 ```
 
-- The **core** = the 6 most-rated starters (by `rating_count`, ties by name), shown to everyone. Shared items maximise `common(u, v)` for user-user CF.
-- The remaining 4 are drawn with the seeded PRNG from the other starters, respecting `maxPerCategory` across the whole set of 10 and a spread of at least 5 categories if possible; `excludeCategoryIds` removes alcoholic categories for anyone under 21.
-- Deterministic for a seed (`userId`), so the set is stable if the user leaves onboarding and comes back.
+The set is typically **3 shared core + 5 from the user's go-to categories (2 from the first pick, 2 from the second, 1 from the third) + 2 wildcards** (a pick whose category is already in the core counts those Bevs toward its quota, which leaves more wildcards); with no picks it is 3 core + 7 wildcards. `maxPerCategory` holds over the whole set of 10 and it aims for a spread of at least `STARTER_MIN_CATEGORIES = 5` categories, so nobody gets a one-category set. `excludeCategoryIds` removes alcoholic categories for anyone under 21.
+
+- The **core** = the 3 most-rated starters (`ratingCount` desc, then name and id by code point), skipping a starter whose category already has `maxPerCategory` core members. It depends on neither `picks` nor `seed`, so everyone sees it: shared items maximise `common(u, v)` for user-user CF.
+- **Picks** (`picks`, favourite first): only the first 3 distinct entries not in `excludeCategoryIds` count (an excluded or repeated pick does not use up a rank; later ones are ignored). Pick `i` is *topped up* to `STARTER_PICK_QUOTAS[i]` = 2, 2, 1 Bevs in the set with that category's most-rated remaining starters (core order, so users with the same pick share them). Core members already in the category count toward its quota, and the slots they free become wildcards rather than stacking a favourite. Never past `maxPerCategory` (a cap below a quota wins) or `k`; a category with too few starters gives what it has and the shortfall becomes wildcards.
+- **Wildcards** fill to `k` from the remaining starters in a seeded Fisher–Yates order (over id order), taking (a) Bevs from categories neither in the set nor picked while the set spans fewer than 5 categories, (b) Bevs from non-picked categories under the cap, (c) any Bev under the cap, (d) anything: the cap is relaxed only when `k` is otherwise unreachable.
+- **Order** (what the user sees; they may stop after 3): each pick's first top-up Bev in pick order, then the core, then the picks' other top-up Bevs, then the wildcards in draw order, e.g. `[p1a, p2a, p3a, c1, c2, c3, p1b, p2b, w1, w2]`. A pick the core already filled leads with nothing.
+- Deterministic for a seed (`userId`) and picks, so the set is stable if the user leaves onboarding and comes back.
 - Runs in the app (seam interpretation 1, §12): input is `bevs.getStarterCandidates()` (≥ 30 age-filtered `isStarter` Bevs with `ratingCount`); the server never calls this function.
 
 New Bev cold start needs no special code: `g_b = 0`, `support = 0` → prediction is affinity + content only.
@@ -803,7 +807,7 @@ export function predictScore(snapshot: PredictionSnapshot, userId: UserId, bevId
 export function recommend(snapshot: PredictionSnapshot, userId: UserId, opts: { n: number; seed: string; epsilon?: number; excludeBevIds?: BevId[] }): Recommendation[];
 
 // starter.ts / rank.ts / streak.ts
-export function selectStarterSet(candidates: StarterCandidate[], opts: { k?: number; core?: number; maxPerCategory?: number; seed: string; excludeCategoryIds?: CategoryId[] }): BevId[];
+export function selectStarterSet(candidates: StarterCandidate[], opts: { k?: number; core?: number; maxPerCategory?: number; seed: string; excludeCategoryIds?: CategoryId[]; picks?: readonly CategoryId[] }): BevId[];
 export function rankPoints(a: { bevsRanked: number; currentStreak: number; bevsCreated: number }): number;
 export function rankUsers(rows: Array<{ userId; bevsRanked; currentStreak; bevsCreated; createdAt }>): Array<{ userId; points; rank }>;
 export function computeStreak(periodKeys: string[], todayKey: string, period: 'day' | 'week' = 'day'): { current: number; longest: number; lastKey: string | null };
@@ -971,6 +975,7 @@ This is your input to seam 2. Field names are proposals; Arjun owns the schema a
 | `profile.getMe()` | → `Profile` | root gate, 6.13 |
 | `profile.updateMe(patch)` | `{ displayName?, handle?, timezone?, onboarded? }` → `Profile` | 6.2, 6.3, 6.18 |
 | `profile.setBirthDate(date)` | set once; a second call is `validation`; admin-only change afterwards | 6.2 |
+| `profile.getCategoryPicks()` / `setCategoryPicks(ids)` | → `CategoryId[]`, favourite first (`[]` until set); set replaces them: 0–`MAX_CATEGORY_PICKS` top-level ids, no repeats, `[]` clears; `validation` (field `categoryIds`), `age_restricted` for an alcoholic one under 21. Private to the caller. Hooks `useCategoryPicks` / `useSetCategoryPicks` (DELIVERABLE-44, contract 3.9.0) | onboarding |
 | `profile.checkHandle(handle)` | → `{ available }`; callable signed out (sign-up form) | 6.1, 6.19 |
 | `profile.getUser(id)` / `searchUsers({ q, limit })` | → `Profile` / `Profile[]` | 6.14, 6.8 Search tab (People group) |
 | `stats.getMine()` / `stats.getUser(id)` | → `ProfileStats` | 6.13, 6.14 |
@@ -1118,7 +1123,7 @@ Tags follow vision §10: model / effort. Each row is one Claude Code sub-agent d
 - Photo recognition of a drink from the camera ("take a picture and it's in the database"): v1 is search + manual create; the camera photo becomes the Bev's image, not a lookup key.
 - Business model bits (promoted placements, subscriptions), "hottest this month" before Phase 3, matrix factorisation.
 - Native builds, EAS, App Store/TestFlight, Android, Expo Go/dev client as a target, OAuth and any emailed flow (decided 2026-10-11: web app only).
-- "Skip this comparator" in the ranking flow, periodic drift re-checks, push notifications (the in-app inbox is no longer on this list: it shipped with T-31; push waits for a later release), blocking/private profiles, Bev editing by non-creators (moderation is an open question).
+- "Skip this comparator" in the ranking flow, periodic drift re-checks, blocking/private profiles, Bev editing by non-creators (moderation is an open question). (Push notifications are off this list: T-31 built the inbox and then push itself, its settings and Post notifications; push stays off on every build until the change that adds the push entitlement sets `extra.push`, `DEVELOPMENT-MATT-IOS.md` IM-15.)
 - From the Beli reference (§5): reservations/ordering/hours/distance/maps, invite-unlock card, Guides, "Add School", list import, shares on posts (likes and comments were added later: TASKS.md M-02, M-03), co-visit tagging ("with Rhea"), visit counts, magic-link or social auth.
 
 ---

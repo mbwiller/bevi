@@ -1,6 +1,14 @@
 /**
  * Bumped on any breaking change to the types or `BeviApi` below.
  *
+ * 3.9.0, over 3.8.0's push notifications: go-to categories (DELIVERABLE-44).
+ * Additive: `profile.getCategoryPicks()` and `profile.setCategoryPicks()`,
+ * up to `MAX_CATEGORY_PICKS` top-level categories picked in onboarding,
+ * favourite first, private to their owner. Backed by the new
+ * `user_category_picks` table and `set_category_picks` RPC. NOT a reason to
+ * raise `min_contract_version`: no existing type or method changed, and an
+ * older client calls neither method.
+ *
  * 3.8.0, over 3.7.0's inbox: push notifications and their settings (T-31,
  * Release 2). Additive: six `notifications` methods -- `getSettings` and
  * `updateSettings` (`NotificationSettings`: `paused` and one switch per kind),
@@ -126,7 +134,8 @@
 // 3.6.0: bugs.canRank; testers cannot place and see no ranks; markVerified only from In review, additive.
 // 3.7.0: the notifications inbox (notifications.list/unreadCount/markRead) and feed.getPost (T-31), additive.
 // 3.8.0: push notifications: settings, post subscriptions, device tokens (T-31 Release 2), additive.
-export const CONTRACT_VERSION = '3.8.0';
+// 3.9.0: profile.getCategoryPicks / setCategoryPicks, the go-to categories picked in onboarding (DELIVERABLE-44), additive.
+export const CONTRACT_VERSION = '3.9.0';
 
 export * from './enums';
 export * from './errors';
