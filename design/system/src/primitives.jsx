@@ -306,6 +306,19 @@ export function FollowPill({ following = false, onClick, label, text = 'Follow' 
   );
 }
 
+/**
+ * An on/off switch for one setting: `primary` when on, `borderStrong` when off, with a `surface` knob.
+ * `label` is its accessible name (the row's label).
+ */
+export function Switch({ checked = false, onChange, label, disabled = false, className }) {
+  return (
+    <button type="button" role="switch" aria-checked={checked} aria-label={label} disabled={disabled}
+      className={cx('bv', 'bv-switch', checked && 'bv-switch-on', className)} onClick={() => { if (onChange) onChange(!checked); }}>
+      <span className="bv-switch-knob" aria-hidden="true" />
+    </button>
+  );
+}
+
 /** A 4pt track in `input` with a `primary` fill: a share you've earned (ProgressStrip, CollectionSheet). `tone` recolours the fill with a score band (TasteBar). Decorative; its parent says the number. */
 export function ProgressBar({ value = 0, tone = 'primary', className }) {
   const pct = Math.max(0, Math.min(1, value)) * 100;
