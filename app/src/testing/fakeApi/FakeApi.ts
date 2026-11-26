@@ -95,10 +95,12 @@ import {
   type MetaApi,
   type Notification,
   type NotificationKind,
+  type NotificationSettings,
   type NotificationsApi,
   type Page,
   type PageParams,
   type PeriodWinner,
+  type PostNotificationPerson,
   type PriceTier,
   type Profile,
   type ProfileApi,
@@ -363,6 +365,33 @@ interface FakeNotificationGroup {
   head: FakeNotification;
   members: FakeNotification[];
 }
+
+/** T-31 Release 2: `notification_settings`' defaults, what someone who never saved any gets. */
+const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = { paused: false, follows: true, likes: true, comments: true, posts: false };
+const NOTIFICATION_SETTING_FIELDS = ['paused', 'follows', 'likes', 'comments', 'posts'] as const;
+/** `push_tokens`' check, and its per-user cap (register_push_token keeps the 10 most recently seen). */
+const PUSH_TOKEN_RE = /^Expo(nent)?PushToken\[[!-~]{1,180}\]$/;
+const PUSH_TOKEN_MAX = 200;
+const PUSH_TOKENS_PER_USER = 10;
+/** get_post_notification_people refuses a longer `q`. */
+const POST_PEOPLE_QUERY_MAX = 80;
+
+/** T-31 Release 2: one `push_outbox` row, as the two queue triggers write it (20261127000100). */
+interface FakePush {
+  kind: NotificationKind | 'post';
+  recipientId: string;
+  actorId: string;
+  feedEventId: string | null;
+  commentId: string | null;
+}
+
+/** What `controls.pendingPushes` answers: one push claim_push_batch would send now. */
+export interface FakePendingPush {
+  kind: NotificationKind | 'post';
+  actorHandle: string;
+  /** The post it is about; null for a follow. */
+  postId: string | null;
+}
 /** Bev of the day / week is "strictly New York City" (get_bev_of_period, 20261018000100). */
 const BEV_OF_PERIOD_ZONE = 'America/New_York';
 /** D-01: below this many users Explore widens from two hops to everyone (get_explore, 20261019000300). */
@@ -468,6 +497,17 @@ export class FakeApi implements BeviApi {
   private notificationRows: FakeNotification[] = [];
   private nextNotification = 1;
   /**
+   * T-31 Release 2: `notification_settings`, `post_notification_subscriptions`, `push_tokens` and
+   * `push_outbox`, in memory beside the inbox for the same reason. Cleared by `resetToFixtures`;
+   * account deletion and `emptyUser` drop the user's rows. The fake sends nothing: the queue is
+   * judged on demand by `pendingPushes`, with claim_push_batch's rules.
+   */
+  private notificationSettingsRows = new Map<string, NotificationSettings>();
+  private postSubscriptions: { subscriberId: string; targetId: string }[] = [];
+  private pushTokenRows: { token: string; userId: string; seen: number }[] = [];
+  private pushOutbox: FakePush[] = [];
+  private pushSeq = 0;
+  /**
    * IA-2: the single `app_config` row `meta.getAppConfig` answers with. Not in FakeDb and not
    * persisted: it is the backend's, written by an operator, not part of anyone's data. Suites set
    * it with `controls.setAppConfig`; `resetToFixtures` puts the default back.
@@ -520,6 +560,7 @@ export class FakeApi implements BeviApi {
     this.contentReports = [];
     this.nextContentReport = 1;
     this.seedNotifications();
+    this.clearPushState();
     this.appConfig = { ...DEFAULT_APP_CONFIG };
     this.commit();
     this.emit();
@@ -528,6 +569,73 @@ export class FakeApi implements BeviApi {
   /** T-31: an empty inbox for everyone (the fixture rows included) until `resetToFixtures()`. */
   clearNotifications(): void {
     this.notificationRows = [];
+  }
+
+  /** T-31 Release 2: no settings, subscriptions, devices or queued pushes for anyone. */
+  private clearPushState(): void {
+    this.notificationSettingsRows.clear();
+    this.postSubscriptions = [];
+    this.pushTokenRows = [];
+    this.pushOutbox = [];
+    this.pushSeq = 0;
+  }
+
+  /**
+   * T-31 Release 2, a control: the pushes claim_push_batch would send `userId` now, oldest first.
+   * The same rules: nothing while paused, nothing of a kind switched off, nothing across a block
+   * either way, nothing about an alcoholic Bev under 21, and nothing that is no longer true (an
+   * unliked like, a deleted comment, an unfollowed follow; a post push only while the subscription
+   * and the follow stand). A post push is queued for a NEW ranking only, never a re-rank. Unlike
+   * the server, a user with no registered device is not skipped, so a suite can assert the
+   * settings without registering one (`pushTokens` lists the devices).
+   */
+  pendingPushes(userId: string): FakePendingPush[] {
+    const me = this.db.users.find((u) => u.id === userId);
+    if (!me) return [];
+    const settings = this.notificationSettingsOf(userId);
+    if (settings.paused) return [];
+    const on = { follow: settings.follows, like: settings.likes, comment: settings.comments, post: settings.posts };
+    const visible = this.visibleNotifications(me);
+    return this.pushOutbox
+      .filter((p) => p.recipientId === userId && on[p.kind] && !this.blockedBetween(userId, p.actorId))
+      .filter((p) => {
+        if (p.kind !== 'post') {
+          return visible.some(
+            (n) => n.kind === p.kind && n.actorId === p.actorId && n.feedEventId === p.feedEventId && n.commentId === p.commentId,
+          );
+        }
+        const e = this.db.feed.find((x) => x.id === p.feedEventId);
+        const bev = e && this.db.bevs.find((b) => b.id === e.bevId);
+        return (
+          !!e &&
+          !!bev &&
+          !!this.rankingOf(e.actorId, e.bevId) &&
+          this.visible(bev, me) &&
+          this.isFollowing(userId, p.actorId) &&
+          this.postSubscriptions.some((s) => s.subscriberId === userId && s.targetId === p.actorId)
+        );
+      })
+      .flatMap((p) => {
+        const actor = this.db.users.find((u) => u.id === p.actorId);
+        return actor ? [{ kind: p.kind, actorHandle: actor.handle, postId: p.feedEventId }] : [];
+      });
+  }
+
+  /** T-31 Release 2, a control: the push tokens registered to `userId`, most recently seen first. */
+  pushTokens(userId: string): string[] {
+    return this.pushTokenRows
+      .filter((t) => t.userId === userId)
+      .sort((a, z) => z.seen - a.seen)
+      .map((t) => t.token);
+  }
+
+  private notificationSettingsOf(userId: string): NotificationSettings {
+    return { ...(this.notificationSettingsRows.get(userId) ?? DEFAULT_NOTIFICATION_SETTINGS) };
+  }
+
+  /** drop_post_notification_on_unfollow: a follow that goes takes its post subscription with it. */
+  private dropPostSubscription(followerId: string, followeeId: string): void {
+    this.postSubscriptions = this.postSubscriptions.filter((s) => !(s.subscriberId === followerId && s.targetId === followeeId));
   }
 
   /**
@@ -1198,6 +1306,11 @@ export class FakeApi implements BeviApi {
     this.blockRows = this.blockRows.filter((b) => b.blockerId !== userId && b.blockedId !== userId);
     // notifications: both people cascade from profiles.
     this.notificationRows = this.notificationRows.filter((n) => n.recipientId !== userId && n.actorId !== userId);
+    // T-31 Release 2: settings, subscriptions either way, devices and queued pushes cascade too.
+    this.notificationSettingsRows.delete(userId);
+    this.postSubscriptions = this.postSubscriptions.filter((s) => s.subscriberId !== userId && s.targetId !== userId);
+    this.pushTokenRows = this.pushTokenRows.filter((t) => t.userId !== userId);
+    this.pushOutbox = this.pushOutbox.filter((p) => p.recipientId !== userId && p.actorId !== userId);
     db.wantToTry = db.wantToTry
       .filter((w) => w.userId !== userId)
       .map((w) => (w.viaUserId === userId ? { ...w, viaUserId: null } : w));
@@ -1258,6 +1371,8 @@ export class FakeApi implements BeviApi {
       createdAt: this.nowIso(),
       readAt: null,
     });
+    // enqueue_push_on_notification (T-31 Release 2): a NEW inbox row is a push to queue.
+    this.pushOutbox.push({ kind, recipientId, actorId, feedEventId, commentId });
   }
 
   /**
@@ -1603,6 +1718,7 @@ export class FakeApi implements BeviApi {
           const me = this.requireUser();
           this.user(id);
           this.db.follows = this.db.follows.filter((f) => !(f.followerId === me.id && f.followeeId === id));
+          this.dropPostSubscription(me.id, id);
         },
         true,
       ),
@@ -2027,11 +2143,13 @@ export class FakeApi implements BeviApi {
     return note || null;
   }
 
-  private logPlacement(me: FakeUser, rankingId: string, bevId: string, comparisons: readonly Comparison[], at: string) {
+  private logPlacement(me: FakeUser, rankingId: string, bevId: string, comparisons: readonly Comparison[], at: string): string {
     for (const c of comparisons) {
       this.db.comparisons.push({ rankingId, userId: me.id, winnerBevId: c.winnerBevId, loserBevId: c.loserBevId, tie: !!c.tie, createdAt: at });
     }
-    this.db.feed.push({ id: this.nextId('feed'), type: 'RANKING', actorId: me.id, bevId, createdAt: at });
+    const id = this.nextId('feed');
+    this.db.feed.push({ id, type: 'RANKING', actorId: me.id, bevId, createdAt: at });
+    return id;
   }
 
   rankings: RankingsApi = {
@@ -2123,7 +2241,14 @@ export class FakeApi implements BeviApi {
           this.writeBucket(me.id, input.bucket, next);
           this.db.wantToTry = this.db.wantToTry.filter((w) => !(w.userId === me.id && w.bevId === bev.id));
           if (input.venueId) this.putLocation(me.id, bev.id, input.venueId);
-          this.logPlacement(me, row.id, bev.id, input.comparisons, at);
+          const eventId = this.logPlacement(me, row.id, bev.id, input.comparisons, at);
+          // enqueue_push_on_post (T-31 Release 2): a NEW ranking ('ranked', never a re-rank) queues
+          // a post push for everyone who asked for this person's posts.
+          for (const s of this.postSubscriptions) {
+            if (s.targetId === me.id && s.subscriberId !== me.id) {
+              this.pushOutbox.push({ kind: 'post', recipientId: s.subscriberId, actorId: me.id, feedEventId: eventId, commentId: null });
+            }
+          }
           return { ranking: this.toRanking(row), bucketSize: next.length };
         },
         true,
@@ -2155,6 +2280,12 @@ export class FakeApi implements BeviApi {
           // Left out, the place is kept (it is keyed by user and Bev, not by this row); a venue
           // replaces it and null removes it.
           if (input.venueId !== undefined) this.putLocation(me.id, row.bevId, input.venueId);
+          // On the server the re-rank deletes the ranking row, its old post cascades away, and the
+          // notifications and queued pushes about that post go with it (T-31). The fake keeps the
+          // old feed event, so it drops those two here.
+          const oldPosts = new Set(this.db.feed.filter((e) => e.actorId === me.id && e.bevId === row.bevId).map((e) => e.id));
+          this.notificationRows = this.notificationRows.filter((n) => !n.feedEventId || !oldPosts.has(n.feedEventId));
+          this.pushOutbox = this.pushOutbox.filter((p) => !p.feedEventId || !oldPosts.has(p.feedEventId));
           this.logPlacement(me, row.id, row.bevId, input.comparisons, at);
           return { ranking: this.toRanking(row), bucketSize: next.length };
         },
@@ -3064,6 +3195,8 @@ export class FakeApi implements BeviApi {
           this.db.follows = this.db.follows.filter(
             (f) => !(f.followerId === me.id && f.followeeId === userId) && !(f.followerId === userId && f.followeeId === me.id),
           );
+          this.dropPostSubscription(me.id, userId);
+          this.dropPostSubscription(userId, me.id);
         },
         true,
       ),
@@ -3202,6 +3335,104 @@ export class FakeApi implements BeviApi {
           const at = this.nowIso();
           // Only what the caller could have been shown: a hidden row comes back unread.
           for (const n of this.visibleNotifications(me)) if (n.readAt === null && n.id <= upTo) n.readAt = at;
+        },
+        true,
+      ),
+
+    // T-31 Release 2 (20261127000100): push settings, post subscriptions, device tokens.
+    getSettings: () =>
+      this.call('notifications.getSettings', () => this.notificationSettingsOf(this.requireUser().id)),
+
+    updateSettings: (settings: NotificationSettings) =>
+      this.call(
+        'notifications.updateSettings',
+        (): NotificationSettings => {
+          const me = this.requireUser();
+          for (const field of NOTIFICATION_SETTING_FIELDS) {
+            if (typeof settings?.[field] !== 'boolean') invalid(field, `${field} must be true or false`);
+          }
+          const stored: NotificationSettings = {
+            paused: settings.paused,
+            follows: settings.follows,
+            likes: settings.likes,
+            comments: settings.comments,
+            posts: settings.posts,
+          };
+          this.notificationSettingsRows.set(me.id, stored);
+          return { ...stored };
+        },
+        true,
+      ),
+
+    // get_post_notification_people: the people the caller follows, none across a block, chosen
+    // first, then by handle in code-point order; `q` a case-insensitive substring of the handle or
+    // the display name, a leading '@' ignored.
+    listPostNotificationPeople: (params?: PageParams & { q?: string }) =>
+      this.call('notifications.listPostNotificationPeople', (): Page<PostNotificationPerson> => {
+        const me = this.requireUser();
+        const raw = (params?.q ?? '').trim();
+        if (raw.length > POST_PEOPLE_QUERY_MAX) invalid('q', `Search is up to ${POST_PEOPLE_QUERY_MAX} characters`);
+        const q = raw.replace(/^@+/, '').toLowerCase();
+        const subscribed = (id: string) => this.postSubscriptions.some((s) => s.subscriberId === me.id && s.targetId === id);
+        const rows = this.db.follows
+          .filter((f) => f.followerId === me.id && !this.blockedBetween(me.id, f.followeeId))
+          .flatMap((f) => {
+            const u = this.db.users.find((x) => x.id === f.followeeId);
+            return u ? [u] : [];
+          })
+          .filter((u) => !q || u.handle.toLowerCase().includes(q) || u.displayName.toLowerCase().includes(q))
+          .map((u): PostNotificationPerson => ({ ...this.toRow(u, me), subscribed: subscribed(u.id) }))
+          .sort(
+            (a, z) => Number(z.subscribed) - Number(a.subscribed) || compareCodePoints(a.handle, z.handle) || compareCodePoints(a.id, z.id),
+          );
+        // packages/api asks for clampLimit's default, 20.
+        return paginate(rows, params, 20);
+      }),
+
+    setPostNotification: (userId: string, on: boolean) =>
+      this.call(
+        'notifications.setPostNotification',
+        () => {
+          const me = this.requireUser();
+          if (!on) {
+            this.dropPostSubscription(me.id, userId);
+            return;
+          }
+          // Not there and across a block are the same not_found, as follow_user answers them.
+          this.visibleUser(userId, me);
+          if (!this.isFollowing(me.id, userId)) invalid('not following', 'You can only choose people you follow');
+          if (!this.postSubscriptions.some((s) => s.subscriberId === me.id && s.targetId === userId)) {
+            this.postSubscriptions.push({ subscriberId: me.id, targetId: userId });
+          }
+        },
+        true,
+      ),
+
+    registerPushToken: (token: string) =>
+      this.call(
+        'notifications.registerPushToken',
+        () => {
+          const me = this.requireUser();
+          if (typeof token !== 'string' || token.length > PUSH_TOKEN_MAX || !PUSH_TOKEN_RE.test(token)) {
+            invalid('token', 'That is not an Expo push token');
+          }
+          // One device, one account: a token someone else registered moves to the caller.
+          this.pushTokenRows = this.pushTokenRows.filter((t) => t.token !== token);
+          this.pushTokenRows.push({ token, userId: me.id, seen: ++this.pushSeq });
+          // This one and the nine others seen most recently.
+          const keep = new Set(this.pushTokens(me.id).slice(0, PUSH_TOKENS_PER_USER));
+          this.pushTokenRows = this.pushTokenRows.filter((t) => t.userId !== me.id || keep.has(t.token));
+        },
+        true,
+      ),
+
+    unregisterPushToken: (token: string) =>
+      this.call(
+        'notifications.unregisterPushToken',
+        () => {
+          const me = this.requireUser();
+          // Only the caller's own; anything else is a no-op.
+          this.pushTokenRows = this.pushTokenRows.filter((t) => !(t.token === token && t.userId === me.id));
         },
         true,
       ),
