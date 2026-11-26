@@ -1,8 +1,8 @@
 # ScreenFeed
 
-Feed tab (ref 01, 12): Header with the wordmark and Find people, the filled SearchBar, Bev of the day and Bev of the week side by side (BevOfCard), then SegmentedTabs "Your feed · Explore" and that segment's FeedPosts, over the TabBar.
+Feed tab (ref 01, 12): Header with the wordmark, the bell and Find people, the filled SearchBar, Bev of the day and Bev of the week side by side (BevOfCard), then SegmentedTabs "Your feed · Explore" and that segment's FeedPosts, over the TabBar.
 
-- The person-plus icon in the Header opens People. The search bar is a doorway to Add Bev, which opens with its bar focused.
+- The bell in the Header opens Notifications and carries the unread count; it shows no badge at 0. The person-plus icon opens People. The search bar is a doorway to Add Bev, which opens with its bar focused.
 - The same Bev winning the day and the week shows as two cards, one per period: never merged into one, which leaves half the row empty and reads as a winner that failed to load.
 - The tabs replace the YOUR FEED section header, in the same place: under the Bev of the day and week, which stay on both segments. Text tabs (`underline-text`), as on Lists. "Your feed" is the default.
 - **Your feed:** followed people's rankings, newest first. Each post carries the heart and the comment bubble on the left of its action row and Rank it and Want to Try on the right; up to seven comments show under the row, more collapse to "View all N comments". Following nobody: an EmptyState under the tabs ("Follow friends to see their Bevs" + Find people, which opens People).

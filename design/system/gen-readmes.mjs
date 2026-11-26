@@ -10,7 +10,7 @@ const R = {
 - Provide: \`height\` (28 in headers, the only in-app size), \`tone\` = \`brand\` (default), \`inverse\` (on \`tasteCard\` or a photo) or \`mono\` (inherits \`currentColor\`).
 - It is outlined SVG, so it never depends on Fredoka loading. Never retype "bevi" in a font to stand in for it.
 - Do: sit it at the header's left on the 16pt gutter (the Feed). Don't: recolour the bubbles, add a tagline beside it in the header, or set it in Beli's teal or a serif.`,
-  Icon: `Lucide outline icons, the 55 the app uses, including one per drink category.
+  Icon: `Lucide outline icons, the 60 the app uses, including one per drink category.
 
 - Provide: \`name\` (see \`Bevi.iconNames\`), \`size\` (28 for header and action rows, 24 in profile rows and stat cards, 16 inline in meta lines), \`strokeWidth\` (1.6–1.75 at 24–28, 2 at 16), \`filled\` for a saved bookmark or a liked heart.
 - Colour comes from CSS \`color\`: \`text\` by default, \`primary\` for an active or saved state, \`textSecondary\` for chevrons and recents.
@@ -62,6 +62,7 @@ const R = {
   IconButton: `A bare 28pt outline icon with a 44pt target, or the grey 32pt close circle.
 
 - Provide: \`icon\`, \`label\` (required: it is the accessible name), \`variant\` (plain or filled), optional \`badge\` count.
+- The \`badge\` is \`onDeep\` 11pt bold on \`badgeRed\` (5.2:1) and shows nothing at 0. It is not read out, so the \`label\` says the number as well: "Notifications, 3 unread".
 - Header icons sit 20pt apart; the close circle is the ranking flow's and the create-Bev wizard's dismiss.
 - A press gives way a little (scale 0.98, opacity 0.7 over \`fast\`), like every tappable row and card.`,
   LikeButton: `The post's like control, Instagram's heart: a 28pt \`heart\`, outline in \`text\` until liked, then filled \`primary\`, with the like count beside it.
@@ -98,9 +99,9 @@ const R = {
 - Provide: \`value\` 1–4 or null, \`estimated\`, \`onChange(tier, estimated)\`. Choosing "estimate" sends \`priceTier: null, priceEstimated: true\`.`,
   Header: `The 44pt screen header: the wordmark or a 20pt bold title on the left, 28pt icons on the right; Lists centres a caps title instead.
 
-- Provide: \`wordmark\` or \`title\`, \`centered\` for Lists ("LISTS"), \`actions\` ([{ icon, label, onClick, variant? }]), \`onBack\` for pushed screens (People, Bev detail).
+- Provide: \`wordmark\` or \`title\`, \`centered\` for Lists ("LISTS"), \`actions\` ([{ icon, label, badge?, onClick, variant? }]), \`onBack\` for pushed screens (People, Notifications, Bev detail).
 - A tab's own screen names itself with a plain title and has nothing to close: "Add a Bev", "Map".
-- No bell or calendar in v1.`,
+- The Feed's header carries the bell, then Find people. The bell's \`badge\` is the unread count, and its label says the count too. No calendar.`,
   SectionHeader: `Caps section label ("FEATURED BEVS", "YOUR FEED") with an optional "See all" link in \`primary\`.
 
 - Provide: \`title\` (written in sentence case; it renders uppercase), \`action\` and \`onAction\`.
@@ -200,6 +201,14 @@ const R = {
 - \`context\` adds a third line in \`caption\` with a 14pt \`users\` icon: "Followed by Sam and Arjun", so following a suggested person is a decision with something behind it. The row is 72pt with it, 64pt without.
 - Pin your own row at the bottom of the ranking when it's off screen.
 - The pill pops when it is toggled, like the heart; the row itself gives way a little under a press.`,
+  NotificationRow: `One line of the Notifications screen: who did it, what they did and how long ago, ending in the post's Bev or a Follow back pill.
+
+- Provide: \`kind\` (follow, like or comment), \`actors\` (newest first), \`time\` as a short age ("2m", "3d", "2w"), and for a like or a comment the post's \`bev\`; a comment also takes its text in \`comment\`, quoted on up to two lines.
+- Likes on one post share a row: pass the two latest people in \`actors\` and the total in \`actorCount\`, and it reads "priya, samo and 3 others liked your Diet Coke" beside a pair of 32pt avatars. Comments and follows are one row each.
+- People are named by handle, in semibold; so is the Bev. The sentence is \`body\`, sentence case, with no full stop.
+- \`unread\` tints the row \`primaryTint\` and adds a 6pt \`primary\` dot in the gutter. Colour is never the only signal: the spoken sentence starts with "Unread.", and unread rows sit under a "New" SectionHeader.
+- A follow row ends in the pill: "Follow back" (filled) until you follow them, then "Following" (outlined). It pops when toggled, like every Follow pill.
+- The row opens the post for a like, the post with its comments up for a comment, and the person's profile for a follow. The pill is its own target.`,
   BucketButton: `Gut-check choice in the ranking flow: a \`primary\` ring filled to a level, over its label. Loved is full, fine is half, disliked is empty, so the order reads without colour.
 
 - Provide: \`bucket\` (loved, fine, disliked), \`selected\`, \`dimmed\`, \`onClick\`. Always show all three in one row of three equal columns on the 16pt gutter, under a centred "How was it?", worst to best from the left: disliked, fine, loved. The ring fills up along the row and "Loved it" sits on the right, where a scale's best end is expected.
@@ -299,9 +308,9 @@ const R = {
 };
 
 const S = {
-  ScreenFeed: `Feed tab (ref 01, 12): Header with the wordmark and Find people, the filled SearchBar, Bev of the day and Bev of the week side by side (BevOfCard), then SegmentedTabs "Your feed · Explore" and that segment's FeedPosts, over the TabBar.
+  ScreenFeed: `Feed tab (ref 01, 12): Header with the wordmark, the bell and Find people, the filled SearchBar, Bev of the day and Bev of the week side by side (BevOfCard), then SegmentedTabs "Your feed · Explore" and that segment's FeedPosts, over the TabBar.
 
-- The person-plus icon in the Header opens People. The search bar is a doorway to Add Bev, which opens with its bar focused.
+- The bell in the Header opens Notifications and carries the unread count; it shows no badge at 0. The person-plus icon opens People. The search bar is a doorway to Add Bev, which opens with its bar focused.
 - The same Bev winning the day and the week shows as two cards, one per period: never merged into one, which leaves half the row empty and reads as a winner that failed to load.
 - The tabs replace the YOUR FEED section header, in the same place: under the Bev of the day and week, which stay on both segments. Text tabs (\`underline-text\`), as on Lists. "Your feed" is the default.
 - **Your feed:** followed people's rankings, newest first. Each post carries the heart and the comment bubble on the left of its action row and Rank it and Want to Try on the right; up to seven comments show under the row, more collapse to "View all N comments". Following nobody: an EmptyState under the tabs ("Follow friends to see their Bevs" + Find people, which opens People).
@@ -327,6 +336,14 @@ const S = {
 - People are searched from here too, but suggestions for whom to follow live on People.
 - No wordmark and no close circle: this is a tab, so there is nothing to close.
 - "Can't find it? Add a new Bev" stays pinned to the bottom, as while typing (ScreenSearchResults).`,
+  ScreenNotifications: `Notifications (pushed from the Feed header's bell): Header with Back and "Notifications", then NotificationRows under "NEW", "TODAY", "THIS WEEK" and "EARLIER", over the TabBar with Feed marked.
+
+- **What is listed:** someone followed you, liked a Bev you posted, or commented on it. Likes on one post are one row. Nothing else lands here.
+- **Sections:** "New" holds everything unread. Read rows fall under "Today", "This week" (the last seven days) or "Earlier". A section with no rows is not drawn.
+- **Reading:** opening the screen marks everything read and clears the bell's count at once. The rows keep their tint until you leave, so you can see what was new.
+- **Going away:** a row disappears when what it reports is no longer true (they unfollowed, took the like back or deleted the comment), when the post is gone, and when either of you has blocked the other.
+- **Empty:** EmptyState with the bell, "No notifications yet", and Find people, which opens People.
+- Loading shows Skeleton rows; a failure shows ErrorState with Retry. Pull down to refresh.`,
   ScreenPeople: `People (pushed from the Feed header's person-plus icon): Header with Back and "People", the filled SearchBar "Search people", "SUGGESTED FOR YOU", then "RANKED BY POINTS".
 
 - **Search** replaces the sections with matching people (UserRows with Follow). Your own profile is never listed.
