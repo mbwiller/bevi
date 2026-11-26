@@ -239,6 +239,11 @@ const R = {
 
 - Provide: \`title\` and \`message\` that say what happened and what to do, \`icon\` (wifi-off for \`network\`), \`onRetry\`.
 - No apologies, no codes in the copy.`,
+  Switch: `An on/off switch for one setting: \`primary\` when on, \`borderStrong\` when off, with a \`surface\` knob.
+
+- Provide: \`checked\`, \`onChange(checked)\`, and \`label\`, its accessible name (the row's label: "Likes").
+- It sits at the end of a settings row whose label says what it controls. State is never colour alone: the knob moves, and it is announced as a switch, on or off.
+- In the app it is the platform's own switch, tinted with these tokens.`,
   Skeleton: `Loading placeholder in the shape of the final layout; every list loads with this, never a bare spinner.
 
 - Provide: \`variant\` (row, post, text, block, circle), and sizes for the plain shapes. The shimmer stops under reduced motion.
@@ -351,7 +356,20 @@ const S = {
 - **Reading:** opening the screen marks everything read and clears the bell's count at once. The rows keep their tint until you leave, so you can see what was new.
 - **Going away:** a row disappears when what it reports is no longer true (they unfollowed, took the like back or deleted the comment), when the post is gone, and when either of you has blocked the other.
 - **Empty:** EmptyState with the bell, "No notifications yet", and Find people, which opens People.
-- Loading shows Skeleton rows; a failure shows ErrorState with Retry. Pull down to refresh.`,
+- Loading shows Skeleton rows; a failure shows ErrorState with Retry. Pull down to refresh.
+- On a build that can receive notifications, a gear in the Header opens Settings, Notifications.`,
+  ScreenNotificationSettings: `Settings, Notifications (from Settings, and from the gear in the Notifications Header): what Bevi may send to this phone. One Switch pauses everything, one per kind, and Posts has a list of people.
+
+- **Pause all** on shows every kind off and sends nothing. Off, each kind is back exactly as it was: pausing never changes the kinds themselves. Switching one kind on while paused ends the pause with only that kind on.
+- **Tell me about:** New followers, Likes and Comments start on. Posts starts off.
+- **Posts:** a notification when someone you chose posts a Bev. "Choose people" opens Post notifications: the people you follow, each with a Switch, and search. Switching a person on turns Posts on. It is sent for a new Bev only: never for a re-rank, and never for the likes and comments those people get. Unfollowing someone removes them.
+- These control what is sent to the phone only. Follows, likes and comments still show in Notifications whatever is switched off; post notifications add nothing there.
+- If the phone's own Settings have notifications off for Bevi, the screen says so above the switches and offers to open them.
+- The screen and its row in Settings exist only on a build that can receive notifications.`,
+  ScreenNotificationsAsk: `The ask before the iOS permission prompt: a Sheet over Notifications with the bell, "Hear about it when it happens", one line of what will be sent, a \`primary\` Button "Turn on notifications" and a ghost "Not now".
+
+- Shown once, the first time Notifications is opened with something in it. Never at launch.
+- "Turn on notifications" leads to the iOS prompt. "Not now" closes it, and it does not come back on its own: Settings, Notifications offers it again.`,
   ScreenPeople: `People (pushed from the Feed header's person-plus icon): Header with Back and "People", the filled SearchBar "Search people", "SUGGESTED FOR YOU", then "RANKED BY POINTS".
 
 - **Search** replaces the sections with matching people (UserRows with Follow). Your own profile is never listed.

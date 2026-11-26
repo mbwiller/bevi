@@ -20,6 +20,9 @@ import { usePullToRefresh } from '@/lib/usePullToRefresh';
 import { NOTIFICATION_SECTION_TITLES, notificationSection, type NotificationSection } from '@/lib/time';
 import { size, spacing, useTheme } from '@/theme';
 
+import { NotificationsAsk, useNotificationsAsk } from './NotificationsAsk';
+import { pushAvailable } from './push/availability';
+
 export const NOTIFICATIONS_EMPTY_TITLE = 'No notifications yet';
 export const NOTIFICATIONS_EMPTY_BODY = "When someone follows you, likes a Bev you posted or comments on it, you'll see it here.";
 
@@ -80,6 +83,10 @@ function NotificationsSkeleton({ count = 6 }: { count?: number }) {
  * marked read and the bell goes to 0 at once. The rows keep their tint, under New, while the person
  * is here; leaving (blur) marks the list stale and reads it again behind the scenes, so the next
  * visit shows them read.
+ *
+ * On a build that can receive push (T-31 Release 2) the Header has a gear to Settings >
+ * Notifications, and the first visit with something listed shows the ask before the iOS prompt
+ * (NotificationsAsk). Neither touches the reading above: the ask is a Sheet over the list.
  */
 export function NotificationsScreen() {
   const { colors } = useTheme();
@@ -128,6 +135,15 @@ export function NotificationsScreen() {
   );
 
   const findPeople = useCallback(() => router.push('/people'), [router]);
+
+  // T-31 Release 2, only on a build that can receive push: the gear to Settings > Notifications,
+  // and the ask before the iOS prompt, once per device, over a list with something in it.
+  const available = pushAvailable();
+  const actions = useMemo(
+    () => (available ? [{ icon: 'settings' as const, label: 'Notification settings', onPress: () => router.push('/settings/notifications') }] : []),
+    [available, router],
+  );
+  const ask = useNotificationsAsk(items.length > 0);
 
   const open = useCallback(
     (n: Notification) => {
@@ -186,7 +202,7 @@ export function NotificationsScreen() {
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.screen, { backgroundColor: colors.surface }]}>
-      <Header title="Notifications" onBack={back} />
+      <Header title="Notifications" onBack={back} actions={actions} />
       <FlashList
         testID="notifications-list"
         data={items}
@@ -202,6 +218,7 @@ export function NotificationsScreen() {
         refreshing={refreshing}
         onRefresh={onRefresh}
       />
+      {available ? <NotificationsAsk open={ask.open} onChoose={ask.choose} onClosed={ask.onClosed} /> : null}
     </SafeAreaView>
   );
 }

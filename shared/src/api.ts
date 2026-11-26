@@ -162,6 +162,24 @@ export interface ProfileApi {
 
   /** Matches display name or handle. @throws 'unauthorized'. */
   searchUsers(params: { q: string; limit?: number; cursor?: string }): Promise<Page<ProfileRow>>;
+
+  /**
+   * The caller's go-to categories from onboarding, favourite first; `[]` until set. Only ever
+   * the caller's own: nobody else can read them (a pick of an alcoholic category would say the
+   * person is 21+).
+   * @throws 'unauthorized'.
+   */
+  getCategoryPicks(): Promise<CategoryId[]>;
+
+  /**
+   * Replaces the caller's go-to categories with `categoryIds`, favourite first, and returns what
+   * was saved (same order). 0 to `MAX_CATEGORY_PICKS` top-level categories, no repeats; `[]`
+   * clears them. Nothing is saved when it throws.
+   * @throws 'unauthorized'; 'validation' (`detail.field: 'categoryIds'`) — too many, a repeat,
+   *   or an id that is not a top-level category; 'age_restricted' — an alcoholic category when
+   *   the caller cannot see alcohol (`canSeeAlcohol` false).
+   */
+  setCategoryPicks(categoryIds: CategoryId[]): Promise<CategoryId[]>;
 }
 
 export interface StatsApi {
@@ -496,7 +514,8 @@ export interface RankingsApi {
   /**
    * Inserts a new ranking at `insertIndex`, re-spaces the bucket's scores, stores
    * the comparisons, and posts a feed item, atomically. Removes the Bev from Want
-   * to Try.
+   * to Try. No feed item while the caller's `onboarded` is false: the starter
+   * rankings stay in their list, stats and streak, but are never posts.
    * @throws 'unauthorized'; 'not_found' — no such Bev; 'age_restricted';
    *   'conflict' — the server's bucket size ≠ `expectedBucketSize`, or the Bev is
    *   already ranked (use `rerankBev`); 'validation' — `insertIndex` outside

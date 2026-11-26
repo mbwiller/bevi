@@ -55,6 +55,9 @@ it('lists the rows, with no developer links', async () => {
   expect(screen.getByLabelText('Privacy')).toBeTruthy();
   expect(screen.getByLabelText('Delete account')).toBeTruthy();
   expect(screen.queryByLabelText('Component gallery')).toBeNull();
+  // Push is off until the build can receive it (T-31 Release 2): no Notifications row yet. With it
+  // on, the row is covered by features/notifications/__tests__/NotificationSettingsScreen.test.tsx.
+  expect(screen.queryByLabelText('Notifications')).toBeNull();
   await fireEvent.press(screen.getByLabelText('Account'));
   expect(r.path()).toBe('/settings/account');
 });
