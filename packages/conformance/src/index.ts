@@ -1688,6 +1688,124 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
     });
   });
 
+  describe('notifications (T-31)', () => {
+    /** a ranks a Bev; b follows a, likes it and comments; c follows a and likes it. Ends signed in as a. */
+    async function scene() {
+      const a = await newUser();
+      const [x] = await starterIds(1);
+      await rankAtBottom(x!);
+      const post = (await api.feed.listUser(a.userId)).items[0]!;
+      // The author's own like and comment notify nobody.
+      await api.feed.like(post.id);
+      await api.comments.add(post.id, 'my own post');
+      expect((await api.notifications.list()).items).toEqual([]);
+      expect(await api.notifications.unreadCount()).toBe(0);
+
+      const b = await newUser();
+      await api.follows.follow(a.userId);
+      await api.feed.like(post.id);
+      const comment = await api.comments.add(post.id, 'nice one');
+      const c = await newUser();
+      await api.follows.follow(a.userId);
+      await api.feed.like(post.id);
+      await signInAs(a);
+      return { a, b, c, bevId: x!, post, comment };
+    }
+
+    it('a follow, likes on one post as one row, a comment; the badge counts rows; markRead clears it', async () => {
+      const { b, c, bevId, post, comment } = await scene();
+      const items = (await api.notifications.list()).items;
+      // Newest first by each row's newest notification: c's like, c's follow, b's comment, b's follow.
+      expect(items.map((n) => n.kind)).toEqual(['like', 'follow', 'comment', 'follow']);
+
+      const like = items[0]!;
+      expect(like).toMatchObject({ kind: 'like', actorCount: 2, postId: post.id, unread: true, comment: null });
+      expect(like.actors.map((p) => p.id)).toEqual([c.userId, b.userId]);
+      expect(like.bev?.id).toBe(bevId);
+
+      const followB = items[3]!;
+      expect(followB).toMatchObject({ kind: 'follow', actorCount: 1, postId: null, bev: null, comment: null });
+      expect(followB.actors.map((p) => [p.id, p.isFollowing])).toEqual([[b.userId, false]]);
+
+      expect(items[2]).toMatchObject({ kind: 'comment', actorCount: 1, postId: post.id, comment: { id: comment.id, body: 'nice one' } });
+      expect(items[2]!.actors.map((p) => p.id)).toEqual([b.userId]);
+
+      // Five unread notifications, four rows: the two likes are one.
+      expect(await api.notifications.unreadCount()).toBe(4);
+
+      // Keyset paging: each row on exactly one page, in the same order.
+      const page1 = await api.notifications.list({ limit: 2 });
+      expect(page1.nextCursor).not.toBeNull();
+      const page2 = await api.notifications.list({ limit: 2, cursor: page1.nextCursor! });
+      expect([...page1.items, ...page2.items].map((n) => n.id)).toEqual(items.map((n) => n.id));
+
+      // Up to b's comment: b's follow, like and comment are read; c's follow and like are not, and
+      // the likes row stays unread while any like in it is.
+      await api.notifications.markRead(items[2]!.id);
+      expect(await api.notifications.unreadCount()).toBe(2);
+      expect((await api.notifications.list()).items.map((n) => n.unread)).toEqual([true, true, false, false]);
+
+      await api.notifications.markRead();
+      expect(await api.notifications.unreadCount()).toBe(0);
+      expect((await api.notifications.list()).items.every((n) => !n.unread)).toBe(true);
+      await api.notifications.markRead();
+      expect(await api.notifications.unreadCount()).toBe(0);
+    });
+
+    it('what is undone is not shown: an unlike, a deleted comment, an unfollow, a block', async () => {
+      const { a, b, c, post, comment } = await scene();
+
+      await signInAs(b);
+      await api.feed.unlike(post.id);
+      await signInAs(a);
+      const like = (await api.notifications.list()).items.find((n) => n.kind === 'like')!;
+      expect(like.actorCount).toBe(1);
+      expect(like.actors.map((p) => p.id)).toEqual([c.userId]);
+
+      await signInAs(b);
+      await api.comments.remove(comment.id);
+      await api.follows.unfollow(a.userId);
+      await signInAs(a);
+      let items = (await api.notifications.list()).items;
+      expect(items.some((n) => n.kind === 'comment')).toBe(false);
+      expect(items.some((n) => n.actors.some((p) => p.id === b.userId))).toBe(false);
+      expect(items.map((n) => n.kind)).toEqual(['like', 'follow']);
+
+      // a blocks c: c's like and follow both go, from the list and from the badge.
+      await api.blocks.block(c.userId);
+      items = (await api.notifications.list()).items;
+      expect(items).toEqual([]);
+      expect(await api.notifications.unreadCount()).toBe(0);
+    });
+
+    it('markRead refuses an id that is not one, and every method is unauthorized signed out', async () => {
+      await newUser();
+      await expectCode(api.notifications.markRead('not-an-id'), 'validation');
+      await api.signOut();
+      await expectCode(api.notifications.list(), 'unauthorized');
+      await expectCode(api.notifications.unreadCount(), 'unauthorized');
+      await expectCode(api.notifications.markRead(), 'unauthorized');
+    });
+
+    it('feed.getPost: the author and a follower get the post as the feed shows it; a stranger gets not_found', async () => {
+      const a = await newUser();
+      const [x] = await starterIds(1);
+      await rankAtBottom(x!);
+      const postId = (await api.feed.listUser(a.userId)).items[0]!.id;
+      expect((await api.feed.getPost(postId)).id).toBe(postId);
+
+      await newUser();
+      await api.follows.follow(a.userId);
+      await api.feed.like(postId);
+      const seen = await api.feed.getPost(postId);
+      expect(seen).toMatchObject({ id: postId, type: 'RANKING', actor: { id: a.userId }, bev: { id: x }, likedByMe: true, likeCount: 1 });
+      expect(seen).toEqual((await api.feed.listUser(a.userId)).items.find((i) => i.id === postId));
+
+      await newUser();
+      await expectCode(api.feed.getPost(postId), 'not_found');
+    });
+  });
+
   describe('bugs (the internal reporter)', () => {
     const input = {
       kind: 'bug',

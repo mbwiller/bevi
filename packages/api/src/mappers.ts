@@ -32,6 +32,8 @@ import type {
   FriendScore,
   IconStatus,
   LeaderboardRow,
+  Notification,
+  NotificationKind,
   PeriodWinner,
   PhotoStatus,
   PriceTier,
@@ -167,6 +169,92 @@ export interface BlockedUserRpcRow extends EmbeddedProfileRow {
 
 export function mapBlockedUser(client: SupabaseClient, row: BlockedUserRpcRow): BlockedUser {
   return { ...mapEmbeddedProfile(client, row), blockedAt: row.blocked_at };
+}
+
+// --------------------------------------------------------------------------
+// get_notifications RPC rows -> Notification (T-31, 20261126000100)
+// --------------------------------------------------------------------------
+
+/** One of a row's `actors`: the embedded profile, plus whether the caller follows them. */
+export interface NotificationActorRpcItem extends EmbeddedProfileRow {
+  is_following: boolean;
+}
+
+/**
+ * One displayed row of `get_notifications`: a follow, a comment, or every like
+ * on one post. The `bev_*` columns are get_feed's, under the same names, and
+ * null for a follow (as `feed_event_id` is).
+ */
+export interface NotificationRpcRow {
+  id: number;
+  kind: string;
+  created_at: string;
+  unread: boolean;
+  actor_count: number;
+  /** At most two, newest first. */
+  actors: NotificationActorRpcItem[] | null;
+  feed_event_id: number | null;
+  bev_id: string | null;
+  bev_name: string | null;
+  bev_brand: string | null;
+  bev_flavor: string | null;
+  bev_category_id: string | null;
+  bev_thumb_path: string | null;
+  bev_price_tier: number | null;
+  bev_price_estimated: boolean | null;
+  bev_status: string | null;
+  bev_rating_count: number | null;
+  /** numeric: PostgREST sends a number, but a string is read too. */
+  bev_bayes_score: number | string | null;
+  bev_icon_path: string | null;
+  comment_id: number | null;
+  comment_body: string | null;
+}
+
+const NOTIFICATION_KINDS: readonly NotificationKind[] = ['follow', 'like', 'comment'];
+
+function notificationKindFromDb(kind: string): NotificationKind {
+  if ((NOTIFICATION_KINDS as readonly string[]).includes(kind)) return kind as NotificationKind;
+  throw new ApiError('unknown', `Unexpected notifications.kind from DB: ${kind}`);
+}
+
+export function mapNotification(client: SupabaseClient, row: NotificationRpcRow): Notification {
+  const actors = (row.actors ?? []).map(
+    (a): ProfileRow => ({ ...mapEmbeddedProfile(client, a), isFollowing: a.is_following === true }),
+  );
+  const bev =
+    row.bev_id && row.bev_name && row.bev_category_id
+      ? mapBevSummary(client, {
+          id: row.bev_id,
+          name: row.bev_name,
+          brand: row.bev_brand,
+          flavor: row.bev_flavor,
+          category_id: row.bev_category_id,
+          photo_path: row.bev_thumb_path,
+          icon_path: row.bev_icon_path,
+          price_tier: row.bev_price_tier ?? 1,
+          price_estimated: row.bev_price_estimated ?? true,
+          bev_stats: {
+            rating_count: row.bev_rating_count ?? 0,
+            avg_score: null,
+            score_stddev: null,
+            bayes_score: row.bev_bayes_score === null ? null : Number(row.bev_bayes_score),
+          },
+        })
+      : null;
+  return {
+    id: String(row.id),
+    kind: notificationKindFromDb(row.kind),
+    createdAt: row.created_at,
+    unread: row.unread,
+    actors,
+    // Never fewer than the actors listed, whatever the server said.
+    actorCount: Math.max(row.actor_count ?? 0, actors.length),
+    postId: row.feed_event_id === null ? null : String(row.feed_event_id),
+    bev,
+    comment:
+      row.comment_id !== null && row.comment_body !== null ? { id: String(row.comment_id), body: row.comment_body } : null,
+  };
 }
 
 /** One row of `get_followed_by` (20261111000100): who the caller follows that follows `user_id`. */
