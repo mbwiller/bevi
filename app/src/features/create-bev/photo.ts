@@ -2,7 +2,21 @@ import { File } from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 
-import { CameraPermissionError, fitWithin, PHOTO_MAX_EDGE, PHOTO_MIME, PHOTO_QUALITY, UnsupportedImageError, type PhotoSource, type PreparedPhoto } from './photoCommon';
+import type { PhotoCrop } from '@/lib/photoCrop';
+
+import {
+  AVATAR_MAX_EDGE,
+  CameraPermissionError,
+  croppedEdge,
+  fitWithin,
+  PHOTO_MAX_EDGE,
+  PHOTO_MIME,
+  PHOTO_QUALITY,
+  UnsupportedImageError,
+  type CropSource,
+  type PhotoSource,
+  type PreparedPhoto,
+} from './photoCommon';
 
 export * from './photoCommon';
 
@@ -89,5 +103,32 @@ export async function preparePhoto(asset: ImagePicker.ImagePickerAsset, maxEdge 
     throw new UnsupportedImageError();
   } finally {
     image?.release();
+  }
+}
+
+/**
+ * Cuts the square `crop` (the photo's own pixels, from the PhotoCropper) out of `photo`, an upright
+ * working copy `preparePhoto` made, resizes it to at most `edge` square (never up) and re-encodes it
+ * as JPEG q0.85, returned as the saved file's bytes like `preparePhoto`. Any failure is an
+ * `UnsupportedImageError`. `photo.uri` is the caller's and is left alone.
+ */
+export async function cropPhoto(photo: CropSource, crop: PhotoCrop, edge = AVATAR_MAX_EDGE): Promise<PreparedPhoto> {
+  let context: ImageManipulator.ImageManipulatorContext | null = null;
+  let image: Rendered | null = null;
+  try {
+    context = ImageManipulator.ImageManipulator.manipulate(photo.uri);
+    const side = croppedEdge(crop, edge);
+    context.crop({ originX: crop.x, originY: crop.y, width: crop.size, height: crop.size });
+    if (side < crop.size) context.resize({ width: side, height: side });
+    image = await context.renderAsync();
+    const out = await image.saveAsync({ compress: PHOTO_QUALITY, format: ImageManipulator.SaveFormat.JPEG });
+    const bytes = await new File(out.uri).bytes();
+    if (!bytes.byteLength) throw new Error('empty_image');
+    return { uri: out.uri, file: bytes, mimeType: PHOTO_MIME, width: out.width, height: out.height };
+  } catch {
+    throw new UnsupportedImageError();
+  } finally {
+    image?.release();
+    context?.release();
   }
 }

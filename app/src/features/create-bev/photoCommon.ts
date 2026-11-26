@@ -1,5 +1,7 @@
 import type { UploadPayload } from '@bevi/shared';
 
+import type { PhotoCrop } from '@/lib/photoCrop';
+
 /**
  * What both photo pipelines share: `photo.ts` (native) and `photo.web.ts` (web) re-export all of
  * this, so callers keep importing from `./photo` (or `@/features/create-bev/photo`) and Metro picks
@@ -9,6 +11,11 @@ import type { UploadPayload } from '@bevi/shared';
 export const PHOTO_MAX_EDGE = 1600;
 /** Profile photos are shown at 100pt at most, so they are resized much smaller than Bev photos. */
 export const AVATAR_MAX_EDGE = 512;
+/**
+ * A picked profile photo is first made into an upright working copy this big for the PhotoCropper
+ * to show; the framed square is then cut from it and resized to `AVATAR_MAX_EDGE` (`cropPhoto`).
+ */
+export const AVATAR_SOURCE_MAX_EDGE = 2048;
 export const PHOTO_QUALITY = 0.85;
 export const PHOTO_MIME = 'image/jpeg';
 
@@ -26,6 +33,18 @@ export interface PreparedPhoto {
   mimeType: string;
   width: number;
   height: number;
+}
+
+/** A decoded, upright photo to cut a square from (`cropPhoto`): a `PreparedPhoto` is one. */
+export interface CropSource {
+  uri: string;
+  width: number;
+  height: number;
+}
+
+/** The side of the square `cropPhoto` writes for `crop`: at most `edge`, never scaled up. */
+export function croppedEdge(crop: PhotoCrop, edge: number): number {
+  return Math.max(1, Math.min(Math.round(edge), Math.round(crop.size)));
 }
 
 /** The size that fits inside `max` × `max`, keeping the aspect ratio; never scales up. */
