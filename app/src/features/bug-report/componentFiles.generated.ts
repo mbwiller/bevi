@@ -143,6 +143,7 @@ export const COMPONENT_FILES: Readonly<Record<string, string>> = {
   NumText: 'app/src/components/ScoreBubble.tsx',
   NutritionCard: 'app/src/features/create-bev/NutritionCard.tsx',
   NutritionDemo: 'app/src/features/create-bev/NutritionDemo.tsx',
+  NutritionLabelRead: 'app/src/features/create-bev/NutritionScan.tsx',
   NutritionScan: 'app/src/features/create-bev/NutritionScan.tsx',
   NutritionScanResult: 'app/src/features/create-bev/NutritionScan.tsx',
   NutritionScanSheet: 'app/src/features/create-bev/NutritionScan.tsx',

@@ -1935,15 +1935,25 @@ export class FakeApi implements BeviApi {
           if (input.priceTier !== null && ![1, 2, 3, 4].includes(input.priceTier)) invalid('priceTier', 'Choose a price');
           if (input.nutrition) {
             const n = input.nutrition;
-            // `source` (contract 3.10.0) is accepted, and only as the one kind there is until BEV-13.
             const fields = ['barcode', 'productName', 'basis', 'sourceUrl', 'calories', 'fatGrams', 'carbohydrateGrams', 'sugarGrams', 'proteinGrams', 'sodiumMg', 'source'];
             const values = [n.calories, n.fatGrams, n.carbohydrateGrams, n.sugarGrams, n.proteinGrams, n.sodiumMg];
-            const strings = [n.barcode, n.productName, n.basis, n.sourceUrl];
+            // The server's rules: an absent source is a barcode snapshot; a label read has no barcode or
+            // source URL and must come with the label photo it was read from.
+            const source = n.source ?? 'openfoodfacts';
+            const provenance =
+              source === 'openfoodfacts'
+                ? typeof n.barcode === 'string' && /^(?:\d{8}|\d{12}|\d{13})$/.test(n.barcode) &&
+                  n.sourceUrl === `https://world.openfoodfacts.org/product/${n.barcode}`
+                : source === 'label-ocr' && n.barcode === null && n.sourceUrl === null;
+            // Raised against the field, as the server raises it (detail =
+            // 'labelAssetId'), because the wizard re-uploads the photo for that
+            // field and clears the whole snapshot for 'nutrition'.
+            if (source === 'label-ocr' && input.labelAssetId === undefined) {
+              invalid('labelAssetId', 'Add the label photo this reading came from');
+            }
             if (Object.keys(n).some((k) => !fields.includes(k)) ||
-                strings.some((v) => typeof v !== 'string' || !v.trim() || v.length > 256) ||
-                (n.source !== undefined && n.source !== 'openfoodfacts') ||
-                !/^(?:\d{8}|\d{12}|\d{13})$/.test(n.barcode ?? '') ||
-                n.sourceUrl !== `https://world.openfoodfacts.org/product/${n.barcode}` ||
+                [n.productName, n.basis].some((v) => typeof v !== 'string' || !v.trim() || v.length > 256) ||
+                !provenance ||
                 !values.some((v) => v !== null) ||
                 values.some((v) => v !== null && (typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > 1_000_000))) {
               invalid('nutrition', 'Scan the nutrition label again');
@@ -1993,7 +2003,9 @@ export class FakeApi implements BeviApi {
             // A new Bev with a verified photo automatically enters generation.
             iconReadyAt: photo ? new Date(this.now().getTime() + this.iconGenerationMs).toISOString() : null,
             iconStatusOverride: null,
-            ...(input.nutrition ? { nutrition: { ...input.nutrition } } : {}),
+            // A snapshot sent by a client older than 3.10.0 carries no `source`;
+            // every one of those is an Open Food Facts barcode match.
+            ...(input.nutrition ? { nutrition: { ...input.nutrition, source: input.nutrition.source ?? 'openfoodfacts' } } : {}),
             createdById: me.id,
             createdAt: this.nowIso(),
           };

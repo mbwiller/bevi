@@ -874,6 +874,65 @@ it('rejects invalid scanned nutrition before creating a Bev, matching the live c
   expect((await api.bevs.search({ q: 'Invalid nutrition snapshot' })).items).toHaveLength(0);
 });
 
+describe('label-read nutrition', () => {
+  const reading = {
+    barcode: null, productName: 'Mountain Dew', basis: 'Per serving (12 fl oz (355 mL))',
+    calories: 170, fatGrams: 0, carbohydrateGrams: 46, sugarGrams: 46, proteinGrams: null,
+    sodiumMg: 60, sourceUrl: null, source: 'label-ocr' as const,
+  };
+  const barcodeSnapshot = {
+    barcode: '012345678901', productName: 'Test water', basis: 'Per serving (355 ml)',
+    calories: 0, fatGrams: null, carbohydrateGrams: 0, sugarGrams: 0, proteinGrams: null,
+    sodiumMg: 4, sourceUrl: 'https://world.openfoodfacts.org/product/012345678901',
+  };
+
+  async function upload(api: FakeApi, kind: 'label' | 'bev-photo') {
+    return (await api.media.upload({ kind, file: new Blob(['x']), mimeType: 'image/jpeg' })).assetId;
+  }
+  const base = { categoryId: 'water' as const, priceTier: 2 as const, priceEstimated: false };
+  const clock = { now: new Date('2026-10-11T12:00:00Z') };
+  const field = (f: string) => ({ code: 'validation', detail: { field: f } });
+
+  it('has no server-side label reader: the nutrition capability is the barcode lookups only', () => {
+    const api = new FakeApi({ storage: null, latency: 0, now: () => clock.now });
+    expect(Object.keys(api.nutrition).sort()).toEqual(['lookupBarcode', 'lookupProduct']);
+  });
+
+  it('stores a label read with its source, and a barcode snapshot defaults to openfoodfacts', async () => {
+    const api = new FakeApi({ storage: null, latency: 0, now: () => clock.now });
+    await signInMe(api);
+    const photoAssetId = await upload(api, 'bev-photo');
+    const labelAssetId = await upload(api, 'label');
+    clock.now = new Date(clock.now.getTime() + 5000); // the fake keeps a new photo processing for a few seconds
+    const a = await api.bevs.create({ ...base, name: 'Label read drink', photoAssetId, labelAssetId, nutrition: reading });
+    expect(a.nutrition).toEqual(reading);
+    const b = await api.bevs.create({ ...base, name: 'Barcode drink', photoAssetId, nutrition: barcodeSnapshot as never });
+    expect(b.nutrition).toEqual({ ...barcodeSnapshot, source: 'openfoodfacts' });
+  });
+
+  it('applies the server rules to each source', async () => {
+    const api = new FakeApi({ storage: null, latency: 0, now: () => clock.now });
+    await signInMe(api);
+    const photoAssetId = await upload(api, 'bev-photo');
+    const labelAssetId = await upload(api, 'label');
+    clock.now = new Date(clock.now.getTime() + 5000);
+    const create = (nutrition: object, withLabel = true) =>
+      api.bevs.create({ ...base, name: 'Rules drink', photoAssetId, ...(withLabel ? { labelAssetId } : {}), nutrition: nutrition as never });
+    // label-ocr: no label photo, a barcode, or a source URL are each refused.
+    // A missing label photo names `labelAssetId`, as the server does, because
+    // the wizard re-uploads for that field and clears the snapshot for
+    // `nutrition` -- different recoveries, so the fake must pick the same one.
+    await expect(create(reading, false)).rejects.toMatchObject(field('labelAssetId'));
+    await expect(create({ ...reading, barcode: '012345678901' })).rejects.toMatchObject(field('nutrition'));
+    await expect(create({ ...reading, sourceUrl: 'https://world.openfoodfacts.org/product/012345678901' })).rejects.toMatchObject(field('nutrition'));
+    // openfoodfacts (explicit or absent): still needs a digits barcode and its exact URL.
+    await expect(create({ ...barcodeSnapshot, source: 'openfoodfacts', barcode: null })).rejects.toMatchObject(field('nutrition'));
+    await expect(create({ ...barcodeSnapshot, source: 'openfoodfacts', sourceUrl: null })).rejects.toMatchObject(field('nutrition'));
+    await expect(create({ ...barcodeSnapshot, sourceUrl: 'https://example.com/x' })).rejects.toMatchObject(field('nutrition'));
+    await expect(create({ ...reading, source: 'something-else' })).rejects.toMatchObject(field('nutrition'));
+  });
+});
+
 // IS-7: block_user / list_blocked_users / report_content, and the filtering a block causes.
 describe('blocks and reports', () => {
   const friendId = userIdFor(FRIEND.handle);

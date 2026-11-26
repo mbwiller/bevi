@@ -10,6 +10,8 @@ import { categoryById } from '@/lib/categories';
 import { type } from '@/theme';
 
 import { CreateBevWizard, DUPLICATES_DEBOUNCE_MS } from '../CreateBevWizard';
+import { recogniseText } from '../textRecognition';
+import { VISION_FIXTURES } from '../__fixtures__/visionFixtures';
 import { CameraPermissionError, pickImage, preparePhoto, UnsupportedImageError } from '../photo';
 
 const mockReplace = jest.fn();
@@ -22,6 +24,7 @@ jest.mock('expo-router', () => ({
 // The picker and the resize are native modules; the wizard sees what they would return: the native
 // pipeline's JPEG bytes (photo.ts), never a Blob.
 jest.mock('../BarcodeCamera', () => ({ BarcodeCamera: () => null }));
+jest.mock('../textRecognition', () => ({ TEXT_RECOGNITION_AVAILABLE: true, recogniseText: jest.fn() }));
 
 jest.mock('../photo', () => ({
   ...jest.requireActual('../photo'),
@@ -513,6 +516,31 @@ it('keeps confirmed barcode nutrition across steps and persists it with the new 
   expect((await api.bevs.get(made.id)).nutrition).toEqual(nutrition);
 });
 
+it('reads a label photo on the device, keeps the typed name over the placeholder, and persists it as a label read', async () => {
+  jest.mocked(recogniseText).mockResolvedValue(VISION_FIXTURES['bai-kula-watermelon']!);
+  const create = jest.spyOn(api.bevs, 'create');
+  await renderWizard();
+  await addPhoto();
+  await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+  await fillDetails({ name: 'Qzx Glimmer Citrus Soda', brand: 'Nowhere Co', category: 'Soda' });
+  // Add the label photo, then read it from the details step.
+  await fireEvent.press(screen.getByLabelText('Add label photo'));
+  await fireEvent.press(await screen.findByLabelText('Read nutrition from the label photo'));
+  await waitFor(() => expect(recogniseText).toHaveBeenCalledWith(expect.any(String)));
+  // Nothing is attached until the person confirms.
+  expect(await screen.findByText(/read from your photo\. Check them against the package/)).toBeTruthy();
+  await fireEvent.press(await screen.findByLabelText('Use this nutrition label', {}, { timeout: 8000 }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+  await screen.findByText('Looks new'); // the duplicate check settles before Add is enabled
+  await fireEvent.press(await screen.findByRole('button', { name: 'Add and rank it' }));
+  await waitFor(() => expect(mockReplace).toHaveBeenCalled(), READY_TIMEOUT);
+  const sent = create.mock.calls.at(-1)![0];
+  expect(sent.labelAssetId).toEqual(expect.any(String));
+  expect(sent.nutrition).toMatchObject({ source: 'label-ocr', barcode: null, sourceUrl: null, productName: 'Qzx Glimmer Citrus Soda' });
+  const made = await create.mock.results.at(-1)!.value;
+  expect((await api.bevs.get(made.id)).nutrition).toEqual(sent.nutrition);
+});
+
 it('tells the person when the migration fallback creates the Bev without nutrition and requires acknowledgment', async () => {
   const nutrition = {
     barcode: '012345678901', productName: 'Test water', basis: 'Per serving (355 ml)',
@@ -558,7 +586,7 @@ describe('a barcode scan fills in the details', () => {
   const LABEL: NutritionPreview & { barcode: string } = {
     barcode: '012345678901', productName: 'Qzx Scanned Seltzer', basis: 'Per serving (355 ml)',
     calories: 0, fatGrams: null, carbohydrateGrams: 0, sugarGrams: 0, proteinGrams: null,
-    sodiumMg: 4, sourceUrl: 'https://world.openfoodfacts.org/product/012345678901', source: 'openfoodfacts' as const,
+    sodiumMg: 4, sourceUrl: 'https://world.openfoodfacts.org/product/012345678901', source: 'openfoodfacts',
   };
   const found = (over: Partial<BarcodeProduct> = {}): BarcodeProduct => ({
     barcode: LABEL.barcode, name: 'Qzx Scanned Seltzer', brand: 'Nowhere Co', categoryId: 'sparkling_water', nutrition: LABEL, ...over,
@@ -802,4 +830,38 @@ describe('a barcode scan fills in the details', () => {
     expect(screen.getByText(HINT)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Choose a category' })).toBeTruthy();
   });
+});
+
+// After the barcode-scan tests: AccessibilityInfo.announceForAccessibility is a jest.fn the preset
+// never resets, and they count what it was told.
+it('keeps a label read through a barcode scan with no nutrition and through Back, and files it under the name as last typed', async () => {
+  jest.mocked(recogniseText).mockResolvedValue(VISION_FIXTURES['bai-kula-watermelon']!);
+  const create = jest.spyOn(api.bevs, 'create');
+  await renderWizard();
+  await addPhoto();
+  await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+  await fillDetails({ name: 'Qzx First Name', category: 'Soda' });
+  await fireEvent.press(screen.getByLabelText('Add label photo'));
+  await fireEvent.press(await screen.findByLabelText('Read nutrition from the label photo'));
+  await fireEvent.press(await screen.findByLabelText('Use this nutrition label', {}, { timeout: 8000 }));
+  expect(screen.getByText('Nutrition added to this Bev.')).toBeTruthy();
+
+  // The barcode knows the product but lists no nutrition: it fills the brand and leaves the read alone.
+  jest.spyOn(api.nutrition!, 'lookupProduct').mockResolvedValueOnce({ barcode: '012345678901', name: 'Qzx Scanned Seltzer', brand: 'Nowhere Co', categoryId: 'soda', nutrition: null });
+  await fireEvent.press(screen.getByLabelText('Scan barcode to fill in details'));
+  await fireEvent.changeText(screen.getByLabelText('Or enter barcode digits'), '012345678901');
+  await fireEvent.press(screen.getByLabelText('Look up entered barcode'));
+  await waitFor(() => expect(screen.getByLabelText('Brand or shop (optional)').props.value).toBe('Nowhere Co'));
+  expect(screen.getByText('Nutrition added to this Bev.')).toBeTruthy();
+
+  await fireEvent.changeText(screen.getByLabelText('Name'), 'Qzx Renamed Soda');
+  await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+  await screen.findByText('Looks new');
+  await fireEvent.press(screen.getByLabelText('Back'));
+  expect(screen.getByText('Nutrition added to this Bev.')).toBeTruthy();
+  await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+  await screen.findByText('Looks new');
+  await fireEvent.press(await screen.findByRole('button', { name: 'Add and rank it' }));
+  await waitFor(() => expect(mockReplace).toHaveBeenCalled(), READY_TIMEOUT);
+  expect(create.mock.calls.at(-1)![0].nutrition).toMatchObject({ source: 'label-ocr', productName: 'Qzx Renamed Soda' });
 });

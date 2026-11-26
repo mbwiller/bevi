@@ -49,6 +49,10 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
 
+// The on-device text recogniser is a native (iOS Vision) module with no JS fallback under jest. Any suite
+// that reaches it gets this stand-in; suites that care mock `create-bev/textRecognition` or this path themselves.
+jest.mock('./modules/bevi-text-recognition', () => ({ AVAILABLE: true, recogniseText: jest.fn().mockResolvedValue([]) }));
+
 // expo-application reads the installed binary's version (src/features/app-gate/installedVersion.ts).
 // Suites that care mock `@/features/app-gate/installedVersion` or this module themselves.
 jest.mock('expo-application', () => ({ nativeApplicationVersion: '1.0.0', nativeBuildVersion: '1' }));

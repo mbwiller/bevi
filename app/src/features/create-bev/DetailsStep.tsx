@@ -10,7 +10,7 @@ import { TextField } from '@/components/TextField';
 import { categoryById, type CategoryInfo } from '@/lib/categories';
 import { radius, size, spacing, type, useTheme } from '@/theme';
 
-import { NutritionScanResult, NutritionScanSheet, useNutritionScan } from './NutritionScan';
+import { NutritionLabelRead, NutritionScanResult, NutritionScanSheet, useNutritionScan } from './NutritionScan';
 import { categoryHintText, NAME_MAX_LENGTH, categoryUseLabel, categoryUseText, SCAN_CONFIRM_NUTRITION, SCAN_HINT } from './copy';
 import { PhotoStatusLine } from './PhotoStep';
 import type { PhotoSource } from './photo';
@@ -90,7 +90,7 @@ function CategoryField({ value, error, onPress }: { value: CategoryId | null; er
  */
 export function DetailsStep({ form, errors, onChange, onOpenCategories, label, onPickLabel, nutrition, onNutritionChange, scanned, onScannedChange, onProduct, scanNotice = null, similarCount, categoryHint = null, onUseCategory }: DetailsStepProps) {
   const { colors } = useTheme();
-  const scan = useNutritionScan({ value: nutrition, onChange: onNutritionChange, onProduct, scanned, onScanned: onScannedChange });
+  const scan = useNutritionScan({ value: nutrition, onChange: onNutritionChange, onProduct, scanned, onScanned: onScannedChange, label, onPickLabel, draftName: form.name });
   const hasLabel = !!label.photo;
   // The label a scan found is attached only by "Use this label", further down than the fields the
   // same scan filled in: say so for as long as it is waiting there.
@@ -168,6 +168,7 @@ export function DetailsStep({ form, errors, onChange, onOpenCategories, label, o
       <View style={styles.field}>
         <Text style={[type.caption, styles.label, { color: colors.textSecondary }]}>Nutrition label (optional)</Text>
         <NutritionScanResult scan={scan} />
+        <NutritionLabelRead scan={scan} />
         {errors.nutrition ? <Text role="alert" style={[type.caption, { color: colors.scoreLow }]}>{errors.nutrition}</Text> : null}
         <View style={styles.labelRow}>
           <BevImage size={size.scoreBubbleLg} src={label.photo?.uri} alt={hasLabel ? 'Nutrition label photo' : 'No label photo'} />
