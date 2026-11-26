@@ -36,7 +36,7 @@ beforeEach(() => select.mockClear());
 it('seeds selectStarterSet with the user id and excludes alcoholic categories under 21', () => {
   const ids = selectStarterRound(candidates, { id: 'user-1', canSeeAlcohol: false }, [], 0);
   expect(select).toHaveBeenCalledWith(candidates, { seed: 'user-1', excludeCategoryIds: [...ALCOHOLIC_CATEGORY_IDS], picks: [] });
-  expect(ALCOHOLIC_CATEGORY_IDS).toEqual(['beer', 'wine', 'spirits_cocktails']);
+  expect(ALCOHOLIC_CATEGORY_IDS).toEqual(['beer', 'wine', 'spirits_cocktails', 'hard_seltzer', 'cider']);
   expect(ids).toHaveLength(10);
   const alcoholic = new Set<string>(ALCOHOLIC_CATEGORY_IDS);
   expect(ids.every((id) => !alcoholic.has(categoryOf(id)))).toBe(true);

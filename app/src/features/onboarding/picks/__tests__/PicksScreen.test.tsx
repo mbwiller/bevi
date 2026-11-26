@@ -72,7 +72,7 @@ async function open({ adult = true, before }: { adult?: boolean; before?: () => 
 
 const tile = (name: string) => screen.getByRole('button', { name });
 const continueButton = () => screen.getByRole('button', { name: 'Continue' });
-const ALCOHOLIC = ['Beer', 'Wine', 'Spirits & cocktails'];
+const ALCOHOLIC = ['Beer', 'Wine', 'Spirits & cocktails', 'Hard seltzer', 'Cider'];
 
 beforeEach(() => {
   controls.setLatency(0);
@@ -80,10 +80,10 @@ beforeEach(() => {
   jest.restoreAllMocks();
 });
 
-it('a 21+ user gets a tile for every category, the alcoholic three included, and no Other', async () => {
+it('a 21+ user gets a tile for every category, the alcoholic ones included, and no Other', async () => {
   await open();
   const labels = pickableCategories(true).map((c) => c.label);
-  expect(labels).toHaveLength(14);
+  expect(labels).toHaveLength(16);
   for (const label of labels) expect(await screen.findByRole('button', { name: label })).toBeTruthy();
   expect(screen.queryByRole('button', { name: 'Other' })).toBeNull();
   expect(screen.getByText("Pick up to 3 kinds of Bev, favorite first. We'll start you with a few of each.")).toBeTruthy();

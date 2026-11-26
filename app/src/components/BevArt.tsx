@@ -62,6 +62,8 @@ const CATEGORY_KIND: Record<CategoryId, BevArtKind> = {
   beer: 'pint',
   wine: 'wine',
   spirits_cocktails: 'bottle',
+  hard_seltzer: 'slimCan',
+  cider: 'bottle',
   other: 'bottle',
 };
 

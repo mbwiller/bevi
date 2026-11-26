@@ -3,10 +3,11 @@
 begin;
 select plan(11);
 
--- A-13 loaded D-04's taxonomy, so the table holds 75 rows: the 15 roots a Bev's
--- `category_id` may point at, and 60 leaves under them.
-select is((select count(*)::int from public.categories where parent_id is null), 15, '15 root categories');
-select is((select count(*)::int from public.categories), 75, '75 categories in all, roots plus D-04 leaves');
+-- A-13 loaded D-04's taxonomy, so the table holds 76 rows: the 17 roots a Bev's
+-- `category_id` may point at (TICKET-23 added cider and promoted hard_seltzer), and
+-- 59 leaves under them.
+select is((select count(*)::int from public.categories where parent_id is null), 17, '17 root categories');
+select is((select count(*)::int from public.categories), 76, '76 categories in all, roots plus D-04 leaves');
 select is((select count(*)::int from public.bevs where source = 'seed' and status = 'active'), 381, '381 active seed Bevs');
 select ok(
   (select count(*) from public.bevs b join public.categories c on c.id = b.category_id

@@ -20,6 +20,8 @@ export const categories = [
   { id: 'beer', label: 'Beer', icon: 'beer', isAlcoholic: true },
   { id: 'wine', label: 'Wine', icon: 'wine', isAlcoholic: true },
   { id: 'spirits_cocktails', label: 'Spirits & cocktails', icon: 'martini', isAlcoholic: true },
+  { id: 'hard_seltzer', label: 'Hard seltzer', icon: 'sparkle', isAlcoholic: true },
+  { id: 'cider', label: 'Cider', icon: 'apple', isAlcoholic: true },
   { id: 'other', label: 'Other', icon: 'globe' },
 ];
 export const categoryById = (id) => categories.find((c) => c.id === id);

@@ -21,7 +21,7 @@ export const BUCKET_LABEL: Readonly<Record<Bucket, string>> = {
 export type CategoryId =
   | 'soda' | 'diet_soda' | 'juice' | 'water' | 'sparkling_water' | 'energy'
   | 'coffee' | 'tea' | 'boba' | 'sports' | 'smoothie'
-  | 'beer' | 'wine' | 'spirits_cocktails' | 'other';
+  | 'beer' | 'wine' | 'spirits_cocktails' | 'hard_seltzer' | 'cider' | 'other';
 
 /**
  * The most go-to categories a user picks in onboarding (`profile.setCategoryPicks`), mirrored

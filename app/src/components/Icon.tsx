@@ -1,4 +1,5 @@
 // One import per icon, not the barrel: Metro doesn't tree-shake, and the barrel is all ~1,900 icons.
+import Apple from 'lucide-react-native/icons/apple';
 import ArrowUpDown from 'lucide-react-native/icons/arrow-up-down';
 import Banana from 'lucide-react-native/icons/banana';
 import Beer from 'lucide-react-native/icons/beer';
@@ -47,6 +48,7 @@ import RefreshCw from 'lucide-react-native/icons/refresh-cw';
 import Search from 'lucide-react-native/icons/search';
 import Settings from 'lucide-react-native/icons/settings';
 import Share from 'lucide-react-native/icons/share';
+import Sparkle from 'lucide-react-native/icons/sparkle';
 import Sparkles from 'lucide-react-native/icons/sparkles';
 import Store from 'lucide-react-native/icons/store';
 import TriangleAlert from 'lucide-react-native/icons/triangle-alert';
@@ -120,6 +122,8 @@ const ICONS = {
   beer: Beer,
   wine: Wine,
   martini: Martini,
+  sparkle: Sparkle,
+  apple: Apple,
   globe: Globe,
   // The Search tab's map area.
   map: MapIcon,

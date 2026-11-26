@@ -22,7 +22,7 @@ export const ICONS = {
   // categories (vision.md §2)
   'cup-soda': 'cup-soda', 'candy-off': 'candy-off', citrus: 'citrus', 'glass-water': 'glass-water', droplets: 'droplets',
   zap: 'zap', coffee: 'coffee', leaf: 'leaf', milk: 'milk', dumbbell: 'dumbbell', banana: 'banana', beer: 'beer',
-  wine: 'wine', martini: 'martini', globe: 'globe',
+  wine: 'wine', martini: 'martini', sparkle: 'sparkle', apple: 'apple', globe: 'globe',
   // The Search tab's map area (M-15 placeholder until the live map, M-16).
   map: 'map',
   // The map's chrome (M-16): a chain's glyph on its callout, the Map segment and a venue's address,

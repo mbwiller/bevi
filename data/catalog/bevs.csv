@@ -351,12 +351,12 @@ guinness-draught,Guinness Draught,Guinness,Draught,beer,2,true,,true,guinness|gu
 blue-moon-belgian-white,Blue Moon Belgian White,Blue Moon,Belgian White,beer,2,true,,false,blue moon|belgian white,,,,,ale
 pacifico-clara,Pacifico Clara,Pacifico,Clara,beer,2,true,,false,pacifico,,,,,lager
 dos-equis-lager-especial,Dos Equis Lager Especial,Dos Equis,Lager Especial,beer,2,true,,false,dos equis|dos equis xx,,,,,lager
-white-claw-black-cherry,White Claw Hard Seltzer,White Claw,Black Cherry,beer,2,true,,true,white claw|hard seltzer|black cherry seltzer,,,,,hard_seltzer
-white-claw-mango,White Claw Hard Seltzer,White Claw,Mango,beer,2,true,,false,white claw mango,,,,,hard_seltzer
-white-claw-lime,White Claw Hard Seltzer,White Claw,Lime,beer,2,true,,false,white claw lime,,,,,hard_seltzer
-white-claw-natural-lime,White Claw Hard Seltzer,White Claw,Natural Lime,beer,2,true,,false,white claw natural lime,,,,,hard_seltzer
-truly-wild-berry,Truly Hard Seltzer,Truly,Wild Berry,beer,2,true,,false,truly|truly seltzer|wild berry,,,,,hard_seltzer
-truly-lemonade,Truly Hard Seltzer,Truly,Lemonade,beer,2,true,,false,truly lemonade,,,,,hard_seltzer
+white-claw-black-cherry,White Claw Hard Seltzer,White Claw,Black Cherry,hard_seltzer,2,true,,true,white claw|hard seltzer|black cherry seltzer,,,,,
+white-claw-mango,White Claw Hard Seltzer,White Claw,Mango,hard_seltzer,2,true,,false,white claw mango,,,,,
+white-claw-lime,White Claw Hard Seltzer,White Claw,Lime,hard_seltzer,2,true,,false,white claw lime,,,,,
+white-claw-natural-lime,White Claw Hard Seltzer,White Claw,Natural Lime,hard_seltzer,2,true,,false,white claw natural lime,,,,,
+truly-wild-berry,Truly Hard Seltzer,Truly,Wild Berry,hard_seltzer,2,true,,false,truly|truly seltzer|wild berry,,,,,
+truly-lemonade,Truly Hard Seltzer,Truly,Lemonade,hard_seltzer,2,true,,false,truly lemonade,,,,,
 generic-house-red-cabernet-sauvignon,House Red Cabernet Sauvignon,Generic,Cabernet Sauvignon,wine,3,true,,true,house red|cabernet|red wine,,,,,red_wine
 generic-house-white-chardonnay,House White Chardonnay,Generic,Chardonnay,wine,3,true,,true,house white|chardonnay|white wine,,,,,white_wine
 generic-prosecco,Prosecco,Generic,Prosecco,wine,3,true,,false,prosecco|sparkling wine,,,,,sparkling_wine

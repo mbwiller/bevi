@@ -316,6 +316,18 @@ it('the category sheet hides alcoholic categories for an under-21 account', asyn
   await screen.findByRole('button', { name: 'Soda' });
   expect(screen.queryByRole('button', { name: 'Beer' })).toBeNull();
   expect(screen.queryByRole('button', { name: 'Wine' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Hard seltzer' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Cider' })).toBeNull();
+});
+
+it('the category sheet offers Hard seltzer and Cider, so neither has to go under spirits', async () => {
+  await renderWizard();
+  await addPhoto();
+  await fireEvent.press(screen.getByRole('button', { name: 'Next' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Choose a category' }));
+  expect(await screen.findByRole('button', { name: 'Hard seltzer' })).toBeTruthy();
+  await fireEvent.press(screen.getByRole('button', { name: 'Cider' }));
+  expect(await screen.findByLabelText('Category, Cider')).toBeTruthy();
 });
 
 it('revokes the preview URL when the photo is replaced, and on unmount', async () => {

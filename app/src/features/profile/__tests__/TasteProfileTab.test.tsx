@@ -94,9 +94,11 @@ describe('Profile › Taste Profile', () => {
 
   it("another user's tab shows their bars and a read-out with their first name", async () => {
     await open(`/user/${userIdFor('friend_e')}?tab=taste`);
-    expect(await screen.findByText('Friend prefers beer and wine over spirits & cocktails')).toBeTruthy();
-    await bar(/^Beer, average 8\.5, 11 ranked$/);
-    await bar(/^Diet soda, average 7\.6, 20 ranked$/);
+    // TICKET-23 moved White Claw and Truly out of `beer` into `hard_seltzer`, and the fixture
+    // generator weights its picks by category, so this user's beer and diet soda rankings moved too.
+    expect(await screen.findByText('Friend prefers wine and beer over spirits & cocktails')).toBeTruthy();
+    await bar(/^Beer, average 7\.7, 7 ranked$/);
+    await bar(/^Diet soda, average 7\.7, 22 ranked$/);
   });
 
   it('shows Skeleton rows while loading', async () => {
