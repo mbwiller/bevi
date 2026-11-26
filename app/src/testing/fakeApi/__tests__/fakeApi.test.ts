@@ -17,11 +17,11 @@ import { isApiError, type Bucket, type Session } from '@bevi/shared';
 
 import { CATALOG_BEVS } from '../catalog';
 import { controls } from '../controls';
-import { STORAGE_KEY, type StorageLike } from '../db';
+import { STORAGE_KEY, type FakeDb, type StorageLike } from '../db';
 import { buildFixtures, userIdFor } from '../fixtures';
 import { FakeApi } from '../FakeApi';
 import { getFakeApi } from '../instance';
-import { ALCOHOLIC_BEV_ID, FAKE_INVITE_CODE, FRIEND, ME } from '../people';
+import { ALCOHOLIC_BEV_ID, FAKE_INVITE_CODE, FRIEND, ME, MINOR } from '../people';
 
 const memoryStorage = (): StorageLike & { data: Map<string, string> } => {
   const data = new Map<string, string>();
@@ -973,6 +973,79 @@ describe('blocks and reports', () => {
     api.signInAs(ME.handle);
     await expect(api.comments.list(friendPost.id)).resolves.toMatchObject({ items: expect.not.arrayContaining([expect.objectContaining({ id: comment.id })]) });
     await expect(api.reports.report({ kind: 'comment', id: comment.id, reason: 'spam' })).rejects.toMatchObject({ code: 'not_found' });
+  });
+});
+
+// DELIVERABLE-44: go-to categories, with set_category_picks' rules (20261128000200).
+describe('category picks', () => {
+  it('is [] until set; set returns and reads back favourite first; replace and clear', async () => {
+    const api = make();
+    await signInMe(api);
+    expect(await api.profile.getCategoryPicks()).toEqual([]);
+
+    expect(await api.profile.setCategoryPicks(['coffee', 'soda', 'tea'])).toEqual(['coffee', 'soda', 'tea']);
+    expect(await api.profile.getCategoryPicks()).toEqual(['coffee', 'soda', 'tea']);
+
+    expect(await api.profile.setCategoryPicks(['tea', 'coffee'])).toEqual(['tea', 'coffee']);
+    expect(await api.profile.getCategoryPicks()).toEqual(['tea', 'coffee']);
+
+    expect(await api.profile.setCategoryPicks([])).toEqual([]);
+    expect(await api.profile.getCategoryPicks()).toEqual([]);
+  });
+
+  it('refuses too many, a repeat, a leaf and an unknown id on categoryIds, and saves nothing', async () => {
+    const api = make();
+    await signInMe(api);
+    await api.profile.setCategoryPicks(['water']);
+    const refused = { code: 'validation', detail: { field: 'categoryIds' } };
+    await expect(api.profile.setCategoryPicks(['soda', 'juice', 'tea', 'coffee'])).rejects.toMatchObject(refused);
+    await expect(api.profile.setCategoryPicks(['soda', 'soda'])).rejects.toMatchObject(refused);
+    await expect(api.profile.setCategoryPicks(['cola' as never])).rejects.toMatchObject(refused);
+    await expect(api.profile.setCategoryPicks(['no_such_category' as never])).rejects.toMatchObject(refused);
+    expect(await api.profile.getCategoryPicks()).toEqual(['water']);
+  });
+
+  it('an alcoholic category is age_restricted when the caller cannot see alcohol, and fine at 21+', async () => {
+    const api = make();
+    api.signInAs(MINOR.handle);
+    await expect(api.profile.setCategoryPicks(['beer'])).rejects.toMatchObject({ code: 'age_restricted' });
+    await expect(api.profile.setCategoryPicks(['soda', 'wine'])).rejects.toMatchObject({ code: 'age_restricted' });
+    // Validation first, as in the RPC: a leaf under beer is the wrong id, not a restricted one.
+    await expect(api.profile.setCategoryPicks(['lager' as never])).rejects.toMatchObject({ code: 'validation' });
+    expect(await api.profile.getCategoryPicks()).toEqual([]);
+    expect(await api.profile.setCategoryPicks(['boba', 'energy'])).toEqual(['boba', 'energy']);
+
+    api.signInAs(ME.handle);
+    expect(await api.profile.setCategoryPicks(['beer', 'wine', 'spirits_cocktails'])).toEqual(['beer', 'wine', 'spirits_cocktails']);
+  });
+
+  it("are private: another user reads only their own, and signed out is unauthorized", async () => {
+    const api = make();
+    await signInMe(api);
+    await api.profile.setCategoryPicks(['juice']);
+    api.signInAs(FRIEND.handle);
+    expect(await api.profile.getCategoryPicks()).toEqual([]);
+    await api.signOut();
+    await expect(api.profile.getCategoryPicks()).rejects.toMatchObject({ code: 'unauthorized' });
+    await expect(api.profile.setCategoryPicks(['soda'])).rejects.toMatchObject({ code: 'unauthorized' });
+  });
+
+  it('go with the account when it is deleted, and with a first-run reset', async () => {
+    const storage = memoryStorage();
+    const stored = () => (JSON.parse(storage.data.get(STORAGE_KEY)!) as FakeDb).categoryPicks ?? {};
+    const api = make(storage);
+    const me = await signInMe(api);
+    await api.profile.setCategoryPicks(['juice']);
+    api.emptyUser();
+    expect(await api.profile.getCategoryPicks()).toEqual([]);
+
+    await api.profile.setCategoryPicks(['tea']);
+    api.signInAs(FRIEND.handle);
+    await api.profile.setCategoryPicks(['soda']);
+    api.signInAs(ME.handle);
+    expect(stored()[me.userId]).toEqual(['tea']);
+    await api.deleteAccount();
+    expect(stored()).toEqual({ [userIdFor(FRIEND.handle)]: ['soda'] });
   });
 });
 
