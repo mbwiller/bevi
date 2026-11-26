@@ -152,3 +152,21 @@ describe('a newer change stops an older photo once it has left the step', () => 
     updateMe.mockRestore();
   });
 });
+
+it('leaving the screen after Use photo still saves the photo', async () => {
+  const realUpload = api.media.upload.bind(api.media);
+  const uploading = deferred<void>();
+  const upload = jest.spyOn(api.media, 'upload').mockImplementation(async (payload) => {
+    await uploading.promise;
+    return realUpload(payload);
+  });
+  const { result, unmount } = await renderHook(() => useAvatarUpload(), { wrapper });
+  await act(async () => void result.current.choose());
+  await waitFor(() => expect(result.current.crop.photo).not.toBeNull());
+  await act(async () => result.current.crop.confirm({ x: 256, y: 0, size: 1536 }));
+  await waitFor(() => expect(upload).toHaveBeenCalled());
+  await act(async () => unmount());
+  await act(async () => uploading.resolve());
+  await waitFor(async () => expect((await api.profile.getMe()).avatarUrl).not.toBeNull());
+  upload.mockRestore();
+});

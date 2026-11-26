@@ -90,7 +90,8 @@ export function useAvatarUpload() {
     let started = false;
     // Taken once the person has picked: cancelling the picker leaves an upload in flight alone.
     let gen = generation.current;
-    const live = () => mounted.current && gen === generation.current;
+    const newest = () => gen === generation.current;
+    const live = () => mounted.current && newest();
     try {
       const picked = await pickImage('library');
       if (!picked) return;
@@ -114,11 +115,12 @@ export function useAvatarUpload() {
       if (mounted.current) setCropping((open) => (open === source ? null : open));
       if (!crop || !live()) return;
       photo = await cropPhoto(source, crop, AVATAR_MAX_EDGE);
-      // A newer change (remove, another photo) or leaving the screen stops this one at each step,
-      // so an older photo can never be saved over it.
-      if (!live()) return;
+      // A newer change (remove, another photo) stops this one at each step, so an older photo can
+      // never be saved over it. Leaving the screen does not: a photo the person confirmed still
+      // saves (onboarding moves on while it uploads).
+      if (!newest()) return;
       const { assetId } = await uploadAsync({ kind: 'avatar', file: photo.file, mimeType: photo.mimeType });
-      if (!live()) return;
+      if (!newest()) return;
       const profile = await updateAsync({ avatarAssetId: assetId });
       if (mounted.current) syncSession(profile);
     } catch (e) {
