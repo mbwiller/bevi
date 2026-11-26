@@ -489,7 +489,7 @@ it('keeps confirmed barcode nutrition across steps and persists it with the new 
   const nutrition = {
     barcode: '012345678901', productName: 'Test water', basis: 'Per serving (355 ml)',
     calories: 0, fatGrams: null, carbohydrateGrams: 0, sugarGrams: 0, proteinGrams: null,
-    sodiumMg: 4, sourceUrl: 'https://world.openfoodfacts.org/product/012345678901',
+    sodiumMg: 4, sourceUrl: 'https://world.openfoodfacts.org/product/012345678901', source: 'openfoodfacts' as const,
   };
   jest.spyOn(api.nutrition!, 'lookupProduct').mockResolvedValue({ barcode: nutrition.barcode, name: 'Test water', brand: null, categoryId: 'water', nutrition });
   const create = jest.spyOn(api.bevs, 'create');
@@ -517,7 +517,7 @@ it('tells the person when the migration fallback creates the Bev without nutriti
   const nutrition = {
     barcode: '012345678901', productName: 'Test water', basis: 'Per serving (355 ml)',
     calories: 0, fatGrams: null, carbohydrateGrams: 0, sugarGrams: 0, proteinGrams: null,
-    sodiumMg: 4, sourceUrl: 'https://world.openfoodfacts.org/product/012345678901',
+    sodiumMg: 4, sourceUrl: 'https://world.openfoodfacts.org/product/012345678901', source: 'openfoodfacts' as const,
   };
   jest.spyOn(api.nutrition!, 'lookupProduct').mockResolvedValue({ barcode: nutrition.barcode, name: 'Test water', brand: null, categoryId: 'water', nutrition });
   const create = api.bevs.create.bind(api.bevs);
@@ -555,10 +555,10 @@ it('tells the person when the migration fallback creates the Bev without nutriti
 });
 
 describe('a barcode scan fills in the details', () => {
-  const LABEL: NutritionPreview = {
+  const LABEL: NutritionPreview & { barcode: string } = {
     barcode: '012345678901', productName: 'Qzx Scanned Seltzer', basis: 'Per serving (355 ml)',
     calories: 0, fatGrams: null, carbohydrateGrams: 0, sugarGrams: 0, proteinGrams: null,
-    sodiumMg: 4, sourceUrl: 'https://world.openfoodfacts.org/product/012345678901',
+    sodiumMg: 4, sourceUrl: 'https://world.openfoodfacts.org/product/012345678901', source: 'openfoodfacts' as const,
   };
   const found = (over: Partial<BarcodeProduct> = {}): BarcodeProduct => ({
     barcode: LABEL.barcode, name: 'Qzx Scanned Seltzer', brand: 'Nowhere Co', categoryId: 'sparkling_water', nutrition: LABEL, ...over,
@@ -652,7 +652,7 @@ describe('a barcode scan fills in the details', () => {
 
     // The wrong can was scanned first. The right one lists no brand and a category of its own.
     const OTHER: NutritionPreview = { ...LABEL, barcode: '098765432109', productName: 'Qzx Other Glimmer', calories: 150, sourceUrl: 'https://world.openfoodfacts.org/product/098765432109' };
-    lookup.mockResolvedValue({ barcode: OTHER.barcode, name: 'Qzx Other Glimmer', brand: null, categoryId: 'soda', nutrition: OTHER });
+    lookup.mockResolvedValue({ barcode: '098765432109', name: 'Qzx Other Glimmer', brand: null, categoryId: 'soda', nutrition: OTHER });
     await scan();
     expect(await screen.findByText('Filled in the name and category from the barcode. Check them before you continue. Confirm the nutrition label below.')).toBeTruthy();
     expect(field('Name')).toBe('Qzx Other Glimmer');
@@ -705,7 +705,7 @@ describe('a barcode scan fills in the details', () => {
 
   describe('a product in a category the person cannot see', () => {
     const BEER_LABEL: NutritionPreview = { ...LABEL, barcode: '055555555555', productName: 'Qzx Lager', calories: 110, sourceUrl: 'https://world.openfoodfacts.org/product/055555555555' };
-    const lager = () => found({ barcode: BEER_LABEL.barcode, name: 'Qzx Lager', brand: 'Qzx Brewing', categoryId: 'beer', nutrition: BEER_LABEL });
+    const lager = () => found({ barcode: '055555555555', name: 'Qzx Lager', brand: 'Qzx Brewing', categoryId: 'beer', nutrition: BEER_LABEL });
     const NOT_FOUND = "Bevi doesn't know that barcode. Try another, or close this and enter the details yourself.";
 
     it('fills in nothing and reads as a barcode Bevi does not know', async () => {

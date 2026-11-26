@@ -908,14 +908,33 @@ export interface BevLocationSummary {
   locatedCount: number;
 }
 
-/** Barcode nutrition snapshot, with its original serving basis and source. */
+
+/**
+ * Where a nutrition snapshot's numbers came from. Both are user-confirmed, and
+ * neither is a verified transcription of the package:
+ *
+ * - `openfoodfacts`: a barcode the person scanned, matched against the Open
+ *   Food Facts database. Carries `barcode` and the product page `sourceUrl`.
+ * - `label-ocr`: the nutrition panel read out of a photo the person took of
+ *   their own drink, for the drinks the barcode database does not have. No
+ *   barcode and no third-party page, so both of those fields are null.
+ */
+export type NutritionSource = 'openfoodfacts' | 'label-ocr';
+
+/** Nutrition snapshot, with its original serving basis and where it came from. */
 export interface NutritionPreview {
-  barcode: string;
+  /**
+   * The scanned code, for a barcode match; null for a label read from a photo.
+   * Nothing renders it -- it is kept so a snapshot can be traced back to the
+   * product it was matched against.
+   */
+  barcode: string | null;
   productName: string;
   /**
    * Stable presentation strings: `Per serving (${servingSize})` or
    * `Per 100 g / 100 ml (as listed)`. NutritionCard parses these exact English
    * forms, so changing them requires a versioned move to structured fields.
+   * A label read produces one of the same two forms.
    */
   basis: string;
   calories: number | null;
@@ -924,7 +943,18 @@ export interface NutritionPreview {
   sugarGrams: number | null;
   proteinGrams: number | null;
   sodiumMg: number | null;
-  sourceUrl: string;
+  /**
+   * The Open Food Facts product page, for a barcode match; null for a label
+   * read, whose only source is the person's own photo. A reader that offers to
+   * open it must check for null first.
+   */
+  sourceUrl: string | null;
+  /**
+   * How to read the two fields above, and what to credit on screen. Snapshots
+   * stored before contract 3.10.0 have no `source` of their own and are mapped
+   * to `openfoodfacts`, which is what they all are.
+   */
+  source: NutritionSource;
 }
 
 /**

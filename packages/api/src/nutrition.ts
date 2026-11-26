@@ -32,6 +32,7 @@ export function parseNutrition(barcode: string, data: unknown): NutritionPreview
     calories: get('energy-kcal'), fatGrams: get('fat'), carbohydrateGrams: get('carbohydrates'),
     sugarGrams: get('sugars'), proteinGrams: get('proteins'), sodiumMg: sodium === null ? null : number(sodium * 1000),
     sourceUrl: `https://world.openfoodfacts.org/product/${barcode}`,
+    source: 'openfoodfacts',
   };
   return [result.calories, result.fatGrams, result.carbohydrateGrams, result.sugarGrams, result.proteinGrams, result.sodiumMg]
     .some((v) => v !== null) ? result : null;
