@@ -5,7 +5,7 @@ import type { NotificationSettings } from '@bevi/shared';
  * design system ScreenNotificationSettings). The server keeps exactly what it is sent
  * (`notifications.updateSettings`), so these rules are the app's, and every switch goes through
  * them: the screen's own switches, and a person switched on in Post notifications (which turns
- * Posts on).
+ * Posts on, as `applySettingToggle(settings, 'posts', true)` when Posts is not shown on).
  *
  * - Pause all on: `paused` only; the four kinds are kept, so they all show off.
  * - Pause all off: `paused` only; each kind is back exactly as it was.
@@ -38,10 +38,3 @@ export function shownAs(settings: NotificationSettings, key: NotificationSetting
   return !settings.paused && settings[key];
 }
 
-/**
- * The settings after a person is switched on in Post notifications: Posts on, by the same rule as
- * its own switch. Unchanged (the same object) when Posts already shows on, so nothing is saved.
- */
-export function afterPersonChosen(settings: NotificationSettings): NotificationSettings {
-  return shownAs(settings, 'posts') ? settings : applySettingToggle(settings, 'posts', true);
-}

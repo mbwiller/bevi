@@ -167,6 +167,79 @@ it('a failed save puts the switch back and says so', async () => {
   expect((await api.notifications.getSettings()).likes).toBe(true);
 });
 
+/**
+ * Holds the next `updateSettings` until `release()`; it then reaches the fake as usual. Later calls
+ * go straight through.
+ */
+function holdNextSave() {
+  const original = api.notifications.updateSettings.bind(api.notifications);
+  let release!: () => void;
+  const gate = new Promise<void>((r) => {
+    release = r;
+  });
+  const spy = jest.spyOn(api.notifications, 'updateSettings').mockImplementationOnce(async (next) => {
+    await gate;
+    return original(next);
+  });
+  return { spy, release: () => act(async () => release()) };
+}
+
+describe('quick taps', () => {
+  it('two switches tapped while the first save is still out are saved one at a time, in order, and both stay', async () => {
+    fakePhone({ permission: 'granted' });
+    await open();
+    await screen.findByRole('switch', { name: 'Likes' });
+    const held = holdNextSave();
+    await toggle('Likes');
+    await toggle('Comments');
+    await act(() => jest.advanceTimersByTimeAsync(20));
+    // Both show at once; the second request waits for the first answer.
+    expect(sw('Likes').props.value).toBe(false);
+    expect(sw('Comments').props.value).toBe(false);
+    expect(held.spy).toHaveBeenCalledTimes(1);
+    expect(held.spy.mock.calls[0]![0]).toEqual({ paused: false, follows: true, likes: false, comments: true, posts: false });
+    await held.release();
+    await idle();
+    expect(held.spy).toHaveBeenCalledTimes(2);
+    expect(held.spy.mock.calls[1]![0]).toEqual({ paused: false, follows: true, likes: false, comments: false, posts: false });
+    expect(shown()).toEqual({ 'Pause all': false, 'New followers': true, Likes: false, Comments: false, Posts: false });
+    expect(await api.notifications.getSettings()).toEqual({ paused: false, follows: true, likes: false, comments: false, posts: false });
+  });
+
+  it('the first save failing takes back that tap only: the second is saved without it, and screen and server agree', async () => {
+    fakePhone({ permission: 'granted' });
+    await open();
+    await screen.findByRole('switch', { name: 'Likes' });
+    const held = holdNextSave();
+    await toggle('Likes');
+    await toggle('Comments');
+    await act(() => jest.advanceTimersByTimeAsync(20));
+    controls.failNext('network', 'notifications.updateSettings');
+    await held.release();
+    await idle();
+    expect(held.spy).toHaveBeenCalledTimes(2);
+    expect(held.spy.mock.calls[1]![0]).toEqual({ paused: false, follows: true, likes: true, comments: false, posts: false });
+    const stored = await api.notifications.getSettings();
+    expect(stored).toEqual({ paused: false, follows: true, likes: true, comments: false, posts: false });
+    expect(shown()).toEqual({ 'Pause all': false, 'New followers': true, Likes: true, Comments: false, Posts: false });
+  });
+
+  it('a tap that ends a pause, queued behind another, is applied to what the server confirmed', async () => {
+    fakePhone({ permission: 'granted' });
+    await open();
+    await screen.findByRole('switch', { name: 'Pause all' });
+    const held = holdNextSave();
+    await toggle('Pause all');
+    await toggle('Posts');
+    await act(() => jest.advanceTimersByTimeAsync(20));
+    expect(shown()).toEqual({ 'Pause all': false, 'New followers': false, Likes: false, Comments: false, Posts: true });
+    await held.release();
+    await idle();
+    expect(await api.notifications.getSettings()).toEqual({ paused: false, follows: false, likes: false, comments: false, posts: true });
+    expect(shown()).toEqual({ 'Pause all': false, 'New followers': false, Likes: false, Comments: false, Posts: true });
+  });
+});
+
 it('loading shows skeleton rows; a failed load shows Retry, which reads it again', async () => {
   fakePhone({ permission: 'granted' });
   controls.setLatency(100);

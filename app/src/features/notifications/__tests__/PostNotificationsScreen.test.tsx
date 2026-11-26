@@ -172,6 +172,20 @@ it('a failed change puts the switch back, says so, and leaves Posts alone', asyn
   expect((await api.notifications.getSettings()).posts).toBe(false);
 });
 
+it('Posts failing to turn on switches the person back off, and says post notifications could not be turned on', async () => {
+  await open();
+  await screen.findByRole('switch', { name: personSwitchLabel(FRIEND.handle) });
+  controls.failNext('network', 'notifications.updateSettings');
+  await flip(FRIEND.handle);
+  await idle();
+  expect(personSwitch(FRIEND.handle).props.value).toBe(false);
+  expect(screen.getByRole('alert')).toHaveTextContent(/^Couldn't turn on post notifications\./);
+  expect((await api.notifications.listPostNotificationPeople({ q: FRIEND.handle })).items[0]).toMatchObject({ subscribed: false });
+  expect((await api.notifications.getSettings()).posts).toBe(false);
+  await rankSomethingNew(FRIEND.handle);
+  expect(controls.pendingPushes(meId)).toEqual([]);
+});
+
 it('follows no one: says so, and Find people opens People', async () => {
   controls.emptyUser();
   const r = await open();

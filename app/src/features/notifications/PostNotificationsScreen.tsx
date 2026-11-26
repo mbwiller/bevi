@@ -29,7 +29,7 @@ import { useBack } from '@/lib/useBack';
 import { usePullToRefresh } from '@/lib/usePullToRefresh';
 import { MAX_FONT_SCALE_DENSE, size, spacing, type, useTheme } from '@/theme';
 
-import { afterPersonChosen } from './settingsRules';
+import { shownAs } from './settingsRules';
 
 export const POST_NOTIFICATIONS_TITLE = 'Post notifications';
 export const POST_NOTIFICATIONS_CAPTION = "You'll hear when the people you switch on post a Bev. The likes and comments they get are never sent.";
@@ -61,7 +61,7 @@ function PostPeopleSkeleton({ count = 6 }: { count?: number }) {
  * Post notifications (`/settings/post-notifications`, T-31 Release 2; design system
  * ScreenNotificationSettings, its second phone): the people you follow, those already chosen
  * first, each with a Switch, and a search over them. Switching someone on also turns Posts on, by
- * the same rule as Posts' own switch (`afterPersonChosen`), so it ends a pause with only Posts on.
+ * the same rule as Posts' own switch (`applySettingToggle`), so it ends a pause with only Posts on.
  * Switching someone off changes nothing else. Unfollowing someone takes them off the list (the
  * server does it).
  */
@@ -81,19 +81,32 @@ export function PostNotificationsScreen() {
   const { refreshing, onRefresh } = usePullToRefresh(query.refetch);
 
   const { refetch: refetchSettings } = settings;
+  // On: the person, then Posts (if it is not already shown on), by Posts' own rule, so it ends a
+  // pause with only Posts on. Both take effect or neither does: if Posts cannot be turned on, the
+  // person is switched off again, so the screen never shows a choice the server will not act on.
   const onToggle = useCallback(
     (person: PostNotificationPerson, on: boolean) => {
       setError(null);
-      choose({ userId: person.id, on })
-        .then(async () => {
-          if (!on) return;
+      void (async () => {
+        try {
+          await choose({ userId: person.id, on });
+        } catch (e) {
+          setError(`Couldn't change post notifications for ${person.handle}. ${actionErrorMessage(e)}`);
+          return;
+        }
+        if (!on) return;
+        try {
           const current =
             qc.getQueryData<NotificationSettings>(keys.notifications.settings()) ?? (await refetchSettings({ throwOnError: true })).data;
-          if (!current) return;
-          const next = afterPersonChosen(current);
-          if (next !== current) await saveSettings(next);
-        })
-        .catch((e: unknown) => setError(`Couldn't change post notifications for ${person.handle}. ${actionErrorMessage(e)}`));
+          if (current && !shownAs(current, 'posts')) await saveSettings({ key: 'posts', on: true });
+        } catch (e) {
+          setError(`Couldn't turn on post notifications. ${actionErrorMessage(e)}`);
+          // choose's own rollback covers a failure of this one too (its cache patch is undone).
+          await choose({ userId: person.id, on: false }).catch(() =>
+            qc.invalidateQueries({ queryKey: keys.notifications.postPeopleAll }),
+          );
+        }
+      })();
     },
     [choose, qc, refetchSettings, saveSettings],
   );

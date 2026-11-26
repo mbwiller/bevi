@@ -1,11 +1,8 @@
-import type { NotificationSettings } from '@bevi/shared';
-import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { useChosenPeopleCount, useNotificationSettings, useUpdateNotificationSettings, type ChosenCount } from '@/api/hooks';
-import { keys } from '@/api/keys';
 import { Announce } from '@/components/Announce';
 import { Button } from '@/components/Button';
 import { ErrorState } from '@/components/ErrorState';
@@ -18,7 +15,7 @@ import { spacing, type, useTheme } from '@/theme';
 import { registerThisDevice } from './push/device';
 import { openSystemSettings, requestPushPermission } from './push/push';
 import { usePushPermission } from './push/usePushPermission';
-import { applySettingToggle, shownAs, type NotificationSettingKey } from './settingsRules';
+import { shownAs, type NotificationSettingKey } from './settingsRules';
 
 export const NOTIFICATION_SETTINGS_TITLE = 'Notifications';
 export const PAUSE_CAPTION = 'Switches every kind off for now';
@@ -46,7 +43,7 @@ const KIND_ROWS: { key: Exclude<NotificationSettingKey, 'paused'>; label: string
  * Settings > Notifications (`/settings/notifications`, T-31 Release 2; design system
  * ScreenNotificationSettings): what Bevi may send to this phone. Pause all, then one switch per
  * kind, then Choose people (Post notifications). Every switch goes through `applySettingToggle`, and
- * the whole object is saved. These change what is pushed only, never what the inbox lists.
+ * the whole object is saved, one save at a time in tap order (`useUpdateNotificationSettings`). These change what is pushed only, never what the inbox lists.
  *
  * Above them, what the phone itself allows: a way to turn notifications on while it has not been
  * asked, and a way to the phone's Settings once it said no. The switches work in every case: they
@@ -55,21 +52,15 @@ const KIND_ROWS: { key: Exclude<NotificationSettingKey, 'paused'>; label: string
 export function NotificationSettingsScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-  const qc = useQueryClient();
   const query = useNotificationSettings();
   const save = useUpdateNotificationSettings();
   const chosen = useChosenPeopleCount();
   const { permission, refresh } = usePushPermission();
   const account = useSession((s) => s.profile?.handle);
 
+  // The hook applies the tap with `applySettingToggle` and saves the whole object, in tap order.
   const { mutate } = save;
-  const toggle = useCallback(
-    (key: NotificationSettingKey, on: boolean) => {
-      const current = qc.getQueryData<NotificationSettings>(keys.notifications.settings());
-      if (current) mutate(applySettingToggle(current, key, on));
-    },
-    [qc, mutate],
-  );
+  const toggle = useCallback((key: NotificationSettingKey, on: boolean) => mutate({ key, on }), [mutate]);
 
   const turnOn = useCallback(async () => {
     const answer = await requestPushPermission();

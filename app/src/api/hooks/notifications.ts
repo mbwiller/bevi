@@ -1,5 +1,7 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import type { FeedItem, NotificationSettings, Page, PostNotificationPerson } from '@bevi/shared';
+
+import { applySettingToggle, type NotificationSettingKey } from '@/features/notifications/settingsRules';
 
 import { api } from '../client';
 import { keys } from '../keys';
@@ -82,29 +84,79 @@ export function useNotificationSettings() {
   return useQuery({ queryKey: keys.notifications.settings(), queryFn: () => api.notifications.getSettings() });
 }
 
-/** Every save of the push settings shares this key, so the last one to finish knows it is the last. */
+/** Every save of the push settings shares this key and this scope: they run one at a time, in tap order. */
 export const NOTIFICATION_SETTINGS_MUTATION = ['bevi', 'notificationSettings'] as const;
+const NOTIFICATION_SETTINGS_SCOPE = { id: 'notification-settings' };
+
+/** One tap on a switch of Settings > Notifications. */
+export interface NotificationSettingToggle {
+  key: NotificationSettingKey;
+  on: boolean;
+}
 
 /**
- * Saves all five settings at once (the server keeps exactly what it is sent). Optimistic: the
- * switches move at once and go back if the save fails. When the last save in a row has finished
- * the settings are read again, so quick taps never leave the screen out of step with the server.
+ * Per query client: the settings as the server last confirmed them, and the taps not yet answered,
+ * in order. What the screen shows is always `confirmed` with those taps applied.
+ */
+interface SettingsQueue {
+  confirmed: NotificationSettings | null;
+  pending: NotificationSettingToggle[];
+}
+const queues = new WeakMap<QueryClient, SettingsQueue>();
+function queueOf(qc: QueryClient): SettingsQueue {
+  let q = queues.get(qc);
+  if (!q) {
+    q = { confirmed: null, pending: [] };
+    queues.set(qc, q);
+  }
+  return q;
+}
+const applyAll = (base: NotificationSettings, taps: NotificationSettingToggle[]) =>
+  taps.reduce((s, t) => applySettingToggle(s, t.key, t.on), base);
+
+/**
+ * Saves one switch (the server keeps the whole object it is sent, so this sends all five).
+ *
+ * In order, one at a time: the saves share a mutation scope, so a later tap's request leaves only
+ * once the earlier one has been answered, and the server can never store an older state over a
+ * newer one. Each request is the switch applied to the settings the server last confirmed, so it
+ * carries every earlier tap that was saved and none that failed.
+ *
+ * Optimistic: the switch moves at tap time (`onMutate` runs at once, only the request waits its
+ * turn). The screen always shows the confirmed settings with the taps still waiting applied, so a
+ * failed save takes back that tap alone and leaves a later one standing. When the last save has
+ * finished the settings are read again.
  */
 export function useUpdateNotificationSettings() {
   const qc = useQueryClient();
+  const show = (q: SettingsQueue) => {
+    if (q.confirmed) qc.setQueryData<NotificationSettings>(keys.notifications.settings(), applyAll(q.confirmed, q.pending));
+  };
   return useMutation({
     mutationKey: NOTIFICATION_SETTINGS_MUTATION,
-    mutationFn: (next: NotificationSettings) => api.notifications.updateSettings(next),
-    onMutate: async (next) => {
-      const snap = await snapshot(qc, [keys.notifications.settings()]);
-      qc.setQueryData<NotificationSettings>(keys.notifications.settings(), next);
-      return { snap };
+    scope: NOTIFICATION_SETTINGS_SCOPE,
+    mutationFn: async (tap: NotificationSettingToggle) => {
+      const q = queueOf(qc);
+      const base = q.confirmed ?? (await api.notifications.getSettings());
+      return api.notifications.updateSettings(applySettingToggle(base, tap.key, tap.on));
     },
-    onError: (_e, _next, ctx) => rollback(qc, ctx?.snap),
-    onSettled: () => {
-      if (qc.isMutating({ mutationKey: NOTIFICATION_SETTINGS_MUTATION }) <= 1) {
-        void qc.invalidateQueries({ queryKey: keys.notifications.settings() });
-      }
+    onMutate: async (tap) => {
+      const q = queueOf(qc);
+      // A read on its way would land over the taps.
+      await qc.cancelQueries({ queryKey: keys.notifications.settings() });
+      if (q.pending.length === 0) q.confirmed = qc.getQueryData<NotificationSettings>(keys.notifications.settings()) ?? null;
+      q.pending.push(tap);
+      show(q);
+    },
+    onSuccess: (stored) => {
+      queueOf(qc).confirmed = stored;
+    },
+    onSettled: (_data, _error, tap) => {
+      const q = queueOf(qc);
+      const at = q.pending.indexOf(tap);
+      if (at >= 0) q.pending.splice(at, 1);
+      show(q);
+      if (q.pending.length === 0) void qc.invalidateQueries({ queryKey: keys.notifications.settings() });
     },
   });
 }

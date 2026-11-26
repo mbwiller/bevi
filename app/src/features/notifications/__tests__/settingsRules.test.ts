@@ -1,7 +1,6 @@
 import type { NotificationSettings } from '@bevi/shared';
 
 import {
-  afterPersonChosen,
   applySettingToggle,
   DEFAULT_SETTINGS,
   NOTIFICATION_KINDS,
@@ -87,23 +86,18 @@ describe('a kind switched on while paused', () => {
   });
 });
 
-describe('a person chosen in Post notifications', () => {
+describe('a person chosen in Post notifications (Posts switched on, when it does not show on)', () => {
   it('turns Posts on when it was off', () => {
-    expect(afterPersonChosen(S())).toEqual(S({ posts: true }));
+    expect(applySettingToggle(S(), 'posts', true)).toEqual(S({ posts: true }));
   });
 
   it('ends a pause with only Posts on', () => {
-    expect(afterPersonChosen(S({ paused: true, posts: true }))).toEqual({
+    expect(applySettingToggle(S({ paused: true, posts: true }), 'posts', true)).toEqual({
       paused: false,
       follows: false,
       likes: false,
       comments: false,
       posts: true,
     });
-  });
-
-  it('changes nothing when Posts already shows on', () => {
-    const on = S({ posts: true, likes: false });
-    expect(afterPersonChosen(on)).toBe(on);
   });
 });
