@@ -8,7 +8,7 @@ import { api } from '@/api/client';
 import { controls } from '@/testing/fakeApi';
 import { useSession } from '@/state/session';
 
-import { ALCOHOLIC_CATEGORY_IDS } from '../selection';
+import { ALCOHOLIC_CATEGORY_IDS, starterSeed } from '../selection';
 
 const APP_DIR = path.resolve(__dirname, '../../../../app');
 
@@ -188,6 +188,45 @@ it('running out before 3 offers more starters', async () => {
   await screen.findByText("That's all of these");
   await fireEvent.press(screen.getByRole('button', { name: 'Show me more' }));
   expect(await screen.findByText(/^11 of \d+$/)).toBeTruthy();
+});
+
+it("'Show me more' passes the go-tos too: the next round leads with the first pick's category", async () => {
+  controls.signInAs('tester');
+  controls.emptyUser();
+  const me = await api.profile.getMe();
+  const candidates = await api.bevs.getStarterCandidates();
+  const categoryOf = (id: string) => candidates.find((c) => c.id === id)!.categoryId;
+  const nameOf = (id: string) => candidates.find((c) => c.id === id)!.name;
+  /** Round `n` as the screen picks it: selectStarterSet over the starters not shown yet. */
+  const round = (picks: CategoryId[], n: number, seen: ReadonlySet<string>) =>
+    selectStarterSet(
+      candidates.filter((c) => !seen.has(c.id)),
+      { seed: starterSeed(me.id, n), excludeCategoryIds: [...ALCOHOLIC_CATEGORY_IDS], picks },
+    );
+  // A first pick that still has starters left for round 2 and leads it only because it is passed:
+  // without the picks, round 2 would start with a different Bev.
+  let pick: CategoryId | undefined;
+  let first: string[] = [];
+  let next: string[] = [];
+  for (const p of ['tea', 'boba', 'coffee', 'juice', 'water', 'energy', 'sports', 'smoothie'] as CategoryId[]) {
+    const r0 = round([p], 0, new Set());
+    const r1 = round([p], 1, new Set(r0));
+    if (r1.length > 0 && categoryOf(r1[0]!) === p && r1[0] !== round([], 1, new Set(r0))[0]) {
+      [pick, first, next] = [p, r0, r1];
+      break;
+    }
+  }
+  expect(pick).toBeDefined();
+  await api.profile.setCategoryPicks([pick!]);
+  useSession.setState({ status: 'onboarding', profile: undefined, checked: true, devForced: true });
+  await renderRouter(APP_DIR, { initialUrl: '/onboarding/starter' });
+
+  await start();
+  for (const id of first) await skip(nameOf(id));
+  await screen.findByText("That's all of these");
+  await fireEvent.press(screen.getByRole('button', { name: 'Show me more' }));
+  expect(await screen.findByRole('header', { name: nameOf(next[0]!) })).toBeTruthy();
+  expect(screen.getByText(`11 of ${first.length + next.length}`)).toBeTruthy();
 });
 
 it('a failed candidates call shows Retry', async () => {

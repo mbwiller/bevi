@@ -1,7 +1,7 @@
 import { MAX_CATEGORY_PICKS, type BevSummary, type CategoryId } from '@bevi/shared';
 
 import { helperLine } from '../copy';
-import { artBevsByCategory, pickableCategories, prefillPicks, rankOf, samePicks, togglePick } from '../selection';
+import { artBevsByCategory, pickableCategories, prefillPicks, rankOf, togglePick } from '../selection';
 
 function bev(id: string, categoryId: CategoryId, ratingCount: number, name = id): BevSummary {
   return {
@@ -65,13 +65,6 @@ describe('prefillPicks', () => {
     expect(prefillPicks(['tea', 'tea', 'soda', 'juice', 'coffee'], offered)).toEqual(['tea', 'soda', 'juice']);
     expect(prefillPicks([], offered)).toEqual([]);
   });
-});
-
-it('samePicks compares order as well as members', () => {
-  expect(samePicks(['tea', 'coffee'], ['tea', 'coffee'])).toBe(true);
-  expect(samePicks(['tea', 'coffee'], ['coffee', 'tea'])).toBe(false);
-  expect(samePicks(['tea'], ['tea', 'coffee'])).toBe(false);
-  expect(samePicks([], [])).toBe(true);
 });
 
 it('offers every visible category but Other: 14 for 21+, 11 otherwise', () => {

@@ -41,11 +41,6 @@ export function prefillPicks(saved: readonly CategoryId[], offered: readonly Cat
   return out;
 }
 
-/** The same picks in the same order (the order is the ranking). */
-export function samePicks(a: readonly CategoryId[], b: readonly CategoryId[]): boolean {
-  return a.length === b.length && a.every((id, i) => id === b[i]);
-}
-
 const byCodeUnit = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
 /** Most-rated first, then name, then id: negative when `a` comes before `b`. */

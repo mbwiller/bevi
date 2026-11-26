@@ -9,13 +9,25 @@ import { PickTile, pickTileLabel } from '../PickTile';
 
 jest.mock('@/lib/haptics', () => ({ selectionHaptic: jest.fn(), lightHaptic: jest.fn() }));
 
+// The badge's pop is usePop's withSequence; Reduce Motion comes from useReducedMotion (as usePop.test).
+let mockReduced = false;
+jest.mock('react-native-reanimated', () => {
+  const mock = jest.requireActual('react-native-reanimated/mock');
+  return { ...mock, useReducedMotion: () => mockReduced, withSequence: jest.fn((...steps: unknown[]) => mock.withSequence(...steps)) };
+});
+const { withSequence } = jest.requireMock('react-native-reanimated') as { withSequence: jest.Mock };
+
 const light = colors.light;
 const flat = (el: { props: Record<string, unknown> }) => StyleSheet.flatten(el.props.style as StyleProp<ViewStyle & TextStyle>);
 const tile = (name: string) => screen.getByRole('button', { name });
 const hidden = { includeHiddenElements: true };
 const ART = bevArtForCategory('coffee');
 
-beforeEach(() => jest.mocked(selectionHaptic).mockClear());
+beforeEach(() => {
+  jest.mocked(selectionHaptic).mockClear();
+  withSequence.mockClear();
+  mockReduced = false;
+});
 
 it('names a tile by its label, its place once picked, and why it cannot be picked when dimmed', () => {
   expect(pickTileLabel('Coffee')).toBe('Coffee');
@@ -65,6 +77,23 @@ it('a press calls onPress and ticks the selection haptic, picked or not', async 
   await fireEvent.press(tile('Boba, your number 1 pick'));
   expect(onPress).toHaveBeenCalledTimes(2);
   expect(selectionHaptic).toHaveBeenCalledTimes(2);
+});
+
+it('pops the badge when a tap picks the tile, never when it drops it, and not at all under Reduce Motion', async () => {
+  const { rerender } = await render(<PickTile label="Tea" art={bevArtForCategory('tea')} onPress={() => {}} />);
+  await fireEvent.press(tile('Tea'));
+  expect(withSequence).toHaveBeenCalledTimes(1);
+  await rerender(<PickTile label="Tea" art={bevArtForCategory('tea')} rank={1} onPress={() => {}} />);
+  await fireEvent.press(tile('Tea, your number 1 pick'));
+  expect(withSequence).toHaveBeenCalledTimes(1);
+
+  mockReduced = true;
+  withSequence.mockClear();
+  const onPress = jest.fn();
+  await render(<PickTile label="Juice" art={bevArtForCategory('juice')} onPress={onPress} />);
+  await fireEvent.press(tile('Juice'));
+  expect(onPress).toHaveBeenCalledTimes(1);
+  expect(withSequence).not.toHaveBeenCalled();
 });
 
 it('draws the art through BevImage (a cutout URL, else the category art) and keeps it out of the name', async () => {

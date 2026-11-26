@@ -1,6 +1,6 @@
 import { MAX_CATEGORY_PICKS, type CategoryId, type Profile } from '@bevi/shared';
 import { useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -20,7 +20,7 @@ import { useBack } from '@/lib/useBack';
 import { spacing, type, useTheme } from '@/theme';
 
 import { PICKS_COPY, helperLine } from './copy';
-import { artBevsByCategory, pickableCategories, prefillPicks, rankOf, samePicks, togglePick } from './selection';
+import { artBevsByCategory, pickableCategories, prefillPicks, rankOf, togglePick } from './selection';
 
 /** The grid's columns: three tiles read well on a 375pt phone and fill the capped column on the web. */
 const COLUMNS = 3;
@@ -32,9 +32,10 @@ const SKELETON_ROWS = 3;
 
 /**
  * §6.2a Onboarding, between the profile and the starter ranking: the user taps up to three drink
- * categories, favorite first, and the tap order is the ranking. Continue saves them
- * (`profile.setCategoryPicks`, skipped when nothing changed) and opens the starter ranking, which
- * leads with Bevs from these categories. A returning user sees their saved picks again.
+ * categories, favorite first, and the tap order is the ranking. Continue always saves them
+ * (`profile.setCategoryPicks`, once per press however fast the presses come) and opens the starter
+ * ranking only when the save succeeds; the saved list it returns becomes the cache that screen reads,
+ * so it leads with exactly what the server has. A returning user sees their saved picks again.
  */
 export function PicksScreen() {
   const { colors } = useTheme();
@@ -52,7 +53,9 @@ export function PicksScreen() {
     <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={[styles.fill, { backgroundColor: colors.surface }]}>
       <Header title={PICKS_COPY.header} onBack={back} />
       {me.data && savedQ.data ? (
-        <PicksForm me={me.data} saved={savedQ.data} />
+        // Keyed on what decides the tiles: if a refetched profile flips `canSeeAlcohol`, the form
+        // starts again and the pre-fill filter drops any pick that is no longer offered.
+        <PicksForm key={String(me.data.canSeeAlcohol)} me={me.data} saved={savedQ.data} />
       ) : blocking ? (
         <ErrorState error={blocking} onRetry={retry} style={styles.fill} />
       ) : (
@@ -95,16 +98,23 @@ function PicksForm({ me, saved }: { me: Profile; saved: readonly CategoryId[] })
 
   const tap = useCallback((id: CategoryId) => setPicks((p) => togglePick(p, id)), []);
 
+  // `saving` is state, so two presses inside one frame both read it as false; this ref is set
+  // before the first await, so the second press returns at once.
+  const inFlight = useRef(false);
   const submit = async () => {
-    if (picks.length === 0 || saving) return;
+    if (picks.length === 0 || inFlight.current) return;
+    inFlight.current = true;
     setSaving(true);
     setError(null);
     try {
-      if (!samePicks(picks, saved)) await setCategoryPicks.mutateAsync([...picks]);
+      // Always saved, even when the picks look unchanged: the cached list may be stale, and the
+      // starter screen builds its first round from what this returns.
+      await setCategoryPicks.mutateAsync([...picks]);
       router.push('/onboarding/starter');
     } catch (e) {
       setError(formErrorMessage(e));
     } finally {
+      inFlight.current = false;
       setSaving(false);
     }
   };
