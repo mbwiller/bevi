@@ -685,6 +685,35 @@ export interface Notification {
   comment: NotificationComment | null;
 }
 
+/**
+ * The caller's push switches (T-31 Release 2, contract 3.8.0), from
+ * `notifications.getSettings`. A push is sent only when `paused` is false AND
+ * that kind's switch is on. Pausing never changes the four switches, so
+ * un-pausing restores exactly what was on. Defaults: not paused; `follows`,
+ * `likes` and `comments` on; `posts` off.
+ */
+export interface NotificationSettings {
+  /** Every push off, the four switches kept as they are. */
+  paused: boolean;
+  /** Someone followed the caller. */
+  follows: boolean;
+  /** Someone liked one of the caller's posts. */
+  likes: boolean;
+  /** Someone commented on one of the caller's posts. */
+  comments: boolean;
+  /** Someone the caller chose (`notifications.setPostNotification`) posted a Bev. */
+  posts: boolean;
+}
+
+/**
+ * Someone the caller follows, from `notifications.listPostNotificationPeople`:
+ * `subscribed` is whether a push is on for their new posts. `isFollowing` is
+ * always true, as every row is someone the caller follows.
+ */
+export type PostNotificationPerson = ProfileRow & {
+  subscribed: boolean;
+};
+
 // ---------------------------------------------------------------------------
 // Venues (S-10 + A-08)
 // ---------------------------------------------------------------------------

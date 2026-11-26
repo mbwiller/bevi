@@ -296,3 +296,188 @@ describe('notifications.markRead', () => {
     expect(e.code).toBe('unauthorized');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Release 2 (contract 3.8.0, 20261127000100): settings, post subscriptions, device tokens
+// ---------------------------------------------------------------------------
+
+const PERSON_ID = '00000000-0000-4000-8000-000000000a01';
+const settingsRow = { paused: true, follows: false, likes: true, comments: true, posts: true };
+
+describe('notifications.getSettings', () => {
+  it('calls get_notification_settings and maps its one row', async () => {
+    const log: RpcCall[] = [];
+    const api = createNotificationsApi(fakeClient(log, () => ({ data: [settingsRow], error: null })));
+    expect(await api.getSettings()).toEqual({ paused: true, follows: false, likes: true, comments: true, posts: true });
+    expect(log).toEqual([{ fn: 'get_notification_settings', args: undefined }]);
+  });
+
+  it('a backend without settings answers the defaults', async () => {
+    const api = createNotificationsApi(fakeClient([], () => ({ data: null, error: NO_SUCH_FUNCTION })));
+    expect(await api.getSettings()).toEqual({ paused: false, follows: true, likes: true, comments: true, posts: false });
+  });
+
+  it('no row is an error, and so is a signed-out caller, before any RPC', async () => {
+    const api = createNotificationsApi(fakeClient([], () => ({ data: [], error: null })));
+    expect((await rejection(api.getSettings())).code).toBe('unknown');
+    const log: RpcCall[] = [];
+    expect((await rejection(createNotificationsApi(fakeClient(log, undefined, false)).getSettings())).code).toBe('unauthorized');
+    expect(log).toEqual([]);
+  });
+});
+
+describe('notifications.updateSettings', () => {
+  it('sends all five switches and answers them as stored', async () => {
+    const log: RpcCall[] = [];
+    const api = createNotificationsApi(fakeClient(log, () => ({ data: [settingsRow], error: null })));
+    const stored = await api.updateSettings({ paused: true, follows: false, likes: true, comments: true, posts: true });
+    expect(stored).toEqual(settingsRow);
+    expect(log).toEqual([
+      {
+        fn: 'update_notification_settings',
+        args: { p_paused: true, p_follows: false, p_likes: true, p_comments: true, p_posts: true },
+      },
+    ]);
+  });
+
+  it('refuses a switch that is not a boolean, naming it, without a round trip', async () => {
+    const log: RpcCall[] = [];
+    const api = createNotificationsApi(fakeClient(log));
+    const e = await rejection(api.updateSettings({ ...settingsRow, likes: 'yes' as unknown as boolean }));
+    expect(e).toMatchObject({ code: 'validation', detail: { field: 'likes' } });
+    expect(log).toEqual([]);
+  });
+
+  it('THROWS on a backend without settings: a change it cannot keep is not reported as saved', async () => {
+    const api = createNotificationsApi(fakeClient([], () => ({ data: null, error: NO_SUCH_FUNCTION })));
+    expect((await rejection(api.updateSettings(settingsRow))).code).toBe('unknown');
+  });
+
+  it("maps the RPC's validation, with the field", async () => {
+    const api = createNotificationsApi(
+      fakeClient([], () => ({ data: null, error: { ...pgError('BEVI_VALIDATION', '22023'), details: 'posts' } })),
+    );
+    expect(await rejection(api.updateSettings(settingsRow))).toMatchObject({ code: 'validation', detail: { field: 'posts' } });
+  });
+});
+
+describe('notifications.listPostNotificationPeople', () => {
+  const personRow = {
+    user_id: PERSON_ID,
+    handle: 'ana',
+    display_name: 'Ana B',
+    avatar_path: null,
+    timezone: 'America/New_York',
+    onboarded: true,
+    created_at: '2026-01-01T00:00:00.000Z',
+    subscribed: true,
+  };
+
+  it('sends q, the limit and offset 0, and maps each person as followed, with subscribed', async () => {
+    const log: RpcCall[] = [];
+    const api = createNotificationsApi(fakeClient(log, () => ({ data: [personRow, { ...personRow, user_id: 'x', subscribed: false }], error: null })));
+    const page = await api.listPostNotificationPeople({ q: '  an ', limit: 5 });
+    expect(log).toEqual([{ fn: 'get_post_notification_people', args: { p_q: 'an', p_limit: 5, p_offset: 0 } }]);
+    expect(page.nextCursor).toBeNull();
+    expect(page.items[0]).toEqual({
+      id: PERSON_ID,
+      handle: 'ana',
+      displayName: 'Ana B',
+      avatarUrl: null,
+      timezone: 'America/New_York',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      birthdate: null,
+      canSeeAlcohol: false,
+      onboarded: true,
+      isFollowing: true,
+      subscribed: true,
+    });
+    expect(page.items[1]).toMatchObject({ isFollowing: true, subscribed: false });
+  });
+
+  it('a blank q is no filter, and a full page pages on by offset', async () => {
+    const log: RpcCall[] = [];
+    const api = createNotificationsApi(fakeClient(log, () => ({ data: [personRow, personRow], error: null })));
+    const page = await api.listPostNotificationPeople({ q: '   ', limit: 2 });
+    expect(decodeCursor(page.nextCursor)).toEqual({ offset: 2 });
+    await api.listPostNotificationPeople({ limit: 2, cursor: page.nextCursor! });
+    expect(log.map((c) => c.args)).toEqual([
+      { p_q: null, p_limit: 2, p_offset: 0 },
+      { p_q: null, p_limit: 2, p_offset: 2 },
+    ]);
+  });
+
+  it('a backend without post notifications answers an empty page; other errors are mapped', async () => {
+    const old = createNotificationsApi(fakeClient([], () => ({ data: null, error: NO_SUCH_FUNCTION })));
+    await expect(old.listPostNotificationPeople()).resolves.toEqual({ items: [], nextCursor: null });
+    const api = createNotificationsApi(fakeClient([], () => ({ data: null, error: { ...pgError('BEVI_VALIDATION', '22023'), details: 'q' } })));
+    expect(await rejection(api.listPostNotificationPeople({ q: 'x' }))).toMatchObject({ code: 'validation', detail: { field: 'q' } });
+  });
+});
+
+describe('notifications.setPostNotification', () => {
+  it('calls set_post_notification with the id and the switch', async () => {
+    const log: RpcCall[] = [];
+    const api = createNotificationsApi(fakeClient(log));
+    await api.setPostNotification(PERSON_ID, true);
+    await api.setPostNotification(PERSON_ID, false);
+    expect(log).toEqual([
+      { fn: 'set_post_notification', args: { p_user_id: PERSON_ID, p_on: true } },
+      { fn: 'set_post_notification', args: { p_user_id: PERSON_ID, p_on: false } },
+    ]);
+  });
+
+  it('an id that cannot be anybody is not following when turning on and a no-op when turning off, without a round trip', async () => {
+    const log: RpcCall[] = [];
+    const api = createNotificationsApi(fakeClient(log));
+    expect(await rejection(api.setPostNotification('nobody', true))).toMatchObject({
+      code: 'validation',
+      detail: { field: 'not following' },
+    });
+    await expect(api.setPostNotification('nobody', false)).resolves.toBeUndefined();
+    expect(log).toEqual([]);
+  });
+
+  it("maps 'not following' to validation with its detail, and THROWS on a backend without it", async () => {
+    const notFollowing = createNotificationsApi(
+      fakeClient([], () => ({ data: null, error: { ...pgError('BEVI_VALIDATION', '22023'), details: 'not following' } })),
+    );
+    expect(await rejection(notFollowing.setPostNotification(PERSON_ID, true))).toMatchObject({
+      code: 'validation',
+      detail: { field: 'not following' },
+    });
+    const old = createNotificationsApi(fakeClient([], () => ({ data: null, error: NO_SUCH_FUNCTION })));
+    expect((await rejection(old.setPostNotification(PERSON_ID, true))).code).toBe('unknown');
+  });
+});
+
+describe('notifications.registerPushToken / unregisterPushToken', () => {
+  const TOKEN = 'ExponentPushToken[abc123]';
+
+  it('call the two RPCs with the token', async () => {
+    const log: RpcCall[] = [];
+    const api = createNotificationsApi(fakeClient(log));
+    await api.registerPushToken(TOKEN);
+    await api.unregisterPushToken(TOKEN);
+    expect(log).toEqual([
+      { fn: 'register_push_token', args: { p_token: TOKEN } },
+      { fn: 'unregister_push_token', args: { p_token: TOKEN } },
+    ]);
+  });
+
+  it('resolve silently on a backend without push, and map any other error', async () => {
+    const old = createNotificationsApi(fakeClient([], () => ({ data: null, error: NO_SUCH_FUNCTION })));
+    await expect(old.registerPushToken(TOKEN)).resolves.toBeUndefined();
+    await expect(old.unregisterPushToken(TOKEN)).resolves.toBeUndefined();
+    const api = createNotificationsApi(fakeClient([], () => ({ data: null, error: { ...pgError('BEVI_VALIDATION', '22023'), details: 'token' } })));
+    expect(await rejection(api.registerPushToken('nope'))).toMatchObject({ code: 'validation', detail: { field: 'token' } });
+  });
+
+  it('need a session', async () => {
+    const log: RpcCall[] = [];
+    const api = createNotificationsApi(fakeClient(log, undefined, false));
+    expect((await rejection(api.registerPushToken(TOKEN))).code).toBe('unauthorized');
+    expect((await rejection(api.unregisterPushToken(TOKEN))).code).toBe('unauthorized');
+    expect(log).toEqual([]);
+  });
+});

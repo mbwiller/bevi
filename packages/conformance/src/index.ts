@@ -1806,6 +1806,123 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
     });
   });
 
+  describe('notification settings and post notifications (T-31 Release 2)', () => {
+    const NO_SUCH_USER = '00000000-0000-4000-8000-00000000dead';
+
+    it('settings: the defaults with nothing saved, then exactly what was saved; pausing keeps the switches', async () => {
+      await newUser();
+      expect(await api.notifications.getSettings()).toEqual({ paused: false, follows: true, likes: true, comments: true, posts: false });
+      const saved = { paused: true, follows: false, likes: true, comments: false, posts: true };
+      expect(await api.notifications.updateSettings(saved)).toEqual(saved);
+      expect(await api.notifications.getSettings()).toEqual(saved);
+      const unpaused = { ...saved, paused: false };
+      expect(await api.notifications.updateSettings(unpaused)).toEqual(unpaused);
+      expect(await api.notifications.getSettings()).toEqual(unpaused);
+    });
+
+    it('settings: a switch that is not a boolean is validation, naming it', async () => {
+      await newUser();
+      const e = await expectCode(
+        api.notifications.updateSettings({ paused: false, follows: true, likes: null as unknown as boolean, comments: true, posts: false }),
+        'validation',
+      );
+      expect(e.detail).toMatchObject({ field: 'likes' });
+      expect(await api.notifications.getSettings()).toEqual({ paused: false, follows: true, likes: true, comments: true, posts: false });
+    });
+
+    it('post notifications: only for someone you follow (an unknown or blocked id reads the same); idempotent both ways', async () => {
+      const a = await newUser();
+      const blocked = await newUser();
+      const b = await newUser();
+      await api.follows.follow(blocked.userId);
+      await api.blocks.block(blocked.userId);
+      for (const id of [a.userId, b.userId, NO_SUCH_USER, blocked.userId]) {
+        const e = await expectCode(api.notifications.setPostNotification(id, true), 'validation');
+        expect(e.detail).toMatchObject({ field: 'not following' });
+      }
+      await api.notifications.setPostNotification(NO_SUCH_USER, false);
+      await api.follows.follow(a.userId);
+      await api.notifications.setPostNotification(a.userId, true);
+      await api.notifications.setPostNotification(a.userId, true);
+      expect((await api.notifications.listPostNotificationPeople()).items.map((p) => [p.id, p.subscribed])).toEqual([[a.userId, true]]);
+      await api.notifications.setPostNotification(a.userId, false);
+      await api.notifications.setPostNotification(a.userId, false);
+      expect((await api.notifications.listPostNotificationPeople()).items.map((p) => [p.id, p.subscribed])).toEqual([[a.userId, false]]);
+    });
+
+    it('the people list: the people you follow, chosen first, each followed; q matches the handle', async () => {
+      const a = await newUser();
+      const c = await newUser();
+      const stranger = await newUser();
+      await newUser();
+      await api.follows.follow(a.userId);
+      await api.follows.follow(c.userId);
+      await api.notifications.setPostNotification(c.userId, true);
+
+      const { items } = await api.notifications.listPostNotificationPeople();
+      expect(items.map((p) => p.id)).toEqual([c.userId, a.userId]);
+      expect(items[0]).toMatchObject({ id: c.userId, handle: c.handle, subscribed: true, isFollowing: true });
+      expect(items[1]).toMatchObject({ id: a.userId, subscribed: false, isFollowing: true });
+      expect(items.some((p) => p.id === stranger.userId)).toBe(false);
+
+      const byHandle = await api.notifications.listPostNotificationPeople({ q: c.handle.toUpperCase() });
+      expect(byHandle.items.map((p) => p.id)).toEqual([c.userId]);
+      const withAt = await api.notifications.listPostNotificationPeople({ q: `@${c.handle}` });
+      expect(withAt.items.map((p) => p.id)).toEqual([c.userId]);
+
+      const page1 = await api.notifications.listPostNotificationPeople({ limit: 1 });
+      expect(page1.items.map((p) => p.id)).toEqual([c.userId]);
+      const page2 = await api.notifications.listPostNotificationPeople({ limit: 1, cursor: page1.nextCursor! });
+      expect(page2.items.map((p) => p.id)).toEqual([a.userId]);
+    });
+
+    it('an unfollow, or a block, removes the choice; following again starts with it off', async () => {
+      const a = await newUser();
+      const c = await newUser();
+      await newUser();
+      await api.follows.follow(a.userId);
+      await api.follows.follow(c.userId);
+      await api.notifications.setPostNotification(a.userId, true);
+      await api.notifications.setPostNotification(c.userId, true);
+
+      await api.follows.unfollow(a.userId);
+      expect((await api.notifications.listPostNotificationPeople()).items.map((p) => p.id)).toEqual([c.userId]);
+      await api.follows.follow(a.userId);
+      const after = (await api.notifications.listPostNotificationPeople()).items;
+      expect(after.find((p) => p.id === a.userId)?.subscribed).toBe(false);
+
+      await api.blocks.block(c.userId);
+      await api.blocks.unblock(c.userId);
+      await api.follows.follow(c.userId);
+      expect((await api.notifications.listPostNotificationPeople()).items.find((p) => p.id === c.userId)?.subscribed).toBe(false);
+    });
+
+    it('device tokens: register and unregister are idempotent; a malformed token is validation', async () => {
+      await newUser();
+      const token = `ExponentPushToken[conformance-${makeUsername()}]`;
+      await api.notifications.registerPushToken(token);
+      await api.notifications.registerPushToken(token);
+      await api.notifications.unregisterPushToken(token);
+      await api.notifications.unregisterPushToken(token);
+      await api.notifications.unregisterPushToken('ExponentPushToken[never-registered]');
+      const e = await expectCode(api.notifications.registerPushToken('not-a-push-token'), 'validation');
+      expect(e.detail).toMatchObject({ field: 'token' });
+    });
+
+    it('every method needs a session', async () => {
+      await api.signOut();
+      await expectCode(api.notifications.getSettings(), 'unauthorized');
+      await expectCode(
+        api.notifications.updateSettings({ paused: false, follows: true, likes: true, comments: true, posts: false }),
+        'unauthorized',
+      );
+      await expectCode(api.notifications.listPostNotificationPeople(), 'unauthorized');
+      await expectCode(api.notifications.setPostNotification(NO_SUCH_USER, false), 'unauthorized');
+      await expectCode(api.notifications.registerPushToken('ExponentPushToken[x]'), 'unauthorized');
+      await expectCode(api.notifications.unregisterPushToken('ExponentPushToken[x]'), 'unauthorized');
+    });
+  });
+
   describe('bugs (the internal reporter)', () => {
     const input = {
       kind: 'bug',
