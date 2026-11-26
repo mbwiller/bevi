@@ -260,6 +260,10 @@ export declare function BevOfCard(props: BevOfCardProps): React.ReactElement;
 export interface ProfileListRowProps { icon: string; iconFilled?: boolean; label: string; count?: number; onClick?: () => void; divider?: boolean; className?: string }
 export declare function ProfileListRow(props: ProfileListRowProps): React.ReactElement;
 
+/** An on/off switch for one setting: `primary` when on, `borderStrong` when off, with a `surface` knob. `label` is its accessible name: pass the row's label ("Likes"). */
+export interface SwitchProps { checked?: boolean; onChange?: (checked: boolean) => void; label: string; disabled?: boolean; className?: string }
+export declare function Switch(props: SwitchProps): React.ReactElement;
+
 /** A 4pt track in `input` with a `primary` fill (a share you earned). `tone` recolours the fill with a score band (TasteBar). Decorative (`aria-hidden`): the line beside it says the number. */
 export interface ProgressBarProps { value: number; tone?: 'primary' | 'scoreHigh' | 'scoreMid' | 'scoreLow'; className?: string }
 export declare function ProgressBar(props: ProgressBarProps): React.ReactElement;
@@ -443,7 +447,7 @@ declare global {
     Bevi: {
       Wordmark: typeof Wordmark; Icon: typeof Icon; BevArt: typeof BevArt; BevImage: typeof BevImage; ScoreBubble: typeof ScoreBubble;
       PriceTier: typeof PriceTier; Avatar: typeof Avatar; AvatarStack: typeof AvatarStack; PhotoCropper: typeof PhotoCropper; Pill: typeof Pill; Button: typeof Button;
-      IconButton: typeof IconButton; LikeButton: typeof LikeButton; CommentButton: typeof CommentButton; FilterPill: typeof FilterPill; SortToggle: typeof SortToggle; SearchBar: typeof SearchBar;
+      IconButton: typeof IconButton; LikeButton: typeof LikeButton; CommentButton: typeof CommentButton; FilterPill: typeof FilterPill; SortToggle: typeof SortToggle; Switch: typeof Switch; SearchBar: typeof SearchBar;
       TextField: typeof TextField; PriceTierPicker: typeof PriceTierPicker; PickTile: typeof PickTile; Header: typeof Header; SectionHeader: typeof SectionHeader;
       ListScopeDropdown: typeof ListScopeDropdown; SegmentedTabs: typeof SegmentedTabs; TabBar: typeof TabBar; BevRow: typeof BevRow;
       FeedPost: typeof FeedPost; FeaturedCard: typeof FeaturedCard; BevOfCard: typeof BevOfCard; ProfileListRow: typeof ProfileListRow; StatCard: typeof StatCard;

@@ -1133,7 +1133,7 @@ Tags follow vision §10: model / effort. Each row is one Claude Code sub-agent d
 - Photo recognition of a drink from the camera ("take a picture and it's in the database"): v1 is search + manual create; the camera photo becomes the Bev's image, not a lookup key.
 - Business model bits (promoted placements, subscriptions), "hottest this month" before Phase 3, matrix factorisation.
 - Native builds, EAS, App Store/TestFlight, Android, Expo Go/dev client as a target, OAuth and any emailed flow (decided 2026-10-11: web app only).
-- "Skip this comparator" in the ranking flow, periodic drift re-checks, push notifications (the in-app inbox is no longer on this list: it shipped with T-31; push waits for a later release), blocking/private profiles, Bev editing by non-creators (moderation is an open question).
+- "Skip this comparator" in the ranking flow, periodic drift re-checks, blocking/private profiles, Bev editing by non-creators (moderation is an open question). (Push notifications are off this list: T-31 built the inbox and then push itself, its settings and Post notifications; push stays off on every build until the change that adds the push entitlement sets `extra.push`, `DEVELOPMENT-MATT-IOS.md` IM-15.)
 - From the Beli reference (§5): reservations/ordering/hours/distance/maps, invite-unlock card, Guides, "Add School", list import, shares on posts (likes and comments were added later: TASKS.md M-02, M-03), co-visit tagging ("with Rhea"), visit counts, magic-link or social auth.
 
 ---

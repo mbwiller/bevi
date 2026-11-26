@@ -17,6 +17,7 @@ import { loadReportHost } from '@/features/bug-report/loadHost';
 import { ReportTouchRoot } from '@/features/bug-report/ReportTouchRoot';
 import { AppGate } from '@/features/app-gate/AppGate';
 import { loadNutritionDemo } from '@/features/create-bev/loadNutritionDemo';
+import { PushHost } from '@/features/notifications/push/PushHost';
 import { ConfigError, Splash } from '@/features/auth/Splash';
 import { useSessionBootstrap } from '@/features/auth/useSessionBootstrap';
 import { clearLegacyStorage } from '@/lib/clearLegacyStorage';
@@ -144,6 +145,9 @@ function SessionGate() {
             <Stack.Screen name="settings/privacy" />
             <Stack.Screen name="settings/blocked" />
             <Stack.Screen name="settings/delete-account" />
+            {/* Reached only where push is available (T-31 Release 2); elsewhere they redirect to Settings. */}
+            <Stack.Screen name="settings/notifications" />
+            <Stack.Screen name="settings/post-notifications" />
             {/* Over the page it opens from, which stays drawn behind it; the viewer moves itself (features/bev/ImageViewer.tsx). */}
             <Stack.Screen
               name="image/[url]"
@@ -153,8 +157,10 @@ function SessionGate() {
           </Stack.Protected>
         </Stack>
       </ReportTouchRoot>
-      {/* A sibling of the Stack, so it coming and going never remounts a screen. */}
+      {/* Siblings of the Stack, so their coming and going never remounts a screen. */}
       <Reporter ready={status === 'ready'} />
+      {/* Push registration, the badge and opening a push: nothing at all unless signed in on a build that can receive push. */}
+      <PushHost ready={status === 'ready'} />
     </>
   );
 }

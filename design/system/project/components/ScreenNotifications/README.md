@@ -8,3 +8,4 @@ Notifications (pushed from the Feed header's bell): Header with Back and "Notifi
 - **Going away:** a row disappears when what it reports is no longer true (they unfollowed, took the like back or deleted the comment), when the post is gone, and when either of you has blocked the other.
 - **Empty:** EmptyState with the bell, "No notifications yet", and Find people, which opens People.
 - Loading shows Skeleton rows; a failure shows ErrorState with Retry. Pull down to refresh.
+- On a build that can receive notifications, a gear in the Header opens Settings, Notifications.

@@ -331,6 +331,15 @@
 .bv-userrow-context { display: flex; align-items: center; gap: var(--space-xs); min-width: 0; color: var(--textSecondary); }
 .bv-userrow-context-text { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+/* Switch */
+.bv-switch { position: relative; flex: none; width: 51px; height: 31px; border-radius: var(--radius-pill); background: var(--borderStrong); transition: background 150ms ease; }
+.bv-switch::after { content: ""; position: absolute; inset: -7px 0; }
+.bv-switch-on { background: var(--primary); }
+.bv-switch-knob { position: absolute; left: 2px; top: 2px; width: 27px; height: 27px; border-radius: var(--radius-pill); background: var(--surface); transition: transform 150ms ease; }
+.bv-switch-on .bv-switch-knob { transform: translateX(20px); }
+.bv-switch:disabled { opacity: .45; }
+@media (prefers-reduced-motion: reduce) { .bv-switch, .bv-switch-knob { transition: none; } }
+
 /* NotificationRow */
 .bv-notif { position: relative; display: flex; align-items: center; gap: var(--space-md); min-height: 64px; padding: var(--space-sm) var(--space-gutter); background: var(--surface); }
 .bv-notif-unread { background: var(--primaryTint); }

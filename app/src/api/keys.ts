@@ -153,6 +153,13 @@ export const keys = {
     all: [...root, 'notifications'] as const,
     list: () => [...root, 'notifications', 'list'] as const,
     unreadCount: () => [...root, 'notifications', 'unreadCount'] as const,
+    /** T-31 Release 2: the push settings (`notifications.getSettings`). */
+    settings: () => [...root, 'notifications', 'settings'] as const,
+    /** Post notifications' people (`notifications.listPostNotificationPeople`), per search. */
+    postPeopleAll: [...root, 'notifications', 'postPeople'] as const,
+    postPeople: (q: string) => [...root, 'notifications', 'postPeople', q] as const,
+    /** How many people are chosen, for Settings' "Choose people" row. */
+    chosenCount: () => [...root, 'notifications', 'chosenCount'] as const,
   },
 
   recommendations: (limit?: number) => [...root, 'recommendations', limit ?? null] as const,
