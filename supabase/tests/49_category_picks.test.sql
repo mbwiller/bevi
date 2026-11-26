@@ -1,4 +1,4 @@
--- DELIVERABLE-44 (20261126000200): go-to categories. `user_category_picks`
+-- DELIVERABLE-44 (20261128000200): go-to categories. `user_category_picks`
 -- and `set_category_picks()`.
 --
 -- THE PEOPLE (uuid band ...0000000047NN; nothing else in supabase/tests/ uses

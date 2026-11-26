@@ -100,7 +100,7 @@ it('the image viewer gets the modal scene and draws its own entrance', async () 
   expect(mockStackMounts.slice(before)).toEqual([{ variant: 'rise', enter: false }]);
 });
 
-it('switching tabs makes the new tab the active scene; People is the pushed kind', async () => {
+it('switching tabs makes the new tab the active scene; People and Notifications are the pushed kind', async () => {
   const pathname = await start('/feed');
   await fireEvent.press(await screen.findByLabelText('Lists'));
   expect(pathname()).toBe('/lists');
@@ -111,4 +111,10 @@ it('switching tabs makes the new tab the active scene; People is the pushed kind
   await fireEvent.press(await screen.findByLabelText('Find people'));
   await screen.findByRole('heading', { name: 'People' });
   expect(mockTabs['people/index']).toEqual({ variant: 'push', active: true });
+
+  // Notifications, opened from the Feed's bell, is the pushed kind too.
+  await fireEvent.press(screen.getByLabelText('Feed'));
+  await fireEvent.press(await screen.findByRole('button', { name: /^Notifications/ }));
+  await screen.findByRole('heading', { name: 'Notifications' });
+  expect(mockTabs['notifications/index']).toEqual({ variant: 'push', active: true });
 });

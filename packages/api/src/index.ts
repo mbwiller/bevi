@@ -17,6 +17,7 @@ import { withGeneratedIcons } from './generatedIcons';
 import { createLeaderboardApi } from './leaderboard';
 import { createMediaApi } from './media';
 import { createMetaApi } from './meta';
+import { createNotificationsApi } from './notifications';
 import { createProfileApi } from './profile';
 import { createRankingsApi } from './rankings';
 import { createRecsApi } from './recs';
@@ -84,6 +85,7 @@ export function createBeviApi(config: BeviApiConfig): BeviApi {
     bugs: createBugsApi(client),
     blocks: createBlocksApi(client),
     reports: createReportsApi(client),
+    notifications: createNotificationsApi(client),
     meta: createMetaApi(client),
   });
 }

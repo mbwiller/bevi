@@ -307,6 +307,28 @@ verify_jwt = false
 enabled = true
 verify_jwt = false
 
+# send-push (T-31): delivers push notifications from `push_outbox` through
+# Expo. Its only callers are the `poke_push_sender` trigger over pg_net and the
+# every-minute `drain_push_outbox()` cron (20261127000100).
+#
+# verify_jwt = false ON PURPOSE, for generate-bev-icon's reasons: verify_jwt
+# only proves a key the project issued, the publishable key ships in every copy
+# of the app, and neither real caller holds a user JWT. This function reads and
+# writes as the service role and sends to people's phones, so the gate is
+# PUSH_WEBHOOK_SECRET and only that, compared in constant time in sender.ts. It
+# does NOT fall back to the service-role key (pg_net would persist it in
+# `net.http_request_queue`). Unset, every request is refused. The same value
+# goes in the Vault secret `push_webhook_token`. Nothing is sent unless
+# PUSH_SENDING_ENABLED is exactly `true`.
+#
+# Secrets (PUSH_WEBHOOK_SECRET, PUSH_SENDING_ENABLED, EXPO_ACCESS_TOKEN;
+# SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are injected) come from
+# supabase/.env locally and `supabase secrets set` in the hosted project --
+# never from this file.
+[functions.send-push]
+enabled = true
+verify_jwt = false
+
 # bug-report: the internal bug reporter's server side (docs/ticketing-system.md).
 # verify_jwt stays on, but it is only the outer gate -- the real authorisation
 # is `claim_bug_report()` / `can_report_bugs()`, which the function calls as

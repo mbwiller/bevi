@@ -79,7 +79,7 @@ describe('profile.updateMe and the avatar', () => {
 });
 
 // DELIVERABLE-44: go-to categories over `user_category_picks` and
-// `set_category_picks` (20261126000200). A stand-in client records the select
+// `set_category_picks` (20261128000200). A stand-in client records the select
 // chain and the RPC, and answers from a script, so these pin the column names,
 // the filter, the argument shape and the error mapping without a live stack.
 describe('profile.getCategoryPicks and setCategoryPicks', () => {

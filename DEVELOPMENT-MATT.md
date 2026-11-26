@@ -226,7 +226,7 @@ Values below come from the Beli spec's Part 2 table and from measuring the scree
 | Colour, neutral | `text #111111`, `textSecondary #8A8A8E`, `border #E3E3E6`, `surface #FFFFFF`, `input #EDEDED` (grey search/composer pills), `avatarFill #EEF0F3`; dark set derived in week 1 |
 | Colour, brand | `primary` = **not** `#154F5C`. Used exactly where Beli uses its teal: filled pills, primary buttons, active tab underline, saved-bookmark fill, count badges, "Rank"/"Streak" values. Pick in week 1 from two candidates, record in `design/brand/colors.md`. `primaryTint` (active filter pill background, Beli `#E8EEF2`-style) derived from it |
 | Colour, score | `scoreHigh #2E9E5B`, `scoreMid #E8B423`, `scoreLow #D9534F`. Thresholds ≥ 7.0 / 4.0–6.9 / < 4.0, which are also our band edges (§8.1), so a bucket's colour and a score's colour always agree. The design system's darkened hexes supersede these |
-| Colour, misc | `badgeRed #E05A55` (notification count, not v1), `tasteCard #332E80` (Taste Profile share card, Phase 3) |
+| Colour, misc | `badgeRed #C43D39` (the unread count on the Feed's bell, T-31), `tasteCard #332E80` (Taste Profile share card, Phase 3) |
 | Elevation | None on cards; Beli uses 1pt `border` outlines, not shadows. Only the floating pill button ("View Map" in Beli) has a shadow; we have no floating button in v1 |
 | Motion | `fast 150ms`, `base 250ms`, `springy` (Reanimated spring damping 18 stiffness 180); honoured `reduceMotion` |
 
@@ -290,7 +290,7 @@ Process:
 3. Measurements are inputs, tokens are outputs: snap every measured value to the nearest token and note the snap.
 4. After each screen is built, screenshot it in the simulator next to the reference and fix spacing/colour before moving on (the spec's Part 4 instruction; keep it).
 
-What in the reference is a bad fit for Bevi and is dropped: everything location/venue driven (Reserve now, Order, Open now, distance, hours, "View Map", the party/date/time bar, "Recs Nearby", City filter, "Current Location"); the invite-unlock card (0/5 friends unlock features); Guides tab and guides lists; "Add School"; the "Import a list" card; notifications bell + calendar icons (no notifications in v1); share on posts (not in vision; see §18; likes and comments were added later, TASKS.md decisions 2–3, M-02, M-03); "with Rhea" co-visit tagging and "2 visits" repeat counts (a Bev is ranked once; re-rank replaces).
+What in the reference is a bad fit for Bevi and is dropped: everything location/venue driven (Reserve now, Order, Open now, distance, hours, "View Map", the party/date/time bar, "Recs Nearby", City filter, "Current Location"); the invite-unlock card (0/5 friends unlock features); Guides tab and guides lists; "Add School"; the "Import a list" card; the calendar icon (the notifications bell came back with the in-app inbox, T-31); share on posts (not in vision; see §18; likes and comments were added later, TASKS.md decisions 2–3, M-02, M-03); "with Rhea" co-visit tagging and "2 visits" repeat counts (a Bev is ranked once; re-rank replaces).
 
 What the reference adds that the vision lacks and we adopt: the Profile is rows + stat cards, not tiles (§6.13); Bev'd is one numbered list sorted by score, not bucket sections (§6.5); search finds People as well as Bevs, in one bar (§6.8); the "locked" score state (§4 `ScoreBubble locked`); the Activity feed on the Profile is the same `FeedPost` as the Feed tab; the Taste Profile tab and calendar grid are a natural fit for our per-category stats and streaks (§6.20, Phase 3); a yearly goal card ("You've tried 60 spots in 2026") is cheap gamification for Phase 3.
 
@@ -309,7 +309,7 @@ Common to every screen unless noted: loading = skeleton of the final layout; err
 
 ### 6.2 Onboarding: profile + age gate (`onboarding/profile.tsx`)
 
-- Contents: display name (prefilled from the username), birthdate (date picker) with the line "Set once. Used only to show 21+ categories. Can't be changed later without contacting us."; `Avatar 100` preview with initials.
+- Contents: display name (prefilled from the username), birthdate (date picker) with the line "Set once. Used only to show 21+ categories. Can't be changed later without contacting us."; `Avatar 100` preview with initials, in an `AvatarPicker`: a picked photo opens the `PhotoCropper` ("Move and scale", `features/profile/AvatarCropStep.tsx`) to frame it under the circle, and only that square, resized to 512px, uploads.
 - Data: `profile.updateMe({ displayName, timezone })`, `profile.setBirthDate(date)` (one call, one time; the server rejects a second call, only an admin can change it, Arjun's rule).
 - States: birthdate missing blocks Continue; under-21 is allowed and just sets `profile.canSeeAlcohol = false`.
 
@@ -322,7 +322,7 @@ Common to every screen unless noted: loading = skeleton of the final layout; err
 
 ### 6.4 Feed tab (ref 01, 12)
 
-- Contents, top to bottom: header (wordmark left, 28pt; right: a "find people" icon that opens 6.8 with "Suggested for you" first; no bell/calendar); `SearchBar` ("Search a Bev or a person") that focuses the Search tab's bar; **Featured Bevs** under a `sectionCaps` header "FEATURED BEVS" + "See all": `FeaturedCard` carousel ("You've had 1 of 10" subtitle works for featured *lists*; for a single featured Bev the subtitle is its category + `$`); then "YOUR FEED" `sectionCaps` and `FeedPost`s of followed users' rankings and saves, newest first.
+- Contents, top to bottom: header (wordmark left, 28pt; right: the bell, with the unread count, which opens Notifications (T-31), then a "find people" icon that opens 6.8 with "Suggested for you" first; no calendar); `SearchBar` ("Search a Bev or a person") that focuses the Search tab's bar; **Featured Bevs** under a `sectionCaps` header "FEATURED BEVS" + "See all": `FeaturedCard` carousel ("You've had 1 of 10" subtitle works for featured *lists*; for a single featured Bev the subtitle is its category + `$`); then "YOUR FEED" `sectionCaps` and `FeedPost`s of followed users' rankings and saves, newest first.
 - Data: `feed.getFeatured()`, `feed.getFeed({ cursor, limit: 20 })`, `wantToTry.add/remove`.
 - States: following nobody → `EmptyState` under YOUR FEED: "Follow friends to see their Bevs" + "Find people" `Pill` (Featured stays visible, as in ref 01); no activity yet; paginating footer.
 - Interactions: tap post body → Bev detail; tap avatar/name → user profile; bookmark → Want to Try (optimistic, fills `primary`); plus-circle → ranking flow.
@@ -474,7 +474,7 @@ No screen of its own: people are searched in the Search tab's one bar and shown 
 
 ### 6.19 Small screens and sheets
 
-Edit profile (name, handle, avatar initials preview); Re-rank sheet (choose: change bucket → full placement, or keep bucket → placement within bucket; both end in `rerankBev`); Remove-ranking confirm; Category picker sheet; Filter sheet (bucket, price, category); Report Bev sheet (the Duplicate reason asks which Bev and sends `duplicateOfId`, M-20); Full-screen image viewer (a transparent modal over the page: it grows out of the tapped picture, and a swipe down or Close sends it back; `features/bev/ImageViewer.tsx`); Not-found screen; Force-update/maintenance screen driven by `meta.getAppConfig()` (minimum version, maintenance flag).
+Edit profile (name, handle, avatar initials preview; a new photo is framed in the `PhotoCropper`, "Move and scale", over the sheet before its square uploads); Re-rank sheet (choose: change bucket → full placement, or keep bucket → placement within bucket; both end in `rerankBev`); Remove-ranking confirm; Category picker sheet; Filter sheet (bucket, price, category); Report Bev sheet (the Duplicate reason asks which Bev and sends `duplicateOfId`, M-20); Full-screen image viewer (a transparent modal over the page: it grows out of the tapped picture, and a swipe down or Close sends it back; `features/bev/ImageViewer.tsx`; a profile photo, tapped in either profile's hero, opens as a large circle via `?shape=circle`, and initials are not tappable); Not-found screen; Force-update/maintenance screen driven by `meta.getAppConfig()` (minimum version, maintenance flag).
 
 ### 6.20 Taste Profile tab and goal card (ref 10, 02) — Phase 3
 
@@ -971,7 +971,7 @@ This is your input to seam 2. Field names are proposals; Arjun owns the schema a
 | `profile.getMe()` | → `Profile` | root gate, 6.13 |
 | `profile.updateMe(patch)` | `{ displayName?, handle?, timezone?, onboarded? }` → `Profile` | 6.2, 6.3, 6.18 |
 | `profile.setBirthDate(date)` | set once; a second call is `validation`; admin-only change afterwards | 6.2 |
-| `profile.getCategoryPicks()` / `setCategoryPicks(ids)` | → `CategoryId[]`, favourite first (`[]` until set); set replaces them: 0–`MAX_CATEGORY_PICKS` top-level ids, no repeats, `[]` clears; `validation` (field `categoryIds`), `age_restricted` for an alcoholic one under 21. Private to the caller. Hooks `useCategoryPicks` / `useSetCategoryPicks` (DELIVERABLE-44, contract 3.7.0) | onboarding |
+| `profile.getCategoryPicks()` / `setCategoryPicks(ids)` | → `CategoryId[]`, favourite first (`[]` until set); set replaces them: 0–`MAX_CATEGORY_PICKS` top-level ids, no repeats, `[]` clears; `validation` (field `categoryIds`), `age_restricted` for an alcoholic one under 21. Private to the caller. Hooks `useCategoryPicks` / `useSetCategoryPicks` (DELIVERABLE-44, contract 3.9.0) | onboarding |
 | `profile.checkHandle(handle)` | → `{ available }`; callable signed out (sign-up form) | 6.1, 6.19 |
 | `profile.getUser(id)` / `searchUsers({ q, limit })` | → `Profile` / `Profile[]` | 6.14, 6.8 Search tab (People group) |
 | `stats.getMine()` / `stats.getUser(id)` | → `ProfileStats` | 6.13, 6.14 |
@@ -1119,7 +1119,7 @@ Tags follow vision §10: model / effort. Each row is one Claude Code sub-agent d
 - Photo recognition of a drink from the camera ("take a picture and it's in the database"): v1 is search + manual create; the camera photo becomes the Bev's image, not a lookup key.
 - Business model bits (promoted placements, subscriptions), "hottest this month" before Phase 3, matrix factorisation.
 - Native builds, EAS, App Store/TestFlight, Android, Expo Go/dev client as a target, OAuth and any emailed flow (decided 2026-10-11: web app only).
-- "Skip this comparator" in the ranking flow, periodic drift re-checks, push notifications, blocking/private profiles, Bev editing by non-creators (moderation is an open question).
+- "Skip this comparator" in the ranking flow, periodic drift re-checks, push notifications (the in-app inbox is no longer on this list: it shipped with T-31; push waits for a later release), blocking/private profiles, Bev editing by non-creators (moderation is an open question).
 - From the Beli reference (§5): reservations/ordering/hours/distance/maps, invite-unlock card, Guides, "Add School", list import, shares on posts (likes and comments were added later: TASKS.md M-02, M-03), co-visit tagging ("with Rhea"), visit counts, magic-link or social auth.
 
 ---

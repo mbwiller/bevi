@@ -93,6 +93,11 @@ export const keys = {
   feed: () => [...root, 'feed'] as const,
   /** `feed.listUser` for one person; nested under `feed()` so every FeedItem cache operation on that prefix covers it. */
   feedUser: (userId: string) => [...root, 'feed', 'user', userId] as const,
+  /**
+   * `feed.getPost`: the one post a notification opens (T-31). Under `feed()` too, and cached as a
+   * one-item `Page` (`usePost`), so every FeedItem patch (like, comment, Want to Try, block) reaches it.
+   */
+  post: (id: string) => [...root, 'feed', 'post', id] as const,
   /** Every post's thread: a profile change (name, photo) invalidates them all, since each Comment carries its author. */
   commentsAll: [...root, 'comments'] as const,
   /** A post's thread (`comments.list`, newest-first pages). */
@@ -141,6 +146,13 @@ export const keys = {
     bevdMap: (scope: BevdScope) => [...root, 'venues', 'bevd', 'map', scope] as const,
     /** `venues.bevdAt`: what was had at one venue. */
     bevdAt: (venueId: string, scope: BevdScope) => [...root, 'venues', 'bevd', 'at', venueId, scope] as const,
+  },
+
+  /** The notifications inbox (T-31): `notifications.list` and the bell's `notifications.unreadCount`. */
+  notifications: {
+    all: [...root, 'notifications'] as const,
+    list: () => [...root, 'notifications', 'list'] as const,
+    unreadCount: () => [...root, 'notifications', 'unreadCount'] as const,
   },
 
   recommendations: (limit?: number) => [...root, 'recommendations', limit ?? null] as const,

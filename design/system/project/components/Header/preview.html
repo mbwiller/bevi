@@ -42,7 +42,7 @@
   var FRIENDS = [{ name: 'Jack Torres', handle: 'jackt' }, { name: 'Priya Nair', handle: 'priya' }, { name: 'Sam Okafor', handle: 'samo' }, { name: 'Lena Park', handle: 'lenap' }, ARJUN, { name: 'Diego Ruiz', handle: 'dr' }];
 
   ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'pv-narrow' },
-  h('div', { className: 'hd' }, h(B.Header, { wordmark: true, actions: [{ icon: 'user-plus', label: 'Find people' }] })),
+  h('div', { className: 'hd' }, h(B.Header, { wordmark: true, actions: [{ icon: 'bell', label: 'Notifications, 3 unread', badge: 3 }, { icon: 'user-plus', label: 'Find people' }] })),
   h('div', { className: 'hd' }, h(B.Header, { title: 'Matt Willer', actions: [{ icon: 'menu', label: 'Settings' }] })),
   h('div', { className: 'hd' }, h(B.Header, { centered: true, title: 'Lists' })),
   h('div', { className: 'hd' }, h(B.Header, { title: 'Add a Bev' })),

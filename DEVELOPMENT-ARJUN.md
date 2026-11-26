@@ -354,7 +354,7 @@ create table public.want_to_try (
 );
 ```
 
-#### `user_category_picks` (DELIVERABLE-44, 20261126000200)
+#### `user_category_picks` (DELIVERABLE-44, 20261128000200)
 
 ```sql
 create table public.user_category_picks (

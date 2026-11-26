@@ -6,7 +6,8 @@ import { TabBar, type TabId } from '@/components/TabBar';
 import { useSession } from '@/state/session';
 import { useTheme } from '@/theme';
 
-// The 5 tabs, plus People (/people), which keeps the bar but is not a tab. One agent at a time owns
+// The 5 tabs, plus People (/people) and Notifications (/notifications), which keep the bar but are
+// not tabs. One agent at a time owns
 // this file and the root _layout.tsx (app/CLAUDE.md).
 
 type TabBarRenderProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
@@ -24,10 +25,10 @@ const TAB_IDS = Object.keys(TAB_ROUTES) as TabId[];
 
 /**
  * Screens in this group that are not tabs: they keep the bar under them but add no item to it.
- * People (`/people`) is opened from the Feed's Find people, so the bar marks Feed while it shows
- * (design system ScreenPeople).
+ * People (`/people`) is opened from the Feed's Find people and Notifications (`/notifications`) from
+ * its bell, so the bar marks Feed while either shows (design system ScreenPeople, ScreenNotifications).
  */
-const NON_TAB_ROUTES = { 'people/index': 'feed' } as const satisfies Record<string, TabId>;
+const NON_TAB_ROUTES = { 'people/index': 'feed', 'notifications/index': 'feed' } as const satisfies Record<string, TabId>;
 
 function tabIdFor(routeName: string | undefined): TabId {
   const tab = TAB_IDS.find((id) => TAB_ROUTES[id] === routeName);
@@ -60,7 +61,7 @@ type ScreenLayout = NonNullable<ComponentProps<typeof Tabs>['screenLayout']>;
 
 export default function TabsLayout() {
   const { colors } = useTheme();
-  // Move: switching tabs fades the new one in; People slides in like a pushed screen (TabScene).
+  // Move: switching tabs fades the new one in; People and Notifications slide in like a pushed screen (TabScene).
   const history = useRef<TabHistory['current']>(null);
   const screenLayout: ScreenLayout = ({ route, navigation, children }) => {
     const state = navigation.getState();

@@ -37,7 +37,7 @@ interface SearchOffsetCursor {
   offset: number;
 }
 
-// DELIVERABLE-44: one row of `user_category_picks` (20261126000200), and of what
+// DELIVERABLE-44: one row of `user_category_picks` (20261128000200), and of what
 // `set_category_picks` returns -- the same two columns, so one mapper serves both.
 interface CategoryPickRow {
   category_id: string;

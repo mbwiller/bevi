@@ -375,6 +375,49 @@ export function BevOfCard({ period = 'day', bev, score, date, onClick, className
   );
 }
 
+const NOTIFICATION_VERB = { follow: 'started following you', like: 'liked your', comment: 'commented on your' };
+
+/**
+ * One line of the Notifications screen: who did it, what they did and how long ago, with the post's Bev
+ * (a like or a comment) or a Follow back pill (a new follower) at the end. Likes on one post share a row:
+ * two avatars and "and N others". An unread row is tinted `primaryTint` and carries a dot.
+ */
+export function NotificationRow({ kind = 'follow', actors = [], actorCount, bev, comment, time, unread = false, following, onFollow, onClick, divider = true, className }) {
+  const shown = actors.slice(0, 2);
+  const others = Math.max((actorCount == null ? actors.length : actorCount) - shown.length, 0);
+  const first = shown[0] || {};
+  return (
+    <div className={cx('bv', 'bv-notif', unread && 'bv-notif-unread', divider && 'bv-divider', className)}>
+      {unread ? <span className="bv-notif-dot" aria-hidden="true" /> : null}
+      <button type="button" className="bv-notif-main" onClick={onClick}>
+        {shown.length > 1 ? (
+          <span className="bv-notif-pair" aria-hidden="true">
+            <Avatar name={shown[0].name} src={shown[0].src} size={32} />
+            <Avatar name={shown[1].name} src={shown[1].src} size={32} />
+          </span>
+        ) : <Avatar name={first.name} src={first.src} size={44} />}
+        <span className="body bv-notif-text">
+          {unread ? <span className="bv-visually-hidden">Unread. </span> : null}
+          {shown.map((p, i) => (
+            <React.Fragment key={i}>
+              {i > 0 ? (others ? ', ' : ' and ') : ''}
+              <b>{p.handle || p.name}</b>
+            </React.Fragment>
+          ))}
+          {others ? ' and ' + others + (others === 1 ? ' other' : ' others') : ''}
+          {' ' + NOTIFICATION_VERB[kind]}
+          {kind !== 'follow' && bev ? <> <b>{bev.name}</b></> : null}
+          <span className="bv-meta">{'\u00a0·\u00a0' + time}</span>
+          {comment ? <span className="bv-notif-quote">“{comment}”</span> : null}
+        </span>
+      </button>
+      {kind === 'follow'
+        ? (following != null ? <FollowPill following={following} onClick={onFollow} text="Follow back" label={(following ? 'Following ' : 'Follow back ') + (first.handle || first.name || '')} /> : null)
+        : (bev ? <BevImage src={bev.src} art={bev.art} alt="" size={40} /> : null)}
+    </div>
+  );
+}
+
 /**
  * Person row for People search, suggestions, followers and the points ranking. `context` adds a third
  * line under the handle ("Followed by Sam and Arjun") and the row grows from 64 to 72pt.

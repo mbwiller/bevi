@@ -46,3 +46,43 @@ export function formatRelativeTime(iso: string, now: Date = new Date()): string 
   if (diff < WEEK) return WEEKDAYS[new Date(t).getDay()]!;
   return formatShortDate(iso, now);
 }
+
+/**
+ * A NotificationRow's short age: "now" under a minute (and for future times), then "5m", "3h", "2d",
+ * and "3w" from seven days up.
+ */
+export function formatShortAge(iso: string, now: Date = new Date()): string {
+  const t = parseTimestamp(iso);
+  if (Number.isNaN(t)) return '';
+  const diff = now.getTime() - t;
+  if (diff < MINUTE) return 'now';
+  if (diff < HOUR) return `${Math.floor(diff / MINUTE)}m`;
+  if (diff < DAY) return `${Math.floor(diff / HOUR)}h`;
+  if (diff < WEEK) return `${Math.floor(diff / DAY)}d`;
+  return `${Math.floor(diff / WEEK)}w`;
+}
+
+/** The Notifications screen's sections, in order. */
+export type NotificationSection = 'new' | 'today' | 'week' | 'earlier';
+
+/** Each section's SectionHeader title (SectionHeader draws the caps). */
+export const NOTIFICATION_SECTION_TITLES: Record<NotificationSection, string> = {
+  new: 'New',
+  today: 'Today',
+  week: 'This week',
+  earlier: 'Earlier',
+};
+
+/**
+ * Which section a notification sits under: everything unread is "New"; a read one is "Today" on
+ * `now`'s local calendar day, "This week" within the last seven days (rolling, as
+ * `formatRelativeTime`'s weekday branch), else "Earlier".
+ */
+export function notificationSection(n: { unread: boolean; createdAt: string }, now: Date = new Date()): NotificationSection {
+  if (n.unread) return 'new';
+  const t = parseTimestamp(n.createdAt);
+  if (Number.isNaN(t)) return 'earlier';
+  const d = new Date(t);
+  if (d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()) return 'today';
+  return now.getTime() - t < WEEK ? 'week' : 'earlier';
+}

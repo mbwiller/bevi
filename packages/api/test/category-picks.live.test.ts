@@ -1,7 +1,7 @@
 // DELIVERABLE-44: go-to categories round-tripped through createBeviApi against a
 // live local stack (see auth.live.test.ts for why this is skipped without
 // SUPABASE_URL/SUPABASE_PUBLISHABLE_KEY). The rules themselves are pinned in
-// supabase/tests/47_category_picks.test.sql; this checks what packages/api
+// supabase/tests/49_category_picks.test.sql; this checks what packages/api
 // makes of them: the column names it reads, the argument it sends, and which
 // ApiError each refusal becomes.
 import { describe, expect, it } from 'vitest';
