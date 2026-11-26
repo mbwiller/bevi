@@ -951,7 +951,7 @@ export interface NutritionPreview {
   sourceUrl: string | null;
   /**
    * How to read the two fields above, and what to credit on screen. Snapshots
-   * stored before contract 3.1.0 have no `source` of their own and are mapped
+   * stored before contract 3.10.0 have no `source` of their own and are mapped
    * to `openfoodfacts`, which is what they all are.
    */
   source: NutritionSource;

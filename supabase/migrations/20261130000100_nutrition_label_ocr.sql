@@ -1,27 +1,31 @@
 -- Nutrition read from a photo of the label, for the products a barcode lookup
--- cannot answer (contract 3.1.0: NutritionPreview.source, and a nullable
+-- cannot answer (contract 3.10.0: NutritionPreview.source, and a nullable
 -- `barcode`/`sourceUrl`). The reading itself happens ON THE DEVICE, in the
 -- app, using the platform's own text recogniser: there is no service to call,
--- no credential, and nothing for this migration to authorise or meter. Two
+-- no credential, and nothing for this migration to authorise or meter. Three
 -- things:
 --
 --   1. bev_nutrition.source accepts 'label-ocr' as well as 'openfoodfacts'.
---      Widening a check constraint is safe in one release
---      (DEVELOPMENT-ARJUN.md section 14's table), so no v2 table and no
---      ledger row for this part.
 --   2. create_bev_with_nutrition_v2(): create_bev_with_nutrition plus the
 --      `source` key and the label-ocr branch of the validation. v1 keeps
 --      answering old clients untouched (section 14, "RPC versioning"); its
 --      migration (20261115214237) is frozen.
+--   3. Every installed binary built before 3.10.0 reads bev_nutrition with a
+--      plain table select and types `sourceUrl` as a string. A label read has
+--      a null one, and those binaries' NutritionCard passes it straight to
+--      `Linking.openURL`, which throws -- fatal in a release build -- and
+--      credits Open Food Facts for the person's own reading. So the table
+--      policy now shows Open Food Facts rows only, and get_bev_nutrition()
+--      is how a 3.10.0 client reads either kind. An old binary sees a
+--      label-read Bev as one with no nutrition, which it already handles.
 
 -- =====================================================================
 -- 1. The widened source constraint
 --
 -- The column was created inline as `check (source = 'openfoodfacts')`
--- (20261115214237), which Postgres named bev_nutrition_source_check. An
--- old client reading the column parses a string, not an enum, and nothing
--- in `packages/api` relies on the set being a single value, so widening
--- needs no gate.
+-- (20261115214237), which Postgres named bev_nutrition_source_check. The
+-- widening is safe only because section 3 keeps the new rows away from the
+-- readers that relied on the single value.
 -- =====================================================================
 
 alter table public.bev_nutrition
@@ -34,9 +38,9 @@ alter table public.bev_nutrition
 --
 -- Identical parameter list, security and grants to v1. What changed:
 --
---   * `source` joins the accepted keys and is optional -- a client built
---     against 2.14/2.15 sends a snapshot without it, and that snapshot is
---     an Open Food Facts one, so absent resolves to 'openfoodfacts'. Any
+--   * `source` joins the accepted keys and is optional. A client before
+--     3.10.0 calls v1, never this, so a snapshot without it is defensive
+--     only; absent resolves to 'openfoodfacts', the only kind there was. Any
 --     third value is a validation failure. It is stored in
 --     bev_nutrition.source as well as left inside the jsonb, which is what
 --     merge_bev already carries over.
@@ -182,3 +186,53 @@ $$;
 
 revoke execute on function public.create_bev_with_nutrition_v2(text,text,text,text,smallint,boolean,text,text,jsonb) from public, anon, authenticated;
 grant execute on function public.create_bev_with_nutrition_v2(text,text,text,text,smallint,boolean,text,text,jsonb) to authenticated;
+
+-- =====================================================================
+-- 3. Label reads stay out of the read old binaries use
+--
+-- bev_nutrition_select (20261115214237) showed every row of a visible Bev.
+-- It now shows Open Food Facts rows only: the shape every installed binary
+-- was built against. get_bev_nutrition() returns either kind, under the
+-- same visibility, to a client that knows about `source`.
+--
+-- Security definer, so `bevs_select`'s RLS does not apply inside it and its
+-- rule (20261011000100) is restated here in full, admin clause included: an
+-- active Bev, or a pending_photo one of the caller's own, or the caller is
+-- an admin, and an alcoholic category only for an adult. A Bev the caller
+-- may not see answers null, exactly as one with no snapshot does.
+--
+-- `source` is put into the returned object from the column, so a row
+-- written by v1 (whose jsonb has no `source` key) comes back with one.
+--
+-- Widening the policy again is a deprecation-ledger row
+-- (DEVELOPMENT-ARJUN.md section 15): not before every binary built before
+-- 3.10.0 is gone.
+-- =====================================================================
+
+alter policy bev_nutrition_select on public.bev_nutrition
+  using (
+    source = 'openfoodfacts'
+    and exists (select 1 from public.bevs b where b.id = bev_nutrition.bev_id)
+  );
+
+create or replace function public.get_bev_nutrition(p_bev_id uuid)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select n.nutrition || jsonb_build_object('source', n.source)
+    from public.bev_nutrition n
+    join public.bevs b on b.id = n.bev_id
+    join public.categories c on c.id = b.category_id
+   where n.bev_id = p_bev_id
+     and auth.uid() is not null
+     and (b.status = 'active'
+          or (b.status = 'pending_photo' and b.created_by = auth.uid())
+          or public.is_admin())
+     and (not c.is_alcoholic or public.viewer_is_adult());
+$$;
+
+revoke execute on function public.get_bev_nutrition(uuid) from public, anon, authenticated;
+grant execute on function public.get_bev_nutrition(uuid) to authenticated;

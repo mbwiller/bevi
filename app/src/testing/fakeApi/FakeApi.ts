@@ -2003,7 +2003,7 @@ export class FakeApi implements BeviApi {
             // A new Bev with a verified photo automatically enters generation.
             iconReadyAt: photo ? new Date(this.now().getTime() + this.iconGenerationMs).toISOString() : null,
             iconStatusOverride: null,
-            // A snapshot sent by a client older than 3.1.0 carries no `source`;
+            // A snapshot sent by a client older than 3.10.0 carries no `source`;
             // every one of those is an Open Food Facts barcode match.
             ...(input.nutrition ? { nutrition: { ...input.nutrition, source: input.nutrition.source ?? 'openfoodfacts' } } : {}),
             createdById: me.id,

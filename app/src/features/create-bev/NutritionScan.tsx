@@ -75,6 +75,9 @@ export function useNutritionScan({ value, onChange, onProduct, scanned, onScanne
   const [own, setOwn] = useState<NutritionPreview | null>(value ?? null);
   const nutrition = onScanned ? scanned ?? null : own;
   const setNutrition = onScanned ?? setOwn;
+  // For `lookup`, which is a callback and must not rebuild on every change of the label.
+  const nutritionRef = useRef(nutrition);
+  nutritionRef.current = nutrition;
   const [reveal, setReveal] = useState(false);
   const request = useRef<AbortController | null>(null);
   const reduced = useReducedMotion();
@@ -94,6 +97,8 @@ export function useNutritionScan({ value, onChange, onProduct, scanned, onScanne
     setNutrition(null);
     onChange?.(null);
   }, [label, nutrition, photoUri, setNutrition, onChange]);
+  // A message about the last photo ("no panel found") is not about the next one.
+  useEffect(() => { setMessage(null); }, [photoUri]);
   useEffect(() => {
     if (!reveal) return;
     const entrance = reduced ? 0 : motion.base;
@@ -106,8 +111,9 @@ export function useNutritionScan({ value, onChange, onProduct, scanned, onScanne
     return () => { clearTimeout(fade); clearTimeout(finish); };
   }, [reveal, reduced, opacity, close]);
 
-  const present = useCallback((result: NutritionPreview) => {
-    readUri.current = result.source === 'label-ocr' ? labelRef.current?.photo?.uri ?? null : null;
+  /** `fromUri` is the photo a label read was made from, captured when the read started. */
+  const present = useCallback((result: NutritionPreview, fromUri: string | null = null) => {
+    readUri.current = fromUri;
     setNutrition(result);
     onChange?.(null);
     opacity.value = 0;
@@ -136,9 +142,12 @@ export function useNutritionScan({ value, onChange, onProduct, scanned, onScanne
         present(product.nutrition);
       } else if (onProduct) {
         // A product with no nutrition listed still fills in the details, and a label scanned
-        // earlier belongs to another barcode. There is nothing to reveal, so the sheet just closes.
-        setNutrition(null);
-        onChange?.(null);
+        // earlier belongs to another barcode. A label READ does not: it came from a photo of the
+        // drink in hand, so it stays. There is nothing to reveal, so the sheet just closes.
+        if (nutritionRef.current?.source !== 'label-ocr') {
+          setNutrition(null);
+          onChange?.(null);
+        }
         close();
       } else {
         setMessage(SCAN_NO_NUTRITION);
@@ -163,7 +172,8 @@ export function useNutritionScan({ value, onChange, onProduct, scanned, onScanne
     try {
       // The local photo, not the upload: the read never waits on the network.
       const lines = await recogniseText(uri);
-      if (controller.signal.aborted) return;
+      // Replaced or removed while it was being read: the reading is of a photo that is gone.
+      if (controller.signal.aborted || labelRef.current?.photo?.uri !== uri) return;
       const panel = parseNutritionPanel(lines);
       if (!panel) {
         setMessage(LABEL_NONE_FOUND);
@@ -175,7 +185,7 @@ export function useNutritionScan({ value, onChange, onProduct, scanned, onScanne
         barcode: null,
         sourceUrl: null,
         source: 'label-ocr',
-      });
+      }, uri);
     } catch {
       if (!controller.signal.aborted) setMessage(LABEL_UNUSABLE_IMAGE);
     } finally {
@@ -186,6 +196,8 @@ export function useNutritionScan({ value, onChange, onProduct, scanned, onScanne
   const start = () => { setMode('barcode'); setMessage(null); setReveal(false); setOpen(true); setCamera(true); };
   const retry = () => { setMessage(null); setCamera(true); };
   const remove = () => { setNutrition(null); onChange?.(null); };
+  // The picker's camera must not open over a barcode camera that is still running.
+  const pickLabel = (source: PhotoSource) => { setCamera(false); onPickLabel?.(source); };
   return {
     // `BeviApi.nutrition` is an optional capability (contract 2.14.0). Without it
     // there is nothing to look a barcode up with, so the entry point does not
@@ -194,7 +206,7 @@ export function useNutritionScan({ value, onChange, onProduct, scanned, onScanne
     available: !!api.nutrition,
     // Reading the label needs no backend, only the recogniser and a label photo slot to read.
     canRead,
-    label, onPickLabel, mode,
+    label, canPickLabel: !!onPickLabel, pickLabel, mode,
     open, camera, barcode, busy, message, nutrition, reveal, animation, value, onChange,
     setBarcode, start, retry, remove, close, lookup, readLabel, cameraError,
   };
@@ -236,7 +248,7 @@ export function NutritionLabelRead({ scan }: { scan: NutritionScanState }) {
  */
 export function NutritionScanSheet({ scan }: { scan: NutritionScanState }) {
   const { colors } = useTheme();
-  const { open, camera, barcode, busy, message, nutrition, reveal, close, mode, label, onPickLabel } = scan;
+  const { open, camera, barcode, busy, message, nutrition, reveal, close, mode, label, canPickLabel, pickLabel } = scan;
   const reading = mode === 'label';
   return (
     <Sheet open={open} snap={90} title={reveal ? (nutrition?.source === 'label-ocr' ? 'Label read' : 'Nutrition found') : reading ? 'Read label' : 'Scan barcode'} onClose={close}>
@@ -259,16 +271,16 @@ export function NutritionScanSheet({ scan }: { scan: NutritionScanState }) {
                 <Button variant="outlined" onPress={() => void scan.lookup(barcode)} loading={busy} disabled={busy || !/^(?:\d{8}|\d{12}|\d{13})$/.test(barcode)} accessibilityLabel="Look up entered barcode">Look up barcode</Button>
               </>
             ) : null}
-            {scan.canRead && onPickLabel && label ? (
+            {scan.canRead && canPickLabel && label ? (
               <View style={styles.stack}>
                 <Text style={[type.body, { color: colors.text }]}>No barcode, or no result? Read it from a photo of the label. Keep the whole Nutrition Facts panel in view and sharp.</Text>
                 <View style={styles.row}>
-                  <Button variant="outlined" icon="camera" onPress={() => onPickLabel('camera')} disabled={busy} accessibilityLabel="Take a photo of the label">Take label photo</Button>
-                  <Button variant="outlined" icon="image" onPress={() => onPickLabel('library')} disabled={busy} accessibilityLabel="Choose a photo of the label">Choose label photo</Button>
+                  <Button variant="outlined" icon="camera" onPress={() => pickLabel('camera')} disabled={busy} accessibilityLabel="Take a photo of the label">Take label photo</Button>
+                  <Button variant="outlined" icon="image" onPress={() => pickLabel('library')} disabled={busy} accessibilityLabel="Choose a photo of the label">Choose label photo</Button>
                 </View>
                 <PhotoStatusLine slot={label} />
                 {label.photo ? (
-                  <Button onPress={() => void scan.readLabel()} loading={busy && reading} disabled={busy} accessibilityLabel="Read the label photo again">{LABEL_READ_BUTTON}</Button>
+                  <Button onPress={() => void scan.readLabel()} loading={busy && reading} disabled={busy} accessibilityLabel="Read this label photo">{LABEL_READ_BUTTON}</Button>
                 ) : null}
               </View>
             ) : null}

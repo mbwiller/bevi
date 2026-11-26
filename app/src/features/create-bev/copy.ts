@@ -67,7 +67,7 @@ export const PHOTO_REUPLOAD = 'Add the photo again.';
 export const NAME_MAX_LENGTH = 80;
 
 // Nutrition read from a photo of the label (BEV-13). A draft transcription, never a verified one.
-export const LABEL_READ_NOTE = 'Read from your photo, so a number may be wrong. Check every value against the package.';
+export const LABEL_READ_NOTE = 'Read from a photo of the label, so a number may be wrong. Check every value against the package.';
 export const LABEL_READ_CONFIRM = 'These values were read from your photo. Check them against the package before you use them.';
 export const LABEL_PLACEHOLDER_NAME = 'Scanned label';
 export const LABEL_READ_BUTTON = 'Read nutrition from this photo';
@@ -77,9 +77,12 @@ export const LABEL_NONE_FOUND = "Couldn't find a Nutrition Facts panel in that p
 export const LABEL_UNUSABLE_IMAGE = "Couldn't read that photo. Take it again in good light, or choose a different one.";
 export const NUTRITION_SAVE_FAILED = 'Nutrition could not be saved. Scan the barcode or read the label again, or continue without it.';
 
-/** A label read that could not name the drink is called this; the name already typed in the draft is better. */
+/**
+ * A label read is filed under the Bev's name as it is when the Bev is created: the panel does not carry
+ * the drink's name, so the one read put in is only what was typed by then (or the placeholder).
+ */
 export function nutritionWithDraftName<T extends { productName: string; source: string }>(nutrition: T, draftName: string): T {
   const name = draftName.trim();
-  if (nutrition.source !== 'label-ocr' || nutrition.productName !== LABEL_PLACEHOLDER_NAME || !name) return nutrition;
+  if (nutrition.source !== 'label-ocr' || !name) return nutrition;
   return { ...nutrition, productName: name.slice(0, NAME_MAX_LENGTH) };
 }

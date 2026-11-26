@@ -91,9 +91,30 @@ module — it cannot reach a phone through the web deploy.
 ## Verification
 
 - `npm run typecheck`, `npm test -w app`, `npm test -w packages/api`: see the
-  branch.
-- `supabase db reset && supabase test db`: 44 files, 1,905 tests, PASS.
+  PR.
+- `supabase db reset && supabase test db`: 58 files, 2,518 tests, PASS (merged
+  with main on 2026-11-26).
+- `nutrition.live.test.ts` against a local stack: a label read created and read
+  back through `get_bev_nutrition`.
 - The parser: 16 tests over the eight real panels and the refusal rules.
+
+**What the recogniser is given.** The prepared photo, not the original: the
+JPEG `preparePhoto` writes, quality 0.85, longest edge at most 1,600 px
+(`PHOTO_MAX_EDGE`). Whether the command-line harness that produced
+`visionFixtures.ts` read those prepared files or the camera originals is not
+recorded, so the 27-of-27 check holds for the engine on these panels and may
+not hold at 1,600 px for a panel that is small in the frame. The device check
+below is what settles it.
+
+## Installed binaries
+
+Every build cut before contract 3.10.0 reads `bev_nutrition` with a table
+select, types `sourceUrl` as a string, and passes it to `Linking.openURL`
+unguarded. A label read's null `sourceUrl` would crash that press. So the
+table's select policy shows Open Food Facts rows only, and 3.10.0 reads both
+kinds through `get_bev_nutrition()` (`20261130000100_nutrition_label_ocr.sql`,
+section 3). An old build shows a label-read Bev with no nutrition. Widening the
+policy back is a deprecation-ledger row (`DEVELOPMENT-ARJUN.md` section 15).
 
 **The native module has never been compiled.** The machine this was written on
 has Command Line Tools but no Xcode, so there is no simulator and no way to
@@ -117,13 +138,17 @@ seen working:
 - **A deliberately bad photo**: blurred, half the panel, the front of the can.
   Each must give its own honest message.
 - **Camera and photo-library permission denied**, and denied-then-granted.
-- **HEIC**, which is what an iPhone shoots by default — the recogniser is given
-  whatever the picker returns.
+- **HEIC**, which is what an iPhone shoots by default — the picker's photo goes
+  through `preparePhoto` first, so the recogniser sees a JPEG; confirm that
+  conversion on a real HEIC.
+- **A small panel in a whole-can shot**, at the 1,600 px the recogniser gets.
 - **A big photo**: confirm the read does not block the UI noticeably.
 - **A reading, then replace the label photo** — the reading must drop rather
   than be saved against the wrong photo.
-- **Save and reload**: the Bev page shows the label, says it was read from your
-  photo, and offers no Open Food Facts link.
+- **Save and reload**: the Bev page shows the label, says it was read from a
+  label photo, and offers no Open Food Facts link.
+- **An older TestFlight build** opening that Bev: no nutrition panel, and no
+  crash.
 
 The fallback for a failed reading is the barcode scan, or adding the Bev with
 no nutrition at all.

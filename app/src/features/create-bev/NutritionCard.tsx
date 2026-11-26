@@ -25,7 +25,7 @@ export function NutritionCard({ nutrition, reveal = false }: { nutrition: Nutrit
         <View style={[styles.masthead, { backgroundColor: colors.primary }]}>
           <View style={styles.brandline}>
             <Wordmark height={22} tone="mono" color={colors.onPrimary} />
-            <Text style={[type.caption, { color: colors.onPrimary }]}>{reveal ? 'Captured' : fromLabel ? 'Read from your label' : 'Barcode match'}</Text>
+            <Text style={[type.caption, { color: colors.onPrimary }]}>{reveal ? 'Captured' : fromLabel ? 'Read from a label photo' : 'Barcode match'}</Text>
           </View>
           <Text style={[styles.title, { color: colors.onPrimary }]} accessibilityRole="header">Nutrition Facts</Text>
         </View>

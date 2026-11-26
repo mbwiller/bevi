@@ -230,6 +230,7 @@ describe('bevs.create', () => {
       calls.push({ name, args });
       let result: { data: unknown; error: { code: string; message: string } | null };
       if (name === 'get_bev') result = { data: bevRow, error: null };
+      else if (name === 'get_bev_nutrition') result = { data: stored, error: null };
       else if (missing.includes(name)) result = { data: null, error: { code: 'PGRST202', message: 'function not found' } };
       else if (name === 'create_bev_with_nutrition' && args.p_nutrition
                && Object.keys(args.p_nutrition as object).some((k) => !V1_KEYS.includes(k))) {
@@ -269,21 +270,21 @@ describe('bevs.create', () => {
 
   it('asks for plain create_bev when there is no snapshot', async () => {
     const { names, calls } = await create(undefined, []);
-    expect(names).toEqual(['create_bev', 'get_bev']);
+    expect(names).toEqual(['create_bev', 'get_bev', 'get_bev_nutrition']);
     expect(calls[0]?.args).not.toHaveProperty('p_nutrition');
   });
 
   it.each([['an Open Food Facts', OFF_SNAPSHOT], ['a label-ocr', OCR_SNAPSHOT]] as const)(
     'sends %s snapshot through create_bev_with_nutrition_v2', async (_label, nutrition) => {
       const { created, names, calls } = await create(nutrition, []);
-      expect(names).toEqual(['create_bev_with_nutrition_v2', 'get_bev']);
+      expect(names).toEqual(['create_bev_with_nutrition_v2', 'get_bev', 'get_bev_nutrition']);
       expect(calls[0]?.args).toMatchObject({ p_nutrition: nutrition });
       expect(created.nutrition).toEqual(nutrition);
     });
 
   it('falls back to v1 for an Open Food Facts snapshot when v2 is not deployed yet', async () => {
     const { created, names, calls } = await create(OFF_SNAPSHOT, ['create_bev_with_nutrition_v2']);
-    expect(names).toEqual(['create_bev_with_nutrition_v2', 'create_bev_with_nutrition', 'get_bev']);
+    expect(names).toEqual(['create_bev_with_nutrition_v2', 'create_bev_with_nutrition', 'get_bev', 'get_bev_nutrition']);
     // Without `source`: v1 predates it and rejects any key outside its ten,
     // which would stop the ladder and fail the creation outright.
     expect(calls[1]?.args.p_nutrition).not.toHaveProperty('source');
@@ -297,7 +298,7 @@ describe('bevs.create', () => {
   // was not saved is the behaviour the app already handles.
   it('never offers a label-ocr snapshot to v1, and creates the Bev without it', async () => {
     const { created, names, calls } = await create(OCR_SNAPSHOT, ['create_bev_with_nutrition_v2']);
-    expect(names).toEqual(['create_bev_with_nutrition_v2', 'create_bev', 'get_bev']);
+    expect(names).toEqual(['create_bev_with_nutrition_v2', 'create_bev', 'get_bev', 'get_bev_nutrition']);
     expect(names).not.toContain('create_bev_with_nutrition');
     expect(calls[1]?.args).not.toHaveProperty('p_nutrition');
     expect(created.id).toBe(id);
@@ -306,7 +307,7 @@ describe('bevs.create', () => {
 
   it('drops an Open Food Facts snapshot when neither nutrition RPC is deployed', async () => {
     const { created, names, calls } = await create(OFF_SNAPSHOT, ['create_bev_with_nutrition_v2', 'create_bev_with_nutrition']);
-    expect(names).toEqual(['create_bev_with_nutrition_v2', 'create_bev_with_nutrition', 'create_bev', 'get_bev']);
+    expect(names).toEqual(['create_bev_with_nutrition_v2', 'create_bev_with_nutrition', 'create_bev', 'get_bev', 'get_bev_nutrition']);
     expect(calls[2]?.args).not.toHaveProperty('p_nutrition');
     expect(created.id).toBe(id);
     expect(created.nutrition).toBeNull();
@@ -332,10 +333,11 @@ describe('bevs.create', () => {
   });
 });
 
-// bevs.ts:154 tolerates a bev_nutrition table that is not there yet, so Bev
-// detail keeps rendering if the app deploys before `supabase db push` runs.
-// It is the only thing protecting that window, so both halves are pinned here:
-// the two "no such table" codes pass, anything else still surfaces.
+// `readNutrition` (bevs.ts) reads get_bev_nutrition, steps down to the table
+// on a backend without it, and tolerates a bev_nutrition table that is not
+// there yet, so Bev detail keeps rendering if the app deploys before
+// `supabase db push` runs. It is the only thing protecting that window, so
+// every rung is pinned here: the missing codes pass, anything else surfaces.
 describe('bevs.get before the nutrition migration is pushed', () => {
   const id = '00000000-0000-4000-8000-00000000b002';
   const bevRow = {
@@ -350,12 +352,15 @@ describe('bevs.get before the nutrition migration is pushed', () => {
 
   const snapshots: SnapshotCache = { get: async () => { throw new Error('not needed'); }, invalidate: () => undefined };
 
-  const clientWith = (nutritionResult: { data: unknown; error: { code: string; message: string } | null }) => {
-    const rpc = () => {
-      const promise = Promise.resolve({ data: bevRow, error: null });
+  type Result = { data: unknown; error: { code: string; message: string } | null };
+  const NO_FUNCTION: Result = { data: null, error: { code: 'PGRST202', message: 'function not found' } };
+  const clientWith = (nutritionResult: Result, viaRpc: Result = NO_FUNCTION, tables: string[] = []) => {
+    const rpc = (name: string) => {
+      const promise = Promise.resolve(name === 'get_bev_nutrition' ? viaRpc : { data: bevRow, error: null });
       return Object.assign(promise, { single: () => promise, maybeSingle: () => promise });
     };
     const from = (table: string) => {
+      tables.push(table);
       const result = table === 'bev_nutrition' ? nutritionResult : { data: table === 'follows' ? [] : null, error: null };
       const query: Record<string, unknown> = {};
       query.select = () => query;
@@ -384,16 +389,33 @@ describe('bevs.get before the nutrition migration is pushed', () => {
     const api = createBevsApi(clientWith({ data: null, error: { code: '42501', message: 'permission denied for table bev_nutrition' } }), snapshots);
     await expect(api.get(id)).rejects.toMatchObject({ code: 'unauthorized' });
   });
+
+  it('reads a label reading through get_bev_nutrition, never the table, once it exists', async () => {
+    const tables: string[] = [];
+    const api = createBevsApi(clientWith({ data: null, error: null }, { data: OCR_SNAPSHOT, error: null }, tables), snapshots);
+    const bev = await api.get(id);
+    expect(bev.nutrition).toEqual(OCR_SNAPSHOT);
+    expect(tables).not.toContain('bev_nutrition');
+  });
+
+  it('steps down to the table only on a missing function', async () => {
+    const tables: string[] = [];
+    const api = createBevsApi(clientWith({ data: { nutrition: OFF_SNAPSHOT }, error: null }, NO_FUNCTION, tables), snapshots);
+    expect((await api.get(id)).nutrition).toEqual(OFF_SNAPSHOT);
+    expect(tables).toContain('bev_nutrition');
+    const refused = createBevsApi(clientWith({ data: null, error: null }, { data: null, error: { code: '42501', message: 'permission denied' } }), snapshots);
+    await expect(refused.get(id)).rejects.toMatchObject({ code: 'unauthorized' });
+  });
 });
 
 // --------------------------------------------------------------------------
-// Reading back a snapshot written before contract 3.1.0 added `source`.
+// Reading back a snapshot written before contract 3.10.0 added `source`.
 // Those rows are stored jsonb and nothing rewrites them, so the mapping
 // boundary is the only place that can make them legal `NutritionPreview`s.
 // --------------------------------------------------------------------------
 
 describe('mapNutrition', () => {
-  // Exactly the jsonb a Bev created before 3.1.0 holds: an Open Food Facts
+  // Exactly the jsonb a Bev created before 3.10.0 holds: an Open Food Facts
   // match, with no `source` key at all.
   const stored = {
     barcode: '012345678901', productName: 'Test water', basis: 'Per serving (355 ml)',
@@ -415,6 +437,10 @@ describe('mapNutrition', () => {
     expect(mapNutrition(withoutEither)).toMatchObject({ barcode: null, sourceUrl: null, source: 'openfoodfacts' });
   });
 
+  it('uses the fallback source a caller passes for a sourceless snapshot', () => {
+    expect(mapNutrition(stored, 'label-ocr')).toMatchObject({ source: 'label-ocr' });
+  });
+
   it('answers null for a Bev with no snapshot', () => {
     expect(mapNutrition(null)).toBeNull();
     expect(mapNutrition(undefined)).toBeNull();
@@ -431,8 +457,11 @@ it('reads an older stored snapshot back off bevs.get as an Open Food Facts one',
     is_starter: false, created_at: '2026-11-16T00:00:00.000Z', created_by_id: null,
     created_by_handle: null, rating_count: 0, avg_score: null, score_stddev: null, bayes_score: null,
   };
-  const rpc = () => {
-    const promise = Promise.resolve({ data: bevRow, error: null });
+  // A backend from before get_bev_nutrition: the table holds the old row.
+  const rpc = (name: string) => {
+    const promise = Promise.resolve(name === 'get_bev_nutrition'
+      ? { data: null, error: { code: 'PGRST202', message: 'function not found' } }
+      : { data: bevRow, error: null });
     return Object.assign(promise, { single: () => promise, maybeSingle: () => promise });
   };
   const from = (table: string) => {

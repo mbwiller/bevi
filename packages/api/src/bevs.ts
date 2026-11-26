@@ -101,6 +101,24 @@ interface GetBevRpcRow {
   icon_path?: string | null;
 }
 
+/**
+ * A Bev's nutrition snapshot, of either source, as stored. Through
+ * get_bev_nutrition (20261130000100) because the table's select policy shows
+ * Open Food Facts rows only: that is the shape binaries built before 3.10.0
+ * read, and a label read's null `sourceUrl` crashes their NutritionCard. A
+ * backend without the function answers PGRST202, and its table, which can
+ * then hold nothing but Open Food Facts rows, is read instead; a backend with
+ * no table at all still renders the Bev.
+ */
+async function readNutrition(client: SupabaseClient, bevId: string): Promise<unknown> {
+  const viaRpc = await client.rpc('get_bev_nutrition', { p_bev_id: bevId });
+  if (!viaRpc.error) return viaRpc.data;
+  if (viaRpc.error.code !== 'PGRST202') throw mapError(viaRpc.error);
+  const { data, error } = await client.from('bev_nutrition').select('nutrition').eq('bev_id', bevId).maybeSingle();
+  if (error && !['PGRST205', '42P01'].includes(error.code)) throw mapError(error);
+  return (data as { nutrition?: unknown } | null)?.nutrition ?? null;
+}
+
 export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache): BevsApi {
   async function search(params: { q: string; categoryId?: CategoryId; limit?: number; cursor?: string }): Promise<Page<BevSummary>> {
     await requireUserId(client);
@@ -135,7 +153,7 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
     // Read straight from the table rather than widening get_bev: the profile
     // has a select policy for authenticated, and changing an RPC's `returns
     // table` means dropping and recreating it.
-    const [rankingRes, wantRes, followeeIds, profileRes, nutritionRes] = await Promise.all([
+    const [rankingRes, wantRes, followeeIds, profileRes, nutritionRaw] = await Promise.all([
       client.from('rankings').select('bucket, position, score, note').eq('user_id', uid).eq('bev_id', bevId).maybeSingle(),
       client.from('want_to_try').select('user_id').eq('user_id', uid).eq('bev_id', bevId).maybeSingle(),
       fetchFollowIds(client, 'follows', 'follower_id', uid),
@@ -144,13 +162,11 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
         .select('base, carbonated, caffeine, sweetness, dairy, alcohol, serve, source')
         .eq('bev_id', bevId)
         .maybeSingle(),
-      client.from('bev_nutrition').select('nutrition').eq('bev_id', bevId).maybeSingle(),
+      readNutrition(client, bevId),
     ]);
     if (rankingRes.error) throw mapError(rankingRes.error);
     if (wantRes.error) throw mapError(wantRes.error);
     if (profileRes.error) throw mapError(profileRes.error);
-    // A migration-first rollout is required for writes. Older stacks still render Bev detail.
-    if (nutritionRes.error && !['PGRST205', '42P01'].includes(nutritionRes.error.code)) throw mapError(nutritionRes.error);
 
     let myRanking: MyRankingRow | null = null;
     if (rankingRes.data) {
@@ -213,15 +229,15 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
       is_starter: row.is_starter,
     };
     // `mapNutrition` is what tolerates a snapshot stored before contract
-    // 3.10.0 added `source` (mappers.ts); the missing-table check above is
-    // what tolerates a backend with no `bev_nutrition` at all.
+    // 3.10.0 added `source` (mappers.ts); `readNutrition` is what tolerates a
+    // backend with no get_bev_nutrition, or no `bev_nutrition` at all.
     return { ...mapBev(client, bevRow, {
       myRanking,
       inWantToTry: wantRes.data !== null,
       friends,
       flavorProfile: profileRes.data as FlavorProfileRow | null,
       prediction: myRanking ? null : await prediction,
-    }), nutrition: mapNutrition(nutritionRes.data?.nutrition) };
+    }), nutrition: mapNutrition(nutritionRaw) };
   }
 
   // The contract's `Bev.prediction`: null when the caller ranked the Bev or has

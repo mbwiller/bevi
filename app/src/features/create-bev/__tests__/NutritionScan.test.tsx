@@ -139,7 +139,7 @@ function labelSlot(overrides: Partial<PhotoUpload> = {}, uri = 'file:///label-1.
 }
 const READ = 'Read nutrition from the label photo';
 /** The one in the sheet, offered after a failed read, has its own name. */
-const READ_AGAIN = 'Read the label photo again';
+const READ_AGAIN = 'Read this label photo';
 const readButton = () => screen.getByLabelText(READ);
 
 it('reads the local photo, never the upload, and reveals with the same fade before asking for confirmation', async () => {
@@ -162,7 +162,7 @@ it('reads the local photo, never the upload, and reveals with the same fade befo
   expect(screen.getByLabelText('Close label reader')).toBeTruthy();
   await act(async () => { jest.advanceTimersByTime(1); });
   expect(screen.queryByLabelText('Close label reader')).toBeNull();
-  expect(screen.getByText('Read from your label')).toBeTruthy();
+  expect(screen.getByText('Read from a label photo')).toBeTruthy();
   expect(screen.queryByText('Barcode match')).toBeNull();
   expect(screen.queryByLabelText('View product on Open Food Facts')).toBeNull();
   expect(screen.getByText(/read from your photo\. Check them against the package/)).toBeTruthy();
@@ -231,6 +231,18 @@ it('reads a photo whose upload has failed: that is a separate problem, shown by 
   await fireEvent.press(readButton());
   expect(screen.getByText('Captured')).toBeTruthy();
   expect(slot.ensureUploaded).not.toHaveBeenCalled();
+});
+
+it('presents nothing from a read whose photo was replaced while it was being read', async () => {
+  let finish: (value: typeof lines) => void = () => undefined;
+  jest.mocked(recogniseText).mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+  const onChange = jest.fn();
+  const view = await render(<NutritionScan value={null} onChange={onChange} label={labelSlot()} onPickLabel={jest.fn()} draftName="Kula" />);
+  await fireEvent.press(readButton());
+  await view.rerender(<NutritionScan value={null} onChange={onChange} label={labelSlot({}, 'file:///label-2.jpg')} onPickLabel={jest.fn()} draftName="Kula" />);
+  await act(async () => { finish(lines); });
+  expect(screen.queryByText('Kula')).toBeNull();
+  expect(screen.queryByLabelText('Use this nutrition label')).toBeNull();
 });
 
 it('drops a label read when its photo is replaced or removed, since it no longer matches', async () => {

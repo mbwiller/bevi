@@ -10,24 +10,23 @@
  * new service and no credential. Barcode lookup, its stored snapshots and the
  * two `basis` strings are unchanged.
  *
- * A minor rather than a major, deliberately. Nothing reads `barcode` at
- * runtime -- it is stored and traced, never rendered; `sourceUrl` is only ever
- * opened as a link, now behind a null check; and `source` is absent from every
- * snapshot written before this version, so `packages/api` defaults a missing one to
- * `'openfoodfacts'` where it maps the row, which is what all of them are. No
- * field is removed or retyped into a shape an older client cannot parse.
+ * A minor rather than a major, deliberately, and only because of what the
+ * backend does alongside it. Every installed binary before this version types
+ * `sourceUrl` as a string and passes it to `Linking.openURL` unguarded, which
+ * throws on null -- fatal in a release build. No floor protects them: builds
+ * 0.1.0 (2) and (3) never read `app_config`, and no build at 3.10.0 exists to
+ * raise a floor to. So those binaries are never served a label read at all:
+ * `bev_nutrition`'s select policy shows Open Food Facts rows only, and this
+ * version reads both kinds through `get_bev_nutrition()`
+ * (20261130000100). An old binary sees a label-read Bev as one with no
+ * nutrition, which it already handles. `source` is absent from every
+ * snapshot stored before this version, so `packages/api` defaults a missing
+ * one to `'openfoodfacts'` where it maps the row, which is what all of them
+ * are.
  *
- * NOT a reason to raise `min_contract_version`, for the same reason 3.0.0 was
- * not: the floor exists for a client that would be served a RESPONSE it cannot
- * parse (`DEVELOPMENT-ARJUN.md` §14), and an older binary reading a snapshot
- * it has no `source` field for simply ignores the key.
- *
- * NOT harmless for an installed binary built before this version, though: its
- * NutritionCard renders a label-read Bev as a "Barcode match" with an Open
- * Food Facts button, and pressing it calls `Linking.openURL(null)`, which
- * throws synchronously (React Native's `_validateURL` invariant) inside the
- * press handler -- an uncaught error, fatal in a release build. The snapshot
- * parses and the card renders; only that press fails.
+ * NOT a reason to raise `min_contract_version`: with the policy narrowed, no
+ * older binary is served anything it cannot parse (`DEVELOPMENT-ARJUN.md`
+ * §14). Widening the policy back is a §15 row.
  *
  * 3.9.0, over 3.8.0's push notifications: go-to categories (DELIVERABLE-44).
  * Additive: `profile.getCategoryPicks()` and `profile.setCategoryPicks()`,
