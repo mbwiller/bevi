@@ -91,6 +91,19 @@ describe("rankedLine (the Bev'd row's meta)", () => {
   const createdAt = '2026-10-12T15:00:00Z';
   const venue = { name: 'The Café at Cornell Tech' } as RankedBev['venue'];
 
+  // Pin "now" (Date only; timers stay real) to the day after the ranking: in a later year the line also prints the year.
+  beforeAll(() => {
+    jest.useFakeTimers({
+      now: new Date('2026-10-13T16:00:00Z'),
+      doNotFake: [
+        'hrtime', 'nextTick', 'performance', 'queueMicrotask', 'requestAnimationFrame', 'cancelAnimationFrame',
+        'requestIdleCallback', 'cancelIdleCallback', 'setImmediate', 'clearImmediate', 'setInterval', 'clearInterval',
+        'setTimeout', 'clearTimeout',
+      ],
+    });
+  });
+  afterAll(() => jest.useRealTimers());
+
   it('is the date alone with no place, and names the place, cut short, with one', () => {
     expect(rankedLine({ createdAt, venue: null })).toMatch(/^Ranked \w+ \d+$/);
     expect(rankedLine({ createdAt, venue })).toMatch(/^Ranked \w+ \d+ · The Café at Cor…$/);
