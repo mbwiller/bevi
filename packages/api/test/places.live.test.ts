@@ -90,7 +90,7 @@ describe.skipIf(!url || !publishableKey || !serviceKey)('where a Bev was had, ag
     const api = make();
     const { userId: friendId } = await friend.signUp({ username: randomTestUsername(), password, inviteCode: TEST_INVITE_CODE });
     const { userId: myId } = await api.signUp({ username: randomTestUsername(), password, inviteCode: TEST_INVITE_CODE });
-    // Onboarded first: a ranking made before onboarding ends is not a post (20261126000100).
+    // Onboarded first: a ranking made before onboarding ends is not a post (20261128000100).
     await friend.profile.updateMe({ onboarded: true });
     await api.profile.updateMe({ onboarded: true });
 

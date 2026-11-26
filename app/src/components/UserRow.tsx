@@ -115,9 +115,20 @@ export const UNFOLLOW_HINT = 'Double tap to unfollow';
 /**
  * Pill's look (filled Follow, outlined Following) with `aria-pressed` reporting the follow state.
  * Also the author's Follow pill on an Explore FeedPost. A press pops it like the heart (Change);
- * new data alone never does.
+ * new data alone never does. `text` replaces "Follow" where the row says more ("Follow back" on a
+ * new-follower NotificationRow), in the accessible name too ("Follow back sam").
  */
-export function FollowPill({ following, name, onPress }: { following: boolean; name: string; onPress?: () => void }) {
+export function FollowPill({
+  following,
+  name,
+  onPress,
+  text = 'Follow',
+}: {
+  following: boolean;
+  name: string;
+  onPress?: () => void;
+  text?: string;
+}) {
   const { colors } = useTheme();
   const pop = usePop();
   return (
@@ -132,7 +143,7 @@ export function FollowPill({ following, name, onPress }: { following: boolean; n
             : undefined
         }
         accessibilityRole="button"
-        accessibilityLabel={followLabel(following, name)}
+        accessibilityLabel={following ? followLabel(true, name) : `${text} ${name}`}
         accessibilityHint={following ? UNFOLLOW_HINT : undefined}
         accessibilityState={{ selected: following }}
         {...({ 'aria-pressed': following } as object)}
@@ -150,7 +161,7 @@ export function FollowPill({ following, name, onPress }: { following: boolean; n
           style={[type.body, following ? styles.pillOutlined : styles.pillFilled, { color: following ? colors.text : colors.onPrimary }]}
           numberOfLines={1}
         >
-          {following ? 'Following' : 'Follow'}
+          {following ? 'Following' : text}
         </Text>
       </Pressable>
     </Animated.View>

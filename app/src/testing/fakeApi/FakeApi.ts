@@ -94,9 +94,14 @@ import {
   type LeaderboardApi,
   type MediaApi,
   type MetaApi,
+  type Notification,
+  type NotificationKind,
+  type NotificationSettings,
+  type NotificationsApi,
   type Page,
   type PageParams,
   type PeriodWinner,
+  type PostNotificationPerson,
   type PriceTier,
   type Profile,
   type ProfileApi,
@@ -149,7 +154,7 @@ import {
 import { CATALOG_CATEGORY_NODES, type CatalogCategoryNode } from './catalog';
 import { ALCOHOLIC, CATEGORIES, buildFixtures, isAdult } from './fixtures';
 import { buildEdgeMirror, type EdgeMirror } from './graph';
-import { FAKE_INVITE_CODE } from './people';
+import { FAKE_INVITE_CODE, FRIEND, ME } from './people';
 
 /**
  * Code-point string order, the tie-break every id order in the SQL uses
@@ -328,6 +333,66 @@ const FEED_INLINE_COMMENTS = 7;
 /** Contract 2.12.0: how many people `FeedItem.alsoBevdBy` and `SuggestedProfile.followedBy` list (20261111000100). */
 const ALSO_BEVD_MAX = 3;
 const FOLLOWED_BY_MAX = 2;
+/** T-31: how many actors a notification row lists (get_notifications), and its page cap. */
+const NOTIFICATION_ACTORS_MAX = 2;
+const NOTIFICATIONS_PAGE_MAX = 50;
+/** `get_notifications` / `mark_notifications_read` take a bigint id; packages/api refuses anything else. */
+const NOTIFICATION_ID_RE = /^\d{1,15}$/;
+
+/**
+ * T-31: one row of the fake's `notifications` ledger, as the triggers write it (20261126000100).
+ * Ids are the ledger's own sequence, so they order rows the way the identity column does.
+ */
+interface FakeNotification {
+  id: number;
+  recipientId: string;
+  actorId: string;
+  kind: NotificationKind;
+  feedEventId: string | null;
+  commentId: string | null;
+  createdAt: string;
+  readAt: string | null;
+  /**
+   * Set on the rows `seedNotifications` deals ME, which record things that happened before the
+   * fixtures begin: the follow, like or comment behind them is not in the fixture data (seeding
+   * those would move follower, like and comment counts other suites assert), so the "is it still
+   * there" rule is skipped for them. Blocks, the age gate and the post's own existence still apply.
+   */
+  fixture?: { commentBody?: string };
+}
+
+/** One displayed row: a follow or a comment alone, or every like on one post. Newest member first. */
+interface FakeNotificationGroup {
+  head: FakeNotification;
+  members: FakeNotification[];
+}
+
+/** T-31 Release 2: `notification_settings`' defaults, what someone who never saved any gets. */
+const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = { paused: false, follows: true, likes: true, comments: true, posts: false };
+const NOTIFICATION_SETTING_FIELDS = ['paused', 'follows', 'likes', 'comments', 'posts'] as const;
+/** `push_tokens`' check, and its per-user cap (register_push_token keeps the 10 most recently seen). */
+const PUSH_TOKEN_RE = /^Expo(nent)?PushToken\[[!-~]{1,180}\]$/;
+const PUSH_TOKEN_MAX = 200;
+const PUSH_TOKENS_PER_USER = 10;
+/** get_post_notification_people refuses a longer `q`. */
+const POST_PEOPLE_QUERY_MAX = 80;
+
+/** T-31 Release 2: one `push_outbox` row, as the two queue triggers write it (20261127000100). */
+interface FakePush {
+  kind: NotificationKind | 'post';
+  recipientId: string;
+  actorId: string;
+  feedEventId: string | null;
+  commentId: string | null;
+}
+
+/** What `controls.pendingPushes` answers: one push claim_push_batch would send now. */
+export interface FakePendingPush {
+  kind: NotificationKind | 'post';
+  actorHandle: string;
+  /** The post it is about; null for a follow. */
+  postId: string | null;
+}
 /** Bev of the day / week is "strictly New York City" (get_bev_of_period, 20261018000100). */
 const BEV_OF_PERIOD_ZONE = 'America/New_York';
 /** D-01: below this many users Explore widens from two hops to everyone (get_explore, 20261019000300). */
@@ -426,6 +491,24 @@ export class FakeApi implements BeviApi {
   }[] = [];
   private nextContentReport = 1;
   /**
+   * T-31: the `notifications` ledger. In memory beside the block rows, for the same reason (FakeDb's
+   * schema does not move); `resetToFixtures` re-deals ME's fixture rows, account deletion and
+   * `emptyUser` drop the rows the user is on either side of, and `clearNotifications` empties it.
+   */
+  private notificationRows: FakeNotification[] = [];
+  private nextNotification = 1;
+  /**
+   * T-31 Release 2: `notification_settings`, `post_notification_subscriptions`, `push_tokens` and
+   * `push_outbox`, in memory beside the inbox for the same reason. Cleared by `resetToFixtures`;
+   * account deletion and `emptyUser` drop the user's rows. The fake sends nothing: the queue is
+   * judged on demand by `pendingPushes`, with claim_push_batch's rules.
+   */
+  private notificationSettingsRows = new Map<string, NotificationSettings>();
+  private postSubscriptions: { subscriberId: string; targetId: string }[] = [];
+  private pushTokenRows: { token: string; userId: string; seen: number }[] = [];
+  private pushOutbox: FakePush[] = [];
+  private pushSeq = 0;
+  /**
    * IA-2: the single `app_config` row `meta.getAppConfig` answers with. Not in FakeDb and not
    * persisted: it is the backend's, written by an operator, not part of anyone's data. Suites set
    * it with `controls.setAppConfig`; `resetToFixtures` puts the default back.
@@ -447,6 +530,7 @@ export class FakeApi implements BeviApi {
       const session = stored?.sessionUserId;
       if (session && this.db.users.some((u) => u.id === session)) this.db.sessionUserId = session;
     }
+    this.seedNotifications();
     saveDb(this.storage, this.db);
   }
 
@@ -476,9 +560,148 @@ export class FakeApi implements BeviApi {
     this.blockRows = [];
     this.contentReports = [];
     this.nextContentReport = 1;
+    this.seedNotifications();
+    this.clearPushState();
     this.appConfig = { ...DEFAULT_APP_CONFIG };
     this.commit();
     this.emit();
+  }
+
+  /** T-31: an empty inbox for everyone (the fixture rows included) until `resetToFixtures()`. */
+  clearNotifications(): void {
+    this.notificationRows = [];
+  }
+
+  /** T-31 Release 2: no settings, subscriptions, devices or queued pushes for anyone. */
+  private clearPushState(): void {
+    this.notificationSettingsRows.clear();
+    this.postSubscriptions = [];
+    this.pushTokenRows = [];
+    this.pushOutbox = [];
+    this.pushSeq = 0;
+  }
+
+  /**
+   * T-31 Release 2, a control: the pushes claim_push_batch would send `userId` now, oldest first.
+   * The same rules: nothing while paused, nothing of a kind switched off, nothing across a block
+   * either way, nothing about an alcoholic Bev under 21, and nothing that is no longer true (an
+   * unliked like, a deleted comment, an unfollowed follow; a post push only while the subscription
+   * and the follow stand). A post push is queued for a NEW ranking only, never a re-rank. Unlike
+   * the server, a user with no registered device is not skipped, so a suite can assert the
+   * settings without registering one (`pushTokens` lists the devices).
+   */
+  pendingPushes(userId: string): FakePendingPush[] {
+    const me = this.db.users.find((u) => u.id === userId);
+    if (!me) return [];
+    const settings = this.notificationSettingsOf(userId);
+    if (settings.paused) return [];
+    const on = { follow: settings.follows, like: settings.likes, comment: settings.comments, post: settings.posts };
+    const visible = this.visibleNotifications(me);
+    return this.pushOutbox
+      .filter((p) => p.recipientId === userId && on[p.kind] && !this.blockedBetween(userId, p.actorId))
+      .filter((p) => {
+        if (p.kind !== 'post') {
+          return visible.some(
+            (n) => n.kind === p.kind && n.actorId === p.actorId && n.feedEventId === p.feedEventId && n.commentId === p.commentId,
+          );
+        }
+        const e = this.db.feed.find((x) => x.id === p.feedEventId);
+        const bev = e && this.db.bevs.find((b) => b.id === e.bevId);
+        return (
+          !!e &&
+          !!bev &&
+          !!this.rankingOf(e.actorId, e.bevId) &&
+          this.visible(bev, me) &&
+          this.isFollowing(userId, p.actorId) &&
+          this.postSubscriptions.some((s) => s.subscriberId === userId && s.targetId === p.actorId)
+        );
+      })
+      .flatMap((p) => {
+        const actor = this.db.users.find((u) => u.id === p.actorId);
+        return actor ? [{ kind: p.kind, actorHandle: actor.handle, postId: p.feedEventId }] : [];
+      });
+  }
+
+  /** T-31 Release 2, a control: the push tokens registered to `userId`, most recently seen first. */
+  pushTokens(userId: string): string[] {
+    return this.pushTokenRows
+      .filter((t) => t.userId === userId)
+      .sort((a, z) => z.seen - a.seen)
+      .map((t) => t.token);
+  }
+
+  private notificationSettingsOf(userId: string): NotificationSettings {
+    return { ...(this.notificationSettingsRows.get(userId) ?? DEFAULT_NOTIFICATION_SETTINGS) };
+  }
+
+  /** drop_post_notification_on_unfollow: a follow that goes takes its post subscription with it. */
+  private dropPostSubscription(followerId: string, followeeId: string): void {
+    this.postSubscriptions = this.postSubscriptions.filter((s) => !(s.subscriberId === followerId && s.targetId === followeeId));
+  }
+
+  /**
+   * ME's fixture inbox, so a FakeApi-backed build opens on something to show. Dealt from ME's own
+   * posts and relative to now, so it is the same rows for the same clock:
+   *
+   *   1  follow   friend_d                       read, over a week ago (ME follows them back)
+   *   2  like     friend_d on an older post      read, over a week ago
+   *   3  comment  friend_b on that older post    read, over a week ago
+   *   4  follow   friend_e                       unread (ME does NOT follow them back)
+   *   5  comment  friend_a on ME's second-newest post   unread
+   *   6  like     friend_b on ME's newest post           unread
+   *   7  like     friend_a on ME's newest post           unread
+   *
+   * Listed, 6 and 7 are one row ("friend_a and friend_b"), so ME's badge is 3. Rows 1-3 need a post
+   * of ME's over eight days old, and 5-7 two posts; a database without them gets what it can.
+   */
+  private seedNotifications(): void {
+    this.notificationRows = [];
+    this.nextNotification = 1;
+    const byHandle = (handle: string) => this.db.users.find((u) => u.handle === handle);
+    const me = byHandle(ME.handle);
+    const [a, b, d, e] = [byHandle(FRIEND.handle), byHandle('friend_b'), byHandle('friend_d'), byHandle('friend_e')];
+    if (!me || !a || !b || !d || !e) return;
+
+    const MINUTE = 60_000;
+    const DAY = 24 * 60 * MINUTE;
+    const now = this.now().getTime();
+    const at = (ms: number) => new Date(ms).toISOString();
+    const posts = this.db.feed
+      .filter((ev) => ev.actorId === me.id && ev.type === 'RANKING' && !!this.rankingOf(me.id, ev.bevId))
+      .sort((x, z) => z.createdAt.localeCompare(x.createdAt));
+    const add = (row: Omit<FakeNotification, 'id' | 'recipientId'>) =>
+      this.notificationRows.push({ id: this.nextNotification++, recipientId: me.id, ...row });
+
+    const older = posts.find((p) => Date.parse(p.createdAt) < now - 8 * DAY);
+    if (older) {
+      const t0 = Date.parse(older.createdAt);
+      const read = (ms: number) => ({ createdAt: at(ms), readAt: at(ms + DAY) });
+      add({ actorId: d.id, kind: 'follow', feedEventId: null, commentId: null, ...read(t0 + 30 * MINUTE), fixture: {} });
+      add({ actorId: d.id, kind: 'like', feedEventId: older.id, commentId: null, ...read(t0 + 60 * MINUTE), fixture: {} });
+      add({
+        actorId: b.id,
+        kind: 'comment',
+        feedEventId: older.id,
+        commentId: 'fixture-comment-1',
+        ...read(t0 + 120 * MINUTE),
+        fixture: { commentBody: 'Still thinking about this one' },
+      });
+    }
+    add({ actorId: e.id, kind: 'follow', feedEventId: null, commentId: null, createdAt: at(now - 10 * MINUTE), readAt: null, fixture: {} });
+    const [newest, second] = posts;
+    if (newest && second) {
+      add({
+        actorId: a.id,
+        kind: 'comment',
+        feedEventId: second.id,
+        commentId: 'fixture-comment-2',
+        createdAt: at(now - 6 * MINUTE),
+        readAt: null,
+        fixture: { commentBody: 'Need to try this' },
+      });
+      add({ actorId: b.id, kind: 'like', feedEventId: newest.id, commentId: null, createdAt: at(now - 4 * MINUTE), readAt: null, fixture: {} });
+      add({ actorId: a.id, kind: 'like', feedEventId: newest.id, commentId: null, createdAt: at(now - 2 * MINUTE), readAt: null, fixture: {} });
+    }
   }
 
   /**
@@ -1084,6 +1307,13 @@ export class FakeApi implements BeviApi {
     db.comparisons = db.comparisons.filter((c) => c.userId !== userId);
     db.follows = db.follows.filter((f) => f.followerId !== userId && f.followeeId !== userId);
     this.blockRows = this.blockRows.filter((b) => b.blockerId !== userId && b.blockedId !== userId);
+    // notifications: both people cascade from profiles.
+    this.notificationRows = this.notificationRows.filter((n) => n.recipientId !== userId && n.actorId !== userId);
+    // T-31 Release 2: settings, subscriptions either way, devices and queued pushes cascade too.
+    this.notificationSettingsRows.delete(userId);
+    this.postSubscriptions = this.postSubscriptions.filter((s) => s.subscriberId !== userId && s.targetId !== userId);
+    this.pushTokenRows = this.pushTokenRows.filter((t) => t.userId !== userId);
+    this.pushOutbox = this.pushOutbox.filter((p) => p.recipientId !== userId && p.actorId !== userId);
     db.wantToTry = db.wantToTry
       .filter((w) => w.userId !== userId)
       .map((w) => (w.viaUserId === userId ? { ...w, viaUserId: null } : w));
@@ -1121,6 +1351,88 @@ export class FakeApi implements BeviApi {
 
   private toComment(c: FakeComment, viewer: FakeUser): Comment {
     return { id: c.id, author: this.toProfile(this.user(c.userId), viewer), body: c.body, createdAt: c.createdAt };
+  }
+
+  /**
+   * The notify_on_* triggers (T-31): one row per thing that happened, never about yourself, and
+   * never a second one for the same follow (per pair), like (per pair and post) or comment.
+   */
+  private notify(recipientId: string, actorId: string, kind: NotificationKind, feedEventId: string | null, commentId: string | null): void {
+    if (recipientId === actorId) return;
+    const exists = this.notificationRows.some(
+      (n) =>
+        n.kind === kind &&
+        (kind === 'comment'
+          ? n.commentId === commentId
+          : n.recipientId === recipientId && n.actorId === actorId && (kind === 'follow' || n.feedEventId === feedEventId)),
+    );
+    if (exists) return;
+    this.notificationRows.push({
+      id: this.nextNotification++,
+      recipientId,
+      actorId,
+      kind,
+      feedEventId,
+      commentId,
+      createdAt: this.nowIso(),
+      readAt: null,
+    });
+    // enqueue_push_on_notification (T-31 Release 2): a NEW inbox row is a push to queue.
+    this.pushOutbox.push({ kind, recipientId, actorId, feedEventId, commentId });
+  }
+
+  /**
+   * visible_notifications: `me`'s rows that are still true. No block either way; the follow, the
+   * like or the (undeleted) comment still there (skipped for fixture rows, see FakeNotification);
+   * and for a post, the post still there with its ranking and its Bev within the age gate.
+   */
+  private visibleNotifications(me: FakeUser): FakeNotification[] {
+    return this.notificationRows.filter((n) => {
+      if (n.recipientId !== me.id || this.blockedBetween(me.id, n.actorId)) return false;
+      if (!this.db.users.some((u) => u.id === n.actorId)) return false;
+      if (n.kind === 'follow') return !!n.fixture || this.isFollowing(n.actorId, me.id);
+      const e = this.db.feed.find((x) => x.id === n.feedEventId);
+      // A removed ranking's post is gone (on the server its feed event, and these with it, cascade).
+      if (!e || !this.rankingOf(e.actorId, e.bevId)) return false;
+      const bev = this.db.bevs.find((x) => x.id === e.bevId);
+      if (!bev || !this.visible(bev, me)) return false;
+      if (n.fixture) return true;
+      if (n.kind === 'like') return (this.db.likes ?? []).some((l) => l.userId === n.actorId && l.feedEventId === n.feedEventId);
+      return (this.db.comments ?? []).some((c) => c.id === n.commentId && !c.deleted);
+    });
+  }
+
+  /** get_notifications' rows before paging: likes on one post grouped, newest row first. */
+  private notificationGroups(me: FakeUser): FakeNotificationGroup[] {
+    const groups = new Map<string, FakeNotification[]>();
+    // Newest first, so each group's first member is its head and the map's order is the rows'.
+    for (const n of this.visibleNotifications(me).sort((x, z) => z.id - x.id)) {
+      const key = n.kind === 'like' ? `like:${n.feedEventId}` : `${n.kind}:${n.id}`;
+      const members = groups.get(key);
+      if (members) members.push(n);
+      else groups.set(key, [n]);
+    }
+    return [...groups.values()].map((members) => ({ head: members[0]!, members }));
+  }
+
+  private toNotification({ head, members }: FakeNotificationGroup, me: FakeUser): Notification {
+    const event = head.feedEventId ? this.db.feed.find((x) => x.id === head.feedEventId) : undefined;
+    const bev = event ? this.db.bevs.find((x) => x.id === event.bevId) : undefined;
+    const body =
+      head.kind === 'comment'
+        ? (head.fixture?.commentBody ?? (this.db.comments ?? []).find((c) => c.id === head.commentId)?.body ?? '')
+        : null;
+    return {
+      id: String(head.id),
+      kind: head.kind,
+      createdAt: head.createdAt,
+      unread: members.some((m) => m.readAt === null),
+      actors: members.slice(0, NOTIFICATION_ACTORS_MAX).map((m) => this.toRow(this.user(m.actorId), me)),
+      actorCount: new Set(members.map((m) => m.actorId)).size,
+      postId: head.feedEventId,
+      bev: bev ? this.toSummary(bev) : null,
+      comment: body !== null && head.commentId ? { id: head.commentId, body } : null,
+    };
   }
 
   // -------------------------------------------------------------------------
@@ -1428,7 +1740,10 @@ export class FakeApi implements BeviApi {
           if (id === me.id) invalid('id', "You can't follow yourself");
           // follow_user (IS-7): refused across a block either way, as "no such user".
           this.visibleUser(id, me);
-          if (!this.isFollowing(me.id, id)) this.db.follows.push({ followerId: me.id, followeeId: id, createdAt: this.nowIso() });
+          if (!this.isFollowing(me.id, id)) {
+            this.db.follows.push({ followerId: me.id, followeeId: id, createdAt: this.nowIso() });
+            this.notify(id, me.id, 'follow', null, null);
+          }
         },
         true,
       ),
@@ -1440,6 +1755,7 @@ export class FakeApi implements BeviApi {
           const me = this.requireUser();
           this.user(id);
           this.db.follows = this.db.follows.filter((f) => !(f.followerId === me.id && f.followeeId === id));
+          this.dropPostSubscription(me.id, id);
         },
         true,
       ),
@@ -1866,15 +2182,20 @@ export class FakeApi implements BeviApi {
 
   /**
    * `post` false is a submission made before onboarding ended: `submit_ranking` writes no feed
-   * event for it (DELIVERABLE-44), so it is kept in `unpostedRankings` for the streak instead.
-   * A re-rank always posts, as `rerank_bev` does.
+   * event for it (DELIVERABLE-44), so it is kept in `unpostedRankings` for the streak instead and
+   * there is no event id to return. A re-rank always posts, as `rerank_bev` does.
    */
-  private logPlacement(me: FakeUser, rankingId: string, bevId: string, comparisons: readonly Comparison[], at: string, post = true) {
+  private logPlacement(me: FakeUser, rankingId: string, bevId: string, comparisons: readonly Comparison[], at: string, post = true): string | null {
     for (const c of comparisons) {
       this.db.comparisons.push({ rankingId, userId: me.id, winnerBevId: c.winnerBevId, loserBevId: c.loserBevId, tie: !!c.tie, createdAt: at });
     }
-    if (post) this.db.feed.push({ id: this.nextId('feed'), type: 'RANKING', actorId: me.id, bevId, createdAt: at });
-    else (this.db.unpostedRankings ??= []).push({ userId: me.id, bevId, createdAt: at });
+    if (!post) {
+      (this.db.unpostedRankings ??= []).push({ userId: me.id, bevId, createdAt: at });
+      return null;
+    }
+    const id = this.nextId('feed');
+    this.db.feed.push({ id, type: 'RANKING', actorId: me.id, bevId, createdAt: at });
+    return id;
   }
 
   rankings: RankingsApi = {
@@ -1966,7 +2287,17 @@ export class FakeApi implements BeviApi {
           this.writeBucket(me.id, input.bucket, next);
           this.db.wantToTry = this.db.wantToTry.filter((w) => !(w.userId === me.id && w.bevId === bev.id));
           if (input.venueId) this.putLocation(me.id, bev.id, input.venueId);
-          this.logPlacement(me, row.id, bev.id, input.comparisons, at, me.onboarded);
+          const eventId = this.logPlacement(me, row.id, bev.id, input.comparisons, at, me.onboarded);
+          // enqueue_push_on_post (T-31 Release 2): a NEW ranking ('ranked', never a re-rank) queues
+          // a post push for everyone who asked for this person's posts. The trigger is on the feed
+          // event, so a starter ranking, which has none, pushes nothing.
+          if (eventId !== null) {
+            for (const s of this.postSubscriptions) {
+              if (s.targetId === me.id && s.subscriberId !== me.id) {
+                this.pushOutbox.push({ kind: 'post', recipientId: s.subscriberId, actorId: me.id, feedEventId: eventId, commentId: null });
+              }
+            }
+          }
           return { ranking: this.toRanking(row), bucketSize: next.length };
         },
         true,
@@ -1998,6 +2329,12 @@ export class FakeApi implements BeviApi {
           // Left out, the place is kept (it is keyed by user and Bev, not by this row); a venue
           // replaces it and null removes it.
           if (input.venueId !== undefined) this.putLocation(me.id, row.bevId, input.venueId);
+          // On the server the re-rank deletes the ranking row, its old post cascades away, and the
+          // notifications and queued pushes about that post go with it (T-31). The fake keeps the
+          // old feed event, so it drops those two here.
+          const oldPosts = new Set(this.db.feed.filter((e) => e.actorId === me.id && e.bevId === row.bevId).map((e) => e.id));
+          this.notificationRows = this.notificationRows.filter((n) => !n.feedEventId || !oldPosts.has(n.feedEventId));
+          this.pushOutbox = this.pushOutbox.filter((p) => !p.feedEventId || !oldPosts.has(p.feedEventId));
           this.logPlacement(me, row.id, row.bevId, input.comparisons, at);
           return { ranking: this.toRanking(row), bucketSize: next.length };
         },
@@ -2302,14 +2639,26 @@ export class FakeApi implements BeviApi {
         return { day: winner((d) => d), week: winner(isoWeekStart) };
       }),
 
+    // get_post (T-31): the one post, exactly as this caller's feed would show it, or not_found when
+    // it is gone or not theirs to see (feed_event_visible: own or followed, no block, the age gate).
+    getPost: (id: string) =>
+      this.call('feed.getPost', (): FeedItem => {
+        const me = this.requireUser();
+        const e = this.visibleFeedEvent(id, me);
+        return this.feedItems(me, new Set([e.actorId])).find((item) => item.id === e.id) ?? fail('not_found', 'No such post');
+      }),
+
     like: (id: string) =>
       this.call(
         'feed.like',
         () => {
           const me = this.requireUser();
-          this.visibleFeedEvent(id, me);
+          const e = this.visibleFeedEvent(id, me);
           const likes = (this.db.likes ??= []);
-          if (!likes.some((l) => l.userId === me.id && l.feedEventId === id)) likes.push({ userId: me.id, feedEventId: id });
+          if (!likes.some((l) => l.userId === me.id && l.feedEventId === id)) {
+            likes.push({ userId: me.id, feedEventId: id });
+            this.notify(e.actorId, me.id, 'like', id, null);
+          }
         },
         true,
       ),
@@ -2363,13 +2712,14 @@ export class FakeApi implements BeviApi {
         'comments.add',
         () => {
           const me = this.requireUser();
-          this.visibleFeedEvent(eventId, me);
+          const e = this.visibleFeedEvent(eventId, me);
           // btrim(body, E' \t\n\r'), then 1–280 characters (code points, like char_length).
           const text = (body ?? '').replace(/^[ \t\n\r]+|[ \t\n\r]+$/g, '');
           const length = Array.from(text).length;
           if (length < 1 || length > COMMENT_MAX) invalid('body', `A comment is 1 to ${COMMENT_MAX} characters`);
           const row: FakeComment = { id: this.nextId('comment'), feedEventId: eventId, userId: me.id, body: text, createdAt: this.nowIso() };
           (this.db.comments ??= []).push(row);
+          this.notify(e.actorId, me.id, 'comment', eventId, row.id);
           return this.toComment(row, me);
         },
         true,
@@ -2894,6 +3244,8 @@ export class FakeApi implements BeviApi {
           this.db.follows = this.db.follows.filter(
             (f) => !(f.followerId === me.id && f.followeeId === userId) && !(f.followerId === userId && f.followeeId === me.id),
           );
+          this.dropPostSubscription(me.id, userId);
+          this.dropPostSubscription(userId, me.id);
         },
         true,
       ),
@@ -2985,6 +3337,153 @@ export class FakeApi implements BeviApi {
             createdAt: this.nowIso(),
           });
           return { reportId: id };
+        },
+        true,
+      ),
+  };
+
+  // The notifications inbox (T-31), as get_notifications / get_unread_notification_count /
+  // mark_notifications_read answer it (20261126000100). One set of rules (visibleNotifications)
+  // behind all three, so the list, the badge and mark-read never disagree.
+  notifications: NotificationsApi = {
+    list: (page?: PageParams) =>
+      this.call('notifications.list', (): Page<Notification> => {
+        const me = this.requireUser();
+        // Keyset on the row's id (its newest notification), like get_notifications' p_before_id.
+        const limit = clamp(Math.floor(page?.limit ?? 20), 1, NOTIFICATIONS_PAGE_MAX);
+        let before = Infinity;
+        if (page?.cursor) {
+          const m = /^n:(\d+)$/.exec(page.cursor);
+          if (!m) invalid('cursor', 'Malformed cursor');
+          before = Number(m[1]);
+        }
+        const rows = this.notificationGroups(me)
+          .filter((g) => g.head.id < before)
+          .slice(0, limit);
+        const last = rows[rows.length - 1];
+        return {
+          items: rows.map((g) => this.toNotification(g, me)),
+          nextCursor: rows.length === limit && last ? `n:${last.head.id}` : null,
+        };
+      }),
+
+    unreadCount: () =>
+      this.call('notifications.unreadCount', () => {
+        const me = this.requireUser();
+        // A row of likes counts once, as it is one row on the screen.
+        return this.notificationGroups(me).filter((g) => g.members.some((m) => m.readAt === null)).length;
+      }),
+
+    markRead: (upToId?: string) =>
+      this.call(
+        'notifications.markRead',
+        () => {
+          const me = this.requireUser();
+          if (upToId !== undefined && !NOTIFICATION_ID_RE.test(upToId)) invalid('upToId', 'That is not a notification id');
+          const upTo = upToId === undefined ? Infinity : Number(upToId);
+          const at = this.nowIso();
+          // Only what the caller could have been shown: a hidden row comes back unread.
+          for (const n of this.visibleNotifications(me)) if (n.readAt === null && n.id <= upTo) n.readAt = at;
+        },
+        true,
+      ),
+
+    // T-31 Release 2 (20261127000100): push settings, post subscriptions, device tokens.
+    getSettings: () =>
+      this.call('notifications.getSettings', () => this.notificationSettingsOf(this.requireUser().id)),
+
+    updateSettings: (settings: NotificationSettings) =>
+      this.call(
+        'notifications.updateSettings',
+        (): NotificationSettings => {
+          const me = this.requireUser();
+          for (const field of NOTIFICATION_SETTING_FIELDS) {
+            if (typeof settings?.[field] !== 'boolean') invalid(field, `${field} must be true or false`);
+          }
+          const stored: NotificationSettings = {
+            paused: settings.paused,
+            follows: settings.follows,
+            likes: settings.likes,
+            comments: settings.comments,
+            posts: settings.posts,
+          };
+          this.notificationSettingsRows.set(me.id, stored);
+          return { ...stored };
+        },
+        true,
+      ),
+
+    // get_post_notification_people: the people the caller follows, none across a block, chosen
+    // first, then by handle in code-point order; `q` a case-insensitive substring of the handle or
+    // the display name, a leading '@' ignored.
+    listPostNotificationPeople: (params?: PageParams & { q?: string }) =>
+      this.call('notifications.listPostNotificationPeople', (): Page<PostNotificationPerson> => {
+        const me = this.requireUser();
+        const raw = (params?.q ?? '').trim();
+        if (raw.length > POST_PEOPLE_QUERY_MAX) invalid('q', `Search is up to ${POST_PEOPLE_QUERY_MAX} characters`);
+        const q = raw.replace(/^@+/, '').toLowerCase();
+        const subscribed = (id: string) => this.postSubscriptions.some((s) => s.subscriberId === me.id && s.targetId === id);
+        const rows = this.db.follows
+          .filter((f) => f.followerId === me.id && !this.blockedBetween(me.id, f.followeeId))
+          .flatMap((f) => {
+            const u = this.db.users.find((x) => x.id === f.followeeId);
+            return u ? [u] : [];
+          })
+          .filter((u) => !q || u.handle.toLowerCase().includes(q) || u.displayName.toLowerCase().includes(q))
+          .map((u): PostNotificationPerson => ({ ...this.toRow(u, me), subscribed: subscribed(u.id) }))
+          .sort(
+            (a, z) => Number(z.subscribed) - Number(a.subscribed) || compareCodePoints(a.handle, z.handle) || compareCodePoints(a.id, z.id),
+          );
+        // packages/api asks for clampLimit's default, 20.
+        return paginate(rows, params, 20);
+      }),
+
+    setPostNotification: (userId: string, on: boolean) =>
+      this.call(
+        'notifications.setPostNotification',
+        () => {
+          const me = this.requireUser();
+          if (!on) {
+            this.dropPostSubscription(me.id, userId);
+            return;
+          }
+          // No follow edge is always "not following": someone missing, yourself, and someone across
+          // a block (a block removes the follow) read the same, so the answer reveals no block.
+          if (!this.isFollowing(me.id, userId)) invalid('not following', 'You can only choose people you follow');
+          // Only a follow standing beside a block is left, which no API path creates.
+          this.visibleUser(userId, me);
+          if (!this.postSubscriptions.some((s) => s.subscriberId === me.id && s.targetId === userId)) {
+            this.postSubscriptions.push({ subscriberId: me.id, targetId: userId });
+          }
+        },
+        true,
+      ),
+
+    registerPushToken: (token: string) =>
+      this.call(
+        'notifications.registerPushToken',
+        () => {
+          const me = this.requireUser();
+          if (typeof token !== 'string' || token.length > PUSH_TOKEN_MAX || !PUSH_TOKEN_RE.test(token)) {
+            invalid('token', 'That is not an Expo push token');
+          }
+          // One device, one account: a token someone else registered moves to the caller.
+          this.pushTokenRows = this.pushTokenRows.filter((t) => t.token !== token);
+          this.pushTokenRows.push({ token, userId: me.id, seen: ++this.pushSeq });
+          // This one and the nine others seen most recently.
+          const keep = new Set(this.pushTokens(me.id).slice(0, PUSH_TOKENS_PER_USER));
+          this.pushTokenRows = this.pushTokenRows.filter((t) => t.userId !== me.id || keep.has(t.token));
+        },
+        true,
+      ),
+
+    unregisterPushToken: (token: string) =>
+      this.call(
+        'notifications.unregisterPushToken',
+        () => {
+          const me = this.requireUser();
+          // Only the caller's own; anything else is a no-op.
+          this.pushTokenRows = this.pushTokenRows.filter((t) => !(t.token === token && t.userId === me.id));
         },
         true,
       ),

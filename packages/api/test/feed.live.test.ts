@@ -25,7 +25,7 @@ describe.skipIf(!url || !publishableKey)('feed, against a live local stack', () 
     const password = 'correct-horse-battery-staple';
     const { userId: otherId } = await other.signUp({ username: randomTestUsername(), password, inviteCode: TEST_INVITE_CODE });
     await api.signUp({ username: randomTestUsername(), password, inviteCode: TEST_INVITE_CODE });
-    // Onboarded first: a ranking made before onboarding ends is not a post (20261126000100).
+    // Onboarded first: a ranking made before onboarding ends is not a post (20261128000100).
     await api.profile.updateMe({ onboarded: true });
 
     try {
@@ -82,7 +82,7 @@ describe.skipIf(!url || !publishableKey)('feed, against a live local stack', () 
     const { userId: authorId } = await author.signUp({ username: randomTestUsername(), password, inviteCode: TEST_INVITE_CODE });
     await follower.signUp({ username: randomTestUsername(), password, inviteCode: TEST_INVITE_CODE });
     await stranger.signUp({ username: randomTestUsername(), password, inviteCode: TEST_INVITE_CODE });
-    // Onboarded first: a ranking made before onboarding ends is not a post (20261126000100).
+    // Onboarded first: a ranking made before onboarding ends is not a post (20261128000100).
     await author.profile.updateMe({ onboarded: true });
 
     try {
@@ -123,7 +123,7 @@ describe.skipIf(!url || !publishableKey)('feed, against a live local stack', () 
     const { userId: authorId } = await author.signUp({ username: randomTestUsername(), password, inviteCode: TEST_INVITE_CODE });
     const { userId: friendId } = await friend.signUp({ username: randomTestUsername(), password, inviteCode: TEST_INVITE_CODE });
     await viewer.signUp({ username: randomTestUsername(), password, inviteCode: TEST_INVITE_CODE });
-    // Onboarded first: a ranking made before onboarding ends is not a post (20261126000100).
+    // Onboarded first: a ranking made before onboarding ends is not a post (20261128000100).
     await author.profile.updateMe({ onboarded: true });
     await friend.profile.updateMe({ onboarded: true });
 

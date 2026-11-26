@@ -23,7 +23,7 @@ describe.skipIf(!url || !publishableKey)('comments, against a live local stack',
     const api = createBeviApi({ url: url!, publishableKey: publishableKey!, authStorage: memoryStorage() });
     await api.signUp({ username: randomTestUsername(), password: 'correct-horse-battery-staple', inviteCode: TEST_INVITE_CODE });
     await api.profile.setBirthDate('1990-01-01');
-    // Onboarded first: a ranking made before onboarding ends is not a post (20261126000100).
+    // Onboarded first: a ranking made before onboarding ends is not a post (20261128000100).
     await api.profile.updateMe({ onboarded: true });
 
     // A seeded catalog Bev (20261012000300), so the test leaves nothing behind.

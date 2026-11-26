@@ -34,8 +34,11 @@ import type {
   LatLng,
   LatLngBounds,
   LeaderboardRow,
+  Notification,
+  NotificationSettings,
   NutritionPreview,
   Page,
+  PostNotificationPerson,
   Profile,
   ProfileRow,
   ProfileStats,
@@ -635,6 +638,18 @@ export interface FeedApi {
 
   /** Idempotent. @throws 'unauthorized', 'not_found', 'rate_limited'. */
   unlike(id: string): Promise<void>;
+
+  /**
+   * One post, in the same shape as `getFeed` (likes, the first seven comments
+   * inline, `alsoBevdBy`, the venue): what a notification opens
+   * (`Notification.postId`). Only a post the caller may see, by the feed's
+   * rule: their own or a followed user's, no block between them and its
+   * author, and an alcoholic Bev only from 21 (contract 3.7.0).
+   * @throws 'unauthorized'; 'not_found' — no such post (a removed or
+   *   re-ranked ranking takes its post with it), or one the caller cannot
+   *   see, which reads exactly the same.
+   */
+  getPost(id: string): Promise<FeedItem>;
 }
 
 export interface CommentsApi {
@@ -1152,6 +1167,143 @@ export interface ReportsApi {
   report(input: ReportContentInput): Promise<ReportContentResult>;
 }
 
+export interface NotificationsApi {
+  /**
+   * The caller's notifications inbox (T-31, contract 3.7.0), newest first:
+   * who followed them, and who liked or commented on their posts. Nobody is
+   * notified about their own like or comment.
+   *
+   * **Grouping.** A follow and a comment are a row each. All the likes on one
+   * post are ONE row: `actors` holds the two most recent likers, `actorCount`
+   * all of them, and the row's `id` and `createdAt` are its newest like's, so
+   * a new like on an old post moves that row back to the top. Following,
+   * unfollowing and following again (or liking, unliking, liking again) never
+   * makes a second notification: the first one comes back, with its old date.
+   *
+   * **Checked at read time.** A row is shown only while it is still true: an
+   * unfollow hides that follow, an unlike that like (and shrinks its row), a
+   * deleted comment that comment, and a post that is gone (a removed or
+   * re-ranked ranking) its likes and comments. A block in either direction
+   * hides everything from that person, and unblocking brings back whatever is
+   * still true then (a block removes the follows both ways, so a follow row
+   * comes back only if they follow again). A post about
+   * an alcoholic Bev is hidden while the caller is under 21. `unreadCount` and
+   * `markRead` apply the same rules, so the three never disagree.
+   *
+   * Paged by `nextCursor` (keyset on the row's `id`): a row is on exactly one
+   * page, and a row that moves to the top while paging is not shown twice.
+   *
+   * A backend older than 3.7.0 has no inbox: it answers an empty page.
+   * @throws 'unauthorized'.
+   */
+  list(page?: PageParams): Promise<Page<Notification>>;
+
+  /**
+   * How many rows of `list` are unread (a row of likes counts once), for the
+   * badge. 0 from a backend older than 3.7.0.
+   * @throws 'unauthorized'.
+   */
+  unreadCount(): Promise<number>;
+
+  /**
+   * Marks the caller's notifications read: every one up to and including
+   * `upToId` (a `Notification.id`, normally the first row on screen), or all
+   * of them when it is left out. Idempotent. Resolves without doing anything
+   * on a backend older than 3.7.0.
+   * @throws 'unauthorized'; 'validation' — `upToId` is not a notification id.
+   */
+  markRead(upToId?: string): Promise<void>;
+
+  /**
+   * The caller's push settings (T-31 Release 2, contract 3.8.0). A push is
+   * sent only when `paused` is false AND that kind's switch is on: `follows`,
+   * `likes` and `comments` for the three inbox kinds, `posts` for "someone I
+   * chose posted a Bev" (see `setPostNotification`). Someone who never saved
+   * settings gets the defaults: not paused; `follows`, `likes` and `comments`
+   * on; `posts` off. Reading never saves anything.
+   *
+   * A backend older than 3.8.0 has no settings: it answers the defaults.
+   * @throws 'unauthorized'.
+   */
+  getSettings(): Promise<NotificationSettings>;
+
+  /**
+   * Saves all five switches at once and answers them as stored. The backend
+   * keeps exactly what it is given: what one switch does to another (turning
+   * on `posts` when the first person is chosen, say) is the app's rule, not
+   * the server's. Pausing never changes the four kind switches, so un-pausing
+   * restores exactly what was on.
+   *
+   * A backend older than 3.8.0 cannot save them, and this THROWS rather than
+   * pretend it did.
+   * @throws 'unauthorized'; 'validation' — a switch that is not a boolean
+   *   (`detail.field` names it); 'unknown' — an older backend.
+   */
+  updateSettings(settings: NotificationSettings): Promise<NotificationSettings>;
+
+  /**
+   * The people the caller follows, for choosing whose posts to be pushed
+   * about: never anyone across a block in either direction. Those already
+   * chosen (`subscribed`) come first, then by handle. `q` filters by a
+   * case-insensitive substring of the handle or the display name (a leading
+   * '@' is ignored; at most 80 characters). Paged by `nextCursor`.
+   *
+   * Every row is someone the caller follows, so `isFollowing` is always true.
+   *
+   * A backend older than 3.8.0 answers an empty page.
+   * @throws 'unauthorized'; 'validation' — `q` is over 80 characters.
+   */
+  listPostNotificationPeople(params?: PageParams & { q?: string }): Promise<Page<PostNotificationPerson>>;
+
+  /**
+   * Turns "push me when this person posts a Bev" on or off. Only for someone
+   * the caller follows; the choice is removed when the caller stops following
+   * them (an unfollow, or a block either way, which removes the follow), and
+   * a re-follow starts with it off. A post push is sent for a NEW ranking
+   * only, never a re-rank, and never for the likes or comments that person
+   * receives; it goes to the phone only and adds nothing to `list`. It is
+   * sent only while `posts` is on and the caller is not paused
+   * (`getSettings`). Idempotent both ways; turning off never fails (it is
+   * not rate-limited), whether the person exists or not.
+   *
+   * Turning on for anyone the caller does not follow is 'validation'
+   * (`detail.field` 'not following'), whoever they are: someone who does not
+   * exist, the caller themselves, and someone across a block (a block removes
+   * the follow) all read the same, so the answer never reveals a block.
+   *
+   * A backend older than 3.8.0 cannot save it, and this THROWS rather than
+   * pretend it did.
+   * @throws 'unauthorized'; 'validation' — turning on for someone the caller
+   *   does not follow; 'rate_limited' — turning on, too often; 'not_found' —
+   *   only for a follow standing beside a block, which no client path
+   *   creates; 'unknown' — an older backend.
+   */
+  setPostNotification(userId: string, on: boolean): Promise<void>;
+
+  /**
+   * Records this device's Expo push token (`ExponentPushToken[...]` or
+   * `ExpoPushToken[...]`, at most 200 characters) for the caller, so pushes
+   * reach it. Call it after every sign-in and at launch: a token another
+   * account registered moves to the caller (one device, one signed-in
+   * account), and the server keeps each user's 10 most recently seen devices.
+   * A device Expo reports as no longer registered is forgotten by the server.
+   *
+   * Resolves without doing anything on a backend older than 3.8.0.
+   * @throws 'unauthorized'; 'validation' — not an Expo push token; 'rate_limited'.
+   */
+  registerPushToken(token: string): Promise<void>;
+
+  /**
+   * Forgets this device's token, so it receives no more pushes for the
+   * caller: call it BEFORE signing out (it needs the session). Only the
+   * caller's own token is removed; anything else, or a token already gone, is
+   * a no-op. Idempotent. Resolves without doing anything on a backend older
+   * than 3.8.0.
+   * @throws 'unauthorized'.
+   */
+  unregisterPushToken(token: string): Promise<void>;
+}
+
 export interface NutritionApi {
   /** UPC-A, EAN-8 or EAN-13. null means no usable nutrition data. */
   lookupBarcode(barcode: string, signal?: AbortSignal): Promise<NutritionPreview | null>;
@@ -1186,4 +1338,5 @@ export interface BeviApi extends AuthApi {
   bugs: BugsApi;
   blocks: BlocksApi;
   reports: ReportsApi;
+  notifications: NotificationsApi;
 }

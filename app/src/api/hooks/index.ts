@@ -13,4 +13,5 @@ export * from './venues';
 export * from './places';
 export * from './bugs';
 export * from './safety';
+export * from './notifications';
 export { flattenPages } from './util';

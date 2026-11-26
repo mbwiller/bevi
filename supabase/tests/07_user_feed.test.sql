@@ -24,7 +24,7 @@ update public.profiles set birth_date = (current_date - interval '30 years')::da
 set local bevi.rpc_bypass = 'false';
 
 -- Onboarded, because submit_ranking posts nothing before onboarding ends
--- (20261126000100) and this file's rankings are meant to be posts.
+-- (20261128000100) and this file's rankings are meant to be posts.
 update public.profiles set onboarded = true
  where id in ('00000000-0000-4000-8000-0000000000e1',
               '00000000-0000-4000-8000-0000000000e2',

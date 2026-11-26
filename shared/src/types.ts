@@ -11,6 +11,7 @@ import type {
   FlavorProfileSource,
   FlavorServe,
   IconStatus,
+  NotificationKind,
   PhotoStatus,
   PriceTier,
 } from './enums';
@@ -629,6 +630,89 @@ export interface Page<T> {
   items: T[];
   nextCursor: string | null;
 }
+
+// ---------------------------------------------------------------------------
+// Notifications (T-31, contract 3.7.0)
+// ---------------------------------------------------------------------------
+
+/** The comment a 'comment' notification is about, as it reads now. */
+export interface NotificationComment {
+  /** `Comment.id`. */
+  id: string;
+  body: string;
+}
+
+/**
+ * One row of the notifications inbox, from `notifications.list`: someone
+ * followed the caller, or liked or commented on one of the caller's posts.
+ *
+ * Likes on one post share a row ("ana and 2 others liked your Coke"); a
+ * follow and a comment are a row each. Every row is checked against what is
+ * true NOW, not when it happened: an unfollow, an unlike, a deleted comment or
+ * a block in either direction hides it, and a post that is gone takes its
+ * likes and comments with it.
+ */
+export interface Notification {
+  /**
+   * The newest notification in the row. Rows are ordered by it, newest first,
+   * and it is the cursor `notifications.markRead(upToId)` takes: pass the
+   * first row's id to mark everything on screen read. A new like on an older
+   * post gives that post's row a new id, which moves it back to the top.
+   */
+  id: string;
+  kind: NotificationKind;
+  /** When the newest notification in the row happened. */
+  createdAt: string;
+  /** Whether any notification in the row is unread. */
+  unread: boolean;
+  /**
+   * Who did it, newest first: at most two, and exactly one for a follow or a
+   * comment. `isFollowing` is whether the caller follows them, so a follow
+   * row can offer "Follow back". Never the caller.
+   */
+  actors: ProfileRow[];
+  /**
+   * How many people the row is about, so `actorCount - actors.length` is the
+   * "and N others". Never less than `actors.length`; 1 for a follow or a
+   * comment.
+   */
+  actorCount: number;
+  /** The post liked or commented on (`FeedItem.id`, for `feed.getPost`); null for a follow. */
+  postId: string | null;
+  /** That post's Bev; null for a follow. */
+  bev: BevSummary | null;
+  /** The comment, on a 'comment' row; null on the others. */
+  comment: NotificationComment | null;
+}
+
+/**
+ * The caller's push switches (T-31 Release 2, contract 3.8.0), from
+ * `notifications.getSettings`. A push is sent only when `paused` is false AND
+ * that kind's switch is on. Pausing never changes the four switches, so
+ * un-pausing restores exactly what was on. Defaults: not paused; `follows`,
+ * `likes` and `comments` on; `posts` off.
+ */
+export interface NotificationSettings {
+  /** Every push off, the four switches kept as they are. */
+  paused: boolean;
+  /** Someone followed the caller. */
+  follows: boolean;
+  /** Someone liked one of the caller's posts. */
+  likes: boolean;
+  /** Someone commented on one of the caller's posts. */
+  comments: boolean;
+  /** Someone the caller chose (`notifications.setPostNotification`) posted a Bev. */
+  posts: boolean;
+}
+
+/**
+ * Someone the caller follows, from `notifications.listPostNotificationPeople`:
+ * `subscribed` is whether a push is on for their new posts. `isFollowing` is
+ * always true, as every row is someone the caller follows.
+ */
+export type PostNotificationPerson = ProfileRow & {
+  subscribed: boolean;
+};
 
 // ---------------------------------------------------------------------------
 // Venues (S-10 + A-08)

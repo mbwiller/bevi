@@ -118,3 +118,10 @@ export const REPORT_REASONS: readonly ReportReason[] = [
 
 /** The longest `note` a content report takes, in characters after trimming (`content_reports.note`). */
 export const REPORT_NOTE_MAX = 500;
+
+/**
+ * What happened, in one row of the notifications inbox (T-31, contract 3.7.0),
+ * mirrored from the check on `notifications.kind`: someone followed the
+ * caller, liked one of the caller's posts, or commented on one.
+ */
+export type NotificationKind = 'follow' | 'like' | 'comment';

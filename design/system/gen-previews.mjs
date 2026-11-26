@@ -173,6 +173,13 @@ h('div', { className: 'pv', style: { alignItems: 'flex-start', gap: 40 } },
   L('uploading', h(B.AvatarPicker, { name: ME.name, src: PHOTO, busy: true, onRemove: function () {} })),
   L('failed', h(B.AvatarPicker, { name: ME.name, error: "Couldn't upload your photo. Try another one." })))`];
 
+P.PhotoCropper = [{ group: 'People', height: 700, width: 393, subtitle: 'After picking a profile photo. Drag it; the wheel zooms' }, `.pv-frame { height: 680px; margin: 10px auto; }`, `
+(function () {
+  // A stand-in landscape photo, 1600 x 1200, with something off-centre to frame.
+  var WIDE = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 120"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F2B263"/><stop offset="1" stop-color="#8E44AD"/></linearGradient></defs><rect width="160" height="120" fill="url(#g)"/><circle cx="62" cy="50" r="20" fill="#FFF4E0"/><ellipse cx="62" cy="108" rx="34" ry="26" fill="#FFF4E0"/><circle cx="128" cy="30" r="9" fill="#FFF4E0" opacity=".5"/></svg>');
+  return h('div', { className: 'pv-frame' }, h(B.PhotoCropper, { src: WIDE, width: 1600, height: 1200, onDone: function () {}, onCancel: function () {} }));
+})()`];
+
 P.AvatarStack = [{ group: 'People', height: 96 }, '', `
 h('div', { className: 'pv', style: { gap: 40 } },
   L('Friends who have had it', h(B.AvatarStack, { people: FRIENDS })),
@@ -186,6 +193,16 @@ h('div', { className: 'pv-narrow' },
   h(B.UserRow, { user: FRIENDS[3], meta: '52 Bevs', context: 'Followed by Sam and Arjun', following: false }),
   h(B.UserRow, { user: FRIENDS[0], rank: 1, meta: '212 pts', streak: 14 }),
   h(B.UserRow, { user: ME, rank: 12, meta: '96 pts', streak: 4, self: true, divider: false }))`];
+
+P.NotificationRow = [{ group: 'People', height: 560, width: 393, subtitle: 'Tap Follow back' }, '', `
+h('div', { className: 'pv-narrow' },
+  h(B.NotificationRow, { kind: 'like', actors: [FRIENDS[1], FRIENDS[2]], actorCount: 5, bev: BEVS.dietCoke, time: '2m', unread: true }),
+  h(B.NotificationRow, { kind: 'comment', actors: [FRIENDS[3]], bev: BEVS.topo, comment: 'This is the correct ranking. Finally someone said it.', time: '14m', unread: true }),
+  h(function Row() { var st = React.useState(false); return h(B.NotificationRow, { kind: 'follow', actors: [FRIENDS[5]], time: '1h', unread: true, following: st[0], onFollow: function () { st[1](!st[0]); } }); }),
+  h(B.NotificationRow, { kind: 'like', actors: [FRIENDS[0]], bev: BEVS.coldBrew, time: '4d' }),
+  h(B.NotificationRow, { kind: 'like', actors: [FRIENDS[3], ARJUN], bev: BEVS.poppi, time: '6d' }),
+  h(B.NotificationRow, { kind: 'comment', actors: [FRIENDS[2]], bev: BEVS.matcha, comment: '8.4 is generous.', time: '2w' }),
+  h(B.NotificationRow, { kind: 'follow', actors: [ARJUN], time: '3w', following: true, divider: false }))`];
 
 P.StatCard = [{ group: 'People', height: 130, width: 393 }, `.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 16px 10px; }`, `
 h('div', { className: 'two' },
@@ -240,7 +257,7 @@ h('div', { className: 'pv', style: { gap: 12 } },
   L('settings', h(B.IconButton, { icon: 'settings', label: 'Settings' })),
   L('share', h(B.IconButton, { icon: 'share', label: 'Share' })),
   L('filled close', h(B.IconButton, { icon: 'x', label: 'Close', variant: 'filled' })),
-  L('with badge', h(B.IconButton, { icon: 'menu', label: 'Menu', badge: 4 })))`];
+  L('with badge', h(B.IconButton, { icon: 'bell', label: 'Notifications, 4 unread', badge: 4 })))`];
 
 P.LikeButton = [{ group: 'Actions', height: 110, subtitle: 'Tap to like' }, '', `
 h(function Demo() {
@@ -330,7 +347,7 @@ h(function Demo() {
 // ---------- Navigation ----------
 P.Header = [{ group: 'Navigation', height: 300, width: 393 }, `.hd { border-bottom: 1px solid var(--border); }`, `
 h('div', { className: 'pv-narrow' },
-  h('div', { className: 'hd' }, h(B.Header, { wordmark: true, actions: [{ icon: 'user-plus', label: 'Find people' }] })),
+  h('div', { className: 'hd' }, h(B.Header, { wordmark: true, actions: [{ icon: 'bell', label: 'Notifications, 3 unread', badge: 3 }, { icon: 'user-plus', label: 'Find people' }] })),
   h('div', { className: 'hd' }, h(B.Header, { title: 'Matt Willer', actions: [{ icon: 'menu', label: 'Settings' }] })),
   h('div', { className: 'hd' }, h(B.Header, { centered: true, title: 'Lists' })),
   h('div', { className: 'hd' }, h(B.Header, { title: 'Add a Bev' })),
@@ -532,6 +549,8 @@ P.VenueSheet = [{ group: 'Map', height: 1480, width: 393, subtitle: 'Docked unde
 })()`];
 
 // ---------- Screens (showcase pages) ----------
+const NOTIF_ROWS = "\n    h(B.SectionHeader, { title: 'New' }),\n    h(B.NotificationRow, { kind: 'like', actors: [FRIENDS[1], FRIENDS[2]], actorCount: 5, bev: BEVS.dietCoke, time: '2m', unread: true }),\n    h(B.NotificationRow, { kind: 'comment', actors: [FRIENDS[3]], bev: BEVS.topo, comment: 'This is the correct ranking. Finally someone said it.', time: '14m', unread: true }),\n    h(function Row() { var st = React.useState(false); return h(B.NotificationRow, { kind: 'follow', actors: [FRIENDS[5]], time: '1h', unread: true, following: st[0], onFollow: function () { st[1](!st[0]); } }); }),\n    h(B.SectionHeader, { title: 'This week' }),\n    h(B.NotificationRow, { kind: 'comment', actors: [FRIENDS[2]], bev: BEVS.matcha, comment: '8.4 is generous.', time: '2d' }),\n    h(B.NotificationRow, { kind: 'follow', actors: [ARJUN], time: '3d', following: true }),\n    h(B.NotificationRow, { kind: 'like', actors: [FRIENDS[0]], bev: BEVS.coldBrew, time: '4d' }),\n    h(B.SectionHeader, { title: 'Earlier' }),\n    h(B.NotificationRow, { kind: 'like', actors: [FRIENDS[3], ARJUN], actorCount: 7, bev: BEVS.poppi, time: '2w' }),\n    h(B.NotificationRow, { kind: 'follow', actors: [FRIENDS[1]], time: '3w', following: true })";
+
 const PHONE_CSS = `
   p, h1, h2 { margin: 0; }
   .phone { position: relative; width: 393px; height: 852px; overflow: hidden; display: flex; flex-direction: column; background: var(--surface); }
@@ -553,7 +572,7 @@ h('div', { className: 'phone' },
 
 P.ScreenFeed = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHONE_CSS, phone('feed', `
   h(F, null,
-    h(B.Header, { wordmark: true, actions: [{ icon: 'user-plus', label: 'Find people' }] }),
+    h(B.Header, { wordmark: true, actions: [{ icon: 'bell', label: 'Notifications, 3 unread', badge: 3 }, { icon: 'user-plus', label: 'Find people' }] }),
     h('div', { className: 'gutter', style: { padding: '4px 16px 8px' } }, h(B.SearchBar, { placeholder: 'Search a Bev or a person', id: 'feed-q' })),
     h('div', { className: 'bv-bevof-pair' },
       h(B.BevOfCard, { period: 'day', bev: BEVS.horchata, score: 8.9 }),
@@ -738,6 +757,19 @@ P.ScreenPeople = [{ group: 'Screens', height: 852, width: 393, isPage: true }, P
     h(B.UserRow, { user: FRIENDS[1], rank: 3, meta: '140 pts · 44 Bevs', streak: 2, following: true }),
     h(B.UserRow, { user: ME, rank: 4, meta: '96 pts · 42 Bevs', streak: 4, self: true }),
     h(B.UserRow, { user: FRIENDS[2], rank: 5, meta: '71 pts · 30 Bevs', following: true }))`)];
+
+// Notifications: pushed from the Feed header's bell. Unread on the left, nothing yet on the right.
+P.ScreenNotifications = [{ group: 'Screens', height: 852, width: 802, isPage: true }, PHONE_CSS + `
+  .nt-pair { display: flex; gap: 16px; align-items: flex-start; }
+  .nt-empty { padding-top: 150px; }`, `
+h('div', { className: 'nt-pair' },
+  ${phone('feed', `
+  h(F, null,
+    h(B.Header, { title: 'Notifications', onBack: function () {} }),${NOTIF_ROWS})`)},
+  ${phone('feed', `
+  h(F, null,
+    h(B.Header, { title: 'Notifications', onBack: function () {} }),
+    h('div', { className: 'nt-empty' }, h(B.EmptyState, { icon: 'bell', title: 'No notifications yet', body: "When someone follows you, likes a Bev you posted or comments on it, you'll see it here.", action: 'Find people' })))`)})`];
 
 // Add Bev (the centre tab): the bar, Snap it, then the fastest routes to ranking something. No map.
 const ADD_CSS = PHONE_CSS + `
