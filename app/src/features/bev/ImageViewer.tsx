@@ -9,7 +9,7 @@ import { ErrorState } from '@/components/ErrorState';
 import { Header } from '@/components/Header';
 import { NO_TRANSFORM } from '@/components/PressFeedback';
 import { project, RUBBER, SETTLE, settle } from '@/lib/fling';
-import { motion, spacing, useTheme } from '@/theme';
+import { motion, radius, spacing, useTheme } from '@/theme';
 
 import { takeImageOrigin, windowRect } from './imageOrigin';
 
@@ -18,6 +18,11 @@ export interface ImageViewerProps {
   url: string | null;
   /** Leave the viewer (go back). Called once, after the picture has gone. */
   onClose: () => void;
+  /**
+   * A profile photo (T-29): drawn as the largest circle the screen holds, cropped to fill it, and
+   * grown out of the small round avatar it was opened from.
+   */
+  round?: boolean;
 }
 
 /** A release headed further down than this share of the screen's height closes the viewer. */
@@ -55,13 +60,21 @@ const LEAVE_FALLBACK_MS = 600;
  * place, with no wobble. Pulled up or sideways it only gives a little (`RUBBER`).
  *
  * Under Reduce Motion it fades in and out and nothing moves but the drag itself.
+ *
+ * `round` (a profile photo) draws the picture as a circle of diameter D, the smaller side of the
+ * body inside its padding, centred where the rectangle would be; it grows from scale
+ * `origin.width / D`, so at the start it sits exactly over the avatar that was tapped.
  */
-export function ImageViewer({ url, onClose }: ImageViewerProps) {
+export function ImageViewer({ url, onClose, round = false }: ImageViewerProps) {
   const { colors } = useTheme();
-  const { height: windowHeight } = useWindowDimensions();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const reduced = useReducedMotion();
   const [failed, setFailed] = useState(false);
   const body = useRef<View>(null);
+  // The round picture's diameter, once the body has been measured; until then a guess from the window.
+  const [measured, setMeasured] = useState<number | null>(null);
+  const circle = round && !!url && !failed;
+  const diameter = measured ?? diameterIn(windowWidth, windowHeight);
 
   // 0: not there (the page as it was). 1: open.
   const open = useSharedValue(0);
@@ -85,6 +98,11 @@ export function ImageViewer({ url, onClose }: ImageViewerProps) {
       fromY.value = origin.y + origin.height / 2 - (frame.y + frame.height / 2);
       fromScale.value = origin.width / frame.width;
       anchored.value = true;
+    }
+    if (round && frame) {
+      const d = diameterIn(frame.width, frame.height);
+      setMeasured(d);
+      if (origin && !reduced) fromScale.value = origin.width / d;
     }
     open.value = reduced ? withTiming(1, { duration: motion.fast }) : withSpring(1, SETTLE);
     // Mount only: the viewer opens once.
@@ -186,22 +204,43 @@ export function ImageViewer({ url, onClose }: ImageViewerProps) {
             <Header style={styles.header} actions={[{ icon: 'x', label: 'Close', variant: 'filled', onPress: closeNow }]} />
           </Animated.View>
           <GestureDetector gesture={pan}>
-            <View ref={body} style={styles.body} collapsable={false}>
-              <Animated.View style={[styles.fill, pictureStyle]} testID="image-viewer-picture">
-                {url && !failed ? (
+            <View
+              ref={body}
+              style={styles.body}
+              collapsable={false}
+              onLayout={round ? (e) => setMeasured(diameterIn(e.nativeEvent.layout.width, e.nativeEvent.layout.height)) : undefined}
+            >
+              {circle ? (
+                <Animated.View
+                  style={[styles.circle, { width: diameter, height: diameter, backgroundColor: colors.avatarFill }, pictureStyle]}
+                  testID="image-viewer-picture"
+                >
                   <Image
                     source={{ uri: url }}
                     style={styles.fill}
-                    contentFit="contain"
-                    accessibilityLabel="Full-screen image"
-                    // Web: a mouse press on an <img> starts the browser's own image drag, which cancels the swipe.
+                    contentFit="cover"
+                    accessibilityLabel="Profile photo"
                     draggable={false}
                     onError={() => setFailed(true)}
                   />
-                ) : (
-                  <ErrorState title="Image not available" message="Go back and try again." icon="image" />
-                )}
-              </Animated.View>
+                </Animated.View>
+              ) : (
+                <Animated.View style={[styles.fill, pictureStyle]} testID="image-viewer-picture">
+                  {url && !failed ? (
+                    <Image
+                      source={{ uri: url }}
+                      style={styles.fill}
+                      contentFit="contain"
+                      accessibilityLabel="Full-screen image"
+                      // Web: a mouse press on an <img> starts the browser's own image drag, which cancels the swipe.
+                      draggable={false}
+                      onError={() => setFailed(true)}
+                    />
+                  ) : (
+                    <ErrorState title="Image not available" message="Go back and try again." icon="image" />
+                  )}
+                </Animated.View>
+              )}
             </View>
           </GestureDetector>
         </SafeAreaView>
@@ -210,9 +249,15 @@ export function ImageViewer({ url, onClose }: ImageViewerProps) {
   );
 }
 
+/** The largest circle inside a body of this size, within its padding. */
+function diameterIn(width: number, height: number): number {
+  return Math.max(0, Math.min(width, height) - 2 * spacing.gutter);
+}
+
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   // The page shows through while the picture is dragged, so the header has no band of its own.
   header: { backgroundColor: 'transparent' },
   body: { flex: 1, justifyContent: 'center', padding: spacing.gutter },
+  circle: { alignSelf: 'center', borderRadius: radius.pill, overflow: 'hidden' },
 });

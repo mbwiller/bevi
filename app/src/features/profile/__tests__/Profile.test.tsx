@@ -44,6 +44,7 @@ async function open(url: string) {
       '(tabs)/add/index': Stub,
       'bev/[id]': Stub,
       'settings/index': Stub,
+      'image/[url]': Stub,
     },
     { initialUrl: url },
   );
@@ -264,5 +265,48 @@ describe("another user's profile", () => {
     const me = await api.profile.getMe();
     const r = await open(`/user/${me.id}`);
     await waitFor(() => expect(r.path()).toBe('/profile'));
+  });
+});
+
+// T-29: a profile photo opens full screen as a large circle; initials are not pressable.
+describe('the profile photo', () => {
+  const PHOTO = 'https://example.test/avatar.jpg';
+
+  it('on your own profile, opens the round viewer with the photo', async () => {
+    const getMe = api.profile.getMe.bind(api.profile);
+    const spy = jest.spyOn(api.profile, 'getMe').mockImplementation(async () => ({ ...(await getMe()), avatarUrl: PHOTO }));
+    const me = await getMe();
+    const r = await open('/profile');
+    const photo = await screen.findByRole('imagebutton', { name: `View profile photo of @${me.handle}` });
+    await fireEvent.press(photo);
+    await waitFor(() => expect(r.path()).toBe(`/image/${PHOTO}?shape=circle`));
+    spy.mockRestore();
+  });
+
+  it("on another person's profile, opens the round viewer with their photo", async () => {
+    const page = await api.profile.searchUsers({ q: 'friend_a' });
+    const j = page.items.find((u) => u.handle === 'friend_a')!;
+    const getUser = api.profile.getUser.bind(api.profile);
+    const spy = jest.spyOn(api.profile, 'getUser').mockImplementation(async (id) => ({ ...(await getUser(id)), avatarUrl: PHOTO }));
+    const r = await open(`/user/${j.id}`);
+    const photo = await screen.findByRole('imagebutton', { name: `View profile photo of @${j.handle}` });
+    await fireEvent.press(photo);
+    await waitFor(() => expect(r.path()).toBe(`/image/${PHOTO}?shape=circle`));
+    spy.mockRestore();
+  });
+
+  it('with no photo, the initials are not a button and nothing opens', async () => {
+    const getMe = api.profile.getMe.bind(api.profile);
+    const spy = jest.spyOn(api.profile, 'getMe').mockImplementation(async () => ({ ...(await getMe()), avatarUrl: null }));
+    const me = await getMe();
+    const r = await open('/profile');
+    await screen.findByText(`@${me.handle}`);
+    expect(screen.queryByLabelText(`View profile photo of @${me.handle}`)).toBeNull();
+    expect(screen.queryAllByRole('imagebutton')).toHaveLength(0);
+    // The hero's avatar (the first one) is a plain image: pressing it goes nowhere.
+    const avatar = screen.getAllByRole('image', { name: me.displayName })[0]!;
+    await fireEvent.press(avatar);
+    expect(r.path()).toBe('/profile');
+    spy.mockRestore();
   });
 });
