@@ -145,9 +145,16 @@ export const EXPLORE_BRIDGE_WEIGHT = 1;
 // ---------------------------------------------------------------- starter set (§8.12)
 
 export const STARTER_K = 10;
-export const STARTER_CORE = 6;
+/** The most-rated starters every new user sees, whatever their picks or seed (shared for Layer 2). */
+export const STARTER_CORE = 3;
+/**
+ * How many Bevs each of the user's go-to categories gets in the set, by pick rank (favourite
+ * first): 2 from the first pick, 2 from the second, 1 from the third. Core members in a picked
+ * category count toward its quota. The length is the number of picks that count.
+ */
+export const STARTER_PICK_QUOTAS: readonly number[] = [2, 2, 1];
 export const STARTER_MAX_PER_CATEGORY = 2;
-/** The drawn part aims for at least this many distinct categories across the whole set. */
+/** The wildcards aim for at least this many distinct categories across the whole set. */
 export const STARTER_MIN_CATEGORIES = 5;
 
 // ---------------------------------------------------------------- rank on Bevi (§8.13)
