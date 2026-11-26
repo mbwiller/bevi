@@ -88,7 +88,7 @@ it("with saved go-tos, the set leads with the first pick's category and the intr
   const set = await expectedSet(picks);
   expect(set[0]!.categoryId).toBe(first);
   expect(set.map((b) => b.id)).not.toEqual((await expectedSet()).map((b) => b.id));
-  expect(await screen.findByText(/^We'll show you 10 Bevs, starting with your go-tos\. Rank the ones/)).toBeTruthy();
+  expect(await screen.findByText(/^We'll show you 10 Bevs, your go-tos first\. Rank the ones/)).toBeTruthy();
   await start();
   expect(await screen.findByRole('header', { name: set[0]!.name })).toBeTruthy();
   await skip(set[0]!.name);
@@ -103,7 +103,7 @@ it('a failed load of the go-tos blocks with Retry, then the set is chosen with t
   useSession.setState({ status: 'onboarding', profile: undefined, checked: true, devForced: true });
   await renderRouter(APP_DIR, { initialUrl: '/onboarding/starter' });
   await fireEvent.press(await screen.findByText('Retry'));
-  expect(await screen.findByText(/^We'll show you 10 Bevs, starting with your go-tos\./)).toBeTruthy();
+  expect(await screen.findByText(/^We'll show you 10 Bevs, your go-tos first\./)).toBeTruthy();
   const set = await expectedSet(['juice']);
   await start();
   expect(await screen.findByRole('header', { name: set[0]!.name })).toBeTruthy();

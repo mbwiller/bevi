@@ -24,12 +24,12 @@ export const STARTER_COPY = {
 } as const;
 
 /**
- * "We'll show you 10 Bevs, starting with your go-tos…" (the set leads with the user's go-to
+ * "We'll show you 10 Bevs, your go-tos first…" (the set leads with the user's go-to
  * categories), or "We'll show you 10 popular Bevs…" with none, with the size of the actual selection.
  */
 export function introBody(count: number, withGoTos = false): string {
   const bevs = count === 1 ? 'Bev' : 'Bevs';
-  const lead = withGoTos ? `We'll show you ${count} ${bevs}, starting with your go-tos.` : `We'll show you ${count} popular ${bevs}.`;
+  const lead = withGoTos ? `We'll show you ${count} ${bevs}, your go-tos first.` : `We'll show you ${count} popular ${bevs}.`;
   return `${lead} Rank the ones you've tried and skip the rest. It's how Bevi learns your taste.`;
 }
 
