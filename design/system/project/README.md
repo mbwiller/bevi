@@ -92,6 +92,7 @@ The plan's component list (DEVELOPMENT-MATT §4) covers the screens that have a 
 - `BevOfCard`: Bev of the day and Bev of the week at the top of the Feed (M-05), in the slot Featured Bevs had.
 - `UserRow`, `AvatarStack`: People (search, suggestions, the points ranking), followers, "Friends who've had it" on Bev detail and "Bev'd it too" on a FeedPost (§6.8, §6.11, §6.12).
 - `AvatarPicker`: your own profile photo on Edit profile and the onboarding profile step (§6.2, §6.19); the photo then shows in every `Avatar` of you.
+- `PhotoCropper`: the "Move and scale" step after picking a profile photo, so the person chooses what the circle shows.
 - `TextField`, `PriceTierPicker`: onboarding and the create-Bev wizard (§6.2, §6.10).
 - `Header`, `SectionHeader`, `IconButton`, `Button`: the header pattern, caps section labels, the close circle and the 36pt profile buttons, all described in §4 and §6 but not named as components.
 - `Icon`, `BevArt`: the icon set as one source, and placeholder drink art until catalog photos exist.
