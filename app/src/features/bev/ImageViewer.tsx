@@ -11,7 +11,7 @@ import { NO_TRANSFORM } from '@/components/PressFeedback';
 import { project, RUBBER, SETTLE, settle } from '@/lib/fling';
 import { motion, radius, spacing, useTheme } from '@/theme';
 
-import { takeImageOrigin, windowRect } from './imageOrigin';
+import { type Rect, takeImageOrigin, windowRect } from './imageOrigin';
 
 export interface ImageViewerProps {
   /** The picture, or null when the address was not one: "Image not available". */
@@ -94,19 +94,26 @@ export function ImageViewer({ url, onClose, round = false }: ImageViewerProps) {
     const origin = takeImageOrigin();
     const frame = windowRect(body.current);
     if (origin && frame && !reduced) {
-      fromX.value = origin.x + origin.width / 2 - (frame.x + frame.width / 2);
-      fromY.value = origin.y + origin.height / 2 - (frame.y + frame.height / 2);
-      fromScale.value = origin.width / frame.width;
+      const from = openingTransform(origin, frame, round);
+      fromX.value = from.x;
+      fromY.value = from.y;
+      fromScale.value = from.scale;
       anchored.value = true;
     }
-    if (round && frame) {
-      const d = diameterIn(frame.width, frame.height);
-      setMeasured(d);
-      if (origin && !reduced) fromScale.value = origin.width / d;
-    }
+    if (round && frame) setMeasured(diameterIn(frame.width, frame.height));
     open.value = reduced ? withTiming(1, { duration: motion.fast }) : withSpring(1, SETTLE);
     // Mount only: the viewer opens once.
   }, []);
+
+  // A round photo that fails to load shows the plain "Image not available" state: that closes as a
+  // viewer with nothing to go back into does, not by shrinking into the avatar.
+  const failRound = () => {
+    setFailed(true);
+    anchored.value = false;
+    fromX.value = 0;
+    fromY.value = 0;
+    fromScale.value = reduced ? 1 : FROM_CENTRE;
+  };
 
   const left = useRef(false);
   const leave = useCallback(() => {
@@ -221,7 +228,7 @@ export function ImageViewer({ url, onClose, round = false }: ImageViewerProps) {
                     contentFit="cover"
                     accessibilityLabel="Profile photo"
                     draggable={false}
-                    onError={() => setFailed(true)}
+                    onError={failRound}
                   />
                 </Animated.View>
               ) : (
@@ -252,6 +259,19 @@ export function ImageViewer({ url, onClose, round = false }: ImageViewerProps) {
 /** The largest circle inside a body of this size, within its padding. */
 function diameterIn(width: number, height: number): number {
   return Math.max(0, Math.min(width, height) - 2 * spacing.gutter);
+}
+
+/**
+ * Where the picture starts as it opens from `origin`: the offset from the body's centre to the
+ * origin's centre, and the scale that makes it the origin's width. The rectangle is scaled against
+ * the body's whole width; the round picture against its diameter, so it starts exactly over the avatar.
+ */
+export function openingTransform(origin: Rect, frame: Rect, round: boolean): { x: number; y: number; scale: number } {
+  return {
+    x: origin.x + origin.width / 2 - (frame.x + frame.width / 2),
+    y: origin.y + origin.height / 2 - (frame.y + frame.height / 2),
+    scale: origin.width / (round ? diameterIn(frame.width, frame.height) : frame.width),
+  };
 }
 
 const styles = StyleSheet.create({

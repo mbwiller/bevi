@@ -7,7 +7,7 @@ import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-han
 import ImageScreen from '@/app/image/[url]';
 import { radius, spacing } from '@/theme';
 
-import { ImageViewer } from '../ImageViewer';
+import { ImageViewer, openingTransform } from '../ImageViewer';
 import * as imageOrigin from '../imageOrigin';
 import { openingFrom, takeImageOrigin, windowRect } from '../imageOrigin';
 
@@ -152,6 +152,39 @@ describe('a profile photo, round (T-29)', () => {
     expect(onClose).not.toHaveBeenCalled();
     await swipe(HEIGHT * 0.3);
     await swipe(HEIGHT * 0.3);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('starts exactly over the avatar: centred on it, scaled to its width against the diameter', () => {
+    const avatar = { x: 145, y: 120, width: 100, height: 100 };
+    const body = { x: 0, y: 100, width: 390, height: 600 };
+    const d = 390 - 2 * spacing.gutter;
+    const from = openingTransform(avatar, body, true);
+    expect(from).toEqual({ x: 195 - 195, y: 170 - 400, scale: 100 / d });
+    // At open = 0 the circle's diameter is the avatar's, and its centre the avatar's.
+    expect(d * from.scale).toBeCloseTo(avatar.width);
+    expect(body.x + body.width / 2 + from.x).toBe(avatar.x + avatar.width / 2);
+    expect(body.y + body.height / 2 + from.y).toBe(avatar.y + avatar.height / 2);
+  });
+
+  it('the rectangle starts as it always has: scaled against the whole body width', () => {
+    const tile = { x: 10, y: 200, width: 155, height: 155 };
+    const body = { x: 0, y: 100, width: 390, height: 600 };
+    expect(openingTransform(tile, body, false)).toEqual({
+      x: tile.x + tile.width / 2 - (body.x + body.width / 2),
+      y: tile.y + tile.height / 2 - (body.y + body.height / 2),
+      scale: tile.width / body.width,
+    });
+  });
+
+  it('a photo that fails to load says so, and Close still leaves once', async () => {
+    openingFrom({ getBoundingClientRect: () => ({ x: 145, y: 120, width: 100, height: 100 }) });
+    const onClose = jest.fn();
+    await render(<ImageViewer url={URL} onClose={onClose} round />);
+    await fireEvent(screen.getByLabelText('Profile photo'), 'error', { nativeEvent: { error: 'failed' } });
+    expect(screen.getByText('Image not available')).toBeTruthy();
+    expect(screen.queryByLabelText('Profile photo')).toBeNull();
+    await fireEvent.press(screen.getByRole('button', { name: 'Close' }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 

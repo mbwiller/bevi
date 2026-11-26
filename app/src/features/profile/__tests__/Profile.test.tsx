@@ -8,6 +8,7 @@ import ProfileScreen from '@/app/(tabs)/profile/index';
 import UserProfileScreen from '@/app/user/[id]/index';
 import { streakCardValue } from '@/features/profile/copy';
 import { followPill } from '@/testing/followPill';
+import * as imageOrigin from '@/features/bev/imageOrigin';
 
 let client: QueryClient;
 
@@ -278,8 +279,14 @@ describe('the profile photo', () => {
     const me = await getMe();
     const r = await open('/profile');
     const photo = await screen.findByRole('imagebutton', { name: `View profile photo of @${me.handle}` });
+    // The avatar's frame is handed over before the viewer's route is pushed.
+    const opening = jest.spyOn(imageOrigin, 'openingFrom').mockImplementation(() => {
+      expect(r.path()).toBe('/profile');
+    });
     await fireEvent.press(photo);
+    expect(opening).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(r.path()).toBe(`/image/${PHOTO}?shape=circle`));
+    opening.mockRestore();
     spy.mockRestore();
   });
 
@@ -290,7 +297,12 @@ describe('the profile photo', () => {
     const spy = jest.spyOn(api.profile, 'getUser').mockImplementation(async (id) => ({ ...(await getUser(id)), avatarUrl: PHOTO }));
     const r = await open(`/user/${j.id}`);
     const photo = await screen.findByRole('imagebutton', { name: `View profile photo of @${j.handle}` });
+    const opening = jest.spyOn(imageOrigin, 'openingFrom').mockImplementation(() => {
+      expect(r.path()).toBe(`/user/${j.id}`);
+    });
     await fireEvent.press(photo);
+    expect(opening).toHaveBeenCalledTimes(1);
+    opening.mockRestore();
     await waitFor(() => expect(r.path()).toBe(`/image/${PHOTO}?shape=circle`));
     spy.mockRestore();
   });
