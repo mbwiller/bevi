@@ -123,6 +123,10 @@ it('ranking 3 turns Done on; finishing marks the profile onboarded and lands on 
   expect(useSession.getState().status).toBe('ready');
   expect(pathname()).toBe('/feed');
   expect((await api.profile.getMe()).onboarded).toBe(true);
+  // DELIVERABLE-44: the three starter rankings are in the user's list, and none of them is a post.
+  const me = await api.profile.getMe();
+  expect((await api.rankings.listMine()).items).toHaveLength(3);
+  expect((await api.feed.listUser(me.id)).items).toEqual([]);
 });
 
 it('runs a comparison when the bucket already has a Bev', async () => {

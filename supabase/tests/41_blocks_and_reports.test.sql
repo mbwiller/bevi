@@ -58,6 +58,10 @@ set local bevi.rpc_bypass = 'false';
 
 update public.profiles set timezone = 'UTC' where id in (select id from t_users);
 
+-- Onboarded, because submit_ranking posts nothing before onboarding ends
+-- (20261128000100) and this file's rankings are meant to be posts.
+update public.profiles set onboarded = true where id in (select id from t_users);
+
 insert into public.follows (follower_id, followee_id)
 select a.id, b.id
   from (values ('me', 'vil'), ('me', 'opp'), ('me', 'pal'),

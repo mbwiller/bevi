@@ -496,7 +496,8 @@ export interface RankingsApi {
   /**
    * Inserts a new ranking at `insertIndex`, re-spaces the bucket's scores, stores
    * the comparisons, and posts a feed item, atomically. Removes the Bev from Want
-   * to Try.
+   * to Try. No feed item while the caller's `onboarded` is false: the starter
+   * rankings stay in their list, stats and streak, but are never posts.
    * @throws 'unauthorized'; 'not_found' — no such Bev; 'age_restricted';
    *   'conflict' — the server's bucket size ≠ `expectedBucketSize`, or the Bev is
    *   already ranked (use `rerankBev`); 'validation' — `insertIndex` outside

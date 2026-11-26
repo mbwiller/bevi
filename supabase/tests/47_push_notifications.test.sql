@@ -63,6 +63,11 @@ update public.profiles set birth_date = (current_date - interval '18 years')::da
  where id = '00000000-0000-4000-8000-000000004705';
 set local bevi.rpc_bypass = 'false';
 
+-- Onboarded, because submit_ranking posts nothing before onboarding ends
+-- (20261128000100) and this file's rankings are meant to be posts.
+update public.profiles set onboarded = true
+ where id in (select id from t_users);
+
 create temporary table t_bevs (label text primary key, id uuid) on commit drop;
 insert into t_bevs (label, id)
 select 'soft' || s.n, s.id
