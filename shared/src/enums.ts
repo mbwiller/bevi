@@ -24,6 +24,13 @@ export type CategoryId =
   | 'beer' | 'wine' | 'spirits_cocktails' | 'other';
 
 /**
+ * The most go-to categories a user picks in onboarding (`profile.setCategoryPicks`), mirrored
+ * from the `rank between 1 and 3` check on `user_category_picks` and `set_category_picks`'s own
+ * limit; keep the three in sync by hand, as with `HANDLE_PATTERN`.
+ */
+export const MAX_CATEGORY_PICKS = 3;
+
+/**
  * A Bev's dominant taste family. Deliberately coarser than a category and cuts
  * across them: a cola soda and a cola slushie share `cola`. Mirrored by the
  * `base` check constraint on `bev_flavor_profiles`; keep the two in sync by

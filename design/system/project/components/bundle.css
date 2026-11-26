@@ -356,6 +356,18 @@
 .bv-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .bv-flame { display: inline-block; vertical-align: -2px; color: var(--primary); }
 
+/* PickTile: a category in onboarding's go-tos grid. Picked: `primaryTint`, a 2px `primary` rim (padding gives
+   the extra pixel back) and the pick's number in a `primary` badge. Dimmed: the art at 35%, the label `textSecondary`. */
+.bv-pick { position: relative; display: flex; flex-direction: column; align-items: center; gap: var(--space-sm); width: 100%; height: 100%;
+  padding: var(--space-md) var(--space-sm); border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--surface); text-align: center; }
+.bv-pick-art { display: flex; }
+.bv-pick-label { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-weight: 600; }
+.bv-pick-on { padding: calc(var(--space-md) - 1px) calc(var(--space-sm) - 1px); border: 2px solid var(--primary); background: var(--primaryTint); }
+.bv-pick-badge { position: absolute; top: var(--space-xs); right: var(--space-xs); display: flex; align-items: center; justify-content: center; min-width: 26px; height: 26px;
+  border-radius: var(--radius-pill); background: var(--primary); color: var(--onPrimary); font-size: 15px; line-height: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.bv-pick-dim { color: var(--textSecondary); cursor: default; }
+.bv-pick-dim .bv-pick-art { opacity: .35; }
+
 /* BucketButton: a `primary` ring filled to a level (loved full, fine half, disliked empty) over its label */
 .bv-bucket { display: flex; flex: 1; min-width: 0; flex-direction: column; align-items: center; gap: var(--space-md); padding: var(--space-xs) 0; color: var(--text); text-align: center; transition: color 150ms ease; }
 .bv-bucket-disc { position: relative; box-sizing: border-box; width: 76px; height: 76px; padding: 4px; border: 2.5px solid var(--primary); border-radius: var(--radius-pill); transition: transform 150ms ease, opacity 150ms ease; }

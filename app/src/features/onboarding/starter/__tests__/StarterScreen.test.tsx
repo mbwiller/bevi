@@ -1,14 +1,14 @@
 import path from 'path';
 
 import { selectStarterSet } from '@bevi/ranking';
-import { ApiError } from '@bevi/shared';
+import { ApiError, type CategoryId } from '@bevi/shared';
 import { configure, fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
 
 import { api } from '@/api/client';
 import { controls } from '@/testing/fakeApi';
 import { useSession } from '@/state/session';
 
-import { ALCOHOLIC_CATEGORY_IDS } from '../selection';
+import { ALCOHOLIC_CATEGORY_IDS, starterSeed } from '../selection';
 
 const APP_DIR = path.resolve(__dirname, '../../../../app');
 
@@ -25,11 +25,11 @@ async function open() {
   return () => result.getPathname();
 }
 
-/** The 10 the screen should show: selectStarterSet seeded by the user id, alcohol excluded. */
-async function expectedSet(): Promise<{ id: string; name: string }[]> {
+/** The 10 the screen should show: selectStarterSet seeded by the user id, alcohol excluded, led by `picks`. */
+async function expectedSet(picks: CategoryId[] = []): Promise<{ id: string; name: string; categoryId: CategoryId }[]> {
   const me = await api.profile.getMe();
   const candidates = await api.bevs.getStarterCandidates();
-  const ids = selectStarterSet(candidates, { seed: me.id, excludeCategoryIds: [...ALCOHOLIC_CATEGORY_IDS] });
+  const ids = selectStarterSet(candidates, { seed: me.id, excludeCategoryIds: [...ALCOHOLIC_CATEGORY_IDS], picks });
   return ids.map((id) => candidates.find((c) => c.id === id)!);
 }
 
@@ -72,6 +72,41 @@ it('shows the selectStarterSet picks, seeded by the user id with alcohol exclude
   expect(await screen.findByRole('header', { name: set[0]!.name })).toBeTruthy();
   expect(screen.getByText('1 of 10')).toBeTruthy();
   expect(screen.getByText('Rank at least 3 so we can learn your taste')).toBeTruthy();
+});
+
+it("with saved go-tos, the set leads with the first pick's category and the intro says so", async () => {
+  controls.signInAs('tester');
+  controls.emptyUser();
+  // A first pick the shared core doesn't already fill, so it has a Bev of its own to lead with.
+  const core = (await expectedSet()).slice(0, 3).map((b) => b.categoryId);
+  const first = (['tea', 'boba', 'coffee', 'juice', 'water'] as CategoryId[]).find((c) => !core.includes(c))!;
+  const picks: CategoryId[] = [first, 'sports'];
+  await api.profile.setCategoryPicks(picks);
+  useSession.setState({ status: 'onboarding', profile: undefined, checked: true, devForced: true });
+  await renderRouter(APP_DIR, { initialUrl: '/onboarding/starter' });
+
+  const set = await expectedSet(picks);
+  expect(set[0]!.categoryId).toBe(first);
+  expect(set.map((b) => b.id)).not.toEqual((await expectedSet()).map((b) => b.id));
+  expect(await screen.findByText(/^We'll show you 10 Bevs, your go-tos first\. Rank the ones/)).toBeTruthy();
+  await start();
+  expect(await screen.findByRole('header', { name: set[0]!.name })).toBeTruthy();
+  await skip(set[0]!.name);
+  expect(await screen.findByRole('header', { name: set[1]!.name })).toBeTruthy();
+});
+
+it('a failed load of the go-tos blocks with Retry, then the set is chosen with them', async () => {
+  controls.signInAs('tester');
+  controls.emptyUser();
+  await api.profile.setCategoryPicks(['juice']);
+  controls.failNext('unknown', 'profile.getCategoryPicks');
+  useSession.setState({ status: 'onboarding', profile: undefined, checked: true, devForced: true });
+  await renderRouter(APP_DIR, { initialUrl: '/onboarding/starter' });
+  await fireEvent.press(await screen.findByText('Retry'));
+  expect(await screen.findByText(/^We'll show you 10 Bevs, your go-tos first\./)).toBeTruthy();
+  const set = await expectedSet(['juice']);
+  await start();
+  expect(await screen.findByRole('header', { name: set[0]!.name })).toBeTruthy();
 });
 
 it('skip moves on without ranking', async () => {
@@ -123,6 +158,10 @@ it('ranking 3 turns Done on; finishing marks the profile onboarded and lands on 
   expect(useSession.getState().status).toBe('ready');
   expect(pathname()).toBe('/feed');
   expect((await api.profile.getMe()).onboarded).toBe(true);
+  // DELIVERABLE-44: the three starter rankings are in the user's list, and none of them is a post.
+  const me = await api.profile.getMe();
+  expect((await api.rankings.listMine()).items).toHaveLength(3);
+  expect((await api.feed.listUser(me.id)).items).toEqual([]);
 });
 
 it('runs a comparison when the bucket already has a Bev', async () => {
@@ -149,6 +188,45 @@ it('running out before 3 offers more starters', async () => {
   await screen.findByText("That's all of these");
   await fireEvent.press(screen.getByRole('button', { name: 'Show me more' }));
   expect(await screen.findByText(/^11 of \d+$/)).toBeTruthy();
+});
+
+it("'Show me more' passes the go-tos too: the next round leads with the first pick's category", async () => {
+  controls.signInAs('tester');
+  controls.emptyUser();
+  const me = await api.profile.getMe();
+  const candidates = await api.bevs.getStarterCandidates();
+  const categoryOf = (id: string) => candidates.find((c) => c.id === id)!.categoryId;
+  const nameOf = (id: string) => candidates.find((c) => c.id === id)!.name;
+  /** Round `n` as the screen picks it: selectStarterSet over the starters not shown yet. */
+  const round = (picks: CategoryId[], n: number, seen: ReadonlySet<string>) =>
+    selectStarterSet(
+      candidates.filter((c) => !seen.has(c.id)),
+      { seed: starterSeed(me.id, n), excludeCategoryIds: [...ALCOHOLIC_CATEGORY_IDS], picks },
+    );
+  // A first pick that still has starters left for round 2 and leads it only because it is passed:
+  // without the picks, round 2 would start with a different Bev.
+  let pick: CategoryId | undefined;
+  let first: string[] = [];
+  let next: string[] = [];
+  for (const p of ['tea', 'boba', 'coffee', 'juice', 'water', 'energy', 'sports', 'smoothie'] as CategoryId[]) {
+    const r0 = round([p], 0, new Set());
+    const r1 = round([p], 1, new Set(r0));
+    if (r1.length > 0 && categoryOf(r1[0]!) === p && r1[0] !== round([], 1, new Set(r0))[0]) {
+      [pick, first, next] = [p, r0, r1];
+      break;
+    }
+  }
+  expect(pick).toBeDefined();
+  await api.profile.setCategoryPicks([pick!]);
+  useSession.setState({ status: 'onboarding', profile: undefined, checked: true, devForced: true });
+  await renderRouter(APP_DIR, { initialUrl: '/onboarding/starter' });
+
+  await start();
+  for (const id of first) await skip(nameOf(id));
+  await screen.findByText("That's all of these");
+  await fireEvent.press(screen.getByRole('button', { name: 'Show me more' }));
+  expect(await screen.findByRole('header', { name: nameOf(next[0]!) })).toBeTruthy();
+  expect(screen.getByText(`11 of ${first.length + next.length}`)).toBeTruthy();
 });
 
 it('a failed candidates call shows Retry', async () => {

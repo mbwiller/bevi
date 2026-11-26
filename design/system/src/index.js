@@ -1,13 +1,13 @@
 import { Wordmark, Icon, BevArt, categories, scoreBand, formatScore, iconNames, bevArtKinds } from './core.jsx';
 import { BevImage, ScoreBubble, PriceTier, Avatar, AvatarStack, AvatarPicker, PhotoCropper, Pill, Button, IconButton, LikeButton, CommentButton, FilterPill, SortToggle, Switch, Skeleton, ProgressBar } from './primitives.jsx';
 import { Header, SectionHeader, ListScopeDropdown, BevRow, FeedPost, FeaturedCard, BevOfCard, ProfileListRow, StatCard, UserRow, NotificationRow, ProgressStrip, TasteBar, TasteProfile } from './rows.jsx';
-import { SegmentedTabs, TabBar, FindBevArt, SearchBar, TextField, PriceTierPicker, BucketButton, CompareCard, ProgressDots, EmptyState, ErrorState, Sheet, CommentsSheet, CollectionSheet } from './flow.jsx';
+import { SegmentedTabs, TabBar, FindBevArt, SearchBar, TextField, PriceTierPicker, PickTile, BucketButton, CompareCard, ProgressDots, EmptyState, ErrorState, Sheet, CommentsSheet, CollectionSheet } from './flow.jsx';
 import { MapCallout, MapFilterRow, MapControls, VenueRow, VenueSheet } from './map.jsx';
 
 // Order = catalogue order (mirrored in the @ds-bundle header by build.mjs).
 export const COMPONENTS = {
   Wordmark, Icon, BevArt, BevImage, ScoreBubble, PriceTier, Avatar, AvatarStack, AvatarPicker, PhotoCropper,
-  Pill, Button, IconButton, LikeButton, CommentButton, FilterPill, SortToggle, Switch, SearchBar, TextField, PriceTierPicker,
+  Pill, Button, IconButton, LikeButton, CommentButton, FilterPill, SortToggle, Switch, SearchBar, TextField, PriceTierPicker, PickTile,
   Header, SectionHeader, ListScopeDropdown, SegmentedTabs, TabBar,
   BevRow, FeedPost, FeaturedCard, BevOfCard, ProfileListRow, StatCard, UserRow, NotificationRow, ProgressStrip, ProgressBar, TasteBar, TasteProfile,
   BucketButton, CompareCard, ProgressDots,

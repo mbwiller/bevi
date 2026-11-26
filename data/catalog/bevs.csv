@@ -105,11 +105,11 @@ tropicana-orange-juice-some-pulp,Orange Juice,Tropicana,Some Pulp,juice,1,true,,
 tropicana-pink-lemonade,Pink Lemonade,Tropicana,Pink Lemonade,juice,1,true,,false,tropicana lemonade,,,,,lemonade
 tropicana-fruit-punch,Fruit Punch,Tropicana,Fruit Punch,juice,1,true,,false,tropicana punch,,,,,fruit_juice_blend
 simply-orange,Orange Juice,Simply,Original,juice,1,true,,false,simply oj,,,,,orange_juice
-simply-lemonade,Lemonade,Simply,Original,juice,1,true,,false,simply lemonade,,,,,lemonade
+simply-lemonade,Lemonade,Simply,Original,juice,1,true,,true,simply lemonade,,,,,lemonade
 simply-apple,Apple Juice,Simply,Original,juice,1,true,,false,simply apple,,,,,apple_juice
 simply-grapefruit,Grapefruit Juice,Simply,Original,juice,1,true,,false,simply grapefruit,,,,,orange_juice
 simply-limeade,Limeade,Simply,Original,juice,1,true,,false,simply lime,,,,,lemonade
-minute-maid-apple-juice,Apple Juice,Minute Maid,Original,juice,1,true,,false,minute maid apple,,,,,apple_juice
+minute-maid-apple-juice,Apple Juice,Minute Maid,Original,juice,1,true,,true,minute maid apple,,,,,apple_juice
 minute-maid-fruit-punch,Fruit Punch,Minute Maid,Fruit Punch,juice,1,true,,false,minute maid punch,,,,,fruit_juice_blend
 minute-maid-lemonade,Lemonade,Minute Maid,Original,juice,1,true,,false,minute maid lemonade,,,,,lemonade
 welchs-100-grape-juice,Grape Juice,Welch's,100% Grape,juice,1,true,,true,welchs grape|concord grape,,,,,grape_cranberry_juice
@@ -123,7 +123,7 @@ bolthouse-farms-perfectly-protein-vanilla-chai,Perfectly Protein,Bolthouse Farms
 bolthouse-farms-green-goodness-juice,Green Goodness,Bolthouse Farms,Green Goodness,juice,2,true,,false,bolthouse green,,,,,green_juice
 v8-original-vegetable-juice,Vegetable Juice,V8,Original,juice,1,true,,false,v8 original,,,,,green_juice
 v8-v-fusion-strawberry-banana,V-Fusion,V8,Strawberry Banana,juice,1,true,,false,v8 fusion,,,,,fruit_juice_blend
-ocean-spray-cranberry-juice-cocktail,Cranberry Juice Cocktail,Ocean Spray,Original,juice,1,true,,false,ocean spray cranberry,,,,,grape_cranberry_juice
+ocean-spray-cranberry-juice-cocktail,Cranberry Juice Cocktail,Ocean Spray,Original,juice,1,true,,true,ocean spray cranberry,,,,,grape_cranberry_juice
 ocean-spray-cran-grape,Cran-Grape,Ocean Spray,Cranberry Grape,juice,1,true,,false,ocean spray cran grape,,,,,grape_cranberry_juice
 ocean-spray-cran-raspberry,Cran-Raspberry,Ocean Spray,Cranberry Raspberry,juice,1,true,,false,ocean spray cran raspberry,,,,,grape_cranberry_juice
 motts-apple-juice,Apple Juice,Mott's,Original,juice,1,true,,false,motts apple,,,,,apple_juice
@@ -131,14 +131,14 @@ juicy-juice-apple,Apple Juice,Juicy Juice,Apple,juice,1,true,,false,juicy juice 
 hi-c-fruit-punch,Fruit Punch,Hi-C,Fruit Punch,juice,1,true,,false,hi c punch,,,,,fruit_juice_blend
 fiji-natural-artesian-water,Natural Artesian Water,Fiji,Original,water,2,true,,true,fiji water,,,,,
 evian-natural-spring-water,Natural Spring Water,Evian,Original,water,2,true,,false,evian water,,,,,
-smartwater-vapor-distilled,Vapor Distilled Water,Smartwater,Original,water,1,true,,false,smartwater,,,,,
+smartwater-vapor-distilled,Vapor Distilled Water,Smartwater,Original,water,1,true,,true,smartwater,,,,,
 liquid-death-mountain-water-still,Mountain Water,Liquid Death,Still,water,2,true,,true,liquid death water|liquid death still,,,,,
 liquid-death-sparkling-severed-lime,Sparkling Water,Liquid Death,Severed Lime,sparkling_water,2,true,,false,liquid death lime,,,,,citrus_sparkling_water
 essentia-ionized-alkaline-water,Ionized Alkaline Water,Essentia,Original,water,2,true,,false,essentia water,,,,,
 arrowhead-mountain-spring-water,Mountain Spring Water,Arrowhead,Original,water,1,true,,false,arrowhead water,,,,,
-dasani-purified-water,Purified Water,Dasani,Original,water,1,true,,false,dasani water,,,,,
+dasani-purified-water,Purified Water,Dasani,Original,water,1,true,,true,dasani water,,,,,
 aquafina-purified-water,Purified Water,Aquafina,Original,water,1,true,,false,aquafina water,,,,,
-poland-spring-natural-spring-water,Natural Spring Water,Poland Spring,Original,water,1,true,,false,poland spring water,,,,,
+poland-spring-natural-spring-water,Natural Spring Water,Poland Spring,Original,water,1,true,,true,poland spring water,,,,,
 deer-park-natural-spring-water,Natural Spring Water,Deer Park,Original,water,1,true,,false,deer park water,,,,,
 voss-artesian-still-water,Artesian Still Water,Voss,Still,water,2,true,,false,voss water,,,,,
 mountain-valley-spring-water,Spring Water,Mountain Valley Spring Water,Original,water,2,true,,false,mountain valley water,,,,,
@@ -230,18 +230,18 @@ starbucks-frappuccino-caramel,Frappuccino Caramel,Starbucks,Caramel,coffee,1,tru
 starbucks-frappuccino-coffee,Frappuccino Coffee,Starbucks,Coffee,coffee,1,true,,false,frapp|frappe|original frappuccino,,,,,blended_coffee
 starbucks-frappuccino-mocha-light,Frappuccino Mocha Light,Starbucks,Mocha Light,coffee,1,true,,false,light frappuccino|low calorie frappuccino,,,,,blended_coffee
 starbucks-doubleshot-original,Doubleshot Original,Starbucks,Original,coffee,1,true,,false,doubleshot,,,,,latte
-starbucks-doubleshot-espresso-cream,Doubleshot Espresso & Cream,Starbucks,Espresso & Cream,coffee,1,true,,false,doubleshot espresso and cream,,,,,latte
+starbucks-doubleshot-espresso-cream,Doubleshot Espresso & Cream,Starbucks,Espresso & Cream,coffee,1,true,,true,doubleshot espresso and cream,,,,,latte
 starbucks-doubleshot-vanilla,Doubleshot Vanilla,Starbucks,Vanilla,coffee,1,true,,false,doubleshot vanilla,,,,,flavored_latte
 starbucks-doubleshot-energy-coffee,Doubleshot Energy Coffee,Starbucks,Coffee,coffee,1,true,,false,doubleshot energy|energy coffee,,,,,latte
 dunkin-bottled-iced-coffee-original,Bottled Iced Coffee Original,Dunkin',Original,coffee,1,true,,true,dunkin iced coffee|dunkin original,,,,,latte
 dunkin-bottled-iced-coffee-mocha,Bottled Iced Coffee Mocha,Dunkin',Mocha,coffee,1,true,,false,dunkin iced coffee mocha,,,,,flavored_latte
 dunkin-bottled-iced-coffee-french-vanilla,Bottled Iced Coffee French Vanilla,Dunkin',French Vanilla,coffee,1,true,,false,dunkin iced coffee french vanilla,,,,,flavored_latte
-la-colombe-draft-latte-original,Draft Latte Original,La Colombe,Original,coffee,3,true,,false,draft latte|la colombe latte,,,,,latte
+la-colombe-draft-latte-original,Draft Latte Original,La Colombe,Original,coffee,3,true,,true,draft latte|la colombe latte,,,,,latte
 la-colombe-draft-latte-mocha,Draft Latte Mocha,La Colombe,Mocha,coffee,3,true,,false,draft latte mocha,,,,,flavored_latte
 la-colombe-draft-latte-vanilla,Draft Latte Vanilla,La Colombe,Vanilla,coffee,3,true,,false,draft latte vanilla,,,,,flavored_latte
 la-colombe-draft-latte-oat-milk,Draft Latte Oat Milk,La Colombe,Oat Milk,coffee,3,true,,false,draft latte oat|oat milk latte,,,,,latte
 stok-cold-brew-black,Cold Brew Black,Stok,Black,coffee,2,true,,false,stok black coffee|stok cold brew,,,,,cold_brew
-stok-cold-brew-not-too-sweet,Cold Brew Not Too Sweet,Stok,Not Too Sweet,coffee,2,true,,false,stok not too sweet,,,,,cold_brew
+stok-cold-brew-not-too-sweet,Cold Brew Not Too Sweet,Stok,Not Too Sweet,coffee,2,true,,true,stok not too sweet,,,,,cold_brew
 chameleon-cold-brew-black,Cold Brew Black,Chameleon Cold Brew,Black,coffee,2,true,,false,chameleon black coffee,,,,,cold_brew
 califia-farms-cold-brew-almond-milk,Cold Brew Coffee with Almond Milk,Califia Farms,Almond Milk,coffee,2,true,,false,califia cold brew|cold brew almondmilk,,,,,latte
 high-brew-mexican-vanilla,Coffee Mexican Vanilla,High Brew Coffee,Mexican Vanilla,coffee,2,true,,false,high brew vanilla,,,,,flavored_latte
@@ -259,9 +259,9 @@ jamba-juice-strawberry-surf-rider,Strawberry Surf Rider,Jamba Juice,Strawberry,s
 jamba-juice-caribbean-passion,Caribbean Passion,Jamba Juice,Passion Fruit,smoothie,2,true,,false,jamba caribbean,,,,,fruit_smoothie
 jamba-juice-orange-dream-machine,Orange Dream Machine,Jamba Juice,Orange,smoothie,2,true,,false,jamba orange dream,,,,,fruit_smoothie
 naked-protein-zone,Protein Zone,Naked,Protein Blend,smoothie,2,true,,false,naked protein,,,,,protein_smoothie
-naked-berry-blast,Berry Blast,Naked,Berry,smoothie,2,true,,false,naked berry,,,,,fruit_smoothie
+naked-berry-blast,Berry Blast,Naked,Berry,smoothie,2,true,,true,naked berry,,,,,fruit_smoothie
 bolthouse-farms-perfectly-protein-chocolate,Perfectly Protein Chocolate,Bolthouse Farms,Chocolate,smoothie,2,true,,false,bolthouse chocolate protein,,,,,protein_smoothie
-bolthouse-farms-green-goodness-smoothie,Green Goodness,Bolthouse Farms,Green,smoothie,2,true,,false,bolthouse green smoothie,,,,,green_smoothie
+bolthouse-farms-green-goodness-smoothie,Green Goodness,Bolthouse Farms,Green,smoothie,2,true,,true,bolthouse green smoothie,,,,,green_smoothie
 bolthouse-farms-strawberry-banana,Strawberry Banana,Bolthouse Farms,Strawberry Banana,smoothie,2,true,,true,bolthouse strawberry banana,,,,,fruit_smoothie
 odwalla-superfood-smoothie,Superfood,Odwalla,Superfood,smoothie,2,true,,false,odwalla superfood smoothie,,,,,green_smoothie
 arizona-green-tea,Arizona Green Tea,Arizona,Green Tea,tea,1,true,,true,az green tea|arizona iced tea green,,,,,green_tea
@@ -270,12 +270,12 @@ arizona-half-and-half,Arizona Half & Half,Arizona,Half & Half,tea,1,true,,false,
 arizona-peach-tea,Arizona Peach Tea,Arizona,Peach Tea,tea,1,true,,false,az peach tea,,,,,iced_tea
 arizona-raspberry-tea,Arizona Raspberry Tea,Arizona,Raspberry Tea,tea,1,true,,false,az raspberry tea,,,,,iced_tea
 arizona-diet-green-tea,Arizona Diet Green Tea,Arizona,Diet Green Tea,tea,1,true,,false,diet az green tea,,,,,green_tea
-pure-leaf-sweet-tea,Pure Leaf Sweet Tea,Pure Leaf,Sweet Tea,tea,1,true,,false,pure leaf sweetened tea,,,,,iced_tea
+pure-leaf-sweet-tea,Pure Leaf Sweet Tea,Pure Leaf,Sweet Tea,tea,1,true,,true,pure leaf sweetened tea,,,,,iced_tea
 pure-leaf-unsweetened,Pure Leaf Unsweetened,Pure Leaf,Unsweetened,tea,1,true,,false,pure leaf unsweetened tea,,,,,iced_tea
 pure-leaf-lemon-tea,Pure Leaf Lemon Tea,Pure Leaf,Lemon,tea,1,true,,false,pure leaf lemon,,,,,iced_tea
 pure-leaf-extra-sweet-tea,Pure Leaf Extra Sweet Tea,Pure Leaf,Extra Sweet,tea,1,true,,false,pure leaf extra sweet,,,,,iced_tea
 snapple-lemon-tea,Snapple Lemon Tea,Snapple,Lemon Tea,tea,1,true,,false,snapple lemon,,,,,iced_tea
-snapple-peach-tea,Snapple Peach Tea,Snapple,Peach Tea,tea,1,true,,false,snapple peach,,,,,iced_tea
+snapple-peach-tea,Snapple Peach Tea,Snapple,Peach Tea,tea,1,true,,true,snapple peach,,,,,iced_tea
 snapple-raspberry-tea,Snapple Raspberry Tea,Snapple,Raspberry Tea,tea,1,true,,false,snapple raspberry,,,,,iced_tea
 snapple-diet-peach-tea,Snapple Diet Peach Tea,Snapple,Diet Peach Tea,tea,1,true,,false,diet snapple peach,,,,,iced_tea
 gold-peak-sweet-tea,Gold Peak Sweet Tea,Gold Peak,Sweet Tea,tea,1,true,,false,goldpeak sweet tea,,,,,iced_tea
@@ -286,18 +286,18 @@ lipton-green-tea,Lipton Green Tea,Lipton,Green Tea,tea,1,true,,false,lipton gree
 lipton-diet-green-tea,Lipton Diet Green Tea,Lipton,Diet Green Tea,tea,1,true,,false,diet lipton green tea,,,,,green_tea
 ito-en-oi-ocha-green-tea,Ito En Oi Ocha Green Tea,Ito En,Green Tea,tea,2,true,,false,oi ocha|ito en green tea,,,,,green_tea
 ito-en-matcha-green-tea,Ito En Matcha Green Tea,Ito En,Matcha,tea,2,true,,false,ito en matcha,,,,,matcha
-guayaki-yerba-mate-enlighten-mint,Guayaki Yerba Mate Enlighten Mint,Guayaki,Enlighten Mint,tea,2,true,,false,yerba mate mint|guayaki mint,,,,,yerba_mate
+guayaki-yerba-mate-enlighten-mint,Guayaki Yerba Mate Enlighten Mint,Guayaki,Enlighten Mint,tea,2,true,,true,yerba mate mint|guayaki mint,,,,,yerba_mate
 guayaki-yerba-mate-lemon-elation,Guayaki Yerba Mate Lemon Elation,Guayaki,Lemon Elation,tea,2,true,,false,yerba mate lemon,,,,,yerba_mate
 honest-tea-honey-green-tea,Honest Tea Honey Green Tea,Honest Tea,Honey Green Tea,tea,1,true,,false,honest tea green tea,,,,,green_tea
 kung-fu-tea-classic-milk-tea,Classic Milk Tea (Kung Fu Tea),Kung Fu Tea,Classic Milk Tea,boba,2,true,,true,kung fu tea milk tea|classic boba milk tea,,,,,classic_milk_tea
 tiger-sugar-brown-sugar-boba-milk-tea,Brown Sugar Boba Milk Tea (Tiger Sugar),Tiger Sugar,Brown Sugar,boba,3,true,,true,tiger sugar|brown sugar milk tea,,,,,classic_milk_tea
 boba-guys-taro-milk-tea,Taro Milk Tea (Boba Guys),Boba Guys,Taro,boba,3,true,,false,boba guys taro,,,,,flavored_milk_tea
-thai-milk-tea-boba,Thai Milk Tea,Generic,Thai Milk Tea,boba,2,true,,false,thai tea|thai iced tea boba,,,,,classic_milk_tea
-matcha-latte-with-boba,Matcha Latte with Boba,Generic,Matcha,boba,2,true,,false,matcha boba latte,,,,,flavored_milk_tea
+thai-milk-tea-boba,Thai Milk Tea,Generic,Thai Milk Tea,boba,2,true,,true,thai tea|thai iced tea boba,,,,,classic_milk_tea
+matcha-latte-with-boba,Matcha Latte with Boba,Generic,Matcha,boba,2,true,,true,matcha boba latte,,,,,flavored_milk_tea
 wintermelon-milk-tea-boba,Wintermelon Milk Tea,Generic,Wintermelon,boba,2,true,,false,winter melon milk tea,,,,,flavored_milk_tea
 honeydew-milk-tea-with-boba,Honeydew Milk Tea with Boba,Generic,Honeydew,boba,2,true,,false,honeydew boba milk tea,,,,,flavored_milk_tea
 strawberry-fruit-tea-with-boba,Strawberry Fruit Tea with Boba,Generic,Strawberry,boba,2,true,,false,strawberry boba tea,,,,,boba_fruit_tea
-mango-green-tea-with-boba,Mango Green Tea with Boba,Generic,Mango Green Tea,boba,2,true,,false,mango green tea boba,,,,,boba_fruit_tea
+mango-green-tea-with-boba,Mango Green Tea with Boba,Generic,Mango Green Tea,boba,2,true,,true,mango green tea boba,,,,,boba_fruit_tea
 oolong-milk-tea-boba,Oolong Milk Tea,Generic,Oolong,boba,2,true,,false,oolong boba milk tea,,,,,classic_milk_tea
 gong-cha-classic-milk-tea,Classic Milk Tea (Gong Cha),Gong Cha,Classic Milk Tea,boba,2,true,,false,gong cha milk tea,,,,,classic_milk_tea
 sharetea-taro-milk-tea,Taro Milk Tea (Sharetea),Sharetea,Taro,boba,2,true,,false,sharetea taro,,,,,flavored_milk_tea
@@ -312,16 +312,16 @@ gatorade-glacier-freeze,Gatorade Thirst Quencher,Gatorade,Glacier Freeze,sports,
 gatorade-grape,Gatorade Thirst Quencher,Gatorade,Grape,sports,1,true,,false,gatorade grape,,,,,
 gatorade-zero-lemon-lime,Gatorade Zero,Gatorade,Lemon-Lime,sports,1,true,,false,gatorade zero|zero sugar gatorade lemon-lime,,,,,
 gatorade-zero-grape,Gatorade Zero,Gatorade,Grape,sports,1,true,,false,gatorade zero grape,,,,,
-powerade-mountain-berry-blast,Powerade,Powerade,Mountain Berry Blast,sports,1,true,,false,powerade mountain berry blast,,,,,
+powerade-mountain-berry-blast,Powerade,Powerade,Mountain Berry Blast,sports,1,true,,true,powerade mountain berry blast,,,,,
 powerade-fruit-punch,Powerade,Powerade,Fruit Punch,sports,1,true,,false,powerade fruit punch,,,,,
 powerade-grape,Powerade,Powerade,Grape,sports,1,true,,false,powerade grape,,,,,
 powerade-zero-mixed-berry,Powerade Zero,Powerade,Mixed Berry,sports,1,true,,false,powerade zero|zero sugar powerade mixed berry,,,,,
-bodyarmor-fruit-punch,BODYARMOR Sports Drink,BodyArmor,Fruit Punch,sports,1,true,,false,bodyarmor fruit punch|body armor fruit punch,,,,,
+bodyarmor-fruit-punch,BODYARMOR Sports Drink,BodyArmor,Fruit Punch,sports,1,true,,true,bodyarmor fruit punch|body armor fruit punch,,,,,
 bodyarmor-strawberry-banana,BODYARMOR Sports Drink,BodyArmor,Strawberry Banana,sports,1,true,,false,bodyarmor strawberry banana|body armor strawberry banana,,,,,
 bodyarmor-orange-mango,BODYARMOR Sports Drink,BodyArmor,Orange Mango,sports,1,true,,false,bodyarmor orange mango|body armor orange mango,,,,,
 bodyarmor-lyte-fruit-punch,BODYARMOR Lyte,BodyArmor,Fruit Punch,sports,1,true,,false,bodyarmor lyte|body armor lyte fruit punch,,,,,
 prime-hydration-lemon-lime,Prime Hydration,Prime Hydration,Lemon Lime,sports,1,true,,false,prime lemon lime|prime hydration lemon lime,,,,,
-prime-hydration-blue-raspberry,Prime Hydration,Prime Hydration,Blue Raspberry,sports,1,true,,false,prime blue raspberry,,,,,
+prime-hydration-blue-raspberry,Prime Hydration,Prime Hydration,Blue Raspberry,sports,1,true,,true,prime blue raspberry,,,,,
 prime-hydration-ice-pop,Prime Hydration,Prime Hydration,Ice Pop,sports,1,true,,false,prime ice pop,,,,,
 propel-water-berry,Propel Water,Propel,Berry,sports,1,true,,false,propel fitness water berry|propel berry,,,,,
 horchata-traditional,Horchata,Generic,Horchata,other,2,true,,false,mexican horchata|rice horchata,,,,,aguas_frescas
@@ -339,41 +339,41 @@ vita-coco-coconut-water-original,Vita Coco Coconut Water,Vita Coco,Original,othe
 harmless-harvest-coconut-water,Harmless Harvest Coconut Water,Harmless Harvest,Original,other,2,true,,false,harmless harvest|raw coconut water,,,,,coconut_water
 health-ade-kombucha-pink-lady-apple,Health-Ade Kombucha,Health-Ade,Pink Lady Apple,other,2,true,,false,health ade kombucha,,,,,kombucha
 suja-kombucha-strawberry-basil-lemonade,Suja Kombucha,Suja,Strawberry Basil Lemonade,other,2,true,,false,suja kombucha,,,,,kombucha
-modelo-especial,Modelo Especial,Modelo,Especial,beer,2,true,,false,modelo|modelo especial|cerveza modelo,,,,,lager
-corona-extra,Corona Extra,Corona,Extra,beer,2,true,,false,corona|corona extra,,,,,lager
+modelo-especial,Modelo Especial,Modelo,Especial,beer,2,true,,true,modelo|modelo especial|cerveza modelo,,,,,lager
+corona-extra,Corona Extra,Corona,Extra,beer,2,true,,true,corona|corona extra,,,,,lager
 corona-light,Corona Light,Corona,Light,beer,2,true,,false,corona light,,,,,lager
 coors-light,Coors Light,Coors,Light,beer,2,true,,false,coors|coors light,,,,,lager
-bud-light,Bud Light,Bud Light,Original,beer,2,true,,false,budlight|bud light,,,,,lager
+bud-light,Bud Light,Bud Light,Original,beer,2,true,,true,budlight|bud light,,,,,lager
 miller-lite,Miller Lite,Miller,Lite,beer,2,true,,false,miller|miller lite,,,,,lager
 heineken-original-lager,Heineken Original Lager,Heineken,Original,beer,2,true,,false,heineken|heineken lager,,,,,lager
 stella-artois-lager,Stella Artois Lager,Stella Artois,Lager,beer,2,true,,false,stella|stella artois,,,,,lager
-guinness-draught,Guinness Draught,Guinness,Draught,beer,2,true,,false,guinness|guinness stout|guinness draught,,,,,ale
+guinness-draught,Guinness Draught,Guinness,Draught,beer,2,true,,true,guinness|guinness stout|guinness draught,,,,,ale
 blue-moon-belgian-white,Blue Moon Belgian White,Blue Moon,Belgian White,beer,2,true,,false,blue moon|belgian white,,,,,ale
 pacifico-clara,Pacifico Clara,Pacifico,Clara,beer,2,true,,false,pacifico,,,,,lager
 dos-equis-lager-especial,Dos Equis Lager Especial,Dos Equis,Lager Especial,beer,2,true,,false,dos equis|dos equis xx,,,,,lager
-white-claw-black-cherry,White Claw Hard Seltzer,White Claw,Black Cherry,beer,2,true,,false,white claw|hard seltzer|black cherry seltzer,,,,,hard_seltzer
+white-claw-black-cherry,White Claw Hard Seltzer,White Claw,Black Cherry,beer,2,true,,true,white claw|hard seltzer|black cherry seltzer,,,,,hard_seltzer
 white-claw-mango,White Claw Hard Seltzer,White Claw,Mango,beer,2,true,,false,white claw mango,,,,,hard_seltzer
 white-claw-lime,White Claw Hard Seltzer,White Claw,Lime,beer,2,true,,false,white claw lime,,,,,hard_seltzer
 white-claw-natural-lime,White Claw Hard Seltzer,White Claw,Natural Lime,beer,2,true,,false,white claw natural lime,,,,,hard_seltzer
 truly-wild-berry,Truly Hard Seltzer,Truly,Wild Berry,beer,2,true,,false,truly|truly seltzer|wild berry,,,,,hard_seltzer
 truly-lemonade,Truly Hard Seltzer,Truly,Lemonade,beer,2,true,,false,truly lemonade,,,,,hard_seltzer
-generic-house-red-cabernet-sauvignon,House Red Cabernet Sauvignon,Generic,Cabernet Sauvignon,wine,3,true,,false,house red|cabernet|red wine,,,,,red_wine
-generic-house-white-chardonnay,House White Chardonnay,Generic,Chardonnay,wine,3,true,,false,house white|chardonnay|white wine,,,,,white_wine
+generic-house-red-cabernet-sauvignon,House Red Cabernet Sauvignon,Generic,Cabernet Sauvignon,wine,3,true,,true,house red|cabernet|red wine,,,,,red_wine
+generic-house-white-chardonnay,House White Chardonnay,Generic,Chardonnay,wine,3,true,,true,house white|chardonnay|white wine,,,,,white_wine
 generic-prosecco,Prosecco,Generic,Prosecco,wine,3,true,,false,prosecco|sparkling wine,,,,,sparkling_wine
 generic-pinot-grigio,Pinot Grigio,Generic,Pinot Grigio,wine,3,true,,false,pinot grigio|white wine,,,,,white_wine
-generic-rose,Rose,Generic,Rose,wine,3,true,,false,rose|rose wine|pink wine,,,,,rose_wine
+generic-rose,Rose,Generic,Rose,wine,3,true,,true,rose|rose wine|pink wine,,,,,rose_wine
 barefoot-cellars-cabernet-sauvignon,Barefoot Cellars Cabernet Sauvignon,Barefoot Cellars,Cabernet Sauvignon,wine,3,true,,false,barefoot|barefoot cabernet,,,,,red_wine
 josh-cellars-chardonnay,Josh Cellars Chardonnay,Josh Cellars,Chardonnay,wine,3,true,,false,josh cellars|josh chardonnay,,,,,white_wine
-la-marca-prosecco,La Marca Prosecco,La Marca,Prosecco,wine,3,true,,false,la marca|la marca prosecco,,,,,sparkling_wine
-generic-margarita,Margarita,Generic,Margarita,spirits_cocktails,3,true,,false,margarita|tequila cocktail,,,,,tequila
-generic-old-fashioned,Old Fashioned,Generic,Old Fashioned,spirits_cocktails,3,true,,false,old fashioned|whiskey cocktail,,,,,whiskey
-generic-espresso-martini,Espresso Martini,Generic,Espresso Martini,spirits_cocktails,3,true,,false,espresso martini|coffee cocktail,,,,,vodka
-generic-moscow-mule,Moscow Mule,Generic,Moscow Mule,spirits_cocktails,3,true,,false,moscow mule|vodka cocktail,,,,,vodka
+la-marca-prosecco,La Marca Prosecco,La Marca,Prosecco,wine,3,true,,true,la marca|la marca prosecco,,,,,sparkling_wine
+generic-margarita,Margarita,Generic,Margarita,spirits_cocktails,3,true,,true,margarita|tequila cocktail,,,,,tequila
+generic-old-fashioned,Old Fashioned,Generic,Old Fashioned,spirits_cocktails,3,true,,true,old fashioned|whiskey cocktail,,,,,whiskey
+generic-espresso-martini,Espresso Martini,Generic,Espresso Martini,spirits_cocktails,3,true,,true,espresso martini|coffee cocktail,,,,,vodka
+generic-moscow-mule,Moscow Mule,Generic,Moscow Mule,spirits_cocktails,3,true,,true,moscow mule|vodka cocktail,,,,,vodka
 generic-mojito,Mojito,Generic,Mojito,spirits_cocktails,3,true,,false,mojito|rum cocktail,,,,,rum
 generic-pina-colada,Pina Colada,Generic,Pina Colada,spirits_cocktails,3,true,,false,pina colada|rum cocktail,,,,,rum
 titos-handmade-vodka-soda,Tito's Vodka Soda,Tito's Handmade Vodka,Soda,spirits_cocktails,3,true,,false,titos|titos vodka soda|vodka soda,,,,,vodka
 jack-daniels-and-coke,Jack Daniel's And Coke,Jack Daniel's,And Coke,spirits_cocktails,3,true,,false,jack and coke|jd and coke|whiskey and coke,,,,,whiskey
-high-noon-vodka-soda-watermelon,High Noon Vodka Soda,High Noon,Watermelon,spirits_cocktails,2,true,,false,high noon|high noon watermelon,,,,,vodka
+high-noon-vodka-soda-watermelon,High Noon Vodka Soda,High Noon,Watermelon,spirits_cocktails,2,true,,true,high noon|high noon watermelon,,,,,vodka
 high-noon-vodka-soda-peach,High Noon Vodka Soda,High Noon,Peach,spirits_cocktails,2,true,,false,high noon|high noon peach,,,,,vodka
 cutwater-spirits-margarita,Cutwater Spirits Margarita,Cutwater Spirits,Margarita,spirits_cocktails,2,true,,false,cutwater|cutwater margarita|canned margarita,,,,,tequila
 cutwater-spirits-vodka-mule,Cutwater Spirits Vodka Mule,Cutwater Spirits,Vodka Mule,spirits_cocktails,2,true,,false,cutwater|cutwater vodka mule|canned mule,,,,,vodka

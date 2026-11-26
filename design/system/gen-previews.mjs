@@ -312,6 +312,44 @@ h('div', { className: 'pv-col', style: { gap: 18 } },
 P.PriceTierPicker = [{ group: 'Inputs', height: 140, width: 393 }, '', `
 h('div', { className: 'pv-col' }, h(B.PriceTierPicker, { value: 2 }))`];
 
+// The go-tos grid: three columns on the 16pt gutter, 12pt apart. The art is each category's most-rated starter
+// Bev; Smoothie has none here, so it shows the category's own art (a default iced cup).
+P.PickTile = [{ group: 'Inputs', height: 1160, width: 393, subtitle: 'Tap up to three, favorite first' }, `.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 0 16px; }
+.cell { display: flex; flex-direction: column; gap: 6px; } .cell .bv-pick { flex: 1; }
+.cap { margin: 0; padding: 18px 16px 10px; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--textSecondary); }
+.help { margin: 0; padding: 14px 16px 20px; font-size: 15px; line-height: 20px; color: var(--textSecondary); }`, `
+h(function Demo() {
+  var ART = {
+    soda: BEVS.mexicanCoke.art, diet_soda: BEVS.dietCoke.art, juice: BEVS.oj.art, water: { kind: 'waterBottle', color: '#cfe8f3', accent: '#2b7bb9' },
+    sparkling_water: BEVS.topo.art, energy: BEVS.redBull.art, coffee: BEVS.coldBrew.art, tea: BEVS.matcha.art, boba: BEVS.brownSugar.art,
+    sports: BEVS.gatorade.art, smoothie: { kind: 'icedCup' }, beer: { kind: 'pint', color: '#e3a017', accent: '#f4efe6' },
+    wine: { kind: 'wine', color: '#7b1e3a', accent: '#7b1e3a' }, spirits_cocktails: { kind: 'bottle', color: '#c9a227', accent: '#1d1d1f' },
+  };
+  var cats = B.categories.filter(function (c) { return c.id !== 'other'; });
+  var st = React.useState(['coffee', 'boba']), picks = st[0], set = st[1];
+  var tap = function (id) {
+    set(picks.indexOf(id) >= 0 ? picks.filter(function (p) { return p !== id; }) : picks.length >= 3 ? picks : picks.concat([id]));
+  };
+  var left = 3 - picks.length;
+  var help = picks.length === 0 ? 'Tap your number 1 first.' : left === 0 ? "That's your 3. Tap one to swap it out." : left === 1 ? 'Pick 1 more, or continue.' : 'Pick up to ' + left + ' more, or continue.';
+  function cell(text, el) { return h('div', { className: 'cell' }, el, h('span', { className: 'pv-label' }, text)); }
+  return h('div', null,
+    h('p', { className: 'cap' }, 'Every state'),
+    h('div', { className: 'grid' },
+      cell('not picked', h(B.PickTile, { label: 'Coffee', art: ART.coffee })),
+      cell('picked 1', h(B.PickTile, { label: 'Boba', art: ART.boba, rank: 1 })),
+      cell('picked 2', h(B.PickTile, { label: 'Sparkling water', art: ART.sparkling_water, rank: 2 })),
+      cell('picked 3', h(B.PickTile, { label: 'Tea', art: ART.tea, rank: 3 })),
+      cell('dimmed: three are picked', h(B.PickTile, { label: 'Spirits & cocktails', art: ART.spirits_cocktails, disabled: true })),
+      cell('no starter Bev: the category art', h(B.PickTile, { label: 'Smoothie', art: ART.smoothie }))),
+    h('p', { className: 'cap' }, 'The grid, two picked: tap to pick, tap again to drop'),
+    h('div', { className: 'grid' }, cats.map(function (c) {
+      var i = picks.indexOf(c.id);
+      return h(B.PickTile, { key: c.id, label: c.label, art: ART[c.id], rank: i >= 0 ? i + 1 : undefined, disabled: i < 0 && picks.length >= 3, onClick: function () { tap(c.id); } });
+    })),
+    h('p', { className: 'help', 'aria-live': 'polite' }, help));
+})`];
+
 // ---------- Navigation ----------
 P.Header = [{ group: 'Navigation', height: 300, width: 393 }, `.hd { border-bottom: 1px solid var(--border); }`, `
 h('div', { className: 'pv-narrow' },

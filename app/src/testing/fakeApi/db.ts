@@ -102,6 +102,17 @@ export interface FakeFeedEvent {
   createdAt: string;
 }
 
+/**
+ * DELIVERABLE-44: a submission made before the user onboarded. `submit_ranking` writes no feed
+ * event for it but still writes its `ranking_events` row, which is what the streak is computed
+ * from; the fake keeps that day here, as RANKING feed events keep it for every other submission.
+ */
+export interface FakeUnpostedRanking {
+  userId: string;
+  bevId: string;
+  createdAt: string;
+}
+
 export interface FakeLike {
   userId: string;
   feedEventId: string;
@@ -205,6 +216,8 @@ export interface FakeDb {
   follows: FakeFollow[];
   wantToTry: FakeWantToTry[];
   feed: FakeFeedEvent[];
+  /** Optional so a db stored before it existed still loads. */
+  unpostedRankings?: FakeUnpostedRanking[];
   /** Optional so a db stored before likes existed still loads. */
   likes?: FakeLike[];
   /** Optional so a db stored before comments existed still loads. */
@@ -220,6 +233,12 @@ export interface FakeDb {
   bevLocations?: FakeBevLocation[];
   /** Optional, as `bevLocations`. */
   externalPlaces?: FakeExternalPlace[];
+  /**
+   * DELIVERABLE-44: each user's go-to categories, favourite first, mirroring
+   * `public.user_category_picks` (one row per rank). Keyed by user id. Optional so a db stored
+   * before picks existed still loads, with nobody's picks set.
+   */
+  categoryPicks?: Record<string, CategoryId[]>;
   /** The signed-in user, persisted like a real session. */
   sessionUserId: string | null;
   /** Monotonic id counter. */
