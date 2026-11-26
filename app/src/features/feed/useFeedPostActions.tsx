@@ -19,8 +19,8 @@ const NOTICE_MS = 6000;
 
 /**
  * Everything a list of FeedItems needs to behave like the Feed: like (with per-post errors), Want to
- * Try, Rank, the comments sheet's open post, and the "post is gone" notice. Shared by the Feed and
- * Profile › Activity so they agree. `linkActors: false` drops the avatar link (on that person's own profile).
+ * Try, Rank, the comments sheet's open post, and the "post is gone" notice. Shared by the Feed,
+ * Profile › Activity and the Post screen so they agree. `linkActors: false` drops the avatar link (on that person's own profile).
  */
 export function useFeedPostActions({ linkActors = true }: { linkActors?: boolean } = {}) {
   const router = useRouter();
@@ -104,5 +104,14 @@ export function useFeedPostActions({ linkActors = true }: { linkActors?: boolean
     [add, remove, like, likeErrors, openComments, router, meId, canSeeAlcohol, linkActors, openSafety],
   );
 
-  return { renderItem, commentsFor, closeComments, postGone, notice, safety: { target: safety.target, onClose: safety.close } };
+  return {
+    renderItem,
+    commentsFor,
+    // For a screen that opens a post's comments itself (the Post screen's `?comments=1`).
+    openComments,
+    closeComments,
+    postGone,
+    notice,
+    safety: { target: safety.target, onClose: safety.close },
+  };
 }

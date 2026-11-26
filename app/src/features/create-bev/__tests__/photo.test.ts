@@ -1,7 +1,7 @@
 import type { ImagePickerAsset } from 'expo-image-picker';
 import * as ImagePicker from 'expo-image-picker';
 
-import { AVATAR_MAX_EDGE, CameraPermissionError, fitWithin, pickImage, preparePhoto, UnsupportedImageError } from '../photo';
+import { AVATAR_MAX_EDGE, AVATAR_SOURCE_MAX_EDGE, CameraPermissionError, cropPhoto, fitWithin, pickImage, preparePhoto, UnsupportedImageError } from '../photo';
 
 // The native file (jest resolves '../photo' as iOS): manipulator → JPEG file → its bytes. The web
 // file is covered by photo.web.test.ts.
@@ -42,7 +42,7 @@ const picked = (over: Partial<ImagePickerAsset> = {}): ImagePickerAsset =>
 function context(out = { uri: 'file:///cache/ImageManipulator/out.jpg', width: 1600, height: 1200 }, rendered = { width: out.width, height: out.height }) {
   const saveAsync = jest.fn(async () => out);
   const imageRelease = jest.fn();
-  const ctx = { resize: jest.fn(), release: jest.fn(), renderAsync: jest.fn(async () => ({ ...rendered, saveAsync, release: imageRelease })) };
+  const ctx = { resize: jest.fn(), crop: jest.fn(), release: jest.fn(), renderAsync: jest.fn(async () => ({ ...rendered, saveAsync, release: imageRelease })) };
   return { ctx, saveAsync, imageRelease };
 }
 
@@ -140,6 +140,55 @@ describe('preparePhoto (native)', () => {
     mockManipulate.mockReturnValue(context().ctx);
     mockBytes.mockRejectedValueOnce(new Error('no such file'));
     await expect(preparePhoto(picked())).rejects.toBeInstanceOf(UnsupportedImageError);
+  });
+});
+
+describe('cropPhoto (native)', () => {
+  const working = { uri: 'file:///cache/ImageManipulator/working.jpg', width: 2048, height: 1536 };
+
+  it('cuts the square out of the working copy, resizes it to 512 and returns JPEG bytes, not a Blob', async () => {
+    expect(AVATAR_SOURCE_MAX_EDGE).toBe(2048);
+    const { ctx, saveAsync, imageRelease } = context({ uri: 'file:///cache/ImageManipulator/avatar.jpg', width: 512, height: 512 });
+    mockManipulate.mockReturnValue(ctx);
+    const photo = await cropPhoto(working, { x: 256, y: 0, size: 1536 });
+    expect(mockManipulate).toHaveBeenCalledWith(working.uri);
+    expect(ctx.crop).toHaveBeenCalledWith({ originX: 256, originY: 0, width: 1536, height: 1536 });
+    expect(ctx.resize).toHaveBeenCalledWith({ width: 512, height: 512 });
+    expect(ctx.crop.mock.invocationCallOrder[0]).toBeLessThan(ctx.resize.mock.invocationCallOrder[0]!);
+    expect(saveAsync).toHaveBeenCalledWith({ compress: 0.85, format: 'jpeg' });
+    expect(mockFileUris).toEqual(['file:///cache/ImageManipulator/avatar.jpg']);
+    expect(photo).toMatchObject({ uri: 'file:///cache/ImageManipulator/avatar.jpg', mimeType: 'image/jpeg', width: 512, height: 512 });
+    expect(photo.file).toBeInstanceOf(Uint8Array);
+    expect(photo.file).not.toBeInstanceOf(Blob);
+    expect(ctx.release).toHaveBeenCalled();
+    expect(imageRelease).toHaveBeenCalled();
+  });
+
+  it('never scales a small square up', async () => {
+    const { ctx } = context({ uri: 'file:///out.jpg', width: 300, height: 300 });
+    mockManipulate.mockReturnValue(ctx);
+    await cropPhoto(working, { x: 650, y: 450, size: 300 });
+    expect(ctx.crop).toHaveBeenCalledWith({ originX: 650, originY: 450, width: 300, height: 300 });
+    expect(ctx.resize).not.toHaveBeenCalled();
+  });
+
+  it('takes another edge', async () => {
+    const { ctx } = context({ uri: 'file:///out.jpg', width: 256, height: 256 });
+    mockManipulate.mockReturnValue(ctx);
+    await cropPhoto(working, { x: 0, y: 0, size: 1000 }, 256);
+    expect(ctx.resize).toHaveBeenCalledWith({ width: 256, height: 256 });
+  });
+
+  it('rejects a crop that fails or saves an empty file with UnsupportedImageError', async () => {
+    mockManipulate.mockReturnValue({ crop: jest.fn(), resize: jest.fn(), release: jest.fn(), renderAsync: jest.fn(async () => Promise.reject(new Error('bad crop'))) });
+    await expect(cropPhoto(working, { x: 0, y: 0, size: 100 })).rejects.toBeInstanceOf(UnsupportedImageError);
+    mockManipulate.mockImplementation(() => {
+      throw new Error('no image');
+    });
+    await expect(cropPhoto(working, { x: 0, y: 0, size: 100 })).rejects.toBeInstanceOf(UnsupportedImageError);
+    mockManipulate.mockReset().mockReturnValue(context().ctx);
+    mockBytes.mockResolvedValueOnce(new Uint8Array(0));
+    await expect(cropPhoto(working, { x: 0, y: 0, size: 100 })).rejects.toBeInstanceOf(UnsupportedImageError);
   });
 });
 
