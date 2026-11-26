@@ -316,7 +316,7 @@ Common to every screen unless noted: loading = skeleton of the final layout; err
 ### 6.3 Onboarding: starter ranking (`onboarding/starter.tsx`)
 
 - Purpose: cold-start baseline (vision §5). Contents: progress "3 of 10", `BevImage 155`, name, "Have you had this?" → Yes / No; Yes opens the ranking flow (§6.9) inline; No skips.
-- Data: `bevs.getStarterCandidates()` returns at least 30 age-filtered `isStarter` Bevs, each with `ratingCount`; the app runs `selectStarterSet(candidates, { seed: userId })` from `@bevi/ranking` to pick 10 (§8.12). Then `rankings.submitRanking` per item and `profile.updateMe({ onboarded: true })`. Starter rankings are not posts: the server writes no feed item while `onboarded` is false (they still count in the list, stats and streak).
+- Data: `bevs.getStarterCandidates()` returns at least 30 age-filtered `isStarter` Bevs, each with `ratingCount`; the app runs `selectStarterSet(candidates, { seed: userId })` from `@bevi/ranking` to pick 10 (§8.12): 3 most-rated core Bevs shared by everyone, then seeded wildcards; once onboarding asks for the user's go-to categories it passes them as `picks` (favourite first), and they get up to 5 of the 10 (2, 2, 1). Then `rankings.submitRanking` per item and `profile.updateMe({ onboarded: true })`. Starter rankings are not posts: the server writes no feed item while `onboarded` is false (they still count in the list, stats and streak).
 - States: first Bev (empty bucket, no comparisons: "Placed. Keep going."), finished summary ("You ranked 6 Bevs. Your top: Coke 8.3"), fewer than 3 ranked → "Rank at least 3 so we can learn your taste", candidates call fails → Retry (onboarding can't be skipped past this without ≥ 3).
 - Interactions: skip-all link after ≥ 3 ranked. The set is deterministic for the user, so leaving and coming back shows the same 10.
 
@@ -671,7 +671,7 @@ Layer 1 recommendation list (Phase 2, before Layer 2 exists): all untried, visib
 
 ### 8.9 Layer 2: collaborative filtering
 
-Pick **user-user** at ~20 users. Reasoning: 20 users → 190 user pairs, each pair shares the 6 fixed starter Bevs plus whatever overlaps, so similarities are computable from day one. Item-item needs co-raters per *item pair*; with ~300 Bevs and 20 users almost every item pair has 0–1 co-raters. Switch to item-item when `users ≥ 200` or when the median number of co-raters per item pair among rated items reaches 3 (the eval script prints both numbers). Matrix factorisation only after that (vision §5 "later").
+Pick **user-user** at ~20 users. Reasoning: 20 users → 190 user pairs, each pair shares the 3 core starter Bevs (§8.12; users with the same go-to categories also share those picks' top-ups) plus whatever overlaps, so similarities are computable from day one. The weight is lower than it was with a core of 6: two users who share only the 3 core Bevs get `sim' = 0.6·sim` (significance weighting needs 5 in common for full weight), and reach it with 2 more shared Bevs, from the same picks or later overlap. Item-item needs co-raters per *item pair*; with ~300 Bevs and 20 users almost every item pair has 0–1 co-raters. Switch to item-item when `users ≥ 200` or when the median number of co-raters per item pair among rated items reaches 3 (the eval script prints both numbers). Matrix factorisation only after that (vision §5 "later").
 
 ```
 common(u, v) = items ranked by both
@@ -706,12 +706,16 @@ The conversation's "a beverage near another one in a group plus some air" = nois
 Catalog Bevs carry `isStarter: boolean` (Arjun sets ~20: Coke, Diet Coke, Sprite, LaCroix, Red Bull, Gatorade, Pepsi, Dr Pepper, Mountain Dew, Monster, Celsius, Arizona Iced Tea, Minute Maid OJ, Topo Chico, Poland Spring, Starbucks bottled Frappuccino, Snapple, Yerba Mate, Fanta, Canada Dry; adjust to the seeded catalog).
 
 ```
-selectStarterSet(candidates, { k = 10, core = 6, maxPerCategory = 2, seed, excludeCategoryIds })
+selectStarterSet(candidates, { k = 10, core = 3, maxPerCategory = 2, seed, excludeCategoryIds, picks })
 ```
 
-- The **core** = the 6 most-rated starters (by `rating_count`, ties by name), shown to everyone. Shared items maximise `common(u, v)` for user-user CF.
-- The remaining 4 are drawn with the seeded PRNG from the other starters, respecting `maxPerCategory` across the whole set of 10 and a spread of at least 5 categories if possible; `excludeCategoryIds` removes alcoholic categories for anyone under 21.
-- Deterministic for a seed (`userId`), so the set is stable if the user leaves onboarding and comes back.
+The set is typically **3 shared core + 5 from the user's go-to categories (2 from the first pick, 2 from the second, 1 from the third) + 2 wildcards** (a pick whose category is already in the core counts those Bevs toward its quota, which leaves more wildcards); with no picks it is 3 core + 7 wildcards. `maxPerCategory` holds over the whole set of 10 and it aims for a spread of at least `STARTER_MIN_CATEGORIES = 5` categories, so nobody gets a one-category set. `excludeCategoryIds` removes alcoholic categories for anyone under 21.
+
+- The **core** = the 3 most-rated starters (`ratingCount` desc, then name and id by code point), skipping a starter whose category already has `maxPerCategory` core members. It depends on neither `picks` nor `seed`, so everyone sees it: shared items maximise `common(u, v)` for user-user CF.
+- **Picks** (`picks`, favourite first): only the first 3 distinct entries not in `excludeCategoryIds` count (an excluded or repeated pick does not use up a rank; later ones are ignored). Pick `i` is *topped up* to `STARTER_PICK_QUOTAS[i]` = 2, 2, 1 Bevs in the set with that category's most-rated remaining starters (core order, so users with the same pick share them). Core members already in the category count toward its quota, and the slots they free become wildcards rather than stacking a favourite. Never past `maxPerCategory` (a cap below a quota wins) or `k`; a category with too few starters gives what it has and the shortfall becomes wildcards.
+- **Wildcards** fill to `k` from the remaining starters in a seeded Fisher–Yates order (over id order), taking (a) Bevs from categories neither in the set nor picked while the set spans fewer than 5 categories, (b) Bevs from non-picked categories under the cap, (c) any Bev under the cap, (d) anything: the cap is relaxed only when `k` is otherwise unreachable.
+- **Order** (what the user sees; they may stop after 3): each pick's first top-up Bev in pick order, then the core, then the picks' other top-up Bevs, then the wildcards in draw order, e.g. `[p1a, p2a, p3a, c1, c2, c3, p1b, p2b, w1, w2]`. A pick the core already filled leads with nothing.
+- Deterministic for a seed (`userId`) and picks, so the set is stable if the user leaves onboarding and comes back.
 - Runs in the app (seam interpretation 1, §12): input is `bevs.getStarterCandidates()` (≥ 30 age-filtered `isStarter` Bevs with `ratingCount`); the server never calls this function.
 
 New Bev cold start needs no special code: `g_b = 0`, `support = 0` → prediction is affinity + content only.
@@ -803,7 +807,7 @@ export function predictScore(snapshot: PredictionSnapshot, userId: UserId, bevId
 export function recommend(snapshot: PredictionSnapshot, userId: UserId, opts: { n: number; seed: string; epsilon?: number; excludeBevIds?: BevId[] }): Recommendation[];
 
 // starter.ts / rank.ts / streak.ts
-export function selectStarterSet(candidates: StarterCandidate[], opts: { k?: number; core?: number; maxPerCategory?: number; seed: string; excludeCategoryIds?: CategoryId[] }): BevId[];
+export function selectStarterSet(candidates: StarterCandidate[], opts: { k?: number; core?: number; maxPerCategory?: number; seed: string; excludeCategoryIds?: CategoryId[]; picks?: readonly CategoryId[] }): BevId[];
 export function rankPoints(a: { bevsRanked: number; currentStreak: number; bevsCreated: number }): number;
 export function rankUsers(rows: Array<{ userId; bevsRanked; currentStreak; bevsCreated; createdAt }>): Array<{ userId; points; rank }>;
 export function computeStreak(periodKeys: string[], todayKey: string, period: 'day' | 'week' = 'day'): { current: number; longest: number; lastKey: string | null };

@@ -368,6 +368,11 @@ export interface StarterOptions {
   maxPerCategory?: number;
   seed: string;
   excludeCategoryIds?: CategoryId[];
+  /**
+   * The user's go-to categories, favourite first. Only the first STARTER_PICK_QUOTAS.length
+   * distinct entries not in `excludeCategoryIds` count; absent or empty means no picks.
+   */
+  picks?: readonly CategoryId[];
 }
 
 export interface RankPointsInput {
