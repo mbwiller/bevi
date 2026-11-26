@@ -830,12 +830,14 @@ export class FakeApi implements BeviApi {
   /**
    * @bevi/ranking's computeStreak over the local days (profile timezone, `localDayKey`) on which
    * the user ranked: each ranking's createdAt plus every RANKING feed event (written on submit and
-   * re-rank, kept on removal), so re-ranks count and removals don't break a streak (§8.14).
+   * re-rank, kept on removal) and every submission made before onboarding (which posts no feed
+   * event), so re-ranks count and removals don't break a streak (§8.14).
    */
   private streakOf(u: FakeUser): UserStreak {
     const stamps = [
       ...this.db.rankings.filter((r) => r.userId === u.id).map((r) => r.createdAt),
       ...this.db.feed.filter((e) => e.actorId === u.id && e.type === 'RANKING').map((e) => e.createdAt),
+      ...(this.db.unpostedRankings ?? []).filter((e) => e.userId === u.id).map((e) => e.createdAt),
     ];
     const keys = [...new Set(stamps.map((at) => localDayKey(at, u.timezone)))];
     const todayKey = localDayKey(this.nowIso(), u.timezone);
@@ -1085,6 +1087,7 @@ export class FakeApi implements BeviApi {
       .filter((w) => w.userId !== userId)
       .map((w) => (w.viaUserId === userId ? { ...w, viaUserId: null } : w));
     db.feed = db.feed.filter((e) => e.actorId !== userId);
+    db.unpostedRankings = (db.unpostedRankings ?? []).filter((e) => e.userId !== userId);
     const events = new Set(db.feed.map((e) => e.id));
     db.likes = (db.likes ?? []).filter((l) => l.userId !== userId && events.has(l.feedEventId));
     db.comments = (db.comments ?? []).filter((c) => c.userId !== userId && events.has(c.feedEventId));
@@ -1827,11 +1830,17 @@ export class FakeApi implements BeviApi {
     return note || null;
   }
 
-  private logPlacement(me: FakeUser, rankingId: string, bevId: string, comparisons: readonly Comparison[], at: string) {
+  /**
+   * `post` false is a submission made before onboarding ended: `submit_ranking` writes no feed
+   * event for it (DELIVERABLE-44), so it is kept in `unpostedRankings` for the streak instead.
+   * A re-rank always posts, as `rerank_bev` does.
+   */
+  private logPlacement(me: FakeUser, rankingId: string, bevId: string, comparisons: readonly Comparison[], at: string, post = true) {
     for (const c of comparisons) {
       this.db.comparisons.push({ rankingId, userId: me.id, winnerBevId: c.winnerBevId, loserBevId: c.loserBevId, tie: !!c.tie, createdAt: at });
     }
-    this.db.feed.push({ id: this.nextId('feed'), type: 'RANKING', actorId: me.id, bevId, createdAt: at });
+    if (post) this.db.feed.push({ id: this.nextId('feed'), type: 'RANKING', actorId: me.id, bevId, createdAt: at });
+    else (this.db.unpostedRankings ??= []).push({ userId: me.id, bevId, createdAt: at });
   }
 
   rankings: RankingsApi = {
@@ -1923,7 +1932,7 @@ export class FakeApi implements BeviApi {
           this.writeBucket(me.id, input.bucket, next);
           this.db.wantToTry = this.db.wantToTry.filter((w) => !(w.userId === me.id && w.bevId === bev.id));
           if (input.venueId) this.putLocation(me.id, bev.id, input.venueId);
-          this.logPlacement(me, row.id, bev.id, input.comparisons, at);
+          this.logPlacement(me, row.id, bev.id, input.comparisons, at, me.onboarded);
           return { ranking: this.toRanking(row), bucketSize: next.length };
         },
         true,
