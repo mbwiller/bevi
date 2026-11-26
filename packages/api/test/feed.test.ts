@@ -222,3 +222,39 @@ describe('FeedItem.venue (BEV-22)', () => {
     await expect(api.getFeed({ limit: 5 })).rejects.toMatchObject({ code: 'unauthorized' });
   });
 });
+
+describe('feed.getPost (T-31)', () => {
+  it('calls get_post with the id as a number and maps the row as the feed does, place and all', async () => {
+    const calls: { rpc?: [string, unknown]; venues?: unknown } = {};
+    const api = createFeedApi(fakeClient({ data: [row(9)], venues: [] }, calls));
+
+    const item = await api.getPost('9');
+
+    expect(calls.rpc).toEqual(['get_post', { p_event_id: 9 }]);
+    expect(calls.venues).toEqual({ p_user_ids: [ACTOR], p_bev_ids: ['bev-9'] });
+    expect(item).toMatchObject({ id: '9', type: 'RANKING', actor: { id: ACTOR }, likeCount: 4, likedByMe: true, venue: null });
+  });
+
+  it('no row is not_found', async () => {
+    const api = createFeedApi(fakeClient({ data: [] }));
+    await expect(api.getPost('9')).rejects.toMatchObject({ code: 'not_found' });
+  });
+
+  it("maps the RPC's BEVI_NOT_FOUND to not_found, and does not swallow a missing function", async () => {
+    await expect(
+      createFeedApi(fakeClient({ error: { code: 'P0002', message: 'BEVI_NOT_FOUND', details: null, hint: null } })).getPost('9'),
+    ).rejects.toMatchObject({ code: 'not_found' });
+    await expect(
+      createFeedApi(
+        fakeClient({ error: { code: 'PGRST202', message: 'Could not find the function public.get_post', details: null, hint: null } }),
+      ).getPost('9'),
+    ).rejects.toBeDefined();
+  });
+
+  it('an id that cannot be a post is not_found without a round trip', async () => {
+    const calls: { rpc?: [string, unknown] } = {};
+    const api = createFeedApi(fakeClient({ data: [row(9)] }, calls));
+    await expect(api.getPost('feed-9')).rejects.toMatchObject({ code: 'not_found' });
+    expect(calls.rpc).toBeUndefined();
+  });
+});

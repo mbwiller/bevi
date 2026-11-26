@@ -93,6 +93,9 @@ import {
   type LeaderboardApi,
   type MediaApi,
   type MetaApi,
+  type Notification,
+  type NotificationKind,
+  type NotificationsApi,
   type Page,
   type PageParams,
   type PeriodWinner,
@@ -148,7 +151,7 @@ import {
 import { CATALOG_CATEGORY_NODES, type CatalogCategoryNode } from './catalog';
 import { ALCOHOLIC, CATEGORIES, buildFixtures, isAdult } from './fixtures';
 import { buildEdgeMirror, type EdgeMirror } from './graph';
-import { FAKE_INVITE_CODE } from './people';
+import { FAKE_INVITE_CODE, FRIEND, ME } from './people';
 
 /**
  * Code-point string order, the tie-break every id order in the SQL uses
@@ -327,6 +330,39 @@ const FEED_INLINE_COMMENTS = 7;
 /** Contract 2.12.0: how many people `FeedItem.alsoBevdBy` and `SuggestedProfile.followedBy` list (20261111000100). */
 const ALSO_BEVD_MAX = 3;
 const FOLLOWED_BY_MAX = 2;
+/** T-31: how many actors a notification row lists (get_notifications), and its page cap. */
+const NOTIFICATION_ACTORS_MAX = 2;
+const NOTIFICATIONS_PAGE_MAX = 50;
+/** `get_notifications` / `mark_notifications_read` take a bigint id; packages/api refuses anything else. */
+const NOTIFICATION_ID_RE = /^\d{1,15}$/;
+
+/**
+ * T-31: one row of the fake's `notifications` ledger, as the triggers write it (20261126000100).
+ * Ids are the ledger's own sequence, so they order rows the way the identity column does.
+ */
+interface FakeNotification {
+  id: number;
+  recipientId: string;
+  actorId: string;
+  kind: NotificationKind;
+  feedEventId: string | null;
+  commentId: string | null;
+  createdAt: string;
+  readAt: string | null;
+  /**
+   * Set on the rows `seedNotifications` deals ME, which record things that happened before the
+   * fixtures begin: the follow, like or comment behind them is not in the fixture data (seeding
+   * those would move follower, like and comment counts other suites assert), so the "is it still
+   * there" rule is skipped for them. Blocks, the age gate and the post's own existence still apply.
+   */
+  fixture?: { commentBody?: string };
+}
+
+/** One displayed row: a follow or a comment alone, or every like on one post. Newest member first. */
+interface FakeNotificationGroup {
+  head: FakeNotification;
+  members: FakeNotification[];
+}
 /** Bev of the day / week is "strictly New York City" (get_bev_of_period, 20261018000100). */
 const BEV_OF_PERIOD_ZONE = 'America/New_York';
 /** D-01: below this many users Explore widens from two hops to everyone (get_explore, 20261019000300). */
@@ -425,6 +461,13 @@ export class FakeApi implements BeviApi {
   }[] = [];
   private nextContentReport = 1;
   /**
+   * T-31: the `notifications` ledger. In memory beside the block rows, for the same reason (FakeDb's
+   * schema does not move); `resetToFixtures` re-deals ME's fixture rows, account deletion and
+   * `emptyUser` drop the rows the user is on either side of, and `clearNotifications` empties it.
+   */
+  private notificationRows: FakeNotification[] = [];
+  private nextNotification = 1;
+  /**
    * IA-2: the single `app_config` row `meta.getAppConfig` answers with. Not in FakeDb and not
    * persisted: it is the backend's, written by an operator, not part of anyone's data. Suites set
    * it with `controls.setAppConfig`; `resetToFixtures` puts the default back.
@@ -446,6 +489,7 @@ export class FakeApi implements BeviApi {
       const session = stored?.sessionUserId;
       if (session && this.db.users.some((u) => u.id === session)) this.db.sessionUserId = session;
     }
+    this.seedNotifications();
     saveDb(this.storage, this.db);
   }
 
@@ -475,9 +519,80 @@ export class FakeApi implements BeviApi {
     this.blockRows = [];
     this.contentReports = [];
     this.nextContentReport = 1;
+    this.seedNotifications();
     this.appConfig = { ...DEFAULT_APP_CONFIG };
     this.commit();
     this.emit();
+  }
+
+  /** T-31: an empty inbox for everyone (the fixture rows included) until `resetToFixtures()`. */
+  clearNotifications(): void {
+    this.notificationRows = [];
+  }
+
+  /**
+   * ME's fixture inbox, so a FakeApi-backed build opens on something to show. Dealt from ME's own
+   * posts and relative to now, so it is the same rows for the same clock:
+   *
+   *   1  follow   friend_d                       read, over a week ago (ME follows them back)
+   *   2  like     friend_d on an older post      read, over a week ago
+   *   3  comment  friend_b on that older post    read, over a week ago
+   *   4  follow   friend_e                       unread (ME does NOT follow them back)
+   *   5  comment  friend_a on ME's second-newest post   unread
+   *   6  like     friend_b on ME's newest post           unread
+   *   7  like     friend_a on ME's newest post           unread
+   *
+   * Listed, 6 and 7 are one row ("friend_a and friend_b"), so ME's badge is 3. Rows 1-3 need a post
+   * of ME's over eight days old, and 5-7 two posts; a database without them gets what it can.
+   */
+  private seedNotifications(): void {
+    this.notificationRows = [];
+    this.nextNotification = 1;
+    const byHandle = (handle: string) => this.db.users.find((u) => u.handle === handle);
+    const me = byHandle(ME.handle);
+    const [a, b, d, e] = [byHandle(FRIEND.handle), byHandle('friend_b'), byHandle('friend_d'), byHandle('friend_e')];
+    if (!me || !a || !b || !d || !e) return;
+
+    const MINUTE = 60_000;
+    const DAY = 24 * 60 * MINUTE;
+    const now = this.now().getTime();
+    const at = (ms: number) => new Date(ms).toISOString();
+    const posts = this.db.feed
+      .filter((ev) => ev.actorId === me.id && ev.type === 'RANKING' && !!this.rankingOf(me.id, ev.bevId))
+      .sort((x, z) => z.createdAt.localeCompare(x.createdAt));
+    const add = (row: Omit<FakeNotification, 'id' | 'recipientId'>) =>
+      this.notificationRows.push({ id: this.nextNotification++, recipientId: me.id, ...row });
+
+    const older = posts.find((p) => Date.parse(p.createdAt) < now - 8 * DAY);
+    if (older) {
+      const t0 = Date.parse(older.createdAt);
+      const read = (ms: number) => ({ createdAt: at(ms), readAt: at(ms + DAY) });
+      add({ actorId: d.id, kind: 'follow', feedEventId: null, commentId: null, ...read(t0 + 30 * MINUTE), fixture: {} });
+      add({ actorId: d.id, kind: 'like', feedEventId: older.id, commentId: null, ...read(t0 + 60 * MINUTE), fixture: {} });
+      add({
+        actorId: b.id,
+        kind: 'comment',
+        feedEventId: older.id,
+        commentId: 'fixture-comment-1',
+        ...read(t0 + 120 * MINUTE),
+        fixture: { commentBody: 'Still thinking about this one' },
+      });
+    }
+    add({ actorId: e.id, kind: 'follow', feedEventId: null, commentId: null, createdAt: at(now - 10 * MINUTE), readAt: null, fixture: {} });
+    const [newest, second] = posts;
+    if (newest && second) {
+      add({
+        actorId: a.id,
+        kind: 'comment',
+        feedEventId: second.id,
+        commentId: 'fixture-comment-2',
+        createdAt: at(now - 6 * MINUTE),
+        readAt: null,
+        fixture: { commentBody: 'Need to try this' },
+      });
+      add({ actorId: b.id, kind: 'like', feedEventId: newest.id, commentId: null, createdAt: at(now - 4 * MINUTE), readAt: null, fixture: {} });
+      add({ actorId: a.id, kind: 'like', feedEventId: newest.id, commentId: null, createdAt: at(now - 2 * MINUTE), readAt: null, fixture: {} });
+    }
   }
 
   /**
@@ -1081,6 +1196,8 @@ export class FakeApi implements BeviApi {
     db.comparisons = db.comparisons.filter((c) => c.userId !== userId);
     db.follows = db.follows.filter((f) => f.followerId !== userId && f.followeeId !== userId);
     this.blockRows = this.blockRows.filter((b) => b.blockerId !== userId && b.blockedId !== userId);
+    // notifications: both people cascade from profiles.
+    this.notificationRows = this.notificationRows.filter((n) => n.recipientId !== userId && n.actorId !== userId);
     db.wantToTry = db.wantToTry
       .filter((w) => w.userId !== userId)
       .map((w) => (w.viaUserId === userId ? { ...w, viaUserId: null } : w));
@@ -1115,6 +1232,86 @@ export class FakeApi implements BeviApi {
 
   private toComment(c: FakeComment, viewer: FakeUser): Comment {
     return { id: c.id, author: this.toProfile(this.user(c.userId), viewer), body: c.body, createdAt: c.createdAt };
+  }
+
+  /**
+   * The notify_on_* triggers (T-31): one row per thing that happened, never about yourself, and
+   * never a second one for the same follow (per pair), like (per pair and post) or comment.
+   */
+  private notify(recipientId: string, actorId: string, kind: NotificationKind, feedEventId: string | null, commentId: string | null): void {
+    if (recipientId === actorId) return;
+    const exists = this.notificationRows.some(
+      (n) =>
+        n.kind === kind &&
+        (kind === 'comment'
+          ? n.commentId === commentId
+          : n.recipientId === recipientId && n.actorId === actorId && (kind === 'follow' || n.feedEventId === feedEventId)),
+    );
+    if (exists) return;
+    this.notificationRows.push({
+      id: this.nextNotification++,
+      recipientId,
+      actorId,
+      kind,
+      feedEventId,
+      commentId,
+      createdAt: this.nowIso(),
+      readAt: null,
+    });
+  }
+
+  /**
+   * visible_notifications: `me`'s rows that are still true. No block either way; the follow, the
+   * like or the (undeleted) comment still there (skipped for fixture rows, see FakeNotification);
+   * and for a post, the post still there with its ranking and its Bev within the age gate.
+   */
+  private visibleNotifications(me: FakeUser): FakeNotification[] {
+    return this.notificationRows.filter((n) => {
+      if (n.recipientId !== me.id || this.blockedBetween(me.id, n.actorId)) return false;
+      if (!this.db.users.some((u) => u.id === n.actorId)) return false;
+      if (n.kind === 'follow') return !!n.fixture || this.isFollowing(n.actorId, me.id);
+      const e = this.db.feed.find((x) => x.id === n.feedEventId);
+      // A removed ranking's post is gone (on the server its feed event, and these with it, cascade).
+      if (!e || !this.rankingOf(e.actorId, e.bevId)) return false;
+      const bev = this.db.bevs.find((x) => x.id === e.bevId);
+      if (!bev || !this.visible(bev, me)) return false;
+      if (n.fixture) return true;
+      if (n.kind === 'like') return (this.db.likes ?? []).some((l) => l.userId === n.actorId && l.feedEventId === n.feedEventId);
+      return (this.db.comments ?? []).some((c) => c.id === n.commentId && !c.deleted);
+    });
+  }
+
+  /** get_notifications' rows before paging: likes on one post grouped, newest row first. */
+  private notificationGroups(me: FakeUser): FakeNotificationGroup[] {
+    const groups = new Map<string, FakeNotification[]>();
+    // Newest first, so each group's first member is its head and the map's order is the rows'.
+    for (const n of this.visibleNotifications(me).sort((x, z) => z.id - x.id)) {
+      const key = n.kind === 'like' ? `like:${n.feedEventId}` : `${n.kind}:${n.id}`;
+      const members = groups.get(key);
+      if (members) members.push(n);
+      else groups.set(key, [n]);
+    }
+    return [...groups.values()].map((members) => ({ head: members[0]!, members }));
+  }
+
+  private toNotification({ head, members }: FakeNotificationGroup, me: FakeUser): Notification {
+    const event = head.feedEventId ? this.db.feed.find((x) => x.id === head.feedEventId) : undefined;
+    const bev = event ? this.db.bevs.find((x) => x.id === event.bevId) : undefined;
+    const body =
+      head.kind === 'comment'
+        ? (head.fixture?.commentBody ?? (this.db.comments ?? []).find((c) => c.id === head.commentId)?.body ?? '')
+        : null;
+    return {
+      id: String(head.id),
+      kind: head.kind,
+      createdAt: head.createdAt,
+      unread: members.some((m) => m.readAt === null),
+      actors: members.slice(0, NOTIFICATION_ACTORS_MAX).map((m) => this.toRow(this.user(m.actorId), me)),
+      actorCount: new Set(members.map((m) => m.actorId)).size,
+      postId: head.feedEventId,
+      bev: bev ? this.toSummary(bev) : null,
+      comment: body !== null && head.commentId ? { id: head.commentId, body } : null,
+    };
   }
 
   // -------------------------------------------------------------------------
@@ -1391,7 +1588,10 @@ export class FakeApi implements BeviApi {
           if (id === me.id) invalid('id', "You can't follow yourself");
           // follow_user (IS-7): refused across a block either way, as "no such user".
           this.visibleUser(id, me);
-          if (!this.isFollowing(me.id, id)) this.db.follows.push({ followerId: me.id, followeeId: id, createdAt: this.nowIso() });
+          if (!this.isFollowing(me.id, id)) {
+            this.db.follows.push({ followerId: me.id, followeeId: id, createdAt: this.nowIso() });
+            this.notify(id, me.id, 'follow', null, null);
+          }
         },
         true,
       ),
@@ -2259,14 +2459,26 @@ export class FakeApi implements BeviApi {
         return { day: winner((d) => d), week: winner(isoWeekStart) };
       }),
 
+    // get_post (T-31): the one post, exactly as this caller's feed would show it, or not_found when
+    // it is gone or not theirs to see (feed_event_visible: own or followed, no block, the age gate).
+    getPost: (id: string) =>
+      this.call('feed.getPost', (): FeedItem => {
+        const me = this.requireUser();
+        const e = this.visibleFeedEvent(id, me);
+        return this.feedItems(me, new Set([e.actorId])).find((item) => item.id === e.id) ?? fail('not_found', 'No such post');
+      }),
+
     like: (id: string) =>
       this.call(
         'feed.like',
         () => {
           const me = this.requireUser();
-          this.visibleFeedEvent(id, me);
+          const e = this.visibleFeedEvent(id, me);
           const likes = (this.db.likes ??= []);
-          if (!likes.some((l) => l.userId === me.id && l.feedEventId === id)) likes.push({ userId: me.id, feedEventId: id });
+          if (!likes.some((l) => l.userId === me.id && l.feedEventId === id)) {
+            likes.push({ userId: me.id, feedEventId: id });
+            this.notify(e.actorId, me.id, 'like', id, null);
+          }
         },
         true,
       ),
@@ -2320,13 +2532,14 @@ export class FakeApi implements BeviApi {
         'comments.add',
         () => {
           const me = this.requireUser();
-          this.visibleFeedEvent(eventId, me);
+          const e = this.visibleFeedEvent(eventId, me);
           // btrim(body, E' \t\n\r'), then 1–280 characters (code points, like char_length).
           const text = (body ?? '').replace(/^[ \t\n\r]+|[ \t\n\r]+$/g, '');
           const length = Array.from(text).length;
           if (length < 1 || length > COMMENT_MAX) invalid('body', `A comment is 1 to ${COMMENT_MAX} characters`);
           const row: FakeComment = { id: this.nextId('comment'), feedEventId: eventId, userId: me.id, body: text, createdAt: this.nowIso() };
           (this.db.comments ??= []).push(row);
+          this.notify(e.actorId, me.id, 'comment', eventId, row.id);
           return this.toComment(row, me);
         },
         true,
@@ -2942,6 +3155,53 @@ export class FakeApi implements BeviApi {
             createdAt: this.nowIso(),
           });
           return { reportId: id };
+        },
+        true,
+      ),
+  };
+
+  // The notifications inbox (T-31), as get_notifications / get_unread_notification_count /
+  // mark_notifications_read answer it (20261126000100). One set of rules (visibleNotifications)
+  // behind all three, so the list, the badge and mark-read never disagree.
+  notifications: NotificationsApi = {
+    list: (page?: PageParams) =>
+      this.call('notifications.list', (): Page<Notification> => {
+        const me = this.requireUser();
+        // Keyset on the row's id (its newest notification), like get_notifications' p_before_id.
+        const limit = clamp(Math.floor(page?.limit ?? 20), 1, NOTIFICATIONS_PAGE_MAX);
+        let before = Infinity;
+        if (page?.cursor) {
+          const m = /^n:(\d+)$/.exec(page.cursor);
+          if (!m) invalid('cursor', 'Malformed cursor');
+          before = Number(m[1]);
+        }
+        const rows = this.notificationGroups(me)
+          .filter((g) => g.head.id < before)
+          .slice(0, limit);
+        const last = rows[rows.length - 1];
+        return {
+          items: rows.map((g) => this.toNotification(g, me)),
+          nextCursor: rows.length === limit && last ? `n:${last.head.id}` : null,
+        };
+      }),
+
+    unreadCount: () =>
+      this.call('notifications.unreadCount', () => {
+        const me = this.requireUser();
+        // A row of likes counts once, as it is one row on the screen.
+        return this.notificationGroups(me).filter((g) => g.members.some((m) => m.readAt === null)).length;
+      }),
+
+    markRead: (upToId?: string) =>
+      this.call(
+        'notifications.markRead',
+        () => {
+          const me = this.requireUser();
+          if (upToId !== undefined && !NOTIFICATION_ID_RE.test(upToId)) invalid('upToId', 'That is not a notification id');
+          const upTo = upToId === undefined ? Infinity : Number(upToId);
+          const at = this.nowIso();
+          // Only what the caller could have been shown: a hidden row comes back unread.
+          for (const n of this.visibleNotifications(me)) if (n.readAt === null && n.id <= upTo) n.readAt = at;
         },
         true,
       ),

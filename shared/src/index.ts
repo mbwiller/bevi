@@ -1,6 +1,15 @@
 /**
  * Bumped on any breaking change to the types or `BeviApi` below.
  *
+ * 3.7.0, over 3.6.0's tester reporting: the notifications inbox (T-31).
+ * Additive: a `notifications` namespace (`list`, `unreadCount`, `markRead`)
+ * answering `Notification` rows, and `feed.getPost`, the one post a
+ * notification opens. Likes on one post share a row; every row is checked at
+ * read time, so an unfollow, an unlike, a deleted comment or a block hides
+ * it. A backend without the inbox answers an empty page and a count of 0.
+ * NOT a reason to raise `min_contract_version`: an older client never calls
+ * any of it, and nothing it already reads changed.
+ *
  * 3.6.0, over 3.5.0's places: testers report bugs without ranking them.
  * Additive: `bugs.canRank()`, true for a founder (an admin) only. For an
  * account that may not rank, `place` throws 'unauthorized' and every
@@ -104,7 +113,8 @@
 // 3.4.0: nutrition.lookupProduct and BarcodeProduct (a barcode scan fills in a new Bev), additive.
 // 3.5.0: where a Bev was had: a place on a ranking and a post, the place picker, the map (BEV-22), additive.
 // 3.6.0: bugs.canRank; testers cannot place and see no ranks; markVerified only from In review, additive.
-export const CONTRACT_VERSION = '3.6.0';
+// 3.7.0: the notifications inbox (notifications.list/unreadCount/markRead) and feed.getPost (T-31), additive.
+export const CONTRACT_VERSION = '3.7.0';
 
 export * from './enums';
 export * from './errors';

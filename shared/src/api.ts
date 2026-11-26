@@ -34,6 +34,7 @@ import type {
   LatLng,
   LatLngBounds,
   LeaderboardRow,
+  Notification,
   NutritionPreview,
   Page,
   Profile,
@@ -616,6 +617,18 @@ export interface FeedApi {
 
   /** Idempotent. @throws 'unauthorized', 'not_found', 'rate_limited'. */
   unlike(id: string): Promise<void>;
+
+  /**
+   * One post, in the same shape as `getFeed` (likes, the first seven comments
+   * inline, `alsoBevdBy`, the venue): what a notification opens
+   * (`Notification.postId`). Only a post the caller may see, by the feed's
+   * rule: their own or a followed user's, no block between them and its
+   * author, and an alcoholic Bev only from 21 (contract 3.7.0).
+   * @throws 'unauthorized'; 'not_found' — no such post (a removed or
+   *   re-ranked ranking takes its post with it), or one the caller cannot
+   *   see, which reads exactly the same.
+   */
+  getPost(id: string): Promise<FeedItem>;
 }
 
 export interface CommentsApi {
@@ -1133,6 +1146,54 @@ export interface ReportsApi {
   report(input: ReportContentInput): Promise<ReportContentResult>;
 }
 
+export interface NotificationsApi {
+  /**
+   * The caller's notifications inbox (T-31, contract 3.7.0), newest first:
+   * who followed them, and who liked or commented on their posts. Nobody is
+   * notified about their own like or comment.
+   *
+   * **Grouping.** A follow and a comment are a row each. All the likes on one
+   * post are ONE row: `actors` holds the two most recent likers, `actorCount`
+   * all of them, and the row's `id` and `createdAt` are its newest like's, so
+   * a new like on an old post moves that row back to the top. Following,
+   * unfollowing and following again (or liking, unliking, liking again) never
+   * makes a second notification: the first one comes back, with its old date.
+   *
+   * **Checked at read time.** A row is shown only while it is still true: an
+   * unfollow hides that follow, an unlike that like (and shrinks its row), a
+   * deleted comment that comment, and a post that is gone (a removed or
+   * re-ranked ranking) its likes and comments. A block in either direction
+   * hides everything from that person, and unblocking brings back whatever is
+   * still true then (a block removes the follows both ways, so a follow row
+   * comes back only if they follow again). A post about
+   * an alcoholic Bev is hidden while the caller is under 21. `unreadCount` and
+   * `markRead` apply the same rules, so the three never disagree.
+   *
+   * Paged by `nextCursor` (keyset on the row's `id`): a row is on exactly one
+   * page, and a row that moves to the top while paging is not shown twice.
+   *
+   * A backend older than 3.7.0 has no inbox: it answers an empty page.
+   * @throws 'unauthorized'.
+   */
+  list(page?: PageParams): Promise<Page<Notification>>;
+
+  /**
+   * How many rows of `list` are unread (a row of likes counts once), for the
+   * badge. 0 from a backend older than 3.7.0.
+   * @throws 'unauthorized'.
+   */
+  unreadCount(): Promise<number>;
+
+  /**
+   * Marks the caller's notifications read: every one up to and including
+   * `upToId` (a `Notification.id`, normally the first row on screen), or all
+   * of them when it is left out. Idempotent. Resolves without doing anything
+   * on a backend older than 3.7.0.
+   * @throws 'unauthorized'; 'validation' — `upToId` is not a notification id.
+   */
+  markRead(upToId?: string): Promise<void>;
+}
+
 export interface NutritionApi {
   /** UPC-A, EAN-8 or EAN-13. null means no usable nutrition data. */
   lookupBarcode(barcode: string, signal?: AbortSignal): Promise<NutritionPreview | null>;
@@ -1167,4 +1228,5 @@ export interface BeviApi extends AuthApi {
   bugs: BugsApi;
   blocks: BlocksApi;
   reports: ReportsApi;
+  notifications: NotificationsApi;
 }

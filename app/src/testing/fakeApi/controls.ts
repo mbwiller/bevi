@@ -51,6 +51,14 @@ export interface FakeControls {
    * `resetToFixtures()`. To make the read fail instead, `failNext(code, 'meta.getAppConfig')`.
    */
   setAppConfig(config: Partial<AppConfig>): void;
+  /**
+   * Empty every inbox, ME's fixture notifications included, so `notifications.list` answers an
+   * empty page and `unreadCount` 0 until something new happens. ME's fixtures (an unread pair of
+   * likes from friend_a and friend_b on ME's newest post, an unread comment from friend_a, an unread
+   * follow from friend_e whom ME does not follow back, and three read ones over a week old) come
+   * back with `resetToFixtures()`.
+   */
+  clearNotifications(): void;
 }
 
 export const controls: FakeControls = {
@@ -64,4 +72,5 @@ export const controls: FakeControls = {
   setBugTicketState: (ticketId, state) => getFakeApi().setBugTicketState(ticketId, state),
   setIconStatus: (bevId, status) => getFakeApi().setIconStatus(bevId, status),
   setAppConfig: (config) => getFakeApi().setAppConfig(config),
+  clearNotifications: () => getFakeApi().clearNotifications(),
 };

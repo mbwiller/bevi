@@ -194,6 +194,24 @@ export function createFeedApi(client: SupabaseClient): FeedApi {
       return mapBevOfPeriod(client, (data ?? []) as BevOfPeriodRpcRow[]);
     },
 
+    async getPost(id: string): Promise<FeedItem> {
+      await requireUserId(client);
+      // `get_post` takes a bigint: an id that cannot be one is no post at all,
+      // answered here as the RPC would answer it, without the round trip.
+      if (!/^\d{1,15}$/.test(id ?? '')) throw new ApiError('not_found', 'No such post');
+      const { data, error } = await client.rpc('get_post', { p_event_id: Number(id) });
+      // No PGRST202 tolerance: an older backend has no inbox to open a post
+      // from, and the caller shows its error state.
+      if (error) throw mapError(error);
+      const rows = (data ?? []) as FeedRpcRow[];
+      if (rows.length === 0) throw new ApiError('not_found', 'No such post');
+      // The same path as a feed page: actors from profiles_view, places from get_bev_locations.
+      const page = await toFeedPage(client, 'get_post', rows.slice(0, 1), 1);
+      const item = page.items[0];
+      if (!item) throw new ApiError('not_found', 'No such post');
+      return item;
+    },
+
     async like(id: string): Promise<void> {
       await requireUserId(client);
       const { error } = await client.rpc('like_post', { p_event_id: Number(id) });
