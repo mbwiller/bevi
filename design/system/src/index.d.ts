@@ -134,6 +134,23 @@ export declare function TextField(props: TextFieldProps): React.ReactElement;
 export interface PriceTierPickerProps { value?: 1 | 2 | 3 | 4 | null; estimated?: boolean; onChange?: (tier: number | null, estimated: boolean) => void; className?: string }
 export declare function PriceTierPicker(props: PriceTierPickerProps): React.ReactElement;
 
+/**
+ * One category in onboarding's go-tos grid (three columns): a Bev's art over the category's label. Tap up to
+ * three, favorite first; the tap order is the ranking, and a picked tile shows its number in a `primary` badge.
+ */
+export interface PickTileProps {
+  /** The category's label, from `Bevi.categories` ("Coffee", "Spirits & cocktails"). */
+  label: string;
+  /** The art, as BevImage takes it: the category's most-rated starter Bev's cutout or icon (`src`), else the category's own `art`. */
+  src?: string; art?: BevArtProps;
+  /** Picked, in this place (the order it was tapped in): `primaryTint`, a 2pt `primary` rim and the number badge. Omit when not picked. */
+  rank?: 1 | 2 | 3;
+  /** Three are picked and this one isn't: the art fades to 35%, the label goes `textSecondary`, and a tap does nothing. */
+  disabled?: boolean;
+  onClick?: () => void; className?: string;
+}
+export declare function PickTile(props: PickTileProps): React.ReactElement;
+
 export interface HeaderAction { icon: string; label: string; badge?: number; onClick?: () => void; variant?: 'plain' | 'filled' }
 export interface HeaderProps { title?: string; wordmark?: boolean; centered?: boolean; actions?: HeaderAction[]; onBack?: () => void; className?: string }
 export declare function Header(props: HeaderProps): React.ReactElement;
@@ -379,7 +396,7 @@ declare global {
       Wordmark: typeof Wordmark; Icon: typeof Icon; BevArt: typeof BevArt; BevImage: typeof BevImage; ScoreBubble: typeof ScoreBubble;
       PriceTier: typeof PriceTier; Avatar: typeof Avatar; AvatarStack: typeof AvatarStack; Pill: typeof Pill; Button: typeof Button;
       IconButton: typeof IconButton; LikeButton: typeof LikeButton; CommentButton: typeof CommentButton; FilterPill: typeof FilterPill; SortToggle: typeof SortToggle; SearchBar: typeof SearchBar;
-      TextField: typeof TextField; PriceTierPicker: typeof PriceTierPicker; Header: typeof Header; SectionHeader: typeof SectionHeader;
+      TextField: typeof TextField; PriceTierPicker: typeof PriceTierPicker; PickTile: typeof PickTile; Header: typeof Header; SectionHeader: typeof SectionHeader;
       ListScopeDropdown: typeof ListScopeDropdown; SegmentedTabs: typeof SegmentedTabs; TabBar: typeof TabBar; BevRow: typeof BevRow;
       FeedPost: typeof FeedPost; FeaturedCard: typeof FeaturedCard; BevOfCard: typeof BevOfCard; ProfileListRow: typeof ProfileListRow; StatCard: typeof StatCard;
       UserRow: typeof UserRow; ProgressStrip: typeof ProgressStrip; ProgressBar: typeof ProgressBar; TasteBar: typeof TasteBar; TasteProfile: typeof TasteProfile; BucketButton: typeof BucketButton; CompareCard: typeof CompareCard; ProgressDots: typeof ProgressDots;

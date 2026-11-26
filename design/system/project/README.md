@@ -93,6 +93,7 @@ The plan's component list (DEVELOPMENT-MATT §4) covers the screens that have a 
 - `UserRow`, `AvatarStack`: People (search, suggestions, the points ranking), followers, "Friends who've had it" on Bev detail and "Bev'd it too" on a FeedPost (§6.8, §6.11, §6.12).
 - `AvatarPicker`: your own profile photo on Edit profile and the onboarding profile step (§6.2, §6.19); the photo then shows in every `Avatar` of you.
 - `TextField`, `PriceTierPicker`: onboarding and the create-Bev wizard (§6.2, §6.10).
+- `PickTile`: onboarding's go-tos step, up to three categories tapped in order of preference (§6.2a); a picked tile is a selected chip, so it takes `primaryTint` and shows its number.
 - `Header`, `SectionHeader`, `IconButton`, `Button`: the header pattern, caps section labels, the close circle and the 36pt profile buttons, all described in §4 and §6 but not named as components.
 - `Icon`, `BevArt`: the icon set as one source, and placeholder drink art until catalog photos exist.
 - `ProgressStrip`, `CollectionSheet`: Bev'd's "you've tried this share of a category" (TASKS.md M-08), the collecting half of gamifying the list. The bar is grape because it is a share you earned.
