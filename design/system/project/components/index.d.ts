@@ -151,7 +151,14 @@ export declare function TextField(props: TextFieldProps): React.ReactElement;
 export interface PriceTierPickerProps { value?: 1 | 2 | 3 | 4 | null; estimated?: boolean; onChange?: (tier: number | null, estimated: boolean) => void; className?: string }
 export declare function PriceTierPicker(props: PriceTierPickerProps): React.ReactElement;
 
-export interface HeaderAction { icon: string; label: string; badge?: number; onClick?: () => void; variant?: 'plain' | 'filled' }
+export interface HeaderAction {
+  icon: string;
+  /** The accessible name. With a `badge` it says the number too ("Notifications, 3 unread"): the badge itself is not read out. */
+  label: string;
+  /** A count in `onDeep` on `badgeRed` at the icon's top right; nothing at 0. The Feed's bell. */
+  badge?: number;
+  onClick?: () => void; variant?: 'plain' | 'filled';
+}
 export interface HeaderProps { title?: string; wordmark?: boolean; centered?: boolean; actions?: HeaderAction[]; onBack?: () => void; className?: string }
 export declare function Header(props: HeaderProps): React.ReactElement;
 
@@ -262,6 +269,30 @@ export interface UserRowProps {
   following?: boolean; self?: boolean; onFollow?: () => void; onClick?: () => void; divider?: boolean; className?: string;
 }
 export declare function UserRow(props: UserRowProps): React.ReactElement;
+
+export interface NotificationRowProps {
+  /** A new follower, a like on your post, or a comment on it. */
+  kind: 'follow' | 'like' | 'comment';
+  /** Who did it, newest first. One person shows a 44pt avatar; two show a pair of 32pt avatars. Only the first two are named. */
+  actors: Person[];
+  /** How many people in all. More than the two shown adds "and N others" (likes on one post share a row). Defaults to `actors.length`. */
+  actorCount?: number;
+  /** The post's Bev, for a like or a comment: its name ends the sentence and its image is the 40pt thumbnail. */
+  bev?: { name: string; src?: string; art?: BevArtProps };
+  /** The comment, quoted in `textSecondary` on up to two lines. */
+  comment?: string;
+  /** A short age: "2m", "1h", "3d", "2w". */
+  time: string;
+  /** Tints the row `primaryTint`, adds the dot, and starts the spoken sentence with "Unread." */
+  unread?: boolean;
+  /** A follow row only: whether you follow them back. Shows "Follow back" or "Following"; omit to show no pill. */
+  following?: boolean;
+  onFollow?: () => void;
+  /** Opens the post (a like, or a comment with its comments up) or the person's profile (a follow). */
+  onClick?: () => void;
+  divider?: boolean; className?: string;
+}
+export declare function NotificationRow(props: NotificationRowProps): React.ReactElement;
 
 /** Gut-check choice: a `primary` ring filled to a level (loved full, fine half, disliked empty) over its label. */
 export interface BucketButtonProps {
@@ -399,7 +430,7 @@ declare global {
       TextField: typeof TextField; PriceTierPicker: typeof PriceTierPicker; Header: typeof Header; SectionHeader: typeof SectionHeader;
       ListScopeDropdown: typeof ListScopeDropdown; SegmentedTabs: typeof SegmentedTabs; TabBar: typeof TabBar; BevRow: typeof BevRow;
       FeedPost: typeof FeedPost; FeaturedCard: typeof FeaturedCard; BevOfCard: typeof BevOfCard; ProfileListRow: typeof ProfileListRow; StatCard: typeof StatCard;
-      UserRow: typeof UserRow; ProgressStrip: typeof ProgressStrip; ProgressBar: typeof ProgressBar; TasteBar: typeof TasteBar; TasteProfile: typeof TasteProfile; BucketButton: typeof BucketButton; CompareCard: typeof CompareCard; ProgressDots: typeof ProgressDots;
+      UserRow: typeof UserRow; NotificationRow: typeof NotificationRow; ProgressStrip: typeof ProgressStrip; ProgressBar: typeof ProgressBar; TasteBar: typeof TasteBar; TasteProfile: typeof TasteProfile; BucketButton: typeof BucketButton; CompareCard: typeof CompareCard; ProgressDots: typeof ProgressDots;
       EmptyState: typeof EmptyState; ErrorState: typeof ErrorState; Skeleton: typeof Skeleton; Sheet: typeof Sheet; CommentsSheet: typeof CommentsSheet; CollectionSheet: typeof CollectionSheet;
       FindBevArt: typeof FindBevArt; MapCallout: typeof MapCallout; MapFilterRow: typeof MapFilterRow; MapControls: typeof MapControls; VenueRow: typeof VenueRow; VenueSheet: typeof VenueSheet;
       /** The 15 category slugs with labels and icon names. */

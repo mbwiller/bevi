@@ -292,14 +292,15 @@ export function SaveButton({ saved = false, onClick, className }) {
 
 /**
  * The Follow / Following pill of a person row and an Explore post: filled `primary` "Follow", outlined
- * "Following". A press pops it like the heart (transform only).
+ * "Following". A press pops it like the heart (transform only). `text` replaces "Follow" where the row
+ * says more ("Follow back" on a new-follower notification).
  */
-export function FollowPill({ following = false, onClick, label }) {
+export function FollowPill({ following = false, onClick, label, text = 'Follow' }) {
   const [pop, setPop] = React.useState(0);
   return (
     <span key={pop} className={cx('bv-pop-box', pop > 0 && 'bv-pop')}>
       <Pill variant={following ? 'outlined' : 'filled'} aria-pressed={following} aria-label={label} onClick={() => { setPop((n) => n + 1); if (onClick) onClick(); }}>
-        {following ? 'Following' : 'Follow'}
+        {following ? 'Following' : text}
       </Pill>
     </span>
   );

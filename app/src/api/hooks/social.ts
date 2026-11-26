@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
-import type { ProfileRow, ProfileStats } from '@bevi/shared';
+import type { Notification, ProfileRow, ProfileStats } from '@bevi/shared';
 
 import { api } from '../client';
 import { keys } from '../keys';
@@ -28,7 +28,7 @@ export function useSuggested() {
   return useQuery({ queryKey: keys.follows.suggested(), queryFn: () => api.follows.suggested() });
 }
 
-const ROW_PREFIXES = [keys.users.all, keys.follows.all, keys.stats.mine()];
+const ROW_PREFIXES = [keys.users.all, keys.follows.all, keys.stats.mine(), keys.notifications.list()];
 
 function applyFollow(qc: QueryClient, userId: string, isFollowing: boolean) {
   const patch = (row: ProfileRow) => (row.id === userId ? { ...row, isFollowing } : row);
@@ -36,6 +36,10 @@ function applyFollow(qc: QueryClient, userId: string, isFollowing: boolean) {
   for (const prefix of [keys.users.all, keys.follows.all]) {
     qc.setQueriesData({ queryKey: prefix }, (data: unknown) => mapCachedItems<ProfileRow>(data, patch));
   }
+  // The person in every notification row (T-31): a follow row's pill reads "Following" at once.
+  qc.setQueryData(keys.notifications.list(), (data: unknown) =>
+    mapCachedItems<Notification>(data, (n) => (n.actors.some((a) => a.id === userId) ? { ...n, actors: n.actors.map(patch) } : n)),
+  );
   qc.setQueryData<ProfileStats>(keys.stats.mine(), (s) => s && { ...s, following: Math.max(0, s.following + (isFollowing ? 1 : -1)) });
   qc.setQueryData<ProfileStats>(keys.stats.user(userId), (s) => s && { ...s, followers: Math.max(0, s.followers + (isFollowing ? 1 : -1)) });
 }
@@ -50,6 +54,10 @@ function settleFollow(qc: QueryClient, userId: string) {
   // isn't refetched under the reader (the followed author's posts would jump out mid-scroll); the
   // next fresh sequence (pull to refresh, opening Explore again) drops or adds them.
   void qc.invalidateQueries({ queryKey: keys.explore(), refetchType: 'none' });
+  // The inbox is patched above (applyFollow); stale only, like Explore: a refetch now would take
+  // the unread tint off rows the person is reading on the Notifications screen. It is read again
+  // when that screen is next opened.
+  void qc.invalidateQueries({ queryKey: keys.notifications.all, refetchType: 'none' });
   void qc.invalidateQueries({ queryKey: keys.bevs.all }); // Bev detail "friends who've had it"
   // Who is on the Friends board. Only after the server has the follow, never optimistically, so a
   // press doesn't reorder the ranking under the reader; the People board holds its rows still after

@@ -2,6 +2,7 @@
 import ArrowUpDown from 'lucide-react-native/icons/arrow-up-down';
 import Banana from 'lucide-react-native/icons/banana';
 import Beer from 'lucide-react-native/icons/beer';
+import Bell from 'lucide-react-native/icons/bell';
 import Bookmark from 'lucide-react-native/icons/bookmark';
 import Camera from 'lucide-react-native/icons/camera';
 import CandyOff from 'lucide-react-native/icons/candy-off';
@@ -127,6 +128,8 @@ const ICONS = {
   'map-pin': MapPin,
   navigation: Navigation,
   'maximize-2': Maximize2,
+  // The Feed header's bell (T-31): opens Notifications.
+  bell: Bell,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;

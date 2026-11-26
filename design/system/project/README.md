@@ -70,13 +70,14 @@ Use the tokens by name; never paste hex values.
 ## Building screens
 
 - Wrap content the way the screens in this system do: `Header`, then content on `surface`, then `TabBar` at the bottom. Load `tokens.css` and `components/bundle.css` before using `window.Bevi`.
-- The five tabs: Feed, Lists, Add Bev (the raised circle), Map, Profile. People is a screen pushed from the Feed header, not a tab.
-- Feed: wordmark Header (its person-plus icon opens People), filled SearchBar, the Bev of the day and Bev of the week pair (BevOfCard; two cards even when the same Bev won both), SegmentedTabs + FeedPosts. Each post's action row has the heart and the comment bubble on the left and Rank it and Want to Try on the right; up to seven comments show under it, more collapse to "View all N comments", and both open the CommentsSheet.
+- The five tabs: Feed, Lists, Add Bev (the raised circle), Map, Profile. People and Notifications are screens pushed from the Feed header, not tabs.
+- Feed: wordmark Header (its bell opens Notifications and carries the unread count; its person-plus icon opens People), filled SearchBar, the Bev of the day and Bev of the week pair (BevOfCard; two cards even when the same Bev won both), SegmentedTabs + FeedPosts. Each post's action row has the heart and the comment bubble on the left and Rank it and Want to Try on the right; up to seven comments show under it, more collapse to "View all N comments", and both open the CommentsSheet.
 - Lists: centred caps Header ("LISTS"), ListScopeDropdown, SegmentedTabs (Bev'd · Want to Try · For you · Top), then that tab's BevRows. Bev'd adds the FilterPill row, the ProgressStrip ("All Bevs · 37 of 378 tried · 9%", which opens the CollectionSheet) and the SortToggle. Top is the Bevs leaderboard: numbered rows with the image and "Your score 9.5".
 - Ranking: the floating cutout over a row of three BucketButtons, then ProgressDots and CompareCard pairs, then the note step with the score revealed at once in a ScoreBubble 72 over "#4 of 31 in Loved", then a ScoreBubble 56 result that confirms it.
 - Profile: name Header, Avatar 100, counts (Bev'd · Followers · Following), two outlined Buttons filling the row, two StatCards, two ProfileListRows (Want to Try, Recommended for you), Activity tabs, FeedPosts.
 - Add Bev (the centre tab): Header titled "Add a Bev", the outlined SearchBar, Snap it, then Recents and Popular on Bevi while the bar is empty, or the BEVS and PEOPLE groups while typing, with "Can't find it? Add a new Bev" pinned at the foot. No map.
 - People: Header with Back, the filled SearchBar ("Search people"), Suggested for you (UserRows with `context`), then Ranked by points with its Friends and Everyone pills and your own row tinted.
+- Notifications: Header with Back, then NotificationRows under New, Today, This week and Earlier. Unread rows are tinted with a dot; a follow row ends in Follow back.
 - Map: Header, FindBevArt, "Find Bev" and one `primary` Button that opens Bev Maps. The venue-map components are parked: nothing composes them.
 - The Screens group shows each of these composed at 393pt.
 

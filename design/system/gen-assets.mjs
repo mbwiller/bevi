@@ -12,7 +12,7 @@ export const ICONS = {
   // navigation + chrome
   newspaper: 'newspaper', list: 'list', plus: 'plus', trophy: 'trophy', settings: 'settings', share: 'share',
   menu: 'menu', search: 'search', x: 'x', 'user-plus': 'user-plus', camera: 'camera', users: 'users', user: 'user',
-  'chevron-right': 'chevron-right', 'chevron-down': 'chevron-down', 'chevron-left': 'chevron-left', ellipsis: 'ellipsis',
+  'chevron-right': 'chevron-right', 'chevron-down': 'chevron-down', 'chevron-left': 'chevron-left', ellipsis: 'ellipsis', bell: 'bell',
   // actions + state
   bookmark: 'bookmark', 'circle-plus': 'circle-plus', 'circle-check': 'circle-check', heart: 'heart', 'message-circle': 'message-circle', 'undo-2': 'undo-2',
   flame: 'flame', lock: 'lock', 'arrow-up-down': 'arrow-up-down', 'list-filter': 'list-filter', clock: 'clock',
