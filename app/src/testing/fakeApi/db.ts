@@ -102,6 +102,17 @@ export interface FakeFeedEvent {
   createdAt: string;
 }
 
+/**
+ * DELIVERABLE-44: a submission made before the user onboarded. `submit_ranking` writes no feed
+ * event for it but still writes its `ranking_events` row, which is what the streak is computed
+ * from; the fake keeps that day here, as RANKING feed events keep it for every other submission.
+ */
+export interface FakeUnpostedRanking {
+  userId: string;
+  bevId: string;
+  createdAt: string;
+}
+
 export interface FakeLike {
   userId: string;
   feedEventId: string;
@@ -205,6 +216,8 @@ export interface FakeDb {
   follows: FakeFollow[];
   wantToTry: FakeWantToTry[];
   feed: FakeFeedEvent[];
+  /** Optional so a db stored before it existed still loads. */
+  unpostedRankings?: FakeUnpostedRanking[];
   /** Optional so a db stored before likes existed still loads. */
   likes?: FakeLike[];
   /** Optional so a db stored before comments existed still loads. */

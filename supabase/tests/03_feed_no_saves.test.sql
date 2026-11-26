@@ -10,6 +10,11 @@ values ('00000000-0000-4000-8000-0000000000b1', 'pgtapfeed1@users.bevi.app',
        ('00000000-0000-4000-8000-0000000000b2', 'pgtapfeed2@users.bevi.app',
         '{"invite_code": "local-test-invite-code"}', 'authenticated', 'authenticated');
 
+-- Onboarded, because submit_ranking posts nothing before onboarding ends
+-- (20261126000100) and this file's rankings are meant to be posts.
+update public.profiles set onboarded = true
+ where id in ('00000000-0000-4000-8000-0000000000b1', '00000000-0000-4000-8000-0000000000b2');
+
 -- Two distinct non-alcoholic seed Bevs, picked deterministically.
 -- Created and filled as the owner, before the role switch below. A temp table
 -- is owned by whoever made it, so `authenticated` needs an explicit grant --
